@@ -23,11 +23,16 @@
 | # | 要求 | 结论 | 证据 |
 |---|---|---|---|
 | ① | `docker compose up` 后 `/healthz/live`=**200**、`/healthz/ready`=**503** | ✅ | 真实容器实测（`ready`=503 是**正确**行为：硬依赖尚未接线） |
-| ② | 故意写一个违规 import → CI 必须失败 | ✅ | `backend/scripts/assert_importlinter.py`：3 条契约逐条"注入 → 断言红 → 还原 → 复绿" |
-| ③ | 契约断言集必须能跑通 | ✅ | `pytest` **166** 条断言全绿；另有 `python -m app.core.enums` 自检入口 |
-| ④ | gitleaks 无命中 | ✅ | `gitleaks dir .` → `no leaks found`（并做过正向对照：注入假密钥会命中） |
+| ② | 故意写一个违规 import → CI 必须失败 | ✅ | 双重证据：本地 `scripts/assert_importlinter.py`（3 条契约逐条「注入 → 断言红 → 还原 → 复绿」）**＋ 真实 CI 端到端红**（临时分支注入 `app.guard → app.llm`，CI 的「依赖方向契约」job 失败，失败步骤精确落在「基线 lint」，其余三个 job 保持绿 → 单点归因，无连带误报。探针分支已删除） |
+| ③ | 契约断言集必须能跑通 | ✅ | `pytest` **166** 条断言全绿（本地与 CI 双环境）；另有 `python -m app.core.enums` 自检入口 |
+| ④ | gitleaks 无命中 | ✅ | 本地 `gitleaks dir .` → `no leaks found`（做过正向对照：注入假密钥会命中）；CI 的「密钥扫描」job 以 `fetch-depth: 0` 扫**全史** |
 
 附加：`ruff check .` 全通过、`mypy app` 无问题（35 个文件）、`lint-imports` **3 contracts kept, 0 broken**。
+`main` 分支最近三次 CI 全绿。
+
+> 关于 DoD① 与路径写法：`/healthz/*` 实际挂在版本前缀下，全路径是 **`/api/v1/healthz/live`**、
+> `/api/v1/healthz/ready`、`/api/v1/healthz`（PRD §11.7 接口表即为此写法）。
+> 编程实施计划的 DoD 行写的是简写 `/healthz/live`，二者不冲突，但**验证时要用全路径**。
 
 ---
 
