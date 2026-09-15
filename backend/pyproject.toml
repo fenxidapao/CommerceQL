@@ -1,0 +1,149 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "commerceql"
+version = "0.1.0"
+description = "基于 Text2SQL 的电商数据分析 Agent —— 后端"
+# 刻意不声明 `readme`：仓库根 `README.md` 按 docs/08 §4.1 归属权归**上游窗口**，
+# 阶段 0 不擅自创建/修改它（08 §8 第 1 条）。声明一个不存在的 readme 会让 `pip install .` 直接失败。
+#
+# ADR-19：用托管 Python 3.13 独立 venv（**不用** Anaconda 3.11.5 —— 那边是 pydantic 1.10.19）。
+# 附录 D §D.2.3 要求声明 >=3.12；本机托管版本实测为 3.13.14，故对齐 3.13。
+requires-python = ">=3.13"
+license = { text = "Proprietary" }
+
+# ============================================================================
+# 依赖白名单（**ADR-20 + 附录 D §D.2.1**）
+# ⚠️ 新增依赖必须先在 07 ADR-20 的表格登记并说明用途，**未登记不得进本文件**。
+#    检查方式由 `tests/contract/test_dependency_whitelist.py` 自动执行（阶段 0 DoD 的一部分）。
+#
+# ⚠️ 明确**不装**（ADR-20 / 附录 D §D.2.4，为省 2–3GB+ 冗余下载）：
+#    torch / torchvision / sentence-transformers / transformers
+#    rank_bm25 / bm25s / faiss-cpu / faiss-gpu / chromadb / qdrant-client / pymilvus
+#    openai SDK（用 httpx 直连 OpenAI 兼容端点）/ matplotlib
+# ============================================================================
+dependencies = [
+    # --- Web 与配置 ---
+    "fastapi>=0.115",              # 原生 SSE（StreamingResponse）+ 自动 OpenAPI
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",               # 必须 v2
+    "pydantic-settings>=2.5",
+    # --- 编排与持久化 ---
+    "langgraph>=0.2",
+    "langgraph-checkpoint-postgres>=2.0",  # 生产禁用 MemorySaver
+    "langchain-core>=0.3",
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.2",        # psycopg **3**，不是 psycopg2
+    "alembic>=1.13",               # RLS 策略也必须纳入迁移
+    "pgvector>=0.3",
+    # --- SQL 安全 ---
+    "sqlglot>=25.0",               # 闸门一的解析器；不装则三道闸门的第一道无法实现
+    # --- 客户端与工具 ---
+    "redis>=5.0",
+    "httpx>=0.27",
+    "tenacity>=9.0",               # 429 退避
+    "pyjwt[crypto]>=2.9",          # 只存公钥
+    "structlog>=24.1",
+    "jieba>=0.42.1",               # ★ 中文分词；版本对齐宿主实测的 0.42.1
+    "tiktoken>=0.7",
+    "orjson>=3.10",
+]
+
+[project.optional-dependencies]
+# ADR-20：评测期若确需 pandas，须单独建组，**不得进主依赖**
+eval = ["pandas>=2.2"]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "import-linter>=2.1",          # R-DEP-1 / R-DEP-2 的强制手段
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "respx>=0.21",                 # 拦截 LLM HTTP，评测避免真实烧 token
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+# ============================================================================
+# pytest
+# ============================================================================
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["."]                 # 免安装即可 import app.*（CI 与本机一致）
+asyncio_mode = "auto"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+# ⚠️ 刻意**不加** `--suppress-no-test-exit-code`：
+#   出口码 5（无测试被收集）必须照常暴露。阶段 0 的 DoD③ 要求"断言集可以为空但必须能跑通"，
+#   而 pytest 对空集合的退出码是 **5 而不是 0** —— 任何 CI 都会把它判成失败。
+#   因此 `tests/contract/` 里必须至少有一个占位断言（已放），这不是凑数，是让"能跑通"可验证。
+markers = [
+    "contract: 契约断言（附录 A 取值集 / OpenAPI 快照 / SSE 录音转录）",
+    "redteam: 红队用例（危险 SQL 必须 0 放行）",
+    "integration: 需要真实 PG/Redis/Ollama 的测试（离线默认不跑）",
+]
+
+# ============================================================================
+# ruff（替代 black + flake8 + isort）
+# ============================================================================
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["."]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes（含未使用 import —— 阶段 0 骨架最容易踩）
+    "I",        # isort
+    "B",        # bugbear
+    "UP",       # pyupgrade
+    "SIM",      # simplify
+    "RUF",
+]
+ignore = [
+    "E501",  # 行长交给 formatter；契约注释偏长是有意的
+    # ⚠️ RUF001/002/003（"字符串/文档串含易混淆的全角字符"）对本项目**必须关掉**：
+    #    本项目全部 docstring 与注释是**中文**，全角 `：（）「」` 是正常书写而非笔误。
+    #    开着它的代价实测为 **2222 条**噪声告警，会直接淹没真正需要看的违规
+    #    （阶段 0 实测数据）。关掉后 ruff 才能真正承担"骨架里未使用 import"这类检查。
+    #    防"全角冒号误用"的真实需求由 `tests/contract/` 的取值集断言承担，
+    #    而不是靠 lint 的字符宽度规则 —— 后者抓的是字符，前者抓的是**语义**。
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # RUF022（`__all__` 必须按 isort 排序）对本项目**关掉**：
+    #   单一真相文件（`core/enums.py` / `core/contracts.py`）的 `__all__` 是**按域分组**的，
+    #   分组顺序本身就是信息（编排与事件 → 错误 → 结果与终态 → 语义与绑定 → 呈现 →
+    #   权限与闸门 → 限流与计量 → 健康检查）。按字母排序会把这层语义打散，
+    #   反而降低后续窗口"我要找的那个取值属于哪一块"的检索效率。
+    #   ★ 真正要防的是"加了取值却忘了从 `__all__` 导出"，那由 `tests/contract/`
+    #     的基数断言与 import 检查负责，与排序无关。
+    "RUF022",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# 契约/端口文件里"只写签名"的函数体是 `...`，ruff 会提示可省 —— 但那正是意图
+"app/core/contracts.py" = ["PIE790"]
+"app/**/__init__.py" = []
+
+# ============================================================================
+# mypy
+# ============================================================================
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unreachable = true
+disallow_any_unimported = false
+# 阶段 0 全是空实现，逐层收紧到 strict；W1B 起每包开工前把对应的
+# `[[tool.mypy.overrides]]` 注释掉，最终移除本节。
+[[tool.mypy.overrides]]
+module = ["langgraph.*", "pgvector.*", "jieba.*"]
+ignore_missing_imports = true

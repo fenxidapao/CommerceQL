@@ -1,0 +1,44 @@
+# ============================================================================
+# .gitattributes —— 归属窗口：W0（清单外新增，理由见交付说明 Q-13）
+#
+# ⚠️ 为什么阶段 0 必须建它（不是"顺手加的"）：
+#   开发在 Windows（core.autocrlf 默认 true）、CI 与容器在 Linux。
+#   若不做归一化，同一份 `Dockerfile` / `*.yml` / `nginx.conf` 在两边工作区
+#   的行尾会不一致，最典型的后果是：
+#     · 容器内 shell/python 读到 `\r\n`，`#!/usr/bin/env bash` 类脚本头部解析失败；
+#     · PR diff 里整文件"全红全绿"，真实改动被淹没（评审失效）。
+#   `eol=lf` 把"仓库里存什么"钉死为 LF，检出时不再由本地 core.autocrlf 决定。
+# ============================================================================
+
+# 默认：文本文件仓库内统一 LF
+* text=auto eol=lf
+
+# ---------- Windows 专属脚本必须保留 CRLF ----------
+# cmd / PowerShell 对 LF-only 的 .bat/.ps1 容错差（尤其 .bat 的 label 跳转）
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# ---------- 二进制：禁止任何行尾转换 ----------
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.xlsx  binary
+*.docx  binary
+*.pptx  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.zip   binary
+
+# ---------- 评测快照 / 数据库体积物 ----------
+*.db    binary
+
+# ---------- Git 语言统计：避免把生成物算进项目语言占比 ----------
+deploy/nginx.conf   linguist-language=Nginx
+*.importlinter      linguist-language=INI
+.gitleaks.toml      linguist-language=TOML

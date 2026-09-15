@@ -1,0 +1,169 @@
+# ============================================================================
+# CI —— 阶段 0 三项护栏（docs/08 §3.1 落地清单最后一行）
+# 归属窗口：W0｜依据：docs/08 §3.1 DoD ②③④ + 07 §3.1 / N-01 / N-15
+# ============================================================================
+#
+# 本文件刻意**只做三件事**，与 08 §3.1 清单里的"契约断言 / import-linter / gitleaks"
+# 一一对应。不塞进"顺手加的"质量门（格式化、覆盖率阈值、依赖漏洞扫描等）——
+# 那些属于后续窗口，现在加只会让阶段 0 的 DoD 变模糊。
+#
+# ⚠️ 关于 **DoD①**（`docker compose up` 后 `/healthz/live`=200、`/healthz/ready`=503）：
+#    它**故意不在 CI 里**。原因：GitHub Actions 的 runner 默认没有 Docker daemon，
+#    要么开 Docker-in-Docker，要么改用 `docker compose` 依赖的端口映射与宿主网络 ——
+#    两种方案都会给阶段 0 引入"CI 环境与真实部署环境不一致"的隐患，
+#    而这个 DoD 的价值恰恰在于**真实**跑一次。
+#    → 因此 DoD① 由**本地脚本化验证**（阶段 0 已实测通过，见交付说明），
+#      等 W1B 把真实依赖接上、compose 具备"起来了就该健康"的语义后，
+#      再由 W1B 决定是否升级为 CI 集成测试（届时 `ecom_sandbox.db` 与 Ollama
+#      的可用性也需要一并设计）。
+#
+# 说明：`frontend/` 尚不存在（阶段 5 产出），故无前端 job。
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+# 同一分支连续推送时取消旧运行 —— 阶段 0 的检查很便宜，但保持队列干净。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.13"
+  # 后端是工具链的根（pyproject.toml / .importlinter / tests 都在这一层）。
+  BACKEND_DIR: backend
+
+jobs:
+  # --------------------------------------------------------------------------
+  # DoD③：契约断言集必须能跑通
+  # --------------------------------------------------------------------------
+  contract-tests:
+    name: 契约断言（DoD③）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装（含 dev 组）
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # ⚠️ 不要给 pytest 加 `--suppress-no-test-exit-code`：
+      #    空集合的退出码是 5，那正是 DoD③ 要暴露的信号。
+      #    `tests/contract/` 现有 **98 条**断言，分四个文件：
+      #      · test_contract_counts.py      —— 取值集基数 / 查找表完整性 /
+      #                                        retryable 与 Retry-After 的不对称 / SSE 帧契约 /
+      #                                        三探针依赖分类（N-21）
+      #      · test_config_failfast.py      —— 7 条启动校验 + `.env.example` 双向同步 +
+      #                                        U-19 的 τ env-gate + extra 的真实边界
+      #      · test_dependency_whitelist.py —— ADR-20 依赖白名单**双录账**
+      #    （tests/{unit,integration,graph_snapshot,redteam} 现阶段只有 __init__.py，
+      #      属后续窗口；pytest 会照常收集，不报错。）
+      - name: 全量测试（tests/contract 含 98 条断言 = DoD③ 的载体）
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: pytest
+
+      - name: 取值集自检（07 §4.2 断言⑤ 的独立入口）
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: python -m app.core.enums
+
+  # --------------------------------------------------------------------------
+  # DoD②：故意注入违规 import，lint 必须失败
+  # --------------------------------------------------------------------------
+  dependency-direction:
+    name: 依赖方向契约 + DoD② 注入实验
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装（含 dev 组）
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: 基线 lint（R-DEP-1 分层 / R-DEP-2 确定性层禁 LLM）
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: lint-imports
+
+      # 这一步把 DoD② 从"人工验过一次"升级为"每次 CI 都做的正向实验"：
+      #   注入 app.guard→app.llm（R-DEP-2）与 app.core→app.api（R-DEP-1）
+      #   → 断言 lint 必须失败且输出里出现该契约与违规链路
+      #   → 还原后必须重新通过。
+      # 若哪天有人把 `.importlinter` 的 source/forbidden 列表改坏，这一步会红。
+      - name: DoD② 注入实验（注入 → 必须失败 → 还原 → 必须通过）
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: python scripts/assert_importlinter.py
+
+      # 防"探针文件被误提交"——注入点是新建文件，异常中断可能留下残留。
+      - name: 断言无探针残留
+        run: |
+          if find . -name "_probe_violation.py" -not -path "./.git/*" | grep -q .; then
+            echo "::error::发现 _probe_violation.py 残留 —— DoD② 的注入点未被清理"
+            find . -name "_probe_violation.py" -not -path "./.git/*"
+            exit 1
+          fi
+
+  # --------------------------------------------------------------------------
+  # 静态检查（廉价，且能抓到阶段 0 骨架最容易踩的"未使用 import"）
+  # --------------------------------------------------------------------------
+  lint:
+    name: ruff / mypy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装（含 dev 组）
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: ruff
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: ruff check .
+
+      - name: mypy
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: mypy app
+
+  # --------------------------------------------------------------------------
+  # DoD④：gitleaks 无命中（N-15：密钥不进仓库）
+  # --------------------------------------------------------------------------
+  secret-scan:
+    name: 密钥扫描（DoD④）
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 —— 必须扫**全部历史**，否则"先提交密钥再删掉"这种
+      # 常见事故（PRD §11.5 记录过同类真实事件）会被全绿放行。
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 个人仓库无需 License；组织仓库需在 Settings→Secrets 配 GITLEAKS_LICENSE。
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_CONFIG: .gitleaks.toml

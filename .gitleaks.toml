@@ -1,0 +1,84 @@
+# ============================================================================
+# gitleaks 配置 —— 阶段 0 DoD④：`gitleaks detect` 无命中
+# 归属窗口：W0（清单外新增，理由见交付说明 Q-12：无此文件则 DoD④ 无法执行）
+#
+# 定位：它是"密钥没进仓库"的**自动检查**（N-15 的检查方式之一）。
+# ⚠️ 它只兜得住"已经写进文件"的密钥，兜不住运行期泄漏 ——
+#    后者靠 `app/obs/logging.py` 的脱敏处理器（Authorization / token / api_key 等键名一律 ***）。
+# ============================================================================
+
+title = "CommerceQL"
+
+[extend]
+# 继承官方默认规则集
+useDefault = true
+
+[[rules]]
+id = "commerceql-deepseek-key"
+description = "DeepSeek / OpenAI 兼容 API Key"
+# 形态：sk- 开头，后接较长的不含空格串
+regex = '''(?i)\b(sk-[a-z0-9]{16,})\b'''
+tags = ["key", "llm", "commerceql"]
+keywords = ["sk-"]
+
+[[rules]]
+id = "commerceql-dsn-with-password"
+description = "带明文口令的数据库连接串"
+# `postgresql+psycopg://user:password@host` —— 示例/文档里最容易出现的一类泄漏。
+#
+# ⚠️ 本正则**不得包含负向先行断言**（阶段 0 实测踩过，是本文件最贵的一个坑）：
+#    gitleaks 的正则引擎是 **RE2**（`wasilibs/go-re2`），**不支持** `(?!...)` / `(?<=...)`。
+#    初版写成 `...:(?!\*\*\*)[^@\s/]{3,}@` 想去掉 `***` 占位口令，结果不是"规则失效"，
+#    而是 gitleaks **直接 panic 退出**（`panic: regexp: Compile(...): bad perl operator: (?!`）——
+#    即 DoD④ 会在 CI 上以一种看不出原因的方式整体失败。
+#    → "排除占位值"这件事必须交给下面的 `[allowlist]`，不能塞进规则正则。
+regex = '''(?i)postgresql\+psycopg://[^:\s/]+:[^@\s/]{3,}@'''
+tags = ["dsn", "password", "commerceql"]
+keywords = ["postgresql+psycopg://"]
+
+[[rules]]
+id = "commerceql-jwt-secret"
+description = "JWT 私钥/明文字符串"
+regex = '''-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'''
+tags = ["key", "jwt"]
+keywords = ["PRIVATE KEY"]
+
+# ⚠️ 规则正则的语法约束（写新规则前必读）：
+#   引擎是 RE2，**不支持**：负向/正向先行断言 `(?!`/`(?=`、后行断言 `(?<=`、反向引用 `\1`。
+#   一旦写了，gitleaks 不是"少报一条"，而是 **panic 启动失败** —— 整条 DoD④ 变成假阴性。
+#   规则里只写"什么像密钥"；"哪些是允许的占位"一律放下面 `[allowlist]`。
+
+[allowlist]
+description = "允许的占位/示例值"
+paths = [
+    # 示例文件本就只放键名与占位值，且不含真实密钥
+    '''deploy/\.env\.example''',
+    # 文档里的示意 DSN 带 *** 占位
+    '''docs/.*\.md''',
+    # 本文件自身包含规则字面量
+    '''\.gitleaks\.toml''',
+    # ---- 第三方与构建产物（阶段 0 实测：不排除会让扫描量从 <1MB 涨到 176MB）----
+    # 这些都是 gitignore 的目录，仓库里根本不存在；但 `gitleaks dir` 直接扫工作区时
+    # 会把 venv 里 site-packages 自带的测试夹具（大量假 sk-/PRIVATE KEY 样本）算成泄漏，
+    # 掩盖真实命中。CI 里用 `gitleaks detect`（走 git 追踪文件）不受影响，本地补跑需要这条。
+    '''(^|/)\.venv/''',
+    '''(^|/)venv/''',
+    '''(^|/)__pycache__/''',
+    '''(^|/)node_modules/''',
+    '''\.egg-info/''',
+    '''(^|/)\.import_linter_cache/''',
+    '''(^|/)\.lintprobe/''',
+]
+# 允许的示例值（明确是占位，不是真密钥）
+regexes = [
+    '''postgresql\+psycopg://app_rw:app_rw_pwd@''',
+    '''postgresql\+psycopg://app_ro:app_ro_pwd@''',
+    '''sk-xxxxxxxx''',
+    '''\*\*\*''',
+]
+stopwords = [
+    "example",
+    "placeholder",
+    "dummy",
+    "changeme",
+]

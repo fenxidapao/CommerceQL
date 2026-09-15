@@ -1,0 +1,126 @@
+; ============================================================================
+; 依赖方向契约（R-DEP-1 分层 / R-DEP-2 确定层禁 LLM）
+; 归属窗口：W0（docs/08 §4.1）｜依据：07 §3.1、§1 的 N-01
+; ============================================================================
+;
+; 为什么这个文件是"护栏"而不是"文档"：
+;   N-01 的检查方式原文就是 `import-linter 契约`。没有它，"
+;   确定性模块禁止 import llm" 只是一句口号 —— 而口号在跨窗口协作里等于不存在
+;   （一个窗口为了图快 import 一下 app.llm，CI 不拦，评审也看不出来）。
+;
+; ⚠️ 以下三条语义**已在本机实测确认**（2026-09-15，import-linter 实测，勿再凭记忆推断）：
+;   ① 层序 = **高的在前**；上层可以 import 下层，反过来即违规；
+;   ② **层内互相 import 是允许的** → 故 `app.core` 可以作为一个整体层，
+;      `app.core.contracts` 因此可以 import `app.core.enums` / `app.core.errors`；
+;   ③ **不允许重叠路径**（同时列 `app.core` 与 `app.core.enums` 会直接报
+;      "Modules have shared descendants"）→ core 只能整层列。
+;
+; 由此得到一条有意为之的强约束：
+;   L2 的 5 个兄弟（`binding` / `guard` / `exec` / `mask` / `cache`）在本文件里是
+;   **各自独立的层** → 它们**互相 import 会被判违规**，必须走 `app.core.contracts` 的端口。
+;   这正是 07 §3.1 R-DEP-1 那句"同层调用必须走显式 ports 接口"的机器化落地。
+
+[importlinter]
+root_packages =
+    app
+; tests/ 与 eval/ 故意不纳入本契约：
+;   - tests/ **应当**可以 import 任意层，纳入只会给自己加无意义的违规；
+;   - eval/ 的"不得依赖 app.api"（07 §3.1 旁路规则）**待 W6 建目录后再加一条 forbidden
+;     契约** —— 现在 eval/ 尚不存在，写了只会让 lint 报"模块找不到"。
+
+; ---------------------------------------------------------------------------
+; R-DEP-1：模块只能依赖**严格更低层**的模块（07 §3.1）
+; ---------------------------------------------------------------------------
+[importlinter:contract:r-dep-1-layers]
+name = R-DEP-1 分层依赖（只能依赖严格更低层）
+type = layers
+layers =
+    ; L5 接入层
+    app.api
+    ; L4 编排层
+    app.graph
+    ; L3 决策层（可调 LLM）
+    app.planner
+    app.retrieval
+    app.present
+    ; L2 确定性服务层（**禁 LLM**）
+    app.binding
+    app.guard
+    app.exec
+    app.mask
+    app.cache
+    ; L1 能力层
+    app.semantics
+    app.llm
+    app.auth
+    app.obs
+    ; L0 基础设施层
+    app.repo
+    app.core
+
+; ---------------------------------------------------------------------------
+; R-DEP-2 / N-01：L2 及以下 + binding 禁止 import app.llm
+; ---------------------------------------------------------------------------
+; 为什么 layers 契约拦不住这一条（必须单独写）：
+;   `binding` 在 L2，`llm` 在 L1 —— **上层 import 下层在 layers 里是合法的**。
+;   所以"禁 LLM"这条规则与"依赖方向"是**两个正交维度**，只能各写一条契约。
+;   注意语义：法律意义上的"上层可依赖下层"在这里被**显式收回**，这是刻意的 ——
+;   FR-3.2 要求字段绑定是确定性选择，把绑定放到 L2 并禁 LLM，使这条要求成为
+;   **结构约束**而非纪律要求（07 §3.1 的原话）。
+[importlinter:contract:r-dep-2-no-llm-in-deterministic]
+name = R-DEP-2/N-01 确定性模块与 binding 禁止 import app.llm
+type = forbidden
+source_modules =
+    app.binding
+    app.guard
+    app.exec
+    app.mask
+    app.cache
+    app.semantics
+    app.auth
+    app.obs
+    app.repo
+    app.core
+forbidden_modules =
+    app.llm
+
+; ---------------------------------------------------------------------------
+; R-DEP-3：`obs/` 内**除 `audit.py` 外**任何模块不得依赖 `repo`（★ U-18 的代价约束）
+; ---------------------------------------------------------------------------
+; 来源：07 v0.6 §12.4.1 —— 审计写入**裁定落 `obs/audit.py`**，理由之一是
+;   "调用方只依赖一个端口（AuditSinkPort），不必让 L2/L4 模块直接 import repo"。
+; 但它有一条**必须写明的代价**：`obs/` 从此**不再是纯无副作用模块** ——
+;   它包含一个会**阻断主链路**的写入（审计失败 = 不下发数据，N-09）。
+; 架构窗口给的约束是：
+;   "`obs/` 内除 `audit.py` 外，任何模块不得引入 DB 依赖"。
+;
+; ⚠️ 为什么必须机器化：这条约束的失效方式非常隐蔽 ——
+;   某天有人在 `metrics.py` 里顺手查一次库做汇总，看起来完全合理，
+;   而后果是"观测层可以在 DB 挂掉时把主链路带崩"。评审看不出来，只有 lint 能拦。
+;
+; ⚠️ 写法说明：`forbidden` 契约的 source 只能列**具体模块**（不支持排除语法），
+;   故此处逐个列出 `obs` 下所有**非 audit** 模块。**新增 obs 子模块时必须同步本表** ——
+;   漏加 = 新模块自动获得 DB 依赖豁免。`tests/contract/test_obs_audit_contract.py`
+;   会比对"目录实际文件 == 本表"来兜住这个漏网面。
+[importlinter:contract:r-dep-3-obs-except-audit-no-repo]
+name = R-DEP-3 obs 内除 audit 外禁止依赖 repo（U-18 代价约束）
+type = forbidden
+source_modules =
+    app.obs.logging
+    app.obs.metrics
+    app.obs.schema
+    app.obs.trace
+forbidden_modules =
+    app.repo
+
+; ---------------------------------------------------------------------------
+; TODO（留给后续窗口，**不在阶段 0 写**，因为目标模块尚不存在，写了 lint 会报找不到）：
+;   1. W2B：`retrieval` 内**只有 `refine` 子模块**允许 import `app.llm`
+;      → 加一条 forbidden：source = app.retrieval.{dense,sparse,graph,value,fuse,tokenizer}，
+;        forbidden = app.llm（N-01 的"唯一允许 LLM 的检索子模块"）。
+;   2. W4：`app.graph.nodes.*` 不得 import `app.api`（节点不该碰协议层）；
+;      且 `graph/events.py` 必须是**唯一**产出 SSE 帧的地方。
+;   3. W6：`eval` 不得 import `app.api`（07 §3.1 旁路规则）。
+;   4. W4：`app.api.errors` / `app.api.sse` 为唯一入口 —— 其他模块不得自行拼错误码/帧，
+;      这条用 forbidden **表达不了**，需靠 `tests/contract/` 的静态扫描断言（grep 级）。
+; ---------------------------------------------------------------------------
