@@ -62,16 +62,22 @@ jobs:
 
       # ⚠️ 不要给 pytest 加 `--suppress-no-test-exit-code`：
       #    空集合的退出码是 5，那正是 DoD③ 要暴露的信号。
-      #    `tests/contract/` 现有 **98 条**断言，分四个文件：
+      #    `tests/contract/` 现有 **166 条**断言，分五个文件：
       #      · test_contract_counts.py      —— 取值集基数 / 查找表完整性 /
-      #                                        retryable 与 Retry-After 的不对称 / SSE 帧契约 /
+      #                                        U-17 的 retryable 与 Retry-After 三级不对称 /
+      #                                        U-16 的 20 条 AST 规则分级 / SSE 帧契约 /
       #                                        三探针依赖分类（N-21）
-      #      · test_config_failfast.py      —— 7 条启动校验 + `.env.example` 双向同步 +
-      #                                        U-19 的 τ env-gate + extra 的真实边界
+      #      · test_config_failfast.py      —— **8 条**启动校验 + `.env.example` 双向同步 +
+      #                                        U-19 的 τ env-gate + 行尾注释泄漏兜底 +
+      #                                        extra 的真实边界
+      #      · test_cache_keys_contract.py  —— U-14 缓存键租户规则（无租户键显式登记清单 +
+      #                                        TTL + 签名反射检查 tenant_id 参数）
+      #      · test_obs_audit_contract.py   —— U-18 代价约束（R-DEP-3 声明与源码双向核对）+
+      #                                        U-19 的三条可见性硬要求 + 指标标签基数
       #      · test_dependency_whitelist.py —— ADR-20 依赖白名单**双录账**
       #    （tests/{unit,integration,graph_snapshot,redteam} 现阶段只有 __init__.py，
       #      属后续窗口；pytest 会照常收集，不报错。）
-      - name: 全量测试（tests/contract 含 98 条断言 = DoD③ 的载体）
+      - name: 全量测试（tests/contract 含 166 条断言 = DoD③ 的载体）
         working-directory: ${{ env.BACKEND_DIR }}
         run: pytest
 
