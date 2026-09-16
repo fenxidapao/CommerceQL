@@ -67,14 +67,16 @@ def render(bundle_path: str) -> str:
     out.append("| 指标 | 显示名 | 域 | 单位 | 默认聚合 | 状态 | Owner | 默认时间基准 |")
     out.append("|---|---|---|---|---|---|---|---|")
     for m in b.get("metrics", []):
-        db = m.get("default_binding") or {}
-        tf = db.get("time_field", "—")
+        tf = m.get("time_basis", "—")          # 时间基准的**唯一**承载位（§4.7.1 删掉了 time_field）
         out.append("| `{}` | {} | {} | {} | {} | {} | {} | {} |".format(
             m["name"], m.get("display_name", ""), m.get("domain", ""), m.get("unit", ""),
             m.get("default_aggregation", ""), m.get("status", ""), m.get("owner", ""), tf))
     out.append("")
     out.append("> **`status = draft` 的指标没有 `default_binding`、也没有别名** —— "
                "这是刻意的：未定口径的指标不得被检索命中（附录 C §C.5.2 / FR-12.3）。")
+    out.append(">")
+    out.append("> ⚠️ **时间基准读的是 `metrics[].time_basis`**。曾有一个 `default_binding.time_field` "
+               "字段承载同一件事 —— 已由 07 §4.7.1 裁定**删除**（同一事实两处必然漂移）。")
     out.append("")
 
     # ---- 逐指标 ----
@@ -89,9 +91,11 @@ def render(bundle_path: str) -> str:
                    f"｜**状态**：`{m.get('status', '')}`")
         db = m.get("default_binding")
         if db:
-            out.append(f"- **默认绑定**：资产 `{db.get('asset')}`｜时间基准 `{db.get('time_field')}`")
+            out.append(f"- **默认绑定**：资产 `{db.get('asset')}`"
+                       f"｜时间基准 `{m.get('time_basis', '—')}`（读 `time_basis`，非 time_field）")
             if db.get("reason"):
-                out.append(f"  - 默认理由是**必须披露**的（07 §6.8）：{db['reason']}")
+                out.append(f"  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，"
+                           f"最终载体 = `insight.caveats[]`，≤ 40 字）：{db['reason']}")
         else:
             out.append("- **默认绑定**：无（draft 指标不参与 L3 绑定）")
         dp = m.get("default_predicates") or []

@@ -20,7 +20,9 @@
     · 类 B（任一即"高"）：`metric:` `time:` `predicate:` `fuzzy:`
 
 **纪律 3｜指标口径逐字取自语义包。**
-    谓词 = `metrics[].default_predicates`；时间基准 = `metrics[].default_binding.time_field`。
+    谓词 = `metrics[].default_predicates`；时间基准 = `metrics[].time_basis`。
+    ⚠️ 时间基准读 `time_basis`：曾用 `metrics[].default_binding.time_field` 承载同一件事，
+    已由 07 §4.7.1 裁定**删除**（同一事实两处 → 必然漂移）。
     `refund_rate` 的谓词**少一条**（不含 `refund_status <> 'refunded'`）。
 
 预期格子 → SQL 形状（判据速查：c1=component1, o=others, c2=nested）

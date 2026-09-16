@@ -4,7 +4,7 @@
 
 > **本文件由 `semantic/render_metric_dictionary.py` 从 `bundle_2026.09.14.1.yaml` 自动生成，请勿手改。**
 >
-> 语义包版本 `2026.09.14.1`｜状态 `candidate`｜指标口径 hash `f91f60c55c034270`
+> 语义包版本 `2026.09.14.1`｜状态 `candidate`｜指标口径 hash `ecbcb01b08d9563e`
 >
 > 时区 `Asia/Shanghai`；财年起始月 `1`；周起点 `monday`。
 
@@ -23,6 +23,8 @@
 | `sell_through_rate` | 动销率 | products |  |  | draft |  | — |
 
 > **`status = draft` 的指标没有 `default_binding`、也没有别名** —— 这是刻意的：未定口径的指标不得被检索命中（附录 C §C.5.2 / FR-12.3）。
+>
+> ⚠️ **时间基准读的是 `metrics[].time_basis`**。曾有一个 `default_binding.time_field` 字段承载同一件事 —— 已由 07 §4.7.1 裁定**删除**（同一事实两处必然漂移）。
 
 ## 2. 逐指标口径
 
@@ -30,8 +32,8 @@
 
 - **表达式**：`SUM(order_paid.pay_amount)`
 - **默认聚合**：`sum`｜**单位**：CNY｜**域**：orders｜**Owner**：finance｜**状态**：`active`
-- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`
-  - 默认理由是**必须披露**的（07 §6.8）：GMV 的时间基准固定为 pay_time，而非 create_time
+- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：GMV 的时间基准固定为 pay_time，而非 create_time
 - **默认谓词**：
   - `pay_status = 'paid'` —— 仅统计已支付
   - `refund_status <> 'refunded'` —— GMV 口径剔除全额退款
@@ -44,8 +46,8 @@
 
 - **表达式**：`COUNT(DISTINCT order_paid.sub_order_id)`
 - **默认聚合**：`count_distinct`｜**单位**：单｜**域**：orders｜**Owner**：operations｜**状态**：`active`
-- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`
-  - 默认理由是**必须披露**的（07 §6.8）：订单量同为交易口径，与 GMV 共用时间基准
+- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：订单量同为交易口径，与 GMV 共用时间基准
 - **默认谓词**：
   - `pay_status = 'paid'` —— 仅统计已支付
   - `refund_status <> 'refunded'` —— GMV 口径剔除全额退款
@@ -58,8 +60,8 @@
 
 - **表达式**：`SUM(order_paid.pay_amount) / NULLIF(COUNT(DISTINCT order_paid.sub_order_id), 0)`
 - **默认聚合**：`ratio_of_sums`｜**单位**：CNY｜**域**：orders｜**Owner**：operations｜**状态**：`active`
-- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`
-  - 默认理由是**必须披露**的（07 §6.8）：客单价属交易口径
+- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：客单价属交易口径
 - **默认谓词**：
   - `pay_status = 'paid'` —— 仅统计已支付
   - `refund_status <> 'refunded'` —— GMV 口径剔除全额退款
@@ -72,8 +74,8 @@
 
 - **表达式**：`SUM(order_paid.pay_amount) / NULLIF(COUNT(DISTINCT order_paid.buyer_id), 0)`
 - **默认聚合**：`ratio_of_sums`｜**单位**：CNY｜**域**：orders｜**Owner**：operations｜**状态**：`active`
-- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`
-  - 默认理由是**必须披露**的（07 §6.8）：人均消费属交易口径
+- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：人均消费属交易口径
 - **默认谓词**：
   - `pay_status = 'paid'` —— 仅统计已支付
   - `refund_status <> 'refunded'` —— GMV 口径剔除全额退款
@@ -87,8 +89,8 @@
 - **表达式**：`SUM(CASE WHEN order_paid.refund_status = 'refunded' THEN order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(order_paid.pay_amount), 0)
 `
 - **默认聚合**：`ratio_of_sums`｜**单位**：ratio｜**域**：orders｜**Owner**：finance｜**状态**：`active`
-- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`
-  - 默认理由是**必须披露**的（07 §6.8）：退款率以支付订单为分母，时间随分母
+- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：退款率以支付订单为分母，时间随分母
 - **默认谓词**：
   - `pay_status = 'paid'` —— 仅统计已支付
   - `is_test_order = false` —— 排除测试单
@@ -101,8 +103,8 @@
 - **表达式**：`COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) / NULLIF(COUNT(DISTINCT buyer_id), 0)
 `
 - **默认聚合**：`ratio_of_sums`｜**单位**：ratio｜**域**：orders｜**Owner**：operations｜**状态**：`active`
-- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`
-  - 默认理由是**必须披露**的（07 §6.8）：复购窗口以支付时间为基准
+- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：复购窗口以支付时间为基准
 - **默认谓词**：
   - `pay_status = 'paid'` —— 仅统计已支付
   - `is_test_order = false` —— 排除测试单
@@ -114,8 +116,8 @@
 
 - **表达式**：`SUM(traffic_daily.uv)`
 - **默认聚合**：`sum`｜**单位**：人｜**域**：traffic｜**Owner**：operations｜**状态**：`active`
-- **默认绑定**：资产 `traffic_daily`｜时间基准 `stat_date`
-  - 默认理由是**必须披露**的（07 §6.8）：流量表的时间基准是 stat_date（date 型），不是 pay_time
+- **默认绑定**：资产 `traffic_daily`｜时间基准 `stat_date`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：流量表的时间基准是 stat_date（date 型），不是 pay_time
 - **默认谓词**：
   - `uv >= 0` —— 防御性谓词：排除脏数据负数访客（生成器会注入 0 值，但不会注入负数）
 - **口径说明**：
@@ -126,8 +128,8 @@
 
 - **表达式**：`SUM(traffic_daily.order_cnt) * 1.0 / NULLIF(SUM(traffic_daily.uv), 0)`
 - **默认聚合**：`ratio_of_sums`｜**单位**：ratio｜**域**：traffic｜**Owner**：operations｜**状态**：`active`
-- **默认绑定**：资产 `traffic_daily`｜时间基准 `stat_date`
-  - 默认理由是**必须披露**的（07 §6.8）：转化率的分母是流量，时间随 UV
+- **默认绑定**：资产 `traffic_daily`｜时间基准 `stat_date`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：转化率的分母是流量，时间随 UV
 - **默认谓词**：
   - `uv >= 0` —— 防御性谓词：排除脏数据负数访客（生成器会注入 0 值，但不会注入负数）
 - **口径说明**：

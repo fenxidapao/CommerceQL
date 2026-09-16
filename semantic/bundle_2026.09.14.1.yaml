@@ -14,20 +14,35 @@
 #             join_path / synonym / policy / default_predicate 八张物化表）
 #   校验步骤：07 §6.1（五步）
 #
-# ---- 本文件相对附录 B §B.1.2 示例的 **扩展字段**（全部登记为 U-23，待架构窗口裁定）----
-#   附录 B 的结构示例里**没有**这四个字段的定义，但 07 §12.2 的物化表与
-#   §6.8.1 / §7.4 的实现依赖它们：
-#     · `dimensions[].grain_level` / `grain_levels`   → 07 §12.2 `dimension.grain_level`，L2 层判据
-#     · `assets[].grain_level`                        → 07 §12.2 `asset.grain_level`
-#     · `metrics[].default_binding`
-#       `field_bindings[].default_binding`            → 07 §12.2 `metric_def.default_binding`，L3 层判据
-#     · `assets[].tenant_scoped`                      → 07 §12.2 `asset.tenant_scoped`，§7.4 分支 3 判据
-#     · `assets[].quality_score`                      → 07 §12.2 `asset.quality_score`
+# ---- 本文件相对附录 B §B.1.2 示例的 **扩展字段** ----
+#   ⚠️ 这些字段已由 **07 §4.7.1 裁定**（2026-09-16，v0.8）。原登记号 U-23 已销账。
+#   裁定结论 = **采纳 3 / 收窄 1 / 删除 2**，本文件已按裁定落笔：
+#     ✅ `dimensions[].grain_levels`    → L2 判「同粒度」的**唯一依据**（07 §6.8.1）
+#     ✅ `dimensions[].grain_level`     → 该维度**默认细度**；必须 == grain_levels[hierarchy[-1]]
+#     ✅ `assets[].tenant_scoped`       → 07 §7.4 分支 3 判据（校验器双向断言 ⇔ 含 tenant_id 列）
+#     ✅ `assets[].quality_score`       → 07 §12.2 `asset.quality_score`
+#     ✅ `metrics[].default_binding`    → ⚠️ **已收窄为 `{asset, reason}`**，`time_field` **已删**
+#                                          （与附录 B 既有 `time_basis` 重复 → 同一事实两处必然漂移）
+#     ❌ `assets[].grain_level`         → **已删**。理由：07 全文仅出现一次、无消费者，且与
+#                                          `dimensions[].grain_level` **同名不同义**（同名最易被误用）
+#     ❌ `field_bindings[].default_binding` → **已删**（与 `canonical_asset` 恒等 → 同一事实两处）
+#                                          → 改为新增 `field_bindings[].default_reason`（真正缺失的信息）
+#     ❌ `meta.disclosure_text`         → **已删**（U-26 改判）。披露载体 = **`insight.caveats[]`**
+#                                          （附录 A §A.1.2 第 8 条：必须展示、不可折叠），
+#                                          本文件只提供**文案字段**，不提供渲染字段。
+#
+# ---- U-26 的披露链路（裁定后，本文件承担其中两段）----
+#   指标层文案 = `metrics[].default_binding.reason`
+#   概念层文案 = `field_bindings[].default_reason`
+#   渲染规则（确定性，由 API 层执行）：去重 → 按 display_name / concept 字典序 → 每条 ≤ 40 字
+#   ⚠️ **禁止**塞进 `scope.notice` —— 那是**权限范围披露**的专用字段（附录 A §A.1.5 的三条
+#      泄露红线按它定义）。把"口径默认"混进去会让"跨租户不可见"与"口径默认"无法区分。
+#
 #   另有 **2 处新增顶层区块**（附录 B 无，但 DoD⑤ 与 §B.3.4 需要承载位）：
 #     · `aliases`          —— L1 层唯一入口（附录 B 把同义词散落在 metric.synonyms /
 #                             column.synonyms 两处，07 §12.2 却要求一张扁平 `synonym` 表）
 #     · `blacklist_terms`  —— 附录 B §B.3.4「无字段 → 拒答」与「需澄清阈值」的词
-#   详细形状与理由见 `semantic/SCHEMA_v1.md`。
+#   详细形状与理由见 `semantic/SCHEMA_v1.md`（v1.1，已按 §4.7.1 同步）。
 # ============================================================================
 
 meta:
@@ -42,43 +57,43 @@ meta:
   week_starts_on: "monday"     # 周起点 = 周一。附录 B v1.1 已确认，决定"本周/上周"的解析边界
 
   # 向量维度声明 —— 07 §6.1 步骤⑤要求「EMBEDDING_DIM 与 YAML 声明一致」，
-  # 但附录 B 结构示例里**没有任何位置声明维度**。登记 U-25。
-  # 当前值与 `app/core/config.py` 默认值一致（EMBEDDING_MODEL=bge-m3 / EMBEDDING_DIM=1024）。
+  # 但附录 B 结构示例里**没有任何位置声明维度**。→ U-25，**07 §4.7.1 已裁定采纳**。
+  # 当前值与 `app/core/config.py` 默认值一致（EMBEDDING_MODEL=bge-m3 / EMBEDDING_DIM=1024），
+  # 该一致性由 `validate_bundle.py` 步骤⑤断言。
   embedding:
     model: "bge-m3"
     dim: 1024
 
-  # `resolved_default` 态的强制披露文案来源（07 §6.8 表：「静默套用默认口径 = 隐性错误」）。
-  # 07 要求"必须出现"但未指定文案的唯一来源 → 登记 U-26，默认放在此处。
-  disclosure_text: "已按系统默认口径回答"
+  # ⚠️ 此处**刻意没有** `disclosure_text`。
+  #   U-26 的裁定是 **不采纳** `meta.disclosure_text`：`resolved_default` 态的披露文案，
+  #   指标层走 `metrics[].default_binding.reason`、概念层走 `field_bindings[].default_reason`，
+  #   最终载体是 **`insight.caveats[]`**（附录 A §A.1.2 第 8 条，必须展示、不可折叠）。
+  #   私增 meta 字段会违反"附录 A 是接口唯一规范源"（07 §4.1）。
+  #   → 定义在别处的渲染字段，不得在这里再出现一次。校验器有**负向断言**防它回归。
 
 # ============================================================================
 # 1. 认证资产（**只有这些可被检索** —— 未进本包的资产模型不可检索、不可引用、不可生成）
 # ============================================================================
 #
-# `assets[].grain_level` —— ★ U-23：**资产细度档**（1 = 最粗），本包刻度表：
-#   1 = 汇总/活动维        campaign
-#   2 = 地理维（省）        region
-#   3 = 店铺维             shop
-#   4 = 明细主数据档        product（SKU）/ dim_date（日）
-#   5 = 单据行档           order_paid / order_refund
-#   6 = 最细事实档         traffic_daily（SKU × 日 × 渠道）
+# ⚠️ `assets[].grain_level`（原 W1A 提议的"资产细度档 1–6"）**已按 07 §4.7.1 删除**。
+#    三条理由（架构窗口裁定原文）：
+#      ① 07 全文该字段名**仅出现一次**（§12.2 表结构清单），**无任何消费者**；
+#      ② 与 `dimensions[].grain_level` **同名不同义** —— 而"两套刻度永不比较"正是 W1A
+#         自己立的纪律，**同名是最容易被违反的形态** → 直接删掉资产档；
+#      ③ §6.8 步③ 的粒度校验用 `asset.grain`（枚举 token）已足够。
+#    将来若真需要跨资产细度比较，**正确做法是给 `grain` 加"域内顺序表"**，
+#    不是凭空造一根全局 1–6 刻度（那根刻度已作废，勿复活）。
 #
-# ⚠️ **与 `dimensions[].grain_level` 是两套独立刻度，永不互相比较。**
-#    dimensions 用「族内刻度」（地理族 country=1…city=4 / 时间族 year=1…day=5），
-#    因为 L2 只在**同一维度的候选之间**比粒度；
-#    assets 用「跨资产细度档」，因为它的消费者（若将来有）要比的是**不同资产**
-#    谁更细。把两套混用会让 `shop(3)` 与 `city(4)` 产生虚假的"粒度关系"。
-#    上游 07 §12.2 列了 `asset.grain_level` 列但**未定义语义、也全文无消费者**
-#    （已实测：07 与附录 B 仅在 §12.2 表结构清单出现该字段名）→ 本刻度表为 W1A
-#    提议，待架构窗口裁定（U-23）。
+# `assets[].row_estimate` —— 本文件的值 = **沙箱实测行数**（07 §4.7.4 第 1 条裁定：
+#    `params.*` 是生成器**名义输入**，`measured.*` 是**实测事实**，两者必须在产物里分开；
+#    语义包的 `row_estimate` 填**实测值**）。逐表实测证据见 `eval/MANIFEST_v1.json`
+#    的 `measured` 段；名义值与被"空区间"吃掉的部分见同文件 `inputs_nominal` 段。
 #
 assets:
 
   - logical_name: order_paid
     physical_asset: v_order_paid          # 认证逻辑视图，非裸表
     grain: sub_order                      # 粒度：子订单
-    grain_level: 5                        # ★ 资产细度档（SCHEMA_v1 §3.4 刻度表）
     domain: orders
     owner: data-team
     certified: true
@@ -86,7 +101,7 @@ assets:
     quality_score: 0.98                   # ★ 与 quality_gates 阈值联判 certified
     freshness_sla: "PT6H"                 # ISO 8601 duration，6 小时
     level: hot                            # hot=当日可用 | warm | cold
-    row_estimate: 500000                  # 附录 C §C.12：订单总数 50 万行
+    row_estimate: 494249                  # 实测（名义 500000 被 T_C 2025-02 空区间吃掉 5751）
     description: "已支付子订单事实表。默认已剔除取消/测试单。GMV 的唯一来源。"
     columns:
       - name: tenant_id
@@ -180,7 +195,6 @@ assets:
   - logical_name: order_refund
     physical_asset: v_order_refund
     grain: refund_record
-    grain_level: 5                        # ★ 资产细度档 —— 与 order_paid 同为单据行档
     domain: orders
     owner: data-team
     certified: true
@@ -188,7 +202,7 @@ assets:
     quality_score: 0.96
     freshness_sla: "PT12H"
     level: warm
-    row_estimate: 25000
+    row_estimate: 23116                   # 实测（名义 25000）
     description: "退款事实表。与 order_paid 一对零或一。"
     columns:
       - name: tenant_id
@@ -221,7 +235,6 @@ assets:
   - logical_name: product
     physical_asset: v_product
     grain: sku
-    grain_level: 4                        # ★ 资产细度档 —— 商品主数据档
     domain: products
     owner: data-team
     certified: true
@@ -229,7 +242,7 @@ assets:
     quality_score: 0.95
     freshness_sla: "PT24H"
     level: warm
-    row_estimate: 2000                    # 附录 C §C.12：SKU 数 2,000
+    row_estimate: 6000                    # 实测 = 3 租户 × 2,000（名义 2000 是**单租户**）
     description: "SKU 商品维表。"
     columns:
       - name: tenant_id
@@ -278,7 +291,6 @@ assets:
   - logical_name: shop
     physical_asset: v_shop
     grain: shop
-    grain_level: 3                        # ★ 资产细度档 —— 店铺维档
     domain: products
     owner: data-team
     certified: true
@@ -286,7 +298,7 @@ assets:
     quality_score: 0.97
     freshness_sla: "PT24H"
     level: warm
-    row_estimate: 12                      # 3 租户 × 2–5 店铺（附录 C §C.12）
+    row_estimate: 12                      # 实测（3 租户 × 2–5 店铺，与名义一致）
     description: "店铺维表。含 shop.city —— 与 order_paid.receiver_city 同粒度不同语义，是澄清机制的标准案例。"
     columns:
       - name: tenant_id
@@ -313,7 +325,6 @@ assets:
   - logical_name: region
     physical_asset: v_region
     grain: province
-    grain_level: 2                        # ★ 资产细度档 —— 地理维档（省）
     domain: orders
     owner: data-team
     certified: true
@@ -321,7 +332,7 @@ assets:
     quality_score: 0.99
     freshness_sla: "P7D"
     level: cold
-    row_estimate: 34
+    row_estimate: 31                      # 实测省数（名义 34）
     description: "省级行政区参考维表（公共）。大区（华东/华南…）**不是本表字段**，而是业务约定，见 dimensions.region.value_map。"
     columns:
       - name: code
@@ -338,7 +349,6 @@ assets:
   - logical_name: campaign
     physical_asset: v_campaign
     grain: campaign
-    grain_level: 1
     domain: orders
     owner: operations
     certified: true
@@ -346,7 +356,7 @@ assets:
     quality_score: 0.93
     freshness_sla: "PT24H"
     level: warm
-    row_estimate: 24
+    row_estimate: 84                      # 实测 = 3 租户 × 28（名义 24 是**单租户**）
     description: "活动/大促维表。用于把'618''双11'这类业务区间映射为日期区间。"
     columns:
       - name: tenant_id
@@ -377,7 +387,6 @@ assets:
   - logical_name: traffic_daily
     physical_asset: v_traffic_daily
     grain: sku_day_channel
-    grain_level: 6                        # ★ 资产细度档 —— 本包最细事实档
     domain: traffic
     owner: data-team
     certified: true
@@ -385,7 +394,7 @@ assets:
     quality_score: 0.94
     freshness_sla: "PT12H"
     level: hot
-    row_estimate: 1500000                 # 稀疏合理分布：在架 SKU × 有效渠道 × 有流量日
+    row_estimate: 1500556                 # 实测（名义 1500000；稀疏分布 + 确定性重分配）
     description: "流量日粒度事实表（SKU × 日 × 渠道）。"
     columns:
       - name: tenant_id
@@ -424,7 +433,6 @@ assets:
   - logical_name: dim_date
     physical_asset: v_dim_date
     grain: day
-    grain_level: 4                        # ★ 资产细度档 —— 日期维属明细主数据档
     domain: orders
     owner: data-team
     certified: true
@@ -432,7 +440,7 @@ assets:
     quality_score: 0.99
     freshness_sla: "P30D"
     level: cold
-    row_estimate: 731                     # 24 个月
+    row_estimate: 730                     # 实测（2024-10-01 … 2026-09-30 共 730 天，名义 731 多算 1）
     description: "日期维表（公共）。把'上个月''近7天'这类相对时间锚定到绝对区间。"
     columns:
       - name: date_key
@@ -463,10 +471,16 @@ assets:
 # ============================================================================
 # 2. 指标定义（**唯一权威口径**）
 # ============================================================================
-# `default_binding`（★ U-23 扩展）：该指标默认绑定的资产与时间字段。
+# `default_binding`（07 §4.7.1 裁定：**采纳但收窄为 `{asset, reason}`**）：
+# 该指标默认绑定的**资产**，以及 L3 命中该默认口径时**强制披露的文案**。
 # L3 层的语义是「该概念已有默认口径，且无排他候选 → 直接执行 + 强制披露」。
-# 对指标而言，最常缺的默认是「用哪张表、哪个时间字段」—— 用户问"GMV 多少"
-# 不会说"用 pay_time 算"，而 pay_time / create_time 都在同一张表里。
+# 对指标而言，最常缺的默认是「用哪张表」—— 用户问"GMV 多少"不会说"用 order_paid 算"。
+#
+# ⚠️ 原字段 `time_field` **已删**：它与本区块既有的 `time_basis` **重复**
+#    （同一事实两处 → 必然漂移）。时间基准一律读 `time_basis`。
+#    注意 `time_basis` 的语义不是"排他绑定"（`支付时间` 概念仍有 create_time 备选），
+#    而是本指标口径所属的时间基准 —— 这正是本指标为什么是 L3 而非 L2。
+# `reason` 的长度上限 **40 字**、渲染顺序（去重 → 字典序）见文件头 U-26 披露链路。
 metrics:
 
   - name: gmv
@@ -482,7 +496,6 @@ metrics:
       与财务口径的差异仅在"部分退款"处理上 —— 本口径暂不扣减部分退款。
     default_binding:
       asset: order_paid
-      time_field: pay_time
       reason: "GMV 的时间基准固定为 pay_time，而非 create_time"
     default_predicates:
       - "pay_status = 'paid'"
@@ -504,7 +517,6 @@ metrics:
     definition_note: "按子订单计数（非父订单）；仅已支付、未取消、未全额退款。"
     default_binding:
       asset: order_paid
-      time_field: pay_time
       reason: "订单量同为交易口径，与 GMV 共用时间基准"
     default_predicates:
       - "pay_status = 'paid'"
@@ -529,7 +541,6 @@ metrics:
       ⚠️ "件单价"（pay_amount / quantity）**不是** aov → 见 blacklist_terms。
     default_binding:
       asset: order_paid
-      time_field: pay_time
       reason: "客单价属交易口径"
     default_predicates:
       - "pay_status = 'paid'"
@@ -551,7 +562,6 @@ metrics:
     definition_note: "分母 = 去重买家数。与 aov **不可混用**。"
     default_binding:
       asset: order_paid
-      time_field: pay_time
       reason: "人均消费属交易口径"
     default_predicates:
       - "pay_status = 'paid'"
@@ -579,7 +589,6 @@ metrics:
       - "is_test_order = false"
     default_binding:
       asset: order_paid
-      time_field: pay_time
       reason: "退款率以支付订单为分母，时间随分母"
     time_basis: pay_time
     synonyms: ["退款率", "退货率", "退款占比"]
@@ -603,7 +612,6 @@ metrics:
       - "is_test_order = false"
     default_binding:
       asset: order_paid
-      time_field: pay_time
       reason: "复购窗口以支付时间为基准"
     time_basis: pay_time
     synonyms: ["复购率", "回购率", "复购"]
@@ -625,7 +633,6 @@ metrics:
       - "uv >= 0"
     default_binding:
       asset: traffic_daily
-      time_field: stat_date
       reason: "流量表的时间基准是 stat_date（date 型），不是 pay_time"
     time_basis: stat_date
     synonyms: ["UV", "uv", "访客数", "独立访客"]
@@ -645,7 +652,6 @@ metrics:
       - "uv >= 0"
     default_binding:
       asset: traffic_daily
-      time_field: stat_date
       reason: "转化率的分母是流量，时间随 UV"
     time_basis: stat_date
     synonyms: ["转化率", "支付转化率", "CVR", "成交转化", "转化"]
@@ -667,17 +673,29 @@ metrics:
 # ============================================================================
 # 3. 维度与层级
 # ============================================================================
-# `grain_level`（★ U-23）：数值，**1 = 最粗**。**只在同一 grain 序列内可比**
-#   （时间序列 / 地理序列 / 商品序列各自独立刻度，跨序列比较无意义）。
-# `grain_levels`：层级名 → 细度值 的映射，供 L2 的"粒度词抽取 → 查表"使用
-#   （07 §6.8.1：「抽取失败 → 不进入 L2」）。
+# `grain_levels`（07 §4.7.1 已裁定采纳）：层级名 → 细度值 的映射。
+#   契约：**族内刻度**（绝对值无跨族意义）；必须与 `hierarchy` **逐项对应**且**严格递增**
+#   （校验器断言）。供 L2 的「粒度词抽取 → 查表」使用（07 §6.8.1：「抽取失败 → 不进入 L2」）。
+#   ⚠️ L2 判"是否同粒度"用 **数值相等**，**不得用 `hierarchy` 数组下标**。
+#
+# `grain_level`（07 §4.7.1 已裁定采纳）：该维度的**默认细度**，数值，**1 = 最粗**。
+#   ⚠️ **本文件采用的读法**：默认层级 ≡ `hierarchy` 的**最后一层**（因 `hierarchy` 随
+#      `grain_levels` 严格递增，它等价于"该维度可表达的最细层级"）。校验器据此断言：
+#        `grain_level == grain_levels[hierarchy[-1]]`   （防漂移）
+#   ⚠️ **残留口径待确认（属已裁定的 U-23，不是新问题）**：07 §4.7.1 的定义是「问句未给
+#      粒度词时的默认粒度」。若架构窗口要的是"**`binding` 所在层级**"这一读法，则
+#        `region`（binding=region_code，省）应为 3、`category`（binding=category_l1）应为 1，
+#      而这两个当前分别是 4 / 3。**本文件不擅自改，也不擅自新增 `default_level` 字段** ——
+#      因为那会让"默认层级"变成一个需要落笔的**新字段**（附录 B 无承载位，属 U-34 范围）。
+#      → 已由架构窗口知悉（W1A_HANDOVER §4.1 的"U-23 残留"行）。
+#
 dimensions:
 
   - name: region
     binding: order_paid.region_code
     hierarchy: [country, region, province, city]
     grain_levels: { country: 1, region: 2, province: 3, city: 4 }
-    grain_level: 4                     # binding 落在 city 层（v_region.province_name 用于名称回填）
+    grain_level: 4                     # = grain_levels[hierarchy[-1]] = city（见上方"默认细度"读法）
     value_map:                         # ⚠️ 大区映射是**业务约定**，不是数据库字段 → 必须走 value_map
       "华东": ["310000", "320000", "330000", "340000", "350000", "360000", "370000"]
       "华南": ["440000", "450000", "460000"]
@@ -740,19 +758,23 @@ dimensions:
 # ============================================================================
 # 4. 字段绑定（**唯一性保障 —— 核心机制**）
 # ============================================================================
-# `default_binding`（★ U-23）：该概念的**默认字段**（L3 层依据）。
-# ⚠️ 与 `ambiguous: true` **互斥**：ambiguous 的概念**不得**有 default_binding ——
-#    否则 L3 会抢在澄清之前把它"解决"掉，歧义被静默吞掉。
+# `canonical_asset` —— 概念的**规范字段**（07 §4.7.1：L3 的字段层依据）。
+# `default_reason` —— 07 §4.7.1 **新增**字段：命中该默认绑定时**强制披露的文案**
+#    （载体 = `insight.caveats[]`，见文件头 U-26 链路；≤ 40 字）。
+#
+# ⚠️ 两条互斥纪律（校验器断言，不是口头约定）：
+#   ① `ambiguous: true` ⇒ **不得有 `canonical_asset`、也不得有 `default_reason`**。
+#      原设计留"占位非空 canonical_asset" = **留了一个假值** —— 任何漏判 L3 的路径
+#      都会把它当真（07 §4.7.1）。② 非 ambiguous ⇒ **两者都不得缺**。
+# ⚠️ 原字段 `field_bindings[].default_binding` **已删**：它与 `canonical_asset`
+#    **恒等**（同一事实两处）→ 真正缺失的信息是 `default_reason`。
 field_bindings:
 
   - concept: customer_name
     canonical_asset: shop.shop_name
     time_semantics: current
     grain_level: 1
-    default_binding:
-      asset: shop
-      column: shop_name
-      reason: "主数据现值"
+    default_reason: "主数据现值"
     note: "当前店铺名称（主数据现值）"
     alternatives:
       - asset: order_paid.buyer_id
@@ -771,16 +793,14 @@ field_bindings:
         label: 店铺所在城市
         grain_level: 4
     clarify_prompt: "你说的「城市」是指收货城市还是店铺所在城市？"
-    # ⚠️ 刻意不设 default_binding —— 见上方区块注释
+    # ⚠️ 刻意不设 canonical_asset、也不设 default_reason —— 见上方区块注释。
+    #    留一个"占位非空"的规范字段 = 把歧义变成假值（07 §4.7.1 点名要求去掉）。
 
   - concept: 商品名称
     canonical_asset: product.sku_name
     time_semantics: current
     grain_level: 3
-    default_binding:
-      asset: product
-      column: sku_name
-      reason: "商品名以 SKU 标题为准"
+    default_reason: "商品名以 SKU 标题为准"
     alternatives:
       - asset: product.spu_id
         use_when: spu_level
@@ -790,39 +810,27 @@ field_bindings:
     canonical_asset: traffic_daily.channel
     time_semantics: current
     grain_level: 1
-    default_binding:
-      asset: traffic_daily
-      column: channel
-      reason: "渠道枚举定义在流量表"
+    default_reason: "渠道枚举定义在流量表"
     note: "⚠️ order_paid.channel 同样存在（成交渠道）。订单域问题应绑 order_paid.channel"
 
   - concept: 类目
     canonical_asset: order_paid.category_l1
     time_semantics: current
     grain_level: 1
-    default_binding:
-      asset: order_paid
-      column: category_l1
-      reason: "订单上下文下的类目以成交记录为准"
+    default_reason: "订单上下文下的类目以成交记录为准"
 
   - concept: 大区
     canonical_asset: region.region_name
     time_semantics: current
     grain_level: 2
-    default_binding:
-      asset: region
-      column: region_name
-      reason: "大区是 value_map 派生的业务约定，非原始列"
+    default_reason: "大区是 value_map 派生的业务约定，非原始列"
     note: "⚠️ 该绑定不可直接生成 SQL —— regression 需经 dimensions.region.value_map 展开"
 
   - concept: 支付时间
     canonical_asset: order_paid.pay_time
     time_semantics: transaction_time
     grain_level: 5
-    default_binding:
-      asset: order_paid
-      column: pay_time
-      reason: "交易口径的时间基准"
+    default_reason: "交易口径的时间基准"
     alternatives:
       - asset: order_paid.create_time
         use_when: order_snapshot
@@ -831,6 +839,16 @@ field_bindings:
 # ============================================================================
 # 5. 允许的 Join 路径（图）—— **未列出 = 禁止**
 # ============================================================================
+# 契约不变量：`on_columns` 只能是**列对**（左右各一，或同名只写一个）。
+#   ⚠️ 这条不变量**不允许**靠新增 join 类型来绕过（07 §4.7.1 关于 U-28 的裁定）。
+#
+# ⚠️ 两条**必须带 `note`** 的危险边（校验器断言，缺 note 即 FAIL）：
+#   ① **跨租户边界的边**：`left` 侧 `tenant_scoped: false` 而 `right` 侧 `true`
+#      → 租户谓词**必须落在右侧**，否则会出现跨租户的扇出（一条公共维表行匹配到
+#      多个租户的行）。这比"看不到别的租户"更隐蔽：它会让聚合值**变大而无人报警**。
+#   ② **两侧声明类型不同的边**：`on_columns` 两列的 `type` 不一致（如 `timestamptz`
+#      vs `date`）→ **不是裸等值**，必须把归一化表达式写进 note。
+#      否则实现者会写出 `ON pay_time = date_key`（永不命中 → **静默 0 行**）。
 joins:
   - left: order_paid.sku_id
     right: product.sku_id
@@ -868,6 +886,44 @@ joins:
     on_columns: [category_l1]
     certified_by: data-team
     note: "类目名称对齐通路（避免 UUID 式类目 id 缺维表）"
+
+  # ---- U-28：区间关联（活动期订单）的**两跳路径**，07 §4.7.1 **要求显式登记** ----
+  #   裁定原文：「区间关联不新增 join 类型，**只能经 `v_dim_date` 两跳**；
+  #   语义包必须**显式登记**该 2 跳路径，否则 **gate1 R10 一律拒绝**」。
+  #   → 下面把两跳**拆成两条边**登记（这就是"显式登记"：不登记则路径不可达、R10 拒绝）。
+  #
+  #   ⚠️ 实测（2026-09-16，沙箱库）：这条路径**不是**理想的等值两跳，有两个必须写明的陷阱：
+  #     ① `order_paid.pay_time` 是 `timestamptz`、`dim_date.date_key` 是 `date`
+  #        → **不是裸等值**，必须写 `date(order_paid.pay_time) = v_dim_date.date_key`。
+  #     ② `v_dim_date` 是**公共日历**（`tenant_scoped: false`），而它的 `campaign_id` 只有
+  #        **4 个 PROM 值**（PROM_618_2025 / PROM_618_2026 / PROM_DOUBLE11_2024 /
+  #        PROM_DOUBLE11_2025，共 102 天有值、628 天为 null），**且这 4 个 id 在 3 个租户里
+  #        都存在同名活动**（实测：4 个 campaign_id 各自命中 >1 个租户）
+  #        → 这一跳**必须带租户谓词**（落在 `campaign` 侧），否则**一条 dim_date 行会匹配
+  #        3 条 campaign 行 → 3 倍扇出**，聚合值静默变大。
+  #     ③ 这也意味着：**只有大促窗口内的订单**能经此路径关联到活动；日常促销
+  #        （`NORMAL-YYYY-MM-T_x`，账号内 24 条）在 `dim_date` 里**没有**映射
+  #        → 问"本月活动订单"时，若不加限定会**只统计到大促**。
+  #        该事实必须进评测报告的"已知限制"，不得当成完整覆盖。
+  - left: order_paid.pay_time
+    right: dim_date.date_key
+    type: many_to_one
+    on_columns: [pay_time, date_key]
+    certified_by: data-team
+    note: "U-28 两跳第 1 跳。⚠️ **非裸等值**：pay_time 是 timestamptz、date_key 是 date → 实现必须写 date(order_paid.pay_time) = v_dim_date.date_key。"
+  - left: traffic_daily.stat_date
+    right: dim_date.date_key
+    type: many_to_one
+    on_columns: [stat_date, date_key]
+    certified_by: data-team
+    note: "U-28 可用同构路径（流量侧）。两侧同为 date → 裸等值。"
+  - left: dim_date.campaign_id
+    right: campaign.campaign_id
+    type: many_to_one
+    on_columns: [campaign_id]
+    certified_by: data-team
+    note: "U-28 两跳第 2 跳。⚠️ **跨租户边界的边**：左为公共日历（tenant_scoped: false）、右为租户资产 → 租户谓词必须落在 campaign 侧，否则一条 dim_date 行匹配 3 个租户的同名活动 → 3 倍扇出。且 dim_date.campaign_id 仅大促窗口有值（102/730 天）。"
+
   # ⚠️ 刻意**不列出**：order_paid × traffic_daily 的直连。
   #    二者只能经 product 桥接（2 跳）。直连 = 语义错误的关联（订单与流量无共同粒度键）
   #    → 对应红队用例 RT-JOIN-003「未认证 JOIN 路径」。

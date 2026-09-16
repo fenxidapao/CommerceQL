@@ -1,13 +1,24 @@
 {
   "produced_by_window": "W1A",
+  "manifest_schema": "1.1",
   "dataset_version": "1",
   "content_hash": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609",
+  "nominal_vs_measured_discipline": {
+    "rule": "「生成器输入（名义）」与「实测事实」必须分开存放，且实测事实必须可由 selfcheck.py 复算。",
+    "why": "07 §4.7.4 第 1 条：把结论写进文档而不写进产物时，审计者会依据那句话跳过核对 —— 本案实际发生过（W1A 曾声称『494,249 已如实写进 MANIFEST』，而此处当时只有名义值 500000）。",
+    "nominal_key": "sandbox.params.*   ← 生成器输入，**不是事实**",
+    "measured_key": "measured.*          ← 实测，可由 data/generator/selfcheck.py 复算并断言"
+  },
   "sandbox": {
     "path": "data/ecom_sandbox.db",
     "bytes": 440729600,
+    "bytes_human": "420.3 MiB",
     "sha256": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+    "git_tracked": false,
+    "git_ignore_hit": ".gitignore 的 *.db（W0 于 aef8750 撤除了原来的 !ecom_sandbox.db 反向放行）",
     "generator": "data/generator/seed_generator.py",
     "generator_sha256": "c0b2569cca1fc34216b281938ebf7d5ee59ddc8638d5f9a55dae37285de9dccf",
+    "params_semantics": "⚠️ 以下 params 是**生成器的输入参数（名义）**，用于复现；**不是**数据物的事实。事实见 measured 段。",
     "params": {
       "boundary_order_count": 24,
       "category_l1_count": 8,
@@ -79,13 +90,140 @@
     },
     "reproduce": "python data/generator/seed_generator.py --out data/ecom_sandbox.db  # 同种子 → 同字节"
   },
+  "measured": {
+    "measured_at": "2026-09-16",
+    "measured_by": "W1A",
+    "method": "对 data/ecom_sandbox.db 的 8 个**认证视图**逐个 COUNT(*)；不查裸表。",
+    "db_sha256_at_measure": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+    "self_verified": "data/generator/selfcheck.py 的『额外② - 实测行数 ↔ MANIFEST.measured 一致』会在每次自检时复算并断言；库一改而不更新本段 → 自检变红。",
+    "tables": {
+      "v_order_paid": {
+        "rows": 494249,
+        "params_nominal": 500000,
+        "delta": -5751,
+        "delta_reason": "T_C 2025-02 空区间（U-31 裁定『保空区间』）吃掉的订单数"
+      },
+      "v_order_refund": {
+        "rows": 23116,
+        "params_nominal": 25000,
+        "delta": -1884,
+        "delta_reason": "退款按子订单抽样生成，名义值是上界"
+      },
+      "v_product": {
+        "rows": 6000,
+        "params_nominal": 2000,
+        "delta": 4000,
+        "delta_reason": "⚠️ params.sku_total=2000 是**单租户**的 SKU 数；实测 = 3 租户 × 2000（跨租户同构）"
+      },
+      "v_shop": {
+        "rows": 12,
+        "params_nominal": 12,
+        "delta": 0,
+        "delta_reason": "= sum(shops_per_tenant) = 5+4+3"
+      },
+      "v_region": {
+        "rows": 31,
+        "params_nominal": null,
+        "delta_reason": "公共维表，无生成参数；31 = 省级行政区数"
+      },
+      "v_campaign": {
+        "rows": 84,
+        "params_nominal": 24,
+        "delta": 60,
+        "delta_reason": "⚠️ 名义值 24 是**单租户**的日常促销数（2024-10 … 2026-09 共 24 个月）；实测 = 3 租户 × 28（24 条 NORMAL + 4 条 PROM）"
+      },
+      "v_traffic_daily": {
+        "rows": 1500556,
+        "params_nominal": 1500000,
+        "delta": 556,
+        "delta_reason": "稀疏分布 + 确定性重分配（在架 SKU × 有效渠道 × 有流量日）"
+      },
+      "v_dim_date": {
+        "rows": 730,
+        "params_nominal": 731,
+        "delta": -1,
+        "delta_reason": "2024-10-01 … 2026-09-30 实测 730 天；名义 731 多算 1（24 个月 × 30.5 的估算）"
+      }
+    },
+    "by_tenant": {
+      "v_order_paid": {
+        "T_A": 200000,
+        "T_B": 175000,
+        "T_C": 119249
+      },
+      "v_order_refund": {
+        "T_A": 9444,
+        "T_B": 8130,
+        "T_C": 5542
+      },
+      "v_product": {
+        "T_A": 2000,
+        "T_B": 2000,
+        "T_C": 2000
+      },
+      "v_shop": {
+        "T_A": 5,
+        "T_B": 4,
+        "T_C": 3
+      },
+      "v_campaign": {
+        "T_A": 28,
+        "T_B": 28,
+        "T_C": 28
+      },
+      "v_traffic_daily": {
+        "T_A": 600178,
+        "T_B": 525196,
+        "T_C": 375182
+      },
+      "v_region": {
+        "note": "无 tenant_id 列（tenant_scoped: false）→ 公共维表，31 行全局共享"
+      },
+      "v_dim_date": {
+        "note": "无 tenant_id 列（tenant_scoped: false）→ 公共日历，730 行全局共享"
+      }
+    },
+    "findings": [
+      {
+        "id": "M-1",
+        "about": "v_order_paid",
+        "fact": "pay_time 类型是 timestamptz（不是 date）",
+        "consequence": "与 v_dim_date.date_key（date）**不是裸等值** → 语义包该条边已强制带 note；实现若写 ON pay_time = date_key 会**静默 0 行**"
+      },
+      {
+        "id": "M-2",
+        "about": "v_dim_date.campaign_id",
+        "fact": "非空行 = 102 / 730；非空值只有 4 个：PROM_618_2025 / PROM_618_2026 / PROM_DOUBLE11_2024 / PROM_DOUBLE11_2025",
+        "consequence": "① 与 v_campaign 的关联**只覆盖大促**，日常促销（NORMAL-YYYY-MM-T_x，每租户 24 条）无映射 → 「活动订单」口径不完整，须进评测报告『已知限制』；② 见 M-3 的扇出风险"
+      },
+      {
+        "id": "M-3",
+        "about": "v_dim_date → v_campaign",
+        "fact": "上述 4 个 campaign_id **在 3 个租户里都存在同名活动**（每个 id 的 DISTINCT tenant_id > 1）",
+        "consequence": "v_dim_date 是公共表（tenant_scoped: false）→ 这一跳是**跨租户边界的边**：不把租户谓词落在 campaign 侧，一条 dim_date 行会匹配 3 条 campaign 行 → **3 倍扇出**，聚合值静默变大"
+      }
+    ],
+    "not_measured": [
+      "V1–V7 数据变体的 patch 脚本**未实现**（L1）→ 附录 C §C.5.3 的『每条用例跑 V0 + 1 变体』当前**跑不了**",
+      "『零分母 SKU』40 个已在生成器内部确定性产生，但**清单未导出**（只有计数）→ 做 V6 变体前需先暴露（L5）"
+    ]
+  },
   "layering": {
     "tool": "data/generator/layering.py",
-    "sha256": "5c767ed73aba3dd0bfcc9ebdeb60ef4621525983da64b313bc7a6576cba66b50",
-    "upstream_reference": "github.com/taoyds/spider · evaluation.py (行 206/299/303/324/329/362)",
+    "sha256": "fab9785036d87c1ed18da3d24eeb0920ddd53a6c370a1d2877d39d8f74cfe069",
+    "sha256_note": "本字段记录的是 **07 §4.7.2 裁定落地后**的版本（新增本项目锚点 / 官方锚点降级为差异记录）。改动 layering.py 必须重算本字段。",
+    "main_dialect": "difficulty_struct = 上游代码口径（07 §4.7.2 定为**唯一主口径**；§17.6 I-1）",
+    "comparison_only_dialect": "difficulty_struct_sitelabel —— **仅对照字段**，禁止进分层统计 / 门禁判定 / 报告 headline（07 §4.7.2 + §17.6 I-1 的一致性测试②：报告器字段白名单静态检查）",
+    "anchors": {
+      "official": "4 条，**差异记录，不参与门禁**（Hard 一条在采纳口径下必然不符 = U-30）",
+      "project": "4 级 6 条，**CI 门禁必须 100% 命中**（07 §4.7.2 新立；入口 = layering.py --anchors，退出码即结论）",
+      "current": "官方：主口径 3/4 命中（Hard 不符）、对照口径 4/4；本项目：6/6 命中"
+    },
+    "upstream_reference": "github.com/taoyds/spider · evaluation.py（**引用按函数名，不按行号** —— 07 §4.1 禁令 4；U-29 的事故根因就是行号引用）",
     "known_discrepancies": [
-      "U-29 component2 定义",
-      "U-30 JOIN 计数口径"
+      "U-29 component2 定义（附录 C §C.3.1 引用了死常量 HARDNESS；真正生效的是 len(get_nestedSQL())，子查询计入）—— 已由 07 §4.7.1 采纳并回填上游",
+      "U-30 官方四级锚点与代码口径在 Hard 档不一致 —— 已由 07 §4.7.2 裁定：官方锚点降级为差异记录，本项目锚点另立（见上）",
+      "⚠️ **新增（W1A 实测）**：07 §4.7.2 锚点③ 的括号注「3 表 JOIN + WHERE + GROUP BY（comp1=4）→ hard」与它自己指定的唯一主口径不符 —— 实算 comp1=4 → **extra**。该 SQL 已作为分歧点锚点保留在 layering.py 中，并需回填 07 / 附录 C（与 U-35 同族）"
     ]
   },
   "counts": {

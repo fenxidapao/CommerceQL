@@ -30,27 +30,45 @@
 
       U-29｜`component2` 的定义，附录 C 抄了一个**死常量**。
         附录 C §C.3.1 写「Component2：EXCEPT、UNION、INTERSECT」，来源标注"行号 53-56"。
-        实测 `evaluation.py` 第 53-56 行是：
+        实测 `evaluation.py` 该处是：
             HARDNESS = {"component1": (...), "component2": ('except','union','intersect')}
         而 **`HARDNESS` 这个字典在全文件只出现这一次 —— 定义了，从未被使用**。
-        真正生效的是第 324 行 `count_component2(sql)` → `len(get_nestedSQL(sql))`，
-        而 `get_nestedSQL`（第 206-219 行）收集的是
+        真正生效的是 `count_component2(sql)` → `len(get_nestedSQL(sql))`，
+        而 `get_nestedSQL` 收集的是
         **WHERE/HAVING/ON 里的子查询 + intersect/except/union 分支**。
         → 即：**子查询也计入 component2**，附录 C 只写了集合运算那一半。
-        本文件 **以上游生效代码为准**；输出同时保留 `comp2_setops` 供核对。
+        **07 §4.7.1 已采纳本诊断**（口径 = `len(get_nestedSQL())`，子查询计入）。
+        本文件以上游生效代码为准；输出同时保留 `comp2_setops` 供核对。
+        ⚠️ 引用一律按**函数名**，不按行号 —— 07 §4.1 禁令 4（U-29 的事故根因就是行号引用）。
 
       U-30｜按上游代码实算，**官方站点标注的 "Hard" 示例会得到 "extra"**。
         官方示例（`_refs/spider_examples.png` 实读）：
             SELECT T1.country_name FROM countries T1 JOIN continents T2 ON T1.continent=T2.cont_id
             JOIN car_makers T3 ON T1.country_id=T3.country
             WHERE T2.continent='Europe' GROUP BY T1.country_name HAVING COUNT(*)>=3
-        按第 313-314 行 `count += len(table_units) - 1`：3 张表 → +2，
+        按 `count += len(table_units) - 1`：3 张表 → +2，
         再加 WHERE(+1) 与 GROUP BY(+1) → **comp1 = 4**，others = 0，comp2 = 0
         → `eval_hardness` 落入 `else: return "extra"`。**与站点标注的 Hard 不符。**
         反之若 JOIN 只记 1 个组件（"站点标签口径"），comp1 = 3 → hard，四个官方示例全部吻合。
-        → 两种口径都实现（`difficulty_struct` 取上游代码口径；
-          `difficulty_struct_sitelabel` 取站点标签口径），**由架构窗口裁定**，
-          W1A 不擅自选一个当作"官方真相"。`--anchors` 可随时复跑这 4 条锚点。
+
+      **07 §4.7.2 的裁定（v0.8，已落）**：
+        · `difficulty_struct` **= 上游代码口径，唯一主口径**（理由：可复现；且换站点口径会让
+          `extra` 档从 28 条塌成 3 条 → **DoD③ 直接不达标**）。
+        · `difficulty_struct_sitelabel` **降级为对照字段** ——
+          **禁止**用于：分层统计 / 门禁判定 / 报告 headline / 任何"覆盖率"断言。
+          唯一用途 = 让后来人一眼看到"我们与站点标签差在哪"（U-30 的物证）。
+        · **官方 4 锚点降级为"差异记录"，不作为门禁**（其中 Hard 一条在采纳口径下必然不符）。
+        · **另立本项目锚点**（`PROJECT_ANCHORS`，CI 断言 100% 命中）——
+          锚点必须是"**采纳口径下的真实边界**"，不是"我们希望它是什么"。
+          `--anchors` 一次打印两组锚点。
+
+      ⚠️ **裁定锚点描述里的一处不一致（W1A 实测，与 U-30 同形态）**：
+        07 §4.7.2 锚点③写「3 表 JOIN + WHERE + GROUP BY（`comp1=4`）→ `hard`」。
+        按被它自己定为唯一主口径的代码实算：`comp1 = (3-1) + 1 + 1 = 4` →
+        `spider_level(4, 0, others)` 三条 hard 子句**全不满足** → **`extra`**。
+        `comp1=4` 落 `extra` 这一点，**正是 U-30 的结论本身**（官方 Hard 示例 comp1=4 → extra）。
+        → 本文件不按那句话写锚点，而是**按真实边界**写，并把该 SQL 作为
+          "**裁定描述 vs 采纳口径的分歧点**"锚点单独列出（`DIVERGENCE`）。
 
 轴 2｜业务语义复杂度：附录 C §C.3.3 原样
      · 低：`business_knowledge_required` 为空
@@ -66,6 +84,8 @@
     python data/generator/layering.py --sql "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-01-01'"
     # 自检：打印 4×3 网格计数
     python data/generator/layering.py --in X --grid
+    # 锚点回归（**本项目锚点 = 门禁**；官方锚点只作差异记录）→ 退出码即门禁结论
+    python data/generator/layering.py --anchors
 """
 
 from __future__ import annotations
@@ -271,8 +291,10 @@ def classify_struct(sql: str) -> dict:
         "comp2_setops": count_component2_setops(root),
         "others": others,
         "others_detail": detail,
-        # ★ 默认口径 = **上游代码**（可复现、可验证）；见文件头 U-29/U-30
+        # ★ 主口径 = **上游代码**（07 §4.7.2 裁定为唯一主口径；可复现、可逐行核对）
         "difficulty_struct": spider_level(c1, c2, others),
+        # ⚠️ **仅对照字段**（07 §4.7.2）：禁止进分层统计 / 门禁判定 / 报告 headline。
+        #    唯一用途 = 记录"我们与站点标签差在哪"。见本文件头 U-30。
         "difficulty_struct_sitelabel": spider_level(c1_site, c2, others),
     }
 
@@ -315,7 +337,8 @@ def annotate_case(case: dict) -> dict:
 
 
 # ---- 官方四级锚点（SQL 逐字取自 _refs/spider_examples.png 实读）----
-ANCHORS: list[tuple[str, str, str]] = [
+# ⚠️ 07 §4.7.2 裁定：**降级为"差异记录"，不作为门禁**（Hard 一条在采纳口径下必然不符）。
+OFFICIAL_ANCHORS: list[tuple[str, str, str]] = [
     ("Easy",
      "SELECT COUNT(*) FROM cars_data WHERE cylinders > 4", "easy"),
     ("Medium",
@@ -332,24 +355,103 @@ ANCHORS: list[tuple[str, str, str]] = [
      "extra"),
 ]
 
+# ---- 本项目锚点（07 §4.7.2 裁定"**新立**"，CI 必须 100% 命中）----
+#   判据 = 「**采纳口径下的真实边界**」，不是"我们希望它是什么"。
+#   每条都注明**它为什么落在该级**（comp1 / comp2 / others 各由什么构成）——
+#   这样断言一旦失效，能一眼看出是**哪一根计数**变了，而不是只看到一个 FAIL。
+#   SQL 全部只用本项目的资产名（v_order_paid / v_product / v_shop），
+#   故它同时是"本项目口径"的锚点，而不是又一份 Spider 示例的转述。
+PROJECT_ANCHORS: list[tuple[str, str, str, str]] = [
+    ("P1-easy",
+     "SELECT COUNT(*) FROM v_order_paid WHERE pay_status = 'paid'",
+     "easy",
+     "comp1=1(WHERE) comp2=0 others=0 → 命中第 1 条（三项全成立）"),
+    ("P2-medium",
+     "SELECT p.category_l1, SUM(o.pay_amount) FROM v_order_paid o "
+     "JOIN v_product p ON o.sku_id = p.sku_id GROUP BY p.category_l1",
+     "medium",
+     "comp1=2(JOIN+1, GROUP BY+1) others=1(SELECT 列数>1) → 命中『comp1<=2 且 others<2』"),
+    ("P3-hard-a",
+     "SELECT p.category_l1, SUM(o.pay_amount) FROM v_order_paid o "
+     "JOIN v_product p ON o.sku_id = p.sku_id GROUP BY p.category_l1 ORDER BY 2 DESC",
+     "hard",
+     "comp1=3(JOIN+1, GROUP BY+1, ORDER BY+1) others=1 → 命中『2<comp1<=3 且 others<=2』"),
+    ("P3-hard-b",
+     "SELECT category_l1, SUM(pay_amount), AVG(pay_amount) FROM v_order_paid "
+     "WHERE pay_status = 'paid' AND is_test_order = false "
+     "GROUP BY category_l1, region_code",
+     "hard",
+     "comp1=2(WHERE+1, GROUP BY+1) others=4(聚合>1, 列>1, 条件单元>1, 分组列>1) → 命中『others>2 且 comp1<=2』"),
+    ("P4-extra-a",
+     "SELECT AVG(pay_amount) FROM v_order_paid WHERE shop_id NOT IN "
+     "(SELECT shop_id FROM v_shop WHERE city = '广州')",
+     "extra",
+     "comp2=1(子查询计入) 且 others=1 → 三条 hard 子句**全不满足**（含『others==0』那一支）"),
+    ("P4-extra-b",
+     "SELECT s.shop_name, COUNT(*) FROM v_order_paid o "
+     "JOIN v_product p ON o.sku_id = p.sku_id JOIN v_shop s ON o.shop_id = s.shop_id "
+     "WHERE o.pay_status = 'paid' GROUP BY s.shop_name",
+     "extra",
+     "comp1=4(JOIN 2 表→+2, WHERE+1, GROUP BY+1) → 三条 hard 子句全不满足。**这一条同时是 U-30 的核心证据**"),
+]
+
+# ---- 分歧点（**裁定描述** vs **采纳口径**），故意保留在锚点里 ----
+#   07 §4.7.2 锚点③ 的括号注写「3 表 JOIN + WHERE + GROUP BY（comp1=4）→ hard」。
+#   但按同一节定为**唯一主口径**的上游代码实算：comp1 = 4 → **extra**
+#   （这正是 U-30 的结论本身：官方 Hard 示例 comp1=4 → extra）。
+#   → 保留这条 SQL 的用途有两个：
+#     ① 它是"描述与口径不一致"的**物证**（与 U-35 同族，需回填 07/附录 C）；
+#     ② 若哪天它真的变成 hard，说明有人**偷偷改了 `spider_level`** ——
+#        那必须先改 07 §4.7.2 与 §17.6 I-1，而不是改代码。
+DIVERGENCE_SQL = PROJECT_ANCHORS[-1][1]
+DIVERGENCE_CLAIMED = "hard"   # 07 §4.7.2 锚点③ 的描述
+DIVERGENCE_ACTUAL = "extra"   # 采纳口径的实测结果
+
 
 def run_anchors() -> bool:
-    """跑官方四级锚点。返回是否**全口径**都能对上（false 说明 U-30 的风口存在）。"""
-    print("官方四级锚点自检（SQL 取自 _refs/spider_examples.png）")
-    print(f"{'等级':12s}{'comp1':>7s}{'comp1_site':>12s}{'comp2':>7s}{'others':>8s}"
-          f"{'代码口径':>11s}{'站点口径':>11s}{'期望':>9s}")
+    """打印两组锚点。**返回值 = 本项目锚点是否 100% 命中**（即 CI 门禁的口径）。
+
+    官方锚点**只打印、不参与返回值** —— 07 §4.7.2 已把它降级为差异记录；
+    若还用它当门禁，Hard 那条会永远红，门禁就会被人为放宽（护栏失效的经典路径）。
+    """
+    print("=" * 104)
+    print("锚点回归 · 第 1 组：官方 4 条 —— **差异记录，不参与门禁**（07 §4.7.2）")
+    hdr = (f"{'等级':12s}{'comp1':>7s}{'comp1_site':>12s}{'comp2':>7s}{'others':>8s}"
+           f"{'主口径':>10s}{'对照口径':>12s}{'站点期望':>10s}")
+    print(hdr)
     all_code, all_site = True, True
-    for name, sql, exp in ANCHORS:
+    for name, sql, exp in OFFICIAL_ANCHORS:
         r = classify_struct(sql)
         gc, gs = r["difficulty_struct"], r["difficulty_struct_sitelabel"]
         all_code &= (gc == exp)
         all_site &= (gs == exp)
         print(f"{name:12s}{r['comp1']:>7d}{r['comp1_sitelabel']:>12d}{r['comp2_nested']:>7d}"
-              f"{r['others']:>8d}{gc:>11s}{gs:>11s}{exp:>9s}")
+              f"{r['others']:>8d}{gc:>10s}{gs:>12s}{exp:>10s}")
+    print(f"  → 主口径（上游代码，唯一主口径）全对：{'是' if all_code else '否 ← U-30 的暴露点（已登记为差异，不再视为缺陷）'}")
+    print(f"  → 对照口径（站点标签，**禁进报告/统计**）全对：{'是' if all_site else '否'}")
+
     print()
-    print(f"  上游代码口径（JOIN = 表数-1）全对：{'是' if all_code else '否  ← U-30 的暴露点'}")
-    print(f"  站点标签口径（JOIN = 1）  全对：{'是' if all_site else '否'}")
-    return all_site
+    print("=" * 104)
+    print("锚点回归 · 第 2 组：**本项目锚点** —— CI 门禁，必须 100% 命中（07 §4.7.2 新立）")
+    print(f"{'锚点':14s}{'comp1':>7s}{'comp2':>7s}{'others':>8s}{'判定':>8s}{'期望':>8s}{'':4s}判据")
+    ok = True
+    for name, sql, exp, why in PROJECT_ANCHORS:
+        r = classify_struct(sql)
+        got = r["difficulty_struct"]
+        hit = got == exp
+        ok &= hit
+        print(f"{name:14s}{r['comp1']:>7d}{r['comp2_nested']:>7d}{r['others']:>8d}"
+              f"{got:>8s}{exp:>8s}{'  OK  ' if hit else ' FAIL ':>6s}{why}")
+    print()
+    d = classify_struct(DIVERGENCE_SQL)
+    print("分歧点（**裁定描述 vs 采纳口径**，故意保留）：")
+    print(f"  07 §4.7.2 锚点③ 称该形状（3 表 JOIN + WHERE + GROUP BY，comp1={d['comp1']}）为 "
+          f"**{DIVERGENCE_CLAIMED}**；采纳口径实算 = **{d['difficulty_struct']}**")
+    print(f"  → 若此处突然变成 {DIVERGENCE_CLAIMED}，说明 `spider_level` 被改了 —— "
+          f"那必须先改 07 §4.7.2 与 §17.6 I-1，**不是改这个函数**")
+    print()
+    print(f"本项目锚点 100% 命中：{'是' if ok else '否 —— 门禁不通过'}")
+    return ok
 
 
 def grid(cases: list[dict]) -> tuple[dict, list[str]]:
@@ -379,12 +481,13 @@ def main(argv=None) -> int:
     ap.add_argument("--out", dest="dst", help="输出 JSON（省略则只打印）")
     ap.add_argument("--sql", help="只判定一条 SQL 并打印")
     ap.add_argument("--grid", action="store_true", help="打印 4×3 网格计数")
-    ap.add_argument("--anchors", action="store_true", help="跑官方四级锚点自检（U-30 的复现入口）")
+    ap.add_argument("--anchors", action="store_true",
+                    help="锚点回归：官方 4 条（差异记录）+ **本项目 4 条（CI 门禁）**；退出码 = 后者是否 100% 命中")
     args = ap.parse_args(argv)
 
     if args.anchors:
-        run_anchors()
-        return 0
+        # 退出码 = **本项目锚点**是否 100% 命中（官方锚点不参与，见 run_anchors 的 docstring）
+        return 0 if run_anchors() else 1
 
     if args.sql:
         print(json.dumps(classify_struct(args.sql), ensure_ascii=False, indent=2))

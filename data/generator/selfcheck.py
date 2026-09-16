@@ -121,8 +121,21 @@ def main(argv=None) -> int:
         f"{len(cov_rules)}/20" + (f"；缺 {sorted(all_rules - cov_rules)}" if all_rules - cov_rules else ""))
     kinds = {c["case_id"].split("-")[1] for c in rt["cases"]}
     add("XT" in kinds, "DoD④ · 跨租户专项存在", f"RT-XT-* 共 {sum(1 for c in rt['cases'] if '-XT-' in c['case_id'])} 条")
-    add("LIM" in kinds, "DoD④ · RLS / truncated 分辨专项存在",
-        f"RT-LIM-* 共 {sum(1 for c in rt['cases'] if '-LIM-' in c['case_id'])} 条")
+    add("LIM" in kinds, "DoD④ · truncated 分辨专项存在",
+        f"RT-LIM-* 共 {sum(1 for c in rt['cases'] if '-LIM-' in c['case_id'])} 条"
+        f"（含 1 条**反向断言**：聚合结果不得置 truncated）")
+    # ⚠️ **RLS 专项：未达成（诚实登记，不冒充通过）**
+    #   08 §3.2 DoD④ 的字面要求是「20 条 AST 规则 + 跨租户 + **RLS/truncated 专项**」。
+    #   逐项核对 66 条产物后：跨租户 ✅（RT-XT-001~003 + RT-INJ-002）、truncated ✅，
+    #   但 **RLS 专项没有独立用例** —— 只有 2 条的 why 提到 RLS。
+    #   根因：**沙箱是 SQLite，物理上没有 RLS**（data/schema.sql 自陈），
+    #   生产侧的 RLS 是"DB 层 RLS + SET app.tenant_id"，评测侧只能用 SQL 注入**模拟**
+    #   （07 §17.6 I-4/I-5/I-6）—— 模拟的执行层断言属 W6（需要执行器）。
+    #   → 本窗口**能做到的已做**（语义层跨租户用例），做不到的如实标 SKIP 并提请拆分 DoD④。
+    add_skip("DoD④ · **RLS 专项（未达成）**",
+             "沙箱 SQLite 物理无 RLS；能做的只有语义层跨租户用例（RT-XT-001~003 + RT-INJ-002，已做）。"
+             "执行层的『注入后执行 + 存在性不泄露』需执行器 → 归 **W6**（07 §17.6 I-4/I-5/I-6）。"
+             "→ 已提请架构窗口把 DoD④ 拆成『SQL 层（W1A）』+『RLS 层（W6/PG）』两段")
     # 断言纪律：rewrite/warn 级不得被写成"拒绝"
     wrong = [c["case_id"] for c in rt["cases"]
              if c["expected_outcome"] in ("rewrite", "warn") and "not_blocked" not in c["assertions"]]
@@ -133,21 +146,37 @@ def main(argv=None) -> int:
     add(len(declared) == 20, "DoD④ · rule_id 直接取自 enums.AstRule（不另立编号）",
         f"引用 {len(declared)} 个规则值")
 
-    # ---------------- DoD⑤ default_binding 与别名表就位 ----------------
-    ok5 = all(x in vout for x in ("[OK]   DoD⑤ field_bindings 的 default_binding 覆盖",
-                                  "[OK]   DoD⑤ 非 draft 指标 100% 有 default_binding"))
-    add(ok5, "DoD⑤ default_binding 就位（L1/L3 依赖）",
-        "6/7 概念有默认口径 + 8/8 活跃指标有默认绑定（见 validate_bundle 输出）")
+    # ---------------- DoD⑤ 默认口径与别名表就位 ----------------
+    # ⚠️ 07 §4.7.1 之后：field_bindings 侧承载默认口径的**不是** `default_binding`（已删），
+    #    而是 `canonical_asset`（字段层依据）+ `default_reason`（披露文案）。
+    #    指标侧仍是 `metrics[].default_binding`，但形状已收窄为 `{asset, reason}`。
+    ok5 = all(x in vout for x in ("[OK]   DoD⑤ field_bindings 默认口径覆盖",
+                                  "[OK]   DoD⑤ 非 draft 指标 100% 有 default_binding{asset,reason}"))
+    add(ok5, "DoD⑤ 默认口径就位（L1/L3 依赖）",
+        "6/7 概念有 canonical_asset + default_reason（1 条刻意 ambiguous）；"
+        "8/8 活跃指标有 default_binding{asset,reason}（见 validate_bundle 输出）")
     add("[OK]   ③ 别名 term 唯一映射" in vout, "DoD⑤ 别名表就位（L1 判据：term 一对一）",
         "105 个 term 一对一（见 validate_bundle 输出）")
+    # §4.7.1 的负向断言（防已删字段复活）—— 单独列一项，避免它只藏在 ① 的输出里
+    add("[OK]   ② 已删字段未复活" in vout, "DoD⑤ · §4.7.1 已删字段未复活（负向断言）",
+        "meta.disclosure_text / assets[].grain_level / field_bindings[].default_binding 均确认不存在")
 
-    # ---------------- DoD⑥ 维度含 grain_level ----------------
+    # ---------------- DoD⑥ 维度含 grain_level / grain_levels（L2 依赖）----------------
     rc, out6 = run([PY, "-c",
                     "import yaml,sys;d=yaml.safe_load(open(r'%s',encoding='utf-8'));"
                     "m=[x['name'] for x in d['dimensions'] if x.get('grain_level') is None];"
-                    "print('MISSING',m)" % bundle.replace("\\", "/")])
-    add("MISSING []" in out6, "DoD⑥ 每个维度都含 grain_level（L2 依赖）",
-        out6.strip() or "全部维度均有 grain_level")
+                    "g=[x['name'] for x in d['dimensions'] if not x.get('grain_levels')];"
+                    "print('MISSING',m,g)" % bundle.replace("\\", "/")])
+    add("MISSING [] []" in out6, "DoD⑥ 每个维度都含 grain_level + grain_levels（L2 依赖）",
+        out6.strip() or "全部维度均有 grain_level / grain_levels")
+    # §4.7.1 要求 grain_level 必须等于 grain_levels 里"默认层级"的值 → 由校验器断言
+    add("[OK]   ③ grain_level == grain_levels" in vout,
+        "DoD⑥ · grain_level == grain_levels[hierarchy 末项]（§4.7.1 防漂移）",
+        "6/6 一致（见 validate_bundle 输出）；⚠️ 该断言的读法有一条**每一次跑都会出现的 WARN**，见下一项")
+    add("[WARN] ③ grain_level 读法残留待确认" in vout,
+        "DoD⑥ · grain_level 的「默认层级」读法已提请确认（属已裁定的 U-23 残留）",
+        "region / category 的 binding 层级与 grain_level 不同 → 若裁定取「binding 的粒度」读法则需改；"
+        "**W1A 不擅自改**（改它需新增 default_level 字段，附录 B 无承载位 → 属 U-34）")
 
     # ---------------- 额外承诺 1：DDL 与语义包逐列一致（防"两份真相"） ----------------
     import re
@@ -182,8 +211,31 @@ def main(argv=None) -> int:
         f"{actual[:16]}… ({(mf['sandbox']['bytes'] / 1048576):.1f} MB)")
     add(mf["sandbox"]["params"]["seed"] == 20260915, "额外② · 生成种子已记录于 MANIFEST",
         f"seed={mf['sandbox']['params']['seed']}, "
-        f"orders={mf['sandbox']['params']['order_rows_total']}, "
-        f"traffic={mf['sandbox']['params']['traffic_total_rows']}")
+        f"orders={mf['sandbox']['params']['order_rows_total']}(名义), "
+        f"traffic={mf['sandbox']['params']['traffic_total_rows']}(名义)")
+
+    # ---------------- 额外承诺 2b：MANIFEST.measured ↔ 现场实测（07 §4.7.4 第 1 条）----------------
+    #   为什么这条必须存在：『名义』与『实测』分开只是第一步 —— 如果没人复算，
+    #   MANIFEST 里的数字仍然只是一句自称（本案前身：W1A 曾声称"494,249 已写进 MANIFEST"
+    #   而当时那里只有名义值 500000）。这条断言让**库一改而不更新 MANIFEST → 自检变红**。
+    import sqlite3
+    con = sqlite3.connect(db)
+    try:
+        live = {t: con.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0]
+                for t in mf.get("measured", {}).get("tables", {})}
+    finally:
+        con.close()
+    claimed = {t: v["rows"] for t, v in mf["measured"]["tables"].items()}
+    drift = {t: (claimed[t], live[t]) for t in claimed if claimed[t] != live.get(t)}
+    add(not drift, "额外②b MANIFEST.measured ↔ 沙箱库现场实测一致（名义/实测分离的护栏）",
+        f"{len(claimed)} 张表逐表复算一致（{sum(live.values()):,} 行）" if not drift
+        else f"漂移（声称, 实测）：{drift} → 必须重算 MANIFEST.measured，**不得只改宣称**")
+
+    # ---------------- 额外承诺 2c：MANIFEST 是否声明了"名义 vs 实测"的纪律 ----------------
+    add(bool(mf.get("nominal_vs_measured_discipline"))
+        and "params" in mf["sandbox"] and bool(mf["sandbox"].get("params_semantics")),
+        "额外②c MANIFEST 明确区分「生成器输入（名义）」与「实测」",
+        "有 nominal_vs_measured_discipline + sandbox.params_semantics + measured 三段" )
 
     # ---------------- 额外承诺 3：指标字典与语义包同步 ----------------
     rc, out3 = run([PY, os.path.join(ROOT, "semantic", "render_metric_dictionary.py"), "--check"])
@@ -198,6 +250,20 @@ def main(argv=None) -> int:
     add(not (sd["coverage"].get("cells_with_no_seed") or []),
         "额外④ · 每个 4×3 格子都有 Gold Query 种子",
         f"{len(sd['seeds'])} 条种子；缺口 {sd['coverage'].get('cells_with_no_seed')}")
+
+    # ---------------- 额外承诺 5：结构分层锚点回归（07 §4.7.2 新立）----------------
+    #   只对**本项目锚点**卡门禁；官方 4 锚点降级为差异记录（它的 Hard 一条在采纳口径下
+    #   必然不符）。把这条挂进自检的意义：锚点是一条**会随口径漂移的断言** ——
+    #   若有人动了 `spider_level` 或 `count_component1`，冻结集的 4×3 网格会**照样看起来正常**
+    #   （因为整批用例一起变），只有锚点会立刻红。
+    rc, outA = run([PY, os.path.join(ROOT, "data", "generator", "layering.py"), "--anchors"])
+    ok_line = [l for l in outA.splitlines() if l.startswith("本项目锚点 100% 命中")]
+    add(rc == 0, "额外⑤ 结构分层锚点回归：**本项目锚点 100% 命中**（07 §4.7.2）",
+        (ok_line[0] if ok_line else outA.strip()[-160:])
+        + "｜官方锚点：主口径 3/4（Hard 不符 = U-30，已登记为差异，不参与门禁）")
+    add("分歧点" in outA, "额外⑤ · 分歧点锚点已保留（裁定描述 vs 采纳口径）",
+        "07 §4.7.2 锚点③ 称 comp1=4 → hard，采纳口径实算 → extra；"
+        "该 SQL 留在锚点集里，若哪天变成 hard 即说明 spider_level 被改")
 
     # ---------------- 输出 ----------------
     if args.json:

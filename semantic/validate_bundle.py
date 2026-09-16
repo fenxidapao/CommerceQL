@@ -16,7 +16,7 @@
 | 步 | 内容 | 本脚本 | 说明 |
 |---|---|---|---|
 | ① | 读取只读卷上的 YAML | ✅ | 含「锚点/别名未解析」与「重复 key」的显式检测 |
-| ② | 校验 FR-12.2 的字段齐全性 | ✅ | 15 类（PRD FR-12.2）—— ⚠️ 07 §6.1 写「14 类」，**PRD 更多**，见 U-27 |
+| ② | 校验 FR-12.2 的字段齐全性 | ✅ | 15 类（PRD FR-12.2）—— ⚠️ 07 §6.1 曾写「14 类」，**已由 07 v0.7 订正为 15 类**（U-27 是另一件事：`receiver_city`） |
 | ③ | 引用完整性 | ✅ | `canonical_asset` ∈ assets；join 两端存在；`maps_to_ref` 可解析 |
 | ④ | 质量准入 | ✅ | 未达阈值 → **标 certified=false 并排除出检索**（不报错） |
 | ⑤ | 环境预检 | ⚠️ **部分** | 本脚本只查 `EMBEDDING_DIM` 一致性；「jieba 词典可加载 / 分词函数可用」的**最终断言归 W2B**（它才是 `retrieval/tokenizer.py` 的归属窗口）。脚本会如实报告这一项为 SKIP。 |
@@ -33,10 +33,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
-try:  # PyYAML 当前是 venv 里的**传递依赖**（见交付说明「转达清单」T-3）
+try:
     import yaml
 except ModuleNotFoundError:  # pragma: no cover
-    print("FATAL: PyYAML 不可用。它不是 ADR-20 白名单项，当前靠传递依赖存在。", file=sys.stderr)
+    # PyYAML 曾长期只以**传递依赖**身份存在（venv 里有、pyproject 里没有）→ 裸解释器直接炸。
+    # 已由 W0 于 2026-09-16（main @ aef8750）在 pyproject.toml 转正，并补登 4 个同类包。
+    # 仍保留这条清晰报错：本脚本要能在"什么都没装"的解释器上**说出自己缺什么**。
+    print("FATAL: PyYAML 不可用（应为 pyproject.toml 的声明依赖，见 ADR-20 / U-37）。", file=sys.stderr)
     raise SystemExit(2)
 
 if hasattr(sys.stdout, "reconfigure"):  # Windows 控制台默认 GBK，中文会炸
@@ -112,7 +115,8 @@ def load_bundle(path: Path) -> dict:
 # ---------------------------------------------------------------------------
 
 #: 07 §6.1 步骤②列出的字段类别（逐字抄自 §6.1，**共 15 项**）。
-#: ⚠️ §6.1 正文写的是"14 类"，但同一句里**列举了 15 项**。以列举为准（15）→ 登记 U-27。
+#: ⚠️ §6.1 正文曾写"14 类"，但同一句里**列举了 15 项** → **已由 07 v0.7 订正为 15 类**。
+#:    （这**不是** U-27 —— U-27 是 v_order_paid 缺城市列。曾把两者混引，已修。）
 REQUIRED_FIELD_CLASSES: tuple[tuple[str, str], ...] = (
     ("认证资产", "assets"),
     ("数据域", "meta.domain"),
@@ -131,15 +135,28 @@ REQUIRED_FIELD_CLASSES: tuple[tuple[str, str], ...] = (
     ("质量准入阈值", "quality_gates"),
 )
 
-#: 项目自定义的扩展字段（U-23）—— 07 §12.2 的物化表与 §6.8.1 / §7.4 依赖它们，
-#: 但附录 B 的结构示例里没有定义。缺失即 FAIL（它们已是实现依赖）。
+#: 项目自定义的扩展字段 —— **已由 07 §4.7.1 裁定**（原登记号 U-23 销账）。
+#: 裁定结论 = 采纳 3 / 收窄 1 / **删除 2**，本元组已按裁定同步。
+#: 缺失即 FAIL（它们已是实现依赖）。
 EXTENSION_FIELDS: tuple[str, ...] = (
-    "assets[].grain_level",
-    "assets[].tenant_scoped",
-    "assets[].quality_score",
-    "metrics[].default_binding",
-    "dimensions[].grain_level",
+    "assets[].tenant_scoped",          # 07 §7.4 分支 3 判据
+    "assets[].quality_score",          # 与 quality_gates.min_quality_score 联判
+    "metrics[].default_binding",       # ⚠️ 已收窄为 {asset, reason}
+    "dimensions[].grain_levels",       # L2 判"同粒度"的唯一依据
+    "dimensions[].grain_level",        # 该维度默认细度
 )
+
+#: ❌ **已被 07 §4.7.1 删除的字段** —— 负向断言用（防它们被"好心"重新加回来）。
+#: 为什么需要负向断言：删除一个字段的理由（"与 X 恒等 / 同名不同义 / 走别的载体"）
+#: 在半年后**不会自己浮现**，后来人看到 `grain_level` 空着通常会补上 —— 那正是本案。
+REMOVED_FIELDS: tuple[tuple[str, str], ...] = (
+    ("meta", "disclosure_text"),
+    ("assets[]", "grain_level"),
+    ("field_bindings[]", "default_binding"),
+)
+
+#: `default_binding.reason` / `default_reason` 的长度上限（07 §4.7.1 的披露渲染规则）。
+REASON_MAX_CHARS = 40
 
 
 def check_step1(path: Path, rep: Report) -> dict | None:
@@ -166,8 +183,24 @@ def check_step2(data: dict, rep: Report) -> None:
             f"缺 {missing}" if missing else "15/15 齐全")
 
     ext_missing = [p for p in EXTENSION_FIELDS if not _present(data, p, assets, metrics, dims)]
-    rep.add(FAIL if ext_missing else PASS, "② 扩展字段（U-23）",
+    rep.add(FAIL if ext_missing else PASS, "② 扩展字段（07 §4.7.1 裁定后）",
             f"缺 {ext_missing}" if ext_missing else f"{len(EXTENSION_FIELDS)}/{len(EXTENSION_FIELDS)} 齐全")
+
+    # ---- ② 负向：已被 §4.7.1 删除的字段不得回归（每个删除理由都不会自己浮现）----
+    resurrected: list[str] = []
+    for scope, field in REMOVED_FIELDS:
+        if scope == "meta":
+            hit = field in (data.get("meta") or {})
+        elif scope == "assets[]":
+            hit = any(field in a for a in assets)
+        else:
+            hit = any(field in f for f in (data.get("field_bindings") or []))
+        if hit:
+            resurrected.append(f"{scope}.{field}")
+    rep.add(FAIL if resurrected else PASS, "② 已删字段未复活（07 §4.7.1 负向断言）",
+            f"**回来了** {resurrected} —— 它们的删除理由见 §4.7.1，不是遗漏" if resurrected
+            else f"{len(REMOVED_FIELDS)}/{len(REMOVED_FIELDS)} 确认不存在"
+                 f"（{'/'.join(f for _, f in REMOVED_FIELDS)}）")
 
     # 域声明与实际资产域必须一致（防"声明 3 域、实际多出一个域"）
     declared = set(data.get("meta", {}).get("domain") or [])
@@ -251,8 +284,6 @@ def check_step3(data: dict, rep: Report) -> None:
                 bad_fb.append(f"{concept}: {ref} 不存在")
         # 歧义概念的候选必须**同 grain_level**（07 §6.8.1：只有同粒度才构成竞争）
         if fb.get("ambiguous"):
-            if fb.get("default_binding"):
-                bad_fb.append(f"{concept}: ambiguous 不得有 default_binding（会被 L3 静默解决）")
             levels = {c.get("grain_level") for c in fb.get("candidates") or []}
             if len(levels) > 1:
                 bad_fb.append(f"{concept}: 候选 grain_level 不同 {sorted(levels)} → 按 §6.8.1 不构成竞争，"
@@ -261,6 +292,36 @@ def check_step3(data: dict, rep: Report) -> None:
             "; ".join(bad_fb) if bad_fb else
             f"{len(data.get('field_bindings') or [])} 条绑定全部可解析"
             f"（其中 ambiguous={sum(1 for f in data['field_bindings'] if f.get('ambiguous'))}）")
+
+    # --- 3b-2. ★ `ambiguous` ⇔ 无 `canonical_asset` / 无 `default_reason`（**双向**）---
+    #   为什么是双向而不是只禁一侧（07 §4.7.1 的裁定原文）：
+    #     · `ambiguous: true` 却留着"占位非空"的 canonical_asset = **留了一个假值** ——
+    #       任何漏判 L3 的路径都会把它当真（歧义被静默解决）；
+    #     · 反过来，**非** ambiguous 却没有 canonical_asset / default_reason = 默认口径缺失，
+    #       L3 会在本该直接执行的场景退回澄清 → 澄清率虚高（§6.8.1 的失效形态之一）。
+    #   只禁一侧只能抓到一半事故。
+    amb_viol: list[str] = []
+    fbs = data.get("field_bindings") or []
+    for fb in fbs:
+        concept = fb.get("concept")
+        has_canon = "canonical_asset" in fb and fb.get("canonical_asset") not in (None, "", [], {})
+        has_reason = "default_reason" in fb and fb.get("default_reason") not in (None, "", [], {})
+        if fb.get("ambiguous"):
+            if has_canon:
+                amb_viol.append(f"{concept}: ambiguous 却有 canonical_asset={fb['canonical_asset']!r}（占位假值）")
+            if has_reason:
+                amb_viol.append(f"{concept}: ambiguous 却有 default_reason（歧义被 L3 静默解决）")
+            if not fb.get("candidates"):
+                amb_viol.append(f"{concept}: ambiguous 却无 candidates（无从澄清）")
+        else:
+            if not has_canon:
+                amb_viol.append(f"{concept}: 非 ambiguous 却缺 canonical_asset")
+            if not has_reason:
+                amb_viol.append(f"{concept}: 非 ambiguous 却缺 default_reason（L3 无披露文案）")
+    amb_n = sum(1 for f in fbs if f.get("ambiguous"))
+    rep.add(FAIL if amb_viol else PASS, "③ ambiguous ⇔ 无 canonical_asset/无 default_reason（双向）",
+            "; ".join(amb_viol) if amb_viol
+            else f"双向一致：{len(fbs) - amb_n} 条有 canon+reason，{amb_n} 条 ambiguous 两者皆空")
 
     # --- 3c. aliases.maps_to_ref 可解析 + **term 唯一性**（L1 的硬条件）---
     seen: dict[str, str] = {}
@@ -352,6 +413,67 @@ def check_step3(data: dict, rep: Report) -> None:
             "; ".join(one_sided) if one_sided
             else f"{len(pred_of)} 个指标的两侧谓词逐条一致")
 
+    # --- 3k. ★ `metrics[].default_binding` 的形状 = `{asset, reason}`（§4.7.1 收窄后）---
+    #   收窄的理由：原 `time_field` 与同一条目既有的 `time_basis` **重复**（同一事实两处）。
+    #   这里不只查"少了什么"，也查"**多了什么**" —— 因为被删的字段最可能的回归形态
+    #   就是"顺手又加回来"，而多出来的键**不会有任何报错**，只会静默分叉。
+    bad_db: list[str] = []
+    for m in data.get("metrics") or []:
+        db = m.get("default_binding")
+        if db is None:
+            continue
+        if not isinstance(db, dict):
+            bad_db.append(f"{m['name']}: default_binding 必须是 mapping")
+            continue
+        extra = sorted(set(db) - {"asset", "reason"})
+        miss = sorted({"asset", "reason"} - set(db))
+        if extra:
+            bad_db.append(f"{m['name']}: 多了 {extra}（§4.7.1 已裁删；时间基准一律读 `time_basis`）")
+        if miss:
+            bad_db.append(f"{m['name']}: 少了 {miss}")
+        if db.get("asset") not in assets:
+            bad_db.append(f"{m['name']}: asset={db.get('asset')!r} 不在 assets 中（§6.8 步②③ 要按它查认证/时效/租户）")
+        _r = str(db.get("reason") or "")
+        if len(_r) > REASON_MAX_CHARS:
+            bad_db.append(f"{m['name']}: reason {len(_r)} 字 > 上限 {REASON_MAX_CHARS}（披露渲染规则）")
+    n_db = sum(1 for m in data.get("metrics") or [] if m.get("default_binding"))
+    rep.add(FAIL if bad_db else PASS, "③ metrics.default_binding 形状 = {asset, reason}",
+            "; ".join(bad_db) if bad_db else f"{n_db} 条形状合规、asset 可解析、reason ≤ {REASON_MAX_CHARS} 字")
+
+    # --- 3n. ★ 危险边必须带 `note`（跨租户边界 / 跨类型）---
+    #   两类边是**会静默算错**的边，而不是会报错的边：
+    #     ① 公共资产 → 租户资产：不写清"租户谓词落在右侧"，一条公共维表行会匹配到
+    #        **多个租户**的同行 → 扇出 → **聚合值变大而无人报警**；
+    #     ② 两侧列类型不同：`ON a.timestamptz = b.date` 恒假 → **静默 0 行**
+    #        （不报错、不告警，只是"查不到"）。两者都必须把处置写进 note，机器才拦得住。
+    type_of = {(n, c["name"]): c.get("type")
+               for n, a in assets.items() for c in a.get("columns") or []}
+
+    def _split_ref(ref: str | None) -> tuple[str | None, str | None]:
+        if not ref or "." not in ref:
+            return None, None
+        an, cn = ref.split(".", 1)
+        return an, cn
+
+    dangerous: list[str] = []
+    for j in data.get("joins") or []:
+        ln, lc = _split_ref(j.get("left"))
+        rn, rc = _split_ref(j.get("right"))
+        if ln is None or rn is None or ln not in assets or rn not in assets:
+            continue
+        why: list[str] = []
+        if not assets[ln].get("tenant_scoped") and assets[rn].get("tenant_scoped"):
+            why.append(f"跨租户边界（{ln} 公共 → {rn} 租户）：租户谓词必须落在右侧，否则跨租户扇出")
+        tl, tr = type_of.get((ln, lc)), type_of.get((rn, rc))
+        if tl and tr and tl != tr:
+            why.append(f"两侧类型不同（{tl} vs {tr}）：**非裸等值**，必须写明归一化表达式")
+        if why and not str(j.get("note") or "").strip():
+            dangerous.append(f"{j['left']} → {j['right']}: " + "；".join(why))
+    n_j = len(data.get("joins") or [])
+    rep.add(FAIL if dangerous else PASS, "③ 危险边（跨租户 / 跨类型）必须带 note",
+            "; ".join(dangerous) if dangerous
+            else f"{n_j} 条边中，所有跨租户/跨类型的边都写明了处置")
+
     # --- 3g. grain_levels 与 hierarchy 必须同集合（防"层级名写歪"）---
     bad_gl: list[str] = []
     for d in data.get("dimensions") or []:
@@ -370,6 +492,53 @@ def check_step3(data: dict, rep: Report) -> None:
             bad_gl.append(f"{d['name']}: grain_levels 必须随 hierarchy 严格递增（当前 {vals}）")
     rep.add(FAIL if bad_gl else PASS, "③ grain_levels ↔ hierarchy 一致",
             "; ".join(bad_gl) if bad_gl else "层级名与细度值一一对应且随层级严格递增")
+
+    # --- 3g-2. ★ `grain_level` 必须等于 `grain_levels[默认层级]`（07 §4.7.1 的断言）---
+    #   裁定的原文是"必须等于 grain_levels 中该维度的**默认层级值**"。要让这句话可机检，
+    #   必须先把"默认层级"定死 —— 本校验器采用的读法 = **`hierarchy` 的最后一层**
+    #   （因 `hierarchy` 必须随 `grain_levels` 严格递增，它等价于"该维度可表达的最细层级"）。
+    #   ⚠️ 若架构窗口要的是"`binding` 所在层级"这一读法，则 region(4→3)/category(3→1)
+    #      需改，且要新增一个 `default_level` 字段承载"默认层级"（附录 B 无承载位，属 U-34）。
+    #      → 本条 WARN 存在的唯一目的就是让这个待确认项**每次跑都出现在眼前**。
+    bad_gd: list[str] = []
+    residual: list[str] = []
+    for d in data.get("dimensions") or []:
+        gl, h = d.get("grain_levels"), d.get("hierarchy")
+        gd = d.get("grain_level")
+        if not gl or not h or gd is None:
+            bad_gd.append(f"{d.get('name')}: 缺 grain_levels / hierarchy / grain_level")
+            continue
+        if gd not in gl.values():
+            bad_gd.append(f"{d['name']}: grain_level={gd} 不是 grain_levels 里的任何值（防漂移）")
+        elif gd != gl[h[-1]]:
+            bad_gd.append(f"{d['name']}: grain_level={gd} ≠ grain_levels[hierarchy[-1]]={gl[h[-1]]}")
+        # 残留口径：binding 的物理列落在比 grain_level 更粗的层级时点名出来
+        b = d.get("binding") or ""
+        col = b.split(".", 1)[1] if "." in b else ""
+        hit_level = next((k for k in h if col == k or col.endswith(f"_{k}") or col.startswith(f"{k}_")), None)
+        if hit_level and gl.get(hit_level) != gd:
+            residual.append(f"{d['name']}: binding={b} 落在 {hit_level}({gl[hit_level]}) 而 grain_level={gd}")
+    rep.add(FAIL if bad_gd else PASS, "③ grain_level == grain_levels[hierarchy 末项]（§4.7.1）",
+            "; ".join(bad_gd) if bad_gd else
+            f"{len(data.get('dimensions') or [])} 个维度全部一致（默认层级 ≡ hierarchy 末项）")
+    rep.add(WARN if residual else PASS, "③ grain_level 读法残留待确认（属已裁定的 U-23）",
+            f"{residual} → 若架构窗口的'默认粒度'指 **binding 的粒度**，这两条要改；"
+            f"若要改，需新增 `default_level` 字段（附录 B 无承载位 → 属 U-34）"
+            if residual else "无残留：所有维度的 binding 层级与 grain_level 一致")
+
+    # --- 3m. ★ `tenant_scoped` ⇔ 资产含 `tenant_id` 列（**双向**，07 §7.4 分支 3）---
+    #   写反 = **跨租户存在性泄露**（N-07 直接失效）：把 false 写在有租户数据的资产上
+    #   → 执行层不注入谓词 → T_A 能看到 T_B 的行数。故这里是双向断言，不是单向。
+    ts_viol: list[str] = []
+    for name, a in assets.items():
+        has_col = "tenant_id" in {c["name"] for c in a.get("columns") or []}
+        flag = bool(a.get("tenant_scoped"))
+        if flag != has_col:
+            ts_viol.append(f"{name}: tenant_scoped={flag} 但 {'有' if has_col else '无'} tenant_id 列")
+    rep.add(FAIL if ts_viol else PASS, "③ tenant_scoped ⇔ 含 tenant_id 列（双向，§7.4）",
+            "; ".join(ts_viol) if ts_viol else
+            f"{sum(1 for a in assets.values() if a.get('tenant_scoped'))} 个租户资产 / "
+            f"{sum(1 for a in assets.values() if not a.get('tenant_scoped'))} 个公共资产，双向一致")
 
     # --- 3h. 同义词的两处定义必须一致（**"同一事实只写一遍"的机器化保障**）---
     # 附录 B 把同义词散落在 `columns[].synonyms` 与 `metrics[].synonyms` 两处，
@@ -454,20 +623,26 @@ def check_step5(data: dict, rep: Report) -> None:
 
 
 def check_default_binding_coverage(data: dict, rep: Report) -> None:
-    """L3 覆盖率 —— DoD⑤「default_binding 与别名表就位（L1/L3 层依赖它）」的量化证据。"""
+    """L3 覆盖率 —— DoD⑤「default_binding 与别名表就位（L1/L3 层依赖它）」的量化证据。
+
+    ⚠️ §4.7.1 之后，`field_bindings` 侧承载默认口径的**不是** `default_binding`（已删），
+    而是 `canonical_asset`（字段层依据）+ `default_reason`（披露文案）。
+    指标侧仍是 `metrics[].default_binding`，但形状已收窄为 `{asset, reason}`。
+    """
     fbs = data.get("field_bindings") or []
-    with_db = [f for f in fbs if f.get("default_binding")]
+    with_db = [f for f in fbs if f.get("canonical_asset")]
     ambiguous = [f for f in fbs if f.get("ambiguous")]
     ambiguous_with_aliases = [f for f in ambiguous if f["concept"] in
                               {a["term"] for a in data.get("aliases") or []}]
-    rep.add(PASS, "DoD⑤ field_bindings 的 default_binding 覆盖",
-            f"{len(with_db)}/{len(fbs)} 有默认口径；{len(ambiguous)} 条标 ambiguous（{len(ambiguous_with_aliases)} 条同时有别名词）")
+    rep.add(PASS, "DoD⑤ field_bindings 默认口径覆盖（canonical_asset + default_reason）",
+            f"{len(with_db)}/{len(fbs)} 有默认口径；{len(ambiguous)} 条标 ambiguous"
+            f"（{len(ambiguous_with_aliases)} 条同时有别名词 —— **必须为 0**，否则 L1 会短路掉澄清）")
 
     metrics = data.get("metrics") or []
     active = [m for m in metrics if m.get("status") != "draft"]
     with_db_m = [m for m in active if m.get("default_binding")]
     rep.add(PASS if len(with_db_m) == len(active) else FAIL,
-            "DoD⑤ 非 draft 指标 100% 有 default_binding",
+            "DoD⑤ 非 draft 指标 100% 有 default_binding{asset,reason}",
             f"{len(with_db_m)}/{len(active)}")
 
     # 别名覆盖：每个**非歧义**概念都应能从别名表命中（L1 的目标）
