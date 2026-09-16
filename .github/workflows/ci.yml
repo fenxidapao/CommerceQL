@@ -133,6 +133,79 @@ jobs:
         run: python eval/build_gold_seed.py --check
 
   # --------------------------------------------------------------------------
+  # 迁移链门禁（W2-INT 转达的部署面缺口：07 §18.2"迁移先于 api"此前无机器保证）
+  # --------------------------------------------------------------------------
+  # 每次 push 在**干净库**上从零重建（0001 建角色/GRANT + 0002 语义包表），
+  # 并断言幂等（第二次 upgrade = no-op）。迁移链一旦在干净库上断掉（比如新迁移
+  # 依赖了 0001 之外某次手工操作的状态），本 job 红 —— 而不是等部署日才发现。
+  # ⚠️ 归属：本文件归 W0；迁移文件本身归 W1B。红时先看是不是新迁移在裸库上跑不通。
+  migration-gate:
+    name: 迁移链（干净库从零重建 + 幂等）
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # pgvector 镜像：0002 的语义包表用 vector 列（pgvector 扩展随镜像提供）
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: ecom
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          # CI 一次性容器用 trust：DSN 无需口令段 → 文件里不出现"属主口令 DSN 形态"
+          # （DoD④ 定口径：属主 + 口令 + @ + 主机 的形态出现在受控文件必红，双向已实测）。
+          # 仅作用于本 job 的临时容器，不构成安全面。
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ecom"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装后端
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      # ⚠️ 迁移连接必须是属主/超级用户（0001 要 CREATE ROLE / GRANT，运行时的
+      #    app_rw 刻意没有 CREATEROLE）；唯一来源 MIGRATION_DATABASE_URL（U-45）。
+      - name: alembic upgrade head（从零重建）
+        working-directory: ${{ env.BACKEND_DIR }}
+        env:
+          MIGRATION_DATABASE_URL: postgresql+psycopg://postgres@127.0.0.1:5432/ecom
+        run: alembic upgrade head
+
+      - name: 断言到达 head
+        working-directory: ${{ env.BACKEND_DIR }}
+        env:
+          MIGRATION_DATABASE_URL: postgresql+psycopg://postgres@127.0.0.1:5432/ecom
+        run: |
+          alembic current
+          alembic current | grep -Eq "[0-9a-f]+ \(head\)" || {
+            echo "::error::alembic current 未到达 head —— 迁移链不完整"
+            exit 1
+          }
+
+      - name: 幂等断言（第二次 upgrade 必须是 no-op）
+        working-directory: ${{ env.BACKEND_DIR }}
+        env:
+          MIGRATION_DATABASE_URL: postgresql+psycopg://postgres@127.0.0.1:5432/ecom
+        run: |
+          OUT=$(alembic upgrade head 2>&1)
+          echo "$OUT"
+          echo "$OUT" | grep -qi "Running" && {
+            echo "::error::第二次 upgrade head 仍执行了迁移 —— 迁移不是幂等的"
+            exit 1
+          } || echo "第二次 upgrade = no-op ✅"
+
+  # --------------------------------------------------------------------------
   # DoD②：故意注入违规 import，lint 必须失败
   # --------------------------------------------------------------------------
   dependency-direction:

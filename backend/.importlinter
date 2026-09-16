@@ -23,6 +23,10 @@
 [importlinter]
 root_packages =
     app
+; R-DEP-4 的 forbidden 含第三方包（langgraph/langchain/openai）→ 必须开启本项，
+; 否则 import-linter 拒绝加载（"external forbidden modules"）。开启后外部包进入依赖图，
+; 对现有三条契约（layers / r-dep-2 / r-dep-3）无语义影响（它们的 source/forbidden 全在 app 内）。
+include_external_packages = True
 ; tests/ 与 eval/ 故意不纳入本契约：
 ;   - tests/ **应当**可以 import 任意层，纳入只会给自己加无意义的违规；
 ;   - eval/ 的"不得依赖 app.api"（07 §3.1 旁路规则）**待 W6 建目录后再加一条 forbidden
@@ -114,10 +118,42 @@ forbidden_modules =
     app.repo
 
 ; ---------------------------------------------------------------------------
+; R-DEP-4：retrieval 禁 LLM —— refine 是唯一豁免（W2B RELAY §2 Q4 提案，W0 落笔 2026-09-16）
+; ---------------------------------------------------------------------------
+; 07 §4.8：检索链路唯一允许 LLM 的是 refine（查询改写），P0 未实现（占位）。
+; 检索四路（dense/sparse/graph/value）与融合、分词必须是**确定性**的：
+; 它们在每次请求里都会执行，一旦混入 LLM 调用 = 延迟与成本不可控 + 评测不可复现。
+;
+; ⚠️ httpx **刻意不进** forbidden：dense.py 的 Ollama 客户端用 httpx，
+;   属 embedding 网关（推理在宿主 Ollama，不在应用进程），不是 LLM 推理依赖
+;   （W2B 已在该模块 docstring 声明）。同理 embedding 的其余依赖也不在此禁。
+;
+; ⚠️ 与 R-DEP-3 同款的写法约束：forbidden 契约的 source 只能列**具体模块**，
+;   且 refine.py 必须**不在此列**（它就是豁免）。**新增 retrieval 子模块时必须同步本表** ——
+;   漏加 = 新模块自动获得 LLM 豁免。`tests/contract/test_retrieval_llm_contract.py`
+;   会比对"目录实际文件 == 本表 + refine"来兜住这个漏网面。
+[importlinter:contract:r-dep-4-retrieval-no-llm-except-refine]
+name = R-DEP-4 retrieval 禁 LLM（refine 唯一豁免，P0 未实现）
+type = forbidden
+source_modules =
+    app.retrieval.dense
+    app.retrieval.fuse
+    app.retrieval.graph
+    app.retrieval.search
+    app.retrieval.sparse
+    app.retrieval.tokenizer
+    app.retrieval.value
+    app.retrieval.view
+forbidden_modules =
+    app.llm
+    langgraph
+    langchain_core
+    langchain
+    openai
+
+; ---------------------------------------------------------------------------
 ; TODO（留给后续窗口，**不在阶段 0 写**，因为目标模块尚不存在，写了 lint 会报找不到）：
-;   1. W2B：`retrieval` 内**只有 `refine` 子模块**允许 import `app.llm`
-;      → 加一条 forbidden：source = app.retrieval.{dense,sparse,graph,value,fuse,tokenizer}，
-;        forbidden = app.llm（N-01 的"唯一允许 LLM 的检索子模块"）。
+;   1. ~~W2B：retrieval 禁 LLM~~ → 已落笔为上方 R-DEP-4（2026-09-16，W2B RELAY §2 Q4）。
 ;   2. W4：`app.graph.nodes.*` 不得 import `app.api`（节点不该碰协议层）；
 ;      且 `graph/events.py` 必须是**唯一**产出 SSE 帧的地方。
 ;   3. W6：`eval` 不得 import `app.api`（07 §3.1 旁路规则）。

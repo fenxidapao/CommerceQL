@@ -11,12 +11,15 @@
   是最贵的一种。本脚本把 DoD② 变成每次 CI 都跑的**正向实验**：
   先证明"干净时通过"，再证明"脏了必须红"，最后证明"还原后重新变绿"。
 
-探测两个正交维度（与 `.importlinter` 的两条契约一一对应）：
+探测三个正交维度（与 `.importlinter` 的 forbidden/layers 契约一一对应）：
   - 探针 A → `r-dep-2-no-llm-in-deterministic`：`app.guard` import `app.llm`
     （★ 注意：这一条在 `layers` 契约里**是合法的**，因为 guard 在 L2、llm 在 L1，
       上层依赖下层本来就允许。这正是必须单独写 forbidden 契约的原因。）
   - 探针 B → `r-dep-1-layers`：`app.core` import `app.api`
     （L0 反向依赖 L5，纯方向违规，只有 layers 契约能抓。）
+  - 探针 C → `r-dep-3-obs-except-audit-no-repo`（追加型）：`app.obs.metrics` import `app.repo`
+  - 探针 D → `r-dep-4-retrieval-no-llm-except-refine`（追加型）：`app.retrieval.dense` import `openai`
+    （★ 注入**第三方**包，顺带验证 `include_external_packages=True` 配置不被静默关掉。）
 
 用法::
 
@@ -106,6 +109,23 @@ PROBES: tuple[Probe, ...] = (
         expect_fragments=(
             "obs 内除 audit 外禁止依赖 repo",
             "app.obs.metrics -> app.repo",
+        ),
+    ),
+    Probe(
+        contract_id="r-dep-4-retrieval-no-llm-except-refine",
+        layer_note="app.retrieval.dense → openai：检索链路（refine 除外）禁 LLM（W2B 提案，2026-09-16）",
+        #: ★ 追加型：dense.py 在契约 source_modules 里。注入**第三方**包而不是 app.llm ——
+        #:   该契约的 forbidden 同时覆盖 app.llm 与 langgraph/langchain/openai，
+        #:   探针走第三方那条，正好把 include_external_packages=True 这条配置也一并验掉
+        #:   （它若被关掉，整个契约加载会失败——基线就红，不会静默）。
+        target=BACKEND_ROOT / "app" / "retrieval" / "dense.py",
+        source=(
+            "@@APPEND@@\n"
+            "import openai  # noqa: F401  # R-DEP-4 违规：retrieval 除 refine 外禁 LLM\n"
+        ),
+        expect_fragments=(
+            "retrieval 禁 LLM",
+            "app.retrieval.dense -> openai",
         ),
     ),
 )
