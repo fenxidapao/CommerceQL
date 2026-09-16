@@ -98,7 +98,7 @@ jobs:
   #    W1A 升 SCHEMA 版本时由 W1A 同步校验器，红 = 该窗口需要同步，不是 CI 误报。
   # 归属：执行环境（本文件）归 W0；被校验资产与校验器归 W1A。
   w1a-artifact-checks:
-    name: W1A 资产未漂移（语义包/冻结集/红队集/字典/种子）
+    name: W1A 资产未漂移（语义包/红队集/字典/种子）
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -116,8 +116,12 @@ jobs:
       - name: 语义包 34 项结构校验（W1A validate_bundle.py）
         run: python semantic/validate_bundle.py
 
-      - name: 冻结集未漂移（W1A build_frozen_set.py --check）
-        run: python eval/build_frozen_set.py --check
+      # ⚠️ 刻意**不挂** build_frozen_set.py --check（首次挂载实测：CI 必红，非漂移）：
+      #    它要读 data/ecom_sandbox.db（420MB 沙箱库，按"数据物不入库"决定不进 git）
+      #    → CI 环境结构上没有该文件，`[FATAL] 沙箱库不存在` exit 2。
+      #    该检查与上面 4 个"纯结构/hash"检查不同类，属**需要本地数据物**的检查，
+      #    与 seed_generator 复现流程绑定（W1A 的 MANIFEST 给了种子与 sha256）。
+      #    在 CI 重建 1.5M 行沙箱库的成本远超收益。本地跑法见 W1A HANDOVER。
 
       - name: 红队集未漂移（W1A build_red_team.py --check）
         run: python eval/build_red_team.py --check
