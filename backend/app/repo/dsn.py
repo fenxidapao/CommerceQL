@@ -32,6 +32,7 @@ __all__ = [
     "READ_ONLY_ROLE_ASSERTION_SQL",
     "DsnPair",
     "ParsedDsn",
+    "to_libpq_conninfo",
 ]
 
 
@@ -137,3 +138,33 @@ IDENTITY_INJECTION_TEMPLATE: Final[str] = (
     "       set_config('app.role', $2, true), "
     "       set_config('app.shop_ids', $3, true)"
 )
+
+
+#: SQLAlchemy 的 psycopg3 方言前缀 ↔ libpq 的 scheme。
+_SQLALCHEMY_SCHEME: Final[str] = "postgresql+psycopg://"
+_LIBPQ_SCHEME: Final[str] = "postgresql://"
+
+
+def to_libpq_conninfo(url: str) -> str:
+    """`postgresql+psycopg://…` → `postgresql://…`（libpq 形态）。
+
+    ⚠️ **为什么必须有一个转换函数，而不是在调用点手写 `replace()`**：
+    DSN 有两种消费者，认的形态不同 ——
+
+    | 消费者 | 要什么 | 给错了会怎样 |
+    |---|---|---|
+    | SQLAlchemy `create_async_engine` | `postgresql+psycopg://` | 报 `NoSuchModuleError`（还算清楚） |
+    | `psycopg.connect` / `AsyncConnectionPool` | `postgresql://` | ⚠️ **不报错在明显的地方**：它被当作"无法解析的 conninfo"，池会**持续重试到超时**，最终报的是一句 `PoolTimeout: couldn't get a connection after 30.00 sec` —— 排查方向会指向"数据库挂了/密码错了"，而不是"前缀多了个 `+psycopg`"（本窗口实测踩过） |
+
+    第二条就是本函数存在的理由：**错误信息的误导方向**比错误本身更贵。
+
+    ⚠️ 对未知 scheme **直接抛错**（不"尽力而为"地返回原值）：
+    静默透传会让上面那个 30 秒超时重新出现，而调用点以为已经转换过了。
+    """
+    if url.startswith(_SQLALCHEMY_SCHEME):
+        return _LIBPQ_SCHEME + url[len(_SQLALCHEMY_SCHEME) :]
+    if url.startswith(_LIBPQ_SCHEME):
+        return url
+    raise ValueError(
+        f"DSN scheme 无法识别，拒绝静默透传（会变成一句误导性的 PoolTimeout）：{url[:24]!r}…"
+    )

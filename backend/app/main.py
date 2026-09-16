@@ -20,10 +20,17 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.deps import RUNTIME_STATE_KEY, build_runtime
 from app.api.routers import health
 from app.core.config import AppEnv, get_settings
+from app.core.enums import Dependency
+from app.graph.build import CheckpointSetupOutcome, ensure_checkpoint_schema
 from app.obs import metrics
 from app.obs.logging import configure_logging, get_logger
+from app.repo.health import build_probe_table
+from app.repo.pools import build_three_pools
+from app.repo.redis import build_redis_client
+from app.repo.startup_assertions import enforce_startup_assertions, live_probes
 
 __all__ = ["app", "create_app"]
 
@@ -33,23 +40,37 @@ API_PREFIX = "/api/v1"
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     """启动/关闭钩子。
 
-    ⚠️ 阶段 0 故意**留空**，但必须把"W1B 要在这里做什么"写清楚，
-    否则接线时会漏 —— 07 §18.4 有 4 条**只能在这里**做的断言
-    （`app.core.config.STARTUP_ASSERTIONS_DELEGATED_TO_W1B`）。
-    它们共同的特征是：**必须连上真实依赖才能判定**，纯配置层校验不出来。
+    ⚠️ **顺序是有约束的，不是随手排的**（07 §18.2 / §18.4）：
+
+    1. 日志装配 → 2. τ 校准告警（U-19 硬要求①②，**不碰外部依赖**，必须最先可见）
+    → 3. **三池 + Redis**（纯构造，连接惰性）
+    → 4. **启动断言**（第一次真实 I/O）
+    → 5. **checkpointer 开池 + 确保 `lg` 表族**（探针要靠它判定）
+    → 6. **注册健康探针**
+
+    ⚠️ 第 4 步有**两种失败**，处置相反（`repo/reachability.py` 是唯一分类点）：
+    · **配置级不合格**（角色是超级用户 / 审计表可写 / 维度不匹配）→ **拒绝启动**，任何环境；
+    · **依赖连不上 → 无法判定** → 非 prod **放行**（打 WARN，`/healthz/ready` 报 503），
+      仅 prod 拒绝启动。把后者当致命会让「**服务起来了、但硬依赖未接**」这个状态
+      **不可达** —— 而 07 §18.2 的探针语义（摘流量不重启）与 §18.4.1
+      （`live=200` 且 `ready=503` **必须可达**）都要求它可达。
+
+    ⚠️ 为什么 4 在 5 之前：启动断言里的 `analytics_dsn_is_read_only` 必须
+    在**任何池取连接之前**判定 —— 否则"连不上"与"角色配错了"会混成一个池超时，
+    排查方向被引到"数据库挂了"。断言用的是直连 psycopg（见 `_fetch_analytics_role`）。
+
+    ⚠️ 为什么 6 在 5 之后：探针注册进去的是**已经开好的池**。
+    先注册再开池，第一次 `/healthz/ready` 会打到未打开的池上（`PoolClosed`），
+    于是"服务刚起来的那几秒"必然显示不健康 —— 而 LB 恰好在那一刻决定给不给流量。
     """
-    # --- 启动 ---
-    #
-    # ★ U-19 硬要求 ①②：τ 未校准时**必须可见、不得隐瞒**。
-    #   这是阶段 0 唯一实做的启动动作 —— 它不碰任何外部依赖（不连库、不拉模型），
-    #   因此不会把"起不来"与"依赖没就绪"混成一件事（见本文件顶部装配原则）。
     settings = get_settings()
     configure_logging(settings.LOG_LEVEL)
     logger = get_logger(__name__)
 
+    # --- 1. τ 校准可见性（U-19 硬要求 ①②）---
     metrics.set_binding_tau_calibrated(settings.binding_tau_is_calibrated)
     if not settings.binding_tau_is_calibrated:
         logger.warning(
@@ -60,14 +81,75 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
             why="U-19（07 §18.4.1）：非 prod 放行但不隐瞒；prod 下会直接拒绝启动",
         )
 
-    # W1B: 执行 STARTUP_ASSERTIONS_DELEGATED_TO_W1B 的 4 条断言（失败即拒绝启动）
-    # W2A: 语义包 §6.1 五步校验 + 版本指针读取
-    # W7 : 接线 health.register_probe（元数据库/checkpointer/Redis/语义包/LLM/embedding）
+    # --- 2. 三池 + Redis（**纯构造，不做 I/O**）---
+    pools = build_three_pools(settings)
+    redis_client = build_redis_client(settings)
+    runtime = build_runtime(settings=settings, pools=pools, redis=redis_client)
+    setattr(application.state, RUNTIME_STATE_KEY, runtime)
+
+    # --- 3. 启动断言（07 §18.4：失败即拒绝启动）---
+    outcomes = await enforce_startup_assertions(
+        settings,
+        live_probes(settings, metadata_engine=pools.metadata),
+        logger=logger,
+    )
+    logger.info(
+        "startup_assertions_done",
+        passed=[o.name for o in outcomes if o.status.value == "pass"],
+        pending=[o.name for o in outcomes if o.status.value == "pending"],
+        pending_note="pending = 前置条件尚未具备（依赖上游窗口），不是通过",
+        why="07 §18.4 / N-15：宁可起不来，也不要带着错配置跑起来",
+    )
+
+    # --- 4. checkpointer：开池 + 确保 lg 表族 ---
+    # `wait=False`：不在启动路径上阻塞等连接。池连不上时**不应该**卡住启动 ——
+    # 那是 readiness 该报告的事（摘流量），而不是"进程起不来"（07 §18.2 的失败动作不同）。
+    await pools.checkpoint.open(wait=False)
+    schema_outcome = await ensure_checkpoint_schema(pools.checkpoint)
+    if schema_outcome is CheckpointSetupOutcome.CREATED:
+        logger.warning(
+            "checkpoint_schema_created",
+            extra_fact="lg 表族不齐，本次启动了 AsyncPostgresSaver.setup() —— 通常意味着新库或表被删",
+            why="07 §5.5：检查点表族由 setup() 建；本分支应只在首次部署出现",
+        )
+    elif schema_outcome is CheckpointSetupOutcome.UNREACHABLE:
+        logger.warning(
+            "checkpoint_schema_check_skipped",
+            extra_fact="连不上元数据库 —— lg 表族是否就绪**未被检查**（不是「本来就齐」）",
+            why=(
+                "07 §18.2：readiness 会如实报 503（摘流量**不重启**）。"
+                "本分支不得被读成「无需建表」：症状与日志方向相反，会把排查引偏"
+            ),
+        )
+
+    # --- 5. 健康探针（本窗口只接三个，其余槽位保持"未接线"的如实上报）---
+    probes = build_probe_table(
+        metadata_engine=pools.metadata,
+        checkpoint_pool=pools.checkpoint,
+        redis_client=redis_client,
+    )
+    for dependency, probe in probes.items():
+        health.register_probe(dependency, probe)
+    logger.info(
+        "health_probes_registered",
+        wired=[d.value for d in probes],
+        still_unwired=[
+            d.value for d in Dependency if d not in probes
+        ],
+        why="未接线项由 health._unwired_probe 如实上报 healthy=false —— 不谎报健康（N-21）",
+    )
+
     yield
+
     # --- 关闭 ---
-    # W7 : 优雅停机六步（07 §18.3）—— 摘 readiness → drain 在途 SSE ≤30s →
-    #      未完成的流发 error(INTERNAL) 且 terminal:true（**不得静默断连**）→
-    #      释放会话锁（finally）+ 归还连接 → 写审计 outcome=failed → 退出
+    # W4/W7 还要在这里加：摘 readiness → drain 在途 SSE ≤30s →
+    #   未完成的流发 error(INTERNAL) 且 terminal:true（**不得静默断连**）→
+    #   释放会话锁（finally）+ 写审计 outcome=failed（07 §18.3）。
+    # 本窗口只负责**释放自己创建的连接资源** —— 不替后续窗口假装做完停机六步。
+    await redis_client.aclose()
+    await pools.checkpoint.close()
+    await pools.metadata.dispose()
+    await pools.analytics.dispose()
 
 
 def create_app() -> FastAPI:
