@@ -50,9 +50,17 @@ keywords = ["PRIVATE KEY"]
 
 [allowlist]
 description = "允许的占位/示例值"
+
+# ⚠️ paths 的边界原则（2026-09-16 定口径，回应 W1B 对 U-18/§4.7.1 同源问题的质疑）：
+#   **整文件放行 = 对扫描器不可见，而不是安全**。因此 paths 只允许两类：
+#     ① 本文件自身与第三方/构建产物（规则字面量、扫描量爆炸，见下方注释）；
+#     ② 文档（示意 DSN 带 *** 占位，且 docs/ 不在仓库内，仅本地 `gitleaks dir` 扫得到）。
+#   ⚠️ **deploy/.env.example 已从 paths 移除**（曾有"整文件放行"——已收口）：
+#     它的示例 DSN 改由下方 `regexes` 按**形态**放行 —— 只放行 app_rw/app_ro +
+#     弱占位口令（`app_rw_pwd`/`app_ro_pwd`，与 docker-compose 引导值同源的本地开发凭据）。
+#     任何其他 DSN 形态（**属主口令**、真实主机名、新角色）在该文件里出现**必红**。
+#     ↓ 这意味着：若未来有人往示例文件里写"看起来可用的真实凭据"，扫描器看得见。
 paths = [
-    # 示例文件本就只放键名与占位值，且不含真实密钥
-    '''deploy/\.env\.example''',
     # 文档里的示意 DSN 带 *** 占位
     '''docs/.*\.md''',
     # 本文件自身包含规则字面量
@@ -69,7 +77,9 @@ paths = [
     '''(^|/)\.import_linter_cache/''',
     '''(^|/)\.lintprobe/''',
 ]
-# 允许的示例值（明确是占位，不是真密钥）
+# 允许的示例值（**按形态放行，不是按文件放行**）。边界：仅限本地开发引导凭据的
+# 弱占位形态（app_rw/app_ro + dev 弱口令）——迁移属主（postgres）的口令形态
+# **不**在放行之列，任何受版本控制的文件里出现属主口令 DSN 都必须红（DoD④）。
 regexes = [
     '''postgresql\+psycopg://app_rw:app_rw_pwd@''',
     '''postgresql\+psycopg://app_ro:app_ro_pwd@''',

@@ -142,6 +142,33 @@ def test_rate_limit_key_contains_tenant() -> None:
     assert _TENANT in keys.rate_limit("query", _TENANT, "u1")
 
 
+def test_rate_limit_tenant_key_format() -> None:
+    """U-38：租户合计维度键 = `rl:t:{bucket}:{tenant}`（07 §9.2 的 100/1200/300/min 承载位）。"""
+    assert keys.rate_limit_tenant("query", _TENANT) == f"rl:t:query:{_TENANT}"
+
+
+@pytest.mark.parametrize("bucket", ["query", "read", "write", "admin"])
+@pytest.mark.parametrize("user_id", ["u1", "u2", "admin@tenant"])
+def test_tenant_window_key_never_equals_user_window_key(
+    bucket: str, user_id: str
+) -> None:
+    """防撞（U-38 的全部意义）：两个维度**在任何输入下**不得产生同一个键。
+
+    `ratelimit.py` 的滑窗脚本对 KEYS[1]（用户）/ KEYS[2]（租户）分别判定；
+    若有人"启用租户维度却复用用户键"，两个判定落在同一个 ZSET 上 ——
+    用户配额被当成租户配额，限流忽然变极严**且不报错**（该文件 `_window_keys`
+    的 `raise` 就是防这个）。本条把"两键不可能相等"钉在键空间层面。
+    """
+    user_key = keys.rate_limit(bucket, _TENANT, user_id)
+    tenant_key = keys.rate_limit_tenant(bucket, _TENANT)
+    assert user_key != tenant_key
+    # 结构性区分：租户键第 2 段是字面量 "t"；用户键第 4 段是 16 位 user_hash —— 无重合形态
+    assert tenant_key.split(":")[:2] == ["rl", "t"]
+    assert user_key.split(":")[3] == keys.user_scope_hash(user_id)
+    # 且 PII 纪律对租户键同样成立（tenant 明文可以，user_id 不得出现）
+    assert user_id not in tenant_key
+
+
 def test_active_version_is_a_global_pointer() -> None:
     assert keys.active_version() == "semantic:active_version"
 

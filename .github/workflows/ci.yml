@@ -62,28 +62,71 @@ jobs:
 
       # ⚠️ 不要给 pytest 加 `--suppress-no-test-exit-code`：
       #    空集合的退出码是 5，那正是 DoD③ 要暴露的信号。
-      #    `tests/contract/` 现有 **166 条**断言，分五个文件：
+      #    `tests/contract/` 的断言数会随各窗口交付持续增长（阶段 1B 实测已 386+），
+      #    **本注释刻意不写具体数字** —— 数字型注释过时后会误导后续窗口
+      #    误判契约集规模（曾发生：98 → 166 的陈旧注释）。当前规模以 pytest 实际输出为准。
+      #    文件构成（会随窗口交付增长）：
       #      · test_contract_counts.py      —— 取值集基数 / 查找表完整性 /
       #                                        U-17 的 retryable 与 Retry-After 三级不对称 /
       #                                        U-16 的 20 条 AST 规则分级 / SSE 帧契约 /
       #                                        三探针依赖分类（N-21）
-      #      · test_config_failfast.py      —— **8 条**启动校验 + `.env.example` 双向同步 +
+      #      · test_config_failfast.py      —— 启动校验 + `.env.example` 双向同步 +
       #                                        U-19 的 τ env-gate + 行尾注释泄漏兜底 +
       #                                        extra 的真实边界
       #      · test_cache_keys_contract.py  —— U-14 缓存键租户规则（无租户键显式登记清单 +
-      #                                        TTL + 签名反射检查 tenant_id 参数）
+      #                                        TTL + 签名反射检查 tenant_id 参数）+
+      #                                        U-38 租户级限流键格式与防撞
       #      · test_obs_audit_contract.py   —— U-18 代价约束（R-DEP-3 声明与源码双向核对）+
       #                                        U-19 的三条可见性硬要求 + 指标标签基数
-      #      · test_dependency_whitelist.py —— ADR-20 依赖白名单**双录账**
-      #    （tests/{unit,integration,graph_snapshot,redteam} 现阶段只有 __init__.py，
-      #      属后续窗口；pytest 会照常收集，不报错。）
-      - name: 全量测试（tests/contract 含 166 条断言 = DoD③ 的载体）
+      #      · test_dependency_whitelist.py —— ADR-20 依赖白名单**双录账** +
+      #                                        幽灵依赖检测（直接 import 必须已声明）
+      #    （tests/{unit,integration} 已由阶段 1A/1B 填充；graph_snapshot/redteam 属后续窗口。）
+      - name: 全量测试（tests/contract = DoD③ 的载体）
         working-directory: ${{ env.BACKEND_DIR }}
         run: pytest
 
       - name: 取值集自检（07 §4.2 断言⑤ 的独立入口）
         working-directory: ${{ env.BACKEND_DIR }}
         run: python -m app.core.enums
+
+  # --------------------------------------------------------------------------
+  # W1A 资产未漂移门禁（2026-09-16 应 W1A §2 请求挂载；ci.yml 归 W0）
+  # --------------------------------------------------------------------------
+  # W1A 的 5 个自检入口此前只能人工跑 —— 语义包 / 冻结集 / 红队集 / 指标字典 /
+  # Gold 种子的"未漂移"没有机器守卫。本 job 每次 push 全部复跑。
+  # ⚠️ 断言全部来自 W1A 自己的校验器（本文件不硬编码任何字段形状）——
+  #    W1A 升 SCHEMA 版本时由 W1A 同步校验器，红 = 该窗口需要同步，不是 CI 误报。
+  # 归属：执行环境（本文件）归 W0；被校验资产与校验器归 W1A。
+  w1a-artifact-checks:
+    name: W1A 资产未漂移（语义包/冻结集/红队集/字典/种子）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装后端（editable，供 build_red_team.py import app.core.enums）
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: 语义包 34 项结构校验（W1A validate_bundle.py）
+        run: python semantic/validate_bundle.py
+
+      - name: 冻结集未漂移（W1A build_frozen_set.py --check）
+        run: python eval/build_frozen_set.py --check
+
+      - name: 红队集未漂移（W1A build_red_team.py --check）
+        run: python eval/build_red_team.py --check
+
+      - name: 指标字典未漂移（W1A render_metric_dictionary.py --check）
+        run: python semantic/render_metric_dictionary.py --check
+
+      - name: Gold 种子未漂移（W1A build_gold_seed.py --check）
+        run: python eval/build_gold_seed.py --check
 
   # --------------------------------------------------------------------------
   # DoD②：故意注入违规 import，lint 必须失败
@@ -104,9 +147,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      # ⚠️ U-41：grep 断言是防"假绿"的 —— `python -m importlinter.cli lint-imports`
+      #    是无输出、exit 0、什么都没验的调用形态（该包 cli.py 无 `__main__` 守卫）。
+      #    若哪天有人把调用改成 `-m` 形态，本步骤会因输出里没有 "Contracts:" 而红，
+      #    而不是永远静默绿。**全项目禁止以 `-m importlinter.cli` 形态调用**（README 已注明）。
       - name: 基线 lint（R-DEP-1 分层 / R-DEP-2 确定性层禁 LLM）
         working-directory: ${{ env.BACKEND_DIR }}
-        run: lint-imports
+        run: |
+          lint-imports | tee /tmp/lint-imports.out
+          grep -q "Contracts: " /tmp/lint-imports.out || {
+            echo "::error::import-linter 输出缺少 'Contracts: N kept' —— 疑似假绿调用形态（U-41，禁止 python -m importlinter.cli）"
+            exit 1
+          }
 
       # 这一步把 DoD② 从"人工验过一次"升级为"每次 CI 都做的正向实验"：
       #   注入 app.guard→app.llm（R-DEP-2）与 app.core→app.api（R-DEP-1）

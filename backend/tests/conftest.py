@@ -17,7 +17,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
+import sys
 from collections.abc import Iterator
 
 import pytest
@@ -46,6 +48,26 @@ def _placeholder_env() -> Iterator[None]:
     """会话级注入占位环境（`setdefault`，不覆盖真实值）。"""
     for key, value in _PLACEHOLDER_ENV.items():
         os.environ.setdefault(key, value)
+    yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _win32_selector_event_loop_policy() -> Iterator[None]:
+    """win32 下把事件循环策略换成 Selector（**U-39**，2026-09-16）。
+
+    根因：psycopg async 在 Windows **只支持** `SelectorEventLoop`，而 Windows 默认是
+    `ProactorEventLoop`；阶段 1B（B4）让 `lifespan` 第一次做真实 I/O（启动断言 +
+    readiness 探针走 psycopg async）后，`TestClient(create_app())` 的用例当场撞上
+    `psycopg.InterfaceError`。这是**环境不兼容第一次暴露**，不是断言逻辑写错
+    （W1B 已做对照实验：同一份代码换策略后完全正常）。
+
+    ⚠️ **刻意不用** `asyncio.to_thread` + 同步连接去"修"：那能让测试变绿，
+    但会把"应用本体在 Windows 宿主跑不起来（附录 D E-1：开发期即用 Docker）"
+    这个事实藏起来 —— 修症状留病因。唯一合法的转绿路径就是本 fixture。
+    非 win32 下是 no-op（Linux CI / 容器不受影响）。
+    """
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     yield
 
 

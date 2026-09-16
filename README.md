@@ -102,6 +102,11 @@ deploy/              docker-compose.yml · Dockerfile · nginx.conf · .env.exam
 `.importlinter` 定义分层 R-DEP-1（只能依赖严格更低层）、R-DEP-2（确定性模块禁 import `app.llm`）、
 R-DEP-3（`obs/` 内除 `audit.py` 外禁依赖 `repo`）。跑 `lint-imports` 即知有没有越界。
 
+⚠️ **禁止以 `python -m importlinter.cli lint-imports` 形态调用**（U-41）：
+该形态是无输出、exit 0、**什么都没验**的假绿（包的 `cli.py` 无 `__main__` 守卫）。
+唯一合法入口是 `lint-imports` 命令本身；CI 已加"输出必须含 `Contracts: N kept`"的
+存在性断言，改错调用形态会红而不是静默绿。
+
 **③ 审计写入是 fail-closed 的安全边界。**
 `audit_log` append-only，代码层只暴露 `insert()`，并有静态断言禁止 `UPDATE`/`DELETE`。
 **审计写入失败 = 不下发数据**，不是"记不下来就算了"。

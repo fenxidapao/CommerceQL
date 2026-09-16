@@ -58,6 +58,7 @@ __all__ = [
     "idempotency",
     "jittered_ttl",
     "rate_limit",
+    "rate_limit_tenant",
     "result_set",
     "semantic_few_shot",
     "semantic_retrieval",
@@ -209,11 +210,34 @@ def result_set(tenant_id: str, task_id: str) -> str:
 # ============================================================================
 
 def rate_limit(bucket: str, tenant_id: str, user_id: str) -> str:
-    """限流计数键。格式：`rl:{bucket}:{tenant}:{sha256(user_id)[:16]}`（§9.2 明文给定）。
+    """限流计数键（**用户维度**）。格式：`rl:{bucket}:{tenant}:{sha256(user_id)[:16]}`（§9.2 明文给定）。
 
     ⚠️ **必须含租户**（§9.2 末行明确写了这一条）。
+    ⚠️ 这是"租户内按用户分桶"的键 —— **租户合计维度**请用 `rate_limit_tenant`，
+    两者绝不可混用（见该函数的防撞说明）。
     """
     return _build("rl", bucket, tenant_id, user_scope_hash(user_id))
+
+
+def rate_limit_tenant(bucket: str, tenant_id: str) -> str:
+    """限流计数键（**租户合计维度**）。格式：`rl:t:{bucket}:{tenant}`（U-38，2026-09-16 补齐）。
+
+    背景（U-38）：07 §9.2 给四个桶各有一条**租户级**窗口（query 100/min、
+    read 1200/min、write 300/min），此前因本模块缺这个构造函数而**无人执行**
+    （`app/api/ratelimit.py` 的 `UNENFORCED_DIMENSIONS` 显式登记了这一削弱）。
+
+    ⚠️ **与前缀 `rl:t:` 的双重防撞设计**：
+    用户键是 `rl:{bucket}:{tenant}:{user}`（4 段，第 1 段 `rl`），
+    租户键是 `rl:t:{bucket}:{tenant}`（4 段，第 2 段字面量 `t`）。
+    两键**在任何参数取值下都不可能相等** —— 这不是风格偏好，是正确性前提：
+    `ratelimit.py` 的滑窗脚本对 KEYS[1] / KEYS[2] 分别判定，若两个维度共用一个 ZSET，
+    用户配额会被当成租户配额 → "限流忽然变得极严"且**无任何报错**。
+    （该文件在 `_window_keys` 里为此设了显式 `raise`，本函数是它的解。）
+
+    ⚠️ `tenant_id` 明文进键与本文件其余键一致（硬规则 4 只约束 `user_id` ——
+    PII 面是"自然人身份"，租户是组织标识，且监控面板需要按租户读数）。
+    """
+    return _build("rl", "t", bucket, tenant_id)
 
 
 def session_lock(tenant_id: str, user_id: str, session_id: str) -> str:
@@ -243,6 +267,7 @@ DEFAULT_TTL_S: Final[Mapping[str, int]] = MappingProxyType(
         # 限流计数的 TTL = **窗口长度**，不是"缓存时长"：§A.0.6 的四个桶都是「N 次/分钟」，
         # 故窗口 = 60s。写死在这里只是缺省值 —— 限流器按桶配置覆盖（§9.2）。
         "rate_limit": 60,
+        "rate_limit_tenant": 60,
         "session_lock": 60,             # 执行中每 20s 续租（§9.3）
     }
 )
@@ -293,6 +318,7 @@ ALL_BUILDERS: Final[frozenset[str]] = frozenset(
         "event_buffer",
         "idempotency",
         "rate_limit",
+        "rate_limit_tenant",
         "result_set",
         "semantic_few_shot",
         "semantic_retrieval",
