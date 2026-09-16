@@ -24,6 +24,7 @@ from app.api.deps import RUNTIME_STATE_KEY, build_runtime
 from app.api.routers import health
 from app.core.config import AppEnv, get_settings
 from app.core.enums import Dependency
+from app.core.errors import SemanticBundleError
 from app.graph.build import CheckpointSetupOutcome, ensure_checkpoint_schema
 from app.obs import metrics
 from app.obs.logging import configure_logging, get_logger
@@ -31,6 +32,12 @@ from app.repo.health import build_probe_table
 from app.repo.pools import build_three_pools
 from app.repo.redis import build_redis_client
 from app.repo.startup_assertions import enforce_startup_assertions, live_probes
+from app.semantics import (
+    SemanticBundleRuntime,
+    build_semantic_bundle_probe,
+    load_bundle,
+    validate_bundle_path,
+)
 
 __all__ = ["app", "create_app"]
 
@@ -87,11 +94,46 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     runtime = build_runtime(settings=settings, pools=pools, redis=redis_client)
     setattr(application.state, RUNTIME_STATE_KEY, runtime)
 
+    # --- 2.5 语义包运行时（W2-INT 接线，软依赖：失败 = degraded，不拒绝启动）---
+    # 加载失败（缺失/非法，loader 统一抛 SemanticBundleError）→ runtime 保持 None：
+    # 探针如实报 unhealthy（HARD 依赖 → readiness 503），启动断言如实报 PENDING。
+    # **非预期异常不吞** —— 那是 bug，fail-fast 暴露比 degraded 诚实。
+    semantic_runtime: SemanticBundleRuntime | None = None
+    try:
+        semantic_runtime = SemanticBundleRuntime(
+            load_bundle(
+                settings.SEMANTIC_BUNDLE_PATH,
+                embedding_model=settings.EMBEDDING_MODEL,
+                embedding_dim=settings.EMBEDDING_DIM,
+            )
+        )
+        logger.info(
+            "semantic_bundle_loaded",
+            bundle_version=semantic_runtime.active_version(),
+            why="W2-INT 接线：探针与启动断言共用同一运行时实例，不各自 load_bundle（防多实例漂移）",
+        )
+    except SemanticBundleError as exc:
+        logger.warning(
+            "semantic_bundle_load_failed",
+            detail=str(exc),
+            bundle_path=settings.SEMANTIC_BUNDLE_PATH,
+            why="软依赖降级：semantic_bundle_loaded 探针将如实报 unhealthy（readiness 503）",
+        )
+
+    async def _semantic_validator() -> None:
+        """启动断言注入物（W2A RELAY §1①）：五步校验，失败抛 SemanticBundleError。"""
+        await validate_bundle_path(
+            settings.SEMANTIC_BUNDLE_PATH,
+            embedding_model=settings.EMBEDDING_MODEL,
+            embedding_dim=settings.EMBEDDING_DIM,
+        )
+
     # --- 3. 启动断言（07 §18.4：失败即拒绝启动）---
     outcomes = await enforce_startup_assertions(
         settings,
         live_probes(settings, metadata_engine=pools.metadata),
         logger=logger,
+        semantic_validator=_semantic_validator,
     )
     logger.info(
         "startup_assertions_done",
@@ -122,7 +164,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
             ),
         )
 
-    # --- 5. 健康探针（本窗口只接三个，其余槽位保持"未接线"的如实上报）---
+    # --- 5. 健康探针（W1B 三件 + W2A 语义包探针，其余槽位保持"未接线"的如实上报）---
     probes = build_probe_table(
         metadata_engine=pools.metadata,
         checkpoint_pool=pools.checkpoint,
@@ -130,11 +172,20 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     )
     for dependency, probe in probes.items():
         health.register_probe(dependency, probe)
+    # W2-INT 接线（W2A RELAY §1②）：runtime 未装配时探针返回 healthy=False ——
+    # 这是"未接线/包未就绪"的诚实表达，接上即转真。
+    health.register_probe(
+        Dependency.SEMANTIC_BUNDLE_LOADED,
+        build_semantic_bundle_probe(lambda: semantic_runtime),
+    )
+    # readiness/aggregate 的 bundle_version 从这里读（health.SEMANTIC_RUNTIME_STATE_KEY）
+    setattr(application.state, health.SEMANTIC_RUNTIME_STATE_KEY, semantic_runtime)
+    wired = [*probes.keys(), Dependency.SEMANTIC_BUNDLE_LOADED]
     logger.info(
         "health_probes_registered",
-        wired=[d.value for d in probes],
+        wired=[d.value for d in wired],
         still_unwired=[
-            d.value for d in Dependency if d not in probes
+            d.value for d in Dependency if d not in wired
         ],
         why="未接线项由 health._unwired_probe 如实上报 healthy=false —— 不谎报健康（N-21）",
     )

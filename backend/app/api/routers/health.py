@@ -27,7 +27,7 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any, Final
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from app.core.contracts import HealthProbeResult
@@ -39,9 +39,14 @@ from app.core.enums import (
     HealthStatus,
 )
 
-__all__ = ["register_probe", "router"]
+__all__ = ["SEMANTIC_RUNTIME_STATE_KEY", "register_probe", "router"]
 
 router = APIRouter(tags=["health"])
+
+#: `app.state` 上语义包运行时的键名（W2-INT 接线，主键形态对齐 `deps.RUNTIME_STATE_KEY`）。
+#: 定义在本文件（L5）而不是 `app/semantics`（L1）：放运行时对象进 `app.state`
+#: 是**接入层装配动作**，语义包模块自己不知道也不该知道 `app.state` 的存在。
+SEMANTIC_RUNTIME_STATE_KEY: Final[str] = "commerceql.semantic_runtime"
 
 #: 进程启动时刻（单调时钟）。`time.monotonic` 不受系统时间调整影响 ——
 #: 用墙钟算 uptime 会在 NTP 校时后出现负数。
@@ -114,6 +119,18 @@ def _checks_payload(results: dict[Dependency, HealthProbeResult]) -> dict[str, b
     return {dep.value: res.healthy for dep, res in results.items()}
 
 
+def _bundle_version(request: Request) -> str | None:
+    """从 `app.state` 取语义包运行时的激活版本（W2-INT 接线）。
+
+    ⚠️ 运行时未装配 → `None`（如实），**不填 `"unknown"` 之类的占位串** ——
+    消费方（前端/监控）区分"没有"与"有一个叫 unknown 的版本"靠的就是 None。
+    """
+    runtime = getattr(request.app.state, SEMANTIC_RUNTIME_STATE_KEY, None)
+    if runtime is None:
+        return None
+    return str(runtime.active_version())
+
+
 @router.get("/healthz/live")
 async def liveness() -> JSONResponse:
     """liveness（附录 A §A.8.2）。**约束：不检查任何外部依赖。**
@@ -132,24 +149,26 @@ async def liveness() -> JSONResponse:
 
 
 @router.get("/healthz/ready")
-async def readiness() -> JSONResponse:
+async def readiness(request: Request) -> JSONResponse:
     """readiness（附录 A §A.8.3）。**只含硬依赖**（N-21）。
 
     阶段 0 返回 503 —— 元数据库 / checkpointer / Redis / 语义包**均未接线**。
     这是 DoD① 明确要求的行为：**503 是正确的，不是缺陷**。
+    W2-INT 接线后：语义包运行时装配成功 → `semantic_bundle_loaded` 转真；
+    未装配（包缺失/非法/未接线）→ 如实 503（`SEMANTIC_BUNDLE_LOADED` 属 HARD，enums 单一定义）。
     """
     results = await _collect(READINESS_DEPENDENCIES)
     ok = all(res.healthy for res in results.values())
     body: dict[str, Any] = {
         "status": HealthStatus.OK.value if ok else HealthStatus.UNHEALTHY.value,
         "checks": _checks_payload(results),
-        "bundle_version": None,  # 语义包接入后由 W2A 提供
+        "bundle_version": _bundle_version(request),
     }
     return JSONResponse(body, status_code=200 if ok else 503)
 
 
 @router.get("/healthz")
-async def aggregate() -> JSONResponse:
+async def aggregate(request: Request) -> JSONResponse:
     """聚合详情（附录 A §A.8.4）。**不要用它做编排探针。**
 
     ⚠️ 关键规则：仅软依赖失败 → **200 + degraded**（不是 503）。
@@ -183,7 +202,7 @@ async def aggregate() -> JSONResponse:
         "graph_compiled": False,
         **checks,
         "degraded_dependencies": degraded,
-        "bundle_version": None,
+        "bundle_version": _bundle_version(request),
         "version": "0.1.0",
         # 二者**必须分列**（附录 A §A.8.4）：Ollama 在宿主、DeepSeek 在公网，
         # 合成一个字段会让"到底是 embedding 挂了还是对话模型挂了"无法定位

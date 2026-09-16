@@ -76,7 +76,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.core.config import STARTUP_ASSERTIONS_DELEGATED_TO_W1B, AppEnv, Settings
-from app.core.errors import ConfigError
+from app.core.errors import ConfigError, SemanticBundleError
 from app.repo.dsn import READ_ONLY_ROLE_ASSERTION_SQL, to_libpq_conninfo
 from app.repo.reachability import (
     UNREACHABLE_ERROR_TYPES,
@@ -419,9 +419,15 @@ def evaluate_audit_append_only(access: AuditAccess | Unreachable) -> AssertionOu
 def evaluate_semantic_bundle(*, validator: Callable[[], Awaitable[None]] | None) -> AssertionOutcome:
     """07 §18.4 第 4 条：语义包通过 §6.1 五步校验。
 
-    ⚠️ **本窗口只留插槽，不实现校验**（`validator=None` → `PENDING`）。
-    这不是偷懒，是**避免制造第二份真相**：五步校验的产出形态（物化表 + 版本指针）
-    归 W2A 的 `semantics/loader.py`；W1B 在这里再写一遍校验，两份实现必然随时间分叉。
+    ⚠️ **判定依据 = 编排层是否真的调用过校验器**（W2-INT 接线后的语义）：
+    - `validator=None` → `PENDING`（未接线）；
+    - 编排层 `await validator()` **成功后**传入非 None → `PASS`；
+    - 校验器抛 `SemanticBundleError`（缺失/非法，W2A `loader._read_yaml` 统一形态）
+      → `PENDING`（软依赖降级，不拒绝启动 —— 但 prod 下经 `strict_in_prod` 收紧）。
+
+    这不是偷懒，是**避免制造第二份真相**：五步校验实现归 W2A 的 `semantics/loader.py`；
+    本文件只持有"调用方注入的 callable"（L0 不得 import L1 的 `app.semantics`，
+    R-DEP-1 实测会拦 —— 与 W2A `materialize` 注入 Redis 键是同一修法）。
 
     补充事实（供下一窗口直接用）：W1A 已交付**独立可跑的** `semantic/validate_bundle.py`
     （27 项断言，刻意不 import `app.*`）。它是**作者侧**校验器，
@@ -433,15 +439,50 @@ def evaluate_semantic_bundle(*, validator: Callable[[], Awaitable[None]] | None)
             status=AssertionStatus.PENDING,
             detail=(
                 "五步校验器未接线 —— 归 **W2A**（`semantics/loader.py`，07 §6.1）。"
-                "W1B 在此仅留插槽（`StartupProbes` 之外的单参数注入点），"
-                "避免与 W2A 各写一份校验"
+                "组装根注入 `validate_bundle_path` 后本项自动转为可判定"
             ),
         )
     return AssertionOutcome(
         name=SEMANTIC_BUNDLE_PASSED_FIVE_STEP_VALIDATION,
         status=AssertionStatus.PASS,
-        detail="注入的校验器已通过",
+        detail="注入的校验器已通过（编排层已实际 await 调用）",
     )
+
+
+async def _evaluate_semantic_with_validator(
+    validator: Callable[[], Awaitable[None]] | None,
+) -> AssertionOutcome:
+    """实际执行语义包校验并映射三态（W2-INT 接线的编排点）。
+
+    ⚠️ 失败映射**不是**一刀切 FAIL：
+    - `SemanticBundleError` = 包**缺失/非法**（部署面/上游面问题，可修复可补齐）
+      → `PENDING`（软依赖：dev 放行 + WARN；prod 经 `strict_in_prod` 拒绝启动）。
+      **判 FAIL 会让「服务起来了、但语义包未就绪」这个状态不可达** —— 与文件头
+      "依赖连不上不判 FAIL" 同一条理由。
+    - **其他异常** = 校验器自身有 bug（非预期形态）→ `FAIL`（fail-fast 暴露，不吞）。
+    """
+    if validator is None:
+        return evaluate_semantic_bundle(validator=None)
+    try:
+        await validator()
+    except SemanticBundleError as exc:
+        return AssertionOutcome(
+            name=SEMANTIC_BUNDLE_PASSED_FIVE_STEP_VALIDATION,
+            status=AssertionStatus.PENDING,
+            detail=(
+                f"语义包校验未通过（缺失/非法 → 软依赖 PENDING，不是 FAIL）：{exc}"
+            ),
+        )
+    except Exception as exc:
+        return AssertionOutcome(
+            name=SEMANTIC_BUNDLE_PASSED_FIVE_STEP_VALIDATION,
+            status=AssertionStatus.FAIL,
+            detail=(
+                f"语义包校验器抛出非预期异常 {type(exc).__name__} —— 判 FAIL "
+                f"（校验器缺陷，不是包的问题）：{exc}"
+            ),
+        )
+    return evaluate_semantic_bundle(validator=validator)
 
 
 # ============================================================================
@@ -645,13 +686,17 @@ def assert_covers_delegated_names() -> None:
 
 
 async def run_startup_assertions(
-    settings: Settings, probes: StartupProbes
+    settings: Settings,
+    probes: StartupProbes,
+    *,
+    semantic_validator: Callable[[], Awaitable[None]] | None = None,
 ) -> tuple[AssertionOutcome, ...]:
     """跑全部 4 条，**按清单顺序返回**（顺序稳定 → 日志可 diff）。
 
     ⚠️ 三条 I/O 断言**并行**发出（`asyncio.gather`）：它们互不依赖，
     串行会让 api 的启动时间无谓地叠加三次连接超时（pg 未就绪时最坏 15s）。
-    语义包那条是纯插槽、无 I/O，故直接构造。
+    语义包校验器由组装根注入（`app.semantics.validate_bundle_path`，
+    W2-INT 接线）；`None` = 未接线 → PENDING（原有插槽语义不变）。
     """
     import asyncio
 
@@ -669,8 +714,7 @@ async def run_startup_assertions(
         ),
         evaluate_embedding_dim(declared_dim=settings.EMBEDDING_DIM, column=vector_col),
         evaluate_audit_append_only(audit_access),
-        # ⚠️ 插槽传 `None`：见 `evaluate_semantic_bundle` 的说明（避免与 W2A 各写一份校验）。
-        evaluate_semantic_bundle(validator=None),
+        await _evaluate_semantic_with_validator(semantic_validator),
     )
 
 
@@ -691,6 +735,7 @@ async def enforce_startup_assertions(
     probes: StartupProbes,
     *,
     logger: Any,
+    semantic_validator: Callable[[], Awaitable[None]] | None = None,
 ) -> tuple[AssertionOutcome, ...]:
     """跑断言；**任一致命 → 抛 `ConfigError` 拒绝启动**（07 §18.4 fail-fast）。
 
@@ -700,7 +745,9 @@ async def enforce_startup_assertions(
       "有个东西没就绪"，不知道该找谁；
     - `FAIL` → 先 ERROR 打出全部失败项（**不是第一条就抛**），让一次启动就能看到所有问题。
     """
-    outcomes = await run_startup_assertions(settings, probes)
+    outcomes = await run_startup_assertions(
+        settings, probes, semantic_validator=semantic_validator
+    )
 
     for outcome in outcomes:
         if outcome.status is AssertionStatus.PASS:
