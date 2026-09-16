@@ -1,0 +1,1862 @@
+{
+  "summary": {
+    "n_seeds": 119,
+    "asset_recall_at5_macro": 0.1218,
+    "asset_recall_seeds_counted": 119,
+    "column_recall_at30_macro": 0.0508,
+    "column_recall_seeds_counted": 118,
+    "route_attribution": {
+      "value": 22,
+      "graph": 0,
+      "degraded": 119
+    },
+    "caveat": "sparse/dense 两路因生产 embed_doc 的 tsv/embedding 未填充而贡献为 0；本数值 = value+graph 两路的真实召回，非四路完整形态。"
+  },
+  "misses": [
+    {
+      "seed_id": "GQ-001",
+      "question": "T_A 自 2026-08-01 起的客单价是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pay_amount",
+        "pay_time",
+        "sub_order_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-002",
+      "question": "T_A 自 2026-06-01 起的客单价是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pay_amount",
+        "pay_time",
+        "sub_order_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-003",
+      "question": "T_A 自 2026-08-01 起的人均消费是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "buyer_id",
+        "pay_amount",
+        "pay_time"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-004",
+      "question": "T_A 从 2026-08-01 起的 GMV 是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pay_amount",
+        "pay_time"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-005",
+      "question": "T_A 从 2026-06-01 起的 GMV 是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pay_amount",
+        "pay_time"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-006",
+      "question": "T_A 从 2025-11-01 起的 GMV 是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [
+        "campaign"
+      ],
+      "expected_cols": [
+        "pay_amount",
+        "pay_time"
+      ],
+      "got_cols_sample": [
+        "campaign_type"
+      ]
+    },
+    {
+      "seed_id": "GQ-007",
+      "question": "T_A 从 2026-03-01 起的 GMV 是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pay_amount",
+        "pay_time"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-008",
+      "question": "T_A 自 2026-08-01 起各大区各店铺的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid",
+        "region",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "code",
+        "pay_amount",
+        "pay_time",
+        "region_code",
+        "region_name",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-009",
+      "question": "T_A 自 2026-06-01 起各大区各店铺的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid",
+        "region",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "code",
+        "pay_amount",
+        "pay_time",
+        "region_code",
+        "region_name",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-010",
+      "question": "T_A 自 2026-05-01 起各大区各店铺的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid",
+        "region",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "code",
+        "pay_amount",
+        "pay_time",
+        "region_code",
+        "region_name",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-011",
+      "question": "T_A 自 2026-03-01 起各大区各店铺的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid",
+        "region",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "code",
+        "pay_amount",
+        "pay_time",
+        "region_code",
+        "region_name",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-012",
+      "question": "T_A 618 期间各大区各店铺的成交金额合计是多少？",
+      "expected_assets": [
+        "order_paid",
+        "region",
+        "shop"
+      ],
+      "got_assets": [
+        "campaign"
+      ],
+      "expected_cols": [
+        "code",
+        "pay_amount",
+        "pay_time",
+        "region_code",
+        "region_name",
+        "shop_id"
+      ],
+      "got_cols_sample": [
+        "campaign_type"
+      ]
+    },
+    {
+      "seed_id": "GQ-013",
+      "question": "T_A「3C数码」自 2026-08-01 起各店铺的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid",
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pay_amount",
+        "pay_time",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-014",
+      "question": "T_A「家用电器」自 2026-08-01 起各店铺的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid",
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pay_amount",
+        "pay_time",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-015",
+      "question": "T_A「服饰鞋包」自 2026-06-01 起各店铺的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid",
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pay_amount",
+        "pay_time",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-016",
+      "question": "T_A「食品生鲜」自 2026-06-01 起各店铺的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid",
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pay_amount",
+        "pay_time",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-017",
+      "question": "T_A「美妆个护」自 2026-05-01 起各店铺的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid",
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pay_amount",
+        "pay_time",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-018",
+      "question": "T_A 自 2026-08-01 起各大区的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid",
+        "region"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "code",
+        "pay_amount",
+        "pay_time",
+        "region_code",
+        "region_name"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-019",
+      "question": "T_A 自 2026-06-01 起各大区的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid",
+        "region"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "code",
+        "pay_amount",
+        "pay_time",
+        "region_code",
+        "region_name"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-020",
+      "question": "T_A 自 2026-05-01 起各大区的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid",
+        "region"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "code",
+        "pay_amount",
+        "pay_time",
+        "region_code",
+        "region_name"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-021",
+      "question": "T_A 自 2026-03-01 起各大区的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid",
+        "region"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "code",
+        "pay_amount",
+        "pay_time",
+        "region_code",
+        "region_name"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-022",
+      "question": "T_A 从 2026-08-01 起各渠道的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "channel",
+        "pay_amount",
+        "pay_time"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-023",
+      "question": "T_A 从 2026-08-01 起各店铺的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pay_amount",
+        "pay_time",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-024",
+      "question": "T_A 从 2026-08-01 起各一级类目的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pay_amount",
+        "pay_time"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-025",
+      "question": "T_A 从 2026-08-01 起各收货城市的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pay_amount",
+        "pay_time",
+        "receiver_city"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-026",
+      "question": "T_A 八月起各 SKU 的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pay_amount",
+        "pay_time",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-027",
+      "question": "T_A 六月起各 SKU 的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pay_amount",
+        "pay_time",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-028",
+      "question": "T_A 一月起各 SKU 的 GMV 分别是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pay_amount",
+        "pay_time",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-029",
+      "question": "T_A 从 2026-08-01 起的订单量是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pay_time",
+        "sub_order_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-030",
+      "question": "T_A 从 2026-06-01 起的订单量是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pay_time",
+        "sub_order_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-031",
+      "question": "T_A 从 2026-01-01 起的订单量是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pay_time",
+        "sub_order_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-032",
+      "question": "T_A 自 2026-08-01 起有流量但零转化的 SKU 有哪些？",
+      "expected_assets": [
+        "product",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "order_cnt",
+        "sku_id",
+        "stat_date",
+        "uv"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-033",
+      "question": "T_A 自 2026-08-01 起的支付转化率是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [
+        "order_paid"
+      ],
+      "expected_cols": [
+        "order_cnt",
+        "stat_date",
+        "uv"
+      ],
+      "got_cols_sample": [
+        "pay_status"
+      ]
+    },
+    {
+      "seed_id": "GQ-034",
+      "question": "T_B 自 2026-01-01 起的支付转化率是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [
+        "order_paid"
+      ],
+      "expected_cols": [
+        "order_cnt",
+        "stat_date",
+        "uv"
+      ],
+      "got_cols_sample": [
+        "pay_status"
+      ]
+    },
+    {
+      "seed_id": "GQ-035",
+      "question": "T_A 自 2026-08-01 起的退款率是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [
+        "order_paid"
+      ],
+      "expected_cols": [
+        "pay_amount",
+        "pay_time",
+        "refund_status"
+      ],
+      "got_cols_sample": [
+        "refund_status"
+      ]
+    },
+    {
+      "seed_id": "GQ-036",
+      "question": "T_B 自 2026-06-01 起的退款率是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [
+        "order_paid"
+      ],
+      "expected_cols": [
+        "pay_amount",
+        "pay_time",
+        "refund_status"
+      ],
+      "got_cols_sample": [
+        "refund_status"
+      ]
+    },
+    {
+      "seed_id": "GQ-037",
+      "question": "T_A 自 2026-06-01 起的 90 天复购率是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "buyer_id",
+        "pay_time",
+        "sub_order_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-038",
+      "question": "T_A 自 2026-03-01 起的 90 天复购率是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "buyer_id",
+        "pay_time",
+        "sub_order_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-039",
+      "question": "T_C 从 2026-08-01 起的 UV 合计是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "stat_date",
+        "uv"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-040",
+      "question": "T_A「3C数码」自 2026-08-01 起各店铺的浏览量分别是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pv",
+        "shop_id",
+        "sku_id",
+        "stat_date"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-041",
+      "question": "T_A「家用电器」自 2026-08-01 起各店铺的浏览量分别是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pv",
+        "shop_id",
+        "sku_id",
+        "stat_date"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-042",
+      "question": "T_A「服饰鞋包」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pv",
+        "shop_id",
+        "sku_id",
+        "stat_date"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-043",
+      "question": "T_A「食品生鲜」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pv",
+        "shop_id",
+        "sku_id",
+        "stat_date"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-044",
+      "question": "T_A「美妆个护」自 2026-05-01 起各店铺的浏览量分别是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pv",
+        "shop_id",
+        "sku_id",
+        "stat_date"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-045",
+      "question": "T_A 从 2026-08-01 起各sku_id的 UV 分别是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [
+        "order_paid",
+        "traffic_daily"
+      ],
+      "expected_cols": [
+        "sku_id",
+        "stat_date",
+        "uv"
+      ],
+      "got_cols_sample": [
+        "channel"
+      ]
+    },
+    {
+      "seed_id": "GQ-046",
+      "question": "T_A 从 2026-08-01 起各channel的 UV 分别是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "channel",
+        "stat_date",
+        "uv"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-047",
+      "question": "T_A 从 2026-08-01 起各stat_date的 UV 分别是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "stat_date",
+        "uv"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-048",
+      "question": "T_A 从 2026-08-01 起的付费金额合计（含未支付）是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [
+        "order_paid",
+        "traffic_daily"
+      ],
+      "expected_cols": [
+        "pay_amount",
+        "pay_status"
+      ],
+      "got_cols_sample": [
+        "channel",
+        "pay_status"
+      ]
+    },
+    {
+      "seed_id": "GQ-049",
+      "question": "T_A 2026-08 的日期维表有多少天？",
+      "expected_assets": [
+        "dim_date"
+      ],
+      "got_assets": [],
+      "expected_cols": [],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-050",
+      "question": "T_A 的在架商品数是多少？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "on_sale"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-051",
+      "question": "T_A 的下架商品数是多少？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "on_sale"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-052",
+      "question": "T_A 的SPU 数是多少？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "on_sale",
+        "spu_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-053",
+      "question": "T_A 的店铺数是多少？",
+      "expected_assets": [
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-054",
+      "question": "T_A 的活动数是多少？",
+      "expected_assets": [
+        "campaign"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "campaign_type"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-055",
+      "question": "T_A 的华东覆盖省份数是多少？",
+      "expected_assets": [
+        "region"
+      ],
+      "got_assets": [
+        "order_paid"
+      ],
+      "expected_cols": [
+        "region_name"
+      ],
+      "got_cols_sample": [
+        "region_code"
+      ]
+    },
+    {
+      "seed_id": "GQ-056",
+      "question": "T_A 的收货省份覆盖数是多少？",
+      "expected_assets": [
+        "order_paid"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "region_code"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-057",
+      "question": "T_A 直播渠道一共带来多少浏览量？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [
+        "order_paid",
+        "traffic_daily"
+      ],
+      "expected_cols": [
+        "channel",
+        "pv"
+      ],
+      "got_cols_sample": [
+        "channel"
+      ]
+    },
+    {
+      "seed_id": "GQ-058",
+      "question": "T_A 搜索渠道一共带来多少浏览量？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [
+        "order_paid",
+        "traffic_daily"
+      ],
+      "expected_cols": [
+        "channel",
+        "pv"
+      ],
+      "got_cols_sample": [
+        "channel"
+      ]
+    },
+    {
+      "seed_id": "GQ-059",
+      "question": "T_A 推荐渠道一共带来多少浏览量？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [
+        "order_paid",
+        "traffic_daily"
+      ],
+      "expected_cols": [
+        "channel",
+        "pv"
+      ],
+      "got_cols_sample": [
+        "channel"
+      ]
+    },
+    {
+      "seed_id": "GQ-060",
+      "question": "T_A 付费广告渠道一共带来多少浏览量？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [
+        "order_paid",
+        "traffic_daily"
+      ],
+      "expected_cols": [
+        "channel",
+        "pv"
+      ],
+      "got_cols_sample": [
+        "channel"
+      ]
+    },
+    {
+      "seed_id": "GQ-061",
+      "question": "T_A 直接访问渠道一共带来多少浏览量？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [
+        "order_paid",
+        "traffic_daily"
+      ],
+      "expected_cols": [
+        "channel",
+        "pv"
+      ],
+      "got_cols_sample": [
+        "channel"
+      ]
+    },
+    {
+      "seed_id": "GQ-062",
+      "question": "T_A 的「3C数码」在架商品有多少个？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-063",
+      "question": "T_A 的「家用电器」在架商品有多少个？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-064",
+      "question": "T_A 的「美妆个护」在架商品有多少个？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-065",
+      "question": "T_B 的「服饰鞋包」在架商品有多少个？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-066",
+      "question": "T_C 的「食品生鲜」在架商品有多少个？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-067",
+      "question": "T_A 在 广州市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-068",
+      "question": "T_A 在 杭州市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-069",
+      "question": "T_A 在 成都市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-070",
+      "question": "T_A 在 武汉市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-071",
+      "question": "T_A 在 南京市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-072",
+      "question": "T_A 在 西安市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-073",
+      "question": "T_A 在 长沙市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-074",
+      "question": "T_A 在 郑州市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-075",
+      "question": "T_A 的「3C数码」商品在各店铺的浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-076",
+      "question": "T_A 的「家用电器」商品在各店铺的浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-077",
+      "question": "T_A 的「服饰鞋包」商品在各店铺的浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-078",
+      "question": "T_A 的「食品生鲜」商品在各店铺的浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-079",
+      "question": "T_A 的「美妆个护」商品在各店铺的浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-080",
+      "question": "T_A 的「家居家装」商品在各店铺的浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-081",
+      "question": "T_A 的「母婴玩具」商品在各店铺的浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-082",
+      "question": "T_A 的「运动户外」商品在各店铺的浏览量合计是多少？",
+      "expected_assets": [
+        "product",
+        "shop",
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "pv",
+        "shop_id",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-083",
+      "question": "T_A 位于广州的店铺各有多少个商品？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-084",
+      "question": "T_A 位于杭州的店铺各有多少个商品？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-085",
+      "question": "T_A 位于成都的店铺各有多少个商品？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-086",
+      "question": "T_A 位于武汉的店铺各有多少个商品？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-087",
+      "question": "T_A 位于南京的店铺各有多少个商品？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-088",
+      "question": "T_A 位于西安的店铺各有多少个商品？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [
+        "order_paid"
+      ],
+      "expected_cols": [
+        "city",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": [
+        "region_code"
+      ]
+    },
+    {
+      "seed_id": "GQ-089",
+      "question": "T_A 位于长沙的店铺各有多少个商品？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-090",
+      "question": "T_A 位于郑州的店铺各有多少个商品？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-091",
+      "question": "T_A 各店铺的商品平均标价是多少？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "list_price",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-092",
+      "question": "T_A 的「3C数码」各店铺的商品数分别是多少？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-093",
+      "question": "T_A 的「家用电器」各店铺的商品数分别是多少？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-094",
+      "question": "T_A 的「服饰鞋包」各店铺的商品数分别是多少？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-095",
+      "question": "T_A 的「食品生鲜」各店铺的商品数分别是多少？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-096",
+      "question": "T_A 的「美妆个护」各店铺的商品数分别是多少？",
+      "expected_assets": [
+        "product",
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "on_sale",
+        "shop_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-097",
+      "question": "T_A 处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "expected_assets": [
+        "order_paid",
+        "shop"
+      ],
+      "got_assets": [
+        "order_paid",
+        "order_refund"
+      ],
+      "expected_cols": [
+        "pay_status",
+        "refund_status",
+        "shop_id"
+      ],
+      "got_cols_sample": [
+        "refund_status",
+        "refund_type"
+      ]
+    },
+    {
+      "seed_id": "GQ-098",
+      "question": "T_A 处于「全额退款」状态的订单在各店铺分别是多少笔？",
+      "expected_assets": [
+        "order_paid",
+        "shop"
+      ],
+      "got_assets": [
+        "order_paid",
+        "order_refund"
+      ],
+      "expected_cols": [
+        "pay_status",
+        "refund_status",
+        "shop_id"
+      ],
+      "got_cols_sample": [
+        "refund_status",
+        "refund_type"
+      ]
+    },
+    {
+      "seed_id": "GQ-099",
+      "question": "T_A 处于「无退款」状态的订单在各店铺分别是多少笔？",
+      "expected_assets": [
+        "order_paid",
+        "shop"
+      ],
+      "got_assets": [
+        "order_paid"
+      ],
+      "expected_cols": [
+        "pay_status",
+        "refund_status",
+        "shop_id"
+      ],
+      "got_cols_sample": [
+        "refund_status"
+      ]
+    },
+    {
+      "seed_id": "GQ-100",
+      "question": "T_A 的各 SKU 的浏览量分别是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "pv",
+        "sku_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-101",
+      "question": "T_A 的各渠道的浏览量分别是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "channel",
+        "pv"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-102",
+      "question": "T_A 的各日期的访客数分别是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "stat_date",
+        "uv"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-103",
+      "question": "T_A 的各活动类型的活动数分别是多少？",
+      "expected_assets": [
+        "campaign"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "campaign_type"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-104",
+      "question": "T_A 的各城市的店铺数分别是多少？",
+      "expected_assets": [
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "city"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-105",
+      "question": "T_A 的各 SPU 的 SKU 数分别是多少？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "spu_id"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-106",
+      "question": "T_A 的各二级类目的商品数分别是多少？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l2"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-107",
+      "question": "7 个大区各覆盖的省份数分别是多少？",
+      "expected_assets": [
+        "region"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "region_name"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-108",
+      "question": "各一级类目的商品数分别是多少？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-109",
+      "question": "各渠道的加购次数合计分别是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "cart_add_cnt",
+        "channel"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-110",
+      "question": "T_A 直播渠道各 SKU 的浏览量分别是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [
+        "order_paid",
+        "traffic_daily"
+      ],
+      "expected_cols": [
+        "channel",
+        "pv",
+        "sku_id"
+      ],
+      "got_cols_sample": [
+        "channel"
+      ]
+    },
+    {
+      "seed_id": "GQ-111",
+      "question": "T_A 搜索渠道各 SKU 的浏览量分别是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [
+        "order_paid",
+        "traffic_daily"
+      ],
+      "expected_cols": [
+        "channel",
+        "pv",
+        "sku_id"
+      ],
+      "got_cols_sample": [
+        "channel"
+      ]
+    },
+    {
+      "seed_id": "GQ-112",
+      "question": "T_A 推荐渠道各 SKU 的浏览量分别是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [
+        "order_paid",
+        "traffic_daily"
+      ],
+      "expected_cols": [
+        "channel",
+        "pv",
+        "sku_id"
+      ],
+      "got_cols_sample": [
+        "channel"
+      ]
+    },
+    {
+      "seed_id": "GQ-113",
+      "question": "T_A 付费广告渠道各 SKU 的浏览量分别是多少？",
+      "expected_assets": [
+        "traffic_daily"
+      ],
+      "got_assets": [
+        "order_paid",
+        "traffic_daily"
+      ],
+      "expected_cols": [
+        "channel",
+        "pv",
+        "sku_id"
+      ],
+      "got_cols_sample": [
+        "channel"
+      ]
+    },
+    {
+      "seed_id": "GQ-114",
+      "question": "T_A 各一级类目的在架商品数分别是多少？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "on_sale"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-115",
+      "question": "T_A 各二级类目的在架商品数分别是多少？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l2",
+        "on_sale"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-116",
+      "question": "T_A 各城市的在架商品数分别是多少？",
+      "expected_assets": [
+        "shop"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "city"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-117",
+      "question": "3C数码下一级各子类的商品数分别是多少？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "category_l2"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-118",
+      "question": "家用电器下一级各子类的商品数分别是多少？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "category_l2"
+      ],
+      "got_cols_sample": []
+    },
+    {
+      "seed_id": "GQ-119",
+      "question": "服饰鞋包下一级各子类的商品数分别是多少？",
+      "expected_assets": [
+        "product"
+      ],
+      "got_assets": [],
+      "expected_cols": [
+        "category_l1",
+        "category_l2"
+      ],
+      "got_cols_sample": []
+    }
+  ]
+}
