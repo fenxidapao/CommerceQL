@@ -152,10 +152,53 @@ Part B 六步发布演练（version=2026.09.14.1）：
 
 ---
 
-## 6. 诚实边界
+## 6. U-55 授权改动记录（2026-09-16 23:1x，架构裁决后追加）
+
+> 架构窗口已将 9 条全部裁定并落 07 v0.9（§4.8）。其中 U-55 = **(a) RLS 落基表 + 视图保持默认 owner 语义 + `app_ro` 对基表零 GRANT**（否决 security_invoker 与放弃 DB 侧 RLS）——触发本窗口的唯一授权修改条款。
+
+### 6.1 改动内容（单点：materialize.py 的派生与检查段）
+| 位置 | 改动 |
+|---|---|
+| `app/semantics/materialize.py` `_base_table()`（新增） | `v_X → X`（认证视图 → 基表）；非 `v_` 前缀资产按原样返回 |
+| `derive_policy_statements()` RLS/POLICY 段 | `ALTER TABLE ... ENABLE/FORCE ROW LEVEL SECURITY` 与 `CREATE POLICY p_{基表}_tenant ON {基表}` 改为落**基表**（原版落视图 = 实测 42809 跑不通）；GUC 失败关闭谓词与 shop_ids 空串语义**逐字未动** |
+| 同函数 CLS 段 | **不变**：REVOKE/GRANT 仍在视图上（视图 = app_ro 唯一入口，U-55 前提 2） |
+| `assert_grant_policy_consistency()` | pg_policies 查询同步改为基表名 + `p_{基表}_tenant`（派生侧与检查侧同变，防漂移） |
+| `tests/unit/test_materialize_derivation.py` | 4 条断言随契约更新 + 新增"目标=基表、非视图"锁定断言（测试属 W2A，随授权契约变更一并更新，特此披露） |
+
+### 6.2 注入对照（注入 → 必红 → 还原 → 必绿）
+```
+注入（_base_table 临时改为返回原物理名 = U-55 前旧行为）：
+  pytest tests/unit/test_materialize_derivation.py → 4 failed / 8 passed
+  失败项 = TestDerivedPolicies::test_fail_closed_guc_semantics
+         ::test_shop_ids_empty_string_semantics
+         ::test_assets_without_shop_id_get_tenant_only
+         ::test_force_rls        ← 红的确实且仅是目标断言（CLS/GRANT 8 条照绿）
+还原后：12 passed
+```
+
+### 6.3 门禁复核（改动后全量）
+```
+pytest -q → 767 passed / 8 skipped / 0 failed
+lint-imports → Contracts: 4 kept, 0 broken（R-DEP-4 已由 W0 落笔，检索契约生效）
+```
+
+### 6.4 对 BLOCKED 状态的影响
+- with_policy=True 的失败点将随 W1B 的 U-56 迁移（建基表+视图）就绪而解锁——**裁决已齐，剩余是实施**。
+- 三个硬前提（§13.3 v0.9：迁移属主非超级用户无 BYPASSRLS / app_ro 基表零 GRANT / 策略仅依赖 GUC）需 W1B 迁移与 W6 测试锁定，已列入接线总表转达。
+
+---
+
+## 7. CI 分派决定（W0 提问的回复，2026-09-16 23:1x）
+
+> **选 (a)**：W2A/W2B 各自为其集成测试补"连不上 → skip（写明理由）"分支（范本 = `tests/integration/test_real_redis_lock_and_ratelimit.py:454`）。分派消息见 `RELAY_TO_UPSTREAM.md`。
+> **(b) 不否决，列为后续增强**：(a) 与 (b) 兼容——连接可达时 skip 分支自然不触发，测试真跑；不可达时诚实 skip。若 W0 愿意给 pytest job 加 PG service（pgvector 镜像 + 迁移 0001/0002 + DSN 注入），窗口侧**零额外改动**即可受益，建议 W0 排期。
+
+---
+
+## 8. 诚实边界
 
 1. **W2D 代码当前未提交**（untracked 在制品）——本收口基于工作区实测；W2D 提交后建议重跑全量门禁复核。
 2. 全仓 ruff/mypy 红未清零（W2B/W2C 债）——收口窗口不越权修，已在 RELAY §1 逐窗口回执。
 3. 六步演练的"完整形态"被 U-55/56 卡死是**结构性**的：视图不存在 + RLS 不可用于视图，写代码解决不了，必须架构裁决。
-4. 本窗口唯一例外修改权（U-55 裁决后改 derive_policy_statements RLS 段）**未动用**——架构尚未裁决。
+4. 本窗口唯一例外修改权（U-55 裁决后改 derive_policy_statements RLS 段）**已于 §6 动用并留注入对照**——架构 07 v0.9 裁定 (a) 后按授权执行；测试断言随契约更新的越界（W2A 测试文件）已在 §6.1 披露。
 5. 阶段 3 收口窗口复用本模板时替换：包归属（W3A/W3B/W3C）、reports 目录、裁决号、迁移名（模板见 `w2-int/PROMPT.md`）。

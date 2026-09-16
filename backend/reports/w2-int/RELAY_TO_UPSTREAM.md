@@ -1,12 +1,15 @@
 # W2-INT → 上游转述件（统一版，供用户代为转述）
 
-> 生成：2026-09-16 22:2x ｜ 来源：W2-INT 收口窗口（commit `f351ada` + `167295b`）
+> 生成：2026-09-16 22:2x ｜ 更新：23:1x（架构 9 条已裁定 → §2 状态更新；新增 W0 回复与 W2A/W2B 分派）
+> 来源：W2-INT 收口窗口（commit `f351ada` + `167295b` + `3fc1790`）
 > 用法：每个【】块就是一条完整消息，直接复制给对应窗口即可，互相无依赖。
-> 证据细节都在 `backend/reports/w2-int/DELIVERY.md`（§4 门禁 / §5 端到端），收件窗口可自行查。
+> 证据细节都在 `backend/reports/w2-int/DELIVERY.md`（§4 门禁 / §5 端到端 / §6 U-55 授权改动 / §7 CI 分派），收件窗口可自行查。
 
 ---
 
 ## 【给架构窗口】阶段 2 收口 · 裁决请求汇总（9 条）
+
+> ✅ **状态更新（2026-09-16 23:1x）**：架构窗口已将 9 条全部裁定并落 **07 v0.9**（§4.8 登记表 + §13.3 RLS 模板重写 + §7.2/§7.3 口径更正）。W2-INT 已按 U-55 (a) 完成授权范围内的 `derive_policy_statements` 修改（含注入对照与全量门禁复核，见 DELIVERY §6）。**本节保留作归档**，以下为原始请求内容。
 
 > 阶段 2 四窗口（W2A 语义层 / W2B 检索 / W2C 闸门 / W2D 执行脱敏）已全部交付并经收口窗口核验接线。以下 9 条裁决请求已去重合并（编号占用现状：U-01~53 已用；下一可用号 = **U-65**；终局以 07 §4.8 登记为准）。
 >
@@ -23,6 +26,30 @@
 > | U-64 | 红队冻结集与 07 §7.2/§7.3 六处口径冲突（LIMIT ALL / SET 消歧×2 / CROSS JOIN 归因 / R14 vs R17 / RT-LIM-003 deny-execute 互斥） | 红队集是 DoD① 判定基准且已冻结，W2C 按冻结集执行；裁定反向则改动集中在 ast_gate.py | W1A / W4 / W6 |
 >
 > **阻塞提醒**：U-55 + U-56 不裁决，`materialize(with_policy=True)` 永远 BLOCKED（收口窗口已实测：`UndefinedTable: relation "v_order_paid" does not exist`，单事务回滚无半态），DoD③ 端到端无法收口，语义包无法从 candidate 转正式发布。**这不是写代码能解决的，必须先拍板。**
+
+---
+
+## 【给 W0 · 回复】CI 分派：选 (a)，(b) 列为后续增强
+
+> 收口窗口决定：**选 (a)**——W2A/W2B 各自为其集成测试补"连不上 → skip（写明理由）"分支（范本 = `tests/integration/test_real_redis_lock_and_ratelimit.py:454`），分派消息已发（见下两节）。
+> **(b) 不否决**：(a) 与 (b) 完全兼容——CI 加了 PG service 后连接可达，skip 分支自然不触发、integration 真跑；连接不可达时诚实 skip。若你愿意加（pgvector 镜像 + 跑迁移 0001/0002 + 注入 `RETRIEVAL_TEST_PG_DSN` 等环境变量），**窗口侧零额外改动**即可受益，建议作为后续增强排期。
+> 另收到：R-DEP-4（retrieval 禁 LLM）已在本机 lint-imports 实测生效（Contracts: 4 kept），多谢落笔。§前一条消息里的 3 条部署缺口（迁移步骤 / semantic 挂载 / .env 行内注释）仍待你处理。
+
+---
+
+## 【给 W2A · 分派】test_semantic_materialization.py ×2：补"连不上 → skip"分支
+
+> W0 在 CI（afaia31c，早于 c02f97a 同红）定位：你的 `tests/integration/test_semantic_materialization.py` 2 条用例在**无 PG 的 CI 环境**连接拒绝时直接 fail 而不是如实 skip（本地 8 skipped 走的是"权限不足/视图未建"分支，所以看不到这条红）。
+> **请补"连接不可达 → skip（写明理由）"分支**，范本 = `tests/integration/test_real_redis_lock_and_ratelimit.py:454`（W0 指定）。注意 skip 理由要区分：连不上（部署前置缺失）≠ 视图未建（U-56 实施中）≠ 无 DDL 权限。
+> 配套告知：架构已裁 U-55 = (a)（RLS 落基表）、U-56 = W1B alembic 迁移建视图+基表；收口窗口已按授权把 `derive_policy_statements` 的 RLS/POLICY 段改为基表目标（策略名 `p_{基表}_tenant`），你的 `test_materialize_derivation.py` 有 4 条断言随之更新并过注入对照（改动记录 = `reports/w2-int/DELIVERY.md §6`）——请知悉并复核。
+
+---
+
+## 【给 W2B · 分派】test_retrieval_fts_pg.py ×6：补"连不上 → skip"分支
+
+> W0 在 CI（afaa31c，早于 c02f97a 同红）定位：你的 `tests/integration/test_retrieval_fts_pg.py` 6 条用例在**无 PG 的 CI 环境**连接拒绝时直接 fail 而不是如实 skip（本地走的是"夹具 DSN 无 DDL 权限"分支）。
+> **请补"连接不可达 → skip（写明理由）"分支**，范本 = `tests/integration/test_real_redis_lock_and_ratelimit.py:454`（W0 指定）。skip 理由区分：连不上（部署前置缺失）≠ 无 DDL 权限。
+> 配套告知：架构已裁 U-54 = (a)（契约在 contracts、装配根注入两侧同实例）、U-59 = (a) **升级 RetrievalPort 端口面**（富结果进契约，**search_full() 旁路被否决**，W0 落笔 contracts.py）、U-60/U-61 已契约化进 07——你的 `search_full` 旁路后续要按新端口面收敛，请在阶段 3 排期时留意。
 
 ---
 

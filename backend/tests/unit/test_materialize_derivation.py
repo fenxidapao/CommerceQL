@@ -77,30 +77,39 @@ class TestDerivedPolicies:
         assert not any("v_dim_date" in s for s in stmts.policy_sql)
 
     def test_fail_closed_guc_semantics(self, stmts: PolicyStatementSet) -> None:
-        """缺省 GUC = 失败关闭：current_setting 第二参 true → NULL → 行全滤（§13.3 细节①）。"""
-        p = next(s for s in stmts.policy_sql if "v_order_paid" in s)
+        """缺省 GUC = 失败关闭：current_setting 第二参 true → NULL → 行全滤（§13.3 细节①）。
+
+        ⚠️ v0.9（U-55 (a)）：策略建在**基表**上（`v_order_paid` → `order_paid`），
+        视图上建 RLS 实测 42809 —— 本条同时锁定"目标 = 基表、非视图"的新契约。
+        """
+        p = next(s for s in stmts.policy_sql if '"order_paid"' in s)
         assert "current_setting('app.tenant_id', true)" in p
+        assert 'ON "order_paid"' in p and "v_order_paid" not in p
 
     def test_shop_ids_empty_string_semantics(self, stmts: PolicyStatementSet) -> None:
         """空串 = 不限店铺（不能用 NULL —— 经典 bug，§13.3 细节②）。"""
-        p = next(s for s in stmts.policy_sql if "v_order_paid" in s)
+        p = next(s for s in stmts.policy_sql if '"order_paid"' in s)
         assert "current_setting('app.shop_ids', true) = ''" in p
         assert "string_to_array" in p
 
     def test_assets_without_shop_id_get_tenant_only(self, stmts: PolicyStatementSet) -> None:
         """campaign 无 shop_id 列（yaml 实测）→ 策略只含租户谓词，不发明店铺子句；
         product 有 shop_id → 含店铺子句。两者都派生自包，不写死。"""
-        p_campaign = next(s for s in stmts.policy_sql if "v_campaign" in s)
+        p_campaign = next(s for s in stmts.policy_sql if '"campaign"' in s)
         assert "shop_ids" not in p_campaign
         assert "tenant_id = current_setting('app.tenant_id', true)" in p_campaign
-        p_product = next(s for s in stmts.policy_sql if "v_product" in s)
+        p_product = next(s for s in stmts.policy_sql if '"product"' in s)
         assert "current_setting('app.shop_ids', true)" in p_product
 
     def test_force_rls(self, stmts: PolicyStatementSet) -> None:
-        """FORCE = 表 owner 也受限 —— 缺了它 owner 直连即绕过（§13.3 模板）。"""
-        rls = [s for s in stmts.rls_sql if "v_order_paid" in s]
+        """FORCE = 表 owner 也受限 —— 缺了它 owner 直连即绕过（§13.3 模板）。
+
+        v0.9（U-55 (a)）：ALTER TABLE 目标 = **基表** order_paid，不是视图。
+        """
+        rls = [s for s in stmts.rls_sql if '"order_paid"' in s]
         assert any("ENABLE ROW LEVEL SECURITY" in s for s in rls)
         assert any("FORCE ROW LEVEL SECURITY" in s for s in rls)
+        assert not any("v_order_paid" in s for s in rls)
 
 
 # ============================================================================

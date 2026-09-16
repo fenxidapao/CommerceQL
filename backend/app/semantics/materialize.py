@@ -97,12 +97,25 @@ def _policy_name(physical_asset: str) -> str:
     return f"p_{physical_asset}_tenant"
 
 
+def _base_table(physical_asset: str) -> str:
+    """资产物理名（认证视图 `v_X`）→ 基表名（`X`）。
+
+    ⚠️ **v0.9（U-55 裁定 (a)）**：PG 的 RLS 只能建在**表**上（视图上建 = `42809`）。
+    本项目的防线形态（§13.3 v0.9 三个硬前提）：RLS/POLICY 落**基表**；
+    视图保持默认 owner 语义（**禁止 security_invoker**）+ `app_ro` 对基表**零 GRANT**
+    —— 视图是唯一入口，列白名单（CLS）仍在视图上授。非 `v_` 前缀资产按原样返回
+    （那类资产本身就是表，RLS 直接落它）。
+    """
+    return physical_asset[2:] if physical_asset.startswith("v_") else physical_asset
+
+
 def derive_policy_statements(loaded: LoadedBundle) -> PolicyStatementSet:
     """从语义包派生 CLS（GRANT SELECT(col)）与 RLS（CREATE POLICY）语句集。
 
-    规则来源：§13.3（角色 × CLS × RLS 模板）+ 语义包 `policies[].deny_columns` /
-    `assets[].tenant_scoped` / `assets[].columns`。**任何一条语句都不能脱离本函数
-    被手写** —— 这正是 ADR-10"双保险"里应用侧白名单与 DB 侧 GRANT 同源的机制。
+    规则来源：§13.3（**v0.9 U-55 重写版**：RLS 落基表 / 视图 owner 语义 / 基表零 GRANT）
+    + 语义包 `policies[].deny_columns` / `assets[].tenant_scoped` / `assets[].columns`。
+    **任何一条语句都不能脱离本函数被手写** —— 这正是 ADR-10"双保险"里
+    应用侧白名单与 DB 侧 GRANT 同源的机制。
     """
     revoke: list[str] = []
     grant: list[str] = []
@@ -115,16 +128,19 @@ def derive_policy_statements(loaded: LoadedBundle) -> PolicyStatementSet:
             continue  # 整资产被 deny 清空（loader 已 WARN），不授任何列
         quoted = _q_ident(asset.physical_asset)
         revoke.append(f"REVOKE ALL ON {quoted} FROM PUBLIC;")
-        # CLS：只授允许列（deny_columns 已被 loader 剔除）—— §13.3「只授允许列」
+        # CLS：只授允许列（deny_columns 已被 loader 剔除）—— §13.3「只授允许列」。
+        # ⚠️ 授在**视图**上（视图 = app_ro 唯一入口；基表对 app_ro 零 GRANT，U-55 前提 2）。
         grant.append(
             f"GRANT SELECT ({', '.join(_q_ident(c) for c in cols)}) "
             f"ON {quoted} TO app_ro;"
         )
         if asset.tenant_scoped:
-            # RLS：模板 §13.3。缺省 GUC = 失败关闭（current_setting 第二参 true → NULL → 行全滤）；
+            # RLS：模板 §13.3（v0.9）。目标 = **基表**（U-55 (a)：视图上建 RLS 会 42809）。
+            # 缺省 GUC = 失败关闭（current_setting 第二参 true → NULL → 行全滤）；
             # `app.shop_ids` 空串 = 不限店铺（**不能用 NULL** —— NULL 会把所有行滤光）。
-            rls.append(f"ALTER TABLE {quoted} ENABLE ROW LEVEL SECURITY;")
-            rls.append(f"ALTER TABLE {quoted} FORCE ROW LEVEL SECURITY;")
+            base = _q_ident(_base_table(asset.physical_asset))
+            rls.append(f"ALTER TABLE {base} ENABLE ROW LEVEL SECURITY;")
+            rls.append(f"ALTER TABLE {base} FORCE ROW LEVEL SECURITY;")
             if asset.has_column("shop_id"):
                 using = (
                     "tenant_id = current_setting('app.tenant_id', true) "
@@ -133,12 +149,12 @@ def derive_policy_statements(loaded: LoadedBundle) -> PolicyStatementSet:
                 )
             else:
                 using = "tenant_id = current_setting('app.tenant_id', true)"
-            pname = _policy_name(asset.physical_asset)
+            pname = _policy_name(_base_table(asset.physical_asset))
             policies.append(
                 f"""DO $$
 BEGIN
-  DROP POLICY IF EXISTS {_q_ident(pname)} ON {quoted};
-  CREATE POLICY {_q_ident(pname)} ON {quoted}
+  DROP POLICY IF EXISTS {_q_ident(pname)} ON {base};
+  CREATE POLICY {_q_ident(pname)} ON {base}
     USING ({using});
 END $$;"""
             )
@@ -572,32 +588,35 @@ def assert_grant_policy_consistency(conn: psycopg.Connection[Any], loaded: Loade
             )
 
         if asset.tenant_scoped:
-            pname = _policy_name(asset.physical_asset)
+            # ⚠️ v0.9（U-55 (a)）：策略在**基表**上（派生侧与检查侧必须同变，防两侧漂移）
+            base = _base_table(asset.physical_asset)
+            pname = _policy_name(base)
             prow = conn.execute(
                 """
                 SELECT count(*) FROM pg_policies
                 WHERE schemaname = 'app' AND tablename = %s AND policyname = %s
                 """,
-                (asset.physical_asset, pname),
+                (base, pname),
             ).fetchone()
             if not prow or not prow[0]:
                 mismatches.append(
-                    f"{asset.physical_asset}: tenant_scoped=true 但 RLS 策略 {pname} 不存在"
-                    "（行级边界缺失 = 跨租户泄露面）"
+                    f"{asset.physical_asset}: tenant_scoped=true 但基表 {base} 上 RLS 策略 "
+                    f"{pname} 不存在（行级边界缺失 = 跨租户泄露面）"
                 )
         else:
-            pname = _policy_name(asset.physical_asset)
+            base = _base_table(asset.physical_asset)
+            pname = _policy_name(base)
             prow = conn.execute(
                 """
                 SELECT count(*) FROM pg_policies
                 WHERE schemaname = 'app' AND tablename = %s AND policyname = %s
                 """,
-                (asset.physical_asset, pname),
+                (base, pname),
             ).fetchone()
             if prow and prow[0]:
                 mismatches.append(
-                    f"{asset.physical_asset}: tenant_scoped=false 但存在租户策略 {pname}"
-                    "（策略与声明相反）"
+                    f"{asset.physical_asset}: tenant_scoped=false 但基表 {base} 上存在租户策略 "
+                    f"{pname}（策略与声明相反）"
                 )
 
     return ConsistencyReport(
