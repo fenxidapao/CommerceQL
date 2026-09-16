@@ -52,8 +52,32 @@ logs/
 pg_data/
 *.sqlite
 *.db
-# 评测沙箱库若需要进仓库，用 `git add -f` 单独放行（默认仍忽略）
-!ecom_sandbox.db
+
+# ⚠️⚠️ 严禁在此处对 data/ecom_sandbox.db 写反向放行（曾写过 `!ecom_sandbox.db`，已撤除）
+#
+#   历史事实：原第 56 行是一条 **negation** 规则 `!ecom_sandbox.db`，其旁边的注释却写着
+#   "默认仍忽略，需要时用 git add -f 放行" —— 规则与注释**语义相反**。
+#   git 的实际行为由 `git check-ignore -v` 判定，实测输出 `.gitignore:56:!ecom_sandbox.db`，
+#   即该库**处于"会被跟踪"状态**：一次 `git add -A` 就会把 ~420 MiB 灌进提交历史。
+#   （由 W1A 窗口 2026-09-16 转达；W0 复现后撤除。）
+#
+#   为什么不放行：
+#     · 体积 —— `data/ecom_sandbox.db` 实测 440,729,600 B ≈ 420 MiB，远超仓库合理上限；
+#       git 对二进制不做增量压缩，进一次就永久占历史，且 clone/pull 成本永久上升。
+#     · 可重建 —— 它是**生成物**：`data/schema.sql` + `data/generator/` 才是源，
+#       跑生成脚本即可复现（生成器、schema、MANIFEST 都入库）。
+#     · 归属 —— docs/05 §D.2.1 的 `SQLITE_SANDBOX_PATH` 是**容器内运行时卷路径**
+#       （`/data/sandbox/ecom_sandbox.db`），本就不是仓库内容。
+#
+#   确需入库时：`git add -f data/ecom_sandbox.db`（**显式**、一次性、并当场说明理由）。
+#   为什么不用 .gitignore 表达放行意图：.gitignore 描述的是"**默认**忽略哪些未跟踪文件"，
+#   而"我要有意识地提交这一个文件"是一次**命令级**意图 —— 两者放同一处必然再次语义打架。
+
+# SQLite 侧车文件：沙箱库一旦在本地被打开/写入，会生成这些同源文件。
+# 不显式忽略的话，它们在 `git status` 里长成噪声，且同样具备"误提交"风险。
+*.db-wal
+*.db-shm
+*.db-journal
 
 # ---------- 评测产物（冻结集与红队集**要**进仓库，结果不进） ----------
 eval/runs/

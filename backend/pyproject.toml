@@ -27,15 +27,54 @@ license = { text = "Proprietary" }
 dependencies = [
     # --- Web 与配置 ---
     "fastapi>=0.115",              # 原生 SSE（StreamingResponse）+ 自动 OpenAPI
+    # ⚠️ starlette 是 FastAPI 的 ASGI 底座（实测 fastapi 的 Requires 含 starlette），
+    #    此前项目代码直接 import 它的公开 API 却未声明 —— 又一个"传递依赖冒充直接依赖"。
+    #    当前唯一 import 点：tests/unit/test_deps_wiring.py 的 `starlette.requests.Request`。
+    #    之所以归 main 而不是 dev：PRD §11 规定 SSE 的唯一实现路径是 `StreamingResponse`，
+    #    那是 starlette 的类 —— 它本来就位于运行时链路，当 dev 工具处理会误导后来者。
+    "starlette>=0.40",
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",               # 必须 v2
     "pydantic-settings>=2.5",
+    # ⚠️ 本行是**显式化既存事实**：`pydantic-settings` 的 `env_file` 读取由 python-dotenv 承担
+    #    （实测 Required-by: pydantic-settings），它本就在**运行时链路**上、并不是测试专用。
+    #    之所以必须显式命名：`.env` 的解析行为有一条真实踩过的陷阱 —— 值为空时行尾 ` # 注释`
+    #    会被当成**值**（曾让 binding_tau_is_calibrated 误报 True，同时绕过 N-27 与 U-19）。
+    #    契约测试 tests/contract/test_config_failfast.py 需要**用它的真实解析器**去复现该行为；
+    #    若不显式声明，那个测试就是在 import 一个我们没登记的东西。
+    "python-dotenv>=1.0",
+    # --- 内容解析（语义包 YAML）---
+    # ⚠️ 语义包的格式是 YAML，且这是**被设计强制**的，不是随手选的：
+    #    07 §6.1 的第①步就是"读取只读卷上的 YAML"（失败即拒绝启动）；
+    #    07 §3.2 的 semantics/loader.py 职责原文 = "YAML → 校验 → 物化 PG（单事务）"。
+    #    → **运行时**就要直接 import yaml，因此归 main 组（不是 dev/eval）。
+    #    当前项目代码里的直接 import 点（3 处，均非传递调用）：
+    #      semantic/validate_bundle.py、semantic/render_metric_dictionary.py、
+    #      data/generator/selfcheck.py；W2A 的运行时 loader 同样需要它。
+    #    ⚠️ 本行修的是一个**隐性依赖**：此前 pyyaml 只作为 langchain-core 的传递依赖存在
+    #      （实测 pip show → Required-by: langchain-core）。那等于"能跑"靠巧合 ——
+    #      langchain-core 哪天去掉它，本项目的 YAML 读取会毫无预警地崩，
+    #      而 `pip install -e .` 在干净环境里根本装不出可用后端。
+    #    新增下载体积 = **0**（pyyaml 本就在依赖闭包内），本行只是把既存事实写明。
+    #    登记去向：07 ADR-20 表 与 附录 D §D.2.1 均无此项，补录请求见 **U-37**。
+    "pyyaml>=6.0",
     # --- 编排与持久化 ---
-    "langgraph>=0.2",
-    "langgraph-checkpoint-postgres>=2.0",  # 生产禁用 MemorySaver
+    # ⚠️ 以下两行按用户 2026-09-15 的裁定「**都钉**」由开放区间改为**精确版本**：
+    #    理由 = 二者是**图引擎与检查点格式**的载体，其行为直接决定 T-A1（checkpoint 池持有时长）
+    #    与 checkpoint 表结构。开放区间意味着"在不同机器上装出不同的引擎行为"，
+    #    而 T-A1 的结论一旦建立在浮动版本上就不可复现。
+    #    实测已装 = 1.2.11 / 3.1.2，钉住的正是这两个值。
+    "langgraph==1.2.11",
+    "langgraph-checkpoint-postgres==3.1.2",  # 生产禁用 MemorySaver；版本已钉
     "langchain-core>=0.3",
     "sqlalchemy>=2.0",
     "psycopg[binary]>=3.2",        # psycopg **3**，不是 psycopg2
+    # ⚠️ 三池装配直接 `import psycopg_pool`（app/repo/pools.py、repo/health.py、graph/build.py）。
+    #    它此前只是 langgraph-checkpoint-postgres 的**传递依赖**（实测 Required-by 即它）。
+    #    直接 import 传递依赖 = 同一个"隐性依赖"缺陷：上游换实现，三池装配当场崩。
+    #    新增下载体积 = **0**（已在依赖闭包内）。
+    #    本次登记由 W1B 在 app/repo/pools.py 文件头主动提出（详见 U-37）。
+    "psycopg-pool>=3.2",
     "alembic>=1.13",               # RLS 策略也必须纳入迁移
     "pgvector>=0.3",
     # --- SQL 安全 ---
@@ -44,7 +83,13 @@ dependencies = [
     "redis>=5.0",
     "httpx>=0.27",
     "tenacity>=9.0",               # 429 退避
+    # `[crypto]` extra 由 PyJWT 自己声明（实测 METADATA: Requires-Dist: cryptography>=3.4.0;
+    # extra == "crypto"），所以下面那行**不是**"凭空多装一个包"。
+    # 之所以仍要显式列 cryptography：app/auth/jwks.py 是**直接** import 它的
+    # （`from cryptography.hazmat.primitives.serialization import load_pem_public_key`）。
+    # 直接 import 就该直接声明 —— 否则哪天要换掉 PyJWT 的 crypto 后端，jwks 的导入会无声消失。
     "pyjwt[crypto]>=2.9",          # 只存公钥
+    "cryptography>=42.0",          # jwks.py 直接 import（RS256 公钥加载）
     "structlog>=24.1",
     "jieba>=0.42.1",               # ★ 中文分词；版本对齐宿主实测的 0.42.1
     "tiktoken>=0.7",
