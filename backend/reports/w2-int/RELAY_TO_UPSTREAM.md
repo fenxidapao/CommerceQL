@@ -1,88 +1,72 @@
-# W2-INT → 上游转述件（统一版，供用户代为转述）
+# W2-INT → 全窗口转述件（粘贴版 · 2026-09-16 23:5x 第三版）
 
-> 生成：2026-09-16 22:2x ｜ 更新：23:1x（架构 9 条已裁定 → §2 状态更新；新增 W0 回复与 W2A/W2B 分派）
-> 来源：W2-INT 收口窗口（commit `f351ada` + `167295b` + `3fc1790`）
-> 用法：每个【】块就是一条完整消息，直接复制给对应窗口即可，互相无依赖。
-> 证据细节都在 `backend/reports/w2-int/DELIVERY.md`（§4 门禁 / §5 端到端 / §6 U-55 授权改动 / §7 CI 分派），收件窗口可自行查。
-
----
-
-## 【给架构窗口】阶段 2 收口 · 裁决请求汇总（9 条）
-
-> ✅ **状态更新（2026-09-16 23:1x）**：架构窗口已将 9 条全部裁定并落 **07 v0.9**（§4.8 登记表 + §13.3 RLS 模板重写 + §7.2/§7.3 口径更正）。W2-INT 已按 U-55 (a) 完成授权范围内的 `derive_policy_statements` 修改（含注入对照与全量门禁复核，见 DELIVERY §6）。**本节保留作归档**，以下为原始请求内容。
-
-> 阶段 2 四窗口（W2A 语义层 / W2B 检索 / W2C 闸门 / W2D 执行脱敏）已全部交付并经收口窗口核验接线。以下 9 条裁决请求已去重合并（编号占用现状：U-01~53 已用；下一可用号 = **U-65**；终局以 07 §4.8 登记为准）。
->
-> | 建议号 | 主题 | 选项摘要 | 影响面 |
-> |---|---|---|---|
-> | U-54 | TokenizerPort 落点冲突（= W2B 候选 U-58，同一件事，建议合并裁） | (a) 契约留 contracts、实例由装配根注入物化+检索两侧（W2A/W2B 均倾向）；(b) tokenizer 移到 L1 | W2A / W2B / W0 |
-> | U-55 | **RLS 不适用于 PG 视图**（实测 `WrongObjectType`） | (a) RLS 落基表、视图透传；(b) `security_invoker` 视图 + 基表 RLS；(c) 放弃 DB 侧 RLS，租户谓词全走执行层注入 | W2A / W4 / W6（三者的越权防线与审计面不同） |
-> | U-56 | v_* 业务视图的 PG 侧 DDL 归属（compose init / 迁移 / 数据窗口，谁建？） | 8 个 v_* 资产库里不存在 → GRANT 与一致性检查无对象可比 | W2A / W0 |
-> | U-59 | `CandidateRef` 端口装不下列级富结果 | 端口面升级 vs 维持 `search_full()` 富结果旁路 | W0 / W3B / W3C |
-> | U-60 | `embed_doc.tenant_id='*'` 公共哨兵未契约化 | 07 §12.2 回填 | W2A / W2B |
-> | U-61 | `to_tsquery` 需显式 `&` 连接（空格形态 = syntax error，实测） | 07 §6.4 举例若有空格形态请更正 | 架构 |
-> | U-62 | `GuardPort` 缺"改写类"出参通道（rewritten_sql / limit_injected / applied_predicates） | (a) W4 直接调 `run_gate1` 模块函数；(b) 扩 GuardPort（W0 落笔） | W0 / W4 |
-> | U-63 | gate3 的 EXPLAIN 执行归属 | 确认"W4 的 gate3_cost 节点跑 EXPLAIN 并传计划 JSON"为正式契约 | W4 |
-> | U-64 | 红队冻结集与 07 §7.2/§7.3 六处口径冲突（LIMIT ALL / SET 消歧×2 / CROSS JOIN 归因 / R14 vs R17 / RT-LIM-003 deny-execute 互斥） | 红队集是 DoD① 判定基准且已冻结，W2C 按冻结集执行；裁定反向则改动集中在 ast_gate.py | W1A / W4 / W6 |
->
-> **阻塞提醒**：U-55 + U-56 不裁决，`materialize(with_policy=True)` 永远 BLOCKED（收口窗口已实测：`UndefinedTable: relation "v_order_paid" does not exist`，单事务回滚无半态），DoD③ 端到端无法收口，语义包无法从 candidate 转正式发布。**这不是写代码能解决的，必须先拍板。**
+> 来源：W2-INT 收口窗口（commit `f351ada` + `167295b` + `3fc1790` + `b697667`，不含第三方提交）
+> 用法：每个【】块就是一条完整消息，直接复制给对应窗口，互相无依赖，可一次性全发。
+> 证据细节在 `backend/reports/w2-int/DELIVERY.md`（§4 门禁 / §5 端到端 / §6 U-55 授权改动 / §7 CI 分派）与 `backend/reports/w0/RELAY.md`（§6 ruff 清单），收件窗口可自行查。
 
 ---
 
-## 【给 W0 · 回复】CI 分派：选 (a)，(b) 列为后续增强
+## 【给 W0 · 回复】ruff 33 条已按域分派 + (a) 撤回确认
 
-> 收口窗口决定：**选 (a)**——W2A/W2B 各自为其集成测试补"连不上 → skip（写明理由）"分支（范本 = `tests/integration/test_real_redis_lock_and_ratelimit.py:454`），分派消息已发（见下两节）。
-> **(b) 不否决**：(a) 与 (b) 完全兼容——CI 加了 PG service 后连接可达，skip 分支自然不触发、integration 真跑；连接不可达时诚实 skip。若你愿意加（pgvector 镜像 + 跑迁移 0001/0002 + 注入 `RETRIEVAL_TEST_PG_DSN` 等环境变量），**窗口侧零额外改动**即可受益，建议作为后续增强排期。
-> 另收到：R-DEP-4（retrieval 禁 LLM）已在本机 lint-imports 实测生效（Contracts: 4 kept），多谢落笔。§前一条消息里的 3 条部署缺口（迁移步骤 / semantic 挂载 / .env 行内注释）仍待你处理。
-
----
-
-## 【给 W2A · 分派】test_semantic_materialization.py ×2：补"连不上 → skip"分支
-
-> W0 在 CI（afaia31c，早于 c02f97a 同红）定位：你的 `tests/integration/test_semantic_materialization.py` 2 条用例在**无 PG 的 CI 环境**连接拒绝时直接 fail 而不是如实 skip（本地 8 skipped 走的是"权限不足/视图未建"分支，所以看不到这条红）。
-> **请补"连接不可达 → skip（写明理由）"分支**，范本 = `tests/integration/test_real_redis_lock_and_ratelimit.py:454`（W0 指定）。注意 skip 理由要区分：连不上（部署前置缺失）≠ 视图未建（U-56 实施中）≠ 无 DDL 权限。
-> 配套告知：架构已裁 U-55 = (a)（RLS 落基表）、U-56 = W1B alembic 迁移建视图+基表；收口窗口已按授权把 `derive_policy_statements` 的 RLS/POLICY 段改为基表目标（策略名 `p_{基表}_tenant`），你的 `test_materialize_derivation.py` 有 4 条断言随之更新并过注入对照（改动记录 = `reports/w2-int/DELIVERY.md §6`）——请知悉并复核。
+> 1. **收到 (b) 已落码（c7bb534）**：契约断言 job 挂 PG service 后集成测试真跑全绿——**此前给 W2A/W2B 的分派 (a)"补 skip 分支"撤回**，两窗口无需改动；他们的 CI 红属 (b) 覆盖范围，已改发"知悉 (b) 落地、无需 skip 分支"的通知。你此前表述的 (a)(b) 兼容性判断正确，但既然 (b) 已落地就不再让窗口做无谓改动。
+> 2. **ruff 33 条已按你 RELAY §6 清单分派**，两处归属更正请复核修正：
+>    - guard 域 10 条 → **归 W2C**（app/guard/** 是 W2C 归属，非 W1B 域）；
+>    - `tests/redteam/test_redteam_guard.py:23 F401` 1 条 → **归 W1A**（tests/redteam/** 按 07 归属表为 W1A 内容资产、与 W2C 共建；该文件是红队用例库侧）。
+>    - W2-INT 域 1 条（`reports/w2-int/e2e_stage2_check.py:1` UP009）**已由我修复**，`ruff check` 复核 All checks passed。
+> 3. `dense.py:273 F821` 按你的⚠️指示，已在给 W2B 的消息里明确"先手动修、--fix 修不了"。
+> 4. 上轮 3 条部署面缺口（迁移链无机器保证 / api 容器缺语义包挂载 / .env 行内注释）仍待你收口，清单位置不变（见 DELIVERY §7 转述件存档或 `reports/w2-int/RELAY.md`）。
 
 ---
 
-## 【给 W2B · 分派】test_retrieval_fts_pg.py ×6：补"连不上 → skip"分支
+## 【给 W2A】U-55(a) 已代改 + CI 红已由 W0 (b) 方案解决，请复核
 
-> W0 在 CI（afaa31c，早于 c02f97a 同红）定位：你的 `tests/integration/test_retrieval_fts_pg.py` 6 条用例在**无 PG 的 CI 环境**连接拒绝时直接 fail 而不是如实 skip（本地走的是"夹具 DSN 无 DDL 权限"分支）。
-> **请补"连接不可达 → skip（写明理由）"分支**，范本 = `tests/integration/test_real_redis_lock_and_ratelimit.py:454`（W0 指定）。skip 理由区分：连不上（部署前置缺失）≠ 无 DDL 权限。
-> 配套告知：架构已裁 U-54 = (a)（契约在 contracts、装配根注入两侧同实例）、U-59 = (a) **升级 RetrievalPort 端口面**（富结果进契约，**search_full() 旁路被否决**，W0 落笔 contracts.py）、U-60/U-61 已契约化进 07——你的 `search_full` 旁路后续要按新端口面收敛，请在阶段 3 排期时留意。
-
----
-
-## 【给 W0】部署面缺口 3 条 + 2 条待办
-
-> 阶段 2 收口发现以下缺口，均在你归属内（deploy/** / .github/** / .importlinter），收口窗口未越权修改：
->
-> 1. **迁移链无机器保证**：`deploy/docker-compose.yml` 与 `.github/workflows/ci.yml` 均无 alembic 执行步骤，迁移目前靠手动 `alembic upgrade head`。0002 已在 `backend/app/repo/migrations/versions/` 会被自动纳入，但 07 §18.2"迁移先于 api"没有机器保证 → 建议在 compose 加 migrate 步骤或 CI 加迁移 job。
-> 2. **api 容器缺语义包挂载**：api 服务未挂载 `../semantic` → 容器内 `/semantic/bundle_2026.09.14.1.yaml` 永远不存在，语义包加载必失败、readiness 持续 503（本机验证是用环境变量覆盖宿主路径跑通的）。
-> 3. **deploy/.env 有行内注释**：`KEY=value  # 注释` 形态在 pydantic-settings 下会把注释并进值（实测 Settings 校验 15 项报错）；compose env_file 语义也存疑 → 建议 .env 去注释、说明挪 `#` 注释行。
-> 4. （W2B 提案）`.importlinter` 增补契约：retrieval 禁 LLM（refine 除外，P0 未实现），httpx 例外属 embedding 网关——原文见 `backend/reports/w2b/RELAY.md §2 Q4`。
-> 5. （W1A/W2B 遗留）4 个 `--check`（含 importlinter）尚未挂 CI。
+> 1. **CI 红（test_semantic_materialization.py ×2）无需你改**：W0 已落 (b) 方案（c7bb534，pytest job 挂 PG service），集成测试在 CI 真跑全绿——原分派的"补 skip 分支"撤回。
+> 2. **架构已裁 U-55 = (a)：RLS 落基表、视图透传。** 因该项在你归属（`app/semantics/materialize.py`）但按流程由收口窗口代改，请你**复核以下改动**（记录 = `backend/reports/w2-int/DELIVERY.md §6`，commit `b697667`）：
+>    - `derive_policy_statements` 的 RLS/POLICY 段改为基表目标：`ALTER TABLE {基表} ENABLE/FORCE ROW LEVEL SECURITY`、`CREATE POLICY p_{基表}_tenant ON {基表}`；CLS GRANT 仍在视图；
+>    - `assert_grant_policy_consistency` 的 pg_policies 查询改查基表名；
+>    - 你的 `tests/unit/test_materialize_derivation.py` 有 4 条断言随之更新（基表名），并新增"目标是基表不是视图"的锁定断言；已做注入对照（还原旧行为 → 4 条必红 → 还原 → 必绿）。
+> 3. U-56 裁决 = W1B alembic 迁移建 v_* 视图+基表；U-54 = (a)（契约留 contracts、装配根注入两侧同实例）→ 你的 tokenizer 注入点（`materialize(..., tokenizer=...)`）可按此接线，阶段 3 排期。
+> 4. 上轮接线确认（启动断言注入 PASS / readiness 探针 200 / materialize 197 docs 复现 / 指针切换回滚 PASS）不变，无新动作。
 
 ---
 
-## 【给 W2B】lint 债回执（不阻断，但 CI 先行会挂）
+## 【给 W2B】dense.py:273 F821 先手动修 + ruff 12 条 + 端口面收敛预告
 
-> 收口窗口全仓门禁结果：`ruff check .` 34 条中 **15 条在你窗口**（app/retrieval 6 条含 `dense.py:273 F821 Mapping 未导入`——W2D 转达属实，`__future__ annotations` 下不炸运行时但 ruff/mypy 必红；reports/w2b/recall_report.py 4 条；你的测试文件若干）；`mypy app` 22 条中 1 条在 dense.py。逐条清单见 `backend/reports/w2-int/DELIVERY.md §4`，请自行收口。另：全量 pytest 你的范围 0 failed（dense 断言债已解）；你的 U-59/60/61 已合并上呈架构。
-
----
-
-## 【给 W2C】lint/类型债回执
-
-> 收口窗口全仓门禁结果：`ruff` 34 条中 **8 条在 app/guard/**（UP035×4 / RUF034×2 / UP037 / RUF100）；`mypy` 22 条中 **19 条在 guard**（ast_gate 15 / cost_gate 4）。全部为 lint/类型级、行为未动，清单见 `backend/reports/w2-int/DELIVERY.md §4`。你的 U-62/63/64 已合并上呈架构（与 W2A 的 U-54~56 无撞号）。
+> 1. **⚠️ 优先手动修 `app/retrieval/dense.py:273` F821（Undefined name `Mapping`）**——W0 特别提示：这是运行时 NameError（`from __future__ import annotations` 只护注解不护该处使用），`ruff check . --fix` 修不了；修法 = 文件头 `from typing import` 行补 `Mapping`（当前第 32 行只有 `Any, Final, Protocol, Sequence`）。
+> 2. **ruff 33 条中你域内 13 条**（清单 = `backend/reports/w0/RELAY.md §6`）：上述 1 条手动 + 其余 12 条可用 `ruff check . --fix` 收口（含 retrieval 6 条与 reports/w2b/recall_report.py 等）。收口窗口按纪律不代改你归属文件。
+> 3. **CI 红（test_retrieval_fts_pg.py ×6）无需你改**：W0 已落 (b) 方案（c7bb534，PG service 进 CI），原分派的"补 skip 分支"撤回。
+> 4. **裁决结果知悉**（07 v0.9 §4.8）：U-54 = (a) 契约在 contracts、装配根注入 tokenizer 两侧同实例；U-59 = (a) **升级 RetrievalPort 端口面**（列级富结果进契约，**`search_full()` 旁路被否决**，contracts.py 由 W0 落笔）→ 你的旁路调用后续按新端口面收敛，阶段 3 排期留意；U-60（`tenant_id='*'` 哨兵）与 U-61（`to_tsquery` 显式 `&`）已契约化进 07。
 
 ---
 
-## 【给 W2A】接线确认（告知性质，无需动作）
+## 【给 W2C】ruff 10 条 + mypy 19 条 + U-62/63/64 裁决结果
 
-> 你的 RELAY §1 三项接线已由收口窗口落地并实测：启动断言注入（实测 PASS）、readiness 探针（**/healthz/ready 实测 200**，`bundle_version=2026.09.14.1`）、迁移链核验（compose/CI 缺口归 W0）。六步演练：materialize 197 docs 复现、指针切换/回滚 PASS；`with_policy=True` 如预期 BLOCKED（U-55/56）。tokenizer 注入点（`materialize(..., tokenizer=...)`）等 U-54 裁决后接。
+> 1. **ruff 33 条中你域内 10 条**（app/guard/，UP035×4 / RUF034×2 / UP037 / RUF100 等，清单 = `backend/reports/w0/RELAY.md §6`），多数可 `ruff check . --fix` 收口；行为未动，纯 lint 级。
+> 2. **mypy 22 条中 19 条在 guard**（ast_gate 15 / cost_gate 4，清单 = `backend/reports/w2-int/DELIVERY.md §4`），非阻断但会挂 CI 类型检查，建议一并收。
+> 3. **裁决结果知悉**（07 v0.9 §4.8）：U-62（GuardPort 改写类出参通道）、U-63（gate3 EXPLAIN 归 W4 的 gate3_cost 节点）、U-64（红队冻结集口径）均已登记。U-64 若终局与你的实现有出入，改动集中在 ast_gate.py，请对照 §4.8 复核一次。
 
 ---
 
-## 【给 W2D】交付确认 + 提交提醒
+## 【给 W2D】提交提醒（仍 untracked）+ U-63 契约知悉
 
-> ① 你的 91 条测试全量复跑通过；全仓 ruff/mypy 归属核对与你 DELIVERY §5 的判断一致（0 条归你）。② **你的代码当前 untracked 未提交**——收口基于工作区实测（结论有效），提交后请通知收口窗口重跑门禁复核一次。③ 你给 W4 的装配说明已列入阶段 4 移交清单。
+> 1. **你的代码当前仍未提交（untracked）**——收口窗口基于工作区实测的结论（91 条测试通过、0 条 ruff/mypy 归你）仍有效，但请尽快提交并通知收口窗口重跑门禁复核一次。
+> 2. U-63 已裁决：gate3 的 EXPLAIN 执行 = W4 的 `gate3_cost` 节点跑 EXPLAIN 并传计划 JSON，此为正式契约——你 exec 侧如有对 gate3 执行位置的假设，请对照 07 v0.9 §4.8 核对。
+
+---
+
+## 【给 W1A】1 条 ruff + 红队集口径已被 U-64 裁决
+
+> 1. **ruff 33 条中 1 条在你域**：`tests/redteam/test_redteam_guard.py:23` F401（未使用 import），`--fix` 可收（清单 = `backend/reports/w0/RELAY.md §6`）。
+> 2. U-64 已裁决并登记 07 v0.9 §4.8（红队冻结集 vs 07 §7.2/§7.3 六处口径冲突，含 LIMIT ALL / SET 消歧 / CROSS JOIN 归因 / R14 vs R17 / RT-LIM-003）——W2C 按冻结集执行的口径已获确认；如裁决要求 07 侧文档让步，无需你改用例。你此前的遗留（L1 变体 patch、L5 零分母 SKU、4 个 `--check` 挂 CI）状态不变。
+
+---
+
+## 【给 W1B】U-56 迁移请求（当前关键路径）
+
+> 架构已裁 **U-56：v_* 业务视图（8 个）+ 对应基表的 PG 侧 DDL 由你以 alembic 迁移落**（迁移链 0001/0002 已存在，新增 0003 起）。这是 DoD③ 端到端当前**唯一硬阻塞**：收口窗口实测六步发布在 step② `materialize(with_policy=True)` 报 `UndefinedTable: relation "v_order_paid" does not exist`（单事务回滚无半态）。迁移落地后语义包即可从 candidate 转正式发布。配套知悉：U-55(a) 已实施（RLS 落基表、策略名 `p_{基表}_tenant`、视图透传，GRANT 仍挂视图），迁移脚本建表/建视图时请与此口径一致；实测细节 = `backend/reports/w2-int/DELIVERY.md §5/§6`。另：你名下 U-53（pool.close() 2s）仍未做，可随本次一并收。
+
+---
+
+## 【给架构窗口 · FYI】裁决已收到并核实，无新请求
+
+> 9 条裁决（07 v0.9 §4.8）已收悉并逐条核对：U-55(a) 已由收口窗口在授权范围内实施（`derive_policy_statements` 基表化 + 注入对照 + 全量门禁复核，commit `b697667`，已请 W2A 复核）；其余各窗口分派已发出。**下一可用编号 = U-65**（W1A/W1B/W2A/W2B 区间已用尽，无新增请求）。唯一关键路径 = U-56 迁移（已派 W1B）。编号登记烦请确认 U-62/63/64 归属段无撞号（W2C 曾两次让号）。
