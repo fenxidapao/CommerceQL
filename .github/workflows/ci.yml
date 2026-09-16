@@ -47,6 +47,28 @@ jobs:
   contract-tests:
     name: 契约断言（DoD③）
     runs-on: ubuntu-latest
+    # (b) 决策落码（架构窗口 2026-09-16 裁定，与 (a)"连不上→skip"分支完全兼容）：
+    #     给 pytest job 挂真 PG service → 集成测试（W2B FTS / W2A 语义物化 / W1B 执行与审计）
+    #     在 CI **真跑**而不是 ERROR。此前 CI 红的根因不是 skip 分支缺失，而是
+    #     `test_retrieval_fts_pg.py` 的 `pg_table` fixture 里 `assert TEST_DSN is not None`
+    #     —— CI 无 deploy/.env，DSN 解析不出来直接 AssertionError（隔离树已复现）。
+    #     trust 认证 → DSN 无口令段 → 不触 DoD④ 的"属主口令 DSN 形态"规则（同 migration-gate）。
+    services:
+      postgres:
+        # pgvector 镜像：0002 的语义包表用 vector 列（与 migration-gate 同款）
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: ecom
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ecom"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -81,8 +103,28 @@ jobs:
       #      · test_dependency_whitelist.py —— ADR-20 依赖白名单**双录账** +
       #                                        幽灵依赖检测（直接 import 必须已声明）
       #    （tests/{unit,integration} 已由阶段 1A/1B 填充；graph_snapshot/redteam 属后续窗口。）
+      # 集成测试的硬前置：0001 建角色（app_rw / app_ro）+ 0002 语义包表。
+      # 角色由迁移创建（不是镜像 env），所以必须先迁移再跑 pytest。
+      # 仍会如实 skip 的分支（预期内，非失败）：
+      #   · deploy/.env 不存在 → PROD_DSN schema 对齐检查 skip（CI 不造生产 DSN 文件）；
+      #   · 业务视图未建（W2A 待裁决③）→ 语义物化的授权扰动用例 skip；
+      #   · Redis 未起 → 锁/限流集成用例按 (a) 的"连不上→skip"分支走。
+      - name: 迁移到 head（集成测试前置：角色 + 语义包表）
+        working-directory: ${{ env.BACKEND_DIR }}
+        env:
+          MIGRATION_DATABASE_URL: postgresql+psycopg://postgres@127.0.0.1:5432/ecom
+        run: alembic upgrade head
+
+      # DSN 全部无口令段（trust 认证）。角色对应：postgres=DDL/超管，app_rw=读写，
+      # app_ro=只读（0001 创建）。RETRIEVAL_TEST_PG_DSN 用超管：FTS 夹具要建临时 schema。
+      # ⚠️ 不要把这里的 DSN 换成带口令形态 —— 会命中 gitleaks 的 commerceql-dsn-with-password。
       - name: 全量测试（tests/contract = DoD③ 的载体）
         working-directory: ${{ env.BACKEND_DIR }}
+        env:
+          RETRIEVAL_TEST_PG_DSN: postgresql://postgres@127.0.0.1:5432/ecom
+          COMMERCEQL_TEST_RW_DSN: postgresql://app_rw@127.0.0.1:5432/ecom
+          COMMERCEQL_TEST_RO_DSN: postgresql://app_ro@127.0.0.1:5432/ecom
+          COMMERCEQL_TEST_SUPER_DSN: postgresql://postgres@127.0.0.1:5432/ecom
         run: pytest
 
       - name: 取值集自检（07 §4.2 断言⑤ 的独立入口）
