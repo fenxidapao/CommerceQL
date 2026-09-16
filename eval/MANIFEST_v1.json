@@ -1,0 +1,122 @@
+{
+  "produced_by_window": "W1A",
+  "dataset_version": "1",
+  "content_hash": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609",
+  "sandbox": {
+    "path": "data/ecom_sandbox.db",
+    "bytes": 440729600,
+    "sha256": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+    "generator": "data/generator/seed_generator.py",
+    "generator_sha256": "c0b2569cca1fc34216b281938ebf7d5ee59ddc8638d5f9a55dae37285de9dccf",
+    "params": {
+      "boundary_order_count": 24,
+      "category_l1_count": 8,
+      "channels": [
+        "search",
+        "feed",
+        "live",
+        "direct",
+        "ad"
+      ],
+      "cross_tenant_isomorphic": true,
+      "date_end": "2026-09-30",
+      "date_start": "2024-10-01",
+      "empty_interval": {
+        "month": 2,
+        "tenant": "T_C",
+        "year": 2025
+      },
+      "missing_category_rate": 0.01,
+      "null_region_rate": 0.02,
+      "order_rows_total": 500000,
+      "outlier_amount": 999999,
+      "outlier_count_per_tenant": 5,
+      "partial_refund_share": 0.15,
+      "promo_day_multiplier": [
+        8.0,
+        15.0
+      ],
+      "promo_windows": {
+        "prom_618": [
+          "05-24",
+          "06-20"
+        ],
+        "prom_double11": [
+          "10-20",
+          "11-11"
+        ]
+      },
+      "refund_rate_range": [
+        0.03,
+        0.08
+      ],
+      "seasonal_amplitude": 0.18,
+      "seed": 20260915,
+      "shops_per_tenant": {
+        "T_A": 5,
+        "T_B": 4,
+        "T_C": 3
+      },
+      "sku_powerlaw_alpha": 1.15,
+      "sku_total": 2000,
+      "tenant_share": {
+        "T_A": 0.4,
+        "T_B": 0.35,
+        "T_C": 0.25
+      },
+      "tenants": [
+        "T_A",
+        "T_B",
+        "T_C"
+      ],
+      "test_order_rate": 0.003,
+      "time_inversion_rate": 0.0005,
+      "traffic_channels_per_sku_max": 3,
+      "traffic_total_rows": 1500000,
+      "unpaid_rate": 0.15,
+      "yearend_uplift": 1.25,
+      "zero_denominator_sku_count": 40
+    },
+    "reproduce": "python data/generator/seed_generator.py --out data/ecom_sandbox.db  # 同种子 → 同字节"
+  },
+  "layering": {
+    "tool": "data/generator/layering.py",
+    "sha256": "5c767ed73aba3dd0bfcc9ebdeb60ef4621525983da64b313bc7a6576cba66b50",
+    "upstream_reference": "github.com/taoyds/spider · evaluation.py (行 206/299/303/324/329/362)",
+    "known_discrepancies": [
+      "U-29 component2 定义",
+      "U-30 JOIN 计数口径"
+    ]
+  },
+  "counts": {
+    "execute": 124,
+    "clarify": 18,
+    "refuse": 24
+  },
+  "grid": {
+    "easy": {
+      "low": 10,
+      "medium": 10,
+      "high": 10
+    },
+    "medium": {
+      "low": 10,
+      "medium": 10,
+      "high": 18
+    },
+    "hard": {
+      "low": 9,
+      "medium": 9,
+      "high": 10
+    },
+    "extra": {
+      "low": 8,
+      "medium": 8,
+      "high": 12
+    }
+  },
+  "environment": {
+    "python": "3.13.14",
+    "sqlite": "3.53.1"
+  }
+}

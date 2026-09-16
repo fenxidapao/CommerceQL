@@ -1,0 +1,1169 @@
+# ============================================================================
+# CommerceQL 语义包 v2026.09.14.1
+# 归属窗口：W1A（docs/08 §4.1：`semantic/**` 归 W1A）
+# Owner: data-team（占位）    审批: 待签    生效: 2026-09-15
+#
+# ⚠️ 任何修改必须走 PR + 审批；版本递增后缓存 / few-shot 索引必须失效
+#    （附录 B §B.4.1 版本变更影响表）。
+#
+# ---- 结构权威来源 ----
+#   骨架字段：附录 B v1.1 §B.1.2（meta / assets / metrics / dimensions /
+#             field_bindings / joins / default_predicates / time_semantics /
+#             policies / quality_gates）
+#   检索承载：07 §12.2（asset / metric_def / dimension / field_binding /
+#             join_path / synonym / policy / default_predicate 八张物化表）
+#   校验步骤：07 §6.1（五步）
+#
+# ---- 本文件相对附录 B §B.1.2 示例的 **扩展字段**（全部登记为 U-23，待架构窗口裁定）----
+#   附录 B 的结构示例里**没有**这四个字段的定义，但 07 §12.2 的物化表与
+#   §6.8.1 / §7.4 的实现依赖它们：
+#     · `dimensions[].grain_level` / `grain_levels`   → 07 §12.2 `dimension.grain_level`，L2 层判据
+#     · `assets[].grain_level`                        → 07 §12.2 `asset.grain_level`
+#     · `metrics[].default_binding`
+#       `field_bindings[].default_binding`            → 07 §12.2 `metric_def.default_binding`，L3 层判据
+#     · `assets[].tenant_scoped`                      → 07 §12.2 `asset.tenant_scoped`，§7.4 分支 3 判据
+#     · `assets[].quality_score`                      → 07 §12.2 `asset.quality_score`
+#   另有 **2 处新增顶层区块**（附录 B 无，但 DoD⑤ 与 §B.3.4 需要承载位）：
+#     · `aliases`          —— L1 层唯一入口（附录 B 把同义词散落在 metric.synonyms /
+#                             column.synonyms 两处，07 §12.2 却要求一张扁平 `synonym` 表）
+#     · `blacklist_terms`  —— 附录 B §B.3.4「无字段 → 拒答」与「需澄清阈值」的词
+#   详细形状与理由见 `semantic/SCHEMA_v1.md`。
+# ============================================================================
+
+meta:
+  version: "2026.09.14.1"
+  domain: ["orders", "products", "traffic"]
+  dialect: postgresql
+  published_at: "2026-09-15T20:00:00+08:00"
+  published_by: "data-team"
+  status: "candidate"          # candidate | active | published | deprecated（07 §6.1 版本状态机）
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1   # 财年起始月（1 = 自然年）。附录 B v1.1 已确认（PRD §17.1 / FR-1.3）
+  week_starts_on: "monday"     # 周起点 = 周一。附录 B v1.1 已确认，决定"本周/上周"的解析边界
+
+  # 向量维度声明 —— 07 §6.1 步骤⑤要求「EMBEDDING_DIM 与 YAML 声明一致」，
+  # 但附录 B 结构示例里**没有任何位置声明维度**。登记 U-25。
+  # 当前值与 `app/core/config.py` 默认值一致（EMBEDDING_MODEL=bge-m3 / EMBEDDING_DIM=1024）。
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+  # `resolved_default` 态的强制披露文案来源（07 §6.8 表：「静默套用默认口径 = 隐性错误」）。
+  # 07 要求"必须出现"但未指定文案的唯一来源 → 登记 U-26，默认放在此处。
+  disclosure_text: "已按系统默认口径回答"
+
+# ============================================================================
+# 1. 认证资产（**只有这些可被检索** —— 未进本包的资产模型不可检索、不可引用、不可生成）
+# ============================================================================
+#
+# `assets[].grain_level` —— ★ U-23：**资产细度档**（1 = 最粗），本包刻度表：
+#   1 = 汇总/活动维        campaign
+#   2 = 地理维（省）        region
+#   3 = 店铺维             shop
+#   4 = 明细主数据档        product（SKU）/ dim_date（日）
+#   5 = 单据行档           order_paid / order_refund
+#   6 = 最细事实档         traffic_daily（SKU × 日 × 渠道）
+#
+# ⚠️ **与 `dimensions[].grain_level` 是两套独立刻度，永不互相比较。**
+#    dimensions 用「族内刻度」（地理族 country=1…city=4 / 时间族 year=1…day=5），
+#    因为 L2 只在**同一维度的候选之间**比粒度；
+#    assets 用「跨资产细度档」，因为它的消费者（若将来有）要比的是**不同资产**
+#    谁更细。把两套混用会让 `shop(3)` 与 `city(4)` 产生虚假的"粒度关系"。
+#    上游 07 §12.2 列了 `asset.grain_level` 列但**未定义语义、也全文无消费者**
+#    （已实测：07 与附录 B 仅在 §12.2 表结构清单出现该字段名）→ 本刻度表为 W1A
+#    提议，待架构窗口裁定（U-23）。
+#
+assets:
+
+  - logical_name: order_paid
+    physical_asset: v_order_paid          # 认证逻辑视图，非裸表
+    grain: sub_order                      # 粒度：子订单
+    grain_level: 5                        # ★ 资产细度档（SCHEMA_v1 §3.4 刻度表）
+    domain: orders
+    owner: data-team
+    certified: true
+    tenant_scoped: true                   # ★ RLS 生效 → 07 §7.4 分支 3 判据
+    quality_score: 0.98                   # ★ 与 quality_gates 阈值联判 certified
+    freshness_sla: "PT6H"                 # ISO 8601 duration，6 小时
+    level: hot                            # hot=当日可用 | warm | cold
+    row_estimate: 500000                  # 附录 C §C.12：订单总数 50 万行
+    description: "已支付子订单事实表。默认已剔除取消/测试单。GMV 的唯一来源。"
+    columns:
+      - name: tenant_id
+        type: text
+        comment: "租户隔离键（RLS 依据）。**不暴露给模型生成**——由执行层 SET app.tenant_id 注入"
+        sensitive: tenant_key
+      - name: sub_order_id
+        type: text
+        comment: "子订单号，主键"
+        synonyms: ["子订单号", "订单号"]
+      - name: order_id
+        type: text
+        comment: "父订单号（一个订单可含多个子订单）"
+      - name: shop_id
+        type: text
+        comment: "店铺 ID"
+      - name: buyer_id
+        type: text
+        comment: "买家 ID（脱敏哈希）。ARPU 的分母来源"
+      - name: sku_id
+        type: text
+        comment: "SKU 唯一标识，最小销售单元"
+        synonyms: ["SKU", "单品", "货品"]
+      - name: spu_id
+        type: text
+        comment: "SPU 标准产品单元（同款不同规格共用）"
+        synonyms: ["SPU", "款"]
+      - name: category_l1
+        type: text
+        comment: "一级类目名"
+      - name: category_l2
+        type: text
+        comment: "二级类目名"
+      - name: category_l3
+        type: text
+        comment: "三级类目名"
+      - name: pay_amount
+        type: numeric
+        comment: "实付金额（含运费，扣除优惠后）"
+        unit: CNY
+        synonyms: ["实付金额", "支付金额"]
+      - name: freight_amount
+        type: numeric
+        comment: "运费"
+        unit: CNY
+      - name: discount_amount
+        type: numeric
+        comment: "优惠金额"
+        unit: CNY
+      - name: quantity
+        type: int
+        comment: "购买数量。**件单价的分母，不等于客单价**"
+      - name: pay_time
+        type: timestamptz
+        comment: "支付完成时间。**这是 GMV 的时间基准**"
+        time_semantics: transaction_time
+      - name: create_time
+        type: timestamptz
+        comment: "下单时间。**不要用于 GMV 统计**"
+        time_semantics: transaction_time
+      - name: pay_status
+        type: text
+        comment: "支付状态"
+        enum: { paid: "已支付", unpaid: "未支付" }
+      - name: refund_status
+        type: text
+        comment: "退款状态"
+        enum: { none: "无退款", partial: "部分退款", refunded: "全额退款" }
+      - name: region_code
+        type: text
+        comment: "收货省份编码（6 位数字字符串）"
+      - name: receiver_city
+        type: text
+        comment: "收货城市（含'市'后缀）。与 shop.city 同粒度不同语义 → 构成真竞争，须澄清"
+      - name: channel
+        type: text
+        comment: "成交渠道"
+        enum: { search: "搜索", feed: "推荐", live: "直播", direct: "直接访问", ad: "付费广告" }
+      - name: is_test_order
+        type: boolean
+        comment: "是否测试单"
+      - name: receiver_phone
+        type: text
+        comment: "收件人手机号"
+        sensitive: pii_phone            # ⚠️ 敏感列标记 → 进 policies.deny_columns
+      - name: receiver_address
+        type: text
+        comment: "收件人详细地址"
+        sensitive: pii_address
+
+  - logical_name: order_refund
+    physical_asset: v_order_refund
+    grain: refund_record
+    grain_level: 5                        # ★ 资产细度档 —— 与 order_paid 同为单据行档
+    domain: orders
+    owner: data-team
+    certified: true
+    tenant_scoped: true
+    quality_score: 0.96
+    freshness_sla: "PT12H"
+    level: warm
+    row_estimate: 25000
+    description: "退款事实表。与 order_paid 一对零或一。"
+    columns:
+      - name: tenant_id
+        type: text
+        comment: "租户隔离键"
+        sensitive: tenant_key
+      - name: refund_id
+        type: text
+        comment: "退款单号，主键"
+      - name: sub_order_id
+        type: text
+        comment: "关联子订单号"
+      - name: refund_amount
+        type: numeric
+        comment: "退款金额"
+        unit: CNY
+      - name: refund_type
+        type: text
+        comment: "退款类型"
+        enum: { partial: "部分退款", full: "全额退款" }
+      - name: refund_time
+        type: timestamptz
+        comment: "退款完成时间"
+        time_semantics: transaction_time
+      - name: refund_status
+        type: text
+        comment: "退款状态"
+        enum: { applied: "申请中", approved: "已通过", refunded: "已退款完成", rejected: "已驳回" }
+
+  - logical_name: product
+    physical_asset: v_product
+    grain: sku
+    grain_level: 4                        # ★ 资产细度档 —— 商品主数据档
+    domain: products
+    owner: data-team
+    certified: true
+    tenant_scoped: true
+    quality_score: 0.95
+    freshness_sla: "PT24H"
+    level: warm
+    row_estimate: 2000                    # 附录 C §C.12：SKU 数 2,000
+    description: "SKU 商品维表。"
+    columns:
+      - name: tenant_id
+        type: text
+        comment: "租户隔离键"
+        sensitive: tenant_key
+      - name: sku_id
+        type: text
+        comment: "SKU 唯一标识"
+        synonyms: ["SKU", "单品", "规格"]
+      - name: sku_name
+        type: text
+        comment: "商品标题"
+        synonyms: ["商品名", "标题", "商品标题"]
+      - name: spu_id
+        type: text
+        comment: "SPU 标识"
+      - name: shop_id
+        type: text
+        comment: "所属店铺"
+      - name: category_l1
+        type: text
+        comment: "一级类目"
+      - name: category_l2
+        type: text
+        comment: "二级类目"
+      - name: category_l3
+        type: text
+        comment: "三级类目"
+      - name: list_price
+        type: numeric
+        comment: "标价（吊牌价，**非成交价**）"
+        unit: CNY
+      - name: cost_price
+        type: numeric
+        comment: "成本价。**仅 finance 角色可见**"
+        unit: CNY
+        sensitive: internal_cost          # ⚠️ 按角色屏蔽 → 进 policies.deny_columns
+      - name: on_sale
+        type: boolean
+        comment: "是否在架"
+      - name: launch_date
+        type: date
+        comment: "上架日期"
+
+  - logical_name: shop
+    physical_asset: v_shop
+    grain: shop
+    grain_level: 3                        # ★ 资产细度档 —— 店铺维档
+    domain: products
+    owner: data-team
+    certified: true
+    tenant_scoped: true
+    quality_score: 0.97
+    freshness_sla: "PT24H"
+    level: warm
+    row_estimate: 12                      # 3 租户 × 2–5 店铺（附录 C §C.12）
+    description: "店铺维表。含 shop.city —— 与 order_paid.receiver_city 同粒度不同语义，是澄清机制的标准案例。"
+    columns:
+      - name: tenant_id
+        type: text
+        comment: "租户隔离键"
+        sensitive: tenant_key
+      - name: shop_id
+        type: text
+        comment: "店铺 ID，主键"
+      - name: shop_name
+        type: text
+        comment: "店铺名称"
+        synonyms: ["店铺名", "店名"]
+      - name: city
+        type: text
+        comment: "**店铺所在城市**（与收货城市同名不同义）"
+      - name: category_l1
+        type: text
+        comment: "主营一级类目"
+      - name: open_date
+        type: date
+        comment: "开店日期"
+
+  - logical_name: region
+    physical_asset: v_region
+    grain: province
+    grain_level: 2                        # ★ 资产细度档 —— 地理维档（省）
+    domain: orders
+    owner: data-team
+    certified: true
+    tenant_scoped: false                  # ★ 公共参考维表（非租户数据）→ §7.4 分支 4 的对照样本
+    quality_score: 0.99
+    freshness_sla: "P7D"
+    level: cold
+    row_estimate: 34
+    description: "省级行政区参考维表（公共）。大区（华东/华南…）**不是本表字段**，而是业务约定，见 dimensions.region.value_map。"
+    columns:
+      - name: code
+        type: text
+        comment: "省级编码（6 位）"
+      - name: province_name
+        type: text
+        comment: "省名"
+        synonyms: ["省份", "省"]
+      - name: region_name
+        type: text
+        comment: "大区名（华东/华南/…）。**由 value_map 派生，非原始列**"
+
+  - logical_name: campaign
+    physical_asset: v_campaign
+    grain: campaign
+    grain_level: 1
+    domain: orders
+    owner: operations
+    certified: true
+    tenant_scoped: true
+    quality_score: 0.93
+    freshness_sla: "PT24H"
+    level: warm
+    row_estimate: 24
+    description: "活动/大促维表。用于把'618''双11'这类业务区间映射为日期区间。"
+    columns:
+      - name: tenant_id
+        type: text
+        comment: "租户隔离键"
+        sensitive: tenant_key
+      - name: campaign_id
+        type: text
+        comment: "活动 ID，主键"
+      - name: campaign_name
+        type: text
+        comment: "活动名称"
+        # ⚠️ 刻意**不含**"大促"：附录 B §B.3.3 明确「大促 = 歧义：需澄清是哪个大促」，
+        #    故它只能出现在 blacklist_terms（action: clarify），不得作为 campaign 的别名。
+        #    否则 L1 会把它确定性解析掉，歧义被静默吞掉 —— 这正是 §6.8.3 要诊断的失效形态。
+        synonyms: ["活动名"]
+      - name: campaign_type
+        type: text
+        comment: "活动类型"
+        enum: { prom_618: "618", prom_double11: "双11", normal_sale: "日常促销" }
+      - name: start_date
+        type: date
+        comment: "活动开始日（**含预售期**）"
+      - name: end_date
+        type: date
+        comment: "活动结束日（含）"
+
+  - logical_name: traffic_daily
+    physical_asset: v_traffic_daily
+    grain: sku_day_channel
+    grain_level: 6                        # ★ 资产细度档 —— 本包最细事实档
+    domain: traffic
+    owner: data-team
+    certified: true
+    tenant_scoped: true
+    quality_score: 0.94
+    freshness_sla: "PT12H"
+    level: hot
+    row_estimate: 1500000                 # 稀疏合理分布：在架 SKU × 有效渠道 × 有流量日
+    description: "流量日粒度事实表（SKU × 日 × 渠道）。"
+    columns:
+      - name: tenant_id
+        type: text
+        comment: "租户隔离键"
+        sensitive: tenant_key
+      - name: stat_date
+        type: date
+        comment: "统计日期"
+      - name: sku_id
+        type: text
+        comment: "SKU 标识"
+      - name: channel
+        type: text
+        comment: "流量渠道"
+        enum: { search: "搜索", feed: "推荐", live: "直播", direct: "直接访问", ad: "付费广告" }
+      - name: uv
+        type: bigint
+        comment: "独立访客数（按用户去重，自然日窗口）。跨日累加会重复计数"
+        synonyms: ["UV", "访客数", "独立访客"]
+      - name: pv
+        type: bigint
+        comment: "页面浏览量（不去重）"
+      - name: cart_add_cnt
+        type: bigint
+        comment: "加购次数"
+      - name: order_cnt
+        type: bigint
+        comment: "支付订单数"
+      - name: ad_cost
+        type: numeric
+        comment: "广告花费（用于 ROI）"
+        unit: CNY
+      # ⚠️ 转化率不存成列！由 metric 定义，避免口径分裂（附录 B §B.1.3）
+
+  - logical_name: dim_date
+    physical_asset: v_dim_date
+    grain: day
+    grain_level: 4                        # ★ 资产细度档 —— 日期维属明细主数据档
+    domain: orders
+    owner: data-team
+    certified: true
+    tenant_scoped: false                  # ★ 公共日历维表 → §7.4 分支 4 的第二个对照样本
+    quality_score: 0.99
+    freshness_sla: "P30D"
+    level: cold
+    row_estimate: 731                     # 24 个月
+    description: "日期维表（公共）。把'上个月''近7天'这类相对时间锚定到绝对区间。"
+    columns:
+      - name: date_key
+        type: date
+        comment: "日期，主键"
+      - name: year
+        type: int
+        comment: "年"
+      - name: quarter
+        type: int
+        comment: "季度（1–4）"
+      - name: month
+        type: int
+        comment: "月（1–12）"
+      - name: iso_week
+        type: int
+        comment: "ISO 周序号（**周一为起点**，对齐 meta.week_starts_on）"
+      - name: day_of_week
+        type: int
+        comment: "星期（1=周一 … 7=周日）"
+      - name: is_weekend
+        type: boolean
+        comment: "是否周末"
+      - name: campaign_id
+        type: text
+        comment: "所属活动 ID（无则为 null）"
+
+# ============================================================================
+# 2. 指标定义（**唯一权威口径**）
+# ============================================================================
+# `default_binding`（★ U-23 扩展）：该指标默认绑定的资产与时间字段。
+# L3 层的语义是「该概念已有默认口径，且无排他候选 → 直接执行 + 强制披露」。
+# 对指标而言，最常缺的默认是「用哪张表、哪个时间字段」—— 用户问"GMV 多少"
+# 不会说"用 pay_time 算"，而 pay_time / create_time 都在同一张表里。
+metrics:
+
+  - name: gmv
+    display_name: GMV
+    domain: orders
+    expression: "SUM(order_paid.pay_amount)"
+    default_aggregation: sum
+    unit: CNY
+    owner: finance
+    status: active
+    definition_note: >
+      口径：按支付完成时间（pay_time）统计；含运费；剔除全额退款订单；剔除测试单。
+      与财务口径的差异仅在"部分退款"处理上 —— 本口径暂不扣减部分退款。
+    default_binding:
+      asset: order_paid
+      time_field: pay_time
+      reason: "GMV 的时间基准固定为 pay_time，而非 create_time"
+    default_predicates:
+      - "pay_status = 'paid'"
+      - "refund_status <> 'refunded'"
+      - "is_test_order = false"
+    time_basis: pay_time
+    synonyms: ["GMV", "gmv", "成交额", "销售额", "交易额", "成交金额", "流水"]
+    created_at: "2026-09-14"
+    version: 1
+
+  - name: order_cnt
+    display_name: 订单量
+    domain: orders
+    expression: "COUNT(DISTINCT order_paid.sub_order_id)"
+    default_aggregation: count_distinct
+    unit: 单
+    owner: operations
+    status: active
+    definition_note: "按子订单计数（非父订单）；仅已支付、未取消、未全额退款。"
+    default_binding:
+      asset: order_paid
+      time_field: pay_time
+      reason: "订单量同为交易口径，与 GMV 共用时间基准"
+    default_predicates:
+      - "pay_status = 'paid'"
+      - "refund_status <> 'refunded'"
+      - "is_test_order = false"
+    time_basis: pay_time
+    synonyms: ["订单量", "单量", "订单数", "成交单量", "出单量"]
+    created_at: "2026-09-14"
+    version: 1
+
+  - name: aov
+    display_name: 客单价
+    domain: orders
+    expression: "SUM(order_paid.pay_amount) / NULLIF(COUNT(DISTINCT order_paid.sub_order_id), 0)"
+    default_aggregation: ratio_of_sums
+    unit: CNY
+    owner: operations
+    status: active
+    definition_note: >
+      ⚠️ 高危口径。分母 = **支付子订单数**（非买家数、非父订单数）。
+      若业务需要"人均消费"，应使用独立指标 arpu，**不要复用 aov**。
+      ⚠️ "件单价"（pay_amount / quantity）**不是** aov → 见 blacklist_terms。
+    default_binding:
+      asset: order_paid
+      time_field: pay_time
+      reason: "客单价属交易口径"
+    default_predicates:
+      - "pay_status = 'paid'"
+      - "refund_status <> 'refunded'"
+      - "is_test_order = false"
+    time_basis: pay_time
+    synonyms: ["客单价", "平均订单金额", "AOV"]
+    created_at: "2026-09-14"
+    version: 1
+
+  - name: arpu
+    display_name: 人均消费
+    domain: orders
+    expression: "SUM(order_paid.pay_amount) / NULLIF(COUNT(DISTINCT order_paid.buyer_id), 0)"
+    default_aggregation: ratio_of_sums
+    unit: CNY
+    owner: operations
+    status: active
+    definition_note: "分母 = 去重买家数。与 aov **不可混用**。"
+    default_binding:
+      asset: order_paid
+      time_field: pay_time
+      reason: "人均消费属交易口径"
+    default_predicates:
+      - "pay_status = 'paid'"
+      - "refund_status <> 'refunded'"
+      - "is_test_order = false"
+    time_basis: pay_time
+    synonyms: ["人均消费", "人均产出", "ARPU"]
+    created_at: "2026-09-14"
+    version: 1
+
+  - name: refund_rate
+    display_name: 退款率
+    domain: orders
+    expression: >
+      SUM(CASE WHEN order_paid.refund_status = 'refunded' THEN order_paid.pay_amount ELSE 0 END)
+      / NULLIF(SUM(order_paid.pay_amount), 0)
+    default_aggregation: ratio_of_sums
+    unit: ratio
+    owner: finance
+    status: active
+    definition_note: "**按金额、按退款完成**。若要按单量口径，须另立 refund_rate_qty（P1）。"
+    # ⚠️ 本指标的谓词**不含** `refund_status <> 'refunded'` —— 分子正是靠退款行为算出来的。
+    default_predicates:
+      - "pay_status = 'paid'"
+      - "is_test_order = false"
+    default_binding:
+      asset: order_paid
+      time_field: pay_time
+      reason: "退款率以支付订单为分母，时间随分母"
+    time_basis: pay_time
+    synonyms: ["退款率", "退货率", "退款占比"]
+    created_at: "2026-09-14"
+    version: 1
+
+  - name: repurchase_rate_90d
+    display_name: 90天复购率
+    domain: orders
+    expression: >
+      COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END)
+      / NULLIF(COUNT(DISTINCT buyer_id), 0)
+    default_aggregation: ratio_of_sums
+    unit: ratio
+    owner: operations
+    status: active
+    window: "90 days"
+    definition_note: "90 天内购买 ≥ 2 次；**不含首单口径**。周期固定 90 天，不接受运行时改窗口。"
+    default_predicates:
+      - "pay_status = 'paid'"
+      - "is_test_order = false"
+    default_binding:
+      asset: order_paid
+      time_field: pay_time
+      reason: "复购窗口以支付时间为基准"
+    time_basis: pay_time
+    synonyms: ["复购率", "回购率", "复购"]
+    created_at: "2026-09-14"
+    version: 1
+
+  - name: uv
+    display_name: UV
+    domain: traffic
+    expression: "SUM(traffic_daily.uv)"
+    default_aggregation: sum
+    unit: 人
+    owner: operations
+    status: active
+    definition_note: >
+      按用户去重、**自然日窗口**。跨日直接累加会重复计数 ——
+      跨日区间应使用独立口径 uv_period（P1，本包未定义 → 未定义的指标**不得被生成**）。
+    default_predicates:
+      - "uv >= 0"
+    default_binding:
+      asset: traffic_daily
+      time_field: stat_date
+      reason: "流量表的时间基准是 stat_date（date 型），不是 pay_time"
+    time_basis: stat_date
+    synonyms: ["UV", "uv", "访客数", "独立访客"]
+    created_at: "2026-09-14"
+    version: 1
+
+  - name: pay_cvr
+    display_name: 支付转化率
+    domain: traffic
+    expression: "SUM(traffic_daily.order_cnt) * 1.0 / NULLIF(SUM(traffic_daily.uv), 0)"
+    default_aggregation: ratio_of_sums
+    unit: ratio
+    owner: operations
+    status: active
+    definition_note: "**支付**转化（非下单转化），分母为 UV。转化率不落成列，只在此定义。"
+    default_predicates:
+      - "uv >= 0"
+    default_binding:
+      asset: traffic_daily
+      time_field: stat_date
+      reason: "转化率的分母是流量，时间随 UV"
+    time_basis: stat_date
+    synonyms: ["转化率", "支付转化率", "CVR", "成交转化", "转化"]
+    created_at: "2026-09-14"
+    version: 1
+
+  - name: sell_through_rate
+    display_name: 动销率
+    domain: products
+    status: draft                      # ⚠️ draft 状态**不可被检索使用**（07 §6.1 版本状态机）
+    definition_note: "口径待业务确认（观察周期、分母是否含下架商品）。**确认前不对外开放**。"
+    synonyms: ["动销率", "动销"]
+    created_at: "2026-09-14"
+    version: 0
+    # ⚠️ 刻意**不设** expression / default_binding：draft 指标不参与 L3。
+    # 若 draft 也带 default_binding，L3 会把它当成"有默认口径"而放行 —— 那正是
+    # FR-12.3「禁止 LLM 自动发布语义」要防的事。
+
+# ============================================================================
+# 3. 维度与层级
+# ============================================================================
+# `grain_level`（★ U-23）：数值，**1 = 最粗**。**只在同一 grain 序列内可比**
+#   （时间序列 / 地理序列 / 商品序列各自独立刻度，跨序列比较无意义）。
+# `grain_levels`：层级名 → 细度值 的映射，供 L2 的"粒度词抽取 → 查表"使用
+#   （07 §6.8.1：「抽取失败 → 不进入 L2」）。
+dimensions:
+
+  - name: region
+    binding: order_paid.region_code
+    hierarchy: [country, region, province, city]
+    grain_levels: { country: 1, region: 2, province: 3, city: 4 }
+    grain_level: 4                     # binding 落在 city 层（v_region.province_name 用于名称回填）
+    value_map:                         # ⚠️ 大区映射是**业务约定**，不是数据库字段 → 必须走 value_map
+      "华东": ["310000", "320000", "330000", "340000", "350000", "360000", "370000"]
+      "华南": ["440000", "450000", "460000"]
+      "华北": ["110000", "120000", "130000", "140000", "150000"]
+      "华中": ["410000", "420000", "430000"]
+      "西南": ["500000", "510000", "520000", "530000", "540000"]
+      "西北": ["610000", "620000", "630000", "640000", "650000"]
+      "东北": ["210000", "220000", "230000"]
+    note: "禁止让模型猜大区归属；未列入 value_map 的省 → 归'其他'或不支持。"
+
+  - name: category
+    binding: order_paid.category_l1
+    hierarchy: [category_l1, category_l2, category_l3]
+    grain_levels: { category_l1: 1, category_l2: 2, category_l3: 3 }
+    grain_level: 3
+
+  - name: channel
+    binding: traffic_daily.channel
+    hierarchy: [channel]
+    grain_levels: { channel: 1 }
+    grain_level: 1
+    note: "枚举值见 traffic_daily.channel.enum（5 个渠道）"
+
+  - name: time
+    bindings:
+      day: pay_time
+      week: pay_time
+      month: pay_time
+      quarter: pay_time
+      year: pay_time
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: >
+      ⚠️ GMV 的时间维度**必须绑定 pay_time**，不得用 create_time。
+      流量域的时间绑定是 traffic_daily.stat_date（见 metrics.uv.default_binding）。
+
+  - name: shop
+    binding: shop.shop_id
+    hierarchy: [shop]
+    grain_levels: { shop: 1 }
+    grain_level: 1
+    note: "店铺维度。shop.city 与 order_paid.receiver_city 同粒度、不同语义 → 真竞争。"
+
+  - name: city
+    binding: order_paid.receiver_city
+    hierarchy: [region, province, city]
+    # ⚠️ 从 2 起而非 1 起是**故意的**：grain_level 是**地理族统一刻度**
+    #    （country=1 / region=2 / province=3 / city=4），本维度只覆盖后三层。
+    #    L2 的候选比较发生在同族内，故必须沿用族刻度而非重排为 1..N。
+    grain_levels: { region: 2, province: 3, city: 4 }
+    grain_level: 4
+    note: >
+      ⚠️ 本维度是"城市"概念的**收货侧**绑定。店铺侧绑定是 shop.city。
+      二者 grain_level **相同（=4）** → 构成竞争 → 必须走 field_bindings.城市 的 ambiguous 流程。
+      （对齐 07 §6.8.1：**同粒度不同语义**才是必须澄清的形态；
+       "城市 vs 区县"因粒度不同而**不**触发澄清 —— 上游 PRD §6.2 的举例与 §6.3.1 相反，
+       以 §6.3.1 为准，已登记 U-10。）
+
+# ============================================================================
+# 4. 字段绑定（**唯一性保障 —— 核心机制**）
+# ============================================================================
+# `default_binding`（★ U-23）：该概念的**默认字段**（L3 层依据）。
+# ⚠️ 与 `ambiguous: true` **互斥**：ambiguous 的概念**不得**有 default_binding ——
+#    否则 L3 会抢在澄清之前把它"解决"掉，歧义被静默吞掉。
+field_bindings:
+
+  - concept: customer_name
+    canonical_asset: shop.shop_name
+    time_semantics: current
+    grain_level: 1
+    default_binding:
+      asset: shop
+      column: shop_name
+      reason: "主数据现值"
+    note: "当前店铺名称（主数据现值）"
+    alternatives:
+      - asset: order_paid.buyer_id
+        use_when: transaction_snapshot
+        note: "下单当时买家标识（历史快照）。注意：买方身份标识不可作名称展示"
+
+  - concept: 城市
+    # ⚠️ **故意保留歧义**：两个绑定都合法、**同 grain_level（=4）** → 必须触发澄清
+    ambiguous: true
+    grain_level: 4
+    candidates:
+      - asset: order_paid.receiver_city
+        label: 收货城市
+        grain_level: 4
+      - asset: shop.city
+        label: 店铺所在城市
+        grain_level: 4
+    clarify_prompt: "你说的「城市」是指收货城市还是店铺所在城市？"
+    # ⚠️ 刻意不设 default_binding —— 见上方区块注释
+
+  - concept: 商品名称
+    canonical_asset: product.sku_name
+    time_semantics: current
+    grain_level: 3
+    default_binding:
+      asset: product
+      column: sku_name
+      reason: "商品名以 SKU 标题为准"
+    alternatives:
+      - asset: product.spu_id
+        use_when: spu_level
+        note: "SKU 是销售单元，SPU 是产品单元。用户说'款'时倾向 SPU"
+
+  - concept: 渠道
+    canonical_asset: traffic_daily.channel
+    time_semantics: current
+    grain_level: 1
+    default_binding:
+      asset: traffic_daily
+      column: channel
+      reason: "渠道枚举定义在流量表"
+    note: "⚠️ order_paid.channel 同样存在（成交渠道）。订单域问题应绑 order_paid.channel"
+
+  - concept: 类目
+    canonical_asset: order_paid.category_l1
+    time_semantics: current
+    grain_level: 1
+    default_binding:
+      asset: order_paid
+      column: category_l1
+      reason: "订单上下文下的类目以成交记录为准"
+
+  - concept: 大区
+    canonical_asset: region.region_name
+    time_semantics: current
+    grain_level: 2
+    default_binding:
+      asset: region
+      column: region_name
+      reason: "大区是 value_map 派生的业务约定，非原始列"
+    note: "⚠️ 该绑定不可直接生成 SQL —— regression 需经 dimensions.region.value_map 展开"
+
+  - concept: 支付时间
+    canonical_asset: order_paid.pay_time
+    time_semantics: transaction_time
+    grain_level: 5
+    default_binding:
+      asset: order_paid
+      column: pay_time
+      reason: "交易口径的时间基准"
+    alternatives:
+      - asset: order_paid.create_time
+        use_when: order_snapshot
+        note: "下单时间。**GMV 不得用它**"
+
+# ============================================================================
+# 5. 允许的 Join 路径（图）—— **未列出 = 禁止**
+# ============================================================================
+joins:
+  - left: order_paid.sku_id
+    right: product.sku_id
+    type: many_to_one
+    on_columns: [sku_id]
+    certified_by: data-team
+  - left: order_paid.shop_id
+    right: shop.shop_id
+    type: many_to_one
+    on_columns: [shop_id]
+    certified_by: data-team
+  - left: order_paid.region_code
+    right: region.code
+    type: many_to_one
+    on_columns: [region_code, code]
+    certified_by: data-team
+  - left: order_paid.sub_order_id
+    right: order_refund.sub_order_id
+    type: one_to_zero_or_one
+    on_columns: [sub_order_id]
+    certified_by: data-team
+  - left: traffic_daily.sku_id
+    right: product.sku_id
+    type: many_to_one
+    on_columns: [sku_id]
+    certified_by: data-team
+  - left: product.shop_id
+    right: shop.shop_id
+    type: many_to_one
+    on_columns: [shop_id]
+    certified_by: data-team
+  - left: product.category_l1
+    right: order_paid.category_l1
+    type: reference
+    on_columns: [category_l1]
+    certified_by: data-team
+    note: "类目名称对齐通路（避免 UUID 式类目 id 缺维表）"
+  # ⚠️ 刻意**不列出**：order_paid × traffic_daily 的直连。
+  #    二者只能经 product 桥接（2 跳）。直连 = 语义错误的关联（订单与流量无共同粒度键）
+  #    → 对应红队用例 RT-JOIN-003「未认证 JOIN 路径」。
+  # ⚠️ 未列出的路径一律禁止，防止笛卡尔积与错误关联（附录 B §B.1.3）。
+
+# ============================================================================
+# 6. 默认过滤谓词（隐式业务规则）
+# ============================================================================
+default_predicates:
+  orders:
+    - id: dp_order_001
+      predicate: "is_test_order = false"
+      reason: "排除测试单"
+      owner: data-team
+      applies_to: [gmv, order_cnt, aov, arpu, refund_rate, repurchase_rate_90d]
+    - id: dp_order_002
+      predicate: "refund_status <> 'refunded'"
+      reason: "GMV 口径剔除全额退款"
+      owner: data-team
+      applies_to: [gmv, order_cnt, aov, arpu]
+    - id: dp_order_003
+      predicate: "pay_status = 'paid'"
+      reason: "仅统计已支付"
+      owner: data-team
+      applies_to: [gmv, order_cnt, aov, arpu, refund_rate, repurchase_rate_90d]
+  traffic:
+    - id: dp_traffic_001
+      predicate: "uv >= 0"
+      reason: "防御性谓词：排除脏数据负数访客（生成器会注入 0 值，但不会注入负数）"
+      owner: data-team
+      applies_to: [uv, pay_cvr]
+
+# ============================================================================
+# 7. 别名表（L1 层唯一入口）
+# ============================================================================
+# ★ 本区块是 U-23 之外**新增的顶层区块**，理由：
+#   · 07 §12.2 的 `synonym` 表是**扁平表**：`(bundle_version, term, lang,
+#     maps_to_kind, maps_to_ref)` + `category` + `tsv`；
+#   · 附录 B 却把同义词散落在 `metric.synonyms`（附录 B §B.1.2）与
+#     `column.synonyms`（同处）两处，**没有**一张能直接物化成 `synonym` 表的扁平清单；
+#   · L1 层的判据是「命中该概念且**唯一映射**」→ 唯一性必须**机器可校验**，
+#     散落在两处的自然语言列表无法做这个校验。
+#   → 本区块即物化前的源；`column.synonyms` / `metric.synonyms` 保留，
+#     但**加载器应以本区块为准**，两处不一致视为校验失败（见 SCHEMA_v1.md §5）。
+aliases:
+  # ---- 指标类（附录 B §B.3.1）----
+  - { term: "GMV",       lang: en, maps_to_kind: metric, maps_to_ref: gmv, category: metric }
+  - { term: "gmv",       lang: en, maps_to_kind: metric, maps_to_ref: gmv, category: metric }
+  - { term: "成交额",     lang: zh, maps_to_kind: metric, maps_to_ref: gmv, category: metric }
+  - { term: "销售额",     lang: zh, maps_to_kind: metric, maps_to_ref: gmv, category: metric }
+  - { term: "交易额",     lang: zh, maps_to_kind: metric, maps_to_ref: gmv, category: metric }
+  - { term: "成交金额",   lang: zh, maps_to_kind: metric, maps_to_ref: gmv, category: metric }
+  - { term: "流水",       lang: zh, maps_to_kind: metric, maps_to_ref: gmv, category: metric }
+  - { term: "订单量",     lang: zh, maps_to_kind: metric, maps_to_ref: order_cnt, category: metric }
+  - { term: "单量",       lang: zh, maps_to_kind: metric, maps_to_ref: order_cnt, category: metric }
+  - { term: "订单数",     lang: zh, maps_to_kind: metric, maps_to_ref: order_cnt, category: metric }
+  - { term: "成交单量",   lang: zh, maps_to_kind: metric, maps_to_ref: order_cnt, category: metric }
+  - { term: "出单量",     lang: zh, maps_to_kind: metric, maps_to_ref: order_cnt, category: metric }
+  - { term: "客单价",     lang: zh, maps_to_kind: metric, maps_to_ref: aov, category: metric }
+  - { term: "平均订单金额", lang: zh, maps_to_kind: metric, maps_to_ref: aov, category: metric }
+  - { term: "AOV",       lang: en, maps_to_kind: metric, maps_to_ref: aov, category: metric }
+  - { term: "人均消费",   lang: zh, maps_to_kind: metric, maps_to_ref: arpu, category: metric }
+  - { term: "人均产出",   lang: zh, maps_to_kind: metric, maps_to_ref: arpu, category: metric }
+  - { term: "ARPU",      lang: en, maps_to_kind: metric, maps_to_ref: arpu, category: metric }
+  - { term: "转化率",     lang: zh, maps_to_kind: metric, maps_to_ref: pay_cvr, category: metric }
+  - { term: "转化",       lang: zh, maps_to_kind: metric, maps_to_ref: pay_cvr, category: metric }
+  - { term: "CVR",       lang: en, maps_to_kind: metric, maps_to_ref: pay_cvr, category: metric }
+  - { term: "成交转化",   lang: zh, maps_to_kind: metric, maps_to_ref: pay_cvr, category: metric }
+  - { term: "支付转化率",  lang: zh, maps_to_kind: metric, maps_to_ref: pay_cvr, category: metric }
+  - { term: "复购",       lang: zh, maps_to_kind: metric, maps_to_ref: repurchase_rate_90d, category: metric }
+  - { term: "回购",       lang: zh, maps_to_kind: metric, maps_to_ref: repurchase_rate_90d, category: metric }
+  - { term: "复购率",     lang: zh, maps_to_kind: metric, maps_to_ref: repurchase_rate_90d, category: metric }
+  - { term: "回购率",     lang: zh, maps_to_kind: metric, maps_to_ref: repurchase_rate_90d, category: metric }
+  - { term: "退款率",     lang: zh, maps_to_kind: metric, maps_to_ref: refund_rate, category: metric }
+  - { term: "退货率",     lang: zh, maps_to_kind: metric, maps_to_ref: refund_rate, category: metric }
+  - { term: "退款占比",   lang: zh, maps_to_kind: metric, maps_to_ref: refund_rate, category: metric }
+  - { term: "UV",        lang: en, maps_to_kind: metric, maps_to_ref: uv, category: metric }
+  - { term: "uv",        lang: en, maps_to_kind: metric, maps_to_ref: uv, category: metric }
+  - { term: "访客数",     lang: zh, maps_to_kind: metric, maps_to_ref: uv, category: metric }
+  - { term: "独立访客",   lang: zh, maps_to_kind: metric, maps_to_ref: uv, category: metric }
+
+  # ---- 实体与维度类（附录 B §B.3.2）----
+  - { term: "品",        lang: zh, maps_to_kind: asset, maps_to_ref: product, category: entity }
+  - { term: "商品",      lang: zh, maps_to_kind: asset, maps_to_ref: product, category: entity }
+  - { term: "货",        lang: zh, maps_to_kind: asset, maps_to_ref: product, category: entity }
+  # ⚠️ "货品" **不在此处**：它是 order_paid.sku_id / product.sku_id 的**列级**别名
+  #    （附录 B §B.1.2 的列注释把"货品"写进 sku_id.synonyms），
+  #    故只在下方「列级别名」区块出现一次 —— term 一对一（L1 硬条件）。
+  - { term: "款",        lang: zh, maps_to_kind: column, maps_to_ref: product.spu_id, category: entity }
+  - { term: "SPU",       lang: en, maps_to_kind: column, maps_to_ref: product.spu_id, category: entity }
+  - { term: "SKU",       lang: en, maps_to_kind: column, maps_to_ref: product.sku_id, category: entity }
+  - { term: "sku",       lang: en, maps_to_kind: column, maps_to_ref: product.sku_id, category: entity }
+  - { term: "单品",      lang: zh, maps_to_kind: column, maps_to_ref: product.sku_id, category: entity }
+  - { term: "规格",      lang: zh, maps_to_kind: column, maps_to_ref: product.sku_id, category: entity }
+  - { term: "颜色尺码",   lang: zh, maps_to_kind: column, maps_to_ref: product.sku_id, category: entity }
+  - { term: "店铺",      lang: zh, maps_to_kind: asset, maps_to_ref: shop, category: entity }
+  - { term: "店",        lang: zh, maps_to_kind: asset, maps_to_ref: shop, category: entity }
+  - { term: "流量",      lang: zh, maps_to_kind: asset, maps_to_ref: traffic_daily, category: entity }
+  - { term: "大区",      lang: zh, maps_to_kind: dimension, maps_to_ref: region, category: dimension }
+  - { term: "区域",      lang: zh, maps_to_kind: dimension, maps_to_ref: region, category: dimension }
+  - { term: "省份",      lang: zh, maps_to_kind: column, maps_to_ref: region.province_name, category: dimension }
+  - { term: "省",        lang: zh, maps_to_kind: column, maps_to_ref: region.province_name, category: dimension }
+  - { term: "类目",      lang: zh, maps_to_kind: dimension, maps_to_ref: category, category: dimension }
+  - { term: "品类",      lang: zh, maps_to_kind: dimension, maps_to_ref: category, category: dimension }
+  - { term: "一级类目",   lang: zh, maps_to_kind: column, maps_to_ref: order_paid.category_l1, category: dimension }
+  - { term: "渠道",      lang: zh, maps_to_kind: dimension, maps_to_ref: channel, category: dimension }
+  - { term: "来源",      lang: zh, maps_to_kind: column, maps_to_ref: traffic_daily.channel, category: dimension }
+  - { term: "流量来源",   lang: zh, maps_to_kind: column, maps_to_ref: traffic_daily.channel, category: dimension }
+  - { term: "直播",      lang: zh, maps_to_kind: value, maps_to_ref: "traffic_daily.channel=live", category: value }
+  - { term: "达人",      lang: zh, maps_to_kind: value, maps_to_ref: "traffic_daily.channel=live", category: value }
+  - { term: "头部主播",   lang: zh, maps_to_kind: value, maps_to_ref: "traffic_daily.channel=live", category: value }
+  - { term: "搜索",      lang: zh, maps_to_kind: value, maps_to_ref: "traffic_daily.channel=search", category: value }
+  - { term: "自然搜索",   lang: zh, maps_to_kind: value, maps_to_ref: "traffic_daily.channel=search", category: value }
+  - { term: "推荐",      lang: zh, maps_to_kind: value, maps_to_ref: "traffic_daily.channel=feed", category: value }
+  - { term: "猜你喜欢",   lang: zh, maps_to_kind: value, maps_to_ref: "traffic_daily.channel=feed", category: value }
+  - { term: "信息流",     lang: zh, maps_to_kind: value, maps_to_ref: "traffic_daily.channel=feed", category: value }
+  - { term: "付费广告",   lang: zh, maps_to_kind: value, maps_to_ref: "traffic_daily.channel=ad", category: value }
+  - { term: "直接访问",   lang: zh, maps_to_kind: value, maps_to_ref: "traffic_daily.channel=direct", category: value }
+  # ---- 列级别名（**必须覆盖各 asset 的 `columns[].synonyms`**）----
+  # 07 §12.2 的 `synonym` 表是**唯一**的别名物化载体，而附录 B 把同义词也写在
+  # `columns[].synonyms` 里 → 两处必须一致。本区块为准；不一致由
+  # `semantic/validate_bundle.py` 的「column.synonyms ⊆ aliases」断言拦下。
+  - { term: "子订单号",   lang: zh, maps_to_kind: column, maps_to_ref: order_paid.sub_order_id, category: entity }
+  - { term: "订单号",     lang: zh, maps_to_kind: column, maps_to_ref: order_paid.sub_order_id, category: entity }
+  - { term: "货品",      lang: zh, maps_to_kind: column, maps_to_ref: product.sku_id, category: entity }
+  - { term: "实付金额",   lang: zh, maps_to_kind: column, maps_to_ref: order_paid.pay_amount, category: entity }
+  - { term: "支付金额",   lang: zh, maps_to_kind: column, maps_to_ref: order_paid.pay_amount, category: entity }
+  - { term: "商品名",     lang: zh, maps_to_kind: column, maps_to_ref: product.sku_name, category: entity }
+  - { term: "标题",      lang: zh, maps_to_kind: column, maps_to_ref: product.sku_name, category: entity }
+  - { term: "商品标题",   lang: zh, maps_to_kind: column, maps_to_ref: product.sku_name, category: entity }
+  - { term: "店铺名",     lang: zh, maps_to_kind: column, maps_to_ref: shop.shop_name, category: entity }
+  - { term: "店名",      lang: zh, maps_to_kind: column, maps_to_ref: shop.shop_name, category: entity }
+  - { term: "活动名",     lang: zh, maps_to_kind: column, maps_to_ref: campaign.campaign_name, category: entity }
+  # 时间列别名 —— 没有它们，"支付时间 / 下单时间"这对**必须区分**的概念
+  # 在 L1 层无法命中，只能落到 L4 打分（抬高 L4 占比，且 pay_time vs create_time
+  # 的区分是 GMV 口径的命门，不该交给非确定性层判定）。
+  - { term: "支付时间",   lang: zh, maps_to_kind: column, maps_to_ref: order_paid.pay_time, category: time }
+  - { term: "支付完成时间", lang: zh, maps_to_kind: column, maps_to_ref: order_paid.pay_time, category: time }
+  - { term: "下单时间",   lang: zh, maps_to_kind: column, maps_to_ref: order_paid.create_time, category: time }
+
+  - { term: "复购买家",   lang: zh, maps_to_kind: column, maps_to_ref: order_paid.buyer_id, category: entity }
+  - { term: "买家",      lang: zh, maps_to_kind: column, maps_to_ref: order_paid.buyer_id, category: entity }
+  - { term: "客户",      lang: zh, maps_to_kind: column, maps_to_ref: order_paid.buyer_id, category: entity }
+
+  # ---- 时间与大促类（附录 B §B.3.3）----
+  - { term: "今天",      lang: zh, maps_to_kind: time, maps_to_ref: "relative:today", category: time }
+  - { term: "昨日",      lang: zh, maps_to_kind: time, maps_to_ref: "relative:yesterday", category: time }
+  - { term: "昨天",      lang: zh, maps_to_kind: time, maps_to_ref: "relative:yesterday", category: time }
+  - { term: "前天",      lang: zh, maps_to_kind: time, maps_to_ref: "relative:day_before_yesterday", category: time }
+  - { term: "本周",      lang: zh, maps_to_kind: time, maps_to_ref: "relative:this_week_monday", category: time }
+  - { term: "上周",      lang: zh, maps_to_kind: time, maps_to_ref: "relative:last_week_monday", category: time }
+  - { term: "这周",      lang: zh, maps_to_kind: time, maps_to_ref: "relative:this_week_monday", category: time }
+  - { term: "本月",      lang: zh, maps_to_kind: time, maps_to_ref: "relative:this_month", category: time }
+  - { term: "上月",      lang: zh, maps_to_kind: time, maps_to_ref: "relative:last_month", category: time }
+  - { term: "上个月",    lang: zh, maps_to_kind: time, maps_to_ref: "relative:last_month", category: time }
+  - { term: "这个月",    lang: zh, maps_to_kind: time, maps_to_ref: "relative:this_month", category: time }
+  - { term: "近7天",     lang: zh, maps_to_kind: time, maps_to_ref: "rolling:7d_incl_today", category: time }
+  - { term: "近一周",    lang: zh, maps_to_kind: time, maps_to_ref: "rolling:7d_incl_today", category: time }
+  - { term: "双11",      lang: zh, maps_to_kind: time, maps_to_ref: "campaign:prom_double11", category: time }
+  - { term: "双十一",    lang: zh, maps_to_kind: time, maps_to_ref: "campaign:prom_double11", category: time }
+  - { term: "十一月大促", lang: zh, maps_to_kind: time, maps_to_ref: "campaign:prom_double11", category: time }
+  - { term: "618",       lang: zh, maps_to_kind: time, maps_to_ref: "campaign:prom_618", category: time }
+  - { term: "年中大促",   lang: zh, maps_to_kind: time, maps_to_ref: "campaign:prom_618", category: time }
+  - { term: "618大促",   lang: zh, maps_to_kind: time, maps_to_ref: "campaign:prom_618", category: time }
+  - { term: "同比",      lang: zh, maps_to_kind: time, maps_to_ref: "compare:yoy", category: time }
+  - { term: "环比",      lang: zh, maps_to_kind: time, maps_to_ref: "compare:period_over_period", category: time }
+
+# ============================================================================
+# 8. 黑话与不可映射词（**附录 B §B.3.4 的承载位**）
+# ============================================================================
+# ★ 新增顶层区块，理由：附录 B §B.3.4 的"处理"列明确要求「拒答」或「需澄清阈值」，
+#   但 `synonym` 表（07 §12.2）的 `maps_to_kind/maps_to_ref` **无处承载"拒答"语义** ——
+#   把所有黑话都塞进 synonym 会造出"term 映射到一个不存在的 ref"的脏数据。
+#   → 单独区块，`action` ∈ {refuse, clarify}。
+#   ⚠️ 本区块**直接支撑拒答集的构造**（附录 C §C.5.1 的 20–30 条"应拒答"题）。
+blacklist_terms:
+  - term: "淡季"
+    action: refuse
+    reason: "无定义的时间概念 —— 无法映射到任何数据资产"
+    alt_question: "你可以问「2026 年 3 月的 GMV 是多少」，或指定具体月份区间"
+  - term: "旺季"
+    action: refuse
+    reason: "无定义的时间概念"
+    alt_question: "你可以问「618 期间的 GMV 是多少」"
+  - term: "坑位费"
+    action: refuse
+    reason: "live 渠道资源位费用无对应字段（traffic_daily.ad_cost 是广告花费，口径不同）"
+    alt_question: "你可以问「各渠道的广告花费是多少」（对应 ad_cost）"
+  - term: "坑产"
+    action: refuse
+    reason: "无对应字段"
+    alt_question: "你可以问「直播渠道的 GMV 是多少」"
+  - term: "清仓"
+    action: refuse
+    reason: "无标准字段标记清仓商品"
+    alt_question: "你可以问「按标价与实际成交价的折扣率排行」"
+  - term: "尾货"
+    action: refuse
+    reason: "无标准字段"
+    alt_question: "同'清仓'"
+  - term: "刷单"
+    action: refuse
+    reason: "无字段；且涉及合规 —— 系统不提供此类分析"
+    alt_question: "你可以问「剔除测试单后的 GMV 是多少」"
+  - term: "补单"
+    action: refuse
+    reason: "同'刷单'"
+    alt_question: "同'刷单'"
+  - term: "兜底价"
+    action: refuse
+    reason: "最低可售价无对应字段（list_price 是吊牌价，cost_price 是成本价）"
+    alt_question: "你可以问「标价与成本价的差额」"
+  - term: "爆款"
+    action: clarify
+    reason: "按销量 Top-N 的俗语，阈值未定"
+    clarify_prompt: "你说的「爆款」是指销量 Top 10 吗？还是 Top 50？"
+    alt_question: "你可以直接问「销量 Top 10 的商品是哪些」"
+  - term: "主推"
+    action: clarify
+    reason: "同'爆款'"
+    clarify_prompt: "你说的「主推」是指销量 Top 10 吗？"
+  - term: "头部"
+    action: clarify
+    reason: "同'爆款'（注意：'头部主播'已在 aliases 中映射到 live 渠道，此处指商品）"
+    clarify_prompt: "你说的「头部」是指销量 Top 10 的商品吗？"
+  - term: "长尾"
+    action: clarify
+    reason: "低销量商品集合，阈值未定"
+    clarify_prompt: "你说的「长尾」是指销量排名后 50% 的商品吗？"
+  - term: "尾部"
+    action: clarify
+    reason: "同'长尾'"
+    clarify_prompt: "同'长尾'"
+  - term: "大促"
+    action: clarify
+    reason: "**歧义：需澄清是哪个大促**（附录 B §B.3.3 逐字给定）"
+    clarify_prompt: "你说的「大促」是指 618 还是双11？"
+    alt_question: "你可以问「618 期间的 GMV 是多少」"
+
+# ============================================================================
+# 9. 时间语义
+# ============================================================================
+time_semantics:
+  transaction_time: "交易发生时的时间戳（pay_time / create_time / refund_time / stat_date）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "'上个月' = 日历上月首日 00:00:00 至末日 23:59:59（Asia/Shanghai）"
+    - "'近7天' = 含今天往前 7 个自然日"
+    - "'本周' 起点 = **周一**（对齐 meta.week_starts_on）"
+    - "'618' = 2026-05-24 至 2026-06-20（**含预售期**）"
+    - "'双11' = 2026-10-20 至 2026-11-11（**含预售期**）"
+    - "'同比' = 去年同期；'环比' = 上一相邻周期"
+  # ⚠️ 大促区间在 v_campaign 表里**也有** start_date/end_date。
+  #    两处必然要一致 —— 本包的 notes 是**口径来源**，v_campaign 是**取数来源**；
+  #    生成器以本包 notes 为准写入 v_campaign，并由 selfcheck 断言二者一致。
+
+# ============================================================================
+# 10. 敏感列与脱敏策略
+# ============================================================================
+policies:
+  - deny_columns:
+      - order_paid.receiver_phone
+      - order_paid.receiver_address
+      - product.cost_price
+      - order_paid.tenant_id          # 租户键由执行层注入，模型不得引用
+      - order_refund.tenant_id
+      - product.tenant_id
+      - shop.tenant_id
+      - traffic_daily.tenant_id
+      - campaign.tenant_id
+    applies_to_roles: [support, marketer, finance, analyst, operator, shop_owner]
+    note: >
+      敏感列**不进 schema 上下文** → 模型不知道存在 → 不会生成查询（附录 B §B.1.3）。
+      命中则 AST-R07 直接拒绝（07 §7.2）。
+      ⚠️ `tenant_id` 也在此列：它必须由执行层 `SET app.tenant_id` 注入，
+      **不得由模型生成**——否则模型可写出跨租户谓词。
+  - mask_rules:
+      - column_pattern: ".*phone.*"
+        rule: "***-***-1234"
+      - column_pattern: ".*email.*"
+        rule: "u****@domain.com"
+      - column_pattern: ".*id_card.*"
+        rule: "***-**-6789"
+    note: >
+      ⚠️ `deny`（拒绝）与 `mask`（掩码）是**两套语义**（07 §8.7）：
+      deny 的列**不出现在结果**里；mask 的列**出现但值打码**。
+      当前 mask_rules 命中的列全部同时也在 deny_columns 里 —— 这是**有意的冗余**：
+      若未来放开某列的 deny，mask 仍然生效。
+
+# ============================================================================
+# 11. 质量与准入门槛（07 §6.1 步骤④）
+# ============================================================================
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90            # ★ U-23：与 asset.quality_score 联判
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context  # 不报错，降级排除 + 告警（07 §6.1 步骤④）
