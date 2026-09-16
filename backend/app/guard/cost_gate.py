@@ -2,7 +2,7 @@
 
 归属窗口：W2C（docs/08 §4.1）。**纯函数，禁依赖 LLM / 数据库**（N-01 / N-03 / R-DEP-2）。
 
-**职责切分（U-55 提案，见 reports/w2c/RELAY.md）**：
+**职责切分（U-63 提案，见 reports/w2c/RELAY.md）**：
 EXPLAIN 的**执行**归 `gate3_cost` 节点（W4，经只读连接、同事务、同身份 GUC）；
 本模块只做**计划解析 + 阈值判定** —— 计划 JSON 经 ``thresholds["explain_plan"]`` 传入。
 这样 guard 保持纯函数（离线可测），EXPLAIN 的连接治理留在编排层。

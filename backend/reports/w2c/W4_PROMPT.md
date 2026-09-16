@@ -52,7 +52,7 @@ result = run_gate3(final_sql, {
 5. `gate_detail` 必须带 `rule_id`（C-02）——三个 gate 的 `GateResult.rule_id` 已填好，原样透传。
 6. 用户文案直接用 `GateResult.reason`（已做不泄露处理，红队逐条断言过）；**不要**把内部 detail 拼进用户响应。
 
-## 4. 契约缺口（U-54/U-55 提案，见 reports/w2c/RELAY.md §1）
+## 4. 契约缺口（U-62/U-63 提案，见 reports/w2c/RELAY.md §1；原号 U-54/55 与 W2A 撞号、U-59/60 与 W2B 候选撞号，均已让出）
 
 - GuardPort 目前没有改写类出参的通道 → 阶段 4 请先按"直接调模块函数"实现；若架构窗口裁定扩端口，再切到端口。
 - gate3 的 EXPLAIN 执行（连接、事务、GUC、连续失败计数、降级标注）全部在你的节点层，guard 不持连接。

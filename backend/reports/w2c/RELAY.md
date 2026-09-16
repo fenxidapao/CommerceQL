@@ -6,23 +6,23 @@
 
 ## 1. 需架构窗口登记/裁定的编号（**W2C 未开号，只提案**）
 
-按 docs/08 §6.3：先查 07 §4.8（下一可用号 = **U-54**），W2C 不落笔 07，只在此提案，请架构窗口裁定并开号。
+> 编号更正（2026-09-16，两次让号）：W2C 初稿曾用 U-54/U-55/U-56，发现 W2A 已在 `c864ea2` 先行提案同号（TokenizerPort/RLS 视图/v_* DDL）→ 一让；改用 U-59/60/61 后，又发现 W2B 在 `cc2c619` 的候选号为 U-58~61（前提 = W2A 三号被采纳）→ 二让。按 docs/08 §6.3「引用面小者让号」，W2C 三条提案最终改号为 **U-62/U-63/U-64**（引用本文者一律以新号为准；终局以架构登记表 07 §4.8 为准）。W2C 不落笔 07，只在此提案，请架构窗口裁定并开号。
 
-### 提案 U-54 —— GuardPort 缺"改写类"出参通道
+### 提案 U-62 —— GuardPort 缺"改写类"出参通道
 
 - **现状**：`contracts.GuardPort` 只有 `gate1/gate2/gate3` 三个查询型签名；但 07 §5.3 节点 8 `gate1_ast` 的职责是"AST 审计 + LIMIT 注入 + **默认谓词注入**"，节点（W4）还需要 **`rewritten_sql` / `limit_injected` / `applied_predicates` / warnings** 这些改写产物写回 GraphState（07 §5.2 组 7）。
 - **W2C 已做**：`guard/ast_gate.py` 的模块函数 `run_gate1(sql, allowlist) -> Gate1Report`（含全部出参）；`SqlGuard`（`app/guard/__init__.py`）实现 GuardPort 端口形状。
 - **请裁定**：① W4 节点直接调 `run_gate1` 模块函数（端口不改，最快）；或 ② 扩 GuardPort（W0 落笔 contracts.py）。
 - **影响面**：W4（gate1_ast / gate2_policy / gate3_cost 三节点的调用方式）、W0（contracts.py）。
 
-### 提案 U-55 —— gate3 的 EXPLAIN 执行归编排层
+### 提案 U-63 —— gate3 的 EXPLAIN 执行归编排层
 
 - **现状**：`GuardPort.gate3(sql, thresholds)` 是纯函数，但 07 §7.5 要求 EXPLAIN 在"只读连接、同事务、同身份 GUC"下执行 —— guard 作为 L2 纯函数（N-01/N-03）不能持连接。
 - **W2C 已做**：`run_gate3` 只做**计划解析 + 阈值判定**；计划 JSON 经 `thresholds["explain_plan"]` 传入；`thresholds["explain_error"]=True` → warn；`thresholds` 缺省 → `SKIPPED`（D6：不报告为通过）。降级常量 `EXPLAIN_ERROR_DEGRADE_THRESHOLD=3`（连续计数归节点层）。
 - **请裁定**：确认"W4 的 gate3_cost 节点负责跑 EXPLAIN 并传计划 JSON"为正式契约。
 - **影响面**：W4。
 
-### 提案 U-56 —— 红队冻结集与 07 §7.2/§7.3 的 5 处口径冲突（**需裁决，W2C 已按冻结集执行**）
+### 提案 U-64 —— 红队冻结集与 07 §7.2/§7.3 的 5 处口径冲突（**需裁决，W2C 已按冻结集执行**）
 
 红队集是 DoD① 的判定基准且 content_hash 冻结；冲突处 W2C **按红队集执行**并在测试内留断言。逐条：
 

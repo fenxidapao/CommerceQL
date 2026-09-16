@@ -17,7 +17,7 @@
 | `backend/tests/unit/test_guard_gate2.py` | 四分支逐条 + 冗余复核 + 版本钉 + refuse/error 边界 + 双向断言 | §7.4 |
 | `backend/tests/unit/test_guard_gate3.py` | 阈值表逐行（含 warn 带）+ 三态出口 + skipped 不报通过 + 可配置（DoD④） | §7.5 |
 | `backend/tests/redteam/test_redteam_guard.py` | **红队 66 条全量**（DoD①）+ 不泄露断言 + **负向对照**（审计器失效→阻断类必翻转；gate2 冗余兜底验证） | DoD①、§7.8 |
-| `backend/reports/w2c/RELAY.md` | U-54/U-55/U-56 提案、W2A 对齐点、他窗失败观察、未做清单 | docs/08 §4.1 |
+| `backend/reports/w2c/RELAY.md` | U-62/U-63/U-64 提案、W2A 对齐点、他窗失败观察、未做清单 | docs/08 §4.1 |
 | `backend/reports/w2c/W4_PROMPT.md` | 给 W4 的接线提示词（用户约定：完成后写下一阶段提示词） | 用户开工约定 |
 
 ## 2. DoD 对照（docs/08 §3.4 阶段 2C 行）
@@ -53,7 +53,7 @@
 
 ## 5. 未解决的风险（诚实清单）
 
-- **U-56 的 6 条口径冲突未裁定**：W2C 按冻结红队集执行；若架构窗口裁定相反方向，改动集中在 `ast_gate.py`（LIMIT ALL、SET 消歧、join 归因、R14 口径）+ 对应测试，其余模块不受影响。
+- **U-64 的 6 条口径冲突未裁定**：W2C 按冻结红队集执行；若架构窗口裁定相反方向，改动集中在 `ast_gate.py`（LIMIT ALL、SET 消歧、join 归因、R14 口径）+ 对应测试，其余模块不受影响。
 - **RT-LIM-003**：deny_columns（tenant_id）与"execute 返回 0 行"期望互斥 —— 这是**安全方向偏保守**的选择（拒绝 > 放行），若裁定放行需 W2D/W6 联动。
 - **gate2 二次复核的列解析**与 gate1 共用 `_Auditor._resolve_column`：若 W2A 的 allowlist 形状变更，两处同变（单点实现，无复制）。
 - **gate3 性能契约**（1.0s 超时预算）未压测：纯函数部分估算 <10ms，EXPLAIN 的连接成本归 W4 节点层。
@@ -63,4 +63,4 @@
 
 - 代码可独立合入（不依赖 W2A/W2B/W2D 产物；测试夹具自足）。
 - 下一阶段提示词：`reports/w2c/W4_PROMPT.md`（阶段 4 启动时交给 W4）。
-- 编号提案待架构窗口落 07 §4.8：U-54（GuardPort 出参通道）/ U-55（EXPLAIN 执行归属）/ U-56（口径冲突 6 条）。
+- 编号提案待架构窗口落 07 §4.8：U-62（GuardPort 出参通道）/ U-63（EXPLAIN 执行归属）/ U-64（口径冲突 6 条；原提案号 U-54/55/56 与 W2A 撞号、U-59/60/61 与 W2B 候选撞号，两次让号，见 RELAY §1）。

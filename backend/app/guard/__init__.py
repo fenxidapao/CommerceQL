@@ -12,7 +12,7 @@
 
 **接线注意（W4）**：端口签名只回传 ``GateResult``（gate2 另带 ``ScopeInfo``）；
 但节点还需要 ``rewritten_sql`` / ``limit_injected`` / ``applied_predicates`` / warnings
-等完整出参 —— 请调 ``run_gate1`` / ``run_gate2`` 模块函数（U-54 提案已登记 RELAY）。
+等完整出参 —— 请调 ``run_gate1`` / ``run_gate2`` 模块函数（U-62 提案已登记 RELAY）。
 """
 
 from __future__ import annotations
