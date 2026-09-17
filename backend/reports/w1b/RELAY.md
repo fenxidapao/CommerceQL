@@ -322,3 +322,40 @@
 - 迁移 0003 **不含** RLS/POLICY/GRANT（ADR-10：全部由 materialize 派生；迁移只提供派生的对象基础，且属主=app_rw）。
   若 W2A 决定派生语句改限定名，0003 无需任何改动。
 - 本轮 W1B 的测试文件里，属主 DSN 一律**运行时拼接**（DoD④ 全仓重放的教训：修好配置文件，别在自己新加的测试里种回同一问题）。
+
+## 9 → W4 / W3A / W3C / W7 / 架构：迁移 0004 已落（cost_ledger + query_plan）+ 落库 sink 就绪
+
+**派单来源**：W3-INT 统一转述件 §给 W1B。方案（单连接 sink）经用户采纳。细节 = `DELIVERY.md §10`。
+
+### 9.1 已交付（全部门禁绿，全量 pytest 1498/6/0）
+
+- **迁移 0004**：`app.cost_ledger`（列逐字对齐 `CostEntry`，索引 `(tenant_id,created_at)`/`(created_at)`，
+  `cost_cny NUMERIC(14,6)`）+ `app.query_plan`（`binding_state`/`binding_layer` CHECK 取值集 = enums 冻结快照）。
+- **`app/repo/cost_ledger.py::DbCostLedgerSink`**：W3A `CostLedgerSink` Protocol 的落库实现
+  （同步，单条专用连接 + 失败重连一次 + `connect_timeout=2`；不 import `app.llm` —— R-DEP-2，本地结构化 Protocol，
+  与 `CostEntry` 的字段一致性由 `tests/unit/test_cost_ledger_sink.py` 逐成员钉死）。
+
+### 9.2 → W4：装配点（你接到的是成品，按此接线即可）
+
+- 构造：`DbCostLedgerSink(settings_database_url)`（传 `DATABASE_URL` 原值，SQLAlchemy 形态，内部自行换算 libpq）；
+- 它满足 W3A 的 `CostLedgerSink` Protocol —— 直接塞进网关的 sink 注入点；`CostEntry` 可直接传 `record()`；
+- 可选参数 `billing_tz`（默认 `Asia/Shanghai` = PRD §12.3）——**不要另设时区常量**，日界聚合用；
+- **shutdown 必须调 `sink.close()`**（挂进 `main.py` lifespan 资源释放区，与三池同段）—— 长连资源，不关 = 泄漏。
+
+### 9.3 → W3A / W3C：你们的两个表结构阻塞已解除
+
+- **W3C DoD①**：`query_plan` 表 + `binding_state`/`binding_layer` 列现已存在（0004）；剩余缺口 = W4 写入侧。
+- **W3A**：`cost_ledger` 已存在 → "重启丢账"的 InMemory sink 可换 `DbCostLedgerSink`（接线归 W4，见 9.2）；
+  Protocol 与表列的契约由单测双向锁定，你改 `CostEntry` 字段会当场红 `test_cost_entry_is_structurally_compatible_with_local_proto`。
+
+### 9.4 → 架构：第 4 个长连 DB 资源登记（裁决请求，非阻断）
+
+`DbCostLedgerSink` 持有**一条**专用同步连接（不是池）。07 §8.1 三池算术（80 连接）不含它。
+取舍不得隐瞒：Protocol 是同步的 + "三池唯一装配点"禁止第 4 池 + 每调用短连接纯属浪费握手。
+**若裁定否决**（改回短连接 / 扩 Protocol 为 async），改动收敛在 `_connection()` 一个方法，迁移与测试不受影响。
+风险自评：单进程单事件循环下 sink 调用天然串行，一条连接够用；同步调用阻塞 ≈3ms/次 LLM 调用（相对 1.5–45s 延迟是噪声）。
+
+### 9.5 → W7：保留期清理任务（登记）
+
+`cost_ledger` 13 个月 / `query_plan` 90 天 —— 删除走**属主身份**的定期清理（runbook/部署侧）。
+app_rw 刻意无 DELETE（账本行不可改是权限层钉死的语义，不是疏漏）；app_ro 零 GRANT（不在业务查询路径）。

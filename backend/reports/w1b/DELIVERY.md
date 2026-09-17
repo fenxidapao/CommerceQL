@@ -573,3 +573,60 @@ B4 之后：启动断言第一次真连库 → **连不上被当成致命** → 
    根因 = materialize 派生语句**非限定名** + 调用侧连接未带 `search_path`（详见 `RELAY.md` §8，转 W2A/W2-INT）。
    这 3 条此前一直 skip（`views_ready=False`）；**U-56 让视图存在后 skip 翻成执行，把 W2A 侧的 search_path 前提暴露了出来** ——
    这不是迁移引入的回归，而是 DoD③ 链路的第二层阻塞现形（w2-int 的 e2e step② 复跑时也会撞上同一层）。
+
+## 10 本轮追加（2026-09-17）：U-56 续 —— 迁移 0004（cost_ledger + query_plan）+ 落库 sink
+
+**派单来源**：W3-INT 统一转述件 `reports/w3-int/RELAY.md §给 W1B`（两张表在 0001–0003 零命中，
+收口窗口已复核）。方案（单连接 sink）已由用户采纳后开工。
+
+### 10.1 交付物
+
+| 文件 | 内容 |
+|---|---|
+| `app/repo/migrations/versions/0004_cost_ledger_and_query_plan.py` | 两表 DDL：`cost_ledger`（列逐字对齐 `CostEntry` 落库字段 + 索引 `(tenant_id,created_at)`/`(created_at)`，`cost_cny NUMERIC(14,6)` 无损容纳 `Decimal("0.000001")` 量化）+ `query_plan`（§12.3:2292 + §6.8.3:1540，`binding_state`/`binding_layer` CHECK 取值集 = enums 冻结快照）。DDL 提为模块级常量供契约单测 import。无 downgrade（§12.6） |
+| `app/repo/cost_ledger.py` | `DbCostLedgerSink` —— W3A `CostLedgerSink` Protocol 的落库实现（同步，单条专用连接 + 失败重连一次，`connect_timeout=2`） |
+| `tests/unit/test_migration_0004_runtime_contract.py` | 7 条：CostEntry 字段 ↔ 0004 列双向、enums ↔ CHECK 字面逐字、DDL 常量直读 |
+| `tests/unit/test_cost_ledger_sink.py` | 8 条：结构兼容逐成员、INSERT 列序 = CostEntry 字段序、SQL 形状（绑定参数/N-04）、W3A Protocol 签名同构、conninfo 换算 |
+| `tests/integration/test_migration_0004_runtime.py` | 11 条：全链 upgrade、属主断言、app_ro 零 GRANT、app_rw INSERT/SELECT 通而 UPDATE 权限拒、CHECK 真实拒非法值、sink 往返 + **Asia/Shanghai 日界** + Decimal 精度 + 主键撞重 fail-loud + 不可达 DSN 快速抛（connect_timeout 复验） |
+| `scripts/drill_0004_contract_injection.py` | 护栏注入对照演练（见 10.3） |
+
+### 10.2 关键设计裁定（§12.3 未写明处的 DDL 决定，全部注册）
+
+1. **R-DEP-2 是硬契约** → sink **不 import `app.llm`**：repo 侧本地声明结构化 Protocol
+   （`LedgerEntryProto`/`CostLedgerSinkProto`），W4 装配传 `CostEntry` 天然结构兼容；
+   "CostEntry ↔ 本地契约"一致性由 `test_cost_ledger_sink.py` 逐成员钉死（tests 层可 import 两边）。
+2. **权限**：app_rw 恰好 `INSERT/SELECT`（UPDATE/DELETE 刻意不给 —— 账本行不可改、计划行一次写入，
+   用权限层钉死）；app_ro 零 GRANT（两表不在业务查询路径，N-02）；**保留期清理（13 个月/90 天）走属主身份**
+   —— 这是运维动作不是 DDL，登记为 W7 部署侧/runbook 任务（同文件头"刻意不做 #1"）。
+3. **可空性**：`plan_json`/`binding_state`/`bundle_version` NOT NULL（表存在的理由）；`plan_summary`/
+   `binding_layer`/`confidence` 允许 NULL（unresolved 等态没有判定层/置信度可言，DB 不猜）。
+4. **CHECK 字面 = 冻结快照而非 import**：迁移会被 alembic 子进程独立执行，且 enums 属 W0 可能被并行改
+   —— 迁移要的是落库那一刻的值；漂移由契约单测当场抓（它两边都读）。
+
+### 10.3 护栏注入对照（正向对照纪律）—— 演练抓到两个真问题
+
+`drill_0004_contract_injection.py` 注入 → 必红 → 还原 → sha256 复核，三轮演练：
+
+1. 列解析器的 `\b` 在 `NUMERIC(14, 6)` 右括号后不成立 → `cost_cny` 整行漏掉（护栏盲区，已修为 `(?=\s)`）；
+2. `test_ddl_embedding_of_check_literals` 原是**恒真断言**（拿 `_BINDING_STATES` 渲染的文本比对同一个元组，
+   两边同源永远不可能红）→ 重写为从 DDL 文本**独立解析**字面值再比对。
+3. sink 单测首跑抓到**真实类型漂移**：本地 Proto 的 `created_at: date` vs `CostEntry.created_at: datetime`
+   （timestamptz 本就该 datetime）—— Proto 错，已修。
+
+### 10.4 门禁实测
+
+| 门禁 | 结果 |
+|---|---|
+| 全量 `pytest` | **1498 passed / 6 skipped / 0 failed**（6 skip 全是 retrieval FTS 的 DSN 权限 skip，与本批无关；上轮的 3 条 W2A search_path 红已由 W2A 修复） |
+| `ruff check .` | All checks passed（本批引入 10 条已修净：UP017×5/E741×4/I001） |
+| `mypy app` | Success: no issues found in 104 source files |
+| `lint-imports` | 4 kept, 0 broken（R-DEP-2 实证 KEPT —— sink 无 llm import） |
+
+本批新增测试 26 条（7 契约 + 8 sink + 11 集成）全绿；集成测试含真实 `alembic upgrade head` 全链。
+
+### 10.5 本轮暴露的测试自身缺陷（诚实记录，均已修）
+
+- `get_type_hints(Protocol)` 只收集**类级注解**，拿不到 `@property` 返回注解 → 返回空 dict，
+  使首版结构比对**空转**（循环体零次执行 + 覆盖断言红才现形）—— 与本项目"恒真护栏"教训同类，已改为从 `fget` 提取。
+- 模块级 `rw` 连接未开 autocommit：CHECK/权限拒绝把事务打 Abort 后，aborted 状态**污染后续所有用例**
+  （`InFailedSqlTransaction`）—— 已开 autocommit 并写明原因。
