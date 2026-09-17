@@ -1,0 +1,221 @@
+# W3A 转述件（RELAY）—— 逐窗口可粘贴
+
+> 窗口：W3A（阶段 3 · LLM 网关）｜日期：2026-09-17
+> 细节与证据：`reports/w3a/DELIVERY.md`。本文只写**对方需要照做/照写的东西**。
+> **本窗口未自行开号**：新问题列在 §给架构，下一可用号 = `U-65`。
+
+---
+
+## §给 W3B / W3C（调用面）—— 照此写，不要自行发明
+
+### 1. 拿实例的方式（分层纪律，别绕）
+
+| 你 | 可以怎么做 | **不可以** |
+|---|---|---|
+| **W3B**（`app.planner`，L3） | 可以 `import app.llm`，但**推荐**只依赖 `app.core.contracts.LLMPort` 并接收实例 | 不要在 `planner` 里自己 new 一个 `ChatClient`/`LlmGateway` |
+| **W3C**（`app.binding`，L2） | **只能**拿注入的 `LLMPort` 实例 | 🔴 **禁止 `import app.llm`**（R-DEP-2 会红，`.importlinter` 机器拦）。`binding` 是确定性层，L4 打分器必须经端口 |
+
+装配在 W4 的 lifespan（`build_gateway(...)`）；测试里可以自己构造。
+
+### 2. 调用签名
+
+```python
+resp = await port.call(task, payload, model="auto")   # state/Mapping
+cost = port.estimate_cost({"text": ..., "task": ..., "output_tokens": ...})  # 同步，返回 Decimal
+```
+
+- **`task` 取值（10 个，字面量即契约，改名会破坏你）**：
+  `normalize` / `intent` / `normalize_intent`★合并档 / `rerank`（候选精筛）/ `plan` /
+  `gen_sql`（L0–L2）/ `gen_sql_complex`（L3+，**唯一走思考**）/ `repair` / `present` / `l4_score`。
+  未知 task → `LlmUnknownTask` **fail-fast，不会回退默认模型**。
+- **`model` 参数语义**：`"auto"`（默认）= 按 PRD §12.2 路由表；显式模型名（`settings.LLM_MODEL_FAST/STRONG` 之一）= **覆盖**（逃生门，会记进降级事件 detail 的 `model_override`）；其他 → `LlmUnknownModel`。
+- **`resp` 必带**：`text`（**JSON 字符串，未经解析**）／`model`／`prompt_version`／`tokens{input,output,cache_hit,total}`／`cost_cny`。
+
+### 3. `payload` 只接受这些键（严格模式：多一个键就抛，**不静默丢弃**）
+
+```
+raw_question        必填、非空。唯一允许出站的用户输入（允许含 SQL —— 那是用户自己的话）
+semantic_summary    §10.5 ① 语义包摘要（你经 SemanticBundlePort 取好再传）
+dialect_note        §10.5 ② 方言说明（自产稳定文本）
+output_schema       §10.5 ② 输出 JSON Schema（自产稳定文本）
+few_shots           §10.5 ④ 已脱敏的 (问题, SQL) 二元组，≤8 条
+constraints         自产稳定文本（约束提示）
+error_digest        §10.5 ⑤ 脱敏错误摘要（**禁含 SQL 语句**，≤1000 字）
+candidates          §10.5 ① 候选资产名（表/列/指标/别名），≤200 条、单条 ≤120 字
+history_questions   §10.5 ⑥ 会话历史，**只有问题**（含 SQL 会抛）
+bundle_version      语义包版本（前缀按它冻结）
+user_scope          用户级隔离用的 **16 位 hex 哈希**；只进 HTTP `user` 参数，**不进 prompt 文本**
+```
+
+🔴 **三个必须知道的边界**（写错就是安全事件，不是普通参数错）：
+
+1. **`user_id` / `tenant_id` / `task_id` 不得进 payload**。端口签名里没有身份位 —— 用 `app.llm.set_call_context(LlmCallContext(...))` 传，它走 `contextvars`、只服务计量与日志、**永不出站**。
+2. **N-17：`generated_sql` / `sql_text` / `sql` 永不回灌 prompt**。连带后果：**`repair` 拿不到失败的那条 SQL**，它只能吃 `error_digest`。这是设计如此，不是我漏做了。
+3. **结果集/明细/值样本禁止出站**。`rows`/`result_set`/`sample`/… 这类键名一律抛 `LlmEgressViolation`；用户问题里若出现"结果集形态"（多行分隔字段）也会抛。**这是 fail-closed，没有"警告后继续"档**。
+
+### 4. 异常语义（07 §14.2）
+
+| 你遇到的 | 是什么 | 你该怎么做 |
+|---|---|---|
+| `LlmConcurrencyExceeded`（**F2**，429 退避耗尽） | **error** | 上抛。**不要**降级成模板答案 |
+| `LlmUpstreamError`（**F3**，5xx 重试耗尽） | **error** | 同上 |
+| `LlmRefused` | **产品终态 `refuse`，不是 error**（07 §10.2 最后一行） | 🔴 **原样上抛，不要捕获**（W4 转 `refuse`）。它的 `default_code is None` |
+| `LlmEgressViolation` / `LlmUnknownTask` / `LlmUnknownModel` / `LlmPromptError` | 契约错误 / 安全事件 | 上抛。**它们不降级** —— 降级会掩盖它们 |
+
+⚠️ **若你写 `except LlmError:` 做自己的降级（如 `plan_generation_failed`），必须先 `except LlmRefused: raise`** —— 否则你会把"产品结论"变成"一次业务降级"，语义就错了。
+
+### 5. 网关**不做**的三件事（免得两边各做一遍）
+
+1. **不解析 JSON**：`resp.text` 是字符串。`json.loads` + schema 校验 + "修复重试 1 次"的**归属在调用方**（你）。理由：网关是 L1，不认识业务 schema。
+2. **不发 `degraded` 到 SSE**：网关只调 `DegradationSink`（L4 那一跳归 W4）。
+3. **不把候选从 N 路减到 1 路**：预算 80% / 并发饱和时网关只能**建议**（detail 里 `advisory: True`），实物动作是换到弱档。**减路的决定权在你**。
+
+### 6. `estimate_cost(payload)` 的 payload 约定
+
+```python
+{"text": <将要出站的全部文本>,   # 必需；缺失按空串算（低估，不崩）
+ "task": <LlmTask 取值>,         # 可选；给出则用它的 output_tokens_hint
+ "output_tokens": <int>,         # 可选；显式覆盖输出预估
+ "candidates": <int>}            # 可选；候选路数（默认 1，多路按 N 倍算）
+```
+语义 = **高峰价上界**（TCO 纪律）。它是 pre-flight 防失控用的，不是精确对账。
+
+---
+
+## §给 W4（接线）—— 不接线就有三处是坏的
+
+### 1. 侧信道 A：降级通知 → SSE
+
+```python
+from app.llm import DegradationSink, DegradationEvent, build_gateway
+
+class SseDegradationSink:                      # 你实现，接 EventEmitterPort
+    def on_degraded(self, event: DegradationEvent) -> None:      # ⚠️ 同步方法
+        # 推荐：非阻塞入队，由 SSE 侧消费；不要把 emitter 直接 await 在这
+        queue.put_nowait(("degraded", {
+            "reason": str(event.reason),                          # DegradedReason 8 值之一
+            "action_taken": str(event.action_taken),               # ActionTaken 7 值之一
+            **event.detail,
+        }))
+```
+- 🔴 **`on_degraded` / `on_call` 都是同步回调**（Protocol 如此定义，本窗口刻意不加 `async` —— 它保证"发事件"这一跳**永远不会阻塞 LLM 调用路径**）。
+  ⇒ 若你的 `EventEmitterPort.emit` 是 `async`，请自行做 **sync→async 桥接**：`asyncio.Queue.put_nowait` 或 `loop.call_soon_threadsafe`。
+  ⇒ ☠️ **禁止在回调里 `asyncio.run(...)`**（会起第二个事件循环 → 在运行中的 loop 里必炸）；**禁止阻塞**（`on_degraded` 在 `call()` 的同步段内被调用，阻塞它会直接吃任务的延迟预算）。
+- 默认实现**只写结构化日志**（`llm_degraded`）。**不接线 = 前端看不到降级**。
+- `detail.advisory is True` ⇒ `reduced_candidates` 只是**建议**（网关做不到减路）。
+- 一次 `call()` 可能发**多条**事件（例如预算告警 + 模型降级 + 模板命中）。
+
+### 2. 侧信道 B：`refuse` 终态
+
+```python
+from app.llm.errors import LlmRefused
+
+try:
+    resp = await port.call(...)
+except LlmRefused:
+    return refuse(...)        # 🔴 必须**先**捕获
+except LlmError: ...
+```
+🔴 **不接线它就落成 `500 INTERNAL`** —— 那是**错的终态**（07 §14.2 F1：refuse 不是 error）。
+`refuse` **不给 `data`**（07 §14.3 约束 5），且 `refuse`/`error`/`clarify` 三者互斥。
+
+### 3. 请求级身份上下文（计量要它）
+
+```python
+from app.llm import LlmCallContext, set_call_context
+set_call_context(LlmCallContext(task_id=..., tenant_id=..., user_id=...))   # 进图前
+```
+`contextvars`，请求级、并发不串号、**从不出站**。不设 → 计量归集到 `"(unset)"`（**可见**的错误，不静默）。
+
+### 4. lifespan 装配
+
+```python
+gateway = build_gateway(settings, ledger=<W1B 的落库 sink>, degradation=SseDegradationSink(), ...)
+# 关闭：await gateway.aclose()   ← 别忘了，否则 httpx 连接不释放
+```
+不传 `ledger` 会用内存 sink（**重启后熔断被重置**）。
+
+### 5. 你可能想知道的（前端相关）
+
+- `degraded` **不是可重试信号**（07：前端只对 `SESSION_CONFLICT` 自动重试）。
+- `resp.tokens` 可直接喂 C-03 `meta.tokens`；`cache_hit` 来自上游 `usage` 直供。
+
+---
+
+## §给 W0（配置 / 指标 / 依赖 / 枚举）
+
+1. 🔴 **`Retry-After` 落码**（PROMPT §三-11，本窗口未复核）：07 §14.4.1 裁定 `LLM_CONCURRENCY_EXCEEDED`=**5s**、`LLM_UPSTREAM_ERROR`=**30s**；`app/core/enums.py` 现仍为 2/5。**30s 不得小于熔断开路时长 30s**（07 §14.4.1 的机制来源）。
+2. 🔴 **空字符串 API key 能通过"必填"校验**（本窗口实测）：`DEEPSEEK_API_KEY=''` + 有效 DSN → settings **构造通过**。⇒ 当前"必填"只是"键必须存在"。建议加 `min_length=1` 或 validator（fail-fast 的强度取决于这个）。
+3. **`app.obs.metrics.py` 没有 LLM 指标**（实测只有 `binding_tau` gauge）。本窗口**不改 W0 的文件**，改为暴露 `MetricsSink` 注入点 + 默认打结构化日志。建议落：`llm_calls_total{task,model,degraded}`、`llm_tokens_total{kind=input,output,cache_hit}`、`llm_cache_hit_ratio`（NFR-4.3）、`llm_cost_cny_total{model,is_peak}`、`llm_latency_seconds` 直方图、`llm_circuit_open{model}` gauge、`llm_budget_ratio{scope}` gauge。
+4. **本窗口未新增依赖**：`httpx`/`tiktoken` 已在白名单；**未用 `tenacity`**（退避自己实现 —— `tenacity` 表达不了"总预算做减法"，见 `test_retry_count_is_truncated_by_the_task_budget`）；**未用 `jinja2`**（Q5 用标准库 `string.Template`）。请裁决 `tenacity` 与 `respx` 是否从白名单移出（归 ADR-20）。
+5. **`LLM_TIMEOUT_SECONDS=60` 被 07 §10.2 的 15s/45s 取代**（Q3 以 07 为准）。该键目前**未被使用** —— 建议补注释或交架构裁决删除。
+6. **`app/cache/keys.py` 现在不需要预算/成本键**（本窗口用 in-memory sink）；仅当将来把计量换 Redis 载体时才需要（07 §10.1 已提"并发改 Redis"那条）。
+
+---
+
+## §给 W1B（`cost_ledger` 表 + 写入 API）
+
+**现状**：07 §12.3 有完整列定义，迁移 0001–0003 **均未建**；全仓 `cost_ledger` 只出现在 docstring 里（无模型、无迁移、无写入 API）。本窗口按 Q1 裁定 **(a)**：定义 sink 注入点 + 内存实现，**未建迁移、未报"已落库"**。
+
+**需求（三件事）**：
+
+1. **建表**（列**逐列对齐** `app/llm/budget.py::CostEntry`，§12.3 定义：`entry_id`(PK)/`task_id`/`tenant_id`/`user_id`/`model`/`input_tokens`/`output_tokens`/`cache_hit_tokens`/`cost_cny`/`is_peak`/`created_at`，**保留 13 个月**）。
+   ⇒ 按 `CostEntry` 写 INSERT 即可，**不必两边各定义一遍列**。
+2. **实现 `CostLedgerSink` Protocol**（`app/llm/budget.py`）：
+
+   ```python
+   def record(self, entry: CostEntry) -> None: ...
+   def tenant_spent_cny(self, tenant_id: str, day: date) -> Decimal: ...
+   def global_spent_cny(self, day: date) -> Decimal: ...
+   ```
+   - 后两个是**预算熔断的唯一读口**（日累计）。窗口口径 = **`Asia/Shanghai` 日切**（`budget.BILLING_TZ`），与业务时间口径（N-26）**解耦**。
+   - ⚠️ `created_at` **必须带时区**（本窗口存的是 tz-aware `datetime`）。若落 `timestamptz` 更稳妥。
+   - ☠️ **请不要给"查明细"接口** —— 网关不需要，给了会诱使别人绕开仓库层。
+3. **`cost_cny` 用 `Decimal`**（本窗口精度 `0.000001`，`ROUND_HALF_UP`）。float 累加会让"恰好用满预算"这类判定飘。
+
+**两个附加列（可选）**：`tokens_estimated` / `price_guess` 是 `CostEntry` 上的**非落库标记**（运维可观测用：token 数是否为估算、单价是否走了未知模型兜底价）。落不落列由你定，本窗口不擅自扩表。
+
+**接线位置**：`build_gateway(settings, ledger=<你的 sink>)`（W4 在 lifespan 传）。表没建好之前，内存 sink 会让**熔断在重启面前失效** —— 这已在 `DELIVERY.md §6` 具名登记。
+
+---
+
+## §给架构窗口（待分配编号；下一可用 = `U-65`）
+
+按 07 §4.8 的纪律，本窗口**未自行开号**。以下 8 项请分配编号并裁决：
+
+| 候选 | 问题 | 现状 / 影响 |
+|---|---|---|
+| ① | **07 缺 `gen_sql_complex` / `repair` 的任务级延迟预算** | 其余 6 个阶段都有 0.6–1.5s；这两个没有 → 退化为模型级 45s/15s，**P95 契约在这两档无约束** |
+| ② | **07 §16.1 `gen_sql`=1.3s 与 PRD §12.2 "L3+ 走 pro 思考" 物理冲突** | 真机实测 pro **最简**调用 1.42s > 1.3s。要么给 pro 档独立预算，要么承认 L3+ 必然超 P95 |
+| ③ | `LLM_MAX_CONCURRENCY=50` 与 07 §10.1 "按模型 8/2" 的**语义关系未定义** | 本窗口按"全局 AND 按模型"实现（两值都生效）。若 50 另有含义，当前实现会低估吞吐 |
+| ④ | **租户日预算无 config 键** | 07 §10.4 要求双层预算，config 只有全局 `DAILY_BUDGET_CNY`；本窗口用经验值 10 元 |
+| ⑤ | **`USD_CNY_RATE` 全仓无配置项** | PRD §12.3 只有 1 个换算数据点（$0.0071→¥0.05 ⇒ ≈7.04），本窗口取 7.1 并标经验值 |
+| ⑥ | **`EgressPayload.candidates` 需正式登记进 07 §10.5** | 本窗口**唯一**新增的出站字段（依据 §10.5 ① 的"同义词"子集） |
+| ⑦ | **`LLMPort.estimate_cost(payload)` 的 payload 结构端口未定义**（签名只有 `Mapping`） | 本窗口自行定义并登记（见 `budget.estimate_for_payload` docstring 与本文 §给 W3B/W3C-6） |
+| ⑧ | **`LLMResponse` 装不下 `degraded`/`refuse`** → 本窗口用两条侧信道（回调 + 异常）绕开 | 侧信道是妥协。需裁决是否扩端口字段（扩则 W4 不再依赖回调约定，也不必靠"记得先 except LlmRefused"） |
+
+另请复核一条**交付期发现但已被我推翻的推断**（记录在案，避免后人重走）：`client._Breaker.half_open_probe_in_flight` 的复位耦合**不构成故障**（探针实验证实：失败触顶分支的 `finally` 恰好会清掉它）。本窗口已改为局部不变量并加了白盒断言，但**它不是"修了一个线上缺陷"**。
+
+---
+
+## §给 W3-INT（收口需知）
+
+1. **门禁命令**（与 CI 对齐；⚠️ `lint-imports` 必须用**控制台脚本**）：
+
+   ```bash
+   cd CommerceQL/backend
+   ../.venv/Scripts/python.exe -m pytest -q                      # 1020 passed / 6 skipped
+   ../.venv/Scripts/python.exe -m ruff check .
+   ../.venv/Scripts/python.exe -m mypy app
+   ../.venv/Scripts/lint-imports.exe                             # 4 kept, 0 broken
+   ../.venv/Scripts/python.exe scripts/assert_importlinter.py    # DoD② 注入实验
+   ```
+   ☠️ `python -m importlinter.cli lint-imports` = **无输出 + exit 0 的假绿**（U-41，该包 `cli.py` 无 `__main__` 守卫）。本窗口实测复现过。
+
+2. **必须进阶段 3 收口结论的两条**（否则会误以为"已实现"）：
+   - **模板层是空的**（`NullTemplateProvider`）→ 默认降级链实际是 `pro → flash → 拒答`。真正落地需 Gold Query 库（`gold_query`，W1B/W6）。
+   - **计量是内存的**（`cost_ledger` 表不存在）→ **熔断在进程重启面前失效**。等 W1B 的表。
+3. **两处未接线就是坏的**（W4 的活）：`degraded` 事件只到日志（前端看不到）；`LlmRefused` 不接线会落成 `500 INTERNAL`（错终态）。
+4. **本窗口未做真机集成测试**（只做了行为探测）。`deploy/.env` 有可用 key（PROMPT §三-8 已过期）；集成测的门槛在**费用**与**限流**，请按需决定是否跑。
+5. ⚠️ **探针残留通报**：交付期发现 `backend/app/guard/_probe_violation.py` 残留（中断的 `assert_importlinter.py` 留下的），**导致全仓 import 契约基线本地变红**。已备份内容后清理（详见 `DELIVERY.md §7.3`）。收口时如有窗口报告"lint-imports 红"，先查这个。
+6. **测试夹具位置**：`tests/unit/_llm_fake_upstream.py`（假上游 + 出站请求录制）。DoD③ 的证据 = `test_llm_gateway.py::TestOutboundAttachment`。若你要写集成测试，可复用该夹具。
