@@ -23,23 +23,40 @@
 其他取值 → `LlmUnknownModel`（fail-fast）。**不做"猜最近的模型名"这种事情** ——
 那正是 N-21 禁止的静默降级。
 
-## 超时：**有 07 预算的用预算，没有的**绝不发明数字
+## 🔴 延迟预算 ≠ 超时（本模块的语义边界，**2026-09-17 修正**）
 
-07 §16.1 给了 7 个阶段预算（`normalize`/`intent`/精筛/`plan`/`gen_sql`/`present`），
-§16.2 给了 `normalize+intent` **合并档** 1.2s，§6.8.2 给了 L4 打分器"单次约 0.3–0.8s"。
-其余三项（`gen_sql_complex` / `repair` / 下游的 `l4_score` 之外）——
+这里有两个**必须分开**的概念，它们曾经被本模块混为一谈并造成生产级故障：
 
-> `gen_sql_complex`（L3+ 走 `deepseek-v4-pro` **思考**）与 `repair`（有界纠错）
-> **在 07 里没有任务级延迟预算**。
+| 概念 | 出处 | 性质 | 用途 |
+|---|---|---|---|
+| **单次调用超时** | 07 §10.2：flash **15s** / v4-pro **45s** | **硬上限**（保护） | 真正的传输 deadline |
+| **阶段延迟预算** | 07 §16.1 的 `normalize` 0.6s / `intent` 0.6s / 精筛 0.8s / `plan` 1.0s / `gen_sql` 1.3s / `present` 1.5s；§16.2 合并档 1.2s；§6.8.2 L4 打分 0.3–0.8s | **P95 分配**（目标） | 元数据：衡量 §16.1 一致性、供上层决定是否推占位符 |
 
-按 U-22 的根因纪律（"**推导不出来的值必须显式标为经验值并登记补齐请求，不得装成有依据**"），
-本文件对这两个 task 的做法是：**`timeout_s=None` → 退化为 07 §10.2 的模型级上限**
-（flash 15s / pro 45s），并在 `DELIVERY.md` 具名登记"07 缺这两个任务级预算"。
+**故障复现（真机，双向对照，n=3×5 任务）** —— 把上表第二行当第一行用：
 
-⚠️ 顺带暴露一个**真实矛盾**（已登记，非本窗口可裁）：07 §16.1 给 `gen_sql` 的预算是
-**1.3s**，而 PRD §12.2 要求 L3+ 用 `deepseek-v4-pro` **思考** —— 实测（2026-09-17）
-pro 一次最简调用耗时 **1.42s**，即"按 1.3s 预算跑 pro 思考"在物理上不可能。
-两者不能同时成立，必须由架构窗口裁决（要么给 pro 档独立预算，要么承认 L3+ 必然超 P95）。
+| task | §16.1 预算 | 停用预算后实测延迟中位 | 把预算当硬 deadline |
+|---|---|---|---|
+| `normalize` | 0.6s | 1.45s | **0/3**（失败耗时 608/606/605ms） |
+| `intent` | 0.6s | 1.39s | **0/3**（604/611/602ms） |
+| `normalize_intent` | 1.2s | 1.56s | **0/3**（1311/1202/1213ms） |
+| `plan` | 1.0s | 1.49s | **0/3**（1004/1003/1003ms） |
+| `gen_sql` | 1.3s | 1.60s | **0/3**（1304/1311/1315ms） |
+
+同一进程、同一 payload、同一模型，**唯一变量 = deadline**：0/15 → 15/15。
+失败耗时**恰好等于预算值**，即"卡在 deadline 上死"，而非上游不可用。
+
+**为什么这是逻辑错误而非"调大一点"**：P95 是**分位数**，不是上界。拿分位数当硬上限，
+即使系统完全健康也必然砍掉约 5% 的调用；而当分配值低于真机中位时，就退化成 100% 失败。
+07 §16.2 也写明超预算的处置是"**先推 `stage=intent` 占位**"（降级 UX），**不是失败**。
+PRD §12.2 那张路由表**没有超时列** —— 全项目唯一的"每次调用"超时就是 §10.2 的 15s/45s。
+
+**所以本文件的做法**：`TaskRoute.budget_s` 只承载 §16.1 的阶段分配（**可观测元数据**），
+真实 deadline 一律由 `hard_timeout_s(model_key)` 给（§10.2）。§16.1 的分配值**只影响埋点**，
+不再影响任何一次调用的成败 —— 一致性由 `CallRecord.over_budget` 度量。
+
+⚠️ **仍需架构裁决**（本窗口不越界）：§16.1 的分配值已被真机证伪（实测 1.39–1.60s
+vs 分配 0.6–1.3s，全部超），且"超预算→推占位符"的执行责任现落在上层（W4 的 SSE），
+不在网关。两条都已写进 `RELAY.md §给架构`。
 """
 
 from __future__ import annotations
@@ -61,7 +78,7 @@ __all__ = [
     "resolve_route",
     "resolve_model_name",
     "degrade_target",
-    "effective_timeout_s",
+    "hard_timeout_s",
     "max_tokens_for",
 ]
 
@@ -118,7 +135,10 @@ MODEL_AUTO: Final[str] = "auto"
 #: 真实 SQL 生成所需余量**必须由阶段 3 的实测标定**，当前值只是防"空 content"的下限。
 THINKING_HEADROOM_TOKENS: Final[int] = 2048
 
-#: 07 §10.2 的**模型级**硬上限（传输层超时）。任务级预算比它短时以任务级为准。
+#: 07 §10.2 的**单次调用超时**（传输层 deadline）—— **全项目唯一的硬上限**。
+#:
+#: ⚠️ 这是 07 里唯一以"**单次调用**"为口径给出的超时。§16.1 的 0.6/1.0/1.3s 是**端到端
+#: P95 的阶段分配**，不是调用超时（见模块 docstring 的故障实录）—— 二者不得互相顶替。
 MODEL_HARD_TIMEOUT_S: Final[dict[ModelKey, float]] = {
     ModelKey.FAST: 15.0,
     ModelKey.STRONG: 45.0,
@@ -133,8 +153,12 @@ class TaskRoute:
     model_key: ModelKey
     #: 是否开思考（PRD §12.2 的"模式"列）
     thinking: bool
-    #: 任务级软超时（秒）。`None` = **07 未给该任务级预算** → 退化到模型级上限。
-    timeout_s: float | None
+    #: 07 §16.1 给该阶段的**延迟预算**（端到端 P95 的分配份额）。`None` = 07 未给该阶段分配。
+    #:
+    #: 🔴 **它不参与任何超时判定** —— 只是可观测元数据（驱动 `CallRecord.over_budget`）。
+    #: 真正的 deadline 一律取 `hard_timeout_s()`（§10.2）。把本字段当 deadline 用会让
+    #: 所有分配值低于真机延迟的任务 100% 失败（实测记录见模块 docstring）。
+    budget_s: float | None
     #: 采样温度。L4 打分器由 PRD §12.9 约束 1 明确要求 0；其余取 0.0 保评测可复现。
     temperature: float
     #: 输出 token 提示（**经验值**）：驱动 `max_tokens` 与 pre-flight 成本估算。
@@ -153,52 +177,52 @@ class TaskRoute:
 TASK_ROUTES: Final[dict[LlmTask, TaskRoute]] = {
     LlmTask.NORMALIZE: TaskRoute(
         task=LlmTask.NORMALIZE, model_key=ModelKey.FAST, thinking=False,
-        timeout_s=0.6, temperature=0.0, output_tokens_hint=256, json_output=True,
+        budget_s=0.6, temperature=0.0, output_tokens_hint=256, json_output=True,
         budget_source="07 §16.1 行2（normalize 0.6s）",
     ),
     LlmTask.INTENT: TaskRoute(
         task=LlmTask.INTENT, model_key=ModelKey.FAST, thinking=False,
-        timeout_s=0.6, temperature=0.0, output_tokens_hint=128, json_output=True,
+        budget_s=0.6, temperature=0.0, output_tokens_hint=128, json_output=True,
         budget_source="07 §16.1 行3（intent 0.6s）",
     ),
     LlmTask.NORMALIZE_INTENT: TaskRoute(
         task=LlmTask.NORMALIZE_INTENT, model_key=ModelKey.FAST, thinking=False,
-        timeout_s=1.2, temperature=0.0, output_tokens_hint=384, json_output=True,
+        budget_s=1.2, temperature=0.0, output_tokens_hint=384, json_output=True,
         budget_source="07 §16.2（normalize+intent 合并 1.2s ＝ §16.1 压缩手段 1）",
     ),
     LlmTask.RERANK: TaskRoute(
         task=LlmTask.RERANK, model_key=ModelKey.FAST, thinking=False,
-        timeout_s=0.8, temperature=0.0, output_tokens_hint=512, json_output=True,
+        budget_s=0.8, temperature=0.0, output_tokens_hint=512, json_output=True,
         budget_source="07 §16.1 行4（精筛 0.8s）；PRD §12.2 第3行",
     ),
     LlmTask.PLAN: TaskRoute(
         task=LlmTask.PLAN, model_key=ModelKey.FAST, thinking=False,
-        timeout_s=1.0, temperature=0.0, output_tokens_hint=600, json_output=True,
+        budget_s=1.0, temperature=0.0, output_tokens_hint=600, json_output=True,
         budget_source="07 §16.1 行5（plan 1.0s）",
     ),
     LlmTask.GEN_SQL: TaskRoute(
         task=LlmTask.GEN_SQL, model_key=ModelKey.FAST, thinking=False,
-        timeout_s=1.3, temperature=0.0, output_tokens_hint=800, json_output=True,
+        budget_s=1.3, temperature=0.0, output_tokens_hint=800, json_output=True,
         budget_source="07 §16.1 行7（gen_sql 1.3s）；PRD §12.2 第4行（L0–L2 flash 非思考）",
     ),
     LlmTask.GEN_SQL_COMPLEX: TaskRoute(
         task=LlmTask.GEN_SQL_COMPLEX, model_key=ModelKey.STRONG, thinking=True,
-        timeout_s=None, temperature=0.0, output_tokens_hint=1200, json_output=True,
-        budget_source="PRD §12.2 第5行（L3+ v4-pro 思考）★ 07 **无**任务级预算 → 退化模型级 45s",
+        budget_s=None, temperature=0.0, output_tokens_hint=1200, json_output=True,
+        budget_source="PRD §12.2 第5行（L3+ v4-pro 思考）★ 07 §16.1 **无**该阶段分配（已在 DELIVERY 登记）",
     ),
     LlmTask.REPAIR: TaskRoute(
         task=LlmTask.REPAIR, model_key=ModelKey.FAST, thinking=False,
-        timeout_s=None, temperature=0.0, output_tokens_hint=800, json_output=True,
-        budget_source="PRD §12.2 第6行 ★ 07 **无**任务级预算 → 退化模型级 15s",
+        budget_s=None, temperature=0.0, output_tokens_hint=800, json_output=True,
+        budget_source="PRD §12.2 第6行 ★ 07 §16.1 **无**该阶段分配（已在 DELIVERY 登记）",
     ),
     LlmTask.PRESENT: TaskRoute(
         task=LlmTask.PRESENT, model_key=ModelKey.FAST, thinking=False,
-        timeout_s=1.5, temperature=0.0, output_tokens_hint=800, json_output=True,
+        budget_s=1.5, temperature=0.0, output_tokens_hint=800, json_output=True,
         budget_source="07 §16.1 行13（present 1.5s）",
     ),
     LlmTask.L4_SCORE: TaskRoute(
         task=LlmTask.L4_SCORE, model_key=ModelKey.FAST, thinking=False,
-        timeout_s=0.8, temperature=0.0, output_tokens_hint=512, json_output=True,
+        budget_s=0.8, temperature=0.0, output_tokens_hint=512, json_output=True,
         budget_source="07 §6.8.2 方案C（'单次调用约增加 0.3–0.8s' 的上界）；PRD §12.9 约束1（温度=0）",
     ),
 }
@@ -244,10 +268,13 @@ def degrade_target(route: TaskRoute, current_model_key: ModelKey) -> ModelKey | 
     return None
 
 
-def effective_timeout_s(route: TaskRoute, model_key: ModelKey) -> float:
-    """任务级软超时；`None` 时退化到模型级硬上限（见模块 docstring 的 U-22 说明）。"""
-    if route.timeout_s is not None:
-        return route.timeout_s
+def hard_timeout_s(model_key: ModelKey) -> float:
+    """单次调用的传输 deadline —— **只按模型档取**（07 §10.2：flash 15s / pro 45s）。
+
+    🔴 **刻意不看 task**：stage 延迟预算（`TaskRoute.budget_s`）是 P95 目标而非超时上限。
+    曾把它接进来当 deadline，导致"真机延迟 > 分配值"的任务 100% 失败
+    （实测 0/15 → 15/15，见模块 docstring 的故障实录）。改回按 task 取 = 重新引入该缺陷。
+    """
     return MODEL_HARD_TIMEOUT_S[model_key]
 
 

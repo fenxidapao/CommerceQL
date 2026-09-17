@@ -100,7 +100,7 @@ from app.llm.router import (
     MODEL_AUTO,
     ModelKey,
     degrade_target,
-    effective_timeout_s,
+    hard_timeout_s,
     max_tokens_for,
     resolve_model_name,
     resolve_route,
@@ -254,6 +254,12 @@ class CallRecord:
     reasoning_chars: int
     is_peak: bool
     degraded: bool
+    #: 该 task 在 07 §16.1 里的阶段延迟分配（`None` = 07 未给该阶段分配）。
+    #: **仅供比对** —— 它不是超时，不参与任何成败判定（见 `router` 模块 docstring）。
+    budget_s: float | None
+    #: 本次调用是否超过了 `budget_s`。它**替代**了被移除的"预算=硬超时"：
+    #: §16.1 的一致性从"强制"改为"可观测"，判定留在上层（推占位符是 W4 的 SSE 责任）。
+    over_budget: bool
 
 
 class MetricsSink(Protocol):
@@ -286,6 +292,8 @@ class _LoggingMetricsSink:
             reasoning_chars=record.reasoning_chars,
             is_peak=record.is_peak,
             degraded=record.degraded,
+            budget_s=record.budget_s,
+            over_budget=record.over_budget,
         )
 
 
@@ -414,7 +422,10 @@ class LlmGateway:
                 completion = await self._client.invoke(
                     model=self._model_names[model_key],
                     wire_body=wire,
-                    timeout_s=effective_timeout_s(route, model_key),
+                    # 🔴 传输 deadline **只按模型档取**（07 §10.2）。绝不能传 `route.budget_s` ——
+                    #    那是 §16.1 的端到端 P95 分配，不是超时上限；传它会 100% 掐死
+                    #    所有"真机延迟 > 分配值"的任务（实测 0/15，见 router 模块 docstring）。
+                    deadline_s=hard_timeout_s(model_key),
                 )
             except LlmError as exc:
                 if not isinstance(exc, DEGRADABLE_LLM_ERRORS):
@@ -465,6 +476,12 @@ class LlmGateway:
                     reasoning_chars=completion.reasoning_chars,
                     is_peak=entry.is_peak,
                     degraded=degraded_so_far,
+                    budget_s=route.budget_s,
+                    # 单位换算：budget_s 是秒，latency_ms 是毫秒 —— 比错过就会静默失真。
+                    over_budget=(
+                        route.budget_s is not None
+                        and completion.latency_ms > route.budget_s * 1000
+                    ),
                 )
             )
             return LLMResponse(

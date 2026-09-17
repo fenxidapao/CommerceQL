@@ -98,9 +98,9 @@ def _client(
 
 
 async def _call(
-    client: ChatClient, model: str = "m-flash", timeout_s: float = 30.0
+    client: ChatClient, model: str = "m-flash", deadline_s: float = 30.0
 ) -> Completion:
-    return await client.invoke(model=model, wire_body={"model": model}, timeout_s=timeout_s)
+    return await client.invoke(model=model, wire_body={"model": model}, deadline_s=deadline_s)
 
 
 # ============================================================================
@@ -371,7 +371,7 @@ class TestBackoff:
         client = _client(up, clock=clock, max_retries=3)
         try:
             with pytest.raises(LlmConcurrencyExceeded):
-                await _call(client, timeout_s=60.0)
+                await _call(client, deadline_s=60.0)
         finally:
             await client.aclose()
         assert len(clock.slept) == 3
@@ -388,7 +388,7 @@ class TestBackoff:
             client = _client(up, clock=clock, max_retries=1, seed=seed)
             try:
                 with pytest.raises(LlmConcurrencyExceeded):
-                    await _call(client, timeout_s=60.0)
+                    await _call(client, deadline_s=60.0)
             finally:
                 await client.aclose()
             delays.append(round(clock.slept[0], 6))
@@ -403,7 +403,7 @@ class TestBackoff:
         client = _client(up)
         try:
             with pytest.raises(LlmTimeout) as ei:
-                await _call(client, timeout_s=0.05)
+                await _call(client, deadline_s=0.05)
         finally:
             await client.aclose()
         assert ei.value.detail["model"] == "m-flash"
@@ -418,7 +418,7 @@ class TestBackoff:
         client = _client(up, max_retries=3)
         try:
             with pytest.raises(LlmTimeout):
-                await _call(client, timeout_s=0.05)
+                await _call(client, deadline_s=0.05)
         finally:
             await client.aclose()
         assert up.sent == 1
@@ -435,7 +435,7 @@ class TestBackoff:
         def slow_fail(i: int, r: httpx.Request) -> httpx.Response:
             return json_error(429)
 
-        # ① 预算短：每次处理"耗掉"0.4s 假时钟时间 → 1.3s 只够 2 次尝试
+        # ① deadline 短：每次处理"耗掉"0.4s 假时钟时间 → 1.3s 只够 2 次尝试
         clock_short = _Clock()
 
         def tick(i: int, r: httpx.Request) -> httpx.Response:
@@ -446,22 +446,22 @@ class TestBackoff:
         client_short = _client(up_short, clock=clock_short, max_retries=3)
         try:
             with pytest.raises(LlmConcurrencyExceeded):
-                await _call(client_short, timeout_s=1.3)
+                await _call(client_short, deadline_s=1.3)
         finally:
             await client_short.aclose()
 
-        # ② 对照：预算足够 → 4 次尝试（= max_retries 3 + 1）跑满
+        # ② 对照：deadline 足够 → 4 次尝试（= max_retries 3 + 1）跑满
         up_long = FakeUpstream(slow_fail)
         client_long = _client(up_long, clock=_Clock(), max_retries=3)
         try:
             with pytest.raises(LlmConcurrencyExceeded):
-                await _call(client_long, timeout_s=60.0)
+                await _call(client_long, deadline_s=60.0)
         finally:
             await client_long.aclose()
 
-        assert up_short.sent == 2, "短预算下必须被截断（否则说明预算没做减法）"
-        assert up_long.sent == 4, "长预算下必须跑满重试（否则说明重试根本没生效）"
-        # 短预算那一路真的把预算花掉了，而不是提前放弃
+        assert up_short.sent == 2, "短 deadline 下必须被截断（否则说明 deadline 没做减法）"
+        assert up_long.sent == 4, "长 deadline 下必须跑满重试（否则说明重试根本没生效）"
+        # 短 deadline 那一路真的把时间花掉了，而不是提前放弃
         assert clock_short.t - 1_000.0 >= 0.9 * 1.3
 
 

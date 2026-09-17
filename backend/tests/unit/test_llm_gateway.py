@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
@@ -57,7 +57,7 @@ from app.llm.budget import (
     CostEntry,
     InMemoryCostLedgerSink,
 )
-from app.llm.client import ChatClient
+from app.llm.client import ChatClient, Completion
 from app.llm.egress_guard import ALLOWED_WIRE_KEYS
 from app.llm.errors import (
     LlmConcurrencyExceeded,
@@ -67,7 +67,13 @@ from app.llm.errors import (
     LlmUnknownTask,
     LlmUpstreamError,
 )
-from app.llm.router import MODEL_AUTO, ModelKey
+from app.llm.router import (
+    MODEL_AUTO,
+    MODEL_HARD_TIMEOUT_S,
+    TASK_ROUTES,
+    LlmTask,
+    ModelKey,
+)
 from tests.unit._llm_fake_upstream import FakeUpstream, json_error, json_ok
 
 #: 用**真实模型 ID**（而不是 "m-flash" 这类假名）：
@@ -109,6 +115,21 @@ class _HitTemplate:
         return self.text
 
 
+class _Clock:
+    """可手动推进的假时钟 —— 走 `ChatClient(monotonic=...)` 注入口。
+
+    用它把"这次调用花了多久"精确设成想要的值，而不必真的等。注意它**替代不了**
+    `asyncio.timeout` 的真实计时（后者量的是墙钟），所以"deadline 到底取了哪个值"
+    那组断言必须直接看传输层收到的参数，不能靠假时钟造超时。
+    """
+
+    def __init__(self, start: float = 1000.0) -> None:
+        self.t = start
+
+    def __call__(self) -> float:
+        return self.t
+
+
 class _RecordingLedger(InMemoryCostLedgerSink):
     """内存 sink + 一个可读的明细视图。
 
@@ -132,8 +153,14 @@ def _gw(
     semaphore_pro: int = 2,
     max_concurrency: int = 50,
     max_retries: int = 0,
+    monotonic: Callable[[], float] | None = None,
+    client_cls: Any = ChatClient,
 ) -> tuple[LlmGateway, _RecordingLedger, list[DegradationEvent], list[CallRecord]]:
-    """装配一个"上游全假、观测全记"的网关。"""
+    """装配一个"上游全假、观测全记"的网关。
+
+    `monotonic` / `client_cls` 是给"deadline 取值"那组守卫测试用的注入口
+    （默认值 = 真实时钟 + `ChatClient`，对其余测试无影响）。
+    """
     events: list[DegradationEvent] = []
     records: list[CallRecord] = []
 
@@ -146,7 +173,7 @@ def _gw(
             records.append(record)
 
     the_ledger = ledger if ledger is not None else _RecordingLedger()
-    client = ChatClient(
+    client = client_cls(
         base_url="https://upstream.test",
         api_key="sk-test-not-a-real-key",
         model_names={
@@ -160,6 +187,7 @@ def _gw(
         circuit_fails=999,  # 熔断那条归 test_llm_client.py；这里不让它干扰降级链观察
         circuit_open_s=30.0,
         transport=upstream.transport,
+        monotonic=monotonic,
     )
     gateway = LlmGateway(
         client=client,
@@ -881,3 +909,166 @@ class TestRouteRouterIntegration:
                 await gw.aclose()
             assert up.calls[0]["thinking"] == {"type": "disabled"}, task.value
             assert TASK_ROUTES[task].thinking is False, task.value
+
+
+# ============================================================================
+# 十一、🔴 阶段延迟预算**不是**超时（2026-09-17 真机故障的守卫）
+# ============================================================================
+
+class TestStageBudgetIsNeverTheDeadline:
+    """`TASK_ROUTES[task].budget_s`（07 §16.1 的 P95 分配）曾被当作硬 deadline。
+
+    真机双向对照（真 key，同进程/同 payload/同模型，唯一变量 = deadline，n=3×5 任务）：
+
+    | task | §16.1 预算 | 当 deadline 用 | 改用 §10.2 上限 | 后者实测延迟中位 |
+    |---|---|---|---|---|
+    | `normalize` | 0.6s | **0/3** | 3/3 | 1.45s |
+    | `intent` | 0.6s | **0/3** | 3/3 | 1.39s |
+    | `normalize_intent` | 1.2s | **0/3** | 3/3 | 1.56s |
+    | `plan` | 1.0s | **0/3** | 3/3 | 1.49s |
+    | `gen_sql` | 1.3s | **0/3** | 3/3 | 1.60s |
+
+    失败耗时**恰好等于各自预算**（卡在 deadline 上死，不是上游不可用）；而真机延迟
+    **全部高于**分配值。根因：P95 是**分位数**不是上界 —— 拿它当硬上限，健康系统也
+    必然砍掉尾部；分配值低于中位时就是 100% 失败。07 §16.2 也写明超预算应"先推占位符"
+    （降级 UX），不是失败；PRD §12.2 的路由表根本没有超时列。
+    """
+
+    def _spy(self) -> tuple[Any, list[float]]:
+        """造一个把 `deadline_s` 记下来的 `ChatClient` 子类。
+
+        为什么必须在这个位置判定：`asyncio.timeout` 量的是**真实时间**，所以
+        "用假时钟把耗时拉到 1.8s"**无法**让旧接线失败（协程立刻返回、计时器不触发）——
+        纯行为测试对这条缺陷没有鉴别力。能直接回答"deadline 取了哪个值"的，
+        只有传输层入口的那个参数。
+        """
+        seen: list[float] = []
+
+        class _DeadlineSpy(ChatClient):
+            async def invoke(
+                self, *, model: str, wire_body: Mapping[str, Any], deadline_s: float
+            ) -> Completion:
+                seen.append(deadline_s)
+                return await super().invoke(
+                    model=model, wire_body=wire_body, deadline_s=deadline_s
+                )
+
+        return _DeadlineSpy, seen
+
+    async def test_deadline_handed_to_transport_is_the_model_tier(self) -> None:
+        spy_cls, seen = self._spy()
+        up = FakeUpstream()
+        gw, *_ = _gw(up, client_cls=spy_cls)
+        try:
+            await gw.call(LlmTask.PLAN.value, _payload())
+        finally:
+            await gw.aclose()
+
+        plan_budget = TASK_ROUTES[LlmTask.PLAN].budget_s
+        assert plan_budget == 1.0, "夹具前提：plan 的阶段预算确实是 1.0s"
+        assert seen == [MODEL_HARD_TIMEOUT_S[ModelKey.FAST]]
+        assert seen[0] != plan_budget, "deadline 取了阶段预算 —— 正是那个故障"
+
+    async def test_deadline_follows_the_tier_for_a_task_without_a_budget(self) -> None:
+        """`budget_s is None` 的 task 同样必须拿到模型级上限（不能是 None/0/被跳过）。"""
+        spy_cls, seen = self._spy()
+        up = FakeUpstream()
+        gw, *_ = _gw(up, client_cls=spy_cls)
+        try:
+            await gw.call(LlmTask.REPAIR.value, _payload())
+        finally:
+            await gw.aclose()
+        assert seen == [MODEL_HARD_TIMEOUT_S[ModelKey.FAST]]
+
+    async def test_negative_control_the_spy_actually_tracks_the_wiring(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """负向对照：注入旧接线（deadline 取任务级预算）→ 记录值必须随之变成 1.0。
+
+        没有这一条，上面两条"== 模型级上限"可能是**恒真**的（例如 spy 记的其实是个常量，
+        或 `invoke` 的 deadline 压根不来自 `hard_timeout_s`）。这条证明那些断言有鉴别力。
+        """
+        import app.llm as llm_pkg
+
+        monkeypatch.setattr(
+            llm_pkg, "hard_timeout_s", lambda model_key: TASK_ROUTES[LlmTask.PLAN].budget_s
+        )
+        spy_cls, seen = self._spy()
+        up = FakeUpstream()
+        gw, *_ = _gw(up, client_cls=spy_cls)
+        try:
+            await gw.call(LlmTask.GEN_SQL.value, _payload())
+        finally:
+            await gw.aclose()
+
+        assert seen == [TASK_ROUTES[LlmTask.PLAN].budget_s]
+        assert seen[0] != MODEL_HARD_TIMEOUT_S[ModelKey.FAST], (
+            "注入旧接线后仍等于模型级上限 —— 说明那两条正向断言没有鉴别力"
+        )
+
+    async def test_a_call_slower_than_its_stage_budget_survives_and_is_marked(self) -> None:
+        """行为面：慢于阶段预算的调用必须**成功**，并被标成 `over_budget`。
+
+        假时钟把"耗时"记成 1750ms（> `plan` 的 1000ms 阶段预算，< flash 的 15s 上限）。
+        `over_budget=True` 是新机制的载体 —— §16.1 的一致性从"强制"改为"可观测"，
+        这个标志若不亮，删掉硬上限就等于把 §16.1 整个丢了。
+
+        ⚠️ 步长刻意取 1.75s（= 1 + 1/2 + 1/4，二进制可精确表示）：`1.8` 不可精确表示，
+        `(1001.8 - 1000.0) * 1000` 会截断成 1799，让断言莫名其妙地红。
+        """
+        clock = _Clock()
+
+        def slow_ok(index: int, request: Any) -> Any:
+            _ = (index, request)
+            clock.t += 1.75
+            return json_ok()
+
+        up = FakeUpstream(slow_ok)
+        gw, _, events, records = _gw(up, monotonic=clock)
+        try:
+            resp = await gw.call(LlmTask.PLAN.value, _payload())
+        finally:
+            await gw.aclose()
+
+        assert up.sent == 1, "超预算不该触发重试"
+        assert resp.text, "拿不到内容说明调用被 deadline 掐死了（正是那个故障）"
+        assert records[-1].latency_ms == 1750
+        assert records[-1].budget_s == TASK_ROUTES[LlmTask.PLAN].budget_s
+        assert records[-1].over_budget is True
+        assert events == [], "延迟超标**不是降级** —— 发 degraded 会谎称答案来自降级路径"
+
+    async def test_a_call_within_budget_is_not_marked_over_budget(self) -> None:
+        """反向对照：没超预算就不许标 `over_budget`（否则这个标志没有信息量）。"""
+        clock = _Clock()
+
+        def fast_ok(index: int, request: Any) -> Any:
+            _ = (index, request)
+            clock.t += 0.25
+            return json_ok()
+
+        up = FakeUpstream(fast_ok)
+        gw, _, _, records = _gw(up, monotonic=clock)
+        try:
+            await gw.call(LlmTask.PLAN.value, _payload())
+        finally:
+            await gw.aclose()
+        assert records[-1].latency_ms == 250
+        assert records[-1].over_budget is False
+
+    async def test_over_budget_is_false_when_07_gave_no_budget(self) -> None:
+        """`budget_s is None`（07 未给该阶段分配）→ 没有可比对象，不得标超预算。"""
+        clock = _Clock()
+
+        def slow_ok(index: int, request: Any) -> Any:
+            _ = (index, request)
+            clock.t += 5.0
+            return json_ok()
+
+        up = FakeUpstream(slow_ok)
+        gw, _, _, records = _gw(up, monotonic=clock)
+        try:
+            await gw.call(LlmTask.REPAIR.value, _payload())
+        finally:
+            await gw.aclose()
+        assert records[-1].budget_s is None
+        assert records[-1].over_budget is False

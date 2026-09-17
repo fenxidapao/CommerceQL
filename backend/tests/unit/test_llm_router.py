@@ -29,7 +29,7 @@ from app.llm.router import (
     LlmTask,
     ModelKey,
     degrade_target,
-    effective_timeout_s,
+    hard_timeout_s,
     max_tokens_for,
     resolve_model_name,
     resolve_route,
@@ -57,13 +57,15 @@ class TestRouteTableCompleteness:
         """路由表是要被审计的产物，不是运行时状态：改它必须改代码、走 review。"""
         route = TASK_ROUTES[LlmTask.PLAN]
         with pytest.raises(FrozenInstanceError):
-            route.timeout_s = 999  # type: ignore[misc]
+            route.budget_s = 999  # type: ignore[misc]
 
 
 class TestUpstreamValuesAreCopiedVerbatim:
     """表内容 = PRD §12.2 + 07 §16.1/§16.2/§6.8.2 的**逐格照抄**。"""
 
-    #: 07 §16.1/§16.2/§6.8.2 给的**任务级**延迟预算（秒）。
+    #: 07 §16.1/§16.2/§6.8.2 给的**阶段延迟预算**（秒，端到端 P95 的分配份额）。
+    #: 🔴 它是**目标**不是上限 —— 每一格都低于真机实测延迟（1.39–1.60s），
+    #: 所以它绝不能当超时用（见 `TestTimeoutIsTheModelTierNotTheBudget`）。
     _DOCUMENTED_BUDGETS: ClassVar[dict[LlmTask, float]] = {
         LlmTask.NORMALIZE: 0.6,          # §16.1 行2
         LlmTask.INTENT: 0.6,             # §16.1 行3
@@ -77,17 +79,16 @@ class TestUpstreamValuesAreCopiedVerbatim:
 
     @pytest.mark.parametrize(("task", "expected"), sorted(_DOCUMENTED_BUDGETS.items()))
     def test_documented_budgets_are_copied(self, task: LlmTask, expected: float) -> None:
-        assert TASK_ROUTES[task].timeout_s == pytest.approx(expected), task.value
+        assert TASK_ROUTES[task].budget_s == pytest.approx(expected), task.value
 
     @pytest.mark.parametrize("task", [LlmTask.GEN_SQL_COMPLEX, LlmTask.REPAIR])
     def test_tasks_without_a_documented_budget_declare_None(self, task: LlmTask) -> None:
-        """🔴 **07 在这两个 task 上没给任务级预算** —— 唯一合法的表达是 `None`。
+        """🔴 **07 在这两个 task 上没给阶段预算** —— 唯一合法的表达是 `None`。
 
-        防的是"必须给值但文档没给 ⇒ 实现者发明一个数字"。07 里找不到这三个任务的
-        延迟预算，所以填任何秒数都是**编造**；`None` 让"我们不知道"这件事留在代码里，
-        并退化为 07 §10.2 的模型级上限（见 `test_None_degrades_to_model_hard_limit`）。
+        防的是"必须给值但文档没给 ⇒ 实现者发明一个数字"。07 里找不到这两个任务的
+        延迟预算，所以填任何秒数都是**编造**；`None` 让"我们不知道"这件事留在代码里。
         """
-        assert TASK_ROUTES[task].timeout_s is None, task.value
+        assert TASK_ROUTES[task].budget_s is None, task.value
 
     def test_only_the_complex_sql_task_uses_the_strong_model(self) -> None:
         """PRD §12.2：只有 L3+ 的 `gen_sql_complex` 走高档；其余一律 flash。"""
@@ -185,18 +186,67 @@ class TestDegradeChain:
         assert degrade_target(route, ModelKey.FAST) is None
 
 
-class TestTimeoutAndMaxTokens:
-    def test_effective_timeout_uses_the_task_budget_when_present(self) -> None:
-        assert effective_timeout_s(TASK_ROUTES[LlmTask.GEN_SQL], ModelKey.FAST) == 1.3
+class TestTimeoutIsTheModelTierNotTheBudget:
+    """🔴 **本缺陷的守卫**：超时只能取模型档（07 §10.2），绝不能取阶段预算（07 §16.1）。
 
-    def test_None_degrades_to_the_model_hard_limit(self) -> None:
-        """07 无任务级预算 → 退化为 §10.2 的模型级上限（并在 DELIVERY 具名登记）。"""
-        assert effective_timeout_s(
-            TASK_ROUTES[LlmTask.GEN_SQL_COMPLEX], ModelKey.STRONG
-        ) == MODEL_HARD_TIMEOUT_S[ModelKey.STRONG]
-        assert effective_timeout_s(TASK_ROUTES[LlmTask.REPAIR], ModelKey.FAST) == (
-            MODEL_HARD_TIMEOUT_S[ModelKey.FAST]
-        )
+    故障实录（2026-09-17，真机双向对照，同进程/同 payload/同模型，唯一变量 = deadline）：
+    把 §16.1 的 0.6/0.6/1.2/1.0/1.3s 当硬 deadline → **0/15 全部 LlmRefused**，
+    失败耗时恰好等于各预算值；换成模型档上限 → **15/15 成功**（真机延迟 1.39–1.60s）。
+    根因：P95 是**分位数**不是上界，拿它当硬上限必然砍掉尾部；当分配值低于真机中位时就是 100%。
+    """
+
+    def test_hard_timeout_follows_the_model_tier(self) -> None:
+        assert hard_timeout_s(ModelKey.FAST) == MODEL_HARD_TIMEOUT_S[ModelKey.FAST]
+        assert hard_timeout_s(ModelKey.STRONG) == MODEL_HARD_TIMEOUT_S[ModelKey.STRONG]
+
+    def test_every_task_gets_a_model_tier_timeout(self) -> None:
+        """**逐任务**过一遍：不允许任何 task 拿到"自己的预算值"当超时。
+
+        只断言一两个 task 会漏掉整张表 —— 这条必须遍历 `TASK_ROUTES`。
+        """
+        for task, route in TASK_ROUTES.items():
+            assert hard_timeout_s(route.model_key) == MODEL_HARD_TIMEOUT_S[route.model_key], (
+                task.value
+            )
+
+    def test_stage_budget_is_never_equal_to_the_timeout(self) -> None:
+        """反向对照：每个**有**阶段预算的 task，它的预算值都不得等于其超时值。
+
+        若有人把 `hard_timeout_s` 改回按 task 取，这条会立刻变红 —— 而上面那条
+        "按模型档取"的断言在"预算恰好等于模型上限"时可能巧合通过。
+        """
+        checked = 0
+        for task, route in TASK_ROUTES.items():
+            if route.budget_s is None:
+                continue
+            checked += 1
+            assert route.budget_s != hard_timeout_s(route.model_key), task.value
+        assert checked == 8, f"应检查 8 个有阶段预算的 task，实际 {checked} 个"
+
+    #: 2026-09-17 真机实测的延迟中位（秒）—— **只含量过的 task**。
+    #: 未实测（`present` / `rerank` / `l4_score`）刻意不在此表里：对没量过的值作延迟断言
+    #: 就是编造。它们的预算值仍然登记在 `_DOCUMENTED_BUDGETS`（源自 07），但延迟未知。
+    _MEASURED_LATENCY_S: ClassVar[dict[LlmTask, float]] = {
+        LlmTask.NORMALIZE: 1.45,
+        LlmTask.INTENT: 1.39,
+        LlmTask.NORMALIZE_INTENT: 1.56,
+        LlmTask.PLAN: 1.49,
+        LlmTask.GEN_SQL: 1.60,
+    }
+
+    @pytest.mark.parametrize(("task", "measured"), sorted(_MEASURED_LATENCY_S.items()))
+    def test_measured_budgets_are_below_the_real_latency(
+        self, task: LlmTask, measured: float
+    ) -> None:
+        """把"预算低于实测"这条**事实**钉住：当超时用必然 100% 失败（本缺陷的成因）。
+
+        ⚠️ 范围诚实：只覆盖 `_MEASURED_LATENCY_S` 里量过的 5 个 task。
+        （若将来实测延迟降到预算以下，这条会红 —— 那是好消息，可重新讨论，
+        但不能靠改这个数字把事实抹掉。）
+        """
+        budget = TASK_ROUTES[task].budget_s
+        assert budget is not None, task.value
+        assert budget < measured, f"{task.value}: 预算 {budget}s 未低于实测 {measured}s"
 
     def test_thinking_route_gets_reasoning_headroom(self) -> None:
         """🔴 实测：思考档不预留余量 → `max_tokens` 被 reasoning 吃光 → `content=''`（HTTP 200）。"""

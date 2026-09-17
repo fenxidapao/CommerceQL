@@ -8,11 +8,16 @@ DeepSeek 的限流语义是"**并发连接数**"：请求从发出到**响应读
 超限返回 429。QPS 计数器实现与这个语义**不对应** —— 它允许"1 秒内连发 8 个长请求"，
 而那正好就是撞限流的姿势。因此原语是 `asyncio.Semaphore`。
 
-## 2. 超时：**做减法的预算**，不是"每次尝试各给一份"
+## 2. 超时：**做减法的 deadline**，不是"每次尝试各给一份"
 
-`timeout_s` 是**整个 task 调用**的预算（含重试与退避）。若写成"每次尝试各给 timeout_s"，
-则 `gen_sql` 的 1.3s 预算在 3 次重试下会变成 3.9s —— 预算是 P95 契约，不能被重试悄悄放大。
+`deadline_s` 是**整次 task 调用**的传输上限（含重试与退避）。若写成"每次尝试各给一份"，
+则一次 15s 的调用在 3 次重试下会变成 45s —— 传输上限是保护，不能被重试悄悄放大。
 实现方式：进来先算 `deadline`，每次尝试只拿 `deadline - now`；退避延时也从同一个 deadline 里扣。
+
+⚠️ 本参数**不接受** 07 §16.1 的阶段延迟预算：那是端到端 P95 的分配份额，不是超时上限。
+把 0.6–1.3s 的分配值接到这里，会让真机延迟 1.4–1.6s 的任务 100% 失败
+（实测 0/15 → 15/15，见 `router.py` 模块 docstring）。调用方唯一的合法取值来源是
+`router.hard_timeout_s()`（07 §10.2）。
 
 ## 3. 🔴 三条**实测**得到的上游行为（文档没写，写错不报错只出坏结果）
 
@@ -177,11 +182,11 @@ class ChatClient:
         *,
         model: str,
         wire_body: Mapping[str, Any],
-        timeout_s: float,
+        deadline_s: float,
     ) -> Completion:
-        """发一次调用（含退避重试与熔断）。`timeout_s` 是**整次 task 调用**的总预算。"""
+        """发一次调用（含退避重试与熔断）。`deadline_s` 是**整次调用**的传输上限（07 §10.2）。"""
         start = self._monotonic()
-        deadline = start + timeout_s
+        deadline = start + deadline_s
         last: LlmError | None = None
 
         breaker = self._breakers.setdefault(model, _Breaker())
@@ -219,8 +224,8 @@ class ChatClient:
                 remaining = deadline - self._monotonic()
                 if remaining <= 0:
                     last = last or LlmTimeout(
-                        "任务预算耗尽（超时）",
-                        detail={"model": model, "timeout_s": timeout_s},
+                        "传输 deadline 耗尽（超时）",
+                        detail={"model": model, "deadline_s": deadline_s},
                     )
                     break
 
@@ -259,7 +264,7 @@ class ChatClient:
     def _retryable(self, exc: LlmError) -> bool:
         """只有 429（上游并发超限）与 5xx（上游故障）值得重试。
 
-        ⚠️ 超时**不重试**：预算是硬约束，重试只会把预算吃光并让降级来不及发生。
+        ⚠️ 超时**不重试**：deadline 是硬上限，重试只会把时间吃光并让降级来不及发生。
         非重试型 4xx（如 400）也不重试 —— 那说明**我们的请求体有问题**，
         原样重发必然再次失败（"原样重试必然失败"就不该重试，这与 §14.4 的 `⭕` 纪律同源）。
         """
@@ -313,8 +318,8 @@ class ChatClient:
                 )
         except TimeoutError as exc:
             raise LlmTimeout(
-                "上游调用超时（任务预算耗尽）",
-                detail={"model": model, "budget_s": round(remaining, 3)},
+                "上游调用超时（传输 deadline 耗尽）",
+                detail={"model": model, "remaining_s": round(remaining, 3)},
             ) from exc
         except httpx.HTTPError as exc:
             # 网络层故障归入上游错误（可重试）；**不把异常文本带出去**（可能含 URL/主机名）
