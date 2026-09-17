@@ -95,4 +95,54 @@
 
 ---
 
+## 7 → W2-INT：U-55(a) 代改**复核回执**（2026-09-17，W2A 逐条实测）
+
+> **结论：改动采纳（复核通过）；复核中发现并已补掉一个前提 2 的检查缺口（见 §7.2）。**
+> 回执对应 commit：复核补丁 = `fix(w2a)`（materialize.py + 集成测试），本节 = `docs(w2a)`。
+
+### 7.1 对 `b697667` 的逐项复核（全部实测，非转述采信）
+
+| 项 | 复核方式 | 结论 |
+|---|---|---|
+| `_base_table()` v_X→X 映射 | 读 diff + 全 8 资产前缀核对 | ✅ 映射单射，无非 v_ 资产撞名 |
+| RLS/POLICY 段落基表；CLS GRANT 仍在视图 | 读 diff + 跑更新后 12 条单测 | ✅ GUC 失败关闭与 shop_ids 空串语义逐字未动，符合裁决 |
+| `assert_grant_policy_consistency` 查基表策略 | 读 diff | ✅ 派生侧与检查侧同变 |
+| 4 条断言更新 + "目标=基表"锁定断言 | 读 diff（`'ON "order_paid"' in p and "v_order_paid" not in p` 等） | ✅ 锁定断言存在且绑定在正确用例上 |
+| 注入对照（还原旧行为→4红→还原→12绿） | 采信 §6.2 记录（4 个失败用例定位精确、CLS 8 条照绿的描述与代码结构吻合）；未重放 | ✅ |
+| 门禁（767 passed / lint-imports 4 kept） | 本机重放我方范围：**55 unit passed + 真库集成 16 passed**（Docker 起后）、ruff/mypy 全绿、`lint-imports` = **4 kept, 0 broken** | ✅ |
+
+### 7.2 复核发现并已补掉的缺口（单点，已落 `fix(w2a)`）
+
+**U-55(a) 前提 2（app_ro 对基表零 GRANT）此前只写在文档里，没有检查器分支去验证**：
+改后的 `assert_grant_policy_consistency` 只查视图授权 + 基表策略。若日后有人给基表授权，
+RLS 仍挡行但 **CLS 列白名单可经基表绕过**，检查器不会红 —— 恰是 (a) 方案唯一的静默越权形态，
+也正是 ADR-10 检查器该拦的"两侧漂移"。
+
+已补（materialize.py 是 W2A 归属文件）：
+- 检查器新增基表零授权分支（列级 + 整表两级都查；基表未建时查询空返回 = **空洞放行**，
+  代码注释已声明"属前置未就绪、非已验证"，U-56 迁移落地后自动转为真检查）；
+- 集成测试新增注入对照 2：`GRANT SELECT ON 基表 TO app_ro` → 必红（且断言红的是"基表"措辞的
+  mismatch，防邻居红）→ REVOKE → 必绿；基表未建时 skip 并写明理由。
+
+### 7.3 真库复测（2026-09-17，Docker 栈起后）
+
+```
+pytest tests/integration/test_semantic_materialization.py tests/unit/test_materialize_derivation.py
+  → 16 passed / 3 skipped
+  3 skips 全部 = 业务视图/基表未建（U-56 未实施），理由与 W2-INT 总表一致 —— 无假绿
+```
+
+⚠️ 新增的基表检查 SQL 只能在"基表+视图就绪"后真跑 —— 当前 CI/本地都不会执行到它，
+**建议 W2-INT 在 W1B 的 U-56 迁移合并后，把集成测试的 3 条 skip 清零作为收口验收项**。
+
+### 7.4 U-54 / U-56 回执确认
+
+- U-54 = (a)（契约留 contracts、装配根注入两侧同实例）：tokenizer 注入点
+  `materialize(..., tokenizer=...)` 维持原签名即可，等阶段 3 排期接线，W2A 无动作。
+- U-56 = W1B alembic 建视图+基表：**W2A 无动作**；唯一请求 —— W1B 建基表时请给
+  `information_schema` 可查的同 schema（app）对象名严格等于 `_base_table()` 映射
+  （`v_order_paid → order_paid`），否则检查器与策略会指向不存在的表。
+
+---
+
 > **给 W3A/W3B/W3C 的一句话**（不单独成节）：语义层查询面见 RELAY §3（runtime 的 alias/dimension/field_binding/metric 系列方法），你们绑定与规划需要的 L1–L3 查询都有；装配方式由 W1B/W4 统一接线后经 `SemanticBundlePort` 注入，**不要各自 load_bundle 造成多实例漂移**。
