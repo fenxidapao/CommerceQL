@@ -383,3 +383,75 @@ cd backend（Docker 已起）
 
 ⇒ 与 §12.6 结论一致：**外部写者存在**（另一个窗口/会话在跑同一脚本），且脚本的清理对中断不鲁棒。
 本窗口未改该脚本（属 W0），仅提供证据；跑门禁时**先 `rm -f app/guard/_probe_violation.py` 再跑**可绕开。
+
+---
+
+## 14. 【U-67 执行】L3+ 生效档改回 flash 非思考（07 v1.0 §10.2 / §4.9，方向 B）
+
+架构裁定原文（07 §4.9 U-67）：**P0 = 方向 B + deviation 登记；方向 A 否决；方向 C 列为 P1 候选**
+（触发条件 = E-3 评测证明 flash 在 L3+ 准确率显著不足）。§10.2 已落笔："W3A 拿本裁定即可执行路由改回
+（其索要的'明确指令' = 本条）"。本节记录执行。
+
+### 14.1 路由表改动（`app/llm/router.py`，唯一一处实质变更）
+
+| 字段 | 旧（PRD §12.2 第5行） | 新（07 v1.0 U-67/U-65） |
+|---|---|---|
+| `model_key` | `STRONG`（v4-pro） | **`FAST`**（deepseek-flash） |
+| `thinking` | `True` | **`False`** |
+| `budget_s` | `None`（07 当时无分配） | **`3.0`**（§16.1 表 6' 行，U-65 补，**标"经验值，首轮评测校准"**） |
+| `output_tokens_hint` | 1536（保留） | 1536（⚠️ 该实测是 pro 思考档下量的；flash 非思考的输出分布待 E-3 复校） |
+
+⇒ 改后路由表**没有任何** STRONG / 思考条目。对 PRD §12.2 构成 **deviation，待上游认账**（07 已登记转达项）。
+
+### 14.2 刻意保留的东西（U-67 ②："45s 与 max_tokens 标定保留"）
+
+- `MODEL_HARD_TIMEOUT_S[STRONG] = 45.0` **保留**（将来 pro 回归时直接可用；删掉 = 重新发明数字，违反 U-22）。
+- `THINKING_HEADROOM_TOKENS = 8192` **保留**（当前无消费方 —— 这是有意的：它是 P1 重启 pro 思考的
+  **前置条件**，删掉 = 将来重新踩一次"稳定空 content"）。
+- 降级链 `pro → flash → 模板`（`degrade_target`）**原样保留** —— 07 §10.2 的链仍是契约。
+
+### 14.3 测试重构（该红的红、该绿的绿，机制一个不丢）
+
+| 变化 | 内容 |
+|---|---|
+| **翻转** | `test_only_the_complex_sql_task_uses_the_strong_model` / `..._thinks` → `test_no_task_uses_the_strong_model_u67` / `test_no_task_thinks_u67`（断言集合为**空**）+ 新增 `test_l3_effective_tier_is_flash_non_thinking` 正向钉住 `FAST + thinking=False + budget 3.0` |
+| **预算表** | `_DOCUMENTED_BUDGETS` 增 `GEN_SQL_COMPLEX: 3.0`（U-65）；"无分配"清单只剩 `REPAIR`；`checked == 8 → 9` |
+| **合成档** | 新增 `_strong_thinking_route()`：P1 前置形态（STRONG+thinking）。降级链、模型覆盖、思考余量、pro 饱和、pro→flash 成本结算这些**机制**测试改用它 + `monkeypatch.setitem(TASK_ROUTES, ...)` —— U-67 改的是**现状**，不是**机制**，机制一条不丢 |
+| **标定组** | `test_total_max_tokens...` → `test_if_pro_thinking_is_reenabled_the_budget_still_covers_the_measured_worst_case`（hint+余量 9728 > 实测最坏 7672）—— 把"标定保留"本身钉成守卫 |
+| **新增正向** | `test_max_tokens_on_l3_adds_no_headroom_u67`（非思考档不白加余量 = 成本口径污染的反向对照） |
+
+### 14.4 门禁（实测）
+
+```
+cd backend（Docker 已起）
+../.venv/Scripts/python.exe -m pytest -q                       → 1500 passed / 6 skipped / 0 failed / 0 errors
+../.venv/Scripts/ruff.exe check .                              → All checks passed!
+../.venv/Scripts/mypy.exe app                                  → Success: no issues found in 104 source files
+../.venv/Scripts/lint-imports.exe                              → Contracts: 4 kept, 0 broken.
+```
+
+（mypy 102 → **104** files：W1B 的 `app/repo/cost_ledger.py` + W0 的 `app/obs/metrics.py` 扩充后纳入。）
+
+**跨域一处（已改，请 W3B 复核）**：`tests/unit/test_planner_egress_contract.py` 的
+`test_complex_task_hits_the_thinking_route` 断言旧 PRD 行为（pro+思考）→ 全量假红。
+已按 U-67 改写为 `test_complex_task_hits_the_flash_non_thinking_route_u67`
+（断言 flash + `thinking: disabled`，原断言见 git 历史）。
+
+### 14.5 回执（对今日三份转述）
+
+1. **→ 架构（U-67）**：已执行，见 §14.1。**deviation 转达确认**：PRD §12.2 第 5 行（L3+ → v4-pro 思考）
+   在实现层已被 U-67 取代，等上游认账后 07 §10.2 的 deviation 标记可摘。
+2. **→ W1B（cost_ledger sink）**：`app/repo/cost_ledger.py::DbCostLedgerSink` 与本窗口
+   `CostLedgerSink` Protocol（`record` / `tenant_spent_cny` / `global_spent_cny`，同步三方法）**逐成员核对匹配**；
+   `CostEntry` 列对齐关系维持（你本地结构化 Protocol 的处理方式正确，R-DEP-2 无违反）。
+   **接线归 W4**（`build_gateway(..., ledger=DbCostLedgerSink(...))`）—— 本窗口不代接线。
+   "重启丢账"（InMemory sink）在 W4 接线后自然消解。
+3. **→ W0（12 条处置回执）**：① Retry-After 5s/30s 收到（`enums.RETRY_AFTER_DEFAULT_S` 是唯一入口，
+   本窗口无硬编码）；② 空 key `min_length=1` 收到；③ `assert_importlinter.py` 并发根修收到（粘性残留
+   问题关闭）；⑫ `LLM_TIMEOUT_SECONDS` 废弃标注**确认** —— 本窗口无消费方，建议直接删（07 §10.2 是唯一超时口径）。
+
+### 14.6 待办（W3A 域，下一轮）
+
+- **U-68 合并档资产**：`plan`+`gen_sql` 合并需**新 prompt 资产 + 新 `LlmTask` 取值**（W3A 域），
+  W4 阶段 4 接线。约束（U-68）：必须 flash 非思考 + `plan_ready` 事件先发。
+  **待开工指令**（新资产 = 契约面变更，且 W3B 窗口已收工，合并调用方未定）。

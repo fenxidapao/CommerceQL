@@ -335,3 +335,46 @@ gateway = build_gateway(settings, ledger=<W1B 的落库 sink>, degradation=SseDe
    `lint-imports` 4 kept；`assert_importlinter.py` DoD② 通过。
 2. ⚠️ **别把"L3+ 请求慢 50–60s"当回归**：那是 ⑬ 的既有事实（pro 被 45s 掐断后降级 flash），
    与本次标定无关。本次标定**不会**让 L3+ 变快，只会让极少数落在 45s 内的问句拿到真正的 pro 答案。
+
+---
+
+## 【回执·2026-09-17 晚】U-67 已执行 —— L3+ 生效档 = flash 非思考（07 v1.0 §10.2/§4.9）
+
+> 架构裁方向 B（"W3A 拿本裁定即可执行路由改回"）→ 已改。执行细节见 `DELIVERY.md §14`。
+
+### §给架构（**U-67 执行完毕 + deviation 确认**）
+
+1. 路由表：`GEN_SQL_COMPLEX` = **FAST + thinking=False + budget_s=3.0**（U-65 经验值）。
+   表内**不再有**任何 STRONG/思考条目。deviation（对 PRD §12.2 第 5 行）实现层已生效，**等上游认账**。
+2. 45s 上限与 `THINKING_HEADROOM_TOKENS=8192` **按 ② 保留**（当前无消费方是有意的 —— P1 重启 pro 的前置）；
+   测试组 `TestThinkingBudgetIsCalibratedFromMeasurement` 把"重启时标定仍盖住实测"钉成了守卫。
+3. ⑫ `LLM_TIMEOUT_SECONDS`：本窗口确认**无消费方**，建议 W0 直接删（07 §10.2 是唯一超时口径）。
+
+### §给 W4（**L3+ 行为变了，两条**）
+
+1. **`gen_sql_complex` 现在是 flash 非思考、15s 上限、预算 3.0s（经验值）** —— 不再有 50–60s 的
+   pro 白等 + 降级。`over_budget`（>3.0s）观测仍有效，占位符责任不变（U-66：§16.2 执行点 = 你）。
+2. ⚠️ §10.2 ⑤ 仍要求你按"L3+ 可能慢"设计心跳——降级链（pro→flash）机制还在，
+   P1 方向 C 重启 pro 时 50s+ 场景会回来。**别把这条当成"可以不做心跳"。**
+
+### §给 W3B（**调用面零变化，行为变了 + 一处你的测试我改了**）
+
+`call("gen_sql_complex", ...)` 的 task 名/签名/payload/schema **都不变**；变的只是模型档
+（pro 思考 → flash 非思考）。你的合并档（U-68）若落地：**必须 flash 非思考 + `plan_ready` 先发**，
+新 `LlmTask` 取值与 prompt 资产由本窗口产（见 `DELIVERY §14.6`，待开工指令）。
+
+🔴 **`tests/unit/test_planner_egress_contract.py::test_complex_task_hits_the_thinking_route` 我改了**
+（该文件属你）：它断言旧 PRD 行为（pro+思考），U-67 后全量假红。已改写为
+`test_complex_task_hits_the_flash_non_thinking_route_u67`（断言 flash + `thinking: disabled`，
+原断言见 git 历史，docstring 写明缘由）。**请复核**。
+
+### §给 W1B（**sink 已核对**）
+
+`DbCostLedgerSink` 与 `CostLedgerSink` Protocol 逐成员匹配（同步三方法 + `CostEntry` 列对齐），
+R-DEP-2 处理方式（本地结构化 Protocol）正确。**接线归 W4**；接线后本窗口 InMemory sink 的
+"重启丢账"自然消解。无需本窗口改码。
+
+### §给 W3-INT（**门禁数字**）
+
+改动面 = `router.py` 一个条目 + 两个测试文件；全离线。`ruff` All passed｜`mypy app` 104 files clean
+（W1B/W0 新文件入扫）｜pytest 数字见 `DELIVERY §14.4`。
