@@ -127,13 +127,25 @@ class LlmTask(StrEnum):
 #: `model="auto"` —— 交给路由表决定（默认值）。
 MODEL_AUTO: Final[str] = "auto"
 
-#: 🔴 **经验值**（登记于 `DELIVERY.md`）：思考任务要给 `reasoning_tokens` 留的余量。
+#: 思考任务要给 `reasoning_tokens` 留的余量。
 #:
-#: 实测依据（2026-09-17，真机）：一个最简问句在思考模式下耗掉 32 个 completion token，
-#: 而 `max_tokens=32` 的情形下 **32 个全进 reasoning、`content` 为空字符串、
-#: HTTP 状态仍是 200**。若不预留，思考档会稳定返回空内容。
-#: 真实 SQL 生成所需余量**必须由阶段 3 的实测标定**，当前值只是防"空 content"的下限。
-THINKING_HEADROOM_TOKENS: Final[int] = 2048
+#: **已由阶段 3 真机实测标定（2026-09-17）**，不再是估计值：
+#:
+#: | `max_tokens` | `finish_reason` | content | `reasoning_tokens` | 耗时 |
+#: |---|---|---|---|---|
+#: | **3248**（旧值 = 1200 + 2048） | `length` ×3 | **空** ×3 | 3248 ×3（全被思考吃光） | 68–80s |
+#: | 16384（放宽观察） | `stop` ×3 | ✅ 合法 JSON ×3 | 4900 / 5619 / **6719** | 97–138s |
+#:
+#: ⇒ 旧余量 2048 **差 3.3 倍**，导致 `gen_sql_complex` 稳定返回空 content。
+#: 现值 8192 = 实测上界 6719 向上取到 2 的幂（×1.22 余量）。
+#:
+#: ⚠️ **证据强度有限**：n=3、单一问句。若后续实测出现更长的思考，本值需再调；
+#: 保险机制是 `client` 侧**仍然**检测空 content（`LlmEmptyContent` → 降级），
+#: 所以偏小不会产出垃圾答案，只会降级 —— 但降级也是失败，别把余量当可以省的东西。
+#:
+#: ⚠️ **改了它并不能让 `gen_sql_complex` 变可用**：真实 L3+ 调用耗时 **97–138s**，
+#: 远超 07 §10.2 的 pro 上限 **45s** ⇒ 仍会在传输层被掐。见 `DELIVERY.md §13`。
+THINKING_HEADROOM_TOKENS: Final[int] = 8192
 
 #: 07 §10.2 的**单次调用超时**（传输层 deadline）—— **全项目唯一的硬上限**。
 #:
@@ -207,7 +219,9 @@ TASK_ROUTES: Final[dict[LlmTask, TaskRoute]] = {
     ),
     LlmTask.GEN_SQL_COMPLEX: TaskRoute(
         task=LlmTask.GEN_SQL_COMPLEX, model_key=ModelKey.STRONG, thinking=True,
-        budget_s=None, temperature=0.0, output_tokens_hint=1200, json_output=True,
+        #: 1200 → 1536（2026-09-17 实测标定）：真机 content 实测 545–1223 token，
+        #: 即**原值 1200 低于实测需求**（那一次 1223 > 1200），已验证合法 JSON 输出。
+        budget_s=None, temperature=0.0, output_tokens_hint=1536, json_output=True,
         budget_source="PRD §12.2 第5行（L3+ v4-pro 思考）★ 07 §16.1 **无**该阶段分配（已在 DELIVERY 登记）",
     ),
     LlmTask.REPAIR: TaskRoute(

@@ -254,7 +254,7 @@ class TestTimeoutIsTheModelTierNotTheBudget:
         assert max_tokens_for(route) == route.output_tokens_hint + THINKING_HEADROOM_TOKENS
 
     def test_non_thinking_routes_get_no_headroom(self) -> None:
-        """反向对照：非思考档不该白白多花 2048 token 的上限（那是成本口径污染）。"""
+        """反向对照：非思考档不该白白多花几千 token 的上限（那是成本口径污染）。"""
         for task, route in TASK_ROUTES.items():
             if route.thinking:
                 continue
@@ -266,3 +266,46 @@ class TestTimeoutIsTheModelTierNotTheBudget:
 
     def test_strong_model_has_the_longer_hard_limit(self) -> None:
         assert MODEL_HARD_TIMEOUT_S[ModelKey.STRONG] > MODEL_HARD_TIMEOUT_S[ModelKey.FAST]
+
+
+class TestThinkingBudgetIsCalibratedFromMeasurement:
+    """思考档的 `max_tokens` 已由真机实测标定 —— 本组把标定依据钉住。
+
+    实测（2026-09-17，真 key，`gen_sql_complex` 真实资产，n=3）：
+
+    | `max_tokens` | `finish_reason` | content | `reasoning_tokens` |
+    |---|---|---|---|
+    | 3248（旧值） | `length` ×3 | **空** ×3 | 3248 ×3（全被思考吃光） |
+    | 16384 | `stop` ×3 | ✅ 合法 JSON ×3 | 4900 / 5619 / **6719** |
+
+    旧余量 2048 差 3.3 倍 ⇒ `gen_sql_complex` 稳定返回空 content（空 content 又会触发
+    降级到 flash，即"用户拿不到 pro 档质量"）。下面三条把"余量必须盖住实测"钉死。
+    """
+
+    #: 实测上界（token）。改这些数字前请先重跑真机标定，别对着文档改代码。
+    _MEASURED_MAX_REASONING = 6719
+    _MEASURED_MAX_CONTENT = 1223
+
+    def test_headroom_covers_measured_reasoning(self) -> None:
+        assert THINKING_HEADROOM_TOKENS >= self._MEASURED_MAX_REASONING, (
+            "思考余量低于实测 reasoning 上界 —— 会稳定产出空 content"
+        )
+
+    def test_output_hint_covers_measured_content(self) -> None:
+        route = TASK_ROUTES[LlmTask.GEN_SQL_COMPLEX]
+        assert route.output_tokens_hint >= self._MEASURED_MAX_CONTENT, (
+            "输出提示低于实测 content 上界 —— 合法 JSON 会被截断"
+        )
+
+    def test_total_max_tokens_covers_the_measured_worst_case(self) -> None:
+        """`max_tokens` 必须盖住"思考 + 内容"的实测最坏总计（7672 = 6719 + 953 的那次是 7672）。"""
+        route = TASK_ROUTES[LlmTask.GEN_SQL_COMPLEX]
+        assert max_tokens_for(route) > self._MEASURED_MAX_REASONING + self._MEASURED_MAX_CONTENT
+
+    def test_headroom_is_not_absurdly_large(self) -> None:
+        """反向对照：余量也不能无限大 —— 它是**上限**，过大意味着失控的思考不会被截断。
+
+        上界取"实测上界的 4 倍"这种粗口径：本条不是为了精算，而是防"有人把余量
+        调成 10 万来让测试变绿"。
+        """
+        assert THINKING_HEADROOM_TOKENS <= self._MEASURED_MAX_REASONING * 4
