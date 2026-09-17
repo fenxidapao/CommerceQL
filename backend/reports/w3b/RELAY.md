@@ -187,3 +187,12 @@ sql  = await engine.generate_sql(plan, ctx, candidates=n)      # 🔴 plan 里**
 3. **DoD 收口口径建议**：DoD① 按"3/4 项实测 + 1 项未实现（含触发条件已成立的证据）"记，**不要**记成"延迟实测已完成"。
 4. **证据留存**：真机探针脚本与原始 JSON 在**工作区根目录**（`_w3b_latency_probe{,2,3}.py`、`_w3b_latency_result{,3}.json`），**未提交**。收口若需留档请指定位置；不需要就让它随工作区清理。
 5. **测试夹具可复用**：`tests/unit/test_planner_egress_contract.py` 内含"**真网关 + 假上游**"的装配写法（`_real_gateway` + W3A 的 `tests/unit/_llm_fake_upstream.py`）——W3-INT 若要写阶段 3 的联调冒烟，这是现成的起手式。
+
+---
+
+## 【勘误·2026-09-17 傍晚】本转述件两条被 W3A 修正（证据 = `reports/w3a/DELIVERY.md §12/§13`）
+
+1. **§给 W3A-1 的范围报窄了**：不只是 `plan`/`gen_sql`，**8 个有 §16.1 分配的 task 全部中招**——含 `normalize_intent`（本窗口报 5/5 是悬崖边样本，W3A 同口径 0/3）。W3A 已修（`d89dc07`+`e582fe0`）：`TaskRoute.timeout_s` → **`budget_s`**（纯元数据）、`effective_timeout_s` **删除**、deadline 一律 **`hard_timeout_s(model_key)`**（flash 15s / pro 45s）。真机双向对照 **0/15 → 15/15**。
+2. **§给 W3A-2 的结论相反**：不是"2/3 空 content"，是 **3/3 确定性失败**（`finish_reason=length` ×3，reasoning 恰好吃满 3248）；且 **pro 档端到端从未生效**（每次 45s 掐断 → flash，50–60s/req）。已标定 `THINKING_HEADROOM_TOKENS=8192` / `output_tokens_hint=1536`；真正的矛盾（PRD §12.2 × 07 §10.2 × 8s P95）上呈为候选 **⑬**。
+3. **§给 W3-INT 第 2 条更新**："plan/gen_sql 100% 失败"这条**已过时**，收口结论应写成——**"网关已修，但 §16.1 的预算执行点现在空缺，等架构裁决 + W4 落 SSE 占位符"**（NFR-1.2 的唯一执行点目前无人）。门禁基线更新为 `pytest` → **1471 passed / 6 skipped / 0 failed**（Docker 起来后）。
+4. **§给 W4 的装配指引更新**：本转述件写的接线契约（每请求构造引擎、两条降级通道、`plan["normalized_question"]`、`LlmRefused` 先捕）**全部仍然有效**；新增一条——超阶段预算**不再失败**（照跑完 + `over_budget=true`），你的 SSE 层才是 §16.2"超预算推占位符"的唯一执行点。
