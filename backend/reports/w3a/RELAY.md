@@ -219,3 +219,63 @@ gateway = build_gateway(settings, ledger=<W1B 的落库 sink>, degradation=SseDe
 4. **本窗口未做真机集成测试**（只做了行为探测）。`deploy/.env` 有可用 key（PROMPT §三-8 已过期）；集成测的门槛在**费用**与**限流**，请按需决定是否跑。
 5. ⚠️ **探针残留通报**：交付期发现 `backend/app/guard/_probe_violation.py` 残留（中断的 `assert_importlinter.py` 留下的），**导致全仓 import 契约基线本地变红**。已备份内容后清理（详见 `DELIVERY.md §7.3`）。收口时如有窗口报告"lint-imports 红"，先查这个。
 6. **测试夹具位置**：`tests/unit/_llm_fake_upstream.py`（假上游 + 出站请求录制）。DoD③ 的证据 = `test_llm_gateway.py::TestOutboundAttachment`。若你要写集成测试，可复用该夹具。
+
+---
+
+## 【追加·2026-09-17 下午】阶段预算 ≠ 超时 —— 本次修正的跨窗口影响
+
+> 背景：W3B 转述的阻断项（`reports/w3b/RELAY.md` §给 W3A-1）已确认并修复。
+> 证据与根因见 `DELIVERY.md §12`（真机双向对照 **0/15 → 15/15**）。
+
+### §给 W3B（**你的阻断项已解除，但行为有变，请照此调整**）
+
+1. **`plan` / `gen_sql` / `normalize` / `intent` / `normalize_intent` 现在可用。**
+   真机实测修复后：`plan` 1.49s、`gen_sql` 1.60s、`normalize_intent` 1.56s、`normalize` 1.45s、`intent` 1.39s（均为中位）。你原来旁路 `effective_timeout_s` 的做法**不再需要**，且那个名字**已不存在**（删掉了）。
+2. **不要再传、也不要再读 `TaskRoute.timeout_s`** —— 它改名为 **`budget_s`**，语义是"07 §16.1 的阶段延迟分配（P95）"，**只是元数据，不参与超时判定**。
+3. 🔴 **行为变化（会影响你的阶段预算假设）**：单次调用现在受 **07 §10.2 的模型级上限**约束 —— **flash 15s / pro 45s**，**不再按 task 掐**。也就是说**超阶段预算不会再失败**，而是照跑完。
+   ⇒ 07 §16.1 的 0.6/1.0/1.3s 在**网关层已无人强制执行**。**超预算的处置责任现在在上层**（见下面给 W4 与架构的两条），你那边若有"按预算做取舍"的逻辑，请注意它不再是网关能替你兜的。
+4. 你的 **`gen_sql_complex` 空 content（2/3）** 与 **合并档资产** 两条已收下：前者我接下来做 `max_tokens` / `THINKING_HEADROOM_TOKENS` 标定；后者需要新资产 + 新 `LlmTask` 取值（改契约），**先报架构裁决**再动。
+
+### §给 W4（**新增一份原本不存在的责任**）
+
+1. 🔴 **§16.1 阶段预算的执行责任现在归你（SSE 层）**。原先它是被网关硬砍的（副作用是 `plan`/`gen_sql` 100% 失败）；现在网关**不再管**，07 §16.2 的兜底——"**若 1.2s 未完成 → 先推 `stage=intent` 占位**"——**必须由你发**，否则 NFR-1.2（首字节 ≤1.5s）失去唯一执行点。
+2. 度量手段已备好：`CallRecord` 新增两字段 —— **`budget_s: float | None`**（该 task 的 §16.1 分配，`None` = 07 未给）与 **`over_budget: bool`**（本次是否超标）。日志已输出这两项（`llm_call` 事件）。
+3. ⚠️ **`over_budget` 不会发 `degraded` 事件**（刻意的）：降级事件的含义是"答案来自降级路径"，延迟超标不改变答案。别指望靠降级事件感知它。
+
+### §给架构窗口（**追加候选，编号仍待分配；请与 ① ② 合并裁**）
+
+| 候选 | 问题 | 现状 / 影响 | 证据 |
+|---|---|---|---|
+| ⑪ | **07 §16.1 的阶段预算被实现成硬超时，导致 8 个有分配的 task 全部不可用** | 已按"解耦"修复（超时取 §10.2 模型级）；但 **07 §16.1 的数字本身仍未被重裁**，且**其执行责任现无归属** | `DELIVERY.md §12.1`（0/15 → 15/15） |
+| ⑫ | **07 §16.1 的分配值被真机证伪**（实测 1.39–1.60s vs 分配 0.6–1.3s，**全部超**） | 与 W3B 候选 ① 同源，但本窗口给出了**直连网关**的口径（1.39–1.60s），与 W3B 经 `PlannerEngine` 的口径（1.9–2.8s）不同，请一并采纳 | `_w3a_budget_result.json` |
+
+> 建议裁决要点：① §16.1 的 P95 分配按**新实测**重算（并明确"这是分配，不是超时"）；② 明确"超预算 → 推占位符"的执行点与验收口径（NFR-1.2 现在没有执行者）；③ 若认为确实需要"每任务硬上限"，请给**依据**而不是让实现者发明数字（U-22）。
+
+### §给 W0（**两项**）
+
+1. 🔴 **`scripts/assert_importlinter.py` 不是并发安全的，残留会污染全仓基线**（本窗口交付期实测，两次会话各出现同 sha256 `17d4eff1…7737e2` 的残留）：
+   - 残留存在时，**任何窗口**的 `lint-imports` 报 `R-DEP-2 BROKEN`，脚本本身直接 `FATAL: 注入任何探针之前，lint 就已经失败`（退出码 2）。
+   - 机制：清理只在 `finally`（**信号杀死不执行**）；且脚本**拒绝覆盖已存在的探针** ⇒ 残留是**粘性的**。另：两个窗口同时跑会互踩（一方的 step-0 看到另一方的探针）。
+   - 本次取证：删除并验绿后**数秒内**该文件又被写下（mtime 15:56:44 → 15:57:44）；而"删完立刻跑"（最小竞态窗口）**DoD② 一次通过、无残留** ⇒ 竞态。
+   - 建议：探针文件名带 PID（或加锁）；区分"并发中的临时文件"与"陈旧残留"；清理对 `SIGPIPE`/`SIGTERM` 也生效。
+2. **`CallRecord` 新增 `budget_s` / `over_budget` 两字段**（用于 §16.1 一致性观测，见 `DELIVERY.md §12.4`）。若你已按旧字段集写 Prometheus 指标，请一并把这两项纳入（原"LLM 指标无落点"的需求不变）。
+
+### §给 W3C（**一句话**）
+
+`l4_score` 的 `budget_s=0.8s` **不再**是超时 —— 你那路若曾出现 0/3 失败，根因与 W3B 同源，**现在已修**（单次调用上限 = flash 15s）。**未实测**：`l4_score` 的真机延迟本窗口没量过，如果它的 prompt/候选规模比 `rerank` 大，请自行量一次。
+
+### §给 W3-INT（**门禁数字更新 + 一条坑**）
+
+1. 门禁数字（Docker **必须**先起来，否则集成测会假红）：
+
+   ```bash
+   cd CommerceQL/backend
+   ../.venv/Scripts/python.exe -m pytest -q                      # 1467 passed / 6 skipped / 0 failed / 0 errors
+   ../.venv/Scripts/ruff.exe check .                             # All checks passed!
+   ../.venv/Scripts/mypy.exe app                                 # 102 files clean
+   ../.venv/Scripts/lint-imports.exe                             # 4 kept, 0 broken
+   ../.venv/Scripts/python.exe scripts/assert_importlinter.py    # DoD② 通过
+   ```
+   ⚠️ 首次未起 Docker 时全量会出 **1 failed + 6 errors + 55 skipped**，**全部**是"集成环境不可用"，不是回归（已当场验证：起 Docker 后复跑即 1467 passed）。
+2. ☠️ **`assert_importlinter.py` 若报 `FATAL: 注入任何探针之前，lint 就已经失败`，先查 `backend/app/guard/_probe_violation.py` 是否存在**（并发/中断残留，见上面给 W0 那条）。它**不在 git 里**（`.gitignore:46` 有 `**/_probe_violation.py`），删掉即可，不要当技术债记。
+3. **阶段 3 收口结论里必须写的一条**（替代原来的"`plan`/`gen_sql` 100% 失败"）：**网关已修，但 §16.1 的预算执行点现在空缺**，等架构裁决 + W4 落 SSE 占位符。

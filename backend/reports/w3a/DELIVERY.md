@@ -221,3 +221,82 @@ cd CommerceQL/backend
 
 只暂存本窗口文件（工作区另有 W2-INT/其他窗口的在制品，见 `git status`）。
 push：本会话用户已明确授权"可以直接 push，不一定要等我指令"。
+
+---
+
+## 12. 【追加·2026-09-17 下午】阶段延迟预算被当作硬超时 —— **真实阻断缺陷，已修**
+
+提交：`fix(w3a): 解耦阶段延迟预算与传输 deadline` + `docs(w3a): §12 缺陷记录与跨窗口影响`（附在本节所属的推送里）。
+
+触发：`reports/w3b/RELAY.md` §给 W3A-1（W3B 转述：`plan`/`gen_sql` 在真机上 **100% 失败**）。
+
+### 12.1 一手复现（真 key，同进程 / 同 payload / 同模型，**唯一变量 = deadline**，n=3×5）
+
+| task | 07 §16.1 预算 | 当硬 deadline 用（修复前） | 用 §10.2 上限（修复后） | 修复后实测延迟中位 |
+|---|---|---|---|---|
+| `normalize` | 0.6s | **0/3**（失败耗时 608/606/605 ms） | **3/3** | 1.45s |
+| `intent` | 0.6s | **0/3**（604/611/602 ms） | **3/3** | 1.39s |
+| `normalize_intent` | 1.2s | **0/3**（1311/1202/1213 ms） | **3/3** | 1.56s |
+| `plan` | 1.0s | **0/3**（1004/1003/1003 ms） | **3/3** | 1.49s |
+| `gen_sql` | 1.3s | **0/3**（1304/1311/1315 ms） | **3/3** | 1.60s |
+
+**0/15 → 15/15。** 失败耗时**恰好等于各自预算值** —— 是"卡在 deadline 上死"，不是上游不可用。
+探针与原始 JSON：工作区根目录 `_w3a_budget_probe.py` / `_w3a_budget_result.json`（未提交）。
+
+### 12.2 对 W3B 报数的两处修正（**范围比它报的更大**）
+
+- W3B 报 `plan` 2756ms / `gen_sql` 1939ms；本窗口实测 **1.49s / 1.60s**。口径不同（W3B 走 `PlannerEngine`，含语义包与 prompt 组装；本窗口直连网关），**结论一致**，数值以本表为准。
+- W3B 报 `normalize_intent` **5/5 通过**（939ms）；本窗口 **0/3 失败**（真机 1.2–1.6s）。它在悬崖边 ⇒ **"只有 plan/gen_sql 坏"是低估**：`rerank` 0.8s / `l4_score` 0.8s 同样罩在这条坑里，`present` 1.5s 未实测（未知）。**8 个有 §16.1 分配的任务全部受影响**。
+
+### 12.3 根因（**逻辑错误，不是"调大一点"**）
+
+`TaskRoute.timeout_s` 字段文档写着"任务级**软**超时"，`client.invoke` 却把它当 `deadline`。而：
+
+- **P95 是分位数，不是上界** —— 拿它当硬上限，系统完全健康也必然砍掉约 5%；分配值低于真机中位时即为 100%。
+- **07 §10.2 才是"单次调用超时"的出处**（flash 15s / pro 45s）—— 全项目唯一。
+- **07 §16.1 的标题就是"延迟预算分解（P95 ≤ 8s）"**，且该表自己写明串行合计 9.2s **超预算**、要靠"压缩手段"解决 —— 它从未主张"超了就该失败"。
+- **07 §16.2 兜底写明**超预算应"先推 `stage=intent` 占位"（降级 UX），**不是失败**。
+- **PRD §12.2 的路由表根本没有超时列**（只有 任务/模型/模式/理由）。
+
+外部前提已全部核对到原文行号，不是转述。
+
+### 12.4 修法（3 处，面很小）
+
+| 位置 | 改动 |
+|---|---|
+| `router.py` | `TaskRoute.timeout_s` → **`budget_s`**（§16.1 阶段分配，**元数据**，文档明写"不参与任何超时判定"）；删 `effective_timeout_s`，加 **`hard_timeout_s(model_key)`** → §10.2（**刻意不看 task**，docstring 写明理由） |
+| `client.py` | `invoke(timeout_s=)` → **`deadline_s`**（切断与"任务预算"的词汇联想）；两处残留文案（"任务预算耗尽"）改掉 |
+| `__init__.py` | line 417 改用 `hard_timeout_s`；`CallRecord` 增 **`budget_s` / `over_budget`**，并把两项加到 `_LoggingMetricsSink` 输出 |
+
+**刻意不做**：超预算**不发 `degraded` 事件**。降级事件的含义是"这份答案来自降级路径"（N-21）；延迟超标并不改变答案，发它等于撒谎。§16.1 的一致性改由 `over_budget` 度量，判定责任移交上层（推占位符 = W4 的 SSE）。
+
+### 12.5 守卫测试 + **注入对照**（本次最该留的东西）
+
+- `test_llm_router.py::TestTimeoutIsTheModelTierNotTheBudget`：逐 task 断言超时取模型档；反向对照"**阶段预算 ≠ 超时**"（检查 8 个有预算的 task）；把"预算低于实测"这条事实按**只量过的 5 个 task** 钉住（未实测的 `present`/`rerank`/`l4_score` 刻意不写进断言 —— 对没量过的值作延迟断言就是编造；这条**我自己先写错了一次，被测试抓红后收窄**）。
+- `test_llm_gateway.py::TestStageBudgetIsNeverTheDeadline`：用记录 `deadline_s` 的传输层 spy 断言"传给传输层的是 15.0s 而非 1.0s"；行为面断言"慢于预算的调用仍成功且被标 `over_budget`"；**含一条永久负向对照**。
+- **正向对照实测（注入 → 必红 → 还原 → 必绿）**：把旧接线临时注入 `__init__.py:417` → 守卫 **2 条变红**（`seen == [1.0] != [15.0]`、`[1.3] != [1.0]`）→ 还原 → **90 passed**；残留已 grep 确认为零。
+- ⚠️ **诚实记录一条鉴别力边界**：**行为测试在注入下没有变红**。原因是 `asyncio.timeout` 量的是**真实时间**，假时钟把"耗时"拉到 1.75s 并不能让计时器触发。所以对这一缺陷有鉴别力的**只有参数级断言**——这一点已写进 `_spy` 的 docstring，避免后人误以为行为测试足够。
+- 另记一个夹具坑：浮点截断。`clock.t += 1.8` → `(1001.8-1000.0)*1000` 截断成 **1799**。已改用二进制可精确表示的步长（1.75）。
+
+### 12.6 门禁实测（2026-09-17，全部在本机 `.venv`，Docker 起来后）
+
+```
+pytest -q                                  → 1467 passed / 6 skipped / 0 failed / 0 errors (67s)
+ruff check .                               → All checks passed!
+mypy app                                   → Success: no issues found in 102 source files
+lint-imports.exe                           → Contracts: 4 kept, 0 broken.
+python -m app.core.enums                   → 契约自检通过（32 个取值集基数齐全）
+python scripts/assert_importlinter.py      → DoD② 通过（4 条契约均已证明"脏了必红"）
+```
+
+- 6 skip = `tests/integration/test_retrieval_fts_pg.py` 夹具 DSN 无 DDL 权限（既有如实 skip，非本窗口引入）。
+- ⚠️ **首次全量跑出 1 failed + 6 errors + 55 skipped 全部是 Docker Desktop 未启动**（`集成环境不可用（ConnectionError/ConnectionTimeout）`），**不是回归**；Docker 起来后复跑即全绿。这正是 W3B RELAY §给 W3-INT-1 提醒的那件事，已当场验证。
+
+### 12.7 交付期发现的第 4 个缺陷（**W0 的脚本，非本窗口文件，仅通报**）
+
+`backend/scripts/assert_importlinter.py`（W0）**不是并发安全的**，且残留会**污染全仓基线**：
+
+- 现象（本次实测，两次会话各一次同 sha256 `17d4eff1…7737e2` 的残留）：`app/guard/_probe_violation.py` 被留下 → **所有窗口**的 `lint-imports` 报 `R-DEP-2 BROKEN`、`assert_importlinter.py` 直接 `FATAL: 注入任何探针之前，lint 就已经失败`。
+- 机制：探针清理只在 `finally` 里（**信号杀死时不执行**）；且脚本**拒绝覆盖已存在的探针**（`_run_probe` 的存在性分支）⇒ 一旦残留就是**粘性的**。
+- 另一路径：**两个窗口同时跑**该脚本时会互相踩 —— 一方的 step-0 基线检查会看到另一方的探针。本次取证：我删除并验绿后**数秒内**该文件又被写下（mtime 15:56:44 → 15:57:44），而"删完立刻跑"（最小竞态窗口）**DoD② 一次通过、无残留** ⇒ 竞态，不是本窗口改动引起。
+- 建议（转 W0）：探针文件名带 PID（或加锁）以支持并发；区分"并发中的临时文件"与"陈旧残留"；并把 `finally` 清理改为对 `SIGPIPE`/`SIGTERM` 也生效的形态。
