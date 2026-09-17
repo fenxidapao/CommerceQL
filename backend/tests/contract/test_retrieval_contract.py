@@ -50,9 +50,10 @@ def test_jieba_imported_only_by_tokenizer_entrypoint() -> None:
             if isinstance(node, ast.Import):
                 if any(alias.name == "jieba" or alias.name.startswith("jieba.") for alias in node.names):
                     violations.append(f"{_module_name(path)}: import jieba")
-            elif isinstance(node, ast.ImportFrom):
-                if node.module and (node.module == "jieba" or node.module.startswith("jieba.")):
-                    violations.append(f"{_module_name(path)}: from jieba import ...")
+            elif isinstance(node, ast.ImportFrom) and node.module and (
+                node.module == "jieba" or node.module.startswith("jieba.")
+            ):
+                violations.append(f"{_module_name(path)}: from jieba import ...")
     assert not violations, f"jieba 只准在 {JIEBA_ALLOWED_MODULES} import（N-24），违规：{violations}"
 
 

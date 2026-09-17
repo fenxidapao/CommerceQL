@@ -172,7 +172,7 @@ class BundleView:
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_mapping(cls, bundle: Mapping[str, Any]) -> "BundleView":
+    def from_mapping(cls, bundle: Mapping[str, Any]) -> BundleView:
         """从（已经 W2A 校验的）bundle Mapping 构造。**本方法不做五步校验**。"""
         meta = bundle.get("meta") or {}
         embedding = meta.get("embedding") or {}

@@ -48,17 +48,16 @@ def sync_fetch_factory():
     """生产库同步取数（psycopg 直连；评测脚本非在线路径，逐连接即可）。"""
 
     async def fetch(sql: str, params: dict[str, object]):
-        for key, value in params.items():
+        for key in params:
             sql = sql.replace(f":{key}", f"%({key})s")
         import psycopg
 
-        with psycopg.connect(PROD_DSN, connect_timeout=5) as conn:
-            with conn.cursor() as cur:
-                cur.execute(sql, dict(params))  # type: ignore[arg-type]
-                if cur.description is None:
-                    return []
-                cols = [d.name for d in cur.description]
-                return [dict(zip(cols, row)) for row in cur.fetchall()]
+        with psycopg.connect(PROD_DSN, connect_timeout=5) as conn, conn.cursor() as cur:
+            cur.execute(sql, dict(params))  # type: ignore[arg-type]
+            if cur.description is None:
+                return []
+            cols = [d.name for d in cur.description]
+            return [dict(zip(cols, row, strict=True)) for row in cur.fetchall()]
 
     return fetch
 
@@ -80,7 +79,7 @@ def parse_expected(view: BundleView, gold_sql: str) -> tuple[set[str], set[str]]
     return expected_assets, expected_cols
 
 
-async def main() -> None:  # noqa: D103
+async def main() -> None:
     import yaml
 
     bundle_path = REPO_ROOT / "semantic" / "bundle_2026.09.14.1.yaml"

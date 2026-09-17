@@ -77,3 +77,14 @@
 - `PgVectorStore` SQL 模板列形态 **UNVERIFIED**（W2A embed_doc 填充后跑真向量路径核对）。
 - 4 个 `--check`（含 importlinter）未挂 CI —— W0 待办，非本窗口。
 - recall 报告低数值的**根因是上游数据未填充**，不是检索逻辑缺陷；但 value 路仅覆盖 22/119 题（值类问句占比所限），四路齐备后预计显著改善——此为推断，待重跑验证。
+
+---
+
+## 8. 收口回执（2026-09-17，响应 W2-INT 转达的 4 条）
+
+| # | 事项 | 处置 |
+|---|---|---|
+| 1 | `dense.py:273` F821（`Mapping` 未定义） | ✅ 已修：文件头补 `from collections.abc import Mapping`（采纳 W0 提示的 typing 行补法之外的规范形态，`collections.abc` 是 ruff UP035 指向的正解） |
+| 2 | ruff 域内收口 | ✅ 17 条全清（W0 清单计 13 条，实测当日为 17——含我上轮 `Mapping` import 触发的 I001/UP035）：11 条 `--fix` 自动 + 6 条手动（B007×2→`for key in params`、B905×2→`zip(strict=True)`、SIM102→合并 elif、RUF059→`_`）；`ruff check` 域内 **All checks passed** |
+| 3 | CI 红撤回 | ✅ 知悉，未做任何 skip 分支；本机回归 73 unit/contract + 8 integration 全绿（集成用例不受 ruff 修改影响） |
+| 4 | 07 v0.9 §4.8 裁决 | ✅ 知悉并留档：**U-54**=(a) 契约留 contracts、装配根注入 tokenizer 两侧同实例（与我实现一致，无需改码）；**U-59**=(a) **升级 RetrievalPort 端口面**、`search_full()` 旁路被否决、contracts.py 由 W0 落笔 → **本窗口 `search.py::RetrievalResult` 富结果在 W0 落笔后按新端口面收敛，阶段 3 排期项**（收敛动作归我，等 W0 交付后由我或阶段 3 窗口执行，见 §6 提示词草案需同步更新）；U-60/U-61 已契约化，sparse/dense 实现无需改 |

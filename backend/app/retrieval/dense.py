@@ -28,13 +28,15 @@ from __future__ import annotations
 
 import asyncio
 import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Final, Protocol, Sequence
+from typing import Any, Final, Protocol
 
 import httpx
 import orjson
 
-from app.cache.keys import DEFAULT_TTL_S, embedding as embedding_key
+from app.cache.keys import DEFAULT_TTL_S
+from app.cache.keys import embedding as embedding_key
 
 __all__ = [
     "EMBED_BATCH_SIZE",

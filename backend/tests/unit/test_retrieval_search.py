@@ -8,8 +8,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.core.enums import RetrievalMode
 from app.retrieval.dense import EmbeddingUnavailable, InMemoryVectorStore, l2_normalize
 from app.retrieval.search import RetrievalService
@@ -89,7 +87,7 @@ async def test_sparse_hits_reach_fusion_and_tenant_is_passed() -> None:
 
 async def test_graph_extension_adds_bridge_assets() -> None:
     """sparse 只命中 order_paid → graph 补桥接资产（如 dim_date/product）。"""
-    service, fetcher = make_service(
+    service, _ = make_service(
         embedder=FakeEmbedder(), sparse_rows=sparse_rows_for(["order_paid"])
     )
     result = await service.search_full("订单分析", make_identity(), RetrievalMode.SPARSE_ONLY)

@@ -31,7 +31,7 @@ import pytest
 
 from app.core.contracts import IdentityContext, Role
 from app.core.enums import RetrievalMode
-from app.retrieval.dense import EmbeddingUnavailable, OllamaEmbedder
+from app.retrieval.dense import OllamaEmbedder
 from app.retrieval.search import RetrievalService
 from app.retrieval.sparse import SparseSearch
 from app.retrieval.tokenizer import tsvector_source
@@ -45,7 +45,6 @@ BUNDLE_VERSION = "2026.09.14.1"
 pytest.importorskip("psycopg", reason="psycopg 未安装（集成测试需要真 PG）")
 
 import psycopg  # noqa: E402  # importorskip 之后
-
 
 # ---------------------------------------------------------------------------
 # DSN 定位（两路分离）：
@@ -147,14 +146,14 @@ def write_doc(
 def make_fetcher(table: str):
     async def fetch(sql: str, params: Mapping[str, Any]) -> Sequence[Mapping[str, Any]]:
         # psycopg 命名参数 %(name)s 形态；我们的模板用 :name（SQLAlchemy 风格）
-        for key, value in params.items():
+        for key in params:
             sql = sql.replace(f":{key}", f"%({key})s")
         assert TEST_DSN is not None
         with _conn(TEST_DSN) as conn:
             cur = conn.cursor()
             cur.execute(sql, dict(params))
             cols = [d.name for d in cur.description]
-            return [dict(zip(cols, row)) for row in cur.fetchall()]
+            return [dict(zip(cols, row, strict=True)) for row in cur.fetchall()]
 
     return fetch
 

@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 from app.retrieval.tokenizer import (
-    loaded_custom_terms,
     load_custom_dict,
+    loaded_custom_terms,
     tokenize,
     tsvector_source,
 )
@@ -51,7 +51,7 @@ def test_tokenize_e_commerce_terms_stay_whole() -> None:
 
 def test_tokenize_drops_punctuation_and_whitespace() -> None:
     tokens = tokenize("GMV，。！ 2026年？")
-    assert all(tok.strip() and tok.isalnum() or "_" in tok for tok in tokens)
+    assert all((tok.strip() and tok.isalnum()) or "_" in tok for tok in tokens)
     assert "，" not in tokens
     assert "！" not in tokens
 
