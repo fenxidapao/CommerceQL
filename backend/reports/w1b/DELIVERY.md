@@ -516,3 +516,60 @@ B4 之后：启动断言第一次真连库 → **连不上被当成致命** → 
 - 本轮的 8 条 `ruff` 违规（`RUF036` ×4 / `RUF100` ×2 / `UP047` / `SIM300`）**全部由 W1B 本轮新代码引入并已修净**，
   `pyproject.toml` 的 `select` 与 HEAD **逐字一致**（已 `git show HEAD` 对比）—— 不是规则集变更所致，无需上游动作。
 - `ruff format --check` 显示 32 个文件会被重排；该命令**不在 `ci.yml` 门禁内**（门禁只有 `ruff check .`），与 HEAD 状态一致，**本轮不动**。
+
+---
+
+## 9 本轮追加（2026-09-17）：U-56 迁移 0003 + U-53 关停延迟修复
+
+> 触发：W2-INT 转达的 U-56 迁移请求（DoD③ 端到端当前唯一硬阻塞）；
+> 顺带收掉本窗口名下的 U-53（§8.1 第三条待办）。**本节只记事实与证据**，转述见 `RELAY.md` §8。
+
+### 9.1 U-56 —— 迁移 0003：8 基表 + 8 v_* 视图（`app/repo/migrations/versions/0003_business_views.py`）
+
+| 事实 | 落点 |
+|---|---|
+| 8 基表（`order_paid`/`order_refund`/`product`/`shop`/`region`/`campaign`/`traffic_daily`/`dim_date`，无 `v_` 前缀）+ 8 视图（`v_{基表}`，显式列清单）+ 6 索引 | `_ASSETS` 数据结构（列 = `(name, pg_type, nullable)` 三元组） |
+| 列名与 PG 类型 = **bundle 逐字**（含 `int` 等别名**不归一化**——首版曾映射成 `integer`，被单测当场打回）；列序/可空性/主键/索引名 = **`data/schema.sql` 逐字**（SQLite 方言，只取形状不取类型） | 单测 `tests/unit/test_migration_views_contract.py`（8 条，**双向比对**：bundle↔迁移、schema.sql↔迁移；含"tenant_scoped 必有 tenant_id / 公共维表必无""shop_id 只在三张表"两条口径护栏） |
+| **属主 = app_rw**（表与视图都 `OWNER TO app_rw`）—— materialize(with_policy=True) 以 app_rw 执行 ALTER/POLICY/GRANT（U-55(a) 硬前提，无属主身份发布期必失败） | `upgrade()` 内逐对象 `ALTER ... OWNER TO app_rw`；集成测试逐对象断言属主 |
+| **刻意不做**：RLS/POLICY/CLS 不在迁移里（ADR-10：由 materialize 派生，迁移只给"派生的对象基础"）；`app_ro` 对基表**零 GRANT**（U-55(a) 前提 2，集成测试断言）；无 `downgrade`（§12.6 口径）；不装数据（数据装载另行裁定） | 0003 文件头 docstring 逐条写明 |
+| `region`/`dim_date` = 公共维表（无 tenant_id 列、tenant_scoped=false），与其他 6 张租户表在断言里分组对待 | 单测 + 集成测试的 `_PUBLIC_BASES`/`_TENANT_BASES` |
+
+**★ DoD③ 解锁的直接证明**（`tests/integration/test_migration_0003_views.py`，6 条全绿，真库）：
+真实执行 `alembic upgrade head`（0001→0002→0003 全链）→ 16 对象存在且属主 app_rw →
+**`materialize(with_policy=True)` 通过** → `assert_grant_policy_consistency` = **consistent=True**
+→ 6 张租户基表各有 `p_{基表}_tenant`、公共维表零策略 → app_ro 走视图可查、碰基表 `InsufficientPrivilege`。
+即：w2-int 六步演练 step② 的 `UndefinedTable: relation "v_order_paid" does not exist`（层①"视图不存在"）已被本迁移解除。
+
+### 9.2 U-53 —— 关停延迟根因修复（`app/repo/pools.py::checkpoint_connect_kwargs` 第 ⑤ 参数）
+
+- **根因**（复现脚本 `backend/scripts/probe_pool_close_u53.py`，可复跑）：
+  依赖不可达时，池 worker 的一次连接尝试**无限挂起**（连接参数没带 `connect_timeout`），
+  `pool.close()` 只能等 worker 收工，实测等满默认上限 **5.0s** 并打
+  `couldn't stop task 'pool-1-worker-0' within 5.0 seconds`。
+  arch 当年实测的"退出 lifespan 2.00s" = 同一机制：那次连接尝试恰好在 ~2s 处失败，close 等了多久 = 尝试挂了多久。
+  对照组：依赖可达时 close = 0.000s；`redis.aclose()` / 两个 engine `dispose()` 均 0.000s —— 延迟**只在** checkpoint 池。
+- **修复**：`checkpoint_connect_kwargs()` 增加第 ⑤ 参数 `connect_timeout = 2`（取值推导对齐
+  `POOL_ACQUIRE_TIMEOUT_S`：5s 预算 ÷ 3 硬依赖 ≈ 2s）。复测：不可达时 close 从 5.0s 降到 **3.5s**
+  （本机双栈 ::1+127.0.0.1 各算一次尝试；生产/compose 单主机名 = 一次 ≈2s）。
+  单测护栏：`tests/unit/test_pools.py::test_checkpoint_connect_kwargs_carry_connect_timeout`（锁"参数在"；
+  "close 变快"是时间性事实，只记在探针脚本，不写会抖动的断言）。
+- **边界**：它只管单次连接尝试的生死；重试节奏（`reconnect_timeout`/backoff）属池超时/重连规则（架构窗口 U-52 名下），不越权。
+
+### 9.3 全量门禁实测（诚实记录，含 3 条**已知红**）
+
+| 门禁 | 结果 |
+|---|---|
+| `pytest`（全量） | **786 passed / 6 skipped / 4 failed**（跑于修复 DSN 字面量之前） |
+| 迁移相关 5 文件（单测 8 + 集成 6 + hygiene + pools + 0003） | **全绿**（修复后复验 21~28 passed） |
+| `ruff check .` | All checks passed |
+| `mypy app` | Success: no issues found in 80 source files |
+| `lint-imports` | 4 kept, 0 broken |
+
+4 条 failed 的去向：
+1. `test_migration_dsn_hygiene.py::test_repo_wide_replay...` —— **我的问题，已修**：新测试文件里写了属主 DSN 完整字面量，
+   被自家 DoD④ 全仓重放当场抓到（"修 A 造 B"再次现形）。修法 = 运行时拼接（同 hygiene 测试自己的示范），源码不落完整字面量；
+   `app_rw`/`app_ro` 已在 allowlist，可直写。
+2. 其余 3 条 = `tests/integration/test_semantic_materialization.py::TestPolicyAndConsistency/*` —— **W2A 文件，不越权**，
+   根因 = materialize 派生语句**非限定名** + 调用侧连接未带 `search_path`（详见 `RELAY.md` §8，转 W2A/W2-INT）。
+   这 3 条此前一直 skip（`views_ready=False`）；**U-56 让视图存在后 skip 翻成执行，把 W2A 侧的 search_path 前提暴露了出来** ——
+   这不是迁移引入的回归，而是 DoD③ 链路的第二层阻塞现形（w2-int 的 e2e step② 复跑时也会撞上同一层）。

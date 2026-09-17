@@ -288,4 +288,37 @@
 |---|---|---|
 | `/healthz/ready` 平台预算 5s，而 `_collect` 串行 → 实测 7.82s **仍超**，须改并发 | **W7** | `DELIVERY.md §4.12`、本文件 §3 追加段 |
 | 07 §8 缺"池超时与重连规则" → `DB_UNAVAILABLE` 的 `Retry-After=5s` 与池默认等待 30s **不自洽** | **架构** | `DELIVERY.md §4.12`、本文件 §5 待办 ④ |
-| 依赖不可达时 `pool.close()` 有 2s 关停延迟（未追） | **W1B**（后续） | `DELIVERY.md §4.12` |
+| ~~依赖不可达时 `pool.close()` 有 2s 关停延迟（未追）~~ | **W1B**（后续） | **已修**（2026-09-17，U-53 关闭）：根因 = 连接参数缺 `connect_timeout` → worker 的连接尝试无限挂起 → `pool.close()` 等满默认 5s。修复 = `checkpoint_connect_kwargs()` 加 `connect_timeout=2`（`pools.py` 第 ⑤ 参数）；复现与实测数字见 `backend/scripts/probe_pool_close_u53.py` + `DELIVERY.md §9.2` |
+
+---
+
+## 8 → W2A / W2-INT：U-56 已落（迁移 0003 全绿），但 `UndefinedTable` 还有**第二层** = search_path
+
+> 本节可直接复制转达。对应 `DELIVERY.md §9`（细节与证据都在那里）。
+
+### 8.1 已交付
+
+| 事项 | 落点 | 验证 |
+|---|---|---|
+| **迁移 0003**：8 基表 + 8 `v_*` 视图 + 6 索引，列名/类型 = bundle 逐字、列序/可空性/主键/索引名 = `data/schema.sql` 逐字、**属主 = app_rw** | `backend/app/repo/migrations/versions/0003_business_views.py` | 单测 8 条（bundle↔迁移、schema.sql↔迁移双向比对）+ 真库集成 6 条全绿 |
+| **DoD③ 直接证明**：真库 `alembic upgrade head` 全链 → `materialize(with_policy=True)` 通过 → `assert_grant_policy_consistency` = **consistent=True** → 6 租户基表各有 `p_{基表}_tenant`、公共维表零策略 | `backend/tests/integration/test_migration_0003_views.py` | w2-int 六步演练 step② 的 `UndefinedTable` **层①（视图不存在）已被解除** |
+
+### 8.2 ⚠️ 但 step② 真正复跑还会撞**第二层**：materialize 派生语句是非限定名
+
+- **证据**：U-56 让 `views_ready` 翻成 True 后，`tests/integration/test_semantic_materialization.py::TestPolicyAndConsistency` 的 3 条用例
+  从 skip 变执行，当场报 `UndefinedTable: relation "v_order_paid" does not exist`，断点在
+  `materialize.py:468` 执行 `REVOKE ALL ON "v_order_paid" FROM PUBLIC;`。
+  连接（`_RW`）没带 `search_path` → 非限定名解析不到 `app.v_order_paid`。**此前不是没有这个问题，是 skip 把它盖住了。**
+- **两个修法（归 W2A 裁量，W1B 不越权改 `app/semantics/**`）**：
+  - **推荐（根修）**：`derive_policy_statements()`（materialize.py:129-160 附近）把派生语句改成 schema 限定名
+    （`REVOKE ALL ON app."v_order_paid"` / `ALTER TABLE app.order_paid ...`）—— 调用侧从此不必依赖 search_path；
+  - 备选：约定所有 `materialize` 调用方（含 `tests/integration/test_semantic_materialization.py` 的 `_RW`、w2-int 的 e2e 脚本）
+    连接串必须带 `options=-c search_path=app,public` —— 但这是把同一前提散到每个调用点，漏一处就复现。
+- **给 W2-INT**：收口复跑六步发布前，请确认上述任一修复已落，否则 step② 会在同一位置再红。
+- **单测事实同步**：materialize 派生语句的形状若有变，`tests/unit/test_materialize_derivation.py` 需同步（W2A 名下）。
+
+### 8.3 附带说明
+
+- 迁移 0003 **不含** RLS/POLICY/GRANT（ADR-10：全部由 materialize 派生；迁移只提供派生的对象基础，且属主=app_rw）。
+  若 W2A 决定派生语句改限定名，0003 无需任何改动。
+- 本轮 W1B 的测试文件里，属主 DSN 一律**运行时拼接**（DoD④ 全仓重放的教训：修好配置文件，别在自己新加的测试里种回同一问题）。
