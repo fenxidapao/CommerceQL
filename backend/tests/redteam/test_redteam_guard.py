@@ -20,7 +20,6 @@ from typing import Any
 
 import pytest
 
-from app.core.enums import GateDecision
 from app.guard import ast_gate
 from app.guard.ast_gate import run_gate1
 from app.guard.policy_gate import run_gate2

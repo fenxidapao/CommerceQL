@@ -19,8 +19,9 @@ gate2 守"这次请求在当前策略快照下是否允许"（看策略快照 + 
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Final, Mapping
+from typing import TYPE_CHECKING, Any, Final
 
 import sqlglot
 from sqlglot import exp
@@ -215,7 +216,7 @@ def extract_columns_with_assets(
     cte_names = {c.alias for c in root.find_all(exp.CTE)}
     pairs: list[tuple[str, str]] = []
     for col in root.find_all(exp.Column):
-        resolved = auditor._resolve_column(col, cte_names)  # noqa: SLF001 - 同包复用
+        resolved = auditor._resolve_column(col, cte_names)
         if resolved is not None:
             (kind, logical, _cols), colname = resolved
             if kind == "asset":

@@ -17,7 +17,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Mapping
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 from app.core.contracts import GateResult, ScopeInfo
 from app.guard.ast_gate import Gate1Report, Gate1Warning, run_gate1

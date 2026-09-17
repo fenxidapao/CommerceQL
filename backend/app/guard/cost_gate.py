@@ -17,9 +17,10 @@ EXPLAIN 的**执行**归 `gate3_cost` 节点（W4，经只读连接、同事务�
 
 from __future__ import annotations
 
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Final, Mapping
+from typing import Any, Final
 
 from app.core.contracts import GateResult
 from app.core.enums import GateDecision, GateNo
@@ -53,7 +54,7 @@ class CostThresholds:
     max_plan_depth: int = 12  # 仅记录（告警），不拒绝
 
     @classmethod
-    def from_mapping(cls, thresholds: Mapping[str, Any]) -> "CostThresholds":
+    def from_mapping(cls, thresholds: Mapping[str, Any]) -> CostThresholds:
         """从配置映射构造（未给的键用默认值；键名即字段名；值做类型归一）。"""
 
         kwargs: dict[str, Any] = {}
@@ -195,7 +196,7 @@ def _top_plan(payload: Any) -> Mapping[str, Any] | None:
     return None
 
 
-def _walk_plan(node: Mapping[str, Any]) -> Mapping[str, Any]:
+def _walk_plan(node: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
     """深度优先遍历 Plans[]（07 §7.5 解析字段清单）。"""
 
     yield node

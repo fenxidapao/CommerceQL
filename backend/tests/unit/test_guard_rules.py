@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.enums import AST_RULE_SEVERITY, AstRule, AstRuleSeverity, ErrorCode
-from app.guard.rules import RULES, RULE_BY_ID
+from app.core.enums import AST_RULE_SEVERITY, AstRule, ErrorCode
+from app.guard.rules import RULE_BY_ID, RULES
 
 
 class TestRegistryCompleteness:
@@ -14,7 +14,7 @@ class TestRegistryCompleteness:
         assert set(RULES) == set(AstRule)
 
     def test_by_id_index_consistent(self) -> None:
-        for rule, rd in RULES.items():
+        for _rule, rd in RULES.items():
             assert RULE_BY_ID[rd.rule.value] is rd
 
     def test_severity_matches_enums_source(self) -> None:

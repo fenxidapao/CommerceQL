@@ -7,8 +7,6 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-import pytest
-
 from app.core.enums import GateDecision
 from app.guard.cost_gate import EXPLAIN_ERROR_DEGRADE_THRESHOLD, run_gate3
 

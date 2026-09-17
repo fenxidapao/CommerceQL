@@ -52,10 +52,11 @@ result = run_gate3(final_sql, {
 5. `gate_detail` 必须带 `rule_id`（C-02）——三个 gate 的 `GateResult.rule_id` 已填好，原样透传。
 6. 用户文案直接用 `GateResult.reason`（已做不泄露处理，红队逐条断言过）；**不要**把内部 detail 拼进用户响应。
 
-## 4. 契约缺口（U-62/U-63 提案，见 reports/w2c/RELAY.md §1；原号 U-54/55 与 W2A 撞号、U-59/60 与 W2B 候选撞号，均已让出）
+## 4. 契约缺口 —— **已裁决（07 v0.9 §4.8）**（原提案号 U-54/55 与 W2A 撞号、U-59/60 与 W2B 候选撞号，最终号 = U-62/63/64）
 
-- GuardPort 目前没有改写类出参的通道 → 阶段 4 请先按"直接调模块函数"实现；若架构窗口裁定扩端口，再切到端口。
-- gate3 的 EXPLAIN 执行（连接、事务、GUC、连续失败计数、降级标注）全部在你的节点层，guard 不持连接。
+- **U-62 裁定 (b)：扩 GuardPort**（W0 落笔 contracts.py，出参含 `rewritten_sql` / `limit_injected` / `applied_predicates` / warnings），**否决了 W4 直调模块函数**。过渡期（W0 未落笔前）你先直调 `run_gate1` / `run_gate2` 模块函数；W0 扩端口后切到端口——不要两条路径并存。
+- **U-63 裁定：确认 gate3_cost 节点跑 EXPLAIN 并传计划 JSON 为正式契约**，但**限定执行方式**：必须经 **W2D `exec` 的受控入口**（analytics 池 + 同事务 + 同身份 GUC + 只读，§7.5 三前提），**节点不得自建连接**；guard 保持纯函数。
+- **U-64 裁定与 W2C 实现一致**（LIMIT ALL=rewrite、SET 归因、R10/R11 分工、R14 列-常量放行、RT-LIM-003 维持 R07 拒绝），你无需改动 gate 行为；红队集 v2 微改重冻结归 W1A。
 
 ## 5. 验收锚点（你的 DoD 相关部分）
 

@@ -15,8 +15,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Final, Mapping
+from typing import Final
 
 from app.core.enums import AST_RULE_SEVERITY, AstRule, AstRuleSeverity, ErrorCode
 

@@ -67,7 +67,7 @@ _SELECT_LIKE: Final[tuple[type, ...]] = (exp.Select, exp.Union, exp.Intersect, e
 _FROM_KEY: Final[str] = "from_" if "from_" in exp.Select.arg_types else "from"
 _WITH_KEY: Final[str] = "with_" if "with_" in exp.Select.arg_types else "with"
 
-_COMPARISONS: Final[tuple[type, ...]] = (
+_COMPARISONS: Final[tuple[type[exp.Expr], ...]] = (
     exp.EQ, exp.NEQ, exp.GT, exp.GTE, exp.LT, exp.LTE,
 )
 
@@ -88,7 +88,7 @@ _BLOCK_COMMENT: Final[re.Pattern[str]] = re.compile(r"/\*.*?\*/", re.DOTALL)
 _LIMIT_ALL: Final[re.Pattern[str]] = re.compile(r"\bLIMIT\s+ALL\b", re.IGNORECASE)
 
 
-def _nearest_select(node: exp.Expression | None) -> exp.Select | None:
+def _nearest_select(node: exp.Expr | None) -> exp.Select | None:
     """向上找最近的 SELECT scope（不穿越 Select 边界）。"""
 
     p = node.parent if node is not None else None
@@ -97,7 +97,7 @@ def _nearest_select(node: exp.Expression | None) -> exp.Select | None:
     return p
 
 
-def _root_select_scopes(root: exp.Expression) -> list[exp.Select]:
+def _root_select_scopes(root: exp.Expr) -> list[exp.Select]:
     """根级输出 scope：Select 本身；集合查询（UNION/INTERSECT/EXCEPT）的每个分支。"""
 
     if isinstance(root, exp.Select):
@@ -108,7 +108,7 @@ def _root_select_scopes(root: exp.Expression) -> list[exp.Select]:
     return [inner] if inner is not None else []
 
 
-def _leaf_selects(root: exp.Expression) -> list[exp.Select]:
+def _leaf_selects(root: exp.Expr) -> list[exp.Select]:
     """集合查询树的全部叶子 SELECT（分支可嵌套集合操作）。"""
 
     if isinstance(root, (exp.Union, exp.Intersect, exp.Except)):
@@ -193,7 +193,7 @@ def strip_comments(sql: str) -> str:
         # 块注释
         if sql.startswith("/*", i):
             end = sql.find("*/", i + 2)
-            out.append(" " if end == -1 else " ")
+            out.append(" ")
             i = n if end == -1 else end + 2
             continue
         # 行注释
@@ -360,7 +360,7 @@ def run_gate1(sql: str, allowlist: Mapping[str, Any]) -> Gate1Report:
 # LIMIT 归一化（§7.3）
 # ---------------------------------------------------------------------------
 
-def _top_level_limit(root: exp.Expression) -> exp.Limit | None:
+def _top_level_limit(root: exp.Expr) -> exp.Limit | None:
     return root.args.get("limit") if hasattr(root, "args") else None
 
 
@@ -375,7 +375,7 @@ def _effective_limit(allowlist: Mapping[str, Any]) -> int:
 
 
 def _normalize_limit(
-    root: exp.Expression, effective: int
+    root: exp.Expr, effective: int
 ) -> Gate1Report | Mapping[str, Any] | None:
     """返回 ``None``（保留原 LIMIT）/ 注入说明 mapping / 拒绝 Gate1Report。"""
 
@@ -415,20 +415,21 @@ def _normalize_limit(
 # 默认谓词注入（AST 层）
 # ---------------------------------------------------------------------------
 
-def _parse_predicate(predicate_sql: str) -> exp.Expression | None:
+def _parse_predicate(predicate_sql: str) -> exp.Expr | None:
     try:
         node = sqlglot.parse_one(predicate_sql, dialect="postgres")
     except ParseError:
         return None
     if isinstance(node, exp.Select):
-        node = node.args.get("where")  # 谓词误写成完整查询时兜底取 where
-        if node is None:
+        where = node.args.get("where")  # 谓词误写成完整查询时兜底取 where
+        if where is None:
             return None
-        node = node.this
+        predicate = where.this
+        return predicate if isinstance(predicate, exp.Expr) else None
     return node
 
 
-def _predicate_constants(node: exp.Expression) -> frozenset[str]:
+def _predicate_constants(node: exp.Expr) -> frozenset[str]:
     """从谓词 AST 提取字面量常量（R14 白名单第②类来源）。"""
 
     vals: set[str] = set()
@@ -437,7 +438,7 @@ def _predicate_constants(node: exp.Expression) -> frozenset[str]:
     return frozenset(vals)
 
 
-def _inject_predicates(root: exp.Expression, allowlist: Mapping[str, Any]) -> list[str]:
+def _inject_predicates(root: exp.Expr, allowlist: Mapping[str, Any]) -> list[str]:
     """对查询内每个**物理表实例**注入其域的默认谓词，返回已注入谓词（审计可追溯）。"""
 
     pred_by_domain: Mapping[str, Sequence[str]] = allowlist.get("default_predicates") or {}
@@ -504,7 +505,7 @@ class _Auditor:
 
     # -- 主流程 --
 
-    def run(self, root: exp.Expression) -> Gate1Report | None:
+    def run(self, root: exp.Expr) -> Gate1Report | None:
         cte_names = {c.alias for c in root.find_all(exp.CTE)}
 
         # R12：递归 CTE（P0 直接拒绝）
@@ -649,7 +650,7 @@ class _Auditor:
 
     # -- R06/R07 --
 
-    def _check_columns(self, root: exp.Expression, cte_names: set[str]) -> Gate1Report | None:
+    def _check_columns(self, root: exp.Expr, cte_names: set[str]) -> Gate1Report | None:
         """全树列引用解析（07 §7.2：含 GROUP/ORDER/HAVING/窗口，全树遍历天然覆盖）。"""
 
         for col in root.find_all(exp.Column):
@@ -759,14 +760,14 @@ class _Auditor:
         return out
 
     def _cte_output_columns(self, scope: exp.Select, cte_name: str) -> frozenset[str] | None:
-        for cte in (scope.args.get(_WITH_KEY) or []).expressions:
+        for cte in scope.ctes:
             if cte.alias == cte_name:
-                return _projection_names(cte.this if not isinstance(cte.this, exp.Select) else cte.this)
+                return _projection_names(cte.this)
         return None
 
     # -- R09 --
 
-    def _called_functions(self, root: exp.Expression) -> set[str]:
+    def _called_functions(self, root: exp.Expr) -> set[str]:
         names: set[str] = set()
         for fn in root.find_all(exp.Func):
             rendered = fn.sql(dialect="postgres")
@@ -785,7 +786,7 @@ class _Auditor:
         exp.Like, exp.ILike, exp.Is, exp.In, exp.Between,
     )
 
-    def _check_literals(self, root: exp.Expression) -> Gate1Report | None:
+    def _check_literals(self, root: exp.Expr) -> Gate1Report | None:
         """R14 字面量策略 —— 按冻结红队集（RT-R14-* / RT-R17-*）可执行的口径：
 
         **拒绝**：① 字面量-字面量比较（``1 = 1`` / ``'x' = 'x'`` 恒真注入通道）；
@@ -814,11 +815,13 @@ class _Auditor:
             return self._sibling_has_column(lit)
         return False
 
-    def _sibling_has_column(self, lit: exp.Expression) -> bool:
+    def _sibling_has_column(self, lit: exp.Expr) -> bool:
         """比较/集合节点的**其他操作数**是否含列引用（含列侧嵌套表达式）。"""
 
         parent = lit.parent
-        operands: list[exp.Expression] = []
+        if parent is None:
+            return False
+        operands: list[exp.Expr | None] = []
         if isinstance(parent, exp.Between):
             operands = [parent.this, parent.args.get("low"), parent.args.get("high")]
         elif isinstance(parent, exp.In):
@@ -836,7 +839,7 @@ class _Auditor:
 
     # -- R17 --
 
-    def _warn_implicit_cast(self, root: exp.Expression) -> None:
+    def _warn_implicit_cast(self, root: exp.Expr) -> None:
         for cmp_ in root.find_all(*_COMPARISONS):
             left, right = cmp_.this, cmp_.expression
             col, lit = None, None
@@ -878,8 +881,8 @@ class _Auditor:
 
     # -- R19 --
 
-    def _max_select_depth(self, node: exp.Expression) -> int:
-        def walk(n: exp.Expression, depth: int) -> int:
+    def _max_select_depth(self, node: exp.Expr) -> int:
+        def walk(n: exp.Expr, depth: int) -> int:
             best = depth
             for child in n.iter_expressions():
                 nd = depth + (1 if isinstance(child, exp.Select) else 0)
@@ -891,7 +894,7 @@ class _Auditor:
 
 
 def _warn_unbounded_sort(
-    warnings: list[Gate1Warning], root: exp.Expression, had_top_level_limit: bool
+    warnings: list[Gate1Warning], root: exp.Expr, had_top_level_limit: bool
 ) -> None:
     """R18：原始 SQL 顶层有 ORDER BY 且无 LIMIT → 告警（成本交 gate3 判）。"""
 

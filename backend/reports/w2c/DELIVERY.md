@@ -64,3 +64,11 @@
 - 代码可独立合入（不依赖 W2A/W2B/W2D 产物；测试夹具自足）。
 - 下一阶段提示词：`reports/w2c/W4_PROMPT.md`（阶段 4 启动时交给 W4）。
 - 编号提案待架构窗口落 07 §4.8：U-62（GuardPort 出参通道）/ U-63（EXPLAIN 执行归属）/ U-64（口径冲突 6 条；原提案号 U-54/55/56 与 W2A 撞号、U-59/60/61 与 W2B 候选撞号，两次让号，见 RELAY §1）。
+
+## 7. 收口回执（2026-09-17，W2-INT 转达三项）
+
+- **ruff（本域 14 条）全部清零**：11 条 `--fix`（UP035/UP037/UP020/I001/F401），3 条手工（RUF034 ×2 = 两分支同值取常量、B007 = 循环变量改名 `_rule`、RUF100 = 删未启用 noqa）。行为零改动。
+- **mypy（guard 19+1 条）全部清零**：根因 = sqlglot 30.18 中 `exp.Expression` 是 `exp.Expr` 的兼容**子类**而解析器返回 `Expr` → 全部注解 `exp.Expression`→`exp.Expr`；`_walk_plan` 生成器返回注解 → `Iterator[Mapping]`；`_parse_predicate`/`_cte_output_columns`/`_sibling_has_column`/`_COMPARISONS` 四处窄化。行为零改动。`mypy app` = 79 files clean（余 1 条 `retrieval/tokenizer.py` jieba 缺 stub 属 W2B）。
+- **U-64 对照复核（07 v0.9 §4.8）**：①LIMIT ALL=rewrite ②SET→R01 / SET LOCAL search_path→R16 ③无条件连接→R10 / 认证边错配→R11 ④R14 列-常量放行交 R17 ⑤RT-LIM-003 维持 R07 拒绝——**五点全部与 W2C 实现一致，零改码**；红队集 v2 微改重冻结归 W1A（非本窗）。
+- **U-62/63 裁决落 W4_PROMPT.md §4**：U-62=(b) 扩 GuardPort（W0 落笔，过渡期直调模块函数）；U-63=EXPLAIN 须经 W2D exec 受控入口、节点不得自建连接。
+- 回归：W2C 范围 pytest **137 passed**；`mypy app` 79 files clean；guard 域 ruff All checks passed。

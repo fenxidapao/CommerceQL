@@ -22,9 +22,8 @@ REDTEAM_PATH = REPO_ROOT / "eval" / "red_team_cases_v1.json"
 
 
 def load_bundle_yaml() -> dict[str, Any]:
-    import io
 
-    return yaml.safe_load(io.open(BUNDLE_PATH, encoding="utf-8"))
+    return yaml.safe_load(open(BUNDLE_PATH, encoding="utf-8"))
 
 
 def build_allowlist(bundle: dict[str, Any] | None = None) -> dict[str, Any]:
