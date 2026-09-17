@@ -139,7 +139,7 @@ class TestMaterializeRows:
 
 class TestPolicyAndConsistency:
     def test_policy_execution_and_dod3_consistency(
-        self, loaded: Any, migrated: None, views_ready: bool
+        self, loaded: Any, migrated: None, views_ready: bool, rw_conn: Any
     ) -> None:
         if not views_ready:
             pytest.skip(
@@ -155,7 +155,7 @@ class TestPolicyAndConsistency:
         assert report.consistent, f"DoD③ 不一致：{report.mismatches}"
 
     def test_negative_injection_revoke_must_red(
-        self, loaded: Any, migrated: None, views_ready: bool
+        self, loaded: Any, migrated: None, views_ready: bool, rw_conn: Any
     ) -> None:
         """注入：把 v_product 的授权降成整表以外的错（直接 REVOKE 全部列授权）→ DoD③ 必红。
 
@@ -183,7 +183,7 @@ class TestPolicyAndConsistency:
         assert report2.consistent, f"还原后仍红：{report2.mismatches}"
 
     def test_negative_injection_base_table_grant_must_red(
-        self, loaded: Any, migrated: None, views_ready: bool
+        self, loaded: Any, migrated: None, views_ready: bool, rw_conn: Any
     ) -> None:
         """注入 2（U-55(a) 前提 2）：app_ro 对**基表**被授权 → 检查器必须红。
 

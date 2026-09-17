@@ -61,6 +61,12 @@ _GLOBAL_TENANT: Final[str] = "*"
 #: 发布者署名（版本注册表 `published_by`）。
 _PUBLISHED_BY: Final[str] = "w2a-materialize"
 
+#: 业务对象的 schema 名（0001/0002/0003 迁移与 `repo/health.py` 均用 `app`）。
+#: ⚠️ 目前无共享单一真相（`app/core/**` 未定义该常量）—— 本模块自持一份并把它用于
+#: **所有**派生语句的 schema 限定（2026-09-17 根修，见 `_qualify()`）。
+#: 已在 `reports/w2a/RELAY.md` §8 提请 W0 立共享常量；届时此处改指它，不新增第二份。
+_SCHEMA: Final[str] = "app"
+
 
 # ============================================================================
 # 内容指纹
@@ -109,6 +115,19 @@ def _base_table(physical_asset: str) -> str:
     return physical_asset[2:] if physical_asset.startswith("v_") else physical_asset
 
 
+def _qualify(object_name: str) -> str:
+    """业务对象名 → **schema 限定**名（`app."v_order_paid"`）。
+
+    ⚠️ **2026-09-17（W1B → W2A 转述 §8.2 的根修）**：派生语句原为**非限定名**
+    （`REVOKE ALL ON "v_order_paid"`），依赖连接的 `search_path` 才能解析到 `app`。
+    调用侧（集成测试的 `_RW`、运维脚本）不带 `search_path` → 直接 `UndefinedTable`
+    （层① 视图不存在被 U-56/迁移 0003 解除后，**这一层才暴露**——此前是 skip 盖住了）。
+    两处坏在同一个原因上：**非限定名 = 把"连上来的人恰好有对的 search_path"当默认前提**。
+    修法取根修而非约定调用侧（后者把同一前提散到每个调用点，漏一处就复现）。
+    """
+    return f"{_SCHEMA}.{_q_ident(object_name)}"
+
+
 def derive_policy_statements(loaded: LoadedBundle) -> PolicyStatementSet:
     """从语义包派生 CLS（GRANT SELECT(col)）与 RLS（CREATE POLICY）语句集。
 
@@ -116,6 +135,8 @@ def derive_policy_statements(loaded: LoadedBundle) -> PolicyStatementSet:
     + 语义包 `policies[].deny_columns` / `assets[].tenant_scoped` / `assets[].columns`。
     **任何一条语句都不能脱离本函数被手写** —— 这正是 ADR-10"双保险"里
     应用侧白名单与 DB 侧 GRANT 同源的机制。
+
+    ⚠️ 所有对象名**必须 schema 限定**（见 `_qualify()` 的注释）——单测有锁定断言。
     """
     revoke: list[str] = []
     grant: list[str] = []
@@ -126,7 +147,7 @@ def derive_policy_statements(loaded: LoadedBundle) -> PolicyStatementSet:
         cols = loaded.allowlist.get(asset.physical_asset)
         if cols is None:
             continue  # 整资产被 deny 清空（loader 已 WARN），不授任何列
-        quoted = _q_ident(asset.physical_asset)
+        quoted = _qualify(asset.physical_asset)
         revoke.append(f"REVOKE ALL ON {quoted} FROM PUBLIC;")
         # CLS：只授允许列（deny_columns 已被 loader 剔除）—— §13.3「只授允许列」。
         # ⚠️ 授在**视图**上（视图 = app_ro 唯一入口；基表对 app_ro 零 GRANT，U-55 前提 2）。
@@ -138,7 +159,7 @@ def derive_policy_statements(loaded: LoadedBundle) -> PolicyStatementSet:
             # RLS：模板 §13.3（v0.9）。目标 = **基表**（U-55 (a)：视图上建 RLS 会 42809）。
             # 缺省 GUC = 失败关闭（current_setting 第二参 true → NULL → 行全滤）；
             # `app.shop_ids` 空串 = 不限店铺（**不能用 NULL** —— NULL 会把所有行滤光）。
-            base = _q_ident(_base_table(asset.physical_asset))
+            base = _qualify(_base_table(asset.physical_asset))
             rls.append(f"ALTER TABLE {base} ENABLE ROW LEVEL SECURITY;")
             rls.append(f"ALTER TABLE {base} FORCE ROW LEVEL SECURITY;")
             if asset.has_column("shop_id"):

@@ -13,8 +13,10 @@ import pytest
 from app.semantics import load_bundle
 from app.semantics.materialize import (
     PolicyStatementSet,
+    _base_table,
     _build_docs,
     _q_ident,
+    _qualify,
     content_sha256,
     derive_policy_statements,
 )
@@ -44,6 +46,24 @@ class TestDerivedGrants:
         s1 = derive_policy_statements(loaded)  # type: ignore[arg-type]
         s2 = derive_policy_statements(loaded)  # type: ignore[arg-type]
         assert s1.all_statements() == s2.all_statements()
+
+    def test_all_statements_schema_qualified(self, stmts: PolicyStatementSet) -> None:
+        """**2026-09-17 根修锁定**：所有派生语句必须 schema 限定。
+
+        根因（W1B 转述 §8.2 实测）：非限定名 `REVOKE ALL ON "v_order_paid"` 依赖连接的
+        `search_path` 才能解析到 `app`；调用侧不带 → `UndefinedTable`（此前被 skip 盖住）。
+        锁定形态：① 任何语句不得出现 ` ON "`（裸对象名）；② 每条语句都必须含 `app.` 限定。
+        """
+        for s in stmts.all_statements():
+            assert ' ON "' not in s, f"出现非 schema 限定的对象名：{s}"
+            assert "app." in s, f"语句未使用 schema 限定名：{s}"
+
+    def test_qualify_and_base_table_mapping(self) -> None:
+        """`_qualify` 与 `_base_table` 的形态锁定（供策略/检查器/迁移三方对齐）。"""
+        assert _base_table("v_order_paid") == "order_paid"
+        assert _base_table("no_underscore_asset") == "no_underscore_asset"  # 非 v_ 原样
+        assert _qualify("v_order_paid") == 'app."v_order_paid"'
+        assert _qualify("order_paid") == 'app."order_paid"'
 
     def test_grant_only_allowlist_columns(self, stmts: PolicyStatementSet) -> None:
         g = next(s for s in stmts.grant_sql if "v_order_paid" in s)
@@ -84,7 +104,7 @@ class TestDerivedPolicies:
         """
         p = next(s for s in stmts.policy_sql if '"order_paid"' in s)
         assert "current_setting('app.tenant_id', true)" in p
-        assert 'ON "order_paid"' in p and "v_order_paid" not in p
+        assert 'ON app."order_paid"' in p and "v_order_paid" not in p
 
     def test_shop_ids_empty_string_semantics(self, stmts: PolicyStatementSet) -> None:
         """空串 = 不限店铺（不能用 NULL —— 经典 bug，§13.3 细节②）。"""
