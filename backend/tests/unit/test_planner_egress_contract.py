@@ -259,10 +259,15 @@ class TestPayloadSurvivesTheRealGateway:
         assert _SQL_PROBE in outcome.primary.sql_text
 
     @pytest.mark.asyncio
-    async def test_complex_task_hits_the_thinking_route(
+    async def test_complex_task_hits_the_flash_non_thinking_route_u67(
         self, runtime: SemanticBundleRuntime, clock: FrozenClock
     ) -> None:
-        """`gen_sql_complex` → strong 档 + **开思考**（PRD §12.2：唯一走思考的档）。"""
+        """`gen_sql_complex` → **flash 非思考**（07 v1.0 §10.2 U-67 = 方向 B）。
+
+        ⚠️ 本用例原断言 PRD §12.2 第 5 行（pro 思考）。U-67 已裁：实测 pro 97–138s > 45s
+        上限、pro 端到端从未生效 ⇒ L3+ 生效档 = flash 非思考（deviation 待上游认账）。
+        由 W3A 按裁定改写（原断言见 git 历史），请 W3B 复核。
+        """
         body = json.dumps(
             {
                 "candidates": [
@@ -296,8 +301,8 @@ class TestPayloadSurvivesTheRealGateway:
             _ctx(), normalized_question=_QUESTION, plan=plan, candidates=1, complex_query=True
         )
         wire = upstream.calls[0]
-        assert wire["model"] == "deepseek-v4-pro"
-        assert wire["thinking"] == {"type": "enabled"}
+        assert wire["model"] == "deepseek-flash"
+        assert wire["thinking"] == {"type": "disabled"}
 
     @pytest.mark.asyncio
     async def test_repair_payload_reaches_the_wire_without_the_failed_sql(

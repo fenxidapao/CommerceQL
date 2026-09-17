@@ -54,9 +54,10 @@ PRD §12.2 那张路由表**没有超时列** —— 全项目唯一的"每次�
 真实 deadline 一律由 `hard_timeout_s(model_key)` 给（§10.2）。§16.1 的分配值**只影响埋点**，
 不再影响任何一次调用的成败 —— 一致性由 `CallRecord.over_budget` 度量。
 
-⚠️ **仍需架构裁决**（本窗口不越界）：§16.1 的分配值已被真机证伪（实测 1.39–1.60s
-vs 分配 0.6–1.3s，全部超），且"超预算→推占位符"的执行责任现落在上层（W4 的 SSE），
-不在网关。两条都已写进 `RELAY.md §给架构`。
+✅ **架构已裁（07 v1.0 §4.9）**：① 07 §16.1 已重算为"名义分配 / W3A 实测"两栏（U-65/U-66，
+实测 5 task 全超旧分配的事实已入册），`gen_sql_complex` 补 **3.0s 经验值**分配；
+② **§16.2 占位符执行点 = W4**（U-66）—— 网关只负责 `over_budget` 观测，推占位是编排层的事；
+③ **L3+ 生效档 = flash 非思考（U-67 = 方向 B）**，本表已按裁定改回 —— 见 `GEN_SQL_COMPLEX` 条目。
 """
 
 from __future__ import annotations
@@ -114,7 +115,13 @@ class LlmTask(StrEnum):
     PLAN = "plan"
     #: SQL 生成 L0–L2（07 §16.1 行 7；PRD §12.2 第 4 行）
     GEN_SQL = "gen_sql"
-    #: SQL 生成 L3+ 复杂（PRD §12.2 第 5 行；**唯一走"思考"的档**）
+    #: SQL 生成 L3+ 复杂（PRD §12.2 第 5 行；07 v1.0 §10.2 U-67：**生效档 = flash 非思考**）。
+    #:
+    #: 🔴 U-67 = 方向 B：实测 pro 在真实 L3+ 上 97–138s、45s 必掐、pro 端到端**从未生效**
+    #: （= "慢 + 降级"最差组合），故把既成事实变成诚实契约。对 PRD §12.2 构成 **deviation，
+    #: 待上游认账**（07 已登记转达项）。若 P1（方向 C：pro 异步 + 计划占位）立项，
+    #: 本条目改回 `STRONG + thinking=True` 即可 —— `max_tokens` 标定已保留（见
+    #: `THINKING_HEADROOM_TOKENS`）。
     GEN_SQL_COMPLEX = "gen_sql_complex"
     #: 有界纠错（PRD §12.2 第 6 行）
     REPAIR = "repair"
@@ -145,6 +152,12 @@ MODEL_AUTO: Final[str] = "auto"
 #:
 #: ⚠️ **改了它并不能让 `gen_sql_complex` 变可用**：真实 L3+ 调用耗时 **97–138s**，
 #: 远超 07 §10.2 的 pro 上限 **45s** ⇒ 仍会在传输层被掐。见 `DELIVERY.md §13`。
+#:
+#: ✅ **U-67（07 v1.0 §10.2）后续**：L3+ 生效档已裁为 **flash 非思考**（方向 B）⇒
+#: 当前**没有任何路由**使用思考位，本常量暂时"无消费方"——但**刻意保留**（U-67 ②：
+#: "45s 与 max_tokens 标定保留"）：它是 P1（方向 C：pro 异步）重启 pro 思考的**前置条件**，
+#: 删掉它 = 将来重启时重新踩一次"稳定空 content"。守卫测试
+#: `TestThinkingBudgetIsCalibratedFromMeasurement` 把"重启时标定仍盖住实测"钉住。
 THINKING_HEADROOM_TOKENS: Final[int] = 8192
 
 #: 07 §10.2 的**单次调用超时**（传输层 deadline）—— **全项目唯一的硬上限**。
@@ -218,11 +231,19 @@ TASK_ROUTES: Final[dict[LlmTask, TaskRoute]] = {
         budget_source="07 §16.1 行7（gen_sql 1.3s）；PRD §12.2 第4行（L0–L2 flash 非思考）",
     ),
     LlmTask.GEN_SQL_COMPLEX: TaskRoute(
-        task=LlmTask.GEN_SQL_COMPLEX, model_key=ModelKey.STRONG, thinking=True,
+        task=LlmTask.GEN_SQL_COMPLEX,
+        # 🔴 U-67（07 v1.0 §10.2，方向 B）：L3+ 生效档 = **flash 非思考**。
+        # 实测 pro 97–138s > 45s 上限 ⇒ pro 端到端从未生效（白等 45s → 降级 flash，
+        # 50–60s/请求）；裁定把既成事实变成诚实契约。对 PRD §12.2 构成 deviation，待上游认账。
+        model_key=ModelKey.FAST, thinking=False,
         #: 1200 → 1536（2026-09-17 实测标定）：真机 content 实测 545–1223 token，
         #: 即**原值 1200 低于实测需求**（那一次 1223 > 1200），已验证合法 JSON 输出。
-        budget_s=None, temperature=0.0, output_tokens_hint=1536, json_output=True,
-        budget_source="PRD §12.2 第5行（L3+ v4-pro 思考）★ 07 §16.1 **无**该阶段分配（已在 DELIVERY 登记）",
+        #: ⚠️ 该实测是在 pro 思考档下量的；flash 非思考的输出分布待 E-3/首轮评测复校。
+        budget_s=3.0, temperature=0.0, output_tokens_hint=1536, json_output=True,
+        budget_source=(
+            "预算 = 07 v1.0 §16.1 表 6' 行（U-65：**3.0s 经验值**，按 gen_sql 实测 1.60s×2 估，首轮评测校准）；"
+            "生效档 = 07 v1.0 §10.2 U-67（flash 非思考；PRD §12.2 deviation 待上游认账）"
+        ),
     ),
     LlmTask.REPAIR: TaskRoute(
         task=LlmTask.REPAIR, model_key=ModelKey.FAST, thinking=False,

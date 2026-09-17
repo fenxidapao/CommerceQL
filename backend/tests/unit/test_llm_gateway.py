@@ -73,6 +73,7 @@ from app.llm.router import (
     TASK_ROUTES,
     LlmTask,
     ModelKey,
+    TaskRoute,
 )
 from tests.unit._llm_fake_upstream import FakeUpstream, json_error, json_ok
 
@@ -83,6 +84,23 @@ _MODEL_NAMES: dict[ModelKey, str] = {
     ModelKey.FAST: "deepseek-flash",
     ModelKey.STRONG: "deepseek-v4-pro",
 }
+
+
+def _strong_thinking_route() -> TaskRoute:
+    """U-67（07 v1.0 §10.2）后路由表**没有** STRONG/思考条目（L3+ = flash 非思考）。
+
+    需要"pro 档"语义的测试（降级链 / pro 饱和 / pro→flash 成本结算）用它把
+    `gen_sql_complex` **临时恢复**成 STRONG+thinking —— 钉住的是**机制**：
+    07 §10.2 的降级链与按实际模型结算仍是契约，P1（方向 C）重启 pro 时真实条目即此形态。
+    用法：`monkeypatch.setitem(TASK_ROUTES, LlmTask.GEN_SQL_COMPLEX, _strong_thinking_route())`。
+    """
+    from app.llm.router import LlmTask
+
+    return TaskRoute(
+        task=LlmTask.GEN_SQL_COMPLEX, model_key=ModelKey.STRONG, thinking=True,
+        budget_s=None, temperature=0.0, output_tokens_hint=1536, json_output=True,
+        budget_source="测试合成档（U-67 P1 前置形态，**非**路由表现状）",
+    )
 
 #: 固定"当前时刻"= 工作日高峰，让 `is_peak` 与计价都确定。
 _NOW = datetime(2026, 9, 17, 10, 30, tzinfo=BILLING_TZ)
@@ -358,7 +376,17 @@ class TestOutboundAttachment:
         assert "enable_thinking" not in body
         assert "chat_template_kwargs" not in body
 
-    async def test_thinking_on_only_when_the_route_asks_for_it(self) -> None:
+    async def test_thinking_on_only_when_the_route_asks_for_it(self, monkeypatch) -> None:
+        """思考位**机制**守卫：路由表说思考 → 出站体必须是上游唯一认的 `{"type":"enabled"}`。
+
+        U-67（07 v1.0 §10.2）后真实路由表**没有任何**思考档（L3+ = flash 非思考），
+        所以这里用合成档把机制钉住（P1 方向 C 重启 pro 时，真实条目即此形态）；
+        真实表的"全部非思考"由 `test_thinking_flag_follows_the_route_for_non_thinking_tasks`
+        与 router 侧 `test_no_task_thinks_u67` 钉住。
+        """
+        from app.llm.router import TASK_ROUTES, LlmTask
+
+        monkeypatch.setitem(TASK_ROUTES, LlmTask.GEN_SQL_COMPLEX, _strong_thinking_route())
         up = FakeUpstream()
         gw, *_ = _gw(up)
         try:
@@ -367,8 +395,13 @@ class TestOutboundAttachment:
             await gw.aclose()
         assert up.calls[0]["thinking"] == {"type": "enabled"}
 
-    async def test_max_tokens_leaves_reasoning_headroom_on_thinking_routes(self) -> None:
+    async def test_max_tokens_leaves_reasoning_headroom_on_thinking_routes(
+        self, monkeypatch
+    ) -> None:
+        """思考档的 `max_tokens` = hint + 标定余量（机制守卫，合成档 —— 见上一条说明）。"""
         from app.llm.router import TASK_ROUTES, THINKING_HEADROOM_TOKENS, LlmTask
+
+        monkeypatch.setitem(TASK_ROUTES, LlmTask.GEN_SQL_COMPLEX, _strong_thinking_route())
 
         up = FakeUpstream()
         gw, *_ = _gw(up)
@@ -376,8 +409,22 @@ class TestOutboundAttachment:
             await gw.call("gen_sql_complex", _payload())
         finally:
             await gw.aclose()
-        hint = TASK_ROUTES[LlmTask.GEN_SQL_COMPLEX].output_tokens_hint
-        assert up.calls[0]["max_tokens"] == hint + THINKING_HEADROOM_TOKENS
+        assert up.calls[0]["max_tokens"] == 1536 + THINKING_HEADROOM_TOKENS
+
+    async def test_max_tokens_on_l3_adds_no_headroom_u67(self) -> None:
+        """U-67 正向：L3+ 生效档 = flash **非思考** ⇒ `max_tokens` = hint，**不**加思考余量。
+
+        （余量是给 reasoning 的；非思考档白加上限 = 成本口径污染，router 侧也有反向对照。）
+        """
+        from app.llm.router import TASK_ROUTES, LlmTask
+
+        up = FakeUpstream()
+        gw, *_ = _gw(up)
+        try:
+            await gw.call("gen_sql_complex", _payload())
+        finally:
+            await gw.aclose()
+        assert up.calls[0]["max_tokens"] == TASK_ROUTES[LlmTask.GEN_SQL_COMPLEX].output_tokens_hint
 
     async def test_temperature_and_json_output_travel_as_configured(self) -> None:
         up = FakeUpstream()
@@ -515,9 +562,19 @@ class TestNothingIsSentOnContractViolations:
 # ============================================================================
 
 class TestDegradeToWeakModel:
-    async def test_strong_failure_switches_to_flash_and_forces_thinking_off(self) -> None:
+    async def test_strong_failure_switches_to_flash_and_forces_thinking_off(
+        self, monkeypatch
+    ) -> None:
         """链上第二档写的是 **flash（非思考）** —— 换成 flash 却留着思考，
-        既拿不到质量也拿不到速度（思考的钱照付）。"""
+        既拿不到质量也拿不到速度（思考的钱照付）。
+
+        U-67 后真实路由表没有 STRONG 档（L3+ = flash 非思考）⇒ 用合成档恢复
+        pro+thinking 形态来钉住**降级链机制**（07 §10.2 的链仍是契约；P1 方向 C
+        重启 pro 时真实条目即此形态）。
+        """
+        from app.llm.router import TASK_ROUTES, LlmTask
+
+        monkeypatch.setitem(TASK_ROUTES, LlmTask.GEN_SQL_COMPLEX, _strong_thinking_route())
         up = FakeUpstream(
             lambda i, r: json_ok(content="")
             if i == 0
@@ -542,9 +599,17 @@ class TestDegradeToWeakModel:
         assert events[0].task == "gen_sql_complex"
         assert records[0].degraded is True, "降级后成功也必须被标记（N-21 不得静默降级）"
 
-    async def test_degraded_event_fields_use_the_sse_vocabulary(self) -> None:
+    async def test_degraded_event_fields_use_the_sse_vocabulary(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """`reason` / `action_taken` 必须是**契约枚举**（StrEnum）——
-        W4 要原样把它们塞进 SSE，自造字符串会在前端静默失配。"""
+        W4 要原样把它们塞进 SSE，自造字符串会在前端静默失配。
+
+        （需要一次真实的 pro→flash 降级来产生事件 ⇒ 合成档恢复 STRONG，见 helper 说明。）
+        """
+        from app.llm.router import TASK_ROUTES, LlmTask
+
+        monkeypatch.setitem(TASK_ROUTES, LlmTask.GEN_SQL_COMPLEX, _strong_thinking_route())
         up = FakeUpstream(lambda i, r: json_ok(content="") if i == 0 else json_ok(content="{}"))
         gw, _, events, _ = _gw(up)
         try:
@@ -564,7 +629,12 @@ class TestDegradeToWeakModel:
         能做的实物动作是"换到并发位更多的 flash"（8 位 vs 2 位，pro 饱和时几乎必然可用）。
         所以取 `action_taken=reduced_candidates` 的同时，detail 必须**明写 `advisory=True`**，
         否则这个字段就是在冒充一个已完成的动作。
+
+        （pro 饱和 = STRONG 档语义 ⇒ 合成档恢复，见 helper 说明。）
         """
+        from app.llm.router import TASK_ROUTES, LlmTask
+
+        monkeypatch.setitem(TASK_ROUTES, LlmTask.GEN_SQL_COMPLEX, _strong_thinking_route())
         monkeypatch.setattr("app.llm.client.SEMAPHORE_WAIT_TIMEOUT_S", 0.01)
 
         async def responder(i: int, r: Any) -> Any:
@@ -789,10 +859,17 @@ class TestAccountingAndObservability:
         assert records[0].degraded is False
         assert records[0].is_peak is True  # `now_fn` 固定在工作日高峰
 
-    async def test_cost_settled_after_degradation_uses_the_model_that_actually_ran(self) -> None:
+    async def test_cost_settled_after_degradation_uses_the_model_that_actually_ran(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """降级后结算的必须是**真正跑了的那个模型**的价，不是原路由档的价 ——
         否则成本账会按 pro 计价，而实际只调了 flash（高估 3 倍以上）。
+
+        （需要一次真实的 pro→flash 降级 ⇒ 合成档恢复 STRONG，见 helper 说明。）
         """
+        from app.llm.router import TASK_ROUTES, LlmTask
+
+        monkeypatch.setitem(TASK_ROUTES, LlmTask.GEN_SQL_COMPLEX, _strong_thinking_route())
         up = FakeUpstream(lambda i, r: json_ok(content="") if i == 0 else json_ok(content="{}"))
         gw, ledger, _, records = _gw(up)
         try:
@@ -900,7 +977,13 @@ class TestRouteRouterIntegration:
     async def test_thinking_flag_follows_the_route_for_non_thinking_tasks(self) -> None:
         from app.llm.router import TASK_ROUTES, LlmTask
 
-        for task in (LlmTask.GEN_SQL, LlmTask.PLAN, LlmTask.PRESENT, LlmTask.REPAIR):
+        for task in (
+            LlmTask.GEN_SQL_COMPLEX,  # U-67 后 = flash 非思考，归入本组
+            LlmTask.GEN_SQL,
+            LlmTask.PLAN,
+            LlmTask.PRESENT,
+            LlmTask.REPAIR,
+        ):
             up = FakeUpstream()
             gw, *_ = _gw(up)
             try:

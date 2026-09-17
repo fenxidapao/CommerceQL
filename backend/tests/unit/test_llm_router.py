@@ -28,6 +28,7 @@ from app.llm.router import (
     THINKING_HEADROOM_TOKENS,
     LlmTask,
     ModelKey,
+    TaskRoute,
     degrade_target,
     hard_timeout_s,
     max_tokens_for,
@@ -41,6 +42,20 @@ _MODEL_NAMES: dict[ModelKey, str] = {
     ModelKey.FAST: "test-flash",
     ModelKey.STRONG: "test-pro",
 }
+
+
+def _strong_thinking_route() -> TaskRoute:
+    """U-67 后路由表里**不再有** STRONG/思考条目 —— 需要"高档"语义的测试用这个合成档。
+
+    它**不是**对路由表现状的断言对象，而是降级链 / 模型覆盖 / 思考余量这几个**机制**的
+    载具（07 §10.2 的降级链 `pro → flash → 模板` 仍是契约；P1 方向 C 重启 pro 时，
+    真实条目就会长这样 —— U-67 ②：45s 与 max_tokens 标定保留）。
+    """
+    return TaskRoute(
+        task=LlmTask.GEN_SQL_COMPLEX, model_key=ModelKey.STRONG, thinking=True,
+        budget_s=None, temperature=0.0, output_tokens_hint=1536, json_output=True,
+        budget_source="测试合成档（U-67 P1 前置形态，**非**路由表现状）",
+    )
 
 
 class TestRouteTableCompleteness:
@@ -73,6 +88,7 @@ class TestUpstreamValuesAreCopiedVerbatim:
         LlmTask.RERANK: 0.8,             # §16.1 行4「精筛」
         LlmTask.PLAN: 1.0,               # §16.1 行5
         LlmTask.GEN_SQL: 1.3,            # §16.1 行7
+        LlmTask.GEN_SQL_COMPLEX: 3.0,    # §16.1 表6' 行（v1.0 U-65 补：**经验值**，首轮评测校准）
         LlmTask.PRESENT: 1.5,            # §16.1 行13
         LlmTask.L4_SCORE: 0.8,           # §6.8.2「0.3–0.8s」的上界
     }
@@ -81,28 +97,44 @@ class TestUpstreamValuesAreCopiedVerbatim:
     def test_documented_budgets_are_copied(self, task: LlmTask, expected: float) -> None:
         assert TASK_ROUTES[task].budget_s == pytest.approx(expected), task.value
 
-    @pytest.mark.parametrize("task", [LlmTask.GEN_SQL_COMPLEX, LlmTask.REPAIR])
+    @pytest.mark.parametrize("task", [LlmTask.REPAIR])
     def test_tasks_without_a_documented_budget_declare_None(self, task: LlmTask) -> None:
-        """🔴 **07 在这两个 task 上没给阶段预算** —— 唯一合法的表达是 `None`。
+        """🔴 **07 在这个 task 上没给阶段预算** —— 唯一合法的表达是 `None`。
 
-        防的是"必须给值但文档没给 ⇒ 实现者发明一个数字"。07 里找不到这两个任务的
+        防的是"必须给值但文档没给 ⇒ 实现者发明一个数字"。07 里找不到该任务的
         延迟预算，所以填任何秒数都是**编造**；`None` 让"我们不知道"这件事留在代码里。
+        （`gen_sql_complex` 的 3.0s 已由 v1.0 U-65 补进 §16.1 表 6' —— 显式标了"经验值"，
+        那是架构的编号裁决，不是实现者发明的。）
         """
         assert TASK_ROUTES[task].budget_s is None, task.value
 
-    def test_only_the_complex_sql_task_uses_the_strong_model(self) -> None:
-        """PRD §12.2：只有 L3+ 的 `gen_sql_complex` 走高档；其余一律 flash。"""
+    def test_no_task_uses_the_strong_model_u67(self) -> None:
+        """U-67（07 v1.0 §10.2，方向 B）：L3+ 生效档 = **flash 非思考** ⇒ 表里**没有任何** STRONG。
+
+        实测 pro 在真实 L3+ 上 97–138s > 45s 上限，pro 端到端从未生效（白等 45s → 降级
+        flash）—— 裁定把既成事实变成诚实契约。对 PRD §12.2 构成 deviation，**待上游认账**。
+        若 P1（方向 C）立项重启 pro，本条与下一条会一起红 —— 那是有意设计：改契约必须
+        连测试一起改，不许"顺手把思考位打开"。
+        """
         strong = {t for t, r in TASK_ROUTES.items() if r.model_key is ModelKey.STRONG}
-        assert strong == {LlmTask.GEN_SQL_COMPLEX}
+        assert strong == set()
 
-    def test_only_the_complex_sql_task_thinks(self) -> None:
-        """PRD §12.2 的"模式"列：**唯一**走"思考"的档是 L3+。
+    def test_no_task_thinks_u67(self) -> None:
+        """U-67 的另一半：生效档 = flash **非思考** ⇒ 表里**没有任何**思考位。
 
-        ⚠️ 这条不只是性能约束 —— 实测（2026-09-17）思考会吃掉 `max_tokens` 并让
-        `content` 变空。思考位一旦被顺手打开，症状是"稳定空答案"，不是"慢一点"。
+        ⚠️ 实测（2026-09-17）思考会吃掉 `max_tokens` 并让 `content` 变空（HTTP 200）——
+        思考位一旦被顺手打开，症状是"稳定空答案"，不是"慢一点"。标定余量仍保留
+        （`THINKING_HEADROOM_TOKENS`，P1 重启 pro 的前置），但路由表不再使用它。
         """
         thinking = {t for t, r in TASK_ROUTES.items() if r.thinking}
-        assert thinking == {LlmTask.GEN_SQL_COMPLEX}
+        assert thinking == set()
+
+    def test_l3_effective_tier_is_flash_non_thinking(self) -> None:
+        """U-67 的**正向**断言（防"两条集合断言被同时删掉"的空转）：L3+ 明确 = FAST + 非思考。"""
+        route = TASK_ROUTES[LlmTask.GEN_SQL_COMPLEX]
+        assert route.model_key is ModelKey.FAST
+        assert route.thinking is False
+        assert route.budget_s == pytest.approx(3.0)  # U-65 经验值
 
     def test_temperature_is_zero_everywhere(self) -> None:
         """PRD §12.9 约束 1 明确要求 L4 打分器温度 0；其余取 0 保评测可复现。
@@ -152,12 +184,12 @@ class TestResolveModelName:
     def test_auto_follows_the_route(self) -> None:
         fast_route = TASK_ROUTES[LlmTask.PLAN]
         assert resolve_model_name(fast_route, MODEL_AUTO, _MODEL_NAMES) == "test-flash"
-        strong_route = TASK_ROUTES[LlmTask.GEN_SQL_COMPLEX]
+        strong_route = _strong_thinking_route()
         assert resolve_model_name(strong_route, MODEL_AUTO, _MODEL_NAMES) == "test-pro"
 
     def test_explicit_model_overrides_the_route(self) -> None:
-        """逃生门：W3B 可能需要强制走快档（例如已知语义包很小）。"""
-        route = TASK_ROUTES[LlmTask.GEN_SQL_COMPLEX]
+        """逃生门：调用方可能需要强制换档（例如已知语义包很小）—— 跨档覆盖必须生效。"""
+        route = _strong_thinking_route()
         assert resolve_model_name(route, "test-flash", _MODEL_NAMES) == "test-flash"
 
     def test_unknown_model_fails_fast(self) -> None:
@@ -177,8 +209,7 @@ class TestDegradeChain:
     """07 §10.2：`v4-pro(思考) → flash(非思考) → 模板 → 拒答`（本函数只表达模型段）。"""
 
     def test_strong_degrades_to_fast(self) -> None:
-        route = TASK_ROUTES[LlmTask.GEN_SQL_COMPLEX]
-        assert degrade_target(route, ModelKey.STRONG) is ModelKey.FAST
+        assert degrade_target(_strong_thinking_route(), ModelKey.STRONG) is ModelKey.FAST
 
     def test_fast_has_no_model_target_so_it_goes_to_template(self) -> None:
         """`None` 的语义是"该进模板层了"，不是"降级失败"。"""
@@ -221,7 +252,7 @@ class TestTimeoutIsTheModelTierNotTheBudget:
                 continue
             checked += 1
             assert route.budget_s != hard_timeout_s(route.model_key), task.value
-        assert checked == 8, f"应检查 8 个有阶段预算的 task，实际 {checked} 个"
+        assert checked == 9, f"应检查 9 个有阶段预算的 task（8 个原 §16.1 + U-65 的 3.0s），实际 {checked} 个"
 
     #: 2026-09-17 真机实测的延迟中位（秒）—— **只含量过的 task**。
     #: 未实测（`present` / `rerank` / `l4_score`）刻意不在此表里：对没量过的值作延迟断言
@@ -249,8 +280,11 @@ class TestTimeoutIsTheModelTierNotTheBudget:
         assert budget < measured, f"{task.value}: 预算 {budget}s 未低于实测 {measured}s"
 
     def test_thinking_route_gets_reasoning_headroom(self) -> None:
-        """🔴 实测：思考档不预留余量 → `max_tokens` 被 reasoning 吃光 → `content=''`（HTTP 200）。"""
-        route = TASK_ROUTES[LlmTask.GEN_SQL_COMPLEX]
+        """🔴 实测：思考档不预留余量 → `max_tokens` 被 reasoning 吃光 → `content=''`（HTTP 200）。
+
+        U-67 后真实路由表无思考档 —— 用合成档钉住**机制**（P1 重启 pro 时真实条目即此形态）。
+        """
+        route = _strong_thinking_route()
         assert max_tokens_for(route) == route.output_tokens_hint + THINKING_HEADROOM_TOKENS
 
     def test_non_thinking_routes_get_no_headroom(self) -> None:
@@ -269,7 +303,7 @@ class TestTimeoutIsTheModelTierNotTheBudget:
 
 
 class TestThinkingBudgetIsCalibratedFromMeasurement:
-    """思考档的 `max_tokens` 已由真机实测标定 —— 本组把标定依据钉住。
+    """思考档的 `max_tokens` 标定 —— U-67 后路由表**不再使用**思考位，但标定**刻意保留**。
 
     实测（2026-09-17，真 key，`gen_sql_complex` 真实资产，n=3）：
 
@@ -278,8 +312,13 @@ class TestThinkingBudgetIsCalibratedFromMeasurement:
     | 3248（旧值） | `length` ×3 | **空** ×3 | 3248 ×3（全被思考吃光） |
     | 16384 | `stop` ×3 | ✅ 合法 JSON ×3 | 4900 / 5619 / **6719** |
 
-    旧余量 2048 差 3.3 倍 ⇒ `gen_sql_complex` 稳定返回空 content（空 content 又会触发
-    降级到 flash，即"用户拿不到 pro 档质量"）。下面三条把"余量必须盖住实测"钉死。
+    旧余量 2048 差 3.3 倍 ⇒ pro 思考档稳定返回空 content（空 content 又会触发
+    降级到 flash，即"用户拿不到 pro 档质量"）。
+
+    U-67（07 v1.0 §10.2）裁定：L3+ 生效档 = flash 非思考（方向 B），但 **"45s 与
+    max_tokens 标定保留"（② 明文）** —— 它们是 P1（方向 C：pro 异步生成）重启 pro 的
+    前置条件。本组的存在意义就是：**将来有人把思考位打开时，旧标定必须还在、且仍盖住实测**，
+    而不是被当成"没人用的死配置"清掉后重新踩一遍空 content。
     """
 
     #: 实测上界（token）。改这些数字前请先重跑真机标定，别对着文档改代码。
@@ -297,10 +336,18 @@ class TestThinkingBudgetIsCalibratedFromMeasurement:
             "输出提示低于实测 content 上界 —— 合法 JSON 会被截断"
         )
 
-    def test_total_max_tokens_covers_the_measured_worst_case(self) -> None:
-        """`max_tokens` 必须盖住"思考 + 内容"的实测最坏总计（7672 = 6719 + 953 的那次是 7672）。"""
+    def test_if_pro_thinking_is_reenabled_the_budget_still_covers_the_measured_worst_case(
+        self,
+    ) -> None:
+        """P1 前置守卫：**重启 pro 思考时**（条目改回 STRONG+thinking），合成 `max_tokens`
+        （hint + 余量）必须盖住"思考 + 内容"的实测最坏总计（9728 > 7672）。
+
+        刻意**不**读 `max_tokens_for(TASK_ROUTES[...])`（那是 flash 非思考，无余量），
+        而用"当前 hint + 当前余量"的合成式 —— 表达的就是 U-67 ②"标定保留"这件事。
+        """
         route = TASK_ROUTES[LlmTask.GEN_SQL_COMPLEX]
-        assert max_tokens_for(route) > self._MEASURED_MAX_REASONING + self._MEASURED_MAX_CONTENT
+        future_pro_max_tokens = route.output_tokens_hint + THINKING_HEADROOM_TOKENS
+        assert future_pro_max_tokens > self._MEASURED_MAX_REASONING + self._MEASURED_MAX_CONTENT
 
     def test_headroom_is_not_absurdly_large(self) -> None:
         """反向对照：余量也不能无限大 —— 它是**上限**，过大意味着失控的思考不会被截断。
