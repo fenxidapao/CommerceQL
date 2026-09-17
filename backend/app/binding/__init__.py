@@ -48,10 +48,10 @@ finally:
 `binding_state` / `binding_layer` 两个标签已在 `obs.metrics.BOUNDED_ALLOWED_LABELS` 登记（各 4 值）；
 `BindingEvent.reason` / 概念名**只进日志，不进标签**（无界基数）。
 
-🔴 **但标签只是"允许用"——指标本体还没有**：`obs/metrics.py` 里**没有任何 Counter 构造**
-（实测 `grep -n "Counter" app/obs/metrics.py` 零命中，只有 `binding_tau_calibrated` 这一个 gauge）。
-而 07 §15.3 明确要求两个 Counter：`binding_state` 分布（`state`=4）与 `binding_layer` 分布（`layer`=4）。
-⇒ 你的适配器要么自行登记这两个 Counter，要么向 W0 提需求。**本窗口不越界改 `app/obs/**`。**
+✅ **指标本体已由 W0 落**（`1c24f14`，回应本窗口 RELAY 的提需）：
+`obs.metrics.observe_binding_state(event.state)` / `observe_binding_layer(event.layer)`
+（`binding_state_total` / `binding_layer_total`，值集直接从 `core.enums` 推导、线程安全）。
+你的适配器把 `BindingEvent` 的这两个字段喂进去即可 —— **不要再自行登记同名 Counter**（会变第二真相）。
 
 **4. L4 的两条路，选一条（D1(a) 双入口）**
 

@@ -43,7 +43,7 @@
 
 | # | DoD 原文 | 状态 | 证据 / 缺口 |
 |---|---|---|---|
-| ① | **四层判定四态可观测**（`binding_state` + `binding_layer` 双双落库） | 🔴 **部分达成（落库被表结构阻塞）** | **达成的一半**：每次判定恒产出 `(state, layer)` 二元组（`LayerDecision` 无默认值，两字段必填）；观测出口 `BindingEvent` 同携 `state/layer/reason/attribution/scope_was_set/tau_is_calibrated/ignored_candidates/bundle_version`；标签已在 `obs.metrics.BOUNDED_ALLOWED_LABELS` 登记 `binding_state`=4 / `binding_layer`=4；`python -m app.core.enums` 自检输出实证两者基数 = 4。<br>**未达成的一半**：🔴 **`query_plan` 表在迁移 `0001`–`0003` 中根本不存在**（`grep -rn "query_plan" app/repo/migrations/` 零命中），**也没有任何 `binding_state` / `binding_layer` 列**（`grep` 零命中）——而 07 §12.3 第 2292 行规定落点是 `query_plan.binding_state`、第 1540 行规定 `binding_layer` 同源落库。<br>⇒ **这不是"接线就能好"，是缺表结构**。需 W1B 建表 + W4 写入；本窗口**不越界建迁移**（见 RELAY §给 W1B） |
+| ① | **四层判定四态可观测**（`binding_state` + `binding_layer` 双双落库） | 🟡 **部分达成（表结构阻塞已解除，差 W4 写入）** | **达成的一半**：每次判定恒产出 `(state, layer)` 二元组（`LayerDecision` 无默认值，两字段必填）；观测出口 `BindingEvent` 同携 `state/layer/reason/attribution/scope_was_set/tau_is_calibrated/ignored_candidates/bundle_version`；计量端已由 W0 落（`observe_binding_state/layer`，见 §10 回执②）。<br>**未达成的一半**：写入 `query_plan` 是 **W4 的接线动作**。✅ **表结构阻塞已解除**（本窗口交付后 W1B 落迁移 0004，见 §10 回执①）：<br>`app.query_plan` = `task_id`(PK) / `plan_json` / `plan_summary` / `bundle_version` / **`binding_state` text NOT NULL CHECK(四态)** / **`binding_layer` text CHECK(L1–L4)** / `confidence`，取值集与 `core.enums` **逐字一致**且有离线契约单测钉住（`test_migration_0004_runtime_contract.py`）。本窗口实测复跑：枚举 `.value` 与快照逐字比对通过 |
 | ② | **L4 fail-safe**：解析失败 / 分差落在 τ 邻域 → 必判 `ambiguous`（N-27） | ✅ | `four_layer._level4` 四条路径全部偏 `ambiguous`：候选数<2 / `l4.ok=False`（解析失败）/ 覆盖不全 / 分差落邻域或低于下界。测试含**负向对照**（见 §5）。**例外已裁并具名**：上游故障（`LlmRefused`/`LlmUpstreamError`）**原样上抛**，不转 `ambiguous`（D6） |
 | ③ | τ/ε 校准脚手架（含 **E-5**：n ≥ 3 排名一致性 + 分差 std） | ✅ | `calibration.assess_stability`：`n ≥ 3` 硬校验（构造期即拒）+ Kendall τ-b（自实现，含并列修正）+ 分差样本 std；判据严格按原文 = `max(gap_std) ≥ 0.05` 即 `UNSTABLE` → **禁止定稿** + 升级方案 A 动作项。`calibrate()` 串完六步 |
 | ④ | `RerankScore` 类型**不接受裸 `float`** | ✅ | `scores.require_rerank_scores` 对非 `RerankScore` 入参抛 `BindingScoreMisuse`；单测逐条对照 |
@@ -171,9 +171,9 @@ W3A 交付时该文件是"6 skip"（当时 PG 在跑、只是无 DDL 权限）�
 
 | # | 限制 | 影响 | 何时解除 |
 |---|---|---|---|
-| L1 | 🔴 **DoD① 的"双双落库"不成立** | 澄清率异常时**无法按 07 §6.8.3 的诊断表定位是哪一层失效** | W1B 建 `query_plan` 表（含 `binding_state`/`binding_layer` 列）+ W4 写入。**注意：迁移 0001–0003 里 `query_plan` 表本身都不存在** |
+| L1 | 🟡 **DoD① 的"双双落库"差最后一步（W4 写入）** | 表结构阻塞**已解除**（W1B 迁移 0004 建了 `app.query_plan`，含 `binding_state` NOT NULL CHECK / `binding_layer` CHECK，取值集与 enums 逐字一致 + 离线契约单测钉住）。澄清率异常时**仍无法定位哪层失效**，直到 W4 把 `(state, layer)` 写进该表 | W4 接线（写入动作）。一个观察留给 W1B/W4：`binding_layer` 可空而 `binding_state` NOT NULL —— 本层**恒产出** `(state, layer)`（`unresolved` 时 `layer=L1`），W4 写库时恒有值，可空性不影响正确性 |
 | L2 | **注入路径的 τ 身份校验恒通过** | `CandidateRef` 只有 `{asset_id, score, layer}`，**没有打分器标识** → `model_id`/`prompt_version` 只能取 τ 自己那组。走注入路径的调用方（评测夹具/离线回溯）**必须自己保证**分数来源与 τ 所绑一致 | W0 给 `CandidateRef` 补标识（建议 `RerankScore` 直接进候选，或加 `scorer_id`）。在线路径（`score_l4`）**是真校验**（标识取自 `LLMResponse`） |
-| L3 | **观测出口没有实现，且指标本体也不存在** | ① 默认 `NullBindingObserver` 什么都不做（`__slots__=()`）→ 不接线时 **N-27 约束⑤ 的指标面是缺的**；刻意不做"默认写日志"：那会让每条判定路径依赖日志配置可用性。<br>② 更前一步：**`obs/metrics.py` 里没有任何 Counter 构造**（实测 `grep -n "Counter" app/obs/metrics.py` **零命中**；该文件只有 `binding_tau_calibrated` 一个 gauge + 允许表），而 **07 §15.3（第 2784–2785 行）要求两个 Counter**：`binding_state` 分布（`state`=4）与 `binding_layer` 分布（`layer`=4）。`BOUNDED_ALLOWED_LABELS` 登记只表示"**允许用**这个标签" | W0 补两个 Counter + W4 实现 `BindingObserver` 适配器（`service.observer` 属性就是为"查到底接的是真适配器还是空实现"而暴露的） |
+| L3 | **观测出口没有实现**（指标本体已由 W0 落，见 §10 回执②） | 默认 `NullBindingObserver` 什么都不做（`__slots__=()`）→ 不接线时 **N-27 约束⑤ 的指标面是缺的**；刻意不做"默认写日志"：那会让每条判定路径依赖日志配置可用性 | W4 实现 `BindingObserver` 适配器（`service.observer` 属性就是为"查到底接的是真适配器还是空实现"而暴露的），在 `on_binding` 里调 `obs.metrics.observe_binding_state(event.state)` / `observe_binding_layer(event.layer)` —— **别再自行登记同名 Counter**（会变第二真相） |
 | L4 | 🔴 **L4 从未接过真实 LLM** | 全部 33 条 `l4` 单测用 `httpx.MockTransport` 固定响应（离线纪律）。⇒ **真实模型的分数量纲是否让 τ=0.20 成立、E-5 稳定性是否过关，均未实测** | **首次真跑打分器后**（W3-INT / W6）。在此之前 `is_finalizable` 必为 `False`，**τ 不得定稿** —— 这正是该校验存在的意义 |
 | L5 | 校准的 `accuracy_target` 无上游数值 | §C.4.6 步骤 3 只说"满足绑定准确率目标"、**没给数值** → 本窗口做成**必填参数**（编一个默认值 = 逼人相信它） | 由业务/架构给口径 |
 | L6 | `layer_distribution` 只能由调用方带入 | 本模块离线且只吃分数，**无法自行得出** → 留 `None` 而非编一份 | W4 的观测/审计提供 |
@@ -231,3 +231,25 @@ cd CommerceQL/backend        # ⚠️ ruff/mypy 必须在 backend/ 下跑，在�
 |---|---|
 | `feat(w3c)` | `app/binding/**` 10 模块 + `tests/unit/test_binding_*.py` 7 文件 |
 | `docs(w3c)` | `reports/w3c/{PROMPT,DELIVERY,RELAY}.md` |
+
+---
+
+## 10. 回执核验（2026-09-17 深夜，据 W1B/W0 回执实测）
+
+用户转达两条外部回执：① W1B 两表结构阻塞已解除；② W0 `1c24f14` 落了 binding 计量端。**未盲信声称，逐一实测核验**：
+
+| # | 声称 | 核验方式 | 结果 |
+|---|---|---|---|
+| 1 | W1B 迁移 0004 建了 `query_plan` 表 | 读 `app/repo/migrations/versions/0004_cost_ledger_and_query_plan.py` | ✅ `task_id`(PK)/`plan_json`(jsonb)/`plan_summary`/`bundle_version`/`binding_state`/`binding_layer`/`confidence`，**两列均 NOT NULL/CHECK 约束齐全** |
+| 2 | 列值集与 enums 逐字一致 | 迁移内 `_BINDING_STATES`/`_BINDING_LAYERS` 快照 vs `python -m app.core.enums` 实跑 `.value` | ✅ `resolved_unique/resolved_default/ambiguous/unresolved` 与 `L1/L2/L3/L4` **逐字一致**；另有 `test_migration_0004_runtime_contract.py` 离线契约单测钉住 |
+| 3 | W0 已落 binding counter 本体 | 读 `app/obs/metrics.py` | ✅ `BINDING_STATE_TOTAL`/`BINDING_LAYER_TOTAL` + `observe_binding_state(event.state)`/`observe_binding_layer(event.layer)`，**枚举即准入校验**、线程锁；无同名重复登记必要 |
+
+**状态订正**（已同步改回本文档 §2/§6 与 `app/binding/__init__.py`）：
+
+- DoD①：🔴 缺表阻塞 → 🟡 **表结构已解除，差 W4 写入动作**（装配点写入 `query_plan` 两列）。
+- L1 同步落库：🔴 → 🟡，同上。
+- L3 观测出口：观测出口本身仍缺（W4 `on_binding` 实现），但**指标本体已存在**——W4 直接调 `obs.metrics.observe_binding_state/layer`，**不要再自行登记同名 Counter**。
+
+**门禁未回归**：回执核验后复跑绑定域全量 —— 265 passed / ruff All passed / mypy 104 files clean / lint-imports 4 kept。W0/W1B 的改动未破坏 `app/binding/**`。
+
+**仍待分配**：§7 的 9 条候选编号——§7 原记"下一可用 = U-65"**已过时**（架构窗口已裁 A1–A22 = U-65~86，见 docs/07 v1.0 §4.9），现下一可用 = **U-87**；其中 #7/#8/#9/#10 与 7 个 `llm_*` 指标命名**用户明确待架构裁决，不先斩后奏**。
