@@ -142,6 +142,76 @@ pytest tests/integration/test_semantic_materialization.py tests/unit/test_materi
 - U-56 = W1B alembic 建视图+基表：**W2A 无动作**；唯一请求 —— W1B 建基表时请给
   `information_schema` 可查的同 schema（app）对象名严格等于 `_base_table()` 映射
   （`v_order_paid → order_paid`），否则检查器与策略会指向不存在的表。
+  → **2026-09-17 已核对：迁移 0003 的 `app.{base}` 命名与该映射逐字一致**，本请求关闭。
+
+---
+
+## 8 → W1B / W2-INT：`UndefinedTable` 第二层**已根修**（2026-09-17，commit `71f6ec1`）
+
+> 对应 W1B `RELAY.md` §8.2（本节可整块复制回执）。
+
+### 8.1 根因一手复现（不是转述采信）
+
+本地库（alembic = `0003`，视图/基表已在）跑集成：
+
+```
+tests/integration/test_semantic_materialization.py → ..FFF.. → 3 条红
+失败点 = materialize.py:468 执行 `REVOKE ALL ON "v_order_paid" FROM PUBLIC;`
+         psycopg.errors.UndefinedTable: relation "v_order_paid" does not exist
+```
+
+与 §8.2 描述**逐字一致**；`views_ready` 由 False 翻 True 后 skip 消失，问题当场暴露 ——
+**此前不是没问题，是 skip 盖住了**（同一句话我现在可以自己证）。
+
+### 8.2 修法：取根修（§8.2 的推荐方案），不做调用侧约定
+
+| 改动 | 内容 |
+|---|---|
+| `_SCHEMA`（新增常量） | `"app"`；注释写明"本项目目前**无共享单一真相**（`app/core/**` 未定义），W0 立常量后改指它" |
+| `_qualify()`（新增） | `object_name → app."object_name"`；注释记录本次根因（非限定名 = 把"调用方恰好有对的 search_path"当默认前提） |
+| `derive_policy_statements()` | REVOKE / GRANT / ALTER TABLE ENABLE+FORCE RLS / DROP+CREATE POLICY **全部**改限定名（含 DO 块内两条） |
+| `tests/unit/test_materialize_derivation.py` | 新增 2 条**锁定断言**：① 任何语句不得出现 ` ON "`（裸对象名）② 每条语句必须含 `app.`；另加 `_base_table`/`_qualify` 形态锁定 |
+
+**刻意不采纳**备选（调用侧 DSN 带 `options=-c search_path=app,public`）：那把同一前提散到
+每个调用点（集成测试 / w2-int e2e 脚本 / 运维），漏一处就复现 —— 而根修后调用侧零要求。
+
+### 8.3 修复后验证（全绿，含 DoD③ 端到端）
+
+```
+集成 7 passed / 0 skipped：
+  materialize(with_policy=True) 通过  →  assert_grant_policy_consistency consistent=True   ← DoD③ 首次真绿
+  注入对照 1（REVOKE 视图授权 → 必红 → 重物化 → 必绿）✅
+  注入对照 2（GRANT 基表 → 必红 → REVOKE → 必绿）✅
+
+DoD③ 库侧直证（psql 直查，非断言转述）：
+  策略 6 条全在**基表**：p_{campaign,order_paid,order_refund,product,shop,traffic_daily}_tenant
+  基表 relrowsecurity=True 且 relforcerowsecurity=True（6/6）
+  app_ro 列级授权只在 v_* 视图（v_order_paid 21 列等）
+  业务基表对 app_ro **零授权**（role_column_grants / role_table_grants 均无命中）
+
+全量回归：792 passed / 6 skipped / 0 failed
+  6 skip = W2B 的 test_retrieval_fts_pg（夹具 DSN 无 DDL 权限，与 W2A 无关）
+lint-imports：4 kept / 0 broken    ruff / mypy(app/semantics)：全绿
+```
+
+**给 W2-INT**：六步发布的 step② 现已通，**可以复跑**；上面 4 组数字可直接作为收口验收基线。
+
+### 8.4 ⚠️ 修这条时又抓到第二个"被 skip 掩盖"的缺陷（我自己名下）
+
+我的 3 条集成用例（`TestPolicyAndConsistency`）**方法签名漏了 `rw_conn` 参数**，
+体内引用的是模块级夹具**函数对象** → `AttributeError: 'FixtureFunctionDefinition' object
+has no attribute 'execute'`。它一直 skip，所以**从写下那天起就不可能被发现**。
+
+→ 已修（3 处签名补 `rw_conn`）。**教训（建议进 07 纪律）**：
+**skip 不只掩盖产品码缺陷，也掩盖测试自身的缺陷** —— 一条长期 skip 的用例，
+在其 skip 原因消除后必须**单独复跑并确认红点归属**，否则"测试写了"与"测试有效"是两回事。
+建议 W2-INT 把这条列为收口验收项（本阶段恰好有 3 条从 skip 转真的用例，正是检验点）。
+
+### 8.5 建议（不自行开号，列"待架构分配"）
+
+`app` 这个 schema 名目前有 **3 处独立字面量**：① 迁移（0001/0002/0003）、② `app/repo/health.py`、
+③ 本模块的 `_SCHEMA`。建议 W0 在 `app/core/**` 立共享常量（各窗口改指），
+否则未来改 schema 名会漏改 —— 属"同一事实多处"的典型形态，**建议给个号**。
 
 ---
 
