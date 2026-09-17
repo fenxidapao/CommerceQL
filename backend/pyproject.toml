@@ -82,7 +82,7 @@ dependencies = [
     # --- 客户端与工具 ---
     "redis>=5.0",
     "httpx>=0.27",
-    "tenacity>=9.0",               # 429 退避
+    # tenacity 已移除（W3-INT 转述 #11，2026-09-17）：W3A 自实现退避，全仓零 import。
     # `[crypto]` extra 由 PyJWT 自己声明（实测 METADATA: Requires-Dist: cryptography>=3.4.0;
     # extra == "crypto"），所以下面那行**不是**"凭空多装一个包"。
     # 之所以仍要显式列 cryptography：app/auth/jwks.py 是**直接** import 它的
@@ -106,7 +106,7 @@ dev = [
     "import-linter>=2.1",          # R-DEP-1 / R-DEP-2 的强制手段
     "ruff>=0.6",
     "mypy>=1.11",
-    "respx>=0.21",                 # 拦截 LLM HTTP，评测避免真实烧 token
+    # respx 已移除（W3-INT 转述 #11，2026-09-17）：测试用 httpx.MockTransport（_llm_fake_upstream.py），全仓零 import。
 ]
 
 [tool.hatch.build.targets.wheel]

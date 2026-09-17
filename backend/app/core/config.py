@@ -63,10 +63,15 @@ class Settings(BaseSettings):
     CORS_ALLOWED_ORIGINS: str = ""  # 逗号分隔；prod 必须为空（同源反代，07 §8.6.5 常见误配）
 
     # ---------------- LLM（DeepSeek） ----------------
-    DEEPSEEK_API_KEY: SecretStr = Field(..., description="必填。只在此处填，严禁硬编码")
+    # ⚠️ min_length=1：空字符串曾能过"必填"校验（'' 构造通过 → 运行时才炸），
+    #    W3-INT 转述实测（2026-09-17）。SecretStr 的必填只挡"缺键"，不挡空串。
+    DEEPSEEK_API_KEY: SecretStr = Field(..., min_length=1,
+                                        description="必填。只在此处填，严禁硬编码")
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
     LLM_MODEL_FAST: str = "deepseek-flash"
     LLM_MODEL_STRONG: str = "deepseek-v4-pro"
+    # ⚠️ W3-INT 转述（2026-09-17）：本键已被 07 §10.2 的任务/模型级超时（15/45s）取代，
+    #    当前**无消费方**。是否删除待架构裁决；裁决前保留并标注，勿再新引用。
     LLM_TIMEOUT_SECONDS: int = Field(default=60, gt=0)
     LLM_MAX_CONCURRENCY: int = Field(default=50, gt=0)  # 上游限的是并发连接数，不是 QPS
     LLM_MAX_RETRIES: int = Field(default=3, ge=0)

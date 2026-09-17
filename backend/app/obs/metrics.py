@@ -2,11 +2,19 @@
 
 归属窗口：W0 立骨架 → **W7 实现**（docs/08 §4.1）。
 
-⚠️ **阶段 0 刻意不定义任何指标名**，理由是"指标名一旦写错就是把猜测变成契约"：
-07 §15.3 的完整清单（含**标签基数上限**）阶段 0 尚未逐条核实，
-凭空起名会被 W7 沿用，然后出现"看板与告警读的不是同一个指标"这种最难查的问题。
+⚠️ **刻意不定义任何 07 没给名的指标**，理由是"指标名一旦写错就是把猜测变成契约"：
+凭空起名会被后续窗口沿用，然后出现"看板与告警读的不是同一个指标"这种最难查的问题。
+因此本文件的准入规则是：**只落 07 §15.3 明文在列（类型 + 标签 + 基数都给了）的指标本体**。
+（W3-INT 转述的 7 个 `llm_*` 指标名 §15.3 **没有** —— 属建议名，待架构补名后再落，
+见 `backend/reports/w0/RELAY.md` 回执。）
 
-已核实并写进文档、W7 必须遵守的三条**口径**（07 §14.5 / §15.3）：
+已落实的指标（全部有 07 明文依据）：
+- `binding_tau_calibrated` gauge（U-19 §18.4.1 硬要求 ②，名字由 07 给定）；
+- `binding_state_total` / `binding_layer_total` counter（07 §15.3 语义指标两行：
+  类型 Counter、标签 `state`(4) / `layer`(4)，枚举值来自 `core/enums.py` 的
+  `BindingState` / `BindingLayer` —— 满足"标签枚举必须来自 enums.py"纪律 ③）。
+
+已核实并写进文档、后续窗口必须遵守的三条**口径**（07 §14.5 / §15.3）：
 
 1. **语义指标优先于系统指标**（PRD §14.2）。延迟、QPS 再漂亮，
    也不能替代"闸门拒绝率 / 拒答率 / 澄清率"这类业务侧口径。
@@ -26,13 +34,20 @@ W7 待办清单（与 `app/obs/schema.py` 的 `PENDING_FIELD_GROUPS_OWNER_W7` �
 
 from __future__ import annotations
 
+import threading
 from typing import Final
 
+from app.core.enums import BindingLayer, BindingState
+
 __all__ = [
+    "BINDING_LAYER_TOTAL",
+    "BINDING_STATE_TOTAL",
     "BINDING_TAU_CALIBRATED",
     "BOUNDED_ALLOWED_LABELS",
     "UNBOUNDED_FORBIDDEN_LABELS",
     "get_binding_tau_calibrated",
+    "observe_binding_layer",
+    "observe_binding_state",
     "render_prometheus_text",
     "set_binding_tau_calibrated",
 ]
@@ -79,14 +94,58 @@ def render_prometheus_text() -> str:
     """Prometheus 文本格式快照。
 
     ⚠️ 阶段 0 **不**挂 `/metrics` 端点（那是 W7 的 `deploy/` + 观测收口范围）；
-    本函数只保证"这个 gauge 现在就可被暴露"。W7 接真实指标库后，
-    应把它并入统一的采集端点，而不是再起第二个。
+    本函数只保证"这些指标现在就可被暴露"。W7 接真实指标库后，
+    应把它们并入统一的采集端点，而不是再起第二个。
     """
-    return (
-        f"# HELP {BINDING_TAU_CALIBRATED} {_BINDING_TAU_HELP}\n"
-        f"# TYPE {BINDING_TAU_CALIBRATED} gauge\n"
-        f"{BINDING_TAU_CALIBRATED} {_binding_tau_value}\n"
-    )
+    lines = [
+        f"# HELP {BINDING_TAU_CALIBRATED} {_BINDING_TAU_HELP}",
+        f"# TYPE {BINDING_TAU_CALIBRATED} gauge",
+        f"{BINDING_TAU_CALIBRATED} {_binding_tau_value}",
+    ]
+    # 两个 counter 的序列**全集固定**（枚举即全集），未观测到的值补 0 ——
+    # 看板/告警不必处理"序列尚未出现"的缺席语义。
+    lines.append(f"# HELP {BINDING_STATE_TOTAL} 07 §15.3：binding_state 四态分布（澄清率异常的诊断入口）")
+    lines.append(f"# TYPE {BINDING_STATE_TOTAL} counter")
+    for state in BindingState:
+        lines.append(f'{BINDING_STATE_TOTAL}{{state="{state.value}"}} {_binding_state_counts[state]}')
+    lines.append(f"# HELP {BINDING_LAYER_TOTAL} 07 §15.3：binding_layer 分布（L4 占比 = 语义层质量仪表盘，N-25）")
+    lines.append(f"# TYPE {BINDING_LAYER_TOTAL} counter")
+    for layer in BindingLayer:
+        lines.append(f'{BINDING_LAYER_TOTAL}{{layer="{layer.value}"}} {_binding_layer_counts[layer]}')
+    return "\n".join(lines) + "\n"
+
+
+# ============================================================================
+# binding_state / binding_layer 分布 counter（07 §15.3 语义指标，W3-INT 转述 #5）
+# ============================================================================
+# 为什么是 W0 落本体而不是等 W7：07 §15.3 对这两个指标给了**完整规格**
+# （类型 Counter、标签键 state/layer、基数 4/4、枚举值来自 enums.py），
+# 而 W3C/W4 已经在产生事件却无人计量 —— "事件有了、仪表没有"等于 N-27 约束⑤ 缺位。
+# 名字是本文件起的（07 只给了语义名），已按 Prometheus 惯例加 `_total` 后缀；
+# W7 接真库时若改名，此处是唯一迁移点。
+
+BINDING_STATE_TOTAL: Final[str] = "binding_state_total"
+BINDING_LAYER_TOTAL: Final[str] = "binding_layer_total"
+
+#: 值全集来自 enums（07 §15.3 纪律 ③），不再各写一份字面量。
+_BINDING_STATE_VALUES: Final[tuple[str, ...]] = tuple(s.value for s in BindingState)
+_BINDING_LAYER_VALUES: Final[tuple[str, ...]] = tuple(layer.value for layer in BindingLayer)
+
+_metrics_lock = threading.Lock()
+_binding_state_counts: dict[str, int] = dict.fromkeys(_BINDING_STATE_VALUES, 0)
+_binding_layer_counts: dict[str, int] = dict.fromkeys(_BINDING_LAYER_VALUES, 0)
+
+
+def observe_binding_state(state: BindingState) -> None:
+    """binding 结果落一个 `state` 计数。枚举类型即准入校验（自由字符串进不来）。"""
+    with _metrics_lock:
+        _binding_state_counts[state.value] += 1
+
+
+def observe_binding_layer(layer: BindingLayer) -> None:
+    """binding 结果落一个 `layer` 计数（N-27 约束⑤ 的计量端）。"""
+    with _metrics_lock:
+        _binding_layer_counts[layer.value] += 1
 
 #: **绝对禁止**作为指标标签的键（无界基数）。
 #: 这不是性能建议，是可用性红线：一个 `user_id` 标签能在一个下午内把指标存储写满，
@@ -116,6 +175,8 @@ BOUNDED_ALLOWED_LABELS: Final[dict[str, int]] = {
     "bucket": 5,           # A.0.6（含全局并发桶）
     "binding_state": 4,    # 四态
     "binding_layer": 4,    # L1–L4（N-27 约束 5）
+    "state": 4,            # 07 §15.3：binding_state_total 的标签键（BindingState.value）
+    "layer": 4,            # 07 §15.3：binding_layer_total 的标签键（BindingLayer.value）
     "retrieval_mode": 2,   # C-11
     "scope_level": 3,      # A.1.5
     "role": 7,             # 07 §13.2

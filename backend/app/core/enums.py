@@ -334,21 +334,22 @@ REQUIRES_SUGGESTIONS: Final[Mapping[ErrorCode, bool]] = MappingProxyType(
 #:
 #: ⚠️ 登记 **U-22**：§14.4 说这 6 个 ✅ 码"**必须带** `Retry-After`"，但**只给了两个值**：
 #: `RATE_LIMITED` 按桶（§A.0.6：查询 30 / 读取 5 / 写入 10 / 管理员 60）、
-#: `SESSION_CONFLICT` = 3（§A.11 补充约定）。剩下四个**文档里没有任何数值** ——
-#: 而"必须带"意味着实现者**不得不发明一个数字**。
-#: 本文件的处置：给出**保守缺省值**并显式登记，让契约至少是**可实现且可覆盖**的
-#: （端点层若实现了真实退避/熔断，应显式传入实际值而非依赖缺省）。
-#: 这些值**不是**从文档推导出来的，是 W0 在文档缺口下取的最小可辩护值：
-#:   · `LLM_CONCURRENCY_EXCEEDED` = 2s（§A.11 文案要求"指数退避" → 取首档 2s，后续由退避器接管）
-#:   · `LLM_UPSTREAM_ERROR` = 5s（上游 502 的常规恢复窗口）
-#:   · `DB_UNAVAILABLE` = 5s（连接池摘除 + 重连探测的最小间隔）
+#: `SESSION_CONFLICT` = 3（§A.11 补充约定）。剩下三个 W0 曾给保守缺省，
+#: **07 v0.8 §14.4.1 已裁定替代**（含推导纪律 4：每个值必须能从内部退避窗口 /
+#: 熔断开路时长 / 锁等待上限 / 池超时推导）：
+#:   · `LLM_CONCURRENCY_EXCEEDED` = 5s（内部已退避 3.5s 才外抛，2s 落在同一失败窗口内；
+#:     W0 原值 2s 被裁正）
+#:   · `LLM_UPSTREAM_ERROR` = 30s（熔断开路 30s 内重试**必然失败**，给 5s 等于保证失败；
+#:     W0 原值 5s 被裁正）
+#:   · `DB_UNAVAILABLE` = 5s（07 §14.4 表内明文给定；⚠️ U-52：与池等待的推导自洽性
+#:     归 07 §8 / W1B，勿在此处自行改动）
 RETRY_AFTER_DEFAULT_S: Final[Mapping[ErrorCode, int]] = MappingProxyType(
     {
         ErrorCode.RATE_LIMITED: 30,               # 查询类桶；真实值必须走 map_rate_limited(bucket)
         ErrorCode.SESSION_CONFLICT: 3,            # 附录 A §A.11 补充约定（明文给定）
-        ErrorCode.LLM_CONCURRENCY_EXCEEDED: 2,    # U-22 缺省值
-        ErrorCode.LLM_UPSTREAM_ERROR: 5,          # U-22 缺省值
-        ErrorCode.DB_UNAVAILABLE: 5,              # U-22 缺省值
+        ErrorCode.LLM_CONCURRENCY_EXCEEDED: 5,    # 07 v0.8 §14.4.1（U-22 裁正，原 2s）
+        ErrorCode.LLM_UPSTREAM_ERROR: 30,         # 07 v0.8 §14.4.1（U-22 裁正，原 5s）
+        ErrorCode.DB_UNAVAILABLE: 5,              # 07 §14.4 明文；推导自洽性归 U-52（07 §8）
     }
 )
 

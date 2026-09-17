@@ -11,7 +11,7 @@
   是最贵的一种。本脚本把 DoD② 变成每次 CI 都跑的**正向实验**：
   先证明"干净时通过"，再证明"脏了必须红"，最后证明"还原后重新变绿"。
 
-探测三个正交维度（与 `.importlinter` 的 forbidden/layers 契约一一对应）：
+探测四个正交维度（与 `.importlinter` 的 forbidden/layers 契约一一对应）：
   - 探针 A → `r-dep-2-no-llm-in-deterministic`：`app.guard` import `app.llm`
     （★ 注意：这一条在 `layers` 契约里**是合法的**，因为 guard 在 L2、llm 在 L1，
       上层依赖下层本来就允许。这正是必须单独写 forbidden 契约的原因。）
@@ -20,6 +20,16 @@
   - 探针 C → `r-dep-3-obs-except-audit-no-repo`（追加型）：`app.obs.metrics` import `app.repo`
   - 探针 D → `r-dep-4-retrieval-no-llm-except-refine`（追加型）：`app.retrieval.dense` import `openai`
     （★ 注入**第三方**包，顺带验证 `include_external_packages=True` 配置不被静默关掉。）
+
+并发安全（W3-INT 转述实测，2026-09-17 —— 多窗口共库，两个窗口同时跑本脚本会互踩）：
+  - **探针文件名带 PID**（`_probe_violation_<pid>.py`）：即使锁失效，两个进程的
+    注入点也不会互相覆盖；残留也能定位到属主进程。
+  - **文件锁串行化**（`scripts/.assert_importlinter.lock`，O_CREAT|O_EXCL 抢占，
+    带陈旧检测：锁文件 mtime 超 10 分钟视为死进程残留，抢走重跑）。
+    持锁期间发现的任何探针残留**必然是死进程的陈旧残留**（活着的对手窗口被锁挡住），
+    启动时直接清扫 —— 这就是"临时残留 vs 陈旧残留"的区分方式。
+  - **信号与退出兜底**：SIGINT/SIGTERM/SIGBREAK 转成 SystemExit 让 finally 清理生效，
+    另加 atexit 兜底；清理只删**本 PID** 的探针文件，不碰别人的。
 
 用法::
 
@@ -31,10 +41,13 @@
 from __future__ import annotations
 
 import argparse
+import atexit
 import contextlib
 import io
 import os
+import signal
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -44,6 +57,12 @@ CONFIG = BACKEND_ROOT / ".importlinter"
 #: import-linter 的退出码约定（`importlinter.cli`）。
 _EXIT_SUCCESS = 0
 
+_PID = os.getpid()
+_PROBE_STEM = "_probe_violation"
+_LOCK = BACKEND_ROOT / "scripts" / ".assert_importlinter.lock"
+_LOCK_STALE_S = 600          # 锁文件超过 10 分钟 = 持锁进程已死，抢走
+_cleanup_done = False
+
 
 @dataclass(frozen=True)
 class Probe:
@@ -51,7 +70,7 @@ class Probe:
 
     contract_id: str
     layer_note: str
-    target: Path                     # 注入点（新建的临时文件）
+    target: Path                     # 注入点（新建的临时文件，名字带 PID）
     source: str                      # 注入内容
     expect_fragments: tuple[str, ...]  # lint 输出里必须**全部**出现的片段
 
@@ -61,40 +80,50 @@ class Probe:
     #:   它证明不了契约有效，只证明了命令会失败。
     #:   因此要求输出里同时出现：
     #:     ① 契约的**显示名**（证明是这条契约红的，不是别的）；
-    #:     ② 违规链路原文 `app.guard._probe_violation -> app.llm`
+    #:     ② 违规链路原文 `app.guard._probe_violation_<pid> -> app.llm`
     #:        （证明红的**正是我们注入的那一行**）。
     #:   ★ 注意 import-linter 打印的是 `name =` 的**显示名**，不是 `[importlinter:contract:<id>]`
     #:     里的 id —— 早期版本这里误用了 id 导致误判，已修正。
 
 
+def _new_file_probe(
+    contract_id: str, layer_note: str, package_dir: str, violation_import: str, comment: str
+) -> Probe:
+    """构造"新建文件"型探针：文件名带 PID，期望片段随之动态生成。"""
+    module = f"app.{package_dir}.{_PROBE_STEM}_{_PID}"
+    return Probe(
+        contract_id=contract_id,
+        layer_note=layer_note,
+        target=BACKEND_ROOT / "app" / package_dir / f"{_PROBE_STEM}_{_PID}.py",
+        source=(
+            '"""临时探针 —— 由 scripts/assert_importlinter.py 自动创建并删除，切勿提交。"""\n'
+            "\n"
+            f"import {violation_import}  # noqa: F401  # {comment}\n"
+        ),
+        expect_fragments=(
+            {
+                "r-dep-2-no-llm-in-deterministic": "确定性模块与 binding 禁止 import app.llm",
+                "r-dep-1-layers": "R-DEP-1 分层依赖",
+            }[contract_id],
+            f"{module} -> {violation_import}",
+        ),
+    )
+
+
 PROBES: tuple[Probe, ...] = (
-    Probe(
-        contract_id="r-dep-2-no-llm-in-deterministic",
-        layer_note="app.guard (L2) → app.llm (L1)：方向合法，但被 R-DEP-2 显式禁止",
-        target=BACKEND_ROOT / "app" / "guard" / "_probe_violation.py",
-        source=(
-            '"""临时探针 —— 由 scripts/assert_importlinter.py 自动创建并删除，切勿提交。"""\n'
-            "\n"
-            "import app.llm  # noqa: F401  # R-DEP-2 违规：guard 属确定性层，禁止 import llm\n"
-        ),
-        expect_fragments=(
-            "确定性模块与 binding 禁止 import app.llm",
-            "app.guard._probe_violation -> app.llm",
-        ),
+    _new_file_probe(
+        "r-dep-2-no-llm-in-deterministic",
+        "app.guard (L2) → app.llm (L1)：方向合法，但被 R-DEP-2 显式禁止",
+        "guard",
+        "app.llm",
+        "R-DEP-2 违规：guard 属确定性层，禁止 import llm",
     ),
-    Probe(
-        contract_id="r-dep-1-layers",
-        layer_note="app.core (L0) → app.api (L5)：依赖方向倒挂",
-        target=BACKEND_ROOT / "app" / "core" / "_probe_violation.py",
-        source=(
-            '"""临时探针 —— 由 scripts/assert_importlinter.py 自动创建并删除，切勿提交。"""\n'
-            "\n"
-            "import app.api  # noqa: F401  # R-DEP-1 违规：core 在 L0，不得反向依赖 L5\n"
-        ),
-        expect_fragments=(
-            "R-DEP-1 分层依赖",
-            "app.core._probe_violation -> app.api",
-        ),
+    _new_file_probe(
+        "r-dep-1-layers",
+        "app.core (L0) → app.api (L5)：依赖方向倒挂",
+        "core",
+        "app.api",
+        "R-DEP-1 违规：core 在 L0，不得反向依赖 L5",
     ),
     Probe(
         contract_id="r-dep-3-obs-except-audit-no-repo",
@@ -131,6 +160,91 @@ PROBES: tuple[Probe, ...] = (
 )
 
 
+# ---------------------------------------------------------------------------
+# 并发安全：文件锁 + 陈旧残留清扫 + 信号兜底
+# ---------------------------------------------------------------------------
+
+@contextlib.contextmanager
+def _exclusive_lock():
+    """跨进程互斥：抢 O_EXCL 锁；锁文件陈旧（持锁进程已死）则抢走重跑。
+
+    等待上限也是 `_LOCK_STALE_S`：持锁进程活着但卡死时，最多等 10 分钟后
+    强制接管（接管后启动清扫会把对方的探针一起清掉 —— 对方若还在跑，
+    它的 lint 基线会红并如实报错，不会静默假绿）。
+    """
+    deadline = time.monotonic() + _LOCK_STALE_S
+    while True:
+        try:
+            fd = os.open(_LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            try:
+                age = time.time() - _LOCK.stat().st_mtime
+            except OSError:
+                age = 0.0
+            if age > _LOCK_STALE_S or time.monotonic() > deadline:
+                _LOCK.unlink(missing_ok=True)  # 陈旧锁 / 超时接管
+                continue
+            time.sleep(0.5)
+            continue
+        else:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(f"pid={_PID} acquired_at={time.time()}\n")
+            break
+    try:
+        yield
+    finally:
+        _LOCK.unlink(missing_ok=True)
+
+
+def _sweep_stale_probes() -> list[str]:
+    """清扫**陈旧**探针残留（持锁期间发现的任何残留都来自死进程）。
+
+    范围刻意收窄：只删两个"新建文件"型探针目录里匹配 `_probe_violation*.py`
+    的文件 —— 这个命名前缀是本脚本专用的，不会误伤任何真实源码。
+    """
+    removed: list[str] = []
+    for probe in PROBES:
+        if probe.source.startswith("@@APPEND@@"):
+            continue
+        for leftover in probe.target.parent.glob(f"{_PROBE_STEM}*.py"):
+            leftover.unlink(missing_ok=True)
+            removed.append(str(leftover))
+        for cached in probe.target.parent.glob(f"__pycache__/{_PROBE_STEM}*"):
+            cached.unlink(missing_ok=True)
+    return removed
+
+
+def _emergency_cleanup() -> None:
+    """兜底清理：只删**本 PID** 的探针文件与编译产物（idempotent）。"""
+    global _cleanup_done
+    if _cleanup_done:
+        return
+    _cleanup_done = True
+    for probe in PROBES:
+        if probe.source.startswith("@@APPEND@@"):
+            continue
+        probe.target.unlink(missing_ok=True)
+        for cached in probe.target.parent.glob(f"__pycache__/{_PROBE_STEM}_{_PID}.*"):
+            cached.unlink(missing_ok=True)
+
+
+def _install_signal_cleanup() -> None:
+    """SIGINT/SIGTERM/SIGBREAK → SystemExit，让 finally/atexit 清理生效。
+
+    默认行为下 SIGTERM 直接杀死进程，`finally` 不执行 → 探针残留 →
+    任何窗口的 `lint-imports` 变 BROKEN（W3A 实测的粘性残留事故）。
+    """
+
+    def _handler(signum: int, _frame: object) -> None:
+        raise SystemExit(f"收到信号 {signum}，中断（探针清理由 finally 完成）")
+
+    for sig_name in ("SIGINT", "SIGTERM", "SIGBREAK"):
+        sig = getattr(signal, sig_name, None)
+        if sig is not None:
+            with contextlib.suppress(ValueError, OSError):  # 非主线程注册会 ValueError
+                signal.signal(sig, _handler)
+
+
 def _lint(*, verbose: bool) -> tuple[int, str]:
     """跑一次 lint-imports，返回 (退出码, 输出文本)。
 
@@ -162,6 +276,7 @@ def _run_probe(probe: Probe, *, verbose: bool) -> tuple[bool, str, str]:
 
     · **新建文件**（target 不存在）：适用于 layers / 层间 forbidden 契约 ——
       import-linter 按路径匹配，新建一个 "位于某层" 的文件即可制造违规。
+      文件名带 PID（`_probe_violation_<pid>.py`）→ 并发运行互不覆盖。
     · **追加到已有文件**（target 已存在）：★ **这是 `r-dep-3` 唯一可行的方式**，
       因为该契约的 `source_modules` 是**逐个列出的具体模块**（forbidden 契约不支持目录通配），
       新建的文件根本不在 source 列表里 → lint 不会检查它 → 探针会"注入成功但 lint 依然通过"。
@@ -174,9 +289,11 @@ def _run_probe(probe: Probe, *, verbose: bool) -> tuple[bool, str, str]:
         return _run_append_probe(probe, verbose=verbose)
 
     if probe.target.exists():
+        # 持锁 + 启动清扫后仍存在 = 异常（同 PID 残留未被清扫 / 外部创建）。
+        # 不覆盖，如实报错 —— 宁可红也不静默破坏未知来源的文件。
         return False, (
             f"注入点已存在，拒绝覆盖：{probe.target}\n"
-            f"  → 疑似上次运行异常中断；请人工确认后删除（它不应存在于仓库中）"
+            f"  → 启动清扫未能移除它，请人工确认后删除（它不应存在于仓库中）"
         ), ""
 
     try:
@@ -185,7 +302,7 @@ def _run_probe(probe: Probe, *, verbose: bool) -> tuple[bool, str, str]:
     finally:
         probe.target.unlink(missing_ok=True)
         # 清理探针编译产物，避免 __pycache__ 里留下痕迹影响后续静态扫描
-        for cached in probe.target.parent.glob("__pycache__/_probe_violation.*"):
+        for cached in probe.target.parent.glob(f"__pycache__/{_PROBE_STEM}_{_PID}.*"):
             cached.unlink(missing_ok=True)
 
     return _judge(probe, status, output)
@@ -260,10 +377,23 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FATAL: 缺少 {required}", file=sys.stderr)
             return 2
 
+    atexit.register(_emergency_cleanup)
+    _install_signal_cleanup()
+
+    with _exclusive_lock():
+        return _run_all(verbose=args.verbose)
+
+
+def _run_all(*, verbose: bool) -> int:
     failures: list[str] = []
 
-    # ---------- 第 0 步：基线必须干净 ----------
-    status, output = _lint(verbose=args.verbose)
+    # ---------- 第 0 步：持锁后清扫陈旧残留（活窗口被锁挡住，残留必属死进程） ----------
+    swept = _sweep_stale_probes()
+    if swept:
+        print(f"[sweep] 清扫到陈旧探针残留（死进程遗留，已删除）：{swept}")
+
+    # ---------- 第 1 步：基线必须干净 ----------
+    status, output = _lint(verbose=verbose)
     if status != _EXIT_SUCCESS:
         print("FATAL: 注入任何探针之前，lint 就已经失败 —— 先修好基线再谈 DoD②", file=sys.stderr)
         print(_indent(output), file=sys.stderr)
@@ -271,19 +401,19 @@ def main(argv: list[str] | None = None) -> int:
     kept = _parse_kept(output)
     print(f"[baseline] 干净状态 lint 通过（{kept}）")
 
-    # ---------- 第 1 步：逐个探针 ----------
+    # ---------- 第 2 步：逐个探针 ----------
     for probe in PROBES:
-        if args.verbose:
+        if verbose:
             print(f"[probe] 注入 {probe.contract_id} → {probe.target.name}")
-        ok, message, probe_output = _run_probe(probe, verbose=args.verbose)
+        ok, message, probe_output = _run_probe(probe, verbose=verbose)
         print(f"[probe] {message}")
         if not ok:
             failures.append(probe.contract_id)
-        elif args.verbose:
+        elif verbose:
             print(_indent(probe_output))
 
-    # ---------- 第 2 步：还原后必须重新变绿 ----------
-    status, output = _lint(verbose=args.verbose)
+    # ---------- 第 3 步：还原后必须重新变绿 ----------
+    status, output = _lint(verbose=verbose)
     if status != _EXIT_SUCCESS:
         print("FATAL: 探针已全部还原，但 lint 仍失败 —— 说明脚本留下了残留", file=sys.stderr)
         print(_indent(output), file=sys.stderr)
@@ -292,10 +422,15 @@ def main(argv: list[str] | None = None) -> int:
     #    （`app/obs/metrics.py`），它存在是正确的，不是残留。第一版这里没区分，
     #    导致脚本在做完所有正确的事之后自己 FATAL 退出。
     leftovers = [
-        p.target
+        str(p.target)
         for p in PROBES
         if p.target.exists() and not p.source.startswith("@@APPEND@@")
     ]
+    # 持锁期间任何 `_probe_violation*` 都不该存在（清扫已做、自己的已还原）。
+    for probe in PROBES:
+        if probe.source.startswith("@@APPEND@@"):
+            continue
+        leftovers.extend(str(p) for p in probe.target.parent.glob(f"{_PROBE_STEM}*.py"))
     if leftovers:
         print(f"FATAL: 探针文件未被清理：{leftovers}", file=sys.stderr)
         return 2

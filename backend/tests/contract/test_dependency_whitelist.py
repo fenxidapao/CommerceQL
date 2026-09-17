@@ -132,7 +132,6 @@ _EXPECTED_MAIN = {
     "sqlglot",
     "redis",
     "httpx",
-    "tenacity",
     "pyjwt",
     "structlog",
     "jieba",
@@ -147,7 +146,6 @@ _EXPECTED_DEV = {
     "import-linter",
     "ruff",
     "mypy",
-    "respx",
 }
 
 _EXPECTED_EVAL = {"pandas"}

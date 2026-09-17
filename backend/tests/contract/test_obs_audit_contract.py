@@ -25,6 +25,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.enums import BindingLayer, BindingState
 from app.obs import metrics
 
 pytestmark = pytest.mark.contract
@@ -217,8 +218,35 @@ def test_gauge_is_exposed_in_prometheus_text() -> None:
     text = metrics.render_prometheus_text()
     assert f"# TYPE {metrics.BINDING_TAU_CALIBRATED} gauge" in text
     assert f"{metrics.BINDING_TAU_CALIBRATED} 0" in text
-    # 无标签 → 无基数风险（这是它能在阶段 0 破例命名的前提之一）
-    assert "{" not in text.split("\n")[-2]
+    # 无标签 → 无基数风险（这是它能在阶段 0 破例命名的前提之一）。
+    # ⚠️ 锚定 tau 的**样本行**本身，而不是"全文倒数第二行"——
+    #    2026-09-17 起 render 还输出 binding_state/layer 两个**带标签**的 counter
+    #    （07 §15.3 明文在列），旧断言"全文无花括号行"会误伤合法序列。
+    tau_line = next(
+        line for line in text.splitlines() if line.startswith(metrics.BINDING_TAU_CALIBRATED)
+    )
+    assert "{" not in tau_line
+
+
+def test_binding_distribution_counters_are_exposed_and_bounded() -> None:
+    """07 §15.3 两行语义指标的计量端（W3-INT 转述 #5）：
+    序列全集 = 枚举全集（未观测值补 0），标签值只可能来自 enums（纪律 ③）。"""
+    text_before = metrics.render_prometheus_text()
+    # 未观测时：四个序列都已声明且为 0（看板不必处理"序列缺席"）
+    for state in BindingState:
+        assert f'{metrics.BINDING_STATE_TOTAL}{{state="{state.value}"}} 0' in text_before
+    for layer in BindingLayer:
+        assert f'{metrics.BINDING_LAYER_TOTAL}{{layer="{layer.value}"}} 0' in text_before
+
+    metrics.observe_binding_state(BindingState.AMBIGUOUS)
+    metrics.observe_binding_layer(BindingLayer.L4)
+    text_after = metrics.render_prometheus_text()
+    assert f'{metrics.BINDING_STATE_TOTAL}{{state="{BindingState.AMBIGUOUS.value}"}} 1' in text_after
+    assert f'{metrics.BINDING_LAYER_TOTAL}{{layer="{BindingLayer.L4.value}"}} 1' in text_after
+
+    # 标签键已登记有界基数（BOUNDED ∩ UNBOUNDED = ∅ 的既有测试另测）
+    assert metrics.BOUNDED_ALLOWED_LABELS["state"] == len(BindingState)
+    assert metrics.BOUNDED_ALLOWED_LABELS["layer"] == len(BindingLayer)
 
 
 def test_healthz_payload_does_not_carry_config_softening() -> None:
