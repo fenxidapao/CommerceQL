@@ -182,6 +182,45 @@ class TestPolicyAndConsistency:
         report2 = assert_grant_policy_consistency(rw_conn, loaded)
         assert report2.consistent, f"还原后仍红：{report2.mismatches}"
 
+    def test_negative_injection_base_table_grant_must_red(
+        self, loaded: Any, migrated: None, views_ready: bool
+    ) -> None:
+        """注入 2（U-55(a) 前提 2）：app_ro 对**基表**被授权 → 检查器必须红。
+
+        RLS 仍挡行，但 CLS 列白名单可经基表绕过 —— 这是 (a) 方案唯一的静默越权形态。
+        基表未建（U-56 迁移未落）时 skip，就绪后自动转为真检查。
+        """
+        if not views_ready:
+            pytest.skip("业务视图未建（待裁决③），无法注入授权扰动")
+        try:
+            materialize(loaded, dsn=_RW, with_policy=True)
+        except psycopg.errors.WrongObjectType as exc:
+            pytest.skip(f"RLS 落点缺口（待裁决②）：{exc}")
+
+        has_base = rw_conn.execute(
+            """
+            SELECT count(*) FROM information_schema.tables
+            WHERE table_schema = 'app' AND table_name = 'order_paid'
+            """
+        ).fetchone()[0]
+        if not has_base:
+            pytest.skip("基表 order_paid 未建（U-56 迁移未落）→ 前提 2 检查空洞放行，非已验证")
+
+        with psycopg.connect(_SUPER, connect_timeout=3) as super_conn:
+            super_conn.execute('GRANT SELECT ON app."order_paid" TO app_ro')
+            super_conn.commit()
+
+        report = assert_grant_policy_consistency(rw_conn, loaded)
+        assert not report.consistent, "基表授权注入后仍一致 = 前提 2 检查器失效（假绿灯）"
+        assert any("基表" in m for m in report.mismatches)
+
+        # 还原 → 必绿
+        with psycopg.connect(_SUPER, connect_timeout=3) as super_conn:
+            super_conn.execute('REVOKE ALL ON app."order_paid" FROM app_ro')
+            super_conn.commit()
+        report2 = assert_grant_policy_consistency(rw_conn, loaded)
+        assert report2.consistent, f"还原后仍红：{report2.mismatches}"
+
 
 # ============================================================================
 # 步骤⑤⑥：单键指针（stub Redis 验语义）

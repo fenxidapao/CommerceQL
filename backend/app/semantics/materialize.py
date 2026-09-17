@@ -587,6 +587,34 @@ def assert_grant_policy_consistency(conn: psycopg.Connection[Any], loaded: Loade
                 "（deny_columns 失效 = 越权读取面）"
             )
 
+        # ⚠️ v0.9（U-55 (a) 前提 2）：app_ro 对**基表**必须零 GRANT —— 视图是唯一入口。
+        # 缺了这条检查，"手滑给基表授权"会静默绕过 CLS（RLS 仍挡行，但列白名单失效），
+        # 而本检查器不会红 —— 正是 ADR-10 要拦的"两侧漂移"。基表未建时查询空返回 = 空洞放行，
+        # 属"前置未就绪"而非"已验证零授权"（与 skip 纪律一致，由 U-56 迁移就绪后转为真检查）。
+        base = _base_table(asset.physical_asset)
+        if base != asset.physical_asset:
+            base_cols = conn.execute(
+                """
+                SELECT column_name FROM information_schema.role_column_grants
+                WHERE grantee = 'app_ro' AND table_schema = 'app' AND table_name = %s
+                """,
+                (base,),
+            ).fetchall()
+            base_tables = conn.execute(
+                """
+                SELECT count(*) FROM information_schema.role_table_grants
+                WHERE grantee = 'app_ro' AND table_schema = 'app' AND table_name = %s
+                """,
+                (base,),
+            ).fetchone()
+            leaked = {r[0] for r in base_cols}
+            if leaked or (base_tables and base_tables[0]):
+                mismatches.append(
+                    f"{asset.physical_asset}: app_ro 对基表 {base} 持有授权"
+                    f"（列 {sorted(leaked) if leaked else '整表'}）"
+                    " —— U-55(a) 前提 2 被破坏，CLS 可经基表绕过"
+                )
+
         if asset.tenant_scoped:
             # ⚠️ v0.9（U-55 (a)）：策略在**基表**上（派生侧与检查侧必须同变，防两侧漂移）
             base = _base_table(asset.physical_asset)
