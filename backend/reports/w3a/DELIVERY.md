@@ -281,7 +281,7 @@ push：本会话用户已明确授权"可以直接 push，不一定要等我指�
 ### 12.6 门禁实测（2026-09-17，全部在本机 `.venv`，Docker 起来后）
 
 ```
-pytest -q                                  → 1467 passed / 6 skipped / 0 failed / 0 errors (67s)
+pytest -q                                  → 1467 passed / 6 skipped / 0 failed / 0 errors (67s)   ← §13 加 4 条守卫后 = 1471，见 §13.5
 ruff check .                               → All checks passed!
 mypy app                                   → Success: no issues found in 102 source files
 lint-imports.exe                           → Contracts: 4 kept, 0 broken.
@@ -300,3 +300,86 @@ python scripts/assert_importlinter.py      → DoD② 通过（4 条契约均已
 - 机制：探针清理只在 `finally` 里（**信号杀死时不执行**）；且脚本**拒绝覆盖已存在的探针**（`_run_probe` 的存在性分支）⇒ 一旦残留就是**粘性的**。
 - 另一路径：**两个窗口同时跑**该脚本时会互相踩 —— 一方的 step-0 基线检查会看到另一方的探针。本次取证：我删除并验绿后**数秒内**该文件又被写下（mtime 15:56:44 → 15:57:44），而"删完立刻跑"（最小竞态窗口）**DoD② 一次通过、无残留** ⇒ 竞态，不是本窗口改动引起。
 - 建议（转 W0）：探针文件名带 PID（或加锁）以支持并发；区分"并发中的临时文件"与"陈旧残留"；并把 `finally` 清理改为对 `SIGPIPE`/`SIGTERM` 也生效的形态。
+
+---
+
+## 13. 【追加·2026-09-17 下午】`gen_sql_complex` 的双重故障 —— max_tokens 已标定，**但真正的阻断在 45s 上限**
+
+触发：`reports/w3b/RELAY.md` §给 W3A-2（pro 档 2/3 返回空 content）。
+
+### 13.1 实测：`max_tokens` 是**确定性**失败，不是 2/3（真 key，真实资产，n=3）
+
+出站体由**生产同一条装配路径**构造（`load_prompt` + `render_messages` + `build_wire_request`），
+只变 `max_tokens`；直发上游以读到网关会丢弃的 `finish_reason` / `reasoning_tokens`。
+
+| `max_tokens` | `finish_reason` | content | `reasoning_tokens` | 耗时 |
+|---|---|---|---|---|
+| **3248**（旧生产值 = 1200 + 2048） | **`length` ×3** | **空 ×3** | **3248 ×3**（全部被思考吃光） | 68–80s |
+| 16384（放宽观察） | `stop` ×3 | ✅ 合法 JSON ×3 | 4900 / 5619 / **6719** | **97–138s** |
+
+⇒ 旧余量 2048 **差 3.3 倍**；旧"成功过一次"应是更简问句下的偶然（本窗口用带环比 + 品类排名的 L3+ 问句复现为 **3/3 失败**，比 W3B 报的 2/3 更差）。
+
+### 13.2 已做的标定（**必要但不充分**）
+
+| 常量 | 旧值 | 新值 | 依据 |
+|---|---|---|---|
+| `THINKING_HEADROOM_TOKENS` | 2048 | **8192** | 实测 reasoning 上界 6719 向上取 2 的幂（×1.22） |
+| `GEN_SQL_COMPLEX.output_tokens_hint` | 1200 | **1536** | 实测 content 545–**1223** ⇒ **旧值低于实测需求** |
+| 合成 `max_tokens` | 3248 | **9728** | 实测最坏总计 7672 ⇒ 余量 27% |
+
+守卫：`test_llm_router.py::TestThinkingBudgetIsCalibratedFromMeasurement`（余量盖住实测 reasoning / 提示盖住实测 content / 总值盖住最坏总计 / **反向对照**防"把余量调到 10 万让测试变绿"）。
+
+**诚实交代收益边界**：在当前 45s 传输上限下，这个修正的**可达收益很窄** —— 只有"思考 + 内容需要 3248–约 3560 token 且能在 45s 内生成完"的问句才真正从来不空答案变成拿到 pro 答案。绝大多数 L3+ 问句落在 45s 之外（见 13.3）。它的主要价值是**成为真正修复的前置条件**（上限一旦放宽，旧值立刻是"稳定空 content"）。
+
+### 13.3 🔴 真正的阻断：实测 **97–138s** vs 07 §10.2 的 pro **45s**
+
+按要求做了端到端验证（新标定后过**网关**跑 `gen_sql_complex`，n=2）：
+
+| run | 终态 | 输出模型 | 耗时 | 降级事件 |
+|---|---|---|---|---|
+| 1 | ✅ 有内容（2092 字符） | **`deepseek-flash`** | 49071 ms | `llm_unavailable` / `switched_to_weak_model`，`from_model=deepseek-v4-pro`，`error=LlmTimeout` |
+| 2 | ✅ 有内容（1876 字符） | **`deepseek-flash`** | 59998 ms | 同上 |
+
+⇒ **pro 档在真实 L3+ 问句上从未生效**：每次都白等 45s 被传输层掐断，然后降级到 flash。
+用户拿到的是 **flash 的答案**（且 `degraded=True`），代价是 **50–60s/请求** —— 既不是 pro 的质量，也远不是 8s 的 P95。
+
+**这不是我能在 `app/llm` 单方面修的**：
+- 45s 是 **07 §10.2 明文**的 pro 单次调用上限（"思考模式耗时显著更长"，但 45s 仍低估 2–3 倍）；
+- "L3+ 走 v4-pro 思考"是 **PRD §12.2 明文**（契约优先级 PRD > 07）；
+- 两者与 8s 端到端 P95 目标**三者不可同时成立**。本窗口早前已把这条矛盾登记在 `router.py` 模块 docstring（"物理上不可能"），本次给出了**量级证据**。
+
+⇒ 已作为候选 ⑬ 上呈架构（见 `RELAY.md §给架构`）。**本窗口不擅自改路由表或 §10.2 的值**（那是替架构发明产品决策）。
+
+### 13.4 三个可选方向（供裁决，本窗口不预设立场）
+
+| 方向 | 内容 | 代价 |
+|---|---|---|
+| A | 允许 L3+ 长耗时（pro 上限提到 ~150s） | 与 8s P95 彻底冲突；需要异步/后台 + SSE 分段（产品形态变化） |
+| B | L3+ 也走 **flash 非思考**（放弃 pro 质量） | 与 PRD §12.2 直接冲突，需改需求或说明 deviation |
+| C | L3+ 走 pro 但**异步生成 + 先返回计划占位** | 工程量大（W4/W5 都要动），但唯一同时满足质量与感知延迟的形态 |
+
+> 若选 A 或 C，本窗口已做的 max_tokens 标定即为其前置条件；若选 B，`gen_sql_complex` 路由应改回 FAST 非思考（本窗口可立即执行，但**需明确指令**）。
+
+### 13.5 门禁实测（本次标定的收尾）
+
+```
+cd backend（Docker 已起）
+../.venv/Scripts/python.exe -m pytest -q                       → 1471 passed / 6 skipped / 0 failed / 0 errors (67s)
+../.venv/Scripts/ruff.exe check .                              → All checks passed!
+../.venv/Scripts/mypy.exe app                                  → Success: no issues found in 102 source files
+../.venv/Scripts/lint-imports.exe                              → Contracts: 4 kept, 0 broken.
+../.venv/Scripts/python.exe scripts/assert_importlinter.py     → DoD② 通过（4 条契约「脏了必红」）
+../.venv/Scripts/python.exe -m app.core.enums                  → 契约自检通过
+```
+
+- `pytest` 由 §12 的 **1467** 增至 **1471**（+4 = 本节新增的 `TestThinkingBudgetIsCalibratedFromMeasurement`）。
+- 本次改动**只**动 `app/llm/router.py` 两个常量与 `tests/unit/test_llm_router.py` 一个测试类，不碰任何集成路径 ⇒ 集成测试数字与 §12 一致。
+
+**🔁 并发竞态再次实测（追加证据，转 W0）**：跑门禁时 `assert_importlinter.py` **又一次**在 step-0 报
+`FATAL: 注入任何探针之前，lint 就已经失败`。取证序列：
+- `ls` 确认**无**残留 →（数秒后）脚本 step-0 红 → `ls` 显示文件 mtime **16:22:08**，内容 sha256 与前次**同一份**；
+- 5 秒后 mtime **未再变**、`tasklist` 无 python 进程 ⇒ **不是活跃写者，是残留**（写者被中断，`finally` 未执行）；
+- `rm -f` + **同一条命令内**立刻复跑（闭环、无工具往返间隙）⇒ **DoD② 一次通过、无残留**。
+
+⇒ 与 §12.6 结论一致：**外部写者存在**（另一个窗口/会话在跑同一脚本），且脚本的清理对中断不鲁棒。
+本窗口未改该脚本（属 W0），仅提供证据；跑门禁时**先 `rm -f app/guard/_probe_violation.py` 再跑**可绕开。

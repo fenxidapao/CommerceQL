@@ -270,12 +270,68 @@ gateway = build_gateway(settings, ledger=<W1B 的落库 sink>, degradation=SseDe
 
    ```bash
    cd CommerceQL/backend
-   ../.venv/Scripts/python.exe -m pytest -q                      # 1467 passed / 6 skipped / 0 failed / 0 errors
+   ../.venv/Scripts/python.exe -m pytest -q                      # 1471 passed / 6 skipped / 0 failed / 0 errors
    ../.venv/Scripts/ruff.exe check .                             # All checks passed!
    ../.venv/Scripts/mypy.exe app                                 # 102 files clean
    ../.venv/Scripts/lint-imports.exe                             # 4 kept, 0 broken
    ../.venv/Scripts/python.exe scripts/assert_importlinter.py    # DoD② 通过
    ```
-   ⚠️ 首次未起 Docker 时全量会出 **1 failed + 6 errors + 55 skipped**，**全部**是"集成环境不可用"，不是回归（已当场验证：起 Docker 后复跑即 1467 passed）。
+   ⚠️ 首次未起 Docker 时全量会出 **1 failed + 6 errors + 55 skipped**，**全部**是"集成环境不可用"，不是回归（已当场验证：起 Docker 后复跑即 1471 passed）。
 2. ☠️ **`assert_importlinter.py` 若报 `FATAL: 注入任何探针之前，lint 就已经失败`，先查 `backend/app/guard/_probe_violation.py` 是否存在**（并发/中断残留，见上面给 W0 那条）。它**不在 git 里**（`.gitignore:46` 有 `**/_probe_violation.py`），删掉即可，不要当技术债记。
 3. **阶段 3 收口结论里必须写的一条**（替代原来的"`plan`/`gen_sql` 100% 失败"）：**网关已修，但 §16.1 的预算执行点现在空缺**，等架构裁决 + W4 落 SSE 占位符。
+
+---
+
+## 【追加·2026-09-17 傍晚】`gen_sql_complex` —— 空 content 已标定修好，**但 pro 档在真机仍不可用**
+
+> 证据与根因见 `DELIVERY.md §13`。一句话：**`max_tokens` 不是主因，45s 上限才是。**
+
+### §给 W3B（**你的第 2 条：结论与你相反，请注意**）
+
+1. **不是 2/3，是 3/3 确定性失败。** 用带环比 + 品类排名的 L3+ 问句（真实资产、直发上游、n=3），
+   `max_tokens=3248` 三次**全部** `finish_reason=length` + **空 content**，`reasoning_tokens` 恰好吃满 3248。
+   你那次"成功过一次"应是更简问句下的偶然，**别把它当基线**。
+2. **已按实测标定**（`router.py`）：`THINKING_HEADROOM_TOKENS` 2048 → **8192**；
+   `GEN_SQL_COMPLEX.output_tokens_hint` 1200 → **1536**（旧值低于实测 content 需求 1223）。
+   你**不用改任何调用代码**——这是路由表内部常量。但**可选**：若你的合并档新 `LlmTask` 也是思考档，请把 reasoning 上界按**你的**问句分布再量一次，别照抄我的 8192。
+3. 🔴 **别对 pro 档质量做任何依赖，也别在文案/日志里承诺它。** 实测 pro 档在真实 L3+ 问句上
+   **从未生效**：白等 45s 被传输层掐断（`error=LlmTimeout`）→ 降级 flash，**50–60s/请求**、`degraded=True`。
+   即用户拿到的是 **flash 的答案**。这条是 PRD §12.2（L3+ 走 pro 思考）× 07 §10.2（pro 上限 45s）
+   × 8s P95 **三者不可同时成立**，已上呈架构（候选 ⑬），**不由本窗口单方面改**。
+4. **你的第 3 条（合并 `plan`+`gen_sql`）不变**：新资产 + 新 `LlmTask` 取值 = 改契约，先等架构裁决。
+   附带一条给裁决的输入：合并后如果是**思考档**，会正撞上述 45s 矛盾；如果是**非思考档**，则回到 PRD §12.2 的偏离问题。
+
+### §给 W4（**SSE 侧两条**）
+
+1. **L3+ 请求实测 50–60s（且答案来自 flash）**：`switched_to_weak_model` / `llm_unavailable` 降级事件会照常发出
+   （`from_model=deepseek-v4-pro`、`error=LlmTimeout`）⇒ 你的 SSE **必须能撑住 60s 不断流**（心跳/keepalive），
+   否则前端会在 pro 被掐断之前就先断连。
+2. ⚠️ **NFR-1.2（首字节 ≤1.5s）在 L3+ 上不可能靠"等模型"满足** —— 唯一出路是 §16.2 的**占位符先推**
+   （与上一节给你的第 1 条是同一件事，此处是第二个动因：不只是 1.2s 预算，而是**总耗时 60s**）。
+   本窗口**未**在网关层加任何"L3+ 先返回占位"的行为（那属于你的编排职责）。
+
+### §给架构窗口（**追加候选 ⑬，请与 ⑪⑫ 合并裁**）
+
+| 候选 | 问题 | 现状 / 影响 | 证据 |
+|---|---|---|---|
+| ⑬ | **PRD §12.2（L3+ → v4-pro 思考）× 07 §10.2（pro 单次 45s）× NFR-1.2（端到端 P95 8s）三者不可同时成立** | 实测 pro 档在真实 L3+ 问句 **97–138s**（思考 token 4900–6719），**超 45s 上限 2–3 倍** ⇒ pro **从未生效**，每次都降级 flash + 白等 45s | `DELIVERY.md §13.3`（n=2 端到端 + n=3 直发） |
+
+**三个方向（本窗口不预设立场，也不替架构选）**：
+
+| | 内容 | 代价 |
+|---|---|---|
+| A | 放宽 L3+ 的 pro 上限到 ~150s | 与 8s P95 彻底冲突 ⇒ 必须配异步/后台 + SSE 分段（产品形态变化） |
+| B | L3+ 改走 **flash 非思考** | 放弃 pro 质量，与 PRD §12.2 直接冲突（需改需求或明确 deviation） |
+| C | L3+ 走 pro 但**异步生成 + 先返回计划占位** | 工程量大（W4/W5 都动），但唯一同时满足质量与感知延迟的形态 |
+
+> 裁决要素（与 ⑫ 一起）：**"单次调用超时"到底该按哪个口径定？** 07 §10.2 的 45s 已被真机证伪两次
+> （⑫ 是"分配小于真实中位"，⑬ 是"上限小于真实需求 3 倍"）⇒ 建议架构**先给一版基于实测的口径**，再让实现者照做。
+> 另：若选 B，`gen_sql_complex` 改回 FAST 非思考**本窗口可立即执行**，但需明确指令（不在本轮擅自改）。
+
+### §给 W3-INT（**门禁数字不变，但有一条别误判**）
+
+1. 门禁数字与上一节**完全一致**（本次改动只有 `router.py` 两个常量 + `test_llm_router.py` 一个测试类，
+   全离线，不碰任何集成路径）：`pytest` → **1471 passed / 6 skipped**（比上一节 +4，来自本节新增的守卫测试类）；`ruff` All passed；`mypy app` 102 files clean；
+   `lint-imports` 4 kept；`assert_importlinter.py` DoD② 通过。
+2. ⚠️ **别把"L3+ 请求慢 50–60s"当回归**：那是 ⑬ 的既有事实（pro 被 45s 掐断后降级 flash），
+   与本次标定无关。本次标定**不会**让 L3+ 变快，只会让极少数落在 45s 内的问句拿到真正的 pro 答案。
