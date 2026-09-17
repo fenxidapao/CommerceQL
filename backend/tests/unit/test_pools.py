@@ -30,6 +30,7 @@ from app.repo.pools import (
     build_checkpoint_pool,
     build_metadata_engine,
     build_three_pools,
+    checkpoint_connect_kwargs,
 )
 
 _RW = "postgresql+psycopg://app_rw:pw@localhost:5432/ecom"
@@ -118,3 +119,19 @@ def test_reused_pool_object_is_rejected(settings: Settings) -> None:
     )
     with pytest.raises(PoolSeparationError, match="N-14"):
         pools_mod.assert_pools_are_separated(pools, DsnPair.from_raw(_RW, _RO))
+
+
+def test_checkpoint_connect_kwargs_carry_connect_timeout() -> None:
+    """★ U-53 护栏：checkpoint 连接参数必须带 `connect_timeout`。
+
+    根因（实测，`scripts/probe_pool_close_u53.py` 可复现）：不带它时，依赖不可达的
+    连接尝试**无限挂起**，`pool.close()` 在关停路径上只能等满默认 5s 上限 ——
+    这正是 arch 实测"退出 lifespan 2.00s"（及复测时 5.0s）的机制。
+    本断言只锁"参数在"（离线可验）；"close 真的变快"是时间性事实，
+    由探针脚本记录，不写进会抖动的测试断言。
+    """
+    kwargs = checkpoint_connect_kwargs()
+    assert "connect_timeout" in kwargs, (
+        "checkpoint_connect_kwargs 缺 connect_timeout —— U-53 关停延迟会回归"
+    )
+    assert kwargs["connect_timeout"] > 0

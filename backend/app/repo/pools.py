@@ -279,7 +279,7 @@ def build_checkpoint_pool(settings: Settings) -> AsyncConnectionPool:
 def checkpoint_connect_kwargs() -> dict[str, Any]:
     """**checkpoint 连接**的构造参数 —— 唯一来源，池与单连接两条路都从这里取。
 
-    ⚠️ 四个参数，每一个都是实测逼出来的（不是"照文档抄的建议值"）：
+    ⚠️ 五个参数，每一个都是实测逼出来的（不是"照文档抄的建议值"）：
 
     ① `application_name = commerceql-checkpoint`
        T-A1 的 `pg_stat_activity` 观测**完全依赖**它把连接归因到 checkpoint 池。
@@ -310,6 +310,18 @@ def checkpoint_connect_kwargs() -> dict[str, Any]:
        本窗口**未**在那边加（那会改动 W2D/W7 的语义且当前无法验证），
        已登记为待裁定项 —— 见交付说明。
 
+    ⑤ `connect_timeout = 2`（**U-53**，2026-09-17）—— 关停延迟的根因修复。
+       实测（复现脚本 `backend/scripts/probe_pool_close_u53.py`，本机，PG 不可达）：
+       · **不带** connect_timeout：worker 的连接尝试**无限挂起**，`pool.close()`
+         只能等满默认上限 **5.0s**，并打 "couldn't stop task 'pool-1-worker-0'
+         within 5.0 seconds"（arch 实测的"退出 lifespan 2.00s"即同一机制 ——
+         当时那次连接尝试恰好在 ~2s 处失败，close 等了多久 = 尝试挂了多久）；
+       · **带** connect_timeout=2：单次尝试 2s 内自灭，close 实测 **3.5s**（本机
+         双栈 ::1+127.0.0.1 各算一次；生产/compose 单主机名 = 一次尝试 ≈2s）。
+       取值对齐 `POOL_ACQUIRE_TIMEOUT_S`（5s 预算 ÷ 3 硬依赖 ≈ 2s）的同一推导。
+       ⚠️ 边界：它只管"单次连接尝试"的生死，不管重试节奏（那是池的
+       `reconnect_timeout`/backoff，属架构窗口 U-52 的池超时/重连规则，不越权）。
+
     ⚠️ 依赖 `lg` schema **已存在**（迁移 `0001` 创建）。
     若删掉迁移直接跑 saver，报错是 `schema "lg" does not exist` —— 比静默落错 schema 好。
     """
@@ -318,6 +330,7 @@ def checkpoint_connect_kwargs() -> dict[str, Any]:
         "options": f"-c search_path={CHECKPOINT_SCHEMA}",
         "autocommit": True,
         "prepare_threshold": None,
+        "connect_timeout": 2,
     }
 
 
