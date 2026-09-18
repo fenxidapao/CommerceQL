@@ -493,7 +493,11 @@ await store.insert_query_plan(
 store = FeedbackStore(pools.metadata)
 
 # 端点内（幂等的正确形态：先回读，再写）
-user_id = identity.subject                     # ⚠️ JWT 的 sub，不是 user_id claim（没有这个 claim）
+ctx = deps.get_identity()                      # IdentityContext（app/core/contracts.py:67）
+user_id = ctx.user_id                          # ⚠️ 该字段就是 JWT 的 sub
+                                               #    链路：JWT.sub → VerifiedToken.subject(tokens.py:78)
+                                               #        → IdentityContext.user_id(contracts.py:79)
+                                               #    ⚠️ 别传 tenant_id（会静默造出"跨租户的同一个人"）
 existing = await store.find_feedback_id(
     task_id=body.task_id, user_id=user_id, reason_code=body.reason_code
 )
@@ -515,7 +519,7 @@ else:
 | 参数 | 列 | 约束 / 注意 |
 |---|---|---|
 | `feedback_id` | `feedback_id` | PK，**你生成**（`new_id("feedback")`）；本层不造 id（id 唯一来源 = `obs.trace`） |
-| `task_id` / `user_id` | 同 | NOT NULL；`user_id` **必须**是 `identity.subject`（传成 `tenant_id` 会静默产生"跨租户的同一个人"） |
+| `task_id` / `user_id` | 同 | NOT NULL；`user_id` **必须**是 `deps.get_identity().user_id`（= JWT `sub`）。**别传 `tenant_id`**（会静默产生"跨租户的同一个人"）；也**别写 `identity.subject`** —— 那是 `VerifiedToken` 的字段名，`IdentityContext` 上没有 |
 | `is_correct` | `is_correct` | bool（传 `1` 会被本层拒） |
 | `reason_code` | `reason_code` | **枚举入参** `FeedbackReasonCode` 或 `None`；裸字符串在调用点就红 |
 | `corrected_sql` / `comment` / `correct_result_hint` | 同 | 可空 |
