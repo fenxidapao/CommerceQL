@@ -21,7 +21,16 @@ __all__ = ["TraceIds", "bind_ids", "current_ids", "new_id", "reset_ids"]
 _CTX: ContextVar[TraceIds | None] = ContextVar("commerceql_trace", default=None)
 
 #: id 前缀。前缀不是装饰 —— 它让"日志里贴出来的那串 id 是 task 还是 session"无需再去查表。
-_PREFIX: Final[dict[str, str]] = {"trace": "tr", "task": "tk", "session": "ss", "clarify": "cf"}
+#: ⚠️ `fb` 由附录 A §A.6 明文给定（`"feedback_id": "fb_01J8X7"`），不是自创前缀。
+#: 注：不登记时的回退是 `kind[:2]`，即 "feedback" → "fe" —— 与 §A.6 不一致，
+#: 故这里必须显式登记，否则响应里的 feedback_id 形态会与契约文档不同。
+_PREFIX: Final[dict[str, str]] = {
+    "trace": "tr",
+    "task": "tk",
+    "session": "ss",
+    "clarify": "cf",
+    "feedback": "fb",
+}
 
 
 @dataclass(frozen=True, slots=True)

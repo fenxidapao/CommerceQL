@@ -43,6 +43,7 @@ __all__ = [
     # ---- 结果与终态 ----
     "Outcome", "TaskStatus", "RefuseReason", "ClarifyReason",
     "DegradedReason", "ActionTaken", "RetrievalMode",
+    "FeedbackReasonCode",
     # ---- 语义与绑定 ----
     "BindingState", "BindingLayer", "GoldQueryTier",
     # ---- 呈现 ----
@@ -482,6 +483,36 @@ class RetrievalMode(StrEnum):
     SPARSE_ONLY = "sparse_only"
 
 
+class FeedbackReasonCode(StrEnum):
+    """`POST /feedback` 的 `reason_code` —— **10 值**（附录 A §A.6 明文给定）。
+
+    它的作用不是"分类标签"，而是**决定 bad case 的归因方向**：
+    每个取值映射到一个具体的语义层/工程侧修正对象（§A.6 表右列）——
+    这让"用户说错了"能自动路由到该改的那份资产，而不是攒成一堆没人看的反馈。
+
+    ⚠️ **为何落在本文件而不是 API 层的 `Literal[...]`**（W4 曾提 A 方案）：
+    本文件是**取值集唯一真相**（docs/08 §4.1 / 07 §4.2 断言⑤）。
+    API 层再写一份 `Literal` = 第二份取值集 —— 两处漂移时，枚举侧加了值而 DTO 侧拒收，
+    表现为"契约文档说支持、端点返回 422"，且**没有任何测试会红**。
+    ⇒ W4 直接 `from app.core.enums import FeedbackReasonCode` 做请求校验。
+
+    ⚠️ 与落库的边界：本枚举是**输入校验与归因路由**的取值集，与"有没有 feedback 表"无关；
+    当前迁移 0001–0004 无 feedback/gold_query 表（U-20 挂账，W1B 补），
+    故 `feedback_id` / `queued_for_review` 的真实性由端点窗口另行登记，不由本枚举兜底。
+    """
+
+    WRONG_METRIC_DEFINITION = "wrong_metric_definition"  # 口径错误 → 语义层指标定义
+    WRONG_TIME_RANGE = "wrong_time_range"                # 时间口径错误 → 时间语义
+    WRONG_DIMENSION = "wrong_dimension"                  # 维度映射错误 → 字段绑定
+    MISSING_SYNONYM = "missing_synonym"                  # 未识别业务词 → 同义词表
+    WRONG_JOIN = "wrong_join"                            # 关联错误 → Join 路径
+    WRONG_AGGREGATION = "wrong_aggregation"              # 聚合错误 → SQL 生成
+    MISSING_DEFAULT_FILTER = "missing_default_filter"    # 漏了默认谓词 → 默认谓词表
+    PERMISSION_ISSUE = "permission_issue"                # 权限问题 → 策略
+    DATA_QUALITY = "data_quality"                        # 源数据问题 → 不在本系统范围
+    OTHER = "other"
+
+
 # ============================================================================
 # 四、语义绑定
 # ============================================================================
@@ -888,6 +919,7 @@ CONTRACT_COUNTS: Final[Mapping[str, int]] = MappingProxyType(
         "degraded_reason": 8,
         "action_taken": 7,
         "retrieval_mode": 2,
+        "feedback_reason_code": 10,
         "binding_state": 4,
         "binding_layer": 4,
         "role": 7,
@@ -935,6 +967,7 @@ def validate_contract_counts() -> None:
         "degraded_reason": len(DegradedReason),
         "action_taken": len(ActionTaken),
         "retrieval_mode": len(RetrievalMode),
+        "feedback_reason_code": len(FeedbackReasonCode),
         "binding_state": len(BindingState),
         "binding_layer": len(BindingLayer),
         "role": len(Role),

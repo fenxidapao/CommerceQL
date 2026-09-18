@@ -50,6 +50,7 @@ from app.core.enums import (
     Dependency,
     DependencyKind,
     ErrorCode,
+    FeedbackReasonCode,
     GateDecision,
     GateNo,
     GoldQueryTier,
@@ -105,6 +106,7 @@ _COUNT_BINDINGS: dict[str, object] = {
     "degraded_reason": DegradedReason,
     "action_taken": ActionTaken,
     "retrieval_mode": RetrievalMode,
+    "feedback_reason_code": FeedbackReasonCode,
     "binding_state": BindingState,
     "binding_layer": BindingLayer,
     "role": Role,
@@ -163,6 +165,26 @@ def test_declared_count_matches_object(key: str) -> None:
 def test_authoritative_counts(key: str, expected: int) -> None:
     """07 §4.2 断言⑤ 明文点名的 3 个数字 —— 单独钉一次，改动代价最高。"""
     assert CONTRACT_COUNTS[key] == expected
+
+
+def test_feedback_reason_codes_match_appendix_a() -> None:
+    """附录 A §A.6 的 10 个归因码：字面量必须逐字一致。
+
+    它们是**外部契约**（客户端会把这些字符串传上来），改一个字母就是破坏性变更；
+    而"归因方向"（右列映射）依赖这些取值可枚举，故不能退化成自由字符串。
+    """
+    assert {code.value for code in FeedbackReasonCode} == {
+        "wrong_metric_definition",
+        "wrong_time_range",
+        "wrong_dimension",
+        "missing_synonym",
+        "wrong_join",
+        "wrong_aggregation",
+        "missing_default_filter",
+        "permission_issue",
+        "data_quality",
+        "other",
+    }
 
 
 # ---------------------------------------------------------------------------
