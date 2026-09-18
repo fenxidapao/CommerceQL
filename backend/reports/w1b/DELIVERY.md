@@ -736,3 +736,71 @@ W4 原文允许"走既有池并注明池名"）。方案已获用户采纳后开
 2. **同一个 DSN 字符串服务两个消费者时，形态必须显式转换、且两个方向都要有**；
    只写反向（`_libpq`）等于只覆盖了"本地形态"这一半。
 
+---
+
+## 13 本轮追加（2026-09-18）：迁移 0005（feedback + gold_query）+ FeedbackStore + 铸币脚本
+
+两次提交：`7f205e2`（A：表 + 通道）、`f05c7da`（B：令牌签发）。
+
+### 13.1 产出清单
+
+| # | 文件 | 说明 |
+|---|---|---|
+| 1 | `app/repo/migrations/versions/0005_feedback_and_gold_query.py` | 两表 + 唯一约束 + 索引 + 列注释 + GRANT |
+| 2 | `app/repo/feedback.py` | `FeedbackStore`：`insert_feedback`（写出）+ `find_feedback_id`（幂等回读） |
+| 3 | `tests/unit/test_migration_0005_runtime_contract.py` | 13 条离线契约（列集/枚举/补列登记/NULL 语义/权限面） |
+| 4 | `tests/integration/test_feedback_store_pg.py` | 16 条真库（往返/NULL 语义/权限/CHECK/§11.7 检索规则） |
+| 5 | `scripts/drill_0005_guards.py` | 7 处注入的负向对照 |
+| 6 | `scripts/mint_dev_token.py` | 签发 + **自证**（用应用自己的 `TokenVerifier`） |
+| 7 | `tests/unit/test_mint_dev_token.py` | 10 条：claims 完备 + 端到端验签 + 两条负向对照 |
+
+**门禁（CI 形态 DSN 注入）**：pytest **1680 passed / 6 skipped / 0 failed**、ruff 全过、
+`mypy app` **141 files**、lint-imports **4 kept / 0 broken**（上一轮 1641 ⇒ 本轮 +39 条新用例）。
+
+### 13.2 关键设计决定（三条，都可被单测/演练推翻）
+
+1. **`UNIQUE NULLS NOT DISTINCT`（`uq_feedback_task_user_reason`）**
+   `reason_code` 可空（§A.6 标 ⭕）+ PG 的 `NULL` 互不相等 ⇒ 不加这三个词，
+   唯一约束**看似在、实际拦不住**（同一 task 可刷无限条空归因），§A.6 幂等失效。
+   真库证据：`pg_index.indnullsnotdistinct = t`；集成用例 `test_duplicate_null_reason_code_raises`
+   在没有该子句时会写入两行并失败。
+2. **回读用 `IS NOT DISTINCT FROM`** —— 同一 NULL 陷阱的第二处（`=` 对 NULL 恒为 NULL）。
+   两处必须成对：只做约束会得到"约束拦住了、回读找不到"的矛盾形态。
+3. **补两列并登记**（`feedback.correct_result_hint`、`gold_query.bundle_version`）：
+   各有另一处规范性依据（§A.6 请求字段 / §11.7 检索 SQL），而 §12.3 表行漏写。
+   先例 = 0004 的 `query_plan.binding_layer`。补列清单被两条断言**冻结**：
+   再加列必须同时改清单与迁移文件头。
+
+### 13.3 负向对照（`scripts/drill_0005_guards.py`）
+
+7 处注入，**全部红在目标断言**（不是邻居红），还原后 `sha256` 逐字节一致：
+① feedback 加未登记列 → 列集 + 补列登记（两条同红）；② 枚举元组加幻值 → 枚举比对红；
+③ DDL 的 CHECK 占位符换成手写清单（漏值）→ **只有**"从 DDL 独立解析"那条红；
+④ 去掉 `NULLS NOT DISTINCT` → 约束断言红；⑤ 回读退回 `=` → `IS NOT DISTINCT FROM` 断言红；
+⑥ `gold_query` 加 `tier` 列 → 禁用列 + 列集两条红；⑦ 通道多一个 `update` 方法 → 访问面断言红。
+
+⚠️ **注入①抓出我自己写的一条假绿**：`test_feedback_extra_columns_are_registered` 首版读的是
+`FEEDBACK_COLUMNS`（通道白名单）而不是**迁移 DDL** ⇒ 给 DDL 加列它**不红**。
+「断言的对象不是它声称要守的那个真相」= 本仓库最典型的假绿形态，已修。
+
+### 13.4 实测暴露的限制与未解决风险（**红线区**）
+
+| # | 事实 | 影响 |
+|---|---|---|
+| 1 | **公钥进容器没有持久路径**：api 服务**没有挂载** `JWT_PUBLIC_KEY_PATH`，且容器以非 root 运行（`mkdir /run/secrets` → `Permission denied`）⇒ `--docker-container` 必须 `-u root`，**容器重启即失效** | W5 联调每重启就要重拷。持久解 = 给 compose 加只读挂载（`deploy/**` 属 W0，已转） |
+| 2 | **HTTP 级端到端未证**：本机 api 容器是 6 小时前的旧镜像（`/api/v1/sessions`、`/docs` 均 404，只有 `/api/v1/healthz/ready` 200），且 W4 自述 `GraphRuntime` 未进 lifespan ⇒ 端点当前 500 | 令牌"可用"的证明停在 **`TokenVerifier` 层（已证）**，没到 HTTP 层。**不要对外说"端到端已验证"** |
+| 3 | **审核侧整条缺失**：§A.6 只有 `POST /feedback`，没有"谁审、怎么审"的接口 ⇒ `gold_query` 的写入通道**没有合法写入方** | 本次只交付 `feedback` 的写出通道；`gold_query` 有表无通道（如实登记，未造假通道） |
+| 4 | `gold_query.source` 的**取值集在文档里不存在**（07/PRD 都只给列名） | 列建 NOT NULL、**刻意不加 CHECK**；值由写入方给。加 CHECK 前必须先有权威值集 |
+| 5 | `iat` 在未来时的归因方向偏弱（实测）：PyJWT 抛 `ImmatureSignatureError`，`TokenVerifier` 归到 step3 兜底 `invalid_token` | 排查时看不出是 iat 问题。**非本轮范围**（`app/auth/tokens.py` 加一个 `except` 即可），已登记待编号 |
+| 6 | 本机遗留：`deploy/secrets/{jwt_private,jwt_public}.pem`（`.gitignore` 双覆盖：`secrets/` + `*.pem`）；容器内已拷入匹配公钥 | 开发用明文私钥。换钥匙要 `--force-public-key`（会让已签发令牌全部失效） |
+
+### 13.5 可复用的三条教训
+
+1. **同一个 NULL 语义可能在两处表达**（唯一约束 + 回读查询），必须成对检查 ——
+   "约束拦住了、查询找不到"比"两处都错"更难查。
+2. **自证比断言强**：`mint_dev_token.py` 用**应用自己的** `TokenVerifier` 验自己签的令牌，
+   当场抓出漏 `iss`/`aud` 与"`scope` 可省"两个 bug；若只在脚本里断言"claims 齐全"，
+   两个 bug 都会活到 W5 联调现场。
+3. **负向对照要断言"红的是目标"**：注入①证明了一条断言**测错了对象**。
+   只看"红了没有"会把它当成合格的护栏。
+

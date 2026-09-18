@@ -480,3 +480,91 @@ await store.insert_query_plan(
 - 现成可复用：`tests/unit/test_auth_chain.py` 的 `rsa_keys()` / `_sign()`（`jwt.encode(claims, private, algorithm="RS256", headers={"kid": …})`）/ `_claims()`。
 - 另注：`/login` 端点**不在 W4 清单**（D-H 未裁），所以本脚本是唯一签发途径 —— 别指望端点自产 token。
 
+---
+
+## 12 → W4 / W0 / 架构（2026-09-18）：§11.4 那两项**已交付**（迁移 0005 + 铸币脚本）
+
+承诺兑现。提交：`7f205e2`（表 + 通道）、`f05c7da`（令牌签发）。细节 = `DELIVERY.md §13`。
+
+### 12.1 → W4：`POST /feedback` 现在有表可落了 —— 接线片段
+
+```python
+# 装配（lifespan 或端点依赖）：复用元数据池，**不要**新建连接资源
+store = FeedbackStore(pools.metadata)
+
+# 端点内（幂等的正确形态：先回读，再写）
+user_id = identity.subject                     # ⚠️ JWT 的 sub，不是 user_id claim（没有这个 claim）
+existing = await store.find_feedback_id(
+    task_id=body.task_id, user_id=user_id, reason_code=body.reason_code
+)
+if existing is not None:
+    feedback_id = existing                     # 幂等命中：返回**同一条**
+    queued_for_review = ...                    # 见下（口径待你定）
+else:
+    feedback_id = new_id("feedback")           # `fb_...`（§A.6 明文；W0 已登记前缀）
+    await store.insert_feedback(
+        feedback_id=feedback_id, task_id=body.task_id, user_id=user_id,
+        is_correct=body.is_correct, reason_code=body.reason_code,
+        corrected_sql=body.corrected_sql, comment=body.comment,
+        correct_result_hint=body.correct_result_hint,
+    )
+```
+
+逐参数契约：
+
+| 参数 | 列 | 约束 / 注意 |
+|---|---|---|
+| `feedback_id` | `feedback_id` | PK，**你生成**（`new_id("feedback")`）；本层不造 id（id 唯一来源 = `obs.trace`） |
+| `task_id` / `user_id` | 同 | NOT NULL；`user_id` **必须**是 `identity.subject`（传成 `tenant_id` 会静默产生"跨租户的同一个人"） |
+| `is_correct` | `is_correct` | bool（传 `1` 会被本层拒） |
+| `reason_code` | `reason_code` | **枚举入参** `FeedbackReasonCode` 或 `None`；裸字符串在调用点就红 |
+| `corrected_sql` / `comment` / `correct_result_hint` | 同 | 可空 |
+
+⚠️ **三条你必须知道的边界**：
+
+1. **`correct_result_hint` 有列了**（§A.6 请求字段，§12.3 表行漏写 ⇒ 0005 补齐）。之前"收到只能丢"的情况不存在了。
+2. **`queued_for_review` 的口径归你定**（表里没有 status 列，审核接口也不存在）。两种都能自圆其说：
+   `not is_correct`（任何"结果有误"都进池等归因）或 `not is_correct and corrected_sql is not None`（只有带修正的才进池）。
+   我**不替你选**。唯一硬约束：**别谎报 `true`** —— 行真的落了才 `true`。
+3. **撞唯一约束 = `sqlalchemy.exc.IntegrityError`**（`.orig` 是 `psycopg.errors.UniqueViolation`）。
+   但**别靠捕异常做幂等**（捕到了也拿不到已有 id）—— 用上面的 `find_feedback_id` 先回读。
+   并发下仍可能撞（两个请求同时回读到 None）→ 那时捕 `IntegrityError` 再回读一次即可。
+
+### 12.2 → W0：两条
+
+1. **【请求】`deploy/docker-compose.yml` 的 api 加一条只读挂载**（`deploy/**` 属你）：
+   `../deploy/secrets/jwt_public.pem:/run/secrets/jwt_public.pem:ro`
+   现状：容器**没有**该文件，且 api 以非 root 运行（`mkdir /run/secrets` → `Permission denied`），
+   我的 `--docker-container` 只能 `docker exec -u root` 临时拷，**容器重启即失效**。
+   不加挂载 ⇒ W5 每次重启都要重拷，联调体验直接崩。
+2. **更正你 RELAY 里一处归属**：你写的"W1B 域（guard，10 条 ruff 违规）"—— `docs/08 §4.1:296`
+   明写 `app/guard/**` = **W2C**。请订正或直接转 W2C（详见本文件 §11.2）。
+
+### 12.3 → 架构：4 条待裁（**均未擅自开号**，按规定先登记）
+
+| # | 事项 | W1B 的现状做法 | 需要的裁定 |
+|---|---|---|---|
+| 1 | **§11.7 ↔ §12.3 表行不一致**：§11.7 的检索 SQL 要求 `gold_query.bundle_version`，§12.3 表行没有该列 | 已补列（同 0004 `binding_layer` 先例），并冻结在契约测试里 | 认账补列（并在 §12.3 表行补上），或驳回（则一条 drop 迁移即可 —— 目前无人写入） |
+| 2 | `feedback.correct_result_hint` 同类问题（§A.6 有、§12.3 无） | 同上，已补 | 同上 |
+| 3 | **`gold_query.source` 的取值集在 07/PRD 中均不存在** | 列 NOT NULL、**刻意不加 CHECK**（不发明值集） | 值集定义（谁产生哪些取值） |
+| 4 | **`iat` 未来的归因**：PyJWT 抛 `ImmatureSignatureError`，`TokenVerifier`（W1B 的 `app/auth/tokens.py`）把它归到 step3 兜底 `invalid_token` | 未动（非本轮范围） | 是否加 `except jwt.ImmatureSignatureError` → 新 reason（会牵动 contract 计数，故先报） |
+
+另：**审核状态机/审核端点**不在 §A.6 里（它只定义了 `POST /feedback`），
+所以 `gold_query` 目前**有表无写入通道** —— 这不是遗漏，是没有合法写入方。归架构/W4 后续。
+
+### 12.4 → W5：你现在可以拿一枚真令牌了
+
+```bash
+# 1) 生成密钥对 + 签发 + 自证（令牌打到 stdout，诊断走 stderr）
+python backend/scripts/mint_dev_token.py --tenant-id tenant_a --role analyst --scope "query:read"
+
+# 2) 让容器也能验（重启后需重跑；持久化见 §12.2 给 W0 的请求）
+python backend/scripts/mint_dev_token.py --tenant-id tenant_a --role analyst \
+    --docker-container commerceql-api-1
+```
+
+⚠️ **先别急着联调**：本机 api 容器的镜像比 W4 的端点提交**旧**（`/api/v1/sessions` 404），
+且 W4 自述 `GraphRuntime` 未进 lifespan ⇒ 端点当前 500。**令牌能用**这件事已用
+`TokenVerifier` 证过（不是"应该能用"），但**HTTP 层端到端还没人证过**。
+
+
