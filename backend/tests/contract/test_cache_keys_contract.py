@@ -28,7 +28,11 @@ _OTHER_TENANT = "t_globex"
 #: 期望的"无租户键"清单，作为**变量**而非字面量参与比较：
 #: 直接和字面量比会被 ruff 的 SIM300（Yoda condition）判为可疑写法，
 #: 而且这里的意图本来就是"清单是一份可评审的常量"，独立成常量更直白。
-_EXPECTED_TENANTLESS: frozenset[str] = frozenset({"active_version", "embedding", "event_buffer"})
+#: ⚠️ `task_state`（2026-09-18 W4 转述 #1）：与 `event_buffer` 同为"规则 1 不适用"，
+#:    成立前提是读端做所有权校验（见 `keys.task_state` docstring）。
+_EXPECTED_TENANTLESS: frozenset[str] = frozenset(
+    {"active_version", "embedding", "event_buffer", "task_state"}
+)
 
 #: `keys.py` 中**不是键构造函数**的公共工具（不参与"必须收 tenant_id"的检查）。
 _NOT_KEY_BUILDERS: frozenset[str] = frozenset({"sha256_text", "jittered_ttl", "user_scope_hash"})
@@ -39,7 +43,7 @@ _NOT_KEY_BUILDERS: frozenset[str] = frozenset({"sha256_text", "jittered_ttl", "u
 # ---------------------------------------------------------------------------
 
 def test_tenantless_set_matches_documented_exemptions() -> None:
-    """`TENANTLESS_BUILDERS` 必须恰是那三个有理由的键，一个不多一个不少。"""
+    """`TENANTLESS_BUILDERS` 必须恰是那几个有理由的键，一个不多一个不少。"""
     assert keys.TENANTLESS_BUILDERS == _EXPECTED_TENANTLESS, (
         "无租户键清单被改动 —— 每一个都必须在 07 §11.2 有明确依据（规则 1 的判据或规则 8 的豁免）"
     )
@@ -171,6 +175,42 @@ def test_tenant_window_key_never_equals_user_window_key(
 
 def test_active_version_is_a_global_pointer() -> None:
     assert keys.active_version() == "semantic:active_version"
+
+
+# ---------------------------------------------------------------------------
+# 2.5 W4 转述的三组键（2026-09-18）：task_state / concurrency_lease / session_meta
+# ---------------------------------------------------------------------------
+
+def test_task_state_key_format_and_tenantless_classification() -> None:
+    """`task:` 与 `evt:` 同类（规则 1 不适用）—— 本测试同时钉住"它不得偷偷变成带租户"，
+    因为那会让 W4 的轮询端点与键构造两侧口径分叉（键写了租户、端点没传）。"""
+    assert keys.task_state("task-1") == "task:task-1"
+    assert _TENANT not in keys.task_state("task-1")
+
+
+def test_concurrency_lease_key_format_and_isolation_between_tenants() -> None:
+    """GLOBAL_CONCURRENCY 租约键：必须按租户隔离（跨租户共用一个 ZSET = 配额互相挤占）。"""
+    assert keys.concurrency_lease(_TENANT) == f"concur:{_TENANT}"
+    assert keys.concurrency_lease(_TENANT) != keys.concurrency_lease(_OTHER_TENANT)
+    # 与限流键空间结构性区分：前缀不同，绝不与 rl / rl:t 撞
+    assert keys.concurrency_lease(_TENANT).split(":")[0] == "concur"
+
+
+def test_session_meta_coexists_with_session_plan_without_collision() -> None:
+    """`sess:meta:` 与 `sess:plan:` 同族不同键（单值元数据 vs 轮次计划 List）。"""
+    assert keys.session_meta(_TENANT, "s1") == f"sess:meta:{_TENANT}:s1"
+    assert keys.session_meta(_TENANT, "s1") != keys.session_plan(_TENANT, "s1")
+    assert keys.session_meta(_TENANT, "s1") != keys.session_meta(_OTHER_TENANT, "s1")
+
+
+def test_w4_three_key_groups_all_have_ttl() -> None:
+    """三组键都必须有 TTL —— 无 TTL 的任务状态/租约/会话元数据是永久驻留的租户数据。"""
+    for name in ("task_state", "concurrency_lease", "session_meta"):
+        assert name in keys.DEFAULT_TTL_S, f"{name} 缺 TTL（会永久驻留）"
+    # 数值本身由 W4 转述给定：状态/租约 1h、会话元数据 1d
+    assert keys.DEFAULT_TTL_S["task_state"] == 3600
+    assert keys.DEFAULT_TTL_S["concurrency_lease"] == 3600
+    assert keys.DEFAULT_TTL_S["session_meta"] == 86400
 
 
 # ---------------------------------------------------------------------------

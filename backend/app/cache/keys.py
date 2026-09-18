@@ -53,6 +53,7 @@ __all__ = [
     "TENANTLESS_BUILDERS",
     "active_version",
     "clarify_context",
+    "concurrency_lease",
     "embedding",
     "event_buffer",
     "idempotency",
@@ -63,8 +64,10 @@ __all__ = [
     "semantic_few_shot",
     "semantic_retrieval",
     "session_lock",
+    "session_meta",
     "session_plan",
     "sha256_text",
+    "task_state",
     "user_scope_hash",
 ]
 
@@ -171,6 +174,19 @@ def session_plan(tenant_id: str, session_id: str) -> str:
     return _build("sess", "plan", tenant_id, session_id)
 
 
+def session_meta(tenant_id: str, session_id: str) -> str:
+    """会话元数据键（W4 转述 #3，2026-09-18）。格式：`sess:meta:{tenant}:{session_id}`。
+
+    值形态由 W4 定：`created_at` / `title` / `bundle_version` / `graph_version` /
+    `last_turn_at` / `closed`（W0 只出键构造）。
+
+    ⚠️ **必须带租户**：会话标题与轮次时间属租户数据；W4 已明确本组**不新增无租户键**。
+    ⚠️ 与 `session_plan` 的分工：meta = 会话级元数据（单值），plan = 轮次计划摘要（List）。
+      两者前缀同族（`sess:`）但第 2 段不同（`meta` vs `plan`），键空间不重叠。
+    """
+    return _build("sess", "meta", tenant_id, session_id)
+
+
 def clarify_context(tenant_id: str, clarify_id: str) -> str:
     """澄清上下文。TTL **5min**（对齐附录 A §A.13 的 `CLARIFY_EXPIRED` 410）。"""
     return _build("clarify", tenant_id, clarify_id)
@@ -203,6 +219,24 @@ def result_set(tenant_id: str, task_id: str) -> str:
     ⚠️ 写入前结果必须**已脱敏**（N-05）。
     """
     return _build("result", tenant_id, task_id)
+
+
+def task_state(task_id: str) -> str:
+    """任务状态键（W4 转述 #1，2026-09-18）。格式：`task:{task_id}`（**无租户**）。TTL 1h。
+
+    载体职责（W4）：`GET /query/{task_id}` 轮询状态机 + cancel 幂等 + 转异步后的状态登记。
+    `query_task` 表未建（迁移 0001–0004 零命中）→ 状态放 Redis，需跨连接/跨重启可读。
+    值形态由 W4 定（JSON：`status` / `tenant_id` / `user_id` / `session_id` / 各时间戳）。
+
+    ⚠️ **无租户 = 规则 1「不适用」，不是豁免**（与 `event_buffer` 同一类，见文件头三种分类）：
+    判据仍是"键的内容 / 命中与否是否反映租户数据" —— `task_id` 是服务端生成的随机 ID，
+    键名不含租户信息，命中与否只反映"该任务状态是否存在"。
+    → **代价必须明说**：`task_state` 的**值**含 `tenant_id`/`user_id`，所以
+      "键不含租户"能成立的前提是**读端做所有权校验**（`GET /query/{task_id}` 按附录 A §A.2
+      校验任务归属，与 `evt:` 重放端点同一条义务）。**W4 不得省略该校验**；
+      若哪天有第二个消费方绕过端点直读本键，本键的分类就需要重新评估。
+    """
+    return _build("task", task_id)
 
 
 # ============================================================================
@@ -249,6 +283,22 @@ def session_lock(tenant_id: str, user_id: str, session_id: str) -> str:
     return _build("lock", "session", tenant_id, user_scope_hash(user_id), session_id)
 
 
+def concurrency_lease(tenant_id: str) -> str:
+    """全局并发租约键（W4 转述 #2，2026-09-18）。格式：`concur:{tenant}`（**ZSET**）。TTL 1h（活跃时刷新）。
+
+    结构（W4 用自有 Lua 在 `ratelimit.py` 内原子进出）：
+    member = `task_id`、score = 进入时刻（ms）；进入 +1 / 退出 -1 / 断连 `finally` 释放。
+
+    ⚠️ 背景：§A.0.6 的 `GLOBAL_CONCURRENCY` 桶此前在本模块**无键可构造**，
+    `app/api/ratelimit.py` 只能直接抛 `LimiterNotImplemented` → **P0 期间该桶保护事实上不存在**
+    （W1B DELIVERY 已登记）。本函数是该缺口的键侧解。
+    ⚠️ **必须带租户**：租约按租户隔离，跨租户共享会互相挤占配额。
+    ⚠️ 它是**唯一**用 ZSET 的键 —— 不要拿它跟 `rate_limit*`（ZSET 滑窗）混用同一前缀区：
+    本键第 1 段是 `concur`，与 `rl`/`rl:t` 结构性不同。
+    """
+    return _build("concur", tenant_id)
+
+
 # ============================================================================
 # TTL 与防雪崩
 # ============================================================================
@@ -264,6 +314,9 @@ DEFAULT_TTL_S: Final[Mapping[str, int]] = MappingProxyType(
         "idempotency": 86400,           # 24h
         "event_buffer": 3600,
         "result_set": 3600,
+        "task_state": 3600,             # 1h，对齐 event_buffer / result_set（W4 转述 #1）
+        "concurrency_lease": 3600,      # 1h，活跃时由 Lua 进出刷新（W4 转述 #2）
+        "session_meta": 86400,          # 会话期（同 session_plan / SESSION_TTL_SECONDS）
         # 限流计数的 TTL = **窗口长度**，不是"缓存时长"：§A.0.6 的四个桶都是「N 次/分钟」，
         # 故窗口 = 60s。写死在这里只是缺省值 —— 限流器按桶配置覆盖（§9.2）。
         "rate_limit": 60,
@@ -300,12 +353,16 @@ def jittered_ttl(ttl_s: int, *, rand: float | None = None) -> int:
 #   2. emb:...                —— 唯一被**显式列出**的豁免键（§11.2 规则 8 三条条件全满足）
 #   3. evt:...                —— 规则 1 **不适用**（键内容与命中与否都不反映租户数据）
 #                               ⚠️ 第 3 类的表述待 §11.1 补脚注（U-21）
+#   4. task:...               —— 同类第 2 例（W4 转述 #1，2026-09-18）：键名不含租户，
+#                               值是任务状态 JSON（含 tenant_id/user_id）→
+#                               分类成立的前提是**读端做所有权校验**（见 task_state docstring）
 # ---------------------------------------------------------------------------
 TENANTLESS_BUILDERS: Final[frozenset[str]] = frozenset(
     {
         "active_version",   # 全局指针（非缓存条目）
         "embedding",        # §11.2 规则 8 的唯一显式豁免
         "event_buffer",     # 规则 1 不适用（task_id 为服务端随机 ID）
+        "task_state",       # 规则 1 不适用（同上；值是任务状态，读端必须校验归属）
     }
 )
 
@@ -314,6 +371,7 @@ ALL_BUILDERS: Final[frozenset[str]] = frozenset(
     {
         "active_version",
         "clarify_context",
+        "concurrency_lease",
         "embedding",
         "event_buffer",
         "idempotency",
@@ -323,7 +381,9 @@ ALL_BUILDERS: Final[frozenset[str]] = frozenset(
         "semantic_few_shot",
         "semantic_retrieval",
         "session_lock",
+        "session_meta",
         "session_plan",
+        "task_state",
     }
 )
 
