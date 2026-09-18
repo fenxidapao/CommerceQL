@@ -96,6 +96,7 @@ __all__ = [
     "EventRecorder",
     "emissions_for_node",
     "gate_detail",
+    "meta_payload",
     "missing_meta_keys",
 ]
 
@@ -320,6 +321,48 @@ def missing_meta_keys(data: Mapping[str, Any]) -> tuple[str, ...]:
     return tuple(key for key in _META_REQUIRED_KEYS if data.get(key) is None)
 
 
+def meta_payload(state: Mapping[str, Any], *, bundle_version: str) -> dict[str, Any]:
+    """按 07 §5.6 的 `meta` 行组装载荷（**唯一组装点**）。
+
+    七个键的来源逐条写清 —— 其中**一个是缺口，必须知道**：
+
+    | 键 | 来源 |
+    |---|---|
+    | `bundle_version` | **入参**：`GraphState` 的 07 §5.2 字段表里**没有**它（组 4 只有 `retrieval_mode`），
+      而 §5.6 又要求 `meta` 必带 → 它来自 `RunContext.bundle_version`（`trusted_context` 写入）。
+      ⚠️ 这是**契约缺口**：`meta.bundle_version` 无 state 载体。不得为它新增 state 字段
+      （§5.2 是穷举的，加字段=造第二份真相），故走上下文。 |
+    | `cost_cny` / `tokens` / `latency_ms` | 组 11（`present` / 出口节点写入） |
+    | `trace_id` | 组 1 |
+    | `scope` | 组 7（gate2 算出）；缺失时按 C-07 缺省语义（`unrestricted` / 不改变披露策略） |
+    | `retrieval_mode` | 组 4（C-11：必须如实回填**实际**执行档） |
+
+    ⚠️ C-07 的缺省语义**在这里也要成立**：`scope` 缺失时不填 `None`（那会让
+    `missing_meta_keys` 判它缺失、把一轮正常查询记成契约违规），而是填缺省三元组 ——
+    这正是 C-07 原文"字段缺失视为 `unrestricted` / `applied=False` / `disclosable=True`，
+    **不改变披露策略**"的意思。
+    """
+    scope = state.get("scope")
+    return {
+        "bundle_version": bundle_version,
+        "cost_cny": _jsonable(state.get("cost_cny", 0)),
+        "tokens": _jsonable(state.get("tokens") or {}),
+        "latency_ms": _jsonable(state.get("latency_ms") or {}),
+        "trace_id": state.get("trace_id"),
+        "scope": _jsonable(scope) if scope is not None else _DEFAULT_SCOPE,
+        "retrieval_mode": state.get("retrieval_mode"),
+    }
+
+
+#: C-07 的缺省 `scope`（字段缺失时的语义，**不改变披露策略**）。
+_DEFAULT_SCOPE: Final[dict[str, Any]] = {
+    "level": "unrestricted",
+    "applied": False,
+    "notice": None,
+    "disclosable": True,
+}
+
+
 # ============================================================================
 # 发射器
 # ============================================================================
@@ -537,8 +580,17 @@ def _stage_emission(stage: Stage, elapsed_ms: int, extra: Mapping[str, Any]) -> 
 
 
 def _terminal_payload(node: str, update: Mapping[str, Any], extra: Mapping[str, Any]) -> dict[str, Any]:
-    """出口三节点的载荷（07 §5.6 表后三行 + `GraphState` 组 11）。"""
+    """出口三节点的载荷（07 §5.6 表后三行 + `GraphState` 组 11）。
+
+    ⚠️ 产品文案（`message` / `suggestions[]` / `detail` / `retryable`）有**两个可能来源**：
+    · `extras`（runner/端点层，经 `app/api/errors.map_code` 映射 —— `error` 帧的正常来源）；
+    · 本节点的**增量**（`refuse_out` 直接把文案放进它的返回值 —— 拒答不走错误码映射）。
+    两者都取不到时**如实缺字段**，不编造（U-22）。
+    """
     payload: dict[str, Any] = dict(extra)
+    for key in ("message", "suggestions", "detail", "retryable"):
+        if payload.get(key) is None and update.get(key) is not None:
+            payload[key] = _jsonable(update[key])
     if node == CLARIFY_OUT:
         clarify = _mapping(update.get("clarify"))
         payload.setdefault("clarify_id", clarify.get("clarify_id"))

@@ -36,6 +36,7 @@ T-A1 的目的是回答"**生产该用哪种装配**"，而不是"哪种装配�
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from enum import StrEnum
 from itertools import pairwise
 from typing import TYPE_CHECKING, Any, Final
@@ -60,6 +61,7 @@ __all__ = [
     "STUB_RECURSION_LIMIT",
     "CheckpointSetupOutcome",
     "CheckpointStrategy",
+    "build_graph",
     "build_stub_graph",
     "ensure_checkpoint_schema",
     "graph_version",
@@ -339,3 +341,191 @@ def graph_version() -> str:
     组装归 W4。本函数只暴露图结构版本这一项，避免在 W1B 就假造一个"组合版本"。
     """
     return GRAPH_VERSION
+
+
+# ============================================================================
+# 真图装配（W4 接管；07 §5.3 的 16 主节点 + 3 出口）
+# ============================================================================
+
+
+def build_graph(
+    checkpointer: AsyncPostgresSaver | None = None,
+) -> CompiledStateGraph[GraphState, None, GraphState, GraphState]:
+    """装配真图：19 个节点（16 主 + 3 出口）+ 07 §5.4 的 14 条条件边。
+
+    ⚠️ **为什么可以装配成单例**（而 `PlannerEngine` 必须每请求一个）：
+    节点**不持有依赖** —— 依赖经 `contextvars`（`graph/context.RunContext`）在每请求注入，
+    所以同一张编译好的图可以被所有请求并发复用。反过来，把引擎挂在闭包里会让
+    `PlannerEngine._pending` 跨请求串事件（`RELAY §给 W4` 的接线硬约束）。
+
+    ⚠️ **`route_terminal` 的用法**：`edges.route_terminal` 回答"能不能结束"（返回 `END`），
+    而 `edge.terminal_target` 回答"该走哪个出口节点"。本函数用的是后者 —— 因为
+    出口三节点各自还要**构造终态 + 写段 1 审计**（见各节点 docstring），
+    它们不能省掉直接 `END`。`route_terminal` 是那三个出口**之后**的收口：
+    出口节点写终态 → 无条件边到 `END`（`route_terminal` 的幂等语义由
+    `assert_terminal_is_settable` + `EventRecorder.push` 双保险承担，见 `edges.py` §三）。
+    """
+    from app.graph import edges
+    from app.graph.nodes import (
+        ALL_NODE_NAMES,
+        AUDIT_PRE,
+        AUDIT_SUPP,
+        BIND,
+        CLARIFY_OUT,
+        ERROR_OUT,
+        EXECUTE,
+        GATE1_AST,
+        GATE2_POLICY,
+        GATE3_COST,
+        GEN_SQL,
+        INTENT,
+        LINK,
+        MASK,
+        NORMALIZE,
+        PLAN,
+        PRESENT,
+        REFUSE_OUT,
+        REPAIR,
+        TERMINAL_NODE_NAMES,
+        TRUSTED_CONTEXT,
+    )
+    from app.graph.nodes import audit_pre as audit_pre_node
+    from app.graph.nodes import audit_supp as audit_supp_node
+    from app.graph.nodes import bind as bind_node
+    from app.graph.nodes import clarify_out as clarify_out_node
+    from app.graph.nodes import error_out as error_out_node
+    from app.graph.nodes import execute as execute_node
+    from app.graph.nodes import gate1_ast as gate1_node
+    from app.graph.nodes import gate2_policy as gate2_node
+    from app.graph.nodes import gate3_cost as gate3_node
+    from app.graph.nodes import gen_sql as gen_sql_node
+    from app.graph.nodes import intent as intent_node
+    from app.graph.nodes import link as link_node
+    from app.graph.nodes import mask as mask_node
+    from app.graph.nodes import normalize as normalize_node
+    from app.graph.nodes import plan as plan_node
+    from app.graph.nodes import present as present_node
+    from app.graph.nodes import refuse_out as refuse_out_node
+    from app.graph.nodes import repair as repair_node
+    from app.graph.nodes import trusted_context as trusted_context_node
+
+    builders: dict[str, Any] = {
+        TRUSTED_CONTEXT: trusted_context_node.trusted_context,
+        NORMALIZE: normalize_node.normalize,
+        INTENT: intent_node.intent,
+        LINK: link_node.link,
+        PLAN: plan_node.plan,
+        BIND: bind_node.bind,
+        GEN_SQL: gen_sql_node.gen_sql,
+        GATE1_AST: gate1_node.gate1_ast,
+        GATE2_POLICY: gate2_node.gate2_policy,
+        GATE3_COST: gate3_node.gate3_cost,
+        EXECUTE: execute_node.execute,
+        MASK: mask_node.mask,
+        AUDIT_PRE: audit_pre_node.audit_pre,
+        PRESENT: present_node.present,
+        AUDIT_SUPP: audit_supp_node.audit_supp,
+        REPAIR: repair_node.repair,
+        CLARIFY_OUT: clarify_out_node.clarify_out,
+        REFUSE_OUT: refuse_out_node.refuse_out,
+        ERROR_OUT: error_out_node.error_out,
+    }
+    assert set(builders) == set(ALL_NODE_NAMES), "节点表与 `nodes.__init__` 的常量表不一致"
+
+    builder: StateGraph[GraphState, None, GraphState, GraphState] = StateGraph(GraphState)
+    for name in ALL_NODE_NAMES:
+        builder.add_node(name, builders[name])
+
+    #: 出口四节点：**终态优先守卫的公共去向**（见 `_guard` 的 docstring）。
+    exits: tuple[str, ...] = (CLARIFY_OUT, REFUSE_OUT, ERROR_OUT, AUDIT_SUPP)
+
+    def branch(
+        router: Callable[[GraphState], str], *targets: str
+    ) -> tuple[Callable[[GraphState], str], list[str]]:
+        return _guard(router, targets, exits)
+
+    # --- 入口：常量边，用 `add_edge` 而不是"恒返回同一目标的假条件边" ---
+    # ⚠️ 条件边不给 `path_map` 时 LangGraph 无法内省目标，`get_graph()` 会把该边渲染成
+    #    指向 `__end__` 的**占位**（早期版本实测如此）。拓扑快照是 T9 的对账依据，
+    #    渲染成假的比不渲染更糟 —— 故本函数**每一条条件边都显式声明目标集**。
+    builder.add_edge(START, TRUSTED_CONTEXT)
+    builder.add_edge(TRUSTED_CONTEXT, NORMALIZE)
+
+    # --- 主线（07 §5.4 的 14 条条件边逐条落位）---
+    builder.add_conditional_edges(NORMALIZE, *branch(edges.route_after_normalize, INTENT))
+    builder.add_conditional_edges(
+        INTENT, *branch(edges.route_after_intent, REFUSE_OUT, CLARIFY_OUT, LINK)
+    )
+    builder.add_conditional_edges(
+        LINK, *branch(edges.route_after_link, REFUSE_OUT, CLARIFY_OUT, PLAN)
+    )
+    builder.add_conditional_edges(
+        PLAN, *branch(edges.route_after_plan, REFUSE_OUT, GEN_SQL)
+    )
+    builder.add_conditional_edges(
+        BIND, *branch(edges.route_after_bind, CLARIFY_OUT, REFUSE_OUT, GEN_SQL)
+    )
+    builder.add_conditional_edges(GEN_SQL, *branch(edges.route_after_gen_sql, GATE1_AST))
+    builder.add_conditional_edges(
+        GATE1_AST, *branch(edges.route_after_gate1, GATE2_POLICY, ERROR_OUT)
+    )
+    builder.add_conditional_edges(
+        GATE2_POLICY, *branch(edges.route_after_gate2, GATE3_COST)
+    )
+    builder.add_conditional_edges(
+        GATE3_COST, *branch(edges.route_after_gate3, EXECUTE, AUDIT_SUPP)
+    )
+    builder.add_conditional_edges(
+        EXECUTE, *branch(edges.route_after_execute, MASK, REPAIR)
+    )
+    builder.add_conditional_edges(MASK, *branch(edges.route_after_mask, AUDIT_PRE))
+    builder.add_conditional_edges(AUDIT_PRE, *branch(edges.route_after_audit_pre, PRESENT))
+    builder.add_conditional_edges(PRESENT, *branch(edges.route_after_present, AUDIT_SUPP))
+    builder.add_conditional_edges(REPAIR, *branch(edges.route_after_repair, GATE1_AST))
+    builder.add_edge(AUDIT_SUPP, END)
+
+    # 出口三节点 → END（终态与段 1 审计都由它们自己收口，见各节点 docstring）。
+    for name in TERMINAL_NODE_NAMES:
+        builder.add_edge(name, END)
+
+    return builder.compile(checkpointer=checkpointer)
+
+
+def _guard(
+    router: Callable[[GraphState], str],
+    targets: tuple[str, ...],
+    exits: tuple[str, ...],
+) -> tuple[Callable[[GraphState], str], list[str]]:
+    """给一条 §5.4 条件边套上"**终态优先**"守卫，并**显式列出合法目标集**。
+
+    ⚠️ 为什么要一个统一包装，而不是逐条改 `edges.py`：
+    `edges.py` 里 8 条路由**自己会**判 `state.terminal`（intent/link/plan/bind/mask/
+    audit_pre/gate2/gate3），另 5 条**不判**（normalize/gen_sql/gate1/repair/present）。
+    不判的那几条在"上游节点已设终态"的路径上会**继续往下跑**，下游节点第二次设终态
+    → `assert_terminal_is_settable` 抛 `ValueError`（N-08 的正确行为）。
+    那是"图缺陷"的表现，不该由**一次正常的拒答**触发（例：`gen_sql` 判 `refuse` 后
+    若仍走 `gate1_ast`，就会拿空 SQL 过闸门 → 二次终态 → 崩）。
+    ⇒ 判据只有一条、且与 `edges.py` 同源（`terminal_target`）：**已设终态就必须去出口**。
+    包装而不是重写 `edges.py`，是因为那 14 条判据本身是纯函数、已被 `tests/contract/
+    test_edges_contract.py` 覆盖，不该为这件事改语义 —— 该文件的五条"不判终态"与本节
+    的补偿是**一处已登记的口径分歧**（交付件 §缺口），是否下沉到 `edges.py` 待架构裁决。
+
+    ⚠️ `path_map` 是**第二个返回值**，不是为了好看：
+    LangGraph 在 `path_map=None` 时无法内省该边的目标，`get_graph()` 会渲染出
+    指向 `__end__` 的占位边（早期版本实测），于是"图快照"这个 T9 对账依据会是**假的**；
+    给了 `path_map` 还会在**运行期校验**路由返回值必须落在集合内 —— 拼错节点名当场炸，
+    而不是静默走到一个不存在的节点。故目标集 = 该路由自己的去向 ∪ 出口四节点。
+
+    ⚠️ `asyncio.CancelledError` 与本包装无关：它继承 `BaseException`，节点内已保证冒泡。
+    """
+
+    allowed = list(dict.fromkeys([*targets, *exits]))
+
+    def _routed(state: GraphState) -> str:
+        if state.get("terminal") is not None:
+            from app.graph.edges import terminal_target
+
+            return terminal_target(state)
+        return router(state)
+
+    return _routed, allowed
