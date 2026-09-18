@@ -176,10 +176,17 @@ def test_allowed_labels_have_declared_cardinality_caps() -> None:
 
 
 def test_rule_id_label_cap_matches_ast_rule_count() -> None:
-    """`rule_id` 标签的上限必须等于 AST 规则条数（20）—— U-16 后两者必须同步。"""
+    """`rule_id` 的上限 = AST 规则条数（20，U-16 口径）**+ 空值**。
+
+    ⚠️ 原来写的是 `== len(AstRule)`（=20），而 `GATE_REJECT_TOTAL` 的**域**是
+    `(EMPTY_LABEL_VALUE, *AstRule)` = 21 个不同取值。上界等于规则条数看着对称，实际少一：
+    `_admits()` 会在"第 21 个被观测到的取值"上静默丢弃并记 overflow，
+    **丢哪一个取决于到达顺序** —— 不是"某一类拒绝统计不到"，是"随机一类统计不到"。
+    这条 `+1` 现在由 `tests/unit/test_obs_metrics_cardinality.py` 的全局不变式统一守住。
+    """
     from app.core.enums import AstRule
 
-    assert metrics.BOUNDED_ALLOWED_LABELS["rule_id"] == len(AstRule)
+    assert metrics.BOUNDED_ALLOWED_LABELS["rule_id"] == len(AstRule) + 1
 
 
 # ---------------------------------------------------------------------------

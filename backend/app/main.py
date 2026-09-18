@@ -14,24 +14,31 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import errors
+from app.api import errors, sse
 from app.api.deps import GRAPH_RUNTIME_STATE_KEY, RUNTIME_STATE_KEY, build_runtime
 from app.api.routers import clarify, feedback, health, query, session
+from app.core.clock import Clock
 from app.core.config import AppEnv, get_settings
-from app.core.enums import Dependency
+from app.core.enums import Dependency, ErrorCode, SseEvent
 from app.core.errors import SemanticBundleError
 from app.graph.build import (
     GRAPH_VERSION,
     CheckpointSetupOutcome,
     ensure_checkpoint_schema,
 )
-from app.obs import metrics
+from app.obs import instrumentation, metrics, samplers
+
+# ⚠️ `probes as obs_probes` 的别名是**必须的**：lifespan 第 5 步有局部变量 `probes`（W1B 的探针表 dict）。
+#    同名 import 会在整个函数作用域里把模块遮蔽成那个 dict，
+#    接软依赖探针时炸成 `AttributeError: 'dict' object has no attribute 'make_llm_probe'`。
+from app.obs import probes as obs_probes
 from app.obs.logging import configure_logging, get_logger
 from app.repo.health import build_probe_table
 from app.repo.pools import build_three_pools
@@ -49,6 +56,28 @@ __all__ = ["app", "create_app"]
 #: API 版本前缀。⚠️ 破坏性变更**必须**升 `/api/v2/`（07 §4.5），
 #: 且"语义变更"一律视为破坏性变更 —— 那是最隐蔽的一种：前端不报错，只会算错。
 API_PREFIX = "/api/v1"
+
+
+def _drain_terminal_frame() -> bytes:
+    """drain 时注入给在途 SSE 流的**终止** `error` 帧（07 §18.3 第 3 步：不得静默断连）。
+
+    ⚠️ 必须走 `sse.encode()` 而不是手拼字符串：`terminal: true` 是前端关流的
+    **唯一判据**（附录 A §A.1.4），而 `encode()` 对终止事件缺该标志会直接抛错 ——
+    拼字符串则会把"前端永远转圈"这个病害从停机路径重新引进来。
+
+    字段与 `api/runner.py` 异常路径补发的帧**同源**（`map_code(INTERNAL)` 的 `code`/`retryable`），
+    只有 `message` 换成 §18.3 给定的停机文案 —— 客户端因此无需为停机单独写一套分支。
+    """
+    mapping = errors.map_code(ErrorCode.INTERNAL)
+    return sse.encode(
+        SseEvent.ERROR,
+        {
+            "code": mapping.code.value,
+            "message": instrumentation.DRAIN_MESSAGE,
+            "retryable": mapping.retryable,
+            "terminal": True,
+        },
+    )
 
 
 @asynccontextmanager
@@ -242,6 +271,61 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         why="未接线项由 health._unwired_probe 如实上报 healthy=false —— 不谎报健康（N-21）",
     )
 
+    # --- 5.5 观测接线（W7 追加段：软依赖探针 + 周期采样器）---
+    # ⚠️ 上面第 5 步的 `still_unwired` 里包含 llm / embedding —— **那一刻它是真的**（还没接）。
+    #    本段接上后由下面的 `obs_wiring_done` 自证，两条日志各自成立，不回填改前一条。
+    #
+    # ⚠️ 这两个是**软**依赖：注册探针**不会**让它们进 readiness —— 判定集是
+    #    `READINESS_DEPENDENCIES`（`app.core.enums` 单一定义），不是"注册了就查"。
+    #    LLM 挂掉是"降级"（§A.8.4 的 200 + degraded），不是"摘流量"（N-21）。
+    # 零配额：探针只做一次 GET /api/tags，不调模型 —— 压测期间尤其重要（会烧额度）。
+    health.register_probe(Dependency.LLM, obs_probes.make_llm_probe(settings.DEEPSEEK_BASE_URL))
+    health.register_probe(
+        Dependency.EMBEDDING,
+        obs_probes.make_embedding_probe(settings.EMBEDDING_BASE_URL, settings.EMBEDDING_MODEL),
+    )
+
+    sampler_specs: list[samplers.SamplerSpec] = []
+    if semantic_runtime is not None and graph_runtime is not None and graph_runtime.cost_ledger is not None:
+        # ⚠️ `global_spent_cny` 是**同步** psycopg 查询（W1B 的单条专用连接），在事件循环里直接调
+        #    会阻塞到查询返回。刻意**不**用 `asyncio.to_thread` 把它挪走：同一条连接同时被
+        #    LLM 计费路径写入，换成线程就是两个线程共用一条 psycopg 连接（非线程安全）。
+        #    代价由 15s 的采样间隔摊薄，且阻塞时长会进 `event_loop_lag_ms` —— 自证，不隐瞒。
+        sampler_specs.append(
+            samplers.SamplerSpec(
+                name="daily_cost",
+                interval_s=samplers.STATE_SAMPLER_INTERVAL_S,
+                hook=samplers.make_cost_sampler(
+                    graph_runtime.cost_ledger, Clock(semantic_runtime.time_semantics())
+                ),
+            )
+        )
+    # 🔴 上游并发 gauge **本窗口不接线**：W3A 的 `ChatClient` 只在内部持有每模型信号量，
+    #    没有公开的"已占用几格"读口；翻 `_semaphores[...]` 私有字段等于把
+    #    "改个属性名就让 429 告警失效"写进主干。接缝需求已写进 reports/w7/RELAY.md。
+    sampler_runner = samplers.SamplerRunner(sampler_specs)
+    logger.info(
+        "obs_wiring_done",
+        soft_probes=[Dependency.LLM.value, Dependency.EMBEDDING.value],
+        samplers=["event_loop_lag", *[spec.name for spec in sampler_specs]],
+        background_tasks=sampler_runner.start(),
+        unwired_samplers=["upstream_concurrency（等 W3A 的 inflight(model) 公开读口）"],
+        why="07 §15.3：状态类指标只能周期采样；采不到就不写（绝不用 0 冒充「测到了 0」）",
+    )
+
+    # ⚠️ §18.3 第 1 步的**进程外触发面**是否可用，必须在启动时自证。
+    #    `DRAIN_TOKEN` 未设 ⇒ `POST /healthz/drain` 一律 403（fail-closed，设计如此），
+    #    于是 `entrypoint.sh` 的 pre-stop 只剩"直接 TERM uvicorn"：在途 SSE 改由下面的
+    #    lifespan 兜底，而那一道的预算是 uvicorn 的 `--timeout-graceful-shutdown`（5s），
+    #    不是 30s 的 drain。fail-closed 是对的，静默降级不是 —— 所以启动时就吵出来。
+    if not os.environ.get(health.DRAIN_TOKEN_ENV, ""):
+        logger.warning(
+            "drain_trigger_unavailable",
+            missing_env=health.DRAIN_TOKEN_ENV,
+            consequence="优雅停机只能走 lifespan 第二道保险（5s），无法提前摘 readiness",
+            fix="在 deploy/.env 设置 DRAIN_TOKEN，并与 entrypoint 侧保持一致",
+        )
+
     yield
 
     # --- 关闭 ---
@@ -250,6 +334,42 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     #   释放会话锁（finally）+ 写审计 outcome=failed（07 §18.3）。
     # 本窗口只负责**释放自己创建的连接资源** —— 不替后续窗口假装做完停机六步。
     #
+    # --- W7 追加：优雅停机六步的第 1~3 步（07 §18.3）---
+    # 1) `begin_drain()` ⇒ `/healthz/ready` **立刻** 503（摘流量，不重启进程）；
+    # 2) `drain()` 等在途 SSE 收尾，预算 `DRAIN_TIMEOUT_S`=30s（必须 < Compose 的
+    #    `stop_grace_period`=40s，否则预算还没用完就先被 SIGKILL）；
+    # 3) 仍未终态的流由 `ObservingMiddleware` 在下一次 `send` 注入 `_drain_terminal_frame()`
+    #    —— 静止流靠 15s 心跳保证一定被再次调用 ⇒ **不静默断连**。
+    # 第 4~6 步（释放会话锁 / 审计 `outcome=failed`）不在本段：那是 `api/runner.py` 的
+    # `finally` 职责（W4 已实现），本段只保证"每条流都拿到终态帧"。
+    #
+    # ⚠️ 正常路径（`deploy/entrypoint.sh` 收到 TERM 先调 `POST /healthz/drain`）下这里是 **no-op**。
+    #    但它仍是必需的第二道保险：本地 Ctrl+C、`docker stop` 绕过脚本、或 uvicorn 的
+    #    `--timeout-graceful-shutdown` 到点时，这里是唯一还执行得到的注入点 ——
+    #    实测 uvicorn 0.53 的顺序是「停监听 → **等**在途连接结束 → 才发 lifespan shutdown」，
+    #    把六步只写在 `yield` 之后，等于让 uvicorn 先无限等 SSE 自己结束。
+    inflight_at_shutdown = instrumentation.REGISTRY.begin_drain()
+    drain_report = await instrumentation.REGISTRY.drain()
+    if drain_report.clean:
+        logger.info(
+            "graceful_shutdown_drained",
+            inflight_at_start=inflight_at_shutdown,
+            finished_task_ids=list(drain_report.finished_task_ids),
+            waited_s=drain_report.waited_s,
+            why="07 §18.3：每条在途流都拿到了终止帧",
+        )
+    else:
+        logger.error(
+            "graceful_shutdown_drain_incomplete",
+            inflight_at_start=inflight_at_shutdown,
+            waited_s=drain_report.waited_s,
+            timed_out=drain_report.timed_out,
+            still_inflight=list(drain_report.still_inflight_task_ids),
+            extra_fact="这些客户端拿到的是关流信号而不是 error(INTERNAL) 终止帧（§A.1.4 会判为连接异常）",
+            why="§18.3 第 3 步未完整达成：如实上报，不声称静默断连已消除",
+        )
+    await sampler_runner.stop()
+
     # --- 4.5 的关闭（W4 追加段：两条**长连资源**，先于三池）---
     # ⚠️ `gateway.aclose()` 释放 httpx 连接（W3A §4："不关则 httpx 连接不释放"）；
     #    `cost_ledger.close()` 释放单条专用 psycopg 连接（W1B §9.2："不关 = 泄漏"）。
@@ -302,6 +422,15 @@ def create_app() -> FastAPI:
             expose_headers=["X-RateLimit-Bucket", "X-RateLimit-Limit",
                             "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"],
         )
+
+    # --- W7 观测中间件（07 §15.3 的采集面 + §18.3 的 drain 注入面）---
+    # ⚠️ 位置：必须在 CORS **之后** `add_middleware`。Starlette 里后 add 的中间件在**外层**
+    #    （`user_middleware.insert(0, …)` + 反向遍历构建），于是本中间件的 `send` 包装
+    #    最后收到响应 ⇒ `http_requests_total{status}` 记的是客户端**真正拿到**的状态码，
+    #    而不是路由内部那个还没被 CORS/异常处理改写的值。
+    # ⚠️ 它在 `ServerErrorMiddleware` **之内**：未捕获异常由最外层直接回纯文本 500，
+    #    我们的包装收不到 `http.response.start` ⇒ 由 `_finish` 的"状态码缺失按 500 记"兜住。
+    app.add_middleware(instrumentation.ObservingMiddleware, terminal_error_frame=_drain_terminal_frame)
 
     app.include_router(health.router, prefix=API_PREFIX)
     # --- W4 端点（T5）---

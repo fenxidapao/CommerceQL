@@ -1,0 +1,145 @@
+# ============================================================================
+# 告警规则的**离线语义单测** —— 07 §15.4 十条的"判据真的算对了"的唯一机器证据
+#
+# 归属窗口：W7（`deploy/**`）｜日期：2026-09-18
+# 为什么单独有这一个文件（委托清单里的第 5 个观测文件）：
+#   `promtool check rules` 只证明**语法**能解析；§15.4 十条的价值全在**语义**
+#   （`increase()` 的窗口外推、`histogram_quantile()` 的桶插值、`offset 7d` 的比值方向、
+#    `== 0 and >= 10` 这种"两侧都要有序列"的陷阱）。没有这个文件，交付说明里就只能写
+#   "规则已写完并通过语法检查" —— 而那正是本项目的红线禁止的"配置写好了 ≠ 观测验证过"。
+#
+# 跑法（**不需要起观测栈**，纯离线，不碰共享 compose）：
+#   cd CommerceQL/deploy/observability
+#   docker run --rm -v "$PWD:/c:ro" --workdir /c --entrypoint /bin/promtool #     prom/prometheus:v2.54.1 test rules /c/alert.rules.test.yml
+#   ⇒ 期望 `SUCCESS`。（本机 2026-09-18 实跑通过；promtool 版本与被测镜像同为 v2.54.1）
+#
+# ⚠️ 三件事这个文件**不**证明，别把它读成"端到端已验证"：
+#   ① 不证明应用真的**产出**这些序列（那是采集侧接线状态，见 alert.rules.yml 头部的 A/B 分类）；
+#      下面的 input_series 是我**手工构造**的样本形状，刻意按注册表的真实导出语义写
+#      （例：`gate_reject_total` 恒 0 那条 —— 未接线时序列仍然存在，规则 1 反而会**误响**）。
+#   ② 不证明 Prometheus 抓得到、Grafana 画得出（需要观测栈在跑）。
+#   ③ 不证明告警**送达**任何人（无 Alertmanager，见 prometheus.yml 的 alerting 段）。
+# ============================================================================
+
+rule_files:
+  - alert.rules.yml
+
+evaluation_interval: 1m
+
+tests:
+  # ---------- 场景 1：闸门静默（有流量、零拒绝）→ 规则 1 应触发 ----------
+  - interval: 1m
+    input_series:
+      - series: 'query_outcome_total{outcome="success"}'
+        values: '0+1x120'
+      - series: 'gate_reject_total{gate_no="1",rule_id=""}'
+        values: '0x120'
+    promql_expr_test:
+      - expr: sum(increase(gate_reject_total[30m]))
+        eval_time: 60m
+        exp_samples:
+          - value: 0
+      - expr: sum(increase(gate_reject_total[30m])) == 0 and sum(increase(query_outcome_total[30m])) >= 10
+        eval_time: 60m
+        exp_samples:
+          - value: 0
+
+  # ---------- 场景 2：闸门在拒 → 规则 1 不得触发（反向：不写 expr 的"恒真"陷阱） ----------
+  - interval: 1m
+    input_series:
+      - series: 'query_outcome_total{outcome="success"}'
+        values: '0+1x120'
+      - series: 'gate_reject_total{gate_no="1",rule_id="R03"}'
+        values: '0+1x120'
+    promql_expr_test:
+      - expr: sum(increase(gate_reject_total[30m])) == 0 and sum(increase(query_outcome_total[30m])) >= 10
+        eval_time: 60m
+        exp_samples: []
+
+  # ---------- 场景 3：契约违规 + 基数溢出 + 成本三档 + 澄清率 + L4 占比 ----------
+  - interval: 1m
+    input_series:
+      - series: 'ui_contract_violation_total{kind="duplicate_terminal"}'
+        values: '0x5 1+1x115'
+      - series: 'metric_label_overflow_total{metric="gate_reject_total"}'
+        values: '0+1x120'
+      - series: 'daily_cost_cny'
+        values: '85x120'
+      - series: 'query_outcome_total{outcome="clarify"}'
+        values: '0+1x120'
+      - series: 'query_outcome_total{outcome="success"}'
+        values: '0+3x120'
+      - series: 'binding_layer_total{layer="L4"}'
+        values: '0+1x120'
+      - series: 'binding_layer_total{layer="L1"}'
+        values: '0+3x120'
+    promql_expr_test:
+      - expr: increase(ui_contract_violation_total[5m]) > 0
+        eval_time: 30m
+        exp_samples:
+          - value: 5
+            labels: '{kind="duplicate_terminal"}'
+      - expr: daily_cost_cny >= 80
+        eval_time: 30m
+        exp_samples:
+          - value: 85
+            labels: '{__name__="daily_cost_cny"}'
+      - expr: daily_cost_cny >= 100
+        eval_time: 30m
+        exp_samples: []
+      - expr: (sum(rate(query_outcome_total{outcome="clarify"}[30m])) / sum(rate(query_outcome_total[30m]))) > 0.15
+        eval_time: 60m
+        exp_samples:
+          - value: 0.25
+      - expr: (sum(rate(binding_layer_total{layer="L4"}[1h])) / sum(rate(binding_layer_total[1h]))) > 0.10
+        eval_time: 60m
+        exp_samples:
+          - value: 0.25
+      - expr: increase(metric_label_overflow_total[15m]) > 0
+        eval_time: 60m
+        exp_samples:
+          - value: 15
+            labels: '{metric="gate_reject_total"}'
+
+  # ---------- 场景 4：P95 慢（全落 30s 桶）→ >15 成立；快（全落 8s 桶）→ 不成立 ----------
+  - interval: 1m
+    input_series:
+      - series: 'http_request_duration_seconds_bucket{endpoint="/api/v1/query",le="15"}'
+        values: '0x120'
+      - series: 'http_request_duration_seconds_bucket{endpoint="/api/v1/query",le="30"}'
+        values: '0+10x120'
+      - series: 'http_request_duration_seconds_bucket{endpoint="/api/v1/query",le="+Inf"}'
+        values: '0+10x120'
+    promql_expr_test:
+      - expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m]))) > 15
+        eval_time: 60m
+        exp_samples:
+          - value: 29.25
+
+  - interval: 1m
+    input_series:
+      - series: 'http_request_duration_seconds_bucket{endpoint="/api/v1/query",le="8"}'
+        values: '0+10x120'
+      - series: 'http_request_duration_seconds_bucket{endpoint="/api/v1/query",le="+Inf"}'
+        values: '0+10x120'
+    promql_expr_test:
+      - expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m]))) > 15
+        eval_time: 60m
+        exp_samples: []
+
+  # ---------- 场景 5：token/请求 周环比（1h 步长，200h ≈ 8.3 天） ----------
+  - interval: 1h
+    input_series:
+      - series: 'llm_tokens_total{token_key="total"}'
+        values: '0+1x100 100+2x100'
+      - series: 'http_requests_total{endpoint="/api/v1/query",status="2xx"}'
+        values: '0+1x200'
+    promql_expr_test:
+      - expr: sum(rate(llm_tokens_total{token_key="total"}[1h])) / sum(rate(http_requests_total[1h]))
+        eval_time: 190h
+        exp_samples:
+          - value: 2
+      - expr: sum(rate(llm_tokens_total{token_key="total"}[1h] offset 7d)) / sum(rate(http_requests_total[1h] offset 7d))
+        eval_time: 190h
+        exp_samples:
+          - value: 1

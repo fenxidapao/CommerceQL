@@ -31,6 +31,12 @@ RUN pip install --upgrade pip && pip install .
 
 COPY backend/app ./app
 
+# --- W7 追加：停机编排（07 §18.3）---
+# PID 1 必须是**会 trap 信号的脚本**而不是 uvicorn：
+# uvicorn 的顺序是「停监听 → 等在途连接结束 → 才发 lifespan shutdown」，
+# 于是写在 lifespan 里的 drain 永远晚于"流结束"本身（详见 `entrypoint.sh` 头部推导）。
+COPY deploy/entrypoint.sh deploy/drain_client.py ./
+
 # 沙箱库目录（评测用 SQLite，附录 D §D.4）
 RUN useradd --create-home --uid 10001 appuser \
     && mkdir -p /data/sandbox \
@@ -42,4 +48,7 @@ EXPOSE 8000
 # ⚠️ 单进程 uvicorn（P0）。
 #    多 worker 需先把 LLM 信号量改成 Redis 令牌桶（07 §18.1），
 #    否则"每模型并发上限"会被**按进程数悄悄放大**。
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+# ⚠️ 参数（含 `--timeout-graceful-shutdown`）现在在 `entrypoint.sh` 里 ——
+#    那里是三个时间预算唯一能同时看见的地方（drain 32s + uvicorn 5s < compose 40s）。
+#    刻意写成 `sh 脚本` 而不是可执行位：Windows 检出时 git 不保证保留 +x。
+CMD ["sh", "/srv/entrypoint.sh"]

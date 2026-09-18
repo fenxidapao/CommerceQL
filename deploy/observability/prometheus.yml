@@ -1,0 +1,158 @@
+# ============================================================================
+# Prometheus 抓取端配置 —— 阶段 7「观测与部署」交付物 ②/③ 的抓取侧
+#
+# 归属窗口：W7（docs/08 §4.1：`deploy/**` 归 W7）
+# 日期：2026-09-18
+# 依据：07 §15.3（指标清单 + 标签基数上限）/ §15.4（告警规则）/ §15.5（最小看板）
+#       07 §18.1（进程模型）/ §18.2（三探针与启动顺序）
+#       PRD 假设 A-7（**单机 Docker Compose，无 K8s**）
+#
+# ⚠️ 本文件**只写抓取端**。`/api/v1/metrics` 端点本身由主窗口（W7 应用侧）实现，
+#    指标本体在 `backend/app/obs/metrics.py`（手写 Prometheus text exposition 0.0.4）。
+#    本文件里出现的每一个指标名 / 标签名 / 标签取值，都以 `app/obs/metrics.py`
+#    与 `app/core/enums.py` 为准 —— 不在这张表里的东西一律不写。
+# ============================================================================
+
+global:
+  # §15.4 的窗口口径（rate/increase）最短用 5m，15s 抓取足够出稳定样本；
+  # 再密只是把单机 IO 花掉，换不到判据精度（直方图桶边界才是 P95 的精度上限，不是步长）。
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+  # 无 K8s（A-7）→ 没有 pod/node 标签可继承，只能显式给"这是哪套栈"的标签。
+  # 用途：日后若上第二套环境（staging），靠这组标签在同一 Prometheus 里区分，
+  # 而不是靠"改 job 名"——job 名一改，所有告警与看板查询都要重写。
+  external_labels:
+    stack: commerceql-standalone
+    env: dev                       # ⚠️ 与 deploy/.env 的 APP_ENV 同步改（当前 .env = dev）
+
+# ----------------------------------------------------------------------------
+# 告警规则
+# 挂载约定（已在 `deploy/docker-compose.yml` 的 `prometheus` 服务里落地；
+# 本目录**就在** `deploy/observability/`，与 compose 同一层 ⇒ 相对路径以 `./` 开头）：
+#   ./observability/prometheus.yml  ->  /etc/prometheus/prometheus.yml:ro
+#   ./observability/alert.rules.yml ->  /etc/prometheus/rules/alert.rules.yml:ro
+# 容器内路径写成绝对值：`rule_files` 的相对路径解析依赖配置文件所在目录，
+# 绝对路径可以让"换一种挂载布局"不至于静默变成"规则没加载"（Prometheus 对
+# 匹配不到文件的 rule_files **只在日志里 WARN，不阻止启动** —— 静默失效的那种）。
+# ----------------------------------------------------------------------------
+rule_files:
+  - /etc/prometheus/rules/alert.rules.yml
+
+# ----------------------------------------------------------------------------
+# Alertmanager
+#
+# ⚠️ **整段注释掉，且这是当前状态的正确形态**：`deploy/docker-compose.yml` 的服务是
+#    pg / pgbouncer / redis / api / web / worker，加 `observability` profile 下的
+#    prometheus / grafana —— **没有 alertmanager**。
+#    07 §15.4 与附录 D 都未把 Alertmanager 列入 P0 部署清单，PRD A-7 又把拓扑钉在单机。
+#    写了这段只会让 Prometheus 启动时刷 `error connecting to Alertmanagers` 日志，
+#    并把"告警已送达值班人"这个**从未被验证过**的印象带进验收。
+#
+#    告警的当前消费者 = Prometheus 自带的 /alerts 页面 + 看板（§15.5 屏①）。
+#    真要送达人，需要先补 compose 服务（归属主窗口/架构窗口）→ 再解开下面这段。
+# ----------------------------------------------------------------------------
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  # ==========================================================================
+  # 唯一必用的 job：抓应用自己的 /api/v1/metrics
+  # ==========================================================================
+  - job_name: commerceql-api
+
+    # ★★ 安全边界：为什么必须**直连应用容器**、**不经 Nginx** ★★
+    #
+    # (1) 抓取路径直连的理由（这三条是"选择直连"能兑现的）：
+    #     · 不占用 80 端口那条为 SSE 特调的通路（nginx.conf 的 `location /api/`
+    #       带 proxy_buffering off / read_timeout 300s —— 每 15s 一次的抓取去挤它没有意义）；
+    #     · 抓取流量不进 Nginx 的 access_log，`Authorization` 一类头部不与之相邻（§13.1 第 3 条）；
+    #     · Nginx 挂了或被 reload 时，观测面不受影响 —— 监控与故障面共用一条通路是最坏的设计。
+    #
+    # (2) **"直连"与"对外不暴露"是两件事** —— 后者现在由 nginx 守住，如实记录状态：
+    #     端点路径 `/api/v1/metrics` 会被 `location /api/`（前缀匹配）顺带反代到 80 端口，
+    #     而附录 A 里没有这个端点的对外契约 ⇒ 输出里的这些内容不该对公网可读：
+    #       - `gate_reject_total{rule_id="R05"}` 等 **AST 规则码的命中分布**
+    #         （= 闸门实现细节与资产白名单的可枚举轮廓，07 §7.2 / §7.6 要求"可解释但不泄露"）；
+    #       - `binding_state_total` / `binding_layer_total` 分布（语义层资产结构，§6.8）；
+    #       - `daily_cost_cny`（真实成本，§10.4）；
+    #       - `endpoint` 标签（内部路由清单，`instrumentation.normalize_endpoint` 的产物）。
+    #     ✅ **已收口（2026-09-18，`deploy/nginx.conf` 归本窗口）**：
+    #         `location = /api/v1/metrics { access_log off; return 404; }`
+    #       用精确匹配（nginx 里 `=` 的优先级高于前缀匹配，无需依赖书写顺序）；
+    #       返回 404 而非 403 —— 403 等于告诉外部"这里有个东西，只是你不许看"。
+    #
+    # (3) ⚠️ **但公网侧封堵 ≠ 全链路收口，这一条仍未关闭**：`docker-compose.yml` 的 api 服务
+    #     当前 `ports: "8000:8000"` —— 8000 **绑在 0.0.0.0**。宿主上的任意本地进程、
+    #     以及同网段能路由到宿主的机器，都可以**绕过 nginx** 直接 GET `宿主IP:8000/api/v1/metrics`。
+    #     收紧方式：改成 `expose: ["8000"]`（只进 compose 内部网络；compose healthcheck 走
+    #     容器内 127.0.0.1:8000，**不受影响**）—— 或至少 `"127.0.0.1:8000:8000"`。
+    #     **本窗口刻意不改**：这份 compose 是 W6 并行窗口在用的共享栈，改动虽只在下次 `up`
+    #     生效，却会直接断掉他们在宿主上 `localhost:8000` 的直连调试。
+    #     ⇒ 已登记为「待确认项」（README §待分配 + `reports/w7/RELAY.md`），不是"已解决"。
+    metrics_path: /api/v1/metrics
+    scheme: http
+
+    static_configs:
+      - targets: ["api:8000"]
+        labels:
+          service: api
+          # 刻意**不加** tenant / user / session 类标签（07 §15.3 纪律①：基数爆炸）。
+
+    # 说明：这里刻意**不**用 honor_labels —— 应用侧输出不含任何 `job`/`instance`，
+    # 由 Prometheus 注入即可；honor_labels 会让"应用哪天自己吐一个 job 标签"变成
+    # 抓取端静默接受，属于"两个真相"的那一类坑（07 §4.1 要根治的病）。
+
+  # ==========================================================================
+  # 三探针（/healthz/live、/healthz/ready、/healthz）—— **无可用抓取形态，整段注释**
+  #
+  # ⚠️ 为什么注释掉而不是随便写一个：
+  #   1. `deploy/docker-compose.yml` 里**没有 blackbox_exporter 服务**（只有
+  #      pg/pgbouncer/redis/api/web/worker）。写了 job 就是一条永远 `target down`
+  #      的红线，而"探针探测失败"和"探测组件不存在"在看板上长得一模一样。
+  #   2. 三探针返回的是 **JSON**（`app/api/routers/health.py`：status/checks/
+  #      degraded_dependencies/bundle_version），不是 Prometheus exposition，
+  #      Prometheus **抓不了 JSON**。要抓必须 blackbox 的 `http_2xx` 或
+  #      `json_value_equal` 探测器。
+  #   3. `/healthz/ready` 在阶段 0/1 之后仍可能 503（硬依赖未齐属正确行为，
+  #      compose 文件头已声明），把它做成 `up==0` 告警 = 天天误报。
+  #
+  # ⇒ 当前探针状态的实际消费者：
+  #     · Compose `healthcheck`（readiness，见 `docker-compose.yml` 的 `services.api.healthcheck`）
+  #     · §15.5 屏①「实时健康」用 `up{job="commerceql-api"}` + `event_loop_lag_ms`
+  #       + `http_requests_inflight` 承接"实例活着吗 / 卡不卡"，
+  #       **逐依赖的硬/软降级状态目前无指标来源**（已在看板 panel 描述里如实标注，
+  #       并在 README 登记为待分配问题：需要应用侧把 probes 结果镜像成
+  #       `dependency_healthy{dependency,kind}` gauge 才能补齐 §15.5 屏① 全文）。
+  #
+  # 接线条件（补齐后取消注释，并把 blackbox 服务加进 compose）：
+  # ==========================================================================
+  # - job_name: commerceql-healthz-blackbox
+  #   metrics_path: /probe
+  #   params:
+  #     module: [http_2xx]
+  #   static_configs:
+  #     - targets:
+  #         - http://api:8000/api/v1/healthz/live     # liveness：不查外部依赖
+  #         - http://api:8000/api/v1/healthz/ready    # readiness：只含硬依赖（N-21）
+  #         - http://api:8000/api/v1/healthz          # 聚合：软依赖失败必须 200+degraded
+  #   relabel_configs:
+  #     - source_labels: [__address__]
+  #       target_label: __param_target
+  #     - source_labels: [__param_target]
+  #       target_label: instance
+  #     - target_label: __address__
+  #       replacement: blackbox:9115
+
+  # ==========================================================================
+  # 依赖侧抓取（pg / redis）—— 同样**注释**：compose 内无 postgres_exporter /
+  # redis_exporter，且 §15.3 的清单**不含**任何数据库指标（本系统的观测面刻意
+  # 是"语义指标优先于系统指标"）。不加，是为了不让"没配的 exporter"在看板上
+  # 以"数据库健康"的样子被读过去。
+  # ==========================================================================
+  # - job_name: commerceql-pg-exporter
+  #   static_configs:
+  #     - targets: ["postgres-exporter:9187"]

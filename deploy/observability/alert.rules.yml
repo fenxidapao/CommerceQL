@@ -1,0 +1,480 @@
+# ============================================================================
+# 告警规则 —— 07 §15.4「告警规则实现（PRD §14.3 + 实现方式）」**十条逐条对照**
+#
+# 归属窗口：W7（docs/08 §4.1：`deploy/**` 归 W7｜§3.9 产出③）
+# 日期：2026-09-18
+# 依据：07 §15.3（指标清单 + 标签基数上限 + 三条指标纪律）
+#       07 §15.4（本文件的十条）· 07 §14.5（错误码→指标映射）· 07 §10.4（预算 80%/100%）
+#       07 §16.1/§16.5 + 门禁 G-6（P95 ≤8s）· 07 §18.7（runbook RL-1…RL-6）
+#       PRD §12.9 约束 5 / L4 升级三条件 · NFR-7.1（澄清率 ≤15%）· NFR-4.2（预算熔断）
+#
+# runbook 的权威落点 = `deploy/runbook/`（同窗口 W7，RL-1…RL-6 六条已落地）。
+# 下方 `runbook` 注解**按该目录 README §二.1 的告警路由表写**，不是本窗口自拟 ——
+# 一份告警只该有"该打开哪页手册"的一个答案，两处各定一套时，值班人会在错的那页里找处置。
+#
+# 指标/标签的权威来源 = `backend/app/obs/metrics.py` + `backend/app/core/enums.py`。
+# 本文件**不出现任何不在该表里的指标名或标签取值**；取值以 enums 为准：
+#   outcome        = success|clarify|refuse|degraded|failed
+#                    ⚠️ `degraded` 是**恒 0 声明序列**（有枚举域故导出）：`degraded` 不是终止事件
+#                       （§A.1.2），`_TERMINAL_OUTCOME` 不映射它，降级计数只在 `degraded_total`。
+#                       ⇒ 任何 `query_outcome_total{outcome="degraded"}` 都是死读数。
+#                    ⚠️ `failed` 由 `error` 帧折算 ⇒ **闸门拒绝也落在 failed**（C-12：闸门拒绝走
+#                       error 帧、不渲染成拒答卡）。不要把 failed 读成"系统故障率"。
+#   state          = resolved_unique|resolved_default|ambiguous|unresolved   ← BindingState
+#   layer          = L1|L2|L3|L4                                            ← BindingLayer（**无 miss**）
+#   gate_no        = "1"|"2"|"3"                                            ← str(int(GateNo))，**不是 gate1**
+#   status         = 2xx|3xx|4xx|5xx                                        ← metrics.status_class()，**无 429**
+#   token_key      = input|output|cache_hit|total
+#   endpoint       = 归一化路径（`instrumentation.normalize_endpoint`，如 `/api/v1/query/{id}`），≤20 + unmatched
+#
+# ---------------------------------------------------------------------------
+# ★ 诚实纪律（本项目红线）：十条里凡**现有指标表达不了**的，一律
+#   ① 不写 expr（写了就是假仪表），② 以注释块写明「⚠️ 无指标来源 / 依赖 X 门禁 / UNVERIFIED」，
+#   ③ 说明它真正的判据在哪（CI 红队 / 渗透测试 / W6 影子评测 / 端点侧待补）。
+#
+#   覆盖结果（逐条）：**可表达 8 条**（§15.4 第 1/3/4/5/7/9/10 条，其中第 5 条拆 80%/100% 两条）
+#                     **不可表达 3 处**（第 2 条跨租户、第 6 条准确率周环比、第 8 条 429 比率）
+#                     第 1 条只能按 §15.4 原文点名的**间接探测**口径表达，直接判据（放行=0）属 CI 门禁 G-3。
+#
+# ---------------------------------------------------------------------------
+# ⚠️ **接线状态与"序列会不会出现"是两件事**（2026-09-18 按 `app/obs/metrics.py` 的
+#    `_declared_series()` 逐族核对；本文件第一版把两者混为一谈，故在此重写）
+#
+#    注册表对**从未观测**的族有两种不同的导出行为，用同一个"未接线"概括会两头错：
+#      A. 标签全集已知（域由枚举给全）**或**根本没有标签 → **补 0 输出**：
+#         序列恒在、值为 0 ⇒ `rate()` 得到真实的 0，`== 0` 型条件在健康系统里**恒真**；
+#      B. 既无全集又从未观测 → **整族不输出** ⇒ 表达式是 no-data，条件根本不评估。
+#
+#    · 已接线（有可达调用点）：
+#        http_requests_total · http_request_duration_seconds · http_requests_inflight
+#        stage_duration_seconds · query_outcome_total · clarify_total · refuse_total
+#        degraded_total · exec_failure_total（**只有 `syntax_error` 一类可达**，见规则 2 注）
+#        ui_contract_violation_total · binding_state_total · binding_layer_total
+#        binding_tau_calibrated · metric_label_overflow_total
+#        **gate_reject_total**（2026-09-18 修：原先只读 `refuse`/`error` 载荷里的 `gate_no`，
+#          而闸门拒绝在帧面上只有 `error`+拒绝码一种形态 ⇒ 恒 0；现由
+#          `instrumentation._GATE_NO_BY_ERROR_CODE` 从码回填）
+#        **daily_cost_cny**（`samplers.py` 日成本采样器，`main.py` 第 5.5 步注册；
+#          仅当 `cost_ledger` 未装配时退化）· **event_loop_lag_ms**（`samplers.py` 心跳漂移）
+#    · 未接线，但属上面 **A 类**（**序列以 0 恒存在**，别按"没有数据"理解）：
+#        llm_tokens_total ← 规则 7 · retrieval_mode_total · feedback_reason_total
+#        gen_sql_rounds_total
+#    · 未接线，且属 **B 类**（整族缺席）：
+#        llm_json_parse_failure_total · llm_upstream_concurrency
+#    `coverage` 注解里每条都单独标了这一点，验收时请把它当成本文件的**主要限制**。
+# ============================================================================
+
+groups:
+
+  # ==========================================================================
+  # 组 1：安全（§15.4 第 1~3 条）
+  # ==========================================================================
+  - name: commerceql-security
+    rules:
+
+      # ----------------------------------------------------------------------
+      # §15.4 第 1 条 —— 危险 SQL 放行 > 0，P0
+      #
+      # ⚠️ **本条是"间接探测"，不是"危险 SQL 放行已监控"** —— 这是本文件最容易被
+      #    误读成好消息的一条，故把 §15.4 原文抄在这里：
+      #      「危险 SQL 放行 | > 0 | P0 | **红队用例集在 CI 有断言**；
+      #        **生产侧由『闸门拒绝率突降』间接探测**」
+      #    ⇒ **直接判据无指标来源（UNVERIFIED）**：一条被错误放行的危险 SQL 不会
+      #       在任何计数器上留痕（它"通过了"，而 gate_reject_total 只记拒绝）。
+      #       真正的「危险 SQL 放行 = 0」是**上线门禁 G-3**（07 §17.3），
+      #       由 `eval/red_team_cases_v1.json`（W1A 资产）在 CI 红队断言（W6 执行器跑）。
+      #    ⇒ 下面这条 expr 严格照 §15.4 点名的间接口径写：**有足量查询、却一条闸门拒绝
+      #       都没有** = 闸门可能被旁路（中间件没装、帧没出 gate_detail、规则被改坏）。
+      #       判据成立的前提：R03(SELECT *)/R06(列白名单)/R14(字面量策略) 这类
+      #       阻断级规则在真实流量下**不可能 30 分钟一次都不触发**（07 §7.2 的 14 条阻断级）。
+      #    ⚠️ 反向盲区（必须知道）：若流量真的一条都不该拒，本告警**会误报**；
+      #       若危险 SQL 只是"少量放行"而非"全零"，本告警**漏报**。
+      #       两个盲区都在 README 的「未覆盖声明」里，不许被本文件的存在抹掉。
+      # ----------------------------------------------------------------------
+      - alert: CommerceQLGateRejectSilence
+        expr: |-
+          sum(increase(gate_reject_total[30m])) == 0
+            and
+          sum(increase(query_outcome_total[30m])) >= 10
+        for: 10m
+        labels:
+          severity: P0
+          domain: security
+          kind: indirect-probe
+        annotations:
+          summary: 「闸门 30 分钟零拒绝，而同期有 ≥10 次查询终态 —— 怀疑闸门被旁路（危险 SQL 放行的间接探测）」
+          level: 「P0（07 §15.4 第 1 条）」
+          threshold: 「gate_reject_total 30m 增量 == 0 且 query_outcome_total 30m 增量 >= 10；含义：闸门静默 = 最坏情况，不是最好的情况」
+          runbook: 「RL-5（07 §18.7 危险查询告警）—— 冻结相关会话、核对闸门规则；另需人工确认 §7.2 阻断级 14 条是否仍在生效」
+          source: 「07 §15.3 语义行『闸门拒绝率 gate_no(3)/rule_id(≤20)』 + §14.5『按 gate_no + rule_id 分组』 + §15.4 第 1 条『生产侧由闸门拒绝率突降间接探测』」
+          coverage: 「⚠️ **间接探测**。直接判据『危险 SQL 放行 > 0』**无指标来源**，依赖 CI 红队门禁 G-3（07 §17.3）+ 上线门禁 G-4。UNVERIFIED（生产侧无直接指标）」
+
+      # ----------------------------------------------------------------------
+      # §15.4 第 2 条 —— 跨租户泄露 > 0，P0 —— ⚠️ **无指标来源，故意不写 expr**
+      #
+      #   §15.4 原文实现列：「专项渗透测试 + 上线门禁 G-4」（G-4 = 跨租户泄露 = 0，
+      #   07 §17.3，依据「双租户夹具 + N-07」）。
+      #
+      #   为什么这里**不能**凑一个 expr（每一项都被逐一否决，写清楚免得后人来凑）：
+      #   · `exec_failure_total{error_class="permission"}` ✗ —— 双重不可用：
+      #     ① 语义相反：它计的是**生成的 SQL 被数据库拒绝**（权限错误，§8.9 内部错误类），
+      #        语义是「拦住了」，与「发生了泄露」正好相反 —— 拿它当泄露代理 = 把防线指标当事故指标。
+      #     ② 即便语义对得上，这条序列也**永远不会动**：全仓 `observe_exec_failure` 只有一个
+      #        调用点（`instrumentation.py` 从 error 帧的 `SQL_*` 码折算），而 `ErrorCode`
+      #        里唯一的 `SQL_` 码是 `SQL_SYNTAX_ERROR` ⇒ 九类里只有 `syntax_error` 可增长，
+      #        `permission` 是**恒 0 的声明序列**（error_class 有完整取值域 ⇒ 未观测也输出 0）。
+      #        ⇒ 真正的执行错误分类在 `GraphState.exec_error.error_class`（W2D 脱敏摘要，N-11），
+      #          目前**没有**观察者读它 —— 已写进 RELAY，不在本窗口权限内接线。
+      #   · `refuse_total{reason="pii_blocked"}` ✗ —— 同理，是**拒答成功**的计数。
+      #   · `gate_reject_total{rule_id=~"R05|R06|R07"}` ✗ —— 同样是拦截侧，不是越权侧。
+      #   · 加 `tenant_id` 标签再比对 ✗ —— 直接被 §15.3 纪律① 禁止
+      #     （`UNBOUNDED_FORBIDDEN_LABELS` 会抛 ValueError），而且"跨租户"要的是
+      #     结果集里出现了别人的行，**这是数据面判据，HTTP 层的计数器答不了**。
+      #
+      #   ⇒ 本条的实际覆盖方式：① 专项渗透测试（双租户夹具，附录 A §A.8 / N-07）；
+      #      ② 上线门禁 G-4；③ §13.7「租户隔离七道检查清单」的人工/CI 复核；
+      #      ④ RLS 在**评测沙箱（SQLite）里不存在**（07 §17.4），所以评测也覆盖不到它
+      #         ——「评测全绿」绝不等于"跨租户安全已验证"。
+      #      ⑤ runbook 入口 = **RL-5**（`deploy/runbook/README.md` §二.1 把跨租户
+      #         与契约违规同归 RL-5）—— 但要清楚：**没有任何告警会把人带到那一页**，
+      #         该页只会被渗透测试结论或人工举报打开，不会被监控系统触发。
+      #   ⇒ 唯一可考虑的接线（需架构窗口分配，不在本窗口权限内）：在 `exec` 侧对
+      #      结果行做一次 `scope.level`/`tenant_id` 断言，失败才计一个
+      #      `tenant_isolation_violation_total` 计数器。当前全仓无此指标。
+      # ----------------------------------------------------------------------
+
+      # ----------------------------------------------------------------------
+      # §15.4 第 3 条 —— ui_contract_violation > 0，P0 —— ✅ 可表达（直接判据）
+      #   §15.3 契约行原文：「`ui_contract_violation` | Counter | kind —— **非零即 P0**」
+      #   §14.5 原文：「任何非零值都是 P0（说明后端发了矛盾序列或前端契约被判违规）」
+      #   采集点：`app/obs/instrumentation.py` 的帧观测器在**出口字节层**独立复核 §14.3
+      #   序列约束（不看 EventRecorder 自评）。kind **五**值（metrics.UI_CONTRACT_VIOLATION_KINDS）：
+      #     terminal_after_terminal / duplicate_terminal / terminal_missing_flag
+      #     / non_terminal_claims_terminal / stream_without_terminal
+      #   用 increase() 而非 >0：计数器单调，直接 `> 0` 会在首次违规后**永久**处于 firing。
+      # ----------------------------------------------------------------------
+      - alert: CommerceQLUiContractViolation
+        expr: |-
+          increase(ui_contract_violation_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: P0
+          domain: contract
+        annotations:
+          summary: 「SSE 事件序列契约被违反（5 分钟窗口内出现新违规），按 kind 分组定位是哪一类」
+          level: 「P0 —— §15.3 明文『非零即 P0』，十条里唯一不设容忍量的直接判据」
+          threshold: 「increase(ui_contract_violation_total[5m]) > 0；含义：本进程生命周期内新增了至少一次违规（不是累计非零，避免永久 firing）」
+          runbook: 「RL-5（07 §18.7 危险查询告警，判据原文即『ui_contract_violation 或红队项异常』）—— 冻结相关会话、核对闸门规则」
+          source: 「07 §15.3 契约行 + §14.5 末行 + §14.3 事件序列约束（前端互斥表的前提）」
+          coverage: 「✅ 已接线（instrumentation.py 有 observe_ui_contract_violation 调用点）」
+
+  # ==========================================================================
+  # 组 2：延迟与容量（§15.4 第 4、8 条）
+  # ==========================================================================
+  - name: commerceql-latency-and-capacity
+    rules:
+
+      # ----------------------------------------------------------------------
+      # §15.4 第 4 条 —— P95 延迟 > 15s，P1 —— ✅ 可表达
+      #   桶边界依据：`metrics.LATENCY_BUCKETS_S` =
+      #     0.05,0.1,0.25,0.5,1,2,4,8,15,30,60,120 —— **8.0 与 15.0 都是显式边界**，
+      #   故 P95 落在 15s 上不做插值（G-6 的 8s 线同理）。这是 §16.1 刻意压边界的原因。
+      #
+      #   ⚠️ 口径偏差（已知并如实登记，不是疏漏）：
+      #   ① 探针与抓取自身**在采集侧就被排除了**：`instrumentation.ObservingMiddleware`
+      #      按 `_SELF_SCRAPE_PREFIXES = ("/api/v1/healthz", "/api/v1/metrics")` 前缀直接放行、
+      #      不记 `http_requests_*`（compose healthcheck 15s 一次、Prometheus 15s 抓一次，
+      #      零业务流量时它们约占 100% —— 混进来等于用探针延迟给业务 SLA 判绿）。
+      #      ⇒ 因此本 expr **不写** `endpoint!~"healthz.*|metrics"`：那两条取值根本不会出现在
+      #        `endpoint` 标签域里，写了是恒真的空操作，只会让人误以为"排除"由本文件负责。
+      #        该行为由 `tests/contract/test_obs_frame_format.py`
+      #        （`..._skips_self_scrape_paths`）钉住；哪天采集侧改了，测试先红。
+      #   ② 真正的稀释源**排除不掉**：`/api/v1/query/{id}`（异步任务状态轮询）与
+      #      `/api/v1/query/{id}/cancel` 都是**毫秒级业务端点**，轮询频率由前端决定，
+      #      与 `POST /api/v1/query`（秒级）在同一个 `sum by (le)` 里 ⇒ **P95 被系统性拉低**。
+      #      要按端点分列再判，§15.3 没给"哪个端点算 SLA"的口径，本窗口不自拟。
+      #   ⚠️ 这仍然不等于 G-6 达标：G-6（P95 ≤ 8s）的验收口径是 §16.5 四场景压测
+      #      （W7 出数、W6 判定），本告警只负责 §15.4 的 15s 线。
+      # ----------------------------------------------------------------------
+      - alert: CommerceQLP95LatencyHigh
+        expr: |-
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(http_request_duration_seconds_bucket[5m]))
+          ) > 15
+        for: 5m
+        labels:
+          severity: P1
+          domain: latency
+        annotations:
+          summary: 「业务请求 P95 端到端延迟 > 15s，持续 5 分钟」
+          level: 「P1（07 §15.4 第 4 条）」
+          threshold: 「histogram_quantile(0.95, ...) > 15 秒；含义：G-6 的达标线是 8s（§17.3），15s 是"已经痛了"的告警线。8.0 与 15.0 都在桶边界上，分位数不靠插值」
+          runbook: 「RL-3（checkpoint 写入变慢：节点间耗时上升 + 池等待）→ 首选排查 pgbouncer/连接池，必要时降并发（kill switch）；若 stage_duration_seconds{stage="executing"} 同步抬高则转 RL-4」
+          source: 「07 §15.3 系统行『请求 QPS/错误率/P95 延迟，endpoint(≤20)/status(≤10)』+ §16.1 延迟预算 + §18.1（P0 单进程 uvicorn，长 SSE 会排队）」
+          coverage: 「✅ 已接线。⚠️ 端到端口径：`http_request_duration_seconds` 对 SSE 的观测终点=响应体写完（metrics.py help 原文），与 §16.1 U-13『端到端=收到 complete』同口径」
+
+      # ----------------------------------------------------------------------
+      # §15.4 第 8 条 —— 429 比率 > 5%，P2 —— ⚠️ **现有指标不可表达，故意不写 expr**
+      #
+      #   §15.4 原文实现列：「检查并发信号量配置」。
+      #   为什么表达不了（两处独立缺口，缺一都不能救回本条）：
+      #   ① `http_requests_total{status}` 的取值只有 **2xx/3xx/4xx/5xx**
+      #      —— `app/obs/metrics.py:status_class()` 用 `f"{code // 100}xx"` 折算，
+      #      429 与 400/403/404/409/422 **全并入 4xx**。用 `status="4xx"` 冒充 429
+      #      会把参数校验失败（422）算进"被限流"，而 §14.4 恰恰要求区分
+      #      `429 RATE_LIMITED`（带 Retry-After、可重试）与 `409 SESSION_CONFLICT`。
+      #   ② §14.5 明文给了正确的那个载体却**没人实现它**：
+      #      「限流触发 | 按 `bucket`（`X-RateLimit-Bucket`）—— 与会话串行冲突分开（后者是 409，不进此指标）」
+      #      → `BOUNDED_ALLOWED_LABELS["bucket"] = 5` 的标签键**已预留**，
+      #        但 `app/obs/metrics.py` 里**没有任何指标使用 bucket 标签**（已核对 19 个 labels= 声明）。
+      #
+      #   ⇒ 待补需求（归应用侧/架构窗口，本窗口只登记不实施）：
+      #      新增 `ratelimit_reject_total{bucket}` counter，由 `app/api/ratelimit.py`（W4/W1B 域）
+      #      在返回 429 处计一次；届时本条规则写成
+      #        `sum(rate(ratelimit_reject_total[5m])) / sum(rate(http_requests_total[5m])) > 0.05`
+      #      （分母是否排除探针与规则 4 同理，届时一并定）。
+      #      runbook 侧同结论：`deploy/runbook/README.md` §二.1 把本条标为
+      #      「转 W4（限流分桶属 `app/api/ratelimit.py`）」，并额外钉了一条
+      #      **「429 只表示配额；409 SESSION_CONFLICT 不是限流」**（ADR-13）——
+      #      与上面 ① 的否决理由同源，故新指标**不得**把 409 计进去。
+      #   ⇒ 现阶段的实际判据：人工看 `degraded_total{reason="llm_concurrency_exceeded"}`
+      #      （上游并发超限**在系统内部的降级侧**，§14.2/C-08 的 8 值之一）+ §15.5 屏①。
+      #      它是"我们压不动上游了"，**不是**"上游把我们限流了"，不能互相替代。
+      # ----------------------------------------------------------------------
+
+  # ==========================================================================
+  # 组 3：成本（§15.4 第 5 条，80% / 100% 两档）
+  # ==========================================================================
+  - name: commerceql-cost
+    rules:
+
+      # ----------------------------------------------------------------------
+      # §15.4 第 5 条（前档）—— 日成本达预算 80%，P1
+      #   阈值来源（三个数各自的出处，别当成拍脑袋）：
+      #     · 比例 80%   = 07 §10.4「**80% 告警 / 100% 硬熔断**（NFR-4.2）」
+      #                     + 附录 D §D.4.1 `BUDGET_ALERT_RATIO=0.8`
+      #     · 预算常量   = 07 §10.4 `DAILY_BUDGET_CNY`（全局日预算）
+      #                     代码默认值 100.0（`app/core/config.py:148`）
+      #                     当前 `deploy/.env` DAILY_BUDGET_CNY=100
+      #     · 于是 80%   = 80 元
+      #   ⚠️ **阈值是随环境变的字面量，Prometheus 读不到应用的 env**：
+      #     附录 D §D.4.2 明写 DAILY_BUDGET_CNY：dev=20 / staging=50 / prod=100。
+      #     ⇒ 换环境**必须同步改下面两个数字**（16/20 与 80/100），否则规则静默失效。
+      #       彻底修法（需架构窗口分配）：把预算以 gauge 形式随指标一起导出
+      #       （如 `budget_daily_cny`），规则写成 `daily_cost_cny / budget_daily_cny > 0.8`，
+      #       这样阈值与环境同源。**本窗口不自创该指标。**
+      # ----------------------------------------------------------------------
+      - alert: CommerceQLDailyCostWarning
+        expr: |-
+          daily_cost_cny >= 80
+        for: 5m
+        labels:
+          severity: P1
+          domain: cost
+        annotations:
+          summary: 「当日累计 LLM 成本达到全局日预算的 80%」
+          level: 「P1（07 §15.4 第 5 条 80% 档）」
+          threshold: 「daily_cost_cny >= 80 元 = DAILY_BUDGET_CNY(prod/=100，当前 .env 同值) × BUDGET_ALERT_RATIO(0.8)。含义：80% 是告警，**不熔断**；触发后应收紧候选路数（§10.4『接近预算时自动降为单路生成』，action_taken=reduced_candidates）」
+          runbook: 「RL-6（07 §18.7 成本异常：80% 告警并收紧候选路数）」
+          source: 「07 §15.4 第 5 条『日成本 80%/100%』+ §10.4 预算层级与熔断 + §15.3（daily_cost_cny Gauge 无标签）」
+          coverage: 「✅ **已接线**（2026-09-18）：`main.py` 第 5.5 步注册 `samplers.make_cost_sampler(cost_ledger, clock)`，15s 一次读账本日聚合。⚠️ 但接线是**有条件的**：`graph_runtime.cost_ledger is None`（`gateway=None` 的降级装配，见 `deps.py`）时采样器**不注册**，而本指标无标签 ⇒ 照样导出一条恒 0 序列 ⇒ 本条**静默不响**。启动日志 `obs_wiring_done` 的 `samplers=[...]` 是否含 `daily_cost` 是判据（看板/告警都不反映这一点）。不得据此声称『成本告警已生效』」
+
+      # ----------------------------------------------------------------------
+      # §15.4 第 5 条（后档）—— 日成本达预算 100%，P0（硬熔断）
+      # ----------------------------------------------------------------------
+      - alert: CommerceQLDailyCostBreach
+        expr: |-
+          daily_cost_cny >= 100
+        for: 1m
+        labels:
+          severity: P0
+          domain: cost
+        annotations:
+          summary: 「当日累计 LLM 成本触及全局日预算 100% —— 应用侧应已进入硬熔断（新请求走模板 + 降级）」
+          level: 「P0（07 §15.4 第 5 条 100% 档；§10.4 明确 100% 是**硬熔断**）」
+          threshold: 「daily_cost_cny >= 100 元 = DAILY_BUDGET_CNY 的 100%。含义：熔断是**应用侧行为**（NFR-4.2），本告警只负责『有人知道发生了熔断』，不负责执行熔断」
+          runbook: 「RL-6（成本异常 100% → 转模板）；同时核对 `degraded_total{action_taken="template_only"}` 是否同步上升 —— 若成本到顶而 template_only 为 0，说明**熔断没生效**，那是比超支更严重的问题」
+          source: 「07 §15.4 第 5 条 + §10.4『80% 告警 / 100% 硬熔断（NFR-4.2）；熔断后新请求走模板 + 降级路径，并在 meta 标注』」
+          coverage: 「⚠️ 同 80% 档：**已接线但有条件** —— `cost_ledger` 为 None 时采样器不注册，本 gauge 仍导出恒 0 序列 ⇒ 当前不会响。另注：`for` 取 1m 是刻意的，熔断是既成事实，不需要"持续 5 分钟"才承认」
+
+  # ==========================================================================
+  # 组 4：质量与语义层（§15.4 第 6、7、9、10 条）
+  # ==========================================================================
+  - name: commerceql-quality
+    rules:
+
+      # ----------------------------------------------------------------------
+      # §15.4 第 6 条 —— 准确率周环比下降 > 10%，P1 —— ⚠️ **无指标来源，故意不写 expr**
+      #
+      #   §15.4 原文实现列：「**影子流量评测**」。P0 范围内**没有影子流量**：
+      #   §11.1 的缓存全景与 §20.1 未决项里都没有该机制，评测是**离线批**（W6）。
+      #
+      #   为什么**绝不能**用现有指标凑：
+      #   · `query_outcome_total{outcome="success"}` 占比 ✗✗ —— 这是"**任务跑完了**"，
+      #     不是"**结果是对的**"。一个 SQL 语法合法、执行成功、口径全错的回答，
+      #     在 outcome 上就是 success。拿执行成功率冒充准确率 = 把 §17.4 那张
+      #     「沙箱能力缺口表」要防的误读（"全绿"读成"正确"）主动制造出来。
+      #   · `feedback_reason_total` ✗ —— 用户反馈是**稀疏且有偏**的质量信号，
+      #     §15.3 把它归在"质量"类而**没给它目标值**；且其采集点（feedback 表采样器）未接线。
+      #   · `llm_json_parse_failure_total` ✗ —— §15.3 原文只说它是
+      #     「**最早预示 prompt 退化的指标**」，"预示"≠"度量准确率"；且该指标本身未接线。
+      #
+      #   ⇒ 本条的实际覆盖方式：W6 评测产出 `backend/reports/w6/` 的 EX 分层网格 +
+      #      G-1…G-8 门禁判定，**按周对比报告**（人工/CI），不进 Prometheus。
+      #      runbook 侧同结论：`deploy/runbook/README.md` §二.1 把本条标为
+      #      「转 W6（评测域，不属本六条）」⇒ **本条无 RL 入口，也无告警**。
+      #      §15.5 屏②「准确率与门禁」因此**没有 Prometheus 数据源**，
+      #      看板上已用 text 面板如实标注（见 grafana/dashboards/commerceql.json）。
+      # ----------------------------------------------------------------------
+
+      # ----------------------------------------------------------------------
+      # §15.4 第 7 条 —— token/请求 周环比上升 > 40%，P2 —— ✅ 可表达（口径需知情）
+      #   · 分子 `llm_tokens_total{token_key="total"}` —— metrics.py help 原文点名
+      #     「token/请求 周环比告警（§15.4 P2）的分子」，故"用 total 键"是**照原文**不是自选。
+      #   · 分母"请求数" —— 用 `http_requests_total`：这是 metrics.py 自己的词汇
+      #     （HTTP_REQUESTS_TOTAL help=「请求 QPS / 错误率的分子」；
+      #      DEGRADED_TOTAL help=「降级率 = 本指标 / 请求数」）。
+      #     分母**不加** endpoint 过滤：探针与 /metrics 在采集侧就不进 `http_requests_total`
+      #     （见规则 4 ① 的 `_SELF_SCRAPE_PREFIXES`），写过滤是恒真空操作。
+      #     ⚠️ 残留偏差同规则 4 ②：轮询端点 `/api/v1/query/{id}` 会计入分母 ⇒
+      #     token/请求被**系统性低估**（一个业务查询 n 次轮询 = 分母多 n）。
+      #   · 「周环比」用 offset 7d + 交叉相乘（>1.4 倍）表达，并显式要求
+      #     两侧分母都 > 0，避免 0/0=NaN 之外的"上周零流量→本周任何值都算暴涨"。
+      #   ⚠️ 这条指标是 §15.4 点名的**诊断信号**：「提示 prompt 或输入分布变了」，
+      #      不是成本事故信号（成本看组 3）。
+      # ----------------------------------------------------------------------
+      - alert: CommerceQLTokensPerRequestWeekOverWeekRise
+        expr: |-
+          (
+            sum(rate(llm_tokens_total{token_key="total"}[1h]))
+              / sum(rate(http_requests_total[1h]))
+          )
+          >
+          (
+            1.4 * (
+              sum(rate(llm_tokens_total{token_key="total"}[1h] offset 7d))
+                / sum(rate(http_requests_total[1h] offset 7d))
+            )
+          )
+          and
+          sum(rate(http_requests_total[1h] offset 7d)) > 0
+        for: 30m
+        labels:
+          severity: P2
+          domain: quality
+        annotations:
+          summary: 「每次请求的平均 LLM token 量较上周同期上升 > 40%」
+          level: 「P2（07 §15.4 第 7 条）」
+          threshold: 「(tokens/req)_今日 / (tokens/req)_7天前 > 1.4；含义：§15.4 原文『**提示 prompt 或输入分布变了**』—— 先查 prompt 版本灰度（§10.3/§18.5）与 few-shot 条数，再查多候选路数是否被放宽（ADR-11 是『先 1 路，按需升 N』）」
+          runbook: 「RL-6（成本异常）—— 按 `deploy/runbook/README.md` §二.1 的路由表，本条指到 RL-6。⚠️ 但两侧语义不完全重合：RL-6 的处置是**成本侧**（收紧候选路数 / 转模板），而 §15.4 给本条的诊断语义是『提示 prompt 或输入分布变了』→ 还需并行走 §10.3 prompt 资产审查 + §18.5 版本灰度回滚。成本没超但本条响了，RL-6 会给出空处置。」
+          source: 「07 §15.3 语义行（缓存命中率含 prompt 前缀 cache_hit_tokens）+ §15.4 第 7 条；分子标签取值 token_key=total 见 core/enums.py:TokenKey」
+          coverage: 「⚠️ **规则就绪、序列恒 0**：`observe_tokens()` 全仓无调用点（token 计量在 `app/llm`，W3A 域）⇒ 本条**当前不会响**。注意措辞：`token_key` 有完整枚举域（TokenKey 四值），故序列**已导出、只是全为 0**，不是"序列缺席"（缺席只发生在**无取值域**的族，如 `llm_json_parse_failure_total{prompt_version}`）。本条是 `>` 比较、两侧同零 ⇒ 判据恒假 ⇒ 安全；但**同一事实换成 `== 0` 型规则会长期为真** —— 改阈值方向前先回看这条。另注两个固有偏差：① offset 7d 在进程重启/计数器归零后仍可比（rate 处理归零），但**上周无流量的新环境永远不触发**；② 单机单实例，无跨实例聚合问题，横向扩了要复核分母」
+
+      # ----------------------------------------------------------------------
+      # §15.4 第 9 条 —— 澄清率 > 15%，P1 —— ✅ 可表达
+      #   口径**严格照原文取**（不是自选比值）：
+      #     · 07 §14.5「澄清率 | `outcome=clarify` **占比**（NFR-7.1，上限指标）」
+      #     · 07 §15.3 语义行「澄清率 | Gauge | 全局」→ metrics.py 模块 docstring 的
+      #       Counter 化声明：「本文件按 Counter + PromQL rate() 求占比」
+      #     · metrics.py QUERY_OUTCOME_TOTAL help 原文：
+      #       「**澄清率 = {outcome="clarify"} / 全体**；NFR-7.1 上限 15%」
+      #   ⇒ 分母 = `sum(rate(query_outcome_total[...]))` **全体五值之和**（不是 success、
+      #      不是 http_requests_total）。
+      #   ⇒ 刻意**不用** `clarify_total / query_outcome_total`：clarify_total 的 help 原文
+      #      「与 query_outcome_total{outcome=clarify} 同源：**本指标答『为什么澄清』，
+      #      前者答『澄清占比』**」—— 用它算占比是把归因指标当占比指标用，
+      #      数值今天碰巧相同、明天 clarify 帧补发就会静默翻倍。原因分布留给 §15.5 屏③。
+      # ----------------------------------------------------------------------
+      - alert: CommerceQLClarifyRateHigh
+        expr: |-
+          (
+            sum(rate(query_outcome_total{outcome="clarify"}[30m]))
+              / sum(rate(query_outcome_total[30m]))
+          ) > 0.15
+        for: 15m
+        labels:
+          severity: P1
+          domain: quality
+        annotations:
+          summary: 「澄清率 > 15%（NFR-7.1 上限指标超标）」
+          level: 「P1（07 §15.4 第 9 条；§15.3 标注为**上限指标**）」
+          threshold: 「rate(clarify)/rate(全体 outcome) > 0.15，持续 15 分钟；含义：NFR-7.1 是**上限**不是目标，15% 即门禁 G-8 的前半条（§17.3）—— 但 G-8 还要求『澄清后一次成功率 ≥80%』，**后半条无指标来源**（见 coverage）」
+          runbook: 「**无 RL 条目**（`deploy/runbook/README.md` §二.1 把本条标为『转 W3C/W2A：绑定与语义包域』，不属六条故障处置）→ 处置按 §6.8.3 的四态归因表走：先看 §15.5 屏③ 的 binding_state 四态 + binding_layer 分布定是哪一层失效，补救方向是**回看语义包**（补 L1 别名 / 补 L3 default_binding），**不是放宽 τ**（N-25）」
+          source: 「07 §15.3 语义行『澄清率』 + §14.5『outcome=clarify 占比；同时必须看绑定态四态分布(§6.8.3)』 + NFR-7.1」
+          coverage: 「✅ 已接线（outcome 计数在 instrumentation.py）。⚠️ G-8 的后半条『澄清后一次成功率 ≥80%』**无指标来源**：需要按 clarify_id 串起"澄清→恢复→一次成功"的链路计数，而 §15.3 纪律① 禁止 clarify_id 作标签 → 只能留在 W6 评测侧算。本文件不凑。」
+
+      # ----------------------------------------------------------------------
+      # §15.4 第 10 条 —— L4 触发率 > 10%，P2 —— ✅ 条件①可表达；条件②③无指标来源
+      #   `binding_layer_total{layer="L4"}` **确实存在**（BindingLayer.L4，enums 四值，
+      #   且 `_declared_series()` 会补 0 → 序列恒在，不会"缺席即无告警"）。
+      #   但 §15.4 说的「>10%」出自 PRD §12.9 的**升级评估条件**，那里要的是**三条件同时成立**：
+      #     ① L4 触发率 > 10%          ← ✅ 本 expr
+      #     ② L4 误判为 ambiguous 的主因 ← ⚠️ 无指标来源（需冻结集上的混淆矩阵，属 W6 评测）
+      #     ③ 语义层已按 §C.4.6 步骤 4 补全后仍不下降 ← ⚠️ 无指标来源（人工/评审事实）
+      #   ⇒ 本告警只把 ① 变响；**响了三条件不等于该把方案 C 换回方案 A**，
+      #      这一步必须由人读 PRD §12.9 全文判定。这是本条 annotation 存在的理由。
+      #   ⚠️ 与 τ 的咬合：`binding_tau_calibrated == 0` 时（§18.4.1 / U-19：L4 结果
+      #      "不具备生产判定效力"），L4 占比的读数本身就没有生产含义 →
+      #      本告警的 summary 里显式要求先看 τ gauge。
+      # ----------------------------------------------------------------------
+      - alert: CommerceQLBindingL4RateHigh
+        expr: |-
+          (
+            sum(rate(binding_layer_total{layer="L4"}[1h]))
+              / sum(rate(binding_layer_total[1h]))
+          ) > 0.10
+        for: 30m
+        labels:
+          severity: P2
+          domain: semantics
+        annotations:
+          summary: 「L4 打分兜底占比 > 10%（语义层质量仪表盘读数异常）—— 仅满足 PRD §12.9 升级评估三条件之一，不要据此直接换方案」
+          level: 「P2（07 §15.4 第 10 条）」
+          threshold: 「rate(L4)/rate(binding_layer 全体) > 0.10，持续 30 分钟；含义：§15.3 原文『L4 占比 = **语义层质量的仪表盘**』—— 频繁落 L4 说明 L1 别名表 / L3 默认口径没建够，**不是** τ 该往下调」
+          runbook: 「**无 RL 条目**（`deploy/runbook/README.md` §二.1 把本条标为『转 W2A：回看语义包，**不是放宽 τ**，N-25』）→ 处置：① 确认 binding_tau_calibrated==1；② 回看语义包（补 L1 同义词 / L3 default_binding），§6.8.2 硬约束 5 与 N-25 都禁止"用放宽 τ 来压这条线"；③ 若要评估方案 A，须同时满足 PRD §12.9 的三条件（本告警只覆盖 ①）」
+          source: 「07 §15.3 语义行『binding_layer 分布 layer(4)』（§15.4 标注的『§12.9 升级条件之一』= **PRD** §12.9，TDD §12 只到 §12.7）+ §6.8.2/§6.8.3 + N-27 约束④『binding_layer 分布必须可观测』」
+          coverage: 「✅ 已接线（deps.py MetricsBindingObserver）。⚠️ PRD §12.9 升级评估的**条件②③ 无指标来源**（需 W6 冻结集混淆矩阵 + 人工评审），本规则**不构成**"已达升级条件"的自动判定」
+
+  # ==========================================================================
+  # 组 5：观测层自检（**超出 §15.4 十条**，由 W7 部署侧委托新增）
+  # ==========================================================================
+  - name: commerceql-observability-self
+    rules:
+
+      # ----------------------------------------------------------------------
+      # 不是 §15.4 的条目 —— 委托方（W7 主窗口）明确要求单列的一条。
+      # `metric_label_overflow_total{metric}` = 基数闸门的"丢弃"计数（§15.3 纪律②③）：
+      #   metrics.py `_Metric._overflow()` 原文「**越界本身必须可观测** ——
+      #   否则『看板少了一条线』会被读成『没发生过这类事件』」。
+      # 为什么值得一条告警：它 >0 意味着**观测层在丢数据**，
+      #   此时本文件所有其它规则的读数都不可信（少的是序列，不是日志）。
+      #   级别给 P1 而非 P0：它不直接影响用户，但会**污染 P0 判据的取证**。
+      # ----------------------------------------------------------------------
+      - alert: CommerceQLMetricLabelOverflow
+        expr: |-
+          increase(metric_label_overflow_total[15m]) > 0
+        for: 0m
+        labels:
+          severity: P1
+          domain: observability
+        annotations:
+          summary: 「Prometheus 指标标签基数/取值域溢出，观测样本正被丢弃（按 metric 标签定位是哪个指标）」
+          level: 「P1 —— 观测层自身故障；**本告警响过之后，同窗口内其它规则的读数都要打问号**」
+          threshold: 「increase(metric_label_overflow_total[15m]) > 0；含义：某标签取值落在 enums 域外（纪律③）或已见取值数超 BOUNDED_ALLOWED_LABELS 上界（纪律②）→ 该次观测被**丢弃**」
+          runbook: 「07 §18.7 六条不含（属观测层自身，非服务故障）→ 处置：① 读 metric 标签定位指标；② 若取值是合法枚举 → `core/enums.py` 与 metrics 域漂移，走 W0 的枚举唯一真相流程；③ 若是取值集正确但基数上界偏小 → 改 BOUNDED_ALLOWED_LABELS 需登记 §15.3 纪律② 的评审」
+          source: 「07 §15.3 三条指标纪律 ②③ + metrics.py 的 UNBOUNDED_FORBIDDEN_LABELS / BOUNDED_ALLOWED_LABELS / _Metric._overflow()」
+          coverage: 「✅ 自身即计数器，无需外部接线（丢弃动作发生时才 +1）；标签 metric 无取值域 → 只输出实际观测到的序列」
+
+      # ----------------------------------------------------------------------
+      # 附：§15.3 有、§15.4 十条**没有**的其余可观测面 —— 刻意不写成告警，登记在看板侧
+      #   检索降级率 = `retrieval_mode_total{retrieval_mode="sparse_only"}` / `sum(retrieval_mode_total)`：
+      #     §6.10 给了 >5% 的告警口径，并点名它是「embedding 软依赖健康度的**真实信号**，而非 /healthz」→ 对应 RL-2。
+      #     **不进本文件**的理由：§15.4 的十条是本文件的授权边界，§6.10 属 FR-2.8(P1) 口径，
+      #     由架构窗口决定是否升格为第 11 条。
+      #     ⚠️ 现状：`observe_retrieval_mode()` 无调用点（检索器在 `app/retrieval`，不在本窗口域）
+      #        ⇒ 但 `retrieval_mode` 有完整枚举域 ⇒ 各取值**已导出、恒 0**。若将来把它写成
+      #        `== 0` 型规则，会在全绿系统里长鸣 —— 只可写比率型（分子 0 ⇒ 判据假 ⇒ 安全）。
+      #   降级率 / 执行失败率 / 闸门拒绝分布 / 拒答原因 / JSON 解析失败率：同上，进 §15.5 屏③⑤，
+      #     不设阈值 —— §6.8.3 原文「四态分布是诊断指标（**不设目标值**）」。
+      # ----------------------------------------------------------------------

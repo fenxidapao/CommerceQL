@@ -14,6 +14,37 @@
 #   + 宿主侧绑定，且该绑定**仅对本机/内网开放**（07 §3.4 E-2）。
 #   ⚠️ 本机 `wsl.exe` 被安全策略拦截 → 不要写"进 WSL 执行命令"的步骤，
 #      一律用 `docker compose exec` / `run`（走 Docker Desktop API）。
+#
+# ============================================================================
+# W7 接管后的两件事（2026-09-18）
+#
+# ① 优雅停机的触发链（07 §18.3）已经闭合，**别再手动 `docker kill`**：
+#      docker stop → PID 1 是 `entrypoint.sh`（不是 uvicorn）→ trap TERM
+#      → `drain_client.py begin-wait 32`（POST /healthz/drain 摘 readiness，
+#        再轮询 inflight 到 0）→ TERM uvicorn（`--timeout-graceful-shutdown 5`）
+#      → lifespan 里的第二道保险（drain 30s，正常路径下是 no-op）
+#    三个预算必须自洽：32 + 5 = 37 < `stop_grace_period: 40s` < SIGKILL。
+#    · 2026-09-18 用一次性容器 + 假 drain 端点实测过三条路径：有 token ⇒ 置位**之后**在途流
+#      才逐条收尾、归零后才转发 TERM；无 token ⇒ 403 但仍转发 TERM、不卡死；
+#      预算耗尽 ⇒ `排空=no` 后照样退出（6s ≪ 40s）。未覆盖真实 app + 真实 SSE 客户端。
+#    · ⚠️ 优雅停机后 `docker ps -a` 会显示 **`Exited (143)`，这是正常产物**：dash 在 trap
+#      跑过之后会反复把 `wait` 报成 128+signo，PID 1 取不到服务进程的真实退出码
+#      （脚本按"不伪造"原样报，见 `entrypoint.sh` 尾注）。**只有 137 = 被 SIGKILL**，
+#      才是 §18.3 要避免的"流被硬断"。
+#    ⚠️ 为什么不能 `exec uvicorn` 直接当 PID 1：实测 uvicorn 0.53 收到 TERM 的顺序是
+#      「停监听 → **无限等**在途连接 → 才发 lifespan shutdown」。SSE 是长连接，
+#      于是"等客户端自己结束"就是 40s 后的 SIGKILL（静默断连）。必须先于 TERM 摘流量。
+#
+# ② 两个**只属于部署面**的环境变量：`DRAIN_TOKEN`、`MIGRATION_DATABASE_URL`。
+#    它们刻意**不进 `deploy/.env.example`** —— `tests/contract/test_config_failfast.py`
+#    要求 `.env.example` 的键集与 `Settings.model_fields` **完全相等**（双向同步），
+#    而这两项都不是应用配置项（`DRAIN_TOKEN` 由 `app/api/routers/health.py` 直接读
+#    `os.environ`，`MIGRATION_DATABASE_URL` 由 `alembic` 读）。塞进去会让契约测试红。
+#    · `DRAIN_TOKEN` 写在**本机** `deploy/.env`（已 gitignore，compose 从这里插值）。
+#    · `MIGRATION_DATABASE_URL` **连 `deploy/.env` 也不写**：
+#      `tests/unit/test_migration_dsn_hygiene.py` 扫的是整个工作区（含被 ignore 的文件），
+#      属主级字面 DSN 一落进仓库树 DoD④ 就红 ⇒ 只在跑迁移的那个 shell 里 `export`。
+#    `DRAIN_TOKEN` 缺失时应用会在启动时打 `drain_trigger_unavailable` WARN（不静默）。
 # ============================================================================
 
 name: commerceql
@@ -84,6 +115,10 @@ services:
     environment:
       # 容器内访问宿主 Ollama 的唯一可用地址（写 127.0.0.1 必然连不上）
       EMBEDDING_BASE_URL: http://host.docker.internal:11434
+      # §18.3 停机触发面的共享密钥（见文件头 ②：非 Settings 字段，故不在 .env.example）。
+      # ⚠️ 留空**不是**"功能降级但仍可用"：`POST /healthz/drain` 一律 403（fail-closed），
+      #    应用会在启动时打 `drain_trigger_unavailable` WARN。设置它 = 允许 pre-stop 摘流量。
+      DRAIN_TOKEN: ${DRAIN_TOKEN:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -135,8 +170,12 @@ services:
       - "80:80"
     depends_on:
       api:
-        # ⚠️ 刻意用 service_started：阶段 0 的 api 必然 unhealthy（硬依赖未接），
-        #    用 service_healthy 会让整个栈起不来而 DoD① 无法验证。W7 收尾时改成 service_healthy。
+        # ⚠️ 刻意用 service_started（原注释留的"W7 收尾改成 service_healthy"，W7 判定**不改**）：
+        #    这里要解决的是 nginx 在配置加载期解析 `proxy_pass http://api:8000` 的 DNS ——
+        #    容器**存在**即可，不需要它健康。换成 `service_healthy` 后，readiness 一旦 503
+        #    （元库/Redis/语义包任一硬依赖没就绪，阶段 1 之后这是**正常态**）nginx 就永远不起，
+        #    用户看到的是"连接被拒绝"而不是 §A.8.4 要求的那个 `503 + checks{}` JSON ——
+        #    把一个"看得见故障"的栈换成"看不见故障"的栈，是净损失。
         condition: service_started
     restart: unless-stopped
 
@@ -153,7 +192,67 @@ services:
       pg:
         condition: service_healthy
 
+  # ==========================================================================
+  # 观测栈（07 §15.4 告警规则 + §15.5 最小看板）—— **默认不起**，按需开：
+  #   docker compose --profile observability up -d prometheus grafana
+  #
+  # 为什么放在 profile 里而不是主干：PRD A-7 是单机栈，而 W6 的门禁判定与日常联调
+  # 都只依赖 api/web/pg/redis。多两个常驻进程 = 多两个"看起来在看数据其实没在采"的
+  # 故障面（Prometheus 对加载不到的 rule_files 只在日志 WARN、不阻止启动）。
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    profiles: ["observability"]
+    # ⚠️ 两个挂载路径就是 `observability/prometheus.yml` 文件头里声明的那两个：
+    #    `rule_files` 用的是**绝对路径**（相对路径的解析基准是配置文件所在目录，
+    #    换一种挂载布局就会静默变成"规则没加载"），所以这里的目标路径不能改。
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # 15d：单机栈的磁盘换不来更长回溯，而 §15.4 的周环比告警（准确率/token）要 7d 窗口
+      - --storage.tsdb.retention.time=15d
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alert.rules.yml:/etc/prometheus/rules/alert.rules.yml:ro
+      - prom_data:/prometheus
+    ports:
+      # 只绑宿主回环：/api/v1/metrics 在 nginx 侧已经封堵（`location = …{ return 404; }`），
+      # 但 9090 上没有任何鉴权 —— 绑 0.0.0.0 等于把指标面重新对外打开。
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    profiles: ["observability"]
+    volumes:
+      # provisioning 的两个子目录名是 Grafana 硬编码的（datasources / dashboards），
+      # 而仓库里的源目录叫 `datasource`（单数，与 §15.5 的文档结构对应）—— 挂载时改名。
+      - ./observability/grafana/datasource:/etc/grafana/provisioning/datasources:ro
+      - ./observability/grafana/provider.dashboards.yml:/etc/grafana/provisioning/dashboards/provider.dashboards.yml:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      # 刻意**不设**管理员口令：口令进不了 `.env.example`（见文件头 ②），写死在受版本
+      # 管理的文件里更糟。默认 admin/admin + 只绑回环，够本机看板用；
+      # ⚠️ 任何"对外网/内网开放 3000"的改动都必须先改口令 —— 这一条写在 runbook 里。
+      GF_SERVER_HTTP_ADDR: 0.0.0.0    # 容器内要听 0.0.0.0，否则宿主映射打不进去
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
+  # 观测栈的数据卷与业务无关，删掉不丢任何审计/任务记录
+  prom_data:
+  grafana_data:
   pg_data:
     # ⚠️ Docker 数据已迁到非 C 盘（E:\DockerData\DockerDesktopWSL），C 盘剩余空间紧张，
     #    不得把卷改回 C 盘（附录 D §D.1.3.1 分盘核算）

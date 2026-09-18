@@ -1,0 +1,605 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "description": "CommerceQL 阶段 7「观测与部署」交付物②：07 §15.5 的最小看板五屏（自用，不追求美观）。归属窗口 W7｜日期 2026-09-18｜依据 07 §15.5（屏）/ §15.3（口径与标签基数上限）/ §15.4（阈值同源）。取数一律走 job=commerceql-api（prometheus.yml 直连 api:8000 抓 /api/v1/metrics，不经 Nginx）。★ 诚实声明：屏②「准确率与门禁」当前**没有 Prometheus 数据源**（评测结果不在指标里，见该面板正文），屏① 的三探针逐依赖状态亦无指标来源。\n接线状态（2026-09-18 核对调用点）：**已接** = HTTP/阶段耗时/终态/澄清/拒答/降级/闸门拒绝（由 error 码回填）/契约违规/绑定四态与层级/日成本（条件装配）/事件循环延迟；**未接** = `llm_tokens_total`、`retrieval_mode_total`、`feedback_reason_total`、`gen_sql_rounds_total`（这四族有枚举域或无标签 ⇒ 序列**已导出、恒 0**，不是缺席）、`llm_json_parse_failure_total`、`llm_upstream_concurrency`（这两族才是**整族不输出**）。\n⇒ 看板空白处先怀疑采集端；但**恒 0 的线不是「没数据」**，别把它读成「该类事件为零」。",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "iteration": 0,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "① 实时健康（§15.5 屏1）",
+      "description": "§15.5 原文要求：「/healthz 三探针状态 + 软依赖 degraded_dependencies」。\n\n⚠️ 本屏**只覆盖了其中一部分**：\n· `up{job=commerceql-api}` —— 抓取端点可达（等价于 liveness 通了），这是探针三态里唯一能从 Prometheus 看到的；\n· `event_loop_lag_ms` —— A.8.2 规定 >5000ms 时 /healthz/live 必须 503；**已接线**（`app/obs/samplers.py:run_loop_lag` 每 1s 写一次，由 lifespan 的 `SamplerRunner.start()` 起）。\n· **无标签 gauge ⇒ 未采到也输出一条 0**（`metrics.render_prometheus_text()` 的「全集已知」分支），所以这条线**不能靠「有没有序列」判断采样器活着**；\n· 真正的自证是启动日志 `obs_wiring_done` 的 `background_tasks` 计数（应为 1 + 已注册采样器数），以及数值本身在 0~几十毫秒量级摆动 —— 恒等于同一个 0 才说明循环没跑；\n· `http_requests_inflight` —— §18.3 优雅停机 drain 的判据；\n· `binding_tau_calibrated` —— §18.4.1/U-19：0 表示 L4 精排结果不具备生产判定效力。\n\n⚠️ **无指标来源、本屏看不到**（不要误读成\"健康\"）：\n  /healthz 的逐依赖布尔态 metadata_db / checkpointer / redis / semantic_bundle_loaded（硬）与 llm / embedding（软），以及 degraded_dependencies 列表 —— 它们只存在于 JSON 响应体里，Prometheus 抓不了 JSON；compose 内也没有 blackbox_exporter 可做 json 探测。\n  修法（需架构窗口分配，非本窗口权限）：应用侧把探针结果镜像成 dependency_healthy{dependency,kind} gauge。\n  ⚠️ 这不是「加一行 set」：`dependency` 这个标签键**未登记**在 `metrics.BOUNDED_ALLOWED_LABELS`（注册表对未登记键直接 ValueError），\n  而 §15.3 纪律② 要求每个标签键显式给基数上界 ⇒ 顺序必须是「先评审上界并登记 → 再接线」，两步都在本窗口权限外。\n  人工核对入口：docker compose exec api python -c \"...urllib.../api/v1/healthz\"（见 README）。",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "custom": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "align": "auto",
+            "vMode": "auto",
+            "textMode": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "事件循环延迟 event_loop_lag_ms（ms；>5000 应 503）"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 5000
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "τ 已校准？binding_tau_calibrated（1=已校准 / 0=未校准）"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "orange",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "up{job=\"commerceql-api\"}",
+          "legendFormat": "抓取可达 up（==0 即 /api/v1/metrics 不通）",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "event_loop_lag_ms",
+          "legendFormat": "事件循环延迟 event_loop_lag_ms（ms；>5000 应 503）",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(http_requests_inflight)",
+          "legendFormat": "在途请求（含在途 SSE，停机 drain 判据）",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "binding_tau_calibrated",
+          "legendFormat": "τ 已校准？binding_tau_calibrated（1=已校准 / 0=未校准）",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "text",
+      "title": "② 准确率与门禁（§15.5 屏2）—— 无 Prometheus 数据源",
+      "description": "",
+      "datasource": null,
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "options": {
+        "content": "## 屏② 准确率与门禁 —— **当前无 Prometheus 数据源**\n\n本节是 07 §15.5 要求的第二屏：「EX 分层网格 + 四类指标 + 门禁 G-1…G-8 通过情况（**这是面试/答辩最有价值的一屏**）」。\n\n### 为什么它是一个文本面板而不是图\n\n这些数字**不在 Prometheus 里**，而且**不可能在**：\n\n- 准确率的分母是「结果对不对」，判据是 gold SQL 结果集等价（含浮点容差 / 舍入 / 列序归一化），只存在于 **W6 评测执行器**的输出里（`backend/reports/w6/`，08 §3.8 产出）。\n- `query_outcome_total{outcome=\"success\"}` **不是**准确率：它只说明「SQL 跑完了」。一条语法合法、执行成功、口径全错的回答，在这里就是 success。用它冒充准确率，正是 07 §17.4 那张《沙箱能力缺口表》要防的误读。\n- 门禁 G-1…G-8 是**评测/压测的批判定**，不是流式指标：G-6 来自 §16.5 四场景压测，G-3/G-4 来自红队与渗透测试，G-8 的后半条（澄清后一次成功率）需要按 `clarify_id` 串链路，而 §15.3 纪律① 禁止它作标签。\n\n所以本屏的正确用法：**评测报告出新结果后，人工把数字抄进下面的表格并注明报告日期**。表里现在只有口径、没有数值 —— 这是刻意留白，**不是**「准确率为 0」，也**不是**「已经达标」。\n\n### 待填：G-1…G-8 门禁判定（口径 = 07 §17.3）\n\n| 门禁 | 条件 | 数据来源 | 最近一次结果 | 报告日期 |\n|---|---|---|---|---|\n| G-1 | 全部 P0 用例通过 | 评测/单测 | _待填_ | _待填_ |\n| G-2 | 结构 Easy × 语义低 ≥ 95% | 冻结集分层网格 | _待填_ | _待填_ |\n| G-3 | 危险 SQL 放行 = 0 | CI 红队（`eval/red_team_cases_v1.json`） | _待填_ | _待填_ |\n| G-4 | 跨租户泄露 = 0 | 双租户夹具 + 渗透测试 | _待填_ | _待填_ |\n| G-5 | 拒答准确率 ≥ 95% | 拒答集 | _待填_ | _待填_ |\n| G-6 | P95 延迟 ≤ 8s | **§16.5 四场景压测**（W7 主窗口产出） | _待填_ | _待填_ |\n| G-7 | 口径一致性 ≥ 95%（核心指标子集） | 附录 C | _待填_ | _待填_ |\n| G-8 | 澄清率 ≤ 15% 且澄清后一次成功率 ≥ 80% | 澄清率可算 / 后半条需评测 | _待填_ | _待填_ |\n\n### 待填：EX 分层网格（4 结构难度 × 3 语义难度）与四类指标\n\n数据位置：`backend/reports/w6/`（W6 独占目录，本窗口只读引用、不代其产出）。\n\n### 沙箱能力缺口（07 §17.4，**必须与上表同屏出现**）\n\n评测沙箱是 SQLite：`EXPLAIN(FORMAT JSON)` 缺失 → gate3 **跳过并标注 skipped=true**；**RLS/CLS 不覆盖**；pgvector / tsvector 不覆盖。⇒ 上表任何一格「全绿」都**不等于**成本闸门与行/列级权限被验证过。\n\n### 接线之后本屏会变成什么\n\n如果架构窗口批准把 W6 报告以 pushgateway / 导出脚本形式落成指标（例如 `eval_gate_passed{gate_no}`、`eval_accuracy_ratio{stratum}`），本面板应替换为 timeseries + stat。\n⚠️ 但这两个名字**不是「起个名就能画」**：`gate_no` 的基数上界是 **3**（按闸门 1/2/3 定的），装 G-1…G-8 会在第 4 个取值起**静默丢弃**（§15.3 纪律② 只往 `metric_label_overflow_total` 记一笔）；`stratum` 更是**未登记**的标签键 ⇒ 注册期直接 ValueError。\n先做基数评审（换标签名或另配上界），再谈接线。\n**在那之前，任何画在这上面的曲线都是假的。**",
+        "mode": "markdown"
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "③ 绑定质量（§15.5 屏3）：binding_state 四态 + binding_layer 分布 + 澄清率",
+      "description": "§15.5 原文：「binding_state 四态 + binding_layer 分布 + 澄清率」。\n\n口径全部照原文取：\n· 澄清率 = rate(query_outcome_total{outcome=\"clarify\"}) / rate(query_outcome_total 全体) —— metrics.py 的 QUERY_OUTCOME_TOTAL help 原文与 §14.5 一致；**不用 clarify_total 算占比**（它的 help 写明「本指标答『为什么澄清』」，是归因指标）。\n· 四态取值来自 core/enums.py:BindingState = resolved_unique / resolved_default / ambiguous / unresolved（§6.8.3：**诊断指标，不设目标值**，故本屏不画红线）。\n· 层号取值 = L1/L2/L3/L4（BindingLayer，**无 miss 值**）。\n\n两条必须一起读的注记：\n1. `resolved_default` 占比高**不是好事**（大量问题在套默认口径）—— §6.8.3 明写；\n2. L4 那条线的读数只在 `binding_tau_calibrated == 1` 时有生产含义（屏① / U-19）。\n\n⚠️ 全部曲线都是 0-1 的占比（unit=percentunit），不是计数。",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "占比（0-1）",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (state) (rate(binding_state_total[$__rate_interval])) / sum(rate(binding_state_total[$__rate_interval]))",
+          "legendFormat": "state {{state}}",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (layer) (rate(binding_layer_total[$__rate_interval])) / sum(rate(binding_layer_total[$__rate_interval]))",
+          "legendFormat": "layer {{layer}}",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(query_outcome_total{outcome=\"clarify\"}[30m])) / sum(rate(query_outcome_total[30m]))",
+          "legendFormat": "澄清率（NFR-7.1 上限 15%）",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "vector(0.15)",
+          "legendFormat": "NFR-7.1 / G-8 澄清率上限 15%（参考线）",
+          "instant": false,
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "④ 成本（§15.5 屏4）：日成本曲线 + 缓存命中率",
+      "description": "§15.5 原文：「日成本曲线 + 缓存命中率 + **峰值时段占比**」。\n\n⚠️ 三块内容里**峰值时段占比无指标来源，本屏没有它**：\n`daily_cost_cny` 是**单个无标签 gauge**（当日累计，metrics.py 声明如此），没有 model / 时段 / 租户维度；\n原始明细在 `cost_ledger`（§10.4：model / input_tokens / output_tokens / cache_hit_tokens / cost_cny / task_id / 租户 / 用户），\n但 §15.3 的清单里**没有**为它建任何带时段的指标 → 要画峰谷占比得先加指标（§10.4 的高峰定义：北京工作日 09:00-12:00 与 14:00-18:00）。\n登记为「待架构窗口分配的问题」，本窗口不自创指标。\n\n缓存命中率口径照原文：metrics.py 的 LLM_TOKENS_TOTAL help 明文「prompt 前缀缓存命中率 = cache_hit / input」（§15.3 缓存命中率行）。\n\n⚠️ 两条已知限制：\n1. 本面板把「元」和「0-1 占比」画在同一坐标系里（§15.5 声明自用不求美观）。要看清成本请临时把 D 的轴隐藏；\n2. 两条线的接线状态**不同**（2026-09-18 核对调用点）：\n   · `daily_cost_cny` **已接线但有条件** —— lifespan 第 5.5 步只在 `graph_runtime.cost_ledger` 存在时注册 `make_cost_sampler`；\n     `gateway=None` 的降级装配下采样器不注册，而该 gauge 无标签 ⇒ 仍输出一条恒 0 序列 ⇒ 曲线贴着 0 **不等于**「今天没花钱」。判据看启动日志 `obs_wiring_done` 的 `samplers=[...]` 是否含 `daily_cost`；\n   · `llm_tokens_total` **未接线**（`observe_tokens()` 全仓无调用点，token 计量在 `app/llm` = W3A 域），同理 `token_key` 有枚举域 ⇒ 四条 0 序列而非缺席。\n   ⇒ 两条都是「采集端缺口」或「装配分支未命中」，都不是「系统零成本／零 token」；空图与恒 0 图在这块面板上长得一样，必须靠上面的日志自证。\n3. 两条参考线 80 / 100 是**字面量**，来自 prod 的 DAILY_BUDGET_CNY=100 × BUDGET_ALERT_RATIO=0.8（§10.4）；附录 D §D.4.2 给了 dev=20 / staging=50 → 换环境必须同步改这两条与 alert.rules.yml 的组 3。",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 30
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyCNY",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "当日累计成本（元）",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "prompt 前缀缓存命中率 cache_hit/input"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "daily_cost_cny",
+          "legendFormat": "当日累计成本（元）",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "vector(80)",
+          "legendFormat": "80% 告警线（DAILY_BUDGET_CNY=100 × 0.8，§10.4）",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "vector(100)",
+          "legendFormat": "100% 硬熔断线（NFR-4.2）",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(llm_tokens_total{token_key=\"cache_hit\"}[1h])) / sum(rate(llm_tokens_total{token_key=\"input\"}[1h]))",
+          "legendFormat": "prompt 前缀缓存命中率 cache_hit/input",
+          "instant": false,
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "⑤ 安全（§15.5 屏5）：闸门拒绝（按 rule_id）+ 拒答原因 + ui_contract_violation",
+      "description": "§15.5 原文：「闸门拒绝（按 rule_id）+ 拒答原因 + ui_contract_violation」—— 三块**全部有真实指标**，本屏是可完整兑现的那两屏之一。\n（口径限定：① `gate_reject_total` 是 2026-09-18 补上 `gate_no` 回填后才成立，此前该族虽在导出、`gate_no` 却恒为空 ⇒ 当时只有两块；\n② 「有指标」≠「有数据」 —— 三条线都要真实流量触发过一次才离开 0，全 0 曲线本身不构成任何安全结论。）\n\n· 闸门：gate_reject_total{gate_no=\"1\"|\"2\"|\"3\", rule_id} —— gate_no 取值是 str(int(GateNo))，**不是 gate1**；rule_id 是 R01…R20 的 AST 规则码（enums:AstRule），**空串是有语义的**（metrics.py 对 `EMPTY_LABEL_VALUE` 的原文：「该载体本轮没给这个维度」）：只有**闸门一 = AST 静态审计**产出 R 码，**闸门二 = 策略校验（含 scope 计算）**与**闸门三 = EXPLAIN 成本闸门**本就没有规则号可给（编号语义见 `core/enums.py:GateNo`），所以不要 filter 掉空串，否则 2/3 闸门的柱子会整块消失。上限 `BOUNDED_ALLOWED_LABELS[rule_id]=21` = 空串 + R01…R20。\n  ⚠️ `gate_no` 的来路（2026-09-18 修）：闸门拒绝在帧面上只有 `error`+拒绝码一种形态（C-12，不渲染成拒答卡），故由 `instrumentation._GATE_NO_BY_ERROR_CODE` 从码回填；不带这三个码的 error（如执行故障）**不进**本计数器。\n· 拒答：refuse_total{reason} 四值 no_data_asset / out_of_scope / pii_blocked / open_analysis。⚠️ §14.2 D1/D3：**闸门拒绝不是拒答**，两条线不要相加解读。\n· 契约：ui_contract_violation_total{kind} —— §15.3 明文「非零即 P0」，任何一根离开 0 都要按 RL-5 处置。\n\n⚠️ 本屏**没有**的两件事（§15.4 第 2/1 条的直接判据无指标来源）：\n  跨租户泄露（靠渗透测试 + G-4）、危险 SQL 放行的直接计数（靠 CI 红队 + G-3；alert.rules.yml 里只有一条**间接探测**规则）。\n  「这条屏一片绿」≠「安全已验证」。",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 30
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "次 / 小时",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (gate_no, rule_id) (increase(gate_reject_total[1h]))",
+          "legendFormat": "闸门{{gate_no}} 规则{{rule_id}}",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (reason) (increase(refuse_total[1h]))",
+          "legendFormat": "拒答 {{reason}}",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (kind) (increase(ui_contract_violation_total[1h]))",
+          "legendFormat": "契约违规 {{kind}}（非零即 P0）",
+          "instant": false,
+          "range": true
+        }
+      ]
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "commerceql",
+    "w7",
+    "tdd-15-5"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "commerceql-prometheus",
+          "value": "commerceql-prom"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Prometheus 数据源",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ],
+    "fastquery": false
+  },
+  "time": {
+    "from": "-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "CommerceQL · 阶段 7 最小看板（07 §15.5 五屏）",
+  "uid": "commerceql-w7",
+  "version": 1,
+  "weekStart": ""
+}

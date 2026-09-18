@@ -110,8 +110,11 @@ forbidden_modules =
 name = R-DEP-3 obs 内除 audit 外禁止依赖 repo（U-18 代价约束）
 type = forbidden
 source_modules =
+    app.obs.instrumentation
     app.obs.logging
     app.obs.metrics
+    app.obs.probes
+    app.obs.samplers
     app.obs.schema
     app.obs.trace
 forbidden_modules =

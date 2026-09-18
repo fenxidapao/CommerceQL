@@ -1,0 +1,36 @@
+apiVersion: 1
+
+# ============================================================================
+# Grafana 数据源 provisioning —— 阶段 7 观测交付物 ②（看板的取数入口）
+# 归属窗口：W7｜日期：2026-09-18｜依据：07 §15.5（最小看板五屏）
+#
+# 挂载约定（已在 `deploy/docker-compose.yml` 的 `grafana` 服务里落地；
+# 本目录**就在** `deploy/observability/grafana/`，与 compose 同一层 ⇒ 相对路径以 `./` 开头）：
+#   ./observability/grafana/datasource       -> /etc/grafana/provisioning/datasources:ro
+#   ./observability/grafana/dashboards       -> /var/lib/grafana/dashboards:ro
+#   ./observability/grafana/provider.dashboards.yml
+#                                            -> /etc/grafana/provisioning/dashboards/provider.dashboards.yml:ro
+#   （看板 JSON 还需要一个 provider 指向 `/var/lib/grafana/dashboards` 才会被导入 ——
+#     该文件已与本文件同级落地，理由写在它自己的头部注释里。）
+#
+# uid 固定为 commerceql-prom：dashboard JSON 里的每个 panel 都按这个 uid 引用。
+# 用 uid 而不是 name 做引用，是因为 name 可以被人在 UI 里改掉，而 panel 会当场全空 ——
+# 那种"看板没数据"会被读成"系统没数据"，是最贵的一类误解。
+# ============================================================================
+
+datasources:
+  - name: commerceql-prometheus
+    uid: commerceql-prom
+    type: prometheus
+    access: proxy
+    # 走 compose 内部网络的服务名。✅ `deploy/docker-compose.yml` 里**已有** `prometheus` 服务，
+    # 但它挂在 `observability` profile 下 ⇒ 不带 `--profile observability` 起栈时这个 URL
+    # 解析不到、看板整屏空白 —— 那是**预期行为**，不要在这种状态下判定"观测已交付"。
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    # 与 prometheus.yml 的 global.scrape_interval 一致：写错了 Grafana 的
+    # "$__rate_interval" 会按错误的步长选窗口，rate() 直接出空洞。
+    jsonData:
+      timeInterval: 15s
+      httpMethod: POST

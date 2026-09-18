@@ -1,0 +1,29 @@
+apiVersion: 1
+
+# ============================================================================
+# Grafana 看板 provider —— 把 `dashboards/*.json` 装载进 UI
+# 归属窗口：W7｜日期：2026-09-18｜依据：07 §15.5（最小看板五屏）
+#
+# ⚠️ 为什么**不放进 `dashboards/` 目录里**（那是最直观的摆放位置）：
+#    `docker-compose.yml` 把 `dashboards/` 挂到 `/var/lib/grafana/dashboards`
+#    （JSON 的家），而 provider yaml 必须出现在 `/etc/grafana/provisioning/dashboards/`。
+#    同一目录兼两个用途的话，Grafana 会把 `commerceql.json` 也当成 provider 解析并报错。
+#    所以本文件与 `dashboards/` **同级**，由 compose 单独挂到 provisioning 路径。
+#
+# ⚠️ 为什么必须**有**这个文件：只有 datasource provisioning 的话，看板 JSON 躺在容器里
+#    但 Grafana 不知道要导入 —— 结果是"看板已交付"这句话在浏览器里表现为空白列表。
+#    这是"交付物存在"与"交付物可用"之间最容易糊过去的一类缺口。
+# ============================================================================
+
+providers:
+  - name: commerceql
+    folder: CommerceQL
+    type: file
+    # 关掉两个"能在 UI 里改"的入口：看板 JSON 在版本管理里，
+    # 允许在线编辑会让"浏览器里看到的图"与"仓库里的图"变成两个真相（07 §4.1 的病根）。
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
