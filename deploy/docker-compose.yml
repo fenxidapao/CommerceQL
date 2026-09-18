@@ -92,6 +92,20 @@ services:
       # readiness 持续 503。路径与 settings.SEMANTIC_BUNDLE_PATH 默认值对应；
       # 语义包升级（版本指针切换）只改宿主文件 + 重启 api，不改 compose。
       - ../semantic:/semantic:ro
+      # 验签公钥只读挂载（W1B 转达，2026-09-18）：
+      # 路径与 settings.JWT_PUBLIC_KEY_PATH 默认值（/run/secrets/jwt_public.pem）对应。
+      # 不挂载则该路径不存在 → TokenVerifier 的 JWKS 源加载失败 → 认证链整条不可用；
+      # 且每次重建容器都拿不到公钥，"签出的令牌跨重启即失效"。
+      # ⚠️ 只挂**公钥**：私钥留在宿主 `deploy/secrets/`（已 gitignore），
+      #    签发脚本（W1B）在宿主侧用它，容器永远不需要它。
+      # ⚠️ 宿主文件不存在时 Docker 会在该路径**建一个同名目录**（不是报错）→
+      #    应用侧表现为"读 PEM 失败"。首次使用前在宿主生成密钥对（幂等，已存在则复用）：
+      #      cd backend && ../.venv/Scripts/python.exe scripts/mint_dev_token.py --tenant-id t_dev
+      #    （`mint_dev_token.py` 私钥缺失时自动生成 RSA-2048 写 `deploy/secrets/jwt_private.pem`，
+      #      并把公钥写 `deploy/secrets/jwt_public.pem`；两文件均不入库）
+      # ✅ 有了此挂载，签发时**不再需要** `--docker-container`（原先靠 `docker cp` 拷公钥、
+      #    容器非 root 还得 `-u root`，重启即丢）；现在公钥随挂载持久存在，跨重启不失效。
+      - ./secrets/jwt_public.pem:/run/secrets/jwt_public.pem:ro
     ports:
       - "8000:8000"
     depends_on:
