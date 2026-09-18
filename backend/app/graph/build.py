@@ -53,6 +53,7 @@ if TYPE_CHECKING:  # pragma: no cover - 仅为类型检查
     from psycopg_pool import AsyncConnectionPool
 
 __all__ = [
+    "GRAPH_RECURSION_LIMIT",
     "GRAPH_VERSION",
     "PER_RUN_STRATEGIES",
     "SINGLE_CONN_STRATEGIES",
@@ -74,6 +75,14 @@ __all__ = [
 #: 会话级版本固定是"三者的组合"，由 W4 在 `graph/build.py` 的装配入口完成
 #: （`docs/08 §3.6`）。本阶段只落这一个常量，不假装已完成版本固定。
 GRAPH_VERSION: Final[str] = "0.1.0"
+
+#: **真图**的 `recursion_limit`（07 §5.4 逐字：**25**；NFR-2.4 的 kill switch）。
+#:
+#: ⚠️ 它与 `STUB_RECURSION_LIMIT` **是两个常量而不是一个**：值相同是巧合，
+#: 语义不同（桩图的 25 只是"与真图同构"，真图的 25 是 G4 判据 —— 超限即 `error(INTERNAL)`
+#: + P0 告警）。合成一个会让"调桩图压测参数"顺手改掉生产上限。
+#: 两处都是**调用期**参数（LangGraph 只在 `config` 里读它）。
+GRAPH_RECURSION_LIMIT: Final[int] = 25
 
 #: 桩节点每步的模拟耗时。
 #:

@@ -38,6 +38,13 @@ class FakeRedis:
         self.store: dict[str, tuple[str, int | None]] = {}
         #: key → {member: score}
         self.zsets: dict[str, dict[str, float]] = {}
+        #: key → [value, ...]（`LPUSH` 语义：最新在前）
+        #: ⚠️ 与 `store` 分开：Redis 的字符串与列表是两类值，混在一个 dict 里
+        #: 会让"对 list 键 GET"这类错误在替身里静默成功（真实 Redis 会返回类型错误）。
+        self.lists: dict[str, list[str]] = {}
+        #: 列表键的过期时刻（当前无用例读它，但 `expire()` 要能记住 —— 否则
+        #: "对 list 设 TTL"在替身里是一个静默无效的操作）。
+        self.list_ttl: dict[str, int] = {}
         self.time_ms: int = int(time.time() * 1000) if now_ms is None else now_ms
         #: 记录所有 `eval` 调用（脚本名 + keys + argv），供"参数位序"类断言使用
         self.eval_calls: list[tuple[str, int, tuple[Any, ...]]] = []
@@ -59,11 +66,21 @@ class FakeRedis:
 
     # ---------------- 字符串 ----------------
     async def set(
-        self, key: str, value: str, *, nx: bool = False, px: int | None = None
+        self,
+        key: str,
+        value: str,
+        *,
+        nx: bool = False,
+        px: int | None = None,
+        ex: int | None = None,
     ) -> bool | None:
+        """`SET`。⚠️ `px`（毫秒）与 `ex`（秒）**都在**：前者是会话锁用的，
+        后者是 `api/state_store.py` 的记录写入用的（**不是**冗余 —— 两个调用方各写各的单位，
+        合并成一个参数会让"毫秒当成秒"这类错误只在 TTL 到期时才暴露）。"""
         if nx and not self._expired(key):
             return None
-        self.store[key] = (value, None if px is None else self.time_ms + px)
+        ttl_ms = px if px is not None else (None if ex is None else ex * 1000)
+        self.store[key] = (value, None if ttl_ms is None else self.time_ms + ttl_ms)
         return True
 
     async def get(self, key: str) -> str | None:
@@ -73,6 +90,30 @@ class FakeRedis:
 
     async def delete(self, key: str) -> int:
         return 1 if self.store.pop(key, None) is not None else 0
+
+    # ---------------- 列表（`api/state_store.py` 的轮次历史） ----------------
+    async def lpush(self, key: str, value: str) -> int:
+        self.lists.setdefault(key, []).insert(0, value)
+        return len(self.lists[key])
+
+    async def lrange(self, key: str, start: int, end: int) -> list[str]:
+        items = self.lists.get(key, [])
+        if end == -1:
+            return list(items[start:])
+        return list(items[start : end + 1])
+
+    async def expire(self, key: str, seconds: int) -> bool:
+        """给**已存在**的键设 TTL。⚠️ 键不存在时 Redis 返回 `False`：
+        替身照此返回（不静默成功），否则"给不存在的键设 TTL"这类无害调用
+        会被测成成功，掩盖键名拼错。"""
+        entry = self.store.get(key)
+        if entry is not None:
+            self.store[key] = (entry[0], self.time_ms + seconds * 1000)
+            return True
+        if key in self.lists:
+            self.list_ttl[key] = self.time_ms + seconds * 1000
+            return True
+        return False
 
     async def ping(self) -> bool:
         return True

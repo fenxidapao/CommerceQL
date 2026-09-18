@@ -11,9 +11,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Final
 
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+from app.api.ratelimit import RATE_LIMIT_HEADER_NAMES, RateLimitQuota
+from app.core.contracts import IdentityContext, RateLimitDecision
 from app.core.enums import (
     DEFAULT_SUGGESTIONS,
     ERROR_HTTP_STATUS,
@@ -24,13 +31,33 @@ from app.core.enums import (
     RETRYABLE_BOOLEAN,
     ErrorCode,
     RateLimitBucket,
+    Role,
 )
 from app.core.errors import CommerceQLError
 
-__all__ = ["HEADER_RETRY_AFTER", "HttpErrorMapping", "map_code", "map_exception"]
+__all__ = [
+    "DETAIL_ROLES",
+    "EXPOSE_HEADERS",
+    "HEADER_RETRY_AFTER",
+    "IDENTITY_STATE_KEY",
+    "HttpErrorMapping",
+    "detail_allowed_for",
+    "error_body",
+    "error_response",
+    "install_exception_handlers",
+    "map_code",
+    "map_exception",
+    "map_rate_limited",
+    "rate_limit_headers",
+    "server_time",
+    "sse_response_headers",
+]
 
 
 HEADER_RETRY_AFTER = "Retry-After"
+
+#: `request.state` 上存身份的键名（见 `_identity_of`：错误响应的 `trace_id` / `role` 从这来）。
+IDENTITY_STATE_KEY: Final[str] = "commerceql.identity"
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,3 +188,246 @@ def map_exception(exc: BaseException, *, message: str | None = None) -> HttpErro
         ErrorCode.INTERNAL,
         message=message or "内部错误，请携带 trace_id 反馈",
     )
+
+
+# ============================================================================
+# 响应头（★ 全部头名的唯一来源）
+# ============================================================================
+
+
+#: ⚠️ `X-RateLimit-*` 四个头名在 `app/api/ratelimit.py` 定义（那里产出它们），
+#: 本模块只 import —— 方向单向，避免"头名两处各写一份"。
+#: `EXPOSE_HEADERS` 是 CORS 的 `Access-Control-Expose-Headers` 值（W5 RELAY §1.3）：
+#: 跨源下不暴露它们，前端的 `headers.get()` 恒为 `null` → 限流指示器等于失效。
+EXPOSE_HEADERS: tuple[str, ...] = (*RATE_LIMIT_HEADER_NAMES, HEADER_RETRY_AFTER)
+
+#: 允许看到 `error.detail` 的角色（W5 RELAY §1.1 末列 + 07 §14.2 的收口）。
+#:
+#: ⚠️ **不在表内的角色一律不下发 `detail`**，且这是**服务端**的义务：
+#: 前端 P0 无角色来源（无 `/me`，W5 RELAY §三 D-H），只能"一律不展示"；
+#: 若后端照发，"不展示"只是渲染层的自觉 —— 而 `detail` 里可能有闸门规则号、
+#: 解析器位置之类的诊断信息（N-11 的精神：诊断面只给能处置它的人）。
+DETAIL_ROLES: frozenset[Role] = frozenset({Role.ANALYST, Role.PLATFORM_ADMIN})
+
+
+def detail_allowed_for(role: Role | None) -> bool:
+    """该角色是否允许收到 `detail`。`None`（未认证/无身份）一律 **False**。"""
+    return role in DETAIL_ROLES
+
+
+def rate_limit_headers(
+    decision: RateLimitDecision | None = None,
+    *,
+    limit: int | None = None,
+    remaining: int | None = None,
+    reset_epoch_s: int | None = None,
+) -> dict[str, str]:
+    """`X-RateLimit-*` 四头。
+
+    ⚠️ **`409 SESSION_CONFLICT` 不得带这四个头**（附录 A §A.0.6 末行的强制约定）：
+    会话串行冲突不是配额事件，给了会让前端进入限流禁用态。故本函数**只在两处调用**：
+    配额放行后的 `2xx` 响应、以及 `429` 本身。
+    """
+    if decision is None:
+        return {}
+    return RateLimitQuota(
+        decision=decision, limit=limit, remaining=remaining, reset_epoch_s=reset_epoch_s
+    ).headers()
+
+
+def sse_response_headers(quota: RateLimitQuota | None = None) -> dict[str, str]:
+    """SSE 响应头 = 反代必备头（`sse.SSE_HEADERS`）+ 逐桶限流四头。
+
+    ⚠️ 是本模块而不是 `sse.py`：本模块的标题就是"**全部头名的唯一来源**"，
+    而 `sse.py` 的职责是**编码帧**（它的 docstring 第一句）。两个 SSE 端点
+    （`/query`、`/clarify`）都要这一组头，写在各自 router 里就是两处实现 ——
+    漏一处表现是"某个端点的限流指示器不更新"，而前端只会静默忽略。
+    ⚠️ `429` 的路径**不走这里**：那里由全局处理器用 `map_rate_limited` 取头（同一个来源链）。
+    """
+    from app.api.sse import SSE_HEADERS
+
+    headers = dict(SSE_HEADERS)
+    if quota is not None:
+        headers.update(quota.headers())
+    return headers
+
+
+def server_time() -> str:
+    """`server_time`（附录 A §A.0.1 的时间格式：ISO 8601 带时区偏移）。
+
+    ⚠️ 与 `state_store._now_iso()` 是**同一个格式**、同一个语义（接入层墙钟）——
+    这里再写一份是因为 `errors.py` 不能 import `state_store`（后者 import 了 Redis 客户端
+    与 `cache.keys`，而错误响应在**任何**路径上都要能产出，包括还没装配运行时的启动期）。
+    两者的一致性由 `tests/contract/test_api_error_contract.py` 的形状断言守住。
+    """
+    from datetime import datetime
+
+    return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def error_body(
+    mapping: HttpErrorMapping, *, trace_id: str | None, allow_detail: bool
+) -> dict[str, Any]:
+    """错误响应体（附录 A §A.0.4 的封套）。
+
+    ⚠️ `detail` 的过滤**在这一处**完成（不是各端点各判一次）：
+    本函数是"错误体长什么样"的唯一产出点，与 `ErrorEnvelope`（`api/dto/common.py`）同形。
+    """
+    return {
+        "code": mapping.code.value,
+        "message": mapping.message,
+        "trace_id": trace_id,
+        "detail": mapping.detail if (allow_detail and mapping.detail) else None,
+        "suggestions": list(mapping.suggestions) if mapping.suggestions else None,
+        "server_time": server_time(),
+    }
+
+
+def error_response(
+    mapping: HttpErrorMapping,
+    *,
+    trace_id: str | None,
+    allow_detail: bool,
+    extra_headers: Mapping[str, str] | None = None,
+) -> JSONResponse:
+    """错误响应（**唯一的错误响应构造点**）。
+
+    ⚠️ `mapping.validate()` 在构造时**必须**通过（`tests/contract/test_errors_contract.py` 已钉）：
+    一条"码说可重试、头却没给"的响应会让前端倒计时与真实行为不符。
+    """
+    mapping.validate()
+    headers = {**mapping.headers(), **(dict(extra_headers) if extra_headers else {})}
+    return JSONResponse(
+        status_code=mapping.status,
+        content=error_body(mapping, trace_id=trace_id, allow_detail=allow_detail),
+        headers=headers or None,
+    )
+
+
+# ============================================================================
+# 全局异常处理器（★ 异常离开进程的唯一出口）
+# ============================================================================
+
+
+def install_exception_handlers(app: FastAPI) -> None:
+    """把四类异常挂成全局处理器（`app/main.py` 的组装段调用一次）。
+
+    覆盖范围与理由：
+
+    | 异常 | 处理 | 理由 |
+    |---|---|---|
+    | `CommerceQLError` | `map_exception` | 领域异常的统一出口（`SESSION_CONFLICT` / `TASK_NOT_FOUND` / …） |
+    | `RequestValidationError` | `INVALID_REQUEST` | FastAPI 默认产出的 `{"detail":[{"loc":…}]}` **不是**本项目封套 —— 前端按封套解析会拿到 `undefined.code` |
+    | 其余 `Exception` | `INTERNAL` | N-11：原始报错不回灌；只留 `trace_id` 提示 |
+
+    ⚠️ **限流头的两条非对称规则在这里落地**：
+    · `429` 带 `X-RateLimit-*`（配额事件，四头齐全）；
+    · `409 SESSION_CONFLICT` **不带**（`HttpErrorMapping.headers()` 只产 `Retry-After`，
+      本函数不为它补配额头 —— 这正是"用错层的机制补救另一个层"要防的事）。
+
+    ⚠️ **本函数不注册 `404` 兜底**：FastAPI 的 `HTTPException(404)` 由框架处理，
+    而"路由不存在"不是本项目的领域错误码（附录 A §A.11 里的 404 全部是**资源**级）。
+    """
+    from app.api.ratelimit import RateLimitQuota
+    from app.obs.logging import get_logger
+
+    log = get_logger(__name__)
+
+    def _role_of(request: Request) -> Role | None:
+        """从**本次请求的身份**取角色（先 `request.state`，再 contextvar，见 `_identity_of`）。
+
+        拿不到就返回 `None` → 不下发 `detail`（**安全缺省**：认证失败时本来也没有角色）。
+        """
+        context = _identity_of(request)
+        return context.role if context is not None else None
+
+    @app.exception_handler(CommerceQLError)
+    async def _domain_error(request: Request, exc: CommerceQLError) -> JSONResponse:
+        quota = getattr(exc, "quota", None)
+        mapping = map_exception(exc)
+        if isinstance(quota, RateLimitQuota):
+            # 限流的 `Retry-After` **必须按桶取**（§A.0.6）：`map_rate_limited` 是唯一来源。
+            mapping = map_rate_limited(quota.decision.bucket, message=mapping.message)
+            extra = quota.headers()
+        else:
+            extra = {}
+        log.warning(
+            "api_error",
+            code=mapping.code.value,
+            status=mapping.status,
+            path=request.url.path,
+            error_type=type(exc).__name__,
+        )
+        return error_response(
+            mapping,
+            trace_id=_trace_id_of(request),
+            allow_detail=detail_allowed_for(_role_of(request)),
+            extra_headers=extra,
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def _validation_error(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        # ⚠️ `detail` 只放**字段路径**，不放用户输入回显（N-11 的精神）：
+        # 把问题正文/参数值写回响应体既没有诊断价值（字段名就够了），
+        # 又让"响应里出现用户输入"多一个面。截断到 10 条 —— 错误清单是给人看的，不是枚举面。
+        paths = [".".join(str(part) for part in err.get("loc", ())) for err in exc.errors()]
+        mapping = map_code(
+            ErrorCode.INVALID_REQUEST,
+            message="请求参数校验失败",
+            detail={"fields": paths[:10]} if paths else {},
+        )
+        return error_response(
+            mapping,
+            trace_id=_trace_id_of(request),
+            allow_detail=detail_allowed_for(_role_of(request)),
+            extra_headers={},
+        )
+
+    @app.exception_handler(Exception)
+    async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
+        # ⚠️ 原始异常**只进日志**（N-11）：消息与 `detail` 都不带它。
+        log.error(
+            "unhandled_exception",
+            path=request.url.path,
+            error_type=type(exc).__name__,
+            detail=str(exc)[:500],
+        )
+        return error_response(
+            map_code(ErrorCode.INTERNAL, message="内部错误，请携带 trace_id 反馈"),
+            trace_id=_trace_id_of(request),
+            allow_detail=detail_allowed_for(_role_of(request)),
+            extra_headers={},
+        )
+
+
+def _identity_of(request: Request) -> IdentityContext | None:
+    """取本次请求的身份：**先 `request.state`，再 contextvar**。
+
+    🔴 顺序不能反，理由是实测出来的：`trace_scope` 的 `finally` 在**异常处理器运行之前**
+    就重置了 contextvar（端点的 `async with` 先退出，异常才冒泡到 `ExceptionMiddleware`）。
+    只读 contextvar 的后果是**每一个领域错误的响应里 `trace_id` 都是 `null`**、
+    且 `role` 一律取不到 ⇒ `detail` 对所有角色都不下发（07 §14.2 的收口被"静默全关"）。
+
+    故身份必须同时落到 **ASGI scope 级**的 `request.state`（它随请求存活，
+    异常处理器拿到的是同一个 `scope`）。contextvar 保留为兜底：它服务日志（`obs`），
+    在**未**经端点（例如中间件层）产生的错误上仍有值。
+    """
+    remembered = getattr(request.state, IDENTITY_STATE_KEY, None)
+    if isinstance(remembered, IdentityContext):
+        return remembered
+    from app.auth.context import identity_or_none
+
+    return identity_or_none()
+
+
+def _trace_id_of(request: Request) -> str | None:
+    """从本次请求的身份取 `trace_id`（没有则 `None`）。
+
+    ⚠️ 不从 `X-Trace-Id` 请求头取：那是**客户端可伪造**的输入，
+    而 `trace_id` 是 07 §15.2 的 trace 起点（**服务端生成**）。
+    回显一个客户端给的值会让"按 trace_id 查日志"查出攻击者构造的误导关联。
+    """
+    ctx = _identity_of(request)
+    return ctx.trace_id if ctx is not None else None

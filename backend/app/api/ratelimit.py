@@ -49,6 +49,7 @@ __all__ = [
     "UNENFORCED_DIMENSIONS",
     "UNIMPLEMENTED_BUCKETS",
     "LimiterNotImplemented",
+    "RateLimitQuota",
     "RateLimitRule",
     "RedisBucketRateLimiter",
 ]
@@ -140,6 +141,61 @@ class RateLimitRule:
     per_tenant_per_min: int | None
 
 
+#: 限流四头的**名字**在这里定义（`Retry-After` 在 `app/api/errors.py`）。
+#: ⚠️ 方向是单向的：`errors.py` import 本模块，本模块**不得** import `errors.py`
+#: （两边互相 import 会让"头名"与"映射"绕成一个环 —— 那时谁也说不清哪个是唯一来源）。
+HEADER_RATE_LIMIT_BUCKET: Final[str] = "X-RateLimit-Bucket"
+HEADER_RATE_LIMIT_LIMIT: Final[str] = "X-RateLimit-Limit"
+HEADER_RATE_LIMIT_REMAINING: Final[str] = "X-RateLimit-Remaining"
+HEADER_RATE_LIMIT_RESET: Final[str] = "X-RateLimit-Reset"
+
+#: 四个头名（顺序 = 文档与前端约定的顺序，仅用于 CORS 暴露清单）。
+RATE_LIMIT_HEADER_NAMES: Final[tuple[str, str, str, str]] = (
+    HEADER_RATE_LIMIT_BUCKET,
+    HEADER_RATE_LIMIT_LIMIT,
+    HEADER_RATE_LIMIT_REMAINING,
+    HEADER_RATE_LIMIT_RESET,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class RateLimitQuota:
+    """一次限流判定的**完整事实**：判定 + 配额三数 → `X-RateLimit-*` 四头。
+
+    ⚠️ 为什么不是直接扩 `core/contracts.RateLimitDecision`：那是 **L0 端口类型**（W0 持有），
+    扩它等于让所有 Port 消费者都拿到三个"只有接入层才用得上"的字段。
+    故本类落在**实现侧**（`app/api/ratelimit.py`，整体移交 W4 的文件），
+    `check()` 仍只返回端口类型 —— 端口契约不变，多出来的是实现能力。
+
+    ⚠️ `limit=None` 表示**该维度不设限**（`RATE_LIMIT_RULES` 里的 `None`），
+    此时三个头**一律不下发**：下发 `Limit: 0` 会让前端的配额条显示"0/0"（看起来像被禁用），
+    而真实语义是"这一维不参与限流"。
+    """
+
+    decision: RateLimitDecision
+    #: 用户维度配额（`None` = 该维度不设限）。
+    limit: int | None = None
+    #: 剩余额度。**被拒时恒为 0**（见 `check_with_quota` 的注释）。
+    remaining: int | None = None
+    #: 窗口重置时刻（epoch 秒，**取自 Redis 服务端时间**，见 `SLIDING_WINDOW_SCRIPT`）。
+    reset_epoch_s: int | None = None
+
+    def headers(self) -> dict[str, str]:
+        """本节流事实对应的响应头。
+
+        ⚠️ `Bucket` **恒发**（附录 A §A.0.6 补充规则："每次请求都返回"）：
+        前端只有拿到它才能定位"是哪个桶超限"，也才能只对 `query` 桶更新配额条（W5 RELAY §1.4）。
+        """
+        headers = {HEADER_RATE_LIMIT_BUCKET: self.decision.bucket.value}
+        if self.limit is not None:
+            headers[HEADER_RATE_LIMIT_LIMIT] = str(self.limit)
+        if self.remaining is not None:
+            headers[HEADER_RATE_LIMIT_REMAINING] = str(self.remaining)
+        if self.reset_epoch_s is not None:
+            headers[HEADER_RATE_LIMIT_RESET] = str(self.reset_epoch_s)
+        return headers
+
+
 #: 07 §9.2 的表（**逐行对齐，不是调优结果**）。
 #: 窗口长度统一 60s —— 该表每一行都是「N 次 / 分钟」，没有第二个窗口长度。
 RATE_LIMIT_RULES: Final[Mapping[RateLimitBucket, RateLimitRule]] = MappingProxyType(
@@ -207,11 +263,25 @@ class RedisBucketRateLimiter(RateLimiterPort):
         return user_key, tenant_key
 
     async def check(self, bucket: RateLimitBucket, ctx: IdentityContext) -> RateLimitDecision:
-        """判定是否放行。
+        """判定是否放行 —— **Port 方法**，只回端口类型（`RateLimitDecision`）。
+
+        ⚠️ 单次 Lua 调用：本方法是 `check_with_quota` 的薄投影，**不重复计数**
+        （两次独立判定会把同一次请求记两笔，配额会比文档少一半）。
+        """
+        return (await self.check_with_quota(bucket, ctx)).decision
+
+    async def check_with_quota(
+        self, bucket: RateLimitBucket, ctx: IdentityContext
+    ) -> RateLimitQuota:
+        """判定是否放行，并**顺带**给出配额三数（逐桶 `X-RateLimit-*` 四头的来源）。
 
         ⚠️ 成员（ZSET 的 member）用 `task_id + 随机后缀` 而**不用**裸 `task_id`：
         幂等重放会让两个请求共用 `task_id`，而 ZSET 里同 member 会**覆盖**而不是累加 →
         计数偏小（限流少算）。这类偏差只在"同一 task 被重试"时出现，正是最需要限流保护的时刻。
+
+        ⚠️ `remaining` 在**被拒**时恒为 `0`，而不是 `limit - used`：被拒说明"此刻不能再发"，
+        真实的剩余额度在这个桶上是 0；给出正数会让前端的配额条显示"还有 3 次"却收到 429
+        —— 那正是 §A.0.6 要避免的"头与状态自相矛盾"。
         """
         if bucket in UNIMPLEMENTED_BUCKETS:
             raise LimiterNotImplemented(
@@ -238,7 +308,7 @@ class RedisBucketRateLimiter(RateLimiterPort):
             member,
         )
         allowed = int(result[0]) == 1
-        return RateLimitDecision(
+        decision = RateLimitDecision(
             allowed=allowed,
             bucket=bucket,
             # ⚠️ `Retry-After` **只从 `enums` 的定值表取**（单一来源）：
@@ -246,3 +316,17 @@ class RedisBucketRateLimiter(RateLimiterPort):
             # 表现为"`429` 响应头的倒计时与文档不符"，而两者都"看起来对"。
             retry_after_s=None if allowed else RATE_LIMIT_BUCKET_RETRY_AFTER_S[bucket],
         )
+        return RateLimitQuota(
+            decision=decision,
+            limit=user_limit or None,
+            remaining=_remaining(user_limit, int(result[1]), allowed=allowed),
+            # 脚本第 4 个返回值 = Redis 服务端"现在"（epoch 毫秒），重置时刻 = 现在 + 窗口。
+            reset_epoch_s=int(result[3]) // 1000 + self._window_s,
+        )
+
+
+def _remaining(user_limit: int, user_count: int, *, allowed: bool) -> int | None:
+    """用户维度剩余额度。`user_limit=0`（该维度不设限）→ `None`（三头都不下发）。"""
+    if user_limit <= 0:
+        return None
+    return max(0, user_limit - user_count) if allowed else 0

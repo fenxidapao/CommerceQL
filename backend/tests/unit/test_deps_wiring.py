@@ -52,10 +52,10 @@ from app.api.deps import (
     session_lock_guard,
 )
 from app.api.errors import map_exception
-from app.api.ratelimit import RedisBucketRateLimiter
+from app.api.ratelimit import RateLimitQuota, RedisBucketRateLimiter
 from app.cache.session_lock import RedisSessionLock
 from app.core.config import get_settings
-from app.core.contracts import IdentityContext
+from app.core.contracts import IdentityContext, RateLimitDecision
 from app.core.enums import RATE_LIMIT_BUCKET_RETRY_AFTER_S, RateLimitBucket, Role
 from app.core.errors import CommerceQLError, SessionLockConflict
 from app.obs.audit import AuditWriter
@@ -318,8 +318,17 @@ def test_rate_limited_maps_to_429_with_retry_after() -> None:
 
     ⚠️ 映射本身归 `app/api/errors.py`（W0 立骨架 / W4 维护），本用例**不改它**，
     只做一次"两边接得上"的确认。少了这一条，两个模块各自全绿而接缝处是断的。
+
+    ⚠️ `RateLimited` 携带的是**整个 `RateLimitQuota`**（判定 + 四头同源），
+    不是"桶名 + 秒数"两个裸参数 —— 否则 `X-RateLimit-*` 会在处理器里被重算一遍。
+    本用例因此按新签名构造，顺带把"配额对象真的能穿透到映射层"这条钉住。
     """
-    mapping = map_exception(RateLimited(RateLimitBucket.QUERY, 30))
+    quota = RateLimitQuota(
+        decision=RateLimitDecision(
+            allowed=False, bucket=RateLimitBucket.QUERY, retry_after_s=30
+        )
+    )
+    mapping = map_exception(RateLimited(quota))
     assert mapping.status == 429, "`RateLimited` 必须映射到 429（配额语义）"
     assert mapping.retry_after_s == 30
     assert mapping.code.value == "RATE_LIMITED"

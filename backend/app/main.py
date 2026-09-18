@@ -20,8 +20,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import errors
 from app.api.deps import RUNTIME_STATE_KEY, build_runtime
-from app.api.routers import health
+from app.api.routers import clarify, health, query, session
 from app.core.config import AppEnv, get_settings
 from app.core.enums import Dependency
 from app.core.errors import SemanticBundleError
@@ -237,6 +238,17 @@ def create_app() -> FastAPI:
         )
 
     app.include_router(health.router, prefix=API_PREFIX)
+    # --- W4 端点（T5）---
+    # ⚠️ 异常处理器必须装：`CommerceQLError` → HTTP 码的映射只有 `api/errors.py` 一处
+    #    （不装它，领域异常会落到 Starlette 的默认 500，前端拿不到 `code`/`retryable`）。
+    errors.install_exception_handlers(app)
+    app.include_router(query.router, prefix=API_PREFIX)
+    app.include_router(session.router, prefix=API_PREFIX)
+    app.include_router(clarify.router, prefix=API_PREFIX)
+    # 🔴 未接线（T6）：`app.state[GRAPH_RUNTIME_STATE_KEY]` 还没装配 ⇒ 上面三个端点
+    #    会以 `500 INTERNAL`（`deps.get_graph_runtime` 的显式拒答）结束，**不是**"能用"。
+    #    这一步必须与 `build_gateway` / `BindingService` / 图编译一起做（T6），
+    #    不能只把图编译完就宣告端点可用（那会让 `/query` 变成"接了一半"）。
     return app
 
 
