@@ -221,6 +221,12 @@ def emissions_for_node(
     if node == AUDIT_PRE:
         # 07 §5.6：`data` 在"`mask` 完成**且 `audit_pre` 提交后**"发出 —— 挂在本节点之后，
         # 正是 N-09「审计写入不得晚于结果下发」的落地（审计失败 = fail-closed，不走到这里）。
+        # 🔴 fail-closed 必须在**发射层**兑现（§14.3 约束 6）：写库失败时节点返回的是
+        # `terminal=error` 增量（没有 result_columns）—— 此时若仍无条件发 DATA，前端会
+        # 收到"空表格 + error"的组合，data 帧的"审计已提交"承诺就成了谎话。
+        # （终态 error 帧由后续 `error_out` 节点经 terminal_target 收口发出，不受影响。）
+        if update.get("terminal") is not None:
+            return ()
         columns = _seq(update.get("result_columns"))
         return (
             Emission(

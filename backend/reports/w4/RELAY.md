@@ -133,3 +133,15 @@
 - **口径订正**：`test_api_runner_contract.py::test_session_title_is_written_once` 旧断言"版本要更新"与 07 §5.7 / N-23 冲突，已改为"固定不漂移 + `graph_version` 落键"（T8 依据，注释已注明）。
 - **诚实边界**：会话级固定的**图内读侧**（把 pinned 版本注回 `RunContext.bundle_version`）仍缺 `RepositoryPort` 通道（`trusted_context` 原登记维持）——写侧固定后，`GET /session/{id}` 可对账，但图内本轮仍取激活版本。
 - 新契约测试：`tests/contract/test_graph_timeout_contract.py`（表值逐字 / 包装语义 / present 特例 / overrides）+ `tests/contract/test_sse_placeholder_contract.py`（阈值 1.6 / 单次 / 不发结论 / 不回退 / 不覆盖）。
+
+---
+
+## 八、T9 测试批次 ①：§14.3 八条逐条 + 决策表 A 组 + fail-closed 缺口修复
+
+- **§14.3 八条逐条**：新 `tests/contract/test_spec143_sequence_contract.py`（12 例）——① 终态唯一（转录级）② 三者互斥（转录对照 + 守卫机制面）③ 终态最后 ④ degraded 前置（recorder 级）⑤ refuse 无 data / error 前可有 data ⑥ DATA 发射点唯一 + fail-closed ⑦ meta 必含 scope/retrieval_mode ⑧ stage 恰 6 值。
+- **🔴 顺手抓到并修复一个真缺口**（`graph/events.py`）：`audit_pre` **fail-closed**（段 1 写库失败 → 节点返回 terminal=error 增量）时，`emissions_for_node` 的 AUDIT_PRE 分支**仍无条件发 `data` 帧**——前端会收到"空表格 + error"组合，违反约束 6 的 fail-closed 本意（原注释写了"不走到这里"但代码没拦）。修复 = 分支在 `update.terminal` 非空时返回 `()`；终态 error 帧仍由 `error_out` 经 `terminal_target` 正常收口。
+- **决策表 A 组 6 行全绿**：新 `tests/contract/test_decision_table_contract.py`（真图 + 脚本 planner 转录级）——A1 时间不可解析→clarify(time_ambiguous)、A2 意图澄清、A3 open_analysis→refuse、A4 no_data_asset、A5 out_of_scope、A6 pii_blocked；行级断言 = 事件/reason/terminal/status 投影/审计段 1 落行/refuse 无 data。
+  - 登记差异：A2 的 07 字面 `reason=ambiguity`，实现走时间澄清分支（`time_ambiguous`，`clarify_out` 已登记 reason 无枚举）——断言按实现事实写。
+  - **H 组映射已由 W0 钉死**（`test_contract_counts.py` 41 项：HTTP status 全覆盖 / Retry-After 只对 ✅ / 值具体 / ⭕ suggestions / INTERNAL 迁 ⭕）——T9 不重复建。
+- **进度（不谎报全绿）**：B–G 组（约 34 行）待下一批——B 组需要 `deps.retrieval.search_full` 全脚本、C–E 组需要 plan/executor 全链脚本（当前图测试只走早退路径，`executor/mask` 是"未预期调用当场炸"占位）。graph_snapshot（`test_graph_wiring.py`）与 redteam 骨架（`test_redteam_guard.py`）已在位。
+- 门禁：ruff / mypy(143) / lint-imports(4 kept) 全过。
