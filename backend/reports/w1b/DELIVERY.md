@@ -691,3 +691,48 @@ W4 原文允许"走既有池并注明池名"）。方案已获用户采纳后开
    `sqlalchemy.exc.IntegrityError`（`.orig` 才是 psycopg 的 `UniqueViolation`）。
    已写进 store docstring —— 调用方（W4）的捕获点用 SQLAlchemy 类型。
 3. **列解析器不得内嵌"已知列名"**：见 11.3 ⚠️（同一类"护栏假绿"已在 0004 轮踩过一次）。
+
+---
+
+## 12 本轮追加（2026-09-18）：CI 形态 DSN 兼容修复（`90fc312`）
+
+**触发**：W0 RELAY §9.2（🔴 挡一切推送）；本地隔离树复现 6 errors。
+
+**性质**：**本窗口上一轮（§11）自己写的 `tests/integration/test_query_plan_store_pg.py` 的缺陷** —— 不是回归，是首次推送前被 W0 的 CI 等效环境抓出。
+
+### 12.1 根因（两处，同一个成因）
+
+`COMMERCEQL_TEST_*_DSN` 的**本地缺省值 = SQLAlchemy 形态**（`postgresql+psycopg://…`），
+而 **CI 注入的是 libpq 形态**（`ci.yml:125-127` 的 `postgresql://role@127.0.0.1:5432/ecom`）。
+这个形态差是被迫的（`test_semantic_materialization.py` / `test_exec_real_pg.py` 直接
+把它交给 `psycopg.connect()`，而 psycopg 3 不接受 `+psycopg` 后缀），
+但本模块把同一个值喂给了**两个形态要求相反**的消费者：
+
+| # | 位置 | 现象 |
+|---|---|---|
+| 1 | `upgraded` 夹具 → `MIGRATION_DATABASE_URL` | `app/repo/migrations/env.py:80` `create_engine()` 解析出 **psycopg2** 方言 → `ModuleNotFoundError: No module named 'psycopg2'` |
+| 2 | `_run()` → `create_async_engine(_RW)` | 同一原因（W0 只列了第 1 处，实测第 2 处同样红） |
+
+### 12.2 修法
+
+补**正向**助手 `_sqla()`（与上一轮已存在的反向助手 `_libpq()` 成对），
+四处出口全部归一：`MIGRATION_DATABASE_URL` / `DATABASE_URL` / `ANALYTICS_DB_URL` / `create_async_engine`。
+`_sqla()` 同时认 `postgresql://` 与 `postgres://` 两种 libpq 前缀。
+
+### 12.3 对照实验结果（**红 → 修 → 绿**，两次独立命令留痕）
+
+| 阶段 | 命令 | 结果 |
+|---|---|---|
+| 红（CI 形态注入） | `COMMERCEQL_TEST_SUPER_DSN=postgresql://… pytest tests/integration/test_query_plan_store_pg.py` | **5 failed, 1 passed**（`-x` 时 1 error，W0 报的 6 errors 一致） |
+| 绿（同注入） | 同上 | **6 passed** |
+| 全量（CI 形态注入） | `pytest -q --basetemp=.w1btmp` | **1641 passed, 6 skipped, 0 failed**（85s） |
+| 门禁 | ruff / mypy app / lint-imports | 全过 / **139 files** / 4 kept |
+
+### 12.4 可复用的两条教训
+
+1. **"本地全绿"证明不了"CI 绿"，前提是两者注入同形态的配置** ——
+   本地缺省值恰好是 SQLAlchemy 形态，把 bug 精确地藏在了"看起来最自然的那一行"。
+   → 凡测试读 `COMMERCEQL_TEST_*` 环境变量，**至少跑一遍 CI 形态**（已写入模块 docstring 的复核命令）。
+2. **同一个 DSN 字符串服务两个消费者时，形态必须显式转换、且两个方向都要有**；
+   只写反向（`_libpq`）等于只覆盖了"本地形态"这一半。
+

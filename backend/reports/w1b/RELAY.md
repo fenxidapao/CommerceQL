@@ -406,3 +406,77 @@ await store.insert_query_plan(
 
 **遗留（不挡你）**：W3C DoD① 的"最后一步"现在是你的 T7 写入 —— 表已建（0004）、通道已交付（本文件 §10），
 落一行即可销账。
+
+---
+
+## 11 → W0 / W4 / 架构（2026-09-18）：§9.2 已修 + 两处归属订正 + W1B 待开工项
+
+### 11.1 → W0：你的 RELAY §9.2（🔴 CI 阻断）**已修**（`90fc312`）
+
+> 【W1B → W0】定位完全正确，两处补充/更正：
+
+- **你报的第 1 处成立**（`upgraded` 夹具 → `MIGRATION_DATABASE_URL` → alembic 解析出 psycopg2）。
+  **但还有第 2 处你没列**：`_run()` 里的 `create_async_engine(_RW)` 同一个成因，同批一起红 ——
+  只修你给的那一行，仍会 5F/1P。
+- 修法：补**正向**助手 `_sqla()`（与上一轮已有的反向 `_libpq()` 成对），
+  **4 处出口**归一（3 个 env 值 + engine 构造）。你的"2 行"估算偏乐观，根因判断无误。
+- 对照实验留痕：CI 形态注入 → **5 failed / 1 passed**（红）→ 修 → **6 passed**（绿）；
+  全量 CI 形态 **1641 passed / 6 skipped / 0 failed**；ruff 全过 / mypy **139 files** / lint-imports 4 kept。
+- **⚠️ 一条给所有窗口的通用教训**：本地缺省值是 SQLAlchemy 形态、CI 注入的是 libpq 形态 ——
+  "本地全绿"因此**结构性地区分不出**这类 bug。凡测试读 `COMMERCEQL_TEST_*`，请至少跑一遍 CI 形态
+  （命令已写进 `tests/integration/test_query_plan_store_pg.py` docstring）。
+
+### 11.2 → W0：你的 §9.1 对了两处，但有两处要订正
+
+1. ✅ **"`scripts/**` 归 W1B，不是 W0"—— 你判对了**。`docs/08 §4.1`（v1.2，U-42）已补登记
+   `app/main.py` / `app/cache/session_lock.py` / `backend/alembic.ini` / `backend/scripts/**` → W1B。
+2. ⚠️ 你提的"`scripts/` 下 W0 的 `assert_importlinter.py` 阶段 0 遗产 vs 归属表不一致"
+   → 归**架构**裁（"阶段 0 遗留怎么办"）。W1B **不擅动**该文件，也不把它算作自己的待办。
+3. ❌ **你 RELAY 里"W1B 域（guard，10 条 ruff 违规）"归属标错了**：
+   `docs/08 §4.1:296` 明写 `app/guard/**` = **W2C**。请订正或直接转 W2C ——
+   否则这 10 条会烂在错误的窗口名下，谁都不动。
+
+### 11.3 → W4：T6 装配根在我的文件里，另两处不是我的
+
+| 你的决策点③ | 归属判定 | 依据 |
+|---|---|---|
+| `app/main.py` 装配根（T6） | **W1B（组装根）** | `docs/08 §4.1`（U-42）：lifespan 六步由 W1B 落；**W4/W7 在该文件追加，不得另立第二个组装根** |
+| `pools.metadata` 上的 fetch 小闭包 | **取决于落点** | `app/repo/pools.py` ∈ `app/repo/**` = W1B 域 |
+| `app/cache/` 的 CachePort 实现 | **不是 W1B 能自领的** | `app/cache/` 仅 `keys.py`（W0）+ `session_lock.py`（W1B）两行登记，CachePort 归属**未裁** → 转架构 |
+
+- 闭包两个选项：**(a) 写在你自己的模块（`app/api/**` / graph 节点文件）→ 无冲突，只需在 RELAY 登记**；
+  (b) 你希望它进 `app/repo/` → **提需求、我落笔**（纪律：改别人的文件只提需求）。
+  **默认走 (a)**，避免同一文件两边都改。
+- `presenter=None` ⇒ 恒带 `present_failed` degraded：这是你的接线决策 + 架构口径，W1B 无动作。
+
+### 11.4 → 用户 / 上游：W1B 手上**与新阻塞相关**的两项（**待开工指令，尚未动笔**）
+
+| # | 项 | 依据 | 阻塞对象 | 状态 |
+|---|---|---|---|---|
+| A | 迁移 **0005**：`feedback` + `gold_query` 两表 + `FeedbackStore` | W0 §9.1 明写"U-20 / 迁移 0005 **归 W1B**"；`07 §12.3`（v0.8）**已给全键/列/唯一约束/保留期** | W4 T5 收口里 `queued_for_review` / `corrected_sql` 的**真实落库**（当前必须如实 `false`） | 规格齐；3 条设计位待报备后自裁 |
+| B | `scripts/mint_dev_token.py` | `docs/08 §4.1`（U-42）`scripts/**`→W1B；W0 §9.1 建议转 W1B | W4 ↔ W5 的**真实联调**（**不挡编码与测试**） | 参数契约已实测齐，见下 |
+
+**A 的三条设计位（W1B 拟自裁，先报备 —— 不同意请直接驳回）**：
+
+1. **`reason_code` 可空 × 唯一键的矛盾**：§A.6 里 `reason_code` 是 ⭕（可空），
+   而 07 §12.3 的唯一键是 `(task_id, user_id, reason_code)`。
+   PG 里 `NULL` 互不相等 ⇒ **用户不填归因时唯一约束形同虚设**、A.12 幂等失效，同一 task 可刷无限条空归因反馈。
+   → 拟用 **`UNIQUE NULLS NOT DISTINCT`（PG 15+；本机 `pgvector/pgvector:pg16` 支持）**，
+   并在迁移注释里写明"为什么不加这个子句就等于没加唯一键"。
+2. **`feedback.user_id` 的来源**：JWT **没有 `user_id` claim**，身份在 `sub`
+   （`app/auth/tokens.py:59` REQUIRED_CLAIMS = sub/tenant_id/role/scope/exp/iat/jti）。
+   → 列名保留 `user_id`（对齐 §12.3），写入值取 `IdentityContext.subject`，映射写进 store docstring（否则接线方必写错）。
+3. **`gold_query` 两列**：`ast_fingerprint` 拟 **NOT NULL**（可空/空串会让"防重复沉淀"的唯一键失效）；
+   `tenant_id` 可空的**双语义（NULL = 已进全局库）必须落进列注释**，否则后来人当成漏填。
+
+**B 的铸币参数契约（实测所得，可直接交实现方）**：
+
+- 头：`alg=RS256`、`kid="default"`（`app/auth/jwks.py:40` `DEFAULT_KID`；缺 kid 时 `TokenVerifier` 也回退到它）。
+- 必需 claims（逐字对齐 07 §13.1，**不得增减**）：`sub` / `tenant_id` / `role` / `scope` / `exp` / `iat` / `jti`；可选 `shop_ids`。
+- `role` 必须 ∈ `Role` 枚举（否则 step=5 `unknown_role` → 401）；`scope` / `shop_ids` **空格分隔字符串或数组都收**（`_as_str_tuple`）。
+- `iss` = `settings.JWT_ISSUER`（缺省 `workbuddy-demo`）、`aud` = `settings.JWT_AUDIENCE`（缺省 `text2sql-agent`）；`exp` 容许 **±60s** 偏移。
+- **仓库内无任何密钥对**（`.pem` 只存在于 `.venv/`）⇒ 脚本必须自己生成 RSA-2048，
+  并把**公钥**写到 `JWT_PUBLIC_KEY_PATH`（缺省 `/run/secrets/jwt_public.pem`），否则 `PemFileJwksSource` 取不到 key、链路照旧 401。
+- 现成可复用：`tests/unit/test_auth_chain.py` 的 `rsa_keys()` / `_sign()`（`jwt.encode(claims, private, algorithm="RS256", headers={"kid": …})`）/ `_claims()`。
+- 另注：`/login` 端点**不在 W4 清单**（D-H 未裁），所以本脚本是唯一签发途径 —— 别指望端点自产 token。
+
