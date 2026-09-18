@@ -1,0 +1,276 @@
+"""`eval/harness.py` 的单元测试 —— allowlist 形状适配、闸门自伤判据、夹具与超时。
+
+归属窗口：W6。
+
+这里测的都是"评测器凭什么有权替被测系统说话"的那几件事
+--------------------------------------------------------------------------
+* `AssetAllowlistView` 是**双形状视图**，存在的理由是一条上游契约冲突（两个消费者要求
+  互斥形状）。它一旦把 wrapper 键当资产枚举出去，planner 的提示词就会长出 8 张假表。
+* `detect_gate_self_defect` 决定一条 R06 记在**闸门**头上还是**模型**头上；
+  它自己判错，§C.7 的分布就整体失真。
+* 超时派生：评测若在契约超时上跑，LLM 节点会整批超时，然后报告里全是"链路故障"。
+"""
+
+from __future__ import annotations
+
+import harness as H
+import pytest
+
+from app.core.enums import RetrievalMode, Role
+from app.core.errors import ContractViolationError
+from app.guard.ast_gate import run_gate1
+from app.guard.policy_gate import run_gate2
+
+
+# ==== AssetAllowlistView：双形状不能互相污染 ==========================
+def test_view_iterates_only_flat_assets_not_guard_wrapper_keys():
+    """planner 走 `sorted(allowlist)` —— 枚举里混进 `assets`/`joins` 就是给它 8 张假表。"""
+    from harness import AssetAllowlistView
+
+    view = AssetAllowlistView(
+        {"v_order_paid": {"logical_name": "order_paid"}, "v_shop": {"logical_name": "shop"}},
+        {
+            "assets": {"v_order_paid": {}}, "joins": [], "deny_columns": [],
+            "default_predicates": {}, "bundle_version": "x",
+        },
+    )
+    assert sorted(view) == ["v_order_paid", "v_shop"]
+    assert len(view) == 2
+    assert "assets" not in list(view)
+
+
+def test_view_prefers_flat_entry_over_wrapper_key():
+    from harness import AssetAllowlistView
+
+    flat = {"v_shop": {"logical_name": "shop", "columns": {}}}
+    wrapper = {"assets": {"FAKE": {}}, "joins": []}
+    view = AssetAllowlistView(flat, wrapper)
+    assert view["v_shop"]["logical_name"] == "shop"
+    assert view.get("assets") == {"FAKE": {}}          # wrapper 键仍可取（闸门要）
+    assert view.get("nope") is None and view.get("nope", 7) == 7
+
+
+def test_view_refuses_to_build_when_a_physical_asset_shadows_a_guard_key():
+    """正对照：物理资产真叫 `assets` 时必须**炸**，不能静默遮蔽（遮蔽方向 = 闸门拿不到判据）。"""
+    from harness import AssetAllowlistView
+
+    with pytest.raises(ValueError, match="遮蔽"):
+        AssetAllowlistView({"assets": {"columns": {}}}, {"joins": []})
+
+
+# ==== GuardAllowlistBundle：缓存 + 透传 ===============================
+def test_bundle_caches_per_role_and_passes_through_other_methods(harness, analyst_ctx):
+    assert harness.semantics.asset_allowlist(analyst_ctx) is harness.semantics.asset_allowlist(analyst_ctx)
+    assert harness.semantics.active_version() == harness.runtime.active_version()
+    assert harness.semantics.policy() == harness.runtime.policy()
+
+
+def test_visible_columns_have_deny_columns_stripped(guard_allowlist):
+    """CLS 的评测面：夹具/闸门看到的列集必须**已剔除** deny 列，而 deny 清单本身仍在。"""
+    entry = guard_allowlist["v_order_paid"]
+    visible = set(entry["columns"])
+    denied_logical = {"tenant_id", "receiver_phone", "receiver_address"}
+    assert not (visible & denied_logical), f"deny 列漏进了可见列面：{visible & denied_logical}"
+    assert any(d.startswith("order_paid.") for d in guard_allowlist["deny_columns"])
+
+
+def test_wrapper_shape_keys_are_all_present(guard_allowlist):
+    for key in ("assets", "joins", "deny_columns", "default_predicates", "allowed_constants"):
+        assert key in guard_allowlist, f"闸门判据缺键：{key}"
+
+
+def test_allowed_constants_is_empty_because_bundle_has_none(harness, analyst_ctx):
+    """语义包**没有** `allowed_constants` 区块（grep 实证）⇒ 空表，不许编一个。"""
+    assert H.build_guard_allowlist(harness.loaded, harness.runtime, analyst_ctx)["allowed_constants"] == []
+
+
+def test_max_rows_is_deliberately_absent_so_r04_uses_the_same_default_as_prod(
+    harness, analyst_ctx, guard_allowlist
+):
+    """评测不许私自注入 `max_rows`，否则 R04 在评测里比生产严/松。"""
+    built = H.build_guard_allowlist(harness.loaded, harness.runtime, analyst_ctx)
+    assert "max_rows" not in built
+    assert guard_allowlist.get("max_rows") is None
+
+
+# ==== run_gate2 的端口形状（一条真实的踩坑路径）=======================
+def test_gate2_rejects_an_allowlist_view_because_it_wants_a_port(guard_allowlist, analyst_ctx):
+    """`run_gate2(sql, ctx, bundle)` 的第三个参数是**端口**（自己调 `asset_allowlist`）。
+
+    记进测试的理由：红队跑批第一版就是传了视图 ⇒ `AttributeError`，
+    而它长得像被测系统坏了。
+    """
+    with pytest.raises(AttributeError):
+        run_gate2("SELECT pay_amount FROM v_order_paid", analyst_ctx, guard_allowlist)
+
+
+def test_gate2_bidirectional_tenant_assertion_raises_on_production_visible_shape(analyst_ctx, harness):
+    """🔴 生产现状（不是评测的发明）：可见列已剔除 `tenant_id`，而资产仍 `tenant_scoped=true`
+    ⇒ 07 §7.4 的双向断言 **必然**抛 `ContractViolationError`。
+
+    这条测试钉住两件事：① 评测不能拿"闸门没报错"当 G-3/G-4 的证据（它压根没返回）；
+    ② 红队必须显式改用结构档 bundle（见下一条），否则整批 45/66 的 FAIL 会被读成模型问题。
+    """
+    sql = "SELECT pay_amount FROM v_order_paid"
+    with pytest.raises(ContractViolationError):
+        run_gate2(sql, analyst_ctx, harness.semantics)
+
+
+def test_gate2_passes_when_columns_are_the_full_bundle_shape(analyst_ctx, harness):
+    import redteam_eval as rt
+
+    structural = rt.StructuralAllowlistBundle(harness.semantics, rt.structural_wrapper(harness))
+    result = run_gate2("SELECT pay_amount FROM v_order_paid", analyst_ctx, structural)
+    assert result.gate_result.decision.value == "pass"
+
+
+def test_structural_wrapper_only_changes_the_columns_face(harness, analyst_ctx):
+    """结构档只把 `assets[*].columns` 换成全列，deny 清单一字不动 ⇒ 屏蔽判据仍在。"""
+    import redteam_eval as rt
+
+    base = H.build_guard_allowlist(harness.loaded, harness.runtime, analyst_ctx)
+    full = rt.structural_wrapper(harness)
+    assert "tenant_id" in full["assets"]["v_order_paid"]["columns"]
+    assert "tenant_id" not in base["assets"]["v_order_paid"]["columns"]
+    assert full["deny_columns"] == base["deny_columns"]
+    assert full["default_predicates"] == base["default_predicates"]
+
+
+# ==== gate1 的真实形状（评测与生产同一条路径）=========================
+def test_gate1_blocks_tenant_id_either_qualified_or_not(analyst_ctx, harness):
+    """I-4/I-5 冲突的实测半边：手写租户谓词进不了闸门，所以评测只能走 DB 对象层。"""
+    al = harness.semantics.asset_allowlist(analyst_ctx)
+    bare = run_gate1("SELECT pay_amount, tenant_id FROM v_order_paid", al)
+    qualified = run_gate1("SELECT v_order_paid.tenant_id FROM v_order_paid", al)
+    assert bare.passed is False and qualified.passed is False
+    # ⚠️ 归因会随**表前缀**漂移（无表前缀时列归属先失败 → R06），文案两者共用一句。
+    assert {bare.gate_result.rule_id, qualified.gate_result.rule_id} == {"R06", "R07"}
+    assert bare.gate_result.reason == qualified.gate_result.reason == "查询包含受保护字段"
+
+
+def test_gate1_rejects_assets_outside_the_bundle(analyst_ctx, harness):
+    al = harness.semantics.asset_allowlist(analyst_ctx)
+    r = run_gate1("SELECT 1 FROM orders", al)
+    assert r.passed is False and r.gate_result.rule_id == "R05"
+
+
+# ==== detect_gate_self_defect：R06 的两种相反含义 =====================
+def test_f1_order_by_projection_alias_is_the_gates_fault(guard_allowlist):
+    defect = H.detect_gate_self_defect(
+        "SELECT SUM(pay_amount) AS gmv FROM v_order_paid GROUP BY region_name ORDER BY gmv DESC",
+        guard_allowlist,
+    )
+    assert defect and "F1" in defect and "gmv" in defect
+
+
+def test_f1_must_not_fire_on_a_qualified_order_key(guard_allowlist):
+    """反例：`ORDER BY o.region_name` 走表别名解析（`_scope_tables` 登记 alias），
+    是合法形态，不许记成闸门缺陷。
+
+    ⚠️ 这里必须用 `v_order_paid`：`v_region` 会先被 F2 命中（见下面那条），
+    用它做 F1 的反例等于什么都测不到。
+    """
+    assert H.detect_gate_self_defect(
+        "SELECT o.region_name AS rn FROM v_order_paid o ORDER BY o.region_name", guard_allowlist
+    ) is None
+
+
+def test_f2_v_region_is_poisoned_by_the_orders_domain_predicates(guard_allowlist):
+    """实测：`v_region.domain == 'orders'` ⇒ orders 域的默认谓词被注入到一张没有那些列的表。"""
+    defect = H.detect_gate_self_defect("SELECT region_name FROM v_region", guard_allowlist)
+    assert defect and "F2" in defect and "v_region" in defect
+
+
+def test_clean_sql_produces_no_self_defect(guard_allowlist):
+    """正对照：判据不能恒真，否则所有 R06 都会被推给闸门。"""
+    assert H.detect_gate_self_defect("SELECT pay_amount FROM v_order_paid", guard_allowlist) is None
+
+
+def test_unparsable_and_unknown_asset_sql_are_not_gate_defects(guard_allowlist):
+    """语法不成立是模型的账；未声明资产由 R05 管 —— 都不许记到 `gate_policy_gap`。"""
+    assert H.detect_gate_self_defect("SELECT FROM WHERE", guard_allowlist) is None
+    assert H.detect_gate_self_defect("SELECT x FROM not_in_bundle", guard_allowlist) is None
+    assert H.detect_gate_self_defect("   ", guard_allowlist) is None
+
+
+# ==== 身份与超时派生 ==================================================
+def test_identity_is_deterministic_per_case_and_tenant():
+    a1 = H.identity_for_case("C-1", "T_A")
+    a2 = H.identity_for_case("C-1", "T_A")
+    b1 = H.identity_for_case("C-2", "T_A")
+    assert a1 == a2, "同一条用例两次跑出两个身份 → 权限回放不可复现"
+    assert a1.user_id != b1.user_id
+    assert a1.role is Role.ANALYST
+    assert H.identity_for_case("C-1", "T_A", role=Role.OPERATOR).role is Role.OPERATOR
+
+
+def test_eval_timeouts_keep_contract_values_but_floor_llm_nodes():
+    """契约超时不许原样用在评测上：一次 LLM 调用就能超过契约值，
+    于是整批被判"链路故障" —— 但执行/闸门这类**纯 CPU** 节点必须照契约。"""
+    effective = H.eval_node_timeouts()
+    described = H.describe_node_timeouts(effective)
+    assert described["scaled"] is True
+    for node in described["llm_calling_nodes"]:
+        assert effective[node] >= described["contract"][node]
+        assert effective[node] == described["llm_node_floor_s"] or effective[node] > described["contract"][node]
+    for node in described["kept_as_contract"]:
+        assert effective[node] == described["contract"][node]
+    assert set(effective) == set(described["contract"])
+
+
+def test_unknown_cassette_mode_is_rejected_at_construction():
+    """真打时模式写错会静默退化成"不录"，第二批还以为在回放。"""
+    with pytest.raises(ValueError, match="匣带模式"):
+        H.Harness(cassette_path="x.json", cassette_mode="bogus", live=True)
+
+
+def test_tenant_scoped_physicals_come_from_the_bundle(harness):
+    """租户清单从语义包 `tenant_scoped=true` 导出，且只覆盖**激活**资产。"""
+    assert set(harness.tenant_scoped_physicals) == {
+        a.physical_asset for a in harness.loaded.bundle.assets
+        if a.tenant_scoped and a.logical_name in harness.loaded.active_assets
+    }
+    assert set(harness.tenant_scoped_physicals.values()) == {"tenant_id"}
+    assert len(harness.tenant_scoped_physicals) == 6, "语义包若新增租户资产，缺口表与一致性①都要跟着改"
+
+
+# ==== 检索夹具：deny 面 + 降级面 =====================================
+async def test_retrieval_fixture_excludes_deny_columns_and_keeps_all_metrics(harness, analyst_ctx):
+    """夹具必须与生产可见面同形：deny 列不许出现在列候选里。
+
+    ⚠️ `column_top` 只裁列候选、**不裁指标** —— 这是本夹具的既定行为（指标层只有 8 条，
+    裁它会直接改变绑定结果）。写在这里是为了让"改这个行为"必须过一次测试。
+    """
+    full = await harness.retrieval.search_full("各大区 GMV", analyst_ctx, RetrievalMode.HYBRID)
+    column_face = " | ".join(str(name) for name, _ in full.columns)
+    for banned in ("tenant_id", "receiver_phone", "receiver_address", "cost_price"):
+        assert banned not in column_face, f"deny 列 {banned} 出现在检索列候选里"
+
+    trimmed = await H.BundleCatalogRetrieval(
+        harness.loaded, column_top=3,
+        denied_columns=tuple(harness.runtime.policy().get("deny_columns") or ()),
+    ).search_full("各大区 GMV", analyst_ctx, RetrievalMode.HYBRID)
+    assert len(trimmed.columns) == 3 < len(full.columns)
+    assert len(trimmed.metrics) == len(full.metrics) == 8
+
+
+async def test_offline_retrieval_degrades_loudly_instead_of_faking_hybrid(harness, analyst_ctx):
+    """占位环境下嵌入服务不可用 ⇒ 必须回 `SPARSE_ONLY` 并带上降级原因。
+
+    这条是"不许把降级读成正常"的护栏：若哪天它悄悄返回 `HYBRID`，
+    说明要么环境真起了嵌入服务（那报告口径要改），要么夹具在说谎。
+    """
+    from app.core.enums import ActionTaken, DegradedReason
+    from app.core.enums import RetrievalMode as RM
+
+    res = await harness.retrieval.search_full("各大区 GMV", analyst_ctx, RM.HYBRID)
+    assert res.mode is RM.SPARSE_ONLY
+    assert res.action_taken is ActionTaken.SPARSE_ONLY
+    assert res.degraded_reason is DegradedReason.EMBEDDING_UNAVAILABLE
+    assert len(res.candidates) == len(harness.loaded.active_assets)
+
+
+def test_gate3_thresholds_are_ordered_pass_below_reject(harness):
+    t = harness.gate3_thresholds()
+    assert t["total_cost_pass"] < t["total_cost_reject"]
+    assert t["rows_pass"] < t["rows_reject"]
