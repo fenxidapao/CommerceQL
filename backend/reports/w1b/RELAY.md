@@ -359,3 +359,50 @@
 
 `cost_ledger` 13 个月 / `query_plan` 90 天 —— 删除走**属主身份**的定期清理（runbook/部署侧）。
 app_rw 刻意无 DELETE（账本行不可改是权限层钉死的语义，不是疏漏）；app_ro 零 GRANT（不在业务查询路径）。
+
+## 10 → W4：`app/repo/query_plan.py` 写入通道**已交付**（解除 §二的 T7 阻塞）
+
+**派单**：你的 `reports/w4/RELAY.md §二`。形态取你给的选项之一 = **走既有池**（元数据池），
+故**无新增连接资源、无 shutdown 责任**。细节 = `DELIVERY.md §11`。
+
+### 10.1 装配与调用（可直接照做）
+
+```python
+from app.repo.query_plan import QueryPlanStore
+
+store = QueryPlanStore(pools.metadata)          # ← 元数据池；不要新建 engine/连接
+
+await store.insert_query_plan(
+    task_id=state["task_id"],
+    plan_json=plan_outcome.plan_json,            # Mapping（含 schema_version）或已序列化 str
+    bundle_version=state["bundle_version"],      # 会话级固定版本
+    binding_state=binding.state,                 # app.core.enums.BindingState 枚举
+    binding_layer=binding.layer,                 # BindingLayer 枚举或 None
+    plan_summary=plan_outcome.plan_summary,      # Mapping（C-01 结构）或 None
+    confidence=binding.confidence,               # Decimal 或 None
+)
+```
+
+### 10.2 传参契约（逐条都对你有影响）
+
+| 项 | 约定 |
+|---|---|
+| `binding_state` / `binding_layer` | **传枚举，不要传字符串**。传裸字符串会当场 `AttributeError`（第一层）；非法字面值即使绕过 Python 也会被 CHECK 拒（第二层，两条都有测试） |
+| `confidence` | **传 `Decimal`**（`numeric` 列）；传 `float` 会引入二进制误差，诊断时分数与打分器产出不再相等 |
+| `plan_json` | `Mapping` 时必须含 `schema_version`（缺失直接抛，不发语句）；`str` 形态按原样绑（`schema_version` 由你保证 —— 已按你 RELAY 的口径） |
+| `plan_summary` | 列类型是 `text`：`Mapping` 会被序列化成 JSON 字符串入库（C-01 结构可原样还原）；`str`/`None` 原样 |
+| 可空三列 | `binding_layer` / `plan_summary` / `confidence` 允许 `None`（`unresolved` 终态就该这么写） |
+| **重复 task_id** | **如实抛**（无 `ON CONFLICT`）：`sqlalchemy.exc.IntegrityError`，`.orig` 是 `psycopg.errors.UniqueViolation`。原行**不会被覆盖** —— 本表用于事后诊断，被覆盖的那次才是要查的那次 |
+| 异常 | 本通道**不 catch**：连不上/约束违反都向上抛，阻断性由你的节点决定（同 `audit_store` 分层裁定） |
+| 事务 | 每次写入独立 `engine.begin()`（借用/归还逐语句，07 §8.1 纪律 1）——**不要**在 LLM 调用期间持有连接 |
+
+### 10.3 回执要件（你 §二 的验收条件）
+
+- 集成测试含 **UPDATE 被权限拒绝的负例** ✅（`tests/integration/test_query_plan_store_pg.py::test_app_rw_update_is_rejected_by_privilege`，
+  核对 sqlstate = 42501，且先正向写入一行证明"表在、权限在"）
+- 取值来源对齐 ✅（枚举来自 `app/core/enums.py`；迁移 0004 的 CHECK 是其冻结快照，
+  两边一致性由 `tests/unit/test_migration_0004_runtime_contract.py` 钉住）
+- 门禁：全量 pytest **1528/6/0**、ruff 全过、mypy 105 files、lint-imports 4 kept。
+
+**遗留（不挡你）**：W3C DoD① 的"最后一步"现在是你的 T7 写入 —— 表已建（0004）、通道已交付（本文件 §10），
+落一行即可销账。

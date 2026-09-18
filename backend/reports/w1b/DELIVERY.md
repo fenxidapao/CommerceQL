@@ -630,3 +630,64 @@ B4 之后：启动断言第一次真连库 → **连不上被当成致命** → 
   使首版结构比对**空转**（循环体零次执行 + 覆盖断言红才现形）—— 与本项目"恒真护栏"教训同类，已改为从 `fget` 提取。
 - 模块级 `rw` 连接未开 autocommit：CHECK/权限拒绝把事务打 Abort 后，aborted 状态**污染后续所有用例**
   （`InFailedSqlTransaction`）—— 已开 autocommit 并写明原因。
+
+## 11 本轮追加（2026-09-18）：`app/repo/query_plan.py` 写入通道（W4 §二 点名阻塞 T7）
+
+**派单来源**：`reports/w4/RELAY.md §二`（阻塞 T7 `query_plan` 落库 = W3C DoD① 最后一步；
+W4 原文允许"走既有池并注明池名"）。方案已获用户采纳后开工。
+
+### 11.1 交付物
+
+| 文件 | 内容 |
+|---|---|
+| `app/repo/query_plan.py` | `QueryPlanStore(engine)` + `insert_query_plan(...)`：**只写**通道，逐字覆盖 0004 列集；类型化签名（`BindingState` / `BindingLayer \| None` / `Decimal`）；`plan_json` 走 `CAST(... AS jsonb)` 且 `Mapping` 形态校验 `schema_version` 在场；`plan_summary` 的 `Mapping` 序列化为 JSON 文本；纯 INSERT（无 `ON CONFLICT`）；不 catch |
+| `tests/unit/test_query_plan_store.py` | 15 条离线契约：源码层（剥 docstring 后）无改删语句/无 `ON CONFLICT`、公开面只有 `insert_query_plan`、列集与迁移 DDL **双向一致**、jsonb CAST、枚举注解、写入值形态、必填缺失报字段名、异常不吞 |
+| `tests/integration/test_query_plan_store_pg.py` | 6 条真库：往返（jsonb 对象/JSON 文本/枚举字面值/Decimal 精度/NULL 三列）、**`app_rw` UPDATE 被权限拒（42501）**、主键撞重抛且原行未被覆盖、非枚举在发语句前失败、CHECK 拒非法字面值 |
+| `scripts/drill_query_plan_guards.py` | 4 组注入负向对照（见 11.3） |
+
+### 11.2 关键设计裁定
+
+1. **复用元数据池，不新开连接**：`QueryPlanStore` 收 `AsyncEngine`（形态同 `AuditStore`），
+   W4 装配时传 `pools.metadata` ⇒ **零新增长连资源、零 shutdown 责任**
+   （避开 U-86 轮 `DbCostLedgerSink` 那条"第 4 资源待架构裁"的老路）。
+   调用方在 async 图节点里，通道本身即 async。
+2. **类型化签名而不是 dict 白名单**：本表只有 7 列，枚举直接进签名 ⇒ 拼错取值在调用点红；
+   CHECK 仍是数据库侧最后防线（两层不互替，两层都有测试）。
+3. **不做 upsert**：`task_id` PK 撞重如实抛（SQLAlchemy 包成 `IntegrityError`，`.orig` 是 psycopg 的
+   `UniqueViolation`）—— upsert 会把"同一任务走了两次 plan 节点"静默成最后一次覆盖，
+   而本表存在的意义就是事后诊断（被覆盖的那次才是要查的）。
+4. **`plan_summary` 存 JSON 文本**（列类型 = `text`）：C-01 的结构化摘要序列化入库，
+   保证读回可解析；不引入"dict 的 `str()`"这类不可解析脏数据。
+
+### 11.3 护栏注入对照（4/4 必红，还原 sha256 一致）
+
+| # | 注入 | 必红断言 |
+|---|---|---|
+| ① | 加 `update_query_plan` 方法 | `test_only_insert_method_is_exposed` |
+| ② | 去掉 `CAST(:plan_json AS jsonb)` | `test_plan_json_binds_as_jsonb_cast` |
+| ③ | 写入面加一列（迁移没有） | `test_columns_match_migration_ddl_bidirectionally` |
+| ④ | `_INSERT_SQL` 追加 `ON CONFLICT DO NOTHING` | `test_module_source_has_no_on_conflict` |
+
+⚠️ 首版列解析器写成了"只认已知 7 列"的正则 —— 那会让**迁移新增列**变成假绿
+（匹配不到 → 两份清单仍相等）。已改为通用解析（行首标识符 + 类型，跳过约束行），
+并由注入 ③ 验证解析器不瞎。
+
+### 11.4 门禁实测
+
+| 门禁 | 结果 |
+|---|---|
+| 全量 `pytest` | **1528 passed / 6 skipped / 0 failed**（81.35s；6 skip = retrieval FTS 夹具 DDL 权限，既有） |
+| `ruff check .` | All checks passed（本批 2 条 I001/SIM300 已修净） |
+| `mypy app` | Success: no issues found in **105** source files |
+| `lint-imports` | 4 kept, 0 broken（R-DEP-1 实证：repo 收 core 枚举合法，未引入新依赖方向） |
+
+### 11.5 本轮踩到的坑（可复用，均已落注释/记录）
+
+1. **`pytest-asyncio` 1.4 自建事件循环不认 `set_event_loop_policy`** —— 4 条 async 用例全撞
+   `psycopg.InterfaceError: cannot use the 'ProactorEventLoop'`。仓库既有惯例是
+   **不用 `async def test_`**、改在同步用例里 `asyncio.run(...)`（`test_auth_chain.py` 30+ 处），
+   本批照此重写即可（首版按 `asyncio_mode=auto` 写 async 用例是错的）。
+2. **经 `AsyncEngine` 执行时异常被 SQLAlchemy 包装**：撞主键得到的是
+   `sqlalchemy.exc.IntegrityError`（`.orig` 才是 psycopg 的 `UniqueViolation`）。
+   已写进 store docstring —— 调用方（W4）的捕获点用 SQLAlchemy 类型。
+3. **列解析器不得内嵌"已知列名"**：见 11.3 ⚠️（同一类"护栏假绿"已在 0004 轮踩过一次）。
