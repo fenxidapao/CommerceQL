@@ -22,6 +22,11 @@
 本文件因此在**同一个 helper 里**建 engine → 跑协程 → dispose，三者同循环。
 
 跳过策略（同 0004 集成测试）：PG 不可达 → skip（写明缺失前置）；迁移失败 → 让它红。
+
+⚠️ **本地复核必须至少跑一遍 CI 形态的 DSN**（否则"本地全绿"是假绿，见 `_sqla()`）：
+`COMMERCEQL_TEST_SUPER_DSN=postgresql://postgres:postgres@localhost:5432/ecom \
+ COMMERCEQL_TEST_RW_DSN=postgresql://app_rw:app_rw_pwd@localhost:5432/ecom \
+ pytest tests/integration/test_query_plan_store_pg.py`
 """
 
 from __future__ import annotations
@@ -60,7 +65,31 @@ _RW = os.environ.get(
 
 
 def _libpq(dsn: str) -> str:
+    """SQLAlchemy 形态 → libpq 形态（`psycopg.connect()` **不接受** `+psycopg` 后缀）。"""
     return dsn.replace("postgresql+psycopg://", "postgresql://", 1)
+
+
+def _sqla(dsn: str) -> str:
+    """libpq 形态 → SQLAlchemy 形态（`alembic` / SQLAlchemy 需要）。
+
+    ⚠️ **两个方向都要有**，缺正向那个会让 CI 整个 DoD③ job 变红（W0 RELAY §9.2）：
+
+    - 本模块**本地**跑时 `COMMERCEQL_TEST_*_DSN` 缺省值就是 SQLAlchemy 形态，
+      把 `_SUPER` 直接交给 `MIGRATION_DATABASE_URL` 恰好是对的 —— 所以本地全绿；
+    - CI（`ci.yml`）注入的却是 **libpq 形态** `postgresql://role@127.0.0.1:5432/ecom`
+      （被迫的：`test_semantic_materialization.py` / `test_exec_real_pg.py`
+      直接把它交给 `psycopg.connect()`），于是同一行代码解析出 **psycopg2** 方言
+      → `ModuleNotFoundError: No module named 'psycopg2'`（本环境只有 psycopg 3）。
+
+    教训：**"本地绿"证明不了"CI 绿"的前提是两者注入同形态的配置**；
+    这里两个方向的转换函数成对存在，任何一种形态进来都能归一。
+    """
+    if "+psycopg://" in dsn:
+        return dsn
+    for libpq_prefix in ("postgresql://", "postgres://"):
+        if dsn.startswith(libpq_prefix):
+            return dsn.replace(libpq_prefix, "postgresql+psycopg://", 1)
+    return dsn
 
 
 _SUPER_LIBPQ = _libpq(_SUPER)
@@ -85,9 +114,11 @@ def upgraded() -> str:
         pytest.skip("PG 不可达（compose 栈未起）→ 不计为通过")
     env = {
         **os.environ,
-        "MIGRATION_DATABASE_URL": _SUPER,
-        "DATABASE_URL": _RW,
-        "ANALYTICS_DB_URL": _RW,
+        # ⚠️ 全部过 `_sqla()`：alembic/SQLAlchemy 侧只认 `+psycopg` 后缀，
+        # 而 CI 注入的是 libpq 形态（W0 RELAY §9.2 的根因）。
+        "MIGRATION_DATABASE_URL": _sqla(_SUPER),
+        "DATABASE_URL": _sqla(_RW),
+        "ANALYTICS_DB_URL": _sqla(_RW),
     }
     result = subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
@@ -125,7 +156,9 @@ def _run(action: Callable[[QueryPlanStore], Awaitable[Any]]) -> Any:
     """
 
     async def main() -> Any:
-        engine = create_async_engine(_RW, pool_size=2, max_overflow=0)
+        # ⚠️ `_sqla()`：CI 注入的是 libpq 形态，而 `create_async_engine` 认方言后缀
+        # —— 少这一层会把 `postgresql://` 解析成 psycopg2（本环境没有）。
+        engine = create_async_engine(_sqla(_RW), pool_size=2, max_overflow=0)
         try:
             return await action(QueryPlanStore(engine))
         finally:
