@@ -393,14 +393,24 @@ class Outcome(StrEnum):
 class TaskStatus(StrEnum):
     """`GET /query/{task_id}` 的 `status` —— **8 值**（补充契约 C-05）。
 
-    后 5 个与 `Outcome` 对齐；前 3 个是任务生命周期态。
+    值的演进（架构裁定，2026-09-18 转达 W0 落码）：
+    `pending→queued` / `running→processing` / `succeeded→complete` / `refuse→refused`；
+    `clarify / degraded / failed / cancelled` 不动。
+    - 前 2 个是任务生命周期态（排队/执行中）；
+    - `complete` + 后 4 个与 `Outcome` 语义对齐 —— ⚠️ 注意 `refused` 与
+      `Outcome.REFUSE`（="refuse"）**字面不再相同**：status 是任务终态表述，
+      outcome 是审计结论，二者各归各的取值集，不得混用字面量做相等判断；
+    - `cancelled` 是用户侧取消，不进 Outcome。
+
+    ⚠️ 旧值（pending/running/succeeded/refuse）若已落库或已被客户端缓存，
+    迁移/兼容处理归消费方窗口（任务生命周期接线属 W4，当前零代码消费方）。
     """
 
-    PENDING = "pending"
-    RUNNING = "running"
-    SUCCEEDED = "succeeded"
+    PENDING = "queued"
+    RUNNING = "processing"
+    SUCCEEDED = "complete"
     CLARIFY = "clarify"
-    REFUSE = "refuse"
+    REFUSE = "refused"
     DEGRADED = "degraded"
     FAILED = "failed"
     CANCELLED = "cancelled"
