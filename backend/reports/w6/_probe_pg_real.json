@@ -1,0 +1,649 @@
+{
+  "sqlite_sandbox": {
+    "objects": [
+      "dim_tenant",
+      "idx_op_tenant_cat",
+      "idx_op_tenant_channel",
+      "idx_op_tenant_paytime",
+      "idx_op_tenant_region",
+      "idx_op_tenant_shop",
+      "idx_op_tenant_sku",
+      "idx_pd_tenant_shop",
+      "idx_pd_tenant_spu",
+      "idx_rf_tenant_sub",
+      "idx_rf_tenant_time",
+      "idx_rg_region",
+      "idx_td_tenant_channel",
+      "idx_td_tenant_date",
+      "idx_td_tenant_sku",
+      "v_campaign",
+      "v_dim_date",
+      "v_order_paid",
+      "v_order_refund",
+      "v_product",
+      "v_region",
+      "v_shop",
+      "v_traffic_daily"
+    ],
+    "sqlite_base_tables": [
+      "dim_tenant",
+      "v_campaign",
+      "v_dim_date",
+      "v_order_paid",
+      "v_order_refund",
+      "v_product",
+      "v_region",
+      "v_shop",
+      "v_traffic_daily"
+    ],
+    "sqlite_views": [],
+    "sqlite_row_counts": {
+      "dim_tenant": 3,
+      "v_campaign": 84,
+      "v_dim_date": 730,
+      "v_order_paid": 494249,
+      "v_order_refund": 23116,
+      "v_product": 6000,
+      "v_region": 31,
+      "v_shop": 12,
+      "v_traffic_daily": 1500556
+    },
+    "sqlite_view_counts": {},
+    "tenants": "NO app_user"
+  },
+  "pg": {
+    "dsn_host_user": "localhost:5432",
+    "version": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit",
+    "reachable": true,
+    "tables": [
+      "app.asset",
+      "app.audit_log",
+      "app.audit_log_supplement",
+      "app.campaign",
+      "app.cost_ledger",
+      "app.default_predicate",
+      "app.dim_date",
+      "app.dimension",
+      "app.embed_doc",
+      "app.feedback",
+      "app.field_binding",
+      "app.gold_query",
+      "app.join_path",
+      "app.metric_def",
+      "app.order_paid",
+      "app.order_refund",
+      "app.policy",
+      "app.product",
+      "app.query_plan",
+      "app.region",
+      "app.semantic_bundle",
+      "app.shop",
+      "app.synonym",
+      "app.traffic_daily",
+      "app.v_campaign",
+      "app.v_dim_date",
+      "app.v_order_paid",
+      "app.v_order_refund",
+      "app.v_product",
+      "app.v_region",
+      "app.v_shop",
+      "app.v_traffic_daily",
+      "public.alembic_version"
+    ],
+    "n_app_objects": 32,
+    "alembic_version": [
+      "0005"
+    ],
+    "pg_base_tables": [
+      "asset",
+      "audit_log",
+      "audit_log_supplement",
+      "campaign",
+      "cost_ledger",
+      "default_predicate",
+      "dim_date",
+      "dimension",
+      "embed_doc",
+      "feedback",
+      "field_binding",
+      "gold_query",
+      "join_path",
+      "metric_def",
+      "order_paid",
+      "order_refund",
+      "policy",
+      "product",
+      "query_plan",
+      "region",
+      "semantic_bundle",
+      "shop",
+      "synonym",
+      "traffic_daily"
+    ],
+    "pg_views": [
+      "v_campaign",
+      "v_dim_date",
+      "v_order_paid",
+      "v_order_refund",
+      "v_product",
+      "v_region",
+      "v_shop",
+      "v_traffic_daily"
+    ],
+    "pg_row_counts": {
+      "asset": 8,
+      "audit_log": 0,
+      "audit_log_supplement": 0,
+      "campaign": 0,
+      "cost_ledger": 0,
+      "default_predicate": 2,
+      "dim_date": 0,
+      "dimension": 6,
+      "embed_doc": 197,
+      "feedback": 2,
+      "field_binding": 7,
+      "gold_query": 0,
+      "join_path": 10,
+      "metric_def": 9,
+      "order_paid": 0,
+      "order_refund": 0,
+      "policy": 2,
+      "product": 0,
+      "query_plan": 0,
+      "region": 0,
+      "semantic_bundle": 1,
+      "shop": 0,
+      "synonym": 105,
+      "traffic_daily": 0
+    },
+    "pg_view_counts": {
+      "v_campaign": 0,
+      "v_dim_date": 0,
+      "v_order_paid": 0,
+      "v_order_refund": 0,
+      "v_product": 0,
+      "v_region": 0,
+      "v_shop": 0,
+      "v_traffic_daily": 0
+    },
+    "rls_policies": [
+      {
+        "table": "campaign",
+        "policy": "p_campaign_tenant",
+        "permissive": "PERMISSIVE",
+        "cmd": "ALL",
+        "roles": [
+          "public"
+        ],
+        "qual": "(tenant_id = current_setting('app.tenant_id'::text, true))"
+      },
+      {
+        "table": "order_paid",
+        "policy": "p_order_paid_tenant",
+        "permissive": "PERMISSIVE",
+        "cmd": "ALL",
+        "roles": [
+          "public"
+        ],
+        "qual": "((tenant_id = current_setting('app.tenant_id'::text, true)) AND ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text)))))"
+      },
+      {
+        "table": "order_refund",
+        "policy": "p_order_refund_tenant",
+        "permissive": "PERMISSIVE",
+        "cmd": "ALL",
+        "roles": [
+          "public"
+        ],
+        "qual": "(tenant_id = current_setting('app.tenant_id'::text, true))"
+      },
+      {
+        "table": "product",
+        "policy": "p_product_tenant",
+        "permissive": "PERMISSIVE",
+        "cmd": "ALL",
+        "roles": [
+          "public"
+        ],
+        "qual": "((tenant_id = current_setting('app.tenant_id'::text, true)) AND ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text)))))"
+      },
+      {
+        "table": "shop",
+        "policy": "p_shop_tenant",
+        "permissive": "PERMISSIVE",
+        "cmd": "ALL",
+        "roles": [
+          "public"
+        ],
+        "qual": "((tenant_id = current_setting('app.tenant_id'::text, true)) AND ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text)))))"
+      },
+      {
+        "table": "traffic_daily",
+        "policy": "p_traffic_daily_tenant",
+        "permissive": "PERMISSIVE",
+        "cmd": "ALL",
+        "roles": [
+          "public"
+        ],
+        "qual": "(tenant_id = current_setting('app.tenant_id'::text, true))"
+      }
+    ],
+    "rls_flags": [
+      {
+        "rel": "asset",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "audit_log",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "audit_log_supplement",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "campaign",
+        "row_security": true,
+        "force": true
+      },
+      {
+        "rel": "cost_ledger",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "default_predicate",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "dim_date",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "dimension",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "embed_doc",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "feedback",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "field_binding",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "gold_query",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "join_path",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "metric_def",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "order_paid",
+        "row_security": true,
+        "force": true
+      },
+      {
+        "rel": "order_refund",
+        "row_security": true,
+        "force": true
+      },
+      {
+        "rel": "policy",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "product",
+        "row_security": true,
+        "force": true
+      },
+      {
+        "rel": "query_plan",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "region",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "semantic_bundle",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "shop",
+        "row_security": true,
+        "force": true
+      },
+      {
+        "rel": "synonym",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "traffic_daily",
+        "row_security": true,
+        "force": true
+      },
+      {
+        "rel": "v_campaign",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "v_dim_date",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "v_order_paid",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "v_order_refund",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "v_product",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "v_region",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "v_shop",
+        "row_security": false,
+        "force": false
+      },
+      {
+        "rel": "v_traffic_daily",
+        "row_security": false,
+        "force": false
+      }
+    ],
+    "app_ro_visible_objects": 18,
+    "app_ro_can_read_view": 0,
+    "app_ro_non_superuser_with_policies": [
+      "off",
+      6
+    ]
+  },
+  "parity": {
+    "relations": [
+      {
+        "rel": "asset",
+        "sqlite": "-",
+        "pg": 8,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "audit_log",
+        "sqlite": "-",
+        "pg": 0,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "audit_log_supplement",
+        "sqlite": "-",
+        "pg": 0,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "campaign",
+        "sqlite": "-",
+        "pg": 0,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "cost_ledger",
+        "sqlite": "-",
+        "pg": 0,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "default_predicate",
+        "sqlite": "-",
+        "pg": 2,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "dim_date",
+        "sqlite": "-",
+        "pg": 0,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "dim_tenant",
+        "sqlite": 3,
+        "pg": "-",
+        "sqlite_kind": "table",
+        "pg_kind": "-"
+      },
+      {
+        "rel": "dimension",
+        "sqlite": "-",
+        "pg": 6,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "embed_doc",
+        "sqlite": "-",
+        "pg": 197,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "feedback",
+        "sqlite": "-",
+        "pg": 2,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "field_binding",
+        "sqlite": "-",
+        "pg": 7,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "gold_query",
+        "sqlite": "-",
+        "pg": 0,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "join_path",
+        "sqlite": "-",
+        "pg": 10,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "metric_def",
+        "sqlite": "-",
+        "pg": 9,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "order_paid",
+        "sqlite": "-",
+        "pg": 0,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "order_refund",
+        "sqlite": "-",
+        "pg": 0,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "policy",
+        "sqlite": "-",
+        "pg": 2,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "product",
+        "sqlite": "-",
+        "pg": 0,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "query_plan",
+        "sqlite": "-",
+        "pg": 0,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "region",
+        "sqlite": "-",
+        "pg": 0,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "semantic_bundle",
+        "sqlite": "-",
+        "pg": 1,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "shop",
+        "sqlite": "-",
+        "pg": 0,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "synonym",
+        "sqlite": "-",
+        "pg": 105,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "traffic_daily",
+        "sqlite": "-",
+        "pg": 0,
+        "sqlite_kind": "-",
+        "pg_kind": "table"
+      },
+      {
+        "rel": "v_campaign",
+        "sqlite": 84,
+        "pg": 0,
+        "sqlite_kind": "table",
+        "pg_kind": "view"
+      },
+      {
+        "rel": "v_dim_date",
+        "sqlite": 730,
+        "pg": 0,
+        "sqlite_kind": "table",
+        "pg_kind": "view"
+      },
+      {
+        "rel": "v_order_paid",
+        "sqlite": 494249,
+        "pg": 0,
+        "sqlite_kind": "table",
+        "pg_kind": "view"
+      },
+      {
+        "rel": "v_order_refund",
+        "sqlite": 23116,
+        "pg": 0,
+        "sqlite_kind": "table",
+        "pg_kind": "view"
+      },
+      {
+        "rel": "v_product",
+        "sqlite": 6000,
+        "pg": 0,
+        "sqlite_kind": "table",
+        "pg_kind": "view"
+      },
+      {
+        "rel": "v_region",
+        "sqlite": 31,
+        "pg": 0,
+        "sqlite_kind": "table",
+        "pg_kind": "view"
+      },
+      {
+        "rel": "v_shop",
+        "sqlite": 12,
+        "pg": 0,
+        "sqlite_kind": "table",
+        "pg_kind": "view"
+      },
+      {
+        "rel": "v_traffic_daily",
+        "sqlite": 1500556,
+        "pg": 0,
+        "sqlite_kind": "table",
+        "pg_kind": "view"
+      }
+    ],
+    "pg_reachable": true,
+    "pg_business_fact_rows": 0,
+    "sqlite_business_fact_rows": 2023933,
+    "pg_rls_measurable_with_real_data": false,
+    "pg_rls_policies_n": 6,
+    "pg_rls_forced_relations": [
+      "campaign",
+      "order_paid",
+      "order_refund",
+      "product",
+      "shop",
+      "traffic_daily"
+    ],
+    "verdict": "PG 可达且 RLS 策略在位，但业务事实表为空 ⇒ PG 侧只能验**结构/权限面**，结果集等价与 RLS 有效性仍不可测"
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "deny_columns_dropped_from_visible": {
+    "v_order_paid": [
+      "receiver_address",
+      "receiver_phone",
+      "tenant_id"
+    ],
+    "v_order_refund": [
+      "tenant_id"
+    ],
+    "v_product": [
+      "cost_price",
+      "tenant_id"
+    ],
+    "v_shop": [
+      "tenant_id"
+    ],
+    "v_campaign": [
+      "tenant_id"
+    ],
+    "v_traffic_daily": [
+      "tenant_id"
+    ]
+  },
+  "visible_column_count": {
+    "v_order_paid": 21,
+    "v_order_refund": 6,
+    "v_product": 10,
+    "v_shop": 5,
+    "v_region": 3,
+    "v_campaign": 5,
+    "v_traffic_daily": 8,
+    "v_dim_date": 8
+  },
+  "bundle_column_count": {
+    "v_order_paid": 24,
+    "v_order_refund": 7,
+    "v_product": 12,
+    "v_shop": 6,
+    "v_region": 3,
+    "v_campaign": 6,
+    "v_traffic_daily": 9,
+    "v_dim_date": 8
+  },
+  "rows": [
+    {
+      "probe": "tenant_id_unqualified",
+      "sql": "SELECT tenant_id FROM v_order_paid LIMIT 10",
+      "expected_rule": "R07",
+      "actual_rule_id": "R06",
+      "error_code": "FORBIDDEN_SCOPE",
+      "user_message": "查询包含受保护字段",
+      "matches_frozen_set": false
+    },
+    {
+      "probe": "tenant_id_qualified",
+      "sql": "SELECT o.tenant_id FROM v_order_paid o LIMIT 10",
+      "expected_rule": "R07",
+      "actual_rule_id": "R07",
+      "error_code": "PII_BLOCKED",
+      "user_message": "查询包含受保护字段",
+      "matches_frozen_set": true
+    },
+    {
+      "probe": "receiver_phone_unqualified",
+      "sql": "SELECT receiver_phone FROM v_order_paid LIMIT 10",
+      "expected_rule": "R07",
+      "actual_rule_id": "R06",
+      "error_code": "FORBIDDEN_SCOPE",
+      "user_message": "查询包含受保护字段",
+      "matches_frozen_set": false
+    },
+    {
+      "probe": "receiver_phone_qualified",
+      "sql": "SELECT v_order_paid.receiver_phone FROM v_order_paid LIMIT 10",
+      "expected_rule": "R07",
+      "actual_rule_id": "R07",
+      "error_code": "PII_BLOCKED",
+      "user_message": "查询包含受保护字段",
+      "matches_frozen_set": true
+    },
+    {
+      "probe": "cost_price_unqualified",
+      "sql": "SELECT cost_price FROM v_product LIMIT 10",
+      "expected_rule": "R07",
+      "actual_rule_id": "R06",
+      "error_code": "FORBIDDEN_SCOPE",
+      "user_message": "查询包含受保护字段",
+      "matches_frozen_set": false
+    },
+    {
+      "probe": "cost_price_qualified",
+      "sql": "SELECT v_product.cost_price FROM v_product LIMIT 10",
+      "expected_rule": "R07",
+      "actual_rule_id": "R07",
+      "error_code": "PII_BLOCKED",
+      "user_message": "查询包含受保护字段",
+      "matches_frozen_set": true
+    },
+    {
+      "probe": "bogus_column",
+      "sql": "SELECT not_a_real_col FROM v_order_paid LIMIT 10",
+      "expected_rule": "R06",
+      "actual_rule_id": "R06",
+      "error_code": "FORBIDDEN_SCOPE",
+      "user_message": "查询包含受保护字段",
+      "matches_frozen_set": true
+    }
+  ],
+  "r07_hits_among_pairs": 3,
+  "r06_hits_among_deny_pairs": 3,
+  "finding": "deny 列引用是否命中 R07 取决于**有没有写表前缀**；无前置一律 R06/FORBIDDEN_SCOPE。且 R06 与 R07 共用文案『查询包含受保护字段』⇒ 列名写错（含闸门注入出的缺列，见 probe_gate_rejections F2）也会被提示成权限问题。安全侧 fail-closed 正确，**归因侧（§C.7 / PRD §14.2 的 rule_id 统计）失真**。归属：W2C（判据顺序 + 文案），编号待架构窗口分配。"
+}

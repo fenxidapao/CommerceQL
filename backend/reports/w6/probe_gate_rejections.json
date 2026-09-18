@@ -1,0 +1,266 @@
+{
+  "f1_order_by_projection_alias": {
+    "expr_sort": {
+      "sql": "SELECT category_l1, SUM(list_price) AS avg_price FROM v_product GROUP BY category_l1 ORDER BY SUM(list_price) DESC",
+      "passed": true,
+      "rule_id": null,
+      "reason": null,
+      "applied_predicates": [],
+      "rewritten_sql": "SELECT category_l1, SUM(list_price) AS avg_price FROM v_product GROUP BY category_l1 ORDER BY SUM(list_price) DESC LIMIT 10000"
+    },
+    "bare_alias_sort": {
+      "sql": "SELECT category_l1, SUM(list_price) AS avg_price FROM v_product GROUP BY category_l1 ORDER BY avg_price DESC",
+      "passed": false,
+      "rule_id": "R06",
+      "reason": "查询包含受保护字段",
+      "applied_predicates": [],
+      "rewritten_sql": ""
+    },
+    "qualified_alias_sort": {
+      "sql": "SELECT category_l1, SUM(list_price) AS avg_price FROM v_product GROUP BY category_l1 ORDER BY v_product.avg_price DESC",
+      "passed": false,
+      "rule_id": "R06",
+      "reason": "查询包含受保护字段",
+      "applied_predicates": [],
+      "rewritten_sql": ""
+    },
+    "underlying_col_sort": {
+      "sql": "SELECT category_l1, SUM(list_price) AS avg_price FROM v_product GROUP BY category_l1 ORDER BY category_l1 DESC",
+      "passed": true,
+      "rule_id": null,
+      "reason": null,
+      "applied_predicates": [],
+      "rewritten_sql": "SELECT category_l1, SUM(list_price) AS avg_price FROM v_product GROUP BY category_l1 ORDER BY category_l1 DESC LIMIT 10000"
+    }
+  },
+  "f2_default_predicates_injected_by_domain": {
+    "v_region_alone": {
+      "sql": "SELECT region_name FROM v_region",
+      "passed": false,
+      "rule_id": "R06",
+      "reason": "查询包含受保护字段",
+      "applied_predicates": [],
+      "rewritten_sql": ""
+    },
+    "v_dim_date_alone": {
+      "sql": "SELECT month FROM v_dim_date",
+      "passed": false,
+      "rule_id": "R06",
+      "reason": "查询包含受保护字段",
+      "applied_predicates": [],
+      "rewritten_sql": ""
+    },
+    "v_campaign_alone": {
+      "sql": "SELECT campaign_name FROM v_campaign",
+      "passed": false,
+      "rule_id": "R06",
+      "reason": "查询包含受保护字段",
+      "applied_predicates": [],
+      "rewritten_sql": ""
+    },
+    "fact_join_dim": {
+      "sql": "SELECT r.region_name, SUM(o.pay_amount) FROM v_order_paid o JOIN v_region r ON o.region_code = r.code GROUP BY r.region_name",
+      "passed": false,
+      "rule_id": "R06",
+      "reason": "查询包含受保护字段",
+      "applied_predicates": [],
+      "rewritten_sql": ""
+    },
+    "grain_table_alone": {
+      "sql": "SELECT pay_amount FROM v_order_paid",
+      "passed": true,
+      "rule_id": null,
+      "reason": null,
+      "applied_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "rewritten_sql": "SELECT pay_amount FROM v_order_paid WHERE v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 10000"
+    },
+    "evidence_injected_sql": {
+      "v_region_alone": "SELECT region_name FROM v_region WHERE v_region.is_test_order = FALSE AND v_region.refund_status <> 'refunded' AND v_region.pay_status = 'paid'",
+      "v_dim_date_alone": "SELECT month FROM v_dim_date WHERE v_dim_date.is_test_order = FALSE AND v_dim_date.refund_status <> 'refunded' AND v_dim_date.pay_status = 'paid'",
+      "v_campaign_alone": "SELECT campaign_name FROM v_campaign WHERE v_campaign.is_test_order = FALSE AND v_campaign.refund_status <> 'refunded' AND v_campaign.pay_status = 'paid'",
+      "fact_join_dim": "SELECT r.region_name, SUM(o.pay_amount) FROM v_order_paid AS o JOIN v_region AS r ON o.region_code = r.code WHERE o.is_test_order = FALSE AND o.refund_status <> 'refunded' AND o.pay_status = 'paid' AND r.is_test_order = FALSE AND r.refund_status <> 'refunded' AND r.pay_status = 'paid' GROUP BY r.region_name",
+      "grain_table_alone": "SELECT pay_amount FROM v_order_paid WHERE v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid'"
+    }
+  },
+  "f3_frozen_set_blast_radius": {
+    "n_cases": 166,
+    "predicate_columns_by_domain": {
+      "orders": [
+        "is_test_order",
+        "pay_status",
+        "refund_status"
+      ],
+      "traffic": [
+        "uv"
+      ]
+    },
+    "poisoned_assets_missing_columns": {
+      "v_order_refund": [
+        "is_test_order",
+        "pay_status"
+      ],
+      "v_region": [
+        "is_test_order",
+        "pay_status",
+        "refund_status"
+      ],
+      "v_campaign": [
+        "is_test_order",
+        "pay_status",
+        "refund_status"
+      ],
+      "v_dim_date": [
+        "is_test_order",
+        "pay_status",
+        "refund_status"
+      ]
+    },
+    "n_affected": 14,
+    "affected_share": 0.0843,
+    "affected": [
+      {
+        "case_id": "E-VER-01",
+        "assets": [
+          "v_dim_date"
+        ]
+      },
+      {
+        "case_id": "E-VER-06",
+        "assets": [
+          "v_campaign"
+        ]
+      },
+      {
+        "case_id": "E-VER-07",
+        "assets": [
+          "v_region"
+        ]
+      },
+      {
+        "case_id": "M-DIM-04",
+        "assets": [
+          "v_campaign"
+        ]
+      },
+      {
+        "case_id": "M-DIM-08",
+        "assets": [
+          "v_region"
+        ]
+      },
+      {
+        "case_id": "H-MET-06",
+        "assets": [
+          "v_region"
+        ]
+      },
+      {
+        "case_id": "H-MET-07",
+        "assets": [
+          "v_region"
+        ]
+      },
+      {
+        "case_id": "H-MET-08",
+        "assets": [
+          "v_region"
+        ]
+      },
+      {
+        "case_id": "H-MET-09",
+        "assets": [
+          "v_region"
+        ]
+      },
+      {
+        "case_id": "X-MET-06",
+        "assets": [
+          "v_region"
+        ]
+      },
+      {
+        "case_id": "X-MET-07",
+        "assets": [
+          "v_region"
+        ]
+      },
+      {
+        "case_id": "X-MET-08",
+        "assets": [
+          "v_region"
+        ]
+      },
+      {
+        "case_id": "X-MET-09",
+        "assets": [
+          "v_region"
+        ]
+      },
+      {
+        "case_id": "X-MET-10",
+        "assets": [
+          "v_region"
+        ]
+      }
+    ],
+    "unaffected_case_ids_sample": [
+      "E-VER-02",
+      "E-VER-03",
+      "E-VER-04",
+      "E-VER-05",
+      "E-VER-08",
+      "E-VER-10",
+      "E-VER-11",
+      "E-ENUM-01",
+      "E-ENUM-02",
+      "E-ENUM-03"
+    ],
+    "gold_sql_with_no_table_ref": 42,
+    "by_expected_behavior": {
+      "clarify": {
+        "affected": 0,
+        "unaffected": 18
+      },
+      "execute": {
+        "affected": 14,
+        "unaffected": 110
+      },
+      "refuse": {
+        "affected": 0,
+        "unaffected": 24
+      }
+    }
+  },
+  "asset_domains": {
+    "v_order_paid": "orders",
+    "v_order_refund": "orders",
+    "v_product": "products",
+    "v_shop": "products",
+    "v_region": "orders",
+    "v_campaign": "orders",
+    "v_traffic_daily": "traffic",
+    "v_dim_date": "orders"
+  },
+  "default_predicates_by_domain": {
+    "orders": [
+      "is_test_order = false",
+      "refund_status <> 'refunded'",
+      "pay_status = 'paid'"
+    ],
+    "traffic": [
+      "uv >= 0"
+    ]
+  },
+  "domains_without_default_predicates": [
+    "products"
+  ],
+  "findings": {
+    "F1": "投影别名作排序键 → R06（`ast_gate._scope_tables` 不登记同 scope 的投影别名；`_projection_names` 已存在，缺的是这一环接线）。归属：W2C。",
+    "F2": "默认谓词按 `asset.domain` 注入到该域所有物理表实例 → 维表/第二事实表被注入出不存在的列 → R06。契约侧：附录 A §A.7.1 的 `default_predicates` 是**指标级且带表别名**；语义包 §5 每条带 `applies_to=[指标名]`；`SemanticBundleRuntime.policy()` 投影时丢掉 `applies_to` ⇒ 下游只能按域注入。归属：W1A（域归类）+ W2A（policy 丢字段）+ W2C（按域注入），本窗口只取证不改。",
+    "F3": "冻结集实测 14/166（8.43%）的 gold_sql 触达会被注入缺列的资产；受影响判据 = 列级（谓词列 ⊄ 该资产白名单列），不是'是不是粒度表'。这些用例的 gate1 拒绝**不得**计入模型能力（归因单列一类，编号待架构窗口分配）。"
+  }
+}

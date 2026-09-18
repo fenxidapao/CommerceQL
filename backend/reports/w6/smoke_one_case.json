@@ -1,0 +1,71 @@
+{
+  "case_id": "E-VER-02",
+  "question": "T_A 的在架商品数是多少？",
+  "eval_tenant": "T_A",
+  "expected_behavior": "execute",
+  "difficulty": {
+    "struct": "easy",
+    "semantic": "low"
+  },
+  "gold": {
+    "tenant_wrapped_sql": "SELECT COUNT(*) FROM (SELECT * FROM v_product WHERE tenant_id = 'T_A') AS v_product WHERE on_sale = 1",
+    "recomputed_hash": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+    "frozen_hash": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+    "hash_matches_frozen": true,
+    "rows": 1,
+    "cols": 1,
+    "frozen_rows": 1,
+    "frozen_cols": 1
+  },
+  "run": {
+    "nodes": [
+      "trusted_context",
+      "normalize",
+      "intent",
+      "link",
+      "plan",
+      "refuse_out"
+    ],
+    "terminal_event": "refuse",
+    "outcome": "refuse",
+    "infra_error": null,
+    "refusal_reason": "no_data_asset",
+    "binding_status": null,
+    "sql_dialect": "",
+    "sql_text": "",
+    "sql_params": {},
+    "row_count": 0,
+    "result_columns": [],
+    "result_rows": [],
+    "truncated": false,
+    "fingerprint": "",
+    "exec_error_class": null,
+    "gate_decisions": {},
+    "gate_rules_hit": [],
+    "limit_injected": null,
+    "applied_predicates": [],
+    "degradations": [
+      {
+        "reason": "embedding_unavailable",
+        "action_taken": "sparse_only"
+      }
+    ],
+    "latency_ms": {
+      "normalize": 1366,
+      "linking": 1,
+      "plan": 1657,
+      "total": 3028
+    },
+    "tokens": {
+      "input": 6156,
+      "output": 309,
+      "cache_hit": 5632,
+      "total": 6465
+    },
+    "cost_cny": 0.001995
+  },
+  "cassette": {
+    "path": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\cassettes\\w6_smoke.jsonl",
+    "entries_written": 2
+  }
+}

@@ -1,0 +1,282 @@
+{
+  "invariants_checked": [
+    "I-1",
+    "I-4",
+    "I-5",
+    "I-6",
+    "N-13"
+  ],
+  "eval_tenants": [
+    "T_A",
+    "T_B",
+    "T_C"
+  ],
+  "tenant_scoped_assets": [
+    "v_campaign",
+    "v_order_paid",
+    "v_order_refund",
+    "v_product",
+    "v_shop",
+    "v_traffic_daily"
+  ],
+  "test_1_tenant_boundary": {
+    "required_by": "07 §17.6①",
+    "n_selected": 3,
+    "n_required": 3,
+    "tenants_covered": [
+      "T_A",
+      "T_B",
+      "T_C"
+    ],
+    "selection_complete": true,
+    "rows": [
+      {
+        "case_id": "E-VER-02",
+        "eval_tenant": "T_A",
+        "touched_tenant_scoped": true,
+        "hash_frozen": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+        "hash_wrap": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+        "hash_view": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+        "rows_wrap": 1,
+        "rows_view": 1,
+        "error_wrap": null,
+        "error_view": null,
+        "frozen_eq_wrap": true,
+        "wrap_eq_view": true,
+        "ok": true
+      },
+      {
+        "case_id": "E-VER-10",
+        "eval_tenant": "T_B",
+        "touched_tenant_scoped": true,
+        "hash_frozen": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+        "hash_wrap": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+        "hash_view": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+        "rows_wrap": 1,
+        "rows_view": 1,
+        "error_wrap": null,
+        "error_view": null,
+        "frozen_eq_wrap": true,
+        "wrap_eq_view": true,
+        "ok": true
+      },
+      {
+        "case_id": "E-VER-11",
+        "eval_tenant": "T_C",
+        "touched_tenant_scoped": true,
+        "hash_frozen": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+        "hash_wrap": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+        "hash_view": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+        "rows_wrap": 1,
+        "rows_view": 1,
+        "error_wrap": null,
+        "error_view": null,
+        "frozen_eq_wrap": true,
+        "wrap_eq_view": true,
+        "ok": true
+      }
+    ],
+    "ok": true
+  },
+  "test_1b_boundary_efficacy": {
+    "purpose": "§17.6① 的前置：证明 TEMP VIEW 租户边界确实在过滤，且评测租户集合覆盖全量行",
+    "rows": [
+      {
+        "asset": "v_campaign",
+        "unfiltered_rows": 84,
+        "per_tenant_rows": {
+          "T_A": 28,
+          "T_B": 28,
+          "T_C": 28
+        },
+        "sum_per_tenant": 84,
+        "filters_something": true,
+        "covers_all_rows": true,
+        "ok": true
+      },
+      {
+        "asset": "v_order_paid",
+        "unfiltered_rows": 494249,
+        "per_tenant_rows": {
+          "T_A": 200000,
+          "T_B": 175000,
+          "T_C": 119249
+        },
+        "sum_per_tenant": 494249,
+        "filters_something": true,
+        "covers_all_rows": true,
+        "ok": true
+      },
+      {
+        "asset": "v_order_refund",
+        "unfiltered_rows": 23116,
+        "per_tenant_rows": {
+          "T_A": 9444,
+          "T_B": 8130,
+          "T_C": 5542
+        },
+        "sum_per_tenant": 23116,
+        "filters_something": true,
+        "covers_all_rows": true,
+        "ok": true
+      },
+      {
+        "asset": "v_product",
+        "unfiltered_rows": 6000,
+        "per_tenant_rows": {
+          "T_A": 2000,
+          "T_B": 2000,
+          "T_C": 2000
+        },
+        "sum_per_tenant": 6000,
+        "filters_something": true,
+        "covers_all_rows": true,
+        "ok": true
+      },
+      {
+        "asset": "v_shop",
+        "unfiltered_rows": 12,
+        "per_tenant_rows": {
+          "T_A": 5,
+          "T_B": 4,
+          "T_C": 3
+        },
+        "sum_per_tenant": 12,
+        "filters_something": true,
+        "covers_all_rows": true,
+        "ok": true
+      },
+      {
+        "asset": "v_traffic_daily",
+        "unfiltered_rows": 1500556,
+        "per_tenant_rows": {
+          "T_A": 600178,
+          "T_B": 525196,
+          "T_C": 375182
+        },
+        "sum_per_tenant": 1500556,
+        "filters_something": true,
+        "covers_all_rows": true,
+        "ok": true
+      }
+    ],
+    "ok": true
+  },
+  "test_2_field_whitelist": {
+    "required_by": "07 §17.6② / I-1",
+    "banned_field": "difficulty_struct_sitelabel",
+    "source": {
+      "n_files_scanned": 20,
+      "hits": [],
+      "ok": true
+    },
+    "artifacts": {
+      "n_files_scanned": 7,
+      "hits": [],
+      "ok": true,
+      "paths": [
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\consistency_results.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_gate_rejections.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_rule_identity.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\redteam_results.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\smoke_one_case.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\results_replay_probe.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\results_v1.json"
+      ]
+    },
+    "control_field_still_in_dataset": 166,
+    "control_field_present": true,
+    "self_test": {
+      "patterns_expected_hits": 3,
+      "patterns_hit": 3,
+      "caught": true,
+      "note": "对照没命中 = 扫描器自身失效，② 不得判绿"
+    },
+    "ok": true
+  },
+  "test_3_anchors": {
+    "required_by": "07 §17.6③",
+    "n_project_anchors": 6,
+    "project": [
+      {
+        "anchor": "P1-easy",
+        "expected": "easy",
+        "actual": "easy",
+        "ok": true,
+        "why": "comp1=1(WHERE) comp2=0 others=0 → 命中第 1 条（三项全成立）"
+      },
+      {
+        "anchor": "P2-medium",
+        "expected": "medium",
+        "actual": "medium",
+        "ok": true,
+        "why": "comp1=2(JOIN+1, GROUP BY+1) others=1(SELECT 列数>1) → 命中『comp1<=2 且 others<2』"
+      },
+      {
+        "anchor": "P3-hard-a",
+        "expected": "hard",
+        "actual": "hard",
+        "ok": true,
+        "why": "comp1=3(JOIN+1, GROUP BY+1, ORDER BY+1) others=1 → 命中『2<comp1<=3 且 others<=2』"
+      },
+      {
+        "anchor": "P3-hard-b",
+        "expected": "hard",
+        "actual": "hard",
+        "ok": true,
+        "why": "comp1=2(WHERE+1, GROUP BY+1) others=4(聚合>1, 列>1, 条件单元>1, 分组列>1) → 命中『others>2 且 comp1<=2』"
+      },
+      {
+        "anchor": "P4-extra-a",
+        "expected": "extra",
+        "actual": "extra",
+        "ok": true,
+        "why": "comp2=1(子查询计入) 且 others=1 → 三条 hard 子句**全不满足**（含『others==0』那一支）"
+      },
+      {
+        "anchor": "P4-extra-b",
+        "expected": "extra",
+        "actual": "extra",
+        "ok": true,
+        "why": "comp1=4(JOIN 2 表→+2, WHERE+1, GROUP BY+1) → 三条 hard 子句全不满足。**这一条同时是 U-30 的核心证据**"
+      }
+    ],
+    "official": [
+      {
+        "anchor": "Easy",
+        "expected": "easy",
+        "actual": "easy",
+        "match": true
+      },
+      {
+        "anchor": "Medium",
+        "expected": "medium",
+        "actual": "medium",
+        "match": true
+      },
+      {
+        "anchor": "Hard",
+        "expected": "hard",
+        "actual": "extra",
+        "match": false
+      },
+      {
+        "anchor": "Extra Hard",
+        "expected": "extra",
+        "actual": "extra",
+        "match": true
+      }
+    ],
+    "official_participates_in_verdict": false,
+    "official_mismatch_n": 1,
+    "divergence": {
+      "claimed_by_doc_4_7_2": "hard",
+      "actual_adopted": "extra",
+      "ok": true,
+      "note": "07 §4.7.2 锚点③ 的括号注称该形状为 hard，采纳口径实算 extra（U-30/U-35 物证）"
+    },
+    "doc_says_n": 4,
+    "ok": true
+  },
+  "ok": true
+}

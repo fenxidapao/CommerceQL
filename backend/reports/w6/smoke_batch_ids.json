@@ -1,0 +1,48 @@
+{
+  "seed": "w6-smoke-20260918",
+  "rule": "按 expected_behavior 配额（execute/refuse/clarify）分层，execute 内再按 difficulty_struct 每层保底 1 条；层内按 sha1(SEED:case_id) 排序取前 k。选题与难易无关 ⇒ 报告里的百分比不掺杂选题偏置。",
+  "quota": {
+    "execute": 12,
+    "refuse": 5,
+    "clarify": 3
+  },
+  "n_dataset_cases": 166,
+  "n_selected": 20,
+  "by_behavior": {
+    "clarify": 3,
+    "execute": 12,
+    "refuse": 5
+  },
+  "by_cell": {
+    "clarify/None/high": 3,
+    "execute/easy/low": 2,
+    "execute/easy/medium": 1,
+    "execute/extra/high": 3,
+    "execute/hard/high": 2,
+    "execute/hard/medium": 1,
+    "execute/medium/high": 3,
+    "refuse/None/high": 5
+  },
+  "case_ids": [
+    "C-AOV-01",
+    "C-GMV-03",
+    "C-UV-01",
+    "E-ENUM-07",
+    "E-VER-06",
+    "E-VER-10",
+    "H-CAT-03",
+    "H-MET-05",
+    "H-MET-08",
+    "M-IDX-09",
+    "M-MET-04",
+    "M-MET-05",
+    "M-MET-10",
+    "R-NA-02",
+    "R-NA-04",
+    "R-NA-08",
+    "R-PII-04",
+    "R-PII-07",
+    "X-MET-05",
+    "X-MET-06"
+  ]
+}

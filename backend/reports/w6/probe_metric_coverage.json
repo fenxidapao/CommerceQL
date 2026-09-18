@@ -1,0 +1,709 @@
+{
+  "metrics_in_bundle": [
+    "aov",
+    "arpu",
+    "gmv",
+    "order_cnt",
+    "pay_cvr",
+    "refund_rate",
+    "repurchase_rate_90d",
+    "sell_through_rate",
+    "uv"
+  ],
+  "active_metrics": [
+    "aov",
+    "arpu",
+    "gmv",
+    "order_cnt",
+    "pay_cvr",
+    "refund_rate",
+    "repurchase_rate_90d",
+    "uv"
+  ],
+  "reachable_terms": [
+    "90天复购率",
+    "AOV",
+    "ARPU",
+    "CVR",
+    "GMV",
+    "UV",
+    "aov",
+    "arpu",
+    "gmv",
+    "order_cnt",
+    "pay_cvr",
+    "refund_rate",
+    "repurchase_rate_90d",
+    "sell_through_rate",
+    "uv",
+    "交易额",
+    "人均产出",
+    "人均消费",
+    "出单量",
+    "动销",
+    "动销率",
+    "单量",
+    "回购",
+    "回购率",
+    "复购",
+    "复购率",
+    "客单价",
+    "平均订单金额",
+    "成交单量",
+    "成交转化",
+    "成交金额",
+    "成交额",
+    "支付转化率",
+    "流水",
+    "独立访客",
+    "订单数",
+    "订单量",
+    "访客数",
+    "转化",
+    "转化率",
+    "退款占比",
+    "退款率",
+    "退货率",
+    "销售额"
+  ],
+  "n_cases": 166,
+  "n_question_hits_metric_term": 61,
+  "n_agg_gold_sql_without_metric_term": 79,
+  "n_execute_agg_without_metric_term": 79,
+  "execute_miss_share": 0.4759,
+  "execute_miss": [
+    {
+      "case_id": "E-VER-01",
+      "question": "T_A 2026-08 的日期维表有多少天？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-VER-02",
+      "question": "T_A 的在架商品数是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-VER-03",
+      "question": "T_A 的下架商品数是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-VER-04",
+      "question": "T_A 的SPU 数是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-VER-05",
+      "question": "T_A 的店铺数是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-VER-06",
+      "question": "T_A 的活动数是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-VER-07",
+      "question": "T_A 的华东覆盖省份数是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-VER-08",
+      "question": "T_A 的收货省份覆盖数是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-VER-10",
+      "question": "T_B 的在架商品数是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-VER-11",
+      "question": "T_C 的在架商品数是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-ENUM-01",
+      "question": "T_A 直播渠道一共带来多少浏览量？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "E-ENUM-02",
+      "question": "T_A 搜索渠道一共带来多少浏览量？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "E-ENUM-03",
+      "question": "T_A 推荐渠道一共带来多少浏览量？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "E-ENUM-04",
+      "question": "T_A 付费广告渠道一共带来多少浏览量？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "E-ENUM-05",
+      "question": "T_A 直接访问渠道一共带来多少浏览量？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "E-ENUM-06",
+      "question": "T_A 的「3C数码」在架商品有多少个？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-ENUM-07",
+      "question": "T_A 的「家用电器」在架商品有多少个？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-ENUM-08",
+      "question": "T_A 的「美妆个护」在架商品有多少个？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-ENUM-09",
+      "question": "T_B 的「服饰鞋包」在架商品有多少个？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-ENUM-10",
+      "question": "T_C 的「食品生鲜」在架商品有多少个？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "E-MET-08",
+      "question": "T_A 从 2026-08-01 起的付费金额合计（含未支付）是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "high",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "M-DIM-01",
+      "question": "T_A 的各 SKU 的浏览量分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "M-DIM-02",
+      "question": "T_A 的各渠道的浏览量分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "M-DIM-04",
+      "question": "T_A 的各活动类型的活动数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "M-DIM-05",
+      "question": "T_A 的各城市的店铺数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "M-DIM-06",
+      "question": "T_A 的各 SPU 的 SKU 数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "M-DIM-07",
+      "question": "T_A 的各二级类目的商品数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "M-DIM-08",
+      "question": "7 个大区各覆盖的省份数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "M-DIM-09",
+      "question": "各一级类目的商品数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "M-DIM-10",
+      "question": "各渠道的加购次数合计分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "M-ENUM-01",
+      "question": "T_A 直播渠道各 SKU 的浏览量分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "M-ENUM-02",
+      "question": "T_A 搜索渠道各 SKU 的浏览量分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "M-ENUM-03",
+      "question": "T_A 推荐渠道各 SKU 的浏览量分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "M-ENUM-04",
+      "question": "T_A 付费广告渠道各 SKU 的浏览量分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "M-HIER-01",
+      "question": "T_A 各一级类目的在架商品数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "M-HIER-02",
+      "question": "T_A 各二级类目的在架商品数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "M-HIER-03",
+      "question": "T_A 各城市的在架商品数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "M-HIER-04",
+      "question": "3C数码下一级各子类的商品数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "M-HIER-05",
+      "question": "家用电器下一级各子类的商品数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "M-HIER-06",
+      "question": "服饰鞋包下一级各子类的商品数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-STR-01",
+      "question": "T_A 位于广州的店铺各有多少个商品？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-STR-02",
+      "question": "T_A 位于杭州的店铺各有多少个商品？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-STR-03",
+      "question": "T_A 位于成都的店铺各有多少个商品？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-STR-04",
+      "question": "T_A 位于武汉的店铺各有多少个商品？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-STR-05",
+      "question": "T_A 位于南京的店铺各有多少个商品？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-STR-06",
+      "question": "T_A 位于西安的店铺各有多少个商品？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-STR-07",
+      "question": "T_A 位于长沙的店铺各有多少个商品？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-STR-08",
+      "question": "T_A 位于郑州的店铺各有多少个商品？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-STR-09",
+      "question": "T_A 各店铺的商品平均标价是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "gold_agg": "AVG"
+    },
+    {
+      "case_id": "H-ENUM-01",
+      "question": "T_A 处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-ENUM-02",
+      "question": "T_A 处于「全额退款」状态的订单在各店铺分别是多少笔？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-ENUM-03",
+      "question": "T_A 处于「无退款」状态的订单在各店铺分别是多少笔？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-ENUM-04",
+      "question": "T_A 处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-CAT-01",
+      "question": "T_A 的「3C数码」各店铺的商品数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-CAT-02",
+      "question": "T_A 的「家用电器」各店铺的商品数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-CAT-03",
+      "question": "T_A 的「服饰鞋包」各店铺的商品数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-CAT-04",
+      "question": "T_A 的「食品生鲜」各店铺的商品数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "H-CAT-05",
+      "question": "T_A 的「美妆个护」各店铺的商品数分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "medium",
+      "gold_agg": "COUNT"
+    },
+    {
+      "case_id": "X-STR-01",
+      "question": "T_A 在 广州市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-STR-02",
+      "question": "T_A 在 杭州市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-STR-03",
+      "question": "T_A 在 成都市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-STR-04",
+      "question": "T_A 在 武汉市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-STR-05",
+      "question": "T_A 在 南京市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-STR-06",
+      "question": "T_A 在 西安市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-STR-07",
+      "question": "T_A 在 长沙市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-STR-08",
+      "question": "T_A 在 郑州市 的店铺各 SKU 浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-ENUM-01",
+      "question": "T_A 的「3C数码」商品在各店铺的浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-ENUM-02",
+      "question": "T_A 的「家用电器」商品在各店铺的浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-ENUM-03",
+      "question": "T_A 的「服饰鞋包」商品在各店铺的浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-ENUM-04",
+      "question": "T_A 的「食品生鲜」商品在各店铺的浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-ENUM-05",
+      "question": "T_A 的「美妆个护」商品在各店铺的浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-ENUM-06",
+      "question": "T_A 的「家居家装」商品在各店铺的浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-ENUM-07",
+      "question": "T_A 的「母婴玩具」商品在各店铺的浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-ENUM-08",
+      "question": "T_A 的「运动户外」商品在各店铺的浏览量合计是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "medium",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-MET-01",
+      "question": "T_A「3C数码」自 2026-08-01 起各店铺的浏览量分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "high",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-MET-02",
+      "question": "T_A「家用电器」自 2026-08-01 起各店铺的浏览量分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "high",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-MET-03",
+      "question": "T_A「服饰鞋包」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "high",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-MET-04",
+      "question": "T_A「食品生鲜」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "high",
+      "gold_agg": "SUM"
+    },
+    {
+      "case_id": "X-MET-05",
+      "question": "T_A「美妆个护」自 2026-05-01 起各店铺的浏览量分别是多少？",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "high",
+      "gold_agg": "SUM"
+    }
+  ],
+  "caveat": "题面词形未命中 ≠ 模型一定拿不到该指标（normalize/intent 可能把黑话归一到 name）。本探针给的是**上界口径**：这些题面里没有任何一个运行时可达的指标词形，因此`_METRIC_GAP_NOTE` 指示模型写 blocking_issues 的概率极高 —— 已用匣带里模型自述的 blocking_issues 抽样核对（见 reports/w6/live_batch2.log）。"
+}

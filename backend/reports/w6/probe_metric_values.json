@@ -1,0 +1,652 @@
+{
+  "threshold_rel_error": 0.001,
+  "core_metrics": [
+    "gmv",
+    "order_cnt",
+    "uv",
+    "aov",
+    "refund_rate"
+  ],
+  "total": 13,
+  "consistent": 1,
+  "consistent_rate": 0.0769,
+  "unattributed": 0,
+  "differing": [
+    "E-MET-01",
+    "E-MET-02",
+    "E-MET-03",
+    "E-MET-04",
+    "E-MET-05",
+    "E-MET-06",
+    "E-MET-07",
+    "E-MET-09",
+    "M-IDX-01",
+    "M-IDX-02",
+    "M-IDX-05",
+    "M-IDX-06"
+  ],
+  "unattributed_cases": [],
+  "metrics_covered": [
+    "aov",
+    "gmv",
+    "order_cnt",
+    "refund_rate",
+    "uv"
+  ],
+  "rows": [
+    {
+      "case_id": "E-MET-01",
+      "metric": "gmv",
+      "tenant": "T_A",
+      "question": "T_A 从 2026-08-01 起的 GMV 是多少？",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "authority_sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+      "gold_value": 16483171.53,
+      "authority_value": 15611729.95,
+      "rel_error": 0.05582,
+      "consistent": false,
+      "gold_error": null,
+      "authority_error": null,
+      "attribution": {
+        "same_expression": true,
+        "gold_expression": "SUM(pay_amount)",
+        "authority_expression": "SUM(order_paid.pay_amount)",
+        "missing_predicates": [
+          "pay_status = 'paid'",
+          "refund_status <> 'refunded'",
+          "is_test_order = false"
+        ],
+        "already_present_predicates": [],
+        "steps": [
+          {
+            "added_predicate": "pay_status = 'paid'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid'",
+            "value": 16483171.53,
+            "error": null,
+            "delta_vs_prev": 0.0
+          },
+          {
+            "added_predicate": "refund_status <> 'refunded'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND refund_status <> 'refunded'",
+            "value": 15660060.65,
+            "error": null,
+            "delta_vs_prev": -823110.88
+          },
+          {
+            "added_predicate": "is_test_order = false",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+            "value": 15611729.95,
+            "error": null,
+            "delta_vs_prev": -48330.7
+          }
+        ],
+        "reconstructed_value": 15611729.95,
+        "explained_by_predicate": true,
+        "why_not_explained": null
+      }
+    },
+    {
+      "case_id": "E-MET-02",
+      "metric": "gmv",
+      "tenant": "T_A",
+      "question": "T_A 从 2026-06-01 起的 GMV 是多少？",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-06-01'",
+      "authority_sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+      "gold_value": 32486530.79,
+      "authority_value": 30768819.37,
+      "rel_error": 0.055826,
+      "consistent": false,
+      "gold_error": null,
+      "authority_error": null,
+      "attribution": {
+        "same_expression": true,
+        "gold_expression": "SUM(pay_amount)",
+        "authority_expression": "SUM(order_paid.pay_amount)",
+        "missing_predicates": [
+          "pay_status = 'paid'",
+          "refund_status <> 'refunded'",
+          "is_test_order = false"
+        ],
+        "already_present_predicates": [],
+        "steps": [
+          {
+            "added_predicate": "pay_status = 'paid'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid'",
+            "value": 32486530.79,
+            "error": null,
+            "delta_vs_prev": 0.0
+          },
+          {
+            "added_predicate": "refund_status <> 'refunded'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid' AND refund_status <> 'refunded'",
+            "value": 30827298.87,
+            "error": null,
+            "delta_vs_prev": -1659231.92
+          },
+          {
+            "added_predicate": "is_test_order = false",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+            "value": 30768819.37,
+            "error": null,
+            "delta_vs_prev": -58479.5
+          }
+        ],
+        "reconstructed_value": 30768819.37,
+        "explained_by_predicate": true,
+        "why_not_explained": null
+      }
+    },
+    {
+      "case_id": "E-MET-03",
+      "metric": "gmv",
+      "tenant": "T_A",
+      "question": "T_A 从 2025-11-01 起的 GMV 是多少？",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2025-11-01'",
+      "authority_sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2025-11-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+      "gold_value": 108857094.48,
+      "authority_value": 103385547.56,
+      "rel_error": 0.052924,
+      "consistent": false,
+      "gold_error": null,
+      "authority_error": null,
+      "attribution": {
+        "same_expression": true,
+        "gold_expression": "SUM(pay_amount)",
+        "authority_expression": "SUM(order_paid.pay_amount)",
+        "missing_predicates": [
+          "pay_status = 'paid'",
+          "refund_status <> 'refunded'",
+          "is_test_order = false"
+        ],
+        "already_present_predicates": [],
+        "steps": [
+          {
+            "added_predicate": "pay_status = 'paid'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2025-11-01' AND pay_status = 'paid'",
+            "value": 108857094.48,
+            "error": null,
+            "delta_vs_prev": 0.0
+          },
+          {
+            "added_predicate": "refund_status <> 'refunded'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2025-11-01' AND pay_status = 'paid' AND refund_status <> 'refunded'",
+            "value": 103665526.32,
+            "error": null,
+            "delta_vs_prev": -5191568.16
+          },
+          {
+            "added_predicate": "is_test_order = false",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2025-11-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+            "value": 103385547.56,
+            "error": null,
+            "delta_vs_prev": -279978.76
+          }
+        ],
+        "reconstructed_value": 103385547.56,
+        "explained_by_predicate": true,
+        "why_not_explained": null
+      }
+    },
+    {
+      "case_id": "E-MET-04",
+      "metric": "gmv",
+      "tenant": "T_A",
+      "question": "T_A 从 2026-03-01 起的 GMV 是多少？",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-03-01'",
+      "authority_sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-03-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+      "gold_value": 60389934.75,
+      "authority_value": 57306143.84,
+      "rel_error": 0.053813,
+      "consistent": false,
+      "gold_error": null,
+      "authority_error": null,
+      "attribution": {
+        "same_expression": true,
+        "gold_expression": "SUM(pay_amount)",
+        "authority_expression": "SUM(order_paid.pay_amount)",
+        "missing_predicates": [
+          "pay_status = 'paid'",
+          "refund_status <> 'refunded'",
+          "is_test_order = false"
+        ],
+        "already_present_predicates": [],
+        "steps": [
+          {
+            "added_predicate": "pay_status = 'paid'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-03-01' AND pay_status = 'paid'",
+            "value": 60389934.75,
+            "error": null,
+            "delta_vs_prev": 0.0
+          },
+          {
+            "added_predicate": "refund_status <> 'refunded'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-03-01' AND pay_status = 'paid' AND refund_status <> 'refunded'",
+            "value": 57478814.0,
+            "error": null,
+            "delta_vs_prev": -2911120.75
+          },
+          {
+            "added_predicate": "is_test_order = false",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-03-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+            "value": 57306143.84,
+            "error": null,
+            "delta_vs_prev": -172670.16
+          }
+        ],
+        "reconstructed_value": 57306143.84,
+        "explained_by_predicate": true,
+        "why_not_explained": null
+      }
+    },
+    {
+      "case_id": "E-MET-05",
+      "metric": "order_cnt",
+      "tenant": "T_A",
+      "question": "T_A 从 2026-08-01 起的订单量是多少？",
+      "gold_sql": "SELECT COUNT(DISTINCT sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "authority_sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+      "gold_value": 11995.0,
+      "authority_value": 11413.0,
+      "rel_error": 0.050994,
+      "consistent": false,
+      "gold_error": null,
+      "authority_error": null,
+      "attribution": {
+        "same_expression": true,
+        "gold_expression": "COUNT(DISTINCT sub_order_id)",
+        "authority_expression": "COUNT(DISTINCT order_paid.sub_order_id)",
+        "missing_predicates": [
+          "pay_status = 'paid'",
+          "refund_status <> 'refunded'",
+          "is_test_order = false"
+        ],
+        "already_present_predicates": [],
+        "steps": [
+          {
+            "added_predicate": "pay_status = 'paid'",
+            "sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid'",
+            "value": 11995.0,
+            "error": null,
+            "delta_vs_prev": 0.0
+          },
+          {
+            "added_predicate": "refund_status <> 'refunded'",
+            "sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND refund_status <> 'refunded'",
+            "value": 11444.0,
+            "error": null,
+            "delta_vs_prev": -551.0
+          },
+          {
+            "added_predicate": "is_test_order = false",
+            "sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+            "value": 11413.0,
+            "error": null,
+            "delta_vs_prev": -31.0
+          }
+        ],
+        "reconstructed_value": 11413.0,
+        "explained_by_predicate": true,
+        "why_not_explained": null
+      }
+    },
+    {
+      "case_id": "E-MET-06",
+      "metric": "order_cnt",
+      "tenant": "T_A",
+      "question": "T_A 从 2026-06-01 起的订单量是多少？",
+      "gold_sql": "SELECT COUNT(DISTINCT sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-06-01'",
+      "authority_sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+      "gold_value": 23747.0,
+      "authority_value": 22536.0,
+      "rel_error": 0.053736,
+      "consistent": false,
+      "gold_error": null,
+      "authority_error": null,
+      "attribution": {
+        "same_expression": true,
+        "gold_expression": "COUNT(DISTINCT sub_order_id)",
+        "authority_expression": "COUNT(DISTINCT order_paid.sub_order_id)",
+        "missing_predicates": [
+          "pay_status = 'paid'",
+          "refund_status <> 'refunded'",
+          "is_test_order = false"
+        ],
+        "already_present_predicates": [],
+        "steps": [
+          {
+            "added_predicate": "pay_status = 'paid'",
+            "sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid'",
+            "value": 23747.0,
+            "error": null,
+            "delta_vs_prev": 0.0
+          },
+          {
+            "added_predicate": "refund_status <> 'refunded'",
+            "sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid' AND refund_status <> 'refunded'",
+            "value": 22588.0,
+            "error": null,
+            "delta_vs_prev": -1159.0
+          },
+          {
+            "added_predicate": "is_test_order = false",
+            "sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+            "value": 22536.0,
+            "error": null,
+            "delta_vs_prev": -52.0
+          }
+        ],
+        "reconstructed_value": 22536.0,
+        "explained_by_predicate": true,
+        "why_not_explained": null
+      }
+    },
+    {
+      "case_id": "E-MET-07",
+      "metric": "order_cnt",
+      "tenant": "T_A",
+      "question": "T_A 从 2026-01-01 起的订单量是多少？",
+      "gold_sql": "SELECT COUNT(DISTINCT sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-01-01'",
+      "authority_sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-01-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+      "gold_value": 59418.0,
+      "authority_value": 56408.0,
+      "rel_error": 0.053361,
+      "consistent": false,
+      "gold_error": null,
+      "authority_error": null,
+      "attribution": {
+        "same_expression": true,
+        "gold_expression": "COUNT(DISTINCT sub_order_id)",
+        "authority_expression": "COUNT(DISTINCT order_paid.sub_order_id)",
+        "missing_predicates": [
+          "pay_status = 'paid'",
+          "refund_status <> 'refunded'",
+          "is_test_order = false"
+        ],
+        "already_present_predicates": [],
+        "steps": [
+          {
+            "added_predicate": "pay_status = 'paid'",
+            "sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-01-01' AND pay_status = 'paid'",
+            "value": 59418.0,
+            "error": null,
+            "delta_vs_prev": 0.0
+          },
+          {
+            "added_predicate": "refund_status <> 'refunded'",
+            "sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-01-01' AND pay_status = 'paid' AND refund_status <> 'refunded'",
+            "value": 56584.0,
+            "error": null,
+            "delta_vs_prev": -2834.0
+          },
+          {
+            "added_predicate": "is_test_order = false",
+            "sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-01-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+            "value": 56408.0,
+            "error": null,
+            "delta_vs_prev": -176.0
+          }
+        ],
+        "reconstructed_value": 56408.0,
+        "explained_by_predicate": true,
+        "why_not_explained": null
+      }
+    },
+    {
+      "case_id": "E-MET-09",
+      "metric": "gmv",
+      "tenant": "T_B",
+      "question": "T_B 从 2026-08-01 起的 GMV 是多少？",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "authority_sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+      "gold_value": 14275035.28,
+      "authority_value": 13541842.86,
+      "rel_error": 0.054143,
+      "consistent": false,
+      "gold_error": null,
+      "authority_error": null,
+      "attribution": {
+        "same_expression": true,
+        "gold_expression": "SUM(pay_amount)",
+        "authority_expression": "SUM(order_paid.pay_amount)",
+        "missing_predicates": [
+          "pay_status = 'paid'",
+          "refund_status <> 'refunded'",
+          "is_test_order = false"
+        ],
+        "already_present_predicates": [],
+        "steps": [
+          {
+            "added_predicate": "pay_status = 'paid'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid'",
+            "value": 14275035.28,
+            "error": null,
+            "delta_vs_prev": 0.0
+          },
+          {
+            "added_predicate": "refund_status <> 'refunded'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND refund_status <> 'refunded'",
+            "value": 13578778.85,
+            "error": null,
+            "delta_vs_prev": -696256.43
+          },
+          {
+            "added_predicate": "is_test_order = false",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+            "value": 13541842.86,
+            "error": null,
+            "delta_vs_prev": -36935.99
+          }
+        ],
+        "reconstructed_value": 13541842.86,
+        "explained_by_predicate": true,
+        "why_not_explained": null
+      }
+    },
+    {
+      "case_id": "E-MET-10",
+      "metric": "uv",
+      "tenant": "T_C",
+      "question": "T_C 从 2026-08-01 起的 UV 合计是多少？",
+      "gold_sql": "SELECT SUM(uv) FROM v_traffic_daily WHERE stat_date >= '2026-08-01'",
+      "authority_sql": "SELECT SUM(v_traffic_daily.uv) FROM v_traffic_daily WHERE stat_date >= '2026-08-01' AND uv >= 0",
+      "gold_value": 602325.0,
+      "authority_value": 602325.0,
+      "rel_error": 0.0,
+      "consistent": true,
+      "gold_error": null,
+      "authority_error": null,
+      "attribution": null
+    },
+    {
+      "case_id": "M-IDX-01",
+      "metric": "aov",
+      "tenant": "T_A",
+      "question": "T_A 自 2026-08-01 起的客单价是多少？",
+      "gold_sql": "SELECT SUM(pay_amount) / NULLIF(COUNT(DISTINCT sub_order_id), 0) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "authority_sql": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.sub_order_id), 0) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+      "gold_value": 1374.1701984160065,
+      "authority_value": 1367.8901209147464,
+      "rel_error": 0.004591,
+      "consistent": false,
+      "gold_error": null,
+      "authority_error": null,
+      "attribution": {
+        "same_expression": true,
+        "gold_expression": "SUM(pay_amount) / NULLIF(COUNT(DISTINCT sub_order_id), 0)",
+        "authority_expression": "SUM(order_paid.pay_amount) / NULLIF(COUNT(DISTINCT order_paid.sub_order_id), 0)",
+        "missing_predicates": [
+          "pay_status = 'paid'",
+          "refund_status <> 'refunded'",
+          "is_test_order = false"
+        ],
+        "already_present_predicates": [],
+        "steps": [
+          {
+            "added_predicate": "pay_status = 'paid'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.sub_order_id), 0) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid'",
+            "value": 1374.1701984160065,
+            "error": null,
+            "delta_vs_prev": 0.0
+          },
+          {
+            "added_predicate": "refund_status <> 'refunded'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.sub_order_id), 0) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND refund_status <> 'refunded'",
+            "value": 1368.407956134219,
+            "error": null,
+            "delta_vs_prev": -5.762242
+          },
+          {
+            "added_predicate": "is_test_order = false",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.sub_order_id), 0) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+            "value": 1367.8901209147464,
+            "error": null,
+            "delta_vs_prev": -0.517835
+          }
+        ],
+        "reconstructed_value": 1367.8901209147464,
+        "explained_by_predicate": true,
+        "why_not_explained": null
+      }
+    },
+    {
+      "case_id": "M-IDX-02",
+      "metric": "aov",
+      "tenant": "T_A",
+      "question": "T_A 自 2026-06-01 起的客单价是多少？",
+      "gold_sql": "SELECT SUM(pay_amount) / NULLIF(COUNT(DISTINCT sub_order_id), 0) FROM v_order_paid WHERE pay_time >= '2026-06-01'",
+      "authority_sql": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.sub_order_id), 0) FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+      "gold_value": 1368.0267313765949,
+      "authority_value": 1365.3185733936812,
+      "rel_error": 0.001984,
+      "consistent": false,
+      "gold_error": null,
+      "authority_error": null,
+      "attribution": {
+        "same_expression": true,
+        "gold_expression": "SUM(pay_amount) / NULLIF(COUNT(DISTINCT sub_order_id), 0)",
+        "authority_expression": "SUM(order_paid.pay_amount) / NULLIF(COUNT(DISTINCT order_paid.sub_order_id), 0)",
+        "missing_predicates": [
+          "pay_status = 'paid'",
+          "refund_status <> 'refunded'",
+          "is_test_order = false"
+        ],
+        "already_present_predicates": [],
+        "steps": [
+          {
+            "added_predicate": "pay_status = 'paid'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.sub_order_id), 0) FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid'",
+            "value": 1368.0267313765949,
+            "error": null,
+            "delta_vs_prev": 0.0
+          },
+          {
+            "added_predicate": "refund_status <> 'refunded'",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.sub_order_id), 0) FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid' AND refund_status <> 'refunded'",
+            "value": 1364.7644266867364,
+            "error": null,
+            "delta_vs_prev": -3.262305
+          },
+          {
+            "added_predicate": "is_test_order = false",
+            "sql": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.sub_order_id), 0) FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid' AND refund_status <> 'refunded' AND is_test_order = false",
+            "value": 1365.3185733936812,
+            "error": null,
+            "delta_vs_prev": 0.554147
+          }
+        ],
+        "reconstructed_value": 1365.3185733936812,
+        "explained_by_predicate": true,
+        "why_not_explained": null
+      }
+    },
+    {
+      "case_id": "M-IDX-05",
+      "metric": "refund_rate",
+      "tenant": "T_A",
+      "question": "T_A 自 2026-08-01 起的退款率是多少？",
+      "gold_sql": "SELECT SUM(CASE WHEN refund_status = 'refunded' THEN pay_amount ELSE 0 END) / NULLIF(SUM(pay_amount), 0) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "authority_sql": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0)\n FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND is_test_order = false",
+      "gold_value": 0.04993643841550195,
+      "authority_value": 0.05008328882002321,
+      "rel_error": 0.002932,
+      "consistent": false,
+      "gold_error": null,
+      "authority_error": null,
+      "attribution": {
+        "same_expression": true,
+        "gold_expression": "SUM(CASE WHEN refund_status = 'refunded' THEN pay_amount ELSE 0 END) / NULLIF(SUM(pay_amount), 0)",
+        "authority_expression": "SUM(CASE WHEN order_paid.refund_status = 'refunded' THEN order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(order_paid.pay_amount), 0)\n",
+        "missing_predicates": [
+          "pay_status = 'paid'",
+          "is_test_order = false"
+        ],
+        "already_present_predicates": [],
+        "steps": [
+          {
+            "added_predicate": "pay_status = 'paid'",
+            "sql": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0)\n FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid'",
+            "value": 0.04993643841550195,
+            "error": null,
+            "delta_vs_prev": 0.0
+          },
+          {
+            "added_predicate": "is_test_order = false",
+            "sql": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0)\n FROM v_order_paid WHERE pay_time >= '2026-08-01' AND pay_status = 'paid' AND is_test_order = false",
+            "value": 0.05008328882002321,
+            "error": null,
+            "delta_vs_prev": 0.000147
+          }
+        ],
+        "reconstructed_value": 0.05008328882002321,
+        "explained_by_predicate": true,
+        "why_not_explained": null
+      }
+    },
+    {
+      "case_id": "M-IDX-06",
+      "metric": "refund_rate",
+      "tenant": "T_B",
+      "question": "T_B 自 2026-06-01 起的退款率是多少？",
+      "gold_sql": "SELECT SUM(CASE WHEN refund_status = 'refunded' THEN pay_amount ELSE 0 END) / NULLIF(SUM(pay_amount), 0) FROM v_order_paid WHERE pay_time >= '2026-06-01'",
+      "authority_sql": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0)\n FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid' AND is_test_order = false",
+      "gold_value": 0.04985778251783307,
+      "authority_value": 0.049981614113764596,
+      "rel_error": 0.002478,
+      "consistent": false,
+      "gold_error": null,
+      "authority_error": null,
+      "attribution": {
+        "same_expression": true,
+        "gold_expression": "SUM(CASE WHEN refund_status = 'refunded' THEN pay_amount ELSE 0 END) / NULLIF(SUM(pay_amount), 0)",
+        "authority_expression": "SUM(CASE WHEN order_paid.refund_status = 'refunded' THEN order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(order_paid.pay_amount), 0)\n",
+        "missing_predicates": [
+          "pay_status = 'paid'",
+          "is_test_order = false"
+        ],
+        "already_present_predicates": [],
+        "steps": [
+          {
+            "added_predicate": "pay_status = 'paid'",
+            "sql": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0)\n FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid'",
+            "value": 0.04985778251783307,
+            "error": null,
+            "delta_vs_prev": 0.0
+          },
+          {
+            "added_predicate": "is_test_order = false",
+            "sql": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0)\n FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid' AND is_test_order = false",
+            "value": 0.049981614113764596,
+            "error": null,
+            "delta_vs_prev": 0.000124
+          }
+        ],
+        "reconstructed_value": 0.049981614113764596,
+        "explained_by_predicate": true,
+        "why_not_explained": null
+      }
+    }
+  ],
+  "excluded": [],
+  "comparison_basis": "权威侧 = 语义包 `metrics[].expression + default_predicates + time_basis` 在同一沙箱、同一租户边界（TEMP VIEW）上的直接实现；被比侧 = 冻结集 `gold_sql`（W1A，content_hash 冻结）。⚠️ 本项目无外部 BI 权威值可引 ⇒ 本产物验的是**内部口径一致性**，不是对外部报表数字的验证（§C.4.3 的「已确认权威值」只能降级到这一层，报告须如实写）。",
+  "caveat": "只纳入「题面命中单个核心指标词形 + gold 无 GROUP BY + WHERE 除时间边界与默认谓词外无其他条件」的用例；被排除者逐条列在 `excluded`，不静默丢。可归因判据是三条同时成立（表达式同形 + 缺集非空 + 补齐后收敛），见本文件 docstring。"
+}
