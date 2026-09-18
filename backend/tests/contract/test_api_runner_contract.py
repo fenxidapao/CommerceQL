@@ -56,7 +56,7 @@ from app.cache import keys as cache_keys
 from app.core.contracts import IdentityContext, TokenUsage
 from app.core.enums import RefuseReason, Role, SseEvent, Stage, TaskStatus
 from app.core.errors import ContractViolationError
-from app.graph.build import build_graph
+from app.graph.build import GRAPH_VERSION, build_graph
 from app.graph.context import GraphDeps, current_run_context
 from app.graph.events import Emission, EventRecorder
 from app.llm.errors import LlmRefused, LlmTimeout
@@ -663,8 +663,11 @@ class TestStateStoreOwnership:
         meta = asyncio.run(_run())
         assert meta is not None
         assert meta.title == "上个月卖得怎么样"
-        # 语义包版本**要**更新（它是"这一轮用了哪版口径"的事实）。
-        assert meta.bundle_version == "v-runner-0002"
+        # 🔴 T8 订正（07 §5.7 / N-23："同一会话内 bundle_version 固定不漂移"）：
+        # 旧断言"版本要更新"与规范冲突 —— 语义包中途切换时第二轮静默换口径，
+        # 正是 §5.7 说的"用户无法解释差异"的信任崩塌点。会话固定 = 旧值优先。
+        assert meta.bundle_version == "v-runner-0001"
+        assert meta.graph_version == GRAPH_VERSION
 
     def test_task_ttl_comes_from_keys_single_source(self) -> None:
         """TTL 取自 `cache/keys.DEFAULT_TTL_S`（唯一来源），不在这里另写数字。"""

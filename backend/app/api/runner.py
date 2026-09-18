@@ -103,6 +103,14 @@ _TICK_MAX_S: Final[float] = min(sse.HEARTBEAT_INTERVAL_S, CANCEL_POLL_INTERVAL_S
 #: 消费循环单次等待的下限（防"tick 已经用掉大半"时算出 0 或负数 → 忙等）。
 _TICK_MIN_S: Final[float] = 0.05
 
+#: §16.2 占位帧的判定阈值（秒）。
+#:
+#: 🔴 **1.6 而不是表里的 1.2**（U-66 订正原文：照 `normalize_intent` 的**分配** 1.6s 判定，
+#: "不是旧值 1.2s"）：表 1.2s 是 normalize+intent 的预算，加上建流/发射余量才是 1.5s 的
+#: NFR 口径 —— 占位判定放余量之内才会把"还在预算内跑"的请求误判成需要占位。
+#: 这是 **NFR-1.2 的唯一执行点**（网关根修后没有人替 W4 发这个帧）。
+PLACEHOLDER_AFTER_S: Final[float] = 1.6
+
 
 # ============================================================================
 # 请求与结果
@@ -252,6 +260,8 @@ class SseRunner:
         "_graph_version",
         "_heartbeat_s",
         "_new_deps",
+        "_placeholder_after_s",
+        "_placeholder_sent",
         "_store",
         "outcome",
     )
@@ -265,6 +275,7 @@ class SseRunner:
         graph_version: str = GRAPH_VERSION,
         heartbeat_s: float = sse.HEARTBEAT_INTERVAL_S,
         cancel_poll_s: float = CANCEL_POLL_INTERVAL_S,
+        placeholder_after_s: float = PLACEHOLDER_AFTER_S,
     ) -> None:
         self._graph = graph
         self._store = store
@@ -272,6 +283,10 @@ class SseRunner:
         self._graph_version = graph_version
         self._heartbeat_s = heartbeat_s
         self._cancel_poll_s = cancel_poll_s
+        # §16.2 占位（U-66）：`placeholder_after_s` 可注入（测试压小验证"真的会发"），
+        # 生产装配不传 —— 契约值只有 `PLACEHOLDER_AFTER_S` 一份来源。
+        self._placeholder_after_s = placeholder_after_s
+        self._placeholder_sent = False
         self.outcome: RunOutcome | None = None
 
     # -- 主流程 -------------------------------------------------------------
@@ -322,12 +337,23 @@ class SseRunner:
         drive: asyncio.Task[None],
     ) -> AsyncIterator[bytes]:
         last_beat = time.monotonic()
+        # §16.2 占位的计时起点 = 消费循环进入时刻。它与 `ack`（在 `stream` 里、本函数
+        # 之前发出）的间隔是同任务内的两次同步调用，<1ms —— 把"建流"定义在这里
+        # 而不是再传一个时间戳进来，是省一个参数换不来偏差的交换。
+        started = last_beat
         last_poll = last_beat
         while True:
+            now = time.monotonic()
             wait_s = min(
-                self._heartbeat_s - (time.monotonic() - last_beat),
-                self._cancel_poll_s - (time.monotonic() - last_poll),
+                self._heartbeat_s - (now - last_beat),
+                self._cancel_poll_s - (now - last_poll),
             )
+            # 🔴 占位**必须**参与 tick 周期计算：`wait_for` 会一直等到最近的 tick，
+            # 而占位阈值（1.6s）小于心跳（15s）—— 不把它算进等待，占位判定
+            # 要等到下一次心跳 tick 才有机会跑，NFR-1.2 就在 produces 路径上失效。
+            # （契约测试以 0.05s/10s 的极端比例抓住了这一点。）
+            if not self._placeholder_sent and not drive.done():
+                wait_s = min(wait_s, self._placeholder_after_s - (now - started))
             try:
                 frame = await asyncio.wait_for(
                     recorder.queue.get(), timeout=max(wait_s, _TICK_MIN_S)
@@ -342,6 +368,18 @@ class SseRunner:
                 continue
 
             now = time.monotonic()
+            # §16.2 占位（U-66，NFR-1.2 的唯一执行点）——放在心跳之前判：
+            # 1.6s < 15s，占位永远先到期；发完即止（`_placeholder_sent` 单次闸门）。
+            # 四个条件缺一不可：图已结束（`drive.done()`）就不需要进度占位；
+            # 已有任何 stage 帧（真值已到）就**不覆盖**——占位只补"一个字都没有"的空白。
+            if (
+                not self._placeholder_sent
+                and not drive.done()
+                and not recorder.has_stage_emission()
+                and now - started >= self._placeholder_after_s
+            ):
+                self._placeholder_sent = True
+                recorder.stage_placeholder()
             if now - last_beat >= self._heartbeat_s:
                 # 心跳是**唯一**允许在终态之后发出的事件（07 §14.3 约束 3）：
                 # 转异步场景下 `complete` 先到、用户还要等轮询，此时断流前端会误判连接异常。

@@ -459,6 +459,37 @@ class EventRecorder:
         """心跳（15s 一次）。它是**唯一**允许在终态之后发出的事件（07 §14.3 约束 3）。"""
         self.push(Emission(SseEvent.HEARTBEAT, {}), after_terminal_ok=True)
 
+    def has_stage_emission(self) -> bool:
+        """是否已发出过任何 `stage` 帧（§16.2 占位判定的依据，由 runner 查询）。
+
+        ⚠️ 查询**本记录器**而不是去数节点："`intent` 完成过没有"在合并档下有歧义
+        （`intent` 节点可能返回空增量），而"前端见没见过 stage 帧"是**唯一**与
+        NFR-1.2（首字节必须有可见变化）对齐的事实。
+        """
+        return any(emission.stage is not None for emission in self._emissions)
+
+    def stage_placeholder(self) -> None:
+        """§16.2 首字节兜底：`stage=intent` **占位帧**（U-66，NFR-1.2 的唯一执行点）。
+
+        语义（HANDOFF §五-6 逐字）：
+        - **单次**：调用方（runner）保证只调一次；这里不再防重 —— 防重放在
+          "发射决策"层会把"谁负责只发一次"变成两个窗口的共同假设。
+        - **不发结论**：载荷只有 `elapsed_ms`（真实经过时间，同 `on_node` 的时钟口径），
+          不携带任何 intent 的结论字段 —— 它是进度条的第一段，不是分类结果。
+        - **不回退**：真实 `intent` 完成后 `on_node` 照常发带真值的 `stage=intent`；
+          前端按段幂等显示，不存在"收回占位"的动作。
+
+        ⚠️ 终态守卫对它生效：占位若在终态后才被调用（竞态），会被 `push` 丢弃 ——
+        那正是正确行为（已收口的流不再需要进度占位）。
+        """
+        self.push(
+            Emission(
+                SseEvent.STAGE,
+                {"elapsed_ms": self.elapsed_ms},
+                stage=Stage.INTENT,
+            )
+        )
+
     def on_node(self, node: str, update: Mapping[str, Any], *, extras: Mapping[str, Any] | None = None) -> None:
         """节点结束 → 产出其事件序列。
 

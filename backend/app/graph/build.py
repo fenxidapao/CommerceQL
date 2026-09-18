@@ -36,10 +36,11 @@ T-A1 的目的是回答"**生产该用哪种装配**"，而不是"哪种装配�
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+import functools
+from collections.abc import Callable, Mapping
 from enum import StrEnum
 from itertools import pairwise
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import END, START, StateGraph
@@ -357,8 +358,99 @@ def graph_version() -> str:
 # ============================================================================
 
 
+#: 每节点超时（秒；07 §5.3 契约表"超时"列的逐字落地；HANDOFF §五-5 已裁口径）。
+#:
+#: ⚠️ **"—" 的节点不进表**：`trusted_context` 与三个出口节点在 07 §5.3 表里的超时是
+#: "—"（它们是纯内存操作 / 终态构造），给它们配超时等于发明一个文档里没有的数值。
+#: ⚠️ `EXECUTE` 的 30s 是**上限**（表值"交互 8s / 上限 30s"）—— 交互级超时已由
+#: `statement_timeout_ms`（`GraphDeps`，默认 8s）在 SQL 层承担，这里是兜底上限。
+#: ⚠️ 超时值进入**契约**：`tests/contract/test_graph_timeout_contract.py` 钉"表键集 =
+#: 16 节点里 07 给了超时值的那些"，改这里必须同步 07 §5.3。
+NODE_TIMEOUT_S: Final[dict[str, float]] = {
+    "normalize": 2.0,
+    "intent": 1.5,
+    "link": 4.0,
+    "plan": 3.0,
+    "bind": 0.2,
+    "gen_sql": 2.5,
+    "gate1_ast": 0.1,
+    "gate2_policy": 0.1,
+    "gate3_cost": 1.0,
+    "execute": 30.0,
+    "mask": 0.1,
+    "audit_pre": 1.0,
+    "present": 2.0,
+    "audit_supp": 0.5,
+    "repair": 3.0,
+}
+
+
+def _with_node_timeout(name: str, fn: Any, *, overrides: Mapping[str, float] | None = None) -> Any:
+    """给节点套 `asyncio.timeout()`（HANDOFF §五-5：每节点超时 = asyncio.timeout 包装）。
+
+    ⚠️ **超时 ≠ 节点内失败**：节点内部的失败转移（LLM 不可用 → degraded、EXPLAIN
+    不可用 → 跳过 gate3……）在节点**跑着**时才有机会执行；超时意味着节点**没跑完**，
+    那些转移逻辑没机会触发。故只有两条出路：
+
+    | 节点 | 超时转移 | 依据 |
+    |---|---|---|
+    | `present` | `report_degraded(PRESENT_FAILED, TABLE_ONLY)` + 空增量（= 仅表格） | 07 §14.2 F4 的超时同形：与节点内部失败路径（`present.py` 的 report_degraded + `return {}`）**完全同形**，只是触发源不同 |
+    | 其余 | 告警 + **re-raise** → `runner._drive` 兜底 `error(INTERNAL)` | 节点没跑完 = 工程故障；对着一个没产出结果的节点假装"降级成功"才是谎报 |
+
+    🔴 `audit_supp` **不在"吞掉"之列**（虽然表里它"失败不阻断"）：那个"不阻断"说的是
+    **段 2 写库失败**（节点内部已 try/except 告警），而该节点还兼发 `complete` 终态 ——
+    超时时连终态都没构造出来，吞掉 = 流无终态（违反 N-08）。
+
+    ⚠️ `overrides` 仅供**测试**放大超时（0.1s 的闸门节点在慢 CI 上会假阳性）；
+    生产装配不传 —— 契约值只能有一份来源（本表）。
+    """
+    limit = (overrides or {}).get(name) or NODE_TIMEOUT_S.get(name)
+    if limit is None:
+        return fn
+
+    from app.core.enums import ActionTaken, DegradedReason
+    from app.graph.context import current_run_context_or_none
+    from app.obs.logging import get_logger as _get_logger
+
+    timeout_log = _get_logger(__name__)
+
+    @functools.wraps(fn)
+    async def _timed(state: GraphState) -> dict[str, Any]:
+        try:
+            async with asyncio.timeout(limit):
+                return cast("dict[str, Any]", await fn(state))
+        except TimeoutError:
+            if name == "present":
+                # F4 超时同形：降级为"仅表格"，不再构造 chart/insight（缺席 = 不发事件）。
+                context = current_run_context_or_none()
+                if context is not None:
+                    context.report_degraded(
+                        DegradedReason.PRESENT_FAILED,
+                        ActionTaken.TABLE_ONLY,
+                        {"stage": "present", "reason": "timeout", "limit_s": limit},
+                    )
+                timeout_log.error(
+                    "node_timeout_degraded",
+                    node=name,
+                    limit_s=limit,
+                    extra_fact="present 超时 → degraded(present_failed) 仅表格（§14.2 F4）",
+                )
+                return {}
+            timeout_log.error(
+                "node_timeout",
+                node=name,
+                limit_s=limit,
+                extra_fact="节点超时未收口 → 上抛，由 runner 兜底 error(INTERNAL)（N-08 不留无终态的流）",
+            )
+            raise
+
+    return _timed
+
+
 def build_graph(
     checkpointer: AsyncPostgresSaver | None = None,
+    *,
+    node_timeout_overrides: Mapping[str, float] | None = None,
 ) -> CompiledStateGraph[GraphState, None, GraphState, GraphState]:
     """装配真图：19 个节点（16 主 + 3 出口）+ 07 §5.4 的 14 条条件边。
 
@@ -443,7 +535,10 @@ def build_graph(
 
     builder: StateGraph[GraphState, None, GraphState, GraphState] = StateGraph(GraphState)
     for name in ALL_NODE_NAMES:
-        builder.add_node(name, builders[name])
+        # T8：每节点超时包装（07 §5.3"超时"列；`NODE_TIMEOUT_S` 的 docstring 有全部口径）。
+        builder.add_node(
+            name, _with_node_timeout(name, builders[name], overrides=node_timeout_overrides)
+        )
 
     #: 出口四节点：**终态优先守卫的公共去向**（见 `_guard` 的 docstring）。
     exits: tuple[str, ...] = (CLARIFY_OUT, REFUSE_OUT, ERROR_OUT, AUDIT_SUPP)

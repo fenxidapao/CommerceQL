@@ -81,6 +81,7 @@ import orjson
 from app.cache import keys as cache_keys
 from app.core.contracts import IdentityContext
 from app.core.enums import TaskStatus
+from app.graph.build import GRAPH_VERSION as _GRAPH_VERSION
 
 if TYPE_CHECKING:  # pragma: no cover - 仅为类型检查
     from redis.asyncio import Redis
@@ -372,7 +373,7 @@ class RedisStateStore:
     async def touch_session(
         self, ctx: IdentityContext, *, title: str | None, bundle_version: str | None
     ) -> None:
-        """首轮完成后落标题与语义包版本（附录 A §A.5.1："`title` 生成时机 = 首轮 query 完成后"）。
+        """首轮完成后落标题与**会话固定版本**（附录 A §A.5.1 / 07 §5.7 / N-23）。
 
         ⚠️ `title` 只写一次（"已存在且非空就不覆盖"）：第二轮再写会把标题改成第二个问题，
         而 §A.5.4 明说标题取自**首轮**问题。
@@ -381,12 +382,23 @@ class RedisStateStore:
         —— 于是标题永远写不进去（实测：`GET /session/{id}` 恒返回 `title: null`）。
         同一文件里 `create_session` 的 `closed` 等键也有这个形态，改这里时别改回 `setdefault`。
         ⚠️ 标题长度在 `history_title()` 里截断 —— 服务端是唯一能保证长度/字符规范的地方。
-        """
+
+        🔴 **版本固定 = 旧值优先**（T8，07 §5.7 / N-23："同一会话内 `bundle_version`
+        固定不漂移"）：端点每轮都调本方法，若"新值优先"，语义包在会话中途切换时
+        第二轮会静默换口径 —— 那正是 §5.7 说的"用户无法解释差异"的信任崩塌点。
+        `graph_version` 同理（会话首次成功调用时固定三版本；`prompt_version` 进审计、
+        无 `sess:meta` 键位，见 `create_session` 的键清单）。
+        ⚠️ 诚实边界：这只是**写侧**固定（`GET /session/{id}` 的对账依据）。图内
+        "读侧沿用固定版本"需要把固定版本注回 `RunContext.bundle_version`，
+        而那条通道（`GraphDeps` 未收 `RepositoryPort`）仍是 `trusted_context`
+        登记的缺口 —— 两处口径由端点读 `session_meta` 后传图来对齐（未接线前，
+        图内仍取激活版本）。"""
         key = self._session_key(ctx)
         payload = await self._read_json(key) or {}
         if not payload.get("title") and title:
             payload["title"] = title
-        payload["bundle_version"] = bundle_version or payload.get("bundle_version")
+        payload["bundle_version"] = payload.get("bundle_version") or bundle_version
+        payload["graph_version"] = payload.get("graph_version") or _GRAPH_VERSION
         payload["last_turn_at"] = _now_iso()
         await self._write_json(key, payload, ttl_s=cache_keys.DEFAULT_TTL_S["session_meta"])
 

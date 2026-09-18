@@ -114,3 +114,22 @@
 - **T6**：`build_graph_runtime` + `main.py` lifespan 装配（`SINGLE_SAVER_SHARED_POOL`，§16.3 T-A1 结论），gateway/cost_ledger 挂 shutdown；W3A/W3B 降级汇入单一 `_report_degraded`，W3C `MetricsBindingObserver` 接入；`/query` 原装配缺失的 500 已解。
 - **T7**：`bind` 节点 `set_binding_scope`（try/finally 清理）+ `runner._drive` `set_call_context`；`query_plan` 落库经 `bind::_write_query_plan` 已通（`QueryPlanStore` 由 T6 注入）——W3C DoD① 最后一步已闭合（待其复核）。
 - 门禁：ruff / mypy(143 files) / lint-imports(4 kept) 全过；pytest 全量两次跑（1672p+30E / 1701p+1E）——ERROR 均落在**他人文件**（`test_semantics_loader` / `test_llm_prompts`）且单跑全绿、两轮位置不同 ⇒ 判定 tmp_path 环境噪音非回归，与 W4 变更无关。
+
+---
+
+## 七、T8 韧性交付（本窗口，随下次提交入库）
+
+四子项对照 HANDOFF §五已裁口径：
+
+| 子项 | 落点 | 状态 |
+|---|---|---|
+| 每节点超时 | `graph/build.py`：`NODE_TIMEOUT_S`（07 §5.3"超时"列逐字）+ `_with_node_timeout`（`asyncio.timeout` 包装）| ✅ |
+| 两段审计 | T2–T4 已接线（`audit_pre` fail-closed / `audit_supp` 非阻断 / 取消路径补写）| ✅ 复核无缺口 |
+| 会话级版本固定 | `state_store.touch_session`：**旧值优先**（N-23 不漂移）+ `graph_version` 落键 | ✅ 写侧；读侧缺口维持登记 |
+| §16.2 占位先推 | `runner._pump`：1.6s 无任何 stage 帧 → 单次推 `stage=intent` 占位；`events.EventRecorder.stage_placeholder` | ✅ |
+
+- **超时转移口径**：仅 `present` 超时按 §14.2 F4 同形降级（`degraded(present_failed, table_only)` + 空增量）；其余 14 节点超时 → 告警 + re-raise → `runner._drive` 兜底 `error(INTERNAL)`。🔴 `audit_supp` **不吞**：该节点兼发 `complete` 终态，超时吞掉 = 流无终态（N-08）。`overrides` 参数仅供测试放大 0.1s 闸门值。
+- **占位实现要点**：判定阈值 = **1.6s**（U-66 订正，非旧值 1.2s）；占位**必须参与 tick 周期计算**——否则 `wait_for` 等到下一次心跳（15s）才轮到判定，NFR-1.2 在生产路径上失效（契约测试以 0.05s/10s 极端比例实抓此缺陷）；占位载荷只有 `elapsed_ms`（不发结论）；真值先到不覆盖；图已结束不发。
+- **口径订正**：`test_api_runner_contract.py::test_session_title_is_written_once` 旧断言"版本要更新"与 07 §5.7 / N-23 冲突，已改为"固定不漂移 + `graph_version` 落键"（T8 依据，注释已注明）。
+- **诚实边界**：会话级固定的**图内读侧**（把 pinned 版本注回 `RunContext.bundle_version`）仍缺 `RepositoryPort` 通道（`trusted_context` 原登记维持）——写侧固定后，`GET /session/{id}` 可对账，但图内本轮仍取激活版本。
+- 新契约测试：`tests/contract/test_graph_timeout_contract.py`（表值逐字 / 包装语义 / present 特例 / overrides）+ `tests/contract/test_sse_placeholder_contract.py`（阈值 1.6 / 单次 / 不发结论 / 不回退 / 不覆盖）。
