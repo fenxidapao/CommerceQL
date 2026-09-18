@@ -63,6 +63,7 @@ from app.exec import REPAIRABLE_CLASSES
 from app.graph.nodes import (
     AUDIT_PRE,
     AUDIT_SUPP,
+    BIND,
     CLARIFY_OUT,
     ERROR_OUT,
     EXECUTE,
@@ -230,7 +231,14 @@ def route_after_link(state: GraphState) -> str:
 
 
 def route_after_plan(state: GraphState) -> str:
-    """§5.4：`plan is None` → degraded → 模板 → 命中 `gen_sql` / 未命中 `refuse_out`。
+    """§5.4 第 4 行：`plan is None` → degraded → 模板 → 未命中 `refuse_out`。
+
+    ⚠️ 成功去向 = **`bind`**（不是 §5.4 表字面的"命中则 `gen_sql`"）：
+    该表没有给 `bind`（§5.3 主节点 5）任何入边 —— 按字面装配会让 `bind` 悬空，
+    `route_after_bind`（表的下一行）与 §14.2 B2–B6（绑定歧义/未解析/口径披露）
+    全部不可达。⇒ 本函数把成功跳接到 `bind`，由 `route_after_bind` 决定
+    `gen_sql` / `clarify_out` / `refuse_out`（与表 L1330 的三去向逐字一致）。
+    07 L1329 的字面缺口与本次修正已登记 RELAY §九。
 
     ⚠️ 模板分支在当前实现里不可达（模块 docstring §二-2）：模板层产出文本、
     `gen_sql` 需要结构化 `Plan`，故 `plan` 缺失一律 → `refuse_out`。
@@ -239,7 +247,7 @@ def route_after_plan(state: GraphState) -> str:
         return terminal_target(state)
     if state.get("plan") is None:
         return REFUSE_OUT
-    return GEN_SQL
+    return BIND
 
 
 def route_after_bind(state: GraphState) -> str:

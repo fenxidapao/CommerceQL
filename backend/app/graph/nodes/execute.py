@@ -84,6 +84,10 @@ async def execute(state: GraphState) -> dict[str, Any]:
         "row_count": result.row_count,
         "truncated": result.truncated,
         "result_fingerprint": result.fingerprint,
+        # ⚠️ 成功必须清掉上一轮失败残留：repair 循环里本节点会被二次进入，
+        # 若不清，`route_after_execute` 读到旧 `exec_error` 会把成功误判成
+        # 失败并继续 repair 直到超限（实测 §14.2 C3：终态 error 而非 complete）。
+        "exec_error": None,
     }
 
 

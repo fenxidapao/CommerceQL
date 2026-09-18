@@ -20,17 +20,15 @@
 在没有那些判据时选它们等于把一次"没数据"记成"你没权限"。
 
 --------------------------------------------------------------------------
-二、`message` / `suggestions` 是**占位文案**（登记，同 `SHOP_LIMITED_NOTICE` 先例）
+二、`message` / `suggestions` **不在本节点产出**（映射点在 L5，登记）
 --------------------------------------------------------------------------
-07 §5.6 规定 `refuse` 的载荷含 `message` / `suggestions[]`，而**文案内容归 06 UI/UX**
-（本项目已有先例：`policy_gate.SHOP_LIMITED_NOTICE` 是"固定文案"，内容由实现方暂拟、
-登记待 UI/UX 复核）。本节点沿用该先例，按 `reason` 给一份**中性**文案：
-
-* `message` 只陈述"没有可回答的数据"，**不**透露库里有什么、也不暗示"其实是权限问题"
-  （后者会制造存在性泄露 —— 与 C-07 的三级披露同一条红线）；
-* `suggestions[]` 在 `no_data_asset` 下给"换个问法/收窄范围"这类通用改法
-  （`enums.DEFAULT_SUGGESTIONS` 的同类内容，但此处不 import 它：那是错误码侧的常量，
-  语义是"原样重试必然失败时该怎么改"，与拒答的"没数据"不是同一件事）。
+07 §5.6 规定 `refuse` 的载荷含 `message` / `suggestions[]`，文案内容归 06 UI/UX
+（本项目先例：`policy_gate.SHOP_LIMITED_NOTICE`）。映射表住在 `app/api/errors.py`
+的 `map_refuse`（与 `map_code` 对称），由 runner 的 `_extras` 侧信道送进帧 ——
+**不是**本节点不想给：LangGraph `stream_mode="updates"` 只放行 `GraphState`
+schema 键，本节点往增量顶层写的任何文案键都会在到达 `events` 之前被丢弃
+（T9 批次②实测）。`reason` 同理走侧信道（从 `_RunTrace` 的累积终态读）。
+本节点保留的是**判据**（`_reason_of` 的优先级链）与**终态收口**（if 分支）。
 """
 
 from __future__ import annotations
@@ -46,28 +44,14 @@ __all__ = ["refuse_out"]
 
 _log = get_logger(__name__)
 
-#: `reason` → 中性文案（占位，待 06 UI/UX 复核 —— 见 docstring §二）。
-_MESSAGES: dict[str, str] = {
-    RefuseReason.NO_DATA_ASSET.value: "系统里没有能回答这个问题的数据，无法给出结果。",
-    RefuseReason.OUT_OF_SCOPE.value: "这个问题涉及的数据范围超出你被授权的范围。",
-    RefuseReason.PII_BLOCKED.value: "这个问题会返回受保护的字段，出于安全考虑不能作答。",
-    RefuseReason.OPEN_ANALYSIS.value: "这类开放式分析不在本产品的回答范围内。",
-}
-
-_SUGGESTIONS: dict[str, tuple[str, ...]] = {
-    RefuseReason.NO_DATA_ASSET.value: (
-        "可以试着换一个更具体的问法（点明指标与时间范围）",
-        "也可以先收窄维度，例如只看某个类目或某个渠道",
-    ),
-    RefuseReason.OPEN_ANALYSIS.value: (
-        "可以把它拆成一个有明确口径的统计问题",
-    ),
-}
-_DEFAULT_SUGGESTIONS: tuple[str, ...] = _SUGGESTIONS[RefuseReason.NO_DATA_ASSET.value]
-
 
 async def refuse_out(state: GraphState) -> dict[str, Any]:
-    """拒答终态（`terminal.event = "refuse"`）+ 段 1 审计。"""
+    """拒答终态（`terminal.event = "refuse"`）+ 段 1 审计。
+
+    ⚠️ 上游已设终态时（plan 拒答 / gate2 `out_of_scope` / execute `permission` 等）
+    本节点返回**空增量**（只补审计）：终态已在 state，帧上的 `reason` /
+    `message` / `suggestions` 由 runner `_extras` 侧信道产出（见模块 docstring §二）。
+    """
     terminal = state.get("terminal") or {}
     reason = _reason_of(state, terminal)
     update: dict[str, Any] = {}
@@ -78,11 +62,6 @@ async def refuse_out(state: GraphState) -> dict[str, Any]:
             outcome=Outcome.REFUSE,
             reason=reason,
         )
-
-    # `message` / `suggestions` 走**本节点的增量**（`events._terminal_payload` 会取它们）；
-    # 理由：它们是产品文案，映射点是图内这**一处**（`api/errors` 只映射错误码，不映射拒答）。
-    update["message"] = _MESSAGES.get(reason, _MESSAGES[RefuseReason.NO_DATA_ASSET.value])
-    update["suggestions"] = list(_SUGGESTIONS.get(reason, _DEFAULT_SUGGESTIONS))
 
     if not await write_audit_pre(state, outcome=Outcome.REFUSE, refusal_reason=reason):
         _log.error(

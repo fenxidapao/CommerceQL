@@ -65,7 +65,7 @@ from app.api import errors, sse
 from app.api.state_store import RedisStateStore
 from app.auth.context import bind_identity, reset_identity
 from app.core.contracts import IdentityContext
-from app.core.enums import ErrorCode, Outcome, SseEvent, Stage, TaskStatus
+from app.core.enums import ErrorCode, Outcome, RefuseReason, SseEvent, Stage, TaskStatus
 from app.graph.build import GRAPH_RECURSION_LIMIT, GRAPH_VERSION
 from app.graph.context import (
     GraphDeps,
@@ -74,7 +74,7 @@ from app.graph.context import (
     set_run_context,
 )
 from app.graph.events import Emission, EventRecorder, meta_payload
-from app.graph.nodes import AUDIT_PRE, ERROR_OUT, PRESENT
+from app.graph.nodes import AUDIT_PRE, ERROR_OUT, PRESENT, REFUSE_OUT
 from app.graph.nodes._shared import write_audit_pre
 from app.graph.state import GraphState, initial_state
 from app.llm import LlmCallContext, set_call_context
@@ -516,7 +516,8 @@ class SseRunner:
         |---|---|---|
         | `audit_pre` | `rows` | 结果行是**体积字段**（§5.2.1）：全量在结果集缓存/内存通道，state 里只有 `result_ref` |
         | `present` | `meta` | 它由 **10 组**字段拼成（`scope` 在组 7、`retrieval_mode` 在组 4、计量在组 11…），且 `bundle_version` **没有 state 载体**（见 `events.meta_payload` 的表） |
-        | `error_out` | `message` / `detail` / `retryable` | 文案与可重试性由 **L5** 的 `api/errors.map_code` 产出，而 `app.graph`（L4）不得 import L5 |
+        | `error_out` | `message` / `detail` / `retryable` / `code` | 文案与可重试性由 **L5** 的 `api/errors.map_code` 产出，而 `app.graph`（L4）不得 import L5 |
+        | `refuse_out` | `reason` / `message` / `suggestions` | 文案由 **L5** 的 `api/errors.map_refuse` 产出（对称理由同上）。🔴 两条都**必须**走侧信道：LangGraph `stream_mode="updates"` 只放行 `GraphState` schema 键，出口节点往增量顶层写的这些键在到达 `events` 之前就被丢弃（T9 批次②实测：上游已设终态时 refuse_out/error_out 增量 = `{}`）⇒ 终态事实（`reason`/`code`）改从 `_RunTrace` 的**累积 state** 读（`merge` 先于本方法调用，两条分支都覆盖），文案查表本就在 L5 |
         """
         if node == AUDIT_PRE:
             # `take_rows()` 是**取走即清**（单次赋值语义）：结果行只在这一刻出内存通道。
@@ -525,8 +526,15 @@ class SseRunner:
             return {
                 "meta": meta_payload(trace.state, bundle_version=run_context.bundle_version)
             }
+        if node == REFUSE_OUT:
+            terminal = trace.state.get("terminal") or {}
+            reason = str(terminal.get("reason") or RefuseReason.NO_DATA_ASSET.value)
+            return {"reason": reason, **errors.map_refuse(reason)}
         if node == ERROR_OUT:
-            terminal = update.get("terminal") or {}
+            # 🔴 终态从**累积 state** 读而非增量：上游已设终态（闸门拒绝 / repair 超限 /
+            # mask fail-closed / LLM 4xx·5xx）时出口节点增量是空的（LangGraph 过滤），
+            # 读增量会错码成 INTERNAL（T9 批次②实测 §14.2 D1–D4/D7/F2/F3）。
+            terminal = trace.state.get("terminal") or {}
             code = str(terminal.get("code") or ErrorCode.INTERNAL.value)
             try:
                 error_code = ErrorCode(code)

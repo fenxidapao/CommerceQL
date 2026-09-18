@@ -42,6 +42,7 @@ from app.graph.nodes import (
     ALL_NODE_NAMES,
     AUDIT_PRE,
     AUDIT_SUPP,
+    BIND,
     CLARIFY_OUT,
     ERROR_OUT,
     EXECUTE,
@@ -153,14 +154,16 @@ def test_route_after_link_plans_when_clean() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_route_after_plan_goes_to_gen_sql_when_plan_present() -> None:
-    assert route_after_plan(_state(plan={"metrics": []})) == GEN_SQL
+def test_route_after_plan_goes_to_bind_when_plan_present() -> None:
+    """成功去向 = `bind`（07 §5.4 表字面是"命中则 gen_sql"，但那会让 `bind` 悬空 ——
+    修正依据见 `route_after_plan` 的 docstring，差异登记 RELAY §九）。"""
+    assert route_after_plan(_state(plan={"metrics": []})) == BIND
 
 
 def test_route_after_plan_refuses_when_plan_missing() -> None:
     """⚠️ 模板分支不可达（`NullTemplateProvider` 恒无命中 + 模板产出非 `Plan`）。
 
-    缺口补齐（模板层落地产出真 `Plan`）后，本用例应改为断言走到 `GEN_SQL`。
+    缺口补齐（模板层落地产出真 `Plan`）后，本用例应改为断言走到 `BIND`。
     """
     assert route_after_plan(_state(plan=None)) == REFUSE_OUT
 

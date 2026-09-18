@@ -564,7 +564,7 @@ def build_graph(
         LINK, *branch(edges.route_after_link, REFUSE_OUT, CLARIFY_OUT, PLAN)
     )
     builder.add_conditional_edges(
-        PLAN, *branch(edges.route_after_plan, REFUSE_OUT, GEN_SQL)
+        PLAN, *branch(edges.route_after_plan, REFUSE_OUT, BIND)
     )
     builder.add_conditional_edges(
         BIND, *branch(edges.route_after_bind, CLARIFY_OUT, REFUSE_OUT, GEN_SQL)

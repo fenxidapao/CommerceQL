@@ -619,15 +619,15 @@ def _stage_emission(stage: Stage, elapsed_ms: int, extra: Mapping[str, Any]) -> 
 def _terminal_payload(node: str, update: Mapping[str, Any], extra: Mapping[str, Any]) -> dict[str, Any]:
     """出口三节点的载荷（07 §5.6 表后三行 + `GraphState` 组 11）。
 
-    ⚠️ 产品文案（`message` / `suggestions[]` / `detail` / `retryable`）有**两个可能来源**：
-    · `extras`（runner/端点层，经 `app/api/errors.map_code` 映射 —— `error` 帧的正常来源）；
-    · 本节点的**增量**（`refuse_out` 直接把文案放进它的返回值 —— 拒答不走错误码映射）。
-    两者都取不到时**如实缺字段**，不编造（U-22）。
+    ⚠️ 产品文案与终态事实（`message` / `suggestions` / `detail` / `retryable` /
+    `reason` / `code`）的**唯一活通道是 `extras`**（runner `_extras` 侧信道）：
+    LangGraph `stream_mode="updates"` 只放行 `GraphState` schema 键，出口节点往
+    增量顶层写的这些键在到达本函数之前就被过滤（T9 批次②实测：上游已设终态时
+    出口节点增量 = `{}`）。`error` 帧的映射在 `api/errors.map_code`、`refuse` 帧
+    在 `api/errors.map_refuse`（终态事实从 `_RunTrace` 的累积 state 读）。
+    缺 `extras` 时如实发"少字段"的帧并告警，**不编造**（U-22）。
     """
     payload: dict[str, Any] = dict(extra)
-    for key in ("message", "suggestions", "detail", "retryable"):
-        if payload.get(key) is None and update.get(key) is not None:
-            payload[key] = _jsonable(update[key])
     if node == CLARIFY_OUT:
         clarify = _mapping(update.get("clarify"))
         payload.setdefault("clarify_id", clarify.get("clarify_id"))

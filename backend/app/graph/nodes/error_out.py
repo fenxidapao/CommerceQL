@@ -68,7 +68,14 @@ _GATE_CODE: dict[GateNo, ErrorCode] = {
 
 
 async def error_out(state: GraphState) -> dict[str, Any]:
-    """失败终态（`terminal.event = "error"`）+ 段 1 审计。"""
+    """失败终态（`terminal.event = "error"`）+ 段 1 审计。
+
+    ⚠️ 上游已设终态时（闸门拒绝 / repair 超限 / mask fail-closed / LLM 4xx·5xx 等）
+    本节点返回**空增量**（只补审计）：`code` 已在 `state.terminal`，帧上的
+    `code` / `message` / `detail` / `retryable` 由 runner `_extras` 侧信道产出
+    （`api/errors.map_code` 映射；终态从 `_RunTrace` 的累积 state 读 —— LangGraph
+    `updates` 模式会过滤掉增量顶层的非 schema 键，T9 批次②实测）。
+    """
     update: dict[str, Any] = {}
     if state.get("terminal") is None:
         update = terminal_update(

@@ -31,6 +31,7 @@ from app.core.enums import (
     RETRYABLE_BOOLEAN,
     ErrorCode,
     RateLimitBucket,
+    RefuseReason,
     Role,
 )
 from app.core.errors import CommerceQLError
@@ -48,6 +49,7 @@ __all__ = [
     "map_code",
     "map_exception",
     "map_rate_limited",
+    "map_refuse",
     "rate_limit_headers",
     "server_time",
     "sse_response_headers",
@@ -142,6 +144,54 @@ def map_code(
         detail=dict(detail or {}),
         suggestions=tuple(resolved_suggestions),
     )
+
+
+#: 拒答 `reason` → 中性 `message`（占位文案，待 06 UI/UX 复核 —— 沿 `SHOP_LIMITED_NOTICE` 先例）。
+#:
+#: ⚠️ 表住在 L5 而不是 `graph/nodes/refuse_out.py` 的原因（T9 批次②实测）：
+#: LangGraph `stream_mode="updates"` 只放行 `GraphState` schema 键 —— 出口节点往增量
+#: 顶层写的 `message`/`suggestions` 在到达 `events.emissions_for_node` 之前就被丢弃
+#: （实测 refuse_out 增量 = `{}`）。SSE 帧文案的唯一活通道是 `_extras` 侧信道（L5），
+#: 故映射与 `map_code` 对称地住在 L5。文案约束不变：`message` 只陈述"没有可回答的数据"，
+#: **不**透露库里有什么、不暗示"其实是权限问题"（存在性泄露，C-07 同一条红线）。
+_REFUSAL_MESSAGES: Final[dict[str, str]] = {
+    RefuseReason.NO_DATA_ASSET.value: "系统里没有能回答这个问题的数据，无法给出结果。",
+    RefuseReason.OUT_OF_SCOPE.value: "这个问题涉及的数据范围超出你被授权的范围。",
+    RefuseReason.PII_BLOCKED.value: "这个问题会返回受保护的字段，出于安全考虑不能作答。",
+    RefuseReason.OPEN_ANALYSIS.value: "这类开放式分析不在本产品的回答范围内。",
+}
+
+#: `reason` → 改法建议（`no_data_asset` 的通用收窄建议；其余 reason 无更具体的改法）。
+_REFUSAL_SUGGESTIONS: Final[dict[str, tuple[str, ...]]] = {
+    RefuseReason.NO_DATA_ASSET.value: (
+        "可以试着换一个更具体的问法（点明指标与时间范围）",
+        "也可以先收窄维度，例如只看某个类目或某个渠道",
+    ),
+    RefuseReason.OPEN_ANALYSIS.value: (
+        "可以把它拆成一个有明确口径的统计问题",
+    ),
+}
+
+#: 兜底改法（`reason` 不在 `_REFUSAL_SUGGESTIONS` 时用，语义与 `no_data_asset` 档一致）。
+_REFUSAL_DEFAULT_SUGGESTIONS: Final[tuple[str, ...]] = _REFUSAL_SUGGESTIONS[
+    RefuseReason.NO_DATA_ASSET.value
+]
+
+
+def map_refuse(reason: str) -> dict[str, Any]:
+    """拒答 `reason` → `refuse` 帧的 `message` / `suggestions[]`（与 `map_code` 对称的查表）。
+
+    ⚠️ `suggestions` 的语义是"没数据时该怎么改问法"，与 `DEFAULT_SUGGESTIONS`
+    （错误码侧的"原样重试必然失败时该怎么改"）**不是同一件事**，故不共用表。
+    """
+    return {
+        "message": _REFUSAL_MESSAGES.get(
+            reason, _REFUSAL_MESSAGES[RefuseReason.NO_DATA_ASSET.value]
+        ),
+        "suggestions": list(
+            _REFUSAL_SUGGESTIONS.get(reason, _REFUSAL_DEFAULT_SUGGESTIONS)
+        ),
+    }
 
 
 def map_rate_limited(bucket: RateLimitBucket, *, message: str = "") -> HttpErrorMapping:

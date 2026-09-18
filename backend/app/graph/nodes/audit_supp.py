@@ -57,8 +57,14 @@ async def audit_supp(state: GraphState) -> dict[str, Any]:
         "latency_ms_present": int(context.latency_ms().get(LatencyKey.PRESENT.value, 0)),
         "chart_type": _chart_type(state),
         "insight_hash": _insight_hash(state),
+        # 🔴 从 RunContext（权威累积器）读而非 `state.degradations`：`degradations`
+        # 进 state 的唯一通道是 `metering_update` 的快照（出口/收口节点写终态时带上），
+        # 而 present 恰恰**不写**（P0 降级后返回空增量）⇒ 读入参 state 会漏掉
+        # `present_failed`（P0 恒在的降级）—— supp 审计的 `degradations` 列将为空
+        # （T9 批次②实测）。`present` 与 `audit_supp` 之间的节点不产生降级，
+        # 故本时刻的累积快照 = 本轮全部降级。
         "degradations": [
-            orjson.dumps(item, default=str).decode() for item in (state.get("degradations") or ())
+            orjson.dumps(item, default=str).decode() for item in context.degradations()
         ],
     }
     try:
