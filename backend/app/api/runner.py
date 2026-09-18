@@ -77,6 +77,7 @@ from app.graph.events import Emission, EventRecorder, meta_payload
 from app.graph.nodes import AUDIT_PRE, ERROR_OUT, PRESENT
 from app.graph.nodes._shared import write_audit_pre
 from app.graph.state import GraphState, initial_state
+from app.llm import LlmCallContext, set_call_context
 from app.obs.logging import get_logger
 
 __all__ = [
@@ -395,6 +396,22 @@ class SseRunner:
             "configurable": {"thread_id": thread_id_of(req.identity)},
             "recursion_limit": GRAPH_RECURSION_LIMIT,
         }
+        # 🔴 LLM 计量上下文（W3A §3 / W3B RELAY §3）：不设 ⇒ 计量归 `"(unset)"` ——
+        # 那是**可见**的错误，但积攒一整天后"按租户对账"就废了。
+        # 设置点选在**本任务**（`_drive` 由每请求一个的 `asyncio.create_task` 驱动）而不是
+        # `stream()`：contextvar 写进哪个 task 的上下文，就只在那个 task 里可见 ——
+        # 本任务随请求生灭 ⇒ 计量上下文的作用域被**钉死在一次 run 内**，
+        # 端点任务与后续请求都读不到它（不需要"事后清除"，也就不依赖
+        # `app.llm` 目前没有的 `clear_call_context`）。
+        set_call_context(
+            LlmCallContext(
+                task_id=req.identity.task_id,
+                tenant_id=req.identity.tenant_id,
+                # ⚠️ `user_id` = JWT `sub`（`IdentityContext.user_id`）；三个字段都只进
+                #    计量聚合，**永不出站**（N-12 的 PII 禁令对 payload 生效，不对此处）。
+                user_id=req.identity.user_id,
+            )
+        )
         try:
             async for chunk in self._graph.astream(state, config, stream_mode="updates"):
                 for node, update in dict(chunk).items():

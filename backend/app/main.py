@@ -21,12 +21,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import errors
-from app.api.deps import RUNTIME_STATE_KEY, build_runtime
-from app.api.routers import clarify, health, query, session
+from app.api.deps import GRAPH_RUNTIME_STATE_KEY, RUNTIME_STATE_KEY, build_runtime
+from app.api.routers import clarify, feedback, health, query, session
 from app.core.config import AppEnv, get_settings
 from app.core.enums import Dependency
 from app.core.errors import SemanticBundleError
-from app.graph.build import CheckpointSetupOutcome, ensure_checkpoint_schema
+from app.graph.build import (
+    GRAPH_VERSION,
+    CheckpointSetupOutcome,
+    ensure_checkpoint_schema,
+)
 from app.obs import metrics
 from app.obs.logging import configure_logging, get_logger
 from app.repo.health import build_probe_table
@@ -165,6 +169,53 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
             ),
         )
 
+    # --- 4.5 图运行时装配（T6，W4 追加段）---
+    # ⚠️ 为什么在 4 之后：`build_graph(checkpointer=...)` 需要一个**已开**的 checkpoint 池；
+    #    为什么在 5 之前：探针注册后 LB 立刻开始判定 readiness，而图运行时是否就绪
+    #    会直接影响 `/query` 系端点能否工作（500 ⇔ 未装配），观测要在判定前落定。
+    #
+    # ⚠️ **本段只追加，不另立组装根**（W1B 纪律）：lifespan 的六步顺序归 W1B，
+    #    W4 在此插入的只有"构造 + 挂 app.state"，顺序调整权在组装根窗口。
+    #
+    # ⚠️ 装配策略（W4 的装配决定，T-A1 最终裁定权在架构）：`SINGLE_SAVER_SHARED_POOL`
+    #    —— 复用第 4 步**已开**的 `pools.checkpoint`（零新增连接资源，关闭权仍在
+    #    lifespan 手里）；`setup=False` 因为 `ensure_checkpoint_schema` 刚刚跑过，
+    #    再跑一次 `setup()` 只会在 PG 上多排一次 `pg_advisory_xact_lock`（无收益）。
+    #    其余策略（PER_RUN_*）属"每请求建检查点"形态，与本装配（进程级单图）不匹配。
+    from app.api.deps import build_graph_runtime
+    from app.graph.build import CheckpointStrategy, make_checkpointer
+
+    graph_runtime = None
+    try:
+        saver = await make_checkpointer(
+            CheckpointStrategy.SINGLE_SAVER_SHARED_POOL,
+            settings,
+            pool=pools.checkpoint,
+            setup=False,
+        )
+        graph_runtime = build_graph_runtime(
+            settings=settings,
+            pools=pools,
+            redis=redis_client,
+            audit=runtime.audit,
+            semantic_runtime=semantic_runtime,
+            checkpointer=saver,
+        )
+    except Exception as exc:
+        # ⚠️ 装配失败**必须**让启动失败（fail-fast），但要把"哪件东西没装好"说出来 ——
+        #    吞掉异常会让 lifespan 看似成功、端点 500、日志里却没有任何装配痕迹。
+        #    与"依赖连不上 ⇒ 非 prod 放行"不同：这里是**配置/接线**错误，不是依赖抖动。
+        logger.exception("graph_runtime_assembly_failed", error_type=type(exc).__name__)
+        raise
+    if graph_runtime is not None:
+        setattr(application.state, GRAPH_RUNTIME_STATE_KEY, graph_runtime)
+        logger.info(
+            "graph_runtime_assembled",
+            graph_version=GRAPH_VERSION,
+            gateway=type(graph_runtime.gateway).__name__,
+            why="T6：GraphRuntime 进 app.state ⇒ /query 系端点不再以 500 拒答",
+        )
+
     # --- 5. 健康探针（W1B 三件 + W2A 语义包探针，其余槽位保持"未接线"的如实上报）---
     probes = build_probe_table(
         metadata_engine=pools.metadata,
@@ -198,6 +249,21 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     #   未完成的流发 error(INTERNAL) 且 terminal:true（**不得静默断连**）→
     #   释放会话锁（finally）+ 写审计 outcome=failed（07 §18.3）。
     # 本窗口只负责**释放自己创建的连接资源** —— 不替后续窗口假装做完停机六步。
+    #
+    # --- 4.5 的关闭（W4 追加段：两条**长连资源**，先于三池）---
+    # ⚠️ `gateway.aclose()` 释放 httpx 连接（W3A §4："不关则 httpx 连接不释放"）；
+    #    `cost_ledger.close()` 释放单条专用 psycopg 连接（W1B §9.2："不关 = 泄漏"）。
+    #    两者都必须在池关闭**之前**完成（顺序无关紧要但"先长连后池"最直观），
+    #    且**各自兜底**：一条失败不得阻断另一条与池的释放（停机路径要走到头）。
+    if graph_runtime is not None:
+        import contextlib as _contextlib
+
+        if graph_runtime.gateway is not None:
+            with _contextlib.suppress(Exception):
+                await graph_runtime.gateway.aclose()
+        if graph_runtime.cost_ledger is not None:
+            with _contextlib.suppress(Exception):
+                graph_runtime.cost_ledger.close()
     await redis_client.aclose()
     await pools.checkpoint.close()
     await pools.metadata.dispose()
@@ -245,6 +311,7 @@ def create_app() -> FastAPI:
     app.include_router(query.router, prefix=API_PREFIX)
     app.include_router(session.router, prefix=API_PREFIX)
     app.include_router(clarify.router, prefix=API_PREFIX)
+    app.include_router(feedback.router, prefix=API_PREFIX)
     # 🔴 未接线（T6）：`app.state[GRAPH_RUNTIME_STATE_KEY]` 还没装配 ⇒ 上面三个端点
     #    会以 `500 INTERNAL`（`deps.get_graph_runtime` 的显式拒答）结束，**不是**"能用"。
     #    这一步必须与 `build_gateway` / `BindingService` / 图编译一起做（T6），

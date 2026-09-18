@@ -28,9 +28,10 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Final
 
 from fastapi import Request
@@ -52,9 +53,12 @@ from app.core.contracts import (
 )
 from app.core.enums import RateLimitBucket
 from app.core.errors import CommerceQLError
+from app.obs import metrics
 from app.obs.audit import AuditWriter
+from app.obs.logging import get_logger
 from app.obs.trace import TraceIds, bind_ids, new_id, reset_ids
 from app.repo.audit_store import AuditStore
+from app.repo.feedback import FeedbackStore
 from app.repo.pools import ThreePools
 
 if TYPE_CHECKING:  # pragma: no cover - 仅为类型检查
@@ -64,15 +68,21 @@ if TYPE_CHECKING:  # pragma: no cover - 仅为类型检查
 
 __all__ = [
     "GRAPH_RUNTIME_STATE_KEY",
+    "RETRIEVAL_WEIGHTS",
     "RUNTIME_STATE_KEY",
     "AppRuntime",
     "GraphRuntime",
+    "MetricsBindingObserver",
     "RateLimited",
+    "SseDegradationSink",
+    "SsePlannerDegradationSink",
     "authenticate",
+    "build_graph_runtime",
     "build_runtime",
     "build_token_verifier",
     "check_rate_limit",
     "get_audit_sink",
+    "get_feedback_store",
     "get_graph_runtime",
     "get_identity",
     "get_rate_limiter",
@@ -106,6 +116,10 @@ class AppRuntime:
     session_lock: SessionLockPort
     rate_limiter: RateLimiterPort
     audit: AuditSinkPort
+    #: 反馈落库（`POST /feedback` 的唯一写入通道，W1B 提供）。
+    #: ⚠️ 收**引擎**（`pools.metadata`）而不是连接：借用/归还每语句一次，
+    #: 零新增连接资源、零 shutdown 责任（同 `audit_store` / `query_plan` 的裁定）。
+    feedback: FeedbackStore
 
 
 def build_runtime(
@@ -116,7 +130,7 @@ def build_runtime(
 ) -> AppRuntime:
     """组装运行时对象。**纯构造，不做 I/O**（连接是惰性的）。
 
-    ⚠️ 三个具体实现（锁 / 限流 / 审计）在这里 `new` 出来而不是让调用方注入：
+    ⚠️ 四个具体实现（锁 / 限流 / 审计 / 反馈落库）在这里 `new` 出来而不是让调用方注入：
     它们都只依赖 `client` 或 `engine`，没有第二份配置；
     允许注入只会造出"测试里用 A、生产里用 B"的差异面 —— 而这类差异
     恰好会让契约测试（用假实现）全绿、生产（用真实现）出问题。
@@ -130,6 +144,8 @@ def build_runtime(
         rate_limiter=RedisBucketRateLimiter(redis),
         # 审计的 fail-closed 语义在 `obs/audit.py`，SQL 在 `repo/audit_store.py`（§12.4.1 的分工）。
         audit=AuditWriter(AuditStore(pools.metadata)),
+        # 反馈写入复用**元数据池**（W1B 开工指令 §1）：不新建连接资源。
+        feedback=FeedbackStore(pools.metadata),
     )
 
 
@@ -160,6 +176,14 @@ class GraphRuntime:
     store: RedisStateStore
     verifier: TokenVerifier
     new_deps: Callable[[], GraphDeps]
+    #: 🔴 **长连资源**，由 `main.py` 的 lifespan 关闭区释放（W1B §9.2 / W3A §4）。
+    #:
+    #: ⚠️ 为什么它们必须挂在本对象上而不是局部变量：`build_graph_runtime` 是**函数**，
+    #: 局部变量出了函数就没了 —— 而 `await gateway.aclose()`（否则 httpx 连接不释放）
+    #: 与 `ledger.close()`（单条专用 psycopg 连接）都发生在**进程关闭时**。
+    #: 不挂出来的直接后果是"开发期一切正常、压测/长跑后连接数只增不减"。
+    gateway: Any | None = None
+    cost_ledger: Any | None = None
 
 
 def build_token_verifier(settings: Settings) -> TokenVerifier:
@@ -228,6 +252,17 @@ def get_rate_limiter(request: Request) -> RateLimiterPort:
 
 def get_audit_sink(request: Request) -> AuditSinkPort:
     return get_runtime(request).audit
+
+
+def get_feedback_store(request: Request) -> FeedbackStore:
+    """反馈落库通道（`POST /feedback` 用）。
+
+    ⚠️ 与 `get_state_store` 的分工必须看清：那个返回 **Redis** 状态存储
+    （task/session/幂等/澄清），本函数返回 **PostgreSQL** 的 `app.feedback` 访问对象。
+    两者都不是"通用状态库"—— 把反馈写进 Redis 会绕开 §12.3 的表与
+    `uq_feedback_task_user_reason` 的唯一约束，而幂等恰恰只由那个约束保证。
+    """
+    return get_runtime(request).feedback
 
 
 # ---------------------------------------------------------------------------
@@ -405,3 +440,402 @@ async def session_lock_guard(
         yield key
     finally:
         await runtime.session_lock.release(key, ctx.task_id)
+
+
+# ===========================================================================
+# T6：图运行时装配（由 `main.py` 的 lifespan 调用）
+# ===========================================================================
+#
+# 为什么装配代码在这里而不是 `main.py`：`main.py` 的 lifespan 是**顺序**（六步的次序
+# 有语义，见它的 docstring），把构造细节也塞进去会让"顺序"被二十行构造代码淹没。
+# 本模块是"接线位"，构造放这里、顺序放那里（`build_runtime` 已经是同一分工）。
+#
+# ⚠️ 本节的函数**只在 lifespan 里调用一次**（进程级），绝不进请求路径 ——
+# 唯一进请求路径的是 `GraphRuntime.new_deps`，它构造的是**每请求一份**的 `GraphDeps`。
+
+#: 07 §6.7 的四路 RRF 权重（**逐字对齐该表，不是调优结果**）。
+#:
+#: ⚠️ 写成本模块的常量而不是 `Settings` 字段：07 §6.7 把这张表定为**契约**，
+#: 而"降级时的权重重分配必须是确定性规则"（同节明文）。放进可配置项会让
+#: "同一问题两次结果不同"从"不可能"变成"取决于谁改了 .env"。
+#: `sparse_only` 的重分配（dense 的 0.40 按 0.35:0.10 分给 sparse/graph）在
+#: `app/retrieval/fuse.effective_weights`，不在这里重复。
+RETRIEVAL_WEIGHTS: Final[Mapping[str, float]] = MappingProxyType(
+    {"dense": 0.40, "sparse": 0.35, "value": 0.15, "graph": 0.10}
+)
+
+#: `SparseSearch` 的归一化标志与低分阈值（W2B 的装配示例用它自己的取值）。
+_SPARSE_RANK_NORMALIZATION: Final[int] = 32
+_SPARSE_SCORE_MIN: Final[float] = 0.05
+
+
+def _report_degraded(reason: Any, action_taken: Any, detail: Any, *, source: str) -> None:
+    """两条降级侧信道的**唯一**转出口（W3A 出站跳 + W3B 业务跳共用）。
+
+    🔴 为什么收在一处：RELAY 说"两条通道缺一就有可见性缺口"，而两条通道的**转出语义
+    完全相同**（reason + action_taken + detail → 当前请求的降级累积 + SSE 帧）。
+    各写一份的结果是"其中一条忘了带 `detail`"，而那种缺陷在两条通道里表现不对称，
+    最难发现的正是"只有某个特定降级路径丢字段"。
+
+    ⚠️ **同步**（两个 sink 都是同步回调）：`RunContext.report_degraded` 也是同步的，
+    所以这里**不需要** sync→async 桥接 —— 这正是 `report_degraded` 存在的意义
+    （它在内部用 `EventRecorder.degraded`，后者直接 `Queue.put_nowait`）。
+    ⇒ ☠️ 不得在此处 `await` / `asyncio.run`：`on_degraded` 在 `call()` 的同步段被调用，
+    阻塞它会直接吃任务的延迟预算。
+
+    ⚠️ `detail` 只进日志与 `GraphState.degradations`，**不进 SSE 帧**
+    （C-08 的 `degraded.data` 只有 `{reason, action_taken, partial_result?}`）——
+    这条口径由 `RunContext.report_degraded` 承担，本函数不重复处理。
+    """
+    from app.graph.context import current_run_context_or_none
+
+    context = current_run_context_or_none()
+    if context is None:
+        # 无请求上下文 = 正常状态（离线评测 / 启动自检 / 直接构造引擎的单测），
+        # 不是接线缺陷 ⇒ 如实记一条日志放行，**不抛**（见 `current_run_context_or_none`）。
+        get_logger(__name__).info(
+            "degradation_without_run_context",
+            source=source,
+            reason=str(reason),
+            action_taken=str(action_taken),
+            why="离线/启动期降级：没有请求可挂 ⇒ 只记日志（与 RunContext._recorder is None 同口径）",
+        )
+        return
+    context.report_degraded(reason, action_taken, detail)
+
+
+class SseDegradationSink:
+    """W3A 的 `DegradationSink`（网关**出站跳**）→ 当前请求的 SSE 流。
+
+    ⚠️ 默认实现（`_LoggingDegradationSink`）**不是空实现**，但它到不了 SSE：
+    不接本类 = 前端看不到任何 LLM 降级（`switched_to_weak_model` / `llm_unavailable` …）。
+    """
+
+    __slots__ = ()
+
+    def on_degraded(self, event: Any) -> None:
+        _report_degraded(
+            event.reason,
+            event.action_taken,
+            getattr(event, "detail", None),
+            source="llm",
+        )
+
+
+class SsePlannerDegradationSink:
+    """W3B 的 `PlannerDegradationSink`（planner **业务跳**）→ 当前请求的 SSE 流。
+
+    ⚠️ 另一条通道（outcome 自带的 `degradations[]`）由节点写进 `GraphState.degradations`，
+    与本类是**两条都要接**的关系，不是二选一。
+    """
+
+    __slots__ = ()
+
+    def on_degraded(self, note: Any) -> None:
+        _report_degraded(
+            note.reason,
+            note.action_taken,
+            getattr(note, "detail", None),
+            source="planner",
+        )
+
+
+class MetricsBindingObserver:
+    """W3C 的 `BindingObserver` → W0 的 `obs.metrics` 计数器（N-27 约束⑤ 的计量端）。
+
+    🔴 不接这一个的后果写在协议自己的 docstring 里：默认 `NullBindingObserver`
+    什么都不做 ⇒ **指标面是缺的**（不是"已满足"）。`service.observer` 属性可查
+    到底接的是本类还是空实现。
+
+    ⚠️ **不自行登记同名 Counter**：指标本体由 W0 落（`binding_state_total` /
+    `binding_layer_total`），本类只把 `BindingEvent` 的两个字段喂进去。
+    自己登记一份 = 第二真相，两处会漂移且没有任何测试会红。
+
+    ⚠️ `event.reason` 与概念名**只进日志**（无界基数，`obs.metrics` 明文禁止）
+    ⇒ 本类把它们写进结构化日志而不是标签。
+    """
+
+    __slots__ = ()
+
+    def on_binding(self, event: Any) -> None:
+        from app.obs import metrics
+
+        metrics.observe_binding_state(event.state)
+        metrics.observe_binding_layer(event.layer)
+        # ⚠️ 不 try/except：协议要求"实现不得抛"，而这两个函数是对**枚举**做的
+        #    `dict[key] += 1`（`core.enums` 的冻结取值集），没有任何可抛的输入。
+        #    包一层 `except Exception` 只会把"指标写坏了"变成静默的（调用侧还会兜一层）。
+        get_logger(__name__).info(
+            "binding_decision",
+            binding_state=event.state.value,
+            binding_layer=event.layer.value,
+            reason=event.reason,
+            scope_was_set=event.scope_was_set,
+            tau_is_calibrated=event.tau_is_calibrated,
+        )
+
+
+def _metadata_fetch(engine: Any) -> Any:
+    """元数据池上的**通用取数** —— `PgVectorStore` / `SparseSearch` 的注入物。
+
+    🔴 这是**本窗口新增的接线件**，不是从哪个包抄来的：两个检索存储类都声明
+    "取数经注入的 `fetch(sql, params)`（阶段 4 由 W4 注入元数据池的执行器）"，
+    而 `app/repo/pools.py` 只提供 `ThreePools`，**没有**通用 `fetch`。
+    本对象就是那句注释里的"执行器"，落在这里（W4 的接线位）而不是 `repo/`
+    （W1B 域，要改请先提需求）。
+
+    ⚠️ 三个刻意的性质：
+
+    1. **每语句借还一次**（`async with engine.connect()`）—— 与 `AuditStore` /
+       `QueryPlanStore` / `FeedbackStore` 同一纪律（07 §8.1 纪律 1）。持有连接会让
+       "谁负责归还"含糊，漏归还的表现是池被慢慢抽干。
+    2. **参数用 SQLAlchemy 的 `:name` 占位**（`text()` + `dict(params)`）——
+       两个存储类的 SQL 模板就是 `:vector` / `:bundle_version` 这种形态，
+       故**不做** `%(name)s` 改写（那是 psycopg 直连形态的写法，W2B 的评测脚本用）。
+    3. **返回 `list[Mapping]`**（`mappings()`）而不是 tuple —— 调用方按列名取值。
+
+    ⚠️ 之所以是**类**而不是闭包：`retrieval.Fetcher` 是"实例带异步 `__call__`"的
+    Protocol，mypy 对"裸函数直接匹配 `__call__` Protocol"判定不稳定（实测报
+    `arg-type`）；类实例在两侧都是精确形状，也让 docstring 有地方落。
+    """
+    from sqlalchemy import text
+
+    class _MetadataFetcher:
+        __slots__ = ("_engine",)
+
+        def __init__(self, the_engine: Any) -> None:
+            self._engine = the_engine
+
+        async def __call__(self, sql: str, params: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+            async with self._engine.connect() as conn:
+                result = await conn.execute(text(sql), dict(params))
+                return [dict(row) for row in result.mappings().all()]
+
+    return _MetadataFetcher(engine)
+
+
+
+def _load_bundle_view(path: str) -> Any:
+    """语义包 YAML → `BundleView`（检索面的只读视图）。
+
+    ⚠️ 这里**再读一次 YAML**（`main.py` 已用 `load_bundle` 读过一次给
+    `SemanticBundleRuntime`），这是**登记过的重复**，不是疏忽：
+
+    - `BundleView.from_mapping` 要的是**原始 mapping**，而
+      `SemanticBundleRuntime` 只把 `LoadedBundle` 藏在私有字段里（`_loaded`），
+      没有暴露 mapping 的公开面 ⇒ 从运行时无法派生；
+    - 拿 `LoadedBundle.bundle.model_dump()` 去凑不可取：那是**模型序列化**，
+      与原始 YAML 在别名/默认值上的往返一致性没有任何测试保证 —— 用它等于
+      在"检索看到的东西"与"语义层看到的东西"之间插一个未验证的转换。
+    - W2B 自己的装配示例（`reports/w2b/recall_report.py`）也是这么做的。
+
+    ⇒ 两次解析**同一个文件**（同一次启动内文件不变 ⇒ 无漂移）。
+    已登记：建议 W2A 在 `SemanticBundleRuntime` 上暴露一个返回原始 mapping 的只读访问器，
+    届时本函数改为从运行时取，重复即消除。
+    """
+    import yaml  # type: ignore[import-untyped]  # types-PyYAML 未进 dev 依赖（W0 白名单，同 semantics/loader.py）
+
+    from app.retrieval.view import BundleView
+
+    with open(path, encoding="utf-8") as fh:
+        return BundleView.from_mapping(yaml.safe_load(fh))
+
+
+def _gate3_thresholds(settings: Settings) -> dict[str, Any]:
+    """`GraphDeps.gate3_thresholds` —— `CostThresholds` 的**字段名 → `Settings.GATE3_*`**。
+
+    ⚠️ `graph/context.py` 原先注释说该映射"来源 = 语义包 `policy()`" —— **实测不成立**：
+    `SemanticBundleRuntime.policy()` 只回 `deny_columns` / `applies_to_blacklist` 之类，
+    **没有**成本阈值；语义包 YAML 里也 grep 不到 `gate3` / `total_cost` / `rows_pass`。
+    唯一来源是 `Settings.GATE3_*`（`config.py:118-121`，且已有
+    `total_cost_pass < total_cost_reject` 的交叉校验）。本函数按字段名映射
+    （`CostThresholds.from_mapping` 的键名即字段名），**缺键由 dataclass 默认值兜底**
+    （= 07 §7.5 原表）。该注释已同步订正。
+    """
+    return {
+        "total_cost_pass": settings.GATE3_COST_WARN,
+        "total_cost_reject": settings.GATE3_COST_REJECT,
+        "rows_pass": settings.GATE3_ROWS_WARN,
+        "rows_reject": settings.GATE3_ROWS_REJECT,
+    }
+
+
+def build_graph_runtime(
+    *,
+    settings: Settings,
+    pools: ThreePools,
+    redis: Redis,
+    audit: AuditSinkPort,
+    semantic_runtime: Any | None,
+    checkpointer: Any | None = None,
+) -> GraphRuntime | None:
+    """装配图运行时（T6）。**返回 `None` 表示语义包不可用**（软依赖降级）。
+
+    ⚠️ 为什么"语义包不可用 ⇒ 不装配"而不是"装一半"：
+    `GraphDeps.semantics` / `binding` / `retrieval` 都**从语义包派生**（视图、τ、
+    资产白名单）。语义包缺失时任何一个都造不出来，而造一个"能进图但一跑就炸"的运行时
+    会让端点从"明确的 500 + 日志"退化成"看起来正常、跑到某个节点才炸"
+    —— 后者在前端表现为**随机失败**。
+    此时 `app.state` 上不设 `GRAPH_RUNTIME_STATE_KEY` ⇒ `get_graph_runtime` 的
+    显式拒答生效（错误信息直接指出"装配段未执行"），而 readiness 已经因为
+    `semantic_bundle_loaded` 探针报 503（摘流量）—— 两层都是**如实**的。
+
+    ⚠️ 纯装配不做的两件事（都不在 T6 范围，见 §五的边界）：
+    - 不 `await` 任何 I/O：`PemFileJwksSource` / `DbCostLedgerSink` / 三个池全是惰性连接
+      （07 §18.2 要求"起不来"与"依赖没就绪"是两件事）；
+    - 不注册任何健康探针（那是 `main.py` 的步骤 6）。
+    """
+    if semantic_runtime is None:
+        get_logger(__name__).warning(
+            "graph_runtime_not_assembled",
+            reason="semantic_bundle_unavailable",
+            extra_fact="图运行时**未**装配 ⇒ /query 等端点会以 500 明确拒答，不是『能用』",
+            why="语义包是 GraphDeps 的派生源（视图/τ/白名单）；装一半会让失败随机化",
+        )
+        return None
+
+    # --- 函数内 import：装配只在启动跑一次，模块 import 期保持廉价，也不会与 graph 成环 ---
+    from app.binding.service import BindingService
+    from app.core.clock import Clock
+    from app.exec.executor import PgSqlExecutor
+    from app.graph.build import build_graph
+    from app.graph.context import GraphDeps
+    from app.llm import build_gateway
+    from app.mask.engine import SemanticMaskEngine
+    from app.planner.engine import PlannerEngine
+    from app.repo.cost_ledger import DbCostLedgerSink
+    from app.repo.query_plan import QueryPlanStore
+    from app.retrieval.dense import OllamaEmbedder, PgVectorStore
+    from app.retrieval.search import RetrievalService
+    from app.retrieval.sparse import SparseSearch
+
+    logger = get_logger(__name__)
+
+    # --- 1. 成本落库 sink + LLM 网关（W1B §9.2 / W3A §4）---
+    # ⚠️ `settings.DATABASE_URL` 传**原值**（SQLAlchemy 形态），libpq 换算在 sink 内部。
+    cost_ledger = DbCostLedgerSink(settings.DATABASE_URL)
+    gateway = build_gateway(
+        settings,
+        ledger=cost_ledger,
+        degradation=SseDegradationSink(),
+    )
+
+    # --- 2. 检索（W2B）---
+    fetch = _metadata_fetch(pools.metadata)
+    retrieval = RetrievalService(
+        view=_load_bundle_view(settings.SEMANTIC_BUNDLE_PATH),
+        embedder=OllamaEmbedder(
+            base_url=settings.EMBEDDING_BASE_URL,
+            model=settings.EMBEDDING_MODEL,
+            dim=settings.EMBEDDING_DIM,
+            timeout_s=float(settings.EMBEDDING_TIMEOUT_SECONDS),
+            # ⚠️ `cache=None`：`CachePort` **全仓无实现**（`app/cache/` 只有键定义与
+            #    会话锁；`runner.py` 的 P0 边界表已登记同一事实）。传 None = 每次真打
+            #    Ollama，如实慢；不传会需要一个不存在的实现（编一个 = 第二真相）。
+            cache=None,
+        ),
+        vector_store=PgVectorStore(fetch),
+        sparse=SparseSearch(
+            fetch,
+            rank_normalization=_SPARSE_RANK_NORMALIZATION,
+            score_min=_SPARSE_SCORE_MIN,
+        ),
+        weights=RETRIEVAL_WEIGHTS,
+        rrf_k=settings.RRF_K,
+        cache=None,
+    )
+
+    # --- 3. 掩码 / 执行（W2D）---
+    mask = SemanticMaskEngine()
+    executor = PgSqlExecutor(
+        pools.analytics,
+        mask,
+        settings,
+        bundle=semantic_runtime,
+    )
+
+    # --- 4. 绑定（W3C）：装配 + τ 断言 + gauge（U-19 §18.4.1 硬要求 ②）---
+    binding_service = BindingService.from_settings(
+        reader=semantic_runtime,
+        settings=settings,
+        observer=MetricsBindingObserver(),
+    )
+    # `assert_usable_tau()` 只做"坏配置 ⇒ ConfigError"（ε≤0 / τ≤0 / 已校准无 report_ref），
+    # **不**重复 config 层的 prod 拒绝、**不**写指标、**不**校验"实际打分器 == τ 所绑"。
+    calibrated = binding_service.assert_usable_tau()
+    metrics.set_binding_tau_calibrated(calibrated)
+    if not calibrated:
+        logger.warning(
+            "binding_tau_uncalibrated",
+            extra_fact="τ 未校准 ⇒ L4 精排结果不可用于生产判定",
+            env_gated=True,
+            why="U-19：非 prod 放行但不得隐瞒（prod 会在 config 层直接拒绝启动）",
+        )
+    logger.info(
+        "binding_service_assembled",
+        observer=type(binding_service.observer).__name__,
+        tau_is_calibrated=calibrated,
+        why="observer 类型要能在这里一眼看到 —— 默认空实现时 N-27 约束⑤ 的指标面是缺的",
+    )
+
+    # --- 5. query_plan 写入通道（W1B §10，W3C DoD① 的最后一步）---
+    query_plan_writer = QueryPlanStore(pools.metadata)
+
+    # --- 6. 图（单例，可并发复用；依赖经 contextvars 每请求注入）---
+    graph = build_graph(checkpointer=checkpointer)
+
+    thresholds = _gate3_thresholds(settings)
+    time_semantics = semantic_runtime.time_semantics()
+    store = RedisStateStore(redis)
+
+    def new_deps() -> GraphDeps:
+        """**每请求一份** `GraphDeps`。
+
+        🔴 `PlannerEngine` 在这里 `new`（而不是在装配期造一个共享实例）是硬约束：
+        它唯一的可变状态 `_pending`（本次调用的降级累积）生命周期 = 一次公开方法调用，
+        并发复用会**串降级事件**（A 请求的降级发给 B 的流）。把构造放进本工厂
+        让"每请求一份"在**结构上**无法写错。
+        ⚠️ `clock` 同理每请求一份：它持 `TimeSemantics` 与本请求无关，但共享实例
+        没有任何收益，而"顺手共享"是下一次引入请求态的地方。
+        ⚠️ **T7 待补**：本工厂尚未接 `set_binding_scope` / `set_call_context`
+        （每请求上下文，缺则 L2 与过滤步③静默失效、计量归 `"(unset)"`）。
+        """
+        return GraphDeps(
+            llm=gateway,
+            planner=PlannerEngine(
+                llm=gateway,
+                semantics=semantic_runtime,
+                clock=Clock(time_semantics),
+                degradation=SsePlannerDegradationSink(),
+            ),
+            binding=binding_service,
+            semantics=semantic_runtime,
+            retrieval=retrieval,
+            executor=executor,
+            mask=mask,
+            audit=audit,
+            clock=Clock(time_semantics),
+            # ⚠️ `None`：结果集缓存的唯一位置是 `result:{tenant}:{task_id}`，而
+            #    `CachePort` 全仓无实现（与上面 embedder 的 cache 同一事实）。
+            #    `mask` 节点因此走"写失败只告警"的已登记路径。
+            result_cache=None,
+            query_plan_writer=query_plan_writer,
+            # ⚠️ `None`：`app/present/` 仍是空壳（W3B 归属）⇒ `present` 节点走
+            #    §14.2 F4 降级（`present_failed` + `table_only`）。这意味着 **P0 下
+            #    每个成功请求都会带一条 `degraded`** —— 这是既定 P0 形态（不是缺陷），
+            #    已在 DELIVERY 显著登记。
+            presenter=None,
+            gate3_thresholds=thresholds,
+            max_rows=settings.EXEC_MAX_ROWS,
+            statement_timeout_ms=settings.EXEC_STATEMENT_TIMEOUT_MS,
+        )
+
+    return GraphRuntime(
+        graph=graph,
+        store=store,
+        verifier=build_token_verifier(settings),
+        new_deps=new_deps,
+        gateway=gateway,
+        cost_ledger=cost_ledger,
+    )
+

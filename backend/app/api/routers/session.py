@@ -9,7 +9,8 @@
 ⚠️ 两个安全约束在这里的落点（都不是形式主义）：
 
 1. **`POST /session` 不收 `title`**（§A.5.1 的 B-19 修订）。
-   由 `dto/session.py` 的 `extra="forbid"` 保证"客户端还在传 `title`"变成 **422 显式拒绝**，
+   由 `dto/session.py` 的 `extra="forbid"` 保证"客户端还在传 `title`"变成
+   **400（`INVALID_REQUEST`）显式拒绝**，
    而不是静默忽略 —— 静默忽略会让联调期变成"我传了 title 但列表里没有"这种要翻代码的问题。
    本文件**不**读请求体，所以也不可能"顺手"把 `title` 用上。
 

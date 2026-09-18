@@ -65,7 +65,7 @@ class AskOptions(BaseModel):
     ⚠️ 全部字段都有默认值，且 `QueryRequest.options` 可整体缺省 ——
     附录 A §A.1.1 把它们全标成 ⭕（可选）。前端恒传其中五项（W5 RELAY §1.2），
     但"前端恒传"不是契约，**不得**据此把字段设成必填：那会让 curl/测试/第三方接入
-    因为漏一个字段而 422。
+    因为漏一个字段而收到 400（`INVALID_REQUEST`）。
     """
 
     model_config = ConfigDict(extra="forbid")

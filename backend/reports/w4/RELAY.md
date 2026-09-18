@@ -80,3 +80,37 @@
 ## 五、已解除 / 无需行动
 
 - **§七-1 TaskStatus 两源不一致**：已按裁定 B 解除——W0 `d09020c` 对齐附录 A；**W5 轮询按 A.2 实现即可，前端无需改动**。
+---
+
+## 六、给 W1B —— ✅ 回执：T5.3 `POST /feedback` 已接线（开工指令四要件全落）
+
+- 回执对象：`reports/w1b/PROMPT_TO_W4.md`（远端 `89262bb`）；执行日 2026-09-18，W4 本地提交（本节实证随之入库）。
+- **要件①** `user_id` 取 `deps.get_identity().user_id`：✅ 端点内实际取值即此（见 `app/api/routers/feedback.py` `submit_feedback`）；真库探针落行 `user_id = "probe_user"`（与 `tenant_id="probe_tenant"` 刻意不同，证明取的是 subject 维度而非租户）。
+- **要件②** `queued_for_review` 口径（W4 自定，窄口径不谎报）：**`= (not is_correct) and corrected_sql is not None`**——只有"用户明确给了修正 SQL"才值得进人工复核队列；`comment`/`correct_result_hint` 不触发（单有意见无修正，复核无锚点）。其余组合一律 `false`；行本身始终落库，不因口径丢弃。
+- **要件③** 幂等先 `find_feedback_id` 回读：✅ `_resolve_feedback_id` = 先查→命中即返；未命中才 `new_id("feedback")`+INSERT；并发撞 `uq_feedback_task_user_reason` 时捕 `IntegrityError` 再回读一次，回读仍空则上抛（不吞非同行的冲突）。
+
+### 实证（真 PG 端到端探针 `reports/w4/probe_feedback_endpoint_pg.py`，`commerceql-pg-1` 实测）
+
+链路 = HTTP（TestClient）→ 真验签链（`mint_dev_token.py` 铸币 + `build_token_verifier`）→ 端点 → 真 `FeedbackStore`（metadata 池）→ 迁移 0005 的 `app.feedback` 表：
+
+```json
+{"verdict": "PASS",
+ "①首次提交":  {"http": 200, "feedback_id": "fb_94bb29d467f3407c8d07b17bf740b49a",
+               "queued_for_review": true,
+               "db_row": {"task_id": "tk_probe_feedback_0001", "user_id": "probe_user",
+                          "is_correct": false, "reason_code": "wrong_metric_definition",
+                          "corrected_sql": "SELECT 1", "correct_result_hint": "应为 1752.10 万元"}},
+ "②同键重提交": {"http": 200, "feedback_id": "fb_94bb29d467f3407c8d07b17bf740b49a", "db_row_count": 1},
+ "③null归因重提交": {"http": [200, 200], "feedback_id": "fb_a49978eba7f0418dba7481ebf75496df",
+                  "db_rows_total": 2, "reason_codes": ["None", "wrong_metric_definition"]}}
+```
+
+- ① id 形如 `fb_`（35 位）且真库落行，可选列逐字入库；② 同三元组重提交返回**同一条 id**、行数不变（`UNIQUE NULLS NOT DISTINCT` 生效）；③ `reason_code = NULL` 的重复提交同 id 命中（`IS NOT DISTINCT FROM` 读回配对生效），与①共 2 行互不干扰。
+- ⚠️ 诚实边界（同 W1B §7）：探针是**进程内 TestClient**，未经 uvicorn/compose 容器层 ⇒ 不据此宣称"容器内端到端已验证"。
+- 契约测试侧：`tests/contract/test_api_feedback_contract.py` 22 例全绿（幂等组合/竞态恢复/身份字段/枚举边缘/限流配额/400 vs 422 口径）。
+
+### 顺手交付（同批本地提交）
+
+- **T6**：`build_graph_runtime` + `main.py` lifespan 装配（`SINGLE_SAVER_SHARED_POOL`，§16.3 T-A1 结论），gateway/cost_ledger 挂 shutdown；W3A/W3B 降级汇入单一 `_report_degraded`，W3C `MetricsBindingObserver` 接入；`/query` 原装配缺失的 500 已解。
+- **T7**：`bind` 节点 `set_binding_scope`（try/finally 清理）+ `runner._drive` `set_call_context`；`query_plan` 落库经 `bind::_write_query_plan` 已通（`QueryPlanStore` 由 T6 注入）——W3C DoD① 最后一步已闭合（待其复核）。
+- 门禁：ruff / mypy(143 files) / lint-imports(4 kept) 全过；pytest 全量两次跑（1672p+30E / 1701p+1E）——ERROR 均落在**他人文件**（`test_semantics_loader` / `test_llm_prompts`）且单跑全绿、两轮位置不同 ⇒ 判定 tmp_path 环境噪音非回归，与 W4 变更无关。

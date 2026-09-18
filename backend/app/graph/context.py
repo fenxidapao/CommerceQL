@@ -58,6 +58,7 @@ __all__ = [
     "RunContext",
     "clear_run_context",
     "current_run_context",
+    "current_run_context_or_none",
     "identity_from_state",
     "set_run_context",
 ]
@@ -94,7 +95,11 @@ class GraphDeps:
     #: `present` 生成器（chart/insight）。**P0 = `None`**：`app/present/` 仍是空壳（W3B 归属），
     #: 此时 `present` 节点走 §14.2 F4 的降级路径（`degraded(present_failed)` + `table_only`）。
     presenter: Any | None = None
-    #: gate3 阈值（`CostThresholds.from_mapping` 的输入）。来源 = 语义包 `policy()`。
+    #: gate3 阈值（`CostThresholds.from_mapping` 的输入）。
+    #: ⚠️ 来源 = **`Settings.GATE3_*`**（`deps._gate3_thresholds()` 按 `CostThresholds`
+    #: 的字段名映射），**不是**语义包 `policy()` —— 本注释原先写"来源 = 语义包 policy()"，
+    #: 实测不成立：`policy()` 只回 `deny_columns` / `applies_to_blacklist` 之类，
+    #: 语义包 YAML 里也没有任何 gate3 / 成本阈值键（2026-09-18 grep 实证）。已订正。
     #: ⚠️ 用 `default_factory` 而不是 `None` 默认值：`Mapping` 的"缺省空表"与"显式 None"
     #: 在 `from_mapping` 里行为相同，但前者不需要调用方判空（少一条可写错的分支）。
     gate3_thresholds: Mapping[str, Any] = field(default_factory=dict)
@@ -327,6 +332,27 @@ def current_run_context() -> RunContext:
             "此时节点拿不到任何依赖，只能编造结果；那比直接报错危险得多（fail-fast 是刻意的）。"
         )
     return context
+
+
+def current_run_context_or_none() -> RunContext | None:
+    """同 `current_run_context()`，但**未设置时返回 `None`** 而不抛。
+
+    🔴 为什么需要"不抛"的这一版（而它**不是**对 fail-fast 的放松）：
+
+    W3A/W3B 的降级 sink 是**同步回调**，它们被网关/引擎在**任意调用点**触发 ——
+    包括**没有请求上下文**的地方（启动自检、离线评测、`tests/unit/test_planner_egress_contract.py`
+    这类直接构造引擎的用例）。那里"没有 RunContext"是**正常状态**，不是接线缺陷：
+
+    - 用抛错版 ⇒ 每次离线调用都会在回调里炸出 `RuntimeError`，而回调的异常
+      会被调用侧兜住/日志刷屏，真正的降级信息反而被淹没（"噪音淹没信号"）；
+    - 用本函数 ⇒ 返回 `None`，sink 据此**记一条日志**并放行 —— 与
+      `RunContext._recorder is None` 时的既有口径（"无 SSE 出口 ⇒ 降级只进 state/审计，
+      这是如实少一条通道而非静默丢弃"）完全一致。
+
+    ⚠️ **节点内部仍然必须用抛错版**：节点**永远**在 run 里被调用，
+    在那里拿不到上下文只能意味着接线漏了 —— 本函数不得被节点使用。
+    """
+    return _RUN_CONTEXT.get()
 
 
 def identity_from_state(state: Mapping[str, Any]) -> IdentityContext:

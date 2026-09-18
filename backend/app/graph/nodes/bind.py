@@ -50,6 +50,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from app.binding import MAX_CLARIFY_OPTIONS
+from app.binding.context import BindingRequestScope, clear_binding_scope, set_binding_scope
 from app.core.contracts import CandidateRef
 from app.core.enums import ActionTaken, BindingLayer, BindingState, DegradedReason
 from app.core.errors import ContractViolationError
@@ -98,7 +99,27 @@ async def bind(state: GraphState) -> dict[str, Any]:
     # ⚠️ 本节点**不单独计时**：`LatencyKey` 是恰好 8 个（C-04 要求与审计键集逐字一致），
     # 里面没有 `bind` 键。硬塞一个语义不符的键会让两处数不再可比（见 `_shared` 文档头 §三），
     # 故 bind 的耗时只体现在 `latency_ms.total` 里。
-    outcome = deps.binding.resolve_detailed(concept, identity, (*asset_refs, *l4_refs))
+    #
+    # 🔴 问句上下文（W3C RELAY §2 / `binding/context.py` 的"接线动作归 W4"）：
+    # 不设 ⇒ **L2 与五步过滤的步③ 静默失效**（fail-open，`scope_was_set=False` 如实标出）。
+    # 设置点在这里（`resolve_detailed` 之前）而不是 runner：scope 要的是
+    # `normalized_question`，它由 planner 在 `state` 里产出 —— runner 在进图前拿不到，
+    # 只有本节点同时握着"归一化问句"与"判定调用"两样东西。
+    # ⚠️ `time_semantics` 传 `None`（不校）：那是"**请求声明**的时间语义"
+    # （§A.1.1 的 options 没有这一项 ⇒ 没有来源），而 `Clock` 的口径来自**语义包**，
+    # 两者语义不同 —— 拿后者冒充前者等于发明一个请求没做过的声明（U-22）。
+    # ⚠️ `bundle_version` 带上（N-23 的一致性告警输入）。
+    set_binding_scope(
+        BindingRequestScope(
+            normalized_question=question,
+            bundle_version=context.bundle_version or None,
+        )
+    )
+    try:
+        outcome = deps.binding.resolve_detailed(concept, identity, (*asset_refs, *l4_refs))
+    finally:
+        # 同一请求内可能多次进入（重试/重跑路径）⇒ 必须还原，不能残留到下一次判定。
+        clear_binding_scope()
 
     if not outcome.scope_was_set:
         # L2 与五步过滤的步③ **不判**（fail-open，W3C RELAY §2）。不静默：打日志 + 登记。
