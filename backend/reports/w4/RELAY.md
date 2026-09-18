@@ -145,3 +145,38 @@
   - **H 组映射已由 W0 钉死**（`test_contract_counts.py` 41 项：HTTP status 全覆盖 / Retry-After 只对 ✅ / 值具体 / ⭕ suggestions / INTERNAL 迁 ⭕）——T9 不重复建。
 - **进度（不谎报全绿）**：B–G 组（约 34 行）待下一批——B 组需要 `deps.retrieval.search_full` 全脚本、C–E 组需要 plan/executor 全链脚本（当前图测试只走早退路径，`executor/mask` 是"未预期调用当场炸"占位）。graph_snapshot（`test_graph_wiring.py`）与 redteam 骨架（`test_redteam_guard.py`）已在位。
 - 门禁：ruff / mypy(143) / lint-imports(4 kept) 全过。
+
+---
+
+## 九、T9 批次②（决策表 B–G 组）：全链图级测试 + 差异/修复登记
+
+- **产出**：`tests/contract/_fullchain_deps.py`（全链脚本 deps 夹具库，接口逐字对齐节点调用面）＋ `test_decision_table_b_c.py`（B/C）＋ `test_decision_table_d_e.py`（D/E）＋ `test_decision_table_f_g.py`（F/G）。断言模板沿 A 组（`terminal_frames` 恰 1 终态 + `outcome.status` + 审计落行）。
+- **本批实测**：`tests/contract` 目录 **380 passed**（含全部新文件）；全量门禁见 `DELIVERY.md §3`。
+
+### 9.1 生产真缺口（T9 实测抓到，已修）
+
+| # | 缺口 | 修复 |
+|---|---|---|
+| **U-88** | **出口帧 `reason`/`code` 丢失**：LangGraph `stream_mode="updates"` 只放行 `GraphState` schema 键，`refuse_out`/`error_out` 往增量顶层写的 `reason`/`code` 在到达 `events.emissions_for_node` 前被过滤（实测两出口增量 = `{}`） | `runner._extras` 的 ERROR_OUT/REFUSE_OUT 分支改从 `trace.state` **累积**读终态；`refuse_out`/`error_out` 删死代码回填；`events.py` 删死代码复制循环；`api/errors.py` 新增 `map_refuse(reason)`（`_REFUSAL_MESSAGES`/`_REFUSAL_SUGGESTIONS` 表，与 `map_code` 对称，文案归 L5 因侧信道是唯一活通道） |
+| **U-89** | **C3 终态 error 而非 complete（`exec_error` 残留）**：`execute` 成功分支不清 `exec_error`，repair 后第二跳成功被 `route_after_execute` 误判失败 | `execute.py` 成功分支 update 加 `"exec_error": None` |
+| **U-90** | **B6 supp 降级为空**：present 返回空增量不写 `degradations`，`audit_supp` 读入参 `state.degradations` 恒空，漏掉 P0 恒在的 `present_failed` | `audit_supp.py` 改从 `context.degradations()`（权威累积器）读 |
+
+### 9.2 差异登记（07 字面 vs 实现事实，断言按实现写，不谎报已解决）
+
+| # | 差异 | 现状 |
+|---|---|---|
+| **U-91** | B2+B3 `reason` 取值 | 07 字面 `ambiguity`；实现走 `ambiguous_field_binding`（`refuse/clarify` reason 无枚举覆盖该字面值）——断言按实现事实写 |
+| **U-92** | C1+C2 合一 | 07 两行（`LlmError` 与 `PlannerError` 计划阶段失败）在实现中走同一条 `plan` 节点异常分流路径，合并为一条可测面 |
+| **U-93** | D3 `error` ≠ `refuse` | `policy_gate.run_gate2` 的 G2-DENY 命中敏感列走 `_reject("G2-DENY")`，**不设 `refuse_reason`** ⇒ 终态是 `error` 而非 07 字面的 `refuse`（`PII_BLOCKED`） |
+| **U-94** | D4 `message` 为空 | 出口码 `message` 是 `map_code` 入参默认空（文案归 06 UI/UX），runner `_extras` 未接线具体文案——D 组删掉该断言 |
+| **U-95** | F1 无弱模型降级档 | `LlmTimeout`/`LlmCircuitOpen` 在图内可测面（脚本件直抛、不经 `app.llm` 网关降级链）→ `llm_error_update` 按 `default_code="INTERNAL"` 折 `error`，而非 07 字面 `degraded + switched_to_weak_model` |
+| **U-96** | F5 不可达 | `GateResult` 缺"预估延迟"载体 ⇒ 转异步分支恒 False（已有 `test_edges_contract.py::test_async_switch_is_unreachable_until_carrier_lands` 钉住） |
+| **U-97** | F6 会话历史恒空 | `GraphState` 无历史消息字段（`normalize` docstring §三已登记），裁剪无从发生 ⇒ 无任何事件，纯登记 |
+| **U-98** | G3 缺载体（kill switch） | 触发面需意图节点读全局禁用开关（P0 无）；路由面（"节点已设终态按终态出口"）已被 `test_edges_contract.py::test_route_after_intent_respects_terminal_set_by_node` 钉住 |
+| **U-99** | G4 缺载体（recursion_limit ≥25） | 需构造 ≥25 步循环，正常链无法触达；`GRAPH_RECURSION_LIMIT` 常量见 `build.py` ⇒ 图级不可测 |
+| **U-100** | B6 `disclosure` 仅审计可见 | 绑定披露文案只进 `audit_supp` 落行载荷，不进 SSE 帧（前端无该列） |
+| **U-101** | `TaskStatus.DEGRADED` 不可达 | 成功链路走 `complete` 终态（携 `degraded` 帧），无独立 `degraded` 终态路径；枚举值存在但图内无出口 |
+| **U-102** | E7（取消路径）/ E8（错误码表）引用既有测试 | 无图级新桩：E7 引用 `test_api_runner_contract.py::TestCancellation`，E8 引用 `test_errors_contract.py` |
+| **U-103** | 07 L1329 `route_after_plan` 字面缺口 | 07 决策表把 `plan` 异常行写在某条件边上；实现为 `PLAN→BIND` 正常装配下的异常分流（`PlanOutcome` 失败不阻断 BIND 语义），已按实现事实修正 |
+
+> 给 W5 的联调清单沿用 `HANDOFF.md §四`，本节不重复。
