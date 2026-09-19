@@ -62,6 +62,7 @@ class Sample:
     frames: int = 0
     code: str | None = None
     detail: str | None = None
+    msg: str | None = None  # 终止 error 帧的 message ⇒ 区分"业务内部错误"与"drain 注入的停机帧"
 
 
 @dataclass(slots=True)
@@ -182,7 +183,8 @@ async def fire_one(
         # 流正常结束却没有终止帧：这是 N-08 违约，不是"成功"。
         return Sample("truncated", status, ttfb, total, frames, detail="流结束但无 terminal=true 帧")
     if terminal == "error":
-        return Sample("error_frame", status, ttfb, total, frames, code=str(data.get("code")))
+        return Sample("error_frame", status, ttfb, total, frames,
+                      code=str(data.get("code")), msg=str(data.get("message") or "")[:60])
     if terminal == "complete":
         if data.get("async") or data.get("task_id"):
             return Sample("async_degraded", status, ttfb, total, frames, detail="超阈值转异步，端到端未在此流内完成")
@@ -304,11 +306,22 @@ def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: a
         "ttfb_ms": {"p50": _pct(ttfbs, 50), "p95": _pct(ttfbs, 95)},
         "outcomes": by_outcome,
         "codes": _codes(samples),
+        # drain 证据只能靠 message 分家：光看 `error_frame` 数会把"停机注入"和"节点超时"混成一坨。
+        "drain_frames": sum(1 for s in samples if s.msg and "重启" in s.msg),
+        "error_messages": _messages(samples),
         # G-6 只看 total_ms 的 p95；⚠️ 有 async_degraded 时该数**不可**直接判达标，见 README §四。
         "g6_p95_le_8s": (_pct(totals, 95) is not None and _pct(totals, 95) <= 8000.0),
         "g6_caveat": ("含 async_degraded 样本 ⇒ 端到端未真正完成，P95 偏低"
                       if by_outcome.get("async_degraded") else None),
     }
+
+
+def _messages(samples: list[Sample]) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for s in samples:
+        if s.msg:
+            out[s.msg] = out.get(s.msg, 0) + 1
+    return out
 
 
 def _codes(samples: list[Sample]) -> dict[str, int]:

@@ -156,11 +156,15 @@ async def test_drain_bytes_reach_the_client_and_count_as_failed() -> None:
         sent.append(message)
 
     mw = ObservingMiddleware(app, registry=registry, terminal_error_frame=_drain_terminal_frame)
-    with pytest.raises(BaseException) as raised:  # _DrainAbort 故意穿透 except Exception
-        await mw({"type": "http", "path": "/api/v1/query", "method": "POST"}, _noop_receive, send)
-    assert type(raised.value).__name__ == "_DrainAbort"
+    # ⚠️ 这里**不该**再向外抛（2026-09-19 契约变更）：`_DrainAbort` 是中间件内部的"停止生成"信号，
+    # 让它逃到 uvicorn 的代价是每条被 drain 的流留一段 `Exception in ASGI application` 全栈
+    # （真机一次停机 = 43 段），把"按 error 级检索日志"的运维判据整体污染。
+    await mw({"type": "http", "path": "/api/v1/query", "method": "POST"}, _noop_receive, send)
 
     assert _drain_terminal_frame() in [m.get("body") for m in sent], "终止帧没真的发出去"
+    assert sent[-1] == {"type": "http.response.body", "body": b"", "more_body": False}, (
+        "缺关流帧 ⇒ 响应挂在 uvicorn 的超时上，drain 反而拖长停机"
+    )
     assert metrics.QUERY_OUTCOME_TOTAL.value(outcome="failed") == 1
     assert metrics.UI_CONTRACT_VIOLATION_TOTAL.total() == 0
     assert registry.count() == 0, "中止后必须从在途表里摘掉，否则 drain 永远等不完"

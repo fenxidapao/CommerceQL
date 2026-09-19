@@ -1,0 +1,51 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-09-19T06:27:47+00:00",
+  "target": "http://127.0.0.1:18000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 40,
+        "duration_s": 120.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": false,
+        "questions": "questions_T_A.txt",
+        "request_cap": 120
+      },
+      "requests": 120,
+      "wall_s": 6.248,
+      "throughput_rps": 19.206,
+      "latency_ms": {
+        "p50": 74.8,
+        "p95": 5913.1,
+        "p99": 5925.8,
+        "max": 5931.2,
+        "mean": 1971.4
+      },
+      "ttfb_ms": {
+        "p50": 79.2,
+        "p95": 3231.7
+      },
+      "outcomes": {
+        "error_frame": 96,
+        "clarify": 4,
+        "http_4xx": 20
+      },
+      "codes": {
+        "INTERNAL": 96,
+        "RATE_LIMITED": 20
+      },
+      "drain_frames": 66,
+      "error_messages": {
+        "服务重启中，请重试": 66
+      },
+      "g6_p95_le_8s": true,
+      "g6_caveat": null
+    }
+  ],
+  "finished_at": "2026-09-19T06:27:53+00:00"
+}

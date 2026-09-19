@@ -372,7 +372,15 @@ def _drain_frame() -> bytes:
     return f'event: error\ndata: {{"code":"INTERNAL","message":"{DRAIN_MESSAGE}","retryable":true,"terminal":true}}\n\n'.encode()
 
 
-async def test_drain_injects_terminal_error_frame_and_aborts() -> None:
+async def test_drain_injects_terminal_frame_and_ends_response_cleanly() -> None:
+    """drain 注入终止帧之后必须**正常收口**：不向上抛、且补一个关流帧。
+
+    ⚠️ 这条契约是被真机打脸打出来的：原实现在发完终止帧后把 `_DrainAbort` 一路抛回 uvicorn，
+    于是**每条被 drain 的流**都在日志里留下一段
+    `ERROR: Exception in ASGI application` + 全栈（2026-09-19 一次真实停机 = 43 段 traceback）。
+    客户端没受伤（它已经按 `terminal` 收口），坏的是可观测性：
+    runbook 与 §15.4 里"按 error 级日志计数"的判据会被自家停机噪声整体污染。
+    """
     registry = InFlightRegistry()
 
     async def slow_app(scope: Any, receive: Any, send: Any) -> None:
@@ -387,12 +395,13 @@ async def test_drain_injects_terminal_error_frame_and_aborts() -> None:
         sent.append(message)
 
     mw = ObservingMiddleware(slow_app, registry=registry, terminal_error_frame=_drain_frame)
-    with pytest.raises(BaseException) as caught:  # _DrainAbort
-        await mw({"type": "http", "path": "/api/v1/query", "method": "POST"}, _noop_receive, send)
-    assert type(caught.value).__name__ == "_DrainAbort"
+    await mw({"type": "http", "path": "/api/v1/query", "method": "POST"}, _noop_receive, send)
 
     bodies = [m.get("body", b"") for m in sent if m["type"] == "http.response.body"]
     assert any(b"event: error" in b and DRAIN_MESSAGE.encode() in b and b'"terminal":true' in b for b in bodies)
+    assert sent[-1]["type"] == "http.response.body" and sent[-1].get("more_body", False) is False, (
+        "缺关流帧 ⇒ uvicorn 会把这条响应挂到超时上，drain 反而拖长停机"
+    )
     # 中止后注册表必须为空：否则 `drain()` 会白等到超时。
     assert registry.count() == 0
 

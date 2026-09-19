@@ -528,6 +528,15 @@ class ObservingMiddleware:
         state = _ResponseState(endpoint=endpoint)
         try:
             await self._app(scope, receive, self._make_send(send, state))
+        except _DrainAbort:
+            # drain 主动中止了这条流的生成器：终止帧**已经发出**、客户端已经按 `terminal` 收口。
+            # 所以这里是"我们设计上的一次正常结束"，必须就地吞掉并补一个关流帧。
+            # 让它逃到 uvicorn 的后果实测过（2026-09-19 一次真机停机）：
+            # 每条被 drain 的流都留下一段 `ERROR: Exception in ASGI application` + 全栈 ⇒
+            # runbook 里"按 error 级检索日志"的判据会被自家停机噪声整体污染。
+            if state.sse:
+                with contextlib.suppress(Exception):
+                    await send({"type": "http.response.body", "body": b"", "more_body": False})
         finally:
             self._finish(state, started, endpoint)
 

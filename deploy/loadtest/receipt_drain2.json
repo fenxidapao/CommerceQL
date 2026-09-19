@@ -1,0 +1,50 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-09-19T06:22:33+00:00",
+  "target": "http://127.0.0.1:18000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 40,
+        "duration_s": 120.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": false,
+        "questions": "questions_T_A.txt",
+        "request_cap": 120
+      },
+      "requests": 120,
+      "wall_s": 11.64,
+      "throughput_rps": 10.309,
+      "latency_ms": {
+        "p50": 3891.3,
+        "p95": 7059.2,
+        "p99": 7070.8,
+        "max": 7417.6,
+        "mean": 3750.2
+      },
+      "ttfb_ms": {
+        "p50": 320.1,
+        "p95": 4041.4
+      },
+      "outcomes": {
+        "error_frame": 92,
+        "http_5xx": 28
+      },
+      "codes": {
+        "INTERNAL": 92,
+        "{\"code\":\"INTERNAL\",\"message\":\"内部错误，请携带 trace_id ": 28
+      },
+      "drain_frames": 36,
+      "error_messages": {
+        "服务重启中，请重试": 36
+      },
+      "g6_p95_le_8s": true,
+      "g6_caveat": null
+    }
+  ],
+  "finished_at": "2026-09-19T06:22:45+00:00"
+}
