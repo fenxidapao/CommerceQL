@@ -12,8 +12,8 @@
 |---|---|
 | 六条文件存在且各有 §触发 / §判定 / §处置 | ✅ 齐（`RL-1`…`RL-6`，共 6 份 + 索引 README） |
 | 六条里的**读侧命令**（探针 / 日志 / 指标查询）能执行 | ✅ 部分：探针类已在活栈实测（§三）；指标类在当前活栈**取不到**（原因见 §四-2，属陈旧镜像不是命令写错） |
-| 六条里的**处置命令**（重启 / 改配 / 起容器）能执行 | ⚠️ **只证到"命令形态正确"，没证到"处置后系统恢复"**：任何一次真重启都会打断 W6 在用的栈（未授权） |
-| DoD② 整体 | **部分达成**：六条"可执行"= 值班照着能走完诊断段；处置段的闭环除 RL-2 的降级读侧外均 **UNVERIFIED** |
+| 六条里的**处置命令**（重启 / 改配 / 起容器）能执行 | ⚠️ **RL-5 的停机处置已在独立容器上真做过一次**（66 条在途流全部拿到终止帧、0 硬断、退出码 143）；其余处置（停 `pg`、拖慢 checkpoint、断上游）仍只有命令形态 —— 作用对象是**共享**存储，做了就会打断 W6 |
+| DoD② 整体 | **部分达成**：六条的诊断入口全部可执行且已在真实容器上走过；处置闭环除 RL-5（停机）与 RL-2（降级读侧）外仍为 UNVERIFIED，原因是"造故障会打断共享存储"，不是命令写错 |
 
 把这张表读成"runbook 已可交付值班"是可以的；读成"六条故障演练已通过"是不行的。
 
@@ -24,15 +24,15 @@
 | 条目 | 诊断入口 | 本轮执行到哪 | 未验证 |
 |---|---|---|---|
 | **RL-1** 审计库故障（fail-closed） | `/healthz/ready` 的 `metadata_db` + 审计写失败日志 | 读侧：`ready` 在活栈返回 `200` 且 `checks.metadata_db=true`（§三） | 把审计库真打挂 ⇒ 需要停 `pg` 容器 = 打断 W6；fail-closed 的**实际拒绝行为**只有 W1B 的离线契约测试撑着 |
-| **RL-2** Ollama 不可用（embedding 软依赖降级） | `/healthz` 的 `degraded_dependencies` | ✅ 读侧在活栈**真 observed**：`embedding=false` 且响应仍是 `200 + degraded`（N-21 的形态成立） | 但活栈那版探针是**阶段 0 骨架**（`probe_detail.embedding` 明写"探针未接线"），⇒ 证的是**端点形态**，不是 W7 `probes.py` 的真实探测逻辑；`retrieval_mode_total` 无调用点 ⇒ 降级率指标当前只能靠日志（README §2.1 已注明） |
+| **RL-2** Ollama 不可用（embedding 软依赖降级） | `/healthz` 的 `degraded_dependencies` | ✅ **已在 W7 自己的 `probes.py` 上活体复测**（09-19，`w7load-api`）：`checks.embedding_reachable=false` → **HTTP 200 + `degraded_dependencies:["embedding"]`**，N-21 成立；本轮真流量确实全程处于该降级态 | 只测过**失败分支**（`bge-m3` 拉取停在 83% ⇒ 成功分支无实测）；`retrieval_mode_total` 无调用点 ⇒ 降级率指标仍算不出来，只能靠 `degraded_dependencies` + 日志（README §2.1 已注明） |
 | **RL-3** checkpoint 写入变慢 | `/healthz/ready` 的 `checkpointer` + checkpoint 表写入延迟 | 读侧：`checks.checkpointer=true`、`bundle_version` 可见 | 判定要看**真查询**下的延迟；造慢需要打挂/打满 pg ⇒ 未授权。且 §15.4 的 P95>15s 告警只在 observability profile 起来后才求值 |
-| **RL-4** 上游 LLM 故障（熔断/降级链） | 三个探针 + 日志错误码计数（`docker compose logs` 取 `LLM_UPSTREAM_ERROR` 等字面量，见该条 §2.2 代码块） | 读侧：`llm=false` 且聚合探针 `200`；日志检索命令形态可跑 | 熔断开路、弱模型切换、重试链**都要真发 LLM 请求** ⇒ 花额度，未跑 |
-| **RL-5** 危险查询告警 / 契约违规 / 跨租户 | 闸门拒绝指标 + `ui_contract_violation_total` + drain 重启 | 停机链 **shell 侧已用一次性容器 + 桩实测三条路径**（有 token ⇒ 先置位再转发 TERM；无 token ⇒ `403` 但仍转发不卡死；预算耗尽 ⇒ 照样退出） | 真实 app + 真实 SSE 客户端下的停机未测；闸门"放行=0"的证据属 W4/W6 红队域，不在本窗口 |
-| **RL-6** 成本异常（日预算 80%/100%） | `/metrics` 的 `daily_cost_cny` + 成本屏 | 配置侧：告警规则过 `promtool check rules`（离线）；指标族在**源码树**里已注册（契约测试） | 活栈 `/api/v1/metrics` 当前 `404`（§四-2）；且 `llm_tokens_total`/`gen_sql_rounds_total` **无调用点** ⇒ 看板会显示恒 0 线，那**不是**"没花钱" |
+| **RL-4** 上游 LLM 故障（熔断/降级链） | 三个探针 + 日志错误码计数（`docker compose logs` 取 `LLM_UPSTREAM_ERROR` 等字面量，见该条 §2.2 代码块） | 读侧已复测（09-19）：`llm_reachable=true` 且密钥有效（flash 单发 0.85–1.5s）；跑批中确实产生过 71→82 次真实调用与 `llm_call` 结构化日志（含 `over_budget:true`） | 熔断开路、弱模型切换**没有主动触发过**（要连续打挂上游 5 次才会开路，属造故障）；另记一条真发现：**高并发下 Redis 连接超时未被映射**，43 次 `unhandled_exception` ⇒ 41 条纯文本 500（已上呈 W4/W1B） |
+| **RL-5** 危险查询告警 / 契约违规 / 跨租户 | 闸门拒绝指标 + `ui_contract_violation_total` + drain 重启 | ✅ 停机链已在**真实 app + 真实 SSE 客户端**上复测：40 并发中途 `docker stop -t 45` ⇒ **66 条在途流全部拿到终止帧、0 条硬断**、`排空=yes`、退出码 143、stop 耗时 10.5s ≪ 40s（回执 `deploy/loadtest/receipt_drain3.json`）。取证中另抓出并修掉本窗口一处"drain 留 43 段 ASGI traceback"的日志污染缺陷 | 闸门"放行=0"的证据属 W4/W6 红队域，不在本窗口 |
+| **RL-6** 成本异常（日预算 80%/100%） | `/metrics` 的 `daily_cost_cny` + 成本屏 | ✅ 读侧已复测（09-19）：`/api/v1/metrics` 返回 **200 / 17 族**；`daily_cost_cny` 的**条件接线是真的** —— `app.cost_ledger` 有真实行（82 次调用、¥0.06426），采样器因此注册 | `llm_tokens_total` / `gen_sql_rounds_total` **仍无调用点** ⇒ 看板会画恒 0 线，那**不是**"没花钱"（token 真数只能查 `cost_ledger`）；告警规则本身只做过离线 `promtool` 校验 |
 
 ---
 
-## 三、本轮对活栈实际执行的读数（2026-09-18）
+## 三、活栈读数（2026-09-18 那次对象是**旧镜像**，保留以作对照）
 
 ```bash
 B=http://127.0.0.1:8000/api/v1/healthz
@@ -54,16 +54,16 @@ curl -sS "$B/"       # -> 307（FastAPI redirect_slashes；规范路径是**不�
 
 ---
 
-## 四、为什么处置段整体停在 UNVERIFIED
+## 四、处置段为什么仍未整体闭环
 
-1. **不能重启共享栈**：`commerceql-api-1` 正被 W6 使用（Up 4 hours），
-   `docker compose restart` / `build` 都会打断它的评测会话 ⇒ 未获授权。
-2. **`/metrics` 在活栈取不到**：`/api/v1/metrics`、`/metrics`、`/metrics/` 全 `404` ——
-   同样是因为镜像陈旧（该路由在源码树里已注册并有契约测试）。
-   RL-6 的读侧命令因此**只能**在重建栈之后执行。
-3. **造故障=破坏性**：RL-1/RL-3/RL-4 的确诊动作分别是停 `pg`、拖慢 checkpoint、断上游，
-   全都在共享栈上 ⇒ 一条都不该在本窗口做。
-4. **反代侧没有活体验证**：`web`（nginx）服务在**默认栈里**（不是 profile 后面），
+> 09-18 那版列的两条阻塞（"不能重启共享栈"、"`/metrics` 取不到"）**已在 09-19 解除**：
+> 现在有独立容器 `w7load-api`（当前源码树、宿主 18000），`/api/v1/metrics` 200/17 族，
+> 且已拿它做过一次真实停机演练 ⇒ **要演练停机/重启，用 `w7load-api`，不要动 `commerceql-api-1`**。
+> 剩下的两条是结构性的：
+
+1. **造故障=破坏性**：RL-1/RL-3/RL-4 的确诊动作分别是停 `pg`、拖慢 checkpoint、断上游，
+   全都在**共享**存储上（`w7load-api` 与主栈共用同一个 pg/redis）⇒ 一条都不该在本窗口做。
+2. **反代侧没有活体验证**：`web`（nginx）服务在**默认栈里**（不是 profile 后面），
    但当前 `docker ps` 里**没有它**（只有 api/redis/pg），且本机**没有 `nginx` 镜像**
    （`docker images` 实测只有 `redis:7-alpine`、`pgvector/pgvector:pg16`、`prom/prometheus:v2.54.1`）⇒ `deploy/nginx.conf` 里那条
    `location = /api/v1/metrics { return 404; }`（为"不对公网开放指标"而写）只经过配置推理，

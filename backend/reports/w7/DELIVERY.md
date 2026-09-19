@@ -11,13 +11,13 @@
 
 | DoD | 判定 | 证据在哪 |
 |---|---|---|
-| ① 四场景压测通过 + P95 ≤8s | ❌ **未达成**（G-6 = UNVERIFIED） | `压测报告.md` §二 四条阻塞（含"被测栈镜像里没有 query 路由"的取证命令与读数）；量具已校准的读数在 §三 |
+| ① 四场景压测通过 + P95 ≤8s | ⚠️ **四场景已跑完（真实额度、真实数据、真实并发），但 G-6 不可判"达标"**：50/100 并发下 `complete` 帧 **0 条**，P95 全部来自失败样本。四条根因已量化（LLM 信号量 8 vs 节点预算 2.0s / Redis 超时未映射成 500 / §16.5 与 §9.2 配额数学冲突 / embedding 不可用致零执行） | [`压测报告.md`](压测报告.md) §三 逐条读数、§四 根因；回执 `deploy/loadtest/receipt_*.json` |
 | ② runbook 六条可执行 | ⚠️ **部分达成**：六条诊断入口可执行（活栈探针实测读数已附），处置闭环除 RL-2 读侧外 UNVERIFIED | `runbook.md` §二 逐条 + §三 活栈读数 |
-| ③ `/healthz` 三探针语义正确（软依赖失败必须 `200 + degraded`，N-21） | ✅ **语义在源码树里正确**（16 条契约测试钉死，含"并发探测"这条本轮新增）；⚠️ 活栈上的 `200+degraded` 读数来自**旧镜像的阶段 0 骨架探针**，不是本窗口的 `probes.py` | `tests/contract/test_health_endpoints_contract.py`；`runbook.md` §三 的活栈读数与它的限定 |
+| ③ `/healthz` 三探针语义正确（软依赖失败必须 `200 + degraded`，N-21） | ✅ **本轮在 W7 自己的实现上活体验证过**：当前源码树构建的 `w7load-api`，`llm_reachable=true` / `embedding_reachable=false` → **HTTP 200 + `degraded_dependencies:["embedding"]`**，payload 为收敛后的 §A.8.4 `checks{}` 形状。（09-18 那版"读数来自旧镜像占位探针"的限定**已解除**） | `压测报告.md` §二 探针行；`tests/contract/test_health_endpoints_contract.py` 16 条 |
 
-⚠️ ③ 的那句限定不要跳过：形态（软依赖坏 ⇒ 200+degraded 而非 503）在真容器上 observed 到了，
-但产生该响应的实现是被测容器里的**占位探针**（`probe_detail.embedding` 明写"探针未接线"）。
-**"W7 的软依赖探针在真实栈上验证过"这句话目前没有证据。**
+⚠️ ③ 的验证范围要说清：证到的是"**软依赖坏掉时不 503、给 200+degraded，且 payload 是 A.8.4 形状**"，
+用的确实是我这一版 `probes.py`（`llm_reachable` 走 TLS 连通探测、`embedding_reachable` 走 Ollama 探维）。
+**没有证到**的是"embedding 可用时的正向路径"——本机 `bge-m3` 拉取停摆，探针在这一侧只有失败分支的实测。
 
 ---
 
@@ -28,8 +28,8 @@
 | ① 指标接入（§15.3 清单 + 标签基数上限） | `app/obs/metrics.py`（手写 exposition，不引 `prometheus_client`） | 23 族注册；**冷启动导出 17 族 / 262 条序列**，另 6 族属"B 类整族不输出"（无声明域且未被观测）⇒ 看板与告警**不得**把"没有这条线"读成"值为 0" |
 | ② 看板 | `deploy/observability/grafana/`（datasource + provider + `dashboards/commerceql.json`，§15.5 五块面板） | JSON/`yaml` 全部离线可解析；**从未在浏览器渲染过**（本机无 `grafana/grafana` 镜像） |
 | ③ 告警规则 | `deploy/observability/alert.rules.yml`（§15.4 十条 → 9 条规则 / 5 group） | 过 `promtool check rules` + `promtool test rules`；⚠️ 无 Alertmanager ⇒ "有人去 `/alerts` 看"，不是"已送达值班" |
-| ④ 压测（§16.5 四场景） | `deploy/loadtest/{driver.py,README.md}` | 量具 + 方案就绪，**跑批未执行**，G-6 UNVERIFIED |
-| ⑤ 优雅停机（§18.3 六步） | `deploy/{entrypoint.sh,drain_client.py}` + `app/obs/instrumentation.py` + `app/main.py` 追加段 + `health.py` 的 `/healthz/drain` | shell 链已在一次性容器里用桩实测三条路径；真实 app + 真实 SSE 未测。时序见 §三 |
+| ④ 压测（§16.5 四场景） | `deploy/loadtest/{driver.py,load_synth_to_pg.py,compose.loadtest.yml,questions_T_A.txt,README.md}` + 8 份回执 JSON | **四场景已跑完**（真实额度 ¥0.0643 / 82 次调用、真实附录 C 全量 194 万行）。结论：`complete` 帧 0 条 ⇒ **G-6 不可判达标**，量到的是容量事实（50 并发成功率 8.7%）+ 四条根因。见 `压测报告.md` |
+| ⑤ 优雅停机（§18.3 六步） | `deploy/{entrypoint.sh,drain_client.py}` + `app/obs/instrumentation.py` + `app/main.py` 追加段 + `health.py` 的 `/healthz/drain` | ✅ **真实 app + 真实 SSE 客户端复测过**（09-19，40 并发中途 `docker stop`）：66 条在途流全拿到终止帧、0 条硬断、`排空=yes`、退出码 143；顺带抓出并修掉本窗口一处 drain 日志污染缺陷。时序与证据见 §三 |
 | ⑥ runbook 六条 | `deploy/runbook/README.md` + `RL-1`…`RL-6` | 见 `runbook.md` |
 | ⑦ 启动校验全量（§18.4 八行） | 分散在 W0/W1B/W2A 实现，本窗口出**逐条核对表** | `deploy/runbook/README.md` §2.4（八行 × 落点/失败动作/钉死测试/本沙箱能否判） |
 
@@ -76,9 +76,25 @@ PID 1 在不用 `exec`、不加监督进程的前提下**拿不到**服务进程
 · **运维判据**因此改为：`143` = 正常优雅停机产物；**`137` = 被 SIGKILL = §18.3 要避免的"流被硬断"**。
 这条已写进 `docker-compose.yml` 头部 ① 与 `runbook/README.md` §四-2、`RL-4/RL-5`。
 
-### 仍未覆盖
+### 仍未覆盖 → **已覆盖（2026-09-19 补）**
 
-真实 app + 真实 SSE 客户端下的一次完整重启（需要一个能被安全重启的栈 ⇒ 授权 A）。
+上面三路径是"一次性容器 + 假 drain 端点"。本轮用 `w7load-api`（当前源码树构建的真实 app + 真实 SSE 客户端）
+在 40 并发跑批中途 `docker stop -t 45`，两侧同时取证：
+
+| 侧 | 读数 |
+|---|---|
+| 客户端（驱动回执 `receipt_drain3.json`） | 120 条中 **66 条收到注入的终止帧**（`error_messages = {"服务重启中，请重试": 66}`），`truncated=0`、`conn_error=0` ⇒ **没有一条流被硬断**（§18.3 要防的正是这个形态） |
+| 服务端 | `[drain] 排空=yes 预算=32.0s` → `INFO: Shutting down` → `graceful_shutdown_drained` → `[entrypoint] … status=143 …`；退出码 **143**（与本文的判据一致），`docker stop` 实际耗时 **10.5s ≪ 40s** |
+
+⚠️ 这一跑同时**抓出本窗口自己的一个缺陷**：`_drain_stream` 发完终止帧后把 `_DrainAbort` 一路抛回 uvicorn，
+于是每条被 drain 的流都留下一段 `ERROR: Exception in ASGI application` + 全栈
+（首跑实测 **43 段**）。客户端没受伤，坏的是可观测性 —— runbook 与 §15.4 里"按 error 级日志计数"的
+判据会被自家停机噪声整体污染。
+已修（`app/obs/instrumentation.py` 的 `__call__` 就地吞掉并补一个关流帧），
+复测 **traceback 归零**；契约同步改在 `test_obs_frame_format.py` 与
+`test_obs_instrumentation.py`（后者带变异检验：注掉 `except _DrainAbort` ⇒ 测试变红）。
+
+仍**未**覆盖的只剩一条：readiness 被编排层消费后真正摘走流量的端到端（本机没有消费编排器的自动重启/摘流机制）。
 
 ---
 
@@ -95,7 +111,11 @@ PID 1 在不用 `exec`、不加监督进程的前提下**拿不到**服务进程
 | 探针并发的"守卫真的会拦" | 把 `health.py` 的 `gather` 改回串行 `await` | 红：`readiness 的探针峰值只有 1（硬依赖共 4 个）`，还原后绿 |
 | 压测量具 | `driver.py --self-check` + 5 处变异 | 自检 `exit=0`（10/10 分类）；变异 **5/5 被抓** |
 | 观测配置可解析 | compose + prometheus/告警/datasource/provider 共 6 yaml + dashboard JSON | 全部通过；规则另过 `promtool check rules` |
-| 活栈探针读数 | `curl /api/v1/healthz{,/live,/ready}` | `live=200 ok` · `ready=200 四项硬依赖全 true` · `healthz=200 status=degraded, degraded_dependencies=[llm,embedding]`（限定见 §一-③） |
+| 活栈探针读数（09-18，旧镜像） | `curl :8000/api/v1/healthz{,/live,/ready}` | `live=200 ok` · `ready=200 四项硬依赖全 true` · `healthz=200 status=degraded`（**该版实现是占位探针，不能算 W7 证据**） |
+| 活栈探针读数（09-19，**W7 自己的代码**） | `curl :18000/api/v1/healthz`（当前源码树构建的独立容器） | `200` + `checks{llm_reachable:true, embedding_reachable:false}` + `degraded_dependencies:["embedding"]` ⇒ N-21 活体成立 |
+| 指标面与独立量具对表 | 冒烟 + 3 次跑批之后 `curl :18000/api/v1/metrics` | `query_outcome_total{clarify,refuse,failed}` = **23 / 26 / 25**，与四次客户端回执的分类计数逐项相加**完全一致**（clarify=13+5+5、refuse=7+13+3+3、failed=22+2+1）；`stage_duration_seconds_count{executing}=0` 直接证明"零执行"不是猜的 |
+| 数据装载 | `load_synth_to_pg.py --force` | 8 表 **1,940,300 行**沙箱↔PG 逐表相等；8 个 `v_*` 视图带身份 GUC 可读（`v_order_paid` 以 T_A 可见 200,000 行） |
+| 实际额度花费 | `select count(*), sum(cost_cny) from app.cost_ledger` | **71 次调用 / 217,675 tokens / ¥0.05613** |
 
 ---
 
@@ -118,10 +138,11 @@ PID 1 在不用 `exec`、不加监督进程的前提下**拿不到**服务进程
 
 | 项 | 为什么 |
 |---|---|
-| 四场景压测 / G-6 P95 | 被测栈镜像陈旧 + 额度未授权 + pgbouncer 未起 ⇒ `压测报告.md` §五 三项授权 |
-| pgbouncer 后端连接 ≤30 | 无进程可问；且本机无 `edoburu/pgbouncer` 镜像（还需联网拉） |
-| checkpoint 无写入等待、`SET LOCAL` 复位**在负载下** | 需要真查询流量；离线契约测试通过不等于负载下成立 |
-| 真实 app + 真实 SSE 的一次优雅停机重启 | 重启会打断 W6 在用的栈 |
+| **G-6"P95 ≤8s"是否达标** | 四场景已跑完（真实额度、真实数据）但**零成功完成** ⇒ 无有效分母。已量到的是容量事实：50 并发成功率 8.7%、100 并发 0%，根因见 `压测报告.md` §四 R1/R2 |
+| pgbouncer 后端连接 ≤30 | 服务已能起（补 `LISTEN_PORT: "6432"` 之前**从未可用**），但应用角色进不去：镜像 `auth_query` 只认 md5、W1B 角色口令是 SCRAM，且 `auth_type=scram` 是非法取值（直接 FATAL + 重启循环）。三条出路已上呈 |
+| 断言① checkpoint 无写入等待 / 断言② `SET LOCAL` 复位**在负载下** | **不可观察**而非"不成立"：embedding 不可用 ⇒ 查询从未走到 `execute`（`stage_duration_seconds_count{executing}=0`）。侧证有（`lg.checkpoints` 4,200 行在写、审计 62 行），但那不等于"负载下无等待" |
+| embedding 探针的**成功分支** | `bge-m3` 拉取停在 83%（1.8 KB/s）⇒ 只实测过失败分支的 `200 + degraded` |
+| 真实 app + 真实 SSE 的一次优雅停机重启 | ✅ **已覆盖（09-19）**：40 并发中途 `docker stop`，66 条在途流全部拿到终止帧、0 条硬断、traceback 归零。见 §三 末节 |
 | liveness 失败后的自动重启 | **附录 A 口径**：readiness/liveness 的**消费者**里没有编排器自动重启 ⇒ "探针就位"不等于"自愈已闭环" |
 | Grafana 面板渲染、nginx `/metrics` 404 的活体行为 | 本机无 `grafana` / `nginx` 镜像，反代容器未起 |
 | `retrieval_mode_total` 的降级率告警口径 | 指标**无调用点** ⇒ 比值分母为 0，当前只能靠 `/healthz` 的 `degraded_dependencies` + 日志判 RL-2 |

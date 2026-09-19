@@ -61,7 +61,10 @@
 
 ## 六、给 W6（并行窗口）
 
-1. ★ **G-6 现在是 UNVERIFIED**，不是"还没写"。原因与取证在 `压测报告.md` §二；门禁表请照抄 UNVERIFIED（外部阻塞），不要填空、不要填通过。
+1. ★ **G-6 状态已从"UNVERIFIED（没跑）"变成"已跑完但不可判达标"**：四场景都跑了真实额度与真实数据，
+   但 50/100 并发下 `complete` 帧 **0 条** ⇒ 没有有效分母。W6 门禁表请写
+   **"G-6 不可判：并发 ≥30 时零成功完成（根因 R1/R2，见 压测报告.md §四）"**，
+   既不要写"通过"，也不要写成"环境没准备好"。
 2. **压测与评测不同时跑**：同一台机、同一个 pg。谁先跑请主流程定，另一方在报告里写避让。
 3. 两份归档**不得互转**：本窗口不产出任何准确率结论；评测报告也不得引用 `driver.py --self-check` 里那个 p95≈3010ms —— 那是**桩的注入延迟**。
 4. ⚠️ **工作树并发**（本窗口实测到）：同一时刻两次读 `deploy/docker-compose.yml` 内容不同 ——
@@ -78,3 +81,37 @@
 | 四场景跑批 | 卡在 §五（DELIVERY）三项授权；命令与方案已写到一条命令一个场景（`deploy/loadtest/README.md` §七） |
 | `edoburu/pgbouncer:latest` 未固定版本 | compose 里**唯一**没 tag 的镜像（其余 5 个都有）。本窗口**没改**：本机没有该镜像，盲改一个未验证的 tag 会让"起得来"变成"起不来"⇒ 留给能联网拉镜像的那次一起做 |
 | 真实 app + 真实 SSE 的一次优雅停机重启 | 未做（会打断 W6 共享栈）。桩侧三路径已实测，见 DELIVERY §三 |
+
+---
+
+## 八、09-19 真实跑批后新增（按窗口拆，含证据计数）
+
+### 给 W4（`app/api/**`）+ W1B（`app/repo/redis`）
+
+| # | 事实 | 证据 |
+|---|---|---|
+| 16 ★ | **高并发下 Redis 连接超时没有被映射**：`/query` 路径抛 `redis.exceptions.TimeoutError("Timeout connecting to server")`，一路逃到 `ServerErrorMiddleware` ⇒ 客户端拿到**纯文本 500**（不是 §A.1.4 的 `error` 帧） | 50 并发 150 条那一跑：**43 × `unhandled_exception`** 对应 **41 条 `http_5xx`**；栈停在 `asyncio.open_connection`。W7 侧的计数兜住了（中间件"收不到 `http.response.start` 就记 500"），但**响应形态违约**在 W4 那一层 |
+| 17 | **串行锁的保护范围疑似小于一整轮**（这是问题不是结论）：8 路 × 24 条打同一个真会话，只有 **4 次 `409 SESSION_CONFLICT`**，其余 20 条在 **6.38s** 内全部收口（mean 1.66s）—— 若整轮被序列化，24 条应该是 ~40s 量级 | `deploy/loadtest/receipt_lock.json`；`SESSION_LOCK_WAIT_MS=3000` 可能是"排队后放行"的来源 |
+
+### 给 W3A（`app/llm`）+ 架构窗口
+
+| # | 事实 | 证据 |
+|---|---|---|
+| 18 ★ | **`LLM_SEMAPHORE_FLASH=8` 与 §16.5 的 50 并发口径在数学上不相容**：`normalize` 是 LLM 节点而 `NODE_TIMEOUT_S[normalize]=2.0`；flash 单发实测 0.85–1.5s ⇒ 第 9 条并发开始排队，等待本身就吃掉 2.0s 预算 | 4 分钟窗口 **137 × `node_timeout{node:"normalize",limit_s:2.0}`** → 137 × `graph_run_failed`；并发 5 时只有 2/20 失败，并发 30 时 22/30 ⇒ 失败率是并发度的函数，不是随机抖动 |
+| 19 ★ | **§16.5"50 并发持续 10min"与 §9.2 的限流桶直接冲突**：`QUERY` 桶 = 10 请求/用户/分钟、100 请求/租户/分钟，而 50 并发 × mean≈3.8s ≈ 790 请求/分钟 ⇒ 原口径**在配置上就不可能被满足** | 50 并发 / 5 用户那一跑 **98 × 429**（撞用户桶）；换 150 用户后只剩 **9 × 429**（撞租户桶）——A/B 对照见 `压测报告.md` §三-① |
+
+### 给 W2A + 环境
+
+| # | 事实 |
+|---|---|
+| 20 | `EMBEDDING_MODEL=bge-m3` 本机 Ollama **没有**（现有 `nomic-embed-text` 是 768 维 ≠ `EMBEDDING_DIM=1024`，不能直接换）。`ollama pull bge-m3` 拉到 **83% 后停摆**（1.8 KB/s，ETA 29 小时）⇒ 本轮所有查询都停在稀疏降级态，**从未走到 `execute`**：`stage_duration_seconds_count{executing}=0`、`{sql_ready}=0`、`{gate_passed}=0`。后果是 §16.5 断言①②**不可观察**（不是不成立） |
+
+### 给 W1B + 架构窗口（pgbouncer 口令体系，三选一）
+
+| 出路 | 代价 |
+|---|---|
+| 给 `app_rw` / `app_ro` 另存一份 md5 哈希 | **降安全**（SCRAM→md5），且要改迁移 ⇒ 需 W1B 明确同意 |
+| 在 pgbouncer `userlist.txt` 里放专用口令 | 多一份要管的秘密；compose 面可承载，需定义放哪（`deploy/.env` 还是 secret 文件） |
+| `auth_type=trust` | 等于**放弃容器网络内的口令校验**，必须配一条威胁声明 + 确认网络不出宿主 |
+
+⚠️ 别试 `auth_type=scram` —— **不是合法取值**，pgbouncer 直接 `FATAL cannot load config` 进重启循环（本轮踩过）。
