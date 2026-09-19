@@ -35,27 +35,60 @@
 
 ---
 
-## 三、前置条件核对（2026-09-18 实测，**四条阻塞**）
+## 三、前置条件核对（2026-09-19 复测：**四条阻塞已解三条**，换来三条新事实）
 
-| # | 前置 | 实测事实 | 后果 |
+| # | 前置 | 2026-09-18 的状态 | 2026-09-19 复测 |
 |---|---|---|---|
-| 1 | 被测栈有 `query` 路由 | `docker exec commerceql-api-1 grep -n include_router /srv/app/main.py` → **只有 `health.router` 一行**；`/srv/app/api/routers/` 里只有 `__init__.py` + `health.py`；带令牌 `POST /api/v1/query` 返回 `404` | 在跑的 `commerceql-api-1`（Up 4 hours）是 **W4 收口之前的陈旧镜像**。四场景 E2E **无法在当前栈上跑**；要跑得 `docker compose build api` ⇒ **重启 W6 正在用的共享栈**（未授权） |
-| 2 | pgbouncer 在跑 | `docker ps` 只有 `api / redis / pg` 三个容器，**无 pgbouncer** | 断言③（后端连接 ≤30）**无对象可测**。启动它未获授权 |
-| 3 | LLM 不烧额度 | `DEEPSEEK_BASE_URL` 默认 `https://api.deepseek.com`，`LLM_MODEL_FAST/STRONG` 都是真实模型 | 任何走通 `POST /query` 的请求都**花真钱**。已授权范围是"只跑不烧额度子集" ⇒ 四场景全量**不在授权内** |
-| 4 | 本地模型可替代（若要零额度 E2E） | Ollama 在宿主可达，文本模型有 `qwen2.5:7b`/`llama3.1:8b`；但 `EMBEDDING_MODEL=bge-m3` **不在**模型列表里（只有 `nomic-embed-text`，768 维 ≠ `EMBEDDING_DIM=1024`） | 指向 Ollama 能零额度跑通，但：① 仍要重建镜像（回到阻塞 1）② `LLM_SEMAPHORE_FLASH=8 / PRO=2` 下 50 并发会排长队，宿主 CPU 上的 7B 延迟**既不代表生产也不代表降级**，且与 W6 抢 CPU ⇒ 拿它出的 P95 填 G-6 是**双向都可能错**的数字，**不做** |
+| 1 | 被测栈有 `query` 路由 | 在跑的 `commerceql-api-1` 是陈旧镜像（只有 `health` 路由） | ✅ **已解**：`compose.loadtest.yml` 起独立容器 `w7load-api`（宿主 18000，外部网络 `commerceql_default`，复用同 pg/redis），镜像由当前源码树构建 ⇒ 不打断 W6 的 8000 容器 |
+| 2 | 库里有**合成数据集全量** | 未核对 | ❌ **实测为 0 行**：`app.order_paid` / `traffic_daily` 等 8 张底表**结构与 `v_*` 视图都在**（W1B 的 `0003_business_views`，alembic head `0005`），但一行数据都没有；容器内 `/data/sandbox/` 也是空的。这正是 07 U-56 里"数据装载**另行裁定**"那半句没人接的后果 ⇒ 本目录补了 `load_synth_to_pg.py`（见 §三.1） |
+| 3 | LLM 可用且不失控 | 无授权 | ✅ 已给密钥 + 有界额度授权；`deploy/.env` 里 `DEEPSEEK_API_KEY` **原本为空**（第 35 行），已写入本机（该文件被 gitignore，不进任何提交） |
+| 4 | 软依赖 embedding | `bge-m3` 不在 Ollama 模型列表 | ⏳ 中途还发现 Ollama **整个没在跑**（宿主 `:11434` 无监听）；起来后 `host.docker.internal:11434` 从容器 23ms 可达，但 `bge-m3` 仍需拉取（1.2 GB）⇒ **未拉完之前所有查询走稀疏降级**，实测表现为大量 `clarify`/`refuse` |
+| 5 | pgbouncer | 未运行 | ⚠️ **两处独立缺陷**：① compose 发布 `6432:6432` 但镜像默认 `LISTEN_PORT=5432` ⇒ 该服务自加入起从未可用（已在 compose 补 `LISTEN_PORT: "6432"`）；② 修好之后应用角色仍连不上：`FATAL: server login failed: wrong password type` —— 镜像默认 `auth_query` 只能配 md5 哈希，而 W1B 的角色口令是 SCRAM。且 `auth_type=scram` **不是合法取值**（写了直接 `FATAL cannot load config` + 重启循环）。⇒ 断言③仍不可测，三条出路已上呈 RELAY |
 
-阻塞 1 是最硬的一条：它同时挡住四场景与 pgbouncer 路线，且解开它必须动 W6 的栈。
+### 三.1 装载（本轮实测读数）
+
+`load_synth_to_pg.py` 用 W1A 的 `data/generator/seed_generator.py`（确定性、附录 C §C.12 规模）
+产出的 SQLite 沙箱作数据源，机械映射 `v_X → app.X` 灌进 PG：
+
+```
+| 表 | 沙箱 | PG | 一致 |
+| app.order_paid | 494249 | 494249 | ✅ |   | app.traffic_daily | 1500556 | 1500556 | ✅ |
+| app.order_refund | 23116 | 23116 | ✅ |   | app.product | 6000 | 6000 | ✅ |
+| app.shop | 12 | 12 | ✅ |  app.campaign 84 ✅ |  app.dim_date 730 ✅ |  app.region 31 ✅ |
+[视图] app.v_order_paid 以 tenant=T_A 可读 200000 行 …（8 个视图全部可读）
+```
+
+⚠️ 装载脚本的**行数比对**不是形式主义：第一版按 psycopg2 写法调 `cur.copy(sql, iterable)`，
+psycopg 3.3.5 把第二个位置参数当 `params`、返回一个**没进入的 context manager**
+⇒ 八张表全部**静默灌进 0 行且不报错**。是"沙箱 vs PG 行数相等"这条比对把它抓出来的。
+
+⚠️ 另一条只在这里看得见的事实：`app.order_paid` 上是 **FORCE ROW LEVEL SECURITY**，
+策略含 `current_setting('app.shop_ids', true) = ''` —— 两个身份 GUC **都不设**时该谓词整体求值为
+**NULL（不是 true）**，于是**连超级用户走视图都是 0 行**。所以"视图 0 行"不能读成"没数据"，
+也不能读成"装载失败"，只说明**没给身份**。
+
+### 三.2 已经量到的两条（不依赖 embedding，与模型下载无关）
+
+| 场景 | 读数 | 判读 |
+|---|---|---|
+| ③ 单会话并发（8 路 × 24 条同一 `session_id`） | `4 × SESSION_CONFLICT`；其余 20 条完成；`wall=6.38s`、`p50=1416ms`、`max=3026ms` | 锁**确实会拒**（4 次），但 24 条同会话请求在 6.4s 内跑完（mean 1.66s）⇒ 序列化范围**小于一整轮**（`SESSION_LOCK_WAIT_MS=3000` 也可能是那批"没冲突却排队"的来源）。**作为问题转 W4，不写成"通过"** |
+| ④ 同租户并发（30 路 × 30 条，5 个用户同租户） | **0 × `429`**；`22 × error_frame` 全是 `INTERNAL`；`p50=2354ms`、`p95=2468ms` | 两个结论：**(a) 配额桶在 30 并发下没触发** ⇒ 场景④当前不可判（阈值到底多少？还是桶没生效？）；**(b) 22 条失败已被日志证实为容量问题**：`22 × node_timeout {"node":"normalize","limit_s":2.0}` → `22 × graph_run_failed`。即 `normalize` 这个 LLM 节点的 2.0s 预算在并发 30 时被击穿（flash 单发 0.85s，`LLM_SEMAPHORE_FLASH=8` 下排队即超） |
+
+⚠️ 读 ④ 的 latency 时注意：本驱动的 `total_ms` 统计的是**到终止帧为止**，
+`error_frame` 也是终止帧 ⇒ **失败样本在延迟里**。所以"p95 2468ms ≤8s"这种读法是错的：
+同期成功率只有 **8/30**。任何引用都必须把 `outcomes` 与延迟一起给。
+
 
 ---
 
 ## 四、必测断言 ↔ 本沙箱可判定性（§16.5"必测断言"逐条）
 
-| 断言 | 谁产生证据 | 本轮可判定？ |
+| 断言 | 谁产生证据 | 2026-09-19 可判定性 |
 |---|---|---|
-| ① 无 checkpoint 写入等待（R-10） | 需真实栈 + 真查询流；候选侧证是 `checkpoint` 表写入耗时日志 | ❌ 阻塞 1/3 |
-| ② `SET LOCAL` 身份在连接复用时正确复位（ADR-09 验证③） | 连接池归 W1B，已有离线契约测试；**负载下的**复位需真实栈 | ❌ 阻塞 1（离线部分不由我重复声称） |
-| ③ pgbouncer 后端连接数 ≤30 | `pgbouncer` 的 `SHOW POOLS` | ❌ 阻塞 2（无进程可问） |
-| ④ P95 ≤ 8s（G-6） | 本驱动的 `total_ms.p95` | ❌ 阻塞 1/3；且见下方陷阱 |
+| ① 无 checkpoint 写入等待（R-10） | 独立容器跑真查询 + `lg` 表写入耗时 | ✅ **可判**（`w7load-api` 已是当前代码 + 真数据）；结论随跑批回执给出 |
+| ② `SET LOCAL` 身份在连接复用时正确复位（ADR-09 验证③） | 负载下跨租户抽查：同连接先后服务不同 token，看结果是否串号 | ✅ **可判**（装载后的视图带 `tenant_id`，可用 `app.shop_ids`/`app.tenant_id` 的可见行数差做对照） |
+| ③ pgbouncer 后端连接数 ≤30 | `SHOW POOLS` | ❌ **仍不可判**：进程已能起（补 `LISTEN_PORT` 后），但应用角色进不去（SCRAM vs `auth_query`，见 §三-5）。三条出路待 W1B/架构裁决 |
+| ④ P95 ≤ 8s（G-6） | 本驱动的 `total_ms.p95` | ⚠️ **可判但必须与成功率同读**：并发 30 实测 22/30 失败于 `normalize` 的 2.0s 节点预算 ⇒ 只报 P95 会读成"达标" |
 
 ⚠️ **④ 的口径陷阱（必须先讲清，否则这条会"自然达标"）**：
 `AskOptions.async_if_slow` 默认 `true` 且 `async_threshold_ms=8000` —— 超过 8s 的查询**转异步**，
@@ -69,55 +102,68 @@
 
 ---
 
-## 五、跑批需要的三项授权
+## 五、授权状态（2026-09-19：三项全部到位，按"独立容器 + 硬上限"执行）
 
-1. **可以重建并重启共享栈**（`docker compose build api && docker compose up -d api`），并知会 W6 取数时点；
-   或授权 W7 用 `docker compose -p w7load` 起一套**独立 api 容器**（复用同一 pg/redis 网络、宿主端口 18000）。
-2. **额度**：批准一次有界的真实 DeepSeek 调用量。量级估算：`steady` 50×600s 在 P95 8s 下约 3.7 万条
-   ⇒ 不可接受；可行的是**缩短为 50 并发 × 60s（约 300~400 条）**并把 §16.5 的 10min 口径如实记为"未跑满"。
-3. **pgbouncer**：授权启动（否则断言③永远 UNVERIFIED）。
+| 授权 | 内容 | 实际采用的形态 |
+|---|---|---|
+| A 被测栈 | 已批 | **不重启 W6 的 `commerceql-api-1`**：另起 `w7load-api`（独立 project、外部网络、宿主 18000）。主栈三个容器的 Up 时长未断过 |
+| B 额度 | 已批（密钥只写本机 `deploy/.env`，该文件 gitignore） | **每条场景都给 `--max-requests` 硬上限**，跑完以 `app.cost_ledger` 的实测 `cost_cny` 合计结账，不靠估算 |
+| C pgbouncer | 已批 | 起来了（补 `LISTEN_PORT` 之后），但应用角色口令体系不兼容 ⇒ 断言③仍不可判，见 §三-5 |
 
-未拿到 1 之前，本轮**不跑任何打向 `POST /query` 的批量请求**；未拿到 2 之前不跑任何**真实模型**的批量请求。
-理由：这两件事分别会在 W6 正在用的栈上制造负载、和花掉无法回收的额度。
+⚠️ §16.5 的 `steady` 原口径是 **50 并发 × 10min**。按并发 30 实测（单条 mean≈2.3s、且 73% 失败）外推，
+跑满 10min 会产生**数千条注定失败的请求**，既无信息量又烧额度 ⇒
+本轮**主动不跑满**，以"有界样本 + 失败成因"换可解释性，并把这一偏离写进报告而不是隐去。
 
 ---
 
-## 六、本轮实际执行了什么（回执）
+## 六、执行记录
 
 | 动作 | 命令 | 结果 |
 |---|---|---|
-| 量具自检（零外呼、零额度、不起容器之外的服务） | `python driver.py --self-check` | `10/10 分类正确；样本 p95=3010.5ms（桩注入最大延迟 3000ms）`，exit=0 |
-| 量具有效性变异检验（5 处注入缺陷） | `.tmp` 内脚本，逐条改驱动再跑自检 | **5/5 被抓**：计时停在第一帧 / 无终止帧算成功 / 4xx 算成功 / 百分位取最小 / 百分位恒 0 |
-| 四场景跑批 | — | **未执行**（§三 的四条阻塞 + §五 的三项授权未到位） |
+| 量具自检 | `python driver.py --self-check` | `10/10 分类正确`，exit=0（延迟读数落在 2000–3300ms 区间） |
+| 量具变异检验（5 处注入缺陷） | 仓库外一次性脚本逐条改驱动再跑自检 | **5/5 被抓**：计时停在第一帧 / 无终止帧算成功 / 4xx 算成功 / 百分位取最小 / 百分位恒 0 |
+| 数据集装载 | `python load_synth_to_pg.py --sqlite … --force` | 8 张底表 **1,940,300 行**全部沙箱↔PG 行数相等；8 个 `v_*` 视图带身份可读 |
+| 场景③ 单会话并发 | `driver.py --scenario session-lock` | 24 条 / `4 × SESSION_CONFLICT`，见 §三.2 |
+| 场景④ 同租户并发 | `driver.py --scenario tenant-quota --max-requests 30` | 30 条 / **0 × 429** / `22 × INTERNAL`（全部 `normalize` 2.0s 节点超时），见 §三.2 |
+| 场景① 稳态、② 突发 | `driver.py --scenario steady/burst` | ⏳ 等 `bge-m3` 拉完再跑（否则测的是稀疏降级态的 clarify/refuse，不是执行路径） |
 
 自检的桩**必须走真 TCP 环回**：`httpx.ASGITransport` 会把响应体先攒成 `body_parts` 再整体交回
 （`httpx/_transports/asgi.py:158-185`），于是 TTFB ≡ total，"计时停在第一帧"这类量具缺陷**测不出来**
 —— 这一条不是推演，是变异 1 在改造前**实测漏判**后发现的。
 
-**G-6（P95 ≤8s）= UNVERIFIED**。本目录交出的是"仪器已校准 + 方案已定 + 阻塞已定位到具体命令"，
-不是一组数字。任何把上面这行改写成"P95 达标"的报告都是伪造。
+**G-6 目前仍未判定**（①②两条主场景待跑）。已经判定的两件事反而是负面的：
+并发 30 时**成功率 8/30**、**配额桶未触发** —— 这两条不会因为等模型而变好。
 
 ---
 
-## 七、授权到位后的确切命令
+## 七、复现命令（本轮实际用的那组）
 
 ```bash
 cd CommerceQL/backend
-../.venv/Scripts/python.exe scripts/mint_dev_token.py --tenant-id tenant_a --role analyst \
-    --docker-container <api 容器名>       # 公钥要拷进容器：compose 没挂 JWT_PUBLIC_KEY_PATH
-export COMMERCEQL_DEV_TOKEN=<上一步 stdout 的令牌>
+# 建被测容器（不打断主栈）
+docker build -f deploy/Dockerfile -t w7load-api .
+cd deploy/loadtest && docker compose -p w7load -f compose.loadtest.yml up -d
+# 先确认被测栈真的有 query 路由（这一条能挡掉"对着陈旧镜像压测"整场）
+docker exec w7load-api grep -c "include_router" /srv/app/main.py    # 期望 5
+```
+
+```bash
+cd backend
+# ⚠️ 租户必须与**数据里的 tenant_id** 一致（沙箱用 T_A/T_B/T_C），
+#    写成 tenant_a 会让 RLS 把所有行滤掉 ⇒ 每条都"成功返回空结果"，P95 假性很好
+../.venv/Scripts/python.exe scripts/mint_dev_token.py --tenant-id T_A --user-id u_load --role analyst
+export COMMERCEQL_DEV_TOKEN=<上一步 stdout 的令牌>      # 公钥已由 compose 挂载，不需要 --docker-container
 ```
 
 ```bash
 cd ../deploy/loadtest
-# 先确认被测栈真的有新路由（这条能挡掉"对着陈旧镜像压测"整场）
-docker exec <api 容器名> grep -c "include_router" /srv/app/main.py    # 期望 ≥5
-python driver.py --scenario steady --no-async --out steady.json
-python driver.py --scenario burst --no-async --out burst.json
-python driver.py --scenario session-lock --out lock.json
-python driver.py --scenario tenant-quota --tokens tenant_a_users.txt --out quota.json
+python driver.py --scenario steady       --no-async --max-requests 150 --questions-file questions_T_A.txt --out steady.json
+python driver.py --scenario burst        --no-async --max-requests 100 --questions-file questions_T_A.txt --out burst.json
+python driver.py --scenario session-lock --no-async --tokens "$TOK" --questions-file questions_T_A.txt --out lock.json
+python driver.py --scenario tenant-quota --no-async --max-requests 30 --tokens "$TOK" --questions-file questions_T_A.txt --out quota.json
 ```
 
-题库：`--questions-file` 指向**附录 C 合成数据集全量**口径的问句文件（一行一条）。
+题库 `questions_T_A.txt` 由 `eval/dataset_v1_frozen.json`（附录 C 冻结集，166 例）
+按 `eval_tenant=T_A` 抽出 **155 条**问句生成，**不含 gold SQL**。
 ⚠️ §16.5 明文"不得用缩小数据集压测"——用 `driver.py` 内置的 5 条轮转题库跑出来的数**只能**用于量具演示。
 回执文件含耗时分布与状态分类，**不含查询文本与结果行**（N-11 同源关注）⇒ 可以进仓库。

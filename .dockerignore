@@ -1,0 +1,27 @@
+# 构建上下文白名单式收敛：Dockerfile 只 COPY 三处
+# （backend/pyproject.toml、backend/app、deploy/entrypoint.sh + deploy/drain_client.py），
+# 其余一律不进上下文。⚠️ 没有这个文件时，`.venv` 的 283 MB 会整体上传给 daemon，
+# 构建慢一个数量级，且宿主 venv 里装了什么会进上下文（镜像内容随本机状态漂移）。
+.git
+.gitignore
+.venv
+**/__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+*.log
+
+# 不进镜像的部分（都被 deploy/Dockerfile 的显式 COPY 绕过）
+frontend
+docs
+eval
+semantic
+backend/tests
+backend/reports
+backend/scripts
+# 密钥永远不进上下文（**就算**将来有人误加 COPY deploy/ 也不会带出去）
+.env
+deploy/observability
+deploy/runbook
+deploy/loadtest

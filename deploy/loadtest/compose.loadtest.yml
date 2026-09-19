@@ -1,0 +1,58 @@
+# W7 压测专用 api 容器（**不动 W6 在用的 commerceql-api-1**）
+#
+# 为什么单独一个文件：`commerceql-api-1` 是**陈旧镜像**（容器内只有 health 路由，
+# 实测 `grep -c include_router /srv/app/main.py` = 1），而压测要打的是 `POST /query`。
+# 直接 `compose build api && up -d api` 会重启 W6 正在用的容器；
+# 所以这里用**独立 project（w7load）+ 外部网络（commerceql_default）+ 宿主端口 18000**：
+# 复用同一套 pg/redis（数据是真的），但进程是第二个，谁都不打断。
+#
+# ⚠️ 前置：主栈的 pg/redis 必须已经在跑（本文件 `networks.external` 不创建它们），
+#    且业务底表已灌数（`load_synth_to_pg.py`，否则对着空表压测出来的 P95 不成立）。
+#
+# 用法（在 deploy/loadtest 目录）：
+#   docker build -f ../Dockerfile -t w7load-api ../..        # 在仓库根执行更稳
+#   docker compose -p w7load -f compose.loadtest.yml up -d
+#   docker compose -p w7load -f compose.loadtest.yml down    # 跑完就收，不留驻
+
+name: w7load
+
+services:
+  loadapi:
+    image: w7load-api:latest
+    container_name: w7load-api
+    env_file:
+      - ../.env                       # 与主栈同一份（含 DEEPSEEK_API_KEY / DRAIN_TOKEN）
+    environment:
+      # 容器内访问宿主 Ollama 的唯一可用地址（写 127.0.0.1 必然连不上）
+      EMBEDDING_BASE_URL: http://host.docker.internal:11434
+      # 压测容器的日志降噪：观测中间件仍在，但 uvicorn access log 会自己产生 I/O
+      LOG_LEVEL: INFO
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ../../semantic:/semantic:ro
+      - ../secrets/jwt_public.pem:/run/secrets/jwt_public.pem:ro
+      # 沙箱目录挂出来：万一 exec 走 SQLite 回退路径，能看见它是不是空的（而不是猜）
+      - w7load_sandbox:/data/sandbox
+    ports:
+      - "18000:8000"
+    networks:
+      - commerceql_default
+    healthcheck:
+      # 与主栈同口径：用 readiness（编排要的是"能不能接流量"），不用 liveness
+      test: ["CMD", "python", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/healthz/ready').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    stop_grace_period: 40s            # §18.3：drain ≤30s + uvicorn 5s < 40s
+    # ⚠️ 刻意 no：压测容器不该在 Docker 重启后自己回来占 18000、悄悄给 W6 添一个未知负载源
+    restart: "no"
+
+networks:
+  commerceql_default:
+    external: true
+
+volumes:
+  w7load_sandbox:

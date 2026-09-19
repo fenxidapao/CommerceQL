@@ -87,6 +87,39 @@ def scenario_specs(only: str | None) -> list[ScenarioSpec]:
     return [s for s in specs if s.name == only]
 
 
+async def create_session(client: httpx.AsyncClient, base: str, token: str) -> str:
+    """建一个**真实**会话并返回 id。
+
+    ⚠️ 不能凭空编一个 `session_id` 塞给 `POST /query`：实测 24/24 全部
+    `400 {"code":"SESSION_NOT_FOUND"}`（会话由 `POST /session` 铸造，§A.5.1）。
+    那样跑出来的"串行锁测试"其实什么都没测 —— 一条都没进到锁上。
+    """
+    resp = await client.post(f"{base.rstrip('/')}/session", json={},
+                             headers={"Authorization": f"Bearer {token}"})
+    sid = _dig(resp.json(), "session_id") if resp.status_code == 200 else None
+    if not sid:
+        raise SystemExit(f"[中止] 建会话失败：HTTP {resp.status_code} {resp.text[:120]}\n"
+                         "  ⇒ 场景③/复用会话都依赖它，先修这条再谈压测")
+    return str(sid)
+
+
+def _dig(obj: Any, key: str) -> Any:
+    """在响应信封里递归找第一个 `key`（附录 A 的 `data` 层级不该由压测端硬编码假设）。"""
+    if isinstance(obj, dict):
+        if key in obj:
+            return obj[key]
+        for value in obj.values():
+            found = _dig(value, key)
+            if found is not None:
+                return found
+    elif isinstance(obj, list):
+        for value in obj:
+            found = _dig(value, key)
+            if found is not None:
+                return found
+    return None
+
+
 async def fire_one(
     client: httpx.AsyncClient,
     url: str,
@@ -185,7 +218,12 @@ async def run_spec(spec: ScenarioSpec, args: argparse.Namespace, questions: list
     lock = asyncio.Lock()
     next_index = 0
     opened = time.perf_counter()
-    fixed_session = "w7-loadtest-fixed-session" if spec.single_session else None
+    # ⚠️ 成本安全阀：真实跑批每条请求都花额度，而"跑满 10min"的失控形态是
+    #    服务越慢 ⇒ 每条越久 ⇒ 到时间前发出的并发数不减。`--max-requests` 给一个**硬上限**，
+    #    到数就停 —— 宁可不跑满口径，也不能让一个脚本花光预算。
+    hard_cap = spec.total_requests
+    if args.max_requests:
+        hard_cap = min(hard_cap, args.max_requests) if hard_cap else args.max_requests
 
     async def worker(client: httpx.AsyncClient, token: str) -> None:
         nonlocal next_index
@@ -193,11 +231,13 @@ async def run_spec(spec: ScenarioSpec, args: argparse.Namespace, questions: list
             if spec.duration_s is not None and time.perf_counter() - opened >= spec.duration_s:
                 return
             async with lock:
-                if spec.total_requests is not None and next_index >= spec.total_requests:
+                if hard_cap is not None and next_index >= hard_cap:
                     return
                 i = next_index
                 next_index += 1
-            sid = fixed_session or (f"w7-loadtest-s{i % max(1, args.session_pool)}" if args.reuse_sessions else None)
+            sid = session_pool[0] if spec.single_session else (
+                session_pool[i % len(session_pool)] if session_pool else None
+            )
             sample = await fire_one(
                 client, url, token, questions[i % len(questions)], sid,
                 async_if_slow=not args.no_async,
@@ -206,6 +246,13 @@ async def run_spec(spec: ScenarioSpec, args: argparse.Namespace, questions: list
 
     async with httpx.AsyncClient(limits=limits, timeout=timeout, http2=False) as client:
         tokens = await _tokens_for(args, spec)
+        session_pool: list[str] = []
+        if spec.single_session:
+            # 场景③要的就是"同一个会话上并发" ⇒ 只建**一个**真会话，24 条全打上去
+            session_pool = [await create_session(client, args.target, tokens[0])]
+        elif args.reuse_sessions:
+            session_pool = [await create_session(client, args.target, tokens[j % len(tokens)])
+                            for j in range(max(1, args.session_pool))]
         workers = [asyncio.create_task(worker(client, tokens[i % len(tokens)])) for i in range(spec.concurrency)]
         await asyncio.gather(*workers)
 
@@ -243,6 +290,10 @@ def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: a
             "same_tenant": spec.one_tenant,
             "async_if_slow": not args.no_async,
             "questions": args.questions_file or f"合成题库 {QUESTION_POOL_DEFAULT} 条轮转",
+            # 有上限的跑批必须在**场景级**可见，否则"300 条"看着像"跑满了 10min"。
+            "request_cap": (min(spec.total_requests, args.max_requests)
+                            if spec.total_requests and args.max_requests
+                            else (spec.total_requests or args.max_requests)),
         },
         "requests": len(samples),
         "wall_s": round(wall_s, 3),
@@ -430,6 +481,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--session-pool", type=int, default=10)
     p.add_argument("--tokens", help="令牌文件（空白分隔）；同租户多用户场景用")
     p.add_argument("--request-timeout-s", type=float, default=TERMINAL_EVENT_MAX_WAIT_S)
+    p.add_argument("--concurrency", type=int, help="覆盖场景默认并发（**降并发**用于找失败边界；调高属于加负载，先报告）")
+    p.add_argument("--duration-s", type=float, help="覆盖场景默认时长（秒）")
+    p.add_argument("--max-requests", type=int,
+                   help="**成本硬上限**（每个场景）。真实额度跑批必给：到数就停，不跑满时长")
     p.add_argument("--out", default="receipt.json", help="结构化回执输出路径")
     p.add_argument("--self-check", action="store_true", help="只验量具（零外呼、零额度）")
     p.add_argument("--dry-run", action="store_true", help="打印将执行的场景参数后退出")
@@ -442,6 +497,11 @@ def main(argv: list[str] | None = None) -> int:
         return asyncio.run(self_check())
 
     specs = scenario_specs(args.scenario)
+    for s in specs:  # 覆盖参数只动**要跑的那条**，且只允许把量调小或等量（调高要先报告，见 §五）
+        if args.concurrency:
+            s.concurrency = args.concurrency
+        if args.duration_s:
+            s.duration_s = args.duration_s
     if args.dry_run:
         for s in specs:
             print(f"{s.name}: 并发={s.concurrency} 时长={s.duration_s or '—'} "

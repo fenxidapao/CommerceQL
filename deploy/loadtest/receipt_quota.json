@@ -1,0 +1,46 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-09-19T05:29:10+00:00",
+  "target": "http://127.0.0.1:18000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "tenant-quota",
+      "params": {
+        "concurrency": 30,
+        "duration_s": null,
+        "total_requests": 60,
+        "single_session": false,
+        "same_tenant": true,
+        "async_if_slow": false,
+        "questions": "questions_T_A.txt",
+        "request_cap": 30
+      },
+      "requests": 30,
+      "wall_s": 4.551,
+      "throughput_rps": 6.592,
+      "latency_ms": {
+        "p50": 2354.5,
+        "p95": 2468.7,
+        "p99": 4440.9,
+        "max": 4440.9,
+        "mean": 2315.9
+      },
+      "ttfb_ms": {
+        "p50": 201.3,
+        "p95": 210.3
+      },
+      "outcomes": {
+        "clarify": 5,
+        "error_frame": 22,
+        "refuse": 3
+      },
+      "codes": {
+        "INTERNAL": 22
+      },
+      "g6_p95_le_8s": true,
+      "g6_caveat": null
+    }
+  ],
+  "finished_at": "2026-09-19T05:29:15+00:00"
+}
