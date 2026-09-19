@@ -115,3 +115,39 @@
 | `auth_type=trust` | 等于**放弃容器网络内的口令校验**，必须配一条威胁声明 + 确认网络不出宿主 |
 
 ⚠️ 别试 `auth_type=scram` —— **不是合法取值**，pgbouncer 直接 `FATAL cannot load config` 进重启循环（本轮踩过）。
+
+---
+
+### 给主流程 / W6：观测栈对着**当前在跑的栈**抓不到任何东西（2026-09-19 实测）
+
+| # | 事实 |
+|---|---|
+| 21 | 交付版 `deploy/observability/prometheus.yml` 的目标是 `api:8000`，而 `commerceql-api-1` 现在跑的镜像**早于** W7 的 metrics 路由 ⇒ `GET :8000/api/v1/metrics` 在宿主和 compose 网络内**各测一次都是 404**，`targets` 会显示 DOWN。**这不是观测面的缺陷，是被抓方镜像陈旧**。 ⇒ 要么重建主栈镜像（会重启 W6 的在途流，**需要 W6 同意 + 主流程定时窗**），要么按本轮做法用当前源码树起独立容器（`deploy/loadtest/compose.loadtest.yml`，零打扰）。**本窗口不动共享栈** |
+
+顺带把这一轮**新升级成实测**的观测面结论列在这儿，免得别的窗口还按旧陈述判：
+
+- 手写 Prometheus exposition **被真解析器接受**：`up=1`、`lastError=''`（以前只有离线文本断言）。
+- 9 条告警规则在**活序列**上 `health=ok`、`state=inactive` 全部 9/9（以前只有 `promtool` 静态 + 离线夹具）。
+  ⚠️ 但**没有任何一条真的 firing 过** —— "真故障里会按预期亮"仍只有 `alert.rules.test.yml` 作证据。
+- A/B 族分类被**独立复现**：冷启动 24 族 → 3 个请求后 29 族，新增 5 条**全部**是 `http_*`。
+- `daily_cost_cny = 0.064258` 与 `select sum(cost_cny) from app.cost_ledger` **逐分相等**。
+- 顺手修掉两个我自己交付物里的问题：`RL-3` §4 的两条 P95/阶段耗时判据原来写成**裸直方图名**（实测返回 0 序列，照抄会看成"没有慢请求"）；看板屏① 的 `http_requests_inflight` 冷启动必然 **No data**，已在 description 写明"No data ≠ 已排空"（刻意没加 `or vector(0)`，那会抹掉 B 类缺席这个有信息量的信号）。
+
+### 给 W1B：`tests/unit/test_migration_dsn_hygiene.py` 的通过与否**取决于调用时的 locale**（09-19 实测）
+
+`_alembic()` 用 `subprocess.run(..., capture_output=True, text=True)`，而 `text=True` 的解码编码取**父进程的
+`locale.getpreferredencoding()`**。本机是 Windows GBK，`alembic history` 的输出里有中文 docstring 的 UTF-8 字节
+⇒ 读线程抛 `UnicodeDecodeError` ⇒ **`result.stdout` 变成 `None`** ⇒ 两条断言以 `TypeError` 红掉，
+而**真实原因是编码不是纪律被破**。
+
+| 调用方式 | 结果 |
+|---|---|
+| `PYTHONIOENCODING=utf-8 python -m pytest tests/unit/test_migration_dsn_hygiene.py` | **2 failed**（`TypeError: argument of type 'NoneType' is not iterable`） |
+| `PYTHONUTF8=1 PYTHONIOENCODING=utf-8 …` 同一文件 | **7 passed** |
+
+⇒ 危害在于**失败形态会误导**：这条是 DoD④（"属主级 DSN 不得进仓库"）的守卫，红成 `TypeError` 时长得
+像"测试自己的 bug"，很容易被人顺手删断言或加 `if result.stdout:` 糊过去 —— 那正好把这个门禁的**反向**证据
+（"跑起来了但根本没检查"）留下来了。
+建议的修法（**在 W1B 的权限里，本窗口不改他人文件**）：给那次 `subprocess.run` 显式 `encoding="utf-8"`，
+比设环境变量稳（环境变量会随 CI runner / 本地 shell 漂）。
+本窗口临时口径：跑离线全量时固定带 `PYTHONUTF8=1`，此时 **1733 passed**。

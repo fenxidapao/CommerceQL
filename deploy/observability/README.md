@@ -181,11 +181,15 @@ curl -s http://127.0.0.1:9090/api/v1/rules   | head -c 400                    # 
 
 ## 三、明确声明：**未被覆盖 / 未验证**的部分
 
-1. **运行时验证只到"离线语义"这一层**。已过的机器证据：`promtool check rules`（9 条）、
-   `check config`（含 rule_files 真的被加载）、`test rules`（`alert.rules.test.yml`，
-   6 组用例 / 13 个断言）。**未过**：真实抓取下的序列形状、Grafana 面板渲染、
-   Alertmanager 送达（根本没有 AM，见第 10 条）。
-   ⇒ 规则的 PromQL **能否解析、判据方向对不对**已被证明；**在真流量下会不会按预期触发**没有。
+1. **运行时验证到哪一层（2026-09-19 更新：抓取层已补上，触发层仍未）**。
+   已过的机器证据：`promtool check rules`（9 条）、`check config`（含 rule_files 真的被加载）、
+   `test rules`（`alert.rules.test.yml`，6 组用例 / 13 个断言），**以及 §六(6) 的真实抓取**
+   （手写 exposition 被解析、9 条规则在活序列上 `health=ok`、A/B 族分类被独立复现）。
+   **仍未过**：⚠️ **没有任何一条规则在真流量下实际跨越过阈值**（本轮读数全部远低于判据，
+   `pending`/`firing` 状态一次都没出现，也不该为了看它亮而去制造超支或超时）。
+   ⇒ 所以"表达式的**形状与方向**对不对"目前**只有离线夹具**作证据；
+   "在真故障里会不会按预期亮"仍是**未验证**，别把 §六(6) 读成这条也过了。
+   Grafana 面板渲染、Alertmanager 送达（根本没有 AM，见第 10 条）同样未验。
 2. **§15.4 第 2/6/8 条无 expr**（跨租户 / 准确率环比 / 429）。见上表，注释块里写明了缺口与修法。
    第 2 条尤其要防"凑"：`exec_failure_total{error_class="permission"}` 是**双重不可用** ——
    语义相反（它记的是"被权限层拦住了"= 防住了，不是泄露了），而且**永远不会增**
@@ -342,7 +346,23 @@ A/B 族数复测（render_prometheus_text() 冷启动）                        
 同一轮里还按**一次性容器的桩实测**改写了 runbook 中"停机链端到端未验证"的旧陈述
 （三场景 + `Exited (143)` 与 `137` 的判据）⇒ 证据与边界见 `deploy/runbook/README.md` §四-2。
 
-**没做的校验**（别把上面读成这些也过了）：真实抓取（`targets` 全 up）、Grafana 面板渲染、
-`/alerts` 页面在常驻实例上的观察窗、告警送达（无 Alertmanager）。
-这四项需要有观测栈在跑，而本窗口为了不打断 W6 的共享栈**刻意没起**（§一.4）。
-（venv 里 `pyyaml` 已存在，**未新装任何 Python 依赖**；未跑 pytest 全量；未起观测栈容器。）
+**（6）真实抓取活体验证（2026-09-19 新增 —— 前五项都只是"文件没错"，这一项才碰到"指标真的进得去 Prometheus"）**
+
+前提：`prom/prometheus:v2.54.1` 本机就有（§一 开头的镜像表记的是准的 —— 缺的只有 `grafana:11.2.0`）。
+区别在于本轮**第一次拿它真跑一个实例**，而不只是借里面的 `promtool`。
+为不动 W6 的共享栈，用**一次性容器**：挂 `deploy/observability/alert.rules.yml` 到交付文档里那个**绝对路径**（这本身就是要验的点 —— `rule_files` 用绝对路径，换一种挂载布局就会静默变成"规则没加载"），配置文件只改一行 `targets`（`api:8000` → `w7load-api:8000`，理由见下），端口只绑宿主回环。
+
+| 验的东西 | 读数 | 判读 |
+|---|---|---|
+| **手写 exposition 能不能被真解析器接受**（T2 的核心风险，前五项**一项都没覆盖到它**） | `health=up`、`lastError=''`、`scrapeUrl=http://w7load-api:8000/api/v1/metrics` | ✅ `app/obs/metrics.py` 手写的 text format 0.0.4 被 Prometheus 真解析，不是"看起来像" |
+| 规则是否**真的加载**（不是 promtool 静态过） | 启动日志 `Completed loading of configuration file ... rules=6.706817ms`；`/api/v1/rules?type=alert` → **5 组 / 9 条，全部 `health=ok`** | ✅ 9 条表达式在**活数据**上求值通过（含 `histogram_quantile` 与 `offset 7d` 那两条形状复杂的） |
+| §三.4 的 A/B 族分类 | 冷启动 **24 族**（19 个应用族 + `up` 与 4 个 `scrape_*`）；发 3 个请求后 **29 族**，新增的 5 个**全部**是 `http_requests_total` / `http_request_duration_seconds_{bucket,count,sum}` / `http_requests_inflight` | ✅ 独立复现"B 类整族不输出、有流量才出现"。这条以前只是读代码推出来的 |
+| 计数**语义**对不对（不是只数族） | 3 个无令牌请求 → `http_requests_total{endpoint="/api/v1/query",status="4xx"} 3`、`..._duration_seconds_count 3`、`_sum 0.0083`、`http_requests_inflight 0` | ✅ 401 记成 4xx 而不是成功；直方图与计数器同源；在途归零 |
+| 采样器与真库对账 | `daily_cost_cny = 0.064258` ⟷ `select sum(cost_cny) from app.cost_ledger` = `0.064258` | ✅ 成本不是"接了个指标"，是**和账本逐分相等** |
+| τ 门禁 gauges | `binding_tau_calibrated = 0` | ✅ 实时反映"未校准"，与 §18.4.1/U-19 的 dev 放行口径一致 |
+| **看板引用 ⟷ 实际导出**交叉核对（本轮才做得动：需要一份真序列清单） | 屏①–⑤ 共 15 条 `expr`、引用 11 个族；其中**只有 `http_requests_inflight`** 在冷启动不存在 | ⚠️ 抓到我自己 T7 的一个真问题：刚重启时屏①那条会显示 **No data**，而这正是运维最想看的一刻。已在屏①的 `description`/`legendFormat` 写明"No data ≠ 在途为 0"（**刻意没改成 `or vector(0)`** —— 那会把 B 类缺席这个有信息量的信号抹掉，且 `RL-3` §4 的严格判据就是"出现过且为 0"）|
+
+⚠️ **一条必须跟着读的运维事实**：交付版 `prometheus.yml` 的 `targets: ["api:8000"]` 在**本机现在这台机器上会 DOWN** —— 不是配置错，是 `commerceql-api-1` 的镜像早于 W7 的 metrics 路由，`GET :8000/api/v1/metrics` 返回 **404**（宿主与 compose 网络内各测一次，都是 404）。⇒ 观测栈要看到数据，前提是**被测镜像含 W7 的应用侧改动**（本轮用 `w7load-api`，它由当前源码树构建）。这一条已进 `RELAY.md`。
+
+**仍未验**（别把上面读成这些也过了）：**Grafana 面板渲染**与**反代 `/metrics` 404 的活体行为**（本机确实没有 `grafana` / `nginx` 镜像，dashboard JSON 只过了解析 + 上面那次序列交叉核对）；**告警送达**（compose 里没有 Alertmanager，规则求值过 ≠ 有人被通知）；`/alerts` 页在**常驻**实例上的长观察窗（本次容器只跑了几分钟，`for:` 时长类的Pending→Firing 迁移未被跨越）。
+（venv 里 `pyyaml` 已存在，**未新装任何 Python 依赖**；未跑 pytest 全量。）

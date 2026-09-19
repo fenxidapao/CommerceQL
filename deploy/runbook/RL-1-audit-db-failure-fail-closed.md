@@ -89,7 +89,16 @@ docker compose exec -T pg psql -U postgres -d ecom -c \
 | PG 活着但**连接数打满**（常见是 checkpoint 池把 metadata 池一起拖死，见 `app/repo/pools.py:11` 的同 DSN 分池理由） | **转 RL-3**，本条只做止血 |
 | 表/权限/触发器不对（有人改了 GRANT 或迁移没跑） | §3 步骤 4，并**必须**上呈（fail-closed 被改坏 = 安全边界破了，不是运维小事） |
 
-`UNVERIFIED`：`app_rw` / `app_ro` 角色、`audit_log` 触发器与 RLS 都由 alembic 迁移建立（`backend/app/repo/migrations/versions/0001_roles_and_audit_append_only.py`）。**本机 PG 未确认在跑**，上面 2.3–2.5 的 SQL 在 SQLite 沙箱形态下**无法执行**，需在真 PG 环境验证。
+✅ **2026-09-19 真机读数**（本机 PG 在跑，`alembic_version = 0005`；上面 2.4–2.5 四条 SQL **逐条可执行**，无 SQLite 沙箱形态的豁免需要）：
+
+| 检查 | 读数 | 判定 |
+|---|---|---|
+| 2.5 权限三元组 | `can_insert=t` / `can_update=f` / `can_delete=f` | ✅ N-09 的 append-only 边界**没被改坏** |
+| 2.5 触发器 | `trg_audit_log_immutable`（`not tgisinternal` 过滤后只有这一条） | ✅ 在位 |
+| 2.5 角色 `rolconfig` | `app_rw = {default_transaction_read_only=off}` · `app_ro = {default_transaction_read_only=on}` | ✅ 与上面第 78–79 行的两条判据一一对上，**没有混** |
+| 2.4 表清单 | 6 个被查的名字里只存在 4 个：`audit_log` / `audit_log_supplement` / `cost_ledger` / `query_plan` | ⚠️ **`query_task` 与 `session` 在任何 schema 下都不存在**（按 `table_name` 全库搜 = 0 行）。本条判据**不依赖**这两张表（运行期会话确实可用，24 条请求打同一 session id 成功 ⇒ 会话面在 Redis/检查点侧），所以这里**只记录读数，不下"这是缺陷"的结论**。要定性归 W1B |
+
+⇒ 与启动校验互证：`audit_log_append_only_enforced` 的 PASS detail 就是"INSERT ✅ / UPDATE ❌ / DELETE ❌ / TRUNCATE ❌ 且触发器在位"，与本表同一事实的两次独立读法。
 
 ---
 

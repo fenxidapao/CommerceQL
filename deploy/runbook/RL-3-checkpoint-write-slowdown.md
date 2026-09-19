@@ -25,6 +25,10 @@
 | 连带信号 | 同窗口出现 `audit_pre_failed` → **元数据池被 checkpoint 池拖死**（两条池**同 DSN** `DATABASE_URL`，靠分池隔离，`app/repo/pools.py:11` 明写这条风险）。此时**主故障是本条，但先按 RL-1 止血** |
 | 告警（§15.4） | P95 延迟 > 15s / P1 |
 
+> ⚠️ **记法约定（先看这条再抄指标名）**：下表里 `stage_duration_seconds{stage=...}` / `http_request_duration_seconds{endpoint=...}` 这种写法指代的是**指标族**，
+> 而它们是**直方图** —— `/metrics` 实际导出的是 `_bucket` / `_count` / `_sum` 三条，**裸名选择器返回 0 条序列**（2026-09-19 经真 Prometheus 实测）。
+> ⇒ 排查时**不要**直接 curl/查询裸名；分位数的可抄表达式见 §4「验证恢复」。
+
 > ⚠️ **「图节点耗时」这个指标在本仓库不存在**。§15.3 给了一行「图节点耗时 Histogram `node`(≤20)」，而 `app/obs/metrics.py` 注册的是 `STAGE_DURATION_SECONDS`（`stage_duration_seconds{stage}`），其 help 明文写着「⚠️ **不是** §15.3 的『图节点耗时』：节点名不进 SSE（06 D2 红线），节点级直方图待 `app/graph` 的观测钩子（见 RELAY 上呈）」。→ 本条**只能用 stage 口径判定**，"节点间耗时"在指标层面**判不了**（不一致已登记，待架构窗口分配编号）。
 > ⚠️ **「池等待」同样没有指标**：`metrics.py` 里没有池等待/池占用的任何 Counter。只有 `llm_upstream_concurrency`（那是 LLM 信号量，不是 DB 池）。→ 池与锁的等待只能从 **PG 侧 + 日志时间差** 反推（§2.2、§2.3）。
 
@@ -89,22 +93,49 @@ docker compose exec -T pg psql -U postgres -d ecom -c \
     order by pg_total_relation_size(c.oid) desc;"
 ```
 
-`UNVERIFIED`：四张**表名**已在代码常量中确认，但 `lg` 下的**索引名与各自膨胀程度**未在本机核过（`setup()` 由 `langgraph-checkpoint-postgres` 内部建），需在真 PG 环境验证。清理口径：`CHECKPOINT_TTL_DAYS=7`（`deploy/.env:142`）。
+✅ **2026-09-19 本机已核过**（`setup()` 由 `langgraph-checkpoint-postgres` 内部建，实测结果如下）。四张表：
 
-### 2.5 pgbouncer —— 先确认它在不在链路上（**大概率不在**）
+| 表 | 行数 | 含索引总大小 |
+|---|---|---|
+| `lg.checkpoints` | 5,086 | 9,216 kB |
+| `lg.checkpoint_writes` | 16,305 | 6,648 kB |
+| `lg.checkpoint_blobs` | 4,619 | 2,032 kB |
+| `lg.checkpoint_migrations` | 0 | 24 kB |
+
+索引共 **7 条**：三张业务表各一个 `*_pkey`、一个 `*_thread_id_idx`（`checkpoints_thread_id_idx` / `checkpoint_writes_thread_id_idx` / `checkpoint_blobs_thread_id_idx`），加 `checkpoint_migrations_pkey`。**没有**额外的手工二级索引 ⇒ 按 `thread_id` 查是走索引的，不必怀疑"缺索引"。
+
+⚠️ 这组读数是**基线快照**，不是"膨胀已发生"的证据。判膨胀要比**同一实例的前后两次**读数；`pg_stat_user_tables` 的计数在容器重建/`truncate` 后会归零，所以"看起来很小"不能读成"没有写放大"。清理口径仍未实现：`CHECKPOINT_TTL_DAYS=7`（`deploy/.env:142`）**没有任何清理任务读它**（上呈见 §5）。
+
+### 2.5 pgbouncer —— 已确认：**不在链路上，而且当前根本进不来**
 
 ```bash
 cd deploy && grep -n "DATABASE_URL\|ANALYTICS_DB_URL\|6432" .env
 ```
 
-现网 `deploy/.env` 两条 DSN 都指向 **`pg:5432`**，`pgbouncer` 服务虽已定义（`6432`、`POOL_MODE=transaction`、`DEFAULT_POOL_SIZE=30`），但**应用侧没有任何 DSN 走它**。→ §18.7 的"检查 pgbouncer 与连接池"在**当前配置下不是本故障的第一现场**（文档与配置不一致，待架构窗口分配编号）。若确实要查 pgbouncer：
+现网 `deploy/.env` 两条 DSN 都指向 **`pg:5432`**。→ §18.7 的"检查 pgbouncer 与连接池"在**当前配置下不是本故障的第一现场**（文档与配置不一致，待架构窗口分配编号）。
+
+**2026-09-19 实测（把这一节从"推断"升级成"实证"）**：
+
+| 项 | 实测 |
+|---|---|
+| 镜像有没有 `psql` | ✅ **有**（`/usr/bin/psql`）⇒ 旧版这里写的 `UNVERIFIED` 不再成立 |
+| 旧命令能否直接跑 | ❌ **不能**：不带口令 → `fe_sendauth: no password supplied`。可执行版见下 |
+| 管理口 | ✅ `SHOW POOLS` 可查（`admin_users = postgres`） |
+| 监听端口 | 镜像自动生成的 `pgbouncer.ini` 里 `listen_port = 6432` —— 这要等 `LISTEN_PORT: "6432"` 显式设进 compose 之后才成立。⚠️ **该镜像默认监听 5432**，compose 原先 `6432:6432` 映射的是一个**没人监听**的端口 ⇒ 这个服务从建好起就从未可用过（"已定义"≠"能用"） |
+| 认证方式 | `auth_type = md5` + `auth_file = /etc/pgbouncer/userlist.txt`（**只有 1 个用户**）。W1B 的 `app_rw`/`app_ro` 口令是 **SCRAM** ⇒ 即使把 DSN 改到 6432，应用角色也**过不去认证**（实测 `wrong password type`）。⚠️ 别改成 `AUTH_TYPE: scram`：该镜像**不接受这个值**，`FATAL cannot load config` + 容器重启循环 |
+| **流量证据** | `SHOW POOLS` 返回**只有 pgbouncer 自用管理池这一行**，没有任何 `ecom` 库下 `app_rw` / `app_ro` 对应的池 ⇒ "应用侧没有 DSN 走它"不再是读 `.env` 的推断，是服务端自己的读数 |
 
 ```bash
-docker compose exec -T pgbouncer psql -h 127.0.0.1 -p 6432 -U postgres -d pgbouncer -c "SHOW POOLS;" || \
-  echo "UNVERIFIED：镜像 edoburu/pgbouncer 内的管理库入口未在本机验证过"
+# 可执行版（口令是 compose 里明文写的开发默认值，不是秘密）
+cd deploy
+docker compose exec -e PGPASSWORD=postgres pgbouncer \
+  psql -h 127.0.0.1 -p 6432 -U postgres -d pgbouncer -c "SHOW POOLS;"
+docker compose exec pgbouncer cat /etc/pgbouncer/pgbouncer.ini   # 核对 auth_type / listen_port / pool_mode
 ```
 
-⚠️ 并且**不要顺手把 DSN 改成 6432**：`transaction` 池模式与 `SET LOCAL` 身份传递（ADR-09）、以及 checkpoint 若变长持连接（R-10）三者互不兼容 —— 07 §16.3 风险 1 与 `probe_checkpoint_pool.py` 头部都点过这笔账。改它属配置决策，需 W7 + 架构确认。
+⚠️ 并且**不要顺手把 DSN 改成 6432**：① 上面那条认证问题会先把请求全拒掉；② `transaction` 池模式与 `SET LOCAL` 身份传递（ADR-09）、以及 checkpoint 若变长持连接（R-10）三者互不兼容 —— 07 §16.3 风险 1 与 `probe_checkpoint_pool.py` 头部都点过这笔账。改它属配置决策（口令体系三选一见 `RELAY.md`），需 W7 + 架构确认。
+
+⇒ **§16.5 断言 ③（pgbouncer 后端连接 ≤30）当前不可判**：不是"没测"，是**没有一条应用连接能进到被计量的那一侧**。本次 `SHOW POOLS` 里唯一的行 `sv_active=0`、`cl_active=1`（就是这条 psql 自己）⇒ 分母为空，"≤30"既不能被证实也不能被证伪。
 
 ---
 
@@ -157,12 +188,12 @@ docker compose exec -T pgbouncer psql -h 127.0.0.1 -p 6432 -U postgres -d pgboun
 
 | 判据 | 怎么看 |
 |---|---|
-| 阶段耗时回到基线 | `stage_duration_seconds` 各 `stage` 分位回落；重点看 `executing`（含检查点写入的那段）与 `plan_ready` |
-| P95 达标 | `http_request_duration_seconds{endpoint="/api/v1/query"}` **P95 ≤ 8s**（§16.5 必测断言④ / G-6）；告警线是 >15s（§15.4） |
+| 阶段耗时回到基线 | ⚠️ 同样是直方图，**裸名查不到**：用 `histogram_quantile(0.95, sum by (le, stage) (rate(stage_duration_seconds_bucket[$__rate_interval])))`（宿主 curl 场景把 `$__rate_interval` 换成 `5m`）按 `stage` 分组看分位回落；重点看 `executing`（含检查点写入的那段）与 `plan_ready`。`stage_duration_seconds_count{stage="executing"}` 为 **0** 的意思不是"快"，是**根本没有查询走到执行**（本轮 09-19 就是这个形态，见 `压测报告.md` §四 R4） |
+| P95 达标 | ⚠️ **别照抄裸名**：`http_request_duration_seconds` 这个族在 `/metrics` 里**不存在**（直方图只导出 `_bucket` / `_count` / `_sum` 三条；2026-09-19 实测裸选择器返回 **0 条序列** ⇒ 照着查会看成"没有慢请求"）。正确写法：`histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{endpoint="/api/v1/query"}[5m])))` ⇒ **P95 ≤ 8s**（§16.5 断言④ / G-6），告警线 >15s（§15.4）。两条读法坑：① 该族带 `endpoint` 且无声明域 ⇒ **冷启动整族不输出**，要出现过请求才有数；② 窗口内样本太少时 `histogram_quantile` 返回 **NaN**（实测：刚起 3 个请求即 NaN），**NaN 不是 0、也不是"达标"** |
 | 探针快且绿 | `time curl $BASE/healthz/ready` 明显低于 §2.1 记下的基线，且 200、`checks` 四项全 true |
 | 连接归位 | `pg_stat_activity` 里 `commerceql-checkpoint` 的行数回到预期区间，无长期 `idle in transaction` |
 | 断言未破 | 近 5min 日志里 `checkpoint_schema_created` 与 `audit_pre_failed` **都不出现**（完整命令见表格下方） |
-| 在途流清空 | `http_requests_inflight` 归零。**`/metrics` 已注册**（README §五命令约定）：宿主 `curl -sS "$BASE/metrics"`（8000 直读；经 80 会被 nginx 故意 404），拿不到宿主映射时在 api 容器内用 `python -c "import urllib.request as u;print(u.urlopen('http://127.0.0.1:8000/api/v1/metrics').read().decode())"`（镜像无 curl），再在返回全文里筛 `http_requests_inflight{` 开头的行。⚠️ 该族标签 `endpoint` **无取值域** ⇒ 属"整族不输出"型：冷启动**没有这条线 = 还没有过请求**，不等于"已排空"；排空的判据是**出现过、且当前值为 0**。辅证用 `docker compose logs` 与 nginx 活动连接数 |
+| 在途流清空 | `http_requests_inflight` 归零。**`/metrics` 已注册**（README §五命令约定）：宿主 `curl -sS "$BASE/metrics"`（8000 直读；经 80 会被 nginx 故意 404），拿不到宿主映射时在 api 容器内用 `python -c "import urllib.request as u;print(u.urlopen('http://127.0.0.1:8000/api/v1/metrics').read().decode())"`（镜像无 curl），再在返回全文里筛 `http_requests_inflight{` 开头的行。⚠️ 该族标签 `endpoint` **无取值域** ⇒ 属"整族不输出"型：冷启动**没有这条线 = 还没有过请求**，不等于"已排空"；排空的判据是**出现过、且当前值为 0**。辅证用 `docker compose logs` 与 nginx 活动连接数。**2026-09-19 两端都实测过**：新起容器查 `http_requests_inflight` 返回 0 条序列（= 还没有过请求），发 3 个请求后该族出现且值回到 0 ⇒ 这条判据是**可执行**的，不是纸面推断 |
 
 ```bash
 cd deploy
@@ -173,7 +204,19 @@ docker compose logs --since 5m api | grep -Ec 'checkpoint_schema_created|audit_p
 ```
 
 **压测复现口径（§16.5）**：确认修复要按**四场景**跑 —— ① 稳态 50 并发 10min ② 突发 100 并发 30s ③ 单会话并发（验串行锁）④ 同租户并发（验配额），数据用**合成数据集全量**（**不得用缩小数据集压测**，否则连接池与慢查询都不暴露）。必测断言：① **无 checkpoint 写入等待**（R-10）② `SET LOCAL` 在连接复用时正确复位 ③ pgbouncer 后端连接 ≤30 ④ P95 ≤ 8s。
-`UNVERIFIED`：本窗口未跑压测（另一窗口在用这套栈；且「先报告再跑批」是硬纪律）。断言③在现网"DSN 不经 pgbouncer"的形态下**测不到**（§2.5）。压测结果与评测结果**分开归档**（PRD §13.5）。
+✅ **已跑（2026-09-19，W7）**：四场景按 §16.5 口径执行完毕 —— 被测面是当前源码树构建的**独立容器** `w7load-api`（宿主 18000），数据是**合成数据集全量 1,940,300 行**（`deploy/loadtest/load_synth_to_pg.py` 灌入），题库是冻结集里 `eval_tenant=T_A` 的 **155 条**问句。
+落点：**`deploy/loadtest/README.md`**（方案、断言口径、复现命令）与 **`backend/reports/w7/压测报告.md`**（读数与判读），回执 JSON 在 `deploy/loadtest/receipt_*.json`。
+
+四条必测断言的当前状态（**别把"跑过了"读成"判据成立了"**）：
+
+| 断言 | 状态 | 为什么 |
+|---|---|---|
+| ① 无 checkpoint 写入等待（R-10） | ⚪ **不可观察** | 本轮 0 次执行（`stage_duration_seconds_count{executing}=0`）⇒ 没有写入可等。`lg.checkpoints` 确有 4,200 行（图状态在写），但那不是分析查询的等待面 |
+| ② `SET LOCAL` 连接复用时正确复位 | ⚪ **不可观察** | 同因：需要真查询流量穿过 `app_rw` 身份传递路径。离线契约测试通过 ≠ 负载下成立 |
+| ③ pgbouncer 后端连接 ≤30 | ⚪ **不可判** | 链路本身不通（§2.5：镜像 `auth_type=md5` vs W1B 角色的 SCRAM 口令），分母为空 |
+| ④ P95 ≤ 8s | ⚠️ **跑出来了但不可判达标** | 50 / 100 并发下 `complete` 帧 **0 条** ⇒ P95（6.19s / 7.27s）的分母全是失败样本。**必须与 `outcomes` 同读** |
+
+运维口径两条：① 要演练停机或压测，**用 `w7load-api`，不要动 `commerceql-api-1`**（W6 在用；重启会打断它的在途 SSE 流）。② 压测结果与评测结果**分开归档**（PRD §13.5）—— 上面的报告全文没有任何准确率结论。
 
 ---
 

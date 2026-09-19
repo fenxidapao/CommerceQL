@@ -83,13 +83,13 @@
 > 或 `refused_to_start` 时，按**断言名**在下表找到那一行，再看"失败动作"决定是配置错还是依赖没起。
 > 八行**全部有实现处、全部有钉死测试**（本轮逐条对过，测试名都是真的能 `pytest -k` 到的）。
 
-| # | 校验（§18.4 原文顺序） | 实现落点（归属） | 失败动作 | 钉死测试 | 本沙箱能判吗 |
+| # | 校验（§18.4 原文顺序） | 实现落点（归属） | 失败动作 | 钉死测试 | 可判性（本机实测） |
 |---|---|---|---|---|---|
 | 1 | 必填环境变量齐全 | `app/core/config.py` 的 `Settings`（`Field(...)` 必填 + DSN 形态 + 值域，W0） | 拒绝启动（pydantic `ValidationError`） | `tests/contract/test_config_failfast.py`：`test_minimal_env_is_valid`、`test_dsn_must_be_psycopg3`、`test_analytics_dsn_must_be_psycopg3`、`test_dsns_must_differ`、`test_invalid_timezone_refuses`、`test_invalid_log_level_refuses` | ✅ 离线可判 |
-| 2 | `ANALYTICS_DB_URL` 角色具备 `default_transaction_read_only`（N-02） | `app/repo/startup_assertions.py:230` `evaluate_analytics_is_read_only`，SQL 在 `app/repo/dsn.py:126`，角色由迁移 0001 `ALTER ROLE app_ro SET …` 建立（W1B） | prod 拒绝启动；非 prod 且连不上 ⇒ **PENDING**（`startup_assertion_pending` WARN） | `tests/unit/test_startup_assertions.py`：`test_analytics_read_only_pass`、`test_analytics_read_only_fails`、`test_read_only_flag_is_case_insensitive` | ⚠️ 需真实 PG。沙箱里离线单测判的是**判定函数**，真角色是否真的只读 → 见 `tests/integration/`（默认不跑） |
-| 3 | `EMBEDDING_DIM` 与向量列维度一致 | 同上文件 `:288` `evaluate_embedding_dim`（W1B） | 维度不符 ⇒ 拒绝启动；**列还没物化 ⇒ PENDING**（不是 FAIL） | `test_vector_column_absent_is_pending_not_fail`、`test_embedding_dim_fails`、`test_embedding_dim_pass` | ⚠️ 同上（列由 W2A 物化） |
+| 2 | `ANALYTICS_DB_URL` 角色具备 `default_transaction_read_only`（N-02） | `app/repo/startup_assertions.py:230` `evaluate_analytics_is_read_only`，SQL 在 `app/repo/dsn.py:126`，角色由迁移 0001 `ALTER ROLE app_ro SET …` 建立（W1B） | prod 拒绝启动；非 prod 且连不上 ⇒ **PENDING**（`startup_assertion_pending` WARN） | `tests/unit/test_startup_assertions.py`：`test_analytics_read_only_pass`、`test_analytics_read_only_fails`、`test_read_only_flag_is_case_insensitive` | ✅ **活体已判**（2026-09-19，`w7load-api` 启动日志）：detail="角色 'app_ro'：非超级用户且 default_transaction_read_only=on" ⇒ 真角色真的只读。⚠️ 区分不变：离线单测判的是**判定函数**，这一格判的是**真库**（`tests/integration/` 仍默认不跑） |
+| 3 | `EMBEDDING_DIM` 与向量列维度一致 | 同上文件 `:288` `evaluate_embedding_dim`（W1B） | 维度不符 ⇒ 拒绝启动；**列还没物化 ⇒ PENDING**（不是 FAIL） | `test_vector_column_absent_is_pending_not_fail`、`test_embedding_dim_fails`、`test_embedding_dim_pass` | ✅ **活体已判**（同上）：detail="EMBEDDING_DIM=1024 == 向量列 vector(1024)" ⇒ 列**已由 W2A 物化**，本行不再是 PENDING。⚠️ 判定范围只有"配置维度 vs 库内列维度"，**与 embedding 服务是否真在提供 1024 维无关** ⇒ 模型缺席时它照样 PASS（见 `RL-2` §2 的表） |
 | 4 | 语义包通过 §6.1 五步校验 | 判定壳 `…startup_assertions.py:419` `evaluate_semantic_bundle`；**校验器由组装根注入**：`app/main.py:157-163` → `app.semantics.validate_bundle_path`（W2A 实现、W2-INT 接线） | 校验不过 ⇒ 拒绝启动；**没注入 callable ⇒ PENDING 并点名 W2A** | `test_semantic_bundle_slot_is_pending_and_names_w2a` + `tests/unit/test_semantics_loader.py`（五步本体） | ✅ 注入已落地（第 4 行不再是"等上游"），真实包判过与否取决于挂载的 bundle |
-| 5 | `audit_log` 存在且 `app_rw` **无** UPDATE/DELETE（N-09 前提） | 同上文件 `:356` `evaluate_audit_append_only`（W1B）+ 迁移 0001 的 `REVOKE` | 表缺失或权限没收紧 ⇒ 拒绝启动；连不上 ⇒ PENDING | `test_audit_append_only_pass`、`test_audit_table_missing_fails`、`test_audit_append_only_fails`、`test_superuser_connection_is_reported_first`、`tests/integration/test_audit_append_only.py`、`tests/contract/test_obs_audit_contract.py`（应用侧无 UPDATE/DELETE 的静态断言） | ⚠️ **用超级用户连会被单列报出**（"权限判定失真"），不要用 postgres 账号验这条 |
+| 5 | `audit_log` 存在且 `app_rw` **无** UPDATE/DELETE（N-09 前提） | 同上文件 `:356` `evaluate_audit_append_only`（W1B）+ 迁移 0001 的 `REVOKE` | 表缺失或权限没收紧 ⇒ 拒绝启动；连不上 ⇒ PENDING | `test_audit_append_only_pass`、`test_audit_table_missing_fails`、`test_audit_append_only_fails`、`test_superuser_connection_is_reported_first`、`tests/integration/test_audit_append_only.py`、`tests/contract/test_obs_audit_contract.py`（应用侧无 UPDATE/DELETE 的静态断言） | ✅ **活体已判**（同上）：detail="角色 'app_rw'：INSERT ✅ / UPDATE ❌ / DELETE ❌ / TRUNCATE ❌ 且触发器在位"，与 `RL-1` §2.5 用 `has_table_privilege` 的独立读法同值。⚠️ 告诫不变：**别用超级用户连着跑这条断言**（会被单列报出"权限判定失真"）。注意区分两件事：以 `postgres` 走 `psql` **查目录表**（`pg_roles` / `has_table_privilege`）是只读旁路，可用；要失效的是**让被测连接本身以超级用户身份去满足断言** |
 | 6 | 结果缓存开关为 `on` 时必须有显式确认标志（ADR-12） | `app/core/config.py:201`（W0） | 拒绝启动 | `test_result_cache_requires_explicit_confirmation`、`test_result_cache_ok_with_confirmation` | ✅ 离线可判 |
 | 7 | `CORS_ALLOWED_ORIGINS` 在 `APP_ENV=prod` 时必须为空（§8.6.5） | `app/core/config.py:197`（W0） | 拒绝启动 | `test_prod_forbids_cors` | ✅ 离线可判 |
 | 8 | τ 三元组齐备（`BINDING_TAU_MODEL_ID` + `PROMPT_VERSION` + `CALIBRATED_AT`） | `app/core/config.py:245`（prod 校验）+ `:289` `binding_tau_is_calibrated` 属性（W0，U-19 的 env-gate） | **仅 prod** 拒绝启动；非 prod **放行但不得隐瞒** | 双向往返：`test_tau_gate_is_prod_only_by_design`（+ `test_tau_uncalibrated_boots_in_dev`、`test_tau_uncalibrated_refuses_in_prod`、`test_tau_gate_does_not_apply_to_staging`）；"不隐瞒"三条：`tests/contract/test_obs_audit_contract.py` 的 `test_startup_warn_is_emitted_when_tau_uncalibrated`、`test_gauge_reflects_calibration_state`、`test_gauge_is_exposed_in_prometheus_text` | ✅ 离线可判（这是八行里唯一"放行"的一行） |
@@ -117,7 +117,10 @@
 1. **软依赖不得变成不可用**。LLM / embedding 失败 → `/healthz` **必须 `200` + `status:"degraded"`**，只有硬依赖（元数据库 / checkpointer / Redis / 语义包）失败才是 `503`（附录 A §A.8.1、§A.8.4；07 §18.2；N-21）。**任何"重启 api 来恢复 LLM/embedding"的建议都是错的** —— 那会把一次降级放大成一次事故。
 2. **停机不用 `docker kill` / `kill -9`**。§18.3 期望顺序：`SIGTERM` → 摘 readiness → drain 在途 SSE ≤30s → 超时流发 `error(INTERNAL, message="服务重启中，请重试")` + `terminal:true` → 释放会话锁/归还连接 → 写审计 `outcome=failed` → 退出。静默断连会让前端永远停在"加载中"。**先读 §四-2 的现状声明再决定要不要重启。**
 3. **`429` 与 `409` 是两件事**。`429 RATE_LIMITED` = 配额超限，按桶给 `Retry-After`（30/5/10/60，`GLOBAL_CONCURRENCY` 无该头语义）。`409 SESSION_CONFLICT` = 会话串行冲突（`SESSION_LOCK_WAIT_MS=3000` 内没等到锁），**不是限流**，处置是"串行化本身生效了"，**不得写成"等 Retry-After 就行"**（它带的 `Retry-After: 3` 是附录 A §A.11 的补充约定，不是配额窗口）。二者也不共用指标（§14.5）。
-4. **不伪造能力**。本沙箱 = 单机 Docker Compose + SQLite 沙箱库，**没有 K8s、没有 pgvector 托管实例、PG 可能未起**。凡是当前环境做不到的步骤，本目录一律标 `UNVERIFIED` 或「需在真 PG 环境验证」。**标了 UNVERIFIED 的条目不得在交付报告里写成"已验证"。**
+4. **不伪造能力**。凡是当前环境做不到的步骤，本目录一律标 `UNVERIFIED` 或「需在真 PG 环境验证」。**标了 UNVERIFIED 的条目不得在交付报告里写成"已验证"。**
+   ⚠️ 但**别照抄旧版那句"PG 可能未起 / 没有 pgvector"** —— 2026-09-19 实测两点都已变：本机 **PG 在跑**（`alembic_version=0005`，`app` schema 有 1,940,300 行业务数据），**pgvector 已装**（`pg_extension` 里 `vector 0.8.6`，`app.embed_doc.embedding` 是 `vector(1024)`）⇒ 凡"需要真 PG 才能判"的步骤，**在本机已经可以判**，不要再拿沙箱形态当挡箭牌。
+   仍然**不成立**的环境事实（这几条没变）：没有 K8s、没有第二台机器可横向扩展、宿主 Ollama **缺 `bge-m3`**（RL-2）。
+   镜像面按 `docker images` 实测分两半（**别整句照抄旧版**）：`prom/prometheus:v2.54.1` 与 `edoburu/pgbouncer:latest` **在本机就有** ⇒ Prometheus 侧的抓取/规则**可以在本机真跑**，不要再说"拉不到镜像"；`grafana` 与 `nginx` **确实没有** ⇒ 看板**渲染**与反代 `/metrics` 404 的活体行为仍未验（dashboard JSON 只过了解析，告警规则只过了 `promtool`）。
 5. **编号纪律**：本目录**不开任何 `U-xx` 编号**。发现的文档/实现不一致，一律写成「**待架构窗口分配编号**」，由架构窗口登记到 07 §4.8。
 
 ---
@@ -161,16 +164,19 @@ export MIGRATION_DATABASE_URL='<按上面形态填，勿写进任何仓库文件
 cd ../backend && ../.venv/Scripts/python.exe -m alembic upgrade head
 ```
 
-**端口与池速记**：`api` 8000 · `pg` 5432 · `pgbouncer` 6432 · `redis` 6379 · `web` 80 · Ollama **在宿主** 11434（不在 Compose 内，§18.1）· `worker` 属 `profiles: [async]` **P0 不启用**（ADR-15）。
+**端口与池速记**：`api` 8000 · `pg` 5432 · `pgbouncer` 6432（⚠️ **容器在跑 ≠ 可用**：该镜像默认监听 **5432**，要靠 compose 里显式的 `LISTEN_PORT: "6432"` 才对得上；且 `auth_type=md5` 与 W1B 角色的 SCRAM 口令不兼容 ⇒ 应用侧**一条连接都进不去**，详见 `RL-3` §2.5）· `redis` 6379 · `web` 80 · Ollama **在宿主** 11434（不在 Compose 内，§18.1）· `worker` 属 `profiles: [async]` **P0 不启用**（ADR-15）。
 **停机宽限**：`api` 的 `stop_grace_period: 40s` 对应 §18.3 的 drain 30s；`healthcheck` 用 **readiness**（不是 liveness），`start_period: 60s`（Ollama 预热慢）。
 **venv**：`CommerceQL/.venv`，从 `backend/` 用 `../.venv/Scripts/python.exe`；本机用 **Git Bash**（不要 PowerShell，零回显）。
 
-> ⚠️ **两条命令级坑（六份 RL-\* 正文共用）**：
+> ⚠️ **三条命令级坑（六份 RL-\* 正文共用）**：
 > ① 本目录已在 `deploy/runbook/`，与 `docker-compose.yml` **同一层** ⇒ `docker compose …` 的工作目录是
 >    **`CommerceQL/deploy`**（不是本目录、也不用 `cd ..`）。
 > ② **api 镜像是 slim 构建，容器内没有 `curl`** ⇒ `docker compose exec api curl …` 必然失败。
 >    容器内取探针/指标一律用 `docker compose exec api python -c "import urllib.request as u; print(u.urlopen('http://127.0.0.1:8000/api/v1/…').read().decode())"`；
 >    上面那段 `curl` 只在**宿主** Git Bash 里可用（宿主有 curl，且 8000/80 有宿主映射）。
+> ③ **只有 `docker compose exec -T` 可用**；绕过 compose 直接 `docker exec -T <容器> …` 在本机 docker CLI 上
+>    报 `unknown shorthand flag: 'T' in -T`（2026-09-19 实测）。⇒ 本目录一律写 compose 形式；
+>    确实要按容器名直连时**去掉 `-T`** 即可（非交互下 `-T` 本来也没有作用）。
 
 ---
 

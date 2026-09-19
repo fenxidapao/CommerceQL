@@ -83,7 +83,16 @@ docker compose exec -T pg psql -U postgres -d ecom -c \
   "select polname, polrelid::regclass, polqual is not null as has_qual from pg_policy;"
 # 存在性泄露的判据在应用侧：scope.level 三值是否被正确降为 role_limited/tenant_isolated（§13.5 禁 LLM 参与）
 ```
-`UNVERIFIED`：2.5 的两条 SQL 需要真 PG + 迁移已跑（`0001` 建角色与策略，`0003` 建业务视图）。本沙箱 PG 状态未确认。
+✅ **2026-09-19 真机读数**（两条 SQL 均可执行，迁移 head=`0005`）：
+
+| 读数 | 判读 |
+|---|---|
+| 承载租户数据的 **6 张业务底表**（`order_paid` 494,249 行 / `order_refund` 23,116 / `traffic_daily` 1,500,556 / `product` 6,000 / `shop` 12 / `campaign` 84）**全部** `relrowsecurity=t` **且** `relforcerowsecurity=t`，各挂 **1 条** `p_*_tenant` 策略且 `polqual is not null = t` | ✅ "RLS 是最终强制边界"在**业务表**上成立，且 `FORCE` 也开着 ⇒ 表 owner 也绕不过去 |
+| `audit_log`、`cost_ledger`、`query_plan`：`relrowsecurity=f`、0 条策略 | ⚠️ **别把上一行的判据外推到这三张**。它们的边界不是 RLS：`audit_log` 靠 `trg_audit_log_immutable` + `app_rw` 无 UPDATE/DELETE（见 `RL-1` §2.5 实测），`cost_ledger`/`query_plan` 靠**只有应用能写**。“跨租户读审计会被 RLS 挡住”是**错的** |
+| 其余 `rls=f` 的表（`metric_def`/`dimension`/`synonym`/`join_path`/`region`/`policy`/`semantic_bundle`/`embed_doc`/`asset`/`default_predicate`/`feedback`/`gold_query`） | 语义层/配置面，按 §6.1 是**全局共享**的 ⇒ 无租户策略是当前设计，不是漏配 |
+| 2.5a 按名字点了 4 张表，只回 2 行 | ⚠️ 因为 **`query_task` 与 `session` 在任何 schema 下都不存在**（全库按 `table_name` 搜 = 0 行）。这**不是**"迁移没跑"——`alembic_version=0005` 就是 head。会话面在 Redis/检查点侧。定性要不要建这两张表归 W1B |
+
+⇒ 本条的存在性泄露判据仍然在**应用侧**（`scope.level` 三值是否被正确降为 `role_limited`/`tenant_isolated`，§13.5 禁 LLM 参与）；库侧这组读数只证明"最后一道墙在位"，不证明"上游没漏"。
 
 **分流结论** → A 类走 §3-A，B 类走 §3-B，**两类都做 §3-C 的禁止清单**。
 

@@ -62,7 +62,12 @@ docker compose logs --since 60m api | grep -oE '"blocked_by":"(tenant|global)"' 
 
 ```bash
 # 2.3 真账：cost_ledger（表在 app schema，索引按 (tenant_id, created_at) / (created_at)，迁移 0004）
-#     ⚠️ 需要真 PG；SQLite 沙箱形态下本步不可执行 → UNVERIFIED
+#     ✅ 2026-09-19 本机已实测可执行（真 PG + head=0005）。读数：小时分布 13:00→58 次/¥0.046680、
+#        14:00→24 次/¥0.017578；租户分组只有 T_A（82 次 / ¥0.064258）⇒ 两条 SQL 的合计互相对得上。
+#     ⚠️ token 口径：算总 token 用 sum(input_tokens + output_tokens)，**不要加 cache_hit_tokens** ——
+#        它是 input_tokens 的**子集**（app/llm/budget.py:175 用 max(input - cache_hit, 0) 计未命中价），
+#        相加等于把命中的前缀算两遍（本机实测：正确 217,675 vs 错误算法 473,270）。
+#        命中率才用 cache_hit/input（NFR-4.3，`llm/__init__.py:279` 同式）。
 docker compose exec -T pg psql -U postgres -d ecom -c \
   "select date_trunc('hour', created_at at time zone 'Asia/Shanghai') as hr,
           sum(cost_cny) as cny, count(*) as calls

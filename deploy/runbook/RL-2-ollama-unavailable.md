@@ -70,7 +70,22 @@ print(u.urlopen(os.environ['EMBEDDING_BASE_URL'].rstrip('/')+'/api/tags',timeout
 | 2.2/2.4 都通、但报维度/模型错 | `EMBEDDING_MODEL` / `EMBEDDING_DIM` 与索引不一致（§18.4 第 3 行断言 `embedding_dim_matches_vector_column`） | §3-4，**这是配置级故障，可能拒绝启动** |
 | 只是**慢**（首次调用几十秒） | 模型未预热（`start_period: 60s` 与 `EMBEDDING_TIMEOUT_SECONDS=30` 就是为它准备的） | §3-5 |
 
-`UNVERIFIED`：以上 2.2–2.4 需要**宿主 Ollama 实际在跑**才能验证；本沙箱未确认 Ollama 已启动、也未确认 `bge-m3` 已 `pull`（约 1.2GB）。此外维度一致性断言要连**真 PG + pgvector**，SQLite 沙箱下该断言为 `PENDING`（不是通过）。
+`UNVERIFIED` 的当前状态（2026-09-19 按本轮实测逐项收口，**不要整段照抄旧口径**）：
+
+| 步骤 | 状态 | 实测 |
+|---|---|---|
+| 2.2 宿主 Ollama 在跑 | ✅ 已验 | 起进程后 `11434/api/tags` 可答 |
+| 2.4 容器内可达 | ✅ 已验（**E-11 在本机不成立**） | 容器内经 `http://host.docker.internal:11434` 实测 **23ms** 拿到响应（`extra_hosts: host-gateway` 生效）⇒ 判据表的"2.2 通、2.4 不通"这一格本轮**未被走到** |
+| 2.3 模型已拉 + 维度对 | ❌ **仍不可观测** | `bge-m3` 不在 `/api/tags`；`ollama pull bge-m3` 到 **83%** 后停摆（末次读数 1.8 KB/s、ETA≈29h）⇒ 属网络面阻塞，非本 runbook 可解 |
+| 降级分支（本条的正题） | ✅ 已验 | embedding 不可用时 `GET /healthz` → **200** + `status=degraded` + `degraded_dependencies:["embedding"]`，且 `checks.llm_reachable=true` ⇒ **N-21（软依赖失败不得 503）活体成立** |
+
+⚠️ 两个不得外推：① 上表验的是"**失败时**降级正确"，**不是**"模型可用"。
+`embedding_dim_matches_vector_column` 本轮**合法 PASS**（容器日志原文 `detail="EMBEDDING_DIM=1024 == 向量列 vector(1024)"`
+⇒ `app.embed_doc.embedding` 确实已物化成 `vector(1024)`），但**它的判定范围只有"配置维度 vs 库内列维度"**，
+与 embedding **服务**是否真在吐 1024 维无关 ⇒ `bge-m3` 缺席时它**照样 PASS**。
+不要拿这条 PASS 去否定 R4：**没有任何一次查询走到执行**（`stage_duration_seconds_count{executing}=0`，见 `压测报告.md` §四 R4）。
+② 维度一致性断言要连**真 PG + pgvector**，SQLite 沙箱形态下该断言是 `PENDING`（不是通过）—— 本轮它之所以可判定，
+正是因为跑在真 PG 上（`load_synth_to_pg.py` 那套装载已把元库建到位）。
 
 ---
 
