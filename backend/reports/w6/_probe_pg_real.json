@@ -466,7 +466,48 @@
         "owner_total": 1500556
       }
     },
-    "rls_partition_ok": true
+    "rls_partition_ok": true,
+    "parallel_equality": {
+      "v_order_paid": {
+        "off": {
+          "counts": [
+            200000,
+            200000,
+            200000
+          ],
+          "parallel_plan": true
+        },
+        "on": {
+          "counts": [
+            200000,
+            200000,
+            200000
+          ],
+          "parallel_plan": true
+        },
+        "equal": true
+      },
+      "v_traffic_daily": {
+        "off": {
+          "counts": [
+            600178,
+            600178,
+            600178
+          ],
+          "parallel_plan": true
+        },
+        "on": {
+          "counts": [
+            600178,
+            600178,
+            600178
+          ],
+          "parallel_plan": true
+        },
+        "equal": true
+      }
+    },
+    "parallel_equality_ok": true
   },
   "parity": {
     "relations": [

@@ -270,10 +270,60 @@ async def probe_pg() -> dict:
                 c["sum_over_tenants"] == c["owner_total"]
                 for c in out["rls_partition_check"].values()
             )
+            # ---- 并行 vs 串行：同一条 SQL 必须给同一个数 ----
+            # 为什么常驻在探针里：W7 报过一次"并行计划下 count(*) 少算且不报错"（我这边
+            # 8 种组合没能复现，见 parallel_equality 的实测值）。N-07 抓不到这种错 ——
+            # 策略照样生效、不报错，只是分量被并行计划吃掉；而 PG 轮要的是"结果可信"。
+            # ⇒ 它是 PG 执行链的**前置判据**，不是可选检查。
+            out["parallel_equality"] = await _parallel_equality(
+                tenants[0] if tenants else "T_A", "v_order_paid", "v_traffic_daily"
+            )
+            out["parallel_equality_ok"] = all(
+                r.get("equal") for r in out["parallel_equality"].values()
+            )
         except Exception as exc:
             out["rls_effectiveness"] = f"UNREACHABLE {type(exc).__name__}: {exc}"
 
     return out
+
+
+async def _parallel_equality(tenant: str, *views: str, runs: int = 3) -> dict:
+    """同一视图在 `debug_parallel_query` off/on 下各数 `runs` 次，并要求计划里真的有并行节点。
+
+    只比数值不够：并行没被选中时"相等"是空话 ⇒ 一并记 `parallel_plan`，让读的人能判断
+    这次对照到底测没测到那条路径。
+    """
+    import psycopg  # 与 probe_pg() 同为延迟导入（模块顶层不依赖驱动在位）
+
+    result: dict[str, dict] = {}
+    con = await psycopg.AsyncConnection.connect(RO_DSN, autocommit=True)
+    async with con:
+        await con.execute("select set_config('app.tenant_id', %s, false)", (tenant,))
+        await con.execute("select set_config('app.shop_ids', '', false)")
+        for v in views:
+            q = f'select count(*) from "app"."{v}"'
+            per_mode: dict[str, dict] = {}
+            for dpq in ("off", "on"):
+                cur = await con.execute("select set_config('debug_parallel_query', %s, false)", (dpq,))
+                await cur.fetchone()
+                counts: list[int | str] = []
+                for _ in range(runs):
+                    try:
+                        cur = await con.execute(q)
+                        counts.append((await cur.fetchone())[0])
+                    except Exception as exc:
+                        counts.append(f"ERR {type(exc).__name__}")
+                plan = [r[0] for r in await (await con.execute("explain " + q)).fetchall()]
+                per_mode[dpq] = {
+                    "counts": counts,
+                    "parallel_plan": any(("Parallel" in p) or ("Gather" in p) for p in plan),
+                }
+            nums = [x for m in per_mode.values() for x in m["counts"] if isinstance(x, int)]
+            result[v] = {
+                **per_mode,
+                "equal": bool(nums) and len(set(nums)) == 1 and len(nums) == 2 * runs,
+            }
+    return result
 
 
 def probe_sqlite() -> dict:
