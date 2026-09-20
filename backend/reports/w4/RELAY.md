@@ -123,16 +123,16 @@
 
 | 子项 | 落点 | 状态 |
 |---|---|---|
-| 每节点超时 | `graph/build.py`：`NODE_TIMEOUT_S`（07 §5.3"超时"列逐字）+ `_with_node_timeout`（`asyncio.timeout` 包装）| ✅ |
+| 每节点超时 | `graph/build.py`：`_with_node_timeout`（`asyncio.timeout` 包装）+ 超时出路表（`_timeout_fallback`）；硬超时口径已按 **U-107** 收口订正（6 LLM 节点→客户端超时、9 固定节点→`NODE_TIMEOUT_S`），见 §十 | ✅（本行口径已被 §十订正）|
 | 两段审计 | T2–T4 已接线（`audit_pre` fail-closed / `audit_supp` 非阻断 / 取消路径补写）| ✅ 复核无缺口 |
 | 会话级版本固定 | `state_store.touch_session`：**旧值优先**（N-23 不漂移）+ `graph_version` 落键 | ✅ 写侧；读侧缺口维持登记 |
 | §16.2 占位先推 | `runner._pump`：1.6s 无任何 stage 帧 → 单次推 `stage=intent` 占位；`events.EventRecorder.stage_placeholder` | ✅ |
 
-- **超时转移口径**：仅 `present` 超时按 §14.2 F4 同形降级（`degraded(present_failed, table_only)` + 空增量）；其余 14 节点超时 → 告警 + re-raise → `runner._drive` 兜底 `error(INTERNAL)`。🔴 `audit_supp` **不吞**：该节点兼发 `complete` 终态，超时吞掉 = 流无终态（N-08）。`overrides` 参数仅供测试放大 0.1s 闸门值。
+- **超时转移口径**：~~仅 `present` 超时降级、其余 re-raise~~ —— **已被 U-107 收口订正**（旧口径 = N-21「软依赖失败必须 200+degraded」的反向实现，上游一慢就 `error(INTERNAL)`→`ok=0`，W7 实测 145 条 http_5xx 全 INTERNAL）。新口径：逐节点复用 §5.3「失败转移」列（LLM 节点→降级链、gate1/2/3→各自 GATE_* 码或跳过并标注、execute→EXEC_TIMEOUT、present→table_only；mask/audit_pre/audit_supp 具名 re-raise），详见 §十。`overrides` 参数仅供测试放大/缩小闸门值。
 - **占位实现要点**：判定阈值 = **1.6s**（U-66 订正，非旧值 1.2s）；占位**必须参与 tick 周期计算**——否则 `wait_for` 等到下一次心跳（15s）才轮到判定，NFR-1.2 在生产路径上失效（契约测试以 0.05s/10s 极端比例实抓此缺陷）；占位载荷只有 `elapsed_ms`（不发结论）；真值先到不覆盖；图已结束不发。
 - **口径订正**：`test_api_runner_contract.py::test_session_title_is_written_once` 旧断言"版本要更新"与 07 §5.7 / N-23 冲突，已改为"固定不漂移 + `graph_version` 落键"（T8 依据，注释已注明）。
 - **诚实边界**：会话级固定的**图内读侧**（把 pinned 版本注回 `RunContext.bundle_version`）仍缺 `RepositoryPort` 通道（`trusted_context` 原登记维持）——写侧固定后，`GET /session/{id}` 可对账，但图内本轮仍取激活版本。
-- 新契约测试：`tests/contract/test_graph_timeout_contract.py`（表值逐字 / 包装语义 / present 特例 / overrides）+ `tests/contract/test_sse_placeholder_contract.py`（阈值 1.6 / 单次 / 不发结论 / 不回退 / 不覆盖）。
+- 新契约测试：`tests/contract/test_graph_timeout_contract.py`（9 固定节点表值逐字 / 6 LLM 节点路由到客户端超时 / 逐节点超时出路表 / fail-closed re-raise / overrides / 客户端超时解析）+ `tests/contract/test_sse_placeholder_contract.py`（阈值 1.6 / 单次 / 不发结论 / 不回退 / 不覆盖）。
 
 ---
 
@@ -181,3 +181,35 @@
 | **U-104** | 07 §5.3 `normalize` 行"失败转移"格空着 + 合并档预算冲突（w7 联调 🔴-0） | **已修（预算平移，非契约变更）**：合并档下 `normalize` 一次调用干节点 2+3 的活，节点超时吸收 `intent` 表值（2.0+1.5=3.5s，`build.py:_MERGED_NORMALIZE_EXTRA_S`，执行期按 `deps.merged_understand` 判；split 档/无上下文仍逐字 2.0s，`NODE_TIMEOUT_S` 契约表不动）。根因：合并调用契约预算 1.6s（§16.2）+ 节点级 2.0s 只剩 ~0.4s 余量，w7 单条复现 8/8 稳定超限 50–100ms。**待架构**：补 §5.3 该行"失败转移"格（超时→降级落点口径，如需 W4 再补降级出口） |
 
 > 给 W5 的联调清单沿用 `HANDOFF.md §四`，本节不重复。
+
+---
+
+## 十、U-107 落地回执（架构 §10 → W4，收口后修订提交）
+
+- 归属：**U-107**（`app/graph/**` 域内），依据 `reports/arch/RELAY.md §10` + `docs/07 §5.3.0`「U-107 附注」四条口径。**问题本质**：旧形态把 N-21「软依赖失败必须 200+degraded」反向实现——上游一慢就 `error(INTERNAL)`→`ok=0`（W7 实测 145 条 http_5xx 全 INTERNAL；link 的 bge-m3 实测 4462-5025ms vs 旧 4.0s 硬超时）。四条口径逐条落地如下。
+
+### ① 硬超时改成"按本请求实际模型的客户端超时"（执行期解析，不写死）
+
+- `NODE_TIMEOUT_S` 只剩 **9 个非 LLM 节点**（值逐字：`link 30.0 / bind 0.2 / gate1_ast 0.1 / gate2_policy 0.1 / gate3_cost 1.0 / execute 30.0 / mask 0.1 / audit_pre 1.0 / audit_supp 0.5`）。
+- 6 个 LLM 节点（`normalize/intent/plan/gen_sql/present/repair`）移出表 → 新增 `_LLM_NODE_TASKS` + `_client_timeout_for(task)` = `hard_timeout_s(resolve_route(task).model_key)`（§10.2：flash 15s / pro 45s）；`_effective_limit_for` **执行期**解析（图是编译期单例，包装期拿不到最终档）。
+- **link 4.0 → 30.0**：具名引用 `Settings.EMBEDDING_TIMEOUT_SECONDS`（`app/core/config.py`，07 §6.5，默认 30）——旧 4.0s 先掐 embedding 自己的 30s 客户端超时（同款病害第二处，U-22 纪律：不得就地发明数值）。
+
+### ② 超时出路表（`_timeout_fallback` 逐节点复用 §5.3「失败转移」列）
+
+- 每次转移**镜像该节点自身处理同源失败的分支**（让"运行中超时"与"节点内失败"产出同形终态）：
+  `normalize/plan/gen_sql/repair` → `degraded` + `refuse(no_data_asset)`；`intent` → `refuse`（不发 degraded，镜像节点自身）；`link` → `degraded(embedding_unavailable, sparse_only)` + `refuse`；`bind` → `refuse`（W4 具名裁决：无绑定产物→拒答）；`present` → `degraded(present_failed, table_only)` + 空增量；`gate1_ast/gate2_policy` → `error(GATE_AST_REJECTED/GATE_POLICY_REJECTED)`；`gate3_cost` → `run_gate3(explain_error=True)`→WARN + `gate_update`（跳过并标注，不设终态）；`execute` → 写 `exec_error(timeout)`、不定终态（由 `route_after_execute`/`error_out` 映射 `EXEC_TIMEOUT`）。
+- **`_RERAISE_TIMEOUT_NODES = {mask, audit_pre, audit_supp}` 保持 re-raise**：`mask/audit_pre` 是 fail-closed（没跑完=脱敏/段1审计未完成）；`audit_supp` **具名裁决**（兼发 `complete` 终态，超时连终态都没构造 ⇒ 吞掉=流无终态，违 N-08）——理由已写进代码注释。
+
+### ③ `_MERGED_NORMALIZE_EXTRA_S` 语义从"超时平移"→"分配平移"
+
+- 3.5s **保留**（U-104 规则 5 转正），但改承载"分配（budget）"（§16.1 预算 / §16.2 SSE 占位符判定 / `over_budget`），**不再叠加进 `asyncio.timeout`**；LLM 节点硬超时统一走 `_client_timeout_for`。
+- ⚠️ W7 重建镜像后看到的 `node_timeout{node=normalize, limit_s:3.5}` 会变成**客户端超时值**——这是设计意图，**不是回滚 🔴-0**（已在 §十登记，请勿改回）。
+
+### ④ 契约测试（与架构 §10④ 的一处分歧，已登记）
+
+- 架构 §10④ 称"契约钉的是**键集**不是值 ⇒ 不需改断言"——**实际代码是值级断言**（`assert NODE_TIMEOUT_S == EXPECTED_TIMED_NODES`），改表必红。故 `tests/contract/test_graph_timeout_contract.py` **已整体重写**：`EXPECTED_TIMED_NODES` 更新为 9 固定节点、新增 `EXPECTED_LLM_NODES`、`TestTimeoutTable`/`TestWrapper`/`TestClientTimeoutResolution`/`TestAssembly` 重组，删除旧 `TestMergedUnderstandSlack` 4 例（其"3.5s 超时平移"语义被 ③ 取消）。
+
+### 门禁（本机 `.venv`，`cd backend`）
+
+- `ruff check .` ✓ ｜ `mypy app` ✓（146 files）｜ `pytest tests/contract/test_graph_timeout_contract.py` 全绿（含 timeout/edges/runner 契约，74 passed 在 contract 目录内）。
+- 顺带：U-104 在九天 RELAY 里"待架构补 §5.3 normalize 失败转移格"已由架构 §10 落笔（v1.3，`07 §5.3` 6 格超时列改"= 客户端超时"、link 标"同款病害第二处"、表下加"超时列=硬超时≠分配"注）。

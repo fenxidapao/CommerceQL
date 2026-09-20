@@ -91,3 +91,11 @@ $ ../.venv/Scripts/python.exe -m pytest tests/contract -q --tb=short
 1. **端到端"可用"未宣称**：本批测试全部是**进程内真图转录级**（`SseRunner.stream` + `asyncio.run`），未经 uvicorn/compose 容器层，也不含与 W5 前端的真实联调。W5 的 17 条 BLOCKED QA 仍待联调环境。
 2. **U-68 合并档未落**：plan+gen_sql 仍两 task 接线，W3B DoD① 的部分达成与本窗口无关，维持"未完成"口径。
 3. **全量 pytest 唯一红 = 环境不可达**：`test_retrieval_fts_pg.py` 的 1F+6E 是 PG compose 栈未起导致的 `ConnectionTimeout`，非回归；如需真库绿需先 `docker compose up` 起 `commerceql-pg-1`。
+
+---
+
+## 6. 收口后修订（U-107，架构 §10 → W4）
+
+- T10 收口后，架构 §10 裁定 **U-107**（归 W4，最高优先级）：旧节点超时口径把 N-21「软依赖失败必须 200+degraded」反向实现——上游一慢就 `error(INTERNAL)`→`ok=0`（W7 实测 145 条 http_5xx 全 INTERNAL）。
+- **DoD 订正/追注**：本文件 §2 DoD 表（08 §3.6 ①–④）不含节点超时的完成声称——超时口径原登记在 `RELAY.md §七`（T8），该节的"仅 present 降级、其余 re-raise"完成声称**已被 U-107 订正**，迁移到 `RELAY.md §十`（硬超时=客户端超时 / 逐节点超时出路表 / 3.5s 改指分配 / 契约测试同步重写）。架构 §10④ 称"契约钉键集不需改断言"与实际**值级断言**冲突，已按实现事实重写测试并在 §十登记分歧。
+- 门禁：`ruff check .` ✓ ｜ `mypy app` ✓（146 files）｜ `pytest tests/contract/test_graph_timeout_contract.py` 全绿。
