@@ -279,6 +279,8 @@ async def _tokens_for(args: argparse.Namespace, spec: ScenarioSpec) -> list[str]
 def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: argparse.Namespace) -> dict[str, Any]:
     totals = sorted(s.total_ms for s in samples if s.total_ms is not None)
     ttfbs = sorted(s.ttfb_ms for s in samples if s.ttfb_ms is not None)
+    # 先算一次：`_pct` 返回 `float | None`，连调两次 mypy 收窄不了（而且同一分位数算两遍没意义）。
+    p95_total = _pct(totals, 95)
     by_outcome: dict[str, int] = {}
     for s in samples:
         by_outcome[s.outcome] = by_outcome.get(s.outcome, 0) + 1
@@ -300,7 +302,7 @@ def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: a
         "requests": len(samples),
         "wall_s": round(wall_s, 3),
         "throughput_rps": round(len(samples) / wall_s, 3) if wall_s > 0 else None,
-        "latency_ms": {"p50": _pct(totals, 50), "p95": _pct(totals, 95), "p99": _pct(totals, 99),
+        "latency_ms": {"p50": _pct(totals, 50), "p95": p95_total, "p99": _pct(totals, 99),
                        "max": round(totals[-1], 1) if totals else None,
                        "mean": round(statistics.fmean(totals), 1) if totals else None},
         "ttfb_ms": {"p50": _pct(ttfbs, 50), "p95": _pct(ttfbs, 95)},
@@ -309,11 +311,30 @@ def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: a
         # drain 证据只能靠 message 分家：光看 `error_frame` 数会把"停机注入"和"节点超时"混成一坨。
         "drain_frames": sum(1 for s in samples if s.msg and "重启" in s.msg),
         "error_messages": _messages(samples),
-        # G-6 只看 total_ms 的 p95；⚠️ 有 async_degraded 时该数**不可**直接判达标，见 README §四。
-        "g6_p95_le_8s": (_pct(totals, 95) is not None and _pct(totals, 95) <= 8000.0),
-        "g6_caveat": ("含 async_degraded 样本 ⇒ 端到端未真正完成，P95 偏低"
-                      if by_outcome.get("async_degraded") else None),
+        # G-6 只看 total_ms 的 p95；⚠️ 这个布尔位**单独读没有意义**，必须与 `g6_caveat` 同读
+        #    （0 条完成时 p95 也可以 ≤8s —— 那正是假绿灯的形状，见 `_g6_caveat` 的文档）。
+        "g6_p95_le_8s": (p95_total is not None and p95_total <= 8000.0),
+        "g6_caveat": _g6_caveat(by_outcome),
     }
+
+
+def _g6_caveat(by_outcome: dict[str, int]) -> str | None:
+    """这份 P95 **能不能**拿来判 G-6 达标 —— 必须是机器可读的，不能只在散文里警告。
+
+    为什么这条要单独抽出来：下游 W6 的 `eval/reporter.loadtest_pressure()` 取的是
+    "各场景 `latency_ms.p95` 的最大值"，并且**只通过 `g6_caveat` 是否非空**来降档 ——
+    它不读 `outcomes`。于是 2026-09-19 那种"0 条完成、但 error 帧收得很快"的跑批
+    （p95 = 7268ms ≤ 8000ms）会被**机械地判成 G-6 PASS**。分母里没有一次成功。
+    ⇒ 凡是"这条 P95 不代表真实完成延迟"的情形，都必须在这里落一句非空文本。
+    """
+    notes: list[str] = []
+    completed = by_outcome.get("ok", 0)
+    if not completed:
+        notes.append("本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标")
+    async_degraded = by_outcome.get("async_degraded", 0)
+    if async_degraded:
+        notes.append(f"含 {async_degraded} 条 async_degraded（超阈值转异步）⇒ 端到端未在此流内完成，P95 偏低")
+    return "；".join(notes) if notes else None
 
 
 def _messages(samples: list[Sample]) -> dict[str, int]:
@@ -393,7 +414,7 @@ async def self_check() -> int:
         if kind == "truncated":
             await send({"type": "http.response.body", "body": b"", "more_body": False})
             return
-        body = {"terminal": True}
+        body: dict[str, Any] = {"terminal": True}
         if kind == "error":
             body["code"] = "INTERNAL"
         if kind == "async":
@@ -444,7 +465,21 @@ async def self_check() -> int:
     if p95 is None or not 2000.0 < p95 <= 3300.0:
         print(f"[自检失败] 百分位计算异常：p95={p95}（期望落在 (2000, 3300]）", file=sys.stderr)
         return 3
-    print(f"[自检通过] 10/10 分类正确；样本 p95={p95}ms（桩注入的最大延迟 3000ms）")
+    # `g6_caveat` 是**下游唯一的降档开关**（W6 的 `eval/reporter.loadtest_pressure()` 只读它、
+    # 不读 `outcomes`）⇒ 它"假空"就等于把一份没有一次成功的 P95 判成 G-6 PASS。
+    # 三种情形都必须测到，否则会静默退回旧行为。
+    gate_cases: list[tuple[dict[str, int], bool]] = [
+        ({"error_frame": 87, "http_5xx": 41, "http_4xx": 9, "clarify": 7, "refuse": 6}, True),
+        ({"async_degraded": 12, "ok": 3}, True),
+        ({"ok": 40, "clarify": 5}, False),
+    ]
+    for case_outcomes, want_caveated in gate_cases:
+        if bool(_g6_caveat(case_outcomes)) != want_caveated:
+            print(f"[自检失败] g6_caveat 判错：{case_outcomes} → {_g6_caveat(case_outcomes)!r}"
+                  f"（期望{'非空' if want_caveated else 'None'}）", file=sys.stderr)
+            return 3
+    print(f"[自检通过] 10/10 分类正确；样本 p95={p95}ms（桩注入的最大延迟 3000ms）；"
+          f"g6_caveat 三情形（零完成/转异步/真有完成）判向正确")
     return 0
 
 
@@ -500,14 +535,96 @@ def build_parser() -> argparse.ArgumentParser:
                    help="**成本硬上限**（每个场景）。真实额度跑批必给：到数就停，不跑满时长")
     p.add_argument("--out", default="receipt.json", help="结构化回执输出路径")
     p.add_argument("--self-check", action="store_true", help="只验量具（零外呼、零额度）")
+    p.add_argument("--roll-up", nargs="+", metavar="RECEIPT",
+                   help="**零外呼、零额度**：把已落盘的回执合成一份 --out（默认 receipt.json），"
+                        "并按各自 outcomes 重算 g6_caveat（旧文件的 null 会让 G-6 假绿）")
     p.add_argument("--dry-run", action="store_true", help="打印将执行的场景参数后退出")
     return p
+
+
+def roll_up(paths: list[str], out: str) -> int:
+    """**不发包、不花额度**：把已有回执合成一份 `receipt.json`，顺手把 caveat 补算对。
+
+    两件事缺一不可：
+    ① 下游 W6 的读端只认一个路径（`deploy/loadtest/receipt.json`），而本目录按场景分文件存；
+    ② 2026-09-19 之前写出的回执里 `g6_caveat` 是 `null`（那时它只看 `async_degraded`），
+       直接喂给 W6 的"取 max(p95) + 无 caveat 即达标"口径 ⇒ **G-6 会被判成 PASS**，
+       而那几轮其实是 0 条完成。⇒ 这里用**各场景自己已落盘的 `outcomes`** 重算，不引入任何新测量。
+    """
+    merged: dict[str, Any] = {
+        "schema": SCHEMA_VERSION,
+        "mode": "roll-up",
+        "note": ("本文件由已落盘的回执**合成**，没有重新发包。"
+                 "`g6_caveat` 按各场景自带的 `outcomes` 重算（旧文件里为 null 会产生 G-6 假绿灯）。"
+                 "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）"),
+        "derived_from": [],
+        "started_at": None,
+        "finished_at": None,
+        "target": None,
+        "scenarios": [],
+    }
+    started: list[str] = []
+    finished: list[str] = []
+    for p in paths:
+        raw = json.loads(Path(p).read_text(encoding="utf-8"))
+        if raw.get("schema") != SCHEMA_VERSION:
+            print(f"[中止] {p} 的 schema 是 {raw.get('schema')!r}，不是 {SCHEMA_VERSION!r} ⇒ 别混进同一份",
+                  file=sys.stderr)
+            return 2
+        merged["target"] = merged["target"] or raw.get("target")
+        if raw.get("started_at"):
+            started.append(raw["started_at"])
+        if raw.get("finished_at"):
+            finished.append(raw["finished_at"])
+        for s in raw.get("scenarios") or []:
+            outcomes = s.get("outcomes") or {}
+            old = s.get("g6_caveat")
+            s["g6_caveat"] = _g6_caveat(outcomes)
+            s["g6_caveat_recomputed"] = True
+            merged["derived_from"].append({
+                "file": Path(p).name, "scenario": s.get("scenario"),
+                "requests": s.get("requests"),
+                "ok": outcomes.get("ok", 0),
+                "p95_ms": (s.get("latency_ms") or {}).get("p95"),
+                "caveat_before": old,
+                "caveat_after": s["g6_caveat"],
+            })
+            merged["scenarios"].append(s)
+    merged["started_at"] = min(started) if started else None
+    merged["finished_at"] = max(finished) if finished else None
+    Path(out).write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
+    changed = sum(1 for d in merged["derived_from"] if d["caveat_before"] != d["caveat_after"])
+    print(f"[合成] {len(paths)} 份 → {out}：{len(merged['scenarios'])} 条场景，"
+          f"其中 {changed} 条的 g6_caveat 由 null 补算为非空")
+
+    # ⚠️ 光修合成件不够：W6 的读端支持 `--loadtest-receipt <路径>`，把**任意一份分场景回执**
+    #    单独指过去，同样会因为 `g6_caveat` 是 null 而判 PASS。⇒ 输入文件也就地重算写回。
+    #    只改 `g6_caveat` 这一个派生字段，读数（outcomes / latency / codes）一律不动。
+    repaired = 0
+    for p in paths:
+        raw = json.loads(Path(p).read_text(encoding="utf-8"))
+        touched = False
+        for s in raw.get("scenarios") or []:
+            fresh = _g6_caveat(s.get("outcomes") or {})
+            if s.get("g6_caveat") != fresh:
+                s["g6_caveat"] = fresh
+                s["g6_caveat_recomputed"] = True
+                touched = True
+        if touched:
+            Path(p).write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+            repaired += 1
+    if repaired:
+        print(f"[就地补算] {repaired} 份输入回执的 g6_caveat 已按各自 outcomes 重算写回"
+              "（读数未动，仅补派生字段）")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.self_check:
         return asyncio.run(self_check())
+    if args.roll_up:
+        return roll_up(args.roll_up, args.out)
 
     specs = scenario_specs(args.scenario)
     for s in specs:  # 覆盖参数只动**要跑的那条**，且只允许把量调小或等量（调高要先报告，见 §五）

@@ -44,7 +44,8 @@
         "服务重启中，请重试": 66
       },
       "g6_p95_le_8s": true,
-      "g6_caveat": null
+      "g6_caveat": "本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标",
+      "g6_caveat_recomputed": true
     }
   ],
   "finished_at": "2026-09-19T06:27:53+00:00"

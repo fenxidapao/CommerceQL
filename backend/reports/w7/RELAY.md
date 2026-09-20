@@ -151,3 +151,47 @@
 建议的修法（**在 W1B 的权限里，本窗口不改他人文件**）：给那次 `subprocess.run` 显式 `encoding="utf-8"`，
 比设环境变量稳（环境变量会随 CI runner / 本地 shell 漂）。
 本窗口临时口径：跑离线全量时固定带 `PYTHONUTF8=1`，此时 **1733 passed**。
+
+---
+
+## 九、G-6 接口闭合：你们的读端会把 G-6 判成 PASS，现已修在我这一侧（09-19）
+
+**给 W6 / 主流程，优先级最高的一条。**
+
+`eval/reporter.loadtest_pressure()` 的口径是"取各场景 `latency_ms.p95` 的最大值"，
+降档**只看** `g6_caveat` 是否非空（`eval/gates.py:204`），而**不读 `outcomes`**。
+我这边第一版驱动只在有 `async_degraded` 样本时才填 `g6_caveat` ⇒ 本轮真实数据正好落进这个缝：
+
+| 喂给 `loadtest_pressure()` | `ok` 完成 | max p95 | 旧 `g6_caveat` | 你们的 gates 判 |
+|---|---|---|---|---|
+| §16.5 四条口径 | **0** | 7268.4ms | `null` | ❌ **PASS(≤8s)** |
+
+**零次成功完成的 P95 被机器判成 G-6 达标。** 我在 `压测报告.md` §五-1 用散文警告过这件事，
+但散文挡不住机器口径 —— 这类"两边各写一遍判据、其中一边假绿"正是 §17.4 要防的形状。
+
+**修法落在我的数据侧**（不需要你们改代码）：`deploy/loadtest/driver.py` 的 `_g6_caveat()` 现在覆盖
+两种不可判情形（① 该场景 0 条真正完成；② 含 `async_degraded`），并已把
+`deploy/loadtest/receipt*.json` **十份**全部按各自 `outcomes` 重算写回（只动这一个派生字段，读数未改）。
+合成件在 **`deploy/loadtest/receipt.json`**（即你们 `DEFAULT_LOADTEST_RECEIPT` 那个路径，
+`mode: "roll-up"`、`derived_from[]` 带逐场景溯源）。
+
+**复核方式**（你们那边一条命令都不用改）：
+
+```bash
+cd eval && ../.venv/Scripts/python.exe -c "import sys;sys.path.insert(0,'.');import reporter,gates;\
+g=reporter.loadtest_pressure('E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL/deploy/loadtest/receipt.json');\
+print(g['p95_total_ms'], g['caveat']);\
+print([x.verdict for x in gates.evaluate_gates(pressure=g) if x.gate_id=='G-6'])"
+# 期望：7268.4 / "本场景 0 条真正完成…" / ['UNVERIFIED']
+```
+
+我这边已用你们的**真读端 + 真 gates** 逐份跑过十份回执：**全部 UNVERIFIED，无一例 PASS**。
+
+⇒ 副作用一条，请知悉：**G-6 会从 `NOT_AVAILABLE` 变成 `UNVERIFIED`**。你们 `eval_metrics.json`
+里"回执一落地本行自动变实测值"这句现在兑现了，但**变成的是 UNVERIFIED 而不是 PASS**，
+且 `eval/gates.py:194` 那句"机器可读回执未产出"的措辞届时**过期**，建议一并改掉。
+
+⚠️ 一处小瑕疵在你们文件里（**我没动**）：`gates.py:211` 的 caveat 分支写死了
+"P95 可能被**截断点**假性做低"。那是 `async_degraded` 的理由；本轮触发降档的理由是
+"**零完成**"，套那句话会让读者以为还有第二种病因。建议改成中性措辞（例如"回执带 `g6_caveat` ⇒ 不判 PASS，
+理由见该字段"）。归属 W6，待架构窗口分配编号。

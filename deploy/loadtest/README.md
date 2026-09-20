@@ -100,6 +100,21 @@ psycopg 3.3.5 把第二个位置参数当 `params`、返回一个**没进入的 
 ⇒ 目前无法从 SSE 帧上区分"真完成"与"转异步"，驱动用的是"`complete` 帧带 `task_id`/`async` 键"的启发式。
 已记入 RELAY。
 
+### 四.1 `g6_caveat` 是**机器可读的降档开关**，不是注释（09-19 补，起因是一台真假绿灯）
+
+下游 W6 的 `eval/reporter.loadtest_pressure()` 取"各场景 `latency_ms.p95` 的最大值"，
+并**只靠 `g6_caveat` 是否非空**决定 G-6 降不降档（`eval/gates.py:204`）—— 它**不读 `outcomes`**。
+本目录第一版只在有 `async_degraded` 时才填这个字段，于是本轮的真实数据落进去是这个形状：
+
+| 输入 | `ok` 完成数 | p95 | 旧 `g6_caveat` | W6 读端算得 |
+|---|---|---|---|---|
+| §16.5 四条口径的合成回执 | **0** | 7268.4ms | `null` | ❌ **PASS(≤8s)** |
+
+⇒ 散文里写"P95 全是失败样本"挡不住机器口径。已改成 `_g6_caveat(outcomes)` 统一覆盖**两种**不可判情形：
+① **该场景 0 条真正完成**（本轮新增，最强的那种不可判）；② 含 `async_degraded`（原有）。
+`--self-check` 里加了三种情形的判向断言，并用 4 条变异验证过它真的会红（含"退回旧行为"那条）。
+复算后**十份回执逐份过 W6 真读端 + 真 gates，全部 UNVERIFIED，无一例 PASS**。
+
 ---
 
 ## 五、授权状态（2026-09-19：三项全部到位，按"独立容器 + 硬上限"执行）
@@ -173,3 +188,14 @@ python driver.py --scenario tenant-quota --no-async --max-requests 30 --tokens "
 按 `eval_tenant=T_A` 抽出 **155 条**问句生成，**不含 gold SQL**。
 ⚠️ §16.5 明文"不得用缩小数据集压测"——用 `driver.py` 内置的 5 条轮转题库跑出来的数**只能**用于量具演示。
 回执文件含耗时分布与状态分类，**不含查询文本与结果行**（N-11 同源关注）⇒ 可以进仓库。
+
+**最后一步：合成 W6 读端唯一认的那一份**（`deploy/loadtest/receipt.json`）。
+`--roll-up` **不发包、不花额度**，只做两件事：把分场景回执按 §16.5 口径并成单文件、并按各自
+`outcomes` **就地补算** `g6_caveat`（见 §四.1，防 G-6 假绿灯）。
+
+```bash
+cd ../deploy/loadtest
+python driver.py --roll-up receipt_steady_pool.json receipt_burst_pool.json \
+                       receipt_lock.json receipt_quota.json --out receipt.json
+# 期望输出：[合成] 4 份 → receipt.json：4 条场景 …（首次跑会顺带把输入里的 null caveat 补算写回）
+```
