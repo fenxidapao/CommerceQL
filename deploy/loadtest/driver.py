@@ -63,6 +63,11 @@ class Sample:
     code: str | None = None
     detail: str | None = None
     msg: str | None = None  # 终止 error 帧的 message ⇒ 区分"业务内部错误"与"drain 注入的停机帧"
+    # ⚠️ 这两个字段是为了回答一个 `outcomes` 答不了的问题：一条 clarify/refuse **是哪个节点说的**。
+    #    `reason="no_data_asset"` 这个字符串同时是 intent 层的产物和 §5.3 给 `link` 的"空召回"落点
+    #    ⇒ 只看 reason 分不出来源，必须把"终止前最后一个 stage 帧"一起记下来。
+    last_stage: str | None = None
+    reason: str | None = None
 
 
 @dataclass(slots=True)
@@ -146,7 +151,11 @@ async def fire_one(
     ttfb: float | None = None
     event_name: str | None = None
     terminal: str | None = None
+    last_stage: str | None = None
     frames = 0
+    # 先绑一个空 dict：`terminal is None` 那条出口（流里一条 data 帧都没有）也要读 `data`，
+    # 不初始化就是 UnboundLocalError —— 而那条出口恰恰是"什么都没收到"时最该走到的地方。
+    data: dict[str, Any] = {}
     try:
         async with client.stream("POST", url, json=payload, headers=headers) as resp:
             status = resp.status_code
@@ -168,32 +177,42 @@ async def fire_one(
                 try:
                     data = json.loads(line[5:].strip())
                 except json.JSONDecodeError:
-                    return Sample("truncated", status, ttfb, _ms(start), frames, detail="data 帧不是 JSON")
+                    return Sample("truncated", status, ttfb, _ms(start), frames,
+                                  detail="data 帧不是 JSON", last_stage=last_stage)
                 if data.get("terminal") is not True:
+                    if event_name == "stage" and isinstance(data.get("stage"), str) and data["stage"]:
+                        last_stage = str(data["stage"])
                     continue
                 terminal = event_name or str(data.get("type") or "")
                 break
     except httpx.TimeoutException:
-        return Sample("timeout", None, ttfb, _ms(start), frames, detail=f">{TERMINAL_EVENT_MAX_WAIT_S}s 未收到终止帧")
+        return Sample("timeout", None, ttfb, _ms(start), frames,
+                      detail=f">{TERMINAL_EVENT_MAX_WAIT_S}s 未收到终止帧", last_stage=last_stage)
     except (httpx.HTTPError, OSError) as exc:
-        return Sample("conn_error", None, ttfb, _ms(start), frames, detail=f"{type(exc).__name__}")
+        return Sample("conn_error", None, ttfb, _ms(start), frames,
+                      detail=f"{type(exc).__name__}", last_stage=last_stage)
 
     total = _ms(start)
+    reason = data.get("reason") if isinstance(data.get("reason"), str) else None
     if terminal is None:
         # 流正常结束却没有终止帧：这是 N-08 违约，不是"成功"。
-        return Sample("truncated", status, ttfb, total, frames, detail="流结束但无 terminal=true 帧")
+        return Sample("truncated", status, ttfb, total, frames,
+                      detail="流结束但无 terminal=true 帧", last_stage=last_stage)
     if terminal == "error":
         return Sample("error_frame", status, ttfb, total, frames,
-                      code=str(data.get("code")), msg=str(data.get("message") or "")[:60])
+                      code=str(data.get("code")), msg=str(data.get("message") or "")[:60],
+                      last_stage=last_stage, reason=reason)
     if terminal == "complete":
         if data.get("async") or data.get("task_id"):
-            return Sample("async_degraded", status, ttfb, total, frames, detail="超阈值转异步，端到端未在此流内完成")
-        return Sample("ok", status, ttfb, total, frames)
+            return Sample("async_degraded", status, ttfb, total, frames,
+                          detail="超阈值转异步，端到端未在此流内完成", last_stage=last_stage)
+        return Sample("ok", status, ttfb, total, frames, last_stage=last_stage)
     if terminal == "clarify":
-        return Sample("clarify", status, ttfb, total, frames)
+        return Sample("clarify", status, ttfb, total, frames, last_stage=last_stage, reason=reason)
     if terminal == "refuse":
-        return Sample("refuse", status, ttfb, total, frames)
-    return Sample("truncated", status, ttfb, total, frames, detail=f"未知终止事件 {terminal}")
+        return Sample("refuse", status, ttfb, total, frames, last_stage=last_stage, reason=reason)
+    return Sample("truncated", status, ttfb, total, frames,
+                  detail=f"未知终止事件 {terminal}", last_stage=last_stage)
 
 
 def _ms(start: float) -> float:
@@ -308,6 +327,8 @@ def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: a
         "ttfb_ms": {"p50": _pct(ttfbs, 50), "p95": _pct(ttfbs, 95)},
         "outcomes": by_outcome,
         "codes": _codes(samples),
+        # 谁能回答"这条 refuse 是 intent 说的还是 link 说的"：`outcomes` 与 `reason` 单独都答不了。
+        "terminal_provenance": _provenance(samples),
         # drain 证据只能靠 message 分家：光看 `error_frame` 数会把"停机注入"和"节点超时"混成一坨。
         "drain_frames": sum(1 for s in samples if s.msg and "重启" in s.msg),
         "error_messages": _messages(samples),
@@ -352,6 +373,23 @@ def _codes(samples: list[Sample]) -> dict[str, int]:
             out[s.code] = out.get(s.code, 0) + 1
         elif s.outcome in {"http_4xx", "http_5xx"} and s.detail:
             out[s.detail[:48]] = out.get(s.detail[:48], 0) + 1
+    return out
+
+
+def _provenance(samples: list[Sample]) -> dict[str, dict[str, int]]:
+    """终止事件的**来源指纹**：`outcome` → {"stage=<终止前最后一个 stage>|reason=<终止帧自带 reason>"} → 条数。
+
+    存在的理由是一个 `outcomes` + `codes` 都答不了的问题：一条 `refuse(reason=no_data_asset)`
+    既可能是 intent 层给的（07 §5.2 组 3），也可能是 `link` 的空召回（§5.3）—— 两个落点共用同一个
+    4 值枚举。把"终止前最后一个 `stage` 帧"一起记下来才能分家。
+    ⚠️ 读法：`stage=none` 表示**一条 stage 帧都没收到**（不是"数据丢了"），这本身就是信息 ——
+    例如全部终止都停在 `stage=none` ⇒ 破在第一个发 stage 帧的节点之前。
+    """
+    out: dict[str, dict[str, int]] = {}
+    for s in samples:
+        key = f"stage={s.last_stage or 'none'}|reason={s.reason or 'none'}"
+        bucket = out.setdefault(s.outcome, {})
+        bucket[key] = bucket.get(key, 0) + 1
     return out
 
 
@@ -408,7 +446,8 @@ async def self_check() -> int:
         #    若把首帧和终止帧拼成一条，TTFB 就约等于 total，于是"计时停在第一帧"
         #    这类量具缺陷在这条自检里**测不出来**（变异实测漏判）。
         await send({"type": "http.response.body",
-                    "body": b'event: sql\ndata: {"terminal": false}\n\n', "more_body": True})
+                    "body": b'event: stage\ndata: {"terminal": false, "stage": "schema_linking"}\n\n',
+                    "more_body": True})
         if delay_ms > 0:
             await asyncio.sleep(delay_ms / 1000.0)
         if kind == "truncated":
@@ -417,6 +456,8 @@ async def self_check() -> int:
         body: dict[str, Any] = {"terminal": True}
         if kind == "error":
             body["code"] = "INTERNAL"
+        if kind == "clarify":
+            body["reason"] = "time_ambiguous"
         if kind == "async":
             body["task_id"] = "t_stub"
         name = {"ok": "complete", "clarify": "clarify", "error": "error", "async": "complete"}[kind]
@@ -478,8 +519,24 @@ async def self_check() -> int:
             print(f"[自检失败] g6_caveat 判错：{case_outcomes} → {_g6_caveat(case_outcomes)!r}"
                   f"（期望{'非空' if want_caveated else 'None'}）", file=sys.stderr)
             return 3
+    # 终止来源指纹：整字典相等（不是"包含"）。三件事各钉一处 ——
+    # ① 非终止 `stage` 帧真的被记下来了（不是永远 none）；② `clarify` 的 reason 被记下来；
+    # ③ 4xx 没有流 ⇒ 落成 `stage=none|reason=none`，"分辨不了"要显式可见而不是留空。
+    prov = _provenance(got)
+    want_prov = {
+        "ok": {"stage=schema_linking|reason=none": 4},
+        "clarify": {"stage=schema_linking|reason=time_ambiguous": 1},
+        "error_frame": {"stage=schema_linking|reason=none": 1},
+        "async_degraded": {"stage=schema_linking|reason=none": 1},
+        "truncated": {"stage=schema_linking|reason=none": 1},
+        "http_4xx": {"stage=none|reason=none": 2},
+    }
+    if prov != want_prov:
+        print(f"[自检失败] 终止来源指纹不对：{prov}", file=sys.stderr)
+        return 3
     print(f"[自检通过] 10/10 分类正确；样本 p95={p95}ms（桩注入的最大延迟 3000ms）；"
-          f"g6_caveat 三情形（零完成/转异步/真有完成）判向正确")
+          f"g6_caveat 三情形（零完成/转异步/真有完成）判向正确；"
+          f"terminal_provenance {sum(sum(v.values()) for v in prov.values())} 条指纹可读")
     return 0
 
 

@@ -203,3 +203,56 @@ python driver.py --roll-up receipt_steady_pool.json receipt_burst_pool.json \
                        receipt_lock.json receipt_quota.json --out receipt.json
 # 期望输出：[合成] 4 份 → receipt.json：4 条场景 …（首次跑会顺带把输入里的 null caveat 补算写回）
 ```
+
+## 八、回执字段 `terminal_provenance`：分清"这条终止是谁说的"（09-20 补）
+
+`outcomes` 只说"终止成了什么"，`codes` 只说"错误码"。有一类问题这两个字段**都答不了**：
+
+> 一条 `refuse(reason=no_data_asset)` 是 **intent 层**给的（07 §5.2 组 3），还是 **`link` 空召回**给的（§5.3）？
+
+两个落点**共用同一个 4 值枚举**（`core/enums.py:429-432`）⇒ 只看 reason 无法分家，而这件事直接决定
+"要让 `complete` 不为 0，该去修闸门还是该去修检索"。驱动因此多记一条**终止前最后一个 `stage` 帧**，
+在回执里落成：
+
+```json
+"terminal_provenance": {
+  "clarify": {"stage=阶段名|reason=原因值": 1},
+  "refuse":  {"stage=阶段名|reason=no_data_asset": 2}
+}
+```
+
+⚠️ 上面是**形状示例**（占位），不是本机读数 —— 本轮四场景是在这个字段存在之前产的，
+它们的 `terminal_provenance` 键**不存在**（见下表第三行）。
+
+读法（⚠️ 三种形状各有含义，别一律当"数据缺失"）：
+
+| 形状 | 含义 |
+|---|---|
+| `stage=<某阶段>` 加 `reason=<某值>` | 终止**之前**流上最后出现的那个阶段 ⇒ 该阶段的**下游**节点说的 |
+| `stage=none` 加 `reason=none` | 要么根本没进流（`http_4xx`/`http_5xx` 就是这种），要么**第一个 stage 帧之前**就破了 ⇒ 本身就是定位信息 |
+| 整个键缺失 | 这份回执是 09-20 之前产的（旧驱动没有这两个字段）⇒ **不要**据此推断"没有终止" |
+
+自检（`--self-check`）已把这三个形状**钉成整字典相等**的断言，并做过变异检验：
+删掉"记 stage"那一行 ⇒ 自检 exit=3 红；还原 ⇒ 逐字节相同 + 绿。
+
+## 九、判"零完成是不是并发造成的"：先跑 c=1，再谈并发预算（09-20 的方法论教训）
+
+本报告 §三/§四 原先把"所有档 `complete`=0"归给"并发预算撑不到 50 并发"。**那个归因错了**，
+而纠正它只花了 **1 条请求**：
+
+```bash
+# 同一镜像、同一题库，把在途压到 1 条：并发因素被摘掉
+python driver.py --target http://127.0.0.1:18000/api/v1 --scenario steady \
+                 --max-requests 1 --duration-s 30 --out probe.json
+# 本机 09-20 实测：-> 1 条，p95=2052.2ms，{'error_frame': 1}（codes: INTERNAL）
+```
+
+⇒ 在途只有 1 条时仍然超时（服务端 `node_timeout{node:"normalize",limit_s:2.0}`），
+所以**并发不是必要条件**，只是放大器（2.05s → 2.5–7.3s）。
+
+⚠️ 反过来也**不要**据此说成"每条请求必死"：同一天回读 `baseline_c5.json`（09-19，c=5）是
+**clarify 5 + refuse 13 + error 2 / 20** ⇒ 多数请求当时在 2.0s 内走通了 `normalize`。
+两组合起来的正确说法是：**预算对那次合并 LLM 调用零余量 ⇒ 存活由 LLM 延迟抖动决定**。
+
+⇒ 纪律：**任何"N 并发下全崩"的结论，都要先用 `--max-requests 1` 复现一次**。
+不花额度、几秒钟，但能把"容量问题"和"根本跑不通"这两种完全不同的病分开 —— 它们的修法、归属、优先级都不一样。
