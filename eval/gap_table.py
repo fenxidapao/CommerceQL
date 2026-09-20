@@ -146,9 +146,16 @@ def _rls_head() -> str:
 
 
 def parallel_clause(pg_facts: Mapping[str, Any]) -> str:
-    """并行/串行等值对照的措辞（三态）。为什么评测侧要自带这项判据：
-    W7 报过一次"并行把 `count(*)` 吃掉一截**且不报错**"—— 这类错 N-07 抓不到
-    （租户策略照样生效，只是数变小），门禁顺路逮不到，只能由引用读数的人自己对照。
+    """并行/串行等值对照的措辞（按**形态**点名）。为什么评测侧要自带这项判据：
+    `count(*)` 可以在并行 worker 里整片被 RLS 的 `Filter` 掉、**不报错也不留痕**，
+    而 N-07 抓不到这种错（策略照样生效，只是分量丢了）⇒ 只能由引用读数的人自己对照。
+
+    本轮实测（PG 16.15 / `ecom`，两条角色路径一致）：`app.shop_ids` 只是 `RESET` 留下的
+    占位符时，并行读数比串行少约一半且逐轮抖动；同一状态下**显式** `set_config('')` 两路都精确。
+    ⚠️ 机制**未定**，别在引用时把猜测当事实：worker 侧计划里 `Worker 0: rows=0` +
+    `Rows Removed by Filter` 覆盖它整片份额，可是同一状态下从**不含 shop 条款**的视图里
+    并行投影 `current_setting('app.shop_ids', true)` 取到的仍是 `''` ⇒ "worker 没继承到 GUC"
+    这个直观解释被这条读数**证伪**（详见 RELAY P7）。
 
     ⚠️ **不自带句首标点**：前一句有没有句号由调用方知道，这里再写一个就会在报告里
     生成"。。"（实测踩过）。调用方按自己那一句的收尾选分隔符。
@@ -157,11 +164,18 @@ def parallel_clause(pg_facts: Mapping[str, Any]) -> str:
     if state is None:
         return ("⚠️ 本轮**未做**并行/串行等值对照 ⇒ 上面这些 PG 读数的"
                 "「并行路径下是否同一数」未测")
+    under = list(pg_facts.get("parallel_undercount_states") or [])
+    if under:
+        prod = (pg_facts.get("parallel_state_ok") or {}).get("explicit_empty")
+        prod_txt = "等值" if prod is True else ("**不等值**" if prod is False else "**未测**")
+        return ("🔴 并行/串行**不等值**（少算已复现）：" + "、".join(f"`{x}`" for x in under)
+                + " ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 "
+                + prod_txt + "；机制未定（见 RELAY P7），不要把「worker 没拿到 GUC」当既成事实引用")
     if not state:
-        return ("🔴 并行开/关**不等值** ⇒ 本行 PG 读数一律不得引用，先定位并行路径"
+        return ("🔴 并行/串行**不等值** ⇒ 本行 PG 读数一律不得引用，先定位并行路径"
                 "（数变小且不报错，N-07 抓不到）")
-    return ("且并行开/关等值对照**通过**（逐关系 `count(*)` 相同、`EXPLAIN` 确有并行节点 ⇒ "
-            "并行路径真被走到）")
+    return ("且并行/串行等值对照**通过**（四形态 × 真串行/真并行，且每格 `Workers Launched ≥ 1` "
+            "⇒ 并行确实被走到，不是「计划里有 Gather 就算」）")
 
 
 def rls_follow_up(pg_facts: Mapping[str, Any] | None) -> str:

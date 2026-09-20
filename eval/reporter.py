@@ -145,8 +145,11 @@ def pg_facts(path: str | None = DEFAULT_PG_PROBE) -> dict[str, Any] | None:
         "rls_negative_no_context": pg.get("rls_negative_no_context"),
         "rls_negative_unknown_tenant": pg.get("rls_negative_unknown_tenant"),
         # 三态而非 bool()：**没跑这项对照**（缺键 = None）与**跑了但不等值**（False）是两回事 ——
-        # 前者只能说"未测"，后者必须点名（W7 报过一次"并行把 count(*) 吃掉一截且不报错"）。
+        # 前者只能说"未测"，后者必须点名。本轮起判据跑在"四形态 × 真串行/真并行"上 ⇒ 还要
+        # 搬出**哪一格**少算、以及生产执行链那一格等不等值，否则措辞只能含糊说"不等值"。
         "parallel_equality_ok": pg.get("parallel_equality_ok"),
+        "parallel_undercount_states": pg.get("parallel_undercount_states") or [],
+        "parallel_state_ok": pg.get("parallel_state_ok") or {},
     }
 
 

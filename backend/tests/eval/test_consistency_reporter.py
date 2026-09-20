@@ -627,6 +627,25 @@ def test_pg_facts_carries_the_parallel_control_from_the_probe(tmp_path):
     assert rp.pg_facts(str(g))["parallel_equality_ok"] is None
 
 
+def test_real_probe_artifact_wording_names_the_reproduced_undercount():
+    """措辞必须跟着**真实产物**走：本轮少算已复现 ⇒ 报告里不许再出现"等值对照通过"。
+
+    为什么单独钉一条真文件（不用替身）：`_pg_facts_with_data` 是手写形状，派生逻辑只要
+    对着替身测，真实探针一换形状（本轮就从 `debug_parallel_query off/on` 换成"四形态 ×
+    真串行/真并行"）报告就会拿着一个已经不复现的绿灯上线 —— 那正是 §17.4 要防的叙述。
+    """
+    facts = rp.pg_facts(rp.DEFAULT_PG_PROBE)
+    if facts is None or not facts["reachable"]:
+        pytest.skip("本机 PG 未在位 ⇒ 产物是历史快照，措辞断言不适用（也不许据此判通过）")
+    if not facts["parallel_undercount_states"]:
+        pytest.skip("本轮探针未复现少算 ⇒ 点名断言不适用，措辞应自动回到'通过'那一支")
+    text = rp.gaps_mod.parallel_clause(facts)
+    assert "v_order_paid/reset_placeholder" in text
+    assert "少算已复现" in text and "等值对照**通过**" not in text
+    assert "显式 `set_config`）本轮 等值" in text, "要同时说清生产执行链那一格是等值的"
+    assert "机制未定" in text, "worker 侧成因未定，措辞不许把它写成既成事实"
+
+
 def test_timeout_snapshot_drift_names_the_shape_change():
     """§0 同页写着"本次生成时的 commit"和**跑批当时**的超时快照 ⇒ 两者不一致必须点名。
 
