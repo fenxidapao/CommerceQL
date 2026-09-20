@@ -1,0 +1,607 @@
+{
+ "view": "app.v_order_paid",
+ "tenant": "T_A",
+ "runs_per_mode": 3,
+ "policy_qual": "((tenant_id = current_setting('app.tenant_id'::text, true)) AND ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text)))))",
+ "probes": [
+  {
+   "role_path": "app_ro 直接登录",
+   "states": {
+    "never_touched": {
+     "shop_ids": " untouched",
+     "role": [
+      "app_ro",
+      "app_ro"
+     ],
+     "guc_form": {},
+     "serial": {
+      "counts": [
+       0,
+       0,
+       0
+      ],
+      "parallel_node": false,
+      "workers_launched": 0,
+      "rows_removed_by_filter": 200000,
+      "scan_rows_per_loop": null,
+      "plan_head": [
+       "Aggregate  (cost=8722.26..8722.27 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..8719.77 rows=996 width=0) (actual rows=0 loops=1)",
+       "        Index Cond: (tenant_id = current_setting('app.tenant_id'::text, true))",
+       "        Filter: ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text))))",
+       "        Rows Removed by Filter: 200000",
+       "        Heap Fetches: 0"
+      ]
+     },
+     "parallel": {
+      "counts": [
+       0,
+       0,
+       0
+      ],
+      "parallel_node": true,
+      "workers_launched": 1,
+      "rows_removed_by_filter": 100000,
+      "scan_rows_per_loop": 586,
+      "plan_head": [
+       "Finalize Aggregate  (cost=7055.39..7055.40 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Gather  (cost=7055.27..7055.38 rows=1 width=8) (actual rows=2 loops=1)",
+       "        Workers Planned: 1",
+       "        Workers Launched: 1",
+       "        ->  Partial Aggregate  (cost=6055.27..6055.28 rows=1 width=8) (actual rows=1 loops=2)",
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=0 loops=2)"
+      ]
+     },
+     "measurable": false,
+     "parallel_ran": true,
+     "equal": false
+    },
+    "explicit_empty": {
+     "shop_ids": " set_config '' -> ''",
+     "role": [
+      "app_ro",
+      "app_ro"
+     ],
+     "guc_form": {},
+     "serial": {
+      "counts": [
+       200000,
+       200000,
+       200000
+      ],
+      "parallel_node": false,
+      "workers_launched": 0,
+      "rows_removed_by_filter": 0,
+      "scan_rows_per_loop": null,
+      "plan_head": [
+       "Aggregate  (cost=8722.26..8722.27 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..8719.77 rows=996 width=0) (actual rows=200000 loops=1)",
+       "        Index Cond: (tenant_id = current_setting('app.tenant_id'::text, true))",
+       "        Filter: ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text))))",
+       "        Heap Fetches: 0"
+      ]
+     },
+     "parallel": {
+      "counts": [
+       200000,
+       200000,
+       200000
+      ],
+      "parallel_node": true,
+      "workers_launched": 1,
+      "rows_removed_by_filter": 0,
+      "scan_rows_per_loop": 586,
+      "plan_head": [
+       "Finalize Aggregate  (cost=7055.39..7055.40 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Gather  (cost=7055.27..7055.38 rows=1 width=8) (actual rows=2 loops=1)",
+       "        Workers Planned: 1",
+       "        Workers Launched: 1",
+       "        ->  Partial Aggregate  (cost=6055.27..6055.28 rows=1 width=8) (actual rows=1 loops=2)",
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=100000 loops=2)"
+      ]
+     },
+     "measurable": true,
+     "parallel_ran": true,
+     "equal": true
+    },
+    "reset_placeholder": {
+     "shop_ids": " RESET ok -> ''",
+     "role": [
+      "app_ro",
+      "app_ro"
+     ],
+     "guc_form": {},
+     "serial": {
+      "counts": [
+       200000,
+       200000,
+       200000
+      ],
+      "parallel_node": false,
+      "workers_launched": 0,
+      "rows_removed_by_filter": 0,
+      "scan_rows_per_loop": null,
+      "plan_head": [
+       "Aggregate  (cost=8722.26..8722.27 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..8719.77 rows=996 width=0) (actual rows=200000 loops=1)",
+       "        Index Cond: (tenant_id = current_setting('app.tenant_id'::text, true))",
+       "        Filter: ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text))))",
+       "        Heap Fetches: 0"
+      ]
+     },
+     "parallel": {
+      "counts": [
+       104514,
+       104222,
+       89748
+      ],
+      "parallel_node": true,
+      "workers_launched": 1,
+      "rows_removed_by_filter": 48541,
+      "scan_rows_per_loop": 586,
+      "plan_head": [
+       "Finalize Aggregate  (cost=7055.39..7055.40 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Gather  (cost=7055.27..7055.38 rows=1 width=8) (actual rows=2 loops=1)",
+       "        Workers Planned: 1",
+       "        Workers Launched: 1",
+       "        ->  Partial Aggregate  (cost=6055.27..6055.28 rows=1 width=8) (actual rows=1 loops=2)",
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=51459 loops=2)"
+      ]
+     },
+     "measurable": true,
+     "parallel_ran": true,
+     "equal": false
+    },
+    "explicit_list": {
+     "shop_ids": " set_config 'T_A-S04,T_A-S04' -> 'T_A-S04,T_A-S04'",
+     "role": [
+      "app_ro",
+      "app_ro"
+     ],
+     "guc_form": {},
+     "serial": {
+      "counts": [
+       40162,
+       40162,
+       40162
+      ],
+      "parallel_node": false,
+      "workers_launched": 0,
+      "rows_removed_by_filter": 159838,
+      "scan_rows_per_loop": null,
+      "plan_head": [
+       "Aggregate  (cost=8802.34..8802.35 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..8719.77 rows=33028 width=0) (actual rows=40162 loops=1)",
+       "        Index Cond: (tenant_id = current_setting('app.tenant_id'::text, true))",
+       "        Filter: ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text))))",
+       "        Rows Removed by Filter: 159838",
+       "        Heap Fetches: 0"
+      ]
+     },
+     "parallel": {
+      "counts": [
+       40162,
+       40162,
+       40162
+      ],
+      "parallel_node": true,
+      "workers_launched": 1,
+      "rows_removed_by_filter": 79919,
+      "scan_rows_per_loop": 19428,
+      "plan_head": [
+       "Finalize Aggregate  (cost=7102.49..7102.50 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Gather  (cost=7102.38..7102.49 rows=1 width=8) (actual rows=2 loops=1)",
+       "        Workers Planned: 1",
+       "        Workers Launched: 1",
+       "        ->  Partial Aggregate  (cost=6102.38..6102.39 rows=1 width=8) (actual rows=1 loops=2)",
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=19428 width=0) (actual rows=20081 loops=2)"
+      ]
+     },
+     "measurable": true,
+     "parallel_ran": true,
+     "equal": true
+    },
+    "sentinel_star": {
+     "shop_ids": " set_config '*' -> '*'",
+     "role": [
+      "app_ro",
+      "app_ro"
+     ],
+     "guc_form": {},
+     "serial": {
+      "counts": [
+       0,
+       0,
+       0
+      ],
+      "parallel_node": false,
+      "workers_launched": 0,
+      "rows_removed_by_filter": 200000,
+      "scan_rows_per_loop": null,
+      "plan_head": [
+       "Aggregate  (cost=8722.26..8722.27 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..8719.77 rows=996 width=0) (actual rows=0 loops=1)",
+       "        Index Cond: (tenant_id = current_setting('app.tenant_id'::text, true))",
+       "        Filter: ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text))))",
+       "        Rows Removed by Filter: 200000",
+       "        Heap Fetches: 0"
+      ]
+     },
+     "parallel": {
+      "counts": [
+       0,
+       0,
+       0
+      ],
+      "parallel_node": true,
+      "workers_launched": 1,
+      "rows_removed_by_filter": 100000,
+      "scan_rows_per_loop": 586,
+      "plan_head": [
+       "Finalize Aggregate  (cost=7055.39..7055.40 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Gather  (cost=7055.27..7055.38 rows=1 width=8) (actual rows=2 loops=1)",
+       "        Workers Planned: 1",
+       "        Workers Launched: 1",
+       "        ->  Partial Aggregate  (cost=6055.27..6055.28 rows=1 width=8) (actual rows=1 loops=2)",
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=0 loops=2)"
+      ]
+     },
+     "measurable": false,
+     "parallel_ran": true,
+     "equal": false
+    }
+   }
+  },
+  {
+   "role_path": "postgres 登录 + 每连接 SET ROLE app_rw",
+   "states": {
+    "never_touched": {
+     "shop_ids": " untouched",
+     "role": [
+      "app_rw",
+      "postgres"
+     ],
+     "guc_form": {},
+     "serial": {
+      "counts": [
+       0,
+       0,
+       0
+      ],
+      "parallel_node": false,
+      "workers_launched": 0,
+      "rows_removed_by_filter": 200000,
+      "scan_rows_per_loop": null,
+      "plan_head": [
+       "Aggregate  (cost=8722.26..8722.27 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..8719.77 rows=996 width=0) (actual rows=0 loops=1)",
+       "        Index Cond: (tenant_id = current_setting('app.tenant_id'::text, true))",
+       "        Filter: ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text))))",
+       "        Rows Removed by Filter: 200000",
+       "        Heap Fetches: 0"
+      ]
+     },
+     "parallel": {
+      "counts": [
+       0,
+       0,
+       0
+      ],
+      "parallel_node": true,
+      "workers_launched": 1,
+      "rows_removed_by_filter": 100000,
+      "scan_rows_per_loop": 586,
+      "plan_head": [
+       "Finalize Aggregate  (cost=7055.39..7055.40 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Gather  (cost=7055.27..7055.38 rows=1 width=8) (actual rows=2 loops=1)",
+       "        Workers Planned: 1",
+       "        Workers Launched: 1",
+       "        ->  Partial Aggregate  (cost=6055.27..6055.28 rows=1 width=8) (actual rows=1 loops=2)",
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=0 loops=2)"
+      ]
+     },
+     "measurable": false,
+     "parallel_ran": true,
+     "equal": false
+    },
+    "explicit_empty": {
+     "shop_ids": " set_config '' -> ''",
+     "role": [
+      "app_rw",
+      "postgres"
+     ],
+     "guc_form": {},
+     "serial": {
+      "counts": [
+       200000,
+       200000,
+       200000
+      ],
+      "parallel_node": false,
+      "workers_launched": 0,
+      "rows_removed_by_filter": 0,
+      "scan_rows_per_loop": null,
+      "plan_head": [
+       "Aggregate  (cost=8722.26..8722.27 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..8719.77 rows=996 width=0) (actual rows=200000 loops=1)",
+       "        Index Cond: (tenant_id = current_setting('app.tenant_id'::text, true))",
+       "        Filter: ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text))))",
+       "        Heap Fetches: 0"
+      ]
+     },
+     "parallel": {
+      "counts": [
+       200000,
+       200000,
+       200000
+      ],
+      "parallel_node": true,
+      "workers_launched": 1,
+      "rows_removed_by_filter": 0,
+      "scan_rows_per_loop": 586,
+      "plan_head": [
+       "Finalize Aggregate  (cost=7055.39..7055.40 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Gather  (cost=7055.27..7055.38 rows=1 width=8) (actual rows=2 loops=1)",
+       "        Workers Planned: 1",
+       "        Workers Launched: 1",
+       "        ->  Partial Aggregate  (cost=6055.27..6055.28 rows=1 width=8) (actual rows=1 loops=2)",
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=100000 loops=2)"
+      ]
+     },
+     "measurable": true,
+     "parallel_ran": true,
+     "equal": true
+    },
+    "reset_placeholder": {
+     "shop_ids": " RESET ok -> ''",
+     "role": [
+      "app_rw",
+      "postgres"
+     ],
+     "guc_form": {},
+     "serial": {
+      "counts": [
+       200000,
+       200000,
+       200000
+      ],
+      "parallel_node": false,
+      "workers_launched": 0,
+      "rows_removed_by_filter": 0,
+      "scan_rows_per_loop": null,
+      "plan_head": [
+       "Aggregate  (cost=8722.26..8722.27 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..8719.77 rows=996 width=0) (actual rows=200000 loops=1)",
+       "        Index Cond: (tenant_id = current_setting('app.tenant_id'::text, true))",
+       "        Filter: ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text))))",
+       "        Heap Fetches: 0"
+      ]
+     },
+     "parallel": {
+      "counts": [
+       93269,
+       103989,
+       109977
+      ],
+      "parallel_node": true,
+      "workers_launched": 1,
+      "rows_removed_by_filter": 49415,
+      "scan_rows_per_loop": 586,
+      "plan_head": [
+       "Finalize Aggregate  (cost=7055.39..7055.40 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Gather  (cost=7055.27..7055.38 rows=1 width=8) (actual rows=2 loops=1)",
+       "        Workers Planned: 1",
+       "        Workers Launched: 1",
+       "        ->  Partial Aggregate  (cost=6055.27..6055.28 rows=1 width=8) (actual rows=1 loops=2)",
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=50585 loops=2)"
+      ]
+     },
+     "measurable": true,
+     "parallel_ran": true,
+     "equal": false
+    },
+    "explicit_list": {
+     "shop_ids": " set_config 'T_A-S04,T_A-S04' -> 'T_A-S04,T_A-S04'",
+     "role": [
+      "app_rw",
+      "postgres"
+     ],
+     "guc_form": {},
+     "serial": {
+      "counts": [
+       40162,
+       40162,
+       40162
+      ],
+      "parallel_node": false,
+      "workers_launched": 0,
+      "rows_removed_by_filter": 159838,
+      "scan_rows_per_loop": null,
+      "plan_head": [
+       "Aggregate  (cost=8802.34..8802.35 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..8719.77 rows=33028 width=0) (actual rows=40162 loops=1)",
+       "        Index Cond: (tenant_id = current_setting('app.tenant_id'::text, true))",
+       "        Filter: ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text))))",
+       "        Rows Removed by Filter: 159838",
+       "        Heap Fetches: 0"
+      ]
+     },
+     "parallel": {
+      "counts": [
+       40162,
+       40162,
+       40162
+      ],
+      "parallel_node": true,
+      "workers_launched": 1,
+      "rows_removed_by_filter": 79919,
+      "scan_rows_per_loop": 19428,
+      "plan_head": [
+       "Finalize Aggregate  (cost=7102.49..7102.50 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Gather  (cost=7102.38..7102.49 rows=1 width=8) (actual rows=2 loops=1)",
+       "        Workers Planned: 1",
+       "        Workers Launched: 1",
+       "        ->  Partial Aggregate  (cost=6102.38..6102.39 rows=1 width=8) (actual rows=1 loops=2)",
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=19428 width=0) (actual rows=20081 loops=2)"
+      ]
+     },
+     "measurable": true,
+     "parallel_ran": true,
+     "equal": true
+    },
+    "sentinel_star": {
+     "shop_ids": " set_config '*' -> '*'",
+     "role": [
+      "app_rw",
+      "postgres"
+     ],
+     "guc_form": {},
+     "serial": {
+      "counts": [
+       0,
+       0,
+       0
+      ],
+      "parallel_node": false,
+      "workers_launched": 0,
+      "rows_removed_by_filter": 200000,
+      "scan_rows_per_loop": null,
+      "plan_head": [
+       "Aggregate  (cost=8722.26..8722.27 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..8719.77 rows=996 width=0) (actual rows=0 loops=1)",
+       "        Index Cond: (tenant_id = current_setting('app.tenant_id'::text, true))",
+       "        Filter: ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text))))",
+       "        Rows Removed by Filter: 200000",
+       "        Heap Fetches: 0"
+      ]
+     },
+     "parallel": {
+      "counts": [
+       0,
+       0,
+       0
+      ],
+      "parallel_node": true,
+      "workers_launched": 1,
+      "rows_removed_by_filter": 100000,
+      "scan_rows_per_loop": 586,
+      "plan_head": [
+       "Finalize Aggregate  (cost=7055.39..7055.40 rows=1 width=8) (actual rows=1 loops=1)",
+       "  ->  Gather  (cost=7055.27..7055.38 rows=1 width=8) (actual rows=2 loops=1)",
+       "        Workers Planned: 1",
+       "        Workers Launched: 1",
+       "        ->  Partial Aggregate  (cost=6055.27..6055.28 rows=1 width=8) (actual rows=1 loops=2)",
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=0 loops=2)"
+      ]
+     },
+     "measurable": false,
+     "parallel_ran": true,
+     "equal": false
+    }
+   }
+  }
+ ],
+ "pg_version": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit",
+ "max_parallel_workers_per_gather": "2",
+ "shop_sample": [
+  "T_A-S04",
+  "T_A-S04"
+ ],
+ "controls": {
+  "plan_cache": {
+   "prepare_threshold=default × plan_cache_mode=auto": [
+    101647,
+    98103,
+    104147,
+    103697
+   ],
+   "prepare_threshold=default × plan_cache_mode=force_custom_plan": [
+    107032,
+    103187,
+    96071,
+    103622
+   ],
+   "prepare_threshold=default × plan_cache_mode=force_generic_plan": [
+    110067,
+    106689,
+    98645,
+    97834
+   ],
+   "prepare_threshold=1 × plan_cache_mode=auto": [
+    114867,
+    91804,
+    111338,
+    103697
+   ],
+   "prepare_threshold=1 × plan_cache_mode=force_custom_plan": [
+    109574,
+    105418,
+    108521,
+    104458
+   ],
+   "prepare_threshold=1 × plan_cache_mode=force_generic_plan": [
+    107250,
+    106254,
+    112033,
+    102458
+   ]
+  },
+  "plan_node_options": {
+   "enable_indexonlyscan": [
+    60406,
+    60780,
+    54227
+   ],
+   "enable_indexscan": [
+    50284,
+    65917,
+    69536
+   ],
+   "enable_parallel_append": [
+    106764,
+    103437,
+    105493
+   ]
+  },
+  "worker_side_guc_value": {
+   "rows": [
+    [
+     "",
+     600178
+    ]
+   ],
+   "workers_launched": 2,
+   "note": "值全是 '' ⇒ 'worker 没拿到 GUC' 这一支解释被证伪（但 v_order_paid 那一格的少算就在 worker 侧：见 plan 里的 `Worker 0: ... rows=0`）"
+  },
+  "production_shapes": {
+   "①事务内 set_config(...,true)（生产形状）": {
+    "counts": [
+     200000,
+     200000,
+     200000,
+     200000
+    ]
+   },
+   "③提交后复用同一把连接": {
+    "guc_left": {
+     "app.tenant_id": "",
+     "app.shop_ids": ""
+    },
+    "counts": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "②会话级 set_config(...,false)": {
+    "counts": [
+     200000,
+     200000,
+     200000,
+     200000
+    ]
+   }
+  }
+ }
+}

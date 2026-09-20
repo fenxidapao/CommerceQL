@@ -132,10 +132,10 @@
     ],
     "pg_row_counts": {
       "asset": 8,
-      "audit_log": 70,
+      "audit_log": 71,
       "audit_log_supplement": 0,
       "campaign": 84,
-      "cost_ledger": 0,
+      "cost_ledger": 3,
       "default_predicate": 2,
       "dim_date": 730,
       "dimension": 6,
@@ -469,45 +469,246 @@
     "rls_partition_ok": true,
     "parallel_equality": {
       "v_order_paid": {
-        "off": {
-          "counts": [
-            200000,
-            200000,
-            200000
-          ],
-          "parallel_plan": true
+        "states": {
+          "explicit_empty": {
+            "note": "显式 set_config('')，= 不限店铺（生产执行链的形状）",
+            "guc_applied": "set_config '' -> ''",
+            "serial": {
+              "counts": [
+                200000,
+                200000,
+                200000
+              ],
+              "gather_node": false,
+              "workers_launched": 0,
+              "rows_removed_by_filter": 0
+            },
+            "parallel": {
+              "counts": [
+                200000,
+                200000,
+                200000
+              ],
+              "gather_node": true,
+              "workers_launched": 1,
+              "rows_removed_by_filter": 0
+            },
+            "measurable": true,
+            "parallel_ran": true,
+            "equal": true
+          },
+          "reset_placeholder": {
+            "note": "RESET app.shop_ids ⇒ 键本会话从未设过，留下值为 '' 的占位符",
+            "guc_applied": "RESET ok -> ''",
+            "serial": {
+              "counts": [
+                200000,
+                200000,
+                200000
+              ],
+              "gather_node": false,
+              "workers_launched": 0,
+              "rows_removed_by_filter": 0
+            },
+            "parallel": {
+              "counts": [
+                100385,
+                97282,
+                103929
+              ],
+              "gather_node": true,
+              "workers_launched": 1,
+              "rows_removed_by_filter": 54098
+            },
+            "measurable": true,
+            "parallel_ran": true,
+            "equal": false
+          },
+          "never_touched": {
+            "note": "全程不碰 app.shop_ids ⇒ current_setting 取 NULL",
+            "guc_applied": "untouched",
+            "serial": {
+              "counts": [
+                0,
+                0,
+                0
+              ],
+              "gather_node": false,
+              "workers_launched": 0,
+              "rows_removed_by_filter": 200000
+            },
+            "parallel": {
+              "counts": [
+                0,
+                0,
+                0
+              ],
+              "gather_node": true,
+              "workers_launched": 1,
+              "rows_removed_by_filter": 100000
+            },
+            "measurable": false,
+            "parallel_ran": true,
+            "equal": false
+          },
+          "sentinel_star": {
+            "note": "set_config('*')（W7 的 P1 哨兵提议；策略文本里 `= ''` 不成立）",
+            "guc_applied": "set_config '*' -> '*'",
+            "serial": {
+              "counts": [
+                0,
+                0,
+                0
+              ],
+              "gather_node": false,
+              "workers_launched": 0,
+              "rows_removed_by_filter": 200000
+            },
+            "parallel": {
+              "counts": [
+                0,
+                0,
+                0
+              ],
+              "gather_node": true,
+              "workers_launched": 1,
+              "rows_removed_by_filter": 100000
+            },
+            "measurable": false,
+            "parallel_ran": true,
+            "equal": false
+          }
         },
-        "on": {
-          "counts": [
-            200000,
-            200000,
-            200000
-          ],
-          "parallel_plan": true
-        },
-        "equal": true
+        "undercount_in": [
+          "reset_placeholder"
+        ],
+        "state_ok": false
       },
       "v_traffic_daily": {
-        "off": {
-          "counts": [
-            600178,
-            600178,
-            600178
-          ],
-          "parallel_plan": true
+        "states": {
+          "explicit_empty": {
+            "note": "显式 set_config('')，= 不限店铺（生产执行链的形状）",
+            "guc_applied": "set_config '' -> ''",
+            "serial": {
+              "counts": [
+                600178,
+                600178,
+                600178
+              ],
+              "gather_node": false,
+              "workers_launched": 0,
+              "rows_removed_by_filter": 0
+            },
+            "parallel": {
+              "counts": [
+                600178,
+                600178,
+                600178
+              ],
+              "gather_node": true,
+              "workers_launched": 2,
+              "rows_removed_by_filter": 0
+            },
+            "measurable": true,
+            "parallel_ran": true,
+            "equal": true
+          },
+          "reset_placeholder": {
+            "note": "RESET app.shop_ids ⇒ 键本会话从未设过，留下值为 '' 的占位符",
+            "guc_applied": "RESET ok -> ''",
+            "serial": {
+              "counts": [
+                600178,
+                600178,
+                600178
+              ],
+              "gather_node": false,
+              "workers_launched": 0,
+              "rows_removed_by_filter": 0
+            },
+            "parallel": {
+              "counts": [
+                600178,
+                600178,
+                600178
+              ],
+              "gather_node": true,
+              "workers_launched": 2,
+              "rows_removed_by_filter": 0
+            },
+            "measurable": true,
+            "parallel_ran": true,
+            "equal": true
+          },
+          "never_touched": {
+            "note": "全程不碰 app.shop_ids ⇒ current_setting 取 NULL",
+            "guc_applied": "untouched",
+            "serial": {
+              "counts": [
+                600178,
+                600178,
+                600178
+              ],
+              "gather_node": false,
+              "workers_launched": 0,
+              "rows_removed_by_filter": 0
+            },
+            "parallel": {
+              "counts": [
+                600178,
+                600178,
+                600178
+              ],
+              "gather_node": true,
+              "workers_launched": 2,
+              "rows_removed_by_filter": 0
+            },
+            "measurable": true,
+            "parallel_ran": true,
+            "equal": true
+          },
+          "sentinel_star": {
+            "note": "set_config('*')（W7 的 P1 哨兵提议；策略文本里 `= ''` 不成立）",
+            "guc_applied": "set_config '*' -> '*'",
+            "serial": {
+              "counts": [
+                600178,
+                600178,
+                600178
+              ],
+              "gather_node": false,
+              "workers_launched": 0,
+              "rows_removed_by_filter": 0
+            },
+            "parallel": {
+              "counts": [
+                600178,
+                600178,
+                600178
+              ],
+              "gather_node": true,
+              "workers_launched": 2,
+              "rows_removed_by_filter": 0
+            },
+            "measurable": true,
+            "parallel_ran": true,
+            "equal": true
+          }
         },
-        "on": {
-          "counts": [
-            600178,
-            600178,
-            600178
-          ],
-          "parallel_plan": true
-        },
-        "equal": true
+        "undercount_in": [],
+        "state_ok": true
       }
     },
-    "parallel_equality_ok": true
+    "parallel_equality_ok": false,
+    "parallel_state_ok": {
+      "explicit_empty": true,
+      "reset_placeholder": false,
+      "never_touched": true,
+      "sentinel_star": true
+    },
+    "parallel_undercount_states": [
+      "v_order_paid/reset_placeholder"
+    ]
   },
   "parity": {
     "relations": [
@@ -521,7 +722,7 @@
       {
         "rel": "audit_log",
         "sqlite": "-",
-        "pg": 70,
+        "pg": 71,
         "sqlite_kind": "-",
         "pg_kind": "table"
       },
@@ -542,7 +743,7 @@
       {
         "rel": "cost_ledger",
         "sqlite": "-",
-        "pg": 0,
+        "pg": 3,
         "sqlite_kind": "-",
         "pg_kind": "table"
       },

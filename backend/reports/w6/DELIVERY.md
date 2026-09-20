@@ -20,15 +20,15 @@
 | `eval/attribution.py` | 221 | T3 §C.7 归因器（短路顺序：安全 > 交互 > 闸门 > 执行 > 模型） |
 | `eval/grid.py` | 124 | T4 4×3 分层网格（I-1 主口径：结构档用**重算标签**，不信用题面字段） |
 | `eval/gates.py` | 331 | T5 G-1…G-8 判定 + 五词判定词表 |
-| `eval/gap_table.py` | 219 | T5 §17.4 沙箱能力缺口表（8 行，每行 `covered_by_eval=False`；RLS 行的措辞由探测派生） |
+| `eval/gap_table.py` | 233 | T5 §17.4 沙箱能力缺口表（8 行，每行 `covered_by_eval=False`；RLS / 并行等值两行的措辞均由探测派生） |
 | `eval/consistency.py` | 533 | T6 §17.6 一致性三测（I-1 白名单扫描 / I-6 三条哈希链路 / §4.7.2 锚点回归） |
 | `eval/redteam_eval.py` | 775 | G-3/G-4 §7.8 红队矩阵 66 条断言级判定 |
-| `eval/reporter.py` | 1232 | T7 报告器（Markdown + `eval_metrics.json`；§17.4 表与 §8 已知限制由它生成；本轮加"跑批快照 vs 当前树"的超时表漂移点名） |
+| `eval/reporter.py` | 1235 | T7 报告器（Markdown + `eval_metrics.json`；§17.4 表与 §8 已知限制由它生成；本轮加"跑批快照 vs 当前树"的超时表漂移点名） |
 | `eval/_bootstrap.py` | 121 | 冻结件验真的唯一入口（N-13） |
-| `backend/tests/eval/**`（11 文件） | 3,355 | D4 裁定：评测器自己的测试，**305 条**（第二轮 +9：G-6 口径 5 条、读端兼容 2 条、RLS 措辞派生 2 条；第三轮 +3：超时并集/放大档漂移守卫 2 条、并行等值三态措辞与探针读端 2 条、快照漂移点名 1 条 —— 另把原 300 条里的超时契约测试按新形状重写） |
-| `backend/reports/w6/**` | — | 取证产物：探针脚本 7 个（第二轮新增 `probe_loadtest_receipts.py`）+ 日志 + `results_w6_live20.json` + 匣带 + 本报告 |
+| `backend/tests/eval/**`（11 文件） | 3,374 | D4 裁定：评测器自己的测试，**306 条**（第二轮 +9：G-6 口径 5 条、读端兼容 2 条、RLS 措辞派生 2 条；第三轮 +4：超时并集/放大档漂移守卫 2 条、并行等值按形态点名的措辞 1 条 + 探针读端 1 条、快照漂移点名 1 条、**吃真实产物**的并行措辞回归 1 条 —— 并把原 300 条里的超时契约测试按新形状重写） |
+| `backend/reports/w6/**` | — | 取证产物：取证脚本 10 个 `.py`（本轮新增 `_probe_parallel_states.py`）+ 日志 + `results_w6_live20.json` + 匣带 + 本报告 |
 
-合计 `eval/` 新模块 13 个 / 6,279 行，测试 3,355 行 / 305 条（`wc -l` 现场核过）。**未落笔他人范围**：
+合计 `eval/` 新模块 13 个 / 6,296 行，测试 3,374 行 / 306 条（`wc -l` 现场核过）。**未落笔他人范围**：
 `eval/*.json`、`eval/case_library.py`、`eval/build_*.py`（W1A）｜`app/**`（W0–W4）｜`frontend/**`（W5）｜`deploy/**`、`app/obs/**`（W7）。
 
 ---
@@ -111,8 +111,8 @@
 | RLS **策略本身**是否有效 | **有效**（`app_ro` + `set_config('app.tenant_id', …)` 逐租户可见数：`order_paid` 200,000 / 175,000 / 119,249，三租户**求和恰等于**属主看到的总数 ⇒ 不重不漏；`rls_partition_ok = true`）|
 | 负对照 | ①零上下文（不设 GUC）⇒ `v_order_paid` **0 行**；②设一个不存在的租户 ⇒ **0 行**；③经视图引用 `tenant_id` ⇒ `permission denied`（deny 列生效）|
 | 仍然没接的那一半 | G-4 保持 PARTIAL：以上证的是**DB 层策略**，而评测主链路走的是 SQLite TEMP VIEW；"应用运行时是否经 PG 执行"仍未测 ⇒ 见 §8 与 RELAY §十 |
-| 并行 vs 串行（回应 W7 的 ④） | **没能复现**：`debug_parallel_query` off/on × `is_local` false/true × 各 5 次 = 8 组读数全部精确（200,000 / 600,178）且 `EXPLAIN` 里确有 `Gather`/`Parallel Index Only Scan` ⇒ 并行路径真被走到。该对照已**常驻探针**（`parallel_equality` + `equal` 判定），因为 N-07 抓不到"分量被并行吃掉"这类错 ⇒ 见 RELAY P7 |
-| ⚠️ 顺带发现的一个坑（已由 W7 复现并收窄） | `p_*_tenant` 里 `current_setting('app.shop_ids', true) = ''` 这一支在 **GUC 从未设过**时取 NULL ⇒ 整条策略恒 false ⇒ 静默 0 行。范围只有 `order_paid`/`product`/`shop` 三张基表（另三张是纯租户条件）；`RESET` 之后取到的是 `''`（= 不限店铺）而非 NULL；**生产路径不落在这一格**（`app/exec/executor.py:286-289` 在事务里连发三条 `set_config(..., true)`，`",".join(ctx.shop_ids)` 对"不限"天然给 `''`）⇒ 暴露面是装载脚本 / 评测适配器 / 自定义连接。首轮"业务事实表为空"的误判就是它造成的（§5.5），见 RELAY P6 |
+| 并行 vs 串行（回应 W7 的 ④） | **已复现**（本轮订正：上一版这一格写的"没能复现"作废，成因见 §4.8 与 §5.7）。常驻判据从"`debug_parallel_query` off/on"换成"**四形态 × 真串行/真并行**"后实测：`v_order_paid` 在 `app.shop_ids` 只是 `RESET` 占位符那一格，串行恒 200,000、并行 100,385 / 97,282 / 103,929（`Workers Launched = 1`、`Worker 0: rows=0`）⇒ **静默少算约一半**；而显式 `set_config`（生产执行链的形状）与真值清单两格两路都精确 ⇒ 见 §4.8、RELAY P7 |
+| ⚠️ 顺带发现的一个坑（已由 W7 复现并收窄） | `p_*_tenant` 里 `current_setting('app.shop_ids', true) = ''` 这一支在 **GUC 从未设过**时取 NULL ⇒ 整条策略恒 false ⇒ 静默 0 行。范围只有 `order_paid`/`product`/`shop` 三张基表（另三张是纯租户条件）；`RESET` 之后取到的是 `''`（= 不限店铺）而非 NULL；**生产路径不落在这一格**（`app/exec/executor.py:286-289` 在事务里连发三条 `set_config(..., true)`，`",".join(ctx.shop_ids)` 对"不限"天然给 `''`）⇒ 暴露面是装载脚本 / 评测适配器 / 自定义连接。首轮"业务事实表为空"的误判就是它造成的（§5.5），见 RELAY P6。**本轮再加一条边界**：`RESET` 留下的 `''` 占位符在 SQL 里读出来与显式 `''` **同值**，但在并行计划下**不是同一格**（少算约一半）⇒ "值相同"≠"行为相同"，见 §4.8 |
 
 ### 4.5 I-2 结构标签：全量 166 条**零漂移**（本轮唯一一条"不变量已被机器验证"的正面读数）
 
@@ -141,7 +141,22 @@
 - ★ **仍然没解的生产侧缺口**（RELAY G3）：`bind` 触达 `deps.llm`（`nodes/bind.py:180` 走 L4 精排）却不在 `_LLM_NODE_TASKS` 里 ⇒ `_effective_limit_for("bind") = **0.2s**`。评测侧因为我给 LLM 节点兜了下界，**这条在批次里完全看不出来** —— 是"评测比生产宽松"的存量一处，不是可以拿来给自己加分的通过。
 - ⚠️ 方向要说全：**两份清单双向都不一致** —— `present` 在对方清单里，但 `nodes/present.py` 对 `llm` 零命中（清单比代码宽，对我方无害）。⇒ 本窗口的判据固定为"代码是否触达 `deps.llm`"，**不照抄任何一侧清单**（含自家注释）。
 - ⚠️ 顺带发现产物里的**陈旧快照**：`meta.run_config.node_timeouts.contract` 是 runner **跑批当时**落盘的（09-18 那批 = 15 个节点、`normalize` 2.0s、`link` 4.0s），而报告 §0 同一页写着本次生成时的 commit ⇒ 读者会拿一张已经不存在的表去引用 §5.3 契约。修法不是重跑批次（要花钱），而是让报告器**读当时、比当前**：新增 `reporter.timeout_snapshot_drift()`，不一致就在 §0 点名（实测输出"已移出契约表：`gen_sql`、`intent`、`normalize`、`plan`、`present`、`repair`；值变了：`link` 4.0s→30.0s"），并加 `test_timeout_snapshot_drift_names_the_shape_change`。
-- 实测：`pytest backend/tests/eval -q` → **305 passed**（本轮新增 3 条守卫）。
+- 实测：`pytest backend/tests/eval -q` → **306 passed**（本轮新增守卫见 §1）。
+
+### 4.8 ★ PG 并行下的**静默少算**已复现（W7 的 ④）：机制未定，但暴露面已经量出来了
+
+上一版我写"8 组全绿 ⇒ 未能复现"。那条结论**错了两次**：轴选错（`debug_parallel_query` 在本机 PG 16.15 只接受 `off/on/regress`，而 **off 下计划里照样有 Gather** ⇒ 我根本没有串行对照组），形态也只剩一种（两把 GUC 都显式设值）。换成"四形态 × 真串行/真并行"后（`_probe_pg_real.py` + `_probe_parallel_states.py`，全程只读）：
+
+| 项 | 实测（T_A / `app.v_order_paid`；串行 = `max_parallel_workers_per_gather=0`，并行 = 2 + `regress`） |
+|---|---|
+| 复现形状 | `app.shop_ids` 只被 `RESET` 过（键本会话从未设过 ⇒ 留下值为 `''` 的占位符）⇒ 并行 **100,385 / 97,282 / 103,929**，串行恒 **200,000**；`Workers Launched = 1`，扫描节点 `Worker 0: actual ... rows=0` + `Rows Removed by Filter` 覆盖 worker 整片份额 |
+| 等值的形状 | 显式 `set_config('app.shop_ids','')`（生产执行链形状）两路恒 200,000；显式真值清单（`T_A-S04`）两路恒 40,162；`v_traffic_daily`（策略**不含** shop 条款）四形态两路全等 ⇒ **只有"策略的 Filter 去读那个占位符键"这一格会掉数** |
+| 被排除的假设 | ① 不是 plan 缓存：入库产物跑的是 `prepare_threshold=default(5)/1` × `plan_cache_mode=auto/force_custom_plan/force_generic_plan` 六种组合，**全部照样少算**（并行读数 91,804 – 114,867）；本机另测过一次 `prepare_threshold=None`（完全不启用预处理语句）同样少算，但那组不在入库产物里；② 不是 index-only 节点特有：`enable_indexonlyscan=off` / `enable_indexscan=off` / `enable_parallel_append=off` 三组下仍少算（50,284 – 106,764）；③ 也不是"worker 完全没拿到这个 GUC"：同一状态下从**不含 shop 条款**的视图里并行投影 `current_setting('app.shop_ids',true)`，600,178 行**全部**报 `''`（`Workers Launched = 2`）⇒ 那个直观解释被这条读数证伪 |
+| 两条角色路径 | `app_ro` 直接登录 与 "postgres 登录 + 每条连接内 `SET ROLE app_rw`" 读数一致 ⇒ 回掉 W7 的 ②（他们只测了后者）。⚠️ 顺带一条实验纪律：**`SET ROLE` 不跨连接继承**，我第一版把它设在外层连接上、而每条状态又新建连接 ⇒ 等于什么都没设（且 superuser 绕过 RLS，那样读出来的"正确"是假的）|
+| 生产暴露面 | **不受影响**：`app/exec/executor.py` 在事务内用 `set_config(..., true)`（`IDENTITY_INJECTION_TEMPLATE`）⇒ 实测事务内并行 4/4 精确。但**同一把连接提交后再复用** ⇒ 实测恒 **0 行**：两把键的事务级值随提交消失、`current_setting` 只剩 `''`（入库产物 `production_shapes["③…"]` 的 `guc_left = {'app.tenant_id': '', 'app.shop_ids': ''}`）⇒ `tenant_id = ''` 谁也匹配不上（fail-closed，不是半值）⇒ 直接进 RELAY §十-6b①：接 PG 的评测适配器必须**每批都在事务内设两把 GUC**，且不许把 0 行读成"模型没查到" |
+| 对 W7 的 P1（`'*'` 哨兵）的实测含义 | 当前策略文本是 `= '' OR shop_id = ANY(string_to_array(v, ','))` ⇒ 设成 `'*'` 时**读 0 行**（串行并行都是）⇒ 换哨兵必须**连策略一起改**，否则"不限店铺"会静默变成"什么都查不到"（安全上 fail-closed，语义上是另一种错）|
+
+**这条为什么值得单列**：它不是评测器的 bug，也不是模型能力问题，而是"同一条 SQL 在并行开/关下给出不同的数、且不报错"。N-07 抓不到（策略照样生效，只是分量没了），门禁也不会顺路逮到 ⇒ 任何把评测执行链切到 PG 的方案（§8-5）都会把它引进分母。本窗口的处置：判据常驻（`parallel_equality_ok = false` 已如实落进产物）、措辞按形态点名（缺口表与报告 §0/§7 同一状态）、复现形状与被排除的假设一起交给 W7/架构继续定位（RELAY P7）。
 
 ---
 
@@ -155,7 +170,7 @@
 | 5.4 | RELAY 初稿写"`pay_status='paid'` 零差值是因为 `v_order_paid` **已预筛**" | 那是**没做过的实验**：沙箱里 `v_order_paid` 根本不是视图（SQLite 侧是实体表），非 paid 行 74,173 条确实存在。真跑数据才看到根因是这些行 `pay_time` **全为 NULL**，而且**无时间边界时该谓词差 15.4%** ⇒ 原句的因果和"恒零"都错 | 用 §4.1 的实测数（`attribution.steps[].delta_vs_prev` 12/12 为 0 + 全表分布）重写 RELAY B1；结论从"补了也没用"改成"仅在有 `pay_time` 边界时冗余"，并据此补正 A1 的归因措辞 |
 | 5.5 | 首轮报告写着"**PG 业务事实表 0 行** ⇒ RLS 有效性与结果集等价不可测" | 数据其实到位得比我想的早，而且**那句 0 行的成因写错了**：探针只数了视图，而 `p_*_tenant` 里 `current_setting('app.shop_ids', true) = ''` 在 GUC 未设时取 NULL ⇒ 整条策略恒 false ⇒ 视图恒 0 行（视图按**属主**求策略，连绕开 RLS 的属主连接也一样）。我把"自己没设上下文"报告成了"环境没数据" | `_probe_pg_real.py` 加"逐租户 `set_config` + 两条负对照 + 不重不漏判据"，重跑后基表 **2,024,017 行**、五关系求和与沙箱**逐数相等**、`rls_partition_ok = true`（§4.4）；教训并入 §5.4 同一条：**没设上下文 ≠ 没有数据** |
 | 5.6 | 我在 RELAY P6 里把受害视图列成 `v_order_paid`/`v_product`/`v_shop`/`v_campaign`，并建议把"未设"改成"= 不限"（coalesce） | 两处都不成立：含 `shop_ids` 条款的只有三张基表，`campaign`/`order_refund`/`traffic_daily` 是纯租户条件；而 `''` 已经是"不限店铺"，把"未设"也当"不限"= **fail-open**（整租户跨店铺可读），比现在 fail-closed 的 0 行更糟 | 由 W7 的复现矩阵证伪 ⇒ P6 已订正范围、删掉 `v_campaign`、**撤回 coalesce 提议**，诉求收窄为"漏设就吵"；同时把"未设过 ⇒ NULL"和"RESET ⇒ `''`"两种状态区分开（我只踩了前者） |
-| 5.7 | 我第一版并行对照实验给出 `count(*) = 0`、`sum = None` ⇒ 差点对上 W7 说的"并行把数吃掉一截"，把 ④ 报成**已复现** | 是我自己的实验缺陷：那版在**同一条连接、同一个事务**里连改 `debug_parallel_query` 反复取样，读到的根本不是并行路径。**每例独立连接**重写后：off/on × `is_local` false/true × 各 5 次 = **8 组全部精确**（200,000 / 600,178），且 `EXPLAIN` 里确有 `Gather`/`Parallel Index Only Scan` ⇒ 并行路径真被走到，却没复现少算 | 结论按"未能复现"上报（RELAY P7，向 W7 索取可复现形状：PG 版本 / `parallel_threshold` / 具体查询），同时把这项对照**常驻**进探针（`parallel_equality` + `parallel_equality_ok`），并把措辞交给 `gap_table.parallel_clause()` 派生 ⇒ "我自己的对照组"不能再是临时脚本（§8-4） |
+| 5.7 | 两连错：① 第一版并行对照给出 `count(*) = 0`、`sum = None`，看起来正好"复现"W7 的 ④；② 订正 ① 之后我上报了**"未能复现"** | ① 是我自己的实验缺陷：同一条连接、同一个事务里连改 `debug_parallel_query` ⇒ 读的根本不是并行路径。② **更贵**：每例独立连接重写后 8 组全精确，我就把它当成了事实 —— 但那把"轴"本身是坏的（本机 PG16 的 `debug_parallel_query` 只接受 `off/on/regress`，而 **off 下计划里照样有 Gather** ⇒ 我没有串行对照组），且只测了"两把 GUC 都显式设值"一种形态 ⇒ **"恒绿"正是这一格能藏错的原因** | 判据换成"四形态 × 真串行/真并行 + `Workers Launched ≥ 1`"后**少算已复现**（§4.8）；`parallel_equality_ok = false` 如实落盘，措辞按形态点名（`gap_table.parallel_clause`），并加 `test_real_probe_artifact_wording_names_the_reproduced_undercount`（吃**真实产物**，防替身形状领先于现实）。教训：**"我的对照组全绿"要先证明那组对照真的有对照组** |
 
 另外两处过程性错误也如实记：**两次**把只打印了计划的命令当成跑完的批次（runner 未带 `--yes` 时只输出计划、exit 0），都是从日志里发现"未带 --yes：只打印计划，不执行。"后重跑。还有一处是**读数骗人**：`lint-imports` 在 GBK 控制台崩溃时真实退出码是 **1**，但命令尾接了 `| tail` 把退出码吞掉，我因此记成"exit 0 却打印了 gbk"——去掉管道重取 `$?` 才对得上（RELAY O4）。纪律：**只报实测，且实测要连着退出码一起看**。
 
@@ -177,7 +192,7 @@
 | 密钥 | 全程未打印任何 key 的值（只报"有无值"与长度）；`deploy/.env` 只读。入库侧自查（按两个 commit 的文件清单逐个扫，共 **50 个文件**）：长 `sk-[A-Za-z0-9]{16,}` **0 命中**、`Bearer` **0 命中**；匣带 `eval/cassettes/w6_batch.jsonl` 每条只含 `key/path/status` + `request`（`model/messages/temperature/max_tokens/…`）+ `response`（`choices/usage/…`），**不含任何 HTTP 头字段** ⇒ 结构上就存不下凭据。`_probe_pg_real.py:39` 的两处本地引导 DSN 与**已在版本库里**的 `backend/tests/integration/test_exec_real_pg.py:34` **同字面**（同一 dev compose 引导值 ⇒ 未新增凭据，`.gitleaks.toml` 的 `app_ro_pwd` 形态本就放行）|
 | 中文控制台 | 所有命令带 `PYTHONIOENCODING=utf-8`，产物 UTF-8 |
 
-**测试**：`backend/tests/eval` **305 passed**（12.7s）；全量 `pytest backend/tests` 在 `76e4e5d`（已含 U-107/U-108）重跑 → **0 failed / 2186 passed / 6 skipped（105.49s）**。
+**测试**：`backend/tests/eval` **306 passed**（14.6s）。全量套件本轮**未重跑**（改动只落在 `eval/` 与报告侧，`backend/tests` 那棵树没动）⇒ 上一轮在 `76e4e5d` 的实测读数仍是 **0 failed / 2186 passed / 6 skipped（105.49s）**，报告的 G-1 仍按那份日志取数（日志不在版本库，`.gitignore:47`，见 A9）。
 首轮那 2 条 W0 的 GBK 红**已被 W0 修掉**（RELAY O1 关闭 ⇒ G-1 才转 PASS，见 §3）；剩下 6 条 skip 全在 `tests/integration/test_retrieval_fts_pg.py`（夹具 DSN 对 `ecom` 库无 DDL 权限），仍按 RELAY O5 折算成 UNVERIFIED。
 
 ---
@@ -189,7 +204,8 @@
 | `feat(w6)`（首轮） | `eval/{_bootstrap,runner,harness,sqlite_exec,cassette,equivalence,attribution,grid,gates,gap_table,consistency,redteam_eval,reporter}.py`（13 个模块）+ `backend/tests/eval/**` |
 | `docs(w6)`（首轮） | `backend/reports/w6/` 全部本窗口产物：3 份 md（`DELIVERY`/`RELAY`/`评测报告与门禁判定`）+ 读数件（`eval_metrics.json`、`consistency_results.json`、`redteam_results.json`、`results_w6_live20.json`、`smoke_one_case.json`、`_probe_pg_real.json`、三个 `probe_*.json`、`probe_gate_rejections.json`）+ 取证脚本（`probe_*.py`、`_probe_pg_real.py`、`select_smoke_batch.py`、`smoke_one_case.py`）+ `smoke_batch_ids.json`；外加数据侧 `eval/cassettes/`（`w6_batch.jsonl` 48 次调用 + `w6_smoke.jsonl` 单条冒烟）与 `eval/results_v1.json`（本轮批次读数）。**不含 `*.log`** —— `.gitignore:47` 全局忽略，本窗口不例外（该约定的后果见 RELAY A9）|
 | 第二轮（2026-09-20） | 代码：`gates.py` G-6 判定按 U-106 口径重写（全请求优先、准入口径不得判 PASS）、`reporter.py` 读 `p95_scope`/`admission`/`latency_ms_all_ms` 且路径改仓库相对、`_probe_pg_real.py` 加租户上下文与负对照、新增 `probe_loadtest_receipts.py`、测试 +6。产物：重新生成的报告 + `eval_metrics.json` + `_probe_pg_real.json` + 本轮 RELAY/DELIVERY |
-| 第三轮（2026-09-20，回应 W7 对 P6 的答复 + 拉入 U-107/U-108 后复测） | 代码：`harness.py` 超时遍历改"契约 ∪ LLM 清单"并显式输出 `not_in_contract`、`link` 移进"不放大"清单、四处注释按当前契约形状订正；`gap_table.py` 新增 `parallel_clause()`（三态、由探测派生）；`reporter.py` 读探针的 `parallel_equality_ok` 并新增 `timeout_snapshot_drift()`（跑批快照 vs 当前树的超时表点名）；`_probe_pg_real.py` 新增 `_parallel_equality()`（并行开/关 × `is_local` × 各 5 次，每例独立连接）。测试 +3（→ **305 条**，含把超时契约测试按新形状重写）。产物：`eval/reporter.py --no-backup` 重生成报告 + `eval_metrics.json`、`_probe_pg_real.json`（`parallel_equality_ok = true`）。文档：RELAY **G1 关闭 / G3 订正 / P6 全面订正 / P7 新增 / A10 补 W7 反证**、DELIVERY §1 §4.4 §4.6 §4.7 §5 §6 §7 §8 |
+| 第三轮（2026-09-20，回应 W7 对 P6 的答复 + 拉入 U-107/U-108 后复测） | 代码：`harness.py` 超时遍历改"契约 ∪ LLM 清单"并显式输出 `not_in_contract`、`link` 移进"不放大"清单、四处注释按当前契约形状订正；`gap_table.py` 新增 `parallel_clause()`（三态、由探测派生）；`reporter.py` 读探针的 `parallel_equality_ok` 并新增 `timeout_snapshot_drift()`（跑批快照 vs 当前树的超时表点名）；`_probe_pg_real.py` 新增 `_parallel_equality()`（并行开/关 × `is_local` × 各 5 次，每例独立连接）。测试 +3（→ **305 条**，含把超时契约测试按新形状重写）。产物：`eval/reporter.py --no-backup` 重生成报告 + `eval_metrics.json`、`_probe_pg_real.json`（`parallel_equality_ok = true`）。文档：RELAY **G1 关闭 / G3 订正 / P6 全面订正 / P7 新增 / A10 补 W7 反证**、DELIVERY §1 §4.4 §4.6 §4.7 §5 §6 §7 §8。<br>⚠️ 该行里的 `parallel_equality_ok = true` 已被下一行**订正**（判据本身有缺陷） |
+| 第三轮 · 续（同日，答 W7 对 P7 的答复） | 判据换形：`_probe_pg_real.py` 的 `parallel_equality` 从"`debug_parallel_query` off/on"改成"**四形态 × 真串行/真并行**（串行 = `max_parallel_workers_per_gather=0`）+ `Workers Launched ≥ 1` 才算测到"，实测把 `parallel_equality_ok` 落成 **false**（`v_order_paid/reset_placeholder` 并行少算约一半）；新增 `_probe_parallel_states.py`（两条角色路径 × 五种形态 + 被排除的三个假设）；`gap_table.parallel_clause()` 改成**按形态点名**并写明"机制未定"；`reporter.pg_facts()` 多搬 `parallel_undercount_states` / `parallel_state_ok`；测试 +1（→ **306**，含一条**吃真实产物**的措辞回归）。产物：`_probe_pg_real.json`、`_probe_parallel_states.json`、重生成报告 + `eval_metrics.json`。文档：RELAY **P7 由"未复现"改写为"已复现 + 机制未定"**、§十-6b 补"提交后复用连接 ⇒ 恒 0 行"、G3 补 W7 ③（`bind` 超时在回执里会长成 `refuse(no_data_asset)`）；DELIVERY §4.4 订正 + 新增 §4.8 + §5.7 改成"两连错" + §8-4 换待办 |
 
 **不入版本库**：
 `eval/results_replay_probe.json`（中途探针临时产物，已被 `results_v1.json` 取代）、`eval/*.bak-*`、`backend/reports/w6/*.bak-*`、
@@ -202,7 +218,7 @@
 1. **146/166 条未真打**（D1 裁定：先冒烟）。全量 ≈¥0.27 / 769k tokens，需要额度授权。
 2. **G-8 需要第二轮回路**（W6 自己的缺口）：`runner.py` 要能把 `clarify` 的补答喂回去再走一次。
 3. **§C.4.3 的裁决**：gold 补 `default_predicates` 重冻结，还是宣布语义包口径权威 —— 待 W1A + 架构。
-4. **前置判据（本轮已落成常驻物，不再是待办）**：PG 执行链接进来之前，`_probe_pg_real.py` 的 `parallel_equality` 必须先绿 —— 同一条 SQL 在并行开/关下给出同一个数。本轮实测：`parallel_equality_ok = true`（8 组读数全部精确、`EXPLAIN` 确有并行节点），且措辞已交给报告器派生（`gap_table.parallel_clause()` 三态：未做 / 不等值 → 本行 PG 读数全部作废 / 通过 ⇒ 缺口表与报告 §0、§7 同一状态，不许一处有一处没有）。W7 报过的那次"并行把 `count(*)` 吃掉一截且不报错"我按能想到的 8 种组合**没能复现**（第一版实验复用同一连接，是我自己的缺陷 —— 见 §5.7）⇒ 剩下的唯一待办 = 等 W7 给出可复现的形状（RELAY P7）。
+4. **PG 并行少算：已复现，机制未定**（§4.8）。判据已常驻在"四形态 × 真串行/真并行 + `Workers Launched ≥ 1`"上，本轮把 `parallel_equality_ok` 落成 **false**（`v_order_paid/reset_placeholder`）。剩下三件：① **机制**要 DB 侧继续定位（我已排除 plan 缓存、index-only 节点类型、"worker 没拿到 GUC"三条直观解释 —— 排除法也是产物，见 RELAY P7）；② §8-5 那条"接 PG 执行链"必须把这条判据当**前置门**：不等值就不许进分母；③ 适配器要断言"事务内设两把 GUC 且当批生效"—— 我实测到**提交后复用同一把连接**会让事务级值消失、只剩占位符 ⇒ 恒 0 行（fail-closed，但 0 行极易被误读成"模型没查到东西"）。
 5. **G-4 的"应用链走 PG"那一半**：数据已到位、**策略本身已实测有效**（§4.4），但评测主链路仍走 SQLite TEMP VIEW。下一步是把 `PgSqlExecutor` + 两个 GUC 接进跑批，并把探针的 `rls_partition_ok` 接成 `cross_tenant.pg_rls_verified` 的证据 —— 现在那一格仍写"未在真实 DB 层验证"，**故意不提前吃这条绿灯**（判据只到"策略对原始 SQL 阅读器有效"，不等于"我们的执行链在 PG 上隔离正确"）。
 6. **红队四桶分歧**：终态形状 / rule_id 归因 / truncated 可观测性 / 用例前提与语义包不相容 —— 分属 W1A·W2C·W2D·W4（RELAY §二/§三/§五/§六）。
 7. `eval/` 不在 CI 的 lint / import-linter 范围内（都在 `backend/` 下跑）⇒ 本窗口的边界契约靠自己的测试兜底，建议架构给 `eval/` 一个正式契约（RELAY A7 / O3）。

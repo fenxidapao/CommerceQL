@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -271,15 +272,39 @@ async def probe_pg() -> dict:
                 for c in out["rls_partition_check"].values()
             )
             # ---- 并行 vs 串行：同一条 SQL 必须给同一个数 ----
-            # 为什么常驻在探针里：W7 报过一次"并行计划下 count(*) 少算且不报错"（我这边
-            # 8 种组合没能复现，见 parallel_equality 的实测值）。N-07 抓不到这种错 ——
-            # 策略照样生效、不报错，只是分量被并行计划吃掉；而 PG 轮要的是"结果可信"。
-            # ⇒ 它是 PG 执行链的**前置判据**，不是可选检查。
+            # 为什么常驻在探针里：租户策略里的 `current_setting('app.shop_ids', true)` 在
+            # **并行 worker 眼里可以是 NULL**（当该键只是 RESET 留下的占位符时），于是 worker
+            # 整片被过滤掉、`count(*)` 静默少算且不报错。N-07 抓不到这种错（策略照样生效，
+            # 只是分量丢了），所以它是 PG 执行链的**前置判据**，不是可选检查。
+            # ⚠️ 这一格第一轮探针只测了"显式设值"一种形态 ⇒ 恒绿，而恒绿正是它能藏错的原因。
             out["parallel_equality"] = await _parallel_equality(
                 tenants[0] if tenants else "T_A", "v_order_paid", "v_traffic_daily"
             )
             out["parallel_equality_ok"] = all(
-                r.get("equal") for r in out["parallel_equality"].values()
+                v["state_ok"] for v in out["parallel_equality"].values()
+            )
+            # 按**形态**聚合的三态：
+            # · False —— 有视图"串行有数、并行对不上"（真不符）
+            # · None  —— 没有任何一个"可测且并行真跑起来"的格子（例如两把键都没设 ⇒ 恒 0 行，
+            #   0 == 0 不能读成"等值通过"）
+            # · True  —— 至少一个格子可测且真跑了并行，且没有一个格子不符
+            out["parallel_state_ok"] = {}
+            for state, _ in PARALLEL_GUC_STATES:
+                cells = [
+                    per_view["states"][state]
+                    for per_view in out["parallel_equality"].values()
+                    if state in per_view["states"]
+                ]
+                if any(c["measurable"] and not c["equal"] for c in cells):
+                    out["parallel_state_ok"][state] = False
+                elif any(c["measurable"] and c["parallel_ran"] for c in cells):
+                    out["parallel_state_ok"][state] = True
+                else:
+                    out["parallel_state_ok"][state] = None
+            out["parallel_undercount_states"] = sorted(
+                f"{view}/{state}"
+                for view, per_view in out["parallel_equality"].items()
+                for state in per_view["undercount_in"]
             )
         except Exception as exc:
             out["rls_effectiveness"] = f"UNREACHABLE {type(exc).__name__}: {exc}"
@@ -287,42 +312,118 @@ async def probe_pg() -> dict:
     return out
 
 
-async def _parallel_equality(tenant: str, *views: str, runs: int = 3) -> dict:
-    """同一视图在 `debug_parallel_query` off/on 下各数 `runs` 次，并要求计划里真的有并行节点。
+#: `app.shop_ids` 的四种**都能到达 RLS 策略**的形态。少算只出在其中一格 ⇒ 只测一种必然恒绿。
+PARALLEL_GUC_STATES: tuple[tuple[str, str], ...] = (
+    ("explicit_empty", "显式 set_config('')，= 不限店铺（生产执行链的形状）"),
+    ("reset_placeholder", "RESET app.shop_ids ⇒ 键本会话从未设过，留下值为 '' 的占位符"),
+    ("never_touched", "全程不碰 app.shop_ids ⇒ current_setting 取 NULL"),
+    ("sentinel_star", "set_config('*')（W7 的 P1 哨兵提议；策略文本里 `= ''` 不成立）"),
+)
 
-    只比数值不够：并行没被选中时"相等"是空话 ⇒ 一并记 `parallel_plan`，让读的人能判断
-    这次对照到底测没测到那条路径。
+
+async def _set_guc_state(con, state: str) -> str:
+    """把连接摆进目标形态，并如实记下这一句到底做了什么（RESET 失败不许静默跳过）。"""
+    if state == "never_touched":
+        return "untouched"
+    if state == "explicit_empty":
+        cur = await con.execute("select set_config('app.shop_ids', '', false)")
+        return f"set_config '' -> {(await cur.fetchone())[0]!r}"
+    if state == "reset_placeholder":
+        try:
+            await con.execute("reset app.shop_ids")
+        except Exception as exc:
+            await con.rollback()
+            return f"RESET 失败 {type(exc).__name__}"
+        cur = await con.execute("select current_setting('app.shop_ids', true)")
+        return f"RESET ok -> {(await cur.fetchone())[0]!r}"
+    if state == "sentinel_star":
+        cur = await con.execute("select set_config('app.shop_ids', '*', false)")
+        return f"set_config '*' -> {(await cur.fetchone())[0]!r}"
+    raise ValueError(f"未知形态：{state}")
+
+
+async def _count_under(con, q: str, *, parallel: bool, runs: int) -> dict:
+    """在"真串行 / 真并行"下各数 `runs` 次，并带回**并行真的发生了**的证据。
+
+    ⚠️ 轴换了：第一版拿 `debug_parallel_query` 的 off/on 当串行/并行 —— 本机 PG16 只接受
+    `off/on/regress` 三个取值，且 **off 下计划里照样有 Gather** ⇒ 那个"off"根本不是串行。
+    现在串行 = `max_parallel_workers_per_gather = 0`，并行 = 2 + `regress`（强制考虑并行路径），
+    并以 `Workers Launched ≥ 1` 为"测到了"的判据 —— 只看计划里有没有 Gather 不够，
+    "结果恰好正确"这一格已经骗过 W7 一次、也骗过本窗口一次。
+    """
+    mpw = "2" if parallel else "0"
+    dpq = "regress" if parallel else "off"
+    await con.execute(
+        "select set_config('max_parallel_workers_per_gather', %s, false)", (mpw,)
+    )
+    await con.execute("select set_config('debug_parallel_query', %s, false)", (dpq,))
+    counts = []
+    for _ in range(runs):
+        try:
+            cur = await con.execute(q)
+            counts.append((await cur.fetchone())[0])
+        except Exception as exc:
+            counts.append(f"ERR {type(exc).__name__}")
+    plan = "\n".join(
+        r[0] for r in await (await con.execute(f"explain (analyze, timing off) {q}")).fetchall()
+    )
+    launched = re.search(r"Workers Launched:\s*(\d+)", plan)
+    removed = re.search(r"Rows Removed by Filter:\s*(\d+)", plan)
+    return {
+        "counts": counts,
+        "gather_node": "Gather" in plan,
+        "workers_launched": int(launched.group(1)) if launched else 0,
+        "rows_removed_by_filter": int(removed.group(1)) if removed else 0,
+    }
+
+
+async def _parallel_equality(tenant: str, *views: str, runs: int = 3) -> dict:
+    """视图 × GUC 形态 × 串行/并行 的等值矩阵。每格**新连接**（复用连接会让上一格的状态漏进来）。
+
+    判定只认"串行有数"的格：串行都是 0 行的形态（NULL / `'*'`）里 `0 == 0` 也会"等值"，
+    那种恒等不能算通过 —— 它测不到任何分量。
     """
     import psycopg  # 与 probe_pg() 同为延迟导入（模块顶层不依赖驱动在位）
 
     result: dict[str, dict] = {}
-    con = await psycopg.AsyncConnection.connect(RO_DSN, autocommit=True)
-    async with con:
-        await con.execute("select set_config('app.tenant_id', %s, false)", (tenant,))
-        await con.execute("select set_config('app.shop_ids', '', false)")
-        for v in views:
-            q = f'select count(*) from "app"."{v}"'
-            per_mode: dict[str, dict] = {}
-            for dpq in ("off", "on"):
-                cur = await con.execute("select set_config('debug_parallel_query', %s, false)", (dpq,))
-                await cur.fetchone()
-                counts: list[int | str] = []
-                for _ in range(runs):
-                    try:
-                        cur = await con.execute(q)
-                        counts.append((await cur.fetchone())[0])
-                    except Exception as exc:
-                        counts.append(f"ERR {type(exc).__name__}")
-                plan = [r[0] for r in await (await con.execute("explain " + q)).fetchall()]
-                per_mode[dpq] = {
-                    "counts": counts,
-                    "parallel_plan": any(("Parallel" in p) or ("Gather" in p) for p in plan),
-                }
-            nums = [x for m in per_mode.values() for x in m["counts"] if isinstance(x, int)]
-            result[v] = {
-                **per_mode,
-                "equal": bool(nums) and len(set(nums)) == 1 and len(nums) == 2 * runs,
+    for v in views:
+        q = f'select count(*) from "app"."{v}"'
+        per_state: dict[str, dict] = {}
+        undercount: list[str] = []
+        for state, note in PARALLEL_GUC_STATES:
+            con = await psycopg.AsyncConnection.connect(RO_DSN, autocommit=True)
+            async with con:
+                await con.execute("select set_config('app.tenant_id', %s, false)", (tenant,))
+                applied = await _set_guc_state(con, state)
+                ser = await _count_under(con, q, parallel=False, runs=runs)
+                par = await _count_under(con, q, parallel=True, runs=runs)
+            ser_nums = [x for x in ser["counts"] if isinstance(x, int)]
+            par_nums = [x for x in par["counts"] if isinstance(x, int)]
+            measurable = bool(ser_nums) and min(ser_nums) > 0
+            # 没起 worker 的两格相等什么也证明不了 ⇒ 不算测到，更不算通过。
+            parallel_ran = par["workers_launched"] >= 1
+            equal = (
+                measurable
+                and parallel_ran
+                and sorted(ser_nums) == sorted(par_nums)
+                and len(par_nums) == runs
+            )
+            if measurable and parallel_ran and not equal:
+                undercount.append(state)
+            per_state[state] = {
+                "note": note,
+                "guc_applied": applied,
+                "serial": ser,
+                "parallel": par,
+                "measurable": measurable,
+                "parallel_ran": parallel_ran,
+                "equal": equal,
             }
+        result[v] = {
+            "states": per_state,
+            "undercount_in": undercount,
+            "state_ok": not undercount,
+        }
     return result
 
 
