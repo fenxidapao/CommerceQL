@@ -302,6 +302,15 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         Dependency.EMBEDDING,
         obs_probes.make_embedding_probe(settings.EMBEDDING_BASE_URL, settings.EMBEDDING_MODEL),
     )
+    # ★ U-108 追加：装配期先把出站握手付掉（永不抛，失败只留一条 WARN，不影响启动成败）。
+    #   实测冷连接是双峰的（17/20 次 85–150ms，3/20 次 4,090–4,102ms），而**只有第一次探测会付**；
+    #   留给第一次 `/healthz` 去付 = 把假负固定安排在"运维最在看的那一刻"。
+    probe_warm_ms = await obs_probes.warm_probe_connections()
+    logger.info(
+        "probe_connections_warmed",
+        per_target=probe_warm_ms,
+        why="07 §18.2 ④：连接复用 + 判据/门限分离（U-108）",
+    )
 
     sampler_specs: list[samplers.SamplerSpec] = []
     if semantic_runtime is not None and graph_runtime is not None and graph_runtime.cost_ledger is not None:
@@ -387,6 +396,18 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
             why="§18.3 第 3 步未完整达成：如实上报，不声称静默断连已消除",
         )
     await sampler_runner.stop()
+
+    # --- 软依赖探针的出站连接（★ U-108 追加段，W7）---
+    # §18.3 第 4 步的"归还连接"过去只覆盖入站 SSE 与三池；U-108 之后探针**跨探测复用**
+    # `httpx.AsyncClient`（07 §18.2 ④），于是多出一批指向 DeepSeek / Ollama 的出站 keepalive。
+    # 不关的话进程退出照样消失，但 uvicorn 在 shutdown 之后还要转一会儿循环 ——
+    # 未关客户端就是那一句 `Event loop is closed` 的来源。
+    probe_clients_closed = await obs_probes.aclose_probe_clients()
+    logger.info(
+        "probe_clients_closed",
+        closed=probe_clients_closed,
+        why="07 §18.3 第 4 步「归还连接」的出站那一半（U-108 引入复用之后才存在）",
+    )
 
     # --- 4.5 的关闭（W4 追加段：两条**长连资源**，先于三池）---
     # ⚠️ `gateway.aclose()` 释放 httpx 连接（W3A §4："不关则 httpx 连接不释放"）；

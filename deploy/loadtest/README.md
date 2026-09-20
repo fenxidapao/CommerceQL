@@ -112,10 +112,19 @@ PY
 | 首次调用 | **27,348 ms** | — |
 | 容器→`api.deepseek.com` 建连 | 同一容器内先后两批：**3134 / 4038 / 4049 ms** ⇒ 复测 **22–70 ms**；宿主 123 ms | 建连延迟**是间歇的**，不是稳定特征（两批 `getaddrinfo` 返回的 IPv4 集合相同） |
 
-⇒ **判据（本窗口自定，等架构改数）：warm 单发 p50 ≤ 1.5s 且三次无 5xx 才开跑批。**
-今天的读数不满足（1.85–2.03s + 一次 503 + 一次 27s），所以**本窗口没有跑四场景**：
-在这种上游状态下跑出来的 P95 测的是 DeepSeek 当天的抖动，不是 CommerceQL 的容量，
-而 W6 的门禁会照抄我的数 ⇒ **不跑比跑更负责**。
+⇒ **判据（2026-09-20 第二版；第一版已撤回，理由见下）**：
+
+| # | 判据 | 为什么是这个数 |
+|---|---|---|
+| ① | warm 单发补全（c=1，n≥5）**p95 ≤ 8s** | **就用 G-6 的同一个数，不另发明**。要判的是"50 并发下的 p95 ≤8s"；单发都已经超 8s，并发只会更差 ⇒ 那一批只会把外部抖动记成我们的容量 |
+| ② | 连续 3 次**无 5xx**（上游返回的 5xx） | 5xx 进样本后统计的是 provider 当天的故障率，不是 CommerceQL 的容量 |
+| ③ | **`U-107` 已落地**且 `/healthz` 的 `llm`/`embedding` 不再假负 | 架构 `RELAY §10`④ 明写"`U-107` 必须先落"：否则测到的仍是"上游慢就 100% `error(INTERNAL)`"这个缺陷本身；探针假负则会让"该不该开跑"这一步的输入就是错的（U-108） |
+
+🔴 **撤回第一版判据：`warm 单发 p50 ≤ 1.5s`**。它低于 flash `normalize_intent` 的**真机中位 1.56s**
+（`app/llm/router.py:41`，W3A 自己测的读数）⇒ 这是一扇**物理上开不了的门**，
+把它写成放行条件 = 用"我没跑"永久冒充"跑了也不达标"。W4 本轮指出这一点，成立。
+今天的读数按新判据重述：**① 满足**（1,853 / 2,033ms 均 ≪ 8s）、**② 不满足**（warmup 那一次 503）、
+**③ 不满足**（`U-107` 未落）⇒ **仍不跑批，但阻塞项从"上游慢"改成了"`U-107` 未落 + 上游间歇 5xx"**。
 
 ⚠️ 同时留下的一条真实事实（不是推测，是日志）：W4 的 3.5s 合并档预算**已生效**
 （`node_timeout{node:"normalize","limit_s":3.5}`，不再是 2.0），但今天这 5 条探测仍
@@ -123,6 +132,62 @@ PY
 好消息是这 5 条是 200 + error 帧（`admission.admitted = 5`，`p95_scope=admitted_http_2xx`），
 `terminal_provenance` 也第一次出了真数：`{"error_frame": {"stage=intent|reason=none": 2}}`
 ⇒ 终止发生在 `intent` 阶段帧之后，与"合并调用回得来但节点收不了口"一致。
+
+#### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
+
+探针的取数依据按 U-22 纪律必须"写在常量旁边"，而常量旁边放不下方法 —— 所以
+`probes.py` 的那几行注释指向本节。**全部读数在 `commerceql-api-1` 容器内取得**（不是宿主：
+宿主→上游建连 123ms，容器内曾出现 4.1s，两回事），且**零配额** —— 探针与这些测量都只打
+`GET /`（DeepSeek 不带 key、不产生 token）与 Ollama `GET /api/tags`。
+
+| 测的东西 | 读数（2026-09-20，容器内） | 用它定的数 |
+|---|---|---|
+| 裸 TCP+TLS 建连（`socket`+`ssl`，不被超时截断）n=20 | **双峰**：17 次 85–150ms；3 次 4,090 / 4,097 / 4,102ms。p50 142 / p90 4,090 / p95 4,097 / max 4,102ms | 长尾是**离散仅 12ms 的一簇**，不像抖动 ⇒ 更像固定回退路径（多 A 记录 / happy-eyeballs） |
+| 冷客户端第一次 `GET /` | 4,270ms（含握手，返回 401 = 可达） | — |
+| **复用连接**后的 `GET /`（同一 `AsyncClient`） | p50 **110ms** / p95 **142ms**；跨 30s、65s 闲置后仍在同一连接上（96 / 114ms） | `LLM_PROBE_SLOW_S = 1.0`（≈复用 p95 的 7 倍） |
+| `httpx` 路径的 connect 阶段超时（当时的界 = 8.0s） | **两次被截断：8,119ms / 8,151ms**（真值未知）；紧随其后的一次 **5,236ms 成功**（HTTP 401） | `LLM_PROBE_TIMEOUT_S` 从 8.0 抬到 **12.0**（= 已见成功值 5.2s 的 ~2.3 倍，≪ UI 30s 轮询） |
+| Ollama `/api/tags` 空闲 n=8 | p50 4 / p95 6 / max 6ms | — |
+| Ollama `/api/tags` **在 6 路 embedding 并发期间** n=92 | p50 5 / p95 6 / **max 7ms**（embedding 单次 4,462–5,025ms） | `EMBEDDING_PROBE_TIMEOUT_S = 1.0`、`..._SLOW_S = 0.2`（"本机忙会拖慢 tags"这个假设被**否掉**了，所以不必为它留量级） |
+| `_KEEPALIVE_EXPIRY_S` 的必要性 | httpx 默认 5s ⇒ **低于 UI 的 30s 轮询间隔**：用默认值时"复用"根本不会发生，第二次探测照样重新握手 | 显式设 **60s**（实测跨 30s / 65s 闲置仍复用成功） |
+
+⚠️ **一条必须在真上游上才看得见的事实（也是 U-108 的立项证据被当场复现了一次）**：
+把新代码跑起来，第一次探测报 `ConnectTimeout`（8.1s 处）⇒ `healthy=False`；
+紧接着第二次 **5,236ms 拿到 HTTP 401** ⇒ `healthy=True` + `probe_slow` WARN。
+**同一段时间窗口内，旧代码（共用 2.0s）会把这两次都判成"LLM 不可达"** —— 那才是假负本体。
+所以本轮交付的不是"阈值从 2 改成 12"，是三件事：**复用连接**（长尾从每次探测挪到第一次）、
+**判据与门限分离**（慢 ⇒ `healthy=true` + WARN，不再翻转布尔）、
+**按层写清失败原因**（连接层 / 松弛上界 / 本地池 —— 间歇长尾消不掉，能交付的是"报得准"）。
+
+复跑口径（零配额，可直接粘贴）：
+
+```bash
+# ① 裸建连分布（不被超时截断）
+docker exec -i commerceql-api-1 python - <<'PY'
+import socket, ssl, time
+xs=[]
+for _ in range(20):
+    t=time.perf_counter()
+    s=socket.create_connection(("api.deepseek.com",443), timeout=25.0)
+    s=ssl.create_default_context().wrap_socket(s, server_hostname="api.deepseek.com"); s.do_handshake()
+    s.close(); xs.append((time.perf_counter()-t)*1000)
+xs.sort(); print(xs)
+PY
+# ② 探针本身（暖身 + 三次轮询 + 停机归还），看 healthy 与自计耗时
+# ⚠️ 必须**把当前源码挂进去**跑，不能直接 exec 进 commerceql-api-1：那个镜像里的
+#    `app/obs/probes.py` 是构建时的旧版（本轮 ③ 的判据依赖它，用旧版会得到旧行为）。
+IMG=$(docker inspect --format '{{.Image}}' commerceql-api-1)
+docker run --rm -v "$PWD/backend":/w:ro -w /w -e PYTHONPATH=/w --env-file deploy/.env \
+  --entrypoint python "$IMG" -c "
+from app.obs import probes; import asyncio, time
+async def m():
+    p=probes.make_llm_probe('https://api.deepseek.com')
+    print(await probes.warm_probe_connections())
+    for _ in range(3):
+        t=time.perf_counter(); r=await p(); print(round((time.perf_counter()-t)*1000), r.healthy, r.detail[:90])
+    print('closed =', await probes.aclose_probe_clients())
+asyncio.run(m())"
+```
+（`probes.py` 的 17 条单测用 `httpx.MockTransport`，**不碰网络**；本节这些数只能真跑，两者不互相顶替。）
 
 ### 三.1 装载（本轮实测读数）
 
