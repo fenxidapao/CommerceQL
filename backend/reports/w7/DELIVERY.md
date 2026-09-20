@@ -11,7 +11,7 @@
 
 | DoD | 判定 | 证据在哪 |
 |---|---|---|
-| ① 四场景压测通过 + P95 ≤8s | ⚠️ **四场景已跑完（真实额度、真实数据、真实并发），但 G-6 不可判"达标"**：50/100 并发下 `complete` 帧 **0 条**，P95 全部来自失败样本。四条根因已量化（LLM 信号量 8 vs 节点预算 2.0s / Redis 超时未映射成 500 / §16.5 与 §9.2 配额数学冲突 / embedding 不可用致零执行） | [`压测报告.md`](压测报告.md) §三 逐条读数、§四 根因；回执 `deploy/loadtest/receipt_*.json` |
+| ① 四场景压测通过 + P95 ≤8s | ⚠️ **四场景已跑完（真实额度、真实数据、真实并发），但 G-6 不可判"达标"**：50/100 并发下 `complete` 帧 **0 条**，P95 全部来自失败样本。⚠️ **09-20 用"c=1 判别实验"订正了 R1 的机制**：不是"LLM 信号量 8 排队吃掉预算"（在途只有 1 条时 8/8 仍超时），而是**节点 2.0s 硬超时对那次 1.5–1.6s 的合并 LLM 调用零余量，且 §5.3 没给 `normalize` 写"超时后落点" ⇒ 只能由 runner 兜底成 `error(INTERNAL)`**。⇒ 零完成有**两个独立成因**：① 上述超时；② 走通者也停在 `clarify`/`refuse`（`complete` 仍 0，来源节点待分辨）。四条根因见 `压测报告.md` §四 | [`压测报告.md`](压测报告.md) §一/§三/§四、`RELAY.md` §十三 ⓪+🔴-0；回执 `deploy/loadtest/receipt_*.json`、`baseline_c5.json` |
 | ② runbook 六条可执行 | ⚠️ **判定入口这一半已逐条真跑过（09-19）**：RL-1 §2.4/2.5、RL-2 §2.2/2.4、RL-3 §2.4/2.5、RL-5 §2.5、RL-6 §2.3 的 SQL/命令**全部可执行**，读数与判读已写回各条正文（不再是 `UNVERIFIED` 占位）；过程中还抓到并修掉 `RL-3` §4 两条**裸直方图名**判据（照抄会返回 0 序列）。**处置闭环那一半仍 UNVERIFIED**（除 RL-2 读侧外） | `runbook.md` §二 逐条 + §三 活栈读数；`deploy/runbook/RL-*` 各 §2 的"2026-09-19 实测"表 |
 | ③ `/healthz` 三探针语义正确（软依赖失败必须 `200 + degraded`，N-21） | ✅ **本轮在 W7 自己的实现上活体验证过**：当前源码树构建的 `w7load-api`，`llm_reachable=true` / `embedding_reachable=false` → **HTTP 200 + `degraded_dependencies:["embedding"]`**，payload 为收敛后的 §A.8.4 `checks{}` 形状。（09-18 那版"读数来自旧镜像占位探针"的限定**已解除**） | `压测报告.md` §二 探针行；`tests/contract/test_health_endpoints_contract.py` 16 条 |
 

@@ -331,25 +331,77 @@ W1B 侧改动就一处（`_alembic()` 的 `subprocess.run` 加 `encoding="utf-8"
 
 ⇒ **G-6（P95 ≤ 8s）现在没有一条"真正完成"的样本可判**。这不是 P95 算得高或低的问题，是**分母为空**。
 `g6_caveat` 已经把它变成机器可读的降级（W6 的门禁会读 `g6_caveat` ⇒ 判 UNVERIFIED 而不是 PASS），
-所以**门禁不会被骗过去** —— 但 DoD① 也**没有被满足**。这一条排 🔴-1，且**主要卡在我这侧**：
-压测数据只有我能产，但我需要 W4 的两笔提交先进 HEAD，否则复跑还是同样的形状。
+所以**门禁不会被骗过去** —— 但 DoD① 也**没有被满足**。
+⚠️ 且这条**不再是"卡在我这侧"**：**`ok=0` 至少有两个独立成因** ——
+① 大量请求死在 `normalize` 的 2.0s 硬超时（根因见下，修法不在我域）；
+② 即便走通 `normalize`，也停在 `clarify`/`refuse` 而不是 `complete`：09-19 的 c=5 基线
+20 条里 18 条走通，结局是 **clarify 5 + refuse 13 + complete 0**。
+⚠️ 这 18 条**为什么**停在这里，我**分辨不了**，别听我编：服务端出现过
+`refuse_total{reason="no_data_asset"}`，但 `RefuseReason` 只有 4 个值（`enums.py:429-432`），
+而 `no_data_asset` 这个字符串**同时**是 intent 层 `INTENT_MAP` 的产物（07 §5.2 组 3）
+**和** §5.3 给 `link` 的"空召回 → `refuse`"的落点 ⇒ **单看 reason 判不出是哪个节点说的**。
+⇒ 需要一个带 **terminal 事件来源节点**明细的复跑才能定（我这侧可做：驱动已收 `event` 帧，
+加一条"终止前最后一个 `stage`"的记录即可，属我域、不阻塞别人）。
+⇒ 因此复跑前置是：**🔴-0 必做**；**🔴-7 是否必要，等上面这一眼分辨完再说**（别提前把两件事捆在一起）。
 
-⚠️ 未定性部分如实标注：`burst` 那 100 条 `INTERNAL` 的**根因我还没钉死**。已钉死的是停机窗口那批
-（34 × `TimeoutError` + `Timeout connecting to server`，栈在 `asyncio.open_connection` ⇒ W4-1 的 Redis 边界）；
-但 burst 期间 Redis 是 up 的 ⇒ **不能**把 burst 也归给同一条。这一格是 **UNVERIFIED**，
-钉它的方式见 🔴-1 的动作（1 条请求 + 容器日志即可判，不用跑批）。
+⚠️ **09-20 已把根因钉死**（用 1 条请求复现，不跑批、不猜）：在**同一个 `w7load-api` 镜像**上
+单条打 `POST /query` ⇒ 稳定得到同一条链：
+
+```
+{"node":"normalize","limit_s":2.0,"event":"node_timeout"}
+{"error_type":"TimeoutError","event":"graph_run_failed",
+ "extra_fact":"图未收口 → 补发 error(INTERNAL)，不留一条无终态的流（N-08）"}
+→ 客户端收到 error 帧，code=INTERNAL，端到端 2052.2ms
+```
+
+**8 次小样（1 + 6 + 1）全部同形**。这组实验**能**排除三件事：
+- 排除"**并发是必要条件**"：在途只有 1 条时也 8/8 超时；
+- 排除"冷启动"：进程已热身后的第 9 次仍然 `p95=2052.2ms`；
+- 排除"Redis"：这条链的日志里没有任何 Redis 字样（那批 41 × `http_5xx` 才是 Redis 边界，W4-1）。
+
+⚠️ 但它**不能**支持"每条请求都必死"这个说法 —— 反例在我自己的归档里：
+09-19 的 `baseline_c5.json`（c=5，20 条）是 **clarify 5 + refuse 13 + error 2**，
+即**多数请求当年是在 2.0s 内走通 `normalize` 的**，那时单发 LLM 延迟是 1060/1104/**1515ms**。
+⇒ 两天的数据合起来才是机制：**2.0s 预算对那次 1.5–1.6s 的合并调用几乎零余量（只剩 ~0.4s）**，
+所以**谁能活由 LLM 单次延迟的抖动决定**，并发只是放大器（把 2.05s 放大成 2.5–7.3s）。
+⇒ 也正因为如此，"调大 `LLM_SEMAPHORE_FLASH`"或"降并发"都**不是**正解 —— 根子上没有余量。
+（今天 `LLM_SEMAPHORE_PRO=2` 与"降并发"这两条被排除，仅对今天这组 c=1 样本成立，不是普遍结论。）
+
+**耗时去哪了 —— 用我自己那套指标量的**（`/api/v1/metrics` 活体抓取，8 条样本）：
+
+| 读数 | 值 |
+|---|---|
+| `stage_duration_seconds{stage="intent"}` count / sum | 8 / **12.87** ⇒ mean **1.609s** |
+| 该族 `le="1"` / `le="2"` 累计 | **0** / **8** ⇒ 8 条全落在 **(1s, 2s]** |
+| `normalize` 节点超时阈值（`build.py:370`） | **2.0s** |
+| 契约给 `normalize`+`intent` **合并后**那次调用的分配（07 **§16.2** 首字节预算，:2923 表 + :2929 已把旧值 1.2s 订正为 **1.6s**） | **1.6s** |
+
+⇒ 结论：**LLM 侧完全按契约的 1.6s 在跑**（实测 mean 1.609s，几乎不偏）；
+死因是**节点级 2.0s 硬超时**（`build.py:388 _with_node_timeout` 用 `asyncio.timeout` 抛异常，
+除 `present` 外**没有任何降级出口**）只剩 **0.4s** 给"合并调用之外的那部分节点工作"，而这 0.4s **不够**。
+差值稳定在 ~50–100ms（2052/2101/2104ms 三个读数）⇒ 是**系统性预算冲突**，不是抖动。
+
+⚠️ 别把两件事混了：超的是 **§16.2 给合并调用的那次分配 + 节点 2.0s 硬超时**；
+**NFR-1.2 首字节 ≤1.5s 本身实测是达标的** —— 十份回执的 `ttfb_ms.p50` 在 **79–320ms**
+（`burst_pool 217 / quota 201 / steady 128 / lock 8`），只有 drain 两份的 p95 到 3.2–4.2s，
+那是**停机窗口**该看到的形状，不是首字节预算破了。
+
+⚠️ 最后 0.4s 里具体是谁（`resolve_time` / `INTENT_MAP` / `detect_injection` / 事件循环节流）
+**从 SSE 层看不到** —— 那正是 §十一 W4-4「节点内部耗时不可见」这个观测缺口现在挡住建模的地方。
+这条我按实测能钉到"预算冲突"这一层，再往里要 W4 的节点内计时才能判。
 
 ### ① 🔴 阻塞项 —— 需要转给有权限的人，且顺序不能倒
 
 | # | 事项 | 归属（谁能做） | 卡住了什么 | 判据（可自行复核） |
 |---|---|---|---|---|
+| 🔴-0 ★★ | **节点超时没有降级落点 ⇒ 一超时就判 `error(INTERNAL)`**（`build.py:370` 阈值 + `build.py:388 _with_node_timeout` 用 `asyncio.timeout` 抛异常，除 `present` 外无出口；07 §5.3 给 `normalize` 那行**只写了 2.0s 超时、没写超时后落点**） | 修法在 **W4**（`app/graph/**`）；**预算数字与 §5.3 那一格要架构补** | **G-6 / DoD① / W6 全部下游门禁**。抖动事实：09-20 **c=1 时 8/8 超时**（那次合并调用 mean **1.609s**，§16.2 已把分配订正到 1.6s），09-19 **c=5 时 20 条只有 2 条超时**（单发 1060/1104/1515ms）⇒ **2.0s 对 1.5–1.6s 的调用零余量**，谁能活由 LLM 抖动决定。三条候选（选一即可）：① 超时后按 §5.3 语义**降级**（澄清 / `degraded(llm_unavailable, template_only)`）而不是 `INTERNAL`；② 承认"合并调用同时干了节点 2+3 的活"，给它 **2.0s + 节点 3 的 1.5s** 这一档预算；③ 把 `resolve_time`/`INTENT_MAP`/`detect_injection` 挪出计时段（若那 0.4s 真是它们吃的）。⚠️ 我倾向 **①+②组合**：②解当下的量不够，①让"预算破了"不再等于"用户拿到 INTERNAL" | 见 §⓪ 的复现链与指标读数（1 条请求即可，不跑批）：`node_timeout{node=normalize,limit_s=2.0}` + `graph_run_failed(TimeoutError)`；`stage_duration_seconds{stage="intent"}` 8 条全在 (1s, 2s] |
 | 🔴-1 | **W4 把已在手的那两笔改动 commit 进 HEAD**（`app/api/errors.py` +22 的 Redis 边界映射、`app/graph/nodes/execute.py` +5 的 `_on_failure` 观测） | W4 | ① W7 已删帧反推 ⇒ HEAD 上 `exec_failure_total` 是**九条恒 0**，"执行失败分类分布"当前**无告警覆盖**；② 我复跑压测拿 `ok>0` 依赖那个边界映射，否则 Redis 一抖还是纯文本 500 | 对 `HEAD` 版本的 `execute.py` 做 `grep -c observe_exec_failure` → `0`；`git diff --stat` 仍显示这两文件为 modified |
-| 🔴-2 | **`ruff check .` 的 SIM117 挡 CI** | W4（文件在 `backend/reports/w4/`） | **所有**窗口往 main 推的 CI 都会红（`ci.yml:321` 就是 `ruff check .`，且不排除 `reports/**`）⇒ 现在是全局第一阻塞 | `cd backend && ruff check .` → `Found 1 error`（`probe_feedback_endpoint_pg.py:100:5`，由 `6863fdc` 带入） |
-| 🔴-3 | **W7 复跑四场景取 `ok>0` 的 G-6 数据** | 我（W7），但**必须等 🔴-1** | G-6 是 W6 全部下游门禁的输入；DoD① 未满足 | 复跑后看 `roll-up` 的 `outcomes.ok`，非 0 才有资格谈 P95 |
+| 🔴-2 | **`ruff check .` 的 SIM117 挡 CI** | W4（文件在 `backend/reports/w4/`） | **所有**窗口往 main 推的 CI 都会红（`ci.yml:321` 就是 `ruff check .`，且不排除 `reports/**`）⇒ 这是**CI 侧第一**阻塞（产品侧第一是 🔴-0） | `cd backend && ruff check .` → `Found 1 error`（`probe_feedback_endpoint_pg.py:100:5`，由 `6863fdc` 带入） |
+| 🔴-3 | **W7 复跑四场景取 `ok>0` 的 G-6 数据** | 我（W7）；🔴-0 不修 ⇒ 几乎必然还是 `ok=0`（另有一半要看 §⓪-② 那个"终止来源节点"明细才能判，那条在我域） | G-6 是 W6 全部下游门禁的输入；DoD① 未满足 | 复跑后看 `roll-up` 的 `outcomes.ok`，非 0 才有资格谈 P95 |
 | 🔴-4 | **裁决：启动校验指标的基数上界**（W1B 已给数：断言名 4 / `AssertionStatus` 3 / 每断言一行 ≤12） | 架构点这个数；W1B+我随即接 | W1B-2（PENDING 三态无指标）+ 我这侧注册（`app/obs/metrics.py:124` 归我，登记动作我做得了）⇒ §15.3 纪律② 不许我自上而下猜上界 | 冷启动真容器导出的 19 个应用族里**没有一个** `startup_assertion*` |
 | 🔴-5 | **裁决：§16.5 压测并发 vs 限流桶**（`ratelimit.py:203`：QUERY 10/user/min、100/tenant/min） | 架构 | `steady`/`burst` 两个场景的 429 到底**是预期还是缺陷**。不裁 ⇒ 我只能一直用 caveat 降级，W6 也判不了 G-6 的"限流不误伤"那一半 | `receipt_steady` 里 `http_4xx 98` 以 `RATE_LIMITED` 为主 |
 | 🔴-6 | **`GateResult` 加预估延迟载体**（U-96，W4 已登记并明确不做真转异步；字段归 **W2D**） | W2D（编号归架构，**我不自开**） | 真转异步、`ActionTaken.SWITCHED_TO_ASYNC`、以及 §5.4 一切"降级到后台"的口径。当前 `_should_go_async` **恒 False** 且有契约用例钉住 | `edges.py:322`；`receipt_*.json` 里 `async_degraded=0` 是**预期**，不是"恰好没触发" |
-| 🔴-7 | **裁决：embedding 模型名与维度**（`EMBEDDING_MODEL` 现值 vs 本机 ollama 是否有该模型；`EMBEDDING_DIM=1024` 被启动断言钉住） | 架构 + W3A | 成功路径压测。本机缺模型 ⇒ 复跑仍主要走**失败路径**，那批 P95 不能代表真实检索链路 | `docker logs w7load-api` 里 `still_unwired: [llm, embedding]` |
+| 🔴-7 | **裁决 + 恢复：embedding 提供方**。订正我原先的说法 —— 本机 09-20 实测**不是"缺 `bge-m3` 模型"，是 Ollama 整个没在听**：`127.0.0.1:11434` connect **refused**、`netstat` 里 **0 个** 11434 监听。而 `EMBEDDING_MODEL=bge-m3` / `EMBEDDING_REQUIRED=false` / 容器侧 `EMBEDDING_BASE_URL=http://host.docker.internal:11434` | 运维起 Ollama（不在任何窗口域）；**模型名/维度仍要架构 + W3A 裁** | ⚠️ 它**不是** 🔴-0 那条链的成因（`normalize` 只调 LLM，不调 embedding）。要不要在它上面花功夫，**等 §⓪-② 的"终止来源节点"分辨完再定**；二选一地表态：**要么把 Ollama 拉起来**，**要么明确"本轮 P95 只覆盖 dense 不可用的 sparse-only 路径"** —— 别两者都不说、让下游以为测的是正常检索链路 | connect refused + netstat 0 命中。⚠️ 不要拿 `still_unwired: [llm, embedding]` 当证据 —— 那句话说的是**探针没被注册**，不是服务可用性 |
 | 🔴-8 | **决策：共享 PG 里那 1,940,300 行合成数据留不留、何时清** | 总控（主流程） | 不是技术卡点，是**归属**：这批数据是 §16.5 复现的前置，也是 W6 现在可能同时在读的同一个库；`truncate` 在这儿不可逆 ⇒ 本窗口不动别人在用的库 | `backend/reports/w7/DELIVERY.md` §五 那条登记 |
 
 ### ② 🟠 不阻塞、但建议优先（能排进下一个窗口就别拖）
