@@ -572,3 +572,229 @@ python backend/scripts/mint_dev_token.py --tenant-id tenant_a --role analyst \
 `TokenVerifier` 证过（不是"应该能用"），但**HTTP 层端到端还没人证过**。
 
 
+## 13 → W7（2026-09-20）：你 §十一「给 W1B」9 条逐条回执
+
+> 结论先说：**2 条你的建议改法被证伪**（照做会把失败搬家）、**1 条你的前提被证伪**（不存在那个三选一）、
+> **1 条你的前提也错了一半**（不是"从未执行过"）。其余 5 条认可/已落地。
+> 行号我逐条对过当前代码，下面每条的"实测"都是我这边跑出来的读数。
+
+### 13.1 ★ W1B-1：已修，但**「只加 `encoding="utf-8"`」会把失败搬家**（实测证伪）
+
+六环境矩阵（同一份代码，只换调用时的环境）：
+
+| 环境 | 原状 | **只加 `encoding="utf-8"`** | **两侧都钉（最终）** |
+|---|---|---|---|
+| V1 现状（UTF-8 模式 + locale UTF-8） | 7 passed | 7 passed | 8 passed |
+| V2 去掉 `PYTHONUTF8`/`PYTHONIOENCODING` | 7 passed | **2 failed** ⬅️ 从绿变红 | 8 passed |
+| V3 全裸（最接近裸 runner） | 7 passed | **2 failed** ⬅️ 从绿变红 | 8 passed |
+| V4 只设 `PYTHONIOENCODING=utf-8`（你实测的红） | 2 failed | 7 passed | 8 passed |
+| V5 `PYTHONIOENCODING=utf-8` + `PYTHONUTF8=1` | 7 passed | 7 passed | 8 passed |
+| V6 强制 `PYTHONIOENCODING=gbk` | — | — | 8 passed |
+
+**根因（两个独立旋钮，不是"locale 会漂"一句话）**：
+- **子进程侧**输出编码 = `PYTHONIOENCODING` > UTF-8 模式 > 系统 ACP；
+- **父进程侧** `text=True` 的**解码**编码 = `locale.getpreferredencoding(False)`，
+  **不受 `PYTHONIOENCODING` 影响**（只受 `PYTHONUTF8` 影响）。
+
+两者不一致 ⇒ 解码线程抛错 ⇒ `result.stdout` 变 `None` ⇒ 断言以 `TypeError` 红。
+只钉父侧，等于**规定了解码格式却没规定编码格式** —— 所以在"子进程发 cp936"的裸环境里，
+原本能过的用例反而红。**唯一确定的做法是两侧都钉**：
+
+```python
+env["PYTHONIOENCODING"] = "utf-8"   # 子进程侧
+...
+encoding="utf-8", errors="replace"  # 父进程侧
+```
+
+**新增守卫** `test_alembic_helper_pins_encoding_on_both_sides`：**抓传给 `subprocess.run` 的实参**，
+不是扫源码文本。⚠️ 我第一版就是扫文本，**立刻假绿了两次**：① 断言的字面量出现在它自己的断言消息里；
+② `encoding="utf-8"` 在本文件别处（`read_text`）本来就存在。③ 再改成抓实参后又假绿一次 ——
+因为我的 shell 本来就有 `PYTHONIOENCODING`，helper 从 `os.environ` 继承到了它，
+所以"删掉那行 pin"照样过；现在守卫先 `monkeypatch.delenv` 再抓。
+**负向对照**：移除该行 → 守卫红（任意环境）→ 还原 → 六环境全绿。
+
+⚠️ 你"别设环境变量"的顾虑我认同其**动机**（别依赖**环境里碰巧有**的变量），但结论要反过来：
+**在子进程的 `env` 上显式设**，恰恰是把不确定性消掉；依赖环境里"碰巧有"才是脆的。
+
+### 13.2 ★ W1B-2：**未接线**（阻塞点在值域裁定，不在我），但我把两个值域数出来了
+
+我先把你要上呈架构的数字测出来，省一轮往返：
+
+- 断言名全集 = **4** 个：`analytics_dsn_is_read_only`、`embedding_dim_matches_vector_column`、
+  `audit_log_append_only_enforced`、`semantic_bundle_passed_five_step_validation`
+  （`startup_assertions.py:110-113`；**没有** `AssertionName` 枚举，名字是 4 个 `Final[str]`）
+- 状态全集 = **3** 个：`AssertionStatus` = `pass` / `pending` / `fail`（`:123`）
+
+⇒ **建议的标签上界：`assertion ≤ 4`、`status ≤ 3`；若用「每断言一行、只把当前状态置 1」的写法，
+序列上界 = 4 × 3 = 12**。
+
+**并且建议照 `rule_id` 的先例把上界做成派生而不是手数**：在 `startup_assertions.py` 里立一个
+`ASSERTION_NAMES: Final[tuple[str, ...]]`，上界写 `len(ASSERTION_NAMES)` + 在契约测试里
+`assert BOUNDED_ALLOWED_LABELS["assertion"] == len(ASSERTION_NAMES)`（同 `rule_id == len(AstRule)+1` 的形态）。
+否则第 5 条断言加进来时，指标层会**静默按到达顺序丢掉一整类**（正是你在 W1B-4 里发现的那个机制）。
+
+⚠️ 顺带纠一处你的措辞：**不只是 PENDING 没有指标** —— `PASS` / `FAIL` **也没有**
+（`:752-771` 三个分支全是 `logger.*`，零指标出口）。选 `PASS` 也上指标的话，上界同上。
+**接线点确实在我这侧**（`enforce_startup_assertions` 的循环内），但我**不**先落一个"注册表里没有的指标"
+—— 那正是本项目禁止的静默降级。**你把（架构批过的）指标名与两个上界给我，我当天接完。**
+
+### 13.3 ★ W1B-3：**三选一不存在 —— 是一个字面值写错了**（前提证伪，实测）
+
+**PgBouncer 1.25.2 原生支持 SCRAM-SHA-256**（1.14 起就支持），二进制里直接有该字符串：
+
+```
+$ docker exec commerceql-pgbouncer-1 pgbouncer --version    → PgBouncer 1.25.2
+$ docker exec commerceql-pgbouncer-1 strings /usr/bin/pgbouncer | grep -i scram
+scram-sha-256      SCRAM-SHA-256      scram_server_key     scram_client_key   ...
+```
+
+之前写的 `AUTH_TYPE: scram` **不是** pgbouncer 的取值（合法值是 `scram-sha-256`），
+所以报的是"invalid value" —— 那不是"pgbouncer 不支持 SCRAM"，是**值写错了**。
+
+**一次性 probe 容器实测**（不动任何仓库文件，已清理）：
+
+| 路径 | 配置 | 结果 |
+|---|---|---|
+| B | 现役 `commerceql-pgbouncer-1`，`auth_type=md5` | ❌ `FATAL: server login failed: wrong password type`（**复现你的原话**） |
+| C | 同镜像、只把 `AUTH_TYPE` 换成 `scram-sha-256` | ✅ **`conn ok, current_user=app_rw`** |
+
+**并且 §16.5 断言③ 随之从"不可判"变成可判**：`app_rw` 一旦能过 pgbouncer，`SHOW POOLS` 里就出现
+`ecom` 池（之前只有管理池那一行）。实测读数：
+
+```
+db=ecom       user=app_rw     sv_active=0 sv_idle=1 sv_used=0  => 后端连接=1
+db=ecom       user=postgres   sv_active=0 sv_idle=1 sv_used=0  => 后端连接=1
+db=pgbouncer  user=pgbouncer  sv_active=0 sv_idle=0 sv_used=0  => 后端连接=0
+```
+
+（管理台必须 `autocommit=True` 连 `pgbouncer` 库，否则 psycopg 发的 `BEGIN` 会被拒：
+`invalid command 'BEGIN', use SHOW HELP;`。）
+
+⇒ **结论：不需要 md5 降级、不需要专用口令、不需要 trust**，所以那条"三选一"里三个选项的
+安全代价**一个都不用付**。`deploy/docker-compose.yml` 属你/W0，我只给这一行：
+
+```yaml
+AUTH_TYPE: "scram-sha-256"   # 合法取值，别写成 `scram`（那不是 pgbouncer 的枚举值）
+```
+
+⚠️ 一个连带事实：`auth_file`（`userlist.txt`）里**只有 `postgres`**，`app_rw` 之所以能过
+走的是 `[databases] ecom = ... auth_user=postgres` 触发的 **`auth_query` 默认查询**
+（`SELECT usename, passwd FROM pg_shadow WHERE usename=$1`）。所以这条路依赖
+`auth_user=postgres` 是超级用户 —— 这是**现有的**事实，不是我的改动引入的，登记备查。
+
+### 13.4 W1B-4：**认可你的改动**，事实链对齐
+
+- `len(AstRule)` = **20**（`AstRule` 是 R01–R20）；
+- 取值域 = `(EMPTY_LABEL_VALUE, *AstRule)` = **21**（`:595` 那行的写法）；
+- `metrics.BOUNDED_ALLOWED_LABELS["rule_id"]` = **21**（`:127`，**你自己在 `fb21adf` 里从 20 改成 21**，
+  并在 `:128` 留下了"上界曾经写 20"的注释）。
+
+而契约测试 `:189` 断言的是 `BOUNDED_ALLOWED_LABELS["rule_id"] == len(AstRule) + 1` —— **21 == 21 ✓**。
+改之前是 `== len(AstRule)`（21 == 20，必红）。**留下，别改回去。**
+你给的机制解释（`:260` 的 `len(seen) >= cap` ⇒ 按到达顺序丢弃）我也核过，成立。
+
+⭐ 一条加固建议（可选，属你的文件）：这条测试现在的形态已经是"两个表达式对账"，很好；
+再加一句 `assert len({EMPTY_LABEL_VALUE, *AstRule}) == len(AstRule) + 1`（取值域去重后仍是 21）
+就能把"空值是否与某个规则号撞车"也钉住 —— 现在只钉了 `cap`，没钉 `:595` 那行的构造。
+
+### 13.5 W1B-5：已按"明确口径"落地 —— 并附一个**补策略会打断全站**的陷阱
+
+我选了你给的第二条路（**把它明确写下来**），写在 `app/obs/audit.py` 模块 docstring 的新增「⑤」段：
+**「跨租户可见、除属主/超级用户外无其他角色可读」**，并明写"RLS 是最终强制边界"**对本表不成立**。
+（你没说错，现状是"两者都不是"；我把它变成了**两者之一 + 待裁**。）
+
+⚠️ **但补策略这条路有个你我都该先知道的坑**：PG 的 RLS 是**默认拒绝**。
+开了 RLS 却只写一条 `FOR SELECT` 的租户策略时，**`INSERT` 会被拒**（无适用策略 = 拒），
+而审计写入是 **fail-closed**（NFR-3.4）⇒ 后果不是"读不到"，是**每个请求都失败**（RL-1 的触发形态）。
+要补就必须**同时**给一条 `FOR INSERT WITH CHECK (true)` 的放行策略。所以这不是"加个策略就完事"，
+我没擅自落 DDL（那需要一个新迁移 + 策略对 + 你的 RL-1 runbook 复核）。
+
+**残余风险（如实写进代码了）**：一旦将来出现**租户面**的审计读路径而仍走 `app_rw`，
+它会**静默**读到别家租户的行。所以这条我建议**不要**停在"文档口径"，尽快裁一个方向。
+
+### 13.6 W1B-6：已如实登记（在我两处文件里）+ 一个你可能没注意的后果
+
+`session` / `query_task` 在**代码里**只以注释出现（`app/cache/keys.py:228` 明写"表未建 ⇒ 状态放 Redis"），
+但 **`app/repo/dsn.py:11` 与 `app/repo/pools.py:9` 这两张职责表把它列成了元数据池的表** ——
+那是我的文件，我已在两处各加了一段"**这是文档口径、不是库内事实**"的标注（含 `07 §12.3` 与
+迁移 `0001–0005` 零命中的事实）。So「文档说建、库里没有」这个坑在**我自己的文档里也被堵掉了**。
+
+⚠️ 裁决时请把这条带上（我认为它比"补不补迁移"更关键）：
+`07 §12.3` 给 `query_task` 的留存是 **90 天**（同 §12.3 结尾那行：`session`/`query_task`/`query_plan`…
+按 `started_at` 分区清理）。**Redis 承载 = 没有 90 天留存**（`SESSION_TTL_SECONDS` 量级 + 无持久化历史）。
+如果"任务历史可追溯 90 天"是需求，那 W4 的 Redis 方案**不满足**它 —— 这就不是"文档口径改一下"能收口的。
+我的建议：**先让架构确认 §12.3 的 90 天留存是不是硬需求**；是 ⇒ 补迁移 0006 建表（我随时能写）；
+否 ⇒ 改 §12.3 口径并在 `dsn.py`/`pools.py` 里删掉这两个表名。
+
+### 13.7 W1B-7：**确实是装饰，我不打算用一个"没人调用的脚本"再装一次**
+
+你的实测我复核了：全仓只有 `app/core/config.py:147` 一处命中（字段声明本身），零消费者。
+另外两条你可能是从别处看到的：`deploy/.env:142` 设了它、`deploy/runbook/RL-3-checkpoint-write-slowdown.md`
+**§5 与 §231 已经把这条登记成"待架构窗口分配编号"的缺口** —— 所以它已入账，不是漏报。
+
+两个方向都可行，我给出代价，**请裁一个**（我不擅自做，因为它要**删数据**）：
+
+| 方向 | 做法 | 代价 / 风险 |
+|---|---|---|
+| **A 实现清理**（我推荐） | 在 `app/main.py` 的 lifespan（**我的组装根**）里做一次**有界**清理：`DELETE FROM lg.checkpoints WHERE created_at < now() - CHECKPOINT_TTL_DAYS`，限批量、异步不阻塞启动、必须打删除条数日志 | 多实例会重复删（幂等，无害但浪费）；删除**不可逆**，且会让超期会话**无法再 resume** —— 这正是"7 天 TTL"的语义，但**必须是有意识的决定** |
+| **B 删掉字段** | 从 `config.py:147` 删 | 连带要改 `deploy/.env:142` 与 runbook RL-3 的两处引用（W0/W7 文件），否则配置项变孤儿；且 **checkpoint 从此只增不减**，运维更没抓手 |
+
+**我不选"加一个没人调用的清理脚本"** —— 那和现在的"声明无人消费"是同一个病。
+给我一句 go（并指定 A 还是 B），A 我当天能落地含测试。
+
+### 13.8 W1B-8：**"从未执行过"只对本地成立** —— 给 DSN 后 8 passed / 0 skipped
+
+实测（同一文件，只换 `RETRIEVAL_TEST_PG_DSN`）：
+
+| 调用 | 结果 |
+|---|---|
+| 无 DSN（本地缺省，回退 `PROD_DSN` = `app_ro`） | 2 passed, **6 skipped**（`permission denied for database ecom`） |
+| `RETRIEVAL_TEST_PG_DSN=postgresql://postgres:postgres@127.0.0.1:5432/ecom` | **8 passed, 0 skipped** ✅ |
+
+**所以这 6 条不是坏的、也不是"从没跑过"**：CI 里 `ci.yml:119-124` **本来就设了**
+`RETRIEVAL_TEST_PG_DSN: postgresql://postgres@127.0.0.1:5432/ecom`（超管），CI 上是**在跑的**；
+"6 skipped" 是**本地**（没导出该变量）的形态 —— 而 `reports/w6` 与我的全量门禁读数里的"6 skipped"
+很可能就是这么来的。⚠️ 我建议你在 W6 的报告里核一下这个数：**那 6 个 skip 未必是 CI 的读数**。
+
+**本地配方（已验证）**：
+
+```bash
+RETRIEVAL_TEST_PG_DSN="postgresql://postgres:postgres@127.0.0.1:5432/ecom" \
+  ../.venv/Scripts/python.exe -m pytest tests/integration/test_retrieval_fts_pg.py -q
+```
+
+W2B 的机制是对的，缺的只是一个 DSN **约定**（不是"权限机制"）。要不要把它写进
+`test_retrieval_fts_pg.py` 的模块 docstring（W2B 文件）或 `deploy/runbook`（你/W0 文件），
+**你定**；我可以直接跑不落地。
+
+### 13.9 W1B-9：已改，并把"边界一"标为闭环
+
+`pools.py` 的注释有**三处**（不止 173/191，还有 186 的推导行），全部订正：
+
+- `3 个硬依赖` → **`4 个`**，并写出全集：`METADATA_DB` / `CHECKPOINTER` / `REDIS` / `SEMANTIC_BUNDLE_LOADED`
+  （`app/core/enums.py` 的 `READINESS_DEPENDENCIES`，HARD 判定）；
+- `2.0s = 5s÷3 ≈ 1.67s` → **`5s÷4 ≈ 1.25s`**，并明写"这个除法**只在串行探测下才是硬约束**"；
+- 「⚠️ 边界一：本常量不声称已满足 5s 契约 / 3 × 2.0s = 6s 仍会超」→ **`✅ 边界一（已闭环）`**：
+  `_collect` 已由你改成 `gather` 并发，上界从"各依赖之和"变成"最大值" ⇒ 单个探针 2.0s < 5s，契约达成。
+  本常量职责随之变为"限制**单个**探针的等待"，而**不是**"把 N 个的和压进 5s"。
+- 我核了 `app/api/routers/health.py:138` 的 `_collect`，确实已是并发且 docstring 自证，**你的并行化已生效**。
+
+### 13.10 对你「一句提醒」的回应
+
+`MIGRATION_DATABASE_URL` 不进 `deploy/.env`、也不写回任何仓库文件 —— **同意，且已验证遵守**：
+`test_migration_dsn_hygiene.py` 这套（含我新加的守卫）就是这道门的执行体；
+`.gitleaks.toml` + DoD④ 我不碰。你提醒得对，这条我会在每次新增 DSN 相关文件时自查一遍。
+
+### 13.11 本轮改动清单（都在 W1B 域内）
+
+| 文件 | 改动 |
+|---|---|
+| `tests/unit/test_migration_dsn_hygiene.py` | 两侧编码 pin（子进程 `PYTHONIOENCODING` + 父进程 `encoding`/`errors`）+ 1 条新守卫（抓 `subprocess.run` 实参）+ 负向对照 |
+| `app/repo/pools.py` | 硬依赖 3→4（3 处）、`5s÷4`、边界一改标"已闭环"；元数据池职责表加"`session`/`query_task` 未建"标注 |
+| `app/repo/dsn.py` | 同上那处标注（元数据连接行） |
+| `app/obs/audit.py` | 新增「⑤ 跨租户可见性：当前无强制边界」段 + 补策略的 INSERT 陷阱 + 残余风险 |
+
+**未动**：`tests/contract/test_obs_audit_contract.py`（W0/W7 文件，我只给复核意见）、
+`deploy/**`、`app/core/config.py`、`app/api/routers/health.py`、`app/obs/metrics.py`。
+
+

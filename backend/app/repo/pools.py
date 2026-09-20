@@ -10,6 +10,12 @@
 | analytics | `ANALYTICS_DB_URL` | `app_ro` | **业务查询唯一下发通道** | `default_transaction_read_only=on`；合并即意味着"业务 SQL 跑在可写连接上"，N-02 的整套保证当场失效 |
 | checkpoint | `DATABASE_URL` | `app_rw` | LangGraph 检查点读写 | **与 metadata 同 DSN 也必须分池**：checkpoint 的写入频率与持有时长完全由图引擎决定，一旦与业务写入共享池，**图的一次重放打满池 = 审计写不进去 = 主链路 fail-closed**（N-14 / R-10） |
 
+⚠️ **上表第 1 行的 `session` / `query_task` 目前是「文档口径」而非「库里的事实」**（2026-09-20 如实登记，待裁）：
+`07 §12.3` 规定了这两张表，但迁移 `0001`–`0005` 里**零命中**，库里按 `table_name` 全库搜也是 **0 行**；
+W4 已改用 Redis 承载运行时状态（`app/cache/keys.py:228` 明写此因）。
+本行保留是因为"元数据池的职责范围"引用的是设计口径；**不代表这两张表已存在**。
+补迁移建表 vs 改 `07 §12.3` 口径 = 架构裁决项（已登记，见 `reports/w1b/RELAY.md`）。
+
 ⚠️ **本文件是"三池"这个事实的唯一落点**。任何模块想拿连接，只能：
 - 业务 SQL → `SqlExecutorPort`（W2D 实现，内部用 analytics 池）；
 - 元数据 → `RepositoryPort` / 审计 → `AuditSinkPort`（内部用 metadata 池）；
@@ -170,7 +176,8 @@ POOL_SPECS: Final[dict[PoolKind, PoolSpec]] = {
 #:
 #: 附录 D 的 `api.healthcheck` 写死了平台侧如何看待 `/healthz/ready`：
 #: `timeout: 5s`。到点 `curl` 被杀，**消费者看到的是"超时"，而不是端点的应答体**。
-#: 也就是说：readiness 路径（3 个硬依赖）必须在 5s 内作答，否则"诚实的 503"根本传不出去。
+#: 也就是说：readiness 路径（**4 个**硬依赖 —— `READINESS_DEPENDENCIES` 的 HARD 全集）
+#: 必须在 5s 内作答，否则"诚实的 503"根本传不出去。
 #:
 #: 而 `psycopg_pool` 的默认 `timeout=30s` 是给**业务借用**设计的
 #: （在忙池上等一个空位，等 30s 是合理策略）。同一个默认值放在探针/启动检查上会反向：
@@ -183,13 +190,19 @@ POOL_SPECS: Final[dict[PoolKind, PoolSpec]] = {
 #:
 #: 后果不只是"慢"：每次探针要占住一个 worker 达 30s —— **健康端点自己成了可用性风险**。
 #:
-#: 2.0s = 5s 预算（附录 D）÷ 3 个硬依赖 ≈ 1.67s，取整向上到 2.0s。
+#: 2.0s 的**取值来源** = 5s 预算（附录 D）÷ 4 个硬依赖 ≈ 1.25s，取整向上到 2.0s。
 #:
-#: ## ⚠️ 边界一：本常量**不声称已满足 5s 契约**
+#: ⚠️ 2026-09-20 订正（W7 核出）：此处原写"÷ **3** 个硬依赖 ≈ 1.67s"，依赖数实为 **4** ——
+#: `READINESS_DEPENDENCIES = frozenset({METADATA_DB, CHECKPOINTER, REDIS,
+#: SEMANTIC_BUNDLE_LOADED})`（`app/core/enums.py`）。同时"边界一"已闭环，见下。
 #:
-#: `app/api/routers/health.py::_collect` 当前是**串行**遍历硬依赖（该文件归 W7），
-#: 故最坏情况 3 × 2.0s = 6s，**仍会超 5s**。本常量把 30s 降到 2s，
-#: 真正的达成要靠 `_collect` 并行化（已登记给 W7）。
+#: ## ✅ 边界一（2026-09-20 已闭环）：5s 契约靠 `_collect` 并行化达成
+#:
+#: 原状：`app/api/routers/health.py::_collect` **串行**遍历硬依赖（该文件归 W7），
+#: 最坏情况 **4 × 2.0s = 8s**，必超 5s —— 本常量只把 30s 降到 2s，不足以达成契约。
+#: 现况：W7 已改为 `gather` 并发，**上界从"各依赖之和"变成"最大值"**
+#: ⇒ 单个探针 2.0s < 5s，契约达成。
+#: 因此本常量如今的职责是"限制**单个**探针的等待"，而**不是**"把 N 个探针的和压进 5s"。
 #:
 #: ## ⚠️ 边界二：查询路径的池策略**不在此处定**
 #:

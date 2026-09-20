@@ -11,6 +11,11 @@ PRD 原把 `DATABASE_URL` 描述为"PG **只读副本**"，但 `session` / `audi
 | 元数据连接 | session / query_task / audit_log / cost_ledger / eval_* / 语义包物化 / checkpointer | `app_rw`（对 `audit_log` **仅 INSERT**） | `DATABASE_URL` |
 | 分析连接 | 业务查询（**唯一**可发业务 SQL 的连接） | `app_ro`（`default_transaction_read_only=on` + 无写权限 + RLS 生效） | `ANALYTICS_DB_URL` |
 
+⚠️ **上表第 1 行的 `session` / `query_task` 是文档口径、不是库内事实**（2026-09-20 登记，待裁）：
+`07 §12.3` 规定了两表，但迁移 `0001`–`0005` 零命中、全库 `table_name` 搜索 0 行；W4 已改用 Redis
+（`app/cache/keys.py:228`）。本行是**职责范围**的引用，不代表表已存在 —— 补迁移建表 vs 改 §12.3 口径
+属架构裁决项（见 `reports/w1b/RELAY.md`）。
+
 ⚠️ 三条硬规则（07 §3.3）：
 1. 两个连接池**独立**，且 checkpointer 与业务查询**再分池**（N-14，共三池，禁止混用）；
 2. 分析连接**只能**经"注入身份上下文管理器"获取（ADR-09）；

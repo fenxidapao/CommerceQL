@@ -163,15 +163,64 @@ def _alembic(*args: str, dsn: str | None = None) -> subprocess.CompletedProcess[
     env = {k: v for k, v in os.environ.items() if k != "MIGRATION_DATABASE_URL"}
     if dsn is not None:
         env["MIGRATION_DATABASE_URL"] = dsn
+    # ⚠️ 编码必须**两侧都钉死**；只钉一侧会比不钉更糟（2026-09-20 四环境实测矩阵）。
+    #   · 子进程（alembic）侧：输出编码 = `PYTHONIOENCODING` > UTF-8 模式 > 系统 ACP；
+    #   · 本进程侧：`text=True` 的**解码**编码 = `locale.getpreferredencoding(False)`，
+    #     它**不受** `PYTHONIOENCODING` 影响（只受 `PYTHONUTF8` 影响）。
+    #   两者是两个独立的旋钮 ⇒ 任何"半套 UTF-8 环境"（设了 PYTHONIOENCODING=utf-8、
+    #   但系统 ACP 仍是 cp936 —— 中文 Windows runner 的常见形态）都会让两侧不一致：
+    #   解码线程抛错 ⇒ `result.stdout` 变 `None` ⇒ 断言以 **TypeError** 红，
+    #   长得像测试自己的 bug，极易被顺手删断言（W7 2026-09-19 实测 2 failed）。
+    #   ⚠️ 只加 `encoding="utf-8"` 是**把失败搬家**，不是修：实测裸 locale 环境
+    #   （子进程发 cp936）会从 7 passed 变 2 failed。所以下面两个 pin 缺一不可。
+    env["PYTHONIOENCODING"] = "utf-8"
     return subprocess.run(
         [sys.executable, "-m", "alembic", *args],
         cwd=_BACKEND_ROOT,
         env=env,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=120,
         check=False,
     )
+
+
+def test_alembic_helper_pins_encoding_on_both_sides(monkeypatch: pytest.MonkeyPatch) -> None:
+    """★ 两侧编码 pin 的守卫 —— 防止有人把 `PYTHONIOENCODING` 那行"简化"掉。
+
+    为什么需要它：这个缺陷在 UTF-8 环境里**完全不可见**（钉一侧、钉两侧都是 7 passed），
+    天真的重构会删掉子进程侧那行，然后在中文 Windows runner（ACP=cp936）上炸。
+    实测依据：只钉父侧时，裸 locale 环境从 7 passed → 2 failed。
+
+    ⚠️ 断言方式是有意的：**抓传给 `subprocess.run` 的实参**，而不是扫源码文本。
+    扫文本会被本文件里别处的 `encoding="utf-8"`（`read_text`）和注释里的同名字样
+    轻易骗过 —— 那就是本仓库已经栽过的"断言打错对象"。
+    """
+    captured: dict[str, object] = {}
+
+    def _fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        captured["cmd"] = cmd
+        captured.update(kwargs)
+        return subprocess.CompletedProcess(cmd, 0, stdout="0001\n", stderr="")
+
+    # ⚠️ 必须先把环境变量摘掉再抓实参：`_alembic` 的 env 是从 `os.environ` 拷来的，
+    #    若调用方环境里本来就设了 `PYTHONIOENCODING`（很多 CI/开发机都有），
+    #    那么"删掉 helper 里那行 pin"也照样能通过 —— 本守卫会**假绿**。
+    monkeypatch.delenv("PYTHONIOENCODING", raising=False)
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+    _alembic("history")
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env.get("PYTHONIOENCODING") == "utf-8", (
+        "子进程侧编码 pin 丢失：只钉父侧会让裸 locale 环境（子进程发 cp936）解码失败"
+    )
+    assert captured.get("encoding") == "utf-8", (
+        "父进程侧编码 pin 丢失：`text=True` 会退回 `locale.getpreferredencoding()`"
+    )
+    assert "MIGRATION_DATABASE_URL" not in env, "helper 没把 DSN 从环境里摘掉"
 
 
 def test_alembic_history_needs_no_dsn() -> None:
