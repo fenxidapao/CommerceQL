@@ -384,6 +384,40 @@ NODE_TIMEOUT_S: Final[dict[str, float]] = {
     "repair": 3.0,
 }
 
+#: 合并档预算平移（w7 联调 🔴-0，2026-09-20）：合并档下 `normalize` 一次调用干节点 2+3
+#: 的活（`PlannerEngine.understand()`），其节点超时**吸收 `intent` 的表值**（2.0+1.5=3.5s）。
+#:
+#: ⚠️ **这不是改契约**：`NODE_TIMEOUT_S` 仍逐字对齐 07 §5.3（契约测试钉死）；split 档
+#: （`GraphDeps.merged_understand=False`）与无运行上下文（装配期/单测）仍按 2.0s 执行。
+#: 平移的正当性：合并把 `intent` 节点变成空操作，它的 1.5s 预算没人花 —— 端到端预算
+#: 总量不变，只是跟着活走。
+#:
+#: 为什么必须平移（w7 单条复现钉死的机制，8/8 同形）：合并调用的契约预算本身是 1.6s
+#: （07 §16.2 首字节表），LLM 侧实测 mean 1.609s —— 节点级 2.0s 只剩 ~0.4s 给节点内
+#: 其余工作 + 图开销，实测稳定超限 50–100ms（`node_timeout{node="normalize"}` →
+#: `graph_run_failed`），是**系统性预算冲突**，不是抖动；降并发/调信号量都不解决。
+#:
+#: 07 §5.3 `normalize` 行的"失败转移"格仍空着（超时→降级落点的口径）—— 归架构窗口补，
+#: 本窗口 RELAY §九 已登记（U-104）。
+_MERGED_NORMALIZE_EXTRA_S: Final[float] = NODE_TIMEOUT_S["intent"]
+
+
+def _effective_limit_for(name: str, base: float) -> float:
+    """执行期生效超时：仅 `normalize` 且**本请求**走合并档时吸收 `intent` 的预算。
+
+    刻意在**执行期**判而不是包装期：图是编译期单例，而 `merged_understand` 是
+    每请求事实（`GraphDeps`，经 contextvars 注入）—— 包装期读不到它。
+    无运行上下文（装配自检 / 未设 context 的单测）按基线走，不加平移。
+    """
+    if name != "normalize":
+        return base
+    from app.graph.context import current_run_context_or_none
+
+    context = current_run_context_or_none()
+    if context is not None and context.deps.merged_understand:
+        return base + _MERGED_NORMALIZE_EXTRA_S
+    return base
+
 
 def _with_node_timeout(name: str, fn: Any, *, overrides: Mapping[str, float] | None = None) -> Any:
     """给节点套 `asyncio.timeout()`（HANDOFF §五-5：每节点超时 = asyncio.timeout 包装）。
@@ -403,6 +437,10 @@ def _with_node_timeout(name: str, fn: Any, *, overrides: Mapping[str, float] | N
 
     ⚠️ `overrides` 仅供**测试**放大超时（0.1s 的闸门节点在慢 CI 上会假阳性）；
     生产装配不传 —— 契约值只能有一份来源（本表）。
+
+    ⚠️ 合并档预算平移（🔴-0，`_MERGED_NORMALIZE_EXTRA_S`）：`normalize` 在**本请求**
+    走合并档时生效超时 = 表值 + `intent` 表值（3.5s）。判定在**执行期**（`_effective_limit_for`），
+    因为图是编译期单例而合并档是每请求事实。split 档 / 无上下文：逐字表值。
     """
     limit = (overrides or {}).get(name) or NODE_TIMEOUT_S.get(name)
     if limit is None:
@@ -416,8 +454,9 @@ def _with_node_timeout(name: str, fn: Any, *, overrides: Mapping[str, float] | N
 
     @functools.wraps(fn)
     async def _timed(state: GraphState) -> dict[str, Any]:
+        effective = _effective_limit_for(name, limit)
         try:
-            async with asyncio.timeout(limit):
+            async with asyncio.timeout(effective):
                 return cast("dict[str, Any]", await fn(state))
         except TimeoutError:
             if name == "present":
@@ -427,19 +466,19 @@ def _with_node_timeout(name: str, fn: Any, *, overrides: Mapping[str, float] | N
                     context.report_degraded(
                         DegradedReason.PRESENT_FAILED,
                         ActionTaken.TABLE_ONLY,
-                        {"stage": "present", "reason": "timeout", "limit_s": limit},
+                        {"stage": "present", "reason": "timeout", "limit_s": effective},
                     )
                 timeout_log.error(
                     "node_timeout_degraded",
                     node=name,
-                    limit_s=limit,
+                    limit_s=effective,
                     extra_fact="present 超时 → degraded(present_failed) 仅表格（§14.2 F4）",
                 )
                 return {}
             timeout_log.error(
                 "node_timeout",
                 node=name,
-                limit_s=limit,
+                limit_s=effective,
                 extra_fact="节点超时未收口 → 上抛，由 runner 兜底 error(INTERNAL)（N-08 不留无终态的流）",
             )
             raise

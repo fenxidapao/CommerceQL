@@ -18,6 +18,7 @@ from typing import Any, Final
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from redis.exceptions import RedisError
 
 from app.api.ratelimit import RATE_LIMIT_HEADER_NAMES, RateLimitQuota
 from app.core.contracts import IdentityContext, RateLimitDecision
@@ -430,6 +431,27 @@ def install_exception_handlers(app: FastAPI) -> None:
         )
         return error_response(
             mapping,
+            trace_id=_trace_id_of(request),
+            allow_detail=detail_allowed_for(_role_of(request)),
+            extra_headers={},
+        )
+
+    @app.exception_handler(RedisError)
+    async def _redis_unavailable(request: Request, exc: RedisError) -> JSONResponse:
+        # Redis 超时/连不上 → `DB_UNAVAILABLE`(503 ✅) 而非裸 `INTERNAL`(500 ⭕)。
+        # 覆盖四条边界（限流器 / 会话锁 / state_store / deps）——Redis 是 HARD 依赖
+        # （`enums.Dependency.REDIS: HARD`），**fail-closed**：Redis 不可用即拒答、给 5s 重试，
+        # 不让请求在失去限流/串行保护的状态下继续执行（w7 联调回执 #1）。
+        # ⚠️ 只对**响应开始前**的边界生效：SSE 流已开始后（图内 state_store 写）不由本处理器接管，
+        #    那条路径归 `runner` 的 in-stream error 帧（另一出口）。
+        log.warning(
+            "redis_unavailable",
+            path=request.url.path,
+            error_type=type(exc).__name__,
+            extra_fact="fail-closed → 503 DB_UNAVAILABLE（Retry-After 5s，可原样重试）",
+        )
+        return error_response(
+            map_code(ErrorCode.DB_UNAVAILABLE, message="服务暂时不可用，请稍后重试"),
             trace_id=_trace_id_of(request),
             allow_detail=detail_allowed_for(_role_of(request)),
             extra_headers={},

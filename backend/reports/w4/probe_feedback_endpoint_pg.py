@@ -97,15 +97,17 @@ def _pg_ready() -> bool:
 def _select_rows(task_id: str) -> list[dict[str, object]]:
     import psycopg
 
-    with psycopg.connect(_RW_DSN.replace("postgresql+psycopg://", "postgresql://", 1), connect_timeout=3) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                f"SELECT feedback_id, task_id, user_id, is_correct, reason_code, "
-                f"corrected_sql, correct_result_hint FROM {FEEDBACK_TABLE} WHERE task_id = %s ORDER BY feedback_id",
-                (task_id,),
-            )
-            cols = [d.name for d in cur.description]
-            return [dict(zip(cols, row, strict=True)) for row in cur.fetchall()]
+    with (
+        psycopg.connect(_RW_DSN.replace("postgresql+psycopg://", "postgresql://", 1), connect_timeout=3) as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(
+            f"SELECT feedback_id, task_id, user_id, is_correct, reason_code, "
+            f"corrected_sql, correct_result_hint FROM {FEEDBACK_TABLE} WHERE task_id = %s ORDER BY feedback_id",
+            (task_id,),
+        )
+        cols = [d.name for d in cur.description]
+        return [dict(zip(cols, row, strict=True)) for row in cur.fetchall()]
 
 
 def _build_app() -> TestClient:

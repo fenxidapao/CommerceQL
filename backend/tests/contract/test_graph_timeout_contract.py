@@ -9,6 +9,7 @@
 | 超时 → re-raise（runner 兜底 error(INTERNAL)，N-08 不留无终态的流） | 非 present 节点超时抛 `TimeoutError` |
 | `present` 超时 → `degraded(present_failed, table_only)` + 空增量（§14.2 F4 同形） | 返回 `{}` 且 `RunContext.degradations()` 记录 PRESENT_FAILED/TABLE_ONLY |
 | `overrides` 仅测试注入生效 | 覆盖值优先生效（0.1s 闸门节点在慢 CI 上防假阳性的通道） |
+| 合并档 `normalize` 吸收 `intent` 预算（2.0+1.5=3.5s，执行期按 `deps.merged_understand` 判；w7 🔴-0） | 合并档下超基线的工作不再被掐；split 档 / 无上下文仍逐字表值 |
 | 生产装配可编译 | `build_graph()` / `build_graph(overrides=...)` 均编译成功 |
 
 同步用例 + `asyncio.run`（`tests/contract/` 惯例）。
@@ -17,6 +18,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 
 import pytest
 
@@ -110,6 +112,73 @@ class TestWrapper:
         wrapped = _with_node_timeout("gate1_ast", _fast, overrides={"gate1_ast": 0.001})
         with pytest.raises(TimeoutError):
             asyncio.run(wrapped({}))
+
+
+class TestMergedUnderstandSlack:
+    """合并档预算平移（w7 🔴-0）：`normalize` 吸收 `intent` 的 1.5s，仅本请求合并档生效。"""
+
+    def test_merged_mode_absorbs_intent_budget(self) -> None:
+        """合并档（默认 `merged_understand=True`）：0.05s 基线 + 1.5s 平移 ⇒ 0.2s 的活不被掐。"""
+        recorder = EventRecorder(encoder=sse.encode)
+        # `_make_deps` 不传 `merged_understand` ⇒ 走默认 True（P0 合并档，同生产）。
+        run_context = RunContext(_make_deps("refuse_intent"), recorder=recorder)
+        token = set_run_context(run_context)
+        try:
+
+            async def _work(state: dict) -> dict:
+                await asyncio.sleep(0.2)  # > 0.05 基线；< 1.55 生效值
+                return {"ok": True}
+
+            wrapped = _with_node_timeout("normalize", _work, overrides={"normalize": 0.05})
+            assert asyncio.run(wrapped({})) == {"ok": True}
+        finally:
+            clear_run_context(token)
+
+    def test_split_mode_keeps_verbatim_budget(self) -> None:
+        """split 档（`merged_understand=False`）：仍按表值/覆盖值逐字执行（07 §5.3 不动）。"""
+        recorder = EventRecorder(encoder=sse.encode)
+        deps = replace(_make_deps("refuse_intent"), merged_understand=False)
+        run_context = RunContext(deps, recorder=recorder)
+        token = set_run_context(run_context)
+        try:
+
+            async def _work(state: dict) -> dict:
+                await asyncio.sleep(0.2)  # > 0.05 ⇒ 必超时（证明没吃到平移）
+                return {"ok": True}
+
+            wrapped = _with_node_timeout("normalize", _work, overrides={"normalize": 0.05})
+            with pytest.raises(TimeoutError):
+                asyncio.run(wrapped({}))
+        finally:
+            clear_run_context(token)
+
+    def test_without_run_context_no_slack(self) -> None:
+        """无运行上下文（装配自检 / 未设 context 的单测）：不加平移，按基线走。"""
+
+        async def _work(state: dict) -> dict:
+            await asyncio.sleep(0.2)
+            return {"ok": True}
+
+        wrapped = _with_node_timeout("normalize", _work, overrides={"normalize": 0.05})
+        with pytest.raises(TimeoutError):
+            asyncio.run(wrapped({}))
+
+    def test_slack_does_not_leak_to_other_nodes(self) -> None:
+        """平移只给 `normalize`：合并档下别的节点仍按自身表值/覆盖值执行。"""
+        recorder = EventRecorder(encoder=sse.encode)
+        run_context = RunContext(_make_deps("refuse_intent"), recorder=recorder)
+        token = set_run_context(run_context)
+        try:
+
+            async def _work(state: dict) -> dict:
+                await asyncio.sleep(0.2)
+                return {"ok": True}
+
+            wrapped = _with_node_timeout("gen_sql", _work, overrides={"gen_sql": 0.05})
+            with pytest.raises(TimeoutError):
+                asyncio.run(wrapped({}))
+        finally:
+            clear_run_context(token)
 
 
 class TestAssembly:

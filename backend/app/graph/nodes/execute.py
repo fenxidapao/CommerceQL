@@ -50,6 +50,7 @@ from app.graph.nodes._shared import (
 )
 from app.graph.state import GraphState
 from app.obs.logging import get_logger
+from app.obs.metrics import observe_exec_failure
 
 __all__ = ["execute"]
 
@@ -104,6 +105,10 @@ def _on_failure(state: GraphState, exc: ExecFailure) -> dict[str, Any]:
             "llm_hint": error.llm_hint,
         }
     }
+    # §15.3 `exec_failure_total`：在本节点按 `error.error_class` **直接记**（9 类全量）。
+    # ⚠️ 必须在 if/else 之前 —— `permission` 走 if 分支（:107），不放在这里会漏掉这一出口
+    #    （w7 联调回执 #2：旧调用点只喂 `SQL_*` ErrorCode，仅 `syntax_error` 可观测）。
+    observe_exec_failure(error.error_class)
     if error.error_class == "permission":
         update.update(
             terminal_update(
