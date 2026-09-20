@@ -178,5 +178,6 @@
 | **U-101** | `TaskStatus.DEGRADED` 不可达 | 成功链路走 `complete` 终态（携 `degraded` 帧），无独立 `degraded` 终态路径；枚举值存在但图内无出口 |
 | **U-102** | E7（取消路径）/ E8（错误码表）引用既有测试 | 无图级新桩：E7 引用 `test_api_runner_contract.py::TestCancellation`，E8 引用 `test_errors_contract.py` |
 | **U-103** | 07 L1329 `route_after_plan` 字面缺口 | 07 决策表把 `plan` 异常行写在某条件边上；实现为 `PLAN→BIND` 正常装配下的异常分流（`PlanOutcome` 失败不阻断 BIND 语义），已按实现事实修正 |
+| **U-104** | 07 §5.3 `normalize` 行"失败转移"格空着 + 合并档预算冲突（w7 联调 🔴-0） | **已修（预算平移，非契约变更）**：合并档下 `normalize` 一次调用干节点 2+3 的活，节点超时吸收 `intent` 表值（2.0+1.5=3.5s，`build.py:_MERGED_NORMALIZE_EXTRA_S`，执行期按 `deps.merged_understand` 判；split 档/无上下文仍逐字 2.0s，`NODE_TIMEOUT_S` 契约表不动）。根因：合并调用契约预算 1.6s（§16.2）+ 节点级 2.0s 只剩 ~0.4s 余量，w7 单条复现 8/8 稳定超限 50–100ms。**待架构**：补 §5.3 该行"失败转移"格（超时→降级落点口径，如需 W4 再补降级出口） |
 
 > 给 W5 的联调清单沿用 `HANDOFF.md §四`，本节不重复。
