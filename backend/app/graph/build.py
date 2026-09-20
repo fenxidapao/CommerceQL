@@ -358,130 +358,303 @@ def graph_version() -> str:
 # ============================================================================
 
 
-#: 每节点超时（秒；07 §5.3 契约表"超时"列的逐字落地；HANDOFF §五-5 已裁口径）。
+#: 非 LLM 节点的固定硬超时（秒；07 §5.3 契约表"超时"列逐字落地）。
 #:
-#: ⚠️ **"—" 的节点不进表**：`trusted_context` 与三个出口节点在 07 §5.3 表里的超时是
-#: "—"（它们是纯内存操作 / 终态构造），给它们配超时等于发明一个文档里没有的数值。
-#: ⚠️ `EXECUTE` 的 30s 是**上限**（表值"交互 8s / 上限 30s"）—— 交互级超时已由
+#: ⚠️ **LLM 节点不在本表**：走 DeepSeek 的 6 节点（normalize/intent/plan/gen_sql/present/repair）
+#: 的硬超时 = **本请求实际模型的客户端超时**（§10.2：flash 15s / pro 45s），执行期解析
+#: （`_LLM_NODE_TASKS` → `_client_timeout_for` → `resolve_route` → `hard_timeout_s`）。
+#: 这是 §5.3.0 规则 2 / U-107 附注①：单一超时点，LLM 节点不得自设更小的硬超时
+#: （"预算当硬超时"正是本次要治的病害 —— 上游一慢就 `error(INTERNAL)` → `ok=0`）。
+#: ⚠️ **"—" 的节点不进本表**：`trusted_context` 与三个出口节点在 07 §5.3 表里的超时是
+#: "—"（纯内存操作 / 终态构造），给它们配超时等于发明一个文档里没有的数值。
+#: ⚠️ `execute` 的 30s 是**上限**（表值"交互 8s / 上限 30s"）—— 交互级超时已由
 #: `statement_timeout_ms`（`GraphDeps`，默认 8s）在 SQL 层承担，这里是兜底上限。
-#: ⚠️ 超时值进入**契约**：`tests/contract/test_graph_timeout_contract.py` 钉"表键集 =
-#: 16 节点里 07 给了超时值的那些"，改这里必须同步 07 §5.3。
+#: ⚠️ `link` 的 30s = `Settings.EMBEDDING_TIMEOUT_SECONDS`（`app/core/config.py`，07 §6.5，默认 30）：
+#: 具名引用（U-22）—— link 内部 embedding 批量调用的客户端超时就是 30s，节点硬超时必须
+#: ≥ 它，否则旧值 4.0s 先掐 ⇒ embedding 自己的超时/错误永远报不出来（U-107 附注① 同款病害第二处）。
+#: ⚠️ 超时值进入**契约**：`tests/contract/test_graph_timeout_contract.py` 钉"哪些节点被计时 +
+#: 逐字值"，改这里必须同步 07 §5.3。
 NODE_TIMEOUT_S: Final[dict[str, float]] = {
-    "normalize": 2.0,
-    "intent": 1.5,
-    "link": 4.0,
-    "plan": 3.0,
+    "link": 30.0,
     "bind": 0.2,
-    "gen_sql": 2.5,
     "gate1_ast": 0.1,
     "gate2_policy": 0.1,
     "gate3_cost": 1.0,
     "execute": 30.0,
     "mask": 0.1,
     "audit_pre": 1.0,
-    "present": 2.0,
     "audit_supp": 0.5,
-    "repair": 3.0,
 }
 
-#: 合并档预算平移（w7 联调 🔴-0，2026-09-20）：合并档下 `normalize` 一次调用干节点 2+3
-#: 的活（`PlannerEngine.understand()`），其节点超时**吸收 `intent` 的表值**（2.0+1.5=3.5s）。
+#: LLM 节点 → `LlmTask` 值：硬超时 = 该 task 路由到的模型的客户端超时（执行期解析）。
 #:
-#: ⚠️ **这不是改契约**：`NODE_TIMEOUT_S` 仍逐字对齐 07 §5.3（契约测试钉死）；split 档
-#: （`GraphDeps.merged_understand=False`）与无运行上下文（装配期/单测）仍按 2.0s 执行。
-#: 平移的正当性：合并把 `intent` 节点变成空操作，它的 1.5s 预算没人花 —— 端到端预算
-#: 总量不变，只是跟着活走。
+#: ⚠️ **不得写死一个数**（§5.3.0 规则 2 / U-107 附注①）：U-67 后 P0 生效路由恒 flash（15s），
+#: 但 pro 档一旦启用，`hard_timeout_s(resolve_route(task).model_key)` 会自动跟上 45s。
+#: ⚠️ 合并档（`normalize` 实际走 `understand()` = `normalize_intent`）与 L3+ 复杂档
+#: （`gen_sql_complex`）在此按**基 task** 解析：当前两档都路由 `ModelKey.FAST`，值相同；
+#: 若将来某档被裁成 pro，须在 `_client_timeout_for` 按 `deps.merged_understand`/复杂度再分流。
+_LLM_NODE_TASKS: Final[dict[str, str]] = {
+    "normalize": "normalize",
+    "intent": "intent",
+    "plan": "plan",
+    "gen_sql": "gen_sql",
+    "present": "present",
+    "repair": "repair",
+}
+
+#: 合并档分配平移（§5.3.0 规则 5 / U-107 附注③）：合并档下 `normalize` 一次调用干
+#: 节点 2+3 的活（`understand()`），其**分配** = normalize 的 2.0 + intent 的 1.5 = 3.5s。
 #:
-#: 为什么必须平移（w7 单条复现钉死的机制，8/8 同形）：合并调用的契约预算本身是 1.6s
-#: （07 §16.2 首字节表），LLM 侧实测 mean 1.609s —— 节点级 2.0s 只剩 ~0.4s 给节点内
-#: 其余工作 + 图开销，实测稳定超限 50–100ms（`node_timeout{node="normalize"}` →
-#: `graph_run_failed`），是**系统性预算冲突**，不是抖动；降并发/调信号量都不解决。
-#:
-#: 07 §5.3 `normalize` 行的"失败转移"格仍空着（超时→降级落点的口径）—— 归架构窗口补，
-#: 本窗口 RELAY §九 已登记（U-104）。
-_MERGED_NORMALIZE_EXTRA_S: Final[float] = NODE_TIMEOUT_S["intent"]
+#: ⚠️ **这里是"分配（budget）"，不是"硬超时（hard timeout）"**：3.5s 保留，供 §16.1 预算 /
+#: §16.2 SSE 占位符判定 / `over_budget` 标记，**不再叠加进 `asyncio.timeout`**。
+#: LLM 节点的硬超时统一走 `_client_timeout_for`（§10.2 客户端超时），"上游慢"从此走
+#: 降级链而不是 re-raise 成 `error(INTERNAL)`—— 这才是 w7 🔴-0 的正解。
+#: ⚠️ `2.0`/`1.5` 是旧 `NODE_TIMEOUT_S` 行值（那时是"预算当硬超时"的病害数字）沿用为分配口径，
+#: 与 §16.1 路由表 `budget_s`（normalize_intent=1.2）是两条不同口径的预算，已在 RELAY 登记该分歧。
+_MERGED_NORMALIZE_EXTRA_S: Final[float] = 1.5
 
 
-def _effective_limit_for(name: str, base: float) -> float:
-    """执行期生效超时：仅 `normalize` 且**本请求**走合并档时吸收 `intent` 的预算。
+def _client_timeout_for(task: str) -> float:
+    """`task` → 客户端超时（`resolve_route(task).model_key` → `hard_timeout_s`，§10.2）。
 
-    刻意在**执行期**判而不是包装期：图是编译期单例，而 `merged_understand` 是
-    每请求事实（`GraphDeps`，经 contextvars 注入）—— 包装期读不到它。
-    无运行上下文（装配自检 / 未设 context 的单测）按基线走，不加平移。
+    flash 15s / pro 45s；刻意不写死 —— pro 档启用自动跟进（U-107 附注①）。
     """
-    if name != "normalize":
-        return base
+    from app.llm.router import hard_timeout_s, resolve_route
+
+    return hard_timeout_s(resolve_route(task).model_key)
+
+
+def _effective_limit_for(name: str, override: float | None) -> float:
+    """执行期生效硬超时（`override` 仅供测试放大/缩小，生产为 `None`）。
+
+    LLM 节点 → 客户端超时（`resolve_route` → `hard_timeout_s`，§10.2）；非 LLM 节点 → 表值。
+    刻意在执行期判而不是包装期：图是编译期单例，而客户端超时依赖路由表（`resolve_route`）
+    与 §10.2 档位 —— 包装期无法保证拿到 pro/flash 的最终档（U-107 附注①：不得写死一个数）。
+    """
+    if override is not None:
+        return override
+    task = _LLM_NODE_TASKS.get(name)
+    if task is not None:
+        return _client_timeout_for(task)
+    return NODE_TIMEOUT_S[name]
+
+
+#: 超时后**保持 re-raise** 的节点（fail-closed / 终态构造责任）。
+#:
+#: ⚠️ 这三个节点的超时**没有** §5.3 的"失败转移"出路（§5.3.0 附注②）：
+#: · `mask` / `audit_pre`：fail-closed —— 没跑完就代表"脱敏/段 1 审计未完成"，吞掉等于
+#:   放行一条未脱敏的数据 / 一次缺审计的下发（N-05 / 段 1 是安全前提）；
+#: · `audit_supp`：它**兼发** `complete` 终态 —— 超时时连终态都没构造出来，吞掉 = 流无终态
+#:   （违反 N-08）。W4 具名裁决：保留 re-raise，即使表里它"失败不阻断"（那个"不阻断"说的是
+#:   段 2 **写库失败**，不是"终态没构造"）。
+#: 三者超时 → 上抛 → `runner._drive` 兜底 `error(INTERNAL)`（N-08 不留无终态的流）。
+_RERAISE_TIMEOUT_NODES: Final[frozenset[str]] = frozenset({"mask", "audit_pre", "audit_supp"})
+
+
+def _timeout_fallback(name: str, state: GraphState, effective: float) -> dict[str, Any]:
+    """逐节点超时出路表（§5.3.0 规则 2 / U-107 附注②）：**复用 §5.3 的失败转移列**。
+
+    ⚠️ 只覆盖「文档给了出路的节点」（LLM 节点 → 降级链 / 闸门 → GATE_* 码或跳过并标注 /
+    execute → EXEC_TIMEOUT）。`_RERAISE_TIMEOUT_NODES` 不在本表 —— 由 `_with_node_timeout`
+    上抛（见该常量 docstring）。
+
+    ⚠️ 每次转移都**镜像该节点自身处理同源失败的分支**（`normalize.py` 的 `PlannerError`
+    → `report_degraded(LLM_UNAVAILABLE, TEMPLATE_ONLY)` + refuse；……），让"运行中超时"
+    与"节点内失败"两条路径产出**同形**的终态 —— 上游一慢从此走降级链，而不是 re-raise
+    成 `error(INTERNAL)` → `ok=0`（这是 w7 🔴-0 的正解）。
+    """
+    from app.core.enums import (
+        ActionTaken,
+        DegradedReason,
+        ErrorCode,
+        GateNo,
+        Outcome,
+        RefuseReason,
+    )
     from app.graph.context import current_run_context_or_none
+    from app.graph.nodes._shared import gate_update, terminal_update
+    from app.planner.schemas import IntentKind
 
     context = current_run_context_or_none()
-    if context is not None and context.deps.merged_understand:
-        return base + _MERGED_NORMALIZE_EXTRA_S
-    return base
+
+    def _degraded(reason: DegradedReason, action: ActionTaken) -> None:
+        if context is not None:
+            context.report_degraded(
+                reason, action, {"stage": name, "reason": "timeout", "limit_s": effective}
+            )
+
+    if name == "normalize":
+        # 镜像 `normalize.py` 的 `PlannerError` 分支（§5.3 行 2：模板 → 无命中 → 拒答）。
+        _degraded(DegradedReason.LLM_UNAVAILABLE, ActionTaken.TEMPLATE_ONLY)
+        update: dict[str, Any] = {
+            "intent": IntentKind.REFUSE.value,
+            "intent_detail": {
+                "reason_code": "understand_unavailable",
+                "refuse_kind": RefuseReason.NO_DATA_ASSET.value,
+            },
+        }
+        update.update(
+            terminal_update(
+                state, event="refuse", outcome=Outcome.REFUSE,
+                reason=RefuseReason.NO_DATA_ASSET.value,
+            )
+        )
+        return update
+
+    if name == "intent":
+        # 镜像 `intent.py` 的 `PlannerError` 分支（§5.3 行 3）：单跑路径**不** report_degraded。
+        update = {
+            "intent": IntentKind.REFUSE.value,
+            "intent_detail": {
+                "reason_code": "intent_unavailable",
+                "refuse_kind": RefuseReason.NO_DATA_ASSET.value,
+            },
+        }
+        update.update(
+            terminal_update(
+                state, event="refuse", outcome=Outcome.REFUSE,
+                reason=RefuseReason.NO_DATA_ASSET.value,
+            )
+        )
+        return update
+
+    if name == "plan":
+        # 镜像 `plan.py` 的 `PlannerError` 分支（§5.3 行 5）。
+        _degraded(DegradedReason.PLAN_GENERATION_FAILED, ActionTaken.TEMPLATE_ONLY)
+        return terminal_update(
+            state, event="refuse", outcome=Outcome.REFUSE,
+            reason=RefuseReason.NO_DATA_ASSET.value,
+        )
+
+    if name in ("gen_sql", "repair"):
+        # 镜像 `gen_sql.py` / `repair.py` 的 `PlannerError` 分支（§5.3 行 7 / 16）。
+        _degraded(DegradedReason.LLM_UNAVAILABLE, ActionTaken.TEMPLATE_ONLY)
+        return terminal_update(
+            state, event="refuse", outcome=Outcome.REFUSE,
+            reason=RefuseReason.NO_DATA_ASSET.value,
+        )
+
+    if name == "present":
+        # 镜像 `present.py`（§14.2 F4）：degraded + 空增量 = 仅表格。
+        _degraded(DegradedReason.PRESENT_FAILED, ActionTaken.TABLE_ONLY)
+        return {}
+
+    if name == "link":
+        # §5.3 行 4：检索超时 = 稠密不可用 → sparse_only；P0 稀疏也无命中 → 拒答。
+        _degraded(DegradedReason.EMBEDDING_UNAVAILABLE, ActionTaken.SPARSE_ONLY)
+        return terminal_update(
+            state, event="refuse", outcome=Outcome.REFUSE,
+            reason=RefuseReason.NO_DATA_ASSET.value,
+        )
+
+    if name == "bind":
+        # W4 具名裁决（§5.3 行 6「无绑定 → refuse」）：绑定超时 = 无绑定产物 → 拒答。
+        return terminal_update(
+            state, event="refuse", outcome=Outcome.REFUSE,
+            reason=RefuseReason.NO_DATA_ASSET.value,
+        )
+
+    if name == "gate1_ast":
+        return terminal_update(
+            state, event="error", outcome=Outcome.FAILED,
+            code=ErrorCode.GATE_AST_REJECTED.value,
+        )
+
+    if name == "gate2_policy":
+        return terminal_update(
+            state, event="error", outcome=Outcome.FAILED,
+            code=ErrorCode.GATE_POLICY_REJECTED.value,
+        )
+
+    if name == "gate3_cost":
+        # §5.3.0 附注②「跳过并标注」：EXPLAIN 超时视同 explain_error → WARN（不设终态，
+        # 不报告为通过，D5/D6 —— 与 `gate3_cost.py` 的 EXPLAIN 异常分支同形）。
+        from app.guard import run_gate3
+
+        result = run_gate3(str(state.get("sql_text") or ""), {"explain_error": True})
+        return gate_update(state, GateNo.COST, result)
+
+    if name == "execute":
+        # §5.3 行 11：写 `exec_error(timeout)`、**不定终态**，交由 `route_after_execute` /
+        # `error_out` 映射成 `EXEC_TIMEOUT` —— 与本节点 `_on_failure` 的"只写摘要、不定终态"
+        # 分工一致（`timeout` 是不可修类，不进 repair）。
+        from app.exec.errors import MESSAGES
+        from app.obs.metrics import observe_exec_failure
+
+        observe_exec_failure("timeout")
+        return {
+            "exec_error": {
+                "error_class": "timeout",
+                "pgcode": None,
+                "message": MESSAGES["timeout"],
+                "llm_hint": None,
+            },
+        }
+
+    # 理论不可达：所有可计时节点（`_LLM_NODE_TASKS` ∪ `NODE_TIMEOUT_S`）都已在上表列出。
+    raise RuntimeError(f"_timeout_fallback 未覆盖节点: {name}")
 
 
 def _with_node_timeout(name: str, fn: Any, *, overrides: Mapping[str, float] | None = None) -> Any:
     """给节点套 `asyncio.timeout()`（HANDOFF §五-5：每节点超时 = asyncio.timeout 包装）。
 
-    ⚠️ **超时 ≠ 节点内失败**：节点内部的失败转移（LLM 不可用 → degraded、EXPLAIN
-    不可用 → 跳过 gate3……）在节点**跑着**时才有机会执行；超时意味着节点**没跑完**，
-    那些转移逻辑没机会触发。故只有两条出路：
+    ⚠️ **包装判定**：「—」节点（`trusted_context` 与三个出口）不在任何表 → 返回**原函数对象**
+    （给它们配超时 = 发明文档里没有的数值）。其余 15 节点（6 LLM + 9 固定）按下方出路表计时。
 
-    | 节点 | 超时转移 | 依据 |
-    |---|---|---|
-    | `present` | `report_degraded(PRESENT_FAILED, TABLE_ONLY)` + 空增量（= 仅表格） | 07 §14.2 F4 的超时同形：与节点内部失败路径（`present.py` 的 report_degraded + `return {}`）**完全同形**，只是触发源不同 |
-    | 其余 | 告警 + **re-raise** → `runner._drive` 兜底 `error(INTERNAL)` | 节点没跑完 = 工程故障；对着一个没产出结果的节点假装"降级成功"才是谎报 |
+    ⚠️ **生效硬超时由 `_effective_limit_for` 执行期解析**（§5.3.0 规则 2 / U-107 附注①）：
+    · LLM 节点 → `resolve_route(task).model_key` 的客户端超时（flash 15s / pro 45s，pro 档
+      启用自动跟进），**不叠加** `_MERGED_NORMALIZE_EXTRA_S`（那是"分配"，归 §16.1 预算，
+      见该常量 docstring）；
+    · 非 LLM 节点 → `NODE_TIMEOUT_S` 表值。
 
-    🔴 `audit_supp` **不在"吞掉"之列**（虽然表里它"失败不阻断"）：那个"不阻断"说的是
-    **段 2 写库失败**（节点内部已 try/except 告警），而该节点还兼发 `complete` 终态 ——
-    超时时连终态都没构造出来，吞掉 = 流无终态（违反 N-08）。
+    ⚠️ **超时出路表**（§5.3.0 规则 2 / U-107 附注②，逐节点复用 §5.3 失败转移列）：
 
-    ⚠️ `overrides` 仅供**测试**放大超时（0.1s 的闸门节点在慢 CI 上会假阳性）；
-    生产装配不传 —— 契约值只能有一份来源（本表）。
+    | 节点 | 超时动作 |
+    |---|---|
+    | normalize / plan / gen_sql / repair | `degraded(lm_unavailable / plan_generation_failed, template_only)` + `refuse(no_data_asset)` |
+    | intent | `refuse(no_data_asset)`（不发 degraded，镜像节点自身） |
+    | link | `degraded(embedding_unavailable, sparse_only)` + `refuse(no_data_asset)` |
+    | bind | `refuse(no_data_asset)`（W4 具名裁决：无绑定 → refuse） |
+    | present | `degraded(present_failed, table_only)` + 空增量（仅表格） |
+    | gate1_ast / gate2_policy | `error(GATE_AST_REJECTED / GATE_POLICY_REJECTED)` |
+    | gate3_cost | `run_gate3(explain_error=True)` → WARN + `gate_update`（跳过并标注，不设终态） |
+    | execute | 写 `exec_error(timeout)` → `route_after_execute`/`error_out` 映射 `EXEC_TIMEOUT` |
+    | mask / audit_pre / audit_supp | **re-raise**（`_RERAISE_TIMEOUT_NODES`，fail-closed / 终态构造） |
 
-    ⚠️ 合并档预算平移（🔴-0，`_MERGED_NORMALIZE_EXTRA_S`）：`normalize` 在**本请求**
-    走合并档时生效超时 = 表值 + `intent` 表值（3.5s）。判定在**执行期**（`_effective_limit_for`），
-    因为图是编译期单例而合并档是每请求事实。split 档 / 无上下文：逐字表值。
+    ⚠️ `overrides` 仅供**测试**放大/缩小超时（0.1s 的闸门节点在慢 CI 上会假阳性）；
+    生产装配不传 —— 契约值只能有一份来源。
     """
-    limit = (overrides or {}).get(name) or NODE_TIMEOUT_S.get(name)
-    if limit is None:
+    if name not in _LLM_NODE_TASKS and name not in NODE_TIMEOUT_S:
         return fn
 
-    from app.core.enums import ActionTaken, DegradedReason
-    from app.graph.context import current_run_context_or_none
+    override = (overrides or {}).get(name)
+
     from app.obs.logging import get_logger as _get_logger
 
     timeout_log = _get_logger(__name__)
 
     @functools.wraps(fn)
     async def _timed(state: GraphState) -> dict[str, Any]:
-        effective = _effective_limit_for(name, limit)
+        effective = _effective_limit_for(name, override)
         try:
             async with asyncio.timeout(effective):
                 return cast("dict[str, Any]", await fn(state))
         except TimeoutError:
-            if name == "present":
-                # F4 超时同形：降级为"仅表格"，不再构造 chart/insight（缺席 = 不发事件）。
-                context = current_run_context_or_none()
-                if context is not None:
-                    context.report_degraded(
-                        DegradedReason.PRESENT_FAILED,
-                        ActionTaken.TABLE_ONLY,
-                        {"stage": "present", "reason": "timeout", "limit_s": effective},
-                    )
+            if name in _RERAISE_TIMEOUT_NODES:
                 timeout_log.error(
-                    "node_timeout_degraded",
+                    "node_timeout",
                     node=name,
                     limit_s=effective,
-                    extra_fact="present 超时 → degraded(present_failed) 仅表格（§14.2 F4）",
+                    extra_fact="fail-closed / 终态构造节点超时未收口 → 上抛，由 runner 兜底 error(INTERNAL)（N-08）",
                 )
-                return {}
+                raise
             timeout_log.error(
-                "node_timeout",
+                "node_timeout_degraded",
                 node=name,
                 limit_s=effective,
-                extra_fact="节点超时未收口 → 上抛，由 runner 兜底 error(INTERNAL)（N-08 不留无终态的流）",
+                extra_fact="节点超时 → 走 §5.3 失败转移列（§5.3.0 规则 2 / U-107 附注②）",
             )
-            raise
+            return _timeout_fallback(name, state, effective)
 
     return _timed
 
