@@ -19,7 +19,7 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from typing import Any, Final
 
-__all__ = ["GapRow", "build_gap_table", "rls_follow_up"]
+__all__ = ["GapRow", "build_gap_table", "parallel_clause", "rls_follow_up"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,6 +145,25 @@ def _rls_head() -> str:
             "`tests/integration/**` 默认走 `localhost:5432`，真 PG 16 应答正常。")
 
 
+def parallel_clause(pg_facts: Mapping[str, Any]) -> str:
+    """并行/串行等值对照的措辞（三态）。为什么评测侧要自带这项判据：
+    W7 报过一次"并行把 `count(*)` 吃掉一截**且不报错**"—— 这类错 N-07 抓不到
+    （租户策略照样生效，只是数变小），门禁顺路逮不到，只能由引用读数的人自己对照。
+
+    ⚠️ **不自带句首标点**：前一句有没有句号由调用方知道，这里再写一个就会在报告里
+    生成"。。"（实测踩过）。调用方按自己那一句的收尾选分隔符。
+    """
+    state = pg_facts.get("parallel_equality_ok")
+    if state is None:
+        return ("⚠️ 本轮**未做**并行/串行等值对照 ⇒ 上面这些 PG 读数的"
+                "「并行路径下是否同一数」未测")
+    if not state:
+        return ("🔴 并行开/关**不等值** ⇒ 本行 PG 读数一律不得引用，先定位并行路径"
+                "（数变小且不报错，N-07 抓不到）")
+    return ("且并行开/关等值对照**通过**（逐关系 `count(*)` 相同、`EXPLAIN` 确有并行节点 ⇒ "
+            "并行路径真被走到）")
+
+
 def rls_follow_up(pg_facts: Mapping[str, Any] | None) -> str:
     """缺口表 RLS 行"下一步"的**唯一**措辞来源（跟着探测结果走，不写死当前事实）。
 
@@ -169,13 +188,14 @@ def rls_follow_up(pg_facts: Mapping[str, Any] | None) -> str:
         return head + (f"PG 业务事实表已有 {int(pg_facts['pg_fact_rows']):,} 行"
                        "（沙箱同规模）⇒ 数据面已具备，但本窗口的探针**没有**给出"
                        "`rls_partition_ok`（逐租户可见数求和 == 属主总数 + 两条负对照）"
-                       "⇒ 有效性**仍未实测**，本行保持不覆盖")
+                       "⇒ 有效性**仍未实测**，本行保持不覆盖") + "。" + parallel_clause(pg_facts)
     return head + shape + (
         f"PG 业务事实表已有 {int(pg_facts['pg_fact_rows']):,} 行（沙箱 "
         f"{int(pg_facts.get('sqlite_fact_rows', 0)):,}）⇒ 策略**存在性与有效性均已实测**："
         "逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。"
         "⚠️ **但本行仍不构成 G-4 的完整证据**：评测主链路走的是 SQLite TEMP VIEW，"
-        "「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」这一半未接（见 W6 交付 §8）")
+        "「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」这一半未接（见 W6 交付 §8）"
+    ) + "。" + parallel_clause(pg_facts)
 
 
 def build_gap_table(

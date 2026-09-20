@@ -59,6 +59,7 @@ __all__ = [
     "pg_facts",
     "pg_statement",
     "render_markdown",
+    "timeout_snapshot_drift",
 ]
 
 W6_DIR = os.path.join(_bootstrap.ROOT, "backend", "reports", "w6")
@@ -143,6 +144,9 @@ def pg_facts(path: str | None = DEFAULT_PG_PROBE) -> dict[str, Any] | None:
         "rls_per_tenant_view_counts": pg.get("rls_per_tenant_view_counts") or {},
         "rls_negative_no_context": pg.get("rls_negative_no_context"),
         "rls_negative_unknown_tenant": pg.get("rls_negative_unknown_tenant"),
+        # 三态而非 bool()：**没跑这项对照**（缺键 = None）与**跑了但不等值**（False）是两回事 ——
+        # 前者只能说"未测"，后者必须点名（W7 报过一次"并行把 count(*) 吃掉一截且不报错"）。
+        "parallel_equality_ok": pg.get("parallel_equality_ok"),
     }
 
 
@@ -222,13 +226,44 @@ def pg_statement(facts: Mapping[str, Any] | None) -> str:
             "逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。"
             "⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，"
             "「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。"
+            + " " + gaps_mod.parallel_clause(facts)
         )
     return (
         f"**PG 可达且有 {facts['pg_fact_rows']:,} 行业务事实数据**"
         f"（RLS 策略 {facts['rls_policies_n']} 条）⇒ 可评估把评测主链路切到 PG。"
         "注意：本轮探测**没有**给出逐租户可见数（`rls_partition_ok`），"
         "所以这条只到「数据与策略在位」，不到「RLS 有效性已实测」。"
+        + " " + gaps_mod.parallel_clause(facts)
     )
+
+
+def timeout_snapshot_drift(snapshot_contract: Mapping[str, Any] | None) -> str:
+    """批次快照里的超时表 vs **当前树**的超时表 —— 不同就必须点名。
+
+    为什么需要：`meta.run_config.node_timeouts` 是 **runner 落盘当时**的快照，报告器只是搬运。
+    本轮实测：09-18 那批的快照里 `contract` 有 15 个节点（`normalize` 2.0s、`link` 4.0s、
+    `present` 2.0s…），而 U-104/U-107 之后当前树只剩 9 个非 LLM 节点（`link` 已到 30s）。
+    报告 §0 同页写着本次生成时的 commit ⇒ 不点名的话，读者会拿一张已经不存在的表去引用契约。
+    """
+    if not snapshot_contract:
+        return ""
+    from harness import NODE_TIMEOUT_S as now  # 延迟导入：报告器只读产物，不在加载期装整张图
+
+    snap = dict(snapshot_contract)
+    if snap == now:
+        return ""
+    moved_out = sorted(set(snap) - set(now))
+    moved_in = sorted(set(now) - set(snap))
+    changed = sorted(k for k in set(now) & set(snap) if now[k] != snap[k])
+    bits = []
+    if moved_out:
+        bits.append("已移出契约表（硬超时改执行期解析）：" + "、".join(f"`{k}`" for k in moved_out))
+    if moved_in:
+        bits.append("新增：" + "、".join(f"`{k}`" for k in moved_in))
+    if changed:
+        bits.append("值变了：" + "、".join(f"`{k}` {snap[k]}s→{now[k]}s" for k in changed))
+    return ("⚠️ 那份 `contract` 是**跑批当时**的快照，已与当前树的 `NODE_TIMEOUT_S` 不一致（"
+            + "；".join(bits) + "）⇒ 引用超时契约以当前树为准，别把这张表当今天的口径。")
 
 
 def git_rev() -> dict[str, Any]:
@@ -891,7 +926,9 @@ def render_markdown(p: Mapping[str, Any]) -> str:
     add(f"- LLM 后端：mode={cfg.get('mode')}、live={cfg.get('live')}、"
         f"匣带={os.path.basename(str(cfg.get('cassette') or '')) or '—'}")
     add("- 节点超时派生值见产物 JSON 的 `meta.run_config.node_timeouts`（真打轮被放大 ⇒ "
-        "**真打轮的 EX 不覆盖 §5.3 的超时契约**，§17.4）")
+        "**真打轮的 EX 不覆盖 §5.3 的超时契约**，§17.4）"
+        + (" " + timeout_snapshot_drift((cfg.get("node_timeouts") or {}).get("contract"))
+           if isinstance(cfg.get("node_timeouts"), Mapping) else ""))
     add("- 产物在位：" + "，".join(f"{k}={'有' if v else '无'}" for k, v in meta["artifacts_present"].items()))
     add("")
 

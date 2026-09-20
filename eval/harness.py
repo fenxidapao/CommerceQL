@@ -675,18 +675,35 @@ def identity_for_case(case_id: str, tenant: str, *, role: Role = Role.ANALYST) -
 # ============================================================================
 # 五、节点超时：真打时必须显式放大（走 `build_graph` 的官方测试缝）
 # ============================================================================
-"""07 §5.3 的超时表按**生产**口径设定。实测（本会话 5 条 live 批次）：正常链路在
-`normalize`（契约 2.0s）与 `bind`（契约 0.2s）上被打断 → `TimeoutError`、`terminal=None`
-—— 即"链路没坏，但契约值容不下一次真实 LLM 出站"。这是**契约冲突**，已上呈（RELAY）。
+"""07 §5.3 的超时表按**生产**口径设定。实测（本会话 5 条 live 批次）：正常链路会在校内一次
+真实 LLM 出站上被节点硬超时打断 → `TimeoutError`、`terminal=None` —— 即"链路没坏，但契约值
+容不下一次真实 LLM 出站"。这是**契约冲突**，已上呈（RELAY）。
+
+⚠️ 本函数的靶子随契约换过两次形状（都要按当下的代码读，别照抄旧例子）：
+· U-104（合并档预算平移）把 5 个 LLM 节点从 `NODE_TIMEOUT_S` 移了出去；
+· U-107（d387347，W4）把"预算当硬超时"这个病害整体改掉 —— LLM 节点的硬超时**不再写死**，
+  执行期经 `_LLM_NODE_TASKS` → `resolve_route` → `hard_timeout_s` 解析为**客户端超时**
+  （§10.2：flash 15s / pro 45s）。⇒ 当年"`normalize` 契约 2.0s 被打断"那一格已不成立
+ （它的生效值现在是 15s）；但 `bind` **仍留在表里、仍是 0.2s**，而 `nodes/bind.py:180`
+  确实触达 `deps.llm` ⇒ 生产侧这一格仍是缺口，本窗口只上呈不代修（RELAY G3）。
 
 放大不拍脑袋：下界由文档自己的数字推出 ⇒ `EVAL_LLM_NODE_TIMEOUT_S`。
-放大的代价必须写清：**真打轮的 EX 不覆盖 07 §5.3 超时契约**（进 §17.4 缺口表）。
-匣带回放轮**不放大**（回放不出网）⇒ 那一轮仍是契约超时，可用于超时回归。
+放大的代价必须写清：**真打轮的 EX 不覆盖 07 §5.3 超时契约**（进 §17.4 缺口表）——
+U-107 之后这句更具体：LLM 节点生产走 15s/45s，评测兜到 162s，两者**不是同一个数**。
+匣带回放轮**不放大**（回放不出网）⇒ 那一轮仍是契约/客户端超时，可用于超时回归。
 """
 
 #: 会做出站 LLM 调用的节点（判据 = `app/graph/nodes/*.py` 里是否触达 `deps.llm`；
 #: 实测命中：`normalize` `intent` `plan` `bind` `gen_sql` `repair`；
 #: `link` 只走本地检索、`present` 是启发式排版，故不在此列）。
+#: ⚠️ 与 app 自己的 `_LLM_NODE_TASKS`（`build.py:396`）**双向都不一致**（U-107 后实测）：
+#: · `bind`：`nodes/bind.py:180` 确实经 `context.deps.llm` 走 L4 精排，却不在那份清单里
+#:   ⇒ `_effective_limit_for("bind") = 0.2s`（`normalize`/`gen_sql` 都解析成 15s）。
+#:   生产路径上 L4 那一跳只有 0.2s，而评测侧的下界把它兜住了 ——
+#:   "评测比生产宽松"的存量一处，已上呈 RELAY G3（不在本窗口替对方改契约）。
+#: · `present`：那份清单里有，而 `nodes/present.py` 全文件对 `llm` **零命中** ⇒ 对方比代码宽。
+#:   对本窗口无害（多给一档客户端超时不会假绿），但结论要留下：**两份清单谁都不是权威**，
+#:   判据只能是"代码是否触达 `deps.llm`"，所以本清单不改成照抄 `_LLM_NODE_TASKS`。
 LLM_CALLING_NODES: frozenset[str] = frozenset(
     {"normalize", "intent", "plan", "bind", "gen_sql", "repair"}
 )
@@ -699,21 +716,38 @@ LLM_CALLING_NODES: frozenset[str] = frozenset(
 EVAL_LLM_NODE_TIMEOUT_S: float = 20.0 + 3 * 45.0 + 2 * 3.5
 
 #: 非 LLM 节点的放大系数（纯 CPU / 本地状态构造）。07 自己在 `build_graph` docstring
-#: 里承认"0.1s 的闸门节点在慢 CI 上会假阳性"⇒ 评测机同样适用。放大后闸门节点仍 <1s、
-#: `link`/`present`/`audit_*` 落在 4–32s，都远低于 LLM 档，不构成"让挂死蒙混过关"。
+#: 里承认"0.1s 的闸门节点在慢 CI 上会假阳性"⇒ 评测机同样适用。实测放大后落点：
+#: 闸门三兄弟 0.8s、`mask` 0.8s、`audit_pre` 8s、`audit_supp` 4s —— 都远低于 LLM 档，
+#: 不构成"让挂死蒙混过关"。
 EVAL_CPU_FACTOR: float = 8.0
 
-#: **不放大**的节点：`execute` 的 30s 是 07 §5.3 明文的"交互 8s / 上限 30s"**上限**，
-#: 慢在这里 = 被测事实（沙箱跑不出来的查询，放大只会把结论藏起来），不是 CI 假阳性。
-EVAL_TIMEOUT_AS_CONTRACT: frozenset[str] = frozenset({"execute"})
+#: **不放大**的节点（逐节点给理由，不能一句"上限"概括）：
+#: · `execute`：30s 是 07 §5.3 明文的"交互 8s / 上限 30s"**上限**，慢在这里 = 被测事实
+#:   （沙箱跑不出来的查询，放大只会把结论藏起来），不是 CI 假阳性。
+#: · `link`：U-107 之后它的契约值 = `Settings.EMBEDDING_TIMEOUT_SECONDS`（30s），已经是
+#:   **出站客户端超时同档**，再 ×8 = 240s 只是放大墙钟、不放大被测事实；且评测走的是
+#:   本地夹具检索 `BundleCatalogRetrieval`（§17.4"评测不测向量检索"）⇒ 永远逼近不了 30s，
+#:   放大对它没有意义。
+EVAL_TIMEOUT_AS_CONTRACT: frozenset[str] = frozenset({"execute", "link"})
 
 
 def eval_node_timeouts() -> dict[str, float]:
-    """由 `NODE_TIMEOUT_S`（唯一契约真相）派生评测用 overrides；不含任何自造节点名。"""
+    """评测用节点超时 overrides。
+
+    ⚠️ U-104 把 5 个 LLM 节点从 `NODE_TIMEOUT_S` 移了出去，U-107（`d387347`）进一步把它们
+    的硬超时改成**执行期解析**：`_LLM_NODE_TASKS`（`build.py:396-403`）→ `resolve_route` →
+    `hard_timeout_s`（flash 15s / pro 45s）。只遍历契约表 ⇒ 这些节点拿不到评测下界，
+    一次真 LLM 出站又把整条判成链路故障 —— 正是本函数要防的那件事，只是换了个隐身方式。
+    ⇒ 遍历**并集**：契约表里的节点按契约/系数处理，只在 LLM 清单里的节点直接给下界。
+    （`link` 与 `execute` 走"不放大"分支，逐节点理由写在 `EVAL_TIMEOUT_AS_CONTRACT` 上。）
+    """
     out: dict[str, float] = {}
-    for name, contract in NODE_TIMEOUT_S.items():
+    for name in set(NODE_TIMEOUT_S) | set(LLM_CALLING_NODES):
+        contract = NODE_TIMEOUT_S.get(name)
         if name in EVAL_TIMEOUT_AS_CONTRACT:
-            out[name] = contract
+            out[name] = contract if contract is not None else EVAL_LLM_NODE_TIMEOUT_S
+        elif contract is None:                     # 契约表已不再计时的 LLM 节点
+            out[name] = EVAL_LLM_NODE_TIMEOUT_S
         elif name in LLM_CALLING_NODES:
             out[name] = max(contract, EVAL_LLM_NODE_TIMEOUT_S)
         else:
@@ -725,6 +759,8 @@ def describe_node_timeouts(effective: Mapping[str, float]) -> dict[str, Any]:
     """把"契约 vs 实际"写成可进报告/JSON 的形状（报告里必须能看出放大过）。
 
     `effective` 传空 dict = 图跑在契约值上 ⇒ 这里回填契约表，避免读者把"空"读成"没配超时"。
+    ⚠️ `not_in_contract` 必须显式列出：那些节点名**不在** `NODE_TIMEOUT_S`（U-104 后 LLM 节点
+    的硬超时在执行期解析），藏起来就等于让读者以为评测和契约一一对应。
     """
     eff = dict(effective) or dict(NODE_TIMEOUT_S)
     return {
@@ -732,6 +768,7 @@ def describe_node_timeouts(effective: Mapping[str, float]) -> dict[str, Any]:
         "effective": eff,
         "scaled": bool(effective),
         "llm_calling_nodes": sorted(LLM_CALLING_NODES),
+        "not_in_contract": sorted(LLM_CALLING_NODES - set(NODE_TIMEOUT_S)),
         "kept_as_contract": sorted(EVAL_TIMEOUT_AS_CONTRACT),
         "cpu_factor": EVAL_CPU_FACTOR,
         "llm_node_floor_s": EVAL_LLM_NODE_TIMEOUT_S,

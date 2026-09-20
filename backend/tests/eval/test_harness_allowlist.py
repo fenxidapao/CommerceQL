@@ -209,13 +209,50 @@ def test_eval_timeouts_keep_contract_values_but_floor_llm_nodes():
     于是整批被判"链路故障" —— 但执行/闸门这类**纯 CPU** 节点必须照契约。"""
     effective = H.eval_node_timeouts()
     described = H.describe_node_timeouts(effective)
+    contract, floor = described["contract"], described["llm_node_floor_s"]
     assert described["scaled"] is True
     for node in described["llm_calling_nodes"]:
-        assert effective[node] >= described["contract"][node]
-        assert effective[node] == described["llm_node_floor_s"] or effective[node] > described["contract"][node]
+        assert effective[node] >= floor, "LLM 节点必须拿到评测下界"
+        if node in contract:
+            assert effective[node] >= contract[node]
     for node in described["kept_as_contract"]:
-        assert effective[node] == described["contract"][node]
-    assert set(effective) == set(described["contract"])
+        assert effective[node] == contract[node]
+    for node in set(contract) - set(described["llm_calling_nodes"]) - set(described["kept_as_contract"]):
+        assert effective[node] == contract[node] * described["cpu_factor"]
+    # U-104 之后 LLM 节点的硬超时不在契约表里（执行期由路由解析）⇒ 键集合是**并集**，
+    # 且"哪些节点名已不在契约表"必须被显式报出来，不能静默隐身。
+    assert set(effective) == set(contract) | set(described["llm_calling_nodes"])
+    assert described["not_in_contract"] == sorted(
+        set(described["llm_calling_nodes"]) - set(contract))
+
+
+def test_outbound_budget_nodes_are_not_double_amplified() -> None:
+    """U-107 把 `link` 的契约值抬到了**出站客户端超时同档**（30s = `EMBEDDING_TIMEOUT_SECONDS`）
+    ⇒ 再乘 CPU 系数就是 240s：放大的是墙钟，不是被测事实（评测走本地夹具检索，逼近不了 30s）。
+    所以"不放大"清单要逐节点钉住，且任何非 LLM 节点都不许被放大到越过 LLM 下界。
+    """
+    described = H.describe_node_timeouts(H.eval_node_timeouts())
+    contract, effective = described["contract"], described["effective"]
+    assert set(described["kept_as_contract"]) == {"execute", "link"}
+    for node in described["kept_as_contract"]:
+        assert effective[node] == contract[node]
+    for node, value in effective.items():
+        if node not in H.LLM_CALLING_NODES:
+            assert value <= H.EVAL_LLM_NODE_TIMEOUT_S
+
+
+def test_timeouts_survive_contract_slimming() -> None:
+    """漂移守卫：契约表瘦身（U-104 把 LLM 节点移出去）不许让下界静默消失。
+
+    本测试写的时候就是因为 `gen_sql` 已从 `NODE_TIMEOUT_S` 移除，旧实现只遍历契约表 ⇒
+    这些节点连 override 都拿不到，真打批次又会把"上游慢"判成链路故障。
+    """
+    effective = H.eval_node_timeouts()
+    moved = [n for n in ("gen_sql", "intent", "plan", "normalize", "repair")
+             if n not in H.NODE_TIMEOUT_S]
+    assert moved, "契约表若又把这些节点收回去，本测试的靶子就没了 —— 改测试而不是删断言"
+    for node in moved:
+        assert effective[node] == H.EVAL_LLM_NODE_TIMEOUT_S
 
 
 def test_unknown_cassette_mode_is_rejected_at_construction():

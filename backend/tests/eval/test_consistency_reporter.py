@@ -590,6 +590,61 @@ def test_gap_table_rls_follow_up_tracks_the_probe_not_the_prose():
     assert proven != empty, "事实变了措辞必须变（否则就是写死的散文）"
 
 
+def test_rls_follow_up_parallel_equality_clause_is_three_state():
+    """并行/串行等值对照三态：**没跑 ≠ 跑过且通过**，不等值则连本行读数一起废掉。
+
+    为什么单独钉：W7 报过"并行把 `count(*)` 吃掉一截且不报错"，而 N-07 抓不到这类错
+    （策略照样生效、只是数变小）⇒ 判据只能由引用读数的人自带，措辞不能含糊。
+    """
+    def rls_row(facts):
+        rows = rp.gaps_mod.build_gap_table(extra_evidence={}, pg_facts=facts)
+        return next(r for r in rows if str(r["capability"]).startswith("RLS"))["follow_up"]
+
+    not_probed = rls_row(_pg_facts_with_data(rls_partition_ok=True))
+    assert "未做**并行/串行等值对照" in not_probed and "通过" not in not_probed
+    failed = rls_row(_pg_facts_with_data(rls_partition_ok=True, parallel_equality_ok=False))
+    assert "不等值" in failed and "不得引用" in failed
+    passed = rls_row(_pg_facts_with_data(rls_partition_ok=True, parallel_equality_ok=True))
+    assert "等值对照**通过**" in passed
+    assert failed != passed != not_probed
+    # 同一状态必须也出现在报告正文那句 PG 措辞里（缺口表有、报告没有 = 两处口径不一致）
+    assert "未做**并行/串行等值对照" in rp.pg_statement(_pg_facts_with_data(rls_partition_ok=True))
+    assert "等值对照**通过**" in rp.pg_statement(
+        _pg_facts_with_data(rls_partition_ok=True, parallel_equality_ok=True))
+    # 子句不自带句首标点：本轮实测踩过"。。"（主句已以句号结尾时又接一个"。"）
+    for text in (not_probed, failed, passed):
+        assert "。。" not in text
+
+
+def test_pg_facts_carries_the_parallel_control_from_the_probe(tmp_path):
+    """读端必须把探针的 `parallel_equality_ok` 搬出来 —— 否则措辞派生的是空气。"""
+    f = tmp_path / "probe.json"
+    f.write_text(json.dumps({"pg": {"reachable": True, "parallel_equality_ok": True},
+                             "parity": {}}), encoding="utf-8")
+    assert rp.pg_facts(str(f))["parallel_equality_ok"] is True
+    g = tmp_path / "probe2.json"
+    g.write_text(json.dumps({"pg": {"reachable": True}, "parity": {}}), encoding="utf-8")
+    assert rp.pg_facts(str(g))["parallel_equality_ok"] is None
+
+
+def test_timeout_snapshot_drift_names_the_shape_change():
+    """§0 同页写着"本次生成时的 commit"和**跑批当时**的超时快照 ⇒ 两者不一致必须点名。
+
+    真实输入：`eval/results_v1.json` 是 09-18 那批，快照里 15 个节点（`normalize` 2.0s、
+    `link` 4.0s）；U-104/U-107 之后当前树只剩 9 个非 LLM 节点。不点名的话读者会拿一张
+    已经不存在的表去引用 §5.3 的超时契约。
+    """
+    import harness as h
+
+    snapshot = rp._load(rp.DEFAULT_RESULTS)["config"]["node_timeouts"]["contract"]
+    drift = rp.timeout_snapshot_drift(snapshot)
+    assert drift, "跑批快照与当前树明显不同，却报「无漂移」= 这条守卫失效"
+    assert "normalize" in drift and "已移出契约表" in drift
+    assert "`link` 4.0s→30.0s" in drift, "值变化的节点要带上前后两个数"
+    assert rp.timeout_snapshot_drift(dict(h.NODE_TIMEOUT_S)) == "", "一致时无许无病呻吟"
+    assert rp.timeout_snapshot_drift(None) == ""
+
+
 def _minimal_payload() -> dict:
     """`render_markdown` 的 §4 只需要这几个键；其余区块给它空值。"""
     return {
