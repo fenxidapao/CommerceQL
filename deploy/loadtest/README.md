@@ -133,6 +133,44 @@ PY
 `terminal_provenance` 也第一次出了真数：`{"error_frame": {"stage=intent|reason=none": 2}}`
 ⇒ 终止发生在 `intent` 阶段帧之后，与"合并调用回得来但节点收不了口"一致。
 
+#### 三.0.1b 被测容器的正确启动形态（09-20 我两次挂错，各浪费一轮）
+
+`w7load-api` 用裸 `docker run` 起时**必须带两条只读挂载**，缺任何一条都是"服务起来了但不可用"，
+而表现完全不像挂载问题：
+
+| 缺哪条 | 表现 | 为什么会误判 |
+|---|---|---|
+| `<repo>/semantic` → `/semantic:ro` | `readiness` 恒 **503**、`/healthz` 里 `graph_compiled=false` + `semantic_bundle_loaded=false`、`/query` 一律 500 | 日志其实很诚实（`graph_runtime_not_assembled`，明写"不是『能用』"），但报错指向"语义包文件不存在"⇒ 人会去查 YAML 而不查挂载 |
+| `<repo>/deploy/secrets/jwt_public.pem` → `/run/secrets/jwt_public.pem:ro` | 认证链整条不可用（所有令牌 401） | ⚠️ 更阴：宿主文件不存在时 **Docker 会在该路径建一个同名目录**而不是报错 ⇒ 应用侧只说"读 PEM 失败" |
+
+还有两条：`--env-file deploy/.env` 里的 DSN 是 `pg:5432` / `redis:6379`，所以容器必须挂在
+`commerceql_default` 这条**外部网络**上；以及 **Git Bash 下 `-v "$PWD/…"` 会被转成 MSYS 路径而静默挂不上**
+（本轮实测：用 `$PWD` 那次容器里 `/semantic` 目录根本不存在）⇒ 要用 `E:/…` 这种 Windows 形态的绝对路径。
+
+启动（一行，避免续行符在 shell 里被吃掉）：
+
+```bash
+docker run -d --name w7load-api --network commerceql_default --env-file deploy/.env -p 18000:8000 -e EMBEDDING_BASE_URL=http://host.docker.internal:11434 -v "E:/…/CommerceQL/semantic:/semantic:ro" -v "E:/…/CommerceQL/deploy/secrets/jwt_public.pem:/run/secrets/jwt_public.pem:ro" w7load-api:0920r2
+# 放行判据：/healthz 的 status=ok，且 checks 里 graph_compiled / semantic_bundle_loaded 全为 true
+```
+
+#### 三.0.1c 跑批前预检读数（09-20 第二轮 · `U-107` + `U-108` 之后 · c=1 / 3 条 / `--no-async`）
+
+| 判据 | 读数 | 判定 |
+|---|---|---|
+| ① 单发 p95 ≤ 8s | p50 **1,491ms**、p95 **15,855.9ms**（n=3） | ❌ **不满足** |
+| ② 连续三次无 5xx | `admission.http_5xx = 0`、`rejected_429 = 0` ⇒ 3 条全部 200 准入 | ✅ 满足（这一次上游没吐 5xx） |
+| ③ `U-107` 已落 + 探针不再假负 | 容器日志 **零条 `node_timeout`**；`/healthz` 全绿且端到端 **0.296s**（暖身后的第一次轮询） | ✅ 满足 |
+| 结果形状 | `outcomes={error_frame: 2, clarify: 1}`、`codes={INTERNAL: 2}`、`terminal_provenance={error_frame: {"stage=intent｜reason=none": 2}}` | ⚠️ **`ok=0/3` 又出现了，但成因换了** |
+
+⇒ **本轮不跑批**（判据① 不过 + `ok=0` ⇒ 跑了也没有有效分母）。
+⚠️ 而这次的成因**不是超时**：那 2 条 `INTERNAL` 在服务端日志里是
+`error_type=TypeError, detail="float() argument must be a string or a real number, not 'NoneType'"`，
+`node_timeout` 事件为零 ⇒ **`U-107` 新落的降级出口这一轮根本没被走到**。
+所以我先前"INTERNAL = 节点超时"的归因在这轮被证伪了一半：**同一个 `INTERNAL` 码下至少有两种成因**，
+而 `app/api/runner.py:483` 那句 `_log.error(..., detail=str(exc)[:300])` **不带 `exc_info`** ⇒
+无栈可查、谁也无法归因。详见 `backend/reports/w7/RELAY.md` §十七（含我复现出的候选点）。
+
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 
 探针的取数依据按 U-22 纪律必须"写在常量旁边"，而常量旁边放不下方法 —— 所以

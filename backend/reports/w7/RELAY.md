@@ -803,3 +803,70 @@ Ollama `bge-m3` 单条 embedding 实测 **4,462–5,025ms**（6 路并发各 4.5
 P1 换 `'*'` 哨兵后）—— 只测前两态里的第一态会恒绿，而这正是这一格能藏住错的原因。
 还有 `debug_parallel_query=on` 只证明"计划里有 Gather"，**不证明 worker 真扫了块**：
 要看 `Worker 0: actual rows=`。我们两边各被"结果恰好正确"骗过一次。
+
+---
+
+## 十七、`U-107` 验收（读码 + 活体）· 一条新缺陷 · 以及我上一轮说过头的一句
+
+### ① `U-107` 四条逐条核过（**不照抄回执**：读码 + 全量跑）
+
+| 裁定（架构 §10） | 我核到的实现 | 判 |
+|---|---|---|
+| ① 硬超时 = 本请求模型的客户端超时，执行期解析、不写死 | `build.py:360-383` 的 `NODE_TIMEOUT_S` 里**已无 6 个 LLM 节点**（只剩 `link 30.0 / bind 0.2 / gate1-3 / execute / mask / audit_*`）；`_LLM_NODE_TASKS`（`:396`）→ `_client_timeout_for`（`:417`）= `hard_timeout_s(resolve_route(task).model_key)` ⇒ pro 档自动跟 45s；`link` 的 30.0 具名引用 `Settings.EMBEDDING_TIMEOUT_SECONDS`（U-22 合规） | ✅ |
+| ② 超时出路复用 §5.3"失败转移"列，不消灭 fail-closed 节点的 `INTERNAL` | `_timeout_fallback`（`:454`）逐节点给出口（`bind`→`refuse(no_data_asset)`、`link`→`degraded(embedding_unavailable,sparse_only)`、`present`→`degraded(present_failed,table_only)`…），`_RERAISE_TIMEOUT_NODES = {mask, audit_pre, audit_supp}` 保留 re-raise 且 `audit_supp` 有具名理由 | ✅ |
+| ③ 3.5s 改指"分配"，不再叠加进 `asyncio.timeout` | `_MERGED_NORMALIZE_EXTRA_S = 1.5` 仍在（`:414`），但 `_effective_limit_for`（`:427`）对 LLM 节点直接返回客户端超时，**没有 `base + extra`** | ✅ |
+| ④ 契约测试"只钉键集、不需改断言" | ⚠️ **架构这句不成立、W4 的订正成立**：`tests/contract/test_graph_timeout_contract.py:44` 实测是**值级**断言（字典字面量里有 `"bind": 0.2` 这样的逐节点数值）⇒ 改 `NODE_TIMEOUT_S` 必红。W4 重写整份测试是对的。这条我核出来是为了让两边下一轮不要又按"只钉键集"行事 | ✅（W4 已登记分歧） |
+
+**静态门全绿（含 `U-107` 的当前树）**：`2187 passed / 6 skipped / 0 failed`（真实退出码，从日志文件读）；
+`ruff check .` 全绿；`mypy` 干净；`lint-imports` 4 kept / 0 broken。
+⚠️ 顺带订正我自己：我上一轮说过"我那 2180 条的树里已经含 `U-107`"——**那是用错判据得出的**
+（我用 `--is-ancestor d387347 HEAD` 判，而当时 HEAD 已经是别人的提交）。
+按提交顺序 `d387347` 是 `1300379` 的**后代** ⇒ 那轮 2180 不含 `U-107`，本轮这次重跑才算。
+
+### ② 活体（`w7load-api:0920r2`，当前树构建，c=1 / 3 条 / `--no-async`）
+
+- **`U-108` 在真实服务形态里成立**：lifespan 的 `probe_connections_warmed` 付掉 `deepseek 4,256ms / ollama 18ms`，
+  之后第一次 `/healthz` 端到端 **0.296s** 且 `llm_reachable=true`、`embedding_reachable=true`、`status=ok`。
+- **`U-107` 的形状变化被观察到**：整场 **零条 `node_timeout`**（先前是 137 条），`/healthz/ready=200`。
+- ⚠️ 但 **`ok=0/3` 又出现了**：`outcomes={error_frame: 2, clarify: 1}`、`codes={INTERNAL: 2}`、
+  `p95=15,855.9ms` ⇒ 按 §三.0.1 判据① 不过 ⇒ **本轮不跑批**（细节与启动形态教训见 README §三.0.1b/§三.0.1c）。
+
+### ③ ★ 一条新缺陷（不在我权限内，够格当 G-6 的下一个第一阻塞）
+
+服务端日志（两次，同一形状）：
+
+```
+error_type=TypeError  detail="float() argument must be a string or a real number, not 'NoneType'"
+extra_fact="图未收口 → 补发 error(INTERNAL)，不留一条无终态的流（N-08）"
+```
+
+**它不是超时**：`node_timeout` 事件为零 ⇒ `U-107` 新落的降级出口这一轮**根本没被走到**，
+我这 3 条既没验到降级路径、也没验到转异步路径。**下一轮跑批要同时把这两条路径钉出读数**，
+否则 `U-107` 的活体证据仍然只有"超时不再发生"这一半。
+
+我做的定位（**到"候选点"为止，不当结论用**）：
+- `app/api/runner.py:483` 的 `_log.error(..., detail=str(exc)[:300])` **不带 `exc_info`** ⇒ **没有栈**。
+  所以我无法证明是哪一处。★ **这条本身就是一个请求**：给这一处补上栈（N-11 禁止的是"回灌用户"，
+  不是"日志里也不留"）—— 现在任何 `INTERNAL` 都是不可归因的，而 `INTERNAL` 恰好是我回执里的主码。
+- 我在自己权限内能复现的候选点（同一句报错文案）：
+  `app/graph/nodes/_shared.py:238` 的 `float(ref.score)` —— 纯函数调用
+  `candidate_payload(SimpleNamespace(asset_id='a', score=None, layer=None))` 直接抛出
+  **一模一样的 TypeError**。旁证：同一个函数里 `layer` 做了 None 保护（`:239`），`score` 没有；
+  而 `CandidateRef.score` 的契约类型是 `float`（`app/core/contracts.py:205`，非 Optional），
+  `app/binding/scores.py:129 require_rerank_scores` 只校验 `item` 是不是 `RerankScore`，**不校验 `.value` 不是 None**
+  ⇒ `bind.py:194` 的 `score=score.value` 是可达 `None` 的一条路（模型 JSON 里 `"score": null`）。
+- ⚠️ 反向证据也要摆着：`provenance` 是 `stage=intent`，而候选通常由 `link` 之后才产出 ⇒ 时间上贴，
+  但我不据此断言。**归因等栈。**
+- 另一处同文案候选在 `app/llm/budget.py:392/395` 的 `float(self._alert)`（若 `_alert` 为 None）——
+  我没排除它，只是它会在每次预算判定都炸，与我这 3 条"1 条走通"的形状不太合。
+
+### ④ 我上一轮说过头的一句，现在收回来一半
+
+我对 W4 说过："十份回执里 145 条 5xx **全是** `build.py:432` 那条节点超时的产物"。
+现在必须收窄：**"5xx 体的码是 INTERNAL"成立，"INTERNAL ⇒ 节点超时"这个反向推论不成立** ——
+本轮就是 `INTERNAL` 但零超时。所以正确表述是：
+`INTERNAL` 是一个**至少混有两类成因**的兜底码（节点超时 / 未捕获异常如本条 TypeError），
+而我的 `codes` 字段分不开它们 —— 能分开的只有服务端栈（见 ③ 的请求）或一条 §15.3 的注册指标
+（那是封闭登记表，要开得走架构，我不自增）。
+先前那批的归因**不受影响**：那批日志里 `node_timeout` 与 `graph_run_failed` 是同数对上的
+（137 : 137），所以"那一批是超时"仍成立；错的是我把它写成了一条通用逆命题。
