@@ -1,8 +1,58 @@
 # W2D RELAY —— 逐窗口转述件
 
 > 2026-09-17 更新：**已提交**（响应收口窗口提交提醒）—— `4a63373` feat(w2d) 代码+测试 + docs 提交（交付/转述件）。请收口窗口基于提交后状态重跑门禁复核。
+> **2026-09-18 更新：回应 W7 阻塞项 🔴-6（U-96"预估延迟载体"）—— 见本页第一节。结论：这不是"给
+> `GateResult` 加个字段"，是"值来源从未定义"；已出可复跑探针 + 三条实测事实 + 三方案裁定请求。**
 > 本文件是"谁下一步该做什么"的单页转述；细节与证据见同目录 `DELIVERY.md`。
 > W2D 范围：`app/exec/**` + `app/mask/**`。96 tests passed（31+25+21+19），W2D 范围门禁全绿。
+
+---
+
+## 🔴 给 W7 / 架构 —— U-96 回执：不是"加个字段"，是"值来源从未定义"
+
+> 2026-09-18。对应 W7 阻塞项 🔴-6（`backend/reports/w7/RELAY.md:407`）。
+> 复跑：`cd backend && ../.venv/Scripts/python.exe reports/w2d/probe_explain_timing_pg.py`（真 PG 在位）
+
+### 0. 三条**实测**事实（脚本输出为准，不是推断）
+
+实测环境：PG **16.15**（compose 栈 `commerceql-pg-1`），表 `app.order_paid`，五种查询形状。
+
+| # | 事实 | 证据 |
+|---|---|---|
+| 1 | `EXPLAIN (FORMAT JSON)`（**07 §7.5 明文规定的取数形态**）输出里**没有任何耗时字段** | 五种形状（全表聚合 / 点查 / 高基数分组 / 排序+LIMIT / 无索引全扫）顶层键**恒为 `['Plan']`**，"含 time 的键"命中数 **0**。JSON 里只有 `Startup Cost` / `Total Cost` / `Plan Rows` / `Plan Width` |
+| 2 | 耗时只存在于 `EXPLAIN (ANALYZE, FORMAT JSON)`（`Planning Time` / `Execution Time` / 逐节点 `Actual Total Time`），而 **ANALYZE 会真执行查询** | plain 形态 0 命中；同一个 SQL 加 `ANALYZE` 立刻出现 `Execution Time` |
+| 3 | 代用路线"`Total Cost` × 系数 = 毫秒"**不成立** | 五种形状 `cost/ms` = **1.667 ~ 545.5（327×）**；同一 SQL 同进程连跑 3 次漂移 **1.10~1.32×**，经独立进程冷调用实测 **2.2×**（21.4ms vs 47.8ms，同 SQL 同机） |
+
+### 1. 为什么"给 `GateResult` 加预估延迟字段"不是正解
+
+- **加了字段也没有诚实的取值来源**：事实 1 说 §7.5 的数据源里没有毫秒；事实 2 的取值要先执行（自毁分支目的，且与 §7.5 自己的"只估算不执行"冲突）；事实 3 的代用是造数字（**U-22 红线**）。
+- **归属也不成立**：`GateResult` 在 `app/core/contracts.py`（W0，阶段 0 冻结的最小端口面）；`edges.py::_estimated_latency_ms` 在 `app/graph/**`（W4）；`run_gate3` 在 `app/guard/**`（W2C）。`docs/08 §4.1:297` 给 W2D 的只有 `app/exec/** + app/mask/**`。
+  ⇒ W2D 能供的是**读计划的通道**（已有 `executor.explain()`，U-63），不是那个值本身。
+- **配置键也从未存在**：`async_threshold_ms` 在任何配置契约里都没有定义（附录 A §A.1.3 只定义了 `async_if_slow`，默认 true）——`edges.py:108-113` 已如实标注这个待对账。
+- **连标定路线的数据源也没有**：全仓没有 `(estimated_cost → 实测耗时)` 的证据留存 —— `cost_ledger` 只记 LLM token 成本（`entry_id/model/input_tokens/cost_cny/...`），`query_plan` 只记计划与绑定诊断（`plan_json/binding_state/...`）。
+
+### 2. 三个方案（需架构一句裁定）
+
+| 方案 | 内容 | 需要什么 | 归属 | 我的判断 |
+|---|---|---|---|---|
+| **甲** | 把"超阈值"落到 gate3 **已有的 `warn` 决策**上：`decision is WARN and async_if_slow` → 转异步；`async_threshold_ms` 由"必需"降为"可选覆盖" | 一句语义裁定（"预估耗时超阈值" ≡ "gate3 判 warn"）+ 架构给 `async_threshold_ms` 定义或删除 | **W4 改 `edges._should_go_async`，约 1 行** | ✅ **推荐**：零新数据、零编数；且 §7.5:1786 的 async 分支**本来就只在 `warn` 行** —— 语义天然对齐 |
+| **乙** | 坚持毫秒语义 ⇒ 成本→耗时系数 + 标定 | 新配置键 + 新证据列/表 + 标定流程 | 架构 + W1B（迁移）+ W6（标定） | ❌ 事实 3 已否掉：系数跨 327×，不是常数 |
+| **丙** | 不在 gate3 预判，改在 **execute 侧"超时即转后台"拦截**（不预测、只拦截） | §5.4 路由语义改写 | 架构 + W4；W2D 配合出"同步等待超时"的可区分结果 | ⚠️ 工程上最正确（预测不如拦截），但动 §5.4 结构 |
+
+**推荐甲的额外理由**：`GateResult` 的 `decision` **已经**是 gate3 唯一的"轻/重"分类器，`warn` 的定义就是"重到要提示、但允许执行"。再引入一个与 `Total Cost` 强相关、却谁都没定义过的 ms 阈值，等于给同一个判断做两套口径 —— 而它们必然漂移。
+
+### 3. 我落地了什么 / 没落地什么
+
+- **落地**：`reports/w2d/probe_explain_timing_pg.py`（可复跑、只读、ruff clean、`ruff format` clean）+ 本节登记。
+- **未落地**：**未改任何一行他人代码** —— `app/graph/**`、`app/core/contracts.py`、`app/guard/**`、`tests/contract/**` 全未动（甲方案那 1 行属 W4，且需先有架构裁定）。
+- **未开号**：U-96 的编号归架构，我不自开新号。
+
+### 4. 附带发现：🔴-2 的 `SIM117` 是**系统性陷阱**，不是 W4 的笔误
+
+本探针**第一版**同样命中 `SIM117`（嵌套 `with psycopg.connect() / with conn.cursor()`），与 W4
+`reports/w4/probe_feedback_endpoint_pg.py:100` 同因。
+⇒ 只要 CI 跑的是 `backend/` 下 `ruff check .`（**不排除 `reports/**`**），**任何**写成"两个嵌套 `with`"的探针脚本都会挡 CI。
+建议（归 W0/W4，我只出证据）：`ci.yml` 排除 `reports/**`，或 `backend/pyproject.toml [tool.ruff]` 加 `exclude = ["reports"]` —— 逐个手修是治症状。
 
 ---
 

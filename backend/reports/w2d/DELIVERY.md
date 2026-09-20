@@ -45,6 +45,7 @@
 | `tests/unit/test_exec_offline.py` | 25 条（错误分类 N-11 / 指纹 / executor 纯逻辑 / `_bind_dollar_params` 契约） |
 | `tests/integration/test_exec_real_pg.py` | 19 条真 PG（沿用 W1B 模式：无库 skip 不假绿；schema 随机后缀） |
 | `reports/w2d/DELIVERY.md` `reports/w2d/RELAY.md` | 本文件 + 逐窗口转述件 |
+| `reports/w2d/probe_explain_timing_pg.py` | **2026-09-18 追加**：U-96 判据实验探针（可复跑、只读、不写库）—— 钉死"07 §7.5 规定的 `EXPLAIN (FORMAT JSON)` 不产出任何耗时字段" + "cost→ms 系数跨 327× 不成立"。见 RELAY 第一节 / DELIVERY §8 |
 
 ---
 
@@ -172,6 +173,8 @@ P0 接线的是**语义包 mask_rules 覆盖路径**（`bundle.policy()["mask_ru
 **无新增编号请求。** 本窗口范围内的所有问题均在交付前修复，无遗留未决项需要开号。
 （记忆约定：W1A/W1B 区间已用尽，下一可用号 = U-54；本窗口未占用。）
 
+> **2026-09-18 补充**：回应 🔴-6 时**亦未开新号** —— `U-96` 已由 W4 登记，其编号与裁定归架构。详见 §8。
+
 ---
 
 ## 7. 门禁复跑命令（`cd backend`，真 PG/Redis 在位）
@@ -182,3 +185,24 @@ lint-imports                       # ⚠️ 不要写 python -m importlinter.cli
 ruff check app/exec app/mask tests/unit/test_exec_offline.py tests/unit/test_mask_engine.py tests/unit/test_type_normalization.py tests/integration/test_exec_real_pg.py
 mypy app/exec app/mask
 ```
+
+---
+
+## 8. U-96 回执（2026-09-18 追加，回应 W7 🔴-6）
+
+**W7 的交办口径**：`GateResult` 加预估延迟载体（U-96），"字段归 W2D"。
+
+**W2D 的结论：口径需要更正 —— 这不是"加个字段"，是"值来源从未定义"。**
+
+| 结论 | 依据（实测，非推断） |
+|---|---|
+| 07 §7.5 规定的 `EXPLAIN (FORMAT JSON)` **不产出任何耗时字段** | 五种查询形状顶层键恒为 `['Plan']`，"含 time 的键"命中 **0**；只有 `Total Cost` / `Plan Rows`（PG 16.15 实测） |
+| 耗时只在 `EXPLAIN (ANALYZE, ...)` 里有，而它**会真执行查询** | 与 §7.5 "只估算不执行"直接冲突；且"执行完再转异步"失去意义 |
+| 代用路线（`Total Cost` × 系数 = 毫秒）**不成立** | `cost/ms` 跨 **1.667 ~ 545.5（327×）**；同 SQL 同进程漂移 1.10~1.32×，跨进程冷调用 2.2× |
+| "字段归 W2D" **不成立** | `GateResult`∈W0（`app/core/contracts.py`，冻结端口面）、`edges.py`∈W4（`app/graph/**`）、`run_gate3`∈W2C（`app/guard/**`）；docs/08 §4.1:297 只给 W2D `app/exec/** + app/mask/**` |
+| 连"标定"路线的数据源也没有 | `cost_ledger` 只记 LLM token 成本；`query_plan` 只记计划/绑定诊断 —— 全仓无 `(estimated_cost → 实测耗时)` 留存 |
+
+**W2D 交出的**：`probe_explain_timing_pg.py`（证据）+ 三方案对比与推荐（甲：`warn` 即"超阈值"，约 1 行改 W4 的 `edges.py`）。
+**W2D 未动的**：一切他人代码（`contracts.py` / `edges.py` / `cost_gate.py` / `tests/contract/**` 零改动）。
+
+> 决策与完整方案表见 `RELAY.md` 第一节。**待架构一句裁定**（甲/乙/丙）后即可落地。
