@@ -195,3 +195,39 @@ print([x.verdict for x in gates.evaluate_gates(pressure=g) if x.gate_id=='G-6'])
 "P95 可能被**截断点**假性做低"。那是 `async_degraded` 的理由；本轮触发降档的理由是
 "**零完成**"，套那句话会让读者以为还有第二种病因。建议改成中性措辞（例如"回执带 `g6_caveat` ⇒ 不判 PASS，
 理由见该字段"）。归属 W6，待架构窗口分配编号。
+
+---
+
+## 十、G-1 的 2 条失败与 W7 无关，是**调用时的 locale** —— 复算证据（09-19）
+
+W6 的 `eval_metrics.json` 里 G-1 记 `FAIL / failed=2, unit+contract passed=2137`。
+本窗口在同一条 `main` 上按**同一收集范围**复算：
+
+| 调用 | 结果 |
+|---|---|
+| `PYTHONIOENCODING=utf-8 python -m pytest tests -q` | **2 failed** / 2137 passed / 6 skipped |
+| `PYTHONUTF8=1 PYTHONIOENCODING=utf-8 python -m pytest tests -q` | **0 failed** / **2139 passed** / 6 skipped |
+
+`2137 + 2 = 2139` 严丝合缝 ⇒ **那 2 条就是同一对**，且与 CommerceQL 的实现无关：
+`tests/unit/test_migration_dsn_hygiene.py::_alembic()` 用 `subprocess.run(..., text=True)`，
+解码编码取父进程 locale（本机 GBK），而 `alembic history` 的输出含中文 UTF-8 字节
+⇒ 读线程抛 `UnicodeDecodeError` ⇒ `result.stdout` 变 `None` ⇒ 断言以 `TypeError` 红。
+归因订正一条：这是 **W1B 的测试文件**（文件头写"归属窗口：W1B"），不是 W0 的 config。
+
+⚠️ 本窗口**不建议**直接把这行改成 PASS，理由是"判据不该取决于谁怎么敲命令"：
+只要 CI runner 的 locale 不是 UTF-8，G-1 就还会红。**先把 W1B 那一行 `encoding="utf-8"` 补上，
+再让 G-1 翻成 PASS** —— 否则门禁的判定结果仍然绑在调用方式上。
+W1B 侧改动就一处（`_alembic()` 的 `subprocess.run` 加 `encoding="utf-8"`），比设环境变量稳。
+本窗口的临时口径：跑全量固定带 `PYTHONUTF8=1`。
+
+顺带两条与本窗口无关但同批测到的：
+- 6 条 `tests/integration/test_retrieval_fts_pg.py` **仍是 skipped**（`permission denied for database ecom`，
+  夹具 DSN 无 DDL 权）⇒ 需要 `RETRIEVAL_TEST_PG_DSN` 指向可建表实例。属 W2B + W1B。
+- `deploy/runbook/README.md` §三-4 已按实测更新：本机 **PG 在跑**、**pgvector 已装**（`vector 0.8.6`），
+  ⇒ W6 在 `eval_metrics.json` 里写的"PG 业务事实表 **0 行** ⇒ RLS **有效性**不可测（0 行对 0 行必然相等 = 假通过）"
+  这条**前置条件现已消除**：`app.order_paid` 494,249 / `traffic_daily` 1,500,556 / `product` 6,000 / `shop` 12
+  （附录 C 全量 1,940,300 行，逐表与沙箱相等）。**G-4 的"未在真实 DB 层验证"可以真测了**，
+  但**必须带身份 GUC**（`set_config('app.tenant_id',…)`，租户号是 `T_A/T_B/T_C` 不是 `tenant_a`），
+  否则 RLS 谓词的第二段取 NULL ⇒ 什么都看不见，那又是一次假象。
+  ⚠️ 另：G-7 的 1/13=7.7% **不是**空库造成的（它的权威侧与被比侧都在同一 SQLite 沙箱内），
+  那是语义层/执行面的真实不一致 ⇒ 不随灌数据变化，归 W2A / W4。
