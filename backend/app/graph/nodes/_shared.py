@@ -233,9 +233,21 @@ def rich_method(port: Any, name: str, *, why: str) -> Callable[..., Any]:
 def candidate_payload(ref: Any) -> dict[str, Any]:
     """`CandidateRef` → state 可存的 `Mapping`（`layer` 缺省写 `None`，不省略键）。"""
     layer = getattr(ref, "layer", None)
+    score = ref.score
+    if score is None:
+        # 上游（检索/缓存）违反了 `CandidateRef.score: float` 契约，给了 None ——
+        # 不该为一个元数据字段把整条请求 500 掉（U-107 同款：上游坏数据 → 降级可见，
+        # 不是 error(INTERNAL)）。与 `candidate_ref` 的 `or 0.0` 对称：按 0 分落地并告警，
+        # 溯源修复归上游数据源。
+        _log.warning(
+            "candidate_payload_null_score",
+            asset_id=str(ref.asset_id),
+            extra_fact="上游给了 score=None 的候选（契约违约）→ 按 0.0 落地，需上游溯源",
+        )
+        score = 0.0
     return {
         "asset_id": str(ref.asset_id),
-        "score": float(ref.score),
+        "score": float(score),
         "layer": None if layer is None else str(getattr(layer, "value", layer)),
     }
 

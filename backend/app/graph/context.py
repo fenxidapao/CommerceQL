@@ -51,7 +51,27 @@ from app.core.contracts import (
     TokenUsage,
 )
 from app.core.enums import ActionTaken, DegradedReason, LatencyKey, TokenKey
+from app.obs.logging import get_logger
 from app.planner.engine import PlannerEngine
+
+_log = get_logger(__name__)
+
+
+def _float_score(ref: Any, score: Any, site: str) -> float:
+    """列级候选分数落地：上游给了 `None`（`score: float` 契约违约）时按 0.0 落地并告警。
+
+    ⚠️ 不为此 500 整条请求（U-107 同款：上游坏数据 → 降级可见，不是 `error(INTERNAL)`）；
+    溯源修复归上游检索/缓存数据源。
+    """
+    if score is not None:
+        return float(score)
+    _log.warning(
+        f"{site}_null_score",
+        ref=str(ref),
+        extra_fact="上游给了 score=None 的候选（契约违约）→ 按 0.0 落地，需上游溯源",
+    )
+    return 0.0
+
 
 __all__ = [
     "GraphDeps",
@@ -246,7 +266,9 @@ class RunContext:
         （`RetrievalResult` 的注释如此），而在线 L4 打的是字段级候选；07 §5.2 的
         字段表里没有列级候选的键（穷举，不得为传值新增）⇒ 与结果行同款的内存通道。
         """
-        self._pending_columns = tuple((str(ref), float(score)) for ref, score in columns)
+        self._pending_columns = tuple(
+            (str(ref), _float_score(ref, score, "hold_columns")) for ref, score in columns
+        )
 
     def take_columns(self) -> tuple[tuple[str, float], ...]:
         columns = self._pending_columns or ()

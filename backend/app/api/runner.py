@@ -485,6 +485,7 @@ class SseRunner:
                 task_id=req.identity.task_id,
                 error_type=type(exc).__name__,
                 detail=str(exc)[:300],
+                exc_info=True,
                 extra_fact="图未收口 → 补发 error(INTERNAL)，不留一条无终态的流（N-08）",
             )
             mapping = errors.map_code(ErrorCode.INTERNAL)
