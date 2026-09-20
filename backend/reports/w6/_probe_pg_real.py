@@ -183,6 +183,96 @@ async def probe_pg() -> dict:
                     out["app_ro_non_superuser_with_policies"] = f"ERR {type(exc).__name__}"
         except Exception as exc:
             out["app_ro"] = f"UNREACHABLE {type(exc).__name__}: {exc}"
+
+        # ---- 带租户上下文的 RLS 有效性（评测真正关心的那一面）----
+        # ⚠️ 这一段的由来：上一版只 count 了视图就报告"PG 业务事实表 0 行 ⇒ 不可测"。
+        #    实测**那句结论的成因写错了**：基表里有 200 万行，视图返 0 行是因为
+        #    `p_*_tenant` 策略里 `current_setting('app.shop_ids', true) = ''` 这一支在
+        #    GUC **未设**时取到 NULL ⇒ 整条策略恒 false（视图按**视图属主**求策略，
+        #    所以连绕开 RLS 的属主连接也一样返 0 行）。也就是"我没设上下文"被写成了
+        #    "环境没数据" —— 正是 §17.4 要防的那类叙述。
+        try:
+            tenants = [
+                r[0] for r in await (await conn.execute(
+                    'select distinct tenant_id from "app"."order_paid" order by 1'
+                )).fetchall()
+            ]
+            out["tenants_in_data"] = tenants
+            TENANT_SCOPED = {
+                "v_order_paid": "order_paid", "v_order_refund": "order_refund",
+                "v_traffic_daily": "traffic_daily", "v_product": "product",
+                "v_shop": "shop", "v_campaign": "campaign",
+            }
+            scoped_views = [v for v in pg_views if v.removeprefix("v_") in set(TENANT_SCOPED.values())]
+            ro = await psycopg.AsyncConnection.connect(RO_DSN, autocommit=True)
+            per_tenant: dict[str, dict[str, int | str]] = {}
+            async with ro:
+                for ten in tenants:
+                    await ro.execute("select set_config('app.tenant_id', %s, false)", (ten,))
+                    await ro.execute("select set_config('app.shop_ids', '', false)")
+                    res: dict[str, int | str] = {}
+                    for v in scoped_views:
+                        try:
+                            cur = await ro.execute(f'select count(*) from "app"."{v}"')
+                            res[v] = (await cur.fetchone())[0]
+                        except Exception as exc:
+                            res[v] = f"ERR {type(exc).__name__}"
+                            await ro.rollback()
+                    per_tenant[ten] = res
+                # 负对照 A：另开一条**从未 set_config 过**的连接 ⇒ 复现上一版那个 0 行的成因。
+                # （PG 没有 `reset_config(text, bool)` 这个函数，只有 `set_config` + SQL `RESET`，
+                #   所以要用新会话，而不是在同一条连接上"撤销"。）
+                if tenants:
+                    fresh = await psycopg.AsyncConnection.connect(RO_DSN, autocommit=True)
+                    async with fresh:
+                        try:
+                            cur = await fresh.execute(
+                                "select set_config('app.tenant_id', %s, false)", (tenants[0],))
+                            await cur.fetchone()
+                            cur = await fresh.execute('select count(*) from "app"."v_order_paid"')
+                            out["rls_negative_no_context"] = (await cur.fetchone())[0]
+                        except Exception as exc:
+                            out["rls_negative_no_context"] = f"ERR {type(exc).__name__}"
+                    # 负对照 B：设一个数据里不存在的租户 ⇒ 也应 0 行（不泄露也不凭空造数）。
+                    await ro.execute("select set_config('app.tenant_id', 'T_NOT_A_TENANT', false)")
+                    try:
+                        cur = await ro.execute('select count(*) from "app"."v_order_paid"')
+                        out["rls_negative_unknown_tenant"] = (await cur.fetchone())[0]
+                    except Exception as exc:
+                        out["rls_negative_unknown_tenant"] = f"ERR {type(exc).__name__}"
+            out["rls_per_tenant_view_counts"] = per_tenant
+            # 带上下文的可见数才是评测面 ⇒ 覆盖 pg_view_counts，零上下文那份另存反证。
+            out["pg_view_counts_no_context"] = dict(out["pg_view_counts"])
+            out["pg_view_counts"] = {
+                **out["pg_view_counts_no_context"],
+                **{
+                    v: sum(
+                        x for x in (per_tenant.get(t, {}).get(v) for t in per_tenant)
+                        if isinstance(x, int)
+                    )
+                    for v in scoped_views
+                },
+            }
+            out["pg_view_counts_scope"] = (
+                "`pg_view_counts` = 角色 `app_ro` 在 set_config('app.tenant_id', 各租户) + "
+                "set_config('app.shop_ids','') 下的可见行数**跨租户求和**；"
+                "零上下文的读法（租户域视图一律 0 行）保留在 `pg_view_counts_no_context`"
+            )
+            # 跨租户不重不漏的机器判据：各租户可见数之和 == 属主看到的基表总数。
+            out["rls_partition_check"] = {
+                v: {
+                    "sum_over_tenants": out["pg_view_counts"][v],
+                    "owner_total": out["pg_row_counts"].get(TENANT_SCOPED.get(v, v), -1),
+                }
+                for v in scoped_views
+            }
+            out["rls_partition_ok"] = all(
+                c["sum_over_tenants"] == c["owner_total"]
+                for c in out["rls_partition_check"].values()
+            )
+        except Exception as exc:
+            out["rls_effectiveness"] = f"UNREACHABLE {type(exc).__name__}: {exc}"
+
     return out
 
 

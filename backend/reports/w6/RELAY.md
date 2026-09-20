@@ -1,6 +1,6 @@
 # W6 → 其他窗口的转述单（RELAY）
 
-窗口：W6 · 日期：2026-09-18
+窗口：W6 · 首轮：2026-09-18 / 第二轮：2026-09-20（G-6 接 W7 的 U-106 口径 + PG 事实复测）
 "要谁改哪一行"尽量写到**具体函数 + 具体证据文件**，不接受"评测没跑通"这种无法执行的描述。
 标 ★ = **没有它对应门禁就永远拿不到可信读数**。
 
@@ -23,6 +23,7 @@
 | A7 | **`eval/` 不在 CI 的 lint 与 import-linter 覆盖范围内** | `ci.yml` 的 ruff/mypy 步 `working-directory: backend`，`.importlinter` 也从 `backend/` 跑 ⇒ 根目录 `eval/` 的 18 条 ruff 违规（全在 W1A 的 `build_*.py` / `case_library.py`）与本窗口的边界契约**都不会被 CI 看见**。本窗口靠 `backend/tests/eval/test_eval_boundary.py` 自兜。建议：要么给 `eval/` 建 lint job + 契约，要么把 `eval/` 迁入 `backend/`（后者动 W1A 的路径，需裁决）|
 | A8 | 07 §17.4 缺口表只列了 5 行，本窗口实测到 **8 行** | 多出的 3 行：PG 方言表达式、执行层驱动（`PgSqlExecutor` 连接治理面）、LLM 出站（§17.2 匣带）。请回写 §17.4，否则下一轮有人按 5 行核对以为本窗口"多加了假行"|
 | A9 | **`*.log` 被 `.gitignore:47` 全局忽略 ⇒ 跑批日志天然不入库，但它是最自然的证据件** | 本窗口有两处结论只能靠日志佐证（全量套件的 2 failed / 6 skipped 明细、live 批次的逐次调用），推到远端后接收方 `git clone` 拿不到 ⇒ "见日志"变成空引用。请定一条约定：① `backend/reports/*/` 下的 `.log` 例外纳入版本库，或 ② 全窗口统一"跨窗口引用只允许引用已入库的 JSON 产物 + 可复算命令"。本窗口暂按 ② 自查（G-1 读数已落 `eval_metrics.json` 的 `gates[].measured`，O1/O5 里的日志仅作本机补充，并附了复算命令）|
+| A10 ★ | **G-6 的 P95 分母到底含不含"被限流/被拒的请求"**（W7 的 U-106 把口径改成准入样本，规格没写） | §17.3 只写"P95 延迟 ≤ 8s"。W7 现在给的 `latency_ms.p95` 只在 HTTP 2xx 上算，429 单列 `admission` ⇒ 同一批数据会有两个 P95，达标结论可能相反（本窗口的测试用例就是照这个形状造的：准入 5.2s 达标 / 全请求 12s 超标）。请裁决三选一：① G-6 按**全请求**判（被拒也是用户经历到的延迟）；② 按**准入**判，另立容量门禁管 429 比例；③ 两个都要，取较严者。在裁决前本窗口的做法：有全请求数就按全请求判，只有准入口径时**不判 PASS**（读数里显名分母）|
 
 ---
 
@@ -93,10 +94,12 @@
 
 | # | 要什么 | 现状与回执 |
 |---|---|---|
-| P1 ★ | **往 PG 灌入与 `data/ecom_sandbox.db` 同规模的业务数据** | 本窗口订正上一版错判（原来只查了一条 DSN）。实测：`PostgreSQL 16.15`、alembic `0005`、24 表 + 8 视图、6 条 `p_<table>_tenant` RLS 策略且 6 张表 `FORCE ROW LEVEL SECURITY`、`app_ro` 可读视图，**但业务事实表 0 行** vs 沙箱 **2,023,933 行**。⇒ RLS **有效性**与 PG 侧结果集等价仍不可测（0 行对 0 行必然相等 = 假通过）。G-3/G-4 的两行缺口表都等这一件事 |
+| P1 ✅ **已满足（2026-09-20 复测）**：往 PG 灌入与 `data/ecom_sandbox.db` 同规模的业务数据 | 首轮我报的是「业务事实表 0 行」——那句**结论对了但成因写错了**（见 P6）。本轮带租户上下文复测：`app` 六张租户域基表 **2,024,017 行**，§C.4.3 那五个事实关系求和 = **2,023,933 = 沙箱同数**（逐关系等量），`app_ro` 逐租户可见数求和恰等于属主总数（`order_paid` 200,000+175,000+119,249）⇒ **不重不漏**，两条负对照（零上下文 / 未知租户）都返 0 行。⇒ 缺口表现在可闭：请保持这份数据**不要 truncate**（复灌要多久只有你知道，而 W6 下一轮要接 PG 执行链）。证据：`backend/reports/w6/_probe_pg_real.json` 的 `rls_per_tenant_view_counts` / `rls_partition_check` / `rls_negative_*` |
 | P2 ★ | **G-6 接口对表回执**：本窗口已按你方 schema 接好读端 | `eval/reporter.loadtest_pressure()` 解析 `w7.loadtest.receipt/1`（顶层 `schema`/`started_at`/`scenarios[]`，取各场景 `latency_ms.p95` 的**最大值**，任一场景带 `g6_caveat` ⇒ G-6 判 UNVERIFIED 不判 PASS）。**读的路径**：`deploy/loadtest/receipt.json`（你方 `--out` 默认文件名，目录本窗口自选）⇒ 若 W7 要放别处，只需告诉我，或跑 `--loadtest-receipt <路径>`。回执一落地 G-6 自动从 `NOT_AVAILABLE` 变实测值，**不用改任何措辞** |
 | P3 | 关于你方 §七"请 W6 照抄 UNVERIFIED" | 本窗口保留 `NOT_AVAILABLE` 并在同一格引你方报告为"谁欠、去哪查"的证据；语义映射上呈 A5。另外你方 §五 提到"重启会打断 W6 在用的栈"⇒ 本窗口**已停批**，今晚不再有跑批占栈，可随时重启 |
 | P4 | 你方 DELIVERY §六 提到"5 条 I001 在 `tests/eval/`（W6 未提交文件）" | 已修：`cd backend && ruff check .` 现在本窗口文件 0 违规（顺手把 `reports/w6/` 的探针脚本一并清了）。谢谢报出来，没你们这条我会继续把未 lint 的代码交上去 |
+| P5 | 你的 U-106 口径变更**已接**，且那两行**没动** | `eval/reporter.py` 仍逐字比 `schema` 串、**不加未知键校验**：`receipt.json` 新增的 `p95_scope`/`admission`/`rejection_headers`/`latency_ms_all_ms`/`terminal_provenance` 都不在读的路径上，多余键无害 —— 并用 `test_loadtest_pressure_ignores_unknown_keys_and_still_matches_schema_verbatim`（含「版本串改成 `/2` 必须读不出来」的反面对照）把这条兼容性钉死，将来谁想"顺手严格一点"会先撞红。**判定值改为优先取 `latency_ms_all_ms.p95`**（全请求口径）；只有准入口径时**不得判 PASS**（降 UNVERIFIED + 上呈 A10）。复算你的第 3 条：`deploy/loadtest/receipt*.json` **10 份**过真读端 + 真 gates ⇒ `{'UNVERIFIED': 10}`、无一例 PASS（改读端前/后两次都是这个结果），产物 `backend/reports/w6/probe_loadtest_receipts.json` |
+| P6 ★ | **`app.shop_ids` 未设 ⇒ 租户域视图静默返 0 行**（不是报错） | 复测时发现：`p_order_paid_tenant` 等策略含 `current_setting('app.shop_ids', true) = ''` 这一支，GUC **从未 set_config** 时 `current_setting(..., true)` 取到 NULL ⇒ `NULL = ''` 不为真、`shop_id = ANY(string_to_array(NULL,…))` 也不为真 ⇒ **整条策略恒 false** ⇒ 该会话看 `v_order_paid`/`v_product`/`v_shop`/`v_campaign` 一律 0 行。⚠️ 视图是按**视图属主**求策略，所以连绕过 RLS 的属主连接也一样是 0 行 —— 这正是「像空库一样」的形状。请判定这是否是要交付的行为：① `app/exec` 的连接装配是否保证两个 GUC 都设（只设 `app.tenant_id` 不够）；② 若 `''` 才代表"不限店铺"，那"未设"应与"设成空"同义（策略改成 `coalesce(current_setting('app.shop_ids', true), '') = ''`），否则任何漏设 GUC 的消费者都会拿到空结果而毫无异常 ⇒ 这条会被记成"模型答错了"。评测侧我先把两个 GUC 都设上并留负对照 |
 
 ---
 
@@ -104,7 +107,7 @@
 
 | # | 要什么 | 现状 |
 |---|---|---|
-| O1 ★ | **全量套件的 2 条红属于 W0**：`tests/unit/test_migration_dsn_hygiene.py::test_alembic_history_needs_no_dsn`、`::test_upgrade_fails_loudly_when_dsn_missing` | Windows 下 `'gbk' codec can't decode byte 0xae` —— 子进程输出按 locale 解码，中文机器必炸。本窗口**不动别人文件**，只报：全量套件 2 failed / 2137 passed / 6 skipped / 113s（入库读数 = `eval_metrics.json` 的 `gates[G-1].measured`；明细日志 `_full_pytest_w6.log` 只在本机，`.log` 不入库见 A9。复算：`cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest -q`）。G-1 因这两条恒 FAIL ⇒ 在 W0 修好之前，G-1 无法给"全 P0 通过"的真读数，请优先 |
+| O1 ✅ **已关闭（2026-09-20 复测）** | 全量套件的 2 条红属于 W0：`tests/unit/test_migration_dsn_hygiene.py::test_alembic_history_needs_no_dsn`、`::test_upgrade_fails_loudly_when_dsn_missing` | 首轮是 `'gbk' codec can't decode byte 0xae'`（子进程输出按 locale 解码）⇒ G-1 恒 FAIL。本轮重跑：**0 failed / 2160 passed / 6 skipped（102s）**⇒ W0 已修，G-1 自动转 PASS（`eval_metrics.json` 的 `gates[G-1].measured`）。谢谢收口；本窗口没动你们任何文件 |
 | O2 | allowlist 端口形状（同 C4） | 评测侧双形状视图是**适配器**，不是修复；正解是端口给第二个方法或闸门自己从扁平派生 |
 | O3 | `.importlinter` 增加 eval 契约（见 A7） | 本窗口的"评测不得被生产 import""评测不得重抄闸门"目前只有自家测试守着，CI 看不见 |
 | O4 | `lint-imports` 在 GBK 控制台下崩溃，**已单变量定位**：罪魁是 Python 标准流编码，不是缓存 | 复现矩阵（`backend/` 目录，`.venv/Scripts/lint-imports.exe`）：① 无 `PYTHONUTF8` + 默认 cache → 抛 `'gbk' codec can't decode byte 0xae in position 129`，真实退出码 **1**；② 无 `PYTHONUTF8` + `--no-cache` → 同样崩 ⇒ `--no-cache` 与此无关；③ `PYTHONUTF8=1` + 默认 cache → `Contracts: 4 kept, 0 broken.`，退出码 0。⇒ 两条请求：把 `PYTHONUTF8=1` 写进环境坑清单（并顺手查 `ci.yml` job 的默认 locale）；另记一条骗人之处 —— 本窗口第一次把它读成"exit 0"，是因为命令接了 `\| tail`，管道吞掉了退出码。**任何"崩溃却看着像通过"的排查都请先去掉管道再取 `$?`** |
@@ -119,6 +122,9 @@
 3. 匣带覆盖：`eval/cassettes/w6_batch.jsonl` 只有本轮 20 题（48 次调用）。prompt 或时间语义一变就是 miss ⇒ 重新录制，**不要在评测里回退到真网络**。
 4. `sandbox_dialect_gap` 目前只有归类没有正样本（本轮 0 条）⇒ 需要在沙箱上跑 `date_trunc` / `::numeric` / `FILTER (WHERE)` 的对照用例来证明这条归因真的会亮。
 5. `_has_result_set` 的历史低估已修（`reporter.py:270`）；`terminal_event` 与 `outcome` 两个轴仍靠 `_terminal()` 合并，下一轮考虑拆成两列展示。
+6. **把 PG 执行链接进来**（现在是本窗口最大的剩余缺口）：`PgSqlExecutor` + 两个 GUC 进 `runner.py`，并把探针的 `rls_partition_ok` 接成 `cross_tenant.pg_rls_verified`。G-4 现在**故意**仍写"未在真实 DB 层验证"——判据只到"策略对原始 SQL 阅读器有效"，不等于"我们的链路在 PG 上隔离正确"，不许提前吃这条绿灯。
+7. **G-6 的收紧点**：A10 一旦裁决，`gates.py` 里"只有准入口径 ⇒ 不判 PASS"这条要么删掉（口径定为准入）、要么保留并注明依据。别让这段逻辑变成没人知道的私人偏好。
+8. **产物去绝对路径**：`reporter._rel()` 已用于回执来源；剩 `meta.run_config`（`runner.py` 落盘）与 `consistency_17_6.…artifacts.paths` 两处仍是本机绝对路径。
 
 ---
 
@@ -145,3 +151,5 @@
 | 两次把"只打印计划"当成跑完的批次 | `runner.py` 不带 `--yes` 时 exit 0 只输出计划 | 过程纪律：**只报实测**，日志里那句"未带 --yes：只打印计划，不执行。"就是判据 |
 | 本单初稿 B1 的因果句"`v_order_paid` 已预筛 ⇒ 加不加行数一样" | **没做过的实验**。SQLite 沙箱里 `v_order_paid` 是实体表，非 paid 行 74,173 条确实存在；真原因是这些行 `pay_time` 全为 NULL，所以只有"带 `pay_time` 边界"时冗余，无时间边界时差 **15.4%** | 补测后 B1/A1 措辞已换成可复算的 `attribution.steps[].delta_vs_prev`；教训：**因果句要么有实验要么不写** |
 | `lint-imports` 崩溃被记成"exit 0" | 真实退出码是 1；是命令尾的 `| tail` 吞掉了 `$?` | 已单变量定位（编码 vs 缓存，见 O4）。排查"崩了却像通过"时先去管道再取退出码 |
+| 首轮入库的 `_probe_pg_real.json` 写着"PG 业务事实表 0 行 ⇒ 不可测" | **数字是真的，成因是假的**：探针没设 `app.shop_ids` ⇒ 策略恒 false ⇒ 视图恒 0 行；同一时刻属主侧基表已有 200 万行 | 带上下文复测 + 两条负对照（见 P1/P6），并重录产物；教训：**"数到 0"要先问"是不是我没给它看见的条件"** |
+| 照抄 W7 的"十份回执全 UNVERIFIED" | 跨窗口声明不能当自己的读数用（读端刚被我改过） | 自建 `probe_loadtest_receipts.py` 真跑一遍（10 份，改前/改后各一次，`{'UNVERIFIED': 10}`）才写进 §4.6 |

@@ -132,12 +132,12 @@
     ],
     "pg_row_counts": {
       "asset": 8,
-      "audit_log": 0,
+      "audit_log": 70,
       "audit_log_supplement": 0,
-      "campaign": 0,
+      "campaign": 84,
       "cost_ledger": 0,
       "default_predicate": 2,
-      "dim_date": 0,
+      "dim_date": 730,
       "dimension": 6,
       "embed_doc": 197,
       "feedback": 2,
@@ -145,26 +145,26 @@
       "gold_query": 0,
       "join_path": 10,
       "metric_def": 9,
-      "order_paid": 0,
-      "order_refund": 0,
+      "order_paid": 494249,
+      "order_refund": 23116,
       "policy": 2,
-      "product": 0,
+      "product": 6000,
       "query_plan": 0,
-      "region": 0,
+      "region": 31,
       "semantic_bundle": 1,
-      "shop": 0,
+      "shop": 12,
       "synonym": 105,
-      "traffic_daily": 0
+      "traffic_daily": 1500556
     },
     "pg_view_counts": {
-      "v_campaign": 0,
-      "v_dim_date": 0,
-      "v_order_paid": 0,
-      "v_order_refund": 0,
-      "v_product": 0,
-      "v_region": 0,
-      "v_shop": 0,
-      "v_traffic_daily": 0
+      "v_campaign": 84,
+      "v_dim_date": 730,
+      "v_order_paid": 494249,
+      "v_order_refund": 23116,
+      "v_product": 6000,
+      "v_region": 31,
+      "v_shop": 12,
+      "v_traffic_daily": 1500556
     },
     "rls_policies": [
       {
@@ -395,7 +395,78 @@
     "app_ro_non_superuser_with_policies": [
       "off",
       6
-    ]
+    ],
+    "tenants_in_data": [
+      "T_A",
+      "T_B",
+      "T_C"
+    ],
+    "rls_negative_no_context": 0,
+    "rls_negative_unknown_tenant": 0,
+    "rls_per_tenant_view_counts": {
+      "T_A": {
+        "v_campaign": 28,
+        "v_order_paid": 200000,
+        "v_order_refund": 9444,
+        "v_product": 2000,
+        "v_shop": 5,
+        "v_traffic_daily": 600178
+      },
+      "T_B": {
+        "v_campaign": 28,
+        "v_order_paid": 175000,
+        "v_order_refund": 8130,
+        "v_product": 2000,
+        "v_shop": 4,
+        "v_traffic_daily": 525196
+      },
+      "T_C": {
+        "v_campaign": 28,
+        "v_order_paid": 119249,
+        "v_order_refund": 5542,
+        "v_product": 2000,
+        "v_shop": 3,
+        "v_traffic_daily": 375182
+      }
+    },
+    "pg_view_counts_no_context": {
+      "v_campaign": 0,
+      "v_dim_date": 730,
+      "v_order_paid": 0,
+      "v_order_refund": 0,
+      "v_product": 0,
+      "v_region": 31,
+      "v_shop": 0,
+      "v_traffic_daily": 0
+    },
+    "pg_view_counts_scope": "`pg_view_counts` = 角色 `app_ro` 在 set_config('app.tenant_id', 各租户) + set_config('app.shop_ids','') 下的可见行数**跨租户求和**；零上下文的读法（租户域视图一律 0 行）保留在 `pg_view_counts_no_context`",
+    "rls_partition_check": {
+      "v_campaign": {
+        "sum_over_tenants": 84,
+        "owner_total": 84
+      },
+      "v_order_paid": {
+        "sum_over_tenants": 494249,
+        "owner_total": 494249
+      },
+      "v_order_refund": {
+        "sum_over_tenants": 23116,
+        "owner_total": 23116
+      },
+      "v_product": {
+        "sum_over_tenants": 6000,
+        "owner_total": 6000
+      },
+      "v_shop": {
+        "sum_over_tenants": 12,
+        "owner_total": 12
+      },
+      "v_traffic_daily": {
+        "sum_over_tenants": 1500556,
+        "owner_total": 1500556
+      }
+    },
+    "rls_partition_ok": true
   },
   "parity": {
     "relations": [
@@ -409,7 +480,7 @@
       {
         "rel": "audit_log",
         "sqlite": "-",
-        "pg": 0,
+        "pg": 70,
         "sqlite_kind": "-",
         "pg_kind": "table"
       },
@@ -423,7 +494,7 @@
       {
         "rel": "campaign",
         "sqlite": "-",
-        "pg": 0,
+        "pg": 84,
         "sqlite_kind": "-",
         "pg_kind": "table"
       },
@@ -444,7 +515,7 @@
       {
         "rel": "dim_date",
         "sqlite": "-",
-        "pg": 0,
+        "pg": 730,
         "sqlite_kind": "-",
         "pg_kind": "table"
       },
@@ -507,14 +578,14 @@
       {
         "rel": "order_paid",
         "sqlite": "-",
-        "pg": 0,
+        "pg": 494249,
         "sqlite_kind": "-",
         "pg_kind": "table"
       },
       {
         "rel": "order_refund",
         "sqlite": "-",
-        "pg": 0,
+        "pg": 23116,
         "sqlite_kind": "-",
         "pg_kind": "table"
       },
@@ -528,7 +599,7 @@
       {
         "rel": "product",
         "sqlite": "-",
-        "pg": 0,
+        "pg": 6000,
         "sqlite_kind": "-",
         "pg_kind": "table"
       },
@@ -542,7 +613,7 @@
       {
         "rel": "region",
         "sqlite": "-",
-        "pg": 0,
+        "pg": 31,
         "sqlite_kind": "-",
         "pg_kind": "table"
       },
@@ -556,7 +627,7 @@
       {
         "rel": "shop",
         "sqlite": "-",
-        "pg": 0,
+        "pg": 12,
         "sqlite_kind": "-",
         "pg_kind": "table"
       },
@@ -570,71 +641,71 @@
       {
         "rel": "traffic_daily",
         "sqlite": "-",
-        "pg": 0,
+        "pg": 1500556,
         "sqlite_kind": "-",
         "pg_kind": "table"
       },
       {
         "rel": "v_campaign",
         "sqlite": 84,
-        "pg": 0,
+        "pg": 84,
         "sqlite_kind": "table",
         "pg_kind": "view"
       },
       {
         "rel": "v_dim_date",
         "sqlite": 730,
-        "pg": 0,
+        "pg": 730,
         "sqlite_kind": "table",
         "pg_kind": "view"
       },
       {
         "rel": "v_order_paid",
         "sqlite": 494249,
-        "pg": 0,
+        "pg": 494249,
         "sqlite_kind": "table",
         "pg_kind": "view"
       },
       {
         "rel": "v_order_refund",
         "sqlite": 23116,
-        "pg": 0,
+        "pg": 23116,
         "sqlite_kind": "table",
         "pg_kind": "view"
       },
       {
         "rel": "v_product",
         "sqlite": 6000,
-        "pg": 0,
+        "pg": 6000,
         "sqlite_kind": "table",
         "pg_kind": "view"
       },
       {
         "rel": "v_region",
         "sqlite": 31,
-        "pg": 0,
+        "pg": 31,
         "sqlite_kind": "table",
         "pg_kind": "view"
       },
       {
         "rel": "v_shop",
         "sqlite": 12,
-        "pg": 0,
+        "pg": 12,
         "sqlite_kind": "table",
         "pg_kind": "view"
       },
       {
         "rel": "v_traffic_daily",
         "sqlite": 1500556,
-        "pg": 0,
+        "pg": 1500556,
         "sqlite_kind": "table",
         "pg_kind": "view"
       }
     ],
     "pg_reachable": true,
-    "pg_business_fact_rows": 0,
+    "pg_business_fact_rows": 2023933,
     "sqlite_business_fact_rows": 2023933,
-    "pg_rls_measurable_with_real_data": false,
+    "pg_rls_measurable_with_real_data": true,
     "pg_rls_policies_n": 6,
     "pg_rls_forced_relations": [
       "campaign",
@@ -644,6 +715,6 @@
       "shop",
       "traffic_daily"
     ],
-    "verdict": "PG 可达且 RLS 策略在位，但业务事实表为空 ⇒ PG 侧只能验**结构/权限面**，结果集等价与 RLS 有效性仍不可测"
+    "verdict": "PG 有事实数据 ⇒ 可评估把评测主链路切到 PG"
   }
 }
