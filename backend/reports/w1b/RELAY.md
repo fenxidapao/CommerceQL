@@ -797,4 +797,47 @@ W2B 的机制是对的，缺的只是一个 DSN **约定**（不是"权限机制
 **未动**：`tests/contract/test_obs_audit_contract.py`（W0/W7 文件，我只给复核意见）、
 `deploy/**`、`app/core/config.py`、`app/api/routers/health.py`、`app/obs/metrics.py`。
 
+### 13.12 门禁读数（本轮改动后实测）
+
+| 门禁 | 读数 |
+|---|---|
+| `ruff check .`（我改的 4 个文件单跑） | **All checks passed!** ✅ |
+| `ruff check .`（全目录） | **1 error —— 不是我的文件**，见 13.13 |
+| `mypy app` | **Success: no issues found in 146 source files** ✅ |
+| `lint-imports` | **exit 0**（契约保持） ✅ |
+| `pytest`（全量） | **2140 passed / 6 skipped / 0 failed / 1 warning**（143s）✅ |
+
+6 个 skip 就是 §13.8 的那 6 条（本地无 `RETRIEVAL_TEST_PG_DSN`，**属预期**，非缺陷）。
+提交 `1c26047`，已推：远端 `main = 1c26047`（`git ls-remote` 实测）。
+
+### 13.13 ⚠️ 两条**不在我域**但会挡别人的发现（请转对应窗口）
+
+**① 🔴 `ruff check .` 现在是红的 → CI 会被挡（整仓级）**
+
+```
+reports/w4/probe_feedback_endpoint_pg.py:100:5: SIM117
+  Use a single `with` statement with multiple contexts instead of nested `with` statements
+```
+
+归属 = **W4**（`6863fdc` "T5.3 POST /feedback 接线"）。CI 的 ruff 步骤是
+`.github/workflows/ci.yml:319-321`：`working-directory: backend` + `ruff check .`
+—— 不排除 `reports/**`，所以这条**会让 `ruff/mypy` job 红**。
+**当前远端 `main` 已经是这个状态**（`6863fdc` 早已推上去），不是我这一轮引入的，
+但按上次 W0 §9.2 的判例，它属"挡一切推送"级别。我**没有**动 W4 的文件（归属纪律），
+一行机械修复，W4 授权我改或自己改都行。
+
+**② 🟠 `--basetemp=.wNtmp` 这个惯例是个陷阱（我踩了，已清理）**
+
+`tests` 的收尾会被 harness 的 safe-delete 守卫杀掉（`SAFE_DELETE_BULK_CONFIRM_REQUIRED`），
+于是 `--basetemp=.w1btmp` 留下的目录**留在仓库里**。而
+`backend/pyproject.toml` 的 `[tool.ruff]` **没有 `exclude`**、`.gitignore` 也没有 `*tmp` 规则
+
+⇒ 紧接着的 `ruff check .` 会把 pytest 的夹具产物当代码扫，吐出一堆
+`F821 Undefined name payload / cs / render`，**看着像代码坏了，其实全是临时文件**。
+第一次跑门禁时我就被这个骗了一次（`tail` 只看到"Found 1 error"，以为只有一条）。
+
+**建议（属 W0 的 `pyproject.toml` / `.gitignore`，我不动）**：
+`[tool.ruff]` 加 `exclude = [".w*tmp", ".w*btmp"]`，`.gitignore` 加 `.w*tmp` ——
+否则每个窗口都会周期性地踩一次，而且**症状具有误导性**。
+
 
