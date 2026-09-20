@@ -143,6 +143,16 @@ PID 1 在不用 `exec`、不加监督进程的前提下**拿不到**服务进程
    `w7load-api` 停在 `Exited (143)`（drain 演练的正常出口）；`commerceql-pgbouncer-1` 在跑但应用角色进不去；
    ⚠️ **灌进共享 PG 的 1,940,300 行合成数据没有回滚** —— 它是 §16.5 复现的前置，也是 W6 现在可能在读的同一个库。
    **要不要清、什么时候清，属主流程决定**，本窗口不擅自动别人在用的库（`truncate` 在这儿不可逆）。
+6. **本轮对着当前代码复核自己发布过的结论，订正三处**（都写在原处，不留旧版误导）：
+   ① `deploy/loadtest/README.md` §四 的"async 截断点会压低 P95"这条陷阱，**在当前构建里不可达** ——
+   `_should_go_async()` 因缺预估延迟载体恒 `False`（`edges.py:329`、`runner.py:51` 自证，且有契约用例钉住）。
+   ⇒ 含义变了：本轮十份回执 `async_degraded=0` 是**预期结果**而非"恰好没触发"；`--no-async` 仍保留（载体一接上就复现）。
+   ② RELAY 条目 6 原写"`Outcome.SWITCHED_TO_ASYNC` 全仓无消费方"——两处都不准：成员在 `ActionTaken`
+   （`enums.py:469`），且有 `test_edges_contract.py` 引用。真实事实是"生产路径不可达"。
+   ③ `observability` 看板屏① 的 `dependency_healthy` 原写"两步都在本窗口权限外"——**登记动作其实在我权限内**
+   （`app/obs/metrics.py:124` 归 W7），只有基数上界要架构给数。原措辞把一个"等一个数"的事写成了"等两个窗口"。
+   ④ 另订正一处**归因**（非本窗口文件）：G-1 那 2 条失败我先前记在"W0 的 GBK"，实际在 **W1B 的
+   `test_migration_dsn_hygiene.py:166`**（`subprocess.run(text=True)` 未指定 encoding）。
 
 ---
 

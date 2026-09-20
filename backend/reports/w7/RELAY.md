@@ -24,7 +24,7 @@
 |---|---|---|---|
 | 4 ★ | `POST /feedback` 出口加一行 `metrics.observe_feedback(reason=...)` | §15.3 的反馈归因面板与 G-1/G-8 的旁证 | `observe_feedback` 无调用点 |
 | 5 | 在纠错/重试处加一行 `metrics.observe_gen_sql_rounds(rounds=...)` | §15.3"SQL 纠错轮次"是效率门禁的输入 | 无调用点；`gen_sql_rounds_total` 属 A 类恒 0 |
-| 6 ★ | **`Outcome.SWITCHED_TO_ASYNC` 无消费方**（全仓只有枚举定义） | 压测的口径问题：`async_if_slow=true` + `async_threshold_ms=8000` 会让超 8s 的查询**转异步并正常终止该流**，而帧上区分不了"真完成"与"转异步" ⇒ `driver.py` 只能靠"`complete` 帧带 `task_id`/`async` 键"的启发式。**G-6 的 P95 因此可能被截断点假性做低**（`压测报告.md` §四）。要么给终止帧加一个可判定字段，要么明确"转异步不计入 P95 分母" | 待架构窗口分配编号 |
+| 6 ★ | **转异步分支当前不可达**（订正本窗口旧措辞：成员是 `ActionTaken.SWITCHED_TO_ASYNC`，`enums.py:469`，不是 `Outcome`；且它**有**用例钉着 —— `tests/contract/test_edges_contract.py`，所以"全仓无消费方"不准确。真正的事实见 `app/api/runner.py:51` 与 `app/graph/edges.py:329`：`_should_go_async` 因缺"预估延迟"载体（`gate3_cost` 的 `GateResult` 无该字段）而**恒 `False`**） | 压测的口径问题：`async_if_slow=true` + `async_threshold_ms=8000` 会让超 8s 的查询**转异步并正常终止该流**，而帧上区分不了"真完成"与"转异步" ⇒ `driver.py` 只能靠"`complete` 帧带 `task_id`/`async` 键"的启发式。**G-6 的 P95 因此可能被截断点假性做低**（`压测报告.md` §四）。要么给终止帧加一个可判定字段，要么明确"转异步不计入 P95 分母" | 待架构窗口分配编号 |
 | 7 | 图节点耗时的显式 hook（或允许 W7 在 `graph` 外层包计时） | `stage_duration_seconds` 目前由 W7 的中间件**从 SSE `stage` 帧反推** ⇒ 只有"发过 stage 帧的阶段"有数，节点内部耗时看不到 | 现在可用但口径受限 |
 
 ---
@@ -231,3 +231,37 @@ W1B 侧改动就一处（`_alembic()` 的 `subprocess.run` 加 `encoding="utf-8"
   否则 RLS 谓词的第二段取 NULL ⇒ 什么都看不见，那又是一次假象。
   ⚠️ 另：G-7 的 1/13=7.7% **不是**空库造成的（它的权威侧与被比侧都在同一 SQLite 沙箱内），
   那是语义层/执行面的真实不一致 ⇒ 不随灌数据变化，归 W2A / W4。
+
+---
+
+## 十一、W4 / W1B 修复清单（09-19 逐条对着当前代码核过；行号是今天的，不是抄旧的）
+
+> 用法：每条都给了「落点 / 实测证据 / 建议改法 / 是否需裁决」。**本窗口不动你们目录**，这只是需求单。
+
+### 给 W4（`app/api/**`、`app/graph/**`）
+
+| # | 落点 | 实测证据 | 建议改法 | 需裁决？ |
+|---|---|---|---|---|
+| W4-1 ★ | Redis 调用点：`api/ratelimit.py:43`、`api/state_store.py:87`、`api/deps.py:65`、`cache/session_lock.py:47` 各持一个 `redis.asyncio.Redis` | 停机/压测窗口内 **43 × `unhandled_exception`（`error_type=TimeoutError`，`Timeout connecting to server`，栈在 `asyncio.open_connection`）+ 41 × `http_5xx`**；客户端拿到的是**纯文本 500**，不是 §A.1.4 的 error 帧 | 把 `redis.exceptions.TimeoutError/ConnectionError` 在**边界**上映射成契约内的 `error` 终止帧（带 `code`），别让异常逃到 `ServerErrorMiddleware` | ⚠️ **要**：限流器那条 Redis 挂掉时 fail-open（放行）还是 fail-closed（拒绝）是**安全/可用性取向**，不是我该定的 |
+| W4-2 ★ | `app/graph/nodes/execute.py:90` `_on_failure` | `observe_exec_failure` 全仓**只有一个调用点** = `obs/instrumentation.py:458`，喂的是 `code.removeprefix("SQL_").lower()`；而 `ErrorCode` 里 `SQL_*` **只有 `SQL_SYNTAX_ERROR` 一个**（`enums.py:192`）⇒ `exec_failure_total` 实际**只能取到 `syntax_error` 一个值**，`EXEC_ERROR_CLASSES` 的 9 类里有 **8 类永不可观测**（含 `permission` / `timeout` / `db_unavailable` / `resource_exceeded`） | 在 `_on_failure` 里按 `error.error_class` 直接记一次。⚠️ 注意 `permission` 走 `if` 分支（`execute.py:107`，定 `refuse` 终态）且**不经过** else 里的日志 ⇒ **两个出口都要记**，否则补了也白补 | 否（纯接线）。⚠️ 顺带：`observability/README` §三.2 说"§15.4 第 2 条跨租户无 expr"的根因之一就是这个空维度 |
+| W4-3 | `app/graph/edges.py:322` `_should_go_async`（`edges.py:39` + `api/runner.py:51` 已自证） | 因缺"预估延迟"载体（`gate3_cost` 的 `GateResult` 无该字段）**恒 `False`**，并有 `tests/contract/test_edges_contract.py` 钉住 ⇒ `ActionTaken.SWITCHED_TO_ASYNC` 在生产路径上**不可达** | 若 §5.4 的转异步要真做：给 `GateResult` 加预估延迟字段；**同时**给终止帧加一个可判定标记，别让下游靠"`complete` 帧带 `task_id`"猜 | ⚠️ **要**：这条要不要做属 §5.4 的范围裁决 |
+| W4-4 | §15.3 的「图节点耗时 Histogram `node`(≤20)」 | 全仓无此指标；W7 的 `stage_duration_seconds` 是从 SSE `stage` 帧**反推**的 ⇒ 只有发过 stage 帧的阶段有数，节点内部耗时不可见 | 加节点级计时 hook，或明确允许 W7 在 `graph` 外层包计时（后者我这边能自己做） | 否，但要选一种 |
+| W4-5 | 会话串行锁粒度 | 实测 8 路 × 24 条打**同一真会话**：`409 SESSION_CONFLICT` 仅 4 次，全部 24 条 **6.38s** 收口（mean 1658ms）。若真整轮串行应是 ~40s | 请确认锁的保护范围是否**有意小于一整轮**。若有意 ⇒ 把它写进注释；若无意 ⇒ 是缺陷。**我不替你们下结论** | 否，先要一句答复 |
+
+### 给 W1B（`app/repo/**`、migrations、`app/obs/audit.py`、`tests/unit/test_migration_dsn_hygiene.py`）
+
+| # | 落点 | 实测证据 | 建议改法 | 需裁决？ |
+|---|---|---|---|---|
+| W1B-1 ★ | `tests/unit/test_migration_dsn_hygiene.py:166` 的 `subprocess.run(..., text=True)` | 同一收集范围两种调法：`PYTHONIOENCODING=utf-8` ⇒ **2 failed**/2137 passed；再加 `PYTHONUTF8=1` ⇒ **0 failed**/**2139** passed（`2137+2=2139` 严丝合缝）。`text=True` 用**父进程 locale（GBK）**解码 alembic 的中文 UTF-8 输出 ⇒ 读线程抛异常 ⇒ `result.stdout` 变 `None` ⇒ 断言以 `TypeError` 红 | **就加一个 `encoding="utf-8"`**（比设环境变量稳，CI runner 的 locale 会漂）。⚠️ 危害在失败形态：这条是 DoD④ 的守卫，红成 `TypeError` 长得像测试自己的 bug，容易被顺手删断言 | 否。**W6 的 G-1 正卡在它身上**（见 §十） |
+| W1B-2 ★ | `app/repo/startup_assertions.py:757`（PENDING 只发 WARN 日志） | 三态 PASS/PENDING/FAIL 里 **PENDING 没有任何指标**；活体佐证：真容器冷启动导出的 19 个应用族里**没有一个** `startup_assertion*` 族 | 镜像成 gauge（如 `startup_assertion_state{assertion,status}`）。指标注册表在我这边（`app/obs/metrics.py:124`，`dependency`/`status` 这类键登记**我做得了**），⚠️ 卡点是 §15.3 纪律② 要**架构先给基数上界** ⇒ 请和架构把这 2 个值域定了，我随即接 | ⚠️ **要**（上界数） |
+| W1B-3 ★ | pgbouncer 口令体系 | 镜像生成 `auth_type = md5` + `userlist.txt` **只有 1 个用户**；W1B 的 `app_rw`/`app_ro` 是 **SCRAM** ⇒ `wrong password type`，应用角色**进不去**。另：`AUTH_TYPE: scram` 不是合法值（`FATAL cannot load config` + 重启循环，本轮踩过） | 三选一：给两角色另存 md5 哈希（**降安全**，需你们明确同意）/ userlist 放专用口令（多一处秘密，要定义放哪）/ `auth_type=trust` + 威胁声明。⚠️ 决定前 §16.5 断言③（后端连接 ≤30）**不可判** —— `SHOW POOLS` 只有管理池那一行 | ⚠️ **要**（三选一） |
+| W1B-4 | `tests/contract/test_obs_audit_contract.py` | **本窗口改了你们这个文件一处**：`BOUNDED_ALLOWED_LABELS["rule_id"] == len(AstRule)` → `== len(AstRule) + 1`。理由：取值域是 `(EMPTY_LABEL_VALUE, *AstRule)` = **21**，上界写 20 会按到达顺序**随机丢掉一类拒绝统计** | 请复核；认可就留下，不认可请给替代方案，我改回来 | 否，要一句复核 |
+| W1B-5 | `app.audit_log` 的 RLS | 实测 `relrowsecurity=f`、0 条策略（6 张业务底表倒是 `rls=t` **且** `force=t` 各挂 1 条）⇒ **"RLS 是最终强制边界"对审计表不成立**，它的边界只有 `trg_audit_log_immutable` + `app_rw` 无 UPDATE/DELETE | 要么给审计表补租户策略，要么在文档里把它明确成"审计跨租户可见、只有属主/运维可读"。**别让它停在"两者都不是"** | ⚠️ 要（安全口径） |
+| W1B-6 | 迁移 0001–0005 | `alembic_version=0005`（= head），但 **`query_task` 与 `session` 两张表在任何 schema 下都不存在**（按 `table_name` 全库搜 0 行）。W4 已改用 Redis 承载（`app/cache/keys.py:228`、`reports/w4/RELAY.md:27`） | 二选一：补迁移建表，**或**明确"这两张不落 PG"并同步 07 §12.3 的口径。⚠️ 现状是"文档说建、库里没有"，运维按 §12.3 排查会一路误判 | ⚠️ 要 |
+| W1B-7 | `CHECKPOINT_TTL_DAYS` | 全仓**只有 `app/core/config.py:147` 一处命中**（字段声明本身），**没有任何消费者** ⇒ 7 天 TTL 是装饰 | 要么加清理任务，要么删字段。现状最坏：运维以为 checkpoint 会自动回收（实测已 5,086 行/9.2MB 且在涨） | 否 |
+| W1B-8 | `tests/integration/test_retrieval_fts_pg.py`（6 条） | 至今 **6 skipped**：`permission denied for database ecom`（夹具 DSN 无 DDL 权）⇒ 这批用例**从未执行过** | 给一个可建表的 `RETRIEVAL_TEST_PG_DSN`（建个专用 schema 授权即可）。W2B 已把机制写对，缺的是那个 DSN | 否 |
+| W1B-9 | `app/repo/pools.py:173,191` 注释 | 写"3 个硬依赖 ⇒ 2.0s = 5s÷3"，实际 `READINESS_DEPENDENCIES` 是 **4 个** HARD。并行化落地后预算不再依赖这个差值，**只剩注释错** | 改文案即可 | 否 |
+
+### 一句提醒（两窗口共用）
+
+`MIGRATION_DATABASE_URL` **刻意不进 `deploy/.env`**（`tests/unit/test_migration_dsn_hygiene.py` 扫的是**整个工作区**，连 gitignore 的文件也扫）⇒ 别为了"方便跑迁移"把它写回任何仓库文件，那会直接踩 DoD④ 的 gitleaks 门禁。
