@@ -15,10 +15,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from typing import Any, Final
 
-__all__ = ["GapRow", "build_gap_table"]
+__all__ = ["GapRow", "build_gap_table", "rls_follow_up"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,12 +139,61 @@ _ROWS: Final[tuple[GapRow, ...]] = (
 )
 
 
-def build_gap_table(*, extra_evidence: dict[str, str] | None = None) -> list[dict[str, Any]]:
-    """产出缺口表（可被报告器直接渲染）。`extra_evidence` 用本次 run 的实测值补强指定行。"""
+def _rls_head() -> str:
+    return ("PG 侧 RLS 专项（08 §3.2 v1.2 拆归 W6）。本轮实测订正：上一版写「hostname `pg` "
+            "解析失败 ⇒ 策略/GRANT 一律 UNVERIFIED」，那是**只查了一条 DSN** 的结论 —— "
+            "`tests/integration/**` 默认走 `localhost:5432`，真 PG 16 应答正常。")
+
+
+def rls_follow_up(pg_facts: Mapping[str, Any] | None) -> str:
+    """缺口表 RLS 行"下一步"的**唯一**措辞来源（跟着探测结果走，不写死当前事实）。
+
+    为什么要派生：这一栏原先把"业务事实表全空（0 行）+ 补齐条件 = W7 灌数据"写死在散文里。
+    W7 真把数据灌进来之后，报告里就同时存在"有 200 万行"和"全空"两句话 ——
+    缺口表比判定更容易说谎，因为它读起来像背景。
+    """
+    head = _rls_head()
+    if pg_facts is None:
+        return head + "**本轮未探测真 PG** ⇒ 本行一切结论 UNVERIFIED（未探测 ≠ 不可达），不得引用为通过依据"
+    n_pol = int(pg_facts.get("rls_policies_n", 0))
+    n_forced = len(pg_facts.get("rls_forced_relations") or [])
+    shape = (f"实测现状：{n_pol} 条 `p_<table>_tenant` 策略在位、{n_forced} 张表 "
+             f"`FORCE ROW LEVEL SECURITY`、`app_ro` 可读 `v_*` 视图；")
+    if not int(pg_facts.get("pg_fact_rows", 0)):
+        return head + shape + (
+            f"但 PG 的业务事实表 **0 行**（沙箱 {int(pg_facts.get('sqlite_fact_rows', 0)):,} 行）"
+            "⇒ 策略**存在性**已实测、**有效性**仍不可测（0 行对 0 行必然相等 = 假通过）。"
+            "补齐条件 = 往 PG 灌入与 `data/ecom_sandbox.db` 同规模的数据。"
+            "在此之前本行**不得**被任何门禁引用为通过依据")
+    if not pg_facts.get("rls_partition_ok"):
+        return head + (f"PG 业务事实表已有 {int(pg_facts['pg_fact_rows']):,} 行"
+                       "（沙箱同规模）⇒ 数据面已具备，但本窗口的探针**没有**给出"
+                       "`rls_partition_ok`（逐租户可见数求和 == 属主总数 + 两条负对照）"
+                       "⇒ 有效性**仍未实测**，本行保持不覆盖")
+    return head + shape + (
+        f"PG 业务事实表已有 {int(pg_facts['pg_fact_rows']):,} 行（沙箱 "
+        f"{int(pg_facts.get('sqlite_fact_rows', 0)):,}）⇒ 策略**存在性与有效性均已实测**："
+        "逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。"
+        "⚠️ **但本行仍不构成 G-4 的完整证据**：评测主链路走的是 SQLite TEMP VIEW，"
+        "「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」这一半未接（见 W6 交付 §8）")
+
+
+def build_gap_table(
+    *,
+    extra_evidence: dict[str, str] | None = None,
+    pg_facts: Mapping[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """产出缺口表（可被报告器直接渲染）。
+
+    `extra_evidence` 用本次 run 的实测值补强指定行；`pg_facts` 存在时 RLS 行的
+    `follow_up` 改由 :func:`rls_follow_up` 派生（缺探测 ⇒ 只说"未探测"，绝不复述旧事实）。
+    """
     rows = [asdict(r) for r in _ROWS]
     for row in rows:
         cap = row["capability"]
         for key, value in (extra_evidence or {}).items():
             if key in cap:
                 row["evidence"] = f"{row['evidence']}；本次实测：{value}"
+        if cap.startswith("RLS"):
+            row["follow_up"] = rls_follow_up(pg_facts)
     return rows

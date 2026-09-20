@@ -198,26 +198,63 @@ def evaluate_gates(
         gates.append(Gate("G-6", "P95 延迟 ≤ 8s", "NOT_AVAILABLE",
                           "压测归 W7，本轮未收到回执", "§16.5 压测", no_receipt))
     else:
-        p95 = float(pressure.get("p95_total_ms", -1))
+        admitted_p95 = float(pressure.get("p95_total_ms", -1))
+        all_p95 = pressure.get("p95_all_requests_ms")
+        raw_scope = str(pressure.get("p95_scope") or "")
+        #: U-106 之后 `latency_ms.p95` 的分母是**准入样本（HTTP 2xx）**，429 单列在 `admission`。
+        #: ⇒ 判定值优先取回执自带的**全请求**分位数；只有准入口径时**不得判 PASS**
+        #:   （§17.3 没写分母定义 —— 这处歧义上呈架构裁决（RELAY A10），不由本窗口偷偷选一个）。
+        full_scopes = {"all_requests", "all", "full", ""}
+        judged = float(all_p95) if all_p95 is not None else admitted_p95
+        judged_scope = (
+            "全请求口径 `latency_ms_all_ms`" if all_p95 is not None
+            else (f"准入样本口径 `{raw_scope}`" if raw_scope else "口径未标注 = U-106 之前的回执")
+        )
         src = (f"数据来源 = {pressure.get('source', 'W7')}"
                f"，取数时点 = {pressure.get('as_of', '未记录')}",)
+        notes: list[str] = [
+            *src,
+            f"P95 分母 = {judged_scope} ⇒ 读这行时别默认它是「用户端到端 P95」，"
+            "除非分母那一栏写的就是全请求",
+            f"准入样本 P95 = {admitted_p95:.0f}ms"
+            + (f"；全请求 P95 = {judged:.0f}ms（两者不一致时以全请求判定）"
+               if all_p95 is not None else ""),
+        ]
+        admission = [a for a in (pressure.get("admission") or []) if isinstance(a, Mapping)]
+        notes.append(
+            "准入分桶（回执 `admission`）：" + "；".join(
+                ", ".join(f"{k}={v}" for k, v in sorted(a.items())) for a in admission)
+            if admission else
+            "回执**无** `admission` 分桶 ⇒ 被限流/被拒的请求有多少无从核对（U-106 之前的形状）"
+        )
+        over_budget = judged > THRESHOLDS["G-6_p95_ms"]
         if pressure.get("caveat"):
-            # 超 8s 的查询会转异步并正常终止该流 ⇒ total_ms 的 P95 天然贴近 8s。
-            # 拿这种数判 PASS = 用截断点给自己打分。
+            # 超 8s 的查询会转异步并正常终止该流；0 条真正完成的跑批 p95 也可以 ≤8s。
+            # 拿这种数判 PASS = 用截断点/空分母给自己打分。
             gates.append(Gate(
                 "G-6", "P95 延迟 ≤ 8s",
-                "UNVERIFIED" if p95 <= THRESHOLDS["G-6_p95_ms"] else "FAIL",
-                f"P95 = {p95:.0f}ms", "§16.5 压测（W7 产出）",
-                (*src, f"⚠️ 回执带 `g6_caveat`：{pressure['caveat']} ⇒ P95 可能被截断点假性做低，"
-                       "不判 PASS（判据来自 W7 `driver.py` 的同一字段）"),
+                "FAIL" if over_budget else "UNVERIFIED",
+                f"P95 = {judged:.0f}ms，分母 = {judged_scope}", "§16.5 压测（W7 产出）",
+                (*notes, f"⚠️ 回执带 `g6_caveat`：{pressure['caveat']} ⇒ 该 P95 不可判达标，"
+                         "不判 PASS（判据来自 W7 `driver.py` 的同一字段）"),
+            ))
+        elif all_p95 is None and raw_scope not in full_scopes:
+            gates.append(Gate(
+                "G-6", "P95 延迟 ≤ 8s",
+                "FAIL" if over_budget else "UNVERIFIED",
+                f"P95 = {judged:.0f}ms，分母 = {judged_scope}", "§16.5 压测（W7 产出）",
+                (*notes,
+                 "回执只给了准入口径、没有全请求分位数 ⇒ 本窗口**不判 PASS**："
+                 "§17.3 的 G-6 未规定分母是否含被限流的请求，歧义已上呈架构（RELAY A10）。"
+                 "准入口径达标只说明「被放行并跑起来的请求没超 8s」，不说明「用户请求没超 8s」"),
             ))
         else:
             gates.append(Gate(
                 "G-6", "P95 延迟 ≤ 8s",
-                "PASS" if p95 <= THRESHOLDS["G-6_p95_ms"] else "FAIL",
-                f"P95 = {p95:.0f}ms",
+                "PASS" if not over_budget else "FAIL",
+                f"P95 = {judged:.0f}ms，分母 = {judged_scope}",
                 "§16.5 压测（W7 产出）",
-                src,
+                (*notes, "判定值 = 全请求分位数；准入样本口径只作对照，不参与打分"),
             ))
 
     # ---- G-7 口径一致性 ≥ 95% 且差异 100% 可归因 ----

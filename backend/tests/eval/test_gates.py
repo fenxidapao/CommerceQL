@@ -183,6 +183,60 @@ def test_g6_caveat_does_not_rescue_an_over_budget_p95():
     assert _verdict_of(gt.evaluate_gates(**inputs), "G-6").verdict == "FAIL"
 
 
+def test_g6_zero_completed_caveat_cannot_pass():
+    """W7 新增的最强情形：该场景 0 条真正完成 ⇒ 直接落 caveat（p95 可以 ≤8s 也没用）。
+
+    本窗口的降档只认"caveat 是否非空"，不认具体文案 ⇒ 上游再加第 7 种情形也接得上，
+    但这条测试用它的**原文**钉住"文案改了我们要知道"。
+    """
+    inputs = _all_pass_inputs()
+    inputs["pressure"] = {
+        "p95_total_ms": 7268.4, "source": "W7",
+        "caveat": "本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标",
+    }
+    gate = _verdict_of(gt.evaluate_gates(**inputs), "G-6")
+    assert gate.verdict == "UNVERIFIED"
+    assert any("0 条真正完成" in c for c in gate.caveats)
+
+
+def test_g6_admitted_only_scope_cannot_borrow_a_pass():
+    """U-106：p95 只在准入（2xx）样本上算 ⇒ 分母里根本没有被限流的那些请求。
+
+    这种数即使 ≤8s 也不判 PASS：§17.3 没规定分母含不含 429，本窗口不替架构把这个字填上，
+    而是降到 UNVERIFIED + 上呈 RELAY A10。
+    """
+    inputs = _all_pass_inputs()
+    inputs["pressure"] = {"p95_total_ms": 5200.0, "source": "W7",
+                          "p95_scope": "admitted_http_2xx", "admission": [{"admitted": 90, "rejected_429": 40}]}
+    gate = _verdict_of(gt.evaluate_gates(**inputs), "G-6")
+    assert gate.verdict == "UNVERIFIED"
+    assert any("admitted_http_2xx" in c for c in gate.caveats)
+    assert any("A10" in c for c in gate.caveats)
+
+
+def test_g6_judges_on_the_all_request_percentile_not_the_admitted_one():
+    """假绿的形状：准入 5.2s 达标，但全请求 12s —— 判定必须取全请求 ⇒ FAIL。"""
+    inputs = _all_pass_inputs()
+    inputs["pressure"] = {"p95_total_ms": 5200.0, "source": "W7",
+                          "p95_scope": "admitted_http_2xx", "p95_all_requests_ms": 12000.0}
+    gate = _verdict_of(gt.evaluate_gates(**inputs), "G-6")
+    assert gate.verdict == "FAIL"
+    assert "12000" in gate.measured and "全请求" in gate.measured
+
+
+def test_g6_passes_when_the_all_request_percentile_is_in_budget():
+    """两个口径都齐且全请求达标 ⇒ 可以 PASS，但准入值只作对照写清楚。"""
+    inputs = _all_pass_inputs()
+    inputs["pressure"] = {"p95_total_ms": 9000.0, "source": "W7", "p95_scope": "admitted_http_2xx",
+                          "p95_all_requests_ms": 5000.0,
+                          "admission": [{"admitted": 100, "rejected_429": 3}]}
+    gate = _verdict_of(gt.evaluate_gates(**inputs), "G-6")
+    assert gate.verdict == "PASS"
+    assert "5000" in gate.measured
+    assert any("rejected_429=3" in c for c in gate.caveats), "429 分桶要能被读者核对"
+    assert any("准入样本 P95 = 9000ms" in c for c in gate.caveats)
+
+
 def test_g6_names_the_owing_window_when_no_receipt_arrives():
     """没回执 ≠ 没人在做：把 W7 报告的在位证据写进前置条件，读者能自己去查。"""
     gate = _verdict_of(gt.evaluate_gates(pressure_report="backend/reports/w7/压测报告.md"), "G-6")

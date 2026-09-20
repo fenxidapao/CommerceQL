@@ -523,7 +523,7 @@ def test_replay_batch_still_names_its_recording_provenance(tmp_path):
 
 
 def test_pg_statement_three_branches_never_claim_more_than_measured():
-    """三档措辞各自不许越界：未探测 ≠ 不可达；可达但空表 ≠ RLS 已验证。"""
+    """四档措辞各自不许越界：未探测 ≠ 不可达；可达但空表 ≠ RLS 已验证；有数据 ≠ 有效性已实测。"""
     assert "未探测" in rp.pg_statement(None)
     assert "未探测 ≠ 不可达" in rp.pg_statement(None)
 
@@ -542,6 +542,52 @@ def test_pg_statement_three_branches_never_claim_more_than_measured():
     assert "结构/权限面已实测" in empty and "仍不可测" in empty
     assert "2,023,933" in empty and "0 行" in empty
     assert "0 行对 0 行" in empty, "必须点破「空对空必然相等」这种假通过"
+
+
+def _pg_facts_with_data(**over):
+    base = {"reachable": True, "version": "PostgreSQL 16.15 on x86_64", "alembic_version": "0005",
+            "n_app_tables": 24, "n_app_views": 8, "rls_policies_n": 6,
+            "rls_forced_relations": ["order_paid", "traffic_daily"],
+            "app_ro_visible_objects": 18, "app_ro_reads_view": 494249,
+            "pg_fact_rows": 2023933, "sqlite_fact_rows": 2023933, "rls_partition_ok": False}
+    return {**base, **over}
+
+
+def test_pg_statement_has_data_but_no_effectiveness_evidence():
+    """有数据 ≠ 有效性已实测：探针没给 `rls_partition_ok` 时只能说"在位"。"""
+    got = rp.pg_statement(_pg_facts_with_data())
+    assert "可评估把评测主链路切到 PG" in got
+    assert "有效性已实测" not in got.replace("不到「RLS 有效性已实测」", "")
+    assert "rls_partition_ok" in got, "要告诉读者缺的是哪一个证据"
+
+
+def test_pg_statement_effectiveness_measured_still_not_the_app_path():
+    """四条负对照齐了才允许说"均已实测"，且必须紧跟着"不等于评测走了 PG"。"""
+    got = rp.pg_statement(_pg_facts_with_data(rls_partition_ok=True))
+    assert "存在性与有效性均已实测" in got
+    assert "不等于" in got and "TEMP VIEW" in got
+    assert "PASS" not in got, "措辞里不许混进判定词"
+
+
+def test_gap_table_rls_follow_up_tracks_the_probe_not_the_prose():
+    """§17.4 缺口表 RLS 行的"下一步"必须由探测派生。
+
+    反例就是首轮那份：判定已经改了，缺口表里还写着"业务事实表全空 ⇒ 待 W7 灌数"，
+    于是同一份报告里同时存在"200 万行"和"全空"。缺口表读起来像背景，比判定更容易说谎。
+    """
+    def rls_row(facts):
+        rows = rp.gaps_mod.build_gap_table(extra_evidence={}, pg_facts=facts)
+        return next(r for r in rows if str(r["capability"]).startswith("RLS"))["follow_up"]
+
+    assert "未探测真 PG" in rls_row(None)
+    empty = rls_row(_pg_facts_with_data(pg_fact_rows=0))
+    assert "0 行对 0 行" in empty and "补齐条件" in empty
+    has_data_no_proof = rls_row(_pg_facts_with_data())
+    assert "有效性**仍未实测**" in has_data_no_proof
+    proven = rls_row(_pg_facts_with_data(rls_partition_ok=True))
+    assert "存在性与有效性均已实测" in proven
+    assert "全空" not in proven and "2,023,933" in proven
+    assert proven != empty, "事实变了措辞必须变（否则就是写死的散文）"
 
 
 def _minimal_payload() -> dict:
@@ -702,6 +748,40 @@ def test_loadtest_pressure_propagates_the_async_degraded_caveat(tmp_path):
     assert got["caveat"] == "含 async_degraded 样本", "caveat 丢了 ⇒ gates 会把截断读数判成达标"
 
 
+def test_loadtest_pressure_transports_the_u106_scope_fields(tmp_path):
+    """W7 的 U-106 把 P95 的分母换成准入样本并单列 429 ⇒ 读端必须把口径一起搬走。
+
+    只搬数值不搬口径 = 读端自己把"端到端 P95"这个词说错了，下游无从纠错。
+    """
+    got = rp.loadtest_pressure(_receipt(tmp_path, [
+        {"scenario": "steady", "latency_ms": {"p95": 4200.0}, "p95_scope": "admitted_http_2xx",
+         "admission": {"admitted": 8, "rejected_429": 2}, "rejection_headers": {"429": {"retry-after": 30}},
+         "latency_ms_all_ms": {"p95": 6900.0}, "terminal_provenance": {"intent": 8}},
+    ]))
+    assert got["p95_total_ms"] == 4200.0, "判定用的仍是 schema 里定义的那一个 p95"
+    assert got["p95_scope"] == "admitted_http_2xx"
+    assert got["p95_all_requests_ms"] == 6900.0
+    assert got["admission"] == [{"admitted": 8, "rejected_429": 2}]
+
+
+def test_loadtest_pressure_ignores_unknown_keys_and_still_matches_schema_verbatim(tmp_path):
+    """W7 刻意不升 schema 版本号 ⇒ 我方**不得**加未知键校验，否则接口当场断。
+
+    这条测试钉的是"读端的宽容度"本身：将来有人想'顺手严格一点'，这里先红。
+    """
+    path = _receipt(tmp_path, [
+        {"scenario": "steady", "latency_ms": {"p95": 4200.0}, "brand_new_w7_field": {"x": 1},
+         "another_unknown": [1, 2, 3]},
+    ])
+    got = rp.loadtest_pressure(path)
+    assert got is not None and got["p95_total_ms"] == 4200.0
+    assert got["p95_scope"] is None and got["p95_all_requests_ms"] is None
+    assert got["admission"] == [], "缺字段要落成空/None，不能凭空造一个数"
+    # 反面对照：版本号逐字比对这条**不能**被放宽成前缀匹配。
+    assert rp.loadtest_pressure(_receipt(tmp_path, [{"latency_ms": {"p95": 1.0}}],
+                                         schema="w7.loadtest.receipt/2")) is None
+
+
 @pytest.mark.parametrize("scenarios", [
     [],                     # 四场景一个没跑（W7 本轮的真实状态）
     [{"scenario": "steady", "latency_ms": {"p95": None}}],   # 跑了但零样本
@@ -728,6 +808,8 @@ def test_build_payload_routes_the_receipt_into_g6(tmp_path):
         pressure_report="__nope__.md",
     )
     g6 = next(x for x in p["gates"] if x["gate_id"] == "G-6")
-    assert g6["verdict"] == "PASS" and g6["measured"] == "P95 = 4200ms"
+    assert g6["verdict"] == "PASS"
+    assert g6["measured"] == "P95 = 4200ms，分母 = 口径未标注 = U-106 之前的回执", \
+        "U-106 之后读数必须显名分母：只写数值会让准入 P95 被读成端到端 P95"
     assert p["meta"]["artifacts_present"]["loadtest_receipt"] is True
     assert p["gate_summary"]["all_pass"] is False, "一条 PASS 掩不掉其余 NOT_AVAILABLE"

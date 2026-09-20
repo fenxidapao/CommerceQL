@@ -101,6 +101,20 @@ def _load(path: str | None) -> Any | None:
     return _bootstrap.load_json(path)
 
 
+def _rel(path: str | None) -> str:
+    """报告是**共享产物** ⇒ 里面不该出现本机绝对路径（含用户名/盘符/中文目录）。
+
+    仓库外的路径不硬凑相对形式（`../..` 连三格会让人以为能点开），原样给出并注明。
+    """
+    if not path:
+        return "未记录"
+    try:
+        rel = os.path.relpath(path, _bootstrap.ROOT).replace("\\", "/")
+    except ValueError:      # 跨盘符：relpath 直接抛，不是本仓库能表达的相对路径
+        return f"{path}（仓库外，按绝对路径给出）"
+    return rel if not rel.startswith("..") else f"{path}（仓库外）"
+
+
 def pg_facts(path: str | None = DEFAULT_PG_PROBE) -> dict[str, Any] | None:
     """真 PG 只读探测的结论（`_probe_pg_real.py` 的产物）。没探测 ⇒ `None`。
 
@@ -124,6 +138,11 @@ def pg_facts(path: str | None = DEFAULT_PG_PROBE) -> dict[str, Any] | None:
         "app_ro_reads_view": pg.get("app_ro_can_read_view"),
         "pg_fact_rows": parity.get("pg_business_fact_rows", 0),
         "sqlite_fact_rows": parity.get("sqlite_business_fact_rows", 0),
+        # 有效性（不只是存在性）的证据：本轮探针新增的三项。缺任何一项 ⇒ 缺口表不许说"已实测有效"。
+        "rls_partition_ok": bool(pg.get("rls_partition_ok")),
+        "rls_per_tenant_view_counts": pg.get("rls_per_tenant_view_counts") or {},
+        "rls_negative_no_context": pg.get("rls_negative_no_context"),
+        "rls_negative_unknown_tenant": pg.get("rls_negative_unknown_tenant"),
     }
 
 
@@ -132,8 +151,15 @@ def loadtest_pressure(path: str | None = DEFAULT_LOADTEST_RECEIPT) -> dict[str, 
 
     ⚠️ 取**各场景 p95 的最大值**：§17.3 的「P95 ≤ 8s」是延迟红线，取平均或只取
     steady 一条会让 burst / 配额场景的劣迹隐身。
-    ⚠️ 任一场景带 `g6_caveat`（`async_degraded` 样本）⇒ 整份回执的 P95 不可判达标；
-    降成 UNVERIFIED 的活交给 `gates.py`，本函数只负责如实搬运。
+    ⚠️ 任一场景带 `g6_caveat` ⇒ 整份回执的 P95 不可判达标（W7 的 6 种不可判情形里最强的
+    一种是"该场景 0 条真正完成"）；降成 UNVERIFIED 的活交给 `gates.py`，本函数只负责如实搬运。
+
+    U-106 之后 `latency_ms.p95` 的**population 变了**：只在准入（HTTP 2xx）样本上算，
+    429 被剔出分母、单列在 `admission`。⇒ 本函数照旧用 `latency_ms.p95` 打分（那是 schema
+    里定义的那一个数），但把 `p95_scope` / `admission` / `latency_ms_all_ms` 一并搬出来，
+    由 `gates.py` 负责把"这不是端到端全请求分位数"写进判定格 —— **不做的事**：
+    不拿新字段重算 p95（两套口径同时打分只会让人以为门禁换了定义），也不校验未知键
+    （W7 刻意不升版本号，升了就静默变 NOT_AVAILABLE；多出来的键必须无害）。
     """
     raw = _load(path)
     if not isinstance(raw, Mapping) or raw.get("schema") != LOADTEST_SCHEMA:
@@ -143,11 +169,21 @@ def loadtest_pressure(path: str | None = DEFAULT_LOADTEST_RECEIPT) -> dict[str, 
             if (s.get("latency_ms") or {}).get("p95") is not None]
     if not p95s:
         return None
+    scopes = sorted({
+        str(s["p95_scope"]) for s in scenarios
+        if isinstance(s.get("p95_scope"), str) and s.get("p95_scope")
+    })
+    all_p95s = [float(s["latency_ms_all_ms"]["p95"]) for s in scenarios
+                if (s.get("latency_ms_all_ms") or {}).get("p95") is not None]
     return {
         "p95_total_ms": max(p95s),
-        "source": f"{LOADTEST_SCHEMA} @ {path}（{len(p95s)}/{len(scenarios)} 个场景有 p95，取最大）",
+        "source": (f"{LOADTEST_SCHEMA} @ {_rel(path)}"
+                   f"（{len(p95s)}/{len(scenarios)} 个场景有 p95，取最大）"),
         "as_of": raw.get("started_at") or "未记录",
         "caveat": next((str(s.get("g6_caveat")) for s in scenarios if s.get("g6_caveat")), None),
+        "p95_scope": " / ".join(scopes) if scopes else None,
+        "p95_all_requests_ms": max(all_p95s) if all_p95s else None,
+        "admission": [s["admission"] for s in scenarios if isinstance(s.get("admission"), Mapping)],
     }
 
 
@@ -179,9 +215,19 @@ def pg_statement(facts: Mapping[str, Any] | None) -> str:
             "（0 行对 0 行必然相等，那种「通过」比不测更糟）。"
             "补齐需 W7 灌入与沙箱同规模数据（见 RELAY）。"
         )
+    if bool(facts.get("rls_partition_ok")):
+        return (
+            f"**PG 可达且有 {facts['pg_fact_rows']:,} 行业务事实数据**（RLS 策略 "
+            f"{facts['rls_policies_n']} 条）⇒ 策略**存在性与有效性均已实测**："
+            "逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。"
+            "⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，"
+            "「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。"
+        )
     return (
         f"**PG 可达且有 {facts['pg_fact_rows']:,} 行业务事实数据**"
         f"（RLS 策略 {facts['rls_policies_n']} 条）⇒ 可评估把评测主链路切到 PG。"
+        "注意：本轮探测**没有**给出逐租户可见数（`rls_partition_ok`），"
+        "所以这条只到「数据与策略在位」，不到「RLS 有效性已实测」。"
     )
 
 
@@ -521,7 +567,7 @@ def build_payload(
         "LLM 出站": f"mode={cfg_mode}，{llm_measured}",
         "RLS": ("一致性三测已跑，见 §6" if consistency else "一致性三测未跑") + f"；{pg_txt}",
         "执行层驱动": pg_txt,
-    })
+    }, pg_facts=pg)
 
     attribution_split = split_attributions(records)
     attribution_dist = attribution_split["distribution"]
