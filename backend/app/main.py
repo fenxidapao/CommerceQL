@@ -177,6 +177,24 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         why="07 §18.4 / N-15：宁可起不来，也不要带着错配置跑起来",
     )
 
+    # --- 3.5 启动断言三态镜像成指标（★ U-105，W7 追加段）---
+    # ⚠️ **只追加，不另立组装根**（照本文件第 4.5 段 W4 的同一条纪律）：lifespan 六步顺序归 W1B，
+    #    本段只做"把上一步已经拿到的 `outcomes` 多写一份到指标面"，不引入新的判定、不改日志形状。
+    #
+    # 为什么注入点在**这里**而不是 `app/obs/metrics.py` 里直接 import 源枚举：
+    #   `.importlinter` 的 R-DEP-3 禁止 `app/obs/**`（除 `audit.py`）依赖 `app/repo/**`。
+    #   而 U-105 要求取值"从 `ASSERTION_NAMES` / `AssertionStatus` 导出，禁手抄"
+    #   ⇒ 只有本段同时满足两条：这里本来就 import 得到 repo，且指标文件里一个字母都没抄。
+    #   后果如果做反了（在 metrics.py 手抄 4 个名字）：W1B 加第 5 条断言时 CI 全绿，
+    #   而第 5 条的状态**永远进不了看板** —— 这正是 U-105 要消灭的那类隐形。
+    from app.repo.startup_assertions import ASSERTION_NAMES, AssertionStatus
+
+    metrics.bind_startup_assertion_domains(
+        ASSERTION_NAMES, tuple(item.value for item in AssertionStatus)
+    )
+    for _assertion_outcome in outcomes:
+        metrics.observe_startup_assertion(_assertion_outcome.name, _assertion_outcome.status.value)
+
     # --- 4. checkpointer：开池 + 确保 lg 表族 ---
     # `wait=False`：不在启动路径上阻塞等连接。池连不上时**不应该**卡住启动 ——
     # 那是 readiness 该报告的事（摘流量），而不是"进程起不来"（07 §18.2 的失败动作不同）。

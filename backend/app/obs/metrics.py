@@ -52,6 +52,7 @@ PromQL `histogram_quantile` 口径与库一致。
 | `binding_state` / `binding_layer` | `app/api/deps.py:MetricsBindingObserver`（W4 已接，本文件只提供计量端） |
 | τ 校准 | `app/main.py` lifespan 启动段（W1B）+ `app/binding/__init__.py` |
 | 日成本 / 上游并发 / 事件循环延迟 | `app/obs/samplers.py` 周期采样器（W7）。⚠️ 前两个是**有条件接线**：`cost_ledger` 为 None 则成本采样器不注册；上游并发等 W3A 的 `inflight(model)` 公开读口（缺它就不接，见下） |
+| `startup_assertion_state`（★ U-105） | `app/main.py` lifespan **第 3.5 段**（W7 追加）。取值域由那里注入 —— 本文件不能 `import app.repo`（R-DEP-3）⇒ 见 `bind_startup_assertion_domains` 的 docstring |
 
 ## 未接线项（诚实清单，不得被读成"已落地"）
 
@@ -61,6 +62,10 @@ PromQL `histogram_quantile` 口径与库一致。
   危险读法："看到 0" ≠ "这类事件没发生"，也可能是**采集点不存在**。
 * **B 类 · 整族不输出**：有标签**未声明取值域**且从未观测 ⇒ 该前缀在 `/metrics` 里**根本不存在**。
   危险读法："没看到线" ≠ "值为 0"，也可能是"有流量但标签被丢弃"。
+* ⚠️ **第三种：类别会随运行期改变** —— `startup_assertion_state` 的域是**绑定进来**的，
+  所以它在 `bind_startup_assertion_domains` 之前是 B 类（整族不输出）、之后是 A 类（12 条 0 序列齐备）。
+  在这条上"整族不输出"多了一层含义：**装配没跑到第 3.5 段**（而那种情况下任何 `observe` 都会当场抛，
+  不会静默）⇒ 读这族时先确认进程是**完整启动**过的。
 
 | §15.3 行 | 类别 | 状态 | 缺什么 |
 |---|---|---|---|
@@ -152,6 +157,12 @@ BOUNDED_ALLOWED_LABELS: Final[dict[str, int]] = {
     "reason": 8,            # 一名两义的上界（见上方注释）
     "kind": 8,              # §15.3 `ui_contract_violation` 的标签
     "error_class": 9,       # 07 §8.9 的 8 类 + `resource_exceeded`（§A.11 的 EXEC_RESOURCE_EXCEEDED）
+    # --- U-105（架构裁定，2026-09-20）：启动校验三态镜像 ---
+    "assertion": 4,         # `repo/startup_assertions.ASSERTION_NAMES` 的条数（**封闭集**，见下）
+    "assertion_status": 3,  # `AssertionStatus` 三值 pass/pending/fail。⚠️ 刻意**不叫 `status`** ——
+                            #   `status` 已被 HTTP 状态类占用（≤10）、`state` 已被 BindingState 占用（≤4），
+                            #   同名两义会让 `BOUNDED_ALLOWED_LABELS` 的上界在两个指标间互相背锅
+                            #   （`reason` 就是登记在案的那处疤，不再新增第二处）。
     "token_key": 4,         # C-03 四键
     "reason_code": 10,      # §A.6 反馈原因码
     "metric": 40,           # `metric_label_overflow_total` 自身：受控指标数上界
@@ -183,9 +194,16 @@ LATENCY_BUCKETS_S: Final[tuple[float, ...]] = (
 
 
 class _MetricSpec:
-    """指标声明：名字 + 类型 + 标签集 + **逐标签取值域** + 直方图桶。"""
+    """指标声明：名字 + 类型 + 标签集 + **逐标签取值域** + 直方图桶。
 
-    __slots__ = ("buckets", "domains", "help", "kind", "labels", "name")
+    `closed`（★ U-105）标出**封闭集**标签：取值域由代码里的枚举/常量表决定，
+    出现第 N+1 个取值只能是代码错误，不是"运行时观测到的新事实"。
+    这类标签的越界处置与开放集**相反** —— 开放集（如 `rule_id`）丢弃 + 计溢出，
+    因为脏数据不该打挂请求；封闭集**当场抛**，因为静默截断会把"代码少了一个分支"
+    伪装成"这类断言从没红过"（那正是启动校验指标最不该有的失效方式）。
+    """
+
+    __slots__ = ("buckets", "closed", "domains", "help", "kind", "labels", "name")
 
     def __init__(
         self,
@@ -196,6 +214,7 @@ class _MetricSpec:
         labels: tuple[str, ...] = (),
         domains: Mapping[str, Iterable[str]] | None = None,
         buckets: tuple[float, ...] | None = None,
+        closed: tuple[str, ...] = (),
     ) -> None:
         if kind not in (COUNTER, GAUGE, HISTOGRAM):
             raise ValueError(f"未知指标类型：{kind}")
@@ -204,14 +223,47 @@ class _MetricSpec:
                 raise ValueError(f"{name}: 标签 {label!r} 属无界基数，禁止作标签（§15.3 纪律①）")
             if label not in BOUNDED_ALLOWED_LABELS:
                 raise ValueError(f"{name}: 标签 {label!r} 未声明基数上限（§15.3 纪律②）")
+        for label in closed:
+            if label not in labels:
+                raise ValueError(f"{name}: 封闭集标签 {label!r} 不在该指标的标签集内")
         self.name = name
         self.kind = kind
         self.help = help_text
         self.labels = labels
-        self.domains: Mapping[str, tuple[str, ...]] = {
+        self.closed: frozenset[str] = frozenset(closed)
+        self.domains: dict[str, tuple[str, ...]] = {
             key: tuple(values) for key, values in (domains or {}).items()
         }
         self.buckets = buckets
+
+    def bind_domain(self, label: str, values: Iterable[str]) -> tuple[str, ...]:
+        """**运行期**填取值域（封闭集专用），返回生效的域。
+
+        为什么必须有这条路：R-DEP-3 禁止 `app/obs/**`（除 `audit.py`）依赖 `app/repo/**`，
+        所以本文件**不能** `from app.repo.startup_assertions import ASSERTION_NAMES`。
+        而 U-105 要求"取值从 `ASSERTION_NAMES` / `AssertionStatus` 导出，禁手抄"
+        ⇒ 唯一合规形态是：**由已经 import 得到的那一侧（`app/main.py` 的 lifespan）把域注进来**。
+        手抄一份字面量在这里不是风格问题，是"改一处忘改另一处、而 CI 不红"的漂移源。
+        """
+        if label not in self.labels:
+            raise ValueError(f"{self.name}: 标签 {label!r} 未声明")
+        bound = tuple(dict.fromkeys(str(v) for v in values))
+        if not bound:
+            raise ValueError(f"{self.name}: 标签 {label!r} 的取值域不能为空")
+        ceiling = BOUNDED_ALLOWED_LABELS[label]
+        if len(bound) > ceiling:
+            raise ValueError(
+                f"{self.name}: 标签 {label!r} 声明了 {len(bound)} 个取值，超过基数上界 {ceiling}"
+                "（§15.3 纪律②）⇒ 要么改上界并留裁定出处，要么这不该是封闭集"
+            )
+        existing = self.domains.get(label)
+        if existing is not None and existing != bound:
+            raise ValueError(
+                f"{self.name}: 标签 {label!r} 的取值域已绑定为 {existing}，不允许二次绑定改域"
+                "（否则同一进程内先后两次启动能给出两套真相）"
+            )
+        self.domains[label] = bound
+        return bound
 
 
 class _Metric:
@@ -248,6 +300,29 @@ class _Metric:
             if name not in self._seen:
                 raise ValueError(
                     f"{self.spec.name}: 标签 {name!r} 未在该指标声明的标签集内或无上界"
+                )
+        # ★ 封闭集（U-105）先单独过一遍：越界是**代码错误**，必须在写任何状态之前抛，
+        #   且不走下面的"丢弃 + 计溢出" —— 那会把"少了一个分支"伪装成"这类事件从没发生过"。
+        for name in self.spec.closed:
+            value = labels.get(name)
+            if value is None:
+                raise ValueError(f"{self.spec.name}: 封闭集标签 {name!r} 必须给值")
+            domain = self.spec.domains.get(name)
+            if domain is None:
+                raise ValueError(
+                    f"{self.spec.name}: 封闭集标签 {name!r} 的取值域尚未绑定"
+                    f"（应由装配方调用 `bind_domain` 从源枚举导出 ⇒ 不在这里手抄）"
+                )
+            if value not in domain:
+                raise ValueError(
+                    f"{self.spec.name}: 封闭集标签 {name!r} 收到域外取值 {value!r}"
+                    f"（域 = {domain}）⇒ 这是代码错误，不是观测事实，不静默丢弃"
+                )
+            seen = self._seen[name]
+            if value not in seen and len(seen) >= BOUNDED_ALLOWED_LABELS[name]:
+                raise ValueError(
+                    f"{self.spec.name}: 封闭集标签 {name!r} 已观测到 {len(seen)} 个取值，"
+                    f"{value!r} 会突破上界 {BOUNDED_ALLOWED_LABELS[name]} ⇒ 域与上界不一致，代码错误"
                 )
         for name, value in labels.items():
             domain = self.spec.domains.get(name)
@@ -749,6 +824,55 @@ def get_event_loop_lag_ms() -> float | None:
     返回 0 等于宣称"已实现且健康"（W0 在 health.py 里为此留了 null）。
     """
     return EVENT_LOOP_LAG_MS.value() if EVENT_LOOP_LAG_MS.observed() else None
+
+
+# --- 启动校验三态镜像（★ U-105，07 §18.4 / §15.3 纪律②的裁定项）---------------
+
+STARTUP_ASSERTION_STATE = register_metric(
+    _MetricSpec(
+        "startup_assertion_state",
+        GAUGE,
+        help_text=(
+            "启动断言当前态（1 = 该断言处于该状态；同一条断言在任一时刻只有一行是 1）。"
+            "U-105：三态 PASS/PENDING/FAIL 里 PENDING 原先只有一条 WARN 日志 ⇒ "
+            "'带着未就绪的前置条件跑起来'这件事在看板与告警上都是隐形的。"
+            "标签 assertion(≤4) × assertion_status(≤3) ⇒ 系列上界 12"
+        ),
+        labels=("assertion", "assertion_status"),
+        closed=("assertion", "assertion_status"),
+        # ⚠️ 注册时**故意不给 domains**：见 `bind_startup_assertion_domains` 的 R-DEP-3 说明。
+        #   未绑定前本族整族不输出（B 类，"没线"≠"0"）；绑定后 12 条 0 序列齐备（A 类）。
+    )
+)
+
+
+def bind_startup_assertion_domains(
+    assertion_names: Iterable[str], statuses: Iterable[str]
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """由**装配方**（`app/main.py` 的 lifespan）把封闭集取值域注进来。
+
+    为什么不由本文件自己 `from app.repo.startup_assertions import ASSERTION_NAMES`：
+    `.importlinter` 的 **R-DEP-3** 明令 `app/obs/**`（除 `audit.py`）不得依赖 `app/repo/**`
+    —— 违反它拿到的不是"少一次 import"，而是"观测层可以在 DB 挂掉时把主链路带崩"这个失效面。
+    而 U-105 又要求"取值从 `ASSERTION_NAMES` / `AssertionStatus` 导出，禁手抄"
+    ⇒ 两面夹出来的唯一合规形态就是：**已经 import 得到源枚举的那一侧注入**。
+
+    幂等性刻意**不做**：二次绑定给出不同域会当场抛 —— 同一进程内两套真相比不写更糟。
+    """
+    return (
+        STARTUP_ASSERTION_STATE.spec.bind_domain("assertion", assertion_names),
+        STARTUP_ASSERTION_STATE.spec.bind_domain("assertion_status", statuses),
+    )
+
+
+def startup_assertion_domains_bound() -> bool:
+    spec = STARTUP_ASSERTION_STATE.spec
+    return {"assertion", "assertion_status"} <= set(spec.domains)
+
+
+def observe_startup_assertion(assertion: str, status: str) -> None:
+    """记一条"断言 `assertion` 当前是 `status`"。取值越界 ⇒ **抛**，不静默丢弃（封闭集）。"""
+    STARTUP_ASSERTION_STATE.set_value(1.0, assertion=assertion, assertion_status=status)
 
 
 # ============================================================================

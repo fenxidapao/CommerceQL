@@ -107,8 +107,14 @@
    `startup_assertions_done` 会把它们列进 `pending=[...]`。判据写在
    `tests/unit/test_startup_assertions.py::test_pending_is_fatal_only_in_prod_by_design`：
    **prod 下 PENDING 升级为拒绝启动**，非 prod 放行 —— 所以"本地起得来"不代表这三条过了。
-   ⚠️ 且 PENDING **只有日志、没有指标**（§15.3 未要求，八行里只有 τ 有 gauge）⇒
-   "有多少实例端着未判定断言在跑"目前**不可查询**，已作为建议写进 `backend/reports/w7/RELAY.md`。
+   ✅ 这一条**已从"只有日志"变成可查询**（★ U-105，2026-09-20 裁定 + W7 接线）：
+   `startup_assertion_state{assertion,assertion_status}`（gauge，1=当前态；4×3=12 条序列）。
+   运维查法：`count(startup_assertion_state{assertion_status="pending"} == 1) by (instance)`
+   ⇒ "有多少实例端着未判定断言在跑"第一次有了数。
+   ⚠️ 读法两条：① 该族**整族不输出**不代表"没有 pending"，而是**进程没跑到 lifespan 第 3.5 段**
+   （取值域在那里绑定；没绑定时任何写入会当场抛，不会静默）；
+   ② 本窗口**尚未对绑定后的导出面做活体抓取**（容器要重建才能带上新代码）⇒ 这一格目前是
+   "代码+契约测试已判、活体读数待复跑"，不要当已验证。
 
 ---
 

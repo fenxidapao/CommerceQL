@@ -372,5 +372,14 @@ A/B 族数复测（render_prometheus_text() 冷启动）                        
 
 ⚠️ **一条必须跟着读的运维事实**：交付版 `prometheus.yml` 的 `targets: ["api:8000"]` 在**本机现在这台机器上会 DOWN** —— 不是配置错，是 `commerceql-api-1` 的镜像早于 W7 的 metrics 路由，`GET :8000/api/v1/metrics` 返回 **404**（宿主与 compose 网络内各测一次，都是 404）。⇒ 观测栈要看到数据，前提是**被测镜像含 W7 的应用侧改动**（本轮用 `w7load-api`，它由当前源码树构建）。这一条已进 `RELAY.md`。
 
+**09-20 复采（U-105 落地之后）**：用当前源码树重建 `w7load-api`、`docker restart` 后**立刻**从宿主直抓
+`GET :18000/api/v1/metrics` ⇒ **18 个 `# TYPE` 族**，其中含 `startup_assertion_state`，
+导出**正好 12 条序列**（4 断言 × 3 态），每条断言**一行 `1`、两行 `0`** ⇒ "端着 PENDING 的实例"第一次可查询。
+冷启动这一刻 `http_requests_*` 整族仍不出现（B 类，无流量）⇒ 与 §三.4 的分类一致。
+
+⚠️ **这个 18 不能和上面那行的"19 个应用族"相减使用**：两处测的不是同一个东西 ——
+上面是 **Prometheus 侧**数出的族（含 `up` 与 4 个 `scrape_*`，且隔着一层 target），这里是**宿主直抓端点**；
+镜像也不同（那次在 U-105 之前）。⇒ 两数各自成立，**不要**从"少了 1 族"推出任何结论。
+
 **仍未验**（别把上面读成这些也过了）：**Grafana 面板渲染**与**反代 `/metrics` 404 的活体行为**（本机确实没有 `grafana` / `nginx` 镜像，dashboard JSON 只过了解析 + 上面那次序列交叉核对）；**告警送达**（compose 里没有 Alertmanager，规则求值过 ≠ 有人被通知）；`/alerts` 页在**常驻**实例上的长观察窗（本次容器只跑了几分钟，`for:` 时长类的Pending→Firing 迁移未被跨越）。
 （venv 里 `pyyaml` 已存在，**未新装任何 Python 依赖**；未跑 pytest 全量。）

@@ -22,6 +22,9 @@
 
 from __future__ import annotations
 
+import contextlib
+from collections.abc import Iterator
+
 import pytest
 
 from app.obs import metrics
@@ -144,3 +147,106 @@ def test_help_text_is_not_empty_and_name_has_its_type_suffix(spec: metrics._Metr
     assert spec.help.strip(), spec.name
     if spec.name.endswith("_total"):
         assert spec.kind == metrics.COUNTER, f"{spec.name}: `_total` 后缀只能给 counter"
+
+
+# ---------------------------------------------------------------------------
+# ★ U-105（架构裁定 2026-09-20）：**封闭集**的越界处置与开放集**相反**
+#
+# 本文件上面钉的那套是"丢弃 + 计溢出"（开放集，如 `rule_id`）—— 脏数据不该打挂请求。
+# 但 `assertion` 的取值域由代码里的 `ASSERTION_NAMES` 决定：出现第 5 个名字**只能是代码错误**，
+# 此时"丢弃"的失效方式是把"少了一个分支"伪装成"这类断言从没红过"，而这条指标存在的目的
+# 恰恰是让"带着未就绪前置条件跑起来"可见 ⇒ 必须当场抛。
+# ---------------------------------------------------------------------------
+
+_THROWAWAY = "test_closed_probe_state"
+
+
+@contextlib.contextmanager
+def _throwaway_closed_metric() -> Iterator[metrics._Metric]:
+    """注册一个**仅测试用**的 closed 指标，用完从注册表摘掉（不污染全局导出面）。"""
+    spec = metrics._MetricSpec(
+        _THROWAWAY,
+        metrics.GAUGE,
+        help_text="仅测试用：验证封闭集的越界处置",
+        labels=("assertion", "assertion_status"),
+        closed=("assertion", "assertion_status"),
+    )
+    metric = metrics.register_metric(spec)
+    try:
+        yield metric
+    finally:
+        metrics._REGISTRY.pop(_THROWAWAY, None)
+
+
+def test_closed_label_without_bound_domain_raises() -> None:
+    """域未绑定 ⇒ **抛**，而不是"整族安静地不输出"。
+
+    这条是 `bind_domain` 注入形态的代价：绑定动作丢了（或 lifespan 没跑到那一段），
+    现象必须是启动当场红，而不是"看板上永远没有启动校验这一屏"。
+    """
+    metrics.reset_for_tests()
+    with _throwaway_closed_metric() as gauge, pytest.raises(ValueError, match="尚未绑定"):
+        gauge.set_value(1.0, assertion="analytics_dsn_is_read_only", assertion_status="pass")
+    assert metrics.METRIC_LABEL_OVERFLOW_TOTAL.value(metric=_THROWAWAY) in (None, 0.0), (
+        "封闭集越界走了'丢弃 + 计溢出'那条路 ⇒ 与 U-105 的 fail-fast 裁定相反"
+    )
+
+
+def test_closed_label_out_of_domain_raises_not_dropped() -> None:
+    metrics.reset_for_tests()
+    with _throwaway_closed_metric() as gauge:
+        gauge.spec.bind_domain("assertion", ("a", "b"))
+        gauge.spec.bind_domain("assertion_status", ("pass", "pending", "fail"))
+        with pytest.raises(ValueError, match="域外取值"):
+            gauge.set_value(1.0, assertion="c", assertion_status="pass")
+        # 正向对照：域内的写入照常生效 ⇒ 上面那次抛不是"整个指标写不进"
+        gauge.set_value(1.0, assertion="a", assertion_status="pending")
+        assert gauge.value(assertion="a", assertion_status="pending") == 1.0
+
+
+def test_closed_domain_binding_rejects_oversized_and_conflicting() -> None:
+    """绑定动作自己也要 fail-fast：`assertion` 的上界是 4 ⇒ 注入 5 个必须抛。
+
+    ⚠️ 这一条把"上界"与"源枚举"绑成一件事：W1B 真加第 5 条断言时，抛出的信息会直接指向
+    `BOUNDED_ALLOWED_LABELS["assertion"]`，逼着改的人**带着裁定出处**去动上界，而不是顺手放宽。
+    """
+    metrics.reset_for_tests()
+    with _throwaway_closed_metric() as gauge:
+        with pytest.raises(ValueError, match="超过基数上界"):
+            gauge.spec.bind_domain("assertion", ("a", "b", "c", "d", "e"))
+        gauge.spec.bind_domain("assertion", ("a", "b"))
+        with pytest.raises(ValueError, match="不允许二次绑定"):
+            gauge.spec.bind_domain("assertion", ("a", "b", "c"))
+        # 同域重复绑定**放行**（幂等）：测试与 lifespan 可能各绑一次，值同源时不该炸
+        assert gauge.spec.bind_domain("assertion", ("a", "b")) == ("a", "b")
+
+
+def test_startup_assertion_metric_exports_full_closed_grid() -> None:
+    """真实指标：域从 **repo 的源枚举**导出 ⇒ 未观测也补 0，序列数 = 4 × 3 = 12。
+
+    刻意不硬编码 12 之外的东西：断言名与状态值都从源读，这样 W1B 改名/加名时
+    这条用例只会因"上界与源不一致"而红（那是真信号），不会因为抄名漂移而假绿。
+    """
+    from app.repo.startup_assertions import ASSERTION_NAMES, AssertionStatus
+
+    metrics.reset_for_tests()
+    names, statuses = metrics.bind_startup_assertion_domains(
+        ASSERTION_NAMES, tuple(item.value for item in AssertionStatus)
+    )
+    assert names == tuple(ASSERTION_NAMES), "域必须逐字来自 ASSERTION_NAMES（禁手抄的那条裁定）"
+    assert metrics.BOUNDED_ALLOWED_LABELS["assertion"] >= len(names)
+    text = metrics.render_prometheus_text()
+    for name in names:
+        for status in statuses:
+            assert f'startup_assertion_state{{assertion="{name}",assertion_status="{status}"}}' in text, (
+                f"封闭集已绑定 ⇒ ({name},{status}) 这一行缺失就不是'还没采到'，而是导出漏了"
+            )
+    assert text.count("# TYPE startup_assertion_state ") == 1
+    assert sum(1 for line in text.splitlines() if line.startswith("startup_assertion_state{")) == (
+        len(names) * len(statuses)
+    )
+    # 记一条 pass 后：同一断言的另两行仍必须是 0（"只有一行是 1" 这个口径得由导出面撑住）
+    metrics.observe_startup_assertion(names[0], "pass")
+    text = metrics.render_prometheus_text()
+    assert f'startup_assertion_state{{assertion="{names[0]}",assertion_status="pass"}} 1' in text
+    assert f'startup_assertion_state{{assertion="{names[0]}",assertion_status="fail"}} 0' in text
