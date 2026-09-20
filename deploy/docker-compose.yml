@@ -90,15 +90,20 @@ services:
       #    这个服务自加入 compose 起就从未被真正用过（2026-09-19 起它才第一次能接上）。
       #    07 §16.3 的端口口径就是 6432，所以改监听端而不是改映射。
       LISTEN_PORT: "6432"
-      # ⚠️ 刻意**不设** AUTH_TYPE：pgbouncer 没有 `scram` 这个取值（写了就 `invalid value for
-      #    parameter auth_type` + FATAL cannot load config ⇒ 容器重启循环，2026-09-19 实测），
-      #    而镜像默认的 `auth_query` 只能配 md5 哈希 —— W1B 的 0001 迁移建 app_rw/app_ro 时
-      #    用的是 PG 默认 password_encryption=scram-sha-256，两侧对不上，
-      #    表现为 `FATAL: server login failed: wrong password type`。
-      #    ⇒ **§16.5 断言③（经 pgbouncer 的后端连接 ≤30）当前不可测**，
-      #      三条出路各有代价，已上呈 RELAY：给这两个角色另存 md5（降安全）、
-      #      或 userlist 里放专用口令、或 `auth_type=trust`（等于放弃容器网络内的口令校验）。
-      #    在裁决前不要把应用 DSN 指到 6432。
+      # ✅ `scram-sha-256`（W1B 一次性 probe 容器实测：`auth_type=md5` 复现 `FATAL wrong password
+      #    type`；只把这个值换成 scram-sha-256 ⇒ `conn ok, current_user=app_rw`）。
+      #    ⚠️ 订正本窗口先前的一条错误结论：这里曾写"不设 AUTH_TYPE，三条出路各有代价、待裁决"，
+      #    把问题当成了**口令体系裁决**。实际是我写了个不合法的字面值 —— pgbouncer 的取值是
+      #    `scram-sha-256`（1.14+ 原生支持；二进制里直接有），而我试的 `scram` 才是
+      #    `invalid value for parameter auth_type` + FATAL cannot load config + 重启循环。
+      #    ⇒ **零安全代价**：与 W1B 的 0001 迁移（PG 默认 password_encryption=scram-sha-256）天然对齐，
+      #      不需要给角色另存 md5、不需要多管一份秘密、不需要 trust。
+      # ⚠️ 但**应用 DSN 仍不指向 6432**（`deploy/.env` 两条 DSN 都是 `pg:5432`）：
+      #    本行只是让"经 pgbouncer"这条路**变得可测**（§16.5 断言③），不等于要切过去 ——
+      #    `POOL_MODE=transaction` 与 `SET LOCAL` 身份传递（ADR-09）、以及 checkpoint 长持连接
+      #    （R-10）三者互不兼容，那笔账见 07 §16.3 风险 1 与 `probe_checkpoint_pool.py` 头注。
+      #    切换属配置决策，需 W7 + 架构确认，**不要顺手改 .env**。
+      AUTH_TYPE: "scram-sha-256"
     ports:
       - "6432:6432"
     depends_on:

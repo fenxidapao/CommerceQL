@@ -453,9 +453,12 @@ class _StreamObserver:
                 gate_no = _GATE_NO_BY_ERROR_CODE.get(code)
             if gate_no is not None:
                 metrics.observe_gate_reject_from_payload(gate_no, rule_id)
-            if isinstance(code, str) and code.startswith("SQL_"):
-                # §8.9：SQL 结构类错误码的分布是 repair 轮次的解释变量（哪个码回灌得最多）。
-                metrics.observe_exec_failure(code.removeprefix("SQL_").lower())
+            # ⚠️ 这里**故意不记** `exec_failure_total`。
+            #    权威且唯一的记录点是 `app/graph/nodes/execute.py::_on_failure`（按 `error.error_class`
+            #    记全 9 类）。从终止帧的 `ErrorCode` 反推有两个毛病：① 与那里**双计**；
+            #    ② `app/exec/errors.py` 把 `unknown_column` / `unknown_table` / `type_mismatch` /
+            #    `unknown_function` / `syntax_error` **五类压成同一个** `SQL_SYNTAX_ERROR` ⇒ 反推出来
+            #    只会得到一个 `syntax_error`，把四类结构错误伪装成语法错误（§8.9 要的正是要分清它们）。
 
     def _violate(self, kind: str) -> None:
         with contextlib.suppress(Exception):

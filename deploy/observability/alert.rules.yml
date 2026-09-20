@@ -116,15 +116,17 @@ groups:
       #   07 §17.3，依据「双租户夹具 + N-07」）。
       #
       #   为什么这里**不能**凑一个 expr（每一项都被逐一否决，写清楚免得后人来凑）：
-      #   · `exec_failure_total{error_class="permission"}` ✗ —— 双重不可用：
-      #     ① 语义相反：它计的是**生成的 SQL 被数据库拒绝**（权限错误，§8.9 内部错误类），
-      #        语义是「拦住了」，与「发生了泄露」正好相反 —— 拿它当泄露代理 = 把防线指标当事故指标。
-      #     ② 即便语义对得上，这条序列也**永远不会动**：全仓 `observe_exec_failure` 只有一个
-      #        调用点（`instrumentation.py` 从 error 帧的 `SQL_*` 码折算），而 `ErrorCode`
-      #        里唯一的 `SQL_` 码是 `SQL_SYNTAX_ERROR` ⇒ 九类里只有 `syntax_error` 可增长，
-      #        `permission` 是**恒 0 的声明序列**（error_class 有完整取值域 ⇒ 未观测也输出 0）。
-      #        ⇒ 真正的执行错误分类在 `GraphState.exec_error.error_class`（W2D 脱敏摘要，N-11），
-      #          目前**没有**观察者读它 —— 已写进 RELAY，不在本窗口权限内接线。
+      #   · `exec_failure_total{error_class="permission"}` ✗ —— **语义相反**：
+      #     它计的是**生成的 SQL 被数据库拒绝**（权限错误，§8.9 内部错误类），
+      #     语义是「拦住了」，与「发生了泄露」正好相反 —— 拿它当泄露代理 = 把防线指标当事故指标。
+      #     ⚠️ 状态订正（2026-09-20，本目录旧版此处有第二条否决理由，现已失效）：旧文还写着这条
+      #     「**永远不会动**（`observe_exec_failure` 只能从 error 帧的 `SQL_*` 码折算，而九类里
+      #     只有 `syntax_error` 可增长）」—— 那一条**不再成立**：W4 已在 `app/graph/nodes/execute.py`
+      #     的 `_on_failure` 里按 `error.error_class` 记全 9 类（`if`/`else` 两出口之前都记，含 `permission`），
+      #     W7 侧的帧反推同步删除以免双计。⇒ 这条线**会动**，但「会动」只改变可用性，
+      #     **不改变它语义相反这件事** —— 否决理由从两条收敛到一条，结论不变。
+      #     （注：截至 W7 本次文档订正，`_on_failure` 那批改动仍在共享工作区、**尚未进 HEAD**，
+      #      判据 `git show HEAD:backend/app/graph/nodes/execute.py | grep -c observe_exec_failure`。）
       #   · `refuse_total{reason="pii_blocked"}` ✗ —— 同理，是**拒答成功**的计数。
       #   · `gate_reject_total{rule_id=~"R05|R06|R07"}` ✗ —— 同样是拦截侧，不是越权侧。
       #   · 加 `tenant_id` 标签再比对 ✗ —— 直接被 §15.3 纪律① 禁止

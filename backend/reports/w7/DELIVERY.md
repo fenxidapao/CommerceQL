@@ -161,7 +161,7 @@ PID 1 在不用 `exec`、不加监督进程的前提下**拿不到**服务进程
 | 项 | 为什么 |
 |---|---|
 | **G-6"P95 ≤8s"是否达标** | 四场景已跑完（真实额度、真实数据）但**零成功完成** ⇒ 无有效分母。已量到的是容量事实：50 并发成功率 8.7%、100 并发 0%，根因见 `压测报告.md` §四 R1/R2 |
-| pgbouncer 后端连接 ≤30 | 服务已能起（补 `LISTEN_PORT: "6432"` 之前**从未可用**），但应用角色进不去：镜像 `auth_query` 只认 md5、W1B 角色口令是 SCRAM，且 `auth_type=scram` 是非法取值（直接 FATAL + 重启循环）。三条出路已上呈 |
+| pgbouncer 后端连接 ≤30 | **状态已从"不可测"改为"可判、但没有生产读数"**。⚠️ 订正本报告先前那版"应用角色进不去 ⇒ 三条出路各有代价待裁决"：**是我把字面值写错了** —— 合法取值是 `AUTH_TYPE: "scram-sha-256"`（pgbouncer 1.14+ 原生支持），我试的 `scram` 才非法。**零安全代价**，一行已落 `deploy/docker-compose.yml`；本轮实测 `app_rw` 经 6432 `conn ok`、`SHOW POOLS` 出现 `db=ecom user=app_rw`（`sv_idle=1`）。⇒ 剩下的障碍从来不是认证，而是"`transaction` 池模式 vs `SET LOCAL` 身份传递（ADR-09）vs checkpoint 长持连接（R-10）"互不兼容 ⇒ **应用要不要真的走 6432 待裁**。在那之前该断言只有探针读数（四场景期间 `sv_active=0` = 没接，不是接了没超） |
 | 断言① checkpoint 无写入等待 / 断言② `SET LOCAL` 复位**在负载下** | **不可观察**而非"不成立"：embedding 不可用 ⇒ 查询从未走到 `execute`（`stage_duration_seconds_count{executing}=0`）。侧证有（`lg.checkpoints` 4,200 行在写、审计 62 行），但那不等于"负载下无等待" |
 | embedding 探针的**成功分支** | `bge-m3` 拉取停在 83%（1.8 KB/s）⇒ 只实测过失败分支的 `200 + degraded` |
 | 真实 app + 真实 SSE 的一次优雅停机重启 | ✅ **已覆盖（09-19）**：40 并发中途 `docker stop`，66 条在途流全部拿到终止帧、0 条硬断、traceback 归零。见 §三 末节 |

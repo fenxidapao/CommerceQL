@@ -122,8 +122,9 @@ cd deploy && grep -n "DATABASE_URL\|ANALYTICS_DB_URL\|6432" .env
 | 旧命令能否直接跑 | ❌ **不能**：不带口令 → `fe_sendauth: no password supplied`。可执行版见下 |
 | 管理口 | ✅ `SHOW POOLS` 可查（`admin_users = postgres`） |
 | 监听端口 | 镜像自动生成的 `pgbouncer.ini` 里 `listen_port = 6432` —— 这要等 `LISTEN_PORT: "6432"` 显式设进 compose 之后才成立。⚠️ **该镜像默认监听 5432**，compose 原先 `6432:6432` 映射的是一个**没人监听**的端口 ⇒ 这个服务从建好起就从未可用过（"已定义"≠"能用"） |
-| 认证方式 | `auth_type = md5` + `auth_file = /etc/pgbouncer/userlist.txt`（**只有 1 个用户**）。W1B 的 `app_rw`/`app_ro` 口令是 **SCRAM** ⇒ 即使把 DSN 改到 6432，应用角色也**过不去认证**（实测 `wrong password type`）。⚠️ 别改成 `AUTH_TYPE: scram`：该镜像**不接受这个值**，`FATAL cannot load config` + 容器重启循环 |
-| **流量证据** | `SHOW POOLS` 返回**只有 pgbouncer 自用管理池这一行**，没有任何 `ecom` 库下 `app_rw` / `app_ro` 对应的池 ⇒ "应用侧没有 DSN 走它"不再是读 `.env` 的推断，是服务端自己的读数 |
+| 认证方式 | ✅ **已解，且零安全代价**（订正本目录先前那版"三选一出路"）：pgbouncer 的合法取值是 **`scram-sha-256`**（1.14+ 原生支持），先前记的"`scram` 非法 ⇒ 只能退回 md5 / userlist / trust"是**我把字面值写错了**，不是架构冲突。改 `deploy/docker-compose.yml` 一行 `AUTH_TYPE: "scram-sha-256"` 后，本轮用 `app_rw`（0001 迁移按 PG 默认 `password_encryption=scram-sha-256` 建的角色）实测：**`conn ok, current_user=app_rw`** |
+| **断言③ 现在可判** | `SHOW POOLS` 不再只有管理池 —— 实测出现 `db=ecom user=app_rw`（`sv_idle=1`）⇒ **§16.5 断言③ 从"不可测"变成"可判"**。⚠️ 两个读数前提：① 管理台要**用 `autocommit=True` 连 `pgbouncer` 库**，否则 `BEGIN` 被拒（`SHOW POOLS` 会失败）；② 现在这一池是**探针连出来的**，应用 DSN 仍指 `pg:5432` ⇒ 要拿"生产并发下 ≤30"的数，仍要先裁"应用到底该不该过 pgbouncer"（见下一行的 transaction/`SET LOCAL` 冲突） |
+| **流量证据** | 两个时点要分开读：**认证修好之前** `SHOW POOLS` 只有 pgbouncer 自用管理池那一行（探针也连不上，所以没有 `ecom` 的池）；**之后**才有 `db=ecom user=app_rw`，而那一条是本轮**探针**连出来的。⇒ "生产应用流量不经 pgbouncer"仍然成立，依据换成：`.env` 两条 DSN 都指 `pg:5432` + 四场景压测期间池表里除管理池外没有任何 `ecom` 池 |
 
 ```bash
 # 可执行版（口令是 compose 里明文写的开发默认值，不是秘密）
@@ -133,9 +134,14 @@ docker compose exec -e PGPASSWORD=postgres pgbouncer \
 docker compose exec pgbouncer cat /etc/pgbouncer/pgbouncer.ini   # 核对 auth_type / listen_port / pool_mode
 ```
 
-⚠️ 并且**不要顺手把 DSN 改成 6432**：① 上面那条认证问题会先把请求全拒掉；② `transaction` 池模式与 `SET LOCAL` 身份传递（ADR-09）、以及 checkpoint 若变长持连接（R-10）三者互不兼容 —— 07 §16.3 风险 1 与 `probe_checkpoint_pool.py` 头部都点过这笔账。改它属配置决策（口令体系三选一见 `RELAY.md`），需 W7 + 架构确认。
+⚠️ **不要顺手把 DSN 改成 6432**。认证这一关**已经不是障碍**（`scram-sha-256` 已解），剩下的是真正的那笔账：
+`transaction` 池模式与 `SET LOCAL` 身份传递（ADR-09）、以及 checkpoint 若变长持连接（R-10）三者互不兼容 ——
+07 §16.3 风险 1 与 `probe_checkpoint_pool.py` 头部都点过。改它属配置决策，需 W7 + 架构确认。
 
-⇒ **§16.5 断言 ③（pgbouncer 后端连接 ≤30）当前不可判**：不是"没测"，是**没有一条应用连接能进到被计量的那一侧**。本次 `SHOW POOLS` 里唯一的行 `sv_active=0`、`cl_active=1`（就是这条 psql 自己）⇒ 分母为空，"≤30"既不能被证实也不能被证伪。
+⇒ **§16.5 断言 ③（pgbouncer 后端连接 ≤30）现在可判**（先前记的"链路不通、分母为空"已随 `AUTH_TYPE` 订正失效）。
+⚠️ 但**"可判"≠"已有生产读数"**：要拿这个数，前提是应用 DSN 真的走 6432，而那件事卡在
+`transaction` 池模式与 `SET LOCAL` 身份传递（ADR-09）的冲突上，**尚未裁决**（见上一行与 `RELAY.md`）。
+本轮四场景期间的读数是 `sv_active=0`（没有生产连接走它）—— 那是"没接"，不是"接了但没超"。
 
 ---
 

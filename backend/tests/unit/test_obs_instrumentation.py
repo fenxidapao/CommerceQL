@@ -272,6 +272,35 @@ async def test_cost_gate_rejection_maps_to_gate_three() -> None:
     assert _sample("gate_reject_total", gate_no="1", rule_id="") == 0
 
 
+async def test_error_frame_with_sql_code_does_not_double_count_exec_failure() -> None:
+    """`exec_failure_total` 的**唯一**权威记录点是 `execute.py::_on_failure`（按 `error_class` 记全 9 类）。
+
+    观测器第一版这里还从终止帧的 `ErrorCode` 反推一次，两个毛病叠在一起：
+    ① 与 `_on_failure` **双计**；
+    ② `app/exec/errors.py:136-140` 把 `unknown_column`/`unknown_table`/`type_mismatch`/
+      `unknown_function`/`syntax_error` **五类压成同一个** `SQL_SYNTAX_ERROR` ⇒ 反推只能得到
+      `syntax_error` 一个值，把四类结构错误伪装成语法错误（而 §8.9 要的正是分清它们）。
+    ⇒ 这条钉住"反推已移除"，防有人以"补观测"为名加回来。
+    """
+    await _run(
+        [
+            _START,
+            _frame(
+                "error",
+                '{"code":"SQL_SYNTAX_ERROR","message":"x","retryable":false,"terminal":true}',
+            ),
+            _final(),
+        ]
+    )
+    nonzero = [
+        ln for ln in metrics.render_prometheus_text().splitlines()
+        if ln.startswith("exec_failure_total{") and not ln.endswith(" 0")
+    ]
+    assert nonzero == [], f"观测器又从帧反推 exec_failure ⇒ 与 _on_failure 双计：{nonzero}"
+    # 反向防呆：别把"不记 exec_failure"改成"这条帧什么都不记"。
+    assert _sample("query_outcome_total", outcome="failed") == 1
+
+
 async def test_refuse_frame_does_not_feed_the_gate_counter() -> None:
     """拒答**不是**闸门拒绝（06 §7.2：闸门拒绝不得渲染成拒答卡）⇒ 不得串台。"""
     await _run(

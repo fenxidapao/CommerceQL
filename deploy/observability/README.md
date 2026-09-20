@@ -191,10 +191,18 @@ curl -s http://127.0.0.1:9090/api/v1/rules   | head -c 400                    # 
    "在真故障里会不会按预期亮"仍是**未验证**，别把 §六(6) 读成这条也过了。
    Grafana 面板渲染、Alertmanager 送达（根本没有 AM，见第 10 条）同样未验。
 2. **§15.4 第 2/6/8 条无 expr**（跨租户 / 准确率环比 / 429）。见上表，注释块里写明了缺口与修法。
-   第 2 条尤其要防"凑"：`exec_failure_total{error_class="permission"}` 是**双重不可用** ——
-   语义相反（它记的是"被权限层拦住了"= 防住了，不是泄露了），而且**永远不会增**
-   （`observe_exec_failure` 的唯一来源是 `SQL_*` 错误码，而 `ErrorCode` 里只有
-   `SQL_SYNTAX_ERROR`；真正的权限分类在 `GraphState.exec_error.error_class`，无观察者 → §五 ⑧）。
+   第 2 条要防的是"拿错的指标凑"：`exec_failure_total{error_class="permission"}` **语义相反** ——
+   它记的是"被权限层拦住了"= **防住了**，不是泄露了 ⇒ 不能充当跨租户泄露指标（该指标需要的是
+   "读到了不该读的租户行"这种载体，本仓库目前没有）。
+   ⚠️ 订正本目录先前那半句：旧版还写着它"**永远不会增**（`observe_exec_failure` 只能从 `SQL_SYNTAX_ERROR`
+   反推）"—— 那**已失效**：W4 在 `app/graph/nodes/execute.py:111` 的 `_on_failure` 里按 `error.error_class`
+   记全 **9 类**（`if`/`else` 两个出口都在之前，含 `permission`），W7 侧的帧反推同步删除以免双计。
+   ⇒ 现在这条线**会动**，但"会动"改变的只是可用性，**不改变它语义相反这件事**。
+   ⚠️ 且这句"会动"有**时序限定**：截至本轮，W4 那批改动仍在共享工作区、**尚未进 HEAD**
+   （判据 `git show HEAD:backend/app/graph/nodes/execute.py | grep -c observe_exec_failure` 返回 `0`）
+   ⇒ 在 HEAD 上这条线是**九条恒 0 序列**（`error_class` 有完整取值域 ⇒ 未观测也导出 0，§15.3 A 类）。
+   读法：A 类的"全 0"至少**看得见**（比 B 类的"根本没有序列"好），但它**不产生任何告警覆盖** ⇒
+   在 W4 的提交落地前，不得声称"执行失败分类分布已被观测"。
 3. **第 1 条只有间接探测**，且有双侧盲区（真零拒绝会误报、少量放行会漏报）。
    **不得**因该规则存在而声称"危险 SQL 放行已被监控"。
 4. **采集端接线现状（必须按两种"没数据"分开读）**。`metrics.render_prometheus_text()` 的导出语义是：
