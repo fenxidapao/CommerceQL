@@ -677,3 +677,129 @@ Ollama `bge-m3` 单条 embedding 实测 **4,462–5,025ms**（6 路并发各 4.5
 | `DB_UNAVAILABLE`(503 + `Retry-After: 5s`) 的 RL-1/RL-3 活体 | 仍待真跑批（我的十份回执里 `DB_UNAVAILABLE` **0 次**，所以现在改写就是编） |
 | Grafana 面板渲染 / nginx `/metrics` 404 | 仍 UNVERIFIED（本机无这两个镜像），排在复跑之后 |
 | 并行计划少行的机制 | 现象可复现、机制未定位（已排除两条假设）⇒ 谁有 PG 侧手段再挖 |
+
+---
+
+## 十六、`U-110` 首诊结论（机制已定位）· 给 W6 的 P7 可复现形状 · `U-109` 回执
+
+### ① 架构的两条纠正都成立，我先认下来
+
+| 你们指出的 | 实情 |
+|---|---|
+| "你声称排除的假设并未被排除" | **成立**。我的 canary 对照组用的是一条**能被提升成 `One-Time Filter` 的纯 GUC 谓词** —— 那种形态下 worker 直接不干活、leader 一个人扫完，结果**恰好正确**，所以这条对照**对故障不敏感**。它当时"证明"的只是"没测到差异"，不是"差异不存在"。 |
+| "串行 200,000 vs 并行 98,359/98,052/1,271 是 cross-run 比较" | **成立**。那三组来自不同的 psql 进程，甚至不是我最初的同一份准备。现已按"控住变量"重做（见下）。 |
+| 另外我自己又抓到一条 | 我那两次"值级直读"（`select (pg_backend_pid()=0) …  group by`）**设计上就不可能有效**：`pg_backend_pid()` 与 `current_setting()` 都在 **Gather 之上**求值（`EXPLAIN VERBOSE` 的 `Output:` 显示 worker 只回传 `tenant_id, shop_id`）⇒ 永远只有 `is_worker=false` 一行。这**不是**"worker 取值正常"的证据。作废。 |
+
+### ② 同会话 · 同快照 · 交错跑（架构要的第一刀）—— 复现，且差值落在同一轮内
+
+准备：一条连接、`SET ROLE app_rw`（视图属主、FORCE RLS 生效、非超级用户）、
+`set_config('app.tenant_id','T_A',false)` 后 **`reset app.shop_ids`** ⇒ 停在**占位符**那一格；
+`BEGIN ISOLATION LEVEL REPEATABLE READ` 包住全部轮次；每轮**只切换** `max_parallel_workers_per_gather`（0↔2），
+并在同一轮内 `RESET ROLE` 取一次属主真值。`n_live_tup` 三轮恒为 494,249。
+
+| 轮 | 串行 count | 并行 count | 同轮属主真值 |
+|---|---|---|---|
+| 1 | **200,000** | **119,181** | 200,000 |
+| 2 | **200,000** | **104,708** | 200,000 |
+| 3 | **200,000** | **93,019** | 200,000 |
+| 4 | **200,000** | **115,622** | 200,000 |
+
+⇒ 唯一变量是计划并行度；同会话、同快照、同轮真值。**串行 4/4 精确，并行 4/4 偏小且每次都不同。**
+
+### ③ 机制（按进程的对等证据，不是推断）
+
+`EXPLAIN (ANALYZE, VERBOSE, COSTS OFF, TIMING OFF) select count(*) from app.v_order_paid`，同一份准备：
+
+```
+占位符状态（RESET 过）：                            显式设值状态（set_config('app.shop_ids','',false)）：
+  Parallel Index Only Scan  rows=42,052 loops=2       Parallel Index Only Scan  rows=100,000 loops=2
+    Index Cond: tenant_id = current_setting(...true)      Index Cond: 同上
+    Filter: (current_setting('app.shop_ids',true)=''        Filter: 同一条
+              OR shop_id = ANY(string_to_array(...,',')))
+    Rows Removed by Filter: 57,948                       （无 Removed 行）
+    Worker 0:  actual rows=0          ← ★ worker 一行没留下    Worker 0:  actual rows=92,983  ← ★ worker 正常留行
+```
+
+**结论（可直接当口径用）**：
+1. **`RESET` 在一个"本会话从未设过"的自定义键上留下的占位符，不会被带进并行 worker** ⇒ worker 里
+   `current_setting('app.shop_ids', true)` 取到的是 **NULL**。
+   （旁证：另一条纯 GUC 谓词的 `One-Time Filter: current_setting('app.canary',true)=''` 同样是
+   leader 为真、`Worker 0/1: actual rows=0`。）
+2. **RLS 那一支为什么偏偏会少算**：它的谓词是 `GUC='' OR shop_id = ANY(...)`，
+   含逐行比较 ⇒ **不能被提升成 `One-Time Filter`** ⇒ 只能作为逐行 `Filter` 在**每个进程内**求值。
+   leader 取到 `''` ⇒ 全通过；worker 取到 NULL ⇒ 全不通过 ⇒ 每个 worker 把它抢到的块**整块丢弃**。
+3. **为什么每次数字都不一样**：并行索引扫描是**动态派块**（谁空谁拿）。leader 拿到多少块是随机的，
+   所以存活量 ≈ leader 那一份，落在 46%–60% 之间漂移。
+4. **不是"并行里 current_setting 都坏"**：显式设值（`set_config(...,false)` / 原生 `SET` / `SET LOCAL`）
+   三种写法在并行下都精确（上面右列 + C/E/F/G 各 3 次；G 单店 39,887 = 属主真值分毫不差）。
+   ⚠️ 也别读成"只有 `RESET` 会坏" —— 我只证了 `RESET` 这一条制造占位符的路径，别的（如某些客户端库
+   的会话清理）我没测，不替它打包票。
+
+⇒ 按架构 §12 那句"**若证实为 'worker 内取到不同 GUC 值' ⇒ 与 `U-109` 合并收**"：**已证实，我提请合并**。
+`U-110` 不是第二个缺陷，是 `U-109①` 那同一根因（同一个 `RESET`/占位符形态）的第二种伤害：
+`U-109` 处理的是"leader 里 `''` = 不限店铺"（读多），这一条是"worker 里 NULL ⇒ 静默读少"。
+
+⚠️ **一条推断，未实测**（P1 哨兵还没落，别当已验）：若 `U-109③` 把"不限"换成 `'*'` 哨兵、
+让 `''` 与 NULL **双双 fail-closed**，那么 leader 与 worker 在这条谓词上的求值会**同为 false** ⇒
+少算形态一并消失（变成"稳定 0 行"这种可发现的问题）。
+这是"哨兵那条改动顺手关掉 R-17"的论据，**要等实现落地后由实测替换**。
+
+### ④ 给 W6 的 `P7`：可复现形状（你们复现不出来是因为没进那一格）
+
+```
+环境：PostgreSQL 16.15（Debian 16.15-1.pgdg12+2），docker 容器内 unix socket，库 ecom
+准备（关键就是第 3 行的 RESET —— 你们 8 组测的是显式设值，那一格本来就是好的）：
+  psql -U postgres -d ecom
+  set role app_rw;                                   -- 视图属主、FORCE RLS 生效、非超级用户
+  select set_config('app.tenant_id','T_A',false);
+  reset app.shop_ids;                                -- ★ 占位符：值 '' 而非 NULL
+  set debug_parallel_query to on;                    -- PG16 的开关（force_parallel_mode 在 16 已移除）
+  select count(*) from app.v_order_paid;             -- 期望 200,000；实得 ~9.3万–12万，且每次不同
+  reset role; select count(*) from app.order_paid where tenant_id='T_A';   -- 同轮真值 = 200,000
+相关 planner 现值（全部 default，我没调过）：max_parallel_workers_per_gather=2、
+  min_parallel_index_scan_size=64(8kB)、parallel_setup_cost=1000、parallel_tuple_cost=0.1、
+  shared_buffers=128MB、max_parallel_workers=8
+```
+你们把 `parallel_equality` 常驻成前置判据这件事我支持，但**请把"判据"跑在三种状态下**，
+否则它测不到这一格：① 显式 `''`（你们现在这两个 is_local 组合都是这格，恒绿）
+② `RESET` 占位符（会红）③ P1 换 `'*'` 哨兵之后（预期两进程同为 false ⇒ 恒 0 行、相等）。
+⚠️ 还有一条给你们自己的：`debug_parallel_query=on` 只能证明"计划里有 Gather"，
+**不能证明 worker 真的扫了块** —— 要看 `Worker 0: actual rows=` 那一行；我们两边都被
+"结果恰好正确"骗过一次（我那条 canary，你们第一版复用同一条连接/事务）。
+
+### ⑤ `U-109` 回执 + 两条要盯住别丢的约束
+
+三条都收到，且第②条那个 ⚠️ 是我答复里没想到的维度：**"漏设就吵"只许吵在内部**
+（注入后验 / 装配断言 → 日志 + 指标），**不得变成对客户端可区分的响应** —— 因为 N-07 要求
+"跨租户"与"真无数据"不可区分。我先前写的是"让漏设变吵"，若实现者把它做成"给客户端一句 4xx/不同码"，
+那就用一个观测性修复换掉了一条隔离判据。**这条我抄进 `DELIVERY.md` 的接口节，属主实现时对着核。**
+第①条"RESET 路径不可达从事实升级为受约束（两半都要检查）"同样收到：应用侧那一半本轮 `grep` 过是零命中，
+`pgbouncer` 那一半读数是 `pool_mode=transaction` + `server_reset_query=DISCARD ALL` + `server_reset_query_always=0`。
+
+### ⑥ 另：W6 顺手逮到的那条不在我范围内的（`bind` 触达 LLM 却不在 `_LLM_NODE_TASKS`）
+
+`nodes/bind.py:180` 走 `deps.llm` 而 `_effective_limit_for("bind")` 仍是 0.2s，同一次探测里 6 个 LLM 节点都是 15.0s。
+这条对**我**的意义只有一条：如果 `bind` 因 0.2s 被掐，终止码会走 W4 新落的失败转移而不是 `INTERNAL` ⇒
+我的回执里 `codes` 会开始出现 `GATE_*`/降级码而不是只有 `INTERNAL`。**下一次跑批我会按这个预期读**，
+判向变了不是我的驱动坏了。归 W4（他们已收 RELAY G3）。
+
+### ⑦ P7 那四问逐条答（W6：你们复现不出来是**差一步准备动作**，不是形状不对）
+
+| 你们要的四件事之一 | 答 |
+|---|---|
+| ① 经 app 执行器还是裸 SQL | **裸 SQL**，`docker exec commerceql-pg-1 psql -U postgres -d ecom`，没进 executor、没有游标、没有 `EXEC_MAX_ROWS` |
+| ② `SET ROLE app_rw` 与直接以 `app_rw` 登录 | 我只测了 `SET ROLE app_rw`（视图属主、`FORCE RLS` 对它生效、非超级用户），**没有 app_ro 的口令 ⇒ 那条路径我未测**。"两者应走同一策略（普通视图按属主求值）"是我的推断，不是读数 |
+| ③ SQL 的确切形状 | `select count(*) from app.v_order_paid`（无 GROUP BY、无游标；`v_order_paid` 定义是纯 `SELECT … FROM app.order_paid`，**无 WHERE**，已核 `pg_get_viewdef`） |
+| ④ `max_parallel_workers_per_gather` | 服务器默认 **2**（我交错实验里就在 0↔2 之间切；早先那几个数用的是 4 与默认） |
+| **★ 你们 8 组全绿的真正原因** | 你们的准备里 **两把 GUC 都是 `set_config` 显式设值** ⇒ 从来没进过"占位符"那一格。差的只有这一句：`reset app.shop_ids;`（键在本会话从未设过 ⇒ 留下列值 `''` 的占位符，而不是 NULL）。补上这一句，off/on 立刻不等值（我这边串行恒 200,000 / 并行 119,181…115,622）。 |
+
+⚠️ **同时订正一件对我自己不利的事**：你们试图复现的那三个数（98,359 / 98,052 / 1,271）来自我**被污染的前两批**
+—— 第一批用 `RESET` 清场混在会话里、第二批跨了不同 psql 进程。它们**不该被当成一组可复现读数**发给你们，
+是我发出去得太早。现在这组才是受控的（同会话、同 REPEATABLE READ 快照、每轮同轮取属主真值）：
+**119,181 / 104,708 / 93,019 / 115,622**，串行恒 200,000。
+你们那句"更像部分并行分量为 0 的形状"**判断正确**，且现在按进程证实了：`Worker 0: actual rows=0`。
+
+另：你们把 `parallel_equality` 常驻成前置判据这件事，请把它**跑在三态上**（显式设值 / `RESET` 占位符 /
+P1 换 `'*'` 哨兵后）—— 只测前两态里的第一态会恒绿，而这正是这一格能藏住错的原因。
+还有 `debug_parallel_query=on` 只证明"计划里有 Gather"，**不证明 worker 真扫了块**：
+要看 `Worker 0: actual rows=`。我们两边各被"结果恰好正确"骗过一次。

@@ -158,9 +158,14 @@ def load(args: argparse.Namespace) -> int:
         # ⚠️ 必须带身份 GUC 才测得出东西：`app.order_paid` 上是 **FORCE ROW LEVEL SECURITY**，
         #    策略为 `tenant_id = current_setting('app.tenant_id', true)`
         #    **AND** (`current_setting('app.shop_ids', true)` = '' **OR** shop_id = ANY(...))。
-        #    两个 GUC 都不设时第二个谓词整体求值为 **NULL**（不是 true）⇒ 任何一行都不满足，
-        #    连超级用户走视图都是 0 行（2026-09-19 实测）。所以"视图 0 行"**不是**装载失败，
-        #    而是没给身份 —— 这里显式设成 T_A/'' 来区分这两种情况。
+        #    两个 GUC 都不设时第二个谓词整体求值为 **NULL**（不是 true）⇒ 任何一行都不满足。
+        #    ⚠️ 订正 09-19 那句"连超级用户走视图都是 0 行"：**超级用户绕开 RLS，那句话是错的** ——
+        #    复测是用 `SET ROLE app_rw`（视图属主、FORCE RLS 对它生效、非超级用户）做的，0 行成立。
+        #    ⚠️ 还有一条会坑到任何"先清场再测"的人：`RESET app.shop_ids` **不会**回到 NULL，
+        #    而是留下一个值为 `''` 的占位符 —— 而 `''` 在策略里就是"不限店铺"。
+        #    ⇒ 想测"未设"这一格只能开**全新连接**，别在会话里 RESET（09-20 实测：RESET 之后
+        #    串行读出 200,000 行 = 该租户全部 5 家店；并行计划下还会少算，见 reports/w7/RELAY.md §十六）。
+        #    这里显式设成 T_A/'' 来区分"没给身份"与"装载失败"两种情况。
         for (view,) in pg.execute(
             "select viewname from pg_views where schemaname='app' and viewname like 'v_%' order by 1"
         ).fetchall():
