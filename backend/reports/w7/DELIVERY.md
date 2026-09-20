@@ -140,12 +140,16 @@ PID 1 在不用 `exec`、不加监督进程的前提下**拿不到**服务进程
    ⇒ 提交前 `git status` 逐条核过，本窗口那批只含 `backend/reports/w7/**`、`deploy/runbook/**`、
    `deploy/observability/**`、`deploy/loadtest/**`、`app/obs/**`、`app/api/routers/health.py`。
 5. **本轮为验证临时起的资源与它们的当前状态**：一次性 Prometheus 容器 `w7prom` **已删**；
-   `w7load-api` 停在 `Exited (143)`（drain 演练的正常出口）；`commerceql-pgbouncer-1` 在跑但应用角色进不去；
-   ⚠️ **灌进共享 PG 的 1,940,300 行合成数据没有回滚** —— 它是 §16.5 复现的前置，也是 W6 现在可能在读的同一个库。
-   **要不要清、什么时候清，属主流程决定**，本窗口不擅自动别人在用的库（`truncate` 在这儿不可逆）。
+   `w7load-api` 09-20 为 U-105 活体复采**用当前源码树重建过一次**，采完即停（仍 `Exited (143)`，drain 的正常出口），
+   主栈 `commerceql-{api,pg,redis}` 全程未动；`commerceql-pgbouncer-1` 在跑且**应用角色进得去**
+   （⚠️ 旧版这里写"进不去"已作废：真因是我把 `AUTH_TYPE` 字面值写成 `scram`，合法值是 `scram-sha-256`，
+   已落 compose 并实测 `app_rw` 经 6432 `conn ok`、`SHOW POOLS` 出现 `db=ecom user=app_rw`）。
+   ✅ **灌进共享 PG 的 1,940,300 行合成数据 —— 总控 09-20 裁定「暂不清理」**（原话：共享 PG 里 1,940,300 行
+   合成数据暂时不清理）。⇒ 它是 §16.5 复现的前置，W6 也在读同一个库；`truncate` 在这儿不可逆，
+   **后续窗口不要自行清**，要清等总控明示。这一条从"待决"变成"已决"，别再当开放问题转述。
 6. **本轮对着当前代码复核自己发布过的结论，订正三处**（都写在原处，不留旧版误导）：
    ① `deploy/loadtest/README.md` §四 的"async 截断点会压低 P95"这条陷阱，**在当前构建里不可达** ——
-   `_should_go_async()` 因缺预估延迟载体恒 `False`（`edges.py:329`、`runner.py:51` 自证，且有契约用例钉住）。
+   `_should_go_async()` 因缺预估延迟载体恒 `False`（`edges.py:322` 定义处、`runner.py:51` 自证，且有契约用例钉住）。
    ⇒ 含义变了：本轮十份回执 `async_degraded=0` 是**预期结果**而非"恰好没触发"；`--no-async` 仍保留（载体一接上就复现）。
    ② RELAY 条目 6 原写"`Outcome.SWITCHED_TO_ASYNC` 全仓无消费方"——两处都不准：成员在 `ActionTaken`
    （`enums.py:469`），且有 `test_edges_contract.py` 引用。真实事实是"生产路径不可达"。
@@ -160,10 +164,12 @@ PID 1 在不用 `exec`、不加监督进程的前提下**拿不到**服务进程
 
 | 项 | 为什么 |
 |---|---|
-| **G-6"P95 ≤8s"是否达标** | 四场景已跑完（真实额度、真实数据）但**零成功完成** ⇒ 无有效分母。已量到的是容量事实：50 并发成功率 8.7%、100 并发 0%，根因见 `压测报告.md` §四 R1/R2 |
+| **G-6"P95 ≤8s"是否达标** | 四场景已跑完（真实额度、真实数据）但**零成功完成** ⇒ 无有效分母。⚠️ 根因按 09-20 实测**已改写**：并发不是成因（c=1 也超时），节点预算已由 W4 平移到 3.5s（活体见 `limit_s:3.5`），**现在挡在上游**：容器内 `deepseek-flash` warm 单发 1.85–2.03s（另有 27.3s 一次、503 一次）⇒ 5 条探测 5/5 仍超时。**故本轮未跑批**，判据与量法见 `deploy/loadtest/README.md` §三.0.1 |
+| U-104 规则 2 / 3 的**实施状态**（我只登记读数，不动别人的表） | `NODE_TIMEOUT_S`（`app/graph/build.py:369-384`）实测仍是 `normalize 2.0 / intent 1.5 / plan 3.0 / gen_sql 2.5 / link 4.0` ⇒ **规则 2**（LLM 节点硬超时 = 模型客户端超时 flash 15s / pro 45s、单一超时点）**未实施**；今天 5 条超时终止码仍是 `INTERNAL` ⇒ **规则 3**（超时走该节点失败转移、禁落 `error(INTERNAL)`）**未实施**。规则 4 的非 LLM 数值与裁定一致（gate 0.1 / bind 0.2 / mask 0.1 / audit 1.0·0.5 / execute 30） |
+| `checks.llm_reachable` 在慢建连窗口下的**假负** | `app/obs/probes.py:45` 的 `PROBE_TIMEOUT_S = 2.0` 把"连不上"与"慢于 2s"压成同一个布尔（A.8.4 的 `checks` 形状不允许两态）。实测：同一时刻容器内 warm 单发 1.9s 能通，而 `/healthz` 报 `degraded_dependencies:["llm"]`。**本窗口未擅自改阈值**（牵动 readiness 轮询耗时与 N-21 语义）⇒ 待架构裁：改阈值 / 拆两态 / 保持并在文档标注 |
 | pgbouncer 后端连接 ≤30 | **状态已从"不可测"改为"可判、但没有生产读数"**。⚠️ 订正本报告先前那版"应用角色进不去 ⇒ 三条出路各有代价待裁决"：**是我把字面值写错了** —— 合法取值是 `AUTH_TYPE: "scram-sha-256"`（pgbouncer 1.14+ 原生支持），我试的 `scram` 才非法。**零安全代价**，一行已落 `deploy/docker-compose.yml`；本轮实测 `app_rw` 经 6432 `conn ok`、`SHOW POOLS` 出现 `db=ecom user=app_rw`（`sv_idle=1`）。⇒ 剩下的障碍从来不是认证，而是"`transaction` 池模式 vs `SET LOCAL` 身份传递（ADR-09）vs checkpoint 长持连接（R-10）"互不兼容 ⇒ **应用要不要真的走 6432 待裁**。在那之前该断言只有探针读数（四场景期间 `sv_active=0` = 没接，不是接了没超） |
-| 断言① checkpoint 无写入等待 / 断言② `SET LOCAL` 复位**在负载下** | **不可观察**而非"不成立"：embedding 不可用 ⇒ 查询从未走到 `execute`（`stage_duration_seconds_count{executing}=0`）。侧证有（`lg.checkpoints` 4,200 行在写、审计 62 行），但那不等于"负载下无等待" |
-| embedding 探针的**成功分支** | `bge-m3` 拉取停在 83%（1.8 KB/s）⇒ 只实测过失败分支的 `200 + degraded` |
+| 断言① checkpoint 无写入等待 / 断言② `SET LOCAL` 复位**在负载下** | **仍不可观察**，但⚠️ **原因换了一个**：旧版写"embedding 不可用 ⇒ 从未走到 `execute`"，09-20 embedding 已可用，现在挡在前面的是 **`normalize` 节点超时**（5/5 条探测在该节点终止 ⇒ 到不了 `execute`/`link`，`stage_duration_seconds_count{executing}` 仍为 0）。侧证有（`lg.checkpoints` 在写、审计在写），但那不等于"负载下无等待" |
+| embedding 探针的**成功分支** | ✅ **已覆盖（09-20 活体）**：重建后的 `w7load-api` `/healthz` 报 `embedding_reachable=true`、`embedding_model=bge-m3`、`embedding_dim=1024` ⇒ N-21 的"软依赖坏 ⇒ 200+degraded"与"软依赖好 ⇒ 200+healthy"**两面都实测过**。⚠️ 同一份 payload 里 `llm_reachable=false` 是**上面那行探针阈值**的产物，不是 embedding 的问题 |
 | 真实 app + 真实 SSE 的一次优雅停机重启 | ✅ **已覆盖（09-19）**：40 并发中途 `docker stop`，66 条在途流全部拿到终止帧、0 条硬断、traceback 归零。见 §三 末节 |
 | liveness 失败后的自动重启 | **附录 A 口径**：readiness/liveness 的**消费者**里没有编排器自动重启 ⇒ "探针就位"不等于"自愈已闭环" |
 | **9 条告警规则会不会按预期亮** | 真 Prometheus 已实测到"9 条在活序列上 `health=ok`、`state` 全 `inactive`"，但**没有任何一条真正跨越过阈值**（不该为了看它亮去制造超支/超时）⇒ 判据方向**仍只有** `alert.rules.test.yml` 那 13 条离线断言作证据。另：compose 里**没有 Alertmanager** ⇒ "告警送达"这一环根本没有实现面可验 |
