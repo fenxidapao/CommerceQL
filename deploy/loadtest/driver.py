@@ -34,10 +34,11 @@ import os
 import statistics
 import sys
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import httpx
 
@@ -68,6 +69,9 @@ class Sample:
     #    ⇒ 只看 reason 分不出来源，必须把"终止前最后一个 stage 帧"一起记下来。
     last_stage: str | None = None
     reason: str | None = None
+    #: 拒答侧的"什么时候再来"（429 → §9.2 给 30s；W4 的 DB_UNAVAILABLE → 5s）。
+    #: U-106 新增场景⑤"单租户饱和"要验的就是这个头**在不在**——没有它，客户端只会重试打爆。
+    retry_after: str | None = None
 
 
 @dataclass(slots=True)
@@ -81,15 +85,26 @@ class ScenarioSpec:
 
 
 def scenario_specs(only: str | None) -> list[ScenarioSpec]:
-    """07 §16.5 的四场景默认参数。``--scenario`` 给名字时只跑那一条。"""
+    """07 §16.5 的四场景默认参数 + U-106 追加的场景⑤。``--scenario`` 给名字时只跑那一条。
+
+    ★ 场景⑤ `tenant-saturation`（U-106，2026-09-20 架构裁定"另加"）验的**不是容量**，是
+    "配额保护对不对"：429 是否带 `Retry-After: 30`、被拒的请求是否**根本没进流水线**
+    （不产生 LLM 调用、不产生 `cost_ledger` 行）。⚠️ 成本要说清：租户桶是 100 请求/分钟
+    （`ratelimit.py:203`），所以前 ~100 条是**真准入、真花额度**的，只有超出那部分才是免费的拒绝
+    —— 别把这一场景当成"不花钱的冒烟测试"。
+    """
     specs = [
         ScenarioSpec("steady", 50, 600.0, None, False, False),
         ScenarioSpec("burst", 100, 30.0, None, False, False),
         ScenarioSpec("session-lock", 8, None, 24, True, False),
         ScenarioSpec("tenant-quota", 30, None, 60, False, True),
+        ScenarioSpec("tenant-saturation", 30, 30.0, 130, False, True),
     ]
     if only is None:
-        return specs
+        # ⚠️ 缺省**不含**场景⑤：§16.5 的口径是"四场景"，而 W6 读的 `receipt.json` 就按那四条合成。
+        #    把一条追加诊断场景混进默认集，会让"§16.5 全跑完"这句话悄悄变成五件事 ——
+        #    要跑它必须显式 `--scenario tenant-saturation`。
+        return [s for s in specs if s.name != "tenant-saturation"]
     return [s for s in specs if s.name == only]
 
 
@@ -162,7 +177,8 @@ async def fire_one(
             if status >= 400:
                 body = (await resp.aread()).decode("utf-8", "replace")[:200]
                 kind = "http_4xx" if status < 500 else "http_5xx"
-                return Sample(kind, status, None, _ms(start), 0, detail=_code_of(body) or body)
+                return Sample(kind, status, None, _ms(start), 0, detail=_code_of(body) or body,
+                              retry_after=resp.headers.get("retry-after"))
             async for line in resp.aiter_lines():
                 if not line:
                     continue
@@ -295,14 +311,63 @@ async def _tokens_for(args: argparse.Namespace, spec: ScenarioSpec) -> list[str]
     return [single]
 
 
+#: U-106 的"准入"定义：HTTP 2xx（= 真进了 SSE 流）。429 是限流器**正确工作**，
+#: 不该进延迟分位数；4xx/5xx/未收口同理要单列，不能混进分母。
+MIN_ADMITTED_FOR_P95: Final[int] = 20
+
+
+def _admitted(sample: Sample) -> bool:
+    return sample.status is not None and 200 <= sample.status < 300
+
+
+def _admission(samples: list[Sample]) -> dict[str, int]:
+    """把请求按"有没有被准入"分桶 —— U-106 要求 429 比例**单列**，不是塞进 outcomes。"""
+    buckets = {"admitted": 0, "rejected_429": 0, "other_http_4xx": 0, "http_5xx": 0, "unresolved": 0}
+    for s in samples:
+        if _admitted(s):
+            buckets["admitted"] += 1
+        elif s.status == 429:
+            buckets["rejected_429"] += 1
+        elif s.status is not None and 400 <= s.status < 500:
+            buckets["other_http_4xx"] += 1
+        elif s.status is not None and s.status >= 500:
+            buckets["http_5xx"] += 1
+        else:
+            buckets["unresolved"] += 1  # 超时/连不上：连接层事实，没资格进任何 HTTP 桶
+    return buckets
+
+
+def _rejections(samples: list[Sample]) -> dict[str, dict[str, int]]:
+    """被拒样本的**退避可用性**指纹：`状态码 → {"retry_after=<值 或 missing>"} → 条数`。
+
+    为什么单独记：429/503 只对客户端"可恢复"的前提是带了 `Retry-After`（§9.2 给 429 是 30s，
+    W4 的 `DB_UNAVAILABLE` 给 5s）。少了这个头，压测端和真实前端都只会立刻重试 ⇒ 配额保护
+    被自己的重试流量打穿，而看板上看到的只是"429 很多"。
+    """
+    out: dict[str, dict[str, int]] = {}
+    for s in samples:
+        if s.status is None or s.status < 400:
+            continue
+        bucket = out.setdefault(str(s.status), {})
+        key = f"retry_after={s.retry_after if s.retry_after is not None else 'missing'}"
+        bucket[key] = bucket.get(key, 0) + 1
+    return out
+
+
 def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: argparse.Namespace) -> dict[str, Any]:
-    totals = sorted(s.total_ms for s in samples if s.total_ms is not None)
-    ttfbs = sorted(s.ttfb_ms for s in samples if s.ttfb_ms is not None)
+    # ★ U-106（架构裁定 2026-09-20）：**P95 只在准入样本上算，429 比例单列**。
+    #   旧口径把所有样本混进分位数 ⇒ "5 用户打 150 条"那种跑法 p50=7.3ms（那是 429 的速度），
+    #   而 429 是限流器**正确工作**，不是"请求很快"。混算会把配额问题伪装成容量结论。
+    admitted = [s for s in samples if _admitted(s)]
+    totals = sorted(s.total_ms for s in admitted if s.total_ms is not None)
+    ttfbs = sorted(s.ttfb_ms for s in admitted if s.ttfb_ms is not None)
+    all_totals = sorted(s.total_ms for s in samples if s.total_ms is not None)
     # 先算一次：`_pct` 返回 `float | None`，连调两次 mypy 收窄不了（而且同一分位数算两遍没意义）。
     p95_total = _pct(totals, 95)
     by_outcome: dict[str, int] = {}
     for s in samples:
         by_outcome[s.outcome] = by_outcome.get(s.outcome, 0) + 1
+    admission = _admission(samples)
     return {
         "scenario": spec.name,
         "params": {
@@ -321,9 +386,18 @@ def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: a
         "requests": len(samples),
         "wall_s": round(wall_s, 3),
         "throughput_rps": round(len(samples) / wall_s, 3) if wall_s > 0 else None,
+        # ⚠️ `latency_ms` 的分母是**准入样本**（`p95_scope` 自证口径）。schema 串刻意仍是
+        #    `w7.loadtest.receipt/1`：W6 的 `eval/reporter.py:139` 按这个串**精确匹配**，
+        #    改串会让 G-6 静默退回 `NOT_AVAILABLE` —— 那是把口径修对了、把接口弄断了。
+        "p95_scope": "admitted_http_2xx",
+        "admission": admission,
+        "rejection_headers": _rejections(samples),
         "latency_ms": {"p50": _pct(totals, 50), "p95": p95_total, "p99": _pct(totals, 99),
                        "max": round(totals[-1], 1) if totals else None,
-                       "mean": round(statistics.fmean(totals), 1) if totals else None},
+                       "mean": round(statistics.fmean(totals), 1) if totals else None,
+                       "samples": len(totals)},
+        "latency_ms_all_ms": {"p50": _pct(all_totals, 50), "p95": _pct(all_totals, 95),
+                              "samples": len(all_totals)},
         "ttfb_ms": {"p50": _pct(ttfbs, 50), "p95": _pct(ttfbs, 95)},
         "outcomes": by_outcome,
         "codes": _codes(samples),
@@ -335,11 +409,14 @@ def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: a
         # G-6 只看 total_ms 的 p95；⚠️ 这个布尔位**单独读没有意义**，必须与 `g6_caveat` 同读
         #    （0 条完成时 p95 也可以 ≤8s —— 那正是假绿灯的形状，见 `_g6_caveat` 的文档）。
         "g6_p95_le_8s": (p95_total is not None and p95_total <= 8000.0),
-        "g6_caveat": _g6_caveat(by_outcome),
+        "g6_caveat": _g6_caveat(by_outcome, admission),
     }
 
 
-def _g6_caveat(by_outcome: dict[str, int]) -> str | None:
+def _g6_caveat(
+    by_outcome: dict[str, int],
+    admission: Mapping[str, int] | None = None,
+) -> str | None:
     """这份 P95 **能不能**拿来判 G-6 达标 —— 必须是机器可读的，不能只在散文里警告。
 
     为什么这条要单独抽出来：下游 W6 的 `eval/reporter.loadtest_pressure()` 取的是
@@ -347,6 +424,8 @@ def _g6_caveat(by_outcome: dict[str, int]) -> str | None:
     它不读 `outcomes`。于是 2026-09-19 那种"0 条完成、但 error 帧收得很快"的跑批
     （p95 = 7268ms ≤ 8000ms）会被**机械地判成 G-6 PASS**。分母里没有一次成功。
     ⇒ 凡是"这条 P95 不代表真实完成延迟"的情形，都必须在这里落一句非空文本。
+
+    `admission=None` = 这份回执产自 U-106 之前（没有准入分桶字段）⇒ 不能假装按新口径判过。
     """
     notes: list[str] = []
     completed = by_outcome.get("ok", 0)
@@ -355,6 +434,23 @@ def _g6_caveat(by_outcome: dict[str, int]) -> str | None:
     async_degraded = by_outcome.get("async_degraded", 0)
     if async_degraded:
         notes.append(f"含 {async_degraded} 条 async_degraded（超阈值转异步）⇒ 端到端未在此流内完成，P95 偏低")
+    if admission is None:
+        notes.append("本回执无 `admission` 字段（产自 U-106 口径之前）⇒ 无法确认 P95 的分母是否只含准入样本")
+    else:
+        admitted = admission.get("admitted", 0)
+        if not admitted:
+            notes.append("准入样本为 0（全部被 4xx/5xx/连接层拒掉）⇒ 本场景没有任何端到端延迟可判")
+        elif admitted < MIN_ADMITTED_FOR_P95:
+            notes.append(
+                f"准入样本仅 {admitted} 条（< 本窗口下限 {MIN_ADMITTED_FOR_P95}）⇒ P95 落点由个别样本决定，"
+                "统计意义不足"
+            )
+        rejected_429 = admission.get("rejected_429", 0)
+        if rejected_429:
+            notes.append(
+                f"另有 {rejected_429} 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；"
+                "它是配额画像而非容量读数）"
+            )
     return "；".join(notes) if notes else None
 
 
@@ -438,7 +534,10 @@ async def self_check() -> int:
             await _json_reply(send, 409, '{"detail":{"code":"SESSION_CONFLICT"}}')
             return
         if kind == "http429":
-            await _json_reply(send, 429, '{"detail":{"code":"RATE_LIMITED"}}')
+            # 带 `Retry-After: 30` 是 §9.2 的要求 ⇒ 桩必须也带上，否则 `rejection_headers`
+            # 这条读数在任何自检里都只能是 missing，等于没测。
+            await _json_reply(send, 429, '{"detail":{"code":"RATE_LIMITED"}}',
+                              headers=[(b"retry-after", b"30")])
             return
         await send({"type": "http.response.start", "status": 200,
                     "headers": [(b"content-type", b"text/event-stream")]})
@@ -508,15 +607,20 @@ async def self_check() -> int:
         return 3
     # `g6_caveat` 是**下游唯一的降档开关**（W6 的 `eval/reporter.loadtest_pressure()` 只读它、
     # 不读 `outcomes`）⇒ 它"假空"就等于把一份没有一次成功的 P95 判成 G-6 PASS。
-    # 三种情形都必须测到，否则会静默退回旧行为。
-    gate_cases: list[tuple[dict[str, int], bool]] = [
-        ({"error_frame": 87, "http_5xx": 41, "http_4xx": 9, "clarify": 7, "refuse": 6}, True),
-        ({"async_degraded": 12, "ok": 3}, True),
-        ({"ok": 40, "clarify": 5}, False),
+    # 五种情形都必须测到（后三条是 U-106 加的），否则会静默退回旧行为。
+    gate_cases: list[tuple[dict[str, int], dict[str, int] | None, bool]] = [
+        ({"error_frame": 87, "http_5xx": 41, "http_4xx": 9, "clarify": 7, "refuse": 6},
+         {"admitted": 0, "rejected_429": 9}, True),
+        ({"async_degraded": 12, "ok": 3}, {"admitted": 15}, True),
+        ({"ok": 40, "clarify": 5}, {"admitted": 45}, False),
+        ({"ok": 5}, {"admitted": 5}, True),                                  # 准入太少 ⇒ 判不了
+        ({"ok": 40}, None, True),                                            # 旧回执无准入分桶
+        ({"ok": 30, "refuse": 5}, {"admitted": 30, "rejected_429": 20}, True),  # 429 单列但必须可见
     ]
-    for case_outcomes, want_caveated in gate_cases:
-        if bool(_g6_caveat(case_outcomes)) != want_caveated:
-            print(f"[自检失败] g6_caveat 判错：{case_outcomes} → {_g6_caveat(case_outcomes)!r}"
+    for case_outcomes, case_admission, want_caveated in gate_cases:
+        if bool(_g6_caveat(case_outcomes, case_admission)) != want_caveated:
+            print(f"[自检失败] g6_caveat 判错：{case_outcomes} + admission={case_admission} "
+                  f"→ {_g6_caveat(case_outcomes, case_admission)!r}"
                   f"（期望{'非空' if want_caveated else 'None'}）", file=sys.stderr)
             return 3
     # 终止来源指纹：整字典相等（不是"包含"）。三件事各钉一处 ——
@@ -534,8 +638,24 @@ async def self_check() -> int:
     if prov != want_prov:
         print(f"[自检失败] 终止来源指纹不对：{prov}", file=sys.stderr)
         return 3
+    # U-106 的准入分桶：桩里刻意放一条 409（配额之外的 4xx）和一条 429，
+    # 断言"429 单独成桶、其他 4xx 不混进去、2xx 全算准入"——分母口径错了，P95 就全错了。
+    admission = _admission(got)
+    want_admission = {"admitted": 8, "rejected_429": 1, "other_http_4xx": 1,
+                      "http_5xx": 0, "unresolved": 0}
+    if admission != want_admission:
+        print(f"[自检失败] 准入分桶不对：{admission}（期望 {want_admission}）", file=sys.stderr)
+        return 3
+    # 被拒样本的退避指纹：429 必须读到 `retry_after=30`（桩就是照 §9.2 发的），
+    # 409 没这个头 ⇒ 落成 missing。**如果这条恒 missing，说明驱动压根没读响应头**，
+    # 那场景⑤要验的东西就没人验 —— 所以它是"指纹能不能出数"的正向对照，不是装饰。
+    rejections = _rejections(got)
+    want_rejections = {"409": {"retry_after=missing": 1}, "429": {"retry_after=30": 1}}
+    if rejections != want_rejections:
+        print(f"[自检失败] Retry-After 指纹不对：{rejections}（期望 {want_rejections}）", file=sys.stderr)
+        return 3
     print(f"[自检通过] 10/10 分类正确；样本 p95={p95}ms（桩注入的最大延迟 3000ms）；"
-          f"g6_caveat 三情形（零完成/转异步/真有完成）判向正确；"
+          f"g6_caveat {len(gate_cases)} 情形判向正确；准入分桶正确；"
           f"terminal_provenance {sum(sum(v.values()) for v in prov.values())} 条指纹可读")
     return 0
 
@@ -555,9 +675,10 @@ async def _serve_on_loopback(app: Any) -> tuple[Any, asyncio.Task[Any], str]:
     return server, task, f"http://127.0.0.1:{port}"
 
 
-async def _json_reply(send: Any, status: int, body: str) -> None:
+async def _json_reply(send: Any, status: int, body: str,
+                      headers: list[tuple[bytes, bytes]] | None = None) -> None:
     await send({"type": "http.response.start", "status": status,
-                "headers": [(b"content-type", b"application/json")]})
+                "headers": [(b"content-type", b"application/json"), *(headers or [])]})
     await send({"type": "http.response.body", "body": body.encode(), "more_body": False})
 
 
@@ -578,8 +699,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="CommerceQL §16.5 四场景压测驱动（W7）")
     p.add_argument("--target", default="http://127.0.0.1:8000/api/v1",
                    help="API 基址（含 /api/v1）。⚠️ 先确认该栈有 query 路由：docker exec <api> ls /srv/app/api/routers")
-    p.add_argument("--scenario", choices=["steady", "burst", "session-lock", "tenant-quota"],
-                   help="只跑一条；缺省跑全四条")
+    p.add_argument("--scenario",
+                   choices=["steady", "burst", "session-lock", "tenant-quota", "tenant-saturation"],
+                   help="只跑一条；缺省跑 §16.5 那四条（`tenant-saturation` 是 U-106 的追加场景，**只能点名跑**）")
     p.add_argument("--questions-file", help="题库文件（一行一条）。⚠️ §16.5 要求合成数据集全量口径")
     p.add_argument("--no-async", action="store_true", help="置 options.async_if_slow=false，拿真实端到端")
     p.add_argument("--reuse-sessions", action="store_true", help="轮转复用 session（撞串行锁的正面用例）")
@@ -636,7 +758,7 @@ def roll_up(paths: list[str], out: str) -> int:
         for s in raw.get("scenarios") or []:
             outcomes = s.get("outcomes") or {}
             old = s.get("g6_caveat")
-            s["g6_caveat"] = _g6_caveat(outcomes)
+            s["g6_caveat"] = _g6_caveat(outcomes, s.get("admission"))
             s["g6_caveat_recomputed"] = True
             merged["derived_from"].append({
                 "file": Path(p).name, "scenario": s.get("scenario"),

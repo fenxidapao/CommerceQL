@@ -431,3 +431,97 @@ W1B 侧改动就一处（`_alembic()` 的 `subprocess.run` 加 `encoding="utf-8"
 
 ⚠️ 一句总纲：上面所有"会动了""可判了"都以**那两笔提交进 HEAD** 为前提。在那之前，HEAD 上这条线是全 0，
 而 A 类的全 0 **看得见但不产生告警覆盖** —— 别把"注册了指标"读成"监控已生效"。
+
+---
+
+## 十四、回执 W4 / 架构：U-104 / U-105 / U-106 已落，另报一条新的第一阻塞（09-20）
+
+**先解除 §十三 末尾那句前提**：`addc554` + `134476d` 已进 `main`，我复测过（不是引用你们的说法）——
+
+| 判据 | 结果 |
+|---|---|
+| `grep -rn observe_exec_failure app/ --include=*.py` | 只剩 `execute.py:53/111`（直记）+ `metrics.py:857`（定义）⇒ **帧反推已无、无双计** ✅ |
+| `cd backend && ruff check .` | **All checks passed!** ⇒ 🔴-2 解除 ✅ |
+| 全量测试 | **2154 passed / 6 skipped / 0 failed** ✅ |
+| `lint-imports` | **4 kept, 0 broken**（U-105 的注入形态没违反 R-DEP-3）✅ |
+| 活体（重建 `w7load-api` 镜像后） | `node_timeout{node:"normalize","limit_s":3.5}` ⇒ 3.5s 合并档**真的生效** ✅ |
+
+### ① U-105（`startup_assertion_state`）—— 已接，且是**活体验过**的
+
+架构给的三条约束我都守住了，但**约束 ① 与 R-DEP-3 直接冲突**，得说清我是怎么解的：
+
+> 约束① 要求"取值从 `ASSERTION_NAMES` / `AssertionStatus` 导出，禁手抄"；
+> 而 `.importlinter` 的 **R-DEP-3 禁止 `app/obs/**`（除 `audit.py`）import `app/repo/**`**。
+> ⇒ `metrics.py` 自己 import 源枚举这条路**不存在**。手抄一份字面量能过所有测试，
+> 而它的失效方式正是 U-105 要消灭的那种：W1B 加第 5 条断言时 CI 全绿、第 5 条永远不上看板。
+
+**采用的形态**：注册表只提供"封闭集 + `bind_domain` 注入口"，由**已经 import 得到 repo 的那一侧**
+（`app/main.py` lifespan 新增的第 **3.5** 段，照 W4 第 4.5 段的同一条"只追加"纪律）把
+`ASSERTION_NAMES` / `AssertionStatus` 注入。指标名/标签名/上界逐字按裁定：
+`startup_assertion_state`、`assertion`(≤4)、**`assertion_status`**（不叫 `status`，避开 HTTP `status`≤10 与 `state`≤4 的一名两义）。
+
+活体读数（重建镜像 + 起容器 + 抓 `/metrics`，不是推导）：**正好 12 条序列**，
+每条断言一行 `1` + 两行 `0`（`analytics_dsn_is_read_only` / `embedding_dim_matches_vector_column` /
+`audit_log_append_only_enforced` / `semantic_bundle_passed_five_step_validation`，全 `pass`）。
+
+约束②（封闭集越界 fail-fast）做成了通用机制 `_MetricSpec(closed=...)`：域外/未绑定/超上界一律**抛**，
+不走"丢弃 + 计溢出"那条路。新增 **8 条具名用例**（`test_obs_metrics_cardinality.py` 4 条 +
+`tests/contract/test_obs_startup_assertion_wiring.py` 4 条），再加 1 条随新指标**自动展开**的参数化用例
+⇒ 收集数 **+9**，与全量从 2145 涨到 2154 严格对齐。并对"手抄字面量"这种**看起来更简单、
+而且能通过全部现有测试**的写法做了 AST 级拦截 + 变异验证（往 `metrics.py` 塞一个字面量 ⇒ 契约红；
+还原 ⇒ 逐字节相同 + 绿）。第一次变异我写成了注释，**没被测到 —— 那是变异无效不是守卫无效**，
+重做成真字面量后才红；这一笔也记在这儿，免得有人以为一次就过了。
+
+### ② U-106（P95 只算准入 + 429 单列 + 场景⑤）—— 驱动侧已落
+
+* `latency_ms.*` 的分母改成**准入（HTTP 2xx）样本**；新字段 `p95_scope="admitted_http_2xx"`、
+  `admission{admitted/rejected_429/other_http_4xx/http_5xx/unresolved}`、`rejection_headers`
+  （429/503 的 `Retry-After` 指纹 —— 场景⑤的主判据）。旧混算口径留在 `latency_ms_all_ms`，**不得**引用成达标。
+* ⚠️ 一处刻意的**不升版**：`SCHEMA_VERSION` 仍是 `w7.loadtest.receipt/1`。
+  因为 W6 的 `eval/reporter.py:139` 按这个串**精确匹配**，升串 = G-6 静默退回 `NOT_AVAILABLE`。
+  我拿现有 `receipt.json` 过了 W6 真读端验证：`p95_total_ms=7268.4`、`caveat` 非空 ⇒ 接口未断。**口径靠字段自证，不靠版本号。**
+* `g6_caveat` 从 2 种降到 6 种判向（准入为 0 / 准入 < 20 / 旧回执无 `admission` / 有 429 被排除 …），
+  含一条"45 条准入且真有完成 ⇒ **不该**降档"的正向对照；两条新变异（摘 `Retry-After` 读取、把准入放宽成全体）都验过会红。
+* 场景⑤ `tenant-saturation` 已加，但**刻意不进默认集**（§16.5 是四场景，W6 读的 `receipt.json` 按那四条合成），
+  只能 `--scenario tenant-saturation` 点名跑。⚠️ 成本要说清：租户桶 100/分钟 ⇒ 前 ~100 条是**真准入真花额度**的，
+  它不是"免费冒烟测试"。
+* 40 用户 × 4 租户的画像算术写在 `deploy/loadtest/README.md` §三.0（375 req/min 需求 ⇔ 4 租户 / 38 用户）。
+
+### ③ ★ 新的第一阻塞：**上游 LLM 今天的抖动**，不是任何窗口的代码
+
+重建镜像后我打了 5 条探测请求（**不是跑批**）+ 在容器内直接量 `deepseek-flash`：
+
+| 量 | 读数（09-20，容器内） | 09-19 对照 |
+|---|---|---|
+| warm 单发 | **1853 / 2033 ms** | 1060 / 1104 / 1515 ms |
+| warmup 请求 | 一次 **HTTP 503** | — |
+| 首次调用 | **27,348 ms** | — |
+| 容器→上游建连 | 一批 **3134 / 4038 / 4049 ms**，稍后复测 **22–70 ms**（宿主 123 ms；两批解析到的 IPv4 集合相同） | — |
+| 端到端 5 条探测 | 全 `node_timeout{limit_s:3.5}` ⇒ `error(INTERNAL)`，3584.8 / 12129.7 ms | — |
+
+⇒ **结论：3.5s 合并档是对的，但它解决的是"零余量"，不解决"上游慢"。** 在 warm 单发已经 2.0s 的供给方上，
+`normalize` 的余量又变成 1.5s，与 09-19 的形状等价。**我没有跑四场景**（判据与命令见 `README.md` §三.0.1：
+warm 单发 p50 ≤1.5s 且三次无 5xx 才开跑）—— 这种状态跑出来的 P95 是 DeepSeek 当天的抖动画像，
+而 W6 的门禁会照抄我的数，**不跑比跑更负责**。
+⇒ 要转述的话就一句：**G-6 复跑现在卡在外部供给方的延迟窗口，不卡在代码**。请总控在"容器内 warm 单发回到
+≤1.5s"时给我一句话，我立刻按 §三.0 的 40 令牌画像跑四场景 + 场景⑤。
+
+### ④ 我自己的一处量具缺陷（如实报，属 W7 域）
+
+`app/obs/probes.py:45` 的 `PROBE_TIMEOUT_S = 2.0` 让 `/healthz` 在上述慢建连窗口里报
+**`llm_reachable=false` + `degraded_dependencies=["llm"]`，而真实请求是能通的**（同一时刻 warm 单发 1.9s < 60s 预算）。
+⇒ `checks.llm_reachable` 这个布尔把"**连不上**"和"**慢于 2s**"合并成了同一个读数 —— 这是**契约 A.8.4 的形状**逼出来的，
+我不能改 payload 形状（`checks` 是布尔表），只能在阈值上取舍。
+**我没有擅自改这个阈值**：它同时影响 readiness 轮询耗时与 N-21 的告警语义，要改建议连同
+"软探针是否该在 `/healthz` 内联跑"一起判 ⇒ **待架构给一句话**（改阈值 / 拆成两态字段 / 保持现状但在文档标注"false 可能是慢"）。
+本轮已把这条写进 `README.md` §三.0.1 与这里，看板侧暂时按"`llm` 软探针 false ⇒ 先复测量具再说"处理。
+
+### ⑤ 我这侧还剩什么（不阻塞别人）
+
+| 项 | 状态 |
+|---|---|
+| G-6 四场景复跑 + 场景⑤ | **等上游窗口**（§③）+ 40 枚多租户令牌（命令已写） |
+| 绑定后的 `/metrics` 活体 | ✅ 本轮已抓（12 条序列）；runbook §二 那条"PENDING 不可查询"已改成可查询 |
+| RL-1/RL-3 里 `DB_UNAVAILABLE`(503 + `Retry-After: 5s`) 的新行为 | 待复跑时一起改（现在改写的是"没有活体读数的行为"） |
+| Grafana 面板渲染 / nginx 404 | 仍 UNVERIFIED（排在复跑之后） |
+| `exec_failure_total` 9 类真数 | 需要一次真跑批才谈得上（今天 5 条探测全是 `INTERNAL` 终止，不进执行失败分类） |

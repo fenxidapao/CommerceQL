@@ -45,6 +45,85 @@
 | 4 | 软依赖 embedding | `bge-m3` 不在 Ollama 模型列表 | ⏳ 中途还发现 Ollama **整个没在跑**（宿主 `:11434` 无监听）；起来后 `host.docker.internal:11434` 从容器 23ms 可达，但 `bge-m3` 仍需拉取（1.2 GB）⇒ **未拉完之前所有查询走稀疏降级**，实测表现为大量 `clarify`/`refuse` |
 | 5 | pgbouncer | 未运行 | ⚠️ **两处独立缺陷**：① compose 发布 `6432:6432` 但镜像默认 `LISTEN_PORT=5432` ⇒ 该服务自加入起从未可用（已在 compose 补 `LISTEN_PORT: "6432"`）；② 修好之后应用角色仍连不上：`FATAL: server login failed: wrong password type` —— 镜像默认 `auth_query` 只能配 md5 哈希，而 W1B 的角色口令是 SCRAM。且 `auth_type=scram` **不是合法取值**（写了直接 `FATAL cannot load config` + 重启循环）。⇒ 断言③仍不可测，三条出路已上呈 RELAY |
 
+### 三.0 2026-09-20 复测：前置已解除，且 U-106 给并发画像定了数
+
+上表（§三）是 **09-19 的状态**，其中三条已被 09-20 覆写，列在这里不删是为了留住"当时为什么那样判"：
+
+| 前置 | 09-20 复测 |
+|---|---|
+| W4 的三笔 | ✅ 已进 HEAD（`addc554` + `134476d`）：`errors.py` 的 Redis 边界映射（→ `DB_UNAVAILABLE` 503 + `Retry-After: 5s`、限流器 fail-closed）、`execute.py::_on_failure` 直记 `exec_failure_total`（9 类全量）、`build.py` 合并档预算平移。**W7 的帧反推已删 ⇒ 无双计**（`tests/unit/test_obs_instrumentation.py` 钉住） |
+| `normalize` 2.0s 硬超时 | ✅ 合并档下 `normalize` 吸收 `intent` 的 1.5s ⇒ **生效值 3.5s**（`_MERGED_NORMALIZE_EXTRA_S`，U-104 规则 5 已转正）。⚠️ 副作用：`node_timeout` 日志的 `limit_s` 现在显示 **3.5**，而 `NODE_TIMEOUT_S` 契约表仍逐字写 2.0（split 档/无上下文时还是 2.0）⇒ **按 `limit_s` 做告警阈值的人要改数** |
+| embedding | ✅ Ollama 由总控手动拉起（09-20 早前实测 `:11434` 是 connect refused）。⚠️ `bge-m3` 是否已拉完**本窗口未复测**，复跑前先看 `/healthz` 的 `embedding_reachable` |
+
+★ **U-106（架构裁定）给"场景①②该怎么画像"定了数**，这不是建议而是口径：
+
+```
+租户桶 = 100 请求/分钟，用户桶 = 10 请求/分钟（ratelimit.py:203，**契约值，不许为压测放开**）
+50 并发 × 目标 P95 8s ⇒ 需求 ≈ 50 / 8 × 60 ≈ 375 请求/分钟
+⇒ 单租户必破（375 > 100）；每用户又只能吃 10/分钟
+⇒ 至少 375/100 = 4 个租户，且 375/10 = 38 个用户
+⇒ 本机取 **4 租户 × 10 用户 = 40 枚令牌**（用户侧供给 40×10=400/分钟 ≥ 375，租户侧 4×100=400 ≥ 375）
+```
+
+⚠️ 这条算术的用词要抠准：**"用 5 个用户打 150 条"测出来的是配额，不是容量** ——
+09-19 的 `receipt_steady` 就是那个形状（150 条里 98 条 429，`p50=7.3ms` 是 429 的速度）。
+按 U-106，那种数据现在会被驱动**自动**记进 `admission.rejected_429` 并排除出 P95 分母（见 §四.2）。
+
+复跑前的一次性准备（40 枚令牌，本地 RSA 签名，不花额度）：
+
+```bash
+cd backend
+for t in 1 2 3 4; do for u in $(seq 1 10); do
+  ../.venv/Scripts/python.exe scripts/mint_dev_token.py \
+      --tenant-id "tenant_r$t" --user-id "u_load_$t$u" --role analyst
+done; done > ../deploy/loadtest/tokens_rerun.txt   # ⚠️ 令牌文件不进仓库（见下方纪律）
+```
+
+⚠️ 令牌文件**不要 commit**：`deploy/loadtest/tokens_rerun.txt` 里是可用凭据（RS256 签的访问令牌）。
+驱动用 `--tokens <file>` 读它；跑完即删。
+
+#### 三.0.1 跑批前必过的"上游门"（2026-09-20 实测加进来的，原因见下方读数）
+
+G-6 要测的是**CommerceQL 的容量**，前提是被测面的外部依赖不处在抽风状态。
+上游 LLM 的延迟不是被测面的一部分，但它直接决定 `normalize` 会不会超时 ⇒ **先量它，再决定跑不跑**。
+
+```bash
+# 在**被测容器内**量 warm 单发延迟（不是在宿主上 —— 宿主侧建连 123ms、容器侧曾出现 4.0s，两回事）
+docker exec w7load-api python - <<'PY'
+import os, time, httpx
+key=os.environ["DEEPSEEK_API_KEY"]; base=os.environ.get("DEEPSEEK_BASE_URL","https://api.deepseek.com")
+model=os.environ["LLM_MODEL_FAST"]; c=httpx.Client(timeout=60)
+c.post(base.rstrip('/')+"/chat/completions", headers={"Authorization":"Bearer "+key},
+       json={"model":model,"messages":[{"role":"user","content":"说\"好\""}],"max_tokens":4})   # warmup
+for i in range(3):
+    t=time.perf_counter()
+    r=c.post(base.rstrip('/')+"/chat/completions", headers={"Authorization":"Bearer "+key},
+             json={"model":model,"messages":[{"role":"user","content":"说\"好\""}],"max_tokens":4})
+    print(i, r.status_code, round((time.perf_counter()-t)*1000), "ms")
+PY
+```
+
+本机 **2026-09-20 的实测**（同一容器、同一密钥、`LLM_MODEL_FAST=deepseek-flash`）：
+
+| 项 | 读数 | 对照 |
+|---|---|---|
+| warm 单发 | **1853 / 2033 ms** | 09-19 是 1060 / 1104 / **1515** ms |
+| warmup 那一次 | **503**（服务端错误，未重试） | — |
+| 首次调用 | **27,348 ms** | — |
+| 容器→`api.deepseek.com` 建连 | 同一容器内先后两批：**3134 / 4038 / 4049 ms** ⇒ 复测 **22–70 ms**；宿主 123 ms | 建连延迟**是间歇的**，不是稳定特征（两批 `getaddrinfo` 返回的 IPv4 集合相同） |
+
+⇒ **判据（本窗口自定，等架构改数）：warm 单发 p50 ≤ 1.5s 且三次无 5xx 才开跑批。**
+今天的读数不满足（1.85–2.03s + 一次 503 + 一次 27s），所以**本窗口没有跑四场景**：
+在这种上游状态下跑出来的 P95 测的是 DeepSeek 当天的抖动，不是 CommerceQL 的容量，
+而 W6 的门禁会照抄我的数 ⇒ **不跑比跑更负责**。
+
+⚠️ 同时留下的一条真实事实（不是推测，是日志）：W4 的 3.5s 合并档预算**已生效**
+（`node_timeout{node:"normalize","limit_s":3.5}`，不再是 2.0），但今天这 5 条探测仍
+**5/5 超时**、端到端 3584.8–12129.7ms ⇒ 说明**预算平移解决的是"零余量"，不解决"上游慢"**。
+好消息是这 5 条是 200 + error 帧（`admission.admitted = 5`，`p95_scope=admitted_http_2xx`），
+`terminal_provenance` 也第一次出了真数：`{"error_frame": {"stage=intent|reason=none": 2}}`
+⇒ 终止发生在 `intent` 阶段帧之后，与"合并调用回得来但节点收不了口"一致。
+
 ### 三.1 装载（本轮实测读数）
 
 `load_synth_to_pg.py` 用 W1A 的 `data/generator/seed_generator.py`（确定性、附录 C §C.12 规模）
@@ -114,10 +193,35 @@ psycopg 3.3.5 把第二个位置参数当 `params`、返回一个**没进入的 
 |---|---|---|---|---|
 | §16.5 四条口径的合成回执 | **0** | 7268.4ms | `null` | ❌ **PASS(≤8s)** |
 
-⇒ 散文里写"P95 全是失败样本"挡不住机器口径。已改成 `_g6_caveat(outcomes)` 统一覆盖**两种**不可判情形：
-① **该场景 0 条真正完成**（本轮新增，最强的那种不可判）；② 含 `async_degraded`（原有）。
-`--self-check` 里加了三种情形的判向断言，并用 4 条变异验证过它真的会红（含"退回旧行为"那条）。
+⇒ 散文里写"P95 全是失败样本"挡不住机器口径。已改成 `_g6_caveat(outcomes, admission)` 覆盖**六种**不可判情形：
+① **该场景 0 条真正完成**（本轮新增，最强的那种不可判）；② 含 `async_degraded`（原有）；
+③ 准入样本为 0；④ 准入样本 < `MIN_ADMITTED_FOR_P95`；⑤ 回执产自 U-106 之前（无 `admission` 字段）；
+⑥ 有 429 被排除（把"排除了多少"这件事本身留在 caveat 里，不让它变成一个看不见的除法）。
+`--self-check` 里这六种判向都有断言（含"真有 45 条准入完成 ⇒ **不该**降档"那条正向对照）。
+变异检验分两批，别混着记：**09-19** 那批验的是"退回旧 `g6_caveat` 行为"（4/4 红）；
+**09-20** 这批新验的是 ① 摘掉 `Retry-After` 读取 ⇒ 红、② 把"准入"放宽成"全部样本" ⇒ 红。
 复算后**十份回执逐份过 W6 真读端 + 真 gates，全部 UNVERIFIED，无一例 PASS**。
+
+### 四.2 U-106 的口径：**P95 只算准入样本，429 单列**（2026-09-20 架构裁定）
+
+裁定原文的第二条是"报告口径：P95 只在准入（2xx）样本上算，429 比例单列"。落地成三个字段：
+
+```json
+"p95_scope": "admitted_http_2xx",
+"admission": {"admitted": 30, "rejected_429": 20, "other_http_4xx": 1, "http_5xx": 0, "unresolved": 0},
+"rejection_headers": {"429": {"retry_after=30": 20}, "503": {"retry_after=5": 1}}
+```
+
+⚠️ 上面是**形状示例**（数字是占位，不是本机读数 —— 这四份新口径回执还没跑过）。
+
+| 字段 | 为什么要它 | 读法 |
+|---|---|---|
+| `p95_scope` | **自证分母**。`schema` 串刻意仍是 `w7.loadtest.receipt/1` 没升版：W6 的 `eval/reporter.py:139` 按该串**精确匹配**，升串会让 G-6 静默退回 `NOT_AVAILABLE`（口径修对了、接口弄断了）。⇒ 新旧回执靠这个字段区分，不靠版本号 | 缺这个键 ⇒ 是 U-106 之前的回执，`latency_ms` 是**混算**口径 |
+| `admission` | 09-19 的 `receipt_steady` 里 `p50=7.3ms` 那种荒谬读数，来源就是"429 也是样本" | `rejected_429/admitted` 才是配额画像；`admitted` 才是容量的分母 |
+| `rejection_headers` | 429/503 只有带 `Retry-After` 才叫"可恢复拒绝"；没有它，客户端只会立刻重试把配额保护打穿 | 场景⑤ `tenant-saturation` 的主判据就是这个字段（画像与命令见 §三.0） |
+
+⚠️ 一处必须一起说的：`latency_ms_all_ms` 保留了**旧混算口径**，只用于"同一次跑批两口径对照"，
+**不得**被引用成任何达标结论 —— 有 `p95_scope` 的场合，权威值是 `latency_ms.p95`。
 
 ---
 
