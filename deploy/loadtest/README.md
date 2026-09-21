@@ -321,7 +321,7 @@ curl -sS -N -X POST http://127.0.0.1:18000/api/v1/query \
 **一句话**：判据④ **仍不过，但卡点换人成功** —— W2A 的修复**实测生效**（PLAN 不再自拒），
 现在挡住 `executing` 的是 **`NODE_TIMEOUT_S["bind"] = 0.2`**，而 `bind` 这次实测**在请求路径上真调了一次 DeepSeek**。
 
-**读数（`preflight_r4.json`，c=1 / `request_cap=5` / `--no-async` / 题库 `questions_T_A_time.txt`）**：
+**读数（回执原件已入库 = `deploy/loadtest/preflight_r4.json`，故本节全部数字可只读复核；⚠️ 它**不叫** `receipt.json` ⇒ W6 的 `loadtest_pressure()` 读端不会取用它，它只是预检证据）· c=1 / `request_cap=5` / `--no-async` / 题库 `questions_T_A_time.txt`**：
 
 | 项 | 读数 |
 |---|---|
