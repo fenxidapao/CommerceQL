@@ -166,19 +166,28 @@
     "required_by": "07 §17.6② / I-1",
     "banned_field": "difficulty_struct_sitelabel",
     "source": {
-      "n_files_scanned": 20,
+      "n_files_scanned": 26,
       "hits": [],
       "ok": true
     },
     "artifacts": {
-      "n_files_scanned": 7,
+      "n_files_scanned": 16,
       "hits": [],
       "ok": true,
       "paths": [
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\_probe_parallel_states.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\_probe_pg_real.json",
         "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\consistency_results.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\eval_metrics.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_gate_allowlist_shape.json",
         "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_gate_rejections.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_loadtest_receipts.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_metric_coverage.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_metric_values.json",
         "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_rule_identity.json",
         "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\redteam_results.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\results_w6_live20.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\smoke_batch_ids.json",
         "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\smoke_one_case.json",
         "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\results_replay_probe.json",
         "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\results_v1.json"

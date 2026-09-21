@@ -1,0 +1,223 @@
+{
+  "bundle": "semantic/bundle_2026.09.14.1.yaml",
+  "bundle_version": "2026.09.14.1",
+  "bundle_status": "candidate",
+  "role": "analyst",
+  "sqls": {
+    "plain": "SELECT pay_amount FROM v_order_paid",
+    "time_bounded": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01'"
+  },
+  "shape_facts": {
+    "flat_keys_sample": [
+      "v_campaign",
+      "v_dim_date",
+      "v_order_paid",
+      "v_order_refund",
+      "v_product"
+    ],
+    "flat_has_wrapper_keys": {
+      "bundle_version": false,
+      "assets": false,
+      "joins": false,
+      "deny_columns": false,
+      "default_predicates": false,
+      "allowed_constants": false,
+      "max_rows": false
+    },
+    "flat_columns_type": "tuple",
+    "port_top_level_keys": [
+      "allowed_constants",
+      "assets",
+      "bundle_version",
+      "default_predicates",
+      "deny_columns",
+      "joins",
+      "max_rows"
+    ],
+    "port_asset_entry_keys": [
+      "all_columns",
+      "columns",
+      "domain",
+      "grain",
+      "logical_name",
+      "tenant_scoped"
+    ],
+    "port_columns_type": "dict",
+    "port_has_all_columns": true,
+    "port_max_rows": null,
+    "port_joins_n": 10,
+    "port_default_predicates": {
+      "orders": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "traffic": [
+        "uv >= 0"
+      ]
+    },
+    "derivation_invariant": {
+      "same_physical_keys": true,
+      "scalar_keys_equal": true,
+      "visible_columns_equal": true
+    }
+  },
+  "gate1": {
+    "plain": {
+      "sql": "SELECT pay_amount FROM v_order_paid",
+      "flat_production_wiring": {
+        "raised": null,
+        "passed": false,
+        "rule_id": "R05",
+        "reason": "查询涉及的数据范围超出你的权限",
+        "applied_predicates": [],
+        "rewritten_sql": ""
+      },
+      "legacy_hand_wrapper": {
+        "raised": "AttributeError",
+        "message": "'tuple' object has no attribute 'keys'",
+        "passed": null
+      },
+      "port_guard_allowlist": {
+        "raised": null,
+        "passed": true,
+        "rule_id": null,
+        "reason": null,
+        "applied_predicates": [
+          "is_test_order = false",
+          "refund_status <> 'refunded'",
+          "pay_status = 'paid'"
+        ],
+        "rewritten_sql": "SELECT pay_amount FROM v_order_paid WHERE v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 10000"
+      }
+    },
+    "time_bounded": {
+      "sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "flat_production_wiring": {
+        "raised": null,
+        "passed": false,
+        "rule_id": "R05",
+        "reason": "查询涉及的数据范围超出你的权限",
+        "applied_predicates": [],
+        "rewritten_sql": ""
+      },
+      "legacy_hand_wrapper": {
+        "raised": "AttributeError",
+        "message": "'tuple' object has no attribute 'keys'",
+        "passed": null
+      },
+      "port_guard_allowlist": {
+        "raised": null,
+        "passed": true,
+        "rule_id": null,
+        "reason": null,
+        "applied_predicates": [
+          "is_test_order = false",
+          "refund_status <> 'refunded'",
+          "pay_status = 'paid'"
+        ],
+        "rewritten_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 10000"
+      }
+    }
+  },
+  "gate2": {
+    "plain": {
+      "sql": "SELECT pay_amount FROM v_order_paid",
+      "real_runtime": {
+        "raised": null,
+        "passed": false,
+        "rule_id": "G2-ASSET",
+        "reason": "查询涉及的数据范围超出你的权限",
+        "refuse_reason": null,
+        "scope": "ScopeInfo(level=<ScopeLevel.UNRESTRICTED: 'unrestricted'>, applied=False, notice=None, disclosable=True)"
+      },
+      "port_shaped_bundle": {
+        "raised": "ContractViolationError",
+        "message": "语义包 tenant_scoped 与 tenant_id 列不一致（07 §7.4 双向断言） | detail={'asset': 'order_paid'}",
+        "passed": null
+      }
+    },
+    "time_bounded": {
+      "sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "real_runtime": {
+        "raised": null,
+        "passed": false,
+        "rule_id": "G2-ASSET",
+        "reason": "查询涉及的数据范围超出你的权限",
+        "refuse_reason": null,
+        "scope": "ScopeInfo(level=<ScopeLevel.UNRESTRICTED: 'unrestricted'>, applied=False, notice=None, disclosable=True)"
+      },
+      "port_shaped_bundle": {
+        "raised": "ContractViolationError",
+        "message": "语义包 tenant_scoped 与 tenant_id 列不一致（07 §7.4 双向断言） | detail={'asset': 'order_paid'}",
+        "passed": null
+      }
+    }
+  },
+  "gate1_face_control": {
+    "sql": "SELECT receiver_phone FROM v_order_paid",
+    "deny_column_in_bundle": true,
+    "visible_face": {
+      "raised": null,
+      "passed": false,
+      "rule_id": "R06",
+      "reason": "查询包含受保护字段",
+      "applied_predicates": [],
+      "rewritten_sql": ""
+    },
+    "structural_face": {
+      "raised": null,
+      "passed": false,
+      "rule_id": "R07",
+      "reason": "查询包含受保护字段",
+      "applied_predicates": [],
+      "rewritten_sql": ""
+    },
+    "structural_face_no_deny_columns": {
+      "raised": null,
+      "passed": true,
+      "rule_id": null,
+      "reason": null,
+      "applied_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "rewritten_sql": "SELECT receiver_phone FROM v_order_paid WHERE v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 10000"
+    }
+  },
+  "conclusion": {
+    "wrapper_question": "U-119 判据③ 问的那句：由运行时派生 wrapper 能否让真 SQL 过闸",
+    "answer": "能，但**必须由端口派生**（`guard_allowlist`），不是由评测侧手拼：手拼那版崩在 `columns.keys()`（扁平面给列名元组、不给类型），端口那版 gate1 全 passed（{'plain': True, 'time_bounded': True}）",
+    "gate1_flat_still_fails": {
+      "plain": false,
+      "time_bounded": false
+    },
+    "gate1_via_port": {
+      "plain": true,
+      "time_bounded": true
+    },
+    "gate2_via_real_runtime": {
+      "plain": false,
+      "time_bounded": false
+    },
+    "gate2_via_port_shaped_bundle": {
+      "plain": null,
+      "time_bounded": null
+    },
+    "gate2_port_shaped_detail": {
+      "plain": "语义包 tenant_scoped 与 tenant_id 列不一致（07 §7.4 双向断言） | detail={'asset': 'order_paid'}",
+      "time_bounded": "语义包 tenant_scoped 与 tenant_id 列不一致（07 §7.4 双向断言） | detail={'asset': 'order_paid'}"
+    },
+    "remaining_break_ownership": "gate1 的接缝本窗口已可直连端口（`run_gate1(sql, semantics.guard_allowlist(ctx, max_rows=…))`，两条 SQL 今天全 passed）。gate2 断在消费侧，且**不是一行**：①`app/guard/policy_gate.py:105` 要从 `asset_allowlist` 改调 `guard_allowlist`；②只改 ① 会当场 `ContractViolationError`（本产物 `gate2_port_shaped_detail` 那句「语义包 tenant_scoped 与 tenant_id 列不一致」）—— 因为 ⑤ 在 `policy_gate.py:148` 用**可见面** `columns` 判「`tenant_id` in columns」，而 `tenant_id` 恰是 deny 列 ⇒ 必须改读 `all_columns`；同理 ④ 的 `extract_columns_with_assets` 也要走结构面。⚠️ 但**不能整包换成结构面**：gate1 的 R06 必须继续读可见面，否则「deny 缺失时敏感列被放行」那条 fail-open 就回来了（`contracts.py` 的 U-121 子事实 2 写的就是这两面）。⇒ 消费侧要**按判据选面**，归属 W2C；本窗口不改生产件。",
+    "face_control": {
+      "passed_by_variant": {
+        "visible_face": false,
+        "structural_face": false,
+        "structural_face_no_deny_columns": true
+      },
+      "reading": "可见面 = 端口原样；整包换结构面在 deny_columns 还在时仍被 R07 拦（所以「换面」看起来无害），但 deny_columns 一旦漏送就变成**放行**——这就是 `contracts.py` 那句「两面缺一不可、且不得整包换面」的实测形状。⇒ 消费侧只能**按判据选面**。"
+    },
+    "seam_test_caution_for_W4": "`tests/contract/test_gate_seam_contract.py:54` 把**扁平面**原样喂 `run_gate1` 并要求 pass。按 U-121 裁定的正解（消费方改调 `guard_allowlist`）改完之后，这条仍会红 —— 它的绿条件只能靠「给扁平面补 wrapper 键」达成，而那正是 07 明令禁止的做法。判据①的输入应是端口形状，或由 W4 显式声明「红的是消费侧未接线、不是形状本身」。"
+  }
+}

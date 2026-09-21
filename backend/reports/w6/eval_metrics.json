@@ -1,9 +1,9 @@
 {
   "meta": {
-    "generated_at": "2026-09-21T02:54:11+00:00",
+    "generated_at": "2026-09-21T14:53:51+00:00",
     "window": "W6",
     "git": {
-      "rev": "31e4876",
+      "rev": "e125348",
       "dirty": true
     },
     "run_config": {
@@ -140,10 +140,13 @@
     {
       "gate_id": "G-1",
       "condition": "全部 P0 用例通过",
-      "verdict": "PASS",
-      "measured": "failed=0, unit+contract passed=2186, integration_ran=True",
+      "verdict": "FAIL",
+      "measured": "failed=4, unit+contract passed=2222, integration_ran=True",
       "basis": "§17.1 单元 + 集成",
-      "caveats": []
+      "caveats": [
+        "红的测试逐条点名：`tests/contract/test_gate_seam_contract.py::test_plain_sql_passes_through_gate_seam`、`tests/integration/test_retrieval_fts_pg.py::test_dense_all_null_column_raises_unavailable_not_type_error`、`tests/integration/test_retrieval_fts_pg.py::test_dense_null_rows_never_crowd_out_valid_vectors`、`tests/integration/test_retrieval_fts_pg.py::test_dense_scope_with_zero_rows_is_not_degradation`",
+        "另有 3 条 **error（夹具起不来，不是断言失败）** ⇒ 与 failed 分开数，混报会看不出坏的是测试环境还是被测系统"
+      ]
     },
     {
       "gate_id": "G-2",
@@ -226,10 +229,9 @@
   ],
   "gate_summary": {
     "all_pass": false,
-    "passed": [
-      "G-1"
-    ],
+    "passed": [],
     "not_pass": {
+      "G-1": "FAIL",
       "G-2": "FAIL",
       "G-3": "PARTIAL",
       "G-4": "PARTIAL",
@@ -239,8 +241,8 @@
       "G-8": "UNVERIFIED"
     },
     "counts": {
-      "PASS": 1,
-      "FAIL": 3,
+      "PASS": 0,
+      "FAIL": 4,
       "UNVERIFIED": 2,
       "NOT_AVAILABLE": 0,
       "PARTIAL": 2
@@ -689,19 +691,28 @@
       "required_by": "07 §17.6② / I-1",
       "banned_field": "difficulty_struct_sitelabel",
       "source": {
-        "n_files_scanned": 20,
+        "n_files_scanned": 26,
         "hits": [],
         "ok": true
       },
       "artifacts": {
-        "n_files_scanned": 7,
+        "n_files_scanned": 16,
         "hits": [],
         "ok": true,
         "paths": [
+          "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\_probe_parallel_states.json",
+          "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\_probe_pg_real.json",
           "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\consistency_results.json",
+          "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\eval_metrics.json",
+          "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_gate_allowlist_shape.json",
           "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_gate_rejections.json",
+          "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_loadtest_receipts.json",
+          "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_metric_coverage.json",
+          "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_metric_values.json",
           "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_rule_identity.json",
           "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\redteam_results.json",
+          "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\results_w6_live20.json",
+          "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\smoke_batch_ids.json",
           "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\smoke_one_case.json",
           "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\results_replay_probe.json",
           "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\results_v1.json"
@@ -1078,6 +1089,7 @@
     "**§17.4 全表 `covered_by_eval=False`** ⇒ 本报告的任何一行都不构成「生产能力已验证」。",
     "**PG 可达且有 2,023,933 行业务事实数据**（RLS 策略 6 条）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。 🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；成因已定位 = **占位符 GUC 不随并行 worker 传值**（leader 读 `''`、worker 读 NULL，两格相加 = 该租户全量），修法归 PG 配置 / 策略文本（架构裁决见 RELAY A11），本窗口只报读数不代修",
     "**τ 未校准**（`deploy/.env` 的三个校准字段同样为空）⇒ L4 相关结论带 R-19 caveat；本轮未改 τ。",
+    "🔴 匣带**已失效，报告里的回放读数今天不可零成本复算**：同一批 20 题重放 `w6_batch.jsonl` ⇒ **20/20 全部 miss**（`tokens_total=0`）。miss 的成因实测在上游出站报文变了（语义摘要新增 `## 指标口径` 段，见 W2A `fbae176`），**不在评测侧** ⇒ 要重新出这批读数必须**重新录制**（真打），不得回退到网络静默补数。",
     "**§C.4.3 口径比对**：核心指标 13 条可比对用例中一致 1 条（7.7%），不可归因差异 0 条。一致率低于 95% 是**冻结集 gold 与语义包默认口径不一致**的实测结论（差在 gold 少了 `default_predicates`），不是环境缺陷；比对方是语义包而非外部 BI ⇒ 「已确认权威值」按内部口径降级验证，见 `comparison_basis`。",
     "指标覆盖度：79 条期望 execute 的题面不含任何运行时可达的指标词形（占全集 47.6%）⇒ EX 分母偏小的**上半截**来自目录覆盖，不是模型能力。（覆盖度 ≠ G-7 的口径比对）",
     "**执行层端到端未覆盖**：12 条 execute 用例里真拿到结果集的是 **0** 条（终态分布 {\"?\": 1, \"clarify\": 9, \"error\": 3, \"refuse\": 7}）⇒ 本轮 EX 只度量「闸门之前 + 闸门本身」，**不等于**「执行 + 掩码 + 渲染链路正确」。",
@@ -1095,7 +1107,9 @@
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/_probe_pg_real.py        # 只读探测真 PG",
     "cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest tests/integration -q -rfes",
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/select_smoke_batch.py   # 确定性取 20 题",
+    "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_gate_allowlist_shape.py   # U-119 判据③：两种形状 × 两道闸门",
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --live --yes   # 真打全量需额度：先不带 --yes 看计划",
-    "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --mode replay --provenance \"<匣带来源>\" --yes   # 零成本复算"
+    "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --mode replay --provenance \"<匣带来源>\" --yes   # 匣带未失效时才是零成本复算；今天是否可复算看 §8 那条 🔴（探针 = 下一条命令）",
+    "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_cassette_replay.py   # 匣带可复算性探针（不是批次读数；产物喂 §8 那条 🔴）"
   ]
 }
