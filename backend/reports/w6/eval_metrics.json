@@ -1,9 +1,9 @@
 {
   "meta": {
-    "generated_at": "2026-09-20T15:51:06+00:00",
+    "generated_at": "2026-09-21T02:54:11+00:00",
     "window": "W6",
     "git": {
-      "rev": "8fa5484",
+      "rev": "31e4876",
       "dirty": true
     },
     "run_config": {
@@ -173,7 +173,7 @@
       "basis": "双租户夹具 + N-07",
       "caveats": [
         "沙箱无 RLS：本轮以执行层租户边界模拟（I-6），与生产 DB 层 RLS 是两条路径 → 不构成 N-07 的完整证据",
-        "RT-XT 全部被拦发生在 **SQL 层**（评测侧 TEMP VIEW 边界 + 闸门）⇒ 不构成 N-07 的完整证据。**PG 可达且有 2,023,933 行业务事实数据**（RLS 策略 6 条）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。 🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；机制未定（见 RELAY P7），不要把「worker 没拿到 GUC」当既成事实引用"
+        "RT-XT 全部被拦发生在 **SQL 层**（评测侧 TEMP VIEW 边界 + 闸门）⇒ 不构成 N-07 的完整证据。**PG 可达且有 2,023,933 行业务事实数据**（RLS 策略 6 条）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。 🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；成因已定位 = **占位符 GUC 不随并行 worker 传值**（leader 读 `''`、worker 读 NULL，两格相加 = 该租户全量），修法归 PG 配置 / 策略文本（架构裁决见 RELAY A11），本窗口只报读数不代修"
       ]
     },
     {
@@ -518,7 +518,7 @@
     "n_cases": 3,
     "pg_rls_verified": false,
     "notes": [
-      "RT-XT 全部被拦发生在 **SQL 层**（评测侧 TEMP VIEW 边界 + 闸门）⇒ 不构成 N-07 的完整证据。**PG 可达且有 2,023,933 行业务事实数据**（RLS 策略 6 条）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。 🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；机制未定（见 RELAY P7），不要把「worker 没拿到 GUC」当既成事实引用"
+      "RT-XT 全部被拦发生在 **SQL 层**（评测侧 TEMP VIEW 边界 + 闸门）⇒ 不构成 N-07 的完整证据。**PG 可达且有 2,023,933 行业务事实数据**（RLS 策略 6 条）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。 🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；成因已定位 = **占位符 GUC 不随并行 worker 传值**（leader 读 `''`、worker 读 NULL，两格相加 = 该租户全量），修法归 PG 配置 / 策略文本（架构裁决见 RELAY A11），本窗口只报读数不代修"
     ]
   },
   "consistency_17_6": {
@@ -1001,8 +1001,8 @@
       "sqlite": "物理不存在 RLS",
       "handling": "评测用**执行层租户边界**模拟（I-6）：只读连接上对 `tenant_scoped` 资产建 `CREATE TEMP VIEW`（SQLite 的 TEMP 优先解析 ⇒ 被测 SQL 非限定名自动命中视图），被测 SQL 内**不出现** `tenant_id`，与生产一样「数据库层面看不到」；**没有**按租户物化沙箱库副本（440 MB，零复制）；**这不等于**验证了 PG 策略本身。⚠️ I-4「SQL 层改写」与 I-5「改写后仍过闸门」在本语义包下**不能同时成立**（`tenant_id` 是 deny 列 ⇒ 任何手写租户谓词都被 gate1 R06/R07 拒，含 W1A 的 `tenant_wrap` 派生表形态）⇒ 评测取与生产同构的那一半（谓词在被测 SQL 之外），冲突上呈架构（见 RELAY），不由评测器私自改口径",
       "covered_by_eval": false,
-      "evidence": "07 §17.6 I-6；`backend/reports/w6/consistency_results.json` 本次实测：① 三条哈希链路（冻结值 / `tenant_wrap` 手写谓词 / TEMP VIEW 边界）在 T_A·T_B·T_C 各 1 条用例上逐字相等；边界有效性探针 6 个租户域资产全 OK（例：`v_order_paid` 494249 = 200000+175000+119249，逐租户均为严格子集且并集覆盖全量）；本次实测：一致性三测已跑，见 §6；**PG 可达且有 2,023,933 行业务事实数据**（RLS 策略 6 条）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。 🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；机制未定（见 RELAY P7），不要把「worker 没拿到 GUC」当既成事实引用",
-      "follow_up": "PG 侧 RLS 专项（08 §3.2 v1.2 拆归 W6）。本轮实测订正：上一版写「hostname `pg` 解析失败 ⇒ 策略/GRANT 一律 UNVERIFIED」，那是**只查了一条 DSN** 的结论 —— `tests/integration/**` 默认走 `localhost:5432`，真 PG 16 应答正常。实测现状：6 条 `p_<table>_tenant` 策略在位、6 张表 `FORCE ROW LEVEL SECURITY`、`app_ro` 可读 `v_*` 视图；PG 业务事实表已有 2,023,933 行（沙箱 2,023,933）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ **但本行仍不构成 G-4 的完整证据**：评测主链路走的是 SQLite TEMP VIEW，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」这一半未接（见 W6 交付 §8）。🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；机制未定（见 RELAY P7），不要把「worker 没拿到 GUC」当既成事实引用"
+      "evidence": "07 §17.6 I-6；`backend/reports/w6/consistency_results.json` 本次实测：① 三条哈希链路（冻结值 / `tenant_wrap` 手写谓词 / TEMP VIEW 边界）在 T_A·T_B·T_C 各 1 条用例上逐字相等；边界有效性探针 6 个租户域资产全 OK（例：`v_order_paid` 494249 = 200000+175000+119249，逐租户均为严格子集且并集覆盖全量）；本次实测：一致性三测已跑，见 §6；**PG 可达且有 2,023,933 行业务事实数据**（RLS 策略 6 条）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。 🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；成因已定位 = **占位符 GUC 不随并行 worker 传值**（leader 读 `''`、worker 读 NULL，两格相加 = 该租户全量），修法归 PG 配置 / 策略文本（架构裁决见 RELAY A11），本窗口只报读数不代修",
+      "follow_up": "PG 侧 RLS 专项（08 §3.2 v1.2 拆归 W6）。本轮实测订正：上一版写「hostname `pg` 解析失败 ⇒ 策略/GRANT 一律 UNVERIFIED」，那是**只查了一条 DSN** 的结论 —— `tests/integration/**` 默认走 `localhost:5432`，真 PG 16 应答正常。实测现状：6 条 `p_<table>_tenant` 策略在位、6 张表 `FORCE ROW LEVEL SECURITY`、`app_ro` 可读 `v_*` 视图；PG 业务事实表已有 2,023,933 行（沙箱 2,023,933）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ **但本行仍不构成 G-4 的完整证据**：评测主链路走的是 SQLite TEMP VIEW，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」这一半未接（见 W6 交付 §8）。🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；成因已定位 = **占位符 GUC 不随并行 worker 传值**（leader 读 `''`、worker 读 NULL，两格相加 = 该租户全量），修法归 PG 配置 / 策略文本（架构裁决见 RELAY A11），本窗口只报读数不代修"
     },
     {
       "capability": "CLS / deny 列 / PII 掩码在 DB 侧的强制",
@@ -1046,7 +1046,7 @@
       "sqlite": "不适用",
       "handling": "评测复用 `app.exec` 的**纯逻辑面**（`normalize_row`/`result_fingerprint`/错误分类）与 `app.guard` 全量；驱动层为 eval 侧 SQLite 适配器（实现同一个 `SqlExecutorPort` 签名），**已登记为方言适配需求交 W2D**",
       "covered_by_eval": false,
-      "evidence": "`app/exec/executor.py` 无方言抽象（W6 探针实测）；本次实测：**PG 可达且有 2,023,933 行业务事实数据**（RLS 策略 6 条）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。 🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；机制未定（见 RELAY P7），不要把「worker 没拿到 GUC」当既成事实引用",
+      "evidence": "`app/exec/executor.py` 无方言抽象（W6 探针实测）；本次实测：**PG 可达且有 2,023,933 行业务事实数据**（RLS 策略 6 条）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。 🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；成因已定位 = **占位符 GUC 不随并行 worker 传值**（leader 读 `''`、worker 读 NULL，两格相加 = 该租户全量），修法归 PG 配置 / 策略文本（架构裁决见 RELAY A11），本窗口只报读数不代修",
       "follow_up": "W2D 落 `SqlExecutorPort` 的方言分层后，评测改注入 PG 适配器（消除本行）"
     },
     {
@@ -1076,7 +1076,7 @@
   "known_limitations": [
     "**I-3**：v1 的 `medium` 语义档因沙箱物化了 `v_region.region_name` 而存在**高估**（U-32）。不就地改（改了 `content_hash` 就不再是冻结集），只在此披露；v2 冻结时按判据重标。",
     "**§17.4 全表 `covered_by_eval=False`** ⇒ 本报告的任何一行都不构成「生产能力已验证」。",
-    "**PG 可达且有 2,023,933 行业务事实数据**（RLS 策略 6 条）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。 🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；机制未定（见 RELAY P7），不要把「worker 没拿到 GUC」当既成事实引用",
+    "**PG 可达且有 2,023,933 行业务事实数据**（RLS 策略 6 条）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。 🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；成因已定位 = **占位符 GUC 不随并行 worker 传值**（leader 读 `''`、worker 读 NULL，两格相加 = 该租户全量），修法归 PG 配置 / 策略文本（架构裁决见 RELAY A11），本窗口只报读数不代修",
     "**τ 未校准**（`deploy/.env` 的三个校准字段同样为空）⇒ L4 相关结论带 R-19 caveat；本轮未改 τ。",
     "**§C.4.3 口径比对**：核心指标 13 条可比对用例中一致 1 条（7.7%），不可归因差异 0 条。一致率低于 95% 是**冻结集 gold 与语义包默认口径不一致**的实测结论（差在 gold 少了 `default_predicates`），不是环境缺陷；比对方是语义包而非外部 BI ⇒ 「已确认权威值」按内部口径降级验证，见 `comparison_basis`。",
     "指标覆盖度：79 条期望 execute 的题面不含任何运行时可达的指标词形（占全集 47.6%）⇒ EX 分母偏小的**上半截**来自目录覆盖，不是模型能力。（覆盖度 ≠ G-7 的口径比对）",

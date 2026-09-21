@@ -131,13 +131,13 @@
      },
      "parallel": {
       "counts": [
-       104514,
-       104222,
-       89748
+       103404,
+       99374,
+       104699
       ],
       "parallel_node": true,
       "workers_launched": 1,
-      "rows_removed_by_filter": 48541,
+      "rows_removed_by_filter": 46764,
       "scan_rows_per_loop": 586,
       "plan_head": [
        "Finalize Aggregate  (cost=7055.39..7055.40 rows=1 width=8) (actual rows=1 loops=1)",
@@ -145,7 +145,7 @@
        "        Workers Planned: 1",
        "        Workers Launched: 1",
        "        ->  Partial Aggregate  (cost=6055.27..6055.28 rows=1 width=8) (actual rows=1 loops=2)",
-       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=51459 loops=2)"
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=53236 loops=2)"
       ]
      },
      "measurable": true,
@@ -379,13 +379,13 @@
      },
      "parallel": {
       "counts": [
-       93269,
-       103989,
-       109977
+       104908,
+       103697,
+       103989
       ],
       "parallel_node": true,
       "workers_launched": 1,
-      "rows_removed_by_filter": 49415,
+      "rows_removed_by_filter": 49942,
       "scan_rows_per_loop": 586,
       "plan_head": [
        "Finalize Aggregate  (cost=7055.39..7055.40 rows=1 width=8) (actual rows=1 loops=1)",
@@ -393,7 +393,7 @@
        "        Workers Planned: 1",
        "        Workers Launched: 1",
        "        ->  Partial Aggregate  (cost=6055.27..6055.28 rows=1 width=8) (actual rows=1 loops=2)",
-       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=50585 loops=2)"
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=50058 loops=2)"
       ]
      },
      "measurable": true,
@@ -510,68 +510,74 @@
  "controls": {
   "plan_cache": {
    "prepare_threshold=default × plan_cache_mode=auto": [
-    101647,
-    98103,
-    104147,
-    103697
+    105469,
+    105729,
+    101155,
+    104932
    ],
    "prepare_threshold=default × plan_cache_mode=force_custom_plan": [
-    107032,
-    103187,
-    96071,
-    103622
+    101131,
+    106725,
+    108813,
+    102694
    ],
    "prepare_threshold=default × plan_cache_mode=force_generic_plan": [
-    110067,
-    106689,
-    98645,
-    97834
+    102157,
+    110359,
+    105418,
+    107056
    ],
    "prepare_threshold=1 × plan_cache_mode=auto": [
-    114867,
-    91804,
-    111338,
-    103697
+    103219,
+    102918,
+    106456,
+    99809
    ],
    "prepare_threshold=1 × plan_cache_mode=force_custom_plan": [
-    109574,
-    105418,
-    108521,
-    104458
+    104439,
+    101355,
+    106254,
+    103243
    ],
    "prepare_threshold=1 × plan_cache_mode=force_generic_plan": [
-    107250,
-    106254,
-    112033,
-    102458
+    103929,
+    102390,
+    104514,
+    103697
    ]
   },
   "plan_node_options": {
    "enable_indexonlyscan": [
-    60406,
-    60780,
-    54227
+    69513,
+    63940,
+    70064
    ],
    "enable_indexscan": [
-    50284,
-    65917,
-    69536
+    64117,
+    64784,
+    67160
    ],
    "enable_parallel_append": [
-    106764,
-    103437,
-    105493
+    106689,
+    100385,
+    106725
    ]
   },
   "worker_side_guc_value": {
+   "workers_launched": 2,
+   "void": false,
    "rows": [
     [
      "",
-     600178
+     194377
+    ],
+    [
+     "<NULL-in-this-process>",
+     405801
     ]
    ],
-   "workers_launched": 2,
-   "note": "值全是 '' ⇒ 'worker 没拿到 GUC' 这一支解释被证伪（但 v_order_paid 那一格的少算就在 worker 侧：见 plan 里的 `Worker 0: ... rows=0`）"
+   "shape": "带列引用的 CASE（`t.tenant_id is not null` 逼出逐行求值）× 基表 traffic_daily × app_rw",
+   "note": "两格相加恒等于该租户总行数 ⇒ 占位符 GUC 没传到 worker；leader 读 '' 而 worker 读 NULL ⇒ 这就是少算那一格的成因"
   },
   "production_shapes": {
    "①事务内 set_config(...,true)（生产形状）": {
