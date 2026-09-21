@@ -16,9 +16,15 @@ import re
 import sys
 from pathlib import Path
 
+HERE = Path(__file__).resolve().parent
 ROOT = Path(r"E:\01_实训\项目\基于Text2SQL的电商数据分析Agent")
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "CommerceQL" / "backend"))
+#: ⚠️ **必须最后插入**（`insert(0)` 后插者优先）：本脚本 import 同级目录的
+#: `_w2b_u112_materialize`。若让 `ROOT` 优先，`deploy/w2b_materialize/` 的归档副本
+#: 会静默去工作区根拿原件 ⇒ **归档不自足**（2026-09-21 实测：归档副本 import 到的是
+#: 工作区根那份，`'w2b_materialize' in __file__ == False`）——原件一旦被删/换机就断。
+sys.path.insert(0, str(HERE))
 
 import psycopg  # noqa: E402
 from _w2b_u112_materialize import VERSION, rw_dsn  # noqa: E402

@@ -318,3 +318,78 @@ cd "E:/01_实训/项目/基于Text2SQL的电商数据分析Agent"
   现在**只活在工作区根、不在 git 内** = 与 U-112 五文件**同款孤本风险**，而 W7 复现判据④ 正靠它。
   建议收进 `deploy/`（如 `deploy/materialize_bundle.py`）。**归谁落笔请裁。**
 - **推不推**：见 §10.1 —— 本提交尚未上远端。
+
+---
+
+## 11. 认领 W7 的四问 / 两条不一致（2026-09-21，W7 → 架构 / W4 / W2B）
+
+### 11.1 "出路表 vs stage 帧" —— **没有偏移，是拿两把尺子量同一件事**
+
+`build.py:610-622` 那张表是**超时出路表**：节点撞 `NODE_TIMEOUT_S` 时的兜底动作
+（逐节点复用 §5.3「失败转移」列）。它把 `no_data_asset` 记在
+normalize/plan/gen_sql/repair、intent、link、bind 名下，说的是
+**"这些节点超时之后怎么出去"**，**不是**"运行期这次终止是谁造成的"。
+
+⇒ 与 stage 帧的读数**不在同一论域**，不构成"出路表与实现有偏移"。
+⇒ 反过来说更该警惕：该表 9 行里**有 4 行都产出 `refuse(no_data_asset)`**
+⇒ **"看到 no_data_asset"这件事本身不携带任何归因信息**。
+
+### 11.2 后半句猜对了：**确实是"那个节点不发 stage 帧"**，且可精确到节点
+
+- `Stage` 只有 6 值（`core/enums.py:80-83`：intent / schema_linking / plan_ready /
+  sql_ready / gate_passed / executing）；**发帧的节点只有 5 个**
+  （`events.py:174 / 179 / 188 / 206 / 208`：INTENT / LINK / PLAN / GEN_SQL / GATE3_COST）。
+- 图序（`build.py:767-800`）：
+  `START → trusted_context → normalize → INTENT → LINK → PLAN → BIND → GEN_SQL
+   → gate1_ast → gate2_policy → gate3_cost → execute → …`
+- ⇒ **`BIND` 正好落在 `plan_ready`（PLAN 发）与 `sql_ready`（GEN_SQL 发）之间，而它一个帧都不发。**
+  `trusted_context` / `normalize` 同样无帧。
+- ⇒ W7 的"`plan_ready` 与 `execute` 之间有一道从未被通过的关卡"，在**指标面上结构性不可归因**。
+  这正是 **`U-115`**（`metrics.py:72` 已登记节点级钩子缺位）。**别在 W2B 这里找那个钩子，它归 U-115。**
+
+### 11.3 静默窗口里有**两个**候选人，而当前读数区分不了
+
+| 候选 | 触发条件 | 出口与指纹 |
+|---|---|---|
+| **PLAN 自己拒** | 模型返回非空 `blocking_issues`（`plan.py:90-107`） | 设终态 `refuse(no_data_asset)`；**同时**写 `intent_detail.reason_code="plan_blocked"` + `blocking_issues[...]`；`plan` 不写回 `None`；**刻意不发 degraded**（模块 docstring：产品结论 ≠ 故障） |
+| **BIND 拒** | `binding_status ∈ {unresolved, 未登记取值}`（`edges.py:264-269`） | → `REFUSE_OUT`；`refuse_out.py:14 / 17` **兜底**取 `no_data_asset`（无 `intent_detail` 可依） |
+
+两者的指标签名**逐字相同**：`plan_ready` 有帧、`no_data_asset` +1、`sql_ready` 无帧。
+⇒ **W7 现在的读数与两个候选人同时相容。**
+
+### 11.4 用 W7 手里已有的数据就能判（**零新增调用**）
+
+1. **最强指纹**：该 run 的 `intent_detail`（审计 / 终态里）。出现
+   `reason_code="plan_blocked"` 或非空 `blocking_issues` ⇒ **PLAN 路径**
+   —— 那是模型的**产品结论**（"这问题要的数据不在语义层"），**不是缺陷**；
+   没有该字段 ⇒ **BIND 路径**，那才是要查的缺陷。
+2. **次强**：`stage=plan_ready` 帧的 `plan_summary`。非空 ⇒ PLAN 产出了计划 ⇒ 拒绝发生在 BIND；
+   `null` ⇒ PLAN 自己拒的。
+3. **已被 W7 自己的数据否掉的一条**：`schema_linking=7 == plan_ready=7` ⇒ **没有任何 run 从 LINK 出口终止**
+   ⇒ 那 3 条 `clarify` 只能来自 `route_after_intent`，**不是** `route_after_link` 的歧义。
+   （这同时**作废**了我此前"终止可能发生在 link"的暗示 —— 与 W7 作废其两个成因同理。）
+
+### 11.5 先质疑前提：**"没通过"不等于"有 bug"**
+
+若指纹是 `plan_blocked`，那 G-6 卡住的**不是编排缺陷，而是语义层覆盖**：当前 bundle 只有 8 个 asset，
+模型在这些题上判"数据不在语义层"是**正确行为**。
+⇒ 那么"让 `stage=executing` 从 0 变 ≥1"这个目标本身就是错的 —— 正确动作是**换能答的题**或**补语义层**，
+而不是让 BIND 放行。**把"没通过"默认读成"有 bug"，会推着所有人去拆一道不该拆的门。**
+⇒ 反之若指纹指向 BIND，才是真缺陷；第一手证据 = `binding_status` 具体取值
+与 `link` 给出的 `candidates` 在哪一格对不上（那一段才是 W2B/W4 的活）。
+
+### 11.6 归档：**请保留**，但其中有一个真问题我修了
+
+- **逐字节复核**：4 个文件 sha256 与工作区根**全部一致** ✅（W7 确为逐字节复制，未改一字符）。
+- **但归档原先不自足**：`_w2b_u112_verify_read.py` 用 `sys.path.insert(0, ROOT)` 去**工作区根**
+  取 `_w2b_u112_materialize`。实测从 `deploy/` 跑时，`import` 到的**仍是工作区根那份**
+  （`'w2b_materialize' in __file__ == False`）⇒ 原件一旦被删或换机，归档就断。
+- **已修**（2 行 + 注释）：把脚本**自身目录最后**插入 `sys.path`（后插者优先）⇒ 同级优先、两处均可独立跑。
+  实测归档副本现在 `import` 到同级（`True`），两条读路径照常通过；
+  **工作区根版与 `deploy/` 版 sha256 仍一致**（`7b25e89d5dd3ca2f`）。
+- **顺带替 W7 核了两条 CI 风险（都干净）**：
+  ① DoD④ —— 这 6 个文件对 `postgresql+psycopg://user:pass@` 与 `sk-` 形态**零命中**
+  （即 `ci.yml:120` 警告的那类）；
+  ② ruff —— CI 的 `ruff check .` 在 `backend/` 下跑，**不扫 `deploy/`** ⇒ 归档不会把 CI 弄红。
+- **权威口径**接受 W7 README 的写法。**唯一附加要求**：以后我若再改原件，我会**同时**刷新
+  `deploy/` 副本并报新 sha256 —— 否则"以 W2B 为准"这句没有消费者。
