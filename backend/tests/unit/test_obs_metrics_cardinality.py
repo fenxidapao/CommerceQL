@@ -205,15 +205,21 @@ def test_closed_label_out_of_domain_raises_not_dropped() -> None:
 
 
 def test_closed_domain_binding_rejects_oversized_and_conflicting() -> None:
-    """绑定动作自己也要 fail-fast：`assertion` 的上界是 4 ⇒ 注入 5 个必须抛。
+    """绑定动作自己也要 fail-fast：**超过** `BOUNDED_ALLOWED_LABELS["assertion"]` 必须抛。
 
-    ⚠️ 这一条把"上界"与"源枚举"绑成一件事：W1B 真加第 5 条断言时，抛出的信息会直接指向
+    ⚠️ 这一条把"上界"与"源枚举"绑成一件事：W1B 真加断言名时，抛出的信息会直接指向
     `BOUNDED_ALLOWED_LABELS["assertion"]`，逼着改的人**带着裁定出处**去动上界，而不是顺手放宽。
+    ⚠️ 域的大小**从字典读、不写字面量**：09-21 因为这里抄死了"上界是 4"，U-111 把上界抬到 5
+    之后本用例假红了一次（`DID NOT RAISE`）—— 用例自己犯了它要防的那个错。
     """
     metrics.reset_for_tests()
+    cap = metrics.BOUNDED_ALLOWED_LABELS["assertion"]
     with _throwaway_closed_metric() as gauge:
+        # 正向对照：恰好等于上界要放行 ⇒ 下面那次抛的是"超限"，不是"任何长域都抛"
+        assert gauge.spec.bind_domain("assertion", tuple(f"a{i}" for i in range(cap)))
         with pytest.raises(ValueError, match="超过基数上界"):
-            gauge.spec.bind_domain("assertion", ("a", "b", "c", "d", "e"))
+            gauge.spec.bind_domain("assertion", tuple(f"a{i}" for i in range(cap + 1)))
+    with _throwaway_closed_metric() as gauge:   # 另起一个：上面那个已经绑掉域了
         gauge.spec.bind_domain("assertion", ("a", "b"))
         with pytest.raises(ValueError, match="不允许二次绑定"):
             gauge.spec.bind_domain("assertion", ("a", "b", "c"))

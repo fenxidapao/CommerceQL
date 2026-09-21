@@ -96,7 +96,10 @@ def test_assertion_names_are_still_within_the_declared_cardinality_cap() -> None
     """源枚举与上界的一致性：`BOUNDED_ALLOWED_LABELS["assertion"]` 必须容得下全部断言名。
 
     加第 5 条断言时这条会红 —— 那是**故意**的：逼着改动者显式承认"封闭集扩大了"，
-    并按 U-105 走一次裁定（顺带看板的系列上界 12 也要跟着改）。
+    并按 U-105 走一次裁定（顺带把系列上界 12→15 的三处文案一起改）。
+
+    ⚠️ 光改这里**不够**：上界的 fail-fast 落在 lifespan 里 ⇒ 只改测试不改 BOUNDED_ALLOWED_LABELS
+    会让进程启动不了，而不是 CI 红一条。U-111 的第 5 条断言已提前入账（上界已给到 5）。
     """
     from app.obs import metrics
 

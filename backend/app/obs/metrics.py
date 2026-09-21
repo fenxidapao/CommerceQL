@@ -63,7 +63,7 @@ PromQL `histogram_quantile` 口径与库一致。
 * **B 类 · 整族不输出**：有标签**未声明取值域**且从未观测 ⇒ 该前缀在 `/metrics` 里**根本不存在**。
   危险读法："没看到线" ≠ "值为 0"，也可能是"有流量但标签被丢弃"。
 * ⚠️ **第三种：类别会随运行期改变** —— `startup_assertion_state` 的域是**绑定进来**的，
-  所以它在 `bind_startup_assertion_domains` 之前是 B 类（整族不输出）、之后是 A 类（12 条 0 序列齐备）。
+  所以它在 `bind_startup_assertion_domains` 之前是 B 类（整族不输出）、之后是 A 类（15 条 0 序列齐备，U-111 预留第 5 条断言）。
   在这条上"整族不输出"多了一层含义：**装配没跑到第 3.5 段**（而那种情况下任何 `observe` 都会当场抛，
   不会静默）⇒ 读这族时先确认进程是**完整启动**过的。
 
@@ -158,7 +158,13 @@ BOUNDED_ALLOWED_LABELS: Final[dict[str, int]] = {
     "kind": 8,              # §15.3 `ui_contract_violation` 的标签
     "error_class": 9,       # 07 §8.9 的 8 类 + `resource_exceeded`（§A.11 的 EXEC_RESOURCE_EXCEEDED）
     # --- U-105（架构裁定，2026-09-20）：启动校验三态镜像 ---
-    "assertion": 4,         # `repo/startup_assertions.ASSERTION_NAMES` 的条数（**封闭集**，见下）
+    "assertion": 5,         # `repo/startup_assertions.ASSERTION_NAMES` 的条数（**封闭集**，见下）。
+                            #   ⚠️ 4→5 是**提前一步**：U-111（架构 v4，归 W1B）会新增第 5 条断言
+                            #   （materialize 的 `embedding_status` 生产侧零读者）。`bind_domain` 对上界
+                            #   是 fail-fast 的，而它的调用点在 `app/main.py` 的 **lifespan** 里
+                            #   ⇒ 不提前抬这个数，W1B 一合就是"启动抛 ValueError"而不是"CI 变红"。
+                            #   系列上界随之 4×3=12 ⇒ 5×3=**15**（`startup_assertion_state` 的 help_text、
+                            #   本文件 §导出口径注释、`deploy/runbook/README.md` §二 三处同步）。
     "assertion_status": 3,  # `AssertionStatus` 三值 pass/pending/fail。⚠️ 刻意**不叫 `status`** ——
                             #   `status` 已被 HTTP 状态类占用（≤10）、`state` 已被 BindingState 占用（≤4），
                             #   同名两义会让 `BOUNDED_ALLOWED_LABELS` 的上界在两个指标间互相背锅
@@ -836,12 +842,12 @@ STARTUP_ASSERTION_STATE = register_metric(
             "启动断言当前态（1 = 该断言处于该状态；同一条断言在任一时刻只有一行是 1）。"
             "U-105：三态 PASS/PENDING/FAIL 里 PENDING 原先只有一条 WARN 日志 ⇒ "
             "'带着未就绪的前置条件跑起来'这件事在看板与告警上都是隐形的。"
-            "标签 assertion(≤4) × assertion_status(≤3) ⇒ 系列上界 12"
+            "标签 assertion(≤5) × assertion_status(≤3) ⇒ 系列上界 15"
         ),
         labels=("assertion", "assertion_status"),
         closed=("assertion", "assertion_status"),
         # ⚠️ 注册时**故意不给 domains**：见 `bind_startup_assertion_domains` 的 R-DEP-3 说明。
-        #   未绑定前本族整族不输出（B 类，"没线"≠"0"）；绑定后 12 条 0 序列齐备（A 类）。
+        #   未绑定前本族整族不输出（B 类，"没线"≠"0"）；绑定后 15 条 0 序列齐备（A 类，上界随 U-111 到 5）。
     )
 )
 
