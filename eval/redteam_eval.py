@@ -81,7 +81,7 @@ from app.core.contracts import ResultSet  # noqa: E402
 from app.core.enums import GateDecision  # noqa: E402
 from app.guard import run_gate1, run_gate2, run_gate3  # noqa: E402
 from app.guard.ast_gate import MAX_ROWS_HARD_LIMIT  # noqa: E402
-from harness import Harness, build_guard_allowlist, identity_for_case  # noqa: E402
+from harness import Harness, identity_for_case  # noqa: E402
 from sqlglot import expressions as exp  # noqa: E402
 
 __all__ = ["Check", "RedTeamCaseResult", "evaluate_case", "run_redteam", "run_redteam_sync"]
@@ -179,8 +179,11 @@ class StructuralAllowlistBundle:
     * ⑤ `tenant_scoped ⇔ "tenant_id" in columns` 双向断言（07 §7.4 ⚠️"写反 = N-07 失效"）
       —— 用可见列判 ⇒ 对**任何**租户隔离资产直接抛 `ContractViolationError`（实测）。
 
-    ⇒ 本代理只补"结构面"（列全集），**权限面不变**：gate1 的 R06 白名单仍用裁剪后的可见列
-    （那正是跨租户探测该被拦的机制）。两种视图的判定结果都落盘，冲突本身进缺口表 + RELAY。
+    ⇒ 本代理只**选面**（把列集换成端口给的 `all_columns`），不补字段、不改权限面：
+    gate1 的 R06 白名单仍用裁剪后的可见列（那正是跨租户探测该被拦的机制）。
+    两种视图的判定结果都落盘，冲突本身进缺口表 + RELAY。
+    ⚠️ U-121 之前这里是"从 `LoadedBundle` 造一份全列字典"，现在全部取自端口 ⇒ 见
+    `structural_wrapper` 的删除条件。
     """
 
     def __init__(self, inner: Any, wrapper: Mapping[str, Any]) -> None:
@@ -198,18 +201,27 @@ class StructuralAllowlistBundle:
 
 
 def structural_wrapper(harness: Harness) -> dict[str, Any]:
-    """把 gate1 用的 wrapper 里的 `assets[*].columns` 换成**语义包全列**（其余键一字不动）。"""
+    """闸门判据的**结构面**版本：只把 `assets[*].columns` 换成端口自己给的 `all_columns`。
+
+    ⚠️ 这是**选面**，不是**造面**：七键、列类型、`joins`、deny 清单、默认谓词全部来自
+    `runtime.guard_allowlist(ctx, max_rows=…)`（U-121）⇒ 评测侧不再派生任何字段。
+    本函数存在的唯一理由 = `app/guard/policy_gate.py:148` 用**可见面**判
+    「`tenant_id` in columns」，而 `tenant_id` 恰是 deny 列 ⇒ 结构面下 ⑤ 才不抛
+    `ContractViolationError`（两面各自的失效形态实测在
+    `reports/w6/probe_gate_allowlist_shape.json` 的 `gate1_face_control`）。
+    🔴 W2C 把 ④⑤ 改成读 `all_columns` 之后，本函数与 `StructuralAllowlistBundle` **一并删除**
+    （哨兵测试 = `test_the_dual_shape_view_dies_with_the_consumer_fix`）。
+    """
     ctx = identity_for_case("RT-STRUCT", "T_A")
-    wrapper = dict(build_guard_allowlist(harness.loaded, harness.runtime, ctx))
-    full_columns = {
-        str(a.physical_asset): {str(c.name): str(c.type) for c in a.columns}
-        for a in harness.loaded.bundle.assets
+    port = dict(harness.runtime.guard_allowlist(ctx, max_rows=None))
+    port["assets"] = {
+        physical: {
+            **entry,
+            "columns": dict(entry.get("all_columns") or entry.get("columns") or {}),
+        }
+        for physical, entry in (port.get("assets") or {}).items()
     }
-    assets: dict[str, Any] = {}
-    for physical, entry in (wrapper.get("assets") or {}).items():
-        assets[physical] = {**entry, "columns": full_columns.get(physical, entry.get("columns") or {})}
-    wrapper["assets"] = assets
-    return wrapper
+    return port
 
 
 def _top_limit_value(tree: exp.Expr) -> int | None:

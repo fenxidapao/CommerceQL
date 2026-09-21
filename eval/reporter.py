@@ -59,6 +59,7 @@ __all__ = [
     "pg_facts",
     "pg_statement",
     "render_markdown",
+    "replay_reproducibility",
     "timeout_snapshot_drift",
 ]
 
@@ -74,6 +75,9 @@ DEFAULT_METRIC_PROBE = os.path.join(W6_DIR, "probe_metric_coverage.json")
 DEFAULT_METRIC_VALUES = os.path.join(W6_DIR, "probe_metric_values.json")
 DEFAULT_PG_PROBE = os.path.join(W6_DIR, "_probe_pg_real.json")
 DEFAULT_INTEGRATION_LOG = os.path.join(W6_DIR, "_integration_pytest.log")
+#: 匣带**可复算性**探针（同一批 20 题、`--mode replay`、只测命中率）。
+#: 它不是批次读数 —— 它回答的是"报告里那些回放读数今天还能不能零成本重算"。
+DEFAULT_CASSETTE_PROBE = os.path.join(W6_DIR, "cassette_replay_probe.json")
 DEFAULT_JSON_OUT = os.path.join(W6_DIR, "eval_metrics.json")
 DEFAULT_MD_OUT = os.path.join(W6_DIR, "评测报告与门禁判定.md")
 
@@ -267,6 +271,37 @@ def timeout_snapshot_drift(snapshot_contract: Mapping[str, Any] | None) -> str:
         bits.append("值变了：" + "、".join(f"`{k}` {snap[k]}s→{now[k]}s" for k in changed))
     return ("⚠️ 那份 `contract` 是**跑批当时**的快照，已与当前树的 `NODE_TIMEOUT_S` 不一致（"
             + "；".join(bits) + "）⇒ 引用超时契约以当前树为准，别把这张表当今天的口径。")
+
+
+def replay_reproducibility(probe: Mapping[str, Any] | None) -> str:
+    """匣带今天还能不能**零成本复算**（§C.6.1 纪律二的成立条件，不是免责句）。
+
+    实测来由（09-21）：W2A `fbae176` 把 `metrics()/aliases()` 枚举器接进语义摘要 ⇒ 出站报文
+    多出一段 `## 指标口径`（首条 system 从 6,401 涨到 11,343 字符）⇒ 旧匣带的 48 个报文指纹
+    **全部不再命中**（同一批 20 题回放 = 20/20 `cassette_miss`）。
+    ⇒ "产物可复算"这句话必须带**日期与命中率**，否则下一轮会以为自己还能重算。
+    """
+    if not probe:
+        return ("⚠️ 本轮**没有**匣带可复算性探针产物（`cassette_replay_probe.json` 缺失）"
+                "⇒ §C.6.1 纪律二（产物可复算）**未验证**，不要把回放当成随时可重算。")
+    recs = list(probe.get("records") or [])
+    n = len(recs)
+    miss = sum(1 for r in recs if "cassette_miss" in str(r.get("infra_error") or ""))
+    summary = probe.get("summary") or {}
+    if n and miss == n:
+        return (
+            f"🔴 匣带**已失效，报告里的回放读数今天不可零成本复算**：同一批 {n} 题重放 "
+            f"`{os.path.basename(str((probe.get('config') or {}).get('cassette') or ''))}` ⇒ "
+            f"**{miss}/{n} 全部 miss**（`tokens_total={summary.get('tokens_total', 0)}`）。"
+            "miss 的成因实测在上游出站报文变了（语义摘要新增 `## 指标口径` 段，见 W2A `fbae176`），"
+            "**不在评测侧** ⇒ 要重新出这批读数必须**重新录制**（真打），不得回退到网络静默补数。"
+        )
+    if miss:
+        return (
+            f"⚠️ 匣带部分失效：{n} 题回放 miss **{miss}** 条（{miss / max(n, 1):.0%}）"
+            "⇒ 命中率不满即视为该批不可复算，先重录再引用。"
+        )
+    return f"✅ 匣带可复算：{n} 题回放 0 miss（本报告的回放读数今天可零成本重算）。"
 
 
 def git_rev() -> dict[str, Any]:
@@ -521,6 +556,7 @@ def build_payload(
     metric_probe_path: str | None = DEFAULT_METRIC_PROBE,
     metric_values_path: str | None = DEFAULT_METRIC_VALUES,
     pg_probe_path: str | None = DEFAULT_PG_PROBE,
+    cassette_probe_path: str | None = DEFAULT_CASSETTE_PROBE,
     loadtest_receipt: str | None = DEFAULT_LOADTEST_RECEIPT,
     pressure_report: str | None = DEFAULT_PRESSURE_REPORT,
 ) -> dict[str, Any]:
@@ -537,6 +573,7 @@ def build_payload(
     metric_values = _load(metric_values_path)      # §C.4.3 权威值比对 = G-7 的输入
     pg = pg_facts(pg_probe_path)
     pg_txt = pg_statement(pg)
+    cassette_probe = _load(cassette_probe_path)   # 匣带可复算性（纪律二的成立条件）
     p0 = parse_pytest_summary(pytest_log)
     # 全量日志是 `.` 输出时看不到集成层是否参与；有定向日志就用它补上取证。
     p0_integration = parse_pytest_summary(integration_log)
@@ -657,6 +694,7 @@ def build_payload(
             g8_second_round_available=bool(clarification and clarification.get("second_round_loop_available")),
             clarify_expected_n=int((clarification or {}).get("clarify_expected_n") or 0),
             pg_txt=pg_txt, metric_values=metric_values,
+            replay_txt=replay_reproducibility(cassette_probe),
         ),
         "reproduce": [
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/consistency.py",
@@ -668,8 +706,12 @@ def build_payload(
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/_probe_pg_real.py        # 只读探测真 PG",
             "cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest tests/integration -q -rfes",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/select_smoke_batch.py   # 确定性取 20 题",
+            "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_gate_allowlist_shape.py   # U-119 判据③：两种形状 × 两道闸门",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --live --yes   # 真打全量需额度：先不带 --yes 看计划",
-            "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --mode replay --provenance \"<匣带来源>\" --yes   # 零成本复算",
+            "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --mode replay --provenance \"<匣带来源>\" --yes"
+            "   # 匣带未失效时才是零成本复算；今天是否可复算看 §8 那条 🔴（探针 = 下一条命令）",
+            "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_cassette_replay.py"
+            "   # 匣带可复算性探针（不是批次读数；产物喂 §8 那条 🔴）",
         ],
     }
 
@@ -809,6 +851,7 @@ def _known_limitations(
     clarify_expected_n: int = 0,
     pg_txt: str,
     metric_values: Any = None,
+    replay_txt: str = "",
 ) -> list[str]:
     """「已知限制」是报告的一部分，不是免责声明 —— 缺一条就可能被读成通过。"""
     out = [
@@ -818,6 +861,9 @@ def _known_limitations(
         pg_txt,
         "**τ 未校准**（`deploy/.env` 的三个校准字段同样为空）⇒ L4 相关结论带 R-19 caveat；本轮未改 τ。",
     ]
+    if replay_txt:
+        # 空串不占位：§8 是"已知限制"清单，一条空 bullet 会被读成"这里本来有内容但没渲染"。
+        out.append(replay_txt)
     if metric_values:
         rate = float(metric_values.get("consistent_rate") or 0.0)
         out.append(
@@ -1196,6 +1242,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--metric-probe", default=DEFAULT_METRIC_PROBE)
     ap.add_argument("--metric-values", default=DEFAULT_METRIC_VALUES)
     ap.add_argument("--pg-probe", default=DEFAULT_PG_PROBE)
+    ap.add_argument("--cassette-probe", default=DEFAULT_CASSETTE_PROBE,
+                    help="匣带可复算性探针产物（只影响 §8 的纪律二措辞）")
     ap.add_argument("--loadtest-receipt", default=DEFAULT_LOADTEST_RECEIPT,
                     help="W7 压测回执（w7.loadtest.receipt/1）= G-6 的唯一输入")
     ap.add_argument("--pressure-report", default=DEFAULT_PRESSURE_REPORT,
@@ -1209,7 +1257,7 @@ def main(argv: list[str] | None = None) -> int:
         results_path=args.results, redteam_path=args.redteam, consistency_path=args.consistency,
         pytest_log=args.pytest_log, integration_log=args.integration_log,
         metric_probe_path=args.metric_probe, metric_values_path=args.metric_values,
-        pg_probe_path=args.pg_probe,
+        pg_probe_path=args.pg_probe, cassette_probe_path=args.cassette_probe,
         loadtest_receipt=args.loadtest_receipt, pressure_report=args.pressure_report,
     )
     md = render_markdown(payload)

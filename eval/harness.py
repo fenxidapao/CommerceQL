@@ -12,7 +12,7 @@
 | 装配点 | 生产 | 评测 | 为什么 |
 |---|---|---|---|
 | `executor` | `PgSqlExecutor(analytics 池)` | `SqliteEvalExecutor`（继承它） | 沙箱无 PG 业务数据（D2 / §17.4） |
-| `semantics` | `SemanticBundleRuntime` | `GuardAllowlistBundle`（薄代理） | `asset_allowlist` 形状缺陷，见 §三 |
+| `semantics` | `SemanticBundleRuntime` | `GuardAllowlistBundle`（薄代理，两面均取自端口） | 消费方仍从 `asset_allowlist` 读闸门判据，见 §三 |
 | `retrieval` | `RetrievalService`（pgvector + tsvector） | `BundleCatalogRetrieval`（全目录夹具） | §17.4 明文"评测不测向量检索"，见 §四 |
 | `audit` / `query_plan_writer` / `result_cache` / `presenter` | PG/Redis/W3B | 内存替身 / `None` | 评测不产出生产审计行；`None` 走的是**已登记的降级路径**（同生产 P0 的 `presenter=None`） |
 
@@ -28,30 +28,31 @@
 `live=True` 时真打上游并（可选）录制。⚠️ 密钥只从**环境**读，本模块不打印、不落盘。
 
 --------------------------------------------------------------------------
-三、闸门 allowlist 适配器（W2A↔W2C↔W4 的形状缺口，评测侧临时补齐）
+三、闸门 allowlist 形状（U-121 之后：端口给形状，评测只**选面**不**造面**）
 --------------------------------------------------------------------------
-`app/guard/ast_gate.py` 头部把 allowlist 契约写成一个**包装字典**
-（`assets` / `joins` / `deny_columns` / `default_predicates` / …），
-而 `SemanticBundleRuntime.asset_allowlist(ctx)` 返回的是**扁平表**且
-`columns` 是元组 —— 两者不匹配。实测（`reports/w6/probe_gate_allowlist_shape.py`）：
-把运行时直接交给 `run_gate1` → **任何**查询都被 R05 拒；`run_gate2` → G2-ASSET 拒。
-生产装配点（`app/api/deps.py` 的 `semantics=semantic_runtime`）没有做这层转换
-⇒ **闸门在生产里今天对每条查询都不生效**（不是"偶尔漏"，是"全拒"）。
+`app/guard/ast_gate.py` / `policy_gate.py` 要的是**七键 wrapper**（`assets` / `joins` /
+`deny_columns` / `default_predicates` / `allowed_constants` / `bundle_version` / `max_rows`），
+而 `asset_allowlist(ctx)` 给的是**扁平表**、`columns` 还是列名**元组**。
+09-20 实测（`reports/w6/probe_gate_allowlist_shape.py`）：扁平面直接喂 `run_gate1` →
+**任何**查询都被 R05 拒；喂 `run_gate2` → G2-ASSET 拒。
 
-🔴 而且这个端口有**两个形状互斥的消费者**，所以"改成 wrapper"并不是一个字符就能修的事：
-`planner/payloads.build_semantic_summary` 与 `binding/filters._step_no_permission`
-消费的是**扁平**形态（`for physical in sorted(allowlist)` + `allowlist[physical]`）——
-实测把 wrapper 直接给端口会让 planner 在 `entry.get(...)` 上抛
-`AttributeError: 'str' object has no attribute 'get'`（它把 `bundle_version` 当成了一张表）。
+U-121（W0 契约 + W2A `b7e6c8d`）把这件事的正解落在了端口上：
+`SemanticBundleRuntime.guard_allowlist(ctx, *, max_rows=None)` 现成给七键，且 `assets[*]`
+**带两个列面** —— `columns`（可见面，已裁 deny，gate1 R06 用）与 `all_columns`
+（结构面，全列，gate2 ④⑤ 用）。⇒ 评测侧那套"手拼七键 + 补列类型 + 截 joins"的派生代码
+**整体删除**（它现在就是第三条真相）。
 
-`GuardAllowlistBundle` 因此返回 `AssetAllowlistView`（**双形状视图**，见该类的表格式说明）：
-迭代面 = 扁平（planner/binding 的真相不变），`.get(wrapper 键)` = wrapper（闸门可用），
-键解析**先扁平后 wrapper** ⇒ 真实资产名永不被保留键遮蔽。
-这条生产缺陷作为 RELAY 交给 W2A/W2C/W4/W0（**不由评测窗口去改别人的文件**）。
+⚠️ **残留的适配层只剩一件事**：生产消费方今天仍从 `asset_allowlist` 里读闸门判据
+（`app/graph/nodes/gate1_ast.py:52`、`app/guard/policy_gate.py:105`），而该端口方法同时被
+`planner/payloads` 与 `binding/filters` 按**扁平**消费（实测把 wrapper 直接给端口会让
+planner 在 `entry.get(...)` 上抛 `AttributeError`）。⇒ `GuardAllowlistBundle` 返回
+`AssetAllowlistView`（迭代 = 扁平、`.get(保留键)` = wrapper，两面**都来自端口**）。
 
-⚠️ 适配规则只有一条是"造"出来的：`joins[].left/right` 在语义包里是
-`<资产>.<列>` 点分形态，而 gate1 要的是**逻辑资产名** → 取点号左侧。
-其余键全部逐字取自运行时/`policy()`/`LoadedBundle`。
+🔴 这层视图**随消费侧改调 `guard_allowlist` 而必须整体删除**（判据与实测见
+`reports/w6/probe_gate_allowlist_shape.json`：gate2 那边不只是"改调一行"，⑤ 还要从
+可见面改读结构面，否则 `tenant_scoped ⇔ tenant_id` 双向断言当场 `ContractViolationError`）。
+哨兵测试 = `tests/eval/test_harness_allowlist.py::test_the_dual_shape_view_dies_with_the_consumer_fix`。
+**不由评测窗口去改别人的文件。**
 
 --------------------------------------------------------------------------
 四、检索夹具的口径偏差（必须写进报告的"已知限制"）
@@ -115,7 +116,6 @@ __all__ = [
     "CaseRun",
     "GuardAllowlistBundle",
     "Harness",
-    "build_guard_allowlist",
     "describe_node_timeouts",
     "eval_node_timeouts",
     "identity_for_case",
@@ -123,54 +123,18 @@ __all__ = [
 
 
 # ============================================================================
-# 一、闸门 allowlist 适配
+# 一、闸门 allowlist 形状（U-121 之后**一律取端口输出**，评测侧不再自己拼）
 # ============================================================================
-
-def build_guard_allowlist(
-    loaded: LoadedBundle, runtime: SemanticBundleRuntime, ctx: IdentityContext
-) -> dict[str, Any]:
-    """按 `ast_gate` 文档契约组装 allowlist（逐字派生自语义包，不做业务发明）。"""
-
-    flat = runtime.asset_allowlist(ctx)  # 运行时自己按 role 裁剪过 deny
-    type_by_column: dict[str, dict[str, str]] = {
-        asset.physical_asset: {c.name: c.type for c in asset.columns}
-        for asset in loaded.bundle.assets
-    }
-    policy = dict(runtime.policy() or {})
-
-    assets: dict[str, Any] = {}
-    for physical, entry in flat.items():
-        columns = entry.get("columns") or ()
-        known = type_by_column.get(physical, {})
-        assets[physical] = {
-            "logical_name": entry.get("logical_name"),
-            "domain": entry.get("domain"),
-            "tenant_scoped": bool(entry.get("tenant_scoped")),
-            # 契约要 {列名: 类型}；运行时给的是列名元组 → 类型从资产模型补齐（W2A 未透出类型，
-            # 见 reports/w6/RELAY.md：allowlist 形状缺陷的第三小条）。
-            "columns": {name: known.get(name, "unknown") for name in columns},
-        }
-
-    joins = [
-        {
-            "left": str(j.left).split(".", 1)[0],
-            "right": str(j.right).split(".", 1)[0],
-            "on_columns": [str(c) for c in (j.on_columns or ())],
-        }
-        for j in loaded.bundle.joins
-    ]
-
-    return {
-        "bundle_version": runtime.active_version(),
-        "assets": assets,
-        "joins": joins,
-        "deny_columns": [str(x) for x in (policy.get("deny_columns") or ())],
-        "default_predicates": dict(policy.get("default_predicates") or {}),
-        # 语义包**没有** allowed_constants 区块（grep 实证）→ 空表，不编造。
-        "allowed_constants": [],
-        # `max_rows` **刻意不填**：生产也没给（运行时不透出），R04 因此用
-        # `ast_gate.DEFAULT_MAX_ROWS` —— 评测与生产同形，而不是评测私自注入一个数。
-    }
+#
+# 这里曾经有一个 `build_guard_allowlist()`：从扁平面手拼七键（补列类型、截 joins、
+# 决定哪些键留空）。它存在的前提是"端口给不出闸门要的形状"。U-121（W0 契约 + W2A
+# `b7e6c8d`）之后前提没了 ⇒ 派生代码整体删除，理由有三条，每条都实测过：
+#   ① 手拼那版把扁平面（`columns` = 列名**元组**）当类型字典用 ⇒ `ast_gate.py:751`
+#      `AttributeError`（见 `reports/w6/probe_gate_allowlist_shape.py` 的 `legacy_hand_wrapper` 格）；
+#   ② 列类型/`joins`/`all_columns` 现在由端口从同一份 `LoadedBundle` 派生，评测再拼一遍
+#      = 第三条真相（漂移只会以"评测绿、生产红"的形式回来）；
+#   ③ 端口自带**两个列面**（可见面 + `all_columns`），评测侧需要的"结构面"从此是
+#      **选面**而不是**造面** —— 见 `redteam_eval.structural_wrapper`。
 
 
 #: guard 侧（`ast_gate` / `policy_gate`）从 allowlist 读的**唯一**几个键。
@@ -244,13 +208,22 @@ class AssetAllowlistView(Mapping):
 class GuardAllowlistBundle:
     """`SemanticBundlePort` 薄代理：只把 `asset_allowlist` 换成 `AssetAllowlistView`。
 
-    其余方法（`active_version` / `policy` / `time_semantics` / L1 查找面 …）
-    一律 `__getattr__` 透传给真运行时 —— 代理不许改语义，只许改形状。
+    两面**都来自端口**（扁平 = `asset_allowlist`，闸门 = `guard_allowlist`），评测侧
+    一个字段都不派生。`max_rows` 由调用方给（生产给的是 `state["options"]["max_rows"]`；
+    评测与生产今天都没给 ⇒ 端口填 `None`，实测 `_effective_limit` 对"缺键/None"同值 = 10000）。
+
+    🔴 **本类是临时的**：它存在的唯一理由 = 生产消费方还在从 `asset_allowlist` 里读
+    闸门判据（`app/graph/nodes/gate1_ast.py:52`、`app/guard/policy_gate.py:105`）。
+    U-121 的正解落地后这里必须**整体删除**（评测路径与在线路径同一条）；
+    `tests/eval/test_harness_allowlist.py::test_the_dual_shape_view_dies_with_the_consumer_fix`
+    就是钉这句话的哨兵 —— 消费侧一改，它红，逼下一轮动手，而不是让适配层变成长期真相。
+
+    其余方法一律 `__getattr__` 透传给真运行时 —— 代理不许改语义，只许改形状。
     """
 
-    def __init__(self, runtime: SemanticBundleRuntime, loaded: LoadedBundle) -> None:
+    def __init__(self, runtime: SemanticBundleRuntime, *, max_rows: int | None = None) -> None:
         self._runtime = runtime
-        self._loaded = loaded
+        self._max_rows = max_rows
         self._cache: dict[str, AssetAllowlistView] = {}
 
     def asset_allowlist(self, ctx: IdentityContext) -> Mapping[str, Any]:
@@ -259,7 +232,7 @@ class GuardAllowlistBundle:
         if view is None:
             view = AssetAllowlistView(
                 self._runtime.asset_allowlist(ctx),
-                build_guard_allowlist(self._loaded, self._runtime, ctx),
+                self._runtime.guard_allowlist(ctx, max_rows=self._max_rows),
             )
             self._cache[key] = view
         return view
@@ -804,7 +777,7 @@ class Harness:
         self.settings = settings or get_settings()
         self.loaded = load_bundle(bundle_path or _bootstrap.BUNDLE_PATH)
         self.runtime = SemanticBundleRuntime(self.loaded)
-        self.semantics = GuardAllowlistBundle(self.runtime, self.loaded)
+        self.semantics = GuardAllowlistBundle(self.runtime)
         self.mask = SemanticMaskEngine()
         self.tenant_scoped_physicals = {
             a.physical_asset: "tenant_id"

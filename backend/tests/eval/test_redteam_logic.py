@@ -368,11 +368,14 @@ def test_bundle_returns_the_wrapper_shape_and_passes_the_rest_through(harness):
 
 def test_structural_wrapper_widens_columns_for_every_active_physical_asset(harness):
     wrapper = rt.structural_wrapper(harness)
-    flat = H.build_guard_allowlist(harness.loaded, harness.runtime, H.identity_for_case("T-RT", "T_A"))
-    assert set(wrapper["assets"]) == set(flat["assets"])
+    visible = harness.runtime.guard_allowlist(
+        H.identity_for_case("RT-STRUCT", "T_A"), max_rows=None
+    )
+    assert set(wrapper["assets"]) == set(visible["assets"])
     for physical, entry in wrapper["assets"].items():
         assert entry["columns"], f"{physical} 的全列面为空"
-        assert len(entry["columns"]) >= len(flat["assets"][physical]["columns"])
+        assert len(entry["columns"]) >= len(visible["assets"][physical]["columns"])
+        assert set(entry["columns"]) == set(visible["assets"][physical]["all_columns"])
 
 
 # ==== 七、失败分桶（报告读它，不能把用例问题读成产品缺陷）===========

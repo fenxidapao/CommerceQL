@@ -13,12 +13,15 @@
 
 from __future__ import annotations
 
+import ast
+import os
+
 import harness as H
 import pytest
 
 from app.core.enums import RetrievalMode, Role
 from app.core.errors import ContractViolationError
-from app.guard.ast_gate import run_gate1
+from app.guard.ast_gate import DEFAULT_MAX_ROWS, _effective_limit, run_gate1
 from app.guard.policy_gate import run_gate2
 
 
@@ -80,17 +83,20 @@ def test_wrapper_shape_keys_are_all_present(guard_allowlist):
 
 
 def test_allowed_constants_is_empty_because_bundle_has_none(harness, analyst_ctx):
-    """语义包**没有** `allowed_constants` 区块（grep 实证）⇒ 空表，不许编一个。"""
-    assert H.build_guard_allowlist(harness.loaded, harness.runtime, analyst_ctx)["allowed_constants"] == []
+    """语义包**没有** `allowed_constants` 区块（grep 实证）⇒ 端口给空集合，评测不许编一个。"""
+    assert not harness.runtime.guard_allowlist(analyst_ctx, max_rows=None)["allowed_constants"]
 
 
-def test_max_rows_is_deliberately_absent_so_r04_uses_the_same_default_as_prod(
-    harness, analyst_ctx, guard_allowlist
-):
-    """评测不许私自注入 `max_rows`，否则 R04 在评测里比生产严/松。"""
-    built = H.build_guard_allowlist(harness.loaded, harness.runtime, analyst_ctx)
-    assert "max_rows" not in built
+def test_eval_does_not_invent_a_max_rows(harness, analyst_ctx, guard_allowlist):
+    """评测不许私自注入 `max_rows`，否则 R04 在评测里比生产严/松。
+
+    U-121 之前这条测试钉的是"wrapper 里**没有** `max_rows` 键"；端口现在**必给**这个键
+    （生产也没给 ⇒ 填 `None`）。⇒ 钉法换成"键在但值为空，且 R04 的生效值与生产同值"。
+    """
+    port = harness.runtime.guard_allowlist(analyst_ctx, max_rows=None)
+    assert port["max_rows"] is None, "评测不得自己决定行数上限"
     assert guard_allowlist.get("max_rows") is None
+    assert _effective_limit(port) == _effective_limit({}) == DEFAULT_MAX_ROWS
 
 
 # ==== run_gate2 的端口形状（一条真实的踩坑路径）=======================
@@ -125,15 +131,102 @@ def test_gate2_passes_when_columns_are_the_full_bundle_shape(analyst_ctx, harnes
 
 
 def test_structural_wrapper_only_changes_the_columns_face(harness, analyst_ctx):
-    """结构档只把 `assets[*].columns` 换成全列，deny 清单一字不动 ⇒ 屏蔽判据仍在。"""
+    """结构档只把 `assets[*].columns` 换成端口的 `all_columns`，其余键一字不动。"""
     import redteam_eval as rt
 
-    base = H.build_guard_allowlist(harness.loaded, harness.runtime, analyst_ctx)
+    base = harness.runtime.guard_allowlist(analyst_ctx, max_rows=None)
     full = rt.structural_wrapper(harness)
+    assert set(full) == set(base), "结构档不得新增/删除顶层键 —— 字段只能来自端口"
     assert "tenant_id" in full["assets"]["v_order_paid"]["columns"]
     assert "tenant_id" not in base["assets"]["v_order_paid"]["columns"]
     assert full["deny_columns"] == base["deny_columns"]
     assert full["default_predicates"] == base["default_predicates"]
+    assert full["joins"] == base["joins"], "joins 由端口派生，评测不再截点分名"
+
+
+# ==== U-119 / U-121：形状只能取自端口，且适配层必须"到期"==============
+#: `contracts.GuardAllowlist` 的七个键（本测试只用作**反查**：评测侧不许自己拼出这些键）。
+_GUARD_KEYS = ("bundle_version", "assets", "joins", "deny_columns",
+               "default_predicates", "allowed_constants", "max_rows")
+#: 两道闸门的取数点（W2C 的接线面）。
+_GATE_CONSUMERS = (os.path.join("app", "guard", "policy_gate.py"),
+                   os.path.join("app", "graph", "nodes", "gate1_ast.py"))
+
+
+def _guard_keys_per_dict(path: str) -> list[set[str]]:
+    """每个**字典字面量**各自命中的闸门键（不是全模块并集 —— 那样阈值就没意义了）。"""
+    with open(path, encoding="utf-8") as fh:
+        tree = ast.parse(fh.read())
+    guard = set(_GUARD_KEYS)
+    hits: list[set[str]] = []
+    for node in (n for n in ast.walk(tree) if isinstance(n, ast.Dict)):
+        keys = {k.value for k in node.keys if isinstance(k, ast.Constant) and isinstance(k.value, str)}
+        if keys & guard:
+            hits.append(keys & guard)
+    return hits
+
+
+def _port_methods_called_by_gates(repo_root: str) -> set[str]:
+    """生产闸门实际调了端口的哪个方法（AST 扫源码，不靠文档也不靠猜）。"""
+    found: set[str] = set()
+    for rel in _GATE_CONSUMERS:
+        with open(os.path.join(repo_root, "backend", rel), encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
+        found |= {
+            n.func.attr for n in ast.walk(tree)
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+            and n.func.attr in ("asset_allowlist", "guard_allowlist")
+        }
+    return found
+
+
+def test_the_evaluator_never_derives_guard_fields_itself():
+    """🔴 U-119 的正面要求：形状只能**取自端口**，评测不得再拼一个 wrapper。
+
+    判据是"字典字面量里出现 ≥5 个闸门键"⇒ 算的是**整份 wrapper**（被删掉的那版拼了 6 个）。
+    阈值不是 7：漏 `max_rows` 的自拼件同样危险；也不是 3：`harness` 的自检证据字典与检索
+    载荷本来就有同名列（键多到能拼出判据才是造面，只是取个长度不是）。
+    漂移的真正兜底是 `test_view_forwards_the_port_output_verbatim`（行为对照：给闸门的七键
+    必须逐键等于端口输出），本条只是不让旧符号悄悄回来。
+    """
+    import harness as _h
+    import redteam_eval as _rt
+
+    assert not hasattr(_h, "build_guard_allowlist"), "被删的派生函数不得回来"
+    for mod in (_h, _rt):
+        hits = _guard_keys_per_dict(os.path.abspath(mod.__file__))
+        fabricated = next((sorted(h) for h in hits if len(h) >= 5), None)
+        assert fabricated is None, (
+            f"{os.path.basename(mod.__file__)} 里有字典字面量装了 {fabricated}（全部命中："
+            f"{[sorted(h) for h in hits]}）—— 闸门判据必须由 "
+            "`SemanticBundleRuntime.guard_allowlist()` 给出，不是评测拼"
+        )
+
+
+def test_view_forwards_the_port_output_verbatim(harness, analyst_ctx):
+    """正对照：视图给闸门的 wrapper **逐键等于端口输出**，枚举面仍等于扁平面。"""
+    port = harness.runtime.guard_allowlist(analyst_ctx, max_rows=None)
+    view = harness.semantics.asset_allowlist(analyst_ctx)
+    assert {k: view.get(k) for k in _GUARD_KEYS} == {k: port.get(k) for k in _GUARD_KEYS}
+    assert sorted(view) == sorted(harness.runtime.asset_allowlist(analyst_ctx))
+
+
+def test_the_dual_shape_view_dies_with_the_consumer_fix(repo_root):
+    """哨兵：消费侧一旦改调 `guard_allowlist`，评测的双形状视图必须**整体删除**。
+
+    为什么要它：适配层"是临时的"这句话靠注释传承不了两轮。今天生产仍从 `asset_allowlist`
+    读闸门判据 ⇒ 视图合法存在；哪天 W2C 接线完成（`policy_gate` 的 ④⑤ 还要改读
+    `all_columns`，见 `reports/w6/probe_gate_allowlist_shape.json`），本测试立刻红并点名删处。
+    """
+    if "asset_allowlist" not in _port_methods_called_by_gates(repo_root):
+        pytest.fail(
+            "U-121 消费侧已接线（两道闸门都改调 `guard_allowlist`）⇒ 现在必须删除评测侧适配层："
+            "`eval/harness.py` 的 `AssetAllowlistView` / `GuardAllowlistBundle` 与 "
+            "`eval/redteam_eval.py` 的 `StructuralAllowlistBundle` / `structural_wrapper`"
+            "（U-119 判据③ 的副产品；留着它就是第三份真相）"
+        )
+    # 删除条件尚未成立 ⇒ 视图必须仍在（在 = 评测跑得动；不在 = 本测试的另一半失真）
+    assert hasattr(H, "GuardAllowlistBundle") and hasattr(H, "AssetAllowlistView")
 
 
 # ==== gate1 的真实形状（评测与生产同一条路径）=========================

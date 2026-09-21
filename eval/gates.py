@@ -71,6 +71,29 @@ def _tau_verdict(gate_id: str, verdict: str, tau_calibrated: bool) -> str:
     return verdict
 
 
+def _p0_notes(p0_tests: Mapping[str, Any], ran_integration: bool) -> tuple[str, ...]:
+    """G-1 的红**必须点名到测试**。只报 `failed=N` 会被下一轮读成「评测窗口改坏了什么」。
+
+    本轮（2026-09-21）实测 `1 failed / 2222 passed / 6 skipped / 3 errors`，两条红因都在本窗口外：
+    W4 为 U-119 立的**刻意红**（`tests/contract/test_gate_seam_contract.py`）与
+    `tests/integration/test_retrieval_fts_pg.py` 夹具的权限错（与那六条 skip 同源，见 RELAY O5）。
+    「本窗口零回归」这句话不能靠叙述成立 ⇒ 把测试名与错误数直接搬进读数里，谁都能复核。
+    """
+    notes: list[str] = []
+    if not ran_integration:
+        notes.append("集成层未跑（需 PG/Redis）→ 只覆盖单元+契约")
+    named = list(p0_tests.get("failed_tests") or ())
+    if named:
+        notes.append("红的测试逐条点名：" + "、".join(f"`{t}`" for t in named))
+    errors = int(p0_tests.get("errors") or 0)
+    if errors:
+        notes.append(
+            f"另有 {errors} 条 **error（夹具起不来，不是断言失败）** ⇒ 与 failed 分开数，"
+            "混报会看不出坏的是测试环境还是被测系统"
+        )
+    return tuple(notes)
+
+
 def evaluate_gates(
     *,
     grid: Any | None = None,
@@ -102,7 +125,7 @@ def evaluate_gates(
             "PASS" if failed == 0 and ran_integration else ("FAIL" if failed else "PARTIAL"),
             f"failed={failed}, unit+contract passed={p0_tests.get('passed')}, integration_ran={ran_integration}",
             "§17.1 单元 + 集成",
-            () if ran_integration else ("集成层未跑（需 PG/Redis）→ 只覆盖单元+契约",),
+            _p0_notes(p0_tests, ran_integration),
         ))
 
     # ---- G-2 结构 Easy × 语义低 ≥ 95% ----
