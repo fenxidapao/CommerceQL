@@ -342,6 +342,27 @@ def test_pytest_summary_reads_integration_layer_from_log(tmp_path):
     assert "集成层已跑" in s["integration_note"]
 
 
+def test_pytest_summary_keeps_assertion_failures_and_fixture_errors_in_separate_lists(tmp_path):
+    """`FAILED` 与 `ERROR` 的用例名**不许混装**（旧实现一条正则两个都收）。
+
+    今天的真实读数就是这条判据的理由：全量 `0 failed / 2230 passed / 3 errors` ⇒
+    让 G-1 变红的三条全在窗外、且坏的是**测试环境**（`test_retrieval_fts_pg.py` 夹具权限）。
+    混装成 `failed_tests` 会让读者以为被测系统有三处断言不成立。
+    """
+    log = tmp_path / "full.log"
+    log.write_text(
+        "ERROR tests/integration/test_retrieval_fts_pg.py::test_dense_scope_with_zero_rows_is_not_degradation\n"
+        "ERROR tests/integration/test_retrieval_fts_pg.py::test_dense_null_rows_never_crowd_out_valid_vectors\n"
+        "FAILED tests/contract/test_x.py::test_y - AssertionError\n"
+        "====== 1 failed, 2230 passed, 6 skipped, 2 errors in 136.33s ======\n",
+        encoding="utf-8",
+    )
+    s = rp.parse_pytest_summary(str(log))
+    assert s["failed_tests"] == ["tests/contract/test_x.py::test_y"]
+    assert len(s["error_tests"]) == 2 and all("test_retrieval_fts_pg" in t for t in s["error_tests"])
+    assert (s["passed"], s["failed"], s["errors"]) == (2230, 1, 2)
+
+
 def test_pytest_summary_none_cases(tmp_path):
     assert rp.parse_pytest_summary(None) is None
     assert rp.parse_pytest_summary(str(tmp_path / "missing.log")) is None
@@ -857,6 +878,20 @@ def test_loadtest_pressure_ignores_unknown_keys_and_still_matches_schema_verbati
                                          schema="w7.loadtest.receipt/2")) is None
 
 
+@pytest.mark.parametrize("le_8s", [True, False, None])
+def test_the_reader_never_depends_on_w7s_g6_boolean(tmp_path, le_8s):
+    """W7 在 U-120 把 `g6_p95_le_8s` 从两态改成三态（`admitted<20` ⇒ null）⇒ 我方读数不许变。
+
+    钉住"我方 G-6 只认 `latency_ms.p95` + `g6_caveat`"这条依赖面：将来谁想改成读那个布尔，
+    上游一置 null 本窗口的门禁就会跟着变红 —— 而那是 W7 的降档，不是我们的判定。
+    """
+    path = _receipt(tmp_path, [{"scenario": "steady", "latency_ms": {"p95": 4200.0},
+                               "g6_p95_le_8s": le_8s}])
+    got = rp.loadtest_pressure(path)
+    assert got["p95_total_ms"] == 4200.0 and got["caveat"] is None
+    assert "g6_p95_le_8s" not in got, "读端一旦把这个布尔搬进产物，就等于把判定权交了出去"
+
+
 @pytest.mark.parametrize("scenarios", [
     [],                     # 四场景一个没跑（W7 本轮的真实状态）
     [{"scenario": "steady", "latency_ms": {"p95": None}}],   # 跑了但零样本
@@ -873,18 +908,38 @@ def test_loadtest_pressure_ignores_foreign_schema_and_absent_files(tmp_path):
 
 
 def test_build_payload_routes_the_receipt_into_g6(tmp_path):
-    """装配半边也要钉住：回执一落地，门禁表里就是实测 P95，不用再改任何措辞。"""
+    """装配半边也要钉住：回执一落地，门禁表里就是实测 P95，不用再改任何措辞。
+
+    ⚠️ 合成回执用的是**现行干净形状**（有 `admission` + 全请求分位数）——
+    旧形状"只给一个 p95"现在按定义拿不到 PASS（见 `test_gates.py` 的同名判据测试）。
+    """
+    clean = {"scenario": "steady", "latency_ms": {"p95": 4200.0},
+             "p95_scope": "admitted_http_2xx", "admission": {"admitted": 150, "rejected_429": 0},
+             "latency_ms_all_ms": {"p95": 4600.0}}
     p = rp.build_payload(
         results_path="__nope__.json", redteam_path="__nope__.json",
         consistency_path="__nope__.json", pytest_log="__nope__.log",
         integration_log="__nope__.log", metric_probe_path="__nope__.json",
         metric_values_path="__nope__.json", pg_probe_path="__nope__.json",
-        loadtest_receipt=_receipt(tmp_path, [{"scenario": "steady", "latency_ms": {"p95": 4200.0}}]),
+        loadtest_receipt=_receipt(tmp_path, [clean]),
         pressure_report="__nope__.md",
     )
     g6 = next(x for x in p["gates"] if x["gate_id"] == "G-6")
     assert g6["verdict"] == "PASS"
-    assert g6["measured"] == "P95 = 4200ms，分母 = 口径未标注 = U-106 之前的回执", \
+    assert g6["measured"] == "P95 = 4600ms，分母 = 全请求口径 `latency_ms_all_ms`", \
         "U-106 之后读数必须显名分母：只写数值会让准入 P95 被读成端到端 P95"
     assert p["meta"]["artifacts_present"]["loadtest_receipt"] is True
     assert p["gate_summary"]["all_pass"] is False, "一条 PASS 掩不掉其余 NOT_AVAILABLE"
+
+    # 装配路径上的反面对照：同一个数、但分母无从核对 ⇒ 判定必须跟着降档。
+    pre_u106 = {k: v for k, v in clean.items()
+                if k not in ("admission", "latency_ms_all_ms", "p95_scope")}
+    p2 = rp.build_payload(
+        results_path="__nope__.json", redteam_path="__nope__.json",
+        consistency_path="__nope__.json", pytest_log="__nope__.log",
+        integration_log="__nope__.log", metric_probe_path="__nope__.json",
+        metric_values_path="__nope__.json", pg_probe_path="__nope__.json",
+        loadtest_receipt=_receipt(tmp_path, [pre_u106]), pressure_report="__nope__.md",
+    )
+    g6b = next(x for x in p2["gates"] if x["gate_id"] == "G-6")
+    assert g6b["verdict"] == "UNVERIFIED" and g6b["measured"].startswith("P95 = 4200ms")

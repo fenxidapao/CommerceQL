@@ -74,22 +74,29 @@ def _tau_verdict(gate_id: str, verdict: str, tau_calibrated: bool) -> str:
 def _p0_notes(p0_tests: Mapping[str, Any], ran_integration: bool) -> tuple[str, ...]:
     """G-1 的红**必须点名到测试**。只报 `failed=N` 会被下一轮读成「评测窗口改坏了什么」。
 
-    本轮（2026-09-21）实测 `1 failed / 2222 passed / 6 skipped / 3 errors`，两条红因都在本窗口外：
-    W4 为 U-119 立的**刻意红**（`tests/contract/test_gate_seam_contract.py`）与
-    `tests/integration/test_retrieval_fts_pg.py` 夹具的权限错（与那六条 skip 同源，见 RELAY O5）。
-    「本窗口零回归」这句话不能靠叙述成立 ⇒ 把测试名与错误数直接搬进读数里，谁都能复核。
+    同一句"红因"在一天里换过一次构成，正好说明为什么必须逐条点名而不只报数：
+    第四轮实测 `1 failed / 2222 passed / 3 errors`（红因 = W4 为 U-119 立的**刻意红**
+    `tests/contract/test_gate_seam_contract.py` + `test_retrieval_fts_pg.py` 夹具权限错）；
+    W4 落 `357618f` 把接缝测试的输入改对之后 ⇒ **断言失败 0 条**，让 G-1 仍红的
+    **只剩窗外那 3 条夹具 error**。「本窗口零回归」这句话不能靠叙述成立 ⇒ 把测试名搬进读数里。
     """
     notes: list[str] = []
     if not ran_integration:
         notes.append("集成层未跑（需 PG/Redis）→ 只覆盖单元+契约")
     named = list(p0_tests.get("failed_tests") or ())
     if named:
-        notes.append("红的测试逐条点名：" + "、".join(f"`{t}`" for t in named))
+        notes.append("断言失败逐条点名：" + "、".join(f"`{t}`" for t in named))
     errors = int(p0_tests.get("errors") or 0)
     if errors:
+        named_err = list(p0_tests.get("error_tests") or ())
         notes.append(
             f"另有 {errors} 条 **error（夹具起不来，不是断言失败）** ⇒ 与 failed 分开数，"
             "混报会看不出坏的是测试环境还是被测系统"
+            + (
+                "；点名：" + "、".join(f"`{t}`" for t in named_err) if named_err else
+                "；**本日志未点名** ⇒ 它不是用 `-rfEs` 跑的（`-r` 里要点名的字符是大写 `E`，"
+                "小写 `e` 不收 error）⇒ 按 §8 的重跑命令取证"
+            )
         )
     return tuple(notes)
 
@@ -123,7 +130,9 @@ def evaluate_gates(
         gates.append(Gate(
             "G-1", "全部 P0 用例通过",
             "PASS" if failed == 0 and ran_integration else ("FAIL" if failed else "PARTIAL"),
-            f"failed={failed}, unit+contract passed={p0_tests.get('passed')}, integration_ran={ran_integration}",
+            f"断言失败 {int(p0_tests.get('failed', 0))} + 夹具 error {int(p0_tests.get('errors', 0))}"
+            f" = 红 {failed} 条；unit+contract passed={p0_tests.get('passed')}"
+            f", integration_ran={ran_integration}",
             "§17.1 单元 + 集成",
             _p0_notes(p0_tests, ran_integration),
         ))
@@ -260,6 +269,21 @@ def evaluate_gates(
                 f"P95 = {judged:.0f}ms，分母 = {judged_scope}", "§16.5 压测（W7 产出）",
                 (*notes, f"⚠️ 回执带 `g6_caveat`：{pressure['caveat']} ⇒ 该 P95 不可判达标，"
                          "不判 PASS（判据来自 W7 `driver.py` 的同一字段）"),
+            ))
+        elif all_p95 is None and not admission:
+            # 🔴 老回执的 `g6_caveat == null` **不等于**"干净"：U-106 之前的判据根本没有
+            #   「无 admission 分桶」这一条，而 W7 现行判据（`driver.py` 的 `_g6_caveat`）会把它
+            #   写成非空 caveat。实测（2026-09-21，`probe_loadtest_receipts.py`）：
+            #   `deploy/loadtest/baseline_c5.json`（p95=3675.8ms，无 scope / 无 admission /
+            #   无全请求分位数）喂真 gates 落在下面的 else ⇒ **判成 PASS**。
+            #   ⇒ 分母无从核对的数不配绿灯；超预算仍照判 FAIL（降档不许洗白）。
+            gates.append(Gate(
+                "G-6", "P95 延迟 ≤ 8s",
+                "FAIL" if over_budget else "UNVERIFIED",
+                f"P95 = {judged:.0f}ms，分母 = {judged_scope}", "§16.5 压测（W7 产出）",
+                (*notes,
+                 "🔴 回执既无 `admission` 分桶也无 `latency_ms_all_ms` ⇒ 这条 P95 的分母无从核对；"
+                 "它的 `g6_caveat` 为 null 只说明产自 U-106 之前的判据，**不说明它干净** ⇒ 不判 PASS"),
             ))
         elif all_p95 is None and raw_scope not in full_scopes:
             gates.append(Gate(

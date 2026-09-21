@@ -321,7 +321,11 @@ def git_rev() -> dict[str, Any]:
 
 #: 只在日志里"点过名"的集成测试才算跑了 —— 纯 `.` 的输出里全绿的用例不留文件名。
 _INTEGRATION_FILE_RE = re.compile(r"tests[\\/]integration[\\/](\S+?\.py)", re.I)
-_FAILED_TEST_RE = re.compile(r"^(?:FAILED|ERROR)\s+(\S+)", re.M)
+#: ⚠️ FAILED 与 ERROR **分开放**：前者是断言失败（被测系统坏了），后者是夹具起不来
+#: （测试环境坏了）—— 归属不同的窗口，混进一个列表里就没法点名（见 `gates._p0_notes`）。
+#: 且摘要里是否出现 `ERROR <nodeid>` 取决于 `-r` 的字符：`E` 才有，小写 `e` 不点 error 名。
+_FAILED_TEST_RE = re.compile(r"^FAILED\s+(\S+)", re.M)
+_ERROR_TEST_RE = re.compile(r"^ERROR\s+(\S+)", re.M)
 
 
 def parse_pytest_summary(log_path: str | None) -> dict[str, Any] | None:
@@ -349,6 +353,7 @@ def parse_pytest_summary(log_path: str | None) -> dict[str, Any] | None:
     skipped = n(r"(\d+) skipped")
     integration_files = sorted(set(_INTEGRATION_FILE_RE.findall(text)))
     failed_tests = sorted(set(_FAILED_TEST_RE.findall(text)))
+    error_tests = sorted(set(_ERROR_TEST_RE.findall(text)))
     ran_integration = bool(integration_files)
     return {
         "source_log": os.path.basename(log_path),
@@ -357,6 +362,7 @@ def parse_pytest_summary(log_path: str | None) -> dict[str, Any] | None:
         "errors": errors,
         "skipped": skipped,
         "failed_tests": failed_tests,
+        "error_tests": error_tests,
         "integration_ran": ran_integration,
         "integration_files_seen": integration_files,
         "integration_note": (
@@ -704,7 +710,8 @@ def build_payload(
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_metric_coverage.py",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_metric_values.py   # G-7 输入",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/_probe_pg_real.py        # 只读探测真 PG",
-            "cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest tests/integration -q -rfes",
+            "cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest -q -rfEs   # G-1 读全量：大写 E 才点 error 名（小写 e 不点 ⇒ 红因无从点名）",
+            "cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest tests/integration -q -rfEs",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/select_smoke_batch.py   # 确定性取 20 题",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_gate_allowlist_shape.py   # U-119 判据③：两种形状 × 两道闸门",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --live --yes   # 真打全量需额度：先不带 --yes 看计划",

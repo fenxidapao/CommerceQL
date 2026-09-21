@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import ast
 import os
+import re
 
 import harness as H
 import pytest
@@ -166,18 +167,23 @@ def _guard_keys_per_dict(path: str) -> list[set[str]]:
     return hits
 
 
-def _port_methods_called_by_gates(repo_root: str) -> set[str]:
-    """生产闸门实际调了端口的哪个方法（AST 扫源码，不靠文档也不靠猜）。"""
-    found: set[str] = set()
+def _port_methods_called_by_gates(repo_root: str) -> dict[str, set[str]]:
+    """生产闸门实际调了端口的哪个方法（AST 扫源码，不靠文档也不靠猜）—— **按文件分开**。
+
+    ⚠️ 这里刻意不做并集：并集会让哨兵对"只接线了一半"完全失明。实测：W4 落 `357618f` 之后
+    `gate1_ast.py` 已改调 `guard_allowlist`、`policy_gate.py` 仍读 `asset_allowlist`，
+    并集版的哨兵既不响也不报，等于"到期"这件事只写在注释里（正是本测试要防的那件事）。
+    """
+    per_file: dict[str, set[str]] = {}
     for rel in _GATE_CONSUMERS:
         with open(os.path.join(repo_root, "backend", rel), encoding="utf-8") as fh:
             tree = ast.parse(fh.read())
-        found |= {
+        per_file[rel.replace("\\", "/")] = {
             n.func.attr for n in ast.walk(tree)
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
             and n.func.attr in ("asset_allowlist", "guard_allowlist")
         }
-    return found
+    return per_file
 
 
 def test_the_evaluator_never_derives_guard_fields_itself():
@@ -214,19 +220,52 @@ def test_view_forwards_the_port_output_verbatim(harness, analyst_ctx):
 def test_the_dual_shape_view_dies_with_the_consumer_fix(repo_root):
     """哨兵：消费侧一旦改调 `guard_allowlist`，评测的双形状视图必须**整体删除**。
 
-    为什么要它：适配层"是临时的"这句话靠注释传承不了两轮。今天生产仍从 `asset_allowlist`
-    读闸门判据 ⇒ 视图合法存在；哪天 W2C 接线完成（`policy_gate` 的 ④⑤ 还要改读
-    `all_columns`，见 `reports/w6/probe_gate_allowlist_shape.json`），本测试立刻红并点名删处。
+    为什么要它：适配层"是临时的"这句话靠注释传承不了两轮。今天 `policy_gate` 仍从
+    `asset_allowlist` 读闸门判据 ⇒ 视图合法存在；哪天接线完成（④⑤ 还要改读 `all_columns`，
+    见 `reports/w6/probe_gate_allowlist_shape.json`），本测试立刻红并点名删处。
+
+    ⚠️ 判据按**文件**算，不按并集算：2026-09-21 W4 落 `357618f` 只接了 gate1 半边，
+    并集版哨兵既没响也没报 —— "到期了一半"这种状态必须有读数（下一条测试管这件事）。
     """
-    if "asset_allowlist" not in _port_methods_called_by_gates(repo_root):
+    calls = _port_methods_called_by_gates(repo_root)
+    still_flat = {rel for rel, methods in calls.items() if "asset_allowlist" in methods}
+    if not still_flat:
         pytest.fail(
-            "U-121 消费侧已接线（两道闸门都改调 `guard_allowlist`）⇒ 现在必须删除评测侧适配层："
-            "`eval/harness.py` 的 `AssetAllowlistView` / `GuardAllowlistBundle` 与 "
-            "`eval/redteam_eval.py` 的 `StructuralAllowlistBundle` / `structural_wrapper`"
-            "（U-119 判据③ 的副产品；留着它就是第三份真相）"
+            "U-121 消费侧已接线（逐文件读数 "
+            + str({k: sorted(v) for k, v in calls.items()})
+            + "）⇒ 现在必须删除评测侧适配层：`eval/harness.py` 的 `AssetAllowlistView` / "
+            "`GuardAllowlistBundle` 与 `eval/redteam_eval.py` 的 `StructuralAllowlistBundle` / "
+            "`structural_wrapper`（U-119 判据③ 的副产品；留着它就是第三份真相）"
         )
     # 删除条件尚未成立 ⇒ 视图必须仍在（在 = 评测跑得动；不在 = 本测试的另一半失真）
     assert hasattr(H, "GuardAllowlistBundle") and hasattr(H, "AssetAllowlistView")
+
+
+def test_the_adapters_stated_reason_list_matches_the_code(repo_root):
+    """适配层"还剩谁没接线"那句话是**一份清单**，不是散文 ⇒ 逐文件双向核对。
+
+    实测它抓得住什么：`357618f` 把 gate1 接完之后，`harness.py` 的模块 docstring 还在点名
+    `app/graph/nodes/gate1_ast.py` ⇒ 那句话当场失真，而当时没有任何测试会因此变红
+    （并集哨兵要等两边都改完才响）。本测试就是补这个洞，方向是双向的：
+    ① 清单里点名但代码已接线 ⇒ 红（理由失效，改文档并删那一半适配）；
+    ② 代码仍在读扁平面但清单没点 ⇒ 红（清单漏项，等于悄悄把适配层转正）。
+    """
+    doc = H.__doc__ or ""
+    m = re.search(r"^存在理由（仍在读扁平面、因此还需要本视图的生产文件）:\s*(.+)$", doc, re.M)
+    assert m, "harness §三 的清单行必须存在且只写一行（哨兵读它）"
+    claimed = {e.strip().split(":")[0] for e in re.split("[、,，]", m.group(1)) if e.strip()}
+    calls = _port_methods_called_by_gates(repo_root)
+    still_flat = {rel for rel, methods in calls.items() if "asset_allowlist" in methods}
+    wired = {rel for rel, methods in calls.items() if "asset_allowlist" not in methods}
+
+    stale_claims = {c for c in claimed if c in wired}
+    assert not stale_claims, (
+        f"harness 的存在理由清单仍点名 {sorted(stale_claims)}，但它们已改调 guard_allowlist"
+        f"（逐文件读数 { {k: sorted(v) for k, v in calls.items()} }）⇒ 那一半适配层已到期："
+        "改清单 + 把对应视图消费点接到端口，别留第三份真相"
+    )
+    missing = still_flat - claimed
+    assert not missing, f"仍在读扁平面却未被清单点名：{sorted(missing)}（清单 = 唯一真相，不许漏项）"
 
 
 # ==== gate1 的真实形状（评测与生产同一条路径）=========================

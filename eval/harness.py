@@ -42,13 +42,18 @@ U-121（W0 契约 + W2A `b7e6c8d`）把这件事的正解落在了端口上：
 （结构面，全列，gate2 ④⑤ 用）。⇒ 评测侧那套"手拼七键 + 补列类型 + 截 joins"的派生代码
 **整体删除**（它现在就是第三条真相）。
 
-⚠️ **残留的适配层只剩一件事**：生产消费方今天仍从 `asset_allowlist` 里读闸门判据
-（`app/graph/nodes/gate1_ast.py:52`、`app/guard/policy_gate.py:105`），而该端口方法同时被
+⚠️ **残留的适配层只剩一半**（2026-09-21 复测）：gate1 侧已由 W4 `357618f` 改调端口，
+而 `policy_gate` 仍从 `asset_allowlist` 读闸门判据 —— 该端口方法今天同时被
 `planner/payloads` 与 `binding/filters` 按**扁平**消费（实测把 wrapper 直接给端口会让
 planner 在 `entry.get(...)` 上抛 `AttributeError`）。⇒ `GuardAllowlistBundle` 返回
 `AssetAllowlistView`（迭代 = 扁平、`.get(保留键)` = wrapper，两面**都来自端口**）。
 
-🔴 这层视图**随消费侧改调 `guard_allowlist` 而必须整体删除**（判据与实测见
+存在理由（仍在读扁平面、因此还需要本视图的生产文件）: app/guard/policy_gate.py:105
+
+🔴 上面那行**不是散文，是一份可证伪的清单**：`tests/eval/test_harness_allowlist.py` 会逐文件
+AST 扫端口方法的实际调用点，清单与代码不一致就红（并集式的"两个都改完才响"会漏掉
+"只改完一半"这种状态 —— 而今天正好就是这种状态）。
+整层视图**随消费侧改调 `guard_allowlist` 而必须整体删除**（判据与实测见
 `reports/w6/probe_gate_allowlist_shape.json`：gate2 那边不只是"改调一行"，⑤ 还要从
 可见面改读结构面，否则 `tenant_scoped ⇔ tenant_id` 双向断言当场 `ContractViolationError`）。
 哨兵测试 = `tests/eval/test_harness_allowlist.py::test_the_dual_shape_view_dies_with_the_consumer_fix`。
@@ -212,9 +217,10 @@ class GuardAllowlistBundle:
     一个字段都不派生。`max_rows` 由调用方给（生产给的是 `state["options"]["max_rows"]`；
     评测与生产今天都没给 ⇒ 端口填 `None`，实测 `_effective_limit` 对"缺键/None"同值 = 10000）。
 
-    🔴 **本类是临时的**：它存在的唯一理由 = 生产消费方还在从 `asset_allowlist` 里读
-    闸门判据（`app/graph/nodes/gate1_ast.py:52`、`app/guard/policy_gate.py:105`）。
-    U-121 的正解落地后这里必须**整体删除**（评测路径与在线路径同一条）；
+    🔴 **本类是临时的**：它存在的唯一理由 = 还有生产消费方从 `asset_allowlist` 里读闸门判据。
+    那份"还剩谁"的清单**只在模块 §三 写一次**（`存在理由（仍在读扁平面…）: <文件>:<行>`），
+    本类刻意不复述 —— 两处各写一遍必然漂移，2026-09-21 gate1 半边接线时就是它先失真。
+    U-121 的正解全部落地后这里必须**整体删除**（评测路径与在线路径同一条）；
     `tests/eval/test_harness_allowlist.py::test_the_dual_shape_view_dies_with_the_consumer_fix`
     就是钉这句话的哨兵 —— 消费侧一改，它红，逼下一轮动手，而不是让适配层变成长期真相。
 

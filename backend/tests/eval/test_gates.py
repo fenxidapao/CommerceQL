@@ -32,7 +32,12 @@ def _all_pass_inputs() -> dict:
         "red_team": {"leaked": 0, "total": 66, "expect_block": 50, "checked": 50},
         "cross_tenant": {"leaked": 0, "pg_rls_verified": True},
         "refusal": {"correct_refused": 24, "total": 24, "over_refused": 0, "answerable_total": 100},
-        "pressure": {"p95_total_ms": 5200.0, "source": "W7", "as_of": "2026-09-18T00:00:00Z"},
+        # 一份**现行形状**的干净回执：有准入分桶 + 有全请求分位数（判定值取后者）。
+        # ⚠️ 刻意不给旧的"只有 p95_total_ms"形状 —— 那种形状在 `gates.py` 里已不配判 PASS。
+        "pressure": {"p95_total_ms": 5200.0, "p95_all_requests_ms": 5600.0,
+                     "p95_scope": "admitted_http_2xx",
+                     "admission": [{"admitted": 150, "rejected_429": 0}],
+                     "source": "W7", "as_of": "2026-09-18T00:00:00Z"},
         "consistency": {"consistent": 5, "total": 5, "unattributed": 0},
         "clarification": {"requests": 100, "clarified": 10, "clarify_then_correct": 9,
                           "second_round_loop_available": True},
@@ -95,6 +100,20 @@ def test_g1_fail_when_any_p0_red():
     inputs = _all_pass_inputs()
     inputs["p0_tests"] = {"failed": 3, "errors": 0, "passed": 100, "integration_ran": True}
     assert _verdict_of(gt.evaluate_gates(**inputs), "G-1").verdict == "FAIL"
+
+
+def test_g1_measured_keeps_assertion_failures_and_fixture_errors_apart():
+    """🔴 2026-09-21 的真实读数就是这一格：断言失败 0 条、夹具 error 3 条。
+
+    只写 `failed=3` 会被下一轮读成"被测系统坏了三处"，而实际坏的是测试环境
+    （RELAY O6 那三条 `test_dense_*`）。两个数必须分开出现在 `measured` 里。
+    """
+    inputs = _all_pass_inputs()
+    inputs["p0_tests"] = {"failed": 0, "errors": 3, "passed": 2228, "integration_ran": True}
+    gate = _verdict_of(gt.evaluate_gates(**inputs), "G-1")
+    assert gate.verdict == "FAIL"
+    assert "断言失败 0" in gate.measured and "夹具 error 3" in gate.measured
+    assert "红 3 条" in gate.measured, "合计也要给，但只能在两个分量都在场之后"
 
 
 # ==== G-2：该格零样本 = NOT_AVAILABLE，不是 0% FAIL ====================
@@ -235,6 +254,28 @@ def test_g6_passes_when_the_all_request_percentile_is_in_budget():
     assert "5000" in gate.measured
     assert any("rejected_429=3" in c for c in gate.caveats), "429 分桶要能被读者核对"
     assert any("准入样本 P95 = 9000ms" in c for c in gate.caveats)
+
+
+def test_g6_null_caveat_on_a_pre_u106_receipt_is_not_a_clean_bill():
+    """🔴 实测出来的假绿灯（2026-09-21）：`deploy/loadtest/baseline_c5.json` 喂真 gates 判 PASS。
+
+    它的形状 = 只有 `latency_ms.p95`（3675.8ms）、无 `admission`、无 `latency_ms_all_ms`、
+    `g6_caveat` 为 null。而那个 null 只代表**产自 U-106 之前的判据**（W7 现行 `_g6_caveat`
+    会把"无 admission 字段"本身写成非空 caveat），不代表这份数干净。
+    ⇒ 分母无从核对的 P95 至多 UNVERIFIED。W7 把 `g6_p95_le_8s` 改三态救不了这条 —— 我方读端不读它。
+    """
+    inputs = _all_pass_inputs()
+    inputs["pressure"] = {"p95_total_ms": 3675.8, "source": "W7", "as_of": "2026-09-16T00:00:00Z"}
+    gate = _verdict_of(gt.evaluate_gates(**inputs), "G-6")
+    assert gate.verdict == "UNVERIFIED"
+    assert any("无从核对" in c for c in gate.caveats), "要写明为什么不判 PASS，不许只给个词"
+
+
+def test_g6_null_caveat_without_admission_still_fails_when_over_budget():
+    """反例：这条降档只压 PASS。超 8s 又分母不明 ⇒ 照判 FAIL，不能躲成「测不了」。"""
+    inputs = _all_pass_inputs()
+    inputs["pressure"] = {"p95_total_ms": 9001.0, "source": "W7"}
+    assert _verdict_of(gt.evaluate_gates(**inputs), "G-6").verdict == "FAIL"
 
 
 def test_g6_names_the_owing_window_when_no_receipt_arrives():

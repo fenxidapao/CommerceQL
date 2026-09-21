@@ -33,7 +33,9 @@ _bootstrap.bootstrap()
 import gates as gates_mod  # noqa: E402
 import reporter as rp  # noqa: E402
 
-RECEIPT_GLOB = os.path.join(ROOT, "deploy", "loadtest", "receipt*.json")
+#: 扫描面 = 该目录**全部** JSON。刻意不用 `receipt*.json`：那个 glob 会漏掉
+#: `baseline_c5.json`（实测唯一喂真 gates 出 PASS 的一份）和两份 preflight。
+RECEIPT_GLOB = os.path.join(ROOT, "deploy", "loadtest", "*.json")
 OUT = os.path.join(HERE, "probe_loadtest_receipts.json")
 
 
@@ -55,6 +57,10 @@ def judge(receipt_path: str) -> dict[str, object]:
         "caveated_scenarios": sum(1 for s in scenarios if s.get("g6_caveat")),
         "p95_scope_values": sorted({str(s.get("p95_scope")) for s in scenarios}),
         "has_admission": any(s.get("admission") for s in scenarios),
+        # W7 声明这堆历史格里有 14 个 stale `true` ⇒ 我方产物要能自己数，不靠转述。
+        "g6_p95_le_8s_values": sorted({str(s.get("g6_p95_le_8s")) for s in scenarios}),
+        "stale_true_cells": sum(1 for s in scenarios if s.get("g6_p95_le_8s") is True),
+        "null_caveat_scenarios": sum(1 for s in scenarios if s.get("g6_caveat") is None),
         "has_all_ms_p95": any(
             (s.get("latency_ms_all_ms") or {}).get("p95") is not None for s in scenarios
         ),
@@ -73,11 +79,17 @@ def main() -> int:
         "n_files": len(paths),
         "verdict_tally": tally,
         "any_pass": any(r["verdict"] == "PASS" for r in results.values()),
+        "stale_true_cells_total": sum(int(r.get("stale_true_cells", 0)) for r in results.values()),
+        "null_caveat_scenarios_total": sum(
+            int(r.get("null_caveat_scenarios", 0)) for r in results.values()),
         "files": results,
         "note": (
             "读端**不做未知键校验**（W7 刻意不升 schema 版本号，新增字段在读的路径之外）；"
             "判定口径：`g6_caveat` 非空 ⇒ 至多 UNVERIFIED；p95 只标了非全请求口径 ⇒ 至多 PARTIAL；"
             "有 `latency_ms_all_ms` ⇒ 用全请求分位数判。"
+            "🔴 2026-09-21 起再加一条：caveat 为 null **但**既无 `admission` 又无全请求分位数 ⇒ "
+            "也判不了达标（那个 null 只代表产自 U-106 之前的判据）。同轮把扫描面从 `receipt*.json` "
+            "扩到 `*.json` —— 旧 glob 恰好漏掉了唯一出 PASS 的 baseline_c5.json。"
         ),
     }
     with open(OUT, "w", encoding="utf-8") as fh:
