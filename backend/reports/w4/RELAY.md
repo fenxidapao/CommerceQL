@@ -213,3 +213,146 @@
 
 - `ruff check .` ✓ ｜ `mypy app` ✓（146 files）｜ `pytest tests/contract/test_graph_timeout_contract.py` 全绿（含 timeout/edges/runner 契约，74 passed 在 contract 目录内）。
 - 顺带：U-104 在九天 RELAY 里"待架构补 §5.3 normalize 失败转移格"已由架构 §10 落笔（v1.3，`07 §5.3` 6 格超时列改"= 客户端超时"、link 标"同款病害第二处"、表下加"超时列=硬超时≠分配"注）。
+
+---
+
+## 十一、W4 接续登记（HANDOFF §四~§七 → 本窗口，2026-09-21）
+
+> 本节是"开窗必做"的登记，不新写任何生产代码。§四~§七 与架构 v8 §21 / W0 回执有偏差，逐条列在下面，**偏差以出处复核、别信结论**。
+
+### 11.1 已收口（勿重做）
+
+| 项 | 落点 | 实测状态 |
+|---|---|---|
+| U-107 节点超时 + 出路表 | `app/graph/build.py` | 已交付，见 §十（本节不重复） |
+| U-118① `bind` 并入 LLM 执行期超时 | `8202204`（远端已含） | 已交付：`_LLM_NODE_TASKS["bind"]="l4_score"`，`NODE_TIMEOUT_S` 无 bind |
+| U-115 `plan_blocked` 外部可读 | `app/api/runner.py:534-541`（REFUSE_OUT 分支） | 🔴 **仍 OPEN**：只有 PLAN 自拒分支拼 `blocking_issues`；bind 超时 / UNRESOLVED 的 refuse 帧**无**该字段 ⇒ 外部仍只能靠 `node_timeout_degraded{node}` 日志计数区分 |
+| U-119 闸门接缝契约测试 | `8a4121a`，`tests/contract/test_gate_seam_contract.py` | 已交付，**Test A 为刻意红**（红 = 缝没修）。W0 §11.5 全量复跑读数：`1 failed / 2207 passed / 6 skipped`，唯一 failed 即本条 |
+
+### 11.2 三处口径订正（HANDOFF 稿 vs 架构 v8 §21 / W0 回执）
+
+1. **G-6 卡点归位**：HANDOFF §五 写"唯一卡点 = τ 未校准"——**已过期**。架构 v8 §21 裁定当下唯一卡着 G-6 的一格 = **`U-121`**，排序 **U-121 → `gate3_cost` / `execute` → 才轮到 τ 校准**；且"先看 `sql_ready` 0→≥1"这条判据**已满足**（`5327b1e` 第八轮预检 `sql_ready=3`，历史首次非 0）。本窗口按 §十二 的扫描接架构那句提醒执行：**修完 U-121 仍不能演示**。
+2. **U-117**：HANDOFF §七 写"P2 待读数"——**读数已回并升 P1**（架构 v1.6.4：`binding_layer` L3×3 / L4×0 ⇒ `l4_score` 纯浪费 ⇒ 改条件触发，需 W3C 配合给"无 L4 的两阶段入口"）。W4 侧不擅自动 `bind.py:95`，等 W3C 形态。
+3. **U-116 两件补做在 HANDOFF §七 中缺失**，架构 §20③/§21 仍挂 W4 名下：
+   - **(a)** 全仓**没有任何测试钉住 `refuse` 载荷键集** ⇒ 要么补一条键集契约断言、要么回填附录 A（架构推荐前者）。
+   - **(b)** `runner.py:541` 的 `[str(b) for b in blocking]` 是**模型原文逐字透传、零裁剪** ⇒ **裁剪**或**具名接受**二选一，写进本 RELAY。
+   读数时刻 2026-09-21 21:18（本地树 `3991574`）复核命令：`grep -rn "blocking_issues" backend/app/api/runner.py`（命中 534/539/541）、`grep -rn "set(payload)\|keys() ==" backend/tests/contract/*.py`（**零命中**）。
+
+### 11.3 本窗口名下待办（合并 HANDOFF §六/§七 + W0 §11.4/§11.6 后的全集）
+
+| 编号 | 事项 | 依赖 | 状态 |
+|---|---|---|---|
+| U-121 落地后① | `gate1_ast.py:52` 换调 `guard_allowlist`；`run_gate1` 入参形状随之变 | W2A 实现 | 按住（见 §十二.5） |
+| U-121 落地后② | 判据④：**由 W4 传请求级 `max_rows`**，取值面 = `state["options"]["max_rows"]`（`app/graph/state.py:272`）。⚠️ **禁止**用 `GraphDeps.max_rows` 冒充（那是 `EXEC_MAX_ROWS`，`nodes/execute.py:34` 已具名自警） | 同上 | 新增（W0 §11.6④） |
+| U-121 落地后③ | `tests/contract/test_gate_seam_contract.py:54` 调用点从 `rt.asset_allowlist(_ctx())` 换 `rt.guard_allowlist(_ctx())`，否则它测的是被废弃的投影 | 同上 | 新增（W0 §11.4） |
+| U-121 落地后④ | 跑 U-119 Test A 确认**反绿**；没反绿则查"形状 ≠ W0 显式形状"，**不改测试适配** | 同上 | 继承 |
+| U-116(a)(b) | 见 §11.2 第 3 条 | 无（本窗口可独立做） | OPEN，未排期 |
+| U-115 | 见 §11.1 | W2B/W2C | OPEN |
+| U-117 | 改条件触发 | W3C | P1，本窗口不动 `bind.py` |
+| GATE3/EXECUTE 接缝锁 | 待架构/W2D 立号；扫描结论见 §十二 | 架构/W2D | 未立号，不擅自发明出口 |
+
+---
+
+## 十二、GATE1 / GATE2 / GATE3 / EXECUTE **判据源扫描**（W4 只读实测）
+
+> 起因：架构 §21 尾句"修完只到 GATE2 之后 ⇒ `gate3_cost` 与 `execute` 的判据源接缝**请在同一次里扫完**，别让第六格第三次重演'修一格才发现下一格'"。
+> **读数条件（可复现）**：时刻 2026-09-21 21:05–21:18，树 = 本地 `main` **`3991574`**（见 §12.1 漂移），全部为**只读**：`sed -n`/`grep -n` 逐处读码 + `git log --oneline -S` / `git ls-remote` / `git rev-list`。**本窗口未跑任何测试/探针/SQL**——W0 §11.5 的全量读数引自它的回执，不是本窗口实测。
+
+### 12.1 基准漂移（实测，先记账再谈结论）
+
+- 本窗口开场实测：`HEAD == origin/main == 8a4121a`、`rev-list --left-right --count` = `0 0`。
+- 同一会话内 `git fetch` 后：**远端 main → `ff3e122`**（`docs(w7): 第九轮回执处理`），**本地 main → `3991574`**，且 `origin/main..HEAD` 有 **5 条未推提交**：`633f434`(w2-int) / **`ae59c5c` = `feat(w0): U-121 第一步 端口显式声明闸门判据形状（7 键 + 两面）`** / `1143f99`(w2d exec seam) / `14e9f59`(docs w0) / `3991574`(docs w2d)。
+- ⇒ 上一轮"基准对齐 `8a4121a`"的结论**只在 约 21:05 那一刻成立**，本节及以后一律以 `3991574` 为读数树。**这 5 条不是我提交的，我没有推、也不打算代推**（唯一写者纪律）。
+
+### 12.2 四格总表
+
+| 格 | 判据源（应然） | 生产装配现在给不给得出 | 现有的锁 | 今天可归因的失败形态 |
+|---|---|---|---|---|
+| **GATE1** | `SemanticBundlePort.guard_allowlist(ctx) -> GuardAllowlist`（7 键 wrapper） | ❌ 给不出：`nodes/gate1_ast.py:52` 仍取**扁平** `asset_allowlist`，而 `guard/ast_gate.py:264 run_gate1(sql, allowlist)` 期待 wrapper | U-119 Test A（**刻意红**） | 普通 SQL 被 **R05** 拒（`assets` 取不到） |
+| **GATE2** | 同一 wrapper（闸门**自己**在 `guard/policy_gate.py:105` 取数） | ❌ 同上，且 `contracts.py:423` 已明文"`run_gate2` 今天调 `asset_allowlist`，**必须一并改调本方法**" | **无接缝锁** | 见 §12.3：**一条恒拒 + 两条静默放行** |
+| **GATE3** | `EXPLAIN (FORMAT JSON)` 计划 JSON，**只能**走 `executor.explain()`（U-63：走 `fetch` 撞 PG 42601） | ⚠️ 装配在（`api/deps.py:750 PgSqlExecutor` / `:828 gate3_thresholds`），但 `explain` **不在 `SqlExecutorPort` 上**（`contracts.py:494` 起只有 `fetch`），靠 `_shared.rich_method`（`nodes/_shared.py:198-212`）取实现类富方法、缺则 fail-fast | **只有脚本件**：`tests/contract/_fullchain_deps.py:436-483` 的 `_ScriptExec` + `GREEN_EXPLAIN` 常量 | 真 EXPLAIN JSON **从未进过 `run_gate3`**（证据链 §12.4）。⚠️ U-107 超时短路 `run_gate3(sql,{"explain_error":True})`（`build.py:574`）是 WARN（`cost_gate.py:79` 立即返回、不看 plan），**不能**当"EXPLAIN 路径已验" |
+| **EXECUTE** | 真 DB + 身份 GUC，`deps.executor.fetch(sql, params, identity, max_rows, statement_timeout_ms, effective_limit)`（`nodes/execute.py:70-77`） | ⚠️ 装配同 GATE3；但**图走不到这一格**：上游 gate1/gate2 双封（W7 读数 `GATE_AST_REJECTED`×3、`executing=0`） | **只有脚本件**（同 `_ScriptExec`） | 未验分两层：①**可达性**——U-121 之后才谈得上；②**判据源真值**——要真 DB + 身份 GUC（且按 W7 纪律用一次性库） |
+
+### 12.3 🆕 GATE2 侧三条后果（与 gate1 同源、方向不同；**不在 W4 名下，转 W2C + 抄架构**）
+
+真实现 `app/semantics/runtime.py:102-125` 的返回形状，docstring `:107` 自述 = `{物理名: {logical_name, columns, grain, domain, tenant_scoped}}`（**扁平、无 wrapper**）。把它喂进 `run_gate2` 后，按 `policy_gate.py` 的行号逐条实测：
+
+1. `:106 allowlist.get("assets") or {}` → **`{}`** ⇒ `:120-128` `unknown = tables` 非空 ⇒ **`_reject("G2-ASSET", "查询涉及的数据范围超出你的权限")`** —— 今天**任何引用真实表的 SQL 到 gate2 必被拒**（fail-**closed**，与 gate1 的 R05 同因不同形）。
+2. `:109-110 snap_version = allowlist.get("bundle_version")` → **`None`** ⇒ `if snap_version is not None` 不成立 ⇒ **① 版本一致性检查静默跳过**（fail-**open**：请求锚定的旧口径已不在服务也不会告出来，07 §5.7 版本固定的反面）。
+3. `:140 deny_columns = allowlist.get("deny_columns") or ()` → **`()`** ⇒ **④ 敏感列二次复核永不命中**（fail-**open**，与 gate1 R07 的冗余复核等于不存在）。
+
+⇒ 给 U-121 的一句话：**只改 `gate1_ast.py:52` 不够**。W0 已在 `contracts.py:423` 写明 `policy_gate.py:105` 要一并改调；若只修 gate1，则 G-6 会从"gate1 恒拒"变成"**gate2 恒拒**"，`gate_passed` 仍为 0，而 ②③ 两条静默 fail-open 会一直藏在恒拒后面。
+
+### 12.4 GATE3 的"真 EXPLAIN 从未进闸门"证据链（全仓 `run_gate3` 调用点实测，5 处）
+
+`app/graph/build.py:574`（超时短路 `explain_error=True`）、`app/graph/nodes/gate3_cost.py:90`（生产路径，入参来自 `deps.gate3_thresholds` + `explain()` 真值）、`app/guard/cost_gate.py:69`（定义）、`app/guard/__init__.py:60`（转发）、`tests/unit/test_guard_gate3.py:29`（**合成** `_plan_payload`）、`tests/eval/test_sandbox_executor.py:261-264`（真件 `executor.explain()` 在离线沙箱**断言返回 `None`** ⇒ 闸门自判 `SKIPPED`）。
+⇒ 集合里**没有任何一条**是"真 `PgSqlExecutor.explain()` 的 JSON → `run_gate3`"。这**就是 GATE3 缺的那条 U-119 类接缝锁**，判据形状与 U-119 Test A 同构（真端口输出原样喂闸门）。**编号不自己占**，等架构/W2D 立号（总控已转）。
+
+### 12.5 "继续按住 `gate1_ast.py:52`"的判据（不是保守，是实测）
+
+- U-121 现状 = **1/3**：W0 契约声明**已提交但未推**（`ae59c5c`，`git ls-remote origin main` 不含）；**W2A 实现未落地** —— 读数时刻 21:18 实测 `grep -c guard_allowlist backend/app/semantics/runtime.py` = **`0`**；W2C `policy_gate.py:105` 未改调。
+- ⇒ 此刻换调用点 = 调用一个端口声明了、实现类上没有的方法 = **伪造实现**（违反硬约束"不伪造实现"）。同时 §12.3 说明"加个本地适配层凑形状"更是**第三份真相**（架构已禁）。
+- 保留项确认：`gate1_ast.py:13-18` docstring 的"与 gate2 **各取一次**是刻意的"设计，换形状时**不合并**（总控 2026-09-21 再确认）。
+
+### 12.6 补登记：EXECUTE 侧一处**本窗口既有**的退化口径（此前 RELAY 未记）
+
+`nodes/execute.py:70-77` 确实把 `effective_limit` 传给了 `fetch`，但值来自 `_effective_limit(state)`，而它 **P0 恒 `None`**（`execute.py:133-146`：gate1 的 `limit_injected` 只有 `None` 或 `{"injected","original_limit"}` 两种形状，**注入值 L 本身没有出口**）。
+- W2D 的回执（`3991574`，"给 W4"§2）要求 **"`effective_limit` 请务必传——它是 §8.6 `truncated` 判定的唯一正确口径"**，与本节点的自述前提冲突。
+- **责任划分（不猜）**：解点在 **W2C**（把 L 放进 `limit_injected`，或给一个公开取值函数）；W4 只承接消费侧。在此之前 `truncated` 走 executor 的退化口径，"SQL 自带 LIMIT 恰等于行数"的边界上与 §8.6 原文可能差一。
+- 诚实订正：该缺口在 `execute.py` 注释里写了"已写进本窗口 RELAY"，但 §一~§十 **并无此登记** ⇒ 本节补上，并以此为订正凭据。
+
+---
+
+## 十三、U-121 第 3 格 · W4 半边落地：`gate1_ast` 换调 `guard_allowlist` + U-119 判据改写（架构 v1.6.5 §22.1）
+
+> 授权链：架构 v1.6.5 §22.1③（落点与判据）→ 总控 21:0x 转达"形状合了再动" → W7 23:07 零额度探针实测 + 总控放行 ⇒ 本窗口先**自证前提**再动（不采信转述）。
+
+### 13.1 前提自证（实测 23:05–23:20，树 `01944dc`）
+
+- `b7e6c8d feat(w2a): U-121 第二步 —— 按 W0 形状实现 guard_allowlist（七键 + 两面）`（21:54）在本地树、是 `HEAD` 祖先、**未推**（`origin/main = 2e2058a`）。
+- 本窗口 21:18 那次"`grep -c guard_allowlist runtime.py` = 0"的读数**已被自己的新读数替换**：`runtime.py:141` 起实现存在（§12.5 的"按住"结论到 21:54 为止成立，之后失效）。
+- ⚠️ 基准在同会话内又漂两次：`3991574 → 14880ae`(W6, 22:55) `→ 01944dc`(W2C, 23:17)。**均未由我推送，我也没代推。**
+
+### 13.2 改了哪四处（全部在 W4 可写目录）
+
+| 文件 | 改动 |
+|---|---|
+| `app/graph/nodes/gate1_ast.py:52` | `deps.semantics.asset_allowlist(identity)` → `deps.semantics.guard_allowlist(identity, max_rows=_request_max_rows(state))` |
+| 同文件 `_request_max_rows()`（新增） | 判据④ 的送货面：只认 `state["options"]["max_rows"]`（`AskOptions`，`state.py:465`）；options 非映射或值非 `int` ⇒ **照实 `None`**。⚠️ 不拿 `deps.max_rows`（`EXEC_MAX_ROWS`）冒充 = 造数字（U-22）。归一由 `ast_gate._effective_limit` 做，调用方不 clamp |
+| 同文件 docstring §二 | 改成"来源只有一处 = `guard_allowlist`（闸门唯一形状）+ 扁平面按设计不得喂闸门"。**"与 gate2 各自取一次是刻意的"整段保留**（总控与架构 §22.2 都点名不许合并），并写明 gate2 侧取用点归 W2C |
+| `tests/contract/test_gate_seam_contract.py` | 按 §22.1①② 改写：**Test A** 喂 `rt.guard_allowlist(ctx, max_rows=5000)` ⇒ 普通 SQL 必 `passed=True`；**Test B** 降级为反向对照（扁平面喂闸门必被拒 = fail-closed 行为正确，不再是缺陷）。⚠️ **没保留"原样 Test A + 另补新测试"**（架构明令禁止留没人敢删的红），也**没**为 gate2 写断言 —— 那一条今天必红，对称断言随 W2C 换 `policy_gate.py:105` 时补（文件 docstring 已写明） |
+| `tests/contract/_fullchain_deps.py` | `FullChainSemantics` 补 `guard_allowlist(ctx, *, max_rows=None)`，**与 `asset_allowlist` 共用调用序计数器**（保住"gate1 第 1 次、gate2 第 2 次"的既有约定，D3 两份 allowlist 的用例不破） |
+
+### 13.3 门禁实测（23:05–23:15，本机 `.venv`，`cd backend`；未跑 `tests/integration`，W7 纪律）
+
+| 命令 | 读数 |
+|---|---|
+| `pytest tests/contract/test_gate_seam_contract.py -q` | **2 passed**（= 架构 §22.1 判据；U-119 的 Test A **已反绿**，红因消除） |
+| `pytest tests/contract -q --tb=line` | **426 passed**（契约目录零红，含决策表 D/E 全链） |
+| `pytest tests/unit -q --tb=line` | **1373 passed**（无"修门禁自伤"） |
+| `ruff check app tests` | All checks passed |
+| `mypy app` | Success / 147 source files |
+
+### 13.4 独立复现 W7 的读数（零额度离线探针，23:10）
+
+真 `SemanticBundleRuntime(load_bundle(bundle_2026.09.14.1.yaml))` → `guard_allowlist(ctx, max_rows=5000)` → `run_gate1("SELECT pay_amount FROM v_order_paid", …)`：
+
+- 键集 = **7 个齐**（`allowed_constants/assets/bundle_version/default_predicates/deny_columns/joins/max_rows`）；
+- `passed=True`；`applied_predicates` = **3 条口径谓词真注入**（`is_test_order = false` / `refund_status <> 'refunded'` / `pay_status = 'paid'`）⇒ U-121 判据② 在这一条读数额成立；
+- `rewritten_sql` 尾部 = **`LIMIT 5000`** ⇒ 判据④（请求级 `max_rows`）经我这次的取用点**真的生效**；
+- ⚠️ `limit_injected = {'injected': True}` —— **注入值 L 仍无出口**（与 §12.6 同源，W7 已声明不催 W4，改 `_effective_limit` 需要 W2C 给 L）。
+
+### 13.5 🔴 卡点后移，不是修完（给 W7 的 c=1 预检判据）
+
+同一条普通 SQL 直喂 `run_gate2(SQL, ctx, rt)`（真运行时，23:15 实测）：**`passed=False` / `G2-ASSET` "查询涉及的数据范围超出你的权限"**。
+⇒ 生产链路现在是 **gate1 过、gate2 恒拒**，`gate_passed` / `executing` **仍会 0**，红因在 W2C 的 `policy_gate.py:105`（+ §6.8 D3/D4 的两个读取面），**不在 W4**。
+⇒ 复现命令（离线、不连库不连模型）：`python -c "from app.guard import run_gate2; …"`，或 `pytest tests/contract/test_gate_seam_contract.py -q`（本文件不含 gate2 断言，见 §13.2 末行）。
+
+### 13.6 一处对 W2C `§6.4` 的实测订正（两档不得混写）
+
+W2C 的 A4 档记"真 runtime 扁平面直喂 ⇒ `AttributeError`（`ast_gate:751` 的 `.keys()`）"。**今天直喂真扁平面走不到那一行**：`policy_gate.py:106` 先 `allowlist.get("assets")` → 真扁平面**没有 `assets` 键** → `assets={}` → ② 判 `unknown` → **`G2-ASSET` 拒**（我 23:15 的实测即此）。
+⇒ 两种形态的成因不同：**A4 = "`assets` 里有真身、`columns` 是 tuple"才会 `AttributeError`**；**今天 = ② 拦在前面**。A1/A2 的"干净 SQL 即抛 `ContractViolationError`（`policy_gate:148`）"预言的是**换完 `:105`、没换 `:141/:148` 之后**的状态 —— 那是 D4 必改的凭据，不是今天的读数。
+
+### 13.7 与 W2C `§6.8 D8` 的一处冲突（已按架构裁定走，登记不隐瞒）
+
+W2C 默认方案 D8 写"若 W4 排不开同窗 ⇒ **宁可等，不单侧先改**（单侧 = 两真相）"；架构 §22.1③ 则把 `gate1_ast.py:52` 的换调判给 **W4 现在做**、判据 = `2 passed`，总控与 W7 亦放行。本窗口按**架构裁定 > 他窗默认方案**执行，并把"两真相"的**可观测后果**写成 §13.5 的实测（gate1 过 / gate2 拒），供 W2C 落地时对照。⚠️ D3/D4 与 D2 必须同批（"换方法 ≠ 换读取面"），这条我方无代码，只做登记与转述。
