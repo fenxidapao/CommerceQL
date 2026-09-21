@@ -393,3 +393,90 @@ normalize/plan/gen_sql/repair、intent、link、bind 名下，说的是
   ② ruff —— CI 的 `ruff check .` 在 `backend/` 下跑，**不扫 `deploy/`** ⇒ 归档不会把 CI 弄红。
 - **权威口径**接受 W7 README 的写法。**唯一附加要求**：以后我若再改原件，我会**同时**刷新
   `deploy/` 副本并报新 sha256 —— 否则"以 W2B 为准"这句没有消费者。
+
+---
+
+## 12. G-6 根因回执（2026-09-21，响应 W7 §二十四）+ 回一处待核项（09-21 第七轮）
+
+### 12.1 结论一句话
+
+W7 那句"**题集与语义资产不对齐**被证伪"是对的，但他们由此推出的**反面**（"语义层覆盖没问题，所以先别动语义层"）不成立。
+真正卡死链路的是一件更上游的事：**指标口径目录从来没有进过 plan 的出站 prompt**。`gmv` 在语义包里定义得好好的，但**模型看不到它**。
+
+### 12.2 判定链（三段，全部可复现，**零 LLM 成本**）
+
+| # | 事实 | 出处（逐字） |
+| --- | --- | --- |
+| 1 | **prompt 向模型承诺"指标口径在这里"** | `app/llm/prompts/plan_v1.txt:6` "可用的语义资产与指标口径（**只能使用这里出现过的资产**）：" + L27 硬性规则 2 "口径必须**显式引用**语义包中的指标名" |
+| 2 | **`semantic_summary` 是资产信息到模型的唯一通道** | `app/planner/engine.py:711` "计划的资产信息**只经 `semantic_summary`** 到达模型"；`plan_v1.txt:8` 是唯一 `$semantic_summary` 插值点 |
+| 3 | **该通道里没有指标段，且明说没有** | 探针实跑（见 12.7）：3293 字摘要，段落只有 `## 认证资产` / `## 维度与层级` / `## 唯一字段绑定`；**无 `## 指标`**；9 个 metric 名只命中 `order_cnt`、`uv`（且是 `traffic_daily` 的**列名**，不是指标条目）；缺口声明原文 "（本次未提供**指标口径目录**与**同义词表**：语义层运行时尚未暴露枚举器，已登记需求。因此：指标名请只使用上文资产段落里出现过的名字，**不要自行发明口径**，找不到就把问题写进 `blocking_issues`。）" |
+
+**合成**：prompt 要指标名 ⇒ 唯一通道里没有指标名、还明确指示"**找不到就写进 `blocking_issues`**"
+⇒ **模型把 `GMV` 写进 `blocking_issues`，是在正确遵循指令**，不是语义层覆盖不足，也不是题集错。
+
+**因果闭环（对齐 W7 的帧序列）**：`blocking_issues` 非空 → `nodes/plan.py:89-106` 阻塞路径 → `plan_summary=null`（W7 的次强指纹，**成立**）
+→ `refuse(no_data_asset)` → 到不了 BIND/GEN_SQL ⇒ `sql_ready=0` / `gate_passed=0` / `executing=0`
+**是结构性为 0，不是偶发、不是超时、不是 embedding 那茬**。这同时解释了 §二十四 ③ 的六档全表。
+
+### 12.3 根因定位（**唯一一处，在 W2A 目录内**）
+
+`SemanticBundleRuntime` **缺 `metrics()` 枚举器**（探针逐项探测 10 个端口名：`active_version`/`asset_allowlist`/`policy`/`resolve_alias`/`dimensions`/`field_bindings`/`metric`/`time_semantics` ✅，`metrics` / `aliases` **❌ 不存在**）
+⇒ `build_semantic_summary()` 没有可枚举来源 ⇒ 渲染不出指标段 ⇒ 只剩那条缺口声明。
+
+⚠️ **这不是"没人知道"**：生产代码自己登记了（`payloads.py:204 summary_gaps()`，且 `_METRIC_GAP_NOTE` 注释写明"已登记需求"）。
+**没人量过的是它的后果**——后果就是 G-6 这一格。**属 W2A**（语义层运行时），不是 W2B 的绑定域、也不是 W4 的图。
+
+### 12.4 回 W7 §③ 的待核项：**"减法无效"我接受，但原因不是重入 intent**
+
+W7 写"探针 A 在一条 run 内发了两次 `stage=intent` ⇒ **有 run 重入了 `intent`**"。**这条诊断错了**，真因是 **§16.2 首字节占位帧**：
+
+- `api/runner.py:374-382`：占位条件 = `not self._placeholder_sent` ∧ `not drive.done()` ∧ **`not recorder.has_stage_emission()`** ∧ `now - started >= 1.6`；
+  占位帧的 stage **写死** `Stage.INTENT`（`events.py:491-497`，`Emission(SseEvent.STAGE, {"elapsed_ms": …}, stage=Stage.INTENT)`）——**与 intent 节点是否执行无关**。
+- 对上读数：探针 A 首帧 `intent 1609ms` = 占位（真实 intent 在 12628ms，远超 1.6s）；探针 B 真实 intent 1237ms < 1.6s ⇒ **只一帧、无占位**。
+- ⇒ `intent=11` = **10 条 run 的真实帧 + 1 帧占位**（探针 A 那条）。**没有任何 run 重入 intent**。
+  （唯一的回边 `route_after_normalize → INTENT`（`edges.py:193`）每 run 只走一次，不构成重入。）
+
+**"相等有效"我给证明**（这是我自己的推理前提，不能只当公理用）：
+
+1. `LINK` 的**唯一入边** = `route_after_intent`（`edges.py:196-211`）的返回值；`PLAN` 的**唯一入边** = `route_after_link`（`edges.py:214-230`）的返回值。全 `app/graph/` 内**无第二处**返回 `LINK` / `PLAN`。
+2. `repair` 环**不进这两个节点**：`route_after_repair → GATE1_AST`（`edges.py:378`）。
+3. 两者的 stage 帧**无条件发射**（`events.py:179-195`：只按节点名派生，不看载荷、不看 `update` 内容）。
+⇒ 每 run 对 `LINK` / `PLAN` **至多执行一次、执行即发一帧** ⇒ 恒有 `schema_linking ≥ plan_ready`，**取等 ⟺ 无任何 run 在 LINK 出口终止**。
+⇒ `7 == 7` ⇒ **"没有 run 从 LINK 出口终止"成立**。（旁证：帧里 `candidates_count=5` 非空，本也走不到 `route_after_link` 的 `refuse_out` 分支。）
+
+⚠️ 但这**不救 `intent` 那一档**：intent 有**两个发射点**（真实帧 + 占位帧）⇒ `intent − schema_linking = 1` **不能**读成"1 条 run 终止在 intent"。**减法无效、相等有效**——W7 引用得对，我把它从"经验规则"升级为"带证明的规则"。
+
+### 12.5 `U-115` 已落地（我复核了，但它**只能看、不能治**）
+
+- `9c65a42`（W4）在 `api/runner.py:530-543` 的 `REFUSE_OUT` 分支上：读 `trace.state["intent_detail"]`，`reason_code == "plan_blocked"` 且有 `blocking_issues` 时挂到 refuse 帧；契约测试 `test_c_plan_blocked_refuses_with_blocking_issues_in_frame` 断言落在**帧载荷**上（正是 W7 要的"外部证据"）。
+- ⚠️ **拿到理由 ≠ 修好链路**：带出来的内容会是"`GMV` 找不到口径"一类话术 ⇒ 它证明的是 12.2，**不改变** 12.3 那一处。断言口子仍在 `executing`。
+- ❌ 我**没有**做端到端验证（那要一次真实调用，口子在 W7）；我只做了代码 + 契约测试复核。
+
+### 12.6 处置建议（按 ROI 排，我**不越界动手**）
+
+1. **W2A 补 `metrics()`（顺手 `aliases()`）枚举器 ⇒ `build_semantic_summary` 加 `## 指标口径` 段。** 这是**唯一**能让 `executing` 从 0 变 ≥1 的改动。改动面小（运行时一个方法 + payloads 一段 + 两处测试）。
+2. **在此之前，"换题集"和"补语义层资产"都是白做**：换任何题只要问指标，同样被拒（8/9 个指标名都不在摘要里）。
+3. **更早的断言**：`stage_duration_seconds_count{stage="sql_ready"}` 应从 0 变 ≥1 —— 它在 `executing` **之前**，能提前一格暴露"指标段有没有真的生效"。
+
+### 12.7 本轮实测 / 未实测
+
+- ✅ 实测（**零 LLM**）：`build_semantic_summary()` 真跑并留存 3293 字原文；10 项端口枚举器逐项探测；9 个指标名逐字比对；`plan_v1.txt` 全文；`events.py` / `edges.py` / `runner.py` 三处发射点与入边逐行读。
+- ✅ 花费：**0 次 LLM 调用 / ¥0.000000**（探针只读 YAML 与纯函数，不碰服务、不碰 DB）。
+- ✅ 归档：探针 `_w2b_plan_prompt_probe.py` 已逐字节复制进 `backend/reports/w2b/`（sha256 见 12.8）。
+- ❌ 未跑：活体 SSE / 指标（我不碰服务）；`tests/integration`（会把 `embed_doc` 清回 NULL，见 §10）。
+- ❌ 未改代码：12.3 那一处在 W2A 目录内，本窗口只交证据。
+
+### 12.8 复现命令（任何窗口可零成本重跑）
+
+```
+cd E:\01_实训\项目\基于Text2SQL的电商数据分析Agent
+CommerceQL\.venv\Scripts\python.exe _w2b_plan_prompt_probe.py
+```
+
+期望判据输出（本次实测逐字）：
+
+```
+gap 声明进入了摘要（'指标口径目录' 出现） : True
+9 个指标名出现在摘要里的                 : ['order_cnt', 'uv']
+摘要里有 '## 指标' 段落吗                 : False
+```
