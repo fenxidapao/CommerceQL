@@ -162,8 +162,13 @@
 
 本探针**第一版**同样命中 `SIM117`（嵌套 `with psycopg.connect() / with conn.cursor()`），与 W4
 `reports/w4/probe_feedback_endpoint_pg.py:100` 同因。
-⇒ 只要 CI 跑的是 `backend/` 下 `ruff check .`（**不排除 `reports/**`**），**任何**写成"两个嵌套 `with`"的探针脚本都会挡 CI。
-建议（归 W0/W4，我只出证据）：`ci.yml` 排除 `reports/**`，或 `backend/pyproject.toml [tool.ruff]` 加 `exclude = ["reports"]` —— 逐个手修是治症状。
+⇒ 只要 CI 跑的是 `backend/` 下 `ruff check .`，**任何**写成"两个嵌套 `with`"的探针脚本都会挡 CI。
+
+🔴 **处置（本条已按架构裁定订正，我原先的建议作废）**：我 2026-09-20 曾建议
+"`ci.yml` 排除 `reports/**`" —— **该建议已被架构驳回**（`REFERENCE.md §9.2`：`reports/**` 在
+`gitleaks` 扫描面内，且那道门禁红**已在远端 `main`** ⇒ 缩 scope = **假绿**）。
+⇒ **正解改为：把 `reports/**` 当受检代码写** —— 探针脚本自己保证 `ruff check` / `ruff format` 干净
+（本目录两个探针已如此），单个 `with` 把两个上下文并起来即可。
 
 ---
 
