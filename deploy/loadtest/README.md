@@ -249,6 +249,32 @@ W2B 一旦回退工作区，这串数就没了出处。它只回答一个问题�
 `retrieval_mode_total` 在同轮真实降压下**仍全零** ⇒ "无调用点"是缺埋点而非缺流量；
 `query_outcome_total{outcome="degraded"}=0` 而请求确实"既降级又被拒" ⇒ **降级率的分母不能用它**。
 
+#### 三.0.1f 第五轮预检（09-21 · `w7load-api:0921r3` = commit `51543e1` ⇒ **从这一轮起读数可作 G-6 级证据**）
+
+构建前核验：`git status --short -- backend/app backend/tests deploy` **为空** ⇒ 镜像内容 = commit（与 §三.0.1e 的"工作区镜像"不同级）。
+数据复核（我自己只读查表，不信自报）：`app.embed_doc` = **197 行 / embedding 非空 197 / tsv 非空 197**。
+
+| 读数 | 预检 A：混合题库（155 行，n=5） | 预检 B：**时间锚定子集**（`questions_T_A_time.txt`，42 行，n=5） |
+|---|---|---|
+| `outcomes` | `{refuse: 2, clarify: 3}` | **`{refuse: 5}`** |
+| `codes` / `error_messages` | **空 / 空** | **空 / 空** |
+| `latency_ms` | p50 1,159.7 · p95 11,221.1 | p95 **3,505.2** |
+| `admission` | 0×5xx、0×429 | 0×5xx、0×429 |
+| `terminal_provenance` | `plan_ready\|no_data_asset` ×2、`intent\|time_ambiguous` ×3 | `plan_ready\|no_data_asset` ×5 |
+
+★ **决定性读数在 `/metrics`（零额度）**：`stage_duration_seconds_count` 只有三档非零 ——
+`intent=11`、`schema_linking=7`、**`plan_ready=7`**，而 **`executing` 一档从未出现**；配套 `refuse_total{reason="no_data_asset"}=7`。
+
+⇒ **判据④ 卡点第三次换形**：`INTERNAL`（`U-112` 已修）→ "题库一半本来就该 clarify" → **全链走到 `plan_ready` 却一次都没进执行**。
+⇒ 这条读数**取代**本报告/DELIVERY 里旧那句"`executing` 仍为 0 是因为 embedding 不可用 / `normalize` 超时"：
+两个旧成因现在都不成立，仍然过不去 ⇒ **`plan_ready` 与 execute 之间有一道从未被通过的关卡**。
+⚠️ 我不指哪一行：`app/graph/build.py:614-616` 的出路表把 `no_data_asset` 记在 `intent`/`link` 名下，而 stage 帧说终止在 `plan_ready` **之后**
+⇒ 出路表与实现之间可能已有偏移。**判定权在 W4（图）与 W2B（资产绑定）**，我给的判据只有一条：
+`stage_duration_seconds_count{stage="executing"}` 从 0 变 ≥1，`ok` 就通，判据④ 就过。
+⚠️ 另：W2B 实证了"`tests/integration/test_semantic_materialization.py` 会把 `embed_doc` 的 embedding/tsv 清回 NULL 且测试全绿"
+⇒ **本轮起我在"物化 → 预检"之间不跑任何 `tests/integration`**，且每次预检前先复核 `(197,197,197)`。归号建议 `U-114`（不自占）。
+本轮额度（实测）：**17 次调用 / ¥0.033283**。
+
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 
 探针的取数依据按 U-22 纪律必须"写在常量旁边"，而常量旁边放不下方法 —— 所以

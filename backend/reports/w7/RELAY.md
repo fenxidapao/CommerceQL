@@ -1320,3 +1320,38 @@ $ ls .git        → COMMIT_EDITMSG FETCH_HEAD HEAD ORIG_HEAD config hooks/ inde
 - 🔜 下一格（仍缺）：`ok ≥ 1`。要它出现只有两条路 —— ① W2B 跑物化把 197 行向量与 `tsv` 灌上；
   ② 或先用**不依赖检索的小问句**（纯时间/维度类）验一次全链收口。②我可以自己做，但那是**换题目迁就环境**，
   只能证明"链能通"、不能证明"容量对"，所以我不会拿它当判据④ 的替代，除非总控明确同意这个降级口径。
+
+---
+
+## 二十三、G-6 的最后一个阻塞点变了形状：全链走到 `plan_ready`，但**没有任何一次走到执行**（09-21 第五轮）
+
+W2B 把 U-112 提交了（`1255065`）并物化了 `app.embed_doc`。我独立复核后按**可复现**口径重取了读数：
+
+| 复核项 | 读数 |
+| --- | --- |
+| 数据（我自己只读查表，不依赖 W2B 自报） | `embed_doc` = **197 行 / embedding 非空 197 / tsv 非空 197**（跑前他们留痕是 197/0/0 ⇒ 与我这轮读数同形反向） |
+| 镜像可复现性 | 构建前 `git status --short -- backend/app backend/tests deploy` **为空** ⇒ `w7load-api:0921r3` = commit `51543e1` 的内容（**这一轮起读数可作 G-6 级证据**，与 §二十二 的"工作区镜像"等级不同） |
+| 预检 A（混合题库，n=5） | `outcomes={refuse:2, clarify:3}`、`codes={}`、p50 **1,159.7ms** / p95 11,221.1ms |
+| 预检 B（**机械筛出的时间锚定子集**，n=5，`questions_T_A_time.txt` = 题库 155 行里含 `20YY-MM`/`20YY年` 的 **42 行**） | `outcomes={refuse:5}`、`codes={}`、p95 **3,505.2ms**、零 5xx / 零 429 |
+| ★ 决定性读数（`/metrics`，零额度） | `stage_duration_seconds_count` 只有三档非零：**intent=11、schema_linking=7、plan_ready=7** ⇒ **`executing` 一档从未出现**；`refuse_total{reason="no_data_asset"}=7`、`query_outcome_total{refuse}=7` |
+
+⇒ **三条结论，按证据强度排**：
+1. **崩溃面已经干净**：两轮共 10 条请求，`codes` 空、`error_messages` 空、零 5xx ⇒ `U-107` + `U-108` + `U-112` 三件事在活体上同时成立。
+2. **判据④ 到现在为止不过，但原因换了两茬**：先是 `INTERNAL`（已修）⇒ 再是"题库里一半问题本来就该 `clarify(time_ambiguous)`"（混合题库 3/5）⇒ 换成时间锚定子集后**全是 `refuse(no_data_asset)`**。
+3. ★ 剩下唯一的一格是：**图走到 `plan_ready` 就停住了，一次都没进 `executing`**。我这条读数直接解释并**取代**了 §六 里那句历史性的"`stage_duration_seconds_count{executing}` 仍为 0"（旧归因：embedding 不可用 / `normalize` 超时）—— 现在两个原因都不成立了，仍然过不去 ⇒ **`plan_ready` 与 execute 之间存在一道从未被通过的关卡**。
+
+⚠️ **我不指哪一行代码**（`build.py:614-616` 的出路表把 `no_data_asset` 记在 `intent` / `link` 名下，而我的 stage 帧说终止发生在 `plan_ready` **之后** ⇒ 要么出路表与实现有偏移，要么发帧的节点不发 stage 帧）。**这条属于 W4 的 `app/graph/**` 与 W2B 的绑定域，我只提供判据**：`stage_duration_seconds_count{stage="executing"}` —— 谁改完只要这一档从 0 变成 ≥1，`ok` 就通了。
+
+### 附带：W2B 报的"集成夹具会清空物化向量"我复现了方向、没复现数值
+
+我没有跑 `tests/integration/test_semantic_materialization.py`（跑一次就把我刚拿到的 197/197 归零，而判据④ 正靠它），
+但机制我核过原文且成立：`materialize(..., with_policy=False)` 不传 `embedder=` ⇒ `_insert_rows` 先 `DELETE` 再 `INSERT` ⇒ 同版本行回来时 `embedding`/`tsv` 全 NULL。
+⇒ **这条对判据④ 是致命的**（不是"测试红"而是"测试绿着毁掉被测面前置"），所以我按 W2B 的三条临时措施执行：
+① 每次预检前我自己复核 `(197,197,197)`（已做，见上表）；② 本轮起**我不跑任何 `tests/integration`**；③ 归号请架构定（W2B 报 `07:1050` 处可用 = 建议 **`U-114`**，我同样不自占号）。
+
+### 本轮实测 / 未实测
+- ✅ 实测：数据三计数、树=commit 的核验、两轮 n=5 预检、`/metrics` 三档 stage 计数与 refuse 原因。
+  **本轮额度（实测，`app.cost_ledger` `created_at ≥ 2026-09-21 06:20Z`）= 17 次调用 / ¥0.033283**，覆盖上面两轮 n=5 预检。
+  ⚠️ 我先前在这行写过"12 次 / ¥0.0233"，那是**估的、不是查的** —— 已按台账改正（同一判据：数字要能指出出处）。
+- ❌ 未跑：四场景 + 场景⑤ 跑批（判据④ 仍 `ok=0` ⇒ 跑了依旧无分母）、`tests/integration`（会毁前置，见上）、迁移套件（`U-113` 未定案）。
+- ❌ 未验：`executing` 关卡的**具体成因**（不在我目录）。
