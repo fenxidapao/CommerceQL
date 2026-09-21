@@ -478,8 +478,15 @@ def _provenance(samples: list[Sample]) -> dict[str, dict[str, int]]:
     存在的理由是一个 `outcomes` + `codes` 都答不了的问题：一条 `refuse(reason=no_data_asset)`
     既可能是 intent 层给的（07 §5.2 组 3），也可能是 `link` 的空召回（§5.3）—— 两个落点共用同一个
     4 值枚举。把"终止前最后一个 `stage` 帧"一起记下来才能分家。
-    ⚠️ 读法：`stage=none` 表示**一条 stage 帧都没收到**（不是"数据丢了"），这本身就是信息 ——
-    例如全部终止都停在 `stage=none` ⇒ 破在第一个发 stage 帧的节点之前。
+
+    🔴 **读法（W4 纠正，别再按字面读）**：stage 帧是节点**跑完之后**才发射的 ——
+    `app/api/runner.py:454` 用 `stream_mode="updates"`，其头注第 8 行明写"每个节点跑完拿到一次增量"。
+    ⇒ `stage=X` 的**唯一**可靠含义是"**X 已完成**"，破点在 §5.3 顺序里 X 的**后继节点**，
+    而不是 X 本身。把它读成"X 这一格有问题"是反向的。
+    例：本轮 `{"error_frame": {"stage=intent|reason=none": 2}}` 曾被本窗口读成
+    "intent 收不了口"，按此语义正确读法是 **intent 完成、崩在 link**（W4 据此定位到
+    `app/retrieval/search.py` 缓存重建路径的 `float(None)`）。
+    ⚠️ `stage=none` = **一条 stage 帧都没收到** ⇒ 没有任何节点完成（不是"数据丢了"）。
     """
     out: dict[str, dict[str, int]] = {}
     for s in samples:

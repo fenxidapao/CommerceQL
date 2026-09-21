@@ -870,3 +870,88 @@ extra_fact="图未收口 → 补发 error(INTERNAL)，不留一条无终态的�
 （那是封闭登记表，要开得走架构，我不自增）。
 先前那批的归因**不受影响**：那批日志里 `node_timeout` 与 `graph_run_failed` 是同数对上的
 （137 : 137），所以"那一批是超时"仍成立；错的是我把它写成了一条通用逆命题。
+
+---
+
+## 十八、撤回两条推导 · 回架构 U-110 两件未结 · 对 W6 第三条读数提一个反证要求
+
+### ① 我撤回两条推导（都核过码才撤，不是照抄别人的回执）
+
+| 我先前说的 | 实情（我自己去读的码） | 判 |
+|---|---|---|
+| `bind.py:194` 的 `score=score.value` 可达 None ⇒ 那是 `float(None)` 的源头 | `app/binding/scores.py:73-93` 的 `RerankScore.__post_init__` 在**构造期**就挡：`isinstance(value, bool) or not isinstance(value, (int, float))` ⇒ `None` 直接 `ScoreParseError`；`parse_scores_json` 把 `"score": null` 变成 `ScoreOutcome(failed=True)`，`bind.py:185` 早退 ⇒ **L4/bind 这条路给不出 None** | 🔴 **撤回**。W4 的纠正成立，我的旁证里"require_rerank_scores 不校验 .value"是真话但结论错——校验已经埋在构造函数里 |
+| `provenance=stage=intent` 是**反向**证据（候选一般在 link 之后才有） | `app/api/runner.py:454` 用 `stream_mode="updates"`，头注第 8 行明写"每个节点跑完拿到一次增量" ⇒ **stage 帧在节点返回之后才发射** ⇒ `stage=intent` 的唯一可靠含义是"**intent 已完成**"，破点在**后继节点** = `link` ⇒ 这条是**正向**证据 | 🔴 **撤回**，并把它变成量具自己的语义订正：`driver.py:_provenance` 的 docstring 已重写（旧写法会让人读成"intent 收不了口"，我就是那么读的）。**这个字段的读法错一次，整条归因链就反一次** |
+
+⇒ 我上一版那句"归因等栈"没错，但候选点给错了方向；正解是 W4 找到的
+`app/retrieval/search.py:325/326`（缓存重建把 `raw["candidates"]` 里的 null 直传 `CandidateRef(score=None)`）。
+
+### ② 回架构的两件"未结"—— 第①件我接受，第②件我要先反证 W6 的一条读数
+
+**未结①（"进程对等证据取自另一组配置"）接受。** 确实：我的 4 个偏小读数与
+`Worker 0: actual rows=0` 来自两条不同的 psql 会话。关闭证据需要同一 run 同源三件套，
+我把它写成了入库脚本而不是又一段聊天读数：**`deploy/loadtest/rls_parallel_evidence.sql`**
+（⓪ 先证明 `Workers Launched ≥ 1` → ① RLS qual 落层与每进程留行 → ② 每个进程实际读到的值
+→ ②b 同一状态同一键的"可提升"形状 → ③ 同快照内串行/属主真值/`n_live_tup`）。
+⚠️ **本轮跑不了**：这台机器的 Docker 引擎在写这份文档时掉了（主栈 5 个容器全断，
+`docker version` 连不上 named pipe）。我**没有擅自拉起 Docker Desktop** —— 那会重启 W6/W4 共用的
+`pg`/`redis`/`api` 与 1,940,300 行共享库所在的实例，属跨窗口共享状态，要总控点头。
+⇒ 三件套的实测状态：**UNVERIFIED，等环境恢复**，不预写结论。
+
+**未结②（生产注入形态是否复现）**：W4/W6 的读数是"事务内 `set_config(...,true)` 恒 200,000"，
+与我读到的 `dsn.py:141-145` 模板形状一致 ⇒ 我同意"触发面只在未显式设值那一格"，
+但这条也要在同一 run 里被三件套覆盖到（脚本 ②/③ 两栏就是为它设计的）。
+
+### ③ ★ 对 W6 第三条读数提一个反证要求：**"worker 拿不到值被证伪"这句还下不了**
+
+你们报的：同一占位符状态下，从**不含 shop 条款**的 `v_traffic_daily` 里并行投影
+`current_setting('app.shop_ids',true)`，600,178 行全部报 `''`（`Workers Launched=2`）。
+
+⚠️ 这条测量的形状，**与本窗口自己被同一种形状骗过一次的那条一模一样**：
+表达式若**不含列引用**，规划器可以把它放到 **Gather 之上**、由 leader 一次算完 ——
+我当时的 `EXPLAIN VERBOSE` 原文就是这么写的：
+
+```
+GroupAggregate   Output: (pg_backend_pid() = 0), current_setting('app.canary'::text, true)
+  -> Index Only Scan ...   Output: tenant_id, channel          ← worker 只回传这两列
+```
+
+⇒ 那一栏读到的 `''` 有可能是 **leader 算完发下来的**，不是 worker 扫到的。
+所以"worker 看得见值"目前**既没被你们证实、也没被我们证伪**。
+要证实它，把表达式变成**不能提升**的形状（带一个列引用 + `group by` 该表达式）：
+
+```sql
+select case when t.tenant_id is not null
+            then coalesce(current_setting('app.shop_ids',true), '<NULL-in-this-process>')
+            else '<unreachable>' end as value_seen_by_the_scanning_process,
+       count(*)
+  from app.traffic_daily t group by 1;
+```
+出现 `<NULL-in-this-process>` 组 ⇒ 我那条机制成立；只出现 `''` 组 ⇒ **机制作废，我改口径**，
+而且你们排除的另两条（plan 缓存、index-only 特有）就真的成了唯一剩余解释面。
+两种结果我都接受，但**别用一条可提升的投影定死机制** —— 这与你们订正前的 `off/on` 不是串行/并行轴
+是同一类错误，你们已经认了一条，这条我替你们先想到。
+
+### ④ 三条我要转出去的事实（其中一条改的是架构刚写下的东西）
+
+1. **给架构**：`§13.3 细节 4` 刚把我那条推断（"P1 换 `'*'` ⇒ 少算变成稳定 0 行"）记成 P1 的第 4 条理由，
+   标 UNVERIFIED。**W6 本轮实测把它推翻了一半**：在**当前策略文本**
+   （`= '' OR shop_id = ANY(string_to_array(v,','))`）下 `'*'` 串行并行都读 **0 行**
+   ⇒ 哨兵**必须连策略文本一起改**，否则"不限店铺"静默变成"什么都查不到"。
+   那条"第 4 理由"的措辞请改成"哨兵 + 策略文本同改之后才成立"，否则会有人照 §13.3 只改常量。
+2. **给架构 + W1B**：W6 报的**新失败形态**要并进 `U-109` —— 同一条连接**提交后再复用**，
+   两把键的 `LOCAL` 值一起消失、余值只剩 `''` ⇒ `tenant_id = ''` ⇒ 恒 0 行。
+   这是"`SET LOCAL` 的生命周期"而不是"`RESET`"，与 §16.3 那笔池模式账直接相关（池复用正是提交后再用）。
+3. **给我自己**：`--no-async` 那 3 条预检的 `p95=15,855.9ms` 现在有了一个**不依赖上游**的解释候选 ——
+   崩点在 `link`（见 ①），而 `link` 的 embedding 调用实测单条 4.5–5.0s；
+   那条 15.86s 到底是"上游慢"还是"link 之后才炸"，等 `exc_info` + 重跑一次才分得开。
+   **先前把它写成"纯上游容量问题"是过早的。**
+
+### ⑤ 收到的其余几条（不复述、只登记）
+
+- 架构：`§10④` 你们自己认错并升级为"§5.3 表 / 代码 / 契约测试 三处同改"，`link` 行 4.0→30 已同步；
+  R-17 风险面上调为**结果正确性**（接受，且我认为这是本轮最该上调的一条）；
+  `INTERNAL` 不开指标、不扩 `codes`（接受，理由成立：成因属内部诊断，对外不可区分是 A.11/N-07 的有意语义）。
+  报告纪律"INTERNAL 不得当节点超时的同义词"——**这条本来就是我被本轮教育之后写下的**，已并入口径。
+- W4：`exc_info=True` 已核（`runner.py:483-489`）。重跑请等我这边环境恢复（见 ②）。
+- W6：`parallel_equality_ok=false` + `parallel_undercount_states` 点名到形态，
+  比我上一版那句含糊的"不等值"强，方向对；"吃真实产物的测试"那条尤其对。
