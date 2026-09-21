@@ -1,0 +1,189 @@
+# W7 窗口交接文档（阶段 7 · 观测与部署）· 2026-09-21
+
+> 用途：让一个新窗口**继承 / 成为** W7。本文只写"必须知道才知道得做事"的东西；读数细节一律给指针，不复抄（复抄会漂移）。
+> 权威件是三份：本文件 + `backend/reports/w7/RELAY.md`（我写给别人的回执与订正）+ `backend/reports/w7/DELIVERY.md`（DoD 自验与 UNVERIFIED 清单）。
+
+---
+
+## 一、这个窗口是谁、边界在哪
+
+**角色**：CommerceQL 阶段 7（观测与部署）责任窗口。总控（用户）按窗口派活；**不自开 U-xx 编号**；跨窗口只提需求、不动别人的文件。
+
+**契约权威顺序（冲突时从高到低）**：`02 附录 A` > `01 PRD` > `06 UIUX` > `07 TDD` > `08 实施计划`。
+设计文档在**仓库外**的项目根 `docs/01…08`（对本窗口**只读**；07 现 v1.6.4，由架构窗口维护）。
+
+**独占可写**：`app/obs/**`（例外：`audit.py` → W1B、`logging.py` → W0）、`app/api/routers/health.py`、`deploy/loadtest/**`、`deploy/observability/**`、`deploy/runbook/**`、`backend/reports/w7/**`。
+`app/main.py` **只追加**（本轮已登记一次 3 行 import 的例外，见 DELIVERY §五）。
+**禁写**：`app/core/**`、`app/{llm,planner,binding,guard,exec,mask,retrieval}/**`、`app/graph/**`、`app/semantics/**`、其他 api routers、`frontend/**`、`eval/*` —— 要改只能提需求。
+⚠️ `deploy/**` **名义归 W0**，分给本窗口的只有 `deploy/loadtest/`；动 `deploy/` 其他路径前先确认（例：pgbouncer 那一行 `AUTH_TYPE` 是请 W0 落的）。
+
+**提交**：前缀 `feat(w7)` / `docs(w7)`；**只 stage 本窗口的文件**（每轮 `git status` 先核归属，跨窗口撞车要先报）。**push 已获长期授权**；但**代推别人的 commit 要先问一句**（09-21 我推了 W2B 的 `9942753`，登记在 RELAY §二十六①）。
+
+**共享状态**：`commerceql-api-1` / 主栈 compose / PG / Redis 是**共用的**，不得单方面重启或重建。**唯一写者纪律**：同一时刻对同一份共享状态只能有一个窗口动手。
+
+---
+
+## 二、密钥与门禁纪律（binding，违反即事故）
+
+1. `DRAIN_TOKEN` 只写本机 `deploy/.env`（已 gitignore），**不得进任何提交 / 文档 / 脚本**。
+2. `MIGRATION_DATABASE_URL` **连 `deploy/.env` 也不写**，只在跑迁移的 shell 里 `export`；两者都不得进 `.env.example`。
+3. DeepSeek API key 由总控提供，**绝不可出现在任何提交、文档或脚本**。
+4. RS256 dev token 文件：放仓库外（本机用 `E:/tmp_w7/`），**用完即删**，永不入库。
+5. Grafana 刻意不设管理员口令 ⇒ 任何"对外开放 3000"的改动**必须先设口令**。
+6. **DSN 卫生门禁**：`tests/unit/test_migration_dsn_hygiene.py` **扫整个工作区**且**把"引用规则的模式串"等同于"触犯规则"** ⇒ 在任何报告里写那条 DSN 形态时必须**拆词形**（`` `postgresql+psycopg://` + `user:pass@` ``）。架构 v1.6.3 已裁：驳回"缩小扫描范围"，正确修法就是拆词形。09-21 W2B 和我各中过一次。
+
+---
+
+## 三、现在站在哪里（一句话 + 一张链）
+
+**G-6（P95 ≤ 8s）从未有过分母：`outcome=ok` 至今 0 次。** 阻塞点今天换了四次形，每格都**不是负载问题**：
+
+| 序 | 格 | 状态 | 出处 |
+|---|---|---|---|
+| 1 | `normalize` 超时 → `error(INTERNAL)` | ✅ 已修（U-107 落地：LLM 节点走客户端超时） | `app/graph/build.py` + README §三.0.1c |
+| 2 | `app.embed_doc` 向量/tsv 全 NULL | ✅ 已灌（197/197/197）+ U-112 已修 | README §三.0.1d/e |
+| 3 | PLAN 自拒（指标目录从未进 plan prompt） | ✅ W2A 已修并活体验证（`plan_summary` 由 `null` → 含 `"metrics":["gmv"]`） | README §三.0.1h |
+| 4 | `bind` 0.2s 掐掉一次真 LLM 调用 | ✅ 架构裁 (B)、W4 落 `8202204`；实测 `l4_score` 三条 1,605–1,700ms 全部完成 | README §三.0.1h/i |
+| 5 | **GATE1 把每条真 SQL 都拒（`GATE_AST_REJECTED` = U-121）** | 🔴 **当前卡点，不归 W7** | README §三.0.1i + RELAY §二十六③ |
+| 6/7 | **GATE3（真 EXPLAIN）与 EXECUTE（真 DB + 身份 GUC）** | ❌ `gate_passed=0`、`executing=0` ⇒ **一帧都没见过**，且真路径按 U-63 须经 W2D 受控入口 | RELAY §二十七④ |
+
+⇒ **结论口径（写进任何汇报都要带）**：当前**测不出"容量"，因为链路走不到执行**。近期演示走 clarify/refuse，**不宣称 G-6 达标**（架构明令禁止"修完就能演示"的写法）。
+
+---
+
+## 四、待办与优先级（新窗口的第一屏）
+
+### P0（阻塞 G-6，不由本窗口做，但由本窗口盯）
+| # | 事项 | 归属 | W7 的动作 |
+|---|---|---|---|
+| U-121 | 闸门 7 键判据在生产不可达（端口给扁平、闸门要 wrapper；三方分工 W0 定形状 → W2A 实现 → W2C 消费 + 删自造口径） | W0 + W2A + W2C | **不动代码**。落地后：重建镜像 → c=1 预检 → 看 `gate_passed`/`executing` 是否从 0 起（第六、第七格首次现身） |
+| U-119 | 生产端口原样输出直连闸门的契约测试（`tests/contract/test_gate_seam_contract.py`，W4 已落 `8a4121a`） | W4 + W6 | ⚠️ **它刻意红**：全量 `pytest -q` 今后恒有 1 failed ⇒ 报读数必须点名，别当自己的回归；U-121 修好后**它该转绿**，由 W4/W6 确认 |
+
+### P1（本窗口的活，按顺序做）
+1. **U-120（架构新派给我）**：`MIN_ADMITTED_FOR_P95 = 20` 现在**只用于写 caveat**（`driver.py:316` 定义、`:443-445` 使用），`admitted=5` 照样输出 `latency_ms.p95` + 布尔 `g6_p95_le_8s` ⇒ 低样本时量具会产出可被引用的分位数。
+   **最小改法（已核兼容性）**：`admitted < 20` ⇒ **`g6_p95_le_8s` 置 `null`**、保留 `latency_ms` 字段形状不动（W6 读端 `eval/reporter.py:175-177` 已过滤 `None`，不会红），并按老规矩补**变异测试**（退回旧行为必须红）。改完给 W6 打招呼（它的 gate 语义从"布尔"变"三态"）。
+   验收判据：同一份 n=5 回执重算后 `g6_p95_le_8s === null`；n≥20 的样例仍出布尔；有一条用例正向钉这条。
+2. **RL-2 告警口径**（我欠的）：`query_outcome_total{outcome="degraded"}` 实测恒 0 而 degraded+refused 请求存在 ⇒ **假分母**；降级率必须改挂 `degraded_total`，看板/规则文案同步（见 DELIVERY §三/§五）。
+3. **`retrieval_mode_total` 仍零调用点**（09-21 订正：`binding_layer`/`binding_state` 已被 W4 接上，只剩这一族）⇒ 要么提需求接线，要么在看板上摘掉；**不得当证据引用**。
+
+### P2（DoD 收尾，未跑就标 UNVERIFIED）
+- RL-1/RL-3 的 `DB_UNAVAILABLE` 活体行为；Grafana 面板渲染 + nginx `/metrics` 404（本机无镜像）；`exec_failure_total` 读数。
+- 六条 runbook 全部可执行性已在 DELIVERY 记账，复跑成本高，收口时引用即可。
+
+### 明确不做
+- 不换题集绕开阻塞（架构已否决"换题集/补语义层"）；不"修"U-119 那条红；不碰 `backend/reports/w2-int/e2e_stage2_check.py`（别人的脏文件，架构已要求认领，每轮 `git status` 会看见，**不 stage 不还原不删除**）。
+
+---
+
+## 五、怎么跑起来（一次预检的全套命令，逐字用过）
+
+```bash
+# 0) 前置三查（缺一不可，09-21 我各失手过一次）
+docker ps --format '{{.Names}}'                      # 期望 commerceql-pg-1 / -redis-1 / -pgbouncer-1 在
+docker exec commerceql-pg-1 psql -U postgres -d ecom -tAc "select count(*),count(embedding),count(tsv) from app.embed_doc;"   # 必须 197|197|197
+git status --porcelain | grep -v '^??'               # 必须只看见别人的文件
+```
+
+```bash
+# 1) 从 commit 建被测镜像（⚠️ Dockerfile 在仓库根的 deploy/，构建上下文是 backend）
+cd CommerceQL && docker build -f deploy/Dockerfile -t w7load-api:MMDDrN backend
+```
+
+```bash
+# 2) 起被测容器：两条只读挂载一条都不能少（缺了会 503/500，报错还指向别处）+ 外部网络 + Windows 形态绝对路径
+docker run -d --name w7load-api --network commerceql_default --env-file deploy/.env -p 18000:8000 \
+  -e EMBEDDING_BASE_URL=http://host.docker.internal:11434 \
+  -v "E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL/semantic:/semantic:ro" \
+  -v "E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL/deploy/secrets/jwt_public.pem:/run/secrets/jwt_public.pem:ro" \
+  w7load-api:MMDDrN
+# 放行：/api/v1/healthz 的 status=ok 且 7 项 checks 全 true、degraded_dependencies 为空
+# ⚠️ 路径带 /api/v1 前缀 —— 打 /healthz 会 404（我白试一轮）
+```
+
+```bash
+# 3) 铸 dev token（租户必须是 T_A/T_B/T_C —— 写成 tenant_a 会让 RLS 滤光、P95 假性很好）
+cd CommerceQL/backend && PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe \
+  scripts/mint_dev_token.py --tenant-id T_A --user-id u_load --role analyst > E:/tmp_w7/tok.txt
+# 用完删：rm -f E:/tmp_w7/tok.txt   （永不入库）
+```
+
+```bash
+# 4) c=1 预检（判据④ = 至少 1 条 outcome=ok；不满足 ⇒ 不跑批）
+cd CommerceQL/deploy/loadtest && PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../../.venv/Scripts/python.exe \
+  driver.py --target http://127.0.0.1:18000/api/v1 --scenario steady --no-async --concurrency 1 \
+  --max-requests 5 --questions-file questions_T_A_time.txt --tokens E:/tmp_w7/tok.txt \
+  --out E:/tmp_w7/preflight_rN.json
+```
+
+```bash
+# 5) 取证三件套（全部零额外配额，别用模型调用去猜）
+docker logs w7load-api --since 10m > E:/tmp_w7/all.log    # 数 httpx 200 vs "event": "llm_call" vs task 分布
+curl -sS http://127.0.0.1:18000/api/v1/metrics            # stage_duration_seconds_count 六档 + degraded/binding 族
+docker exec commerceql-pg-1 psql -U postgres -d ecom -c "select task_id,count(*),sum(cost_cny) from app.cost_ledger where created_at>now()-interval '20 min' group by 1;"
+```
+
+**四场景跑批（判据④ 过了才准做，且先报告规模与花费再跑）**：命令在 `deploy/loadtest/README.md` §七，最后一步必须 `--roll-up` 合成 W6 唯一认的 `receipt.json`。
+
+---
+
+## 六、本机的坑（每一条都真烧过时间）
+
+- 编码：任何 Python/psql/mypy 前缀 `PYTHONIOENCODING=utf-8 PYTHONUTF8=1`（GBK 会崩，且失败形态长得像被测代码的 bug）。
+- `lint-imports` 必须用 `.venv/Scripts/lint-imports.exe` 且在 `backend/` 下跑，否则**假绿**或读到 1 退出码。
+- Git Bash 改容器内路径 ⇒ `docker exec` 里读文件加 `MSYS_NO_PATHCONV=1`；`docker run -v "$PWD/…"` 会被静默改成 MSYS 路径 ⇒ 用 `E:/…` 绝对形态。
+- **`/tmp` 不是同一个**：Git Bash 写的 `/tmp/x` Windows Python 打不开 ⇒ scratch 一律 `E:/tmp_w7/`。
+- **退出码会被吞**：`cmd | tail`、`cmd > f; echo "exit=$?"`（$? 是 echo 的）都不作数 ⇒ 重定向到文件后再 `echo $?`，或读 `${PIPESTATUS[0]}`。
+- `*.log` 被 `.gitignore:47` 全局忽略 ⇒ 证据要落 `.json`/`.txt` 才能入库（W2A 本轮也踩，改存 `_gates_*.txt`）。
+- **绝禁**：对共享 `ecom` 跑迁移套件或 `tests/integration`（后者会**静默清空 `embed_doc` 向量** = U-114）。每次预检前重核 `197|197|197`。
+- 报价口径：成本由 **DeepSeek prompt cache 冷/暖**决定，不由条数决定 ⇒ 按"首条 +（n−1)×稳态"报，别把首条摊进平均。稳态一次预检 n=5 ≈ 13 次调用 / ¥0.021（暖）~ ¥0.042（冷）。
+- 冷容器第一条会吃掉整个 p95（本轮实测 187,728.9ms，**未做单变量对照 ⇒ 不写成成因**，只登记）。
+
+---
+
+## 七、证据指针（别再从头找）
+
+| 主题 | 位置 |
+|---|---|
+| 放行判据（四条，含"判据④ 必须有 ok"） | `deploy/loadtest/README.md` §三.0.1 |
+| 被测容器正确启动形态（两条挂载 + healthz 全清单） | 同上 §三.0.1b |
+| 第一~八轮预检读数（逐轮，含被撤回的说法） | 同上 §三.0.1c–i |
+| 探针门限常量的取数口径（U-108） | 同上 §三.0.2 |
+| `g6_caveat` 是降档开关 / P95 只算准入样本 / c=1 先行 | 同上 §四.1 / §四.2 / §九 |
+| 回执原件 | `deploy/loadtest/preflight_r4.json`、`preflight_r5.json`、`receipt_*.json` |
+| U-110（并行 worker 少算）关闭证据与只读读法 | `deploy/loadtest/rls_parallel_evidence.sql` + RELAY §十九 |
+| 我给别人的回执与**我自己的订正/撤回** | `backend/reports/w7/RELAY.md` §十九 ~ §二十七 |
+| DoD 自验、UNVERIFIED 清单、越界声明 | `backend/reports/w7/DELIVERY.md` §三 ~ §六 |
+| 看板/告警/停机/断言的落地状态 | 同上 §二、§三 + `deploy/runbook/README.md` |
+
+**读别人结论的纪律**：本项目几乎每个读数都是某次 run 的快照 ⇒ **引用前先复测**（09-21 我自己有两次："三族零调用点"已被 W4 接线推翻；架构 v1.6.2 那句"`bind` 本次未被走到"被我的活体推翻）。**撤回报错要留痕，不改历史文本，在最新一节登记作废。**
+
+---
+
+## 八、跨窗口当前关系图（09-21 收尾时）
+
+- **我在等**：U-121（W0→W2A→W2C）→ 之后重建镜像复跑预检 → 才有第六/七格（GATE3/EXECUTE）的读数；τ 校准（W3C/W4 侧）在**更后面**，不是当前卡点。
+- **等我的**：U-117 已用我的读数结案；W4 的 U-119 需要我在 U-121 落地后回报"预检是否走通"；架构需要我确认 U-120 的修法口径；W6 需要我 U-120 改完后的三态布尔打招呼。
+- **别混淆**：G-6（压测）**≠** 评测（eval/gates），两条数据分开归档（DELIVERY §一已登记）。
+- 编号：下一可用 = **U-122**。取号前三查：07 §4.8 表 + `git grep -n "U-<next>"` + `git log --all --grep="U-<next>"`（09-21 的撞车就是缺后两条）。
+
+---
+
+## 附、开新窗口的提示词（正文，可直接复制粘贴）
+
+```
+你是 CommerceQL 项目（仓库 E:\01_实训\项目\基于Text2SQL的电商数据分析Agent\CommerceQL\）的 W7 窗口，负责阶段 7「观测与部署」，接替上一个 W7 窗口继续工作。
+
+第一步（必做，不许跳过）：完整读完 backend/reports/w7/HANDOFF_W7.md —— 它是本窗口的角色、所有权边界、密钥纪律、当前卡点、待办优先级、跑起来的命令、本机的坑、证据指针。你的所有工作以它为唯一交接件，不要凭猜测开工。
+
+三条立刻生效的纪律：
+1) 先理清现状、再列执行计划、再动手；需求不明确先问总控，不要猜。压测四场景必须先报告规模与花费再跑批。
+2) 只写你自己的地盘（HANDOFF §一列了可写/禁写清单）；跨窗口只提需求、不改别人的文件；不得自行开 U-xx 编号（下一可用 = U-122，取号前三查：07 §4.8 表 + git grep 代码 + git log --all --grep）。只 stage 本窗口文件；push 已获长期授权，但代推别人的 commit 要先问。
+3) 只报实测：未跑的写 UNVERIFIED；因果句必须有对照实验；撤回报错要在最新一节留痕、不改历史文本；引用别人的读数前先复测（读数都是快照）。
+
+当前状态一句话：G-6（P95 ≤ 8s）至今 0 条 outcome=ok ⇒ 没有分母、跑批不准跑。阻塞现在在 U-121（闸门 allowlist 形状，归 W0+W2A+W2C，你不改代码），你手上的活是 HANDOFF §四 的 P1 第 1 条 U-120（driver 的 MIN_ADMITTED_FOR_P95 未真正生效），以及每次开工前照 §五 做"前置三查"。
+
+密钥纪律按 HANDOFF §二 逐字执行（DRAIN_TOKEN 只进本机 deploy/.env；MIGRATION_DATABASE_URL 连 .env 也不写；DeepSeek key 绝不出现在任何提交/文档/脚本；报告里引用 DSN 模式串必须拆词形）。
+
+每轮收尾三件事：把实测/未实测写进 backend/reports/w7/RELAY.md（新增一节，不复抄旧文）与 DELIVERY.md 的对应行、只提交本窗口文件并推 main、最后给总控一段可直接转发给其他窗口的粘贴块。
+```
+

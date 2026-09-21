@@ -1531,3 +1531,43 @@ http_requests_total{endpoint="/api/v1/query",status="2xx"} = 12（含本轮两�
 ### ⑤ 放行状态
 
 判据④ 仍不过（`ok=0`）⇒ **跑批继续不跑**。本轮之后 G-6 的依赖链：`normalize`(超时) → `embed_doc`(数据) → `PLAN`(语义摘要) → `BIND`(0.2s) → **`GATE1`(allowlist 形状)**，五格四次换形，**每格都不是负载问题** ⇒ 这条本身就是给 G-6 结论的一部分：**当前测不出"容量"，因为链路走不到执行。**
+
+---
+
+## 二十七、回执五条（架构 v1.6.4 / W4 / W2A / W2C）+ 一条落在我自己头上的 P1（09-21 第九轮 · 本轮零 LLM、零花费）
+
+### ① 编号与裁定：我这边要改口径的地方
+
+| 事件 | 状态 | 对我的影响 |
+|---|---|---|
+| 闸门形状项的号：U-118 → **U-121**（W4 的 `8202204` 已占 U-118 且已在远端） | ✅ 架构已改表 + 补登记 | 我 §二十六 里"闸门形状"一律按 **U-121** 引用；**下一可用 = U-122**（我仍然不自开号） |
+| **U-120（🔴 P1 · 归 W7 · 也就是归我）**：`§16.5 MIN_ADMITTED_FOR_P95 = 20` **未真正落地** —— `admitted=5` 照样输出 `p95` + 布尔 `g6_p95_le_8s` | ❌ **未做，架构驳回了我提的"跑批前预热判据第 ⑤ 条"的形式、同意其实质** | 我的量具在**低样本时会产出一个可被引用的分位数**。`preflight_r5.json` 的 `p95=187,728.9ms` 因此**不可当延迟结论引用**（架构已点名这一条，我认领） |
+| **U-119（P1 · W4+W6）**：全仓无测试从生产端口直连闸门 | ✅ W4 已落 `8a4121a`，且**刻意留 1 条红**（`tests/contract/test_gate_seam_contract.py`） | ⚠️ **今后任何窗口跑全量 suite 都会看到 1 failed —— 那是接缝没修，不是你的回归**。我自己已核：该文件在 HEAD 存在、Test A 断言"真端口原样喂闸门 ⇒ 普通 SQL 应过闸" |
+| U-117 关闭（L4 占比 0/3 ⇒ 纯浪费 ⇒ 改条件触发） | ✅ 用我的读数结的案 | 这条不需要我再动 |
+
+### ② 我上一轮那句话被 W2A 精化了 —— 订正在先
+
+我写的是"**没有任何一条测试从生产端口直连闸门**"。W2A 核得对：**不准确**。`tests/eval/test_harness_allowlist.py:142-153` 确实把 `run_gate1` 接上了 `bundle`，但那个 bundle 是 **W6 的适配器 `GuardAllowlistBundle`（已自行整形）**。⇒ 正确表述是：
+
+> **没有一条测试把 `app/semantics/runtime.py::asset_allowlist()` 的原始输出喂进闸门。**
+
+⚠️ 这条差别不是文字游戏：它决定修法 —— 病灶不是"没人测接缝"，是"**接缝一直被适配器替两端把形状对上了**"，而 W6 那个 `structural_wrapper()` 正是 U-121 落地后**必须删掉**的东西（否则第三份真相）。
+
+### ③ W2A + W2C 各自补上的一半，我记录为需求输入（不动任何代码）
+
+1. **W2A**：`SemanticBundlePort` 实测只有 4 个方法（`active_version` / `asset_allowlist` / `policy` / `time_semantics`），而 `GraphDeps.semantics` 的类型就是它（`graph/context.py:105`）⇒ **`joins` 与"全列声明"在端口上根本没有入口** ⇒ **W2A 单方改 `asset_allowlist` 返回形状修不好这条缝，必须先动 `app/core/contracts.py`（W0 的地盘）**。这与 U-121 记三方一致，也否掉了我隐含的"改一个返回形状就行"。
+2. **W2A**：`columns` 要**分两个面** —— 可见面（planner/binding + gate1 解析）要裁 deny 列；结构面（gate2 ④⑤ + `_column_type` 的 R17）要全列 + 类型。实测后果：给 gate2 喂裁剪列 ⇒ ⑤ 当场 `ContractViolationError`，而 ④ 对 `SELECT receiver_phone …` **完全不响**（不返回 `G2-DENY`）⇒ **fail-open 的一半**。
+3. **W2C**（三方都没提的那条，我认为最关键）：**两个闸门的入参形态不对称** —— `run_gate1(sql, allowlist)` 收**映射**（W4 从端口取），`run_gate2(sql, ctx, bundle)` 收**端口对象**（`policy_gate.py:105` 内部自己调 `asset_allowlist`）。⇒ **W0 若只加一个"返回 wrapper"的方法而不同时点明 gate2 改调新方法，同一个 run 里 gate1 用新形状、gate2 用旧扁平 ⇒ 两个真相，且 U-119 那条测试抓不到它**（Test A 是分别喂的）。⚠️ 我把这条列进交给 W0 的需求输入，**归号由架构裁**。
+4. **W2C**：`allowed_constants` **不走 allowlist 入参**，是 `run_gate1` 的独立形参 `literal_allowlist` ⇒ 形状定义必须交代它从哪来。
+5. **W2C 自述**（我核了代码位置，成立）：guard 要的 7 个键出处是 `ast_gate.py:16-24` **它自己写的 docstring、无上游依据**；而扁平才是既成契约（`planner/payloads.py:293`、`binding/filters.py:337` 两个生产消费者按扁平用，`tests/unit/test_semantics_loader.py:394-401` 在真实现上把扁平钉住）⇒ **guard 是形状上的少数派**。这条对 U-121 的意义：**W0 定形状时不能默认"端口向闸门靠"**。
+6. **W2C 的 7 键缺向表**（我按 fail-open/fail-closed 分了类，这张表就是"为什么它值 P0"）：`assets`/`joins`/`deny_columns` = **fail-closed**（全拒、归因退化）；`default_predicates` = 🔴 **fail-open**（`is_test_order`/`refund_status`/`pay_status`/`uv` 口径谓词不注入 ⇒ 数字静默失真）；`bundle_version` = 🔴 **fail-open**（G2-VERSION 永不触发）；`max_rows` = 请求级选项静默失效（恒 10000）。⇒ **只补 `assets` 键会把三条 fail-open 从"被掩盖"变成"被暴露"，比现状更坏** —— 这正是架构明令禁止"只修 assets"的理由，也是我的观测面（RL/告警）要盯 `default_predicates` 生效性的理由。
+
+### ④ 下一格的位置（W2C + W4 都点了，我登记为自己的读数责任）
+
+`gate_passed = 0`、`executing = 0` ⇒ **GATE3（EXPLAIN 成本）与 EXECUTE（真 DB + 身份 GUC）两条至今一帧未见过**。W4 明确：它的 `gate3_cost` 超时出路走的是 `run_gate3(sql, {"explain_error": True})` 的**短路 WARN**，不是真 EXPLAIN 路径；真路径按 **U-63** 必须经 **W2D 的 exec 受控入口**。⇒ **U-121 修完 ≠ 链路通**，第六格之后还有第七、第八格。架构因此驳回"修完就能演示"的写法，我照此重写演示口径：**近期演示走 clarify/refuse，不宣称 G-6 达标**。
+
+### ⑤ 本轮实测 / 未实测
+
+- ✅ 实测（**零 LLM、零额度**）：`git fetch` + `git log origin/main`（`8a4121a`/`417b056` 已在远端，我本地 0/0 同步）；`MIN_ADMITTED_FOR_P95 = 20` 在 `driver.py:316` 但**只用于写 caveat**（`:443-445`）⇒ U-120 成立；W6 读端 `eval/reporter.py:175-177` **已容忍 `latency_ms.p95 = null`**（过滤 None + 空则走不可判）⇒ 我修 U-120 不需要 W6 同步改，但仍要打招呼；`tests/contract/test_gate_seam_contract.py` 存在于 HEAD。
+- ❌ 未跑：G-6 跑批（判据④ 不过）、预检复跑（等 U-121）、`tests/integration`（会清 `embed_doc` = U-114）、迁移套件。**本轮一次模型调用都没花。**
+- ⚠️ 一处不是我、也不该我碰的脏文件：`backend/reports/w2-int/e2e_stage2_check.py`（只删了一行 `# -*- coding: utf-8 -*-`、无归属登记）。架构已要求 W2-INT/W2B 认领或还原。**我在每轮 `git status` 里都会看见它，但不 stage、不还原、不删除。**
