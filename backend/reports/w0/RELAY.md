@@ -403,3 +403,107 @@
 > ⚠️ 照抄 07 的顺序提醒：修完只到 **GATE2 之后** —— `gate3_cost`（EXPLAIN）与 `execute`
 > （真 DB + 身份 GUC）的判据源接缝**请在同一次里扫完**，别让"第六格"第三次重演"修一格才发现下一格"。
 
+---
+
+## 12 【U-121 家族第二个实例回执】`SqlExecutorPort` 端口面补齐（`aa494f6`，2026-09-21）
+
+### 12.0 一句话
+
+W2D `reports/w2d/RELAY.md §3b` 的请求已落：**唯一改动文件 = `app/core/contracts.py`** ——
+`fetch` 增 `effective_limit`（**必填**）、**新增 `explain`**、形状 `ExplainPlan` 归本文件。
+**一行实现未动。**
+
+### 12.1 🔴 我有一处**必须反着做** W2D 的建议
+
+W2D 写的是"形状可直接取 `app/exec/seam.py` 的 `ExplainPlan`"。**照抄会让 CI 必红**：
+`app/exec/seam.py` 是 **L2**、`app/core/contracts.py` 是 **L0**，07 §3.1 R-DEP-1 禁止 L0 依赖 L2。
+
+**已做正对照（不是推理）** —— 把 `from app.exec.seam import ExplainPlan` 注入 `contracts.py:48`：
+
+```
+R-DEP-1 分层依赖（只能依赖严格更低层） BROKEN
+R-DEP-2/N-01 … KEPT    R-DEP-3 … KEPT    R-DEP-4 … KEPT
+Contracts: 3 kept, 1 broken.                      exit=1
+
+Broken contracts → app.core is not allowed to import app.exec:
+  - app.core.contracts -> app.exec.seam (l.48)
+```
+
+还原 ⇒ `Contracts: 4 kept, 0 broken.`（`scripts/assert_importlinter.py` 同步 **DoD② 通过**）
+
+⇒ **正解与 U-121 第一步同一个动作**：形状归 L0（`contracts.py`），**L2 只能再导出**
+（`from app.core.contracts import ExplainPlan`）。两边各留一份定义 = 立第二份真相，本项目明禁。
+
+### 12.2 三个判断点
+
+| # | 判断 | 依据 |
+|---|---|---|
+| ① | `effective_limit` **故意不给默认值（必填）** | 它是 07 §8.6 `truncated` 判定的**唯一**正确口径（值 = `state.limit_injected`）。给默认值 ⇒ 调用方**静默漏传** ⇒ 判定口径静默失真 = 🔴 **fail-open**（与 U-121 里 `max_rows` 缺省方向同类）。"本轮没注入"由**值 `None`** 表达，不必再用默认值表达一次。**三个实现都写 `= None`** ⇒ 更宽松仍满足本声明 ⇒ **零实现改动** |
+| ② | `ExplainPlan` 归 `contracts.py`（不回抄 seam.py） | 见 §12.1 的正对照 |
+| ③ | `gate3_cost.py` 的 `rich_method(deps.executor, "explain", …)` 可以退休了 | 端口有 `explain` 后它就只在做"这个名字是否 callable"；`gate3_cost.py:11` 那句"**端口上没有它，缺即抛**"随之作废。⚠️ **那是 W4 的文件，我只提不动** |
+
+`ExplainPlan` 的注释里逐条钉了两条**不得混**的语义（W2D 的 `seam.py` 原有，我原样抬进 L0）：
+
+| 表达 | 含义 | gate3 结论 |
+|---|---|---|
+| 返回 `None` | 该方言**没有**这个能力（SQLite 沙箱，07 §17.4） | `SKIPPED`（"不可用 ≠ 通过"，§14.2 D6） |
+| **抛异常** | 有这个能力、但**本次** EXPLAIN 失败 | `WARN`（`explain_error`，§14.2 D5，**不阻断**） |
+
+### 12.3 跨窗口动作（谁该动什么）
+
+| 窗口 | 动作 | 位置 |
+|---|---|---|
+| **W2D** | 把 `ExplainPlan = list[dict[str, Any]] \| None` 改成**再导出**（`from app.core.contracts import ExplainPlan`），`__all__` 不变 ⇒ 5 条 `test_exec_seam.py` 不受影响 | `app/exec/seam.py:76` |
+| **W2D**（可选） | `ExecutorSeam.fetch` 的 `effective_limit` 也去默认值，与端口对齐。**不动也不红** —— `declared_call_face_mismatches` 对 face 内参数**豁免**默认值检查（`seam.py:159-166`），只是两边表述不一致 | `app/exec/seam.py:113` |
+| **W4** | `rich_method(…, "explain", …)` → 直接属性访问；删 `gate3_cost.py:11` 的过时注释 | `app/graph/nodes/gate3_cost.py:61` |
+| **W4 / W7** | **肯定面判据**由你们立（W2D §4 已给两条可直接照抄的口径：`_fullchain_deps.make_chain()` 绿档断言 `"gate_passed" in stages` + 正向对照；替身忠实性用 `declared_call_face_mismatches`）。**W0 不代写他窗口的判据** | `tests/contract/**` |
+| **架构** | **编号**：W2D 倾向并入 `U-121`（同一句病"生产端口的实际调用面 > 声明面"的两个实例）。**我不自占号** | 07 §4.8 |
+
+### 12.4 我另外核出的一条（不在 W2D 清单里）
+
+🔴 **`eval/` 无视 CI 的类型违规 —— 证据在，门禁看不见。**
+
+```
+$ cd backend && mypy ../eval/sqlite_exec.py
+..\eval\sqlite_exec.py:298: error: Unused "type: ignore" comment  [unused-ignore]
+..\eval\sqlite_exec.py:344: error: Return type "Coroutine[Any, Any, None]" of "explain"
+    incompatible with return type "Coroutine[Any, Any, list[dict[str, Any]]]"
+    in supertype "app.exec.executor.PgSqlExecutor"  [override]
+Found 2 errors in 1 file
+```
+
+`SqliteEvalExecutor(PgSqlExecutor)`（`eval/sqlite_exec.py:278`）把 `explain` 收窄成 `-> None`
+（沙箱恒 `None` ⇒ gate3 `SKIPPED`，**语义是对的**），但父类 `PgSqlExecutor.explain -> list[dict[str, Any]]`
+⇒ 覆盖签名不兼容。**CI 只跑 `mypy app`（`ci.yml:325`）** ⇒ `eval/` 永不进类型检查。
+
+**对照归因**：撤掉本轮回执的改动（`git checkout -- contracts.py`）后**同样 2 条** ⇒ **零新增**，
+纯属既存盲区。归属 = `eval/**`（W6）；我只登记。
+若将来给 `eval/` 开 mypy，**正解是把父类返回类型放宽到 `ExplainPlan`**（端口这次已经这么做了），
+而不是把子类的 `None` 改成别的 —— 那会把"方言不支持"的语义改坏。
+
+### 12.5 诚实边界（本条最容易说过头）
+
+- ⚠️ **抬进端口本身不会让任何现存测试变红**：`test_exec_seam.py` 查的是 `ExecutorSeam`（W2D 本地协议），
+  **不查端口**。删掉端口的 `explain` ⇒ 全套测试仍绿。这正是 W2D 说的"**判据不完整**"。
+  ⇒ 本轮**唯一的机械护栏是 R-DEP-1**（已正对照），而它护的是"形状别放错层"，
+  **不护**"端口面 == 图真实调用面"。后者得 W4/W7 立判据（见 §12.3）。
+- 未改任何实现（`app/exec/**`、`app/graph/**`、`eval/**` 一行未动）；未改 W4 的接缝测试；
+  未改 `seam.py`（归属 W2D，我只给 1 行改法）。
+- 工作区里 `reports/w4/HANDOFF.md` 与 `reports/w4/RELAY.md` 有 W4 的在制改动，**本窗口未暂存、未提交**。
+- 本轮**已推**（用户 2026-09-21 21:2x 明示授权）。
+
+### 12.6 验证读数（可复现）
+
+| 项 | 读数 |
+|---|---|
+| `ruff check .` | **All checks passed** |
+| `mypy app` | **Success / 147 source files** |
+| 契约自检（`python -c`） | `ExplainPlan` 在 `__all__` ✓ · 端口方法 = `['explain','fetch']` ✓ · `effective_limit` 默认值 = `inspect._empty`（**必填**）✓ · `fetch` 关键字 = `max_rows, statement_timeout_ms, effective_limit` ✓ · 值 = `list[dict[str, Any]] \| None` ✓ |
+| `lint-imports` | **Contracts: 4 kept, 0 broken** |
+| `scripts/assert_importlinter.py` | **DoD② 通过**（4 条契约均证明"脏了必红"） |
+| 正对照（L0→L2 注入） | 注入 ⇒ `R-DEP-1 BROKEN` + `app.core is not allowed to import app.exec` + exit 1；还原 ⇒ 4 kept |
+| `pytest -q`（全量） | **1 failed, 2212 passed, 6 skipped, 3 errors**（99.6s） |
+| 唯一 failed | `tests/contract/test_gate_seam_contract.py::test_plain_sql_passes_through_gate_seam` = **U-119 刻意红**（`8a4121a` 立的判据①） |
+| 3 errors | `tests/integration/test_retrieval_fts_pg.py`：本机 DSN 无 DDL 权限（**环境**，非代码） |
+| passed 较 §11 的 2207 **+5** | 正是 W2D `1143f99` 新增的 `tests/unit/test_exec_seam.py` 5 条 ⇒ 账对得上，非我引入 |
+
