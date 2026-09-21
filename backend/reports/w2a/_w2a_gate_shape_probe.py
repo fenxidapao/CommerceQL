@@ -11,6 +11,14 @@
    扁平 → ? ｜ 只补 `assets` 的**天真修法** → ? ｜ 完整 wrapper → ?；
 4. **判据④**：请求级 `max_rows` 到底能不能生效。
 
+⚠️ **`417b056` 之后本文件的作用变了（U-121 第二步已落地）**：生产侧已按 W0 `contracts.py`
+的形状实现 `SemanticBundleRuntime.guard_allowlist()`，于是：
+
+- §① 起**一律改用生产实现**取形状，`build_gate_criteria()` 降级为**独立对拍实现**
+  （两条独立推导逐值一致 ⇒ 形状不再是"谁说了算"的问题）；
+- §⑧ 原来记的"端口无入口"**已由 W0 `ae59c5c` 解决**，改为记录端口 5 方法后的可达性；
+- 新增 §⑩（生产 vs 探针逐值对拍）与 §⑪（**判据④ 活体**：`receiver_phone` 必须落 `G2-DENY`）。
+
 ⚠️ **前情（本文第一版写错过，已订正）**：`assets[*].columns` 该取"可见列"还是"声明全列"这件事，
 **不是本探针的发现**。W6 早已实测并落盘：`eval/redteam_eval.py:169-212`
 （`StructuralAllowlistBundle` docstring 逐字写着 `v_order_paid` 24 → 21 列、以及 gate2 必抛
@@ -81,7 +89,10 @@ def _ctx(role: Role = Role.ANALYST) -> IdentityContext:
 
 
 # ---------------------------------------------------------------------------
-# W2A 提案：从**真运行时**组装闸门形状（这就是要交给 W0 定形状的那份）
+# 独立对拍实现：从**真运行时**组装闸门形状
+#   ⚠️ `ae59c5c` 之后生产已有 `runtime.guard_allowlist()`（U-121 第二步）。
+#   本函数**不再是提案**，而是**第二条独立推导** —— 与生产实现逐值对拍（§⑩）。
+#   刻意不 import 生产实现来自证：两条路各自从 `LoadedBundle` 出发。
 # ---------------------------------------------------------------------------
 
 def build_gate_criteria(
@@ -92,6 +103,9 @@ def build_gate_criteria(
     columns_from: str = "declared",
 ) -> dict[str, Any]:
     """把闸门要的 7 个键从语义层**逐字派生**出来（不做业务发明）。
+
+    ⚠️ 生产实现是 `app/semantics/runtime.py::SemanticBundleRuntime.guard_allowlist`
+    （U-121 第二步）；本函数只作**独立对拍**用（§⑩），两者不一致即有一方错。
 
     三项非平凡变换（形状的难点就在这里，W0 定形状时必须写死）：
     - `columns`：运行时给**列名元组**，闸门要 **`{列名: 类型}`**（`_scope_tables` 调 `.keys()`，
@@ -187,6 +201,37 @@ class _WrapperBundle:
         return getattr(self._rt, name)
 
 
+class _FaceBundle:
+    """模拟 W2C 的两处待改，**只为读出"还差哪一步"**（本窗口不改 W2C 的文件）。
+
+    两档之间**只差一个因子** ⇒ 读数差异可归因到它（不是两个变量一起动）：
+
+    - `structural=False`：只把 `asset_allowlist` 换成生产 `guard_allowlist`
+      （即 `policy_gate.py:105` 那一行）—— 闸门 ④⑤ 仍读 `columns`（可见面）；
+    - `structural=True`：再让闸门 ④⑤ 的读取面切到 `all_columns`（W0 `RELAY.md` §11.2(2)
+      要求的"归属面可切换"）—— 模拟方式 = 把结构面挂到 `columns` 上。
+    """
+
+    def __init__(self, runtime: SemanticBundleRuntime, *, structural: bool) -> None:
+        self._rt = runtime
+        self._structural = structural
+
+    def asset_allowlist(self, ctx: IdentityContext) -> Mapping[str, Any]:
+        wrapper = self._rt.guard_allowlist(ctx)
+        if not self._structural:
+            return wrapper
+        return {
+            **wrapper,
+            "assets": {
+                physical: {**entry, "columns": entry["all_columns"]}
+                for physical, entry in wrapper["assets"].items()
+            },
+        }
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._rt, name)
+
+
 class _HarnessShim:
     """只补 W6 的 `structural_wrapper(harness)` 需要的两个属性，别的一概不提供。
 
@@ -271,35 +316,47 @@ def main() -> None:
     print(f"role = {ctx.role.value}")
     print()
 
-    # ---- ① 可产出性 ----
+    # ---- ① 可产出性（**改用生产实现**：`ae59c5c` 后 `guard_allowlist` 已存在）----
     flat = runtime.asset_allowlist(ctx)
     print("=== ① 可产出性核对（闸门要 7 键，语义层能给几个）===")
     print(f"  runtime.asset_allowlist(ctx) 顶层键 = {sorted(flat)[:3]} …（扁平，{len(flat)} 项）")
-    wrapper = build_gate_criteria(runtime, ctx)
+    wrapper = runtime.guard_allowlist(ctx)
     got = [k for k in GUARD_KEYS if k in wrapper]
     missing = [k for k in GUARD_KEYS if k not in wrapper]
-    print(f"  闸门 7 键：可产出 {len(got)}/7 {got}")
-    print(f"           需调用方传入 {missing or '无'}"
-          f"{'（语义层没有这个事实：请求级选项）' if missing else ''}")
+    print(f"  生产 runtime.guard_allowlist(ctx)  ：可产出 {len(got)}/7｜缺 {missing or '无'}")
+    probe_w = build_gate_criteria(runtime, ctx)
+    probe_missing = [k for k in GUARD_KEYS if k not in probe_w]
+    print(f"  对拍 build_gate_criteria()        ：可产出 {7 - len(probe_missing)}/7"
+          f"｜缺 {probe_missing or '无'}"
+          + ("（对拍实现只在调用方声明时给 `max_rows`；生产必须键常在、值可为 None）"
+             if probe_missing else ""))
     print(f"  assets 条目数 = {len(wrapper['assets'])}｜joins 条数 = {len(wrapper['joins'])}"
           f"｜deny 条数 = {len(wrapper['deny_columns'])}"
           f"｜谓词域数 = {len(wrapper['default_predicates'])}")
     sample = wrapper["assets"].get("v_order_paid", {})
     print(f"  样本 v_order_paid: logical={sample.get('logical_name')} "
-          f"domain={sample.get('domain')} 列数={len(sample.get('columns', {}))} "
+          f"grain={sample.get('grain')} domain={sample.get('domain')}")
+    print(f"    可见面 columns    : {len(sample.get('columns', {}))} 列｜"
           f"tenant_id 在内? {'tenant_id' in sample.get('columns', {})}")
+    print(f"    结构面 all_columns: {len(sample.get('all_columns', {}))} 列｜"
+          f"tenant_id 在内? {'tenant_id' in sample.get('all_columns', {})}")
     print(f"  样本 joins[0] = {wrapper['joins'][0] if wrapper['joins'] else None}")
     print()
 
     # ---- ② 列源之争：trimmed vs declared（W6 先发现，此处独立复现）----
     print("=== ② 🔴 `assets[].columns` 该取哪一份列？（W6 已实测，此处独立复现）===")
     trimmed = build_gate_criteria(runtime, ctx, columns_from="trimmed")
+    declared = build_gate_criteria(runtime, ctx, columns_from="declared")
     t_asset = trimmed["assets"]["v_order_paid"]
-    d_asset = wrapper["assets"]["v_order_paid"]
+    d_asset = declared["assets"]["v_order_paid"]
+    prod_entry = wrapper["assets"]["v_order_paid"]
     print(f"  trimmed（跟 asset_allowlist 走，角色裁剪后）: 列数={len(t_asset['columns'])} "
           f"tenant_id 在内? {'tenant_id' in t_asset['columns']}")
     print(f"  declared（语义包声明全列，runtime.asset()） : 列数={len(d_asset['columns'])} "
           f"tenant_id 在内? {'tenant_id' in d_asset['columns']}")
+    print(f"  生产 `guard_allowlist` 的两面             : 可见面={len(prod_entry['columns'])} 列｜"
+          f"结构面={len(prod_entry['all_columns'])} 列 ← 争点由 W0 这样闭合"
+          "（两个键并存，不是二选一）")
     print(f"  tenant_scoped = {d_asset['tenant_scoped']} "
           "→ policy_gate.py:145-149 断言 `tenant_scoped ⟺ 'tenant_id' in columns`")
     print(f"  ⇒ gate2 用 trimmed 的结果 : {_call_gate2(SQL_SIMPLE, ctx, _WrapperBundle(runtime, columns_from='trimmed'))}")
@@ -316,7 +373,7 @@ def main() -> None:
     print()
 
     # ---- ③ 与 W6 评测侧适配器交叉核对 ----
-    print("=== ③ 交叉核对：本提案 vs W6 `eval/harness.py::build_guard_allowlist` ===")
+    print("=== ③ 交叉核对：生产实现 vs W6 `eval/harness.py::build_guard_allowlist` ===")
     try:
         import harness as H  # type: ignore[import-not-found]
 
@@ -326,7 +383,18 @@ def main() -> None:
         print(f"  键集相同 = {sorted(w6) == sorted(wrapper)}｜值级差异键 = {diffs or '无（逐值一致）'}")
         if diffs:
             for k in diffs:
-                print(f"    - {k}: W6={str(w6.get(k))[:80]} … 本提案={str(wrapper.get(k))[:80]}")
+                print(f"    - {k}: W6={str(w6.get(k))[:80]} … 生产={str(wrapper.get(k))[:80]}")
+            print("    ⚠️ 逐键查明差异**性质**（都是编码层，不是判据层）：")
+            print("      · `assets`：生产每条多 `all_columns`（新契约的结构面）—— W6 侧由")
+            print("        `structural_wrapper()` 另补一个入口，**同一件事的两种落法**；")
+            print("      · `joins` / `deny_columns`：生产给 **tuple**（不可变，与 `policy()` 同源），")
+            print("        W6 给 **list** ⇒ Python 里 `list != tuple`。闸门两侧都只做")
+            print("        `set(...)` / `frozenset(...)` 归一，**对判定无影响**（§⑩ 归一后对拍）。")
+            w6a = w6["assets"]["v_order_paid"]
+            pa = wrapper["assets"]["v_order_paid"]
+            print(f"      · 归一后**可见面**逐值一致 ? "
+                  f"{dict(w6a['columns']) == dict(pa['columns'])}"
+                  f"（{len(w6a['columns'])} 列 vs {len(pa['columns'])} 列）")
         w6_cols = w6["assets"]["v_order_paid"]["columns"]
         print(f"  W6 的列源: tenant_id 在内? {'tenant_id' in w6_cols}（{len(w6_cols)} 列）")
         print("  ✅ 这一点**不是缺陷**：`build_guard_allowlist` 的刻意语义就是"
@@ -354,10 +422,12 @@ def main() -> None:
         **{k: wrapper[k] for k in ("bundle_version", "joins", "deny_columns",
                                    "default_predicates", "allowed_constants")},
     }
+    structural_al = _FaceBundle(runtime, structural=True).asset_allowlist(ctx)
     for label, al in (
-        ("扁平（= 生产现状）", flat),
+        ("扁平（= 生产现状：闸门读 `asset_allowlist`）", flat),
         ("只补 `assets` 键（天真修法）", naive),
-        ("完整 wrapper · declared", wrapper),
+        ("生产 `guard_allowlist`（`columns`=可见面 21 列 → gate1 档）", wrapper),
+        ("结构面档（`columns`:=`all_columns` 24 列 → gate2 档）", structural_al),
     ):
         print(f"  ── {label} ──")
         print(f"     简单 SQL   : {_call_gate1(SQL_SIMPLE, al)}")
@@ -368,8 +438,10 @@ def main() -> None:
     # ---- ⑤ gate2：归因与版本守卫（判据③）----
     print("=== ⑤ gate2：归因与版本守卫（判据③）===")
     wrapped = _WrapperBundle(runtime)
-    print(f"  扁平         : {_call_gate2(SQL_SIMPLE, ctx, runtime)}")
-    print(f"  wrapper      : {_call_gate2(SQL_SIMPLE, ctx, wrapped)}")
+    print(f"  扁平（生产现状）      : {_call_gate2(SQL_SIMPLE, ctx, runtime)}")
+    print(f"  探针自建档（declared）: {_call_gate2(SQL_SIMPLE, ctx, wrapped)}")
+    print("  ⚠️ 本节的档位都用**探针自建**的 wrapper；用**生产** `guard_allowlist` 的")
+    print("     三档读数在 §⑪（那才是 W2C 接手时面对的东西）。")
     print(f"  受限列 SQL   : {_call_gate2(SQL_DENIED, ctx, wrapped)}"
           "   ← 期望归因落 G2-DENY，而不是被 G2-ASSET 抢走")
     stale = _WrapperBundle(runtime, bump_version="1999.01.01.0")
@@ -418,8 +490,8 @@ def main() -> None:
 
     print()
     print("=== ⑧ 端口方法面：闸门 7 键各自「经 SemanticBundlePort」可达吗？ ===")
-    print("  （这一节回答的是「W2A 单独改 asset_allowlist 能不能修好」—— 不能的话，")
-    print("    形状决议就必须动 contracts.py，即 W0 的份）")
+    print("  ⚠️ 本节 `417b056` 的结论是 🔴「W2A 单独改形状修不好」。W0 `ae59c5c` 已按该结论")
+    print("     给端口加了 `guard_allowlist`（4 → 5 方法）⇒ 本节改为**复核新端口够不够用**。")
     from app.core.contracts import SemanticBundlePort
 
     port_methods = sorted(
@@ -428,34 +500,111 @@ def main() -> None:
     )
     print(f"  SemanticBundlePort 方法 = {port_methods}（{len(port_methods)} 个）")
     reach = [
-        ("bundle_version", "✅", "active_version()"),
-        ("deny_columns", "✅", "policy()['deny_columns']"),
-        ("default_predicates", "✅", "policy()['default_predicates']"),
-        ("allowed_constants", "✅", "包内无该声明区 ⇒ 空表，无需来源"),
-        ("assets", "⚠️", "只有 asset_allowlist()（**可见面**）；"
-                         "「声明全列」要 runtime.asset() —— **不在端口上**"),
-        ("joins", "❌", "runtime.joins() —— **不在端口上** ⇒ 经端口不可达"),
-        ("max_rows", "❌", "语义层没有这个事实（请求级）"),
+        ("bundle_version", "✅", "guard_allowlist()['bundle_version'] ← active_version()"),
+        ("deny_columns", "✅", "guard_allowlist()['deny_columns'] ← 与 policy() 同一派生"),
+        ("default_predicates", "✅", "guard_allowlist()['default_predicates'] ← 同一派生"),
+        ("allowed_constants", "✅", "包内无该声明区 ⇒ 空序列，键仍在"),
+        ("assets·可见面", "✅", "guard_allowlist()['assets'][*]['columns']"),
+        ("assets·结构面", "✅", "guard_allowlist()['assets'][*]['all_columns'] ← **新增入口**"),
+        ("joins", "✅", "guard_allowlist()['joins'] ← **新增入口**（已剥 `.列` 后缀）"),
+        ("max_rows", "✅", "guard_allowlist(ctx, max_rows=…) 关键字（请求级事实，须调用方给）"),
     ]
     for key, mark, how in reach:
-        print(f"    {mark} {key:18s}: {how}")
+        print(f"    {mark} {key:16s}: {how}")
     print("  ⇒ GraphDeps.semantics 的类型**就是** SemanticBundlePort（`graph/context.py:105`）")
-    print("    ⇒ `gate1_ast.py:52` 能调的只有那 4 个方法")
-    print("    ⇒ 🔴 结论：**W2A 单独改 `asset_allowlist` 的返回形状也修不好这条缝** ——")
-    print("      `joins` 与「声明全列」在端口上根本没有入口，必须动 `app/core/contracts.py`。")
-    print("      这与 `U-121` 把归属写成 W0 + W2A + W2C 三方是一致的（不是 W2A 一家的事）。")
+    print(f"    ⇒ `gate1_ast.py:52` 现可调 {len(port_methods)} 个方法（含 `guard_allowlist`）")
+    print("    ⇒ ✅ **已翻案**：7 键全部经端口可达 —— 6 个由本方法直接给，`max_rows` 由")
+    print("      调用方关键字给（端口给不了，也不该给：它不是语义层的事实）。")
+    print("    ⚠️ 仍未在端口上的富能力（`assets()` / `dimensions()` / `joins()`）只服务")
+    print("      planner / W6 覆盖度核对，调用方用 `getattr` 探测 —— 与闸门判据无关。")
 
     print()
-    print("=== ⑨ 结论 ===")
+    print("=== ⑨ 结论（记录 §①–⑧ 的判读；U-121 第二步落地后的复核见 §⑩⑪）===")
     print("  · 7 键里 6 键可由语义层逐字派生；`max_rows` 是请求级事实 ⇒ 必须作参数传入。")
     print("  · 形状无需新设计：W6 已在评测侧实现同一形状（见 ③），三项变换逐字一致。")
-    print("  · 🔴 真正的争点不是\"谁说了算\"，而是 **`assets[].columns` 只够一个面**（见 ②）：")
-    print("     可见面（planner/binding + gate1 解析）要裁剪；结构面（gate2 ④⑤）要全列。")
-    print("     单槽位放任一份都会有一方受损 ⇒ W0 定形状时必须显式回答"
-          "\"两个面怎么给\"，而不是只写一个 `columns`。")
-    print("  · '只补 assets 键' 见 ④：不是 fail-open，而是**更早的崩溃**。")
-    print("  · ⚠️ 本节第一版把 ② 报成\"本探针新发现\"——**错**，W6 已实测并落盘"
+    print("  · 🔴 争点不是谁说了算，而是 **`assets[].columns` 只够一个面**（见 ②）：")
+    print("     可见面（planner/binding + gate1 R06）要裁剪；结构面（gate2 ④⑤）要全列。")
+    print("     ✅ **W0 已裁**（`contracts.GuardAllowlistAsset`）：单槽位拆成 `columns` +")
+    print("     `all_columns` 两个键 —— 争点闭合，落点见 §⑩。")
+    print("  · 「只补 `assets` 键」见 ④：不是 fail-open，而是**更早的崩溃**。")
+    print("  · ⚠️ 本节第一版把 ② 报成「本探针新发现」——**错**，W6 已实测并落盘"
           "（`eval/redteam_eval.py:169-212`），已订正。")
+
+    # ---- ⑩ 生产实现 vs 探针独立推导：逐值对拍 ----
+    print()
+    print("=== ⑩ 对拍：生产 `guard_allowlist` vs 探针独立推导（两条路各自从 LoadedBundle 出发）===")
+    prod = runtime.guard_allowlist(ctx)
+    p_trim = build_gate_criteria(runtime, ctx, columns_from="trimmed")
+    p_decl = build_gate_criteria(runtime, ctx, columns_from="declared")
+
+    scalar_diffs: list[str] = []
+    col_diffs: list[str] = []
+    all_diffs: list[str] = []
+    for physical, pa in prod["assets"].items():
+        pb = p_trim["assets"][physical]
+        for key in ("logical_name", "domain", "tenant_scoped"):
+            if pa[key] != pb[key]:
+                scalar_diffs.append(f"{physical}.{key}")
+        if dict(pa["columns"]) != dict(pb["columns"]):
+            col_diffs.append(physical)
+        if dict(pa["all_columns"]) != dict(p_decl["assets"][physical]["columns"]):
+            all_diffs.append(physical)
+    joins_same = [tuple(j["on_columns"]) for j in prod["joins"]] == [
+        tuple(j["on_columns"]) for j in p_decl["joins"]
+    ]
+    deny_same = tuple(prod["deny_columns"]) == tuple(p_trim["deny_columns"])
+    preds_same = dict(prod["default_predicates"]) == dict(p_decl["default_predicates"])
+
+    print(f"  键数        : 生产 {len(prod)} 键｜对拍(trimmed) {len(p_trim)} 键"
+          "（对拍缺 `max_rows` 是**刻意**：它只在调用方声明时给）")
+    print(f"  标量键差异  : {scalar_diffs or '无'}")
+    print(f"  可见面不一致的资产 : {col_diffs or '无'}")
+    print(f"  结构面不一致的资产 : {all_diffs or '无'}")
+    print(f"  joins 一致（`on_columns` tuple/list 已归一） = {joins_same}")
+    print(f"  deny_columns 一致（同上归一）               = {deny_same}")
+    print(f"  default_predicates 一致                     = {preds_same}")
+    all_ok = not (scalar_diffs or col_diffs or all_diffs) and joins_same and deny_same and preds_same
+    print(f"  ⇒ {'✅ 两条独立推导逐值一致' if all_ok else '🔴 存在不一致 —— 必须查明哪一方错'}")
+    print("     ⚠️ 生产相对对拍的**结构性**差异只有两处，且都是契约要求、不是分歧：")
+    print("        ① 每条资产多 `grain`（`AssetAllowlistEntry` Required，对拍实现早于该契约）；")
+    print("        ② `max_rows` 键常在（值可为 None）—— 键在 = 调用方显式表态，缺键才是违约。")
+
+    # ---- ⑪ 判据④ 活体 ----
+    print()
+    print("=== ⑪ 判据④ 活体：`SELECT receiver_phone FROM v_order_paid` 必须落 G2-DENY ===")
+    from app.guard.policy_gate import extract_columns_with_assets  # gate2 第④步的输入函数
+
+    entry = prod["assets"]["v_order_paid"]
+    print("  【一】形状侧的两半判据（与消费方无关，今天即可查）：")
+    print(f"    · ④ 得先「认得出来」：`receiver_phone` ∈ all_columns ? "
+          f"{'receiver_phone' in entry['all_columns']}")
+    print(f"    · ④ 才「拒得掉」    ：`order_paid.receiver_phone` ∈ deny_columns ? "
+          f"{'order_paid.receiver_phone' in prod['deny_columns']}")
+    print(f"    · ⚠️ 可见面**不含**它（敏感列名不进 LLM 上下文，PRD §10.5④）："
+          f"in columns = {'receiver_phone' in entry['columns']}")
+    structural_view = _FaceBundle(runtime, structural=True).asset_allowlist(ctx)
+    print("  【二】第④步的**输入**（`extract_columns_with_assets`，真实现）"
+          "—— 直读「看不看得见越权列」：")
+    print(f"    喂可见面 : {extract_columns_with_assets(SQL_DENIED, prod)}")
+    print(f"    喂结构面 : {extract_columns_with_assets(SQL_DENIED, structural_view)}")
+    print("  【三】端到端 `run_gate2` 三档（每档只差一个因子 ⇒ 可作因果归因）：")
+    print("    (a) 今天：闸门仍读 `asset_allowlist`（扁平面没有 `assets` 键）")
+    print(f"        {_call_gate2(SQL_SIMPLE, ctx, runtime)}")
+    print("    (b) 只换方法（`policy_gate.py:105` → `guard_allowlist`）：")
+    print(f"        干净 SQL : {_call_gate2(SQL_SIMPLE, ctx, _FaceBundle(runtime, structural=False))}")
+    print(f"        受限列   : {_call_gate2(SQL_DENIED, ctx, _FaceBundle(runtime, structural=False))}")
+    print("    (c) 换方法 **且** ④⑤ 改读结构面（`all_columns`）：")
+    print(f"        干净 SQL : {_call_gate2(SQL_SIMPLE, ctx, _FaceBundle(runtime, structural=True))}")
+    print(f"        受限列   : {_call_gate2(SQL_DENIED, ctx, _FaceBundle(runtime, structural=True))}"
+          "   ← ✅ 判据达成")
+    print("  ⇒ 读法：")
+    print("    (a) 闸门**拿不到判据** ⇒ 真 SQL 恒 `G2-ASSET`（与 W7 预检的 R05 同因）；")
+    print("    (b) **只换方法不够**：⑤ 读可见面 ⇒ `tenant_scoped=true` 而 `tenant_id` 被裁掉")
+    print("        ⇒ 在**干净 SQL 上就抛 `ContractViolationError`**（闸门瘫痪）；且 ④ 的输入为空")
+    print("        ⇒ 越权列漏检（fail-open 的一半）。**这一步的归属 = W2C**：")
+    print("        `policy_gate` ⑤ 的读取面 + `_Auditor._resolve_column` 的归属面；")
+    print("    (c) 本投影的形状**够用**：④ 输入非空 ⇒ `G2-DENY`，干净 SQL 照常放行。")
+    print("        ⇒ W2A 侧交付完毕；④ 从「空转」转「活体」只差 W2C 把读取面切到 `all_columns`。")
 
 
 if __name__ == "__main__":

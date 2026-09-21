@@ -1,0 +1,213 @@
+W2A · U-121 第二步（guard_allowlist 实现）· 门禁与活体判据读数
+采集口径：HEAD + 时刻（2026-09-21 总控要求起沿用）
+
+HEAD                 = 2e2058a95c32ecb2472ef92043db162a3dd9ffb4
+origin/main 最新      = 2e2058a95c32ecb2472ef92043db162a3dd9ffb4
+采集时刻              = 2026-09-21T21:52:22+08:00
+python                = Python 3.13.14
+工作目录              = backend/
+语义包                = semantic/bundle_2026.09.14.1.yaml（version 2026.09.14.1 / candidate）
+
+本次改动（工作区）
+ M app/semantics/runtime.py
+ M reports/w2a/_w2a_gate_shape_probe.py
+ M tests/unit/test_semantics_loader.py
+?? reports/w2a/_gates_w2a_u121.txt
+
+=== 一、门禁（四道）===
+
+$ ruff check .
+All checks passed!
+
+$ mypy app
+Success: no issues found in 147 source files
+
+$ lint-imports
+--------------------------------------
+
+R-DEP-1 分层依赖（只能依赖严格更低层） KEPT
+R-DEP-2/N-01 确定性模块与 binding 禁止 import app.llm KEPT
+R-DEP-3 obs 内除 audit 外禁止依赖 repo（U-18 代价约束） KEPT
+R-DEP-4 retrieval 禁 LLM（refine 唯一豁免，P0 未实现） KEPT
+
+Contracts: 4 kept, 0 broken.
+
+$ pytest tests/unit tests/contract -q
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/contract/test_gate_seam_contract.py::test_plain_sql_passes_through_gate_seam
+1 failed, 1798 passed, 1 warning in 60.24s (0:01:00)
+
+=== 二、判据① 可兑现性：W4 的接缝测试换成 guard_allowlist 后的读数 ===
+（该文件归 W4，本窗口**未改**；此处只证明"换那一行"的即时收益）
+
+run_gate1(SQL, rt.guard_allowlist(ctx))            : passed= True | rule= None | LIMIT=10000 见改写 SQL: 'paid' LIMIT 10000
+run_gate2(SQL, ctx, rt)  ← 今天（读 asset_allowlist）: passed= False | rule= G2-ASSET
+W2C 换方法 + ④⑤ 切结构面后 → run_gate2          : passed= True | rule= None
+
+=== 三、探针全量输出（reports/w2a/_w2a_gate_shape_probe.py，§①–⑪）===
+
+语义包 = bundle_2026.09.14.1.yaml | version=2026.09.14.1 | status=candidate
+role = analyst
+
+=== ① 可产出性核对（闸门要 7 键，语义层能给几个）===
+  runtime.asset_allowlist(ctx) 顶层键 = ['v_campaign', 'v_dim_date', 'v_order_paid'] …（扁平，8 项）
+  生产 runtime.guard_allowlist(ctx)  ：可产出 7/7｜缺 无
+  对拍 build_gate_criteria()        ：可产出 6/7｜缺 ['max_rows']（对拍实现只在调用方声明时给 `max_rows`；生产必须键常在、值可为 None）
+  assets 条目数 = 8｜joins 条数 = 10｜deny 条数 = 9｜谓词域数 = 2
+  样本 v_order_paid: logical=order_paid grain=sub_order domain=orders
+    可见面 columns    : 21 列｜tenant_id 在内? False
+    结构面 all_columns: 24 列｜tenant_id 在内? True
+  样本 joins[0] = {'left': 'order_paid', 'right': 'product', 'on_columns': ('sku_id',)}
+
+=== ② 🔴 `assets[].columns` 该取哪一份列？（W6 已实测，此处独立复现）===
+  trimmed（跟 asset_allowlist 走，角色裁剪后）: 列数=21 tenant_id 在内? False
+  declared（语义包声明全列，runtime.asset()） : 列数=24 tenant_id 在内? True
+  生产 `guard_allowlist` 的两面             : 可见面=21 列｜结构面=24 列 ← 争点由 W0 这样闭合（两个键并存，不是二选一）
+  tenant_scoped = True → policy_gate.py:145-149 断言 `tenant_scoped ⟺ 'tenant_id' in columns`
+  ⇒ gate2 用 trimmed 的结果 : ❌ 抛异常 ContractViolationError: 语义包 tenant_scoped 与 tenant_id 列不一致（07 §7.4 双向断言） | detail={'asset': 'order_paid'}
+  ⇒ gate2 用 declared 的结果: passed=True
+  对照 W2C 夹具 guard_fixtures.build_allowlist(): 列数=24 tenant_id 在内? True ← 它取的是**声明全列**
+
+=== ③ 交叉核对：生产实现 vs W6 `eval/harness.py::build_guard_allowlist` ===
+  W6 适配器输出键 = ['allowed_constants', 'assets', 'bundle_version', 'default_predicates', 'deny_columns', 'joins']
+  键集相同 = False｜值级差异键 = ['allowed_constants', 'assets', 'deny_columns', 'joins']
+    - allowed_constants: W6=[] … 生产=()
+    - assets: W6={'v_order_paid': {'logical_name': 'order_paid', 'domain': 'orders', 'tenant_scop … 生产={'v_order_paid': {'logical_name': 'order_paid', 'domain': 'orders', 'grain': 'su
+    - deny_columns: W6=['campaign.tenant_id', 'order_paid.receiver_address', 'order_paid.receiver_phone … 生产=('campaign.tenant_id', 'order_paid.receiver_address', 'order_paid.receiver_phone
+    - joins: W6=[{'left': 'order_paid', 'right': 'product', 'on_columns': ['sku_id']}, {'left':  … 生产=({'left': 'order_paid', 'right': 'product', 'on_columns': ('sku_id',)}, {'left':
+    ⚠️ 逐键查明差异**性质**（都是编码层，不是判据层）：
+      · `assets`：生产每条多 `all_columns`（新契约的结构面）—— W6 侧由
+        `structural_wrapper()` 另补一个入口，**同一件事的两种落法**；
+      · `joins` / `deny_columns`：生产给 **tuple**（不可变，与 `policy()` 同源），
+        W6 给 **list** ⇒ Python 里 `list != tuple`。闸门两侧都只做
+        `set(...)` / `frozenset(...)` 归一，**对判定无影响**（§⑩ 归一后对拍）。
+      · 归一后**可见面**逐值一致 ? True（21 列 vs 21 列）
+  W6 的列源: tenant_id 在内? False（21 列）
+  ✅ 这一点**不是缺陷**：`build_guard_allowlist` 的刻意语义就是"镜像**生产可见面**"
+     （gate1 的 R06 靠它），给 gate2 的全列由**另一个**入口补：
+     `redteam_eval.structural_wrapper()` + `StructuralAllowlistBundle`。
+  ⚠️ 但 `max_rows` 两边都**刻意缺席**（W6 测试钉死）：False
+  ✅ W6 结构档列源: tenant_id 在内? True（24 列）｜其 gate2 = passed=True
+
+=== ④ 后果对照：同一批 SQL 喂真闸门 ===
+  ── 扁平（= 生产现状：闸门读 `asset_allowlist`） ──
+     简单 SQL   : passed=False｜rule_id=R05｜reason='查询涉及的数据范围超出你的权限'｜谓词=空｜（无改写 SQL：被拒）
+     JOIN SQL   : passed=False｜rule_id=R05｜reason='查询涉及的数据范围超出你的权限'｜谓词=空｜（无改写 SQL：被拒）
+     受限列 SQL : passed=False｜rule_id=R05｜reason='查询涉及的数据范围超出你的权限'｜谓词=空｜（无改写 SQL：被拒）
+  ── 只补 `assets` 键（天真修法） ──
+     简单 SQL   : ❌ 抛异常 AttributeError: 'tuple' object has no attribute 'keys'
+     JOIN SQL   : ❌ 抛异常 AttributeError: 'tuple' object has no attribute 'keys'
+     受限列 SQL : ❌ 抛异常 AttributeError: 'tuple' object has no attribute 'keys'
+  ── 生产 `guard_allowlist`（`columns`=可见面 21 列 → gate1 档） ──
+     简单 SQL   : passed=True｜谓词=['is_test_order = false', "refund_status <> 'refunded'", "pay_status = 'paid'"]｜LIMIT 10000｜ 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 10000
+     JOIN SQL   : passed=True｜谓词=['is_test_order = false', "refund_status <> 'refunded'", "pay_status = 'paid'"]｜LIMIT 10000｜d_status <> 'refunded' AND o.pay_status = 'paid' LIMIT 10000
+     受限列 SQL : passed=False｜rule_id=R06｜reason='查询包含受保护字段'｜谓词=空｜（无改写 SQL：被拒）
+  ── 结构面档（`columns`:=`all_columns` 24 列 → gate2 档） ──
+     简单 SQL   : passed=True｜谓词=['is_test_order = false', "refund_status <> 'refunded'", "pay_status = 'paid'"]｜LIMIT 10000｜ 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 10000
+     JOIN SQL   : passed=True｜谓词=['is_test_order = false', "refund_status <> 'refunded'", "pay_status = 'paid'"]｜LIMIT 10000｜d_status <> 'refunded' AND o.pay_status = 'paid' LIMIT 10000
+     受限列 SQL : passed=False｜rule_id=R07｜reason='查询包含受保护字段'｜谓词=空｜（无改写 SQL：被拒）
+
+=== ⑤ gate2：归因与版本守卫（判据③）===
+  扁平（生产现状）      : passed=False｜rule_id=G2-ASSET｜reason='查询涉及的数据范围超出你的权限'
+  探针自建档（declared）: passed=True
+  ⚠️ 本节的档位都用**探针自建**的 wrapper；用**生产** `guard_allowlist` 的
+     三档读数在 §⑪（那才是 W2C 接手时面对的东西）。
+  受限列 SQL   : passed=False｜rule_id=G2-DENY｜reason='查询包含受保护字段'   ← 期望归因落 G2-DENY，而不是被 G2-ASSET 抢走
+  版本错配     : passed=False｜rule_id=G2-VERSION｜reason='口径版本已更新，请重新发起提问'   ← 期望 G2-VERSION（扁平下 `snap_version is None` ⇒ **永不触发**）
+  受限列·trimmed : ❌ 抛异常 ContractViolationError: 语义包 tenant_scoped 与 tenant_id 列不一致（07 §7.4 双向断言） | detail={'asset': 'order_paid'}   ← 若返回 G2-DENY 则 ④ 仍工作；若抛 ContractViolationError 则 ④ **空转**且 ⑤ 先炸
+  受限列·declared: passed=False｜rule_id=G2-DENY｜reason='查询包含受保护字段'   ← 对照：全列下 ④ 正常工作
+
+=== ⑥ 判据④：请求级 max_rows 能不能生效 ===
+  不传         : passed=True｜谓词=['is_test_order = false', "refund_status <> 'refunded'", "pay_status = 'paid'"]｜LIMIT 10000｜ 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 10000
+  max_rows=200 : passed=True｜谓词=['is_test_order = false', "refund_status <> 'refunded'", "pay_status = 'paid'"]｜LIMIT 200｜<> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 200
+
+=== ⑦ 若「一律用声明全列」：gate1 的归因会怎么漂？ ===
+  （gate1 只用 columns 做**列归属解析** → 解析失败落 R06、解析成功再被 deny 落 R07）
+  · 干净列（两档都该放行）
+      可见列(trimmed)  : passed｜（放行，无 reason）
+      声明全列(declared): passed｜（放行，无 reason）
+  · 受限列·未限定
+      可见列(trimmed)  : rule_id=R06｜reason='查询包含受保护字段'
+      声明全列(declared): rule_id=R07｜reason='查询包含受保护字段'  ← ⚠️ 归因变了
+  · 受限列·已限定
+      可见列(trimmed)  : rule_id=R07｜reason='查询包含受保护字段'
+      声明全列(declared): rule_id=R07｜reason='查询包含受保护字段'
+  · 受限列·receiver_phone
+      可见列(trimmed)  : rule_id=R06｜reason='查询包含受保护字段'
+      声明全列(declared): rule_id=R07｜reason='查询包含受保护字段'  ← ⚠️ 归因变了
+  · 受限列·SELECT *
+      可见列(trimmed)  : rule_id=R03｜reason='查询字段过多，请指明你需要的字段'
+      声明全列(declared): rule_id=R03｜reason='查询字段过多，请指明你需要的字段'
+  ⇒ 结论：**两档都是拦住的**（安全性不变），但 `rule_id` 会漂：未限定受限列 R06 → R07。
+     ⚠️ **用户可见文案不漂**（两档同一句）⇒ 漂移只落内部统计与归因口径：
+     ① 已落盘的红队读数按 `rule_id` 归因，会跟着变；
+     ② W2C 的 `test_gate1_blocks_tenant_id_either_qualified_or_not` 断言的是**集合 {R06,R07}**，故容忍这次漂移（该测试不用改）。
+
+=== ⑧ 端口方法面：闸门 7 键各自「经 SemanticBundlePort」可达吗？ ===
+  ⚠️ 本节 `417b056` 的结论是 🔴「W2A 单独改形状修不好」。W0 `ae59c5c` 已按该结论
+     给端口加了 `guard_allowlist`（4 → 5 方法）⇒ 本节改为**复核新端口够不够用**。
+  SemanticBundlePort 方法 = ['active_version', 'asset_allowlist', 'guard_allowlist', 'policy', 'time_semantics']（5 个）
+    ✅ bundle_version  : guard_allowlist()['bundle_version'] ← active_version()
+    ✅ deny_columns    : guard_allowlist()['deny_columns'] ← 与 policy() 同一派生
+    ✅ default_predicates: guard_allowlist()['default_predicates'] ← 同一派生
+    ✅ allowed_constants: 包内无该声明区 ⇒ 空序列，键仍在
+    ✅ assets·可见面      : guard_allowlist()['assets'][*]['columns']
+    ✅ assets·结构面      : guard_allowlist()['assets'][*]['all_columns'] ← **新增入口**
+    ✅ joins           : guard_allowlist()['joins'] ← **新增入口**（已剥 `.列` 后缀）
+    ✅ max_rows        : guard_allowlist(ctx, max_rows=…) 关键字（请求级事实，须调用方给）
+  ⇒ GraphDeps.semantics 的类型**就是** SemanticBundlePort（`graph/context.py:105`）
+    ⇒ `gate1_ast.py:52` 现可调 5 个方法（含 `guard_allowlist`）
+    ⇒ ✅ **已翻案**：7 键全部经端口可达 —— 6 个由本方法直接给，`max_rows` 由
+      调用方关键字给（端口给不了，也不该给：它不是语义层的事实）。
+    ⚠️ 仍未在端口上的富能力（`assets()` / `dimensions()` / `joins()`）只服务
+      planner / W6 覆盖度核对，调用方用 `getattr` 探测 —— 与闸门判据无关。
+
+=== ⑨ 结论（记录 §①–⑧ 的判读；U-121 第二步落地后的复核见 §⑩⑪）===
+  · 7 键里 6 键可由语义层逐字派生；`max_rows` 是请求级事实 ⇒ 必须作参数传入。
+  · 形状无需新设计：W6 已在评测侧实现同一形状（见 ③），三项变换逐字一致。
+  · 🔴 争点不是谁说了算，而是 **`assets[].columns` 只够一个面**（见 ②）：
+     可见面（planner/binding + gate1 R06）要裁剪；结构面（gate2 ④⑤）要全列。
+     ✅ **W0 已裁**（`contracts.GuardAllowlistAsset`）：单槽位拆成 `columns` +
+     `all_columns` 两个键 —— 争点闭合，落点见 §⑩。
+  · 「只补 `assets` 键」见 ④：不是 fail-open，而是**更早的崩溃**。
+  · ⚠️ 本节第一版把 ② 报成「本探针新发现」——**错**，W6 已实测并落盘（`eval/redteam_eval.py:169-212`），已订正。
+
+=== ⑩ 对拍：生产 `guard_allowlist` vs 探针独立推导（两条路各自从 LoadedBundle 出发）===
+  键数        : 生产 7 键｜对拍(trimmed) 6 键（对拍缺 `max_rows` 是**刻意**：它只在调用方声明时给）
+  标量键差异  : 无
+  可见面不一致的资产 : 无
+  结构面不一致的资产 : 无
+  joins 一致（`on_columns` tuple/list 已归一） = True
+  deny_columns 一致（同上归一）               = True
+  default_predicates 一致                     = True
+  ⇒ ✅ 两条独立推导逐值一致
+     ⚠️ 生产相对对拍的**结构性**差异只有两处，且都是契约要求、不是分歧：
+        ① 每条资产多 `grain`（`AssetAllowlistEntry` Required，对拍实现早于该契约）；
+        ② `max_rows` 键常在（值可为 None）—— 键在 = 调用方显式表态，缺键才是违约。
+
+=== ⑪ 判据④ 活体：`SELECT receiver_phone FROM v_order_paid` 必须落 G2-DENY ===
+  【一】形状侧的两半判据（与消费方无关，今天即可查）：
+    · ④ 得先「认得出来」：`receiver_phone` ∈ all_columns ? True
+    · ④ 才「拒得掉」    ：`order_paid.receiver_phone` ∈ deny_columns ? True
+    · ⚠️ 可见面**不含**它（敏感列名不进 LLM 上下文，PRD §10.5④）：in columns = False
+  【二】第④步的**输入**（`extract_columns_with_assets`，真实现）—— 直读「看不看得见越权列」：
+    喂可见面 : []
+    喂结构面 : [('order_paid', 'receiver_phone')]
+  【三】端到端 `run_gate2` 三档（每档只差一个因子 ⇒ 可作因果归因）：
+    (a) 今天：闸门仍读 `asset_allowlist`（扁平面没有 `assets` 键）
+        passed=False｜rule_id=G2-ASSET｜reason='查询涉及的数据范围超出你的权限'
+    (b) 只换方法（`policy_gate.py:105` → `guard_allowlist`）：
+        干净 SQL : ❌ 抛异常 ContractViolationError: 语义包 tenant_scoped 与 tenant_id 列不一致（07 §7.4 双向断言） | detail={'asset': 'order_paid'}
+        受限列   : ❌ 抛异常 ContractViolationError: 语义包 tenant_scoped 与 tenant_id 列不一致（07 §7.4 双向断言） | detail={'asset': 'order_paid'}
+    (c) 换方法 **且** ④⑤ 改读结构面（`all_columns`）：
+        干净 SQL : passed=True
+        受限列   : passed=False｜rule_id=G2-DENY｜reason='查询包含受保护字段'   ← ✅ 判据达成
+  ⇒ 读法：
+    (a) 闸门**拿不到判据** ⇒ 真 SQL 恒 `G2-ASSET`（与 W7 预检的 R05 同因）；
+    (b) **只换方法不够**：⑤ 读可见面 ⇒ `tenant_scoped=true` 而 `tenant_id` 被裁掉
+        ⇒ 在**干净 SQL 上就抛 `ContractViolationError`**（闸门瘫痪）；且 ④ 的输入为空
+        ⇒ 越权列漏检（fail-open 的一半）。**这一步的归属 = W2C**：
+        `policy_gate` ⑤ 的读取面 + `_Auditor._resolve_column` 的归属面；
+    (c) 本投影的形状**够用**：④ 输入非空 ⇒ `G2-DENY`，干净 SQL 照常放行。
+        ⇒ W2A 侧交付完毕；④ 从「空转」转「活体」只差 W2C 把读取面切到 `all_columns`。

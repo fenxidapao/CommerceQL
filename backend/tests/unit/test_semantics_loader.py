@@ -17,7 +17,7 @@ from typing import Any
 import pytest
 import yaml
 
-from app.core.contracts import IdentityContext
+from app.core.contracts import GuardAllowlist, IdentityContext
 from app.core.enums import Role
 from app.core.errors import SemanticBundleError
 from app.semantics import (
@@ -397,6 +397,135 @@ class TestRuntime:
         assert "tenant_id" in admin["v_order_paid"]["columns"]
         # 被排除资产不出现
         assert "v_dim_date" in analyst  # tenant_scoped=false 的公共表也在白名单
+
+    # ------------------------------------------------------------------
+    # U-121：闸门判据投影 `guard_allowlist`（与上面的扁平断言**并排**，两个投影的
+    # 约束必须同时可读 —— 只钉一个投影正是那条缝能存活这么久的原因）
+    # ------------------------------------------------------------------
+
+    def test_guard_allowlist_carries_all_seven_keys(
+        self, runtime: SemanticBundleRuntime
+    ) -> None:
+        """7 键**全部在位**（缺键 = 违约，`GuardAllowlist` 把它们全声明为 Required）。"""
+        wrapper = runtime.guard_allowlist(_identity())
+        assert set(wrapper) == set(GuardAllowlist.__required_keys__)
+        assert set(wrapper) == {
+            "bundle_version",
+            "assets",
+            "joins",
+            "deny_columns",
+            "default_predicates",
+            "allowed_constants",
+            "max_rows",
+        }
+        assert wrapper["bundle_version"] == runtime.active_version()
+        # `allowed_constants`：包内**没有**该声明区（grep 实证）⇒ 空序列，**不是不给键**
+        assert wrapper["allowed_constants"] == ()
+        # `max_rows` 是请求级事实：调用方不声明 ⇒ 照实填 None（不许拿 EXEC_MAX_ROWS 冒充）
+        assert wrapper["max_rows"] is None
+        assert runtime.guard_allowlist(_identity(), max_rows=200)["max_rows"] == 200
+
+    def test_guard_allowlist_has_two_column_faces(self, runtime: SemanticBundleRuntime) -> None:
+        """🔴 列面**两个**：可见面裁 deny、结构面全列 —— 缺任一面都有一副失效形态。"""
+        entry = runtime.guard_allowlist(_identity())["assets"]["v_order_paid"]
+        # 可见面：deny 列不在。这是 gate1 R06 的解析面，也是**唯一**允许出站到 LLM 的列面
+        # （PRD §10.5④：敏感列不进 schema 上下文 ⇒ 模型不知道存在 ⇒ 不会生成查询）。
+        assert "tenant_id" not in entry["columns"]
+        assert "receiver_phone" not in entry["columns"]
+        # 结构面：全列都在 —— "得先认得出来，才拒得掉"（gate2 ④ 的列归属解析靠它）
+        assert "tenant_id" in entry["all_columns"]
+        assert "receiver_phone" in entry["all_columns"]
+        assert len(entry["columns"]) == 21
+        assert len(entry["all_columns"]) == 24
+        # 两面**同源**（同一次 `Asset.columns` 派生）：可见面 ⊆ 结构面，类型逐列一致
+        assert set(entry["columns"]) < set(entry["all_columns"])
+        for name, pg_type in entry["columns"].items():
+            assert entry["all_columns"][name] == pg_type
+
+    def test_guard_allowlist_types_are_declared_pg_types(
+        self, runtime: SemanticBundleRuntime
+    ) -> None:
+        """列面是 `{列名: PG 类型}`（**不是**列名元组，也不是 `unknown` 占位）。
+
+        W6 的评测适配层为"运行时不透出类型"补过一次（`eval/harness.py:149-151` 的
+        `known.get(name, "unknown")`）；本投影把类型给足 ⇒ 那层补偿不再需要
+        （U-119 要求评测侧适配层随本条落地而整体删除）。
+        """
+        asset = runtime.asset("order_paid")
+        assert asset is not None
+        declared = {c.name: c.type for c in asset.columns}
+        entry = runtime.guard_allowlist(_identity())["assets"]["v_order_paid"]
+        assert entry["all_columns"] == declared
+        # 可见面 = 声明全列减去 analyst 被裁的三列（deny 全集里属于本资产的）
+        assert entry["columns"] == {
+            name: pg_type
+            for name, pg_type in declared.items()
+            if name not in {"tenant_id", "receiver_phone", "receiver_address"}
+        }
+
+    def test_guard_allowlist_agrees_with_flat_projection(
+        self, runtime: SemanticBundleRuntime
+    ) -> None:
+        """派生不变式：两个投影**同源** —— 标量键逐值相等、列名集相等（只列面编码不同）。
+
+        列面编码差异是**刻意的**（契约 §`AssetAllowlistEntry`：扁平面给列名序列、
+        闸门面给 `{列名: 类型}`）—— 本用例把"差异只允许存在于编码、不允许存在于**列集**"
+        钉死，防两处各派生出不同的可见列。
+        """
+        ctx = _identity()
+        flat = runtime.asset_allowlist(ctx)
+        guard = runtime.guard_allowlist(ctx)
+        assert set(flat) == set(guard["assets"])
+        for physical, entry in flat.items():
+            gate_entry = guard["assets"][physical]
+            for key in ("logical_name", "domain", "grain", "tenant_scoped"):
+                assert gate_entry[key] == entry[key], (physical, key)
+            assert set(gate_entry["columns"]) == set(entry["columns"]), physical
+
+    def test_guard_allowlist_role_trimming_and_deny_independence(
+        self, runtime: SemanticBundleRuntime
+    ) -> None:
+        """可见面随角色裁；`deny_columns` **角色无关**（`platform_admin` 也不回填空列）。"""
+        analyst = runtime.guard_allowlist(_identity(Role.ANALYST))
+        admin = runtime.guard_allowlist(_identity(Role.PLATFORM_ADMIN))
+        assert "tenant_id" not in analyst["assets"]["v_order_paid"]["columns"]
+        assert "tenant_id" in admin["assets"]["v_order_paid"]["columns"]
+        # 结构面表达"事实"，不表达"权限" ⇒ 两个角色逐列相等
+        assert (
+            analyst["assets"]["v_order_paid"]["all_columns"]
+            == admin["assets"]["v_order_paid"]["all_columns"]
+        )
+        # deny 是**绝对拒绝**（07 §7.4 / U-84 裁定）：两个角色逐值相等，且非空
+        assert analyst["deny_columns"] == admin["deny_columns"]
+        assert "order_paid.receiver_phone" in analyst["deny_columns"]
+        assert len(analyst["deny_columns"]) == 9
+
+    def test_guard_allowlist_joins_strip_column_suffix(
+        self, runtime: SemanticBundleRuntime
+    ) -> None:
+        """`joins[].left/right` 必须是**逻辑名**：包内写 `<逻辑名>.<列>`，闸门按逻辑名比对。
+
+        不剥后缀 ⇒ `ast_gate._join_verdict` 的 `{left, right}` 永不等于
+        `{left_logical, right_logical}` ⇒ **所有 join 落 R10**（过严，不是放行）。
+        """
+        wrapper = runtime.guard_allowlist(_identity())
+        joins = wrapper["joins"]
+        assert len(joins) == len(runtime.joins()) == 10
+        for j in joins:
+            assert "." not in j["left"], j
+            assert "." not in j["right"], j
+            assert j["on_columns"], j
+        assert {"left": "order_paid", "right": "product", "on_columns": ("sku_id",)} in joins
+
+    def test_guard_allowlist_policy_keys_share_one_derivation(
+        self, runtime: SemanticBundleRuntime
+    ) -> None:
+        """`deny_columns` / `default_predicates` 与 `policy()` **同一份派生**（防两处漂移）。"""
+        wrapper = runtime.guard_allowlist(_identity())
+        pol = runtime.policy()
+        assert tuple(wrapper["deny_columns"]) == tuple(pol["deny_columns"])
+        assert dict(wrapper["default_predicates"]) == dict(pol["default_predicates"])
+        assert "is_test_order = false" in wrapper["default_predicates"]["orders"]
 
     def test_time_semantics_from_bundle(self, runtime: SemanticBundleRuntime) -> None:
         ts = runtime.time_semantics()

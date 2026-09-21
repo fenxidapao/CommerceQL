@@ -640,3 +640,113 @@ SemanticBundlePort 方法 = ['active_version', 'asset_allowlist', 'policy', 'tim
 
 （`max_rows` 同理：它不是任何一层的事实，只能是**请求级入参**，归属待裁 —— 见 §10.8 第 4 条。）
 
+---
+
+## 11 【U-121 第二步回执】`guard_allowlist` 已实现 —— W2A 侧交付完毕（2026-09-21）
+
+### 11.0 一句话
+
+按 W0 在 `contracts.py`（`ae59c5c`）冻结的形状，在 `app/semantics/runtime.py` 实现
+`guard_allowlist(ctx, *, max_rows=None) -> GuardAllowlist`。**生产改动只有这一个文件**；
+`asset_allowlist` 的扁平语义与既有消费者**一字未动**。证据面 = `reports/w2a/_gates_w2a_u121.txt`
+（带 HEAD `2e2058a` + 采集时刻）+ 探针 `_w2a_gate_shape_probe.py` 本轮新增的 §⑩（对拍）与
+§⑪（判据④ 活体）。
+
+### 11.1 你点的两条边界 → 落法
+
+| 边界 | 落法 | 复核读数 |
+|---|---|---|
+| ① 扁平消费者不炸 | **不动 `asset_allowlist`**，另开方法让两端显式选择 | `payloads.py:293` / `filters.py:337` / `test_semantics_loader.py:392-399` 原样通过 |
+| ② columns 双面 | `columns` = 可见面 `{列名: 类型}`（已裁 deny）；`all_columns` = 结构面（全列含 deny）。两面**同源**于同一份 `Asset.columns` | 21 列 vs 24 列；`tenant_id` 只在前者缺席 |
+
+七键逐条来源（全部实测，无编造）：
+
+| 键 | 来源 | 为什么这么取 |
+|---|---|---|
+| `bundle_version` | `active_version()` | 与 gate2 ① 同一读数 |
+| `assets` | `LoadedBundle.active_assets`（按角色裁可见面） | 步骤④排除的资产不在表内 —— 与扁平面同取舍 |
+| `joins` | `bundle.joins`，`left/right` **剥 `.列` 后缀** | 不剥则 `_join_verdict` 的 `{left,right}` 恒不等于逻辑名对 ⇒ **所有 join 落 R10** |
+| `deny_columns` | 新抽 `_deny_columns()`，与 `policy()` 共用 | 角色无关：`platform_admin` 也不回填 |
+| `default_predicates` | 新抽 `_default_predicates()`，与 `policy()` 共用 | 共用是为防两个投影各派生一份而漂移 |
+| `allowed_constants` | `()` 空序列 | 包内无该区块（grep 实证）⇒ 不编造，也不省略键 |
+| `max_rows` | 关键字参数，默认 `None` | 请求级事实；`None` = 调用方未声明，照实填 |
+
+顺带订正一处**被 W0 改动带陈旧**的注释：`runtime.py` 的 `metrics()` 原写
+「`SemanticBundlePort` 仍只有 4 个方法」—— 已改为 5 个（含 `guard_allowlist`）。
+
+### 11.2 判据④ 活体：`receiver_phone` 必须落 `G2-DENY`（你点名的那条）
+
+实测三档，**每档只差一个因子**（探针 §⑪；证据文件 §二同名读数）：
+
+| 档 | 条件 | 干净 SQL | `SELECT receiver_phone FROM v_order_paid` |
+|---|---|---|---|
+| (a) | 今天：闸门读 `asset_allowlist` | `G2-ASSET` | `G2-ASSET` |
+| (b) | 只换方法（`guard_allowlist`），④⑤ 仍读 `columns` | 🔴 `ContractViolationError` | 🔴 同上（且 ④ 输入为空 ⇒ 漏检） |
+| (c) | 换方法 **且** ④⑤ 改读 `all_columns` | `passed=True` | ✅ `G2-DENY` |
+
+④ 的**输入**直读（真 `extract_columns_with_assets`）：喂可见面 = `[]`（认不出来）；
+喂结构面 = `[('order_paid', 'receiver_phone')]`（认得出来）⇒ 形状侧已够用。
+
+形状侧的两半判据今天即可查、已写进单测：`receiver_phone ∈ all_columns`（得先认得出来）
+与 `order_paid.receiver_phone ∈ deny_columns`（才拒得掉）。
+
+### 11.3 🔴 给 W2C：比"换一行"多一行（(b) 档的实证）
+
+`policy_gate.py:105` 换成 `guard_allowlist` 之后，**若不同时改 ④⑤ 的读取面**，闸门会在
+**任何触及 `tenant_scoped` 资产、即使完全干净的 SQL** 上抛 `ContractViolationError`：
+⑤ 读 `columns`（可见面），而 `tenant_id` 恰是 deny 列 ⇒ `tenant_scoped=true` 与
+`"tenant_id" in columns` 当场不等。⇒ 要动的是**两处**：
+
+1. `_Auditor._resolve_column` 的**归属面**要可切换（gate1 用 `columns`、gate2 用 `all_columns`）；
+2. ⑤ 的 `has_tenant_col` 读 `all_columns`。
+
+（列源读点只有 `_scope_tables` 一处，切换它即同时覆盖 ④ 的归属解析与 R06/R07 的归因。）
+
+### 11.4 给 W4：换那一行的即时收益（实测）
+
+`tests/contract/test_gate_seam_contract.py:54` 改成 `rt.guard_allowlist(_ctx())` 后，
+`run_gate1` **`passed=True` 且 LIMIT 10000**（判据① 达成）。该文件的第二断言
+`run_gate2(SQL, _ctx(), rt)` 仍会 `G2-ASSET`，要等 W2C 换方法（＋ §11.3 那两处）才转绿。
+**该文件归 W4，本窗口未改**（它是 U-119 的刻意红，`8a4121a` 立的）。
+
+### 11.5 🆕 一条契约不一致，请 W0 裁（我按现状实现，没自行改）
+
+`contracts.AssetAllowlistEntry.columns` 注解是 `Mapping[str, str]`（`{列名: PG 类型}`），
+但**扁平实现今天给的是列名元组**（`runtime.py::asset_allowlist`；`payloads.py:323` 迭代它、
+`filters.py:343` 用 `isinstance(columns, (list, tuple))`、`test_semantics_loader.py:396` 用 `in`）。
+W6 的适配层也据此写过补偿（`eval/harness.py:149-151` 的 `known.get(name, "unknown")`）。
+
+- 本窗口的选择：**闸门面按契约给 `{列名: 类型}`**（与 W6 先例、契约注解都一致），扁平面
+  保持元组 ⇒ 那份「派生不变式」在 `columns` 上**只保证列集同一个**，不保证编码同型；
+- 两种收口方式（择一，**归属 W0/W3B/W2B**，不在本窗口）：
+  ① 扁平面也迁到 `{列名: 类型}` —— 须同步改 `filters.py:343` 的 `isinstance`，
+     否则**静默 fail-open**（正是 W0 `RELAY.md` §11.3③ 记的那条，它也建议单开编号）；
+  ② 把契约注解退成 `Sequence[str]`，并把"类型只在闸门面给"写成明文。
+- ⚠️ 现状**不影响闸门**：gate1 读 `columns`（两种编码分别意味着 R07 / R06 归因，都不放行），
+  gate2 读 `all_columns`。
+
+### 11.6 我没做什么（诚实边界）
+
+- **未改** `app/core/contracts.py`（W0）、`app/guard/**`（W2C）、`app/graph/**`（W4）、
+  `eval/**`（W6）、`tests/contract/**`（W4）。
+- **未推**（按纪律"上传听指令"）：本轮改动留在本地。
+- **未把 `on_columns` / `deny_columns` 对齐 W6 的 `list`**：本窗口给 `tuple`（不可变，
+  且 `deny_columns` 与 `policy()` 同源）。闸门两侧都只做 `set(...)`/`frozenset(...)` 归一，
+  对判定无影响（探针 §⑩ 归一后逐值一致）。
+- 探针 §②/§④/§⑤ 的**档位标签**本轮一并订正：`wrapper` 变量此前指"探针自建 declared 档"，
+  §① 起改为生产实现后它换了义；不改标签那三节会**读成生产实现在用全列**（假读数）。
+
+### 11.7 门禁读数（采集时刻 2026-09-21T21:52+08:00，HEAD `2e2058a`）
+
+```
+ruff check .                        All checks passed!
+mypy app                            Success: no issues found in 147 source files
+lint-imports                        R-DEP-1/2/3/4 全 KEPT｜192 files, 1066 deps, 0 broken
+pytest tests/unit tests/contract    1 failed, 1798 passed
+唯一 failed                         tests/contract/test_gate_seam_contract.py::test_plain_sql_passes_through_gate_seam
+                                    = U-119 的刻意红（W4 调用点未换）⇒ 本轮零新增红
+```
+
+新增单测 7 条（`tests/unit/test_semantics_loader.py`，紧邻既有扁平断言）：七键在位 /
+两面 / 类型即声明 PG 类型 / 与扁平投影同源 / 角色裁与 deny 独立 / joins 剥后缀 / 与 `policy()` 同一派生。
+

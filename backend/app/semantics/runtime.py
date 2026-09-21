@@ -12,6 +12,13 @@
 | `TimeSemantics` 注出（N-26：时间口径只来自语义包） | 时间区间解析（→ W3/W4 按本口径执行） |
 | deny / mask / 谓词的策略透出（§7.4 / §8.7 的判据） | SQL 判定（→ W2C guard） |
 
+⚠️ **两个投影、两种形状，各自显式声明（U-121）**：本模块对外给**两份**白名单视图 ——
+`asset_allowlist(ctx)`（**扁平** `{物理名: 条目}`，给 `planner` / `binding`）与
+`guard_allowlist(ctx, *, max_rows=None)`（**7 键 wrapper**，给 `guard/ast_gate` / `guard/policy_gate`）。
+二者**同源于同一份 `LoadedBundle`**；消费方**不得**互相派生（"闸门自己从扁平拼判据"正是
+U-121 那条缝的成因：同一条真 SQL 在生产里必 `R05`）。形状由 `app/core/contracts.py`
+（W0 冻结）声明，本模块只负责**如实产出**，不自行发明键。
+
 ⚠️ **确定性纪律（N-01 / R-DEP-2）**：本模块禁 import `app.llm`，且**没有任何方法**
 调外部服务 —— 同一输入恒同一输出，离线可测。
 
@@ -26,7 +33,13 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from app.core.contracts import IdentityContext, TimeSemantics
+from app.core.contracts import (
+    GuardAllowlist,
+    GuardAllowlistAsset,
+    GuardAllowlistJoin,
+    IdentityContext,
+    TimeSemantics,
+)
 from app.semantics.loader import LoadedBundle
 from app.semantics.models import (
     Alias,
@@ -42,7 +55,8 @@ __all__ = ["SemanticBundleRuntime"]
 
 
 class SemanticBundleRuntime:
-    """实现 `SemanticBundlePort`（`active_version` / `asset_allowlist` / `time_semantics` / `policy`）。
+    """实现 `SemanticBundlePort`（`active_version` / `asset_allowlist` / `guard_allowlist` /
+    `time_semantics` / `policy`；五方法是 `ae59c5c` 后的端口全量）。
 
     另暴露 L1/L2/L3 与黑话的确定性查找面 —— W2B（检索）、W2C（gate1 白名单/谓词）、
     W3C（绑定四层的 L1–L3 数据）、W4（`resolved_terms` 填充）都从这里取数，
@@ -84,7 +98,7 @@ class SemanticBundleRuntime:
         self._applies_to_roles = frozenset(roles)
 
     # ------------------------------------------------------------------
-    # SemanticBundlePort 四方法（签名与 contracts.py 逐字对齐）
+    # SemanticBundlePort 五方法（签名与 contracts.py 逐字对齐）
     # ------------------------------------------------------------------
 
     def active_version(self) -> str:
@@ -124,6 +138,92 @@ class SemanticBundleRuntime:
             }
         return result
 
+    def guard_allowlist(
+        self, ctx: IdentityContext, *, max_rows: int | None = None
+    ) -> GuardAllowlist:
+        """闸门判据的**唯一形状**（U-121；`asset_allowlist` 的姊妹投影）。
+
+        7 个键**全部必填**（缺键 = 违约，见 `contracts.GuardAllowlist`；**明令禁止**
+        只补 `assets` 一键 —— 那会把一条 fail-closed 换成三条 fail-open）：
+        `bundle_version` / `assets` / `joins` / `deny_columns` / `default_predicates` /
+        `allowed_constants` / `max_rows`。
+
+        🔴 **`assets[]` 带两个列面，不是一个**（U-121 子事实 2 / W0 `RELAY.md` §11.1）：
+
+        | 面 | 键 | 内容 | 谁读 |
+        |---|---|---|---|
+        | 可见面 | `columns` | `{列名: PG 类型}`，**已裁 `deny_columns`** | gate1 的 R06 列解析 |
+        | 结构面 | `all_columns` | `{列名: PG 类型}`，**全列含 deny** | gate2 ④ 敏感列复核 / ⑤ `tenant_id` 双向断言 / R17 类型 |
+
+        ⚠️ **两面缺一不可**，各有一副失效形态（这就是"必须两个面"的实证理由）：
+        - 只给结构面（`columns` 也填全列）⇒ `deny_columns` 一旦缺，`colname in columns`
+          成立 ⇒ **敏感列被放行**（fail-open；07 v1.6.4 子事实 4 那句"缺 deny 仍 fail-closed"
+          **只在可见面下成立**）；
+        - 只给可见面（不另立 `all_columns`）⇒ gate2 ④ **认不出** `receiver_phone` 的归属
+          ⇒ 列不出表就检不出 ⇒ **越权列漏检**；且 ⑤ 在 `tenant_scoped=true` 的资产上
+          **当场 `ContractViolationError`**（`tenant_id` 恰是 deny 列）——
+          这是 fail-open 的一半，比崩溃更值得记。
+
+        ⚠️ `deny_columns` **角色无关**（07 §7.4 / U-84 裁定）：`platform_admin` 也**不**回填空列。
+        它表达的是"绝对拒绝"，不是"本角色能不能看"——后者才是可见面裁的那件事。
+
+        ⚠️ `max_rows` 是**请求级事实**，语义层无从得知 ⇒ 只能由调用方经关键字传入
+        （`app/graph/nodes/gate1_ast.py` 侧的 `state["options"]["max_rows"]`）。
+        键**必在**，"必在"≠"必非空"：调用方未声明时**照实填 `None`** —— `ast_gate._effective_limit`
+        对 `None` 已走退化分支到硬上限，**不得**拿 `GraphDeps.max_rows`（那是 `EXEC_MAX_ROWS`）冒充。
+
+        ⚠️ `allowed_constants`：本包**没有**该声明区块（grep 实证）⇒ 给**空序列**。
+        不编造，也**不省略键**（省略 = R14 少一类来源，fail-closed）。
+
+        ⚠️ 与扁平投影的关系（**派生不变式**）：`assets[p]` 与 `asset_allowlist(ctx)[p]`
+        同源于同一份 `LoadedBundle.active_assets` —— 四个标量键（`logical_name` / `domain` /
+        `grain` / `tenant_scoped`）**逐值相等**，列面也**是同一个可见列集**，只是：
+        ①本投影带 PG 类型（`{列名: 类型}`，扁平面给的是列名元组）、②本投影**多**一个 `all_columns`。
+        两面都从 `Asset.columns` 这一份声明派生 ⇒ 结构上不可能漂移；谁要是绕过它自己拼，
+        就重新制造了 U-121。
+        """
+        deny_applies = ctx.role.value in self._applies_to_roles
+
+        assets: dict[str, GuardAllowlistAsset] = {}
+        for logical_name, asset in self._loaded.active_assets.items():
+            if deny_applies:
+                visible_names = self._allowlist.get(asset.physical_asset)
+                if visible_names is None:
+                    continue  # 整资产被 deny 清空（与 asset_allowlist 同一取舍，§6.1④）
+            else:
+                visible_names = asset.column_names
+            visible = frozenset(visible_names)
+            assets[asset.physical_asset] = GuardAllowlistAsset(
+                logical_name=logical_name,
+                domain=asset.domain,
+                grain=asset.grain,
+                tenant_scoped=asset.tenant_scoped,
+                # 两面**同源**（同一份 Asset.columns），只差"裁不裁 deny"——不是两份真相
+                columns={c.name: c.type for c in asset.columns if c.name in visible},
+                all_columns={c.name: c.type for c in asset.columns},
+            )
+
+        return GuardAllowlist(
+            # 与 active_version() 同一读数：gate2 ① 用它判"请求锚定的口径是否已下线"（§5.7）
+            bundle_version=self.active_version(),
+            assets=assets,
+            joins=tuple(
+                GuardAllowlistJoin(
+                    # 包内 `left/right` 是 `<逻辑名>.<列>`（SCHEMA §6.2），而闸门拿它跟
+                    # **逻辑名**比（`ast_gate._join_verdict` 的 `pair = {left, right}` vs `left_logical`）
+                    # ⇒ 必须剥掉 `.列` 后缀，否则 join 恒落 R10。
+                    left=str(j.left).split(".", 1)[0],
+                    right=str(j.right).split(".", 1)[0],
+                    on_columns=tuple(str(c) for c in (j.on_columns or ())),
+                )
+                for j in self._loaded.bundle.joins
+            ),
+            deny_columns=self._deny_columns(),
+            default_predicates=self._default_predicates(),
+            allowed_constants=(),
+            max_rows=max_rows,
+        )
+
     def time_semantics(self) -> TimeSemantics:
         """时间口径 —— **只能来自语义包**（N-26）；注入 `ClockPort` 的上下文。"""
         meta = self._loaded.bundle.meta
@@ -132,6 +232,21 @@ class SemanticBundleRuntime:
             fiscal_year_start_month=meta.fiscal_year_start_month,
             week_starts_on=meta.week_starts_on,
         )
+
+    def _deny_columns(self) -> tuple[str, ...]:
+        """deny 列全集（`<逻辑名>.<列>` 形态，**角色无关**）。
+
+        `policy()` 与 `guard_allowlist()` **共用本方法** —— 两处各写一遍会让
+        "闸门拿到的 deny 集"与"策略面读到的 deny 集"存在漂移空间。
+        """
+        return tuple(sorted(self._loaded.deny_columns))
+
+    def _default_predicates(self) -> dict[str, tuple[str, ...]]:
+        """数据域 → 默认谓词 SQL 片段（同一个共用理由，见 `_deny_columns`）。"""
+        return {
+            domain: tuple(dp.predicate for dp in dps)
+            for domain, dps in self._loaded.bundle.default_predicates.items()
+        }
 
     def policy(self) -> Mapping[str, Any]:
         """策略透出（W2C gate 的判据源）：deny_columns / mask_rules / 谓词 / 适用角色。"""
@@ -142,13 +257,10 @@ class SemanticBundleRuntime:
             for r in policy.mask_rules
         )
         return {
-            "deny_columns": tuple(sorted(self._loaded.deny_columns)),
+            "deny_columns": self._deny_columns(),
             "applies_to_roles": tuple(sorted(self._applies_to_roles)),
             "mask_rules": mask_rules,
-            "default_predicates": {
-                domain: tuple(dp.predicate for dp in dps)
-                for domain, dps in bundle.default_predicates.items()
-            },
+            "default_predicates": self._default_predicates(),
         }
 
     # ------------------------------------------------------------------
@@ -249,8 +361,9 @@ class SemanticBundleRuntime:
     def metrics(self) -> tuple[Metric, ...]:
         """全部指标定义（**含 draft / deprecated**，按包声明序）。
 
-        ⚠️ 契约未变：`SemanticBundlePort`（W0 冻结）仍只有 4 个方法，
-        本方法与 `assets()` / `dimensions()` / `joins()` 同属**可选能力**，
+        ⚠️ 契约未变：`SemanticBundlePort`（W0 冻结）自 `ae59c5c` 起有 **5** 个方法
+        （`active_version` / `asset_allowlist` / `guard_allowlist` / `time_semantics` / `policy`），
+        本方法与 `assets()` / `dimensions()` / `joins()` 仍**不在端口上**，属**可选能力**，
         调用方必须用 `getattr` 探测（见 `app/planner/payloads.py::_sorted_metrics`）。
         """
         return self._loaded.bundle.metrics
