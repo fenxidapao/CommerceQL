@@ -1,6 +1,6 @@
 # W2C RELAY —— 跨窗口转达件（唯一转达入口）
 
-> 归属：W2C（`app/guard/**`）｜日期：2026-09-16｜状态：**阶段 2C 代码完成，待架构裁定 3 项 + W2A 对齐 1 项**
+> 归属：W2C（`app/guard/**`）｜初版日期：2026-09-16｜状态：**阶段 2C 已交付并 push（`9e2bd7e`/`c02f97a`/`a9ccec9`）；`U-62/63/64` 已裁定；`U-121`（P0）的形状由 W0 定，本窗待其落地后消费（见 §6）**
 
 ---
 
@@ -60,3 +60,69 @@
 - gate2 "敏感字段二次审批（P1）"：07 §7.4 表内 P1 项，接口预留位未实现（P0 无令牌通道），与 07 §13.6 一致。
 - R14 第③类"语义包内声明的白名单常量"：当前 bundle 无声明区 → `allowed_constants=[]`；W1A 若增补声明区，guard 零改动（读 allowlist 键）。
 - `SHOP_LIMITED_NOTICE` 固定文案内容：07 只规定"固定文案"未给文本，W2C 给了默认值（`policy_gate.py`），措辞请 06/W4 复核。
+
+## 6. `U-121` allowlist 形状接缝 —— **本节是"消费方需求"，不是"形状定义"**（2026-09-21）
+
+> **定位声明**：下表是 W2C **作为消费方**对入参形状的**需求输入**，**不是契约**。形状所有权在 **W0**（`app/core/**`），依据 = `07` v1.6.4 §4.8 的 `U-121` 裁定（W0 定形状 / W2A 实现 / W2C 消费并删自造口径）。**任何窗口不得把本节当契约引用**；W0 定的形状若与本节不一致，**以 W0 为准**，本节随新形状重写。
+
+### 6.1 W2C 立场：不主张形状所有权
+
+- 闸门要的 7 键出自 `app/guard/ast_gate.py:16-24` 的**我方 docstring**（原文写作"入参形状"）—— **无任何上游依据**，是"把自己写的入参说明当成了端口契约"。
+- **扁平才是端口的既成契约**：`app/planner/payloads.py:293`、`app/binding/filters.py:337` 两个生产消费者按扁平用；`tests/unit/test_semantics_loader.py:394-401` 在真实现上把扁平钉住。
+- 根因不在任一侧的实现：`app/core/contracts.py:288` 的 `asset_allowlist(ctx) -> Mapping[str, Any]` **只声明签名、不声明形状** ⇒ 无人违约、也无人对齐。
+- ⇒ **W2C 的动作 = 消费新方法 + 删掉自造形状的口径**；不是定义形状，也不是在 guard 内部自适配。
+
+### 6.2 两个取用点的入参形态**不对称**，落点分属两窗
+
+| 取用点 | 现状 | 换新方法由谁改 |
+|---|---|---|
+| `app/graph/nodes/gate1_ast.py:52` | `deps.semantics.asset_allowlist(identity)` → `:55` `run_gate1(sql, allowlist)`（**映射**入参） | **W4**（节点侧换方法） |
+| `app/graph/nodes/gate2_policy.py:57` | `run_gate2(sql, identity, deps.semantics)`（**端口**入参；内部 `policy_gate.py:105` 自行取 allowlist） | **W2C**（改 `policy_gate.py:105`）；W4 的传入形态**不变** |
+
+- ⚠️ **两处必须一起换**：只换 gate1 调用点、gate2 仍走扁平 ⇒ 同一 run 内 gate1 用新形状、gate2 用旧扁平 = **两个真相**，且**不会有任何测试发现**（那正是 `U-119` 的病灶）。
+- ⚠️ **两处各自取一次是刻意设计**（`gate1_ast.py:13-18`：共用一份会让 gate2 的复核变成"复核自己刚给的那份"）⇒ 换形状时**不要顺手合并成一次取用**。
+
+### 6.3 消费方需求清单（键 → 消费行 → 需要类型 → 缺了的方向）
+
+| 键 | W2C 消费点 | 需要类型（我方实测的用法） | 缺了的方向 |
+|---|---|---|---|
+| `assets` | `ast_gate:500/:544/:638/:748/:751/:879`、`policy_gate:106` | `{物理名: {logical_name, columns: {列名: 类型}}}` | fail-closed（全拒 `R05`） |
+| `joins` | `ast_gate:501/:640` | `[{left, right, on_columns[]}]`（**逻辑名**对） | fail-closed（所有 join 落 `R10`） |
+| `deny_columns` | `ast_gate:502/:666/:693`、`policy_gate:140` | `frozenset["逻辑名.列名"]` | fail-closed，但**归因退化**（`R07`→`R06`）、gate2 `G2-DENY` 失效 |
+| `default_predicates` | `ast_gate:444`（`:445` 空即 `return []`） | `{域: [SQL 片段]}` | 🔴 **fail-open**：口径谓词一条不注入 ⇒ GMV 等**静默算进测试单/退款单/未支付单** |
+| `bundle_version` | `policy_gate:109` | `str` | 🔴 **fail-open**：`G2-VERSION` 永不触发 ⇒ 违反 §5.7"旧版本必须显式失效" |
+| `max_rows` | `ast_gate:370` | 可选 `int` | 请求级 `max_rows` **静默失效**（恒 `L = 10000`），`api/deps.py` 的 `EXEC_MAX_ROWS` 送不进来 |
+| `allowed_constants` | `ast_gate:314` | — | ⚠️ **不走 allowlist 入参**：它是 `run_gate1` 的独立形参 `literal_allowlist` ⇒ 形状设计须交代它从哪来，但**不必进 wrapper** |
+
+- 三条 fail-open（`default_predicates` / `bundle_version` / 以及 `max_rows` 的"请求级参数失效"）是本清单最该被 W0 看见的部分：**它们今天被 `assets` 缺失所产生的"全拒"掩盖着**。
+
+### 6.4 `columns` 必须**双面**（采纳 W2A `RELAY §10` 的实测，我方未独立复现）
+
+同一个槽位被两类读者以**相反**要求共用：
+
+| 面 | 读者 | 要求 |
+|---|---|---|
+| **可见面** | gate1 列解析（`ast_gate:748/:751`）+ planner/binding | 裁掉 deny 列（"不许被提出来"） |
+| **结构面** | gate2 ④ 敏感列复核（`policy_gate:140-143`）、`_column_type`（`ast_gate:879`，R17 隐式转换） | **全列 + 类型** `{列名: 类型}`（"得先认得出来，才拒得掉"） |
+
+- 喂**裁剪列**给 gate2 的实测后果（W2A）：⑤ 双向断言当场抛 `ContractViolationError`；④ 对 `SELECT receiver_phone FROM v_order_paid` **完全没响**（= fail-open 的一半，比崩溃更值得记）。
+- `columns` 是 `tuple` 而非 `{列名:类型}` 时的后果：`ast_gate:751` 的 `(...).keys()` **抛 `AttributeError`**（W6 探针正崩在此），且 `_column_type`（`:879`）恒 `None` ⇒ **R17 恒不触发**。
+
+### 6.5 三条禁止修法（`07` v1.6.4 原文，W2C 逐条认可）
+
+1. **只补 `assets` 键** —— `R05` 一解除，其余六条从"被掩盖"变"被暴露"，含两条 fail-open ⇒ **比现状全拒更坏**。（W2A 实测的中间态更早：只补 `assets` ⇒ 三条 SQL 全 `AttributeError`，不是 fail-open 而是崩溃。）
+2. **guard 内部自适配** —— `joins` 与 `bundle_version` **在现有端口里根本不存在**（`policy()` 不给）⇒ 派生不出来，多写一层也修不好。
+3. **给夹具补 wrapper 键** —— `U-119` 明文禁止；那正是今天 CI 恒绿的做法本身。
+
+### 6.6 W2C 动作清单（总控 2026-09-21 21:58 下达）与当前状态
+
+| # | 动作 | 状态 |
+|---|---|---|
+| 1 | gate1/gate2 **两处一起**改为消费新方法 | ⏳ **待 W0/W2A 落地**（形状未定就动 = 第三次自造形状） |
+| 2 | 删除 guard 内部任何自造形状 / 自适配 | ⏳ 同上。**现状核查**：`ast_gate`/`policy_gate` 只做 `.get(key)` 读取，**没有形状转换层**；要删的是 `ast_gate.py:16-24` 那段"入参形状"docstring 的口径（随动作 1 一起改） |
+| 3 | 保留 R06/R07 归因漂移的既有断言口径（集合 `{R06,R07}`） | ✅ **已确认无需改测试** —— `test_gate1_blocks_tenant_id_either_qualified_or_not` 断言的正是集合；依据 = W2A §10 的两档归因实测表 |
+| — | 本节落盘（消费方需求，非形状定义） | ✅ 2026-09-21 |
+
+### 6.7 顺序提醒（`07` 原文，不是 W2C 的动作项）
+
+修完 `U-121` 只到 **GATE2 之后**：`gate3_cost`（EXPLAIN 计划 JSON 的来源，`U-63` 已裁"必须经 W2D `exec` 受控入口、节点不得自建连接"）与 `execute`（真 DB + 身份 GUC）**至今 `gate_passed` / `executing` 都为 0，一条都没验过** ⇒ 建议按 `07` 的要求**一次扫完 GATE2/GATE3/EXECUTE 的"判据源"接缝**，别让第六格第三次重演"修一格才发现下一格"。
