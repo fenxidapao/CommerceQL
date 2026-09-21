@@ -1,17 +1,89 @@
 {
   "reader": "eval/reporter.loadtest_pressure + eval/gates.evaluate_gates(pressure=…)",
   "schema_string_read_verbatim": "w7.loadtest.receipt/1",
-  "n_files": 10,
+  "n_files": 13,
   "verdict_tally": {
-    "UNVERIFIED": 10
+    "UNVERIFIED": 11,
+    "FAIL": 2
   },
   "any_pass": false,
+  "stale_true_cells_total": 14,
+  "null_caveat_scenarios_total": 1,
   "files": {
+    "deploy/loadtest/baseline_c5.json": {
+      "verdict": "UNVERIFIED",
+      "measured": "P95 = 3676ms，分母 = 口径未标注 = U-106 之前的回执",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/baseline_c5.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T05:33:05+00:00",
+        "P95 分母 = 口径未标注 = U-106 之前的回执 ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 3676ms",
+        "回执**无** `admission` 分桶 ⇒ 被限流/被拒的请求有多少无从核对（U-106 之前的形状）",
+        "🔴 回执既无 `admission` 分桶也无 `latency_ms_all_ms` ⇒ 这条 P95 的分母无从核对；它的 `g6_caveat` 为 null 只说明产自 U-106 之前的判据，**不说明它干净** ⇒ 不判 PASS"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 0,
+      "p95_scope_values": [
+        "None"
+      ],
+      "has_admission": false,
+      "g6_p95_le_8s_values": [
+        "True"
+      ],
+      "stale_true_cells": 1,
+      "null_caveat_scenarios": 1,
+      "has_all_ms_p95": false
+    },
+    "deploy/loadtest/preflight_r4.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 42529ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/preflight_r4.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-21T08:59:40+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 42529ms；全请求 P95 = 42529ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=5, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 5 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "False"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/preflight_r5.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 187729ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/preflight_r5.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-21T10:34:54+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 187729ms；全请求 P95 = 187729ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=5, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 5 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "False"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
     "deploy/loadtest/receipt.json": {
       "verdict": "UNVERIFIED",
       "measured": "P95 = 7268ms，分母 = 口径未标注 = U-106 之前的回执",
       "caveats": [
-        "数据来源 = w7.loadtest.receipt/1 @ E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\deploy\\loadtest\\receipt.json（4/4 个场景有 p95，取最大），取数时点 = 2026-09-19T05:27:26+00:00",
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/receipt.json（4/4 个场景有 p95，取最大），取数时点 = 2026-09-19T05:27:26+00:00",
         "P95 分母 = 口径未标注 = U-106 之前的回执 ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
         "准入样本 P95 = 7268ms",
         "回执**无** `admission` 分桶 ⇒ 被限流/被拒的请求有多少无从核对（U-106 之前的形状）",
@@ -23,13 +95,18 @@
         "None"
       ],
       "has_admission": false,
+      "g6_p95_le_8s_values": [
+        "True"
+      ],
+      "stale_true_cells": 4,
+      "null_caveat_scenarios": 0,
       "has_all_ms_p95": false
     },
     "deploy/loadtest/receipt_burst.json": {
       "verdict": "UNVERIFIED",
       "measured": "P95 = 275ms，分母 = 口径未标注 = U-106 之前的回执",
       "caveats": [
-        "数据来源 = w7.loadtest.receipt/1 @ E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\deploy\\loadtest\\receipt_burst.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:12:42+00:00",
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/receipt_burst.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:12:42+00:00",
         "P95 分母 = 口径未标注 = U-106 之前的回执 ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
         "准入样本 P95 = 275ms",
         "回执**无** `admission` 分桶 ⇒ 被限流/被拒的请求有多少无从核对（U-106 之前的形状）",
@@ -41,13 +118,18 @@
         "None"
       ],
       "has_admission": false,
+      "g6_p95_le_8s_values": [
+        "True"
+      ],
+      "stale_true_cells": 1,
+      "null_caveat_scenarios": 0,
       "has_all_ms_p95": false
     },
     "deploy/loadtest/receipt_burst_pool.json": {
       "verdict": "UNVERIFIED",
       "measured": "P95 = 7268ms，分母 = 口径未标注 = U-106 之前的回执",
       "caveats": [
-        "数据来源 = w7.loadtest.receipt/1 @ E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\deploy\\loadtest\\receipt_burst_pool.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:17:10+00:00",
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/receipt_burst_pool.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:17:10+00:00",
         "P95 分母 = 口径未标注 = U-106 之前的回执 ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
         "准入样本 P95 = 7268ms",
         "回执**无** `admission` 分桶 ⇒ 被限流/被拒的请求有多少无从核对（U-106 之前的形状）",
@@ -59,13 +141,18 @@
         "None"
       ],
       "has_admission": false,
+      "g6_p95_le_8s_values": [
+        "True"
+      ],
+      "stale_true_cells": 1,
+      "null_caveat_scenarios": 0,
       "has_all_ms_p95": false
     },
     "deploy/loadtest/receipt_drain.json": {
       "verdict": "UNVERIFIED",
       "measured": "P95 = 5010ms，分母 = 口径未标注 = U-106 之前的回执",
       "caveats": [
-        "数据来源 = w7.loadtest.receipt/1 @ E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\deploy\\loadtest\\receipt_drain.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:21:01+00:00",
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/receipt_drain.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:21:01+00:00",
         "P95 分母 = 口径未标注 = U-106 之前的回执 ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
         "准入样本 P95 = 5010ms",
         "回执**无** `admission` 分桶 ⇒ 被限流/被拒的请求有多少无从核对（U-106 之前的形状）",
@@ -77,13 +164,18 @@
         "None"
       ],
       "has_admission": false,
+      "g6_p95_le_8s_values": [
+        "True"
+      ],
+      "stale_true_cells": 1,
+      "null_caveat_scenarios": 0,
       "has_all_ms_p95": false
     },
     "deploy/loadtest/receipt_drain2.json": {
       "verdict": "UNVERIFIED",
       "measured": "P95 = 7059ms，分母 = 口径未标注 = U-106 之前的回执",
       "caveats": [
-        "数据来源 = w7.loadtest.receipt/1 @ E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\deploy\\loadtest\\receipt_drain2.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:22:33+00:00",
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/receipt_drain2.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:22:33+00:00",
         "P95 分母 = 口径未标注 = U-106 之前的回执 ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
         "准入样本 P95 = 7059ms",
         "回执**无** `admission` 分桶 ⇒ 被限流/被拒的请求有多少无从核对（U-106 之前的形状）",
@@ -95,13 +187,18 @@
         "None"
       ],
       "has_admission": false,
+      "g6_p95_le_8s_values": [
+        "True"
+      ],
+      "stale_true_cells": 1,
+      "null_caveat_scenarios": 0,
       "has_all_ms_p95": false
     },
     "deploy/loadtest/receipt_drain3.json": {
       "verdict": "UNVERIFIED",
       "measured": "P95 = 5913ms，分母 = 口径未标注 = U-106 之前的回执",
       "caveats": [
-        "数据来源 = w7.loadtest.receipt/1 @ E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\deploy\\loadtest\\receipt_drain3.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:27:47+00:00",
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/receipt_drain3.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:27:47+00:00",
         "P95 分母 = 口径未标注 = U-106 之前的回执 ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
         "准入样本 P95 = 5913ms",
         "回执**无** `admission` 分桶 ⇒ 被限流/被拒的请求有多少无从核对（U-106 之前的形状）",
@@ -113,13 +210,18 @@
         "None"
       ],
       "has_admission": false,
+      "g6_p95_le_8s_values": [
+        "True"
+      ],
+      "stale_true_cells": 1,
+      "null_caveat_scenarios": 0,
       "has_all_ms_p95": false
     },
     "deploy/loadtest/receipt_lock.json": {
       "verdict": "UNVERIFIED",
       "measured": "P95 = 3026ms，分母 = 口径未标注 = U-106 之前的回执",
       "caveats": [
-        "数据来源 = w7.loadtest.receipt/1 @ E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\deploy\\loadtest\\receipt_lock.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T05:27:26+00:00",
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/receipt_lock.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T05:27:26+00:00",
         "P95 分母 = 口径未标注 = U-106 之前的回执 ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
         "准入样本 P95 = 3026ms",
         "回执**无** `admission` 分桶 ⇒ 被限流/被拒的请求有多少无从核对（U-106 之前的形状）",
@@ -131,13 +233,18 @@
         "None"
       ],
       "has_admission": false,
+      "g6_p95_le_8s_values": [
+        "True"
+      ],
+      "stale_true_cells": 1,
+      "null_caveat_scenarios": 0,
       "has_all_ms_p95": false
     },
     "deploy/loadtest/receipt_quota.json": {
       "verdict": "UNVERIFIED",
       "measured": "P95 = 2469ms，分母 = 口径未标注 = U-106 之前的回执",
       "caveats": [
-        "数据来源 = w7.loadtest.receipt/1 @ E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\deploy\\loadtest\\receipt_quota.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T05:29:10+00:00",
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/receipt_quota.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T05:29:10+00:00",
         "P95 分母 = 口径未标注 = U-106 之前的回执 ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
         "准入样本 P95 = 2469ms",
         "回执**无** `admission` 分桶 ⇒ 被限流/被拒的请求有多少无从核对（U-106 之前的形状）",
@@ -149,13 +256,18 @@
         "None"
       ],
       "has_admission": false,
+      "g6_p95_le_8s_values": [
+        "True"
+      ],
+      "stale_true_cells": 1,
+      "null_caveat_scenarios": 0,
       "has_all_ms_p95": false
     },
     "deploy/loadtest/receipt_steady.json": {
       "verdict": "UNVERIFIED",
       "measured": "P95 = 2394ms，分母 = 口径未标注 = U-106 之前的回执",
       "caveats": [
-        "数据来源 = w7.loadtest.receipt/1 @ E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\deploy\\loadtest\\receipt_steady.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:12:10+00:00",
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/receipt_steady.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:12:10+00:00",
         "P95 分母 = 口径未标注 = U-106 之前的回执 ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
         "准入样本 P95 = 2394ms",
         "回执**无** `admission` 分桶 ⇒ 被限流/被拒的请求有多少无从核对（U-106 之前的形状）",
@@ -167,13 +279,18 @@
         "None"
       ],
       "has_admission": false,
+      "g6_p95_le_8s_values": [
+        "True"
+      ],
+      "stale_true_cells": 1,
+      "null_caveat_scenarios": 0,
       "has_all_ms_p95": false
     },
     "deploy/loadtest/receipt_steady_pool.json": {
       "verdict": "UNVERIFIED",
       "measured": "P95 = 6190ms，分母 = 口径未标注 = U-106 之前的回执",
       "caveats": [
-        "数据来源 = w7.loadtest.receipt/1 @ E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\deploy\\loadtest\\receipt_steady_pool.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:15:40+00:00",
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/receipt_steady_pool.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-19T06:15:40+00:00",
         "P95 分母 = 口径未标注 = U-106 之前的回执 ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
         "准入样本 P95 = 6190ms",
         "回执**无** `admission` 分桶 ⇒ 被限流/被拒的请求有多少无从核对（U-106 之前的形状）",
@@ -185,8 +302,13 @@
         "None"
       ],
       "has_admission": false,
+      "g6_p95_le_8s_values": [
+        "True"
+      ],
+      "stale_true_cells": 1,
+      "null_caveat_scenarios": 0,
       "has_all_ms_p95": false
     }
   },
-  "note": "读端**不做未知键校验**（W7 刻意不升 schema 版本号，新增字段在读的路径之外）；判定口径：`g6_caveat` 非空 ⇒ 至多 UNVERIFIED；p95 只标了非全请求口径 ⇒ 至多 PARTIAL；有 `latency_ms_all_ms` ⇒ 用全请求分位数判。"
+  "note": "读端**不做未知键校验**（W7 刻意不升 schema 版本号，新增字段在读的路径之外）；判定口径：`g6_caveat` 非空 ⇒ 至多 UNVERIFIED；p95 只标了非全请求口径 ⇒ 至多 PARTIAL；有 `latency_ms_all_ms` ⇒ 用全请求分位数判。🔴 2026-09-21 起再加一条：caveat 为 null **但**既无 `admission` 又无全请求分位数 ⇒ 也判不了达标（那个 null 只代表产自 U-106 之前的判据）。同轮把扫描面从 `receipt*.json` 扩到 `*.json` —— 旧 glob 恰好漏掉了唯一出 PASS 的 baseline_c5.json。"
 }
