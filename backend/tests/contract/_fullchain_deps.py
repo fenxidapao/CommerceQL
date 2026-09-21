@@ -306,6 +306,7 @@ class FullChainPlanner:
         sql: str = GREEN_SQL,
         understand_error: Exception | None = None,
         plan_error: Exception | None = None,
+        plan_blocked_issues: Sequence[str] = (),
         sql_error: Exception | None = None,
         repair_sqls: Sequence[str] = (),
     ) -> None:
@@ -313,6 +314,7 @@ class FullChainPlanner:
         self._sql = sql
         self._understand_error = understand_error
         self._plan_error = plan_error
+        self._plan_blocked_issues = tuple(plan_blocked_issues)
         self._sql_error = sql_error
         self._repair_sqls = list(repair_sqls)
         self.understand_calls = 0
@@ -334,6 +336,16 @@ class FullChainPlanner:
         self.plan_calls += 1
         if self._plan_error is not None:
             raise self._plan_error
+        if self._plan_blocked_issues:
+            # U-115 测试用：模型自拒（有阻塞项、空 metrics）→ `plan_blocked` 路径。
+            blocked = Plan(metrics=[], blocking_issues=list(self._plan_blocked_issues))
+            return PlanOutcome(
+                plan=blocked,
+                plan_summary=blocked.to_summary(),
+                meta=_META,
+                attempts=1,
+                latency_ms=1,
+            )
         return PlanOutcome(
             plan=_PLAN,
             plan_summary=_PLAN.to_summary(),
@@ -541,6 +553,7 @@ def make_chain(
     sql: str = GREEN_SQL,
     understand_error: Exception | None = None,
     plan_error: Exception | None = None,
+    plan_blocked_issues: Sequence[str] = (),
     sql_error: Exception | None = None,
     repair_sqls: Sequence[str] = (),
     fetches: Sequence[ResultSet | ExecFailure] = (),
@@ -567,6 +580,7 @@ def make_chain(
         sql=sql,
         understand_error=understand_error,
         plan_error=plan_error,
+        plan_blocked_issues=plan_blocked_issues,
         sql_error=sql_error,
         repair_sqls=repair_sqls,
     )

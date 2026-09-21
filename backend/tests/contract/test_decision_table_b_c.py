@@ -278,3 +278,25 @@ class TestGroupC:
         assert chain.executor.fetch_calls == 2
         assert chain.planner.repair_calls == 1
         assert any(e == "data" for e, _ in frames)
+
+    def test_c_plan_blocked_refuses_with_blocking_issues_in_frame(self) -> None:
+        """U-115：PLAN 自拒（模型给了 `blocking_issues`、空 metrics）→ `refuse(no_data_asset)`
+
+        且 refuse 帧带 `blocking_issues`（否则"模型为什么认为答不了"只活在内存态，外部证据
+        读不到）。断言落在帧载荷上 —— 这就是 W7 判据要求的"外部证据"。
+        """
+        chain = make_chain(
+            plan_blocked_issues=("订单表与流量表无关联路径", "需要维度先绑定"),
+        )
+        frames, outcome = run_chain(chain)
+
+        terminals = terminal_frames(frames)
+        assert len(terminals) == 1
+        assert terminals[0][0] == "refuse"
+        assert terminals[0][1]["reason"] == "no_data_asset"
+        # U-115：blocking_issues 已经带出到 refuse 帧（不再只看得到 reason，看不到为什么）。
+        assert terminals[0][1]["blocking_issues"] == [
+            "订单表与流量表无关联路径",
+            "需要维度先绑定",
+        ]
+        assert outcome.status is TaskStatus.REFUSE

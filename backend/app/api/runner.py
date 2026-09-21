@@ -530,7 +530,16 @@ class SseRunner:
         if node == REFUSE_OUT:
             terminal = trace.state.get("terminal") or {}
             reason = str(terminal.get("reason") or RefuseReason.NO_DATA_ASSET.value)
-            return {"reason": reason, **errors.map_refuse(reason)}
+            refuse_payload: dict[str, Any] = {"reason": reason, **errors.map_refuse(reason)}
+            # U-115：PLAN 自拒（`reason_code=plan_blocked`）时把 `blocking_issues` 带出，
+            # 否则"模型为什么认为答不了"只活在内存态（W7 实测 refuse 帧逐字无 reason_code、
+            # `query_plan` 0 行、审计无该列）。加在既有 refuse 帧上 —— 用现成出口，不新开一条。
+            detail = trace.state.get("intent_detail")
+            if isinstance(detail, Mapping) and detail.get("reason_code") == "plan_blocked":
+                blocking = detail.get("blocking_issues")
+                if blocking:
+                    refuse_payload["blocking_issues"] = [str(b) for b in blocking]
+            return refuse_payload
         if node == ERROR_OUT:
             # 🔴 终态从**累积 state** 读而非增量：上游已设终态（闸门拒绝 / repair 超限 /
             # mask fail-closed / LLM 4xx·5xx）时出口节点增量是空的（LangGraph 过滤），
