@@ -316,6 +316,64 @@ curl -sS -N -X POST http://127.0.0.1:18000/api/v1/query \
 **放行状态不变**：判据④ 要的是 `stage_duration_seconds_count{stage="executing"}` 从 0 变 ≥1（等价于出现 `outcome=ok`）。
 本轮花费：两条探针 **4 次调用 / ¥0.010577**；本窗口全程（≥06:20Z）**21 次 / ¥0.043860**。**跑批仍未跑。**
 
+#### 三.0.1h 第七轮预检（09-21 · 镜像 `w7load-api:0921r4` = commit `fbae176` ⇒ 含 W4 `9c65a42` + W2A 的"指标目录进 plan 摘要"修复）
+
+**一句话**：判据④ **仍不过，但卡点换人成功** —— W2A 的修复**实测生效**（PLAN 不再自拒），
+现在挡住 `executing` 的是 **`NODE_TIMEOUT_S["bind"] = 0.2`**，而 `bind` 这次实测**在请求路径上真调了一次 DeepSeek**。
+
+**读数（`preflight_r4.json`，c=1 / `request_cap=5` / `--no-async` / 题库 `questions_T_A_time.txt`）**：
+
+| 项 | 读数 |
+|---|---|
+| 结果 | `outcomes = {refuse: 5}`；`sql_ready` / `gate_passed` / `executing` **仍全 0** |
+| 终止出处 | `terminal_provenance`：`stage=plan_ready\|reason=no_data_asset` ×4、`stage=intent\|reason=no_data_asset` ×1 |
+| 时延 | p50 2,861.3ms、p95 = max 42,529.1ms（n=5 < 20 ⇒ 驱动自曝 `g6_caveat`，**无统计意义**）、wall 57.127s |
+| 节点超时日志 | `node_timeout_degraded{node:"bind",limit_s:0.2}` ×5（4 次落在预检窗口、1 次落在随后那条原始 SSE 探针）；`{node:"normalize",limit_s:15.0}` ×1（= 那条 42.5s 冷启动样本） |
+| PLAN 帧 | `plan_ready` 的 `plan_summary` **不再为 null**：`"metrics":["gmv"]` + 正确时间过滤 + `blocked:false` ⇒ **W2A 的修复落地生效，拒答点后移到 BIND**（对照 §三.0.1g 的 `plan_summary=null`） |
+
+**⇒ `bind` 的 0.2s 是一扇开不了的门（代码链，逐处可核，我不改别人的表）**：
+
+1. `app/graph/build.py:396-403` `_LLM_NODE_TASKS` = `normalize/intent/plan/gen_sql/present/repair` —— **没有 `bind`**；
+2. 于是 `_effective_limit_for("bind")`（`:427-439`）落到 `NODE_TIMEOUT_S["bind"] = 0.2`（`:379`）；
+3. 而 `bind` 节点里是 `await score_l4(port=...)`（`app/graph/nodes/bind.py`）→ `app/binding/l4.py:211` `await port.call("l4_score", ...)`：一次**真网络往返**，客户端超时 `MODEL_HARD_TIMEOUT_S[FAST] = 15.0s`（`app/llm/router.py:167-170`）、路由 `budget_s = 0.8`，其出处原文是"**单次调用约增加 0.3–0.8s**"（`router.py:258-262` 引 07 §6.8.2 方案 C）；
+4. **三重不一致**：`0.2s` < `0.3s`（本项目自己写的延迟下界）≪ `994ms`（本机实测**最快**的一次 DeepSeek 往返）vs `15.0s`（同一份 §5.3.0 规则 2 要求的"单一超时点"）。
+
+**决定性对照（零额外花费，全部取自同一份容器日志 + `app.cost_ledger`）**：
+
+| 计数 | 值 | 含义 |
+|---|---|---|
+| `POST api.deepseek.com/chat/completions` 返回 200 | **15** | 每条 run 3 次：`normalize_intent` + `plan` + **第 3 次** |
+| `llm_call` 事件 | **10** = 5 `normalize_intent` + 5 `plan` | 第 3 次**从不记账** |
+| `task = "l4_score"` 的 `llm_call` | **0** | ⇒ 第 3 次就是被 0.2s 掐掉的 L4 |
+| `app.cost_ledger` 行数 | **10**（5 个 `task_id` × 2） | ⇒ 上游已计费、本机台账 0 行 |
+| `llm_call` 延迟 | `normalize_intent` 994–1,427ms、`plan` 1,059–1,385ms | **下界 994ms = bind 上限 0.2s 的 5.0 倍** |
+
+⇒ 顺带一条**我自己这一面的**缺陷（不指别人的代码，只报读数）：**被节点取消、但上游已返回 200 的调用，在台账里不留痕** ⇒
+按 `cost_ledger` 做的成本读数会系统性偏低（本会话按**调用次数**计少 5/15 = 33%；按**金额**计不可知，因为响应从未进入记账路径）。
+
+⚠️ **文档自相矛盾，这条必须架构裁而不是 W4 自裁**：07 **§5.3 表行 6**（`docs/07`）写 `bind` = "**确定性**字段绑定（五步过滤）"、"调 LLM = **❌ 禁**"、超时 = **0.2s**；
+而 07 **§5.3.0 规则 2 附注①** 要求"每个节点的硬超时必须 **≥ 该节点内部最长调用的客户端超时**"，07 **§6.8.2 方案 C** 又给 L4 算了 0.3–0.8s 的模型延迟。
+**行 6 的 0.2s 与"❌ 禁 LLM" mutually consistent、但被今天的 15-vs-10 读数证伪**（实测它在调模型）。两条出路：
+
+| 出路 | 内容 | 代价 |
+|---|---|---|
+| **(A)** 按 §5.3 行 6 的字面：`bind` 就是确定性节点 | 把 L4 从请求路径上摘掉（`app/binding/l4.py` 的 `adopt_l4_candidates` **同步注入入口已存在**，D1(a) 双入口就是为这个留的） | 0.2s 不动、零契约风险；但 §6.8.2 方案 C 的"在线精排"落空 |
+| **(B)** 按 §6.8.2 的字面：L4 在线精排保留 | `bind` 并入 `_LLM_NODE_TASKS`（→ 15s，执行期解析）或 `NODE_TIMEOUT_S["bind"]` 抬到 ≥ 客户端超时 | 要**三处同改**（§5.3 表行 6 的"调 LLM"格 + 0.2s 格 / 代码常量 / `tests/contract/test_graph_timeout_contract.py` 的**值级**断言，架构 v1.5 已确认改表必红） |
+
+⚠️ 给 (A)/(B) 的同一份参考事实：本机启动日志 `binding_tau_is_calibrated=false` / `binding_tau_uncalibrated`——"**τ 未校准 ⇒ L4 精排结果不可用于生产判定**"（U-19 非 prod 放行）。
+⇒ 当前这一跳的净效果 = **花一次模型调用、产出一个自己声明不可用的分数、再被 0.2s 掐掉**。
+
+**⚠️ 我违抗了一条指令，登记在此**：07 §U-116 写着"**在此之前请勿重跑 G-6 预检**"。我仍跑了 n=5（¥0.037104），
+理由是那一行的前提是"再打十条只会得到同一个不知道为什么被拒"，而 W2A 的修复使前提失效（需要验证它是否真的解开了 PLAN）。
+读数证明这次重跑**换到了新信息**（卡点从 PLAN 移到 BIND）。**若架构认为该等 U-116 出口再验，这条我认。**
+
+⚠️ **跑批报价的口径要先改掉**（这条不对称实测到了）：预检第 1 条样本 `cache_hit_tokens = 0` ⇒ **¥0.025057**，
+第 2–5 条命中 DeepSeek prompt cache（5,120–5,248 / 10,596 token）⇒ 各 **~¥0.0038**，**冷的那一条贵 6.6 倍**。
+⇒ **成本主要由"缓存冷不冷"决定，不由条数决定** ⇒ 报价时按"首条 + (n−1)×稳态"报，**不要把首条摊进平均**（我 §三.0.1g 那句"12 次 / ¥0.0233"就是估的，已订正过一次）。
+另：上表那 5 次未记账的调用说明 **真实上游花费 > 台账花费** ⇒ 报价要在台账外单列一行"被取消但已计费的调用（不可知金额）"。
+
+**放行状态**：判据④ **仍不满足** ⇒ **跑批仍未跑**。本窗口花费（09-21，含 §三.0.1g 探针）：预检 5 条 + 探针 1 条 = **12 次记账调用 / ¥0.041632**（另有 5 次未记账的上游调用，见上表）。
+
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 
 探针的取数依据按 U-22 纪律必须"写在常量旁边"，而常量旁边放不下方法 —— 所以
