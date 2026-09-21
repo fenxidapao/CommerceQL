@@ -224,4 +224,97 @@ formatter 的：对齐式行尾注释、模块 docstring 后空两行）。**故
 - **issue② 真跑**（等放行）；跑完 W7 才可能拿到 ≥1 条 `outcome=ok`（他的放行判据）。
 - **`U-59`=(a) 端口面收敛**（`RetrievalResult` 富结果并进 `RetrievalPort`）仍等 W0 落 `contracts.py`。
 - **`U-111` 的启动断言**在 W1B / `ASSERTION_NAMES` 4→5 的耦合在 W7 —— 本窗口不越界，仅登记。
-- **本轮回执的代码未提交**（§9.7 所限）。
+- **本轮回执的代码未提交**（§9.7 所限）。**→ 已于 §10.1 补交。**
+
+---
+
+## 10. `U-112` issue② 执行回执（2026-09-21）+ 🔴 新缺陷：集成夹具会清空物化向量
+
+### 10.1 总控要求①：提交（已完成）
+
+- commit **`1255065`** = `fix(w2b)+test(w2b): U-112 落地 —— 向量列未物化时降级而非 INTERNAL`；
+  5 文件 **439 insertions / 10 deletions**；`git log` = `1255065` ← `42c4250`。
+- **未推**：提交前 `origin/main == 42c4250`（= 提交前的 HEAD）⇒ 本地现领先 1 个 commit。
+  按纪律"上传严格听指令"，**我不自行推**；总控说一句即可。
+- 门禁复跑（提交前，皆为实跑）：`ruff check .` **All checks passed**；`lint-imports`
+  **4 kept / 0 broken**；`tests/unit + tests/contract + tests/graph_snapshot` = **1785 passed**；
+  `tests/integration` = **100 passed**（带 `RETRIEVAL_TEST_PG_DSN`）。
+
+### 10.2 总控要求②：物化（已跑，三个痕齐）
+
+| 时点 | 行数 | embedding 非空 | tsv 非空 |
+|---|---|---|---|
+| **跑前**（原样 SQL，独立于 runner 自报） | 197 | **0** | **0** |
+| **跑后** | 197 | **197** | **197** |
+
+完整命令（逐字）：
+
+```bash
+export PATH="/c/Users/林琪荣/.workbuddy/binaries/PortableGit/versions/1.2.0/usr/bin:/c/Users/林琪荣/.workbuddy/binaries/PortableGit/versions/1.2.0/cmd:$PATH"
+cd "E:/01_实训/项目/基于Text2SQL的电商数据分析Agent"
+"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL/.venv/Scripts/python.exe" _w2b_u112_materialize.py
+```
+
+- runner 位置 = **工作区根**（`E:\01_实训\项目\基于Text2SQL的电商数据分析Agent\`，**在 git 之外**）。
+- 实际调用 = `materialize(loaded, dsn=<deploy/.env 的 DATABASE_URL 换 host 为 127.0.0.1>,
+  tokenizer=app.retrieval.tokenizer.tokenize, embedder=OllamaEmbedder(bge-m3, dim=1024) 的同步适配器,
+  with_policy=False)`。
+- 报告：`doc_count=197 / embedding_status=embedded / tsv_status=tokenized /
+  grant_policy_executed=False` + 1 条 warning（GRANT/POLICY 未执行，`with_policy=False`，**故意**）。
+- 前置全绿：Docker 在、`commerceql-pg-1` healthy、Ollama 可达、`bge-m3:latest` 在册。
+
+### 10.3 计数 ≠ 可读：另做了一次真实读路径自证
+
+`_w2b_u112_verify_read.py`（工作区根）用**生产实现**真打两条路，不是看计数：
+
+- **稠密** `PgVectorStore.topk`（真调 Ollama 生成查询向量，dim=1024）：命中 5 条 ——
+  `0.707283 [synonym] 销售额`、`0.618468 [column] product.on_sale`、`0.592584 [metric] sell_through_rate`、
+  `0.590137 [column] order_paid.channel`、`0.587569 [synonym] 成交额`；分数全非 NULL、降序已断言。
+- **稀疏** `SparseSearch.search`（归一化标志 32 / `score_min` 0.05，取 `deps.py:468-469` 的生产值）：
+  命中 1 条 —— `0.090909 [synonym] 销售额`。
+
+### 10.4 🔴 新缺陷：`tests/integration/test_semantic_materialization.py` 会清空共享库的物化向量
+
+**这条直击判据④，而且会反复发生。**
+
+- **干净的正向对照**：物化后 `(197, 197, 197)` → 只跑该文件（**7 passed**）→ `(197, 0, 0)`。
+  测试全绿，**静默毁数据**。
+- **根因（读原文，非推断）**：`test_semantic_materialization.py:114`
+  `materialize(loaded, dsn=_RW, with_policy=False)`；`_RW` 默认 =
+  `postgresql://app_rw:app_rw_pwd@localhost:5432/ecom` —— **就是共享 dev 库**；
+  且**不传 `tokenizer=` / `embedder=`** ⇒ `_insert_rows`（`materialize.py:296-299`）对同一
+  `bundle_version` **先 DELETE 9 张表再 INSERT** ⇒ `embed_doc` 197 行回来时 embedding/tsv 全 NULL。
+- **不止一处**：该文件共 5 处会重写（L114 / L131-132 / L149 / L168 / L181 / L196）。
+  反过来 `test_retrieval_fts_pg.py` **是安全的**（走临时 schema）：实测跑完仍是 `(197, 197, 197)`。
+- **与 `U-113` 的关系**：U-113 的首诊（"夹具无'目标库必须隔离'门禁"）**在此得到机制实证**，
+  且这是**第二张受害者表**。⇒ **不是新根因，是新证据 + 新受害者（而这个直击 G-6）。**
+- **影响口径**：任何窗口本地跑一次集成测试，物化向量归零 ⇒ 判据④ 的读数**依赖跑测顺序**，
+  "我灌了 / 你跑完就没了"会变成互指。**修好之前，判据④ 的读数不可信。**
+- **我方边界**：该文件属语义域（W2A），**我不落笔**。请 架构/总控 归号并派单 ——
+  `07:1050` 记 **下一个可用 = `U-114`**；**我不自行占号**（避免与并发窗口撞号），
+  建议归号后由 架构 回填 §4.8。
+- **立刻可用的三个临时措施（都不必改别人的文件）**：
+  1. 判据④ 每次采样前先 `_w2b_u112_materialize.py --verify-only` 复核计数，为 0 就先重物化；
+  2. 要跑集成测试的窗口把 `COMMERCEQL_TEST_RW_DSN` 指向一次性库；
+  3. **不要在"物化 → 预检"之间跑 `tests/integration`**。
+
+### 10.5 顺手回答总控附带的问题：`embedding_status="pending_embedder"` 有读端消费者吗
+
+**没有 —— 生产侧零读者，`U-111` 的判断成立。** 全仓 grep（`backend/**/*.py`）只有三类命中：
+
+1. 生产代码里的**定义处**（`materialize.py:262 / 450 / 500`），以及一处**承认零读者的注释**
+   （`obs/metrics.py:163` 原文："materialize 的 `embedding_status` 生产侧零读者"）；
+2. 探针脚本 `reports/w2-int/e2e_stage2_check.py:110`（**不属生产链路**）；
+3. 测试 `tests/integration/test_semantic_materialization.py:124-125`（断言 pending 值）。
+
+另：`app/retrieval/dense.py:351` 的命中只是本次新增的**异常消息文本**，不是读者。
+**并且**：`MaterializeReport` 是 `frozen dataclass`，`embedding_status` **不落库**
+（落库的 `app.semantic_bundle.status='staged'` 是版本生命周期状态，是另一回事）
+⇒ 该字段目前**连"写 — 读"闭环都不存在，只有壳**。
+
+### 10.6 待总控裁（新增两条）
+
+- **runner 要不要收进仓库**：`_w2b_u112_materialize.py` 与 probe / control / verify 四个脚本
+  现在**只活在工作区根、不在 git 内** = 与 U-112 五文件**同款孤本风险**，而 W7 复现判据④ 正靠它。
+  建议收进 `deploy/`（如 `deploy/materialize_bundle.py`）。**归谁落笔请裁。**
+- **推不推**：见 §10.1 —— 本提交尚未上远端。
