@@ -79,7 +79,27 @@
 |---|---|---|
 | 两格各立一条 U-119 式接缝号？ | ❌ 不必 | 两格的**入口是同一条**（同一个 `deps.executor`、同一个端口）；拆两条会把"端口不声明形状"这个**唯一根因**切成两半 —— 而这正是 `U-121` 家族"修一格才发现下一格"的成因 |
 | 那该立什么？ | ✅ 一条就够，且**不是** exec 侧的 | 缺的是"`gate_passed` **肯定路径**判据"（1 条，`tests/contract/**` = W4）。而"生产端口直连"这件事**已有的 `U-119` 已经覆盖实质** ⇒ 建议**并入 `U-119` 的判据**，不另开号 |
-| 我这条（`explain`/`effective_limit` 未声明）要号吗？ | ⚠️ 倾向并入 `U-119` | 同一句病的两个实例：**"生产端口的实际调用面 > 声明面"**（闸门 allowlist 形状 / exec 入口形状）。⚠️ **编号归架构，我不自开** |
+| 我这条（`explain`/`effective_limit` 未声明）要号吗？ | ⚠️ 倾向并入 `U-121` | 同一句病的两个实例：**"生产端口的实际调用面 > 声明面"**（闸门 allowlist 形状 / exec 入口形状）。⚠️ **编号归架构，我不自开** |
+
+### 3b. 🔴 正解落点 = W0（且它已有**刚刚落地的同型先例**）
+
+⚠️ **本回执写作时才发现**：W0 已落地 `ae59c5c`（2026-09-21 21:13:27）
+**`U-121 第一步` —— 端口显式声明闸门判据形状（7 键 + 两面）**：新增
+`AssetAllowlistEntry` / `GuardAllowlistAsset` / `GuardAllowlistJoin` / `GuardAllowlist` 与
+`SemanticBundlePort.guard_allowlist(ctx, *, max_rows=None)`（**端口方法 4→5**）。
+
+⇒ 这**正是 W2D 这条缝需要的同一个动作**，只是主角不同：
+
+| | `SemanticBundlePort`（W0 刚做完） | `SqlExecutorPort`（本条） |
+|---|---|---|
+| 缺陷 | `asset_allowlist(ctx) -> Mapping[str, Any]` 只声明签名、不声明形状 ⇒ 两拨消费者按互斥形状用 | 只声明 `fetch` 的 2 个关键字 ⇒ 图真在传的 `effective_limit` 与 `explain` **都不在端口上** |
+| 修复 | 新增唯一形状 + 第 5 个方法 | **同一动作**：把 `effective_limit` 落进 `fetch`、把 `explain` 升为端口方法（形状可直接取 `app/exec/seam.py` 的 `ExplainPlan`） |
+| 归属 | `app/core/**` = W0 | **同为 W0**（`app/core/**`），W2D 落不了这一笔 |
+
+**⇒ 我给 W0 的请求（一句话）**：`SqlExecutorPort` 与 `SemanticBundlePort` 是**同一个缺陷的两个实例**；
+`app/exec/seam.py` 已把"图真正调用的面"声明出来（`ExplainPlan` / `ExecutorSeam` / 签名差异检查器），
+可直接**抬进端口**（`fetch` 加 `effective_limit`、新增 `explain`）。在抬进去之前，W4/W7 可先用
+`isinstance(deps.executor, ExecutorSeam)` + `declared_call_face_mismatches(...)` 立判据。
 
 ### 4. 给 W4 的可直接落地口径（两条）
 
