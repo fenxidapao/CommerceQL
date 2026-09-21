@@ -81,6 +81,7 @@
 
 - ⚠️ **两处必须一起换**：只换 gate1 调用点、gate2 仍走扁平 ⇒ 同一 run 内 gate1 用新形状、gate2 用旧扁平 = **两个真相**，且**不会有任何测试发现**（那正是 `U-119` 的病灶）。
 - ⚠️ **两处各自取一次是刻意设计**（`gate1_ast.py:13-18`：共用一份会让 gate2 的复核变成"复核自己刚给的那份"）⇒ 换形状时**不要顺手合并成一次取用**。
+- 🔴 **门数是 3 处、不是 2 处**（W7 回执 + 我方复核）：除上述两个**取用点**外，`policy_gate.py` 内部还有**两个读取面**要一起切 —— `:141` 的 ④（`extract_columns_with_assets` 走 `_resolve_column` ⇒ 依赖可见面）与 `:148` 的 ⑤（`has_tenant_col` 读 `columns`）都必须改读 `all_columns`。**换方法（`:105`）与换读取面是两件不同改动**：只换 `:105` 不换读取面 ⇒ ④ 输入集为空、⑤ 在干净 SQL 上就抛（A1/A2 逐格实测，见 §6.4）⇒ **静默漏检 + 无谓崩溃**。
 
 ### 6.3 消费方需求清单（键 → 消费行 → 需要类型 → 缺了的方向）
 
@@ -94,19 +95,41 @@
 | `max_rows` | `ast_gate:370` | 可选 `int` | 请求级 `max_rows` **静默失效**（恒 `L = 10000`），`api/deps.py` 的 `EXEC_MAX_ROWS` 送不进来 |
 | `allowed_constants` | `ast_gate:314` | — | ⚠️ **不走 allowlist 入参**：它是 `run_gate1` 的独立形参 `literal_allowlist` ⇒ 形状设计须交代它从哪来，但**不必进 wrapper** |
 
+- 🔴 **`assets` 这一行还欠一个子槽位**：`assets[物理名]` 里除 `columns` 外还需 **`all_columns`**（结构面，见 §6.4 B1 档）；且 **`columns` 的元素类型必须是 `{列名: 类型}` 而非 `tuple`**（A4 档：元组 ⇒ `ast_gate:751` 抛 `AttributeError`）。⇒ **`assets` 不是"一个键"，是"一个键 + 两个面 + 一层形状"**。
+
 - 三条 fail-open（`default_predicates` / `bundle_version` / 以及 `max_rows` 的"请求级参数失效"）是本清单最该被 W0 看见的部分：**它们今天被 `assets` 缺失所产生的"全拒"掩盖着**。
 
-### 6.4 `columns` 必须**双面**（采纳 W2A `RELAY §10` 的实测，我方未独立复现）
+### 6.4 `columns` 必须**双面**（W2A `RELAY §10` 提出；**W2C 已于 2026-09-21 独立复现**，读数见下）
 
 同一个槽位被两类读者以**相反**要求共用：
 
 | 面 | 读者 | 要求 |
 |---|---|---|
 | **可见面** | gate1 列解析（`ast_gate:748/:751`）+ planner/binding | 裁掉 deny 列（"不许被提出来"） |
-| **结构面** | gate2 ④ 敏感列复核（`policy_gate:140-143`）、`_column_type`（`ast_gate:879`，R17 隐式转换） | **全列 + 类型** `{列名: 类型}`（"得先认得出来，才拒得掉"） |
+| **结构面** | gate2 ④ 敏感列复核（`policy_gate:140-143`）、⑤ 双向断言（`policy_gate:148`）、`_column_type`（`ast_gate:879`，R17 隐式转换） | **全列 + 类型** `{列名: 类型}`（"得先认得出来，才拒得掉"） |
 
-- 喂**裁剪列**给 gate2 的实测后果（W2A）：⑤ 双向断言当场抛 `ContractViolationError`；④ 对 `SELECT receiver_phone FROM v_order_paid` **完全没响**（= fail-open 的一半，比崩溃更值得记）。
-- `columns` 是 `tuple` 而非 `{列名:类型}` 时的后果：`ast_gate:751` 的 `(...).keys()` **抛 `AttributeError`**（W6 探针正崩在此），且 `_column_type`（`:879`）恒 `None` ⇒ **R17 恒不触发**。
+**W2C 独立复现读数**（探针 `backend/reports/w2c/_probe_u121_faces.py`，离线、不连库；`assets.orders` 的 `columns` 裁 deny / `all_columns` 含 `receiver_phone`+`tenant_id`，`tenant_scoped=true`）：
+
+| 档 | `columns` 内容 | 另立 `all_columns` | 干净 SQL | `deny列`-限定表名 | `deny列`-不限定 | 未知列 |
+|---|---|---|---|---|---|---|
+| A1 扁平面直喂 | 可见、**dict** | 无 | 🛑 `ContractViolationError` | 拒 `G2-DENY` | 🛑 `ContractViolationError` | 🛑 `ContractViolationError` |
+| A2 形状双面齐 | 可见、dict | **有** | 🛑 `ContractViolationError` | 拒 `G2-DENY` | 🛑 `ContractViolationError` | 🛑 `ContractViolationError` |
+| A3 只给结构面 | **全列**、dict | 无 | ✅ 过 | 拒 `G2-DENY` | 拒 `G2-DENY` | ⚠️ **过（④ 静默漏检）** |
+| A4 真 runtime 扁平面 | 可见、**tuple** | 无 | 🛑 `AttributeError` | 🛑 `AttributeError` | 🛑 `AttributeError` | 🛑 `AttributeError` |
+| **B1 双面齐 + ④⑤ 读 `all_columns`** | 可见、dict | **有** | ✅ **过** | 拒 `G2-DENY` | ⚠️ **过（残余漏检）** | ⚠️ 过 |
+
+- **A1 ≡ A2**（逐格相同）⇒ 🔴 `all_columns` 在**今天的生产代码里没有任何读者**（④/⑤ 都读 `columns`）⇒ 光把形状补上面、**不改读取面 = 白给**。
+- **A1/A2 的干净 SQL 也抛 `ContractViolationError`**（抛出点 = `policy_gate.py:148` 的 `⑤`，它读 `columns` 可见面，`tenant_id` 已被裁掉）⇒ **凡 `tenant_scoped=true` 的资产，gate2 必崩**。这条比 W2A 记的"④ 漏检"更早发作：**④ 还没轮到，⑤ 先炸**。
+- **A4 = 真 `asset_allowlist` 的现形态**（`columns` 是**列名元组**，`runtime.py:134`）⇒ 生产闸门对元组**直接 `AttributeError`**（`ast_gate:751` 的 `.keys()`），**不是"拒"而是"崩"**。⚠️ 这解释了 W7 读数为何是"`G2-ASSET` 恒拒、未抛错"：W7 喂的是**经适配层转过的扁平**（`assets` 键里没有 `orders` 的真身 ⇒ 在 ④⑤ 之前就被 ② 拦掉），与"真 runtime 直喂"是两档。**两格不得混写。**
+- 🔴 **B1 的 `deny列`-不限定 仍是 `pass=True`** —— 这是**切面也治不好的残余漏检**，必须让 W0/W4 知道：`extract_columns_with_assets` 走 `_resolve_column`，无表别名时靠"**列名 ∈ 该表可见列集**"归属（`ast_gate:718-724`）；可见面已把 `receiver_phone` 裁掉 ⇒ `owners` 为空 ⇒ 归属失败 ⇒ **④ 的遍历体根本不执行**，与它读哪个面无关。⇒ **`G2-DENY` 只能覆盖"显式限定表名"的形态**；不限定形态由 gate1 的 `R06` 兜住（见下方归因漂移），**gate2 的 ④ 不是这一形态的防线**。这一条 W2A §10 与 W7 回执均未点明，我方补记。
+- **B1 与 A3 的差别**：A3 靠"`columns` 填全列"换来 ④ 能认出列，代价是 **gate1 侧 R06 变成 R07**（`deny列`-不限定 归因从 `R06` 漂到 `R07`），且 `未知列` 静默过（④ 认不出就放行）；B1 两面分开，各归其位。⇒ **B1 是四格中语义最全的档**（但仍有上一条的残余），也正是"双面"的实证价值。
+
+⚠️ **deny 列在 gate1 侧的归因漂移（W7 实测 + 我方复现一致）**：
+- `SELECT orders.receiver_phone ...`（**限定表名**）⇒ **`R07`**（`ast_gate:666` 先命中 `deny_columns`）；
+- `SELECT receiver_phone ...`（**不限定**）⇒ **`R06`**，因为 `:718-724` 的**无别名归属靠"列名 ∈ 该表可见列集"**，而 `receiver_phone` 已被裁出可见面 ⇒ `owners` 为空 ⇒ `_resolve_column` 返回 `None` ⇒ `:660` 先报 `R06`（**压根走不到 `:666` 的 R07**）。
+⇒ 这就是"**`deny_columns` 存在但归因退化成 R06**"的机制。既有测试断言集合 `{R06,R07}`（`test_gate1_blocks_tenant_id_either_qualified_or_not`）**正是在容纳这个漂移**，不是随手写的松断言 —— 改面时**不要把它收紧成单值**。
+
+`columns` 是 `tuple` 而非 `{列名:类型}` 时的后果：`ast_gate:751` 的 `(...).keys()` **抛 `AttributeError`**（A4 逐格复现），且 `_column_type`（`:879`）恒 `None` ⇒ **R17 恒不触发**。
 
 ### 6.5 三条禁止修法（`07` v1.6.4 原文，W2C 逐条认可）
 
@@ -118,11 +141,29 @@
 
 | # | 动作 | 状态 |
 |---|---|---|
-| 1 | gate1/gate2 **两处一起**改为消费新方法 | ⏳ **待 W0/W2A 落地**（形状未定就动 = 第三次自造形状） |
+| 1 | gate1/gate2 **两处一起**改为消费新方法 | ⏳ **待 W0/W2A 落地**（形状未定就动 = 第三次自造形状）。⚠️ 落点是 **3 处**：`gate1_ast:52`（W4）+ `policy_gate:105`（W2C，换方法）+ `policy_gate:141/:148`（W2C，**换读取面**，与换方法是两件改动，见 §6.2/§6.4） |
 | 2 | 删除 guard 内部任何自造形状 / 自适配 | ⏳ 同上。**现状核查**：`ast_gate`/`policy_gate` 只做 `.get(key)` 读取，**没有形状转换层**；要删的是 `ast_gate.py:16-24` 那段"入参形状"docstring 的口径（随动作 1 一起改） |
-| 3 | 保留 R06/R07 归因漂移的既有断言口径（集合 `{R06,R07}`） | ✅ **已确认无需改测试** —— `test_gate1_blocks_tenant_id_either_qualified_or_not` 断言的正是集合；依据 = W2A §10 的两档归因实测表 |
+| 3 | 保留 R06/R07 归因漂移的既有断言口径（集合 `{R06,R07}`） | ✅ **已确认无需改测试** —— `test_gate1_blocks_tenant_id_either_qualified_or_not` 断言的正是集合。**机制已由 W2C 探针查实**：不限定形态归 `R06` 是因为 `ast_gate:718-724` 靠"列名 ∈ 可见列集"归属、`receiver_phone` 已被裁出 ⇒ 走不到 `:666` 的 `R07`（§6.4） |
 | — | 本节落盘（消费方需求，非形状定义） | ✅ 2026-09-21 |
+| — | §6.4 独立复现（A1–A4 / B1–B2 六档读数）+ §6.8 默认方案 | ✅ 2026-09-21（探针 `_probe_u121_faces.py`，读数 `_gates_w2c_u121_faces.txt`） |
 
 ### 6.7 顺序提醒（`07` 原文，不是 W2C 的动作项）
 
 修完 `U-121` 只到 **GATE2 之后**：`gate3_cost`（EXPLAIN 计划 JSON 的来源，`U-63` 已裁"必须经 W2D `exec` 受控入口、节点不得自建连接"）与 `execute`（真 DB + 身份 GUC）**至今 `gate_passed` / `executing` 都为 0，一条都没验过** ⇒ 建议按 `07` 的要求**一次扫完 GATE2/GATE3/EXECUTE 的"判据源"接缝**，别让第六格第三次重演"修一格才发现下一格"。
+
+### 6.8 默认方案（未获决策时按本方案推进；**不阻塞**）
+
+> W7 2026-09-21 回执："遇到我没有决策的，列出默认方案，而非阻塞"。以下每项都标了"若被否，退到哪"。
+
+| # | 事项 | 默认方案 | 若被否（fallback） |
+|---|---|---|---|
+| D1 | gate1 侧换方法 | W4 在 `gate1_ast.py:52` 改调 `guard_allowlist(identity, max_rows=state["options"].get("max_rows"))`；`:55` 传入同一对象 | 若 W0 定稿方法名不同 ⇒ 只改方法名，**取用点位置不变** |
+| D2 | gate2 侧换方法 | W2C 在 `policy_gate.py:105` 改调 `bundle.guard_allowlist(ctx)` | 同上 |
+| D3 | **④ 读取面** | `policy_gate:141` 改为**按结构面**取列集后比对 `deny_columns`；实现上最省的一步 = 让 `_Auditor` 在 ④ 场景下以 `all_columns` 建 `_scope_tables` | 若 W0 定稿形状**不含** `all_columns` ⇒ 退到"用 `deny_columns` 顶层集合 + 独立 `_resolve_column` 反查"（W7 实测 `deny_columns` 顶层 8+ 项，**可用**）；**不可**退到"不查"。⚠️ **切面后 `deny列`-不限定 仍漏检**（B1 实测）⇒ ④ 只对"显式限定表名"形态有效，该形态的防线是 gate1 `R06` |
+| D4 | **⑤ 读取面** | `policy_gate:148` 的 `has_tenant_col` 改读 `all_columns`（**必改**：不改 ⇒ 干净 SQL 即抛，A1/A2 实测） | 无 fallback。若形状不给结构面，**唯一正确动作是让形状给**，不是在 gate2 里用 `tenant_scoped` 反推（那等于把断言改成恒真） |
+| D5 | 归因口径 | **保持 `{R06,R07}` 集合断言**，不收紧、不放宽（§6.4/W7：`R06` 是可见面下的正确归因，不是缺陷） | — |
+| D6 | `all_columns` 的派生源 | 由 W2A 在 `guard_allowlist` 内从**同一份 `Asset.columns`** 派生（`runtime.py:202-203` 已这么做）⇒ 两面结构上不可能漂移 | 若 W0 要求两面**各自独立声明** ⇒ **拒绝**：那正是 `U-121` 的成因复发 |
+| D7 | `U-119` 接缝测试 | 输入 = **真** `guard_allowlist()` 输出（不补 wrapper 键），断言普通 SQL `passed=True`；**今天必须红** | 无。补夹具 = 假绿，07 明令禁止 |
+| D8 | 我方的落地顺序 | 等 W0 定形状 → W2A 实现 → **W4 与 W2C 同一 PR 窗口内**改三处（`gate1_ast:52`、`policy_gate:105`、`policy_gate:141+148`） | 若 W4 排不开同窗 ⇒ **宁可等**，不单侧先改（单侧 = 两真相，§6.2） |
+
+- 🔴 **D3/D4 是本节最容易被漏的一半**：W7 的"`policy_gate.py:105` 可以动了"**只覆盖方法替换**；只做 D1+D2 而不做 D3/D4 ⇒ 四条 SQL 逐格后果 = A1/A2 档（干净 SQL 崩、④ 漏检）。**"可以动"≠"动一处就够"。**

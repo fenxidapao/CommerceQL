@@ -1,0 +1,39 @@
+########## A. 生产读数（run_gate1 / run_gate2 原样） ##########
+
+=== A1 扁平投影直喂（今天生产：columns=可见、无 all_columns） ===
+  干净 SQL           gate1[pass=True rule=None]  gate2[RAISED ContractViolationError]
+  deny列-限定表名       gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
+  deny列-不限定        gate1[pass=False rule=R06]  gate2[RAISED ContractViolationError]
+  未知列              gate1[pass=False rule=R06]  gate2[RAISED ContractViolationError]
+
+=== A2 形状面双面齐（columns=可见 + all_columns=全列） ===
+  干净 SQL           gate1[pass=True rule=None]  gate2[RAISED ContractViolationError]
+  deny列-限定表名       gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
+  deny列-不限定        gate1[pass=False rule=R06]  gate2[RAISED ContractViolationError]
+  未知列              gate1[pass=False rule=R06]  gate2[RAISED ContractViolationError]
+
+=== A3 只给结构面（columns=全列、无 all_columns） ===
+  干净 SQL           gate1[pass=True rule=None]  gate2[pass=True rule=None]
+  deny列-限定表名       gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
+  deny列-不限定        gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
+  未知列              gate1[pass=False rule=R06]  gate2[pass=True rule=None]
+
+=== A4 真 runtime 扁平面（columns=元组、无 all_columns） ===
+  干净 SQL           gate1[RAISED AttributeError]  gate2[RAISED AttributeError]
+  deny列-限定表名       gate1[RAISED AttributeError]  gate2[RAISED AttributeError]
+  deny列-不限定        gate1[RAISED AttributeError]  gate2[RAISED AttributeError]
+  未知列              gate1[RAISED AttributeError]  gate2[RAISED AttributeError]
+
+########## B. 反事实变体（④⑤ 改读 all_columns；非生产实现） ##########
+
+=== B1 双面齐 + ④⑤ 读 all_columns ===
+  干净 SQL           gate2[pass=True rule=None]
+  deny列-限定表名       gate2[rule=G2-DENY]
+  deny列-不限定        gate2[pass=True rule=None]
+  未知列              gate2[pass=True rule=None]
+
+=== B2 只给可见面 + ④⑤ 读 all_columns（消费方盲改） ===
+  干净 SQL           gate2[RAISED ContractViolationError]
+  deny列-限定表名       gate2[rule=G2-DENY]
+  deny列-不限定        gate2[RAISED ContractViolationError]
+  未知列              gate2[RAISED ContractViolationError]
