@@ -53,6 +53,8 @@ __all__ = [
     "RateLimitDecision", "MaskOutcome", "BindingResult", "CandidateRef", "HealthProbeResult",
     # 语义层 → 闸门的判据形状（U-121：形状必须与端口同源）
     "AssetAllowlistEntry", "GuardAllowlistAsset", "GuardAllowlistJoin", "GuardAllowlist",
+    # 执行器 → gate3 的计划载荷（U-121 家族第二个实例：形状归本文件，L2 只能再导出）
+    "ExplainPlan",
     # 端口
     "ClockPort", "TokenizerPort", "LLMPort", "SemanticBundlePort", "RepositoryPort",
     "AuditSinkPort", "SessionLockPort", "RateLimiterPort", "CachePort",
@@ -499,6 +501,23 @@ class CachePort(Protocol):
     ) -> str: ...
 
 
+#: `EXPLAIN (FORMAT JSON)`（07 §7.5）解析后的计划载荷 —— **两种"拿不到计划"是两条语义**：
+#:
+#: | 表达 | 含义 | gate3 结论 |
+#: |---|---|---|
+#: | 返回 `None` | 该方言**没有**这个能力（SQLite 评测沙箱，07 §17.4） | `SKIPPED`（"不可用 ≠ 通过"，§14.2 D6） |
+#: | **抛异常** | 有这个能力、但**本次** EXPLAIN 失败 | `WARN`（`explain_error`，§14.2 D5，**不阻断**） |
+#:
+#: 把前者写成异常 ⇒ 沙箱里的 gate3 从 `SKIPPED` 变 `WARN`，报告会读成"EXPLAIN 失败过一次"；
+#: 把后者写成 `None` ⇒ 真库的 EXPLAIN 故障被记成"方言不支持" ——
+#: **闸门故障被静默成能力缺失**，比前者更坏。
+#:
+#: ⚠️ **形状归本文件（L0）**，不是 `app/exec/seam.py`（L2）：R-DEP-1 禁 L0 依赖 L2。
+#: 那个文件只能**再导出**本名（`from app.core.contracts import ExplainPlan`），
+#: **不得**另立第二份定义 —— 第二份真相正是本项目明禁的那条。
+ExplainPlan = list[dict[str, Any]] | None
+
+
 @runtime_checkable
 class SqlExecutorPort(Protocol):
     """受控执行（L2；`app.exec` 实现）。**分析连接的唯一出口**（N-02）。
@@ -506,6 +525,32 @@ class SqlExecutorPort(Protocol):
     ⚠️ 实现在返回前**必须**完成类型归一化与脱敏交接（N-05 / 07 §8.4）。
     ⚠️ 资源上限（默认内存 512MB）被突破 → 抛 `EXEC_RESOURCE_EXCEEDED`，
     **不是** `COST_TOO_HIGH`（后者是预执行 gate3，层级不同，不得合并 —— 附录 A §A.11 补充约定）。
+
+    --------------------------------------------------------------------------
+    ⚠️ 端口面必须覆盖**图的真实调用面**（U-121 家族的第二个实例，2026-09-21）
+    --------------------------------------------------------------------------
+    本端口此前只声明 `fetch` 的 2 个关键字，而图真的在用第三样东西与第二个方法：
+
+    | 调用方 | 真实调用 | 旧端口 |
+    |---|---|---|
+    | `app/graph/nodes/execute.py` | `fetch(..., effective_limit=...)` | ❌ 没这个关键字 |
+    | `app/graph/nodes/gate3_cost.py` | `executor.explain(...)`（U-63） | ❌ 没这个方法 |
+
+    后果**不是**"跑不起来"，而是**判据立不起来**：
+    `app/graph/nodes/_shared.deps_of() -> Any` ⇒ 类型层看不见这两个调用；契约测试要造替身
+    只能去调用点**抄签名**，抄错了也**不会红**（Python 参数不匹配只在真调到那一行才炸）；
+    且 `isinstance(x, SqlExecutorPort)` 对"缺 `explain`"的替身**照样为真** ⇒
+    这个检查**不足以**证明图能跑到底。`U-119` 的接缝测的就是这条（今天刻意红）。
+
+    ⚠️ `effective_limit` **故意不给默认值（必填）**：它是 §8.6 `truncated` 判定的**唯一**正确口径
+    （值 = `state.limit_injected`，"本轮没注入"由**值 `None`** 表达）。给默认值 ⇒ 调用方可以
+    **静默漏传** ⇒ 判定口径静默失真，方向是 🔴 **fail-open**（与 U-121 里 `max_rows`
+    的缺省方向同类）。现存三个实现都写 `= None` —— 更宽松仍满足本声明，
+    故本收紧**不要求任何实现改动**。
+
+    ⚠️ `explain` **不得**经命名游标（即 `fetch` 的实现路径）执行：PG 直接报 `42601`，而该错会被
+    误分类成 `syntax_error` 并回灌 repair —— **错误信号完全误导**（已钉死为必败：
+    `tests/integration/test_exec_real_pg.py::test_explain_via_named_cursor_would_fail_42601`）。
     """
 
     async def fetch(
@@ -516,7 +561,17 @@ class SqlExecutorPort(Protocol):
         *,
         max_rows: int,
         statement_timeout_ms: int,
+        effective_limit: int | None,
     ) -> ResultSet: ...
+
+    async def explain(
+        self,
+        sql: str,
+        params: Mapping[str, Any],
+        ctx: IdentityContext,
+        *,
+        statement_timeout_ms: int,
+    ) -> ExplainPlan: ...
 
 
 @runtime_checkable
