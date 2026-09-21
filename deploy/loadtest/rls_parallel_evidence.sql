@@ -52,6 +52,11 @@ set max_parallel_workers_per_gather to 2;
 explain (analyze, verbose, costs off, timing off, buffers off)
   select count(*) from app.v_order_paid;
 
+-- ⚠️ EXPLAIN 不打印计数 ⇒ 只有 ① 的话，"三件套"里可比的那个数是缺的。
+-- 这里沿用 ① 的并行设置直接打印数值，好与 ③ 的串行计数在**同一快照**里相减。
+\echo '=== ①b 同一快照内的并行**数值**计数（与 ③ 串行计数直接可比） ==='
+select '并行(v_order_paid)' as probe, count(*) from app.v_order_paid;
+
 -- ----------------------------------------------------------------------------
 -- ② 每个进程实际读到的值 —— **不能提升**的形状
 --    为什么写成 `group by 1` 且表达式里带列引用（`t.tenant_id is not null`）：
@@ -90,7 +95,53 @@ set role app_rw;
 select 'n_live_tup(并发写没写动的旁证)' as probe,
        (select n_live_tup from pg_stat_user_tables where schemaname = 'app' and relname = 'order_paid');
 
+-- ----------------------------------------------------------------------------
+-- ④ 生产注入形态：**显式设值**之后，worker 到底读不读得到
+--    这一格回答的是"生产里 GUC 由 `app/exec` 注入，会不会也少算"。
+--    ⚠️ 必须放在最后：它会改会话态，先跑会污染 ③ 的"串行 = 真值"对照。
+--    与生产一致的三点：`is_local = true`（事务级，§16.3 复用连接后会被 reset 掉）、
+--    值是**真实店铺列表**（不是 `''` 也不是哨兵 `'*'`）、以 `app_rw` 身份读视图。
+-- ----------------------------------------------------------------------------
+\echo '=== ④ 生产形态（显式 set_config LOCAL）：每进程取值 + 并行计数是否等于 ③ 串行真值 ==='
+reset role;                                        -- 取列表要属主视角（RLS 下 app_rw 此刻看得见 0 行）
+select string_agg(distinct shop_id, ',') as t_a_shops
+  from app.order_paid where tenant_id = 'T_A';
+\gset
+set role app_rw;
+select set_config('app.shop_ids', :'t_a_shops', true);
+
+select case when t.tenant_id is not null
+            then coalesce(current_setting('app.shop_ids', true), '<NULL-in-this-process>')
+            else '<unreachable>'
+       end as value_seen_by_the_scanning_process,
+       count(*) as rows_carrying_it
+  from app.traffic_daily t group by 1 order by 1;
+
+set max_parallel_workers_per_gather to 2;
+explain (analyze, verbose, costs off, timing off, buffers off)
+  select count(*) from app.v_order_paid;
+select '并行(v_order_paid, 显式设值)' as probe, count(*) from app.v_order_paid;
+
 commit;
+
+-- ----------------------------------------------------------------------------
+-- ⑤ **对称**清除态（= W6 第三条读数："同一把连接 commit 后再复用"）
+--    生产的注入是**一条语句里三个 `set_config(..., true)`**（`app/repo/dsn.py:141-145`
+--    + `app/exec/executor.py:284-290`），所以 commit 之后三个键**一起**回到占位符 `''`
+--    （`RESET` 是这条路径的等价 stand-in，理由见本文件头部注释）。
+--    这一栏要回答：对称清除会不会也少算？（预测 **不会** —— `tenant_id=''` 连 Index Cond 都过不去，
+--    worker 压根没有行可丢 ⇒ 干净 0 行。少算需要的是**非对称**态：租户有值、shop_ids 是占位符。）
+-- ----------------------------------------------------------------------------
+\echo '=== ⑤ 对称清除（两个身份 GUC 同为占位符）：并行计数是否 = 0（干净）而非随机 ==='
+reset app.tenant_id;
+reset app.shop_ids;
+select 'leader 侧两键' as probe,
+       coalesce(current_setting('app.tenant_id', true), '<NULL>') || ' / '
+         || coalesce(current_setting('app.shop_ids', true), '<NULL>') as v;
+set max_parallel_workers_per_gather to 2;
+explain (analyze, verbose, costs off, timing off, buffers off)
+  select count(*) from app.v_order_paid;
+select '并行(对称清除后)' as probe, count(*) from app.v_order_paid;
 
 -- ----------------------------------------------------------------------------
 -- 判读（把结果对着这两条读，别只贴数）
@@ -100,4 +151,13 @@ commit;
 --     再对 ②b 的 `Worker 0/1: actual rows=0` 与 ① 的 `Worker 0: actual rows=0` 互相印证。
 --   · ⓪ 的 `Workers Launched = 0` ⇒ **整轮作废**（没并行可谈），把 traffic 表加大或提高
 --     `min_parallel_*` 之前先别下任何结论。
+--   · **关闭判据（架构 v1.5 要的"同源三件套"里可比的那个数）**：①b 与 ③ 在同一快照内相减。
+--     不等 ⇒ 少算成立，且 ② 的 `<NULL-in-this-process>` 那一格给出机制。
+--     相等 ⇒ **不得判"没问题"** —— 掉几行取决于哪几个进程抢到哪些块，是随机的；
+--     本文件跑一次只算一个样本，要多跑几轮再看。
+--   · ④（生产形态）三条**同时**成立才算"显式设值安全"：
+--     取值分布只有**一个**值组、其值 = 注入的店铺列表；`并行(显式设值)` = ③ 串行 200,000；
+--     且 ④ 的 EXPLAIN 里 `Workers Launched ≥ 1`（少了这条，相等只是没并行，废话）。
+--     ⇒ 成立则 R-17 的影响面精确等于"会话从未设过该键 / 被清成 `''` 占位符"这一族，
+--       **不包含**正常请求路径（`app/exec` 每事务注入）。
 -- ============================================================================
