@@ -152,10 +152,12 @@ def parallel_clause(pg_facts: Mapping[str, Any]) -> str:
 
     本轮实测（PG 16.15 / `ecom`，两条角色路径一致）：`app.shop_ids` 只是 `RESET` 留下的
     占位符时，并行读数比串行少约一半且逐轮抖动；同一状态下**显式** `set_config('')` 两路都精确。
-    ⚠️ 机制**未定**，别在引用时把猜测当事实：worker 侧计划里 `Worker 0: rows=0` +
-    `Rows Removed by Filter` 覆盖它整片份额，可是同一状态下从**不含 shop 条款**的视图里
-    并行投影 `current_setting('app.shop_ids', true)` 取到的仍是 `''` ⇒ "worker 没继承到 GUC"
-    这个直观解释被这条读数**证伪**（详见 RELAY P7）。
+    成因**已定位**：占位符 GUC 不随并行 worker 传值 —— 带列引用的对照里，同一条查询、
+    `Workers Launched = 2`，leader 那一格读 `''`、worker 那一格读 NULL，两格相加恒等于该租户全量。
+    ⚠️ 这条教训要留着：**对照表达式必须带列引用**。上一版我方用
+    `select coalesce(current_setting(...)) as v from 视图 group by v`（无列引用）⇒ planner 把它
+    提到 Gather 之上、只由 leader 算一次 ⇒ 产出"worker 也看到 ''"的**提升性伪影**，
+    差点把真因排除掉（W7 指出后我方复算证实）。
 
     ⚠️ **不自带句首标点**：前一句有没有句号由调用方知道，这里再写一个就会在报告里
     生成"。。"（实测踩过）。调用方按自己那一句的收尾选分隔符。
@@ -170,7 +172,9 @@ def parallel_clause(pg_facts: Mapping[str, Any]) -> str:
         prod_txt = "等值" if prod is True else ("**不等值**" if prod is False else "**未测**")
         return ("🔴 并行/串行**不等值**（少算已复现）：" + "、".join(f"`{x}`" for x in under)
                 + " ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 "
-                + prod_txt + "；机制未定（见 RELAY P7），不要把「worker 没拿到 GUC」当既成事实引用")
+                + prod_txt + "；成因已定位 = **占位符 GUC 不随并行 worker 传值**"
+                "（leader 读 `''`、worker 读 NULL，两格相加 = 该租户全量），"
+                "修法归 PG 配置 / 策略文本（架构裁决见 RELAY A11），本窗口只报读数不代修")
     if not state:
         return ("🔴 并行/串行**不等值** ⇒ 本行 PG 读数一律不得引用，先定位并行路径"
                 "（数变小且不报错，N-07 抓不到）")

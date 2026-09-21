@@ -643,7 +643,8 @@ def test_real_probe_artifact_wording_names_the_reproduced_undercount():
     assert "v_order_paid/reset_placeholder" in text
     assert "少算已复现" in text and "等值对照**通过**" not in text
     assert "显式 `set_config`）本轮 等值" in text, "要同时说清生产执行链那一格是等值的"
-    assert "机制未定" in text, "worker 侧成因未定，措辞不许把它写成既成事实"
+    assert "成因已定位" in text and "占位符 GUC 不随并行 worker 传值" in text
+    assert "本窗口只报读数不代修" in text, "修法归 PG 配置/策略文本，措辞不许越界成我方已修"
 
 
 def test_timeout_snapshot_drift_names_the_shape_change():

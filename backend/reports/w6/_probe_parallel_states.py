@@ -213,12 +213,20 @@ async def _controls() -> dict:
             nodes[opt] = n
     out["plan_node_options"] = nodes
 
-    # 直接把 worker 眼里的值聚合出来：`v_traffic_daily` 的策略**不含** shop 条款，
-    # 所以投影不会被过滤掉 ⇒ 这一格能回答"worker 到底拿没拿到那个占位符"。
-    q = ("select v, count(*) as n from (select coalesce(current_setting('app.shop_ids', true), "
-         "'<NULL>') as v from \"app\".\"v_traffic_daily\") s group by v order by v nulls first")
-    con = await psycopg.AsyncConnection.connect(RO_DSN, autocommit=True)
+    # ⚠️ 这一组**换过形状**：旧版是 `select coalesce(current_setting(...)) as v from 视图 group by v`，
+    # 表达式里**没有列引用** ⇒ planner 把它提到 Gather 之上、只由 leader 算一次 ⇒ 根本测不到 worker，
+    # 于是产出"worker 也看到 ''"这种**提升性伪影**（W7 指出，我方复算证实：同一条查询里
+    # `Workers Launched = 2`，leader 格 `''` 与 worker 格 `<NULL-in-this-process>` 同时出现）。
+    # 现在必须带列引用（`case when t.tenant_id is not null then …`）逐行求值，走基表
+    # `traffic_daily`，身份用 `app_rw`（`app_ro` 读不到基表、也无权 `SET ROLE`），并在
+    # **同一条计划**里核对 `Workers Launched ≥ 1`；不满足就整组作废（`void`），不许留假读数。
+    q = ("select case when t.tenant_id is not null then "
+         "coalesce(current_setting('app.shop_ids', true), '<NULL-in-this-process>') "
+         "else '<unreachable>' end v, count(*) n "
+         "from app.traffic_daily t group by 1 order by 1")
+    con = await psycopg.AsyncConnection.connect(SUPER_DSN, autocommit=True)
     async with con:
+        await con.execute("set role app_rw")
         await con.execute("select set_config('app.tenant_id', %s, false)", (TENANT,))
         await con.execute("reset app.shop_ids")
         await con.execute("select set_config('max_parallel_workers_per_gather', '2', false)")
@@ -226,11 +234,14 @@ async def _controls() -> dict:
         plan = "\n".join(r[0] for r in await (await con.execute(
             f"explain (analyze, timing off, summary off) {q}")).fetchall())
         launched = re.search(r"Workers Launched:\s*(\d+)", plan)
+        workers = int(launched.group(1)) if launched else 0
         out["worker_side_guc_value"] = {
-            "rows": [list(r) for r in await (await con.execute(q)).fetchall()],
-            "workers_launched": int(launched.group(1)) if launched else 0,
-            "note": "值全是 '' ⇒ 'worker 没拿到 GUC' 这一支解释被证伪（但 v_order_paid 那一格的"
-                    "少算就在 worker 侧：见 plan 里的 `Worker 0: ... rows=0`）",
+            "workers_launched": workers,
+            "void": workers < 1,
+            "rows": [list(r) for r in await (await con.execute(q)).fetchall()] if workers >= 1 else [],
+            "shape": "带列引用的 CASE（`t.tenant_id is not null` 逼出逐行求值）× 基表 traffic_daily × app_rw",
+            "note": "两格相加恒等于该租户总行数 ⇒ 占位符 GUC 没传到 worker；"
+                    "leader 读 '' 而 worker 读 NULL ⇒ 这就是少算那一格的成因",
         }
     # 生产形状对照：`app/exec/executor.py` 走的是①（`IDENTITY_INJECTION_TEMPLATE` 用
     # `set_config(..., true)`，且与连接借用原子）。③ 是连接池复用最容易踩的一格。
