@@ -275,6 +275,47 @@ W2B 一旦回退工作区，这串数就没了出处。它只回答一个问题�
 ⇒ **本轮起我在"物化 → 预检"之间不跑任何 `tests/integration`**，且每次预检前先复核 `(197,197,197)`。归号建议 `U-114`（不自占）。
 本轮额度（实测）：**17 次调用 / ¥0.033283**。
 
+#### 三.0.1g 判据④ 卡点的最终定位（09-21 第六轮 · 一次原始 SSE 取证就够）
+
+**为什么要有这一节**：`ok=0` 这件事我在 §三.0.1d/e/f 里换了三个归因（`INTERNAL` → 题库该 clarify → "一道关卡"），
+前三个都靠回执统计推；这一节的方法论是**把一条流原样打出来看帧**，一次请求就定案。
+
+```bash
+# 一次性取证（不是量具、不进 driver）。⚠️ 会话必须由 POST /session 铸造：凭空造 session_id 会被拒（实测 404）。
+TOKEN=$(head -1 /path/to/tokens.txt)                      # 令牌文件不进仓库，跑完即删
+SID=$(curl -sS -X POST http://127.0.0.1:18000/api/v1/session \
+        -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' \
+      | python -c 'import json,sys; print(json.load(sys.stdin)["data"]["session_id"])')
+curl -sS -N -X POST http://127.0.0.1:18000/api/v1/query \
+     -H "Authorization: Bearer $TOKEN" -H 'Accept: text/event-stream' -H 'Content-Type: application/json' \
+     -d "{\"question\":\"T_A 在 2026-08-01 到 2026-08-31 之间的 GMV 是多少？\",\"session_id\":\"$SID\",\"options\":{\"async_if_slow\":false}}"
+# -N 关缓冲才能逐帧看到 event/data；判据全在 plan_ready 那一帧的 plan_summary 是不是 null
+```
+
+| 探针 | 问句 | 帧 | 结论 |
+|---|---|---|---|
+| A | `T_A 从 2026-08-01 起的 GMV 是多少？` | `intent 1609` → **`intent 12628`** → `schema_linking (candidates_count=5)` → **`plan_ready (plan_summary=null)`** → `refuse(no_data_asset)` | 一条 run 发了**两次** `stage=intent` |
+| B | `T_A 在 2026-08-01 到 2026-08-31 之间的 GMV 是多少？` | `intent 1237` → `schema_linking (candidates=5)` → **`plan_ready (plan_summary=null)`** → `refuse(no_data_asset)` | 闭区间 + 语义层里定义好的指标 ⇒ 照样被拒 |
+
+⇒ **三条要记住的读数**：
+1. `GMV` 在语义层里（`embed_doc kind='metric'` 共 9 条：`gmv/aov/arpu/order_cnt/pay_cvr/refund_rate/repurchase_rate_90d/sell_through_rate/uv`；
+   asset 8 条：`campaign/dim_date/order_paid/order_refund/product/region/shop/traffic_daily`）⇒ **"题集与资产不对齐"这条解释被证伪**。
+2. `plan_ready` 帧的 `plan_summary` 取的是 **PLAN 那一次节点的 state 增量**（`app/graph/events.py` 的 PLAN 分支），
+   而阻塞路径返回 `terminal_update(...)`（不含 `plan_summary`）、成功路径才返回 `state_payload()`
+   ⇒ **`plan_summary=null` 只可能来自 PLAN 自拒，不是 BIND**。
+3. 但"为什么拒"**读不到**：refuse 帧只有 `{reason,message,suggestions}`；`app.query_plan` **0 行**；
+   `app.audit_log` 只有 `outcome`/`refusal_reason`（`final_executed_sql` 全 NULL、`tables_accessed` 全 `{}`）
+   ⇒ 一手证据 `blocking_issues` 只活在 state 里 ⇒ **这条归 U-115（架构已归号给 W4+W7）**。
+
+⚠️ **两条别再走的死路**（我都试过）：
+- 用指标面区分 PLAN / BIND：`binding_state_total`、`binding_layer_total`、`retrieval_mode_total` **三族在 12 条 run 后仍全零**，
+  `grep` 复核是**没有调用点**（不是没流量）⇒ 路不通。
+- 拿 stage 计数做减法（`intent − schema_linking = 中途终止数`）：**不成立** —— 探针 A 实测一条 run 发了两次 `stage=intent`
+  ⇒ `stage_*_count` 是**节点执行次数**，不是请求数。要判"有没有收口"用终态族（`query_outcome_total` = 3 clarify + 7 refuse = 10）。
+
+**放行状态不变**：判据④ 要的是 `stage_duration_seconds_count{stage="executing"}` 从 0 变 ≥1（等价于出现 `outcome=ok`）。
+本轮花费：两条探针 **4 次调用 / ¥0.010577**；本窗口全程（≥06:20Z）**21 次 / ¥0.043860**。**跑批仍未跑。**
+
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 
 探针的取数依据按 U-22 纪律必须"写在常量旁边"，而常量旁边放不下方法 —— 所以

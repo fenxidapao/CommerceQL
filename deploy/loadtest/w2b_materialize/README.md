@@ -6,3 +6,10 @@
 用法：`cd 仓库根 && .venv/Scripts/python.exe deploy/w2b_materialize/_w2b_u112_materialize.py`（前置：pg healthy、Ollama 可达、bge-m3 在册）。
 
 ⚠️ 与 `tests/integration/test_semantic_materialization.py` 的冲突（W2B 实证）：那个夹具会把 `app.embed_doc` 的 embedding/tsv 清回 NULL **且测试全绿** ⇒ 物化之后不要跑 `tests/integration`，且每次预检前先复核 `(197,197,197)`。
+
+---
+
+**09-21 两条补记（架构要求）**
+1. **被测镜像的 commit 出处**：本轮所有活体读数出自 `w7load-api:0921r3`，构建时 `git status --short -- backend/app backend/tests deploy` 为空 ⇒ 镜像内容 = **commit `51543e1`**（含 `1255065` 的 U-112）。
+2. **目录归属**：`deploy/**` 名义归 W0、只把 `deploy/loadtest/` 划给 W7 ⇒ 本目录已从 `deploy/w2b_materialize/` **移进 `deploy/loadtest/w2b_materialize/`**（`git mv`，历史可追），这样不需要 W0 额外 ack。
+3. W2B 的自足性修复（`ffe3ed7`：脚本自身目录最后插 `sys.path` ⇒ 同级优先）已随本副本进来；**权威版本仍是 W2B 的仓内提交**，两边不一致以他们为准。

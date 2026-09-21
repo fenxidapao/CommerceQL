@@ -1355,3 +1355,81 @@ W2B 把 U-112 提交了（`1255065`）并物化了 `app.embed_doc`。我独立�
   ⚠️ 我先前在这行写过"12 次 / ¥0.0233"，那是**估的、不是查的** —— 已按台账改正（同一判据：数字要能指出出处）。
 - ❌ 未跑：四场景 + 场景⑤ 跑批（判据④ 仍 `ok=0` ⇒ 跑了依旧无分母）、`tests/integration`（会毁前置，见上）、迁移套件（`U-113` 未定案）。
 - ❌ 未验：`executing` 关卡的**具体成因**（不在我目录）。
+
+---
+
+## 二十四、那条"关卡"我自己拆掉了：一次 SSE 原始流把 PLAN 与 BIND 分开，结论是 **PLAN 自拒**（09-21 第六轮）
+
+架构要的决定性读数先交齐（`/api/v1/metrics`，零额度，镜像 `0921r3` = commit `51543e1`）：
+
+```
+stage_duration_seconds_count{stage="intent"}          11
+stage_duration_seconds_count{stage="schema_linking"}   7
+stage_duration_seconds_count{stage="plan_ready"}       7
+stage_duration_seconds_count{stage="sql_ready"}        0   ← 显式 0（架构点名要的那条）
+stage_duration_seconds_count{stage="gate_passed"}      0   ← 显式 0
+stage_duration_seconds_count{stage="executing"}        0
+http_requests_total{endpoint="/api/v1/query",status="2xx"} = 12（含本轮两条探针）；终态：clarify 3 + refuse 7 = 10
+```
+
+### ① 我按 W2B 给的两条指纹做了活体取证（两条原始 SSE 流，各 1 条请求）
+
+| 探针 | 问句 | 帧序列（`elapsed_ms`） |
+| --- | --- | --- |
+| A（开放区间） | `T_A 从 2026-08-01 起的 GMV 是多少？` | `intent 1609` → **`intent 12628`** → `schema_linking 15701 (candidates_count=5)` → **`plan_ready 18213 (plan_summary=null)`** → `refuse(no_data_asset)` |
+| B（闭区间 + 精确指标名） | `T_A 在 2026-08-01 到 2026-08-31 之间的 GMV 是多少？` | `intent 1237` → `schema_linking 1349 (candidates_count=5)` → **`plan_ready 3245 (plan_summary=null)`** → `refuse(no_data_asset)` |
+
+⇒ **"题集与已物化语义资产不对齐"这条假设，在 B 这道题上证伪**：`GMV` 就是语义层里定义好的指标
+（实测 `embed_doc kind='metric'` 共 9 条：`gmv / aov / arpu / order_cnt / pay_cvr / refund_rate / repurchase_rate_90d / sell_through_rate / uv`；
+`kind='asset'` 8 条：`campaign / dim_date / order_paid / order_refund / product / region / shop / traffic_daily`），
+时间区间也是闭的、`schema_linking` 还回了 5 个候选 ⇒ **模型照样判"没有能答的数据"**。
+
+### ② 两个候选怎么分开的（代码依据，我只读不写）
+
+- `app/graph/events.py`（`emissions_for_node`，PLAN 分支）：`plan_ready` 帧的载荷是 `{"plan_summary": _jsonable(update.get("plan_summary"))}`
+  ⇒ **它取的是 PLAN 这一次节点的 state 增量**，不是全量 state。
+- `app/graph/nodes/plan.py:89-106`：阻塞路径返回的是 `terminal_update(...)` **再加 `intent_detail`**，
+  而**成功路径**才返回 `outcome.state_payload()`（含 `plan_summary`）⇒ **只有 PLAN 自拒时，帧里的 `plan_summary` 才会是 `null`**。
+- BIND 拒（`edges.py` 的 `route_after_bind` → `REFUSE_OUT`）发生在 PLAN **成功之后** ⇒ 那一帧的 `plan_summary` 必然非 null。
+
+⇒ **判定：本轮 7 条 `refuse(no_data_asset)` 走的是 PLAN 自拒，不是 BIND。** W2B 的"次强指纹"成立、方向对。
+⚠️ 但他们的"最强指纹"（在 refuse 帧里读 `intent_detail.reason_code="plan_blocked"`）**实测不可用**：
+两条流的终止帧载荷逐字是 `{"reason","message","suggestions","terminal"}` —— **没有 `reason_code`，也没有 `blocking_issues`**。
+再查出口：`app.query_plan` **行数 = 0**（`plan_json/plan_summary/binding_state` 三列都在，但没有任何一行），
+`app.audit_log` 只有 `outcome` + `refusal_reason`（今日 13 行里 7 条 `refuse|no_data_asset`、`final_executed_sql` 全 NULL、`tables_accessed` 全 `{}`）。
+⇒ **`blocking_issues` 这个"为什么拒答"的一手证据只活在 state 里，SSE / 指标 / 库三处都不出口。**
+   这就是 **U-115 的可执行定义**（不是"加个 stage 帧"这么轻）：**把 PLAN 判阻塞的理由变成运行期可读的一件东西**。
+   判据我可以给：改完之后，同样这道题应当能仅凭外部证据（不看日志、不改代码）回答"模型为什么认为答不了"。
+
+### ③ 🔻 拆我自己量具的雷：`stage` 计数是**节点执行次数**，不是请求数
+
+探针 A 在**一条 run 内发了两次 `stage=intent`**（1,609ms 与 12,628ms），而探针 B 只发了一次 ⇒
+`intent=11` 对 10 条终态不是"多出 1 条没收口"，而是**有 run 重入了 intent**。
+⇒ 任何形如"`intent − schema_linking = 终止在两者之间的请求数`"的减法**都不成立**，除非先证明每条 run 每档至多一帧。
+⚠️ 核对了一遍我自己写过的话：§二十三 的结论（"从未进 `executing`"）不依赖这个减法，**所以那条结论不作废**；
+但 W2B 由 `schema_linking=7 == plan_ready=7` 推"没有 run 从 LINK 出口终止"这一步，是建立在"每 run 一帧"这个我尚未证明的假设上的
+——**它对 intent 不成立，对 link/plan 目前还没有反例**，我把它作为待核项交回，不替他们下结论。
+（哪条路径会重入 `intent` 属 W4 的图，我只报读数。）
+
+### ④ 我试过、失败的那条路（如实记，免得别人再走）
+
+想用指标面独立区分 PLAN vs BIND，于是查了 `binding_state_total` / `binding_layer_total`：12 条 run 后**仍全零**。
+`grep` 复核原因 —— **三族都没有调用点**（`app/` 内除 `app/obs/**` 自身外零引用）：
+`BINDING_STATE_TOTAL` 0、`BINDING_LAYER_TOTAL` 0、`RETRIEVAL_MODE_TOTAL` 只有一个内部包装函数（包装本身也没人调）。
+⇒ 我先前只报了 `retrieval_mode_total` 一族"无调用点"，**准确说法是三族同一形态**；
+⇒ 也⇒ **"用指标判 BIND"这条路当前不通**，别再接着试；等 U-115 落地时一并把这三族的调用点补上才是正解（归 W4/W2B，不进我目录）。
+
+### ⑤ 交回总控的唯一动作
+
+`ok ≥ 1` 现在卡在**一件可读性事实**上：PLAN 说什么理由判了阻塞。我这边不猜、不改别人的节点；
+判据现成（`stage_duration_seconds_count{stage="executing"}` 从 0 变 ≥1 就是通了）。
+
+### ⑥ 本轮实测 / 未实测
+
+- ✅ 实测：6 档 stage 全计数（含两条显式 0）、两条原始 SSE 流、语义层 9 metric + 8 asset 清单、
+  `app.query_plan=0 行` / `app.audit_log` 13 行的字段形态、三族指标的调用点 grep。
+- ✅ 花费：**两条探针 = 4 次调用 / ¥0.010577**；本轮全程（`created_at ≥ 06:20Z`）**21 次调用 / ¥0.043860**。
+- ⚙️ 顺带办了架构两条要求：`deploy/w2b_materialize/` → **移进 `deploy/loadtest/w2b_materialize/`**（`git mv`，历史可追，不用 W0 ack），
+  README 补上"镜像 = commit `51543e1`"与 W2B 的 `ffe3ed7` 自足性修复说明。
+- ❌ 未跑：四场景 + 场景⑤ 跑批（`ok` 仍 0 ⇒ 无分母）、`tests/integration`（会把 `embed_doc` 清回 NULL）、迁移套件。
+- ❌ 未证：探针 A 为何重入 `intent`；`blocking_issues` 的具体内容（拿不到，这正是 U-115）。
