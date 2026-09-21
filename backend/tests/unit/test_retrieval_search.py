@@ -9,7 +9,12 @@
 from __future__ import annotations
 
 from app.core.enums import RetrievalMode
-from app.retrieval.dense import EmbeddingUnavailable, InMemoryVectorStore, l2_normalize
+from app.retrieval.dense import (
+    EmbeddingUnavailable,
+    InMemoryVectorStore,
+    PgVectorStore,
+    l2_normalize,
+)
 from app.retrieval.search import RetrievalService
 from app.retrieval.sparse import SparseSearch
 from tests.unit._retrieval_fixture import (
@@ -125,6 +130,30 @@ async def test_embedding_down_yields_explicit_degradation() -> None:
     assert str(result.degraded_reason) == "embedding_unavailable"
     assert str(result.action_taken) == "sparse_only"
     assert result.candidates  # 降级不是空结果
+
+
+async def test_vector_column_not_materialized_degrades_not_internal() -> None:
+    """`U-112` 形态 (ii)：向量列未物化（分数全 NULL）—— 必须降级，不得抛出去。
+
+    与上面的 `test_embedding_down_yields_explicit_degradation`（形态 (i)：
+    Ollama 不通）**成对**：07 §5.3 行 4 的 v1.6 判据要求"两形态同一出口"。
+    只修 (i) 会留下静默/500 形态 —— 那正是 W7 那 2 条 `INTERNAL` 的形状。
+    """
+
+    async def fetch_rows(sql: str, params: dict) -> list[dict]:
+        return [{"ref": "order_paid", "kind": "asset", "score": None}]
+
+    service, _ = make_service(
+        embedder=FakeEmbedder(),
+        sparse_rows=sparse_rows_for(["order_paid"]),
+        vector_store=PgVectorStore(fetch_rows),
+    )
+    result = await service.search_full("订单分析", make_identity(), RetrievalMode.HYBRID)
+    assert result.mode == RetrievalMode.SPARSE_ONLY
+    assert result.degraded
+    assert str(result.degraded_reason) == "embedding_unavailable"
+    assert str(result.action_taken) == "sparse_only"
+    assert result.candidates  # 稀疏路仍有结果 ⇒ 不是"空降级"
 
 
 async def test_requested_sparse_only_never_calls_embedder() -> None:

@@ -17,9 +17,29 @@
 ## 落位与诚实边界
 
 - `PgVectorStore` 的物理 SQL 面向 `app.embed_doc`（W1B 启动断言引用的表名）；
-  但该表**由 W2A 物化**、schema 未冻结——除表名外的列形态以 W2A 冻结为准，
-  本实现按 07 §6.3/§12.2 的字段需求写，**在 W2A 冻结 schema 前标 UNVERIFIED**，
-  不跑集成测试（本机 pgvector 也未安装）。
+  该表由 W2A 物化。**列形态已核对**（2026-09-21 实测 `information_schema`：
+  `doc_id/bundle_version/tenant_id/kind/ref/text/tsv/embedding`，其中 `embedding`
+  = `vector`、`tsv` = `tsvector`，与 07 §12.2 逐字一致；本机 pgvector **已装**
+  = `0.8.6`，旧注"本机 pgvector 也未安装"作废）。
+- **`U-112`：稠密不可用的两种形态，本模块都归到同一个出口**（07 §5.3 行 4 的
+  `degraded(embedding_unavailable, sparse_only)`，不新发明出口）：
+  - **(i) 请求侧失败**：`OllamaEmbedder.embed` 重试耗尽 → 抛 `EmbeddingUnavailable`；
+  - **(ii) 数据侧缺失**：向量列未物化（`embedding IS NULL`）。此时
+    `1 - (embedding <=> vec)` **返回 NULL**（不是 0），`float(None)` 会抛 `TypeError`
+    并一路逃出图 ⇒ runner 兜底 `error(INTERNAL)`（W7 2026-09-21 活体栈实测）。
+    `PgVectorStore.topk` 现按下列规则**转为 (i) 同款异常**：
+    作用域内有行但**一条可用向量都没有** ⇒ 抛 `EmbeddingUnavailable`（= 空向量列）；
+    作用域内**一行都没有** ⇒ 返回空、**不降级**（空 KB / 无该版本文档是合法状态，
+    不能让"没数据"冒充"软依赖坏了"，否则 `retrieval_mode=sparse_only` 的降级率
+    会掺进假信号 —— 07 §6.x 把它当 Ollama 健康度信号用）。
+    ⚠️ 部分为 NULL 时**不降级**：有效向量照常返回。"列里有没有数"由
+    `U-111` 的**启动断言**负责播报，不在读路径上重复判（一条判据两个落点 = 第 5 例）。
+- **有效向量不会被 NULL 行挤掉**（判据不是不等式，是可证事实）：SQL 的
+  `ORDER BY embedding <=> (:vector)::vector, doc_id` 是 **ASC**，PG 的 ASC 默认
+  **`NULLS LAST`** ⇒ 非 NULL 行必排在 NULL 行之前 ⇒ 被 `LIMIT` 截掉的只可能是
+  NULL 行。**这条不变量由集成测试锁住**
+  （`tests/integration/test_retrieval_fts_pg.py::test_dense_null_rows_never_crowd_out_valid_vectors`）
+  —— 改 `ORDER BY` 的排序方向会让它变红。
 - `InMemoryVectorStore` 是**测试/离线评测用的替身**（余弦同生产数学），
   **不是**第二套生产实现，禁止在任何在线路径使用。
 """
@@ -255,6 +275,13 @@ class PgVectorStore:
     #: ⚠️ `tenant_id IN (:tenant_id, '*')`：`'*'` = W2A 物化侧的公共语义包哨兵
     #: （实测 2026-09-16；语义包 doc 无租户数据，公共行全租户可见不构成泄露，
     #: 真租户行仍只能命中自己。过滤仍在 SQL 内，N-10 不变。对齐项已登记 RELAY）。
+    #:
+    #: ⚠️ **两处刻意"什么都不加"**（U-112，改动前先读模块头的"落位与诚实边界"）：
+    #: 1. **不加 `AND embedding IS NOT NULL`** —— 加了就再也分不清"作用域内无文档"
+    #:    与"文档在但向量没物化"；这两者的正确处理相反（前者如实返空，后者降级）。
+    #: 2. **不写显式 `NULLS LAST`** —— ASC 下它与默认同义（多一处与 pgvector HNSW
+    #:    有序扫描计划交互的语法，收益为零）；改成断言式锁：集成测试
+    #:    `test_dense_null_rows_never_crowd_out_valid_vectors` 让"改排序方向"变红。
     _SQL_TEMPLATE: Final[str] = """
         SELECT ref, kind,
                1 - (embedding <=> (:vector)::vector) AS score
@@ -272,11 +299,22 @@ class PgVectorStore:
         self._sql = self._SQL_TEMPLATE.format(table=table)
 
     @staticmethod
-    def _row_to_hit(row: Mapping[str, Any]) -> VectorHit:
+    def _row_to_hit(row: Mapping[str, Any]) -> VectorHit | None:
+        """行 → 命中。**分数为 NULL 时返回 `None`**（= 该行没有可用向量）。
+
+        `1 - (embedding <=> vec)` 在 `embedding IS NULL` 时求值为 **NULL**（不是 0）
+        —— 旧实现无条件 `float(row["score"])` 会在这一步抛 `TypeError`、逃出图，
+        被 runner 兜底成 `error(INTERNAL)`（`U-112` 形态 (ii)，W7 活体栈实测）。
+        这里**不就地把 NULL 当成 0 分**（那会让空向量列伪造出"全 0 分候选"，
+        比报错更坏）；返回 `None` 交 `topk` 汇总判断。
+        """
+        score = row["score"]
+        if score is None:
+            return None
         return VectorHit(
             ref=str(row["ref"]),
             kind=str(row["kind"]),
-            score=float(row["score"]),
+            score=float(score),
         )
 
     async def topk(
@@ -297,4 +335,19 @@ class PgVectorStore:
                 "limit": limit,
             },
         )
-        return [self._row_to_hit(row) for row in rows]
+        hits = [h for h in (self._row_to_hit(row) for row in rows) if h is not None]
+
+        # U-112 形态 (ii)：作用域内**有行**却**零条可用向量** ⇒ 向量列未物化。
+        # 抛 `EmbeddingUnavailable`（与形态 (i) 同款异常）⇒ search.py 既有出口
+        # 把它转成 `degraded(embedding_unavailable, sparse_only)`（07 §5.3 行 4）。
+        # ⚠️ 判据是"有行且全 NULL"，不是"命中 0 行"：作用域内一行都没有（空 KB /
+        #    该版本无文档）是**合法状态**，返回空即为如实结果，不得冒充降级。
+        if rows and not hits:
+            raise EmbeddingUnavailable(
+                f"app.embed_doc 在 tenant_id={tenant_id!r} / "
+                f"bundle_version={bundle_version!r} 作用域内返回 {len(rows)} 行，"
+                "但 embedding 全为 NULL ⇒ 向量列未物化，稠密检索不可用"
+                "（物化侧未注入 embedder，见 semantics/materialize.py 的 "
+                "`pending_embedder`；U-112 形态 (ii)）。"
+            )
+        return hits

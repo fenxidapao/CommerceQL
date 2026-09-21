@@ -23,6 +23,7 @@ PG DSN（两路分离）：
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -31,7 +32,7 @@ import pytest
 
 from app.core.contracts import IdentityContext, Role
 from app.core.enums import RetrievalMode
-from app.retrieval.dense import OllamaEmbedder
+from app.retrieval.dense import EmbeddingUnavailable, OllamaEmbedder, PgVectorStore
 from app.retrieval.search import RetrievalService
 from app.retrieval.sparse import SparseSearch
 from app.retrieval.tokenizer import tsvector_source
@@ -143,11 +144,28 @@ def write_doc(
         conn.commit()
 
 
+#: `:name` 占位符（**排除 `::type` 强制转换**）
+_PLACEHOLDER = re.compile(r"(?<![:\w]):([A-Za-z_][A-Za-z0-9_]*)\b")
+
+
+def to_psycopg_params(sql: str, params: Mapping[str, Any]) -> str:
+    """`:name` → `%(name)s`（只换 `params` 里真有的键），**跳过 `::type`**。
+
+    ⚠️ 朴素的 `sql.replace(":vector", "%(vector)s")` 会把 `(:vector)::vector` 里
+    `::vector` 的那半截也吃掉，产出 `(%(vector)s):%(vector)s` ⇒ `syntax error at or
+    near ":"`。旧写法"看着没事"只因本文件此前**只有 sparse 用例**——它的 SQL 里
+    没有任何 `::` 转换。2026-09-21 加 dense 用例时立刻踩到，故改为带否定后顾的正则。
+    """
+    known = set(params)
+    return _PLACEHOLDER.sub(
+        lambda m: f"%({m.group(1)})s" if m.group(1) in known else m.group(0), sql
+    )
+
+
 def make_fetcher(table: str):
     async def fetch(sql: str, params: Mapping[str, Any]) -> Sequence[Mapping[str, Any]]:
         # psycopg 命名参数 %(name)s 形态；我们的模板用 :name（SQLAlchemy 风格）
-        for key in params:
-            sql = sql.replace(f":{key}", f"%({key})s")
+        sql = to_psycopg_params(sql, params)
         assert TEST_DSN is not None
         with _conn(TEST_DSN) as conn:
             cur = conn.cursor()
@@ -325,3 +343,129 @@ def test_dead_ollama_port_yields_explicit_degradation() -> None:
 
 async def _empty_fetcher(sql: str, params: Mapping[str, Any]) -> Sequence[Mapping[str, Any]]:
     return []
+
+
+# ---------------------------------------------------------------------------
+# U-112：稠密路的 NULL 形态（真 pgvector；无 pgvector 时**具名 skip**）
+#
+# 为什么必须真 PG 跑：dense 的 NULL 形态是**物理 SQL 的行为**（
+# `1 - (embedding <=> vec)` 在向量为 NULL 时求值为 NULL，且 NULL 行的排序位置
+# 决定了它们会不会挤掉有效行）—— 用替身 fetcher 只能测到 Python 侧的分支。
+# ---------------------------------------------------------------------------
+
+DENSE_SCHEMA = "retrieval_dense_it"
+
+_DENSE_DDL = f"""
+CREATE SCHEMA IF NOT EXISTS {DENSE_SCHEMA};
+DROP TABLE IF EXISTS {DENSE_SCHEMA}.embed_doc;
+CREATE TABLE {DENSE_SCHEMA}.embed_doc (
+    doc_id         text PRIMARY KEY,
+    bundle_version text NOT NULL,
+    tenant_id      text NOT NULL,
+    kind           text NOT NULL,
+    ref            text NOT NULL,
+    text           text NOT NULL,
+    tsv            tsvector,
+    embedding      vector(4)
+);
+"""
+
+
+@pytest.fixture(scope="module")
+def dense_table() -> str:
+    """临时 schema + **真 `vector` 列**（与生产表同为 pgvector 类型）。"""
+    assert TEST_DSN is not None
+    with _conn(TEST_DSN) as conn:
+        try:
+            conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            conn.commit()
+        except psycopg.Error as exc:  # 无扩展文件 / 无权限 —— 具名 skip，不伪装通过
+            conn.rollback()
+            pytest.skip(f"目标实例不可用 pgvector：{type(exc).__name__}: {exc}")
+        conn.execute(_DENSE_DDL)
+        conn.commit()
+    yield f"{DENSE_SCHEMA}.embed_doc"
+    with _conn(TEST_DSN) as conn:
+        conn.execute(f"DROP SCHEMA IF EXISTS {DENSE_SCHEMA} CASCADE")
+        conn.commit()
+
+
+def dense_literal(values: list[float]) -> str:
+    return "[" + ",".join(repr(float(v)) for v in values) + "]"
+
+
+def seed_dense(table: str, version: str, rows: list[tuple[str, str | None]]) -> None:
+    """`rows` 的第二个元素 = pgvector 文本字面量；`None` = 该行向量为 NULL。"""
+    assert TEST_DSN is not None
+    with _conn(TEST_DSN) as conn:
+        for ref, vector in rows:
+            conn.execute(
+                f"INSERT INTO {table} (doc_id, bundle_version, tenant_id, kind, ref,"
+                " text, tsv, embedding) VALUES (%s,%s,%s,%s,%s,%s,NULL,%s::vector)",
+                (f"{version}::{ref}", version, "*", "asset", ref, ref, vector),
+            )
+        conn.commit()
+
+
+def test_dense_null_rows_never_crowd_out_valid_vectors(dense_table) -> None:
+    """U-112 的**机制锁**：NULL 行不得把有效向量挤出 `LIMIT` 窗口。
+
+    依据的事实：SQL 的 `ORDER BY embedding <=> (:vector)::vector` 是 **ASC**，
+    而 PG 的 ASC 默认 **`NULLS LAST`** ⇒ 非 NULL 行必排在 NULL 行之前。
+    本用例**故意让 NULL 行数 > limit**：若有人把排序方向改成 `DESC`（NULL 变先行），
+    这里会立刻变红（0 条命中 ⇒ 抛 `EmbeddingUnavailable`），而不是悄悄少召回。
+    每个用例用**各自的 bundle_version**，避免模块级夹具互相污染。
+    """
+    import asyncio
+
+    version = f"{BUNDLE_VERSION}-nullmix"
+    seed_dense(dense_table, version, [(f"null_{i}", None) for i in range(6)])
+    seed_dense(
+        dense_table,
+        version,
+        [
+            ("hit_a", dense_literal([1.0, 0.0, 0.0, 0.0])),
+            ("hit_b", dense_literal([0.9, 0.1, 0.0, 0.0])),
+        ],
+    )
+
+    store = PgVectorStore(make_fetcher(dense_table), table=dense_table)
+    hits = asyncio.run(
+        store.topk([1.0, 0.0, 0.0, 0.0], tenant_id="T_A", bundle_version=version, limit=3)
+    )
+    assert [h.ref for h in hits] == ["hit_a", "hit_b"]  # 有效行零丢失、NULL 行被丢弃
+    assert hits[0].score > hits[1].score  # 真 ts 之外：分数是真 pgvector 算的
+
+
+def test_dense_all_null_column_raises_unavailable_not_type_error(dense_table) -> None:
+    """向量列全 NULL ⇒ `EmbeddingUnavailable`（**不是** `TypeError`）。
+
+    这是 W7 那 2 条 `INTERNAL` 的形态：旧实现在这里抛 `TypeError`，
+    而它**不是** `EmbeddingUnavailable` ⇒ `search.py` 的 except 接不住 ⇒ 兜底 INTERNAL。
+    """
+    import asyncio
+
+    version = f"{BUNDLE_VERSION}-allnull"
+    seed_dense(dense_table, version, [("only_null_1", None), ("only_null_2", None)])
+
+    store = PgVectorStore(make_fetcher(dense_table), table=dense_table)
+    with pytest.raises(EmbeddingUnavailable, match="全为 NULL"):
+        asyncio.run(
+            store.topk([1.0, 0.0, 0.0, 0.0], tenant_id="T_A", bundle_version=version, limit=5)
+        )
+
+
+def test_dense_scope_with_zero_rows_is_not_degradation(dense_table) -> None:
+    """作用域内 0 行（该版本无文档）⇒ 如实返空，**不得**冒充降级。"""
+    import asyncio
+
+    store = PgVectorStore(make_fetcher(dense_table), table=dense_table)
+    hits = asyncio.run(
+        store.topk(
+            [1.0, 0.0, 0.0, 0.0],
+            tenant_id="T_A",
+            bundle_version=f"{BUNDLE_VERSION}-no-such-version",
+            limit=5,
+        )
+    )
+    assert hits == []

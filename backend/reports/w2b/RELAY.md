@@ -88,3 +88,140 @@
 | 2 | ruff 域内收口 | ✅ 17 条全清（W0 清单计 13 条，实测当日为 17——含我上轮 `Mapping` import 触发的 I001/UP035）：11 条 `--fix` 自动 + 6 条手动（B007×2→`for key in params`、B905×2→`zip(strict=True)`、SIM102→合并 elif、RUF059→`_`）；`ruff check` 域内 **All checks passed** |
 | 3 | CI 红撤回 | ✅ 知悉，未做任何 skip 分支；本机回归 73 unit/contract + 8 integration 全绿（集成用例不受 ruff 修改影响） |
 | 4 | 07 v0.9 §4.8 裁决 | ✅ 知悉并留档：**U-54**=(a) 契约留 contracts、装配根注入 tokenizer 两侧同实例（与我实现一致，无需改码）；**U-59**=(a) **升级 RetrievalPort 端口面**、`search_full()` 旁路被否决、contracts.py 由 W0 落笔 → **本窗口 `search.py::RetrievalResult` 富结果在 W0 落笔后按新端口面收敛，阶段 3 排期项**（收敛动作归我，等 W0 交付后由我或阶段 3 窗口执行，见 §6 提示词草案需同步更新）；U-60/U-61 已契约化，sparse/dense 实现无需改 |
+
+---
+
+## 9. `U-112` 落地回执（2026-09-21，响应 W7 的端到端阻塞报障）
+
+> 输入 = W7 转 W2B 的两条：① `dense.py:279` 对 NULL 分数无条件 `float()` ⇒ `INTERNAL`；
+> ② `app.embed_doc` 没灌向量/tsv。**①②不可互替**（架构 §16⑥ 已钉）。本轮回执 **① 已落地**，
+> **② 具备开跑条件但未执行**（见 §9.6，等用户放行）。
+
+### 9.1 事实复核（独立复跑，非采信转述）
+
+探针 `_w2b_u112_probe.py`（仓库外，不入 git）：
+
+| # | W7 的读数 | 我实测 | 结论 |
+|---|---|---|---|
+| 1 | `embed_doc` 197 行，`embedding` NULL=197 | `count(*)=197`，`count(embedding)=0` | 一致 |
+| 2 | 分 kind：synonym 105 / column 75 / metric 9 / asset 8 | 完全相同（105/75/9/8） | 一致 |
+| 3 | `tsv` 非空 = 0 | `count(tsv)=0` 且 `tsv::text<>''` = 0 | 一致 |
+| 4 | `tenant_id='*'` / bundle `2026.09.14.1` | 全表同一组合，197 行 | 一致 |
+| 5 | `dense` 路返回 NULL 分数 ⇒ `float()` 炸 | 原样跑那条 SQL：返回 5 行、**score 全为 NULL**；`float(None)` ⇒ `TypeError` | **实测成立** |
+| 6 | 加 `AND embedding IS NOT NULL` 会怎样（W7 未测，我补的对照） | **0 行** = 静默空 | ⇒ **光过滤不够**，会从"报错"变成"静默"（架构原话的"静默形态"） |
+| 7 | 稀疏侧是否同样炸（W7 未断言） | 稀疏侧 `WHERE tsv @@ query` 已把 NULL 行滤掉 ⇒ **返 0 行、不出 NULL 分数** | ⇒ **sparse 无需改**，与 07 §5.3 行 4"稀疏侧同样空 ⇒ 自然 `refuse(no_data_asset)`"一致 |
+| 8 | 环境：pgvector 是否可用 | `vector 0.8.6` **已装**；`embedding` 列类型 = `vector` | ⇒ `dense.py` 模块头旧注"本机 pgvector 也未安装 / schema UNVERIFIED"**已过时，本轮回填** |
+
+### 9.2 改了什么（只动 `app/retrieval/dense.py`，W2B 独占域）
+
+| 位置 | 改动 |
+|---|---|
+| `PgVectorStore._row_to_hit` | 返回 `VectorHit \| None`；**分数为 NULL 时返回 `None`**。**不把 NULL 当 0 分**（那会让空向量列伪造出"全 0 分候选"，比报错更坏） |
+| `PgVectorStore.topk` | 丢弃 `None` 行；**作用域内有行却零条可用向量 ⇒ 抛 `EmbeddingUnavailable`** |
+| 模块头 + SQL 模板注释 | 记 U-112 两形态、降级出口、以及"两处刻意什么都不加"的理由（见下） |
+
+**出口不新发明**：`EmbeddingUnavailable` 正是 `search.py:146` 既有的 `except` 分支，
+一路走到 §5.3 行 4 的 `degraded(embedding_unavailable, sparse_only)` ⇒ `link` 不变、W4 不变。
+
+**两处刻意不加（改动前请先读，它们各有理由）**：
+
+1. **不加 `AND embedding IS NOT NULL`** —— 加了就再也分不清"作用域内无文档"与"文档在但向量没物化"，
+   而这两者的正确处理**相反**：前者如实返空（空 KB 是合法状态），后者必须降级。
+   混为一谈会把"没数据"灌进 `retrieval_mode=sparse_only` 的降级率，而 07 把它当**软依赖健康度**信号用。
+2. **不写显式 `NULLS LAST`** —— SQL 的 `ORDER BY embedding <=> v` 是 ASC，PG 的 ASC 默认 `NULLS LAST`，
+   显式写与默认同义（却多一处与 pgvector HNSW 有序扫描计划交互的语法）。改为**用断言锁**：
+   集成用例 `test_dense_null_rows_never_crowd_out_valid_vectors` 故意让 NULL 行数 > `limit`，
+   谁把排序方向改成 `DESC` 谁就把它变红。
+
+### 9.3 判据覆盖"两形态"（架构 §16⑥ 的硬要求）
+
+| 形态 | 判据 | 落点 |
+|---|---|---|
+| **(i) 抛异常**（Ollama 不通） | 既有 `test_embedding_down_yields_explicit_degradation`（未改） | unit/search |
+| **(ii) NULL 分数 / 空向量列** | 新增 4 条单测：全 NULL ⇒ 抛；混合 ⇒ 只回有效且不降级；0 行 ⇒ 不降级；**`score=0.0` 不得被当 falsy 丢掉** | unit/dense |
+| | 新增 1 条服务级：真 `RetrievalService` + 真 `PgVectorStore`，同夹具同作用域，断言 `mode=sparse_only` / `degraded_reason=embedding_unavailable` / `action_taken=sparse_only` / 候选非空 | unit/search |
+| | 新增 3 条集成（**真 pgvector 0.8.6**，临时 schema + 真 `vector(4)` 列；无 pgvector 时具名 skip）：NULL 行不挤掉有效向量 / 全 NULL ⇒ `EmbeddingUnavailable` / 0 行 ⇒ 返空 | integration |
+
+**正向对照（修复前必须红）** —— 因本会话 git 不可用（见 §9.7），改用**进程内 monkeypatch**
+把 `_row_to_hit` 换回旧实现，夹具/向量/作用域完全相同（`_w2b_u112_control.py`，仓库外）：
+
+```
+A 组（修复前） topk 抛出 TypeError: float() argument must be a string or a real number, not 'NoneType'
+               是 EmbeddingUnavailable 吗 : False   ⇒ search.py 的 except 接不住
+               服务层：抛出 TypeError —— 连 degraded 都没机会发（这就是 INTERNAL 的形状）
+B 组（修复后） topk 抛出 EmbeddingUnavailable（…embedding 全为 NULL ⇒ 向量列未物化…）
+               服务层：mode=sparse_only / degraded=True / reason=embedding_unavailable ✅
+```
+
+⇒ W7 报的"`TypeError` ⇒ `link` 抛 ⇒ runner 兜底 `error(INTERNAL)`"**按要求复现**，且修复后同一输入
+走的是降级出口。**不是`测试写法`造成的假象**。
+
+### 9.4 门禁读数（2026-09-21，均为本机实跑）
+
+| 门 | 命令 | 读数 |
+|---|---|---|
+| lint | `ruff check app/retrieval tests/...` | **All checks passed** |
+| 类型 | `mypy app` | **Success: no issues found in 146 source files** |
+| 单测+契约 | `pytest tests/unit tests/contract` | **1772 passed**（含新增 5 条） |
+| 集成（本域） | `pytest tests/integration/test_retrieval_fts_pg.py` | **11 passed**（8 → 11） |
+| 分层契约 | `lint-imports`（**控制台脚本**，非 `python -m importlinter.cli`） | **4 kept, 0 broken** |
+
+⚠️ `ruff format --check` 会报 10 个文件"would be reformatted"，**其中 5 个我从没碰过**
+（`fuse/graph/value/view/sparse`）⇒ 本项目**不以 `ruff format` 为门**（仓库风格是有意不同于
+formatter 的：对齐式行尾注释、模块 docstring 后空两行）。**故未 reformat，避免制造无关大 diff**。
+
+### 9.5 顺带修掉一个夹具 bug（此前"看着没事"）
+
+`tests/integration/test_retrieval_fts_pg.py::make_fetcher` 原来做
+`sql.replace(f":{key}", f"%({key})s")` —— 这会把 `(:vector)::vector` 里 `::vector` 的
+**后半截也吃掉**，产出 `(%(vector)s):%(vector)s` ⇒ `syntax error at or near ":"`。
+旧写法之所以没暴露：**本文件此前只有 sparse 用例，而 sparse 的 SQL 里没有任何 `::` 转换**。
+本轮加 dense 集成用例时立刻踩到 ⇒ 改成带否定后顾的正则 `(?<![:\w]):name\b`（只换 `params` 里真有的键）。
+**这是一条"用例覆盖面盲区"的实证**，不是笔误。
+
+### 9.6 issue②（灌数据）状态：**具备条件，未执行**
+
+已独立核实的前置（`_w2b_u112_materialize.py --dry-run`）：
+
+- Ollama 可达 ✅、`bge-m3:latest` **在册** ✅；语义包加载 ✅、**将写入恰好 197 篇**（与现存行数相符）；
+- 写入前计数 197 / embedding 0 / tsv 0（与 §9.1 一致）；
+- `materialize()` 对**同一 `bundle_version` 幂等**（`DELETE` 相关行 → `INSERT`，**单事务**；
+  佐证 `materialize.py:296-299`）⇒ 可重跑、失败整体回滚。
+
+**未执行的理由（不是能力问题，是边界问题）**：
+
+1. `app/semantics/**` 属 **W2A**，本窗口纪律是"改别人的文件只提需求、不落笔"；
+   本脚本只**调用** `materialize()`，不改它一行，但**真跑 = 写共享 dev 库**。
+2. 目标是**全窗口共用**的 `ecom` 库（`app_rw`）；本机最近一次同类事故正是 `U-113`（另一窗口清掉了
+   `cost_ledger` 的对账基线）。**在拿到明确放行前不写。**
+3. 本会话 **git 不可用**（§9.7）⇒ 我**无法在写库前留一个可回退的提交快照**，这削弱了风险对冲。
+
+**默认跑法 = 数据 only**：`--with-policy=False`（只写数据、**不碰 GRANT/POLICY**，权限面爆炸半径为零）；
+需要完整 §6.2 六步发布再加 `--with-policy`（ADR-10 纯函数，重派生同一语句集）。**等一句放行即可开跑。**
+
+### 9.7 🔴 环境阻塞：本会话 git 不可用（**请其他窗口注意**）
+
+- **现象**：`git stash push` 在 harness 上被 SIGTERM 中断；此后**同一目录内**所有 git 命令均报
+  `fatal: not a git repository`（`-C` / `--git-dir=` / `GIT_DIR` 三种显式写法皆同）。
+- **实测到的磁盘状态**（用 Python 直读，绕开 bash 缺 coreutils 的问题）：
+  `.git/` 有 11 项 —— `COMMIT_EDITMSG / FETCH_HEAD / HEAD / ORIG_HEAD / config / description / hooks / index / info / logs / objects`，
+  **`packed-refs` 与 `refs/` 都不在**；而 **`.git/logs/refs/heads/main` 与 `.git/logs/refs/remotes/` 确实存在**。
+- **两个已确认的推论**：
+  1. `refs/` 缺失正是 git 判定"非仓库"的原因（仓库识别要求 `HEAD` + `objects/` + `refs/` 三者齐备）。
+  2. **`objects/`（含 pack）与 `logs/`（reflog）完好** ⇒ 历史与服务端无关地可恢复。
+     最后已知 HEAD 就在 reflog 末行 = **`5d47c0e41f6521d35d14500d33c16d7c20a06a35`**（W6 的 commit）。
+- **⚠️ 我不确定的是**"`refs/` 是被真的删了，还是**只被沙箱遮蔽**"：本仓库早有记录
+  "沙箱写不进 `.git/refs/remotes/**`"，而**没有任何 git 操作会删 `refs/` 却留着 `logs/refs/`**，
+  故遮蔽的可能性存在。**我没有继续试探**（再写 `.git` 可能把状况搞得更糟）。
+- **恢复方式（待用户在有正常 shell 的机器上确认后再动）**：若 `refs/` 真丢，
+  `mkdir .git/refs/heads` 后把上述 SHA 写回 `.git/refs/heads/main`（或 `git update-ref`）即可；
+  **不要**在恢复前跑任何 `stash`/`gc`/`prune`。
+- **后果**：本轮回执**未提交任何 commit**（不是"忘了"，是 git 不可用）；已落盘的改动都在工作区，
+  内容完好（用 Read/Grep 复核过）。
+
+### 9.8 未做 / 留给下一轮
+
+- **issue② 真跑**（等放行）；跑完 W7 才可能拿到 ≥1 条 `outcome=ok`（他的放行判据）。
+- **`U-59`=(a) 端口面收敛**（`RetrievalResult` 富结果并进 `RetrievalPort`）仍等 W0 落 `contracts.py`。
+- **`U-111` 的启动断言**在 W1B / `ASSERTION_NAMES` 4→5 的耦合在 W7 —— 本窗口不越界，仅登记。
+- **本轮回执的代码未提交**（§9.7 所限）。

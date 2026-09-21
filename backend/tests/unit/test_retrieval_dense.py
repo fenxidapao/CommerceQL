@@ -269,3 +269,69 @@ async def test_pg_store_passes_params_and_parses_rows() -> None:
         ("order_paid", "asset", 0.93),
         ("traffic_daily.channel", "column", 0.71),
     ]
+
+
+# ---------------------------------------------------------------------------
+# U-112 形态 (ii)：向量列未物化（NULL 分数）
+#
+# `1 - (embedding <=> vec)` 在 `embedding IS NULL` 时是 **NULL**（不是 0）。
+# 旧实现 `score=float(row["score"])` 无条件转换 ⇒ `TypeError` ⇒ 逃出图 ⇒
+# runner 兜底 `error(INTERNAL)`（W7 2026-09-21 活体栈实测）。
+# 现须转成与形态 (i) 同款的 `EmbeddingUnavailable`（07 §5.3 行 4 的降级出口）。
+# ---------------------------------------------------------------------------
+
+def store_with_rows(rows: list[dict]) -> PgVectorStore:
+    """分数形态由用例给定（含 None），专门用来钉 NULL 分支。"""
+
+    async def fetch(sql: str, params: dict) -> list[dict]:
+        return rows
+
+    return PgVectorStore(fetch)
+
+
+async def test_pg_store_all_null_scores_raises_unavailable() -> None:
+    """作用域内有行但零条可用向量 ⇒ 抛 `EmbeddingUnavailable`（空向量列）。"""
+    store = store_with_rows([
+        {"ref": "order_paid", "kind": "asset", "score": None},
+        {"ref": "product", "kind": "asset", "score": None},
+    ])
+    with pytest.raises(EmbeddingUnavailable, match="全为 NULL"):
+        await store.topk([1.0, 0.0, 0.0, 0.0], tenant_id="T_A", bundle_version="v1", limit=5)
+
+
+async def test_pg_store_keeps_valid_rows_and_drops_null_ones() -> None:
+    """部分 NULL：有效向量照常返回、**不降级**。
+
+    "向量列到底有没有数"由 `U-111` 的**启动断言**播报 —— 读路径不重复判
+    （一条判据两个落点 = 本项目已 4 次实锤的病害）。
+    """
+    store = store_with_rows([
+        {"ref": "order_paid", "kind": "asset", "score": 0.93},
+        {"ref": "dim_date", "kind": "asset", "score": None},
+        {"ref": "product", "kind": "asset", "score": 0.4},
+    ])
+    hits = await store.topk([1.0, 0.0, 0.0, 0.0], tenant_id="T_A", bundle_version="v1", limit=5)
+    assert [(h.ref, h.score) for h in hits] == [("order_paid", 0.93), ("product", 0.4)]
+
+
+async def test_pg_store_empty_scope_is_not_degradation() -> None:
+    """作用域内一行都没有（空 KB / 该版本无文档）⇒ 如实返空，**不得**冒充降级。
+
+    否则 `retrieval_mode=sparse_only` 的降级率会掺进"没数据"的假信号，而
+    07 把它当 Ollama 软依赖的真实健康度指标用。
+    """
+    hits = await store_with_rows([]).topk(
+        [1.0, 0.0, 0.0, 0.0], tenant_id="T_A", bundle_version="v1", limit=5
+    )
+    assert hits == []
+
+
+async def test_pg_store_zero_score_is_not_treated_as_null() -> None:
+    """**0.0 是合法分数**（正交向量 ⇒ 余弦相似度 0）—— 别把 falsy 当 NULL 丢。
+
+    钉这个是因为"顺手写 `if not score`"是这类修复最常见的回归形态。
+    """
+    hits = await store_with_rows([{"ref": "unrelated", "kind": "asset", "score": 0.0}]).topk(
+        [1.0, 0.0, 0.0, 0.0], tenant_id="T_A", bundle_version="v1", limit=5
+    )
+    assert [(h.ref, h.score) for h in hits] == [("unrelated", 0.0)]
