@@ -374,6 +374,37 @@ curl -sS -N -X POST http://127.0.0.1:18000/api/v1/query \
 
 **放行状态**：判据④ **仍不满足** ⇒ **跑批仍未跑**。本窗口花费（09-21，含 §三.0.1g 探针）：预检 5 条 + 探针 1 条 = **12 次记账调用 / ¥0.041632**（另有 5 次未记账的上游调用，见上表）。
 
+#### 三.0.1i 第八轮预检（09-21 · 镜像 `w7load-api:0921r5` = HEAD `9942753` ⇒ 含 W4 `8202204` 的 **(B)**）
+
+**一句话**：**(B) 确实生效了，判据"sql_ready 0→≥1"史上第一次达成**，但链路立刻撞到下一格 ——
+**`GATE_AST_REJECTED` 3/3**，而那一格是**一条从未被任何生产读数走过的接缝**：闸门读的 allowlist 形状 ≠ 端口给出的形状。
+
+| 读数（`preflight_r5.json`，c=1 / n=5 / `--no-async` / `questions_T_A_time.txt`） | 值 |
+|---|---|
+| `outcomes` | `{refuse:1, clarify:1, error_frame:3}`、`codes={GATE_AST_REJECTED:3}`、`ok=0` |
+| 终止出处 | `stage=sql_ready\|reason=none` ×3、`stage=intent\|reason=no_data_asset` ×1、`stage=intent\|reason=time_ambiguous` ×1 |
+| 指标面（★ = 该族第一次非 0） | `sql_ready`★ **3** / `gate_passed` **0** / `executing` **0**；`binding_layer_total{L3}`★ **3**；`binding_state_total{resolved_default}`★ **3**；`degraded_total{llm_unavailable,template_only}` **1** |
+| `llm_call` | **13 条** = `normalize_intent`×4 + `plan`×3 + **`l4_score`×3**★ + **`gen_sql`×3**★ ⇒ (B) 生效：L4 不再被掐，`l4_score` **1,605 / 1,620 / 1,700ms** 全部完成 |
+| 时延 | p50 **6,138.6ms**（上轮 2,861ms ⇒ 一条请求现在 4 次模型调用）、max/p95 **187,728.9ms**、wall 214.5s |
+| 台账 | 13 行 / **¥0.020882**（缓存已热 ⇒ 比上轮 10 次 / ¥0.041632 **更便宜**，再次印证冷/暖不对称）；httpx 200 **13** = `llm_call` **13** ⇒ 本轮**零缺口** |
+
+**⇒ 新卡点的机制（读代码 + 离线复现，两条对照，零 LLM）**：
+1. 生产唯一调用点是 `app/graph/nodes/gate1_ast.py:52,55` ⇒ `run_gate1(sql, deps.semantics.asset_allowlist(identity))`；
+2. `app/semantics/runtime.py:102-125` 的返回形状 = **扁平** `{物理名: {logical_name, columns, grain, domain, tenant_scoped}}`（它自己的 docstring 逐字这么写）；
+3. 而 `app/guard/ast_gate.py:500` 与 `app/guard/policy_gate.py:106` 都读 **`allowlist.get("assets") or {}`** ⇒ 拿到 `{}` ⇒ `assets` 空 ⇒ `name not in self.assets` 恒成立 ⇒ **每条真 SQL 必 `R05_TABLE_ALLOWLIST`**（gate2 同形 ⇒ 必 `G2-ASSET`）；
+4. `app/core/contracts.py:288` 的 `SemanticBundlePort.asset_allowlist` **只声明签名、不声明形状** ⇒ 这个接缝没有契约，两边各自实现；
+5. **离线复现**（`docker exec` 内跑真端口 + 真闸门）：扁平形 ⇒ `gate1 passed=False`；`rule_id` 实测 **R05**、gate2 ⇒ **G2-ASSET**；参数换成字面量 ⇒ **照样 R05**（排除"命名参数解析失败"这条竞争解释）。
+
+**⚠️ 三条必须一起说的限定**：
+- **W6 早写过同一句话**：`backend/reports/w6/probe_gate_allowlist_shape.py` 的 docstring 明写"闸门入参形状是 `{"assets":…}`，而 `asset_allowlist(ctx)` 实测回的是**扁平**"。但**那个探针跑到第二步就崩了**（我复跑：`AttributeError: 'tuple' object has no attribute 'keys'`，`ast_gate.py:751` 要 `columns.keys()`，端口给的是 `tuple[str,...]`，`runtime.py:70` 的字段声明也是 tuple）⇒ **第二处形状不一致，且它的 wrapper 结论从未产出**。我只补上"这条缺口今天有活体后果"这一段，不认领为我的新发现。
+- **为什么 CI 全绿**：闸门侧全部测试喂**自家夹具**（`tests/unit/guard_fixtures.py:81`、`tests/contract/_fullchain_deps.py:206` 都是"注入什么形状就用什么形状"），而 `tests/eval/test_harness_allowlist.py:78` 甚至**断言 wrapper 键必须齐全** ⇒ 评测面自己造了一份合规形状、生产端口给的是另一种，**没有任何一条测试从生产端口直连闸门**。⚠️ 我上一轮"G-6 卡住的题是评测夹具形状与生产脱节"的判断在 `build_frozen_set.py` 上成立过一次，这是**同一病害的第二处实例**。
+- **判据④ 仍不过**：卡点从 BIND 移到 GATE1，`ok=0` 没变 ⇒ **跑批仍不跑**。
+
+**顺带两条要收回/收窄的我自己的结论**：
+1. §三.0.1h 我写"台账少计 33%"是**过度外推**。本轮 13 = 13 零缺口 ⇒ 正确口径是：**只有"被节点取消、但上游仍返回 200"的那类调用不进台账**（上轮 5/15，本轮 0/13）。缺口大小 = 取消数，不是恒有偏差。
+2. 那条 **187,728.9ms** 是**冷容器的第一条**（容器 10:33:51 起、首条 llm_call 之前还有一次 15s `normalize` 超时），**我没做单变量对照 ⇒ 不写成成因**。但它对跑批是实操约束：**从冷容器起跑，第一条会吃掉整个 p95** ⇒ 跑批前必须预热或把首条排除并披露（见 §九 的同族教训）。
+3. ⚠️ **给 U-117 的读数（架构定的判据 = L4 占比）**：`binding_layer_total{L3}=3`、**L4 = 0** ⇒ 按架构写下的口径"**≈0 ⇒ 纯浪费、升 P1、改条件触发**"。同时 `l4_score` 的单次成本 **¥0.001551–0.001711** > `plan`（¥0.0011）> `normalize_intent`（¥0.0008）⇒ 这跳花的比出计划的还多。
+
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 
 探针的取数依据按 U-22 纪律必须"写在常量旁边"，而常量旁边放不下方法 —— 所以

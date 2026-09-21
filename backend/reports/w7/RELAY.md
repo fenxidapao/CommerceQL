@@ -1487,3 +1487,47 @@ http_requests_total{endpoint="/api/v1/query",status="2xx"} = 12（含本轮两�
 - ⚠️ 顺带一条给 W3A/W4 的读数（不是我的面，但我撞见了）：`plan` 的 `over_budget=true` **5/5**（`budget_s=1.0` vs 实测 1,059–1,385ms）、`normalize_intent` **3/5** ⇒ §16.1 的 stage 分配在这台机器上系统性偏小。它**不掐调用**（规则 1 明确分配 ≠ 硬超时），所以这不是缺陷，但看板会一直红。
 - ❌ 未跑：G-6 四场景 + 场景⑤ 跑批（判据④ 仍不过 ⇒ **不跑**，红线：先报告再跑批）、`tests/integration`、迁移套件、`adopt_l4_candidates` 注入路径的任何验证。
 - ❌ **UNVERIFIED**：W4 新加的 `blocking_issues` 出口**活体能不能真读到** —— PLAN 现在不自拒了 ⇒ 当前**没有 `plan_blocked` 样本**可取。U-116 的判据要等下一次 PLAN 自拒，或 W4 给一条只读复现。**我没有为验证它再花一次额度。**
+
+---
+
+## 二十六、(B) 生效、`sql_ready` 第一次非 0，然后链路撞上"闸门读的 allowlist 形状 ≠ 端口给的形状"（09-21 第八轮）
+
+### ① 先把三条回执核完（都核到了，不是转述）
+
+| 回执 | 我的独立核验 | 结果 |
+|---|---|---|
+| 架构 v1.6.3 裁 (B) + "请勿重跑"解除 | 不必核（是裁定不是事实主张），照做 | ✅ 本轮就是解除后跑的第一条 |
+| W4 `8202204`"五处同改的代码侧三处已齐" | `git show --stat` + 我自己在 HEAD 上重跑 `tests/contract/test_graph_timeout_contract.py` | ✅ 实测 **2 文件 / +18 −6**；**17 passed（真实 exit=0）**；`NODE_TIMEOUT_S` 现 8 键**无 bind**、`_LLM_NODE_TASKS` 7 项含 `"bind": "l4_score"` ⇒ 与自述一致 |
+| W2B"工作区已清干净、历史未清、CI 扫全历史" | `git grep` 我自己跑：HEAD 全仓对规则模式串 **0 命中**；`test_migration_dsn_hygiene.py` 我自己复跑 **8 passed / exit=0**；`git branch -r --contains a7e31b6` 现在**非空** | ✅ 三条全对。⇒ **我上一轮"暂不推"的理由已消失**（远端早就有那段历史，是别人推的），故我把 W2B 的 `9942753` 一起推了 |
+
+⚠️ **一条要如实说的越界风险，我自己踩在边缘**：`9942753` 不是我写的文件，是我代推的。理由只有两条：内容我只 `git show` 逐行读过（1 文件 / +26 −2，纯文档）、且它是解我自己那次停推的前置。**下次这类"代推别人一个 commit"的动作我会在推之前先问一句**，不默认授权延伸。
+
+### ② 本轮主读数：判据第一次达成，卡点第五次换形
+
+- ★ **`stage_duration_seconds_count{stage="sql_ready"} = 3`（历史第一次非 0）**、`gate_passed = 0`、`executing = 0` ⇒ 架构给的"先看 sql_ready 是否 0→≥1"**满足**；判据④（`ok≥1`）**仍不过**，因为 3 条 SQL 全被 **`GATE_AST_REJECTED`** 拒。
+- ★ `(B)` 生效的直接证据：`llm_call` 里第一次出现 **`l4_score` 3 条**（1,605 / 1,620 / 1,700ms 全部完成，上轮这 3 次会在 0.2s 被掐掉）+ **`gen_sql` 3 条** + `binding_decision` 3 条。
+- ★ **`binding_layer_total{layer="L3"} = 3`** ⇒ 我 §三.0.1g 写的"`binding_state_total`/`binding_layer_total`/`retrieval_mode_total` **三族零调用点**"**订正**：前两族已被 W4 在 `app/api/deps.py:564` 接上（`MetricsBindingObserver`），**只有 `retrieval_mode_total` 仍零调用点**。
+- **给 U-117 的读数（架构定的判据）**：`binding_layer` = **L3 三次、L4 零次** ⇒ L4 占比 ≈0 ⇒ 按架构写下的口径就是"**纯浪费 ⇒ 升 P1、改条件触发**"。且 `l4_score` 单次 **¥0.001551–0.001711** > `plan` ¥0.0011 > `normalize_intent` ¥0.0008。
+- 时延：**p50 6,138.6ms**（上轮 2,861ms —— 一条请求现在 4 次模型调用）、**max/p95 187,728.9ms**、wall 214.5s。花 **13 次记账 / ¥0.020882**。
+- 回执入库：`deploy/loadtest/preflight_r5.json`。
+
+### ③ 新卡点的机制（这条我不指谁错，只把四处代码和一个反例摆出来）
+
+1. 生产唯一调用点 `app/graph/nodes/gate1_ast.py:52,55` 把 **`deps.semantics.asset_allowlist(identity)`** 直接喂给 `run_gate1`；
+2. `app/semantics/runtime.py:102-125` 的返回形状是**扁平** `{物理名: {logical_name, columns, grain, domain, tenant_scoped}}`（它自己 docstring 第 107 行逐字这么写），且 `_allowlist: dict[str, tuple[str, ...]]` ⇒ `columns` 是 **tuple**；
+3. 而 `app/guard/ast_gate.py:500` 与 `app/guard/policy_gate.py:106` 都读 **`allowlist.get("assets") or {}`**，`ast_gate.py:16-24` 的 docstring 声明的入参形状是 `{"assets":…, "joins":…, "default_predicates":…, "allowed_constants":…}`；
+4. ⇒ 生产输入里**根本没有 `assets` 这个键** ⇒ `self.assets = {}` ⇒ `if name not in self.assets`（`:544`）对**任何**表恒成立 ⇒ **每条真 SQL 必被 `R05_TABLE_ALLOWLIST` 拒**；gate2 同形 ⇒ 必 `G2-ASSET`；
+5. `app/core/contracts.py:288` 的 `SemanticBundlePort.asset_allowlist` 只声明签名、**不声明形状** ⇒ 两边各自实现，无人违约也无人对齐。
+6. **离线复现（零 LLM，跑真闸门）**：扁平形 ⇒ `gate1 passed=False / rule=R05`；把命名参数换成字面量 ⇒ **照样 R05**（这条对照排掉了"psycopg 命名参数解析失败"这个竞争解释）。第二处不一致也复现了：`ast_gate.py:751` 要 `columns.keys()`，tuple 会 `AttributeError`。
+7. **为什么 CI 一直没红**：闸门侧所有测试喂自家夹具形状（`tests/unit/guard_fixtures.py:81`、`tests/contract/_fullchain_deps.py:206` 都是"注入什么用什么"），`tests/eval/test_harness_allowlist.py:78` 甚至**断言 wrapper 键齐全** ⇒ **没有任何一条测试从生产端口直连闸门**。
+⚠️ **归属与认领**：`reports/w6/probe_gate_allowlist_shape.py` 的 docstring 早就写了"闸门要 `{"assets":…}`、端口回扁平"这句话 —— **这条不是我发现的**，我补的是"它今天有了活体后果（3/3 拒）+ 那个探针第二步会崩所以结论从未产出 + 全仓无接缝测试"。四个面分属 W2A / W2C / W4 / `core/contracts`，**修法与归号请架构裁，我只交读数**。
+
+### ④ 我自己的三条收回
+
+1. **§三.0.1h"台账少计 33%"过度外推 ⇒ 收窄**：本轮 httpx 200 **13** = `llm_call` **13**，零缺口。正确口径：**只有"被节点取消、上游仍返回 200"的调用不进台账**（上轮 5/15、本轮 0/13）⇒ 缺口 = 取消数，不是恒有偏差。
+2. **"三族零调用点" ⇒ 订正为"一族"**（见 ②）。⚠️ 教训同形：读数是有时刻的快照，我这次的错和架构 v1.6.1 那次"代码已落 ≠ 07 已知"是同一类。
+3. **187,728.9ms 我**不**写成因**：冷容器第一条、前面还有一次 15s `normalize` 超时，但我没做单变量对照 ⇒ 只登记。对跑批的实操结论独立成立：**冷启动第一条会吃掉 p95 ⇒ 跑批前预热或排除首条并披露**。
+
+### ⑤ 放行状态
+
+判据④ 仍不过（`ok=0`）⇒ **跑批继续不跑**。本轮之后 G-6 的依赖链：`normalize`(超时) → `embed_doc`(数据) → `PLAN`(语义摘要) → `BIND`(0.2s) → **`GATE1`(allowlist 形状)**，五格四次换形，**每格都不是负载问题** ⇒ 这条本身就是给 G-6 结论的一部分：**当前测不出"容量"，因为链路走不到执行。**
