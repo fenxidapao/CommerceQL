@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """W2-INT 端到端验证（2026-09-16 实测脚本，结果写入 DELIVERY.md）。
 
 Part A：/healthz 三端点（真 lifespan + 真 PG/Redis + 真语义包运行时）

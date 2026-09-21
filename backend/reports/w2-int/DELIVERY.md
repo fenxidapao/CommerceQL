@@ -119,6 +119,17 @@ mypy app
   → Found 22 errors in 3 files：app/guard/**（19，W2C）+ app/retrieval/dense.py:273（W2B）
   本窗口三文件：mypy app/main.py app/repo/startup_assertions.py app/api/routers/health.py
   → Success: no issues found in 3 source files
+
+第 2 轮 ruff 复核（2026-09-16 23:5x，按 W0 `reports/w0/RELAY.md §6` 的 33 条清单逐条落域）
+  → 本窗口域内 1 条：reports/w2-int/e2e_stage2_check.py:1 UP009（Python3 源码默认 UTF-8，声明多余）
+    改法 = 删除首行 `# -*- coding: utf-8 -*-`；无行为影响（注释行，非 import/非逻辑）
+    复核 → ruff check backend/reports/w2-int/e2e_stage2_check.py → All checks passed!
+  → 分派（本窗口不代改）：app/guard/**（W2C，10）+ app/retrieval/**（W2B，13，其中
+    dense.py:273 F821 须手动补 `Mapping` 导入）+ tests/redteam/test_redteam_guard.py:23（W1A，1）
+
+  ⚠️ 登记补记（2026-09-21）：上述 UP009 修复当时**只落工作区、未随 commit 落库**
+  （收口窗口操作遗漏，非有意绕过；同一提交批次的 `b697667`/`4ee80d4` 已落而它被漏 add）。
+  2026-09-21 由总控在 `git status` 中点名后补提交，本条即为该改动的正式登记。
 ```
 
 ---
