@@ -181,33 +181,73 @@ def detect_injection(text: str) -> InjectionScan:
 
 #: 表头 —— 与 `INJECTION_DECLARATION` 一样属稳定文本。
 _SUMMARY_HEADER: Final[str] = (
-    "以下是本次查询**可依据的全部语义资产**（认证资产、列、维度、字段绑定）。"
-    "**只能使用这里出现过的表名 / 列名 / 指标名**；此处未出现的资产一律视为不存在。"
+    "以下是本次查询**可依据的全部语义资产与指标口径**"
+    "（指标口径、认证资产、列、维度、字段绑定、同义词）。"
+    "**只能使用这里出现过的指标名 / 表名 / 列名**；此处未出现的资产一律视为不存在。"
 )
 
-#: 🔴 缺口声明（**不假装摘要完整**）。
+#: 指标段表头。
 #:
-#: 实测（2026-09-17）：`SemanticBundleRuntime` 暴露了 `assets()` / `asset()` / `dimensions()` /
-#: `field_bindings()` 等**枚举器**，但**没有** `metrics()` / `aliases()` 枚举器
-#: （只有按名单查的 `metric(name)` / `resolve_alias(term)`）。
-#: ⇒ 指标口径与同义词表**当前无法枚举**，只能如实留白 + 向 W2A 提需求（见 `RELAY.md`）。
+#: ⚠️ 段名以 `## 指标口径` 开头是**有意固定**的：W7 的判据与 W2B 的取证探针都按
+#: `'## 指标' in summary` 取值（见 `reports/w2b/RELAY.md §12.8`），改名会让那些
+#: 已经归档的读数失去可比性。
+_METRIC_HEAD: Final[str] = (
+    "## 指标口径（**唯一权威口径**：只能逐字引用下列指标名，不得自造新口径）"
+)
+
+#: 同义词段表头。
+_ALIAS_HEAD: Final[str] = "## 同义词表（词面 → 规范名；命中词面即等价于右侧规范名）"
+
+#: 各类 `maps_to_kind` 的中文标签（渲染给人/模型读，不是枚举值 —— 枚举值照原样保留）。
+_ALIAS_KIND_LABEL: Final[dict[str, str]] = {
+    "asset": "资产",
+    "metric": "指标",
+    "column": "列",
+    "dimension": "维度",
+    "value": "取值",
+    "time": "时间",
+}
+
+#: 🔴 退化兜底声明（**不是**主路径）。
 #:
-#: 这段文本**必须出现在摘要里**：模型看到"指标目录未提供"会倾向于不发明口径，
-#: 而看到"什么都没有"却仍被要求输出指标时，**它一定会编一个**。
-_METRIC_GAP_NOTE: Final[str] = (
-    "（本次未提供**指标口径目录**与**同义词表**：语义层运行时尚未暴露枚举器，"
-    "已登记需求。因此：指标名请只使用上文资产段落里出现过的名字，"
+#: 历史（2026-09-17 → 09-21）：本常量原名 `_METRIC_GAP_NOTE`，作用是承认
+#: "`SemanticBundleRuntime` 没有 `metrics()` 枚举器 ⇒ 指标目录进不了摘要"。
+#: 该枚举器**已补**（W2A，见 `runtime.metrics()`），指标段现在是主路径 ——
+#: 本常量只在**语义包一个可用指标都没有**时兜底，措辞随之改写。
+#:
+#: 为什么留这个常量而不是删掉：`reports/w2b/_w2b_plan_prompt_probe.py` 等**归档取证副本**
+#: 直接 import 它（归档副本要能独立重跑，见 `ff9b421`）。改名会静默打断那些证据的可复现性。
+#: 旧名以别名保留在文件末（仅供归档脚本 import，生产代码不用）。
+_METRIC_EMPTY_NOTE: Final[str] = (
+    "（本语义包**未登记任何可用指标口径**：指标名请只使用上文资产段落里出现过的名字，"
     "**不要自行发明口径**，找不到就把问题写进 `blocking_issues`。）"
 )
 
+#: ⚠️ **仅供归档取证脚本 import** 的旧名（`ff9b421` 的"归档副本自足性"要求）。
+#: 生产代码一律用 `_METRIC_EMPTY_NOTE`。两者是**同一个对象**（不是两份文案）。
+_METRIC_GAP_NOTE: Final[str] = _METRIC_EMPTY_NOTE
+
 
 def summary_gaps() -> tuple[str, ...]:
-    """当前摘要**缺**哪些段（供测试断言与审计核对；缺口不许静默）。"""
+    """当前摘要**还缺**哪些段（供测试断言与审计核对；缺口不许静默）。
+
+    ⚠️ 这张表**必须随实现同步**：一条已修好的缺口若还挂在这里，它就是**假警报**，
+    会让后来的人以为摘要还残着 —— 比不登记更糟。本次已按此规则删去两条（见下）。
+
+    已关闭（留档，不要再往这里加回去）：
+
+    - `metrics`：`SemanticBundleRuntime.metrics()` **已补** ⇒ `## 指标口径` 段已渲染；
+    - `aliases`：`SemanticBundleRuntime.aliases()` **已补** ⇒ `## 同义词表` 段已渲染。
+    """
     return (
-        "metrics: SemanticBundleRuntime 未暴露 metrics() 枚举器（只有 metric(name)）",
-        "aliases: SemanticBundleRuntime 未暴露 aliases() 枚举器（只有 resolve_alias(term)）",
-        "column_comments: 依赖 asset() 逐资产补齐；缺失时只渲染列名",
+        "column_comments: 依赖 asset() 逐资产补齐；取不到注释时只渲染列名（降级可见，非静默）",
+        # ⚠️ 下面这条是**本窗口只登记、未动手**的：join 路径（`runtime.joins()`）同样没有
+        #    渲染进语义摘要，而 `plan_v1.txt` 硬性规则 3 要求计划写出"关联键与关联方向、
+        #    找不到就写 blocking_issues" ⇒ 与指标缺口**同一失败类**（都能独立触发 PLAN 自拒）。
+        #    修它要定渲染形状与基数（是本窗口的另一处改动，未获授权），故只登记。
+        "joins: 语义摘要未渲染 join 路径（plan_v1.txt 规则 3 却要求写出关联键）",
     )
+
 
 
 def _denied_basenames(policy: Mapping[str, Any]) -> frozenset[str]:
@@ -252,7 +292,19 @@ def build_semantic_summary(
     """
     allowlist = semantics.asset_allowlist(ctx)
     denied = _denied_basenames(semantics.policy())
-    metrics_note = _METRIC_GAP_NOTE
+
+    # 🔴 **段落顺序不是排版偏好，是截断时的降级次序**：`_truncate_sections` 按段整块丢弃
+    # 且**从后往前**丢 ⇒ 越靠前越不可能被丢。因此：
+    #   1) 指标口径排在最前 —— 它是 G-6 的卡点（模型拿不到指标名就写 `blocking_issues`，
+    #      链路直接停在 `plan_ready`），任何情况下都不能被资产列清单挤掉；
+    #   2) 同义词表排在最后 —— 它是**辅助查表**，丢掉只让模型少认几个口语词形，
+    #      不会让它"发明口径"。把可丢的东西放在可丢的位置。
+    metric_lines = _metric_section(semantics, denied)
+    sections = [
+        _SUMMARY_HEADER,
+        f"语义包版本：{semantics.active_version()}",
+        "\n".join(metric_lines),
+    ]
 
     asset_lines: list[str] = ["## 认证资产（表 / 视图）"]
     for physical in sorted(allowlist):
@@ -299,15 +351,154 @@ def build_semantic_summary(
         else:
             binding_lines.append(f"- {fb.concept} → {getattr(fb, 'canonical_asset', None)}")
 
-    sections = [
-        _SUMMARY_HEADER,
-        f"语义包版本：{semantics.active_version()}",
-        metrics_note,
-        "\n".join(asset_lines),
-        "\n".join(dimension_lines),
-        "\n".join(binding_lines),
-    ]
+    sections.extend(
+        (
+            "\n".join(asset_lines),
+            "\n".join(dimension_lines),
+            "\n".join(binding_lines),
+            "\n".join(_alias_section(semantics, denied)),
+        )
+    )
     return _truncate_sections(sections, max_chars=max_chars)
+
+
+# ----------------------------------------------------------------------------
+# 指标段 / 同义词段的取材与渲染
+# ----------------------------------------------------------------------------
+
+def _one_line(text: str) -> str:
+    """压成单行（YAML 的 `>` 折叠块会带换行；多行会让段落的"按行"结构失效）。"""
+    return " ".join(str(text).split())
+
+
+def _leaks_denied(text: str, denied: frozenset[str]) -> bool:
+    """文本里是否出现 deny 列名 —— 与资产段的排除规则**同源同保守**。
+
+    ⚠️ 取 basename 比较（`order_paid.cost_price` ⇒ `cost_price`）会**多排除**：
+    只要某个指标表达式里出现 `cost_price` 这个词形，整条指标就不渲染。
+    这是**有意的偏保守** —— 少渲染一条指标 = 模型少一个口径；多渲染一次 = N-12 违规。
+    两边不对等，所以往安全侧倒（与 `_denied_basenames` 的取舍逐字一致）。
+    """
+    return any(name in text for name in denied)
+
+
+def _metric_section(
+    semantics: SemanticBundlePort, denied: frozenset[str]
+) -> list[str]:
+    """渲染 `## 指标口径` 段。
+
+    渲染口径（每条可用指标最多四行）：
+    - 头行：`- <指标名>（<显示名>）｜单位=…｜聚合=…｜默认资产=…｜时间基准=…`
+    - `口径：` = `definition_note`（**逐字照抄语义包**，不摘要 —— 口径文案的权威在包里）
+    - `表达式：` = `expression`（模型据此知道"官方口径长什么样"，从而不去发明）
+    - `默认谓词：` = `default_predicates`（生成 SQL 时**必须拼入**）
+
+    🔴 `draft` / `deprecated` 指标**单列一行**说"存在但不可用"，不入可用清单：
+    静默隐藏与静默放行**一样坏** —— 隐藏会让模型在别处编一个同名口径，放行会让它
+    直接引用未转正口径（FR-12.3）。两难的正确出口是**如实说出它存在、但不得引用**。
+    """
+    metrics = _sorted_metrics(semantics)
+    if not metrics:
+        # 退化：包里一个指标都没有 ⇒ 如实留白 + 明说（留白会让模型自己发明口径）。
+        return ["## 指标口径（本包未登记）", _METRIC_EMPTY_NOTE]
+
+    lines: list[str] = [_METRIC_HEAD]
+    unusable: list[str] = []
+    for m in metrics:
+        name = str(getattr(m, "name", ""))
+        status = str(getattr(m, "status", ""))
+        binding = getattr(m, "default_binding", None)
+        binding_asset = str(getattr(binding, "asset", "")) if binding is not None else ""
+        expr = _one_line(getattr(m, "expression", "") or "")
+        note = _one_line(getattr(m, "definition_note", "") or "")
+        # ⚠️ 包里有指标把 `definition_note` 写成"口径：按支付完成时间…"（自带前缀）
+        #    ⇒ 直接拼会渲染成"口径：口径：…"。剥掉自带前缀，不动其余一字。
+        if note.startswith("口径："):
+            note = note[len("口径："):]
+        preds = "；".join(str(p) for p in (getattr(m, "default_predicates", ()) or ()))
+        # 整条指标的**全部**文本一起过 deny 扫描（头行/口径/表达式/谓词都可能带出列名）
+        whole = " ".join((name, expr, note, preds, binding_asset))
+
+        if status != "active":
+            unusable.append(f"{name}（状态={status or '未标'}）")
+            continue
+        if _leaks_denied(whole, denied):
+            unusable.append(f"{name}（口径涉及受限列，本角色不可用）")
+            continue
+
+        head = f"- {name}"
+        display = str(getattr(m, "display_name", "") or "")
+        if display and display != name:
+            head += f"（{display}）"
+        attrs = [
+            f"{label}={value}"
+            for label, value in (
+                ("单位", getattr(m, "unit", None)),
+                ("聚合", getattr(m, "default_aggregation", None)),
+                ("默认资产", binding_asset or None),
+                ("时间基准", getattr(m, "time_basis", None)),
+            )
+            if value
+        ]
+        lines.append(f"{head}｜{'｜'.join(attrs)}" if attrs else head)
+        if note:
+            lines.append(f"    口径：{note}")
+        if expr:
+            lines.append(f"    表达式：{expr}")
+        if preds:
+            lines.append(f"    默认谓词：{preds}")
+
+    if unusable:
+        lines.append(
+            "（以下指标**存在但不得引用**：" + "、".join(unusable)
+            + "。请不要为它们编造口径，需要就写进 `blocking_issues`。）"
+        )
+    return lines
+
+
+def _alias_section(semantics: SemanticBundlePort, denied: frozenset[str]) -> list[str]:
+    """渲染 `## 同义词表` 段。
+
+    排除规则（三条，全部**无条件**执行，不看当前包的数据碰巧干不干净）：
+    1. `term` 本身是 deny 列名 ⇒ 不渲染（否则等于把受限列名印给模型）；
+    2. `maps_to_ref` 的 basename 是 deny 列名 ⇒ 不渲染（同上，从右侧漏出）；
+    3. 指向**非 active 指标** ⇒ 不渲染（放出去等于给 draft 指标开了条后门，
+       绕开 `is_metric_active` 这道闸）。
+
+    ⚠️ 取材只用 `aliases()`，**不碰 `Metric.synonyms`** —— 后者是 W1A 新增的第二张表，
+    与 L1 的实际解析面可能漂移。同义词表必须与 `resolve_alias()` **同源**，
+    否则模型按摘要里的词形问、L1 却查不到，会静默落到 L4 近似匹配（口径失控）。
+    """
+    lines: list[str] = [_ALIAS_HEAD]
+    for a in _sorted_aliases(semantics):
+        term = str(getattr(a, "term", ""))
+        kind = str(getattr(a, "maps_to_kind", ""))
+        ref = str(getattr(a, "maps_to_ref", ""))
+        if not term or not ref:
+            continue
+        if _leaks_denied(term, denied) or _leaks_denied(ref.rsplit(".", 1)[-1], denied):
+            continue
+        if kind == "metric" and not _is_metric_active(semantics, ref):
+            continue
+        label = _ALIAS_KIND_LABEL.get(kind, kind)
+        lines.append(f"- {term} → {label} {ref}")
+    return lines
+
+
+def _is_metric_active(semantics: SemanticBundlePort, name: str) -> bool:
+    """指标是否可用（可选能力，缺失时**保守判不可用**）。
+
+    ⚠️ 探测失败时返回 False = 不渲染该别名：少一条同义词只让模型多问一句，
+    放行一条指向 draft 的别名则是一次口径违规。
+    """
+    checker = getattr(semantics, "is_metric_active", None)
+    if not callable(checker):
+        return False
+    try:
+        return bool(checker(name))
+    except Exception:  # pragma: no cover
+        return False
+
 
 
 def _column_comments(semantics: SemanticBundlePort, logical_name: str) -> dict[str, str]:
@@ -359,6 +550,36 @@ def _sorted_field_bindings(semantics: SemanticBundlePort) -> list[Any]:
     except Exception:  # pragma: no cover
         return []
     return sorted(items, key=lambda b: str(getattr(b, "concept", "")))
+
+
+def _sorted_metrics(semantics: SemanticBundlePort) -> list[Any]:
+    """`metrics()` 按 name 排序（确定性；可选能力，缺失时返回空）。
+
+    ⚠️ 必须走 `getattr` 探测，不能当契约方法直接调：`metrics()` 是
+    `SemanticBundleRuntime` 的**可选能力**（不在 W0 冻结的 `SemanticBundlePort` 里），
+    而 `tests/unit/guard_fixtures.py::FakeSemanticBundle` 这类测试桩**只有 4 个契约方法**。
+    直接调会让所有 gate 用例 AttributeError —— 这是"扩了实现、撞了桩"的典型形态。
+    """
+    getter = getattr(semantics, "metrics", None)
+    if not callable(getter):
+        return []
+    try:
+        items = list(getter())
+    except Exception:  # pragma: no cover
+        return []
+    return sorted(items, key=lambda m: str(getattr(m, "name", "")))
+
+
+def _sorted_aliases(semantics: SemanticBundlePort) -> list[Any]:
+    """`aliases()` 按 term 排序（确定性；可选能力，缺失时返回空）。探测理由同上。"""
+    getter = getattr(semantics, "aliases", None)
+    if not callable(getter):
+        return []
+    try:
+        items = list(getter())
+    except Exception:  # pragma: no cover
+        return []
+    return sorted(items, key=lambda a: str(getattr(a, "term", "")))
 
 
 def _truncate_sections(sections: Sequence[str], *, max_chars: int) -> str:

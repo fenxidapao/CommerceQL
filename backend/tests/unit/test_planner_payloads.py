@@ -25,6 +25,7 @@ W3B 的载荷是**交给 W3A 网关出站的原材料**。两条硬约束在此�
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -54,12 +55,18 @@ from app.planner.payloads import (
 )
 from app.planner.schemas import task_output_models
 from app.semantics import SemanticBundleRuntime, load_bundle
+from app.semantics.models import Alias, Metric
 
 REAL_BUNDLE = Path(__file__).resolve().parents[3] / "semantic" / "bundle_2026.09.14.1.yaml"
 
 #: `policy()["deny_columns"]` 的**列名部分**（实测 2026-09-17）。
 #: 断言它"不在摘要里"之前，必须先证明它**在**白名单里（否则是空断言）。
 _DENIED_BASENAMES = ("tenant_id", "receiver_phone", "receiver_address", "cost_price")
+
+
+def _has_word(text: str, word: str) -> bool:
+    """词边界包含判定 —— 防 `uv` 命中 `uv_period`、`aov` 命中 `aov_qty` 这类**假通过**。"""
+    return re.search(rf"\b{re.escape(word)}\b", text) is not None
 
 
 @pytest.fixture(scope="module")
@@ -306,12 +313,233 @@ class TestSemanticSummary:
         for physical in runtime.asset_allowlist(_ctx()):
             assert str(physical) in summary
 
-    def test_metrics_gap_is_declared_not_silently_omitted(
+    def test_metric_directory_reaches_the_model(
+        self, runtime: SemanticBundleRuntime, prompt_ctx: PromptContext
+    ) -> None:
+        """**G-6 的卡点**：指标名必须真的进到出站文本里，不只是"语义层里有"。
+
+        判据从**语义包自身**取（`runtime.metrics()`），不写死名字清单 ——
+        包加指标，本用例自动跟着盯；包掉指标，本用例也跟着红。
+
+        背景（`reports/w2b/RELAY.md §12`）：`gmv` 在包里定义得好好的，但摘要里没有指标段，
+        还写着"找不到就把问题写进 `blocking_issues`" ⇒ 模型照做 ⇒ PLAN 结构性自拒
+        ⇒ `executing` 恒 0。本用例就是那一格的回归闸。
+        """
+        summary = prompt_ctx.semantic_summary
+        assert "## 指标口径" in summary
+        names = sorted(m.name for m in runtime.metrics())
+        assert names, "夹具失效：语义包一个指标都没有，本用例无证明力"
+        missing = [n for n in names if not _has_word(summary, n)]
+        assert not missing, f"这些指标名没进摘要：{missing}"
+        # 缺口语径声明**必须消失**：留着就是假警报，会让模型以为拿不到口径而照旧走 blocking
+        assert "未提供**指标口径目录**" not in summary
+
+    def test_metric_caliber_text_is_carried_verbatim(
+        self, runtime: SemanticBundleRuntime, prompt_ctx: PromptContext
+    ) -> None:
+        """口径文案与默认谓词必须**逐字**来自包 —— 摘要不许自己摘要口径。
+
+        ⚠️ 唯一允许的加工是剥掉 `definition_note` 自带的 `口径：` 标签
+        （包里有指标自带该前缀，不剥会渲染成"口径：口径：…"）。除标签外的字一个不改。
+        """
+        summary = prompt_ctx.semantic_summary
+        gmv = runtime.metric("gmv")
+        assert gmv is not None and gmv.definition_note and gmv.expression
+        assert gmv.expression in summary
+        body = " ".join(gmv.definition_note.split()).split("口径：", 1)[-1]
+        assert body in summary
+        for pred in gmv.default_predicates:
+            assert pred in summary
+
+    def test_draft_metric_is_declared_unusable_neither_hidden_nor_allowed(
         self, prompt_ctx: PromptContext
     ) -> None:
-        """指标目录枚举器缺失 ⇒ 必须**写明缺**（留白会让模型自己发明口径）。"""
-        assert "未提供**指标口径目录**" in prompt_ctx.semantic_summary
-        assert summary_gaps()  # 缺口可枚举、可审计
+        """draft 指标的**正确一路**：说出它存在、但明说不许引用。
+
+        两条错路都要堵住：静默隐藏 ⇒ 模型在别处编一个同名口径；
+        静默放行 ⇒ 引用未转正口径（FR-12.3）。
+        """
+        summary = prompt_ctx.semantic_summary
+        assert "sell_through_rate" in summary, "draft 指标被静默隐藏了"
+        assert "存在但不得引用" in summary, "draft 指标没被明确禁止引用"
+        assert "\n- sell_through_rate" not in summary, "draft 指标进了可用清单"
+
+    def test_alias_table_reaches_the_model(
+        self, runtime: SemanticBundleRuntime, prompt_ctx: PromptContext
+    ) -> None:
+        """同义词表进摘要（口语词形 → 规范名）—— 与 L1 的 `resolve_alias` 同源。"""
+        summary = prompt_ctx.semantic_summary
+        assert "## 同义词表" in summary
+        aliases = runtime.aliases()
+        assert aliases, "夹具失效：语义包一条别名都没有"
+        # 抽样：别名表里的 term 必须**逐字**出现在摘要里（大小写也照原样，不擅自归一化）
+        sample = [a for a in aliases if a.maps_to_kind == "metric"][:20]
+        assert sample, "夹具失效：没有指向指标的别名"
+        missing = [a.term for a in sample if a.term not in summary]
+        assert not missing, f"这些别名没进摘要：{missing}"
+
+    def test_gaps_registry_carries_no_ghost_entries(self) -> None:
+        """修好的缺口必须从 `summary_gaps()` 里**删掉** —— 留着就是假警报。
+
+        这条与"不许静默漏登记"是一体两面：登记表既不能少（漏报），也不能多（误报）。
+        """
+        gaps = summary_gaps()
+        assert gaps, "缺口登记表空了，说明有人把存在的缺口也删了"
+        joined = "\n".join(gaps)
+        assert "metrics:" not in joined or "未暴露 metrics()" not in joined
+        assert "aliases:" not in joined or "未暴露 aliases()" not in joined
+
+
+# ============================================================================
+# 四之二、指标段 / 同义词段的**排除规则**（合成桩，不靠"当前包碰巧干净"）
+# ============================================================================
+
+class _StubSemantics:
+    """最小语义桩 —— 只提供摘要渲染真正读到的面。
+
+    🔴 为什么不能只用真实语义包测排除规则：真实包的指标表达式**当前**一个受限列都不含
+    （已实测，见 `reports/w2a/_w2a_metric_enum_probe.py` 判据④）。
+    拿它断言"受限列没漏出"是**空断言** —— 哪天包改坏了，用例照样绿。
+    合成桩把"受限列真的在表达式里 / 真的在别名指向里"这条前提**钉死在夹具里**。
+    """
+
+    def __init__(
+        self,
+        metrics: tuple[Metric, ...] = (),
+        aliases: tuple[Alias, ...] = (),
+        *,
+        active: tuple[str, ...] = (),
+    ) -> None:
+        self._metrics = metrics
+        self._aliases = aliases
+        self._active = frozenset(active)
+
+    def active_version(self) -> str:
+        return "stub-0"
+
+    def asset_allowlist(self, ctx: IdentityContext) -> dict[str, Any]:
+        return {}
+
+    def policy(self) -> dict[str, Any]:
+        return {"deny_columns": ("product.cost_price",)}
+
+    def metrics(self) -> tuple[Metric, ...]:
+        return self._metrics
+
+    def aliases(self) -> tuple[Alias, ...]:
+        return self._aliases
+
+    def is_metric_active(self, name: str) -> bool:
+        return name in self._active
+
+
+class _PortOnlySemantics:
+    """**只有 4 个契约方法**的桩 —— 与 `guard_fixtures.FakeSemanticBundle` 同形。
+
+    盯的是一条真实回归：`metrics()` / `aliases()` 是**可选能力**，不在 W0 冻结的
+    `SemanticBundlePort` 里。摘要构造函数一旦把它们当契约方法直接调，
+    所有 gate 用例会当场 `AttributeError` —— 而非静默降级。
+    """
+
+    def active_version(self) -> str:
+        return "port-only-0"
+
+    def asset_allowlist(self, ctx: IdentityContext) -> dict[str, Any]:
+        return {}
+
+    def time_semantics(self) -> Any:  # pragma: no cover - 摘要不读
+        raise NotImplementedError
+
+    def policy(self) -> dict[str, Any]:
+        return {"deny_columns": ()}
+
+
+def _safe_metric() -> Metric:
+    return Metric(
+        name="safe_metric",
+        display_name="安全口径",
+        domain="orders",
+        status="active",
+        expression="SUM(order_paid.pay_amount)",
+        unit="CNY",
+        time_basis="pay_time",
+    )
+
+
+class TestMetricAndAliasExclusionRules:
+    def test_metric_expression_touching_a_denied_column_is_not_rendered(self) -> None:
+        """受限列只要出现在指标的**任一**文本里（这里：表达式）⇒ 整条不渲染。"""
+        unsafe = Metric(
+            name="unsafe_metric",
+            display_name="受限口径",
+            domain="orders",
+            status="active",
+            expression="SUM(product.cost_price)",
+            unit="CNY",
+            time_basis="pay_time",
+        )
+        stub = _StubSemantics((unsafe, _safe_metric()), active=("unsafe_metric", "safe_metric"))
+        summary = build_semantic_summary(_ctx(), stub)  # type: ignore[arg-type]
+
+        assert "cost_price" not in summary, "受限列名漏出了摘要"
+        assert "unsafe_metric" in summary and "存在但不得引用" in summary, "该说不说的没说出来"
+        assert "\n- unsafe_metric" not in summary, "受限指标进了可用清单"
+        # 前置证明：安全指标**在**（否则"没漏出"可能只是整段没渲染）
+        assert "\n- safe_metric" in summary
+
+    def test_alias_pointing_at_a_denied_column_is_not_rendered(self) -> None:
+        """别名的**右侧**指向受限列 ⇒ 不渲染（否则等于把受限列名印给模型）。"""
+        stub = _StubSemantics(
+            aliases=(
+                Alias(
+                    term="成本价",
+                    lang="zh",
+                    maps_to_kind="column",
+                    maps_to_ref="product.cost_price",
+                    category="entity",
+                ),
+                Alias(
+                    term="成交额",
+                    lang="zh",
+                    maps_to_kind="metric",
+                    maps_to_ref="safe_metric",
+                    category="metric",
+                ),
+            ),
+            active=("safe_metric",),
+        )
+        summary = build_semantic_summary(_ctx(), stub)  # type: ignore[arg-type]
+        assert "cost_price" not in summary
+        assert "成本价" not in summary, "别名 term 漏出（它自己就带受限词形）"
+        assert "- 成交额 → 指标 safe_metric" in summary  # 前置证明：别名段真的渲染了
+
+    def test_alias_to_a_non_active_metric_is_not_rendered(self) -> None:
+        """指向非 active 指标的别名 ⇒ 不渲染（放出去就是给 draft 开的后门）。"""
+        stub = _StubSemantics(
+            aliases=(
+                Alias(
+                    term="售罄率",
+                    lang="zh",
+                    maps_to_kind="metric",
+                    maps_to_ref="draft_metric",
+                    category="metric",
+                ),
+            ),
+            active=(),
+        )
+        summary = build_semantic_summary(_ctx(), stub)  # type: ignore[arg-type]
+        assert "售罄率" not in summary
+
+    def test_summary_still_renders_for_a_port_only_semantics(self) -> None:
+        """只有 4 个契约方法的桩**不得**让摘要构造炸掉（可选能力必须真"可选"）。"""
+        summary = build_semantic_summary(_ctx(), _PortOnlySemantics())  # type: ignore[arg-type]
+        assert "## 认证资产" in summary and "port-only-0" in summary
+        assert "## 指标口径（本包未登记）" in summary, "无指标的退化情形没有如实留白"
+
+    def test_empty_metric_package_declares_the_gap_instead_of_staying_silent(self) -> None:
+        """退化情形：包里没有指标 ⇒ 必须**明说没有**（留白会让模型自己发明口径）。"""
+        summary = build_semantic_summary(_ctx(), _StubSemantics())  # type: ignore[arg-type]
+        assert "未登记任何可用指标口径" in summary
 
     def test_deny_columns_are_excluded_even_for_a_role_whose_allowlist_has_them(
         self, runtime: SemanticBundleRuntime

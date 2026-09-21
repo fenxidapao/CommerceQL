@@ -416,3 +416,36 @@ class TestRuntime:
         assert "pay_status = 'paid'" in preds
         assert "refund_status <> 'refunded'" not in preds
         assert "is_test_order = false" in preds
+
+    def test_metrics_enumerator_returns_all_including_draft(
+        self, runtime: SemanticBundleRuntime
+    ) -> None:
+        """`metrics()` 是**枚举器**，刻意不过滤状态（理由见 `runtime.metrics()` 的注释）。
+
+        它存在的原因很具体：plan 的资产信息只经 `semantic_summary` 到达模型，
+        而摘要此前渲染不出指标段 ⇒ 模型看不见指标名 ⇒ 把指标写进 `blocking_issues`
+        ⇒ PLAN 自拒 ⇒ `executing` 恒 0（W2B 的 G-6 根因回执）。
+        """
+        enumerated = runtime.metrics()
+        assert enumerated, "夹具失效：语义包一个指标都没有"
+        names = {m.name for m in enumerated}
+        assert names == {m.name for m in load_bundle(REAL_BUNDLE).bundle.metrics}
+        assert "gmv" in names
+        assert "sell_through_rate" in names, "draft 指标被枚举器静默滤掉了（应当如实吐出）"
+        # 与按名单查的 `metric()` 是**同一份对象** —— 不许有第二份真相
+        assert runtime.metric("gmv") is next(m for m in enumerated if m.name == "gmv")
+        # 可用性判定仍归调用方：draft 在枚举里，但 `is_metric_active` 说不可用
+        assert not runtime.is_metric_active("sell_through_rate")
+
+    def test_aliases_enumerator_is_the_same_index_as_resolve_alias(
+        self, runtime: SemanticBundleRuntime
+    ) -> None:
+        """`aliases()` 必须与 L1 的 `resolve_alias()` **同源**（不是另抄一份表）。
+
+        判据用**对象同一性**逐条回代：任何"另建一张表"的实现都会在这里红 —
+        而两张表漂移的后果是模型按摘要里的词形问、L1 却查不到，静默落到 L4 近似匹配。
+        """
+        aliases = runtime.aliases()
+        assert len(aliases) == 105
+        for alias in aliases:
+            assert runtime.resolve_alias(alias.term) is alias

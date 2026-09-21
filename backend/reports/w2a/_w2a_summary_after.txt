@@ -1,0 +1,238 @@
+以下是本次查询**可依据的全部语义资产与指标口径**（指标口径、认证资产、列、维度、字段绑定、同义词）。**只能使用这里出现过的指标名 / 表名 / 列名**；此处未出现的资产一律视为不存在。
+
+语义包版本：2026.09.14.1
+
+## 指标口径（**唯一权威口径**：只能逐字引用下列指标名，不得自造新口径）
+- aov（客单价）｜单位=CNY｜聚合=ratio_of_sums｜默认资产=order_paid｜时间基准=pay_time
+    口径：⚠️ 高危口径。分母 = **支付子订单数**（非买家数、非父订单数）。 若业务需要"人均消费"，应使用独立指标 arpu，**不要复用 aov**。 ⚠️ "件单价"（pay_amount / quantity）**不是** aov → 见 blacklist_terms。
+    表达式：SUM(order_paid.pay_amount) / NULLIF(COUNT(DISTINCT order_paid.sub_order_id), 0)
+    默认谓词：pay_status = 'paid'；refund_status <> 'refunded'；is_test_order = false
+- arpu（人均消费）｜单位=CNY｜聚合=ratio_of_sums｜默认资产=order_paid｜时间基准=pay_time
+    口径：分母 = 去重买家数。与 aov **不可混用**。
+    表达式：SUM(order_paid.pay_amount) / NULLIF(COUNT(DISTINCT order_paid.buyer_id), 0)
+    默认谓词：pay_status = 'paid'；refund_status <> 'refunded'；is_test_order = false
+- gmv（GMV）｜单位=CNY｜聚合=sum｜默认资产=order_paid｜时间基准=pay_time
+    口径：按支付完成时间（pay_time）统计；含运费；剔除全额退款订单；剔除测试单。 与财务口径的差异仅在"部分退款"处理上 —— 本口径暂不扣减部分退款。
+    表达式：SUM(order_paid.pay_amount)
+    默认谓词：pay_status = 'paid'；refund_status <> 'refunded'；is_test_order = false
+- order_cnt（订单量）｜单位=单｜聚合=count_distinct｜默认资产=order_paid｜时间基准=pay_time
+    口径：按子订单计数（非父订单）；仅已支付、未取消、未全额退款。
+    表达式：COUNT(DISTINCT order_paid.sub_order_id)
+    默认谓词：pay_status = 'paid'；refund_status <> 'refunded'；is_test_order = false
+- pay_cvr（支付转化率）｜单位=ratio｜聚合=ratio_of_sums｜默认资产=traffic_daily｜时间基准=stat_date
+    口径：**支付**转化（非下单转化），分母为 UV。转化率不落成列，只在此定义。
+    表达式：SUM(traffic_daily.order_cnt) * 1.0 / NULLIF(SUM(traffic_daily.uv), 0)
+    默认谓词：uv >= 0
+- refund_rate（退款率）｜单位=ratio｜聚合=ratio_of_sums｜默认资产=order_paid｜时间基准=pay_time
+    口径：**按金额、按退款完成**。若要按单量口径，须另立 refund_rate_qty（P1）。
+    表达式：SUM(CASE WHEN order_paid.refund_status = 'refunded' THEN order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(order_paid.pay_amount), 0)
+    默认谓词：pay_status = 'paid'；is_test_order = false
+- repurchase_rate_90d（90天复购率）｜单位=ratio｜聚合=ratio_of_sums｜默认资产=order_paid｜时间基准=pay_time
+    口径：90 天内购买 ≥ 2 次；**不含首单口径**。周期固定 90 天，不接受运行时改窗口。
+    表达式：COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) / NULLIF(COUNT(DISTINCT buyer_id), 0)
+    默认谓词：pay_status = 'paid'；is_test_order = false
+- uv（UV）｜单位=人｜聚合=sum｜默认资产=traffic_daily｜时间基准=stat_date
+    口径：按用户去重、**自然日窗口**。跨日直接累加会重复计数 —— 跨日区间应使用独立口径 uv_period（P1，本包未定义 → 未定义的指标**不得被生成**）。
+    表达式：SUM(traffic_daily.uv)
+    默认谓词：uv >= 0
+（以下指标**存在但不得引用**：sell_through_rate（状态=draft）。请不要为它们编造口径，需要就写进 `blocking_issues`。）
+
+## 认证资产（表 / 视图）
+- campaign（物理名 `v_campaign`） 粒度=campaign｜域=orders｜租户隔离=是
+    - campaign_id：活动 ID，主键
+    - campaign_name：活动名称
+    - campaign_type：活动类型
+    - end_date：活动结束日（含）
+    - start_date：活动开始日（**含预售期**）
+- dim_date（物理名 `v_dim_date`） 粒度=day｜域=orders｜租户隔离=否
+    - campaign_id：所属活动 ID（无则为 null）
+    - date_key：日期，主键
+    - day_of_week：星期（1=周一 … 7=周日）
+    - is_weekend：是否周末
+    - iso_week：ISO 周序号（**周一为起点**，对齐 meta.week_starts_on）
+    - month：月（1–12）
+    - quarter：季度（1–4）
+    - year：年
+- order_paid（物理名 `v_order_paid`） 粒度=sub_order｜域=orders｜租户隔离=是
+    - buyer_id：买家 ID（脱敏哈希）。ARPU 的分母来源
+    - category_l1：一级类目名
+    - category_l2：二级类目名
+    - category_l3：三级类目名
+    - channel：成交渠道
+    - create_time：下单时间。**不要用于 GMV 统计**
+    - discount_amount：优惠金额
+    - freight_amount：运费
+    - is_test_order：是否测试单
+    - order_id：父订单号（一个订单可含多个子订单）
+    - pay_amount：实付金额（含运费，扣除优惠后）
+    - pay_status：支付状态
+    - pay_time：支付完成时间。**这是 GMV 的时间基准**
+    - quantity：购买数量。**件单价的分母，不等于客单价**
+    - receiver_city：收货城市（含'市'后缀）。与 shop.city 同粒度不同语义 → 构成真竞争，须澄清
+    - refund_status：退款状态
+    - region_code：收货省份编码（6 位数字字符串）
+    - shop_id：店铺 ID
+    - sku_id：SKU 唯一标识，最小销售单元
+    - spu_id：SPU 标准产品单元（同款不同规格共用）
+    - sub_order_id：子订单号，主键
+- order_refund（物理名 `v_order_refund`） 粒度=refund_record｜域=orders｜租户隔离=是
+    - refund_amount：退款金额
+    - refund_id：退款单号，主键
+    - refund_status：退款状态
+    - refund_time：退款完成时间
+    - refund_type：退款类型
+    - sub_order_id：关联子订单号
+- product（物理名 `v_product`） 粒度=sku｜域=products｜租户隔离=是
+    - category_l1：一级类目
+    - category_l2：二级类目
+    - category_l3：三级类目
+    - launch_date：上架日期
+    - list_price：标价（吊牌价，**非成交价**）
+    - on_sale：是否在架
+    - shop_id：所属店铺
+    - sku_id：SKU 唯一标识
+    - sku_name：商品标题
+    - spu_id：SPU 标识
+- region（物理名 `v_region`） 粒度=province｜域=orders｜租户隔离=否
+    - code：省级编码（6 位）
+    - province_name：省名
+    - region_name：大区名（华东/华南/…）。**由 value_map 派生，非原始列**
+- shop（物理名 `v_shop`） 粒度=shop｜域=products｜租户隔离=是
+    - category_l1：主营一级类目
+    - city：**店铺所在城市**（与收货城市同名不同义）
+    - open_date：开店日期
+    - shop_id：店铺 ID，主键
+    - shop_name：店铺名称
+- traffic_daily（物理名 `v_traffic_daily`） 粒度=sku_day_channel｜域=traffic｜租户隔离=是
+    - ad_cost：广告花费（用于 ROI）
+    - cart_add_cnt：加购次数
+    - channel：流量渠道
+    - order_cnt：支付订单数
+    - pv：页面浏览量（不去重）
+    - sku_id：SKU 标识
+    - stat_date：统计日期
+    - uv：独立访客数（按用户去重，自然日窗口）。跨日累加会重复计数
+
+## 维度与层级
+- category：层级=category_l1 > category_l2 > category_l3｜grain_level=3｜绑定=order_paid.category_l1
+- channel：层级=channel｜grain_level=1｜绑定=traffic_daily.channel
+- city：层级=region > province > city｜grain_level=4｜绑定=order_paid.receiver_city
+- region：层级=country > region > province > city｜grain_level=4｜绑定=order_paid.region_code
+- shop：层级=shop｜grain_level=1｜绑定=shop.shop_id
+- time：层级=year > quarter > month > week > day｜grain_level=5｜绑定={'day': 'pay_time', 'week': 'pay_time', 'month': 'pay_time', 'quarter': 'pay_time', 'year': 'pay_time'}
+
+## 唯一字段绑定（概念 → 资产.列）与歧义概念
+- customer_name → shop.shop_name
+- 商品名称 → product.sku_name
+- 城市：**歧义**（候选：order_paid.receiver_city、shop.city）——不得自行选一个
+- 大区 → region.region_name
+- 支付时间 → order_paid.pay_time
+- 渠道 → traffic_daily.channel
+- 类目 → order_paid.category_l1
+
+## 同义词表（词面 → 规范名；命中词面即等价于右侧规范名）
+- 618 → 时间 campaign:prom_618
+- 618大促 → 时间 campaign:prom_618
+- AOV → 指标 aov
+- ARPU → 指标 arpu
+- CVR → 指标 pay_cvr
+- GMV → 指标 gmv
+- SKU → 列 product.sku_id
+- SPU → 列 product.spu_id
+- UV → 指标 uv
+- gmv → 指标 gmv
+- sku → 列 product.sku_id
+- uv → 指标 uv
+- 一级类目 → 列 order_paid.category_l1
+- 上个月 → 时间 relative:last_month
+- 上周 → 时间 relative:last_week_monday
+- 上月 → 时间 relative:last_month
+- 下单时间 → 列 order_paid.create_time
+- 买家 → 列 order_paid.buyer_id
+- 交易额 → 指标 gmv
+- 人均产出 → 指标 arpu
+- 人均消费 → 指标 arpu
+- 今天 → 时间 relative:today
+- 付费广告 → 取值 traffic_daily.channel=ad
+- 信息流 → 取值 traffic_daily.channel=feed
+- 出单量 → 指标 order_cnt
+- 前天 → 时间 relative:day_before_yesterday
+- 区域 → 维度 region
+- 十一月大促 → 时间 campaign:prom_double11
+- 单品 → 列 product.sku_id
+- 单量 → 指标 order_cnt
+- 双11 → 时间 campaign:prom_double11
+- 双十一 → 时间 campaign:prom_double11
+- 同比 → 时间 compare:yoy
+- 品 → 资产 product
+- 品类 → 维度 category
+- 商品 → 资产 product
+- 商品名 → 列 product.sku_name
+- 商品标题 → 列 product.sku_name
+- 回购 → 指标 repurchase_rate_90d
+- 回购率 → 指标 repurchase_rate_90d
+- 复购 → 指标 repurchase_rate_90d
+- 复购买家 → 列 order_paid.buyer_id
+- 复购率 → 指标 repurchase_rate_90d
+- 大区 → 维度 region
+- 头部主播 → 取值 traffic_daily.channel=live
+- 子订单号 → 列 order_paid.sub_order_id
+- 实付金额 → 列 order_paid.pay_amount
+- 客单价 → 指标 aov
+- 客户 → 列 order_paid.buyer_id
+- 平均订单金额 → 指标 aov
+- 年中大促 → 时间 campaign:prom_618
+- 店 → 资产 shop
+- 店名 → 列 shop.shop_name
+- 店铺 → 资产 shop
+- 店铺名 → 列 shop.shop_name
+- 成交单量 → 指标 order_cnt
+- 成交转化 → 指标 pay_cvr
+- 成交金额 → 指标 gmv
+- 成交额 → 指标 gmv
+- 推荐 → 取值 traffic_daily.channel=feed
+- 搜索 → 取值 traffic_daily.channel=search
+- 支付完成时间 → 列 order_paid.pay_time
+- 支付时间 → 列 order_paid.pay_time
+- 支付转化率 → 指标 pay_cvr
+- 支付金额 → 列 order_paid.pay_amount
+- 昨天 → 时间 relative:yesterday
+- 昨日 → 时间 relative:yesterday
+- 本周 → 时间 relative:this_week_monday
+- 本月 → 时间 relative:this_month
+- 来源 → 列 traffic_daily.channel
+- 标题 → 列 product.sku_name
+- 款 → 列 product.spu_id
+- 活动名 → 列 campaign.campaign_name
+- 流水 → 指标 gmv
+- 流量 → 资产 traffic_daily
+- 流量来源 → 列 traffic_daily.channel
+- 渠道 → 维度 channel
+- 独立访客 → 指标 uv
+- 猜你喜欢 → 取值 traffic_daily.channel=feed
+- 环比 → 时间 compare:period_over_period
+- 直接访问 → 取值 traffic_daily.channel=direct
+- 直播 → 取值 traffic_daily.channel=live
+- 省 → 列 region.province_name
+- 省份 → 列 region.province_name
+- 类目 → 维度 category
+- 自然搜索 → 取值 traffic_daily.channel=search
+- 规格 → 列 product.sku_id
+- 订单号 → 列 order_paid.sub_order_id
+- 订单数 → 指标 order_cnt
+- 订单量 → 指标 order_cnt
+- 访客数 → 指标 uv
+- 货 → 资产 product
+- 货品 → 列 product.sku_id
+- 转化 → 指标 pay_cvr
+- 转化率 → 指标 pay_cvr
+- 达人 → 取值 traffic_daily.channel=live
+- 近7天 → 时间 rolling:7d_incl_today
+- 近一周 → 时间 rolling:7d_incl_today
+- 这个月 → 时间 relative:this_month
+- 这周 → 时间 relative:this_week_monday
+- 退款占比 → 指标 refund_rate
+- 退款率 → 指标 refund_rate
+- 退货率 → 指标 refund_rate
+- 销售额 → 指标 gmv
+- 颜色尺码 → 列 product.sku_id
