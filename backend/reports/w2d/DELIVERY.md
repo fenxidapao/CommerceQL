@@ -46,6 +46,9 @@
 | `tests/integration/test_exec_real_pg.py` | 19 条真 PG（沿用 W1B 模式：无库 skip 不假绿；schema 随机后缀） |
 | `reports/w2d/DELIVERY.md` `reports/w2d/RELAY.md` | 本文件 + 逐窗口转述件 |
 | `reports/w2d/probe_explain_timing_pg.py` | **2026-09-18 追加**：U-96 判据实验探针（可复跑、只读、不写库）—— 钉死"07 §7.5 规定的 `EXPLAIN (FORMAT JSON)` 不产出任何耗时字段" + "cost→ms 系数跨 327× 不成立"。见 RELAY 第一节 / DELIVERY §8 |
+| `app/exec/seam.py` | **2026-09-21 追加**：exec 入口形态的**声明层** —— `ExplainPlan`（含"方言不支持 vs 本次失败"两种语义）/ `ExecutorSeam`（端口 ∪ 图真正多用的 `effective_limit` + `explain`）/ `declared_call_face_mismatches()`。**不改端口**（W0 冻结面）。见 DELIVERY §9 |
+| `tests/unit/test_exec_seam.py` | **2026-09-21 追加**：5 条，含"端口面替身必须被拒"的**分离力**断言（已做"删声明 ⇒ 必须红"的正向对照） |
+| `reports/w2d/probe_fullchain_two_cells.py` | **2026-09-21 追加**：离线全链读数探针（不连库）—— 实测默认绿档能产出 `gate_passed` + `executing` + `fetch_calls=1` + `explain_calls=1` |
 
 ---
 
@@ -206,3 +209,23 @@ mypy app/exec app/mask
 **W2D 未动的**：一切他人代码（`contracts.py` / `edges.py` / `cost_gate.py` / `tests/contract/**` 零改动）。
 
 > 决策与完整方案表见 `RELAY.md` 第一节。**待架构一句裁定**（甲/乙/丙）后即可落地。
+
+---
+
+## 9. GATE3 / EXECUTE 入口形态回执（2026-09-21 追加，回应总控）
+
+**总控口径**：两格 `stage_duration_seconds_count{gate_passed}=0` / `{executing}=0`，"需要 W2D 按 U-63 的受控入口开口子"。
+
+**W2D 的结论：入口不缺；缺的是"缝没有被声明"。**
+
+| 结论 | 依据 |
+|---|---|
+| 两格在**离线侧今天就能兑现** | 探针 `probe_fullchain_two_cells.py` 实测默认绿档 stage 序列 = `intent → schema_linking → plan_ready → sql_ready → **gate_passed** → **executing**`，`fetch_calls=1`、`explain_calls=1` |
+| 生产为 0 的成因**不在 exec** | `U-121`：端口给扁平 `allowlist`、闸门要 7 键 ⇒ `assets={}` ⇒ 任何真 SQL 必 `R05` ⇒ 图到不了 `gate3_cost` |
+| `explain()` 既已实现也已装配 | `app/api/deps.py:750` 真 `PgSqlExecutor`；`tests/integration/test_exec_real_pg.py` 有 5 条 `test_explain_*`（含超时 / 42601 对照） |
+| **真正缺的**：`explain` 不在端口上 | `SqlExecutorPort`（`core/contracts.py:494`）只声明 `fetch` 的 2 个关键字；图的调用面还多 `effective_limit` 与 `explain`；且 `deps_of() -> Any` ⇒ 类型层不检查、`rich_method` 只查 callable |
+
+**交付**：`app/exec/seam.py`（`ExplainPlan` / `ExecutorSeam` / `declared_call_face_mismatches`）+ `tests/unit/test_exec_seam.py`（5 条）。
+**分离力已实测**：删掉 `ExecutorSeam.explain` ⇒ 恰好 1 条红；还原 ⇒ 5 passed。
+**未改**：`core/contracts.py`（W0 冻结面）、`app/graph/**`（W4）、`app/guard/**`（W2C）、`tests/contract/**`（W4）。
+**顺带量出的判据缺口**：`"gate_passed" in stages` 的**肯定**断言全仓 **0 条**（只有 2 条否定断言）—— 而它离线可达，今天就能写。详见 `RELAY.md` 第一节 §2/§4。

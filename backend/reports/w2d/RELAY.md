@@ -1,10 +1,101 @@
 # W2D RELAY —— 逐窗口转述件
 
 > 2026-09-17 更新：**已提交**（响应收口窗口提交提醒）—— `4a63373` feat(w2d) 代码+测试 + docs 提交（交付/转述件）。请收口窗口基于提交后状态重跑门禁复核。
-> **2026-09-18 更新：回应 W7 阻塞项 🔴-6（U-96"预估延迟载体"）—— 见本页第一节。结论：这不是"给
+> **2026-09-18 更新：回应 W7 阻塞项 🔴-6（U-96"预估延迟载体"）—— 见本页第二节。结论：这不是"给
 > `GateResult` 加个字段"，是"值来源从未定义"；已出可复跑探针 + 三条实测事实 + 三方案裁定请求。**
+> **2026-09-21 更新：回应总控"GATE3 / EXECUTE 两格至今一帧未见"—— 见本页第一节（更靠前）。结论：
+> 入口不缺 —— 离线全链夹具今天就能产出 `gate_passed` + `executing`（探针读数）；两格为 0 的成因是
+> `U-121`。真正缺的是"`explain` 不在端口上、缝没人声明"，已补 `app/exec/seam.py`。**
 > 本文件是"谁下一步该做什么"的单页转述；细节与证据见同目录 `DELIVERY.md`。
 > W2D 范围：`app/exec/**` + `app/mask/**`。96 tests passed（31+25+21+19），W2D 范围门禁全绿。
+
+---
+
+## 🔴 给总控 / W4 / 架构 —— GATE3 & EXECUTE 的入口形态回执（前提需更正）
+
+> 2026-09-21。回应总控"两格至今一帧未见，需要 W2D 按 U-63 开口子"。
+> 复跑：`cd backend && ../.venv/Scripts/python.exe reports/w2d/probe_fullchain_two_cells.py`（**不连库**）
+
+### 0. 🔴 先更正前提：入口不缺，两格在**离线侧今天就能兑现**
+
+离线全链夹具（`tests/contract/_fullchain_deps.make_chain()` 默认绿档）一轮的 stage 序列：
+
+| 读数 | 值 |
+|---|---|
+| stage 序列 | `intent → schema_linking → plan_ready → sql_ready → gate_passed → executing` |
+| `gate_passed` 出现 | **True** |
+| `executing` 出现 | **True** |
+| `ScriptExecutor.fetch_calls` | **1**（真走到了 execute） |
+| `ScriptExecutor.explain_calls` | **1**（gate3 真走了 U-63 的 EXPLAIN 入口） |
+
+**⇒ 两格的判据不需要 W2D 再开任何口子。** 生产为 0 的成因**不在 exec 侧** ——
+它是 `U-121`（闸门判据不可达：端口给扁平 `allowlist`，闸门要 7 个键 ⇒ `assets={}` ⇒
+**任何真 SQL 必 `R05`**）⇒ 图根本到不了 `gate3_cost`。
+
+补充（同样是既有事实，不是新发现）：`executor.explain()` 已实现且已生产装配
+（`app/api/deps.py:750` 构造真 `PgSqlExecutor`）、已有 **5 条真 PG 集成测试**
+（`tests/integration/test_exec_real_pg.py` 的 `test_explain_*`，含超时与 42601 对照）。
+
+### 1. 真正缺的那一层（**今天已补**）：`explain` 不在端口上，缝没人声明
+
+| 事实 | 位置 |
+|---|---|
+| `SqlExecutorPort` **只声明 `fetch`**，且只有 `max_rows` / `statement_timeout_ms` 两个关键字 | `app/core/contracts.py:494-510`（W0，冻结面） |
+| 而图真的在传 `effective_limit` | `app/graph/nodes/execute.py`（07 §7.3 生效 LIMIT） |
+| 而图真的在取 `explain`（`rich_method`） | `app/graph/nodes/gate3_cost.py`（U-63） |
+| 这条缝**在类型层完全不检查** | `app/graph/nodes/_shared.deps_of() -> Any` ⇒ mypy 看不见上面两个调用；`rich_method` 运行期**只查 callable** |
+
+两个可测后果（都指向"判据立不起来"）：
+
+1. 契约测试要造替身，只能去**读调用点抄签名**；抄错了**不会红**（Python 参数不匹配只在真调到那一行才炸）。
+2. `isinstance(fake, SqlExecutorPort)` 对**缺 `explain`** 的替身**照样为真** ⇒ 这个检查不足以证明图能跑到底。
+
+⇒ **交付 `app/exec/seam.py`**（不改端口 —— 端口是 W0 的冻结面，同 W1B 为 `cost_ledger` 用本地结构化 Protocol 的先例）：
+
+| 导出 | 内容 |
+|---|---|
+| `ExplainPlan` | `list[dict[str, Any]] | None`，并**明文区分两种"拿不到计划"**：返回 `None` = 方言不支持 → gate3 `SKIPPED`；抛异常 = 本次 EXPLAIN 失败 → gate3 `WARN`。仓库里三个实现（`PgSqlExecutor` / `SqliteEvalExecutor` / `ScriptExecutor`）此前**各表各的** |
+| `ExecutorSeam` | `@runtime_checkable` Protocol = 端口 ∪ 图真正多用的两处（`effective_limit` + `explain`） |
+| `declared_call_face_mismatches(obj)` | 用 `inspect.signature` 抓"抄错签名"，让它在**立判据时当场红**，而不是跑到那一行才炸 |
+
+**分离力已做正向对照**（本仓护栏口径：注入 → 必须红 → 还原 → 必须绿）：
+把 `ExecutorSeam` 里的 `explain` 删掉 ⇒ `tests/unit/test_exec_seam.py::test_port_face_double_is_rejected`
+**正好 1 条红**（`assert not isinstance(_PortFaceDouble(), ExecutorSeam)` 失败）；还原 ⇒ 5 passed。
+
+### 2. 顺带量出的**判据不完整**（是"没写"，不是"不可立"）
+
+| 断言 | 条数 | 位置 |
+|---|---|---|
+| `"executing" in stages`（肯定） | **2** | `test_decision_table_d_e.py:147/162` |
+| `"gate_passed" not in stages`（否定） | 2 | 同上 `:146/161`（warn/skipped 路径） |
+| **`"gate_passed" in stages`（肯定）** | **0** | —— |
+
+⇒ **`gate_passed` 只有否定面、没有肯定面**：D5/D6 钉住了"warn/skipped 时不许发"，
+但"三闸门全 PASS ⇒ 要发"这条正路径**契约层无人钉**。而本探针证明它**离线可达**（今天就能写）。
+
+### 3. 给架构的意见：**不建议为 GATE3 / EXECUTE 各立一条接缝号**
+
+| 问题 | 我的判断 | 理由 |
+|---|---|---|
+| 两格各立一条 U-119 式接缝号？ | ❌ 不必 | 两格的**入口是同一条**（同一个 `deps.executor`、同一个端口）；拆两条会把"端口不声明形状"这个**唯一根因**切成两半 —— 而这正是 `U-121` 家族"修一格才发现下一格"的成因 |
+| 那该立什么？ | ✅ 一条就够，且**不是** exec 侧的 | 缺的是"`gate_passed` **肯定路径**判据"（1 条，`tests/contract/**` = W4）。而"生产端口直连"这件事**已有的 `U-119` 已经覆盖实质** ⇒ 建议**并入 `U-119` 的判据**，不另开号 |
+| 我这条（`explain`/`effective_limit` 未声明）要号吗？ | ⚠️ 倾向并入 `U-119` | 同一句病的两个实例：**"生产端口的实际调用面 > 声明面"**（闸门 allowlist 形状 / exec 入口形状）。⚠️ **编号归架构，我不自开** |
+
+### 4. 给 W4 的可直接落地口径（两条）
+
+- **①`gate_passed` 肯定用例**：用 `_fullchain_deps.make_chain()`（默认绿档）跑一轮，断言
+  `"gate_passed" in stages` 且 `"executing" in stages` 且 `fetch_calls == 1`。
+  ⚠️ **必须配正向对照**（本仓护栏口径）：把 `ScriptExecutor` 的 `explain_payload` 换成 `_WARN_BAND`
+  ⇒ 该断言**必须红**（证明它在测"clean pass"这条缝，不是在测夹具恒真）。
+- **②替身忠实性**：`assert declared_call_face_mismatches(deps.executor) == ()`
+  （`from app.exec import declared_call_face_mismatches`）⇒ 签名漂移在立判据时红，而不是跑到那一行才炸。
+
+### 5. 如实登记（本窗口自己的）
+
+`app/exec/*.py` 与 `app/mask/*.py` 中有 **4 个已提交文件不满足 `ruff format --check`**
+（`errors.py` / `executor.py` / `normalize.py` / `mask/engine.py`）。**文档门禁只有 `ruff check`（全绿）**，
+故这不是现状红；但若 CI 将来加 `ruff format --check`，这 4 个会红。⚠️ **本轮不动它们**（改已提交文件会给
+并行窗口制造 diff 噪声），登记待裁。
 
 ---
 

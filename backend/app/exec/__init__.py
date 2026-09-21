@@ -18,17 +18,29 @@ from app.exec.errors import (
 from app.exec.executor import FETCH_SIZE, WORK_MEM, PgSqlExecutor
 from app.exec.fingerprint import result_fingerprint
 from app.exec.normalize import normalize_cell, normalize_row
+from app.exec.seam import (
+    EXPLAIN_CALL_FACE,
+    FETCH_CALL_FACE,
+    ExecutorSeam,
+    ExplainPlan,
+    declared_call_face_mismatches,
+)
 
 __all__ = [
     "EXEC_ERROR_CLASSES",
+    "EXPLAIN_CALL_FACE",
+    "FETCH_CALL_FACE",
     "FETCH_SIZE",
     "LLM_HINT_BY_CLASS",
     "REPAIRABLE_CLASSES",
     "WORK_MEM",
     "ExecError",
     "ExecFailure",
+    "ExecutorSeam",
+    "ExplainPlan",
     "PgSqlExecutor",
     "classify_pg_error",
+    "declared_call_face_mismatches",
     "normalize_cell",
     "normalize_row",
     "result_fingerprint",
