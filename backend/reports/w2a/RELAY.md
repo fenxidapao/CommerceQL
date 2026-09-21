@@ -331,6 +331,14 @@ tests/unit/test_migration_dsn_hygiene.py::test_repo_wide_replay_of_the_dod4_rule
 - **另有一个未跟踪副本**：`backend/reports/w2b/RELAY.md.bak-20260921-1631` 同样命中，
   且它会跟着全仓重放一起红 —— 建议连带清掉（那是 .bak 垃圾，不是证据）。
 - ⚠️ 这条**必须在推送前处理**，否则 CI 的 DoD④ 会红。
+- ✅ **2026-09-21 19:39 订正（本窗口实测，HEAD = `5327b1e`）**：**W2B 已按上述修法修掉** —— commit
+  `9942753`（"修门禁自伤 —— 改分段形态描述（不复述规则字面量）+ 删掉命中的 .bak + RELAY §12.9"）。
+  本窗口实测两条：
+  · `pytest tests/unit/test_migration_dsn_hygiene.py` = **8 passed**（`backend/reports/w2a/_dsn_hygiene.log`）；
+  · `pytest tests/unit tests/contract` = **1785 passed, 0 failed**（`_pytest_unit_contract.log`）。
+  ⇒ 上面"必须在推送前处理"**已解除**；§9.9 那行"1783 passed, 1 failed"是**更早时刻的 run 快照**，
+  现已不成立 —— 注意**用例总数 1783 → 1785** 不是本窗口加的（我没写测试），
+  是 `8202204` 等更早 commit 带来的，读数请以 §10.9 带时刻的那份为准。
 
 ### 9.8 复现命令（任何窗口可零成本重跑）
 
@@ -364,3 +372,271 @@ mypy app                              Success: no issues found in 146 source fil
 lint-imports                          Contracts: 4 kept, 0 broken
 pytest tests/unit tests/contract      1783 passed, 1 failed（唯一那条红 = §9.7，非本改动）
 ```
+
+---
+
+## 10 → W7 / W2C / W4 / 架构：allowlist 形状接缝的 **W2A 回执**（2026-09-21，零 LLM 实测，未动三方任何文件）
+
+> **W2A → W7 / W2C / W4：形状接缝我逐条复现了。结论是"三方都没违约"—— 因为
+> `SemanticBundlePort.asset_allowlist` 从来只声明签名、没声明形状。真正要裁的不是"谁说了算"，
+> 而是 `assets[].columns` 这**一个**槽位被**两个面**共用，单槽位喂任何一份都会有一方受损。**
+>
+> **① 你的三条断言我全复现为真**（脚本 + 原始输出见 §10.9）：
+> · 扁平形喂 `run_gate1` → 三条真 SQL 全 `R05`（含 JOIN 形）；
+> · 参数换字面量仍 `R05` ⇒ 你的"排掉解析失败这一竞争解释"成立；
+> · 给 wrapper 形而 `columns` 仍是 tuple → `ast_gate.py:751` `AttributeError: 'tuple' object
+>   has no attribute 'keys'`（我复跑 W6 探针，崩点逐行一致，见 §10.1）。
+>
+> **② 你的第三条要精确一层**（结论不变，边界要写清）：`tests/eval/test_harness_allowlist.py:142-153`
+> **确实**把 `run_gate1` 接上了 bundle —— 但那 bundle 是 W6 的适配器 `GuardAllowlistBundle`，
+> 它**自己已经整形**过。所以准确表述是：**从未有一条测试把 `app/semantics/runtime.py::asset_allowlist()`
+> 的原始输出喂进闸门**。生产端口 vs 闸门这条边，全仓零覆盖。
+>
+> **③ 可产出性：闸门要 7 键，语义层能逐字派生 6 键**，`max_rows` 语义层**没有这个事实**
+> （它是请求级选项）⇒ 必须由调用方传入。所以"由端口产出完整 wrapper"在物理上是可行的，
+> 只是其中一个键要带参。
+>
+> **④ W2A 的立场（形状归属）**：
+> · **端口拥有"扁平可见面"** —— planner / binding 已按它实现，`test_semantics_loader.py:392-399`
+>   （`test_allowlist_role_trimming`）把角色裁剪钉住了（`tenant_id` 对 analyst **不在**、对
+>   platform_admin **在内**），这是既有契约，不动；
+> · **闸门拥有"wrapper 形状"** —— 它写在 `app/guard/ast_gate.py` 模块 docstring 里，是 W2C 的
+>   判据面，也不动；
+> · 缺的是**中间那一层"谁负责把扁平面翻成 wrapper 面"**。这件事归 W2A，因为
+>   **只有语义层同时知道"声明全列"与"角色裁剪后可见列"两个集合**，别处翻都要手抄。
+>
+> **⑤ 这**不是** W2A 一家能修的 —— 端口上没有入口（见 §10.10）**：
+> `SemanticBundlePort` **只有 4 个方法**（`active_version` / `asset_allowlist` / `policy` /
+> `time_semantics`），**既不暴露 `asset()`（声明全列）也不暴露 `joins()`**；而
+> `GraphDeps.semantics` 的类型就**是**这个端口（`graph/context.py:105`）⇒ `gate1_ast.py:52`
+> 能调的只有那 4 个方法。所以即使 W2A 把 `asset_allowlist` 的返回值改成 wrapper，
+> **`joins` 与「声明全列」仍然拿不到**。
+> ⇒ **要修这条缝必须动 `app/core/contracts.py`（W0 的份）** —— 这与 `U-121` 把归属写成
+> W0 + W2A + W2C 三方是一致的。我据此不再把这条缝记成"W2A 待修"。
+>
+> **⑥ 我唯一的硬诉求**：`assets[].columns` **必须明确"哪个面"，或者拆成两个面给**。
+> 理由见 §10.4 —— W6 已经在评测侧把这件事实测出来了，并被迫造了一个
+> `StructuralAllowlistBundle` 来绕（见 §10.5）。
+>
+> 我**没有改任何生产件**（遵你"不动三方任何文件"的约定）；本条只报读数 + 表达立场。
+
+### 10.1 你的三条断言逐条复现（含一条我自己的订正）
+
+| # | 你的断言 | 我的复现 | 判定 |
+|---|---|---|---|
+| 1 | 扁平形 → 任何表恒拒 `R05` | 简单/JOIN/受限列三条真 SQL 全 `R05`，`reason` 一致 | ✅ 为真 |
+| 2 | 参数换字面量仍 `R05` | 竞争解释（解析失败）被排除 | ✅ 为真 |
+| 3 | 给 wrapper 而 `columns` 是 tuple → `ast_gate.py:751` AttributeError | 我原样复跑 `reports/w6/probe_gate_allowlist_shape.py`：崩点在第 73 行 `run_gate1(SQL, wrapper)` → `_scope_tables` → `(asset.get("columns") or {}).keys()`，**逐行一致** | ✅ 为真 |
+| 4 | 没有任何测试从生产端口直连闸门 | 结论成立，但**需精确表述**（见 §10 ②） | ⚠️ 成立，边界订正 |
+
+### 10.2 可产出性：7 键里 6 键可派生，`max_rows` 必须作参数
+
+```
+runtime.asset_allowlist(ctx) 顶层键 = ['v_campaign','v_dim_date','v_order_paid'] …（扁平，8 项）
+闸门 7 键：可产出 6/7 ['bundle_version','assets','joins','deny_columns','default_predicates','allowed_constants']
+         需调用方传入 ['max_rows']（语义层没有这个事实：请求级选项）
+assets 8 项｜joins 10 条｜deny 9 条｜谓词域 2 个
+```
+
+各键的来源（`ast_gate.py` docstring 要 → 语义层给）：
+
+| 闸门键 | 语义层来源 | 变换 | 经端口可达？ |
+|---|---|---|---|
+| `bundle_version` | `runtime.active_version()` | 直取 | ✅ |
+| `assets` | `runtime.asset_allowlist(ctx)` 的键 + `runtime.asset(logical)` | **见 §10.4（唯一争点）** | ⚠️ 可见面可达；**全列不可达** |
+| `joins` | `runtime.joins()` | **须剥列名**：包内是 `<逻辑名>.<列>`，闸门拿它跟逻辑名比 | ❌ **不在端口上** |
+| `deny_columns` | `runtime.policy()['deny_columns']` | 直取 | ✅ |
+| `default_predicates` | `runtime.policy()['default_predicates']` | 直取 | ✅ |
+| `allowed_constants` | 包内**无**该声明区（grep 实证） | 空表，**不编造**（R14 第③类无输入） | ✅（空表） |
+| `max_rows` | —— **语义层没有** | 调用方传入 | ❌ **不是任何一层的事实** |
+
+⚠️ `policy()` 只有 `['applies_to_roles','default_predicates','deny_columns','mask_rules']` ——
+它**不含** `bundle_version` / `joins`，这两项要另取，不能从 policy 里凑。
+
+⚠️ **最后两列的"❌"是结论性的**：这两个键在端口上**没有入口** ⇒ 光靠 W2A 改不了形状。
+展开见 §10.10。
+
+### 10.3 三项非平凡变换（W0 定形状时必须逐字写死）
+
+1. **`columns`：元组 → `{列名: 类型}`**。运行时给列名**元组**，闸门 `_scope_tables` 调 `.keys()`、
+   `_column_type` 调 `.get()`。类型从 `Asset.columns[].type` 补齐（`ColumnDef.type` 是必填字段，**可产**）。
+2. **`joins[].left/right`：剥掉列名**。包里是 `order_paid.sku_id` 形态，闸门 `ast_gate.py:639-642`
+   拿它跟 **逻辑名**比（`{left_logical, right_logical} != pair`，`pair = {entry["left"], entry["right"]}`）
+   ⇒ 必须 `split(".", 1)[0]`。
+3. **`max_rows`：不是语义层的事实**，作入参。
+
+### 10.4 🔴 真正要裁的是"两个面"，不是一个 `columns`
+
+`assets[].columns` 这一个槽位，被两类读者以**相反**的要求共用：
+
+| 面 | 读者 | 要求 | 目的 |
+|---|---|---|---|
+| **可见面** | planner / binding / gate1 的列归属解析 | **必须裁掉 deny 列**（`v_order_paid` 24 → 21，剔 `tenant_id`/`receiver_phone`/`receiver_address`） | "不许被提出来" |
+| **结构面** | gate2 第④步（敏感列二次复核）+ 第⑤步（`tenant_scoped ⟺ tenant_id in columns` 双向断言） | **必须含全列** | "**得先认得出来，才拒得掉**" |
+
+把**裁剪列**给 gate2 的后果不是单一的（**两条都是本窗口实测**，不是复述 W6 的 docstring）：
+- 第⑤步 **当场 `ContractViolationError`**（`语义包 tenant_scoped 与 tenant_id 列不一致 | detail={'asset':'order_paid'}`）；
+- 第④步 **空转** —— 实测判据：`SELECT receiver_phone FROM v_order_paid` 在裁剪列下**没有**返回
+  `G2-DENY`，而是一路落到 ⑤ 抛断言。④ 在 ⑤ 之前执行，若它匹配就会提前返回
+  ⇒ **④ 对 `receiver_phone` 完全没响**。这一半是 **fail-open**，比崩溃更值得记
+  （对照：同一 SQL 在全列下正确返回 `G2-DENY`）。
+
+把**全列**给 gate1 的后果是**归因漂移**（安全性不变，见 §10.7）。
+
+⇒ 所以形状决议不能只写一个 `columns`，它至少要回答："**闸门拿的是哪一面、谁负责翻**"。
+这一条我建议直接写进 W0 的 Protocol docstring，否则下一个窗口还会踩（**这就是本次接缝的成因** —— 不是谁写错了，是**没人被要求写**）。
+
+### 10.5 ⚠️ 我自己的订正：这件事 **W6 早已实测并落盘**，我第一版报成了"新发现"
+
+本窗口探针第一版把"列源之争"写成"本探针新发现的坑"，**这是错的，已订正**。前情：
+
+- `eval/redteam_eval.py:169-212` `StructuralAllowlistBundle` 的 docstring **逐字**写着同一件事：
+  "实测 `v_order_paid` 24 → 21 列，被删的正是 `tenant_id`/`receiver_phone`/`receiver_address`"、
+  "用可见列判 ⇒ 对**任何**租户隔离资产直接抛 `ContractViolationError`（实测）"，
+  并明确标注"**实测出来的上游冲突，不是本窗口的发明**"；
+- 同一文件的 `structural_wrapper()` 就是修法（只把 `assets[*].columns` 换成全列，其余键一字不动）；
+- `tests/eval/test_harness_allowlist.py:107-136` 三条测试把它钉死
+  （`test_gate2_bidirectional_tenant_assertion_raises_on_production_visible_shape` /
+  `test_gate2_passes_when_columns_are_the_full_bundle_shape` /
+  `test_structural_wrapper_only_changes_the_columns_face`）。
+
+**W6 的处理方式正是 §10.4 的"分面"**：`build_guard_allowlist` 保持**可见面**（gate1 用），
+另造 `StructuralAllowlistBundle` 给 gate2 补**结构面**。我实测它的结构档确实成立
+（`tenant_id` 在内 24 列，`gate2 = passed=True`）—— 即"分面"这条路**已被验证可行**，
+不是我的提案，是既成事实。
+
+⇒ 对架构的含义：**U-121 的修法不需要新设计，只需要把 W6 在评测侧被迫造的那套
+（"可见面 + 结构面"）提升为端口的正规形状**。这也解释了为什么它一直没红：
+W6 在评测侧**绕过**了它，而不是**暴露**了它。
+
+### 10.6 后果矩阵（真 SQL 喂真闸门，逐字）
+
+```
+── 扁平（= 生产现状） ──
+   简单 SQL / JOIN SQL / 受限列 SQL : 全 passed=False｜R05｜谓词=空（被拒，无改写 SQL）
+── 只补 `assets` 键（天真修法） ──
+   三条全 ❌ AttributeError: 'tuple' object has no attribute 'keys'
+── 完整 wrapper · declared ──
+   简单 SQL : passed=True｜谓词=['is_test_order = false',"refund_status <> 'refunded'","pay_status = 'paid'"]｜LIMIT 10000
+   JOIN SQL : passed=True｜同上三谓词｜LIMIT 10000
+   受限列 SQL : passed=False｜R07｜'查询包含受保护字段'
+```
+
+gate2 侧（判据③）：
+
+```
+扁平         : passed=False｜G2-ASSET｜'查询涉及的数据范围超出你的权限'
+wrapper      : passed=True
+受限列 SQL   : passed=False｜G2-DENY     ← 归因没被 G2-ASSET 抢走（扁平下会被抢）
+版本错配     : passed=False｜G2-VERSION  ← 扁平下 `snap_version is None` ⇒ 永不触发
+受限列·trimmed : ❌ ContractViolationError（语义包 tenant_scoped 与 tenant_id 列不一致）
+                  ← ④ 在 ⑤ 之前执行却没提前返回 ⇒ **④ 空转**（这一行是"④ 空转"的实测依据）
+受限列·declared: passed=False｜G2-DENY ← 对照：全列下 ④ 正常工作
+```
+
+判据④（`max_rows`）：不传 → `LIMIT 10000`；传 200 → `LIMIT 200`。**生效**。
+
+⚠️ "只补 `assets` 键"**不是 fail-open，而是更早的崩溃** —— 这条要写进决议，
+否则有人会以为"先让它跑起来"是个安全的中间态。
+
+### 10.7 换列源对 gate1 归因的副作用（**本节是本窗口相对 W6 的增量读数**）
+
+gate1 只用 `columns` 做**列归属解析**：解析失败落 `R06`，解析成功再被 deny 落 `R07`。
+
+| 探针 SQL | 可见列(trimmed) | 声明全列(declared) | 漂移 |
+|---|---|---|---|
+| `SELECT sub_order_id FROM v_order_paid` | passed | passed | 无 |
+| `SELECT tenant_id FROM v_order_paid` | `R06` | `R07` | ⚠️ **变了** |
+| `SELECT v_order_paid.tenant_id FROM v_order_paid` | `R07` | `R07` | 无 |
+| `SELECT receiver_phone FROM v_order_paid` | `R06` | `R07` | ⚠️ **变了** |
+| `SELECT * FROM v_order_paid` | `R03` | `R03` | 无 |
+
+**两条结论**：
+1. **安全性不变** —— 两档都是拦住的；
+2. **用户可见文案不漂**（两档同为 `'查询包含受保护字段'`）⇒ 漂移只落**内部 `rule_id` 统计与归因口径**：
+   · 已落盘的红队读数按 `rule_id` 归因，换列源会跟着变；
+   · W2C 的 `test_gate1_blocks_tenant_id_either_qualified_or_not` 断言的是**集合 `{R06,R07}`**，
+     故**容忍**这次漂移（该测试不用改）。
+
+⇒ 对形状决议的含义：**"一律给全列"是可接受的**（不破安全、不改用户文案），
+代价是红队归因口径要跟着重述一次。这降低了 §10.4 那个决议的风险 —— 但**不能**倒过来说
+"那给裁剪列也行"：给裁剪列 gate2 是**崩溃 + ④ 空转**，不对称。
+
+### 10.8 未做 / 已知风险（不许沉默）
+
+1. **没动任何生产件** —— 按你"不动三方任何文件"的约定，W2C 的 `app/guard/` 下各文件、W4 的
+   `gate1_ast.py`、
+   W0 的 `contracts.py` 我一行未改。本条只报读数。
+2. **没跑 `tests/integration`** —— 那一集夹具会把 `app.embed_doc` 的向量静默清回 NULL（`U-114`），
+   且本次不碰 DB/迁移面，跑它只有代价没有信息。
+3. **没验生产装配路径**：我只用 `SemanticBundleRuntime(load_bundle(...))` 自建实例
+   （公开 API）。生产侧 runtime 是否已被 W1B/W4 装配、装配后 `deps.semantics` 指向谁，
+   **本窗口未核**。
+4. **`max_rows` 由谁传入仍无归属**：语义层没有这个事实 ⇒ 只能是调用方（`gate1_ast.py`）或
+   请求上下文。这条我**不自行开号**，列"待架构分配"。
+5. **"两个面怎么给"是 W0 的裁量**：我给了立场（§10 ④⑤）与两面的读者清单（§10.4），
+   但**没定接口形态** —— 定形状是 W0 的职责，我不越界。
+6. ⚠️ 我这份探针**第一版有两处自伤**（已修）：① `if __name__ == "__main__"` 块写了两遍
+   ⇒ 输出整份打两遍（会把读者误导成"跑了两轮"）；② `# noqa: BLE001` 是无效指令
+   ⇒ 把 `ruff check .` 弄红 5 条。两处都已修，现门禁全绿。**记在这里是因为"探针的输出双份"
+   这种东西最容易被当成实质读数采信。**
+
+### 10.9 复现命令与门禁读数
+
+```
+cd E:\01_实训\项目\基于Text2SQL的电商数据分析Agent\CommerceQL
+.venv\Scripts\python.exe backend\reports\w2a\_w2a_gate_shape_probe.py
+```
+
+原始输出留档：`backend/reports/w2a/_w2a_gate_shape_probe.out`（105 行，**单份**，九小节
+①可产出性 ②列源 ③交叉核对 ④后果矩阵 ⑤gate2 ⑥max_rows ⑦归因漂移 ⑧端口方法面 ⑨结论）。
+门禁证据（含 HEAD 与采集时刻，**已入库**）：`backend/reports/w2a/_gates_w2a_shape.txt`。
+
+⚠️ 下面这几份**是本地证据、不入库** —— `.gitignore:47` 有 `*.log`，全仓 `backend/reports/` 下
+**0 个** `.log` 被跟踪（既有约定）。要复现请按上面的命令自己跑一遍：
+- `_w6_probe_rerun.log`（W6 探针崩溃复现，exit=1，崩点见 §10.1）
+- `_pytest_unit_contract.log` / `_dsn_hygiene.log`（pytest 原始输出）
+
+本窗口门禁（**读数采集时刻**：2026-09-21 19:39–19:41，HEAD = `5327b1e`）：
+
+```
+ruff check .                          All checks passed!（修前：5 条，全在本探针 —— 见 §10.8 ⑥）
+mypy app / lint-imports               —— 本窗口未改生产件，未复跑（不冒充读数）
+pytest tests/unit tests/contract      1785 passed, 0 failed（§9.7 那条预存红已被 W2B 9942753 清除）
+pytest tests/unit/test_migration_dsn_hygiene.py   8 passed
+```
+
+⚠️ §9.9 里"1783 passed, 1 failed"是**更早时刻的 run 快照**，已不成立；两处差别见 §9.7 的订正条。
+
+⚠️ 本文件同样**不抄那段 DSN 命中的原文**（见 §9.7）。
+
+### 10.10 🔴 端口方法面：闸门 7 键「经 `SemanticBundlePort`」各自可达吗？
+
+这一节回答的是"**W2A 单独改 `asset_allowlist` 的返回形状，能不能修好这条缝**"。实测（`inspect`）：
+
+```
+SemanticBundlePort 方法 = ['active_version', 'asset_allowlist', 'policy', 'time_semantics']（4 个）
+
+  ✅ bundle_version     : active_version()
+  ✅ deny_columns       : policy()['deny_columns']
+  ✅ default_predicates : policy()['default_predicates']
+  ✅ allowed_constants  : 包内无该声明区 ⇒ 空表，无需来源
+  ⚠️ assets             : 只有 asset_allowlist()（= **可见面**）
+                          「声明全列」要 runtime.asset() —— **不在端口上**
+  ❌ joins              : runtime.joins() —— **不在端口上** ⇒ 经端口不可达
+  ❌ max_rows           : 语义层没有这个事实（请求级）
+```
+
+**推论链**（三步，每步都可复核）：
+
+1. `GraphDeps.semantics` 的类型**就是** `SemanticBundlePort`（`app/graph/context.py:105`）；
+2. 生产唯一调用点 `gate1_ast.py:52` 走的是 `deps.semantics.asset_allowlist(identity)`
+   ⇒ 它能调的**只有那 4 个方法**；
+3. ⇒ `joins` 与「声明全列」在端口上**没有入口**。**W2A 把 `asset_allowlist` 的返回值改成
+   wrapper 也拿不到这两项** ⇒ **修这条缝必须动 `app/core/contracts.py`，即 W0 的份。**
+
+⚠️ 这条对归属的意义：**不要把它记成"W2A 待修"**。W2A 能做的是"给 W0 一份可产出性证明 +
+一项实现"（本文即为该证明），**不是**自己改形状 —— 否则我改完还是不通。
+
+（`max_rows` 同理：它不是任何一层的事实，只能是**请求级入参**，归属待裁 —— 见 §10.8 第 4 条。）
+

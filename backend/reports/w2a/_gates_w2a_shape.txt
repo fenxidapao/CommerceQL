@@ -1,0 +1,32 @@
+HEAD = 5327b1e  docs(w7): 第八轮预检 —— (B) 生效、sql_ready 首次非 0，卡点后移到 gate1 的 allowlist 形状接缝
+采集时刻 = 2026-09-21 19:39–19:41 +0800
+窗口 = W2A ｜ 目的 = allowlist 形状接缝回执（RELAY §10）｜ 生产件改动 = **无**
+
+--- 1) ruff check . （在 backend/ 下）---
+All checks passed!
+ruff_exit=0
+
+    ⚠️ 本探针入库前这条是 **5 条红的**（F401 unused `traceback` + 4×RUF100 无效 noqa），
+    全部落在我自己的 `_w2a_gate_shape_probe.py` 上；已修，见 RELAY §10.8 ⑥。
+
+--- 2) pytest tests/unit tests/contract -q （原始输出见 _pytest_unit_contract.log）---
+1785 passed, 1 warning in 72.72s (0:01:12)
+exit=0
+
+    ⚠️ RELAY §9.9 记录的 "1783 passed, 1 failed" 是**更早时刻的 run 快照**；
+    那条唯一红（test_migration_dsn_hygiene 的全仓重放命中 W2B 的 RELAY.md:391）
+    已被 W2B 的 `9942753` 修掉 ⇒ 现在是 0 failed。
+    ⚠️ 用例总数 1783 → 1785 **不是本窗口加的**（本窗口没写测试），来自更早 commit。
+
+--- 3) pytest tests/unit/test_migration_dsn_hygiene.py （原始输出见 _dsn_hygiene.log）---
+8 passed in 8.60s
+
+--- 4) 两个探针的退出码 ---
+_w2a_gate_shape_probe.py            exit=0（原始输出见 _w2a_gate_shape_probe.out）
+w6/probe_gate_allowlist_shape.py    exit=1（**预期**：它第二名断言落在真 bug 上，
+                                    崩点 ast_gate.py:751 `'tuple' object has no attribute 'keys'`，
+                                    逐行留档 _w6_probe_rerun.log）
+
+--- 未复跑、不冒充读数 ---
+mypy app / lint-imports ：本窗口未改任何生产件 ⇒ 未复跑。
+    （若有人要引用本文件的"全绿"，请只引用上面 4 条，不要把第 5 条读成绿。）
