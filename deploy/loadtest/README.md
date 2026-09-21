@@ -119,6 +119,7 @@ PY
 | ① | warm 单发补全（c=1，n≥5）**p95 ≤ 8s** | **就用 G-6 的同一个数，不另发明**。要判的是"50 并发下的 p95 ≤8s"；单发都已经超 8s，并发只会更差 ⇒ 那一批只会把外部抖动记成我们的容量 |
 | ② | 连续 3 次**无 5xx**（上游返回的 5xx） | 5xx 进样本后统计的是 provider 当天的故障率，不是 CommerceQL 的容量 |
 | ③ | **`U-107` 已落地**且 `/healthz` 的 `llm`/`embedding` 不再假负 | 架构 `RELAY §10`④ 明写"`U-107` 必须先落"：否则测到的仍是"上游慢就 100% `error(INTERNAL)`"这个缺陷本身；探针假负则会让"该不该开跑"这一步的输入就是错的（U-108） |
+| ④ | **`c=1` 预检（n≥3）至少出现 1 条 `outcome=ok`**（09-21 加，原因见 §三.0.1d） | P95 是**完成样本**的分位数。13 份历史 receipts 里 `outcome=ok` **一次都没出现过** ⇒ 跑批只会产出驱动自曝的 `g6_caveat`（"0 条真正完成 ⇒ 不可判达标"），白烧额度。**这一条比 ①②③ 更硬**：它判的是"有没有分母"，另三条判的是"分母长什么样" |
 
 🔴 **撤回第一版判据：`warm 单发 p50 ≤ 1.5s`**。它低于 flash `normalize_intent` 的**真机中位 1.56s**
 （`app/llm/router.py:41`，W3A 自己测的读数）⇒ 这是一扇**物理上开不了的门**，
@@ -151,7 +152,10 @@ PY
 
 ```bash
 docker run -d --name w7load-api --network commerceql_default --env-file deploy/.env -p 18000:8000 -e EMBEDDING_BASE_URL=http://host.docker.internal:11434 -v "E:/…/CommerceQL/semantic:/semantic:ro" -v "E:/…/CommerceQL/deploy/secrets/jwt_public.pem:/run/secrets/jwt_public.pem:ro" w7load-api:0920r2
-# 放行判据：/healthz 的 status=ok，且 checks 里 graph_compiled / semantic_bundle_loaded 全为 true
+# 放行判据：`/api/v1/healthz` 的 status=ok（⚠️ **不是 `/healthz`** —— 挂了 `/api/v1` 前缀，
+#   09-21 我按本行旧写法打 `/healthz` 拿到 404 白试一轮），且 checks 里
+#   graph_compiled / metadata_db / checkpointer_reachable / redis_reachable /
+#   semantic_bundle_loaded / llm_reachable / embedding_reachable **全为 true**、degraded_dependencies 为空
 ```
 
 #### 三.0.1c 跑批前预检读数（09-20 第二轮 · `U-107` + `U-108` 之后 · c=1 / 3 条 / `--no-async`）
@@ -170,6 +174,46 @@ docker run -d --name w7load-api --network commerceql_default --env-file deploy/.
 所以我先前"INTERNAL = 节点超时"的归因在这轮被证伪了一半：**同一个 `INTERNAL` 码下至少有两种成因**，
 而 `app/api/runner.py:483` 那句 `_log.error(..., detail=str(exc)[:300])` **不带 `exc_info`** ⇒
 无栈可查、谁也无法归因。详见 `backend/reports/w7/RELAY.md` §十七（含我复现出的候选点）。
+
+#### 三.0.1d 第三轮预检（09-21 · 新镜像 `w7load-api:0921r1`，含 W4 `8fa5484` · c=1 / 3 条 / `--no-async`）
+
+⚠️ 镜像 tag 每次重建都要换（`docker build -q -t w7load-api:<MMDD>r<n> -f deploy/Dockerfile .`），
+沿用旧 tag = 测的是旧代码。本轮上面 §三.0.1b 那条命令里的 `0920r2` 请照此替换。
+
+| 判据 | 读数 | 判定 |
+|---|---|---|
+| ① 单发 p95 ≤ 8s | p50 —、p95 **16,896.8ms**（n=3） | ❌ 不满足 |
+| ② 连续三次无 5xx | `admission = {admitted:3, rejected_429:0, other_http_4xx:0, http_5xx:0, unresolved:0}` | ✅ 满足（本轮上游没吐 5xx） |
+| ③ `U-107` 已落 + 探针不假负 | `/api/v1/healthz` `status=ok`、`degraded_dependencies=[]`、7 项 checks **全 true**；容器日志 **零条 `node_timeout`** | ✅ 满足 |
+| ④ **预检出现 ≥1 条 `ok`** | `outcomes = {error_frame: 2, clarify: 1}` ⇒ **`ok = 0`** | ❌ **不满足 ⇒ 本轮不跑批** |
+| 结果形状 | `codes={INTERNAL:2}`、`terminal_provenance={error_frame:{"stage=intent\|reason=none":2}, clarify:{"stage=intent\|reason=time_ambiguous":1}}`、`g6_caveat` 已自曝"0 条完成 ⇒ 不可判达标" | ⚠️ 与 09-20 那轮**同码不同因** |
+
+★ **本轮最重要的读数不是延迟，是那条栈**（W4 补的 `exc_info=True` 值回票价）：
+
+```
+link.py:77 → search.py:145 → search.py:237 → dense.py:300 (topk)
+  → dense.py:279  score=float(row["score"])  →  TypeError: float() ... not 'NoneType'
+```
+
+⇒ **不是 binding/缓存**（容器日志 `null_score` **0 条** —— W4 守的 `context.py:60` 与 `_shared.py:243` 两处本轮都没被走到），
+是 **`app/retrieval/dense.py:279`** 把 NULL 分数直接 `float()`。
+而它是 NULL 的原因在数据侧（只读查表，零额度）：
+
+```
+app.embed_doc：197 行，embedding 为 NULL 的 = 197（四类 kind 全部），tsv 非空 = 0，tenant_id='*' / bundle 2026.09.14.1
+```
+
+⇒ **稠密与稀疏两条检索路在这台 PG 上都是空的** ⇒ 任何走到稠密路的请求必然 `TypeError` ⇒ `error(INTERNAL)`；
+`ok` 恒 0 ⇒ P95 没有分母。⇒ 这一类失败**与负载无关**，跑批不会让它变得可测。
+物化时 `tokenizer=` / `embedder=` 都没注入（`app/semantics/materialize.py:20-21` 明写缺省即 NULL + 警告），
+而读路径没有对应的降级出口 ⇒ 详见 `backend/reports/w7/RELAY.md` §二十。
+
+⚠️ **另记两件我自己的账**：
+① 13 份历史 receipts 的 `outcomes` 里 **`ok` 一次都没出现过** ⇒ 我先前把这些 `error_frame` 归因到"上游容量/节点超时"，
+   其中至少这一整类其实是**数据未就绪**，与负载无关 —— 归因作废，改判见 `RELAY.md` §二十⑥。
+② `app.cost_ledger` 此刻只剩 **6 行**（09-20 14:00 起），我 09-19 测的 **82 行 / ¥0.064258** 已不在表里
+   （清空动作不是我做的）⇒ 累计花费基线重开，T7 的 `daily_cost_cny` 对账下次活体跑要重测。
+本轮花费：`created_at ≥ 2026-09-21 01:45Z` ⇒ **3 次调用 / 9,043 tokens / ¥0.004198**（全 `deepseek-flash`，峰时价）。
 
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 

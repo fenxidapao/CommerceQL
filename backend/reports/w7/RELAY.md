@@ -1103,3 +1103,90 @@ W6 报的"同一状态下从不含 shop 条款的 `v_traffic_daily` 里并行投
 - ❌ **未跑**：四场景 + 场景⑤ 压测批。**红线"压测先报告再跑批"** ⇒ 规模与额度估算还没报给总控，拿到 go 之前不会跑。
   ⇒ `G-6` 仍 `UNVERIFIED`。
 - ❌ **未测**（§④ 里点名过的两格）：session pooling + `DISCARD ALL` 的真实形态；把"显式空串"那格做成脚本栏位。
+
+---
+
+## 二十、W4 要的复跑做完了：`INTERNAL` **没消失**，但成因换了位置，而且**不是图侧**（09-21）
+
+> 环境：新镜像 `w7load-api:0921r1`（含 W4 `8fa5484`）+ 两条只读挂载 + `commerceql_default`，
+> `/api/v1/healthz` 放行：`status=ok`、`degraded_dependencies=[]`、
+> `graph_compiled/metadata_db/checkpointer_reachable/redis_reachable/semantic_bundle_loaded/llm_reachable/embedding_reachable` **全 true**。
+> ⚠️ 顺手记一条我自己的坑：README §三.0.1b 的放行判据写的是 `/healthz`，**真实路径是 `/api/v1/healthz`**
+> （我按文档打 `/healthz` 拿到 404，白试一轮）⇒ 已在 README 改正。
+> 预检命令：`--scenario steady --no-async --concurrency 1 --max-requests 3`（c=1，不是跑批）。
+
+### ① W4 三条要求的逐条答复
+
+| 要求 | 实测 | 答复 |
+| --- | --- | --- |
+| "重跑确认：应无 `INTERNAL`" | `outcomes={error_frame: 2, clarify: 1}`、`codes={INTERNAL: 2}` | ❌ **仍有 2 条 `INTERNAL`**。不是"修了没生效"，是**修在了另一条路上**（见 ②） |
+| "`grep null_score` 看命中资产级还是列级" | 容器日志里 `null_score` **0 条**（`graph_run_failed` 2 条） | 两个事件名都**没打过**。⇒ 本次的 `None` 不来自 W4 守的那两处 |
+| "把 null score 从哪写进缓存转 W2B" | —— | ⚠️ **撤回这句的前提**：本轮的 `None` 与"缓存"无关，也**不在 binding 侧**。转派内容以 ③ 的栈为准 |
+
+`terminal_provenance`（按 `driver.py:_provenance` 的口径：`stage` = 最后一个**完成**的节点）：
+`error_frame → {stage=intent｜reason=none: 2}`、`clarify → {stage=intent｜reason=time_ambiguous: 1}`
+⇒ 3 条里 2 条走过了 `intent` 并死在下游，第 3 条在 `intent` 就以 `time_ambiguous` 收口了（**没走到** link）。
+
+### ② 栈（W4 补的 `exc_info=True` 这一笔直接值回票价）
+
+`app/api/runner.py:454 → graph/build.py:641 (_timed) → nodes/link.py:77 → retrieval/search.py:145 (_dense_route 入口)
+→ search.py:237 → retrieval/dense.py:300 (topk) → **dense.py:279 `score=float(row["score"])`** → `TypeError`（`NoneType`）`
+
+⇒ 落点在 **`app/retrieval/dense.py:279`**（W2B 的读路径），不在 `app/graph/context.py:60 _float_score`、
+也不在 `app/graph/nodes/_shared.py:243`。W4 那两个守卫各守住了自己的位置（所以本轮 `null_score` 静默是**正常**的），
+但 `link` 的输入比它们更上游。
+
+### ③ 根因不在代码，在这台 PG 的数据（一次只读查表，零额度）
+
+```
+select count(*), count(*) filter (where embedding is null) from app.embed_doc;  → 197 | 197
+select count(*) filter (where tsv is not null) from app.embed_doc;             → 0
+kind 分布：synonym=105 / column=75 / metric=9 / asset=8 —— 四类**全部** embedding 为 NULL
+tenant_id / bundle_version                                                    → '*'  / 2026.09.14.1
+```
+
+⇒ **两条检索路都是空的**：稀疏侧 `tsv` 全 NULL（0 命中），稠密侧 `1 - (embedding <=> vec)` 对 NULL 向量
+返回 NULL 分数，`dense.py:279` 无条件 `float()` ⇒ 每一次走到稠密路的请求都必然 `TypeError`。
+`text` 列 197/197 非空 ⇒ 物化跑过，但 **`tokenizer=` / `embedder=` 都没注入** ——
+`app/semantics/materialize.py:20-21` 写的正是这两种注入缺省时"tsv/embedding = NULL + 警告（如实降级）"。
+
+⇒ **契约缺口（这条要给 W2B + W2-INT 同时看）**：降级只写在**物化侧**，
+读路径 `PgVectorStore.topk` 没有对应的"稠密检索不可用"降级 ⇒ "如实降级"变成了 500/`INTERNAL`。
+`materialize()` 的 `embedding_status="pending_embedder"` 明确区分了"未通过"，但这个状态**没有任何读端消费者**。
+
+⚠️ 排除我自己：`app.embed_doc` **不是**我装的 —— 沙箱 SQLite 只有 8 张 `v_*` + `dim_tenant`，**没有 `embed_doc`**，
+而 `load_synth_to_pg.py:39` 是按沙箱表清单复制的。这 197 行来自一次 `materialize()`（未注入 embedder/tokenizer）。
+
+### ④ 另一条要报给 W1B / 架构的：绿灯盖住了空表
+
+启动断言 `embedding_dim_matches_vector_column` 本轮 **PASS**（`detail: EMBEDDING_DIM=1024 == 向量列 vector(1024)`），
+而该列 **197/197 行是 NULL** ⇒ 它判的是**声明维度**、不是**有没有数**。
+`app/repo/startup_assertions.py:312-319` 只在**列不存在**时给 PENDING。
+⇒ 这正是我自己 DoD 里那句"不把'接了但没数据'报成已落地"的反面案例，只是发生在别人家里：
+建议要么把该断言升级成"维度匹配 **且** `count(*) filter (where embedding is not null) > 0`"，
+要么明确它只声明 schema 契约（并在 `/healthz` 里另设一格"文档向量就绪"）。**判定权在 W1B/架构，我只是把两个读数摆在一起。**
+
+### ⑤ 附带：额度台账被谁清过（影响我自己的历史读数）
+
+`app.cost_ledger` 此刻**只有 6 行**（09-20 14:00 起 3 行 + 本轮 3 行）。我 09-19 实测的是 **82 行 / ¥0.064258**，
+并验证过 Prometheus `daily_cost_cny` 与之逐分相等。⇒ 历史行已不在表里，**清空动作不是我做的**（我今天只跑了只读 SQL 与 3 条预检）。
+影响两条读数口径：① 我给 W6 的"累计花费"要重开基线；② T7 那条 `daily_cost_cny == sum(cost_ledger.cost_cny)` 的对账**下次活体跑要重测**（旧读数作废为"当时相等"）。
+
+### ⑥ 本轮实测 / 未实测
+
+- ✅ 实测：c=1 预检 3 条（`outcomes`/`codes`/`terminal_provenance`/`admission`/`g6_caveat` 全在回执里）、
+  容器日志 `null_score` **0 条**、`graph_run_failed` 2 条含完整栈、`embed_doc` 三项计数、`/api/v1/healthz` 全绿。
+- ✅ 花费：`app.cost_ledger` `created_at >= 2026-09-21 01:45Z` ⇒ **3 次调用 / 9,043 tokens / ¥0.004198**（全 `deepseek-flash`，峰时价）。
+- ❌ **没跑批**。四场景 + 场景⑤ 在 `ok` 恒为 0 的环境下跑了也没有分母 ⇒ 见 §⑦。红线"压测先报告再跑批"仍然生效，规模与额度已单独报总控。
+- 🔻 **本窗口先前列一次撤回**：那 13 份 receipts 里 `outcome=ok` **一次都没出现过**（`error_frame`/`http_5xx`/`http_4xx`/`clarify`/`refuse` 是全部形状）。
+  所以我先前把若干 `error_frame` 归因到"上游容量/节点超时"，其中**至少这一整类其实是数据未就绪**，与负载无关。
+
+### ⑦ 我要才能跑批的东西（按归属，不是需求清单而是放行条件）
+
+1. **W2B / W2-INT**：给 `app.embed_doc` 灌上文档向量与 `tsv`（`materialize(..., embedder=OllamaEmbedder(...), tokenizer=...)`）。
+   这条路是"让被测系统真的可被测"。写谁的表我不越界，也不代跑。
+2. **W2B**（可并行、且更小的改动）：`dense.py:279` 对 NULL 分数按"稠密检索不可用"降级而不是 `raise`
+   —— 与 `materialize.py:20-21` 的承诺对齐。**但**：只修这一条会让 `link` 空召回 ⇒ 大量 `refuse(no_data_asset)`，
+   那是"不 500 但也没结果"，**G-6 仍然测不到真实端到端**。所以 1 与 2 不能互相替代。
+3. **W7（我自己，已可做）**：把放行判据从"无 5xx"改成 **"`c=1 预检至少出现 1 条 `outcome=ok`"**，
+   否则又是一轮无分母读数。这条我现在就写进 README §三.0.1。
