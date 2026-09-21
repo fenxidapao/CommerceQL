@@ -283,3 +283,123 @@
 > 导致 `git status` / `git branch -vv` 误显 `[origin/main: gone]`。
 > 判断"我领先/落后远端"请用 `git ls-remote origin main`，**不要相信 `[gone]`**。
 
+---
+
+## 11 【U-121 第一步回执】闸门判据形状已定稿（`ae59c5c`，2026-09-21）
+
+### 11.0 一句话
+
+`app/core/contracts.py` 现在**显式声明**了闸门那 7 个键的形状（`GuardAllowlist`，**7 键全 Required**）
++ 新方法 `guard_allowlist(ctx, *, max_rows=None)`。**唯一改动文件 = `app/core/contracts.py`**，
+**未动任何实现** —— 下一步按 07 v1.6.4 的三方归属（W2A 实现 / W2C 消费 / W4 换 gate1 调用点）走。
+
+### 11.1 定了什么形状（W2A 照着实现、W2C 照着消费）
+
+| 名字 | 形状 | 谁用 |
+|---|---|---|
+| `AssetAllowlistEntry` | `{logical_name, domain, grain, tenant_scoped, columns}` | **扁平面**（`asset_allowlist` 的返回值；planner/binding） |
+| `GuardAllowlistAsset` | 上式 **+ `all_columns`** | 闸门面条目 |
+| `GuardAllowlistJoin` | `{left, right, on_columns}`（**逻辑名**，已截 `.列` 后缀） | R10/R11 |
+| `GuardAllowlist` | `bundle_version` / `assets` / `joins` / `deny_columns` / `default_predicates` / `allowed_constants` / `max_rows` | gate1 + gate2 |
+| 端口 | `asset_allowlist(ctx) -> Mapping[str, AssetAllowlistEntry]`（⚠️ 注解**未**收紧，见 §11.3③）+ **新增** `guard_allowlist(ctx, *, max_rows=None) -> GuardAllowlist` | — |
+
+**两面的判据（坑 ② 的落点）**：
+
+| 面 | 键 | 内容 | 消费者 |
+|---|---|---|---|
+| **可见面** | `columns` | `{列名: PG 类型}`，**已裁 `deny_columns`** | gate1 列解析（R06）、planner、binding |
+| **结构面** | `all_columns` | `{列名: PG 类型}`，**全列含 deny** | gate2 ④（敏感列复核）⑤（`tenant_id` 双向断言）、`_column_type`（R17） |
+
+> 为什么 `columns` **必须**取可见面（这条决定了 W2C 现有测试要不要改）：07 v1.6.4 子事实 4 写
+> "`deny_columns` 缺 ⇒ 仍 fail-closed，丢的只是归因（R07→R06）" —— **这句话只在可见面下成立**。
+> 若 `columns` 给全列而 `deny_columns` 又缺 ⇒ `colname in columns` 成立 ⇒ **敏感列直接放行**（fail-open）。
+> 且 W2A §10 的漂移表已实测：可见列(21) 下 `tenant_id`/`receiver_phone` 未限定 → R06、
+> 全列(24) → R07 ⇒ **取可见面则 W2C 那条 `{R06, R07}` 集合断言继续成立，测试不用改**。
+
+**七个键的缺省方向**（逐键裁入 docstring，抄 07 v1.6.4 + W2C 表）：
+`assets` / `joins` / `deny_columns` / `allowed_constants` 缺 = **fail-closed**
+（全拒 R05 ／ join 全落 R10 ／ 丢归因 R07→R06 ／ R14 少一类来源）；
+`default_predicates` / `bundle_version` / `max_rows` 缺 = 🔴 **fail-open**
+（口径静默失真 ／ 版本守卫静默失效 ／ 请求级上限被静默忽略）。
+⇒ 故"只补 `assets` 键"被明令禁止：那会把一条 fail-closed 换成三条 fail-open。
+
+### 11.2 你要点名的两个坑 —— 答复
+
+**（1）入参形态不对称 ⇒ 我选"端口加第二个方法"，不给闸门派生。** 落点按 W2C 20:43 的精确化：
+
+| 取用点 | 现状 | 改谁 |
+|---|---|---|
+| `app/graph/nodes/gate1_ast.py:52` | `... = deps.semantics.asset_allowlist(identity)` → `:55 run_gate1(sql, allowlist)` | **W4**（换成 `guard_allowlist(identity, max_rows=<请求级>)`） |
+| `app/guard/policy_gate.py:105` | `allowlist = bundle.asset_allowlist(ctx)` | **W2C**（换成 `bundle.guard_allowlist(ctx)`）；`gate2_policy.py:57` 的传入形态**不变** |
+
+> ⚠️ 两处**保持各自取一次**（`gate1_ast.py:13-18` 明写"与 gate2 各自取一次是刻意的"），
+> 换方法时**别顺手合并**成一次取用。
+
+**（2）`columns` 两面 ⇒ 已按 §11.1 定。** 给 W2C 追加一条**必须做**的：
+`_Auditor._resolve_column` 的**归属面要可切换** —— 同一个 helper 今天既服务 gate1 的 R06（要可见面），
+又服务 gate2 ④ 的列归属（**要结构面**）。实测后果（W2A §10 复现）：给 gate2 喂可见面 ⇒
+④ 对 `SELECT receiver_phone FROM v_order_paid` **完全不响**（落到 ⑤ 抛 `ContractViolationError`）——
+**fail-open 的一半，比崩溃更值得记**。
+
+**（3）`allowed_constants` 从哪来 ⇒ 只有一个来源：`allowlist["allowed_constants"]`。**
+`run_gate1(sql, allowlist)` 现在**已无**独立形参（`ast_gate.py:314` 直接读该键）；
+07 §7.2 三类白名单里 **① LIMIT 注入值 ② 注入谓词的常量由 `run_gate1` 自算**，
+**不得**经此键提供。当前语义包**没有**该区块（grep 实证）⇒ W2A **给空元组**：既不编造，也不省略键。
+
+### 11.3 我另外核出的三条（不在你给的清单里）
+
+① **判据④ 的通路已核实可行，且不能用别的数冒充**：请求级选项在 **`GraphState.options`**
+（`app/graph/state.py:272`，`OpaquePayload` = `RunOptions`，由 `:447-465` 写入）
+⇒ `gate1_ast` 能读到 `state["options"]["max_rows"]`。
+⚠️ **禁止**用 `GraphDeps.max_rows` 代替它 —— 那是 `EXEC_MAX_ROWS`（`graph/context.py:126`，默认 1000），
+而 `nodes/execute.py:34` 已具名自警"两者可能不同，拿它冒充是造数字"。
+归一（`min(值, 10000)`）由 `ast_gate._effective_limit` **自己做**（它已 `min(int(...), 10000)`，
+且对 `None` 走 `TypeError` 分支退化到硬上限 `MAX_ROWS_HARD_LIMIT`）⇒
+**调用方不必先 clamp**，而 `max_rows` 的语义定为"**键必在**，值为 `int` = 请求级上限 /
+`None` = 调用方未声明（照实填 `None`，不许编数）"。
+
+② **两个键的来源现成**：`joins` ← `runtime.joins()`（`app/semantics/runtime.py:290`，**已存在**、
+只是**不在端口上**）；`bundle_version` ← 与 `active_version()` 同一读数。W2A 不必新写派生器。
+
+③ 🆕 **扁平面收紧的连带风险（我刻意没做的那部分）**：`binding/filters.py:345` 用
+`isinstance(columns, (list, tuple))` 判"无权限" ⇒ 扁平面 `columns` 从 **tuple 改成 Mapping** 会让它
+**静默 fail-open**（返回 True = 不拦）。所以我**没有**把 `asset_allowlist` 的注解收紧到 `AssetAllowlistEntry`：
+实测收紧会让 `planner/payloads.py:311` 的 `entry = allowlist[physical] or {}` 变成**死兜底**
+（mypy `warn_unreachable` 报错；对照实验：松注解 **147 files clean** / 收紧 **1 error**）。
+⇒ 归属 = **W3B（`app/planner/payloads.py`）+ W2B 侧 `binding`**；建议**单开一条编号**
+（**我没自行占号**，按纪律请架构/总控归号）：同步改 `isinstance` 判据 + 补"Mapping 形态下 deny 列仍被拦"
+的测试，**然后**才能收紧注解。
+
+### 11.4 我没做什么（诚实边界）
+
+- **未动任何实现**：`app/semantics/**`（W2A）、`app/guard/**`（W2C）、`app/graph/**`（W4）一行未改。
+- **未改 W4 的接缝测试**：`tests/contract/test_gate_seam_contract.py:54` 现在调的仍是
+  `rt.asset_allowlist(_ctx())` ⇒ 新方法落地后，**Test A 的调用点要换成 `rt.guard_allowlist(_ctx())`**
+  （否则它测的是被废弃的那个投影）。该文件归 W4；它的**红我复跑对照过**（见 §11.5 末行）。
+- **未推**（按今日纪律"上传听指令"）：本地 `ae59c5c`，**远端未含本提交**。
+
+### 11.5 验证读数（可复现）
+
+| 项 | 读数 |
+|---|---|
+| `ruff check .` | **All checks passed** |
+| `mypy app` | **Success / 147 source files** |
+| 契约自检（`python -c`） | `GuardAllowlist.__required_keys__` = **7** 个（`allowed_constants, assets, bundle_version, default_predicates, deny_columns, joins, max_rows`）· `__optional_keys__` = **空** · 端口方法 **4 → 5** |
+| `pytest -q`（全量） | **1 failed, 2207 passed, 6 skipped, 3 errors**（138.2s） |
+| 唯一 failed | `tests/contract/test_gate_seam_contract.py::test_plain_sql_passes_through_gate_seam` = **U-119 的刻意红**（`8a4121a` 立的判据①） |
+| 3 errors | `tests/integration/test_retrieval_fts_pg.py`：本机 DSN 无 DDL 权限（**环境**，非代码；CI 注入了可建表的 DSN） |
+| **对照归因** | `git stash push -- backend/app/core/contracts.py` 后**同一条照样红** ⇒ **本次改动零新增红** |
+| 远端 CI 现状 | 最近 3 次 run 全 `failure`（`ff3e122`/`8a4121a`/`5327b1e`）—— **接缝红是既定的**，不是本轮引入 |
+
+### 11.6 07 v1.6.4 四条判据的落点
+
+| 判据 | 落点 |
+|---|---|
+| ① 普通 SQL 必须 `passed=True` | W2A 实现新方法 + W4 换 `gate1_ast:52` 调用点（W4 的接缝测试随之转绿） |
+| ② 默认谓词真注入（含 `pay_status = 'paid'`） | W2A（`default_predicates` ← `bundle.default_predicates`） |
+| ③ `G2-VERSION` 真能触发 | W2A（`bundle_version` ← `active_version()`）+ W2C 改 `policy_gate:105` |
+| ④ 请求级 `max_rows` 生效（200 ⇒ LIMIT 200） | W4（`state["options"]` → 新方法关键字）；W2C 侧 `_effective_limit` **无需改**（已 `min(int(...), 10000)`） |
+
+> ⚠️ 照抄 07 的顺序提醒：修完只到 **GATE2 之后** —— `gate3_cost`（EXPLAIN）与 `execute`
+> （真 DB + 身份 GUC）的判据源接缝**请在同一次里扫完**，别让"第六格"第三次重演"修一格才发现下一格"。
+
