@@ -1256,3 +1256,67 @@ $ ls .git        → COMMIT_EDITMSG FETCH_HEAD HEAD ORIG_HEAD config hooks/ inde
 - ✅ 只读核过的仓库事实：`.git` 缺失项、reflog 末行 SHA、远端一致性。
 - ❌ **未跑**：全量 `pytest`（工作区含他人未提交改动，跑了也不是我自己的树）、迁移套件（见 ③）、四场景跑批、U-112 后的复跑（镜像里还没有，见 ⑥）。
 - 🔻 一句自我修正：本轮我先写的那版用例改动（在同一 gauge 上加正向对照）**自己就是错的** —— 会把后面的二次绑定与幂等断言全部带偏，是重构为两个 gauge 之后才绿的。写在这里是因为"我改的守卫先红在我身上"这类事值得留痕。
+
+---
+
+## 二十二、`.git` 修复记录 · U-112 定向验证（判据④ 仍未过，但一次跑出了三个第一次）（09-21 第四轮）
+
+### ① 仓库损坏的真相与我做了什么（透明记录，含我自己的两个错误）
+
+| 项 | 实测 |
+| --- | --- |
+| 初判（⑦ 那一版） | "缺 `.git/refs` + `packed-refs`" —— **不完整** |
+| 真相 | **`.git/objects/pack/` 下两个 `*.pack` 也消失了**，只剩孤儿 `*.idx` ×2 + `multi-pack-index`，loose 对象只剩 4 个 ⇒ 整个对象库本地为空（`git cat-file -t` 对三个已知 SHA 全部 `could not get object info`） |
+| 恢复路径 | 重建 `refs` 目录 → `git fetch origin` 重新拉回 pack（1,678 对象）→ `main == origin/main == 5d47c0e`，我三笔（`f4162ce`/`bfff133`/`31e4876`）与 W6 三笔全部在链上 ⇒ **零提交丢失** |
+| 孤儿索引 | 移到仓库外 `/tmp/git_pack_orphans_0921/`（**没有删**）；移走前 `git fsck` 每次报 `failed to load pack in position 0/1/2`，移走后这类报错消失 |
+| 残留噪声 | `git fsck` 仍报两次 `invalid reflog entry 1d4a69a3…` ⇒ reflog 里有一条指向**已随 pack 一起丢失**的对象（时间上与 W2B 那次被 SIGTERM 的 `git stash` 吻合）。⚠️ 我**没有**去清 reflog —— 那是事故证据，且清了不解决任何问题 |
+| 未提交内容 | 全部健在。我的工作树改动 + W2B 的 `retrieval/dense.py`(+59/−6)、`tests/unit/test_retrieval_dense.py`、`test_retrieval_search.py`、`tests/integration/test_retrieval_fts_pg.py`、`reports/w2b/RELAY.md` ⇒ 修复前我先各自做了仓库外快照（`/tmp/w7_uncommitted_0921/`、`/tmp/w2b_uncommitted_0921/`） |
+| 提交边界 | 我只 stage 自己的 6 个文件 ⇒ `05ba3a1` 已推。**W2B 的文件一笔都没动**（不是我清高，是代提交别人的未评审代码会让"谁验证过它"这件事失真） |
+
+🔻 **我这一轮的两个自身错误，按纪律写下来**：① 恢复 ref 时我先用了 `awk '{print $3}'` 读 reflog ⇒ 把作者名 `fenxidapao` 当成 SHA 写进了 `.git/refs/heads/main`（正确字段是 `$2`）；当场被 `fatal: your current branch appears to be broken` 抓到并改正。② 我在动手前**曾把一段并不存在的 Docker 日志路径当作证据来推理**（"pgbouncer 被 SIGKILL"），核对时发现那个文件不存在 ⇒ 该说法作废，我没有任何容器被强杀的证据。**这条正是我最该防的那类错误，本轮又在我身上出现一次。**
+
+### ② U-112 的定向验证（**证据等级：不含 G-6**）
+
+⚠️ 口径先钉死：镜像 `w7load-api:0921r2wt` 是**从工作区构建**的，含 W2B 未提交的 `dense.py`
+⇒ 本轮读数只作"**U-112 有没有把崩溃变成降级**"的定向验证，**不作 G-6 证据、不可复现**（W2B 一旦回退工作区，这串数就没了出处）。
+构建前的旁证：`git diff --stat` 显示 `dense.py +59/−6`；W2B 的两份单测在我这边**独立复跑 28 passed**（`test_retrieval_dense.py` + `test_retrieval_search.py`，离线、零额度）；镜像内核验 `/srv/app/retrieval/dense.py` 含 `EmbeddingUnavailable` 11 处。
+预检形状与上一轮**逐参数相同**（`steady --no-async --concurrency 1 --max-requests 3`，同题库、同库）。
+
+| 读数 | 上一轮（`0921r1`，无 U-112） | 本轮（`0921r2wt`，含 U-112） |
+| --- | --- | --- |
+| `outcomes` | `{error_frame: 2, clarify: 1}` | **`{refuse: 2, clarify: 1}`** |
+| `codes` | `{INTERNAL: 2}` | **`{}`（空）** |
+| `error_messages` | 2 条 `TypeError` | **`{}`** |
+| `terminal_provenance` | 两条都停在 `stage=intent` | `{refuse: {"stage=intent\|reason=no_data_asset": 1, `**`stage=schema_linking\|reason=no_data_asset`**`": 1}, clarify: {…time_ambiguous: 1}}` |
+| `admission` | `http_5xx=0` | `http_5xx=0`、`rejected_429=0` |
+| `latency_ms` | p95 16,896.8（n=3） | p50 7,992.8 / p95 **34,363.0**（n=3，无统计意义） |
+| 花费 | 3 次调用 / ¥0.004198 | **2 次调用 / 6,040 tokens / ¥0.002921**（`app.cost_ledger` ≥06:00Z；全表此刻 8 行 / ¥0.009376） |
+
+⇒ **我上一轮那句"推理不是读数"现在成了读数**：`INTERNAL` 归零、请求以 `200 + refuse(reason=no_data_asset)` 收口，
+且其中一条的 `stage=schema_linking` 表示 **`link` 节点是跑完的**（不是崩的）⇒ U-112 的出口是对的。
+⇒ **但判据 ④（预检出现 ≥1 条 `ok`）仍然不过** ⇒ **还是不跑批**。原因不是代码坏，是**没有可检的东西**：`tsv` 也全 NULL ⇒ 稀疏路空 ⇒ `refuse`。
+
+### ③ 一次跑出了三个第一次（这几条对 DoD 有直接关系）
+
+1. **`degraded_total` 第一次有非零读数**（`/api/v1/metrics` 实测，此前该族恒全 0）：
+   `degraded_total{reason="embedding_unavailable",action_taken="sparse_only"} 1`（=U-112 的降级）
+   与 `degraded_total{reason="llm_unavailable",action_taken="template_only"} 1`（=**U-107 的降级出口第一次在活体流量里被走到**，
+   服务端事件 `node_timeout_degraded` 同日首次出现）。⇒ 我 §六 里"降级出口从未被走到 / 该族恒 0"那两行**就地作废并改正**。
+2. **`retrieval_mode_total` 确认"无调用点"不是数据假象**：同一轮里 `sparse_only` 降级真实发生、`degraded_total` 记到了，
+   而 `retrieval_mode_total{retrieval_mode="sparse_only"} 仍 = 0` ⇒ 缺的是**埋点**，不是流量。
+   ⇒ **RL-2（降级率）的分子现在可用了，但只能建在 `degraded_total` 上**；我按这条改 runbook 与看板文案，
+   并把它作为一条**埋点需求**提给 W4/W2B（谁拥有 `link` 的 mode 落点谁做，我不进别人目录）。
+3. **一条口径提醒（给我自己的指标设计，也给 W6）**：`query_outcome_total{outcome="degraded"} = 0`，
+   而那两条请求**既降级又被拒** ⇒ 终止态只记 `refuse`（`{refuse: 2, clarify: 1}`）。
+   这在 A.6 的五值口径里是对的，但**看板若拿 `outcome="degraded"` 当降级率分母会系统性低估** ⇒ 分子分母都以 `degraded_total` 为准。
+
+### ④ 本轮实测 / 未实测
+
+- ✅ 实测：仓库恢复全过程（含 `fsck` 前后对照）、W2B 两份单测 28 passed、镜像内容核验、
+  c=1 预检 3 条的完整回执、`/metrics` 三族的非零/全零读数、额度 2 次 / ¥0.002921。
+- ⚠️ **不可复现声明**：`0921r2wt` 出自工作区。W2B 提交后请用 commit 重建（`0921r3` 之类）再取一次 G-6 级证据。
+- ❌ 未跑：四场景 + 场景⑤ 跑批（判据④ 不过）、迁移套件（`U-113` 未定案前不在共用 `ecom` 上重放）、
+  `embed_doc` 灌向量（**W2B 的表、W2B 的动作**，我不代跑）。
+- 🔜 下一格（仍缺）：`ok ≥ 1`。要它出现只有两条路 —— ① W2B 跑物化把 197 行向量与 `tsv` 灌上；
+  ② 或先用**不依赖检索的小问句**（纯时间/维度类）验一次全链收口。②我可以自己做，但那是**换题目迁就环境**，
+  只能证明"链能通"、不能证明"容量对"，所以我不会拿它当判据④ 的替代，除非总控明确同意这个降级口径。

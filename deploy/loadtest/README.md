@@ -227,6 +227,28 @@ app.embed_doc：197 行，embedding 为 NULL 的 = 197（四类 kind 全部）�
    （清空动作不是我做的）⇒ 累计花费基线重开，T7 的 `daily_cost_cny` 对账下次活体跑要重测。
 本轮花费：`created_at ≥ 2026-09-21 01:45Z` ⇒ **3 次调用 / 9,043 tokens / ¥0.004198**（全 `deepseek-flash`，峰时价）。
 
+#### 三.0.1e 第四轮预检（09-21 · `w7load-api:0921r2wt` **含 W2B 未提交的 U-112** · 与 §三.0.1d 逐参数相同）
+
+⚠️ **这一节的读数不是 G-6 证据**。镜像是从**工作区**构建的（`dense.py +59/−6` 未提交）⇒ 不可复现：
+W2B 一旦回退工作区，这串数就没了出处。它只回答一个问题——"U-112 有没有把崩溃变成降级"。
+构建前的两项旁证：W2B 的两份单测在我这边**独立复跑 28 passed**；镜像内核验 `/srv/app/retrieval/dense.py` 含 `EmbeddingUnavailable` 11 处。
+
+| 读数 | §三.0.1d（`0921r1`，无 U-112） | 本轮（`0921r2wt`，含 U-112） |
+|---|---|---|
+| `outcomes` | `{error_frame: 2, clarify: 1}` | **`{refuse: 2, clarify: 1}`** |
+| `codes` | `{INTERNAL: 2}` | **`{}`** |
+| `error_messages` | 2 条 `TypeError` | **`{}`** |
+| `terminal_provenance` | 两条都停在 `stage=intent` | 一条 `stage=intent`、**一条 `stage=schema_linking`**（⇒ `link` **跑完了**） |
+| 判据 ④（出现 ≥1 条 `ok`） | ❌ | ❌ **仍不过** |
+| 花费 | 3 次 / ¥0.004198 | **2 次 / 6,040 tokens / ¥0.002921** |
+
+⇒ `INTERNAL` 归零、请求以 `200 + refuse(no_data_asset)` 收口 ⇒ **§三.0.1d 那条"根因是数据不是代码"的判断成立**。
+⇒ 但 `ok` 还是 0，因为 `tsv` 也全 NULL ⇒ 稀疏路同样空。**放行条件不变**：`app.embed_doc` 要有向量与 `tsv`（W2B 的表、W2B 的动作）。
+★ 顺带三个"第一次"（细节与口径见 `backend/reports/w7/RELAY.md` §二十二③）：
+`degraded_total` 首次非零（`{embedding_unavailable,sparse_only}=1`、`{llm_unavailable,template_only}=1` ⇒ **U-107 的降级出口首次在活体流量里被走到**）；
+`retrieval_mode_total` 在同轮真实降压下**仍全零** ⇒ "无调用点"是缺埋点而非缺流量；
+`query_outcome_total{outcome="degraded"}=0` 而请求确实"既降级又被拒" ⇒ **降级率的分母不能用它**。
+
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 
 探针的取数依据按 U-22 纪律必须"写在常量旁边"，而常量旁边放不下方法 —— 所以
