@@ -1,13 +1,15 @@
-"""接缝契约测试：`run_gate1/run_gate2` 与 `SemanticBundleRuntime` 的 allowlist 形状契约。
+"""接缝契约测试：`run_gate1` 与 `SemanticBundleRuntime` 的**闸门判据形状**契约（U-119）。
 
-背景（reports/w6/probe_gate_allowlist_shape.py）：生产唯一调用
-`app/graph/nodes/gate1_ast.py` 把 `deps.semantics.asset_allowlist(identity)` —— 真运行时
-返回**扁平** `{物理名: {...}}` —— 直接喂 `run_gate1`。但 `run_gate1/run_gate2` 期待的是
-**wrapper** 形状（含 `assets` / `default_predicates` 等键）。这条「形状接缝」没有契约，
-两边各自实现，今天这条缝是断的：普通 SQL 过闸仍是 `passed=False`。
+判据已由架构 v1.6.5 §22.1 改写（`U-121` 定案"两个投影、两种形状"之后）：
 
-本契约锁住：**真运行时输出原样喂进闸门，普通 SQL 必须能过**。Test A 红 = 缝没修；
-Test B（不一致形状必须被拒）做反向对照，证明测的是这条缝、不是测夹具。
+- **Test A**：真运行时的 `guard_allowlist(ctx, max_rows=…)`（闸门唯一形状，7 键 wrapper）
+  原样喂 `run_gate1` ⇒ 普通 SQL 必须 `passed=True`。这条**必须绿**，红 = 生产取用点/实现漂了。
+- **Test B（反向对照）**：把**扁平面** `asset_allowlist(ctx)`（planner / binding 的可见面）
+  喂闸门 ⇒ 必须被 `R05` 拒。改写前它是"缺陷的证据"，改写后它是"fail-closed 行为正确的证据"
+  —— 扁平面按设计**不该**喂闸门（`app/core/contracts.py` 的 `SemanticBundlePort` docstring 明写）。
+
+⚠️ **gate2 不在本文件断言范围内**：`run_gate2` 在 `guard/policy_gate.py:105` **自己**取数，
+那一处仍是扁平面（`U-121` 第 3 格，归 W2C）。W2C 换调 `guard_allowlist` 时应在此补对称断言。
 """
 
 from __future__ import annotations
@@ -16,12 +18,15 @@ from pathlib import Path
 
 from app.core.contracts import IdentityContext
 from app.core.enums import Role
-from app.guard import run_gate1, run_gate2
+from app.guard import run_gate1
 from app.semantics.loader import load_bundle
 from app.semantics.runtime import SemanticBundleRuntime
 
 #: W2C 规范普通 SQL（默认谓词归一后普通查询）。
 SQL = "SELECT pay_amount FROM v_order_paid"
+
+#: 请求级行数上限：`api/dto/query.AskOptions.max_rows` 的默认值（生产由调用方给出）。
+_MAX_ROWS = 5000
 
 #: backend/tests/contract/... → parents[0]=contract, parents[1]=tests,
 #: parents[2]=backend, parents[3]=CommerceQL（仓库根）。
@@ -49,23 +54,18 @@ def _ctx() -> IdentityContext:
 
 
 def test_plain_sql_passes_through_gate_seam() -> None:
-    """真运行时 allowlist 原样喂进闸门，普通 SQL 必须能过（今天应红 = 缝没修）。"""
+    """Test A：真运行时的闸门形状原样喂 `run_gate1`，普通 SQL 必须过（U-121 落地后应绿）。"""
     rt = _rt()
-    allowlist = rt.asset_allowlist(_ctx())  # 真运行时输出，原样，不包装、不加键
+    allowlist = rt.guard_allowlist(_ctx(), max_rows=_MAX_ROWS)  # 原样，不包装、不加键
 
     r1 = run_gate1(SQL, allowlist)
-    assert r1.gate_result.passed is True
-
-    r2 = run_gate2(SQL, _ctx(), rt)
-    assert r2.gate_result.passed is True
+    assert r1.gate_result.passed is True, r1.gate_result
 
 
-def test_broken_shape_rejected() -> None:
-    """不一致形状必须被拒（反向对照：证明测的是缝不是夹具）。"""
+def test_flat_projection_is_rejected_by_gate1() -> None:
+    """Test B（反向对照）：扁平面喂闸门必被拒 —— 证明测的是这条缝，不是夹具。"""
     rt = _rt()
-    allowlist = rt.asset_allowlist(_ctx())
-    # 删掉 SQL 引用的 mandatory 资产 → 不可能通过。
-    broken = {k: v for k, v in allowlist.items() if k != "v_order_paid"}
+    flat = rt.asset_allowlist(_ctx())  # planner/binding 的可见面，不该进闸门
 
-    r1 = run_gate1(SQL, broken)
+    r1 = run_gate1(SQL, flat)
     assert r1.gate_result.passed is False

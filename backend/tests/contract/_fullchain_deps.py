@@ -208,6 +208,14 @@ class FullChainSemantics:
         self.allowlist_calls += 1
         return self._allowlists[idx]
 
+    def guard_allowlist(
+        self, ctx: IdentityContext, *, max_rows: int | None = None
+    ) -> Mapping[str, Any]:
+        """闸门形状（U-121）：与 `asset_allowlist` **共用调用序** —— gate1 第 1 次、gate2 第 2 次。"""
+        allowlist = dict(self.asset_allowlist(ctx))
+        allowlist["max_rows"] = max_rows
+        return allowlist
+
     def policy(self) -> Mapping[str, Any]:
         """mask 的 policy 来源 —— 空表 = 无 mask_rules（脱敏恒直通）。"""
         return {}
