@@ -38,10 +38,9 @@ from app.graph.events import EventRecorder
 from tests.contract.test_api_runner_contract import _make_deps
 
 # 07 §5.3 表里给了超时值的**非 LLM** 节点（"—" 的 trusted_context 与三个出口不在内；
-# 6 个 LLM 节点已从本表移出，改走客户端超时，见 `_LLM_NODE_TASKS`）。
+# 7 个 LLM 节点已从本表移出，改走客户端超时，见 `_LLM_NODE_TASKS`）。
 EXPECTED_TIMED_NODES = {
     "link": 30.0,
-    "bind": 0.2,
     "gate1_ast": 0.1,
     "gate2_policy": 0.1,
     "gate3_cost": 1.0,
@@ -51,8 +50,11 @@ EXPECTED_TIMED_NODES = {
     "audit_supp": 0.5,
 }
 
-#: 6 个 LLM 节点 —— 硬超时 = 客户端超时（§10.2 / U-107 附注①），**不入 `NODE_TIMEOUT_S`**。
-EXPECTED_LLM_NODES = {"normalize", "intent", "plan", "gen_sql", "present", "repair"}
+#: 7 个 LLM 节点 —— 硬超时 = 客户端超时（§10.2 / U-107 附注① / U-118 ②），**不入 `NODE_TIMEOUT_S`**。
+#: `bind` 走 `l4_score`（架构 ① 裁定 (B)：bind 是真发 LLM，摘出在线预算"0.2s 预算当硬超时"病害）。
+EXPECTED_LLM_NODES = {
+    "normalize", "intent", "plan", "gen_sql", "present", "repair", "bind",
+}
 
 
 def _make_ctx() -> tuple[RunContext, object]:
@@ -204,6 +206,16 @@ class TestClientTimeoutResolution:
 
         for node in ("normalize", "intent", "plan", "gen_sql", "present", "repair"):
             assert _effective_limit_for(node, None) == _client_timeout_for(_LLM_NODE_TASKS[node])
+
+    def test_bind_uses_l4_score_client_timeout(self) -> None:
+        """U-118 ①：`bind` 并入 LLM 执行期超时解析，走 `l4_score`（§6.8.2 上界 0.8s 是分配非超时）。"""
+        from app.graph.build import _client_timeout_for, _effective_limit_for
+
+        assert _LLM_NODE_TASKS["bind"] == "l4_score"
+        assert "bind" not in NODE_TIMEOUT_S
+        # bind 的生效硬超时 = `l4_score` 客户端的（FAST flash 15s），而非旧 0.2s 紧值。
+        assert _effective_limit_for("bind", None) == _client_timeout_for("l4_score")
+        assert _effective_limit_for("bind", None) > 0.2
 
     def test_merge_extra_is_allocation_not_timeout(self) -> None:
         """`_MERGED_NORMALIZE_EXTRA_S` 是「分配平移」，**不再叠加进 `asyncio.timeout`**。"""

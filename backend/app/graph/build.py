@@ -360,7 +360,7 @@ def graph_version() -> str:
 
 #: 非 LLM 节点的固定硬超时（秒；07 §5.3 契约表"超时"列逐字落地）。
 #:
-#: ⚠️ **LLM 节点不在本表**：走 DeepSeek 的 6 节点（normalize/intent/plan/gen_sql/present/repair）
+#: ⚠️ **LLM 节点不在本表**：走 DeepSeek 的 7 节点（normalize/intent/plan/gen_sql/present/repair/bind）
 #: 的硬超时 = **本请求实际模型的客户端超时**（§10.2：flash 15s / pro 45s），执行期解析
 #: （`_LLM_NODE_TASKS` → `_client_timeout_for` → `resolve_route` → `hard_timeout_s`）。
 #: 这是 §5.3.0 规则 2 / U-107 附注①：单一超时点，LLM 节点不得自设更小的硬超时
@@ -376,7 +376,6 @@ def graph_version() -> str:
 #: 逐字值"，改这里必须同步 07 §5.3。
 NODE_TIMEOUT_S: Final[dict[str, float]] = {
     "link": 30.0,
-    "bind": 0.2,
     "gate1_ast": 0.1,
     "gate2_policy": 0.1,
     "gate3_cost": 1.0,
@@ -400,6 +399,7 @@ _LLM_NODE_TASKS: Final[dict[str, str]] = {
     "gen_sql": "gen_sql",
     "present": "present",
     "repair": "repair",
+    "bind": "l4_score",
 }
 
 #: 合并档分配平移（§5.3.0 规则 5 / U-107 附注③）：合并档下 `normalize` 一次调用干
