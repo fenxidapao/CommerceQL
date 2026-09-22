@@ -40,6 +40,7 @@ from typing import Any, Final
 
 import psycopg
 
+from app.core.config import APP_SCHEMA
 from app.semantics.loader import LoadedBundle
 from app.semantics.models import Asset
 
@@ -61,11 +62,10 @@ _GLOBAL_TENANT: Final[str] = "*"
 #: 发布者署名（版本注册表 `published_by`）。
 _PUBLISHED_BY: Final[str] = "w2a-materialize"
 
-#: 业务对象的 schema 名（0001/0002/0003 迁移与 `repo/health.py` 均用 `app`）。
-#: ⚠️ 目前无共享单一真相（`app/core/**` 未定义该常量）—— 本模块自持一份并把它用于
-#: **所有**派生语句的 schema 限定（2026-09-17 根修，见 `_qualify()`）。
-#: 已在 `reports/w2a/RELAY.md` §8 提请 W0 立共享常量；届时此处改指它，不新增第二份。
-_SCHEMA: Final[str] = "app"
+#: 业务对象的 schema 名（0001/0002/0003 迁移与 `repo/health.py` 均用同名 schema）。
+#: ⚠️ **U-124 判据②（2026-09-22）已收口为全仓唯一真相**：`app.core.config.APP_SCHEMA`
+#: —— 本文件原私有 `_SCHEMA` 常量已删，不再自持第二份；`pools.py` 的连接级
+#: `search_path`（AST-R16 DB 侧兜底）与本文件的派生语句限定由此同源。
 
 
 # ============================================================================
@@ -124,8 +124,10 @@ def _qualify(object_name: str) -> str:
     （层① 视图不存在被 U-56/迁移 0003 解除后，**这一层才暴露**——此前是 skip 盖住了）。
     两处坏在同一个原因上：**非限定名 = 把"连上来的人恰好有对的 search_path"当默认前提**。
     修法取根修而非约定调用侧（后者把同一前提散到每个调用点，漏一处就复现）。
+    schema 名引 `app.core.config.APP_SCHEMA`（U-124 判据②：全仓唯一真相，本文件
+    不再自持 `_SCHEMA` 字面量；与 `pools.py` 的连接级 `search_path` 同源）。
     """
-    return f"{_SCHEMA}.{_q_ident(object_name)}"
+    return f"{APP_SCHEMA}.{_q_ident(object_name)}"
 
 
 def derive_policy_statements(loaded: LoadedBundle) -> PolicyStatementSet:

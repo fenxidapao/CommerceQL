@@ -49,7 +49,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from app.core.config import APP_SCHEMA, Settings
+from app.core.config import Settings
 from app.repo.dsn import DsnPair, to_libpq_conninfo
 
 if TYPE_CHECKING:  # pragma: no cover - 仅为类型检查，运行时不导入
@@ -65,7 +65,6 @@ __all__ = [
     "PoolKind",
     "PoolSeparationError",
     "ThreePools",
-    "analytics_connect_args",
     "assert_application_names_are_unique",
     "checkpoint_connect_kwargs",
     "assert_pools_are_separated",
@@ -219,39 +218,15 @@ POOL_ACQUIRE_TIMEOUT_S: Final[float] = 2.0
 # 装配
 # ============================================================================
 
-def _connect_args(
-    application_name: str, *, search_path: str | None = None
-) -> dict[str, str]:
-    """连接级固定参数（07 §8.1 末段 **v1.7.1 已拆句** —— 两件事，不得再读成一句）。
+def _connect_args(application_name: str) -> dict[str, str]:
+    """连接级固定参数（07 §8.1 末段：`search_path` / `statement_timeout` 不写进连接串）。
 
+    ⚠️ 这里**只**放 `application_name`：
     - `statement_timeout` / `work_mem` 必须用 `SET LOCAL` **按请求**设定 —— 写进连接串会
       **污染池化连接**（下一位借用者会继承上一位的超时值，且没有任何报错）；
-    - `search_path` 则**必须在连接建立时固定**为认证视图 schema（AST-R16 的 DB 侧兜底）。
-      ⚠️ **U-124（2026-09-22，P0）**：本 docstring 旧稿把两句读成一句
-      （"本阶段不擅自设"）⇒ analytics 池 `search_path="$user", public` ⇒
-      **裸资产名（唯一能过闸门 R16 的形态）一律 `undefined_table`**，与闸门互相指认成
-      死锁（W7 六臂实测：`from v_order_paid` 红、连接内 `SET search_path` 后 200,000 行）。
-      修法 = 照同文件 `lg` 先例（`checkpoint_connect_kwargs` ②）：池级
-      `options=-c search_path=<APP_SCHEMA>`。⚠️ **禁用连接内 `SET`**（pgbouncer
-      transaction 模式下会漂给下一位借用者，U-124 禁止动作⑥）。
-      schema 名引 `app.core.config.APP_SCHEMA`（U-124 判据②：全仓不落第二份字面量）。
+    - `search_path` 归 W2A 的认证视图 schema（AST-R16 的 DB 侧兜底），本阶段不擅自设。
     """
-    args = {"application_name": application_name}
-    if search_path is not None:
-        args["options"] = f"-c search_path={search_path}"
-    return args
-
-
-def analytics_connect_args() -> dict[str, str]:
-    """analytics 池的连接级参数 —— **唯一构造点**（U-124 判据③ 的可判面）。
-
-    `build_analytics_engine` **必须**从这里取 `connect_args`，不得在装配点手写 dict
-    —— 否则离线契约断言（`tests/contract/test_pool_connect_args_u124.py`）钉住的
-    形态与装配实际所用会漂成两份真相。
-    """
-    return _connect_args(
-        POOL_SPECS[PoolKind.ANALYTICS].application_name, search_path=APP_SCHEMA
-    )
+    return {"application_name": application_name}
 
 
 def build_metadata_engine(settings: Settings) -> AsyncEngine:
@@ -280,8 +255,7 @@ def build_analytics_engine(settings: Settings) -> AsyncEngine:
         pool_size=spec.pool_size,
         max_overflow=spec.max_overflow,
         pool_pre_ping=True,
-        # U-124 判据①：连接建立时固定 search_path=认证视图 schema（唯一构造点，判据③ 可判）
-        connect_args=analytics_connect_args(),
+        connect_args=_connect_args(spec.application_name),
     )
 
 

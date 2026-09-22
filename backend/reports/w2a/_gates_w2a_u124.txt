@@ -1,0 +1,35 @@
+U-124 交付门禁读数（W2A）
+============================
+
+采集时刻：2026-09-22T21:01+0800　HEAD = 9046bd3（= 远端 main）
+
+改动面（07 v1.7.1 三方裁定，W1B/W0 窗口不在 ⇒ W2A 同批收口，授权 = 07 v1.7.1 + W7 直接派单）：
+- app/core/config.py            新增 APP_SCHEMA: Final[str] = "app"（W0 名下部分）
+- app/repo/pools.py             _connect_args 加 search_path kwarg；新增 analytics_connect_args()
+                                （唯一构造点）；build_analytics_engine 改用之（W1B 名下部分）
+- app/semantics/materialize.py  删私有 _SCHEMA 字面量，_qualify() 改引 APP_SCHEMA（W2A 部分）
+- tests/contract/test_pool_connect_args_u124.py   判据③：6 passed
+- reports/w2a/probe_u124_criterion4.py            判据④探针（只读 SELECT，零 LLM）
+
+门禁（全绿）：
+- ruff check .                → All checks passed!
+- mypy app                    → Success: no issues found in 147 source files
+- lint-imports                → Contracts: 4 kept, 0 broken
+- pytest tests/unit tests/contract → 1816 passed, 1 warning (62.75s)
+- 判据② grep -n '"app"' app/repo/pools.py app/semantics/materialize.py → 零命中（exit=1）
+
+判据逐条：
+① analytics connect_args 含池级 search_path（options="-c search_path=app"）—— 判据③测试钉住 ✅
+② schema 名全仓唯一真相 = app.core.config.APP_SCHEMA，两文件 grep 零第二份字面量 ✅
+③ 离线契约断言：三池形态钉死（metadata 无 options / analytics=APP_SCHEMA / checkpoint=lg）
+   + 装配必须经唯一构造点（spy 录制法，不读 SQLAlchemy 内部面）✅
+④ 真栈：w7load-api 热补丁新版 pools/config 后，判据④探针实测 ——
+   SELECT pay_amount FROM v_order_paid LIMIT 3 → OK rows=3 ['168.74','108.39','71.76']
+   （样例值见探针输出），search_path=app；
+   EXPLAIN 同语句 → 出计划，Seq Scan on order_paid + RLS 过滤完好。
+   ⚠️ 验证方式 = 容器热补丁（/srv 非挂载、镜像是旧代码），验证后容器已还原原状；
+   W7 拉本 commit 重建镜像后为永久态，届时 scratch_searchpath_ab.py 的 A 臂应转绿。
+禁止动作自查：⑤ 未改 R16 ⑥ 无连接内 SET ⑦ 未扩散 metadata 池 ⑧ materialize 同因族未折入本号。
+
+现场留痕：reports/w2a/_u124_container_backup/ = 容器被热补丁前的原版 pools/config
+（审计痕迹，勿删）。/tmp/c4.py、/tmp/ab.py 属 root 删不掉，无害。

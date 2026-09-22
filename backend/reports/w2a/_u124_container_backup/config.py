@@ -22,7 +22,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-__all__ = ["APP_SCHEMA", "STARTUP_ASSERTIONS_DELEGATED_TO_W1B", "AppEnv", "Settings", "get_settings"]
+__all__ = ["STARTUP_ASSERTIONS_DELEGATED_TO_W1B", "AppEnv", "Settings", "get_settings"]
 
 
 class AppEnv(StrEnum):
@@ -303,16 +303,6 @@ class Settings(BaseSettings):
             and self.BINDING_TAU_PROMPT_VERSION
             and self.BINDING_TAU_CALIBRATED_AT
         )
-
-#: 业务对象与认证视图所在的 schema 名（0001/0002/0003 迁移、`repo/health.py` 均用 `app`）。
-#:
-#: ⚠️ **U-124 判据②（2026-09-22，07 v1.7.1）—— 这是全仓唯一真相**：
-#: `app/repo/pools.py`（analytics 引擎**连接建立时**的 `search_path`，
-#: AST-R16 的 DB 侧兜底）与 `app/semantics/materialize.py`（DDL/派生语句的
-#: schema 限定）都**必须引本常量**，不得再写第二份 `"app"` 字面量 ——
-#: 自检命令：`grep -n '"app"' app/repo/pools.py app/semantics/materialize.py`
-#: 除本常量外必须零命中。
-APP_SCHEMA: Final[str] = "app"
 
 #: **阶段 0 故意不实现**的启动断言（需要真实依赖，属 W1B 的 lifespan）。
 #: 列在这里是为了让"还差哪三条"是明确的，而不是靠人记：
