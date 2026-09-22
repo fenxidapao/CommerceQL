@@ -878,6 +878,54 @@ def test_loadtest_pressure_ignores_unknown_keys_and_still_matches_schema_verbati
                                          schema="w7.loadtest.receipt/2")) is None
 
 
+def test_todays_w7_driver_shape_can_still_reach_a_pass(tmp_path, repo_root):
+    """正向对照（W7 已把这条接受成**产出契约**）：现行 driver 写出的形状必须还能判 PASS。
+
+    为什么不手写这个夹具：形状由**生产者自己的函数** `deploy/loadtest/driver.py::_summarize`
+    现场生成（它今天无条件写 `admission` + `latency_ms_all_ms`，见 `driver.py:393/399`）⇒
+    W7 今后删掉任一键，本测试当场红，而不是让 G-6 悄悄变成"永远 UNVERIFIED"。
+    这条同时防我方自伤：第五轮新加的"分母无从核对 ⇒ 不判 PASS"降档若写宽了，
+    真·干净回执也会被它压住 —— 那种形状只有正向对照能逮到。
+    """
+    import argparse
+    import importlib.util
+    import sys
+
+    import gates as gt
+
+    name = "w7_driver_under_test"
+    spec = importlib.util.spec_from_file_location(
+        name, os.path.join(repo_root, "deploy", "loadtest", "driver.py")
+    )
+    driver = importlib.util.module_from_spec(spec)
+    # ⚠️ 必须先登记再 exec：`driver.py` 里是 `@dataclass(slots=True)`，而 dataclasses **在建类时**
+    # 用 `sys.modules[cls.__module__]` 取命名空间 —— 不登记就在这儿抛
+    # `AttributeError: 'NoneType' object has no attribute '__dict__'`（长得像 W7 的件坏了，其实是加载方式）。
+    sys.modules[name] = driver
+    try:
+        spec.loader.exec_module(driver)
+    finally:
+        sys.modules.pop(name, None)
+
+    samples = [driver.Sample(outcome="ok", status=200, ttfb_ms=300.0, total_ms=1000.0 + i)
+               for i in range(25)]
+    scenario = driver.ScenarioSpec(name="steady", concurrency=5, duration_s=None,
+                                   total_requests=25, single_session=False, one_tenant=False)
+    args = argparse.Namespace(no_async=False, questions_file=None, max_requests=None)
+    summary = driver._summarize(scenario, samples, 30.0, args)
+
+    # 契约面自证：两个键在场且非空 ⇒ 这份数才有资格判达标。
+    assert summary["admission"]["admitted"] == 25, summary["admission"]
+    assert summary["latency_ms_all_ms"]["p95"] is not None
+    assert summary["g6_caveat"] is None, "零降级、25 条准入 ⇒ W7 侧不该给 caveat"
+
+    pressure = rp.loadtest_pressure(_receipt(tmp_path, [summary]))
+    assert pressure is not None, "现行形状若在读端就不可读 ⇒ G-6 会永远停在 NOT_AVAILABLE"
+    gate = next(g for g in gt.evaluate_gates(pressure=pressure) if g.gate_id == "G-6")
+    assert gate.verdict == "PASS", f"W7 的产出契约形状被判成 {gate.verdict}：{gate.caveats}"
+    assert "全请求" in gate.measured, "判定值必须是全请求分位数，不是准入分位数"
+
+
 @pytest.mark.parametrize("le_8s", [True, False, None])
 def test_the_reader_never_depends_on_w7s_g6_boolean(tmp_path, le_8s):
     """W7 在 U-120 把 `g6_p95_le_8s` 从两态改成三态（`admitted<20` ⇒ null）⇒ 我方读数不许变。
