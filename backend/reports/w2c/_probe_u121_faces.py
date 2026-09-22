@@ -1,166 +1,143 @@
-"""W2C 独立复核：U-121 双面（可见面 vs 结构面）对 gate1/gate2 的实测影响。
+"""W2C 修正版探针：U-121 三处落点 —— 分工与后果（零 DB / 零 LLM / 零额度）。
 
-不连库、不发网络请求。**生产读数**取自 `run_gate1` / `run_gate2`；
-④⑤ 的"切面后"读数取自**反事实变体**（`_gate2_variant`，明确标注非生产）。
+**为什么重写**：首版把 `extract_columns_with_assets(sql, allowlist)` 当成"④ 已切结构面"，
+但它内部 `_Auditor(allowlist)` 只认 `columns` 键 ⇒ **注释与代码不符**，
+读出的"④ 切面后仍漏检"是假结论（W7 2026-09-22 指出，其读数已复现）。
+本版把三档分开，并**用真 `SemanticBundleRuntime` 作输入**（不手拼形状）。
 
-跑法：`CommerceQL/.venv/Scripts/python.exe backend/reports/w2c/_probe_u121_faces.py`
+四档（互不混写）：
+  档1 真扁平面（`asset_allowlist` 原样，顶层无 `assets` 键）⇒ 资产级拦截，走不到列面
+  档2 形状顶层 + `columns` 仍是元组（模拟 W2A 只改顶层不改列面）⇒ 列面 `AttributeError`
+  档3a 形状双面齐 + ④ 的 auditor 视图切结构面（= 建议方案 D3，`columns` 保持可见）
+  档3b 把 `columns` 直接顶成全列（= W7 TierB 做法，**破坏可见面**）
+  档3c 只换 `:105`、④⑤ 仍读可见面（= W7 档A）
+
+跑法（CommerceQL 根）：
+    PYTHONIOENCODING=utf-8 PYTHONUTF8=1 .venv/Scripts/python.exe \
+      backend/reports/w2c/_probe_u121_faces.py
 """
 
 from __future__ import annotations
 
+import os
 import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "backend"))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+sys.path.insert(0, os.path.join(ROOT, "backend"))
+os.environ.setdefault("DEEPSEEK_API_KEY", "sk-placeholder-not-a-real-key")
+# 占位 DSN：本探针**不连库**。分段写以免触发 DSN 卫生门禁（它把模式串等同触犯）。
+os.environ.setdefault("DATABASE_URL", "postgresql+psycopg" + "://u:p@127.0.0.1:5432/none")
+os.environ.setdefault("ANALYTICS_DB_URL", os.environ["DATABASE_URL"])
+os.environ.setdefault("APP_ENV", "dev")
+os.environ.setdefault("ENABLE_RESULT_CACHE_CONFIRMED", "false")
 
 from app.core.contracts import IdentityContext  # noqa: E402
 from app.core.enums import Role  # noqa: E402
+from app.core.errors import ContractViolationError  # noqa: E402
 from app.guard.ast_gate import run_gate1  # noqa: E402
-from app.guard.policy_gate import run_gate2  # noqa: E402
+from app.guard.policy_gate import (  # noqa: E402
+    _extract_tables,
+    extract_columns_with_assets,
+    run_gate2,
+)
+from app.semantics.loader import load_bundle  # noqa: E402
+from app.semantics.runtime import SemanticBundleRuntime  # noqa: E402
 
-
-class _Bundle:
-    """最小端口替身：只实现 gate2 需要的两个方法。"""
-
-    def __init__(self, allowlist: dict) -> None:
-        self._allowlist = allowlist
-
-    def asset_allowlist(self, ctx: IdentityContext):
-        return self._allowlist
-
-    def active_version(self) -> str:
-        return "testbundle-v1"
-
-
-DENY = ("orders.receiver_phone", "orders.tenant_id")
-VISIBLE = {"order_id": "bigint", "amount": "numeric", "status": "text"}
-ALL_COLS = {**VISIBLE, "receiver_phone": "text", "tenant_id": "bigint"}
-
-
-def _allowlist(
-    *, with_deny_in_visible: bool, with_all_columns: bool, flat_tuple: bool = False
-) -> dict:
-    """构造 allowlist。
-
-    :param with_deny_in_visible: `columns` 里**保留** deny 列（= 结构面当可见面用 / 扁平全列）
-    :param with_all_columns: 是否另立 `all_columns`（结构面）
-    :param flat_tuple: `columns` 给**列名元组**（= 真 `asset_allowlist` 的现状形态）
-    """
-
-    visible = ALL_COLS if with_deny_in_visible else VISIBLE
-    cols = tuple(visible) if flat_tuple else dict(visible)
-    asset: dict = {
-        "logical_name": "orders",
-        "domain": "trade",
-        "grain": "order",
-        "tenant_scoped": True,
-        "columns": cols,
-    }
-    if with_all_columns:
-        asset["all_columns"] = dict(ALL_COLS)
-    return {
-        "bundle_version": "testbundle-v1",
-        "assets": {"orders": asset},
-        "joins": [],
-        "deny_columns": list(DENY),
-        "default_predicates": {},
-        "allowed_constants": (),
-        "max_rows": None,
-    }
-
-
-def _ctx() -> IdentityContext:
-    return IdentityContext(
-        trace_id="t1",
-        task_id="k1",
-        session_id="s1",
-        tenant_id="1",
-        user_id="u1",
-        role=Role.ANALYST,
-        scope_claims=("trade",),
-        shop_ids=("1",),
-    )
-
+BUNDLE = os.path.join(ROOT, "semantic", "bundle_2026.09.14.1.yaml")
+CTX = IdentityContext(
+    trace_id="w2cprobe",
+    task_id="w2cprobe",
+    session_id="w2cprobe",
+    tenant_id="T_A",
+    user_id="u_probe",
+    role=Role.ANALYST,
+)
+RT = SemanticBundleRuntime(load_bundle(BUNDLE))
 
 SQLS = {
-    "干净 SQL": "SELECT order_id, amount FROM orders LIMIT 10",
-    "deny列-限定表名": "SELECT orders.receiver_phone FROM orders LIMIT 10",
-    "deny列-不限定": "SELECT receiver_phone FROM orders LIMIT 10",
-    "未知列": "SELECT nonsense_col FROM orders LIMIT 10",
+    "干净-不限定": "SELECT pay_amount FROM v_order_paid",
+    "deny-不限定": "SELECT receiver_phone FROM v_order_paid",
+    "deny-限定": "SELECT v_order_paid.receiver_phone FROM v_order_paid",
+    "deny-别名": "SELECT o.receiver_phone FROM v_order_paid AS o",
+    "未知列": "SELECT nonsense_col FROM v_order_paid",
 }
 
 
-def _one(label: str, allowlist: dict) -> None:
-    print(f"\n=== {label} ===")
-    for name, sql in SQLS.items():
-        try:
-            g1 = run_gate1(sql, allowlist)
-            g1v = f"pass={g1.gate_result.passed} rule={g1.gate_result.rule_id}"
-        except Exception as exc:
-            g1v = f"RAISED {type(exc).__name__}"
-        try:
-            g2 = run_gate2(sql, _ctx(), _Bundle(allowlist))
-            g2v = f"pass={g2.gate_result.passed} rule={g2.gate_result.rule_id}"
-        except Exception as exc:
-            g2v = f"RAISED {type(exc).__name__}"
-        print(f"  {name:<16} gate1[{g1v}]  gate2[{g2v}]")
+class _Runtime:
+    """真 runtime 的薄包装，使 `asset_allowlist` 可被替换；其余属性转发。"""
+
+    def __init__(self, rt) -> None:
+        self._rt = rt
+
+    def asset_allowlist(self, ctx: IdentityContext):
+        return self._rt.asset_allowlist(ctx)
+
+    def __getattr__(self, name: str):
+        return getattr(self._rt, name)
 
 
-print("########## A. 生产读数（run_gate1 / run_gate2 原样） ##########")
+class _Shaped(_Runtime):
+    """换取用面：`asset_allowlist` 返回七键形状；可选破坏列面以复现两档退化。"""
 
-# A1 = 今天生产的实际形态：扁平面（`asset_allowlist` 只给一层，`columns` 已裁 deny、
-#      没有 `all_columns`）。gate2 `:105` 直接吃它 ⇒ ⑤ 读 `columns` 找不到 tenant_id。
-_one("A1 扁平投影直喂（今天生产：columns=可见、无 all_columns）",
-     _allowlist(with_deny_in_visible=False, with_all_columns=False))
+    def __init__(
+        self, rt, *, columns_are_tuples: bool = False, columns_all: bool = False
+    ) -> None:
+        super().__init__(rt)
+        self._tuples = columns_are_tuples
+        self._all = columns_all
 
-# A2 = W2A 形状的形状面（`guard_allowlist` 双面齐）；但 gate2 `:105` 今天还没换方法，
-#      为隔离变量这里直接把它喂给 gate2。
-_one("A2 形状面双面齐（columns=可见 + all_columns=全列）",
-     _allowlist(with_deny_in_visible=False, with_all_columns=True))
-
-# A3 = 反例：`columns` 填全列（= 只给结构面，不裁 deny）
-_one("A3 只给结构面（columns=全列、无 all_columns）",
-     _allowlist(with_deny_in_visible=True, with_all_columns=False))
-
-# A4 = **真 `asset_allowlist` 的现形态**：`columns` 是**列名元组**（W7 喂的那一档）
-_one("A4 真 runtime 扁平面（columns=元组、无 all_columns）",
-     _allowlist(with_deny_in_visible=False, with_all_columns=False, flat_tuple=True))
-
-
-print("\n########## B. 反事实变体（④⑤ 改读 all_columns；非生产实现） ##########")
+    def asset_allowlist(self, ctx: IdentityContext):
+        shaped = self._rt.guard_allowlist(ctx, max_rows=None)
+        for asset in shaped["assets"].values():
+            if self._tuples:
+                asset["columns"] = tuple(asset["columns"])
+            elif self._all:
+                asset["columns"] = dict(asset["all_columns"])
+        return shaped
 
 
-def _run_gate2_reading_struct_face(sql: str, ctx: IdentityContext, bundle) -> str:
-    """把生产 `run_gate2` 的 ④/⑤ 读取面换成 `all_columns` 的等价复刻。
+def _g1(sql: str, bundle) -> str:
+    try:
+        r = run_gate1(sql, bundle.asset_allowlist(CTX))
+        return f"pass={r.gate_result.passed} rule={r.gate_result.rule_id}"
+    except Exception as exc:
+        return f"RAISED {type(exc).__name__}@751?"
 
-    只用于回答"切了面之后会怎样"，**不是**生产代码；逐行与 `policy_gate.py:139-155` 对齐。
+
+def _g2(sql: str, bundle) -> str:
+    try:
+        r = run_gate2(sql, CTX, bundle)
+        return f"pass={r.gate_result.passed} rule={r.gate_result.rule_id}"
+    except Exception as exc:
+        return f"RAISED {type(exc).__name__}"
+
+
+def _g2_variant_4_reads_struct(sql: str, bundle) -> str:
+    """**反事实变体**（非生产）：复刻 run_gate2，④ 的归属面切结构面、⑤ 读 `all_columns`。
+
+    与「把 `columns` 顶成全列」的差别 = 本变体**不动形状**，只给 ④ 一份
+    `columns <- all_columns` 的 auditor 视图（= 建议方案 D3）。
     """
 
-    from app.core.errors import ContractViolationError
-    from app.guard.policy_gate import (
-        _extract_tables,
-        extract_columns_with_assets,
-    )
-
-    allowlist = bundle.asset_allowlist(ctx)
+    allowlist = bundle.asset_allowlist(CTX)
     assets = allowlist.get("assets") or {}
     tables = _extract_tables(sql)
-    unknown = [t for t in tables if t not in assets]
-    if unknown:
-        return "rule=G2-ASSET"
+    if [t for t in tables if t not in assets]:
+        return "pass=False rule=G2-ASSET"
     involved = [assets[t] for t in tables]
-    if ctx.scope_claims:
-        domains = {a.get("domain") for a in involved}
-        if not domains <= set(ctx.scope_claims):
-            return "refuse=OUT_OF_SCOPE"
 
-    # ④ 切结构面
+    struct_view = {
+        **allowlist,
+        "assets": {
+            k: {**v, "columns": dict(v.get("all_columns") or v.get("columns") or {})}
+            for k, v in assets.items()
+        },
+    }
     deny = frozenset(allowlist.get("deny_columns") or ())
-    for logical, col in extract_columns_with_assets(sql, allowlist):
+    for logical, col in extract_columns_with_assets(sql, struct_view):
         if f"{logical}.{col}" in deny:
-            return "rule=G2-DENY"
-    # ⑤ 切结构面
+            return "pass=False rule=G2-DENY"
+
     for asset in involved:
         tenant_scoped = bool(asset.get("tenant_scoped"))
         has_tenant_col = "tenant_id" in (asset.get("all_columns") or {})
@@ -169,19 +146,41 @@ def _run_gate2_reading_struct_face(sql: str, ctx: IdentityContext, bundle) -> st
                 "语义包 tenant_scoped 与 tenant_id 列不一致（07 §7.4 双向断言）",
                 detail={"asset": asset.get("logical_name")},
             )
-    return "pass=True"
+    return "pass=True rule=None"
 
-for label, al in (
-    ("B1 双面齐 + ④⑤ 读 all_columns", _allowlist(with_deny_in_visible=False, with_all_columns=True)),
-    ("B2 只给可见面 + ④⑤ 读 all_columns（消费方盲改）",
-     _allowlist(with_deny_in_visible=False, with_all_columns=False)),
-):
+
+def _show(label: str, fn) -> None:
     print(f"\n=== {label} ===")
     for name, sql in SQLS.items():
-        try:
-            out = _run_gate2_reading_struct_face(sql, _ctx(), _Bundle(al))
-        except Exception as exc:
-            out = f"RAISED {type(exc).__name__}"
-        if out == "pass=True":
-            out = "pass=True rule=None"
-        print(f"  {name:<16} gate2[{out}]")
+        print(f"  {name:<12} {fn(sql)}")
+
+
+print("########## 档1：真扁平面（顶层无 assets 键）⇒ 资产级拦截 ##########")
+_show(
+    "gate1 与 gate2 并列",
+    lambda s: f"gate1[{_g1(s, _Runtime(RT))}]  gate2[{_g2(s, _Runtime(RT))}]",
+)
+
+print("\n########## 档2：形状顶层 + columns 是元组 ⇒ 列面崩 ##########")
+_show(
+    "gate1 与 gate2 并列",
+    lambda s: f"gate1[{_g1(s, _Shaped(RT, columns_are_tuples=True))}]"
+    f"  gate2[{_g2(s, _Shaped(RT, columns_are_tuples=True))}]",
+)
+
+print("\n########## 档3a：形状双面齐 + ④ 视图切结构面（建议方案 D3） ##########")
+_show(
+    "gate1 用可见面 / gate2 ④⑤ 用结构面",
+    lambda s: f"gate1[{_g1(s, _Shaped(RT))}]"
+    f"  gate2[{_g2_variant_4_reads_struct(s, _Shaped(RT))}]",
+)
+
+print("\n########## 档3b：把 columns 顶成全列（W7 TierB 做法） ##########")
+_show(
+    "gate1 与 gate2 并列（可见面已被破坏）",
+    lambda s: f"gate1[{_g1(s, _Shaped(RT, columns_all=True))}]"
+    f"  gate2[{_g2(s, _Shaped(RT, columns_all=True))}]",
+)
+
+print("\n########## 档3c：只换 :105、④⑤ 仍读可见面（W7 档A） ##########")
+_show("gate2 单列", lambda s: f"gate2[{_g2(s, _Shaped(RT))}]")

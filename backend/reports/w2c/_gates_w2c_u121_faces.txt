@@ -1,39 +1,45 @@
-########## A. 生产读数（run_gate1 / run_gate2 原样） ##########
+semantic bundle loaded: version=2026.09.14.1 status=candidate assets=8 excluded=0 warnings=1
+########## 档1：真扁平面（顶层无 assets 键）⇒ 资产级拦截 ##########
 
-=== A1 扁平投影直喂（今天生产：columns=可见、无 all_columns） ===
-  干净 SQL           gate1[pass=True rule=None]  gate2[RAISED ContractViolationError]
-  deny列-限定表名       gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
-  deny列-不限定        gate1[pass=False rule=R06]  gate2[RAISED ContractViolationError]
-  未知列              gate1[pass=False rule=R06]  gate2[RAISED ContractViolationError]
+=== gate1 与 gate2 并列 ===
+  干净-不限定       gate1[pass=False rule=R05]  gate2[pass=False rule=G2-ASSET]
+  deny-不限定     gate1[pass=False rule=R05]  gate2[pass=False rule=G2-ASSET]
+  deny-限定      gate1[pass=False rule=R05]  gate2[pass=False rule=G2-ASSET]
+  deny-别名      gate1[pass=False rule=R05]  gate2[pass=False rule=G2-ASSET]
+  未知列          gate1[pass=False rule=R05]  gate2[pass=False rule=G2-ASSET]
 
-=== A2 形状面双面齐（columns=可见 + all_columns=全列） ===
-  干净 SQL           gate1[pass=True rule=None]  gate2[RAISED ContractViolationError]
-  deny列-限定表名       gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
-  deny列-不限定        gate1[pass=False rule=R06]  gate2[RAISED ContractViolationError]
-  未知列              gate1[pass=False rule=R06]  gate2[RAISED ContractViolationError]
+########## 档2：形状顶层 + columns 是元组 ⇒ 列面崩 ##########
 
-=== A3 只给结构面（columns=全列、无 all_columns） ===
-  干净 SQL           gate1[pass=True rule=None]  gate2[pass=True rule=None]
-  deny列-限定表名       gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
-  deny列-不限定        gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
-  未知列              gate1[pass=False rule=R06]  gate2[pass=True rule=None]
+=== gate1 与 gate2 并列 ===
+  干净-不限定       gate1[RAISED AttributeError@751?]  gate2[RAISED AttributeError]
+  deny-不限定     gate1[RAISED AttributeError@751?]  gate2[RAISED AttributeError]
+  deny-限定      gate1[RAISED AttributeError@751?]  gate2[RAISED AttributeError]
+  deny-别名      gate1[RAISED AttributeError@751?]  gate2[RAISED AttributeError]
+  未知列          gate1[RAISED AttributeError@751?]  gate2[RAISED AttributeError]
 
-=== A4 真 runtime 扁平面（columns=元组、无 all_columns） ===
-  干净 SQL           gate1[RAISED AttributeError]  gate2[RAISED AttributeError]
-  deny列-限定表名       gate1[RAISED AttributeError]  gate2[RAISED AttributeError]
-  deny列-不限定        gate1[RAISED AttributeError]  gate2[RAISED AttributeError]
-  未知列              gate1[RAISED AttributeError]  gate2[RAISED AttributeError]
+########## 档3a：形状双面齐 + ④ 视图切结构面（建议方案 D3） ##########
 
-########## B. 反事实变体（④⑤ 改读 all_columns；非生产实现） ##########
+=== gate1 用可见面 / gate2 ④⑤ 用结构面 ===
+  干净-不限定       gate1[pass=True rule=None]  gate2[pass=True rule=None]
+  deny-不限定     gate1[pass=False rule=R06]  gate2[pass=False rule=G2-DENY]
+  deny-限定      gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
+  deny-别名      gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
+  未知列          gate1[pass=False rule=R06]  gate2[pass=True rule=None]
 
-=== B1 双面齐 + ④⑤ 读 all_columns ===
-  干净 SQL           gate2[pass=True rule=None]
-  deny列-限定表名       gate2[rule=G2-DENY]
-  deny列-不限定        gate2[pass=True rule=None]
-  未知列              gate2[pass=True rule=None]
+########## 档3b：把 columns 顶成全列（W7 TierB 做法） ##########
 
-=== B2 只给可见面 + ④⑤ 读 all_columns（消费方盲改） ===
-  干净 SQL           gate2[RAISED ContractViolationError]
-  deny列-限定表名       gate2[rule=G2-DENY]
-  deny列-不限定        gate2[RAISED ContractViolationError]
-  未知列              gate2[RAISED ContractViolationError]
+=== gate1 与 gate2 并列（可见面已被破坏） ===
+  干净-不限定       gate1[pass=True rule=None]  gate2[pass=True rule=None]
+  deny-不限定     gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
+  deny-限定      gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
+  deny-别名      gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
+  未知列          gate1[pass=False rule=R06]  gate2[pass=True rule=None]
+
+########## 档3c：只换 :105、④⑤ 仍读可见面（W7 档A） ##########
+
+=== gate2 单列 ===
+  干净-不限定       gate2[RAISED ContractViolationError]
+  deny-不限定     gate2[RAISED ContractViolationError]
+  deny-限定      gate2[pass=False rule=G2-DENY]
+  deny-别名      gate2[pass=False rule=G2-DENY]
+  未知列          gate2[RAISED ContractViolationError]
