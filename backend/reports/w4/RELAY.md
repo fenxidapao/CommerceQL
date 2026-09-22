@@ -385,3 +385,34 @@ W2C 默认方案 D8 写"若 W4 排不开同窗 ⇒ **宁可等，不单侧先改
 - 复跑门禁：`tests/contract` **429 passed**（426 + 本次 3）｜`ruff check app tests` 干净｜`mypy app` Success / 147 files。仍未跑 `tests/integration`（W7 纪律）。
 - **§十四 的前提未变**：10:38 实测 `policy_gate.py:105` 仍是 `bundle.asset_allowlist(ctx)`、`:148` 仍读 `asset.get("columns")` ⇒ W2C 的 D2/D3/D4 未落地 ⇒ **gate2 对称断言仍不能写绿的**（写了必红），等三处同批时我按 §十四 的两种红法补。
 - ⚠️ **转 W2C 的一处探针/生产不同名**（`2c18868` 的 D5+ `oracle_check`）：探针里 `_rule1()` 走 `bundle.asset_allowlist(CTX)` 来模拟"闸门已吃 wrapper"。而生产 gate1 自 `357618f` 起吃的是 **`guard_allowlist`**。⇒ 若照这份探针复跑"落地判据"，测的是**替身的方法名**不是生产调用面（`U-121` 的病根正是"闸门从哪个方法取"）。请在 D2 落地时把探针入口一并改成 `guard_allowlist`，否则 A/B 两档的读数与生产无关。**归因**：只读比对 `reports/w2c/_probe_u121_faces.py` 的 `_rule1` 与本文件 §13.2，读数时刻 10:45。
+
+---
+
+## 十六、U-122 判据③+④ 落地 + 一处自我订正（14:03，树 `dc62468`）
+
+### 16.1 序号对齐（W7 按架构 v9.3 提出，本窗口接受）
+
+`c2f63cf` 记为 **判据①+② 合一**（① = `explain` 上端口、② = `fetch` 关键字集 == `FETCH_CALL_FACE`）。本轮补齐我名下剩下两条 ⇒ **U-122 的 W4 侧四条齐**（③④ 见下，实现侧声明归 W0 `aa494f6` + W2D `1143f99`）：
+
+| 判据 | 落点 | 实测 |
+|---|---|---|
+| **③** 全链肯定断言 | `tests/contract/test_decision_table_d_e.py::test_d_green_chain_emits_gate_passed_and_executing` | 绿档确实发出 `gate_passed` 与 `executing` 两帧，且 `index(gate_passed) < index(executing)`、`fetch_calls == 1`、终态 `complete`。**此前全链级 0 条肯定断言**（D5/D6 只有 `not in` 否定式；W2D 的"单元级 1 条 / 全链级 0 条"口径由本条关闭） |
+| **④** 替身忠实性 | `tests/contract/test_exec_port_face_contract.py::test_fullchain_script_executor_is_faithful` | `declared_call_face_mismatches(ScriptExecutor()) == ()`；配 **反向对照** `test_call_face_helper_is_load_bearing`：删掉 `explain` 的替身被抓为 `"缺方法 explain"` ⇒ 证明上一条不是空断言 |
+
+门禁读数（14:00–14:03，`cd backend`，未跑 `tests/integration`）：新文件 + D/E 两档 **19 passed**｜`tests/contract` **432 passed**（+3）｜`ruff check app tests` 干净｜`mypy app` Success / 147 files。⚠️ `ruff format --check` 对 `test_decision_table_d_e.py` 报"would reformat" —— 实测**该偏差在 `HEAD` 版本就已存在**（`git show HEAD:… > /tmp/x.py` 后 `--check` 同样报），非本次引入，我**不顺手重排**（`format` 不在 HANDOFF §三 的三条门禁里）。
+
+### 16.2 🔴 自我订正：我 §十五 末条对 W2C 探针的定性说过头了
+
+我写的是"那份探针测的是替身的方法名不是生产调用面 ⇒ **A/B 两档读数与生产无关**"。经 W7 复核 + 架构 v9.2 自证（`reports/arch/probe_u121_half_landed.py`），**该结论要收窄**：
+
+- **形状判据有效**：W2C 探针的替身 `_Shaped` 内部就是取 `rt.guard_allowlist(...)`，所以档 3a/3b 关于"可见面 vs 顶全列"的 `R06`/`R07` 分裂读数**与生产同源**，不是无关。架构 v9.3 已把它升为 `U-121` **判据⑤**。
+- **剩下的只是入口名**：`_rule1()` 外层写的是 `bundle.asset_allowlist(CTX)`，与生产 `guard_allowlist` 不同名 ⇒ 一行改名即可，不影响已出的读数。
+- **"生产调用面有没有人还在吃扁平面"这半边不必我叠层**：已由 W6 `b3092a4` 的**按文件 AST 哨兵**覆盖 ⇒ 我不再另立第二道检查（避免同址两判据）。
+- 保留的正确部分：入口名仍应与生产同名，W2C 落地 D2 时顺手改。⇒ 教训照架构纪律 ① 记一次：**我这句"与生产无关"是否定性断言，写的时候没做"形状来源"的对照实验**（只比了方法名）。旧文不改，本节为具名订正凭据。
+
+### 16.3 角色与待办变更（照架构 v9.2 登记，不重记号）
+
+- `U-119` **判据④ = gate2 对称断言**：裁定改为"**W2C 换调的同一 PR 落地、W4 审形状**" ⇒ 我的角色从"写断言"变"**审形状**"，写法仍按 §十四 两种红法（只 `assert passed is True`，不 `try/except`、不只断言拒绝码）。**`U-119` 不记结案**（架构明令：Test A 转绿 ≠ `U-121` 付清）。
+- `U-121` 落地铁律已由架构升格：**`policy_gate.py` 105 + 141 + 148 同一 PR**，禁止"先换 105 再说"；三家独立读数一致（W4 `6da16db` / W7 09:21 / 架构探针 09:55），半落地态会以未捕获 `ContractViolationError` 冒进图 ⇒ 落 `INTERNAL`，归因能力倒退。
+- 仍欠（未变）：U-116(a) `refuse` 键集断言、U-116(b) `blocking_issues` 裁剪或具名接受、U-115（P1 排序在后）、U-117（等 W3C 两阶段入口）。
+- 共享状态记一笔：我前三条提交由 W7 按总控点名**连带推**（`2c18868..4e782b6`，其 RELAY §二十九①）；本轮起按新纪律**自行 push 本窗口提交**。

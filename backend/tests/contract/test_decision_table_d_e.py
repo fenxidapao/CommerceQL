@@ -127,6 +127,26 @@ class TestGroupD:
         assert chain.executor.fetch_calls == 0
         assert all(e != "data" for e, _ in frames)
 
+    def test_d_green_chain_emits_gate_passed_and_executing(self) -> None:
+        """U-122 判据③（肯定面）：三闸全净过时 `gate_passed` 与 `executing` **必须各发一帧**。
+
+        D5/D6 只有 `"gate_passed" not in` 的否定断言 ⇒ 全链套件此前**没有一条**肯定断言
+        （架构 §22 判据、W2D 复核"单元级 1 条 / 全链级 0 条"）。绿档与 warn/skipped 档
+        的差别正是 `_all_gates_clean_pass` 的开关，所以这条必须与那两条成对存在。
+        """
+        chain = make_chain()
+        frames, outcome = run_chain(chain)
+
+        stages = _stages(frames)
+        assert "gate_passed" in stages
+        assert "executing" in stages
+        assert stages.index("gate_passed") < stages.index("executing")  # §14.2 顺序
+        terminals = terminal_frames(frames)
+        assert len(terminals) == 1
+        assert terminals[0][0] == "complete"
+        assert outcome.status is TaskStatus.SUCCEEDED
+        assert chain.executor.fetch_calls == 1
+
     def test_d5_cost_warn_still_executes(self) -> None:
         """D5 闸门三 `warn` → **仍执行**（无错误事件），且不报告为通过。
 

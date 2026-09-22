@@ -504,3 +504,32 @@ gap 声明进入了摘要（'指标口径目录' 出现） : True
 1. **"证明某形态零命中"这个动作本身会制造命中** ⇒ 写门禁报告要用**分段形态描述**，不能用"引用规则原文"。
 2. **该门禁的作用域 = 工作区 ⊃ git 追踪** ⇒ **`*.bak-*` 留在仓内会被扫到**（W6 那批没命中，只是因为它们的内容里恰好没有该形态，不是因为被豁免）。⇒ 备份要么放仓外（本项目的工作区根就是"仓外"），要么用完即删。
 
+---
+
+## 13. `app.embed_doc` 重灌回执（2026-09-22，响应 W7 的恢复请求）
+
+**触发**：W7 只读取证 —— 共享库 `app.embed_doc` 于 09-22 从 `197|197|197`（09-21 21:05 读数）掉回 `197|0|0`；PG 今晨 09:19:52 重启后该表 `ins=1970 / del=1970 / upd=0`（= **10 次全表重载、末次留 NULL**）。机制 = `tests/integration/test_migration_0003_views.py` 的 `materialize(loaded, dsn=_RW_SP, with_policy=True)`（L201/L228）**不带 `embedder`/`tokenizer`** ⇒ 按 `materialize.py:20-21` 契约写 NULL。**我复核了该文件的 DSN 默认值（L44-56）**：`_SUPER`（postgres 超管）与 `_RW`（app_rw）两套默认值**都直指共享库 `ecom`** —— 与 `test_semantic_materialization.py` 同款（U-114 的处置范围）。
+
+### 13.1 三痕齐全（跑前 / 命令 / 跑后）
+
+- **跑前**（`--dry-run` 独立取证，非转述）：`197 | 0 | 0`（未就绪）；Ollama 可达 ✅、`bge-m3:latest` 在册 ✅、语义包将写 197 篇。
+- **命令**：`CommerceQL\.venv\Scripts\python.exe _w2b_u112_materialize.py`（工作区根 = `deploy/loadtest/w2b_materialize/` 归档件的原件；`with_policy=False`，只写数据、不碰 GRANT/POLICY）。
+- **跑后**（`MaterializeReport`）：`version=2026.09.14.1 | doc_count=197 | embedding_status=embedded | tsv_status=tokenized | grant_policy_executed=False`（warning 一条：§6.2 步骤②未执行 —— 与 09-21 首灌一致）。
+
+### 13.2 恢复判据（用 W7 的**原句 SQL** 复核，不换口径）
+
+- `select count(*), count(embedding), count(tsv) from app.embed_doc`（**不过滤版本**）= **`(197, 197, 197)`** ✅
+- 按 `bundle_version`：**唯一版本** `2026.09.14.1` 197/197/197，无其他版本残留行；`tenant_id` 全部 `'*'`。
+- `kind` 分布 = synonym 105 + column 75 + metric 9 + asset 8 = 197，**与 09-21 首灌逐字一致**。
+
+### 13.3 超出判据的自证（计数 ≠ 可读）+ 权限面复核（新增）
+
+- **生产读路径真打**（`_w2b_u112_verify_read.py`，与 09-21 同一份脚本）：稠密（真 Ollama 查询向量 → `PgVectorStore.topk`）5 命中，top-1 = **`0.707283 [synonym] 销售额`** —— **与 09-21 首灌同值** ⇒ 重灌后检索面稳定；稀疏（`SparseSearch.search`）1 命中 `0.090909 [synonym] 销售额`。
+- **权限面复核（对 W7 机制读数的延伸）**：那 10 次重载走的是 `with_policy=True` ⇒ **GRANT/POLICY 被重放了 10 次**。我按 §6.2 的口径复核：`assert_grant_policy_consistency` = **True / mismatches=0**，`app` schema 现存 POLICY 6 条 ⇒ **权限面完好**（ADR-10"派生同语句集"的幂等性这次是被实打验证了）。**但这不改变结论**：一个集成测试默认能以 app_rw（且测试文件里还有一套超管默认 DSN）反复重放共享库的权限面，这正是 U-114 要关的门。
+
+### 13.4 第三次实锤：重灌是止血，U-114 才是伤口
+
+- 本窗口 09-21 已重灌一次（`51543e1`），09-22 又被清 ⇒ **只要 `COMMERCEQL_TEST_*_DSN` 缺省仍指向共享库，谁跑 `tests/integration` 谁就再清一次**（本次的清空者 = `test_migration_0003_views.py`，连"带 `with_policy=True`"这条都超出了我 09-21 报的 `test_semantic_materialization.py` 那一档）。
+- **本窗口处置照旧**：不跑 `tests/integration`；预检前复核 `(197,197,197)`；**在 U-114 落地前，此恢复动作可能还要再来**。
+
+
