@@ -184,3 +184,42 @@ _show(
 
 print("\n########## 档3c：只换 :105、④⑤ 仍读可见面（W7 档A） ##########")
 _show("gate2 单列", lambda s: f"gate2[{_g2(s, _Shaped(RT))}]")
+
+
+# ============================================================================
+# oracle 机械断言（W7 2026-09-22 提出的落地判据，见 RELAY §6.8 D5）
+#
+#   A（anti-oracle）：gate1 可见面下，"deny 列"与"不存在的列"两条 SQL 的
+#      rule_id **必须同为 R06** —— 两码（R07/R06）= error oracle = 违规。
+#   B（冗余复核活着）：gate2 ④⑤ 对 deny 列三形态必须全 `G2-DENY`。
+#
+#   auditor 视图切面（D3/档3a）= A+B 同时满足；顶全列（3b）= B 满足、A 破坏。
+# ============================================================================
+
+def _rule1(sql: str, bundle) -> str | None:
+    try:
+        return run_gate1(sql, bundle.asset_allowlist(CTX)).gate_result.rule_id
+    except Exception:
+        return "RAISED"
+
+
+def oracle_check(label: str, bundle) -> None:
+    deny_sql = SQLS["deny-不限定"]
+    unknown_sql = SQLS["未知列"]
+    r_deny = _rule1(deny_sql, bundle)
+    r_unknown = _rule1(unknown_sql, bundle)
+    anti_oracle = "PASS" if r_deny == r_unknown == "R06" else "FAIL(oracle!)"
+
+    struct = _g2_variant_4_reads_struct(deny_sql, bundle)
+    redundant = "PASS" if "G2-DENY" in struct else "FAIL"
+
+    print(
+        f"  {label:<28} A_anti_oracle={anti_oracle}"
+        f" (deny={r_deny}, unknown={r_unknown})"
+        f"  B_redundant={redundant} ({struct})"
+    )
+
+
+print("\n########## oracle 机械断言（U-121 落地判据，W7 2026-09-22） ##########")
+oracle_check("档3a D3 视图切面", _Shaped(RT))
+oracle_check("档3b 顶全列（违规对照）", _Shaped(RT, columns_all=True))

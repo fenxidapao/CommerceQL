@@ -43,3 +43,7 @@ semantic bundle loaded: version=2026.09.14.1 status=candidate assets=8 excluded=
   deny-限定      gate2[pass=False rule=G2-DENY]
   deny-别名      gate2[pass=False rule=G2-DENY]
   未知列          gate2[RAISED ContractViolationError]
+
+########## oracle 机械断言（U-121 落地判据，W7 2026-09-22） ##########
+  档3a D3 视图切面                  A_anti_oracle=PASS (deny=R06, unknown=R06)  B_redundant=PASS (pass=False rule=G2-DENY)
+  档3b 顶全列（违规对照）                A_anti_oracle=FAIL(oracle!) (deny=R07, unknown=R06)  B_redundant=PASS (pass=False rule=G2-DENY)
