@@ -372,3 +372,16 @@ W2C 默认方案 D8 写"若 W4 排不开同窗 ⇒ **宁可等，不单侧先改
 ⇒ 复现命令（离线、不连库不连模型）：`python -c` 里 `run_gate2("SELECT pay_amount FROM v_order_paid", ctx, rt)` 与同一条喂"返回 wrapper 的替身端口"。
 ⇒ **断言写法约束（我下次写 gate2 那条时照此，且请 W7/W6 不要把两种形态并成一种）**：Test 只能是 `assert run_gate2(...).gate_result.passed is True` 直取，**禁止** `try/except` 把异常折成"被拒"，也**禁止**只断言拒绝码 —— 档 B 应当以 **error** 形态暴露（可归因到读取面），档 A 以 **`G2-ASSET`** 形态暴露（可归因到取用点）。把 B 写成"也是拒"就会让"只换一半"看起来像"没换"，D3/D4 那一半正是最容易被漏的一半。
 3. 基准第四次漂移记账：`2544399`(docs w4) → `81288ad`/`b3092a4`(W6, 00:17) → `7eaeadc`(W2C 勘误, 09:40)。`origin/main` 仍 = `2e2058a`，**我未推、未代推**。
+
+---
+
+## 十五、U-122 判据② 落地：`SqlExecutorPort` 声明面 == 图调用面（10:38–10:50，树 `2c18868`）
+
+- 新增 `tests/contract/test_exec_port_face_contract.py`（架构 v1.6.5 §22.3 裁定②："写由 W4、审由 W0"）三条机械断言，**实测 3 passed**：
+  1. `fetch` 参数名 == `app.exec.seam.FETCH_CALL_FACE`（含 `effective_limit`）；
+  2. `explain` **在端口上**且参数名 == `EXPLAIN_CALL_FACE`（U-63 的入口从此有锁）；
+  3. `effective_limit` **无默认值**且 `KEYWORD_ONLY`（W0 `aa494f6` 裁定：给默认值 = 允许静默漏传 = §8.6 `truncated` 口径 fail-open）。
+- **反向对照（证明断言不是空转）**：同一判据打在 `app/exec/seam.py:114` 的 `ExecutorSeam.fetch` 上，`effective_limit` 默认值实测 `= None` ⇒ **该档不成立** ⇒ 端口与 seam 确实差在"必填"这一刀；真实现 `PgSqlExecutor.fetch` 也 `= None`（更宽松仍满足端口声明 ⇒ W0 那句"不要求任何实现改动"我这边复算成立）。
+- 复跑门禁：`tests/contract` **429 passed**（426 + 本次 3）｜`ruff check app tests` 干净｜`mypy app` Success / 147 files。仍未跑 `tests/integration`（W7 纪律）。
+- **§十四 的前提未变**：10:38 实测 `policy_gate.py:105` 仍是 `bundle.asset_allowlist(ctx)`、`:148` 仍读 `asset.get("columns")` ⇒ W2C 的 D2/D3/D4 未落地 ⇒ **gate2 对称断言仍不能写绿的**（写了必红），等三处同批时我按 §十四 的两种红法补。
+- ⚠️ **转 W2C 的一处探针/生产不同名**（`2c18868` 的 D5+ `oracle_check`）：探针里 `_rule1()` 走 `bundle.asset_allowlist(CTX)` 来模拟"闸门已吃 wrapper"。而生产 gate1 自 `357618f` 起吃的是 **`guard_allowlist`**。⇒ 若照这份探针复跑"落地判据"，测的是**替身的方法名**不是生产调用面（`U-121` 的病根正是"闸门从哪个方法取"）。请在 D2 落地时把探针入口一并改成 `guard_allowlist`，否则 A/B 两档的读数与生产无关。**归因**：只读比对 `reports/w2c/_probe_u121_faces.py` 的 `_rule1` 与本文件 §13.2，读数时刻 10:45。
