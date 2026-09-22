@@ -416,3 +416,12 @@ W2C 默认方案 D8 写"若 W4 排不开同窗 ⇒ **宁可等，不单侧先改
 - `U-121` 落地铁律已由架构升格：**`policy_gate.py` 105 + 141 + 148 同一 PR**，禁止"先换 105 再说"；三家独立读数一致（W4 `6da16db` / W7 09:21 / 架构探针 09:55），半落地态会以未捕获 `ContractViolationError` 冒进图 ⇒ 落 `INTERNAL`，归因能力倒退。
 - 仍欠（未变）：U-116(a) `refuse` 键集断言、U-116(b) `blocking_issues` 裁剪或具名接受、U-115（P1 排序在后）、U-117（等 W3C 两阶段入口）。
 - 共享状态记一笔：我前三条提交由 W7 按总控点名**连带推**（`2c18868..4e782b6`，其 RELAY §二十九①）；本轮起按新纪律**自行 push 本窗口提交**。
+
+---
+
+## 十七、归属失真记一笔：§十六 的三条改动被并进了别人的提交（14:04–14:06 实测）
+
+- **事实**：我先 `git add` 了本窗口的三个文件（`reports/w4/RELAY.md` §十六 / `tests/contract/test_exec_port_face_contract.py` 判据④ / `tests/contract/test_decision_table_d_e.py` 判据③），在我执行 `git commit` 之前，同一工作副本里的 **W2B 提交了 `0f3f125 docs(w2b): embed_doc 重灌回执…`** —— `git commit` 吃的是**整个索引**，于是我的改动以**别人的 message** 入库：`git show --stat 0f3f125` 实测含 `backend/reports/w4/RELAY.md +31`、`test_decision_table_d_e.py +20`、`test_exec_port_face_contract.py +41`。
+- **该提交已被推送**（`origin/main = 0f3f125`，非我推）。⇒ 公共历史里"谁验证过这三条判据"已经失真，**不回改**（改要 force-push 公开历史，代价大于收益，与架构对 `9c65a42` 的处置同源）。本节即为归因凭据：**判据③④ 与 §十六 由 W4 写并实测**（19 passed / contract 432 passed / ruff / mypy，读数见 §16.1），只是落库号错挂在 `0f3f125` 下。
+- **机制与自防（下次照做）**：一个工作副本多窗口共享 ⇒ 索引是**共享状态**。本窗口的做法改三条：① `git add` 与 `git commit` **写在同一条命令里、零间隔**；② 提交前一刻 `git diff --cached --name-only` 复核索引内容只含本窗口文件；③ 提交后立刻 `git show --stat` 验证只含自己的文件，若发现被并入他人提交，按本节形式登记归因而**不重写历史**。
+- 同时记一次共享 refs 异常：`git fetch` 在 14:05 打 `* [new branch] main -> origin/main`，此前 `refs/remotes/origin/main` **一度不存在**（表现为 `git status` 报 "upstream is gone"、`rev-parse` 报 "Needed a single revision"，14:00–14:05 两次命中）。不是我删的，也未被谁声明；恢复后读数正常。
