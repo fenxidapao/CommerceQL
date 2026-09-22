@@ -356,3 +356,19 @@ W2C 的 A4 档记"真 runtime 扁平面直喂 ⇒ `AttributeError`（`ast_gate:7
 ### 13.7 与 W2C `§6.8 D8` 的一处冲突（已按架构裁定走，登记不隐瞒）
 
 W2C 默认方案 D8 写"若 W4 排不开同窗 ⇒ **宁可等，不单侧先改**（单侧 = 两真相）"；架构 §22.1③ 则把 `gate1_ast.py:52` 的换调判给 **W4 现在做**、判据 = `2 passed`，总控与 W7 亦放行。本窗口按**架构裁定 > 他窗默认方案**执行，并把"两真相"的**可观测后果**写成 §13.5 的实测（gate1 过 / gate2 拒），供 W2C 落地时对照。⚠️ D3/D4 与 D2 必须同批（"换方法 ≠ 换读取面"），这条我方无代码，只做登记与转述。
+
+---
+
+## 十四、gate2 断言的**两种红法**（W7 复测确认 + 本窗口独立实测，2026-09-22 09:46）
+
+1. **W7 的独立复测收下**（09:21，`test_gate_seam_contract.py` = 2 passed / 真实 `exit=0`，`gate1_ast.py:56` 已是 `guard_allowlist` + 请求级 `max_rows`）。本窗口在同一时段的复跑同读数 ⇒ §十三 的落地**不依赖我这棵树**：新树 `7eaeadc`（W6 `b3092a4` + W2C `7eaeadc` 已在我两条提交之后）上再测 **`tests/contract` 426 passed / ruff 干净 / mypy 147 files Success**。
+2. **对 §13.2 末行"gate2 对称断言今天写就是必红"补一句：红法有两种**（W7 提示，本窗口离线双档实测，命令见下）：
+
+| 档 | 状态 | 实测形态 | 归因 |
+|---|---|---|---|
+| **A** | `policy_gate.py:105` **未换**（= 今天，09:46 实测该行仍是 `bundle.asset_allowlist(ctx)`） | `passed=False` / **`G2-ASSET`**（"查询涉及的数据范围超出你的权限"） | 缺**换方法**（W2C 的 D2） |
+| **B** | **只换 `:105`**、没换 `:141/:148` 读取面（用替身端口模拟：`asset_allowlist` 返回 `guard_allowlist(...)`） | **抛 `ContractViolationError`**，抛出点 `policy_gate.py:148` 的 ⑤，detail 带 `asset`；即"语义包 `tenant_scoped` 与 `tenant_id` 列不一致" | 缺**换读取面**（D3/D4）—— ⑤ 读可见面，`tenant_id` 已被裁 ⇒ 断言恒假 |
+
+⇒ 复现命令（离线、不连库不连模型）：`python -c` 里 `run_gate2("SELECT pay_amount FROM v_order_paid", ctx, rt)` 与同一条喂"返回 wrapper 的替身端口"。
+⇒ **断言写法约束（我下次写 gate2 那条时照此，且请 W7/W6 不要把两种形态并成一种）**：Test 只能是 `assert run_gate2(...).gate_result.passed is True` 直取，**禁止** `try/except` 把异常折成"被拒"，也**禁止**只断言拒绝码 —— 档 B 应当以 **error** 形态暴露（可归因到读取面），档 A 以 **`G2-ASSET`** 形态暴露（可归因到取用点）。把 B 写成"也是拒"就会让"只换一半"看起来像"没换"，D3/D4 那一半正是最容易被漏的一半。
+3. 基准第四次漂移记账：`2544399`(docs w4) → `81288ad`/`b3092a4`(W6, 00:17) → `7eaeadc`(W2C 勘误, 09:40)。`origin/main` 仍 = `2e2058a`，**我未推、未代推**。
