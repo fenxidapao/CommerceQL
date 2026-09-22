@@ -13,18 +13,10 @@ R14 字面量白名单的三类来源（07 §7.2 原文）：
     ② 注入的默认谓词常量（从谓词 AST 提取）
     ③ 语义包声明的白名单常量（``allowlist["allowed_constants"]``）
 
-allowlist 输入形状（与 W2A ``asset_allowlist(ctx)`` 的对齐点，见 reports/w2c/RELAY.md）：
-
-    {
-      "bundle_version": str,
-      "assets": { <物理名>: {"logical_name": str, "domain": str,
-                              "tenant_scoped": bool, "columns": {<列名>: <类型>}} },
-      "joins": [ {"left": <逻辑名>, "right": <逻辑名>, "on_columns": [str, ...]} ],
-      "deny_columns": ["<逻辑名>.<列名>", ...],
-      "default_predicates": {<域>: ["<谓词 SQL 片段>", ...]},
-      "allowed_constants": [str],
-      "max_rows": int,          # 可选；R04 注入上限
-    }
+allowlist 输入形状：**不做本模块声明**（U-121 第三步收口）——唯一真相是
+``app/core/contracts.py::GuardAllowlist``（W0，七键 + ``assets[]`` 双列面：
+可见面 ``columns`` 供本模块 R06 列解析 / 结构面 ``all_columns`` 供 gate2 ④⑤
+与 R17 类型）。形状若与本模块消费方式冲突，改契约，不在 guard 内自适配。
 """
 
 from __future__ import annotations

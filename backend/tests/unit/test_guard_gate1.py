@@ -105,7 +105,10 @@ class TestBlockingRules:
     )
     def test_r07_deny_columns(self, allow: dict, sql: str) -> None:
         r = run_gate1(sql, allow)
-        assert not r.passed and r.gate_result.rule_id == "R07"
+        # U-121 判据⑤（07 v1.6.8）：可见面已裁 deny 列 ⇒ 无表别名形态归 R06
+        # （归属失败）、限定/别名形态归 R07 —— 两者都必须拒，且**禁止分裂出
+        # 第三种码**；单值断言 R07 只在可见面裁剪前的旧夹具下成立。
+        assert not r.passed and r.gate_result.rule_id in {"R06", "R07"}
 
     @pytest.mark.parametrize(
         "sql",

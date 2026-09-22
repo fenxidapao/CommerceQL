@@ -173,10 +173,10 @@ def _show(label: str, fn) -> None:
         print(f"  {name:<12} {fn(sql)}")
 
 
-print("########## 档1：gate2 现状存档 —— :105 仍调 asset_allowlist ⇒ 扁平面 ⇒ G2-ASSET ##########")
-print("(gate1 生产已换 guard_allowlist【W4 357618f】，本档不再单列 gate1；gate1 侧见档2/3a/3b)")
+print("########## 档1：落地后生产读数（run_gate2 走 guard_allowlist，真 runtime 无修饰） ##########")
+print("(D2/D3/D4 落地【本 commit】后：干净 SQL 过、deny 三形态全 G2-DENY；此前此档恒 G2-ASSET)")
 _show(
-    "gate2（真扁平面 = RT.asset_allowlist）",
+    "gate2（真 runtime 经 __getattr__ 转发 guard_allowlist）",
     lambda s: f"gate2[{_g2(s, _Runtime(RT))}]",
 )
 
@@ -201,7 +201,8 @@ _show(
     f"  gate2[{_g2(s, _Shaped(RT, columns_all=True))}]",
 )
 
-print("\n########## 档3c：只换 :105、④⑤ 仍读可见面（W7 档A） ##########")
+print("\n########## 档3c：历史反事实存档（只换 :105、④⑤ 仍读可见面 ⇒ 旧生产抛错） ##########")
+print("(落地后 run_gate2 已切读取面，本档不再复现生产——读数变为全对，仅留作对照)")
 _show("gate2 单列", lambda s: f"gate2[{_g2(s, _Shaped(RT))}]")
 
 

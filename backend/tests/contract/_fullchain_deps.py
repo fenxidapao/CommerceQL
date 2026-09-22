@@ -151,29 +151,37 @@ def base_allowlist() -> dict[str, Any]:
 
     `fact_orders` 带 `buyer_phone`（敏感列）但**不在 deny_columns** —— 单一 allowlist
     下它可被查出（D3 需要 gate2 的第二份 allowlist 才会拦它）。
+
+    U-121 双面：`columns` = 可见面、`all_columns` = 结构面（全列）。本基线无
+    deny ⇒ 两面同内容，但**键必须都在**（gate2 ⑤ 读 `all_columns`，缺键 =
+    `tenant_scoped` 双向断言误抛，`policy_gate.py` 落地后的实测红）。
     """
-    return {
-        "bundle_version": BUNDLE_VERSION,
-        "assets": {
-            "fact_orders": {
-                "logical_name": "order_paid",
-                "domain": "sales",
-                "tenant_scoped": True,
-                "columns": {
-                    "order_id": "bigint",
-                    "tenant_id": "text",
-                    "amount": "numeric",
-                    "region_code": "bigint",
-                    "buyer_phone": "text",
-                },
-            },
-            "dim_region": {
-                "logical_name": "region",
-                "domain": "geography",
-                "tenant_scoped": False,
-                "columns": {"region_code": "bigint", "region_name": "text"},
+
+    assets = {
+        "fact_orders": {
+            "logical_name": "order_paid",
+            "domain": "sales",
+            "tenant_scoped": True,
+            "columns": {
+                "order_id": "bigint",
+                "tenant_id": "text",
+                "amount": "numeric",
+                "region_code": "bigint",
+                "buyer_phone": "text",
             },
         },
+        "dim_region": {
+            "logical_name": "region",
+            "domain": "geography",
+            "tenant_scoped": False,
+            "columns": {"region_code": "bigint", "region_name": "text"},
+        },
+    }
+    for asset in assets.values():
+        asset["all_columns"] = dict(asset["columns"])
+    return {
+        "bundle_version": BUNDLE_VERSION,
+        "assets": assets,
         "joins": [],
         "deny_columns": [],
         "default_predicates": {},

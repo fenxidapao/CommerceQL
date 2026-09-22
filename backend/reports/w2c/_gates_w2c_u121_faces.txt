@@ -1,22 +1,22 @@
 semantic bundle loaded: version=2026.09.14.1 status=candidate assets=8 excluded=0 warnings=1
-########## 档1：gate2 现状存档 —— :105 仍调 asset_allowlist ⇒ 扁平面 ⇒ G2-ASSET ##########
-(gate1 生产已换 guard_allowlist【W4 357618f】，本档不再单列 gate1；gate1 侧见档2/3a/3b)
+########## 档1：落地后生产读数（run_gate2 走 guard_allowlist，真 runtime 无修饰） ##########
+(D2/D3/D4 落地【本 commit】后：干净 SQL 过、deny 三形态全 G2-DENY；此前此档恒 G2-ASSET)
 
-=== gate2（真扁平面 = RT.asset_allowlist） ===
-  干净-不限定       gate2[pass=False rule=G2-ASSET]
-  deny-不限定     gate2[pass=False rule=G2-ASSET]
-  deny-限定      gate2[pass=False rule=G2-ASSET]
-  deny-别名      gate2[pass=False rule=G2-ASSET]
-  未知列          gate2[pass=False rule=G2-ASSET]
+=== gate2（真 runtime 经 __getattr__ 转发 guard_allowlist） ===
+  干净-不限定       gate2[pass=True rule=None]
+  deny-不限定     gate2[pass=False rule=G2-DENY]
+  deny-限定      gate2[pass=False rule=G2-DENY]
+  deny-别名      gate2[pass=False rule=G2-DENY]
+  未知列          gate2[pass=True rule=None]
 
 ########## 档2：形状顶层 + columns 是元组 ⇒ 列面崩 ##########
 
 === gate1 与 gate2 并列 ===
-  干净-不限定       gate1[RAISED AttributeError@751?]  gate2[RAISED AttributeError]
-  deny-不限定     gate1[RAISED AttributeError@751?]  gate2[RAISED AttributeError]
-  deny-限定      gate1[RAISED AttributeError@751?]  gate2[RAISED AttributeError]
-  deny-别名      gate1[RAISED AttributeError@751?]  gate2[RAISED AttributeError]
-  未知列          gate1[RAISED AttributeError@751?]  gate2[RAISED AttributeError]
+  干净-不限定       gate1[RAISED AttributeError@751?]  gate2[pass=True rule=None]
+  deny-不限定     gate1[RAISED AttributeError@751?]  gate2[pass=False rule=G2-DENY]
+  deny-限定      gate1[RAISED AttributeError@751?]  gate2[pass=False rule=G2-DENY]
+  deny-别名      gate1[RAISED AttributeError@751?]  gate2[pass=False rule=G2-DENY]
+  未知列          gate1[RAISED AttributeError@751?]  gate2[pass=True rule=None]
 
 ########## 档3a：形状双面齐 + ④ 视图切结构面（建议方案 D3） ##########
 
@@ -36,14 +36,15 @@ semantic bundle loaded: version=2026.09.14.1 status=candidate assets=8 excluded=
   deny-别名      gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
   未知列          gate1[pass=False rule=R06]  gate2[pass=True rule=None]
 
-########## 档3c：只换 :105、④⑤ 仍读可见面（W7 档A） ##########
+########## 档3c：历史反事实存档（只换 :105、④⑤ 仍读可见面 ⇒ 旧生产抛错） ##########
+(落地后 run_gate2 已切读取面，本档不再复现生产——读数变为全对，仅留作对照)
 
 === gate2 单列 ===
-  干净-不限定       gate2[RAISED ContractViolationError]
-  deny-不限定     gate2[RAISED ContractViolationError]
+  干净-不限定       gate2[pass=True rule=None]
+  deny-不限定     gate2[pass=False rule=G2-DENY]
   deny-限定      gate2[pass=False rule=G2-DENY]
   deny-别名      gate2[pass=False rule=G2-DENY]
-  未知列          gate2[RAISED ContractViolationError]
+  未知列          gate2[pass=True rule=None]
 
 ########## oracle 机械断言（U-121 落地判据，W7 2026-09-22） ##########
   档3a D3 视图切面                  A_anti_oracle=PASS (deny=R06, unknown=R06)  B_redundant=PASS (pass=False rule=G2-DENY)

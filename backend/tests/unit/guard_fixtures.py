@@ -27,20 +27,30 @@ def load_bundle_yaml() -> dict[str, Any]:
 
 
 def build_allowlist(bundle: dict[str, Any] | None = None) -> dict[str, Any]:
-    """把语义包 YAML 转成 guard 的 allowlist 输入形状（见 app/guard/ast_gate.py docstring）。
+    """把语义包 YAML 转成 guard 的 allowlist 输入形状（唯一真相 ``contracts.GuardAllowlist``）。
 
-    ⚠️ 这是 W2A ``asset_allowlist(ctx)`` 的**预期形状** —— 对齐点已登记
-    reports/w2c/RELAY.md；W2A 交付后本夹具应改为直接调其运行时。
+    U-121 双面（07 v1.6.8 判据⑤的落点约束）：``columns`` = **可见面**
+    （裁 deny 列，供 gate1 R06 列解析）；``all_columns`` = **结构面**
+    （全列，供 gate2 ④⑤ / R17）。两面同源于同一份语义包声明。
     """
 
     b = bundle if bundle is not None else load_bundle_yaml()
+    deny: list[str] = []
+    for p in b["policies"]:
+        deny.extend(p.get("deny_columns") or [])
+    deny_set = frozenset(deny)
     assets: dict[str, Any] = {}
     for a in b["assets"]:
+        all_cols = {c["name"]: c["type"] for c in a["columns"]}
+        logical = a["logical_name"]
         assets[a["physical_asset"]] = {
-            "logical_name": a["logical_name"],
+            "logical_name": logical,
             "domain": a["domain"],
             "tenant_scoped": bool(a["tenant_scoped"]),
-            "columns": {c["name"]: c["type"] for c in a["columns"]},
+            "columns": {
+                k: v for k, v in all_cols.items() if f"{logical}.{k}" not in deny_set
+            },
+            "all_columns": all_cols,
         }
     joins = [
         {
@@ -50,9 +60,6 @@ def build_allowlist(bundle: dict[str, Any] | None = None) -> dict[str, Any]:
         }
         for j in b["joins"]
     ]
-    deny: list[str] = []
-    for p in b["policies"]:
-        deny.extend(p.get("deny_columns") or [])
     default_predicates = {
         domain: [p["predicate"] for p in preds]
         for domain, preds in b["default_predicates"].items()
@@ -79,6 +86,11 @@ class FakeSemanticBundle:
         return self._version
 
     def asset_allowlist(self, ctx: IdentityContext) -> dict[str, Any]:
+        return self._allowlist
+
+    def guard_allowlist(
+        self, ctx: IdentityContext, *, max_rows: int | None = None
+    ) -> dict[str, Any]:
         return self._allowlist
 
     def time_semantics(self):  # pragma: no cover - gate2 不消费

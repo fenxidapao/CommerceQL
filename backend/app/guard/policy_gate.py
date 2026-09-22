@@ -100,9 +100,14 @@ def _refuse(reason: RefuseReason, scope: ScopeInfo) -> Gate2Report:
 def run_gate2(
     sql: str, ctx: IdentityContext, bundle: SemanticBundlePort
 ) -> Gate2Report:
-    """执行 gate2。入参形状与 ``GuardPort.gate2`` 一致。"""
+    """执行 gate2。入参形状与 ``GuardPort.gate2`` 一致。
 
-    allowlist: Mapping[str, Any] = bundle.asset_allowlist(ctx)
+    取用面 = ``bundle.guard_allowlist(ctx)``（U-121 第三步；七键形状，
+    唯一真相 ``app/core/contracts.py::GuardAllowlist``）。gate1 与 gate2
+    **各自取一次是刻意的**（``gate1_ast.py`` docstring）——不要合并。
+    """
+
+    allowlist: Mapping[str, Any] = bundle.guard_allowlist(ctx)
     assets: Mapping[str, Any] = allowlist.get("assets") or {}
 
     # ---- ① 版本一致性（请求固定版本 vs 当前激活版本）----
@@ -137,15 +142,20 @@ def run_gate2(
             return _refuse(RefuseReason.OUT_OF_SCOPE, scope_now)
 
     # ---- ④ 敏感列二次复核（与 gate1 R07 冗余，07 §7.4 原文）----
+    # 归属面切**结构面**（U-121 判据⑤的落点约束：结构面只对 gate2 ④ 开；
+    # gate1 的列解析必须留在可见面）。可见面已裁 deny 列 ⇒ 直接喂会让
+    # 无表别名的 deny 列归属失败 ⇒ ④ 遍历体不执行 = 静默漏检。
     deny: frozenset[str] = frozenset(allowlist.get("deny_columns") or ())
-    for logical, col in extract_columns_with_assets(sql, allowlist):
+    for logical, col in extract_columns_with_assets(sql, _struct_view(allowlist)):
         if f"{logical}.{col}" in deny:
             return _reject("G2-DENY", "查询包含受保护字段", scope_now)
 
     # ---- ⑤ tenant_scoped 双向断言（07 §7.4 ⚠️：写反 = N-07 失效）----
+    # 读**结构面**（all_columns）：可见面已裁 tenant_id（deny 列），读可见面
+    # 会让 tenant_scoped=true 的资产在干净 SQL 上误抛 ContractViolationError。
     for asset in involved:
         tenant_scoped = bool(asset.get("tenant_scoped"))
-        has_tenant_col = "tenant_id" in (asset.get("columns") or {})
+        has_tenant_col = "tenant_id" in (asset.get("all_columns") or {})
         if tenant_scoped != has_tenant_col:
             raise ContractViolationError(
                 "语义包 tenant_scoped 与 tenant_id 列不一致（07 §7.4 双向断言）",
@@ -171,6 +181,28 @@ def _compute_scope(
         return ScopeInfo(ScopeLevel.TENANT_ISOLATED, True, None, False)
     # 分支 4
     return ScopeInfo(ScopeLevel.UNRESTRICTED, False, None, True)
+
+
+def _struct_view(allowlist: Mapping[str, Any]) -> Mapping[str, Any]:
+    """把 ``assets[].columns`` 顶成结构面（``all_columns``）的**一次性视图**。
+
+    仅供 gate2 ④ 的列归属使用（U-121 判据⑤落点约束）——**不得**传给 gate1：
+    gate1 的列解析必须留在可见面（否则 deny 列归因 R06→R07 分裂 = error oracle，
+    07 v1.6.8 判据⑤）。形状不含 ``all_columns`` 时退回原 ``columns``（fail-closed
+    由调用侧 ``deny_columns`` 比对兜底）。
+    """
+
+    assets = allowlist.get("assets") or {}
+    return {
+        **allowlist,
+        "assets": {
+            key: {
+                **asset,
+                "columns": dict(asset.get("all_columns") or asset.get("columns") or {}),
+            }
+            for key, asset in assets.items()
+        },
+    }
 
 
 def _extract_tables(sql: str) -> list[str]:
