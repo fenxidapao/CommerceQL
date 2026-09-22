@@ -425,3 +425,38 @@ W2C 默认方案 D8 写"若 W4 排不开同窗 ⇒ **宁可等，不单侧先改
 - **该提交已被推送**（`origin/main = 0f3f125`，非我推）。⇒ 公共历史里"谁验证过这三条判据"已经失真，**不回改**（改要 force-push 公开历史，代价大于收益，与架构对 `9c65a42` 的处置同源）。本节即为归因凭据：**判据③④ 与 §十六 由 W4 写并实测**（19 passed / contract 432 passed / ruff / mypy，读数见 §16.1），只是落库号错挂在 `0f3f125` 下。
 - **机制与自防（下次照做）**：一个工作副本多窗口共享 ⇒ 索引是**共享状态**。本窗口的做法改三条：① `git add` 与 `git commit` **写在同一条命令里、零间隔**；② 提交前一刻 `git diff --cached --name-only` 复核索引内容只含本窗口文件；③ 提交后立刻 `git show --stat` 验证只含自己的文件，若发现被并入他人提交，按本节形式登记归因而**不重写历史**。
 - 同时记一次共享 refs 异常：`git fetch` 在 14:05 打 `* [new branch] main -> origin/main`，此前 `refs/remotes/origin/main` **一度不存在**（表现为 `git status` 报 "upstream is gone"、`rev-parse` 报 "Needed a single revision"，14:00–14:05 两次命中）。不是我删的，也未被谁声明；恢复后读数正常。
+
+---
+
+## 十八、W7 上呈「闸门 `rule_id` 到不了任何归因面」——本窗口自证 + 拆责任 + 要号（21:13，树 `d4ca203`）
+
+### 18.1 三条读数我逐条复现了（只读，全部成立）
+
+| W7 的说法 | 本窗口实测 |
+|---|---|
+| error 帧只有 `code/message/retryable` | ✅ `app/api/runner.py:543-563`：`payload` 三键 + `detail`（且仅当 `errors.detail_allowed_for(role)` **且** `mapping.detail` 非空）。闸门码走 `map_code` 的固定文案 ⇒ 帧面无 `rule_id` |
+| `gate_detail`（含 `rule_id`）只挂在 `gate_passed` 上 | ✅ `app/graph/events.py:215` 是 `gate_detail` 的**唯一**发射点，且被 `_all_gates_clean_pass` 门住 ⇒ **只有全净通过才发**，拒绝路径永远不发 |
+| `gate_reject_total{rule_id=""}` 恒空 | ✅ `app/obs/instrumentation.py:448-455` 的反推只能给 `gate_no`（`_GATE_NO_BY_ERROR_CODE`，:91-95），`rule_id` 只能从帧上取（`_gate_facts` :474-487）⇒ 上游没给 ⇒ 恒落 `EMPTY_LABEL_VALUE` |
+
+### 18.2 还有第四处，W7 没报（我扫出来的）：**标签面只开了 gate1 的字母表**
+
+`app/obs/metrics.py:671-677` 把 `gate_reject_total` 的 `rule_id` 取值域声明为 `(EMPTY, *AstRule)`；而端口上的载体是 `GateResult.rule_id: str | None`（`app/core/contracts.py:137`），**三闸通用字符串**。
+⇒ 后果：即使按 W7 建议在节点侧补记，**gate2 的 `G2-ASSET`/`G2-DENY`/`G2-VERSION` 与 gate3 的号会被开放集"丢弃 + 计溢出"**（`metrics.py:207` 的越界处置）⇒ 光挪记录点治不好，标签面必须同时放宽。**这条决定它是跨窗三处、不是两处。**
+
+### 18.3 拆责任（按 08 §4.1）与"不单侧先改"的理由
+
+| # | 落点 | 归属 | 成本 |
+|---|---|---|---|
+| ① | 节点侧唯一记录点：`app/graph/nodes/_shared.py::gate_update`（:116-120，**三闸共用的收敛点**，`gate1_ast.py:63`/`gate2_policy.py:62`/`gate3_cost.py:92` 都过它）里对 `result.passed is False` 记 `metrics.observe_gate_reject(gate_no, rule_id)` | **W4** | 1 处（API 现成：`metrics.py:962` 已收 `rule_id`） |
+| ② | 摘掉 `instrumentation.py:448-455` 的 `error` 帧反推 | **W7**（`app/obs/**` 指标部分按 08 §4.1:287 归 W7） | 删一段；**必须与 ① 同批**，否则 `gate_reject_total` 双计 |
+| ③ | `rule_id` 取值域从 `AstRule` 放宽到三闸规则字母表 | **W7** | 声明 + 溢出计数复核 |
+
+⇒ **本窗口本轮不动代码**：①单落 = 制造双计 + gate2/3 读数被丢弃，正是本项目一周内被烧过三次的"半落地比现状坏"。先例支持节点侧：exec 面的权威记录点就在节点（`nodes/execute.py::_on_failure` 记 `exec_failure_total{error_class}`），而**没有**从帧反推 —— 那条注释本身就写在 `instrumentation.py:456-462`（"① 与节点侧双计；② 五类压一类"）。
+⇒ 帧面出口**本轮不碰**：`error` 载荷属附录 A（最高优先级契约），加 `rule_id` 要走上游回填，请架构裁"是否需要"，我不擅自加键。
+
+### 18.4 要号 + 一条 exec 面读数订正
+
+- 🔴 **报架构要号**：`07 §14.5` "闸门拒绝率按 `rule_id` 分组"今天做不到（18.1 三条 + 18.2 第四处），修复面跨 W4/W7 三处 —— 请归一个号（**默认按 `U-123`**；`docs/07 §4.8` 若已另有安排以 §4.8 为准）。本窗口**不自占号**。
+- 同时记一笔 W7 的 `executing` 首次非 0（`preflight_r6.json`）：W4 的 exec 面**第一次被真流量走到**，死因 `unknown_table` ⇒ **不是 exec 缺陷**（引用了不在册资产，成因在语义包/闸门面）。⚠️ 但要说清归因面现状：`app/exec/errors.py:136-140` 把 `unknown_column/unknown_table/type_mismatch/unknown_function/syntax_error` **五类压成同一个 `SQL_SYNTAX_ERROR`** ⇒ 帧上只会是语法错；W7 能分清是靠节点侧 `exec_failure_total{error_class}`（18.3 的正面先例）与其离线器件，**不是**靠 error 帧。
+
+> 复现命令（全部离线、零额度）：`sed -n '543,563p' app/api/runner.py`｜`sed -n '213,217p;295,305p' app/graph/events.py`｜`sed -n '448,462p' app/obs/instrumentation.py`｜`sed -n '667,678p' app/obs/metrics.py`｜`sed -n '136,140p' app/exec/errors.py`。读数时刻 2026-09-22 21:13，树 `d4ca203`；本窗口本轮**未改代码、未跑门禁**（无代码改动可测）。
