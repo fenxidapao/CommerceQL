@@ -44,10 +44,12 @@
 | 2 | `app.embed_doc` 向量/tsv 全 NULL | ✅ 已灌（197/197/197）+ U-112 已修 | README §三.0.1d/e |
 | 3 | PLAN 自拒（指标目录从未进 plan prompt） | ✅ W2A 已修并活体验证（`plan_summary` 由 `null` → 含 `"metrics":["gmv"]`） | README §三.0.1h |
 | 4 | `bind` 0.2s 掐掉一次真 LLM 调用 | ✅ 架构裁 (B)、W4 落 `8202204`；实测 `l4_score` 三条 1,605–1,700ms 全部完成 | README §三.0.1h/i |
-| 5 | **GATE1 把每条真 SQL 都拒（`GATE_AST_REJECTED` = U-121）** | 🔴 **当前卡点，不归 W7** | README §三.0.1i + RELAY §二十六③ |
-| 6/7 | **GATE3（真 EXPLAIN）与 EXECUTE（真 DB + 身份 GUC）** | ❌ `gate_passed=0`、`executing=0` ⇒ **一帧都没见过**，且真路径按 U-63 须经 W2D 受控入口 | RELAY §二十七④ |
+| 5 | **GATE1 把每条真 SQL 都拒（`GATE_AST_REJECTED` = U-121）** | ✅ **gate1 半边已付清**（W4 `357618f` 换调 `guard_allowlist`；U-119 那条刻意红 09-22 复跑 = **2 passed**）；🔴 **gate2 半边仍开 = W2C 三处**（`policy_gate.py:105` 取用面 + `:141` ④ + `:148` ⑤） | README §三.0.1i + `RELAY.md` §二十八①② |
+| 6/7 | **GATE3（真 EXPLAIN）与 EXECUTE（真 DB + 身份 GUC）** | ❌ `gate_passed=0`、`executing=0` ⇒ **一帧都没见过**；真路径按 U-63 须经 W2D 受控入口。**⚠️ 架构 v1.6.5 更正：这两格离线侧今天就能兑现**（W2D 探针 exit 0 ⇒ 生产为 0 的成因在 U-121，不在 exec） | RELAY §二十七④ + `reports/arch/HANDOVER §10.1` |
+| 8 | **🔴 复现前置本身没了：`app.embed_doc` = `197\|0\|0`** | ❌ 09-22 11:10 后置核查实测（昨晚 21:05 是 `197\|197\|197`）。机制 = integration 夹具用不带 `embedder`/`tokenizer` 的 `materialize()` 重载全表（**U-114**）。⇒ **重灌（W2B）之前：谁都不能跑预检/跑批** | `RELAY.md` §二十八⑦ + `DELIVERY.md` §四 末两行 |
 
-⇒ **结论口径（写进任何汇报都要带）**：当前**测不出"容量"，因为链路走不到执行**。近期演示走 clarify/refuse，**不宣称 G-6 达标**（架构明令禁止"修完就能演示"的写法）。
+⇒ **结论口径（写进任何汇报都要带）**：当前**测不出"容量"，因为链路走不到执行**（且第 8 格让复现前置本身也不在）。
+近期演示走 clarify/refuse，**不宣称 G-6 达标**（架构明令禁止"修完就能演示"的写法）。
 
 ---
 
@@ -56,15 +58,23 @@
 ### P0（阻塞 G-6，不由本窗口做，但由本窗口盯）
 | # | 事项 | 归属 | W7 的动作 |
 |---|---|---|---|
-| U-121 | 闸门 7 键判据在生产不可达（端口给扁平、闸门要 wrapper；三方分工 W0 定形状 → W2A 实现 → W2C 消费 + 删自造口径） | W0 + W2A + W2C | **不动代码**。落地后：重建镜像 → c=1 预检 → 看 `gate_passed`/`executing` 是否从 0 起（第六、第七格首次现身） |
-| U-119 | 生产端口原样输出直连闸门的契约测试（`tests/contract/test_gate_seam_contract.py`，W4 已落 `8a4121a`） | W4 + W6 | ⚠️ **它刻意红**：全量 `pytest -q` 今后恒有 1 failed ⇒ 报读数必须点名，别当自己的回归；U-121 修好后**它该转绿**，由 W4/W6 确认 |
+| U-121 | 闸门 allowlist 形状。**gate1 半边已付清**（W4 `357618f`），剩 **gate2 三处**：`policy_gate.py:105`（取用面）+ `:141` ④ + `:148` ⑤，**必须同一 PR**（只换 105 = 干净 SQL 当场抛未捕获 `ContractViolationError`，我以三档探针实测过）。落地判据再加一条：**"deny 列"与"不存在的列"在 gate1 必须同为 `R06`**（顶全列 = 列存在性 oracle） | W2C（W0 形状 ✅ / W2A 实现 ✅ / W4 消费 ✅） | **不动代码**。落地后：重建镜像 → 先恢复 embed_doc → c=1 预检 → 看 `gate_passed`/`executing` 是否从 0 起 |
+| 🔴 **新** | **`app.embed_doc` = `197\|0\|0`**（09-22 被 integration 夹具重载成全 NULL = U-114）⇒ G-6 复现前置失效 | W2B 重灌；门禁归 W6 + W0/W1B | **谁都不能跑预检/跑批**；每次开工前置三查第 2 条必须回到 `197\|197\|197` |
+| U-119 | 生产端口直连闸门的契约测试（`tests/contract/test_gate_seam_contract.py`） | W4 + W6 | ✅ **09-22 复跑 = 2 passed / exit=0**（`357618f` 按改写后的判据）。⚠️ 旧纪律句"全量恒有 1 条刻意红"**只对 `8a4121a..357618f` 成立**，引用必带区间 |
 
-### P1（本窗口的活，按顺序做）
-1. **U-120（架构新派给我）**：`MIN_ADMITTED_FOR_P95 = 20` 现在**只用于写 caveat**（`driver.py:316` 定义、`:443-445` 使用），`admitted=5` 照样输出 `latency_ms.p95` + 布尔 `g6_p95_le_8s` ⇒ 低样本时量具会产出可被引用的分位数。
-   **最小改法（已核兼容性）**：`admitted < 20` ⇒ **`g6_p95_le_8s` 置 `null`**、保留 `latency_ms` 字段形状不动（W6 读端 `eval/reporter.py:175-177` 已过滤 `None`，不会红），并按老规矩补**变异测试**（退回旧行为必须红）。改完给 W6 打招呼（它的 gate 语义从"布尔"变"三态"）。
-   验收判据：同一份 n=5 回执重算后 `g6_p95_le_8s === null`；n≥20 的样例仍出布尔；有一条用例正向钉这条。
-2. **RL-2 告警口径**（我欠的）：`query_outcome_total{outcome="degraded"}` 实测恒 0 而 degraded+refused 请求存在 ⇒ **假分母**；降级率必须改挂 `degraded_total`，看板/规则文案同步（见 DELIVERY §三/§五）。
-3. **`retrieval_mode_total` 仍零调用点**（09-21 订正：`binding_layer`/`binding_state` 已被 W4 接上，只剩这一族）⇒ 要么提需求接线，要么在看板上摘掉；**不得当证据引用**。
+### P1（本窗口的活）
+1. ✅ **U-120 已落（09-22 第十轮）**：`g6_p95_le_8s` 改**三态**（`p95` 无值 / 无 `admission` / `admitted<20` ⇒ `null`），
+   判定点收在 `driver._g6_boolean()`；`--self-check` 加 7 情形 + **`_summarize` 调用点双向**；
+   变异检查入库 `backend/reports/w7/scratch_g6_mutation_check.py` ⇒ **6/6 被抓**。⚠️ **教训**：第一版 M1 逃跑，
+   因为用例只测助手函数、而变异打在调用点上（"断言打错对象"）。W6 的两条守卫复跑 PASSED（三态没打断读端）。
+2. ✅ **A-1（架构 v1.6.6，不占 U 号）代码已落**：`--roll-up` 同时重算两个派生量 + `g6_derived_audit` before/after，
+   并修掉就地补算漏传 `admission` 的缺陷（有对照）。**待办 = 那 11 份归档件要不要就地降档，等总控点头**
+   （演示读数已在副本上跑过；`receipt.json` 是 W6 的 G-6 默认输入）。
+3. ✅ **RL-2 降级率已改挂 `degraded_total`**（四处同步：`RL-2` §22/§132、`runbook/README.md`、`alert.rules.yml` 注释、看板 `description`）；
+   两个假分母逐处点名禁用。**接线需求仍在 W2B**（一行 `observe_retrieval_mode()`）⇒ 接线前它不得当证据引用。
+4. ✅ **U-122 归我那半已写**（`README §四.4`：`truncated` 是客户端流截断 ≠ §8.6 行数截断；L 无出口 ⇒ 压测判不了服务端截断）。
+   ⚠️ **仍欠**：判据④ 落地后回一条可复制的读法 —— **UNVERIFIED**，别引成"已有"。
+5. **新窗口第一屏**：等 U-121 gate2 三处 + embed_doc 重灌 ⇒ 从新 commit 重建镜像 ⇒ c=1 预检 ⇒ 判据④ 过了才谈跑批（**先报规模与花费**）。
 
 ### P2（DoD 收尾，未跑就标 UNVERIFIED）
 - RL-1/RL-3 的 `DB_UNAVAILABLE` 活体行为；Grafana 面板渲染 + nginx `/metrics` 404（本机无镜像）；`exec_failure_total` 读数。

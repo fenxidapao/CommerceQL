@@ -1,0 +1,79 @@
+semantic bundle loaded: version=2026.09.14.1 status=candidate assets=8 excluded=0 warnings=1
+{
+ "A_只换取用面": {
+  "plain_unqualified": {
+   "raised": "ContractViolationError",
+   "message": "语义包 tenant_scoped 与 tenant_id 列不一致（07 §7.4 双向断言） | detail={'asset': 'order_paid'}"
+  },
+  "deny_unqualified": {
+   "raised": "ContractViolationError",
+   "message": "语义包 tenant_scoped 与 tenant_id 列不一致（07 §7.4 双向断言） | detail={'asset': 'order_paid'}"
+  },
+  "deny_qualified": {
+   "passed": false,
+   "rule_id": "G2-DENY"
+  },
+  "deny_qualified_alias": {
+   "passed": false,
+   "rule_id": "G2-DENY"
+  }
+ },
+ "B_顶全列(读数器件_非落地形态)": {
+  "plain_unqualified": {
+   "passed": true,
+   "rule_id": null
+  },
+  "deny_unqualified": {
+   "passed": false,
+   "rule_id": "G2-DENY"
+  },
+  "deny_qualified": {
+   "passed": false,
+   "rule_id": "G2-DENY"
+  },
+  "deny_qualified_alias": {
+   "passed": false,
+   "rule_id": "G2-DENY"
+  }
+ },
+ "生产今天(未换 105)": {
+  "plain_unqualified": {
+   "passed": false,
+   "rule_id": "G2-ASSET"
+  },
+  "deny_unqualified": {
+   "passed": false,
+   "rule_id": "G2-ASSET"
+  },
+  "deny_qualified": {
+   "passed": false,
+   "rule_id": "G2-ASSET"
+  },
+  "deny_qualified_alias": {
+   "passed": false,
+   "rule_id": "G2-ASSET"
+  }
+ },
+ "oracle对照_gate1的rule_id": {
+  "可见面(端口原样)": {
+   "deny列": {
+    "passed": false,
+    "rule_id": "R06"
+   },
+   "不存在的列": {
+    "passed": false,
+    "rule_id": "R06"
+   }
+  },
+  "顶全列(=档B手法)": {
+   "deny列": {
+    "passed": false,
+    "rule_id": "R07"
+   },
+   "不存在的列": {
+    "passed": false,
+    "rule_id": "R06"
+   }
+  }
+ }
+}

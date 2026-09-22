@@ -1570,4 +1570,131 @@ http_requests_total{endpoint="/api/v1/query",status="2xx"} = 12（含本轮两�
 
 - ✅ 实测（**零 LLM、零额度**）：`git fetch` + `git log origin/main`（`8a4121a`/`417b056` 已在远端，我本地 0/0 同步）；`MIN_ADMITTED_FOR_P95 = 20` 在 `driver.py:316` 但**只用于写 caveat**（`:443-445`）⇒ U-120 成立；W6 读端 `eval/reporter.py:175-177` **已容忍 `latency_ms.p95 = null`**（过滤 None + 空则走不可判）⇒ 我修 U-120 不需要 W6 同步改，但仍要打招呼；`tests/contract/test_gate_seam_contract.py` 存在于 HEAD。
 - ❌ 未跑：G-6 跑批（判据④ 不过）、预检复跑（等 U-121）、`tests/integration`（会清 `embed_doc` = U-114）、迁移套件。**本轮一次模型调用都没花。**
-- ⚠️ 一处不是我、也不该我碰的脏文件：`backend/reports/w2-int/e2e_stage2_check.py`（只删了一行 `# -*- coding: utf-8 -*-`、无归属登记）。架构已要求 W2-INT/W2B 认领或还原。**我在每轮 `git status` 里都会看见它，但不 stage、不还原、不删除。**
+- ⚠️ 一处不是我、也不该我碰的脏文件：`backend/reports/w2-int/e2e_stage2_check.py`（只删了一行 `# -*- coding: utf-8 -*-`、无归属登记）。架构已要求 W2-INT/W2B 认领或还原。**我在每轮 `git status` 里都会看见它，但不 stage、不还原、不删除。**（⚠️ 本节 ⑧-3 登记：该文件已于 09-21 21:12 由 W2-INT 自行落库 `633f434`，此行自 09-22 起过期）
+
+---
+
+## 二十八、U-120 三态 + A-1 落地（零额度）· gate2 三档读数与一条 oracle · 🔴 共享库 `embed_doc` 被清空（09-22 上午 · 第十轮）
+
+> 基准：`2c18868`（= 远端 `main`，本地 0/0 同步，10:42 实测）。本轮**零模型调用、零额度**，
+> 一次 `tests/integration` 都没跑（U-114 禁令），共享栈只做过只读 `docker exec`/`curl`。
+
+### ① 盘面复测（都是我自己跑的，不是转述）
+
+| 项 | 读数（时刻） |
+|---|---|
+| 我的地盘是否被他人改过 | `git diff --stat ff3e122..HEAD -- deploy/ backend/app/obs/ backend/app/api/routers/health.py` → **空**（只有 `backend/tests/{eval,unit}` 四个文件动过，那是 W6/W2A/W2D 的） |
+| U-119 那条"刻意红" | 09:21 `pytest tests/contract/test_gate_seam_contract.py -q` → **2 passed / 真实 exit=0** ⇒ **我 §二十七④ 那句"今后全量恒有 1 条红"已过期**（架构 v1.6.7 已加时效限定：只对 `8a4121a..357618f` 成立）。留痕、不改旧文 |
+| U-121 进度 | `gate1_ast.py:56` 已换 `guard_allowlist(identity, max_rows=_request_max_rows(state))`；`policy_gate.py:105` 仍 `bundle.asset_allowlist(ctx)`、`:148` 仍读可见面 ⇒ **3/4，只剩 W2C** |
+| `all_columns` 有读者吗 | 09:20 `git grep all_columns -- backend/app` → 只有 `contracts.py:348`（声明）+ `runtime.py:203`（产出）⇒ **guard 侧零读者**（W2C 自述成立，我复核） |
+| 端口形状 | `guard_allowlist(ctx, max_rows=None)` 七键齐；`v_order_paid` 可见面 **21 列** / 结构面 **24 列**（与 W2A 自述同数） |
+
+### ② 🔴 三档 gate2 读数（器件入库：`backend/reports/w7/scratch_gate2_face_probe.py` + `.out`）
+
+器件只读（不改 `app/guard/**`），跑法在文件头。**读数**：
+
+| 档 | 干净 SQL | deny 列·不限定 | deny 列·限定 / 别名 | 未知列 |
+|---|---|---|---|---|
+| 生产今天（未换 `:105`） | `G2-ASSET` | `G2-ASSET` | `G2-ASSET` | `G2-ASSET` |
+| A：只换 `:105`（④⑤ 仍可见面） | 🛑 **抛 `ContractViolationError`**（⑤，`detail={'asset':'order_paid'}`） | 🛑 同上 | `G2-DENY`（④ 仍响） | 🛑 同上 |
+| B：④⑤ 顶到结构面 | `passed=true` | `G2-DENY` | `G2-DENY` | — |
+
+⇒ 三条结论：**(a)** "只换 105 不换读取面 = 与今天一样"**不成立** —— 形态从"恒拒"变成**未捕获异常**，
+下次预检会以 `INTERNAL` 出现，而不是以拒绝码出现；**(b)** 我在档 B 复现不出 W2C v1 的"不限定形态漏检"，
+W2C 复跑后自证是探针 bug 并已勘误（`7eaeadc`）；**(c) 新发现**（W2C 提、我独立复现、已入库成第四档 `oracle对照`）：
+档 B 那种"顶全列"会让 gate1 归因从 `R06`（deny 列与不存在列**同码**）漂成 `R07`/`R06` **两码**
+⇒ **`rule_id` 成了列存在性 oracle**（N-07 相邻面）。已转 W2C 与架构，W2C 钉进 §6.8 D5+（`2c18868`）。
+⚠️ **我自己的器件为此改过两处**：档 B 改名 `B_顶全列(读数器件_非落地形态)` + docstring 具名警告 —— 否则它会被照抄成落地形态。
+
+### ③ U-120 三态已落地（架构 v1.6.5 三条补充全收）
+
+`driver.py`：判定点收进 `_g6_boolean(p95, admission)` 一处 —— `p95 is None` / 无 `admission` /
+`admitted < 20` ⇒ **`null`**；只有 `admitted ≥ 20` 才许出 `true`/`false`（旧写法三种情形都给布尔，
+且"没有 p95"给的是 `false`）。`scope` 未扩到 `ttfb_ms`/`latency_ms_all_ms`；`latency_ms` 与 `schema` 串形状未动。
+
+守卫与分离力：
+- `--self-check` 加 7 情形三态用例 + **`_summarize` 调用点双向**（低样本⇒`null`；20 条同型准入样本⇒真给 `true`）。
+  实测 **exit=0**，读数含 `g6_p95_le_8s 7 情形三态正确（含 _summarize 调用点双向）`。
+- 变异检查入库 `backend/reports/w7/scratch_g6_mutation_check.py`（基线先跑必绿 / 每处断言"注入真的发生了" /
+  只改临时副本）⇒ **6/6 被抓、0 逃跑**。`M1 退回无条件布尔`、`M3 去掉样本门槛`、`M4 门槛常量改 1`、
+  `M5 roll-up 不算布尔`、`M6 roll-up 越界改读数` = **断言式**抓红（exit=3）；
+  `M2 去掉「没有 p95」这一支` = **崩溃式**抓红（`TypeError` / exit=1）。两种都拦住了，但只有前者是断言在说话。
+- ★ **自曝一条方法论**：第一版变异检查 **M1 逃跑**。原因 = 我的用例只测助手函数 `_g6_boolean`，而 M1 改的是
+  **调用点**的接线 ⇒ 助手用例全绿、量具却退回旧行为。这是本项目反复说的"断言打错了对象"，这次打在我自己身上。
+
+### ④ A-1（不占 U 号）已落 + 顺手抓出我自己一处缺陷
+
+`--roll-up` 现在同时重算 `g6_caveat` 与 `g6_p95_le_8s`，每格留 `g6_derived_audit{caveat,bool}_before/after`，
+读数（`outcomes`/`latency_ms`/`codes`/`admission`）不碰 —— 越界会被自检里 M6 那条抓住。
+
+**副本演示读数（10:5x，归档件未动）**：`receipt_steady true→null`、`receipt_burst`（p95=**274.6ms**）`true→null`、
+`baseline_c5 true→null`、`preflight_r5` **`false→null`**（架构补充①点名的正是这格：p95 有值但 `admitted=5`）。
+**对照实验**（零额度）：用 `git show HEAD:` 取出**旧** `driver.py`、对同一份 `preflight_r5.json` 跑就地补算 ⇒
+写回的 caveat 变成「本回执无 `admission` 字段（产自 U-106 口径之前）」并**丢掉**真实那句「准入样本仅 5 条」
+⇒ 证明旧 `:794` 漏传 `admission` 是真缺陷（假话 + 丢真话）。已修：两处共用 `_recompute_g6_derived()`。
+
+⚠️ **未执行、等点名**：对 11 份**归档件本身**就地降档 = 改写归档证据的字节，且 `receipt.json` 是 W6 的 G-6 默认输入。
+我只在副本上演示；要真做请总控点头，做完在 `README §四.3` 登记读数。
+
+### ⑤ 不可引用清单与 RL-2 口径（我欠的两条已还）
+
+- `deploy/loadtest/README.md` 新增 **§四.3**：三态判据表 + 变异读数 + **14 格 / 11 份文件**清单 + 一条可复算命令。
+  三方同数：我 10:26 手工数、W6 产物 `probe_loadtest_receipts.json` 的 `stale_true_cells_total=14`、清单里的命令。
+  并写明**两种红法不许并成一种** —— `preflight_r4/r5`（p95 42,529.1 / 187,728.9ms）是"量到了、超预算"，
+  它们的布尔本来就是 `false`，不在 14 格里。
+- **RL-2 降级率改挂 `degraded_total`**，四处同步：`RL-2-ollama-unavailable.md` §22 与 §132、
+  `runbook/README.md` 的判据索引行、`observability/alert.rules.yml` 末尾注释、看板 `commerceql.json` 的 `description`。
+  点名两个假分母：`retrieval_mode_total`（无调用点 ⇒ 恒 0 序列 ⇒ `0/0` = 无数据）、
+  `query_outcome_total{outcome="degraded"}`（恒 0：被降级请求的终止态只记 `refuse`/`clarify` ⇒ 系统性低估）。
+  ⚠️ 接线需求仍归 **W2B**（`link` 侧一行 `observe_retrieval_mode(...)`）；接线前它**不得当证据引用**。
+- **U-122 归我的那半**写进 `README §四.4`：`outcomes.truncated` 是**客户端流截断**（流结束无终止帧，N-08 违约），
+  不是 §8.6 的行数截断；且实测 `limit_injected` 只有 `{"injected": true}`、**注入值 L 无出口** +
+  `execute.py:133-146` 的 `_effective_limit` **P0 恒 `None`** ⇒ 压测回执**不能**当"服务端截断判定已验证"的证据。
+  那条"判据④ 落地后的读法"仍 **UNVERIFIED**（今天写不出来，别在别处引成已有）。
+
+### ⑥ 本轮门禁读数（子集；**刻意不含 integration**）
+
+| 项 | 命令 | 读数 |
+|---|---|---|
+| 量具自检 | `driver.py --self-check` | **exit=0**；10/10 分类 + 7 情形三态（含调用点双向）+ A-1 双向 2 夹具 + 准入分桶 + 10 条指纹 |
+| 变异分离力 | `backend/reports/w7/scratch_g6_mutation_check.py` | 基线绿 + **6/6 被抓、0 逃跑** |
+| 离线（子集） | `pytest tests/unit tests/contract -q` | **1802 passed / 0 failed / exit=0 / 90.26s** |
+| W6 的产出契约 | `pytest tests/eval -q` | **318 passed / exit=0**；点名两条 PASSED：`test_todays_w7_driver_shape_can_still_reach_a_pass`、`test_the_reader_never_depends_on_w7s_g6_boolean[True/False/None]` ⇒ 三态没打断 W6 读端 |
+| 静态 | `ruff check .`（backend 根）+ `ruff check ../deploy/loadtest/driver.py reports/w7/` | All checks passed |
+| 类型 | `mypy ../deploy/loadtest/driver.py reports/w7/scratch_*.py` | Success |
+| 观测配置 | `yaml.safe_load` + 看板 JSON 解析 + `promtool check rules` + `promtool test rules`（`prom/prometheus:v2.54.1`，只读挂载） | **9 规则 / 5 group SUCCESS**；`test rules` **SUCCESS** |
+| DSN 卫生门禁 | `pytest tests/unit/test_migration_dsn_hygiene.py -q` | **8 passed**（含我三份新文件，未自伤） |
+| ❌ **没跑** | `pytest -q` 全量 / `tests/integration` / 迁移套件 | **纪律**（U-114；见 ⑦）⇒ 本窗口**不报"全量 passed 数"**，别拿我的数字当全量 |
+
+### ⑦ 🔴 共享状态事故：`app.embed_doc` 的向量与 tsv 已空（影响所有窗口，G-6 前置失效）
+
+11:10 后置核查实测：`select count(*),count(embedding),count(tsv) from app.embed_doc` = **`197|0|0`**
+（昨晚 21:05 是 `197|197|197`）。⇒ **谁现在都别跑预检**（这是前置三查第 2 条，本来就该每次开工前跑）。
+
+| 证据（全部只读） | 读数 |
+|---|---|
+| PG 实例启动 | `pg_postmaster_start_time()` = **09-22 09:19:52 本地** ⇒ 今晨重启过，累计统计归零 |
+| 写计数 | `pg_stat_user_tables.embed_doc`：`ins=1970 / del=1970 / upd=0` ⇒ 重启后 **10 次全表重载**、最后一次留 NULL |
+| 机制（代码依据） | `tests/integration/test_migration_0003_views.py:201,228` = `materialize(loaded, dsn=_RW_SP, with_policy=True)` **不带 `embedder=`/`tokenizer=`** ⇒ 按 `materialize.py:20-21` 的契约两列写 NULL。**就是 U-114 早已写下的那条** |
+| 谁可能跑的 | W6 今晨报告（10:17–10:22 落盘）里那 3 条 `ERROR` 就在 `tests/integration/test_retrieval_fts_pg.py` ⇒ 那次"全量"**真的连上了库** ⇒ 同一次里 0003 那份也会跑。⚠️ **我没有对照实验证明这一点 ⇒ 只到"高度相关"，不写成定论** |
+| 排除我自己 | ① 我三次 pytest 的路径是 `tests/unit`、`tests/contract`、`tests/eval`，**没有 integration**；② 涉及 `embed_doc`/`materialize` 的两个 unit 文件（`test_materialize_derivation.py`/`test_retrieval_dense.py`）里 `psycopg\|connect\|DSN` **零命中**；③ 宿主解析不了 conftest 默认 DSN 的主机名 `pg`（实测 `gaierror`），而 `127.0.0.1:5432` 可连 ⇒ 能写共享库的只有"显式指到 127.0.0.1 的那类夹具"；④ 我的探针从不建连（纯闸门函数 + 假 DSN） |
+
+**我要的三件事（放行条件，不是需求清单）**：
+1. **W2B 重灌** `197|197|197`（`materialize(..., embedder=OllamaEmbedder(...), tokenizer=...)`）—— 那是 W2B 的表，我不写别人的东西。
+2. **总控点名一条门禁**（面归 W6 + W0/W1B，我不占号）：任何窗口跑 `tests/integration` 或"全量"之前，
+   必须把夹具 DSN 指到一次性库。今天缺的是**强制**，不是意识 —— W4 已把这条写进自己 HANDOFF，
+   但一条 `pytest -q` 就能绕过它，而代价是**所有人的复现前置**（`07 §16.5` 与本机 194 万行合成数据）。
+3. 恢复前我这边继续挂着：**c=1 预检与跑批都不跑**（本来也因判据④ 不过）。
+
+### ⑧ 我自己两条订正 + 两条过期声明（留痕，不改历史文本）
+
+1. 上一轮我写"12 份 receipt 文件带 stale `true`" ⇒ 错。正确是 **14 格 / 11 份文件**（我把两份 `preflight_*` 数进去了，
+   它们的布尔本来就是 `false`）。W6 订正、我 10:26 自己复数确认。
+2. 上一轮我转述 W2C 的"只做第 2 项不做第 3 项 ⇒ 后果与今天完全一样" ⇒ **不准确**，我 ② 档实测是"当场抛未捕获异常"。
+   W2C 已按我这条勘误（`7eaeadc`）。
+3. 过期两条：① §二十七④ 的"全量 suite 今后恒有 1 条刻意红"已随 `357618f` 失效（见 ①）；
+   ② 本节上方 §二十七⑤ 末行"每轮 `git status` 会看见 `w2-int/e2e_stage2_check.py`"不再成立（`633f434` 已落库），
+   我在原行加了过期标注，未改正文。
+4. 当前**不属于我**的脏文件登记（不 stage、不还原、不删除）：`backend/reports/w4/{HANDOFF.md,RELAY.md}`（W4 在跑）、
+   未跟踪的 `backend/reports/logs_x.txt`（09:56 落盘，内容是一句"找不到 `reports/arch/reports/arch/probe_u121_half_landed.py`"
+   的报错重定向，疑似架构窗口的误写件）、未跟踪的 `backend/reports/arch/`（架构历轮不入库）。
