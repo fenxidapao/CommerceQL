@@ -1,10 +1,10 @@
 {
   "reader": "eval/reporter.loadtest_pressure + eval/gates.evaluate_gates(pressure=…)",
   "schema_string_read_verbatim": "w7.loadtest.receipt/1",
-  "n_files": 13,
+  "n_files": 14,
   "verdict_tally": {
     "UNVERIFIED": 11,
-    "FAIL": 2
+    "FAIL": 3
   },
   "any_pass": false,
   "stale_true_cells_total": 14,
@@ -74,6 +74,29 @@
       "has_admission": true,
       "g6_p95_le_8s_values": [
         "False"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/preflight_r6.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 11157ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/preflight_r6.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-22T11:48:48+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 11157ms；全请求 P95 = 11157ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=5, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 5 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "None"
       ],
       "stale_true_cells": 0,
       "null_caveat_scenarios": 0,

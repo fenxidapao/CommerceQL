@@ -1,9 +1,9 @@
 {
   "meta": {
-    "generated_at": "2026-09-22T09:31:16+00:00",
+    "generated_at": "2026-09-22T13:41:21+00:00",
     "window": "W6",
     "git": {
-      "rev": "c76f701",
+      "rev": "0f67fa9",
       "dirty": true
     },
     "run_config": {
@@ -141,7 +141,7 @@
       "gate_id": "G-1",
       "condition": "全部 P0 用例通过",
       "verdict": "FAIL",
-      "measured": "断言失败 1 + 夹具 error 10 = 红 11 条；unit+contract passed=2180, integration_ran=True",
+      "measured": "断言失败 1 + 夹具 error 10 = 红 11 条；unit+contract passed=2187, integration_ran=True",
       "basis": "§17.1 单元 + 集成",
       "caveats": [
         "断言失败逐条点名：`tests/redteam/test_redteam_guard.py::TestRedTeamFrozenSet::test_block_cases_blocked_with_rule_attribution`",
