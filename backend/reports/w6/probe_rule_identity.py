@@ -53,7 +53,7 @@ import _bootstrap  # noqa: E402
 
 _bootstrap.bootstrap()
 
-from harness import build_guard_allowlist, identity_for_case  # noqa: E402
+from harness import identity_for_case  # noqa: E402
 
 from app.core.enums import Role  # noqa: E402
 from app.guard import run_gate1  # noqa: E402
@@ -78,7 +78,7 @@ def main() -> int:
     loaded = load_bundle(_bootstrap.BUNDLE_PATH)
     runtime = SemanticBundleRuntime(loaded)
     ctx = identity_for_case("probe-rule-identity", "T_A", role=Role.ANALYST)
-    allowlist = build_guard_allowlist(loaded, runtime, ctx)
+    allowlist = runtime.guard_allowlist(ctx, max_rows=None)
 
     visible = {
         str(a.physical_asset): sorted(allowlist["assets"][str(a.physical_asset)]["columns"])

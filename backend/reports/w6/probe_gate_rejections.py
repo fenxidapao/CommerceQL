@@ -67,7 +67,6 @@ import _bootstrap  # noqa: E402
 _bootstrap.bootstrap()
 
 import sqlglot  # noqa: E402
-from harness import build_guard_allowlist  # noqa: E402  # (W6 自己的适配器，非生产件)
 
 from app.core.contracts import IdentityContext  # noqa: E402
 from app.core.enums import Role  # noqa: E402
@@ -205,7 +204,7 @@ def _by_behavior(cases: list[dict], hit: list[dict]) -> dict:
 def main() -> int:
     loaded = load_bundle(_bootstrap.BUNDLE_PATH)
     runtime = SemanticBundleRuntime(loaded)
-    allowlist = build_guard_allowlist(loaded, runtime, _ctx())
+    allowlist = runtime.guard_allowlist(_ctx(), max_rows=None)
 
     f1 = {name: _gate(allowlist, sql) for name, sql in F1_CASES.items()}
     f2 = {name: _gate(allowlist, sql) for name, sql in F2_CASES.items()}
