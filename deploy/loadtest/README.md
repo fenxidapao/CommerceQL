@@ -610,6 +610,29 @@ W6 产物 `probe_loadtest_receipts.json` 的 `stale_true_cells_total=14` 三方�
 `baseline_c5 true→null`、`preflight_r5 false→null`。⚠️ **11 份归档件本身的就地降档尚未执行**
 —— 那会改写归档证据的字节、且 `receipt.json` 是 W6 的 G-6 默认输入 ⇒ 等总控点头再做，做完在此登记读数。
 
+**架构 v1.6.9 点名要的那条读数：注入 `admitted=5` ⇒ 达标字段必须缺席**（零额度，在副本上做，不碰归档件）：
+
+```bash
+mkdir -p E:/tmp_w7/u120 && cp deploy/loadtest/preflight_r5.json E:/tmp_w7/u120/
+cd deploy/loadtest && PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../../.venv/Scripts/python.exe \
+  driver.py --roll-up E:/tmp_w7/u120/preflight_r5.json --out E:/tmp_w7/u120/merged.json
+```
+
+09-22 15:2x 实测（逐字）：
+
+```
+[合成] 1 份 → …/merged.json：1 条场景，其中 1 条的派生判定量被重算（caveat 补算 / g6 布尔降档）
+g6_p95_le_8s = null            ← 重算前这格是 false（旧写法把"没量到"写成"不达标"）
+admitted     = 5 | outcomes = {"refuse": 1, "clarify": 1, "error_frame": 3}
+merged 件同名字段 = null        ← 合成件与输入件一致；admission/outcomes/latency_ms 未被改写
+audit = {"bool_before": false, "bool_after": null, "changed": true, "caveat_before": …, "caveat_after": …}
+```
+
+**变异用例名**（架构要求点名；跑法 `PYTHONIOENCODING=utf-8 PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w7/scratch_g6_mutation_check.py`）：
+`M1 退回无条件布尔` / `M2 去掉「没有 p95」这一支` / `M3 去掉准入样本门槛` / `M4 把门槛常量改成 1` /
+`M5 roll-up 只算 caveat 不算布尔` / `M6 roll-up 越界改读数` ⇒ 09-22 15:2x 复跑 **6/6 被抓、0 逃跑、基线先绿**。
+守卫本体在 `driver.py --self-check` 的两处：`bool_cases`（7 情形）与 **`_summarize` 调用点双向**（后者是被 M1 逼出来的 —— 见 `RELAY §二十八③`）。
+
 ### 四.4 U-122：本目录引用 exec 侧读数的口径（归 W7 的那半）
 
 | 本目录里的名字 | 它**不是**什么 | 实测依据（2026-09-22，零额度） |
@@ -618,8 +641,21 @@ W6 产物 `probe_loadtest_receipts.json` 的 `stale_true_cells_total=14` 三方�
 | 任何回执 | ❌ 不能当"服务端截断判定已验证"的证据 | gate1 的 `limit_injected` 实测只有 `{"injected": true}`，**注入值 L 没有出口**；`app/graph/nodes/execute.py:133-146` 的 `_effective_limit` **P0 恒 `None`** ⇒ §8.6 的 `truncated` 判定在生产路径今天就是退化的 |
 
 ⇒ 结论口径：压测面**只能**判"端到端有没有在 8s 内收口"，判不了"结果集有没有被静默截断"。
-后者要等 U-122 判据①②④ 落地（端口成员集 + 替身忠实性）＋ W2C 给出 L 的出口，
+后者要等 **U-122 剩余两条**（③ 全链肯定断言、④ 替身忠实性 `declared_call_face_mismatches()==()`；
+①端口成员集 + ②`isinstance` 反证已由 W4 `c2f63cf` 落地，序号按架构 v9.3 对齐）＋ W2C 给出 L 的出口，
 本目录届时回一条可复制的读法。⚠️ 该读法 **UNVERIFIED**（今天写不出来，别在别处引成"已有"）。
+
+### 四.5 预检归因核对表（跑预检时照抄，别让"红因"靠记忆 —— 架构 v1.6.9 两条后果的落地）
+
+| 看到什么形态 | 第一解释（**待验假设，不是读数**） | 必须同时给出的证据 | 零额度复核手段 |
+|---|---|---|---|
+| `codes={GATE_AST_REJECTED:n}` 且 `sql_ready=0` | gate1 没吃到端口形状（镜像没含 W4 `357618f`） | 容器日志里的 `R05` 行 | `docker logs` + `/metrics` |
+| `codes={INTERNAL:n}` 且 `sql_ready>0` | 🔴 W2C **半落地态**：只换 `policy_gate.py:105`、没换 ④⑤ 读取面 ⇒ ⑤ 抛未捕获 `ContractViolationError` | ⚠️ 按 §14.2 **不得凭 `code` 推成因** ⇒ 必须附 `error_type` + 栈（`graph_run_failed` 带 `exc_info`），并点名抛出点 `policy_gate.py:148` | `docker logs --since` + 器件 `scratch_gate2_face_probe.py` 档 A |
+| `gate_passed=0` 且 `codes` 里有 `G2-*` | gate2 已接线、判据真在拒（正常态，不是坏了） | 拒绝码 + `rule_id` | `/metrics` + `app.audit_log` 只读 |
+| 链路走到 gate1 之后的任意 SQL | **归因面核对**（架构 U-121 判据⑤）：同一资产跑「任一 deny 列」与「该资产内根本不存在的列名」 | 两者在 gate1 的 `rule_id` **必须同为 `R06`**；分裂成 `R07`/`R06` ⇒ 顶全列 = **列存在性 oracle** ⇒ 功能面过了也判未落地 | 同一器件第四档 `oracle对照`（两条 SQL × 两种面已内置） |
+
+⚠️ 前 3 行今天都还是**假设**（GATE3/EXECUTE 与 gate2 的活体帧至今 `=0` ⇒ UNVERIFIED）。
+第 4 行是唯一已经量过的：09-22 实测可见面 `R06/R06`、顶全列 `R07/R06`（`scratch_gate2_face_probe.out`）。
 
 
 
