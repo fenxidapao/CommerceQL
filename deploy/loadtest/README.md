@@ -560,6 +560,69 @@ psycopg 3.3.5 把第二个位置参数当 `params`、返回一个**没进入的 
 ⚠️ 一处必须一起说的：`latency_ms_all_ms` 保留了**旧混算口径**，只用于"同一次跑批两口径对照"，
 **不得**被引用成任何达标结论 —— 有 `p95_scope` 的场合，权威值是 `latency_ms.p95`。
 
+### 四.3 U-120：`g6_p95_le_8s` 是**三态**，不是布尔（2026-09-22 落地）
+
+判定点收在 `driver._g6_boolean()` 一处（唯一写点仍是 `_summarize`）。`None` 有三种来路，
+每一种都比旧写法诚实 —— 旧写法在 `admitted=5` 时照样给布尔，且 p95 无值时给 `false`：
+
+| 输入 | `g6_p95_le_8s` | 为什么 |
+|---|---|---|
+| `p95 = None` | `null` | "没有数"写成 `false` = 谎报"不达标"（架构 v1.6.5 补的①） |
+| 无 `admission`（U-106 之前的旧件） | `null` | 分母口径无法确认 |
+| `admitted < 20` | `null` | 07 §16.5：落点由个别样本决定，不构成容量结论 |
+| `admitted ≥ 20` 且 `p95 ≤ 8000` | `true` | 唯一许出 `true` 的形态 |
+| `admitted ≥ 20` 且 `p95 > 8000` | `false` | **唯一**许出 `false` 的形态 |
+
+scope 就这一格：`ttfb_ms.p95` 与 `latency_ms_all_ms` 没有配对布尔，不入本判据（架构 v1.6.5 补的②）。
+读法不变：**该位必须与 `g6_caveat` 同读**，单独引用任何一格都是断章。
+
+守卫（`--self-check` 内，零外呼）：7 情形三态用例 + **`_summarize` 调用点双向**（低样本 ⇒ `null`；
+20 条同型准入样本 ⇒ 真给 `true`，防"把三态写成永远 `null`"）。变异检查
+`backend/reports/w7/scratch_g6_mutation_check.py` 实测 **6/6 被抓**（基线先跑、必绿；
+M2 是崩溃式抓红 = `TypeError`，其余 5 条是断言式），含两处 A-1 变异。
+
+**不可引用清单**（`g6_p95_le_8s: true` 但分母根本不可判的历史格，实测 **14 格 / 11 份文件**）：
+
+⚠️ 在 **CommerceQL 根目录**执行（glob 是相对路径），零额度、零外呼：
+
+```bash
+PYTHONIOENCODING=utf-8 PYTHONUTF8=1 .venv/Scripts/python.exe -c "
+import glob,json
+cells=0;files=set()
+for f in sorted(glob.glob('deploy/loadtest/*.json')):
+    for s in (json.load(open(f,encoding='utf-8')).get('scenarios') or []):
+        if s.get('g6_p95_le_8s') is True:
+            cells+=1;files.add(f);print(f,s.get('scenario'),(s.get('admission') or {}).get('admitted'))
+print('stale_true_cells=',cells,'files=',len(files))"
+```
+
+2026-09-22 复算读数：`stale_true_cells=14 files=11`，逐格分解与我 10:26 的手工计数、
+W6 产物 `probe_loadtest_receipts.json` 的 `stale_true_cells_total=14` 三方同数。
+其中 `baseline_c5.json` 是唯一 `g6_caveat=null` 且同时缺 `admission`/`latency_ms_all_ms` 的那份
+（p95=3675.8）⇒ W6 实测：这份喂进真 gates 会判 **G-6 PASS**，是那台假绿灯在当前盘上唯一活着的样本。
+
+⚠️ **两种红法不许并成一种**：`preflight_r4/r5`（`admitted=5`、p95 42,529.1 / 187,728.9ms）的布尔本来是
+`false`，不在上面这 14 格里 —— 它们是"**量到了、超预算**"，不是"分母不明"。引用时按 §三.0.1 的判据④说。
+
+**A-1（架构 v1.6.6）现状**：`--roll-up` 已扩成同时重算 `g6_caveat` 与 `g6_p95_le_8s`，每格留
+`g6_derived_audit{caveat_before/after,bool_before/after}`，且自检钉住"不许越界改读数"。
+在**副本**上演示过：`receipt_steady true→null`、`receipt_burst`（p95=274.6ms！）`true→null`、
+`baseline_c5 true→null`、`preflight_r5 false→null`。⚠️ **11 份归档件本身的就地降档尚未执行**
+—— 那会改写归档证据的字节、且 `receipt.json` 是 W6 的 G-6 默认输入 ⇒ 等总控点头再做，做完在此登记读数。
+
+### 四.4 U-122：本目录引用 exec 侧读数的口径（归 W7 的那半）
+
+| 本目录里的名字 | 它**不是**什么 | 实测依据（2026-09-22，零额度） |
+|---|---|---|
+| `outcomes.truncated` | ❌ 不是 §8.6 的"行数被 LIMIT 截断" | 它是**客户端流截断**：流结束却没拿到终止帧（`driver.py` 的分类判据） |
+| 任何回执 | ❌ 不能当"服务端截断判定已验证"的证据 | gate1 的 `limit_injected` 实测只有 `{"injected": true}`，**注入值 L 没有出口**；`app/graph/nodes/execute.py:133-146` 的 `_effective_limit` **P0 恒 `None`** ⇒ §8.6 的 `truncated` 判定在生产路径今天就是退化的 |
+
+⇒ 结论口径：压测面**只能**判"端到端有没有在 8s 内收口"，判不了"结果集有没有被静默截断"。
+后者要等 U-122 判据①②④ 落地（端口成员集 + 替身忠实性）＋ W2C 给出 L 的出口，
+本目录届时回一条可复制的读法。⚠️ 该读法 **UNVERIFIED**（今天写不出来，别在别处引成"已有"）。
+
+
+
 ---
 
 ## 五、授权状态（2026-09-19：三项全部到位，按"独立容器 + 硬上限"执行）

@@ -33,6 +33,7 @@ import json
 import os
 import statistics
 import sys
+import tempfile
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -406,11 +407,28 @@ def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: a
         # drain 证据只能靠 message 分家：光看 `error_frame` 数会把"停机注入"和"节点超时"混成一坨。
         "drain_frames": sum(1 for s in samples if s.msg and "重启" in s.msg),
         "error_messages": _messages(samples),
-        # G-6 只看 total_ms 的 p95；⚠️ 这个布尔位**单独读没有意义**，必须与 `g6_caveat` 同读
-        #    （0 条完成时 p95 也可以 ≤8s —— 那正是假绿灯的形状，见 `_g6_caveat` 的文档）。
-        "g6_p95_le_8s": (p95_total is not None and p95_total <= 8000.0),
+        # G-6 只看 total_ms 的 p95。**三态**（U-120 / 07 §16.5）：`None` = 这份样本不可判，
+        # `true`/`false` 才是量到了结论 —— 旧写法把"没有数"输出成 `false`（= 不达标），
+        # 与"准入只有 5 条也给布尔"是同一病灶的两种形态。⚠️ 必须与 `g6_caveat` 同读。
+        "g6_p95_le_8s": _g6_boolean(p95_total, admission),
         "g6_caveat": _g6_caveat(by_outcome, admission),
     }
+
+
+def _g6_boolean(p95_ms: float | None, admission: Mapping[str, int] | None) -> bool | None:
+    """`g6_p95_le_8s` 的唯一判定点 —— 三态，不是布尔。
+
+    `None` 的三种来路（每种都比 `false` 诚实）：
+      · 没有 p95（准入样本里一条延迟都没收到）⇒ "不达标"是**假话**，那是"没有数"；
+      · `admission` 缺失（产自 U-106 口径之前的旧回执）⇒ 分母口径无法确认；
+      · `admitted < MIN_ADMITTED_FOR_P95` ⇒ 分位数落点由个别样本决定，不构成容量结论。
+    scope 就这一格：`ttfb_ms.p95` 与 `latency_ms_all_ms` 没有配对布尔，不入本判据（架构 v1.6.5 ②）。
+    """
+    if p95_ms is None or not admission:
+        return None
+    if admission.get("admitted", 0) < MIN_ADMITTED_FOR_P95:
+        return None
+    return bool(p95_ms <= 8000.0)
 
 
 def _g6_caveat(
@@ -630,6 +648,81 @@ async def self_check() -> int:
                   f"→ {_g6_caveat(case_outcomes, case_admission)!r}"
                   f"（期望{'非空' if want_caveated else 'None'}）", file=sys.stderr)
             return 3
+    # ★ U-120：三态要**单独**钉。上一轮的形状正是"caveat 判对了、布尔照出"——
+    #   而 `false` 与 `null` 的差别是"不达标"与"没量到"的差别，只读布尔的下游分不出来。
+    bool_cases: list[tuple[float | None, dict[str, int] | None, bool | None]] = [
+        (7000.0, {"admitted": 20}, True),                       # 样本够 + 达标
+        (9000.0, {"admitted": 20}, False),                      # 样本够 + 超预算 ⇒ 唯一许出 False 的形态
+        (7000.0, {"admitted": 19}, None),                       # 差一条也不许出结论
+        (7000.0, {"admitted": 5}, None),                        # 今天 c=1 预检就是这个形状
+        (7000.0, {"admitted": 0, "rejected_429": 9}, None),     # 全部被限流拒掉
+        (7000.0, None, None),                                   # 旧回执无准入分桶
+        (None, {"admitted": 40}, None),                         # ★ 没有 p95 ⇒ 不得谎报"不达标"
+    ]
+    for p95_in, adm_in, want_bool in bool_cases:
+        got_bool = _g6_boolean(p95_in, adm_in)
+        if got_bool is not want_bool:
+            print(f"[自检失败] g6_p95_le_8s 三态判错：p95={p95_in} admission={adm_in} "
+                  f"→ {got_bool!r}（期望 {want_bool!r}）", file=sys.stderr)
+            return 3
+    # ★ 上面那组只钉住了**助手函数**。变异检查实测：把 `_summarize` 里的接线退回旧表达式，
+    #   助手用例照样全绿 —— 病灶在调用点，就得在调用点上取证。两格双向：低样本给 None，
+    #   样本够要真给布尔（防有人把三态写成"永远 None"来通过这条守卫）。
+    stub_spec = ScenarioSpec(name="self-check", concurrency=1, duration_s=None,
+                             total_requests=len(got), single_session=False, one_tenant=False)
+    stub_args = argparse.Namespace(no_async=True, questions_file=None, max_requests=None)
+    sum_low = _summarize(stub_spec, got, 1.0, stub_args)
+    if sum_low["g6_p95_le_8s"] is not None:
+        print(f"[自检失败] 调用点没走三态：admitted={sum_low['admission']['admitted']} "
+              f"⇒ g6_p95_le_8s={sum_low['g6_p95_le_8s']!r}（期望 None）", file=sys.stderr)
+        return 3
+    enough = [s for s in got if _admitted(s)] * MIN_ADMITTED_FOR_P95
+    sum_ok = _summarize(stub_spec, enough, 1.0, stub_args)
+    if sum_ok["g6_p95_le_8s"] is not True:
+        print(f"[自检失败] 样本够时调用点仍没给出达标布尔：admitted="
+              f"{sum_ok['admission']['admitted']} p95={sum_ok['latency_ms']['p95']} "
+              f"⇒ {sum_ok['g6_p95_le_8s']!r}（期望 True）", file=sys.stderr)
+        return 3
+    # ★ A-1（架构 v1.6.6）：`--roll-up` 必须把两个派生量**一起**重算，而且只动派生量。
+    #   两格是双向的 —— 低样本的 stale `true` 要降成 None（否则旧件继续被引用），
+    #   而"样本够、确实达标"的格必须能从 None 回到 true（否则守卫会被写成"永远不可判"来自证清白）。
+    rollup_cases = {
+        "low_sample.json": {"bool_before": True, "bool_after": None,
+                            "admitted": 5, "p95": 3000.0},
+        "enough_sample.json": {"bool_before": None, "bool_after": True,
+                               "admitted": 25, "p95": 4000.0},
+    }
+    with tempfile.TemporaryDirectory() as td:
+        ru_paths = []
+        for ru_name, ru_case in rollup_cases.items():
+            receipt = {"schema": SCHEMA_VERSION, "scenarios": [{
+                "scenario": ru_name, "requests": ru_case["admitted"],
+                "outcomes": {"ok": ru_case["admitted"]},
+                "admission": {"admitted": ru_case["admitted"], "rejected_429": 0},
+                "latency_ms": {"p50": ru_case["p95"], "p95": ru_case["p95"]},
+                "latency_ms_all_ms": {"p95": ru_case["p95"]},
+                "g6_p95_le_8s": ru_case["bool_before"], "g6_caveat": None}]}
+            ru_path = os.path.join(td, ru_name)
+            Path(ru_path).write_text(json.dumps(receipt, ensure_ascii=False), encoding="utf-8")
+            ru_paths.append(ru_path)
+        if roll_up(ru_paths, os.path.join(td, "merged.json")) != 0:
+            print("[自检失败] A-1：roll_up 在临时夹具上返回非零", file=sys.stderr)
+            return 3
+        for ru_path in ru_paths:
+            ru_name = os.path.basename(ru_path)
+            ru_case = rollup_cases[ru_name]
+            ru_got = json.loads(Path(ru_path).read_text(encoding="utf-8"))["scenarios"][0]
+            ru_audit = ru_got.get("g6_derived_audit") or {}
+            if ru_audit.get("bool_before") != ru_case["bool_before"] \
+                    or ru_got.get("g6_p95_le_8s") != ru_case["bool_after"]:
+                print(f"[自检失败] A-1 派生量重算不对：{ru_name} "
+                      f"bool {ru_audit.get('bool_before')!r}→{ru_got.get('g6_p95_le_8s')!r}"
+                      f"（期望 {ru_case['bool_before']!r}→{ru_case['bool_after']!r}）", file=sys.stderr)
+                return 3
+            if ru_got.get("admission") != {"admitted": ru_case["admitted"], "rejected_429": 0} \
+                    or ru_got.get("latency_ms", {}).get("p95") != ru_case["p95"]:
+                print(f"[自检失败] A-1 越界：读数被改写了（{ru_name}）", file=sys.stderr)
+                return 3
     # 终止来源指纹：整字典相等（不是"包含"）。三件事各钉一处 ——
     # ① 非终止 `stage` 帧真的被记下来了（不是永远 none）；② `clarify` 的 reason 被记下来；
     # ③ 4xx 没有流 ⇒ 落成 `stage=none|reason=none`，"分辨不了"要显式可见而不是留空。
@@ -662,7 +755,10 @@ async def self_check() -> int:
         print(f"[自检失败] Retry-After 指纹不对：{rejections}（期望 {want_rejections}）", file=sys.stderr)
         return 3
     print(f"[自检通过] 10/10 分类正确；样本 p95={p95}ms（桩注入的最大延迟 3000ms）；"
-          f"g6_caveat {len(gate_cases)} 情形判向正确；准入分桶正确；"
+          f"g6_caveat {len(gate_cases)} 情形判向正确；g6_p95_le_8s {len(bool_cases)} 情形三态正确"
+          f"（含 _summarize 调用点双向）；"
+          f"A-1 roll-up 降档/回判双向 {len(rollup_cases)} 夹具正确且未越界改读数；"
+          f"准入分桶正确；"
           f"terminal_provenance {sum(sum(v.values()) for v in prov.values())} 条指纹可读")
     return 0
 
@@ -723,25 +819,32 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--self-check", action="store_true", help="只验量具（零外呼、零额度）")
     p.add_argument("--roll-up", nargs="+", metavar="RECEIPT",
                    help="**零外呼、零额度**：把已落盘的回执合成一份 --out（默认 receipt.json），"
-                        "并按各自 outcomes 重算 g6_caveat（旧文件的 null 会让 G-6 假绿）")
+                        "并按各场景自带读数重算两个派生判定量 —— g6_caveat（旧文件的 null 会让 G-6 假绿）"
+                        "与三态的 g6_p95_le_8s（U-120/A-1：低样本的 stale true 要降档，留 before/after 审计位）")
     p.add_argument("--dry-run", action="store_true", help="打印将执行的场景参数后退出")
     return p
 
 
 def roll_up(paths: list[str], out: str) -> int:
-    """**不发包、不花额度**：把已有回执合成一份 `receipt.json`，顺手把 caveat 补算对。
+    """**不发包、不花额度**：把已有回执合成一份 `receipt.json`，顺手把两个派生判定量算对。
 
-    两件事缺一不可：
+    三件事缺一不可：
     ① 下游 W6 的读端只认一个路径（`deploy/loadtest/receipt.json`），而本目录按场景分文件存；
     ② 2026-09-19 之前写出的回执里 `g6_caveat` 是 `null`（那时它只看 `async_degraded`），
        直接喂给 W6 的"取 max(p95) + 无 caveat 即达标"口径 ⇒ **G-6 会被判成 PASS**，
        而那几轮其实是 0 条完成。⇒ 这里用**各场景自己已落盘的 `outcomes`** 重算，不引入任何新测量。
+    ③ **A-1（架构 v1.6.6）**：`g6_p95_le_8s` 自 U-120 起是三态，而历史回执里躺着 14 个 stale `true`
+       （`admission` 缺失 / `admitted<20` 的格照样给了布尔）⇒ 同一处派生量重算必须把它一起降档，
+       否则改了新写端、旧文件还在被引用。**边界**：只动派生判定量（`g6_caveat` / `g6_p95_le_8s`），
+       读数（`outcomes` / `latency_ms` / `codes` / `admission`）一律不碰；每次降档留 before/after 审计位。
     """
     merged: dict[str, Any] = {
         "schema": SCHEMA_VERSION,
         "mode": "roll-up",
         "note": ("本文件由已落盘的回执**合成**，没有重新发包。"
-                 "`g6_caveat` 按各场景自带的 `outcomes` 重算（旧文件里为 null 会产生 G-6 假绿灯）。"
+                 "`g6_caveat` 与 `g6_p95_le_8s` 按各场景自带的 outcomes/p95/admission 重算"
+                 "（旧文件的 null caveat 会让 G-6 假绿、stale true 会让低样本量具产出可引用布尔）。"
+                 "读数未动，只动这两个派生量。"
                  "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）"),
         "derived_from": [],
         "started_at": None,
@@ -764,45 +867,60 @@ def roll_up(paths: list[str], out: str) -> int:
             finished.append(raw["finished_at"])
         for s in raw.get("scenarios") or []:
             outcomes = s.get("outcomes") or {}
-            old = s.get("g6_caveat")
-            s["g6_caveat"] = _g6_caveat(outcomes, s.get("admission"))
-            s["g6_caveat_recomputed"] = True
+            audit = _recompute_g6_derived(s)
             merged["derived_from"].append({
                 "file": Path(p).name, "scenario": s.get("scenario"),
                 "requests": s.get("requests"),
                 "ok": outcomes.get("ok", 0),
                 "p95_ms": (s.get("latency_ms") or {}).get("p95"),
-                "caveat_before": old,
-                "caveat_after": s["g6_caveat"],
+                **audit,
             })
             merged["scenarios"].append(s)
     merged["started_at"] = min(started) if started else None
     merged["finished_at"] = max(finished) if finished else None
     Path(out).write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
-    changed = sum(1 for d in merged["derived_from"] if d["caveat_before"] != d["caveat_after"])
+    changed = sum(1 for d in merged["derived_from"] if d["changed"])
     print(f"[合成] {len(paths)} 份 → {out}：{len(merged['scenarios'])} 条场景，"
-          f"其中 {changed} 条的 g6_caveat 由 null 补算为非空")
+          f"其中 {changed} 条的派生判定量被重算（caveat 补算 / g6 布尔降档）")
 
     # ⚠️ 光修合成件不够：W6 的读端支持 `--loadtest-receipt <路径>`，把**任意一份分场景回执**
-    #    单独指过去，同样会因为 `g6_caveat` 是 null 而判 PASS。⇒ 输入文件也就地重算写回。
-    #    只改 `g6_caveat` 这一个派生字段，读数（outcomes / latency / codes）一律不动。
+    #    单独指过去，同样会因为 `g6_caveat` 是 null、或因为 stale 布尔而判 PASS。⇒ 输入文件也就地重算。
+    #    只动这两个派生字段，读数（outcomes / latency_ms / codes / admission）一律不碰。
     repaired = 0
     for p in paths:
         raw = json.loads(Path(p).read_text(encoding="utf-8"))
         touched = False
         for s in raw.get("scenarios") or []:
-            fresh = _g6_caveat(s.get("outcomes") or {})
-            if s.get("g6_caveat") != fresh:
-                s["g6_caveat"] = fresh
-                s["g6_caveat_recomputed"] = True
+            audit = _recompute_g6_derived(s)
+            if audit["changed"]:
+                s["g6_derived_audit"] = audit
                 touched = True
         if touched:
             Path(p).write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
             repaired += 1
     if repaired:
-        print(f"[就地补算] {repaired} 份输入回执的 g6_caveat 已按各自 outcomes 重算写回"
-              "（读数未动，仅补派生字段）")
+        print(f"[就地补算] {repaired} 份输入回执的派生判定量已按其自带读数重算写回"
+              "（读数未动；每格留 g6_derived_audit 记 before/after）")
     return 0
+
+
+def _recompute_g6_derived(s: dict[str, Any]) -> dict[str, Any]:
+    """按这一格**自己已落盘的读数**重算两个派生判定量，返回 before/after 审计位。
+
+    刻意不引入任何新测量：`g6_caveat` 只看 `outcomes` + `admission`，`g6_p95_le_8s` 只看
+    `latency_ms.p95` + `admission` —— 都是格内既有字段。**关键：两处都必须把 `admission` 传进去**，
+    漏传会让带 admission 的新格式回执被盖上"无 admission 字段"这句假话（就地补算曾这么错过一次）。
+    """
+    admission = s.get("admission")
+    old_caveat, old_bool = s.get("g6_caveat"), s.get("g6_p95_le_8s")
+    new_caveat = _g6_caveat(s.get("outcomes") or {}, admission)
+    new_bool = _g6_boolean((s.get("latency_ms") or {}).get("p95"), admission)
+    s["g6_caveat"], s["g6_p95_le_8s"] = new_caveat, new_bool
+    return {
+        "caveat_before": old_caveat, "caveat_after": new_caveat,
+        "bool_before": old_bool, "bool_after": new_bool,
+        "changed": (old_caveat, old_bool) != (new_caveat, new_bool),
+    }
 
 
 def main(argv: list[str] | None = None) -> int:

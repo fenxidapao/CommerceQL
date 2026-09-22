@@ -19,7 +19,7 @@
 | 探针 | `GET /api/v1/healthz` → **`200`**（**必须**是 200）+ `"status": "degraded"` + `"degraded_dependencies": ["embedding"]`（附录 A §A.8.4；`Dependency.EMBEDDING = "embedding"`，`DEPENDENCY_KIND[EMBEDDING] = SOFT`） |
 | 探针（反向判据） | `GET /api/v1/healthz/ready` **必须仍是 `200`**。若它也 503 → **不是本故障，转 RL-1** |
 | 帧 | SSE `degraded` 事件：`reason=embedding_unavailable` / `action_taken=sparse_only`；随后 `meta.retrieval_mode = "sparse_only"` |
-| 指标 | `retrieval_mode_total{retrieval_mode="sparse_only"}` 占比上升（§15.3「检索降级率」口径）；`degraded_total{reason="embedding_unavailable",action_taken="sparse_only"}` |
+| 指标 | **降级率口径 = `degraded_total{reason="embedding_unavailable",action_taken="sparse_only"}` / `sum(degraded_total)`**（分子分母同族，且本族**已接线** —— `app/obs/instrumentation.py` 的 SSE 帧观测器）。⚠️ 两个**假分母不要用**：① `retrieval_mode_total` 至今无调用点 ⇒ 导出的是恒 0 序列，`0/0` 在 PromQL 里是"无数据"，既不是红线也不是绿线，只在 W2B 接上 `observe_retrieval_mode()` 之后当趋势复核；② `query_outcome_total{outcome="degraded"}` 恒 0 —— 2026-09-21 活体对照：同一次预检里 `degraded_total{reason="embedding_unavailable",action_taken="sparse_only"}=1` 而 `outcome="degraded"=0`，因为被降级请求的**终止态**只记 `refuse`/`clarify` ⇒ 拿它当分母会系统性低估 |
 | 告警（§15.4） | §15.4 表内**没有**"embedding 不可用"这一行；它只以"检索降级率上升"出现在 §18.7 的判据里 → 待架构窗口分配编号 |
 
 > ✅ **"未接线"这个第一解释已经作废**（2026-09-18）：`app/main.py:282-285` 注册了 `obs_probes.make_llm_probe` / `make_embedding_probe`，`checks.embedding_reachable` 现在是**真实可达性**，不再是 `health._unwired_probe` 那句 `"阶段 0 骨架：探针未接线"`。所以 `/healthz` 里看到 `embedding_reachable: false` + `status:"degraded"`，**可以直接按本故障走**。
@@ -129,7 +129,7 @@ print(u.urlopen(os.environ['EMBEDDING_BASE_URL'].rstrip('/')+'/api/tags',timeout
 | 探针不再降级 | `curl -sS $BASE/healthz` → 200 且 `degraded_dependencies` **不含** `embedding`；且日志里**不再出现** `healthz_failed_probes` 的 `failed.embedding` | 聚合详情（**不要拿它做编排探针**，A.8.4）+ `docker compose logs api` |
 | 硬依赖全程没动 | 整个处置期间 `curl -o /dev/null -w '%{http_code}' $BASE/healthz/ready` **始终 200** | readiness |
 | 检索回到混合 | 新查询的 `meta.retrieval_mode` = `"hybrid"`，且本轮**没有** `degraded(embedding_unavailable)` 帧 | SSE 帧 / `audit_log` 的 `meta` |
-| 降级率回落 | `retrieval_mode_total{retrieval_mode="sparse_only"}` 增速归零，`hybrid` 占比回升；`degraded_total{reason="embedding_unavailable"}` 不再增长 | 指标。⚠️ **`/metrics` 已注册，但这条判据现在拿不到真数据**：`observe_retrieval_mode()` 全仓**无调用点**，而 `retrieval_mode` 标签有完整枚举域 ⇒ 注册表**导出恒 0 序列**（不是"序列缺席"）⇒ 比值 `0/0` 在 PromQL 里是**无数据**，看板上既不是红线也不是绿线。⇒ **主判据用上一行的 `meta.retrieval_mode` 与 `audit_log`**，指标只作接线后的趋势复核（`degraded_total` 已接线，可以直接看）。缺口登记见 `deploy/observability/README.md` §三.4 |
+| 降级率回落 | **主判据 = `rate(degraded_total{reason="embedding_unavailable",action_taken="sparse_only"}[15m])` 增速归零**（本族已接线，`/metrics` 上直接可读）。⚠️ **别用 `retrieval_mode_total` 做这条**：`observe_retrieval_mode()` 全仓**无调用点**，而标签有完整枚举域 ⇒ 注册表**导出恒 0 序列**（不是"序列缺席"）⇒ `0/0` 在 PromQL 里是**无数据**，看板上既不是红线也不是绿线 —— 只在 W2B 接线后当趋势复核。同样**别用** `query_outcome_total{outcome="degraded"}` 当分母（被降级请求的终止态只记 `refuse`/`clarify`，该位恒 0 ⇒ 系统性低估）。⇒ 帧侧/表侧的回落证据看上一行 `meta.retrieval_mode` 与 `audit_log`。缺口登记见 `deploy/observability/README.md` §三.4 |
 | 首包没退化 | 一次真实 `/query` 的 `meta.latency_ms.linking` 与 `http_request_duration_seconds` P95 回到基线（G-6 ≤8s 口径） | §16.1/§16.5 |
 
 **如实声明（不得报告成"已恢复原状"）**：降级期间跑的查询**检索质量确实下降了**（少了一路稠密）。这些轮次在 `meta` 与审计里都有 `sparse_only` 标记，若在降级窗口内产出评测/澄清率结论，必须标注（§18.4.1 对 R-19 口径污染的同一套纪律）。

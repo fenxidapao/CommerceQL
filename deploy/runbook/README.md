@@ -36,7 +36,7 @@
 | 澄清率（>15% / P1） | 转 **W3C/W2A**（绑定与语义包域） | 诊断入口 = `binding_state_total{state}` + `binding_layer_total{layer}` |
 | L4 触发率（>10% / P2） | 转 **W2A**（回看语义包，**不是放宽 τ**，N-25） | |
 | （§15.4 未列，但 §18.7 列了）审计库 / readiness 503 | **RL-1** | |
-| （§15.4 未列）embedding 降级率上升 | **RL-2** | 口径 = `retrieval_mode_total{retrieval_mode="sparse_only"} / sum(retrieval_mode_total)`；⚠️ **该指标无调用点**（恒 0 序列）⇒ 分母为 0、比值无数据，**现在只能靠 `/healthz` 的 `degraded_dependencies` + 日志判 RL-2** |
+| （§15.4 未列）embedding 降级率上升 | **RL-2** | 口径（2026-09-22 改挂）= `degraded_total{reason="embedding_unavailable",action_taken="sparse_only"} / sum(degraded_total)` —— 本族**已接线**，可直接判。⚠️ 两个假分母不要用：`retrieval_mode_total`（无调用点 ⇒ 恒 0 序列 ⇒ `0/0`=无数据，只在 W2B 接线后当趋势复核）、`query_outcome_total{outcome="degraded"}`（恒 0：被降级请求的终止态只记 `refuse`/`clarify` ⇒ 系统性低估）。探针 `/healthz` 的 `degraded_dependencies` 与日志仍是并列证据，但**不再是唯一可用的证据** |
 
 > ✅ **告警规则文件已在仓库里**：`deploy/observability/alert.rules.yml`（§15.4 十条落成 **9 条规则 / 5 个 group**，
 > 已过 `promtool check rules` + `test rules`）。上表的"§15.4 规则"到真实规则名的映射见

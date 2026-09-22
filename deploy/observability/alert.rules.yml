@@ -470,13 +470,19 @@ groups:
 
       # ----------------------------------------------------------------------
       # 附：§15.3 有、§15.4 十条**没有**的其余可观测面 —— 刻意不写成告警，登记在看板侧
-      #   检索降级率 = `retrieval_mode_total{retrieval_mode="sparse_only"}` / `sum(retrieval_mode_total)`：
-      #     §6.10 给了 >5% 的告警口径，并点名它是「embedding 软依赖健康度的**真实信号**，而非 /healthz」→ 对应 RL-2。
+      #   降级率（RL-2 口径）= `degraded_total{reason="embedding_unavailable",action_taken="sparse_only"}`
+      #     / `sum(degraded_total)`：§6.10 给了 >5% 的告警口径，并点名它是「embedding 软依赖健康度的
+      #     **真实信号**，而非 /healthz」→ 对应 RL-2。
       #     **不进本文件**的理由：§15.4 的十条是本文件的授权边界，§6.10 属 FR-2.8(P1) 口径，
       #     由架构窗口决定是否升格为第 11 条。
-      #     ⚠️ 现状：`observe_retrieval_mode()` 无调用点（检索器在 `app/retrieval`，不在本窗口域）
-      #        ⇒ 但 `retrieval_mode` 有完整枚举域 ⇒ 各取值**已导出、恒 0**。若将来把它写成
-      #        `== 0` 型规则，会在全绿系统里长鸣 —— 只可写比率型（分子 0 ⇒ 判据假 ⇒ 安全）。
-      #   降级率 / 执行失败率 / 闸门拒绝分布 / 拒答原因 / JSON 解析失败率：同上，进 §15.5 屏③⑤，
+      #     ⚠️ 2026-09-22 口径改挂（W7 欠账收口）：**分子分母同族走 `degraded_total`**（已接线，
+      #        `instrumentation.py` 的 SSE 帧观测器）。两个假分母不要用：
+      #        ① `retrieval_mode_total` —— `observe_retrieval_mode()` 无调用点（检索器在 `app/retrieval`，
+      #           不在本窗口域），但 `retrieval_mode` 有完整枚举域 ⇒ 各取值**已导出、恒 0** ⇒ 比值是 `0/0`
+      #           = PromQL 的"无数据"。若将来把它写成 `== 0` 型规则，会在全绿系统里长鸣 —— 只可写比率型。
+      #        ② `query_outcome_total{outcome="degraded"}` —— 恒 0（09-21 活体对照：同一次预检里
+      #           `degraded_total{sparse_only}=1` 而该位 =0，因为被降级请求的**终止态**只记 refuse/clarify）
+      #           ⇒ 拿它当分母会系统性低估降级率。
+      #   执行失败率 / 闸门拒绝分布 / 拒答原因 / JSON 解析失败率：同上，进 §15.5 屏③⑤，
       #     不设阈值 —— §6.8.3 原文「四态分布是诊断指标（**不设目标值**）」。
       # ----------------------------------------------------------------------

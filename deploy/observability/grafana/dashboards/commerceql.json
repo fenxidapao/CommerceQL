@@ -2,7 +2,7 @@
   "annotations": {
     "list": []
   },
-  "description": "CommerceQL 阶段 7「观测与部署」交付物②：07 §15.5 的最小看板五屏（自用，不追求美观）。归属窗口 W7｜日期 2026-09-18｜依据 07 §15.5（屏）/ §15.3（口径与标签基数上限）/ §15.4（阈值同源）。取数一律走 job=commerceql-api（prometheus.yml 直连 api:8000 抓 /api/v1/metrics，不经 Nginx）。★ 诚实声明：屏②「准确率与门禁」当前**没有 Prometheus 数据源**（评测结果不在指标里，见该面板正文），屏① 的三探针逐依赖状态亦无指标来源。\n接线状态（2026-09-18 核对调用点）：**已接** = HTTP/阶段耗时/终态/澄清/拒答/降级/闸门拒绝（由 error 码回填）/契约违规/绑定四态与层级/日成本（条件装配）/事件循环延迟；**未接** = `llm_tokens_total`、`retrieval_mode_total`、`feedback_reason_total`、`gen_sql_rounds_total`（这四族有枚举域或无标签 ⇒ 序列**已导出、恒 0**，不是缺席）、`llm_json_parse_failure_total`、`llm_upstream_concurrency`（这两族才是**整族不输出**）。\n⇒ 看板空白处先怀疑采集端；但**恒 0 的线不是「没数据」**，别把它读成「该类事件为零」。",
+  "description": "CommerceQL 阶段 7「观测与部署」交付物②：07 §15.5 的最小看板五屏（自用，不追求美观）。归属窗口 W7｜日期 2026-09-18｜依据 07 §15.5（屏）/ §15.3（口径与标签基数上限）/ §15.4（阈值同源）。取数一律走 job=commerceql-api（prometheus.yml 直连 api:8000 抓 /api/v1/metrics，不经 Nginx）。★ 诚实声明：屏②「准确率与门禁」当前**没有 Prometheus 数据源**（评测结果不在指标里，见该面板正文），屏① 的三探针逐依赖状态亦无指标来源。\n接线状态（2026-09-18 核对调用点）：**已接** = HTTP/阶段耗时/终态/澄清/拒答/降级/闸门拒绝（由 error 码回填）/契约违规/绑定四态与层级/日成本（条件装配）/事件循环延迟；**未接** = `llm_tokens_total`、`retrieval_mode_total`、`feedback_reason_total`、`gen_sql_rounds_total`（这四族有枚举域或无标签 ⇒ 序列**已导出、恒 0**，不是缺席）、`llm_json_parse_failure_total`、`llm_upstream_concurrency`（这两族才是**整族不输出**）。\n⇒ 看板空白处先怀疑采集端；但**恒 0 的线不是「没数据」**，别把它读成「该类事件为零」。\n★ 2026-09-22 口径改挂（RL-2 收口）：降级率一律以 `degraded_total` 为分子分母。两个假分母不得用 —— `retrieval_mode_total`（无调用点 ⇒ 恒 0 序列，比值是 0/0=无数据）、`query_outcome_total{outcome=\"degraded\"}`（恒 0：被降级请求的终止态只记 refuse/clarify ⇒ 系统性低估）。",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
