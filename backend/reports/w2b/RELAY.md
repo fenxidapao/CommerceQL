@@ -532,4 +532,16 @@ gap 声明进入了摘要（'指标口径目录' 出现） : True
 - 本窗口 09-21 已重灌一次（`51543e1`），09-22 又被清 ⇒ **只要 `COMMERCEQL_TEST_*_DSN` 缺省仍指向共享库，谁跑 `tests/integration` 谁就再清一次**（本次的清空者 = `test_migration_0003_views.py`，连"带 `with_policy=True`"这条都超出了我 09-21 报的 `test_semantic_materialization.py` 那一档）。
 - **本窗口处置照旧**：不跑 `tests/integration`；预检前复核 `(197,197,197)`；**在 U-114 落地前，此恢复动作可能还要再来**。
 
+### 13.5 归属更正（W7 指出，2026-09-22）
+
+`0f3f125` 除本文件的 §13 外，**还含 W4 的三处未署名改动**（`backend/reports/w4/RELAY.md`、`backend/tests/contract/test_decision_table_d_e.py`、`backend/tests/contract/test_exec_port_face_contract.py`）——成因 = **多窗口共享同一工作区**，我 `git add` 只点了本文件，但它们已在暂存区被一并卷入。**归属 = W4**（其 RELAY §十七 已作归因凭据，不回改历史）；本窗口只是提交载体。⚠️ **下一窗口勿据 commit author 判归属**。
+
+### 13.6 第三次重灌（09-22 16:11，两道防线落地后）
+
+- **前置核**：`5e47558`（U-123 缺派生器禁破坏性清空 + 防线① 夹具 DSN 去字面默认）与 `36c782a`（防线② CI 静态断言）**均已在远端 main** ⇒ W7 的"先等防线落地再灌"条件满足，且经我 `git show` 复核：U-123 把 `embed_doc` 从 DELETE 循环里剔除、缺派生器时**连 DELETE 都不做**（rows=0 + 具名 PENDING），正是"重灌还会被清"的根因关闭点。
+- **跑前**（原句）`(197,0,0)` → **跑后**（原句）**`(197,197,197)`**；命令同 §13.1，退出码 **0**；唯一版本 `2026.09.14.1`。
+- **"跑前+跑后各测一次原句 SQL"已列为固定动作**（W7 要求，两次都以 `select count(*),count(embedding),count(tsv) from app.embed_doc` 不换口径执行）。
+- 证据：`_w2b_repour_20260922b.log`（工作区根，**仓外**）。
+
+
 
