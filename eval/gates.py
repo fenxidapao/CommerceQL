@@ -71,6 +71,53 @@ def _tau_verdict(gate_id: str, verdict: str, tau_calibrated: bool) -> str:
     return verdict
 
 
+#: `reporter.pg_surface()` 交回来的 `ddl_targets` 形如 `DROP TABLE public.foo`：
+#: 这一串里**不是对象名**的词（动词 + 条件子句）。用词表而不是"切掉前 N 个词"，
+#: 因为 DDL 动词一词两词都有（`TRUNCATE` / `DROP TABLE` / `CREATE SCHEMA`）。
+_DDL_PREAMBLE = frozenset({"create", "drop", "truncate", "alter", "table", "schema",
+                           "index", "view", "materialized", "extension", "if", "not", "exists"})
+
+
+def _pg_surface_notes(p0_tests: Mapping[str, Any]) -> tuple[str, ...]:
+    """报"全量"必须自证这轮**连没连共享库** —— W7 2026-09-22 提的要求，我方复算后接受。
+
+    日志实测（09-22 收口那次）：一次 `pytest -q` 的读数里同时含有
+    `CREATE SCHEMA IF NOT EXISTS retrieval_dense_it` / `DROP TABLE IF EXISTS retrieval_dense_it.embed_doc`
+    与 `permission denied for database ecom` ⇒ 一句"2232 passed"把这些全盖住了。
+    跨窗口要判"共享库里的表被动过没有"时缺的就是这一格，所以它现在是**读数的固定字段**
+    （取证来自 `reporter.pg_surface()`，只搬日志文本、不推断因果）。
+    """
+    surface = p0_tests.get("pg_surface")
+    if not isinstance(surface, Mapping):
+        return ("PG 接触面未取证（日志里既没有集成层文件名，也没有库名/DDL 文本）"
+                " ⇒ 若本轮其实跑了集成层，这是取数缺陷，按 §10 的 `-rfEs` 重跑",)
+    ddl = surface.get("ddl_targets") or ()
+    ddl_txt = ("、".join(str(d) for d in ddl) if ddl
+               else "无（只在日志里取 DDL 形状；取不到 ≠ 这轮对共享库没做任何写操作）")
+    notes = [(
+        f"本读数的分层与接触面：集成层文件 = {surface.get('integration_named') or '无'}；"
+        f"被拒的库 = {surface.get('databases_denied') or '无'}；"
+        f"夹具下发过的 DDL 形状 = {ddl_txt}"
+        f"（连接参数 = {surface.get('conn_params') or '未点名'}；凭据一律不落盘）"
+    )]
+    shared: list[str] = []
+    for target in surface.get("ddl_targets") or ():
+        # ⚠️ 动词有**一词有两词**（`TRUNCATE x` / `DROP TABLE public.x`）⇒ 不能按固定词数切，
+        # 否则 `DROP TABLE public.foo` 的对象名会剩成 "table public.foo"、这条判据永不命中。
+        # 测试实测抓到过一次，故留此注。
+        tokens = str(target).lower().split()
+        object_name = next((t for t in tokens if t not in _DDL_PREAMBLE), "")
+        head = object_name.strip('"').split(".")[0]
+        if head in {"app", "public"}:
+            shared.append(str(target))
+    if shared:
+        notes.append(
+            f"⚠️ 上面这批 DDL 的目标名限定在**共享业务 schema**（`app` / `public`）：{shared} "
+            "⇒ 这一轮不只是「读」，请相关窗口按时间线核对；本窗口不推断因果，只点名。"
+        )
+    return tuple(notes)
+
+
 def _p0_notes(p0_tests: Mapping[str, Any], ran_integration: bool) -> tuple[str, ...]:
     """G-1 的红**必须点名到测试**。只报 `failed=N` 会被下一轮读成「评测窗口改坏了什么」。
 
@@ -98,6 +145,8 @@ def _p0_notes(p0_tests: Mapping[str, Any], ran_integration: bool) -> tuple[str, 
                 "小写 `e` 不收 error）⇒ 按 §8 的重跑命令取证"
             )
         )
+    # **不管红不红**都要声明 PG 接触面：全绿的一轮也可能悄悄连了共享库。
+    notes.extend(_pg_surface_notes(p0_tests))
     return tuple(notes)
 
 

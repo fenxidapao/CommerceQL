@@ -37,12 +37,18 @@ sys.path.insert(0, str(REPO / "eval"))
 if os.name == "nt":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-SUPER_DSN = os.environ.get(
+#: 🔴 两条 DSN 一律过 `force_readonly()` —— 本探针**以 `postgres` 超管连接**（要看 `pg_policy` /
+#: 建占位扩展），超管绕过 RLS 也绕过权限，"我只读"这句话在这个角色上等于没说。
+#: 包完之后每条连接都会被服务端强制成只读事务，且 `main()` 里会**故意下发一次 CREATE TABLE**
+#: 验证它真的被拒（`eval/pg_guard.py`）。W7 2026-09-22 要求"加一条会响的守卫"，落在这里。
+from pg_guard import force_readonly  # noqa: E402
+
+SUPER_DSN = force_readonly(os.environ.get(
     "COMMERCEQL_TEST_SUPER_DSN", "postgresql://postgres:postgres@localhost:5432/ecom"
-)
-RO_DSN = os.environ.get(
+))
+RO_DSN = force_readonly(os.environ.get(
     "COMMERCEQL_TEST_RO_DSN", "postgresql://app_ro:app_ro_pwd@localhost:5432/ecom"
-)
+))
 SQLITE_DB = REPO / "data" / "ecom_sandbox.db"
 
 TABLES = (
@@ -517,8 +523,19 @@ def parity(sq: dict, pg: dict) -> dict:
 
 
 async def main() -> None:
+    from pg_guard import open_readonly, redact_dsn, target_stamp
+
+    # 🔴 闸门自证放在最前面：没过就不出产物（一份"我们以为只读"的读数比没有读数更贵）。
+    guard: dict[str, object] = {}
+    for label, dsn in (("super", SUPER_DSN), ("app_ro", RO_DSN)):
+        conn = await open_readonly(dsn, purpose=f"_probe_pg_real/{label}")
+        try:
+            guard[label] = {**(await target_stamp(conn)), "dsn_redacted": redact_dsn(dsn)}
+        finally:
+            await conn.close()
+
     sq, pg = probe_sqlite(), await probe_pg()
-    payload = {"sqlite_sandbox": sq, "pg": pg, "parity": parity(sq, pg)}
+    payload = {"sqlite_sandbox": sq, "pg": pg, "parity": parity(sq, pg), "pg_guard": guard}
     dest = HERE / "_probe_pg_real.json"
     dest.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"

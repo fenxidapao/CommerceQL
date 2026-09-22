@@ -326,6 +326,62 @@ _INTEGRATION_FILE_RE = re.compile(r"tests[\\/]integration[\\/](\S+?\.py)", re.I)
 #: 且摘要里是否出现 `ERROR <nodeid>` 取决于 `-r` 的字符：`E` 才有，小写 `e` 不点 error 名。
 _FAILED_TEST_RE = re.compile(r"^FAILED\s+(\S+)", re.M)
 _ERROR_TEST_RE = re.compile(r"^ERROR\s+(\S+)", re.M)
+#: "这轮到底连没连库、动了什么"的取证形状（全部来自日志文本，不做任何推断）。
+#: ⚠️ 这里**刻意不加 `\b`**：pytest 会把夹具的 SQL 以 repr 打出来（`query = '\nCREATE SCHEMA …'`），
+#: 那个 `\n` 是**两个字符** ⇒ `n` 与 `C` 之间没有词边界 ⇒ 带 `\b` 的版本在真日志上恒返空
+#: （2026-09-22 实测：同一份 `_full_pytest_w6.log`，带 `\b` 取到 `[]`、去掉取到 3 条）。
+#: 对象名用"限定名形状"而不是 `[\w."$]+`：后者会把被截断的 `CREATE TABLE r...` 整段吞进来。
+_PG_DB_RE = re.compile(r"permission denied for database \"?(\w+)", re.I)
+_PG_DDL_RE = re.compile(
+    r"(CREATE SCHEMA|DROP SCHEMA|CREATE TABLE|DROP TABLE|TRUNCATE)"
+    r"\s+(?:IF NOT EXISTS\s+|IF EXISTS\s+)?"
+    r'((?:[\w$]+|"[^"]*")(?:\.(?:[\w$]+|"[^"]*"))*)',
+    re.I)
+_PG_CONN_RE = re.compile(r"^\s*(?:host|hostname)=('?[^\s,']+'?)", re.M)
+#: 兜底脱敏：上面三条捕获组**当前**都取不到口令，但"不落凭据"不能靠"取不到"成立 ——
+#: 日志形状一变（例如夹具把整串 DSN 打进异常）就会漏。凡是 `password=…` / `token: …` 一律打码。
+_SECRET_RE = re.compile(r"(?i)\b(password|passwd|pwd|api[_-]?key|secret|token)\b\s*[=:]\s*\S+")
+
+
+def _redact(value: str) -> str:
+    """把任意 `口令形状` 的片段替换成 `<已脱敏>`（`pg_surface` 的每个出口都过这一道）。"""
+    return _SECRET_RE.sub(lambda m: f"{m.group(1)}=<已脱敏>", str(value))
+
+
+def pg_surface(log_path: str | None) -> dict[str, Any] | None:
+    """从 pytest 日志取**PG 接触面**：连到哪个库、夹具想动哪些对象。**输出脱敏。**
+
+    为什么要有这个函数（W7 2026-09-22 的要求，我方复算后认为成立）：本窗口报的"全量"读数
+    里包含 `tests/integration/**`，而那些夹具**会连真 PG 并下发 DDL**。日志实测（09-22 收口那次）
+    就同时含有 `CREATE SCHEMA IF NOT EXISTS retrieval_dense_it` / `DROP TABLE IF EXISTS
+    retrieval_dense_it.embed_doc` 与 `permission denied for database ecom` —— 一句"2232 passed"
+    把这些全盖住了。跨窗口要判"谁动了共享库里的表"时，缺的正是这一格。
+    ⚠️ 边界一：本函数只搬运日志里已有的文本，不推断因果（因果要有对照实验的窗口自己写）；
+    任何 `password=…` 形状一律不落进产物（四个出口都过 `_redact`）。
+    ⚠️ 边界二：`ddl_targets` 只覆盖 **DDL 形状**（CREATE/DROP SCHEMA、CREATE/DROP TABLE、TRUNCATE），
+    DML 与查询不在字段范围内 ⇒ "DDL 形状 = 无"只能读成"没在日志里取到 DDL"，
+    **不等于**"这轮对共享库什么都没做"。
+    """
+    if not log_path or not os.path.exists(log_path):
+        return None
+    with open(log_path, encoding="utf-8", errors="replace") as fh:
+        text = fh.read()
+    ddl = sorted({_redact(
+        f"{m.group(1).upper()} {m.group(2).replace(chr(34), '')}"
+        # ⚠️ pytest 会把过长的 query 截断成 `CREATE TABLE r...` ⇒ 光看捕获组像取证在乱抓，
+        # 所以把"这是日志截断"这件事本身点名出来（跨窗口读的人需要知道缺的是日志不是库）。
+        + (" (截断)" if text[m.end():m.end() + 3] == "..." else ""))
+        for m in _PG_DDL_RE.finditer(text)})
+    if not ddl and not _PG_DB_RE.findall(text) and not _INTEGRATION_FILE_RE.search(text):
+        return None
+    return {
+        "integration_named": sorted({_redact(f"tests/integration/{f}")
+                                     for f in _INTEGRATION_FILE_RE.findall(text)}),
+        "databases_denied": sorted({_redact(m.lower()) for m in _PG_DB_RE.findall(text)}),
+        "ddl_targets": ddl,
+        "conn_params": sorted({_redact(m.strip(chr(39))) for m in _PG_CONN_RE.findall(text)}),
+        "redaction": "密码/凭据类字段一律不落盘；这里只有日志里已有的库名/schema 名/连接参数",
+    }
 
 
 def parse_pytest_summary(log_path: str | None) -> dict[str, Any] | None:
@@ -363,6 +419,7 @@ def parse_pytest_summary(log_path: str | None) -> dict[str, Any] | None:
         "skipped": skipped,
         "failed_tests": failed_tests,
         "error_tests": error_tests,
+        "pg_surface": pg_surface(log_path),
         "integration_ran": ran_integration,
         "integration_files_seen": integration_files,
         "integration_note": (
@@ -709,11 +766,13 @@ def build_payload(
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_rule_identity.py",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_metric_coverage.py",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_metric_values.py   # G-7 输入",
-            "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/_probe_pg_real.py        # 只读探测真 PG",
-            "cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest -q -rfEs   # G-1 读全量：大写 E 才点 error 名（小写 e 不点 ⇒ 红因无从点名）",
+            "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/_probe_pg_real.py        # 探测前先过只读闸门（故意写一次须被拒），没过就不出产物",
+            "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/_probe_parallel_states.py  # 并行少算五态复现（同样带只读闸门；U-110 成因的证据件）",
+            "cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest -q -rfEs   # G-1 读全量：大写 E 才点 error 名（小写 e 不点 ⇒ 红因无从点名）；读数自带 PG 接触面 pg_surface",
             "cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest tests/integration -q -rfEs",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/select_smoke_batch.py   # 确定性取 20 题",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_gate_allowlist_shape.py   # U-119 判据③：两种形状 × 两道闸门",
+            "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_loadtest_receipts.py   # G-6 读端：13 份回执逐个过真 gates（含 stale 格数与 caveat=null 计数）",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --live --yes   # 真打全量需额度：先不带 --yes 看计划",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --mode replay --provenance \"<匣带来源>\" --yes"
             "   # 匣带未失效时才是零成本复算；今天是否可复算看 §8 那条 🔴（探针 = 下一条命令）",

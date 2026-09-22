@@ -9,7 +9,11 @@ W7 说：你们 8 组全绿的形状**只差一句** `reset app.shop_ids;`。这
 `EXPLAIN (ANALYZE)` 里的 `Workers ... actual rows=` 原样带回来 —— 只看计划里有没有
 Gather 不足以证明 worker 真扫了块（W7 与我在同一件事上各被骗过一次）。
 
-只读：全程 `SELECT` / `RESET` / `SET ROLE`，不改任何数据。跑法：
+只读：全程 `SELECT` / `RESET` / `SET ROLE`，不改任何数据 —— 但这句**不靠我方自觉**：两条 DSN
+都被 `force_readonly()` 绑上服务端 `default_transaction_read_only`，且 `main()` 在探测前会
+**故意下发一次 `CREATE TABLE` 并期望被拒**，没过闸门就不出产物（见 `eval/pg_guard.py`）。
+⚠️ `RESET` 本身是对会话状态的改动（U-110 的教训），所以它是被测对象的一部分、不是清场动作。
+跑法：
     PYTHONIOENCODING=utf-8 PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w6/_probe_parallel_states.py
 """
 
@@ -30,16 +34,23 @@ except ImportError:  # pragma: no cover - 取决于本机环境
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 sys.path.insert(0, str(REPO / "backend"))
+sys.path.insert(0, str(REPO / "eval"))
+
+from pg_guard import force_readonly  # noqa: E402
 
 if os.name == "nt":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-RO_DSN = os.environ.get(
+#: 🔴 两条 DSN 一律过 `force_readonly()`：本脚本**以 `postgres` 超管连接**（要读 `pg_policy`、
+#: 要 `SET ROLE app_rw` 复现 W7 的路径），靠"选只读角色"约束不住它 ⇒ 闸门放在服务端
+#: （`default_transaction_read_only`）。`main()` 会在探测前故意写一次并期望被拒。
+#: 依据：W7 2026-09-22 要求"在你们侧加一条会响的守卫"（详见 `eval/pg_guard.py`）。
+RO_DSN = force_readonly(os.environ.get(
     "COMMERCEQL_TEST_RO_DSN", "postgresql://app_ro:app_ro_pwd@localhost:5432/ecom"
-)
-SUPER_DSN = os.environ.get(
+))
+SUPER_DSN = force_readonly(os.environ.get(
     "COMMERCEQL_TEST_SUPER_DSN", "postgresql://postgres:postgres@localhost:5432/ecom"
-)
+))
 TENANT = "T_A"
 VIEW = "v_order_paid"
 RUNS = 3
@@ -281,12 +292,31 @@ async def main() -> int:
     if psycopg is None:
         print("psycopg 不在位 ⇒ 无法探测（不猜结论）")
         return 2
+
+    from pg_guard import open_readonly, redact_dsn, target_stamp
+
+    # 🔴 闸门自证放在最前面：没过就不出产物（与 `_probe_pg_real.py` 同口径）。
+    #   这个脚本的读数会被跨窗口引用（P7/U-110 的成因），一份"我们以为只读"的读数比没有更贵。
+    guard: dict[str, object] = {}
+    try:
+        for label, dsn in (("super", SUPER_DSN), ("app_ro", RO_DSN)):
+            conn = await open_readonly(dsn, purpose=f"_probe_parallel_states/{label}")
+            try:
+                guard[label] = {**(await target_stamp(conn)), "dsn_redacted": redact_dsn(dsn)}
+            finally:
+                await conn.close()
+    # 闸门没过时要原样把原因报出来，不许吞 ⇒ 这里刻意捕 `Exception`。
+    except Exception as exc:
+        print(f"🔴 只读闸门未通过 ⇒ 本次不出产物：{type(exc).__name__}: {exc}")
+        return 3
+
     result = {
         "view": f"app.{VIEW}",
         "tenant": TENANT,
         "runs_per_mode": RUNS,
         "policy_qual": None,
         "probes": [],
+        "pg_guard": guard,
     }
     con = await psycopg.AsyncConnection.connect(SUPER_DSN, autocommit=True)
     async with con:
@@ -328,6 +358,7 @@ async def main() -> int:
     for k, v in ctl["production_shapes"].items():
         print(f"    生产形状 {k:34s} counts={v['counts']}"
               + (f" 余值={v['guc_left']}" if "guc_left" in v else ""))
+    print("只读闸门自证：" + json.dumps(guard, ensure_ascii=False))
     out = HERE / "_probe_parallel_states.json"
     out.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
     print("written:", out)
