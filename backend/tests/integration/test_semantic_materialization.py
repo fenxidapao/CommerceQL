@@ -1,7 +1,8 @@
-"""语义物化集成测试（§6.2 步骤①②③ + DoD③ 一致性）。
+"""语义物化集成测试（§6.2 步骤①②③ + DoD③ 一致性 + U-123 防破坏性幂等）。
 
 只测**必须真库才能证明**的部分：
-- 步骤①：单事务写入物化行（幂等重跑 = 先 DELETE 后 INSERT）；
+- 步骤①：单事务写入物化行（幂等重跑 = 先 DELETE 后 INSERT；
+  ⚠️ `embed_doc` 例外 —— U-123：缺派生器时**整体跳过**，见 TestU123NoDestructiveIdempotence）；
 - 步骤②③：派生 GRANT/POLICY 执行 + DoD③ 双向一致性（少授与多授都红）；
 - **负向对照纪律**：注入一个"整表 SELECT"→ 一致性检查必须红 → 还原 → 必须绿。
   （⚠️ 注入后红必须是 DoD③ 那条断言红 —— 报错理由不符 = 假对照。）
@@ -9,6 +10,9 @@
 
 跳过策略（**每条 skip 都写明缺失的具体前置**，不静默假绿）：
 - 无库 → skip（与 test_audit_append_only 同模式）；
+- ⚠️ **DSN 只认环境变量**（U-114 防线①）：缺 `COMMERCEQL_TEST_*_DSN` =
+  **import 期当场 fail**（共享守卫 `tests/integration/_env_dsn.py`），
+  禁止 skip、禁止共享库字面默认值。请指向**一次性测试库**。
 - 迁移 0002 未应用 → skip（需先 `alembic upgrade head`）；
 - 业务视图未建 → skip（**归属待架构裁决**，见 reports/w2a/DELIVERY.md 待裁决③）；
 - PG 拒绝对视图 `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`（RLS 只适用于表）
@@ -17,7 +21,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -34,15 +37,12 @@ from app.semantics.materialize import (
     rollback_to,
     switch_version,
 )
+from tests.integration._env_dsn import env_dsn
 
 pytestmark = pytest.mark.integration
 
-_RW = os.environ.get(
-    "COMMERCEQL_TEST_RW_DSN", "postgresql://app_rw:app_rw_pwd@localhost:5432/ecom"
-)
-_SUPER = os.environ.get(
-    "COMMERCEQL_TEST_SUPER_DSN", "postgresql://postgres:postgres@localhost:5432/ecom"
-)
+_RW = env_dsn("COMMERCEQL_TEST_RW_DSN")
+_SUPER = env_dsn("COMMERCEQL_TEST_SUPER_DSN")
 _POINTER_KEY = "semantic:active_version"  # 测试内固定字面量；生产由 cache.keys.active_version() 注入
 
 REAL_BUNDLE = (
@@ -117,20 +117,105 @@ class TestMaterializeRows:
         assert report.rows["metric_def"] == 9
         assert report.rows["dimension"] == 6
         assert report.rows["synonym"] == 105
-        # embed_doc = 资产 8 + 列 75 + 指标 9 + 别名 105（与 _build_docs 对账，防止写丢/写重）
-        assert report.rows["embed_doc"] == len(_build_docs(loaded))
-        assert report.rows["embed_doc"] == 8 + 75 + 9 + 105
-        # 诚实降级：tokenizer/embedder 未注入 → 状态 pending + 警告，不冒充已分词
+        # U-123：缺派生器 ⇒ embed_doc **整体跳过删插**（连 DELETE 都不做），不是插 NULL 行
+        assert report.rows["embed_doc"] == 0
+        assert report.doc_count == 0
+        # 诚实降级：tokenizer/embedder 未注入 → 状态具名 PENDING + 警告（U-123 判据①④）
         assert report.tsv_status == "pending_tokenizer"
         assert report.embedding_status == "pending_embedder"
         assert report.grant_policy_executed is False
-        assert any("pending" in w or "未" in w for w in report.warnings)
+        assert any("跳过" in w and "embed_doc" in w for w in report.warnings)
 
     def test_idempotent_rerun(self, loaded: Any, migrated: None) -> None:
         """同版本重跑不重复累积（每表先 DELETE 同版本）。"""
         r1 = materialize(loaded, dsn=_RW, with_policy=False)
         r2 = materialize(loaded, dsn=_RW, with_policy=False)
         assert r1.rows == r2.rows
+
+
+# ============================================================================
+# U-123：缺派生器的 materialize 不得破坏性清空 embed_doc（2026-09-22，P0）
+# ============================================================================
+
+_EMBEDDING_DIM = 1024  # 迁移 0002 `EMBEDDING_DIM`（ADR-06 bge-m3）；假 embedder 必须对齐维度
+
+
+class TestU123NoDestructiveIdempotence:
+    @staticmethod
+    def _tokenizer(text: str) -> list[str]:
+        return text.split()
+
+    @staticmethod
+    def _embedder(texts: list[str]) -> list[list[float]]:
+        return [[0.125] * _EMBEDDING_DIM for _ in texts]
+
+    def test_rematerialize_without_derivers_preserves_derived_data(
+        self, loaded: Any, migrated: None
+    ) -> None:
+        """判据②（正向断言，修复前必红）：带派生器物化 → 缺派生器重物化 → 派生列仍在。
+
+        修复前的形态：第二次 materialize 对同版本 embed_doc 先 DELETE 再插 NULL 行
+        ⇒ count(embedding) 归零 —— 即 2026-09-22 共享库 embed_doc 一天被清两轮的
+        生产件自毁路径（arch RELAY §24.1）。
+        """
+        docs = _build_docs(loaded)
+        r1 = materialize(
+            loaded, dsn=_RW, with_policy=False,
+            tokenizer=self._tokenizer, embedder=self._embedder,
+        )
+        assert r1.embedding_status == "embedded"
+        assert r1.tsv_status == "tokenized"
+        assert r1.rows["embed_doc"] == len(docs)
+
+        r2 = materialize(loaded, dsn=_RW, with_policy=False)  # 缺派生器
+        assert r2.tsv_status == "pending_tokenizer"
+        assert r2.embedding_status == "pending_embedder"
+        assert r2.rows["embed_doc"] == 0  # 跳过（PENDING），不是静默插 NULL（判据①/④）
+
+        try:
+            with psycopg.connect(_RW, connect_timeout=3) as conn:
+                n_rows, n_emb, n_tsv = conn.execute(
+                    """
+                    SELECT count(*), count(embedding), count(tsv)
+                    FROM app.embed_doc WHERE bundle_version = %s
+                    """,
+                    (loaded.version,),
+                ).fetchone()
+            assert n_rows == len(docs), "embed_doc 行数被改 = 破坏性幂等（U-123）"
+            assert n_emb == len(docs), "embedding 被清 NULL = 破坏性幂等（U-123 判据②）"
+            assert n_tsv == len(docs), "tsv 被清 NULL = 破坏性幂等（U-123 判据②）"
+        finally:
+            # 收尾卫生：本测试写入的是假向量，不留在库里
+            with psycopg.connect(_RW, connect_timeout=3) as conn:
+                conn.execute(
+                    "DELETE FROM app.embed_doc WHERE bundle_version = %s", (loaded.version,)
+                )
+                conn.commit()
+
+    def test_idempotent_rerun_with_derivers(self, loaded: Any, migrated: None) -> None:
+        """带派生器的幂等重跑：行数一致且派生列不丢（全量写路径的幂等性）。"""
+        r1 = materialize(
+            loaded, dsn=_RW, with_policy=False,
+            tokenizer=self._tokenizer, embedder=self._embedder,
+        )
+        r2 = materialize(
+            loaded, dsn=_RW, with_policy=False,
+            tokenizer=self._tokenizer, embedder=self._embedder,
+        )
+        assert r1.rows == r2.rows
+        assert r2.rows["embed_doc"] == len(_build_docs(loaded))
+        with psycopg.connect(_RW, connect_timeout=3) as conn:
+            n_emb = conn.execute(
+                "SELECT count(embedding) FROM app.embed_doc WHERE bundle_version = %s",
+                (loaded.version,),
+            ).fetchone()
+        assert n_emb[0] == r2.rows["embed_doc"]
+        # 收尾卫生：清掉假向量
+        with psycopg.connect(_RW, connect_timeout=3) as conn:
+            conn.execute(
+                "DELETE FROM app.embed_doc WHERE bundle_version = %s", (loaded.version,)
+            )
+            conn.commit()
 
 
 # ============================================================================

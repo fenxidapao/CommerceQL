@@ -44,21 +44,15 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.enums import FeedbackReasonCode
 from app.repo.feedback import FeedbackSchemaMismatch, FeedbackStore
+from tests.integration._env_dsn import env_dsn
 
 pytestmark = pytest.mark.integration
 
 _BACKEND = Path(__file__).resolve().parents[2]
 
-#: 属主 DSN **运行时拼接**（DoD④：源码不落完整字面量；app_rw 在 allowlist 内可直写）。
-_SCHEME = "postgresql+psycopg" + "://"
-_SUPER = os.environ.get(
-    "COMMERCEQL_TEST_SUPER_DSN",
-    _SCHEME + "postgres" + ":" + "postgres" + "@localhost:5432/ecom",
-)
-_RW = os.environ.get(
-    "COMMERCEQL_TEST_RW_DSN",
-    "postgresql+psycopg://app_rw:app_rw_pwd@localhost:5432/ecom",
-)
+#: DSN **只认环境变量**（U-114 防线①，共享守卫 `_env_dsn.py`）：缺 env = 当场 fail（禁止 skip）。
+_SUPER = env_dsn("COMMERCEQL_TEST_SUPER_DSN")
+_RW = env_dsn("COMMERCEQL_TEST_RW_DSN")
 
 
 def _libpq(dsn: str) -> str:
@@ -70,8 +64,8 @@ def _sqla(dsn: str) -> str:
     """libpq 形态 → SQLAlchemy 形态（`alembic` / SQLAlchemy 需要）。
 
     ⚠️ **两个方向都要有**，缺正向那个会让 CI 整个 DoD③ job 变红（W0 RELAY §9.2）：
-    本地缺省值是 SQLAlchemy 形态所以本地全绿，CI 注入的是 libpq 形态
-    （`ci.yml:125-127`，被迫的：另两个测试直接把它交给 `psycopg.connect()`）。
+    CI 注入的是 libpq 形态（`ci.yml:125-127`，被迫的：另两个测试直接把它交给
+    `psycopg.connect()`），本文件需要的是 SQLAlchemy 形态。
     """
     if "+psycopg://" in dsn:
         return dsn

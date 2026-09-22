@@ -28,25 +28,17 @@ import psycopg
 import pytest
 
 from app.repo.cost_ledger import DbCostLedgerSink
+from tests.integration._env_dsn import env_dsn
 
 pytestmark = pytest.mark.integration
 
 _BACKEND = Path(__file__).resolve().parents[2]
 
 #: 项目约定 DSN 形态 = `postgresql+psycopg://`；属主 DSN **运行时拼接**（DoD④）。
-_SCHEME = "postgresql+psycopg" + "://"
-_SUPER = os.environ.get(
-    "COMMERCEQL_TEST_SUPER_DSN",
-    _SCHEME + "postgres" + ":" + "postgres" + "@localhost:5432/ecom",
-)
-_RW = os.environ.get(
-    "COMMERCEQL_TEST_RW_DSN",
-    "postgresql+psycopg://app_rw:app_rw_pwd@localhost:5432/ecom",
-)
-_RO = os.environ.get(
-    "COMMERCEQL_TEST_RO_DSN",
-    "postgresql+psycopg://app_ro:app_ro_pwd@localhost:5432/ecom",
-)
+#: DSN **只认环境变量**（U-114 防线①，共享守卫 `_env_dsn.py`）：缺 env = 当场 fail（禁止 skip）。
+_SUPER = env_dsn("COMMERCEQL_TEST_SUPER_DSN")
+_RW = env_dsn("COMMERCEQL_TEST_RW_DSN")
+_RO = env_dsn("COMMERCEQL_TEST_RO_DSN")
 
 
 def _sqla(dsn: str) -> str:

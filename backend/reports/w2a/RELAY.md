@@ -750,3 +750,43 @@ pytest tests/unit tests/contract    1 failed, 1798 passed
 新增单测 7 条（`tests/unit/test_semantics_loader.py`，紧邻既有扁平断言）：七键在位 /
 两面 / 类型即声明 PG 类型 / 与扁平投影同源 / 角色裁与 deny 独立 / joins 剥后缀 / 与 `policy()` 同一派生。
 
+## 12 U-123（P0）+ U-114 防线① 落地回执（2026-09-22T15:5x+08:00，HEAD `36c782a`，证据 = `_gates_w2a_u123.txt`）
+
+### 12.0 一句话
+W7 点名的两条都落了：**U-123** = `materialize()` 缺派生器时 `embed_doc` **整体跳过删插**（连 DELETE 都不做）
++ 报告记具名 PENDING + 判据② 正向断言"红today→绿"实测闭环；**防线①** = 7 个集成夹具文件的字面默认 DSN
+全部改为 `tests/integration/_env_dsn.py` 的 `env_dsn()`（缺 env 当场 RuntimeError，禁止 skip）。
+**判据① 取"跳过+PENDING"路线，未取"抛错"路线** —— 判据④ 隐含"能走完且记 PENDING"的完成路径，抛错会让它空转。
+
+### 12.1 判据② 正向对照（正向控制，不许 skip 绕）
+- 红：materialize.py 未修 + 测试先落 ⇒ `2 failed, 7 passed, exit 1`，红点 =
+  `assert r2.rows["embed_doc"] == 0` → **`assert 197 == 0`**（旧行为缺派生器静默插 197 行 NULL）；
+- 绿：修复落盘后同命令 ⇒ `9 passed, exit 0`（判据② + 带派生器幂等重跑 + 原 7 条全绿）；
+- 库 = 一次性库 `ecom_u123_probe`（从零建 + alembic head），**全程未触碰共享 ecom**。
+
+### 12.2 防线① 判据读数
+- 缺 env：`pytest tests/integration` ⇒ **7 collection errors, exit 2**（非零、不是 7 skipped）；
+- grep：`localhost:5432/ecom` 在 `tests/integration/**/*.py` **零命中**（`_env_dsn.py` 文档字符串也不落该字面量）；
+- **与 W0 防线②（`36c782a`）联动闭合**：`test_no_shared_ecom_dsn_fallback.py` 实测 **4 passed** ——
+  W0 提交说明里"夹具窗口按防线①改完即绿"的那一步，就是本节。
+
+### 12.3 门禁读数（采集时刻 2026-09-22T15:54+08:00，HEAD `36c782a`）
+```
+ruff check .                        All checks passed!
+mypy app                            Success: no issues found in 147 source files
+lint-imports                        Contracts: 4 kept, 0 broken
+pytest tests/unit tests/contract    1810 passed（U-119 刻意红已被 W4 0c596e6 转绿，非本轮）
+```
+
+### 12.4 我没做什么 / 提请裁定（诚实边界）
+- **`app.synonym` 的 tsv 有同族破坏性幂等形态**（缺 tokenizer 时 DELETE 后重插 tsv=NULL）——
+  但 synonym 的非派生列是核心元数据，**不能**照搬"整表跳过"；U-123 四条判据只点名
+  embed_doc，synonym 侧未动。**提请架构裁**：要么"tsv 列保留旧值式重写"，要么开新号。
+- `tests/eval/**` 字面 DSN = pg_guard 自身的测试输入（W0 守卫明确不扫、归 W6 自治）；
+  tests/unit 假 DSN 从不拨号；`test_retrieval_fts_pg.py` 的运行时读 deploy/.env 归 W0 已登记的静态盲区。
+- 一次性库 `ecom_u123_probe` 留存可复跑，随时可 DROP。
+
+### 12.5 push 说明（09-22 新纪律）
+本窗口 commit 自行 push；**将连带 W0 的 `36c782a`（防线②）** —— 授权来源 = arch RELAY §24.5
+（dc62468 纪律变更）+ W0 自己的提交说明（预期夹具窗口转绿后入库）。远端 `main` 现为 `e44f721`。
+

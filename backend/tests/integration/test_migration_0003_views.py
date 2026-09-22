@@ -30,6 +30,8 @@ from typing import Any
 import psycopg
 import pytest
 
+from tests.integration._env_dsn import env_dsn
+
 pytestmark = pytest.mark.integration
 
 _BACKEND = Path(__file__).resolve().parents[2]
@@ -40,20 +42,10 @@ _REAL_BUNDLE = _REPO / "semantic" / "bundle_2026.09.14.1.yaml"
 #: 裸 `postgresql://` 会让 SQLAlchemy 去找未安装的 psycopg2 —— env.py 原样透传，不归一化）。
 #: ⚠️ 属主 DSN **运行时拼接**（DoD④，同 test_migration_dsn_hygiene 的示范）：
 #: 源码里不落能被 `commerceql-dsn-with-password` 规则命中的完整字面量；
-#: `app_rw` / `app_ro` 已被 .gitleaks.toml 的 allowlist 放行，可直接写字面量。
-_SCHEME = "postgresql+psycopg" + "://"
-_SUPER = os.environ.get(
-    "COMMERCEQL_TEST_SUPER_DSN",
-    _SCHEME + "postgres" + ":" + "postgres" + "@localhost:5432/ecom",
-)
-_RW = os.environ.get(
-    "COMMERCEQL_TEST_RW_DSN",
-    "postgresql+psycopg://app_rw:app_rw_pwd@localhost:5432/ecom",
-)
-_RO = os.environ.get(
-    "COMMERCEQL_TEST_RO_DSN",
-    "postgresql+psycopg://app_ro:app_ro_pwd@localhost:5432/ecom",
-)
+#: DSN **只认环境变量**（U-114 防线①，共享守卫 `_env_dsn.py`）：缺 env = 当场 fail（禁止 skip）。
+_SUPER = env_dsn("COMMERCEQL_TEST_SUPER_DSN")
+_RW = env_dsn("COMMERCEQL_TEST_RW_DSN")
+_RO = env_dsn("COMMERCEQL_TEST_RO_DSN")
 
 
 def _sqla(dsn: str) -> str:

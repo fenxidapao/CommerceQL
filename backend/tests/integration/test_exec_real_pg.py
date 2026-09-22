@@ -21,19 +21,18 @@
 from __future__ import annotations
 
 import asyncio
-import os
 import uuid
 from collections.abc import Iterator
 
 import psycopg
 import pytest
 
+from tests.integration._env_dsn import env_dsn
+
 pytestmark = pytest.mark.integration
 
-_SUPER = os.environ.get(
-    "COMMERCEQL_TEST_SUPER_DSN", "postgresql://postgres:postgres@localhost:5432/ecom"
-)
-_RO = os.environ.get("COMMERCEQL_TEST_RO_DSN", "postgresql://app_ro:app_ro_pwd@localhost:5432/ecom")
+_SUPER = env_dsn("COMMERCEQL_TEST_SUPER_DSN")
+_RO = env_dsn("COMMERCEQL_TEST_RO_DSN")
 
 #: 模块随机后缀（并发跑两次 pytest 也不撞表名）
 _SCHEMA = f"it_w2d_{uuid.uuid4().hex[:8]}"

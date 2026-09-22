@@ -1,0 +1,73 @@
+================================================================================
+U-123（P0，W2A）+ U-114 防线①（W2A）落地证据 —— W2A 采集
+采集时刻：2026-09-22T15:54:42+0800
+HEAD（证据采集时）：36c782a feat(w0): U-114 防线② …（本地未推；W0 15:46 落）
+远端：git ls-remote origin main = e44f721（W2A 此前 b7e6c8d 已在远端）
+数据库：一次性库 ecom_u123_probe（本机 compose 栈 pgvector/pgvector:pg16，
+  从零 CREATE DATABASE + alembic upgrade head 至 0005，exit 0）。
+  全程未触碰共享库 ecom。
+================================================================================
+
+【一】U-123 修复内容（app/semantics/materialize.py）
+- `_insert_rows` 的 DELETE 循环剔除 `embed_doc`（原 :297-299 对 9 张表按
+  bundle_version 先 DELETE 后 INSERT）；
+- embed_doc 删插整体移入"派生器齐备"分支：`tokenizer is None or embedder is None`
+  ⇒ 连 DELETE 都不做，rows["embed_doc"]=0 + 警告 + 状态 pending_*（判据① 取
+  "跳过删插 + PENDING"路线，未取"抛错"路线 —— 判据④ 隐含"能走完且记 PENDING"
+  的完成路径）；
+- 判据③：未给 embedder/tokenizer 任何默认值（签名仍是 None 默认 + 跳过语义）；
+- 判据④：MaterializeReport.embedding_status/tsv_status 缺派生器时 =
+  "pending_embedder"/"pending_tokenizer"（具名 PENDING，接 U-111）；
+  doc_count 改为实际写入数（缺派生器 = 0，如实记录）。
+
+【二】U-114 防线① 内容（tests/integration/，7 文件 + 共享守卫）
+- 新共享守卫 `tests/integration/_env_dsn.py`：`env_dsn()` 缺 env 当场 RuntimeError；
+- 7 个集成夹具文件的 `os.environ.get(VAR, "…localhost:5432/ecom")` 字面默认值全部
+  删除，改 `env_dsn(VAR)`：test_semantic_materialization / test_audit_append_only /
+  test_exec_real_pg / test_feedback_store_pg / test_migration_0003_views /
+  test_migration_0004_runtime / test_query_plan_store_pg（含 docstring 示例改写）。
+
+【三】判据② 正向对照（红today → 绿）
+- 红today（materialize.py 未修 + 测试已改）：
+  命令：COMMERCEQL_TEST_*_DSN=<ecom_u123_probe> python -m pytest
+        tests/integration/test_semantic_materialization.py -v
+  退出码：1
+  读数：2 failed, 7 passed ——
+    FAILED ...::TestMaterializeRows::test_insert_rows_and_honest_degradation
+    FAILED ...::TestU123NoDestructiveIdempotence::test_rematerialize_without_derivers_preserves_derived_data
+    （红点：`assert r2.rows["embed_doc"] == 0` → `assert 197 == 0`，
+     = 旧行为缺派生器静默插 197 行 NULL 的自毁路径实测复现）
+- 绿（materialize.py 修复后，同一命令）：
+  退出码：0，读数：9 passed in 3.57s（含 U-123 判据② 正向断言与带派生器幂等重跑）
+- ruff --fix（import 排序）后复跑：9 passed, exit 0（改完必须跑，语义未变）。
+
+【四】防线① 判据门禁
+- 缺 env 跑目录：env -u COMMERCEQL_TEST_RW_DSN/SUPER/RO_DSN
+  python -m pytest tests/integration
+  退出码：2（7 errors during collection —— RuntimeError: 环境变量 … 未设置）
+  ⇒ 非零失败，不是 7 skipped。✓
+- grep 门禁：grep -rn "localhost:5432/ecom" tests/integration/ --include="*.py"
+  退出码：1（零命中）。✓（_env_dsn.py 文档字符串亦不落该字面量）
+
+【五】常规门禁
+- ruff check .        → All checks passed!
+- mypy app            → Success: no issues found in 147 source files
+- lint-imports        → Contracts: 4 kept, 0 broken
+- pytest tests/unit tests/contract → 1810 passed, 1 warning（exit 0；
+  注意：U-119 的刻意红已被 W4 0c596e6 转绿，非本轮改动）
+
+【六】防线② 联动闭合（W0 36c782a 的 tests/contract/test_no_shared_ecom_dsn_fallback.py）
+- W0 提交说明："夹具窗口按防线①（_env_dsn 必填）改完即绿"
+- 实测：pytest tests/contract/test_no_shared_ecom_dsn_fallback.py -v
+  → 4 passed, exit 0（守卫主体 + 三条常驻正对照全绿）✓
+
+【七】未做 / 边界（如实登记）
+- `app.synonym` 的 tsv 有同族破坏性幂等形态（缺 tokenizer 时 DELETE 后重插
+  tsv=NULL，但 synonym 的非派生列是核心元数据，不能整表跳过）—— U-123 四条判据
+  只点名 embed_doc，synonym 侧未动，已在 RELAY 回执提请裁定；
+- `tests/eval/**` 的字面 DSN = pg_guard 守卫函数自身的测试输入（W0 守卫明确
+  不扫、归 W6 自治）；tests/unit 的假 DSN（app_rw:pw）从不拨号，不在判据面；
+- test_retrieval_fts_pg.py 的 _dsn_from_env_file() 运行时读 deploy/.env ——
+  W0 守卫已登记为静态盲区，归其夹具归属窗口 + 架构裁；
+- 一次性库 ecom_u123_probe 留存未删（含测试假向量已被收尾清理），可随时 DROP；
+- W6 按 §24.4 提醒：U-123/防线① 已落地，判据④ 接触面采样可重跑。

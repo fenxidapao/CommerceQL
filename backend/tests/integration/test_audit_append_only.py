@@ -21,27 +21,21 @@
 
 from __future__ import annotations
 
-import os
 import uuid
 from collections.abc import Iterator
 
 import psycopg
 import pytest
 
+from tests.integration._env_dsn import env_dsn
+
 pytestmark = pytest.mark.integration
 
-#: 集成测试的连接串。**默认指向本机映射端口**（compose 的 5432 映射），
-#: 生产/CI 用环境变量覆盖 —— 与 `deploy/.env.example` 的密码保持一致，
-#: 这样"测试能过"与"栈能起"用的是同一套凭据。
-_RW = os.environ.get(
-    "COMMERCEQL_TEST_RW_DSN", "postgresql://app_rw:app_rw_pwd@localhost:5432/ecom"
-)
-_RO = os.environ.get(
-    "COMMERCEQL_TEST_RO_DSN", "postgresql://app_ro:app_ro_pwd@localhost:5432/ecom"
-)
-_SUPER = os.environ.get(
-    "COMMERCEQL_TEST_SUPER_DSN", "postgresql://postgres:postgres@localhost:5432/ecom"
-)
+#: 集成测试的连接串 **只认环境变量**（U-114 防线①，共享守卫 `tests/integration/_env_dsn.py`）：
+#: 旧实现给共享库 `ecom` 的字面默认值 —— 漏带 env 就静默打到共享库。缺 env = 当场 fail（禁止 skip）。
+_RW = env_dsn("COMMERCEQL_TEST_RW_DSN")
+_RO = env_dsn("COMMERCEQL_TEST_RO_DSN")
+_SUPER = env_dsn("COMMERCEQL_TEST_SUPER_DSN")
 
 
 def _connect(dsn: str) -> psycopg.Connection:

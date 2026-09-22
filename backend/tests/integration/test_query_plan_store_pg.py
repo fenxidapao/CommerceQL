@@ -24,9 +24,8 @@
 跳过策略（同 0004 集成测试）：PG 不可达 → skip（写明缺失前置）；迁移失败 → 让它红。
 
 ⚠️ **本地复核必须至少跑一遍 CI 形态的 DSN**（否则"本地全绿"是假绿，见 `_sqla()`）：
-`COMMERCEQL_TEST_SUPER_DSN=postgresql://postgres:postgres@localhost:5432/ecom \
- COMMERCEQL_TEST_RW_DSN=postgresql://app_rw:app_rw_pwd@localhost:5432/ecom \
- pytest tests/integration/test_query_plan_store_pg.py`
+`COMMERCEQL_TEST_SUPER_DSN=<超管 DSN> COMMERCEQL_TEST_RW_DSN=<读写 DSN> pytest tests/integration/test_query_plan_store_pg.py`
+（U-114 防线①：DSN 只认环境变量，缺 = fail；别指向共享库，用一次性测试库。）
 """
 
 from __future__ import annotations
@@ -47,21 +46,17 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.enums import BindingLayer, BindingState
 from app.repo.query_plan import QueryPlanStore
+from tests.integration._env_dsn import env_dsn
 
 pytestmark = pytest.mark.integration
 
 _BACKEND = Path(__file__).resolve().parents[2]
 
 #: 属主 DSN **运行时拼接**（DoD④：源码不落完整字面量；app_rw 在 allowlist 内可直写）。
+#: DSN **只认环境变量**（U-114 防线①，共享守卫 `_env_dsn.py`）：缺 env = 当场 fail（禁止 skip）。
 _SCHEME = "postgresql+psycopg" + "://"
-_SUPER = os.environ.get(
-    "COMMERCEQL_TEST_SUPER_DSN",
-    _SCHEME + "postgres" + ":" + "postgres" + "@localhost:5432/ecom",
-)
-_RW = os.environ.get(
-    "COMMERCEQL_TEST_RW_DSN",
-    "postgresql+psycopg://app_rw:app_rw_pwd@localhost:5432/ecom",
-)
+_SUPER = env_dsn("COMMERCEQL_TEST_SUPER_DSN")
+_RW = env_dsn("COMMERCEQL_TEST_RW_DSN")
 
 
 def _libpq(dsn: str) -> str:

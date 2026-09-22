@@ -293,9 +293,11 @@ def _insert_rows(
         """,
         (version, content_hash, _PUBLISHED_BY),
     )
-    # 幂等重发布：清掉旧行再插（全在一个事务里，失败整体回滚）
+    # 幂等重发布：清掉旧行再插（全在一个事务里，失败整体回滚）。
+    # ⚠️ `embed_doc` 不在此列（U-123）：它的删插下移到"派生器齐备"分支 ——
+    # 缺派生器时连 DELETE 都不许碰，否则同版本已派生的 tsv/embedding 被清空。
     for table in ("asset", "metric_def", "dimension", "field_binding", "join_path",
-                  "synonym", "policy", "default_predicate", "embed_doc"):
+                  "synonym", "policy", "default_predicate"):
         cur.execute(f"DELETE FROM app.{table} WHERE bundle_version = %s", (version,))
 
     counts: dict[str, int] = {}
@@ -411,27 +413,31 @@ def _insert_rows(
         )
     counts["default_predicate"] = len(b.default_predicates)
 
-    # embed_doc：tsv / embedding 依赖注入（缺 → NULL + 如实降级）
+    # embed_doc（U-123，arch RELAY §24.1 判据①）：缺任一派生器 ⇒ **整体跳过删插**
+    # （连 DELETE 都不做）。禁止第三态"静默插 NULL"：DELETE 会先清掉同版本已派生的
+    # tsv/embedding，再插 NULL 行 = 破坏性幂等清空检索面（生产件自毁路径，
+    # 2026-09-22 共享库实测一天被清两轮）。
+    if tokenizer is None or embedder is None:
+        counts["embed_doc"] = 0
+        warnings.append(
+            "embed_doc 删插已跳过（tokenizer/embedder 未注入齐，U-123）—— "
+            "防破坏性幂等清空已派生的 tsv/embedding；本版本检索文档未写入（PENDING，非通过）"
+        )
+        return counts, "pending_tokenizer", "pending_embedder", warnings
+
+    # 派生器齐备：清掉同版本旧行后全量重写（幂等；tsv/embedding 由注入方计算，
+    # N-24：写入侧与查询侧必须同源）
+    cur.execute("DELETE FROM app.embed_doc WHERE bundle_version = %s", (version,))
     texts = [d["text"] for d in docs]
-    tsv_terms: list[str | None] | None = None
-    if tokenizer is not None:
-        tsv_terms = [" ".join(tokenizer(t)) for t in texts]
-    else:
-        warnings.append("tsv 未物化（tokenizer 未注入）—— 稀疏检索不可用（如实降级，非通过）")
-    embeddings: list[list[float]] | None = None
-    if embedder is not None:
-        embeddings = embedder(texts)
-        if len(embeddings) != len(texts):
-            raise SemanticMaterializeError(
-                f"embedder 返回 {len(embeddings)} 条向量，与文档数 {len(texts)} 不一致"
-            )
-    else:
-        warnings.append("embedding 未物化（embedder 未注入）—— 稠密检索不可用（如实降级，非通过）")
+    tsv_terms = [" ".join(tokenizer(t)) for t in texts]
+    embeddings = embedder(texts)
+    if len(embeddings) != len(texts):
+        raise SemanticMaterializeError(
+            f"embedder 返回 {len(embeddings)} 条向量，与文档数 {len(texts)} 不一致"
+        )
 
     for i, doc in enumerate(docs):
-        tsv_text = tsv_terms[i] if tsv_terms is not None else None
-        emb = embeddings[i] if embeddings is not None else None
-        emb_literal = "[" + ",".join(f"{x:.8g}" for x in emb) + "]" if emb else None
+        emb_literal = "[" + ",".join(f"{x:.8g}" for x in embeddings[i]) + "]"
         cur.execute(
             """
             INSERT INTO app.embed_doc (doc_id, bundle_version, tenant_id, kind, ref, text,
@@ -442,13 +448,11 @@ def _insert_rows(
                     %s::vector)
             """,
             (doc["doc_id"], version, _GLOBAL_TENANT, doc["kind"], doc["ref"], doc["text"],
-             tsv_text, tsv_text, emb_literal),
+             tsv_terms[i], tsv_terms[i], emb_literal),
         )
     counts["embed_doc"] = len(docs)
 
-    tsv_status = "tokenized" if tokenizer is not None else "pending_tokenizer"
-    emb_status = "embedded" if embedder is not None else "pending_embedder"
-    return counts, tsv_status, emb_status, warnings
+    return counts, "tokenized", "embedded", warnings
 
 
 class SemanticMaterializeError(Exception):
@@ -496,7 +500,7 @@ def materialize(
         version=loaded.version,
         content_hash=content_hash or "",
         rows=counts,
-        doc_count=len(docs),
+        doc_count=counts["embed_doc"],  # 实际写入数（U-123：缺派生器时 = 0，如实记录）
         embedding_status=emb_status,
         tsv_status=tsv_status,
         grant_policy_executed=with_policy,
