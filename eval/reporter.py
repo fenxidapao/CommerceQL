@@ -768,11 +768,16 @@ def build_payload(
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_metric_values.py   # G-7 输入",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/_probe_pg_real.py        # 探测前先过只读闸门（故意写一次须被拒），没过就不出产物",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/_probe_parallel_states.py  # 并行少算五态复现（同样带只读闸门；U-110 成因的证据件）",
-            "cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest -q -rfEs   # G-1 读全量：大写 E 才点 error 名（小写 e 不点 ⇒ 红因无从点名）；读数自带 PG 接触面 pg_surface",
+            "cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest -q -rfEs"
+            "   # G-1 读全量：大写 E 才点 error 名（小写 e 不点 ⇒ 红因无从点名）；读数自带 PG 接触面 pg_surface",
+            "cd backend && PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest -q -rfEs --continue-on-collection-errors"
+            "   # ⚠️ U-114 防线①后本地裸跑会因 7 条 import 期 env_dsn() 抛错而整轮中断（退出码 2、零条执行）"
+            "⇒ 用这条保住同一收集面；**不许**改用 --ignore/--deselect 窄化范围（缩门禁与假绿同族）",
             "cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest tests/integration -q -rfEs",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/select_smoke_batch.py   # 确定性取 20 题",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_gate_allowlist_shape.py   # U-119 判据③：两种形状 × 两道闸门",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_loadtest_receipts.py   # G-6 读端：13 份回执逐个过真 gates（含 stale 格数与 caveat=null 计数）",
+            "COMMERCEQL_PROBE_DSN=<必须显式给共享库 DSN，无字面默认> PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_pg_boundary.py --label before   # 运行边界签名：跑前一把、跑后一把（--label after --diff-with before），任何「没变化」的否定句只能引用它的差值",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --live --yes   # 真打全量需额度：先不带 --yes 看计划",
             "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --mode replay --provenance \"<匣带来源>\" --yes"
             "   # 匣带未失效时才是零成本复算；今天是否可复算看 §8 那条 🔴（探针 = 下一条命令）",
@@ -898,7 +903,7 @@ def _metric_coverage_digest(mc: Mapping[str, Any] | None) -> dict[str, Any] | No
 def _redteam_digest(rt: Mapping[str, Any]) -> dict[str, Any]:
     keys = (
         "total", "leaked", "expect_block", "checked", "n_cases_clean", "assertion_counts",
-        "reject_gates", "gate2_visible_raise", "gate2_chain_raise_n", "not_covered_cases",
+        "reject_gates", "gate2_on_port_raise", "gate2_chain_raise_n", "not_covered_cases",
         "terminal_shapes", "failures_by_class", "leak_vocabulary_size",
     )
     out = {k: rt.get(k) for k in keys}
@@ -1153,7 +1158,8 @@ def render_markdown(p: Mapping[str, Any]) -> str:
             ["断言级 PASS/FAIL/NOT_CHECKED", json.dumps(rt["assertion_counts"], ensure_ascii=False)],
             ["无任何失败断言的用例", rt["n_cases_clean"]],
             ["拒绝发生在哪道闸门", json.dumps(rt["reject_gates"], ensure_ascii=False)],
-            ["gate2 在「生产可见列形状」下的异常", json.dumps(rt["gate2_visible_raise"], ensure_ascii=False)],
+            ["gate2 在**生产端口**上的异常（非空 = 回归）",
+             json.dumps(rt["gate2_on_port_raise"], ensure_ascii=False)],
             ["未覆盖用例", "; ".join(f"{c['case_id']}" for c in rt["not_covered_cases"] or []) or "—"],
         ]))
         add("")

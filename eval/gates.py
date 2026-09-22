@@ -98,7 +98,10 @@ def _pg_surface_notes(p0_tests: Mapping[str, Any]) -> tuple[str, ...]:
         f"本读数的分层与接触面：集成层文件 = {surface.get('integration_named') or '无'}；"
         f"被拒的库 = {surface.get('databases_denied') or '无'}；"
         f"夹具下发过的 DDL 形状 = {ddl_txt}"
-        f"（连接参数 = {surface.get('conn_params') or '未点名'}；凭据一律不落盘）"
+        f"（连接参数 = {surface.get('conn_params') or '未点名'}；凭据一律不落盘。"
+        # ⚠️ 这句是**无条件**的：`pytest -q` 只打印失败/报错夹具的 SQL ⇒ 通过夹具留下的写操作
+        # 一行都不会进日志，所以取到的清单是**下界**（2026-09-22 W7 的证据逼出来的措辞，见交付 §5.18）。
+        "整串取自日志文本 ⇒ 只能证明「取到了这些」，不能证明「只做了这些」）"
     )]
     shared: list[str] = []
     for target in surface.get("ddl_targets") or ():

@@ -82,5 +82,5 @@ def analyst_ctx():
 
 @pytest.fixture(scope="session")
 def guard_allowlist(harness, analyst_ctx):
-    """闸门实际读到的那份 allowlist（`AssetAllowlistView` 双形状视图）。"""
-    return harness.semantics.asset_allowlist(analyst_ctx)
+    """闸门实际读到的那份 allowlist = 端口的七键 `guard_allowlist`（与生产同一条路径）。"""
+    return harness.semantics.guard_allowlist(analyst_ctx, max_rows=None)

@@ -443,7 +443,9 @@ async def run_batch(
         column_top=column_top,
         node_timeout_overrides=node_timeout_overrides,
     )
-    allowlist = harness.semantics.asset_allowlist(identity_for_case("ALLOWLIST", "T_A"))
+    allowlist = harness.semantics.guard_allowlist(
+        identity_for_case("ALLOWLIST", "T_A"), max_rows=None
+    )
     records: list[dict[str, Any]] = []
     try:
         for index, case in enumerate(cases, start=1):

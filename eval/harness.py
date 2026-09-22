@@ -12,7 +12,7 @@
 | 装配点 | 生产 | 评测 | 为什么 |
 |---|---|---|---|
 | `executor` | `PgSqlExecutor(analytics 池)` | `SqliteEvalExecutor`（继承它） | 沙箱无 PG 业务数据（D2 / §17.4） |
-| `semantics` | `SemanticBundleRuntime` | `GuardAllowlistBundle`（薄代理，两面均取自端口） | 消费方仍从 `asset_allowlist` 读闸门判据，见 §三 |
+| `semantics` | `SemanticBundleRuntime` | `SemanticBundleRuntime`（**同一个类，同一条取数路径**） | U-121 全部落地（`357618f` + `c76f701`）⇒ 评测侧适配层已删净，见 §三 |
 | `retrieval` | `RetrievalService`（pgvector + tsvector） | `BundleCatalogRetrieval`（全目录夹具） | §17.4 明文"评测不测向量检索"，见 §四 |
 | `audit` / `query_plan_writer` / `result_cache` / `presenter` | PG/Redis/W3B | 内存替身 / `None` | 评测不产出生产审计行；`None` 走的是**已登记的降级路径**（同生产 P0 的 `presenter=None`） |
 
@@ -28,7 +28,7 @@
 `live=True` 时真打上游并（可选）录制。⚠️ 密钥只从**环境**读，本模块不打印、不落盘。
 
 --------------------------------------------------------------------------
-三、闸门 allowlist 形状（U-121 之后：端口给形状，评测只**选面**不**造面**）
+三、闸门 allowlist 形状（U-121 全部落地：评测路径 == 生产路径，同一端口对象）
 --------------------------------------------------------------------------
 `app/guard/ast_gate.py` / `policy_gate.py` 要的是**七键 wrapper**（`assets` / `joins` /
 `deny_columns` / `default_predicates` / `allowed_constants` / `bundle_version` / `max_rows`），
@@ -36,28 +36,25 @@
 09-20 实测（`reports/w6/probe_gate_allowlist_shape.py`）：扁平面直接喂 `run_gate1` →
 **任何**查询都被 R05 拒；喂 `run_gate2` → G2-ASSET 拒。
 
-U-121（W0 契约 + W2A `b7e6c8d`）把这件事的正解落在了端口上：
-`SemanticBundleRuntime.guard_allowlist(ctx, *, max_rows=None)` 现成给七键，且 `assets[*]`
-**带两个列面** —— `columns`（可见面，已裁 deny，gate1 R06 用）与 `all_columns`
-（结构面，全列，gate2 ④⑤ 用）。⇒ 评测侧那套"手拼七键 + 补列类型 + 截 joins"的派生代码
-**整体删除**（它现在就是第三条真相）。
+U-121 把正解落在端口上：`SemanticBundleRuntime.guard_allowlist(ctx, *, max_rows=None)`
+现成给七键，且 `assets[*]` **带两个列面** —— `columns`（可见面，已裁 deny，gate1 R06 用）
+与 `all_columns`（结构面，全列，gate2 ④⑤ 用）。评测侧那套"手拼七键 + 补列类型 + 截
+joins"的派生代码因此**整体删除**。
 
-⚠️ **残留的适配层只剩一半**（2026-09-21 复测）：gate1 侧已由 W4 `357618f` 改调端口，
-而 `policy_gate` 仍从 `asset_allowlist` 读闸门判据 —— 该端口方法今天同时被
-`planner/payloads` 与 `binding/filters` 按**扁平**消费（实测把 wrapper 直接给端口会让
-planner 在 `entry.get(...)` 上抛 `AttributeError`）。⇒ `GuardAllowlistBundle` 返回
-`AssetAllowlistView`（迭代 = 扁平、`.get(保留键)` = wrapper，两面**都来自端口**）。
+✅ **2026-09-22 适配层归零**：`357618f`（W4）接完 gate1、`c76f701`（W2C）接完 gate2
+（`policy_gate.py:110` 改调 `guard_allowlist`，④⑤ 改读 `all_columns`，结构面由闸门自己
+在 `policy_gate.py:187-201` 内成一次性视图）⇒ 本模块不再有 `AssetAllowlistView` /
+`GuardAllowlistBundle`，`Harness.semantics` **就是** `SemanticBundleRuntime`，与
+`app/api/deps.py` 同一个类、同一条取数路径（架构在 `reports/arch/RELAY.md` 点名的
+"第三份真相"到此消掉；`eval/redteam_eval.py` 的 `StructuralAllowlistBundle` /
+`structural_wrapper` 同批删除 —— 它们存在的唯一理由"生产用可见面判 ⑤"已不成立）。
 
-存在理由（仍在读扁平面、因此还需要本视图的生产文件）: app/guard/policy_gate.py:105
-
-🔴 上面那行**不是散文，是一份可证伪的清单**：`tests/eval/test_harness_allowlist.py` 会逐文件
-AST 扫端口方法的实际调用点，清单与代码不一致就红（并集式的"两个都改完才响"会漏掉
-"只改完一半"这种状态 —— 而今天正好就是这种状态）。
-整层视图**随消费侧改调 `guard_allowlist` 而必须整体删除**（判据与实测见
-`reports/w6/probe_gate_allowlist_shape.json`：gate2 那边不只是"改调一行"，⑤ 还要从
-可见面改读结构面，否则 `tenant_scoped ⇔ tenant_id` 双向断言当场 `ContractViolationError`）。
-哨兵测试 = `tests/eval/test_harness_allowlist.py::test_the_dual_shape_view_dies_with_the_consumer_fix`。
-**不由评测窗口去改别人的文件。**
+🔴 **留下的不是散文，是回归哨兵**：`tests/eval/test_harness_allowlist.py` 逐文件 AST 扫
+`gate1_ast.py` / `policy_gate.py` 实际调用的端口方法，**任一侧回退到 `asset_allowlist`
+即红**，且适配层符号一旦被重新引入也红。历史教训有两条，都写进了那条测试的理由：
+① 并集式"两个都改完才响"漏掉了"只改完一半"（09-21 就是那个状态）；
+② 清单式"存在理由"行会在别人接线后当场失真（当时也无声）⇒ 所以那句话随适配层**一并删除**，
+不再留第二处需要人工同步的清单。
 
 --------------------------------------------------------------------------
 四、检索夹具的口径偏差（必须写进报告的"已知限制"）
@@ -119,7 +116,6 @@ from sqlite_exec import SqliteEvalExecutor  # noqa: E402
 __all__ = [
     "BundleCatalogRetrieval",
     "CaseRun",
-    "GuardAllowlistBundle",
     "Harness",
     "describe_node_timeouts",
     "eval_node_timeouts",
@@ -128,123 +124,13 @@ __all__ = [
 
 
 # ============================================================================
-# 一、闸门 allowlist 形状（U-121 之后**一律取端口输出**，评测侧不再自己拼）
+# 一、闸门判据的取用面：本模块**不派生任何字段**
 # ============================================================================
 #
-# 这里曾经有一个 `build_guard_allowlist()`：从扁平面手拼七键（补列类型、截 joins、
-# 决定哪些键留空）。它存在的前提是"端口给不出闸门要的形状"。U-121（W0 契约 + W2A
-# `b7e6c8d`）之后前提没了 ⇒ 派生代码整体删除，理由有三条，每条都实测过：
-#   ① 手拼那版把扁平面（`columns` = 列名**元组**）当类型字典用 ⇒ `ast_gate.py:751`
-#      `AttributeError`（见 `reports/w6/probe_gate_allowlist_shape.py` 的 `legacy_hand_wrapper` 格）；
-#   ② 列类型/`joins`/`all_columns` 现在由端口从同一份 `LoadedBundle` 派生，评测再拼一遍
-#      = 第三条真相（漂移只会以"评测绿、生产红"的形式回来）；
-#   ③ 端口自带**两个列面**（可见面 + `all_columns`），评测侧需要的"结构面"从此是
-#      **选面**而不是**造面** —— 见 `redteam_eval.structural_wrapper`。
-
-
-#: guard 侧（`ast_gate` / `policy_gate`）从 allowlist 读的**唯一**几个键。
-_GUARD_WRAPPER_KEYS: tuple[str, ...] = (
-    "bundle_version",
-    "assets",
-    "joins",
-    "deny_columns",
-    "default_predicates",
-    "allowed_constants",
-    "max_rows",
-)
-
-
-class AssetAllowlistView(Mapping):
-    """`asset_allowlist(ctx)` 的**双形状视图**（评测侧适配，不改任何生产件）。
-
-    🔴 为什么必须存在（这是一条**上游契约冲突**，不是评测的发明）
-    ------------------------------------------------------------------
-    `SemanticBundlePort.asset_allowlist(ctx)` 有**两个文档化、但形状互斥**的消费者：
-
-    | 消费者 | 期望形状 | 读取方式 |
-    |---|---|---|
-    | `planner/payloads.build_semantic_summary`、`binding/filters._step_no_permission` | **扁平** `{物理名: {logical_name, columns, grain, domain, tenant_scoped}}` | `for physical in sorted(allowlist)` + `allowlist[physical]` |
-    | `guard/ast_gate.run_gate1`、`guard/policy_gate.run_gate2` | **wrapper** `{assets, joins, deny_columns, default_predicates, allowed_constants, bundle_version, max_rows}`（形状写在其模块 docstring） | 只用 `.get(<wrapper 键>)`（实测全仓无迭代、无 `[]`） |
-
-    真运行时给的是**扁平** ⇒ 生产现状是"planner 正常、gate1 因 `assets` 取不到而把
-    **每张表**判 R05"（`probe_gate_allowlist_shape.py` 实证）。也就是：这条冲突不是
-    评测能绕过的取舍，而是"闸门今天在生产里根本没生效"。
-
-    本视图的做法：`__getitem__`/`get` **先查扁平再查 wrapper** ⇒ 真实资产名永不被
-    保留键遮蔽；`__iter__`/`__len__` **只枚举扁平** ⇒ planner 的 `sorted(allowlist)`、
-    `.items()`、`keys()` 看到的仍是"物理名 → 条目"的真相，不会把 `assets` 当成一张表。
-
-    ⚠️ 残余风险（已登记 `reports/w6/RELAY.md`）：若语义包将来出现名为
-    `assets` / `joins` / … 的**物理资产**，wrapper 键会被资产条目遮蔽（方向是安全的：
-    闸门会因此拿不到判据而**拒绝**，不是放行），届时本类必须换成显式两方法端口。
-    正解归属：W0 给端口加第二个方法，**或** W2C 让闸门自己从扁平派生（后者改动面更小）。
-    """
-
-    def __init__(self, flat: Mapping[str, Any], wrapper: Mapping[str, Any]) -> None:
-        overlap = sorted(set(flat) & set(_GUARD_WRAPPER_KEYS))
-        if overlap:
-            raise ValueError(
-                "物理资产名与 guard 的 wrapper 键冲突，双形状视图无法保证不遮蔽",
-                f"（冲突项：{overlap}）",
-            )
-        self._flat = dict(flat)
-        self._wrapper = {k: wrapper[k] for k in _GUARD_WRAPPER_KEYS if k in wrapper}
-
-    def __getitem__(self, key: str) -> Any:
-        if key in self._flat:
-            return self._flat[key]
-        return self._wrapper[key]
-
-    def get(self, key: str, default: Any = None) -> Any:  # 与 __getitem__ 同优先级
-        if key in self._flat:
-            return self._flat[key]
-        return self._wrapper.get(key, default)
-
-    def __contains__(self, key: object) -> bool:
-        return key in self._flat or key in self._wrapper
-
-    def __iter__(self):  # 只枚举扁平：见 docstring 的 planner 一致性要求
-        return iter(self._flat)
-
-    def __len__(self) -> int:
-        return len(self._flat)
-
-
-class GuardAllowlistBundle:
-    """`SemanticBundlePort` 薄代理：只把 `asset_allowlist` 换成 `AssetAllowlistView`。
-
-    两面**都来自端口**（扁平 = `asset_allowlist`，闸门 = `guard_allowlist`），评测侧
-    一个字段都不派生。`max_rows` 由调用方给（生产给的是 `state["options"]["max_rows"]`；
-    评测与生产今天都没给 ⇒ 端口填 `None`，实测 `_effective_limit` 对"缺键/None"同值 = 10000）。
-
-    🔴 **本类是临时的**：它存在的唯一理由 = 还有生产消费方从 `asset_allowlist` 里读闸门判据。
-    那份"还剩谁"的清单**只在模块 §三 写一次**（`存在理由（仍在读扁平面…）: <文件>:<行>`），
-    本类刻意不复述 —— 两处各写一遍必然漂移，2026-09-21 gate1 半边接线时就是它先失真。
-    U-121 的正解全部落地后这里必须**整体删除**（评测路径与在线路径同一条）；
-    `tests/eval/test_harness_allowlist.py::test_the_dual_shape_view_dies_with_the_consumer_fix`
-    就是钉这句话的哨兵 —— 消费侧一改，它红，逼下一轮动手，而不是让适配层变成长期真相。
-
-    其余方法一律 `__getattr__` 透传给真运行时 —— 代理不许改语义，只许改形状。
-    """
-
-    def __init__(self, runtime: SemanticBundleRuntime, *, max_rows: int | None = None) -> None:
-        self._runtime = runtime
-        self._max_rows = max_rows
-        self._cache: dict[str, AssetAllowlistView] = {}
-
-    def asset_allowlist(self, ctx: IdentityContext) -> Mapping[str, Any]:
-        key = ctx.role.value
-        view = self._cache.get(key)
-        if view is None:
-            view = AssetAllowlistView(
-                self._runtime.asset_allowlist(ctx),
-                self._runtime.guard_allowlist(ctx, max_rows=self._max_rows),
-            )
-            self._cache[key] = view
-        return view
-
-    def __getattr__(self, name: str) -> Any:  # 透传（含端口未列出的富方法）
-        return getattr(self._runtime, name)
+# `run_gate1` / `run_gate2` 的判据只有一处来源 = `runtime.guard_allowlist(ctx, max_rows=…)`；
+# `planner/payloads`、`binding/filters` 仍按扁平消费 `asset_allowlist(ctx)`。评测侧曾经为此
+# 造过 `AssetAllowlistView` / `GuardAllowlistBundle` 双形状视图，U-121 全部落地
+# （`357618f` 接 gate1、`c76f701` 接 gate2）后**整体删除**，理由与回归哨兵见模块 docstring §三。
 
 
 def _pred_columns_by_domain(allowlist: Mapping[str, Any]) -> dict[str, set[str]]:
@@ -783,7 +669,9 @@ class Harness:
         self.settings = settings or get_settings()
         self.loaded = load_bundle(bundle_path or _bootstrap.BUNDLE_PATH)
         self.runtime = SemanticBundleRuntime(self.loaded)
-        self.semantics = GuardAllowlistBundle(self.runtime)
+        # 与 `app/api/deps.py` 同一个类：闸门判据由端口自己给（`guard_allowlist`），
+        # 评测侧不再包一层代理 —— 别名只为让装配点读起来仍像 `semantics`（端口本名）。
+        self.semantics = self.runtime
         self.mask = SemanticMaskEngine()
         self.tenant_scoped_physicals = {
             a.physical_asset: "tenant_id"
@@ -975,7 +863,7 @@ def selfcheck() -> dict[str, Any]:
     """评测器自身的"能不能装起来"检查（报告附录用；不调 LLM、不执行 SQL）。"""
     harness = Harness()
     identity = identity_for_case("SELFCHECK", "T_A")
-    allowlist = harness.semantics.asset_allowlist(identity)
+    allowlist = harness.semantics.guard_allowlist(identity, max_rows=None)
     from app.guard import run_gate1
 
     # ⚠️ 排序键刻意写**表达式**而不是投影别名：`ORDER BY g DESC` 会被 gate1 判 R06

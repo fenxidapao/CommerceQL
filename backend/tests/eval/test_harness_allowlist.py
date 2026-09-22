@@ -4,8 +4,8 @@
 
 这里测的都是"评测器凭什么有权替被测系统说话"的那几件事
 --------------------------------------------------------------------------
-* `AssetAllowlistView` 是**双形状视图**，存在的理由是一条上游契约冲突（两个消费者要求
-  互斥形状）。它一旦把 wrapper 键当资产枚举出去，planner 的提示词就会长出 8 张假表。
+* 闸门判据的**取用面**：评测侧不许再拼 wrapper，也不许再包一层双形状视图（U-121 全部
+  落地后已删净）。本文件里那几条"到期哨兵"因此转成了**回归哨兵** —— 回退即红。
 * `detect_gate_self_defect` 决定一条 R06 记在**闸门**头上还是**模型**头上；
   它自己判错，§C.7 的分布就整体失真。
 * 超时派生：评测若在契约超时上跑，LLM 节点会整批超时，然后报告里全是"链路故障"。
@@ -15,63 +15,32 @@ from __future__ import annotations
 
 import ast
 import os
-import re
+from pathlib import Path
 
 import harness as H
 import pytest
 
 from app.core.enums import RetrievalMode, Role
-from app.core.errors import ContractViolationError
 from app.guard.ast_gate import DEFAULT_MAX_ROWS, _effective_limit, run_gate1
 from app.guard.policy_gate import run_gate2
 
 
-# ==== AssetAllowlistView：双形状不能互相污染 ==========================
-def test_view_iterates_only_flat_assets_not_guard_wrapper_keys():
-    """planner 走 `sorted(allowlist)` —— 枚举里混进 `assets`/`joins` 就是给它 8 张假表。"""
-    from harness import AssetAllowlistView
+# ==== 闸门判据的取用面（评测侧不再包视图）=================================
+def test_harness_semantics_is_the_port_itself(harness):
+    """评测路径与生产路径**同一个对象** —— 这是 U-121 的交付判据，不是风格偏好。
 
-    view = AssetAllowlistView(
-        {"v_order_paid": {"logical_name": "order_paid"}, "v_shop": {"logical_name": "shop"}},
-        {
-            "assets": {"v_order_paid": {}}, "joins": [], "deny_columns": [],
-            "default_predicates": {}, "bundle_version": "x",
-        },
-    )
-    assert sorted(view) == ["v_order_paid", "v_shop"]
-    assert len(view) == 2
-    assert "assets" not in list(view)
+    记进测试的理由：适配层当初就是以'另一个实例'的形式混进来的，只要 `semantics` 又
+    变成代理类，评测就会和生产读到不同的面，而所有读数仍然'看起来对'。
+    """
+    from app.semantics.runtime import SemanticBundleRuntime
 
-
-def test_view_prefers_flat_entry_over_wrapper_key():
-    from harness import AssetAllowlistView
-
-    flat = {"v_shop": {"logical_name": "shop", "columns": {}}}
-    wrapper = {"assets": {"FAKE": {}}, "joins": []}
-    view = AssetAllowlistView(flat, wrapper)
-    assert view["v_shop"]["logical_name"] == "shop"
-    assert view.get("assets") == {"FAKE": {}}          # wrapper 键仍可取（闸门要）
-    assert view.get("nope") is None and view.get("nope", 7) == 7
-
-
-def test_view_refuses_to_build_when_a_physical_asset_shadows_a_guard_key():
-    """正对照：物理资产真叫 `assets` 时必须**炸**，不能静默遮蔽（遮蔽方向 = 闸门拿不到判据）。"""
-    from harness import AssetAllowlistView
-
-    with pytest.raises(ValueError, match="遮蔽"):
-        AssetAllowlistView({"assets": {"columns": {}}}, {"joins": []})
-
-
-# ==== GuardAllowlistBundle：缓存 + 透传 ===============================
-def test_bundle_caches_per_role_and_passes_through_other_methods(harness, analyst_ctx):
-    assert harness.semantics.asset_allowlist(analyst_ctx) is harness.semantics.asset_allowlist(analyst_ctx)
-    assert harness.semantics.active_version() == harness.runtime.active_version()
-    assert harness.semantics.policy() == harness.runtime.policy()
+    assert harness.semantics is harness.runtime
+    assert type(harness.runtime) is SemanticBundleRuntime, "semantics 又变成代理类了"
 
 
 def test_visible_columns_have_deny_columns_stripped(guard_allowlist):
     """CLS 的评测面：夹具/闸门看到的列集必须**已剔除** deny 列，而 deny 清单本身仍在。"""
-    entry = guard_allowlist["v_order_paid"]
+    entry = guard_allowlist["assets"]["v_order_paid"]
     visible = set(entry["columns"])
     denied_logical = {"tenant_id", "receiver_phone", "receiver_address"}
     assert not (visible & denied_logical), f"deny 列漏进了可见列面：{visible & denied_logical}"
@@ -102,7 +71,7 @@ def test_eval_does_not_invent_a_max_rows(harness, analyst_ctx, guard_allowlist):
 
 # ==== run_gate2 的端口形状（一条真实的踩坑路径）=======================
 def test_gate2_rejects_an_allowlist_view_because_it_wants_a_port(guard_allowlist, analyst_ctx):
-    """`run_gate2(sql, ctx, bundle)` 的第三个参数是**端口**（自己调 `asset_allowlist`）。
+    """`run_gate2(sql, ctx, bundle)` 的第三个参数是**端口**（自己调 `guard_allowlist`）。
 
     记进测试的理由：红队跑批第一版就是传了视图 ⇒ `AttributeError`，
     而它长得像被测系统坏了。
@@ -111,41 +80,41 @@ def test_gate2_rejects_an_allowlist_view_because_it_wants_a_port(guard_allowlist
         run_gate2("SELECT pay_amount FROM v_order_paid", analyst_ctx, guard_allowlist)
 
 
-def test_gate2_bidirectional_tenant_assertion_raises_on_production_visible_shape(analyst_ctx, harness):
-    """🔴 生产现状（不是评测的发明）：可见列已剔除 `tenant_id`，而资产仍 `tenant_scoped=true`
-    ⇒ 07 §7.4 的双向断言 **必然**抛 `ContractViolationError`。
+def test_gate2_on_the_production_port_no_longer_raises(analyst_ctx, harness):
+    """🟢 生产链现状（U-121 第三步 `c76f701` 之后）：gate2 在**端口**上就能跑通，不再抛
+    `ContractViolationError`。
 
-    这条测试钉住两件事：① 评测不能拿"闸门没报错"当 G-3/G-4 的证据（它压根没返回）；
-    ② 红队必须显式改用结构档 bundle（见下一条），否则整批 45/66 的 FAIL 会被读成模型问题。
+    这条测试的前身是钉住一个**失效**（可见面已剔 `tenant_id`，而 ⑤ 用可见面判
+    `tenant_scoped ⇔ tenant_id` ⇒ 必抛，07 §7.4 那条"N-07 失效"的雷）。W2C 把 ④⑤ 改读
+    `all_columns` 后，结构面由闸门自己在 `policy_gate.py:187-201` 内顶起来 ⇒ 判据反转：
+
+    * **不抛**并且 pass = 生产闸门真的生效了（G-3/G-4 的证据才成立）；
+    * 一旦重新抛 `ContractViolationError` = 闸门又退回读可见面，本测试当场红。
+
+    ⚠️ 红队侧同一条事实由 `gate2_on_port_raised` 落盘（`eval/redteam_eval.py`），
+    两处都留读数，是为了防"只在一处修好"。
     """
-    sql = "SELECT pay_amount FROM v_order_paid"
-    with pytest.raises(ContractViolationError):
-        run_gate2(sql, analyst_ctx, harness.semantics)
+    result = run_gate2("SELECT pay_amount FROM v_order_paid", analyst_ctx, harness.semantics)
+    assert result.gate_result.decision.value == "pass", (
+        f"生产端口上的 gate2 判成 {result.gate_result.decision.value}"
+        f"（rule={result.gate_result.rule_id}）⇒ 07 §7.4 的双向断言在真实链上没走通"
+    )
 
 
-def test_gate2_passes_when_columns_are_the_full_bundle_shape(analyst_ctx, harness):
-    import redteam_eval as rt
+def test_structural_face_widening_only_touches_the_columns_key(analyst_ctx, harness):
+    """结构面 = 只把 `assets[*].columns` 顶成 `all_columns`，其余判据一字不动。
 
-    structural = rt.StructuralAllowlistBundle(harness.semantics, rt.structural_wrapper(harness))
-    result = run_gate2("SELECT pay_amount FROM v_order_paid", analyst_ctx, structural)
-    assert result.gate_result.decision.value == "pass"
-
-
-def test_structural_wrapper_only_changes_the_columns_face(harness, analyst_ctx):
-    """结构档只把 `assets[*].columns` 换成端口的 `all_columns`，其余键一字不动。"""
-    import redteam_eval as rt
-
-    base = harness.runtime.guard_allowlist(analyst_ctx, max_rows=None)
-    full = rt.structural_wrapper(harness)
-    assert set(full) == set(base), "结构档不得新增/删除顶层键 —— 字段只能来自端口"
-    assert "tenant_id" in full["assets"]["v_order_paid"]["columns"]
-    assert "tenant_id" not in base["assets"]["v_order_paid"]["columns"]
-    assert full["deny_columns"] == base["deny_columns"]
-    assert full["default_predicates"] == base["default_predicates"]
-    assert full["joins"] == base["joins"], "joins 由端口派生，评测不再截点分名"
+    这条从"评测自己顶面"改成"核对闸门顶面后的效果"：租户列必须在结构面里**看得见**
+    （④ 敏感列复核与 ⑤ 双向断言的前提），同时**仍不在**可见面里（gate1 R06 的跨租户
+    拦截机制依赖的就是这一半）。两面都读，是为了让"顺手把 deny 列放回可见面"也红。
+    """
+    port = harness.runtime.guard_allowlist(analyst_ctx, max_rows=None)
+    entry = port["assets"]["v_order_paid"]
+    assert "tenant_id" in entry["all_columns"], "结构面缺 tenant_id ⇒ gate2 ⑤ 无法成立"
+    assert "tenant_id" not in entry["columns"], "deny 列混进可见面 ⇒ gate1 R06 的拦截失效"
 
 
-# ==== U-119 / U-121：形状只能取自端口，且适配层必须"到期"==============
+# ==== U-119 / U-121：形状只能取自端口，且适配层不得复活============
 #: `contracts.GuardAllowlist` 的七个键（本测试只用作**反查**：评测侧不许自己拼出这些键）。
 _GUARD_KEYS = ("bundle_version", "assets", "joins", "deny_columns",
                "default_predicates", "allowed_constants", "max_rows")
@@ -209,69 +178,59 @@ def test_the_evaluator_never_derives_guard_fields_itself():
         )
 
 
-def test_view_forwards_the_port_output_verbatim(harness, analyst_ctx):
-    """正对照：视图给闸门的 wrapper **逐键等于端口输出**，枚举面仍等于扁平面。"""
+def test_gate_input_equals_port_output(harness, analyst_ctx, guard_allowlist):
+    """给闸门的那七键**逐键等于**端口输出 —— 中间没有任何加工。
+
+    前身是"视图必须原样转发端口"。适配层删净之后这条仍然要留：它防的是"哪天有人
+    在评测里给闸门补一个键 / 裁一个键"（那正是当初手拼七键造成的 `ast_gate.py:751`
+    `AttributeError` 的形状）。
+    """
     port = harness.runtime.guard_allowlist(analyst_ctx, max_rows=None)
-    view = harness.semantics.asset_allowlist(analyst_ctx)
-    assert {k: view.get(k) for k in _GUARD_KEYS} == {k: port.get(k) for k in _GUARD_KEYS}
-    assert sorted(view) == sorted(harness.runtime.asset_allowlist(analyst_ctx))
+    assert {k: guard_allowlist.get(k) for k in _GUARD_KEYS} == {k: port.get(k) for k in _GUARD_KEYS}
 
 
-def test_the_dual_shape_view_dies_with_the_consumer_fix(repo_root):
-    """哨兵：消费侧一旦改调 `guard_allowlist`，评测的双形状视图必须**整体删除**。
+def test_the_adapter_symbols_stay_dead(repo_root):
+    """🔴 回归哨兵（前身 = 两条"到期即 fail"哨兵）：适配层删了就不许回来，闸门也不许回退。
 
-    为什么要它：适配层"是临时的"这句话靠注释传承不了两轮。今天 `policy_gate` 仍从
-    `asset_allowlist` 读闸门判据 ⇒ 视图合法存在；哪天接线完成（④⑤ 还要改读 `all_columns`，
-    见 `reports/w6/probe_gate_allowlist_shape.json`），本测试立刻红并点名删处。
+    W7 在 2026-09-22 明确要求"这条 AST 守卫别摘掉，改成转绿点名" ⇒ 判据从"到期就红"
+    反转成"回退就红"，扫描面一字未改（**按文件**，不做并集 —— 并集版对"只接一半"失明，
+    09-21 的 `357618f` 就是活证）。四件事一起钉：
 
-    ⚠️ 判据按**文件**算，不按并集算：2026-09-21 W4 落 `357618f` 只接了 gate1 半边，
-    并集版哨兵既没响也没报 —— "到期了一半"这种状态必须有读数（下一条测试管这件事）。
+    ① 两道闸门都调 `guard_allowlist`；
+    ② 两道闸门都**不**再调 `asset_allowlist` 取判据；
+    ③ 评测侧的适配符号全部不在（含 `redteam_eval` 那两个）；
+    ④ `harness` docstring 里那行"存在理由（仍在读扁平面…）"清单不在 ——
+       它是需要人工同步的第二处真相，2026-09-21 就是它先失真的。
     """
+    import harness as _h
+    import redteam_eval as _rt
+
     calls = _port_methods_called_by_gates(repo_root)
-    still_flat = {rel for rel, methods in calls.items() if "asset_allowlist" in methods}
-    if not still_flat:
-        pytest.fail(
-            "U-121 消费侧已接线（逐文件读数 "
-            + str({k: sorted(v) for k, v in calls.items()})
-            + "）⇒ 现在必须删除评测侧适配层：`eval/harness.py` 的 `AssetAllowlistView` / "
-            "`GuardAllowlistBundle` 与 `eval/redteam_eval.py` 的 `StructuralAllowlistBundle` / "
-            "`structural_wrapper`（U-119 判据③ 的副产品；留着它就是第三份真相）"
-        )
-    # 删除条件尚未成立 ⇒ 视图必须仍在（在 = 评测跑得动；不在 = 本测试的另一半失真）
-    assert hasattr(H, "GuardAllowlistBundle") and hasattr(H, "AssetAllowlistView")
+    readings = {k: sorted(v) for k, v in sorted(calls.items())}
+    not_wired = {rel for rel, m in calls.items() if "guard_allowlist" not in m}
+    back_to_flat = {rel for rel, m in calls.items() if "asset_allowlist" in m}
+    assert not not_wired, f"闸门未接端口闸门面（逐文件读数 {readings}）：{sorted(not_wired)}"
+    assert not back_to_flat, f"闸门回退到扁平面取判据（逐文件读数 {readings}）：{sorted(back_to_flat)}"
 
+    revived = [f"{m.__name__}:{name}" for m, names in (
+        (_h, ("AssetAllowlistView", "GuardAllowlistBundle", "build_guard_allowlist",
+              "_GUARD_WRAPPER_KEYS")),
+        (_rt, ("StructuralAllowlistBundle", "structural_wrapper")),
+    ) for name in names if hasattr(m, name)]
+    assert not revived, f"评测侧适配层符号复活：{revived}（U-121 已全量落地，留着就是第三份真相）"
 
-def test_the_adapters_stated_reason_list_matches_the_code(repo_root):
-    """适配层"还剩谁没接线"那句话是**一份清单**，不是散文 ⇒ 逐文件双向核对。
-
-    实测它抓得住什么：`357618f` 把 gate1 接完之后，`harness.py` 的模块 docstring 还在点名
-    `app/graph/nodes/gate1_ast.py` ⇒ 那句话当场失真，而当时没有任何测试会因此变红
-    （并集哨兵要等两边都改完才响）。本测试就是补这个洞，方向是双向的：
-    ① 清单里点名但代码已接线 ⇒ 红（理由失效，改文档并删那一半适配）；
-    ② 代码仍在读扁平面但清单没点 ⇒ 红（清单漏项，等于悄悄把适配层转正）。
-    """
-    doc = H.__doc__ or ""
-    m = re.search(r"^存在理由（仍在读扁平面、因此还需要本视图的生产文件）:\s*(.+)$", doc, re.M)
-    assert m, "harness §三 的清单行必须存在且只写一行（哨兵读它）"
-    claimed = {e.strip().split(":")[0] for e in re.split("[、,，]", m.group(1)) if e.strip()}
-    calls = _port_methods_called_by_gates(repo_root)
-    still_flat = {rel for rel, methods in calls.items() if "asset_allowlist" in methods}
-    wired = {rel for rel, methods in calls.items() if "asset_allowlist" not in methods}
-
-    stale_claims = {c for c in claimed if c in wired}
-    assert not stale_claims, (
-        f"harness 的存在理由清单仍点名 {sorted(stale_claims)}，但它们已改调 guard_allowlist"
-        f"（逐文件读数 { {k: sorted(v) for k, v in calls.items()} }）⇒ 那一半适配层已到期："
-        "改清单 + 把对应视图消费点接到端口，别留第三份真相"
+    doc = _h.__doc__ or ""
+    assert "存在理由（仍在读扁平面" not in doc, (
+        "harness docstring 又出现了需要人工同步的『存在理由』清单 —— 适配层已不存在，"
+        "这句话没有可维护的真值，删掉它（本测试的 ④）"
     )
-    missing = still_flat - claimed
-    assert not missing, f"仍在读扁平面却未被清单点名：{sorted(missing)}（清单 = 唯一真相，不许漏项）"
+    assert "class AssetAllowlistView" not in Path(_h.__file__).read_text(encoding="utf-8")
 
 
 # ==== gate1 的真实形状（评测与生产同一条路径）=========================
 def test_gate1_blocks_tenant_id_either_qualified_or_not(analyst_ctx, harness):
     """I-4/I-5 冲突的实测半边：手写租户谓词进不了闸门，所以评测只能走 DB 对象层。"""
-    al = harness.semantics.asset_allowlist(analyst_ctx)
+    al = harness.semantics.guard_allowlist(analyst_ctx, max_rows=None)
     bare = run_gate1("SELECT pay_amount, tenant_id FROM v_order_paid", al)
     qualified = run_gate1("SELECT v_order_paid.tenant_id FROM v_order_paid", al)
     assert bare.passed is False and qualified.passed is False
@@ -281,7 +240,7 @@ def test_gate1_blocks_tenant_id_either_qualified_or_not(analyst_ctx, harness):
 
 
 def test_gate1_rejects_assets_outside_the_bundle(analyst_ctx, harness):
-    al = harness.semantics.asset_allowlist(analyst_ctx)
+    al = harness.semantics.guard_allowlist(analyst_ctx, max_rows=None)
     r = run_gate1("SELECT 1 FROM orders", al)
     assert r.passed is False and r.gate_result.rule_id == "R05"
 

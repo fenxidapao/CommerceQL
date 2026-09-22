@@ -758,7 +758,7 @@ def test_redteam_digest_caps_the_layer_ordering_sample_and_keeps_g3_keys():
     d = rp._redteam_digest(rt)
     assert (d["total"], d["leaked"], d["expect_block"], d["checked"]) == (66, 0, 50, 48)
     assert len(d["layer_ordering_sample"]) == 3
-    assert d["failures_by_class"] is None and d["gate2_visible_raise"] is None, "缺键不许编默认值"
+    assert d["failures_by_class"] is None and d["gate2_on_port_raise"] is None, "缺键不许编默认值"
 
 
 def test_git_rev_never_fabricates_a_commit(zero_input_payload):

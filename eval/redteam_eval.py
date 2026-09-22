@@ -166,62 +166,12 @@ class RedTeamCaseResult:
 # 一、事实采集（照在线顺序跑三道闸门 + 沙箱执行）
 # ============================================================================
 
-class StructuralAllowlistBundle:
-    """`SemanticBundlePort` 的**结构视图**：`assets[*].columns` 给全列（不按 deny 裁剪）。
-
-    🔴 为什么评测侧要再造一个视图（实测出来的上游冲突，不是本窗口的发明）
-    ----------------------------------------------------------------------
-    `SemanticBundleRuntime.asset_allowlist(ctx)` 按角色把 deny 列**从可见列里删掉**
-    （实测 `v_order_paid` 24 → 21 列，被删的正是 `tenant_id` / `receiver_phone` /
-    `receiver_address`）。而 `policy_gate.run_gate2` 有两处**必须看到全列**才可能成立：
-
-    * ④ 敏感列二次复核 —— 列不在表里就永远检不出 deny 引用（形同空转）；
-    * ⑤ `tenant_scoped ⇔ "tenant_id" in columns` 双向断言（07 §7.4 ⚠️"写反 = N-07 失效"）
-      —— 用可见列判 ⇒ 对**任何**租户隔离资产直接抛 `ContractViolationError`（实测）。
-
-    ⇒ 本代理只**选面**（把列集换成端口给的 `all_columns`），不补字段、不改权限面：
-    gate1 的 R06 白名单仍用裁剪后的可见列（那正是跨租户探测该被拦的机制）。
-    两种视图的判定结果都落盘，冲突本身进缺口表 + RELAY。
-    ⚠️ U-121 之前这里是"从 `LoadedBundle` 造一份全列字典"，现在全部取自端口 ⇒ 见
-    `structural_wrapper` 的删除条件。
-    """
-
-    def __init__(self, inner: Any, wrapper: Mapping[str, Any]) -> None:
-        self._inner = inner
-        self._wrapper = dict(wrapper)
-
-    def asset_allowlist(self, ctx: Any) -> Mapping[str, Any]:
-        return self._wrapper
-
-    def active_version(self) -> str:
-        return self._inner.active_version()
-
-    def __getattr__(self, name: str) -> Any:  # 端口其余方法透传
-        return getattr(self._inner, name)
-
-
-def structural_wrapper(harness: Harness) -> dict[str, Any]:
-    """闸门判据的**结构面**版本：只把 `assets[*].columns` 换成端口自己给的 `all_columns`。
-
-    ⚠️ 这是**选面**，不是**造面**：七键、列类型、`joins`、deny 清单、默认谓词全部来自
-    `runtime.guard_allowlist(ctx, max_rows=…)`（U-121）⇒ 评测侧不再派生任何字段。
-    本函数存在的唯一理由 = `app/guard/policy_gate.py:148` 用**可见面**判
-    「`tenant_id` in columns」，而 `tenant_id` 恰是 deny 列 ⇒ 结构面下 ⑤ 才不抛
-    `ContractViolationError`（两面各自的失效形态实测在
-    `reports/w6/probe_gate_allowlist_shape.json` 的 `gate1_face_control`）。
-    🔴 W2C 把 ④⑤ 改成读 `all_columns` 之后，本函数与 `StructuralAllowlistBundle` **一并删除**
-    （哨兵测试 = `test_the_dual_shape_view_dies_with_the_consumer_fix`）。
-    """
-    ctx = identity_for_case("RT-STRUCT", "T_A")
-    port = dict(harness.runtime.guard_allowlist(ctx, max_rows=None))
-    port["assets"] = {
-        physical: {
-            **entry,
-            "columns": dict(entry.get("all_columns") or entry.get("columns") or {}),
-        }
-        for physical, entry in (port.get("assets") or {}).items()
-    }
-    return port
+# 闸门判据只有一处来源 = `harness.semantics.guard_allowlist(ctx, max_rows=…)`（U-121）。
+# 本模块曾另造 `StructuralAllowlistBundle` + `structural_wrapper` 给 gate2 补『结构面』，
+# 存在的唯一理由是 `policy_gate` 用**可见面**判 ⑤（`tenant_id` 恰是 deny 列 ⇒ 当场抛
+# `ContractViolationError`）。W2C `c76f701` 把 ④⑤ 改读 `all_columns` 后，结构面由闸门
+# 自己在 `policy_gate.py:187-201` 内成一次性视图 ⇒ 两个符号**整体删除**（回归哨兵 =
+# `tests/eval/test_harness_allowlist.py::test_the_adapter_symbols_stay_dead`）。
 
 
 def _top_limit_value(tree: exp.Expr) -> int | None:
@@ -355,11 +305,11 @@ def _gate2_of(sql: str, ctx: Any, bundle: Any) -> dict[str, Any]:
             "passed": bool(r.gate_result.passed)}
 
 
-async def _collect_facts(case: Mapping[str, Any], harness: Harness, gate2_bundle: Any) -> dict[str, Any]:
+async def _collect_facts(case: Mapping[str, Any], harness: Harness) -> dict[str, Any]:
     """跑一条红队用例的闸门链，返回**判据事实**（不判定，判定在 `_judge`）。"""
     sql = str(case["attack_sql"])
     ctx = identity_for_case(str(case["case_id"]), str(case.get("eval_tenant") or "T_A"))
-    allowlist = harness.semantics.asset_allowlist(ctx)
+    allowlist = harness.semantics.guard_allowlist(ctx, max_rows=None)
 
     g1 = run_gate1(sql, allowlist)
     facts: dict[str, Any] = {
@@ -386,19 +336,20 @@ async def _collect_facts(case: Mapping[str, Any], harness: Harness, gate2_bundle
     }
 
     # ---- 策略层对**原始 SQL** 的意见（层序证据：docstring §二）----
-    alone = _gate2_of(sql, ctx, gate2_bundle)
+    # 取用面 = 生产同一个端口：gate2 自己读 `guard_allowlist` 并在内部把 `columns` 顶成
+    # 结构面（`policy_gate.py:187-201`）⇒ 这里不再另造"结构 vs 可见"两份事实。
+    alone = _gate2_of(sql, ctx, harness.semantics)
     facts["gate2_alone_decision"] = alone["decision"]
     facts["gate2_alone_rule_id"] = alone["rule_id"]
     facts["gate2_alone_refuse_reason"] = alone["refuse_reason"]
-    # 生产形状（可见列）单独探一次：`ContractViolationError` 若在这里出现，就是
-    # "gate2 今天在生产里跑不动"的实测证据（docstring 的 StructuralAllowlistBundle §）。
-    visible = _gate2_of(sql, ctx, harness.semantics)
-    facts["gate2_visible_raised"] = visible["raised"]
-    facts["gate2_visible_decision"] = visible["decision"]
+    # ⚠️ 这一格非 null 的含义已变：U-121 之前它记录的是"gate2 在生产里跑不动"的实测证据
+    # （可见面判 ⑤ ⇒ `ContractViolationError`）；现在生产链自己会顶结构面，
+    # 所以它**只可能是回归** —— 一旦重新出现，就是闸门端又读错了面。
+    facts["gate2_on_port_raised"] = alone["raised"]
 
     chain_sql = g1.rewritten_sql if g1.passed else None
     if chain_sql:
-        g2 = _gate2_of(chain_sql, ctx, gate2_bundle)
+        g2 = _gate2_of(chain_sql, ctx, harness.semantics)
         facts["gate2_decision"] = g2["decision"]
         facts["gate2_rule_id"] = g2["rule_id"]
         facts["gate2_reason"] = g2["reason"]
@@ -624,9 +575,9 @@ def _truncated_check(name: str, facts: Mapping[str, Any], *, want: bool) -> Chec
 # ============================================================================
 
 async def evaluate_case(
-    case: Mapping[str, Any], harness: Harness, vocabulary: Sequence[str], gate2_bundle: Any
+    case: Mapping[str, Any], harness: Harness, vocabulary: Sequence[str]
 ) -> RedTeamCaseResult:
-    facts = await _collect_facts(case, harness, gate2_bundle)
+    facts = await _collect_facts(case, harness)
     cid = str(case["case_id"])
     covered = cid not in _NOT_EXECUTABLE_IN_SANDBOX
     checks = tuple(
@@ -659,9 +610,8 @@ async def run_redteam(*, dataset: Mapping[str, Any] | None = None, harness: Harn
     own_harness = harness is None
     h = harness or Harness()
     vocabulary = sorted(_leak_vocabulary(h.loaded))
-    gate2_bundle = StructuralAllowlistBundle(h.semantics, structural_wrapper(h))
     try:
-        results = [await evaluate_case(case, h, vocabulary, gate2_bundle) for case in cases]
+        results = [await evaluate_case(case, h, vocabulary) for case in cases]
     finally:
         if own_harness:
             h.close()
@@ -700,8 +650,9 @@ async def run_redteam(*, dataset: Mapping[str, Any] | None = None, harness: Harn
         "reject_gates": _count(r.reject_gate for r in results if r.reject_gate),
         # ⚠️ 这两类的"拦下"来自**闸门自身抛异常**（崩溃路径），不是策略判据 ⇒ 不得计入安全成绩。
         "gate2_chain_raise_n": sum(1 for r in results if r.facts.get("gate2_decision") == "raise"),
-        "gate2_visible_raise": _count(
-            r.facts.get("gate2_visible_raised") for r in results if r.facts.get("gate2_visible_raised")
+        # 非 0 ⇒ gate2 在生产端口上抛异常 = 闸门又读错了面（回归，不是"已知失效"）。
+        "gate2_on_port_raise": _count(
+            r.facts.get("gate2_on_port_raised") for r in results if r.facts.get("gate2_on_port_raised")
         ),
         "layer_ordering": [
             {

@@ -117,6 +117,8 @@ def test_the_surface_declaration_is_emitted_even_when_nothing_is_red():
     assert len(notes) == 1  # 目标全在测试专用 schema ⇒ 不额外 ⚠️
     assert "test_retrieval_fts_pg.py" in notes[0]
     assert "凭据一律不落盘" in notes[0]
+    # 🔴 下界句必须**无条件**在：取到清单也不等于"只做了这些"（通过的夹具 SQL 不进 `-q` 日志）。
+    assert "只能证明「取到了这些」，不能证明「只做了这些」" in notes[0]
 
 
 def test_missing_surface_is_reported_as_unaudited_not_as_no_database():
@@ -273,3 +275,19 @@ def test_redact_dsn_on_an_unparseable_shape_does_not_echo_the_input():
     """解析不了就返回固定文案 —— 宁可少说，也不把原文（可能含口令）抄进产物。"""
     out = pg_guard.redact_dsn("host=localhost user=app_ro password=app_ro_pwd")
     assert "app_ro_pwd" not in out and "无法解析" in out
+
+
+# ==== 边界探针自己也不许带字面共享 DSN（防线①同形）=====================
+def test_the_boundary_probe_takes_no_literal_shared_dsn():
+    """`probe_pg_boundary.py` 连的就是共享实例 ⇒ 必须显式给 DSN，缺 env 直接终止。
+
+    记进测试的理由：本窗口刚把"夹具默认回退到共享 `ecom`"上报给 W0/W2B（RELAY O7），
+    若自己的新探针里留一份同样的字面量，那条上报就只是说说。
+    ⚠️ 判据是"缺 env 就终止"，**不是** skip —— 与 U-114 防线①（W0 `36c782a` +
+    W2A `5e47558`）同形：静默跳过等于宣布"这轮没写共享库"，而那正是本探针要回答的问题。
+    """
+    src = (Path(__file__).parents[2] / "reports/w6/probe_pg_boundary.py").read_text(
+        encoding="utf-8")
+    assert "COMMERCEQL_PROBE_DSN" in src, "探针必须从 env 读 DSN"
+    assert "5432/ecom" not in src, "探针源码里不许出现字面共享库 DSN（含任何口令形状）"
+    assert 'return 2' in src, "缺 env 时必须终止并给出退出码，而不是连一把默认连接"

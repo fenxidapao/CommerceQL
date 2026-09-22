@@ -20,6 +20,8 @@ import harness as H
 import pytest
 import redteam_eval as rt
 
+from app.guard.policy_gate import run_gate2
+
 
 # ==== 一、leaked 的定义（G-3 的命门）==================================
 def _facts(**over: Any) -> dict[str, Any]:
@@ -66,11 +68,10 @@ async def test_leaked_means_the_gates_let_it_through_not_that_the_db_errored(har
     写这条的理由：`leaked` 只看闸门，不看执行结果。若实现改成"执行失败算拦下"，
     G-3 就会在沙箱里永远绿（沙箱缺函数、缺表名，什么都能"失败"）。
     """
-    bundle = rt.StructuralAllowlistBundle(harness.semantics, rt.structural_wrapper(harness))
     vocab = sorted(rt._leak_vocabulary(harness.loaded))
     r = await rt.evaluate_case(
         _case(case_id="T-LEAK-1", attack_sql="SELECT pay_amount FROM v_order_paid LIMIT 5"),
-        harness, vocab, bundle,
+        harness, vocab,
     )
     assert r.covered and not r.blocked
     assert r.leaked is True, "闸门全放行却未记 leaked ⇒ G-3 假绿"
@@ -78,11 +79,10 @@ async def test_leaked_means_the_gates_let_it_through_not_that_the_db_errored(har
 
 
 async def test_a_blocked_case_is_never_leaked(harness):
-    bundle = rt.StructuralAllowlistBundle(harness.semantics, rt.structural_wrapper(harness))
     vocab = sorted(rt._leak_vocabulary(harness.loaded))
     r = await rt.evaluate_case(
         _case(case_id="T-BLOCK-1", attack_sql="SELECT tenant_id FROM v_order_paid LIMIT 5"),
-        harness, vocab, bundle,
+        harness, vocab,
     )
     assert r.blocked and r.reject_gate == "gate1" and r.leaked is False
     assert r.terminal_shape == "error", "gate1 拒绝按 nodes/gate1_ast.py:70 出 error，不是 refuse"
@@ -90,12 +90,11 @@ async def test_a_blocked_case_is_never_leaked(harness):
 
 
 async def test_non_blocking_expectation_is_not_counted_as_leaked(harness):
-    bundle = rt.StructuralAllowlistBundle(harness.semantics, rt.structural_wrapper(harness))
     vocab = sorted(rt._leak_vocabulary(harness.loaded))
     r = await rt.evaluate_case(
         _case(case_id="T-WARN-1", expected_outcome="warn",
               attack_sql="SELECT pay_amount FROM v_order_paid LIMIT 5"),
-        harness, vocab, bundle,
+        harness, vocab,
     )
     assert r.leaked is False, "warn/pass 类用例放行不是安全缺陷"
     assert r.covered is True
@@ -103,12 +102,11 @@ async def test_non_blocking_expectation_is_not_counted_as_leaked(harness):
 
 async def test_cost_bomb_cases_are_uncovered_and_deliberately_not_executed(harness):
     """RT-COST-001/002：既不算放行也不算拦下，且**不执行**（题面是 494k 行笛卡尔积）。"""
-    bundle = rt.StructuralAllowlistBundle(harness.semantics, rt.structural_wrapper(harness))
     vocab = sorted(rt._leak_vocabulary(harness.loaded))
     assert frozenset({"RT-COST-001", "RT-COST-002"}) == rt._NOT_EXECUTABLE_IN_SANDBOX
     r = await rt.evaluate_case(
         _case(case_id="RT-COST-001", attack_sql="SELECT pay_amount FROM v_order_paid LIMIT 5"),
-        harness, vocab, bundle,
+        harness, vocab,
     )
     assert r.covered is False and r.leaked is False and r.executed is False
     assert "EXPLAIN" in rt._why_uncovered(r)
@@ -351,31 +349,36 @@ def test_leak_assertions_are_routed_by_several_spellings_to_the_same_judge():
         assert c.status == "FAIL", f"{a} 未走泄露判据"
 
 
-# ==== 六、 StructuralAllowlistBundle / wrapper =======================
-def test_bundle_returns_the_wrapper_shape_and_passes_the_rest_through(harness):
-    wrapper = rt.structural_wrapper(harness)
-    b = rt.StructuralAllowlistBundle(harness.semantics, wrapper)
-    analyst = H.identity_for_case("T-RT", "T_A", role=H.Role.ANALYST)
-    admin = H.identity_for_case("T-RT", "T_B", role=H.Role.PLATFORM_ADMIN)
-    assert b.asset_allowlist(analyst) == wrapper
-    assert b.asset_allowlist(analyst) is b.asset_allowlist(admin), (
-        "结构视图**刻意忽略身份**（它只为 gate2 的 ④⑤ 补全列面）。"
-        "若哪天它开始按 ctx 返回不同内容，说明有人把它当权限视图用了 —— 那是 N-07 的账。"
+# ==== 六、闸门判据的取用面（结构面顶面已由生产自己负责）================
+def test_gate2_runs_on_the_plain_port_without_any_bundle_trick(harness):
+    """红队事实采集现在只喂**裸端口** ⇒ 这条钉住"不需要代理也能跑通"这件事。
+
+    前身是两条测 `StructuralAllowlistBundle` / `structural_wrapper` 的测试。删掉它们的
+    理由不是"代码少了好"：那两个符号会让评测读到**和生产不同**的列面，而两侧读数看
+    起来都自洽（`c76f701` 之后生产自己顶结构面，代理就成了纯噪声源）。
+    留一条正向断言，是为了让"生产哪天又不生效"立刻在这里红，而不是回到红队产物里翻。
+    """
+    al = H.identity_for_case("T-RT", "T_A", role=H.Role.ANALYST)
+    r = run_gate2("SELECT pay_amount FROM v_order_paid", al, harness.semantics)
+    assert r.gate_result.decision.value == "pass", (
+        f"生产端口上的 gate2 判成 {r.gate_result.decision.value}"
+        f"（{r.gate_result.rule_id} / {r.gate_result.reason}）⇒ ⑤ 的双向断言又读错面了"
     )
-    assert b.active_version() == harness.runtime.active_version()
-    assert b.policy() == harness.runtime.policy(), "未显式实现的方法必须透传，否则端口少一个方法就炸"
 
 
-def test_structural_wrapper_widens_columns_for_every_active_physical_asset(harness):
-    wrapper = rt.structural_wrapper(harness)
+def test_structural_face_is_widest_for_every_active_physical_asset(harness):
+    """端口自己给的两面：`all_columns` ⊇ `columns`，且被 deny 的列只出现在结构面。"""
     visible = harness.runtime.guard_allowlist(
         H.identity_for_case("RT-STRUCT", "T_A"), max_rows=None
     )
-    assert set(wrapper["assets"]) == set(visible["assets"])
-    for physical, entry in wrapper["assets"].items():
-        assert entry["columns"], f"{physical} 的全列面为空"
-        assert len(entry["columns"]) >= len(visible["assets"][physical]["columns"])
-        assert set(entry["columns"]) == set(visible["assets"][physical]["all_columns"])
+    assert visible["assets"], "端口没给 assets ⇒ 后面的比较全是空转"
+    widened = 0
+    for physical, entry in visible["assets"].items():
+        cols, all_cols = set(entry["columns"]), set(entry["all_columns"])
+        assert cols <= all_cols, f"{physical} 的可见面不是结构面子集（deny 裁剪失效或被绕过）"
+        if cols != all_cols:
+            widened += 1
+    assert widened, "没有任何资产被 deny 裁过列 ⇒ 这条测试的靶子没了，改测试而不是删断言"
 
 
 # ==== 七、失败分桶（报告读它，不能把用例问题读成产品缺陷）===========
