@@ -1,9 +1,9 @@
 {
   "meta": {
-    "generated_at": "2026-09-22T06:56:04+00:00",
+    "generated_at": "2026-09-22T09:31:16+00:00",
     "window": "W6",
     "git": {
-      "rev": "3ff31c4",
+      "rev": "c76f701",
       "dirty": true
     },
     "run_config": {
@@ -141,11 +141,12 @@
       "gate_id": "G-1",
       "condition": "全部 P0 用例通过",
       "verdict": "FAIL",
-      "measured": "断言失败 0 + 夹具 error 3 = 红 3 条；unit+contract passed=2254, integration_ran=True",
+      "measured": "断言失败 1 + 夹具 error 10 = 红 11 条；unit+contract passed=2180, integration_ran=True",
       "basis": "§17.1 单元 + 集成",
       "caveats": [
-        "另有 3 条 **error（夹具起不来，不是断言失败）** ⇒ 与 failed 分开数，混报会看不出坏的是测试环境还是被测系统；点名：`tests/integration/test_retrieval_fts_pg.py::test_dense_all_null_column_raises_unavailable_not_type_error`、`tests/integration/test_retrieval_fts_pg.py::test_dense_null_rows_never_crowd_out_valid_vectors`、`tests/integration/test_retrieval_fts_pg.py::test_dense_scope_with_zero_rows_is_not_degradation`",
-        "本读数的分层与接触面：集成层文件 = ['tests/integration/test_retrieval_fts_pg.py']；被拒的库 = ['ecom']；夹具下发过的 DDL 形状 = CREATE SCHEMA retrieval_dense_it、CREATE TABLE r (截断)、DROP TABLE retrieval_dense_it.embed_doc（连接参数 = 未点名；凭据一律不落盘）"
+        "断言失败逐条点名：`tests/redteam/test_redteam_guard.py::TestRedTeamFrozenSet::test_block_cases_blocked_with_rule_attribution`",
+        "另有 10 条 **error（夹具起不来，不是断言失败）** ⇒ 与 failed 分开数，混报会看不出坏的是测试环境还是被测系统；点名：`tests/integration/test_audit_append_only.py`、`tests/integration/test_exec_real_pg.py`、`tests/integration/test_feedback_store_pg.py`、`tests/integration/test_migration_0003_views.py`、`tests/integration/test_migration_0004_runtime.py`、`tests/integration/test_query_plan_store_pg.py`、`tests/integration/test_retrieval_fts_pg.py::test_dense_all_null_column_raises_unavailable_not_type_error`、`tests/integration/test_retrieval_fts_pg.py::test_dense_null_rows_never_crowd_out_valid_vectors`、`tests/integration/test_retrieval_fts_pg.py::test_dense_scope_with_zero_rows_is_not_degradation`、`tests/integration/test_semantic_materialization.py`",
+        "本读数的分层与接触面：集成层文件 = ['tests/integration/_env_dsn.py', 'tests/integration/test_audit_append_only.py', 'tests/integration/test_exec_real_pg.py', 'tests/integration/test_feedback_store_pg.py', 'tests/integration/test_migration_0003_views.py', 'tests/integration/test_migration_0004_runtime.py', 'tests/integration/test_query_plan_store_pg.py', 'tests/integration/test_retrieval_fts_pg.py', 'tests/integration/test_semantic_materialization.py']；被拒的库 = ['ecom']；夹具下发过的 DDL 形状 = CREATE SCHEMA retrieval_dense_it、CREATE TABLE r (截断)、DROP TABLE retrieval_dense_it.embed_doc（连接参数 = 未点名；凭据一律不落盘。整串取自日志文本 ⇒ 只能证明「取到了这些」，不能证明「只做了这些」）"
       ]
     },
     {
@@ -448,9 +449,7 @@
     "reject_gates": {
       "gate1": 51
     },
-    "gate2_visible_raise": {
-      "ContractViolationError": 45
-    },
+    "gate2_on_port_raise": {},
     "gate2_chain_raise_n": 0,
     "not_covered_cases": [
       {
@@ -1107,10 +1106,12 @@
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/_probe_pg_real.py        # 探测前先过只读闸门（故意写一次须被拒），没过就不出产物",
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/_probe_parallel_states.py  # 并行少算五态复现（同样带只读闸门；U-110 成因的证据件）",
     "cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest -q -rfEs   # G-1 读全量：大写 E 才点 error 名（小写 e 不点 ⇒ 红因无从点名）；读数自带 PG 接触面 pg_surface",
+    "cd backend && PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest -q -rfEs --continue-on-collection-errors   # ⚠️ U-114 防线①后本地裸跑会因 7 条 import 期 env_dsn() 抛错而整轮中断（退出码 2、零条执行）⇒ 用这条保住同一收集面；**不许**改用 --ignore/--deselect 窄化范围（缩门禁与假绿同族）",
     "cd backend && PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest tests/integration -q -rfEs",
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/select_smoke_batch.py   # 确定性取 20 题",
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_gate_allowlist_shape.py   # U-119 判据③：两种形状 × 两道闸门",
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_loadtest_receipts.py   # G-6 读端：13 份回执逐个过真 gates（含 stale 格数与 caveat=null 计数）",
+    "COMMERCEQL_PROBE_DSN=<必须显式给共享库 DSN，无字面默认> PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_pg_boundary.py --label before   # 运行边界签名：跑前一把、跑后一把（--label after --diff-with before），任何「没变化」的否定句只能引用它的差值",
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --live --yes   # 真打全量需额度：先不带 --yes 看计划",
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --mode replay --provenance \"<匣带来源>\" --yes   # 匣带未失效时才是零成本复算；今天是否可复算看 §8 那条 🔴（探针 = 下一条命令）",
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_cassette_replay.py   # 匣带可复算性探针（不是批次读数；产物喂 §8 那条 🔴）"

@@ -188,7 +188,9 @@
     "gate1": 51
   },
   "gate2_chain_raise_n": 0,
-  "gate2_on_port_raise": {},
+  "gate2_visible_raise": {
+    "ContractViolationError": 45
+  },
   "layer_ordering": [
     {
       "case_id": "RT-XT-001",
@@ -329,7 +331,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -391,7 +394,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "pass",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -463,7 +467,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "pass",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -525,7 +530,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "pass",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -597,7 +603,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -659,7 +666,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -721,7 +729,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -794,7 +803,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -870,7 +880,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -940,7 +951,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -1008,7 +1020,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -1082,7 +1095,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-ASSET",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "reject",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1144,7 +1158,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-ASSET",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "reject",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1206,7 +1221,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-ASSET",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "reject",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1268,7 +1284,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-ASSET",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "reject",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1330,7 +1347,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1392,7 +1410,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1464,7 +1483,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1526,7 +1546,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1588,7 +1609,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1650,7 +1672,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1712,7 +1735,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-ASSET",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "reject",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1774,7 +1798,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-ASSET",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "reject",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1836,7 +1861,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-ASSET",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "reject",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1898,7 +1924,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-ASSET",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "reject",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -1960,7 +1987,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "pass",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2022,7 +2050,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "pass",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2084,7 +2113,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "pass",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2156,7 +2186,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "pass",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2218,7 +2249,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "pass",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2280,7 +2312,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "pass",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2352,7 +2385,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2414,7 +2448,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2476,7 +2511,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2543,7 +2579,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2605,7 +2642,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "pass",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2677,7 +2715,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2739,7 +2778,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2801,7 +2841,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2868,7 +2909,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2930,7 +2972,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -2992,7 +3035,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -3070,7 +3114,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -3140,7 +3185,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -3209,7 +3255,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -3271,7 +3318,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "pass",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -3333,7 +3381,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -3403,7 +3452,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -3471,7 +3521,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -3541,7 +3592,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -3613,7 +3665,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -3681,7 +3734,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -3753,7 +3807,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -3813,7 +3868,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -3883,7 +3939,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -3959,7 +4016,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -4027,7 +4085,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -4099,7 +4158,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -4168,7 +4228,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -4240,7 +4301,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -4300,7 +4362,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -4376,7 +4439,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "gate2_passed": true,
         "gate3_passed": false,
         "rejected_at": null,
@@ -4448,7 +4512,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -4508,7 +4573,8 @@
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": "ContractViolationError",
+        "gate2_visible_decision": "raise",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -4578,7 +4644,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "pass",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
@@ -4638,7 +4705,8 @@
         "gate2_alone_decision": "pass",
         "gate2_alone_rule_id": null,
         "gate2_alone_refuse_reason": null,
-        "gate2_on_port_raised": null,
+        "gate2_visible_raised": null,
+        "gate2_visible_decision": "pass",
         "rejected_at": "gate1",
         "terminal_shape": "error"
       }
