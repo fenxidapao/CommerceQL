@@ -131,13 +131,13 @@
      },
      "parallel": {
       "counts": [
-       103404,
-       99374,
-       104699
+       105493,
+       105785,
+       101880
       ],
       "parallel_node": true,
       "workers_launched": 1,
-      "rows_removed_by_filter": 46764,
+      "rows_removed_by_filter": 50285,
       "scan_rows_per_loop": 586,
       "plan_head": [
        "Finalize Aggregate  (cost=7055.39..7055.40 rows=1 width=8) (actual rows=1 loops=1)",
@@ -145,7 +145,7 @@
        "        Workers Planned: 1",
        "        Workers Launched: 1",
        "        ->  Partial Aggregate  (cost=6055.27..6055.28 rows=1 width=8) (actual rows=1 loops=2)",
-       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=53236 loops=2)"
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=49715 loops=2)"
       ]
      },
      "measurable": true,
@@ -379,13 +379,13 @@
      },
      "parallel": {
       "counts": [
-       104908,
-       103697,
-       103989
+       109037,
+       105493,
+       104222
       ],
       "parallel_node": true,
       "workers_launched": 1,
-      "rows_removed_by_filter": 49942,
+      "rows_removed_by_filter": 52220,
       "scan_rows_per_loop": 586,
       "plan_head": [
        "Finalize Aggregate  (cost=7055.39..7055.40 rows=1 width=8) (actual rows=1 loops=1)",
@@ -393,7 +393,7 @@
        "        Workers Planned: 1",
        "        Workers Launched: 1",
        "        ->  Partial Aggregate  (cost=6055.27..6055.28 rows=1 width=8) (actual rows=1 loops=2)",
-       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=50058 loops=2)"
+       "              ->  Parallel Index Only Scan using idx_op_tenant_shop on order_paid  (cost=0.42..6053.81 rows=586 width=0) (actual rows=47780 loops=2)"
       ]
      },
      "measurable": true,
@@ -501,6 +501,24 @@
    }
   }
  ],
+ "pg_guard": {
+  "super": {
+   "database": "ecom",
+   "role": "postgres",
+   "read_only_enforced": true,
+   "write_attempt_rejected": true,
+   "server": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu",
+   "dsn_redacted": "postgres@localhost:5432/ecom"
+  },
+  "app_ro": {
+   "database": "ecom",
+   "role": "app_ro",
+   "read_only_enforced": true,
+   "write_attempt_rejected": true,
+   "server": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu",
+   "dsn_redacted": "app_ro@localhost:5432/ecom"
+  }
+ },
  "pg_version": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit",
  "max_parallel_workers_per_gather": "2",
  "shop_sample": [
@@ -510,57 +528,57 @@
  "controls": {
   "plan_cache": {
    "prepare_threshold=default × plan_cache_mode=auto": [
-    105469,
-    105729,
-    101155,
-    104932
+    106239,
+    102951,
+    103437,
+    102951
    ],
    "prepare_threshold=default × plan_cache_mode=force_custom_plan": [
-    101131,
-    106725,
-    108813,
-    102694
+    105454,
+    102927,
+    104490,
+    103697
    ],
    "prepare_threshold=default × plan_cache_mode=force_generic_plan": [
-    102157,
-    110359,
-    105418,
-    107056
+    104514,
+    91780,
+    102876,
+    101680
    ],
    "prepare_threshold=1 × plan_cache_mode=auto": [
-    103219,
-    102918,
-    106456,
-    99809
+    94307,
+    104222,
+    103729,
+    105185
    ],
    "prepare_threshold=1 × plan_cache_mode=force_custom_plan": [
-    104439,
-    101355,
-    106254,
-    103243
+    103219,
+    99630,
+    100895,
+    101680
    ],
    "prepare_threshold=1 × plan_cache_mode=force_generic_plan": [
-    103929,
-    102390,
     104514,
-    103697
+    107435,
+    103897,
+    94015
    ]
   },
   "plan_node_options": {
    "enable_indexonlyscan": [
-    69513,
-    63940,
-    70064
+    52750,
+    68055,
+    66924
    ],
    "enable_indexscan": [
-    64117,
-    64784,
-    67160
+    59413,
+    67450,
+    71946
    ],
    "enable_parallel_append": [
-    106689,
-    100385,
-    106725
+    93260,
+    96781,
+    99899
    ]
   },
   "worker_side_guc_value": {
@@ -569,11 +587,11 @@
    "rows": [
     [
      "",
-     194377
+     194708
     ],
     [
      "<NULL-in-this-process>",
-     405801
+     405470
     ]
    ],
    "shape": "带列引用的 CASE（`t.tenant_id is not null` 逼出逐行求值）× 基表 traffic_daily × app_rw",

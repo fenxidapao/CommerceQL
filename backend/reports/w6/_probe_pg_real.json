@@ -132,10 +132,10 @@
     ],
     "pg_row_counts": {
       "asset": 8,
-      "audit_log": 71,
+      "audit_log": 98,
       "audit_log_supplement": 0,
       "campaign": 84,
-      "cost_ledger": 3,
+      "cost_ledger": 0,
       "default_predicate": 2,
       "dim_date": 730,
       "dimension": 6,
@@ -512,13 +512,13 @@
             },
             "parallel": {
               "counts": [
-                100385,
-                97282,
-                103929
+                99809,
+                97867,
+                101641
               ],
               "gather_node": true,
               "workers_launched": 1,
-              "rows_removed_by_filter": 54098
+              "rows_removed_by_filter": 50585
             },
             "measurable": true,
             "parallel_ran": true,
@@ -722,7 +722,7 @@
       {
         "rel": "audit_log",
         "sqlite": "-",
-        "pg": 71,
+        "pg": 98,
         "sqlite_kind": "-",
         "pg_kind": "table"
       },
@@ -743,7 +743,7 @@
       {
         "rel": "cost_ledger",
         "sqlite": "-",
-        "pg": 3,
+        "pg": 0,
         "sqlite_kind": "-",
         "pg_kind": "table"
       },
@@ -958,5 +958,23 @@
       "traffic_daily"
     ],
     "verdict": "PG 有事实数据 ⇒ 可评估把评测主链路切到 PG"
+  },
+  "pg_guard": {
+    "super": {
+      "database": "ecom",
+      "role": "postgres",
+      "read_only_enforced": true,
+      "write_attempt_rejected": true,
+      "server": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu",
+      "dsn_redacted": "postgres@localhost:5432/ecom"
+    },
+    "app_ro": {
+      "database": "ecom",
+      "role": "app_ro",
+      "read_only_enforced": true,
+      "write_attempt_rejected": true,
+      "server": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu",
+      "dsn_redacted": "app_ro@localhost:5432/ecom"
+    }
   }
 }

@@ -97,9 +97,9 @@
     "tokens_total": 0,
     "cost_cny_total": 0.0,
     "wall_s": {
-      "max": 0.131,
-      "median": 0.007,
-      "sum": 0.25
+      "max": 0.158,
+      "median": 0.006,
+      "sum": 0.275
     }
   },
   "records": [
@@ -136,7 +136,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:203c63e7c211136a… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.131
+      "wall_s": 0.158
     },
     {
       "case_id": "E-VER-10",
@@ -171,7 +171,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:2bea3e3950fc6767… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.007
+      "wall_s": 0.006
     },
     {
       "case_id": "E-ENUM-07",
@@ -206,7 +206,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:8fc21fe5de9b120c… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.007
+      "wall_s": 0.006
     },
     {
       "case_id": "M-MET-04",
@@ -241,7 +241,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:a79eea8cb90ac364… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.007
+      "wall_s": 0.005
     },
     {
       "case_id": "M-MET-05",
@@ -276,7 +276,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:4686c5a4ee8d2c31… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.008
+      "wall_s": 0.006
     },
     {
       "case_id": "M-MET-10",
@@ -311,7 +311,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:77035d377ccab6de… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.007
+      "wall_s": 0.006
     },
     {
       "case_id": "H-CAT-03",
@@ -346,7 +346,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:55d21f6272ce1d1e… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.006
+      "wall_s": 0.007
     },
     {
       "case_id": "H-MET-05",
@@ -416,7 +416,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:f16f1956dde4d383… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.008
+      "wall_s": 0.005
     },
     {
       "case_id": "X-MET-05",
@@ -451,7 +451,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:750599ef4053fa54… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.007
+      "wall_s": 0.006
     },
     {
       "case_id": "X-MET-06",
@@ -556,7 +556,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:5d7c5aef2c0e916c… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.007
+      "wall_s": 0.006
     },
     {
       "case_id": "C-UV-01",
@@ -626,7 +626,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:b579c28c4dddc53a… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.005
+      "wall_s": 0.006
     },
     {
       "case_id": "R-PII-04",
@@ -661,7 +661,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:d38457b16a5d2502… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.005
+      "wall_s": 0.006
     },
     {
       "case_id": "R-PII-07",
@@ -696,7 +696,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:1396a7a42681f095… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.005
+      "wall_s": 0.006
     },
     {
       "case_id": "R-NA-02",
@@ -731,7 +731,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:bc6410df77844689… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.005
+      "wall_s": 0.007
     },
     {
       "case_id": "R-NA-04",
@@ -766,7 +766,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:4225da255b8f9b1d… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.006
+      "wall_s": 0.008
     },
     {
       "case_id": "R-NA-08",
@@ -801,7 +801,7 @@
       "unscored_reason": "infra: cassette_miss: 匣带未命中（w6_batch.jsonl）：key=sha256:1afba081b7a202ae… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
       "verdict": null,
       "attribution": null,
-      "wall_s": 0.005
+      "wall_s": 0.007
     }
   ]
 }
