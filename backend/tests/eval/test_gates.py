@@ -218,6 +218,27 @@ def test_g6_zero_completed_caveat_cannot_pass():
     assert any("0 条真正完成" in c for c in gate.caveats)
 
 
+def test_g6_over_budget_on_a_writer_unjudged_receipt_stays_fail_but_names_the_kind():
+    """`preflight_r6.json` 的真实形状：caveat 非空 **且** p95 超预算 **且** 写端自己没判。
+
+    判据不许单方面放松：`FAIL` 保留（方向偏向"不许宣布通过"），但那句话必须说清这是
+    「观测到的 p95 超预算」而不是「已证明服务不达标」，并把归类问题指向 RELAY A14。
+    ⚠️ 反例一起测：没有"写端未判定"这个数时，那段归因文字**不许**出现 —— 否则它就
+    变成一条恒定免责声明，读者会以为我方所有 FAIL 都只是样本不够。
+    """
+    inputs = _all_pass_inputs()
+    base = {"p95_total_ms": 11157.4, "source": "W7", "p95_scope": "admitted_http_2xx",
+            "caveat": "本场景 0 条真正完成（outcome=ok）⇒ …；准入样本仅 5 条（< 下限 20）⇒ 统计意义不足"}
+    gate = _verdict_of(gt.evaluate_gates(**(inputs | {"pressure": base | {"g6_writer_declined": 1}})), "G-6")
+    assert gate.verdict == "FAIL"
+    assert any("写端自己对本场景**未判定**" in c and "A14" in c for c in gate.caveats)
+    assert any("不是" in c and "已证明服务不达标" in c for c in gate.caveats)
+
+    plain = _verdict_of(gt.evaluate_gates(**(inputs | {"pressure": base})), "G-6")
+    assert plain.verdict == "FAIL"
+    assert not any("未判定" in c for c in plain.caveats), "归因文字不许无条件出现，否则就成了免责声明"
+
+
 def test_g6_admitted_only_scope_cannot_borrow_a_pass():
     """U-106：p95 只在准入（2xx）样本上算 ⇒ 分母里根本没有被限流的那些请求。
 

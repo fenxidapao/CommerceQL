@@ -315,12 +315,22 @@ def evaluate_gates(
         if pressure.get("caveat"):
             # 超 8s 的查询会转异步并正常终止该流；0 条真正完成的跑批 p95 也可以 ≤8s。
             # 拿这种数判 PASS = 用截断点/空分母给自己打分。
+            declined = int(pressure.get("g6_writer_declined") or 0)
+            cav = [*notes,
+                   f"⚠️ 回执带 `g6_caveat`：{pressure['caveat']} ⇒ 该 P95 不可判达标，"
+                   "不判 PASS（判据来自 W7 `driver.py` 的同一字段）"]
+            if over_budget and declined:
+                cav.append(
+                    f"🔴 且写端自己对本场景**未判定**（`g6_p95_le_8s = null`，共 {declined} 个场景）"
+                    "⇒ 本 FAIL 的含义是「观测到的 p95 超预算」，**不是**「已证明服务不达标」；"
+                    "该归类已上呈 RELAY A14。**本窗口不擅自降档**：判据方向必须偏向「不许宣布通过」，"
+                    "把 FAIL 改 UNVERIFIED 属门禁语义变更、要架构裁"
+                    "（同 A13：环境/样本不足造成的红要单独点名，不折算成被测系统失败）")
             gates.append(Gate(
                 "G-6", "P95 延迟 ≤ 8s",
                 "FAIL" if over_budget else "UNVERIFIED",
                 f"P95 = {judged:.0f}ms，分母 = {judged_scope}", "§16.5 压测（W7 产出）",
-                (*notes, f"⚠️ 回执带 `g6_caveat`：{pressure['caveat']} ⇒ 该 P95 不可判达标，"
-                         "不判 PASS（判据来自 W7 `driver.py` 的同一字段）"),
+                tuple(cav),
             ))
         elif all_p95 is None and not admission:
             # 🔴 老回执的 `g6_caveat == null` **不等于**"干净"：U-106 之前的判据根本没有

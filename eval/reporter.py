@@ -192,6 +192,11 @@ def loadtest_pressure(path: str | None = DEFAULT_LOADTEST_RECEIPT) -> dict[str, 
                    f"（{len(p95s)}/{len(scenarios)} 个场景有 p95，取最大）"),
         "as_of": raw.get("started_at") or "未记录",
         "caveat": next((str(s.get("g6_caveat")) for s in scenarios if s.get("g6_caveat")), None),
+        #: 写端自己**未判定**的场景数（U-120 三态：`g6_p95_le_8s` 键在而值为 null）。
+        #: ⚠️ 刻意只统计 null —— `true`/`false` 不进任何延迟读数（历史 stale 格禁令同源），
+        #: 这个数只用来区分"我方判出的 FAIL"与"写端本就没判"。
+        "g6_writer_declined": sum(1 for s in scenarios
+                                  if "g6_p95_le_8s" in s and s.get("g6_p95_le_8s") is None),
         "p95_scope": " / ".join(scopes) if scopes else None,
         "p95_all_requests_ms": max(all_p95s) if all_p95s else None,
         "admission": [s["admission"] for s in scenarios if isinstance(s.get("admission"), Mapping)],
