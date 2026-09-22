@@ -1,0 +1,12 @@
+# 读数时刻 2026-09-22 20:1x 本地 · HEAD fb8b4c6 · 镜像 w7load-api:0922r6 · 容器 w7load-api（commerceql_default；DSN 只从 deploy/.env 读，不进本文件）
+# 跑法：docker cp backend/reports/w7/scratch_searchpath_ab.py w7load-api:/tmp/ab.py && MSYS_NO_PATHCONV=1 docker exec -e PYTHONPATH=/srv -w /srv w7load-api python /tmp/ab.py
+A 生产池原样       非限定资产名 : ProgrammingError: relation "v_order_paid" does not exist
+LINE 1: SELECT count(*) FROM v_order_paid
+         
+A 生产池原样       EXPLAIN      : ProgrammingError: relation "v_order_paid" does not exist
+LINE 1: EXPLAIN SELECT count(*) FROM v_order_paid
+ 
+B 连接内 SET     非限定资产名 : OK 200000  search_path=app, public
+B 连接内 SET     限定名          : OK 200000  search_path=app, public
+C 池级 -c 固定    非限定资产名 : OK 200000  search_path=app
+C 池级 -c 固定    EXPLAIN      : OK Finalize Aggregate  (cost=7055.39..7055.40 rows=1 width=8)  search_path=app

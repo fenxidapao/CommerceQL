@@ -405,6 +405,71 @@ curl -sS -N -X POST http://127.0.0.1:18000/api/v1/query \
 2. 那条 **187,728.9ms** 是**冷容器的第一条**（容器 10:33:51 起、首条 llm_call 之前还有一次 15s `normalize` 超时），**我没做单变量对照 ⇒ 不写成成因**。但它对跑批是实操约束：**从冷容器起跑，第一条会吃掉整个 p95** ⇒ 跑批前必须预热或把首条排除并披露（见 §九 的同族教训）。
 3. ⚠️ **给 U-117 的读数（架构定的判据 = L4 占比）**：`binding_layer_total{L3}=3`、**L4 = 0** ⇒ 按架构写下的口径"**≈0 ⇒ 纯浪费、升 P1、改条件触发**"。同时 `l4_score` 的单次成本 **¥0.001551–0.001711** > `plan`（¥0.0011）> `normalize_intent`（¥0.0008）⇒ 这跳花的比出计划的还多。
 
+#### 三.0.1j 第九轮预检（09-22 · 镜像 `w7load-api:0922r6` = HEAD `fb8b4c6` ⇒ 含 W2C `c76f701` + W2A `5e47558` + W0 `36c782a` + W2B `d4ca203`）
+
+**一句话**：**U-121 那一格真的通了** —— 史上第一次有请求穿过 gate1+gate2+gate3 走到 `executing`
+（`stage_duration_seconds_count{executing}` 0→**1**）。但判据④ 仍不过（`ok=0`），且**红因已经不是闸门**：
+今天是一条**两边各自合规、合起来走不通的死锁** ⇒ 闸门只认非限定资产名（带 `app.` 前缀一律 `R16`），
+而 analytics 池的 `search_path` 里**没有 `app`** ⇒ 任何合法资产名在 execute 期必 `undefined_table`。
+
+| 读数（`preflight_r6.json`，c=1 / n=5 / `--no-async` / `questions_T_A_time.txt` · 11:48:48–11:49:07Z） | 值 |
+|---|---|
+| `outcomes` | `{refuse:1, clarify:3, error_frame:1}`、`codes={GATE_AST_REJECTED:1}`、**`ok=0`** |
+| 终止出处 | `stage=intent\|reason=out_of_scope` ×1、`stage=intent\|reason=time_ambiguous` ×3、**`stage=executing\|reason=none` ×1** |
+| 指标面（★ = 该格第一次非 0） | `intent` **6** / `schema_linking`★ **1** / `plan_ready`★ **1** / `sql_ready`★ **1** / `gate_passed` **0** / **`executing`★ 1**；`query_outcome_total{failed}`★ **1**、`{success}` **0** |
+| `llm_call` | **9 条** = `normalize_intent`×5 + `plan`×1 + `l4_score`×1 + `gen_sql`×1 + **`repair`×1**★ |
+| 时延 | p50 **1,060.5ms**、p95=max **11,157.4ms**、mean 3,875.1ms、wall 19.45s、TTFB p50 **6.8ms** |
+| `g6_p95_le_8s` / `g6_caveat` | **`null`** / "0 条真正完成 ⇒ 分母全是失败样本"＋"准入样本仅 5 条（< 20）" ⇒ **U-120 三态在活体上第一次走对**（没把"没量到"写成"不达标"） |
+| 台账结账 | 9 行 / **¥0.014471**（跑前报备的是 ¥0.02–0.04 ⇒ 声明偏保守，实测更低）；`httpx 200` 9 = `llm_call` 9 ⇒ 零缺口 |
+
+**红因换了什么（三条互相独立的实测，不是一条推论）**：
+
+1. **闸门面（离线、零额度）** `scratch_searchpath_asset_face_probe.py`：
+   非限定合法资产名 `v_order_paid` ⇒ gate1 **过**、gate2 **过**；`app.v_order_paid` ⇒ **gate1 `R16` 拒**
+   （`ast_gate.py:531-534`：带 schema 前缀 = 绕白名单形态）；裸表 `order_paid` ⇒ gate1 `R05` / gate2 `G2-ASSET`
+   ⇒ ✅ 顺带排掉一条我本来担心的洞：**deny 列经裸表名绕不过去**（裸表 + `receiver_phone` 仍是 `R05`/`G2-ASSET`）。
+2. **解析面（psql，以 `app_ro` 会话身份，只读）**：`search_path="$user", public` ⇒
+   `from order_paid` 与 **`from v_order_paid`（合法资产）同样** `relation does not exist`；`from app.v_order_paid` ⇒ 可解析。
+3. **生产池 A/B（`scratch_searchpath_ab.py`，六臂 E1…F，容器内跑真 `build_analytics_engine`）**：
+   A 生产池原样 + 非限定名 ⇒ `ProgrammingError: relation "v_order_paid" does not exist`；
+   B 同池连接内 `SET search_path=app,public` ⇒ `count=200000`；C 池级 `-c search_path=app`（照 `lg` 的先例 `pools.py:343`）⇒ `count=200000`；
+   D 限定名在 B 臂同样出数（但闸门面 R16 拒 ⇒ 这条路不可用）。
+
+**⇒ 一处修好、两格复原（不记两笔账）**：E 臂 = 生产池上 `EXPLAIN … from v_order_paid` 报的**也是**
+`relation "v_order_paid" does not exist`，F 臂 = 池级 `search_path=app` 上 EXPLAIN **出计划**。
+所以本轮日志里 `gate3_explain_failed → "EXPLAIN 不可用 → warn"` 与 `exec_failed unknown_table`
+**同一个因**，不是两个缺陷。
+
+**⚠️ 我自己上一版判据的收窄（留痕，不改 §四.5 原文）**：本轮之前我写的"预检要读 `sql_ready → gate_passed` 的第一格非零"
+—— **`gate_passed` 在 EXPLAIN 不可用的今天结构性为 0**：`events.py:55` 明写 `stage=gate_passed` 只在**三闸门 `passed is True`** 时发，
+而 gate3 判 `warn` 按 §14.2 D6 **不得算通过**（`nodes/gate3_cost.py:18` 同句）。⇒ 活体上**最早**能拿到的穿透信号是
+`executing`，不是 `gate_passed`；把 `gate_passed=0` 读成"闸门坏了"是反向的。
+
+**⚠️ `rule_id` 今天到不了归因面（这是缺口，不是我没看）**：客户端 error 帧只有 `code`/`message`/`retryable`
+（`api/runner.py:542-561` 的 `_extras(ERROR_OUT)` 载荷 = `errors.map_code(...)` 的**固定文案**，`detail` 还只在特定角色下给），
+`gate_detail` 只挂在 `gate_passed` 事件上 ⇒ 拒绝路径**没有 `rule_id` 出口**。指标面同一条实测：
+`gate_reject_total{gate_no="1",rule_id=""} 1` —— **有调用点**（`obs/instrumentation.py:455`）但**载体未给规则号**
+（`metrics.py:177` 把空值定义成"载体未给"，所以这不是崩，是口径到头）。
+⇒ 本轮 §四.5 第 4 行那种 `R06/R06` 核对**只能走离线器件**，压测面与 `/metrics` 都判不了。需求已提给 W4/W5：
+唯一记录点应落在闸门节点（先例就是 `execute.py::_on_failure` 记 `exec_failure_total`），
+且**必须同时**摘掉 `instrumentation` 里那条反推 —— 否则双计（同一处注释已经警告过）。
+
+**三条必须一起说的限定**：
+1. **HANDOFF 的构建配方是错的**：我写的 `docker build -f deploy/Dockerfile … backend` 必失败
+   （`Dockerfile:38` 的 `COPY deploy/entrypoint.sh` 相对构建上下文解析 ⇒ 上下文必须是**仓库根**）。
+   本轮实跑：上下文 `backend` ⇒ `ERROR … "/deploy/entrypoint.sh": not found`；上下文 `.` ⇒ 成功。**已改 HANDOFF §五**。
+2. **`repair` 这一跳本轮花了 ¥0.006592**（单次最贵，`cache_hit_ratio=0.0`），产出是一条被 gate1 `R05` 拒的裸表 SQL
+   ⇒ 对 G-6 是**纯浪费**。它不是我造成的（同一因），但**修好 search_path 之前 repair 的账会一直这么花**，跑批成本口径要带上它。
+3. **题池决定 clarify 占比**：`questions_T_A_time.txt` 42 条里本轮 3/5 终止在 `reason=time_ambiguous` 是**设计使然**
+   （这个池就是为澄清率建的），不是回归。⇒ 判据④ 用这个池**天然难拿 `ok`**，下一轮要么换"时间口径完整"的池，
+   要么显式说明"判据④ 只需 ≥1 条 ok，与澄清率题池不冲突"。
+
+**⇒ 本轮处置**：判据④ 未过 ⇒ **四场景仍不跑批**。红因从"闸门恒拒"换成"`search_path` 无人认领"，
+架构 v1.6.9 那句"修完 U-121 也还不能演示"**仍然成立**，但成因又换了一格。`app/repo/pools.py:227` 写"归 W2A 的认证视图 schema"、
+W2A 未设 ⇒ **两格互相指认**，按纪律我**不自取 U 号**，需求已随回执上报（下一可用号 U-124）。
+
+
+
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 
 探针的取数依据按 U-22 纪律必须"写在常量旁边"，而常量旁边放不下方法 —— 所以
@@ -656,6 +721,25 @@ audit = {"bool_before": false, "bool_after": null, "changed": true, "caveat_befo
 
 ⚠️ 前 3 行今天都还是**假设**（GATE3/EXECUTE 与 gate2 的活体帧至今 `=0` ⇒ UNVERIFIED）。
 第 4 行是唯一已经量过的：09-22 实测可见面 `R06/R06`、顶全列 `R07/R06`（`scratch_gate2_face_probe.out`）。
+
+**追加（09-22 20:2x · 第九轮预检后本表的实际状态；原文不动，只标状态）**：
+
+| 上面那 4 行 | 现在的状态 |
+|---|---|
+| 第 1 行（`sql_ready=0` ⇒ 镜像没含端口形状） | **已被活体证否**：`sql_ready` 首次 `=1`，W2C `c76f701` 三处同批已进镜像 |
+| 第 2 行（半落地 ⇒ `INTERNAL` + 未捕获 `ContractViolationError`） | **本轮未出现**（`codes` 里没有 `INTERNAL`）⇒ 仍按"半落地警示"保留，别删；W2C 已在 commit message 里把"三处同批"写成硬约束 |
+| 第 3 行（`codes` 有 `G2-*` = 正常态） | **仍未命中**（本轮一个 `G2-*` 都没有）⇒ 继续按假设用 |
+| 第 4 行（`R06/R06` 归因核对） | ✅ 复跑通过（W2C 器件档3a `A_anti_oracle=PASS`、档3b `FAIL(oracle!)`，我亲测）。⚠️ 但**核对手段变了**：见下表第 3 行，活体面上拿不到 `rule_id` |
+
+新增三行（都来自本轮活体，不是推论）：
+
+| 看到什么形态 | 第一解释（**本轮已是读数，不是假设**） | 必须同时给出的证据 | 零额度复核手段 |
+|---|---|---|---|
+| `stage=executing\|reason=none` + `codes={GATE_AST_REJECTED:1}` | **不是 gate1 坏了**：`executing` 完成 → repair → **repair 产出的 SQL** 被 gate1 拒（§八 的"stage=X 只表示 X 已完成"口径）。本轮 repair 写的是裸表 `order_paid` ⇒ `R05` | `docker logs` 里 `exec_failed error_class=…` 与 `task=repair` 两条的**先后**；审计行 `prompt_version=repair_v1` | `docker logs w7load-api --since 15m` + `app.audit_log`（只读） |
+| `gate_passed=0` 且 `executing>0` | ✅ **合规形态**，不是"闸门坏了"：gate3 判 `warn` 时按 §14.2 D6 不得算通过 ⇒ `events.py:55` 干脆不发 `gate_passed` 帧，但链照走执行 | 日志里 `gate3_explain_failed` 的 `extra_fact`（本轮：`EXPLAIN 不可用 → gate3 判 warn`） | `/metrics` 两格并读 + `nodes/gate3_cost.py:18` |
+| `gate_reject_total{rule_id=""}` | ⚠️ **载体未给规则号**（`metrics.py:177` 定义的空值语义），不是崩也不是"没规则"。⇒ 闸门拒绝**按规则号归因今天不可做**，无论 `/metrics` 还是压测回执 | 同刻 `app.audit_log` 的 `outcome` 与容器日志配对 | `scratch_searchpath_asset_face_probe.py`（离线喂闸门，规则号直接可见） |
+
+
 
 
 

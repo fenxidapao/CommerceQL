@@ -48,11 +48,13 @@
 | 2 | `app.embed_doc` 向量/tsv 全 NULL | ✅ 已灌（197/197/197）+ U-112 已修 | README §三.0.1d/e |
 | 3 | PLAN 自拒（指标目录从未进 plan prompt） | ✅ W2A 已修并活体验证（`plan_summary` 由 `null` → 含 `"metrics":["gmv"]`） | README §三.0.1h |
 | 4 | `bind` 0.2s 掐掉一次真 LLM 调用 | ✅ 架构裁 (B)、W4 落 `8202204`；实测 `l4_score` 三条 1,605–1,700ms 全部完成 | README §三.0.1h/i |
-| 5 | **GATE1 把每条真 SQL 都拒（`GATE_AST_REJECTED` = U-121）** | ✅ **gate1 半边已付清**（W4 `357618f` 换调 `guard_allowlist`；U-119 那条刻意红 09-22 复跑 = **2 passed**）；🔴 **gate2 半边仍开 = W2C 三处**（`policy_gate.py:105` 取用面 + `:141` ④ + `:148` ⑤） | README §三.0.1i + `RELAY.md` §二十八①② |
-| 6/7 | **GATE3（真 EXPLAIN）与 EXECUTE（真 DB + 身份 GUC）** | ❌ `gate_passed=0`、`executing=0` ⇒ **一帧都没见过**；真路径按 U-63 须经 W2D 受控入口。**⚠️ 架构 v1.6.5 更正：这两格离线侧今天就能兑现**（W2D 探针 exit 0 ⇒ 生产为 0 的成因在 U-121，不在 exec） | RELAY §二十七④ + `reports/arch/HANDOVER §10.1` |
-| 8 | **🔴 复现前置本身没了：`app.embed_doc` = `197\|0\|0`** | ❌ 09-22 11:10 后置核查实测（昨晚 21:05 是 `197\|197\|197`）。机制 = integration 夹具用不带 `embedder`/`tokenizer` 的 `materialize()` 重载全表（**U-114**）。⇒ **重灌（W2B）之前：谁都不能跑预检/跑批** | `RELAY.md` §二十八⑦ + `DELIVERY.md` §四 末两行 |
+| 5 | **GATE1 把每条真 SQL 都拒（`GATE_AST_REJECTED` = U-121）** | ✅✅ **四处取用点已全换**（W0 形状 / W2A 实现 / W4 `357618f` gate1 / W2C `c76f701` gate2 三处同批）。09-22 我亲跑两份证据复现：**W2C 器件**（真 runtime 经 `guard_allowlist`）⇒ 干净 SQL `pass=True`、deny 三形态全 `G2-DENY`、判据⑤ 未退步（档3a `R06/R06`=PASS / 档3b 顶全列 `R07/R06`=`FAIL(oracle!)`）；**我自己复跑的 redteam 全链** ⇒ `leaked=0`、断言计数 `PASS187/FAIL26/NOT_CHECKED25` 与 `failures` **集合**同落地前逐格相同（零漂移），但报告形状有一处键改名（W6 `899fffb` 把 `gate2_visible_raise` 改叫 `gate2_on_port_raise`）⇒ 引用旧件时别按新键名找 | `RELAY.md` §三十一①② + `README §四.5` |
+| 6/7 | **GATE3（真 EXPLAIN）与 EXECUTE（真 DB + 身份 GUC）** | ⚠️ **09-22 19:48 第一次各见到一帧**：`executing`=1、`query_outcome_total{failed}`=1、`exec_failed error_class=unknown_table`。`gate_passed` 仍 **0** —— 但这次不是坏事：**gate3 因 `EXPLAIN 不可用` 只能判 `warn`，按 §14.2 D6 不得算通过** ⇒ `events.py:55` 就不发 `gate_passed` 帧（活体上最早的可穿透信号是 `executing`，不是 `gate_passed`） | `README §三.0.1j` + `§四.5` 追加行 |
+| 8 | `app.embed_doc` = `197\|0\|0`（U-114 第三次实锤） | ✅ **09-22 19:43 我复测 `197\|197\|197`**（W2B `d4ca203` 重灌 + 两道防线：W2A `5e47558` U-123/防线①、W0 `36c782a` 防线②，都已在远程 main）。⚠️ 整栈 19:18:18 被重启过（不是我）⇒ 统计计数自该时刻起算，`embed_doc` ins/del 到 19:43 已 `10244\|10244`（=52×197，形态与"整表删后重灌"一致，**不指名成因**） | `RELAY.md` §三十一 |
+| 9 | 🔴 **当前真阻塞：`analytics` 连接的 `search_path` 里没有 `app`** | ❌ 闸门只认**非限定资产名**（`app.v_order_paid` 一律 `R16`，`ast_gate.py:531-534`），而 `build_analytics_engine` 的池上 `search_path="$user", public` ⇒ **合法资产名也 `relation does not exist`**（六臂 A/B 实测：A 挂 / B、C 出数 200,000 / E=EXPLAIN 同因 / F 出计划）。⇒ **判据④（≥1 条 `outcome=ok`）今天结构性不可满足**。`pools.py:227` 写"归 W2A"、W2A 未设 = 两格互相指认 | `README §三.0.1j` + `scratch_searchpath_ab.{py,out}` |
 
-⇒ **结论口径（写进任何汇报都要带）**：当前**测不出"容量"，因为链路走不到执行**（且第 8 格让复现前置本身也不在）。
+⇒ **结论口径（写进任何汇报都要带）**：卡点已从"闸门恒拒"移到"名字解析无人认领"，
+**仍然测不出容量**（`ok=0` ⇒ 判据④ 未过 ⇒ 四场景不跑批）。
 近期演示走 clarify/refuse，**不宣称 G-6 达标**（架构明令禁止"修完就能演示"的写法）。
 
 ---
@@ -62,8 +64,9 @@
 ### P0（阻塞 G-6，不由本窗口做，但由本窗口盯）
 | # | 事项 | 归属 | W7 的动作 |
 |---|---|---|---|
-| U-121 | 闸门 allowlist 形状。**gate1 半边已付清**（W4 `357618f`），剩 **gate2 三处**：`policy_gate.py:105`（取用面）+ `:141` ④ + `:148` ⑤，**必须同一 PR**（只换 105 = 干净 SQL 当场抛未捕获 `ContractViolationError`，我以三档探针实测过）。落地判据再加一条：**"deny 列"与"不存在的列"在 gate1 必须同为 `R06`**（顶全列 = 列存在性 oracle） | W2C（W0 形状 ✅ / W2A 实现 ✅ / W4 消费 ✅） | **不动代码**。落地后：重建镜像 → 先恢复 embed_doc → c=1 预检 → 看 `gate_passed`/`executing` 是否从 0 起 |
-| 🔴 **新** | **`app.embed_doc` = `197\|0\|0`**（09-22 被 integration 夹具重载成全 NULL = U-114）⇒ G-6 复现前置失效 | W2B 重灌；门禁归 W6 + W0/W1B | **谁都不能跑预检/跑批**；每次开工前置三查第 2 条必须回到 `197\|197\|197` |
+| 🔴 **新 P0（未取号，下一可用号 U-124）** | **`search_path` 死锁**：闸门只认非限定资产名（`app.` 前缀 = `R16`），而 analytics 池 `search_path="$user", public` 解析不了任何非限定名 ⇒ **判据④ 今天结构性不可满足**。`pools.py:227` 写"归 W2A 的认证视图 schema"、W2A 未设 ⇒ 两格互相指认 | **待架构定标**（候选：W2A 池装配 / W1B 语义包 `physical_asset` 命名）。**默认方案 = 照同文件 `lg` 已有的先例给 analytics 引擎加 `options="-c search_path=app"`**（`pools.py:343` 同形态；我一臂实测：加了之后 SELECT 与 EXPLAIN 同时复原，200,000 行） | **不动别人的代码**。需求 + 六臂实测随回执上报；落地后重建镜像跑 c=1/n=5 |
+| U-121 | 闸门 allowlist 形状 | ✅ **四处取用点已全换**（W0/W2A/W4 `357618f`/W2C `c76f701`）⇒ **不再是 P0**。我亲跑 W2C 器件与 redteam 全链复现（见 §三 第 5 行）。⚠️ 判据⑤ 那条"deny 列与不存在的列在 gate1 必须同为 `R06`"**未退步** | 只在架构把 U-121 关单前复核一次活体；不主动动代码 |
+| ✅ 已闭环 | `app.embed_doc` = `197\|0\|0`（U-114） | W2B 重灌 + W2A `5e47558`（U-123 + 防线①）+ W0 `36c782a`（防线②）；09-22 19:43 我复测 `197\|197\|197` | **每次预检前后各测一次** `count(*),count(embedding),count(tsv)`（本轮实测：前 `197\|197\|197`、后仍 `197\|197\|197`） |
 | U-119 | 生产端口直连闸门的契约测试（`tests/contract/test_gate_seam_contract.py`） | W4 + W6 | ✅ **09-22 复跑 = 2 passed / exit=0**（`357618f` 按改写后的判据）。⚠️ 旧纪律句"全量恒有 1 条刻意红"**只对 `8a4121a..357618f` 成立**，引用必带区间 |
 
 ### P1（本窗口的活）
@@ -78,7 +81,13 @@
    两个假分母逐处点名禁用。**接线需求仍在 W2B**（一行 `observe_retrieval_mode()`）⇒ 接线前它不得当证据引用。
 4. ✅ **U-122 归我那半已写**（`README §四.4`：`truncated` 是客户端流截断 ≠ §8.6 行数截断；L 无出口 ⇒ 压测判不了服务端截断）。
    ⚠️ **仍欠**：判据④ 落地后回一条可复制的读法 —— **UNVERIFIED**，别引成"已有"。
-5. **新窗口第一屏**：等 U-121 gate2 三处 + embed_doc 重灌 ⇒ 从新 commit 重建镜像 ⇒ c=1 预检 ⇒ 判据④ 过了才谈跑批（**先报规模与花费**）。
+5. **新窗口第一屏（09-22 第九轮之后）**：① 盯 `search_path` 定标（上面新 P0，不由我做）→ ② 从含修法的 commit **重建镜像**（上下文 = 仓库根！）→ ③ 前置三查含 `embed_doc` 必 `197|197|197` →
+   ④ **先报规模与花费再跑** c=1/n=5 → ⑤ **判据④ 看的是 `outcome=ok ≥1`（配 `executing` 与 `query_outcome_total{success}`），不是 `gate_passed`**（后者 gate3 判 warn 时按 D6 恒 0，见 §三 第 6/7 行）→
+   ⑥ 过了才谈四场景跑批；**跑前跑后各测一次 `embed_doc` 三计数**并带读数时刻。
+6. **可观测缺口两条（都是需求，不是本窗口的代码）**：① 闸门拒绝的 `rule_id` **今天到不了任何归因面**
+   （error 帧无该字段、`gate_reject_total{rule_id=""}` 实测恒空）⇒ 需求 = 唯一记录点落在闸门节点，
+   且必须同时摘掉 `instrumentation` 的反推否则双计；② 共享 `commerceql-api-1` 的 `/healthz` 把 `llm`/`embedding`
+   报成"阶段 0 探针未接线"，而**我新建的镜像里同一项是 `true`** ⇒ 那是 5 天前的旧镜像，不是探针缺陷（别照它判 RL-2）。
 
 ### P2（DoD 收尾，未跑就标 UNVERIFIED）
 - RL-1/RL-3 的 `DB_UNAVAILABLE` 活体行为；Grafana 面板渲染 + nginx `/metrics` 404（本机无镜像）；`exec_failure_total` 读数。
@@ -99,8 +108,11 @@ git status --porcelain | grep -v '^??'               # 必须只看见别人的�
 ```
 
 ```bash
-# 1) 从 commit 建被测镜像（⚠️ Dockerfile 在仓库根的 deploy/，构建上下文是 backend）
-cd CommerceQL && docker build -f deploy/Dockerfile -t w7load-api:MMDDrN backend
+# 1) 从 commit 建被测镜像（⚠️ 构建上下文**必须是仓库根 `.`**，不是 backend：
+#    Dockerfile 里 `COPY backend/app` 与 `COPY deploy/entrypoint.sh` 都相对仓库根写。
+#    09-22 我按本文件旧版写"上下文 = backend"跑过一次 ⇒ `ERROR "/deploy/entrypoint.sh": not found`。
+#    别再改回去。）
+cd CommerceQL && docker build -f deploy/Dockerfile -t w7load-api:MMDDrN .
 ```
 
 ```bash
@@ -154,7 +166,17 @@ docker exec commerceql-pg-1 psql -U postgres -d ecom -c "select task_id,count(*)
   `cost_ledger` 留下 `ins=24/del=0/count=0` 的 **TRUNCATE 签名** ⇒ 别人跑一次集成套件就能毁掉所有人的复现前置（U-114/U-113/U-123 同一个门）。
 - **同一工作副本被多窗口共用 ⇒ `git` 索引是共享的**（09-22 实锤：W4 三处改动在它 `add` 后、`commit` 前的两分钟里，被 W2B 的 `0f3f125` 一并卷走并推送）。
   自防三条（照 W4 的 §十七）：**`git add` 与 `git commit` 写同一条命令、零间隔**；提交前一刻查索引（`git diff --cached --name-only`）；**提交后立刻 `git show --stat` 复核**。
-- 报价口径：成本由 **DeepSeek prompt cache 冷/暖**决定，不由条数决定 ⇒ 按"首条 +（n−1)×稳态"报，别把首条摊进平均。稳态一次预检 n=5 ≈ 13 次调用 / ¥0.021（暖）~ ¥0.042（冷）。
+- 报价口径：成本由 **DeepSeek prompt cache 冷/暖**决定，不由条数决定 ⇒ 按"首条 +（n−1)×稳态"报，别把首条摊进平均。
+  **09-22 第九轮实测锚点**：`c=1 / n=5`（`questions_T_A_time.txt`）= **9 次调用 / ¥0.014471**（暖缓存、含一次 `repair` ¥0.006592）。
+  ⚠️ 先前那句"≈13 次 / ¥0.021–0.042"是**多条 SQL 一起死在 gate1 的第八轮**形态（那时 3 条各跑 4 次调用）；
+  链路走通到执行面之后**调用数会变小、单条变贵**（`repair` 一次顶三次 `normalize_intent`）⇒ 报备要按"当前卡在哪一格"换锚点。
+- `docker exec` 进被测容器跑临时脚本：两处**必须同时**带上，否则一个是"路径不存在"、一个是 `ModuleNotFoundError: app`：
+  `MSYS_NO_PATHCONV=1 docker exec -e PYTHONPATH=/srv -w /srv w7load-api python /tmp/ab.py`
+  （`-w /srv` 不加 `MSYS_NO_PATHCONV` 会被 Git Bash 改写成宿主路径 ⇒ `OCI runtime exec failed: Cwd must be an absolute path`；
+  脚本放 `/tmp` 时 `sys.path[0]=/tmp`，`app` 在 `/srv/app` ⇒ 非显式 `PYTHONPATH=/srv` 不可）。
+- **A/B 对照脚本别让两条语句共用一条连接/一次事务**：第一条失败后 PG 对同一事务里的第二条只回
+  `current transaction is aborted, commands ignored until end of transaction block` ⇒ 那是**量具假读数**，
+  长得却极像"被测系统的第二个缺陷"（我第一版的 E 臂就是这样，改成一语句一连接后才读出真形态）。
 - 冷容器第一条会吃掉整个 p95（本轮实测 187,728.9ms，**未做单变量对照 ⇒ 不写成成因**，只登记）。
 
 ---

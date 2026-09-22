@@ -1797,3 +1797,115 @@ origin/main 现 = `cd90e16`（15:1x 实测 0/0）。⚠️ 但本轮新增一条
   `--roll-up` 注入读数、变异检查 6/6、`origin/main..HEAD` 同步核。
 - ❌ 未跑：预检（前置未恢复）、跑批、`tests/integration`（禁令）、GATE3/EXECUTE 活体帧、`exec_failure_total`、Grafana 渲染、nginx `/metrics` 404。
 - ⚠️ 未指认：那 40 分钟里跑集成套件的是谁 —— **我没有证据，也不打算用时间线相邻当因果**。
+
+---
+
+## 三十一、第九轮预检：闸门那一格真通了，然后链路撞上一条**两边都合规的死锁**（09-22 19:43–20:10 · 第十三轮）
+
+**一句话**：总控贴来的六份回执我**逐条自己复测过**才动手；复测全对 ⇒ 按我上轮设的解锁条件跑了 c=1/n=5。
+`executing` 史上第一次非 0，但判据④ 仍不过（`ok=0`），红因是一处**归属未定的 `search_path` 死锁**，
+不是任何人的回归。**本轮花费 ¥0.014471 / 9 次调用**（跑前报备 ¥0.02–0.04 ⇒ 声明偏保守）。
+
+### ① 盘面复测（先测再动，08 v1.3 §6.5 的【读数时刻 + commit + 前置值】）
+
+| 项 | 我的实测 |
+|---|---|
+| HEAD / 远程 | `fb8b4c6` = `origin/main`（`git fetch` 后追踪 ref 在 ⇒ 采纳 W4 的建议，push 前先 fetch） |
+| 共享索引 | `git diff --cached --name-only` = **空**；工作区有别人的 2 个 `M` 文件（W6 的两支探针）⇒ **不 stage 不还原不删除** |
+| `embed_doc` | 跑前 19:43 = **`197\|197\|197`**、跑后 20:08 = **`197\|197\|197`**（W2B 的第三次重灌回执成立） |
+| **新事实：整栈被重启** | `commerceql-{api,pg,redis,pgbouncer}-1` 四条 `started=2026-09-22T11:18:17~18Z`（**19:18 本地**），`created` 仍是 09-15/18/20 ⇒ 是**重启不是重建**；`pg_postmaster_start_time()` = 11:18:18Z 同刻。**不是我做的** |
+| 计数的后果 | 统计视图在重启时清零 ⇒ 我上两轮的 14:26–15:06 取证链**无法向后续接**；重启后到 19:43：`embed_doc` `ins\|del` = `10244\|10244` = **52×197**（形态与"整表删后重灌 ×52"一致，**不指名成因**；我本轮只跑过纯 AST 的 `test_harness_allowlist.py`，没跑任何会重灌的套件） |
+| `cost_ledger` | 重启后 `ins=40 / del=0 / count=0` ⇒ 与 §三十 记的 TRUNCATE 签名同形；**我本轮的 9 行在**（`sum(cost_cny)=0.014471`，`where created_at > now()-interval '20 min'`） |
+
+### ② W2C `c76f701` 三条读数 = 我亲跑它的器件复现（零 DB / 零 LLM）
+
+`backend/reports/w2c/_probe_u121_faces.py` 在 HEAD 上的读数：档1（生产今天）干净 SQL `pass=True`、
+deny 三形态（不限定 / 限定 / 别名）**全 `G2-DENY`**、未知列 `pass=True`（那是 gate1 的活）；
+oracle 机械断言：**档3a `A_anti_oracle=PASS`（`R06`/`R06`）**、**档3b 顶全列 `FAIL(oracle!)`（`R07`/`R06`）**
+⇒ **判据⑤ 未退步**，W2C 三条回执我一条都不用转述。另：`git grep` 复核取用面 ——
+闸门侧两处（`nodes/gate1_ast.py:56`、`guard/policy_gate.py:110`）**都读 `guard_allowlist`**；
+平铺面 `asset_allowlist` 只剩 `planner/payloads.py:293` 与 `binding/filters.py:337` 两处**设计内消费者**
+（`binding/grain.py:79` 是窄接口声明，不是取用）。
+
+### ③ 答复 W2C 交回的那条 UNVERIFIED：redteam 全链**没被打坏**，但它本来就不是全绿
+
+`eval/redteam_eval.py` 是**零 LLM、零额度**（66 条题面自带 `attack_sql`，测闸门不测模型）⇒ 我直接复跑：
+**exit 0、`leaked=0`（G-3 硬判据成立）**，与 W6 存的落地前快照 `_redteam_before_c76f701.json` 比：
+`total/leaked/expect_block/checked` 四格相同、断言计数同为 `PASS187 / FAIL26 / NOT_CHECKED25`、
+**`failures` 集合 26 条逐格相同**（`only_before=[] / only_after=[]`）⇒ **适配层删除 + 三处同批 = 行为零漂移**。
+两处必须一起说的：
+1. 报告形状改了一个键名（`gate2_visible_raise` → `gate2_on_port_raise`），**出处是 W6 `899fffb`**，不是 W2C；引用旧件别按新键找。
+2. 那 26 条红**不是我账上的"环境未就绪"**（接 W6 的归因提醒）：其中 `RT-R07-001…004` 期望 `R07` 实测 `R06`
+   —— 这**正是判据⑤ 要求的形态**（可见面下 deny 列与不存在列必须同为 `R06`，否则就是列存在性 oracle）。
+   ⇒ 冻结红队集（`content_hash sha256:886cb57…`、`frozen_at 2026-09-16`）里这四条的**期望值与 07 v1.6.8 冲突**，
+   归 W6 + 架构定夺（改期望 = 重冻评测集 = 动 G-3 的输入），**本窗口不动**。
+
+### ④ 第九轮预检 c=1/n=5（规模与花费先报备，再跑）
+
+报备 ¥0.02–0.04 / ~13 次调用 ⇒ 实测 **9 次 / 9 行台账 / ¥0.014471**（`httpx 200` 9 = `llm_call` 9，零缺口）。
+读数：`{refuse:1, clarify:3, error_frame:1}`、`ok=0`；`codes={GATE_AST_REJECTED:1}`；
+指标面 `intent 6 / schema_linking 1 / plan_ready 1 / sql_ready 1 / gate_passed 0 / **executing 1**`、
+`query_outcome_total{success=0, clarify=3, refuse=1, failed=1}`；p50 1,060.5ms / p95=max 11,157.4ms；
+**`g6_p95_le_8s=null` + `g6_caveat` 两条齐全**（U-120 三态第一次在活体上走对：没把"没量到"写成"不达标"）。
+链上序列（`docker logs`）：`normalize_intent×5 → plan → l4_score → gen_sql → gate3_explain_failed(warn) →
+exec_failed error_class=unknown_table → repair → 终态 GATE_AST_REJECTED`；审计行
+`final_executed_sql = SELECT SUM(order_paid.pay_amount) … FROM order_paid … LIMIT 1`、`prompt_version=repair_v1`、
+`tables_accessed={}`。⇒ **穿透了 gate1+gate2+gate3，第一次死在执行面。**
+
+### ⑤ 🔴 新 P0（**未取号**，下一可用号 U-124）：闸门与解析面互相指认 ⇒ 判据④ 今天结构性不可满足
+
+三条**互相独立**的实测（不是一条推论）：
+
+| 面 | 器件 | 读数 |
+|---|---|---|
+| 闸门 | `scratch_searchpath_asset_face_probe.py`（离线，零额度） | 非限定 `v_order_paid` ⇒ gate1 **过** / gate2 **过**；`app.v_order_paid` ⇒ **gate1 `R16` 拒**（`ast_gate.py:531-534`：带 schema 前缀 = 绕白名单形态）；裸表 `order_paid` ⇒ `R05` / `G2-ASSET` |
+| 解析（psql，`SET SESSION AUTHORIZATION app_ro`） | 同上说明 | `search_path="$user", public` ⇒ `from order_paid` **和** `from v_order_paid`（合法资产）**同样** `relation does not exist`；`from app.v_order_paid` 可解析 |
+| 生产池 | `scratch_searchpath_ab.py`（容器内跑真 `build_analytics_engine`，六臂） | **A** 原样+非限定 ⇒ `ProgrammingError: relation "v_order_paid" does not exist`；**B** 连接内 `SET search_path=app,public` ⇒ `count=200000`；**C** 池级 `-c search_path=app` ⇒ `200000`；**D** 限定名在 B 臂亦 `200000` |
+
+⇒ 死锁：**能过闸门的 SQL 一定解析不了，能解析的写法一定过不了闸门。** 归属：`pools.py:227` 写"归 W2A 的认证视图 schema"、
+W2A 未设；`IDENTITY_INJECTION_TEMPLATE`（`dsn.py:141`）只注入三键也不带 ⇒ **两格互相指认**。
+**默认方案（列出来，不阻塞）**：照**同文件里 `lg` 已有的先例**（`pools.py:343` `options="-c search_path=…"`)给 analytics 引擎
+加 `-c search_path=app`。代价：① 它把"资产名必须非限定"这条隐含前提固化到连接上（这正是 W1B 在 materialize 上踩过的
+同一族坑，见 `w1b/DELIVERY.md:573`"根因 = 非限定名 + 调用侧连接未带 search_path"）；
+② 备选"让 gen_sql 写限定名"**不可行** —— 要改的是 R16 的语义（那条规则防的是绕白名单，不是防你老实写 schema）。
+⇒ 请架构定标归属并决定是否取号；**我不自取 U 号、不动别人的文件。**
+
+### ⑥ gate3 的 warn 与 execute 的报错**同因** ⇒ 记一笔不记两笔
+
+E 臂 = 生产池上 `EXPLAIN … FROM v_order_paid` ⇒ **也是** `relation "v_order_paid" does not exist`；
+F 臂 = 池级 `search_path=app` 上 EXPLAIN ⇒ 出计划。所以日志里 `gate3_explain_failed` 与 `exec_failed`
+**是同一个因**，修 `search_path` 一处两格同时复原。
+**顺带收窄我自己上轮写下的判据**（留痕，不改原文）：我在 §四.5 说的"预检读 `gate_passed` 首格非零"——
+今天按 §14.2 D6 + `events.py:55`，gate3 判 warn 时**根本不发 `gate_passed` 帧** ⇒ 活体上最早的可穿透信号是
+`executing`。`gate_passed=0 且 executing>0` 是**合规形态**，读成"闸门坏了"是反向的。
+
+### ⑦ 观测缺口一条（需求，归 W4/W5）：`rule_id` 今天到不了任何归因面
+
+- 客户端 error 帧只有 `code`/`message`/`retryable`（`api/runner.py:542-561`，`detail` 还只在特定角色下给）；
+  `gate_detail`（含 `rule_id`）**只挂在 `gate_passed` 事件上** ⇒ 拒绝路径无 `rule_id` 出口。
+- 指标面实测：`gate_reject_total{gate_no="1",rule_id=""} 1` —— **有调用点**（`obs/instrumentation.py:455`），
+  但载体没给规则号 ⇒ 恒落空值序列（`metrics.py:177` 定义的空值语义）。**所以 §14.5"闸门拒绝率按 `rule_id` 分组"今天做不到。**
+- 需求：唯一记录点落在**闸门节点**（先例 = `execute.py::_on_failure` 记 `exec_failure_total`），
+  且**必须同时**摘掉 `instrumentation` 那条反推 —— 同一处注释已经警告过双计。我不动别人的文件。
+  ⇒ 在它落地前，任何"按规则号归因"的读数**只能走离线器件**（我这两支已入库）。
+
+### ⑧ 本轮我自己的错与收回
+
+1. **HANDOFF §五 的构建配方是错的**（写了"上下文 = backend"）⇒ 真跑一次直接 `ERROR "/deploy/entrypoint.sh": not found`。
+   正确上下文 = **仓库根**。已改，并在原处留了"别再改回去"的注记。
+2. **A/B 脚本第一版 E 臂是量具假读数**：两条语句共用一条连接/事务，第一条失败后第二条只报
+   `current transaction is aborted`。改成"每条语句各借一条新连接"后 E 臂才给出真读数（同因）。
+3. 上轮我给 W2C 的"档A 只换 `:105` ⇒ 未捕获 `ContractViolationError`"**已被本轮超越**：那是半落地态；
+   三处同批后 W2C 器件的档3c 自己标成"历史反事实存档"，我复跑读数一致 ⇒ 不再作为对生产的判断引用。
+4. 跑前报备的口径写宽了（¥0.02–0.04 / ~13 次）⇒ 实测 9 次 / ¥0.014471。**报备偏保守可以，但下次按 9 次这个量级报**，
+   别把"四场景跑批"的预算也用这个低估口径反推。
+
+### ⑨ 本轮实测 / 未实测
+
+- ✅ **实测**：前置三查（HEAD/远程/索引/`embed_doc` 跑前跑后）；整栈重启时刻与 `pg_postmaster_start_time()`；
+  W2C 器件全六档 + oracle；`git grep` 取用面；redteam 全链复跑 + 落地前后逐格对照；
+  `tests/eval/test_harness_allowlist.py` 27 passed；`driver.py --self-check` exit 0（10/10 + U-120/A-1 全绿）；
+  闸门面离线探针 7 题面；psql `app_ro` 会话三臂；生产池六臂 A/B；`/metrics` 活体计数；`cost_ledger` 结账。
+- ❌ **未跑 / 未验**：四场景跑批（判据④ 未过 ⇒ 禁止）；`tests/integration`（禁令）；`tests/eval` 全量
+  （**只有 W6 的读数，而且它两轮报的数还不一样 ⇒ 我未复测**；跑它会重灌 `embed_doc` ⇒ 不在我这边引成"已验证"）；`retrieval_mode_total` 接线（仍在 W2B）；
+  G-6 达标（**不得宣称**）；A-1 那 11 份归档件就地降档（仍等总控点头）；Grafana 渲染 / nginx `/metrics`。

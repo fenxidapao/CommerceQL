@@ -1,0 +1,12 @@
+semantic bundle loaded: version=2026.09.14.1 status=candidate assets=8 excluded=0 warnings=1
+semantic bundle: 2026.09.14.1
+allowlist 顶层键数 = 8
+
+题面                    gate1                             gate2
+合法资产·非限定              passed=True rule=-                passed=True rule=- refuse=-
+合法资产·限定 app.          passed=False rule=R16             passed=True rule=- refuse=-
+裸表·非限定                passed=False rule=R05             passed=False rule=G2-ASSET refuse=-
+裸表·限定 app.            passed=False rule=R16             passed=False rule=G2-ASSET refuse=-
+裸表 + deny 列           passed=False rule=R05             passed=False rule=G2-ASSET refuse=-
+裸表 + deny 列·限定        passed=False rule=R16             passed=False rule=G2-ASSET refuse=-
+生产 repair 去参数         passed=False rule=R05             passed=False rule=G2-ASSET refuse=-
