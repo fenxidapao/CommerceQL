@@ -17,7 +17,11 @@
 **禁写**：`app/core/**`、`app/{llm,planner,binding,guard,exec,mask,retrieval}/**`、`app/graph/**`、`app/semantics/**`、其他 api routers、`frontend/**`、`eval/*` —— 要改只能提需求。
 ⚠️ `deploy/**` **名义归 W0**，分给本窗口的只有 `deploy/loadtest/`；动 `deploy/` 其他路径前先确认（例：pgbouncer 那一行 `AUTH_TYPE` 是请 W0 落的）。
 
-**提交**：前缀 `feat(w7)` / `docs(w7)`；**只 stage 本窗口的文件**（每轮 `git status` 先核归属，跨窗口撞车要先报）。**push 已获长期授权**；但**代推别人的 commit 要先问一句**（09-21 我推了 W2B 的 `9942753`，登记在 RELAY §二十六①）。
+**提交**：前缀 `feat(w7)` / `docs(w7)`；**只 stage 本窗口的文件**（每轮 `git status` 先核归属，跨窗口撞车要先报）。
+**push：09-22 总控改规则 ⇒ 各窗口自行推自己那批，不必再等指令**（我已在转述块里对全窗口同步）。
+⚠️ 但我的 commit 压在别人未推的提交之上时，一推就**连带**推上去 ⇒ 那要在 RELAY 点名"连带了哪几笔 + 依据哪句授权"
+（09-22 我推 `2c18868..4e782b6` 连带了 W4 的 `c2f63cf`，依据是总控点名"将 W4 的一起 push"）。
+**没有被点名的代推仍要先问**（09-21 我推 W2B 的 `9942753` 已被架构 v1.6.4 记为"下次先问"）。
 
 **共享状态**：`commerceql-api-1` / 主栈 compose / PG / Redis 是**共用的**，不得单方面重启或重建。**唯一写者纪律**：同一时刻对同一份共享状态只能有一个窗口动手。
 
