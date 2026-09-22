@@ -64,7 +64,12 @@ SQLS = {
 
 
 class _Runtime:
-    """真 runtime 的薄包装，使 `asset_allowlist` 可被替换；其余属性转发。"""
+    """真 runtime 的薄包装，使 `asset_allowlist` 可被替换；其余属性转发。
+
+    ⚠️ `asset_allowlist` 名**保留**：gate2 生产（`policy_gate.py:105`）今天仍调它
+    （D2 未落地）；D2 落地后本方法删除。gate1 侧生产（W4 `357618f`）已改调
+    `guard_allowlist`，探针 gate1 入口（`_g1`）同步走该名。
+    """
 
     def __init__(self, rt) -> None:
         self._rt = rt
@@ -77,7 +82,14 @@ class _Runtime:
 
 
 class _Shaped(_Runtime):
-    """换取用面：`asset_allowlist` 返回七键形状；可选破坏列面以复现两档退化。"""
+    """gate1 入口（`guard_allowlist`）与 gate2 替身（`asset_allowlist`）都返回七键形状。
+
+    ⚠️ 方法名对齐生产调用路径（W4 2026-09-22 要求）：
+    - `guard_allowlist` —— gate1 生产（`gate1_ast.py:52`）的取用名，探针 `_g1` 走它；
+    - `asset_allowlist` —— gate2 生产（`policy_gate.py:105`）今天的取用名，
+      D2 落地后随 `:105` 一起消失。
+    两者喂的是**同一个** `guard_allowlist()` 产物（可选破坏列面以复现两档退化）。
+    """
 
     def __init__(
         self, rt, *, columns_are_tuples: bool = False, columns_all: bool = False
@@ -86,7 +98,7 @@ class _Shaped(_Runtime):
         self._tuples = columns_are_tuples
         self._all = columns_all
 
-    def asset_allowlist(self, ctx: IdentityContext):
+    def _shaped(self, ctx: IdentityContext):
         shaped = self._rt.guard_allowlist(ctx, max_rows=None)
         for asset in shaped["assets"].values():
             if self._tuples:
@@ -95,10 +107,16 @@ class _Shaped(_Runtime):
                 asset["columns"] = dict(asset["all_columns"])
         return shaped
 
+    def guard_allowlist(self, ctx: IdentityContext, *, max_rows=None):
+        return self._shaped(ctx)
+
+    def asset_allowlist(self, ctx: IdentityContext):
+        return self._shaped(ctx)
+
 
 def _g1(sql: str, bundle) -> str:
     try:
-        r = run_gate1(sql, bundle.asset_allowlist(CTX))
+        r = run_gate1(sql, bundle.guard_allowlist(CTX, max_rows=None))
         return f"pass={r.gate_result.passed} rule={r.gate_result.rule_id}"
     except Exception as exc:
         return f"RAISED {type(exc).__name__}@751?"
@@ -155,10 +173,11 @@ def _show(label: str, fn) -> None:
         print(f"  {name:<12} {fn(sql)}")
 
 
-print("########## 档1：真扁平面（顶层无 assets 键）⇒ 资产级拦截 ##########")
+print("########## 档1：gate2 现状存档 —— :105 仍调 asset_allowlist ⇒ 扁平面 ⇒ G2-ASSET ##########")
+print("(gate1 生产已换 guard_allowlist【W4 357618f】，本档不再单列 gate1；gate1 侧见档2/3a/3b)")
 _show(
-    "gate1 与 gate2 并列",
-    lambda s: f"gate1[{_g1(s, _Runtime(RT))}]  gate2[{_g2(s, _Runtime(RT))}]",
+    "gate2（真扁平面 = RT.asset_allowlist）",
+    lambda s: f"gate2[{_g2(s, _Runtime(RT))}]",
 )
 
 print("\n########## 档2：形状顶层 + columns 是元组 ⇒ 列面崩 ##########")

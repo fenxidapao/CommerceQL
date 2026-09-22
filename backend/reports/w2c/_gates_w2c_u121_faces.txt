@@ -1,12 +1,13 @@
 semantic bundle loaded: version=2026.09.14.1 status=candidate assets=8 excluded=0 warnings=1
-########## 档1：真扁平面（顶层无 assets 键）⇒ 资产级拦截 ##########
+########## 档1：gate2 现状存档 —— :105 仍调 asset_allowlist ⇒ 扁平面 ⇒ G2-ASSET ##########
+(gate1 生产已换 guard_allowlist【W4 357618f】，本档不再单列 gate1；gate1 侧见档2/3a/3b)
 
-=== gate1 与 gate2 并列 ===
-  干净-不限定       gate1[pass=False rule=R05]  gate2[pass=False rule=G2-ASSET]
-  deny-不限定     gate1[pass=False rule=R05]  gate2[pass=False rule=G2-ASSET]
-  deny-限定      gate1[pass=False rule=R05]  gate2[pass=False rule=G2-ASSET]
-  deny-别名      gate1[pass=False rule=R05]  gate2[pass=False rule=G2-ASSET]
-  未知列          gate1[pass=False rule=R05]  gate2[pass=False rule=G2-ASSET]
+=== gate2（真扁平面 = RT.asset_allowlist） ===
+  干净-不限定       gate2[pass=False rule=G2-ASSET]
+  deny-不限定     gate2[pass=False rule=G2-ASSET]
+  deny-限定      gate2[pass=False rule=G2-ASSET]
+  deny-别名      gate2[pass=False rule=G2-ASSET]
+  未知列          gate2[pass=False rule=G2-ASSET]
 
 ########## 档2：形状顶层 + columns 是元组 ⇒ 列面崩 ##########
 

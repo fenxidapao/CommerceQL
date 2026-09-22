@@ -160,15 +160,17 @@
 
 | # | 事项 | 默认方案 | 若被否（fallback） |
 |---|---|---|---|
-| D1 | gate1 侧换方法 | W4 在 `gate1_ast.py:52` 改调 `guard_allowlist(identity, max_rows=state["options"].get("max_rows"))`；`:55` 传入同一对象 | 若 W0 定稿方法名不同 ⇒ 只改方法名，**取用点位置不变** |
+| D1 | gate1 侧换方法 | ~~W4 在 `gate1_ast.py:52` 改调…~~ ✅ **W4 已落地（`357618f`）**：`gate1_ast.py` 改调 `guard_allowlist`（判据④ 走请求级 `max_rows`）；我方探针 gate1 入口已同步对齐该名 | — |
 | D2 | gate2 侧换方法 | W2C 在 `policy_gate.py:105` 改调 `bundle.guard_allowlist(ctx)` | 同上 |
 | D3 | **④ 读取面** | `policy_gate:141` 改为**按结构面**取列集后比对 `deny_columns`；实现 = 给 ④ 的 `_Auditor` 一份 `columns <- all_columns` 的**视图**（探针档3a 已验证：三形态 deny 全 `G2-DENY` 含不限定），**不动形状** | 若 W0 定稿形状**不含** `all_columns` ⇒ 退到"用 `deny_columns` 顶层集合 + 独立 `_resolve_column` 反查"（W7 实测 `deny_columns` 顶层 8+ 项，**可用**）；**不可**退到"不查"。⚠️ **不可**退到"把 `columns` 顶成全列"（档3b）——那会破坏可见面并制造 error oracle（见 §6.4 末条） |
 | D4 | **⑤ 读取面** | `policy_gate:148` 的 `has_tenant_col` 改读 `all_columns`（**必改**：不改 ⇒ 干净 SQL 抛未捕获 `ContractViolationError`，档3c 实测） | 无 fallback。若形状不给结构面，**唯一正确动作是让形状给**，不是在 gate2 里用 `tenant_scoped` 反推（那等于把断言改成恒真） |
 | D5 | 归因口径 | **保持 `{R06,R07}` 集合断言**，不收紧、不放宽（§6.4/W7：`R06` 是可见面下的正确归因，不是缺陷） | — |
-| D5+ | **anti-oracle 机械断言**（W7 2026-09-22 提出，U-121 **落地判据**） | 改完三处后必须逐条机械验证（探针尾部 `oracle_check` 段已实现，直接复跑）：**A** — gate1 可见面下，`SELECT receiver_phone FROM v_order_paid`（deny 列）与 `SELECT nonsense_col FROM v_order_paid`（不存在列）的 `rule_id` **必须同为 `R06`**（两码 = error oracle = 违规）；**B** — gate2 ④⑤ 对 deny 列三形态（限定/别名/不限定）**必须全 `G2-DENY`**。⇒ auditor 视图切面（D3）A+B 同满足；**顶全列（3b）B 满足、A 破坏** ⇒ 机械上排除 3b | A 不过 = 形状或读取面被改错（大概率有人把 `columns` 顶成全列），**停手回查**，不是调断言 |
+| D5+ | **anti-oracle = `07` v1.6.8 判据⑤（官方化，2026-09-22）** | 判据⑤原文：「gate1 对任一 deny 列 与 该资产内不存在的列名，必须返回同一个 rule_id（现状 R06/R06）；**分裂成 R07/R06 即判未落地，功能面过了也不算**」。⇒ 与我方 D5+ 的 A 条**同一件事**，A/B 两条机械断言照旧执行（探针 `oracle_check` 段）。**落点约束（07 同条）**：结构面只对 gate2 ④ 开，**gate1 的列解析必须留在可见面** —— D3 的 auditor 视图正满足此约束；顶全列（3b）同时违反判据⑤与该约束 | A 不过 = 形状或读取面被改错（大概率有人把 `columns` 顶成全列），**停手回查**，不是调断言 |
+| D5- | **机械守卫不叠层**（W7 2026-09-22 提示） | "生产从哪个方法取"的守卫**已存在且归 W6**：`tests/eval/test_harness_allowlist.py:170-186` 按文件 AST 扫描。⇒ W2C **不另写第二层守卫测试**；我方判据只落在探针 `oracle_check` + 既有测试集合断言 `{R06,R07}` 上 | — |
 | D6 | `all_columns` 的派生源 | 由 W2A 在 `guard_allowlist` 内从**同一份 `Asset.columns`** 派生（`runtime.py:202-203` 已这么做）⇒ 两面结构上不可能漂移 | 若 W0 要求两面**各自独立声明** ⇒ **拒绝**：那正是 `U-121` 的成因复发 |
 | D7 | `U-119` 接缝测试 | 输入 = **真** `guard_allowlist()` 输出（不补 wrapper 键），断言普通 SQL `passed=True`；**今天必须红** | 无。补夹具 = 假绿，07 明令禁止 |
 | D8 | 我方的落地顺序 | 等 W0 定形状 → W2A 实现 → **W4 与 W2C 同一 PR 窗口内**改三处（`gate1_ast:52`、`policy_gate:105`、`policy_gate:141+148`） | 若 W4 排不开同窗 ⇒ **宁可等**，不单侧先改（单侧 = 两真相，§6.2） |
 
 - 🔴 **D3/D4 是本节最容易被漏的一半**：W7 的"`policy_gate.py:105` 可以动了"**只覆盖方法替换**；只做 D1+D2 而不做 D3/D4 ⇒ 逐格后果 = **档3c**（干净 SQL 抛未捕获 `ContractViolationError`，`INTERNAL` 形态）。**"可以动"≠"动一处就够"。**
 - 📌 **v2 勘误（2026-09-22，应 W7 复跑要求）**：我方 v1 三处表述已撤并更正——①"④ 切面后不限定仍漏检"为假结论（v1 探针 ④ 根本没切面）；②"只换 :105 = 与今天一样"应为"当场抛未捕获异常"；③"真扁平面 ⇒ AttributeError@751"标签错误（真扁平面先被资产级拦截，@751 属于"形状顶层+元组 columns"那一档）。探针已重写为五档版（真 runtime 输入），读数与 W7 `scratch_gate2_face_probe.py` 一致。
+- 📌 **v2.1（2026-09-22 午后）**：① 探针替身入口改名对齐生产（W4 要求）：gate1 侧 `_g1` 改走 `guard_allowlist`（= `gate1_ast.py:52` 新调用），gate2 侧替身**保留** `asset_allowlist` 名（`:105` 未换，D2 落地后随生产一起删）；改名后全档读数逐格不变。② 判据⑤升格为 `07` v1.6.8 官方判据（D5+）。③ "生产从哪个方法取"守卫不叠层（D5-）。④ 🔴 **给落地 commit message 的固定警示句（W7 要求，防 INTERNAL 误判）**：「本 commit 若只包含 :105 而缺 ④⑤ 读取面（半落地态），干净 SQL 会抛未捕获 `ContractViolationError`（= INTERNAL 形态），属已知中间态而非回归；完整三处同批 = 无此形态」。
