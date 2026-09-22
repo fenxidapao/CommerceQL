@@ -1,9 +1,9 @@
 {
   "meta": {
-    "generated_at": "2026-09-21T16:16:05+00:00",
+    "generated_at": "2026-09-22T02:17:43+00:00",
     "window": "W6",
     "git": {
-      "rev": "2544399",
+      "rev": "6da16db",
       "dirty": true
     },
     "run_config": {
@@ -141,7 +141,7 @@
       "gate_id": "G-1",
       "condition": "全部 P0 用例通过",
       "verdict": "FAIL",
-      "measured": "断言失败 0 + 夹具 error 3 = 红 3 条；unit+contract passed=2231, integration_ran=True",
+      "measured": "断言失败 0 + 夹具 error 3 = 红 3 条；unit+contract passed=2232, integration_ran=True",
       "basis": "§17.1 单元 + 集成",
       "caveats": [
         "另有 3 条 **error（夹具起不来，不是断言失败）** ⇒ 与 failed 分开数，混报会看不出坏的是测试环境还是被测系统；点名：`tests/integration/test_retrieval_fts_pg.py::test_dense_all_null_column_raises_unavailable_not_type_error`、`tests/integration/test_retrieval_fts_pg.py::test_dense_null_rows_never_crowd_out_valid_vectors`、`tests/integration/test_retrieval_fts_pg.py::test_dense_scope_with_zero_rows_is_not_degradation`"
