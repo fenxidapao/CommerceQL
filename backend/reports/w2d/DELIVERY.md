@@ -46,8 +46,8 @@
 | `tests/integration/test_exec_real_pg.py` | 19 条真 PG（沿用 W1B 模式：无库 skip 不假绿；schema 随机后缀） |
 | `reports/w2d/DELIVERY.md` `reports/w2d/RELAY.md` | 本文件 + 逐窗口转述件 |
 | `reports/w2d/probe_explain_timing_pg.py` | **2026-09-18 追加**：U-96 判据实验探针（可复跑、只读、不写库）—— 钉死"07 §7.5 规定的 `EXPLAIN (FORMAT JSON)` 不产出任何耗时字段" + "cost→ms 系数跨 327× 不成立"。见 RELAY 第一节 / DELIVERY §8 |
-| `app/exec/seam.py` | **2026-09-21 追加**：exec 入口形态的**声明层** —— `ExplainPlan`（含"方言不支持 vs 本次失败"两种语义）/ `ExecutorSeam`（端口 ∪ 图真正多用的 `effective_limit` + `explain`）/ `declared_call_face_mismatches()`。**不改端口**（W0 冻结面）。见 DELIVERY §9 |
-| `tests/unit/test_exec_seam.py` | **2026-09-21 追加**：5 条，含"端口面替身必须被拒"的**分离力**断言（已做"删声明 ⇒ 必须红"的正向对照） |
+| `app/exec/seam.py` | **2026-09-21 追加 / 2026-09-22 收敛（U-122）**：exec 入口形态 —— `ExplainPlan` **再导出** `app.core.contracts`（唯一真相，contracts:515-517 明文）/ `ExecutorSeam` **= `SqlExecutorPort` 迁移别名**（名字留 L2，合架构裁定③）/ 两个 face 常量（**刻意手写不推导**，保 W4 判据② 非恒真）/ `declared_call_face_mismatches()`（U-122 判据④）。见 DELIVERY §10 |
+| `tests/unit/test_exec_seam.py` | **2026-09-21 追加 / 2026-09-22 更新**：6 条 —— 新增 `test_single_truth_identity`（`app.exec.ExplainPlan is contracts.ExplainPlan`、`ExecutorSeam is SqlExecutorPort`，杀第二真相；已做注入正对照：注入 ⇒ 恰好 1 红 ⇒ 还原绿）+ 分离力断言保留 |
 | `reports/w2d/probe_fullchain_two_cells.py` | **2026-09-21 追加**：离线全链读数探针（不连库）—— 实测默认绿档能产出 `gate_passed` + `executing` + `fetch_calls=1` + `explain_calls=1` |
 
 ---
@@ -229,3 +229,25 @@ mypy app/exec app/mask
 **分离力已实测**：删掉 `ExecutorSeam.explain` ⇒ 恰好 1 条红；还原 ⇒ 5 passed。
 **未改**：`core/contracts.py`（W0 冻结面）、`app/graph/**`（W4）、`app/guard/**`（W2C）、`tests/contract/**`（W4）。
 **顺带量出的判据缺口**：`"gate_passed" in stages` 的**肯定**断言全仓 **0 条**（只有 2 条否定断言）—— 而它离线可达，今天就能写。详见 `RELAY.md` 第一节 §2/§4。
+> ⚠️ 2026-09-22 订正：上句已被两次更新覆盖 —— 架构 v1.6.5 收窄为"单元级 1 条、全链级 0 条"（`test_sse_events_contract.py:283-294`）；W4 `6d6ac25` 又落下 U-122 判据③全链级肯定断言（`test_decision_table_d_e.py:130`）⇒ 现全链级 ≥ 1。原句保留作历史读数。
+
+---
+
+## 10. U-122 收敛回执（2026-09-22 追加，付 W7 的"再导出 1 行"）
+
+**前提**：W0 `aa494f6` 把 `effective_limit`（必填）与 `explain` 抬进 `SqlExecutorPort`，
+`contracts.py:515-517` 明文令 `seam.py` 只准再导出。收敛前 `seam.py` 还是第二真相
+（`ExecutorSeam.fetch` 的 `effective_limit` 仍带 `= None` 默认，与端口漂移 —— 即
+W0 RELAY:457 点名处）。
+
+| 项 | 处置 |
+|---|---|
+| `ExplainPlan` | 再导出 `app.core.contracts`（唯一真相；两语义表随迁 contracts:504-513） |
+| `ExecutorSeam` | = `SqlExecutorPort` 迁移别名（名字留 L2，合架构裁定③"不得搬进 app/core"） |
+| face 常量 | **刻意手写、不从端口推导** —— W4 判据② 等式断言靠两边独立防回退；理由钉在 seam.py 模块 docstring 第二节 |
+| `declared_call_face_mismatches` | 逻辑不变；`effective_limit` 豁免补 W0 `aa494f6` 出处 |
+
+**证据**：unit 6 + W4 契约 5 = 11 passed；离线全量 **1806 passed**；ruff check + format 干净；lint-imports 4/4 KEPT；**正对照**（注入第二份 `ExplainPlan` ⇒ 恰好 1 红 `test_single_truth_identity` ⇒ 还原 6 绿）。
+
+**给 W7 的引用口径**：deploy/loadtest 现在就可写死 —— 权威 = `app.core.contracts.SqlExecutorPort` / `.ExplainPlan`；`app.exec.seam.ExecutorSeam` 与 `app.exec.ExplainPlan` 是**同一对象**的别名/再导出，`isinstance` 恒等价；face 常量引 `app.exec.seam.FETCH_CALL_FACE` / `EXPLAIN_CALL_FACE`。
+

@@ -6,8 +6,59 @@
 > **2026-09-21 更新：回应总控"GATE3 / EXECUTE 两格至今一帧未见"—— 见本页第一节（更靠前）。结论：
 > 入口不缺 —— 离线全链夹具今天就能产出 `gate_passed` + `executing`（探针读数）；两格为 0 的成因是
 > `U-121`。真正缺的是"`explain` 不在端口上、缝没人声明"，已补 `app/exec/seam.py`。**
+> **2026-09-22 更新：U-122 收敛回执（付 W7 的"再导出 1 行"）—— 见本页第零节。`seam.py` 已收敛为
+> 再导出 + 检查器（`ExplainPlan` 再导出 / `ExecutorSeam` = `SqlExecutorPort` 别名）；W7 的
+> deploy/loadtest 引用口径**现在就可以写死**（见第零节 §3）。**
 > 本文件是"谁下一步该做什么"的单页转述；细节与证据见同目录 `DELIVERY.md`。
 > W2D 范围：`app/exec/**` + `app/mask/**`。96 tests passed（31+25+21+19），W2D 范围门禁全绿。
+
+---
+
+## ✅ 给 W7 / W0 / 架构 —— U-122 收敛回执：`seam.py` 已付"再导出"
+
+> 2026-09-22。回应 W7："你欠的 seam.py 再导出 1 行仍未见……我这半（deploy/loadtest 的引用
+> 口径）会引你的 seam 名字，等它进端口后再写死。" **端口已进（W0 `aa494f6`），本窗口已收敛。**
+
+### 1. 事实与动作
+
+W0 `aa494f6` 把 `effective_limit`（必填）与 `explain` 抬进 `SqlExecutorPort` 并在
+`contracts.py:515-517` 明文令本文件"只能再导出本名，不得另立第二份定义"。收敛前本文件
+确实还是第二真相（`ExecutorSeam.fetch` 的 `effective_limit` 还带 `= None` 默认 —— 正是
+W0 RELAY:457 点名的那处漂移）。已做（commit 见 git log）：
+
+| 项 | 收敛前 | 收敛后 |
+|---|---|---|
+| `ExplainPlan` | 本地定义 + 两语义表 docstring | **再导出** `app.core.contracts`（唯一真相；两语义表随迁到 contracts:504-513） |
+| `ExecutorSeam` | 本地 Protocol（面已与端口漂移） | **= `SqlExecutorPort` 的迁移别名**（名字留在 L2，合架构裁定③"不得搬进 app/core"） |
+| `FETCH_CALL_FACE` / `EXPLAIN_CALL_FACE` | 手写字面量 | **保持手写、刻意不从端口推导** —— W4 判据② 的等式断言靠两边独立才有防回退力，推导会把等式变恒真；理由写进 seam.py 模块 docstring 第二节 |
+| `declared_call_face_mismatches` | 不变 | 不变（`effective_limit` 默认值豁免补了 W0 `aa494f6` 的出处注） |
+
+### 2. 证据（全绿 + 正向对照）
+
+- `tests/unit/test_exec_seam.py` **6 条**（新增 `test_single_truth_identity`：断言
+  `app.exec.ExplainPlan is contracts.ExplainPlan`、`ExecutorSeam is SqlExecutorPort` ——
+  有人把本地定义加回来立刻红）+ W4 契约 5 条 = **11 passed**；
+- 离线全量 `tests/unit tests/contract` = **1806 passed**；ruff check + format --check 干净；
+  lint-imports **4/4 KEPT**（含 R-DEP-1）；
+- **正向对照**：向 seam.py 注入第二份 `ExplainPlan` 定义 ⇒ 恰好 1 红
+  （`test_single_truth_identity`）⇒ 还原 ⇒ 6 passed。
+
+### 3. 给 W7 的引用口径（**现在就可以写死**）
+
+- 权威名：`app.core.contracts.SqlExecutorPort` / `app.core.contracts.ExplainPlan`；
+- 迁移别名：`app.exec.seam.ExecutorSeam`（**就是** `SqlExecutorPort` 同一对象，
+  `isinstance` 恒等价）与 `app.exec.ExplainPlan`（同一对象的再导出）—— 引哪个都指向
+  同一真相，不会漂；新代码建议直接引权威名；
+- ⚠️ 引用面常量请引 `app.exec.seam.FETCH_CALL_FACE` / `EXPLAIN_CALL_FACE`（W4 判据②
+  在消费，与端口签名的等式有测试钉着）。
+
+### 4. 订正（接架构 §5 的收窄，并再更新一步）
+
+我此前"gate_passed 肯定断言全仓 0 条"按架构收窄为"**单元级 1 条、全链级 0 条**"
+（`test_sse_events_contract.py:283-294` 的 6 段序列）。**再补一刀时效**：W4 `6d6ac25`
+已落 **U-122 判据③**（`tests/contract/test_decision_table_d_e.py:130`
+`test_d_green_chain_emits_gate_passed_and_executing`，全链级肯定断言）⇒ "全链级 0 条"
+也已过时，现全链级 ≥ 1。两个计数都是历史读数，特此钉住。
 
 ---
 
