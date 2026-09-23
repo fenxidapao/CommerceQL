@@ -65,3 +65,15 @@ semantic bundle loaded: version=2026.09.14.1 status=candidate assets=8 excluded=
   OK   11 不存在列（anti-oracle）     expect=R06   got=R06   passed=False
 
 判据⑥ 形态矩阵：11/11 符合期望（DIFF=0）
+
+########## R13 边界实测（UNION 分支内列级违规的归因） ##########
+(起因：W7 探针测不到该形态、解释为"表级规则先命中"；本段用**全合法表**反证该解释)
+  A 干净 UNION（两分支同表）              passed=True  rule=None
+  B deny 在第二分支                    passed=False rule=R13  reason=查询涉及的数据范围超出你的权限
+  C deny 在第一分支                    passed=False rule=R13  reason=查询涉及的数据范围超出你的权限
+  E 单分支裸写（对照）                   passed=False rule=R07  reason=查询包含受保护字段
+  F UNION 分支含未授权表                 passed=False rule=R13
+  G UNION 两分支全用已授权表 + 不存在列     passed=False rule=R13   <- 反证：不是"表级先命中"
+⇒ 依据 ast_gate.py:514-516「R13：分支违规 → rule_id=R13，即使违规形态是 R05/R06/R07」
+  （07 §7.2 原文 + 红队 RT-R13-* 冻结口径）；且 R13 分支检查先于列级审计执行
+  ⇒ 判据⑥ 是"普通 SELECT"的列归因判据，集合查询分支由 R13 统一接管，两者不冲突。

@@ -180,7 +180,7 @@
   - 门禁：pytest unit+contract+eval = **2148 passed / 0 failed**；`pytest tests/redteam` = **11 passed**（架构判据②）；探针判据⑥断言 A/B 双 PASS。
   - ⚠️ **UNVERIFIED**：W7 的评测侧全链复跑（`leaked=0` / `PASS187/FAIL26/NOT_CHECKED25` 与 `RT-R07-001…004` 是否转绿）需重建镜像后由 W7 出读数 —— 我方只到「guard 层红队 11 passed + 归因码实测 R07」。
   - **覆盖面补测（判据⑥ 形态矩阵，探针 `_probe_u121_judge6_shapes.py`，11/11 符合期望）**：6 个语法位置（投影 / 表别名+裸列 / WHERE / ORDER BY / 子查询 / CTE 内）全 `R07`；**JOIN 多义**（`_resolve_column` 返 `None` 但列确实存在）也 `R07`；**反面仍 `R06`**（多义非 deny 列 / CTE 输出列名回避 / 不存在列）⇒ 新分支没有把"多义"顺手并入 deny 面。旧五档探针只覆盖投影列三形态，未覆盖 JOIN 多义。
-  - ⚠️ **R13 边界未覆盖**：UNION 分支内的裸写 deny 列仍统一归 `R13`（`_branch_violation`，07 §7.2 原文）；判据⑥未提该形态，**保持原设计不改**，登记为待澄清。
+  - ✅ **R13 边界（已裁，不需要架构新裁定）**：UNION/INTERSECT/EXCEPT 分支内的 R05/R06/R07 违规**统一归 `R13`** —— 依据 `ast_gate.py:514-516`（07 §7.2 原文 + 红队 `RT-R13-*` 冻结口径），且 `_branch_violation` 先于列级审计执行。⇒ 判据⑥ 管**普通 SELECT** 的列归因，集合查询分支由 R13 接管，两条判据不冲突。⚠️ W7 侧"测不到该形态是因为**表级规则先命中**"的解释**不成立**：两分支**全用已授权表** + 一个不存在列，实测仍 `R13`（读数见 `_gates_w2c_u121_faces.txt` R13 段）。本轮**不动** R13 归因；若架构要覆写它，属另一件事。
 - 📌 **v3 落地读数（2026-09-22 16:4x，D2+D3+D4 同批）** —— 以下为判据⑤当轮的存档读数；判据⑥换后仅"归因码"一列按 §6.4 新段复读：
   - 生产 `run_gate2`（真 runtime、真形状、无修饰）：干净 SQL `pass=True`、deny 三形态（限定/别名/不限定）全 `G2-DENY` —— 此前此档恒 `G2-ASSET`（资产级拦截）。
   - oracle 机械断言（**旧判据⑤口径，已废**）：A（anti-oracle，gate1 R06/R06 同码）PASS + B（④⑤ 冗余复核活）PASS。
