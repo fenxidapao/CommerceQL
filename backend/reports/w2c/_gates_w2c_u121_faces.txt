@@ -49,3 +49,19 @@ semantic bundle loaded: version=2026.09.14.1 status=candidate assets=8 excluded=
 ########## 判据⑥ 机械断言（07 v1.7.1；替代已撤销的 v1.6.8 判据⑤） ##########
   档3a 可见面 + deny 直查            A_judge6=PASS (deny=R07 应R07, unknown=R06 应R06)  B_redundant=PASS (pass=False rule=G2-DENY)
   档3b 顶全列（对照）                  A_judge6=PASS (deny=R07 应R07, unknown=R06 应R06)  B_redundant=PASS (pass=False rule=G2-DENY)
+
+########## 判据⑥ 形态矩阵（探针 _probe_u121_judge6_shapes.py；旧五档只覆盖"投影"三形态） ##########
+(补：6 个语法位置 + JOIN 多义 + anti-oracle 反面。真 runtime 的 guard_allowlist 作输入)
+  OK   1 单表裸写                   expect=R07   got=R07   passed=False
+  OK   2 表别名+裸写                 expect=R07   got=R07   passed=False
+  OK   3 WHERE 裸写               expect=R07   got=R07   passed=False
+  OK   4 ORDER BY 裸写            expect=R07   got=R07   passed=False
+  OK   5 子查询内裸写                 expect=R07   got=R07   passed=False
+  OK   6 CTE 内裸写                expect=R07   got=R07   passed=False
+  OK   7 JOIN 多义(双表皆 deny)      expect=R07   got=R07   passed=False
+  OK   8 JOIN 单表 deny 裸写        expect=R07   got=R07   passed=False
+  OK   9 JOIN 多义非 deny 列        expect=R06   got=R06   passed=False
+  OK   10 CTE 输出列名回避            expect=R06   got=R06   passed=False
+  OK   11 不存在列（anti-oracle）     expect=R06   got=R06   passed=False
+
+判据⑥ 形态矩阵：11/11 符合期望（DIFF=0）

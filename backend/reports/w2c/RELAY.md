@@ -179,6 +179,7 @@
   - 断言收回单值 `R07`：`tests/unit/test_guard_gate1.py::test_r07_deny_columns` + `tests/eval/test_harness_allowlist.py::test_gate1_blocks_tenant_id_either_qualified_or_not`（架构只点 unit 那条；eval 侧同款放宽一并收回，否则该测试红）。
   - 门禁：pytest unit+contract+eval = **2148 passed / 0 failed**；`pytest tests/redteam` = **11 passed**（架构判据②）；探针判据⑥断言 A/B 双 PASS。
   - ⚠️ **UNVERIFIED**：W7 的评测侧全链复跑（`leaked=0` / `PASS187/FAIL26/NOT_CHECKED25` 与 `RT-R07-001…004` 是否转绿）需重建镜像后由 W7 出读数 —— 我方只到「guard 层红队 11 passed + 归因码实测 R07」。
+  - **覆盖面补测（判据⑥ 形态矩阵，探针 `_probe_u121_judge6_shapes.py`，11/11 符合期望）**：6 个语法位置（投影 / 表别名+裸列 / WHERE / ORDER BY / 子查询 / CTE 内）全 `R07`；**JOIN 多义**（`_resolve_column` 返 `None` 但列确实存在）也 `R07`；**反面仍 `R06`**（多义非 deny 列 / CTE 输出列名回避 / 不存在列）⇒ 新分支没有把"多义"顺手并入 deny 面。旧五档探针只覆盖投影列三形态，未覆盖 JOIN 多义。
   - ⚠️ **R13 边界未覆盖**：UNION 分支内的裸写 deny 列仍统一归 `R13`（`_branch_violation`，07 §7.2 原文）；判据⑥未提该形态，**保持原设计不改**，登记为待澄清。
 - 📌 **v3 落地读数（2026-09-22 16:4x，D2+D3+D4 同批）** —— 以下为判据⑤当轮的存档读数；判据⑥换后仅"归因码"一列按 §6.4 新段复读：
   - 生产 `run_gate2`（真 runtime、真形状、无修饰）：干净 SQL `pass=True`、deny 三形态（限定/别名/不限定）全 `G2-DENY` —— 此前此档恒 `G2-ASSET`（资产级拦截）。
