@@ -237,13 +237,18 @@ async def test_terminal_event_counts_outcome_and_refuse_reason() -> None:
     assert _sample("refuse_total", reason="out_of_scope") == 1
 
 
-async def test_gate_reject_is_counted_from_the_rejection_code() -> None:
-    """闸门拒绝在**帧面上**只有 `error` + 拒绝码这一种形态（C-12），所以码就是来源。
+async def test_error_frame_does_not_count_gate_rejections_anymore() -> None:
+    """**U-125 ②**：闸门拒绝的唯一记录点是**闸门节点自己**（W4 ①），不是这里。
 
-    ⚠️ 这条断言钉的是一个真实缺陷的第一版：观测器原本只查载荷里的 `gate_no`/`rule_id`，
-    而 `api/errors.map_code` 产出的 error 载荷只有 `code`/`message`/`retryable`
-    （`detail` 仅对特定角色开放）⇒ `gate_reject_total` 会成为一个**恒 0 的族**，
-    而"系统从没拦过危险 SQL"恰恰是 §15.4 最想发现的问题。
+    旧写法（本用例的前一版）从 `error` 帧的拒绝码反推 `(gate_no, rule_id)` 并计数，
+    当时给的理由是"帧面只有 `code`/`message`/`retryable`，不反推就恒 0"。
+    **那个前提指错了地方** —— 缺 `rule_id` 的是**帧**，不是**节点**（节点手上
+    `GateResult.rule_id` 是现成的）。反推的实际后果是全部拒绝挤进
+    `gate_reject_total{rule_id=""}` 一条序列 ⇒ §14.5"按 rule_id 分组"被伪装成"载体没给"
+    （09-22 活体实测：`gate_no="1"` +1、`rule_id` 恒空）。
+
+    ⚠️ 判据写成 `total() == 0` 而不是"序列有没有出现"：本模块会为整个取值域
+    **预生成 0 值序列**（零值导出纪律），用"缺席"判"没记过事"会永远红。
     """
     await _run(
         [
@@ -255,12 +260,14 @@ async def test_gate_reject_is_counted_from_the_rejection_code() -> None:
             _final(),
         ]
     )
-    # rule_id 落空值 = "载体本轮没给规则号"（EMPTY_LABEL_VALUE 的既定语义，不是"未知规则"）
-    assert _sample("gate_reject_total", gate_no="1", rule_id="") == 1
     assert _sample("query_outcome_total", outcome="failed") == 1
+    assert metrics.GATE_REJECT_TOTAL.total() == 0, (
+        "帧面又记了闸门拒绝 ⇒ 与闸门节点侧的唯一记录点双计（U-125 ②）"
+    )
 
 
-async def test_cost_gate_rejection_maps_to_gate_three() -> None:
+async def test_cost_terminal_counts_outcome_but_not_the_gate() -> None:
+    """`COST_TOO_HIGH` 同族：outcome 记、闸门拒绝不记（防"只有第三闸被改回来"）。"""
     await _run(
         [
             _START,
@@ -268,8 +275,8 @@ async def test_cost_gate_rejection_maps_to_gate_three() -> None:
             _final(),
         ]
     )
-    assert _sample("gate_reject_total", gate_no="3", rule_id="") == 1
-    assert _sample("gate_reject_total", gate_no="1", rule_id="") == 0
+    assert _sample("query_outcome_total", outcome="failed") == 1
+    assert metrics.GATE_REJECT_TOTAL.total() == 0
 
 
 async def test_error_frame_with_sql_code_does_not_double_count_exec_failure() -> None:

@@ -485,3 +485,31 @@ W7 下一次开工写 **②摘 `instrumentation.py` 反推 + ③放宽 `metrics.
 - 顺带修掉我文件里那条过期注释（架构 v1.7.0 点名的 `test_gate_seam_contract.py:11-12` 仍写"`policy_gate.py:105` 扁平面"）。⚠️ **派单更正**：架构那句写"归 W0 改，不占号"—— 但 `tests/contract/**` 按 **08 §4.1** 归 **W4**，W0 无写权 ⇒ 由本窗口改掉了；请转告架构把归属列订正，避免下一个窗口以为 W0 会动它。
 - `U-119` 状态：判据①③④ 均有锁且全绿；**结案与否归架构裁**（本窗口不自关）。
 - 另记一次共享 refs 异常（第三次）：15:0x 与 21:1x 两度 `refs/remotes/origin/main` 不存在 ⇒ `git status` 报 `upstream is gone`、`git log origin/main..HEAD` 报 `fatal: ambiguous argument`，`git fetch` 后恢复；不是我删的。
+
+---
+
+## 二十、`U-125` ①②③ 同批落地 + 一条 SLO 互斥的立场（23:10，树 `cc46e8a` 之后）
+
+### 20.1 同批内容（W7 的 ②③ 由本窗口代为提交，归属点名如下）
+
+- **②③ = W7 写的**（补丁 `backend/reports/w7/u125_w7_side.patch`，`git apply --check` OK，本窗口 23:0x `git apply` 后未改一行）：`app/obs/instrumentation.py`（摘掉终止帧反推：删 `_GATE_NO_BY_ERROR_CODE` 与 `_gate_facts`）、`app/obs/metrics.py`（`GATE_REJECT_RULE_IDS` = 空值 + `AstRule` + `POLICY_RULE_IDS(4)` + `COST_RULE_IDS(1)`；`observe_gate_reject` 参数放宽成 `AstRule | str | None`）、`tests/unit/test_obs_gate_rule_vocabulary.py`（新增）、`tests/unit/test_obs_instrumentation.py`、**以及两处落在 `tests/contract/**` 的**（`test_obs_audit_contract.py`、`test_obs_frame_format.py`）—— ⇒ 🔴 **请架构订正 08 §4.1 的归属列**：`tests/contract/**` 按现表归 W4，而这两处的内容是 W7 的判据；本轮按 W7 要求"同一 commit 同批"由我提交，**作者归属以本行为准**。
+- **① = W4 写的**：`app/graph/nodes/_shared.py::gate_update`（三闸共用收敛点）在 `result.passed is False` 时记 `observe_gate_reject(gate_no, result.rule_id)`；docstring 写明"记在节点而不是观测器"的两条理由与"①② 必须同批（只补不删=双计、只删不补=恒 0）"。先例 = `nodes/execute.py::_on_failure`。
+- **① 的锁**（新）：`tests/contract/test_gate_reject_metric_contract.py` 5 条 —— `G2-*` 落自己序列、gate1 用 `AstRule` 字面值、三道闸不共享标签、`pass/warn/skipped` 不计数、载体真缺号才落空值。读数一律用**增量**（指标是进程级注册表）。
+
+### 20.2 门禁实测（23:05–23:10，`cd backend`；未跑 `tests/integration`，W7 纪律）
+
+| 项 | 读数 |
+|---|---|
+| `pytest tests/unit tests/contract tests/redteam -q` | **1845 passed**（W7 交来的 1840 + 我 5 条；红队集未退步） |
+| `ruff check app tests` | All checks passed |
+| `mypy app` | Success / 147 source files |
+| `lint-imports` | **4 kept, 0 broken**（`app.graph → app.obs.metrics` 与 `execute.py` 同层先例一致） |
+| **端到端反双计**（真图一轮，`make_chain(sql="SELECT 1; SELECT 2")` → gate1 拒） | `gate_reject_total` 全族 **delta = 1.0**，序列 = `{gate_no="1", rule_id="R02"}` ⇒ 走完整图（含观测器在场）只记一次、且带得出规则号 |
+| `test_gate_seam_contract.py`（上一批） | 3 passed，未受本批影响 |
+
+### 20.3 🔴 W7 上呈的"15s 硬超时 × G-6 `p95≤8s`"互斥：本窗口的立场与要裁的东西
+
+- 事实自证：`app/llm/router.py:306 hard_timeout_s()` 的 docstring 明写 **07 §10.2 = flash 15s / pro 45s**，且**刻意不看 task** —— 因为曾把 stage 预算 `TaskRoute.budget_s` 当 deadline，"真机延迟 > 分配值"的任务 **100% 失败（实测 0/15 → 15/15）**。我 U-107 的节点超时就是**执行期解析这个客户端超时**（§十），所以"把 15s 压到 8s 以内"= 重新引入那次实录，**我不做**。
+- ⇒ 真正的待裁项**不是**改超时值，而是二选一：**(a) 架构裁 SLO 口径**（`p95≤8s` 是否该按"含 LLM 出站的端到端"计，还是按"去掉模型出站的编排 + 检索段"计）；**(b) 我这边加降级出路**（超过 SLO 阈值就走 §16.2 的"转异步/占位续推"，而该分支今天**不可达**：`GateResult` 缺"预估延迟"载体 = 已登记的 **`U-96`**，架构 v1.7.x 仍排队、需真 PG 复现）。
+- ⇒ 请架构归号（**本窗口不自取号**；`docs/07 §4.8` 末段记下一可用 = `U-126`，取号前按纪律先双向 grep）。W7 侧读数我不代记：本轮 `max 15,080.1ms`、`degraded{llm_unavailable}` 3/≈9 ⇒ 引 W7 §三十三，不是我测的。
+- 另请 W7 收一处**补丁留下的孤儿注释**：`app/obs/instrumentation.py:82-88` 还在讲"为什么必须有这张表…少了这张表 `gate_reject_total` 就是恒 0 的族"，而被讲的 `_GATE_NO_BY_ERROR_CODE` 已被 ② 删掉（ruff/mypy 都不会报）。归 W7 的文件，我不动。

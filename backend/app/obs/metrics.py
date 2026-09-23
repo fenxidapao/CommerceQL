@@ -129,12 +129,16 @@ UNBOUNDED_FORBIDDEN_LABELS: Final[frozenset[str]] = frozenset(
 BOUNDED_ALLOWED_LABELS: Final[dict[str, int]] = {
     "stage": 6,             # 07 §14.3 约束 8
     "gate_no": 3,           # 1/2/3
-    "rule_id": 21,          # AST-R01…R20（07 §7.2；§14.2 D1 曾误写 R01…R16，见 U-16）**+ 空值**。
-                            # ⚠️ 上界曾经写 20：`EMPTY_LABEL_VALUE` 也是一个**不同的序列取值**
+    "rule_id": 26,          # gate1 的 AST-R01…R20（07 §7.2；§14.2 D1 曾误写 R01…R16，见 U-16）
+                            #   + gate2 的 `G2-*` 4 个 + gate3 的 `G3-COST` + **空值** = 26。
+                            #   ⚠️ **U-125 ③**：本值曾经写 21，只覆盖 gate1 的字母表 ⇒ 三闸共用的
+                            #   `GateResult.rule_id: str` 一旦送来 `G2-DENY` 就会被当第 22 个取值处理。
+                            #   ⚠️ 上界曾经写 20：`EMPTY_LABEL_VALUE` 也是一个**不同的序列取值**
                             #   （"载体本轮没给规则号"），域实际是 21。写 20 的后果不是报错，
                             #   而是"第 21 个被观测到的取值"静默丢弃 + 记一次 overflow ——
                             #   丢哪个取决于**到达顺序**，等于给闸门统计装了个随机洞。
-                            #   不变式由 `tests/unit/test_obs_metrics_cardinality.py` 全局守住。
+                            #   不变式由 `tests/unit/test_obs_metrics_cardinality.py` 全局守住，
+                            #   而"域与 gate2/gate3 字面量是否一致"由 `test_obs_gate_rule_vocabulary.py` 钉。
     "refuse_reason": 4,     # C-12
     "degraded_reason": 8,   # C-08
     "action_taken": 7,      # C-08
@@ -664,6 +668,21 @@ DEGRADED_TOTAL = register_metric(
     )
 )
 
+#: gate2 的规则号（**真值在 `app/guard/policy_gate.py` 的 `rule_id="G2-*"` 字面量里**，那边没有枚举）。
+#: ⚠️ 这里是**手抄的第二份**，不是"权威"—— 与源码是否一致由
+#:    `tests/unit/test_obs_gate_rule_vocabulary.py` 扫源码钉住（漏一个就红，不会静默丢序列）。
+#:    ★ 若 W2C/W4 把这几号升成 `app.core.enums` 的成员，本常量应**删除**、改回 `_enum_values(...)` 派生
+#:    （U-125 讨论里记下的收敛方向：本项目一周内为"两处各写一遍"烧过三次）。
+POLICY_RULE_IDS: Final[tuple[str, ...]] = ("G2-ASSET", "G2-DENY", "G2-DOMAIN", "G2-VERSION")
+
+#: gate3 的规则号（真值在 `app/guard/cost_gate.py:161`）。
+COST_RULE_IDS: Final[tuple[str, ...]] = ("G3-COST",)
+
+#: `gate_reject_total{rule_id}` 的完整取值域 = 空值 + 三闸全部规则号（基数上界见 `BOUNDED_ALLOWED_LABELS`）。
+GATE_REJECT_RULE_IDS: Final[tuple[str, ...]] = (
+    EMPTY_LABEL_VALUE, *_enum_values(AstRule), *POLICY_RULE_IDS, *COST_RULE_IDS
+)
+
 GATE_REJECT_TOTAL = register_metric(
     _MetricSpec(
         "gate_reject_total",
@@ -673,7 +692,11 @@ GATE_REJECT_TOTAL = register_metric(
         labels=("gate_no", "rule_id"),
         domains={
             "gate_no": tuple(str(int(gate)) for gate in GateNo),
-            "rule_id": (EMPTY_LABEL_VALUE, *_enum_values(AstRule)),
+            # ★ U-125 ③：旧写法是 `(EMPTY_LABEL_VALUE, *_enum_values(AstRule))` —— **只有 gate1 的字母表**。
+            #   载体 `GateResult.rule_id`（`core/contracts.py:137`）是三闸通用 `str` ⇒ gate2/gate3 的号
+            #   会被"域外丢弃"或（更早在 `observe_gate_reject_from_payload` 里）被 `AstRule(...)` 转换失败
+            #   **静默改写成空值** ⇒ 看板上表现为"闸门拦了很多次，但一次都没有规则号"。
+            "rule_id": GATE_REJECT_RULE_IDS,
         },
     )
 )
@@ -959,29 +982,35 @@ def observe_degraded(reason: DegradedReason, action_taken: ActionTaken) -> None:
     DEGRADED_TOTAL.inc(reason=reason.value, action_taken=action_taken.value)
 
 
-def observe_gate_reject(gate_no: GateNo, rule_id: AstRule | None = None) -> None:
-    """闸门拒绝计数。`rule_id` 缺位时落在 `rule_id=""` 序列（= 载体未给规则号）。"""
-    GATE_REJECT_TOTAL.inc(gate_no=str(int(gate_no)), rule_id=rule_id.value if rule_id else EMPTY_LABEL_VALUE)
+def observe_gate_reject(gate_no: GateNo, rule_id: AstRule | str | None = None) -> None:
+    """闸门拒绝计数。**唯一合法调用点 = 闸门节点自己**（U-125 ①，W4：`nodes/_shared.py::gate_update`）。
+
+    `rule_id` 缺位才落在 `rule_id=""` 序列（= 载体未给规则号）。⚠️ 参数放宽成 `str` 是必须的：
+    节点手上拿的是 `GateResult.rule_id: str`（三闸共用，`core/contracts.py:137`），
+    旧签名只吃 `AstRule` ⇒ gate2/gate3 的号在入口就被折成空值。
+    """
+    value = rule_id.value if isinstance(rule_id, AstRule) else (rule_id or EMPTY_LABEL_VALUE)
+    GATE_REJECT_TOTAL.inc(gate_no=str(int(gate_no)), rule_id=value)
 
 
 def observe_gate_reject_from_payload(gate_no: object, rule_id: object) -> bool:
     """从帧载荷（任意 `dict`）安全取值的入口。返回 `False` = 取值不合法、未计数。
 
-    刻意不抛：帧载荷来自图内部，一个字段形状不对不该把观测器连带打挂，
-    而"没计数"必须能被调用方记成一条日志。
+    ⚠️ **U-125 ② 之后本函数只作兜底**：帧面上根本没有 `rule_id`（`api/errors.map_code` 的载荷
+    只有 `code`/`message`/`retryable`），而 `ObservingMiddleware` 已不再记这一族 ⇒ 保留是为了给
+    非图内调用方（评测/演练）一个不抛的入口，且域外的字符串会**被丢弃并计 overflow**，
+    不再被静默改写成 `""`（旧写法用 `AstRule(rule_id)` 试转换、失败置 `None` ⇒
+    `G2-DENY` 会变成"载体没给规则号"，那正是本项要修的失效方式）。
     """
     try:
         gate = GateNo(int(str(gate_no)))
     except (TypeError, ValueError):
         return False
-    rule: AstRule | None = None
-    if isinstance(rule_id, str) and rule_id:
-        try:
-            rule = AstRule(rule_id)
-        except ValueError:
-            rule = None
+    rule = rule_id if isinstance(rule_id, str) and rule_id else None
+    ok_rule = rule is None or rule in GATE_REJECT_RULE_IDS
+    # 无条件调用：域外的值由 `_MetricSpec` 走"丢弃 + 记一次 overflow"，越界本身必须可观测。
     observe_gate_reject(gate, rule)
-    return True
+    return ok_rule
 
 
 def observe_exec_failure(error_class: str) -> None:

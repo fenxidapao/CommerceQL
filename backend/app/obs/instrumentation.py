@@ -40,8 +40,6 @@ from app.core.enums import (
     ActionTaken,
     ClarifyReason,
     DegradedReason,
-    ErrorCode,
-    GateNo,
     Outcome,
     RefuseReason,
     Stage,
@@ -87,12 +85,7 @@ _TERMINAL_OUTCOME: Final[Mapping[str, Outcome]] = {
 #: ⚠️ 为什么必须有这张表：`refuse` 帧**不可能**承载闸门事实（C-12 + `RefuseReason` 四值里
 #:    没有闸门项，06 §7.2 明令"闸门拒绝不得渲染成拒答卡"），闸门拒绝在帧面上**只有**
 #:    `error` + 这三个码这一种形态。少了这张表，`gate_reject_total` 就是一个恒 0 的族，
-#:    而 §14.5 的"闸门拒绝率按 rule_id 分组"会看起来像"系统从没拦过任何危险 SQL"。
-_GATE_NO_BY_ERROR_CODE: Final[Mapping[str, GateNo]] = {
-    ErrorCode.GATE_AST_REJECTED.value: GateNo.AST,
-    ErrorCode.GATE_POLICY_REJECTED.value: GateNo.POLICY,
-    ErrorCode.COST_TOO_HIGH.value: GateNo.COST,
-}
+
 
 #: 停机时下发给客户端的文案（07 §18.3 第 3 步原文给定的字符串）。
 DRAIN_MESSAGE: Final[str] = "服务重启中，请重试"
@@ -444,21 +437,18 @@ class _StreamObserver:
             reason = data["reason"]
             if reason:
                 metrics.observe_refuse(RefuseReason(reason))
-        if event == "error":
-            code = data.get("code")
-            gate_no, rule_id = _gate_facts(data)
-            if gate_no is None and isinstance(code, str):
-                # 帧上没有 gate_no 是**常态**（`api/errors.map_code` 只在特定角色下才给 detail）
-                # ⇒ 拒绝码本身就是闸门事实的唯一来源（`_GATE_NO_BY_ERROR_CODE`）。
-                gate_no = _GATE_NO_BY_ERROR_CODE.get(code)
-            if gate_no is not None:
-                metrics.observe_gate_reject_from_payload(gate_no, rule_id)
-            # ⚠️ 这里**故意不记** `exec_failure_total`。
-            #    权威且唯一的记录点是 `app/graph/nodes/execute.py::_on_failure`（按 `error.error_class`
-            #    记全 9 类）。从终止帧的 `ErrorCode` 反推有两个毛病：① 与那里**双计**；
-            #    ② `app/exec/errors.py` 把 `unknown_column` / `unknown_table` / `type_mismatch` /
-            #    `unknown_function` / `syntax_error` **五类压成同一个** `SQL_SYNTAX_ERROR` ⇒ 反推出来
-            #    只会得到一个 `syntax_error`，把四类结构错误伪装成语法错误（§8.9 要的正是要分清它们）。
+        # ⚠️ **`error` 这一格刻意什么都不记**（outcome 已在上面 `_TERMINAL_OUTCOME` 里记过了）。两族同源：
+        # 1) `gate_reject_total` —— **U-125 ②**：唯一记录点是**闸门节点自己**（W4 ①：
+        #    `app/graph/nodes/_shared.py::gate_update`）。从终止帧反推的两个毛病：① 与节点侧**双计**；
+        #    ② error 帧载荷由 `api/errors.map_code` 产出，只有 `code`/`message`/`retryable`
+        #    （`detail` 仅对能处置它的角色开放）⇒ `rule_id` **永远缺位**，全部拒绝会静默落在
+        #    `gate_reject_total{rule_id=""}` 一条序列上 —— 那不是"规则号未知"，而是把
+        #    §14.5"闸门拒绝率按 `rule_id` 分组"整条判据伪装成"载体没给"（09-22 活体实测即如此）。
+        # 2) `exec_failure_total` —— 权威记录点是 `app/graph/nodes/execute.py::_on_failure`（按
+        #    `error.error_class` 记全 9 类）。反推同样两个毛病：① 双计；
+        #    ② `app/exec/errors.py` 把 `unknown_column` / `unknown_table` / `type_mismatch` /
+        #    `unknown_function` / `syntax_error` **五类压成同一个** `SQL_SYNTAX_ERROR` ⇒ 反推出来
+        #    只会得到一个 `syntax_error`，把四类结构错误伪装成语法错误（§8.9 要的正是要分清它们）。
 
     def _violate(self, kind: str) -> None:
         with contextlib.suppress(Exception):
@@ -469,22 +459,6 @@ class _StreamObserver:
             endpoint=self._stream.endpoint,
             frames=self._stream.frames,
         )
-
-
-def _gate_facts(data: Mapping[str, Any]) -> tuple[Any, Any]:
-    """从 `error` 帧载荷里取 `(gate_no, rule_id)`。
-
-    两个位置都要看：`gate_no` 可能在顶层，也可能在 §A.11 的 `error.detail` 里
-    （`detail` 只发给能处置它的角色，所以**多数情况下两处都是空** ——
-    这正是 `_GATE_NO_BY_ERROR_CODE` 存在的理由）。
-    """
-    gate_no = data.get("gate_no")
-    rule_id = data.get("rule_id")
-    detail = data.get("detail")
-    if isinstance(detail, Mapping):
-        gate_no = gate_no if gate_no is not None else detail.get("gate_no")
-        rule_id = rule_id if rule_id is not None else detail.get("rule_id")
-    return gate_no, rule_id
 
 
 # ============================================================================

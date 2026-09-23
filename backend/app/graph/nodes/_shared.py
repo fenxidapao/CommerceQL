@@ -61,6 +61,7 @@ from app.graph.context import RunContext, current_run_context
 from app.graph.state import GraphState, assert_terminal_is_settable
 from app.llm.errors import LlmRefused
 from app.obs.logging import get_logger
+from app.obs.metrics import observe_gate_reject
 
 _log = get_logger(__name__)
 
@@ -114,7 +115,16 @@ def node_latency(key: LatencyKey) -> Iterator[None]:
 
 
 def gate_update(state: Mapping[str, Any], gate_no: GateNo, result: GateResult) -> dict[str, Any]:
-    """把一道闸门的判定并进 `gate_results`（**合并**，见模块 docstring §二）。"""
+    """把一道闸门的判定并进 `gate_results`（**合并**，见模块 docstring §二）。
+
+    🔴 同时是 `gate_reject_total` 的**唯一记录点**（`U-125` ①，07 §14.5 要按 `rule_id` 分组）。
+    记在这里而不是观测器里，有两个理由：① 载体 `GateResult.rule_id` 只在节点手上（`error` 帧由
+    `api/errors.map_code` 产出，只有 `code`/`message`/`retryable` ⇒ 从帧反推会把一切拒绝静默落成
+    `rule_id=""`）；② 从终止帧反推与节点侧**双计** —— 那条反推路径已随本号摘除（②），
+    故 ①② 必须同批：只补不删 = 双计，只删不补 = 恒 0。先例 = `nodes/execute.py::_on_failure`。
+    """
+    if not result.passed:
+        observe_gate_reject(gate_no, result.rule_id)
     merged: dict[GateNo, GateResult] = dict(state.get("gate_results") or {})
     merged[gate_no] = result
     return {"gate_results": merged}

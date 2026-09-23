@@ -170,18 +170,28 @@ async def test_drain_bytes_reach_the_client_and_count_as_failed() -> None:
     assert registry.count() == 0, "中止后必须从在途表里摘掉，否则 drain 永远等不完"
 
 
-def test_gate_code_copy_matches_the_graph_verdict_table() -> None:
-    """L1 那份"闸门拒绝码 → 闸门编号"必须与 L4 的判定表**逐项相等**（R-DEP-1 不许 import）。
+def test_frame_side_no_longer_mirrors_gate_codes() -> None:
+    """**U-125 ② 的反向哨兵**：`app/obs/instrumentation.py` 里不得再有"闸门拒绝码 → 闸门编号"的副本。
 
-    漂移的后果不是报错，而是**归错闸门**：例如 `COST_TOO_HIGH` 从表里漏掉，
-    闸门三的全部拒绝会静默落到 `gate_no=""`（= 不计数），看板上的成本闸门曲线归零，
-    而"闸门工作正常"这个结论仍然看起来成立。
+    本用例的前一版比的是"两份表逐项相等"（L1 的镜像 vs L4 的 `_GATE_CODE`）—— 那本身就是
+    "两处各写一遍"的形状，而这个项目为同款病害烧过三次。镜像被删之后若再写"两份相等"，
+    等于把已经消失的耦合留在测试里，所以下面改成断言**它不许回来**：
+
+    为什么不能回来：帧面上的 `error` 载荷根本没有 `rule_id`（`api/errors.map_code` 只给
+    `code`/`message`/`retryable`）⇒ 从码反推只能产出 `gate_reject_total{rule_id=""}`，
+    把 §14.5"按 rule_id 分组"伪装成"载体没给"。唯一记录点 = 闸门节点（W4 ①：
+    `app/graph/nodes/_shared.py::gate_update`，先例 `execute.py::_on_failure`）。
     """
-    from app.graph.nodes import error_out
+    import inspect
 
-    mirrored = {code: gate for gate, code in error_out._GATE_CODE.items()}
-    assert dict(instrumentation._GATE_NO_BY_ERROR_CODE) == mirrored, (
-        "`app/graph/nodes/error_out.py::_GATE_CODE` 与本文件的镜像不一致 ⇒ 闸门拒绝会计错编号"
+    from app.obs import instrumentation
+
+    src = inspect.getsource(instrumentation)
+    assert "_GATE_NO_BY_ERROR_CODE" not in src, (
+        "帧侧的闸门码镜像表回来了 ⇒ 会与闸门节点侧的唯一记录点双计"
+    )
+    assert "observe_gate_reject" not in src, (
+        "观测器又开始记 gate_reject_total ⇒ 唯一记录点不再唯一（U-125 ②）"
     )
 
 

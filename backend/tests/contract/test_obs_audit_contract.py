@@ -175,18 +175,30 @@ def test_allowed_labels_have_declared_cardinality_caps() -> None:
     assert not missing, f"以下标签缺基数上限：{missing}"
 
 
-def test_rule_id_label_cap_matches_ast_rule_count() -> None:
-    """`rule_id` 的上限 = AST 规则条数（20，U-16 口径）**+ 空值**。
+def test_rule_id_label_cap_equals_the_declared_domain() -> None:
+    """`rule_id` 的上界必须**恰好等于指标侧声明的域大小**，且域要覆盖三闸 + 空值。
 
-    ⚠️ 原来写的是 `== len(AstRule)`（=20），而 `GATE_REJECT_TOTAL` 的**域**是
-    `(EMPTY_LABEL_VALUE, *AstRule)` = 21 个不同取值。上界等于规则条数看着对称，实际少一：
-    `_admits()` 会在"第 21 个被观测到的取值"上静默丢弃并记 overflow，
-    **丢哪一个取决于到达顺序** —— 不是"某一类拒绝统计不到"，是"随机一类统计不到"。
-    这条 `+1` 现在由 `tests/unit/test_obs_metrics_cardinality.py` 的全局不变式统一守住。
+    ⚠️ 本用例的前一版写的是 `== len(AstRule) + 1` —— 把"21"这个数字的**推导过程**又抄了一遍字面量，
+    恰好犯了它自己 docstring 里点名的病（"上界看着对称，实际少一 ⇒ 随机丢一类"）。
+    **U-125 ③ 之后那个式子也失效了**：`GateResult.rule_id` 是三闸共用的 `str`，字母表 =
+    AST 的 R01…R20 + gate2 的 `G2-*` + gate3 的 `G3-COST` + 空值 = 26，
+    再按"AST 条数 +1"写就会把 gate2/gate3 的号挡在域外。
+    ⇒ 现在唯一的真相来源是指标自己的 `spec.domains`，本用例只钉两件事：
+    ① 上界 == 域大小（谁改了域忘了改上界 ⇒ 红）；② 域确实覆盖三闸与空值（谁收窄了域 ⇒ 红）。
     """
     from app.core.enums import AstRule
 
-    assert metrics.BOUNDED_ALLOWED_LABELS["rule_id"] == len(AstRule) + 1
+    domain = set(metrics.GATE_REJECT_TOTAL.spec.domains["rule_id"])
+    cap = metrics.BOUNDED_ALLOWED_LABELS["rule_id"]
+
+    assert cap == len(domain), (
+        f"上界 {cap} ≠ 域大小 {len(domain)} ⇒ 差的那几个取值会被静默丢弃 + 记一次 overflow，"
+        "而丢哪一个取决于到达顺序"
+    )
+    assert "" in domain, "空值 = '载体本轮未给规则号'，是有语义的一个取值，必须在域里"
+    assert {rule.value for rule in AstRule} <= domain, "gate1 的字母表被收窄了"
+    assert set(metrics.POLICY_RULE_IDS) <= domain, "gate2 的规则号被挡在域外"
+    assert set(metrics.COST_RULE_IDS) <= domain, "gate3 的规则号被挡在域外"
 
 
 # ---------------------------------------------------------------------------
