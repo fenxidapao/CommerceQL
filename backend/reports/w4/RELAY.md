@@ -460,3 +460,28 @@ W2C 默认方案 D8 写"若 W4 排不开同窗 ⇒ **宁可等，不单侧先改
 - 同时记一笔 W7 的 `executing` 首次非 0（`preflight_r6.json`）：W4 的 exec 面**第一次被真流量走到**，死因 `unknown_table` ⇒ **不是 exec 缺陷**（引用了不在册资产，成因在语义包/闸门面）。⚠️ 但要说清归因面现状：`app/exec/errors.py:136-140` 把 `unknown_column/unknown_table/type_mismatch/unknown_function/syntax_error` **五类压成同一个 `SQL_SYNTAX_ERROR`** ⇒ 帧上只会是语法错；W7 能分清是靠节点侧 `exec_failure_total{error_class}`（18.3 的正面先例）与其离线器件，**不是**靠 error 帧。
 
 > 复现命令（全部离线、零额度）：`sed -n '543,563p' app/api/runner.py`｜`sed -n '213,217p;295,305p' app/graph/events.py`｜`sed -n '448,462p' app/obs/instrumentation.py`｜`sed -n '667,678p' app/obs/metrics.py`｜`sed -n '136,140p' app/exec/errors.py`。读数时刻 2026-09-22 21:13，树 `d4ca203`；本窗口本轮**未改代码、未跑门禁**（无代码改动可测）。
+
+---
+
+## 十九、编号订正（`U-123` → **`U-125`**）+ `U-119` 判据④ 落地（16:33，树 `bfbb16f` 之后）
+
+### 19.1 🔴 具名订正：我 §18.4 写的"默认 `U-123`"撞号，作废
+
+- 出处核对：`docs/07 §4.8` 的 `U-123` 已在 **v1.6.9** 归给 **W2A**（`materialize()` 缺派生器的破坏性幂等，P0，落地件 `5e47558`）。我在 §十八 用它作"默认号"是**没先 grep 冻结表就取号**，正是本项目第三次同类。
+- 本项的正确号 = **`U-125`（P1，W4 + W7）**，出处：`docs/07` 修订表 **v1.7.1** 行"新开 `U-125` = 闸门拒绝的 `rule_id` 三个出口全断…**判据含'唯一记录点 = 闸门节点 + 同批摘掉 `instrumentation.py:455` 反推路径'（只补不删 = 双计）**"，与 §4.8 末段"下一可用号 = `U-126`"一致。旧文不删，本节为凭据。
+- ⇒ 本窗口以后取号前**先跑一次双向 grep**（代码 + 全部 commit message），并把 §4.8 的行号抄进回执。
+
+### 19.2 `U-125` 同批协议（W7 排期，本窗口接受）
+
+W7 下一次开工写 **②摘 `instrumentation.py` 反推 + ③放宽 `metrics.py:676` 的 `rule_id` 取值域 + 自测**，**只贴 diff 不提交**；我在同一轮落 **①`app/graph/nodes/_shared.py::gate_update`**（三闸共用收敛点，:116-120）⇒ **①②③ 同一批、同一 push**。
+**我不单推 ①**（只补不删 = `gate_reject_total` 双计），也不催 W7 单推（只删不补 = 恒空标签）。本轮 W4 侧**无 `U-125` 代码改动**。
+
+### 19.3 🟢 本轮实际交付：`U-119` **判据④**（gate2 对称断言）——架构 v1.7.0 具名追讨的那条
+
+- 前提自证：W2C `c76f701`（16:36，已在 `origin/main`）确把三处换完 —— `policy_gate.py:110` 取 `bundle.guard_allowlist(ctx)`、`:158` 的 `has_tenant_col` 读 **`all_columns`**、`:187-201` 提供一次性结构面视图。
+- 落地：`tests/contract/test_gate_seam_contract.py::test_plain_sql_passes_through_gate2_seam`（Test C）。写法照 §十四 两种红法：**只 `assert ... passed is True` 直取，不 `try/except`、不只断言拒绝码** ⇒ 半落地态（换了取用点没换 `:154`/`:158`）会以未捕获 `ContractViolationError` 暴露，error 形态本身就是归因。
+- 读数（16:33，`cd backend`，未跑 integration）：`test_gate_seam_contract.py` **3 passed**｜`tests/contract` **443 passed**｜`ruff check app tests` 干净｜`mypy app` Success / 147 files。
+- ⚠️ **引用要带区间**：架构 v1.6.5 的判据"该文件 = **2 passed**"自本提交起**失效**（现 3 条）。同理 v1.6.7 那句"全量 suite 恒有 1 条刻意红"的区间是 `8a4121a`～`357618f`。**"2 passed" 与 "恒 1 红" 都不要再无限定引用。**
+- 顺带修掉我文件里那条过期注释（架构 v1.7.0 点名的 `test_gate_seam_contract.py:11-12` 仍写"`policy_gate.py:105` 扁平面"）。⚠️ **派单更正**：架构那句写"归 W0 改，不占号"—— 但 `tests/contract/**` 按 **08 §4.1** 归 **W4**，W0 无写权 ⇒ 由本窗口改掉了；请转告架构把归属列订正，避免下一个窗口以为 W0 会动它。
+- `U-119` 状态：判据①③④ 均有锁且全绿；**结案与否归架构裁**（本窗口不自关）。
+- 另记一次共享 refs 异常（第三次）：15:0x 与 21:1x 两度 `refs/remotes/origin/main` 不存在 ⇒ `git status` 报 `upstream is gone`、`git log origin/main..HEAD` 报 `fatal: ambiguous argument`，`git fetch` 后恢复；不是我删的。

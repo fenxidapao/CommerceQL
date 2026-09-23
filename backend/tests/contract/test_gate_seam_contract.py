@@ -8,8 +8,9 @@
   喂闸门 ⇒ 必须被 `R05` 拒。改写前它是"缺陷的证据"，改写后它是"fail-closed 行为正确的证据"
   —— 扁平面按设计**不该**喂闸门（`app/core/contracts.py` 的 `SemanticBundlePort` docstring 明写）。
 
-⚠️ **gate2 不在本文件断言范围内**：`run_gate2` 在 `guard/policy_gate.py:105` **自己**取数，
-那一处仍是扁平面（`U-121` 第 3 格，归 W2C）。W2C 换调 `guard_allowlist` 时应在此补对称断言。
+⚠️ **gate2 侧走的是它自己那次取数**：`run_gate2(sql, ctx, bundle)` 在 `guard/policy_gate.py` 内部
+调 `bundle.guard_allowlist(ctx)`（`c76f701`，U-121 第三步），与 gate1 **各取一次是刻意的**
+（见 `app/graph/nodes/gate1_ast.py` docstring §二）⇒ 本文件第三条断言测的就是那条独立缝。
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from pathlib import Path
 
 from app.core.contracts import IdentityContext
 from app.core.enums import Role
-from app.guard import run_gate1
+from app.guard import run_gate1, run_gate2
 from app.semantics.loader import load_bundle
 from app.semantics.runtime import SemanticBundleRuntime
 
@@ -60,6 +61,20 @@ def test_plain_sql_passes_through_gate_seam() -> None:
 
     r1 = run_gate1(SQL, allowlist)
     assert r1.gate_result.passed is True, r1.gate_result
+
+
+def test_plain_sql_passes_through_gate2_seam() -> None:
+    """Test C = `U-119` **判据④**：gate2 自己那次取数也必须拿到判据（与 Test A 对称）。
+
+    `run_gate2` 收的是**端口对象**，判据在它内部取 ⇒ 这条测的是 `policy_gate.py` 那条独立缝，
+    Test A 绿不代表它绿（两条分开喂）。
+    ⚠️ **写法约束（`reports/w4/RELAY.md` §十四 的两种红法）**：只允许 `assert ... passed is True`
+    直取，**不** `try/except`、**不**只断言拒绝码 —— 半落地态（换了取用点没换 `:154`/`:158`
+    读取面）会以未捕获 `ContractViolationError` 暴露，那个 error 形态本身就是归因；
+    把它折成"被拒"就等于把"只换一半"伪装成"没换"。
+    """
+    r2 = run_gate2(SQL, _ctx(), _rt())
+    assert r2.gate_result.passed is True, r2.gate_result
 
 
 def test_flat_projection_is_rejected_by_gate1() -> None:
