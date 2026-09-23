@@ -2100,8 +2100,10 @@ F 臂 = 池级 `search_path=app` 上 EXPLAIN ⇒ 出计划。所以日志里 `ga
 
 ### ⑨ 🔴 本轮提交已落地、**推送被网络挡住**（三条路都实测过，不是猜测）
 
-本地 commit = **`25f7f79`**（11 个文件，`git show --stat` 复核：全部落在 `backend/reports/w7/**` 与 `deploy/loadtest/**`，
+第一条 = **`25f7f79`**（11 个文件，`git show --stat` 复核：全部落在 `backend/reports/w7/**` 与 `deploy/loadtest/**`，
 **无他人文件**；`git add` 与 `git commit` 同命令零间隔、提交前 `git diff --cached --name-only` 已核 = 空 → 只含我这 11 个）。
+其后是**本节的一条或多条补记 commit** ⇒ ⚠️ **待推集合不要从这里抄，现查**：`git log --oneline f5e501d..HEAD`
+（原因：本节每补一次字就多一条 commit，把条数或哈希写死在本节里，这句话本身立刻就过期 —— 这是"自指记录"的通病，别再犯）。
 
 **推送失败实测**（同一分钟内三条独立探测）：
 
