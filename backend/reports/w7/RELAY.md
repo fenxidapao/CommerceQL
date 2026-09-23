@@ -2097,3 +2097,23 @@ F 臂 = 池级 `search_path=app` 上 EXPLAIN ⇒ 出计划。所以日志里 `ga
 - ❌ 未跑 / 未验：**四场景跑批**（`steady`/`burst`/`tenant-quota` 三格仍等总控点头：额度 ≈¥2–3.5 + §16.5 偏离）；
   **G-6 达标**（两轮 `admitted=5 < 20` ⇒ 不得宣称）；`retrieval_mode_total{sparse_only}` 降级分支；RL-2 分母口径；
   U-125 判据（本轮无闸门可拒）；判据⑥ 的**活体** redteam（离线已跑，见 §三十二）；`tests/integration`（**绝禁**）。
+
+### ⑨ 🔴 本轮提交已落地、**推送被网络挡住**（三条路都实测过，不是猜测）
+
+本地 commit = **`25f7f79`**（11 个文件，`git show --stat` 复核：全部落在 `backend/reports/w7/**` 与 `deploy/loadtest/**`，
+**无他人文件**；`git add` 与 `git commit` 同命令零间隔、提交前 `git diff --cached --name-only` 已核 = 空 → 只含我这 11 个）。
+
+**推送失败实测**（同一分钟内三条独立探测）：
+
+| 探测 | 结果 |
+|---|---|
+| `git push origin HEAD:main`（走 `~/.ssh/config` 的 `ssh.github.com:443`） | `Connection reset by 20.205.243.160 port 443`，`exit=128` |
+| `ssh -p 22 -o HostName=github.com -T git@github.com`（绕过配置，**不用管道**，避免 `$?` 被 `tail` 吞） | `Connection reset by 20.205.243.166 port 22`，`exit=255` |
+| `curl https://api.github.com` / `https://github.com` | `000` + `schannel: CRYPT_E_REVOCATION_OFFLINE` / `Connection timed out (28)` |
+
+⇒ **结论**：SSH 22、SSH 443、HTTPS **三条路同时不可达** ⇒ 不是我的密钥、不是 `.ssh/config`、不是仓库权限问题，是**出网链路**。
+⚠️ **连带一条必须让别的窗口知道的**：本机 `refs/remotes/origin/*` **整体不存在**（`git branch -r` 空、`git rev-parse origin/main` = `unknown revision`）
+⇒ **"我是否落后于别人"当前不可判**。⇒ 网络恢复后的正确顺序固定为：**`git fetch` → 看是否落后 → 落后就先 `git rebase`/合并再推 ⇒ 绝不 `--force`**。
+（`25f7f79` 建在 `f5e501d` 之上，别人若已推新 commit，push 会被 non-fast-forward 拒 —— 这是**安全的**，不要用 force 绕过。）
+⚠️ 我没有去改 `~/.ssh/config`、也没配 HTTPS 凭据（那是用户级/含密的持久改动，且换协议不等于换链路，多半同样不通）。
+⇒ **待办**：网络恢复后补推 `25f7f79`，并把 `git rev-parse --short origin/main` 的读数补登记到本节。
