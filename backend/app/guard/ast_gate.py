@@ -648,6 +648,10 @@ class _Auditor:
         for col in root.find_all(exp.Column):
             resolved = self._resolve_column(col, cte_names)
             if resolved is None:
+                # 判据⑥（07 v1.7.1）：裸写 deny 列必须先归 R07 —— 可见面已裁该列
+                # ⇒ 归属会失败，若不先查 deny 就会退化成 R06（归因错误）。
+                if self._is_unqualified_deny(col, cte_names):
+                    return _build_reject(AstRule.R07_DENY_COLUMNS)
                 # 无法归属到任何已声明资产/CTE 输出的列（含多义）→ 拒绝。
                 return _build_reject(AstRule.R06_COLUMN_ALLOWLIST)
             owner, colname = resolved
@@ -663,6 +667,33 @@ class _Auditor:
                 if colname not in columns:
                     return _build_reject(AstRule.R06_COLUMN_ALLOWLIST)
         return None
+
+    def _is_unqualified_deny(self, col: exp.Column, cte_names: set[str]) -> bool:
+        """裸写（无表限定符）的 deny 列 → 判据⑥要求归 R07。
+
+        ⚠️ **不读 ``all_columns``**（判据⑥落点约束：gate1 列解析留在可见面）。
+        判据源只用 ``deny_columns`` 顶层集合（``<逻辑名>.<列名>``，gate1 本来就消费）
+        + 本 scope 表的**逻辑名**反查 —— 即"这个裸列名，是本 scope 某张表的 deny 列"。
+        CTE/派生表 alias 不参与（``kind == "asset"`` 过滤），避免与 CTE 输出列同名误判。
+        """
+
+        if col.table:
+            return False  # 有限定符的形态由 _check_columns 的正常路径归 R07
+        name = col.name
+        scope = _nearest_select(col)
+        while scope is not None:
+            mapping = self._scope_tables(scope, cte_names)
+            logicals = {
+                logical
+                for kind, logical, _cols in mapping.values()
+                if kind == "asset"
+            }
+            for entry in self.deny_columns:
+                logical, _, colname = entry.partition(".")
+                if colname == name and logical in logicals:
+                    return True
+            scope = _nearest_select(scope.parent)
+        return False
 
     def _branch_violation(
         self, leaf: exp.Select, cte_names: set[str]

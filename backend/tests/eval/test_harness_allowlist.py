@@ -234,8 +234,10 @@ def test_gate1_blocks_tenant_id_either_qualified_or_not(analyst_ctx, harness):
     bare = run_gate1("SELECT pay_amount, tenant_id FROM v_order_paid", al)
     qualified = run_gate1("SELECT v_order_paid.tenant_id FROM v_order_paid", al)
     assert bare.passed is False and qualified.passed is False
-    # ⚠️ 归因会随**表前缀**漂移（无表前缀时列归属先失败 → R06），文案两者共用一句。
-    assert {bare.gate_result.rule_id, qualified.gate_result.rule_id} == {"R06", "R07"}
+    # 判据⑥（07 v1.7.1，撤销 v1.6.8 判据⑤）：deny 列**无论带不带表限定符都必须是 R07**
+    # （裸写形态由 `ast_gate._is_unqualified_deny` 在归属失败前直查 deny_columns 兜住；
+    #  不再依赖"随表前缀漂移"。RT-R07-001…004 曾因漂移成 R06 而红）。
+    assert bare.gate_result.rule_id == qualified.gate_result.rule_id == "R07"
     assert bare.gate_result.reason == qualified.gate_result.reason == "查询包含受保护字段"
 
 

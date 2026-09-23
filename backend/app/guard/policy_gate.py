@@ -186,10 +186,10 @@ def _compute_scope(
 def _struct_view(allowlist: Mapping[str, Any]) -> Mapping[str, Any]:
     """把 ``assets[].columns`` 顶成结构面（``all_columns``）的**一次性视图**。
 
-    仅供 gate2 ④ 的列归属使用（U-121 判据⑤落点约束）——**不得**传给 gate1：
-    gate1 的列解析必须留在可见面（否则 deny 列归因 R06→R07 分裂 = error oracle，
-    07 v1.6.8 判据⑤）。形状不含 ``all_columns`` 时退回原 ``columns``（fail-closed
-    由调用侧 ``deny_columns`` 比对兜底）。
+    仅供 gate2 ④ 的列归属使用（U-121 判据⑥落点约束：结构面只对 gate2 ④ 开）——
+    **不得**传给 gate1：graph 的 gate1 列解析留在可见面（可见面裁剪让**列白名单**
+    有效；顶全列会让任意真实列都过 R06）。形状不含 ``all_columns`` 时退回原
+    ``columns``（fail-closed 由调用侧 ``deny_columns`` 比对兜底）。
     """
 
     assets = allowlist.get("assets") or {}

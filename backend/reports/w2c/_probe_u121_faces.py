@@ -207,18 +207,23 @@ _show("gate2 单列", lambda s: f"gate2[{_g2(s, _Shaped(RT))}]")
 
 
 # ============================================================================
-# oracle 机械断言（W7 2026-09-22 提出的落地判据，见 RELAY §6.8 D5）
+# 判据⑥ 机械断言（07 v1.7.1，**撤销** v1.6.8 判据⑤；架构 2026-09-23 换判据）
 #
-#   A（anti-oracle）：gate1 可见面下，"deny 列"与"不存在的列"两条 SQL 的
-#      rule_id **必须同为 R06** —— 两码（R07/R06）= error oracle = 违规。
-#   B（冗余复核活着）：gate2 ④⑤ 对 deny 列三形态必须全 `G2-DENY`。
+#   判据⑥原文：deny 列**无论带不带表限定符都必须 R07**，且仍禁 gate1 读
+#   `all_columns`（结构面只对 gate2 ④ 开）。
+#   ⇒ 断言 A = 分类正确性：deny 三形态全 R07、不存在的列仍 R06；
+#     断言 B = gate2 ④⑤ 对 deny 列仍报 `G2-DENY`（冗余复核活着）。
 #
-#   auditor 视图切面（D3/档3a）= A+B 同时满足；顶全列（3b）= B 满足、A 破坏。
+#   ⚠️ 历史：v1.6.8 判据⑤曾要求"deny 列与不存在列**同码** R06"，我方探针
+#   据此断言同码。撤销后**读数不变、解释翻转**（W7 2026-09-23 提示）：
+#   裸写 deny 列出 R06 从"正确"变"待修"。
 # ============================================================================
 
 def _rule1(sql: str, bundle) -> str | None:
     try:
-        return run_gate1(sql, bundle.asset_allowlist(CTX)).gate_result.rule_id
+        return run_gate1(
+            sql, bundle.guard_allowlist(CTX, max_rows=None)
+        ).gate_result.rule_id
     except Exception:
         return "RAISED"
 
@@ -228,18 +233,18 @@ def oracle_check(label: str, bundle) -> None:
     unknown_sql = SQLS["未知列"]
     r_deny = _rule1(deny_sql, bundle)
     r_unknown = _rule1(unknown_sql, bundle)
-    anti_oracle = "PASS" if r_deny == r_unknown == "R06" else "FAIL(oracle!)"
+    verdict = "PASS" if (r_deny == "R07" and r_unknown == "R06") else "FAIL"
 
     struct = _g2_variant_4_reads_struct(deny_sql, bundle)
     redundant = "PASS" if "G2-DENY" in struct else "FAIL"
 
     print(
-        f"  {label:<28} A_anti_oracle={anti_oracle}"
-        f" (deny={r_deny}, unknown={r_unknown})"
+        f"  {label:<28} A_judge6={verdict}"
+        f" (deny={r_deny} 应R07, unknown={r_unknown} 应R06)"
         f"  B_redundant={redundant} ({struct})"
     )
 
 
-print("\n########## oracle 机械断言（U-121 落地判据，W7 2026-09-22） ##########")
-oracle_check("档3a D3 视图切面", _Shaped(RT))
-oracle_check("档3b 顶全列（违规对照）", _Shaped(RT, columns_all=True))
+print("\n########## 判据⑥ 机械断言（07 v1.7.1；替代已撤销的 v1.6.8 判据⑤） ##########")
+oracle_check("档3a 可见面 + deny 直查", _Shaped(RT))
+oracle_check("档3b 顶全列（对照）", _Shaped(RT, columns_all=True))

@@ -22,7 +22,7 @@ semantic bundle loaded: version=2026.09.14.1 status=candidate assets=8 excluded=
 
 === gate1 用可见面 / gate2 ④⑤ 用结构面 ===
   干净-不限定       gate1[pass=True rule=None]  gate2[pass=True rule=None]
-  deny-不限定     gate1[pass=False rule=R06]  gate2[pass=False rule=G2-DENY]
+  deny-不限定     gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
   deny-限定      gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
   deny-别名      gate1[pass=False rule=R07]  gate2[pass=False rule=G2-DENY]
   未知列          gate1[pass=False rule=R06]  gate2[pass=True rule=None]
@@ -46,6 +46,6 @@ semantic bundle loaded: version=2026.09.14.1 status=candidate assets=8 excluded=
   deny-别名      gate2[pass=False rule=G2-DENY]
   未知列          gate2[pass=True rule=None]
 
-########## oracle 机械断言（U-121 落地判据，W7 2026-09-22） ##########
-  档3a D3 视图切面                  A_anti_oracle=PASS (deny=R06, unknown=R06)  B_redundant=PASS (pass=False rule=G2-DENY)
-  档3b 顶全列（违规对照）                A_anti_oracle=FAIL(oracle!) (deny=R07, unknown=R06)  B_redundant=PASS (pass=False rule=G2-DENY)
+########## 判据⑥ 机械断言（07 v1.7.1；替代已撤销的 v1.6.8 判据⑤） ##########
+  档3a 可见面 + deny 直查            A_judge6=PASS (deny=R07 应R07, unknown=R06 应R06)  B_redundant=PASS (pass=False rule=G2-DENY)
+  档3b 顶全列（对照）                  A_judge6=PASS (deny=R07 应R07, unknown=R06 应R06)  B_redundant=PASS (pass=False rule=G2-DENY)

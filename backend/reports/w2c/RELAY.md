@@ -123,13 +123,13 @@
 - **档1 = "生产今天全拒"的真实机制**：扁平面顶层没有 `assets` 键 ⇒ gate1 `self.assets={}` 全 `R05`、gate2 `:106` 全 `G2-ASSET` —— **资产级拦截，走不到任何列面代码**。⚠️ 我方 v1 曾把"形状顶层 + 元组 columns"（档2）误标为"真 runtime 扁平面"并据此解释 W7 读数 —— **标签错误，已撤**：W7 09-22 复核正确，真扁平面**先被资产级拦截，`ast_gate:751` 的 `AttributeError` 走不到**；那是我手拼"顶层有 assets + 元组 columns"的**假中间态**档。
 - **档3c = "(a) 只换 :105 不换读取面"的真实后果**：**不是"与今天一样"（我方 v1 表述错误，已撤），是干净 SQL 当场抛未捕获 `ContractViolationError`**（⑤ `policy_gate:148` 读可见面找不到 `tenant_id`）⇒ 会以 `INTERNAL` 形态出现在预检里 —— **形态比"全拒"更坏**（拒绝是安全出口，未捕获异常是 500）。W7 09-22 指出，我方复跑证实。
 - **档3a = 双面的实证价值（v2 关键修正）**：我方 v1 声称"④ 切面后 `deny`-不限定 仍漏检"——**假结论，已撤**。根因是我方 v1 探针里 `extract_columns_with_assets(sql, allowlist)` 仍走可见面（`_Auditor` 只认 `columns` 键），**注释写了"切面"但代码没切**。v2 给 ④ 一份 `columns <- all_columns` 的 auditor 视图后，**不限定形态同样命中 `G2-DENY`**（W7 `TierB` 读数复现，且不动形状）。
-- **档3b 的代价 = error oracle（安全理由，非形状理由）**：`columns` 顶成全列后，gate1 归因从 `R06` 漂到 **`R07`** ⇒ 调用方可通过 `rule_id` 区分"`receiver_phone` 存在但被 deny"与"列不存在"；3a 保持可见面 ⇒ deny 列统一表现为 `R06`（与未知列同面），**不泄露列存在性**。⇒ **不要用 3b（顶全列）落地**，除非 07 明确接受该泄露面。
+- **档3b 的代价 = 列白名单失效（判据⑥下的正确解释，2026-09-23 更新）**：`columns` 顶成全列后，gate1 的**列白名单**（R06）形同虚设（任意真实列都在"可见列集"里 ⇒ 不再有"未列出的列"这一拒绝面）；`deny` 列仍因 `:658` 的 deny 直查落 `R07`。⚠️ v1.6.8 判据⑤曾把 3b 的 `R06→R07` 归因漂移定性为 **error oracle**（列存在性侧信道）并据此禁 3b；**该论证已随判据⑤撤销作废** —— 07 v1.7.1 判据⑥明确要求 `R07`，残余的 `R07`/`R06` 可区分性按 `U-64-④` 方式登记为残余风险（架构原文："不要再为它改冻结集"）。⇒ 3b 仍**不作为落地形态**，理由只剩"保可见面 = 保列白名单 + 保 gate2 ④ 归属面独立"。
 - 档3a 的 `未知列` 在 gate2 `pass=True` **不是漏检**：④ 的归属失败即放行，但该 SQL 已被 gate1 `R06` 拒在前面 —— gate2 ④ 的防线职责**只有 deny 复核**（07 §7.4"与 R07 冗余"），未知列归属 gate1。
 
-⚠️ **deny 列在 gate1 侧的归因漂移（可见面下固有，档3a 实测）**：
-- `SELECT v_order_paid.receiver_phone ...`（**限定**/**别名**）⇒ **`R07`**（`ast_gate:666` 先命中 `deny_columns`）；
-- `SELECT receiver_phone ...`（**不限定**）⇒ **`R06`**：`:718-724` 无别名归属靠"列名 ∈ 可见列集"，`receiver_phone` 已裁 ⇒ `owners` 空 ⇒ `:660` 先报 `R06`（走不到 `:666`）。
-⇒ 既有测试断言集合 `{R06,R07}`（`test_gate1_blocks_tenant_id_either_qualified_or_not`）**正是在容纳这个漂移** —— 改面时**不要收紧成单值**。
+⚠️ **deny 列的 gate1 归因（判据⑥，07 v1.7.1；2026-09-23 落地）**：
+- 判据⑥原文：「deny 列**无论带不带表限定符都必须 R07**」，且**仍禁 gate1 读 `all_columns`**（结构面只对 gate2 ④ 开）。
+- 实现 = `ast_gate` 新增 `_is_unqualified_deny()`：`_resolve_column` 返回 `None` 时，先用 `deny_columns` 顶层集合（`<逻辑名>.<列名>`）+ 本 scope 表的**逻辑名**反查，命中即 `R07`；**不读 `all_columns`**。
+- ⚠️ 撤销历史：v1.6.8 判据⑤曾要求"deny 列与不存在列**同码 R06**"（anti-oracle）。撤销后 **探针读数不变、解释翻转**：裸写 deny 列的 `R06` 从"正确"变"待修"。W6 红队 `RT-R07-001…004` 曾因该漂移落 `R06` 而失败（`redteam_results.json`），现已具备转绿条件。
 
 `columns` 是 `tuple` 而非 `{列名:类型}` 时的后果：`ast_gate:751` 的 `(...).keys()` 抛 `AttributeError`（**档2** 逐格复现），且 `_column_type`（`:879`）恒 `None` ⇒ **R17 恒不触发**。
 
@@ -145,7 +145,7 @@
 |---|---|---|
 | 1 | gate1/gate2 **两处一起**改为消费新方法 | ⏳ **待 W0/W2A 落地**（形状未定就动 = 第三次自造形状）。⚠️ 落点是 **3 处**：`gate1_ast:52`（W4）+ `policy_gate:105`（W2C，换方法）+ `policy_gate:141/:148`（W2C，**换读取面**，与换方法是两件改动，见 §6.2/§6.4） |
 | 2 | 删除 guard 内部任何自造形状 / 自适配 | ⏳ 同上。**现状核查**：`ast_gate`/`policy_gate` 只做 `.get(key)` 读取，**没有形状转换层**；要删的是 `ast_gate.py:16-24` 那段"入参形状"docstring 的口径（随动作 1 一起改） |
-| 3 | 保留 R06/R07 归因漂移的既有断言口径（集合 `{R06,R07}`） | ✅ **已确认无需改测试** —— `test_gate1_blocks_tenant_id_either_qualified_or_not` 断言的正是集合。**机制已由 W2C 探针查实**：不限定形态归 `R06` 是因为 `ast_gate:718-724` 靠"列名 ∈ 可见列集"归属、`receiver_phone` 已被裁出 ⇒ 走不到 `:666` 的 `R07`（§6.4） |
+| 3 | 保留 R06/R07 归因漂移的既有断言口径（集合 `{R06,R07}`） | 🔄 **2026-09-23 反转**：判据⑤撤销、判据⑥落地 ⇒ **收回单值 `R07`**（unit 与 eval 两条断言均已改）。原判定"无需改测试"依当时的判据⑤成立，判据换后失效 |
 | — | 本节落盘（消费方需求，非形状定义） | ✅ 2026-09-21 |
 | — | §6.4 独立复现 + §6.8 默认方案 | ✅ 2026-09-21（探针 v1，A1–A4/B1–B2 六档）——**v1 三处表述已于 09-22 勘误**（见 §6.8 v2 勘误条） |
 | — | 探针 v2 重写（真 runtime 输入、五档、撤 v1 假结论）+ W7 三条质疑全部复核 | ✅ 2026-09-22（读数与 W7 `scratch_gate2_face_probe.py` 一致） |
@@ -165,17 +165,23 @@
 | D3 | **④ 读取面** | ✅ **已落地（本 commit）**：`policy_gate.py` 新增 `_struct_view()`（`columns <- all_columns` 一次性视图）喂 `extract_columns_with_assets`；**不动形状、gate1 列解析仍在可见面**（判据⑤落点约束） | — |
 | D4 | **⑤ 读取面** | ✅ **已落地（本 commit）**：`policy_gate.py` ⑤ `has_tenant_col` 改读 `all_columns`（结构面） | — |
 | D2/3/4 配套 | 删自造形状口径 + 夹具随契约更新 | ✅ `ast_gate.py` docstring 的 7 键自造形状段已删（改指 `contracts.GuardAllowlist` 唯一真相）；`guard_fixtures.build_allowlist` 补双面（`columns` 裁 deny 可见面 + `all_columns` 全列）并按真实语义包派生；`FakeSemanticBundle` 加 `guard_allowlist`；`_fullchain_deps.base_allowlist` 补 `all_columns` 键；`test_guard_gate1.test_r07_deny_columns` 单值 R07 → 集合 `{R06,R07}`（可见面下不限定形态归 R06 = 判据⑤明文的正确行为，非放宽：仍禁第三种码） | — |
-| D5 | 归因口径 | **保持 `{R06,R07}` 集合断言**，不收紧、不放宽（§6.4/W7：`R06` 是可见面下的正确归因，不是缺陷） | — |
-| D5+ | **anti-oracle = `07` v1.6.8 判据⑤（官方化，2026-09-22）** | 判据⑤原文：「gate1 对任一 deny 列 与 该资产内不存在的列名，必须返回同一个 rule_id（现状 R06/R06）；**分裂成 R07/R06 即判未落地，功能面过了也不算**」。⇒ 与我方 D5+ 的 A 条**同一件事**，A/B 两条机械断言照旧执行（探针 `oracle_check` 段）。**落点约束（07 同条）**：结构面只对 gate2 ④ 开，**gate1 的列解析必须留在可见面** —— D3 的 auditor 视图正满足此约束；顶全列（3b）同时违反判据⑤与该约束 | A 不过 = 形状或读取面被改错（大概率有人把 `columns` 顶成全列），**停手回查**，不是调断言 |
-| D5- | **机械守卫不叠层**（W7 2026-09-22 提示） | "生产从哪个方法取"的守卫**已存在且归 W6**：`tests/eval/test_harness_allowlist.py:170-186` 按文件 AST 扫描。⇒ W2C **不另写第二层守卫测试**；我方判据只落在探针 `oracle_check` + 既有测试集合断言 `{R06,R07}` 上 | — |
+| D5 | 归因口径 | 🔄 **2026-09-23 反转**：判据⑤（`{R06,R07}` 集合 / 同码 R06）**已撤销**，换 **判据⑥ = deny 列无论带不带限定符都必须 `R07`**。⇒ 断言从"集合"收回**单值 `R07`**（架构 `RELAY.md:1012` 原文："从 `{R06,R07}` 收回单值 `R07`"，并注明放宽责任在架构）。已改：`tests/unit/test_guard_gate1.py::test_r07_deny_columns`、`tests/eval/test_harness_allowlist.py::test_gate1_blocks_tenant_id_either_qualified_or_not`（后者架构只点了前者，属同类放宽、我方一并收回） | — |
+| D5+ | **判据⑥ 机械断言**（替代原 anti-oracle） | 探针 `oracle_check` 已改口径：**A = 分类正确**（deny 三形态全 `R07`、不存在列仍 `R06`）；**B = gate2 ④⑤ 对 deny 列仍报 `G2-DENY`**。实测档3a/档3b 双 `A_judge6=PASS` + `B=PASS` | A 不过 = 归因面改错（如 deny 直查被绕过），**停手回查** |
+| D5- | **机械守卫不叠层**（W7 2026-09-22 提示） | "生产从哪个方法取"的守卫**已存在且归 W6**：`tests/eval/test_harness_allowlist.py:170-186` 按文件 AST 扫描。⇒ W2C **不另写第二层守卫测试** | — |
 | D6 | `all_columns` 的派生源 | 由 W2A 在 `guard_allowlist` 内从**同一份 `Asset.columns`** 派生（`runtime.py:202-203` 已这么做）⇒ 两面结构上不可能漂移 | 若 W0 要求两面**各自独立声明** ⇒ **拒绝**：那正是 `U-121` 的成因复发 |
 | D7 | `U-119` 接缝测试 | 输入 = **真** `guard_allowlist()` 输出（不补 wrapper 键），断言普通 SQL `passed=True`；**今天必须红** | 无。补夹具 = 假绿，07 明令禁止 |
 | D8 | 我方的落地顺序 | 等 W0 定形状 → W2A 实现 → **W4 与 W2C 同一 PR 窗口内**改三处（`gate1_ast:52`、`policy_gate:105`、`policy_gate:141+148`） | 若 W4 排不开同窗 ⇒ **宁可等**，不单侧先改（单侧 = 两真相，§6.2） |
 
 - 🔴 **D3/D4 是本节最容易被漏的一半**：W7 的"`policy_gate.py:105` 可以动了"**只覆盖方法替换**；只做 D1+D2 而不做 D3/D4 ⇒ 逐格后果 = **档3c**（干净 SQL 抛未捕获 `ContractViolationError`，`INTERNAL` 形态）。**"可以动"≠"动一处就够"。**
 - 📌 **v2 勘误（2026-09-22，应 W7 复跑要求）**：我方 v1 三处表述已撤并更正——①"④ 切面后不限定仍漏检"为假结论（v1 探针 ④ 根本没切面）；②"只换 :105 = 与今天一样"应为"当场抛未捕获异常"；③"真扁平面 ⇒ AttributeError@751"标签错误（真扁平面先被资产级拦截，@751 属于"形状顶层+元组 columns"那一档）。探针已重写为五档版（真 runtime 输入），读数与 W7 `scratch_gate2_face_probe.py` 一致。
-- 📌 **v3 落地读数（2026-09-22 16:4x，D2+D3+D4 同批）**：
+- 📌 **v4 判据⑥落地（2026-09-23，架构 v1.7.1 换判据）**：
+  - `ast_gate` 新增 `_is_unqualified_deny()`：归属失败前用 `deny_columns` 顶层集合直查 ⇒ **裸写 deny 列归 `R07`**（不读 `all_columns`；可见面仍裁 deny 列）。
+  - 断言收回单值 `R07`：`tests/unit/test_guard_gate1.py::test_r07_deny_columns` + `tests/eval/test_harness_allowlist.py::test_gate1_blocks_tenant_id_either_qualified_or_not`（架构只点 unit 那条；eval 侧同款放宽一并收回，否则该测试红）。
+  - 门禁：pytest unit+contract+eval = **2148 passed / 0 failed**；`pytest tests/redteam` = **11 passed**（架构判据②）；探针判据⑥断言 A/B 双 PASS。
+  - ⚠️ **UNVERIFIED**：W7 的评测侧全链复跑（`leaked=0` / `PASS187/FAIL26/NOT_CHECKED25` 与 `RT-R07-001…004` 是否转绿）需重建镜像后由 W7 出读数 —— 我方只到「guard 层红队 11 passed + 归因码实测 R07」。
+  - ⚠️ **R13 边界未覆盖**：UNION 分支内的裸写 deny 列仍统一归 `R13`（`_branch_violation`，07 §7.2 原文）；判据⑥未提该形态，**保持原设计不改**，登记为待澄清。
+- 📌 **v3 落地读数（2026-09-22 16:4x，D2+D3+D4 同批）** —— 以下为判据⑤当轮的存档读数；判据⑥换后仅"归因码"一列按 §6.4 新段复读：
   - 生产 `run_gate2`（真 runtime、真形状、无修饰）：干净 SQL `pass=True`、deny 三形态（限定/别名/不限定）全 `G2-DENY` —— 此前此档恒 `G2-ASSET`（资产级拦截）。
-  - oracle 机械断言：A（anti-oracle，gate1 R06/R06 同码）PASS + B（④⑤ 冗余复核活）PASS；顶全列对照档 A 仍 FAIL(oracle!)（未动，留作违规样本）。
+  - oracle 机械断言（**旧判据⑤口径，已废**）：A（anti-oracle，gate1 R06/R06 同码）PASS + B（④⑤ 冗余复核活）PASS。
   - 门禁：pytest unit+contract+eval = **2141 passed / 3 failed**；mypy app 147 files 0 issues；ruff 全绿；lint-imports 4 kept / 0 broken；DSN 卫生 8 passed。
-  - 🔴 **剩余 3 红 = W6 到期哨兵触发（`tests/eval/test_harness_allowlist.py`），按域归 W6、W2C 不跨域删**：① `test_gate2_bidirectional_tenant_assertion_raises_on_production_visible_shape` 钉的是旧生产失效形态（⑤ 读可见面抛错）——落地后生产不再抛，该测试应反转为"断言不抛"；② `test_the_dual_shape_view_dies_with_the_consumer_fix` 明示消费侧已接线 ⇒ 须删 `eval/harness.py` 的 `AssetAllowlistView`/`GuardAllowlistBundle` 与 `eval/redteam_eval.py` 的 `StructuralAllowlistBundle`/`structural_wrapper`（哨兵原文："留着它就是第三份真相"）；③ `test_the_adapters_stated_reason_list_matches_the_code` 要求 harness 存在理由清单摘掉已接线的 `app/guard/policy_gate.py`。**UNVERIFIED**：评测侧适配层删除后 redteam 全链是否绿 —— 归 W6 复跑。
+  - 🔴 **当时剩余 3 红 = W6 到期哨兵（`tests/eval/test_harness_allowlist.py`）**：① `test_gate2_bidirectional_tenant_assertion_raises_on_production_visible_shape`（钉旧生产失效形态，落地后须反转）；② `test_the_dual_shape_view_dies_with_the_consumer_fix`（须删 `eval/harness.py` 的 `AssetAllowlistView`/`GuardAllowlistBundle` 与 `eval/redteam_eval.py` 的 `StructuralAllowlistBundle`/`structural_wrapper`）；③ `test_the_adapters_stated_reason_list_matches_the_code`。**09-23 现状：①②③ 均已不红**（W6/他窗已处理），仅剩 1 条归因断言（本文件 v4 段已收回）。
