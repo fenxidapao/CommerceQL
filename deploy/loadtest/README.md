@@ -470,6 +470,40 @@ W2A 未设 ⇒ **两格互相指认**，按纪律我**不自取 U 号**，需求
 
 
 
+#### 三.0.1k 第十轮预检（09-23 16:0x · 镜像 `w7load-api:0923r7` = HEAD `776beb4` ⇒ 含 W2A `d8eca02` = U-124）：**判据④ 第一次达成**
+
+**一句话**：`search_path` 那处一落地，链路**整条亮起来** —— `ok=3`、`codes={}`（零错误帧）、
+**`gate_passed` 与 `executing` 同时第一次非 0（各 3）**。⇒ **G-6 从"没有分母"变成"有分母但样本不够"**，四场景跑批的前置解除。
+
+| 读数（`preflight_r7.json`，c=1 / n=5 / `--no-async` / 与上轮**逐参数相同**） | 值 |
+|---|---|
+| `outcomes` | `{ok:3, clarify:1, refuse:1}` ⇒ ★ **判据④（≥1 条 `outcome=ok`）达成** |
+| `codes` / `error_messages` | **`{}` / `{}`** —— 本目录九轮预检以来**第一次零错误帧** |
+| 终止出处 | `ok` 三条全 `stage=executing\|reason=none`；`clarify` `stage=intent\|time_ambiguous` ×1；`refuse` `stage=intent\|out_of_scope` ×1 |
+| 指标面（★ = 首次非 0） | `intent` 6 / `schema_linking`★ **3** / `plan_ready`★ **3** / `sql_ready`★ **3** / **`gate_passed`★ 3** / `executing`★ **3**；`query_outcome_total{success}`★ **3** |
+| 时延 | p50 **5,767.6ms**、p95=max **9,756.0ms**、mean 5,490.7ms、wall 27.55s、TTFB p50 **6.4ms** |
+| `g6_p95_le_8s` / `g6_caveat` | **`null`** / **只剩一条**："准入样本仅 5 条（< 20）" ⇒ "0 条完成"那条 caveat 正确地消失了（U-120 三态的第二面） |
+| 台账结账 | **14 次调用 / 62,552 tokens / ¥0.030397**（⚠️ **高于我报备的 ¥0.015–0.025**，见下方校准） |
+| 前置复核 | `embed_doc` 跑前 15:57 与跑后 16:04 均 `197\|197\|197` |
+
+**独立复测 U-124（不转述 W2A 的回执）**：我自己的六臂件 A 臂**由红转绿** ——
+生产 `build_analytics_engine` 原样、无任何 preset：`SELECT count(*) FROM v_order_paid` ⇒ `200000  search_path=app`，
+`EXPLAIN` 同一连接 ⇒ 出计划。⇒ §三.0.1j 那条死锁**已解**，且 `gate3` 从此走真 EXPLAIN 而非 warn
+（这解释了本轮 `gate_passed` 为什么同时从 0 变 3：**它依赖 EXPLAIN 真出计划**）。
+
+**⚠️ 花费校准（我报备错了方向，必须记进报价口径）**：上轮 9 次 / ¥0.0145 是**链路在 gen_sql 之后当场死掉**的形态；
+本轮**成功反而更贵** —— 一条走完全链的请求要 `normalize_intent + plan + l4_score + gen_sql` ≈ 4 次调用，
+`repair` 只是失败路径的额外开销。⇒ **新锚点：一条 `ok` ≈ ¥0.0087**（14 次 / ¥0.0304 ÷ 3 条 ok + 2 条早退）。
+**跑批报价一律用这个锚点，别再拿"死在闸门前"的单价外推**（那会系统性低估 3–5 倍）。
+
+**跑批前必须一起说的两条限定**：
+1. **单机不是产品容量**：本机 Ollama `bge-m3` 单条 embedding 实测 **4.5–5.0s**（§三.0.2），
+   c=50 时检索侧会排队 ⇒ P95 里含**压测环境的瓶颈**，报告须按"单机观测容量"口径写，不得写成产品结论。
+2. **`--max-requests` 硬上限 ≠ §16.5 的"持续 10min"**：按 §二 参数跑满是 **50 并发 × 600s ≈ 数千条** ⇒
+   按 ¥0.0087/条粗算 **¥40+**，不可行。⇒ 只能"配额上限 + 满足 `MIN_ADMITTED_FOR_P95=20`"，
+   这是**对 §16.5 的偏离**，要架构/总控明确接受才写进 G-6 报告（默认建议见 `RELAY.md` §三十二⑤）。
+
+
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 
 探针的取数依据按 U-22 纪律必须"写在常量旁边"，而常量旁边放不下方法 —— 所以
@@ -668,6 +702,12 @@ W6 产物 `probe_loadtest_receipts.json` 的 `stale_true_cells_total=14` 三方�
 
 ⚠️ **两种红法不许并成一种**：`preflight_r4/r5`（`admitted=5`、p95 42,529.1 / 187,728.9ms）的布尔本来是
 `false`，不在上面这 14 格里 —— 它们是"**量到了、超预算**"，不是"分母不明"。引用时按 §三.0.1 的判据④说。
+
+**09-23 复算（同一条命令，逐字）**：`json_files=15 stale_true_cells=14 files=11` ⇒ **归档件从 13 涨到 15**
+（新增 `preflight_r6.json` / `preflight_r7.json`），但**那 14 格 stale-true 一格没变**（新件都不在内）。
+布尔为 `null` 的件现清单 = **`preflight_r6.json`、`preflight_r7.json`** —— 即 **U-120 的三态第一次在"新写的回执"上产出 `null`**
+（旧件要变 `null` 得靠 `--roll-up` 重算，见上一段 A-1）。⚠️ 引用纪律：`r7` 是**判据④ 达成的那一轮**（`ok=3`），
+但它的 `p95=9,756.0ms` **同样不可当 P95 结论**（`admitted=5 < 20`）—— "走通了"与"量够了"是两件事。
 
 **A-1（架构 v1.6.6）现状**：`--roll-up` 已扩成同时重算 `g6_caveat` 与 `g6_p95_le_8s`，每格留
 `g6_derived_audit{caveat_before/after,bool_before/after}`，且自检钉住"不许越界改读数"。
