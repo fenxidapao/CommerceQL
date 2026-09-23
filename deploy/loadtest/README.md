@@ -247,6 +247,7 @@ W2B 一旦回退工作区，这串数就没了出处。它只回答一个问题�
 ★ 顺带三个"第一次"（细节与口径见 `backend/reports/w7/RELAY.md` §二十二③）：
 `degraded_total` 首次非零（`{embedding_unavailable,sparse_only}=1`、`{llm_unavailable,template_only}=1` ⇒ **U-107 的降级出口首次在活体流量里被走到**）；
 `retrieval_mode_total` 在同轮真实降压下**仍全零** ⇒ "无调用点"是缺埋点而非缺流量；
+★ **09-23 晚订正**：W2B `f5e501d` 已补上调用点 ⇒ 本轮该族**第一次有活体非 0 序列**（`hybrid=2`）。本句"缺埋点"已是历史状态，见 §三.0.1l。
 `query_outcome_total{outcome="degraded"}=0` 而请求确实"既降级又被拒" ⇒ **降级率的分母不能用它**。
 
 #### 三.0.1f 第五轮预检（09-21 · `w7load-api:0921r3` = commit `51543e1` ⇒ **从这一轮起读数可作 G-6 级证据**）
@@ -310,6 +311,10 @@ curl -sS -N -X POST http://127.0.0.1:18000/api/v1/query \
 ⚠️ **两条别再走的死路**（我都试过）：
 - 用指标面区分 PLAN / BIND：`binding_state_total`、`binding_layer_total`、`retrieval_mode_total` **三族在 12 条 run 后仍全零**，
   `grep` 复核是**没有调用点**（不是没流量）⇒ 路不通。
+  ★ **09-23 晚订正（这条"路不通"的归因写错了）**：`binding_state_total` / `binding_layer_total` **一直有调用点**
+  （`app/api/deps.py:563/564`，W2B 指出、我 grep 复核）；`retrieval_mode_total` 的调用点由 W2B `f5e501d` 补上，
+  09-23 晚**首次拿到活体非 0 序列**（§三.0.1l）。⇒ 当时全零的真实原因是**请求根本没走到那段代码**（PLAN/BIND/link 之前就被终止），
+  不是"埋点不存在"。**区分这两件事很要紧**：前者换个题面就能出读数，后者要改代码。
 - 拿 stage 计数做减法（`intent − schema_linking = 中途终止数`）：**不成立** —— 探针 A 实测一条 run 发了两次 `stage=intent`
   ⇒ `stage_*_count` 是**节点执行次数**，不是请求数。要判"有没有收口"用终态族（`query_outcome_total` = 3 clarify + 7 refuse = 10）。
 
@@ -503,6 +508,85 @@ W2A 未设 ⇒ **两格互相指认**，按纪律我**不自取 U 号**，需求
    按 ¥0.0087/条粗算 **¥40+**，不可行。⇒ 只能"配额上限 + 满足 `MIN_ADMITTED_FOR_P95=20`"，
    这是**对 §16.5 的偏离**，要架构/总控明确接受才写进 G-6 报告（默认建议见 `RELAY.md` §三十二⑤）。
 
+#### 三.0.1l 第十一轮（09-23 晚 · 镜像 `w7load-api:0923r8` = HEAD `f5e501d` ⇒ 含 W2B 的 RL-2 接线）
+
+**一句话**：**`retrieval_mode_total` 第一次出现活体非 0 序列**（W2B 接线由我复验成立）、
+**判据④ 在新镜像上复现（`ok=2`）**，但同轮抓到一条**新的文档级互斥**：
+`MODEL_HARD_TIMEOUT_S[FAST] = 15.0s`（07 §10.2 分配）与 G-6 的"端到端 p95 ≤ 8s"在文档层面就不能同时成立。
+
+**共享栈外部重启第 4 次 + 一条新坑**（我全程没碰编排，只登记）：`pg_postmaster_start_time = 2026-09-23 12:47:19+00`，
+我自己的 `w7load-api` 以 `Exited(255)` 躺在里面。⚠️ **重启后 `pg_stat_user_tables` 四张表全部归零**：
+
+| 表 | `n_live_tup / ins / upd / del`（归零） | `count(*)` 真值（完好） |
+|---|---|---|
+| `app.embed_doc` | 0/0/0/0 | **197**（`count(embedding)=197`、`count(tsv)=197`） |
+| `app.cost_ledger` | 0/0/0/0 | 23 → **本轮后 36**（终值实测，见末节花费） |
+| `app.query_plan` | 0/0/0/0 | 4 |
+| `app.audit_log` | 0/0/0/0 | 108 |
+
+⇒ **口径改写（对我自己是破坏性的）**：`HANDOFF §六` 那条"pg_stat 是累计量 ⇒ 只有带时间戳的**差分**作数"**前提还在，但基线断了** ——
+归零之后无法再区分"别人重灌了 N 次 `embed_doc`"与"统计被清"。U-114 的历史取证链在 12:47Z 之前那段**永久不可重建**。
+⇒ 本轮起 embed_doc 前置判据退回 **`count(*)=197` + `count(embedding)/count(tsv)` 非空计数**，不再引用差分。
+⚠️ 归零的**成因我不写**（`pg_stat_database.stats_reset` 对 `ecom` 仍为 NULL，与"有人调了 `pg_stat_reset()`"不同态；
+我没有单变量对照 ⇒ 只登记"数据完好而计数归零"这个事实）。
+
+**四条运行读数**（同一容器、同一镜像、同一 token，全部真实额度）：
+
+| # | 命令 | 结果 |
+|---|---|---|
+| ① | `steady --no-async c=1 n=2`（**冷容器**） | `{refuse 1, clarify 1}`、`ok=0`、**p95 72,768.7ms** |
+| ② | 同上（**热容器**） | 同两题、同镜像：**p95 1,345.7ms** |
+| ③ | `session-lock c=8 n=24`（单一真会话） | `admitted=1`、**9×409 `SESSION_CONFLICT`(Retry-After 3)** + **14×429 `RATE_LIMITED`(Retry-After 30)**、准入那条 p95 15,060.6ms → `refuse(no_data_asset)` |
+| ④ | `steady --no-async c=1 n=5`（= r7 同配置，等 75s 清滑窗后跑） | **`{ok 2, clarify 2, refuse 1}`**、`codes={}`、p50 **5,213.3ms** / p95=max **15,080.1ms**、wall 35.9s |
+
+**★ ①/② 是本仓第一条干净的单变量对照**：同镜像、同题、同 n、同并发，只差"容器冷/热"一个变量 ⇒
+**p95 72,768.7ms → 1,345.7ms（54 倍）**。§三.0.1i 末节我写过"冷容器第一条吃掉整个 p95，但未做单变量对照 ⇒ 不写成成因"——
+**这条限定今天可以撤销了**。⇒ **跑批规程**：跑批前必须先打 1–2 条预热请求并把它们排除出分母、或整体作废重跑。
+
+**★ 我自己的一个取证错误（先撤回再报）**：① ② 两条都"没有 ok"，我一度判成"判据④ 不可稳定复现"。
+读驱动才知道取题是 `questions[i % len(questions)]`（`driver.py:280`）⇒ **n=2 只打到文件第 0、1 题**：
+`T_A 2026-08 的日期维表有多少天？`（`intent → refuse(out_of_scope)`）与
+`T_A 从 2026-08-01 起的 GMV 是多少？`（`intent → clarify(time_ambiguous)`）——
+**这两题结构上就到不了 `link`**，r7 的 3 条 ok 来自 Q2–Q4。⇒ **不是回归，是我切片切错了**；
+"判据④ 抖动"这句话在写进任何文档之前就被我自己否掉了（归档回执 `preflight_r8_cold/warm.json` 仍留着，作为"别按 n=2 下结论"的反例）。
+
+**★★ ③ 的算术完全对上一条配置 ⇒ session-lock 的参数集是自相矛盾的**：
+`ratelimit.py:203` `RateLimitBucket.QUERY = RateLimitRule(QUERY, per_user_per_min=10, per_tenant_per_min=100)`、窗口 `WINDOW_S=60` ⇒
+24 条同一 `user_id` 在 15.2s 内打出 = **10 条过限流 + 14 条 429**；那 10 条 = **1 条拿到锁 + 9 条 409**（锁只给一个赢家，其余按 `SESSION_LOCK_WAIT_MS=3000` 等待后拒）。
+⇒ **场景③ 按 §16.5 原样跑，测到的主要是限流器，不是会话锁**：锁的真实观察面只有 10/24。
+✔ 立得住的判据：**409 带 `Retry-After: 3`、429 带 `Retry-After: 30`、两者桶名与头齐全**（U-106 的"拒绝必须可区分"这一面成立）。
+✘ 立不住的判据："并发下锁把请求排成串行"—— 需要 per-user 配额 ≥ 总请求数，或把 24 条摊到 >60s 窗口。
+⚠️ **我不擅自改 §16.5 的场景参数**（那是契约面）⇒ 提架构裁（见 `RELAY.md` §三十三③）。
+
+**★★★ ④ 复现了判据④，同时暴露一条新的 G-6 结构性障碍**：
+`stage_duration_seconds_count` 六档同亮：intent **11** / schema_linking **2** / plan_ready **2** / sql_ready **2** / **`gate_passed` 2** / **`executing` 2**，
+`query_outcome_total{success}=2`、`codes={}`、`gate_reject_total` 全 0。
+⇒ **`gate_passed` 与 `executing` 同时亮**（架构 09-23 回执⑤的说法在我这里得到实测支持），
+我先前那条"只亮 executing 而 gate_passed=0 ⇒ 闸门坏了"的反向读法**正式作废**。
+
+**★ `retrieval_mode_total{hybrid} = 2` —— 该族第一次有活体非 0 序列**（基线同容器为 0）。
+⇒ W2B `f5e501d`（`app/retrieval/search.py:242 observe_retrieval_mode(effective_mode)`）**接线成立，由我独立复验**。
+⚠️ **只验了成功分支**：本轮 `sparse_only` 仍 = 0（没有发生 embedding 降级）⇒
+"降级分支会被记成 `sparse_only`"这条**UNVERIFIED**，且**我不为它制造降级**（要停共享 Ollama = 动别人的运行面）。
+⇒ RL-2 的"证据"等级从今天起可以从「缺埋点」升到「分子已有活体读数」，但**分母口径仍未测**。
+
+**★★ 新发现的文档级互斥（给架构 + W4，不是我的地盘）**：
+`app/llm/router.py:306 hard_timeout_s()` 明写 **flash 15s / pro 45s（07 §10.2 分配）**，
+而 G-6 要的是**端到端 p95 ≤ 8s**。⇒ 一条用满 flash deadline 的请求**独自就能把 p95 顶到 15s** ——
+本轮 ④ 的 max/p95 样本 **15,080.1ms ≈ 15.0s + 80ms**，且同轮 `degraded_total{llm_unavailable,template_only}` 由 2 → **3**
+⇒ 那个样本极可能就是"normalize 吃满 15s 后降级"的那条（⚠️ 相关不是因果：n=5，我没有对该条做单请求追踪）。
+本轮 `llm_unavailable` 累计 **3 次 / 约 9 条走到 normalize 的请求 ⇒ ~33% 命中率**。
+⇒ **可判的推论（这是推算，不是读数）**：按 33% 命中率，admitted=20 的批测里期望 ~6 条落在 15s ⇒
+**p95 必然 ≥15s ⇒ G-6 会读成 `false` 而不是 `null`**。
+这与 §三.0.1h 的 `bind 0.2s` 是**同一处预算表的两面**（一面掐太紧、一面放太松），⇒ 归 W4 落、架构裁，**W7 两边都不动**。
+
+**一条免费的自洽断言**：`degraded_total{present_failed,table_only} = 2` 与 `query_outcome_total{success} = 2` **1:1** ——
+出处是 `app/api/deps.py:824-826`（`presenter=None` ⇒ `app/present/` 空壳 ⇒ §14.2 F4 **P0 下每个成功请求必带一条 degraded**，注释自陈"这是既定 P0 形态（不是缺陷）"）。
+⇒ 以后任何一次跑批若出现 `success ≠ degraded{present_failed}`，**说明 present 接线变了**，这比单独盯某个计数器灵敏。
+
+**本轮花费（先报后跑，全部实测复核）**：预估 ≤¥0.07（上限 ¥0.23）⇒ **实跑 13 次调用 / ¥0.013110**（台账 `created_at > 12:55Z` 过滤）。
+⚠️ 低于预估的原因不是便宜，是 **24 条里有 23 条在模型之前就被 409/429 拒了** ⇒ **"花费低于预估"本身要按"准入数低于预估"来读，别当成单价校准成功**。
+锚点复核：④ 一条 ok ≈ 7 次调用 / ¥0.0079 ⇒ §三.0.1k 定的 **¥0.0087/条** 误差 <10%，**继续用**。
 
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 
@@ -708,6 +792,14 @@ W6 产物 `probe_loadtest_receipts.json` 的 `stale_true_cells_total=14` 三方�
 布尔为 `null` 的件现清单 = **`preflight_r6.json`、`preflight_r7.json`** —— 即 **U-120 的三态第一次在"新写的回执"上产出 `null`**
 （旧件要变 `null` 得靠 `--roll-up` 重算，见上一段 A-1）。⚠️ 引用纪律：`r7` 是**判据④ 达成的那一轮**（`ok=3`），
 但它的 `p95=9,756.0ms` **同样不可当 P95 结论**（`admitted=5 < 20`）—— "走通了"与"量够了"是两件事。
+
+**09-23 晚复算（同一条命令，逐字）**：`json_files=19 stale_true_cells=14 files=11` ⇒ 归档件从 15 涨到 **19**
+（新增 §三.0.1l 的 4 份 `preflight_r8_*.json`），**那 14 格 stale-true 依旧一格没变**。
+布尔为 `null` 的件从 2 份涨到 **6 份**：`preflight_r6` / `preflight_r7` / `preflight_r8_c1n5` / `preflight_r8_cold` / `preflight_r8_sessionlock` / `preflight_r8_warm`。
+⚠️ 这 6 份的 `null` 是**两种不同成因**并存，引用时必须分开说：
+① `cold`/`warm`/`sessionlock` = **0 条 `ok`** ⇒ 分母全是失败样本（无效率意义上的不可判）；
+② `r6`/`r7`/`c1n5` = **有 `ok` 但 `admitted < 20`** ⇒ 量不够（统计意义上的不可判）。
+⇒ 这正是 U-120 三态想要的区分：`null` 不等于"还没跑"，`false` 才等于"量到了且超预算"。
 
 **A-1（架构 v1.6.6）现状**：`--roll-up` 已扩成同时重算 `g6_caveat` 与 `g6_p95_le_8s`，每格留
 `g6_derived_audit{caveat_before/after,bool_before/after}`，且自检钉住"不许越界改读数"。

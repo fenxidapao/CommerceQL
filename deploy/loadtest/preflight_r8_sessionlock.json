@@ -1,0 +1,78 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-09-23T13:07:00+00:00",
+  "target": "http://127.0.0.1:18000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "session-lock",
+      "params": {
+        "concurrency": 8,
+        "duration_s": null,
+        "total_requests": 24,
+        "single_session": true,
+        "same_tenant": false,
+        "async_if_slow": true,
+        "questions": "合成题库 5 条轮转",
+        "request_cap": 24
+      },
+      "requests": 24,
+      "wall_s": 15.185,
+      "throughput_rps": 1.58,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 1,
+        "rejected_429": 14,
+        "other_http_4xx": 9,
+        "http_5xx": 0,
+        "unresolved": 0
+      },
+      "rejection_headers": {
+        "409": {
+          "retry_after=3": 9
+        },
+        "429": {
+          "retry_after=30": 14
+        }
+      },
+      "latency_ms": {
+        "p50": 15060.6,
+        "p95": 15060.6,
+        "p99": 15060.6,
+        "max": 15060.6,
+        "mean": 15060.6,
+        "samples": 1
+      },
+      "latency_ms_all_ms": {
+        "p50": 25.6,
+        "p95": 3035.5,
+        "samples": 24
+      },
+      "ttfb_ms": {
+        "p50": 7.7,
+        "p95": 7.7
+      },
+      "outcomes": {
+        "http_4xx": 23,
+        "refuse": 1
+      },
+      "codes": {
+        "SESSION_CONFLICT": 9,
+        "RATE_LIMITED": 14
+      },
+      "terminal_provenance": {
+        "http_4xx": {
+          "stage=none|reason=none": 23
+        },
+        "refuse": {
+          "stage=intent|reason=no_data_asset": 1
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": null,
+      "g6_caveat": "本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 1 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足；另有 14 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）"
+    }
+  ],
+  "finished_at": "2026-09-23T13:07:15+00:00"
+}

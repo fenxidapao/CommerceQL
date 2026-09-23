@@ -1999,3 +1999,101 @@ F 臂 = 池级 `search_path=app` 上 EXPLAIN ⇒ 出计划。所以日志里 `ga
   `stats_reset=NULL` + 计数器跨今晨重启**不变**（撤回 ② 的依据）；`/metrics` 活体；台账 14 行 / ¥0.030397 结账；令牌用完即删（`E:/tmp_w7/tok.txt` 已 `rm`）。
 - ❌ 未跑 / 未验：**四场景跑批**（等总控对额度与偏离点头，见 ⑤）；G-6 达标（**仍不得宣称**：`admitted=5 < 20`、p95 9,756ms 未过 8s 但样本不足以下结论）；
   判据⑥ 落地后的 redteam 复跑；U-125 的 ②③（本轮只排期未动手）；`tests/integration`（禁令）；`retrieval_mode_total` 接线（W2B）。
+  ★ **本行下半段已被 §三十三 取代**：U-125 ②③ 已写完并全门验证（以 patch 交付、未单独提交）；
+    `retrieval_mode_total` 的**成功分支已实测非 0**，`sparse_only` 分支仍 UNVERIFIED。
+
+---
+
+## 三十三、`retrieval_mode_total` 第一次有活体序列 ⇒ **W2B 的接线我复验成立**；同时抓到一条 **15s/8s 的文档级互斥**（09-23 晚 · 第十五轮）
+
+基准：镜像 `w7load-api:0923r8` = HEAD **`f5e501d`**（构建上下文 = 仓库根，见 HANDOFF §五 的订正）；
+`/api/v1/healthz` = `status ok`、**7 项 checks 全 true**、`degraded_dependencies` 空。
+本轮 **3 次运行 / 13 次调用 / ¥0.013110**（台账实测，非估算）。
+
+### ① 先说三条撤回与自我订正（都还没写进对外结论，就地掐掉）
+
+1. **"判据④ 不可稳定复现" —— 我错了，成因是我自己的取数方式。** `n=2` 两次（冷/热）都 0 条 `ok`，我一度判成回归。
+   读 `driver.py:280` 才知道取题是 `questions[i % len(questions)]` ⇒ **`n=2` 只打到文件第 0、1 题**，
+   而这两题结构上停在 `intent`（`refuse(out_of_scope)` / `clarify(time_ambiguous)`），r7 的 3 条 `ok` 来自 **Q2–Q4**。
+   ⇒ **不是链路回归，是我拿"换了题集前缀"的两条样本回答了一个回归问题。** 归档件保留（`preflight_r8_cold/warm.json`）当反例。
+   ⇒ 纪律已写进 HANDOFF §六：**跨轮比较必须复刻 `(n, questions-file, concurrency)` 三元组**。
+2. **W4 建议的降格措辞（"走通到 exec、未走到底"）在 r8 上被实测部分反驳**：同 r7 配置在**新镜像**上跑出 **`ok=2`** ⇒
+   "走通到执行"不是一次性事件。⇒ 我接受 W4 的措辞纪律（"走通 ≠ 量够"），但**"未走到底"这句在 r8 不再成立**：
+   `gate_passed=2` 且 `executing=2`、`query_outcome_total{success}=2`、`codes={}` ⇒ **走到底了，只是只有 2 条**。
+3. **我 §三.0.1g 那条"三族没有调用点 ⇒ 死路"的归因写错了**（`binding_state_total` / `binding_layer_total` 一直在 `api/deps.py:563/564`，
+   `retrieval_mode_total` 现由 W2B 补上）⇒ 真实成因是**请求没走到那段代码**，不是埋点不存在。已就地加日期订正，不改历史正文。
+   ★ 这条对别人有用：**"指标恒 0"有两种成因、修法完全相反**（换题面 vs 改代码），报告里必须写清是哪一种。
+
+### ② ★★ `retrieval_mode_total{hybrid}=2` —— RL-2 的"缺埋点"这一格由我确认已还
+
+同容器基线该族两条序列均为 0 ⇒ 跑完 5 条后 `hybrid=2`（与本轮 `ok=2` 同数）。
+⇒ **W2B `f5e501d`（`app/retrieval/search.py:242 observe_retrieval_mode(effective_mode)`）接线成立**，我是独立复验方。
+⚠️ **两条必须一起说**：① **只验了成功分支**，`sparse_only` 仍 = 0（本轮未发生 embedding 降级）⇒ 降级分支 **UNVERIFIED**，
+而**我不为它制造降级**（要停共享 Ollama = 动别人的运行面）；② **分母口径仍未定** ——
+`stage_duration_seconds_count{stage="schema_linking"}` 是**节点执行次数**不是请求数（§三.0.1g 血案同款），**不得当分母**。
+⇒ RL-2 的证据等级：**「分子可用、分母待定」**（原先是「缺埋点」）。**这条改动要 W2B 与架构各自确认。**
+
+### ③ ★ `session-lock` 我按架构授权跑完了 ⇒ 场景参数与限流桶**自相矛盾**（读数与算术逐格对上）
+
+`c=8 / n=24 / 单一真会话`（真 `POST /session` 铸的 id）⇒ `admitted=1`、**9× 409 `SESSION_CONFLICT`（`Retry-After: 3`）**、
+**14× 429 `RATE_LIMITED`（`Retry-After: 30`）**、wall 15.2s。
+机制：`app/api/ratelimit.py:203` `QUERY = (per_user=10, per_tenant=100)`、`WINDOW_S=60` ⇒
+**24 = 10（过限流）+ 14（429）**；那 10 = **1（拿到锁）+ 9（409）**。**两层加法都精确 ⇒ 这不是缺陷，是 §16.5 的参数集把被测对象换成了限流器。**
+- ✔ 立得住：**"两类拒绝可区分、头齐全"**（U-106 这一面第一次拿到活体 409/429 同框读数）。
+- ✘ 立不住：**"并发下锁把请求排成串行"** —— 锁的真实观察面只有 **10/24**。
+- ⇒ **请架构裁一句**：场景③ 是 (A) 保持参数、报告里把判据改成"仅验拒绝可区分"；还是 (B) 把 24 条摊到 >60s 窗口 / 临时抬 per_user。
+  **我默认走 (A)**（不动契约面；且 (B) 会让场景③ 与④ 共用时间窗、读数互相污染），**不改 `driver.py` 的场景参数**。
+- ⚠️ 顺带一条**花费读法陷阱**：本轮实花 ¥0.0131 ≪ 预估 ≤¥0.07，**原因不是单价准，是准入数远低于预期**（23/24 在模型之前就被拒）。
+  ⇒ 报"花费低于预估"必须同时报"准入数低于预估"，否则下一次跑批预算会被系统性压低。
+
+### ④ 🔴 新发现（**不在我地盘**）：`flash 15s deadline` 与 `G-6 p95 ≤ 8s` 在文档层面互斥 → 归 **W4 落 / 架构裁**
+
+`app/llm/router.py:306 hard_timeout_s()` 的注释逐字写 **"07 §10.2：flash 15s / pro 45s"**，且明说
+"stage 延迟预算是 P95 目标而非超时上限；曾把它接进来当 deadline ⇒ 任务 100% 失败（实测 0/15 → 15/15）"。
+⇒ **一条用满 flash deadline 的请求，独自就能把端到端 p95 顶到 15s。**
+本轮实测：`c1n5` 的 **p50 5,213.3ms / p95 = max 15,080.1ms**（≈ 15.0s + 80ms），且同轮
+`degraded_total{reason="llm_unavailable",action_taken="template_only"}` 由 2 → **3** ⇒ 那个样本极可能就是吃满 15s 的那条
+（⚠️ **相关不是因果**：n=5，我没对该条做单请求追踪）。本轮该降级 **3 次 / 约 9 条走到 `normalize` ⇒ ~33%**。
+⇒ **推论（推算，不是读数）**：按 33%，admitted=20 的批测期望 ~6 条落在 15s ⇒ **p95 必然 ≥15s ⇒ G-6 会读成 `false` 而不是 `null`**。
+⇒ 这与 §三.0.1h 的 **`bind 0.2s`** 是**同一张预算表的两面**（一面掐太紧、一面放太松）。默认方案：
+**(A) 照批跑，让 G-6 读 `false`**（`false` 是有效读数，比"再等一轮前置"信息量大），报告首页写明"p95 尾部由 §10.2 的 15s deadline 设定，不由并发设定"；
+**(B) 先调 §10.2 的 flash deadline 再跑**。⚠️ **W7 两边都不动代码**，等架构一句话。
+
+### ⑤ ★ 一条免费的自洽断言（送给 W4/W6，零成本）
+
+`degraded_total{present_failed,table_only}` 本轮 = **2**，`query_outcome_total{success}` = **2** ⇒ **1:1**。
+出处 `app/api/deps.py:824-826`：`presenter=None`（`app/present/` 是 W3B 的空壳）⇒ §14.2 F4
+**"P0 下每个成功请求必带一条 degraded"**（注释自陈"这是既定 P0 形态，不是缺陷"）。
+⇒ 以后任何跑批若 `success ≠ degraded{present_failed}`，说明 **present 接线变了** —— 这比单盯任一计数器灵敏。
+⚠️ 反面提醒 W3B：**`app/present/` 一旦接上，这条 1:1 会立刻断**，届时别把它当回归报（我这边同步换断言）。
+
+### ⑥ 共享前置：第三次外部重启 + **`pg_stat` 差分口径的基线断了**（我全程未碰编排）
+
+`pg_postmaster_start_time = 2026-09-23 12:47:19+00`，我的 `w7load-api` 以 `Exited(255)` 躺在里面。
+⚠️ **重启后四张表的 `n_live_tup/n_tup_ins/upd/del` 全部归零**，而 `count(*)` 完好：
+`embed_doc 197`、`cost_ledger 23`、`query_plan 4`、`audit_log 108`。
+⇒ 归零后**无法区分"别人重灌 N 次"与"统计被清"**；U-114 的取证链在 12:47Z 之前那段**永久不可重建**。
+⇒ **前置判据退回 `count(*)=197` + `count(embedding)/count(tsv)` 非空**（本轮跑前跑后各测一次，均 `197|197|197`
+⇒ **我没损坏共享前置**）。⚠️ 归零**成因我不写**：`pg_stat_database.stats_reset` 对 `ecom` 仍是 NULL（与"`pg_stat_reset()` 被调用"不同态），
+且我没有单变量对照 ⇒ 只登记事实。★ 通用纪律（已进 HANDOFF §六）：
+**任何"累计量差分"结论都要附一条"如果计数器归零，这条结论怎样失效"** —— 上一版我没写，今天就烧了。
+
+### ⑦ U-125 我这边（②③）**代码已写完并全门验证，但按纪律没有单独提交**
+
+产出 = **`backend/reports/w7/u125_w7_side.patch`**（452 行 / 6 文件，`git apply --check` = OK）。门（我亲跑）：
+`tests/unit tests/contract tests/redteam` **1840 passed / 1 warning**、`ruff check .` 全绿、`mypy app` Success（147 文件）；
+变异 **M1**（上界退回 21）⇒ 2 failed、**M2**（`AstRule` 试转回归）⇒ 2 failed，基线还原 18 passed。
+⇒ **排法不变**：W4 落 ① 时 `git apply` 这份 patch、**同一 commit 同批 push**（`tests/contract/` 两处落在 W4 的 commit 范围里，
+归属列请架构订正 —— 见粘贴块）。⚠️ **判据"拒一条后 `rule_id` 非空"本轮仍不可判**：`codes={}`、`gate_reject_total` 全 0 ⇒
+**没有闸门可拒 = 分母为空**，不是"判据不成立"。等一次真有 `GATE_*` 拒绝的跑批再取。
+
+### ⑧ 本轮实测 / 未实测
+
+- ✅ 实测：`0923r8` 构建（上下文 = 仓库根）+ healthz 7 项全 true；`c=1/n=5` **`ok=2`**、六档 stage 同亮、`codes={}`；
+  `retrieval_mode_total{hybrid}=2`（基线 0）；`session-lock` 24 条的 409×9 + 429×14 与 `QUERY` 桶算术；
+  冷/热**单变量对照**（同镜像同题同 n：p95 **72,768.7 → 1,345.7ms**）；`embed_doc` 跑前跑后各一次；
+  台账 13 行 / **¥0.013110** 结账；`pg_stat` 四表归零 + `count(*)` 完好；
+  `docker inspect` 泄密形态复现（**只在终端、未入库**，纪律见 HANDOFF §六末条）；令牌用完即删（`E:/tmp_w7/tok.txt` 已 `rm`）。
+- ❌ 未跑 / 未验：**四场景跑批**（`steady`/`burst`/`tenant-quota` 三格仍等总控点头：额度 ≈¥2–3.5 + §16.5 偏离）；
+  **G-6 达标**（两轮 `admitted=5 < 20` ⇒ 不得宣称）；`retrieval_mode_total{sparse_only}` 降级分支；RL-2 分母口径；
+  U-125 判据（本轮无闸门可拒）；判据⑥ 的**活体** redteam（离线已跑，见 §三十二）；`tests/integration`（**绝禁**）。

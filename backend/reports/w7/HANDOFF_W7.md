@@ -50,12 +50,16 @@
 | 4 | `bind` 0.2s 掐掉一次真 LLM 调用 | ✅ 架构裁 (B)、W4 落 `8202204`；实测 `l4_score` 三条 1,605–1,700ms 全部完成 | README §三.0.1h/i |
 | 5 | **GATE1 把每条真 SQL 都拒（`GATE_AST_REJECTED` = U-121）** | ✅✅ **四处取用点已全换**（W0 形状 / W2A 实现 / W4 `357618f` gate1 / W2C `c76f701` gate2 三处同批）。09-22 我亲跑两份证据复现：**W2C 器件**（真 runtime 经 `guard_allowlist`）⇒ 干净 SQL `pass=True`、deny 三形态全 `G2-DENY`；**我复跑的 redteam 全链** ⇒ `leaked=0`、`PASS187/FAIL26/NOT_CHECKED25` 与 `failures` 集合同落地前逐格相同（零漂移；⚠️ 报告有个键被 W6 `899fffb` 改名：`gate2_visible_raise`→`gate2_on_port_raise`，引旧件别按新键找）。⚠️ **09-23 判据翻转**：架构 v1.7.1 撤销判据⑤、换**判据⑥**（deny 列裸写与带限定符都须 `R07`，仍禁 gate1 读 `all_columns`）⇒ 我探针那两条读数（档3a `R06/R06`、档3b `R07/R06`）**仍有效但解释翻转**：`R06/R06` 从"正确形态"变**待修面**（归 W2C 收回 `test_r07_deny_columns` 的 `{R06,R07}` 放宽）。见 `RELAY §三十二④` | `RELAY.md` §三十一①② · §三十二④ + `README §四.5` |
 | 6/7 | **GATE3（真 EXPLAIN）与 EXECUTE（真 DB + 身份 GUC）** | ✅ **两格 09-23 都亮了**：`gate_passed`=3、`executing`=3、`query_outcome_total{success}`=3。09-22 那次 `executing`=1 而 `gate_passed`=0 **不是坏了** —— 当时 gate3 因 `EXPLAIN 不可用` 只能判 `warn`、按 §14.2 D6 不得算通过 ⇒ `events.py:55` 就不发该帧（**活体上最早的可穿透信号是 `executing`**）。U-124 落地后 EXPLAIN 真出计划 ⇒ 两格同时亮起（**同一因的两面，不是两件事**） | `README §三.0.1j/§三.0.1k` + `RELAY §三十二①` |
-| 8 | `app.embed_doc` = `197\|0\|0`（U-114 第三次实锤） | ✅ **09-23 15:57 / 16:04 两次复测均 `197\|197\|197`**（W2B `d4ca203` 重灌 + 两道防线 W2A `5e47558`、W0 `36c782a`）。⚠️ 共享栈被外部重启过**两次**（09-22 19:18、09-23 15:55，`RestartCount=0` ⇒ 是 `restart` 非崩溃、**均非我所为**）。⚠️ **计数器归因口径已改**：干净重启**保留** `pg_stat` 统计（`stats_reset=NULL`，09-23 实测同一秒计数器不变）⇒ 只能用**两次带时刻读数的差分**：15:17→19:43 = **21 次全表重载**、19:43→09-23 15:57 = **0 次**。我上一版"重启清零 ⇒ 25 分钟内 52 次"是**错的**，已在 `RELAY §三十二②` 撤回 | `RELAY.md` §三十一① §三十二②③ + `DELIVERY.md` §四 |
+| 8 | `app.embed_doc` = `197\|0\|0`（U-114 第三次实锤） | ✅ **09-23 15:57 / 16:04 两次复测均 `197\|197\|197`**（W2B `d4ca203` 重灌 + 两道防线 W2A `5e47558`、W0 `36c782a`）。⚠️ 共享栈被外部重启过**两次**（09-22 19:18、09-23 15:55，`RestartCount=0` ⇒ 是 `restart` 非崩溃、**均非我所为**）。⚠️ **计数器归因口径已改**：干净重启**保留** `pg_stat` 统计（`stats_reset=NULL`，09-23 实测同一秒计数器不变）⇒ 只能用**两次带时刻读数的差分**：15:17→19:43 = **21 次全表重载**、19:43→09-23 15:57 = **0 次**。我上一版"重启清零 ⇒ 25 分钟内 52 次"是**错的**，已在 `RELAY §三十二②` 撤回。★ **09-23 晚（第三次外部重启，12:47:19Z）该口径的基线断了**：重启后 `embed_doc`/`cost_ledger`/`query_plan`/`audit_log` 的 `n_live_tup/ins/upd/del` **全部归零**，而 `count(*)` 完好（`197/23/4/108`）⇒ **归零前那段历史永久不可重建，差分法此后不可用**。⇒ 前置判据退回 **`count(*)=197` + `count(embedding)/count(tsv)` 非空**（本轮跑前跑后各测一次，均 `197|197|197` ⇒ **我没损坏共享前置**）。⚠️ 归零**成因我不写**（`pg_stat_database.stats_reset` 对 `ecom` 仍 NULL，与"`pg_stat_reset()` 被调用"不同态；无单变量对照） | `RELAY.md` §三十一① §三十二②③ + `README §三.0.1l` + `DELIVERY.md` §四 |
 | 9 | ~~🔴 当前真阻塞：`analytics` 连接的 `search_path` 里没有 `app`~~ ✅ **已解（U-124，W2A `d8eca02`）** | 修法 = 我建议的默认方案：照同文件 `lg` 先例给 analytics 池 `options="-c search_path=APP_SCHEMA"`（`analytics_connect_args()` 唯一构造点）。**我独立复测**：六臂件 **A 臂由红转绿**（生产池原样 `count=200000`、`EXPLAIN` 出计划）。⇒ ★ **连带效果**：gate3 从"EXPLAIN 不可用 ⇒ warn"变成真出计划 ⇒ `gate_passed` 第一次非 0 | `README §三.0.1k` + `scratch_searchpath_ab.out` |
 | 10 | ★ **判据④ 已达成**（09-23 · `ok=3`、`codes={}`）⇒ 下一道门槛换了性质 | `stage_duration_seconds_count` 六档 `intent 6 / schema_linking 3 / plan_ready 3 / sql_ready 3 / **gate_passed 3** / **executing 3**`、`query_outcome_total{success}=3` ⇒ **链路第一次整条走通**。但 **`admitted=5 < MIN_ADMITTED_FOR_P95=20`** ⇒ `g6_p95_le_8s` 仍 `null`、**G-6 仍不得宣称**。⇒ 剩余门槛从"走不到执行"换成**"跑批的额度与对 §16.5 的偏离"**（默认方案与报价见 `RELAY §三十二⑤`，等总控点头） | `deploy/loadtest/preflight_r7.json` + `README §三.0.1k` |
+| 11 | ★★ **判据④ 在新镜像上复现（`ok=2`）+ `retrieval_mode_total` 首次有活体非 0 序列**（09-23 晚 · 镜像 `0923r8` = HEAD `f5e501d`） | 同 r7 配置（`c=1/n=5`、时间锚定集、`--no-async`）⇒ `{ok 2, clarify 2, refuse 1}`、`codes={}`、六档同亮（`gate_passed 2` / `executing 2`）⇒ **走通到执行不是一次性事件**。★ 同轮 `retrieval_mode_total{hybrid}=2`（基线 0）⇒ **W2B `f5e501d` 的 RL-2 接线由我独立复验成立**；⚠️ `sparse_only` 仍 0 ⇒ **降级分支 UNVERIFIED，且我不为它制造降级**（要停共享 Ollama = 动别人运行面）。⇒ §三.0.1g 那条"三族没有调用点"的死路归因**已就地订正**：真实成因是"请求没走到那段代码"，不是"埋点不存在" | `README §三.0.1l` + `preflight_r8_c1n5.json` |
+| 12 | 🔴 **新发现的 G-6 文档级互斥**（不在我地盘：W4 落、架构裁） | `app/llm/router.py:306 hard_timeout_s()` 按 07 §10.2 给 **flash 15s / pro 45s**，而 G-6 要**端到端 p95 ≤ 8s** ⇒ **一条用满 deadline 的请求独自把 p95 顶到 15s**。实测：本轮 max/p95 样本 **15,080.1ms ≈ 15.0s+80ms**，同轮 `degraded_total{llm_unavailable,template_only}` 2→3；本轮该降级 **3 次 / 约 9 条走到 `normalize` ⇒ ~33%**。⇒ **推论（非读数）**：admitted=20 的批测期望 ~6 条落 15s ⇒ **G-6 会读成 `false` 而不是 `null`**。与 §三.0.1h 的 `bind 0.2s` 是**同一张预算表的两面**（一面掐太紧、一面放太松） | `README §三.0.1l` 末三行 |
 
-⇒ **结论口径（写进任何汇报都要带）**：链路**已经走得到执行**（`ok=3` 实测），但**样本不足以判达标** ⇒
-**G-6 仍 UNVERIFIED、不得宣称达标**；近期演示可用真结果，但**不得引 9,756ms 那格当 P95 结论**（`admitted=5`）。
+⇒ **结论口径（写进任何汇报都要带）**：链路**已经走得到执行**（`ok=3` 于 `0923r7`、`ok=2` 于 `0923r8` ⇒ **两轮同向，不是一次性事件**），
+但**两轮 `admitted` 都是 5 < 20** ⇒ **G-6 仍 UNVERIFIED、不得宣称达标**。
+★ 且第 12 行那条 15s/8s 互斥意味着：**光把样本量堆到 20 不会让 G-6 变绿，只会让它从 `null` 变成 `false`**。
+近期演示可用真结果，但**不得引 9,756ms / 15,080ms 任何一格当 P95 结论**（两轮都 `admitted=5`）。
 
 ---
 
@@ -64,11 +68,12 @@
 ### P0（阻塞 G-6，不由本窗口做，但由本窗口盯）
 | # | 事项 | 归属 | W7 的动作 |
 |---|---|---|---|
-| ★ **P0-1：四场景跑批（唯一还挡着 G-6 的事）** | **等总控点头**（额度 + 对 §16.5 的偏离），不是等技术 | 报价与默认方案已给死在 `RELAY §三十二⑤`：新锚点 **一条 `ok` ≈ ¥0.0087** ⇒ `steady c=50/n=120` ¥1.0–1.6、`burst c=100/n=100` ¥0.8–1.3、`session-lock c=8/n=24` **≈¥0.05（多数 409，不打模型）**、`tenant-quota c=30/n=60` ¥0.3–0.5 ⇒ **合计 ≈¥2–3.5 + 15–25min**。**默认 = 先只跑 `session-lock`**（零额度、能独立判锁），三格等批。⚠️ 两条必须写进报告：① `n` 被上限截断 ≠ §16.5"持续 10min"（偏离待架构接受）；② 本机 Ollama 单条 embedding 4.5–5.0s ⇒ P95 含**压测环境瓶颈**，不是产品容量 |
-| ★ **P0-2：U-125（rule_id 归因，架构 v1.7.1 已开）** | **W4 ①（`nodes/_shared.py::gate_update`）+ W7 ②③ 必须同批同推** | 我的两处：**②** 摘掉 `obs/instrumentation.py:448-455` 的反推路径（否则双计）、**③** 放宽 `obs/metrics.py:676` 的 `rule_id` 取值域（W4 补的第四处，成立且我认领：现在只有 gate1 字母表，`G2-*`/gate3 号会被"丢弃+计溢出"）。**排法**：我下一次开工写 ②③ → **只贴 diff 不单独提交** → 与 W4 同一批 push。判据 = 拒一条后 `/metrics` 的 `rule_id` 标签非空 |
-| ✅ **已闭环（09-23）：`search_path` 死锁 = U-124** | W2A `d8eca02`（P0，架构定标：W1B 名下、W0 落常量、W2A 同批改引） | **我独立验收**：六臂件 A 臂转绿（`200000` + EXPLAIN 出计划）⇒ 判据④ 达成（`ok=3`）。四条禁止动作自查 W2A 已做（未改 R16 / 无连接内 SET / 未扩 metadata 池 / materialize 同因族不并入 ⇒ **那族仍开着**，别当已解） |
+| ★ **P0-1：四场景跑批（唯一还挡着 G-6 的事）** | **等总控点头**（额度 + 对 §16.5 的偏离），不是等技术 | 报价与默认方案已给死在 `RELAY §三十二⑤`：新锚点 **一条 `ok` ≈ ¥0.0087**（★ 09-23 晚复核：`c1n5` 一条 ok = 7 次调用 / ¥0.0079 ⇒ **误差 <10%，锚点继续用**）⇒ `steady c=50/n=120` ¥1.0–1.6、`burst c=100/n=100` ¥0.8–1.3、`session-lock c=8/n=24` **≈¥0.05（多数 409，不打模型）**、`tenant-quota c=30/n=60` ¥0.3–0.5 ⇒ **合计 ≈¥2–3.5 + 15–25min**。**默认 = 先只跑 `session-lock`**（零额度、能独立判锁），三格等批。★ **09-23 晚：`session-lock` 我已实测跑过**（架构授权现跑）⇒ 24 条 = **10 过限流 + 14 条 429**，实花 **¥0.013110/13 次调用**（全轮）；"花费远低于预估"要按**准入数低于预估**来读，不是单价校准成功。⚠️ 三条必须写进报告：① `n` 被上限截断 ≠ §16.5"持续 10min"（偏离待架构接受）；② 本机 Ollama 单条 embedding 4.5–5.0s ⇒ P95 含**压测环境瓶颈**，不是产品容量；③ ★ **场景③ 的默认参数与 `QUERY` 桶（`ratelimit.py:203` per_user=10/min、`WINDOW_S=60`）冲突** ⇒ 原样跑 24 条，锁只拿到 **10/24** 的观察面，**测到的主要是限流器**。立得住：409 带 `Retry-After:3`、429 带 `Retry-After:30`、桶名头齐全（U-106 的"拒绝可区分"成立）。立不住："锁把并发排成串行" |
+| ★ **P0-0（09-23 晚新增 = P0-1 的前置判断：先裁这条，再决定要不要照原样跑批）：`flash 15s deadline` 与 `G-6 p95≤8s` 文档级互斥** | **架构裁 + W4 落**（预算表归 W4、SLO 归架构 ⇒ W7 两边都不动，只出读数） | 见 §三 第 12 行。⇒ **在有人动这张预算表之前，跑批的产出大概率是 `g6_p95_le_8s=false` 而不是 `true`**。我的建议默认方案：**照批**（`false` 也是一条有效读数，比"再等一轮前置"信息量大），但报告首页必须写明"p95 尾部由 §10.2 的 15s deadline 设定，不由并发设定"。等架构决定是否先调预算再跑 |
+| ★ **P0-2：U-125（rule_id 归因，架构 v1.7.1 已开）** | **W4 ①（`nodes/_shared.py::gate_update`）+ W7 ②③ 必须同批同推** | ✅ **09-23 我的两处已写完并全门验证**（`tests/unit+contract+redteam` **1840 passed**、ruff 干净、mypy Success、变异 M1/M2 各被抓 2 条），★ 但**已按纪律撤回工作区**，成果以补丁交付：`backend/reports/w7/u125_w7_side.patch`（452 行 / 6 文件，`git apply --check` = OK）。⇒ **W4 落 ① 时同批 `git apply` 我的 patch 一起 push**；其中 `tests/contract/` 两处归 W4 的 commit 范围（列归属需架构订正，见 `RELAY §三十三①`）。判据 = 拒一条后 `/metrics` 的 `rule_id` 标签非空 ⇒ ⚠️ **本轮 `codes={}`、`gate_reject_total` 全 0 ⇒ 该判据仍未取得活体读数**（没有闸门可拒 = 不可判，不是不成立） |
+| ✅ **已闭环（09-23）：`search_path` 死锁 = U-124** | W2A `d8eca02`（P0，架构定标：W1B 名下、W0 落常量、W2A 同批改引） | **我独立验收**：六臂件 A 臂转绿（`200000` + EXPLAIN 出计划）⇒ 判据④ 达成（`ok=3`，且 `0923r8` 上复现 `ok=2`）。四条禁止动作自查 W2A 已做（未改 R16 / 无连接内 SET / 未扩 metadata 池 / materialize 同因族不并入 ⇒ **那族仍开着**，别当已解） |
 | U-121 | 闸门 allowlist 形状 | ✅ 四处取用点已全换 ⇒ **不再是 P0**。⚠️ 但**判据换成⑥**（见 §三 第 5 行）⇒ 等 W2C 收回放宽后我再复跑一次活体 |
-| ✅ 已闭环 | `app.embed_doc`（U-114） | 09-23 跑前跑后仍 `197\|197\|197`；**每次预检前后各测一次**照做（差分口径，见 §三 第 8 行） |
+| ✅ 已闭环 | `app.embed_doc`（U-114） | 09-23 跑前跑后均 `197\|197\|197`（**"每次预检前后各测一次"照做**）。⚠️ **口径已换**：`pg_stat` 四表在 12:47Z 重启后**全部归零** ⇒ **差分法不再可用**，前置判据 = `count(*)` + `count(embedding)/count(tsv)` 快照（见 §三 第 8 行） |
 | U-119 | 生产端口直连闸门的契约测试 | ✅ 09-22 复跑 = 2 passed。⚠️ 旧纪律句"全量恒有 1 条刻意红"**只对 `8a4121a..357618f` 成立**，引用必带区间 |
 
 ### P1（本窗口的活）
@@ -80,7 +85,12 @@
    并修掉就地补算漏传 `admission` 的缺陷（有对照）。**待办 = 那 11 份归档件要不要就地降档，等总控点头**
    （演示读数已在副本上跑过；`receipt.json` 是 W6 的 G-6 默认输入）。
 3. ✅ **RL-2 降级率已改挂 `degraded_total`**（四处同步：`RL-2` §22/§132、`runbook/README.md`、`alert.rules.yml` 注释、看板 `description`）；
-   两个假分母逐处点名禁用。**接线需求仍在 W2B**（一行 `observe_retrieval_mode()`）⇒ 接线前它不得当证据引用。
+   两个假分母逐处点名禁用。★ **09-23 晚：W2B 的接线（`f5e501d`）已由我独立复验** ⇒
+   `retrieval_mode_total{hybrid}=2`（同容器基线 0）是该族**第一次有活体非 0 序列**，"缺埋点"这一格**已还**。
+   ⚠️ **剩余两格仍未清**：① `sparse_only` 分支 **UNVERIFIED**（本轮没发生降级；我不为它制造降级）；
+   ② **分母口径**还没定 —— 比率 `sparse_only / (hybrid+sparse_only)` 要的是"经过 `link` 的请求数"，
+   而 `stage_duration_seconds_count{stage="schema_linking"}` 是**节点执行次数**不是请求数（§三.0.1g 血案）⇒ **别拿它当分母**。
+   ⇒ RL-2 作为"证据"从今天起可升级为**「分子可用、分母待定」**。
 4. ✅ **U-122 归我那半已写**（`README §四.4`：`truncated` 是客户端流截断 ≠ §8.6 行数截断；L 无出口 ⇒ 压测判不了服务端截断）。
    ⚠️ **仍欠**：判据④ 落地后回一条可复制的读法 —— **UNVERIFIED**，别引成"已有"。
 5. **新窗口第一屏（09-23 判据④ 达成之后）**：① 问总控 P0-1 的额度与 §16.5 偏离（不点头就只跑 `session-lock`，零额度）→
@@ -187,7 +197,24 @@ docker exec commerceql-pg-1 psql -U postgres -d ecom -c "select task_id,count(*)
   复测命令（只读）：`select (select stats_reset from pg_stat_database where datname='ecom'), n_tup_ins, n_tup_del, now(), pg_postmaster_start_time() from pg_stat_user_tables s join pg_class c on c.oid=s.relid where c.relname='embed_doc' and c.relnamespace='app'::regnamespace`
 - **报价锚点要按"链路走到哪一格"取**（09-23 实测校准）：一条走完全链的 `ok` ≈ **4 次调用 / ¥0.0087**（14 次 / ¥0.030397 ÷ 3 条 ok），
   而"死在 `gen_sql` 之后"的那轮只有 9 次 / ¥0.0145 ⇒ **成功比失败贵 3–5 倍**。⇒ 拿失败路径的单价外推跑批预算 = **系统性低估**（我今天就这么超了自己报备上限一次）。
-- 冷容器第一条会吃掉整个 p95（本轮实测 187,728.9ms，**未做单变量对照 ⇒ 不写成成因**，只登记）。
+- 冷容器第一条会吃掉整个 p95 ⇒ ★ **09-23 晚这条已从"只登记"升级为"有单变量对照"**：同镜像、同两题、同 `n=2`、同并发，只差容器冷/热 ⇒
+  **p95 72,768.7ms（冷）vs 1,345.7ms（热），54 倍**（`preflight_r8_cold.json` / `preflight_r8_warm.json`）。
+  ⇒ **跑批规程**：先打 1–2 条预热并排除出分母，否则第一条就是 p95。（先前那句"187,728.9ms 未做对照"保留在 §三.0.1i 作为历史。）
+- ⚠️ **`pg_stat` 差分口径会被一次外部事件整体打断**（09-23 晚实锤）：12:47:19Z 那次共享栈重启之后，
+  `embed_doc`/`cost_ledger`/`query_plan`/`audit_log` 的 `n_live_tup/ins/upd/del` **全为 0**，而 `count(*)` 完好（`197/23/4/108`）。
+  ⇒ 归零后**无法区分"别人重灌了 N 次"与"统计被清"**，且**归零前的历史永久不可重建**。⇒ 前置判据退回 `count(*)` + `count(embedding)/count(tsv)` 快照。
+  ★ 通用纪律：**任何"累计量差分"都要在报告里附一条"如果计数器归零，这条结论会怎样失效"** —— 我上一版没写，今天就烧掉了。
+- ⚠️ **驱动取题是 `questions[i % len(questions)]`（`driver.py:280`）⇒ 换 `--max-requests` 等于换题集前缀**。
+  09-23 晚我把 `n=2` 的"两条都没 ok"读成"判据④ 不可复现"，实际是第 0、1 题（`日期维表` → `out_of_scope`、
+  `从 2026-08-01 起` → `time_ambiguous`）**结构上就到不了 `link`**，r7 的 3 条 ok 来自 Q2–Q4。
+  ⇒ **跨轮比较只比同 `n` 同题面**；要判"链路是否回归"必须复刻上一轮的 `(n, questions-file, concurrency)` 三元组。
+- ⚠️ **`session-lock c=8/n=24` 与 `QUERY` 桶互斥**：`ratelimit.py:203` per_user=**10**/min、`WINDOW_S=60` ⇒ 24 条同用户在 15s 内打出 =
+  **10 过限流 + 14 条 429**，那 10 条 = 1 拿锁 + 9 条 409。**读数与算术逐格对上 ⇒ 不是缺陷，是场景参数自相矛盾**。
+  ⇒ 跑这条要么把 24 条摊到 >60s（`--duration`），要么请架构改 §16.5 参数 —— **我不擅自改契约面**。
+- 🔴 **`docker inspect --format '{{json .Config.Env}}'` 会把 `DEEPSEEK_API_KEY` / `DRAIN_TOKEN` 整段打进终端**（09-23 晚我自己触发一次）。
+  值没进任何文件/提交，但**只要贴一次输出就破 §二 纪律** ⇒ 查容器配置一律用**字段过滤**
+  （`{{.Config.Image}}` / `{{json .HostConfig.PortBindings}}` / `{{json .NetworkSettings.Networks}}`），**永远不要 dump `.Config.Env`**。
+  需要看挂载就读 `.HostConfig.Binds`（`.HostConfig.Mounts` 对 `-v` 起法的容器是 `null`，据此会误判"没有挂载"）。
 
 ---
 

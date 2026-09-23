@@ -1,0 +1,68 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-09-23T13:02:42+00:00",
+  "target": "http://127.0.0.1:18000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 1,
+        "duration_s": 600.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": false,
+        "questions": "questions_T_A_time.txt",
+        "request_cap": 2
+      },
+      "requests": 2,
+      "wall_s": 74.111,
+      "throughput_rps": 0.027,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 2,
+        "rejected_429": 0,
+        "other_http_4xx": 0,
+        "http_5xx": 0,
+        "unresolved": 0
+      },
+      "rejection_headers": {},
+      "latency_ms": {
+        "p50": 1272.8,
+        "p95": 72768.7,
+        "p99": 72768.7,
+        "max": 72768.7,
+        "mean": 37020.8,
+        "samples": 2
+      },
+      "latency_ms_all_ms": {
+        "p50": 1272.8,
+        "p95": 72768.7,
+        "samples": 2
+      },
+      "ttfb_ms": {
+        "p50": 7.3,
+        "p95": 82.7
+      },
+      "outcomes": {
+        "refuse": 1,
+        "clarify": 1
+      },
+      "codes": {},
+      "terminal_provenance": {
+        "refuse": {
+          "stage=intent|reason=no_data_asset": 1
+        },
+        "clarify": {
+          "stage=intent|reason=time_ambiguous": 1
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": null,
+      "g6_caveat": "本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 2 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足"
+    }
+  ],
+  "finished_at": "2026-09-23T13:03:57+00:00"
+}

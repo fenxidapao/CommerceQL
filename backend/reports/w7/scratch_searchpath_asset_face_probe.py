@@ -13,6 +13,14 @@ execute 期 `error_class=unknown_table`。而 `order_paid` **不是**语义包�
 第 2 条决定第 1 条的修法方向，所以顺手测：**限定名 `app.v_order_paid` 闸门认不认**。
 若限定名反而被拒，那"让模型写 schema 限定名"这条修法就不成立（必须先改闸门取面）。
 
+⚠️ **09-23 判据翻转（架构 v1.7.1：撤销 07 v1.6.8 的判据⑤、换判据⑥）** —— 本件的**读数不变、解释翻转**：
+- 判据⑤ 当年要求"deny 列与不存在的列在 gate1 **同为 `R06`**"，把 `R07`/`R06` 分裂读成列存在性 oracle；
+- 判据⑥ 反过来要求"deny 列**裸写与带表限定符都必须 `R07`**"，但仍**禁止 gate1 读 `all_columns`**。
+- 两者不矛盾的在于**出处不同**：`R07` 由 `deny_columns` + 本 scope 表的**逻辑名反查**得出（W2C `_is_unqualified_deny()`），
+  不是"该列在结构面里存在" ⇒ 攻击者能分出"被 deny"与"不存在"（这是判据⑥ 要的归因精度），
+  但**分不出"哪些非 deny 列存在"**（这才是判据⑤ 要堵的那道 oracle）。
+⇒ 所以本件第 8–11 题的正确读法是：deny 三形态全 `R07`、不存在列仍 `R06`。**任何一格变成 `R06`/`R07` 互换都说明判据⑥ 退步了。**
+
 跑法（CommerceQL 根）：
     PYTHONIOENCODING=utf-8 PYTHONUTF8=1 .venv/Scripts/python.exe \
       backend/reports/w7/scratch_searchpath_asset_face_probe.py
@@ -56,6 +64,11 @@ SQLS: list[tuple[str, str]] = [
     ("生产 repair 去参数",
      "SELECT SUM(order_paid.pay_amount) AS gmv FROM order_paid "
      "WHERE order_paid.pay_status = 'paid' LIMIT 1"),
+    # ↓ 09-23 补：判据⑥ 的目标形态（前 7 题全打在**表级**，R05/R16 先响 ⇒ 探不到列级判定）
+    ("合法资产 + deny 裸写", "SELECT receiver_phone FROM v_order_paid"),
+    ("合法资产 + deny 限定", "SELECT v_order_paid.receiver_phone FROM v_order_paid"),
+    ("合法资产 + deny 在 WHERE", "SELECT pay_amount FROM v_order_paid WHERE receiver_phone IS NOT NULL"),
+    ("合法资产 + 不存在的列", "SELECT not_a_real_column FROM v_order_paid"),
 ]
 
 

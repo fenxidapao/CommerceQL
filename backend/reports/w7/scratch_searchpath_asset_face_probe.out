@@ -10,3 +10,7 @@ allowlist 顶层键数 = 8
 裸表 + deny 列           passed=False rule=R05             passed=False rule=G2-ASSET refuse=-
 裸表 + deny 列·限定        passed=False rule=R16             passed=False rule=G2-ASSET refuse=-
 生产 repair 去参数         passed=False rule=R05             passed=False rule=G2-ASSET refuse=-
+合法资产 + deny 裸写        passed=False rule=R07             passed=False rule=G2-DENY refuse=-
+合法资产 + deny 限定        passed=False rule=R07             passed=False rule=G2-DENY refuse=-
+合法资产 + deny 在 WHERE   passed=False rule=R07             passed=False rule=G2-DENY refuse=-
+合法资产 + 不存在的列          passed=False rule=R06             passed=True rule=- refuse=-

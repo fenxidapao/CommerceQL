@@ -1,0 +1,452 @@
+diff --git a/backend/app/obs/instrumentation.py b/backend/app/obs/instrumentation.py
+index 163e550..5aff168 100644
+--- a/backend/app/obs/instrumentation.py
++++ b/backend/app/obs/instrumentation.py
+@@ -40,8 +40,6 @@ from app.core.enums import (
+     ActionTaken,
+     ClarifyReason,
+     DegradedReason,
+-    ErrorCode,
+-    GateNo,
+     Outcome,
+     RefuseReason,
+     Stage,
+@@ -87,12 +85,7 @@ _TERMINAL_OUTCOME: Final[Mapping[str, Outcome]] = {
+ #: ⚠️ 为什么必须有这张表：`refuse` 帧**不可能**承载闸门事实（C-12 + `RefuseReason` 四值里
+ #:    没有闸门项，06 §7.2 明令"闸门拒绝不得渲染成拒答卡"），闸门拒绝在帧面上**只有**
+ #:    `error` + 这三个码这一种形态。少了这张表，`gate_reject_total` 就是一个恒 0 的族，
+-#:    而 §14.5 的"闸门拒绝率按 rule_id 分组"会看起来像"系统从没拦过任何危险 SQL"。
+-_GATE_NO_BY_ERROR_CODE: Final[Mapping[str, GateNo]] = {
+-    ErrorCode.GATE_AST_REJECTED.value: GateNo.AST,
+-    ErrorCode.GATE_POLICY_REJECTED.value: GateNo.POLICY,
+-    ErrorCode.COST_TOO_HIGH.value: GateNo.COST,
+-}
++
+ 
+ #: 停机时下发给客户端的文案（07 §18.3 第 3 步原文给定的字符串）。
+ DRAIN_MESSAGE: Final[str] = "服务重启中，请重试"
+@@ -444,21 +437,18 @@ class _StreamObserver:
+             reason = data["reason"]
+             if reason:
+                 metrics.observe_refuse(RefuseReason(reason))
+-        if event == "error":
+-            code = data.get("code")
+-            gate_no, rule_id = _gate_facts(data)
+-            if gate_no is None and isinstance(code, str):
+-                # 帧上没有 gate_no 是**常态**（`api/errors.map_code` 只在特定角色下才给 detail）
+-                # ⇒ 拒绝码本身就是闸门事实的唯一来源（`_GATE_NO_BY_ERROR_CODE`）。
+-                gate_no = _GATE_NO_BY_ERROR_CODE.get(code)
+-            if gate_no is not None:
+-                metrics.observe_gate_reject_from_payload(gate_no, rule_id)
+-            # ⚠️ 这里**故意不记** `exec_failure_total`。
+-            #    权威且唯一的记录点是 `app/graph/nodes/execute.py::_on_failure`（按 `error.error_class`
+-            #    记全 9 类）。从终止帧的 `ErrorCode` 反推有两个毛病：① 与那里**双计**；
+-            #    ② `app/exec/errors.py` 把 `unknown_column` / `unknown_table` / `type_mismatch` /
+-            #    `unknown_function` / `syntax_error` **五类压成同一个** `SQL_SYNTAX_ERROR` ⇒ 反推出来
+-            #    只会得到一个 `syntax_error`，把四类结构错误伪装成语法错误（§8.9 要的正是要分清它们）。
++        # ⚠️ **`error` 这一格刻意什么都不记**（outcome 已在上面 `_TERMINAL_OUTCOME` 里记过了）。两族同源：
++        # 1) `gate_reject_total` —— **U-125 ②**：唯一记录点是**闸门节点自己**（W4 ①：
++        #    `app/graph/nodes/_shared.py::gate_update`）。从终止帧反推的两个毛病：① 与节点侧**双计**；
++        #    ② error 帧载荷由 `api/errors.map_code` 产出，只有 `code`/`message`/`retryable`
++        #    （`detail` 仅对能处置它的角色开放）⇒ `rule_id` **永远缺位**，全部拒绝会静默落在
++        #    `gate_reject_total{rule_id=""}` 一条序列上 —— 那不是"规则号未知"，而是把
++        #    §14.5"闸门拒绝率按 `rule_id` 分组"整条判据伪装成"载体没给"（09-22 活体实测即如此）。
++        # 2) `exec_failure_total` —— 权威记录点是 `app/graph/nodes/execute.py::_on_failure`（按
++        #    `error.error_class` 记全 9 类）。反推同样两个毛病：① 双计；
++        #    ② `app/exec/errors.py` 把 `unknown_column` / `unknown_table` / `type_mismatch` /
++        #    `unknown_function` / `syntax_error` **五类压成同一个** `SQL_SYNTAX_ERROR` ⇒ 反推出来
++        #    只会得到一个 `syntax_error`，把四类结构错误伪装成语法错误（§8.9 要的正是要分清它们）。
+ 
+     def _violate(self, kind: str) -> None:
+         with contextlib.suppress(Exception):
+@@ -471,22 +461,6 @@ class _StreamObserver:
+         )
+ 
+ 
+-def _gate_facts(data: Mapping[str, Any]) -> tuple[Any, Any]:
+-    """从 `error` 帧载荷里取 `(gate_no, rule_id)`。
+-
+-    两个位置都要看：`gate_no` 可能在顶层，也可能在 §A.11 的 `error.detail` 里
+-    （`detail` 只发给能处置它的角色，所以**多数情况下两处都是空** ——
+-    这正是 `_GATE_NO_BY_ERROR_CODE` 存在的理由）。
+-    """
+-    gate_no = data.get("gate_no")
+-    rule_id = data.get("rule_id")
+-    detail = data.get("detail")
+-    if isinstance(detail, Mapping):
+-        gate_no = gate_no if gate_no is not None else detail.get("gate_no")
+-        rule_id = rule_id if rule_id is not None else detail.get("rule_id")
+-    return gate_no, rule_id
+-
+-
+ # ============================================================================
+ # 中间件
+ # ============================================================================
+diff --git a/backend/app/obs/metrics.py b/backend/app/obs/metrics.py
+index 994d555..f46505d 100644
+--- a/backend/app/obs/metrics.py
++++ b/backend/app/obs/metrics.py
+@@ -129,12 +129,16 @@ UNBOUNDED_FORBIDDEN_LABELS: Final[frozenset[str]] = frozenset(
+ BOUNDED_ALLOWED_LABELS: Final[dict[str, int]] = {
+     "stage": 6,             # 07 §14.3 约束 8
+     "gate_no": 3,           # 1/2/3
+-    "rule_id": 21,          # AST-R01…R20（07 §7.2；§14.2 D1 曾误写 R01…R16，见 U-16）**+ 空值**。
+-                            # ⚠️ 上界曾经写 20：`EMPTY_LABEL_VALUE` 也是一个**不同的序列取值**
++    "rule_id": 26,          # gate1 的 AST-R01…R20（07 §7.2；§14.2 D1 曾误写 R01…R16，见 U-16）
++                            #   + gate2 的 `G2-*` 4 个 + gate3 的 `G3-COST` + **空值** = 26。
++                            #   ⚠️ **U-125 ③**：本值曾经写 21，只覆盖 gate1 的字母表 ⇒ 三闸共用的
++                            #   `GateResult.rule_id: str` 一旦送来 `G2-DENY` 就会被当第 22 个取值处理。
++                            #   ⚠️ 上界曾经写 20：`EMPTY_LABEL_VALUE` 也是一个**不同的序列取值**
+                             #   （"载体本轮没给规则号"），域实际是 21。写 20 的后果不是报错，
+                             #   而是"第 21 个被观测到的取值"静默丢弃 + 记一次 overflow ——
+                             #   丢哪个取决于**到达顺序**，等于给闸门统计装了个随机洞。
+-                            #   不变式由 `tests/unit/test_obs_metrics_cardinality.py` 全局守住。
++                            #   不变式由 `tests/unit/test_obs_metrics_cardinality.py` 全局守住，
++                            #   而"域与 gate2/gate3 字面量是否一致"由 `test_obs_gate_rule_vocabulary.py` 钉。
+     "refuse_reason": 4,     # C-12
+     "degraded_reason": 8,   # C-08
+     "action_taken": 7,      # C-08
+@@ -664,6 +668,21 @@ DEGRADED_TOTAL = register_metric(
+     )
+ )
+ 
++#: gate2 的规则号（**真值在 `app/guard/policy_gate.py` 的 `rule_id="G2-*"` 字面量里**，那边没有枚举）。
++#: ⚠️ 这里是**手抄的第二份**，不是"权威"—— 与源码是否一致由
++#:    `tests/unit/test_obs_gate_rule_vocabulary.py` 扫源码钉住（漏一个就红，不会静默丢序列）。
++#:    ★ 若 W2C/W4 把这几号升成 `app.core.enums` 的成员，本常量应**删除**、改回 `_enum_values(...)` 派生
++#:    （U-125 讨论里记下的收敛方向：本项目一周内为"两处各写一遍"烧过三次）。
++POLICY_RULE_IDS: Final[tuple[str, ...]] = ("G2-ASSET", "G2-DENY", "G2-DOMAIN", "G2-VERSION")
++
++#: gate3 的规则号（真值在 `app/guard/cost_gate.py:161`）。
++COST_RULE_IDS: Final[tuple[str, ...]] = ("G3-COST",)
++
++#: `gate_reject_total{rule_id}` 的完整取值域 = 空值 + 三闸全部规则号（基数上界见 `BOUNDED_ALLOWED_LABELS`）。
++GATE_REJECT_RULE_IDS: Final[tuple[str, ...]] = (
++    EMPTY_LABEL_VALUE, *_enum_values(AstRule), *POLICY_RULE_IDS, *COST_RULE_IDS
++)
++
+ GATE_REJECT_TOTAL = register_metric(
+     _MetricSpec(
+         "gate_reject_total",
+@@ -673,7 +692,11 @@ GATE_REJECT_TOTAL = register_metric(
+         labels=("gate_no", "rule_id"),
+         domains={
+             "gate_no": tuple(str(int(gate)) for gate in GateNo),
+-            "rule_id": (EMPTY_LABEL_VALUE, *_enum_values(AstRule)),
++            # ★ U-125 ③：旧写法是 `(EMPTY_LABEL_VALUE, *_enum_values(AstRule))` —— **只有 gate1 的字母表**。
++            #   载体 `GateResult.rule_id`（`core/contracts.py:137`）是三闸通用 `str` ⇒ gate2/gate3 的号
++            #   会被"域外丢弃"或（更早在 `observe_gate_reject_from_payload` 里）被 `AstRule(...)` 转换失败
++            #   **静默改写成空值** ⇒ 看板上表现为"闸门拦了很多次，但一次都没有规则号"。
++            "rule_id": GATE_REJECT_RULE_IDS,
+         },
+     )
+ )
+@@ -959,29 +982,35 @@ def observe_degraded(reason: DegradedReason, action_taken: ActionTaken) -> None:
+     DEGRADED_TOTAL.inc(reason=reason.value, action_taken=action_taken.value)
+ 
+ 
+-def observe_gate_reject(gate_no: GateNo, rule_id: AstRule | None = None) -> None:
+-    """闸门拒绝计数。`rule_id` 缺位时落在 `rule_id=""` 序列（= 载体未给规则号）。"""
+-    GATE_REJECT_TOTAL.inc(gate_no=str(int(gate_no)), rule_id=rule_id.value if rule_id else EMPTY_LABEL_VALUE)
++def observe_gate_reject(gate_no: GateNo, rule_id: AstRule | str | None = None) -> None:
++    """闸门拒绝计数。**唯一合法调用点 = 闸门节点自己**（U-125 ①，W4：`nodes/_shared.py::gate_update`）。
++
++    `rule_id` 缺位才落在 `rule_id=""` 序列（= 载体未给规则号）。⚠️ 参数放宽成 `str` 是必须的：
++    节点手上拿的是 `GateResult.rule_id: str`（三闸共用，`core/contracts.py:137`），
++    旧签名只吃 `AstRule` ⇒ gate2/gate3 的号在入口就被折成空值。
++    """
++    value = rule_id.value if isinstance(rule_id, AstRule) else (rule_id or EMPTY_LABEL_VALUE)
++    GATE_REJECT_TOTAL.inc(gate_no=str(int(gate_no)), rule_id=value)
+ 
+ 
+ def observe_gate_reject_from_payload(gate_no: object, rule_id: object) -> bool:
+     """从帧载荷（任意 `dict`）安全取值的入口。返回 `False` = 取值不合法、未计数。
+ 
+-    刻意不抛：帧载荷来自图内部，一个字段形状不对不该把观测器连带打挂，
+-    而"没计数"必须能被调用方记成一条日志。
++    ⚠️ **U-125 ② 之后本函数只作兜底**：帧面上根本没有 `rule_id`（`api/errors.map_code` 的载荷
++    只有 `code`/`message`/`retryable`），而 `ObservingMiddleware` 已不再记这一族 ⇒ 保留是为了给
++    非图内调用方（评测/演练）一个不抛的入口，且域外的字符串会**被丢弃并计 overflow**，
++    不再被静默改写成 `""`（旧写法用 `AstRule(rule_id)` 试转换、失败置 `None` ⇒
++    `G2-DENY` 会变成"载体没给规则号"，那正是本项要修的失效方式）。
+     """
+     try:
+         gate = GateNo(int(str(gate_no)))
+     except (TypeError, ValueError):
+         return False
+-    rule: AstRule | None = None
+-    if isinstance(rule_id, str) and rule_id:
+-        try:
+-            rule = AstRule(rule_id)
+-        except ValueError:
+-            rule = None
++    rule = rule_id if isinstance(rule_id, str) and rule_id else None
++    ok_rule = rule is None or rule in GATE_REJECT_RULE_IDS
++    # 无条件调用：域外的值由 `_MetricSpec` 走"丢弃 + 记一次 overflow"，越界本身必须可观测。
+     observe_gate_reject(gate, rule)
+-    return True
++    return ok_rule
+ 
+ 
+ def observe_exec_failure(error_class: str) -> None:
+diff --git a/backend/tests/contract/test_obs_audit_contract.py b/backend/tests/contract/test_obs_audit_contract.py
+index 4ee4b4a..8c39ff6 100644
+--- a/backend/tests/contract/test_obs_audit_contract.py
++++ b/backend/tests/contract/test_obs_audit_contract.py
+@@ -175,18 +175,30 @@ def test_allowed_labels_have_declared_cardinality_caps() -> None:
+     assert not missing, f"以下标签缺基数上限：{missing}"
+ 
+ 
+-def test_rule_id_label_cap_matches_ast_rule_count() -> None:
+-    """`rule_id` 的上限 = AST 规则条数（20，U-16 口径）**+ 空值**。
+-
+-    ⚠️ 原来写的是 `== len(AstRule)`（=20），而 `GATE_REJECT_TOTAL` 的**域**是
+-    `(EMPTY_LABEL_VALUE, *AstRule)` = 21 个不同取值。上界等于规则条数看着对称，实际少一：
+-    `_admits()` 会在"第 21 个被观测到的取值"上静默丢弃并记 overflow，
+-    **丢哪一个取决于到达顺序** —— 不是"某一类拒绝统计不到"，是"随机一类统计不到"。
+-    这条 `+1` 现在由 `tests/unit/test_obs_metrics_cardinality.py` 的全局不变式统一守住。
++def test_rule_id_label_cap_equals_the_declared_domain() -> None:
++    """`rule_id` 的上界必须**恰好等于指标侧声明的域大小**，且域要覆盖三闸 + 空值。
++
++    ⚠️ 本用例的前一版写的是 `== len(AstRule) + 1` —— 把"21"这个数字的**推导过程**又抄了一遍字面量，
++    恰好犯了它自己 docstring 里点名的病（"上界看着对称，实际少一 ⇒ 随机丢一类"）。
++    **U-125 ③ 之后那个式子也失效了**：`GateResult.rule_id` 是三闸共用的 `str`，字母表 =
++    AST 的 R01…R20 + gate2 的 `G2-*` + gate3 的 `G3-COST` + 空值 = 26，
++    再按"AST 条数 +1"写就会把 gate2/gate3 的号挡在域外。
++    ⇒ 现在唯一的真相来源是指标自己的 `spec.domains`，本用例只钉两件事：
++    ① 上界 == 域大小（谁改了域忘了改上界 ⇒ 红）；② 域确实覆盖三闸与空值（谁收窄了域 ⇒ 红）。
+     """
+     from app.core.enums import AstRule
+ 
+-    assert metrics.BOUNDED_ALLOWED_LABELS["rule_id"] == len(AstRule) + 1
++    domain = set(metrics.GATE_REJECT_TOTAL.spec.domains["rule_id"])
++    cap = metrics.BOUNDED_ALLOWED_LABELS["rule_id"]
++
++    assert cap == len(domain), (
++        f"上界 {cap} ≠ 域大小 {len(domain)} ⇒ 差的那几个取值会被静默丢弃 + 记一次 overflow，"
++        "而丢哪一个取决于到达顺序"
++    )
++    assert "" in domain, "空值 = '载体本轮未给规则号'，是有语义的一个取值，必须在域里"
++    assert {rule.value for rule in AstRule} <= domain, "gate1 的字母表被收窄了"
++    assert set(metrics.POLICY_RULE_IDS) <= domain, "gate2 的规则号被挡在域外"
++    assert set(metrics.COST_RULE_IDS) <= domain, "gate3 的规则号被挡在域外"
+ 
+ 
+ # ---------------------------------------------------------------------------
+diff --git a/backend/tests/contract/test_obs_frame_format.py b/backend/tests/contract/test_obs_frame_format.py
+index 629ead1..a438435 100644
+--- a/backend/tests/contract/test_obs_frame_format.py
++++ b/backend/tests/contract/test_obs_frame_format.py
+@@ -170,18 +170,28 @@ async def test_drain_bytes_reach_the_client_and_count_as_failed() -> None:
+     assert registry.count() == 0, "中止后必须从在途表里摘掉，否则 drain 永远等不完"
+ 
+ 
+-def test_gate_code_copy_matches_the_graph_verdict_table() -> None:
+-    """L1 那份"闸门拒绝码 → 闸门编号"必须与 L4 的判定表**逐项相等**（R-DEP-1 不许 import）。
++def test_frame_side_no_longer_mirrors_gate_codes() -> None:
++    """**U-125 ② 的反向哨兵**：`app/obs/instrumentation.py` 里不得再有"闸门拒绝码 → 闸门编号"的副本。
+ 
+-    漂移的后果不是报错，而是**归错闸门**：例如 `COST_TOO_HIGH` 从表里漏掉，
+-    闸门三的全部拒绝会静默落到 `gate_no=""`（= 不计数），看板上的成本闸门曲线归零，
+-    而"闸门工作正常"这个结论仍然看起来成立。
++    本用例的前一版比的是"两份表逐项相等"（L1 的镜像 vs L4 的 `_GATE_CODE`）—— 那本身就是
++    "两处各写一遍"的形状，而这个项目为同款病害烧过三次。镜像被删之后若再写"两份相等"，
++    等于把已经消失的耦合留在测试里，所以下面改成断言**它不许回来**：
++
++    为什么不能回来：帧面上的 `error` 载荷根本没有 `rule_id`（`api/errors.map_code` 只给
++    `code`/`message`/`retryable`）⇒ 从码反推只能产出 `gate_reject_total{rule_id=""}`，
++    把 §14.5"按 rule_id 分组"伪装成"载体没给"。唯一记录点 = 闸门节点（W4 ①：
++    `app/graph/nodes/_shared.py::gate_update`，先例 `execute.py::_on_failure`）。
+     """
+-    from app.graph.nodes import error_out
++    import inspect
++
++    from app.obs import instrumentation
+ 
+-    mirrored = {code: gate for gate, code in error_out._GATE_CODE.items()}
+-    assert dict(instrumentation._GATE_NO_BY_ERROR_CODE) == mirrored, (
+-        "`app/graph/nodes/error_out.py::_GATE_CODE` 与本文件的镜像不一致 ⇒ 闸门拒绝会计错编号"
++    src = inspect.getsource(instrumentation)
++    assert "_GATE_NO_BY_ERROR_CODE" not in src, (
++        "帧侧的闸门码镜像表回来了 ⇒ 会与闸门节点侧的唯一记录点双计"
++    )
++    assert "observe_gate_reject" not in src, (
++        "观测器又开始记 gate_reject_total ⇒ 唯一记录点不再唯一（U-125 ②）"
+     )
+ 
+ 
+diff --git a/backend/tests/unit/test_obs_gate_rule_vocabulary.py b/backend/tests/unit/test_obs_gate_rule_vocabulary.py
+new file mode 100644
+index 0000000..cecef23
+--- /dev/null
++++ b/backend/tests/unit/test_obs_gate_rule_vocabulary.py
+@@ -0,0 +1,110 @@
++"""U-125 ③ 的哨兵：`gate_reject_total{rule_id}` 的取值域 ⟷ 闸门源码里的规则号字面量。
++
++**为什么要一条测试而不是一段注释**：gate2/gate3 的规则号在 `app/guard/` 里是**裸字面量**
++（没有枚举），而指标侧的域是 `metrics.py` 里手抄的一份 ⇒ 两处各写一遍、漂移无感 ——
++这正是本项目一周内烧过三次的那件事（U-122 判据②、W0 的夹具 DSN 哨兵都是同一味药）。
++本测试用**源码扫描**钉住相等：W2C 新增一个 `G2-*` 而没同步指标侧 ⇒ 这里当场红，
++而不是等到看板上"闸门拦了 500 次、一次都没有规则号"才发现。
++
++⚠️ 收敛方向（本测试刻意不实现）：若这几号升成 `app.core.enums` 的成员，`POLICY_RULE_IDS`/`COST_RULE_IDS`
++应当**删除**、改回 `_enum_values(...)` 派生，本文件随之作废（届时删掉并在 U-125 留痕）。
++"""
++
++from __future__ import annotations
++
++import ast
++import os
++import re
++
++import pytest
++
++from app.obs import metrics
++
++_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
++
++#: (源码相对路径, 该文件属于哪一闸, 指标侧对应的声明)
++_SOURCES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
++    (os.path.join("app", "guard", "policy_gate.py"), "gate2", metrics.POLICY_RULE_IDS),
++    (os.path.join("app", "guard", "cost_gate.py"), "gate3", metrics.COST_RULE_IDS),
++)
++
++
++@pytest.fixture(autouse=True)
++def _clean_registry() -> object:
++    """每个用例前后都清注册表 ⇒ 本文件的计数断言不依赖其它用例留下的序列。"""
++    metrics.reset_for_tests()
++    yield
++    metrics.reset_for_tests()
++
++
++def _rule_id_literals(rel: str) -> set[str]:
++    """收集该模块里所有形如 `G2-*` / `G3-*` 的字符串常量。
++
++    ⚠️ **为什么不盯 `rule_id=<字面量>` 这一种形状**（本测试第一版就是这么写的）：
++    `policy_gate.py` 里只有 `G2-DOMAIN` 走关键字实参，另外三个走 `_reject("G2-ASSET", reason, scope)`
++    的**位置实参** ⇒ 只扫关键字会漏三个，而这恰好是最坏的一种失败 —— **测试看起来是绿的**。
++    漏扫比误报危险，所以退到"按号的形状收集"：`^G[23]-[A-Z]+$`。
++    代价：闸门源码的**文案**里若出现同形字符串会被一起收进来 ⇒ 那条会在上面的相等断言里红，
++    而不是静默漏掉。gate1 不在本函数职责内（它有 `AstRule` 枚举，指标侧由 `_enum_values` 派生）。
++    """
++    pattern = re.compile(r"^G[23]-[A-Z]+$")
++    with open(os.path.join(_ROOT, rel), encoding="utf-8") as fh:
++        tree = ast.parse(fh.read())
++    return {
++        node.value
++        for node in ast.walk(tree)
++        if isinstance(node, ast.Constant)
++        and isinstance(node.value, str)
++        and pattern.match(node.value)
++    }
++
++
++@pytest.mark.parametrize("rel,gate,declared", _SOURCES, ids=["gate2", "gate3"])
++def test_source_rule_id_literals_equal_the_declared_domain(
++    rel: str, gate: str, declared: tuple[str, ...]
++) -> None:
++    seen = _rule_id_literals(rel)
++    assert seen, f"{rel} 里一个 rule_id 字面量都没扫到 ⇒ 扫描方式过期了，本测试正在**假绿**"
++    assert seen == set(declared), (
++        f"{gate} 的规则号漂移：源码 {sorted(seen)} vs 指标侧 {sorted(declared)} ⇒ "
++        "少的那个会被域校验丢弃，看板曲线上这一格静默归零"
++    )
++
++
++def test_domain_covers_three_gates_plus_empty_and_fits_the_ceiling() -> None:
++    """域 = 空值 + gate1 全字母表 + gate2 + gate3，且**基数上界装得下**。
++
++    上界写小的后果不是报错，而是"第 N+1 个合法取值被静默丢弃 + 记一次 overflow"，
++    且丢哪个取决于到达顺序（`metrics.py` 里那条 20→21 的旧注释写的就是同一件事）。
++    """
++    domain = metrics.GATE_REJECT_TOTAL.spec.domains["rule_id"]
++    assert domain == metrics.GATE_REJECT_RULE_IDS
++    assert "" in domain, "空值 = '载体本轮未给规则号'，是有语义的取值，必须在域里"
++    assert set(metrics.POLICY_RULE_IDS) <= set(domain)
++    assert set(metrics.COST_RULE_IDS) <= set(domain)
++    assert len(set(domain)) <= metrics.BOUNDED_ALLOWED_LABELS["rule_id"], (
++        f"域宽 {len(set(domain))} > 上界 {metrics.BOUNDED_ALLOWED_LABELS['rule_id']} ⇒ 随机洞"
++    )
++
++
++def test_gate2_rule_id_is_not_blanked_into_the_empty_series() -> None:
++    """正向对照（旧写法在这条上会红）：`G2-DENY` 进来，就必须落在自己那条序列上。
++
++    旧实现 `observe_gate_reject_from_payload` 用 `AstRule(rule_id)` 试转换、`ValueError` 即置
++    `None` ⇒ 三闸的号全被折进 `rule_id=""`，看板上读成"闸门拦过、但没有规则号"。
++    """
++    assert metrics.observe_gate_reject_from_payload(2, "G2-DENY") is True
++    assert metrics.GATE_REJECT_TOTAL.value(gate_no="2", rule_id="G2-DENY") == 1
++    assert metrics.GATE_REJECT_TOTAL.value(gate_no="2", rule_id="") == 0, (
++        "空值序列被顺带 +1 ⇒ 本项要消灭的正是这个混淆"
++    )
++
++
++def test_out_of_domain_rule_id_is_dropped_and_counted_as_overflow() -> None:
++    """脏值不得冒充"载体没给"：返回 False、不落序列、但溢出计数要 +1（越界必须可观测）。"""
++    assert metrics.observe_gate_reject_from_payload(1, "NOT_A_REAL_RULE") is False
++    assert metrics.GATE_REJECT_TOTAL.value(gate_no="1", rule_id="NOT_A_REAL_RULE") == 0
++    assert metrics.GATE_REJECT_TOTAL.value(gate_no="1", rule_id="") == 0, (
++        "域外值被计入空值序列 ⇒ '载体没给'与'取值不合法'两件事又被并成一件"
++    )
++    assert metrics.METRIC_LABEL_OVERFLOW_TOTAL.value(metric="gate_reject_total") == 1
+diff --git a/backend/tests/unit/test_obs_instrumentation.py b/backend/tests/unit/test_obs_instrumentation.py
+index 16a24a1..32dddb1 100644
+--- a/backend/tests/unit/test_obs_instrumentation.py
++++ b/backend/tests/unit/test_obs_instrumentation.py
+@@ -237,13 +237,18 @@ async def test_terminal_event_counts_outcome_and_refuse_reason() -> None:
+     assert _sample("refuse_total", reason="out_of_scope") == 1
+ 
+ 
+-async def test_gate_reject_is_counted_from_the_rejection_code() -> None:
+-    """闸门拒绝在**帧面上**只有 `error` + 拒绝码这一种形态（C-12），所以码就是来源。
+-
+-    ⚠️ 这条断言钉的是一个真实缺陷的第一版：观测器原本只查载荷里的 `gate_no`/`rule_id`，
+-    而 `api/errors.map_code` 产出的 error 载荷只有 `code`/`message`/`retryable`
+-    （`detail` 仅对特定角色开放）⇒ `gate_reject_total` 会成为一个**恒 0 的族**，
+-    而"系统从没拦过危险 SQL"恰恰是 §15.4 最想发现的问题。
++async def test_error_frame_does_not_count_gate_rejections_anymore() -> None:
++    """**U-125 ②**：闸门拒绝的唯一记录点是**闸门节点自己**（W4 ①），不是这里。
++
++    旧写法（本用例的前一版）从 `error` 帧的拒绝码反推 `(gate_no, rule_id)` 并计数，
++    当时给的理由是"帧面只有 `code`/`message`/`retryable`，不反推就恒 0"。
++    **那个前提指错了地方** —— 缺 `rule_id` 的是**帧**，不是**节点**（节点手上
++    `GateResult.rule_id` 是现成的）。反推的实际后果是全部拒绝挤进
++    `gate_reject_total{rule_id=""}` 一条序列 ⇒ §14.5"按 rule_id 分组"被伪装成"载体没给"
++    （09-22 活体实测：`gate_no="1"` +1、`rule_id` 恒空）。
++
++    ⚠️ 判据写成 `total() == 0` 而不是"序列有没有出现"：本模块会为整个取值域
++    **预生成 0 值序列**（零值导出纪律），用"缺席"判"没记过事"会永远红。
+     """
+     await _run(
+         [
+@@ -255,12 +260,14 @@ async def test_gate_reject_is_counted_from_the_rejection_code() -> None:
+             _final(),
+         ]
+     )
+-    # rule_id 落空值 = "载体本轮没给规则号"（EMPTY_LABEL_VALUE 的既定语义，不是"未知规则"）
+-    assert _sample("gate_reject_total", gate_no="1", rule_id="") == 1
+     assert _sample("query_outcome_total", outcome="failed") == 1
++    assert metrics.GATE_REJECT_TOTAL.total() == 0, (
++        "帧面又记了闸门拒绝 ⇒ 与闸门节点侧的唯一记录点双计（U-125 ②）"
++    )
+ 
+ 
+-async def test_cost_gate_rejection_maps_to_gate_three() -> None:
++async def test_cost_terminal_counts_outcome_but_not_the_gate() -> None:
++    """`COST_TOO_HIGH` 同族：outcome 记、闸门拒绝不记（防"只有第三闸被改回来"）。"""
+     await _run(
+         [
+             _START,
+@@ -268,8 +275,8 @@ async def test_cost_gate_rejection_maps_to_gate_three() -> None:
+             _final(),
+         ]
+     )
+-    assert _sample("gate_reject_total", gate_no="3", rule_id="") == 1
+-    assert _sample("gate_reject_total", gate_no="1", rule_id="") == 0
++    assert _sample("query_outcome_total", outcome="failed") == 1
++    assert metrics.GATE_REJECT_TOTAL.total() == 0
+ 
+ 
+ async def test_error_frame_with_sql_code_does_not_double_count_exec_failure() -> None:
