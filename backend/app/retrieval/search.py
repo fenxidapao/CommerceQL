@@ -15,6 +15,10 @@
   选了"不放大降级"，如架构有裁定再改）；
 - 租户过滤：dense/sparse 的 SQL 层强制（N-10）；value/graph 消费公共语义包，
   无租户维度数据（见 value.py 模块注释）。
+- **检索模式埋点**（`retrieval_mode_total`，本模块是**唯一**调用点，RL-2 的缺口就在这一行）：
+  只在**真的执行了检索**的那一轮计一次，标签取**实际**档 `effective_mode`；
+  **空问题轮与缓存命中轮刻意不计**（前者没发生检索，后者没调 embedding 且降级轮不写缓存）
+  —— 计进去会让降级率的分母失真（本项目的"假分母"已被点过两次名）。
 
 ## 契约缺口（Q2，已登记待架构裁定）
 
@@ -35,6 +39,7 @@ import orjson
 from app.cache.keys import DEFAULT_TTL_S, semantic_retrieval
 from app.core.contracts import CandidateRef, IdentityContext
 from app.core.enums import ActionTaken, DegradedReason, RetrievalMode
+from app.obs.metrics import observe_retrieval_mode
 from app.retrieval.dense import EmbeddingUnavailable, VectorStore
 from app.retrieval.fuse import (
     ROUTE_DENSE,
@@ -119,6 +124,8 @@ class RetrievalService:
         （HYBRID 请求在稠密失败后实际执行 SPARSE_ONLY，C-11 要求如实回填）。
         """
         if not question.strip():
+            # ⚠️ 此处**不计** `retrieval_mode_total`：空问题没有发生检索，
+            #    计进分母会把"降级率"稀释成"含空问的比率"（假分母）。
             return RetrievalResult(
                 mode=mode, candidates=(), columns=(), metrics=(),
                 value_hits=(), graph_hits=(),
@@ -133,6 +140,9 @@ class RetrievalService:
         if self._cache is not None:
             raw = await self._cache.get(cache_key)
             if raw is not None:
+                # ⚠️ 此处**不计** `retrieval_mode_total`：缓存命中没有调用 embedding，
+                #    而降级轮**从不写缓存**（见模块 docstring）⇒ 把缓存命中记成 `hybrid`
+                #    会**系统性低估** embedding 降级率（RL-2 的分子分母都会失真）。
                 return self._result_from_cache(orjson.loads(raw))
 
         # ① 稠密（失败 → 显式降级，N-21：不静默）
@@ -224,6 +234,12 @@ class RetrievalService:
                 self._result_to_cache(result),
                 ttl_s=DEFAULT_TTL_S["semantic_retrieval"],
             )
+        # ⑨ 检索模式埋点（RL-2 的唯一缺口，W7 派单；本模块是**唯一**调用点）：
+        #    只在本轮**真的执行了检索**时计一次，且用**实际**执行档 `effective_mode`
+        #    （= C-11 的"如实回填"：HYBRID 请求在稠密失败后记 `sparse_only`）。
+        #    ⇒ `retrieval_mode_total{sparse_only} / sum(...)` = embedding 降级率。
+        #    ⚠️ 两条早退路径刻意不计（各自写在上面的注释里）—— 它们会让分母失真。
+        observe_retrieval_mode(effective_mode)
         return result
 
     # ------------------------------------------------------------------

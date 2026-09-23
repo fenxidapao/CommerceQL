@@ -71,7 +71,7 @@ PromQL `histogram_quantile` 口径与库一致。
 |---|---|---|---|
 | 图节点耗时 Histogram `node`(≤20) | —— | **未采**，且本文件**不登记**同名指标（登记了恒 0 = 假仪表） | 帧里没有节点名；`app/graph/build.py` 的节点包装器需要一个观测钩子（W4 域），需求见 `reports/w7/RELAY.md`。本期用 `stage_duration_seconds{stage}` 承接诊断粒度 |
 | token 计量 `llm_tokens_total{token_key}` | A | 本体在、**无调用点** → 导出 4 条恒 0 序列 | token 用量在 `app/llm`（W3A 域）的响应里，需一行 `observe_llm_tokens(...)`；§15.4 第 7 条（token/请求 周环比）与缓存命中率屏因此**无数据源** |
-| 检索模式 `retrieval_mode_total{retrieval_mode}` | A | 本体在、**无调用点** → 导出恒 0 序列 | 检索器返回的 `mode` 在 `app/retrieval`（W2B 域），需一行 `observe_retrieval_mode(...)`；§18.7 的"检索降级率"判据因此只能读探针与 `meta.retrieval_mode` |
+| 检索模式 `retrieval_mode_total{retrieval_mode}` | A | **已接线**（W2B，2026-09-23：`app/retrieval/search.py::search_full` 末尾一行） | 原缺的 `observe_retrieval_mode(...)` 已落（W7 派单）。**口径（引用前必读）**：分母 = **真的尝试过 embedding 的轮次** —— 空问题轮与缓存命中轮**刻意不计**（后者计进去会稀释降级率，而"被缓存兜住的降级轮"在用户侧无影响）；标签取**实际**执行档（C-11），**不是**请求档。⚠️ 遗留边界：**请求** SPARSE_ONLY 与**降级**出的 SPARSE_ONLY 同标签不可区分 —— 线上唯一调用点 `app/graph/nodes/link.py` 写死 HYBRID，故当前成立；将来若有调用方拿真检索器请求 SPARSE_ONLY（eval / A-B / fast mode），须先处理否则成**假分子** |
 | 首次成功率 / 平均纠错轮次 `gen_sql_rounds_total` | A | 本体在、**无调用点** → 导出恒 0 序列 | 需要按 `sql_ready` 帧计数（观测器看得到帧但**刻意没记**：轮次语义归 `app/graph`，避免把"帧数"冒充"纠错轮次"），需求见 RELAY |
 | 反馈"有误"率 `feedback_reason_total{reason_code}` | A | 本体在、**无调用点** → 导出 10 条恒 0 序列 | 反馈落 `feedback` 表（W1B 域），需 feedback 表采样器；§15.3 未给它目标值 |
 | JSON 解析失败率 `llm_json_parse_failure_total` | B | 本体在、**无调用点** → **整族不输出** | `MetricsSink` 只在成功时回调；失败分支在 `app/llm`（W3A 域）内，需一行 `observe_json_parse_failure(...)` |

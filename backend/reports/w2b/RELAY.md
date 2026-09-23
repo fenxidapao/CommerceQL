@@ -543,5 +543,74 @@ gap 声明进入了摘要（'指标口径目录' 出现） : True
 - **"跑前+跑后各测一次原句 SQL"已列为固定动作**（W7 要求，两次都以 `select count(*),count(embedding),count(tsv) from app.embed_doc` 不换口径执行）。
 - 证据：`_w2b_repour_20260922b.log`（工作区根，**仓外**）。
 
+---
+
+## 14. RL-2 接线回执：`observe_retrieval_mode()` 落地（2026-09-23，响应 W7 第⑤条派单②）
+
+**一句话**：接线已落，口径按"分母 = **真的尝试过 embedding 的轮次**"钉死，并附**正向对照**（注入必红 / 还原必绿）与**导出面自证**（`/metrics` 文本真出现该序列）⇒ `retrieval_mode_total` 从"本体在、**无调用点**"进入**可引用**状态。
+
+### 14.1 改动（三处）
+
+| 文件 | 改什么 |
+|---|---|
+| `app/retrieval/search.py` | **唯一一行接线**：`search_full` 末尾 `observe_retrieval_mode(effective_mode)`（`search()` 只是它的薄封装 ⇒ 不重复计）；模块 docstring 增"检索模式埋点"职责条；两条早退路径各加"不计"注释（含理由） |
+| `tests/unit/test_retrieval_search.py` | **10 → 17 条**：计数 / **实际档 vs 请求档** / 降级率可算 / 两条早退不计 / 契约面只计一次 / **导出面自证** / 口径边界登记；另加 autouse 指标复位夹具（用仓内公共助手 `metrics.reset_for_tests()`，不碰私有 `_reset`） |
+| `app/obs/metrics.py` | **只改一行文档**：§"未接线项"表里检索模式那一行 → 改为**已接线** + 口径 + 遗留边界。⚠️ 这是 W7 域文件，若判"不该动"，**回退这一行即可，不影响功能**（代码零改动） |
+
+### 14.2 口径（引用前必读；已写进 `metrics.py` 那一行）
+
+- **分母 = 真的尝试过 embedding 的轮次**。两条早退**刻意不计**：
+  - **空问题轮**：没发生检索 ⇒ 计进去会把降级率**稀释**成"含空问的比率"；
+  - **缓存命中轮**：没调 embedding，且**降级轮从不写缓存** ⇒ 记成 `hybrid` 会**系统性低估**降级率（分子分母双失真）。
+    - 副作用（**有意**，已登记）：本指标**看不见"被缓存兜住的降级轮"**。这是对的 —— 那种轮次在用户侧**无影响**，不该污染依赖健康度读数。
+- **标签 = 实际执行档**（`effective_mode`），**不是**请求档（C-11）。记请求档 ⇒ 降级率**永远是 0**，正好把 RL-2 要发现的病抹掉。
+
+### 14.3 判据与正向对照（arch 要求"注入必红"）
+
+- **正向对照（本轮实测）**：把那一行注释掉 ⇒ `pytest tests/unit/test_retrieval_search.py` = **7 failed / 10 passed**，红的**恰好是 7 条新用例**、10 条旧用例**全绿**（归因干净）；还原 ⇒ **17 passed**，且 `POSITIVE-CONTROL-TEMP` 标记已核为 0 处。
+- **导出面自证**：跑完一轮后断言 `'retrieval_mode_total{retrieval_mode="hybrid"} 1' in render_prometheus_text()`。**与计数断言刻意分开** —— 本项目被"计数 ≠ 可读"咬过一次（物化 197 行、向量却全 NULL）。
+- **可计算性**：健康 1 轮 + 降级 1 轮 ⇒ `{sparse_only} / 全体 = 1/2`（不再是 0/0）。
+
+### 14.4 ⚠️ 遗留口径边界（我主动登记，不靠"没人会这么调"糊过去）
+
+**请求** SPARSE_ONLY 与**降级**出的 SPARSE_ONLY **同标签、不可区分**。
+当前成立的理由（**已核，非假设**）：生产唯一调用点 `app/graph/nodes/link.py:61` 的 `_REQUESTED_MODE` **写死 `RetrievalMode.HYBRID`** ⇒ 线上 `sparse_only` 序列**只可能**来自降级。
+风险：若将来 eval / A-B / fast-mode 拿**真** `RetrievalService` 请求 SPARSE_ONLY，该序列立刻变成"请求 + 降级"混合 = **假分子**（本项目已两次栽在假分子/假分母上）。⇒ 届时二选一：加区分标签（需架构裁定）或把这类调用导到不注册指标的替身。（`eval/harness.py` 现为自带替身，不调真服务 ⇒ 暂无污染。）
+
+### 14.5 门禁读数（本窗口实测）
+
+- `ruff check .` = All checks passed；`mypy app` = **147 files / 0 issues**；`lint-imports` = **4 kept / 0 broken**。
+- `pytest tests/unit tests/contract` = **1824 passed / 0 failed**（该文件 10 → 17）。
+- `tests/integration` **未跑**（U-114 面 + W7 正在跑批 ⇒ 本窗口全程**零 DB**，不重灌）。
+- ⚠️ 顺带一条**假红**陷阱（这次差点误判）：pytest 收尾清理 `%TEMP%\pytest-of-*` 垃圾目录时会被本机 safe-delete 钩子拦（该次 86 个文件 > 阈值 50），表现为 **exit=1 + 满屏点阵 + 无 summary 行** —— 只看退出码会读成"测试失败"。规避 = `--basetemp=<工作区路径>`。**同一批用例换 basetemp 即 `exit 0 / 1824 passed`**，归因可复现。
+- `ruff format --check` 仍未纳入门禁；我这两个文件**在 HEAD 就已不合**（已用 `git show HEAD:` 的副本对照确认：`search.py` 同 4 处、测试文件同 5 处），**本次只新增 2 处同风格**（未顺手全局重排，避免把 W2B 文件的大 diff 混进本轮）。
+
+### 14.6 未做 / 需要配合
+
+- **不重灌**：遵你第⑤条③，跑批期间暂停任何重灌；本窗口本轮未碰库。
+- "52 次"那一格我不再复算（你已按"带时刻两读差分"结案：`15:17→19:43 = 21`、`19:43→次日 15:57 = 0`）。
+- 复现命令（零成本，零 DB）：`cd backend && ../.venv/Scripts/python.exe -m pytest tests/unit/test_retrieval_search.py -q`
+
+### 14.7 顺带订正一条**过期读数**：arch RELAY 记的"三族零调用点"现只剩一族
+
+arch RELAY（`REFERENCE.md:203` 转记的那条）写的是 `binding_state_total` / `binding_layer_total` / `retrieval_mode_total` **三族零调用点**。本窗口 2026-09-23 17:1x 现读：
+
+| 指标 | 调用点 | 现状 |
+|---|---|---|
+| `binding_state_total` | `app/api/deps.py:563` | **已有**（不是零） |
+| `binding_layer_total` | `app/api/deps.py:564` | **已有**（不是零） |
+| `retrieval_mode_total` | `app/retrieval/search.py:242` | **本轮补上** |
+
+⇒ **此后这条读数按"三族皆已接线"记**（W7 若要引用"零调用点"结论，请改用带时刻的现读）。`app/binding/__init__.py:52` 也把这两条写进了契约说明 —— 与该现读一致。
+
+---
+
+## 15. 一条**重踩**提醒：`python -m importlinter.cli lint-imports` = 静默假绿（**不是新发现**，U-41 在案）
+
+- 现象：exit **0**、**零输出**。我第一遍就是这么"验绿"的，差点把"无输出"读成"契约通过"。机制 = `importlinter/cli.py` **无 `if __name__ == "__main__"` 块** ⇒ `-m` 只 import、不执行。
+- 正解：`./.venv/Scripts/lint-imports.exe`（读 `.importlinter`）⇒ 输出 `Contracts: 4 kept, 0 broken.`。CI 另有 `grep -q "Contracts: "` 守卫（`ci.yml:269-278`）。
+- **这不新**：`U-41` 在案、README 已注明、CI 已设守卫 —— 我记它的唯一价值 = **"没输出"不等于"绿"**（这次我是在**已经知道**这条规则的情况下又踩了一次）。
+
+
 
 
