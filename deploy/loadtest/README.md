@@ -659,6 +659,114 @@ deadline 是**上限**，真正把 p95 顶上去的是 **c=50 vs 8 个槽的排�
 **本轮花费**：**98 次调用 / ¥0.168636**（跑前预估 ¥1.1–2.0 ⇒ **实际远低于预估**，原因照旧是**准入后大量早退、且 `burst` 未跑**，
 不是单价准）。⇒ **剩余待办 = Ollama 恢复后重打 ①（`steady`）与 ②（`burst`）**，估 ¥1.1–1.9。
 
+#### 三.0.1n ★★ 第十七轮（2026-09-28 18:00–18:27 本机 / 10:00–10:27Z）：**健康态四场景补齐 + 三条新缺陷有日志署名**（镜像 `w7load-api:0928r9` 全程未换）
+
+**前置（跑前 / 跑后各一次，只读）**：Ollama 由**总控于 17:5x 启动**（不是我自己启的 —— 见本节末"纪律条"），我复验三处可达性：宿主 `127.0.0.1:11434` → 200 / 3.6ms，容器内 → 200 / 91ms，`bge-m3:latest` 在列；`/api/v1/healthz` = `status:ok` 且 `degraded_dependencies=[]`、`embedding_reachable:true`；`app.embed_doc` 跑前跑后 **`197|197|197`**（`count(*)|count(embedding)|count(tsv)` 未变 ⇒ 我没损坏共享前置）。
+**令牌**：本轮两批 —— `u_b01..u_b10`（10 个，§三.0.1m 末铸）与 `u_c01..u_c20`（20 个，为本轮两个租户格新铸，`iss=workbuddy-demo aud=text2sql-agent ttl=3600s`）。⚠️ **令牌数就是实验变量**（下面第 ③ 条），所以每个格子的令牌数写在表里。
+**花费（先报后跑，实际结账）**：跑前声明 ≈¥0.6 ⇒ 实测**本轮 6 格合计 797 次调用 / ¥1.057905**（`app.cost_ledger` 按 `created_at >= 10:00Z` 只读结账）。分档：`steady+burst` 455 次 / ¥0.583246，`tenant-quota` 99 次 / ¥0.136287，`tenant-saturation` 243 次 / ¥0.338372，**`session-lock` 0 次 / ¥0.000000**（16 条准入全部没走完一次 LLM ⇒ 见第 ③ 条）。⚠️ **超出声明 0.4 元的原因 = 我在声明里只算了"准入数×单价"、漏算了 `steady` 的 264 次里含 `plan`+`gen_sql` 的多次调用**；租户日预算 `DEFAULT_TENANT_DAILY_BUDGET_CNY=10`（`app/llm/budget.py:94`）本轮峰值用量 ¥1.29 ⇒ **距 80% 强降档线（¥8）很远，不存在 `force_single_path` 混淆**。
+
+##### ① 健康态矩阵（六格，同镜像 / 同题集 `questions_T_A_time.txt` / 只差参数）
+
+| 格 | 参数 | 令牌 | admitted | 拒/冲突/5xx | 终态分布 | p50 / **p95** (ms) | `g6_p95_le_8s` |
+|---|---|---|---|---|---|---|---|
+| 预热 | `steady` c=1 n=2 | 10 | 2 | 0 | `refuse 1` / `clarify 1`（**`ok 0`**） | 1,185.2 / 5,074.6 | `null`（0 完成 + 样本 2 < 20） |
+| **① 稳态** | c=50 n=120 | 10 | **77** | **43×429** | `error_frame 45`(R05…) / `refuse 14` / `clarify 8` / **`ok 10`** | 30,831.2 / **36,803.4** | `false` |
+| **② 突增** | c=100 n=100 | 10 | **100** | **0×429** | `refuse 85` / `clarify 12` / `error_frame 2` / **`ok 1`** | 32,784.9 / **41,333.4** | `false` |
+| **③ 单会话锁** | c=8 n=24 单会话 | 10 | **16** | **4×409 SESSION_CONFLICT** + **4×503** | `error_frame 8`(INTERNAL) / `refuse 8` / **`ok 0`** | 5,097.7 / **15,185.5** | `null`（0 完成 + 样本 <20，caveat 两条） |
+| **④ 同租户配额** | c=30 n=60 同租户 | **20** | **60** | 0 | `refuse 33` / `error_frame 18`(R05…) / `clarify 5` / **`ok 4`** | **1,117.4** / **17,821.8** | `false` |
+| **④′ 同租户饱和** | c=30 n=130 30s | **20** | **71** | **0×429** | `error_frame 37` / `refuse 13` / `clarify 7` / **`ok 14`** | 19,967.1 / **21,909.0** | `false` |
+
+⇒ **配额档四条判据**（架构 `reports/arch/RELAY.md:1047`）逐格自证：①具名偏离 `deviation=quota_capped_n`（本轮 `n` 被 `--max-requests` / `duration_s` 截断，实跑时长在表里）✅；②`admitted≥20` 才给布尔 ⇒ 只有 ①②④④′ 给，③ 给 `null` ✅；③环境瓶颈同行披露 ⇒ 就是下面 ②③④ 条 ✅；④先跑零额度那格 ⇒ `session-lock` 实测 0 次调用 ✅。**标签只能写"配额档 P95"，G-6 达标行仍只认满档 ⇒ 本轮依旧不得宣称 G-6。**
+
+##### ② 🔴 **新缺陷（本窗口第一次能归因到"配置面"）：`l4_score` 的 `max_tokens=512` 把响应截断 ⇒ L4 精排静默整层失效**
+
+`degraded_total{reason="llm_unavailable",action_taken="reduced_candidates"}` 从 0923r8 的 0 涨到本轮 **96**。我上一轮把它写成"未归因"，本轮**用零额度日志把它归了**，链条五环：
+
+1. `app/llm/router.py:258-262` —— `LlmTask.L4_SCORE` 路由 `thinking=False`、`output_tokens_hint=512`；`max_tokens_for()`（`router.py:316-321`）在无思考档**不加余量** ⇒ 出站 `max_tokens=512`。
+2. 容器日志里同一时间窗内 `task="l4_score"` 的 `llm_call` 行，**`output_tokens` 恰好 = 512 的那些**就是被截断的（未截断的散在 314–494）。四格计数：`steady` **43/65 = 66.2%**、`tenant-quota` **16/22 = 72.7%**、`tenant-saturation` **36/59 = 61.0%**（合并 95/146 = 65%）。
+3. 截断的 JSON 解析不出来 ⇒ `app/binding/scores.py:256-259` `_fail("invalid_json:…")` ⇒ `ScoreOutcome(failed=True)`（`l4.py:212-217` 把解析结果原样返回，不做部分采纳 —— 这是 `N-27 约束④` 的**刻意**行为）。
+4. `app/graph/nodes/bind.py:185-192` —— `if not scores.ok:` 报 `LLM_UNAVAILABLE / REDUCED_CANDIDATES`，detail 里带 `{"stage":"bind.l4","reason":scores.reason}`。
+5. **记账 1:1 闭合**：五格的"512 截断次数"与"该格 `reduced_candidates` 增量"逐格相等（`steady 43↔43`、`burst 1↔1`、`session-lock 0↔0`、`tenant-quota 16↔16`、`saturation 36↔36`）⇒ 合计 **96 ↔ 计数器终值 96**。⇒ 这不是相关，是**同一事件的两个计数面**。`burst` 那格尤其干净：只有 3 条 `l4_score` 完成，`output_tokens` 分别是 `512 / 422 / 348` ⇒ 恰好 1 条截断、恰好 +1 降级。
+
+**为什么这一条必须上报而不是我改**：① 修复面在 `app/llm/router.py`（W3A 的地盘）与 `app/binding/l4.py`（W3A/W0），`deploy/**` 一行都不用动；② 观测面缺一件 —— `app/llm/client.py` **完全不读 `finish_reason`**（全仓 `finish_reason` 只出现在 `router.py:141` 的一行文档表格里），所以"被截断"与"写完了"在日志里长得一样，只有 `output_tokens==max_tokens` 这个巧合暴露了它。`client.py:380-383` 的 `LlmEmptyContent` 只拦"**空** content"，**非空但残缺**的原样放行到解析层。
+⇒ **建议判据（请架构定号、我不自取）**：`llm_call` 增加 `finish_reason`（或 `truncated` 布尔）字段，并把 `bind.l4` 的 `reason` 落一条日志（与 `U-116` 同一族"理由没有出口"）。
+⚠️ **取号前三查的结果纠正我自己上一句写下的断言**：我先按 `reports/arch/RELAY.md` v13 的旧快照写下"`U-126` 仍可用"，实跑三查（18:3x，HEAD `d26fac5`）⇒ **`U-126` / `U-127` 已被架构 v1.7.3 轮取走**（`docs/07:1134` / `:1136` 两行在表内），`arch/RELAY.md:5` 现报"下一可用 = `U-128`"。**本条不占号、交总控转架构。**（教训同项目那条"表比人快"：**快照字段读盘前一律不用**。）
+⚠️ **同时撤回一句我自己的旧口径**：09-21 至 09-23 我把这类 `reduced_candidates` 暗示成"上游不稳"。本轮五格的上游响应统计 = **`POST` 到 DeepSeek/Ollama 共 1,100 次全部 200、非 200 计 0 次**（另有 **1 次 `GET https://api.deepseek.com` 返回 401** —— 那是 `U-108` 设计里的可达性探针**不带 key** 打根路径，401 = "可达"的正确语义，**不是故障**）⇒ **"上游间歇故障"在这些读数里不成立**，成因在**本机出站配置**。
+另需更正第 2 步的合并数口径：截断率按 `l4_score` 完成数算 `steady 43/65`、`tenant-quota 16/22`、`saturation 36/59`、`burst 1/3` ⇒ 合并 **96/149 = 64.4%**。
+
+##### ②-附 ★ **给架构 `U-126`/`U-127` 的两条零额度实测回执**（本轮顺手能给的、不需要额度的部分）
+
+⚠️ 先登记一处**取号现状核对**（09-28 18:3x，按 09-28 纪律 ④ 读盘不抄快照）：`docs/07` 已是 **v1.7.3**、`§4.8` 新增 **`U-126`（P0）/`U-127`** 两行，`reports/arch/RELAY.md:5` 写"**下一可用号 = `U-128`**"，而 **`docs/07:1063` 的同一字段仍写 `U-126`** ⇒ **两处不一致**（架构自己 §7.1"四处同改"的那条又在同一字段上漏了一次）。**我不取号**，只把上呈交给总控/架构。
+
+| 架构的输入（具名） | 我本轮的实测 | 差 |
+|---|---|---|
+| `§16.1` 健康态"每请求 4 次串行 flash 调用、槽占用 **H=6.15s**" = `normalize 1.56 + plan 1.49 + gen_sql 1.60 + present 1.50` | 四格 `llm_call` 的 p50：`normalize_intent` **967ms**、`plan` **1,424ms**、**`l4_score` 2,075ms**、`gen_sql` **1,522ms** ⇒ **H 实测 5.99s**；但**第 4 次调用是 `l4_score` 不是 `present`**（`deps.py:824-826` 的 `presenter=None` 是 P0 既定 ⇒ `present` 今天不发 LLM） | **−2.6%**（算术站得住，**调用清单需订正**） |
+| `§10.1` 8 槽 ⇒ 吞吐硬上限 **8 × 60/1.56 ≈ 308 调用/分钟** | 四格分别 **317.3 / 267.5 / 295.6 / 328.5 调用/分钟**（`llm_call` 日志行数 ÷ 回执 `wall_s`；`session-lock` 那格 = **0 次调用**，不参与） ⇒ 均值 **302** | **±7% ⇒ 8 槽天花板本轮被四个独立格子测到，不再只是推导** |
+
+⇒ 由这两行得出一条**对总控有用、且不违反新不变量**的结论：截断的 96 次 `l4_score` 平均每次占槽 **2,037ms** ⇒ **196 槽·秒 ÷ 8 槽 = 24.4s ≈ 本轮跑批墙钟（180.1s）的 13.6%** 换不来任何可用输出。
+**修 `max_tokens` 减的是"工作量 H"，不是超时** ⇒ 恰好落在架构那句新不变量的**合法一侧**（"禁止以调小超时达标"管的是掐 deadline，这条是砍掉一次注定失败的出站）。⚠️ 但**它不改变 8 槽与 375 请求/分钟不相容这件事本身** ⇒ 不能拿它当 `U-126` 的出路。
+🔴 **判据④ 的防伪我自己先认一条**：`steady` 那格 `admitted=77` 里有 **43 条被 429 挡在分母外** ⇒ 抬槽位后同样的 `n=120` 会"准入变多、p95 变差"。⇒ **我后续任何"p95 下降"的读数都会同排 `admitted` 与 `rejected_429` 两个数**（已写进 `HANDOFF §六`）。
+📌 **台账零缺口对账**：五格 `llm_call` 日志 **795 行** + 预热格 2 次（未取该格日志窗口）= `app.cost_ledger` 本轮 **797 行** ⇒ **缺口 0**（复证 §三.0.1i 口径：缺口 = 被取消数，不是恒有偏差）。
+
+##### ③ 🟠 **`session-lock` 换令牌数 = 换被测对象（我上一轮的假设本轮被证实，并顺出两条新缺陷）**
+
+同一镜像、同一 `n=24`、同一 `single_session`，唯一变量 = 令牌数：
+
+| 读数时刻 | 令牌 | admitted | 429 | 409 SESSION_CONFLICT | 5xx |
+|---|---|---|---|---|---|
+| 09-23 21:07（§三.0.1l） | **1** | 1 | **14** | 9 | 0 |
+| 09-28 18:22（本轮） | **10** | **16** | **0** | 4 | **4×503** |
+
+⇒ **`driver.py:289-291` 在 `single_session` 下只建一个会话（用 `tokens[0]`），而 `:294` 给每个 worker 固定发 `tokens[i%len]`（i = worker 序号）⇒ 令牌数决定 `RATE_LIMIT_RULES` 的 `QUERY=(per_user 10/min)` 会不会先 bind**：单令牌时 24 条全压在同一个 `user_id` 上 ⇒ 桶必 bind；10 令牌时压力被摊到 8 个 `user_id` ⇒ **桶完全不 bind（本轮实测 `rejected_429=0`）**。所以 §三.0.1l 我那句"24=10+14 与 `ratelimit.py:203` 逐格对上"**只在"单令牌"这一个取值下成立**，不是场景③ 的固有性质（**旧读数不删、限定条件补在这里**）。
+⚠️ **要 W1B/W0 判的一件事（我只报证据、不下结论）**：本轮 24 条里 **8 条准入并落审计，`user_id` 分别是 `u_b01..u_b08`**，而 `driver.py:289-291` 的会话是用 **`tokens[0]`（= `u_b01`）** 建的 ⇒ **另 7 条是"换了 user 的令牌打同一个会话"**，服务端全部受理并进入图。⚠️ **为什么恰好 8 个用户**：`driver.py:294` 是 `worker(client, tokens[i % len(tokens)])`，`i` 是 **worker 序号**（`c=8`）不是请求序号 ⇒ **每个 worker 全程固定一个令牌** ⇒ 8 workers × 10 令牌 = 恰好 8 个不同 `user_id`。`app.audit_log` **没有 `session_id` 列**（实测列清单：`log_id task_id tenant_id user_id role timestamp raw_question … outcome refusal_reason`）⇒ 我从数据面**无法**判断"会话归属校验"是否存在、也无法判断这条路径**应当**拒绝还是放行 ⇒ **UNVERIFIED，不是漏洞判定**；且实测这 8 行 **`count(row_count_returned)=0`、`count(final_executed_sql)=0`**（全 `refuse(no_data_asset)`）⇒ **无任何数据泄露证据**。⇒ 请 W1B/W0 判："同一会话被不同 `user_id` 复用"在 §9/§13 的口径下是特性还是缺陷；若判缺陷，我这边只需把 `single_session` 改成固定用创建者令牌即可（一行、零额度）。
+🔴 **本轮另两条只在健康态才看得见的新缺陷（都有日志逐条署名，零额外花费取证）**：
+- **4× `503 DB_UNAVAILABLE`**：事件 `redis_unavailable{path:"/api/v1/query", extra_fact:"fail-closed → 503 DB_UNAVAILABLE（Retry-After 5s，可原样重试）"}` ⇒ **Redis 单路不可用被报成"数据库不可用"**，而同一时刻 `/healthz` 的 `redis_reachable:true`、事后查 `pg_stat_activity` = 18 idle / 1 active / `max_connections=100`（⇒ 不是连接池打满、也不是 PG 侧）。**归属在 `app/api`/`app/core` 的错误映射（W4/W0），不在 `deploy/**`**。
+- **8× N-08 重复终态**：`node_timeout_degraded{node:"normalize",limit_s:15.0}` ×8 → `llm_falling_back_to_template{task:"normalize_intent"}` ×8 → `graph_run_failed{detail:"终态已被设置（N-08）—— 一个 run 只允许 1 个终止事件。重复设置说明存在两条出口路径同时在跑，必须判为图缺陷而不是覆盖。"}` ×8 ⇒ **走"模板兜底"那条路时，模板自己判了 `refuse` 已经把终态设上，随后运行包装器又补发 `error(INTERNAL)`** ⇒ 客户端拿到 8 条 INTERNAL、审计侧 0 行。**这条与 `U-107`/`U-118` 同族但触发面不同**（`U-107` 管"超时落点"，这里落点有了、但落点和终态各设一次），**我不自取号**，报架构按 `§4.8 规则②` 判拆还是并。
+
+##### ④ 🟡 **场景④ 的参数在健康态仍然打不到租户桶**（契约面问题，要裁不是我改）
+
+`tenant-saturation` spec = `c=30 / duration_s=30 / total_requests=130`（`driver.py` ScenarioSpecs），本轮**实际只发出 71 条**：`duration_s` 是**开工门**不是**收尾门**（worker 只在 30s 窗口内取号），30s × 实测吞吐 ≈ 71。⇒ `admitted=71 / rejected_429=0` ⇒ **`per_tenant 100/min` 从未被触及**，这一格**没测到租户配额、只测到 c=30 的持续吞吐**。
+⚠️ 上一格 `tenant-quota`（`n=60`，20 令牌 ⇒ 3/用户）同样**两个桶都不会 bind**（60 < 100/min、3 < 10/min）⇒ 它的 `0×429` 是**参数决定的必然值，不是"配额未生效"的证据**。
+⇒ **给架构的两个可选口径**（我不擅自改 `§16.5` 的参数）：**(a)** 把 ④′ 的 `duration_s` 抬到 ≥60s 且令牌 ≥14（`130/14=9.3/用户 < 10/min` ⇒ per-user 不 bind、`130 > 100` ⇒ 租户桶必 bind）；**(b)** 或把"租户桶 bind"从场景④ 摘出来，认 §三.0.1l 的 `session-lock`（单令牌 14×429）那种"故意让桶 bind"的取数形态。**我推荐 (a)**，理由：`rejection_headers` 已经能带 `Retry-After`，(a) 才第一次给出"per-tenant 与 per-user 谁先 bind"的**可区分**证据。
+
+##### ⑤ 免费自洽断言复算（跨五格，零成本）
+
+- `degraded_total{reason="present_failed",action_taken="table_only"} = 31` **等于** `query_outcome_total{outcome="success"} = 31`（本轮 5 个真实格各自都对得上：13↔13、31↔31）⇒ `deps.py:824-826` 的 `presenter=None` P0 既定形态仍按 1:1 成立。**W3B 接上 `present` 的那天这条会断，届时不是回归。**
+- **U-125 在大量样本下不退步**：`gate_reject_total{gate_no="1",rule_id=""} = 0`，带号合计 **105**（`R06 63 / R05 24 / R14 11 / R10 4 / R04 3`）⇒ 架构定的判据"拒一条后 `rule_id` 非空"在本轮 105 条拒绝上**全数成立**；`gate2/gate3` 本轮**分母为 0**（无拒绝）⇒ 不是不成立，是**未测**。
+- `retrieval_mode_total{hybrid}=239 / {sparse_only}=72` ⇒ `sparse_only` 停在 72（= §三.0.1m 的 70 + 本轮 2）⇒ **Ollama 恢复后新增的降级确实归零**，反向佐证本轮读数是"健康态"。
+
+##### ⑥ 复现命令（本轮实际用的那组，零密钥）
+
+```bash
+# 0) 三处可达性（宿主 / 容器内 / 模型名）
+curl -s -o /dev/null -w '%{http_code} %{time_total}s\n' http://127.0.0.1:11434/api/tags
+MSYS_NO_PATHCONV=1 docker exec w7load-api python -c "import httpx;print(httpx.get('http://host.docker.internal:11434/api/tags',timeout=5).status_code)"
+# 1) 前置快照（跑前跑后各一次；embed_doc 必须是 197|197|197）
+MSYS_NO_PATHCONV=1 docker exec commerceql-pg-1 psql -U postgres -d ecom -tAc \
+  "select count(*),count(embedding),count(tsv) from app.embed_doc;"
+# 2) 六格（同镜像 w7load-api:0928r9，题集统一 questions_T_A_time.txt）
+cd CommerceQL/deploy/loadtest
+for S in "session-lock 24 E:/tmp_w7/tokA.txt" "tenant-quota 60 E:/tmp_w7/tokC.txt" "tenant-saturation 130 E:/tmp_w7/tokC.txt"; do
+  set -- $S; ../../.venv/Scripts/python.exe driver.py --target http://127.0.0.1:18000/api/v1 \
+    --scenario "$1" --no-async --max-requests "$2" --tokens "$3" \
+    --questions-file questions_T_A_time.txt --out "E:/tmp_w7/rA_$1.json"; sleep 70   # ⚠️ 必须 >60s 让上一格的分钟桶清空
+done
+# 3) 截断取证（零额度，只读日志）—— 核心式：output_tokens==512 的 l4_score 次数 == 该格 reduced_candidates 增量
+docker logs --since <UTC起> --until <UTC止> w7load-api > E:/tmp_w7/win.txt 2>&1   # ⚠️ 必须 '> file 2>&1'，写成 '2>&1 > file' 会把 stderr 打到终端
+grep '"event": "llm_call"' E:/tmp_w7/win.txt | python -c "
+import sys,json
+v=[json.loads(l) for l in sys.stdin if l.strip().startswith('{')]
+x=[d for d in v if d.get('task')=='l4_score']
+print('l4_score',len(x),'@512',sum(1 for d in x if d.get('output_tokens')==512))"
+# 4) 结账（只读）
+MSYS_NO_PATHCONV=1 docker exec commerceql-pg-1 psql -U postgres -d ecom -tAc \
+  "select count(*),round(sum(cost_cny)::numeric,6) from app.cost_ledger where created_at >= '2026-09-28 10:00:00+00';"
+```
+
+##### ⑦ 纪律条（对自己的一条订正，写在证据旁边而不是别处）
+
+**"本机依赖没起来"这件事，我不该拿它去问总控。** §三.0.1m 我把 Ollama 判成"环境瓶颈 ⇒ 扣住整批不跑"并上呈，这个**判断本身是对的**（污染容量读数，必须扣），但我停在"等总控开" —— 开 Ollama 是本机上一个可逆、零外呼、不碰共享数据的动作，**该我自己做完再汇报**。已把这条订正写进长期记忆（分界：**只读探测 + 恢复本机自有依赖 ⇒ 做完汇报；改共享状态 / 不可逆 ⇒ 才问**）。本轮 Ollama 由总控先开了，我照旧做了三处可达性复验再跑批 —— 顺序合规，但**下轮同类不再问**。
+
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 
 探针的取数依据按 U-22 纪律必须"写在常量旁边"，而常量旁边放不下方法 —— 所以
