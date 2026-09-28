@@ -1,0 +1,79 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-09-28T09:24:38+00:00",
+  "target": "http://127.0.0.1:18000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "tenant-quota",
+      "params": {
+        "concurrency": 30,
+        "duration_s": null,
+        "total_requests": 60,
+        "single_session": false,
+        "same_tenant": true,
+        "async_if_slow": true,
+        "questions": "questions_T_A_time.txt",
+        "request_cap": 60
+      },
+      "requests": 60,
+      "wall_s": 20.319,
+      "throughput_rps": 2.953,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 10,
+        "rejected_429": 50,
+        "other_http_4xx": 0,
+        "http_5xx": 0,
+        "unresolved": 0
+      },
+      "rejection_headers": {
+        "429": {
+          "retry_after=30": 50
+        }
+      },
+      "latency_ms": {
+        "p50": 15199.6,
+        "p95": 20227.8,
+        "p99": 20227.8,
+        "max": 20227.8,
+        "mean": 15696.5,
+        "samples": 10
+      },
+      "latency_ms_all_ms": {
+        "p50": 50.7,
+        "p95": 15223.1,
+        "samples": 60
+      },
+      "ttfb_ms": {
+        "p50": 73.2,
+        "p95": 104.5
+      },
+      "outcomes": {
+        "http_4xx": 50,
+        "refuse": 8,
+        "error_frame": 2
+      },
+      "codes": {
+        "RATE_LIMITED": 50,
+        "LLM_UPSTREAM_ERROR": 2
+      },
+      "terminal_provenance": {
+        "http_4xx": {
+          "stage=none|reason=none": 50
+        },
+        "refuse": {
+          "stage=intent|reason=no_data_asset": 8
+        },
+        "error_frame": {
+          "stage=intent|reason=none": 2
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": null,
+      "g6_caveat": "本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 10 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足；另有 50 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）"
+    }
+  ],
+  "finished_at": "2026-09-28T09:24:59+00:00"
+}

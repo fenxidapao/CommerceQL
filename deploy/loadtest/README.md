@@ -588,6 +588,77 @@ W2A 未设 ⇒ **两格互相指认**，按纪律我**不自取 U 号**，需求
 ⚠️ 低于预估的原因不是便宜，是 **24 条里有 23 条在模型之前就被 409/429 拒了** ⇒ **"花费低于预估"本身要按"准入数低于预估"来读，别当成单价校准成功**。
 锚点复核：④ 一条 ok ≈ 7 次调用 / ¥0.0079 ⇒ §三.0.1k 定的 **¥0.0087/条** 误差 <10%，**继续用**。
 
+#### 三.0.1m 第十六轮（09-28 · 镜像 `w7load-api:0928r9` = HEAD `fb307f7` ⇒ 含 `e0e6b39` U-125①②③ / `7114c7f`+`3251344` 判据⑥ / `e0ce440` U-119④）
+
+**一句话**：**`g6_p95_le_8s` 第一次产出布尔 = `false`**（`admitted=79 ≥ 20`），同轮拿到 **U-125 判据的活体读数**与
+**`retrieval_mode_total{sparse_only}` 的首次活体非 0**；但**整轮的容量读数被一条依赖故障污染** —— 本机 **Ollama 没在跑** ⇒
+检索全量走 `sparse_only` ⇒ 我**主动扣住 `burst` 不跑**（不花 ¥0.5 买一个被混淆的数字），等依赖恢复后重打。
+
+**⚠️ 前置就变了：共享栈今晨又被外部重启，且一条软依赖是死的**（我全程未碰编排）
+
+| 检查 | 读数 |
+|---|---|
+| `app.embed_doc` 跑前/跑后 | **`197\|197\|197` 两次同值** ⇒ 我没损坏共享前置 |
+| `/api/v1/healthz/ready` | **5.5 / 5.0 / 4.3 ms**（闲置 >5 分钟后取的冷读数） |
+| 容器 → Ollama | **`ConnectError [Errno 101] Network is unreachable`**；宿主 `127.0.0.1:11434` 连不上 ⇒ **embedding 依赖 down** |
+| 容器 → DeepSeek | **98 次全 `HTTP/1.1 200`、零次非 200** ⇒ **不是没钱、不是被上游限流** |
+| 台账 | 本轮 **98 行 / ¥0.168636**；`httpx 200` 98 = 台账 98 ⇒ **零缺口**（复证 §三.0.1i 的口径：缺口 = 被取消数，不是恒有偏差） |
+
+**四条运行读数**（同一容器、`questions_T_A_time.txt`）：
+
+| # | 命令 | 结果 |
+|---|---|---|
+| ⓪ 预热 | `steady --no-async c=1 n=2`（**排除出分母**，见下"规程"） | `{refuse 2}`、p95 5,690.4ms |
+| ① | `steady c=50 n=120`（**10 个同租户 T_A 令牌**轮转） | `{refuse 66, http_4xx 41, clarify 8, error_frame 3, ok 2}`、`codes={RATE_LIMITED:41, GATE_AST_REJECTED:3}`、`admitted=79`、p50 **5,474.4** / p95 **11,381.8** / p99=max 14,289.8、wall **14.4s**、**`g6_p95_le_8s=false`** |
+| ② | `tenant-quota c=30 n=60`（**改单令牌** —— 见下"设计更正"） | `{http_4xx 50, refuse 8, error_frame 2}`、`codes={RATE_LIMITED:50, LLM_UPSTREAM_ERROR:2}`、`admitted=10`、429 全带 `Retry-After: 30`、p50 15,199.6 / p95 20,227.8、`g6=null` |
+| ③ | `steady --no-async c=1 n=3`（**对照实验**） | `{refuse 3}`、**p95 2,117.1ms**、**期间 `node_timeout_degraded` 增量 = 0** |
+| — | `burst c=100 n=100` | ⛔ **主动不跑**（依赖故障态下只会产出又一个被混淆的 P95；等 Ollama 恢复） |
+
+**★★ `g6_p95_le_8s = false` 是本目录第一次给出布尔 —— 但它是"配额档 P95"，不是达标判定**：
+架构 `07 §16.5` 配额档四条判据逐条自证：①具名 `deviation=quota_capped_n`（`--max-requests 120` 截断，实跑 14.4s ≪ §16.5 的 600s）✅；
+②`admitted=79 ≥ 20` ⇒ 布尔可给，**标签只能写"配额档 P95"**，G-6 达标行仍只认满档 ✅；③环境瓶颈同行披露 ✅（下面两条）；④先跑零额度那格 ✅（`session-lock` 已于 §三.0.1l 跑完）。
+⚠️ 引用纪律：**这一格不得写成"G-6 判定为不达标"**，只能写成"配额档 P95 = 11,381.8ms > 8s，且测于检索降级态"。
+
+**★★★ 15s 那一条尾是并发排队打出来的（本次做了单变量对照，不再靠推测）**：
+① 有 **8 次 `node_timeout_degraded{node:"normalize", limit_s:15.0}`**，而同一容器内所有 `normalize_intent` 调用的
+`latency_ms` 全在 **1,003–1,132ms** ⇒ **15s 不是模型耗时**；③ 在**同一栈、同一降级态、隔几分钟**下用 `c=1` 打三条 ⇒
+**p95 2,117.1ms 且超时增量为 0**。⇒ **结论**：`normalize` 的 15s 墙钟被**网关并发闸（`LLM_SEMAPHORE_FLASH=8`）的排队**吃掉，
+不是上游慢、也不是 embedding 中断。⇒ 这条**修订我 09-23 §三.0.1l 的推论**（当时写"flash 15s deadline 独自把 p95 顶到 15s"）：
+deadline 是**上限**，真正把 p95 顶上去的是 **c=50 vs 8 个槽的排队**；两者叠加 ⇒ 见 `RELAY §三十四③` 给架构的新判据问题。
+
+**★★ `retrieval_mode_total{sparse_only} = 70` —— 降级分支首次活体（且不是我制造的）**
+与 `degraded_total{reason="embedding_unavailable",action_taken="sparse_only"} = 70` **同数同因**，容器日志逐字：
+`"embedding": "上游不可达：连接层失败（DNS / TCP / TLS 未建立）：ConnectError（走降级：稀疏 + Join 图扩展）"`。
+⇒ **RL-2 的分子两面（`hybrid` 09-23 / `sparse_only` 09-28）都有活体读数了**；**"我不为它制造降级"这条纪律自动兑现**（依赖是自然坏的）。
+⚠️ 分母口径仍未定（§三.0.1l 那条"不得拿 `schema_linking` 计数当分母"继续有效）。
+
+**⚠️ 本轮 80% 的准入请求死在检索之后的原因（根因 + 竞争解释已排）**：`refuse` 66 条里 **63 条落在 `stage=schema_linking|reason=no_data_asset`**，
+与 `sparse_only=70` 同向 ⇒ 归因于 embedding 中断。⚠️ 我原本怀疑自己的**多令牌设计**（10 个合成用户没有数据范围）才是主因，
+用 `app.audit_log` 逐用户分组否掉了：`no_data_asset` 在 **u_a01…u_a10 上均匀分布（各 5–8 条）** ⇒ 不是用户维度的事。
+
+**★ 设计更正（这条很重要，别让下一个人再踩）**：`QUERY` 桶是 **per_user=10/min + per_tenant=100/min**（`ratelimit.py:203`）。
+⇒ ① 对 `steady`/`burst`：用**同租户多用户令牌**（驱动 `--tokens` 天然支持 `tokens[i % len]`）把整形从 per-user 抬到 per-tenant，
+这才是"测并发"而不是"测限流"；② 对 `tenant-quota`：**必须反过来用单令牌** —— 否则 60 条摊到 10 个用户（6/用户）**谁也碰不到桶**，
+本场景会零拒绝收场、什么也没测。⚠️ 且 **`n=60 < per_tenant=100/min` ⇒ 场景④ 在 §16.5 原参下永远触发不了租户维度**，
+只能演示 per-user 维度 ⇒ 与 §三.0.1l 的 `session-lock` 是**同一族参数自相矛盾**（第二条实例），已提架构。
+
+**★ U-125 判据达成（架构定的"拒一条后 `/metrics` 的 `rule_id` 非空"）**：`gate_reject_total{gate_no="1",rule_id="R05"} 3`，
+同轮 `query_outcome_total{failed}=3` 与 `codes={GATE_AST_REJECTED:3}` 对齐 ⇒ **闸门侧唯一记录点成立、帧面双计已摘**（`e0e6b39` 三方同批）。
+⚠️ 只覆盖 gate1；`gate2/gate3` 的 `rule_id` 活体序列本轮未出现（本轮没有闸门 2/3 的拒绝 ⇒ 分母为空，不是不成立）。
+
+**★ 还掉一条我自己挂着的欠账（U-122 归 W7 那半）+ 顺带否掉我自己的一个新判断**：
+本轮两条 `ok` 里有一条 `row_count_returned=1000`、`final_executed_sql` 结尾确实是 **`LIMIT 1000`**，而 `audit_log.truncated=false`。
+我第一反应是"§8.6 判定失效"—— **读了实现才撤回**：`execute.py:28-35` 明写 **`effective_limit` 在 P0 恒 `None`**
+（注入值 L 在 `ast_gate._effective_limit` 内部用完即弃），于是 `executor.py:371` 走
+`truncated = len(rows)==effective_limit if effective_limit is not None else more_exist` 的**兜底分支** ⇒
+`false` 是兜底的正常输出、**不是判定错**。⇒ 可复制的读法（本节即为交付物）：
+**"今天 `audit_log.truncated` 一律来自 `more_exist` 探测，不来自 §8.6 的 LIMIT 规则 ⇒ 压测面不得声称'服务端截断已验证'"**；
+核对命令（零额度、只读）：`select row_count_returned, truncated, right(final_executed_sql,60) from app.audit_log where outcome='success'`。
+⇒ 开项仍是**已登记**的那条（`execute.py:35`："请 W2C 把 L 一并放进 `limit_injected`"，与 W6 的 `RT-LIM-001/004` 同一件事）。
+
+**本轮花费**：**98 次调用 / ¥0.168636**（跑前预估 ¥1.1–2.0 ⇒ **实际远低于预估**，原因照旧是**准入后大量早退、且 `burst` 未跑**，
+不是单价准）。⇒ **剩余待办 = Ollama 恢复后重打 ①（`steady`）与 ②（`burst`）**，估 ¥1.1–1.9。
+
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 
 探针的取数依据按 U-22 纪律必须"写在常量旁边"，而常量旁边放不下方法 —— 所以
@@ -841,6 +912,17 @@ audit = {"bool_before": false, "bool_after": null, "changed": true, "caveat_befo
 后者要等 **U-122 剩余两条**（③ 全链肯定断言、④ 替身忠实性 `declared_call_face_mismatches()==()`；
 ①端口成员集 + ②`isinstance` 反证已由 W4 `c2f63cf` 落地，序号按架构 v9.3 对齐）＋ W2C 给出 L 的出口，
 本目录届时回一条可复制的读法。⚠️ 该读法 **UNVERIFIED**（今天写不出来，别在别处引成"已有"）。
+
+★ **09-28 订正（上面那句"写不出来"已被实测作废 ⇒ 可复制的读法已交付在 §三.0.1m 末节）**：
+① W2D `0c596e6` + W4 `c2f63cf` 之后，`executor.fetch(..., effective_limit=...)` 这条**通道已存在**；
+② 但 **`effective_limit` 在 P0 恒 `None`**（`app/graph/nodes/execute.py:28-35` 自陈：注入值 L 在
+`ast_gate._effective_limit` 内部用完即弃）⇒ `executor.py:371` 今天**走的是 `more_exist` 兜底支**，
+`audit_log.truncated` **不是** §8.6 那句"行数 == 生效 LIMIT"的产物；
+③ 一手证据（零额度、只读，本轮两条 `ok` 之一）：`row_count_returned=1000`、`final_executed_sql` 结尾 `LIMIT 1000`、
+`truncated=false` ⇒ **我一度判成"§8.6 判定失效"，读完实现撤回**（兜底路径的正常输出 ≠ 判定错误）。
+⇒ 结论口径收窄为：**压测/回执面要谈"服务端截断"，只能读 `app.audit_log` 的 `more_exist` 结果，
+不得声称"已按 §8.6 验证"**；真正的开项是那条**早已登记**的请求（`execute.py:35` 请 W2C 把 L 放进 `limit_injected`，
+与 W6 的 `RT-LIM-001/RT-LIM-004` 同一件事）⇒ 它落地后本节再改一次口径。
 
 ### 四.5 预检归因核对表（跑预检时照抄，别让"红因"靠记忆 —— 架构 v1.6.9 两条后果的落地）
 

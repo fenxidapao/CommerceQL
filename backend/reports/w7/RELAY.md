@@ -2097,6 +2097,8 @@ F 臂 = 池级 `search_path=app` 上 EXPLAIN ⇒ 出计划。所以日志里 `ga
 - ❌ 未跑 / 未验：**四场景跑批**（`steady`/`burst`/`tenant-quota` 三格仍等总控点头：额度 ≈¥2–3.5 + §16.5 偏离）；
   **G-6 达标**（两轮 `admitted=5 < 20` ⇒ 不得宣称）；`retrieval_mode_total{sparse_only}` 降级分支；RL-2 分母口径；
   U-125 判据（本轮无闸门可拒）；判据⑥ 的**活体** redteam（离线已跑，见 §三十二）；`tests/integration`（**绝禁**）。
+  ★ **本行两项已被 §三十四 关掉**：判据⑥ 的活体 redteam 已跑（五天零漂移：`leaked=0`、`PASS 192 / FAIL 21 / NOT_CHECKED 25`），
+    U-125 判据亦已取得（`gate_reject_total{gate_no="1",rule_id="R05"} 3` ⇒ 非空、且帧面双计已摘）。
 
 ### ⑨ 🔴 本轮提交已落地、**推送被网络挡住**（三条路都实测过，不是猜测）
 
@@ -2119,3 +2121,79 @@ F 臂 = 池级 `search_path=app` 上 EXPLAIN ⇒ 出计划。所以日志里 `ga
 （`25f7f79` 建在 `f5e501d` 之上，别人若已推新 commit，push 会被 non-fast-forward 拒 —— 这是**安全的**，不要用 force 绕过。）
 ⚠️ 我没有去改 `~/.ssh/config`、也没配 HTTPS 凭据（那是用户级/含密的持久改动，且换协议不等于换链路，多半同样不通）。
 ⇒ **待办**：网络恢复后补推 `25f7f79`，并把 `git rev-parse --short origin/main` 的读数补登记到本节。
+
+---
+
+## 三十四、**`g6_p95_le_8s` 第一次产出布尔（`false`）**；同轮 U-125 判据达成 + `sparse_only` 首次活体 —— 但这轮容量读数被一条死掉的依赖污染（09-28 · 第十六轮）
+
+基准：镜像 `w7load-api:0928r9` = HEAD **`fb307f7`**（含 `e0e6b39` U-125①②③ / `7114c7f`+`3251344` 判据⑥ / `e0ce440` U-119④ / `0c596e6` W2D）。
+本轮花费 **98 次调用 / ¥0.168636**（跑前预估 ¥1.1–2.0；`burst` 我**主动没跑**）。
+纪律面：四条项目级变更（arch 入库 / `.workbuddy` 冻结 / 工作区清理 / 提示词不抄易变快照）已按 ④ **读盘**取下一可用号 = **`U-126`**（`07:1062`），未抄任何提示词快照。
+
+### ① 五条"第一次"（全部实测，逐条给出处）
+
+| 项 | 读数 | 出处 |
+|---|---|---|
+| **G-6 布尔** | **`g6_p95_le_8s = false`**（`admitted=79 ≥ 20`、p50 5,474.4 / p95 **11,381.8** / p99=max 14,289.8） | `quota_r9_steady_c50n120.json` + `README §三.0.1m` |
+| **U-125 判据** | **`gate_reject_total{gate_no="1",rule_id="R05"} 3`** ⇒ 架构定的"拒一条后 `rule_id` 非空"**成立**；同轮 `query_outcome_total{failed}=3` 与 `codes={GATE_AST_REJECTED:3}` 对齐 ⇒ **唯一记录点在闸门侧、帧面双计已摘** | `/metrics`（0928r9） |
+| **RL-2 降级分支** | **`retrieval_mode_total{sparse_only} = 70`**，与 `degraded_total{embedding_unavailable,sparse_only}=70` **同数同因** ⇒ 分子两面（`hybrid`/`sparse_only`）都有活体读数 | `/metrics` + 容器日志逐字 |
+| **U-51** | `/healthz/ready` 冷读数 **5.5 / 5.0 / 4.3 ms**（闲置 >5 分钟后取，11 个样本全在 4–6ms）⇒ 登记表那句"串行 7.82s"在本机**已不可复现**（代码 `health.py:170` 早已 `asyncio.gather`，且 `U-108` 的连接复用消掉了 W1B 当年 5.84s 的建连代价） | 本窗复测 |
+| **台账零缺口复证** | `httpx 200` **98** = 台账行 **98** ⇒ 再次印证"缺口 = 被取消数、不是恒有偏差" | `docker logs` + `app.cost_ledger` |
+
+### ② ★★ 我把 09-23 那条推论**改错了方向的一半** —— 15s 的尾是并发排队，不是 deadline 本身
+
+09-23 我写"flash 15s deadline 独自就能把 p95 顶到 15s"。本轮做了**单变量对照**，可以把这句收窄：
+
+- `c=50/n=120`：**8 次** `node_timeout_degraded{node:"normalize", limit_s:15.0}`，p95 11,381.8ms；
+- 同一容器内**所有** `normalize_intent` 的 `latency_ms` = **1,003–1,132ms**（上游 98 次全 200、零次非 200）；
+- `c=1/n=3`（同栈、同降级态、隔几分钟）：**p95 2,117.1ms、超时增量 0**。
+
+⇒ **结论**：15s 那堵墙是 **`LLM_SEMAPHORE_FLASH=8` 的排队**吃掉的，`deadline` 只是它够得着的天花板；
+embedding 中断与此**无关**。**⇒ 给架构的判据问题因此换形**：不再是"§10.2 的 15s vs G-6 的 8s 互斥"，
+而是"**在 `flash=8` 槽位下，c=50 的端到端 p95 结构上不可能 ≤8s**" ⇒ 要动的是**并发几何（槽位 × 单请求调用数）与 SLO 的配平**，
+裁点仍在架构、代码在 W4，**W7 两边都不动**。⚠️ 这条只在"检索降级态（每请求约 2–3 次调用，轻于健康态 4 次）"下量到 ⇒
+**轻负载都过不了，健康负载只会更差**（单调性假设已写明，不是读数）。
+
+### ③ ⚠️ 本轮容量读数**被污染**，我因此扣住 `burst` 不跑（这条比读数重要）
+
+本机 **Ollama 没在跑**（容器侧 `ConnectError [Errno 101] Network is unreachable`；宿主 `127.0.0.1:11434` 拒连）⇒
+检索 100% 走 `sparse_only` ⇒ `refuse` 66 条里 **63 条落 `stage=schema_linking|reason=no_data_asset`**、`ok` 只有 **2/79 = 2.5%**
+（09-23 健康态是 3/5、2/5）。⇒ ① ③ 的 P95 是"**降级检索路径上的 P95**"，不得当容量结论引用；
+⇒ 我**没有**接着跑 `burst`（¥0.5 只能买到第二个被混淆的数），**待 Ollama 恢复后重打 `steady` + `burst` 一遍**（估 ¥1.1–1.9）。
+⚠️ 排除过的竞争解释：我一度怀疑是自己的**多令牌设计**（10 个合成用户无数据范围）导致早退 ——
+`app.audit_log` 逐用户分组显示 `no_data_asset` 在 `u_a01…u_a10` 上**均匀分布（各 5–8 条）** ⇒ 不是用户维度。
+
+### ④ ★ 跑批设计更正（对所有后续 P95 读数生效，含 W6 引用口径）
+
+`QUERY` 桶 = **per_user 10/min + per_tenant 100/min**（`app/api/ratelimit.py:203`、`WINDOW_S=60`）。
+⇒ **测并发必须用"同租户多用户令牌"**（驱动 `--tokens` 原生支持 `tokens[i % len]`，`driver.py:280/294`），
+否则 `c=50` 单用户会被 per-user 桶整形 ⇒ 测到的是限流器不是并发。本轮 `steady` 用 10 个 T_A 令牌 ⇒ `rejected_429=41`（=120−79）。
+⇒ **反之测配额必须用单令牌**：`tenant-quota` 若摊到 10 个用户（6 条/用户）**谁也碰不到桶**，本场景会零拒绝收场。
+⇒ 🔴 **同族第二条参数自相矛盾（提架构）**：`n=60 < per_tenant=100/min` ⇒ **§16.5 场景④ 在原参下永远触发不了租户维度**，只能演示 per-user 维度。
+（第一条实例是 `session-lock` 的 24=10+14，见 §三十三③。）
+
+### ⑤ 🔻 撤回我自己刚生出的两条判断（都未写进对外结论）
+
+1. **"`audit_log.truncated` 的 §8.6 判定失效"** —— 我看到 `row_count_returned=1000` + SQL 结尾 `LIMIT 1000` 而 `truncated=false` 就这样判了。
+   读了实现才撤回：`app/graph/nodes/execute.py:28-35` 自陈 **`effective_limit` 在 P0 恒 `None`**（L 在 `ast_gate._effective_limit` 内用完即弃），
+   ⇒ `app/exec/executor.py:371` 走 `more_exist` **兜底** ⇒ `false` 是兜底的正常输出，**不是判定错误**；
+   真正的开项是那条**早已登记**的请求（`execute.py:35` 请 W2C 把 L 放进 `limit_injected` = W6 的 `RT-LIM-001/004`）。
+   ⇒ 顺带把我 U-122 那半的欠账**还成了一条可复制的读法**（`README §四.4` 09-28 订正块），并作废我先前那句"今天写不出来"。
+2. **"今天 `tenant-quota` 的 2 条 `LLM_UPSTREAM_ERROR` = 上游出问题"** —— 上游 98 次全 200、零次非 200 ⇒ **该码不能等价于上游故障**；
+   我没找到它的产生点（`app/llm/errors.py:114` 把它定义为"上游 5xx 重试耗尽/熔断开路"，而熔断计数 = 0）⇒ **n=2、归因未定，登记不指认**。
+   ⚠️ 这条对告警有实际意义：`LLM_UPSTREAM_ERROR` 的阈值（架构 v1.7.2 把 5 改成 30）若由本地排队触发，**告警会朝错误的原因亮**。
+
+### ⑥ 五天前那条"待推"已经消掉 + 本轮实测/未实测
+
+`git merge-base --is-ancestor` 实测：09-23 被网络挡住的三条 commit（`25f7f79` / `f76d155` / `cc46e8a`）**都已在 `origin/main`**；
+HEAD = `origin/main` = **`fb307f7`**、不落后 ⇒ §三十三⑨ 那条待办关闭（该节文字已按"现查 `git log`"写法留存，不写死哈希）。
+
+- ✅ 实测：G-6 布尔首产（`false`，配额档）；U-125 判据；`sparse_only` 活体 70；U-51 耗时 11 样本；
+  redteam 全链**五天零漂移**（`leaked=0`、`PASS 192 / FAIL 21 / NOT_CHECKED 25`，与 09-23 逐格相同）；
+  我的 11 题面闸门探针**逐格相同**（deny 三形态 `R07`+`G2-DENY`、不存在列 `R06`、限定名 `R16`）；
+  `embed_doc` 跑前跑后 `197|197|197`；台账 98 行 / ¥0.168636；令牌用完即删（`tok9.txt`/`tok9_one.txt`/`tok.err` 全 `rm`）。
+- ❌ 未跑 / 未验：**`burst c=100/n=100`**（主动扣住，等 Ollama 恢复）；**健康态的 `steady` 重打**（同上）；
+  `gate2/gate3` 的 `rule_id` 活体序列（本轮无闸门 2/3 拒绝 ⇒ 分母为空）；**G-6 达标**（配额档 ≠ 达标证据，满档被推迟不是被替代）；
+  RL-2 分母口径；`tenant-quota` 的**租户维度**触发（原参下结构性不可达）；`tests/integration`（**绝禁**）。
+- ⚠️ **要总控动的**：① **起 Ollama**（否则本轮之后所有 P95/ok 率都在降级路径上）；② 我已核对 DeepSeek **不是没钱**（98×200、零非 200），
+  所以"没了告诉我"这一条**今天不用动**；③ 额度剩余预算：重打 ①② ≈ **¥1.1–1.9**。
