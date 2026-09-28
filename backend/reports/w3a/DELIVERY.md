@@ -455,3 +455,96 @@ cd backend（Docker 已起）
 - **U-68 合并档资产**：`plan`+`gen_sql` 合并需**新 prompt 资产 + 新 `LlmTask` 取值**（W3A 域），
   W4 阶段 4 接线。约束（U-68）：必须 flash 非思考 + `plan_ready` 事件先发。
   **待开工指令**（新资产 = 契约面变更，且 W3B 窗口已收工，合并调用方未定）。
+
+---
+
+## §15 L4_SCORE 输出预算事故修复（2026-09-28，W7 报，零额度）
+
+提交：`e1ea13a`（`fix(w3a): L4_SCORE 输出预算 512→2304 + 读 finish_reason 使截断在日志中可辨`）。
+5 files changed, 240 insertions(+), 3 deletions(-)。**不占 U 号**（W7 定性：零额度、现在就能做）。
+
+### 15.1 事故与缺口
+
+W7 loadtest 健康态实测：`l4_score` **149 次调用里 96 次**被 `max_tokens=512` 截断
+（`output_tokens` 恰=512，内容断在 1,213 / 1,279 / 1,310 字符）⇒ `app/binding/scores.py:256-259`
+只能报 `invalid_json:*` ⇒ 下游 fail-safe（N-27 ④：失败 → 减候选继续）把 **L4 精排整层静默降级**
+（96/149 = **64.4%**）。与 `degraded_total{llm_unavailable,reduced_candidates}` 逐格 1:1。
+
+缺口的成因不是"没算这个字段"，而是**从没读过它**：全仓只有 `router.py:141` 的文档表格提过
+`finish_reason`，没有任何代码读 ⇒ "被截断"与"写完了"在任何日志里同形。
+
+**载体订正（W7 自报，我复核认可）**：`detail` 其实**有**出口 =
+`app/audit_log_supplement.degradations`（`audit_supp.py:66-68`）。但 `supp` **只在走到 present
+的 run** 才写 ⇒ 覆盖率 20/96 ≈ **21%**，失败路径仍无出口。⇒ ② 的收益正是这一格。
+
+### 15.2 两条改动
+
+| # | 文件 | 改动 |
+|---|---|---|
+| ① | `app/llm/router.py` | `L4_SCORE.output_tokens_hint` **512 → 2304**（512 是**未登记的经验值**，从未由实测推出） |
+| ② | `app/llm/client.py` + `app/llm/__init__.py` | 读 `choices[0].finish_reason` → `Completion.finish_reason` → `CallRecord.finish_reason` → `llm_call` 日志行（**含成功路径**）；空 content 时同时进 `LlmEmptyContent.detail` |
+
+**2304 的推导**（每一步都有实测来源，U-22 不发明数字）：
+
+1. 项数上界 = **30**。来源 = 契约硬顶 `app/retrieval/search.py:92 column_top: int = 30`。
+   **现读**（`inspect.signature(RetrievalService.__init__)`）而非抄字面量 —— 上游调大硬顶时测试要红。
+   W7 实测 42 题分布：min 8 / p50 15.8 / p95 22 / max 25 ⇒ 打满硬顶才是"任何合法载荷都不被截断"。
+2. 每项字符上界 = **164**（W7 实测区间 52–164）。
+3. 正文上界 = 30 × 164 = **4,920 字符**。
+4. 字符→token 取**最保守**实测比 = **2.369**（512 token 只写出 1,213 字符；另一端 1,310 字符
+   ⇒ 2.559 更"省字符"，不取它）⇒ 正文 ≤ ceil(4,920 / 2.369) = **2,077**。
+5. + JSON 信封（外层数组与键名的括号/引号/逗号）**32** = 2,109。
+6. 向上对齐 256 的倍数 ⇒ **2,304**（余量 9.2%；对齐是工程惯例，不冒充精度）。
+
+交叉校验：W7 独立夹逼给 620–1,900 token（**乐观端**换算），本值在悲观端之上 —— 一致。
+
+⚠️ 放大 `max_tokens` **不增加成本**（计费按实际 token），但会抬高 `budget.estimate_for_payload`
+的 pre-flight 估算 —— 那是**修正**：旧值把 L4 的输出成本估小了。若它让 §10.4 成本闸更常告警，
+那是真实成本的显形，不是回归。
+
+### 15.3 有意未做：不 raise `LlmTruncated`
+
+`app/binding/l4.py` **刻意没有** `except LlmError`（`:179-180`；`:209` 预留"裁定后改 3 行"）。
+在 client 层 raise 会穿过 `l4.py` → `bind.py:96` 的 `except LlmError` → 终态 `error`，
+**把 L4 的 fail-safe（N-27 ④）变成硬失败** = 产品行为变更，得先由 W3C 那 3 行接住。
+⇒ 本轮只做**零控制流风险**的可观测性。raise 版归 **W3C + 架构**（见 `RELAY.md` 同节）。
+
+### 15.4 判据与正向对照（**不靠"现状绿"**）
+
+新增 `tests/unit/test_llm_router.py::TestL4ScoreBudgetIsCalibratedFromMeasurement`（6 条）：
+
+- 覆盖断言：`hint >= 最坏所需`（实测 2304 ≥ 2109）；
+- **正向对照**：`512 必须过不了上面那条` ⇒ 本组具备"注入违规 → 必须红"的判别力；
+- 契约硬顶**真是 30**（否则前两条会在错误的宽松前提上继续变绿）；
+- 对齐粒度、上限不失控（≤ 4 倍）两个反向对照；
+- **前提守卫**：L4 **非思考** ⇒ `hint` 就是全部预算（若将来开思考位，`THINKING_HEADROOM_TOKENS`
+  会自动叠加、把覆盖断言**悄悄放宽** ⇒ 这条先红）。
+
+正向对照探针 `reports/w3a/_probe_l4_budget_positive_control.py`（内存注入，不碰磁盘、不连网）：
+
+```
+注入 512 → 1 failed（正是覆盖断言）→ 探针 exit 0 = 判别力 OK
+不注入   → 6 passed
+```
+
+探针自身也只认 `pytest.ExitCode.TESTS_FAILED`（=1）：把"零收集 / 收集错误"这类非 0 退出
+排除在"如期被拦住"之外 —— 否则探针会用"测试根本没跑起来"骗过自己。
+
+### 15.5 门禁（本窗口职责）
+
+```
+../.venv/Scripts/python.exe -m ruff check .      → All checks passed!
+../.venv/Scripts/python.exe -m mypy app          → Success: no issues found in 147 source files
+../.venv/Scripts/lint-imports.exe                → Contracts: 4 kept, 0 broken.
+pytest tests/unit tests/contract tests/redteam tests/eval tests/graph_snapshot
+                                                  → 2204 passed
+```
+
+⚠️ **范围诚实**：`tests/integration/**` **未跑**。7 个文件要求一次性 DSN env
+（`COMMERCEQL_TEST_SUPER_DSN` / `COMMERCEQL_TEST_RW_DSN`；U-114 防线①：缺 env 必须 error、
+禁止 skip），本机不指向共享库 ⇒ 留给 CI。本改动面 = `app/llm/**`（L1，无下游 import 面），
+集成面理论上与本次无关；**但这是"未验证"，不是"已验证无关"。**
+
+⚠️ 同一工作树里还躺着**别的窗口未提交的在制品**（W4 的 `U-129`：`app/graph/build.py` +
+`tests/contract/test_graph_timeout_contract.py`）。本次提交**逐路径暂存**，未扫入它们；
+上面 2204 passed 是在**含**这些在制品的树上跑的 ⇒ 它们的用例也是绿的，但其正确性归 W4。

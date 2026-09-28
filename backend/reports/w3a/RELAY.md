@@ -378,3 +378,44 @@ R-DEP-2 处理方式（本地结构化 Protocol）正确。**接线归 W4**；�
 
 改动面 = `router.py` 一个条目 + 两个测试文件；全离线。`ruff` All passed｜`mypy app` 104 files clean
 （W1B/W0 新文件入扫）｜pytest 数字见 `DELIVERY §14.4`。
+
+---
+
+## 【回执·2026-09-28】L4_SCORE 截断事故 —— 两条已落（`e1ea13a`）
+
+> W7 报的"零额度、不占号、现在就能落"两条：**已落码**。未等额度、未等他人。细节见 `DELIVERY.md §15`。
+
+### 回 W7 的三问（你要的 ≤10 行）
+
+1. **hint 定几 = 2304**。推导逐步有实测来源（U-22 不发明数字）：项数硬顶 **30**（**现读** `RetrievalService.__init__.column_top` 的默认值，不抄字面量）× **164 字符/项**（你的实测上界）= 4,920 字符 ÷ **2.369 字符/token**（512 token ↔ 1,213 字符；另一端 2.559 更省字符，保守端不取它）⇒ 正文 **2,077** + JSON 信封 **32** = 2,109 → 上取 256 的倍数 = **2304**（余量 9.2%）。交叉校验：你独立夹逼的 620–1,900 是乐观端，本值在悲观端之上 —— 一致。
+2. **finish_reason 落"成功路径"**：`choices[0].finish_reason` → `Completion.finish_reason` → `CallRecord.finish_reason` → `llm_call` 日志行（**含成功**）；空 content 时同时进 `LlmEmptyContent.detail`。选成功路径是刻意的 —— 截断的响应**会**被当成功返回（非空但不完整），只记失败路径就永远看不到它 ⇒ 覆盖率 **21% → 100%**，正是你要的那一格。
+3. **commit = `e1ea13a`**（`fix(w3a): L4_SCORE 输出预算 512→2304 + 读 finish_reason 使截断在日志中可辨`）。
+
+### 有意未做：不 raise `LlmTruncated`（**依赖顺序，不是不做**）
+
+`app/binding/l4.py` 刻意没有 `except LlmError`（`:179-180`；`:209` 预留"裁定后改 3 行"）。
+在 client 层 raise 会穿过 `l4.py` → `bind.py:96` 的 `except LlmError` → 终态 `error`，
+**把 L4 现有 fail-safe（N-27 ④：失败 → 减候选继续）变成硬失败** = 产品行为变更。
+⇒ 本轮只做**零控制流风险**的可观测性；raise 版归 **W3C**（那 3 行）+ 架构裁定。
+
+### 向架构确认一处读法（我与 W7 一致，**无冲突**）
+
+`docs/07:2222`「max_tokens 标定保留（pro 前置）」—— 读法：**那条只管 pro 思考档**
+（`THINKING_HEADROOM_TOKENS`，即 `gen_sql_complex` 合成后的 9728），**不管** flash 的 512。
+本次改动**不触碰**该保留项 ⇒ **无需新裁定**。若架构读法不同，请回一句。
+
+### 判据（**不靠"现状绿"**）
+
+新增 `TestL4ScoreBudgetIsCalibratedFromMeasurement`（6 条）+ 正向对照探针
+`reports/w3a/_probe_l4_budget_positive_control.py`：注入 512 → 该组**如期红**
+（`exit=1`，红在覆盖断言上）；不注入 → **6 passed**。⇒ 这条测试**有判别力**，
+不是"现状恰好满足"。探针自身也只认 `TESTS_FAILED`，把"零收集/收集错误"排除在"成功"之外。
+
+### 给 W3-INT（门禁）
+
+改动面 = `app/llm/**`（L1，无下游 import 面）+ 一个测试文件 + 一个探针；全离线。
+数字见 `DELIVERY.md §15.5`。
+
+⚠️ **范围诚实**：`tests/integration/**` **未跑** —— 7 个文件要求一次性 DSN env
+（`COMMERCEQL_TEST_SUPER_DSN` / `COMMERCEQL_TEST_RW_DSN`；U-114 防线①：缺 env 必须 error、禁止 skip），
+本机不指向共享库 ⇒ 留给 CI。这是"**未验证**"，不是"已验证无关"。
