@@ -578,3 +578,16 @@ W7 下一次开工写 **②摘 `instrumentation.py` 反推 + ③放宽 `metrics.
 - 架构已裁"①②③ 同一 PR"，前科我认（`U-121` 只换 `:105` ⇒ 未捕获 `ContractViolationError`）。**判据③ 那条契约断言落 `tests/contract/**` = 我面**，我承诺随批写；但**不在 ① 之前单独落**——单独落就是"判据本身要求的红"，按 `08 §6.6` 既不能 skip 也不能 xfail，会把 CI 挂成背景噪音。
 - 我这侧为 ② 准备的可复核形状：`_timeout_fallback` 的终态感知（本轮已落）+ `node_timeout_terminal_already_set` 具名日志 ⇒ W7 复跑 `c=50/n=120` 时应看到 `graph_run_failed{N-08}` 归零、`refuse` 终态进 `app.audit_log`（**判据**：`node_timeout_degraded{normalize}` 可以仍有，但 `INTERNAL` 必须为 0、审计行数必须 = 拒答数）。
 - 工作区现状提醒（跑前自证）：本轮跑门时树里另有他人未提交件 —— `app/llm/{__init__,client,router}.py`、`tests/unit/test_llm_router.py`（W3A 在制品）、`reports/w1b/RELAY.md`。我按 `08 §6.4` **逐文件 add 且只 add 我三件**（`app/graph/build.py`、`tests/contract/test_graph_timeout_contract.py`、`reports/w4/RELAY.md`），提交后 `git show --stat` 复核。
+
+### 22.5 跑后自证（同树 `1036295`，20:3x）—— 两条红改判为"顺序相关"，不指认某个提交
+
+| 采样 | 命令 | 读数 |
+|---|---|---|
+| 跑前（我 fix 落地前，树 `e45c0a4` + W3A **未提交**在制品） | `pytest tests/unit tests/contract tests/redteam -q`（默认序） | **2 failed, 1850 passed** |
+| 同上，禁随机 | `… -p no:randomly` | 455 passed（仅 contract）；全量 **1858 passed** |
+| 跑后（我 fix = `7035db3`；W3A 已提交 `e1ea13a`/`1036295`） | 默认序 | **1858 passed**（用时 82.75s） |
+| 同上 | `-p no:randomly` | **1858 passed**（用时 71.33s） |
+
+⇒ 两条红**没有稳定复现**：20 分钟内一次出现、一次消失，且两次采样的差值同时含"W3A 改动是否落库"与"用例顺序"两个变量 ⇒ **按 §4.8 纪律我不指认归因**，只登记观测：形状是**用例间共享可变状态**（候选族 = gate2 结构面/可见面切换 + 红队负控，两条红都落在这一族；`tests/conftest.py:74` 已有 `_reset_tau_gauge` 这类逐例复位先例）。我名下两文件在两序下均全绿 ⇒ 与本批 fix 无关。**要不要立号由架构定**（下一可用号现读 = `U-130`），我不自取、也不去动别人的面。
+⇒ 另：`tests/contract/test_gate_seam_contract.py` 里 **Test D/E（+57 行）至今仍不在 HEAD 内**（`git show HEAD:… | grep -c` = **0**，`git log -S` 空）—— 有人把 `U-119` 判据④b 的用例写进了 W4 的文件却没提交。请作者认领并提交；我**不代提交、也不删**（删别人未评审的活是本项目的禁区）。
+⇒ 推送状态：本轮**网络阻**（`git ls-remote origin` 失败 + `github.com:22` TCP FAIL，与 W7 09-22 的实测同形）⇒ `7035db3` 待推；连带集合待网络恢复后现查 `git log origin/main..HEAD` 再决定，不写死哈希。
