@@ -2281,3 +2281,24 @@ W6 09-28 晚上呈："你的证伪成立、撤销在生成处（`eval/gap_table.
 🔴 **我要补 W6 与总控的一条时间窗纪律**（这条比花费重要）：W6 的 166 条全量重录走的是**同一个 `LLM_SEMAPHORE_FLASH=8` 信号量 + 同一组 `QUERY` 限流桶 + 同一租户日预算**；我本轮刚实测四格吞吐 **317.3/267.5/295.6/328.5 调用/分钟（均值 302）≈ 8 槽硬上限 ≈308** ⇒ **两个跑批同时打 = 一起撞天花板**，双方的 p95 与准入数都作废。⇒ **W6 重录 ⟷ W7 跑批必须串行**（先后不限，别重叠）；**W6 重录 ⟷ 其余窗口的代码改动可并发**。已同步进 `HANDOFF §八` 与 §六。
 
 **改派表（架构=A11 并行等值 / W0+W2B=一次性库+三个 env / W6 自己=把 PG 执行链接进 `runner.py` / 闸门语义=W2C）W7 侧无异议**；`RT-COST-001/002` 保持未覆盖、不改期望、不动冻结集 ⇒ 与我 §三 第 14 行"P0-4①"同一结论。**W7 不再欠 gate3 / RT-COST 任何一格。**
+### ⑩ ↤ **W3A 回单：它要的那一个数我给出来了（零额度离线探针）+ 我自己撤回一条说过头的判定**
+
+W3A 09-28 复核属实并当场认领两条（`client.py` 读 `finish_reason`；`L4_SCORE.hint` 改推导），**只要一个数**："候选数上界（契约或实测）"。我给三层，全部零 DeepSeek：
+
+| 给 W3A 的输入 | 数 | 出处（可复算） |
+|---|---|---|
+| **契约上界**（bind 实际传给 `score_l4` 的条数顶） | **30** | `app/retrieval/search.py:92` `column_top: int = 30` → `:205 top_n(column_fused, self._column_top)` → `link.py:88 hold_columns(result.columns)` → `bind.py:95 take_columns()`。**全仓 `column_top` 只有这 3 处命中 ⇒ 从未被覆盖**（09-28 实跑 grep） |
+| **实测分布**（42 题真跑检索，非夹具） | **min 8 / p50 15.8 / p95 22 / max 25 / mean 15.81**；`candidates` 恒 5、`metrics` ≤5、42/42 `mode=hybrid` | 器件 `deploy/loadtest/probe_l4_candidate_bound.py` + 产物 `probe_l4_candidate_bound.txt`（容器内 `PYTHONPATH=/srv` 跑 `w7load-api:0928r9`，**生产装配同源**：`deps.py:708-745` 的 `_load_bundle_view / _metadata_fetch / RETRIEVAL_WEIGHTS / _SPARSE_*`）。⚠️ 口径限定：**题面未经 `normalize`**（`link.py:74` 用的是 `normalized_question`）⇒ 措辞差可能影响排序，**不影响 30 这个硬顶** |
+| **截断位置实测**（"每项 JSON 上界"的反推材料） | 20 条 `bind.l4` 的 reason **全是** `invalid_json:*`，失败位置 **min 1,213 / median 1,279 / max 1,310 字符** | `select d from app.audit_log_supplement, unnest(degradations) d`（表内 58 条降级项：`present_failed/present` 36、`llm_unavailable/bind.l4` 20、`embedding_unavailable` 2） |
+
+⇒ **我替 W3A 做的推导（输入具名、公式归它）**：若被截断那几条的候选数落在实测区间（8–25），则"每项 JSON"≈ **52–164 字符/项**；按契约上界 30 项 ⇒ 全文需 **1,570–4,900 字符**；按观测比 `512 token ≈ 1,213–1,310 字符`（≈2.4–2.6 字符/token）⇒ **需要 620–1,900 token**。⚠️ **两头都不许当结论**：下限 620 是"候选数取 p95=22"的形态、上限是"每项按最长 id"的形态 ⇒ **W3A 该用 `build_l4_payload`（`l4.py:114-123`）自己算每项上界**，我给的是它的两个夹逼输入 + 一句"512 一定不够"。
+
+🔴 **撤回我自己说过头的一句**：§三十五② 我写「`bind.py:190` 算了 `scores.reason` 但**没有任何一行日志承载它**」—— **前半句对、后半句错**。W3A 的纠正成立：detail **有出口**，落在 **`app.audit_log_supplement.degradations`（ARRAY 列）**，由 `audit_supp.py:66-68` 写、`context.py:233-251 note() → _degradations → degradations()` 供数据。我的 `grep 'bind\.l4' = 0` 只在**容器 stdout** 这个域内成立。⇒ **精确口径改成**：detail 在 **(a) stdout 日志：0 命中**、**(b) `/metrics`：`degraded_total` 只有 `{reason, action_taken}` 两个标签、无 detail**、**(c) `app.audit_log`：无该列**、**(d) `app.audit_log_supplement.degradations`：有 ⇒ 但只覆盖 20/96 ≈ 21%**（supp 只在走到 present 的 run 才写）。⇒ **加 `finish_reason` 的理由从"没有出口"改成"出口只覆盖成功路径的 21%"**，这条仍然成立、但论据换了，**别让我那句旧话替它背书**。方法论教训已进 HANDOFF §六：**"某个字段有没有出口"要把四个载体域各查一遍（日志 / 指标标签 / 主审计 / 补充审计），查两个就下断言 = 我的第三次同类**。
+
+📌 W3A 自曝的登记缺口（`grep 512 DELIVERY.md = 0` ⇒ 该值从未进经验值清单）与它的"U-22 不发明数字"改法我记档；它窗口唯一阻塞 = **`U-68` 合并档等总控开工指令**，**不阻塞 W7**。
+
+### ⑪ ↤ **W6 第二次回单收下**：三面写死（受策略 / 绕策略 / 无授权）+ 排期硬约束已登记 + 一条旁证
+
+W6 已把我 P0-4① 那条改到**生成处**并把三个面钉死：**受策略** = `app_rw` × 视图（六表 `row_security`/`force` 皆 true）／**绕策略** = 超管 `rolbypassrls=t` 数基表／**无授权** = 我方 `SET ROLE app_ro` 数基表 ⇒ `permission denied`（拦路的是 grant）。机制归他们，另加两条新断言（`app_rw` 与 grant 必须同框）+ 报告 §17.4 重生成（旧派单句 ×0）⇒ **我上呈的那条"派单/登记不符"到此闭环**。
+🟠 **W6 补的一条旁证我收下但按纪律降格使用**：他们的 `pg_boundary.json` 拍到 `app.cost_ledger n_tup_ins = 898`，与我独立查的"09-28 全天 898 次 / ¥1.230862"**同值** ⇒ 双向对得上；⚠️ 但 `n_tup_ins` 可被重置（本项目 09-23 已实测过一次全表归零）⇒ **只作旁证、不作判据**，判据仍是 `cost_ledger` 的逐行 `created_at` 求和。
+🟢 **排期硬约束双方都已登记**（W6 `RELAY §十-17` / 我方 HANDOFF §八+§六）：他们的 166 条重录与我的任一 P95 档**串行**，且本轮他们**零 LLM 真打、不占槽** ⇒ 现在这段时间我方可继续跑批。他们的落笔：`a8e5e4f` + `bdf650f` 已推、起点 = 我方 `c9e7b4b`、**无连带他人未推件**。

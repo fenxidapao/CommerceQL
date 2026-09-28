@@ -1,0 +1,13 @@
+W7 离线探针产物（零 DeepSeek、只读；容器内 PYTHONPATH=/srv 跑 w7load-api:0928r9）
+复现：docker exec -i -e PYTHONPATH=/srv -w /srv w7load-api python - < deploy/loadtest/probe_l4_candidate_bound.py
+题集：deploy/loadtest/questions_T_A_time.txt（42 题）  identity：tenant=T_A role=analyst shop_ids=()（空=不限）
+口径：探针喂题库原文（未经 normalize），与 link.py:74 的 normalized_question 有措辞差；columns 的硬上界不受影响。
+Building prefix dict from the default dictionary ...
+Loading model from cache /tmp/jieba.cache
+Loading model cost 0.696 seconds.
+Prefix dict has been built successfully.
+questions = 42 modes = {'hybrid': 42}
+columns(->L4 candidate_ids) n=42 min=8 p50=15.8 p95=22.0 max=25 mean=15.81
+candidates n=42 min=5 p50=5.0 p95=5.0 max=5 mean=5.00
+metrics n=42 min=1 p50=4.1 p95=5.0 max=5 mean=4.14
+columns histogram: {8: 3, 9: 3, 10: 3, 12: 1, 13: 1, 14: 4, 15: 5, 16: 1, 17: 8, 19: 4, 20: 1, 21: 2, 22: 4, 24: 1, 25: 1}
