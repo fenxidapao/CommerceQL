@@ -1,0 +1,50 @@
+U-119 判据④b 交付门禁读数（W2A）
+================================
+
+采集时刻：2026-09-28T23:1x+0800　HEAD = bdc9bc1（远端 main 同点；W7 的 `71c0461` 在链上）
+
+交付件：`backend/tests/contract/test_gate_seam_contract.py`（+57 / −1，原文件 3 条 → 7 条）
+- **Test D**（`test_deny_column_rejected_through_gate2_seam`，参数化 3 形态：裸 / 表限定 / 别名）
+  = deny 列 `receiver_phone` 经**真 `SemanticBundleRuntime`** 喂 `run_gate2` ⇒ 必
+  `passed=False` 且 `rule_id == "G2-DENY"`。
+- **Test E**（`test_gate2_deny_check_depends_on_structure_face`）= 反向对照：monkeypatch 把 ④ 的
+  读取面 `policy_gate._struct_view` 退回**可见面** ⇒ **裸写**形态必须不再被 `G2-DENY` 拦。
+  ⚠️ **只有裸写会翻转**（实测）：限定 / 别名形态靠 `_resolve_column` 的表别名映射仍能归属到资产
+  ⇒ 仍拒。裸名恰是唯一能过闸门 R16 的形态 ⇒ 可见面下漏检的那一格正是生产最常走的那一格。
+
+判据④b 对应关系（07 v1.7.2 拆 ④a/④b）：④a = Test C（W4 `e0ce440`，正向对称）已在；
+④b = 「deny 列经真端口 ⇒ `G2-DENY`」+「读取面退回可见面时该断言必红」入 CI
+（原件只活在 W2C 报告件探针 `reports/w2c/_probe_u121_faces.py` 的档 1 / 档 B ⇒ 报告件不是门禁）。
+
+护栏正向对照（注入 → 必须红 → 还原 → 必须绿，写盘注入）
+- 注入 `policy_gate.py:149` 的 `_struct_view(allowlist)` → `allowlist`（= ④ 退回可见面）⇒
+  **`1 failed, 6 passed`**，红点恰为 `test_deny_column_rejected_through_gate2_seam[裸写]`（Test E 仍绿：
+  它是见证件、不是守卫）。
+- 还原后 `grep -c "extract_columns_with_assets(sql, _struct_view(allowlist))"` = 1、
+  `git diff --stat app/guard/policy_gate.py` = 空 ⇒ **7 passed**。
+
+🟠 **归因（W4 `RELAY §22.5` 的两条红）—— 我自认，并给出可复现的确证**
+W4 在 20:28 附近看到两条红（`test_deny_column_rejected_by_gate2_seam[裸写]` 与
+`tests/redteam::TestNegativeControl::test_gate2_redundancy_catches_when_gate1_blind`），
+随后复跑不复现、记为"顺序相关"。**实测归因：不是顺序，是当时共享工作副本里存在一份
+"④ 退回可见面"的临时状态**（本窗口上一轮为做「注入→必须红」对照，在 20:2x 短暂改过
+`policy_gate.py:149`，约 1～2 分钟后已还原）。**零改动复现**（进程内注入，不动工作区文件）：
+```
+PYTHONPATH=.pytest_tmp_inject pytest tests/contract/test_gate_seam_contract.py \
+  tests/redteam/test_redteam_guard.py -q -p zz_inject_visible_face
+→ 2 failed, 16 passed    ← 恰为 W4 那两条，同形态
+```
+⇒ 两条红**同一个成因**、且证明了这两条断言测的是**同一个判据面**（一条是守卫、一条是红队负向对照）。
+**我的操作教训已具名登记**：临时注入不该在共享工作副本上做，应放进程内（本次即用此法复现）。
+
+门禁读数（本环境）
+- `ruff check tests/contract/` → All checks passed（全仓 `ruff check .` 尚有 1 条属他人 in-flight 的
+  `tests/unit/test_llm_router.py`，不在本件）
+- `mypy app` → Success: no issues found in 147 source files
+- `lint-imports` → Contracts: 4 kept, 0 broken
+- `pytest tests/unit tests/contract -q` → **1847 passed**
+- `pytest tests/unit tests/contract tests/redteam -q` ×5 连跑 → **1858 passed**（5/5 全绿，稳定）
+- ⚠️ 环境事实：本 `.venv` **未装 `pytest-randomly`**（插件清单：anyio / langsmith / asyncio / cov /
+  respx）⇒ 本地序是**确定**的，W4 所称"默认随机序两条红"在本环境不可复现 —— 与上面归因一致。
+
+现场清理：`.pytest_tmp*` 已删；`app/guard/policy_gate.py` 与 HEAD 逐字一致（diff 空）。

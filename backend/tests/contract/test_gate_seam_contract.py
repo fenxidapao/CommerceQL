@@ -11,15 +11,31 @@
 ⚠️ **gate2 侧走的是它自己那次取数**：`run_gate2(sql, ctx, bundle)` 在 `guard/policy_gate.py` 内部
 调 `bundle.guard_allowlist(ctx)`（`c76f701`，U-121 第三步），与 gate1 **各取一次是刻意的**
 （见 `app/graph/nodes/gate1_ast.py` docstring §二）⇒ 本文件第三条断言测的就是那条独立缝。
+
+**判据④b（Test D + Test E，07 v1.7.2 拆 ④a/④b 的欠下那半）**：④a = Test C（正向对称）已由 W4
+`e0ce440` 落；④b = 「deny 列经**真端口**喂 `run_gate2` ⇒ 必 `G2-DENY`」入 CI，且**读取面**这条缝
+本身要有反向对照（原本只在 W2C 的报告件探针 `reports/w2c/_probe_u121_faces.py` 里跑过，
+**报告件不是门禁**）。
+
+- **Test D**：`receiver_phone`（deny 列）三形态（裸 / 表限定 / 别名）经真 `SemanticBundleRuntime`
+  喂 `run_gate2` ⇒ 必须 `passed=False` 且 `rule_id == "G2-DENY"`。
+- **Test E（反向对照）**：把 ④ 的读取面从结构面（`_struct_view`）退回**可见面**，
+  **裸写**形态必须不再被 `G2-DENY` 拦 ⇒ 证明 Test D 钉的是读取面这条缝，而不是「反正都会被拒」。
+  ⚠️ **只有裸写会翻转**（实测）：限定/别名形态靠 `_resolve_column` 的表别名映射仍能归属到资产，
+  即使列不在可见 `columns` 里也照拒 ⇒ 反向对照**只对裸写**成立。
+  而裸名恰好是**唯一能过闸门 R16 的形态** ⇒ 可见面下漏检的那一格，正是生产最常走的那一格。
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
+
+import pytest
 
 from app.core.contracts import IdentityContext
 from app.core.enums import Role
-from app.guard import run_gate1, run_gate2
+from app.guard import policy_gate, run_gate1, run_gate2
 from app.semantics.loader import load_bundle
 from app.semantics.runtime import SemanticBundleRuntime
 
@@ -84,3 +100,43 @@ def test_flat_projection_is_rejected_by_gate1() -> None:
 
     r1 = run_gate1(SQL, flat)
     assert r1.gate_result.passed is False
+
+
+#: deny 列（`receiver_phone`）的三种写法 —— 裸 / 表限定 / 别名。
+_DENY_SQL_FORMS = {
+    "裸写": "SELECT receiver_phone FROM v_order_paid",
+    "表限定": "SELECT v_order_paid.receiver_phone FROM v_order_paid",
+    "别名": "SELECT o.receiver_phone FROM v_order_paid AS o",
+}
+
+
+@pytest.mark.parametrize("form", sorted(_DENY_SQL_FORMS))
+def test_deny_column_rejected_through_gate2_seam(form: str) -> None:
+    """Test D = `U-119` **判据④b**：deny 列经真端口喂 `run_gate2` ⇒ 必 `G2-DENY`。
+
+    与 Test C 的区别：Test C 只证明**干净 SQL 不被误拒**；这条证明 ④ 的**冗余复核仍然活着**
+    —— 两者缺一，gate2 侧那道缝就只在"不错杀"这一半上有护栏（漏检 = fail-open，不会有任何红）。
+    """
+    r2 = run_gate2(_DENY_SQL_FORMS[form], _ctx(), _rt())
+    assert r2.gate_result.passed is False, r2.gate_result
+    assert r2.gate_result.rule_id == "G2-DENY", r2.gate_result
+
+
+def test_gate2_deny_check_depends_on_structure_face(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test E（反向对照）：把 ④ 的读取面退回可见面 ⇒ **裸写**形态必须不再被 `G2-DENY` 拦。
+
+    只有裸写会翻转（限定/别名靠 `_resolve_column` 的表别名映射仍能归属 ⇒ 仍拒）——
+    所以反向对照只对裸写成立，这**不是**测试写漏。裸名是唯一能过闸门 R16 的形态，
+    可见面下漏检的那一格正是生产最常走的那一格（07 §7.4 的"静默漏检"形态）。
+    """
+
+    def _visible_face(allowlist: dict[str, Any]) -> dict[str, Any]:
+        return allowlist  # 等价于"④ 直接吃可见 columns"
+
+    monkeypatch.setattr(policy_gate, "_struct_view", _visible_face)
+    r2 = run_gate2(_DENY_SQL_FORMS["裸写"], _ctx(), _rt())
+    assert not (r2.gate_result.passed is False and r2.gate_result.rule_id == "G2-DENY"), (
+        "可见面下裸写 deny 列竟然仍被 G2-DENY 拦 ⇒ 该断言不再能证明 ④ 读的是结构面"
+    )
