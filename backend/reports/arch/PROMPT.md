@@ -54,7 +54,7 @@
 → ⑤ 拆号（一稿一事；"同机制 ≠ 同缺陷"） → ⑥ 取号（§三 的双向 grep）
 → ⑦ 定归属 + 判据（文件/键/行 + 可机械复核的断言） → ⑧ 落笔（外置脚本，同时改 07 与 RELAY）
 → ⑨ 回填（§4.8 登记行 + 版本/日期/修订行 + RELAY 头"下一可用号"） → ⑩ 自检（grep 复核 + 脚本断言）
-→ ⑪ 交接（裁定只落 `docs/07` + 本窗 `RELAY.md`；**记忆层不由本窗口写** —— Qoder 层由总控维护；`.workbuddy/memory/`（项目层）实测最新写入 = **2026-09-23**，此后停写 ⇒ 引用时按史料、不按现状）
+→ ⑪ 交接（裁定只落 `docs/07` + 本窗 `RELAY.md`；**记忆层不由本窗口写** —— Qoder 层由总控维护；`.workbuddy/memory/`（项目层）已于 2026-09-28 **冻结为只读史料**）
 ```
 
 **两条最容易犯的**：
@@ -70,7 +70,7 @@
 5. **`docs/08 §4.1`**（归属权表 —— 权威）+ §3 各阶段 DoD + §6.3（同号撞车处置）。
 6. **各窗口的 `reports/wX/{DELIVERY,RELAY}.md`**：按需读，**只读"现象"节与"上呈/待裁"节**。
 7. **记忆层（两套，2026-09-28 实测更正）**：
-   - **项目层** `.workbuddy/memory/`（`MEMORY.md` 12 KB + `REFERENCE.md` 72 KB + daily log 2026-09-14→09-23）**存在**，但**实测最新写入 = 2026-09-23、此后停写** ⇒ 按**史料**引用，不当现状用；其中 `REFERENCE.md` 有唯一副本的技术口径（如 §12.1 `retrieval_mode_total`），需要时按节引用。
+   - **项目层** `.workbuddy/memory/`（`MEMORY.md` 12 KB + `REFERENCE.md` 72 KB + daily log 2026-09-14→09-23）**存在**，但**最新写入 = 2026-09-23、此后停写**；总控 2026-09-28 点头后**已加冻结横幅并全部置只读**⇒ 按史料引用、不再往里写；其中 `REFERENCE.md` 有唯一副本的技术口径（如 §12.1 `retrieval_mode_total`），需要时按节引用。
    - **用户层** `C:\Users\林琪荣\.workbuddy\memory\` 确实只有一个 2026-09-12 的会话件（旧提示词说的就是它，路径写成了相对路径才像"不存在"）。
    - **当前记忆层 = Qoder**：`C:\Users\林琪荣\.qoder\memory\MEMORY.md`（用户层）+ `…\.qoder\projects\<本项目>\memory\MEMORY.md`（项目层）。
    ⚠️ 三层都按"可能过期"处理，**判定类事实（`U-xx` 状态 / 门禁结论）唯一权威 = `docs/07 §4.8` + `reports/w6/评测报告与门禁判定.md`**。
@@ -98,7 +98,7 @@
 | `reports/arch/RELAY.md`（升版本号） | 每节 = 一块可粘贴的引用块（收件人写在标题）；**文末四个固定件缺一不可** |
 | 消息回复 | 裁定摘要（号/级别/归属/判据）+ **如实披露局限与未验证项** |
 
-**commit 惯例**：`docs(arch): …`，**只 stage 本窗口文件、逐文件 `git add`**（`08 §6.4`；`git add <文件> && git commit` 同命令零间隔 + 提交后 `git show --stat HEAD` 复核）。⚠️ **实测 `git ls-files backend/reports/arch` = 0 条** ⇒ 本目录 21 个文件（含 195 KB 的 `RELAY.md`）**从未进过仓库**，唯一安全网是 `.bak`（已于 2026-09-28 移到 `E:\01_实训\项目\CommerceQL建议删除垃圾\`）。**是否把本目录入库 = 待总控裁定**（见 RELAY 待办），裁定前不要自行 add。
+**commit 惯例**：`docs(arch): …`，**只 stage 本窗口文件、逐文件 `git add`**（`08 §6.4`；`git add <文件> && git commit` 同命令零间隔 + 提交后 `git show --stat HEAD` 复核）。✅ **本目录已于 2026-09-28 入库**（commit `fd7bcd3`，7 个活跃件 = `DELIVERY/HANDOVER/PROMPT/RELAY.md` + 3 份 `probe_*.py`；当时工作区里另有 13 个 `.bak-*` 已移出）。⚠️ **`.gitattributes` 的 `* text=auto eol=lf` ⇒ 新克隆检出是 LF、本机工作副本仍是 CRLF**⇒「改前先探 EOL」这条从今往后**更要严格执行**（两个 EOL 会同时存在）。
 
 ## 十、边界（这些目录归他人，只能提需求）
 

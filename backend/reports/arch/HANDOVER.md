@@ -249,7 +249,7 @@ export PATH="$PG/usr/bin:$PG/cmd:$PATH"    # cmd 必须有
 - Python 一律 `CommerceQL/.venv/Scripts/python.exe`；**不写 `async def test_`**（Windows 撞 `ProactorEventLoop`）⇒ 同步用例内 `asyncio.run(...)`。
 - 集成测试先起 Docker Desktop；**"物化 → 判据④ 采样"之间不要跑 `tests/integration`**（`test_semantic_materialization.py` 会把向量/tsv **静默清回 NULL 且 7 条测试全绿**，`U-114`）。
 - **判"推上去没有"用 `git ls-remote origin main`**（本沙箱写不进 `.git/refs/remotes/**`，`git log origin/main..HEAD` 会假空/假满）。
-- 🔴 **入库注意**：`reports/arch/` 的 13 个 `RELAY.md.bak-*` 已于 **2026-09-28** 移到 `E:\01_实训\项目\CommerceQL建议删除垃圾\`（清单见该目录 `MANIFEST.md`）⇒ 该目录现在只剩活跃件。**仍要逐文件 `git add`、禁止整目录 add**（`08 §6.4`，与 `.bak` 无关的那半条理由是共享索引会卷走他人暂存）。⚠️ 另：`git ls-files backend/reports/arch` **实测 0 条** ⇒ 本目录从未入库，是否入库待总控裁定。
+- 🔴 **入库注意**：`reports/arch/` 的 13 个 `RELAY.md.bak-*` 已于 **2026-09-28** 移到 `E:\01_实训\项目\CommerceQL建议删除垃圾\`（清单见该目录 `MANIFEST.md`）⇒ 该目录现在只剩活跃件。**仍要逐文件 `git add`、禁止整目录 add**（`08 §6.4`，与 `.bak` 无关的那半条理由是共享索引会卷走他人暂存）。✅ **本目录已于 2026-09-28 入库**（commit `fd7bcd3`，7 个活跃件 = `DELIVERY/HANDOVER/PROMPT/RELAY.md` + 3 份 `probe_*.py`；当时工作区里另有 13 个 `.bak-*` 已移出）。⚠️ **`.gitattributes` 的 `* text=auto eol=lf` ⇒ 新克隆检出是 LF、本机工作副本仍是 CRLF**⇒「改前先探 EOL」这条从今往后**更要严格执行**（两个 EOL 会同时存在）。
 
 ---
 
