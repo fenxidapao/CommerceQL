@@ -1,0 +1,4 @@
+T_A
+view_with_guc|0
+table_with_guc|494249
+p_order_paid_tenant|*|{-}|((tenant_id = current_setting('app.tenant_id'::text, true)) AND ((current_setting('app.shop_ids'::text, true) = ''::text) OR (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text)))))

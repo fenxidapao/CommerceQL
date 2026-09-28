@@ -1,0 +1,88 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-09-28T13:41:40+00:00",
+  "target": "http://127.0.0.1:18000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 50,
+        "duration_s": 600.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": false,
+        "questions": "questions_T_A_time.txt",
+        "request_cap": 120
+      },
+      "requests": 120,
+      "wall_s": 24.932,
+      "throughput_rps": 4.813,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 84,
+        "rejected_429": 1,
+        "other_http_4xx": 0,
+        "http_5xx": 35,
+        "unresolved": 0
+      },
+      "rejection_headers": {
+        "503": {
+          "retry_after=5": 35
+        },
+        "429": {
+          "retry_after=30": 1
+        }
+      },
+      "latency_ms": {
+        "p50": 15664.3,
+        "p95": 24443.3,
+        "p99": 24445.9,
+        "max": 24445.9,
+        "mean": 11481.3,
+        "samples": 84
+      },
+      "latency_ms_all_ms": {
+        "p50": 5006.6,
+        "p95": 24441.0,
+        "samples": 120
+      },
+      "ttfb_ms": {
+        "p50": 229.8,
+        "p95": 3714.6
+      },
+      "outcomes": {
+        "refuse": 76,
+        "error_frame": 8,
+        "http_5xx": 35,
+        "http_4xx": 1
+      },
+      "codes": {
+        "LLM_UPSTREAM_ERROR": 8,
+        "{\"code\":\"DB_UNAVAILABLE\",\"message\":\"服务暂时不可用，请稍后重": 35,
+        "RATE_LIMITED": 1
+      },
+      "terminal_provenance": {
+        "refuse": {
+          "stage=intent|reason=no_data_asset": 45,
+          "stage=none|reason=no_data_asset": 31
+        },
+        "error_frame": {
+          "stage=intent|reason=none": 8
+        },
+        "http_5xx": {
+          "stage=none|reason=none": 35
+        },
+        "http_4xx": {
+          "stage=none|reason=none": 1
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": false,
+      "g6_caveat": "本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；另有 1 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）"
+    }
+  ],
+  "finished_at": "2026-09-28T13:42:05+00:00"
+}

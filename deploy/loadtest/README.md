@@ -767,6 +767,146 @@ MSYS_NO_PATHCONV=1 docker exec commerceql-pg-1 psql -U postgres -d ecom -tAc \
 
 **"本机依赖没起来"这件事，我不该拿它去问总控。** §三.0.1m 我把 Ollama 判成"环境瓶颈 ⇒ 扣住整批不跑"并上呈，这个**判断本身是对的**（污染容量读数，必须扣），但我停在"等总控开" —— 开 Ollama 是本机上一个可逆、零外呼、不碰共享数据的动作，**该我自己做完再汇报**。已把这条订正写进长期记忆（分界：**只读探测 + 恢复本机自有依赖 ⇒ 做完汇报；改共享状态 / 不可逆 ⇒ 才问**）。本轮 Ollama 由总控先开了，我照旧做了三处可达性复验再跑批 —— 顺序合规，但**下轮同类不再问**。
 
+#### 三.0.1o ★★ 第十八轮（2026-09-28 21:40–22:10 本机 / 13:40–14:10Z）：**新镜像首格作废（冷容器假象）+ U-128 / U-129 活体验收 + 属主负向断言拿到读数**（镜像 `w7load-api:0928r10` = HEAD `00d3c12`，含 `e1ea13a` / `1036295` / `7035db3`）
+
+##### ① 五格读数（同镜像、同题集 `questions_T_A_time.txt`、令牌 `u_d01..u_d10` 十枚，用后即删、永不入库）
+
+| 格 | 参数 | 窗口 (UTC) | req | admitted | 429 | 4xx(409) | 5xx | ok | p50 / p95 ms | `llm_call`(stop) | 台账行 / ¥ | 回执文件 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 预热 | c1 / n2 | 13:40:15–13:40:29 | 2 | 2 | 0 | 0 | 0 | 0 | 1,146 / 13,381 | 2 (2/2) | 2 / ¥0.001445 | `healthy_rB_warm_c1n2.json` |
+| **steady 冷** | c50 / n120 | 13:41:40–13:42:05 | 120 | 84 | 1 | 0 | **35** | **0** | 15,664 / 24,443 | **0** | 0 / ¥0 | `healthy_rB_steady_c50n120_cold.json` |
+| 控制臂 | c1 / n3 | 13:45:06–13:45:29 | 3 | 3 | 0 | 0 | 0 | 1 | 9,218 / 13,044 | 6 (6/6) | 6 / ¥0.006944 | `healthy_rB_c1n3_control.json` |
+| **steady 热**（同参重跑） | c50 / n120 | 13:46:44–13:47:41 | 120 | 86 | 34 | 0 | 0 | **8** | 31,839 / 39,552 | 225 (**225/225**) | 225 / ¥0.333996 | `healthy_rB2_steady_c50n120_warm.json` |
+| session-lock（令牌已钉） | c8 / n24 | 13:48:18–13:48:32 | 24 | **1** | 14 | 9 | 0 | 1 | 13,776（单样本） | 2 (2/2) | 2 / ¥0.001566 | `healthy_rB_sessionlock_c8n24_pinned.json` |
+
+冷格的 35 条 5xx 全为 `DB_UNAVAILABLE` + `Retry-After: 5`，容器日志同刻 `redis_unavailable` 35 条、
+`error_type: TimeoutError` 38 条、`node_timeout_degraded` 42 条、`llm_falling_back_to_template` 34 条、
+**`llm_call` 0 条**；`codes` 里 `LLM_UPSTREAM_ERROR` 8 条。
+
+##### ② 冷容器假象是本轮的**主结论**，不是代码回归
+
+同一镜像、同一参数、间隔 4.5 分钟，两格的 `ok` 从 **0** 变成 **8**、5xx 从 **35** 变成 **0**：
+
+| 对照 | 冷臂（首格） | 热臂（同参重跑） |
+|---|---|---|
+| ok / admitted | 0 / 84 | 8 / 86 |
+| 5xx | 35（`DB_UNAVAILABLE`） | **0** |
+| 429 | 1 | 34（`RATE_LIMITED`，`Retry-After: 30`） |
+| `llm_call` | **0** | 225（全 `finish_reason=stop`） |
+| p50 / p95 | 15,664 / 24,443 | 31,839 / 39,552 |
+
+环境旁证（同窗口内取，排除"栈坏了"）：容器 → DeepSeek 首连 **4,320 ms**（401，冷 TLS），随后两次 **193 / 180 ms**；
+Redis `PONG` 0.14 ms、`clients=30`。⇒ 冷臂的红是**首格冷启动**（TLS/连接池/Redis 首握手全部落在同一 20 s 窗口），
+不是 W3A / W4 三个 commit 引入的回归。**判据 = 同参热臂 + `c=1` 控制臂**，缺一不得下"回归"结论（§六 已登记为排期硬约束）。
+
+##### ③ 审计对账（`app.audit_log` 按 `timestamp` 窗口，连接角色 = `postgres`）
+
+| 窗口 | admitted | 审计行 | 差 | outcome 明细 |
+|---|---|---|---|---|
+| rB 冷 steady | 84 | 84 | **0** | refuse 76 / failed 8 |
+| rB 热 steady | 86 | 86 | **0** | failed 40 / refuse 30 / clarify 8 / success 8 |
+| rB 控制 c1n3 | 3 | 3 | **0** | success 1 / clarify 1 / refuse 1 |
+| rB session-lock | 1 | 1 | **0** | refuse 1 |
+| **rA 第十七轮 session-lock（U-129 修复前）** | **16** | **8** | **8** | refuse 8 |
+
+⇒ **U-129 的量纲拿到了**：修复前那一格"应有而没有"的终态行 = **8**，与该窗 `error_frame` 里 8 条
+`error_type:"ValueError"` 精确相等；修复后四格差值全为 0。
+⇒ 同时纠正我自己上一轮的措辞：我写的"审计 **0** 行"**不准确** —— 该窗实际有 8 行（全 `refuse`，模板回落写的），
+缺的是那 8 个崩掉的请求的终态行。读法见 RELAY §三十六 ①。
+
+##### ④ U-128（L4 截断）活体验收 = 通过
+
+| 判据 | 读数 | 载体 |
+|---|---|---|
+| 截断签名消失 | `l4_score` 单请求最大输出 **775** tok（> 旧 `max_tokens_for` 的 512 档）；命中 2304 档 0 次、命中 512 档 0 次 | 热臂窗口容器日志 `llm_call` 225 条 |
+| 全部完成 | `finish_reason=stop` **225/225** | 同上 |
+| 降级归零 | `bind.l4` 的 `REDUCED_CANDIDATES` 降级行：**全库累计 20 行，13:40Z 之后 0 行**（20 行全部是修复前 rA 留下的） | `app.audit_log_supplement` ⋈ `app.audit_log` on `task_id` |
+| 覆盖口径不变 | 该出口仍只覆盖"跑到 `present` 的请求"⇒ 热臂 86 admitted 里只有 8 条 success 具备写 supplement 的资格 | `audit_supp.py:55-70` |
+
+⚠️ 载体纠偏（W3A 提出、我确认）：`bind.py:187-191` 的 degraded detail **有**出口（`{"stage":"bind.l4","reason":…}`），
+我上一轮"没有出口"那句说过头了；本轮据此把 20 行样本逐条读回，reason 全为 `invalid_json:*`。
+
+##### ⑤ 交回 U-126 配平表的新单请求槽占用 **H ≈ 6.18 s**
+
+控制臂 `c=1/n=3` 的逐任务耗时（容器日志，同一请求内串行相加）：
+`normalize` 1,143 / 1,058 / 1,432 ms、`plan` 1,988 ms、**`l4_score` 1,413 ms（输出 321 tok）**、`gen_sql` 1,568 ms
+⇒ 单请求模型槽占用 **H ≈ 6.18 s**，对第十七轮的 5.99 s 是 **+0.19 s（+3.2%）**。
+吞吐上限沿用第十七轮四格实测均值 **302 calls/min**（本轮未重测，冷臂 0 调用不可用、热臂受 429 压制不可用）。
+
+##### ⑥ 属主负向断言（W1B 判缺陷 / W0 判特性 —— 本轮第一次有实测）
+
+新永久件 `probe_session_owner.py`（只读、零写库）：以 `u_d02` 令牌打 `u_d01` 创建的 `session_id`：
+
+| 断言 | 契约期望 | **实测** |
+|---|---|---|
+| 非属主 `POST /query` 打他人 session | 404 `SESSION_NOT_FOUND` | **HTTP 200**，完整 SSE 流 **2,101 字节** |
+| 非属主 `GET /session/{sid}` | 404 | **HTTP 200**，`turns_readable_by_nonowner = 2` |
+| 非属主能否拿到 title | — | `returned_a_title = false` |
+
+⇒ W1B 的"fail-open 判缺陷"成立且已量化；产物 `probe_session_owner_nonowner.json` / `probe_session_owner_with_owner_ask.json`。
+driver 侧 W1B+W0 裁定的那一行已改（`single_session` 时 workers 全用创建者令牌），
+`--self-check` 10/10，session-lock 复跑形状 = **admitted 1 / 14×429(RA 30) / 9×409(RA 3)**，与 09-23 的 1+14+9 完全同形
+⇒ 令牌枚数不再改变被测对象。
+
+##### ⑦ U-124 A 臂在新树复跑（W2A 结案要求的回执）
+
+永久件 `probe_searchpath_a_arm.py`（analytics 池原样、调用方不给任何 preset）：
+`show search_path = app`、`current_user = app_ro`、非限定 `from v_order_paid` **名称解析通过**
+⇒ 与 09-23 的 A 臂（`ProgrammingError: relation "v_order_paid" does not exist`）相反 ⇒ U-124 的连接级 `search_path` 在活体成立。
+
+⚠️ **`rows=0` 不是缺陷**，对照三臂（全为只读；app 侧定位件 = `probe_rls_face_locator.py` / `probe_rls_face_locator.txt`）：
+
+| 读法 | 结果 |
+|---|---|
+| 基表直查（`postgres`，超户） | 494,249 |
+| 视图、只给 `app.tenant_id=T_A` | **0** |
+| 视图、三个身份 GUC 齐给（`shop_ids` = 空串 = 不限） | **200,000**（= T_A 全部行） |
+
+原始读数归档：`probe_rls_table_vs_view_counts.txt`（基表 494,249 / 视图 0）、`probe_rls_three_guc_count.txt`（三 GUC = 200,000）、
+`probe_tenant_rowcounts.txt`（T_A 200,000 / T_B 175,000 / T_C 119,249）、`probe_rls_face_facts.txt`（owner / `relforcerowsecurity` / 是否超户）、
+`probe_rls_policy_readout.txt`（策略原文）。
+
+机制（已验证事实，非推测）：`app.v_order_paid` owner = `app_rw` 且非 security-invoker；
+`app.order_paid` `relrowsecurity=t` **且 `relforcerowsecurity=t`**；策略 `app.p_order_paid_tenant` 的第二支
+`current_setting('app.shop_ids', true) = '' OR shop_id = ANY(...)` 在键未设时求值为 **NULL** ⇒ 整条策略不为真。
+⇒ 生产注入模板 `dsn.py:141-145` 三个键一起给，是对的；探针只给一个就会静默 0 行。
+⇒ 对 W6 长期挂着的"PG 侧 0 行"给出**候选解释路径**（是否即其成因我没有同对象对照，不写结论）。
+
+##### ⑧ 候选数上界探针的标签自纠（`probe_l4_candidate_bound.py`）
+
+同一 42 题、同一镜像重跑，`columns histogram` 与第十七轮**逐桶相同** ⇒ 探针可复现（跨镜像重建）。
+但 `rep()` 原实现把 `st.mean(v)` 打印在 `p50` 位 ⇒ 归档件里 `p50` 与 `mean` 数值相同就是证据。
+修正后：`columns` **min 8 / p50 17.0 / p95 22 / max 25 / mean 15.81**，`metrics` p50 5.0。
+⇒ 交给 W3A 的两个推导输入（硬上界 30 = `search.py:92 column_top: int = 30`、p95 = 22）**不受影响**，
+`hint=2304` 的推导成立。新读数存 `probe_l4_candidate_bound_r10.txt`。
+
+##### ⑨ 本轮花费与归因（共享库台账 `app.cost_ledger`）
+
+跑前基线 934 行 / ¥1.288840 ⇒ 跑后 1,181 行 / ¥1.647555，**本轮 Δ = 247 行 / ¥0.358715**。
+逐分钟 × 逐用户拆开，247 行全部落在我本轮铸的 `u_d01..u_d10` 上，加总闭合：
+2（预热）+ 0（冷臂）+ 6（控制）+ 225（热臂）+ 2（session-lock）+ 12（13:49–13:51 属主探针，其中含一次 owner 真问）= **247** ✅。
+⚠️ **冷臂那 84 个请求没有一条进台账** ⇒ 台账只记"成功完成的模型调用"，上游故障/超时的请求对它不可见 ——
+这一条直接回答了架构 §三十六 ① 的"缺口 0 与 0 行是否矛盾"。
+
+##### ⑩ 复现命令（本机，逐条可贴）
+
+```bash
+# 五格（令牌文件用完即删；<tok> 为本机临时文件，绝不入库）
+docker exec -i -e PYTHONPATH=/srv -w /srv w7load-api python /srv/deploy/loadtest/driver.py \
+  --target http://127.0.0.1:18000/api/v1 --scenario steady --concurrency 50 --requests 120 \
+  --questions deploy/loadtest/questions_T_A_time.txt --tokens <tok> --out <receipt.json>
+# 审计对账（连接角色 = postgres，列名是 timestamp 不是 created_at）
+docker exec commerceql-pg-1 psql -U postgres -d ecom -At \
+  -c "select outcome,count(*) from app.audit_log where timestamp >= '<UTC 起>' and timestamp < '<UTC 止>' group by 1"
+# 降级出口按窗口计数（supplement 表无时间列 ⇒ 必须 join audit_log on task_id）
+docker exec commerceql-pg-1 psql -U postgres -d ecom -At \
+  -c "select count(*) from app.audit_log_supplement s join app.audit_log a using(task_id)
+      where s.degradations::text like '%bind.l4%' and a.timestamp >= '<UTC 起>'"
+# 候选数上界 / A 臂（零 DeepSeek，容器内 stdin 喂脚本）
+docker exec -i -e PYTHONPATH=/srv -w /srv w7load-api python - < deploy/loadtest/probe_l4_candidate_bound.py
+docker exec -i -e PYTHONPATH=/srv -w /srv w7load-api python - < deploy/loadtest/probe_searchpath_a_arm.py
+```
+
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 
 探针的取数依据按 U-22 纪律必须"写在常量旁边"，而常量旁边放不下方法 —— 所以

@@ -1,0 +1,20 @@
+{
+ "expected": "404 SESSION_NOT_FOUND（附录 A §A.11 / 07 §14 H7 / PRD FR-10.4）",
+ "create_session": {
+  "http": 200,
+  "session_id_present": true
+ },
+ "nonowner_post_query": {
+  "http": 200,
+  "codes_seen": [],
+  "sse_bytes": 2065,
+  "body_head": "event: ack\ndata: {\"task_id\":\"tk_b742b10f021d465899f54d95bef752d4\",\"session_id\":\"ss_a85226aa516b45e3b860da9bdaa7de18\",\"terminal\":false}\n\nevent: stage\ndata: {\"elapsed_ms\":1602,\"termi"
+ },
+ "owner_ask_done": true,
+ "nonowner_get_session": {
+  "http": 200,
+  "returned_a_title": false,
+  "turns_readable_by_nonowner": 2,
+  "body_head": "{\"code\":\"OK\",\"message\":\"success\",\"trace_id\":\"tr_754cea3e0fd04711a1043a55f09554e3\",\"data\":{\"session_id\":\"ss_a85226aa516b45e3b860da9bdaa7de18\",\"turns\":[{\"task_id\":\"tk_948e1187b93d4a8"
+ }
+}

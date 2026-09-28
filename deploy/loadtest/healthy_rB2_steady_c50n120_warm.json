@@ -1,0 +1,90 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-09-28T13:46:44+00:00",
+  "target": "http://127.0.0.1:18000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 50,
+        "duration_s": 600.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": false,
+        "questions": "questions_T_A_time.txt",
+        "request_cap": 120
+      },
+      "requests": 120,
+      "wall_s": 56.619,
+      "throughput_rps": 2.119,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 86,
+        "rejected_429": 34,
+        "other_http_4xx": 0,
+        "http_5xx": 0,
+        "unresolved": 0
+      },
+      "rejection_headers": {
+        "429": {
+          "retry_after=30": 34
+        }
+      },
+      "latency_ms": {
+        "p50": 31839.0,
+        "p95": 39552.5,
+        "p99": 46843.5,
+        "max": 46843.5,
+        "mean": 26773.7,
+        "samples": 86
+      },
+      "latency_ms_all_ms": {
+        "p50": 15505.2,
+        "p95": 39115.5,
+        "samples": 120
+      },
+      "ttfb_ms": {
+        "p50": 97.7,
+        "p95": 151.4
+      },
+      "outcomes": {
+        "clarify": 8,
+        "refuse": 30,
+        "error_frame": 40,
+        "ok": 8,
+        "http_4xx": 34
+      },
+      "codes": {
+        "GATE_AST_REJECTED": 40,
+        "RATE_LIMITED": 34
+      },
+      "terminal_provenance": {
+        "clarify": {
+          "stage=intent|reason=time_ambiguous": 8
+        },
+        "refuse": {
+          "stage=intent|reason=out_of_scope": 2,
+          "stage=intent|reason=no_data_asset": 20,
+          "stage=plan_ready|reason=no_data_asset": 8
+        },
+        "error_frame": {
+          "stage=sql_ready|reason=none": 39,
+          "stage=executing|reason=none": 1
+        },
+        "ok": {
+          "stage=executing|reason=none": 8
+        },
+        "http_4xx": {
+          "stage=none|reason=none": 34
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": false,
+      "g6_caveat": "另有 34 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）"
+    }
+  ],
+  "finished_at": "2026-09-28T13:47:41+00:00"
+}

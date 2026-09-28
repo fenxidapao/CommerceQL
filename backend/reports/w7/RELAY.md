@@ -2302,3 +2302,130 @@ W3A 09-28 复核属实并当场认领两条（`client.py` 读 `finish_reason`；
 W6 已把我 P0-4① 那条改到**生成处**并把三个面钉死：**受策略** = `app_rw` × 视图（六表 `row_security`/`force` 皆 true）／**绕策略** = 超管 `rolbypassrls=t` 数基表／**无授权** = 我方 `SET ROLE app_ro` 数基表 ⇒ `permission denied`（拦路的是 grant）。机制归他们，另加两条新断言（`app_rw` 与 grant 必须同框）+ 报告 §17.4 重生成（旧派单句 ×0）⇒ **我上呈的那条"派单/登记不符"到此闭环**。
 🟠 **W6 补的一条旁证我收下但按纪律降格使用**：他们的 `pg_boundary.json` 拍到 `app.cost_ledger n_tup_ins = 898`，与我独立查的"09-28 全天 898 次 / ¥1.230862"**同值** ⇒ 双向对得上；⚠️ 但 `n_tup_ins` 可被重置（本项目 09-23 已实测过一次全表归零）⇒ **只作旁证、不作判据**，判据仍是 `cost_ledger` 的逐行 `created_at` 求和。
 🟢 **排期硬约束双方都已登记**（W6 `RELAY §十-17` / 我方 HANDOFF §八+§六）：他们的 166 条重录与我的任一 P95 档**串行**，且本轮他们**零 LLM 真打、不占槽** ⇒ 现在这段时间我方可继续跑批。他们的落笔：`a8e5e4f` + `bdf650f` 已推、起点 = 我方 `c9e7b4b`、**无连带他人未推件**。
+
+## 三十六、**新镜像首格作废（冷容器假象）⇒ U-128 / U-129 双活体验收通过**；给架构 ⑧ 的同轮读法（审计缺口按理应现出 8 —— 架构猜对了，我的措辞错了）；属主负向断言第一次有实测（09-28 晚 · 第十八轮）
+
+时刻：本机 2026-09-28 21:40–22:10 / UTC 13:40–14:10Z。镜像 `w7load-api:0928r10` = HEAD `00d3c12`
+（含 `e1ea13a` + `1036295` = W3A 的 U-128 修复、`7035db3` = W4 的 U-129 修复）。共享栈全程未重启、未重建。
+证据体 = `deploy/loadtest/README.md` §三.0.1o（五格表 + 审计对账 + 复现命令）。
+
+### ① ↤ **架构 ⑧ 要求"用同轮件给一次读法"** —— 结论：**两个读数不是同一个对象，且我上轮那句"审计 0 行"措辞不准，先撤回**
+
+架构的质疑原话：**"同轮既报『8 条 INTERNAL / 审计 0 行』又报『台账缺口 0（795+2=797）』——若真 0 行，缺口按理应现出 8。"**
+
+本轮我自己复算了那一格（第十七轮 session-lock `c8/n24`，窗口 10:22:17–10:22:41Z，回执 `healthy_rA_sessionlock_c8n24.json`）：
+
+| 度量 | 对象 | 实测 | 判定 |
+|---|---|---|---|
+| 回执 `admitted` | 进入图的请求 | **16**（另 4×409 + 4×503 未入图） | — |
+| `app.audit_log` 该窗行数 | 终态行 | **8**（全部 `outcome=refuse`，模板回落写的） | 🔴 **我上轮写"审计 0 行"是错的** —— 有 8 行 |
+| `admitted − 审计行` | 请求级丢行 | **8** | ✅ **与架构的预测逐字相等**（"按理应现出 8"）；也与该窗 8 条 `error_type:"ValueError"` 精确对齐 |
+| `app.cost_ledger` 该窗行数 | 成功完成的模型调用 | **0** | "缺口 0" 与它不矛盾 —— 见下 |
+
+🔴 **"台账缺口 0"不是完整性度量，我上轮把它当用了**。它的对象是 `llm_call` 日志行 vs `cost_ledger` 行（六格整体 795+2=797）；
+而 session-lock 那一格**两边都是 0**（该窗没有任何成功完成的模型调用 —— 本轮同窗口再查仍是 0 行）⇒ 恒等式自动成立，
+它对"请求级丢行"完全不敏感。**⇒ 能显出 8 的只有 `admitted − audit_log` 这一条，今后我以此为判据，不再引用"台账缺口"回答完整性问题。**
+可复算：
+
+```bash
+docker exec commerceql-pg-1 psql -U postgres -d ecom -At \
+  -c "select outcome,count(*) from app.audit_log where timestamp >= '2026-09-28 10:22:17+00' and timestamp < '2026-09-28 10:22:42+00' group by 1"
+docker exec commerceql-pg-1 psql -U postgres -d ecom -At \
+  -c "select count(*) from app.cost_ledger where created_at >= '2026-09-28 10:22:17+00' and created_at < '2026-09-28 10:22:42+00'"   # = 0
+```
+
+🟢 **零成本线索那条我采纳并跑了**：`grep redis_unavailable` + `error_type=` 分"连不上 / 操作超时" ⇒
+本轮冷臂窗口 `redis_unavailable` **35** 条、`error_type: TimeoutError` **38** 条。
+⚠️ **那 3 条差额我没有逐条归因** ⇒ 记 `UNVERIFIED`，不写成"全部为超时"。
+
+### ② ↤ **U-128④ 要的"新单请求槽占用 H"= 6.18 s**（交回 `U-126` 配平表）
+
+控制臂 `c=1/n=3`（13:45:06–13:45:29Z，`healthy_rB_c1n3_control.json`）逐任务相加：
+`normalize` 1,143 / 1,058 / 1,432、`plan` 1,988、**`l4_score` 1,413（输出 321 tok）**、`gen_sql` 1,568
+⇒ **H ≈ 6.18 s**，对第十七轮的 5.99 s 是 **+0.19 s（+3.2%）**；吞吐上限沿用四格均值 **302 calls/min**（本轮未重测：冷臂 0 调用不可用、热臂被 429 压制不可用）。
+⇒ 对 `U-126`：`hint 512→2304` 对槽占用时间的代价是**每请求 +0.19 s**，不是每请求 +3 s（`thinking=False` 时不叠 `THINKING_HEADROOM_TOKENS`，`router.py:315-321`）。
+
+### ③ ↤ **W4 的三条判据全部复核通过**（`7035db3`）
+
+| W4 判据 | 本轮实测 | 结论 |
+|---|---|---|
+| `graph_run_failed{N-08}` 归零 | 热臂 225 次 `llm_call` 全 `finish_reason=stop`；`graph_run_failed` **0** | ✅ |
+| `INTERNAL` 必须 0 | 冷臂 codes 有 `LLM_UPSTREAM_ERROR 8`（Redis 超时链，非 N-08）；热臂 `INTERNAL` **0**；session-lock 臂 `409×9 / 429×14`，无 INTERNAL | ✅ |
+| refuse 终态进 `app.audit_log` | 热臂该窗 **refuse 30** 行入库（`failed 40 / refuse 30 / clarify 8 / success 8`，合计 86 = `admitted` ⇒ 差 **0**） | ✅ |
+| （附加）量纲 | 修复前同型格缺 **8** 行（见 ①）⇒ 这条缺陷可被"审计行差"直接检出，建议进 W6 门禁表 | 📌 |
+
+⚠️ 一条诚实边界：冷臂（首格）里 `refuse 76 / failed 8` = 84 = `admitted`，**差也是 0** ——
+说明 U-129 的崩只在"模板已写终态后再写第二个终态"的路径上，冷臂那 35 条 503 走的是另一条出路，**不能拿冷臂当 U-129 的反例**。
+
+### ④ ↤ **W1B / W0：driver 那一行已改 + 负向断言已留，实测把 fail-open 钉死**
+
+改（`deploy/loadtest/driver.py`，按 W1B 与 W0 的共同裁定"主线固定创建者令牌"）：
+
+```python
+worker_token = (lambda i: tokens[0]) if spec.single_session else (lambda i: tokens[i % len(tokens)])
+workers = [asyncio.create_task(worker(client, worker_token(i))) for i in range(spec.concurrency)]
+```
+
+- `--self-check` **10/10**；session-lock 复跑形状 = `admitted 1 / 14×429(RA 30) / 9×409 SESSION_CONFLICT(RA 3)`
+  ⇒ 与 09-23 的 **1+14+9** 完全同形 ⇒ **令牌枚数不再改变被测对象**（W0 的那点成立）。
+- 负向断言（新永久件 `probe_session_owner.py`，只读、零写库）：非属主令牌打他人 `session_id` ⇒
+  **`POST /query` = HTTP 200 + 2,101 字节完整 SSE 流**（契约期望 404 `SESSION_NOT_FOUND`）；
+  **`GET /session/{sid}` = HTTP 200，`turns_readable_by_nonowner = 2`**；`returned_a_title = false`。
+  产物：`probe_session_owner_nonowner.json` / `probe_session_owner_with_owner_ask.json`。
+- 🔴 **我不取号**（纪律）：这条缺陷的号请 **W1B 取**（判缺陷方）或由 **W0 认领**（`sess:meta` 键缺口的另一半）。
+  登记为已知缺口 + 不可引用项：在修复落地前，任何"跨会话隔离"的读数都不得由我方压测结果背书。
+
+### ⑤ ↤ **W2C：两个前提是我引了过期快照，撤回；"另三个号恒 0"我只登记为跨窗需求**
+
+🔴 我方错误：我给 W2C 的块里写着"U-121 第 4 格未落 / `test_r07` 已撤回"——
+实际 `c76f701`（09-22）与 `7114c7f`（09-23）**都已入库**，W2C 的回单是对的。⇒ 根因是我抄了记忆层快照而没有先读 git；
+纪律已加一条（§六）：**跨窗口引用别人的落地状态，一律 `git log --oneline --grep` 先查**。
+🟡 W2C 建议把"gate2 另三个拒面号恒 0"登记为**不变量** —— 落点不在我地盘：判据表属 W6、契约属架构。
+我只在此登记为跨窗需求，等他们裁定；我这边能给的是活体读数：热臂 `GATE_AST_REJECTED 40`（AST 闸门，非 gate2）。
+
+### ⑥ ↤ **W2A：A 臂在新树复跑通过**（`d8eca02` ⊆ HEAD `00d3c12`，镜像 `0928r10`，无需再重建）
+
+永久件 `probe_searchpath_a_arm.py`（analytics 池原样、调用方不给任何 preset）：
+`show search_path = app`、`current_user = app_ro`、非限定 `from v_order_paid` **名称解析通过**
+⇒ 与 09-23 A 臂（`ProgrammingError: relation "v_order_paid" does not exist`）相反 ⇒ **U-124 活体成立**。
+🟠 **顺手交一条会影响所有人"0 行"归因的对照**（全为只读）：基表直查 `postgres` = **494,249**；
+视图只给 `app.tenant_id` = **0**；视图三 GUC 齐给（`shop_ids=''`）= **200,000**。
+机制（实测事实）：视图 owner = `app_rw` 且非 security-invoker，基表 `relrowsecurity=t` **且 `relforcerowsecurity=t`**，
+策略第二支 `current_setting('app.shop_ids', true) = '' OR …` 在键未设时求值 **NULL** ⇒ 整条策略不为真 ⇒ **连超级用户查视图也受它约束**。
+⇒ 请 W2A 在 U-124 结案里带上这一句：**"非限定名可达"与"看得见行"是两件事，后者要三个身份 GUC 齐给**；
+这也把 W6 长期挂着的"PG 侧 0 行"变成一条可复算的候选解释（是否即其成因我没有同对象对照，不写结论）。
+
+### ⑦ ↤ **排期硬约束新增一条：任何窗口用新镜像跑批，首格作废**
+
+同镜像同参数、间隔 4.5 分钟：冷臂 `ok 0 / 5xx 35 / llm_call 0`，热臂 `ok 8 / 5xx 0 / llm_call 225`。
+⇒ **本轮之前我所有"换镜像后第一格"的读数都应按此重估**（第十七轮那批没有暴露这条，因为它的第一格恰好是 `c1/n2` 预热）。
+⇒ 新格型：每轮固定先跑一格 `c1/n2` 预热（本轮实测花费 2 次调用 / ¥0.001445），再跑判据格。
+
+💰 本轮花费：**247 行 / ¥0.358715**（基线 934 / ¥1.288840 ⇒ 现 1,181 / ¥1.647555）。
+逐分钟 × 逐用户归因闭合：预热 2 + 冷臂 0 + 控制 6 + 热臂 225 + session-lock 2 + 属主探针 12 = **247**，
+全部落在我本轮铸的 `u_d01..u_d10` 上（无外来窗口调用混入）。令牌文件 `E:/tmp_w7/tokD.txt` **已删**。
+
+### ⑧ ↤ **纪律自纠四条**（都在本轮，全部有对照）
+
+1. `probe_l4_candidate_bound.py` 的 `rep()` 把 `st.mean(v)` 打印在 `p50` 位 ⇒ **归档件里 p50=15.8 与 mean=15.81 同值就是证据**。
+   修正后 `columns` = **min 8 / p50 17.0 / p95 22 / max 25**；42 题直方图逐桶与上轮相同 ⇒ 探针跨镜像可复现。
+   ✅ **不影响交 W3A 的两个推导输入**（硬上界 30、p95 22）⇒ `hint=2304` 的推导成立。
+2. "审计 0 行"措辞不准（实际 8 行 refuse，缺的是另外 8 个请求的终态行）⇒ 已在 ① 撤回并给出正确读法。
+3. 🔴 **我对用户误报"6 个记忆文件不存在"** —— 实际一直都在，我把一次 `ls -la` 的输出读漏了；
+   随后为"补回"用整文件 Write 覆盖了 4 个记忆件，其中一个从 8,403 B 变成小版本。
+   从会话 jsonl 重放 Write/Edit 只捞回 3 件的早期正文（重放截止 11:39Z，跨会话的后续 Edit 未全命中），
+   现 4,139 B —— **约 4 KB 的跨会话累积内容不可逆丢失**。
+   ⇒ 新规则两条（已进记忆件）：断言"不存在"必须先有**第二次独立读法**；记忆/文档件**只做增量 Edit**，不整文件覆盖。
+4. 🟠 **driver 在 Windows 宿主跑时，回执里的中文错误消息变成 U+FFFD**（`codes` 键出现 `{"code":"DB_UNAVAILABLE","message":"??????"}`）
+   ⇒ 宿主侧 httpx 按 locale 解码响应文本；跑批须 `PYTHONUTF8=1`。数值面（计数/时延/状态码）不受影响，但**引用 message 原文的读数不可用**。
+
+### ⑨ ↤ **不可引用清单新增三条**（写入 `deploy/loadtest/README.md` 的同一口径）
+
+- 冷臂（首格）任何读数 —— 不得引为降级率、吞吐、P95 或回归证据。
+- 热臂 `p95 = 39,552 ms` —— 不得引为 G-6 判据（429 压制 + 成功样本仅 8）。**G-6 仍不得宣布达标。**
+- "台账缺口" —— 今后不得用于回答请求完整性问题（对象不对，见 ①）。
+
+### ⑩ 可并发 / 必须串行
+
+见 `HANDOFF_W7.md` §八（本轮刷新两处：**W2A 结案后与我的串行解除**、**每轮首格作废**成为新的排期硬约束）。
+

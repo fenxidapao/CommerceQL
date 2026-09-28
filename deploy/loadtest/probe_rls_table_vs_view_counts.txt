@@ -1,0 +1,6 @@
+table_order_paid|494249
+view_v_order_paid|0
+ERROR:  role "pg_rls_bypass" does not exist
+ERROR:  column reference "oid" is ambiguous
+LINE 1: ...l,relid) from pg_policy join pg_class on polrelid=oid where ...
+                                                             ^

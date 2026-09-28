@@ -1,0 +1,4 @@
+conn_as|postgres|t
+order_paid|app_rw|t|t
+v_order_paid|app_rw|f|
+app_rw|f|f

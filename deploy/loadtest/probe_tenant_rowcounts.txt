@@ -1,0 +1,4 @@
+tenants|'T_A','T_B','T_C'
+rowcount_by_tenant|T_A|200000
+rowcount_by_tenant|T_B|175000
+rowcount_by_tenant|T_C|119249

@@ -291,7 +291,12 @@ async def run_spec(spec: ScenarioSpec, args: argparse.Namespace, questions: list
         elif args.reuse_sessions:
             session_pool = [await create_session(client, args.target, tokens[j % len(tokens)])
                             for j in range(max(1, args.session_pool))]
-        workers = [asyncio.create_task(worker(client, tokens[i % len(tokens)])) for i in range(spec.concurrency)]
+        # ⚠️ `single_session` 必须**全线固定创建者令牌**（W1B/W0 09-28 裁定）：会话由 `tokens[0]` 铸造，
+        #    而 §9.3 的锁键与 FR-10.4 的 thread_id 都含 user ⇒ 换令牌 = 换锁键/换 thread，
+        #    「同一会话并发」这一维根本没被压到（实测：10 令牌轮转时 `rejected_429=0`、409 只有 4）。
+        #    非属主令牌的负向断言不在这里做，见 `probe_session_owner.py`。
+        worker_token = (lambda i: tokens[0]) if spec.single_session else (lambda i: tokens[i % len(tokens)])
+        workers = [asyncio.create_task(worker(client, worker_token(i))) for i in range(spec.concurrency)]
         await asyncio.gather(*workers)
 
     wall = time.perf_counter() - opened

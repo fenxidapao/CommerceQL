@@ -1,0 +1,8 @@
+current_user      = [('app_ro', 'app')]
+rolbypassrls      = [('app_ro', False)]
+search_path       = [('app',)]
+count no tenant   = [(0,)]
+count T_A         = [(0,)]
+tenant seen       = [('T_A',)]
+view relkind      = [('v_order_paid', False)]
+view def head     = [(' SELECT tenant_id,\n    sub_order_id,\n    order_id,\n    shop_id,\n    buyer_id,\n    sku_id,\n    spu_id,\n    category_l1,\n    category_l2,\n     ... (144 characters truncated) ... efund_status,\n    region_code,\n    receiver_city,\n    channel,\n    is_test_order,\n    receiver_phone,\n    receiver_address\n   FROM order_paid;',)]

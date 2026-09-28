@@ -1,0 +1,4 @@
+show_search_path = app
+current_user     = [('app_ro',)]
+UNQUALIFIED_VIEW_FACE = OK  rows = 0 (未注入身份 ⇒ 预期 0)
+WITH_IDENTITY    rows = 200000

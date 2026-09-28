@@ -1,14 +1,21 @@
 
-import asyncio, statistics as st, json
+import asyncio
+import statistics as st
+
+from app.api.deps import (
+    _SPARSE_RANK_NORMALIZATION,
+    _SPARSE_SCORE_MIN,
+    RETRIEVAL_WEIGHTS,
+    _load_bundle_view,
+    _metadata_fetch,
+)
 from app.core.config import Settings
 from app.core.contracts import IdentityContext
-from app.core.enums import Role, RetrievalMode
+from app.core.enums import RetrievalMode, Role
 from app.repo.pools import build_three_pools
-from app.api.deps import (_load_bundle_view, _metadata_fetch, RETRIEVAL_WEIGHTS,
-                          _SPARSE_RANK_NORMALIZATION, _SPARSE_SCORE_MIN)
 from app.retrieval.dense import OllamaEmbedder, PgVectorStore
-from app.retrieval.sparse import SparseSearch
 from app.retrieval.search import RetrievalService
+from app.retrieval.sparse import SparseSearch
 
 QS = ['T_A 2026-08 的日期维表有多少天？', 'T_A 从 2026-08-01 起的 GMV 是多少？', 'T_A 从 2026-06-01 起的 GMV 是多少？', 'T_A 从 2025-11-01 起的 GMV 是多少？', 'T_A 从 2026-03-01 起的 GMV 是多少？', 'T_A 从 2026-08-01 起的订单量是多少？', 'T_A 从 2026-06-01 起的订单量是多少？', 'T_A 从 2026-01-01 起的订单量是多少？', 'T_A 从 2026-08-01 起的付费金额合计（含未支付）是多少？', 'T_A 从 2026-08-01 起各渠道的 GMV 分别是多少？', 'T_A 从 2026-08-01 起各店铺的 GMV 分别是多少？', 'T_A 从 2026-08-01 起各一级类目的 GMV 分别是多少？', 'T_A 从 2026-08-01 起各收货城市的 GMV 分别是多少？', 'T_A 从 2026-08-01 起各sku_id的 UV 分别是多少？', 'T_A 从 2026-08-01 起各channel的 UV 分别是多少？', 'T_A 从 2026-08-01 起各stat_date的 UV 分别是多少？', 'T_A「3C数码」自 2026-08-01 起各店铺的 GMV 分别是多少？', 'T_A「家用电器」自 2026-08-01 起各店铺的 GMV 分别是多少？', 'T_A「服饰鞋包」自 2026-06-01 起各店铺的 GMV 分别是多少？', 'T_A「食品生鲜」自 2026-06-01 起各店铺的 GMV 分别是多少？', 'T_A「美妆个护」自 2026-05-01 起各店铺的 GMV 分别是多少？', 'T_A 自 2026-08-01 起各大区的 GMV 分别是多少？', 'T_A 自 2026-06-01 起各大区的 GMV 分别是多少？', 'T_A 自 2026-05-01 起各大区的 GMV 分别是多少？', 'T_A 自 2026-03-01 起各大区的 GMV 分别是多少？', 'T_A 自 2026-08-01 起有流量但零转化的 SKU 有哪些？', 'T_A「3C数码」自 2026-08-01 起各店铺的浏览量分别是多少？', 'T_A「家用电器」自 2026-08-01 起各店铺的浏览量分别是多少？', 'T_A「服饰鞋包」自 2026-06-01 起各店铺的浏览量分别是多少？', 'T_A「食品生鲜」自 2026-06-01 起各店铺的浏览量分别是多少？', 'T_A「美妆个护」自 2026-05-01 起各店铺的浏览量分别是多少？', 'T_A 自 2026-08-01 起各大区各店铺的 GMV 分别是多少？', 'T_A 自 2026-06-01 起各大区各店铺的 GMV 分别是多少？', 'T_A 自 2026-05-01 起各大区各店铺的 GMV 分别是多少？', 'T_A 自 2026-03-01 起各大区各店铺的 GMV 分别是多少？', 'T_A 自 2026-08-01 起的客单价是多少？', 'T_A 自 2026-06-01 起的客单价是多少？', 'T_A 自 2026-08-01 起的人均消费是多少？', 'T_A 自 2026-08-01 起的退款率是多少？', 'T_A 自 2026-08-01 起的支付转化率是多少？', 'T_A 自 2026-06-01 起的 90 天复购率是多少？', 'T_A 自 2026-03-01 起的 90 天复购率是多少？']
 
@@ -34,12 +41,12 @@ async def main():
     def rep(name, v):
         v=sorted(v); n=len(v)
         p=lambda x: v[min(n-1, int(x*n))]
-        print(name, "n=%d min=%d p50=%.1f p95=%.1f max=%d mean=%.2f" % (n, v[0], st.mean(v), p(.95), v[-1], st.mean(v)))
+        print(f"{name} n={n} min={v[0]} p50={p(.5):.1f} p95={p(.95):.1f} max={v[-1]} mean={st.mean(v):.2f}")
     print("questions =", len(QS), "modes =", modes)
     rep("columns(->L4 candidate_ids)", cols)
     rep("candidates", cands)
     rep("metrics", mets)
-    import collections; print("columns histogram:", dict(sorted(collections.Counter(cols).items())))
-    pass
+    import collections
+    print("columns histogram:", dict(sorted(collections.Counter(cols).items())))
 
 asyncio.run(main())

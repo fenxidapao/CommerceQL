@@ -1,0 +1,9 @@
+Building prefix dict from the default dictionary ...
+Loading model from cache /tmp/jieba.cache
+Loading model cost 0.586 seconds.
+Prefix dict has been built successfully.
+questions = 42 modes = {'hybrid': 42}
+columns(->L4 candidate_ids) n=42 min=8 p50=17.0 p95=22.0 max=25 mean=15.81
+candidates n=42 min=5 p50=5.0 p95=5.0 max=5 mean=5.00
+metrics n=42 min=1 p50=5.0 p95=5.0 max=5 mean=4.14
+columns histogram: {8: 3, 9: 3, 10: 3, 12: 1, 13: 1, 14: 4, 15: 5, 16: 1, 17: 8, 19: 4, 20: 1, 21: 2, 22: 4, 24: 1, 25: 1}
