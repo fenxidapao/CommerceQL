@@ -204,3 +204,5 @@
 - ⚠️ `gate_reject_total` 的**唯一记录点** = `nodes/_shared.py::gate_update`（`U-125` ①；落到 `metrics.py:993`）。`gate2_policy` 节点在**分流之前**无条件调它 ⇒ `refuse` 出口（`G2-DOMAIN`）也会记 ✓。
 - ✅ **给 W7 的活体配方**（本包 domains = `orders` / `products` / `traffic`）：身份 `scope_claims` **不含**目标资产的 domain + SQL 用该 domain 的资产且**过 gate1** ⇒ `G2-DOMAIN` + `refuse_reason=out_of_scope`，落 `gate_reject_total{gate_no="2",rule_id="G2-DOMAIN"}`。**实测 0.0 → 1.0**。该分支走 `refuse` 出口 = **产品结论**（"你不能看"），语义正当，**不是造数**。
 - ⚠️ 推论：`gate_reject_total{gate_no="2"}` **只会有 `G2-DOMAIN` 一个序列**；另三个号的非 0 值在当前结构下**不应出现**（出现即回归）⇒ 建议把"另三号恒 0"登记为**不变量**，而不是待补的缺口。
+  - **2026-09-28 更新**：W7 已接受该推论，并把"另三号恒 0 = 不变量"作为跨窗需求**同时提给架构（落点）与 W6（门禁表）**（其回执 commit `71c0461`）⇒ **本窗不再重复提案**。
+  - 🔴 **证据强度分工（必须写进登记理由，否则不变量是软的）**：本推论成立靠的是**结构推导 + 离线复现**（`runtime.py:208` 同读数 / `ast_gate.py:536` 同源 / `edges.py:285-287` 短路），**不是**"活体没见过非 0"。W7 本轮热臂读数（`GATE_AST_REJECTED` 40、gate2 全 0）对该推论**不构成支持** —— 那批流量里没有"`scope_claims` 不含目标 domain"的请求 ⇒ ③ 分支**根本未进入**，属**无信息**，不是"已验证不触发"。⇒ 登记理由若写成"活体观测为 0"，将来 gate1 白名单一旦被改窄，会表现为"不变量被破"，而正确处置是**改归因 / 改图**，不是"当初该补样本"。
