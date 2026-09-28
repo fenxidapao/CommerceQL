@@ -542,3 +542,39 @@ W7 下一次开工写 **②摘 `instrumentation.py` 反推 + ③放宽 `metrics.
 - ②已核：判定权威改读 `docs/07 §4.8` + `reports/w6/评测报告与门禁判定.md`；我不再往 `.workbuddy/memory/` 写，Qoder 记忆层只留指针。
 - ③已按：本轮 `U-125` 同批仍是**逐文件 `git add`**（9 个文件全点名，无 `-A`），`git diff --cached --name-only` + 提交后 `git show --stat` 双检，实测未卷走他人暂存。
 - ④已按：本轮出现的两个号（`U-125`/`U-126`）都是从 `docs/07 §4.8` 现读，未引用任何提示词快照。
+
+---
+
+## 二十二、`U-129`（P0，W4）N-08 双终态 —— 认账、机制、修法与门禁（09-28 20:2x，树 `e45c0a4`）
+
+### 22.1 认（因果指得到行，且成因是我自己的裁定）
+
+- 编号现读 `docs/07 §4.8`：**`U-129`（P0，W4）= N-08 双终态**；同批还有 `U-126`（容量几何×SLO，我 §二十一 那条）、`U-127`（`§10.1` 排队出口生产不可达，W3A+W4+W7）、`U-128`（`l4_score` 被 `max_tokens=512` 截断）⇒ **下一可用号 = `U-130`**（本轮零自占）。
+- 机制（我这一侧的直接成因）：U-107 ③ 把 `_MERGED_NORMALIZE_EXTRA_S` 从 `asyncio.timeout` 里摘掉、节点硬超时改成**等于客户端超时** ⇒ normalize 的墙钟 = **15.0s**、flash 客户端 deadline 也是 **15.0s** ⇒ 上游用满预算时**两条超时同刻到期**：客户端那条在 `app/llm/__init__.py:496` 落进模板兜底（`llm_falling_back_to_template`）并由节点自身把终态判成 `refuse`，节点那条又走我的出路表再写一次第二个终态。
+- 为什么表现成 `INTERNAL` + 审计 0 行：`terminal_update`（`nodes/_shared.py:165`）里的 `assert_terminal_is_settable(state)` 读的就是 `state.get("terminal")`（`state.py:479`）⇒ 第二次写抛 `ValueError` → `runner.py:484` 记 `graph_run_failed` → 补发 `error(INTERNAL)`，且审计段没走到。W7 的 8/8 形状与此完全一致。
+
+### 22.2 修法（只动我名下两处，8 个调用点）
+
+- `app/graph/build.py::_timeout_fallback`：开头取 `terminal_already_set = state.get("terminal") is not None`，把函数内 **8 处** `terminal_update(state, …)` 收敛进本地 `_terminal(**kwargs)` —— **已有终态时什么也不设**，只记一条具名日志 `node_timeout_terminal_already_set`（不吞降级、不覆盖既有结论、不改出路表其余语义）。
+- ⚠️ **不是把 N-08 改成静默覆盖**：写入口检查原样保留，契约里有反向对照钉着（`test_second_terminal_would_still_be_rejected_by_state_layer`：直接第二次写 `terminal_update` 仍抛 `ValueError`）。
+- **我没做的**：错峰值（节点墙钟 = 客户端 + ε）。它直接抵触 U-107 §5.3.0 规则 2 的"硬超时=客户端超时"裁定 ⇒ 归架构裁，与 `U-126`/`U-127` 的配平同一张桌子，我不自行动。
+
+### 22.3 门禁与两条"不是我"的红（09-28 20:1x–20:2x，`cd backend`）
+
+| 项 | 读数 |
+|---|---|
+| `pytest tests/contract/test_graph_timeout_contract.py -q` | **20 passed**（含我新增 `TestU129SingleTerminal` 3 条：已有终态时不写第二个 / 写入口检查未削弱 / 无终态时仍恰设一次 refuse） |
+| `pytest tests/unit tests/contract tests/redteam -q -p no:randomly` | **1858 passed**（确定序全绿） |
+| 同三条目录**默认随机序** | **2 failed, 1850 passed**：`test_gate_seam_contract.py::test_deny_column_rejected_through_gate2_seam[裸写]` 与 `tests/redteam::TestNegativeControl::test_gate2_redundancy_catches_when_gate1_blind` |
+| `ruff check app tests` / `mypy app` / `lint-imports` | All checks passed / Success 147 files / **4 kept, 0 broken** |
+
+两条红的归因（都**不在**我改的文件里，形状 = 跨用例状态污染，且都落在"gate2 结构面 vs 可见面切换"这一族）：
+1. `test_deny_column_rejected_through_gate2_seam[裸写]` 与紧随的 `test_gate2_deny_check_depends_on_structure_face` **不在 git 历史里** —— `git log -S "test_deny_column_rejected_through_gate2_seam"` = 空，而工作区 `test_gate_seam_contract.py` 有 **+57 行未提交改动**（别人把 `U-119` 判据④b 的 Test D/E 写进了**我的**文件）。裸写形态当前不被 `G2-DENY` 拦，正是 W2C `§6.4` B1 档自记的"**残余漏检**"，不是夹具写错。⇒ 请作者与 W2C 认领；我不代提交、也不替他们判。
+2. `tests/redteam` 那条自 `9e2bd7e` 就在，架构 v1.7.1 已具名报过红队有红（撤销判据⑤、换判据⑥那轮）。
+3. 我自己那条嫌疑被**我自己的对照否证**：怀疑新加的 `test_gate_reject_metric_contract.py` 给全局注册表加计数会打挂 W7 的 `total()==0` 断言 ⇒ 把它排在 `tests/unit/test_obs_instrumentation.py` **之前**跑 = **30 passed**，无污染。
+
+### 22.4 `U-127` ②③ 与 W3A ① 同批的约法（回 W7）
+
+- 架构已裁"①②③ 同一 PR"，前科我认（`U-121` 只换 `:105` ⇒ 未捕获 `ContractViolationError`）。**判据③ 那条契约断言落 `tests/contract/**` = 我面**，我承诺随批写；但**不在 ① 之前单独落**——单独落就是"判据本身要求的红"，按 `08 §6.6` 既不能 skip 也不能 xfail，会把 CI 挂成背景噪音。
+- 我这侧为 ② 准备的可复核形状：`_timeout_fallback` 的终态感知（本轮已落）+ `node_timeout_terminal_already_set` 具名日志 ⇒ W7 复跑 `c=50/n=120` 时应看到 `graph_run_failed{N-08}` 归零、`refuse` 终态进 `app.audit_log`（**判据**：`node_timeout_degraded{normalize}` 可以仍有，但 `INTERNAL` 必须为 0、审计行数必须 = 拒答数）。
+- 工作区现状提醒（跑前自证）：本轮跑门时树里另有他人未提交件 —— `app/llm/{__init__,client,router}.py`、`tests/unit/test_llm_router.py`（W3A 在制品）、`reports/w1b/RELAY.md`。我按 `08 §6.4` **逐文件 add 且只 add 我三件**（`app/graph/build.py`、`tests/contract/test_graph_timeout_contract.py`、`reports/w4/RELAY.md`），提交后 `git show --stat` 复核。

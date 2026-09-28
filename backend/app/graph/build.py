@@ -477,6 +477,26 @@ def _timeout_fallback(name: str, state: GraphState, effective: float) -> dict[st
 
     context = current_run_context_or_none()
 
+    #: U-129：同一次超时里**两条路径都可能设终态** —— 节点自身的降级链（如 normalize 的
+    #: 模板兜底）已把终态判成 `refuse` 时，本出路表**不得**再写第二个：`terminal_update`
+    #: 内的 N-08 检查（`state.assert_terminal_is_settable`）会抛 `ValueError`，runner 随后
+    #: 补发 `error(INTERNAL)` ⇒ 客户端拿到 INTERNAL、`app.audit_log` 0 行（W7 实测 8/8）。
+    terminal_already_set = state.get("terminal") is not None
+
+    def _terminal(**kwargs: Any) -> dict[str, Any]:
+        """设终态，但**已有终态时什么也不设**（只记一条具名日志，不吞、不覆盖）。"""
+        if terminal_already_set:
+            from app.obs.logging import get_logger as _get_logger
+
+            _get_logger(__name__).warning(
+                "node_timeout_terminal_already_set",
+                node=name,
+                limit_s=effective,
+                extra_fact="出路表放弃写第二个终态（N-08）；已存在的终态由节点自身路径负责",
+            )
+            return {}
+        return terminal_update(state, **kwargs)
+
     def _degraded(reason: DegradedReason, action: ActionTaken) -> None:
         if context is not None:
             context.report_degraded(
@@ -494,8 +514,8 @@ def _timeout_fallback(name: str, state: GraphState, effective: float) -> dict[st
             },
         }
         update.update(
-            terminal_update(
-                state, event="refuse", outcome=Outcome.REFUSE,
+            _terminal(
+                event="refuse", outcome=Outcome.REFUSE,
                 reason=RefuseReason.NO_DATA_ASSET.value,
             )
         )
@@ -511,8 +531,8 @@ def _timeout_fallback(name: str, state: GraphState, effective: float) -> dict[st
             },
         }
         update.update(
-            terminal_update(
-                state, event="refuse", outcome=Outcome.REFUSE,
+            _terminal(
+                event="refuse", outcome=Outcome.REFUSE,
                 reason=RefuseReason.NO_DATA_ASSET.value,
             )
         )
@@ -521,16 +541,16 @@ def _timeout_fallback(name: str, state: GraphState, effective: float) -> dict[st
     if name == "plan":
         # 镜像 `plan.py` 的 `PlannerError` 分支（§5.3 行 5）。
         _degraded(DegradedReason.PLAN_GENERATION_FAILED, ActionTaken.TEMPLATE_ONLY)
-        return terminal_update(
-            state, event="refuse", outcome=Outcome.REFUSE,
+        return _terminal(
+            event="refuse", outcome=Outcome.REFUSE,
             reason=RefuseReason.NO_DATA_ASSET.value,
         )
 
     if name in ("gen_sql", "repair"):
         # 镜像 `gen_sql.py` / `repair.py` 的 `PlannerError` 分支（§5.3 行 7 / 16）。
         _degraded(DegradedReason.LLM_UNAVAILABLE, ActionTaken.TEMPLATE_ONLY)
-        return terminal_update(
-            state, event="refuse", outcome=Outcome.REFUSE,
+        return _terminal(
+            event="refuse", outcome=Outcome.REFUSE,
             reason=RefuseReason.NO_DATA_ASSET.value,
         )
 
@@ -542,27 +562,27 @@ def _timeout_fallback(name: str, state: GraphState, effective: float) -> dict[st
     if name == "link":
         # §5.3 行 4：检索超时 = 稠密不可用 → sparse_only；P0 稀疏也无命中 → 拒答。
         _degraded(DegradedReason.EMBEDDING_UNAVAILABLE, ActionTaken.SPARSE_ONLY)
-        return terminal_update(
-            state, event="refuse", outcome=Outcome.REFUSE,
+        return _terminal(
+            event="refuse", outcome=Outcome.REFUSE,
             reason=RefuseReason.NO_DATA_ASSET.value,
         )
 
     if name == "bind":
         # W4 具名裁决（§5.3 行 6「无绑定 → refuse」）：绑定超时 = 无绑定产物 → 拒答。
-        return terminal_update(
-            state, event="refuse", outcome=Outcome.REFUSE,
+        return _terminal(
+            event="refuse", outcome=Outcome.REFUSE,
             reason=RefuseReason.NO_DATA_ASSET.value,
         )
 
     if name == "gate1_ast":
-        return terminal_update(
-            state, event="error", outcome=Outcome.FAILED,
+        return _terminal(
+            event="error", outcome=Outcome.FAILED,
             code=ErrorCode.GATE_AST_REJECTED.value,
         )
 
     if name == "gate2_policy":
-        return terminal_update(
-            state, event="error", outcome=Outcome.FAILED,
+        return _terminal(
+            event="error", outcome=Outcome.FAILED,
             code=ErrorCode.GATE_POLICY_REJECTED.value,
         )
 

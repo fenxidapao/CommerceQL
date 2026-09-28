@@ -235,3 +235,60 @@ class TestAssembly:
         """包装不得破坏装配（T9 的拓扑快照跑在同一张被包装过的图上）。"""
         build_graph()
         build_graph(node_timeout_overrides={"gate1_ast": 5.0})
+
+
+class TestU129SingleTerminal:
+    """`U-129`（P0，W4）：同一次超时里**两条路径各设一次终态** ⇒ 崩成 `error(INTERNAL)`。
+
+    W7 活体读数（`deploy/loadtest/healthy_rA_sessionlock_c8n24.json`，8/8）：
+    `node_timeout_degraded{normalize,15.0s}` → `llm_falling_back_to_template{normalize_intent}`
+    → `graph_run_failed{"终态已被设置（N-08）…"}` ⇒ 客户端 8 条 INTERNAL、`app.audit_log` 0 行。
+
+    成因是 U-107 ③ 的直接后果：出路表把节点墙钟**改成等于客户端超时**（同 15.0s），
+    于是两条超时同刻到期 —— 节点自身的降级链已经判成 `refuse`，出路表又写第二个。
+    修法 = 出路表**终态感知**：已有终态就放弃写第二个（不吞降级、不覆盖既有结论）。
+    """
+
+    def test_fallback_does_not_write_second_terminal(self) -> None:
+        """state 已有终态 ⇒ 不抛 `ValueError`、增量的 `terminal` 键缺席、降级仍被记录。"""
+        _ctx, token = _make_ctx()
+        try:
+            state_with_terminal = {"terminal": {"event": "refuse"}, "outcome": Outcome.REFUSE}
+
+            async def _slow(state: dict) -> dict:
+                await asyncio.sleep(5.0)
+                return {}
+
+            wrapped = _with_node_timeout("normalize", _slow, overrides={"normalize": 0.05})
+            result = asyncio.run(wrapped(state_with_terminal))
+            assert "terminal" not in result
+            assert result.get("intent") == "refuse"  # 降级产物照写，只是不再设第二个终态
+        finally:
+            clear_run_context(token)
+
+    def test_second_terminal_would_still_be_rejected_by_state_layer(self) -> None:
+        """反向对照：N-08 的写入口检查**没有被削弱** —— 直接写第二次仍然抛。
+
+        即本修复是"出路表主动让位"，不是"把双终态改成静默覆盖"（那会把图缺陷藏起来）。
+        """
+        from app.graph.nodes._shared import terminal_update
+
+        state = {"terminal": {"event": "refuse"}}
+        with pytest.raises(ValueError, match="N-08"):
+            terminal_update(state, event="error", outcome=Outcome.FAILED, code="INTERNAL")
+
+    def test_fallback_still_sets_terminal_when_none_exists(self) -> None:
+        """回归保护（U-107 出路表不动）：无既有终态时 normalize 仍须恰设一次 refuse。"""
+        _ctx, token = _make_ctx()
+        try:
+
+            async def _slow(state: dict) -> dict:
+                await asyncio.sleep(5.0)
+                return {}
+
+            wrapped = _with_node_timeout("normalize", _slow, overrides={"normalize": 0.05})
+            result = asyncio.run(wrapped({}))
+            assert result["terminal"]["event"] == "refuse"
+            assert result["terminal"]["reason"] == RefuseReason.NO_DATA_ASSET.value
+        finally:
+            clear_run_context(token)
