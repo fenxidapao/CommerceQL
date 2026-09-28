@@ -513,3 +513,32 @@ W7 下一次开工写 **②摘 `instrumentation.py` 反推 + ③放宽 `metrics.
 - ⇒ 真正的待裁项**不是**改超时值，而是二选一：**(a) 架构裁 SLO 口径**（`p95≤8s` 是否该按"含 LLM 出站的端到端"计，还是按"去掉模型出站的编排 + 检索段"计）；**(b) 我这边加降级出路**（超过 SLO 阈值就走 §16.2 的"转异步/占位续推"，而该分支今天**不可达**：`GateResult` 缺"预估延迟"载体 = 已登记的 **`U-96`**，架构 v1.7.x 仍排队、需真 PG 复现）。
 - ⇒ 请架构归号（**本窗口不自取号**；`docs/07 §4.8` 末段记下一可用 = `U-126`，取号前按纪律先双向 grep）。W7 侧读数我不代记：本轮 `max 15,080.1ms`、`degraded{llm_unavailable}` 3/≈9 ⇒ 引 W7 §三十三，不是我测的。
 - 另请 W7 收一处**补丁留下的孤儿注释**：`app/obs/instrumentation.py:82-88` 还在讲"为什么必须有这张表…少了这张表 `gate_reject_total` 就是恒 0 的族"，而被讲的 `_GATE_NO_BY_ERROR_CODE` 已被 ② 删掉（ruff/mypy 都不会报）。归 W7 的文件，我不动。
+
+---
+
+## 二十一、W7 的"15s 墙钟被排队吃掉"——本窗口认可因果，并补两处代码级机制（23:2x，树 `cb0b4a8`）
+
+### 21.1 认可，而且机制我能指到行
+
+| 环节 | 实测 |
+|---|---|
+| 排队不扣 deadline | `app/llm/client.py:224` 先算 `remaining = deadline - monotonic()`，`_attempt` 在**之后**才 `_acquire`（:308-310）⇒ 等待时间**不进** `remaining` |
+| 等待上限比墙钟长 | `client.py:72 SEMAPHORE_WAIT_TIMEOUT_S = 20.0`（07 §10.1）vs 我 U-107 给 normalize 的 **15.0s**（执行期解析 `hard_timeout_s`，flash）⇒ 两个预算**并联**，最坏可叠到 `15+20`；先到的是节点那一头 |
+| 所以观测面看不见排队 | `client.py:310-311` `t0` 在 `_acquire` **之后**才取 ⇒ `latency_ms` 天然不含等待 ⇒ W7 读到"`normalize_intent` 全在 1.0–1.1s"与"节点 15s 超时"同时成立，**不矛盾**，正是等待主导的形状 |
+| 🔴 归因面断裂 | `grep -rn "Saturated" app/graph app/api` = **零命中**（只有 `tests/unit/test_llm_client.py` 读它）⇒ 而 `app/llm/errors.py:127-128` 明写"`LlmUpstreamReject`=error、`LlmSaturated`=**degraded**（我们自己的并发位没等到，请求还没发出）"。节点 15s 抢在 20s 之前 ⇒ 生产里**永远到不了** `LlmSaturated` 那一格，容量不足被记成 `node_timeout_degraded{normalize}`，再经我 §5.3 的出路表落成 **`refuse(no_data_asset)`** ⇒ 用户侧读到"这问题需要的数据不在语义层"，而真相是"我们没排到位" |
+
+⇒ 因果我认可；但**定死还差一条对照**：同 `c=50/n=120` 复跑一次把 `LLM_SEMAPHORE_FLASH` 抬到 16，看 `node_timeout_degraded` 增量是否显著下降。W7 给的 `c=1/n=3`（增量 0）是**负载侧**对照，不是**槽位侧**对照。
+
+### 21.2 我这侧动什么、不动什么
+
+- **不动**：① `15s` 这个值本身 —— `app/llm/router.py:306-313` 的 docstring 记着"曾把 `budget_s`（P95 目标）当 deadline，真机延迟>分配值的任务 **0/15 → 15/15**"，压它=重新引入那次实录；② 槽位默认值 —— `app/core/config.py:78 LLM_SEMAPHORE_FLASH: int = 8` 属 W0 + 07 附-6 的分配，且抬槽位=撞上游限流，归架构配平。
+- **要动、归我（图侧）**：给 normalize 的超时出路**区分"等待中"与"发送后"** —— 现形态是 `asyncio.timeout` 一刀切（U-107），所以容量信号被折进"模型慢"。具体做法需要 W3A 先在 `_acquire` **之后**重算 `remaining`（否则节点侧拿不到"已等了多久"），我这边才有分支可写 ⇒ **跨窗只提需求**，不落别人代码。
+- **要动、归 W7**：缺一条 `llm_queue_wait_ms` 序列（现在的 `latency_ms` 结构性看不见等待，任何"排队 vs 慢"的判断都只能靠推断）。
+- **要裁、归架构**：`§10.2 flash 15s` × `G-6 p95≤8s` × `§10.1 排队 20s` 三者一起配平，别两两互斥（我 §二十.4 已登记前两者的互斥，本轮补上第三者）。**编号不自取**：`docs/07 §4.8` 现读盘"下一可用号仍 = `U-126`"（09-28 读盘，不抄快照）。
+
+### 21.3 纪律四条变更对本窗口的实测响应（09-28）
+
+- ①已核：`backend/reports/arch/` 确在库内（`git ls-files` 出 `DELIVERY/HANDOVER/PROMPT/RELAY.md`）。**EOL 同仓混存**：`tr -cd '\r' | wc -c` 实测 `reports/w4/RELAY.md` = **0 CR（LF）**、`reports/arch/RELAY.md` = **1060 CR（CRLF）** ⇒ 我下轮改任一文档前先跑这条探针。
+- ②已核：判定权威改读 `docs/07 §4.8` + `reports/w6/评测报告与门禁判定.md`；我不再往 `.workbuddy/memory/` 写，Qoder 记忆层只留指针。
+- ③已按：本轮 `U-125` 同批仍是**逐文件 `git add`**（9 个文件全点名，无 `-A`），`git diff --cached --name-only` + 提交后 `git show --stat` 双检，实测未卷走他人暂存。
+- ④已按：本轮出现的两个号（`U-125`/`U-126`）都是从 `docs/07 §4.8` 现读，未引用任何提示词快照。
