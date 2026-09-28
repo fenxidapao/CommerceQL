@@ -291,3 +291,42 @@ def test_the_boundary_probe_takes_no_literal_shared_dsn():
     assert "COMMERCEQL_PROBE_DSN" in src, "探针必须从 env 读 DSN"
     assert "5432/ecom" not in src, "探针源码里不许出现字面共享库 DSN（含任何口令形状）"
     assert 'return 2' in src, "缺 env 时必须终止并给出退出码，而不是连一把默认连接"
+
+
+def _load_boundary_probe(monkeypatch):
+    """按文件路径加载 `probe_pg_boundary.py` 的**真函数**（模块级只拼 DSN，不建连接）。
+
+    ⚠️ 那个假 DSN 的 host 是 `invalid.invalid`（保留 TLD，永远解析不到）⇒ 它只用来让
+    模块级的 `force_readonly()` 有东西可拼，**不代表一次连接**，更不是任何共享库的形状。
+    ⚠️ 用 monkeypatch 注入而非 `os.environ[...] =`：同会话里还有"缺 env 必须退出码 2"的
+    判据，留一个全局 env 会让那条自证在本轮之后再也测不到真状态。
+    """
+    import importlib.util
+
+    monkeypatch.setenv("COMMERCEQL_PROBE_DSN", "postgresql://u@invalid.invalid/db")
+    path = Path(__file__).parents[2] / "reports/w6/probe_pg_boundary.py"
+    spec = importlib.util.spec_from_file_location("_w6_boundary_probe", path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_boundary_diff_does_not_turn_a_new_signature_into_a_write_event(monkeypatch):
+    """新增字段 = "上一把没测过"，**不许**被读成"这张表被写了"（本轮加 `n_rows` 时的真实风险）。"""
+    probe = _load_boundary_probe(monkeypatch)
+    before = {"tables": {"app.embed_doc": {"relfilenode": 25076, "n_tup_ins": 0, "n_live_tup": 0}}}
+    after = {"tables": {"app.embed_doc": {"relfilenode": 25076, "n_tup_ins": 0,
+                                         "n_live_tup": 0, "n_rows": 197}}}
+    out = probe.diff(before, after)
+    assert out["changed_tables"] == [], f"新签名被当成了写入事件：{out['changed_tables']}"
+    assert out["not_measured_before"] == {"app.embed_doc": {"n_rows": 197}}
+    assert "silent_equal_tables" in out
+
+    moved = probe.diff(before, {"tables": {"app.embed_doc": {
+        "relfilenode": 31337, "n_tup_ins": 0, "n_live_tup": 0, "n_rows": 197}}})
+    assert moved["changed_tables"] == ["app.embed_doc"], "真变化必须照常点名"
+    assert moved["fields"]["app.embed_doc"]["relfilenode"]["delta"] == 31337 - 25076
+
+    note = probe.diff(before, after)["note"]
+    assert "n_rows" in note and "重置" in note, "判读口径要写在产物里，不能只写在源码注释里"

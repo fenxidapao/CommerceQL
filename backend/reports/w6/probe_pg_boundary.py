@@ -11,7 +11,10 @@ W6 一天里两次全量跑（`pytest`，含 `tests/integration/**`）落在 W7 
 所以这里改取**对重载敏感的签名**（全部只读，来自 `pg_stat_user_tables` / `pg_class`）：
 `relfilenode`（TRUNCATE / VACUUM FULL / CLUSTER 会换数）、`truncates`、`n_tup_ins`、
 `n_tup_del`、`n_tup_hot_upd`、`n_live_tup`、`last_vacuum|analyze`，外加 `pg_stat_reset()`
-以来的时钟。用法：
+以来的时钟。**再加 `n_rows`（直接 `count(*)`，2026-09-28 补）**：统计量本身**可被清空** ——
+当天实测 `app.embed_doc` 的 `relfilenode` 与 09-22 相同、`n_tup_ins`/`n_live_tup` 却从
+10244/197 变成 0/0，而 `count(*)` 仍是 **197 行** ⇒ "统计量没变"同样不等于"这张表没变"。
+两侧合起来才是判据：**统计量对重载敏感，`n_rows` 对清空/重置敏感**。用法：
 
     export COMMERCEQL_PROBE_DSN='<共享库 DSN，必须显式给>'   # 不给就 exit 2、不出产物
     PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_pg_boundary.py --label before-run
@@ -39,8 +42,10 @@ from pathlib import Path
 
 try:
     import psycopg
+    from psycopg import sql
 except ImportError:  # pragma: no cover
     psycopg = None  # type: ignore[assignment]
+    sql = None  # type: ignore[assignment]
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
@@ -104,11 +109,25 @@ async def snapshot() -> dict:
     try:
         stamp = await target_stamp(conn)
         rows = await (await conn.execute(SQL, (list(TABLES),))).fetchall()
+        #: 🔴 统计量**可被清空**（2026-09-28 实测：`app.embed_doc` 的 relfilenode 与 09-22 相同，
+        #:   但 `n_tup_ins`/`n_live_tup` 从 10244/197 变成 0/0，而 `count(*)` 当场仍是 **197 行**）
+        #:   ⇒ 只信 `pg_stat` 就会把"统计被重置"读成"这张表没变化"。`n_rows` 是直接数出来的，
+        #:   与统计量互补：统计量对**重载**敏感、`n_rows` 对**清空/重置**敏感。
+        #:   ⚠️ 读数条件：本连接**不设** `app.tenant_id` ⇒ 若把租户域表加进 `TABLES`，
+        #:   `n_rows` 会恒 0（RLS 伪影，不是空表）。当前四张观察对象均为非租户域表。
+        n_rows = {}
+        for t in TABLES:
+            cur = await conn.execute(
+                sql.SQL("select count(*) from {}.{}").format(sql.Identifier("app"), sql.Identifier(t))
+            )
+            n_rows[f"app.{t}"] = (await cur.fetchone())[0]
     finally:
         await conn.close()
     tables = {}
     for r in rows:
-        tables[f"app.{r[0]}"] = {k: _ser(v) for k, v in zip(COLUMNS, r[1:], strict=True)}
+        key = f"app.{r[0]}"
+        tables[key] = {k: _ser(v) for k, v in zip(COLUMNS, r[1:], strict=True)}
+        tables[key]["n_rows"] = n_rows.get(key)
     missing = sorted({f"app.{t}" for t in TABLES} - set(tables))
     return {
         "taken_at_utc": datetime.now(UTC).isoformat(),
@@ -120,21 +139,36 @@ async def snapshot() -> dict:
 
 
 def diff(before: dict, after: dict) -> dict:
-    """逐表逐字段 A→B；只列**变了**的格子（没变的格子留在那里反而会被读成"查过了")。"""
+    """逐表逐字段 A→B；只列**两边都测到过且变了**的格子（没变的格子留在那里反而会被读成"查过了"）。
+
+    ⚠️ 新增字段不许伪装成"写入事件"：签名清单会随轮次增长（本轮加了 `n_rows`），
+    拿新快照去比旧快照时旧的那格是**没测过**、不是"值为 0 后来变成 197"。
+    混进 `changed_tables` 就会把"我方改了探针"读成"有人写了这张表"。
+    """
     out: dict[str, dict] = {}
+    added: dict[str, dict] = {}
     for key in sorted(set(before.get("tables", {})) | set(after.get("tables", {}))):
         a, b = before.get("tables", {}).get(key, {}), after.get("tables", {}).get(key, {})
-        changed = {f: {"before": a.get(f), "after": b.get(f),
-                       "delta": (b[f] - a[f]) if isinstance(a.get(f), int) and isinstance(b[f], int)
+        both = set(a) & set(b)
+        changed = {f: {"before": a[f], "after": b[f],
+                       "delta": (b[f] - a[f]) if isinstance(a[f], int) and isinstance(b[f], int)
                        else None}
-                   for f in set(a) | set(b) if a.get(f) != b.get(f)}
+                   for f in both if a[f] != b[f]}
+        only_after = {f: b[f] for f in set(b) - both}
         if changed:
             out[key] = changed
+        if only_after:
+            added[key] = only_after
     return {"changed_tables": sorted(out), "silent_equal_tables": sorted(
         set(before.get("tables", {})) & set(after.get("tables", {})) - set(out)),
         "fields": out,
+        "not_measured_before": added,
         "note": "relfilenode 变了 = 存储文件被换过（TRUNCATE/VACUUM FULL/CLUSTER）；"
-                "truncates/n_tup_ins 增量 = 发生过整表清空与重灌。行数相同不代表没被动过。"}
+                "n_tup_ins 涨而 n_tup_del 不涨 = 发生过整表清空与重灌；两者都看不出 TRUNCATE 的完整形状"
+                "（本机 PG 16.15 无 `truncates`/`stats_reset` 列）。"
+                "🔴 `n_live_tup`/`n_tup_*` **可被整体重置**（2026-09-28 实测：`app.embed_doc` relfilenode 不变、"
+                "统计量从 10244/197 归 0/0，而 `count(*) = 197`）⇒ '统计量没变' 不等于 '这张表没被碰过'，"
+                "必须连 `n_rows`（直接 `count(*)`）一起读：统计量管重载，`n_rows` 管清空/重置。行数相同不代表没被动过。"}
 
 
 def main() -> int:

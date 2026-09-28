@@ -297,3 +297,33 @@ def test_test_dir_files_are_all_collected():
     assert len(tests) >= 6, f"测试文件数倒退：{tests}"
     for f in tests:
         assert f.endswith(".py")
+
+
+# ==== 缺口表的派单语句也要可证伪（W7 2026-09-28 实测推翻过一条）========
+def test_gap_table_gate3_row_does_not_order_sandbox_refill():
+    """gate3 那一行**不许**再写「灌入沙箱规模数据」，且必须点名真正的阻塞。
+
+    记进测试的理由：旧文案把「事实表 0 行 ⇒ 成本阈值不可校准」当成缺数据，派 W7 灌沙箱。
+    2026-09-28 实测两处都错 —— 沙箱 `v_order_paid` 494,249 行 / `v_traffic_daily` 1,500,556 行，
+    且 `sandbox_db_sha256` 被冻结集钉住（expected == actual），灌进去只会让我方启动验真变红；
+    而 SQLite 侧 `EXPLAIN (FORMAT JSON)` 直接 `OperationalError: near "(": syntax error`，
+    `EXPLAIN` / `EXPLAIN QUERY PLAN` 能跑但**不含 cost/rows** ⇒ 缺的是方言，不是数据。
+
+    🔴 同一类错**本轮在我方改写后又犯了一次**：新文案把「PG 侧业务事实表 0 行」写成接 PG 的
+    前置并派单 W7+W0 —— 带租户上下文复测当场证伪（`order_paid` 494,249 = 200,000+175,000+119,249）。
+    不设 `app.tenant_id` 就 count ⇒ RLS 恒 false ⇒ 0 行是**伪影不是空表**。故下面两条断言：
+    缺口行必须自己点破这个伪影，且**不许向任何窗口索取数据**。
+    """
+    import gap_table
+
+    rows = gap_table.build_gap_table()
+    row = next(r for r in rows if "gate3" in r["capability"])
+    text = row["follow_up"] + row["evidence"]
+    assert "灌入沙箱" not in row["follow_up"], "这条派单已被实测证伪，不许回到报告里"
+    for must in ("EXPLAIN", "A11", "一次性测试库"):
+        assert must in text, f"缺口行没点名真阻塞：{must}"
+    assert "RLS 伪影" in row["follow_up"], "零行读数必须写明是不设租户 GUC 的伪影"
+    assert "494,249" in row["follow_up"], "必须带上带上下文复测到的 PG 规模，否则下一轮还会派单灌数"
+    for must in ("规模数据归", "PG 侧业务事实表当前 **0 行**", "数据阻塞"):
+        assert must not in row["follow_up"], f"缺口行又在索取数据：{must}"
+    assert row["covered_by_eval"] is False, "gate3 成本档在评测分母里仍不许算已覆盖"

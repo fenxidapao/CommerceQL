@@ -43,11 +43,28 @@ _ROWS: Final[tuple[GapRow, ...]] = (
         handling="gate3 判 SKIPPED 并标注，**不得报告为通过**（07 §14.2 D6）",
         covered_by_eval=False,
         evidence="`app/guard/cost_gate.py` 无 `explain_plan` → `GateDecision.SKIPPED`"
-                 "（评测执行器的 `explain()` 恒回 None，走的就是这条分支）",
-        follow_up="真 EXPLAIN 的**语法/解析面**现在可测（本机 PG 有 `app` schema 与 8 个视图，"
-                  "`tests/integration` 已证可达）；但成本**阈值**面仍不可校准 —— 事实表 0 行时 "
-                  "planner 的行数/代价估计不带信息，`EXPLAIN` 出来的 `total_cost` 与真实数据下的量级无关。"
-                  "⇒ 需 W7 灌入沙箱规模数据后，由 W2C 的 `drill_*` 与 W7 压测把本行变成已覆盖",
+                 "（评测执行器的 `explain()` 恒回 None，走的就是这条分支）。"
+                 "2026-09-28 在冻结的沙箱库上直测：`EXPLAIN (FORMAT JSON)` ⇒ "
+                 "`OperationalError: near \"(\": syntax error`；`EXPLAIN`（16 行）与 "
+                 "`EXPLAIN QUERY PLAN`（`SCAN v_order_paid`）**可跑但不含 cost/rows** ⇒ "
+                 "**缺的是带代价的方言，不是数据**",
+        follow_up="🔴 **撤销本行旧派单**（上一版把缺口当成『缺数据』、要 W7 灌行数，2026-09-28 实测证伪两条）："
+                  "① 沙箱库**早有规模** —— 同一份文件实测 `v_order_paid` 494,249 行 / "
+                  "`v_traffic_daily` 1,500,556 行，且 `_bootstrap.verify_frozen_inputs()` 的 "
+                  "`sandbox_db_sha256` expected == actual == `eb35a97f…` ⇒ **往里灌数据会让我方"
+                  "启动验真当场变红**，这件事既无必要也不许做；② 阻塞与行数无关 —— SQLite "
+                  "根本不给成本型 EXPLAIN。⇒ 要把本行变成已覆盖只有一条路：**在真 PG 上跑 gate3**，"
+                  "而**数据不是阻塞**：2026-09-28 带租户上下文的只读探针实测 PG 与沙箱**逐关系等量**"
+                  "（`order_paid` 494,249 = T_A 200,000 + T_B 175,000 + T_C 119,249 / `traffic_daily` "
+                  "1,500,556 / `order_refund` 23,116 / `product` 6,000，见 `_probe_pg_real.json` 的 "
+                  "`pg.pg_row_counts` + `parity`）；上一版本行写的「PG 侧业务事实表当前 0 行」"
+                  "**已作废** —— 那是**不设 `app.tenant_id` 就 count** 的 RLS 伪影（同一个探针带上下文"
+                  "就返 494,249），与 §17.4 老坑「数到 0 要先问是不是没给它看见的条件」同源。"
+                  "⇒ 剩下三件（缺一都不许报覆盖）：a) 并行等值的修法待架构裁 **A11**"
+                  "（我方已实测 `parallel_equality_ok = false`，不绿就接 = 静默少算进评测分母）；"
+                  "b) 一次性测试库 + 三个 env 写进本地/CI 约定（= **A13 出路① / O7 出路②**，归 W0/W2B）；"
+                  "c) 评测侧把 PG 执行链接进 `runner.py` —— 这一件**归 W6 自己**（交付 §十-6），"
+                  "**不需要任何人先灌数据**；闸门语义本身归 **W2C**",
     ),
     GapRow(
         capability="RLS（行级权限）",
