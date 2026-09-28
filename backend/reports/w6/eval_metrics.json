@@ -1,9 +1,9 @@
 {
   "meta": {
-    "generated_at": "2026-09-22T13:41:21+00:00",
+    "generated_at": "2026-09-28T10:31:01+00:00",
     "window": "W6",
     "git": {
-      "rev": "0f67fa9",
+      "rev": "d26fac5",
       "dirty": true
     },
     "run_config": {
@@ -141,10 +141,9 @@
       "gate_id": "G-1",
       "condition": "全部 P0 用例通过",
       "verdict": "FAIL",
-      "measured": "断言失败 1 + 夹具 error 10 = 红 11 条；unit+contract passed=2187, integration_ran=True",
+      "measured": "断言失败 0 + 夹具 error 10 = 红 10 条；unit+contract passed=2207, integration_ran=True",
       "basis": "§17.1 单元 + 集成",
       "caveats": [
-        "断言失败逐条点名：`tests/redteam/test_redteam_guard.py::TestRedTeamFrozenSet::test_block_cases_blocked_with_rule_attribution`",
         "另有 10 条 **error（夹具起不来，不是断言失败）** ⇒ 与 failed 分开数，混报会看不出坏的是测试环境还是被测系统；点名：`tests/integration/test_audit_append_only.py`、`tests/integration/test_exec_real_pg.py`、`tests/integration/test_feedback_store_pg.py`、`tests/integration/test_migration_0003_views.py`、`tests/integration/test_migration_0004_runtime.py`、`tests/integration/test_query_plan_store_pg.py`、`tests/integration/test_retrieval_fts_pg.py::test_dense_all_null_column_raises_unavailable_not_type_error`、`tests/integration/test_retrieval_fts_pg.py::test_dense_null_rows_never_crowd_out_valid_vectors`、`tests/integration/test_retrieval_fts_pg.py::test_dense_scope_with_zero_rows_is_not_degradation`、`tests/integration/test_semantic_materialization.py`",
         "本读数的分层与接触面：集成层文件 = ['tests/integration/_env_dsn.py', 'tests/integration/test_audit_append_only.py', 'tests/integration/test_exec_real_pg.py', 'tests/integration/test_feedback_store_pg.py', 'tests/integration/test_migration_0003_views.py', 'tests/integration/test_migration_0004_runtime.py', 'tests/integration/test_query_plan_store_pg.py', 'tests/integration/test_retrieval_fts_pg.py', 'tests/integration/test_semantic_materialization.py']；被拒的库 = ['ecom']；夹具下发过的 DDL 形状 = CREATE SCHEMA retrieval_dense_it、CREATE TABLE r (截断)、DROP TABLE retrieval_dense_it.embed_doc（连接参数 = 未点名；凭据一律不落盘。整串取自日志文本 ⇒ 只能证明「取到了这些」，不能证明「只做了这些」）"
       ]
@@ -440,10 +439,10 @@
     "leaked": 0,
     "expect_block": 50,
     "checked": 48,
-    "n_cases_clean": 52,
+    "n_cases_clean": 56,
     "assertion_counts": {
-      "PASS": 187,
-      "FAIL": 26,
+      "PASS": 192,
+      "FAIL": 21,
       "NOT_CHECKED": 25
     },
     "reject_gates": {
@@ -481,33 +480,27 @@
         "RT-XT-001",
         "RT-XT-002",
         "RT-XT-003"
-      ],
-      "规则身份归因（rule_id）": [
-        "RT-R07-001",
-        "RT-R07-002",
-        "RT-R07-003",
-        "RT-R07-004"
       ]
     },
     "leak_vocabulary_size": 73,
     "layer_ordering_sample": [
       {
         "case_id": "RT-XT-001",
-        "gate1_rule_id": "R06",
+        "gate1_rule_id": "R07",
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null
       },
       {
         "case_id": "RT-XT-002",
-        "gate1_rule_id": "R06",
+        "gate1_rule_id": "R07",
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null
       },
       {
         "case_id": "RT-XT-003",
-        "gate1_rule_id": "R06",
+        "gate1_rule_id": "R07",
         "gate2_alone_decision": "reject",
         "gate2_alone_rule_id": "G2-DENY",
         "gate2_alone_refuse_reason": null
@@ -1002,8 +995,8 @@
       "sqlite": "无该语法",
       "handling": "gate3 判 SKIPPED 并标注，**不得报告为通过**（07 §14.2 D6）",
       "covered_by_eval": false,
-      "evidence": "`app/guard/cost_gate.py` 无 `explain_plan` → `GateDecision.SKIPPED`（评测执行器的 `explain()` 恒回 None，走的就是这条分支）；本次实测：本轮红队未覆盖 RT-COST-001, RT-COST-002",
-      "follow_up": "真 EXPLAIN 的**语法/解析面**现在可测（本机 PG 有 `app` schema 与 8 个视图，`tests/integration` 已证可达）；但成本**阈值**面仍不可校准 —— 事实表 0 行时 planner 的行数/代价估计不带信息，`EXPLAIN` 出来的 `total_cost` 与真实数据下的量级无关。⇒ 需 W7 灌入沙箱规模数据后，由 W2C 的 `drill_*` 与 W7 压测把本行变成已覆盖"
+      "evidence": "`app/guard/cost_gate.py` 无 `explain_plan` → `GateDecision.SKIPPED`（评测执行器的 `explain()` 恒回 None，走的就是这条分支）。2026-09-28 在冻结的沙箱库上直测：`EXPLAIN (FORMAT JSON)` ⇒ `OperationalError: near \"(\": syntax error`；`EXPLAIN`（16 行）与 `EXPLAIN QUERY PLAN`（`SCAN v_order_paid`）**可跑但不含 cost/rows** ⇒ **缺的是带代价的方言，不是数据**；本次实测：本轮红队未覆盖 RT-COST-001, RT-COST-002",
+      "follow_up": "🔴 **撤销本行旧派单**（上一版把缺口当成『缺数据』、要 W7 灌行数，2026-09-28 实测证伪两条）：① 沙箱库**早有规模** —— 同一份文件实测 `v_order_paid` 494,249 行 / `v_traffic_daily` 1,500,556 行，且 `_bootstrap.verify_frozen_inputs()` 的 `sandbox_db_sha256` expected == actual == `eb35a97f…` ⇒ **往里灌数据会让我方启动验真当场变红**，这件事既无必要也不许做；② 阻塞与行数无关 —— SQLite 根本不给成本型 EXPLAIN。⇒ 要把本行变成已覆盖只有一条路：**在真 PG 上跑 gate3**，而**数据不是阻塞**：2026-09-28 带租户上下文的只读探针实测 PG 与沙箱**逐关系等量**（`order_paid` 494,249 = T_A 200,000 + T_B 175,000 + T_C 119,249 / `traffic_daily` 1,500,556 / `order_refund` 23,116 / `product` 6,000，见 `_probe_pg_real.json` 的 `pg.pg_row_counts` + `parity`）；上一版本行写的「PG 侧业务事实表当前 0 行」**已作废** —— 那是**不设 `app.tenant_id` 就 count** 的 RLS 伪影（同一个探针带上下文就返 494,249），与 §17.4 老坑「数到 0 要先问是不是没给它看见的条件」同源。⇒ 剩下三件（缺一都不许报覆盖）：a) 并行等值的修法待架构裁 **A11**（我方已实测 `parallel_equality_ok = false`，不绿就接 = 静默少算进评测分母）；b) 一次性测试库 + 三个 env 写进本地/CI 约定（= **A13 出路① / O7 出路②**，归 W0/W2B）；c) 评测侧把 PG 执行链接进 `runner.py` —— 这一件**归 W6 自己**（交付 §十-6），**不需要任何人先灌数据**；闸门语义本身归 **W2C**"
     },
     {
       "capability": "RLS（行级权限）",

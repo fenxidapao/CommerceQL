@@ -1,14 +1,14 @@
 {
   "reader": "eval/reporter.loadtest_pressure + eval/gates.evaluate_gates(pressure=…)",
   "schema_string_read_verbatim": "w7.loadtest.receipt/1",
-  "n_files": 14,
+  "n_files": 29,
   "verdict_tally": {
-    "UNVERIFIED": 11,
-    "FAIL": 3
+    "UNVERIFIED": 17,
+    "FAIL": 12
   },
   "any_pass": false,
   "stale_true_cells_total": 14,
-  "null_caveat_scenarios_total": 1,
+  "null_caveat_scenarios_total": 4,
   "files": {
     "deploy/loadtest/baseline_c5.json": {
       "verdict": "UNVERIFIED",
@@ -32,6 +32,168 @@
       "stale_true_cells": 1,
       "null_caveat_scenarios": 1,
       "has_all_ms_p95": false
+    },
+    "deploy/loadtest/control_r9_c1n3.json": {
+      "verdict": "UNVERIFIED",
+      "measured": "P95 = 2117ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/control_r9_c1n3.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-28T09:27:48+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 2117ms；全请求 P95 = 2117ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=3, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 3 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "None"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/healthy_rA_burst_c100n100.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 41333ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/healthy_rA_burst_c100n100.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-28T10:04:36+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 41333ms；全请求 P95 = 41333ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=100, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
+        "判定值 = 全请求分位数；准入样本口径只作对照，不参与打分"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 0,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "False"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 1,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/healthy_rA_sessionlock_c8n24.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 15181ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/healthy_rA_sessionlock_c8n24.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-28T10:22:17+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 15186ms；全请求 P95 = 15181ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=16, http_5xx=4, other_http_4xx=4, rejected_429=0, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 16 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）",
+        "🔴 且写端自己对本场景**未判定**（`g6_p95_le_8s = null`，共 1 个场景）⇒ 本 FAIL 的含义是「观测到的 p95 超预算」，**不是**「已证明服务不达标」；该归类已上呈 RELAY A14。**本窗口不擅自降档**：判据方向必须偏向「不许宣布通过」，把 FAIL 改 UNVERIFIED 属门禁语义变更、要架构裁（同 A13：环境/样本不足造成的红要单独点名，不折算成被测系统失败）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "None"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/healthy_rA_steady_c50n120.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 35506ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/healthy_rA_steady_c50n120.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-28T10:02:09+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 36803ms；全请求 P95 = 35506ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=77, http_5xx=0, other_http_4xx=0, rejected_429=43, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：另有 43 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数） ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "False"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/healthy_rA_tenantquota_c30n60.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 17822ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/healthy_rA_tenantquota_c30n60.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-28T10:24:46+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 17822ms；全请求 P95 = 17822ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=60, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
+        "判定值 = 全请求分位数；准入样本口径只作对照，不参与打分"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 0,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "False"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 1,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/healthy_rA_tenantsaturation_c30n130.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 21909ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/healthy_rA_tenantsaturation_c30n130.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-28T10:26:22+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 21909ms；全请求 P95 = 21909ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=71, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
+        "判定值 = 全请求分位数；准入样本口径只作对照，不参与打分"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 0,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "False"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 1,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/healthy_rA_warm_c1n2.json": {
+      "verdict": "UNVERIFIED",
+      "measured": "P95 = 5075ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/healthy_rA_warm_c1n2.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-28T10:00:52+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 5075ms；全请求 P95 = 5075ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=2, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 2 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "None"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
     },
     "deploy/loadtest/preflight_r4.json": {
       "verdict": "FAIL",
@@ -87,7 +249,173 @@
         "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
         "准入样本 P95 = 11157ms；全请求 P95 = 11157ms（两者不一致时以全请求判定）",
         "准入分桶（回执 `admission`）：admitted=5, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
-        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 5 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）"
+        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 5 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）",
+        "🔴 且写端自己对本场景**未判定**（`g6_p95_le_8s = null`，共 1 个场景）⇒ 本 FAIL 的含义是「观测到的 p95 超预算」，**不是**「已证明服务不达标」；该归类已上呈 RELAY A14。**本窗口不擅自降档**：判据方向必须偏向「不许宣布通过」，把 FAIL 改 UNVERIFIED 属门禁语义变更、要架构裁（同 A13：环境/样本不足造成的红要单独点名，不折算成被测系统失败）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "None"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/preflight_r7.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 9756ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/preflight_r7.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-23T08:01:19+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 9756ms；全请求 P95 = 9756ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=5, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：准入样本仅 5 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）",
+        "🔴 且写端自己对本场景**未判定**（`g6_p95_le_8s = null`，共 1 个场景）⇒ 本 FAIL 的含义是「观测到的 p95 超预算」，**不是**「已证明服务不达标」；该归类已上呈 RELAY A14。**本窗口不擅自降档**：判据方向必须偏向「不许宣布通过」，把 FAIL 改 UNVERIFIED 属门禁语义变更、要架构裁（同 A13：环境/样本不足造成的红要单独点名，不折算成被测系统失败）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "None"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/preflight_r8_c1n5.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 15080ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/preflight_r8_c1n5.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-23T13:09:59+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 15080ms；全请求 P95 = 15080ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=5, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：准入样本仅 5 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）",
+        "🔴 且写端自己对本场景**未判定**（`g6_p95_le_8s = null`，共 1 个场景）⇒ 本 FAIL 的含义是「观测到的 p95 超预算」，**不是**「已证明服务不达标」；该归类已上呈 RELAY A14。**本窗口不擅自降档**：判据方向必须偏向「不许宣布通过」，把 FAIL 改 UNVERIFIED 属门禁语义变更、要架构裁（同 A13：环境/样本不足造成的红要单独点名，不折算成被测系统失败）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "None"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/preflight_r8_cold.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 72769ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/preflight_r8_cold.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-23T13:02:42+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 72769ms；全请求 P95 = 72769ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=2, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 2 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）",
+        "🔴 且写端自己对本场景**未判定**（`g6_p95_le_8s = null`，共 1 个场景）⇒ 本 FAIL 的含义是「观测到的 p95 超预算」，**不是**「已证明服务不达标」；该归类已上呈 RELAY A14。**本窗口不擅自降档**：判据方向必须偏向「不许宣布通过」，把 FAIL 改 UNVERIFIED 属门禁语义变更、要架构裁（同 A13：环境/样本不足造成的红要单独点名，不折算成被测系统失败）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "None"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/preflight_r8_sessionlock.json": {
+      "verdict": "UNVERIFIED",
+      "measured": "P95 = 3036ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/preflight_r8_sessionlock.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-23T13:07:00+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 15061ms；全请求 P95 = 3036ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=1, http_5xx=0, other_http_4xx=9, rejected_429=14, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 1 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足；另有 14 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数） ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "None"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/preflight_r8_warm.json": {
+      "verdict": "UNVERIFIED",
+      "measured": "P95 = 1346ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/preflight_r8_warm.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-23T13:05:31+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 1346ms；全请求 P95 = 1346ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=2, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 2 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "None"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/quota_r9_steady_c50n120.json": {
+      "verdict": "UNVERIFIED",
+      "measured": "P95 = 7582ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/quota_r9_steady_c50n120.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-28T09:21:52+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 11382ms；全请求 P95 = 7582ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=79, http_5xx=0, other_http_4xx=0, rejected_429=41, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：另有 41 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数） ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "False"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/quota_r9_tenantquota_c30n60.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 15223ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/quota_r9_tenantquota_c30n60.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-28T09:24:38+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 20228ms；全请求 P95 = 15223ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=10, http_5xx=0, other_http_4xx=0, rejected_429=50, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 10 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足；另有 50 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数） ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）",
+        "🔴 且写端自己对本场景**未判定**（`g6_p95_le_8s = null`，共 1 个场景）⇒ 本 FAIL 的含义是「观测到的 p95 超预算」，**不是**「已证明服务不达标」；该归类已上呈 RELAY A14。**本窗口不擅自降档**：判据方向必须偏向「不许宣布通过」，把 FAIL 改 UNVERIFIED 属门禁语义变更、要架构裁（同 A13：环境/样本不足造成的红要单独点名，不折算成被测系统失败）"
       ],
       "scenarios_n": 1,
       "caveated_scenarios": 1,
@@ -331,6 +659,29 @@
       "stale_true_cells": 1,
       "null_caveat_scenarios": 0,
       "has_all_ms_p95": false
+    },
+    "deploy/loadtest/warmup_r9_c1n2.json": {
+      "verdict": "UNVERIFIED",
+      "measured": "P95 = 5690ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/warmup_r9_c1n2.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-28T09:21:16+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 5690ms；全请求 P95 = 5690ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=2, http_5xx=0, other_http_4xx=0, rejected_429=0, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 2 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "None"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
     }
   },
   "note": "读端**不做未知键校验**（W7 刻意不升 schema 版本号，新增字段在读的路径之外）；判定口径：`g6_caveat` 非空 ⇒ 至多 UNVERIFIED；p95 只标了非全请求口径 ⇒ 至多 PARTIAL；有 `latency_ms_all_ms` ⇒ 用全请求分位数判。🔴 2026-09-21 起再加一条：caveat 为 null **但**既无 `admission` 又无全请求分位数 ⇒ 也判不了达标（那个 null 只代表产自 U-106 之前的判据）。同轮把扫描面从 `receipt*.json` 扩到 `*.json` —— 旧 glob 恰好漏掉了唯一出 PASS 的 baseline_c5.json。"

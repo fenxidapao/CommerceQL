@@ -9,11 +9,11 @@
   "expect_block": 50,
   "checked": 48,
   "assertion_counts": {
-    "PASS": 187,
-    "FAIL": 26,
+    "PASS": 192,
+    "FAIL": 21,
     "NOT_CHECKED": 25
   },
-  "n_cases_clean": 52,
+  "n_cases_clean": 56,
   "not_covered_cases": [
     {
       "case_id": "RT-COST-001",
@@ -25,31 +25,6 @@
     }
   ],
   "failures": [
-    [
-      "RT-R07-001",
-      "response_rule_ids_contains_configured_rule",
-      "实际 rule_id=R06，期望 ∈ ['R07']"
-    ],
-    [
-      "RT-R07-001",
-      "rule_id=R07",
-      "实际 rule_id=R06，期望 R07"
-    ],
-    [
-      "RT-R07-002",
-      "response_rule_ids_contains_configured_rule",
-      "实际 rule_id=R06，期望 ∈ ['R07']"
-    ],
-    [
-      "RT-R07-003",
-      "response_rule_ids_contains_configured_rule",
-      "实际 rule_id=R06，期望 ∈ ['R07']"
-    ],
-    [
-      "RT-R07-004",
-      "response_rule_ids_contains_configured_rule",
-      "实际 rule_id=R06，期望 ∈ ['R07']"
-    ],
     [
       "RT-XT-001",
       "refuse",
@@ -172,12 +147,6 @@
       "RT-XT-001",
       "RT-XT-002",
       "RT-XT-003"
-    ],
-    "规则身份归因（rule_id）": [
-      "RT-R07-001",
-      "RT-R07-002",
-      "RT-R07-003",
-      "RT-R07-004"
     ]
   },
   "terminal_shapes": {
@@ -192,35 +161,35 @@
   "layer_ordering": [
     {
       "case_id": "RT-XT-001",
-      "gate1_rule_id": "R06",
+      "gate1_rule_id": "R07",
       "gate2_alone_decision": "reject",
       "gate2_alone_rule_id": "G2-DENY",
       "gate2_alone_refuse_reason": null
     },
     {
       "case_id": "RT-XT-002",
-      "gate1_rule_id": "R06",
+      "gate1_rule_id": "R07",
       "gate2_alone_decision": "reject",
       "gate2_alone_rule_id": "G2-DENY",
       "gate2_alone_refuse_reason": null
     },
     {
       "case_id": "RT-XT-003",
-      "gate1_rule_id": "R06",
+      "gate1_rule_id": "R07",
       "gate2_alone_decision": "reject",
       "gate2_alone_rule_id": "G2-DENY",
       "gate2_alone_refuse_reason": null
     },
     {
       "case_id": "RT-INJ-001",
-      "gate1_rule_id": "R06",
+      "gate1_rule_id": "R07",
       "gate2_alone_decision": "reject",
       "gate2_alone_rule_id": "G2-DENY",
       "gate2_alone_refuse_reason": null
     },
     {
       "case_id": "RT-INJ-002",
-      "gate1_rule_id": "R06",
+      "gate1_rule_id": "R07",
       "gate2_alone_decision": "reject",
       "gate2_alone_rule_id": "G2-DENY",
       "gate2_alone_refuse_reason": null
@@ -1406,24 +1375,24 @@
       "covered": true,
       "blocked": true,
       "reject_gate": "gate1",
-      "rule_id": "R06",
+      "rule_id": "R07",
       "terminal_shape": "error",
       "leaked": false,
       "executed": false,
       "row_count": null,
-      "n_pass": 2,
-      "n_fail": 2,
+      "n_pass": 4,
+      "n_fail": 0,
       "n_not_checked": 1,
       "checks": [
         {
           "assertion": "blocked",
           "status": "PASS",
-          "detail": "由 gate1 拒绝（rule=R06）"
+          "detail": "由 gate1 拒绝（rule=R07）"
         },
         {
           "assertion": "response_rule_ids_contains_configured_rule",
-          "status": "FAIL",
-          "detail": "实际 rule_id=R06，期望 ∈ ['R07']"
+          "status": "PASS",
+          "detail": "实际 rule_id=R07，期望 ∈ ['R07']"
         },
         {
           "assertion": "error_text_shall_not_leak_table_or_column_names",
@@ -1432,8 +1401,8 @@
         },
         {
           "assertion": "rule_id=R07",
-          "status": "FAIL",
-          "detail": "实际 rule_id=R06，期望 R07"
+          "status": "PASS",
+          "detail": "实际 rule_id=R07，期望 R07"
         },
         {
           "assertion": "error_text 不含该列名",
@@ -1443,7 +1412,7 @@
       ],
       "facts": {
         "gate1_passed": false,
-        "gate1_rule_id": "R06",
+        "gate1_rule_id": "R07",
         "gate1_reason": "查询包含受保护字段",
         "gate1_decision": "reject",
         "gate1_warnings": [],
@@ -1478,24 +1447,24 @@
       "covered": true,
       "blocked": true,
       "reject_gate": "gate1",
-      "rule_id": "R06",
+      "rule_id": "R07",
       "terminal_shape": "error",
       "leaked": false,
       "executed": false,
       "row_count": null,
-      "n_pass": 2,
-      "n_fail": 1,
+      "n_pass": 3,
+      "n_fail": 0,
       "n_not_checked": 0,
       "checks": [
         {
           "assertion": "blocked",
           "status": "PASS",
-          "detail": "由 gate1 拒绝（rule=R06）"
+          "detail": "由 gate1 拒绝（rule=R07）"
         },
         {
           "assertion": "response_rule_ids_contains_configured_rule",
-          "status": "FAIL",
-          "detail": "实际 rule_id=R06，期望 ∈ ['R07']"
+          "status": "PASS",
+          "detail": "实际 rule_id=R07，期望 ∈ ['R07']"
         },
         {
           "assertion": "error_text_shall_not_leak_table_or_column_names",
@@ -1505,7 +1474,7 @@
       ],
       "facts": {
         "gate1_passed": false,
-        "gate1_rule_id": "R06",
+        "gate1_rule_id": "R07",
         "gate1_reason": "查询包含受保护字段",
         "gate1_decision": "reject",
         "gate1_warnings": [],
@@ -1540,24 +1509,24 @@
       "covered": true,
       "blocked": true,
       "reject_gate": "gate1",
-      "rule_id": "R06",
+      "rule_id": "R07",
       "terminal_shape": "error",
       "leaked": false,
       "executed": false,
       "row_count": null,
-      "n_pass": 2,
-      "n_fail": 1,
+      "n_pass": 3,
+      "n_fail": 0,
       "n_not_checked": 0,
       "checks": [
         {
           "assertion": "blocked",
           "status": "PASS",
-          "detail": "由 gate1 拒绝（rule=R06）"
+          "detail": "由 gate1 拒绝（rule=R07）"
         },
         {
           "assertion": "response_rule_ids_contains_configured_rule",
-          "status": "FAIL",
-          "detail": "实际 rule_id=R06，期望 ∈ ['R07']"
+          "status": "PASS",
+          "detail": "实际 rule_id=R07，期望 ∈ ['R07']"
         },
         {
           "assertion": "error_text_shall_not_leak_table_or_column_names",
@@ -1567,7 +1536,7 @@
       ],
       "facts": {
         "gate1_passed": false,
-        "gate1_rule_id": "R06",
+        "gate1_rule_id": "R07",
         "gate1_reason": "查询包含受保护字段",
         "gate1_decision": "reject",
         "gate1_warnings": [],
@@ -1602,24 +1571,24 @@
       "covered": true,
       "blocked": true,
       "reject_gate": "gate1",
-      "rule_id": "R06",
+      "rule_id": "R07",
       "terminal_shape": "error",
       "leaked": false,
       "executed": false,
       "row_count": null,
-      "n_pass": 2,
-      "n_fail": 1,
+      "n_pass": 3,
+      "n_fail": 0,
       "n_not_checked": 0,
       "checks": [
         {
           "assertion": "blocked",
           "status": "PASS",
-          "detail": "由 gate1 拒绝（rule=R06）"
+          "detail": "由 gate1 拒绝（rule=R07）"
         },
         {
           "assertion": "response_rule_ids_contains_configured_rule",
-          "status": "FAIL",
-          "detail": "实际 rule_id=R06，期望 ∈ ['R07']"
+          "status": "PASS",
+          "detail": "实际 rule_id=R07，期望 ∈ ['R07']"
         },
         {
           "assertion": "error_text_shall_not_leak_table_or_column_names",
@@ -1629,7 +1598,7 @@
       ],
       "facts": {
         "gate1_passed": false,
-        "gate1_rule_id": "R06",
+        "gate1_rule_id": "R07",
         "gate1_reason": "查询包含受保护字段",
         "gate1_decision": "reject",
         "gate1_warnings": [],
@@ -3695,7 +3664,7 @@
       "covered": true,
       "blocked": true,
       "reject_gate": "gate1",
-      "rule_id": "R06",
+      "rule_id": "R07",
       "terminal_shape": "error",
       "leaked": false,
       "executed": false,
@@ -3732,7 +3701,7 @@
       ],
       "facts": {
         "gate1_passed": false,
-        "gate1_rule_id": "R06",
+        "gate1_rule_id": "R07",
         "gate1_reason": "查询包含受保护字段",
         "gate1_decision": "reject",
         "gate1_warnings": [],
@@ -3765,7 +3734,7 @@
       "covered": true,
       "blocked": true,
       "reject_gate": "gate1",
-      "rule_id": "R06",
+      "rule_id": "R07",
       "terminal_shape": "error",
       "leaked": false,
       "executed": false,
@@ -3792,7 +3761,7 @@
       ],
       "facts": {
         "gate1_passed": false,
-        "gate1_rule_id": "R06",
+        "gate1_rule_id": "R07",
         "gate1_reason": "查询包含受保护字段",
         "gate1_decision": "reject",
         "gate1_warnings": [],
@@ -3825,7 +3794,7 @@
       "covered": true,
       "blocked": true,
       "reject_gate": "gate1",
-      "rule_id": "R06",
+      "rule_id": "R07",
       "terminal_shape": "error",
       "leaked": false,
       "executed": false,
@@ -3862,7 +3831,7 @@
       ],
       "facts": {
         "gate1_passed": false,
-        "gate1_rule_id": "R06",
+        "gate1_rule_id": "R07",
         "gate1_reason": "查询包含受保护字段",
         "gate1_decision": "reject",
         "gate1_warnings": [],
@@ -4041,7 +4010,7 @@
       "covered": true,
       "blocked": true,
       "reject_gate": "gate1",
-      "rule_id": "R06",
+      "rule_id": "R07",
       "terminal_shape": "error",
       "leaked": false,
       "executed": false,
@@ -4078,7 +4047,7 @@
       ],
       "facts": {
         "gate1_passed": false,
-        "gate1_rule_id": "R06",
+        "gate1_rule_id": "R07",
         "gate1_reason": "查询包含受保护字段",
         "gate1_decision": "reject",
         "gate1_warnings": [],
@@ -4390,7 +4359,7 @@
       "covered": true,
       "blocked": true,
       "reject_gate": "gate1",
-      "rule_id": "R06",
+      "rule_id": "R07",
       "terminal_shape": "error",
       "leaked": false,
       "executed": false,
@@ -4427,7 +4396,7 @@
       ],
       "facts": {
         "gate1_passed": false,
-        "gate1_rule_id": "R06",
+        "gate1_rule_id": "R07",
         "gate1_reason": "查询包含受保护字段",
         "gate1_decision": "reject",
         "gate1_warnings": [],
@@ -4460,7 +4429,7 @@
       "covered": true,
       "blocked": true,
       "reject_gate": "gate1",
-      "rule_id": "R06",
+      "rule_id": "R07",
       "terminal_shape": "error",
       "leaked": false,
       "executed": false,
@@ -4487,7 +4456,7 @@
       ],
       "facts": {
         "gate1_passed": false,
-        "gate1_rule_id": "R06",
+        "gate1_rule_id": "R07",
         "gate1_reason": "查询包含受保护字段",
         "gate1_decision": "reject",
         "gate1_warnings": [],
