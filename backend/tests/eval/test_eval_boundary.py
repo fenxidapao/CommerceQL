@@ -324,6 +324,8 @@ def test_gap_table_gate3_row_does_not_order_sandbox_refill():
         assert must in text, f"缺口行没点名真阻塞：{must}"
     assert "RLS 伪影" in row["follow_up"], "零行读数必须写明是不设租户 GUC 的伪影"
     assert "494,249" in row["follow_up"], "必须带上带上下文复测到的 PG 规模，否则下一轮还会派单灌数"
+    assert "app_rw" in row["follow_up"], "必须点名这条读数用的角色（W7 09-28 明确要求）"
+    assert "grant" in row["follow_up"], "必须把 grant 面与 RLS 面分开：W7 数基表撞到的是权限，不是策略"
     for must in ("规模数据归", "PG 侧业务事实表当前 **0 行**", "数据阻塞"):
         assert must not in row["follow_up"], f"缺口行又在索取数据：{must}"
     assert row["covered_by_eval"] is False, "gate3 成本档在评测分母里仍不许算已覆盖"
