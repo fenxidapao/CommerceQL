@@ -166,12 +166,12 @@
     "required_by": "07 §17.6② / I-1",
     "banned_field": "difficulty_struct_sitelabel",
     "source": {
-      "n_files_scanned": 29,
+      "n_files_scanned": 30,
       "hits": [],
       "ok": true
     },
     "artifacts": {
-      "n_files_scanned": 19,
+      "n_files_scanned": 20,
       "hits": [],
       "ok": true,
       "paths": [
@@ -182,6 +182,7 @@
         "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\consistency_results.json",
         "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\eval_metrics.json",
         "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\pg_boundary.json",
+        "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_audit_invariant.json",
         "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_gate_allowlist_shape.json",
         "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_gate_rejections.json",
         "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\backend\\reports\\w6\\probe_loadtest_receipts.json",
