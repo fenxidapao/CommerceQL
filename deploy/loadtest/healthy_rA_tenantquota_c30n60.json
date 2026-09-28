@@ -1,0 +1,79 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-09-28T10:24:46+00:00",
+  "target": "http://127.0.0.1:18000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "tenant-quota",
+      "params": {
+        "concurrency": 30,
+        "duration_s": null,
+        "total_requests": 60,
+        "single_session": false,
+        "same_tenant": true,
+        "async_if_slow": false,
+        "questions": "questions_T_A_time.txt",
+        "request_cap": 60
+      },
+      "requests": 60,
+      "wall_s": 20.098,
+      "throughput_rps": 2.985,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 60,
+        "rejected_429": 0,
+        "other_http_4xx": 0,
+        "http_5xx": 0,
+        "unresolved": 0
+      },
+      "rejection_headers": {},
+      "latency_ms": {
+        "p50": 1117.4,
+        "p95": 17821.8,
+        "p99": 18267.9,
+        "max": 18267.9,
+        "mean": 7122.2,
+        "samples": 60
+      },
+      "latency_ms_all_ms": {
+        "p50": 1117.4,
+        "p95": 17821.8,
+        "samples": 60
+      },
+      "ttfb_ms": {
+        "p50": 63.7,
+        "p95": 90.1
+      },
+      "outcomes": {
+        "refuse": 33,
+        "clarify": 5,
+        "error_frame": 18,
+        "ok": 4
+      },
+      "codes": {
+        "GATE_AST_REJECTED": 18
+      },
+      "terminal_provenance": {
+        "refuse": {
+          "stage=none|reason=no_data_asset": 30,
+          "stage=plan_ready|reason=no_data_asset": 3
+        },
+        "clarify": {
+          "stage=intent|reason=time_ambiguous": 5
+        },
+        "error_frame": {
+          "stage=sql_ready|reason=none": 18
+        },
+        "ok": {
+          "stage=executing|reason=none": 4
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": false,
+      "g6_caveat": null
+    }
+  ],
+  "finished_at": "2026-09-28T10:25:06+00:00"
+}

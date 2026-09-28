@@ -1,0 +1,87 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-09-28T10:22:17+00:00",
+  "target": "http://127.0.0.1:18000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "session-lock",
+      "params": {
+        "concurrency": 8,
+        "duration_s": null,
+        "total_requests": 24,
+        "single_session": true,
+        "same_tenant": false,
+        "async_if_slow": false,
+        "questions": "questions_T_A_time.txt",
+        "request_cap": 24
+      },
+      "requests": 24,
+      "wall_s": 23.316,
+      "throughput_rps": 1.029,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 16,
+        "rejected_429": 0,
+        "other_http_4xx": 4,
+        "http_5xx": 4,
+        "unresolved": 0
+      },
+      "rejection_headers": {
+        "409": {
+          "retry_after=3": 4
+        },
+        "503": {
+          "retry_after=5": 4
+        }
+      },
+      "latency_ms": {
+        "p50": 5097.7,
+        "p95": 15185.5,
+        "p99": 15185.5,
+        "max": 15185.5,
+        "mean": 7958.0,
+        "samples": 16
+      },
+      "latency_ms_all_ms": {
+        "p50": 5004.7,
+        "p95": 15181.3,
+        "samples": 24
+      },
+      "ttfb_ms": {
+        "p50": 65.7,
+        "p95": 4956.9
+      },
+      "outcomes": {
+        "refuse": 8,
+        "error_frame": 8,
+        "http_4xx": 4,
+        "http_5xx": 4
+      },
+      "codes": {
+        "INTERNAL": 8,
+        "SESSION_CONFLICT": 4,
+        "{\"code\":\"DB_UNAVAILABLE\",\"message\":\"服务暂时不可用，请稍后重": 4
+      },
+      "terminal_provenance": {
+        "refuse": {
+          "stage=intent|reason=no_data_asset": 8
+        },
+        "error_frame": {
+          "stage=none|reason=none": 8
+        },
+        "http_4xx": {
+          "stage=none|reason=none": 4
+        },
+        "http_5xx": {
+          "stage=none|reason=none": 4
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": null,
+      "g6_caveat": "本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 16 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足"
+    }
+  ],
+  "finished_at": "2026-09-28T10:22:41+00:00"
+}
