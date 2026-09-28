@@ -260,6 +260,13 @@ class CallRecord:
     #: 本次调用是否超过了 `budget_s`。它**替代**了被移除的"预算=硬超时"：
     #: §16.1 的一致性从"强制"改为"可观测"，判定留在上层（推占位符是 W4 的 SSE 责任）。
     over_budget: bool
+    #: 🔴 上游完成原因（`stop` / `length` / …）。`length` = 输出被 `max_tokens` **截断**。
+    #:
+    #: 它落在**成功路径**上是刻意的：截断的响应会被当成"成功"返回（内容不完整但非空），
+    #: 若不在这里带出来，"被截断"与"写完了"在日志里完全同形 ——
+    #: 实测事故（2026-09-28）：`l4_score` 的 512 上限把 149 次里的 96 次截断，
+    #: L4 整层静默失效 64.4%，而没有任何一处记录过这个字段。
+    finish_reason: str
 
 
 class MetricsSink(Protocol):
@@ -294,6 +301,10 @@ class _LoggingMetricsSink:
             degraded=record.degraded,
             budget_s=record.budget_s,
             over_budget=record.over_budget,
+            # 🔴 成功路径也记完成原因：`length` = 被截断、答案不完整。
+            #    缺了它，96/149 次截断只能靠"output_tokens 恰好等于 max_tokens"倒推
+            #    （实测事故，见 `CallRecord.finish_reason` 的说明）。
+            finish_reason=record.finish_reason,
         )
 
 
@@ -482,6 +493,8 @@ class LlmGateway:
                         route.budget_s is not None
                         and completion.latency_ms > route.budget_s * 1000
                     ),
+                    # `length` 必须原样带出去 —— 这是"这答案不完整"的唯一证据。
+                    finish_reason=completion.finish_reason,
                 )
             )
             return LLMResponse(

@@ -37,6 +37,20 @@ DeepSeek 的限流语义是"**并发连接数**"：请求从发出到**响应读
 3. 它是**非确定性文本**：任何"存下来做诊断"的设计都会在下游变成"可被消费的内容"。
 
 本模块只记录 `reasoning_chars`（**长度**），长度足以诊断"思考把预算吃光了"这件事。
+
+## 5. 🔴 `finish_reason` 必须读 —— `length` = 输出被截断（2026-09-28 补，实测事故）
+
+| # | 事实 | 实测 | 本模块的处置 |
+|---|---|---|---|
+| 4 | **`finish_reason` 从没被读过** ⇒ "被截断"与"写完了"在任何日志里同形 | `l4_score` 的 `max_tokens=512`：149 次调用里 **96 次** `output_tokens` 恰=512、`finish_reason=length`、内容在 1,213–1,310 字符处断掉 ⇒ L4 精排**整层静默失效 64.4%**（全仓只有 `router.py` 的文档表格提过这个字段） | 解析出来挂到 `Completion.finish_reason` → 进 `CallRecord.finish_reason` 与 `llm_call` 日志行（**成功路径也带**，所以覆盖率 100%）；空 content 时进 `LlmEmptyContent.detail` |
+
+**为什么现在**不把它变成一个新的异常（`LlmTruncated`）**——依赖顺序，不是不做**：
+
+`app/binding/l4.py` **刻意没有** `except LlmError`（docstring §"`LlmRefused` 与其余 `LlmError` 原样上抛"，`:179-180`），
+并在 `:209` 预留了"裁定后改 3 行"的接口。截断若在本模块 raise，会穿过 `l4.py` → `bind.py`
+（`bind.py:96` 的 `except LlmError` → 终态 `error`），**把 L4 现有的 fail-safe（N-27 约束④：
+失败 → 减候选继续）变成硬失败** —— 那是产品行为变更，得由 W3C 那 3 行先接住。
+⇒ 本轮只做**零控制流风险**的部分（可观测性 100%），raise 版转 W3C/架构（见 `RELAY.md`）。
 """
 
 from __future__ import annotations
@@ -91,6 +105,14 @@ class Completion:
     latency_ms: int
     #: 思考内容的**长度**（不是内容）。诊断"思考把 max_tokens 吃光了"用。
     reasoning_chars: int
+    #: 上游的完成原因（`stop` / `length` / …）。
+    #:
+    #: 🔴 **必须带上成功路径**：`length` = 输出被 `max_tokens` 截断，内容**不完整**。
+    #: 不读它，"被截断"与"写完了"在任何日志里完全同形 —— 实测事故（2026-09-28）：
+    #: `l4_score` 的 `max_tokens=512` 把 149 次调用里的 **96 次**截断（`output_tokens` 恰=512），
+    #: L4 精排整层**静默失效 64.4%**，而全仓没有任何一处读过这个字段。
+    #: 落点见 `CallRecord.finish_reason` 与 `llm_call` 日志行（100% 覆盖，含成功路径）。
+    finish_reason: str
 
 
 @dataclass(slots=True)
@@ -366,9 +388,13 @@ class ChatClient:
 
         try:
             body = resp.json()
-            choice = body["choices"][0]["message"]
+            first = body["choices"][0]
+            choice = first["message"]
             content = choice.get("content") or ""
             usage_raw = body.get("usage") or {}
+            # 🔴 完成原因在 `choices[0]` 上（不在 `message` 里）。读不到就记 "unknown"，
+            #    不猜 —— 猜错会让"截断"看起来像"写完"。
+            finish_reason = str(first.get("finish_reason") or "unknown")
         except Exception as exc:
             raise LlmUpstreamError(
                 "上游响应结构不可解析", detail={"model": model, "kind": type(exc).__name__}
@@ -385,6 +411,9 @@ class ChatClient:
                     "model": model,
                     "reasoning_chars": len(reasoning),
                     "completion_tokens": usage_raw.get("completion_tokens"),
+                    # `length` + 空 content = 思考吃光；`stop` + 空 content = 上游异常。
+                    # 两种成因不同，处置也不同 —— 所以这个字段必须带上。
+                    "finish_reason": finish_reason,
                 },
             )
 
@@ -405,6 +434,7 @@ class ChatClient:
             raw_usage={k: v for k, v in usage_raw.items() if isinstance(v, (int, float, str))},
             latency_ms=latency_ms,
             reasoning_chars=len(reasoning),
+            finish_reason=finish_reason,
         )
 
     @staticmethod

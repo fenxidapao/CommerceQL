@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+import inspect
+import math
 from dataclasses import FrozenInstanceError
 from typing import ClassVar
 
@@ -356,3 +358,91 @@ class TestThinkingBudgetIsCalibratedFromMeasurement:
         调成 10 万来让测试变绿"。
         """
         assert THINKING_HEADROOM_TOKENS <= self._MEASURED_MAX_REASONING * 4
+
+
+class TestL4ScoreBudgetIsCalibratedFromMeasurement:
+    """`L4_SCORE` 输出预算标定 —— 旧值 512 是**未登记的经验值**，代价是整层静默失效。
+
+    实测事故（W7 loadtest，2026-09-28）：149 次 `l4_score` 调用里 **96 次**被
+    `max_tokens=512` 截断（`output_tokens` 恰=512、内容断在 1,213 / 1,279 / 1,310 字符），
+    `scores.py:256-259` 只能报 `invalid_json:*` ⇒ 下游 fail-safe（N-27 ④：失败 → 减候选继续）
+    把 L4 精排整层**静默**降级，而"被截断"与"写完了"在日志里同形。
+
+    本组的意义：**把推导钉住**。512 从来不是从任何实测推出来的，它只是"看着够用"；
+    下面每条断言都对应推导里的一个因子 —— 改任何一个因子，红的是对应的那一条。
+    """
+
+    #: 每项字符上界（W7 实测 42 题真跑检索：区间 52–164）。
+    _MEASURED_MAX_CHARS_PER_ITEM: ClassVar[int] = 164
+    #: 字符→token 的**最保守**实测比（512 token 只写出 1,213 字符 ⇒ 2.369；
+    #: 另一端 1,310 字符 ⇒ 2.559 —— 取"更省字符"的那端，即更悲观的方向）。
+    _MEASURED_CHARS_PER_TOKEN: ClassVar[float] = 2.369
+    #: JSON 信封占用（外层数组 + 每项键名的括号 / 引号 / 逗号）。
+    _ENVELOPE_TOKENS: ClassVar[int] = 32
+    #: 向上对齐粒度：不冒充精度，留出余量。
+    _ALIGN: ClassVar[int] = 256
+    #: 被替换掉的那个值 —— 专门留着做**正向对照**（见下）。
+    _OLD_VALUE: ClassVar[int] = 512
+
+    def _contract_max_items(self) -> int:
+        """上游**契约硬顶**项数 —— 从检索服务签名**现读**，不抄字面量。
+
+        抄字面量的话，`column_top` 被调大时这里不会红 —— 而"载荷变大 ⇒ 又要被截断"
+        正是本事故唯一的复发路径，必须有预警。
+        """
+        from app.retrieval.search import RetrievalService
+
+        default = inspect.signature(RetrievalService.__init__).parameters["column_top"].default
+        assert isinstance(default, int), "column_top 的默认值不再是整数 —— 契约形状变了"
+        return default
+
+    def _worst_case_tokens(self) -> int:
+        """按实测最坏情况算出的**最低**所需 `max_tokens`（不含对齐余量）。"""
+        items = self._contract_max_items()
+        body = math.ceil(items * self._MEASURED_MAX_CHARS_PER_ITEM / self._MEASURED_CHARS_PER_TOKEN)
+        return body + self._ENVELOPE_TOKENS
+
+    def test_l4_output_hint_covers_the_contract_worst_case(self) -> None:
+        route = TASK_ROUTES[LlmTask.L4_SCORE]
+        needed = self._worst_case_tokens()
+        assert route.output_tokens_hint >= needed, (
+            f"L4 输出预算 {route.output_tokens_hint} < 实测最坏所需 {needed} "
+            f"⇒ 打满契约硬顶的载荷会被静默截断（L4 整层降级）"
+        )
+
+    def test_the_old_value_would_not_have_passed_the_assertion_above(self) -> None:
+        """🔴 正向对照：**512 必须过不了**上面那条 —— 否则这个测试防不住事故重演。
+
+        没有这条，"预算 ≥ 所需"可以被一个恰好够大的旧值满足，而测试看起来一样绿；
+        有了它，本组具备"注入违规 → 必须红"的判别力（不只是"现状是绿的"）。
+        """
+        assert self._worst_case_tokens() > self._OLD_VALUE, (
+            "512 竟然够用？——说明推导或实测参数被改小了，请重跑真机标定而不是调常数"
+        )
+
+    def test_the_contract_cap_is_thirty_so_the_derivation_is_not_vacuous(self) -> None:
+        """推导的输入项数必须真是 30：若上游把硬顶调小到 8，上面两条会在**错误的**
+        （更宽松的）前提上继续变绿 —— 那才是"测试骗人"。"""
+        assert self._contract_max_items() == 30
+
+    def test_hint_is_aligned_to_the_declared_granularity(self) -> None:
+        route = TASK_ROUTES[LlmTask.L4_SCORE]
+        assert route.output_tokens_hint % self._ALIGN == 0, (
+            "对齐粒度变了 ⇒ 路由表里的推导注释与这个常数已经不同步"
+        )
+
+    def test_hint_is_not_absurdly_large(self) -> None:
+        """反向对照：上限不能无限大 —— 它同时进 pre-flight 成本估算（§10.4 成本闸）。"""
+        route = TASK_ROUTES[LlmTask.L4_SCORE]
+        assert route.output_tokens_hint <= self._worst_case_tokens() * 4
+
+    def test_l4_is_non_thinking_so_the_hint_is_the_whole_budget(self) -> None:
+        """⚠️ **前提守卫**：推导假设"hint 就是全部输出预算"（非思考档不加余量）。
+
+        L4 若被改成思考档，`max_tokens_for` 会自动叠加 `THINKING_HEADROOM_TOKENS`
+        ⇒ 上面那条覆盖断言的口径就变宽了，会**悄悄**掩盖 hint 本身不够的事实。
+        所以这里把这个前提钉死：将来真要开思考位，这条会先红。
+        """
+        route = TASK_ROUTES[LlmTask.L4_SCORE]
+        assert route.thinking is False
+        assert max_tokens_for(route) == route.output_tokens_hint

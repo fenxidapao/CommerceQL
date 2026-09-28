@@ -257,8 +257,38 @@ TASK_ROUTES: Final[dict[LlmTask, TaskRoute]] = {
     ),
     LlmTask.L4_SCORE: TaskRoute(
         task=LlmTask.L4_SCORE, model_key=ModelKey.FAST, thinking=False,
-        budget_s=0.8, temperature=0.0, output_tokens_hint=512, json_output=True,
-        budget_source="07 §6.8.2 方案C（'单次调用约增加 0.3–0.8s' 的上界）；PRD §12.9 约束1（温度=0）",
+        budget_s=0.8, temperature=0.0,
+        # 🔴 512 → **2304**（2026-09-28 实测标定；512 是**未登记的经验值**，见下）。
+        #
+        # 失效事实（W7 loadtest，2026-09-28）：512 上限把 `l4_score` 149 次调用里的 **96 次**
+        # 截断（`output_tokens` 恰=512、`finish_reason=length`、内容断在 1,213/1,279/1,310 字符），
+        # 下游 `scores.py` 只能报 `invalid_json:*` ⇒ **L4 精排整层静默失效 64.4%**。
+        #
+        # 推导（**每一步都有实测来源，不发明数字**，U-22）：
+        #   ① 上界项数 = **30** —— 契约硬顶 `app/retrieval/search.py:92 column_top=30`
+        #      （全仓 `column_top` 仅 3 处命中 ⇒ 从未被覆盖；W7 实测 42 题：min 8 / p50 15.8 /
+        #      p95 22 / max 25）。打满硬顶才是"任何合法载荷都不会被截断"的判据。
+        #   ② 每项字符上界 = **164** —— W7 实测（区间 52–164）。
+        #   ③ ⇒ 正文上界 = 30 × 164 = **4,920 字符**。
+        #   ④ 字符→token 取**实测最保守方向**：512 token 只写出 1,213 字符 ⇒
+        #      **2.369 字符/token**（另一端 1,310 字符 ⇒ 2.559，取更省字符的那端）。
+        #   ⑤ ⇒ 正文 token 上界 = ceil(4,920 / 2.369) = **2,077**。
+        #   ⑥ + JSON 信封（外层数组与键名的括号/引号/逗号）**32** ⇒ 2,109。
+        #   ⑦ 向上对齐到 **256 的倍数** = **2,304**（余量 9.2%；对齐是工程惯例，不冒充精度）。
+        #   交叉校验：W7 独立夹逼给的是 620–1,900 token（乐观端换算），本值在悲观端之上 —— 一致。
+        #
+        # ⚠️ 放大 `max_tokens` **不增加成本**（计费按实际 token），但会抬高
+        #    `budget.estimate_for_payload` 的 pre-flight 估算 —— 那是**修正**：
+        #    旧值把 L4 的输出成本估小了。若它让 §10.4 的成本闸更常告警，那是真实成本的显形。
+        # ⚠️ 真正的保险不是这个数字，而是 `finish_reason`（`CallRecord` + `llm_call` 日志）：
+        #    下次再有任务被截断，"截断"会直接出现在日志里，不用靠 output_tokens 恰好等于上限去倒推。
+        output_tokens_hint=2304, json_output=True,
+        budget_source=(
+            "延迟 = 07 §6.8.2 方案C（'单次调用约增加 0.3–0.8s' 的上界）；"
+            "输出预算 = 2026-09-28 按 W7 实测推导（项数硬顶 30 × 每项 164 字符 ÷ 2.369 字符/token，"
+            "见上方逐条推导；旧值 512 造成 96/149 次截断 = L4 静默失效 64.4%）；"
+            "PRD §12.9 约束1（温度=0）"
+        ),
     ),
 }
 
