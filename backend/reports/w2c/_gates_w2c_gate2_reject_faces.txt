@@ -1,0 +1,22 @@
+== 0) 语义包 domain 分布（活体配方用）==
+  domains = ['orders', 'products', 'traffic']   GateNo.POLICY = 2
+
+== 1) 四面各自能否触发（替身驱动 ⇒ 证明代码分支存在）==
+OK   G2-VERSION                         rule_id=G2-VERSION
+OK   G2-ASSET                           rule_id=G2-ASSET
+OK   G2-DENY                            rule_id=G2-DENY
+OK   ⑤ tenant 断言（raise 形态）              ContractViolationError ⇒ 不进 gate_reject_total
+
+== 2) 真 runtime：gate1 通过 ⇒ gate2 是否恒 pass ==
+OK   gate1-pass then gate2-pass         gate1=True gate2=True  SELECT pay_amount FROM v_order_paid
+OK   gate1-pass then gate2-pass         gate1=True gate2=True  SELECT pv, uv FROM v_traffic_daily LIMIT 10
+OK   gate1-pass then gate2-pass         gate1=True gate2=True  SELECT shop_name FROM v_shop LIMIT 10
+OK   deny 列：gate1 先拦（不进 gate2）          gate1 rule_id=R07
+
+== 3) G2-DOMAIN 活体配方（gate1 放行 + gate2 计数拒绝）==
+OK   gate1 放行（不看数据域）                    passed=True
+OK   gate2 出 G2-DOMAIN                  rule_id=G2-DOMAIN
+OK   refuse_reason=out_of_scope         refuse_reason=out_of_scope
+OK   计数落 gate_reject_total              0.0 -> 1.0
+
+gate2 拒面探针：全部符合期望

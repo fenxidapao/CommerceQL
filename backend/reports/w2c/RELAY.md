@@ -186,3 +186,21 @@
   - oracle 机械断言（**旧判据⑤口径，已废**）：A（anti-oracle，gate1 R06/R06 同码）PASS + B（④⑤ 冗余复核活）PASS。
   - 门禁：pytest unit+contract+eval = **2141 passed / 3 failed**；mypy app 147 files 0 issues；ruff 全绿；lint-imports 4 kept / 0 broken；DSN 卫生 8 passed。
   - 🔴 **当时剩余 3 红 = W6 到期哨兵（`tests/eval/test_harness_allowlist.py`）**：① `test_gate2_bidirectional_tenant_assertion_raises_on_production_visible_shape`（钉旧生产失效形态，落地后须反转）；② `test_the_dual_shape_view_dies_with_the_consumer_fix`（须删 `eval/harness.py` 的 `AssetAllowlistView`/`GuardAllowlistBundle` 与 `eval/redteam_eval.py` 的 `StructuralAllowlistBundle`/`structural_wrapper`）；③ `test_the_adapters_stated_reason_list_matches_the_code`。**09-23 现状：①②③ 均已不红**（W6/他窗已处理），仅剩 1 条归因断言（本文件 v4 段已收回）。
+
+### 6.9 gate2 四个拒面的**活体可达性** —— `gate_reject_total{gate_no="2"}` 恒 0 的成因（2026-09-28）
+
+**起因**：W7 两次提"gate2/gate3 的 `rule_id` 活体分母仍为 0 ⇒ 不是不成立，是未测"。
+复核实测给出**第三种答案**：四条面里 **3 条结构性不可达 + 1 条可达**。读数 =
+`_gates_w2c_gate2_reject_faces.txt`（探针 `_probe_w2c_gate2_reject_faces.py`，零 DB，退出码 0）。
+
+| 面 | 活体可达 | 机制（代码级） |
+|---|---|---|
+| `G2-VERSION` | ✗ | `runtime.py:208` 的 `bundle_version=self.active_version()` 是**同一读数** ⇒ `policy_gate.py:115` 的 `!=` 在同一 bundle 实例下恒 False；且 `guard_allowlist(ctx, *, max_rows)` **不收版本入参** ⇒ 没有"请求锚定旧版本"的入口 |
+| `G2-ASSET` | ✗ | gate1 `ast_gate.py:536` 用**同一个** `assets` 键先拦 `R05`，且 `edges.py:285-287` gate1 不过就 `ERROR_OUT`（短路） |
+| `G2-DENY` | ✗ | 同上：gate1 `R07` 与 gate2 ④ 同源**同一份** `deny_columns`，gate1 先拦（实测 `SELECT receiver_phone` → gate1 `R07`） |
+| `G2-DOMAIN` | **✓** | gate1 **完全不读** `ctx.scope_claims` ⇒ 这是 gate2 独有的计数拒绝面 |
+
+- ⑤ tenant 双向断言（`policy_gate.py:160`）是 `raise ContractViolationError`，**不是** `_reject` ⇒ **不进 `gate_reject_total`**（INTERNAL 形态）。
+- ⚠️ `gate_reject_total` 的**唯一记录点** = `nodes/_shared.py::gate_update`（`U-125` ①；落到 `metrics.py:993`）。`gate2_policy` 节点在**分流之前**无条件调它 ⇒ `refuse` 出口（`G2-DOMAIN`）也会记 ✓。
+- ✅ **给 W7 的活体配方**（本包 domains = `orders` / `products` / `traffic`）：身份 `scope_claims` **不含**目标资产的 domain + SQL 用该 domain 的资产且**过 gate1** ⇒ `G2-DOMAIN` + `refuse_reason=out_of_scope`，落 `gate_reject_total{gate_no="2",rule_id="G2-DOMAIN"}`。**实测 0.0 → 1.0**。该分支走 `refuse` 出口 = **产品结论**（"你不能看"），语义正当，**不是造数**。
+- ⚠️ 推论：`gate_reject_total{gate_no="2"}` **只会有 `G2-DOMAIN` 一个序列**；另三个号的非 0 值在当前结构下**不应出现**（出现即回归）⇒ 建议把"另三号恒 0"登记为**不变量**，而不是待补的缺口。
