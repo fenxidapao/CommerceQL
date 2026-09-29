@@ -277,6 +277,36 @@ def test_redact_dsn_on_an_unparseable_shape_does_not_echo_the_input():
     assert "app_ro_pwd" not in out and "无法解析" in out
 
 
+def test_normalize_dsn_accepts_the_scheme_deploy_env_actually_writes():
+    """2026-09-29 实测：抄 `deploy/.env` 的 `DATABASE_URL` 喂探针 ⇒ `invalid connection option`。
+
+    那条 URL 写的是 SQLAlchemy 式 `postgresql+psycopg://`，psycopg 不认（把整串当键值对），
+    于是探针**拒绝出产物**。归一只许动 scheme，其余（含 `force_readonly` 加的 options）不许变。
+    ⚠️ 口令位用 `.gitleaks.toml` 放行的那对开发占位（`app_rw` / `app_rw_pwd`）—— 写别的形态会被
+    全仓重放（`tests/unit/test_migration_dsn_hygiene.py`）当场判红，本项目有意如此。
+    """
+    src = "postgresql+psycopg://app_rw:app_rw_pwd@localhost:5432/ecom"
+    assert pg_guard.normalize_dsn(src) == "postgresql://app_rw:app_rw_pwd@localhost:5432/ecom"
+    assert pg_guard.normalize_dsn("postgresql://a:b@h:1/db") == "postgresql://a:b@h:1/db"
+    assert pg_guard.normalize_dsn("") == ""
+    #: 归一之后仍要能被 force_readonly 接上只读闸门（两件事在同一条路径上，顺序错了就白归一）
+    chained = pg_guard.force_readonly(src)
+    assert chained.startswith("postgresql://") and "default_transaction_read_only" in chained
+
+
+def test_scrub_secrets_strips_the_password_from_someone_elses_error_text():
+    """`redact_dsn` 只管"我自己打印 DSN"这一半；驱动层的异常文案里也带着口令。
+
+    今天真实撞到的形状：`invalid connection option "<整串含口令>"` ⇒ 探针把 `str(exc)` 打出来
+    就等于把口令写进日志。纪律是"出口过 scrub"，不是"我记得别打印"。
+    """
+    msg = 'invalid connection option "postgresql+psycopg://app_rw:app_rw_pwd@localhost:5432/ecom?options"'
+    out = pg_guard.scrub_secrets(msg)
+    assert "app_rw_pwd" not in out, out
+    assert "app_rw@localhost:5432/ecom" in out, "脱敏后要留下『连到哪』，否则读数没法点名靶子"
+    assert pg_guard.scrub_secrets("没有 DSN 的普通文案") == "没有 DSN 的普通文案"
+
+
 # ==== 边界探针自己也不许带字面共享 DSN（防线①同形）=====================
 def test_the_boundary_probe_takes_no_literal_shared_dsn():
     """`probe_pg_boundary.py` 连的就是共享实例 ⇒ 必须显式给 DSN，缺 env 直接终止。

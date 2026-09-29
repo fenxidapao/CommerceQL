@@ -24,19 +24,44 @@ from typing import Any
 
 import psycopg
 
-__all__ = ["PgReadOnlyGuardError", "force_readonly", "open_readonly", "redact_dsn", "target_stamp"]
+__all__ = ["PgReadOnlyGuardError", "force_readonly", "normalize_dsn", "open_readonly", "redact_dsn", "scrub_secrets", "target_stamp"]
 
 
 #: 编进连接串的会话级 GUC ⇒ 同一个 DSN 常量的**每一条**连接都自动受约束（不用逐处改 `connect`）。
 _RO_OPTIONS = "-c default_transaction_read_only=on"
 
+#: SQLAlchemy 式 scheme（`postgresql+psycopg://` / `postgresql+asyncpg://`）⇒ psycopg **不认**，
+#: 会把整串当成 libpq 的 `keyword=value`，报 `invalid connection option "<整串>"` ——
+#: 而那句话里**带着口令**（2026-09-29 实测）。`deploy/.env` 的 `DATABASE_URL` 写的就是这个式子，
+#: 所以操作方照抄来的 DSN 必须在**唯一入口**处归一，而不是让每个探针各自绕。
+_SQLA_SCHEME = re.compile(r"^(?P<scheme>postgres(?:ql)?|postgresql?)\+[a-z_]+(?=://)", re.IGNORECASE)
+
+
+def normalize_dsn(dsn: str) -> str:
+    """把 `postgresql+<driver>://` 归一成 psycopg 认得的 `postgresql://`。**只动 scheme**，
+    口令、host、查询串一律原样保留（本函数不做脱敏，脱敏是 `redact_dsn` 的事）。"""
+    if not dsn:
+        return dsn
+    m = _SQLA_SCHEME.match(dsn)
+    return (m.group("scheme") + dsn[m.end():]) if m else dsn
+
+
+def scrub_secrets(text: str) -> str:
+    """把**任意文案**里 DSN 形状的子串换成脱敏形式。
+
+    存在的理由：驱动层报错时会把整条连接串（含 `user:password`）塞进异常消息，
+    而探针的失败文案是要打印、要进日志的 ⇒ "我不打印 DSN"这条纪律**管不住别人的异常文本**。
+    """
+    return _DSN_SHAPE.sub(lambda m: redact_dsn(m.group(0)), text or "")
+
 
 def force_readonly(dsn: str) -> str:
-    """给 DSN 加上 `options=-c default_transaction_read_only=on`（幂等）。
+    """给 DSN 加上 `options=-c default_transaction_read_only=on`（幂等），并先归一 scheme。
 
     ⚠️ 这不是"我自己小心点"，而是**服务端**在每条事务上把关；`open_readonly()` 会故意下发一次
     `CREATE TABLE` 来证明它真的生效。两者都过，才允许探针继续出产物。
     """
+    dsn = normalize_dsn(dsn)
     if "default_transaction_read_only" in dsn:
         return dsn
     sep = "&" if "?" in dsn else "?"

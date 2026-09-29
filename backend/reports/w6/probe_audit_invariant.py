@@ -38,6 +38,28 @@ W7 报：三格实测差 0（热臂 86 / 冷臂 84 / session-lock 1），而 **�
 * 行数 **>** 分母 ⇒ 一个请求落了**多行**（U-129 的双终态形状正是这一侧）；
 所以判据不许写成 `rows <= 分母` 这种单边式。
 
+🔴 **两个差值不许并成一个数**（2026-09-29 第二十轮，W7 明确要求"两数请分写别并"）
+------------------------------------------------------------------------
+同一段路的两半各有归属，合成一个数就同时丢掉两件事：
+
+| 差值 | 说的是 | 归属 |
+|---|---|---|
+| `admitted − terminal` | **有没有断流**（2xx 但没读到终止帧）⇒ 是**量具/客户端侧**的形状 | U-129 家族（终态形状），**与审计行无关** |
+| `terminal − app.audit_log 行数` | **进了图的终态有没有落段 1 审计行** ⇒ 是**服务端侧**的缺失 | **U-130** |
+
+⇒ 本产物**逐格同时落两个具名键**（`gap_admitted_minus_terminal` / `gap_terminal_minus_audit_rows`，
+包在 `two_numbers` 里各自带 `attribution`），并**刻意不输出** `admitted − 审计行` 这个合并值 ——
+代数上它等于两半之和，但报出来会把"4 条断流"和"4 条没落审计"混成同一个缺陷。
+本轮盘上的活样本 = `healthy_r20_aprime_c12n108.json`：`admitted 99 / terminal 99 / 审计行 95`
+⇒ 前一半 **0**（没断流）、后一半 **+4**（四条没落段 1）—— 两个数分别是"无事"和"有缺陷"，
+并成一个 `99 − 95 = 4` 就看不出前一半了。
+
+🔑 **task_id 级取证通道（同轮 W7 新增字段 `codes_task_ids`）**：回执里带 `codes_task_ids`
+（`错误码 → ≤12 条 task_id`，见 `driver.py:542`）⇒ 本器件改走
+`where task_id = any(...)` **逐 id 点名**哪些在 `app.audit_log` 有段 1 行、哪些没有，
+**不再靠时间窗猜**。盘上没有该字段的回执 ⇒ 如实落 `task_id_evidence.status`（"缺件"），
+时间窗读数照给但标注它才是本次的路径来源；**不许**把"我能按 task_id 复算"写进没有该字段的批次。
+
 丢行的**机制**（本轮读码核实，进产物引用）：`app.audit_log` 只有**段 1**（`app/obs/audit.py:18`
 的表分工；段 2 落 `audit_log_supplement`，不在被数的表里）。
 `backend/app/api/runner.py:669-699` 给取消路径做了两段式补偿（且注释明写"反过来做会重复写段 1
@@ -68,9 +90,17 @@ W7 报：三格实测差 0（热臂 86 / 冷臂 84 / session-lock 1），而 **�
     export COMMERCEQL_PROBE_DSN='<共享库 DSN>'
     PYTHONIOENCODING=utf-8 PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w6/probe_audit_invariant.py
 
+⚠️ **从 `deploy/.env` 抄 `DATABASE_URL` 时有两个坑**（2026-09-29 各实测一次，都是"探针拒绝出产物"而不是"连上了"）：
+① 它写的是 SQLAlchemy 式 `postgresql+psycopg://` ⇒ psycopg 不认（会把整串当 libpq 键值对，
+   而**报错文案里带着口令**）；`pg_guard.force_readonly()` 现已归一 scheme，但这类原始文案仍走 `scrub_secrets` 出口。
+② 它的 host 是 compose **内部**名 `pg` ⇒ 宿主机解析不了（`failed to resolve host 'pg'`），
+   compose 把 `5432:5432` 映射到宿主 ⇒ 本机跑要自己换成 `localhost`。**这条不做自动改写**：
+   悄悄换主机等于换靶子，宁可红一次让操作方看见。
+
 产物 = `backend/reports/w6/probe_audit_invariant.json`（逐格 window / target / denominator + basis /
-admitted / terminal / stream_break / audit_rows / diff / by_outcome / state + 汇总 +
-`pg_guard` 自证 + 时钟偏移）。
+admitted / terminal / **`two_numbers`（两个差值分写，各带归属）** / audit_rows / diff / by_outcome /
+**`codes_task_ids` 与 `task_id_evidence`** / state + 汇总（含 `two_number_block` / `task_id_channel` /
+`proxy_only_cells`）+ `pg_guard` 自证 + 时钟偏移）。
 """
 
 from __future__ import annotations
@@ -95,7 +125,13 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 sys.path.insert(0, str(REPO / "eval"))
 
-from pg_guard import force_readonly, open_readonly, redact_dsn, target_stamp  # noqa: E402
+from pg_guard import (  # noqa: E402
+    force_readonly,
+    open_readonly,
+    redact_dsn,
+    scrub_secrets,
+    target_stamp,
+)
 
 if os.name == "nt":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -195,6 +231,51 @@ def denominator_of(scenario: dict) -> tuple[int | None, str | None, dict | None]
     return (proxy, BASIS_PROXY, mismatch) if proxy is not None else (None, None, mismatch)
 
 
+def terminal_of(scenario: dict) -> int | None:
+    """`terminal` 本身（与"分母走哪条路"无关）：① W7 自报 `admission.terminal` → ② 按词表推导。
+
+    ⚠️ 不能用 `denominator_of()` 的返回值代替：那条路可能落到 `admitted` **代理**，
+    而代理值当 `terminal` 用就等于把两个差值并成一个（W7 第二十轮禁的那件事）。
+    """
+    adm = scenario.get("admission")
+    if isinstance(adm, dict) and isinstance(adm.get("terminal"), int):
+        return int(adm["terminal"])
+    return derived_terminal(scenario)
+
+
+def codes_task_ids_of(scenario: dict) -> dict[str, list[str]] | None:
+    """取 W7 第二十轮新增的 `codes_task_ids`（`错误码 → ≤12 条 task_id`，`driver.py:542`）。
+
+    形状不对（不是 dict、值不是字符串列表、全空）⇒ **None**，不做"半解析"：
+    有半个键就照没键处理，免得拿一个残缺的 id 集去宣布"逐 id 点名过了"。
+    """
+    raw = scenario.get("codes_task_ids")
+    if not isinstance(raw, dict) or not raw:
+        return None
+    out = {str(code): list(ids) for code, ids in raw.items()
+           if isinstance(ids, list) and ids and all(isinstance(x, str) for x in ids)}
+    return out or None
+
+
+def two_numbers_of(admitted: int | None, terminal: int | None, audit_rows: int | None) -> dict:
+    """**两个差值分写**的落盘形状（不许合并 ⇒ 本函数不返回 `admitted − audit_rows`）。"""
+    return {
+        "admitted": admitted,
+        "terminal": terminal,
+        "audit_rows": audit_rows,
+        "gap_admitted_minus_terminal": (admitted - terminal) if (admitted is not None and terminal is not None) else None,
+        "gap_terminal_minus_audit_rows": (terminal - audit_rows) if (terminal is not None and audit_rows is not None) else None,
+        "attribution": {
+            "gap_admitted_minus_terminal": "非 0 = 有 2xx 没读到终止帧（断流/客户端超时）⇒ 量具与客户端侧的形状，"
+                                           "归 U-129 家族；**与 app.audit_log 行数无关**",
+            "gap_terminal_minus_audit_rows": "严格式的差：> 0 = 进了图的终态没落段 1 审计行（U-130），"
+                                             "< 0 = 一个请求落了多行（双终态）",
+        },
+        "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— "
+                           "合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。",
+    }
+
+
 def window_of(receipt: dict, scenario: dict) -> tuple[datetime | None, datetime | None, str]:
     """返回 (begin, end, kind)，kind ∈ {"scenario", "receipt", "single", "ambiguous", "missing"}。
 
@@ -270,6 +351,9 @@ def summarize(rows: list[dict], skew_s: float | None) -> dict:
     violated = [
         {"receipt": r["receipt"], "denominator": r["denominator"], "denominator_basis": r["denominator_basis"],
          "admitted": r["admitted"], "terminal": r["terminal"], "audit_rows": r["audit_rows"], "diff": r["diff"],
+         "gap_admitted_minus_terminal": (r.get("two_numbers") or {}).get("gap_admitted_minus_terminal"),
+         "gap_terminal_minus_audit_rows": (r.get("two_numbers") or {}).get("gap_terminal_minus_audit_rows"),
+         "task_id_evidence": r.get("task_id_evidence"),
          "rows_that_window_day": r.get("rows_that_window_day")}
         for r in rows if r["state"] == INVARIANT_VIOLATED
     ]
@@ -316,6 +400,40 @@ def summarize(rows: list[dict], skew_s: float | None) -> dict:
                                          if r.get("mismatch")],
         "clock_skew_s": skew_s,
         "edge_unreliable": skew_s is None or abs(skew_s) > SKEW_LIMIT_S,
+        #: 🔴 **两数分写**（W7 第二十轮）：两侧各自点名，产物里**没有**合并值。
+        "two_number_block": {
+            "admitted_minus_terminal": {
+                "cells_nonzero": [{"receipt": r["receipt"], "admitted": r["admitted"], "terminal": r["terminal"],
+                                   "gap": (r.get("two_numbers") or {}).get("gap_admitted_minus_terminal")}
+                                  for r in rows
+                                  if (r.get("two_numbers") or {}).get("gap_admitted_minus_terminal")],
+                "attribution": "断流 / 客户端超时（2xx 无终止帧）⇒ U-129 家族，与审计行数无关",
+            },
+            "terminal_minus_audit_rows": {
+                "cells_nonzero": [{"receipt": r["receipt"], "terminal": r["terminal"],
+                                   "audit_rows": r["audit_rows"],
+                                   "gap": (r.get("two_numbers") or {}).get("gap_terminal_minus_audit_rows")}
+                                  for r in rows
+                                  if (r.get("two_numbers") or {}).get("gap_terminal_minus_audit_rows")
+                                  and r["state"] == INVARIANT_VIOLATED],
+                "sum": sum((r.get("two_numbers") or {}).get("gap_terminal_minus_audit_rows") or 0
+                           for r in rows if r["state"] == INVARIANT_VIOLATED),
+                "attribution": "进了图的终态 vs 段 1 审计行 ⇒ U-130（> 0 少落，< 0 多落）",
+            },
+            "merged_admitted_minus_audit_rows_emitted": False,
+            "why": "两半各自成立才有意义：`admitted − terminal = 0` 与 `terminal − 审计行 = 4` 并成 "
+                   "`admitted − 审计行 = 4` 之后，'没断流'这件事就从读数里消失了。",
+        },
+        #: 🔑 task_id 级取证的**覆盖面**（没这个字段就不许说"逐 id 点名过了"）。
+        "task_id_channel": {
+            "n_receipts_scanned": len({r["receipt"] for r in rows}),
+            "cells_with_codes_task_ids": sum(1 for r in rows if r.get("codes_task_ids")),
+            "cells_with_id_evidence": sum(1 for r in rows if r.get("task_id_evidence")),
+            "status": "盘上回执若不带 `codes_task_ids` ⇒ 本批只能用时间窗读数，**不许**写成'task_id 级复算过'；"
+                      "带了就走 `where task_id = any(...)` 逐 id 点名（缺件的 task_id 会列在 by_code.missing_task_ids）。",
+        },
+        "proxy_only_cells": [{"receipt": r["receipt"], "admitted": r["admitted"]}
+                             for r in rows if r.get("denominator_basis") == BASIS_PROXY],
         "window_rule": "时间列见 pg_guard.time_column（本轮实测 = `timestamp`，盘上**没有** `created_at`）："
                        f"<时间列> >= begin AND <时间列> < finished_at + {WINDOW_PAD.total_seconds():.0f}s"
                        "（右端含该秒；回执时间戳为秒级）",
@@ -403,11 +521,35 @@ async def measure(rows: list[dict], table: str = "audit_log") -> tuple[list[dict
             row["audit_rows"] = sum(by_outcome.values())
             row["by_outcome"] = by_outcome
             row["rows_that_window_day"] = days_map.get(str(row["begin"].astimezone(UTC).date()))
+            #: 🔑 task_id 级取证（W7 第二十轮新增字段）：**有键就逐 id 点名**，不靠时间窗猜。
+            if row.get("codes_task_ids"):
+                ids = sorted({t for group in row["codes_task_ids"].values() for t in group})
+                tq = sql.SQL("select task_id, count(*) from app.{} where task_id = any(%s) group by task_id").format(
+                    sql.Identifier(table)
+                )
+                got = {str(r[0]): int(r[1]) for r in await (await conn.execute(tq, (ids,))).fetchall()}
+                row["task_id_evidence"] = {
+                    "method": f"select task_id, count(*) from app.{table} where task_id = any(%s)（参数化、只读闸门内）",
+                    "n_ids": len(ids),
+                    "n_with_row": sum(1 for t in ids if got.get(t)),
+                    "by_code": {
+                        code: {"given": len(group),
+                               "with_row": sum(1 for t in group if got.get(t)),
+                               "missing_task_ids": [t for t in group if not got.get(t)]}
+                        for code, group in row["codes_task_ids"].items()
+                    },
+                }
+            row["two_numbers"] = two_numbers_of(row["admitted"], row["terminal"], row["audit_rows"])
             if span_void(row["end"], WINDOW_PAD, table_min):
                 row["state"], row["diff"] = NOT_APPLICABLE, None
                 row["inapplicability_reason"] = "window_before_table_span"
+                row["strict_equation_evaluated"] = False
+                #: 窗口作废 ⇒ 严格式那一半不许留数（留着会被读者当成差值引用），断流那一半与被数的表无关，保留。
+                row["two_numbers"]["gap_terminal_minus_audit_rows"] = None
+                row["two_numbers"]["audit_rows"] = None
                 continue
             row["state"], row["diff"] = classify(row["denominator"], row["audit_rows"])
+            row["strict_equation_evaluated"] = row["diff"] is not None
         return rows, skew, stamp
     finally:
         await conn.close()
@@ -430,13 +572,17 @@ def collect(receipt_dir: Path, pattern: str) -> list[dict]:
             begin, end, kind = window_of(data, sc)
             denominator, basis, mismatch = denominator_of(sc)
             adm = admitted_of(sc)
-            terminal = denominator if basis in (BASIS_PROVIDED, BASIS_DERIVED) else None
+            terminal = terminal_of(sc)
+            task_ids = codes_task_ids_of(sc)
             state = NO_DB
             reason = None
             if denominator is None:
                 state, reason = NOT_APPLICABLE, "denominator_unavailable"
             elif denominator == 0:
                 state, reason = NOT_APPLICABLE, "zero_denominator_vacuous"
+            elif basis == BASIS_PROXY:
+                #: 只有 `admitted` 可用 ⇒ 拿它去比审计行数**就是那个被禁的合并值** ⇒ 不比、不判。
+                state, reason = NOT_APPLICABLE, "denominator_proxy_only"
             elif kind in ("ambiguous", "missing"):
                 state, reason = AMBIGUOUS_WINDOW, f"window_{kind}"
             rows.append({
@@ -451,6 +597,9 @@ def collect(receipt_dir: Path, pattern: str) -> list[dict]:
                 "denominator_basis": basis,
                 "admitted": adm,
                 "terminal": terminal,
+                "two_numbers": two_numbers_of(adm, terminal, None),
+                "codes_task_ids": task_ids,
+                "task_id_evidence": None,
                 "stream_break_gap": (adm - terminal) if (adm is not None and terminal is not None) else None,
                 "mismatch": mismatch,
                 "inapplicability_reason": reason,
@@ -459,6 +608,7 @@ def collect(receipt_dir: Path, pattern: str) -> list[dict]:
                 "diff": None,
                 "by_outcome": None,
                 "state": state,
+                "strict_equation_evaluated": state == NO_DB,
                 "g6_caveat_present": sc.get("g6_caveat") is not None,
             })
     return rows
@@ -486,7 +636,10 @@ def main() -> int:
     try:
         rows, skew, stamp = asyncio.run(measure(rows, table=args.table))
     except (LookupError, RuntimeError, psycopg.Error) as exc:  # RuntimeError 含 PgReadOnlyGuardError
-        print(f"🔴 探测未跑成：{type(exc).__name__}: {str(exc)[:300]}")
+        #: 🔴 驱动层的异常消息**会把整条连接串（含口令）打进来**（2026-09-29 实测：
+        #: `invalid connection option "<scheme>://<user>:<口令>@<host>:<port>/<db>?options…"`）
+        #: ⇒ "我不打印 DSN"管不住别人的文案，出口处必须过一道 `scrub_secrets`。
+        print(f"🔴 探测未跑成：{type(exc).__name__}: {scrub_secrets(str(exc))[:300]}")
         return 2
 
     out = Path(args.out)

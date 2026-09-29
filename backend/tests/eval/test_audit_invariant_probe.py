@@ -7,6 +7,10 @@
 * 缺分母 / 分母为 0（等式恒真）/ 窗口早于表里现存最老一行 ⇒ `not_applicable` 且**必须说出原因**；
 * 差值是**双向**的（少落 = 终态丢失，多落 = 一个请求落多行，U-129 那一侧）；
 * 取证件**不许带字面共享库 DSN**（与 `test_the_boundary_probe_takes_no_literal_shared_dsn` 同形）；
+* 🔴 **两数分写**（第二十轮，W7）：`admitted − terminal` 与 `terminal − 审计行` 各带归属、各自落键，
+  合并值 `admitted − 审计行` **只许以布尔旗标的形式被点名"没输出"**，任何带数的同名键都算违规；
+* 只有 `admitted` 可用（代理）⇒ **不参与严格式**，不比、不判、进 `proxy_only_cells`；
+* `codes_task_ids` 只认完整形状，且**覆盖面本身是读数**：没带该字段的批次不许写成"task_id 级复算过"；
 * 真产物里每个"违反"格都必须两个数齐全，且不可比格不许混进 `invariant_ok_cells`。
 """
 
@@ -266,6 +270,115 @@ def test_product_keeps_inapplicable_cells_out_of_the_ok_count():
     for v in s["violated_cells"]:
         assert "rows_that_window_day" in v, v["receipt"]
     assert s["window_rule"] and "terminal" in s["note"]
+
+
+def test_the_two_gaps_are_written_separately_and_never_merged(monkeypatch, tmp_path):
+    """W7 第二十轮："两数请分写别并"。`admitted − terminal` 与 `terminal − 审计行` 各归各家。
+
+    形状故意选成**两半相等**（2 与 2）：合并值会是 4，而 4 既不是断流也不是缺行的真实条数 ——
+    报出 4 就把"有 2 条断流"这件事抹掉了。所以这里既断两个具名键，也断**合并值不在块里**。
+    """
+    m = _load_probe(monkeypatch)
+    sc = {"admission": {"admitted": 10, "terminal": 8, "rejected_429": 2},
+          "outcomes": {"ok": 4, "clarify": 2, "refuse": 1, "error_frame": 1, "truncated": 2}}
+    block = m.two_numbers_of(m.admitted_of(sc), m.terminal_of(sc), 6)
+    assert block["gap_admitted_minus_terminal"] == 2          # 断流侧（U-129 家族）
+    assert block["gap_terminal_minus_audit_rows"] == 2        # 缺行侧（U-130）
+    assert block["admitted"] == 10 and block["terminal"] == 8 and block["audit_rows"] == 6
+    assert 4 not in [v for v in block.values() if isinstance(v, int)], "合并值不该出现在两数块里"
+    assert set(block["attribution"]) == {"gap_admitted_minus_terminal", "gap_terminal_minus_audit_rows"}
+    cell = m.collect((p := _receipt(tmp_path, sc)).parent, p.name)[0]
+    #: 还没数库 ⇒ 严格式那一半**没有数**（不许拿代理或时间窗凑出一个数来）
+    assert cell["two_numbers"]["gap_admitted_minus_terminal"] == 2
+    assert cell["two_numbers"]["gap_terminal_minus_audit_rows"] is None
+    assert cell["strict_equation_evaluated"] is True          # NO_DB：等着被数，不是等着被猜
+
+
+def test_proxy_only_denominator_is_never_compared_against_audit_rows(monkeypatch, tmp_path):
+    """只有 `admitted` 可用时**不比**：拿它去比审计行数就是那个被禁的合并值。
+
+    第十九轮的"代理要显式标注"在这一轮升级成"代理不参与严格式"——
+    盘上 37 份回执都带 `outcomes`（本轮实测），所以这条今天不影响任何读数，
+    它挡的是"以后某份回执只有 HTTP 计数时，器件静默把 2xx 当终态数"。
+    """
+    m = _load_probe(monkeypatch)
+    p = _receipt(tmp_path, {"admission": {"admitted": 5}})
+    cell = m.collect(p.parent, p.name)[0]
+    assert cell["denominator_basis"] == m.BASIS_PROXY
+    assert (cell["state"], cell["inapplicability_reason"]) == (m.NOT_APPLICABLE, "denominator_proxy_only")
+    assert cell["diff"] is None and cell["terminal"] is None
+    assert cell["two_numbers"]["gap_terminal_minus_audit_rows"] is None
+    s = m.summarize([cell], 0.0)
+    assert s["proxy_only_cells"] == [{"receipt": "r_test.json", "admitted": 5}]
+    assert s["state_counts"].get(m.INVARIANT_OK, 0) == 0, "代理格绝不能混进 ok 计数"
+
+
+def test_codes_task_ids_is_all_or_nothing(monkeypatch):
+    """`codes_task_ids` 只认完整形状：半解析出来的 id 集会让人误以为"逐 id 点名过了"。"""
+    m = _load_probe(monkeypatch)
+    good = {"INTERNAL": ["t1", "t2"], "GATE_AST_REJECTED": ["t3"]}
+    assert m.codes_task_ids_of({"codes_task_ids": good}) == good
+    for junk in (None, {}, [], {"INTERNAL": []}, {"INTERNAL": "t1"}, {"INTERNAL": [1, 2]}, "x"):
+        assert m.codes_task_ids_of({"codes_task_ids": junk}) is None, junk
+    assert m.codes_task_ids_of({}) is None
+    #: 部分坏 ⇒ 坏的那个键不算数，好的那个仍可用（宁可少点名，也不拿残缺 id 集宣布"点名过了"）
+    got = m.codes_task_ids_of({"codes_task_ids": {"INTERNAL": ["t1"], "X": [None]}})
+    assert got == {"INTERNAL": ["t1"]} and "X" not in got
+
+
+def test_summary_reports_task_id_coverage_so_absent_cannot_be_claimed(monkeypatch, tmp_path):
+    """覆盖面是**读数的一部分**：没带该字段的批次，产物要自己说"这批不能写成 task_id 级复算"。
+
+    ⚠️ 两份件放**不同子目录**：`_receipt()` 固定写 `r_test.json`，同目录第二次会覆盖第一次 ⇒
+    `collect()` 读到的是后一份，测试就会"绿得没有内容"（本项目踩过的那类假绿形状）。
+    """
+    m = _load_probe(monkeypatch)
+    dir_a, dir_b = tmp_path / "a", tmp_path / "b"
+    dir_a.mkdir()
+    dir_b.mkdir()
+    without = _receipt(dir_a, {"outcomes": {"ok": 3}})
+    ch = m.summarize(m.collect(without.parent, without.name), 0.0)["task_id_channel"]
+    assert ch["cells_with_codes_task_ids"] == 0 and ch["cells_with_id_evidence"] == 0
+    assert "不许" in ch["status"] and "task_id" in ch["status"]
+    #: 带了字段的格要**算得出来**（覆盖面是数出来的，不是常量）
+    with_ids = _receipt(dir_b, {"outcomes": {"ok": 3}, "codes_task_ids": {"INTERNAL": ["t1", "t2"]}})
+    ch2 = m.summarize(m.collect(with_ids.parent, with_ids.name), 0.0)["task_id_channel"]
+    assert ch2["cells_with_codes_task_ids"] == 1
+    assert ch2["cells_with_id_evidence"] == 0, "没跑库就不许说有 id 级证据"
+
+
+def test_product_carries_both_gaps_and_no_merged_number():
+    """吃真产物：结构上确认"合并值不输出"这条不是嘴上说的。"""
+    if not PRODUCT.exists():
+        pytest.skip("产物未生成（本轮没跑过该探针）")
+    d = json.loads(PRODUCT.read_text(encoding="utf-8"))
+    s = d["summary"]
+
+    def walk(node):
+        """ yields (key, value) for every dict entry in the payload. """
+        if isinstance(node, dict):
+            for k, v in node.items():
+                yield k, v
+                yield from walk(v)
+        elif isinstance(node, list):
+            for item in node:
+                yield from walk(item)
+
+    #: 名字里同时出现 `admitted` 与审计行的键**只许是旗标（布尔）**，不许带数 ——
+    #: 带了数就说明器件把两半并成了一个值（W7 第二十轮禁的事）。
+    named = [(k, v) for k, v in walk(d) if "admitted" in k.lower() and "audit" in k.lower()]
+    assert named, "至少要有那条 `merged_…_emitted = False` 的旗标"
+    for k, v in named:
+        assert isinstance(v, bool) and v is False, f"被禁的合并值出现在键 {k!r} = {v!r}"
+    assert s["two_number_block"]["merged_admitted_minus_audit_rows_emitted"] is False
+    for c in d["cells"]:
+        tn = c["two_numbers"]
+        assert {"gap_admitted_minus_terminal", "gap_terminal_minus_audit_rows", "attribution"} <= set(tn)
+        if c["state"] == "invariant_ok":
+            assert tn["gap_terminal_minus_audit_rows"] == 0
+            assert tn["terminal"] == tn["audit_rows"]
+    #: 覆盖面自己也要在产物里（有 id 级证据的格数 == 带 codes_task_ids 的格数）
+    assert s["task_id_channel"]["cells_with_id_evidence"] <= s["task_id_channel"]["cells_with_codes_task_ids"]
 
 
 def m_terms() -> set[str]:
