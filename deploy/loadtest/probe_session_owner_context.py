@@ -9,6 +9,12 @@
    ⇒ 上下文跨属主流入 = **推理侧**外泄；同时看回显的 `session_id` 是不是别人的会话；
 4. 属主再 GET ⇒ 回合数是否增加、追问原文是否已进入**别人的**会话 = **写侧**污染。
 
+⚠️ 同一 `thread_id` 的第 2 轮有**两种**形状（W4 `20066a5` 离线复现）：崩（`error(INTERNAL)`、审计 0 行）
+与**不崩但静默复用上一轮终态**（HTTP 200 + 多一条同 `outcome` 的审计行 ⇒ 批级不变量在那格差 0、抓不到）。
+本件第 4 步因此记两条客户端侧探测器：`terminal_without_any_stage`（本轮没有任何节点报完成却给出终止帧）
+与 `terminal_digest_same_as_turn1`（终止帧内容逐字等于第 1 轮）⇒ 两臂（非属主 + `--control` 属主正对照）
+必须同交，单臂的 `clarify` 读不出结论。
+
 ⚠️ 成本 = 2 次模型请求（≈¥0.01–0.02）。
 ⚠️ 产物不落令牌：只记问题原文、长度、布尔标记与 `task_id`。
 """
@@ -85,6 +91,41 @@ def _sse_names(text: str) -> dict[str, list[str]]:
             if isinstance(body, dict) and isinstance(body.get("stage"), str):
                 stages.add(body["stage"])
     return {"events_seen": sorted(events), "stages_seen": sorted(stages)}
+
+
+#: 终止帧里每轮都会变的键 ⇒ 比对"两轮结论是否同一个"之前先剥掉。
+_VOLATILE_FRAME_KEYS = ("task_id", "trace_id", "session_id", "elapsed_ms", "ts", "timestamp", "seq")
+
+
+def _terminal_frame(text: str) -> dict[str, Any] | None:
+    """流里最后一个 `terminal: true` 帧（连同它的 `event:` 名）。"""
+    event_name: str | None = None
+    found: dict[str, Any] | None = None
+    for line in text.splitlines():
+        if line.startswith("event:"):
+            event_name = line[6:].strip()
+        elif line.startswith("data:"):
+            try:
+                body = json.loads(line[5:].strip())
+            except json.JSONDecodeError:
+                continue
+            if isinstance(body, dict) and body.get("terminal") is True:
+                found = {**body, "_event": event_name}
+    return found
+
+
+def _frame_digest(frame: dict[str, Any] | None) -> str:
+    """终止帧的**内容指纹**（剥掉 `_VOLATILE_FRAME_KEYS`）。
+
+    存在的理由（W4 `20066a5` 的读数）：同一 `thread_id` 的第 2 轮有一种**不崩**的形状 ——
+    它把上一轮的终态当本轮结论返回（HTTP 200），并且多落一条 `outcome` 相同的审计行。
+    ⇒ 批级不变量在这一格是 `terminal 1 / 审计行 1 = 差 0`（**绿的**），抓不到；
+      能抓它的是"这一轮的终止帧内容与上一轮逐字相同、且本轮没有任何节点完成"。
+    """
+    if not frame:
+        return ""
+    kept = {k: v for k, v in sorted(frame.items()) if k not in _VOLATILE_FRAME_KEYS}
+    return json.dumps(kept, ensure_ascii=False, sort_keys=True, default=str)
 
 
 def _task_id_of_stream(text: str) -> str | None:
@@ -168,6 +209,7 @@ async def main() -> None:
             "sse_bytes": q1["sse_bytes"],
             "task_id": _task_id_of_stream(q1["text"]),
             "terminal_frame_seen": '"terminal": true' in q1["text"].replace('"terminal":true', '"terminal": true'),
+            "terminal_frame_digest": _frame_digest(_terminal_frame(q1["text"])),
             **_sse_names(q1["text"]),
         }
 
@@ -191,6 +233,12 @@ async def main() -> None:
             "echoed_session_id_is_owner_session": _dig(parsed2, "session_id") == sid,
             "stream_hits_owner_only_terms": [w for w in terms if w in q2["text"]],
             "codes_seen": sorted(c for c in ("SESSION_NOT_FOUND", "RATE_LIMITED", "INTERNAL") if c in q2["text"]),
+            # ↓ 两条是 W4 那格"不崩的复用臂"的客户端侧探测器：批级不变量在它那格是 差 0（绿的），
+            #   只有"本轮没有任何节点报完成却给出了终止帧"与"终止帧内容 == 上一轮"能抓到它。
+            "terminal_without_any_stage": bool(_terminal_frame(q2["text"]))
+                                          and not _sse_names(q2["text"])["stages_seen"],
+            "terminal_digest_same_as_turn1": _frame_digest(_terminal_frame(q2["text"]))
+                                             == rep["2_owner_q1"]["terminal_frame_digest"],
             **_sse_names(q2["text"]),
         }
 

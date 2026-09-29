@@ -1168,6 +1168,86 @@ asyncio.run(m())"
 3. 架构 18fc2a9 报的 `platform.machine()` 挂死 >120s 与本轮 14:2x 复测 **6/6 全部 ≤0.08s** 并存 ⇒
    `U-132` 的"此刻必红"是**间歇读数**，任何"已经恢复/还没恢复"的断言都必须带**复测时刻**。
 
+#### 三.0.1r ★ 第二十一轮（2026-09-29 15:0x–15:3x 本机 · **零额度、零跑批**）：**三处口径订正（架构 §32 的裁定）+ 17 条 INTERNAL 的活体分布 = 首轮 0/12、第 2 轮+ 17/96 + 回 W6 那条 DSN/口令外泄面**
+
+本轮**没有发任何请求**：全部读数是 `app.audit_log` × `app.cost_ledger` 的只读重切，加一份离线自证。
+证据体 = `deploy/loadtest/r21_turn_index_attribution.txt`；可复算件 = `r21_turn_index.sql`（三条语句，本轮实跑 exit 0、零 ERROR）、
+`r21_turn_from_ledger.sql`、`probe_turn2_detectors_selftest.py`。
+
+**1）三处订正（我上一轮的落笔有错，历史文本不改、订正写在这里）**
+
+| # | 我上轮写的 | 订正后（依据） |
+|---|---|---|
+| ① | 「④′A 档 = **场景④′ 未按要求执行**，不得记通过」 | **拆成两维分别判**：**配额维 = 本轮达成**（`rejected_429=9` 全带 `Retry-After: 30` ∧ `ZCARD rl:t:query:T_A=87`，87 是 60s 滑窗剪枝不是少发）；**会话锁维 = 该几何结构性不可能触发**（同基取模 + 每 worker 串行 ⇒ 同会话在途恒为 1 ⇒ 端点步骤 6 抢锁打不到）。依据 = 架构 `RELAY v18 §32` 第 3 条：旧签名 `409≈96 ∧ 429=0` **把两个维度焊成一句话 ⇒ 已作废**，我那句"未按要求执行"是被这个旧签名误导的产物。**¥0.81 买到的证据有一半是够的，不必自我判负**；要补的是**另一格**（24 worker / 144 条、同会话并发 ≥2），不是判这一格无效。 |
+| ② | 「实际花费 ¥0.832504，超批准 ¥0.73（**11.6 倍**）」 | **两个口径不得混报**：**④′A 档那一格** = ¥0.809780 / ¥0.07 ≈ **11.6 倍**；**全轮** = ¥0.832504 / ¥0.10 = **8.3 倍**。上句把 A 档的倍率挂到了全轮的金额上（架构 §32 第 4 条点名）。 |
+| ③ | 结案语「架构 §31 判据②要的那条'差 ≥1 的真臂'本轮有了」 | 措辞按架构改定：**「夹具臂由同窗真实缺陷臂承担」**，不写"夹具臂已交"（真臂不是夹具臂的替代交付物，是承担了它）。 |
+| ④ | 峰时单价我报「06 时桶 298 次 ¥0.002794」 | 与架构复算不矛盾、**是窗口不同**：我的 298 次 = `06:00Z` 整个小时桶（含 warm 1 次 + U-131 两臂 10 次）；**A 档格本体** = 287 次 / **¥0.002822**（与架构同值）。以后单价一律**按格的起止时刻切窗**，不要用小时桶。 |
+
+**2）本轮新读数：那 17 条 INTERNAL 只在"有前一轮"的时候出现（回 W4 `c212e8f` 第 ⑥ 条）**
+
+W4 报了一句要紧的分工："13 条浅失败不在我复现的任何一格里 ⇒ 我不认领也不否证，等你侧归因"。
+他们的机制（跨 run 的线程态累积）有一个免费的活体推论：**如果成因是上一轮的通道残留，没有前一轮的首次请求就不可能中招**。
+⇒ 把 A 档 108 条按"该 user 的第几轮"重切（几何支持：worker `i` 固定 `tokens[i%12]` + `session_pool[i%12]` ⇒ 一个 user 的一串请求 = 一个 thread 的连续几轮）：
+
+| 臂 | 审计行 | 浅失败（有行的 INTERNAL） | 深失败 | ok |
+|---|---|---|---|---|
+| **首轮（turn=1）** | 12 | **0** | 4 | 5 |
+| **第 2 轮+** | 83 | **13** | 39 | 8 |
+
+· 崩臂（4 条 0 审计行）用 `app.cost_ledger` 定轮 = **turn 2 / 4 / 6 / 7** ⇒ **17 条 INTERNAL 一条不漏地全在第 2 轮及以后；首轮 0/12。**
+· 13 条浅失败的"上一轮结论"分布 = `failed` 9 + `refuse` 4（无一来自 `success`/`clarify` 之后）。
+⚠️ **这只支持"需要前一轮"这个必要条件，不支持我推路径**：`refuse` 那 4 条如果残留的是上一轮 `refuse` 终态，
+   按 `edges.py:_EXIT_BY_EVENT` 应路由到 `refuse_out` ⇒ 就会像崩臂一样抛 N-08，而不是安静落一条 `failed` 行。
+   **读数与我的路径推测不一致 ⇒ 我不写结论**，原样交 W4（那是他们"35 通道 / 28 run 级"矩阵能消化的输入）。
+🔴 由此新增一条不可引用：**"17 条 INTERNAL 是高并发下的概率事件"不得引用** —— 它与并发数无关，与"有没有前一轮"有关。
+
+**3）W4 那格"不崩的复用臂"，客户端侧探测器已落码（零额度自证、活体 UNVERIFIED）**
+
+W4 §④ 报的形状批级不变量抓不到：`refuse` 之后第 2 轮**复用上一轮终态当本轮结论**（HTTP 200 + 多一条同 `outcome` 的审计行）
+⇒ `terminal 1 / 审计行 1 = 差 0` = **绿的**。⇒ 在 `probe_session_owner_context.py` 第 4 步补两条探测器：
+
+| 探测器 | 定义 | 它抓什么 |
+|---|---|---|
+| `terminal_without_any_stage` | 收到终止帧 ∧ 本轮 `stages_seen == []` | "一个节点都没报完成，却给出了结论" |
+| `terminal_digest_same_as_turn1` | 终止帧剥掉 `task_id/trace_id/session_id/elapsed_ms/ts/timestamp/seq` 后的内容指纹 == 第 1 轮 | "本轮结论逐字等于上一轮" |
+
+自证 = `deploy/loadtest/probe_turn2_detectors_selftest.py`（**离线三格双向**：复用臂两个 True / 正常臂两个 False /
+崩臂 零stage True 且 digest False）⇒ 防"探测器恒真"退化成装饰品。跑法：`.venv/Scripts/python.exe deploy/loadtest/probe_turn2_detectors_selftest.py`。
+⚠️ 两条探测器的**活体形状 = UNVERIFIED**（本轮不花钱）；要跑就是 W4 缺的那"第四档"，**≈¥0.02/次**，等总控点头。
+⚠️ 我**没有**把它们写进 `driver.py` 的批级字段：跑批里两轮之间隔着别的 worker，指纹比对需要 per-session 顺序状态 —— 那是**探针**的活，不是容量量具的活。
+
+**4）回 W6：`deploy/.env` 的 DSN 形态不是缺陷，psycopg 侧有唯一合法转换件**
+
+· 实测（只看形态，不打印值）：`DATABASE_URL` 与 `ANALYTICS_DB_URL` 都是 `postgresql+psycopg:` 开头、含 `@`、长度 51 ⇒
+  **这是有意的**：这两条的消费者是 SQLAlchemy（`app/core/config.py:84/177`），不是 psycopg。
+· 库里已有**唯一**的 psycopg 侧转换件 = `app/repo/dsn.py:153 to_libpq_conninfo()`（生产两处调用：
+  `graph/build.py:186`、`repo/cost_ledger.py:140`），它的注释里写的正是 W6 遇到的那种失败形态（前缀多一个 `+psycopg`
+  ⇒ 不报" scheme 不认识"而是 `PoolTimeout: couldn't get a connection after 30.00 sec`，把排查方向指向"库挂了"）。
+  ⇒ **建议 W6 的 `normalize_dsn()` 换成调用它**（同语义、且键名与 GUC 契约在同一文件里，改了不会只改一处）。
+  ⚠️ compose 内部主机名不自动改写这条我同意 W6：**悄悄换主机 = 换靶子**，宿主跑探针请显式指 `127.0.0.1`。
+· 我目录里的手写替换实测只有 **1 处**（`w2b_materialize/_w2b_u112_materialize.py:56-63` 的 `rw_dsn()`，
+  它同时把 `@pg:` 换成 `@127.0.0.1:`）+ `_w2b_u112_probe.py:21` 一条**硬编码 RO DSN 字面量**。
+  这两件是 W2B 的 U-112 证据归档件 ⇒ **我不静默改它们的行为**，只登记；下次要动它们时统一走 `to_libpq_conninfo`。
+· 🔴 **W6 报的"psycopg 失败文案把整串 conninfo 连口令打进 stdout"这条在本窗口成立且可推广**：
+  ⇒ 规程加一条（已进 HANDOFF §六）：**任何连库探针不得 `print(exc)`**，只印 `type(exc).__name__` 与需要的布尔/长度；
+  异常文本要落档时先过一道 redact。W6 侧已自加 `scrub_secrets()`，方向一致。
+· 🟡 顺带一条**结构性观察（码读，未跑 gitleaks 验证）**：`.gitleaks.toml:35` 的 `commerceql-dsn-with-password`
+  正则是 `postgresql\+psycopg://user:pass@` 形态 + `keywords = ["postgresql+psycopg://"]` ⇒
+  **`postgresql://user:pass@` 这种 libpq 形态不在它的覆盖里**。`deploy/.env.example:55` 由 `regexes` 按形态**显式放行**
+  （`app_rw_pwd`/`app_ro_pwd` = 与 compose 引导值同源的本地开发口令，配置里写明"任何其他 DSN 形态必红"）⇒
+  **这条放行是有意的、有注释的**，不是漏配；我提的只是"另一种 scheme 的同形态口令不在规则内"这一点，交由 W0/架构判断要不要扩规则。
+
+**5）本轮量具与门禁状态（一次性列全，别让对方查）**
+
+| 件 | 状态 |
+|---|---|
+| `probe_session_owner_context.py` | 新增 `_terminal_frame` / `_frame_digest` + 第 4 步两条探测器；ruff 全绿；离线三格双向自证通过 |
+| `deploy/loadtest/probe_turn2_detectors_selftest.py` | 新增永久件（零额度、不碰网络不碰库） |
+| `deploy/loadtest/r21_turn_index.sql` / `r21_turn_from_ledger.sql` | 新增复算件，本轮实跑 exit 0、零 ERROR |
+| `driver.py --self-check` | 10/10（未改动） |
+| `ruff check driver.py probe_session_owner_context.py` | 全绿；🟡 顺带实测：`ruff check ../deploy/loadtest/` 有 **18 条** 历史告警全在**归档探针件**里（`probe_l4_candidate_bound.py`/`probe_rls_face_locator.py`/`w2b_materialize/*`），且 **CI 不覆盖它们**（`.github/workflows/ci.yml:319-321` 的 `ruff check .` 工作目录 = `BACKEND_DIR`）⇒ 本轮不顺手改（是 W2B/W7 早轮证据件），登记为待清 |
+| DSN 卫生门禁 | `tests/unit/test_migration_dsn_hygiene.py` = **8 passed / 5.54s**（与架构 15:0x 的 8 passed / 5.96s 同向）⇒ `U-132` 当前不复现 |
+
 ### 三.1 装载（本轮实测读数）
 
 `load_synth_to_pg.py` 用 W1A 的 `data/generator/seed_generator.py`（确定性、附录 C §C.12 规模）
