@@ -65,6 +65,47 @@ def _obj(text: str) -> Any:
         return _last_data(text)
 
 
+def _sse_names(text: str) -> dict[str, list[str]]:
+    """流里出现过哪些 `event:` 名与 `stage` 值 —— **结构**证据，不是内容证据。
+
+    存在的理由：标记词命中（`stream_hits_owner_only_terms`）分不出两种完全不同的事实 —
+    "图真的带着别人的上下文跑到了 `gen_sql`" 与 "这一轮在鉴权处就 404 了、流是空的"。
+    推理侧那一臂要的正是后者能被**否证**，所以把逐帧的 stage 序列交出去。
+    """
+    events: set[str] = set()
+    stages: set[str] = set()
+    for line in text.splitlines():
+        if line.startswith("event:"):
+            events.add(line[6:].strip())
+        elif line.startswith("data:"):
+            try:
+                body = json.loads(line[5:].strip())
+            except json.JSONDecodeError:
+                continue
+            if isinstance(body, dict) and isinstance(body.get("stage"), str):
+                stages.add(body["stage"])
+    return {"events_seen": sorted(events), "stages_seen": sorted(stages)}
+
+
+def _task_id_of_stream(text: str) -> str | None:
+    """流里**任意一帧**的 `task_id`（真服务端只在 `ack` 帧给）。
+
+    ⚠️ 不能用 `_obj(text)` 取：它返回最后一个可解析帧 = 终止帧，而 `clarify`/`complete`
+    帧上没有 `task_id` ⇒ 本轮实测两处都读成 `null`，取证件反而交不出唯一的 join 键
+    （没有它，W4/W1B 无法把这一轮对上 `app.audit_log` 的行，只能靠时间窗猜）。
+    """
+    for line in text.splitlines():
+        if not line.startswith("data:"):
+            continue
+        try:
+            body = json.loads(line[5:].strip())
+        except json.JSONDecodeError:
+            continue
+        if isinstance(body, dict) and isinstance(body.get("task_id"), str) and body["task_id"]:
+            return str(body["task_id"])
+    return None
+
+
 def _turns(obj: Any) -> list[Any]:
     t = _dig(obj, "turns")
     return t if isinstance(t, list) else []
@@ -87,6 +128,9 @@ async def main() -> None:
     ap.add_argument("--terms", default=",".join(OWNER_ONLY_TERMS),
                     help="只可能来自 Q1 的标记词（逗号分隔）；追问流里出现 = 上下文跨属主流入")
     ap.add_argument("--out", default="E:/tmp_w7/probe_owner_context.json")
+    ap.add_argument("--control", action="store_true",
+                    help="追问改由**属主**提（正对照）：属主带上下文都拿不到 `complete` ⇒ 这句问不出结论，"
+                         "非属主那一臂的 `clarify` 只是「无信息」，不能读成「已验证不触发」")
     args = ap.parse_args()
 
     toks = [t.strip() for t in Path(args.tokens).read_text(encoding="utf-8").splitlines() if t.strip()]
@@ -122,8 +166,9 @@ async def main() -> None:
             "question": args.q1,
             "http": q1["http"],
             "sse_bytes": q1["sse_bytes"],
-            "task_id": _dig(_obj(q1["text"]) or {}, "task_id"),
+            "task_id": _task_id_of_stream(q1["text"]),
             "terminal_frame_seen": '"terminal": true' in q1["text"].replace('"terminal":true', '"terminal": true'),
+            **_sse_names(q1["text"]),
         }
 
         g_other = await get_sess(client, other, sid)
@@ -134,16 +179,19 @@ async def main() -> None:
             "turn_questions_excerpt": [q[:70] for q in g_other["questions"]][:4],
         }
 
-        q2 = await ask(client, other, args.followup, sid)
+        asker = owner if args.control else other
+        q2 = await ask(client, asker, args.followup, sid)
         parsed2 = _obj(q2["text"]) or {}
         rep["4_nonowner_followup"] = {
+            "asked_by": "owner(正对照)" if args.control else "nonowner",
             "question": args.followup,
             "http": q2["http"],
             "sse_bytes": q2["sse_bytes"],
-            "task_id": _dig(parsed2, "task_id"),
+            "task_id": _task_id_of_stream(q2["text"]),
             "echoed_session_id_is_owner_session": _dig(parsed2, "session_id") == sid,
             "stream_hits_owner_only_terms": [w for w in terms if w in q2["text"]],
             "codes_seen": sorted(c for c in ("SESSION_NOT_FOUND", "RATE_LIMITED", "INTERNAL") if c in q2["text"]),
+            **_sse_names(q2["text"]),
         }
 
         g_owner = await get_sess(client, owner, sid)

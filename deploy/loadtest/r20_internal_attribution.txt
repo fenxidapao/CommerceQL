@@ -1,0 +1,140 @@
+④′ A 档那 17 条 INTERNAL 的拆族读数（第二十轮 · 2026-09-29 · 零额度复算件）
+==============================================================================
+
+被测格 = `healthy_r20_aprime_c12n108.json`
+  scenario=steady｜c=12｜108 条｜`--reuse-sessions --session-pool 12`｜题库 `questions_T_A_time.txt`
+  窗口 06:17:08Z–06:18:21Z｜target `http://127.0.0.1:18000/api/v1`
+  `target_check` = 12 条路径、`has_query=true`（07 §16.5 的核对由 `driver.verify_openapi_has_query` 当场做掉）
+  codes = {"GATE_AST_REJECTED": 43, "INTERNAL": 17, "RATE_LIMITED": 9}
+  admission = {"admitted": 99, "terminal": 99, "rejected_429": 9, "other_http_4xx": 0, "http_5xx": 0, "unresolved": 0}
+  本件回答的问题：`codes` 只说"17 条 INTERNAL"，答不了"这 17 条是不是同一种 INTERNAL"。
+
+------------------------------------------------------------------------------
+一、三个读面各说什么（★ 三者覆盖范围不同，缺一个就会误判）
+------------------------------------------------------------------------------
+【读面 1】服务端结构化日志 —— 容器是 `w7load-api`，**不是** `commerceql-api-1`
+  复算：MSYS_NO_PATHCONV=1 docker logs --since 2026-09-29T06:16:00Z --until 2026-09-29T06:19:30Z w7load-api
+  事件计数：llm_call 287 / binding_decision 64 / binding_disclosure_without_outlet 13 /
+            api_error 9 / **graph_run_failed 4** / gate3_explain_failed 1 / exec_failed 1
+  🔴 全容器生命周期内字符串 `INTERNAL` 只出现 **4** 次、`GATE_AST_REJECTED` 出现 **0** 次
+    ⇒ **日志不是错误码的完整读面**（闸门拒绝不落具名日志；`api_error` 只带 `RATE_LIMITED`）。
+    "17 条里只有 4 条能在日志找到"不是矛盾，是读面覆盖差异 —— 拿日志计数去否证回执计数会得假结论。
+  4 条 `graph_run_failed`（`error_type=ValueError`，detail=「终态已被设置（N-08）」）：
+    tk_6a1a6c029be7427cb41c7dac2ce736e1  06:17:39.854Z
+    tk_a1e54c1d5d8c49bb8cd7117703020f45  06:17:56.546Z
+    tk_9f575a098ecf4ac6be50649f20a18b23  06:18:06.201Z
+    tk_398fa097c589466ba6b61c35a2b633cb  06:18:07.534Z
+  四条栈顶逐字相同：`runner.py:454 _drive` → `build.py:661 _timed` →
+    `nodes/audit_supp.py:49 audit_supp` → `nodes/_shared.py:165 terminal_update` →
+    `state.py:480 assert_terminal_is_settable` → ValueError；
+    LangGraph 尾注 `During task with name 'audit_supp'`。
+  ⚠️ 镜像与工作树同源（六个涉事文件 md5 逐一相等：`graph/state.py`、`graph/nodes/_shared.py`、
+    `graph/build.py`、`api/runner.py`、`api/errors.py`、`graph/nodes/audit_supp.py`）
+    ⇒ 这不是"旧镜像里的历史缺陷"，崩点就是当前代码。
+
+【读面 2】`app.audit_log`（段 1 审计行）
+  复算：docker exec commerceql-pg-1 psql -U postgres -d ecom -c
+    "select outcome, refusal_reason, count(*) from app.audit_log
+     where \"timestamp\" >= '2026-09-29 06:17:00+00' and \"timestamp\" < '2026-09-29 06:19:30+00' group by 1,2;"
+  读数：failed 56 / refuse 18（no_data_asset 14 + out_of_scope 4）/ success 13 / clarify 8 = **95 行**
+  ★ **terminal(99) − 审计行(95) = 4**，且这 4 条 = 读面 1 的四条 `graph_run_failed` 一一对上
+    （四条 task_id 逐条 `where task_id in (...)` = **0 行**）。
+  ⇒ U-130 那条"逐终态必有一条审计行"的不变量**第一次在真实流量里被真缺陷臂触发**（不是 `--self-check` 桩、
+    也不是夹具）。架构 §31 判据②要求"两个读数同行"：正常态差 0 已交（上一轮 8/8），本轮交的是**差 ≥1 的臂**，
+    且触发源是产品路径而非夹具 ⇒ 比夹具臂更强。
+
+【读面 3】`latency_ms` 键集 + `app.cost_ledger` 调用数（把 56 条 failed 分深浅）
+  复算：… -c "select k, count(*) from app.audit_log, lateral jsonb_object_keys(latency_ms) k
+        where 时间窗 and outcome='failed' group by 1;"
+  读数：total 56 / normalize 56 / plan 43 / gate 43 / linking 43 / gen_sql 43 / exec 1
+    ⇒ **43 条深失败**（跑到 gen_sql）= 与 GATE_AST_REJECTED 43 同数；**13 条浅失败**（只有 total+normalize）。
+  逐条 LLM 调用数（`cost_ledger` 按 task_id）：
+    success 13 条 = 4 次/条｜failed 深 43 条 = 4.02 次/条（4–5）｜refuse 18 条 = 2.06 次/条（1–3）
+    clarify 8 条 = 1 次/条｜**failed 浅 13 条 = 1 次/条**｜**graph_run_failed 4 条 = 1 次/条且无审计行**
+  逐条 user_id：浅 13 条落在 u_f03/f05/f08/f10/f11/f12；崩 4 条落在 u_f04/f06/f07/f09（各 1 次 flash 调用、
+    输入 5139–5146 tokens ⇒ 只跑过一次意图识别）。
+
+★★ 拆族结论（本轮唯一能钉死的两句）
+  **INTERNAL 17 = 13（有段 1 审计行、只跑了 1 次 LLM、浅失败）+ 4（无审计行、崩在 `audit_supp` 的 N-08）**
+  两族在压测侧指纹里同属 `error_frame`：`stage=none` 11 + `stage=intent` 6 = 17 —— **单看 `codes` 或
+  单看 `terminal_provenance` 都分不开**，必须叠审计行与调用数。
+
+------------------------------------------------------------------------------
+二、U-131 推理侧那一臂：A/B 只换"提问者"，读出的是**新的功能级触发面**
+------------------------------------------------------------------------------
+两臂只差一个变量 = 第 2 轮提问者的 `user_id`（⇒ `thread_id = tenant:user:session` 命不命中已有检查点）；
+Q1 选的是本轮**实测真打到 gen_sql+execute** 的那句（不再用"退款率"那句，它到不了 sql_ready）：
+
+  臂 1（`probe_session_owner_context_infer_r20.json`，非属主追问；06:38 一跑）
+    属主 Q1 = tk_da84dc7aed1149cebeb7587a7f8f79b6 → success，4 次调用 ¥0.009000，stages 全序
+      [intent, plan_ready, schema_linking, sql_ready, gate_passed, executing] ⇒ **"打到 gen_sql"这一条已交**
+    非属主追问 = tk_1d25dad0742240f1bc05850b955c1326：http 200｜sse 445B｜
+      events=[ack, clarify, stage]｜stages=[intent]｜outcome=**clarify**｜1 次调用 ¥0.001766｜**有审计行**
+      （normalize 1094 / total 1103）⇒ 这一臂的"没有上下文"是**读得出结构的**：只跑过意图识别就收了
+  臂 2（`probe_session_owner_context_control_r20.json`，`--control`：**同一属主在自己会话上问同一句**；06:40 一跑）
+    属主 Q1 = tk_2e0387694aeb4298939902312161b586 → success，4 次调用 ¥0.009196（同样打到 executing）
+    属主追问 → http 200｜sse 223B｜events=[ack, **error**]｜stages=[ ]｜codes_seen=[INTERNAL]
+      task_id tk_bc44ba41a4c342018c534220205f623f → 日志 06:40:34.472Z `graph_run_failed`，
+        栈顶与读面 1 那四条**逐字相同**（崩在 `audit_supp`）｜1 次调用 ¥0.001482｜**审计行 0 条**
+    两臂各自的花费：臂 1 = 5 次 ¥0.010766｜臂 2 = 5 次 ¥0.010678｜合计 **10 次 ¥0.021444**
+
+  ⇒ 同一句追问、同一会话、只把提问者从"非属主"换成"属主"：**clarify ↔ error(INTERNAL)**。
+  ⇒ 触发面读法：**属主在同一会话上的第 2 轮**能崩（本轮 1/1）；A 档格内同几何 4/99（不是 100% ⇒ 有竞态成分）。
+  ⚠️ 我**没有**把机制钉成"检查点回放"或"`terminal` 通道跨 run 残留"—— 那要读 `app/graph/**` 与 langgraph
+     内部（W4 域）。本轮证据只到：**触发面（属主同会话第 2 轮）+ 崩点（audit_supp 的 N-08 断言）+ 两个计数**。
+  🔴 对 U-131 结案的直接影响：三面里**推理侧不是"不适用"，是"被这条新触发面挡住、当前不可测"** ——
+     唯一能把上下文带进 `gen_sql` 的路径（属主自己的第 2 轮）在进 `gen_sql` 之前就崩了。
+     按 §31 的"只交读侧不得转绿"，本号仍不转绿，且现在连第三面都交不出正证。
+
+------------------------------------------------------------------------------
+三、形状订正：④′ A 档没打出架构 §31 预测的几何
+------------------------------------------------------------------------------
+预测（架构）：`2xx≈12 / 409≈88 / 429≈8`；实测：`admitted 99 / rejected_429 9 / other_http_4xx 0`（**409=0**），
+跑后 `ZCARD rl:t:query:T_A = 87`。
+  · 不匹配架构点名的"桶根本没响"签名（那条签名是 `409≈96 ∧ rejected_429=0`）—— 本轮 `rejected_429=9 ≥1`
+    且 9 条全带 `Retry-After: 30` ⇒ **租户桶确实在响**。
+  · 但**会话锁那一维根本没被执行**：12 个 worker 各自**串行**打自己名下的会话 ⇒ 同一会话上永远只有一个
+    在途请求 ⇒ 抢锁（端点步骤 6）不可能命中。`ZCARD=87` 而非 100 是 72.6s 的跑批里 ZSET 按 60s 窗口
+    自动剪枝的结果，不是"少发了 13 条"。
+  ⇒ 读数定性：**场景④′ 未按要求执行**（不得记通过），要打出 409 需要"同一会话上并发 ≥2"的几何。
+  ⚠️ 修正几何（24 worker / 144 条 / 同会话并发）按第四节的校准式 ≈ **¥1.12（峰时）/ ¥0.58（非峰）**，
+     不是上一轮说的 ¥0.14。
+
+------------------------------------------------------------------------------
+四、花费订正（超支 ¥0.73 = 两个因子相乘，各自有对照；我上一轮"单价估错 11 倍"这句话归因不完整）
+------------------------------------------------------------------------------
+基线（跑批前）：`cost_ledger` 1186 行 / ¥1.656818。本轮结束后的逐用户归属（同窗口内非 `u_f*` 的行数 = **0** ⇒ 全是本窗口的）：
+  warm（u_f00，1 条）            = 1 次调用 ¥0.001280
+  ④′ A 档（u_f01–u_f12，99 准入）= **287 次调用 ¥0.809780**
+  U-131 两面取证（4 个 task）    = 10 次调用 ¥0.021444（≤ 批准的 ¥0.03 ✓）
+  本轮合计 **¥0.832504**；批准额 ¥0.07 + ¥0.03 = ¥0.10 ⇒ **超 ¥0.73 = 11.6 倍**
+
+  因子 A｜进图的请求数：预测 **12** 条 → 实测 **99** 条（调用数 48 → 287 = ×5.98）
+    ⇒ 根因 = 第三节那个"12 个 worker 各自串行打自己名下的会话 ⇒ 会话锁那一维未被执行"的几何错。
+  因子 B｜单次调用价：预测 **¥0.001452**（07 §16.5 取的是第十八轮**非峰**读数）→ 实测 **¥0.002794**（×1.92）
+    对照（同一张表，只换时段）：09-28 13Z 那 247 次 `is_peak=f` ⇒ ¥0.001452/次；
+      本轮 06:17–06:18Z（北京 14:17，峰时）298 次 `is_peak=t` ⇒ ¥0.002794/次；
+      全库同表观：非峰 1044 次均值 ¥0.001357、峰时 404 次均值 ¥0.002512。
+  ⇒ 5.98 × 1.92 ≈ 11.5 ≈ 实测 11.6 倍 ✓ 两因子相乘即可解释全部缺口，不需要第三条。
+
+★ 校准后的报价式：**¥0.01116/进图请求**（峰时，4 次 ×¥0.002794）、**¥0.0058/进图请求**（非峰）；
+  本轮混合形状实测 **¥0.00818/准入条**（287 次 ÷ 99 条 = 2.9 次/条 ×¥0.002794）。
+  ⇒ 修正几何（24 worker / 144 条、≈100 条进图）**≈¥1.12（峰）/ ¥0.58（非峰）**；B 档满画像同量级。
+🔴 撤回：W7 `RELAY §三十七` 里"修正几何 ≈¥0.14" **作废**（进图数与单价两处都按错）；
+  以后报价必须**同时报进图条数 + 峰/非峰时段**，出价前先 `select is_peak, avg(cost_cny) from app.cost_ledger group by 1`。
+
+------------------------------------------------------------------------------
+五、可复算命令（零额度部分）
+------------------------------------------------------------------------------
+1) 日志事件计数：MSYS_NO_PATHCONV=1 docker logs --since 2026-09-29T06:16:00Z --until 2026-09-29T06:19:30Z w7load-api
+   | grep -oE '"event": "[a-z_0-9]+"' | sort | uniq -c | sort -rn
+2) 审计行分桶：psql -U postgres -d ecom -c "select outcome, refusal_reason, count(*) from app.audit_log
+   where \"timestamp\" between '2026-09-29 06:17:00+00' and '2026-09-29 06:19:30+00' group by 1,2 order by 3 desc;"
+3) 深浅分裂：把上面换成 `select k, count(*) from app.audit_log, lateral jsonb_object_keys(latency_ms) k
+   where outcome='failed' and 同窗 group by 1;`
+4) 调用数与花费：`select user_id, count(*), sum(cost_cny) from app.cost_ledger
+   where user_id like 'u_f%' group by 1;`
+5) 崩点复现（¥0.02/次，要点头）：cd backend && ../.venv/Scripts/python.exe ../deploy/loadtest/probe_session_owner_context.py
+   --tokens <两行：属主/非属主> --q1 "T_A 从 2026-03-01 起的 GMV 是多少？"
+   --followup "上面那个指标按店铺拆开分别是多少？" --terms "2026-03-01" [--control]
+   ⚠️ 不带 `--control` = 非属主那一臂；带 = 属主正对照。**只有两臂一起交，`clarify` 才能被读成结论**。

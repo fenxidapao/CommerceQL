@@ -35,6 +35,7 @@ import statistics
 import sys
 import tempfile
 import time
+import urllib.request
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -70,6 +71,11 @@ class Sample:
     #    ⇒ 只看 reason 分不出来源，必须把"终止前最后一个 stage 帧"一起记下来。
     last_stage: str | None = None
     reason: str | None = None
+    #: 关联键（`ack` 帧的 `task_id`）：只有它能把一条错误码 join 到 `app.audit_log` /
+    #: `app.cost_ledger` / 服务端日志行。④′A 档那 17 条 INTERNAL 归因时，回执里没有任何
+    #: 键可交 ⇒ 只能靠时间窗反查，把一格读数拆成两族花了一整轮。
+    #: ⚠️ 它是**标识符不是内容**（N-11 禁的是查询文本与结果数据），且每码只留 12 条。
+    task_id: str | None = None
     #: 拒答侧的"什么时候再来"（429 → §9.2 给 30s；W4 的 DB_UNAVAILABLE → 5s）。
     #: U-106 新增场景⑤"单租户饱和"要验的就是这个头**在不在**——没有它，客户端只会重试打爆。
     retry_after: str | None = None
@@ -168,6 +174,7 @@ async def fire_one(
     event_name: str | None = None
     terminal: str | None = None
     last_stage: str | None = None
+    task_id: str | None = None
     frames = 0
     # 先绑一个空 dict：`terminal is None` 那条出口（流里一条 data 帧都没有）也要读 `data`，
     # 不初始化就是 UnboundLocalError —— 而那条出口恰恰是"什么都没收到"时最该走到的地方。
@@ -195,41 +202,49 @@ async def fire_one(
                     data = json.loads(line[5:].strip())
                 except json.JSONDecodeError:
                     return Sample("truncated", status, ttfb, _ms(start), frames,
-                                  detail="data 帧不是 JSON", last_stage=last_stage)
+                                  detail="data 帧不是 JSON", last_stage=last_stage, task_id=task_id)
                 if data.get("terminal") is not True:
+                    if isinstance(data.get("task_id"), str) and data["task_id"]:
+                        task_id = str(data["task_id"])
                     if event_name == "stage" and isinstance(data.get("stage"), str) and data["stage"]:
                         last_stage = str(data["stage"])
                     continue
+                if isinstance(data.get("task_id"), str) and data["task_id"]:
+                    task_id = str(data["task_id"])
                 terminal = event_name or str(data.get("type") or "")
                 break
     except httpx.TimeoutException:
         return Sample("timeout", None, ttfb, _ms(start), frames,
-                      detail=f">{TERMINAL_EVENT_MAX_WAIT_S}s 未收到终止帧", last_stage=last_stage)
+                      detail=f">{TERMINAL_EVENT_MAX_WAIT_S}s 未收到终止帧",
+                      last_stage=last_stage, task_id=task_id)
     except (httpx.HTTPError, OSError) as exc:
         return Sample("conn_error", None, ttfb, _ms(start), frames,
-                      detail=f"{type(exc).__name__}", last_stage=last_stage)
+                      detail=f"{type(exc).__name__}", last_stage=last_stage, task_id=task_id)
 
     total = _ms(start)
     reason = data.get("reason") if isinstance(data.get("reason"), str) else None
     if terminal is None:
         # 流正常结束却没有终止帧：这是 N-08 违约，不是"成功"。
         return Sample("truncated", status, ttfb, total, frames,
-                      detail="流结束但无 terminal=true 帧", last_stage=last_stage)
+                      detail="流结束但无 terminal=true 帧", last_stage=last_stage, task_id=task_id)
     if terminal == "error":
         return Sample("error_frame", status, ttfb, total, frames,
                       code=str(data.get("code")), msg=str(data.get("message") or "")[:60],
-                      last_stage=last_stage, reason=reason)
+                      last_stage=last_stage, reason=reason, task_id=task_id)
     if terminal == "complete":
         if data.get("async") or data.get("task_id"):
             return Sample("async_degraded", status, ttfb, total, frames,
-                          detail="超阈值转异步，端到端未在此流内完成", last_stage=last_stage)
-        return Sample("ok", status, ttfb, total, frames, last_stage=last_stage)
+                          detail="超阈值转异步，端到端未在此流内完成",
+                          last_stage=last_stage, task_id=task_id)
+        return Sample("ok", status, ttfb, total, frames, last_stage=last_stage, task_id=task_id)
     if terminal == "clarify":
-        return Sample("clarify", status, ttfb, total, frames, last_stage=last_stage, reason=reason)
+        return Sample("clarify", status, ttfb, total, frames, last_stage=last_stage,
+                      reason=reason, task_id=task_id)
     if terminal == "refuse":
-        return Sample("refuse", status, ttfb, total, frames, last_stage=last_stage, reason=reason)
+        return Sample("refuse", status, ttfb, total, frames, last_stage=last_stage,
+                      reason=reason, task_id=task_id)
     return Sample("truncated", status, ttfb, total, frames,
-                  detail=f"未知终止事件 {terminal}", last_stage=last_stage)
+                  detail=f"未知终止事件 {terminal}", last_stage=last_stage, task_id=task_id)
 
 
 def _ms(start: float) -> float:
@@ -429,6 +444,8 @@ def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: a
         "ttfb_ms": {"p50": _pct(ttfbs, 50), "p95": _pct(ttfbs, 95)},
         "outcomes": by_outcome,
         "codes": _codes(samples),
+        # 关联键：让 `codes` 里每一格都能被 `app.audit_log` / `app.cost_ledger` 复算（见 helper 注释）。
+        "codes_task_ids": _codes_task_ids(samples),
         # 谁能回答"这条 refuse 是 intent 说的还是 link 说的"：`outcomes` 与 `reason` 单独都答不了。
         "terminal_provenance": _provenance(samples),
         # drain 证据只能靠 message 分家：光看 `error_frame` 数会把"停机注入"和"节点超时"混成一坨。
@@ -517,6 +534,29 @@ def _codes(samples: list[Sample]) -> dict[str, int]:
     return out
 
 
+#: 每个错误码最多留几条关联键。12 = "够对方抽样定位"又不把回执撑大；截断是**有意的**，
+#: 全量键在 `app.audit_log` 里按时间窗本来就能反查出来。
+CODES_TASK_IDS_CAP: Final[int] = 12
+
+
+def _codes_task_ids(samples: list[Sample]) -> dict[str, list[str]]:
+    """`错误码 → 命中该码的 task_id 样本`（U-130 取证用）。
+
+    存在的理由：`codes` 只说"有 17 条 INTERNAL"，答不了"这 17 条是不是同一种 INTERNAL"。
+    ④′A 档实测把 17 条拆成了两族（13 条有段 1 审计行、4 条没有），靠的是**时间窗反查**
+    `app.audit_log` 的 `latency_ms` 键集 + `app.cost_ledger` 的调用数 —— 一轮才拆得开。
+    带上关联键，对方一条 `where task_id = any(...)` 就能复算。
+
+    ⚠️ 只装**标识符**，不装查询文本与结果数据（N-11 同一条关注）；排序后截断，保证同一份
+    样本两次 roll-up 输出一致。
+    """
+    out: dict[str, list[str]] = {}
+    for s in samples:
+        if s.code and s.task_id:
+            out.setdefault(s.code, []).append(s.task_id)
+    return {code: sorted(ids)[:CODES_TASK_IDS_CAP] for code, ids in sorted(out.items())}
+
+
 def _provenance(samples: list[Sample]) -> dict[str, dict[str, int]]:
     """终止事件的**来源指纹**：`outcome` → {"stage=<终止前最后一个 stage>|reason=<终止帧自带 reason>"} → 条数。
 
@@ -580,6 +620,7 @@ async def self_check() -> int:
             await send({"type": "http.response.body", "body": b"{}", "more_body": False})
             return
         i = cursor["i"] % len(scripted)
+        seq = cursor["i"]
         cursor["i"] += 1
         kind, delay_ms = scripted[i]
         if kind == "http409":
@@ -593,6 +634,12 @@ async def self_check() -> int:
             return
         await send({"type": "http.response.start", "status": 200,
                     "headers": [(b"content-type", b"text/event-stream")]})
+        # 首帧对齐真服务端的 `ack`（`app/graph/events.py` 发 `{"task_id","session_id"}`）：
+        # `codes_task_ids` 读的就是它。桩不发 ack，那条接线就只是"自检里没报错"，从不被验证。
+        await send({"type": "http.response.body",
+                    "body": f'event: ack\ndata: {{"terminal": false, "task_id": "tk_stub_{seq}"}}\n\n'
+                            .encode(),
+                    "more_body": True})
         # ⚠️ 首帧**必须单独一条 body 消息**发出去，延迟在首帧**之后**才睡：
         #    若把首帧和终止帧拼成一条，TTFB 就约等于 total，于是"计时停在第一帧"
         #    这类量具缺陷在这条自检里**测不出来**（变异实测漏判）。
@@ -709,6 +756,13 @@ async def self_check() -> int:
         print(f"[自检失败] 样本够时调用点仍没给出达标布尔：admitted="
               f"{sum_ok['admission']['admitted']} p95={sum_ok['latency_ms']['p95']} "
               f"⇒ {sum_ok['g6_p95_le_8s']!r}（期望 True）", file=sys.stderr)
+        return 3
+    # ★ 关联键接线也要在**调用点**钉（同 U-120 三态那条的教训）：桩里唯一带码的终止帧是
+    #   脚本第 4 条（索引 3）的 `error` ⇒ 整字典相等，不留"字段存在但恒空"的空间。
+    want_codes_tasks = {"INTERNAL": ["tk_stub_3"]}
+    if sum_low.get("codes_task_ids") != want_codes_tasks:
+        print(f"[自检失败] codes_task_ids 接线不对：{sum_low.get('codes_task_ids')!r}"
+              f"（期望 {want_codes_tasks}）⇒ ack 帧的 task_id 没被记进错误码", file=sys.stderr)
         return 3
     # ★ A-1（架构 v1.6.6）：`--roll-up` 必须把两个派生量**一起**重算，而且只动派生量。
     #   两格是双向的 —— 低样本的 stale `true` 要降成 None（否则旧件继续被引用），
@@ -952,6 +1006,19 @@ def _recompute_g6_derived(s: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def verify_openapi_has_query(base: str, timeout_s: float = 10.0) -> dict[str, Any]:
+    """取 `<target>/openapi.json` 自证这棵树挂着 `/api/v1/query`（`07 §16.5` 的跑批前义务）。"""
+    with urllib.request.urlopen(base.rstrip("/") + "/openapi.json", timeout=timeout_s) as resp:
+        doc = json.loads(resp.read().decode("utf-8"))
+    paths = sorted((doc.get("paths") or {}).keys())
+    return {
+        "url": base.rstrip("/") + "/openapi.json",
+        "paths_total": len(paths),
+        "has_query": "/api/v1/query" in paths,
+        "query_paths": [p for p in paths if "/query" in p][:6],
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.self_check:
@@ -986,6 +1053,24 @@ def main(argv: list[str] | None = None) -> int:
         "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
         "scenarios": [],
     }
+
+    # 🔴 `07 §16.5` 的新义务（架构 09-29 裁定，起因 = W7 把一条预热请求打到了共享 `:8000`）：
+    #    发批之前先自证"这个 target 真的挂着 `/api/v1/query`"。共享 api 那台是**阶段 0 骨架**
+    #    （`openapi.json` 只有三条 healthz 路由，而 `/healthz` 返 200）⇒ 对它发 `/query` 得 404
+    #    是"那棵树的正确行为"，却长得像"被测代码坏了"。裁定原文是"不匹配 ⇒ 该轮全部读数作废"，
+    #    所以这里**当场拦**，而不是跑完再宣布作废 —— 跑完已经花钱了。
+    try:
+        check = verify_openapi_has_query(args.target)
+    except Exception as exc:  # 拿不到 openapi 就等于拿不到"打的是谁"的证据
+        print(f"[中止] 取不到 {args.target}/openapi.json：{type(exc).__name__}: {exc}"
+              "  ⇒ 无法自证被测栈挂着 /api/v1/query（07 §16.5），不发这一批", file=sys.stderr)
+        return 2
+    receipt["target_check"] = check
+    if not check["has_query"]:
+        print(f"[中止] target={args.target} 的 openapi 里没有 /api/v1/query"
+              f"（paths_total={check['paths_total']}，含 query 的路径={check['query_paths']}）"
+              " ⇒ 按 07 §16.5 这一轮读数全部作废，所以根本不该发；请显式 --target 指到被测栈", file=sys.stderr)
+        return 2
     try:
         for spec in specs:
             print(f"[{spec.name}] 并发 {spec.concurrency} 开始 …", flush=True)

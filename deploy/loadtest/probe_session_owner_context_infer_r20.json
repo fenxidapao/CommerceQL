@@ -1,0 +1,61 @@
+{
+ "expected": "非属主 ⇒ 404 SESSION_NOT_FOUND（附录 A §A.11 / 07 §14 H7 / PRD FR-10.4）",
+ "1_owner_create_session": {
+  "http": 200,
+  "session_id_present": true
+ },
+ "2_owner_q1": {
+  "question": "T_A 从 2026-03-01 起的 GMV 是多少？",
+  "http": 200,
+  "sse_bytes": 2096,
+  "task_id": null,
+  "terminal_frame_seen": true,
+  "events_seen": [
+   "ack",
+   "complete",
+   "data",
+   "degraded",
+   "meta",
+   "stage"
+  ],
+  "stages_seen": [
+   "executing",
+   "gate_passed",
+   "intent",
+   "plan_ready",
+   "schema_linking",
+   "sql_ready"
+  ]
+ },
+ "3_nonowner_get": {
+  "http": 200,
+  "turn_count": 1,
+  "owner_q1_readable_by_nonowner": true,
+  "turn_questions_excerpt": [
+   "T_A 从 2026-03-01 起的 GMV 是多少？"
+  ]
+ },
+ "4_nonowner_followup": {
+  "question": "上面那个指标按店铺拆开分别是多少？",
+  "http": 200,
+  "sse_bytes": 445,
+  "task_id": null,
+  "echoed_session_id_is_owner_session": false,
+  "stream_hits_owner_only_terms": [],
+  "codes_seen": [],
+  "events_seen": [
+   "ack",
+   "clarify",
+   "stage"
+  ],
+  "stages_seen": [
+   "intent"
+  ]
+ },
+ "5_owner_get": {
+  "http": 200,
+  "turn_count": 2,
+  "turn_count_grew_vs_nonowner_view": true,
+  "nonowner_followup_written_into_owner_session": true
+ }
+}

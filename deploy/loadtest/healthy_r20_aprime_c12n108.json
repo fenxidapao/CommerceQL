@@ -1,0 +1,106 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-09-29T06:17:08+00:00",
+  "target": "http://127.0.0.1:18000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 12,
+        "duration_s": 600.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": true,
+        "questions": "deploy/loadtest/questions_T_A_time.txt",
+        "request_cap": 108
+      },
+      "requests": 108,
+      "wall_s": 72.597,
+      "throughput_rps": 1.488,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 99,
+        "rejected_429": 9,
+        "other_http_4xx": 0,
+        "http_5xx": 0,
+        "unresolved": 0,
+        "terminal": 99
+      },
+      "rejection_headers": {
+        "429": {
+          "retry_after=30": 9
+        }
+      },
+      "latency_ms": {
+        "p50": 8037.9,
+        "p95": 28235.1,
+        "p99": 29280.7,
+        "max": 29280.7,
+        "mean": 8399.6,
+        "samples": 99
+      },
+      "latency_ms_all_ms": {
+        "p50": 7847.4,
+        "p95": 27784.8,
+        "samples": 108
+      },
+      "ttfb_ms": {
+        "p50": 12.8,
+        "p95": 103.9
+      },
+      "outcomes": {
+        "clarify": 8,
+        "refuse": 18,
+        "error_frame": 60,
+        "ok": 13,
+        "http_4xx": 9
+      },
+      "codes": {
+        "GATE_AST_REJECTED": 43,
+        "INTERNAL": 17,
+        "RATE_LIMITED": 9
+      },
+      "terminal_provenance": {
+        "clarify": {
+          "stage=intent|reason=time_ambiguous": 7,
+          "stage=intent|reason=none": 1
+        },
+        "refuse": {
+          "stage=intent|reason=out_of_scope": 3,
+          "stage=none|reason=no_data_asset": 2,
+          "stage=plan_ready|reason=no_data_asset": 11,
+          "stage=intent|reason=no_data_asset": 2
+        },
+        "error_frame": {
+          "stage=sql_ready|reason=none": 42,
+          "stage=none|reason=none": 11,
+          "stage=intent|reason=none": 6,
+          "stage=executing|reason=none": 1
+        },
+        "ok": {
+          "stage=executing|reason=none": 13
+        },
+        "http_4xx": {
+          "stage=none|reason=none": 9
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": false,
+      "g6_caveat": "另有 9 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）"
+    }
+  ],
+  "target_check": {
+    "url": "http://127.0.0.1:18000/api/v1/openapi.json",
+    "paths_total": 12,
+    "has_query": true,
+    "query_paths": [
+      "/api/v1/query",
+      "/api/v1/query/{task_id}",
+      "/api/v1/query/{task_id}/cancel"
+    ]
+  },
+  "finished_at": "2026-09-29T06:18:21+00:00"
+}
