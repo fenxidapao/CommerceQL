@@ -507,3 +507,107 @@ Found 2 errors in 1 file
 | 3 errors | `tests/integration/test_retrieval_fts_pg.py`：本机 DSN 无 DDL 权限（**环境**，非代码） |
 | passed 较 §11 的 2207 **+5** | 正是 W2D `1143f99` 新增的 `tests/unit/test_exec_seam.py` 5 条 ⇒ 账对得上，非我引入 |
 
+---
+
+## 13 【CI 长期红根因回执】`tests/eval/**` × 421 MB 沙箱库（不占号，2026-09-29，基准 `872cd2d`）
+
+> 受众 = **W6**（`tests/eval/**` 属主）+ **架构**（改 DoD③ 跑什么的口径）。
+> 🔴 **本条同时更正我 §12.6 与 `MEMORY.md §3` 的一处错误归因**：CI 那个恒红**不是** U-119 的刻意红。
+
+### 13.0 一句话
+
+CI **15/15 全 failure、且每次恰 1 个 job 红**（`契约断言（DoD③）`，失败步骤恒为「全量测试」）。
+根因**与研究对象的代码无关**：该步跑的是 **bare `pytest`**（`testpaths=["tests"]`）⇒ `tests/eval/**` 被一并拉进，
+而它的夹具要 `data/ecom_sandbox.db`（**421 MB，被 `.gitignore:54` 的 `*.db` 忽略 ⇒ 结构上不可能进 CI 检出**）
+⇒ **14 条恒红**。这是「数据物不入库」与「CI 跑全量」两处决策撞车。
+
+### 13.1 根因链（四环，逐环带据）
+
+| # | 环 | 出处 |
+|---|---|---|
+| 1 | CI 该步**裸跑 pytest**（job 名写的是 `tests/contract`，命令不是） | `ci.yml:121` 步骤名「全量测试（tests/contract = DoD③ 的载体）」⇄ `ci.yml:128` `run: pytest` |
+| 2 | `pytest` 默认收集面 = 全部 `tests/` ⇒ `tests/eval/**` 被拉入 | `backend/pyproject.toml:120` `testpaths = ["tests"]` |
+| 3 | 夹具直指沙箱库，**无存在性检查、无 skip 分支** | `backend/tests/eval/conftest.py:56` `sandbox_db` → `eval/_bootstrap.py:27` `SANDBOX_DB` |
+| 4 | 该库**结构上不可能在 CI** | `.gitignore:54` `*.db`；实测 **421 MB**（`du -h data/ecom_sandbox.db`） |
+
+### 13.2 隔离树实测读数（可复现）
+
+方法（本项目既有手段）：`git archive HEAD | tar -x -C $TREE` —— **CI 视角**（未跟踪文件天然缺席，
+`deploy/.env` 与 `*.db` 均不在）。
+
+| 隔离树跑什么 | 读数 |
+|---|---|
+| `pytest --ignore=tests/eval` | **1972 passed / 1 skipped** ✅ |
+| `pytest tests/eval` | **14 failed / 325 passed**（8.07s）❌ |
+| `pytest`（全量，同 CI） | **14 failed / 2297 passed / 1 skipped** ❌ |
+
+**14 条的精确拆分（`--tb=line` 逐条计数，实测）**：
+
+| 错误类型 | 条数 | 落点（三处调用点 + 一处 bootstrap） |
+|---|---|---|
+| `sqlite3.OperationalError: unable to open database file` | **10** | `eval/sqlite_exec.py:177` ×4 · `eval/consistency.py:206` ×4 · `eval/runner.py:144` ×2 |
+| `FileNotFoundError: ... data/ecom_sandbox.db` | **3** | `eval/_bootstrap.py:75`（`file_sha256(SANDBOX_DB)`） |
+| `AssertionError: assert False is True` | **1** | `backend/tests/eval/test_redteam_logic.py:78`（`assert r.executed is True`；沙箱缺 ⇒ 执行不落库 ⇒ `executed=False`） |
+| **合计** | **14** | ✅ 与 `-rf` 的 14 行 `FAILED` 对得上 |
+
+⚠️ 逐条读码确认**第 4 类也是同源**：该用例 `attack_sql="SELECT pay_amount FROM v_order_paid LIMIT 5"`，
+断言的是"闸门全放行 ⇒ 必须 `executed`"，沙箱不可用 ⇒ 执行不可能发生 ⇒ 断言必失败。
+⇒ **14 条无一条暴露产品缺陷**（同意 W7 的"无一条代码红"）；但**三桶计数不同**，见 13.3。
+
+### 13.3 与 W7 独立复算的对照（同一现象、读数一致，**三桶拆分不一致**）
+
+W7 独立复算：隔离树 `14 failed / 325 passed` ⇒ **与我逐字一致**；根因链三处（`pyproject:120` / `ci.yml:121`⇄`:128` / `.gitignore:54`）亦同。
+⇒ **现象与根因 = 两方独立实测同数，可当已确认。**
+
+但 W7 的**分类拆分对不上**：报的是 `10× sqlite + 6× FileNotFoundError + 2× AssertionError`。两处问题：
+1. **算术不闭合**：10+6+2 = **18 ≠ 14**（这本身就是信号）；
+2. **两个桶被高估**：实测 **10 / 3 / 1**（FileNotFoundError 6→**3**、AssertionError 2→**1**）。
+
+⇒ 本回执**以实测拆分（10/3/1）为准**；W7 那三桶建议按本表订正后再引用（数字型断言过时正是本项目反复吃过的坑）。
+
+### 13.4 归属与出路（我不自行改，动 DoD③ 口径须架构裁）
+
+| 出路 | 内容 | 归属 | 我的评估 |
+|---|---|---|---|
+| ① | `tests/eval` 对沙箱库缺失**显式 skip 并声明**（保留"数据物缺失"可见，不静默） | **W6**（`tests/eval/conftest.py`） | ✅ 推荐，与②同批 |
+| ② | DoD③ 步改成**显式列目录**（`pytest tests/contract tests/unit tests/integration`），与 job 名对齐 | **W0**（`ci.yml`） | ✅ 推荐；这是"job 名撒谎"的根治 |
+| ③ | CI 重建沙箱库 | W1A/架构 | ❌ 不建议：W1A 曾判"成本远超收益"；且 W6 §17.4 已证 gate3 缺的是**方言**不是数据 ⇒ 与重建无关 |
+| ④ | 用 marker / `addopts` 让 eval 默认不跑 | 需裁（`pyproject.toml`） | 🟡 备选；比②隐式，容易让"eval 没跑"变成看不见 |
+
+**我的倾向 = ①+②**：②把"job 名与实际跑的内容"对齐（消灭撒谎面），①让数据物缺失在 CI 显式可见而非变红。
+⚠️ 两项**分属两个窗口**（② 归 W0、① 归 W6），须同批或②先行 —— 只做②会让 `tests/eval` 彻底不在 CI 跑（覆盖面下降），
+只做①会让 job 名继续撒谎。
+
+### 13.5 诚实边界（本条最容易说过头）
+
+- 🔴 **这不构成"CI 曾经是绿的"的证据**：15/15 全 failure 的历史里，我此前把红记成 U-119 **是错的归因**；
+  本回执只证明"**今天这一条红**"的根因，**不追认**历史各轮的绿/红。
+- **本地永远复现不出来**：本机有那个 421 MB 文件 ⇒ `tests/eval` 本地恒绿；W6 本地报的也都是 `0 failed`。
+  ⇒ **任何"我这边跑了 0 failed"都不构成 CI 绿证据**（已写进 `MEMORY.md §3`）。
+- 未改任何测试、未改 `eval/**`、未改 `ci.yml` 的跑法（**只改了 1 条陈旧注释，见 §13.7**）；
+  `tests/eval/**` 属 W6，我不动。
+- 未在 CI 上验证修复（无推送授权）⇒ 出路①②**均为建议，未落地**。
+
+### 13.6 验证读数（可复现）
+
+```bash
+# 1) 建隔离树（CI 视角）
+TREE=/tmp/ci_tree; rm -rf $TREE; mkdir -p $TREE
+git archive HEAD | tar -x -C $TREE
+
+# 2) 非 eval（应为全绿）
+cd $TREE/backend && ../../.venv/Scripts/python.exe -m pytest -q --ignore=tests/eval   # 1972 passed / 1 skipped
+
+# 3) eval（应 14 failed / 325 passed）
+cd $TREE/backend && ../../.venv/Scripts/python.exe -m pytest tests/eval -q --tb=line -rf
+```
+⚠️ **别用主工作区跑第 3 步**：那里有 421 MB 沙箱库 ⇒ 恒绿，什么也证明不了。
+
+---
+
+### 13.7 同批轻改：`ci.yml:87` 的自相矛盾注释
+
+原第 87 行写 `` `tests/contract/` 的断言数会随各窗口交付持续增长（阶段 1B 实测已 386+） ``，
+而**紧接着的第 88 行**声明"**本注释刻意不写具体数字**" ⇒ 同一段话自我矛盾（且 386+ 现已是 **455**）。
+按第 88 行自己的规则删掉那个括号数字，改为不带数值的表述。⇒ `ci.yml` 归 W0，改动只此一行。
+
