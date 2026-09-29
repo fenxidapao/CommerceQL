@@ -54,11 +54,10 @@ W7 报：三格实测差 0（热臂 86 / 冷臂 84 / session-lock 1），而 **�
 ⇒ 前一半 **0**（没断流）、后一半 **+4**（四条没落段 1）—— 两个数分别是"无事"和"有缺陷"，
 并成一个 `99 − 95 = 4` 就看不出前一半了。
 
-🔑 **task_id 级取证通道（同轮 W7 新增字段 `codes_task_ids`）**：回执里带 `codes_task_ids`
-（`错误码 → ≤12 条 task_id`，见 `driver.py:542`）⇒ 本器件改走
-`where task_id = any(...)` **逐 id 点名**哪些在 `app.audit_log` 有段 1 行、哪些没有，
-**不再靠时间窗猜**。盘上没有该字段的回执 ⇒ 如实落 `task_id_evidence.status`（"缺件"），
-时间窗读数照给但标注它才是本次的路径来源；**不许**把"我能按 task_id 复算"写进没有该字段的批次。
+🔑 **task_id 级取证通道（W7 第二十轮新增字段 `codes_task_ids`，第二十三轮起盘上首次非空）**：回执里带
+`codes_task_ids`（`错误码 → ≤12 条 task_id`，见 `driver.py:542`）⇒ 本器件**自动**逐 id 点名哪些在
+`app.audit_log` 有段 1 行、哪些没有，**不再靠时间窗猜**。覆盖面按**三态**数（`absent` / `empty` / `present`，
+见 `codes_task_ids_presence()`）⇒ "0 格带 id"这句话永远要连着"其中几格是压根没键、几格是有键但无 id 可给"。
 
 丢行的**机制**（本轮读码核实，进产物引用）：`app.audit_log` 只有**段 1**（`app/obs/audit.py:18`
 的表分工；段 2 落 `audit_log_supplement`，不在被数的表里）。
@@ -232,6 +231,19 @@ def denominator_of(scenario: dict) -> tuple[int | None, str | None, dict | None]
         return derived, BASIS_DERIVED, mismatch
     proxy = admitted_of(scenario)
     return (proxy, BASIS_PROXY, mismatch) if proxy is not None else (None, None, mismatch)
+
+
+def codes_task_ids_presence(scenario: dict) -> str:
+    """`codes_task_ids` 这一格的**三态**：`absent`（键没有）/ `empty`（键在但是 `{}`）/ `present`（有 id）。
+
+    存在的理由（W7 第二十二轮 ④ + 我方实测）：两态读法会把"字段没落地"与"字段落地但这条错误码**根本没有
+    `task_id` 可给**"混成同一个 0 ⇒ 冤枉字段。盘上就有活例：`r22_lock_c8n8.json` 的
+    `codes = {SESSION_CONFLICT: 7}` 而 `codes_task_ids = {}`（409 没有 ack 帧 ⇒ 无 id 可记，不是坏）。
+    """
+    raw = scenario.get("codes_task_ids")
+    if not isinstance(raw, dict):
+        return "absent"
+    return "present" if codes_task_ids_of(scenario) else "empty"
 
 
 def terminal_of(scenario: dict) -> int | None:
@@ -453,13 +465,21 @@ def summarize(rows: list[dict], skew_s: float | None) -> dict:
             "why": "两半各自成立才有意义：`admitted − terminal = 0` 与 `terminal − 审计行 = 4` 并成 "
                    "`admitted − 审计行 = 4` 之后，'没断流'这件事就从读数里消失了。",
         },
-        #: 🔑 task_id 级取证的**覆盖面**（没这个字段就不许说"逐 id 点名过了"）。
+        #: 🔑 task_id 级取证的**三态覆盖面**（没带 id 就不许说"逐 id 点名过了"；空 dict 也不算坏字段）。
         "task_id_channel": {
             "n_receipts_scanned": len({r["receipt"] for r in rows}),
+            "n_cells": len(rows),
             "cells_with_codes_task_ids": sum(1 for r in rows if r.get("codes_task_ids")),
+            "presence_counts": {
+                state: sum(1 for r in rows if r.get("codes_task_ids_presence") == state)
+                for state in ("absent", "empty", "present")},
             "cells_with_id_evidence": sum(1 for r in rows if r.get("task_id_evidence")),
-            "status": "盘上回执若不带 `codes_task_ids` ⇒ 本批只能用时间窗读数，**不许**写成'task_id 级复算过'；"
-                      "带了就走 `where task_id = any(...)` 逐 id 点名（缺件的 task_id 会列在 by_code.missing_task_ids）。",
+            "status": "三态分开数：**absent** = 回执根本没有 `codes_task_ids` 这个键（老件）；"
+                      "**empty** = 键在但值是空字典 ⇒ **不是字段坏了**，是那批错误码没有 ack 帧可取 id"
+                      "（W7 第二十二轮 ④ + 我方实测：`r22_lock_c8n8.json` 的 `codes = {SESSION_CONFLICT: 7}` "
+                      "而 `codes_task_ids = {}`）；**present** = 有 id ⇒ 本器件自动走逐行 join（`task_id_evidence`）。"
+                      "引用这条不变量时**只许**引 present 那一格；absent/empty 的批次一律不许写成'task_id 级复算过'。",
+            "present_cells": [r["receipt"] for r in rows if r.get("codes_task_ids")],
         },
         "proxy_only_cells": [{"receipt": r["receipt"], "admitted": r["admitted"]}
                              for r in rows if r.get("denominator_basis") == BASIS_PROXY],
@@ -569,21 +589,39 @@ async def measure(rows: list[dict], table: str = "audit_log") -> tuple[list[dict
             row["audit_rows"] = sum(by_outcome.values())
             row["by_outcome"] = by_outcome
             row["rows_that_window_day"] = days_map.get(str(row["begin"].astimezone(UTC).date()))
-            #: 🔑 task_id 级取证（W7 第二十轮新增字段）：**有键就逐 id 点名**，不靠时间窗猜。
+            #: 🔑 task_id 级取证（W7 第二十轮新增字段，**第二十三轮起盘上首次非空**）：有键就逐 id 点名，不靠时间窗猜。
             if row.get("codes_task_ids"):
                 ids = sorted({t for group in row["codes_task_ids"].values() for t in group})
-                tq = sql.SQL("select task_id, count(*) from app.{} where task_id = any(%s) group by task_id").format(
-                    sql.Identifier(table)
-                )
-                got = {str(r[0]): int(r[1]) for r in await (await conn.execute(tq, (ids,))).fetchall()}
+                #: ⚠️ **行数在 Python 里数**，不用 `count(*) … join lateral jsonb_object_keys(latency_ms)`：
+                #: 那样每行会**按 latency 键数被乘开**（本轮临时件实测：四个 id 全数成 `rows = 6`，
+                #: 而 6 恰好等于它们的键数 ⇒ 差点把"一格一行"报成"一请求落六行"，那是 U-129 双终态的形状）。
+                detail = await (await conn.execute(
+                    sql.SQL("select task_id, outcome, latency_ms from app.{} where task_id = any(%s)").format(
+                        sql.Identifier(table)),
+                    (ids,))).fetchall()
+                by_id: dict[str, dict] = {}
+                for tid, outcome, latency in detail:
+                    entry = by_id.setdefault(str(tid), {"seg1_rows": 0, "outcomes": [], "latency_key_counts": []})
+                    entry["seg1_rows"] += 1
+                    label = str(outcome) if outcome is not None else "<null>"
+                    if label not in entry["outcomes"]:
+                        entry["outcomes"].append(label)
+                    if isinstance(latency, dict):
+                        entry["latency_key_counts"].append(len(latency))
                 row["task_id_evidence"] = {
-                    "method": f"select task_id, count(*) from app.{table} where task_id = any(%s)（参数化、只读闸门内）",
+                    "method": f"逐行取 app.{table} 的 (task_id, outcome, latency_ms)（参数化、只读闸门内）"
+                              "⇒ 行数在 Python 里数（见源码注释：lateral 展开会把行按键数乘开）",
                     "n_ids": len(ids),
-                    "n_with_row": sum(1 for t in ids if got.get(t)),
+                    "n_with_row": sum(1 for t in ids if by_id.get(t, {}).get("seg1_rows")),
+                    "by_id": {t: {"seg1_rows": e["seg1_rows"], "outcomes": e["outcomes"],
+                                  "latency_keys": {"min": min(e["latency_key_counts"]),
+                                                   "max": max(e["latency_key_counts"])}
+                                  if e["latency_key_counts"] else None}
+                              for t, e in sorted(by_id.items())},
                     "by_code": {
                         code: {"given": len(group),
-                               "with_row": sum(1 for t in group if got.get(t)),
-                               "missing_task_ids": [t for t in group if not got.get(t)]}
+                               "with_row": sum(1 for t in group if by_id.get(t, {}).get("seg1_rows")),
+                               "missing_task_ids": [t for t in group if not by_id.get(t, {}).get("seg1_rows")]}
                         for code, group in row["codes_task_ids"].items()
                     },
                 }
@@ -648,6 +686,8 @@ def collect(receipt_dir: Path, pattern: str) -> list[dict]:
                 "terminal": terminal,
                 "two_numbers": two_numbers_of(adm, terminal, None),
                 "codes_task_ids": task_ids,
+                #: 三态覆盖面（absent / empty / present）—— 两态会把"没带字段"与"无可给的 id"混成一个 0
+                "codes_task_ids_presence": codes_task_ids_presence(sc),
                 #: 🔴 诊断列，**不参与判据**（`classify()` 不读它）：W7 的 `stage=none` 那面在盘上可离线复算的部分
                 "client_side_evidence": prov,
                 "task_id_evidence": None,

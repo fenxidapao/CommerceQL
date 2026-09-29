@@ -447,3 +447,87 @@ def test_product_publishes_the_crosscheck_without_a_verdict_slot():
         assert isinstance(row["stage_none_total"], int)
         assert set(row["stage_none_by_outcome"]) <= {"ok", "clarify", "refuse", "error_frame",
                                                     "async_degraded", "http_4xx", "http_5xx"}
+
+
+def test_codes_task_ids_coverage_is_reported_in_three_states(monkeypatch, tmp_path):
+    """W7 第二十二轮 ④ 把我方"0 / 37"这句话打回重做：**两态覆盖面会冤枉字段**。
+
+    `absent` = 回执根本没有这个键（老件）；`empty` = 键在但值是空字典（那批错误码**没有 ack 帧可取 id**，
+    盘上活例 = `r22_lock_c8n8.json`：`codes = {SESSION_CONFLICT: 7}` 而 `codes_task_ids = {}`）；
+    `present` = 有 id ⇒ 器件自动走逐行 join。三态混成一个 0，下一轮就会有人宣布"这字段没落地"。
+    """
+    mod = _load_probe(monkeypatch)
+    assert mod.codes_task_ids_presence({}) == "absent"
+    assert mod.codes_task_ids_presence({"codes_task_ids": {}}) == "empty"
+    assert mod.codes_task_ids_presence({"codes_task_ids": {"INTERNAL": []}}) == "empty"
+    assert mod.codes_task_ids_presence({"codes_task_ids": {"INTERNAL": ["tk_x"]}}) == "present"
+
+    base = {"admission": {"admitted": 4, "terminal": 4}, "outcomes": {"error_frame": 4},
+            "started_at": "2026-09-29T12:00:00+00:00", "finished_at": "2026-09-29T12:01:00+00:00"}
+    dirs = {}
+    for state, extra in (("absent", {}),
+                         ("empty", {"codes": {"SESSION_CONFLICT": 7}, "codes_task_ids": {}}),
+                         ("present", {"codes": {"INTERNAL": 1}, "codes_task_ids": {"INTERNAL": ["tk_x"]}})):
+        dirs[state] = tmp_path / state
+        dirs[state].mkdir()
+        _receipt(dirs[state], dict(base, **extra))
+    rows = []
+    for state in ("absent", "empty", "present"):
+        rows += mod.collect(dirs[state], "r_test.json")
+    assert [r["codes_task_ids_presence"] for r in rows] == ["absent", "empty", "present"]
+    summary = mod.summarize(rows, None)
+    ch = summary["task_id_channel"]
+    assert ch["presence_counts"] == {"absent": 1, "empty": 1, "present": 1}
+    assert sum(ch["presence_counts"].values()) == ch["n_cells"] == len(rows)
+    assert ch["cells_with_codes_task_ids"] == 1 and ch["present_cells"] == ["r_test.json"]
+    assert "不是字段坏了" in ch["status"]
+
+
+def test_the_id_join_counts_rows_in_python_not_via_a_lateral_expand() -> None:
+    """⚠️ 本轮真实踩过的形状：`count(*) … join lateral jsonb_object_keys(latency_ms)` 把**一行按键数乘开**。
+
+    症状长得很可信：W7 交来的四个 id 全部 `rows = 6`，而 6 恰好是它们各自的键数 —— 若照这个读数报出去，
+    就等于宣布"一个请求落了六行审计"，而那正是 U-129 **双终态**那一侧的缺陷形状（方向完全相反）。
+    改成"把 (task_id, outcome, latency_ms) 逐行取回来、在 Python 里数" ⇒ 同一个查询四个 id 都是 1 行。
+    这条测试是**形状锁**：器件里再出现那个 lateral 展开就红，免得下一次又乘回去。
+    """
+    src = PROBE.read_text(encoding="utf-8")
+    #: 那个词只许出现在**注释里**（解释为什么不用它），不许再进任何一条 SQL。
+    for line in src.splitlines():
+        if "jsonb_object_keys" in line:
+            assert line.lstrip().startswith("#"), f"lateral 展开回到 SQL 里了：{line.strip()[:90]}"
+    assert "select task_id, outcome, latency_ms from app." in src
+
+
+@pytest.mark.skipif(not PRODUCT.exists(), reason="产物未生成（本轮没跑过该探针）")
+def test_product_keeps_id_level_claims_inside_the_present_cells_only():
+    """吃真产物：**只有带 id 的那一格**能拿逐 id 点名当证据，且它内部必须自洽。
+
+    钉四条，都是"下一轮会有人引用错"的位置：
+    · 三态覆盖面之和 = 格子总数（缺一个态就等于把老件算成空件）；
+    · `cells_with_codes_task_ids` 必须等于 present 那一格的数（不许把 empty 算进来）；
+    · 有 `task_id_evidence` 的格 ⇒ `n_with_row` 只能由 `by_id` 里的 `seg1_rows` 加出来（不许两个数各说各话）；
+    · `by_code[code].missing_task_ids` 与 `with_row` 之和 = 该码给的 id 数（点名要闭合）。
+    """
+    d = json.loads(PRODUCT.read_text(encoding="utf-8"))
+    ch = d["summary"]["task_id_channel"]
+    cells = d["cells"]
+    assert ch["n_cells"] == len(cells)
+    assert sum(ch["presence_counts"].values()) == len(cells)
+    assert ch["cells_with_codes_task_ids"] == ch["presence_counts"]["present"] == len(ch["present_cells"])
+    for cell in cells:
+        evidence = cell.get("task_id_evidence")
+        if not evidence:
+            assert not cell.get("codes_task_ids"), "有 id 却没跑 join ⇒ 通道漏了"
+            continue
+        assert evidence["n_with_row"] == sum(1 for e in evidence["by_id"].values() if e["seg1_rows"] > 0)
+        for entry in evidence["by_id"].values():
+            assert isinstance(entry["seg1_rows"], int) and entry["seg1_rows"] >= 1
+            assert entry["outcomes"]
+            keys = entry.get("latency_keys")
+            assert keys is None or 1 <= keys["min"] <= keys["max"]
+        for code, block in evidence["by_code"].items():
+            assert block["given"] == len(cell["codes_task_ids"][code])
+            assert block["given"] == block["with_row"] + len(block["missing_task_ids"])
+            for missing in block["missing_task_ids"]:
+                assert missing not in evidence["by_id"] or evidence["by_id"][missing]["seg1_rows"] == 0
