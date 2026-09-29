@@ -1,11 +1,11 @@
 {
   "reader": "eval/reporter.loadtest_pressure + eval/gates.evaluate_gates(pressure=…)",
   "schema_string_read_verbatim": "w7.loadtest.receipt/1",
-  "n_files": 39,
+  "n_files": 43,
   "verdict_tally": {
     "UNVERIFIED": 18,
-    "NOT_AVAILABLE": 5,
-    "FAIL": 16
+    "NOT_AVAILABLE": 7,
+    "FAIL": 18
   },
   "any_pass": false,
   "stale_true_cells_total": 14,
@@ -60,6 +60,53 @@
     "deploy/loadtest/healthy_r19_wrong_target_404.json": {
       "read端": "None（不可读 / schema 不符 / 无 p95）",
       "verdict": "NOT_AVAILABLE"
+    },
+    "deploy/loadtest/healthy_r20_aprime_c12n108.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 27785ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/healthy_r20_aprime_c12n108.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-29T06:17:08+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 28235ms；全请求 P95 = 27785ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=99, http_5xx=0, other_http_4xx=0, rejected_429=9, terminal=99, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：另有 9 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数） ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "False"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
+    },
+    "deploy/loadtest/healthy_r20_warm_c1n1.json": {
+      "verdict": "FAIL",
+      "measured": "P95 = 11044ms，分母 = 全请求口径 `latency_ms_all_ms`",
+      "caveats": [
+        "数据来源 = w7.loadtest.receipt/1 @ deploy/loadtest/healthy_r20_warm_c1n1.json（1/1 个场景有 p95，取最大），取数时点 = 2026-09-29T06:15:28+00:00",
+        "P95 分母 = 全请求口径 `latency_ms_all_ms` ⇒ 读这行时别默认它是「用户端到端 P95」，除非分母那一栏写的就是全请求",
+        "准入样本 P95 = 11044ms；全请求 P95 = 11044ms（两者不一致时以全请求判定）",
+        "准入分桶（回执 `admission`）：admitted=1, http_5xx=0, other_http_4xx=0, rejected_429=0, terminal=1, unresolved=0",
+        "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 1 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）",
+        "🔴 且写端自己对本场景**未判定**（`g6_p95_le_8s = null`，共 1 个场景）⇒ 本 FAIL 的含义是「观测到的 p95 超预算」，**不是**「已证明服务不达标」；该归类已上呈 RELAY A14。**本窗口不擅自降档**：判据方向必须偏向「不许宣布通过」，把 FAIL 改 UNVERIFIED 属门禁语义变更、要架构裁（同 A13：环境/样本不足造成的红要单独点名，不折算成被测系统失败）"
+      ],
+      "scenarios_n": 1,
+      "caveated_scenarios": 1,
+      "p95_scope_values": [
+        "admitted_http_2xx"
+      ],
+      "has_admission": true,
+      "g6_p95_le_8s_values": [
+        "None"
+      ],
+      "stale_true_cells": 0,
+      "null_caveat_scenarios": 0,
+      "has_all_ms_p95": true
     },
     "deploy/loadtest/healthy_rA_burst_c100n100.json": {
       "verdict": "FAIL",
@@ -505,7 +552,15 @@
       "null_caveat_scenarios": 0,
       "has_all_ms_p95": true
     },
+    "deploy/loadtest/probe_session_owner_context_control_r20.json": {
+      "read端": "None（不可读 / schema 不符 / 无 p95）",
+      "verdict": "NOT_AVAILABLE"
+    },
     "deploy/loadtest/probe_session_owner_context_gmv.json": {
+      "read端": "None（不可读 / schema 不符 / 无 p95）",
+      "verdict": "NOT_AVAILABLE"
+    },
+    "deploy/loadtest/probe_session_owner_context_infer_r20.json": {
       "read端": "None（不可读 / schema 不符 / 无 p95）",
       "verdict": "NOT_AVAILABLE"
     },
