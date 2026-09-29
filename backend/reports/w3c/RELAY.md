@@ -1,7 +1,70 @@
 # W3C 转述件（RELAY）—— 逐窗口可粘贴
 
-> 窗口：W3C（`app/binding/**`）｜日期：2026-09-17｜交付提交：`feat(w3c)` + `docs(w3c)`
+> 窗口：W3C（`app/binding/**`）｜原交付：2026-09-17（`feat(w3c)` + `docs(w3c)`）
+> 后续更新：`cc85e34`（2026-09-17 深夜，据 W1B/W0 回执订正 DoD①/L1/L3）｜**`§给 W7`（2026-09-29，最新）**
 > 交付细节 = `reports/w3c/DELIVERY.md`。本文件只放**别人要动手的事**，每节可整段粘贴到对应窗口。
+
+---
+
+## §给 W7（转 W3A / 评测侧）—— 「L4 更准」口径回执：**方向我接，但"现成口径"这四个字不成立**
+
+日期：2026-09-29｜探针 = `reports/w3c/probe_l4_accuracy_carriers.py`（零 LLM / 零 DB / 零服务）
+读数存档 = `reports/w3c/_probe_l4_carriers_out.txt`｜跑法：`cd backend && ../.venv/Scripts/python.exe reports/w3c/probe_l4_accuracy_carriers.py`
+
+### 0. 一句话结论
+
+**口径定义我认领（它属 binding 域），但请把"悬空"改成"三半各有主"** ——
+"载体都在、只差一个脚本"这个说法**不成立**：期望侧**没有 ground truth**（不是缺执行器），
+实际侧你指的那一格记的是 **PLAN 的意图**、不是 **BIND 的结果**。按现在的载体，
+任何脚本都只能算出"L4 **在场率**"，算不出"L4 **更准**"。
+
+### 1. 四条声称逐条实测（可复跑，不是复述）
+
+| # | 声称 | 实测读数 | 判定 |
+|---|---|---|---|
+| ① | 期望列在 `eval/gold_query_seed_v1.json` | 该文件 119 条，字段集**无**任何"期望绑定"项；`eval/` 全目录对 `expected_bind` / `expected_column` / `gold_binding` / `expected_concept` / `expected_field` / `bound_column` **零命中**。最接近列名的只有 `must_contain` = **SQL 文本子串**，且资产级词表只有 **3 个 token**（`NULLIF` / `pay_time` / `stat_date`），带信号的题 45/119（冻结集 47/166）；`gold_result_cols` 是**结果列个数**（`int`），gold seed 里恒 `None` | ❌ **不存在** |
+| ② | 实际绑出的列在 `query_plan.plan_summary` 的 dimensions/metrics | `plan_summary` 由 `Plan.to_summary()`（`planner/schemas.py:334-345`）= `[m.name for m in plan.metrics]` + `plan.dimensions` ⇒ **PLAN 写进计划的概念名**。真正的绑定结果是 `LayerDecision.bindings[0]`（`four_layer.py:264/274/285`），只写进 graph state 的 `bindings` 键（`bind.py:135`）；`query_plan` 列集 = `(task_id, plan_json, plan_summary, bundle_version, binding_state, binding_layer, confidence)` ⇒ 绑定结果**零落库** | ❌ **载体指错** |
+| ③ | `CandidateRef` 无打分器标识 ⇒ 绑后分不出 L1/L4 | `CandidateRef` 字段 = `{asset_id, score, layer}` ⇒ **层是有的**：探针实测 L1 路径 `layer=L1`、L4 路径 `layer=L4`，每条 binding 都带**决定层 + 被选列 ref**。真正缺的是**打分器标识**（`RerankScore` 带 `model_id`/`prompt_version`，转 `CandidateRef` 时被丢掉）⇒ 分不开的是"这个 L4 分是哪个模型/prompt 产的" | ⚠️ **前半对、后半错** |
+| ④ | 计数器每查询一个标量 ⇒ 归不到具体错列 | 成立，且原因比"标量聚合"更硬两条：**(a)** 每请求只判 **1 个概念**（`bind.py:160` = `plan.metrics[0].name`；`dimensions` 与其余指标**完全不参与绑定**——W4 自定并已登记待裁）；**(b)** 两个 Counter 是**边际分布**（`deps.py:563/564` 各自独立自增）⇒ 连 `L4 ∧ resolved_unique` 这种联合口径都**算不出来** | ⚠️ **成立 + 补两条** |
+
+**外加一条你没提的（配 ④ 用）**：`unresolved` 也把 layer 记成 **`L1`**（`four_layer.py:248-257`）
+⇒ `binding_layer_total{L1}` 的分母里混着"概念根本没解析出来" ⇒ **L4 占比的分母被污染**，
+单独看 `binding_layer_total` 会把"未解析"读成"L1 定稿"。
+
+### 2. 今天就能算的口径（观测侧，零新资产 —— 这是本窗口能立刻给的部分）
+
+| 口径 | 式子 | 它回答什么 / **不**回答什么 |
+|---|---|---|
+| **A. L4 在场率** | `binding_layer_total{layer="L4"} / Σ_layer` | 回答"L4 有没有上场"。⚠️ **不是**"更准"；分母含 `unresolved`（见上一条） |
+| **B. 退路率** | `binding_state_total{state="ambiguous"} / Σ_state` | 回答"L4 上场后没能定稿的比例"（打分不足以定夺的那部分） |
+
+两条**今天就能算、零契约变更**，但都**测不到"绑错"**。
+⚠️ 若想拿 `must_contain` 当弱代理：它只在 38%（45/119）的题上有信号、词表 3 个 token
+⇒ 既**高估覆盖**（多数题没信号）又**混淆函数名与列名**（`NULLIF` 在词表里）⇒ **不要对外称"绑错率"**。
+
+### 3. 算"L4 更准"的真前置（4 件，各有主 —— 请照此登记，勿记悬空）
+
+| # | 缺什么 | 归谁 | 为什么本窗口不代做 |
+|---|---|---|---|
+| 1 | **期望绑定**（概念→列）这份 ground truth | **W1A** | gold/冻结集由 `content_hash` 互锁（N-13）⇒ 只能**新资产 / 新冻结版本**；且"期望写概念级还是物理列名"是**设计决策**（`plan_summary` 是概念名 ⇒ 两套词汇表） |
+| 2 | **绑定结果的可读载体**（被选列 ref + 层）| **W0/W1B 择一**：`query_plan` 加列（迁移）**或**契约层明写"检查点即口径面" | `query_plan`/`migrations` 归 W1B、`core/contracts.py` 归 W0；本窗口不越界 |
+| 3 | **打分器标识进候选**（`scorer_id` 或让 `RerankScore` 直接进候选） | **W0**（早已登记于本文件 §给 W0 第 2 条） | 不补它，口径若走注入路径就分不清分数来源（N-27 约束② 恒通过） |
+| 4 | **执行器**（跑 / 比对 / 出报告） | **W6** | `eval/` 执行器唯一所有者、唯一有权出 G-1…G-8 |
+
+### 4. 本窗口认领什么、不认什么
+
+- **认**：口径的**定义与判据**（binding 域）。前置 1–3 落地后由本窗口给出完整判据，草案：
+  **分母** = 该题 `binding_layer=L4` 且 `binding_state=resolved_unique` 的判定；
+  **分子** = 其绑定列 ∉ 期望列集；**硬要求**：期望集必须与 `plan_summary` **同词汇表**（否则又是两套词汇表对比）。
+- **不认**："现成口径 / 不需要新建载体" —— 按 ②，被当成"实际绑出列"的那一格根本不是绑定输出。
+- **已经做掉的**：这四条不是推的，是**可复跑探针**给出的读数（含 `unresolved ⇒ L1` 这条你没提的）。
+
+### 5. 给你的两条登记纪律（与 W3A 09-29 的自订正一致）
+
+1. 报"L4 更准"的读数时**必须带臂别**（W3A 已立：同一 `bind.l4` 出口修复前 `20/96≈21%`、修复后热臂 `8/86≈9.3%`）——
+   一个数概之会把"降级行 = 0"读成"覆盖到位"。
+2. 说"载体都在"之前先问**观测侧还是期望侧**（两侧都要点到名）—— 本轮 ② 就是这个坑的实例：
+   观测侧确实齐（state/layer 双落、Counter 已接线），**期望侧是空的**。
 
 ---
 

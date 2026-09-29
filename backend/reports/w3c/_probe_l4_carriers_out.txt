@@ -1,0 +1,78 @@
+semantic bundle loaded: version=2026.09.14.1 status=candidate assets=8 excluded=0 warnings=1
+W3C 探针：核「L4 更准」口径的三处载体（零 LLM / 零 DB）
+
+========================================================================
+① 期望侧 —— `gold_query_seed_v1.json` / 冻结集里有没有『期望绑定』
+========================================================================
+冻结集：166 条，字段集 = ['business_knowledge_required', 'case_id', 'clarify_expected', 'comp1', 'comp1_detail', 'comp1_sitelabel', 'comp2_nested', 'comp2_setops', 'difficulty_semantic', 'difficulty_struct', 'difficulty_struct_sitelabel', 'domain', 'eval_tenant', 'expected_behavior', 'gold_result_cols', 'gold_result_hash', 'gold_result_rows', 'gold_sql', 'must_contain', 'must_not_contain', 'notes', 'others', 'others_detail', 'question', 'refuse_reason', 'template_block']
+gold  ：119 条，字段集 = ['business_knowledge_required', 'difficulty_semantic', 'difficulty_struct', 'domain', 'gold_sql', 'metric', 'must_contain', 'must_not_contain', 'notes', 'question', 'seed_id', 'source_case_id']
+
+冻结集 `must_contain`：带信号的题 = 47/166，全部取值 = ['NULLIF', 'pay_time', 'stat_date']
+冻结集 `gold_result_cols` 的类型 = ['NoneType', 'int']，取值 = [1, 2, 3, None]
+
+gold   `must_contain`：带信号的题 = 45/119，全部取值 = ['NULLIF', 'pay_time', 'stat_date']
+gold   `gold_result_cols` 的类型 = ['NoneType']，取值 = [None]
+
+⇒ 结论：两个资产里**没有**『概念 X 应绑到列 Y』这种字段；最接近列名的只有 `must_contain`（**SQL 文本子串**，词表见上），以及 `gold_result_cols`（**结果列的个数**，连列名都不是）。
+
+========================================================================
+② 实际侧 —— `query_plan.plan_summary` 记的是 PLAN 的意图还是 BIND 的结果
+========================================================================
+喂给 `Plan` 的概念：metrics[].name = ['gmv','order_cnt']，dimensions = ['stat_date']
+`Plan.to_summary()` → {'metrics': ['gmv', 'order_cnt'], 'dimensions': ['stat_date'], 'filters': [], 'grain': 'day', 'time_range': {'start': None, 'end': None}, 'order_by': [], 'limit': None, 'blocked': False}
+
+⚠️ `to_summary()` 的实现 = `metrics=[m.name for m in self.metrics]` + `dimensions=list(self.dimensions)`（`planner/schemas.py:334-345`）
+   ⇒ 这里出现的字符串**就是模型写进计划的概念名**，与绑定结果无关。
+
+`query_plan` 的列集（`repo/query_plan.py`）= ('task_id', 'plan_json', 'plan_summary', 'bundle_version', 'binding_state', 'binding_layer', 'confidence')
+⇒ 落库面里**没有** `bindings` 一列 ⇒ 真正的绑定结果（被选中的列 ref + 层）
+   只活在 graph state 的 `bindings` 键里（`nodes/bind.py:135`），**零落库**。
+
+========================================================================
+③ 层归属侧 —— 绑后分不分得开 L1/L4；`CandidateRef` 缺的是什么
+========================================================================
+L1 路径：state=resolved_unique layer=L1 bindings=(CandidateRef(asset_id='order_paid.pay_amount', score=0.0, layer=<BindingLayer.L1: 'L1'>),)
+    ⇒ 记录层 = L1，被选列 ref = order_paid.pay_amount
+L4 路径：state=resolved_unique layer=L4 bindings=(CandidateRef(asset_id='order_paid.pay_amount', score=0.91, layer=<BindingLayer.L4: 'L4'>),)
+    ⇒ 记录层 = L4，被选列 ref = order_paid.pay_amount
+
+未解析路径：state=unresolved layer=L1 bindings=() reason=concept_unresolved
+    ⚠️ ⇒ `unresolved` 也把 layer 记成 **L1** ⇒ `binding_layer_total{L1}` 的分母
+       混进了『概念根本没解析出来』，不是纯粹的『L1 定稿』。
+
+`CandidateRef` 字段集 = ['asset_id', 'score', 'layer']
+⇒ **层是有的**（每条 binding 都带决定层）；缺的是**打分器标识**
+   （`RerankScore` 有 `model_id`/`prompt_version`，转成 `CandidateRef` 时被丢掉）
+   ⇒ 分不开的不是 L1/L4，而是『这个 L4 分是哪个模型/prompt 产的』。
+
+========================================================================
+④ 粒度 —— 一次 `bind` 判定到底绑几个概念、覆盖谁
+========================================================================
+bind.py:31: concept = plan.metrics[0].name  （没有指标时退回 normalized_question）
+bind.py:90: concept = _concept_of(plan, question)
+bind.py:157: def _concept_of(plan: Plan, question: str) -> str:
+bind.py:160: return str(plan.metrics[0].name)
+
+实测 `_concept_of(plan with metrics=['gmv','order_cnt'])` = 'gmv'
+
+⇒ 每请求只判 **1 个概念** = `plan.metrics[0].name`（无指标时退回归一化问句），
+   `dimensions` 与其余指标**完全不参与绑定**（W4 自定并已登记待裁：`nodes/bind.py` §二）。
+
+========================================================================
+⑤ 计量面 —— 两个 Counter 是边际分布，联合分布不可得
+========================================================================
+deps.py:563: metrics.observe_binding_state(event.state)
+deps.py:564: metrics.observe_binding_layer(event.layer)
+
+⇒ `BindingEvent` 上 `state` 与 `layer` 是**同一个对象**的两个字段，
+   但适配器把它们喂进**两个独立 Counter** ⇒ 只有两个边际分布，
+   『L4 且 resolved_unique』这种联合口径**算不出来**（要联合就得改计量面）。
+
+========================================================================
+小结（读数，不是结论）
+========================================================================
+① 期望侧：**不存在**（无『期望绑定』字段；`must_contain` 是 SQL 文本子串弱代理，词表仅 3 个 token）
+② 实际侧：`plan_summary` = PLAN 的概念名，**不是**绑定结果；绑定结果零落库
+③ 层归属：绑定输出**带层**；缺的是打分器标识（不是 L1/L4 之分）
+④ 粒度：每请求只判 1 个概念（`metrics[0]`）
+⑤ 计量：两 Counter 是**边际分布**，联合分布不可得；且 `unresolved` 也算 L1
