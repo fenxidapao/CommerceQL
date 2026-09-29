@@ -91,8 +91,11 @@ W7 报：三格实测差 0（热臂 86 / 冷臂 84 / session-lock 1），而 **�
     PYTHONIOENCODING=utf-8 PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w6/probe_audit_invariant.py
 
 ⚠️ **从 `deploy/.env` 抄 `DATABASE_URL` 时有两个坑**（2026-09-29 各实测一次，都是"探针拒绝出产物"而不是"连上了"）：
-① 它写的是 SQLAlchemy 式 `postgresql+psycopg://` ⇒ psycopg 不认（会把整串当 libpq 键值对，
-   而**报错文案里带着口令**）；`pg_guard.force_readonly()` 现已归一 scheme，但这类原始文案仍走 `scrub_secrets` 出口。
+① 它写的是 SQLAlchemy 式 `postgresql+psycopg://` ⇒ psycopg 不认（且不报在明显的地方：连接池会一路重试到
+   `PoolTimeout`，把排查方向带去"库挂了/密码错了"）。**scheme 契约不在本窗口重写**：`pg_guard.force_readonly()`
+   自第十二轮起直接调 W1B 的 `app/repo/dsn.py:153 to_libpq_conninfo()`（库里唯一的那件，`build.py:186` 等 5 处生产
+   调用也走它）；它对未知 scheme 直接抛、不静默透传，但**报错文案会回显 `url[:24]`** ⇒ 本窗口这层掐掉原异常、不回显，
+   所有异常文案统一过 `pg_guard.safe_error_text()`（`type(exc).__name__` + 过 `scrub_secrets` 的摘要）。
 ② 它的 host 是 compose **内部**名 `pg` ⇒ 宿主机解析不了（`failed to resolve host 'pg'`），
    compose 把 `5432:5432` 映射到宿主 ⇒ 本机跑要自己换成 `localhost`。**这条不做自动改写**：
    悄悄换主机等于换靶子，宁可红一次让操作方看见。
@@ -129,7 +132,7 @@ from pg_guard import (  # noqa: E402
     force_readonly,
     open_readonly,
     redact_dsn,
-    scrub_secrets,
+    safe_error_text,
     target_stamp,
 )
 
@@ -255,6 +258,32 @@ def codes_task_ids_of(scenario: dict) -> dict[str, list[str]] | None:
     out = {str(code): list(ids) for code, ids in raw.items()
            if isinstance(ids, list) and ids and all(isinstance(x, str) for x in ids)}
     return out or None
+
+
+def client_side_evidence_of(scenario: dict) -> dict | None:
+    """W7 第二十一轮那两条**客户端侧探测器**在盘上回执里唯一可离线复算的那一条：`stage=none` 计数。
+
+    来源 = `scenario.terminal_provenance`（`{终态词: {"stage=X|reason=Y": n}}`），W7 的
+    `probe_session_owner_context.py` 用同一个面判 `terminal_without_any_stage`。
+    🔴 **诊断件、不参与判据**：`classify()` 不读它，本函数的任何数都不进严格式 —— 因为实测两者**不同阶**
+    （r20 那格 `stage=none` 的 error_frame = 11、全体 = 22，而我方那一格的差 = **4**），
+    把它当"缺的那几条"来对齐 = 造一条解释力过头的假绿灯。另一条 `terminal_digest_same_as_turn1`
+    需要**同一会话的两轮 SSE 原文**，盘上回执结构性不含 ⇒ 本批 UNVERIFIED，不在这里冒充。
+    """
+    raw = scenario.get("terminal_provenance")
+    if not isinstance(raw, dict) or not raw:
+        return None
+    by_outcome: dict[str, int] = {}
+    for outcome, buckets in raw.items():
+        if not isinstance(buckets, dict):
+            continue
+        n = sum(v for k, v in buckets.items() if isinstance(k, str) and k.startswith("stage=none")
+                and isinstance(v, int))
+        if n:
+            by_outcome[str(outcome)] = n
+    if not by_outcome:
+        return {"by_outcome": {}, "total": 0}
+    return {"by_outcome": by_outcome, "total": sum(by_outcome.values())}
 
 
 def two_numbers_of(admitted: int | None, terminal: int | None, audit_rows: int | None) -> dict:
@@ -434,6 +463,25 @@ def summarize(rows: list[dict], skew_s: float | None) -> dict:
         },
         "proxy_only_cells": [{"receipt": r["receipt"], "admitted": r["admitted"]}
                              for r in rows if r.get("denominator_basis") == BASIS_PROXY],
+        #: 🔑 W7 第二十一轮"要不要把客户端探测器并进 U-130 判据面"的**答复依据**（对照，不是判据）：
+        #: 逐格把 `stage=none` 计数与我方的差摆在同一行里看，不同阶这件事必须由读数说话、不由措辞说话。
+        "client_side_crosscheck": {
+            "role": "只作对照列 —— `classify()` 不读 `client_side_evidence`，严格式两边都不引它",
+            "cells_with_provenance": sum(1 for r in rows if r.get("client_side_evidence")),
+            "n_cells": len(rows),
+            "violated_cells_compared": [
+                {"receipt": r["receipt"],
+                 "gap_terminal_minus_audit_rows": (r.get("two_numbers") or {}).get("gap_terminal_minus_audit_rows"),
+                 "stage_none_by_outcome": (r.get("client_side_evidence") or {}).get("by_outcome"),
+                 "stage_none_total": (r.get("client_side_evidence") or {}).get("total")}
+                for r in rows
+                if r["state"] == INVARIANT_VIOLATED and r.get("client_side_evidence")],
+            "verdict_note": "本块不设「同不同阶」的结论位：引用这条对照的人自己把两个数并排写出来"
+                            "（`violated_cells_compared` 每格都给 gap 与 `stage_none_*` 两组数）。",
+            "not_computable_offline": "terminal_digest_same_as_turn1（同会话第 2 轮终止帧指纹 == 第 1 轮）"
+                                      "需要**逐会话的两轮 SSE 原文**，盘上回执结构性不含 ⇒ 本批 UNVERIFIED，"
+                                      "不在本产物里冒充成已测。",
+        },
         "window_rule": "时间列见 pg_guard.time_column（本轮实测 = `timestamp`，盘上**没有** `created_at`）："
                        f"<时间列> >= begin AND <时间列> < finished_at + {WINDOW_PAD.total_seconds():.0f}s"
                        "（右端含该秒；回执时间戳为秒级）",
@@ -574,6 +622,7 @@ def collect(receipt_dir: Path, pattern: str) -> list[dict]:
             adm = admitted_of(sc)
             terminal = terminal_of(sc)
             task_ids = codes_task_ids_of(sc)
+            prov = client_side_evidence_of(sc)
             state = NO_DB
             reason = None
             if denominator is None:
@@ -599,6 +648,8 @@ def collect(receipt_dir: Path, pattern: str) -> list[dict]:
                 "terminal": terminal,
                 "two_numbers": two_numbers_of(adm, terminal, None),
                 "codes_task_ids": task_ids,
+                #: 🔴 诊断列，**不参与判据**（`classify()` 不读它）：W7 的 `stage=none` 那面在盘上可离线复算的部分
+                "client_side_evidence": prov,
                 "task_id_evidence": None,
                 "stream_break_gap": (adm - terminal) if (adm is not None and terminal is not None) else None,
                 "mismatch": mismatch,
@@ -638,8 +689,8 @@ def main() -> int:
     except (LookupError, RuntimeError, psycopg.Error) as exc:  # RuntimeError 含 PgReadOnlyGuardError
         #: 🔴 驱动层的异常消息**会把整条连接串（含口令）打进来**（2026-09-29 实测：
         #: `invalid connection option "<scheme>://<user>:<口令>@<host>:<port>/<db>?options…"`）
-        #: ⇒ "我不打印 DSN"管不住别人的文案，出口处必须过一道 `scrub_secrets`。
-        print(f"🔴 探测未跑成：{type(exc).__name__}: {scrub_secrets(str(exc))[:300]}")
+        #: ⇒ "我不打印 DSN"管不住别人的文案，出口统一 `pg_guard.safe_error_text()`（W7 第二十一轮规程）。
+        print(f"🔴 探测未跑成：{safe_error_text(exc)}")
         return 2
 
     out = Path(args.out)

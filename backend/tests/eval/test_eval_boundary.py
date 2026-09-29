@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import ast
 import os
+import re
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -43,6 +44,9 @@ ALLOWED_APP_DEPS = frozenset({
     "app.guard",       # ADR-18：闸门与在线同源
     "app.exec",        # ADR-18：执行器契约与错误分类与在线同源
     "app.mask",        # 掩码面（N-11）
+    "app.repo",        # 🔴 **只**为 `dsn.py` 的 scheme 契约（W7 第二十/二十一轮点名"库里唯一一件"，
+                       # 我方 `normalize_dsn` 那份已删）⇒ 具体到模块的限制见
+                       # `test_pg_guard_only_reuses_the_dsn_module_from_app_repo`
 })
 
 #: 🔴 明确禁止：进了它，评测数字里就掺了 HTTP 行为。
@@ -106,6 +110,28 @@ def test_eval_app_dependencies_are_all_declared():
     assert seen, "扫描本身坏掉（一个 app 依赖都没抓到）比越界更危险"
     assert seen - ALLOWED_APP_DEPS == set(), f"未登记的评测→生产依赖：{sorted(seen - ALLOWED_APP_DEPS)}"
     assert not seen & FORBIDDEN_APP_DEPS
+
+
+def test_pg_guard_only_reuses_the_dsn_module_from_app_repo():
+    """`app.repo` 进了声明面**只为** `dsn.py` 那一个模块 —— 这条把范围钉死到模块级。
+
+    为什么值得单独钉：`app.repo/**` 归 W1B，里面同时住着连接池与引擎入口（`pools.py`、
+    `cost_ledger.py`…）。评测一旦顺手 import 它们，"评测器不依赖运行时状态"这件事就悄悄变了，
+    而子包级的 allowlist **看不见**这种扩张。第二件事同样重要：`dsn.py` 的存在理由之一是
+    **它不 import SQLAlchemy**（L0，只给字符串）—— 我方探针靠这点才敢冷导入它；哪天 W1B 把
+    SQLAlchemy 拉进来，本测试先红，而不是让探针在某个上午莫名挂死（本机实测过 `platform.machine()`
+    走 WMI 时冷导入 SQLAlchemy 会卡住）。
+    """
+    used = {".".join(m.split(".")[:3]) for p in _eval_files() for m in _imported_modules(p)
+            if m.startswith("app.repo")}
+    assert used == {"app.repo.dsn"}, f"app.repo 的复用面扩到了 {sorted(used)}（只许 `dsn`）"
+
+    dsn_src = (Path(_bootstrap.BACKEND) / "app" / "repo" / "dsn.py").read_text(encoding="utf-8")
+    heavy = [line for line in dsn_src.splitlines()
+             if re.match(r"^\s*(?:from|import)\s", line)
+             and any(pkg in line for pkg in ("sqlalchemy", "psycopg", "asyncpg"))]
+    assert heavy == [], f"`dsn.py` 不再是 L0（{heavy}）⇒ 探针冷导入它会把运行时依赖带进评测路径"
+    assert "def to_libpq_conninfo" in dsn_src, "引用别人文件里的函数名之前先 verify 它在（本单 §十-21 那条）"
 
 
 def test_eval_reuses_the_online_gate_and_executor_entries():

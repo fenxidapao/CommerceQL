@@ -36,7 +36,7 @@ REPO = HERE.parents[2]
 sys.path.insert(0, str(REPO / "backend"))
 sys.path.insert(0, str(REPO / "eval"))
 
-from pg_guard import force_readonly  # noqa: E402
+from pg_guard import force_readonly, safe_error_text  # noqa: E402
 
 if os.name == "nt":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -158,7 +158,7 @@ async def _probe(dsn: str, label: str, states: tuple[str, ...], *, as_role: str)
         try:
             con = await psycopg.AsyncConnection.connect(dsn, autocommit=True)
         except Exception as exc:
-            out[state] = {"connect": f"ERR {type(exc).__name__}: {exc}"}
+            out[state] = {"connect": f"ERR {safe_error_text(exc)}"}
             continue
         async with con:
             # ⚠️ 必须在**每条**连接上重设：SET ROLE 不跨连接继承，在外层连接上设一次
@@ -307,7 +307,7 @@ async def main() -> int:
                 await conn.close()
     # 闸门没过时要原样把原因报出来，不许吞 ⇒ 这里刻意捕 `Exception`。
     except Exception as exc:
-        print(f"🔴 只读闸门未通过 ⇒ 本次不出产物：{type(exc).__name__}: {exc}")
+        print(f"🔴 只读闸门未通过 ⇒ 本次不出产物：{safe_error_text(exc)}")
         return 3
 
     result = {

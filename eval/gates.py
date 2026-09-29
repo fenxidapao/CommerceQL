@@ -139,9 +139,21 @@ def _p0_notes(p0_tests: Mapping[str, Any], ran_integration: bool) -> tuple[str, 
     errors = int(p0_tests.get("errors") or 0)
     if errors:
         named_err = list(p0_tests.get("error_tests") or ())
+        #: 🔴 两种 error 的**归属窗口与修法完全不同**，只报总数会让人去修错的那一层：
+        #: 名字里没有 `::` = **收集期**（模块 import 就抛，U-114 防线① 的"缺 env 当场抛"就是这一类，
+        #: 它是**按设计红**，不是环境坏了）；带 `::` = 夹具期（测试收到了、setup 起不来）。
+        collect_err = [t for t in named_err if "::" not in t]
+        setup_err = [t for t in named_err if "::" in t]
+        split = ""
+        if named_err:
+            split = (f"；其中**收集期 {len(collect_err)} 条**（import 期就抛 ⇒ 多为 U-114 防线① "
+                     "『缺 env 当场抛、禁止 skip/禁止字面默认 DSN』按设计红，不是环境故障。"
+                     "⚠️ 这一类会让不带 `--continue-on-collection-errors` 的全量跑**一条测试都不执行**"
+                     f"）／**夹具期 {len(setup_err)} 条**（收到了但 setup 起不来）")
         notes.append(
-            f"另有 {errors} 条 **error（夹具起不来，不是断言失败）** ⇒ 与 failed 分开数，"
+            f"另有 {errors} 条 **error（测试环境起不来，不是断言失败）** ⇒ 与 failed 分开数，"
             "混报会看不出坏的是测试环境还是被测系统"
+            + split
             + (
                 "；点名：" + "、".join(f"`{t}`" for t in named_err) if named_err else
                 "；**本日志未点名** ⇒ 它不是用 `-rfEs` 跑的（`-r` 里要点名的字符是大写 `E`，"
@@ -182,7 +194,7 @@ def evaluate_gates(
         gates.append(Gate(
             "G-1", "全部 P0 用例通过",
             "PASS" if failed == 0 and ran_integration else ("FAIL" if failed else "PARTIAL"),
-            f"断言失败 {int(p0_tests.get('failed', 0))} + 夹具 error {int(p0_tests.get('errors', 0))}"
+            f"断言失败 {int(p0_tests.get('failed', 0))} + error {int(p0_tests.get('errors', 0))}"
             f" = 红 {failed} 条；unit+contract passed={p0_tests.get('passed')}"
             f", integration_ran={ran_integration}",
             "§17.1 单元 + 集成",

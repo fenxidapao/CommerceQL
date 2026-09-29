@@ -41,7 +41,7 @@ if os.name == "nt":
 #: 建占位扩展），超管绕过 RLS 也绕过权限，"我只读"这句话在这个角色上等于没说。
 #: 包完之后每条连接都会被服务端强制成只读事务，且 `main()` 里会**故意下发一次 CREATE TABLE**
 #: 验证它真的被拒（`eval/pg_guard.py`）。W7 2026-09-22 要求"加一条会响的守卫"，落在这里。
-from pg_guard import force_readonly  # noqa: E402
+from pg_guard import force_readonly, safe_error_text  # noqa: E402
 
 SUPER_DSN = force_readonly(os.environ.get(
     "COMMERCEQL_TEST_SUPER_DSN", "postgresql://postgres:postgres@localhost:5432/ecom"
@@ -81,7 +81,7 @@ async def probe_pg() -> dict:
             SUPER_DSN, row_factory=psycopg.rows.tuple_row, autocommit=True
         )
     except Exception as exc:
-        return {"reachable": False, "error": f"{type(exc).__name__}: {exc}"}
+        return {"reachable": False, "error": safe_error_text(exc)}
     async with conn:
         cur = await conn.execute("select version()")
         out["version"] = (await cur.fetchone())[0]
@@ -103,7 +103,7 @@ async def probe_pg() -> dict:
             cur = await conn.execute("select version_num from public.alembic_version")
             out["alembic_version"] = [r[0] for r in await cur.fetchall()]
         except Exception as exc:
-            out["alembic_version"] = f"ERR {type(exc).__name__}: {exc}"
+            out["alembic_version"] = f"ERR {safe_error_text(exc)}"
             await conn.rollback()
 
         # ---- 真实行数：关系清单来自 information_schema，不靠猜名字 ----
@@ -189,7 +189,7 @@ async def probe_pg() -> dict:
                 except Exception as exc:
                     out["app_ro_non_superuser_with_policies"] = f"ERR {type(exc).__name__}"
         except Exception as exc:
-            out["app_ro"] = f"UNREACHABLE {type(exc).__name__}: {exc}"
+            out["app_ro"] = f"UNREACHABLE {safe_error_text(exc)}"
 
         # ---- 带租户上下文的 RLS 有效性（评测真正关心的那一面）----
         # ⚠️ 这一段的由来：上一版只 count 了视图就报告"PG 业务事实表 0 行 ⇒ 不可测"。
@@ -313,7 +313,7 @@ async def probe_pg() -> dict:
                 for state in per_view["undercount_in"]
             )
         except Exception as exc:
-            out["rls_effectiveness"] = f"UNREACHABLE {type(exc).__name__}: {exc}"
+            out["rls_effectiveness"] = f"UNREACHABLE {safe_error_text(exc)}"
 
     return out
 

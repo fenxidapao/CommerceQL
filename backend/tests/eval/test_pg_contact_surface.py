@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from pathlib import Path
 
 import gates as gt
@@ -277,21 +278,53 @@ def test_redact_dsn_on_an_unparseable_shape_does_not_echo_the_input():
     assert "app_ro_pwd" not in out and "无法解析" in out
 
 
-def test_normalize_dsn_accepts_the_scheme_deploy_env_actually_writes():
-    """2026-09-29 实测：抄 `deploy/.env` 的 `DATABASE_URL` 喂探针 ⇒ `invalid connection option`。
+def test_the_scheme_contract_is_not_reimplemented_in_this_window():
+    """2026-09-29 W7 第二十/二十一轮：psycopg 侧的 scheme 转换**库里已有一件**，我方不许再写一份。
 
-    那条 URL 写的是 SQLAlchemy 式 `postgresql+psycopg://`，psycopg 不认（把整串当键值对），
-    于是探针**拒绝出产物**。归一只许动 scheme，其余（含 `force_readonly` 加的 options）不许变。
-    ⚠️ 口令位用 `.gitleaks.toml` 放行的那对开发占位（`app_rw` / `app_rw_pwd`）—— 写别的形态会被
-    全仓重放（`tests/unit/test_migration_dsn_hygiene.py`）当场判红，本项目有意如此。
+    `deploy/.env` 的 `postgresql+psycopg://` 是有意的（消费者 = SQLAlchemy，`app/core/config.py:84/177`），
+    而 psycopg 侧唯一合法转换件 = `app/repo/dsn.py:153 to_libpq_conninfo()`（生产调用点：`build.py:186`、
+    `cost_ledger.py:140`、`pools.py:310`、`startup_assertions.py:503/520` ⇒ 我实测到 5 处，不是"两处"）。
+    我方上一轮的 `normalize_dsn()` 是第二份真相 ⇒ 删。这里钉三件事：**它没了**、**`.env` 那种形态照样能用**、
+    **转换仍发生在加只读闸门之前**（顺序错了 = 闸门参数拼在 psycopg 不认的串上，白设）。
     """
+    assert not hasattr(pg_guard, "normalize_dsn"), "scheme 归一只能有一个出处（W1B 的 `to_libpq_conninfo`）"
     src = "postgresql+psycopg://app_rw:app_rw_pwd@localhost:5432/ecom"
-    assert pg_guard.normalize_dsn(src) == "postgresql://app_rw:app_rw_pwd@localhost:5432/ecom"
-    assert pg_guard.normalize_dsn("postgresql://a:b@h:1/db") == "postgresql://a:b@h:1/db"
-    assert pg_guard.normalize_dsn("") == ""
-    #: 归一之后仍要能被 force_readonly 接上只读闸门（两件事在同一条路径上，顺序错了就白归一）
-    chained = pg_guard.force_readonly(src)
-    assert chained.startswith("postgresql://") and "default_transaction_read_only" in chained
+    out = pg_guard.force_readonly(src)
+    assert out.startswith("postgresql://app_rw:app_rw_pwd@localhost:5432/ecom"), out
+    assert conninfo_to_dict(out)["options"] == "-c default_transaction_read_only=on"
+
+
+def test_unrecognized_dsn_shapes_are_rejected_without_echoing_the_input():
+    """W1B 那件对未知 scheme **直接抛、不静默透传**（静默的下游症状是一句误导的 `PoolTimeout`）——
+    但它的报错会 `url[:24]!r` 回显输入：实测 `postgresql+asyncpg://u:SECRETWORD@h/db` 打出
+    `'postgresql+asyncpg://u:p'` ⇒ **用户名全露 + 口令首字符**。本窗口这层必须掐掉原文。
+
+    ⚠️ 顺带钉住一条**有意的收窄**：psycopg 合法的关键字式 conninfo（`host=… password=…`）在这里会被拒 ——
+    因为 `redact_dsn()` 与 `?options=` 追加都建立在 URI 形状上，宁缺不猜。
+    """
+    for bad in ("postgresql+asyncpg://app_rw:app_rw_pwd@localhost:5432/ecom",
+                "host=localhost user=app_ro password=app_rw_pwd dbname=ecom",
+                "not-a-dsn at all",
+                ""):
+        with pytest.raises(pg_guard.PgReadOnlyGuardError) as got:
+            pg_guard.force_readonly(bad)
+        msg = str(got.value)
+        assert "app_rw_pwd" not in msg and "app_rw" not in msg and "host=localhost" not in msg, msg
+        assert "URI" in msg, "要点名是哪一类形状不行，否则操作方只能盲猜"
+
+
+def test_safe_error_text_keeps_the_type_name_and_drops_the_password():
+    """探针异常出口的**唯一形状**：`类型名: 过 scrub 的摘要`。
+
+    为什么不是"什么都不印"：`invalid connection option` 这类只有从文案才看得出是 scheme 问题，
+    全吞掉会让探针失败退化成静默 exit（本项目反复记过的坑）。所以取"必印但必刮"。
+    """
+    line = pg_guard.safe_error_text(RuntimeError(
+        'invalid connection option "postgresql://app_ro:app_ro_pwd@localhost:5432/ecom?options"'))
+    assert line.startswith("RuntimeError: "), line
+    assert "app_ro_pwd" not in line and "app_ro@localhost:5432/ecom" in line, line
+    assert len(pg_guard.safe_error_text(RuntimeError("x" * 5000))) <= len("RuntimeError: ") + 300
+
 
 
 def test_scrub_secrets_strips_the_password_from_someone_elses_error_text():
@@ -360,3 +393,33 @@ def test_boundary_diff_does_not_turn_a_new_signature_into_a_write_event(monkeypa
 
     note = probe.diff(before, after)["note"]
     assert "n_rows" in note and "重置" in note, "判读口径要写在产物里，不能只写在源码注释里"
+
+
+# ==== W7 第二十一轮新规程：连库探针不许裸印异常（落成机器检查）============
+def test_pg_connecting_probes_never_emit_a_bare_exception() -> None:
+    """规程原文：**任何连库探针不得 `print(exc)`** —— psycopg 的连接失败文案会把整串 conninfo 连口令打出来。
+
+    判据要能被机器回答，所以这里不查"我记得别打印"，而是扫本窗口**所有 import 了 `pg_guard` 的探针源码**：
+    出现裸异常插值（`{exc}` / `str(exc)` / `repr(exc)`）= 红；`type(exc).__name__` 单独出现是**允许**的
+    （它正是 `safe_error_text()` 保留的那一半，也是唯一的排查线索）。
+    ⚠️ 为什么扫源码而不是跑一遍探针看 stdout：探针要连共享库、且失败形状只能靠"真失败"触发 ——
+    一条纪律若只在真失败时可验证，它就永远不会被验证。
+    """
+    probe_dir = Path(__file__).parents[2] / "reports/w6"
+    scanned, offenders = [], []
+    for path in sorted(probe_dir.glob("*.py")):
+        src = path.read_text(encoding="utf-8")
+        if "pg_guard" not in src:
+            continue
+        scanned.append(path.name)
+        for needle in ("{exc}", "{e}", "str(exc)", "repr(exc)", "print(exc)"):
+            if needle in src:
+                offenders.append(f"{path.name} 命中 {needle!r}")
+    assert len(scanned) >= 4, f"扫描面缩水了（只剩 {scanned}）⇒ 这条检查会变成空转"
+    assert offenders == [], offenders
+    #: 绑定了异常名的文件必须走统一出口；只 `except ImportError` 这种不绑名字的不算（别把判据做成"见 except 就红"）。
+    for name in scanned:
+        src = (probe_dir / name).read_text(encoding="utf-8")
+        bound = re.findall(r"except[^\n:]*\bas\s+(\w+)\s*:", src)
+        if bound:
+            assert "safe_error_text" in src, f"{name} 绑了异常名（{bound}）却没走统一出口"

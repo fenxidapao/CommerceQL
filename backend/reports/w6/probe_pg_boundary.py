@@ -59,7 +59,11 @@ if os.name == "nt":
 #: 🔴 **刻意不留字面默认值**（对齐 U-114 防线①：W0 `36c782a` + W2A `5e47558`）。
 #: 本探针的观察对象**就是共享实例**（归因写副作用正是它的用途）⇒ 连它必须是一次
 #: 显式的操作者动作，而不是"某个 env 忘了设"就自动发生。仍一律过 `force_readonly()`。
-DSN = force_readonly(os.environ.get("COMMERCEQL_PROBE_DSN", ""))
+#: ⚠️ **只在真的给了 DSN 时才转换**：`force_readonly()` 自第十二轮起对空串与不可识别形状**直接抛**
+#: （它现在走 `app/repo/dsn.to_libpq_conninfo()`，且为不回显口令而掐掉原异常）⇒ 若在模块级照旧喂空串，
+#: 本探针设计好的失败形状（"缺 env ⇒ 打固定文案 + exit 2、不出产物"）会被一句 import 期的崩溃替掉。
+_RAW_DSN = os.environ.get("COMMERCEQL_PROBE_DSN", "")
+DSN = force_readonly(_RAW_DSN) if _RAW_DSN else ""
 
 #: 观察对象 = 跨窗口共享前置里被怀疑过的表（新增疑点时往这里加一项，别改判据）。
 TABLES = ("cost_ledger", "embed_doc", "audit_log", "query_plan")

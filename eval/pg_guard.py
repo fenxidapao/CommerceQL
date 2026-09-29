@@ -15,6 +15,14 @@
 
 同时 `target_stamp()` 会把 `current_database()` / `current_user` / `server_version` 落成读数
 ⇒ 报告里能点名"这一轮连的是哪个库、以谁的身份"，但**永不含口令**（`redact_dsn` 只留 host:port/db）。
+
+🔴 两条 2026-09-29 由 W7 第二十/二十一轮落下来的规程，都在这里实现（不在各探针里各写一遍）：
+· **scheme 契约只有一个出处** = `app/repo/dsn.py:153 to_libpq_conninfo()`（W1B 的 L0，模块自陈不 import
+  SQLAlchemy，实测 import 只有 `dataclasses/typing/urllib.parse` ⇒ 探针冷导入不会挂）。`deploy/.env` 的
+  `postgresql+psycopg://` 是**有意的**（消费者是 SQLAlchemy），psycopg 侧唯一的合法转换件就是它。
+  我方原来那份 `normalize_dsn()` 是**第二份 scheme 真相**，已删。
+· **探针不许裸印异常**（`print(exc)` 一类）：psycopg 的连接失败文案会把整串 conninfo 连口令打进来
+  （本机实测）。所有异常出口走 `safe_error_text()` —— 只留 `type(exc).__name__` + 过 `scrub_secrets` 的摘要。
 """
 
 from __future__ import annotations
@@ -22,28 +30,56 @@ from __future__ import annotations
 import re
 from typing import Any
 
+import _bootstrap  # eval/ 与 backend/ 挂上 sys.path（本仓库既有约定，harness/consistency 同款）
 import psycopg
 
-__all__ = ["PgReadOnlyGuardError", "force_readonly", "normalize_dsn", "open_readonly", "redact_dsn", "scrub_secrets", "target_stamp"]
+_bootstrap.bootstrap()
+
+from app.repo.dsn import to_libpq_conninfo  # noqa: E402  # scheme 契约的唯一出处（W1B 的 L0）
+
+__all__ = [
+    "PgReadOnlyGuardError",
+    "force_readonly",
+    "open_readonly",
+    "redact_dsn",
+    "safe_error_text",
+    "scrub_secrets",
+    "target_stamp",
+]
 
 
 #: 编进连接串的会话级 GUC ⇒ 同一个 DSN 常量的**每一条**连接都自动受约束（不用逐处改 `connect`）。
 _RO_OPTIONS = "-c default_transaction_read_only=on"
 
-#: SQLAlchemy 式 scheme（`postgresql+psycopg://` / `postgresql+asyncpg://`）⇒ psycopg **不认**，
-#: 会把整串当成 libpq 的 `keyword=value`，报 `invalid connection option "<整串>"` ——
-#: 而那句话里**带着口令**（2026-09-29 实测）。`deploy/.env` 的 `DATABASE_URL` 写的就是这个式子，
-#: 所以操作方照抄来的 DSN 必须在**唯一入口**处归一，而不是让每个探针各自绕。
-_SQLA_SCHEME = re.compile(r"^(?P<scheme>postgres(?:ql)?|postgresql?)\+[a-z_]+(?=://)", re.IGNORECASE)
 
+def force_readonly(dsn: str) -> str:
+    """把 DSN 换成 psycopg 认得的 libpq 形态，并加上 `options=-c default_transaction_read_only=on`（幂等）。
 
-def normalize_dsn(dsn: str) -> str:
-    """把 `postgresql+<driver>://` 归一成 psycopg 认得的 `postgresql://`。**只动 scheme**，
-    口令、host、查询串一律原样保留（本函数不做脱敏，脱敏是 `redact_dsn` 的事）。"""
-    if not dsn:
+    ⚠️ 这不是"我自己小心点"，而是**服务端**在每条事务上把关；`open_readonly()` 会故意下发一次
+    `CREATE TABLE` 来证明它真的生效。两者都过，才允许探针继续出产物。
+
+    ⚠️ scheme 转换**不在本文件里重写**（那是第二份真相）：交给 `to_libpq_conninfo()`，它对未知 scheme
+    直接抛、不静默透传 —— 因为静默透传的下游症状是一句把人往"库挂了/密码错了"带的 `PoolTimeout`
+    （`dsn.py` 的注释里逐字写着）。
+    🔴 但它的报错会 `url[:24]!r` 回显输入（实测 `'postgresql+asyncpg://u:p'…` ⇒ **露出用户名与口令首字符**），
+    所以这里 `from None` 掐掉原异常、只登记"哪一类形状不行"，不回显任何原文。
+    ⚠️ 副作用是本守卫**只接受 URI 形态**：psycopg 合法的关键字式 conninfo（`host=… user=…`）会被拒 ——
+    这是有意的，因为 `redact_dsn()` 与 `?options=` 追加都建立在 URI 形状上，宁缺不猜。
+    """
+    try:
+        dsn = to_libpq_conninfo(dsn)
+    except ValueError:
+        raise PgReadOnlyGuardError(
+            "DSN 不是 psycopg 可用的 URI 形态（scheme 无法识别，或是关键字式 conninfo）"
+            "⇒ 拒绝继续（上游转换件的报错会回显 url[:24]，里面可能含口令，故此处不回显输入）"
+        ) from None
+    if "default_transaction_read_only" in dsn:
         return dsn
-    m = _SQLA_SCHEME.match(dsn)
-    return (m.group("scheme") + dsn[m.end():]) if m else dsn
+    sep = "&" if "?" in dsn else "?"
+    # ⚠️ 空格**和**等号都要编码：libpq 解析 URI 查询串时会把值里的 `=` 当成键值分隔符，
+    # 实测 `?options=-c%20default_transaction_read_only=on` 直接抛
+    # `ProgrammingError: extra key/value separator "=" in URI query parameter: "options"`。
+    return f"{dsn}{sep}options={_RO_OPTIONS.replace(' ', '%20').replace('=', '%3D')}"
 
 
 def scrub_secrets(text: str) -> str:
@@ -55,20 +91,16 @@ def scrub_secrets(text: str) -> str:
     return _DSN_SHAPE.sub(lambda m: redact_dsn(m.group(0)), text or "")
 
 
-def force_readonly(dsn: str) -> str:
-    """给 DSN 加上 `options=-c default_transaction_read_only=on`（幂等），并先归一 scheme。
+def safe_error_text(exc: BaseException, *, limit: int = 300) -> str:
+    """探针异常出口的**唯一形状**：`类型名: 过 scrub 的摘要`（W7 第二十一轮新规程的落地形式）。
 
-    ⚠️ 这不是"我自己小心点"，而是**服务端**在每条事务上把关；`open_readonly()` 会故意下发一次
-    `CREATE TABLE` 来证明它真的生效。两者都过，才允许探针继续出产物。
+    ⚠️ 为什么不是"干脆什么都不印"：异常文案是唯一的排查线索（`invalid connection option` 那类只有从文案
+    才看得出是 scheme 问题），什么都不印会让探针失败变成"静默 exit 2"，而静默正是本项目反复记过的坑
+    （交付 §5.30/§5.32）。所以取"必印但必刮"：**类型名不刮**（它是线索的主要部分），**正文过 `scrub_secrets`
+    并截断**。任何直接 `print(exc)` / f-string 里放裸 `{exc}` 的探针都算违规，由
+    `tests/eval/test_pg_contact_surface.py` 扫源码钉住。
     """
-    dsn = normalize_dsn(dsn)
-    if "default_transaction_read_only" in dsn:
-        return dsn
-    sep = "&" if "?" in dsn else "?"
-    # ⚠️ 空格**和**等号都要编码：libpq 解析 URI 查询串时会把值里的 `=` 当成键值分隔符，
-    # 实测 `?options=-c%20default_transaction_read_only=on` 直接抛
-    # `ProgrammingError: extra key/value separator "=" in URI query parameter: "options"`。
-    return f"{dsn}{sep}options={_RO_OPTIONS.replace(' ', '%20').replace('=', '%3D')}"
+    return f"{type(exc).__name__}: {scrub_secrets(str(exc))[:limit]}"
 
 
 class PgReadOnlyGuardError(RuntimeError):

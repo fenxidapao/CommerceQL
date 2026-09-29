@@ -112,8 +112,30 @@ def test_g1_measured_keeps_assertion_failures_and_fixture_errors_apart():
     inputs["p0_tests"] = {"failed": 0, "errors": 3, "passed": 2228, "integration_ran": True}
     gate = _verdict_of(gt.evaluate_gates(**inputs), "G-1")
     assert gate.verdict == "FAIL"
-    assert "断言失败 0" in gate.measured and "夹具 error 3" in gate.measured
+    assert "断言失败 0" in gate.measured and "error 3" in gate.measured
     assert "红 3 条" in gate.measured, "合计也要给，但只能在两个分量都在场之后"
+
+
+def test_g1_error_note_separates_collection_phase_from_fixture_phase():
+    """🔴 第十二轮实测：全树 10 条 error 里 **7 条是收集期**（`tests/integration/*` 模块 import 就抛，
+    U-114 防线①『缺 env 当场抛、禁 skip/禁字面默认 DSN』按设计红），只有 3 条是夹具期。
+
+    两类的**归属与修法完全不同**（前者要的是"这个 shell 没带 env"，后者要的是权限/库状态），
+    合并成一句"夹具起不来"会把人送去修错的那一层。而这次是新撞出来的：同一棵树、同一条命令，
+    少了 `--continue-on-collection-errors` 时 pytest 在收集期就中止 ⇒ **一条测试都没跑**
+    （本轮第一次全量 = 7 errors / 2.82s / 零条执行），所以这句话必须进读数。
+    """
+    inputs = _all_pass_inputs()
+    inputs["p0_tests"] = {
+        "failed": 0, "errors": 10, "passed": 2254, "integration_ran": True,
+        "error_tests": [f"tests/integration/test_m{i}.py" for i in range(7)]
+        + [f"tests/integration/test_retrieval_fts_pg.py::test_{i}" for i in range(3)],
+    }
+    gate = _verdict_of(gt.evaluate_gates(**inputs), "G-1")
+    note = next(c for c in gate.caveats if "error" in c)
+    assert "收集期 7" in note and "夹具期 3" in note, note
+    assert "--continue-on-collection-errors" in note, "要点名那个会一条都不跑的开关"
+    assert "不是断言失败" in note
 
 
 # ==== G-2：该格零样本 = NOT_AVAILABLE，不是 0% FAIL ====================

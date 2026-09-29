@@ -386,3 +386,64 @@ def m_terms() -> set[str]:
     block = re.search(r"_TERMINAL_OUTCOMES[^\n]*=\s*frozenset\((.*?)\)", DRIVER.read_text(encoding="utf-8"), re.S)
     assert block
     return set(re.findall(r'"([a-z0-9_]+)"', block.group(1)))
+
+
+def test_client_side_stage_counts_are_reported_but_never_judge(monkeypatch, tmp_path):
+    """W7 第二十一轮把「要不要并进 U-130 判据面」交给我裁 ⇒ 裁定：**并进产物、不并进判据**。
+
+    三条都要能被机器回答，所以这里同时钉：
+    ① 解析形状（只数 `stage=none`，词表按 outcome 分组，缺 provenance ⇒ None 而不是 0）；
+    ② `classify()` 的**入参个数**就决定了客户端面进不来（两个参数：分母与审计行数）——
+       这比"我在注释里说了不判"硬：以后有人想并，必须先改签名，改签名会撞这条测试；
+    ③ 同一格带不带 provenance ⇒ **除诊断列以外逐字段相同**（读数不许被对照面反向塑造）。
+    """
+    import inspect
+
+    mod = _load_probe(monkeypatch)
+    prov = {"error_frame": {"stage=none|reason=none": 3, "stage=sql_ready|reason=none": 2},
+            "http_4xx": {"stage=none|reason=none": 9}}
+    base = {"admission": {"admitted": 10, "terminal": 8},
+            "outcomes": {"ok": 3, "refuse": 5, "error_frame": 3},
+            "started_at": "2026-09-29T02:00:00+00:00", "finished_at": "2026-09-29T02:01:00+00:00"}
+
+    #: `_receipt()` 写的是**固定文件名** ⇒ 两份件必须放两个目录（上一轮踩过同目录互相覆盖）。
+    dir_a, dir_b = tmp_path / "a", tmp_path / "b"
+    dir_a.mkdir()
+    dir_b.mkdir()
+    with_prov = _receipt(dir_a, dict(base, terminal_provenance=prov))
+    without = _receipt(dir_b, dict(base))
+    row_a = mod.collect(with_prov.parent, with_prov.name)[0]
+    row_b = mod.collect(without.parent, without.name)[0]
+
+    assert row_a["client_side_evidence"] == {"by_outcome": {"error_frame": 3, "http_4xx": 9}, "total": 12}
+    assert row_b["client_side_evidence"] is None
+    assert list(inspect.signature(mod.classify).parameters) == ["denominator", "audit_rows"], \
+        "判据若有第三个入参，'客户端面不参与判据'这句话就作废了"
+    row_a.pop("client_side_evidence")
+    row_b.pop("client_side_evidence")
+    assert row_a == row_b, "带对照面读数不该改变任何判定字段"
+
+
+@pytest.mark.skipif(not PRODUCT.exists(), reason="产物未生成（本轮没跑过该探针）")
+def test_product_publishes_the_crosscheck_without_a_verdict_slot():
+    """吃真产物：对照块必须**有数**但**没有结论位**（`same_scale` 那种字段一个都不许出现）。
+
+    存在的理由：这条对照一旦有一个"同不同阶"的布尔格，下一轮就会有人只读那个格、
+    不读两边并排的数 —— 而不同阶这件事（本轮实测：`stage=none` 与 gap 不是同一个数量级）
+    只能靠把两个数一起摆出来才说服人。
+    """
+    d = json.loads(PRODUCT.read_text(encoding="utf-8"))
+    blk = d["summary"]["client_side_crosscheck"]
+    assert blk["role"].startswith("只作对照列") and "not_computable_offline" in blk
+    assert not any("same_scale" in k for k in blk), blk
+    assert blk["n_cells"] == len(d["cells"])
+    assert all("client_side_evidence" in c for c in d["cells"])
+    expected = [c for c in d["cells"]
+                if c["state"] == "invariant_violated" and c.get("client_side_evidence")]
+    assert blk["cells_with_provenance"] == sum(1 for c in d["cells"] if c.get("client_side_evidence"))
+    assert len(blk["violated_cells_compared"]) == len(expected)
+    for row in blk["violated_cells_compared"]:
+        assert isinstance(row["gap_terminal_minus_audit_rows"], int)
+        assert isinstance(row["stage_none_total"], int)
+        assert set(row["stage_none_by_outcome"]) <= {"ok", "clarify", "refuse", "error_frame",
+                                                    "async_degraded", "http_4xx", "http_5xx"}
