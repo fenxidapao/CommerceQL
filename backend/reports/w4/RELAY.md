@@ -675,3 +675,60 @@ W7 09-29 答的那句"**要**"= 把「逐终态必有一条审计行」写成 `t
 - ⇒ §22.3 表里"默认随机序 vs 禁随机"、§22.5 表里"两序下均全绿"**不是两种顺序**，是**同一收集序跑了两遍**。那条对照无效，**撤回**（原文不删，按本项目规矩就地订正）。
 - 顺带把 §22.5 那格"两条红改判为顺序相关"补一个**已有归因的读数**：`test_deny_column_rejected_through_gate2_seam[裸写]` 那条已由 **W2A `8eadbe8`（09-28 23:24）** 落库并在我本轮复跑中全绿 ⇒ 它的"消失"不是顺序效应，是**有人把我目录里的未提交件重写完并提交了**；另一条红队负控（`tests/redteam::TestNegativeControl`）本轮也在 462/全绿里 ⇒ 其此前报红同样具备"`U-132` 冷导入挂死 / 未提交件在树"的候选解释。⚠️ **我不把这两条红的历史归因写死**（当时无 shim、无随机序、树在漂）—— 只登记"今后复现红之前先跑 23.1 那条探针"。
 - 新自检项（进我的开窗必做）：任何写"两序/随机序"的门禁读数，落笔前先 `find_spec` 确认插件存在。
+
+
+---
+
+## 二十四 → 架构 / W7 / W6 / W1B：🔴 W7 那条触发面我离线复现了，而且比它报的那格更宽 —— 崩只是响的一半，另一半是静默复用上一轮结论并落审计行（**待架构归号**，W4 本轮不落生产代码）
+
+> 基准：探针跑在 HEAD `eb73324`，读数时刻 `2026-09-29T07:19:52Z`；证据件 = `backend/reports/w4/probe_turn2_checkpoint_residue.py` + 同名 `.json`（**零额度、零外部服务**）；下一可用号现读 `docs/07 §4.8` 行首 = `U-133`，**W4 不自取**。
+
+### 24.1 复现形状与主读数
+
+`build_graph(checkpointer=MemorySaver())` + **生产同一个** `SseRunner.stream()`，同一 `thread_id` 连跑两轮、第 2 轮换问题：
+
+| 轮 | 终态 | 跑了几个节点 | 段 1 审计行 |
+|---|---|---|---|
+| 第 1 轮（绿灯链） | `complete` | 15 | 1（`success`） |
+| 第 2 轮（同一 thread，换问题） | **`error(INTERNAL)`** | **2**（`trusted_context`,`normalize`） | **0** |
+
+`thread_next_after_turn2 = ['audit_supp']` ⇒ 崩点与 W7 活体四条 `graph_run_failed` 的栈顶**同一节点**（`audit_supp.py:49`）。
+
+- 🔴 **根因不是"某节点重复设终态"**：`initial_state()` 从不写 `terminal`，而 `thread_id = tenant:user:session` 是**刻意跨轮**的（`runner.py:196`，07 §5.4 逐字 + FR-10.4）⇒ 第 2 轮一进来 `terminal` 就已经是上一轮的 `{'event':'complete'}`，`assert_terminal_is_settable` 当场拒。
+- 残留广度（实测，非推测）：**35 个非空通道**带进第 2 轮；去掉组 1 身份 = **28 个 run 级通道**（清单在 JSON `residue.run_scoped_residue_keys`，含 `sql_text` / `gate_results` / `outcome` / `result_columns` / `row_count` / `latency_ms` / `tokens` / `cost_cny`）。
+
+### 24.2 🔴 两半症状：崩（响）与静默复用（不响）
+
+扫源码判"哪些写终态的节点在写之前看过 `terminal` 是否已在场"（JSON `node_terminal_guard_census`）：**4 个文件带守卫**（`refuse_out` / `clarify_out` / `error_out` / `_shared.py`），**12 个不带**。守卫本是给"run 内上游已设终态"用的（`refuse_out.py:51-55` 原文："上游已设终态时本节点返回**空增量**（只补审计）"）⇒ 跨轮残留给它开了**第二条入口**。三档矩阵（同一 thread、第 2 轮换问题）：
+
+| 第 1 轮终态 | 第 2 轮客户端读到 | 第 2 轮审计行 |
+|---|---|---|
+| `complete` | `error(INTERNAL)` | **0 行** |
+| `refuse`（plan_blocked） | **`refuse`（= 上一轮那个）** | **1 行 `outcome=refuse`** |
+| `error(GATE_AST_REJECTED)` | `error(INTERNAL)` | 1 行 `outcome=failed` |
+
+⇒ 中间那格**没有异常、没有红、HTTP 200**：本轮问题拿到上一轮的拒答结论，并凭空多落一条"本轮拒答"审计。⚠️ **批级不变量在这格是绿的**（`terminal=1`、`审计=1`，差 0）⇒ 只盯 `terminal − audit_rows` 抓不到它。
+⇒ **请架构把这条与 W7 那 4 条判成同一个缺陷**（同根 = 跨轮残留；两种症状 = 崩 / 静默复用），不要按症状拆两号。归号与级别不在我面内，我不自取。
+
+### 24.3 回 W7 问 ①：例外表**不补**（补了就是把缺陷合法化）
+
+1. 我那张例外表只收"**设计如此**"的 fail-closed（G1：`audit_pre` 写库失败 ⇒ 0 行且结果不下发）。这条是缺陷，写进去 = 把它变成合法出口，正是该文件 docstring 自己警告的"锁退化成恒真"。
+2. 你说的"批级报红、结构锁报绿"**成立，但不是例外不全**：是**我的锁物理看不见这条缝** —— 整套 `tests/contract/**` 用 `build_graph()`（`checkpointer=None`，`_fullchain_deps.py:659` 等 8 处），线程态在离线面从不跨 run 累积。⇒ 我 §二十三 那 7 条结构断言在这条路径上**必然绿**，这是它的已知边界，我登记而非辩解。
+3. 我要补的是**第五档场景**而不是例外：**「同一 thread 的第 2 轮 ⇒ 恰 1 终态 + 恰 1 审计行 + 终态不得等于上一轮结论」**。⚠️ 它现在会红 ⇒ 按 `08 §6.6` 我不 skip/xfail；**默认随修复同 PR 落**（前科 = `U-119`/`U-121` 的半落地态），若架构要先单独落红，请点名。
+
+### 24.4 修法三形（默认 (a)，等裁；W4 本轮一行生产代码不落）
+
+| 形 | 内容 | 我已验 / 代价 |
+|---|---|---|
+| **(a) 入口复位 run 级通道**（默认） | `initial_state()` 把 28 个键显式写 `None` | **离线已验形**：连跑三轮全部 `complete` / 15 节点 / 各 1 行（JSON `fix_shape_reset_at_entry`）。⚠️ 正面冲突两处：① `initial_state()` docstring 明写"不预先塞空值（`None` 与键不存在在 resume 语义下不同）"；② 首轮"键缺席"vs 续轮"键=None"两种形状不等价 ⇒ `tests/graph_snapshot/**` 与 `trusted_context.py:79`（判据是 `f not in state`，只覆盖组 1）要一并复核 |
+| (b) thread 逐轮 | `thread_id` 末段加 run 维度 | 最省代码，但 `thread_id_of` 的三元组 = 07 §5.4 **逐字** + FR-10.4 ⇒ 契约面，须架构先改 07 |
+| (c) run 收口即清 thread | `finally` 里删该 thread 的检查点 | state 形状与首轮完全一致、不动契约串；代价 = 崩轮取证只剩日志，且要 W1B 确认 checkpoint 池连接持有时长（T-A1 那条老问题） |
+
+- 我默认 (a) 的理由：只动 W4 独占文件、离线已验形、不改契约字符串；次选 (c)。判 (b)/(c) 我照办，不坚持。
+- ⚠️ **一处归属口径冲突，请架构顺手裁**：`08 §4.1` 行 293 写 `app/graph/**` = **W4 全部**（写权限归属，v1.4 已澄清语义），而 `app/graph/nodes/trusted_context.py:69-70` 另有一句"改 `state.py` 需要 W1B/架构点头"⇒ 同一件事两份表述，我不自裁。
+
+### 24.5 顺带登记三条（不占号）
+
+- **跨轮残留没有任何合法消费者**（这是 (a)/(c) 成立的前提）：`normalize.py:34-38` 自陈 `GraphState` 无历史消息字段 ⇒ `understand(..., history=())` ⇒ **多轮指代消解在 P0 不生效**，缺口早被登记。⇒ W7 说推理侧"当前不可测（被这条挡住）"我照收，**`U-131` 的结案词我不写"不适用"**。
+- `clarify` 那一档我**测不了**：A 组件的 `_run()` 自建 `build_graph()`、不接受外部 checkpointer（`test_decision_table_contract.py:116`）⇒ 矩阵缺第四档，标 **UNVERIFIED**，等 `_run` 开一个 graph 形参（同文件同窗口，我面内可改，但不与本轮证据混落）。
+- 本轮全部离线读数同样带 §23.1 的 `U-132` 前提（无 shim 时 `import sqlalchemy` 直接挂死）⇒ 复算命令里那个 `PYTHONPATH` 不是装饰，漏掉就是 0 字节输出。
