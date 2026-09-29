@@ -128,6 +128,9 @@ def _turn(graph: Any, chain: Any, *, tag: str, question: str) -> dict[str, Any]:
         "events": [e for e, _ in frames],
         "audit_rows_this_turn": len(chain.audit.pre),
         "audit_outcomes": [r.get("outcome") for r in chain.audit.pre],
+        #: 本轮进了几次"合并档理解"调用 ⇒ 与"崩在哪个节点"并排读，才能判
+        #: "只烧 1 次调用"与"崩在 `audit_supp`"是否互斥（W7 第二十二轮 ③）。
+        "understand_calls": chain.planner.understand_calls,
         "nodes_ran": [] if out is None else list(out.nodes),
     }
 
@@ -177,6 +180,47 @@ def _residue_across_turns() -> dict[str, Any]:
     }
 
 
+def _three_turn_chain() -> dict[str, Any]:
+    """同一 thread 连跑三轮：`error` 残留 → 本轮自拒 → 绿灯。
+
+    要判的事（回 W7 第二十二轮②）：**"上一条审计行的 outcome" 不是"残留终态事件"的代理**。
+    出口节点带守卫（`refuse_out.py:58`/`error_out.py:80`）⇒ 守卫命中时**只补审计行、不写终态**
+    ⇒ 落库的 `outcome` 跟着**残留事件**走，而残留事件本身**不变** ⇒ 两列可以脱钩。
+    每轮跑完都从检查点把 `terminal.event` 读回来，让"落库结论"与"残留事件"并排可比。
+    """
+    graph = build_graph(checkpointer=MemorySaver())
+    config = {"configurable": {"thread_id": thread_id_of(_IDENTITY)}}
+
+    def persisted_event() -> str:
+        term: dict[str, Any] = dict(graph.get_state(config).values).get("terminal") or {}
+        return str(term.get("event", "")) or "(空)"
+
+    steps: list[dict[str, Any]] = []
+    plan: list[tuple[str, Callable[[], Any]]] = [
+        ("T1 gate1 拒（残留事件=error）", lambda: make_chain(sql="SELECT 1; SELECT 2")),
+        ("T2 本轮自拒（plan blocked）", lambda: make_chain(plan_blocked_issues=("缺表",))),
+        ("T3 绿灯", lambda: make_chain()),
+    ]
+    for i, (label, build) in enumerate(plan, start=1):
+        chain = build()
+        before = persisted_event()
+        rec = _turn(graph, chain, tag=f"ch{i}", question=Q1)
+        steps.append(
+            {
+                "label": label,
+                "residual_event_before_turn": before,
+                "terminal_frame": rec["terminal"],
+                "audit_outcomes": rec["audit_outcomes"],
+                "nodes_ran": rec["nodes_ran"],
+                "residual_event_after_turn": persisted_event(),
+            }
+        )
+    return {
+        "steps": steps,
+        "读法": "T2 的落库 outcome 与 T3 看到的残留事件若不同源 ⇒ `lag(outcome)` 不能当残留种类用",
+    }
+
+
 def _terminal_kind_matrix() -> dict[str, Any]:
     """五种"上一轮结论 × 本轮意图"的组合 —— 把 W7 的两个客户端探测器在离线面一起算出来。
 
@@ -216,9 +260,13 @@ def _terminal_kind_matrix() -> dict[str, Any]:
             t1["terminal_digest"] is not None
             and t1["terminal_digest"] == t2["terminal_digest"]
         )
+        pending = [
+            n for n in (spy.get_state({"configurable": {"thread_id": thread_id_of(_IDENTITY)}}).next or ())
+        ]
         out[name] = {
             "turn1": t1,
             "turn2": t2,
+            "turn2_pending_next_nodes": pending,
             "turn2_node_deltas": list(spy.deltas),
             # ↓ 与 W7 客户端探测器同名同口径（`probe_session_owner_context.py` 第 4 步）
             "detector_terminal_without_any_stage": bool(t2["terminal"]) and t2["stage_frames"] == 0,
@@ -297,6 +345,7 @@ def main() -> None:
         "node_terminal_guard_census": _node_terminal_guard_census(),
         "residue": _residue_across_turns(),
         "terminal_kind_matrix": _terminal_kind_matrix(),
+        "three_turn_chain": _three_turn_chain(),
         "fix_shape_reset_at_entry": _fix_shape_reset_at_entry(),
     }
     Path(args.out).write_text(

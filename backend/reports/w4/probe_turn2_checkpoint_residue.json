@@ -1,8 +1,8 @@
 {
   "meta": {
     "produced_by": "reports/w4/probe_turn2_checkpoint_residue.py",
-    "read_at": "2026-09-29T08:42:12+00:00",
-    "head": "5a28abc",
+    "read_at": "2026-09-29T12:57:24+00:00",
+    "head": "41e4beb",
     "quota_cost_cny": 0.0,
     "checkpointer_under_test": "langgraph MemorySaver（生产 = AsyncPostgresSaver；本件只需要「同一 thread 跑过多轮」这一事实）",
     "why_contract_suite_misses_it": "tests/contract/** 全部 build_graph() ⇒ checkpointer=None"
@@ -61,6 +61,7 @@
       "audit_outcomes": [
         "success"
       ],
+      "understand_calls": 1,
       "nodes_ran": [
         "trusted_context",
         "normalize",
@@ -169,6 +170,7 @@
       ],
       "audit_rows_this_turn": 0,
       "audit_outcomes": [],
+      "understand_calls": 1,
       "nodes_ran": [
         "trusted_context",
         "normalize"
@@ -210,6 +212,7 @@
         "audit_outcomes": [
           "success"
         ],
+        "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
@@ -250,11 +253,15 @@
         ],
         "audit_rows_this_turn": 0,
         "audit_outcomes": [],
+        "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize"
         ]
       },
+      "turn2_pending_next_nodes": [
+        "audit_supp"
+      ],
       "turn2_node_deltas": [
         {
           "node": "trusted_context",
@@ -307,6 +314,7 @@
         "audit_outcomes": [
           "refuse"
         ],
+        "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
@@ -340,12 +348,14 @@
         "audit_outcomes": [
           "refuse"
         ],
+        "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
           "refuse_out"
         ]
       },
+      "turn2_pending_next_nodes": [],
       "turn2_node_deltas": [
         {
           "node": "trusted_context",
@@ -403,6 +413,7 @@
         "audit_outcomes": [
           "refuse"
         ],
+        "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
@@ -436,12 +447,14 @@
         "audit_outcomes": [
           "refuse"
         ],
+        "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
           "refuse_out"
         ]
       },
+      "turn2_pending_next_nodes": [],
       "turn2_node_deltas": [
         {
           "node": "trusted_context",
@@ -495,6 +508,7 @@
         "audit_outcomes": [
           "refuse"
         ],
+        "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
@@ -525,12 +539,14 @@
         "audit_outcomes": [
           "refuse"
         ],
+        "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
           "refuse_out"
         ]
       },
+      "turn2_pending_next_nodes": [],
       "turn2_node_deltas": [
         {
           "node": "trusted_context",
@@ -588,6 +604,7 @@
         "audit_outcomes": [
           "failed"
         ],
+        "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
@@ -624,12 +641,14 @@
         "audit_outcomes": [
           "failed"
         ],
+        "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
           "error_out"
         ]
       },
+      "turn2_pending_next_nodes": [],
       "turn2_node_deltas": [
         {
           "node": "trusted_context",
@@ -658,6 +677,74 @@
       "detector_terminal_without_any_stage": true,
       "detector_terminal_digest_same_as_turn1": false
     }
+  },
+  "three_turn_chain": {
+    "steps": [
+      {
+        "label": "T1 gate1 拒（残留事件=error）",
+        "residual_event_before_turn": "(空)",
+        "terminal_frame": [
+          [
+            "error",
+            "GATE_AST_REJECTED"
+          ]
+        ],
+        "audit_outcomes": [
+          "failed"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "error_out"
+        ],
+        "residual_event_after_turn": "error"
+      },
+      {
+        "label": "T2 本轮自拒（plan blocked）",
+        "residual_event_before_turn": "error",
+        "terminal_frame": [
+          [
+            "error",
+            "INTERNAL"
+          ]
+        ],
+        "audit_outcomes": [
+          "failed"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "error_out"
+        ],
+        "residual_event_after_turn": "error"
+      },
+      {
+        "label": "T3 绿灯",
+        "residual_event_before_turn": "error",
+        "terminal_frame": [
+          [
+            "error",
+            "INTERNAL"
+          ]
+        ],
+        "audit_outcomes": [
+          "failed"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "error_out"
+        ],
+        "residual_event_after_turn": "error"
+      }
+    ],
+    "读法": "T2 的落库 outcome 与 T3 看到的残留事件若不同源 ⇒ `lag(outcome)` 不能当残留种类用"
   },
   "fix_shape_reset_at_entry": {
     "reset_keys": [
@@ -721,6 +808,7 @@
         "audit_outcomes": [
           "success"
         ],
+        "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
@@ -769,6 +857,7 @@
         "audit_outcomes": [
           "success"
         ],
+        "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
@@ -817,6 +906,7 @@
         "audit_outcomes": [
           "success"
         ],
+        "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
