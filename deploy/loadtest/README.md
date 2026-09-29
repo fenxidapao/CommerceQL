@@ -907,6 +907,100 @@ docker exec -i -e PYTHONPATH=/srv -w /srv w7load-api python - < deploy/loadtest/
 docker exec -i -e PYTHONPATH=/srv -w /srv w7load-api python - < deploy/loadtest/probe_searchpath_a_arm.py
 ```
 
+#### 三.0.1p ★ 第十九轮（2026-09-29 10:0x–10:1x 本机 / 02:0x–02:1xZ）：**`admitted` 口径入表（W6 要的契约件）+ U-131 三面取证 + W0 的 CI 红我在隔离树里复算**
+
+镜像/容器：`w7load-api:0928r10`（`docker start` 复用，未重建）。等价性判据 = `git diff 00d3c12 origin/main -- backend/app`
+只有 `app/llm/router.py` 的 **4 行注释**（W3A 的 p50 订正说明）⇒ 行为面无变化。基准 = `origin/main` `872cd2d`。
+
+##### ① ★ 字段表：`admission.*` 各桶到底是什么（W6 回请的那条 —— 它是契约，不是读数）
+
+| 字段 | 判据（代码位） | 含什么 | 🔴 不含什么 / 易误读点 |
+|---|---|---|---|
+| `admitted` | `200 ≤ status < 300`（`driver.py:325-326`） | 真进入 SSE 流的请求；**含 `outcome=error_frame`（SSE 里的错误帧，HTTP 仍是 200）与 `truncated`（流断在半途）** | ❌ 不等于"业务成功"；❌ 也不等于"服务端落了一条终态" |
+| `rejected_429` | `status == 429` | 限流器**正确工作**（U-106 要求单列） | 按 U-106 已排除出 P95 分母 |
+| `other_http_4xx` | 其余 4xx | `409 SESSION_CONFLICT`、`401`、`404`… | ⚠️ 409 **不是**限流，是会话锁；混进 429 会伪造"配额生效" |
+| `http_5xx` | `status ≥ 500` | `503 DB_UNAVAILABLE` 等 | 冷容器首格常在这里爆（§三.0.1o ②） |
+| `unresolved` | `status is None` | 超时 / 连不上 | 连接层事实，没资格进任何 HTTP 桶 |
+| ★ `terminal`（**本轮新增**） | `outcome ∈ {ok, clarify, refuse, error_frame, async_degraded}`（`driver.py:322-330`） | 收到 `terminal: true` 终止帧的请求 | ⇒ **「`admitted − app.audit_log` 行差 = 0」这条不变量（`U-130`）的严格分母是它**，`admitted` 只是"本格没有断流"时的代理 |
+
+✅ 本轮 11 份 `healthy_r*.json` 逐份复算：`admitted − terminal = 0` **全格成立**（无 `truncated` / `timeout`）⇒ 今天两个分母同值。
+🔒 自检桩**刻意**做成两者不等：`--self-check` 里 `admitted=8 / terminal=7`（10 条样本含 1 条 200 断流）⇒ 谁把分母退回 `admitted`，自检当场红。
+复算命令（零成本，读归档件即可）：
+
+```bash
+python - <<'PY'   # 逐格 admitted vs terminal（terminal = Σ outcomes{ok,clarify,refuse,error_frame,async_degraded}）
+import json, glob
+TERM = {"ok","clarify","refuse","error_frame","async_degraded"}
+for f in sorted(glob.glob("deploy/loadtest/healthy_r*.json")):
+    s = json.load(open(f, encoding="utf-8"))["scenarios"][0]
+    a = s["admission"]["admitted"]; o = s.get("outcomes") or {}
+    t = sum(v for k, v in o.items() if k in TERM)
+    print(f.split("/")[-1], "admitted", a, "terminal", t, "差", a - t)
+PY
+```
+
+##### ② ★ U-131（跨属主会话可读）三面取证 —— 读侧与写侧**确证**，推理侧**判不了**
+
+新永久件 `probe_session_owner_context.py`（顺序修正：旧件先跑非属主 ⇒ 回合数混进非属主自己那一轮）。
+
+| 步 | 实测 |
+|---|---|
+| 属主 `POST /session` + 问 Q1 | 200 / SSE；两轮 Q1 分别是 `退款率`（978B）与 `GMV`（520B） |
+| 非属主 `GET /session/{sid}` | **200，`turns[0]` = 属主问句原文**（`T_A 从 2026-06-01 起的退款率是多少？`）⇒ 🔴 **读侧内容外泄确证** |
+| 非属主 `POST /query`（追问） | 200，445B ⇒ 🔴 **写侧污染确证**：属主随后 `GET` 回合数 **1→2**，且追问原文出现在**别人的**会话里 |
+| 上下文是否被推理继承 | ⚠️ **UNVERIFIED**：两轮都**没走到 `gen_sql`**（日志只有 `normalize_intent`×2 + `plan`×1；`app.audit_log` 该窗 = `refuse` / `clarify`）⇒ "流里没属主词"= **没走到会用上下文的那一步**，属**无信息**，不得据此收窄严重度 |
+| 契约期望 | 非属主应得 **404 `SESSION_NOT_FOUND`**（附录 A §A.11 / 07 §14 H7 / PRD FR-10.4） |
+
+码证（我自己读到，非转述）：`app/api/state_store.py:330-343` 的 `create_session` 载荷七字段里**没有 `user_id`**；
+`get_session()`（`:358-371`）用 `cache_keys.session_meta(ctx.tenant_id, session_id)` ⇒ **只按租户定位、无属主比对**。
+同一文件里 `task_state` 已是正确形状（写 `user_id`、读时比对 `tenant_id`+`user_id` 不匹配返 `None`）⇒ 修法 = 把既有形状套到 session。
+🟠 `app/api/routers/clarify.py`：`get_session` **0 命中**（`:113` 按租户读澄清记录 → `:137` 用记录里的 `session_id` 组 ctx → `:262/:265` 直接 `touch_session`/`append_turn`）
+⇒ "单一强制点 = `get_session()`"**不覆盖澄清写路径**；缓解 = `clarify_id` 服务端随机不可猜。**我没有活体可达证据 ⇒ 只登记不下结论。**
+💰 取证花费 **5 次调用 / ¥0.009263**（`app.cost_ledger` 1181/¥1.647555 → 1186/¥1.656818）；令牌 2 枚 `u_e01/u_e02`（`E:/tmp_w7/tokE.txt`，用后即删）。
+
+##### ③ 环境事件：共享栈 **09-29 01:15:01Z 集体重启**（不是我）+ 我的 near-miss
+
+- `docker inspect` 四个共享容器 `StartedAt` 同为 `2026-09-29T01:15:01Z`；我的 `w7load-api` 因此 `Exited (255)` ⇒ 我 `docker start` 复用。
+- 🔴 **我打错目标一次**：`driver.py:808` 的默认 `--target = http://127.0.0.1:8000/api/v1` = **共享 `commerceql-api-1`**。
+  我漏带 `--target` 跑了一条"预热" ⇒ 打到共享栈，返回 **404 `{"detail":"Not Found"}`**。
+  ✅ 后果核实：**零花费零写入**（`cost_ledger` 仍 1,181 / ¥1.647555、`audit_log` 仍 709、`admitted=0` ⇒ 没进图）。
+  ⇒ 规程：跑批前先看回执里的 **`target` 字段**（它一直在记，只是我没看）；预热与探针一律显式 `--target http://127.0.0.1:18000/api/v1`。
+- 🟠 顺带一条对**所有窗口**有用的活体事实（零成本 curl）：共享 `:8000` 现在 `POST /api/v1/query` 与 `/api/v1/session` = **404**、
+  `/api/v1/healthz` = **405**（路由在、方法不对）⇒ 共享 api 那个镜像里**没有 `/query` 系路由**；拿 `:8000` 做端点级联调会拿到与代码无关的 404。
+
+##### ④ W0 的 CI 长期红：我在**隔离树**里复算成立，并把 14 条拆成三种签名
+
+复现（CI 视角：没有 `deploy/.env`、没有 `*.db`；只跑 `tests/eval`；显式去掉 `DEEPSEEK_API_KEY` ⇒ **零模型调用零花费**）：
+
+```bash
+rm -rf /e/tmp_w7/isotree && mkdir -p /e/tmp_w7/isotree
+git archive HEAD | tar -x -C /e/tmp_w7/isotree
+cd /e/tmp_w7/isotree/backend && env -u DEEPSEEK_API_KEY python -m pytest tests/eval -q -p no:cacheprovider
+# 14 failed, 325 passed   ← 与 W0 的数字一字不差
+```
+
+签名拆分（同一前置的三个面，**没有一条是代码逻辑红**）：`10 × sqlite3.OperationalError: unable to open database file` +
+`6 × FileNotFoundError` + `2 × AssertionError`。根因链三处我自己读到：
+`backend/pyproject.toml:120 testpaths = ["tests"]`；`.github/workflows/ci.yml:121` 步骤名叫"全量测试（tests/contract = DoD③ 的载体）"
+而 `:128 run: pytest`（**裸跑 ⇒ 把 `tests/eval` 拉进 DoD③**）；`.gitignore:54 *.db`（`data/ecom_sandbox.db` = 440,729,600 B ⇒ 结构上不可能进检出）。
+🟠 `ci.yml:87` 还留着"阶段 1B 实测已 386+"，而同段 `:89` 明写"当前规模以 pytest 实际输出为准"⇒ 自相矛盾（归 W0，我已授权他们顺手改）。
+⇒ 我在这轮之后**复跑任何门禁读数一律用隔离树**：共享工作副本里有别人未提交的改动（本轮 `backend/reports/w1b/RELAY.md` 与
+`backend/tests/contract/test_gate_seam_contract.py` 都呈 `M`）⇒ 在共享副本上测到的**不是任何一个 commit 的树**。
+
+##### ⑤ W2C 的纠正生效：我撤回"活体读数支持 G2-DOMAIN"那句
+
+那批流量**没有** `scope_claims 不含目标 domain` 的请求 ⇒ ③ 分支未进入 ⇒ 属**无信息**。
+"另三号恒 0"的登记理由改为**结构推导**，三处我逐条读码核过：`app/semantics/runtime.py:206-208`、
+`app/guard/ast_gate.py:536`（`name not in self.assets → R05`，与 gate2 用同一个 assets 键 ⇒ 先被 gate1 拦）、
+`app/graph/edges.py:283-288`（AST 不过 → `ERROR_OUT`，不进 gate2）。
+⚠️ 并按 W6 的提醒带限定：这是 **graph 路径**的性质，不是 gate2 逻辑的性质（离线直调 gate2 能命中 `G2-DENY` / `G2-ASSET`）。
+
+##### ⑥ 不可引用清单（本轮 +2）
+
+- `probe_session_owner_context.py` 的布尔项 `owner_q1_readable_by_nonowner`：它依赖我传入的 `--terms`（大小写敏感），
+  第二次跑就退化成 `false` 而 excerpt 里明摆着挂着属主问句原文 ⇒ **判据以 `turn_questions_excerpt` 为准，布尔只能作辅助**。
+- "非属主追问流里没有属主词"这条：**不得**引为"上下文未跨属主流入"（两轮都没走到 `gen_sql`）。
+
 #### 三.0.2 `U-108` 的取数口径（`app/obs/probes.py` 四个门限常量的出处就在这里）
 
 探针的取数依据按 U-22 纪律必须"写在常量旁边"，而常量旁边放不下方法 —— 所以

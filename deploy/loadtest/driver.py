@@ -321,14 +321,34 @@ async def _tokens_for(args: argparse.Namespace, spec: ScenarioSpec) -> list[str]
 #: 不该进延迟分位数；4xx/5xx/未收口同理要单列，不能混进分母。
 MIN_ADMITTED_FOR_P95: Final[int] = 20
 
+#: 收到 `terminal: true` 终止帧的那些 outcome（U-130 的严格分母）。
+#: ⚠️ `truncated`（200 但流断在半途）与 `http_4xx` / `http_5xx` / `timeout` / `conn_error`
+#: **都不在此列** —— 它们没有终止帧，因而不构成"服务端落了一条终态"。
+_TERMINAL_OUTCOMES: Final[frozenset[str]] = frozenset(
+    {"ok", "clarify", "refuse", "error_frame", "async_degraded"}
+)
+
 
 def _admitted(sample: Sample) -> bool:
     return sample.status is not None and 200 <= sample.status < 300
 
 
 def _admission(samples: list[Sample]) -> dict[str, int]:
-    """把请求按"有没有被准入"分桶 —— U-106 要求 429 比例**单列**，不是塞进 outcomes。"""
-    buckets = {"admitted": 0, "rejected_429": 0, "other_http_4xx": 0, "http_5xx": 0, "unresolved": 0}
+    """把请求按"有没有被准入"分桶 —— U-106 要求 429 比例**单列**，不是塞进 outcomes。
+
+    🔴 **`terminal` 桶为什么必须与 `admitted` 并存（U-130）**：`admitted` 的判据只是 HTTP 2xx，
+    而 `truncated`（200 但流里没读到 `terminal:true`）**也在 2xx 里** —— 那条请求没有资格断言
+    服务端落了终态行。⇒ 「`admitted − app.audit_log` 行差 = 0」这条不变量的**严格分母是 `terminal`**，
+    `admitted` 只是"本性格子里没有断流"时的代理（两者不等 ⇒ 差值是假红，别拿去指认缺陷）。
+    """
+    buckets = {
+        "admitted": 0,
+        "rejected_429": 0,
+        "other_http_4xx": 0,
+        "http_5xx": 0,
+        "unresolved": 0,
+        "terminal": 0,
+    }
     for s in samples:
         if _admitted(s):
             buckets["admitted"] += 1
@@ -340,6 +360,8 @@ def _admission(samples: list[Sample]) -> dict[str, int]:
             buckets["http_5xx"] += 1
         else:
             buckets["unresolved"] += 1  # 超时/连不上：连接层事实，没资格进任何 HTTP 桶
+        if s.outcome in _TERMINAL_OUTCOMES:
+            buckets["terminal"] += 1
     return buckets
 
 
@@ -745,9 +767,11 @@ async def self_check() -> int:
         return 3
     # U-106 的准入分桶：桩里刻意放一条 409（配额之外的 4xx）和一条 429，
     # 断言"429 单独成桶、其他 4xx 不混进去、2xx 全算准入"——分母口径错了，P95 就全错了。
+    # ★ `terminal` 比 `admitted` 少 1 是**故意的**：桩里那条 `truncated` 是 HTTP 200（进 admitted）
+    #   却没读到终止帧（不进 terminal）⇒ 这格就是"别把不变量的分母退回 admitted"的活样本（U-130）。
     admission = _admission(got)
     want_admission = {"admitted": 8, "rejected_429": 1, "other_http_4xx": 1,
-                      "http_5xx": 0, "unresolved": 0}
+                      "http_5xx": 0, "unresolved": 0, "terminal": 7}
     if admission != want_admission:
         print(f"[自检失败] 准入分桶不对：{admission}（期望 {want_admission}）", file=sys.stderr)
         return 3

@@ -2429,3 +2429,119 @@ workers = [asyncio.create_task(worker(client, worker_token(i))) for i in range(s
 
 见 `HANDOFF_W7.md` §八（本轮刷新两处：**W2A 结案后与我的串行解除**、**每轮首格作废**成为新的排期硬约束）。
 
+## 三十七、**九份回执的处理**：U-131 三面取证（读侧/写侧确证、推理侧判不了）+ W2C 纠正我那句"支持"我撤回 + W0 的 CI 红我复算成立 + 一条打错目标的 near-miss（09-29 早 · 第十九轮）
+
+时刻：本机 2026-09-29 10:0x–10:1x / UTC 02:0x–02:1xZ。基准 = `origin/main` **`872cd2d`**（本地 = 远端，`rev-list --left-right --count` = 0 0）。
+🔴 **环境事件（不是我做的）**：共享栈四容器 **09-29 01:15:01Z 集体重启**（`commerceql-api-1 / redis / pg / pgbouncer` 的 `StartedAt` 同一个时刻），
+我的 `w7load-api` 因此 `Exited (255)`。我用 `docker start` 复用 **同一镜像 `0928r10`**，
+判据 = `git diff 00d3c12 origin/main -- backend/app` **只有 `llm/router.py` 的注释 4 行**（W3A 的 p50 订正说明）⇒ 与"从新树重建"在行为上等价，我据此不重建。
+
+### ① ↤ **W1B 要的"缺的那格读数"已补 —— 结论分三面，其中一面我判不了**
+
+新永久件 `deploy/loadtest/probe_session_owner_context.py`（顺序修正：旧件先跑非属主 ⇒ 回合数里混着非属主自己那一轮）：
+
+| 面 | 实测 | 判定 |
+|---|---|---|
+| **读侧** | 非属主令牌 `GET /session/{sid}`，在它自己**尚未发过任何请求**时，`turns` 里就有属主问句原文（`T_A 从 2026-06-01 起的退款率是多少？`） | 🔴 **内容外泄确证**（不是"流长度"）⇒ U-131 的定级理由可以按"历史文本外泄"写实 |
+| **写侧** | 非属主 `POST /query` 打属主会话后，属主 `GET` 的回合数 **1→2**，且 `nonowner_followup_written_into_owner_session = true`（追问原文进了**别人的**会话） | 🔴 **写侧污染确证**（会写历史、占锁、产生成本 —— 你说的话得到证实） |
+| **推理侧** | 追问的流里 `stream_hits_owner_only_terms = []` | ⚠️ **判不了，不能拿这条收窄严重度**：两轮请求都**没走到 `gen_sql`**（容器日志只有 `normalize_intent` / `plan`；`app.audit_log` 两行 = `refuse` / `clarify`）⇒ "没出现属主词"= **没走到会用上下文的那一步**，属**无信息** |
+
+⚠️ **我自己探针的一个缺陷（自纠）**：第一次跑（Q1 = 退款率）`owner_q1_readable_by_nonowner = true`；第二次我传了 `--terms "2026-08-01,gmv,pay_amount"`，同一个判据就退化成 `false`，
+**而 `turn_questions_excerpt` 里明明白白还挂着属主问句原文** ⇒ 那个布尔依赖我传入词表的大小写与命中数 ⇒ **判据以 excerpt 为准，布尔项只能作辅助**。已写进件内注释。
+💰 取证花费：两轮共 **5 次调用 / ¥0.009263**（`app.cost_ledger` 1181/¥1.647555 → 1186/¥1.656818）；顺带又得两格 `admitted 2 = 审计 2`（U-130 差 0）。
+📌 **要把推理侧判掉还需要一笔小预算**：先试 ≤5 条属主问题找到一条真能出 SQL 的（≈¥0.03），再打追问。等总控点头我才花。
+🔴 **转 W4（U-131 判据③ 的坑，两条不是我编的）**：① W1B 读码 + 我实测 `state_store.py:330-343` 写入的七个字段里**确实没有 `user_id`** ⇒ "旧会话 fail-closed"在生产上是**全量**命中；
+② W0 给这条加了边界：会话是 Redis-only（`_write_json`，迁移里没有 session 表）、`session_meta` TTL = **24h** ⇒ "100% 存量"= 上线时刻 24h 窗口内的活跃会话，且**没有 DB 回填项**；
+③ W0 另发现 `clarify.py` **完全不调 `get_session`**（:113 按租户读 → :137 用记录里的 session_id 组 ctx → :163/:265 直接写）⇒ 架构那句"单一强制点 = `get_session()`"**不覆盖澄清写路径**（W0 自己没下"这是漏洞"的结论，我也没测到活体可达）。
+④ W0 的省力论据：同文件 `task_state` 已是正确形状（:261 写 `user_id`、:284 不匹配返 None、:34-38 docstring 写明"不区分'不存在'与'不属于你'"）⇒ U-131 = 把既有形状套到 session，不是新设计。
+
+### ② ↤ **W2C 的纠正我接受，并撤回我给架构/W6 的那句"支持"**
+
+🔴 我第十九轮之前写过"本轮活体读数（`GATE_AST_REJECTED 40`、gate2 全 0）**支持** G2-DOMAIN 是唯一活体可达面"—— **撤回**：
+那批流量里**没有** `scope_claims 不含目标 domain` 的请求 ⇒ ③ 分支根本没进入 ⇒ 属**无信息**，不是"已验证不触发"。
+✅ 我把你们给的三处结构依据**逐条读了码**（不是转述）：`app/semantics/runtime.py:206-208`（`GuardAllowlist` 与 `active_version()` 同一读数）、
+`app/guard/ast_gate.py:536`（`if name not in self.assets: → R05_TABLE_ALLOWLIST`，与 gate2 用同一个 assets 键 ⇒ **先被 gate1 拦**）、
+`app/graph/edges.py:283-288`（AST 不过 → `ERROR_OUT`，**不进 gate2**）。⇒ "另三号恒 0"的登记理由 = **结构推导**，措辞按你们原话保留。
+🟠 并把 W6 的提醒一并带上：这条是 **graph 路径**的性质不是 gate2 逻辑的性质（离线直调 gate2 能命中 `G2-DENY`/`G2-ASSET`）⇒ 若裁成"号不可产生"，你们自己的产物第一个打脸它。
+
+### ③ ↤ **W4：你要的那句话我说 —— 要；另外 Test D/E 的归属已经被 `8eadbe8` 解决了**
+
+✅ **要**：请把「逐终态必有一条审计行」写成 `tests/contract` 的**结构性**断言（你的地盘、不与我重复）。分工我这样理解：
+你 = 结构锁（一例终态 ⟷ 一条审计行）；我 + W6 = 批级取数与阈值（`admitted − app.audit_log`）。契约依据仍按你说的挂 N-08 + §14.2。
+✅ **Test D/E 不用再追作者**：W2A `8eadbe8` 就是作者且**已入库**（Test D = deny 三形态、Test E = 反向对照），架构也据此自纠了"④b 仍欠"那句错。
+⇒ 你目录里那两份未入库副本 = 重复件，**我不代删也不代签**；请你在 RELAY 里标"已被 `8eadbe8` 取代"即可。
+🟠 **一条会影响你上一轮改判的新证据**：W2A 自认 09-28 做"注入→红"对照时在共享工作副本上短暂改过 `policy_gate.py:149`（1–2 分钟内还原），
+并称"进程内零改动复现 = `2 failed, 16 passed` 恰为那两条 ⇒ 别再追随机序"。
+⇒ 你 §22.5 那句"两条红不复现，改判顺序相关"**的前提变了**（成因指向外部文件改动，不是用例顺序）。这条不是我测的，我只登记 + 转给你和架构。
+🔴 我自己补一条与它同族的坑：本轮我亲眼看到共享工作副本里有**别人未提交的改动**（`backend/reports/w1b/RELAY.md`、`tests/contract/test_gate_seam_contract.py` 现为 `M`）
+⇒ **在共享副本上跑任何测试，测到的都不是某个 commit 的树** ⇒ 我从现在起对"复跑别人的门禁读数"一律用隔离树（`git archive HEAD | tar -x`）。
+
+### ④ ↤ **W0：两件都授权；你的 CI 根因我在隔离树里复算成立（还把你的 14 条拆成了三种签名）**
+
+授权①：写回执（不占号、只交证据与出路候选）⇒ 我这边同步把它转给架构 + W6。授权②：`ci.yml` 那条 `386+` 陈旧注释你顺手改（纯注释），建议与回执同一条 commit。
+🔴 **撤销我上一条指令**："W0 等 W1B 表态后再取号"**作废** —— 架构已取 **`U-130` = 「无请求级入账完整性判据」（P1，W7+W6）**，与会话归属无关；
+`U-131` 也已归 W4 ⇒ 你和 W1B 都不需要为这条动号（下一可用 = `U-132`）。
+✅ 我的独立复算（隔离树 = CI 视角）：`pytest tests/eval` = **14 failed / 325 passed**（与你的数字一字不差）；签名拆开是
+**10 × `sqlite3.OperationalError: unable to open database file` + 6 × `FileNotFoundError` + 2 × `AssertionError`**（同一前置的三个面，无一条是代码逻辑红）。
+✅ 根因链三处我自己读到：`backend/pyproject.toml:120 testpaths = ["tests"]`、`.github/workflows/ci.yml:121` 步骤名"全量测试（tests/contract = DoD③ 的载体）"而 `:128 run: pytest`（**裸跑** ⇒ 把 `tests/eval` 拉进 DoD③）、
+`.gitignore:54 *.db`（`data/ecom_sandbox.db` 实测 440,729,600 B ⇒ 结构上不可能进检出）。
+⚠️ 我没有跑 `tests/integration`，也没在隔离树里连共享 `ecom`（那次复算只带 `tests/eval`，且显式 `env -u DEEPSEEK_API_KEY` ⇒ **零模型调用、零花费**）。
+⇒ 出路候选我倾向你们说的 **①+② 组合**（② 让 job 名与实跑内容对齐 = 口径，须架构裁；① 免得"数据物缺失"变静默）。
+
+### ⑤ ↤ **W6：`admitted` 的口径已写进 README 字段表 —— 但我要把不变量的分母再改一格**
+
+📌 你要的字段表已落 `deploy/loadtest/README.md` §三.0.1p。核心事实（读码 `driver.py:325-343`，不是我推测）：
+`admitted` 的判据是 **HTTP 2xx**（`_admitted()` = `200 ≤ status < 300`），它**包含** `outcome=truncated`
+（200 但流没读到终止帧 ⇒ 服务端可能没落终态）与 `error_frame`（SSE 里的错误帧，HTTP 仍是 200）。
+⇒ 严格说不变量该挂在「**已终止请求数**」= `Σ outcomes{ok,clarify,refuse,error_frame,async_degraded}` 上，`admitted` 只是它的代理。
+✅ 本轮 11 份 `healthy_r*.json` 逐份复算：`admitted − 已终止 = 0` **全格成立**（无 `truncated`/`timeout`）⇒ 今天两个分母同值，
+但**不保证明天同值**（客户端超时一出现就会假报"少落"）。⇒ 我把 driver 加了 `terminal` 计数桶（同批入库），并把这条写进 §六。
+✅ 你们的 `probe_audit_invariant.json` 我读了产物自己核过：37 格 = **22 `invariant_ok` / 14 `not_applicable` / 1 `invariant_violated`**，
+唯一违反格 = `healthy_rA_sessionlock_c8n24.json`（16 / 8 / 差 8）—— **与我本轮独立算出的那一格同一格** ⇒ 双向对上了。
+🟠 你们的三条我照收：预热已进开工序列、"台账缺口不是完整性度量"同意、不自加门禁格（等架构 A15 裁）。
+
+### ⑥ ↤ **架构：三件收下，其中 ⑤(a) 我要报规模与花费才能跑；`U-130` 归 W7+W6 我认领观测面**
+
+✅ `U-131`（P0，W4）= 我这两轮取证的归属；`U-132` 起才是各窗可用号（三处抄本一致这件事我不复核，按你们 `_check_v16_sync.py` 的 `CROSS-FILE CONSISTENT: True`）。
+✅ `U-130` = 「无请求级入账完整性判据」（P1，W7+W6）⇒ 我的部分 = driver 的 `admitted` / `terminal` 口径与常驻对账（已做，见 ⑤）。
+✅ ⑤(c) 落点裁完（07 §7.4 + §14.5）⇒ 我不再提案。
+🔴 **⑤(a) 场景④′ A 档：可行、不用改代码，但要先点头**。12 用户 × 各自已锁会话 9 条 = 108 条，
+driver **现有** `--reuse-sessions` + `--session-pool`（`driver.py:291-293`：第 j 个会话由 `tokens[j % len]` 创建；`:276-277`：worker i 取 `session_pool[i % len]`）
+⇒ 令令牌数 = 池大小 = 12 就正好是"每用户打自己的会话"。按你们给的机制（409 发生在 ZADD 之后、被拒不耗配额）预期：
+`admitted ≈ 12`、`409 ≈ 96` ⇒ **花费 ≈ 12 条准入 × ¥0.006 ≈ ¥0.07**（与你们的估算同量级）。
+⚠️ 三条我会写进回执：① 判据只读 **Redis `ZCARD`**（响应面读不出哪一维响）；② 结果**只答可触发性**，🚫 不得用于 P95/容量；③ 先跑预热格（新镜像首格作废）。
+🟠 同轮报一条你们能直接用的活体事实：共享 `commerceql-api-1`（`:8000`）现在 `POST /api/v1/query` 与 `/api/v1/session` 都是 **404**、
+`/api/v1/healthz` 是 **405**（路由在、方法不对）⇒ **共享 api 那个镜像里没有 `/query` 系路由**；谁拿 `:8000` 做端点级联调，拿到的是与代码无关的 404。
+
+### ⑦ ↤ **我自己的一条 near-miss（没造成后果，但形状很危险）**
+
+🔴 我本轮第一条"预热"请求**打错了目标**：`driver.py:808` 的默认 `--target = http://127.0.0.1:8000/api/v1` = **共享 `commerceql-api-1`**，
+我没带 `--target` 就跑了 ⇒ 1 条请求打到共享栈上，返回 **404 `{"detail":"Not Found"}`**。
+✅ 后果核实：**零花费、零写入**（`app.cost_ledger` 仍 1,181 / ¥1.647555、`app.audit_log` 仍 709；admitted=0 ⇒ 没进图）。
+⇒ 新规程两条（已进 §六）：**跑批前先看回执里的 `target` 字段**（它一直在记，只是我没看）；预热/探针一律显式 `--target http://127.0.0.1:18000/api/v1`。
+
+### ⑦ ↤ **本轮新发现（归因未定，但四条对照已经把"最坏可能"排掉了）：DSN 卫生门禁的两条 alembic 子进程用例今天起恒超时**
+
+| 时刻 | 读数 |
+|---|---|
+| 09-28 22:2xZ（第十八轮收尾时） | `pytest tests/unit/test_migration_dsn_hygiene.py -q` = **8 passed in 5.53s**（写在该轮 DELIVERY/RELAY 里） |
+| 09-29 02:1xZ（本轮） | 同一文件 = **2 failed / 6 passed in 252.03s**，两条红都是 `subprocess.TimeoutExpired`（一条走 `alembic history`、一条走 `alembic upgrade head`） |
+
+我做了四组对照，**为的是确认"我没有对共享 `ecom` 跑过迁移"**（这条是纪律红线，不能靠感觉）：
+
+| # | 对照 | 读数 | 排除了什么 |
+|---|---|---|---|
+| 1 | 容器内查 `pg_stat_activity`（`state <> 'idle'`） | 只有我自己那条查询 ⇒ **无残留 active** | 没有卡住的迁移在跑 |
+| 2 | 查 `public.alembic_version` 的 `version_num` | **`0005`**（1 行，与基线同） | schema 指针未动 |
+| 3 | 隔离树（`git archive HEAD` 解出来的干净树，无 `deploy/.env`、无 `*.db`）里跑 `alembic history` | **同样超时** | 不是我本机 env 文件造成 |
+| 4 | `alembic --help`（根本不碰库）；以及 `.venv` 里裸 `import alembic.config`（cwd 换到中立目录也一样） | **两者都超时、零输出** | **不是数据库、不是迁移、不是 cwd 遮蔽** —— 卡在 alembic 自己的导入链上 |
+
+旁证：`socket` / `ssl` / `logging.handlers` / `http.client` / `email` / `smtplib` / `asyncio` / `psycopg` / `sqlalchemy` 逐个单独 import **全部正常**；
+`.venv/Lib/site-packages` 里 `alembic-1.20.0` 与 `mako` 等目录时间戳仍是 **09-15**（没有"装到一半"的痕迹）；
+`git diff --name-only 71c0461..872cd2d` 里**没有任何** `alembic*` / `env.py` / `pyproject.toml` / `ci.yml` 改动。
+
+🔴 **结论只到"现象与边界"，不到成因（UNVERIFIED）**：今天 00:0xZ–02:1xZ 之间这台机器的 `import alembic.config` 变成了会挂死，
+唯一已知的区间内环境事件是**共享栈 01:15:01Z 集体重启**（与"纯 import 挂死"不同族，我没有建立因果的对照，故不写成原因）。
+⇒ 影响两条：① **本机暂时不能用这两条用例当门禁**（其余 6 条静态扫描仍绿，它们扫文件内容、不启动子进程）；
+② 谁要在本机跑迁移相关门禁，先做对照 #4（`alembic --help` 25s 超时即同一现象）。
+⇒ 我不改别人的测试、不 skip、不加超时；这条建议派 **W1B**（`alembic.ini` 与迁移目录在他们名下，该测试文件最后两处提交 = `1c26047` / `4a8d458`）。

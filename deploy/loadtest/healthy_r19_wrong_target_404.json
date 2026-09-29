@@ -1,0 +1,70 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-09-29T02:06:49+00:00",
+  "target": "http://127.0.0.1:8000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 1,
+        "duration_s": 600.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": true,
+        "questions": "deploy/loadtest/questions_T_A_time.txt",
+        "request_cap": 1
+      },
+      "requests": 1,
+      "wall_s": 0.254,
+      "throughput_rps": 3.932,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 0,
+        "rejected_429": 0,
+        "other_http_4xx": 1,
+        "http_5xx": 0,
+        "unresolved": 0
+      },
+      "rejection_headers": {
+        "404": {
+          "retry_after=missing": 1
+        }
+      },
+      "latency_ms": {
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "max": null,
+        "mean": null,
+        "samples": 0
+      },
+      "latency_ms_all_ms": {
+        "p50": 99.8,
+        "p95": 99.8,
+        "samples": 1
+      },
+      "ttfb_ms": {
+        "p50": null,
+        "p95": null
+      },
+      "outcomes": {
+        "http_4xx": 1
+      },
+      "codes": {
+        "{\"detail\":\"Not Found\"}": 1
+      },
+      "terminal_provenance": {
+        "http_4xx": {
+          "stage=none|reason=none": 1
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": null,
+      "g6_caveat": "本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本为 0（全部被 4xx/5xx/连接层拒掉）⇒ 本场景没有任何端到端延迟可判"
+    }
+  ],
+  "finished_at": "2026-09-29T02:06:49+00:00"
+}
