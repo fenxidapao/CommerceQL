@@ -1,11 +1,11 @@
 {
   "reader": "eval/reporter.loadtest_pressure + eval/gates.evaluate_gates(pressure=…)",
   "schema_string_read_verbatim": "w7.loadtest.receipt/1",
-  "n_files": 36,
+  "n_files": 39,
   "verdict_tally": {
     "UNVERIFIED": 18,
-    "FAIL": 16,
-    "NOT_AVAILABLE": 2
+    "NOT_AVAILABLE": 5,
+    "FAIL": 16
   },
   "any_pass": false,
   "stale_true_cells_total": 14,
@@ -56,6 +56,10 @@
       "stale_true_cells": 0,
       "null_caveat_scenarios": 0,
       "has_all_ms_p95": true
+    },
+    "deploy/loadtest/healthy_r19_wrong_target_404.json": {
+      "read端": "None（不可读 / schema 不符 / 无 p95）",
+      "verdict": "NOT_AVAILABLE"
     },
     "deploy/loadtest/healthy_rA_burst_c100n100.json": {
       "verdict": "FAIL",
@@ -500,6 +504,14 @@
       "stale_true_cells": 0,
       "null_caveat_scenarios": 0,
       "has_all_ms_p95": true
+    },
+    "deploy/loadtest/probe_session_owner_context_gmv.json": {
+      "read端": "None（不可读 / schema 不符 / 无 p95）",
+      "verdict": "NOT_AVAILABLE"
+    },
+    "deploy/loadtest/probe_session_owner_context_refund.json": {
+      "read端": "None（不可读 / schema 不符 / 无 p95）",
+      "verdict": "NOT_AVAILABLE"
     },
     "deploy/loadtest/probe_session_owner_nonowner.json": {
       "read端": "None（不可读 / schema 不符 / 无 p95）",
