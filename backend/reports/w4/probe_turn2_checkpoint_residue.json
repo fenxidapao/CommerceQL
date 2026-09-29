@@ -1,8 +1,8 @@
 {
   "meta": {
     "produced_by": "reports/w4/probe_turn2_checkpoint_residue.py",
-    "read_at": "2026-09-29T07:19:52+00:00",
-    "head": "eb73324",
+    "read_at": "2026-09-29T08:42:12+00:00",
+    "head": "5a28abc",
     "quota_cost_cny": 0.0,
     "checkpointer_under_test": "langgraph MemorySaver（生产 = AsyncPostgresSaver；本件只需要「同一 thread 跑过多轮」这一事实）",
     "why_contract_suite_misses_it": "tests/contract/** 全部 build_graph() ⇒ checkpointer=None"
@@ -39,6 +39,11 @@
           null
         ]
       ],
+      "terminal_payload_keys": [
+        "terminal"
+      ],
+      "terminal_digest": "{\"terminal\": true}",
+      "stage_frames": 6,
       "events": [
         "ack",
         "stage",
@@ -150,6 +155,14 @@
           "INTERNAL"
         ]
       ],
+      "terminal_payload_keys": [
+        "code",
+        "message",
+        "retryable",
+        "terminal"
+      ],
+      "terminal_digest": "{\"code\": \"INTERNAL\", \"message\": \"\", \"retryable\": false, \"terminal\": true}",
+      "stage_frames": 0,
       "events": [
         "ack",
         "error"
@@ -166,7 +179,7 @@
     ]
   },
   "terminal_kind_matrix": {
-    "after_complete": {
+    "after_complete__turn2_green": {
       "turn1": {
         "asked": "上个月卖得怎么样",
         "terminal": [
@@ -175,6 +188,11 @@
             null
           ]
         ],
+        "terminal_payload_keys": [
+          "terminal"
+        ],
+        "terminal_digest": "{\"terminal\": true}",
+        "stage_frames": 6,
         "events": [
           "ack",
           "stage",
@@ -218,6 +236,14 @@
             "INTERNAL"
           ]
         ],
+        "terminal_payload_keys": [
+          "code",
+          "message",
+          "retryable",
+          "terminal"
+        ],
+        "terminal_digest": "{\"code\": \"INTERNAL\", \"message\": \"\", \"retryable\": false, \"terminal\": true}",
+        "stage_frames": 0,
         "events": [
           "ack",
           "error"
@@ -228,9 +254,31 @@
           "trusted_context",
           "normalize"
         ]
-      }
+      },
+      "turn2_node_deltas": [
+        {
+          "node": "trusted_context",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "normalize",
+          "wrote_terminal": false,
+          "keys": [
+            "intent",
+            "intent_detail",
+            "normalized_question",
+            "resolved_terms",
+            "time_parse_ok",
+            "time_range",
+            "unresolved_terms"
+          ]
+        }
+      ],
+      "detector_terminal_without_any_stage": true,
+      "detector_terminal_digest_same_as_turn1": false
     },
-    "after_refuse_planblocked": {
+    "after_refuse_plan_blocked__turn2_green": {
       "turn1": {
         "asked": "上个月卖得怎么样",
         "terminal": [
@@ -239,6 +287,15 @@
             null
           ]
         ],
+        "terminal_payload_keys": [
+          "blocking_issues",
+          "message",
+          "reason",
+          "suggestions",
+          "terminal"
+        ],
+        "terminal_digest": "{\"blocking_issues\": [\"缺表\"], \"message\": \"系统里没有能回答这个问题的数据，无法给出结果。\", \"reason\": \"no_data_asset\", \"suggestions\": [\"可以试着换一个更具体的问法（点明指标与时间范围）\", \"也可以先收窄维度，例如只看某个类目或某个渠道\"], \"terminal\": true}",
+        "stage_frames": 3,
         "events": [
           "ack",
           "stage",
@@ -267,6 +324,14 @@
             null
           ]
         ],
+        "terminal_payload_keys": [
+          "message",
+          "reason",
+          "suggestions",
+          "terminal"
+        ],
+        "terminal_digest": "{\"message\": \"系统里没有能回答这个问题的数据，无法给出结果。\", \"reason\": \"no_data_asset\", \"suggestions\": [\"可以试着换一个更具体的问法（点明指标与时间范围）\", \"也可以先收窄维度，例如只看某个类目或某个渠道\"], \"terminal\": true}",
+        "stage_frames": 0,
         "events": [
           "ack",
           "refuse"
@@ -280,9 +345,221 @@
           "normalize",
           "refuse_out"
         ]
-      }
+      },
+      "turn2_node_deltas": [
+        {
+          "node": "trusted_context",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "normalize",
+          "wrote_terminal": false,
+          "keys": [
+            "intent",
+            "intent_detail",
+            "normalized_question",
+            "resolved_terms",
+            "time_parse_ok",
+            "time_range",
+            "unresolved_terms"
+          ]
+        },
+        {
+          "node": "refuse_out",
+          "wrote_terminal": false,
+          "keys": []
+        }
+      ],
+      "detector_terminal_without_any_stage": true,
+      "detector_terminal_digest_same_as_turn1": false
     },
-    "after_gate1_reject": {
+    "after_refuse_plan_blocked__turn2_refuses_again": {
+      "turn1": {
+        "asked": "上个月卖得怎么样",
+        "terminal": [
+          [
+            "refuse",
+            null
+          ]
+        ],
+        "terminal_payload_keys": [
+          "blocking_issues",
+          "message",
+          "reason",
+          "suggestions",
+          "terminal"
+        ],
+        "terminal_digest": "{\"blocking_issues\": [\"缺表\"], \"message\": \"系统里没有能回答这个问题的数据，无法给出结果。\", \"reason\": \"no_data_asset\", \"suggestions\": [\"可以试着换一个更具体的问法（点明指标与时间范围）\", \"也可以先收窄维度，例如只看某个类目或某个渠道\"], \"terminal\": true}",
+        "stage_frames": 3,
+        "events": [
+          "ack",
+          "stage",
+          "stage",
+          "stage",
+          "refuse"
+        ],
+        "audit_rows_this_turn": 1,
+        "audit_outcomes": [
+          "refuse"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "refuse_out"
+        ]
+      },
+      "turn2": {
+        "asked": "上面那个指标按店铺拆开分别是多少",
+        "terminal": [
+          [
+            "refuse",
+            null
+          ]
+        ],
+        "terminal_payload_keys": [
+          "message",
+          "reason",
+          "suggestions",
+          "terminal"
+        ],
+        "terminal_digest": "{\"message\": \"系统里没有能回答这个问题的数据，无法给出结果。\", \"reason\": \"no_data_asset\", \"suggestions\": [\"可以试着换一个更具体的问法（点明指标与时间范围）\", \"也可以先收窄维度，例如只看某个类目或某个渠道\"], \"terminal\": true}",
+        "stage_frames": 0,
+        "events": [
+          "ack",
+          "refuse"
+        ],
+        "audit_rows_this_turn": 1,
+        "audit_outcomes": [
+          "refuse"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "refuse_out"
+        ]
+      },
+      "turn2_node_deltas": [
+        {
+          "node": "trusted_context",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "normalize",
+          "wrote_terminal": false,
+          "keys": [
+            "intent",
+            "intent_detail",
+            "normalized_question",
+            "resolved_terms",
+            "time_parse_ok",
+            "time_range",
+            "unresolved_terms"
+          ]
+        },
+        {
+          "node": "refuse_out",
+          "wrote_terminal": false,
+          "keys": []
+        }
+      ],
+      "detector_terminal_without_any_stage": true,
+      "detector_terminal_digest_same_as_turn1": false
+    },
+    "after_refuse_llm_no_template_hit__turn2_green": {
+      "turn1": {
+        "asked": "上个月卖得怎么样",
+        "terminal": [
+          [
+            "refuse",
+            null
+          ]
+        ],
+        "terminal_payload_keys": [
+          "message",
+          "reason",
+          "suggestions",
+          "terminal"
+        ],
+        "terminal_digest": "{\"message\": \"系统里没有能回答这个问题的数据，无法给出结果。\", \"reason\": \"no_data_asset\", \"suggestions\": [\"可以试着换一个更具体的问法（点明指标与时间范围）\", \"也可以先收窄维度，例如只看某个类目或某个渠道\"], \"terminal\": true}",
+        "stage_frames": 0,
+        "events": [
+          "ack",
+          "refuse"
+        ],
+        "audit_rows_this_turn": 1,
+        "audit_outcomes": [
+          "refuse"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "refuse_out"
+        ]
+      },
+      "turn2": {
+        "asked": "上面那个指标按店铺拆开分别是多少",
+        "terminal": [
+          [
+            "refuse",
+            null
+          ]
+        ],
+        "terminal_payload_keys": [
+          "message",
+          "reason",
+          "suggestions",
+          "terminal"
+        ],
+        "terminal_digest": "{\"message\": \"系统里没有能回答这个问题的数据，无法给出结果。\", \"reason\": \"no_data_asset\", \"suggestions\": [\"可以试着换一个更具体的问法（点明指标与时间范围）\", \"也可以先收窄维度，例如只看某个类目或某个渠道\"], \"terminal\": true}",
+        "stage_frames": 0,
+        "events": [
+          "ack",
+          "refuse"
+        ],
+        "audit_rows_this_turn": 1,
+        "audit_outcomes": [
+          "refuse"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "refuse_out"
+        ]
+      },
+      "turn2_node_deltas": [
+        {
+          "node": "trusted_context",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "normalize",
+          "wrote_terminal": false,
+          "keys": [
+            "intent",
+            "intent_detail",
+            "normalized_question",
+            "resolved_terms",
+            "time_parse_ok",
+            "time_range",
+            "unresolved_terms"
+          ]
+        },
+        {
+          "node": "refuse_out",
+          "wrote_terminal": false,
+          "keys": []
+        }
+      ],
+      "detector_terminal_without_any_stage": true,
+      "detector_terminal_digest_same_as_turn1": true
+    },
+    "after_gate1_reject__turn2_green": {
       "turn1": {
         "asked": "上个月卖得怎么样",
         "terminal": [
@@ -291,6 +568,14 @@
             "GATE_AST_REJECTED"
           ]
         ],
+        "terminal_payload_keys": [
+          "code",
+          "message",
+          "retryable",
+          "terminal"
+        ],
+        "terminal_digest": "{\"code\": \"GATE_AST_REJECTED\", \"message\": \"\", \"retryable\": false, \"terminal\": true}",
+        "stage_frames": 4,
         "events": [
           "ack",
           "stage",
@@ -323,6 +608,14 @@
             "INTERNAL"
           ]
         ],
+        "terminal_payload_keys": [
+          "code",
+          "message",
+          "retryable",
+          "terminal"
+        ],
+        "terminal_digest": "{\"code\": \"INTERNAL\", \"message\": \"\", \"retryable\": false, \"terminal\": true}",
+        "stage_frames": 0,
         "events": [
           "ack",
           "error"
@@ -336,7 +629,34 @@
           "normalize",
           "error_out"
         ]
-      }
+      },
+      "turn2_node_deltas": [
+        {
+          "node": "trusted_context",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "normalize",
+          "wrote_terminal": false,
+          "keys": [
+            "intent",
+            "intent_detail",
+            "normalized_question",
+            "resolved_terms",
+            "time_parse_ok",
+            "time_range",
+            "unresolved_terms"
+          ]
+        },
+        {
+          "node": "error_out",
+          "wrote_terminal": false,
+          "keys": []
+        }
+      ],
+      "detector_terminal_without_any_stage": true,
+      "detector_terminal_digest_same_as_turn1": false
     }
   },
   "fix_shape_reset_at_entry": {
@@ -379,6 +699,11 @@
             null
           ]
         ],
+        "terminal_payload_keys": [
+          "terminal"
+        ],
+        "terminal_digest": "{\"terminal\": true}",
+        "stage_frames": 6,
         "events": [
           "ack",
           "stage",
@@ -422,6 +747,11 @@
             null
           ]
         ],
+        "terminal_payload_keys": [
+          "terminal"
+        ],
+        "terminal_digest": "{\"terminal\": true}",
+        "stage_frames": 6,
         "events": [
           "ack",
           "stage",
@@ -465,6 +795,11 @@
             null
           ]
         ],
+        "terminal_payload_keys": [
+          "terminal"
+        ],
+        "terminal_digest": "{\"terminal\": true}",
+        "stage_frames": 6,
         "events": [
           "ack",
           "stage",

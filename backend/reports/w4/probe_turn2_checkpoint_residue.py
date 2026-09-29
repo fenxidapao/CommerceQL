@@ -7,6 +7,12 @@ assert_terminal_is_settable → ValueError`（`deploy/loadtest/r20_internal_attr
 并回答三件它答不了的事：① 残留的到底是哪些通道 ② 是不是只有 `complete` 之后才坏
 ③ "入口复位"这条修法成不成立。
 
+**第二十一轮追加**（回 W7 `r21_turn_index_attribution.txt` 表 2 的反例：4 条"上一轮 = `refuse`"
+却落 **`failed` 行 + INTERNAL**，与"静默复用"不同形）⇒ 矩阵加两档（本轮也拒 / 上一轮的 refuse
+由 `normalize` 而非 `plan` 写），并把 W7 那两个**客户端探测器同名同口径**在离线面一起算
+（`terminal_without_any_stage` / `terminal_digest_same_as_turn1`，易变键集合与其
+`_frame_digest` 一致）⇒ 两窗口读的是同一个信号，不是各造一套。
+
 为什么 `tests/contract/**` 全都没看见它：**整套契约面用 `build_graph()`（`checkpointer=None`）**
 ⇒ 线程态从不跨 run 累积 ⇒ 这条缝在离线面物理不存在（`_fullchain_deps.py:659` 等 8 处）。
 
@@ -56,6 +62,46 @@ IDENTITY_KEYS = frozenset(
     {"trace_id", "task_id", "session_id", "tenant_id", "user_id", "role", "scope"}
 )
 
+#: 与 W7 客户端探测器 `probe_session_owner_context._frame_digest` **同一组易变键**
+#: —— 跨窗口比指纹必须同集合，否则两条读数不可比。
+_VOLATILE_FRAME_KEYS = frozenset(
+    {"task_id", "trace_id", "session_id", "elapsed_ms", "ts", "timestamp", "seq"}
+)
+
+
+class _DeltaSpy:
+    """透明代理：只记录"每个节点返回的增量里有没有 `terminal`"，不改图也不改 runner。
+
+    存在的理由 = 用读数区分两种坏法，而不是靠推路径：
+    **无守卫节点写终态 → 抛 N-08（崩）** vs **出口节点跳过写终态 → 复用上一轮结论（不崩）**。
+    """
+
+    def __init__(self, inner: object) -> None:
+        self._inner = inner
+        self.deltas: list[dict[str, Any]] = []
+
+    async def astream(self, *args: Any, **kwargs: Any):
+        async for chunk in self._inner.astream(*args, **kwargs):  # type: ignore[attr-defined]
+            for node, update in dict(chunk).items():
+                upd = update if isinstance(update, dict) else {}
+                self.deltas.append(
+                    {
+                        "node": node,
+                        "wrote_terminal": bool(upd.get("terminal")),
+                        "keys": sorted(upd),
+                    }
+                )
+            yield chunk
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._inner, name)
+
+
+def _frame_digest(payload: dict[str, Any]) -> str:
+    """终止帧指纹（剥掉易变键后逐字比）—— 与 W7 的探测器同集合、同口径。"""
+    stable = {k: v for k, v in payload.items() if k not in _VOLATILE_FRAME_KEYS}
+    return json.dumps(stable, sort_keys=True, ensure_ascii=False)
+
 
 def _turn(graph: Any, chain: Any, *, tag: str, question: str) -> dict[str, Any]:
     """走**生产同一个** `SseRunner`（不改代码），返回这一轮的终态/审计/节点读数。"""
@@ -71,9 +117,14 @@ def _turn(graph: Any, chain: Any, *, tag: str, question: str) -> dict[str, Any]:
 
     frames = [_parse(f) for f in asyncio.run(_collect())]
     out = runner.outcome
+    terminals = [(e, d) for e, d in frames if d.get("terminal") is True]
+    payload = terminals[0][1] if terminals else {}
     return {
         "asked": question,
-        "terminal": [[e, d.get("code")] for e, d in frames if d.get("terminal") is True],
+        "terminal": [[e, d.get("code")] for e, d in terminals],
+        "terminal_payload_keys": sorted(payload),
+        "terminal_digest": _frame_digest(payload) if payload else None,
+        "stage_frames": sum(1 for e, _ in frames if e == "stage"),
         "events": [e for e, _ in frames],
         "audit_rows_this_turn": len(chain.audit.pre),
         "audit_outcomes": [r.get("outcome") for r in chain.audit.pre],
@@ -127,18 +178,51 @@ def _residue_across_turns() -> dict[str, Any]:
 
 
 def _terminal_kind_matrix() -> dict[str, Any]:
-    """第 1 轮的三种终态 × 第 2 轮换一句问题 —— 看坏法是否只有一种。"""
-    arms: dict[str, Callable[[], Any]] = {
-        "after_complete": lambda: make_chain(),
-        "after_refuse_planblocked": lambda: make_chain(plan_blocked_issues=("缺表",)),
-        "after_gate1_reject": lambda: make_chain(sql="SELECT 1; SELECT 2"),
+    """五种"上一轮结论 × 本轮意图"的组合 —— 把 W7 的两个客户端探测器在离线面一起算出来。
+
+    为什么要有第 4、5 档：W7 `r21` 表 2 抓到 4 条"上一轮 = refuse"却落 **`failed` 行 + INTERNAL**，
+    与我的"上一轮 refuse ⇒ 静默复用"不同形 ⇒ 差异只可能来自**本轮自己是否也要写终态**、
+    以及**上一轮的 refuse 是哪个节点写的**（守卫节点 vs 无守卫节点）。⇒ 各加一档。
+    """
+    from app.llm.errors import LlmRefused
+
+    arms: dict[str, tuple[Callable[[], Any], Callable[[], Any]]] = {
+        "after_complete__turn2_green": (lambda: make_chain(), lambda: make_chain()),
+        "after_refuse_plan_blocked__turn2_green": (
+            lambda: make_chain(plan_blocked_issues=("缺表",)),
+            lambda: make_chain(),
+        ),
+        "after_refuse_plan_blocked__turn2_refuses_again": (
+            lambda: make_chain(plan_blocked_issues=("缺表",)),
+            lambda: make_chain(plan_blocked_issues=("缺表",)),
+        ),
+        "after_refuse_llm_no_template_hit__turn2_green": (
+            lambda: make_chain(understand_error=LlmRefused("模板层无命中 → 拒答（不是故障）")),
+            lambda: make_chain(),
+        ),
+        "after_gate1_reject__turn2_green": (
+            lambda: make_chain(sql="SELECT 1; SELECT 2"),
+            lambda: make_chain(),
+        ),
     }
     out: dict[str, Any] = {}
-    for name, build_first in arms.items():
-        graph = build_graph(checkpointer=MemorySaver())
+    for name, (build_first, build_second) in arms.items():
+        spy = _DeltaSpy(build_graph(checkpointer=MemorySaver()))
+        spy.deltas.clear()
+        t1 = _turn(spy, build_first(), tag=f"{name}-1", question=Q1)
+        spy.deltas.clear()
+        t2 = _turn(spy, build_second(), tag=f"{name}-2", question=Q2)
+        same_digest = (
+            t1["terminal_digest"] is not None
+            and t1["terminal_digest"] == t2["terminal_digest"]
+        )
         out[name] = {
-            "turn1": _turn(graph, build_first(), tag=f"{name}-1", question=Q1),
-            "turn2": _turn(graph, make_chain(), tag=f"{name}-2", question=Q2),
+            "turn1": t1,
+            "turn2": t2,
+            "turn2_node_deltas": list(spy.deltas),
+            # ↓ 与 W7 客户端探测器同名同口径（`probe_session_owner_context.py` 第 4 步）
+            "detector_terminal_without_any_stage": bool(t2["terminal"]) and t2["stage_frames"] == 0,
+            "detector_terminal_digest_same_as_turn1": same_digest,
         }
     return out
 
