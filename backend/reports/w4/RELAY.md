@@ -602,3 +602,76 @@ W7 下一次开工写 **②摘 `instrumentation.py` 反推 + ③放宽 `metrics.
 - **回归臂硬约束收下**（W7）：新镜像首格作废（冷臂 `ok=0/5xx 35` ⇄ 同参热臂 `ok=8/5xx 0`）⇒ 我窗口今后引用任何压测/预检读数**必带"同参热臂 + c=1 控制臂"**，冷启动首格不作回归凭据。
 - 🔴 **Test D/E 归属指向 W2C**（W7 已明确不认领，其 09-22/09-23 记录为"2 passed / 84 passed"且 scratch 无 Test D/E）：名与判据出自架构件 —— `reports/arch/RELAY.md` 现读："**判据④b** = 把 **W2C 探针 B 档**固化成契约测试（deny 列经真端口 ⇒ `G2-DENY` + 退回可见面必红）"。⇒ 作者指向 **W2C**，用例落在**我**的 `tests/contract/test_gate_seam_contract.py`（+57 行，至今 `git show HEAD` 内查不到）。
   **两条出路，等一句裁定**：① W2C 自己提交（我不动）；② 架构授权 W4 按判据④b 原文重写并提交 —— 默认走 ①，因为 ② 等于我替别人签一份未评审的判据文字。⚠️ 无论哪条，都请架构同时订正 `08 §4.1` 的 `tests/contract/**` 归属列（本轮已是第三次他窗内容进我目录：`e0e6b39` 两处 + 这次）。
+
+
+---
+
+## 二十三 → W7 / 架构 / W6 / W0 / W1B：结构锁落地（W7 那句"要"的兑现）+ 🔴 `U-132` 此刻仍挡着我的门 + 两条码证自证 + 一处方法学自曝
+
+> 基准 HEAD `106b793`（`git rev-parse --short HEAD` 现测）；读数时刻 2026-09-29 13:0x–13:3x（本地）；下一可用号现读 `docs/07 §4.8` 末段行首 = **`U-133`**（本轮 W4 **不取号**）。
+
+### 23.1 🔴 `U-132` 未自愈：`platform.machine()` 3/3 挂死 ≥15s，而 `winmgmt` 报 `RUNNING`
+
+| 项 | 读数（09-29 13:0x 本机） |
+|---|---|
+| 探针 `python -c "import platform,time;t=time.time();platform.machine();print(round(time.time()-t,2))"` ×3（15s 超时） | **3/3 被超时杀掉、stdout 0 字节**（rc=124） |
+| `sc query winmgmt` | `STATE : 4 RUNNING` / `WIN32_EXIT_CODE : 0` |
+| 卡点栈（`faulthandler.dump_traceback_later(18)` 抓） | `platform.py:1110 machine() → :999 uname() → :450 win32_ver() → :391 _win32_ver() → :330 _wmi_query()`，触发方 = `sqlalchemy/util/compat.py:50`（**导入期**） |
+| 影响面（逐模块 `--collect-only`，25s 超时） | `tests/contract/` 里 **5 个模块挂死**：`test_api_endpoints_contract.py` / `test_api_feedback_contract.py` / `test_health_endpoints_contract.py` / `test_obs_startup_assertion_wiring.py` / `test_pool_connect_args_u124.py`；整目录 `--collect-only` rc=124（**收集阶段就挂，与用例无关**） |
+| 对照 | `interp ok 3.13.14` → `BEFORE machine()` 打印、`AFTER` 永不打印 ⇒ 卡点在 `machine()` 本身，不是我的用例 |
+
+- ⚠️ **A 半（主机侧恢复）不是我派的**：架构 v17 §31 ② 已把 A 半派给 **总控/W7**、B 半（`backend/tests/conftest.py` 的测试期 shim）派给 **W0 落、W1B 复核** ⇒ 我不代落 shim（那是别人名下的文件，且 B 会把"环境坏"伪装成"已修"）。
+- **本机出现的症状请一律先跑上面那条计时探针再怀疑自己的代码**：`import sqlalchemy` 在有 shim 与无 shim 之间是 **0.31s vs ≥15s 挂死**（架构 A/B 那轮是 0.56s，同源不同次，别当成同一读数）。
+- 本轮所有门禁数字是在**仓库外**的临时 shim（`E:/tmp_qoder/u132_shim/sitecustomize.py`，仅 `platform.machine = lambda: "AMD64"`，**未入库、不在 `app/**`、不在 `tests/**`**）下取的。⇒ **报告里每个数字都带这个前提**：A 半恢复后应由任一窗口在无 shim 条件下复跑一次才算"环境无关绿"。
+
+### 23.2 结构锁已落：`tests/contract/test_audit_terminal_pairing_contract.py`（7 条）
+
+W7 09-29 答的那句"**要**"= 把「逐终态必有一条审计行」写成 `tests/contract/**` 结构断言。分工照其原文：**我出结构锁，W7+W6 出批级取数与阈值**。
+
+钉的三件事（不是又一处逐例断言）：
+
+1. `test_terminal_kind_set_is_the_whole_enum`：`TERMINAL_AUDIT_OUTCOME` 键集 **==** `{e.value for e in SSE_TERMINAL_EVENTS}`（`app/core/enums.py:146`）⇒ 以后新增一种终态而没人给它登记审计 `outcome` ⇒ **当场红**。
+2. `test_audit_vocabulary_closes_on_both_ends`（反向那半）：取值必须 ⊆ 真 `Outcome` 词表（`core/enums.py:384`，**5 值**），且差集必须**恰好** = `{DEGRADED}`（它不发终止帧，`enums.py:145` 注释已具名）⇒ 新增/改名 `Outcome` 而没人说明它对应哪个终态 ⇒ 同样当场红。
+3. `test_every_terminal_has_exactly_one_audit_row[4 档]`：每档**真跑图**，断"恰 1 个终态帧 + 恰 1 条段 1 审计行 + `outcome` 逐字相等"。场景表（本轮实测，非推测）：`complete` = 绿灯链 / `refuse` = `plan_blocked_issues` / `error` = `sql="SELECT 1; SELECT 2"`（gate1 R02）/ `clarify` = A 组 planner 的 `IntentKind.CLARIFY`。
+4. 具名例外（决策表 G1）：`audit_pre` 写库失败 ⇒ 审计 **0 行** + `error(INTERNAL)` + 无 `data` 帧。这条是本锁**唯一**允许 0 行的口子，且必须点名 —— 否则锁退化成恒真。
+
+| 门（13:1x–13:3x，shim 下） | 读数 |
+|---|---|
+| `pytest tests/contract/test_audit_terminal_pairing_contract.py -q` | **7 passed**（1.57s） |
+| `pytest tests/contract -q` | **462 passed**（42.94s）＝ 目录基线 455 + 我 7（**无重复计数** ⇒ 模块级 import 不会把 A 组用例并进来） |
+| `pytest tests/unit tests/contract tests/redteam -q` | **1865 passed**（76.72s）＝ 基线 1858 + 我 7 |
+| `ruff check app tests` / `mypy app` / `lint-imports` | All checks passed / Success: no issues found in **147** files / **4 kept, 0 broken** |
+
+**载荷性对照**（改坏必须红，两处漂移方向各一条，跑完即还原）：
+
+- M1 删掉 `SseEvent.CLARIFY.value: "clarify"` 一行 ⇒ **2 failed**：`test_terminal_kind_set_is_the_whole_enum` + `test_audit_vocabulary_closes_on_both_ends`。
+- M2 把 `"failed"` 改成 `"failed_x"` ⇒ **2 failed**：`test_audit_vocabulary_closes_on_both_ends` + `test_every_terminal_has_exactly_one_audit_row[error]`。
+
+### 23.3 与架构 v17 三分母的对接（不自签结案、不侵 `U-130`）
+
+- 架构 §31 已定：`admitted` = 2xx、`terminal` = 有终止事件的 run 数、`limiter_passed` = 过限流器的请求数 ⇒ `admitted − terminal` 归 **`U-129`**、`terminal − audit_rows` 归 **`U-130`（P1，W7+W6）**。
+- **本锁的位置**：它是**图面**的"终态↔审计行 1:1"结构不变量，既不是 `admitted` 侧的取数、也不是阈值 ⇒ **不替代 `U-130`，也不构成其判据的结案证据**。请架构在 `§4.8` 的 `U-130` 行注明"另有 W4 图面结构锁"以免两号被并成一件事。
+- 我能提供的契约依据（给 W7/W6 的批级判据用，逐字可引）：**每条流有且仅有 1 个终止事件（N-08），且该事件必对应 1 条段 1 审计行；唯一具名例外 = `audit_pre` 写库失败（fail-closed，结果不下发）。**
+
+### 23.4 Test D/E：不用"标"了 —— 工作区里那份重复件已经不在了
+
+- 现测：`git status` 对 `tests/contract/test_gate_seam_contract.py` = **干净**（我此前那 +57 行重复件不在树里），HEAD 内的 Test D/E 是 **W2A `8eadbe8`**（`2026-09-28 23:24`，`git merge-base --is-ancestor 8eadbe8 HEAD` = 真）。
+- `pytest tests/contract/test_gate_seam_contract.py -q` 与我的新文件同跑 = **13 passed**（= 6+7 当时值；本轮收紧后该文件 7、新文件 7 ⇒ 目录 462 为准）。
+- ⇒ §22.3/§22.5 我留的"两条出路（W2C 自提 / 架构授权 W4 重写）"**自动作废**：既已由 W2A 落库并全绿，就没有"代删/代提交"的问题。⚠️ 但 `08 §4.1` 的 `tests/contract/**` 归属列仍是他窗内容第三次进我目录那件事（`e0e6b39` 两处 + `8eadbe8`），归架构裁，我不自改。
+
+### 23.5 两条码证我**自己复算过**（不转述），都落在 `U-131`（P0，W4）的修复面上
+
+1. `app/api/state_store.py:330-341`（现读）：`create_session` 写 `session_meta` 的载荷 7 字段 = `session_id / created_at / title / bundle_version / graph_version / last_turn_at / closed` ⇒ **确无 `user_id`**。⇒ 判据③"旧会话 fail-closed"在生产是**全量命中**，不是边缘档。
+2. `app/api/routers/clarify.py`：`grep -c "get_session"` = **0**（现测）⇒ 澄清写路径**不经**那个"单一强制点"。⚠️ 精确表述：该文件 `:189` 有 `user_id=token.subject`，但那是 `_tenant_scope()` **构造身份上下文**（其 docstring 自陈"只服务一次 `DEL`，不参与任何授权判定"），**不是比对存储属主** ⇒ 我按 `U-131` 落 `get_session()` 单点比对时，**必须同时覆盖澄清写路径**（`_record_turn`，`clarify.py:163`），否则修完仍有缝。
+3. 推理侧 **UNVERIFIED** 的提醒收下：W7 两轮都没走到 `gen_sql` ⇒ "流里没属主词" ≠ "上下文没流入"。我这边涉及该面的任何结论今后一律写成 UNVERIFIED + 附复算路径，不拿"没有证据"当"证据没有"。
+
+### 23.6 回归臂硬约束（沿用 §22.6，本轮再确认一次口径）
+
+判回归必须"**同参热臂 + c=1 控制臂**"；新镜像首格（冷臂）不作回归凭据。⇒ 我对 `U-129` 的活体判据（`INTERNAL=0`、审计行数 = 拒答数）在冷臂样本上**不成立也不指控**，只认热臂读数。
+
+### 23.7 🔴 方法学自曝：`-p no:randomly` 是**空转** ⇒ §22.3/§22.5 的"两序对照"撤回
+
+- 现测：`importlib.util.find_spec("pytest_randomly") = None`；`pytest --version` 头部加载的第三方插件 = anyio / langsmith / asyncio / cov / respx ⇒ **本机没装随机序插件**，`-p no:randomly` 被 pytest 静默接受（对不存在的 `-p no:` 目标不报错）。
+- ⇒ §22.3 表里"默认随机序 vs 禁随机"、§22.5 表里"两序下均全绿"**不是两种顺序**，是**同一收集序跑了两遍**。那条对照无效，**撤回**（原文不删，按本项目规矩就地订正）。
+- 顺带把 §22.5 那格"两条红改判为顺序相关"补一个**已有归因的读数**：`test_deny_column_rejected_through_gate2_seam[裸写]` 那条已由 **W2A `8eadbe8`（09-28 23:24）** 落库并在我本轮复跑中全绿 ⇒ 它的"消失"不是顺序效应，是**有人把我目录里的未提交件重写完并提交了**；另一条红队负控（`tests/redteam::TestNegativeControl`）本轮也在 462/全绿里 ⇒ 其此前报红同样具备"`U-132` 冷导入挂死 / 未提交件在树"的候选解释。⚠️ **我不把这两条红的历史归因写死**（当时无 shim、无随机序、树在漂）—— 只登记"今后复现红之前先跑 23.1 那条探针"。
+- 新自检项（进我的开窗必做）：任何写"两序/随机序"的门禁读数，落笔前先 `find_spec` 确认插件存在。
