@@ -94,7 +94,11 @@ def _sse_names(text: str) -> dict[str, list[str]]:
 
 
 #: 终止帧里每轮都会变的键 ⇒ 比对"两轮结论是否同一个"之前先剥掉。
-_VOLATILE_FRAME_KEYS = ("task_id", "trace_id", "session_id", "elapsed_ms", "ts", "timestamp", "seq")
+#: `blocking_issues` 是 W4 `3188a9c` 指出的漏项：它由 `runner.py:537-541` 从 **`intent_detail`** 通道取，
+#: 而复用臂残留的是 **`terminal`** 通道 ⇒ 第 1 轮带该键、第 2 轮不带 ⇒ 指纹必然不等 ⇒ 探测器对
+#: "PLAN 自拒后静默复用"那一格**永不响**。它不是结论内容，故剥；但剥掉等于丢信号 ⇒ 另记两个布尔。
+_VOLATILE_FRAME_KEYS = ("task_id", "trace_id", "session_id", "elapsed_ms", "ts", "timestamp", "seq",
+                        "blocking_issues")
 
 
 def _terminal_frame(text: str) -> dict[str, Any] | None:
@@ -210,6 +214,8 @@ async def main() -> None:
             "task_id": _task_id_of_stream(q1["text"]),
             "terminal_frame_seen": '"terminal": true' in q1["text"].replace('"terminal":true', '"terminal": true'),
             "terminal_frame_digest": _frame_digest(_terminal_frame(q1["text"])),
+            # 指纹剥掉的键不落读数 ⇒ 另记"这一帧到底带了哪些键"，被剥的信号（如 `blocking_issues`）仍可在产物里查到
+            "terminal_frame_keys": sorted(_terminal_frame(q1["text"]) or {}),
             **_sse_names(q1["text"]),
         }
 
@@ -239,6 +245,7 @@ async def main() -> None:
                                           and not _sse_names(q2["text"])["stages_seen"],
             "terminal_digest_same_as_turn1": _frame_digest(_terminal_frame(q2["text"]))
                                              == rep["2_owner_q1"]["terminal_frame_digest"],
+            "terminal_frame_keys": sorted(_terminal_frame(q2["text"]) or {}),
             **_sse_names(q2["text"]),
         }
 

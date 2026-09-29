@@ -1221,7 +1221,10 @@ W4 §④ 报的形状批级不变量抓不到：`refuse` 之后第 2 轮**复用
 · 实测（只看形态，不打印值）：`DATABASE_URL` 与 `ANALYTICS_DB_URL` 都是 `postgresql+psycopg:` 开头、含 `@`、长度 51 ⇒
   **这是有意的**：这两条的消费者是 SQLAlchemy（`app/core/config.py:84/177`），不是 psycopg。
 · 库里已有**唯一**的 psycopg 侧转换件 = `app/repo/dsn.py:153 to_libpq_conninfo()`（生产两处调用：
-  `graph/build.py:186`、`repo/cost_ledger.py:140`），它的注释里写的正是 W6 遇到的那种失败形态（前缀多一个 `+psycopg`
+  `graph/build.py:186`、`repo/cost_ledger.py:140`；**🔴 第二十二轮订正：这句我数错了，自己重数 = 5 处**
+  `graph/build.py:186`、`repo/cost_ledger.py:140`、`repo/pools.py:310`、`repo/startup_assertions.py:503`、`:520`
+  —— 与 W6 独立数的**完全一致**（4 个文件、5 个调用点；`reports/w2a/_u124_container_backup/pools.py` 是归档副本，不算）。
+  原句留在这里不删 = 让"别人给的计数也要自己数"这条有本窗口的反面样本），它的注释里写的正是 W6 遇到的那种失败形态（前缀多一个 `+psycopg`
   ⇒ 不报" scheme 不认识"而是 `PoolTimeout: couldn't get a connection after 30.00 sec`，把排查方向指向"库挂了"）。
   ⇒ **建议 W6 的 `normalize_dsn()` 换成调用它**（同语义、且键名与 GUC 契约在同一文件里，改了不会只改一处）。
   ⚠️ compose 内部主机名不自动改写这条我同意 W6：**悄悄换主机 = 换靶子**，宿主跑探针请显式指 `127.0.0.1`。
@@ -1247,6 +1250,110 @@ W4 §④ 报的形状批级不变量抓不到：`refuse` 之后第 2 轮**复用
 | `driver.py --self-check` | 10/10（未改动） |
 | `ruff check driver.py probe_session_owner_context.py` | 全绿；🟡 顺带实测：`ruff check ../deploy/loadtest/` 有 **18 条** 历史告警全在**归档探针件**里（`probe_l4_candidate_bound.py`/`probe_rls_face_locator.py`/`w2b_materialize/*`），且 **CI 不覆盖它们**（`.github/workflows/ci.yml:319-321` 的 `ruff check .` 工作目录 = `BACKEND_DIR`）⇒ 本轮不顺手改（是 W2B/W7 早轮证据件），登记为待清 |
 | DSN 卫生门禁 | `tests/unit/test_migration_dsn_hygiene.py` = **8 passed / 5.54s**（与架构 15:0x 的 8 passed / 5.96s 同向）⇒ `U-132` 当前不复现 |
+
+#### 三.0.1s ★ 第二十二轮（2026-09-29 · 本机 20:2x–20:3x 北京 = **非峰**）：三条零额度还账 + 一把新尺（thread 深度）+ 四格活体（实付 ¥0.092996）
+
+**0）环境事件（本轮开场就撞上，先登记）**
+
+| 项 | 读数 |
+|---|---|
+| Docker 守护进程 | 本机重启过（五个容器 `Up 7 minutes`，而我的 `w7load-api` = **`Exited (255) 7 minutes ago`**）⇒ 12:1xZ 起的读数都属"重启后第一次" |
+| 我做了什么 | 只 `docker start w7load-api`（**我自己的容器**，不是共享栈）；启动日志四条 `startup_assertion` 全 passed、`Application startup complete`、`/api/v1/openapi.json` = 200 |
+| 限流态 | `redis-cli --scan rl:*` = **0 键**、`*lock*` = **0 键** ⇒ 配额桶与串行锁都干净（不存在残留锁冒充 409） |
+| 数据面 | `embed_doc` **197 行**（未被清）；`audit_log` 812 行 / 末条 `06:40:33Z`；`cost_ledger` 1484 行 / **¥2.489322** ⇒ 本轮花费可用 `user_id like 'u_g%'` 与按格时间窗两种切法各自闭合 |
+| 后果 | **容量类读数（p95、`H≈6.18s`、吞吐）与第二十轮不可比**（新进程 + 冷连接，日志里 `probe_warm_failed` 在场）⇒ 本轮只当"本格形状"读，不进任何达标句 |
+
+**1）三条零额度还账（先还钱再花钱）**
+
+| 欠账 | 本轮动作与结论 |
+|---|---|
+| W4-① `lag` 跑错序列 | 已重取：`deploy/loadtest/r22_lag_runseq.sql`（6 条语句，`ON_ERROR_STOP=1` 实跑 exit 0）＋证据件 `r22_lag_runseq_attribution.txt`。**聚合不变（`failed 9 / refuse 4`）但资格变了**：并集序列（审计面 ∪ 入账面）与纯 ledger 两条口径同数，原因已核 —— 4 条崩臂属 `u_f04/06/07/09`，13 条浅失败属 `u_f03/05/08/10/11/12`，**两个 user 集合不相交** ⇒ 上一版是"碰巧对"，不是方法对 |
+| W4-③ 探测器漏 PLAN 自拒那一格 | `_VOLATILE_FRAME_KEYS` 加 `blocking_issues`（根因读码：该键来自 `runner.py:537-541` 的 `intent_detail` 通道，而残留的是 `terminal` 通道 ⇒ 第 2 轮不带 ⇒ 指纹必不等）。自证件从 3 格改 **4 格 + 剥键承重件**：格 1a 断言「**原始帧不等、剥完指纹相等**」⇒ 该键一旦被移出自证件当场红。另跑一次性负对照：`WITH strip = True / WITHOUT strip = False` ⇒ 这条规则**确实承重** |
+| W6-① "生产两处调用" | 自己重数 = **5 处**（`build.py:186`、`cost_ledger.py:140`、`pools.py:310`、`startup_assertions.py:503`、`:520`），与 W6 独立数的完全一致 ⇒ 已就地订正（§三.0.1r 第 4 条原句保留、订正写在旁边） |
+| W6-⑦ `stage=none` 语义 | `driver.py` 的 `_provenance` 补死：**`stage=none` ≠ 没进图、≠ 没落审计行**（自有读数：`stage=none` 共 22 = error 11 + 4xx 9 + refuse 2，而审计缺行只有 4 ⇒ **≥18 条落了行**）。"为什么落了行却一个 stage 都没有"= **UNVERIFIED**（无对照臂） |
+
+**2）🔴 本轮自己撞出来的量具缺陷（比上面四条都贵）：第二十一轮那把「轮次」尺是 user 尺，不是 thread 尺**
+
+· 读码：`driver.py:320` `worker_token(i)` 的 `i` 是 **worker 序号** ⇒ 一个 worker 全程一个 user ✓；
+  但 `:298` 的 `sid = session_pool[i % len(session_pool)]` 里 `i` 是**全局请求游标** ⇒ **同一个 worker 的连续两条请求会落在两个不同会话上**。
+  服务端 `thread_id = {tenant}:{user}:{session}`（`app/api/runner.py:196`）含 session ⇒
+  **我表 1/表 2 那句"一个 user 的一串请求 = 一个 thread 的连续几轮"是错的**：`首轮 0/12` 是**按 user 分组**的读数，不是按 thread。
+· 修法（我的文件、零额度）：`Sample` 加 `worker` + `session_id`（都是标识符，不犯 N-11），新增 `thread_depth` 读数
+  （`depth_hist` / `threads` / `by_outcome` / `by_code`，位次按**完成序**并写明），
+  `--self-check` 加**离线双向断言**（4 条手搓样本 ⇒ `{1:2, 2:1}` + `unsessioned:1`，防"`--reuse-sessions` 关着时整根尺悬空却没人报"）。实测 10/10 通过。
+· 活体对照（本轮两格同参数只差 pool）：`--session-pool 12 --max-requests 24` ⇒ `thread_depth = {"1":22,"2":2} / threads:22`
+  —— 24 条里**只有 2 条真的是某 thread 的第 2 轮**；换 `--session-pool 1` ⇒ `{"1":4,"2":4,"3+":4} / threads:4` = **设计意图逐字对上**。
+  ⇒ 要"同 thread 第 N 轮"这一维**必须 `--session-pool 1`**。这条从今天起写在量具里，不再靠取模的运气。
+
+**3）四格活体（全部非峰；非峰由 `cost_ledger.is_peak` 自证，不是我看时钟推断）**
+
+| 格 | 几何 | 发出/准入/终止 | 审计行 | gap | 调用 | 花费 |
+|---|---|---|---|---|---|---|
+| **W 锁维修正** | `session-lock` c=8（内置）+ `--max-requests 8`，单会话、全线 `tokens[0]` = `u_g01` | 8 / 1 / 1 | 1 | 0 | 1 | **¥0.000640** |
+| **T 稳态（新量具首格）** | `steady` c=12、pool=12、`--max-requests 24`、`--no-async` | 24 / 24 / 24 | 24 | 0 | 53 | ¥0.068216 |
+| **U 同 thread 三轮** | `steady` c=4、**pool=1**、`--max-requests 12` | 12 / 12 / 12 | 12 | 0 | 12 | ¥0.008201 |
+| **P 探针两臂** | `probe_session_owner_context.py` 主臂 + `--control` 臂 | 4 / 4 / 4 | 4 | 0 | 10 | ¥0.015939 |
+| 合计 | 新令牌前缀 `u_g01..u_g12`（与 `u_f*` 隔离，归因不混） | 48 / 41 / 41 | 41 | **0** | 76 | **¥0.092996** |
+
+· 结账两条切法互相闭合：`user_id like 'u_g%'` = **76 次 / ¥0.092996**；按格时间窗相加 = 1+53+12+10 = 76 次、¥0.000640+0.068216+0.008201+0.015939 = **¥0.092996** ✓；
+  台账 1484 → **1560 行**、¥2.489322 → **¥2.582318**（差 = ¥0.092996，1:1）。
+· **非峰单价校准**（取代我记忆里"非峰 = 峰 ÷1.92"那条外推）：T 格 **¥0.00284/准入条**（2.2 次/条 × ¥0.00129/次）。
+  ⇒ 从本轮起非峰报价以 **¥0.0028/准入条** 为基准，且**必须同时报准入条数**（不是发出条数）。
+
+**4）④′ 锁维修正判据：本窗口第一次有机器读数**
+
+| 判据支 | 读数（`r22_lock_c8n8.json`） |
+|---|---|
+| `409 ≥ 1` | `codes = {"SESSION_CONFLICT": 7}`、`admission.other_http_4xx = 7` ✓ |
+| 几何前置"同会话在途 ≥2" | `single_session`（1 个会话）+ c=8 + **全线固定创建者令牌**（`:316-320` 那条裁定）⇒ 7 条 409 本身就证明至少 2 条重叠 ✓ |
+| `409 不带配额四头` | **`quota_headers_by_status = {"409": {"none": 7}}`** ✓ |
+| 正向对照（防"没读到"被读成"没有"） | 同一件 `--self-check` 里桩把四头发给 429、故意不给 409 ⇒ 断言 `{"409":{"none":1},"429":{"bucket+limit+remaining+reset":1}}` 双向通过；四头名唯一出处 = `app/api/ratelimit.py:147-150` |
+| ⚠️ 最容易读错的一点 | 那 7 条 409 **带 `Retry-After: 3`**，而 `errors.py:253` 把 `HEADER_RETRY_AFTER` 与四头**分列**（四头 = `X-RateLimit-*`）⇒ 带 Retry-After **不违反**本判据；若判据被写成"409 不许带任何头"就会误判负 ⇒ 这句给架构对表用 |
+| ⇒ 后果 | ④′ 的**锁维**从"缺格"变"有格且绿"（同一镜像、同一靶子）；配额维仍是第二十轮 A 档那一格达成（架构 §33 两维并排表）。**我上一轮为这一格报的 ¥0.58 / 144 条报价作废 —— 实付 ¥0.00064，差三个数量级**：判据要的是 1 条 409，不是 144 条 |
+
+**5）id 级复算材料（W6 说的"前置在 W7 手里"，本轮交出去）**
+
+`codes_task_ids` 在 W/T/U 三格都是 `{}`：409/429 没有 `ack` 帧 ⇒ 无 `task_id`，而这三个新格**一条错误码都没出**。
+⇒ 材料来自 **P 格（探针两臂）**，四个 `task_id` 已逐条 join 到审计面：
+
+| task_id | 谁 / 第几轮 | 客户端形状 | 审计面 |
+|---|---|---|---|
+| `tk_35006fe97ae249398d470758d7fcacaa` | 属主 Q1（主臂） | `error` + 4 stages（intent→sql_ready） | `failed` **deep**，键 `gate,gen_sql,linking,normalize,plan,total` |
+| `tk_cf1fafb8a9a649e881c79ec412c1338e` | **非属主**在同一会话提追问 | `clarify`，1 stage | `clarify`，键 `normalize,total`，`user_id = u_g02` |
+| `tk_91464a8247174026aaeda7ac2fc6b1a9` | 属主 Q1（对照臂） | `error` + 4 stages | `failed` **deep**（与主臂同形） |
+| `tk_56c0045a69184703881ce675b67710aa` | **属主**同 thread 第 2 轮 | `codes_seen=["INTERNAL"]`、`events=[ack,error]`、**`terminal_without_any_stage = True`** | `failed` **浅**，键 `normalize,total`、**1 次调用** |
+
+· ★ 与第二十轮 A 档那 13 条浅失败**同指纹**（浅失败 = 只 1 次调用 + 键集只有 `{normalize,total}`）；差别是这次**拿着 id、由单变量对照触发**，不是时间窗反查。
+· ★ 单变量对照就摆在这两臂：**同一个 `session_id`，属主第 2 轮崩（INTERNAL），非属主第 2 轮不崩（clarify）** ⇒ 残留的作用域含 **user**（正是 `thread_id` 的形状），不含"会话"那一半。
+  这条给 W4 的通道矩阵消化：它把「session 级污染」与「thread 级残留」分开了（U-131 的写侧污染与它**同时**发生，见下一条）。
+· ⚠️ 本轮**没有复现出"0 审计行的崩臂"**：那条 INTERNAL 落了审计行 ⇒ gap 0。四格 gap 全 0 ⇒ U-130 的 `gap ≥1` 那一支仍只有第二十轮 A 档一个样本（n=99 准入 / gap 4），本轮是 n=41 准入 / gap 0。
+  **这不是否证 U-130**，是"触发条件比并发更窄"的一条新边界读数；"并发差"是我的解释 = **UNVERIFIED**（两臂是串发的，本轮没有并发对照）。
+· `terminal_digest_same_as_turn1` 两臂都 False = **正确**（本轮不存在"静默复用上一轮终态"那一格；没响 ≠ 坏）。
+  ⇒ 我上一轮挂的"两条探测器活体形状 UNVERIFIED"**只对 `terminal_without_any_stage` 解除**（崩臂 True、正常臂 False，两臂各命中一次）；
+  `terminal_digest_same_as_turn1` 的活体 **True 至今没出现过** ⇒ 继续挂 UNVERIFIED，且 W4 那一格仍需专门靶子。
+· U-131 三面复测：写侧 `nonowner_followup_written_into_owner_session = true`（追问被写进属主会话，属主 GET 回合数 1→2）；
+  推理侧 `stream_hits_owner_only_terms = []`（本轮无外泄证据）；读侧见产物 `E:/tmp_w7/probe22_*.json`（不落库、不含令牌）。
+
+**6）本轮进"不可引用 / 需订正"清单**
+
+| 不得引用 | 原因 |
+|---|---|
+| "第二十一轮的 首轮 0/12 是按 thread 分组" | 那是 **user 尺**；thread 尺本轮才有（`thread_depth`）。表 1/表 2 作为"该 user 的第 N 条请求"仍成立 |
+| 本轮任何 p95 / 吞吐 / H 与第二十轮比较 | 本机 Docker 重启 + 冷连接 ⇒ 环境不等价（§0） |
+| "④′ 锁维从未验证" | 已由 W 格给出机器读数 `{"409":{"none":7}}` |
+| "非峰 = 峰 ÷1.92" | 那是外推；本轮实测 ¥0.00284/准入条（T 格）、¥0.00129/次调用 |
+| "本轮复现了 0 审计行的崩臂" | 没有。本轮 INTERNAL 共 1 条且**落了行** ⇒ gap 支路仍只有 A 档一个样本 |
+
+**7）量具与门禁（改动面全在 `deploy/**`，未越界）**
+
+| 件 | 状态（实测） |
+|---|---|
+| `driver.py` | 新增 `Sample.worker/session_id`、`_thread_depth()`、`_quota_headers_by_status()`；桩发四头 + 两条新自检断言（四头双向、thread 深度离线双向）；`--self-check` **10/10** |
+| ruff 形状 | `ruff check --config backend/pyproject.toml deploy/loadtest/{driver,probe_session_owner_context,probe_turn2_detectors_selftest}.py` = **All checks passed**。⚠️ 不带 `--config` 从仓库根跑会读到默认规则集（16–18 条噪声，全在别人/归档件里），计数依赖命令形状这条又应验一次 |
+| `probe_turn2_detectors_selftest.py` | 4 格双向 + 剥键承重件 **通过** |
+| `tests/eval`（含 DSN 卫生门禁） | **360 passed / 13.37s**（与 W6 第十二轮的 360 / 16.16s 同数） |
+| `r22_lag_runseq.sql` | 6 条语句、`ON_ERROR_STOP=1` **exit 0** |
+| 未做 | 没重建镜像（容器内 `/srv/app/graph/edges.py` md5 = `57abddbc572d2e72a9f395783a156f0d`，与 git `HEAD` 与 `7035db3` 同一件）；没碰 `app/**`；令牌只在 `E:/tmp_w7/`，跑完即删 |
 
 ### 三.1 装载（本轮实测读数）
 

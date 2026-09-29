@@ -2775,3 +2775,117 @@ driver **现有** `--reuse-sessions` + `--session-pool`（`driver.py:291-293`：
 | **架构** | ✅ §③ 那条"每维判据 + 可读面并排写"是 `§16.5` 拆写的收尾件；`U-129` 归号已裁（第二触发面 + 判据⑦） | — | `docs/07`、`docs/08`（**不在 git**） |
 | **W6** | ✅ §⑤ 三条：`to_libpq_conninfo` 替换建议 / 覆盖面 0/37 口径一致 / 客户端探测器是否入 U-130 判据面由你判 | — | `tests/eval/**`、`eval/**` |
 | **W0** | 🟡 `.gitleaks.toml:35` 规则只覆盖 `postgresql+psycopg://` 形态（libpq 形态的同型口令不在规则内）—— 是否扩规则归你，**我未跑 gitleaks 验证**，只做了正则码读 | — | `.gitleaks.toml`、`ci.yml` |
+
+## §四十 · 第二十二轮（2026-09-29 12:2x–12:3xZ / 北京 20:2x–20:3x，**非峰**）：三条零额度还账 + 一把新尺（thread 深度）+ 四格活体实付 ¥0.092996
+
+总控两点都收到：①排非峰 —— 四格全部落在北京 20:2x 之后，**非峰由账本自证**（每格 `bool_and(not is_peak) = t`，不是我看时钟推断）；②规模不大即准许 —— 本轮实付 **¥0.092996**（76 次调用），跑批前报的天花板 ¥0.20 未触。
+
+**① 还 W4 的三笔账（`3188a9c`/`57ecea3`）**
+
+1. `lag` 已按 **run 序列**重取，并且我比 W4 指定的口径更宽：序列 = **审计面 ∪ 入账面 的并集**（纯 `cost_ledger` 定轮会漏掉"0 次调用但落了审计行"的 run，坑同形、漏的是另一侧），同时保留 W4 原口径作**对照臂**。读数：两条口径都给 `failed 9 / refuse 4` ⇒ **聚合没变，但这张表的引用资格变了**。为什么同数（这条是我上一版真正该写的）：4 条崩臂属 `u_f04/06/07/09`，13 条浅失败属 `u_f03/05/08/10/11/12`，**user 集合不相交**。件 = `deploy/loadtest/r22_lag_runseq.sql`（6 语句，`ON_ERROR_STOP=1` exit 0）+ `r22_lag_runseq_attribution.txt`。
+2. **给 W4 的反手一条**：`prev=refuse` 那 4 条与 `prev=failed` 那 9 条在我能读的三个面上**完全同形**（`latency_ms` 键集都是 `{normalize,total}`、调用数都是 1、`refusal_reason` 是 0/13 而本格 `refuse` 行 18/18 带 ⇒ 0 命中给过被看见的条件）⇒ **我这三面分不开你第五档与"refuse 残留"档**，我不认领"4 条 = 某一档"。能分它俩的是图内读面（你们的 `MemorySaver` 那套）。
+3. 正文"refuse 那 3 条"确认应为 **4**（表格一直是 4）。已订正。
+4. 探测器按你第 ③ 条改完：`blocking_issues` 进逐轮键，自证件从 3 格改 4 格 + **剥键承重件**（格 1a 断言"原始帧不等、剥完指纹相等"），另跑负对照 `WITH strip = True / WITHOUT strip = False` ⇒ 规则承重。你那条"不依赖内容指纹的判据候选"我没有采纳进判据面（W6 第十二轮已裁"客户端面进产物不进判据"），但**它作为候选的证据我这轮给到了**：见 ③ 的单变量对照。
+
+**② 🔴 本轮最贵的一条是我自己的尺（自曝，且它降低我上一轮两件结论的资格）**
+
+`driver.py:320` 的 `worker_token(i)` 里 `i` 是 **worker 序号**（一个 worker 全程一个 user ✓），但 `:298` 的 `sid = session_pool[i % len]` 里 `i` 是**全局请求游标** ⇒ 同一 worker 的连续两条请求落在**不同会话**上。而 `thread_id = {tenant}:{user}:{session}` 含 session ⇒
+**我第二十一轮写的"一个 user 的一串请求 = 一个 thread 的连续几轮"是错的**，`首轮 0/12 / 第 2 轮+ 17/96` 是 **user 尺**读数，不是 thread 尺。
+活体证据（同参数只差 pool）：`--session-pool 12 / n=24` ⇒ `thread_depth = {"1":22,"2":2}`（24 条里只有 2 条真是某 thread 的第 2 轮）；`--session-pool 1 / c=4 / n=12` ⇒ `{"1":4,"2":4,"3+":4}` = 设计意图逐字对上。
+⇒ **要"同 thread 第 N 轮"这一维必须 `--session-pool 1`**。量具已补（`Sample.worker/session_id` + `thread_depth()` + `--self-check` 离线双向断言），改的是我的文件、零额度。
+⇒ 请 W4/架构按此重读 `U-129` 第二触发面的活体证据强度：**"分布与有没有前一轮有关"这句话在 user 尺上成立，在 thread 尺上本轮还没有样本**（本轮 thread 尺的第 2 轮样本 = 2 条 + 探针那 1 条）。
+
+**③ 交给 W6 的 id 级材料（你说的"前置在 W7 手里"，本轮交出去）+ 还你两条账**
+
+四个 `task_id` 已逐条 join 到审计面（P 格探针两臂，非峰 ¥0.015939）：
+
+| task_id | 谁 / 第几轮 | 客户端 | 审计面 |
+|---|---|---|---|
+| `tk_35006fe97ae249398d470758d7fcacaa` | 属主 Q1（主臂） | error + 4 stages | `failed` deep，键 `gate,gen_sql,linking,normalize,plan,total` |
+| `tk_cf1fafb8a9a649e881c79ec412c1338e` | 非属主同会话追问 | clarify，1 stage | `clarify`，键 `normalize,total`，`u_g02` |
+| `tk_91464a8247174026aaeda7ac2fc6b1a9` | 属主 Q1（对照臂） | error + 4 stages | `failed` deep（与主臂同形） |
+| `tk_56c0045a69184703881ce675b67710aa` | **属主同 thread 第 2 轮** | `INTERNAL` + `events=[ack,error]` + `terminal_without_any_stage=True` | `failed` 浅，键 `normalize,total`，1 次调用 |
+
+· ★ **单变量对照摆在这两臂**：同一个 `session_id`，属主第 2 轮崩、非属主第 2 轮不崩 ⇒ 残留作用域含 **user**（正是 `thread_id` 的形状），不含"会话"那一半。这条同时给 W4（见 ④）。
+· ★ 本轮 **1 条 INTERNAL 落了审计行 ⇒ gap 0**（四格 gap 全 0）⇒ 你说的"必印但必刮"那套在 id 级可核了，但"0 审计行的崩臂"**本轮没复现**。U-130 的 `gap ≥1` 一支仍只有 A 档一个样本（n=99/gap 4），本轮 n=41/gap 0。⚠️ "并发差"是我的解释 = **UNVERIFIED**（探针两臂是串行发的，本轮没有并发对照臂）。
+· 你 ①②⑦ 三条我照收：`to_libpq_conninfo` 生产调用点**我自己重数 = 5 处**（与你完全一致，README §三.0.1r 第 4 条已就地订正、原句保留）；`stage=none ≠ 没落审计行`已写进 `driver.py:_provenance` 并用我自有读数证（`stage=none` 22 条 vs 审计缺行 4 条 ⇒ ≥18 落了行）。
+· 你 ⑥ 那条我给个明确回话：`terminal_digest_same_as_turn1` 的活体 **True 至今没出现过**（本轮两臂都 False，且 False 是对的）⇒ 它继续挂 UNVERIFIED；`terminal_without_any_stage` 的活体形状**本轮解除**（崩臂 True、正常臂 False 各命中一次）。
+
+**④ 给 W4 的一条机制侧新证（本轮免费得到）**
+
+`3188a9c` 把跨轮探针扩到五档后仍在问"什么形状才会崩"。我这轮的两臂对照给出一个作用域判据：
+**残留跟着 `thread_id` 走（含 user），不跟着 session 走**；而且**同 thread 的第 2 轮在"上一轮以 error 收口"时也崩**（本轮 Q1 是 gate 拒绝的 error 帧，第 2 轮属主追问就崩）⇒ 不限于 `refuse`/`complete` 残留。
+另：U 格（4 thread × 3 轮，`--session-pool 1`，全部同 thread 多轮）**一条 INTERNAL 都没出**、且 12 条里 0 条 `ok` ⇒ 我这格既没构成判据也没构成否证（没有 `complete` 残留这一支）。要我把这一支补上就说一声，成本 ¥0.003–0.03 量级。
+
+**⑤ ④′ 判据面：锁维从"缺格"变"有格且绿"（W 格，实付 ¥0.00064）**
+
+| 判据支 | 读数 |
+|---|---|
+| `409 ≥ 1` | `codes = {"SESSION_CONFLICT": 7}`，`other_http_4xx = 7` ✓ |
+| 几何前置"同会话在途 ≥2" | `single_session` + c=8 + 全线固定创建者令牌（`:316-320` 那条 W1B/W0 裁定的实现）⇒ 7 条 409 本身即证明重叠 ✓ |
+| `409 不带配额四头` | **`quota_headers_by_status = {"409": {"none": 7}}`** ✓（本窗口第一次有这条机器读数） |
+| 正向对照 | 桩把四头发给 429、故意不给 409，自检断言 `{"409":{"none":1},"429":{"bucket+limit+remaining+reset":1}}` 双向通过 ⇒ 排除"没读到"被读成"没有" |
+
+⇒ **请架构对表一句**（我不改判据，只报形状）：那 7 条 409 **带 `Retry-After: 3`**，而 `app/api/errors.py:253` 把 `HEADER_RETRY_AFTER` 与 `RATE_LIMIT_HEADER_NAMES` **分列** ⇒ "409 不带配额四头"若被写成"409 不许带任何头"会当场误判负。四头名唯一出处 = `app/api/ratelimit.py:147-150`。
+
+**⑥ 花费治理（我这条又自曝一次）**
+
+· 上一轮我为锁维报 **¥0.58 / 24 worker / 144 条**，本轮实付 **¥0.00064 / 8 条** ⇒ **差三个数量级**。根因不是单价估错，是**我没把"判据最少需要几条"当尺**：那条判据要的是"1 条带几何前置的 409"，我却按"填满一轮"报价。⇒ 规则：**报价前先写下"这条判据的最小充分几何"，再乘单价**（已进本轮报价表：四格各自最小几何）。
+· 非峰单价校准（取代"峰 ÷1.92"外推）：T 格 **¥0.00284/准入条**（2.2 次/条 × ¥0.00129/次调用）。
+· 第一次负对照给了我**假否证**：手搓的 SSE 帧没被 `_terminal_frame` 解析出来（两个 `None` 的指纹都是空串 ⇒ 恒等），我差点据此写"这条剥键不承重"。⇒ 教训入尺：**对照臂自己也要断言"尺量到东西了"**（现在 `assert f1 is not None and f2 is not None` 在件里）。
+
+**⑦ 环境事件登记（影响所有容量读数）**
+
+本机 Docker 守护进程重启过：四个共享容器 `Up 7 minutes`、我的 `w7load-api` = **`Exited (255) 7 minutes ago`**。我只 `docker start w7load-api`（**我自己的容器**，未碰共享栈），启动断言四条全 passed，`/api/v1/openapi.json` = 200；`rl:*` 与 `*lock*` 均 0 键；`embed_doc` **197 行**未被清。
+⇒ **本轮 p95 / 吞吐 / `H≈6.18s` 与第二十轮不可比**（新进程 + 冷连接，日志有 `probe_warm_failed`）；架构 §33 那条"入口复位 = 换镜像 ⇒ W7 读数作废"我这边**这次是"环境重启 ⇒ 同样作废"**，已按同规格登记。
+⇒ 被测构建身份当场重测（不是按时间推断）：容器内 `/srv/app/graph/edges.py` md5 = `57abddbc572d2e72a9f395783a156f0d`，与 `git HEAD` 与 **`7035db3 fix(w4): U-129 出路表终态感知`** 同一件 ⇒ **A 档那 17 条 INTERNAL 是在含该修法的构建上跑出来的**，与"判据⑦ / 修法 (a) 入口复位"这一支不冲突（出路表挡的是同 run 内的第二次写，挡不住跨 run 残留的第一次写 —— 这句解释归 W4 核，我只为 md5 与读数背书）。
+
+**⑧ 门禁与编号**
+
+| 件 | 状态 |
+|---|---|
+| `driver.py --self-check` | 10/10（含两条新断言：四头双向、thread 深度离线双向） |
+| `ruff check --config backend/pyproject.toml`（我的三个文件） | All checks passed。⚠️ 命令形状又应验：不带 `--config` 从仓库根跑 = 16–18 条既有噪声（全在别人的归档件/探针里），计数不可比 |
+| `probe_turn2_detectors_selftest.py` | 4 格双向 + 承重件 通过 |
+| `tests/eval`（含 DSN 卫生门禁） | **360 passed / 13.37s**（与 W6 第十二轮同数） |
+| 取号 | **本轮不取号**。`docs/07 §4.8` 末段我读到的下一可用仍是 **`U-133`**（我未改 `07`）；新出的两件事（thread 尺纠正 = 我的量具、`gap` 本轮 0 = 边界读数）都不构成新缺陷号 |
+
+**⑨ 我在等谁 / 谁在等我**
+
+· 等 W4：②④ 两条（user 尺 ≠ thread 尺对 `U-129` 证据强度的影响；残留作用域含 user 这一条要不要进你们矩阵的判据面）。
+· 等 W6：③ 的 id 级材料是否够你们起 `gap` 的 id 级复算；`terminal_digest_same_as_turn1` 活体 True 仍缺 ⇒ 若要不花钱那条路走不通，需要专门靶子（W4 那一格）。
+· 等架构：⑤ 的 `Retry-After` 与四头分列对表；⑦ 的"环境重启等价于换镜像"这条登记口径。
+· 等总控：**没有**。本轮批准的额度已用完（¥0.092996），剩下的格（U-129 `complete` 残留一支 ≈¥0.03、A 档并发复现一支 ≈¥0.14）我不自行开跑，等你点头或下次派活。
+
+**⑩ 可并发 / 必须串行（本轮刷新）**
+
+| 窗口 | 现在能并发做什么 | 必须串行等什么 |
+|---|---|---|
+| **W7（我）** | 零额度复算、量具改动、报告落档（本轮全做过） | 任何**跑批**须先报规模+花费；`w7load-api` 镜像重建只有我能做，且**新镜像首格作废** |
+| **W4** | 入口复位/判据⑦落码、通道矩阵消化（含我 ②③④ 三条输入） | 若要 W7 补 `complete` 残留一支 ⇒ 先报额度再跑 |
+| **W6** | `tests/eval/**`、`eval/**` 侧（id 级复算的材料本轮已到） | 客户端面入判据 = 他们已裁（进产物不进判据），无需等我 |
+| **W3A / W3C** | L4/截断与检索面各自的事 | 与本窗无共享写者 ⇒ 可并发 |
+| **架构 / W0** | 文档与裁定 | `Retry-After` 措辞对表不阻塞任何窗口 |
+| **总控** | 给 W4/W6/W7 转发提示词可**同时**发（三方互不依赖，本轮 ①③⑤ 各回各家） | 只有"批准跑批额度"必须回到我这里，我等批期间继续零额度件 |
+
+**⑪ 复算命令**
+
+```bash
+# 零额度三条还账
+MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -v ON_ERROR_STOP=1 -f - < deploy/loadtest/r22_lag_runseq.sql
+.venv/Scripts/python.exe deploy/loadtest/probe_turn2_detectors_selftest.py
+
+# 四格回执（W/T/U）与探针两臂
+PYTHONIOENCODING=utf-8 PYTHONUTF8=1 .venv/Scripts/python.exe deploy/loadtest/driver.py --self-check
+ruff check --config backend/pyproject.toml deploy/loadtest/driver.py deploy/loadtest/probe_session_owner_context.py deploy/loadtest/probe_turn2_detectors_selftest.py
+cd backend && PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest tests/eval -q -p no:randomly -rfEs
+
+# 结账（本轮 ¥0.092996 / 76 次；非峰自证）
+MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -c "
+select count(*) calls, round(sum(cost_cny)::numeric,6) cny, bool_and(not is_peak) offpeak
+from app.cost_ledger where user_id like 'u_g%';"
+
+# 被测构建身份（落笔那一秒重测）
+MSYS_NO_PATHCONV=1 docker exec w7load-api md5sum /srv/app/graph/edges.py   # = 57abddbc572d2e72a9f395783a156f0d
+git show HEAD:backend/app/graph/edges.py | md5sum
+```

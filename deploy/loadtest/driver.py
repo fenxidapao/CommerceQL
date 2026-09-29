@@ -79,6 +79,19 @@ class Sample:
     #: 拒答侧的"什么时候再来"（429 → §9.2 给 30s；W4 的 DB_UNAVAILABLE → 5s）。
     #: U-106 新增场景⑤"单租户饱和"要验的就是这个头**在不在**——没有它，客户端只会重试打爆。
     retry_after: str | None = None
+    #: `X-RateLimit-*` 四头里**实际出现**的名字（剥掉前缀）。④′ **锁维修正判据**要求
+    #: "`409 SESSION_CONFLICT` 不得带这四头"（`app/api/errors.py:278` 引 附录 A §A.0.6 末行；
+    #: 四头名唯一出处 = `app/api/ratelimit.py:147-150`）。旧量具只读 `retry-after` ⇒ 这条判据
+    #: **从未被本窗口的任何回执证过**（"没读到"与"没有"同形）。只在 `status >= 400` 一侧记。
+    quota_headers: tuple[str, ...] = ()
+    #: thread 身份的两半（都是**标识符不是内容**，与 `task_id` 同一卫生类）。
+    #: 服务端 `thread_id = {tenant}:{user}:{session}`（`app/api/runner.py:196`）里：
+    #: ① `user` 由 **worker 序号**定（`worker_token(i)` 的 `i` 是 worker 序号，`:320`）；
+    #: ② `session` 由**请求序号**定（`session_pool[i % len]` 的 `i` 是全局游标，`:298`）。
+    #: ⇒ **同一 worker 的连续两条请求大概率落在两个不同 thread 上。**
+    #:    第二十一轮我把"该 user 的第几轮"当成"该 thread 的第几轮"用了 ⇒ 这两个字段就是那笔账。
+    worker: int = -1
+    session_id: str | None = None
 
 
 @dataclass(slots=True)
@@ -185,8 +198,10 @@ async def fire_one(
             if status >= 400:
                 body = (await resp.aread()).decode("utf-8", "replace")[:200]
                 kind = "http_4xx" if status < 500 else "http_5xx"
+                quota = tuple(sorted(h[len("x-ratelimit-"):].lower() for h in resp.headers
+                                     if h.lower().startswith("x-ratelimit-")))
                 return Sample(kind, status, None, _ms(start), 0, detail=_code_of(body) or body,
-                              retry_after=resp.headers.get("retry-after"))
+                              retry_after=resp.headers.get("retry-after"), quota_headers=quota)
             async for line in resp.aiter_lines():
                 if not line:
                     continue
@@ -278,7 +293,7 @@ async def run_spec(spec: ScenarioSpec, args: argparse.Namespace, questions: list
     if args.max_requests:
         hard_cap = min(hard_cap, args.max_requests) if hard_cap else args.max_requests
 
-    async def worker(client: httpx.AsyncClient, token: str) -> None:
+    async def worker(client: httpx.AsyncClient, token: str, widx: int) -> None:
         nonlocal next_index
         while True:
             if spec.duration_s is not None and time.perf_counter() - opened >= spec.duration_s:
@@ -295,6 +310,9 @@ async def run_spec(spec: ScenarioSpec, args: argparse.Namespace, questions: list
                 client, url, token, questions[i % len(questions)], sid,
                 async_if_slow=not args.no_async,
             )
+            #: thread = (worker ⇒ user, sid ⇒ session)；两个都是标识符，不落内容。
+            sample.worker = widx
+            sample.session_id = sid
             samples.append(sample)
 
     async with httpx.AsyncClient(limits=limits, timeout=timeout, http2=False) as client:
@@ -311,7 +329,7 @@ async def run_spec(spec: ScenarioSpec, args: argparse.Namespace, questions: list
         #    「同一会话并发」这一维根本没被压到（实测：10 令牌轮转时 `rejected_429=0`、409 只有 4）。
         #    非属主令牌的负向断言不在这里做，见 `probe_session_owner.py`。
         worker_token = (lambda i: tokens[0]) if spec.single_session else (lambda i: tokens[i % len(tokens)])
-        workers = [asyncio.create_task(worker(client, worker_token(i))) for i in range(spec.concurrency)]
+        workers = [asyncio.create_task(worker(client, worker_token(i), i)) for i in range(spec.concurrency)]
         await asyncio.gather(*workers)
 
     wall = time.perf_counter() - opened
@@ -397,6 +415,56 @@ def _rejections(samples: list[Sample]) -> dict[str, dict[str, int]]:
     return out
 
 
+def _thread_depth(samples: list[Sample]) -> dict[str, Any]:
+    """按 **(worker, session_id) = 同一个 thread** 给样本排第几轮，再按深度切读数。
+
+    存在的理由 = 第二十一轮那笔账（`r21_turn_index_attribution.txt` 表 1/表 2）：那次按
+    **user** 排轮次，而 U-129 第二触发面的机制前提按 **thread** 才成立。两把尺在本几何下
+    **不等价**（`sid` 随请求序号轮转），所以这里给出 thread 尺，并保留"无会话"一桶如实暴露
+    `--reuse-sessions` 没开的事实。
+    ⚠️ 深度顺序 = 样本**完成顺序**（`samples.append` 的到达序），不是发出序；并发下两者可差几秒。
+    """
+    seen: dict[tuple[int, str], int] = {}
+    depth_hist: dict[str, int] = {}
+    by_outcome: dict[str, dict[str, int]] = {}
+    by_code: dict[str, dict[str, int]] = {}
+    unsessioned = 0
+    for s in samples:
+        if s.session_id is None:
+            unsessioned += 1
+            depth = None
+        else:
+            k = (s.worker, s.session_id)
+            seen[k] = seen.get(k, 0) + 1
+            depth = seen[k]
+            bucket = "1" if depth == 1 else ("2" if depth == 2 else "3+")
+            depth_hist[bucket] = depth_hist.get(bucket, 0) + 1
+        arm = "unsessioned" if depth is None else ("turn1" if depth == 1 else "turn2plus")
+        o = by_outcome.setdefault(s.outcome, {"turn1": 0, "turn2plus": 0, "unsessioned": 0})
+        o[arm] += 1
+        if s.code:
+            c = by_code.setdefault(s.code, {"turn1": 0, "turn2plus": 0, "unsessioned": 0})
+            c[arm] += 1
+    return {"depth_hist": depth_hist, "unsessioned": unsessioned,
+            "threads": len(seen), "by_outcome": by_outcome, "by_code": by_code}
+
+
+def _quota_headers_by_status(samples: list[Sample]) -> dict[str, dict[str, int]]:
+    """`状态码 → {出现的 X-RateLimit 头名组合} → 条数`（④′ **锁维修正判据**的可读面）。
+
+    ⚠️ 这条判据是**否证形**（409 不许带四头）⇒ 单看 409 一侧永远绿。正向对照 = **429 必须带**
+    （`app/api/errors.py:279`：四头只在配额放行后的 2xx 与 429 两处下发）⇒ 两臂同表才作数。
+    """
+    out: dict[str, dict[str, int]] = {}
+    for s in samples:
+        if s.status is None or s.status < 400:
+            continue
+        bucket = out.setdefault(str(s.status), {})
+        key = "+".join(s.quota_headers) if s.quota_headers else "none"
+        bucket[key] = bucket.get(key, 0) + 1
+    return out
+
+
 def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: argparse.Namespace) -> dict[str, Any]:
     # ★ U-106（架构裁定 2026-09-20）：**P95 只在准入样本上算，429 比例单列**。
     #   旧口径把所有样本混进分位数 ⇒ "5 用户打 150 条"那种跑法 p50=7.3ms（那是 429 的速度），
@@ -435,6 +503,8 @@ def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: a
         "p95_scope": "admitted_http_2xx",
         "admission": admission,
         "rejection_headers": _rejections(samples),
+        "quota_headers_by_status": _quota_headers_by_status(samples),
+        "thread_depth": _thread_depth(samples),
         "latency_ms": {"p50": _pct(totals, 50), "p95": p95_total, "p99": _pct(totals, 99),
                        "max": round(totals[-1], 1) if totals else None,
                        "mean": round(statistics.fmean(totals), 1) if totals else None,
@@ -571,7 +641,12 @@ def _provenance(samples: list[Sample]) -> dict[str, dict[str, int]]:
     例：本轮 `{"error_frame": {"stage=intent|reason=none": 2}}` 曾被本窗口读成
     "intent 收不了口"，按此语义正确读法是 **intent 完成、崩在 link**（W4 据此定位到
     `app/retrieval/search.py` 缓存重建路径的 `float(None)`）。
-    ⚠️ `stage=none` = **一条 stage 帧都没收到** ⇒ 没有任何节点完成（不是"数据丢了"）。
+    ⚠️ `stage=none` = **一条 stage 帧都没收到** ⇒ 没有任何节点**完成**（不是"数据丢了"）。
+    🔴 但它**不等价于**"没进图"或"没落审计行"（W6 第 ⑦ 条，本窗自有读数佐证）：同一格
+    `terminal_provenance` 里 `stage=none` 共 **22** 条（error 11 + 4xx 9 + refuse 2），
+    而审计侧缺行只有 **4** 条 ⇒ **≥18 条 `stage=none` 的 run 是落了审计行的**。
+    ⇒ 判"是否落审计"请读 `app.audit_log` 或 U-130 的批级差，**不要用 `stage=none` 当代用**。
+    （为"为什么一条 stage 都没有却落了行"给出**机制解释 = UNVERIFIED**：本轮只有形状读数，没有对照臂。）
     """
     out: dict[str, dict[str, int]] = {}
     for s in samples:
@@ -592,6 +667,13 @@ def _pct(sorted_values: list[float], p: int) -> float | None:
 # ---------------------------------------------------------------------------
 # 自检：证明的是**量具**，不是被测系统
 # ---------------------------------------------------------------------------
+
+
+#: 桩自发的 `X-RateLimit-*` 四头（头名 = `app/api/ratelimit.py:147-150` 的小写形）。
+_STUB_QUOTA_HDRS: Final[list[tuple[bytes, bytes]]] = [
+    (b"x-ratelimit-bucket", b"query"), (b"x-ratelimit-limit", b"10"),
+    (b"x-ratelimit-remaining", b"9"), (b"x-ratelimit-reset", b"1700000000"),
+]
 
 
 async def self_check() -> int:
@@ -629,8 +711,9 @@ async def self_check() -> int:
         if kind == "http429":
             # 带 `Retry-After: 30` 是 §9.2 的要求 ⇒ 桩必须也带上，否则 `rejection_headers`
             # 这条读数在任何自检里都只能是 missing，等于没测。
+            # 四头同理发 = `quota_headers_by_status` 的正向对照臂（409 那一支故意不发）。
             await _json_reply(send, 429, '{"detail":{"code":"RATE_LIMITED"}}',
-                              headers=[(b"retry-after", b"30")])
+                              headers=[(b"retry-after", b"30"), *_STUB_QUOTA_HDRS])
             return
         await send({"type": "http.response.start", "status": 200,
                     "headers": [(b"content-type", b"text/event-stream")]})
@@ -836,6 +919,31 @@ async def self_check() -> int:
     want_rejections = {"409": {"retry_after=missing": 1}, "429": {"retry_after=30": 1}}
     if rejections != want_rejections:
         print(f"[自检失败] Retry-After 指纹不对：{rejections}（期望 {want_rejections}）", file=sys.stderr)
+        return 3
+    # ④′ 锁维修正判据的量具自证：**409 一个四头都不许有 / 429 四个都有**（双向，防恒 none 也防恒有）。
+    quota_fp = _quota_headers_by_status(got)
+    want_quota = {"409": {"none": 1}, "429": {"bucket+limit+remaining+reset": 1}}
+    if quota_fp != want_quota:
+        print(f"[自检失败] X-RateLimit 四头指纹不对：{quota_fp}（期望 {want_quota}）", file=sys.stderr)
+        return 3
+
+    # thread 深度尺的离线双向自证（第二十一轮那笔账的量具面：user 尺 ≠ thread 尺）。
+    # 为什么不能只靠真跑批：`--reuse-sessions` 关着的时候 thread 尺整根悬空（全落 `unsessioned`），
+    # 那格回执里没有任何东西能暴露"键根本没接上"。
+    td_samples = [
+        Sample("ok", 200, 1.0, 1.0, 1, worker=0, session_id="sA"),
+        Sample("error_frame", 200, 1.0, 1.0, 1, code="INTERNAL", worker=0, session_id="sA"),
+        Sample("refuse", 200, 1.0, 1.0, 1, worker=1, session_id="sB"),
+        Sample("ok", 200, 1.0, 1.0, 1, worker=2, session_id=None),
+    ]
+    want_td = {"depth_hist": {"1": 2, "2": 1}, "unsessioned": 1, "threads": 2,
+               "by_outcome": {"ok": {"turn1": 1, "turn2plus": 0, "unsessioned": 1},
+                              "error_frame": {"turn1": 0, "turn2plus": 1, "unsessioned": 0},
+                              "refuse": {"turn1": 1, "turn2plus": 0, "unsessioned": 0}},
+               "by_code": {"INTERNAL": {"turn1": 0, "turn2plus": 1, "unsessioned": 0}}}
+    td_got = _thread_depth(td_samples)
+    if td_got != want_td:
+        print(f"[自检失败] thread 深度尺不对：{td_got}（期望 {want_td}）", file=sys.stderr)
         return 3
     print(f"[自检通过] 10/10 分类正确；样本 p95={p95}ms（桩注入的最大延迟 3000ms）；"
           f"g6_caveat {len(gate_cases)} 情形判向正确；g6_p95_le_8s {len(bool_cases)} 情形三态正确"
