@@ -1,0 +1,505 @@
+{
+  "meta": {
+    "produced_by": "reports/w4/probe_turn2_checkpoint_residue.py",
+    "read_at": "2026-09-29T07:19:52+00:00",
+    "head": "eb73324",
+    "quota_cost_cny": 0.0,
+    "checkpointer_under_test": "langgraph MemorySaver（生产 = AsyncPostgresSaver；本件只需要「同一 thread 跑过多轮」这一事实）",
+    "why_contract_suite_misses_it": "tests/contract/** 全部 build_graph() ⇒ checkpointer=None"
+  },
+  "node_terminal_guard_census": {
+    "guarded": [
+      "_shared.py(写 4 处)",
+      "clarify_out.py(写 1 处)",
+      "error_out.py(写 1 处)",
+      "refuse_out.py(写 1 处)"
+    ],
+    "unguarded": [
+      "audit_pre.py(写 1 处)",
+      "audit_supp.py(写 1 处)",
+      "execute.py(写 1 处)",
+      "gate1_ast.py(写 1 处)",
+      "gate2_policy.py(写 2 处)",
+      "gate3_cost.py(写 1 处)",
+      "gen_sql.py(写 2 处)",
+      "intent.py(写 1 处)",
+      "mask.py(写 1 处)",
+      "normalize.py(写 1 处)",
+      "plan.py(写 2 处)",
+      "repair.py(写 2 处)"
+    ]
+  },
+  "residue": {
+    "thread_id_shape": "tenant:user:session（`runner.py:196 thread_id_of`，07 §5.4 逐字）",
+    "turn1": {
+      "asked": "上个月卖得怎么样",
+      "terminal": [
+        [
+          "complete",
+          null
+        ]
+      ],
+      "events": [
+        "ack",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "data",
+        "degraded",
+        "meta",
+        "complete"
+      ],
+      "audit_rows_this_turn": 1,
+      "audit_outcomes": [
+        "success"
+      ],
+      "nodes_ran": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ]
+    },
+    "residue_at_turn2_entry": {
+      "binding_status": "str:resolved_unique",
+      "candidates": "list:[{'asset_id': 'fact_orders', 'score': 0.9, 'laye",
+      "candidates_summary": "dict:{'fused_top': 1, 'value_hits': 0, 'graph_added':",
+      "confidence": "float:0.9",
+      "cost_cny": "Decimal:0.0003",
+      "degradations": "list:[{'reason': 'present_failed', 'action_taken': 't",
+      "gate_results": "dict:{1: GateResult(gate_no=<GateNo.AST: 1>, passed=T",
+      "intent": "str:executable",
+      "intent_detail": "dict:{'reason_code': 'decision_table'}",
+      "latency_ms": "dict:{'normalize': 0, 'linking': 0, 'plan': 0, 'gen_s",
+      "model_version": "str:deepseek-chat",
+      "normalized_question": "str:上个月卖得怎么样",
+      "outcome": "Outcome:success",
+      "plan": "dict:{'metrics': [{'name': 'amount', 'caliber': None}",
+      "plan_summary": "dict:{'metrics': ['amount'], 'dimensions': [], 'filte",
+      "prompt_version": "str:pv-dt",
+      "raw_question": "str:上个月卖得怎么样",
+      "result_columns": "list:[ColumnMeta(name='order_id', type_name='bigint',",
+      "result_fingerprint": "str:fp-dt-1",
+      "retrieval_mode": "str:hybrid",
+      "role": "Role:analyst",
+      "row_count": "int:1",
+      "scope": "ScopeInfo:ScopeInfo(level=<ScopeLevel.TENANT_ISOLATED: 'te",
+      "session_id": "str:ss-run-1",
+      "sql_candidates": "list:[{'sql_text': 'SELECT order_id, amount FROM fact",
+      "sql_dialect": "str:postgres",
+      "sql_text": "str:SELECT order_id, amount FROM fact_orders WHERE r",
+      "task_id": "str:tk-r1",
+      "tenant_id": "str:tenant-run",
+      "terminal": "dict:{'event': 'complete'}",
+      "time_parse_ok": "bool:True",
+      "tokens": "dict:{'input': 30, 'output': 15, 'cache_hit': 0, 'tot",
+      "trace_id": "str:tr-r1",
+      "truncated": "bool:False",
+      "user_id": "str:user-run-1"
+    },
+    "residue_key_count": 35,
+    "run_scoped_residue_keys": [
+      "binding_status",
+      "candidates",
+      "candidates_summary",
+      "confidence",
+      "cost_cny",
+      "degradations",
+      "gate_results",
+      "intent",
+      "intent_detail",
+      "latency_ms",
+      "model_version",
+      "normalized_question",
+      "outcome",
+      "plan",
+      "plan_summary",
+      "prompt_version",
+      "raw_question",
+      "result_columns",
+      "result_fingerprint",
+      "retrieval_mode",
+      "row_count",
+      "sql_candidates",
+      "sql_dialect",
+      "sql_text",
+      "terminal",
+      "time_parse_ok",
+      "tokens",
+      "truncated"
+    ],
+    "turn2": {
+      "asked": "上面那个指标按店铺拆开分别是多少",
+      "terminal": [
+        [
+          "error",
+          "INTERNAL"
+        ]
+      ],
+      "events": [
+        "ack",
+        "error"
+      ],
+      "audit_rows_this_turn": 0,
+      "audit_outcomes": [],
+      "nodes_ran": [
+        "trusted_context",
+        "normalize"
+      ]
+    },
+    "thread_next_after_turn2": [
+      "audit_supp"
+    ]
+  },
+  "terminal_kind_matrix": {
+    "after_complete": {
+      "turn1": {
+        "asked": "上个月卖得怎么样",
+        "terminal": [
+          [
+            "complete",
+            null
+          ]
+        ],
+        "events": [
+          "ack",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "data",
+          "degraded",
+          "meta",
+          "complete"
+        ],
+        "audit_rows_this_turn": 1,
+        "audit_outcomes": [
+          "success"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ]
+      },
+      "turn2": {
+        "asked": "上面那个指标按店铺拆开分别是多少",
+        "terminal": [
+          [
+            "error",
+            "INTERNAL"
+          ]
+        ],
+        "events": [
+          "ack",
+          "error"
+        ],
+        "audit_rows_this_turn": 0,
+        "audit_outcomes": [],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize"
+        ]
+      }
+    },
+    "after_refuse_planblocked": {
+      "turn1": {
+        "asked": "上个月卖得怎么样",
+        "terminal": [
+          [
+            "refuse",
+            null
+          ]
+        ],
+        "events": [
+          "ack",
+          "stage",
+          "stage",
+          "stage",
+          "refuse"
+        ],
+        "audit_rows_this_turn": 1,
+        "audit_outcomes": [
+          "refuse"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "refuse_out"
+        ]
+      },
+      "turn2": {
+        "asked": "上面那个指标按店铺拆开分别是多少",
+        "terminal": [
+          [
+            "refuse",
+            null
+          ]
+        ],
+        "events": [
+          "ack",
+          "refuse"
+        ],
+        "audit_rows_this_turn": 1,
+        "audit_outcomes": [
+          "refuse"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "refuse_out"
+        ]
+      }
+    },
+    "after_gate1_reject": {
+      "turn1": {
+        "asked": "上个月卖得怎么样",
+        "terminal": [
+          [
+            "error",
+            "GATE_AST_REJECTED"
+          ]
+        ],
+        "events": [
+          "ack",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "error"
+        ],
+        "audit_rows_this_turn": 1,
+        "audit_outcomes": [
+          "failed"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "error_out"
+        ]
+      },
+      "turn2": {
+        "asked": "上面那个指标按店铺拆开分别是多少",
+        "terminal": [
+          [
+            "error",
+            "INTERNAL"
+          ]
+        ],
+        "events": [
+          "ack",
+          "error"
+        ],
+        "audit_rows_this_turn": 1,
+        "audit_outcomes": [
+          "failed"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "error_out"
+        ]
+      }
+    }
+  },
+  "fix_shape_reset_at_entry": {
+    "reset_keys": [
+      "binding_status",
+      "candidates",
+      "candidates_summary",
+      "confidence",
+      "cost_cny",
+      "degradations",
+      "gate_results",
+      "intent",
+      "intent_detail",
+      "latency_ms",
+      "model_version",
+      "normalized_question",
+      "outcome",
+      "plan",
+      "plan_summary",
+      "prompt_version",
+      "raw_question",
+      "result_columns",
+      "result_fingerprint",
+      "retrieval_mode",
+      "row_count",
+      "sql_candidates",
+      "sql_dialect",
+      "sql_text",
+      "terminal",
+      "time_parse_ok",
+      "tokens",
+      "truncated"
+    ],
+    "turns": {
+      "turn1": {
+        "asked": "上个月卖得怎么样",
+        "terminal": [
+          [
+            "complete",
+            null
+          ]
+        ],
+        "events": [
+          "ack",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "data",
+          "degraded",
+          "meta",
+          "complete"
+        ],
+        "audit_rows_this_turn": 1,
+        "audit_outcomes": [
+          "success"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ]
+      },
+      "turn2": {
+        "asked": "上个月卖得怎么样",
+        "terminal": [
+          [
+            "complete",
+            null
+          ]
+        ],
+        "events": [
+          "ack",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "data",
+          "degraded",
+          "meta",
+          "complete"
+        ],
+        "audit_rows_this_turn": 1,
+        "audit_outcomes": [
+          "success"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ]
+      },
+      "turn3": {
+        "asked": "上个月卖得怎么样",
+        "terminal": [
+          [
+            "complete",
+            null
+          ]
+        ],
+        "events": [
+          "ack",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "data",
+          "degraded",
+          "meta",
+          "complete"
+        ],
+        "audit_rows_this_turn": 1,
+        "audit_outcomes": [
+          "success"
+        ],
+        "nodes_ran": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ]
+      }
+    }
+  }
+}
