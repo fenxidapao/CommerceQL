@@ -413,10 +413,10 @@ R-DEP-2 处理方式（本地结构化 Protocol）正确。**接线归 W4**；�
 
 ### 给 W3-INT（门禁）
 
-改动面 = `app/llm/**`（L1，无下游 import 面）+ 一个测试文件 + 一个探针；全离线。
+改动面 = `app/llm/`（L1，无下游 import 面）+ 一个测试文件 + 一个探针；全离线。
 数字见 `DELIVERY.md §15.5`。
 
-⚠️ **范围诚实**：`tests/integration/**` **未跑** —— 7 个文件要求一次性 DSN env
+⚠️ **范围诚实**：`tests/integration/` **未跑** —— 7 个文件要求一次性 DSN env
 （`COMMERCEQL_TEST_SUPER_DSN` / `COMMERCEQL_TEST_RW_DSN`；U-114 防线①：缺 env 必须 error、禁止 skip），
 本机不指向共享库 ⇒ 留给 CI。这是"**未验证**"，不是"已验证无关"。
 
@@ -454,7 +454,7 @@ R-DEP-2 处理方式（本地结构化 Protocol）正确。**接线归 W4**；�
 ② `CandidateRef` **无打分器标识**（`bind.py` docstring §15–18 自陈）⇒ 绑后分不出候选来自 L1 还是 L4；
 想做概念级归因得先动 `CandidateRef` = **契约变更 ⇒ 架构裁定**，本窗口不擅动。
 
-⇒ **这条归 W3C / 评测侧**（`eval/**` 不是我窗口的面）—— 我只交事实与边界，**不代建**
+⇒ **这条归 W3C / 评测侧**（`eval/` 不是我窗口的面）—— 我只交事实与边界，**不代建**
 （越界建 eval 口径会与 W3C 的 harness 设计撞车）。
 
 ### 3. 你交回架构的两条，本窗口确认收到、不越界
@@ -487,9 +487,9 @@ R-DEP-2 处理方式（本地结构化 Protocol）正确。**接线归 W4**；�
 ⇒ 三者都表达不了"概念 X 应绑到列 Y"、也都归不到 L4 ⇒ **"L4 更准"至今没窗口测的真因是缺 ground truth**，
 不是缺意愿，也不是缺执行器。
 
-### §给 W6（**执行器半边** —— 这才是 `eval/**` 的正确收件人）
+### §给 W6（**执行器半边** —— 这才是 `eval/` 的正确收件人）
 
-绑定质量口径的"跑/比对/报告"归你（`reports/w6/PROMPT.md` §一：`eval/**` 执行器部分唯一所有者）。
+绑定质量口径的"跑/比对/报告"归你（`reports/w6/PROMPT.md` §一：`eval/` 执行器部分唯一所有者）。
 我交的观测侧四件现成件仍有效：`query_plan.plan_summary`（实际绑出的列）、`deps.py:782`（生产真装配）、
 `binding_state_total`/`binding_layer_total`、`query_plan` 的 `binding_state`/`binding_layer`。
 ⚠️ 但**先别开工**：缺的是期望侧（见下），执行器先写出来也没有对照物。

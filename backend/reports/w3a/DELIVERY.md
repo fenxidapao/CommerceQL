@@ -1,4 +1,4 @@
-# W3A 交付 —— 阶段 3 · LLM 网关（`app/llm/**`）
+# W3A 交付 —— 阶段 3 · LLM 网关（`app/llm/`）
 
 > 窗口：W3A｜日期：2026-09-17｜分支 `main`｜提交：`feat(w3a)` + `docs(w3a)`（见 §11）
 > 依据：`reports/w3a/PROMPT.md`（T0–T6）｜规格：07 §10 全章、§14.2/§14.4.1、§16.1/§16.2、PRD §12.1–§12.3
@@ -216,7 +216,7 @@ cd CommerceQL/backend
 
 | commit | 内容 |
 |---|---|
-| `feat(w3a)` | `app/llm/**`（含 `prompts/`）+ `tests/unit/test_llm_*.py` + `_llm_fake_upstream.py` |
+| `feat(w3a)` | `app/llm/`（含 `prompts/`）+ `tests/unit/test_llm_*.py` + `_llm_fake_upstream.py` |
 | `docs(w3a)` | `reports/w3a/{DELIVERY.md, RELAY.md}` |
 
 只暂存本窗口文件（工作区另有 W2-INT/其他窗口的在制品，见 `git status`）。
@@ -542,9 +542,9 @@ pytest tests/unit tests/contract tests/redteam tests/eval tests/graph_snapshot
                                                   → 2204 passed
 ```
 
-⚠️ **范围诚实**：`tests/integration/**` **未跑**。7 个文件要求一次性 DSN env
+⚠️ **范围诚实**：`tests/integration/` **未跑**。7 个文件要求一次性 DSN env
 （`COMMERCEQL_TEST_SUPER_DSN` / `COMMERCEQL_TEST_RW_DSN`；U-114 防线①：缺 env 必须 error、
-禁止 skip），本机不指向共享库 ⇒ 留给 CI。本改动面 = `app/llm/**`（L1，无下游 import 面），
+禁止 skip），本机不指向共享库 ⇒ 留给 CI。本改动面 = `app/llm/`（L1，无下游 import 面），
 集成面理论上与本次无关；**但这是"未验证"，不是"已验证无关"。**
 
 ⚠️ 同一工作树里还躺着**别的窗口未提交的在制品**（W4 的 `U-129`：`app/graph/build.py` +
@@ -606,7 +606,7 @@ W7 明确只验了前者（对，它的窗口边界就到"在场"）。补一句
   绑定之后再看候选，**分不出它是 L1 命中的还是 L4 打分的**。⇒ 想做概念级归因，
   得先动 `CandidateRef`（**契约变更 ⇒ 需架构裁定**，本窗口不擅动）。
 
-⇒ **本条属 W3C / 评测侧的交付面**（`eval/**` 不归 W3A）。本窗口只交出上面的事实与边界，
+⇒ **本条属 W3C / 评测侧的交付面**（`eval/` 不归 W3A）。本窗口只交出上面的事实与边界，
 **不代建**（跨窗越界建 eval 口径会与 W3C 的 harness 设计撞车）。
 
 ⚠️ **上面这段的第 2 句已被 §15.8 订正**（路由要精确到 W6/W1A，且"不需要新建"只对观测侧成立）。
@@ -631,7 +631,7 @@ W7 明确只验了前者（对，它的窗口边界就到"在场"）。补一句
 
 | 半边 | 归谁 | 依据 |
 |---|---|---|
-| **执行器**（怎么跑、怎么比对、怎么出报告） | **W6**（阶段 6 评测与门禁；`eval/**` 的**执行器**部分唯一所有者，唯一有权出 G-1…G-8 判定） | `reports/w6/PROMPT.md` §一 |
+| **执行器**（怎么跑、怎么比对、怎么出报告） | **W6**（阶段 6 评测与门禁；`eval/` 的**执行器**部分唯一所有者，唯一有权出 G-1…G-8 判定） | `reports/w6/PROMPT.md` §一 |
 | **内容**（"期望绑定"这份 ground truth） | **W1A**（内容资产所有者；`gold_query_seed_v1.json` / `dataset_v1_frozen.json` 带 `content_hash`） | `gold_query_seed_v1.json` 头部的 `derived_from_content_hash` |
 
 🔴 **且这是一次"内容 + 冻结"决策，不是"写个比对脚本"**：gold 资产是
