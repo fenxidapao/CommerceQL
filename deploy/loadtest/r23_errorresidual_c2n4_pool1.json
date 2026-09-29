@@ -1,0 +1,117 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-09-29T15:29:37+00:00",
+  "target": "http://127.0.0.1:18000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 2,
+        "duration_s": 600.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": false,
+        "questions": "E:/tmp_w7/q_rej23.txt",
+        "request_cap": 4
+      },
+      "requests": 4,
+      "wall_s": 6.823,
+      "throughput_rps": 0.586,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 4,
+        "rejected_429": 0,
+        "other_http_4xx": 0,
+        "http_5xx": 0,
+        "unresolved": 0,
+        "terminal": 4
+      },
+      "rejection_headers": {},
+      "quota_headers_by_status": {},
+      "thread_depth": {
+        "depth_hist": {
+          "1": 2,
+          "2": 2
+        },
+        "unsessioned": 0,
+        "threads": 2,
+        "by_outcome": {
+          "error_frame": {
+            "turn1": 2,
+            "turn2plus": 2,
+            "unsessioned": 0
+          }
+        },
+        "by_code": {
+          "GATE_AST_REJECTED": {
+            "turn1": 2,
+            "turn2plus": 0,
+            "unsessioned": 0
+          },
+          "INTERNAL": {
+            "turn1": 0,
+            "turn2plus": 2,
+            "unsessioned": 0
+          }
+        }
+      },
+      "latency_ms": {
+        "p50": 1023.5,
+        "p95": 5729.4,
+        "p99": 5729.4,
+        "max": 5729.4,
+        "mean": 3357.0,
+        "samples": 4
+      },
+      "latency_ms_all_ms": {
+        "p50": 1023.5,
+        "p95": 5729.4,
+        "samples": 4
+      },
+      "ttfb_ms": {
+        "p50": 6.3,
+        "p95": 7.3
+      },
+      "outcomes": {
+        "error_frame": 4
+      },
+      "codes": {
+        "GATE_AST_REJECTED": 2,
+        "INTERNAL": 2
+      },
+      "codes_task_ids": {
+        "GATE_AST_REJECTED": [
+          "tk_90bbc3aaa8c84c6fa5761571e1c53492",
+          "tk_e208331bf06445cebdcda557660282e9"
+        ],
+        "INTERNAL": [
+          "tk_60de763666dd4834b2c70bc3efb03b96",
+          "tk_e80bcacbd7a34b56b9ef6c95775e65bb"
+        ]
+      },
+      "terminal_provenance": {
+        "error_frame": {
+          "stage=sql_ready|reason=none": 2,
+          "stage=none|reason=none": 2
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": null,
+      "g6_caveat": "本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；准入样本仅 4 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足"
+    }
+  ],
+  "target_check": {
+    "url": "http://127.0.0.1:18000/api/v1/openapi.json",
+    "paths_total": 12,
+    "has_query": true,
+    "query_paths": [
+      "/api/v1/query",
+      "/api/v1/query/{task_id}",
+      "/api/v1/query/{task_id}/cancel"
+    ]
+  },
+  "finished_at": "2026-09-29T15:29:44+00:00"
+}

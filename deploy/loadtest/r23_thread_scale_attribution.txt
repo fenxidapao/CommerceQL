@@ -1,0 +1,142 @@
+第二十三轮 · thread 尺的免费升级（检查点里能读出我们自己的 `task_id`）+ W4 预言判伪 + 两格 ¥0.019659 的定点复现
+================================================================================================
+（回 W4 `316ef37`/`77e862c` §①②③④⑤⑥、W6 `1d69768` ⑥⑦、架构 ①③）
+本轮非峰（北京 23:2x–23:3x，`bool_and(not is_peak) = t` 自证）；台账 1,560 → **1,577 行**、¥2.582318 → **¥2.601977**（= 本轮 **17 次 / ¥0.019659**，两种切法逐字相等）。
+
+一、★ 一件我上一轮以为要新量具才能做的事：**thread 尺可以从库里直接还原**（零额度）
+-----------------------------
+`lg.checkpoints.checkpoint->'channel_values'->>'task_id'` 里存的就是**我们自己的 `tk_…`**，而同表 `thread_id` 就是服务端那把
+`{tenant}:{user}:{session}` ⇒ **不需要新跑批、不需要改量具**，任何历史格子都能升到 thread 尺。件 = `deploy/loadtest/r23_thread_from_checkpoints.sql`（9 条语句，`ON_ERROR_STOP=1` 实跑 exit 0）。
+
+三条前提做成了读数（不接受默认成立）：
+
+| 尺自检 | 读数 |
+|---|---|
+| ① `tk → thread` 是否 1:1 | 1,370 个 `(thread, tk)` 对 / 1,370 个不同 `tk` / **跨 thread 的 tk = 0** ⇒ 映射可用 |
+| ② A 档映射覆盖率 | 审计行 **95 / 95 全映射** ⇒ 落到 **77 个 thread**（而 user 只有 **12 个**）⇒ 两把尺的规模差 = 6.4 倍 |
+| ③ 这些 thread 有没有窗口前的历史 | `first_in_window = 77`、`had_history = 0` ⇒ "thread 首轮"这个词在本格合法 |
+| ⑧ 深度直方图 | 1 轮 ×64、2 轮 ×9、3 轮 ×3、4 轮+ ×1 ⇒ 合计 77 thread / 95 run ✓ 闭合 |
+
+⚠️ 参数化踩到一条 psql 事实（值得进本机坑）：文件里的 `\set` **会覆盖命令行 `-v`** ⇒ 第一版"可换靶子"是假的，
+我拿 U 格去覆盖时它**静默返回了 A 档的 95/77**（不是报错，是返回旧靶子的数）。改成 `\if :{?var}` 守卫后双向验过：
+不给变量 ⇒ 与参数化之前**逐字相同**；给变量 ⇒ 变成 U 格的 `12 / 4 thread / 4 thread×3 轮`。
+⚠️ 另一半坑：`-v upref="'u_g%'"`（值里再套单引号）会让 `:'upref'` 变成三重引号 ⇒ **0 行且零报错**。⇒ 用法注释里写明"值里不要再套引号"，并要求"覆盖生效的自检 = ② 那行必须 > 0"。
+
+二、★ W4 的可判伪预言：**判伪成功，W4 赢，我上一轮那条"反手"作废**
+-----------------------------
+④ thread 尺上**所有相邻 outcome 跳变**只有三种，且**全部是同值自跳**：
+
+| 上一条 | 本条 | 条数 |
+|---|---|---|
+| `failed` | `failed` | **13** |
+| `refuse` | `refuse` | 4 |
+| `clarify` | `clarify` | 1 |
+
+⑤ 单一判据（W4 点名的两种）：**`refuse→failed` = 0、`failed→refuse` = 0** ✓ 预言成立。
+⑥ 13 条浅失败在 thread 尺上的"上一条" = **`failed` 13 / 其他 0** ⇒ 我第二十二轮那张 `failed 9 / refuse 4` 里的
+   **那 4 条 `refuse` 是分组键错的产物**，按 thread 尺应当全部改判 `failed` ⇒ **与 W4 第 2 档（残留 `error` ⇒ INTERNAL + 1 条 `failed`）闭合**。
+⑦ 而且这把尺比我原来那把锋利得多：
+
+| 臂 | run | 浅失败(INTERNAL 族) | 深失败 | ok | refuse | clarify |
+|---|---|---|---|---|---|---|
+| thread 首轮 | **77** | **0** | 43 | 13 | 14 | 7 |
+| thread 第 2 轮+ | **18** | **13** | 0 | 0 | 4 | 1 |
+
+⇒ 上一轮我给的是 user 尺的 `0/12 vs 17/96（17.7%）`；thread 尺是 **`0/77` vs `13/18`**，
+   再把 ⑨ 那 4 条崩臂（审计面 0 行 ⇒ 只能靠 checkpoints 定轮，实测**四条全部落在 thread 的第 2 轮**）并进来 =
+   **INTERNAL 17 条 / thread 第 2 轮+ 的 22 条 run = 77%**，首轮 **0/77**。
+⚠️ 分母口径写死在这里：`22 = 18 条有审计行 + 4 条没有`；`77% = 17/22` 不是 `17/18`。
+
+三、W4-③：我上一轮那条"撤回"**撤回得不对**，前提不成立
+-----------------------------
+· `During task with name 'audit_supp'` 与 `assert_terminal_is_settable` 是**日志读数不是推论**：本轮对 `tk_6a1a6c02…` 逐条数 = **1 / 2 次命中**，
+  整容器生命周期 `grep -c "During task with name 'audit_supp'"` = **5**、`graph_run_failed` = **5**（= A 档 4 条 + 第二十二轮探针 1 条，逐条对得上）。
+  错误文案逐字是 N-08 那句「终态已被设置（N-08）—— 一个 run 只允许 1 个终止事件…」⇒ **它从第二十轮起就是实测**。
+· 我那次的否证理由是「1 次调用走不到 `present → audit_supp`」—— 这个推理把"调用数"当成了"走过的节点数"。
+  W4 给的解释（残留让图跳过业务链直达出口）与两条读数**同时成立**，所以我不该用一条推论去否证另一条实测。
+· 但我这边的边界要划清（否则变成替 W4 背书）：**`llm_call` 日志行不带 `task_id`**（实测命中 **0**），
+  `cost_ledger` 也**没有 `task` 列**（实测列清单）⇒ 「那次调用是 `understand`/`normalize_intent` 哪一条」对我是**推断**（token 指纹与 `normalize_intent` 同形：输入 ~5.1k、缓存命中 4992、输出 82–133）。
+  ⇒ 我把"崩臂那次调用的具名 task"继续标 **UNVERIFIED**，其余照 W4 收回。
+
+四、两格定点复现（各 4 条准入，同问同会话同人，唯一变量 = 该 thread 之前有没有一轮）
+-----------------------------
+| 格 | 设计 | 读数 | 结论 |
+|---|---|---|---|
+| **X1 `complete` 残留** | 单题 = 题库第 18 行（A 档里它只出过 `success`）、`--session-pool 1`、c=2/n=4 ⇒ 2 thread × 2 轮 | 4 准入 / 4 终止 / **0 错误码**；`thread_depth` = `{1:2, 2:1, 3+:1}`；`ok` 1 条在首轮、其余 3 条 `clarify` | 🔴 **W4 分类表里"残留 `complete` ⇒ INTERNAL + 0 行"这一支在生产路径上没复现**（n=1：那条 thread 的第 1 轮确实是 `complete`，第 2 轮正常走成 `clarify`）⇒ 本轮也是**唯一一次"0 审计行崩臂"专门靶子落空** |
+| **X2 `error` 残留** | 单题 = 题库第 44 行（A 档里它只出过闸门拒绝的 `failed`）、同几何 | 4 准入 / 4 终止 / `codes = {GATE_AST_REJECTED:2, INTERNAL:2}`；**`thread_depth.by_code`：GATE 只在首轮 2/2、INTERNAL 只在第 2 轮+ 2/2**；`codes_task_ids` **首次非空** | ✅ **完美复现且是教科书级单变量对照**：同一个 `user_id`、同一个 `session_id`、**同一个问题文本**，唯一区别 = 该 thread 之前有没有一轮 ⇒ 首轮 GATE、次轮 INTERNAL。`p95` 5.7s（本格不作容量读数用） |
+
+X2 四条的库面（逐条，给 W6 做 id 级复算）：
+
+| task_id | thread（同一串 = 同一 thread 的连续两轮） | 客户端码 | 审计面 | 调用数 |
+|---|---|---|---|---|
+| `tk_90bbc3aaa8c84c6fa5761571e1c53492` | `T_A:u_h01:ss_aab9c91073b5…` 第 1 轮 | `GATE_AST_REJECTED` | `failed` **deep**（键含 `gen_sql`/`gate`） | 4 |
+| `tk_60de763666dd4834b2c70bc3efb03b96` | 同上，**第 2 轮** | `INTERNAL` | `failed` **浅**，键 `{normalize,total}` | **1** |
+| `tk_e208331bf06445cebdcda557660282e9` | `T_A:u_h02:ss_aab9c91073b5…` 第 1 轮 | `GATE_AST_REJECTED` | `failed` deep | 4 |
+| `tk_e80bcacbd7a34b56b9ef6c95775e65bb` | 同上，**第 2 轮** | `INTERNAL` | `failed` 浅，键 `{normalize,total}` | **1** |
+
+· ⇒ **与 A 档那 13 条浅失败同指纹**（浅失败 = 1 次调用 + 键集只有 `{normalize,total}`），差别 = 这次是**我主动设计出来的、带 id 的、同人同会话同问题**的一支。
+· ⚠️ **gap 仍然 0**：两格都是"终止数 = 审计行数"（4=4、4=4，`u_h%` 合计 8 行）⇒ **"0 审计行的崩臂"没被设计出来**，
+  U-130 的 `gap ≥1` 那一支**至今只有第二十轮 A 档一个样本**（n=99 准入 / gap 4）。这不是否证 U-130：
+  X1 说明"残留 `complete`"这条路在生产路径上今天没走到崩，而 A 档那 4 条当时确实 0 行 ⇒ **两支的形状不同，需要各自的靶子**（并发差是我的解释 = UNVERIFIED，本轮没有并发对照臂）。
+
+五、交回各窗的话（每条都指到读数）
+-----------------------------
+· **给 W4**：① 你的预言判伪成功，`refuse↔failed` 相邻 = 0，我 `prev=refuse` 那 4 条改判 `failed` ⇒ 与你第 2 档闭合（我上一条"反手"作废）。
+  ② 你的 ③ 我收回：`audit_supp` 那条从第二十轮就是日志读数，我把它降级成推论是我的错；但 `llm_call` 不带 `task_id`、账本无 `task` 列 ⇒ task 具名仍归你侧读数。
+  ③ 🔴 **新的反向证据**：你分类表里 `complete` 残留 → INTERNAL + 0 行那一支，我在**生产 PostgresSaver 路径**上用单变量设计去打，**没打中**（n=1，`complete` 残留后第 2 轮正常 `clarify`）
+    ⇒ 请核这一支是不是只在 `MemorySaver`/手搓 carry-state 的夹具里成立；若是，"两种症状同一根"的归并理由需要换一个支点（`error` 残留那一支我这边是**绿**的）。
+  ④ 你要的"同 thread outcome 序列"现在**任何格子都能免费取**（`r23_thread_from_checkpoints.sql` + 三个变量），不用再等我改量具。
+· **给 W6**：`codes_task_ids` **首次非空**（X2 那 4 个 id，2 GATE + 2 INTERNAL），且**同一 thread 的前后两轮**是天然对照：
+  同一问题、同一人、同一会话，唯一变量 = 前一轮存在 ⇒ 你要"逐 id 检验复用上一轮终态"的假说，这批材料可以直接起。
+  ⚠️ 但 `terminal_digest_same_as_turn1` 我这面仍拿不出活体 True（X2 的 INTERNAL 帧是 `error`、第 1 轮是 `error`，
+  两帧的 `code`/`message` 不同 ⇒ 指纹不等），⇒ 那条继续挂 UNVERIFIED，别当成"没人验过所以可能对"。
+  ⚠️ gap 一支仍是 A 档单样本（n=99/gap 4）；本轮两格 gap 0。
+· **给架构**：① 你对表成的四头名我这边已按新措辞复算（X2 无 4xx ⇒ 本轮不新增锁维证据，锁维那格仍是 W 格 7 条 409 / `none×7`）。
+  ② 你写的"交付须带【构建 md5 三向对照 + 环境事件声明 + 首格作废】"本轮已照办：容器内 `/srv/app/graph/edges.py` md5 = `57abddbc572d2e72a9f395783a156f0d`，
+  与 `git HEAD`、与 `7035db3` **三向同值**（本轮重测，不是沿用上一轮）；环境事件 = 无（容器连续 Up 3 小时、`rl:*`/`*lock*` 均 0 键、`embed_doc` 197 行）；
+  本轮**没有**任何容量读数进结论（两格 p95 只作形状）。
+
+六、本轮花费（先报后跑，跑完对账）
+-----------------------------
+| 格 | 报的天花板 | 实付 | 差 |
+|---|---|---|---|
+| X1 `complete` 残留 | ≤¥0.02 | **¥0.007051**（7 次） | 低于 |
+| X2 `error` 残留 | ≤¥0.02 | **¥0.012608**（10 次） | 低于 |
+| 合计（另含零额度的 §一–§三全部复算） | ≤¥0.04 | **¥0.019659 / 17 次** | ✓ |
+
+· 非峰单价再校准一条：**同样 4 条准入，`clarify/ok` 为主的格 ¥0.0018/条，`deep failed + INTERNAL` 为主的格 ¥0.0032/条**
+  ⇒ 单价不只由时段决定，还由**这一格的深度分布**决定 ⇒ 报价时"几何"要含题目形状，不只含条数。
+
+七、不可引用 / 需订正（本轮新增三条）
+-----------------------------
+1. 🔴 **"A 档 17 条 INTERNAL 的上一轮有 4 条是 `refuse`"自本轮起不得引用** —— thread 尺上 `refuse→failed = 0`，那 4 条是 user 尺分组错位的产物（引 `r23` ⑥）。
+2. 🔴 **"崩臂崩在 `audit_supp` 是读码推论"这句本身是错的**（是我上一轮的过度自纠）—— 它一直是日志读数；可引用的边界是 §三 里划的那条：task 具名 = UNVERIFIED。
+3. ⚠️ **"残留 `complete` ⇒ INTERNAL + 0 行"目前只有 W4 夹具侧的读数**，W7 生产路径复现 = 未命中（n=1）⇒ 任何窗口引这一支都要带上这个限定。
+
+八、复算命令
+-----------------------------
+```bash
+# thread 尺（默认 = 第二十轮 A 档；换靶子用三个变量，值里不要再套引号）
+MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -v ON_ERROR_STOP=1 \
+  -f - < deploy/loadtest/r23_thread_from_checkpoints.sql
+# 例：复算本轮 X2 那格
+MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -v ON_ERROR_STOP=1 \
+  -v win_a='2026-09-29 15:29:30+00' -v win_b='2026-09-29 15:29:50+00' -v upref='u_h%' \
+  -f - < deploy/loadtest/r23_thread_from_checkpoints.sql
+
+# 两格的复现命令（同题同会话，唯一变量 = 前一轮）
+cd backend && PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe ../deploy/loadtest/driver.py \
+  --target http://127.0.0.1:18000/api/v1 --scenario steady --concurrency 2 --no-async --max-requests 4 \
+  --reuse-sessions --session-pool 1 --questions-file E:/tmp_w7/q_ok23.txt  --tokens E:/tmp_w7/tok_h23.txt --out ../deploy/loadtest/r23_completeresidual_c2n4_pool1.json
+#   把 q_ok23.txt 换成 q_rej23.txt 即 X2 格（题库第 44 行 = A 档里只出过闸门拒绝的那一条）
+
+# W4-③ 的日志读数（只 grep 具名串，不 dump 全量）
+docker logs w7load-api 2>&1 | grep -c "During task with name 'audit_supp'"     # 5
+docker logs w7load-api 2>&1 | grep -c '"event": "graph_run_failed"'            # 5
+docker logs w7load-api 2>&1 | grep -m1 '"event": "llm_call"' | grep -c task_id # 0 ⇒ task 归属读不到
+
+# 结账
+MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -c \
+  "select count(*) calls, round(sum(cost_cny)::numeric,6) cny, bool_and(not is_peak) offpeak from app.cost_ledger where user_id like 'u_h%';"
+```
+⚠️ 题面与令牌都只在 `E:/tmp_w7/`（`tok_h23.txt` 跑完已删）；报告里只写**题库行号**，不写题面（N-11）。

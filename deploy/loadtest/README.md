@@ -1355,6 +1355,28 @@ W4 §④ 报的形状批级不变量抓不到：`refuse` 之后第 2 轮**复用
 | `r22_lag_runseq.sql` | 6 条语句、`ON_ERROR_STOP=1` **exit 0** |
 | 未做 | 没重建镜像（容器内 `/srv/app/graph/edges.py` md5 = `57abddbc572d2e72a9f395783a156f0d`，与 git `HEAD` 与 `7035db3` 同一件）；没碰 `app/**`；令牌只在 `E:/tmp_w7/`，跑完即删 |
 
+#### 三.0.1t ★ 第二十三轮（2026-09-29 15:2x–15:3xZ / 北京 23:2x **非峰**，实付 ¥0.019659）：thread 尺**不用新量具就能还原** + W4 预言判伪（我输了，且我上一轮那条"反手"作废）+ 两格定点复现
+
+正文 = **`deploy/loadtest/r23_thread_scale_attribution.txt`**（九语句复算件 = `r23_thread_from_checkpoints.sql`）。这里只登记结论与不可引用项。
+
+· 🔴 **免费拿到的新读面**：`lg.checkpoints.checkpoint->'channel_values'->>'task_id'` 存的就是我们自己的 `tk_…`，同表 `thread_id` 就是服务端那把 `{tenant}:{user}:{session}`
+  ⇒ **任何历史格子都能升到 thread 尺**（上一轮我以为必须改量具重跑）。三条尺自检全做成读数：`tk→thread` **1:1（跨 thread = 0）**、A 档 **95/95 全映射 → 77 个 thread（user 只有 12 个）**、这些 thread **0 个有窗口前历史**、深度直方图 64/9/3/1 = 77 thread / 95 run ✓。
+· ★ **W4 的可判伪预言判伪成功、W4 赢**：thread 尺上相邻跳变只有同值自跳（`failed→failed 13`、`refuse→refuse 4`、`clarify→clarify 1`），
+  **`refuse→failed` = 0、`failed→refuse` = 0** ⇒ 我第二十二轮那张 `failed 9 / refuse 4` 里的 **4 条 `refuse` 是分组键错位的产物**，全部改判 `failed` ⇒ 与 W4 第 2 档（残留 `error` ⇒ INTERNAL + 1 条 `failed`）**闭合**。
+· ★ 新尺更锋利：**thread 首轮 0/77 浅失败，第 2 轮+ 13/18**；再并入 4 条崩臂（checkpoints 定轮实测**全部落在 thread 第 2 轮**）= **INTERNAL 17 / thread 第 2 轮+ 的 22 条 run**（`22 = 18 有审计行 + 4 没有`）。上一轮的 `0/12 vs 17/96` 是被 user 尺稀释过的。
+· 🔴 **我上一轮的"自我撤回"撤过头了**（W4-③ 成立）：`During task with name 'audit_supp'`（该 run 命中 1 次）、`assert_terminal_is_settable`（2 次）、全容器 `graph_run_failed` = 5（= A 档 4 + 第二十二轮探针 1）—— **一直是日志读数**。
+  我那句"1 次调用走不到 `audit_supp`"是把**调用数**当成了**走过的节点数**。边界照划清：`llm_call` 行**不带 `task_id`**（命中 0）、账本**无 `task` 列** ⇒ 那次调用的具名 task 对我仍是 **UNVERIFIED**。
+· ✅ **X2 `error` 残留格 = 教科书级单变量复现**（4 条准入 / ¥0.012608）：同一个 user、同一个会话、**同一个问题文本**，`thread_depth.by_code` 给出 **GATE 只在首轮 2/2、INTERNAL 只在第 2 轮+ 2/2**；
+  ⇒ **`codes_task_ids` 首次非空**（4 个 id，见证据件 §四的逐条表，含每条的 thread 归属与调用数）⇒ W6 的 id 级复算前置**这次真的交付了**。
+· 🔴 **X1 `complete` 残留格落空**（4 条 / ¥0.007051）：设计成"第 1 轮必 `complete` ⇒ 第 2 轮该崩"，实测第 2 轮**正常走成 `clarify`**、零错误码
+  ⇒ **W4 分类表里"残留 `complete` ⇒ INTERNAL + 0 行"那一支在生产 PostgresSaver 路径上没复现（n=1）**；连带 ⇒ "0 审计行崩臂"这一支至今**没有设计出来的样本**，U-130 的 `gap ≥1` 仍只有第二十轮 A 档一个（n=99 / gap 4），本轮两格 **gap 全 0**。
+· ⚠️ 单价的新因子：同为 4 条准入，`clarify/ok` 为主的格 **¥0.0018/条**、`deep failed + INTERNAL` 为主的格 **¥0.0032/条** ⇒ **报价的"几何"里要含题目形状（深度分布），不只含条数**。
+· ⚠️ psql 两条坑（进本机坑）：文件里的 `\set` **覆盖命令行 `-v`**（我第一版"可换靶子"是假的，且它**静默返回旧靶子的 95/77**）⇒ 改 `\if :{?var}` 守卫并双向验；
+  `-v upref="'u_g%'"`（值里再套引号）会三重引号 ⇒ **0 行零报错**，用法注释里写明并要求"覆盖生效自检 = ② 行必须 > 0"。
+· 门禁：`--self-check` 10/10、`ruff --config backend/pyproject.toml`（本轮未改码，只复跑）全绿、`tests/eval` + DSN 卫生 **368 passed**、`r23_*.sql` `ON_ERROR_STOP=1` exit 0（默认靶子逐字复现 + 变量覆盖两向都验）。
+· 环境：容器连续 `Up 3 hours`、`rl:*` / `*lock*` = 0 键、`embed_doc` 197 行；构建身份三向对照当场重测（容器内 `edges.py` md5 = `HEAD` = `7035db3` = `57abddbc…`）。**本轮不产出任何可比较的容量读数**（两格 p95 只作形状）。
+· 🔻 **不可引用 +3**：① "A 档浅失败里有 4 条 prev=`refuse`"；② "崩臂崩在 `audit_supp` 是读码推论"（这句本身是错的）；③ "残留 `complete` ⇒ INTERNAL + 0 行"须带"W7 生产路径未复现（n=1）"的限定。
+
 ### 三.1 装载（本轮实测读数）
 
 `load_synth_to_pg.py` 用 W1A 的 `data/generator/seed_generator.py`（确定性、附录 C §C.12 规模）

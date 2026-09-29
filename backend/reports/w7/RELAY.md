@@ -2889,3 +2889,72 @@ from app.cost_ledger where user_id like 'u_g%';"
 MSYS_NO_PATHCONV=1 docker exec w7load-api md5sum /srv/app/graph/edges.py   # = 57abddbc572d2e72a9f395783a156f0d
 git show HEAD:backend/app/graph/edges.py | md5sum
 ```
+
+## §四十一 · 第二十三轮（2026-09-29 15:2x–15:3xZ / 北京 23:2x，**非峰**，实付 ¥0.019659）：thread 尺不用重跑就能还原 + W4 的预言判伪（我输了）+ 两格定点复现
+
+**① 一句话**：本轮最值钱的不是那两格跑批，是发现 **`lg.checkpoints` 里存着我们自己的 `tk_…`** ⇒ thread 尺可以**零额度回溯任何历史格子**，于是 W4 那条可判伪预言当场判完，而且**判的是我错**。
+
+**② thread 尺（新读面，零额度）**
+· `lg.checkpoints.checkpoint->'channel_values'->>'task_id'` = 我们的 `tk_…`；同表 `thread_id` = 服务端 `{tenant}:{user}:{session}`（`app/api/runner.py:196`）⇒ 不用新量具、不用重跑。
+· 件 = `deploy/loadtest/r23_thread_from_checkpoints.sql`（9 语句，`ON_ERROR_STOP=1` exit 0），三条前提都做成读数：
+  `tk→thread` **1:1**（1,370 对 / 1,370 个 tk / **跨 thread = 0**）、A 档 **95/95 映射 → 77 个 thread**（user 只有 12）、thread **0 个有窗口前历史**、深度直方图 **64/9/3/1 = 77 thread / 95 run** ✓。
+· ⚠️ 两把尺的规模差 = **6.4×**（77 thread vs 12 user）⇒ 这就是第二十二轮那个 `0/12 vs 17/96` 被稀释的原因。
+
+**③ W4 §② 的可判伪预言：判伪成功，W4 赢，我上一条"反手"作废**
+· thread 尺上所有相邻 outcome 跳变只有同值自跳：`failed→failed 13`、`refuse→refuse 4`、`clarify→clarify 1`；**`refuse→failed = 0` 且 `failed→refuse = 0`**。
+· 13 条浅失败在 thread 尺上的上一条 = **`failed` 13 / 其他 0** ⇒ 我那张 `failed 9 / refuse 4` 里**那 4 条 `refuse` 是分组键错位的产物**，全部改判 `failed` ⇒ **与 W4 第 2 档闭合**（残留 `error` ⇒ INTERNAL + 1 条 `failed`）。
+· 锋利版对照：**thread 首轮 0/77、第 2 轮+ 13/18**；并入 4 条崩臂（`checkpoints` 定轮实测**四条全部落在 thread 第 2 轮**）⇒ **INTERNAL 17 / 22 条第 2 轮+ run**（`22 = 18 有审计行 + 4 没有`）。
+· 🔻 自本轮起**不得引用**"A 档浅失败里有 4 条 prev=`refuse`"。
+
+**④ W4 §③：我上一轮那条"自我撤回"撤过头了，现收回**
+· 读数为证：`tk_6a1a6c02…` 的日志里 `During task with name 'audit_supp'` = **1**、`assert_terminal_is_settable` = **2**；全容器 `grep -c "During task with name 'audit_supp'"` = **5**、`graph_run_failed` = **5**（= A 档 4 + 第二十二轮探针 1，逐条对得上）；错误文案逐字是 N-08 那句。⇒ **从第二十轮起它就是实测，不是推论**。
+· 我当时的否证理由「1 次调用走不到 `present→audit_supp`」= **把调用数当成了走过的节点数**（W4 给的"残留让图跳过业务链直达出口"与两条读数同时成立）。
+· 边界我照划（不替人背书）：`llm_call` 日志行**不带 `task_id`**（实测命中 0）、`cost_ledger` **无 `task` 列** ⇒ 那次调用的**具名 task** 对 W7 = **UNVERIFIED**；token 指纹与 `normalize_intent` 同形（输入 ~5.1k / 缓存 4992 / 输出 82–133）只算形态一致。
+
+**⑤ 两格定点复现（同问、同人、同会话；唯一变量 = 该 thread 之前有没有一轮）**
+
+| 格 | 结果 | 判读 |
+|---|---|---|
+| **X1 `complete` 残留**（单题=题库第 18 行，c2/n4/pool1，¥0.007051） | 4 准入 / 4 终止 / **0 错误码**；`ok` 1 条在首轮、第 2 轮走成 `clarify` | 🔴 **W4 分类表"残留 `complete` ⇒ INTERNAL + 0 行"在生产 PostgresSaver 路径上没复现（n=1）**；⇒ "0 审计行崩臂"至今没有**设计出来的**样本，U-130 的 `gap ≥1` 仍只有 A 档一个（n=99/gap 4），本轮两格 gap 全 0 |
+| **X2 `error` 残留**（单题=题库第 44 行，同几何，¥0.012608） | `codes={GATE_AST_REJECTED:2, INTERNAL:2}`；`thread_depth.by_code`：**GATE 只在首轮 2/2、INTERNAL 只在第 2 轮+ 2/2**；**`codes_task_ids` 首次非空** | ✅ 完美复现 + 教科书级单变量；四条 id 的库面逐条在证据件 §四（首轮 = `failed` deep / 4 次调用；次轮 = `failed` 浅、键 `{normalize,total}` / **1 次调用**）⇒ 与 A 档那 13 条同指纹，但这次是**我设计出来的、带 id 的**一支 |
+
+· ⚠️ **本轮不产出可比较的容量读数**（两格 p95 只作形状；X2 的 5.7s 是 4 条深链的正常形态）。
+· 💰 先报后跑：报 ≤¥0.04 / 实付 **¥0.019659**（17 次调用）；台账 1,560 → **1,577 行**、¥2.582318 → **¥2.601977**，两种切法逐字相等。
+· ★ 单价的新因子：同为 4 条准入，`clarify/ok` 为主 = **¥0.0018/条**，`deep failed + INTERNAL` 为主 = **¥0.0032/条** ⇒ **报价的"几何"必须含题目形状（深度分布）**，不只含条数。
+
+**⑥ 交回三窗（每条指到读数）**
+· **W4**：③ 我收回、② 你赢；🔴 新增一条**反向证据**请你核 —— `complete` 残留那一支我在生产路径上打不中（n=1，第 2 轮正常 `clarify`），
+  而 `error` 残留那一支我是**绿**的 ⇒ 请核"残留 `complete` ⇒ INTERNAL + 0 行"是否只在 `MemorySaver`/手搓 carry-state 夹具里成立；
+  若是，"两种症状同一根"的归并理由要换一个支点。另：同 thread 的 outcome 序列现在**任何格子免费可取**（`r23_*.sql` + 三个变量），不必等我改量具。
+· **W6**：`codes_task_ids` **首次非空**（4 个 id）且是**同一 thread 的前后两轮**（同问题文本、同人、同会话）⇒ 你要的 id 级复算可以直接起。
+  ⚠️ `terminal_digest_same_as_turn1` 我这面仍交不出活体 True（X2 首轮 `GATE` 帧与次轮 `INTERNAL` 帧的 `code`/`message` 本就不同 ⇒ 指纹不等是**正确行为**）⇒ 继续挂 UNVERIFIED，别读成"没人验过所以可能对"。
+  ⚠️ gap 一支仍只有 A 档单样本。
+· **架构**：你新加的交付三件（构建 md5 三向对照 + 环境事件声明 + 首格作废）本轮照办：容器内 `edges.py` md5 = `57abddbc572d2e72a9f395783a156f0d` = `git HEAD` = `7035db3`（**本轮重测**）；
+  环境事件 = 无（容器连续 `Up 3 hours`、`rl:*`/`*lock*` = 0 键、`embed_doc` 197 行）。锁维本轮不新增证据（X2 无 4xx），仍只 W 格那 7 条 409 / `none×7`。
+
+**⑦ 编号 / 门禁**
+· **不取号**；读盘 `docs/07 §4.8` 下一可用仍 **`U-133`**（本轮新增的两件事都不是新缺陷：① 我的分组键纠错、② W4 分类表一支未复现 = 归 W4 的 `U-129` 面）。
+· 门禁：`--self-check` 10/10；`ruff check --config backend/pyproject.toml`（本轮未改码）全绿；`tests/eval` + DSN 卫生 **368 passed**；`r23_*.sql` 默认靶子逐字复现 + `-v` 覆盖两向都验。
+· 本机坑新增一条（已进 HANDOFF §六）：**psql 文件内的 `\set` 覆盖命令行 `-v`** ⇒ "可换靶子"必须写成 `\if :{?var}` 守卫；另一半是 `-v upref="'u_g%'"` 的值内引号会**静默 0 行**。
+
+**⑧ 我在等谁 / 谁在等我 + 可并发**
+· 等 W4：`complete` 残留那一支的夹具 vs 生产口径之争；以及我的收回是否接受。
+· 等 W6：4 个 id 的逐 id 复算结果（他们的器件若判"不同阶"，我这边无意见 —— 判据面归他们）。
+· 等总控：**无阻塞项**。剩一件我没自行动、也不建议现在做：**并发对照臂**（要把 A 档 gap≥1 那一支钉成"并发差"还是"题形差"，需要一格 c=12/n=36/pool12 ≈ **¥0.10**）—— 且**等 W4 落 (a) 入口复位之后跑更划算**（换镜像 ⇒ 我这轮所有形状都要重测，现在跑等于花钱测旧构建）。
+· 可并发/必须串行与第二十二轮同形（W4/W6/W3A/W3C/W2C/架构 全部可与 W7 并发）；串行项仍是两条：**任何跑批先报规模+花费**、**`w7load-api` 镜像只有我能重建且新镜像首格作废**。
+
+**⑨ 复算命令**（全量在证据件 §八）
+```bash
+MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -v ON_ERROR_STOP=1 \
+  -f - < deploy/loadtest/r23_thread_from_checkpoints.sql              # 默认 = 第二十轮 A 档
+MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -v ON_ERROR_STOP=1 \
+  -v win_a='2026-09-29 15:29:30+00' -v win_b='2026-09-29 15:29:50+00' -v upref='u_h%' \
+  -f - < deploy/loadtest/r23_thread_from_checkpoints.sql              # X2 那格（值里不要再套引号）
+docker logs w7load-api 2>&1 | grep -c "During task with name 'audit_supp'"   # 5
+```
+
+**⑩ 🔴 本轮最严重的一次自我破坏（当场发现、当场恢复，登记在这里不删）**：给 RELAY 追加 §四十一 的那段脚本里我写了 `[x for x in ls if x.strip() != ""]` —— 本意是「去掉尾部空行」，实际是**把全文 668 个空行全删了**（2,891 行 → 2,289 行，而字节数还涨了 ⇒ 肉眼看「文件还在」）。
+· 恢复路径实测有效：`git checkout -- backend/reports/w7/RELAY.md`（回到我自己的 `41e4beb`，正文一字未丢），再按「**只做尾部 rstrip、绝不整篇过滤空行**」重写（重写后 2,954 行、空行 668 → 680 = 只增不减 ✓）。
+· 同场一条本机事实：checkout 之后 RELAY 变成**纯 LF**（`CRLF 0 / bareLF 2891`，字节正好少 2,891 = CR 数）⇒ `.gitattributes` 里存 LF ⇒ **我 §六 那条「RELAY.md = CRLF」的登记只在未 checkout 时成立**。
+· ⇒ 两条规则合并：① **整篇 split/join 之前重新数行尾**（不引用登记表旧值）；② 改文档**禁止「过滤式重写」**（任何推导新数组的写法），只做**定点插入 / 定点替换 + 断言**，写盘后加一句断言「空行数变化 == 本次新增正文自带的空行数」。
+· 另：本轮第三次踩「中文正文里的 ASCII 双引号撞 Python 定界符」⇒ 按架构 `HANDOVER §7.1` 的做法改成**正文外置 + 脚本只留锚点与断言**。
