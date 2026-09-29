@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-09-29T08:57:20+00:00",
+  "generated_at_utc": "2026-09-29T16:13:23+00:00",
   "strict_denominator": "terminal − app.audit_log 行数 = 0",
   "denominator_definition": {
     "terminal_outcomes": [
@@ -50,29 +50,29 @@
     "count_visible_without_tenant_guc": true,
     "table_span": {
       "min": "2026-09-19T05:14:39.200082+00:00",
-      "max": "2026-09-29T06:40:33.299388+00:00",
-      "rows": 812
+      "max": "2026-09-29T15:29:44.146963+00:00",
+      "rows": 861
     },
     "table_outcome_counts": {
       "failed": {
-        "rows": 215,
+        "rows": 222,
         "first": "2026-09-21T10:38:18.277906+00:00",
-        "last": "2026-09-29T06:18:21.481305+00:00"
+        "last": "2026-09-29T15:29:44.146963+00:00"
       },
       "clarify": {
-        "rows": 112,
+        "rows": 134,
         "first": "2026-09-19T05:27:28.062852+00:00",
-        "last": "2026-09-29T06:38:17.991545+00:00"
+        "last": "2026-09-29T15:29:01.586338+00:00"
       },
       "success": {
-        "rows": 63,
+        "rows": 70,
         "first": "2026-09-23T08:01:35.318295+00:00",
-        "last": "2026-09-29T06:40:33.299388+00:00"
+        "last": "2026-09-29T15:29:07.394630+00:00"
       },
       "refuse": {
-        "rows": 422,
+        "rows": 435,
         "first": "2026-09-19T05:14:39.200082+00:00",
-        "last": "2026-09-29T06:18:11.202416+00:00"
+        "last": "2026-09-29T12:26:57.613917+00:00"
       }
     },
     "table_day_counts": {
@@ -82,7 +82,7 @@
       "2026-09-22": 5,
       "2026-09-23": 15,
       "2026-09-28": 591,
-      "2026-09-29": 103
+      "2026-09-29": 152
     }
   },
   "receipts_pattern": "deploy/loadtest/*.json",
@@ -112,6 +112,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -153,6 +154,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -196,6 +198,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {
           "http_4xx": 1
@@ -239,6 +242,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {
           "refuse": 2,
@@ -252,7 +256,7 @@
       "mismatch": null,
       "inapplicability_reason": null,
       "audit_rows": 95,
-      "rows_that_window_day": 103,
+      "rows_that_window_day": 152,
       "diff": 4,
       "by_outcome": {
         "clarify": 8,
@@ -289,6 +293,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -298,7 +303,7 @@
       "mismatch": null,
       "inapplicability_reason": null,
       "audit_rows": 1,
-      "rows_that_window_day": 103,
+      "rows_that_window_day": 152,
       "diff": 0,
       "by_outcome": {
         "refuse": 1
@@ -332,6 +337,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -378,6 +384,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {
           "error_frame": 8,
@@ -425,6 +432,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {
           "http_4xx": 43
@@ -473,6 +481,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {
           "refuse": 30
@@ -521,6 +530,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -567,6 +577,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -611,6 +622,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {
           "http_4xx": 34
@@ -659,6 +671,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -704,6 +717,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {
           "http_4xx": 23
@@ -749,6 +763,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {
           "refuse": 31,
@@ -797,6 +812,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -841,6 +857,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -884,6 +901,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -929,6 +947,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -974,6 +993,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -1019,6 +1039,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -1064,6 +1085,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -1108,6 +1130,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {
           "http_4xx": 23
@@ -1153,6 +1176,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -1197,6 +1221,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {
           "http_4xx": 41
@@ -1245,6 +1270,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {
           "http_4xx": 50
@@ -1261,6 +1287,309 @@
       "by_outcome": {
         "failed": 2,
         "refuse": 8
+      },
+      "state": "invariant_ok",
+      "strict_equation_evaluated": true,
+      "g6_caveat_present": true
+    },
+    {
+      "receipt": "r22_lock_c8n8.json",
+      "scenario_index": 1,
+      "schema": "w7.loadtest.receipt/1",
+      "target": "http://127.0.0.1:18000/api/v1",
+      "window_kind": "single",
+      "begin": "2026-09-29T12:21:51+00:00",
+      "end": "2026-09-29T12:21:58+00:00",
+      "denominator": 1,
+      "denominator_basis": "admission.terminal",
+      "admitted": 1,
+      "terminal": 1,
+      "two_numbers": {
+        "admitted": 1,
+        "terminal": 1,
+        "audit_rows": 1,
+        "gap_admitted_minus_terminal": 0,
+        "gap_terminal_minus_audit_rows": 0,
+        "attribution": {
+          "gap_admitted_minus_terminal": "非 0 = 有 2xx 没读到终止帧（断流/客户端超时）⇒ 量具与客户端侧的形状，归 U-129 家族；**与 app.audit_log 行数无关**",
+          "gap_terminal_minus_audit_rows": "严格式的差：> 0 = 进了图的终态没落段 1 审计行（U-130），< 0 = 一个请求落了多行（双终态）"
+        },
+        "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
+      },
+      "codes_task_ids": null,
+      "codes_task_ids_presence": "empty",
+      "client_side_evidence": {
+        "by_outcome": {
+          "http_4xx": 7
+        },
+        "total": 7
+      },
+      "task_id_evidence": null,
+      "stream_break_gap": 0,
+      "mismatch": null,
+      "inapplicability_reason": null,
+      "audit_rows": 1,
+      "rows_that_window_day": 152,
+      "diff": 0,
+      "by_outcome": {
+        "refuse": 1
+      },
+      "state": "invariant_ok",
+      "strict_equation_evaluated": true,
+      "g6_caveat_present": true
+    },
+    {
+      "receipt": "r22_threadcell_c12n24.json",
+      "scenario_index": 1,
+      "schema": "w7.loadtest.receipt/1",
+      "target": "http://127.0.0.1:18000/api/v1",
+      "window_kind": "single",
+      "begin": "2026-09-29T12:26:00+00:00",
+      "end": "2026-09-29T12:26:16+00:00",
+      "denominator": 24,
+      "denominator_basis": "admission.terminal",
+      "admitted": 24,
+      "terminal": 24,
+      "two_numbers": {
+        "admitted": 24,
+        "terminal": 24,
+        "audit_rows": 24,
+        "gap_admitted_minus_terminal": 0,
+        "gap_terminal_minus_audit_rows": 0,
+        "attribution": {
+          "gap_admitted_minus_terminal": "非 0 = 有 2xx 没读到终止帧（断流/客户端超时）⇒ 量具与客户端侧的形状，归 U-129 家族；**与 app.audit_log 行数无关**",
+          "gap_terminal_minus_audit_rows": "严格式的差：> 0 = 进了图的终态没落段 1 审计行（U-130），< 0 = 一个请求落了多行（双终态）"
+        },
+        "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
+      },
+      "codes_task_ids": null,
+      "codes_task_ids_presence": "empty",
+      "client_side_evidence": {
+        "by_outcome": {
+          "refuse": 1,
+          "clarify": 1
+        },
+        "total": 2
+      },
+      "task_id_evidence": null,
+      "stream_break_gap": 0,
+      "mismatch": null,
+      "inapplicability_reason": null,
+      "audit_rows": 24,
+      "rows_that_window_day": 152,
+      "diff": 0,
+      "by_outcome": {
+        "clarify": 9,
+        "refuse": 9,
+        "success": 6
+      },
+      "state": "invariant_ok",
+      "strict_equation_evaluated": true,
+      "g6_caveat_present": false
+    },
+    {
+      "receipt": "r22_threadturn_c4n12_pool1.json",
+      "scenario_index": 1,
+      "schema": "w7.loadtest.receipt/1",
+      "target": "http://127.0.0.1:18000/api/v1",
+      "window_kind": "single",
+      "begin": "2026-09-29T12:26:54+00:00",
+      "end": "2026-09-29T12:26:58+00:00",
+      "denominator": 12,
+      "denominator_basis": "admission.terminal",
+      "admitted": 12,
+      "terminal": 12,
+      "two_numbers": {
+        "admitted": 12,
+        "terminal": 12,
+        "audit_rows": 12,
+        "gap_admitted_minus_terminal": 0,
+        "gap_terminal_minus_audit_rows": 0,
+        "attribution": {
+          "gap_admitted_minus_terminal": "非 0 = 有 2xx 没读到终止帧（断流/客户端超时）⇒ 量具与客户端侧的形状，归 U-129 家族；**与 app.audit_log 行数无关**",
+          "gap_terminal_minus_audit_rows": "严格式的差：> 0 = 进了图的终态没落段 1 审计行（U-130），< 0 = 一个请求落了多行（双终态）"
+        },
+        "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
+      },
+      "codes_task_ids": null,
+      "codes_task_ids_presence": "empty",
+      "client_side_evidence": {
+        "by_outcome": {
+          "refuse": 2,
+          "clarify": 6
+        },
+        "total": 8
+      },
+      "task_id_evidence": null,
+      "stream_break_gap": 0,
+      "mismatch": null,
+      "inapplicability_reason": null,
+      "audit_rows": 12,
+      "rows_that_window_day": 152,
+      "diff": 0,
+      "by_outcome": {
+        "clarify": 9,
+        "refuse": 3
+      },
+      "state": "invariant_ok",
+      "strict_equation_evaluated": true,
+      "g6_caveat_present": true
+    },
+    {
+      "receipt": "r23_completeresidual_c2n4_pool1.json",
+      "scenario_index": 1,
+      "schema": "w7.loadtest.receipt/1",
+      "target": "http://127.0.0.1:18000/api/v1",
+      "window_kind": "single",
+      "begin": "2026-09-29T15:28:57+00:00",
+      "end": "2026-09-29T15:29:07+00:00",
+      "denominator": 4,
+      "denominator_basis": "admission.terminal",
+      "admitted": 4,
+      "terminal": 4,
+      "two_numbers": {
+        "admitted": 4,
+        "terminal": 4,
+        "audit_rows": 4,
+        "gap_admitted_minus_terminal": 0,
+        "gap_terminal_minus_audit_rows": 0,
+        "attribution": {
+          "gap_admitted_minus_terminal": "非 0 = 有 2xx 没读到终止帧（断流/客户端超时）⇒ 量具与客户端侧的形状，归 U-129 家族；**与 app.audit_log 行数无关**",
+          "gap_terminal_minus_audit_rows": "严格式的差：> 0 = 进了图的终态没落段 1 审计行（U-130），< 0 = 一个请求落了多行（双终态）"
+        },
+        "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
+      },
+      "codes_task_ids": null,
+      "codes_task_ids_presence": "empty",
+      "client_side_evidence": {
+        "by_outcome": {
+          "clarify": 2
+        },
+        "total": 2
+      },
+      "task_id_evidence": null,
+      "stream_break_gap": 0,
+      "mismatch": null,
+      "inapplicability_reason": null,
+      "audit_rows": 4,
+      "rows_that_window_day": 152,
+      "diff": 0,
+      "by_outcome": {
+        "clarify": 3,
+        "success": 1
+      },
+      "state": "invariant_ok",
+      "strict_equation_evaluated": true,
+      "g6_caveat_present": true
+    },
+    {
+      "receipt": "r23_errorresidual_c2n4_pool1.json",
+      "scenario_index": 1,
+      "schema": "w7.loadtest.receipt/1",
+      "target": "http://127.0.0.1:18000/api/v1",
+      "window_kind": "single",
+      "begin": "2026-09-29T15:29:37+00:00",
+      "end": "2026-09-29T15:29:44+00:00",
+      "denominator": 4,
+      "denominator_basis": "admission.terminal",
+      "admitted": 4,
+      "terminal": 4,
+      "two_numbers": {
+        "admitted": 4,
+        "terminal": 4,
+        "audit_rows": 4,
+        "gap_admitted_minus_terminal": 0,
+        "gap_terminal_minus_audit_rows": 0,
+        "attribution": {
+          "gap_admitted_minus_terminal": "非 0 = 有 2xx 没读到终止帧（断流/客户端超时）⇒ 量具与客户端侧的形状，归 U-129 家族；**与 app.audit_log 行数无关**",
+          "gap_terminal_minus_audit_rows": "严格式的差：> 0 = 进了图的终态没落段 1 审计行（U-130），< 0 = 一个请求落了多行（双终态）"
+        },
+        "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
+      },
+      "codes_task_ids": {
+        "GATE_AST_REJECTED": [
+          "tk_90bbc3aaa8c84c6fa5761571e1c53492",
+          "tk_e208331bf06445cebdcda557660282e9"
+        ],
+        "INTERNAL": [
+          "tk_60de763666dd4834b2c70bc3efb03b96",
+          "tk_e80bcacbd7a34b56b9ef6c95775e65bb"
+        ]
+      },
+      "codes_task_ids_presence": "present",
+      "client_side_evidence": {
+        "by_outcome": {
+          "error_frame": 2
+        },
+        "total": 2
+      },
+      "task_id_evidence": {
+        "method": "逐行取 app.audit_log 的 (task_id, outcome, latency_ms)（参数化、只读闸门内）⇒ 行数在 Python 里数（见源码注释：lateral 展开会把行按键数乘开）",
+        "n_ids": 4,
+        "n_with_row": 4,
+        "by_id": {
+          "tk_60de763666dd4834b2c70bc3efb03b96": {
+            "seg1_rows": 1,
+            "outcomes": [
+              "failed"
+            ],
+            "latency_keys": {
+              "min": 2,
+              "max": 2
+            }
+          },
+          "tk_90bbc3aaa8c84c6fa5761571e1c53492": {
+            "seg1_rows": 1,
+            "outcomes": [
+              "failed"
+            ],
+            "latency_keys": {
+              "min": 6,
+              "max": 6
+            }
+          },
+          "tk_e208331bf06445cebdcda557660282e9": {
+            "seg1_rows": 1,
+            "outcomes": [
+              "failed"
+            ],
+            "latency_keys": {
+              "min": 6,
+              "max": 6
+            }
+          },
+          "tk_e80bcacbd7a34b56b9ef6c95775e65bb": {
+            "seg1_rows": 1,
+            "outcomes": [
+              "failed"
+            ],
+            "latency_keys": {
+              "min": 2,
+              "max": 2
+            }
+          }
+        },
+        "by_code": {
+          "GATE_AST_REJECTED": {
+            "given": 2,
+            "with_row": 2,
+            "missing_task_ids": []
+          },
+          "INTERNAL": {
+            "given": 2,
+            "with_row": 2,
+            "missing_task_ids": []
+          }
+        }
+      },
+      "stream_break_gap": 0,
+      "mismatch": null,
+      "inapplicability_reason": null,
+      "audit_rows": 4,
+      "rows_that_window_day": 152,
+      "diff": 0,
+      "by_outcome": {
+        "failed": 4
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
@@ -1291,6 +1620,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -1329,6 +1659,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -1367,6 +1698,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -1405,6 +1737,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -1443,6 +1776,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -1481,6 +1815,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -1519,6 +1854,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -1557,6 +1893,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -1595,6 +1932,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -1636,6 +1974,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -1677,6 +2016,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -1718,6 +2058,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -1756,6 +2097,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
@@ -1797,6 +2139,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "codes_task_ids_presence": "absent",
       "client_side_evidence": {
         "by_outcome": {},
         "total": 0
@@ -1818,15 +2161,15 @@
   ],
   "overlapping_windows": [],
   "summary": {
-    "n_receipts_scanned": 37,
-    "n_scenario_cells": 40,
+    "n_receipts_scanned": 42,
+    "n_scenario_cells": 45,
     "state_counts": {
       "invariant_violated": 10,
-      "invariant_ok": 24,
+      "invariant_ok": 29,
       "not_applicable": 2,
       "ambiguous_window": 4
     },
-    "invariant_ok_cells": 24,
+    "invariant_ok_cells": 29,
     "violated_cells": [
       {
         "receipt": "baseline_c5.json",
@@ -1852,7 +2195,7 @@
         "gap_admitted_minus_terminal": 0,
         "gap_terminal_minus_audit_rows": 4,
         "task_id_evidence": null,
-        "rows_that_window_day": 103
+        "rows_that_window_day": 152
       },
       {
         "receipt": "healthy_rA_sessionlock_c8n24.json",
@@ -1969,13 +2312,13 @@
     "attribution_note": "「少落」不等于「被测系统没落终态」——先对照每格的 rows_that_window_day 与 pg_guard.table_day_counts：共享实例上这张表**现存**的历史可能短于回执，当天整表只剩的行数小于本格分母时，差值说的是表、不是服务。「当时没写」与「写了又被清理」本探针分不开 ⇒ 只有当日行数与分母同量级的格子，才指认得出东西（具体的读数进产物与交付报告，不写死在这里）。",
     "denominator_basis_counts": {
       "derived:outcomes": 38,
-      "admission.terminal": 2
+      "admission.terminal": 7
     },
     "inapplicability_reason_counts": {
       "zero_denominator_vacuous": 2,
       "window_ambiguous": 4
     },
-    "strict_denominator_cells": 40,
+    "strict_denominator_cells": 45,
     "proxy_denominator_cells": 0,
     "stream_break_cells": [],
     "zero_denominator_cells": [
@@ -1989,11 +2332,11 @@
       }
     ],
     "target_counts": {
-      "http://127.0.0.1:18000/api/v1": 39,
+      "http://127.0.0.1:18000/api/v1": 44,
       "http://127.0.0.1:8000/api/v1": 1
     },
     "provided_vs_derived_mismatch": [],
-    "clock_skew_s": 0.001,
+    "clock_skew_s": -0.001,
     "edge_unreliable": false,
     "two_number_block": {
       "admitted_minus_terminal": {
@@ -2070,16 +2413,25 @@
       "why": "两半各自成立才有意义：`admitted − terminal = 0` 与 `terminal − 审计行 = 4` 并成 `admitted − 审计行 = 4` 之后，'没断流'这件事就从读数里消失了。"
     },
     "task_id_channel": {
-      "n_receipts_scanned": 37,
-      "cells_with_codes_task_ids": 0,
-      "cells_with_id_evidence": 0,
-      "status": "盘上回执若不带 `codes_task_ids` ⇒ 本批只能用时间窗读数，**不许**写成'task_id 级复算过'；带了就走 `where task_id = any(...)` 逐 id 点名（缺件的 task_id 会列在 by_code.missing_task_ids）。"
+      "n_receipts_scanned": 42,
+      "n_cells": 45,
+      "cells_with_codes_task_ids": 1,
+      "presence_counts": {
+        "absent": 40,
+        "empty": 4,
+        "present": 1
+      },
+      "cells_with_id_evidence": 1,
+      "status": "三态分开数：**absent** = 回执根本没有 `codes_task_ids` 这个键（老件）；**empty** = 键在但值是空字典 ⇒ **不是字段坏了**，是那批错误码没有 ack 帧可取 id（W7 第二十二轮 ④ + 我方实测：`r22_lock_c8n8.json` 的 `codes = {SESSION_CONFLICT: 7}` 而 `codes_task_ids = {}`）；**present** = 有 id ⇒ 本器件自动走逐行 join（`task_id_evidence`）。引用这条不变量时**只许**引 present 那一格；absent/empty 的批次一律不许写成'task_id 级复算过'。",
+      "present_cells": [
+        "r23_errorresidual_c2n4_pool1.json"
+      ]
     },
     "proxy_only_cells": [],
     "client_side_crosscheck": {
       "role": "只作对照列 —— `classify()` 不读 `client_side_evidence`，严格式两边都不引它",
-      "cells_with_provenance": 26,
-      "n_cells": 40,
+      "cells_with_provenance": 31,
+      "n_cells": 45,
       "violated_cells_compared": [
         {
           "receipt": "healthy_r20_aprime_c12n108.json",
