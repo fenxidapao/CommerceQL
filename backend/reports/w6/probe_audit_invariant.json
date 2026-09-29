@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-09-29T07:16:10+00:00",
+  "generated_at_utc": "2026-09-29T08:57:20+00:00",
   "strict_denominator": "terminal − app.audit_log 行数 = 0",
   "denominator_definition": {
     "terminal_outcomes": [
@@ -112,6 +112,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -152,6 +153,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -191,6 +196,12 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {
+          "http_4xx": 1
+        },
+        "total": 1
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -228,6 +239,14 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {
+          "refuse": 2,
+          "error_frame": 11,
+          "http_4xx": 9
+        },
+        "total": 22
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -270,6 +289,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -309,6 +332,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -351,6 +378,14 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {
+          "error_frame": 8,
+          "http_4xx": 4,
+          "http_5xx": 4
+        },
+        "total": 16
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -390,6 +425,12 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {
+          "http_4xx": 43
+        },
+        "total": 43
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -432,6 +473,12 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {
+          "refuse": 30
+        },
+        "total": 30
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -474,6 +521,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -516,6 +567,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -556,6 +611,12 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {
+          "http_4xx": 34
+        },
+        "total": 34
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -598,6 +659,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -639,6 +704,12 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {
+          "http_4xx": 23
+        },
+        "total": 23
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -678,6 +749,14 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {
+          "refuse": 31,
+          "http_5xx": 35,
+          "http_4xx": 1
+        },
+        "total": 67
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -718,6 +797,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -758,6 +841,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -797,6 +884,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -838,6 +929,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -879,6 +974,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -920,6 +1019,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -961,6 +1064,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -1001,6 +1108,12 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {
+          "http_4xx": 23
+        },
+        "total": 23
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -1040,6 +1153,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -1080,6 +1197,12 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {
+          "http_4xx": 41
+        },
+        "total": 41
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -1122,6 +1245,12 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {
+          "http_4xx": 50
+        },
+        "total": 50
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -1162,6 +1291,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -1199,6 +1329,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -1236,6 +1367,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -1273,6 +1405,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -1310,6 +1443,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -1347,6 +1481,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -1384,6 +1519,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -1421,6 +1557,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -1458,6 +1595,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -1498,6 +1636,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -1538,6 +1677,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -1578,6 +1718,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -1615,6 +1756,7 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": null,
       "task_id_evidence": null,
       "stream_break_gap": null,
       "mismatch": null,
@@ -1655,6 +1797,10 @@
         "merge_forbidden": "admitted − 审计行数 在代数上等于上面两半之和，但本产物**不输出它** —— 合成一个数会把'N 条断流'与'M 条没落审计'报成同一个缺陷。"
       },
       "codes_task_ids": null,
+      "client_side_evidence": {
+        "by_outcome": {},
+        "total": 0
+      },
       "task_id_evidence": null,
       "stream_break_gap": 0,
       "mismatch": null,
@@ -1847,7 +1993,7 @@
       "http://127.0.0.1:8000/api/v1": 1
     },
     "provided_vs_derived_mismatch": [],
-    "clock_skew_s": -0.0,
+    "clock_skew_s": 0.001,
     "edge_unreliable": false,
     "two_number_block": {
       "admitted_minus_terminal": {
@@ -1930,6 +2076,35 @@
       "status": "盘上回执若不带 `codes_task_ids` ⇒ 本批只能用时间窗读数，**不许**写成'task_id 级复算过'；带了就走 `where task_id = any(...)` 逐 id 点名（缺件的 task_id 会列在 by_code.missing_task_ids）。"
     },
     "proxy_only_cells": [],
+    "client_side_crosscheck": {
+      "role": "只作对照列 —— `classify()` 不读 `client_side_evidence`，严格式两边都不引它",
+      "cells_with_provenance": 26,
+      "n_cells": 40,
+      "violated_cells_compared": [
+        {
+          "receipt": "healthy_r20_aprime_c12n108.json",
+          "gap_terminal_minus_audit_rows": 4,
+          "stage_none_by_outcome": {
+            "refuse": 2,
+            "error_frame": 11,
+            "http_4xx": 9
+          },
+          "stage_none_total": 22
+        },
+        {
+          "receipt": "healthy_rA_sessionlock_c8n24.json",
+          "gap_terminal_minus_audit_rows": 8,
+          "stage_none_by_outcome": {
+            "error_frame": 8,
+            "http_4xx": 4,
+            "http_5xx": 4
+          },
+          "stage_none_total": 16
+        }
+      ],
+      "verdict_note": "本块不设「同不同阶」的结论位：引用这条对照的人自己把两个数并排写出来（`violated_cells_compared` 每格都给 gap 与 `stage_none_*` 两组数）。",
+      "not_computable_offline": "terminal_digest_same_as_turn1（同会话第 2 轮终止帧指纹 == 第 1 轮）需要**逐会话的两轮 SSE 原文**，盘上回执结构性不含 ⇒ 本批 UNVERIFIED，不在本产物里冒充成已测。"
+    },
     "window_rule": "时间列见 pg_guard.time_column（本轮实测 = `timestamp`，盘上**没有** `created_at`）：<时间列> >= begin AND <时间列> < finished_at + 1s（右端含该秒；回执时间戳为秒级）",
     "note": "严格式 = **terminal − 审计行数 = 0**（`terminal = Σ outcomes{ok,clarify,refuse,error_frame,async_degraded}`，词表逐字来自 `deploy/loadtest/driver.py:327-329`；U-130）。`admitted` 只是 HTTP 2xx、含 `truncated`（200 但流断在半途）⇒ 只在 terminal 两条取法都落空时作**显式标注的代理**，代理格的 ok 不等于严格式成立。差值是**双向**的：差 > 0 = 有请求没落终态（W7 修复前那一格），差 < 0 = 一个请求落了多行（U-129 的双终态形状）。分母取不到、或分母为 0（等式恒真）的格子一律 not_applicable，**不许**当成差 0。"
   }
