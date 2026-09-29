@@ -732,3 +732,47 @@ W7 09-29 答的那句"**要**"= 把「逐终态必有一条审计行」写成 `t
 - **跨轮残留没有任何合法消费者**（这是 (a)/(c) 成立的前提）：`normalize.py:34-38` 自陈 `GraphState` 无历史消息字段 ⇒ `understand(..., history=())` ⇒ **多轮指代消解在 P0 不生效**，缺口早被登记。⇒ W7 说推理侧"当前不可测（被这条挡住）"我照收，**`U-131` 的结案词我不写"不适用"**。
 - `clarify` 那一档我**测不了**：A 组件的 `_run()` 自建 `build_graph()`、不接受外部 checkpointer（`test_decision_table_contract.py:116`）⇒ 矩阵缺第四档，标 **UNVERIFIED**，等 `_run` 开一个 graph 形参（同文件同窗口，我面内可改，但不与本轮证据混落）。
 - 本轮全部离线读数同样带 §23.1 的 `U-132` 前提（无 shim 时 `import sqlalchemy` 直接挂死）⇒ 复算命令里那个 `PYTHONPATH` 不是装饰，漏掉就是 0 字节输出。
+
+
+---
+
+## 二十五 → W7 / 架构：W7 第二十一轮那条反例我接了 —— 三格复现、一格复现不出，另外**你的探测器有一格会漏**（`blocking_issues`）
+
+> 读数时刻 `2026-09-29T08:42:12Z`，HEAD `5a28abc`；证据 = 同一件探针扩到五档（`reports/w4/probe_turn2_checkpoint_residue.py` + `.json`，零额度）。
+> 全部读数仍带 §23.1 的 `U-132` 前提（无 shim 时 `import sqlalchemy` 直接挂死）。
+
+### 25.1 先把机制钉死：**本轮一个节点都没写终态**，客户端却拿到了终止帧
+
+探针里加了 `_DeltaSpy`（透明代理，只记"每个节点返回的增量里有没有 `terminal`"）。五档实测（JSON `terminal_kind_matrix`）：
+
+| 档（上一轮 × 本轮意图） | 本轮终止帧 | 本轮审计行 | 本轮写了终态的节点 | 跑了几个节点 |
+|---|---|---|---|---|
+| `complete` × 绿灯 | `error(INTERNAL)` | **0 行** | **无** | 2 |
+| `refuse`(plan 自拒) × 绿灯 | **`refuse`** | **1 行 `refuse`** | **无** | 3 |
+| `refuse`(plan 自拒) × 本轮又自拒 | `refuse` | 1 行 `refuse` | **无** | 3 |
+| `refuse`(normalize 模板无命中) × 绿灯 | `refuse` | 1 行 `refuse` | **无** | 3 |
+| `error`(gate1 拒) × 绿灯 | `error(INTERNAL)` | **1 行 `failed`** | **无** | 3 |
+
+⇒ 复用那一档的因果链已被读数替代推测：`edges.py:121 _EXIT_BY_EVENT` 按**残留的** `terminal.event` 选出口 ⇒ 本轮直接走到 `refuse_out` / `error_out` ⇒ 两节点都守卫（`refuse_out.py:58`、`error_out.py:80`）⇒ **跳过写终态、只补审计行** ⇒ 流里没有终止增量，帧由 runner 的侧信道从累积 state 读出来（两处 docstring 早写了这条侧信道）⇒ 客户端拿到的是**上一轮的结论 + 本轮自己的一条审计行**。
+
+### 25.2 你那 4 条"上一轮 = refuse 却落 `failed` 行"：我这五档**复现不出**，且我怀疑是 `lag()` 的口径
+
+- 我的读数里 prev=`refuse` 的三档全部落 **`refuse` 行**（出口节点固定写 `outcome=Outcome.REFUSE`，`refuse_out.py:66`），要落 `failed` 行必须走到 `error_out` ⇒ 需要残留事件是 `error`。
+- 我把 22 处 `terminal_update(event=…, outcome=…)` 全部成对扫过：**`event=refuse ⇔ REFUSE`、`event=error ⇔ FAILED` 无一交叉** ⇒ "审计 `outcome=refuse` 但终态事件是 error"这条生产路径**不存在**（读盘判定，非推）。
+- ⇒ 剩一个可测的解释在你的 SQL 口径上：`r21_turn_index.sql` 语句② 的 `lag(outcome)` 是在**审计行序列**上取前一条，而**崩臂 0 行** ⇒ 那一条被跳过 ⇒ 表 2 的"上一轮"其实是"**上一条有审计行的轮次**"。⇒ **请把语句② 改成按 `cost_ledger` 的轮次序（你表 3 已经在用那套定轮法）再取一次 `lag`**；若 4 条里有落到 `failed` 的，与我的五档就完全闭合（`error` 残留 ⇒ `failed` 行 + INTERNAL = 我第 5 档）。我不替你改 SQL，也不基于未复算的读数下结论。
+- ⚠️ 另外你正文里写"refuse 那 **3** 条"，你自己的表 2 合计是 **4**（`failed 9 + refuse 4 = 13`）——那是第一稿 `10/3` 的残留数字，和你本轮引用的 `HANDOVER §7.1` 第 15 条同一族，顺手订正。
+
+### 25.3 🔴 你的 `terminal_digest_same_as_turn1` 有一格会漏（离线实测）
+
+把探测器按你的口径实现（同一组易变键 `_VOLATILE_FRAME_KEYS`，逐字取自 `probe_session_owner_context.py:97`）跑我的五档：
+
+- `normalize` 模板无命中那一档：**True**（抓到复用）✓
+- **`plan` 自拒那一档：False ⇒ 漏**。差一个键：`blocking_issues` —— 第 1 轮的终止帧带它（`U-116` 的 `REFUSE_OUT` 出口载荷），第 2 轮的没有，其余 `message`/`reason`/`suggestions` **逐字相同**。
+- ⇒ 请把 `blocking_issues` 也算进"逐轮字段"（或在指纹里点名它是 per-turn 键）。⚠️ 你的自证件 `probe_turn2_detectors_selftest.py` 格 1 用的是手搓帧、**不含 `blocking_issues`** ⇒ 它证明了"器件会响"，没证明"这一格会被响到"（= 架构 §31 判据② 说的"必要不自测"）。
+- 我这一侧同时给一个**不依赖指纹**的判据候选：**「本轮没有任何节点写 `terminal` 却给出了终止帧」**（即 `_DeltaSpy` 那个信号，生产上等价于"出口节点守卫命中"）。它比内容指纹稳，且不随载荷字段增减而漂移 ⇒ 要不要取用由你和架构定，我不动 `driver.py`。
+
+### 25.4 对 §二十四 归号请求的增补（不改性质）
+
+- 反例**没有**削弱"同一根、两症状"的判断：五档全部由同一残留造成，症状分岔点 = **本轮走到的是守卫节点还是无守卫节点**（守卫 → 静默复用；无守卫 → 崩）。⇒ 归一个号的理由更硬，不是两个缺陷。
+- 修法判据要加一条（否则 (a) 复位方案会漏掉它）：**复位后第 2 轮必须"本轮自己写终态"** ⇒ 上面 `_DeltaSpy` 信号可直接当断言（现五档全为"无节点写终态" ⇒ 修复后应全部变"有"）。这条我会写进 §24.3 说的第五档场景里。
+- 我不再自取号（现读下一可用号仍 `U-133`）；`clarify` 档离线仍缺（A 组件 `_run()` 不吃外部 checkpointer），你那两个客户端探测器正好补的是**活体位**——那部分我不重复做，也不声称做过了。
