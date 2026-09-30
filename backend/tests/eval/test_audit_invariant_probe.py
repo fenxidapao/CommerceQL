@@ -10,7 +10,11 @@
 * 🔴 **两数分写**（第二十轮，W7）：`admitted − terminal` 与 `terminal − 审计行` 各带归属、各自落键，
   合并值 `admitted − 审计行` **只许以布尔旗标的形式被点名"没输出"**，任何带数的同名键都算违规；
 * 只有 `admitted` 可用（代理）⇒ **不参与严格式**，不比、不判、进 `proxy_only_cells`；
-* `codes_task_ids` 只认完整形状，且**覆盖面本身是读数**：没带该字段的批次不许写成"task_id 级复算过"；
+* `codes_task_ids` 只认完整形状，且**覆盖面本身是读数**（三态：absent / empty / present）；
+* 🔴 **thread 尺那一维（架构 `U-130 v1.7.12` 的 `turn≥2` 限定）**：turn 必须**先在全历史上赋号、再按窗口筛**
+  （反过来会把窗口里的第 2 轮读成 turn1 ⇒ `crash_turn2plus` 静默归零 = **假绿**）；字面式
+  `terminal − 审计行(turn≥2)` 只许以 **`gap_literal_DO_NOT_USE`** 出现；尺的语义**按语句标签**向 W7 的 SQL 锚定
+  （他改尺 ⇒ 我方红），且**不许复制他的 SQL**；
 * 真产物里每个"违反"格都必须两个数齐全，且不可比格不许混进 `invariant_ok_cells`。
 """
 
@@ -531,3 +535,139 @@ def test_product_keeps_id_level_claims_inside_the_present_cells_only():
             assert block["given"] == block["with_row"] + len(block["missing_task_ids"])
             for missing in block["missing_task_ids"]:
                 assert missing not in evidence["by_id"] or evidence["by_id"][missing]["seg1_rows"] == 0
+
+
+W7_THREAD_SQL = REPO / "deploy" / "loadtest" / "r23_thread_from_checkpoints.sql"
+
+
+def test_turns_are_numbered_over_full_history_before_the_window_filters(monkeypatch):
+    """🔴 假绿守卫（W7 第二十五轮 ⑭b 点名的那一族）：**先按窗口过滤再算 turn** 会把窗口里的第 2 轮读成 turn1
+    ⇒ `crash_turn2plus` 静默归零。本器件的形状是"全历史赋号 → 调用方按窗口筛"，这里双向对照。
+    """
+    mod = _load_probe(monkeypatch)
+    t0 = datetime(2026, 9, 29, 1, 0, tzinfo=UTC)
+    ruler = mod.stamp_has_row(
+        mod.thread_turns([("th1", "tk_pre", t0), ("th1", "tk_inwin", t0 + timedelta(hours=2))]),
+        {"tk_pre": t0 + timedelta(seconds=3)})
+    block = mod.cell_thread_position(ruler, [], t0 + timedelta(hours=1), t0 + timedelta(hours=3),
+                                     terminal=1, gap=1)
+    assert block["window_matched_runs"] == 1
+    assert block["runs_by_turn_bucket"] == {"turn1": 0, "turn2plus": 1}
+    assert block["crash_turn2plus"] == 1 and block["crash_turn1"] == 0
+    assert block["turn2plus_no_row_ge_gap"] is True and block["scope_empty"] is False
+    #: 反证（同一条 run 单独喂进去 = "先过滤"的形状）：号会变成 turn1 ⇒ 判据分子归零、假绿
+    filtered_first = mod.thread_turns([("th1", "tk_inwin", t0 + timedelta(hours=2))])
+    assert filtered_first["by_tk"]["tk_inwin"]["turn"] == 1
+    #: 尺自检：一个 tk 落多个 thread ⇒ 不静默取第一个，整段作废（W7 的 ① 段同判据）
+    ambiguous = mod.thread_turns([("th1", "tk_x", t0), ("th2", "tk_x", t0 + timedelta(minutes=1))])
+    assert ambiguous["ambiguous_tk_to_threads"] == ["tk_x"]
+
+
+def test_the_literal_equation_is_published_only_as_a_do_not_use_column(monkeypatch):
+    """架构 `v1.7.12` 的字面式 `terminal − 审计行(turn≥2)` 被减数没有限定 ⇒ 会被 turn1 的行放大。
+
+    本器件的形状：原式照旧（`gap_for_this_cell`），字面式**也算出来但命名成禁用列**
+    （`gap_literal_DO_NOT_USE`，做法照 W7 第二十五轮 ⑭）⇒ "两种式子差多少"可复算，且不会被当判据引用。
+    """
+    mod = _load_probe(monkeypatch)
+    t0 = datetime(2026, 9, 29, 1, 0, tzinfo=UTC)
+    ruler = mod.stamp_has_row(
+        mod.thread_turns([("th1", "tk_a", t0), ("th1", "tk_b", t0 + timedelta(minutes=1))]),
+        {"tk_a": t0, "tk_b": t0 + timedelta(minutes=1)})
+    block = mod.cell_thread_position(ruler, ["tk_a", "tk_b"], t0 - timedelta(seconds=1),
+                                     t0 + timedelta(minutes=5), terminal=2, gap=0)
+    assert block["rows_turn2plus"] == 1
+    assert block["gap_for_this_cell"] == 0            # 原式：不差
+    assert block["gap_literal_DO_NOT_USE"] == 1       # 字面式：凭空"差 1"
+    assert block["crash_turn2plus"] == 0
+    probe_src = PROBE.read_text(encoding="utf-8")
+    for name in re.findall(r'"([A-Za-z0-9_]*literal[A-Za-z0-9_]*)"', probe_src):
+        assert "DO_NOT_USE" in name, f"字面式列没打禁用标：{name}"
+    note = mod.summarize([], 0.0, ruler)["thread_channel"]["naming_note"]
+    assert "crash_turn2plus" in note and "DO_NOT_USE" in note
+    #: 不复制他的 SQL（复制 = 第二份真相）：号是 Python 赋的，尺的 SQL 里不该出现窗口函数
+    assert "row_number" not in mod.CHECKPOINT_RUNS_SQL
+
+
+@pytest.mark.skipif(not W7_THREAD_SQL.exists(), reason="W7 的 thread 尺文件不在位")
+def test_the_thread_ruler_is_borrowed_by_section_label_not_by_line_number(monkeypatch):
+    """同源守卫：借 W7 的 thread 尺语义 ⇒ 他改尺而我没跟，我方测试当场红。
+
+    ⚠️ 锚点用**语句标签**而不是行号（他第二十五轮 ③：「我下一轮可能要动 ⑥⑦，行号会漂」）。
+    钉四处：文件在位、每个段标签仍以 `-- <标签>` 出现、三处被借表达式仍在位、他那个禁用列名仍在位。
+    """
+    mod = _load_probe(monkeypatch)
+    sql_src = W7_THREAD_SQL.read_text(encoding="utf-8")
+    assert mod.THREAD_RULER_SOURCE.split()[0] == "deploy/loadtest/r23_thread_from_checkpoints.sql"
+    for tag in mod.THREAD_RULER_SECTIONS:
+        assert re.search(rf"^-- {re.escape(tag)}", sql_src, re.M), f"W7 的段 {tag} 不见了 ⇒ 尺的语义要重读"
+    for needle in ("checkpoint->'channel_values'->>'task_id'",
+                   "min((checkpoint->>'ts')::timestamptz)",
+                   "row_number() over (partition by",
+                   "gap_literal_DO_NOT_USE"):
+        assert needle in sql_src, f"W7 尺里少了：{needle}"
+
+
+@pytest.mark.skipif(not PRODUCT.exists(), reason="产物未生成（本轮没跑过该探针）")
+def test_gap_citations_carry_the_window_kind():
+    """架构 `U-130 v1.7.13` 的"gap 双口径"：子窗与整窗**都对、不得互换** ⇒ 引用必须带着口径。
+
+    钉两条：① 汇总里每个"违反"格与每条 turn 拆分都带 `window_kind`（少了它，读者无从知道自己引的是哪个口径）；
+    ② 产物里有一条写死的引用规则，点名"子窗 / 整窗 / 不得互换"，并且承认 thread 尺配窗用的是 run 起点
+    （审计行写入时刻中位晚约十秒量级 ⇒ 左边缘会多吸进上一条，这不是秘密，要写在产物里）。
+    """
+    d = json.loads(PRODUCT.read_text(encoding="utf-8"))
+    s = d["summary"]
+    assert s["violated_cells"], "本轮无违反格时此测试应随产物一起重估"
+    for v in s["violated_cells"]:
+        assert v.get("window_kind"), "违反格没带窗口口径 ⇒ 引用者分不清子窗/整窗"
+    rule = s["window_citation_rule"]
+    #: `single` 必须被归到**子窗**（回执只含一个场景时，回执窗 = 该场景窗）—— 上一版我把它写成"整窗"，
+    #: 那是错的分派：架构点名的"整窗 104/99"是跨回执的整批聚合，本器件从没算过那个口径。
+    for needle in ("子窗", "整窗", "不得互换", "单场景", "first_seen"):
+        assert needle in rule, f"引用规则少了关键一句：{needle}"
+    kinds = {v.get("window_kind") for v in s["violated_cells"]}
+    assert kinds <= {"scenario", "single"}, f"违反格里出现了未分派口径的 kind：{kinds}"
+    for v in s["thread_channel"]["violated_cells_turn_split"]:
+        assert v.get("window_kind")
+
+
+@pytest.mark.skipif(not PRODUCT.exists(), reason="产物未生成（本轮没跑过该探针）")
+def test_product_publishes_the_turn_dimension_only_on_live_windows():
+    """吃真产物：turn 这一维必须**自洽且不承担结论**。
+
+    尺不可用 ⇒ `available = false` 且各格不带这一维（"崩臂面未测"绝不许读成"没有崩臂"）；
+    尺可用 ⇒ 全库块两桶闭合、窗口块"命中数 = 两桶之和"、作废窗口的格**不许**带尺读数；
+    id 级 ⇒ 每个 given id 都要有 `turn`（映射不到就是显式 `null`，不是缺键）。
+    """
+    d = json.loads(PRODUCT.read_text(encoding="utf-8"))
+    ch = d["summary"]["thread_channel"]
+    ruler = d["pg_guard"]["thread_ruler"]
+    assert ch["available"] == ruler["available"]
+    if ch["available"]:
+        assert ruler["usable"] is True and ruler["ambiguous_tk_to_threads"] == 0
+        db = ch["db_wide"]
+        assert sum(db["runs_by_turn_bucket"].values()) == db["tk_runs"]
+        for b in ("turn1", "turn2plus"):
+            assert db["runs_by_turn_bucket"][b] == (db["runs_with_audit_row"][b]
+                                                    + db["runs_without_audit_row"][b])
+    cells = d["cells"]
+    with_block = [c for c in cells if c.get("thread_position")]
+    assert ch["cells_with_this_dimension"] == len(with_block)
+    for cell in with_block:
+        b = cell["thread_position"]
+        assert b["runs_by_turn_bucket"]["turn1"] + b["runs_by_turn_bucket"]["turn2plus"] \
+            == b["window_matched_runs"]
+        assert b["scope_empty"] == (b["window_matched_runs"] == 0)
+        assert b["crash_turn1"] + b["crash_turn2plus"] <= b["window_matched_runs"]
+        assert "gap_literal_DO_NOT_USE" in b
+        assert cell.get("inapplicability_reason") != "window_before_table_span"
+    assert ch["scope_empty_cells"] == sum(1 for c in with_block if c["thread_position"]["scope_empty"])
+    for cell in cells:
+        evidence = cell.get("task_id_evidence")
+        if not evidence:
+            continue
+        given = {t for group in cell["codes_task_ids"].values() for t in group}
+        assert set(evidence["turn_of_given_id"]) == given
+        for t in evidence["by_id"]:
+            assert "turn" in evidence["by_id"][t]

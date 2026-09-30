@@ -101,8 +101,11 @@ W7 报：三格实测差 0（热臂 86 / 冷臂 84 / session-lock 1），而 **�
 
 产物 = `backend/reports/w6/probe_audit_invariant.json`（逐格 window / target / denominator + basis /
 admitted / terminal / **`two_numbers`（两个差值分写，各带归属）** / audit_rows / diff / by_outcome /
-**`codes_task_ids` 与 `task_id_evidence`** / state + 汇总（含 `two_number_block` / `task_id_channel` /
-`proxy_only_cells`）+ `pg_guard` 自证 + 时钟偏移）。
+**`codes_task_ids` 与 `task_id_evidence`（含 `turn_of_given_id`）** / **`thread_position`（turn 维度）** /
+state + 汇总（含 `two_number_block` / `task_id_channel` / **`thread_channel`** / `proxy_only_cells`）
++ `pg_guard` 自证（含 **`thread_ruler`** 全库面）+ 时钟偏移。
+⚠️ `thread_channel` 与 `client_side_crosscheck` 同性质：**进产物、不进判据**（`classify()` 不读它们）——
+   架构 `07 §4.8` 的 `U-130 v1.7.12` 只加了"崩臂必须限定 `turn≥2`"这一句口径，**没改严格式本身**。
 """
 
 from __future__ import annotations
@@ -372,7 +375,163 @@ def overlap_pairs(rows: list[dict]) -> list[tuple[str, str]]:
     return out
 
 
-def summarize(rows: list[dict], skew_s: float | None) -> dict:
+#: 🔑 **thread 尺的出处**（借别人字段的语义 = 先读他的码并记下锚点；**不复制他的 SQL** —— 复制 = 第二份真相，
+#:    所以测试里做**同源守卫**：他改尺 ⇒ 我方测试当场红）。
+#:    文件 = `deploy/loadtest/r23_thread_from_checkpoints.sql`，语义逐字对应四段（**按语句标签锚定，不按行号** ——
+#:    W7 第二十五轮 ③ 明说"我下一轮可能要动 ⑥⑦，行号会漂"）：
+#:    ① 尺自检（`tk → thread` 必须 1:1，不成立整段作废）／⑨ 崩臂在 thread 尺上的位置
+#:    ／⑩ 「0 审计行 = 崩臂」必须限定 `turn>=2`／⑭ 四条措辞纪律 + `gap_literal_DO_NOT_USE` 的命名
+#:    ／⑭b "先过滤再算 turn"的假绿守卫。
+#:    ⚠️ 为什么本窗口要自己接这把尺：架构在 `07 §4.8` 的 `U-130` 上按它加了 **`turn≥2` 限定**（v1.7.12，
+#:    基准 `399b786`）—— "0 审计行"不是崩臂独有指纹，不加限定的批级计数会把崩臂**高估约 40 倍**
+#:    ⇒ 我方那条"少落 = 缺陷"的读数必须带 turn 维度。
+#:    ⚠️ 行号只在**读数那一秒**有效（本轮实测：⑨ `:193`、⑩ `:212`、⑭ `:297`、⑭b `:332`）⇒ 引用请以标签为准。
+THREAD_RULER_SOURCE = "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑭⑭b（按标签锚定，行号会漂）"
+THREAD_RULER_SECTIONS = ("①", "⑨", "⑩", "⑭", "⑭b")
+
+#: 只取全库的 `(thread, tk, 首次出现时间)`；**分桶与赋 turn 号都在 Python 里做**
+#: ⇒ 不经过任何展开/聚合，避开交付 §5.40 那一族（"经过展开的行数就不是行数"）。
+#: 🔴 这条 SQL **不带窗口条件**是纪律而不是偷懒：turn 必须在 thread **全历史**上算完，再由调用方按窗口筛
+#:    （W7 的 ⑭b 守卫）。反过来"先按窗口过滤再算 turn"会把窗口里的第 2 轮读成 turn1 ⇒ `crash_turn2plus`
+#:    静默变 0 ⇒ **假绿**。
+CHECKPOINT_RUNS_SQL = """
+select thread_id,
+       checkpoint->'channel_values'->>'task_id' as tk,
+       min((checkpoint->>'ts')::timestamptz) as first_seen
+from lg.checkpoints
+where checkpoint->'channel_values'->>'task_id' like 'tk_%'
+group by 1, 2
+"""
+
+
+def thread_turns(run_rows: list[tuple]) -> dict:
+    """`(thread_id, tk, first_seen)` 行 → `{by_tk: {tk: {thread_id, turn, first_seen, has_row}}, ambiguous_…: [...]}`。
+
+    `turn` = 同一 thread 内按 `first_seen` 升序的序号（与库里 `row_number() over (partition by thread_id
+    order by first_seen)` 同义，但在 Python 里数）。⚠️ 两条与 W7 的尺同判据：
+    ① 一个 tk 落在**多个** thread 上 ⇒ 不静默取第一个，读数以 `usable = false` 作废（他的 ① 段）；
+    ② **这里不看窗口** —— 全历史赋完号才交给调用方按窗口筛（他的 ⑭b：先过滤再编号会把第 2 轮读成 turn1 ⇒ 假绿）。
+    """
+    by_tk: dict[str, dict] = {}
+    tk_threads: dict[str, set[str]] = {}
+    per_thread: dict[str, list[tuple]] = {}
+    for thread_id, tk, first_seen in run_rows:
+        tk_threads.setdefault(str(tk), set()).add(str(thread_id))
+        per_thread.setdefault(str(thread_id), []).append((first_seen, str(tk)))
+    for thread_id, items in per_thread.items():
+        ordered = sorted(items, key=lambda p: (p[0] is None, p[0]))
+        for idx, (seen, tk) in enumerate(ordered, start=1):
+            by_tk.setdefault(tk, {"thread_id": thread_id, "turn": idx, "first_seen": seen})
+    return {"by_tk": by_tk, "ambiguous_tk_to_threads": sorted(t for t, s in tk_threads.items() if len(s) > 1)}
+
+
+def _bucket(turn: int) -> str:
+    return "turn1" if turn == 1 else "turn2plus"
+
+
+def _spread(values: list[float]) -> dict:
+    if not values:
+        return {"n": 0, "min": None, "median": None, "max": None}
+    vs = sorted(values)
+    return {"n": len(vs), "min": vs[0], "median": vs[len(vs) // 2], "max": vs[-1]}
+
+
+def stamp_has_row(ruler: dict, audit_ts: dict[str, datetime]) -> dict:
+    """把"这条 run 在 `app.audit_log` 里有没有行 / 行落在什么时刻"标到尺上（一次算完，全库与单格共用）。"""
+    for tk, entry in ruler["by_tk"].items():
+        ts = audit_ts.get(tk)
+        entry["has_row"] = ts is not None
+        entry["audit_ts"] = ts
+    ruler["usable"] = not ruler["ambiguous_tk_to_threads"]
+    return ruler
+
+
+def thread_position(ruler: dict) -> dict:
+    """按 **`turn` 桶**数"有审计行 / 零审计行"的 run 数（全库面），并落两条前置读数。
+
+    ⚠️ 两条必须一起看，否则这把尺会被读过：
+    ① `first_seen` 是 run 的**起点**（checkpoints 里最早那条 ts），而 `app.audit_log` 的时间是**写行时刻**
+       ⇒ 两者差值分布落在 `audit_row_minus_first_seen_s`；拿它配"回执窗口"时，窗口边缘会漂这么多；
+    ② 零行 run 的**成因不在本函数里**（turn1 那一桶今天仍 `UNVERIFIED`，W7 第二十四轮 ⑦ 也标了未查）
+       ⇒ 本函数只给**位置**，不给因果，也不给"谁接在谁后面"（那要 prev-outcome 面，我方今天不产）。
+    """
+    buckets = ("turn1", "turn2plus")
+    runs = ruler["by_tk"]
+    total = dict.fromkeys(buckets, 0)
+    with_row = dict.fromkeys(buckets, 0)
+    offsets: list[float] = []
+    for entry in runs.values():
+        b = _bucket(int(entry["turn"]))
+        total[b] += 1
+        if entry["has_row"]:
+            with_row[b] += 1
+            if isinstance(entry["first_seen"], datetime) and isinstance(entry["audit_ts"], datetime):
+                offsets.append(round((entry["audit_ts"] - entry["first_seen"]).total_seconds(), 3))
+    return {
+        "source": THREAD_RULER_SOURCE,
+        "usable": ruler["usable"],
+        "ambiguous_tk_to_threads": len(ruler["ambiguous_tk_to_threads"]),
+        "tk_runs": len(runs),
+        "threads": len({e["thread_id"] for e in runs.values()}),
+        "runs_by_turn_bucket": total,
+        "runs_with_audit_row": with_row,
+        "runs_without_audit_row": {b: total[b] - with_row[b] for b in buckets},
+        "audit_row_minus_first_seen_s": _spread(offsets),
+    }
+
+
+def cell_thread_position(ruler: dict, window_task_ids: list[str], begin: datetime, end: datetime,
+                         terminal: int | None, gap: int | None) -> dict:
+    """单格窗口内的 thread 尺读数：先在全历史上赋好号（`thread_turns`），**再由这里按窗口筛**。
+
+    ⚠️ 命名与判据形状照 W7 第二十五轮 ⑭ 的四条措辞纪律（他实测三域：字面式 81 / 16 / 1,330，
+    正确式 4 / 8 / 13 ⇒ 两式只在"runs 全是 turn≥2"时才相等）：
+    ① **判据分子只许写 `crash_turn2plus`**（窗口内 `turn≥2` 且零审计行的 run 数）；
+    ② 架构 `v1.7.12` 那句字面式 `terminal − 审计行(turn≥2)` 的被减数**没有限定** ⇒ 我方照他的做法
+       把它算出来并命名成 **`gap_literal_DO_NOT_USE`**，让"错的那列"在产物里**可见且不可引**，
+       而不是删掉后没人知道有这个坑；
+    ③ `scope_empty` = 窗口内一条 run 都没配上 ⇒ 这一维**不可用**（多半是配窗/边缘偏移，不是"没有崩臂"）；
+    ④ turn1 的零行（`crash_turn1`）**结构性不进判据**，只并列给数。
+    窗口配的是 `first_seen`（run 起点），与审计行写行时刻的差值分布见全库块
+    `audit_row_minus_first_seen_s` ⇒ 边缘会漂那么多。
+    """
+    runs = ruler["by_tk"]
+    hit = {"turn1": 0, "turn2plus": 0}
+    crash = {"turn1": 0, "turn2plus": 0}
+    matched = 0
+    for entry in runs.values():
+        seen = entry["first_seen"]
+        if not (isinstance(seen, datetime) and begin <= seen < end):
+            continue
+        matched += 1
+        b = _bucket(int(entry["turn"]))
+        hit[b] += 1
+        if not entry["has_row"]:
+            crash[b] += 1
+    rows_t2 = 0
+    unmapped = 0
+    for tk in window_task_ids:
+        entry = runs.get(tk)
+        if entry is None:
+            unmapped += 1
+        elif int(entry["turn"]) >= 2:
+            rows_t2 += 1
+    return {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": matched,
+        "scope_empty": matched == 0,
+        "runs_by_turn_bucket": hit,
+        "crash_turn1": crash["turn1"],
+        "crash_turn2plus": crash["turn2plus"],
+        "rows_turn2plus": rows_t2,
+        "audit_rows_unmapped_to_thread": unmapped,
+        "gap_for_this_cell": gap,
+        "gap_literal_DO_NOT_USE": (terminal - rows_t2) if terminal is not None else None,
+        "turn2plus_no_row_ge_gap": bool(gap and gap > 0 and crash["turn2plus"] >= gap),
+    }
+
+
+def summarize(rows: list[dict], skew_s: float | None, ruler: dict | None = None) -> dict:
     counts: dict[str, int] = {}
     for r in rows:
         counts[r["state"]] = counts.get(r["state"], 0) + 1
@@ -390,7 +549,8 @@ def summarize(rows: list[dict], skew_s: float | None) -> dict:
         key = str(r.get("target"))
         target_counts[key] = target_counts.get(key, 0) + 1
     violated = [
-        {"receipt": r["receipt"], "denominator": r["denominator"], "denominator_basis": r["denominator_basis"],
+        {"receipt": r["receipt"], "window_kind": r.get("window_kind"),
+         "denominator": r["denominator"], "denominator_basis": r["denominator_basis"],
          "admitted": r["admitted"], "terminal": r["terminal"], "audit_rows": r["audit_rows"], "diff": r["diff"],
          "gap_admitted_minus_terminal": (r.get("two_numbers") or {}).get("gap_admitted_minus_terminal"),
          "gap_terminal_minus_audit_rows": (r.get("two_numbers") or {}).get("gap_terminal_minus_audit_rows"),
@@ -502,9 +662,54 @@ def summarize(rows: list[dict], skew_s: float | None) -> dict:
                                       "需要**逐会话的两轮 SSE 原文**，盘上回执结构性不含 ⇒ 本批 UNVERIFIED，"
                                       "不在本产物里冒充成已测。",
         },
+        #: 🔑 **thread 尺那一维的汇总出口**（架构 `07 §4.8` 的 `U-130 v1.7.12` 要 `turn≥2` 限定 ⇒ 本轮起产物有这一维）。
+        #:    ⚠️ 三条自我约束写进产物而不是只留在注释里：① 它**不进判据**（`classify()` 不读它）；
+        #:    ② 尺不可用时 `available = false` 且各格不带这一维 ⇒ "崩臂面"是**未测**，不是"没有崩臂"；
+        #:    ③ 只给**位置**，不给"谁接在谁后面"（prev-outcome 面今天不产 —— W7 第二十四轮 ⑥ 正是栽在那种推法上）。
+        "thread_channel": {
+            "role": "对照 + 崩臂面标定，不是判据（classify() 不读这一块）",
+            "source": THREAD_RULER_SOURCE,
+            "available": bool(ruler and ruler.get("by_tk")),
+            "db_wide": thread_position(ruler) if (ruler and ruler.get("by_tk")) else None,
+            "cells_with_this_dimension": sum(1 for r in rows if r.get("thread_position")),
+            "scope_empty_cells": sum(1 for r in rows
+                                     if r.get("thread_position") and r["thread_position"]["scope_empty"]),
+            "violated_cells_turn_split": [
+                {"receipt": r["receipt"], "window_kind": r.get("window_kind"),
+                 "gap_terminal_minus_audit_rows": (r.get("two_numbers") or {}).get("gap_terminal_minus_audit_rows"),
+                 "crash_turn1": (r.get("thread_position") or {}).get("crash_turn1"),
+                 "crash_turn2plus": (r.get("thread_position") or {}).get("crash_turn2plus"),
+                 "window_matched_runs": (r.get("thread_position") or {}).get("window_matched_runs"),
+                 "turn2plus_no_row_ge_gap": (r.get("thread_position") or {}).get("turn2plus_no_row_ge_gap")}
+                for r in rows
+                if r["state"] == INVARIANT_VIOLATED and r.get("thread_position")],
+            "id_level_turns": {r["receipt"]: (r.get("task_id_evidence") or {}).get("turn_of_given_id")
+                               for r in rows if r.get("task_id_evidence")},
+            "naming_note": "判据分子只许写 **`crash_turn2plus`**（窗口内 `turn≥2` 且零审计行的 run 数）。"
+                           "产物里同时留着 **`gap_literal_DO_NOT_USE`**（架构 `v1.7.12` 那句字面式 `terminal − "
+                           "审计行(turn≥2)` 的算法，被减数没有限定 ⇒ 会被 turn1 的行放大）：这一列**故意公开**"
+                           "是为了让'两种式子差多少'可被复算，命名本身即禁用标记（做法照 W7 第二十五轮 ⑭）。"
+                           "turn1 的零行（`crash_turn1` / 全库 `runs_without_audit_row.turn1`）结构性不进判据。",
+            "why_not_a_verdict": "`turn2plus_no_row_ge_gap` 只是「本格 gap ≤ 窗口内 turn≥2 零行数」这条算术；"
+                                 "它不等于「这些 gap 就是那几条崩臂」。要把因果坐实需要**回执自己带 task_id**"
+                                 "（即 `task_id_channel` 的 present 面），而窗口配的是 run 起点、边缘会漂"
+                                 "（必须配 `db_wide.audit_row_minus_first_seen_s` 一起读）。",
+        },
         "window_rule": "时间列见 pg_guard.time_column（本轮实测 = `timestamp`，盘上**没有** `created_at`）："
-                       f"<时间列> >= begin AND <时间列> < finished_at + {WINDOW_PAD.total_seconds():.0f}s"
+        f"<时间列> >= begin AND <时间列> < finished_at + {WINDOW_PAD.total_seconds():.0f}s"
                        "（右端含该秒；回执时间戳为秒级）",
+        #: 🔴 引用纪律（架构 `07 §4.8 U-130 v1.7.13` 的"gap 双口径"）：**两个数都对、不得互换** ——
+        #:    子窗（`window_kind = scenario`）与整窗（`receipt` / `single`）读出来的 run 数与 gap 可以不同
+        #:    （架构现测：A 档子窗 99/95 = 4，整窗 104/99 = 5，第 5 条落在子窗之外）。
+        "window_citation_rule": "引用任何 gap 必须连着该格的 `window_kind` 一起写：`scenario` 与 `single` = "
+                                "**单场景（子窗）口径**（`single` = 这份回执只含一个场景，回执窗就等于该场景窗），"
+                                "`receipt` = 整批窗口，`ambiguous` 不参与判据。架构 `v1.7.13` 现测：同一批 A 档"
+                                "**子窗 99 run / 95 行 = gap 4** 与 **整窗 104 run / 99 行 = gap 5** 两个数都对、"
+                                "**不得互换**，也不许取平均 ⇒ 本器件逐格只按单场景窗口数，"
+                                "所以我方所有 gap 读数都属于『子窗』口径。"
+                                "⚠️ 已知边缘偏差：thread 尺是按 run 起点 `first_seen` 配窗，而审计行的写入时刻"
+                                "中位比它晚约十秒量级（见 `thread_channel.db_wide.audit_row_minus_first_seen_s`）"
+                                "⇒ 窗口左边缘会多吸进上一条 run，本器件**没有**为此放宽 pad（pad 仍是 1 秒）。",
         "note": "严格式 = **terminal − 审计行数 = 0**（`terminal = Σ outcomes{ok,clarify,refuse,error_frame,"
                 "async_degraded}`，词表逐字来自 `deploy/loadtest/driver.py:327-329`；U-130）。`admitted` 只是 "
                 "HTTP 2xx、含 `truncated`（200 但流断在半途）⇒ 只在 terminal 两条取法都落空时作**显式标注的代理**，"
@@ -521,8 +726,12 @@ def pick_time_column(cols: list[str]) -> str | None:
     return None
 
 
-async def measure(rows: list[dict], table: str = "audit_log") -> tuple[list[dict], float | None, dict]:
-    """逐格数 `app.audit_log` 的行数（参数化查询 + 只读闸门）。返回 (带读数的行, 时钟偏移秒, 闸门自证)。"""
+async def measure(rows: list[dict], table: str = "audit_log") -> tuple[list[dict], float | None, dict, dict]:
+    """逐格数 `app.audit_log` 的行数（参数化查询 + 只读闸门）。
+
+    返回 `(带读数的行, 时钟偏移秒, 闸门自证, thread 尺)` —— 尺单独返回给 `summarize()` 用，
+    因为它是**对象形态**（`by_tk`），不进产物（产物里进的是 `thread_position()` 的汇总）。
+    """
     conn = await open_readonly(DSN, purpose="probe_audit_invariant")
     try:
         stamp = await target_stamp(conn)
@@ -578,23 +787,51 @@ async def measure(rows: list[dict], table: str = "audit_log") -> tuple[list[dict
         #: ⚠️ 按 **UTC** 切日：回执窗口是 UTC，用服务端 `TimeZone` GUC 切会把格子的对照日切错一天。
         days_map = {str(d): int(n) for d, n in days}
         stamp["table_day_counts"] = days_map
+        #: 🔑 **thread 尺**（架构 `U-130 v1.7.12` 的 `turn≥2` 限定要用的那一把）：借 W7 的语义、自己数。
+        #: ⚠️ 这把尺**不可用时不假装可用**：读不到 `lg.checkpoints` ⇒ 落 `{"available": false, "error": …}`，
+        #:    各格 `thread_position` 也随之缺席 ⇒ 产物里"崩臂面"这一栏变成"未测"，而不是悄悄等于"没有崩臂"。
+        try:
+            run_rows = await (await conn.execute(CHECKPOINT_RUNS_SQL)).fetchall()
+            audit_ts_rows = await (await conn.execute(sql.SQL(
+                "select task_id, min({}) from app.{} where task_id is not null group by task_id").format(
+                sql.Identifier(time_col), sql.Identifier(table)))).fetchall()
+            audit_ts = {str(t): ts for t, ts in audit_ts_rows if t}
+            ruler = stamp_has_row(thread_turns(list(run_rows)), audit_ts)
+            #: 尺自检（W7 的 ① 段同判据）：一个 tk 落多个 thread ⇒ 整段作废，点名而不静默取第一个。
+            ruler["self_check"] = {
+                "tk_threads_unique": not ruler["ambiguous_tk_to_threads"],
+                "ambiguous_examples": ruler["ambiguous_tk_to_threads"][:5],
+            }
+            stamp["thread_ruler"] = {"available": True, **thread_position(ruler)}
+        except Exception as exc:
+            # 尺不可用要让产物显式承担（available = false），但不能让整个探针不出产物。
+            ruler = {"by_tk": {}, "ambiguous_tk_to_threads": [], "usable": False}
+            stamp["thread_ruler"] = {"available": False, "error": safe_error_text(exc)}
         for row in rows:
             if row["state"] != NO_DB or not row["begin"]:
                 continue
-            q = sql.SQL("select outcome, count(*) from app.{} where {} >= %s and {} < %s group by outcome").format(
-                sql.Identifier(table), sql.Identifier(time_col), sql.Identifier(time_col)
+            q = sql.SQL("select task_id, {} from app.{} where {} >= %s and {} < %s").format(
+                sql.Identifier("outcome"), sql.Identifier(table), sql.Identifier(time_col), sql.Identifier(time_col)
             )
-            pairs = await (await conn.execute(q, (row["begin"], row["end"] + WINDOW_PAD))).fetchall()
-            by_outcome = {str(o): int(c) for o, c in pairs}
-            row["audit_rows"] = sum(by_outcome.values())
+            #: 🔴 本轮起**逐行取回**、`audit_rows` 与 `by_outcome` 都在 Python 里数（原来是 `group by outcome` 的
+            #:    服务端聚合）：① 与交付 §5.40 同一条纪律（能在本地数就不在库里聚合）；
+            #:    ② thread 尺**必须配到 task_id 级**才拿得到 turn ⇒ 聚合面根本配不出这一维。
+            #:    两个数（`audit_rows` / `by_outcome`）与上一把逐格相同 ⇒ 这是出口形状变更、不是判据变更。
+            window_rows = await (await conn.execute(q, (row["begin"], row["end"] + WINDOW_PAD))).fetchall()
+            by_outcome: dict[str, int] = {}
+            for _tid, outcome in window_rows:
+                key = str(outcome)
+                by_outcome[key] = by_outcome.get(key, 0) + 1
+            row["audit_rows"] = len(window_rows)
             row["by_outcome"] = by_outcome
             row["rows_that_window_day"] = days_map.get(str(row["begin"].astimezone(UTC).date()))
             #: 🔑 task_id 级取证（W7 第二十轮新增字段，**第二十三轮起盘上首次非空**）：有键就逐 id 点名，不靠时间窗猜。
             if row.get("codes_task_ids"):
                 ids = sorted({t for group in row["codes_task_ids"].values() for t in group})
                 #: ⚠️ **行数在 Python 里数**，不用 `count(*) … join lateral jsonb_object_keys(latency_ms)`：
-                #: 那样每行会**按 latency 键数被乘开**（本轮临时件实测：四个 id 全数成 `rows = 6`，
-                #: 而 6 恰好等于它们的键数 ⇒ 差点把"一格一行"报成"一请求落六行"，那是 U-129 双终态的形状）。
+                #: 那样每行会**按 latency 键数被乘开**（临时件实测：两个 GATE id 各数成 `rows = 6`、
+                #: 两个 INTERNAL id 各 `rows = 2`，而 6 / 2 恰好等于它们各自的键数、真行数**都是 1**
+                #: ⇒ 差点把"一格一行"报成"一请求落六行"，那是 U-129 双终态的形状；交付 §5.40）。
                 detail = await (await conn.execute(
                     sql.SQL("select task_id, outcome, latency_ms from app.{} where task_id = any(%s)").format(
                         sql.Identifier(table)),
@@ -613,7 +850,12 @@ async def measure(rows: list[dict], table: str = "audit_log") -> tuple[list[dict
                               "⇒ 行数在 Python 里数（见源码注释：lateral 展开会把行按键数乘开）",
                     "n_ids": len(ids),
                     "n_with_row": sum(1 for t in ids if by_id.get(t, {}).get("seg1_rows")),
+                    #: 🔑 **每个 given id 在 thread 尺上的位置**（含没落行的那些 ⇒ 这正是架构要的 `turn≥2` 面）。
+                    #:    `null` = 这条 tk 在 `lg.checkpoints` 里映射不到 thread ⇒ 位置未知，不猜。
+                    "turn_of_given_id": {t: (ruler["by_tk"].get(t) or {}).get("turn") for t in ids},
                     "by_id": {t: {"seg1_rows": e["seg1_rows"], "outcomes": e["outcomes"],
+                                  "turn": (ruler["by_tk"].get(t) or {}).get("turn"),
+                                  "thread_id": (ruler["by_tk"].get(t) or {}).get("thread_id"),
                                   "latency_keys": {"min": min(e["latency_key_counts"]),
                                                    "max": max(e["latency_key_counts"])}
                                   if e["latency_key_counts"] else None}
@@ -636,7 +878,16 @@ async def measure(rows: list[dict], table: str = "audit_log") -> tuple[list[dict
                 continue
             row["state"], row["diff"] = classify(row["denominator"], row["audit_rows"])
             row["strict_equation_evaluated"] = row["diff"] is not None
-        return rows, skew, stamp
+            #: 🔑 **thread 尺那一维**（架构 `U-130 v1.7.12` 要 `turn≥2` 限定的那一维）：只给位置与并排算术，
+            #:    **不参与 `classify()`** ⇒ 判据形状与上一把可比，本轮改的是出口而不是尺。
+            #:    ⚠️ 只给**窗口没作废**的格子（窗口作废时严格式那一半已置空，配一个尺读数会拼出差值）。
+            if ruler["by_tk"]:
+                row["thread_position"] = cell_thread_position(
+                    ruler,
+                    [str(tid) if tid is not None else "<null>" for tid, _o in window_rows],
+                    row["begin"], row["end"] + WINDOW_PAD,
+                    row["terminal"], (row["two_numbers"] or {}).get("gap_terminal_minus_audit_rows"))
+        return rows, skew, stamp, ruler
     finally:
         await conn.close()
 
@@ -725,7 +976,7 @@ def main() -> int:
         print(f"🔴 回执扫描面为空（{args.receipts}）⇒ 不出产物（空扫描面不能写成「没违反」）")
         return 2
     try:
-        rows, skew, stamp = asyncio.run(measure(rows, table=args.table))
+        rows, skew, stamp, ruler = asyncio.run(measure(rows, table=args.table))
     except (LookupError, RuntimeError, psycopg.Error) as exc:  # RuntimeError 含 PgReadOnlyGuardError
         #: 🔴 驱动层的异常消息**会把整条连接串（含口令）打进来**（2026-09-29 实测：
         #: `invalid connection option "<scheme>://<user>:<口令>@<host>:<port>/<db>?options…"`）
@@ -749,7 +1000,7 @@ def main() -> int:
         "cells": [{**r, "begin": r["begin"].isoformat() if r["begin"] else None,
                    "end": r["end"].isoformat() if r["end"] else None} for r in rows],
         "overlapping_windows": overlap_pairs(rows),
-        "summary": summarize(rows, skew),
+        "summary": summarize(rows, skew, ruler),
     }
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     s = payload["summary"]
