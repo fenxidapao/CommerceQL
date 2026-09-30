@@ -293,3 +293,56 @@ select coalesce(prev, '(thread 首条)') as prev_outcome,
        no_row, count(*) as runs, string_agg(distinct usr, ',' order by usr) as users
 from seq where turn >= 2 and (no_row or prev in ('success', '(前一条也无行)'))
 group by 1, 2, 3 order by 1, 2, 3 desc;
+
+-- ⑭ ★★ 「按前缀 + 窗口限定」的验收读数（W4 §二十八 第 6 条的请求：全库面混着 u_f*/u_b*/后续家族 ⇒ 修复后的 gate 必须限定，否则假红/假绿）
+--     ⚠️ 四条措辞纪律，缺一条这条判据就会打人：
+--     (1) **判据分子只许写 `crash_turn2plus = 0`**。不要把架构 v1.7.12 那句字面式 `terminal − 审计行(turn>=2)` 直接实现 ——
+--         字面式的被减数**没有限定**，会被 turn1 的行放大（本轮实测三域：A 档子窗 字面 = 81 / 正确 = 4；
+--         session-lock 格 字面 = 16 / 正确 = 8；全库 字面 = 1,330 / 正确 = 13）。两式只在「runs 全是 turn>=2」时才相等。
+--     (2) **轮次必须按 thread 全历史算，再按窗口过滤**（本段就是这么写的）。反过来「先按窗口过滤、再算 turn」会把
+--         窗口内的第 2 轮读成 turn1 ⇒ `crash_turn2plus` 静默变 0 ⇒ **假绿**。下方 ⑭b 就是这个陷阱的守卫。
+--     (3) 默认靶子 = 第二十轮 A 档子窗 ⇒ `crash_turn2plus = 4` 是**修复前**的基线，**不是**修法失败的证据。
+--         修复后请**换新令牌前缀 + 新时间窗**（-v upref='u_x%' -v win_a=... -v win_b=...），并且要求 ② 行 > 0 以自证覆盖生效。
+--     (4) turn1 的零行（全库 **504** 条）结构性不进本判据 ⇒ 别把它当崩臂数报。
+with ck as (
+  select thread_id, checkpoint->'channel_values'->>'task_id' as tk,
+         min((checkpoint->>'ts')::timestamptz) as first_seen
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2
+), seq as (  -- turn 在**全历史**上算（纪律 2）
+  select ck.thread_id, ck.tk, ck.first_seen, split_part(ck.thread_id, ':', 2) as usr,
+         row_number() over (partition by ck.thread_id order by ck.first_seen) as turn,
+         (a.task_id is not null) as has_row
+  from ck left join app.audit_log a on a.task_id = ck.tk
+), scoped as (  -- 算完才按前缀 + 窗口过滤
+  select * from seq
+  where first_seen between :'win_a'::timestamptz and :'win_b'::timestamptz
+    and usr like :'upref'
+)
+select '⑭验收(按前缀+窗)' as k, count(*) as runs_all,
+       count(*) filter (where turn = 1) as runs_turn1,
+       count(*) filter (where turn >= 2) as runs_t2,
+       count(*) filter (where turn >= 2 and has_row) as rows_t2,
+       count(*) filter (where turn >= 2 and not has_row) as crash_turn2plus,
+       count(*) - count(*) filter (where turn >= 2 and has_row) as gap_literal_DO_NOT_USE,
+       count(*) filter (where turn >= 2) - count(*) filter (where turn >= 2 and has_row) as gap_both_restricted,
+       count(distinct usr) as users_n,
+       (count(*) = 0) as scope_empty__if_true_suspect_vars
+from scoped;
+
+-- ⑭b 纪律 2 的守卫：窗口内这些 thread 里，有多少**其实有窗口前历史**（>0 ⇒ 任何"先过滤再算 turn"的写法都不可信）
+with ck as (
+  select thread_id, checkpoint->'channel_values'->>'task_id' as tk,
+         min((checkpoint->>'ts')::timestamptz) as first_seen
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2
+), per_thread as (
+  select thread_id, min(first_seen) as thread_first,
+         min(first_seen) filter (where first_seen between :'win_a'::timestamptz and :'win_b'::timestamptz) as win_first,
+         bool_or(first_seen < :'win_a'::timestamptz) as has_prehistory,
+         count(*) filter (where first_seen between :'win_a'::timestamptz and :'win_b'::timestamptz) as runs_in_win
+  from ck group by 1
+)
+select '⑭b turn 计算顺序守卫' as k, count(*) as threads_in_win,
+       sum(runs_in_win) as runs_in_win,
+       count(*) filter (where has_prehistory) as threads_with_prehistory,
+       (count(*) filter (where has_prehistory) > 0) as window_turn_would_be_wrong
+from per_thread where runs_in_win > 0;
