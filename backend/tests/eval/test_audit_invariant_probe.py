@@ -613,8 +613,9 @@ def test_gap_citations_carry_the_window_kind():
     """架构 `U-130 v1.7.13` 的"gap 双口径"：子窗与整窗**都对、不得互换** ⇒ 引用必须带着口径。
 
     钉两条：① 汇总里每个"违反"格与每条 turn 拆分都带 `window_kind`（少了它，读者无从知道自己引的是哪个口径）；
-    ② 产物里有一条写死的引用规则，点名"子窗 / 整窗 / 不得互换"，并且承认 thread 尺配窗用的是 run 起点
-    （审计行写入时刻中位晚约十秒量级 ⇒ 左边缘会多吸进上一条，这不是秘密，要写在产物里）。
+    ② 产物里有一条写死的引用规则，点名"子窗 / 整窗 / 不得互换"，并且**把边缘偏差的归属写成当前实测结论**
+    （第十五轮：残差落在 `terminal − matched`，不是审计侧 pad；抬 pad = 改分母 ⇒ 见 `gap_attribution` /
+    `edge_control` 与 `test_product_carries_the_attribution_the_horizon_and_the_kind_distribution`）。
     """
     d = json.loads(PRODUCT.read_text(encoding="utf-8"))
     s = d["summary"]
@@ -671,3 +672,196 @@ def test_product_publishes_the_turn_dimension_only_on_live_windows():
         assert set(evidence["turn_of_given_id"]) == given
         for t in evidence["by_id"]:
             assert "turn" in evidence["by_id"][t]
+
+
+def _ruler_with_two_turns(mod, t0: datetime):
+    """一条 thread 两轮：turn1 落了审计行、turn2 没落 ⇒ 窗口内 matched=2 / crash_turn2plus=1。"""
+    return mod.stamp_has_row(
+        mod.thread_turns([("th1", "tk_a", t0), ("th1", "tk_b", t0 + timedelta(minutes=1))]),
+        {"tk_a": t0 + timedelta(seconds=5)})
+
+
+def test_the_gap_crash_residue_is_attributed_to_the_ruler_not_the_audit_pad(monkeypatch):
+    """🔴 第十五轮的核心对照：W7 第二十六轮 ① 猜"gap 与 crash 对不上是我方审计侧 pad 的漏计"⇒ 双向验。
+
+    正头（一格一行成立）：窗口内 2 条 run、其中 1 条有行、回执自报 terminal=3 ⇒
+    `gap = 3 − 1 = 2`、`crash_total = 1`、残差 **1** 恰好等于 `terminal − matched = 3 − 2 = 1`
+    ⇒ 残差来自"回执终态 ≠ 尺配上的 run"，**不是**审计行被 pad 挡在窗外。
+    反头（一格一行不成立）：窗口内多一条**尺配不到**的行（别人的批次落在同一时钟窗）⇒
+    `row_run_agreement` 与 `identity_holds` 必须**同时**变 False ⇒ 这一族才是"时间窗归属"真正的失败模式。
+    """
+    mod = _load_probe(monkeypatch)
+    t0 = datetime(2026, 9, 29, 1, 0, tzinfo=UTC)
+    ruler = _ruler_with_two_turns(mod, t0)
+    kw = dict(begin=t0 - timedelta(seconds=1), end=t0 + timedelta(minutes=5), terminal=3)
+
+    good = mod.cell_thread_position(ruler, ["tk_a"], gap=2, audit_rows=1, **kw)
+    assert good["window_matched_runs"] == 2 and good["crash_turn2plus"] == 1 and good["crash_turn1"] == 0
+    assert good["runs_with_row_in_window"] == 1 and good["audit_rows_in_window"] == 1
+    assert good["row_run_agreement"] is True
+    assert good["terminal_minus_matched_runs"] == 1 and good["gap_minus_crash_total"] == 1
+    assert good["identity_holds"] is True
+
+    #: 反头：多一条不属于本尺的行 ⇒ 两套归属分叉，恒等式当场不成立（这正是"时间窗会低估 gap"的形状）
+    bad = mod.cell_thread_position(ruler, ["tk_a", "tk_other_batch"], gap=1, audit_rows=2, **kw)
+    assert bad["row_run_agreement"] is False
+    assert bad["audit_rows_unmapped_to_thread"] == 1
+    assert bad["identity_holds"] is False
+
+
+def test_a_cell_read_inside_the_write_delay_horizon_is_not_citable(monkeypatch):
+    """🔴 "还没写" ≠ "不会有"（W7 ⑭c 交给我方做的对照）：读数年龄 < 观测 max lag ⇒ 崩臂数**不可引**（假红方向）。
+
+    三态都要钉：`True` = 在途、`False` = 过了静默期（唯一可引的一态）、`None` = 没有延迟样本或窗口里
+    没配上 run ⇒ **未知不等于可以引**。
+    """
+    mod = _load_probe(monkeypatch)
+    t0 = datetime(2026, 9, 29, 1, 0, tzinfo=UTC)
+    ruler = _ruler_with_two_turns(mod, t0)
+    kw = dict(begin=t0 - timedelta(seconds=1), end=t0 + timedelta(minutes=5), terminal=3,
+              gap=2, audit_rows=1)
+
+    early = mod.cell_thread_position(ruler, ["tk_a"], max_lag_s=188.0,
+                                     now=t0 + timedelta(minutes=1, seconds=10), **kw)
+    assert early["too_soon_to_read"] is True and early["crash_turn2plus_citable"] is False
+    assert early["read_age_s"] == 10.0
+
+    late = mod.cell_thread_position(ruler, ["tk_a"], max_lag_s=188.0,
+                                    now=t0 + timedelta(minutes=1, seconds=400), **kw)
+    assert late["too_soon_to_read"] is False and late["crash_turn2plus_citable"] is True
+
+    unknown = mod.cell_thread_position(ruler, ["tk_a"], max_lag_s=None,
+                                       now=t0 + timedelta(hours=9), **kw)
+    assert unknown["too_soon_to_read"] is None and unknown["crash_turn2plus_citable"] is False
+    #: 窗口里一条 run 都没配上 ⇒ 年龄无从算 ⇒ 同样是 None（不许默认成"可以引"）
+    empty = mod.cell_thread_position(ruler, [], max_lag_s=188.0, now=t0 + timedelta(hours=9),
+                                     begin=t0 + timedelta(hours=1), end=t0 + timedelta(hours=2),
+                                     terminal=3, gap=2, audit_rows=1)
+    assert empty["scope_empty"] is True and empty["too_soon_to_read"] is None
+
+
+def test_widening_the_pad_is_published_as_a_cost_not_as_a_fix(monkeypatch):
+    """W7 第 3 条给的两个方向之一（把 pad 抬到 ≥ max lag）不是免费的：它**吸进邻近 run** = 改分母。
+
+    ⇒ 器件把代价做成读数（`edge_control`），并且只并列、不进判据；根治要么走 A17/架构，
+    要么换配窗键（我方下一轮的默认）。
+    """
+    mod = _load_probe(monkeypatch)
+    t0 = datetime(2026, 9, 29, 1, 0, tzinfo=UTC)
+    ruler = mod.stamp_has_row(
+        mod.thread_turns([("th1", "tk_a", t0), ("th1", "tk_b", t0 + timedelta(minutes=1)),
+                          ("th9", "tk_right", t0 + timedelta(minutes=5, seconds=20)),
+                          ("th8", "tk_left", t0 - timedelta(seconds=20))]),
+        {"tk_a": t0})
+    block = mod.cell_thread_position(
+        ruler, ["tk_a"], begin=t0 - timedelta(seconds=1), end=t0 + timedelta(minutes=5),
+        terminal=2, gap=1)
+    edge = block["edge_control"]
+    assert block["window_matched_runs"] == 2, "当前 pad 下不该吸进邻近 run"
+    assert edge["extra_runs_if_right_pad_widened"] == 1
+    assert edge["extra_runs_if_left_pad_widened"] == 1
+    assert edge["matched_at_current_pad"] == block["window_matched_runs"]
+
+
+def test_summary_publishes_the_window_kind_distribution(monkeypatch):
+    """🔴 上一轮我把「45 格全为 `single`」写进了文档与回执，而产物里**没有任何一处给出分布** ⇒ 那句话没人反对。
+
+    ⇒ 口径的**分布**本身必须是字段：`summary.window_kind_counts`，且总数与逐格 `window_kind` 闭合。
+    （现查真值 = `single` 41 + `ambiguous` 4 —— 不是"全为 single"；见交付 §5.45。）
+    """
+    mod = _load_probe(monkeypatch)
+    rows = [{"receipt": "a.json", "state": mod.INVARIANT_VIOLATED, "denominator": 3,
+             "denominator_basis": mod.BASIS_DERIVED, "admitted": 3, "terminal": 3,
+             "audit_rows": 1, "diff": 2, "inapplicability_reason": None, "window_kind": "single"},
+            {"receipt": "b.json", "state": mod.AMBIGUOUS_WINDOW, "denominator": None,
+             "denominator_basis": None, "admitted": None, "terminal": None,
+             "audit_rows": None, "diff": None, "inapplicability_reason": "window_ambiguous",
+             "window_kind": "ambiguous"}]
+    s = mod.summarize(rows, 0.0)
+    assert s["window_kind_counts"] == {"single": 1, "ambiguous": 1}
+    assert sum(s["window_kind_counts"].values()) == len(rows)
+
+
+def test_the_thread_scope_sql_avoids_both_null_traps(monkeypatch):
+    """🔴 「没有 tk」这条谓词的**两种错法**都要挡：`is null`（几乎恒真）与裸 `bool_or(… like …)`（恒 0）。
+
+    第二个不是假想敌：我方第一版就写了裸 `bool_or`，`NULL like …` ⇒ NULL 被 `bool_or` 忽略 ⇒
+    全是"无 tk"的 thread 聚合成 NULL 而不是 false ⇒ `filter (where not has_tk)` **恒 0**，
+    被自己的产物测试逮到（`1322 == 1317 + 0`，交付 §5.46）。⇒ 这条是**源码形状**守卫，
+    产物没重跑也会红。
+    """
+    mod = _load_probe(monkeypatch)
+    sql_src = mod.THREAD_SCOPE_SQL
+    assert "is null" not in sql_src, "用 is null 量「无 tk」会几乎恒真（W7 第一稿的错法）"
+    assert "coalesce(checkpoint->'channel_values'->>'task_id' like 'tk_%', false)" in sql_src, \
+        "bool_or 吞 NULL ⇒ 必须 coalesce 成 false，否则 threads_without_tk 恒 0"
+    assert "filter (where not has_tk)" in sql_src and "filter (where has_tk)" in sql_src
+    #: 三条读数必须能闭合（产物侧的闭合断言另有一条吃真产物的测试）
+    for col in ("threads_all", "threads_with_tk", "threads_without_tk", "threads_multi_tk"):
+        assert col in sql_src, f"口径读数缺列：{col}"
+
+
+def test_the_thread_scope_block_is_closed_and_self_checking(monkeypatch):
+    """🔴 「1,322 还是 1,317」这类数**必须连谓词一起落产物**（W7 第二十六轮 ⑤ = 我方 P23 ⑥ 的诉求）。
+
+    三条同时钉：① 三个 thread 谓词读数**闭合**（`all == with_tk + without_tk`）；
+    ② `tk_runs − threads_with_tk == 全库 turn2plus 桶` 这条**算术自证**（每条 thread 从 1 连续编号才成立，
+       错成"每窗重新起号"就不可能相等）；③ 口径读数取不到时落 `available = false`，**不许静默缺项**。
+    """
+    mod = _load_probe(monkeypatch)
+    t0 = datetime(2026, 9, 29, 1, 0, tzinfo=UTC)
+    ruler = mod.stamp_has_row(
+        mod.thread_turns([("th1", "tk_a", t0), ("th1", "tk_b", t0 + timedelta(minutes=1)),
+                          ("th2", "tk_c", t0 + timedelta(minutes=2))]),
+        {"tk_a": t0})
+    ruler["scope"] = {"available": True, "threads_all": 3, "threads_with_tk": 2,
+                      "threads_without_tk": 1, "threads_multi_tk": 1}
+    db = mod.thread_position(ruler)
+    assert db["tk_runs"] == 3 and db["runs_by_turn_bucket"]["turn2plus"] == 1
+    assert db["thread_scope"]["closure_threads_add_up"] is True
+    assert db["thread_scope"]["turn_numbering_closes"] is True
+    assert db["thread_scope"]["tk_runs_minus_threads_with_tk"] == 1
+
+    #: 反头：口径 SQL 失败 ⇒ 显式 available=false，而不是"这一项没了"
+    ruler["scope"] = {"available": False, "error": "PermissionDenied: lg.checkpoints"}
+    assert mod.thread_position(ruler)["thread_scope"] == {"available": False,
+                                                          "error": "PermissionDenied: lg.checkpoints"}
+
+
+@pytest.mark.skipif(not PRODUCT.exists(), reason="产物未生成（本轮没跑过该探针）")
+def test_product_carries_the_attribution_the_horizon_and_the_kind_distribution(monkeypatch):
+    """吃真产物：本轮新增的引用面必须都在位，且**不许**自相矛盾。
+
+    ① `gap_attribution` 的恒等式必须在每个带尺的格上成立（不成立 ⇒ 有人把"一格一行"当成了前提）；
+    ② `read_horizon` 与 `edge_control` 的格数必须与带尺格数一致，`max_lag_s` 与 `db_wide` 同源；
+    ③ `window_kind_counts` 必须与逐格读数闭合（上一轮那句过宽的话就是缺这一件东西才会写出来）；
+    ④ 引用规则文本已改口：残差不再归给审计侧 pad，而是点名 `terminal − matched` 与"抬 pad = 改分母"。
+    """
+    d = json.loads(PRODUCT.read_text(encoding="utf-8"))
+    s = d["summary"]
+    ch = s["thread_channel"]
+    att = ch["gap_attribution"]
+    cells = [c for c in d["cells"] if c.get("thread_position")]
+    assert att["identity_holds_all"] is True, "有格不满足「一格一行」⇒ 残差归属要重写，不能沿用本轮结论"
+    assert att["checked_cells"] == len(cells)
+    assert att["cells_where_rows_differ_from_runs_with_row"] == []
+    assert ch["read_horizon"]["max_lag_s"] == ch["db_wide"]["max_lag_s"]
+    assert ch["edge_control"]["cells_measured"] == len(cells)
+    assert sum(s["window_kind_counts"].values()) == s["n_scenario_cells"]
+    rule = s["window_citation_rule"]
+    for needle in ("子窗", "整窗", "不得互换", "单场景", "first_seen", "gap_attribution", "改分母"):
+        assert needle in rule, f"引用规则少了关键一句：{needle}"
+    assert "左边缘会多吸进上一条 run" not in rule, "旧归因还没改口（本轮已实测残差不在审计侧 pad）"
+    for v in ch["violated_cells_turn_split"]:
+        assert "identity_holds" in v and "too_soon_to_read" in v and "crash_turn2plus_citable" in v
+    #: 🔴 thread 数的**谓词口径**与两条自证必须闭合（上一轮这三个数只活在我方文档里，不在产物里）。
+    scope = ch["db_wide"]["thread_scope"]
+    assert scope["available"] is True
+    assert scope["threads_all"] == scope["threads_with_tk"] + scope["threads_without_tk"]
+    assert scope["threads_with_tk"] == ch["db_wide"]["threads"]
+    assert scope["closure_threads_add_up"] is True and scope["turn_numbering_closes"] is True
+    #: 延迟分布的分桶必须是读数（"pad 1 秒放过几成"不许靠别人转述）；负延迟 > 0 ⇒ 配窗方向就该重估。
+    spread = ch["db_wide"]["audit_row_minus_first_seen_s"]
+    assert spread["negative"] == 0
+    assert set(spread["gt_s"]) == {str(x) for x in _load_probe(monkeypatch).LAG_BUCKETS_S}
+    assert spread["gt_s"]["1"] <= spread["n"] and spread["gt_s"]["188"] == 0
