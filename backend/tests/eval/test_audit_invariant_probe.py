@@ -548,7 +548,7 @@ def test_turns_are_numbered_over_full_history_before_the_window_filters(monkeypa
     t0 = datetime(2026, 9, 29, 1, 0, tzinfo=UTC)
     ruler = mod.stamp_has_row(
         mod.thread_turns([("th1", "tk_pre", t0), ("th1", "tk_inwin", t0 + timedelta(hours=2))]),
-        {"tk_pre": t0 + timedelta(seconds=3)})
+        {"tk_pre": t0 + timedelta(seconds=3)}, {"tk_pre": 1})
     block = mod.cell_thread_position(ruler, [], t0 + timedelta(hours=1), t0 + timedelta(hours=3),
                                      terminal=1, gap=1)
     assert block["window_matched_runs"] == 1
@@ -573,10 +573,10 @@ def test_the_literal_equation_is_published_only_as_a_do_not_use_column(monkeypat
     t0 = datetime(2026, 9, 29, 1, 0, tzinfo=UTC)
     ruler = mod.stamp_has_row(
         mod.thread_turns([("th1", "tk_a", t0), ("th1", "tk_b", t0 + timedelta(minutes=1))]),
-        {"tk_a": t0, "tk_b": t0 + timedelta(minutes=1)})
+        {"tk_a": t0, "tk_b": t0 + timedelta(minutes=1)}, {"tk_a": 1, "tk_b": 1})
     block = mod.cell_thread_position(ruler, ["tk_a", "tk_b"], t0 - timedelta(seconds=1),
                                      t0 + timedelta(minutes=5), terminal=2, gap=0)
-    assert block["rows_turn2plus"] == 1
+    assert block["receipt_tk_turn2plus"] == 1
     assert block["gap_for_this_cell"] == 0            # 原式：不差
     assert block["gap_literal_DO_NOT_USE"] == 1       # 字面式：凭空"差 1"
     assert block["crash_turn2plus"] == 0
@@ -678,7 +678,7 @@ def _ruler_with_two_turns(mod, t0: datetime):
     """一条 thread 两轮：turn1 落了审计行、turn2 没落 ⇒ 窗口内 matched=2 / crash_turn2plus=1。"""
     return mod.stamp_has_row(
         mod.thread_turns([("th1", "tk_a", t0), ("th1", "tk_b", t0 + timedelta(minutes=1))]),
-        {"tk_a": t0 + timedelta(seconds=5)})
+        {"tk_a": t0 + timedelta(seconds=5)}, {"tk_a": 1})
 
 
 def test_the_gap_crash_residue_is_attributed_to_the_ruler_not_the_audit_pad(monkeypatch):
@@ -752,7 +752,7 @@ def test_widening_the_pad_is_published_as_a_cost_not_as_a_fix(monkeypatch):
         mod.thread_turns([("th1", "tk_a", t0), ("th1", "tk_b", t0 + timedelta(minutes=1)),
                           ("th9", "tk_right", t0 + timedelta(minutes=5, seconds=20)),
                           ("th8", "tk_left", t0 - timedelta(seconds=20))]),
-        {"tk_a": t0})
+        {"tk_a": t0}, {"tk_a": 1})
     block = mod.cell_thread_position(
         ruler, ["tk_a"], begin=t0 - timedelta(seconds=1), end=t0 + timedelta(minutes=5),
         terminal=2, gap=1)
@@ -813,7 +813,7 @@ def test_the_thread_scope_block_is_closed_and_self_checking(monkeypatch):
     ruler = mod.stamp_has_row(
         mod.thread_turns([("th1", "tk_a", t0), ("th1", "tk_b", t0 + timedelta(minutes=1)),
                           ("th2", "tk_c", t0 + timedelta(minutes=2))]),
-        {"tk_a": t0})
+        {"tk_a": t0}, {"tk_a": 1})
     ruler["scope"] = {"available": True, "threads_all": 3, "threads_with_tk": 2,
                       "threads_without_tk": 1, "threads_multi_tk": 1}
     db = mod.thread_position(ruler)
@@ -865,3 +865,133 @@ def test_product_carries_the_attribution_the_horizon_and_the_kind_distribution(m
     assert spread["negative"] == 0
     assert set(spread["gt_s"]) == {str(x) for x in _load_probe(monkeypatch).LAG_BUCKETS_S}
     assert spread["gt_s"]["1"] <= spread["n"] and spread["gt_s"]["188"] == 0
+def test_the_direct_form_is_blind_to_a_double_written_run(monkeypatch):
+    """🔴 判据② 现在是**两条**断言（架构 `v1.7.14` 裁直读式时补的那一臂）⇒ 这一条测的就是"为什么要补"。
+
+    形状：两条 thread、每条两轮，窗口覆盖全部 4 条 run；`tk_b`（turn2）**落了两行**。
+    ⇒ 直读式（零行的 run 数）= **0**（它看不见多落），配对式 = **1**，第二形 = 2 − 3 = **−1**（负 = 多落）。
+    反头：所有 run 各 1 行 ⇒ 三者同时归零 ⇒ 这一臂今天不报东西，防的是**将来双写时恒绿**（U-129 那一族）。
+    """
+    mod = _load_probe(monkeypatch)
+    t0 = datetime(2026, 9, 29, 1, 0, tzinfo=UTC)
+    run_rows = [("th1", "tk_a", t0), ("th1", "tk_b", t0 + timedelta(minutes=1)),
+                ("th2", "tk_c", t0), ("th2", "tk_d", t0 + timedelta(minutes=1))]
+    ts = {"tk_a": t0 + timedelta(seconds=5), "tk_b": t0 + timedelta(seconds=65),
+          "tk_c": t0 + timedelta(seconds=5), "tk_d": t0 + timedelta(seconds=65)}
+    kw = dict(window_task_ids=["tk_a", "tk_b", "tk_c", "tk_d"],
+              begin=t0 - timedelta(seconds=1), end=t0 + timedelta(minutes=5),
+              terminal=4, gap=0)
+
+    double = mod.cell_thread_position(mod.stamp_has_row(mod.thread_turns(run_rows), ts,
+                                                        {"tk_a": 1, "tk_b": 2, "tk_c": 1, "tk_d": 1}),
+                                      **kw, audit_rows=5)
+    assert double["crash_turn2plus"] == 0, "直读式：零行的 run 数 = 0（这一臂看不见双写，正是它盲的地方）"
+    assert double["multi_row_turn2plus_runs"] == 1
+    assert double["rows_by_turn2plus_runs"] == 3 and double["runs_by_turn_bucket"]["turn2plus"] == 2
+    assert double["second_form_turn2plus"] == -1, "第二形为负 = 多落 ⇒ 它是直读式看不见的另一支"
+    assert double["gap_for_this_cell"] == 0, "格级 gap 也被抵消掉了（少一行 + 多一行）⇒ 只有 run 级看得见"
+
+    single = mod.cell_thread_position(mod.stamp_has_row(mod.thread_turns(run_rows), ts,
+                                                        {"tk_a": 1, "tk_b": 1, "tk_c": 1, "tk_d": 1}),
+                                      **kw, audit_rows=4)
+    assert single["multi_row_turn2plus_runs"] == 0 and single["second_form_turn2plus"] == 0
+    #: 全库面同一件事：`direct_vs_second_form_agree` 只在"每 run 至多一行"时才 True。
+    dbl_ruler = mod.stamp_has_row(mod.thread_turns(run_rows), ts, {"tk_a": 1, "tk_b": 2, "tk_c": 1, "tk_d": 1})
+    one_ruler = mod.stamp_has_row(mod.thread_turns(run_rows), ts, {"tk_a": 1, "tk_b": 1, "tk_c": 1, "tk_d": 1})
+    assert mod.thread_position(dbl_ruler)["direct_vs_second_form_agree"] is False
+    assert mod.thread_position(one_ruler)["direct_vs_second_form_agree"] is True
+    assert mod.thread_position(dbl_ruler)["multi_row_turn2plus_runs"] == 1
+
+
+def test_the_reading_precondition_needs_both_the_scope_and_the_silence(monkeypatch):
+    """架构 `v1.7.14` 同轮补记连带④：**作用域非空 ∧ 年龄 > 已观测 max lag** 两条都过才叫"前置通过"。
+
+    四态各自钉住（关键是 **缺任一条 ⇒ 不可引**，以及"未知"不许当成"通过"）：
+    ① 两条都过；② 窗口里没配上任何 run（空作用域，哪怕年龄再大也不可引）；③ 读得太早（假红方向）；
+    ④ 没有延迟样本 ⇒ `aged_beyond_max_lag` 为 `null` ⇒ 同样不可引。
+    """
+    mod = _load_probe(monkeypatch)
+    t0 = datetime(2026, 9, 29, 1, 0, tzinfo=UTC)
+    ruler = _ruler_with_two_turns(mod, t0)
+    inside = dict(window_task_ids=["tk_b"], begin=t0 - timedelta(seconds=1), end=t0 + timedelta(minutes=5),
+                  terminal=2, gap=1, audit_rows=1)
+
+    aged = mod.cell_thread_position(ruler, max_lag_s=188.0, now=t0 + timedelta(hours=10), **inside)
+    assert aged["reading_precondition"] == {
+        "scope_non_empty": True, "aged_beyond_max_lag": False, "both_pass": True,
+        "read_age_over_max_lag": round(aged["read_age_s"] / 188.0, 3)}
+    assert aged["crash_turn2plus_citable"] is aged["reading_precondition"]["both_pass"], \
+        "citable 与前置必须是**同一个算式**（否则引用者拼出来的和产物里的不是一回事）"
+    assert aged["reading_precondition"]["read_age_over_max_lag"] > 1, "年龄要引**比值**，秒数随读数时刻漂移"
+
+    empty = mod.cell_thread_position(ruler, max_lag_s=188.0, now=t0 + timedelta(hours=10),
+                                     **{**inside, "window_task_ids": [],
+                                        "begin": t0 + timedelta(hours=8), "end": t0 + timedelta(hours=9)})
+    assert empty["scope_empty"] is True and empty["reading_precondition"]["scope_non_empty"] is False
+    assert empty["crash_turn2plus_citable"] is False, "空作用域**不得**记成「零行 = 没有崩臂」（假绿形状）"
+
+    early = mod.cell_thread_position(ruler, max_lag_s=188.0, now=t0 + timedelta(minutes=1), **inside)
+    assert early["reading_precondition"]["scope_non_empty"] is True
+    assert early["reading_precondition"]["aged_beyond_max_lag"] is True
+    assert early["crash_turn2plus_citable"] is False, "两条里缺一根也不行"
+
+    unknown = mod.cell_thread_position(ruler, max_lag_s=None, now=t0 + timedelta(hours=10), **inside)
+    assert unknown["reading_precondition"]["aged_beyond_max_lag"] is None
+    assert unknown["reading_precondition"]["read_age_over_max_lag"] is None
+    assert unknown["crash_turn2plus_citable"] is False, "「阈值未知」不等于「通过」"
+
+
+def test_the_row_count_column_is_never_the_receipt_task_count(monkeypatch):
+    """🔻 本轮**改了一列名**：旧 `rows_turn2plus` 读起来像"行数"，数的其实是**回执侧 task_id 个数**。
+
+    ⇒ 与交付 §5.40（键数冒充行数）同族。现在两列**同时在场且各管各的**：
+    `receipt_tk_turn2plus`（回执侧计数，`gap_literal_DO_NOT_USE` 的减数用它）与
+    `rows_by_turn2plus_runs`（窗口内 run 的**真行数**，逐行取回后在 Python 里数）。
+    """
+    mod = _load_probe(monkeypatch)
+    src = PROBE.read_text(encoding="utf-8")
+    assert '"rows_turn2plus"' not in src, "旧列名回来了 ⇒ 两列又会被读成同一件事"
+    assert '"receipt_tk_turn2plus"' in src and '"rows_by_turn2plus_runs"' in src
+    #: 行数不许由库里聚合出来再当"行数"引（§5.40 的规矩）⇒ 取证侧必须是逐行取回 + Python 计数
+    fetch = src[src.index("audit_row_pairs"):src.index("ruler = stamp_has_row")]
+    assert "group by task_id" not in fetch, "行数一旦经过聚合就不是行数了"
+    t0 = datetime(2026, 9, 29, 1, 0, tzinfo=UTC)
+    ruler = mod.stamp_has_row(
+        mod.thread_turns([("th1", "tk_a", t0), ("th1", "tk_b", t0 + timedelta(minutes=1))]),
+        {"tk_a": t0 + timedelta(seconds=5), "tk_b": t0 + timedelta(seconds=65)},
+        {"tk_a": 1, "tk_b": 3})
+    block = mod.cell_thread_position(ruler, ["tk_a", "tk_b"], t0 - timedelta(seconds=1),
+                                     t0 + timedelta(minutes=5), terminal=2, gap=0, audit_rows=4)
+    assert block["receipt_tk_turn2plus"] == 1 and block["rows_by_turn2plus_runs"] == 3
+
+
+@pytest.mark.skipif(not PRODUCT.exists(), reason="产物未生成（本轮没跑过该探针）")
+def test_product_carries_the_pairing_form_and_the_two_preconditions():
+    """吃真产物：判据② 两条断言 + 读数前置两条 + v1.7.14 措辞，都必须**已经在盘上**。"""
+    d = json.loads(PRODUCT.read_text(encoding="utf-8"))
+    s = d["summary"]
+    ch = s["thread_channel"]
+    pair = ch["overcount_pairing"]
+    for key in ("primary_form", "pair_form", "second_form", "cells_measured", "multi_row_turn2plus_total",
+                "cells_with_negative_second_form", "db_wide_agreement"):
+        assert key in pair, f"配对块少了 {key}"
+    cells = [c for c in d["cells"] if c.get("thread_position")]
+    assert pair["cells_measured"] == len(cells)
+    assert pair["multi_row_turn2plus_total"] == sum(c["thread_position"]["multi_row_turn2plus_runs"] for c in cells)
+    #: 🔴 架构 `§20.4` ㉗ 那条"限定写在差的一侧 = 另一侧没写"的形状守卫：**第二形**两侧都带 `turn≥2`。
+    assert pair["second_form"].count("turn≥2") == 2, "第二形的限定没写全 ⇒ 又变回字面式"
+    horizon = ch["read_horizon"]
+    assert "作用域非空" in horizon["preconditions"] and "比值" in horizon["preconditions"]
+    assert horizon["cells_citable"] + horizon["cells_precondition_fail"] == len(cells)
+    for c in cells:
+        pre = c["thread_position"]["reading_precondition"]
+        assert pre["both_pass"] == c["thread_position"]["crash_turn2plus_citable"]
+    #: 措辞必须是 v1.7.14 的形状：三个式子各自有名、且"分母不同源"与"缺前置记 UNVERIFIED"都在引用规则里。
+    note = ch["naming_note"]
+    for needle in ("crash_turn2plus", "multi_row_turn2plus_runs", "second_form_turn2plus", "两侧同限定",
+                   "DO_NOT_USE", "receipt_tk_turn2plus"):
+        assert needle in note, f"naming_note 少了 {needle}"
+    rule = s["window_citation_rule"]
+    for needle in ("哪一个式子", "不可互认", "UNVERIFIED", "window_kind"):
+        assert needle in rule, f"引用规则少了 v1.7.14 的一件：{needle}"
+    assert "差值式一律禁用" not in rule, "第二形是**允许的**（两侧同限定），别把它和字面式混成一个东西"

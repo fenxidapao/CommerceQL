@@ -474,12 +474,19 @@ def _spread(values: list[float]) -> dict:
             "gt_s": {str(s): sum(1 for v in vs if v > s) for s in LAG_BUCKETS_S}}
 
 
-def stamp_has_row(ruler: dict, audit_ts: dict[str, datetime]) -> dict:
-    """把"这条 run 在 `app.audit_log` 里有没有行 / 行落在什么时刻"标到尺上（一次算完，全库与单格共用）。"""
+def stamp_has_row(ruler: dict, audit_ts: dict[str, datetime], rows_by_tk: dict[str, int]) -> dict:
+    """把"这条 run 在 `app.audit_log` 里落了几行 / 行落在什么时刻"标到尺上（全库与单格共用）。
+
+    🔴 `rows_by_tk` 是**必传**的：只给"有没有行"就把判据② 的第二臂（一个 run 落多行 = **多落**）
+    永久丢掉了 —— 架构 `v1.7.14` 把判据② 裁成**两条**断言，正是这一臂（直读式对多落是盲的）。
+    行数由调用方**逐行取回后在 Python 里数**，不在库里 `count(*)`（交付 §5.40：数出来的"行数"
+    一旦经过展开/聚合就不是行数了）。
+    """
     for tk, entry in ruler["by_tk"].items():
         ts = audit_ts.get(tk)
         entry["has_row"] = ts is not None
         entry["audit_ts"] = ts
+        entry["audit_rows"] = int(rows_by_tk.get(tk, 0))
     ruler["usable"] = not ruler["ambiguous_tk_to_threads"]
     return ruler
 
@@ -497,10 +504,16 @@ def thread_position(ruler: dict) -> dict:
     runs = ruler["by_tk"]
     total = dict.fromkeys(buckets, 0)
     with_row = dict.fromkeys(buckets, 0)
+    rows_in = dict.fromkeys(buckets, 0)
+    multi = dict.fromkeys(buckets, 0)
     offsets: list[float] = []
     for entry in runs.values():
         b = _bucket(int(entry["turn"]))
         total[b] += 1
+        n_rows = int(entry.get("audit_rows", 0))
+        rows_in[b] += n_rows
+        if n_rows > 1:
+            multi[b] += 1
         if entry["has_row"]:
             with_row[b] += 1
             if isinstance(entry["first_seen"], datetime) and isinstance(entry["audit_ts"], datetime):
@@ -514,6 +527,16 @@ def thread_position(ruler: dict) -> dict:
         "runs_by_turn_bucket": total,
         "runs_with_audit_row": with_row,
         "runs_without_audit_row": {b: total[b] - with_row[b] for b in buckets},
+        #: 🔴 **判据② 两条断言的"另一臂"在全库面上**（架构 v1.7.14）：
+        #:    `audit_rows_by_turn_bucket` = 各桶的**真行数**（不是"有行的 run 数"，两者只在"一格一行"时相等）；
+        #:    `multi_row_turn2plus_runs` = `turn≥2` 且落 **> 1 行**的 run 数 ⇒ 判据② 的第二条断言要求它 = 0；
+        #:    `second_form_turn2plus` = `runs(turn≥2) − 行(turn≥2)` = 架构登记的**第二形**（两侧同限定）
+        #:      ⇒ 今天应与直读式（`runs_without_audit_row.turn2plus`）逐域相等；**为负就是多落**。
+        "audit_rows_by_turn_bucket": rows_in,
+        "multi_row_turn2plus_runs": multi["turn2plus"],
+        "second_form_turn2plus": total["turn2plus"] - rows_in["turn2plus"],
+        "direct_vs_second_form_agree": (total["turn2plus"] - with_row["turn2plus"])
+                                       == (total["turn2plus"] - rows_in["turn2plus"]),
         "audit_row_minus_first_seen_s": _spread(offsets),
         #: 🔴 `too_soon_to_read` 的阈值来源：观测到的**最大**写行延迟（W7 ⑭c 同判据："阈值自己算，不写死常数"）。
         #:    没有任何观测样本 ⇒ None ⇒ 各格的 `too_soon_to_read` 一律落 `null`（**未知**，不是 **false**）。
@@ -548,7 +571,11 @@ def cell_thread_position(ruler: dict, window_task_ids: list[str], begin: datetim
 
     ⚠️ 命名与判据形状照 W7 第二十五轮 ⑭ 的四条措辞纪律（他实测三域：字面式 81 / 16 / 1,330，
     正确式 4 / 8 / 13 ⇒ 两式只在"runs 全是 turn≥2"时才相等）：
-    ① **判据分子只许写 `crash_turn2plus`**（窗口内 `turn≥2` 且零审计行的 run 数）；
+    ① **判据分子只许写 `crash_turn2plus`**（窗口内 `turn≥2` 且零审计行的 run 数）—— 架构 `v1.7.14` 已把
+       这一句裁成判据② 的**主式（直读式）**，并要求配一条**第二臂**：窗口内 `turn≥2` 且行数 > 1 的 run 数 = 0
+       ⇒ 本函数同时落 `multi_row_turn2plus_runs` 与 `second_form_turn2plus`，**直读式对"多落"盲**这件事
+       从此有读数、不靠注释；
+
     ② 架构 `v1.7.12` 那句字面式 `terminal − 审计行(turn≥2)` 的被减数**没有限定** ⇒ 我方照他的做法
        把它算出来并命名成 **`gap_literal_DO_NOT_USE`**，让"错的那列"在产物里**可见且不可引**，
        而不是删掉后没人知道有这个坑；
@@ -563,6 +590,8 @@ def cell_thread_position(ruler: dict, window_task_ids: list[str], begin: datetim
     runs = ruler["by_tk"]
     hit = {"turn1": 0, "turn2plus": 0}
     crash = {"turn1": 0, "turn2plus": 0}
+    rows_in = {"turn1": 0, "turn2plus": 0}
+    multi = {"turn1": 0, "turn2plus": 0}
     extra = timedelta(seconds=WIDE_PAD_S)
     matched = 0
     wide_right = 0
@@ -580,6 +609,11 @@ def cell_thread_position(ruler: dict, window_task_ids: list[str], begin: datetim
             hit[b] += 1
             if not entry["has_row"]:
                 crash[b] += 1
+            #: 🔴 逐 run 的**真行数**（`stamp_has_row` 从取回的行里数的）：判据② 的第二臂要用它，
+            #:    而"有行的 run 数"看不见一个 run 落两行（架构 v1.7.14 §37 ① 那条"直读式对多落盲"）。
+            rows_in[b] += int(entry.get("audit_rows", 0))
+            if int(entry.get("audit_rows", 0)) > 1:
+                multi[b] += 1
         #: 吸边对照：只把**右**边再推 188 秒（= 本轮实测 max lag）会多配进多少条 run。
         if end <= seen < end + extra:
             wide_right += 1
@@ -599,6 +633,18 @@ def cell_thread_position(ruler: dict, window_task_ids: list[str], begin: datetim
     #:    阈值来自 `thread_position().max_lag_s`（**自算**，不写死常数）；缺样本 ⇒ `None`（未知 ≠ 可以引）。
     read_age_s = round((now - last_seen).total_seconds(), 3) if (now and last_seen) else None
     too_soon = None if (max_lag_s is None or read_age_s is None) else bool(read_age_s < max_lag_s)
+    #: 🔴 **读数前置**（架构 `v1.7.14` 同轮补记连带④）：引用"零行"这类读数必须**两条都过** ——
+    #:    ① 作用域非空（窗口里至少配上一条 run）；② 该域最后一条 run 的**年龄 > 已观测最大写入延迟**。
+    #:    **缺任一条记 UNVERIFIED、不得记 0**（"还没写"与"永远不会有"在只读面上同形）。
+    #:    ⚠️ 年龄**引比值不引秒数**（秒数随读数时刻漂移，见架构 `HANDOVER §7.1` 第 21 条）。
+    precondition = {
+        "scope_non_empty": matched > 0,
+        "aged_beyond_max_lag": too_soon,
+        "both_pass": bool(matched) and too_soon is False,
+        "read_age_over_max_lag": round(read_age_s / max_lag_s, 3)
+                                 if (read_age_s is not None and max_lag_s) else None,
+    }
+
     return {
         "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
         "window_matched_runs": matched,
@@ -606,7 +652,16 @@ def cell_thread_position(ruler: dict, window_task_ids: list[str], begin: datetim
         "runs_by_turn_bucket": hit,
         "crash_turn1": crash["turn1"],
         "crash_turn2plus": crash["turn2plus"],
-        "rows_turn2plus": rows_t2,
+        #: 🔻 **这一列本轮改名**：旧名 `rows_turn2plus` 读起来像"行数"，但它数的是**回执侧 turn≥2 的
+        #:    task_id 个数**（一个 run 落两行仍计 1）⇒ 正是交付 §5.40 那一族"键数冒充行数"。
+        #:    真·行数在下面 `rows_by_turn2plus_runs`，两列**同时在场**、不许互相代。
+        "receipt_tk_turn2plus": rows_t2,
+        "rows_by_turn2plus_runs": rows_in["turn2plus"],
+        #: 判据② 的**第二臂**（架构 v1.7.14 新增那条）：窗口内 `turn≥2` 且段 1 行数 > 1 的 run 数 = 0。
+        "multi_row_turn2plus_runs": multi["turn2plus"],
+        #: **第二形**（两侧同限定的差值式，架构登记为允许的第二形）：= 0 是主式的等价形；
+        #:    **负** ⇒ 该域有 run 落了多行（多落），这正是直读式看不见的那一支。
+        "second_form_turn2plus": hit["turn2plus"] - rows_in["turn2plus"],
         "audit_rows_unmapped_to_thread": unmapped,
         "gap_for_this_cell": gap,
         "gap_literal_DO_NOT_USE": (terminal - rows_t2) if terminal is not None else None,
@@ -629,7 +684,10 @@ def cell_thread_position(ruler: dict, window_task_ids: list[str], begin: datetim
         #:    `null` = 没有延迟样本或本格窗口内没配上 run ⇒ 同样是"未知"，**不等于**可以引。
         "read_age_s": read_age_s,
         "too_soon_to_read": too_soon,
-        "crash_turn2plus_citable": bool(matched) and too_soon is False,
+        "reading_precondition": precondition,
+        #: 与 `reading_precondition.both_pass` **同一个算式**（判据未动 ⇒ 本轮之前/之后的引用不翻面）。
+        "crash_turn2plus_citable": precondition["both_pass"],
+
         #: 宽 pad 对照（**只并列、不进判据**）：把窗口单边推到本轮实测 max lag 会多配进多少条 run。
         #:    这一列就是"抬 pad"的代价读数：它改的是**分母**，所以属判据变更（要走 A17 / 架构），
         #:    而不是"顺手把常量调大一点"。
@@ -805,9 +863,36 @@ def summarize(rows: list[dict], skew_s: float | None, ruler: dict | None = None)
                  "identity_holds": (r.get("thread_position") or {}).get("identity_holds"),
                  "too_soon_to_read": (r.get("thread_position") or {}).get("too_soon_to_read"),
                  "crash_turn2plus_citable": (r.get("thread_position") or {}).get("crash_turn2plus_citable"),
+                 "reading_precondition": (r.get("thread_position") or {}).get("reading_precondition"),
+                 "multi_row_turn2plus_runs": (r.get("thread_position") or {}).get("multi_row_turn2plus_runs"),
+                 "second_form_turn2plus": (r.get("thread_position") or {}).get("second_form_turn2plus"),
                  "turn2plus_no_row_ge_gap": (r.get("thread_position") or {}).get("turn2plus_no_row_ge_gap")}
                 for r in rows
                 if r["state"] == INVARIANT_VIOLATED and r.get("thread_position")],
+            #: 🔑 **判据② 现在是两条断言**（架构 `v1.7.14` 裁直读式时补的那一臂）：主式数"零行的 run"、
+            #:    配对式数"落 > 1 行的 run"。⇒ 这块的存在理由 = **直读式对"多落"是盲的**，而我方旧出口
+            #:    只有 `runs_with_row_in_window`（有行的 run 数）与格级 `gap`：同一格里"少一行 + 多一行"
+            #:    会让 gap = 0 而**两臂都不为 0** ⇒ 只有 run 级行数看得见。全库那一份见 `db_wide`。
+            "overcount_pairing": {
+                "primary_form": "窗口内 turn≥2 且零段 1 审计行的 run 数 = 0（直读式，量纲 = run）",
+                "pair_form": "窗口内 turn≥2 且段 1 行数 > 1 的 run 数 = 0（架构 v1.7.14 新增的第二条）",
+                "second_form": "run(turn≥2) − 审计行(turn≥2) = 0（允许的第二形，**两侧同限定**；负 = 多落）",
+                "cells_measured": sum(1 for r in rows if r.get("thread_position")),
+                "cells_with_multi_row_turn2plus": sum(1 for r in rows
+                                                      if (r.get("thread_position") or {}).get("multi_row_turn2plus_runs")),
+                "multi_row_turn2plus_total": sum((r.get("thread_position") or {}).get("multi_row_turn2plus_runs", 0)
+                                                 for r in rows if r.get("thread_position")),
+                "cells_with_negative_second_form": sum(1 for r in rows
+                                                       if ((r.get("thread_position") or {}).get("second_form_turn2plus")
+                                                           or 0) < 0),
+                "db_wide_agreement": (thread_position(ruler).get("direct_vs_second_form_agree")
+                                      if (ruler and ruler.get("by_tk")) else None),
+                "status": "两式**同值当且仅当每个 run 至多 1 行** ⇒ 读这一点只看 "
+                          "`db_wide.direct_vs_second_form_agree`，不看本句：这一臂今天多半不报任何东西，"
+                          "它防的是**将来出现双写（U-129 那一族）时恒绿**。",
+
+            },
+
             #: 🔑 **差值归属**（本轮的核心读数）：`gap − (crash_turn1 + crash_turn2plus)` 恒等于
             #:    `terminal − window_matched_runs` ⟺ "窗口内行数 == 窗口内有行的 run 数"（一格一行）。
             #:    ⇒ 若 10/10 成立，"gap 与 crash 对不上"就**不是**审计侧 pad 的锅，而是"回执自报的终态数
@@ -839,15 +924,27 @@ def summarize(rows: list[dict], skew_s: float | None, ruler: dict | None = None)
             "read_horizon": {
                 "rule": "too_soon_to_read = (PG now − 本格窗口内最晚一条 run 的 first_seen) < 观测 max lag"
                         " ⇒ true 时该格 crash_turn2plus 不可引；null = 无延迟样本或窗口内没配上 run（同样不可引）",
+                #: 🔴 架构 `v1.7.14` 同轮补记连带④：这两条是**读数前置**（不是新判据）——
+                #:    引用零行读数要**同时**给「作用域非空」与「年龄 > 已观测最大写行延迟」，
+                #:    **缺任一条记 UNVERIFIED、不得记 0**。逐格的合并旗标 = `reading_precondition.both_pass`。
+                "preconditions": ("① 作用域非空（`window_matched_runs > 0`）"
+                                  "② 该域最后一条 run 的年龄 > 已观测 max lag（`too_soon_to_read is false`；"
+                                  "年龄**引比值** `read_age_over_max_lag`，秒数随读数时刻漂移）"),
                 "max_lag_s": (thread_position(ruler) if ruler and ruler.get("by_tk") else {}).get("max_lag_s"),
                 "cells_too_soon": sum(1 for r in rows
                                       if (r.get("thread_position") or {}).get("too_soon_to_read") is True),
                 "cells_horizon_unknown": sum(1 for r in rows
                                              if (r.get("thread_position") or {}).get("too_soon_to_read") is None
                                              and r.get("thread_position")),
+                "cells_scope_empty": sum(1 for r in rows
+                                         if (r.get("thread_position") or {}).get("scope_empty")),
+                "cells_precondition_fail": sum(1 for r in rows if r.get("thread_position")
+                                               and not ((r.get("thread_position") or {})
+                                                        .get("reading_precondition") or {}).get("both_pass")),
                 "cells_citable": sum(1 for r in rows
                                      if (r.get("thread_position") or {}).get("crash_turn2plus_citable")),
             },
+
             #: **抬 pad 的代价**（只并列，不进判据）：把窗口单边推到观测 max lag 会多配进多少条 run。
             #: ⇒ "把 pad 改成 ≥188s"不是免费的：它改的是**分母**，属判据变更（走 A17 / 架构），
             #:   而 W7 第 3 条给的另一条路（审计侧不带时间谓词）我方实测**已经同数**（见 `gap_attribution`）。
@@ -861,11 +958,19 @@ def summarize(rows: list[dict], skew_s: float | None, ruler: dict | None = None)
             },
             "id_level_turns": {r["receipt"]: (r.get("task_id_evidence") or {}).get("turn_of_given_id")
                                for r in rows if r.get("task_id_evidence")},
-            "naming_note": "判据分子只许写 **`crash_turn2plus`**（窗口内 `turn≥2` 且零审计行的 run 数）。"
-                           "产物里同时留着 **`gap_literal_DO_NOT_USE`**（架构 `v1.7.12` 那句字面式 `terminal − "
-                           "审计行(turn≥2)` 的算法，被减数没有限定 ⇒ 会被 turn1 的行放大）：这一列**故意公开**"
-                           "是为了让'两种式子差多少'可被复算，命名本身即禁用标记（做法照 W7 第二十五轮 ⑭）。"
+            "naming_note": "架构 `07 §4.8 U-130 v1.7.14` 已把判据② 裁成**两条断言** ⇒ 本产物的三个'数 run'的列"
+                           "各管一条，**不许互相代**：① **`crash_turn2plus`** = 主式（窗口内 `turn≥2` 且**零**段 1 行的"
+                           " run 数，量纲 = run）；② **`multi_row_turn2plus_runs`** = 配对式（窗口内 `turn≥2` 且"
+                           "行数 **> 1** 的 run 数，直读式对这一支是盲的）；③ **`second_form_turn2plus`** = 允许的"
+                           "**第二形** `run(turn≥2) − 审计行(turn≥2)`（**两侧同限定**才与主式等价；**为负 = 多落**）。"
+                           "🔻 **本轮一处改名**：旧列 `rows_turn2plus` 读起来像'行数'，实际数的是**回执侧 `turn≥2` 的"
+                           " task_id 个数**（一个 run 两行仍计 1）⇒ 现名 **`receipt_tk_turn2plus`**，真行数 = "
+                           "`rows_by_turn2plus_runs`（逐行取回后在 Python 里数，交付 §5.40）。"
+                           "**`gap_literal_DO_NOT_USE`** 仍保留 = 架构 `v1.7.12` 那句**字面式**（被减数 `terminal` "
+                           "未限定 ⇒ 被 turn1 放大，三域实测 20×/2×/102×）的算法，命名即禁用标记、**故意公开**"
+                           "是为了让'两种式子差多少'可被复算（做法已被架构抄进契约写法）。"
                            "turn1 的零行（`crash_turn1` / 全库 `runs_without_audit_row.turn1`）结构性不进判据。",
+
             "why_not_a_verdict": "`turn2plus_no_row_ge_gap` 只是「本格 gap ≤ 窗口内 turn≥2 零行数」这条算术；"
                                  "它不等于「这些 gap 就是那几条崩臂」。要把因果坐实需要**回执自己带 task_id**"
                                  "（即 `task_id_channel` 的 present 面），而窗口配的是 run 起点、边缘会漂"
@@ -877,20 +982,28 @@ def summarize(rows: list[dict], skew_s: float | None, ruler: dict | None = None)
         #: 🔴 引用纪律（架构 `07 §4.8 U-130 v1.7.13` 的"gap 双口径"）：**两个数都对、不得互换** ——
         #:    子窗（`window_kind = scenario`）与整窗（`receipt` / `single`）读出来的 run 数与 gap 可以不同
         #:    （架构现测：A 档子窗 99/95 = 4，整窗 104/99 = 5，第 5 条落在子窗之外）。
-        "window_citation_rule": "引用任何 gap 必须连着该格的 `window_kind` 一起写：`scenario` 与 `single` = "
-                                "**单场景（子窗）口径**（`single` = 这份回执只含一个场景，回执窗就等于该场景窗），"
-                                "`receipt` = 整批窗口，`ambiguous` 不参与判据。架构 `v1.7.13` 现测：同一批 A 档"
-                                "**子窗 99 run / 95 行 = gap 4** 与 **整窗 104 run / 99 行 = gap 5** 两个数都对、"
-                                "**不得互换**，也不许取平均 ⇒ 本器件逐格只按单场景窗口数，"
-                                "所以我方所有 gap 读数都属于『子窗』口径。"
+        "window_citation_rule": "引用任何 gap 必须**三件一起写**：① 用的是**哪一个式子**（直读式 = 数满足条件的 "
+                                "run，主式；第二形 = `run(turn≥2) − 审计行(turn≥2)`，两侧同限定；字面式 = "
+                                "`terminal − 审计行(turn≥2)`，**禁用**，只以 `gap_literal_DO_NOT_USE` 出现）；"
+                                "② **分母口径**（我方的 gap 分母是**回执自报的 terminal 请求数**，W7 那把尺的分母是"
+                                "**run 数** ⇒ 两家的同名'gap'**不可互认、不可相加**）；③ 该格的 `window_kind`："
+                                "`scenario` 与 `single` = **单场景（子窗）口径**（`single` = 这份回执只含一个场景，"
+                                "回执窗就等于该场景窗），`receipt` = 整批窗口，`ambiguous` 不参与判据。架构 "
+                                "`v1.7.13` 现测：同一批 A 档**子窗 99 run / 95 行 = gap 4** 与 **整窗 104 run / "
+                                "99 行 = gap 5** 两个数都对、**不得互换**、也不许取平均 ⇒ 本器件逐格只按单场景窗口"
+                                "数，所以我方所有 gap 读数都属于『子窗』口径（分布本身是字段 = "
+                                "`summary.window_kind_counts`）。🔴 **读数前置两条**（架构 `v1.7.14` 同轮补记连带④）："
+                                "引用零行读数要同时满足「作用域非空」与「该域最后一条 run 的年龄 > 已观测最大写行"
+                                "延迟」，**缺任一条记 UNVERIFIED、不得记 0**（逐格 = `reading_precondition`）。"
                                 "⚠️ 边缘偏差的**归属已实测改过两次**，此处写当前结论：thread 尺按 run 起点 "
                                 "`first_seen` 配窗，而审计行写入时刻中位比它晚约十秒量级（见 `db_wide."
                                 "audit_row_minus_first_seen_s`，含分桶 `gt_s`）。但第十五轮逐格核对后，"
-                                "`gap` 与 `crash` 对不上的那部分**不在审计侧 pad**：10 个违反格里"
-                                "「窗口内行数 == 窗口内有行的 run 数」全部成立 ⇒ 差值恒等于 `terminal − "
-                                "window_matched_runs`（见 `gap_attribution`）。⇒ 本器件**没有**为此放宽 pad"
-                                "（pad 仍是 1 秒）：抬到观测 max lag 会把邻近 run 吸进窗口 = 改分母，"
+                                "`gap` 与 `crash` 对不上的那部分**不在审计侧 pad**：带尺的格子里「窗口内行数 == "
+                                "窗口内有行的 run 数」全部成立 ⇒ 差值恒等于 `terminal − window_matched_runs`"
+                                "（见 `gap_attribution`）。⇒ 本器件**没有**为此放宽 pad（pad 仍是 1 秒，架构 "
+                                "`v1.7.14` 亦判'两条出路都不采'）：抬到观测 max lag 会把邻近 run 吸进窗口 = 改分母，"
                                 "代价见 `edge_control`，且属判据变更（走 A17 / 架构）。",
+
         "note": "严格式 = **terminal − 审计行数 = 0**（`terminal = Σ outcomes{ok,clarify,refuse,error_frame,"
                 "async_degraded}`，词表逐字来自 `deploy/loadtest/driver.py:327-329`；U-130）。`admitted` 只是 "
                 "HTTP 2xx、含 `truncated`（200 但流断在半途）⇒ 只在 terminal 两条取法都落空时作**显式标注的代理**，"
@@ -981,11 +1094,22 @@ async def measure(rows: list[dict], table: str = "audit_log") -> tuple[list[dict
                                "threads_without_tk": int(scope_row[2]), "threads_multi_tk": int(scope_row[3])}
             except Exception as scope_exc:
                 ruler_scope = {"available": False, "error": safe_error_text(scope_exc)}
-            audit_ts_rows = await (await conn.execute(sql.SQL(
-                "select task_id, min({}) from app.{} where task_id is not null group by task_id").format(
+            #: 🔑 **逐行取回、行数在 Python 里数**（交付 §5.40 的规矩：不在库里 `count(*)` 后再当"行数"引）。
+            #:    旧版这里写的是 `select task_id, min(ts) … group by task_id` ⇒ 只留得下"有没有行"，
+            #:    一个 run 落两行会被压成 1 ⇒ 判据② 的第二臂（多落）在**取证阶段**就丢了。
+            audit_row_pairs = await (await conn.execute(sql.SQL(
+                "select task_id, {} from app.{} where task_id is not null").format(
                 sql.Identifier(time_col), sql.Identifier(table)))).fetchall()
-            audit_ts = {str(t): ts for t, ts in audit_ts_rows if t}
-            ruler = stamp_has_row(thread_turns(list(run_rows)), audit_ts)
+            audit_ts: dict[str, datetime] = {}
+            rows_by_tk: dict[str, int] = {}
+            for tk, ts in audit_row_pairs:
+                if not tk:
+                    continue
+                key = str(tk)
+                rows_by_tk[key] = rows_by_tk.get(key, 0) + 1
+                if isinstance(ts, datetime) and (key not in audit_ts or ts < audit_ts[key]):
+                    audit_ts[key] = ts
+            ruler = stamp_has_row(thread_turns(list(run_rows)), audit_ts, rows_by_tk)
             #: 谓词口径跟着尺走（`thread_position()` 会把它连同**闭合判据**一起落进产物）。
             ruler["scope"] = ruler_scope
             #: 尺自检（W7 的 ① 段同判据）：一个 tk 落多个 thread ⇒ 整段作废，点名而不静默取第一个。
