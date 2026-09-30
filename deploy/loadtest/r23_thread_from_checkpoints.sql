@@ -247,6 +247,16 @@ from seq where no_row and turn >= 2 group by 1 order by 2 desc;
 select 'checkpoint_blobs channel=terminal' as k, count(*) as rows_, count(distinct thread_id) as threads_
 from lg.checkpoint_blobs where channel = 'terminal';
 select '全库 thread 数' as k, count(distinct thread_id) as rows_, 0 as threads_ from lg.checkpoints;
+-- ⑫b 🔴 「1,322」必须连谓词一起报（W6 第二十六轮第 4 条：同一个数两种谓词差 5，别留下"两跑矛盾"）
+--      实测（09-30）：无谓词 = 1,322 / 带 `tk like 'tk_%'` = 1,317 / **无任何 tk_ 组** = 5 ⇒ 1,317 + 5 = 1,322 闭合
+select '⑫b 无谓词 thread' as k, count(distinct thread_id) as n from lg.checkpoints;
+select '⑫b 带 tk_ 谓词 thread' as k, count(distinct thread_id) as n
+from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%';
+with t_all as (select distinct thread_id from lg.checkpoints),
+     t_tk as (select distinct thread_id from lg.checkpoints
+              where checkpoint->'channel_values'->>'task_id' like 'tk_%')
+select '⑫b 无任何 tk_ 组的 thread' as k, count(*) as n from t_all
+where thread_id not in (select thread_id from t_tk);
 
 -- ⑬ ★★ turn>=2 的「崩率」按前一条 outcome **交叉**（不是只数崩的那批）⇒ 架构问的「必崩 vs 偶发」在零额度面上第一次有分母。
 --     ⚠️ 读法三条，缺一条就会把这张表读过：
@@ -346,3 +356,37 @@ select '⑭b turn 计算顺序守卫' as k, count(*) as threads_in_win,
        count(*) filter (where has_prehistory) as threads_with_prehistory,
        (count(*) filter (where has_prehistory) > 0) as window_turn_would_be_wrong
 from per_thread where runs_in_win > 0;
+
+-- ⑭c 🔴 「读得太早」守卫（W6 第二十六轮第 3 条逼出来的；我这面独立复测：审计行写入延迟 n=861，p50 = 10.428s / p99 = 40.824s / **max = 187.623s**，负延迟 0 条）
+--     机理与本尺形状的关系，说清两面：
+--     · **本尺不需要 pad**：窗口只作用在 `first_seen`（检查点 ts），审计行按 `task_id` join、不带时间谓词 ⇒ 晚 188s 写的行照样落到它自己的 run 上 ⇒
+--       W6 那种"pad 只 1 秒 ⇒ crash_turn1 < gap"的**漏计方向**在这里结构性不存在（他们的窗口 pad 作用在**审计行那一侧**）。
+--     · ⚠️ **但反方向的坑是真的**：一条 run "审计行还没写"与"永远不会有"在只读面上**长得一模一样** ⇒ 刚跑完的格读得太早，会把在途 run 计入 `crash_turn2plus`（**假红**，不是假绿）。
+--       ⇒ 我引的 4 / 8 / 13 都是**历史窗**（读数年龄 ≫ max lag）⇒ 不受影响；**修复后的新格必须先过这一条守卫**。
+--     ⇒ 用法：`too_soon_to_read = f` 才许引 `crash_turn2plus`；阈值取**观测 max lag**（本段自己算，不写死常数）。
+with ck as (
+  select thread_id, checkpoint->'channel_values'->>'task_id' as tk,
+         min((checkpoint->>'ts')::timestamptz) as first_seen
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2
+), seq as (
+  select ck.thread_id, ck.tk, ck.first_seen, split_part(ck.thread_id, ':', 2) as usr,
+         row_number() over (partition by ck.thread_id order by ck.first_seen) as turn,
+         (a.task_id is not null) as has_row
+  from ck left join app.audit_log a on a.task_id = ck.tk
+), scoped as (
+  select * from seq
+  where first_seen between :'win_a'::timestamptz and :'win_b'::timestamptz
+    and usr like :'upref'
+), lagobs as (
+  select max(extract(epoch from (a."timestamp" - ck.first_seen))) as max_lag_s,
+         count(*) as n_obs
+  from ck join app.audit_log a on a.task_id = ck.tk
+)
+select '⑭c 读数年龄与静默期' as k, count(*) as runs_in_scope,
+       count(*) filter (where turn >= 2 and not has_row) as crash_turn2plus,
+       to_char(max(scoped.first_seen), 'MM-DD HH24:MI:SS') as last_run_in_scope,
+       round(extract(epoch from (now() - max(scoped.first_seen)))::numeric, 1) as read_age_s,
+       round(lagobs.max_lag_s::numeric, 1) as observed_max_lag_s,
+       lagobs.n_obs as lag_sample_n,
+       (extract(epoch from (now() - max(scoped.first_seen))) < lagobs.max_lag_s) as too_soon_to_read
+from scoped, lagobs group by lagobs.max_lag_s, lagobs.n_obs;
