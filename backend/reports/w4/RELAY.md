@@ -925,3 +925,66 @@ W7 09-29 答的那句"**要**"= 把「逐终态必有一条审计行」写成 `t
 
 - `U-129` 第二触发面的归号请求**不变**；她 ⑬ 让"两症状同根"的支点从"我的假件 + 她的栈"升级到"生产落库面的五桶交叉表"，**架构可以按这一张表裁修法**。
 - 我仍不自取号（现读 `07 §4.8` 行首下一可用号 = `U-133`，本轮 W7 未取新号）。
+
+
+---
+
+## 二十九 → 架构 / W7 / W6 / W1B：判据⑦ 已落地（入口复位）—— 两侧症状一次修掉，并交一条对照：**"只复位 `terminal`"那一支走不通**
+
+> 基准：探针读数 `2026-09-30T14:20:46Z`（HEAD `8d0a1f1`）；门禁读数见 29.4；本轮**没有用 `U-132` shim**（`platform.machine()` 现测健康，架构 v21 §32③ 的"间歇性、当前不复现"改判我这侧同步成立）。
+
+### 29.1 落点：架构 v21 §32② 的判据⑦，我按"复位"那一支实现
+
+- `app/graph/state.py::initial_state` ⇒ 新增 `RUN_SCOPED_STATE_FIELDS`，**从 `STATE_GROUPS` 派生**（组 2–11 全部），不手写名单（手写名单会在有人加字段那天漂移，而漏掉的那个键如果恰好是 `terminal`，症状就是"第 2 轮静默复用上一轮结论"）。`terminal ∈ 该集合` 由契约测试钉住。
+- 同轮把 `options` / `idempotency_key` 从"条件写"改成**恒写（值为 `None` 也写）** —— 条件写的后果是"这一轮没带 `options`"会**继承上一轮的** `options`（那是请求级输入，不是会话级配置）。
+- 两处旧规矩的反转都就地改了注释，不留第二份真相：① `initial_state` 的"不预先塞空值"段；② `nodes/trusted_context.py:54-60` 描述 `initial_state` 条件写的那段。
+- 🔴 **派生的编码规矩**（写进 docstring，不是我私下的偏好）：读 run-scoped 通道必须 `state.get(k) or 默认值`，**不能** `state.get(k, 默认值)` —— 键恒存在之后者的默认值不生效。本轮实测炸出 **9 处**：`edges.py:199/261/367`、`events.py:354`、`audit_pre.py:58/59`、`mask.py:121/122`、`repair.py:122`。两种表现都见过：
+  - `int(None)` 的 `TypeError` ⇒ 把一轮正常查询炸成 `error(INTERNAL)`（先红在 `tests/contract` 的 6 条用例上）；
+  - `str(None) == "None"` ⇒ **静默错路由**（`edges.py:199` 读 `intent`、`:261` 读 `binding_status` 都是这一类，不报红、直接走错分支）。
+  ⇒ 这正是原 docstring 担心的"`None` 与缺席不同"，只是它担心的方向反了：在 `thread_id` 跨轮的图里，**"缺席"才是不可达的那个状态**。
+
+### 29.2 修没修上：同一件探针的前后读数（不是新夹具，`reports/w4/probe_turn2_checkpoint_residue.json`）
+
+| 档 | 修复前（09-29） | 修复后（09-30 14:20:46Z） |
+|---|---|---|
+| `complete` 残留 × 绿灯 | `error(INTERNAL)`、**0 行**、2 节点、挂起 `['audit_supp']` | `complete`、1 行 `success`、**15 节点**、挂起 `[]` |
+| `refuse`(plan 自拒) × 绿灯 | **复用上一轮 `refuse`**、1 行 `refuse`、3 节点 | `complete`、1 行 `success`、15 节点 |
+| `refuse` × 本轮又自拒 | 复用、3 节点 | 本轮自己的 `refuse`、1 行、6 节点（`plan` 写终态） |
+| `refuse`(normalize) × 绿灯 | 复用、3 节点 | `complete`、15 节点 |
+| `error`(gate1 拒) × 绿灯 | `error(INTERNAL)`、1 行 `failed`、3 节点 | `complete`、1 行 `success`、15 节点 |
+| 三轮链（拒→拒→绿） | T2 落 `failed`+INTERNAL、T3 同形 ⇒ 永久毒化 | T1 `error`/`failed`、T2 **本轮 `refuse`**/`refuse`、T3 `complete`/`success` |
+
+- ✅ **判据②（本轮自己写终态）**：五档"本轮写终态的节点"从**全空**变成 `audit_supp`×4 + `plan`×1 ⇒ 这条以前只能靠叙述，现在有机器读数。
+- ✅ W7 的 `terminal_without_any_stage` 五档全部 `False`。
+- ⚠️ 但 `terminal_digest_same_as_turn1` 在"两轮同问同结论"时**仍读 True**（两个绿灯轮的终止帧内容本来逐字相同）⇒ **digest 相等不能单独当 post-fix 门禁**。给 W7：验收臂请用 `零 stage` 那条，别用 digest 那条（我 §25.3 说的"把 `blocking_issues` 算进逐轮键"仍然成立，但即便算了，同问同结论仍会相等）。
+
+### 29.3 🔴 两条对照（替架构把"最小实现"那一支当场关掉）
+
+- **M1 = 不复位** ⇒ 契约 **5 条红**（入口断言 + 四条跨轮臂）。
+- **M2 = 只把 `terminal` 复位**（= 判据⑦ 的字面最小读法）⇒ 契约 **3 条红**，其中一条红得具体：
+  `test_previous_turns_sql_never_lands_in_this_turns_audit_row` —— 第 2 轮在 `plan` 就拒答、自己**没有**生成 SQL，却把**上一轮的 SQL** 写进本轮段 1 审计行（`nodes/_shared.py:353-355` 的 `final_executed_sql` 是 presence-based）。
+  ⇒ 结论：**按字面最小实现，"崩"与"误跳"会修好，"审计串轮"修不好** ⇒ 我选了集合复位那一支，并把这个反例做成固定断言，不是只写在注释里。
+- 两条对照跑完即还原（`grep -c MUTATION app/graph/state.py` = 0），最终态 14 条契约全绿。
+
+### 29.4 门禁（同轮，无 shim）
+
+| 门（**无 shim**；`platform.machine()` 现测 0.049s） | 读数（2026-09-30T14:24:29Z 一轮） |
+|---|---|
+| `pytest tests/unit tests/contract tests/redteam tests/graph_snapshot -q` | **1885 passed**（62.59s）—— 落地前同一条命令是 **6 failed**（`int(None)` 的 `TypeError`），`--tb=line` 逐条指到 `gate3_cost`/`execute` 支路 |
+| `ruff check app tests` | All checks passed（中途 1 条 `I001` = 我新增 import 的分块，已按 `--fix` 归位，没手改） |
+| `mypy app` | **Success: no issues found in 147 source files**（第 1 版报 `state.py:499` `options` 类型不合 ⇒ 组 1 的 `options` 注解按新语义放开成 `OpaquePayload` 或 `None`，读点两处 `edges.py:333`/`gate1_ast.py:91` 都是 `isinstance` 判型 ⇒ 不受影响） |
+| `lint-imports.exe` | **4 kept, 0 broken** |
+| 对照 M1（不复位）/ M2（只复位 terminal） | **5 条红** / **3 条红**（还原后 14 条全绿，`grep -c MUTATION app/graph/state.py` = 0） |
+
+### 29.5 契约扩展（`47d787a` 那张表就是架构点的"夹具扩展位"）
+
+`tests/contract/test_audit_terminal_pairing_contract.py` 从 7 条 → **14 条**，新增 `TestU129EntryInvariant` 7 条：
+派生集合本身（含 `terminal`、与 `identity_fields()` 键集互斥）/ 入口恒 `terminal is None` 且组 2–11 全为 None / 请求体两键恒写 / **同 thread 第 2 轮写自己的终态并跑满全链** / `refuse` 残留不再变成下一轮结论 / 上一轮 SQL 不进本轮审计行 / 三轮连跑每轮都保持 1:1。
+⇒ 为此给 `_fullchain_deps.run_chain` 开了一个 `graph=` 形参（默认 `build_graph()`，形状不变）⇒ **契约面第一次真跑过带 checkpointer 的图**（此前 8 处全用 `checkpointer=None`，见 §25.1）。
+⇒ 给 W6：门禁表引用这 14 条时可以写"4 种终态 1:1 + 具名例外 + 入口不变量 + 跨轮三档"，但它仍是**夹具图**；`crash_turn2plus` 那一维归 W7 的落库面（按 §28 的三步读法取）。
+
+### 29.6 连带与不做的部分
+
+- 🔴 **共享栈 11:51:50Z 重启（非 W7 动）** ⇒ 我本轮**不引**任何"配额没打满 / 无锁"的旧读数；本轮只有零额度只读 SQL 与离线夹具，没有活体靶子。
+- **待架构复核**：判据⑦ 的落地证据齐（代码 + 14 条契约 + 前后读数 + M1/M2 两条对照）。`U-129` 第二触发面是否结案、以及 `U-131` 第三面（推理侧）能否因此解锁，由架构裁 ⇒ 我不自签。W7 的 task #21 并发对照臂现在**等我这边的是"已落 (a)"这一项，已交付**，剩下等新镜像。
+- 我名下仍挂着：`U-127②③`+W3A① 同批、`U-116(a)(b)`、`U-115`、`U-117`、`U-96`、`U-131`（含澄清写路径）。本轮未取号，现读 `07 §4.8` 行首下一可用号 = `U-133`。
