@@ -351,7 +351,7 @@ def meta_payload(state: Mapping[str, Any], *, bundle_version: str) -> dict[str, 
     scope = state.get("scope")
     return {
         "bundle_version": bundle_version,
-        "cost_cny": _jsonable(state.get("cost_cny", 0)),
+        "cost_cny": _jsonable(state.get("cost_cny") or 0),
         "tokens": _jsonable(state.get("tokens") or {}),
         "latency_ms": _jsonable(state.get("latency_ms") or {}),
         "trace_id": state.get("trace_id"),

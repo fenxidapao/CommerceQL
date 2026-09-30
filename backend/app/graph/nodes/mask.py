@@ -118,8 +118,8 @@ async def _write_result_cache(
     payload = {
         "columns": [col.name for col in columns],
         "rows": rows,
-        "row_count": int(state.get("row_count", len(rows))),
-        "truncated": bool(state.get("truncated", False)),
+        "row_count": int(state.get("row_count") or len(rows)),
+        "truncated": bool(state.get("truncated")),
         "fingerprint": state.get("result_fingerprint"),
     }
     try:

@@ -196,7 +196,7 @@ def route_after_normalize(state: GraphState) -> str:
 def route_after_intent(state: GraphState) -> str:
     """§5.4：`refuse` → `refuse_out`；`clarify` → `clarify_out`；
     `open_analysis` → `refuse_out`（NG4，给替代问法）；`executable` → `link`。"""
-    intent = str(state.get("intent", IntentKind.EXECUTABLE.value))
+    intent = str(state.get("intent") or IntentKind.EXECUTABLE.value)
     if intent == IntentKind.REFUSE.value:
         return REFUSE_OUT
     if intent == IntentKind.CLARIFY.value:
@@ -258,7 +258,7 @@ def route_after_bind(state: GraphState) -> str:
     """
     if state.get("terminal") is not None:
         return terminal_target(state)
-    status = str(state.get("binding_status", ""))
+    status = str(state.get("binding_status") or "")
     if status == BindingState.AMBIGUOUS.value:
         return CLARIFY_OUT
     if status == BindingState.UNRESOLVED.value:
@@ -364,7 +364,7 @@ def route_after_execute(state: GraphState) -> str:
     error_class = _exec_error_class(state)
     if error_class is None:
         return MASK
-    if int(state.get("repair_round", 0)) < MAX_REPAIR_ROUNDS and error_class in REPAIRABLE_CLASSES:
+    if int(state.get("repair_round") or 0) < MAX_REPAIR_ROUNDS and error_class in REPAIRABLE_CLASSES:
         return REPAIR
     return ERROR_OUT
 

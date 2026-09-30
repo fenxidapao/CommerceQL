@@ -82,6 +82,7 @@ __all__ = [
     "PII_FIELDS",
     "PROMPT_ALLOWED_FIELDS",
     "REQUIRED_STATE_FIELDS",
+    "RUN_SCOPED_STATE_FIELDS",
     "STATE_GROUPS",
     "GraphState",
     "OpaquePayload",
@@ -239,6 +240,17 @@ PII_FIELDS: Final[frozenset[str]] = frozenset({"tenant_id", "user_id"})
 #: · `tests/contract/test_graph_state_contract.py` 断言组 1 只能由 `trusted_context` 写入。
 REQUIRED_STATE_FIELDS: Final[frozenset[str]] = frozenset(STATE_GROUPS["1_request_identity"])
 
+#: **每个新 run 必须复位的通道** = 组 2–11 全部（从 `STATE_GROUPS` 派生，**不手写名单** ——
+#: 手写就会在加字段那天漂移，而漏掉的一个恰好是 `terminal` 的话，症状是"第 2 轮静默复用上一轮结论"）。
+#: 🔴 该集合必须包含 `terminal`：这是判据⑦（入口不变量）的落点，由
+#: `tests/contract/test_audit_terminal_pairing_contract.py::TestU129EntryInvariant` 钉住。
+RUN_SCOPED_STATE_FIELDS: Final[frozenset[str]] = frozenset(
+    field
+    for group, fields in STATE_GROUPS.items()
+    if group != "1_request_identity"
+    for field in fields
+)
+
 
 # ---------------------------------------------------------------------------
 # GraphState
@@ -269,7 +281,7 @@ class GraphState(TypedDict, total=False):
     scope_claims: tuple[str, ...]
     shop_ids: tuple[str, ...]          # 空 = 不限制（07 §13.2）
     raw_question: str                  # ⚠️ 唯一允许出站的用户输入
-    options: OpaquePayload             # U-24：`RunOptions`
+    options: OpaquePayload | None      # U-24：`RunOptions`；判据⑦ 起本轮没带 = `None`（键恒存在）
     idempotency_key: str | None
 
     # --- 组 2｜归一化（`normalize`）---
@@ -447,24 +459,45 @@ def initial_state(
     options: OpaquePayload | None = None,
     idempotency_key: str | None = None,
 ) -> GraphState:
-    """图入口的初始状态（组 1 + 组 11 的三个计量初值）。
+    """图入口的初始状态：组 1 由请求重写，**组 2–11 一律显式复位成 `None`**。
 
-    ⚠️ **只填组 1 与"出口才写"的字段初值**，不预先塞空值给后续各组：
-    "字段存在但为 `None`"与"字段不存在"在 LangGraph 的 `resume` 语义下**不同** ——
-    前者会让"这个节点跑过没有"无法判断（`state.get(k) is None` 有两种含义）。
-    条件边一律用显式判定（如 `state.get("time_parse_ok") is False`），不靠 `None` 兜底。
+    🔴 **判据⑦（`U-129` 第二触发面，`07 §4.8` 行内注）：入口不变量 = 每个新 run 起点必须
+    `state.terminal is None`。** 落点选"复位"而不是"让 `route_terminal` 在入口幂等收口"，
+    理由有两处读数：
 
-    ⚠️ `raw_question` 的长度（1–500）与 `options` 的白名单校验**不在这里做** ——
-    它们属于**请求校验**（`api/dto/`，W4）。在图上做会让"非法请求"变成
-    "已进图的异常"，而那时已经产生了 checkpoint 与审计的中间态。
+    1. 残留**不止 `terminal`**。`reports/w4/probe_turn2_checkpoint_residue.json` 实测：同
+       `thread_id` 跑完一轮后，下一轮入口带着 **35 个非空通道**（去掉组 1 身份 = 28 个 run 级），
+       含 `outcome`/`sql_text`/`gate_results`/`result_columns`/`latency_ms`/`tokens`/`cost_cny`。
+       只复位 `terminal` 会让 `route_terminal` 不再误跳，但**这些值仍会被本轮读到**。
+    2. 其中一个是**审计正确性**问题，不是风格问题：`nodes/_shared.py:353-355` 把
+       `state["sql_text"]` 当 `final_executed_sql` 写进段 1 载荷 ⇒ 上一轮的 SQL 会落进
+       **这一轮**的审计行（本轮在 `plan` 就拒答时尤其明显，因为它自己不会写 `sql_text`）。
+
+    ⚠️ **本函数此前"刻意不塞空值"的规矩就此反转**，原由是"`None` 与键不存在在 `resume`
+    语义下不同"。但在 `thread_id = {tenant}:{user}:{session}`（`runner.py:196`，07 §5.4 逐字）
+    之下，**第 2 轮起"键不存在"这个状态物理不可达** —— 上一轮写过的键一律带着值回来。
+    ⇒ 于是"不塞空值"换不到干净语义，只换来一条静默的跨轮污染路径。显式写 `None`
+    是**唯一能让第 2 轮与首轮形状一致**的写法。
+    ⇒ 条件边的判定口径不变：仍用显式判定（`state.get("time_parse_ok") is False` 这类），
+    不靠 `None` 兜底 —— `None` 与缺席对本图的所有现存判据等价（全图只有
+    `nodes/trusted_context.py:79` 用 `f not in state`，而它只查组 1 身份）。
+
+    🔴 **派生的编码规矩**：读 run-scoped 通道一律写 `state.get(k) or 默认值`，
+    **不要写 `state.get(k, 默认值)`** —— 键现在恒存在，后者的默认值在 `None` 时**不生效**。
+    两种表现都实测踩过：`int(None)` 的 `TypeError`（把一轮正常查询炸成 `INTERNAL`）与
+    `str(None) == "None"` 的**静默错路由**（条件边拿到 `"None"` 谁都不匹配）。
+    本轮已按该式改齐 9 处读点：`edges.py:199/261/367`、`events.py:354`、
+    `audit_pre.py:58/59`、`mask.py:121/122`、`repair.py:122`。
     """
     assert_state_field_annotations_complete()
     state: GraphState = identity_fields(identity)  # type: ignore[assignment]
+    for field in RUN_SCOPED_STATE_FIELDS:
+        state[field] = None  # type: ignore[literal-required]
     state["raw_question"] = raw_question
-    if options is not None:
-        state["options"] = options
-    if idempotency_key is not None:
-        state["idempotency_key"] = idempotency_key
+    # ⚠️ **无条件写**这三个请求体字段（值为 `None` 也写）：条件写会让"这一轮没带 options"
+    # 继承上一轮的 `options` / `idempotency_key` —— 那是请求级输入，不是会话级配置。
+    state["options"] = options
+    state["idempotency_key"] = idempotency_key
     return state
 
 

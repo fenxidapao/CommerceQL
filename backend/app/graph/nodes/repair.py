@@ -119,7 +119,7 @@ async def repair(state: GraphState) -> dict[str, Any]:
         }
         return update
 
-    round_no = int(state.get("repair_round", 0)) + 1
+    round_no = int(state.get("repair_round") or 0) + 1
     payload = dict(outcome.state_payload())
     payload["sql_candidates"] = (outcome.primary.model_dump(),)  # §5.2.1：只留选中项
     payload["repair_round"] = round_no

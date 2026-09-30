@@ -55,6 +55,6 @@ async def audit_pre(state: GraphState) -> dict[str, Any]:
 
     return {
         "result_columns": tuple(state.get("result_columns") or ()),
-        "row_count": int(state.get("row_count", 0)),
-        "truncated": bool(state.get("truncated", False)),
+        "row_count": int(state.get("row_count") or 0),
+        "truncated": bool(state.get("truncated")),
     }

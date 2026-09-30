@@ -51,17 +51,17 @@ from app.graph.state import REQUIRED_STATE_FIELDS, GraphState
 
 __all__ = ["trusted_context"]
 
-#: 组 1 里**允许缺席**的两个字段 —— 它们是可选请求体，`initial_state()` 在 `None` 时
-#: **刻意不写键**（该函数 docstring 的原话："字段存在但为 `None`"与"字段不存在"
-#: 在 `resume` 语义下不同）。
+#: 组 1 里**允许缺席**的两个字段 —— 它们是可选请求体。
+#: ⚠️ 判据⑦（`U-129` 第二触发面）之后 `initial_state()` **无条件写**这两个键（这一轮没带就写
+#: `None`）⇒ "缺席"这一态在入口已经没有了；此处仍把它们排除在"必须在位"之外，
+#: 因为**值为 `None` 是合法的**（不带 `options` 的请求本来就是合法请求）。
 #:
 #: 🔴 为什么必须显式列出而不是靠 `state.get(f) is None` 判定：
 #: `REQUIRED_STATE_FIELDS` 是组 1 **全集**（11 个，`STATE_GROUPS` 的原文如此），
-#: 其中 `options` / `idempotency_key` 在 `initial_state()` 里是**条件写入**。
-#: 早期版本用 `state.get(f) is None` 判缺 ⇒ **本产品自己的官方构造器造出的状态
-#: 过不了本节点的自检**（实测 `missing=['idempotency_key','options']`）——
-#: 即整张图从入口就起不来。这是"合取判定盖过了定义域"的典型错法：
-#: "必须就位"对 8 个身份字段成立，对那两个可选请求体**不成立**。
+#: 其中 8 个身份字段每轮必有值，而那两个可选请求体**合法地可以是 `None`** ——
+#: 用 `is None` 会把"客户端没带"读成"API 层没播种"，判错方向还会 fail-fast 掉正常请求。
+#: （早期版本反过来：用 `is None` 判缺 ⇒ 本产品自己的官方构造器造出的状态过不了本节点的
+#: 自检，实测 `missing=['idempotency_key','options']`，整张图从入口就起不来。）
 #:
 #: ⚠️ 与之配套的"名义与实现不一致"已登记（**改 `state.py` 需要 W1B/架构点头**，
 #: 本窗口只提需求）：`state.py` 第 234 行把 `REQUIRED_STATE_FIELDS` 注释为
