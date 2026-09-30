@@ -21,6 +21,13 @@ assert_terminal_is_settable → ValueError`（`deploy/loadtest/r20_internal_attr
     ../.venv/Scripts/python.exe reports/w4/probe_turn2_checkpoint_residue.py \
         --out reports/w4/probe_turn2_checkpoint_residue.json
 退出码：0 = 本件跑完（**不代表"没缺陷"，本件的产出就是缺陷读数**）；非 0 = 探针自己坏了。
+
+📌 **判据⑦ 落地之后本件的读法**（入口复位 = `app/graph/state.py::initial_state`）：
+`residue.residue_key_count` **仍会是 ~35** —— 复位发生在**入口**，不是禁止持久化，第 1 轮自己写的值
+本来就该进检查点。⇒ 修复后的回归信号是**第 2 轮的行为**，三条一起看：
+① `turn2.nodes_ran` = 全链 15 个节点（而不是 2–3 个）；② 各档的 `turn2_pending_next_nodes` = `[]`
+（原来崩臂是 `['audit_supp']`）；③ 每档第 2 轮拿到**自己的**结论（`success`/本轮 `refuse`），
+而不是上一轮的。⇒ 这三条里任何一条退回去 = 入口不变量被回退。
 """
 
 from __future__ import annotations

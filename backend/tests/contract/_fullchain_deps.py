@@ -647,16 +647,23 @@ def make_chain(
 
 
 def run_chain(
-    chain: Chain, *, question: str = QUESTION
+    chain: Chain,
+    *,
+    question: str = QUESTION,
+    graph: Any | None = None,
 ) -> tuple[list[tuple[str, dict[str, Any]]], RunOutcome]:
     """驱动真图一轮，返回解析后的 `(event, data)` 帧序列与 `RunOutcome`。
+
+    `graph` 缺省 = `build_graph()`（`checkpointer=None`，整套契约面的既有形状）。
+    ⚠️ 传图进来只为一件事：**同一张带 checkpointer 的图连跑多轮**，
+    即 `U-129` 第二触发面那条"同 thread 第 2 轮"（`TestU129EntryInvariant` 用）。
 
     同步用例 + `asyncio.run`（沿 A 组与 `test_api_runner_contract.py` §二 的惯例：
     pytest-asyncio 自建循环在 Windows 上会撞 ProactorEventLoop）。
     """
     holder = _DepsHolder(chain)
     runner = SseRunner(
-        graph=build_graph(),
+        graph=graph if graph is not None else build_graph(),
         store=RedisStateStore(FakeRedis()),  # type: ignore[arg-type]
         new_deps=holder,
     )

@@ -1,8 +1,8 @@
 {
   "meta": {
     "produced_by": "reports/w4/probe_turn2_checkpoint_residue.py",
-    "read_at": "2026-09-29T12:57:24+00:00",
-    "head": "41e4beb",
+    "read_at": "2026-09-30T14:20:46+00:00",
+    "head": "8d0a1f1",
     "quota_cost_cny": 0.0,
     "checkpointer_under_test": "langgraph MemorySaver（生产 = AsyncPostgresSaver；本件只需要「同一 thread 跑过多轮」这一事实）",
     "why_contract_suite_misses_it": "tests/contract/** 全部 build_graph() ⇒ checkpointer=None"
@@ -152,33 +152,52 @@
       "asked": "上面那个指标按店铺拆开分别是多少",
       "terminal": [
         [
-          "error",
-          "INTERNAL"
+          "complete",
+          null
         ]
       ],
       "terminal_payload_keys": [
-        "code",
-        "message",
-        "retryable",
         "terminal"
       ],
-      "terminal_digest": "{\"code\": \"INTERNAL\", \"message\": \"\", \"retryable\": false, \"terminal\": true}",
-      "stage_frames": 0,
+      "terminal_digest": "{\"terminal\": true}",
+      "stage_frames": 6,
       "events": [
         "ack",
-        "error"
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "data",
+        "degraded",
+        "meta",
+        "complete"
       ],
-      "audit_rows_this_turn": 0,
-      "audit_outcomes": [],
+      "audit_rows_this_turn": 1,
+      "audit_outcomes": [
+        "success"
+      ],
       "understand_calls": 1,
       "nodes_ran": [
         "trusted_context",
-        "normalize"
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
       ]
     },
-    "thread_next_after_turn2": [
-      "audit_supp"
-    ]
+    "thread_next_after_turn2": []
   },
   "terminal_kind_matrix": {
     "after_complete__turn2_green": {
@@ -235,33 +254,52 @@
         "asked": "上面那个指标按店铺拆开分别是多少",
         "terminal": [
           [
-            "error",
-            "INTERNAL"
+            "complete",
+            null
           ]
         ],
         "terminal_payload_keys": [
-          "code",
-          "message",
-          "retryable",
           "terminal"
         ],
-        "terminal_digest": "{\"code\": \"INTERNAL\", \"message\": \"\", \"retryable\": false, \"terminal\": true}",
-        "stage_frames": 0,
+        "terminal_digest": "{\"terminal\": true}",
+        "stage_frames": 6,
         "events": [
           "ack",
-          "error"
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "data",
+          "degraded",
+          "meta",
+          "complete"
         ],
-        "audit_rows_this_turn": 0,
-        "audit_outcomes": [],
+        "audit_rows_this_turn": 1,
+        "audit_outcomes": [
+          "success"
+        ],
         "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
-          "normalize"
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
         ]
       },
-      "turn2_pending_next_nodes": [
-        "audit_supp"
-      ],
+      "turn2_pending_next_nodes": [],
       "turn2_node_deltas": [
         {
           "node": "trusted_context",
@@ -280,10 +318,122 @@
             "time_range",
             "unresolved_terms"
           ]
+        },
+        {
+          "node": "intent",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "link",
+          "wrote_terminal": false,
+          "keys": [
+            "candidates",
+            "candidates_summary",
+            "retrieval_mode"
+          ]
+        },
+        {
+          "node": "plan",
+          "wrote_terminal": false,
+          "keys": [
+            "model_version",
+            "plan",
+            "plan_summary",
+            "prompt_version"
+          ]
+        },
+        {
+          "node": "bind",
+          "wrote_terminal": false,
+          "keys": [
+            "binding_status",
+            "bindings"
+          ]
+        },
+        {
+          "node": "gen_sql",
+          "wrote_terminal": false,
+          "keys": [
+            "confidence",
+            "model_version",
+            "prompt_version",
+            "sql_candidates",
+            "sql_dialect",
+            "sql_params",
+            "sql_text"
+          ]
+        },
+        {
+          "node": "gate1_ast",
+          "wrote_terminal": false,
+          "keys": [
+            "applied_predicates",
+            "gate_results",
+            "limit_injected",
+            "sql_text"
+          ]
+        },
+        {
+          "node": "gate2_policy",
+          "wrote_terminal": false,
+          "keys": [
+            "gate_results",
+            "scope"
+          ]
+        },
+        {
+          "node": "gate3_cost",
+          "wrote_terminal": false,
+          "keys": [
+            "gate_results"
+          ]
+        },
+        {
+          "node": "execute",
+          "wrote_terminal": false,
+          "keys": [
+            "exec_error",
+            "result_columns",
+            "result_fingerprint",
+            "row_count",
+            "truncated"
+          ]
+        },
+        {
+          "node": "mask",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "audit_pre",
+          "wrote_terminal": false,
+          "keys": [
+            "result_columns",
+            "row_count",
+            "truncated"
+          ]
+        },
+        {
+          "node": "present",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "audit_supp",
+          "wrote_terminal": true,
+          "keys": [
+            "cost_cny",
+            "degradations",
+            "latency_ms",
+            "outcome",
+            "terminal",
+            "tokens"
+          ]
         }
       ],
-      "detector_terminal_without_any_stage": true,
-      "detector_terminal_digest_same_as_turn1": false
+      "detector_terminal_without_any_stage": false,
+      "detector_terminal_digest_same_as_turn1": true
     },
     "after_refuse_plan_blocked__turn2_green": {
       "turn1": {
@@ -328,31 +478,49 @@
         "asked": "上面那个指标按店铺拆开分别是多少",
         "terminal": [
           [
-            "refuse",
+            "complete",
             null
           ]
         ],
         "terminal_payload_keys": [
-          "message",
-          "reason",
-          "suggestions",
           "terminal"
         ],
-        "terminal_digest": "{\"message\": \"系统里没有能回答这个问题的数据，无法给出结果。\", \"reason\": \"no_data_asset\", \"suggestions\": [\"可以试着换一个更具体的问法（点明指标与时间范围）\", \"也可以先收窄维度，例如只看某个类目或某个渠道\"], \"terminal\": true}",
-        "stage_frames": 0,
+        "terminal_digest": "{\"terminal\": true}",
+        "stage_frames": 6,
         "events": [
           "ack",
-          "refuse"
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "data",
+          "degraded",
+          "meta",
+          "complete"
         ],
         "audit_rows_this_turn": 1,
         "audit_outcomes": [
-          "refuse"
+          "success"
         ],
         "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
-          "refuse_out"
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
         ]
       },
       "turn2_pending_next_nodes": [],
@@ -376,12 +544,119 @@
           ]
         },
         {
-          "node": "refuse_out",
+          "node": "intent",
           "wrote_terminal": false,
           "keys": []
+        },
+        {
+          "node": "link",
+          "wrote_terminal": false,
+          "keys": [
+            "candidates",
+            "candidates_summary",
+            "retrieval_mode"
+          ]
+        },
+        {
+          "node": "plan",
+          "wrote_terminal": false,
+          "keys": [
+            "model_version",
+            "plan",
+            "plan_summary",
+            "prompt_version"
+          ]
+        },
+        {
+          "node": "bind",
+          "wrote_terminal": false,
+          "keys": [
+            "binding_status",
+            "bindings"
+          ]
+        },
+        {
+          "node": "gen_sql",
+          "wrote_terminal": false,
+          "keys": [
+            "confidence",
+            "model_version",
+            "prompt_version",
+            "sql_candidates",
+            "sql_dialect",
+            "sql_params",
+            "sql_text"
+          ]
+        },
+        {
+          "node": "gate1_ast",
+          "wrote_terminal": false,
+          "keys": [
+            "applied_predicates",
+            "gate_results",
+            "limit_injected",
+            "sql_text"
+          ]
+        },
+        {
+          "node": "gate2_policy",
+          "wrote_terminal": false,
+          "keys": [
+            "gate_results",
+            "scope"
+          ]
+        },
+        {
+          "node": "gate3_cost",
+          "wrote_terminal": false,
+          "keys": [
+            "gate_results"
+          ]
+        },
+        {
+          "node": "execute",
+          "wrote_terminal": false,
+          "keys": [
+            "exec_error",
+            "result_columns",
+            "result_fingerprint",
+            "row_count",
+            "truncated"
+          ]
+        },
+        {
+          "node": "mask",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "audit_pre",
+          "wrote_terminal": false,
+          "keys": [
+            "result_columns",
+            "row_count",
+            "truncated"
+          ]
+        },
+        {
+          "node": "present",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "audit_supp",
+          "wrote_terminal": true,
+          "keys": [
+            "cost_cny",
+            "degradations",
+            "latency_ms",
+            "outcome",
+            "terminal",
+            "tokens"
+          ]
         }
       ],
-      "detector_terminal_without_any_stage": true,
+      "detector_terminal_without_any_stage": false,
       "detector_terminal_digest_same_as_turn1": false
     },
     "after_refuse_plan_blocked__turn2_refuses_again": {
@@ -432,15 +707,19 @@
           ]
         ],
         "terminal_payload_keys": [
+          "blocking_issues",
           "message",
           "reason",
           "suggestions",
           "terminal"
         ],
-        "terminal_digest": "{\"message\": \"系统里没有能回答这个问题的数据，无法给出结果。\", \"reason\": \"no_data_asset\", \"suggestions\": [\"可以试着换一个更具体的问法（点明指标与时间范围）\", \"也可以先收窄维度，例如只看某个类目或某个渠道\"], \"terminal\": true}",
-        "stage_frames": 0,
+        "terminal_digest": "{\"blocking_issues\": [\"缺表\"], \"message\": \"系统里没有能回答这个问题的数据，无法给出结果。\", \"reason\": \"no_data_asset\", \"suggestions\": [\"可以试着换一个更具体的问法（点明指标与时间范围）\", \"也可以先收窄维度，例如只看某个类目或某个渠道\"], \"terminal\": true}",
+        "stage_frames": 3,
         "events": [
           "ack",
+          "stage",
+          "stage",
+          "stage",
           "refuse"
         ],
         "audit_rows_this_turn": 1,
@@ -451,6 +730,9 @@
         "nodes_ran": [
           "trusted_context",
           "normalize",
+          "intent",
+          "link",
+          "plan",
           "refuse_out"
         ]
       },
@@ -475,13 +757,40 @@
           ]
         },
         {
+          "node": "intent",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "link",
+          "wrote_terminal": false,
+          "keys": [
+            "candidates",
+            "candidates_summary",
+            "retrieval_mode"
+          ]
+        },
+        {
+          "node": "plan",
+          "wrote_terminal": true,
+          "keys": [
+            "cost_cny",
+            "degradations",
+            "intent_detail",
+            "latency_ms",
+            "outcome",
+            "terminal",
+            "tokens"
+          ]
+        },
+        {
           "node": "refuse_out",
           "wrote_terminal": false,
           "keys": []
         }
       ],
-      "detector_terminal_without_any_stage": true,
-      "detector_terminal_digest_same_as_turn1": false
+      "detector_terminal_without_any_stage": false,
+      "detector_terminal_digest_same_as_turn1": true
     },
     "after_refuse_llm_no_template_hit__turn2_green": {
       "turn1": {
@@ -519,31 +828,49 @@
         "asked": "上面那个指标按店铺拆开分别是多少",
         "terminal": [
           [
-            "refuse",
+            "complete",
             null
           ]
         ],
         "terminal_payload_keys": [
-          "message",
-          "reason",
-          "suggestions",
           "terminal"
         ],
-        "terminal_digest": "{\"message\": \"系统里没有能回答这个问题的数据，无法给出结果。\", \"reason\": \"no_data_asset\", \"suggestions\": [\"可以试着换一个更具体的问法（点明指标与时间范围）\", \"也可以先收窄维度，例如只看某个类目或某个渠道\"], \"terminal\": true}",
-        "stage_frames": 0,
+        "terminal_digest": "{\"terminal\": true}",
+        "stage_frames": 6,
         "events": [
           "ack",
-          "refuse"
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "data",
+          "degraded",
+          "meta",
+          "complete"
         ],
         "audit_rows_this_turn": 1,
         "audit_outcomes": [
-          "refuse"
+          "success"
         ],
         "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
-          "refuse_out"
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
         ]
       },
       "turn2_pending_next_nodes": [],
@@ -567,13 +894,120 @@
           ]
         },
         {
-          "node": "refuse_out",
+          "node": "intent",
           "wrote_terminal": false,
           "keys": []
+        },
+        {
+          "node": "link",
+          "wrote_terminal": false,
+          "keys": [
+            "candidates",
+            "candidates_summary",
+            "retrieval_mode"
+          ]
+        },
+        {
+          "node": "plan",
+          "wrote_terminal": false,
+          "keys": [
+            "model_version",
+            "plan",
+            "plan_summary",
+            "prompt_version"
+          ]
+        },
+        {
+          "node": "bind",
+          "wrote_terminal": false,
+          "keys": [
+            "binding_status",
+            "bindings"
+          ]
+        },
+        {
+          "node": "gen_sql",
+          "wrote_terminal": false,
+          "keys": [
+            "confidence",
+            "model_version",
+            "prompt_version",
+            "sql_candidates",
+            "sql_dialect",
+            "sql_params",
+            "sql_text"
+          ]
+        },
+        {
+          "node": "gate1_ast",
+          "wrote_terminal": false,
+          "keys": [
+            "applied_predicates",
+            "gate_results",
+            "limit_injected",
+            "sql_text"
+          ]
+        },
+        {
+          "node": "gate2_policy",
+          "wrote_terminal": false,
+          "keys": [
+            "gate_results",
+            "scope"
+          ]
+        },
+        {
+          "node": "gate3_cost",
+          "wrote_terminal": false,
+          "keys": [
+            "gate_results"
+          ]
+        },
+        {
+          "node": "execute",
+          "wrote_terminal": false,
+          "keys": [
+            "exec_error",
+            "result_columns",
+            "result_fingerprint",
+            "row_count",
+            "truncated"
+          ]
+        },
+        {
+          "node": "mask",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "audit_pre",
+          "wrote_terminal": false,
+          "keys": [
+            "result_columns",
+            "row_count",
+            "truncated"
+          ]
+        },
+        {
+          "node": "present",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "audit_supp",
+          "wrote_terminal": true,
+          "keys": [
+            "cost_cny",
+            "degradations",
+            "latency_ms",
+            "outcome",
+            "terminal",
+            "tokens"
+          ]
         }
       ],
-      "detector_terminal_without_any_stage": true,
-      "detector_terminal_digest_same_as_turn1": true
+      "detector_terminal_without_any_stage": false,
+      "detector_terminal_digest_same_as_turn1": false
     },
     "after_gate1_reject__turn2_green": {
       "turn1": {
@@ -621,31 +1055,49 @@
         "asked": "上面那个指标按店铺拆开分别是多少",
         "terminal": [
           [
-            "error",
-            "INTERNAL"
+            "complete",
+            null
           ]
         ],
         "terminal_payload_keys": [
-          "code",
-          "message",
-          "retryable",
           "terminal"
         ],
-        "terminal_digest": "{\"code\": \"INTERNAL\", \"message\": \"\", \"retryable\": false, \"terminal\": true}",
-        "stage_frames": 0,
+        "terminal_digest": "{\"terminal\": true}",
+        "stage_frames": 6,
         "events": [
           "ack",
-          "error"
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "stage",
+          "data",
+          "degraded",
+          "meta",
+          "complete"
         ],
         "audit_rows_this_turn": 1,
         "audit_outcomes": [
-          "failed"
+          "success"
         ],
         "understand_calls": 1,
         "nodes_ran": [
           "trusted_context",
           "normalize",
-          "error_out"
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
         ]
       },
       "turn2_pending_next_nodes": [],
@@ -669,12 +1121,119 @@
           ]
         },
         {
-          "node": "error_out",
+          "node": "intent",
           "wrote_terminal": false,
           "keys": []
+        },
+        {
+          "node": "link",
+          "wrote_terminal": false,
+          "keys": [
+            "candidates",
+            "candidates_summary",
+            "retrieval_mode"
+          ]
+        },
+        {
+          "node": "plan",
+          "wrote_terminal": false,
+          "keys": [
+            "model_version",
+            "plan",
+            "plan_summary",
+            "prompt_version"
+          ]
+        },
+        {
+          "node": "bind",
+          "wrote_terminal": false,
+          "keys": [
+            "binding_status",
+            "bindings"
+          ]
+        },
+        {
+          "node": "gen_sql",
+          "wrote_terminal": false,
+          "keys": [
+            "confidence",
+            "model_version",
+            "prompt_version",
+            "sql_candidates",
+            "sql_dialect",
+            "sql_params",
+            "sql_text"
+          ]
+        },
+        {
+          "node": "gate1_ast",
+          "wrote_terminal": false,
+          "keys": [
+            "applied_predicates",
+            "gate_results",
+            "limit_injected",
+            "sql_text"
+          ]
+        },
+        {
+          "node": "gate2_policy",
+          "wrote_terminal": false,
+          "keys": [
+            "gate_results",
+            "scope"
+          ]
+        },
+        {
+          "node": "gate3_cost",
+          "wrote_terminal": false,
+          "keys": [
+            "gate_results"
+          ]
+        },
+        {
+          "node": "execute",
+          "wrote_terminal": false,
+          "keys": [
+            "exec_error",
+            "result_columns",
+            "result_fingerprint",
+            "row_count",
+            "truncated"
+          ]
+        },
+        {
+          "node": "mask",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "audit_pre",
+          "wrote_terminal": false,
+          "keys": [
+            "result_columns",
+            "row_count",
+            "truncated"
+          ]
+        },
+        {
+          "node": "present",
+          "wrote_terminal": false,
+          "keys": []
+        },
+        {
+          "node": "audit_supp",
+          "wrote_terminal": true,
+          "keys": [
+            "cost_cny",
+            "degradations",
+            "latency_ms",
+            "outcome",
+            "terminal",
+            "tokens"
+          ]
         }
       ],
-      "detector_terminal_without_any_stage": true,
+      "detector_terminal_without_any_stage": false,
       "detector_terminal_digest_same_as_turn1": false
     }
   },
@@ -710,38 +1269,53 @@
         "residual_event_before_turn": "error",
         "terminal_frame": [
           [
-            "error",
-            "INTERNAL"
+            "refuse",
+            null
           ]
         ],
         "audit_outcomes": [
-          "failed"
+          "refuse"
         ],
         "nodes_ran": [
           "trusted_context",
           "normalize",
-          "error_out"
+          "intent",
+          "link",
+          "plan",
+          "refuse_out"
         ],
-        "residual_event_after_turn": "error"
+        "residual_event_after_turn": "refuse"
       },
       {
         "label": "T3 绿灯",
-        "residual_event_before_turn": "error",
+        "residual_event_before_turn": "refuse",
         "terminal_frame": [
           [
-            "error",
-            "INTERNAL"
+            "complete",
+            null
           ]
         ],
         "audit_outcomes": [
-          "failed"
+          "success"
         ],
         "nodes_ran": [
           "trusted_context",
           "normalize",
-          "error_out"
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
         ],
-        "residual_event_after_turn": "error"
+        "residual_event_after_turn": "complete"
       }
     ],
     "读法": "T2 的落库 outcome 与 T3 看到的残留事件若不同源 ⇒ `lag(outcome)` 不能当残留种类用"

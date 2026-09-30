@@ -21,8 +21,16 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from langgraph.checkpoint.memory import MemorySaver
 
-from app.core.enums import SSE_TERMINAL_EVENTS, Outcome, SseEvent
+from app.core.contracts import IdentityContext
+from app.core.enums import SSE_TERMINAL_EVENTS, Outcome, Role, SseEvent
+from app.graph.build import build_graph
+from app.graph.state import (
+    RUN_SCOPED_STATE_FIELDS,
+    identity_fields,
+    initial_state,
+)
 from app.planner.schemas import IntentKind
 from tests.contract._fullchain_deps import make_chain, run_chain, terminal_frames
 from tests.contract.test_decision_table_contract import _outcome, _run
@@ -34,6 +42,18 @@ TERMINAL_AUDIT_OUTCOME: dict[str, str] = {
     SseEvent.ERROR.value: "failed",
     SseEvent.CLARIFY.value: "clarify",
 }
+
+
+def _identity() -> IdentityContext:
+    """入口断言用的身份（值固定 ⇒ 断言只关心"复位了什么"，不关心身份本身）。"""
+    return IdentityContext(
+        trace_id="t",
+        task_id="t",
+        session_id="t",
+        tenant_id="T_A",
+        user_id="u",
+        role=Role.ANALYST,
+    )
 
 
 def _make_scenario(event: str) -> tuple[list[tuple[str, dict[str, Any]]], Any, list[dict[str, Any]]]:
@@ -108,3 +128,86 @@ def test_audit_write_failure_is_the_only_named_zero_row_case() -> None:
     assert terminals[0][1]["code"] == "INTERNAL"
     # N-09：段 1 没落库就不该有 data 帧（结果不下发）。
     assert all(e != "data" for e, _ in frames)
+
+
+# ===========================================================================
+# `U-129` 判据⑦（入口不变量）：每个新 run 起点必须 `state.terminal is None`
+# ---------------------------------------------------------------------------
+# 为什么这一组要钉"集合"而不只是钉 `terminal` 一个键：入口只复位 `terminal` 能让
+# `route_terminal` 不再误跳，但 `outcome`/`sql_text`/`gate_results` 仍会被下一轮读到，
+# 而 `nodes/_shared.py:353` 把 `sql_text` 当 `final_executed_sql` 写进**段 1 审计载荷**
+# ⇒ 审计正确性也在这条不变量里。机制与两侧症状见 `reports/w4/RELAY.md §二十四/§二十六`。
+# ===========================================================================
+
+
+class TestU129EntryInvariant:
+    """入口不变量 = 组 2–11 每轮复位；含"同 thread 连跑多轮"的真图臂。"""
+
+    def test_run_scoped_set_is_derived_and_contains_terminal(self) -> None:
+        """派生集合本身要先钉住：漏一个键 = 那一轮的该键跨轮带回来。"""
+        assert "terminal" in RUN_SCOPED_STATE_FIELDS
+        # 身份键由请求每轮重写 ⇒ 既不该被复位，也不该混进复位集（混进来的话 `role`/`scope` 会变 None）
+        assert set(identity_fields(_identity())) & RUN_SCOPED_STATE_FIELDS == set()
+
+    def test_entry_state_has_terminal_present_and_none_and_nothing_else_carried(self) -> None:
+        st = dict(initial_state(_identity(), raw_question="这一轮的问题"))
+        assert "terminal" in st and st["terminal"] is None
+        carried = [
+            k for k in RUN_SCOPED_STATE_FIELDS if k not in st or st[k] is not None
+        ]
+        assert carried == [], f"入口未复位的 run 级通道：{sorted(carried)}"
+
+    def test_request_body_fields_are_written_even_when_absent(self) -> None:
+        """这一轮没带 `options` ⇒ 必须写 `None`，不能"不写键"（不写键 = 继承上一轮的值）。"""
+        st = dict(initial_state(_identity(), raw_question="q"))
+        assert st["options"] is None
+        assert st["idempotency_key"] is None
+
+    def test_second_run_on_one_thread_writes_its_own_terminal_and_full_chain(self) -> None:
+        graph = build_graph(checkpointer=MemorySaver())
+        first = make_chain()
+        f1, o1 = run_chain(first, graph=graph)
+        second = make_chain()
+        f2, o2 = run_chain(second, graph=graph)
+
+        assert terminal_frames(f1)[0][0] == SseEvent.COMPLETE.value
+        assert [e for e, _ in terminal_frames(f2)] == [SseEvent.COMPLETE.value]
+        assert len(second.audit.pre) == 1 and second.audit.pre[0]["outcome"] == "success"
+        # 全链重跑 = 第 2 轮没有被上一轮的终态接去出口（那条路只跑 2–3 个节点）
+        assert len(o1.nodes) == len(o2.nodes) == 15
+
+    def test_refuse_residue_does_not_become_the_next_turns_conclusion(self) -> None:
+        """§26.2 那格的回归位：残留 `refuse` 曾让第 2 轮"复用上一轮拒答 + 多落一条审计行"。"""
+        graph = build_graph(checkpointer=MemorySaver())
+        blocked = make_chain(plan_blocked_issues=("缺表",))
+        fb, _ob = run_chain(blocked, graph=graph)
+        assert [e for e, _ in terminal_frames(fb)] == [SseEvent.REFUSE.value]
+
+        green = make_chain()
+        fg, _og = run_chain(green, graph=graph)
+        assert [e for e, _ in terminal_frames(fg)] == [SseEvent.COMPLETE.value]
+        assert len(green.audit.pre) == 1 and green.audit.pre[0]["outcome"] == "success"
+
+    def test_previous_turns_sql_never_lands_in_this_turns_audit_row(self) -> None:
+        """审计正确性那一半：本轮在 `plan` 就拒答 ⇒ 它的段 1 行**不得**带上一轮跑出来的 SQL。"""
+        graph = build_graph(checkpointer=MemorySaver())
+        ran = make_chain()
+        run_chain(ran, graph=graph)
+        assert "final_executed_sql" in ran.audit.pre[0]
+
+        blocked = make_chain(plan_blocked_issues=("缺表",))
+        run_chain(blocked, graph=graph)
+        assert blocked.audit.pre[0]["outcome"] == "refuse"
+        assert "final_executed_sql" not in blocked.audit.pre[0], (
+            "第 2 轮自己没生成 SQL，却把上一轮的 SQL 写进了本轮审计行 ⇒ 入口复位漏了这个通道"
+        )
+
+    def test_three_turns_on_one_thread_keep_pairing_each_turn(self) -> None:
+        """毒化是累计的：跑三轮，每轮都要"恰 1 终态 + 恰 1 段 1 行"。"""
+        graph = build_graph(checkpointer=MemorySaver())
+        for turn in range(3):
+            chain = make_chain()
+            frames, out = run_chain(chain, graph=graph)
+            assert len(terminal_frames(frames)) == 1, f"第 {turn + 1} 轮终态数 ≠ 1"
+            assert len(chain.audit.pre) == 1, f"第 {turn + 1} 轮段 1 审计行数 ≠ 1"
+            assert len(out.nodes) == 15, f"第 {turn + 1} 轮没有重跑全链"
