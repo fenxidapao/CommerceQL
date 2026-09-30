@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-09-30T12:07:56+00:00",
+  "generated_at_utc": "2026-09-30T15:01:31+00:00",
   "strict_denominator": "terminal − app.audit_log 行数 = 0",
   "denominator_definition": {
     "terminal_outcomes": [
@@ -103,6 +103,13 @@
         "turn1": 504,
         "turn2plus": 13
       },
+      "audit_rows_by_turn_bucket": {
+        "turn1": 813,
+        "turn2plus": 48
+      },
+      "multi_row_turn2plus_runs": 0,
+      "second_form_turn2plus": 13,
+      "direct_vs_second_form_agree": true,
       "audit_row_minus_first_seen_s": {
         "n": 861,
         "min": 0.007,
@@ -182,7 +189,10 @@
         },
         "crash_turn1": 2,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 2,
         "gap_literal_DO_NOT_USE": 20,
@@ -193,8 +203,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 974083.369,
+        "read_age_s": 984498.878,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 5247.219
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -257,7 +273,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 3,
@@ -268,8 +287,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 182403.882,
+        "read_age_s": 192819.391,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 1027.696
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -383,7 +408,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 4,
-        "rows_turn2plus": 18,
+        "receipt_tk_turn2plus": 18,
+        "rows_by_turn2plus_runs": 18,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 4,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 4,
         "gap_literal_DO_NOT_USE": 81,
@@ -394,8 +422,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 107381.546,
+        "read_age_s": 117797.055,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 627.839
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -458,7 +492,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 1,
@@ -469,8 +506,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 107547.74,
+        "read_age_s": 117963.249,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 628.725
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -536,7 +579,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 100,
@@ -547,8 +593,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 180198.327,
+        "read_age_s": 190613.836,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 1015.941
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -615,7 +667,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 8,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 8,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 8,
         "gap_literal_DO_NOT_USE": 16,
@@ -626,8 +681,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 179117.735,
+        "read_age_s": 189533.244,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 1010.181
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -695,7 +756,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 77,
@@ -706,8 +770,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 180315.452,
+        "read_age_s": 190730.961,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 1016.565
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -775,7 +845,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 60,
@@ -786,8 +859,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 178987.549,
+        "read_age_s": 189403.058,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 1009.487
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -853,7 +932,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 71,
@@ -864,8 +946,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 178863.739,
+        "read_age_s": 189279.248,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 1008.828
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -929,7 +1017,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
@@ -940,8 +1031,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 180418.556,
+        "read_age_s": 190834.065,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 1017.114
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -1009,7 +1106,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 86,
@@ -1020,8 +1120,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 166836.156,
+        "read_age_s": 177251.665,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 944.722
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -1086,7 +1192,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 3,
@@ -1097,8 +1206,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 166947.621,
+        "read_age_s": 177363.13,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 945.317
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -1163,7 +1278,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 1,
@@ -1174,8 +1292,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 166777.598,
+        "read_age_s": 177193.107,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 944.41
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -1243,7 +1367,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 84,
@@ -1254,8 +1381,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 167151.276,
+        "read_age_s": 177566.785,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 946.402
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -1319,7 +1452,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
@@ -1330,8 +1466,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 167247.484,
+        "read_age_s": 177662.993,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 946.915
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -1394,7 +1536,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 5,
@@ -1405,8 +1550,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 788841.679,
+        "read_age_s": 799257.188,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 4259.911
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -1471,7 +1622,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 5,
@@ -1482,8 +1636,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 782971.704,
+        "read_age_s": 793387.213,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 4228.624
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -1548,7 +1708,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 5,
@@ -1559,8 +1722,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 692339.439,
+        "read_age_s": 702754.948,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 3745.569
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -1625,7 +1794,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 5,
@@ -1636,8 +1808,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 619574.854,
+        "read_age_s": 629990.363,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 3357.746
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -1702,7 +1880,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 5,
@@ -1713,8 +1894,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 601046.101,
+        "read_age_s": 611461.61,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 3258.991
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -1778,7 +1965,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
@@ -1789,8 +1979,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 601440.335,
+        "read_age_s": 611855.844,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 3261.092
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -1855,7 +2051,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 1,
@@ -1866,8 +2065,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 601255.876,
+        "read_age_s": 611671.385,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 3260.109
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -1931,7 +2136,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
@@ -1942,8 +2150,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 601343.315,
+        "read_age_s": 611758.824,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 3260.575
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -2011,7 +2225,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 79,
@@ -2022,8 +2239,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 182758.059,
+        "read_age_s": 193173.568,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 1029.584
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -2089,7 +2312,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 10,
@@ -2100,8 +2326,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 182596.984,
+        "read_age_s": 193012.493,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 1028.725
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -2166,7 +2398,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 1,
@@ -2177,8 +2412,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 85564.385,
+        "read_age_s": 95979.894,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 511.557
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -2246,7 +2487,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 2,
+        "receipt_tk_turn2plus": 2,
+        "rows_by_turn2plus_runs": 2,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 22,
@@ -2257,8 +2501,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 85306.813,
+        "read_age_s": 95722.322,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 510.184
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -2325,7 +2575,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 8,
+        "receipt_tk_turn2plus": 8,
+        "rows_by_turn2plus_runs": 8,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 4,
@@ -2336,8 +2589,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 85258.783,
+        "read_age_s": 95674.292,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 509.928
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -2403,7 +2662,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 2,
+        "receipt_tk_turn2plus": 2,
+        "rows_by_turn2plus_runs": 2,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
@@ -2414,8 +2676,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 74335.895,
+        "read_age_s": 84751.404,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 451.711
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -2561,7 +2829,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 2,
+        "receipt_tk_turn2plus": 2,
+        "rows_by_turn2plus_runs": 2,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
@@ -2572,8 +2843,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 74292.937,
+        "read_age_s": 84708.446,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 451.482
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -2826,7 +3103,10 @@
         },
         "crash_turn1": 100,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 100,
         "gap_literal_DO_NOT_USE": 100,
@@ -2837,8 +3117,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 971444.391,
+        "read_age_s": 981859.9,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 5233.153
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -2896,7 +3182,10 @@
         },
         "crash_turn1": 66,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 69,
         "gap_literal_DO_NOT_USE": 69,
@@ -2907,8 +3196,14 @@
         "terminal_minus_matched_runs": 3,
         "gap_minus_crash_total": 3,
         "identity_holds": true,
-        "read_age_s": 971208.378,
+        "read_age_s": 981623.887,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 5231.895
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -2966,7 +3261,10 @@
         },
         "crash_turn1": 57,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 92,
         "gap_literal_DO_NOT_USE": 92,
@@ -2977,8 +3275,14 @@
         "terminal_minus_matched_runs": 35,
         "gap_minus_crash_total": 35,
         "identity_holds": true,
-        "read_age_s": 971119.773,
+        "read_age_s": 981535.282,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 5231.423
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -3039,7 +3343,10 @@
         },
         "crash_turn1": 52,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 92,
         "gap_literal_DO_NOT_USE": 100,
@@ -3050,8 +3357,14 @@
         "terminal_minus_matched_runs": 40,
         "gap_minus_crash_total": 40,
         "identity_holds": true,
-        "read_age_s": 970802.946,
+        "read_age_s": 981218.455,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 5229.734
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -3112,7 +3425,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 15,
+        "receipt_tk_turn2plus": 15,
+        "rows_by_turn2plus_runs": 15,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 5,
@@ -3123,8 +3439,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 974424.83,
+        "read_age_s": 984840.339,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 5249.038
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -3185,7 +3507,10 @@
         },
         "crash_turn1": 22,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 22,
         "gap_literal_DO_NOT_USE": 30,
@@ -3196,8 +3521,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 974325.174,
+        "read_age_s": 984740.683,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 5248.507
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -3255,7 +3586,10 @@
         },
         "crash_turn1": 50,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 50,
         "gap_literal_DO_NOT_USE": 50,
@@ -3266,8 +3600,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 971745.513,
+        "read_age_s": 982161.022,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 5234.758
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -3328,7 +3668,10 @@
         },
         "crash_turn1": 87,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 87,
         "gap_literal_DO_NOT_USE": 100,
@@ -3339,8 +3682,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 971524.134,
+        "read_age_s": 981939.643,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 5233.578
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -3403,7 +3752,10 @@
         },
         "crash_turn1": 0,
         "crash_turn2plus": 0,
-        "rows_turn2plus": 0,
+        "receipt_tk_turn2plus": 0,
+        "rows_by_turn2plus_runs": 0,
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 0,
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
@@ -3414,8 +3766,14 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 182794.056,
+        "read_age_s": 193209.565,
         "too_soon_to_read": false,
+        "reading_precondition": {
+          "scope_non_empty": true,
+          "aged_beyond_max_lag": false,
+          "both_pass": true,
+          "read_age_over_max_lag": 1029.775
+        },
         "crash_turn2plus_citable": true,
         "edge_control": {
           "pad_s": 188.0,
@@ -3617,7 +3975,7 @@
       "http://127.0.0.1:8000/api/v1": 1
     },
     "provided_vs_derived_mismatch": [],
-    "clock_skew_s": -0.0,
+    "clock_skew_s": 0.0,
     "edge_unreliable": false,
     "two_number_block": {
       "admitted_minus_terminal": {
@@ -3760,6 +4118,13 @@
           "turn1": 504,
           "turn2plus": 13
         },
+        "audit_rows_by_turn_bucket": {
+          "turn1": 813,
+          "turn2plus": 48
+        },
+        "multi_row_turn2plus_runs": 0,
+        "second_form_turn2plus": 13,
+        "direct_vs_second_form_agree": true,
         "audit_row_minus_first_seen_s": {
           "n": 861,
           "min": 0.007,
@@ -3800,6 +4165,14 @@
           "identity_holds": true,
           "too_soon_to_read": false,
           "crash_turn2plus_citable": true,
+          "reading_precondition": {
+            "scope_non_empty": true,
+            "aged_beyond_max_lag": false,
+            "both_pass": true,
+            "read_age_over_max_lag": 5247.219
+          },
+          "multi_row_turn2plus_runs": 0,
+          "second_form_turn2plus": 0,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3814,6 +4187,14 @@
           "identity_holds": true,
           "too_soon_to_read": false,
           "crash_turn2plus_citable": true,
+          "reading_precondition": {
+            "scope_non_empty": true,
+            "aged_beyond_max_lag": false,
+            "both_pass": true,
+            "read_age_over_max_lag": 627.839
+          },
+          "multi_row_turn2plus_runs": 0,
+          "second_form_turn2plus": 4,
           "turn2plus_no_row_ge_gap": true
         },
         {
@@ -3828,6 +4209,14 @@
           "identity_holds": true,
           "too_soon_to_read": false,
           "crash_turn2plus_citable": true,
+          "reading_precondition": {
+            "scope_non_empty": true,
+            "aged_beyond_max_lag": false,
+            "both_pass": true,
+            "read_age_over_max_lag": 1010.181
+          },
+          "multi_row_turn2plus_runs": 0,
+          "second_form_turn2plus": 8,
           "turn2plus_no_row_ge_gap": true
         },
         {
@@ -3842,6 +4231,14 @@
           "identity_holds": true,
           "too_soon_to_read": false,
           "crash_turn2plus_citable": true,
+          "reading_precondition": {
+            "scope_non_empty": true,
+            "aged_beyond_max_lag": false,
+            "both_pass": true,
+            "read_age_over_max_lag": 5233.153
+          },
+          "multi_row_turn2plus_runs": 0,
+          "second_form_turn2plus": 0,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3856,6 +4253,14 @@
           "identity_holds": true,
           "too_soon_to_read": false,
           "crash_turn2plus_citable": true,
+          "reading_precondition": {
+            "scope_non_empty": true,
+            "aged_beyond_max_lag": false,
+            "both_pass": true,
+            "read_age_over_max_lag": 5231.895
+          },
+          "multi_row_turn2plus_runs": 0,
+          "second_form_turn2plus": 0,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3870,6 +4275,14 @@
           "identity_holds": true,
           "too_soon_to_read": false,
           "crash_turn2plus_citable": true,
+          "reading_precondition": {
+            "scope_non_empty": true,
+            "aged_beyond_max_lag": false,
+            "both_pass": true,
+            "read_age_over_max_lag": 5231.423
+          },
+          "multi_row_turn2plus_runs": 0,
+          "second_form_turn2plus": 0,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3884,6 +4297,14 @@
           "identity_holds": true,
           "too_soon_to_read": false,
           "crash_turn2plus_citable": true,
+          "reading_precondition": {
+            "scope_non_empty": true,
+            "aged_beyond_max_lag": false,
+            "both_pass": true,
+            "read_age_over_max_lag": 5229.734
+          },
+          "multi_row_turn2plus_runs": 0,
+          "second_form_turn2plus": 0,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3898,6 +4319,14 @@
           "identity_holds": true,
           "too_soon_to_read": false,
           "crash_turn2plus_citable": true,
+          "reading_precondition": {
+            "scope_non_empty": true,
+            "aged_beyond_max_lag": false,
+            "both_pass": true,
+            "read_age_over_max_lag": 5248.507
+          },
+          "multi_row_turn2plus_runs": 0,
+          "second_form_turn2plus": 0,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3912,6 +4341,14 @@
           "identity_holds": true,
           "too_soon_to_read": false,
           "crash_turn2plus_citable": true,
+          "reading_precondition": {
+            "scope_non_empty": true,
+            "aged_beyond_max_lag": false,
+            "both_pass": true,
+            "read_age_over_max_lag": 5234.758
+          },
+          "multi_row_turn2plus_runs": 0,
+          "second_form_turn2plus": 0,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3926,9 +4363,28 @@
           "identity_holds": true,
           "too_soon_to_read": false,
           "crash_turn2plus_citable": true,
+          "reading_precondition": {
+            "scope_non_empty": true,
+            "aged_beyond_max_lag": false,
+            "both_pass": true,
+            "read_age_over_max_lag": 5233.578
+          },
+          "multi_row_turn2plus_runs": 0,
+          "second_form_turn2plus": 0,
           "turn2plus_no_row_ge_gap": false
         }
       ],
+      "overcount_pairing": {
+        "primary_form": "窗口内 turn≥2 且零段 1 审计行的 run 数 = 0（直读式，量纲 = run）",
+        "pair_form": "窗口内 turn≥2 且段 1 行数 > 1 的 run 数 = 0（架构 v1.7.14 新增的第二条）",
+        "second_form": "run(turn≥2) − 审计行(turn≥2) = 0（允许的第二形，**两侧同限定**；负 = 多落）",
+        "cells_measured": 39,
+        "cells_with_multi_row_turn2plus": 0,
+        "multi_row_turn2plus_total": 0,
+        "cells_with_negative_second_form": 0,
+        "db_wide_agreement": true,
+        "status": "两式**同值当且仅当每个 run 至多 1 行** ⇒ 读这一点只看 `db_wide.direct_vs_second_form_agree`，不看本句：这一臂今天多半不报任何东西，它防的是**将来出现双写（U-129 那一族）时恒绿**。"
+      },
       "gap_attribution": {
         "identity": "gap_for_this_cell − crash_turn1 − crash_turn2plus == terminal − window_matched_runs",
         "checked_cells": 39,
@@ -3939,9 +4395,12 @@
       },
       "read_horizon": {
         "rule": "too_soon_to_read = (PG now − 本格窗口内最晚一条 run 的 first_seen) < 观测 max lag ⇒ true 时该格 crash_turn2plus 不可引；null = 无延迟样本或窗口内没配上 run（同样不可引）",
+        "preconditions": "① 作用域非空（`window_matched_runs > 0`）② 该域最后一条 run 的年龄 > 已观测 max lag（`too_soon_to_read is false`；年龄**引比值** `read_age_over_max_lag`，秒数随读数时刻漂移）",
         "max_lag_s": 187.623,
         "cells_too_soon": 0,
         "cells_horizon_unknown": 0,
+        "cells_scope_empty": 0,
+        "cells_precondition_fail": 0,
         "cells_citable": 39
       },
       "edge_control": {
@@ -3958,11 +4417,11 @@
           "tk_e80bcacbd7a34b56b9ef6c95775e65bb": 2
         }
       },
-      "naming_note": "判据分子只许写 **`crash_turn2plus`**（窗口内 `turn≥2` 且零审计行的 run 数）。产物里同时留着 **`gap_literal_DO_NOT_USE`**（架构 `v1.7.12` 那句字面式 `terminal − 审计行(turn≥2)` 的算法，被减数没有限定 ⇒ 会被 turn1 的行放大）：这一列**故意公开**是为了让'两种式子差多少'可被复算，命名本身即禁用标记（做法照 W7 第二十五轮 ⑭）。turn1 的零行（`crash_turn1` / 全库 `runs_without_audit_row.turn1`）结构性不进判据。",
+      "naming_note": "架构 `07 §4.8 U-130 v1.7.14` 已把判据② 裁成**两条断言** ⇒ 本产物的三个'数 run'的列各管一条，**不许互相代**：① **`crash_turn2plus`** = 主式（窗口内 `turn≥2` 且**零**段 1 行的 run 数，量纲 = run）；② **`multi_row_turn2plus_runs`** = 配对式（窗口内 `turn≥2` 且行数 **> 1** 的 run 数，直读式对这一支是盲的）；③ **`second_form_turn2plus`** = 允许的**第二形** `run(turn≥2) − 审计行(turn≥2)`（**两侧同限定**才与主式等价；**为负 = 多落**）。🔻 **本轮一处改名**：旧列 `rows_turn2plus` 读起来像'行数'，实际数的是**回执侧 `turn≥2` 的 task_id 个数**（一个 run 两行仍计 1）⇒ 现名 **`receipt_tk_turn2plus`**，真行数 = `rows_by_turn2plus_runs`（逐行取回后在 Python 里数，交付 §5.40）。**`gap_literal_DO_NOT_USE`** 仍保留 = 架构 `v1.7.12` 那句**字面式**（被减数 `terminal` 未限定 ⇒ 被 turn1 放大，三域实测 20×/2×/102×）的算法，命名即禁用标记、**故意公开**是为了让'两种式子差多少'可被复算（做法已被架构抄进契约写法）。turn1 的零行（`crash_turn1` / 全库 `runs_without_audit_row.turn1`）结构性不进判据。",
       "why_not_a_verdict": "`turn2plus_no_row_ge_gap` 只是「本格 gap ≤ 窗口内 turn≥2 零行数」这条算术；它不等于「这些 gap 就是那几条崩臂」。要把因果坐实需要**回执自己带 task_id**（即 `task_id_channel` 的 present 面），而窗口配的是 run 起点、边缘会漂（必须配 `db_wide.audit_row_minus_first_seen_s` 一起读）。"
     },
     "window_rule": "时间列见 pg_guard.time_column（本轮实测 = `timestamp`，盘上**没有** `created_at`）：<时间列> >= begin AND <时间列> < finished_at + 1s（右端含该秒；回执时间戳为秒级）",
-    "window_citation_rule": "引用任何 gap 必须连着该格的 `window_kind` 一起写：`scenario` 与 `single` = **单场景（子窗）口径**（`single` = 这份回执只含一个场景，回执窗就等于该场景窗），`receipt` = 整批窗口，`ambiguous` 不参与判据。架构 `v1.7.13` 现测：同一批 A 档**子窗 99 run / 95 行 = gap 4** 与 **整窗 104 run / 99 行 = gap 5** 两个数都对、**不得互换**，也不许取平均 ⇒ 本器件逐格只按单场景窗口数，所以我方所有 gap 读数都属于『子窗』口径。⚠️ 边缘偏差的**归属已实测改过两次**，此处写当前结论：thread 尺按 run 起点 `first_seen` 配窗，而审计行写入时刻中位比它晚约十秒量级（见 `db_wide.audit_row_minus_first_seen_s`，含分桶 `gt_s`）。但第十五轮逐格核对后，`gap` 与 `crash` 对不上的那部分**不在审计侧 pad**：10 个违反格里「窗口内行数 == 窗口内有行的 run 数」全部成立 ⇒ 差值恒等于 `terminal − window_matched_runs`（见 `gap_attribution`）。⇒ 本器件**没有**为此放宽 pad（pad 仍是 1 秒）：抬到观测 max lag 会把邻近 run 吸进窗口 = 改分母，代价见 `edge_control`，且属判据变更（走 A17 / 架构）。",
+    "window_citation_rule": "引用任何 gap 必须**三件一起写**：① 用的是**哪一个式子**（直读式 = 数满足条件的 run，主式；第二形 = `run(turn≥2) − 审计行(turn≥2)`，两侧同限定；字面式 = `terminal − 审计行(turn≥2)`，**禁用**，只以 `gap_literal_DO_NOT_USE` 出现）；② **分母口径**（我方的 gap 分母是**回执自报的 terminal 请求数**，W7 那把尺的分母是**run 数** ⇒ 两家的同名'gap'**不可互认、不可相加**）；③ 该格的 `window_kind`：`scenario` 与 `single` = **单场景（子窗）口径**（`single` = 这份回执只含一个场景，回执窗就等于该场景窗），`receipt` = 整批窗口，`ambiguous` 不参与判据。架构 `v1.7.13` 现测：同一批 A 档**子窗 99 run / 95 行 = gap 4** 与 **整窗 104 run / 99 行 = gap 5** 两个数都对、**不得互换**、也不许取平均 ⇒ 本器件逐格只按单场景窗口数，所以我方所有 gap 读数都属于『子窗』口径（分布本身是字段 = `summary.window_kind_counts`）。🔴 **读数前置两条**（架构 `v1.7.14` 同轮补记连带④）：引用零行读数要同时满足「作用域非空」与「该域最后一条 run 的年龄 > 已观测最大写行延迟」，**缺任一条记 UNVERIFIED、不得记 0**（逐格 = `reading_precondition`）。⚠️ 边缘偏差的**归属已实测改过两次**，此处写当前结论：thread 尺按 run 起点 `first_seen` 配窗，而审计行写入时刻中位比它晚约十秒量级（见 `db_wide.audit_row_minus_first_seen_s`，含分桶 `gt_s`）。但第十五轮逐格核对后，`gap` 与 `crash` 对不上的那部分**不在审计侧 pad**：带尺的格子里「窗口内行数 == 窗口内有行的 run 数」全部成立 ⇒ 差值恒等于 `terminal − window_matched_runs`（见 `gap_attribution`）。⇒ 本器件**没有**为此放宽 pad（pad 仍是 1 秒，架构 `v1.7.14` 亦判'两条出路都不采'）：抬到观测 max lag 会把邻近 run 吸进窗口 = 改分母，代价见 `edge_control`，且属判据变更（走 A17 / 架构）。",
     "note": "严格式 = **terminal − 审计行数 = 0**（`terminal = Σ outcomes{ok,clarify,refuse,error_frame,async_degraded}`，词表逐字来自 `deploy/loadtest/driver.py:327-329`；U-130）。`admitted` 只是 HTTP 2xx、含 `truncated`（200 但流断在半途）⇒ 只在 terminal 两条取法都落空时作**显式标注的代理**，代理格的 ok 不等于严格式成立。差值是**双向**的：差 > 0 = 有请求没落终态（W7 修复前那一格），差 < 0 = 一个请求落了多行（U-129 的双终态形状）。分母取不到、或分母为 0（等式恒真）的格子一律 not_applicable，**不许**当成差 0。"
   }
 }
