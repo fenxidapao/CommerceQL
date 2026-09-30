@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-09-30T08:42:45+00:00",
+  "generated_at_utc": "2026-09-30T12:07:56+00:00",
   "strict_denominator": "terminal − app.audit_log 行数 = 0",
   "denominator_definition": {
     "terminal_outcomes": [
@@ -86,7 +86,7 @@
     },
     "thread_ruler": {
       "available": true,
-      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑭⑭b（按标签锚定，行号会漂）",
+      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c（按标签锚定，行号会漂）",
       "usable": true,
       "ambiguous_tk_to_threads": 0,
       "tk_runs": 1378,
@@ -107,7 +107,25 @@
         "n": 861,
         "min": 0.007,
         "median": 10.428,
-        "max": 187.623
+        "max": 187.623,
+        "negative": 0,
+        "gt_s": {
+          "1": 774,
+          "10": 435,
+          "60": 2,
+          "188": 0
+        }
+      },
+      "max_lag_s": 187.623,
+      "thread_scope": {
+        "available": true,
+        "threads_all": 1322,
+        "threads_with_tk": 1317,
+        "threads_without_tk": 5,
+        "threads_multi_tk": 39,
+        "closure_threads_add_up": true,
+        "turn_numbering_closes": true,
+        "tk_runs_minus_threads_with_tk": 61
       }
     }
   },
@@ -168,7 +186,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 2,
         "gap_literal_DO_NOT_USE": 20,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 18,
+        "audit_rows_in_window": 18,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 974083.369,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 20
+        }
       }
     },
     {
@@ -228,7 +261,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 3,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 3,
+        "audit_rows_in_window": 3,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 182403.882,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 3
+        }
       }
     },
     {
@@ -339,7 +387,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 4,
         "gap_literal_DO_NOT_USE": 81,
-        "turn2plus_no_row_ge_gap": true
+        "turn2plus_no_row_ge_gap": true,
+        "runs_with_row_in_window": 95,
+        "audit_rows_in_window": 95,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 107381.546,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 1,
+          "matched_at_current_pad": 99
+        }
       }
     },
     {
@@ -399,7 +462,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 1,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 1,
+        "audit_rows_in_window": 1,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 107547.74,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 99,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 1
+        }
       }
     },
     {
@@ -462,7 +540,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 100,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 100,
+        "audit_rows_in_window": 100,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 180198.327,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 77,
+          "matched_at_current_pad": 100
+        }
       }
     },
     {
@@ -526,7 +619,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 8,
         "gap_literal_DO_NOT_USE": 16,
-        "turn2plus_no_row_ge_gap": true
+        "turn2plus_no_row_ge_gap": true,
+        "runs_with_row_in_window": 8,
+        "audit_rows_in_window": 8,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 179117.735,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 60,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 16
+        }
       }
     },
     {
@@ -591,7 +699,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 77,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 77,
+        "audit_rows_in_window": 77,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 180315.452,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 100,
+          "extra_runs_if_left_pad_widened": 2,
+          "matched_at_current_pad": 77
+        }
       }
     },
     {
@@ -656,7 +779,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 60,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 60,
+        "audit_rows_in_window": 60,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 178987.549,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 71,
+          "extra_runs_if_left_pad_widened": 16,
+          "matched_at_current_pad": 60
+        }
       }
     },
     {
@@ -719,7 +857,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 71,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 71,
+        "audit_rows_in_window": 71,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 178863.739,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 60,
+          "matched_at_current_pad": 71
+        }
       }
     },
     {
@@ -780,7 +933,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 2,
+        "audit_rows_in_window": 2,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 180418.556,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 77,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 2
+        }
       }
     },
     {
@@ -845,7 +1013,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 86,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 86,
+        "audit_rows_in_window": 86,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 166836.156,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 2,
+          "extra_runs_if_left_pad_widened": 3,
+          "matched_at_current_pad": 86
+        }
       }
     },
     {
@@ -907,7 +1090,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 3,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 3,
+        "audit_rows_in_window": 3,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 166947.621,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 87,
+          "extra_runs_if_left_pad_widened": 16,
+          "matched_at_current_pad": 3
+        }
       }
     },
     {
@@ -969,7 +1167,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 1,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 1,
+        "audit_rows_in_window": 1,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 166777.598,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 3,
+          "extra_runs_if_left_pad_widened": 88,
+          "matched_at_current_pad": 1
+        }
       }
     },
     {
@@ -1034,7 +1247,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 84,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 84,
+        "audit_rows_in_window": 84,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 167151.276,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 1,
+          "extra_runs_if_left_pad_widened": 2,
+          "matched_at_current_pad": 84
+        }
       }
     },
     {
@@ -1095,7 +1323,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 2,
+        "audit_rows_in_window": 2,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 167247.484,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 84,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 2
+        }
       }
     },
     {
@@ -1155,7 +1398,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 5,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 5,
+        "audit_rows_in_window": 5,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 788841.679,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 1,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 5
+        }
       }
     },
     {
@@ -1217,7 +1475,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 5,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 5,
+        "audit_rows_in_window": 5,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 782971.704,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 5
+        }
       }
     },
     {
@@ -1279,7 +1552,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 5,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 5,
+        "audit_rows_in_window": 5,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 692339.439,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 5
+        }
       }
     },
     {
@@ -1341,7 +1629,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 5,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 5,
+        "audit_rows_in_window": 5,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 619574.854,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 5
+        }
       }
     },
     {
@@ -1403,7 +1706,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 5,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 5,
+        "audit_rows_in_window": 5,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 601046.101,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 1,
+          "matched_at_current_pad": 5
+        }
       }
     },
     {
@@ -1464,7 +1782,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 2,
+        "audit_rows_in_window": 2,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 601440.335,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 3,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 2
+        }
       }
     },
     {
@@ -1526,7 +1859,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 1,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 1,
+        "audit_rows_in_window": 1,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 601255.876,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 4,
+          "extra_runs_if_left_pad_widened": 3,
+          "matched_at_current_pad": 1
+        }
       }
     },
     {
@@ -1587,7 +1935,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 2,
+        "audit_rows_in_window": 2,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 601343.315,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 1,
+          "extra_runs_if_left_pad_widened": 2,
+          "matched_at_current_pad": 2
+        }
       }
     },
     {
@@ -1652,7 +2015,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 79,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 79,
+        "audit_rows_in_window": 79,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 182758.059,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 10,
+          "extra_runs_if_left_pad_widened": 2,
+          "matched_at_current_pad": 79
+        }
       }
     },
     {
@@ -1715,7 +2093,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 10,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 10,
+        "audit_rows_in_window": 10,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 182596.984,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 3,
+          "extra_runs_if_left_pad_widened": 79,
+          "matched_at_current_pad": 10
+        }
       }
     },
     {
@@ -1777,7 +2170,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 1,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 1,
+        "audit_rows_in_window": 1,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 85564.385,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 1
+        }
       }
     },
     {
@@ -1842,7 +2250,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 22,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 24,
+        "audit_rows_in_window": 24,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 85306.813,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 16,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 24
+        }
       }
     },
     {
@@ -1906,7 +2329,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 4,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 12,
+        "audit_rows_in_window": 12,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 85258.783,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 4,
+          "extra_runs_if_left_pad_widened": 24,
+          "matched_at_current_pad": 12
+        }
       }
     },
     {
@@ -1969,7 +2407,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 4,
+        "audit_rows_in_window": 4,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 74335.895,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 4,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 4
+        }
       }
     },
     {
@@ -2112,7 +2565,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 4,
+        "audit_rows_in_window": 4,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 74292.937,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 4,
+          "matched_at_current_pad": 4
+        }
       }
     },
     {
@@ -2362,7 +2830,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 100,
         "gap_literal_DO_NOT_USE": 100,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 0,
+        "audit_rows_in_window": 0,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 971444.391,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 100,
+          "matched_at_current_pad": 100
+        }
       }
     },
     {
@@ -2417,7 +2900,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 69,
         "gap_literal_DO_NOT_USE": 69,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 0,
+        "audit_rows_in_window": 0,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 3,
+        "gap_minus_crash_total": 3,
+        "identity_holds": true,
+        "read_age_s": 971208.378,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 57,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 66
+        }
       }
     },
     {
@@ -2472,7 +2970,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 92,
         "gap_literal_DO_NOT_USE": 92,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 0,
+        "audit_rows_in_window": 0,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 35,
+        "gap_minus_crash_total": 35,
+        "identity_holds": true,
+        "read_age_s": 971119.773,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 66,
+          "matched_at_current_pad": 57
+        }
       }
     },
     {
@@ -2530,7 +3043,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 92,
         "gap_literal_DO_NOT_USE": 100,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 8,
+        "audit_rows_in_window": 8,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 40,
+        "gap_minus_crash_total": 40,
+        "identity_holds": true,
+        "read_age_s": 970802.946,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 60
+        }
       }
     },
     {
@@ -2588,7 +3116,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 5,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 20,
+        "audit_rows_in_window": 20,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 974424.83,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 30,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 20
+        }
       }
     },
     {
@@ -2646,7 +3189,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 22,
         "gap_literal_DO_NOT_USE": 30,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 8,
+        "audit_rows_in_window": 8,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 974325.174,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 20,
+          "matched_at_current_pad": 30
+        }
       }
     },
     {
@@ -2701,7 +3259,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 50,
         "gap_literal_DO_NOT_USE": 50,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 0,
+        "audit_rows_in_window": 0,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 971745.513,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 0,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 50
+        }
       }
     },
     {
@@ -2759,7 +3332,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 87,
         "gap_literal_DO_NOT_USE": 100,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 13,
+        "audit_rows_in_window": 13,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 971524.134,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 100,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 100
+        }
       }
     },
     {
@@ -2819,7 +3407,22 @@
         "audit_rows_unmapped_to_thread": 0,
         "gap_for_this_cell": 0,
         "gap_literal_DO_NOT_USE": 2,
-        "turn2plus_no_row_ge_gap": false
+        "turn2plus_no_row_ge_gap": false,
+        "runs_with_row_in_window": 2,
+        "audit_rows_in_window": 2,
+        "row_run_agreement": true,
+        "terminal_minus_matched_runs": 0,
+        "gap_minus_crash_total": 0,
+        "identity_holds": true,
+        "read_age_s": 182794.056,
+        "too_soon_to_read": false,
+        "crash_turn2plus_citable": true,
+        "edge_control": {
+          "pad_s": 188.0,
+          "extra_runs_if_right_pad_widened": 79,
+          "extra_runs_if_left_pad_widened": 0,
+          "matched_at_current_pad": 2
+        }
       }
     }
   ],
@@ -2832,6 +3435,10 @@
       "invariant_ok": 29,
       "not_applicable": 2,
       "ambiguous_window": 4
+    },
+    "window_kind_counts": {
+      "single": 41,
+      "ambiguous": 4
     },
     "invariant_ok_cells": 29,
     "violated_cells": [
@@ -3010,7 +3617,7 @@
       "http://127.0.0.1:8000/api/v1": 1
     },
     "provided_vs_derived_mismatch": [],
-    "clock_skew_s": 0.001,
+    "clock_skew_s": -0.0,
     "edge_unreliable": false,
     "two_number_block": {
       "admitted_minus_terminal": {
@@ -3133,10 +3740,10 @@
     },
     "thread_channel": {
       "role": "对照 + 崩臂面标定，不是判据（classify() 不读这一块）",
-      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑭⑭b（按标签锚定，行号会漂）",
+      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c（按标签锚定，行号会漂）",
       "available": true,
       "db_wide": {
-        "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑭⑭b（按标签锚定，行号会漂）",
+        "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c（按标签锚定，行号会漂）",
         "usable": true,
         "ambiguous_tk_to_threads": 0,
         "tk_runs": 1378,
@@ -3157,7 +3764,25 @@
           "n": 861,
           "min": 0.007,
           "median": 10.428,
-          "max": 187.623
+          "max": 187.623,
+          "negative": 0,
+          "gt_s": {
+            "1": 774,
+            "10": 435,
+            "60": 2,
+            "188": 0
+          }
+        },
+        "max_lag_s": 187.623,
+        "thread_scope": {
+          "available": true,
+          "threads_all": 1322,
+          "threads_with_tk": 1317,
+          "threads_without_tk": 5,
+          "threads_multi_tk": 39,
+          "closure_threads_add_up": true,
+          "turn_numbering_closes": true,
+          "tk_runs_minus_threads_with_tk": 61
         }
       },
       "cells_with_this_dimension": 39,
@@ -3170,6 +3795,11 @@
           "crash_turn1": 2,
           "crash_turn2plus": 0,
           "window_matched_runs": 20,
+          "terminal_minus_matched_runs": 0,
+          "row_run_agreement": true,
+          "identity_holds": true,
+          "too_soon_to_read": false,
+          "crash_turn2plus_citable": true,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3179,6 +3809,11 @@
           "crash_turn1": 0,
           "crash_turn2plus": 4,
           "window_matched_runs": 99,
+          "terminal_minus_matched_runs": 0,
+          "row_run_agreement": true,
+          "identity_holds": true,
+          "too_soon_to_read": false,
+          "crash_turn2plus_citable": true,
           "turn2plus_no_row_ge_gap": true
         },
         {
@@ -3188,6 +3823,11 @@
           "crash_turn1": 0,
           "crash_turn2plus": 8,
           "window_matched_runs": 16,
+          "terminal_minus_matched_runs": 0,
+          "row_run_agreement": true,
+          "identity_holds": true,
+          "too_soon_to_read": false,
+          "crash_turn2plus_citable": true,
           "turn2plus_no_row_ge_gap": true
         },
         {
@@ -3197,6 +3837,11 @@
           "crash_turn1": 100,
           "crash_turn2plus": 0,
           "window_matched_runs": 100,
+          "terminal_minus_matched_runs": 0,
+          "row_run_agreement": true,
+          "identity_holds": true,
+          "too_soon_to_read": false,
+          "crash_turn2plus_citable": true,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3206,6 +3851,11 @@
           "crash_turn1": 66,
           "crash_turn2plus": 0,
           "window_matched_runs": 66,
+          "terminal_minus_matched_runs": 3,
+          "row_run_agreement": true,
+          "identity_holds": true,
+          "too_soon_to_read": false,
+          "crash_turn2plus_citable": true,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3215,6 +3865,11 @@
           "crash_turn1": 57,
           "crash_turn2plus": 0,
           "window_matched_runs": 57,
+          "terminal_minus_matched_runs": 35,
+          "row_run_agreement": true,
+          "identity_holds": true,
+          "too_soon_to_read": false,
+          "crash_turn2plus_citable": true,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3224,6 +3879,11 @@
           "crash_turn1": 52,
           "crash_turn2plus": 0,
           "window_matched_runs": 60,
+          "terminal_minus_matched_runs": 40,
+          "row_run_agreement": true,
+          "identity_holds": true,
+          "too_soon_to_read": false,
+          "crash_turn2plus_citable": true,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3233,6 +3893,11 @@
           "crash_turn1": 22,
           "crash_turn2plus": 0,
           "window_matched_runs": 30,
+          "terminal_minus_matched_runs": 0,
+          "row_run_agreement": true,
+          "identity_holds": true,
+          "too_soon_to_read": false,
+          "crash_turn2plus_citable": true,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3242,6 +3907,11 @@
           "crash_turn1": 50,
           "crash_turn2plus": 0,
           "window_matched_runs": 50,
+          "terminal_minus_matched_runs": 0,
+          "row_run_agreement": true,
+          "identity_holds": true,
+          "too_soon_to_read": false,
+          "crash_turn2plus_citable": true,
           "turn2plus_no_row_ge_gap": false
         },
         {
@@ -3251,9 +3921,35 @@
           "crash_turn1": 87,
           "crash_turn2plus": 0,
           "window_matched_runs": 100,
+          "terminal_minus_matched_runs": 0,
+          "row_run_agreement": true,
+          "identity_holds": true,
+          "too_soon_to_read": false,
+          "crash_turn2plus_citable": true,
           "turn2plus_no_row_ge_gap": false
         }
       ],
+      "gap_attribution": {
+        "identity": "gap_for_this_cell − crash_turn1 − crash_turn2plus == terminal − window_matched_runs",
+        "checked_cells": 39,
+        "identity_holds_all": true,
+        "cells_where_rows_equal_runs_with_row": 39,
+        "cells_where_rows_differ_from_runs_with_row": [],
+        "cells_with_terminal_minus_matched_nonzero": 3
+      },
+      "read_horizon": {
+        "rule": "too_soon_to_read = (PG now − 本格窗口内最晚一条 run 的 first_seen) < 观测 max lag ⇒ true 时该格 crash_turn2plus 不可引；null = 无延迟样本或窗口内没配上 run（同样不可引）",
+        "max_lag_s": 187.623,
+        "cells_too_soon": 0,
+        "cells_horizon_unknown": 0,
+        "cells_citable": 39
+      },
+      "edge_control": {
+        "pad_s": 188.0,
+        "cells_measured": 39,
+        "extra_runs_right_total": 896,
+        "extra_runs_left_total": 566
+      },
       "id_level_turns": {
         "r23_errorresidual_c2n4_pool1.json": {
           "tk_60de763666dd4834b2c70bc3efb03b96": 2,
@@ -3266,7 +3962,7 @@
       "why_not_a_verdict": "`turn2plus_no_row_ge_gap` 只是「本格 gap ≤ 窗口内 turn≥2 零行数」这条算术；它不等于「这些 gap 就是那几条崩臂」。要把因果坐实需要**回执自己带 task_id**（即 `task_id_channel` 的 present 面），而窗口配的是 run 起点、边缘会漂（必须配 `db_wide.audit_row_minus_first_seen_s` 一起读）。"
     },
     "window_rule": "时间列见 pg_guard.time_column（本轮实测 = `timestamp`，盘上**没有** `created_at`）：<时间列> >= begin AND <时间列> < finished_at + 1s（右端含该秒；回执时间戳为秒级）",
-    "window_citation_rule": "引用任何 gap 必须连着该格的 `window_kind` 一起写：`scenario` 与 `single` = **单场景（子窗）口径**（`single` = 这份回执只含一个场景，回执窗就等于该场景窗），`receipt` = 整批窗口，`ambiguous` 不参与判据。架构 `v1.7.13` 现测：同一批 A 档**子窗 99 run / 95 行 = gap 4** 与 **整窗 104 run / 99 行 = gap 5** 两个数都对、**不得互换**，也不许取平均 ⇒ 本器件逐格只按单场景窗口数，所以我方所有 gap 读数都属于『子窗』口径。⚠️ 已知边缘偏差：thread 尺是按 run 起点 `first_seen` 配窗，而审计行的写入时刻中位比它晚约十秒量级（见 `thread_channel.db_wide.audit_row_minus_first_seen_s`）⇒ 窗口左边缘会多吸进上一条 run，本器件**没有**为此放宽 pad（pad 仍是 1 秒）。",
+    "window_citation_rule": "引用任何 gap 必须连着该格的 `window_kind` 一起写：`scenario` 与 `single` = **单场景（子窗）口径**（`single` = 这份回执只含一个场景，回执窗就等于该场景窗），`receipt` = 整批窗口，`ambiguous` 不参与判据。架构 `v1.7.13` 现测：同一批 A 档**子窗 99 run / 95 行 = gap 4** 与 **整窗 104 run / 99 行 = gap 5** 两个数都对、**不得互换**，也不许取平均 ⇒ 本器件逐格只按单场景窗口数，所以我方所有 gap 读数都属于『子窗』口径。⚠️ 边缘偏差的**归属已实测改过两次**，此处写当前结论：thread 尺按 run 起点 `first_seen` 配窗，而审计行写入时刻中位比它晚约十秒量级（见 `db_wide.audit_row_minus_first_seen_s`，含分桶 `gt_s`）。但第十五轮逐格核对后，`gap` 与 `crash` 对不上的那部分**不在审计侧 pad**：10 个违反格里「窗口内行数 == 窗口内有行的 run 数」全部成立 ⇒ 差值恒等于 `terminal − window_matched_runs`（见 `gap_attribution`）。⇒ 本器件**没有**为此放宽 pad（pad 仍是 1 秒）：抬到观测 max lag 会把邻近 run 吸进窗口 = 改分母，代价见 `edge_control`，且属判据变更（走 A17 / 架构）。",
     "note": "严格式 = **terminal − 审计行数 = 0**（`terminal = Σ outcomes{ok,clarify,refuse,error_frame,async_degraded}`，词表逐字来自 `deploy/loadtest/driver.py:327-329`；U-130）。`admitted` 只是 HTTP 2xx、含 `truncated`（200 但流断在半途）⇒ 只在 terminal 两条取法都落空时作**显式标注的代理**，代理格的 ok 不等于严格式成立。差值是**双向**的：差 > 0 = 有请求没落终态（W7 修复前那一格），差 < 0 = 一个请求落了多行（U-129 的双终态形状）。分母取不到、或分母为 0（等式恒真）的格子一律 not_applicable，**不许**当成差 0。"
   }
 }
