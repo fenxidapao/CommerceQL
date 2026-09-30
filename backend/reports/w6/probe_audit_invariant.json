@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-09-29T16:13:23+00:00",
+  "generated_at_utc": "2026-09-30T08:42:45+00:00",
   "strict_denominator": "terminal − app.audit_log 行数 = 0",
   "denominator_definition": {
     "terminal_outcomes": [
@@ -13,7 +13,7 @@
     "field_table_source": "deploy/loadtest/README.md §三.0.1p",
     "proxy": "admitted_proxy:2xx 仅在 admission.terminal 与 outcomes 都取不到时使用，且逐格标注"
   },
-  "dsn_redacted": "app_rw@localhost:5432/ecom",
+  "dsn_redacted": "app_rw@127.0.0.1:5432/ecom",
   "pg_guard": {
     "database": "ecom",
     "role": "app_rw",
@@ -83,6 +83,32 @@
       "2026-09-23": 15,
       "2026-09-28": 591,
       "2026-09-29": 152
+    },
+    "thread_ruler": {
+      "available": true,
+      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑭⑭b（按标签锚定，行号会漂）",
+      "usable": true,
+      "ambiguous_tk_to_threads": 0,
+      "tk_runs": 1378,
+      "threads": 1317,
+      "runs_by_turn_bucket": {
+        "turn1": 1317,
+        "turn2plus": 61
+      },
+      "runs_with_audit_row": {
+        "turn1": 813,
+        "turn2plus": 48
+      },
+      "runs_without_audit_row": {
+        "turn1": 504,
+        "turn2plus": 13
+      },
+      "audit_row_minus_first_seen_s": {
+        "n": 861,
+        "min": 0.007,
+        "median": 10.428,
+        "max": 187.623
+      }
     }
   },
   "receipts_pattern": "deploy/loadtest/*.json",
@@ -122,12 +148,28 @@
       "rows_that_window_day": 70,
       "diff": 2,
       "by_outcome": {
-        "clarify": 5,
-        "refuse": 13
+        "refuse": 13,
+        "clarify": 5
       },
       "state": "invariant_violated",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": false
+      "g6_caveat_present": false,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 20,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 20,
+          "turn2plus": 0
+        },
+        "crash_turn1": 2,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 2,
+        "gap_literal_DO_NOT_USE": 20,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "control_r9_c1n3.json",
@@ -171,7 +213,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 3,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 3,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 3,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "healthy_r19_wrong_target_404.json",
@@ -259,14 +317,30 @@
       "rows_that_window_day": 152,
       "diff": 4,
       "by_outcome": {
-        "clarify": 8,
         "failed": 56,
-        "refuse": 18,
-        "success": 13
+        "success": 13,
+        "clarify": 8,
+        "refuse": 18
       },
       "state": "invariant_violated",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 99,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 77,
+          "turn2plus": 22
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 4,
+        "rows_turn2plus": 18,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 4,
+        "gap_literal_DO_NOT_USE": 81,
+        "turn2plus_no_row_ge_gap": true
+      }
     },
     {
       "receipt": "healthy_r20_warm_c1n1.json",
@@ -310,7 +384,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 1,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 1,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 1,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "healthy_rA_burst_c100n100.json",
@@ -350,14 +440,30 @@
       "rows_that_window_day": 591,
       "diff": 0,
       "by_outcome": {
-        "failed": 2,
         "clarify": 12,
-        "success": 1,
-        "refuse": 85
+        "refuse": 85,
+        "failed": 2,
+        "success": 1
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": false
+      "g6_caveat_present": false,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 100,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 100,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 100,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "healthy_rA_sessionlock_c8n24.json",
@@ -405,7 +511,23 @@
       },
       "state": "invariant_violated",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 16,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 8,
+          "turn2plus": 8
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 8,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 8,
+        "gap_literal_DO_NOT_USE": 16,
+        "turn2plus_no_row_ge_gap": true
+      }
     },
     {
       "receipt": "healthy_rA_steady_c50n120.json",
@@ -447,14 +569,30 @@
       "rows_that_window_day": 591,
       "diff": 0,
       "by_outcome": {
-        "failed": 45,
+        "refuse": 14,
         "clarify": 8,
-        "success": 10,
-        "refuse": 14
+        "failed": 45,
+        "success": 10
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 77,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 77,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 77,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "healthy_rA_tenantquota_c30n60.json",
@@ -496,14 +634,30 @@
       "rows_that_window_day": 591,
       "diff": 0,
       "by_outcome": {
-        "clarify": 5,
+        "refuse": 33,
         "failed": 18,
         "success": 4,
-        "refuse": 33
+        "clarify": 5
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": false
+      "g6_caveat_present": false,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 60,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 60,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 60,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "healthy_rA_tenantsaturation_c30n130.json",
@@ -543,14 +697,30 @@
       "rows_that_window_day": 591,
       "diff": 0,
       "by_outcome": {
-        "failed": 37,
-        "clarify": 7,
         "success": 14,
+        "clarify": 7,
+        "failed": 37,
         "refuse": 13
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": false
+      "g6_caveat_present": false,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 71,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 71,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 71,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "healthy_rA_warm_c1n2.json",
@@ -595,7 +765,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 2,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 2,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 2,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "healthy_rB2_steady_c50n120_warm.json",
@@ -637,14 +823,30 @@
       "rows_that_window_day": 591,
       "diff": 0,
       "by_outcome": {
-        "clarify": 8,
         "failed": 40,
+        "success": 8,
         "refuse": 30,
-        "success": 8
+        "clarify": 8
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 86,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 86,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 86,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "healthy_rB_c1n3_control.json",
@@ -685,12 +887,28 @@
       "diff": 0,
       "by_outcome": {
         "clarify": 1,
-        "refuse": 1,
-        "success": 1
+        "success": 1,
+        "refuse": 1
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 3,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 3,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 3,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "healthy_rB_sessionlock_c8n24_pinned.json",
@@ -736,7 +954,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 1,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 1,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 1,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "healthy_rB_steady_c50n120_cold.json",
@@ -780,12 +1014,28 @@
       "rows_that_window_day": 591,
       "diff": 0,
       "by_outcome": {
-        "failed": 8,
-        "refuse": 76
+        "refuse": 76,
+        "failed": 8
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 84,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 84,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 84,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "healthy_rB_warm_c1n2.json",
@@ -830,7 +1080,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 2,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 2,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 2,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "preflight_r4.json",
@@ -874,7 +1140,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 5,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 5,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 5,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "preflight_r5.json",
@@ -914,13 +1196,29 @@
       "rows_that_window_day": 27,
       "diff": 0,
       "by_outcome": {
-        "clarify": 1,
         "failed": 3,
+        "clarify": 1,
         "refuse": 1
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 5,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 5,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 5,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "preflight_r6.json",
@@ -960,13 +1258,29 @@
       "rows_that_window_day": 5,
       "diff": 0,
       "by_outcome": {
-        "clarify": 3,
         "failed": 1,
+        "clarify": 3,
         "refuse": 1
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 5,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 5,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 5,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "preflight_r7.json",
@@ -1006,13 +1320,29 @@
       "rows_that_window_day": 15,
       "diff": 0,
       "by_outcome": {
+        "success": 3,
         "clarify": 1,
-        "refuse": 1,
-        "success": 3
+        "refuse": 1
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 5,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 5,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 5,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "preflight_r8_c1n5.json",
@@ -1052,13 +1382,29 @@
       "rows_that_window_day": 15,
       "diff": 0,
       "by_outcome": {
+        "success": 2,
         "clarify": 2,
-        "refuse": 1,
-        "success": 2
+        "refuse": 1
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 5,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 5,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 5,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "preflight_r8_cold.json",
@@ -1103,7 +1449,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 2,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 2,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 2,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "preflight_r8_sessionlock.json",
@@ -1149,7 +1511,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 1,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 1,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 1,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "preflight_r8_warm.json",
@@ -1194,7 +1572,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 2,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 2,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 2,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "quota_r9_steady_c50n120.json",
@@ -1236,14 +1630,30 @@
       "rows_that_window_day": 591,
       "diff": 0,
       "by_outcome": {
-        "clarify": 8,
         "failed": 3,
+        "success": 2,
         "refuse": 66,
-        "success": 2
+        "clarify": 8
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 79,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 79,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 79,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "quota_r9_tenantquota_c30n60.json",
@@ -1285,12 +1695,28 @@
       "rows_that_window_day": 591,
       "diff": 0,
       "by_outcome": {
-        "failed": 2,
-        "refuse": 8
+        "refuse": 8,
+        "failed": 2
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 10,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 10,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 10,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "r22_lock_c8n8.json",
@@ -1336,7 +1762,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 1,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 1,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 1,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "r22_threadcell_c12n24.json",
@@ -1379,13 +1821,29 @@
       "rows_that_window_day": 152,
       "diff": 0,
       "by_outcome": {
-        "clarify": 9,
+        "success": 6,
         "refuse": 9,
-        "success": 6
+        "clarify": 9
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": false
+      "g6_caveat_present": false,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 24,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 22,
+          "turn2plus": 2
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 2,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 22,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "r22_threadturn_c4n12_pool1.json",
@@ -1433,7 +1891,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 12,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 4,
+          "turn2plus": 8
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 8,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 4,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "r23_completeresidual_c2n4_pool1.json",
@@ -1475,12 +1949,28 @@
       "rows_that_window_day": 152,
       "diff": 0,
       "by_outcome": {
-        "clarify": 3,
-        "success": 1
+        "success": 1,
+        "clarify": 3
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 4,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 2,
+          "turn2plus": 2
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 2,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 2,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "r23_errorresidual_c2n4_pool1.json",
@@ -1527,12 +2017,20 @@
         "method": "逐行取 app.audit_log 的 (task_id, outcome, latency_ms)（参数化、只读闸门内）⇒ 行数在 Python 里数（见源码注释：lateral 展开会把行按键数乘开）",
         "n_ids": 4,
         "n_with_row": 4,
+        "turn_of_given_id": {
+          "tk_60de763666dd4834b2c70bc3efb03b96": 2,
+          "tk_90bbc3aaa8c84c6fa5761571e1c53492": 1,
+          "tk_e208331bf06445cebdcda557660282e9": 1,
+          "tk_e80bcacbd7a34b56b9ef6c95775e65bb": 2
+        },
         "by_id": {
           "tk_60de763666dd4834b2c70bc3efb03b96": {
             "seg1_rows": 1,
             "outcomes": [
               "failed"
             ],
+            "turn": 2,
+            "thread_id": "T_A:u_h01:ss_aab9c91073b54bf785707f9197edf380",
             "latency_keys": {
               "min": 2,
               "max": 2
@@ -1543,6 +2041,8 @@
             "outcomes": [
               "failed"
             ],
+            "turn": 1,
+            "thread_id": "T_A:u_h01:ss_aab9c91073b54bf785707f9197edf380",
             "latency_keys": {
               "min": 6,
               "max": 6
@@ -1553,6 +2053,8 @@
             "outcomes": [
               "failed"
             ],
+            "turn": 1,
+            "thread_id": "T_A:u_h02:ss_aab9c91073b54bf785707f9197edf380",
             "latency_keys": {
               "min": 6,
               "max": 6
@@ -1563,6 +2065,8 @@
             "outcomes": [
               "failed"
             ],
+            "turn": 2,
+            "thread_id": "T_A:u_h02:ss_aab9c91073b54bf785707f9197edf380",
             "latency_keys": {
               "min": 2,
               "max": 2
@@ -1593,7 +2097,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 4,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 2,
+          "turn2plus": 2
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 2,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 2,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "receipt.json",
@@ -1827,7 +2347,23 @@
       "by_outcome": {},
       "state": "invariant_violated",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 100,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 100,
+          "turn2plus": 0
+        },
+        "crash_turn1": 100,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 100,
+        "gap_literal_DO_NOT_USE": 100,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "receipt_drain.json",
@@ -1866,7 +2402,23 @@
       "by_outcome": {},
       "state": "invariant_violated",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 66,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 66,
+          "turn2plus": 0
+        },
+        "crash_turn1": 66,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 69,
+        "gap_literal_DO_NOT_USE": 69,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "receipt_drain2.json",
@@ -1905,7 +2457,23 @@
       "by_outcome": {},
       "state": "invariant_violated",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 57,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 57,
+          "turn2plus": 0
+        },
+        "crash_turn1": 57,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 92,
+        "gap_literal_DO_NOT_USE": 92,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "receipt_drain3.json",
@@ -1942,12 +2510,28 @@
       "rows_that_window_day": 70,
       "diff": 92,
       "by_outcome": {
-        "clarify": 4,
-        "refuse": 4
+        "refuse": 4,
+        "clarify": 4
       },
       "state": "invariant_violated",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 60,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 60,
+          "turn2plus": 0
+        },
+        "crash_turn1": 52,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 92,
+        "gap_literal_DO_NOT_USE": 100,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "receipt_lock.json",
@@ -1989,7 +2573,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 20,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 5,
+          "turn2plus": 15
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 15,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 5,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "receipt_quota.json",
@@ -2026,12 +2626,28 @@
       "rows_that_window_day": 70,
       "diff": 22,
       "by_outcome": {
-        "clarify": 5,
-        "refuse": 3
+        "refuse": 3,
+        "clarify": 5
       },
       "state": "invariant_violated",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 30,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 30,
+          "turn2plus": 0
+        },
+        "crash_turn1": 22,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 22,
+        "gap_literal_DO_NOT_USE": 30,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "receipt_steady.json",
@@ -2070,7 +2686,23 @@
       "by_outcome": {},
       "state": "invariant_violated",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 50,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 50,
+          "turn2plus": 0
+        },
+        "crash_turn1": 50,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 50,
+        "gap_literal_DO_NOT_USE": 50,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "receipt_steady_pool.json",
@@ -2112,7 +2744,23 @@
       },
       "state": "invariant_violated",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 100,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 100,
+          "turn2plus": 0
+        },
+        "crash_turn1": 87,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 87,
+        "gap_literal_DO_NOT_USE": 100,
+        "turn2plus_no_row_ge_gap": false
+      }
     },
     {
       "receipt": "warmup_r9_c1n2.json",
@@ -2156,7 +2804,23 @@
       },
       "state": "invariant_ok",
       "strict_equation_evaluated": true,
-      "g6_caveat_present": true
+      "g6_caveat_present": true,
+      "thread_position": {
+        "matched_by": "lg.checkpoints 的 first_seen（run 起点），不是审计行时间",
+        "window_matched_runs": 2,
+        "scope_empty": false,
+        "runs_by_turn_bucket": {
+          "turn1": 2,
+          "turn2plus": 0
+        },
+        "crash_turn1": 0,
+        "crash_turn2plus": 0,
+        "rows_turn2plus": 0,
+        "audit_rows_unmapped_to_thread": 0,
+        "gap_for_this_cell": 0,
+        "gap_literal_DO_NOT_USE": 2,
+        "turn2plus_no_row_ge_gap": false
+      }
     }
   ],
   "overlapping_windows": [],
@@ -2173,6 +2837,7 @@
     "violated_cells": [
       {
         "receipt": "baseline_c5.json",
+        "window_kind": "single",
         "denominator": 20,
         "denominator_basis": "derived:outcomes",
         "admitted": null,
@@ -2186,6 +2851,7 @@
       },
       {
         "receipt": "healthy_r20_aprime_c12n108.json",
+        "window_kind": "single",
         "denominator": 99,
         "denominator_basis": "admission.terminal",
         "admitted": 99,
@@ -2199,6 +2865,7 @@
       },
       {
         "receipt": "healthy_rA_sessionlock_c8n24.json",
+        "window_kind": "single",
         "denominator": 16,
         "denominator_basis": "derived:outcomes",
         "admitted": 16,
@@ -2212,6 +2879,7 @@
       },
       {
         "receipt": "receipt_burst_pool.json",
+        "window_kind": "single",
         "denominator": 100,
         "denominator_basis": "derived:outcomes",
         "admitted": null,
@@ -2225,6 +2893,7 @@
       },
       {
         "receipt": "receipt_drain.json",
+        "window_kind": "single",
         "denominator": 69,
         "denominator_basis": "derived:outcomes",
         "admitted": null,
@@ -2238,6 +2907,7 @@
       },
       {
         "receipt": "receipt_drain2.json",
+        "window_kind": "single",
         "denominator": 92,
         "denominator_basis": "derived:outcomes",
         "admitted": null,
@@ -2251,6 +2921,7 @@
       },
       {
         "receipt": "receipt_drain3.json",
+        "window_kind": "single",
         "denominator": 100,
         "denominator_basis": "derived:outcomes",
         "admitted": null,
@@ -2264,6 +2935,7 @@
       },
       {
         "receipt": "receipt_quota.json",
+        "window_kind": "single",
         "denominator": 30,
         "denominator_basis": "derived:outcomes",
         "admitted": null,
@@ -2277,6 +2949,7 @@
       },
       {
         "receipt": "receipt_steady.json",
+        "window_kind": "single",
         "denominator": 50,
         "denominator_basis": "derived:outcomes",
         "admitted": null,
@@ -2290,6 +2963,7 @@
       },
       {
         "receipt": "receipt_steady_pool.json",
+        "window_kind": "single",
         "denominator": 100,
         "denominator_basis": "derived:outcomes",
         "admitted": null,
@@ -2336,7 +3010,7 @@
       "http://127.0.0.1:8000/api/v1": 1
     },
     "provided_vs_derived_mismatch": [],
-    "clock_skew_s": -0.001,
+    "clock_skew_s": 0.001,
     "edge_unreliable": false,
     "two_number_block": {
       "admitted_minus_terminal": {
@@ -2457,7 +3131,142 @@
       "verdict_note": "本块不设「同不同阶」的结论位：引用这条对照的人自己把两个数并排写出来（`violated_cells_compared` 每格都给 gap 与 `stage_none_*` 两组数）。",
       "not_computable_offline": "terminal_digest_same_as_turn1（同会话第 2 轮终止帧指纹 == 第 1 轮）需要**逐会话的两轮 SSE 原文**，盘上回执结构性不含 ⇒ 本批 UNVERIFIED，不在本产物里冒充成已测。"
     },
+    "thread_channel": {
+      "role": "对照 + 崩臂面标定，不是判据（classify() 不读这一块）",
+      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑭⑭b（按标签锚定，行号会漂）",
+      "available": true,
+      "db_wide": {
+        "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑭⑭b（按标签锚定，行号会漂）",
+        "usable": true,
+        "ambiguous_tk_to_threads": 0,
+        "tk_runs": 1378,
+        "threads": 1317,
+        "runs_by_turn_bucket": {
+          "turn1": 1317,
+          "turn2plus": 61
+        },
+        "runs_with_audit_row": {
+          "turn1": 813,
+          "turn2plus": 48
+        },
+        "runs_without_audit_row": {
+          "turn1": 504,
+          "turn2plus": 13
+        },
+        "audit_row_minus_first_seen_s": {
+          "n": 861,
+          "min": 0.007,
+          "median": 10.428,
+          "max": 187.623
+        }
+      },
+      "cells_with_this_dimension": 39,
+      "scope_empty_cells": 0,
+      "violated_cells_turn_split": [
+        {
+          "receipt": "baseline_c5.json",
+          "window_kind": "single",
+          "gap_terminal_minus_audit_rows": 2,
+          "crash_turn1": 2,
+          "crash_turn2plus": 0,
+          "window_matched_runs": 20,
+          "turn2plus_no_row_ge_gap": false
+        },
+        {
+          "receipt": "healthy_r20_aprime_c12n108.json",
+          "window_kind": "single",
+          "gap_terminal_minus_audit_rows": 4,
+          "crash_turn1": 0,
+          "crash_turn2plus": 4,
+          "window_matched_runs": 99,
+          "turn2plus_no_row_ge_gap": true
+        },
+        {
+          "receipt": "healthy_rA_sessionlock_c8n24.json",
+          "window_kind": "single",
+          "gap_terminal_minus_audit_rows": 8,
+          "crash_turn1": 0,
+          "crash_turn2plus": 8,
+          "window_matched_runs": 16,
+          "turn2plus_no_row_ge_gap": true
+        },
+        {
+          "receipt": "receipt_burst_pool.json",
+          "window_kind": "single",
+          "gap_terminal_minus_audit_rows": 100,
+          "crash_turn1": 100,
+          "crash_turn2plus": 0,
+          "window_matched_runs": 100,
+          "turn2plus_no_row_ge_gap": false
+        },
+        {
+          "receipt": "receipt_drain.json",
+          "window_kind": "single",
+          "gap_terminal_minus_audit_rows": 69,
+          "crash_turn1": 66,
+          "crash_turn2plus": 0,
+          "window_matched_runs": 66,
+          "turn2plus_no_row_ge_gap": false
+        },
+        {
+          "receipt": "receipt_drain2.json",
+          "window_kind": "single",
+          "gap_terminal_minus_audit_rows": 92,
+          "crash_turn1": 57,
+          "crash_turn2plus": 0,
+          "window_matched_runs": 57,
+          "turn2plus_no_row_ge_gap": false
+        },
+        {
+          "receipt": "receipt_drain3.json",
+          "window_kind": "single",
+          "gap_terminal_minus_audit_rows": 92,
+          "crash_turn1": 52,
+          "crash_turn2plus": 0,
+          "window_matched_runs": 60,
+          "turn2plus_no_row_ge_gap": false
+        },
+        {
+          "receipt": "receipt_quota.json",
+          "window_kind": "single",
+          "gap_terminal_minus_audit_rows": 22,
+          "crash_turn1": 22,
+          "crash_turn2plus": 0,
+          "window_matched_runs": 30,
+          "turn2plus_no_row_ge_gap": false
+        },
+        {
+          "receipt": "receipt_steady.json",
+          "window_kind": "single",
+          "gap_terminal_minus_audit_rows": 50,
+          "crash_turn1": 50,
+          "crash_turn2plus": 0,
+          "window_matched_runs": 50,
+          "turn2plus_no_row_ge_gap": false
+        },
+        {
+          "receipt": "receipt_steady_pool.json",
+          "window_kind": "single",
+          "gap_terminal_minus_audit_rows": 87,
+          "crash_turn1": 87,
+          "crash_turn2plus": 0,
+          "window_matched_runs": 100,
+          "turn2plus_no_row_ge_gap": false
+        }
+      ],
+      "id_level_turns": {
+        "r23_errorresidual_c2n4_pool1.json": {
+          "tk_60de763666dd4834b2c70bc3efb03b96": 2,
+          "tk_90bbc3aaa8c84c6fa5761571e1c53492": 1,
+          "tk_e208331bf06445cebdcda557660282e9": 1,
+          "tk_e80bcacbd7a34b56b9ef6c95775e65bb": 2
+        }
+      },
+      "naming_note": "判据分子只许写 **`crash_turn2plus`**（窗口内 `turn≥2` 且零审计行的 run 数）。产物里同时留着 **`gap_literal_DO_NOT_USE`**（架构 `v1.7.12` 那句字面式 `terminal − 审计行(turn≥2)` 的算法，被减数没有限定 ⇒ 会被 turn1 的行放大）：这一列**故意公开**是为了让'两种式子差多少'可被复算，命名本身即禁用标记（做法照 W7 第二十五轮 ⑭）。turn1 的零行（`crash_turn1` / 全库 `runs_without_audit_row.turn1`）结构性不进判据。",
+      "why_not_a_verdict": "`turn2plus_no_row_ge_gap` 只是「本格 gap ≤ 窗口内 turn≥2 零行数」这条算术；它不等于「这些 gap 就是那几条崩臂」。要把因果坐实需要**回执自己带 task_id**（即 `task_id_channel` 的 present 面），而窗口配的是 run 起点、边缘会漂（必须配 `db_wide.audit_row_minus_first_seen_s` 一起读）。"
+    },
     "window_rule": "时间列见 pg_guard.time_column（本轮实测 = `timestamp`，盘上**没有** `created_at`）：<时间列> >= begin AND <时间列> < finished_at + 1s（右端含该秒；回执时间戳为秒级）",
+    "window_citation_rule": "引用任何 gap 必须连着该格的 `window_kind` 一起写：`scenario` 与 `single` = **单场景（子窗）口径**（`single` = 这份回执只含一个场景，回执窗就等于该场景窗），`receipt` = 整批窗口，`ambiguous` 不参与判据。架构 `v1.7.13` 现测：同一批 A 档**子窗 99 run / 95 行 = gap 4** 与 **整窗 104 run / 99 行 = gap 5** 两个数都对、**不得互换**，也不许取平均 ⇒ 本器件逐格只按单场景窗口数，所以我方所有 gap 读数都属于『子窗』口径。⚠️ 已知边缘偏差：thread 尺是按 run 起点 `first_seen` 配窗，而审计行的写入时刻中位比它晚约十秒量级（见 `thread_channel.db_wide.audit_row_minus_first_seen_s`）⇒ 窗口左边缘会多吸进上一条 run，本器件**没有**为此放宽 pad（pad 仍是 1 秒）。",
     "note": "严格式 = **terminal − 审计行数 = 0**（`terminal = Σ outcomes{ok,clarify,refuse,error_frame,async_degraded}`，词表逐字来自 `deploy/loadtest/driver.py:327-329`；U-130）。`admitted` 只是 HTTP 2xx、含 `truncated`（200 但流断在半途）⇒ 只在 terminal 两条取法都落空时作**显式标注的代理**，代理格的 ok 不等于严格式成立。差值是**双向**的：差 > 0 = 有请求没落终态（W7 修复前那一格），差 < 0 = 一个请求落了多行（U-129 的双终态形状）。分母取不到、或分母为 0（等式恒真）的格子一律 not_applicable，**不许**当成差 0。"
   }
 }

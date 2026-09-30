@@ -166,7 +166,7 @@
     "required_by": "07 §17.6② / I-1",
     "banned_field": "difficulty_struct_sitelabel",
     "source": {
-      "n_files_scanned": 31,
+      "n_files_scanned": 30,
       "hits": [],
       "ok": true
     },
