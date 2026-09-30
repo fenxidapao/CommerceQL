@@ -344,6 +344,10 @@ select '⑭验收(按前缀+窗)' as k, count(*) as runs_all,
 from scoped;
 
 -- ⑭b 纪律 2 的守卫：窗口内这些 thread 里，有多少**其实有窗口前历史**（>0 ⇒ 任何"先过滤再算 turn"的写法都不可信）
+--   ★ 第二十八轮升级成三态（W6 第十六轮 ⑤ 已放行；三条件都守住：本标签仍以 `-- ⑭b` 行首出现、
+--     `checkpoint->'channel_values'->>'task_id'` / `min((checkpoint->>'ts')::timestamptz` 两串原样保留、**列名与列数一字未动**）。
+--   原缺陷：`window_turn_would_be_wrong` 是布尔 ⇒ 空作用域下读成 **`f`**，与"这一族 thread 确实没有窗口前历史"**分不开**（假绿方向，比 ⑭c 那个假红更危险）。
+--   ⇒ 现在 `threads_in_win = 0` 时给 **NULL**：**只有 `= f` 才许说"这批 thread 的 turn 没被窗口截断"**；`t` = 被截断（不可信），`NULL` = 无从判定（先修窗口/前缀，并看 ⑭ 的 `scope_empty`）。
 with ck as (
   select thread_id, checkpoint->'channel_values'->>'task_id' as tk,
          min((checkpoint->>'ts')::timestamptz) as first_seen
@@ -356,9 +360,11 @@ with ck as (
   from ck group by 1
 )
 select '⑭b turn 计算顺序守卫' as k, count(*) as threads_in_win,
-       sum(runs_in_win) as runs_in_win,
+       coalesce(sum(runs_in_win), 0) as runs_in_win,
        count(*) filter (where has_prehistory) as threads_with_prehistory,
-       (count(*) filter (where has_prehistory) > 0) as window_turn_would_be_wrong
+       case when count(*) = 0 then null                                  -- NULL = 作用域为空 ⇒ 无从判定（第二十八轮）
+            when count(*) filter (where has_prehistory) > 0 then true    -- t = 有 thread 带窗口前历史 ⇒ "窗口内重算 turn"不可信
+            else false end as window_turn_would_be_wrong
 from per_thread where runs_in_win > 0;
 
 -- ⑭c 🔴 「读得太早」守卫（W6 第二十六轮第 3 条逼出来的；我这面独立复测：审计行写入延迟 n=861，p50 = 10.428s / p99 = 40.824s / **max = 187.623s**，负延迟 0 条）
@@ -408,3 +414,35 @@ select '⑭c 读数年龄与静默期' as k, agg.runs_in_scope,
             when now() - agg.last_run < make_interval(secs => lagobs.max_lag_s) then true
             else false end as too_soon_to_read
 from agg, lagobs;
+
+-- ⑮ ★ A17 已裁（架构 v1.7.14 = `44b6783`）：`U-130` 判据② 由"字面式差值"改成**两臂配对的直读式** ⇒ 本段把我这面的尺补成同一形状：
+--     **臂 1** =「窗口内 `turn≥2` 且审计行数 **= 0** 的 run 数」期望 0（= ⑭/⑭c 的 `crash_turn2plus`，这里独立再数一遍、含"行数"而不只是"有无行"）
+--     **臂 2** =「窗口内 `turn≥2` 且审计行数 **> 1** 的 run 数」期望 0 ⇒ **臂 1 对"多落"是盲的**：W4 的入口复位（`33675b9`）若让第 2 轮把上一轮的行也带下来、或一轮写两行，
+--                臂 1 读数仍是 0（看着像通过），只有臂 2 抓得到。架构在 `07` 里点名的就是这一格。
+--   🔴 分母（⑭ 注释第 (5) 条）：两臂都按 **run**（`lg.checkpoints` 里带 `tk_` 的组）数，**不是 `terminal`** ⇒ 与他窗按 terminal 的同名数**不可互认、不可相加**；引用请带"分母=run"。
+--   🔴 三态（与 ⑭b/⑭c 同形）：**作用域为空 ⇒ 两臂给 NULL 而不是 0**（空作用域下的 0 是最容易读成"验收通过"的形状）⇒ 读前先确认 `runs_in_scope > 0`（⑭c）且 `scope_empty = f`（⑭）。
+--   ⚠️ 与 W6 的对表口径：他们那件里同名的 `multi_row_turn2plus_runs` 我这面**没有复算他们的窗**，两数各按各的前缀/窗口 ⇒ 相同只是巧合，不同也不必然是矛盾。
+with ck as (
+  select thread_id, checkpoint->'channel_values'->>'task_id' as tk,
+         min((checkpoint->>'ts')::timestamptz) as first_seen
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2
+), seq as (
+  select ck.tk, ck.thread_id, ck.first_seen, split_part(ck.thread_id, ':', 2) as usr,
+         row_number() over (partition by ck.thread_id order by ck.first_seen) as turn,
+         (select count(*) from app.audit_log a where a.task_id = ck.tk) as n_audit_rows
+  from ck
+), scoped as (
+  select * from seq
+  where first_seen between :'win_a'::timestamptz and :'win_b'::timestamptz
+    and usr like :'upref'
+)
+select '⑮ A17 两臂（分母=run）' as k,
+       count(*) as runs_in_scope,
+       count(*) filter (where turn >= 2) as t2_runs,
+       case when count(*) = 0 then null
+            else count(*) filter (where turn >= 2 and n_audit_rows = 0) end as arm1_zero_row_runs__want_0,
+       case when count(*) = 0 then null
+            else count(*) filter (where turn >= 2 and n_audit_rows > 1) end as arm2_multi_row_runs__want_0,
+       max(n_audit_rows) filter (where turn >= 2) as max_rows_per_t2_run,
+       (count(*) = 0) as scope_empty__if_true_suspect_vars
+from scoped;
