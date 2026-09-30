@@ -314,6 +314,10 @@ group by 1, 2, 3 order by 1, 2, 3 desc;
 --     (3) 默认靶子 = 第二十轮 A 档子窗 ⇒ `crash_turn2plus = 4` 是**修复前**的基线，**不是**修法失败的证据。
 --         修复后请**换新令牌前缀 + 新时间窗**（-v upref='u_x%' -v win_a=... -v win_b=...），并且要求 ② 行 > 0 以自证覆盖生效。
 --     (4) turn1 的零行（全库 **504** 条）结构性不进本判据 ⇒ 别把它当崩臂数报。
+--     (5) 🔴 **分母纪律**（W6 第十五轮第 1 条，本轮采纳）：本段的 `runs_all` 按 **run** 数（= `lg.checkpoints` 里带 `tk_` 的组），
+--         而 W6 的 `terminal` 按**发了终止事件的 run** 数 ⇒ 两个同名 `gap` **不可互认、不可相加**。
+--         我这面历史上引过 gap 的四格实测 **terminal == runs**（A 档 99/99、`session-lock` 16/16、X1 4/4、X2 4/4 ⇒ 取回执 `admission.admitted` 与 `outcomes` 里终止类事件求和）
+--         ⇒ **旧读数不受该差异影响**；但今后任何跨窗引用必须写明自己数的是哪个分母。
 with ck as (
   select thread_id, checkpoint->'channel_values'->>'task_id' as tk,
          min((checkpoint->>'ts')::timestamptz) as first_seen
@@ -361,9 +365,14 @@ from per_thread where runs_in_win > 0;
 --     机理与本尺形状的关系，说清两面：
 --     · **本尺不需要 pad**：窗口只作用在 `first_seen`（检查点 ts），审计行按 `task_id` join、不带时间谓词 ⇒ 晚 188s 写的行照样落到它自己的 run 上 ⇒
 --       W6 那种"pad 只 1 秒 ⇒ crash_turn1 < gap"的**漏计方向**在这里结构性不存在（他们的窗口 pad 作用在**审计行那一侧**）。
+--       🔻 **第二十七轮就地订正（撤回括号里那句）**：「他们的 pad 作用在审计行那一侧」**是我从 W6 的散文推的、不是复算** ⇒ 作废。他们自复算 39/39：`audit_rows == runs_in_window` 全等、恒等式
+--       `gap − crash1 − crash2p == terminal − matched` 成立 ⇒ **残差在 `terminal − matched`，成因是分母不同源（他们按 terminal、我按 run）**。
+--       ⚠️ 本行前半句（**本尺的窗口只作用在 `first_seen`、审计 join 不带时间谓词 ⇒ 我这个方向结构性免疫**）仍然成立且是我自己量的 ⇒ 保留；**只是不再据此解释别人器件**。
 --     · ⚠️ **但反方向的坑是真的**：一条 run "审计行还没写"与"永远不会有"在只读面上**长得一模一样** ⇒ 刚跑完的格读得太早，会把在途 run 计入 `crash_turn2plus`（**假红**，不是假绿）。
---       ⇒ 我引的 4 / 8 / 13 都是**历史窗**（读数年龄 ≫ max lag）⇒ 不受影响；**修复后的新格必须先过这一条守卫**。
---     ⇒ 用法：`too_soon_to_read = f` 才许引 `crash_turn2plus`；阈值取**观测 max lag**（本段自己算，不写死常数）。
+--       ⇒ 我引的 4 / 8 / 13 都是**历史窗**（读数年龄 ≫ max lag：现测 ≈30.6h = ≈586 倍、≈50.5h = ≈969 倍 ⇒ **引倍数别引秒数，秒数每秒在涨**）⇒ 不受影响；**修复后的新格必须先过这一条守卫**。
+--     ⇒ 用法（★ 第二十七轮升级为三态）：**只有 `too_soon_to_read = f` 才许引 `crash_turn2plus`**；`t` = 读太早（假红），**`NULL` = 作用域为空 ⇒ 无从判定**（须并看 ⑭ 的
+--       `scope_empty__if_true_suspect_vars = t`，且此时 `crash_turn2plus = 0` 是**最容易读成"验收通过"的假形状**）⇒ **`t` 与 `NULL` 一律不引**（与 W6 第十五轮第 4 条同形纪律）。
+--     🔧 形状修复（本轮）：原来写 `from scoped, lagobs group by …` ⇒ 空作用域下**整段返回 0 行**（守卫自己没行 = 判据无法执行）⇒ 改 `agg` 使空集也出一行 + `case` 给 NULL。**列名与列数一字未动**（W6 已锚定 ⑭c）。
 with ck as (
   select thread_id, checkpoint->'channel_values'->>'task_id' as tk,
          min((checkpoint->>'ts')::timestamptz) as first_seen
@@ -381,12 +390,21 @@ with ck as (
   select max(extract(epoch from (a."timestamp" - ck.first_seen))) as max_lag_s,
          count(*) as n_obs
   from ck join app.audit_log a on a.task_id = ck.tk
+), agg as (  -- 🔧 第二十七轮修：原来写 `from scoped, lagobs group by ...` ⇒ **作用域为空时整段返回 0 行**（我上一轮交的守卫在"窗口写错/前缀不存在"时**根本没有行可判**）
+  select count(*) as runs_in_scope,
+         max(first_seen) as last_run,
+         count(*) filter (where turn >= 2 and not has_row) as crash_turn2plus
+  from scoped
 )
-select '⑭c 读数年龄与静默期' as k, count(*) as runs_in_scope,
-       count(*) filter (where turn >= 2 and not has_row) as crash_turn2plus,
-       to_char(max(scoped.first_seen), 'MM-DD HH24:MI:SS') as last_run_in_scope,
-       round(extract(epoch from (now() - max(scoped.first_seen)))::numeric, 1) as read_age_s,
+select '⑭c 读数年龄与静默期' as k, agg.runs_in_scope,
+       agg.crash_turn2plus,
+       to_char(agg.last_run, 'MM-DD HH24:MI:SS') as last_run_in_scope,
+       round(extract(epoch from (now() - agg.last_run))::numeric, 1) as read_age_s,
        round(lagobs.max_lag_s::numeric, 1) as observed_max_lag_s,
        lagobs.n_obs as lag_sample_n,
-       (extract(epoch from (now() - max(scoped.first_seen))) < lagobs.max_lag_s) as too_soon_to_read
-from scoped, lagobs group by lagobs.max_lag_s, lagobs.n_obs;
+       -- ★ 三态（W6 第十五轮第 4 条的同形纪律）：f = 可引 / t = 太早不可引 / **NULL = 无从判定（含作用域为空）**
+       --   ⇒ 读法：**只有 `too_soon_to_read = f` 才许引 `crash_turn2plus`**；`t` 与 NULL 一律不引，NULL 还要顺带看 ⑭ 的 `scope_empty__if_true_suspect_vars`
+       case when agg.runs_in_scope = 0 then null
+            when now() - agg.last_run < make_interval(secs => lagobs.max_lag_s) then true
+            else false end as too_soon_to_read
+from agg, lagobs;
