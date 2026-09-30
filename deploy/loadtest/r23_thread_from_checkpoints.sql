@@ -208,3 +208,88 @@ left join app.audit_log a on a.task_id = s.tk
 where s.tk in ('tk_6a1a6c029be7427cb41c7dac2ce736e1','tk_a1e54c1d5d8c49bb8cd7117703020f45',
                'tk_9f575a098ecf4ac6be50649f20a18b23','tk_398fa097c589466ba6b61c35a2b633cb')
 order by s.turn;
+
+-- ⑩ 🔴 「0 审计行 = 崩臂」必须限定 **turn>=2**（W4 ②′ 的警告，本轮我自己数过）。
+--    ⚠️ 本段与 ⑪⑫ 是**全库诊断**：不按窗口/前缀过滤，只按 `task_id like 'tk_%'` 取 run 序列。
+--    ⚠️ 第一稿我在这里写了 `like :'upref' or true` ⇒ 放进了 1,322 个 `task_id` 为 NULL 的检查点组，
+--       它们 join 不上审计面、还把 window 排序的 turn1 整排占掉 ⇒ 报出「turn1 全部无行」的**假读数**（已修，教训：过滤式 hack 不要写在诊断段里）。
+with ck as (
+  select thread_id, checkpoint->'channel_values'->>'task_id' as tk,
+         min((checkpoint->>'ts')::timestamptz) as first_seen
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2
+), y as (
+  select ck.thread_id, ck.tk,
+         row_number() over (partition by ck.thread_id order by ck.first_seen) as turn,
+         (a.task_id is null) as no_row
+  from ck left join app.audit_log a on a.task_id = ck.tk
+)
+select case when turn = 1 then 'turn1' else 'turn2plus' end as arm,
+       count(*) as runs, count(*) filter (where no_row) as no_audit_row
+from y group by 1 order by 1;
+
+-- ⑪ turn>=2 的无行 run 按「前一条 outcome」分桶 ⇒ W4 两因子判据的可否证面（他们的分类表在此面被检验）
+with ck as (
+  select thread_id, checkpoint->'channel_values'->>'task_id' as tk,
+         min((checkpoint->>'ts')::timestamptz) as first_seen
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2
+), seq as (
+  select ck.thread_id, ck.tk,
+         row_number() over (partition by thread_id order by first_seen) as turn,
+         (a.task_id is null) as no_row,
+         lag(case when a.task_id is null then '(前一条也无行)' else a.outcome end)
+           over (partition by thread_id order by first_seen) as prev
+  from ck left join app.audit_log a on a.task_id = ck.tk
+)
+select coalesce(prev, '(thread 首条)') as prev_outcome, count(*) as no_row_turn2plus
+from seq where no_row and turn >= 2 group by 1 order by 2 desc;
+
+-- ⑫ 落库面直读：残留的 terminal 通道到底存不存在于生产 saver（W4 ③ 的面，我自己数）
+select 'checkpoint_blobs channel=terminal' as k, count(*) as rows_, count(distinct thread_id) as threads_
+from lg.checkpoint_blobs where channel = 'terminal';
+select '全库 thread 数' as k, count(distinct thread_id) as rows_, 0 as threads_ from lg.checkpoints;
+
+-- ⑬ ★★ turn>=2 的「崩率」按前一条 outcome **交叉**（不是只数崩的那批）⇒ 架构问的「必崩 vs 偶发」在零额度面上第一次有分母。
+--     ⚠️ 读法三条，缺一条就会把这张表读过：
+--     (1) no_row_pct 只是「**同一靶子群体内**的频率」，不是随机样本 ⇒ 必须同看 users_bear / users_clean 两列有没有**重叠**；
+--     (2) 若某桶的崩行全部来自一批 user 前缀、而同一桶的不崩行全部来自**另一些**前缀 ⇒ 该桶的 pct 是**靶子混淆**，不得当缺陷频率引用；
+--     (3) 桶内**没有不崩的对照**（users_clean=0）时，pct=100 只说明「撞上的都崩了」，**不构成「必崩」的判定**（那需要同题同人的对照臂）。
+with ck as (
+  select thread_id, checkpoint->'channel_values'->>'task_id' as tk,
+         min((checkpoint->>'ts')::timestamptz) as first_seen
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2
+), seq as (
+  select ck.thread_id, ck.tk, ck.first_seen,
+         split_part(ck.thread_id, ':', 2) as usr,
+         row_number() over (partition by ck.thread_id order by ck.first_seen) as turn,
+         (a.task_id is null) as no_row,
+         lag(case when a.task_id is null then '(前一条也无行)' else a.outcome end)
+           over (partition by ck.thread_id order by ck.first_seen) as prev
+  from ck left join app.audit_log a on a.task_id = ck.tk
+)
+select coalesce(prev, '(thread 首条)') as prev_outcome,
+       count(*) as turn2plus_runs,
+       count(*) filter (where no_row) as no_row,
+       round(100.0 * count(*) filter (where no_row) / nullif(count(*), 0), 1) as no_row_pct,
+       count(distinct usr) filter (where no_row) as users_bear,
+       count(distinct usr) filter (where not no_row) as users_clean
+from seq where turn >= 2 group by 1 order by 2 desc;
+
+-- ⑬b 同一交叉按**小时 + user 前缀**归因 ⇒ 让上面第 (2) 条的靶子混淆可见（崩的是谁的靶子、不崩的是谁的靶子）
+with ck as (
+  select thread_id, checkpoint->'channel_values'->>'task_id' as tk,
+         min((checkpoint->>'ts')::timestamptz) as first_seen
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2
+), seq as (
+  select ck.thread_id, ck.tk, ck.first_seen,
+         split_part(ck.thread_id, ':', 2) as usr,
+         row_number() over (partition by ck.thread_id order by ck.first_seen) as turn,
+         (a.task_id is null) as no_row,
+         lag(case when a.task_id is null then '(前一条也无行)' else a.outcome end)
+           over (partition by ck.thread_id order by ck.first_seen) as prev
+  from ck left join app.audit_log a on a.task_id = ck.tk
+)
+select coalesce(prev, '(thread 首条)') as prev_outcome,
+       to_char(date_trunc('hour', first_seen), 'MM-DD HH24') as hour_bucket,
+       no_row, count(*) as runs, string_agg(distinct usr, ',' order by usr) as users
+from seq where turn >= 2 and (no_row or prev in ('success', '(前一条也无行)'))
+group by 1, 2, 3 order by 1, 2, 3 desc;

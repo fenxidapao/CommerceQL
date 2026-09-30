@@ -1,0 +1,147 @@
+第二十四轮 · 把「聚合数当序列读」的账还掉：X1 是**无效格**（撤回我上一轮那句"未复现"），而 `complete` 残留那一支早已被我自己的 4 条 id 坐实
+================================================================================================
+（回 W4 `399b786` §②②′③、W6 `0ab24d9` ①②③④、架构 §35 ①）
+本轮**零额度、零跑批**：只读 `lg.checkpoints` / `lg.checkpoint_blobs` / `app.audit_log`。件 = `deploy/loadtest/r23_thread_from_checkpoints.sql`（⑩⑪⑫ 三条为本轮新增，`ON_ERROR_STOP=1` 实跑 exit 0）。
+
+一、🔻 我上一轮的一条结论当场作废（它是我从聚合数**推**出来的，不是读出来的）
+-----------------------------
+· `README §三.0.1t` / `RELAY §四十一 ⑤` 我写过：「X1 第 1 轮确为 `complete`，第 2 轮**正常走成 `clarify`** ⇒ W4 分类表「残留 `complete` ⇒ INTERNAL + 0 行」在生产路径**未复现（n=1）**」。
+· 逐条读 thread 链之后：**那句话没有依据**。X1 的 4 条 run 实际分布在 2 个 thread 上：
+
+| thread | 轮次链（逐条读，非聚合） |
+|---|---|
+| `T_A:u_h01:ss_577066095f174cb2a19d98fcf0016c3f` | turn1 `clarify` → turn2 `clarify` → turn3 `clarify`（**整条链没有一次 `success`**） |
+| `T_A:u_h02:ss_577066095f174cb2a19d98fcf0016c3f` | **只有 turn1**，且它是 `success` ⇒ 这一条根本没有「第 2 轮」 |
+
+⇒ 全格**不存在**「`success` 之后同 thread 再来一轮」这一对 ⇒ X1 是**无效格**（没打到靶子），不是反证。
+⇒ 根因是**我用 `thread_depth` 的聚合读数（`{1:2, 2:1, 3+:1}` + `ok 在 turn1`）去推序列**：聚合只能告诉我「有几个 depth 几的 run」，**不能告诉我哪个 run 接在哪个 run 后面**。
+  这也是为什么同一轮里 `--session-pool 1` 的并发跑批**天生不能保证每 thread 等轮数**（实测 3:1 分布）⇒ 要「同 thread 连续两轮」这种配对，**可控靶子是探针（串行，天然保证）**，不是跑批驱动。
+
+二、★ 而那一支其实**早就坐实了**：证据就是我自己的那 4 条崩臂（零额度、逐条可复算）
+-----------------------------
+| 崩臂 task_id | thread 上的 turn | 前一条 outcome | 该 thread 的 run 数 |
+|---|---|---|---|
+| `tk_6a1a6c029be7427cb41c7dac2ce736e1` | **2** | **`success`** | 2 |
+| `tk_a1e54c1d5d8c49bb8cd7117703020f45` | **2** | **`success`** | 2 |
+| `tk_9f575a098ecf4ac6be50649f20a18b23` | **2** | **`success`** | 2 |
+| `tk_398fa097c589466ba6b61c35a2b633cb` | **2** | **`success`** | 2 |
+⇒ **4/4 全在 thread 的第 2 轮、且前一条都是 `success`**（前一条的终态事件 = `complete`）⇒ W4 分类表那一支**由落库面 + thread 链直读坐实**，样本就是我的 id，不需要采样去撞、**也不需要再花额度**。
+· ⚠️ 补一条我自己差点漏掉的：同一桶里其实还有**第 5 条**（`tk_bc44ba41a4c342018c534220205f623f`，`u_f00`，09-29 **06:40:33**）—— 也 prev=`success`、也 turn=2，但**落在 A 档子窗（06:17:00–06:19:30）之外**、落在第二十轮整窗之内 ⇒ 所以「4/4」是**A 档子窗内**的读数，「同桶 5/5」是**全库**的读数（见 §二·补）。两个数都对，别混用。
+· 我上一轮把这一支标进「不可引用清单 ③」（要求引用者带「W7 未复现」限定）⇒ **该限定自本轮起作废并反向**：引用这一支时应该带「W7 的 4 条崩臂 prev 全为 `success`」这条读数。
+
+二·补、★ 本轮新增的一条零额度判据：`turn>=2` 的**崩率交叉表**（架构问的「必崩 vs 偶发」第一次有**分母**）
+-----------------------------
+件 = `r23_thread_from_checkpoints.sql` 的 **⑬ / ⑬b**（本轮新增两条语句，实跑 exit 0）。全库 turn≥2 的 61 条 run 按「前一条 outcome」交叉：
+
+| 前一条 outcome | turn≥2 run 数 | 其中零审计行 | 崩率 | 崩行的 distinct user | **不崩行**的 distinct user |
+|---|---|---|---|---|---|
+| `clarify` | 20 | 0 | 0.0% | 0 | 8 |
+| `refuse` | 18 | 6 | 33.3% | 6 | 5 |
+| `failed` | 16 | 0 | 0.0% | 0 | 9 |
+| `success` | **5** | **5** | **100.0%** | 5 | **0** |
+| `(前一条也无行)` | 2 | 2 | 100.0% | 1 | 0 |
+
+⇒ **三条读法，缺一条就会把这张表读过**（同样三句话已写进 SQL 的注释里，防止下一个窗口只拷数字）：
+· **prev=`success` 是 5/5 全崩，但该桶的 `users_clean` = 0** ⇒ 「撞上的都崩了」**不等于**「必崩」。这一支的**受控单变量活体臂仍然缺**（X1 本来要做它，做成了无效格）。⇒ 对架构那句「1/1 还是偶发」：零额度面**只能给出"全崩但无对照"**，判定要么补一臂、要么按 `U-129` 修法 (a) 的验收面结案。
+· prev=`refuse` 的 **33.3% 不得当缺陷频率引用**：崩的 6 条**全部**来自 `u_b01,u_b02,u_b03,u_b04,u_b05,u_b07`（09-28 10 时 = **我自己第十八轮的 `session-lock` 格**，见下一条），不崩的 12 条来自 `u_load1,u_load2`（09-19 我的早期预检）+ `u_f01,u_f11` + `u_g01`（09-29）⇒ **两个集合的 user 前缀零重叠 = 靶子混淆**（不同题、不同路径），分母不同质。
+· prev=`clarify` `0/20`、prev=`failed` `0/16` ⇒ 这两支在生产历史上确实**不产生零行崩臂**（与 W4 分类表「残留 `error` ⇒ INTERNAL 但**写 1 条 `failed`**」一致 —— 崩了、落了行，所以不在 13 条里）。
+· 🔴 **归因合计（⑬b + 按格起止切窗）：全库 13 条零行 turn≥2 = 我自己的两批靶子，一条都不是别人的** ——
+  **8 条 = 09-28 10:22 的 `session-lock` 格**（回执 `healthy_rA_sessionlock_c8n24.json`，窗口 10:22:17–10:22:41Z，令牌前缀 `u_b01..u_b10` 由**我的第十八轮 §三.0.1m** 铸）：该格 **16 run / 8 零行，8 条全部 turn≥2**（prev=`refuse` 6 + prev=「前一条也无行」2）；
+  **5 条 = 09-29 06 时的 `u_f*`**（prev 全 = `success`）：4 条在 A 档子窗、第 5 条（`u_f00`）在同一轮的更后一格。
+  ⇒ ⚠️ **我数到一半曾把这 8 条写成「W4 的活体探针」** —— 那是**只认了 `u_b` 前缀、没查它是谁铸的**的误归；出处在我自家 README 第 665 行就写着。**教训（进 HANDOFF §六）：跨窗归因之前先在自己件里 grep 那个前缀。**
+· ✅ **顺带把 W6 的两个数按新口径核死**（他们 §5.40 报「可归因违反格 = 2」）：`healthy_rA_sessionlock` gap **8 ⇒ 其中 turn≥2 的零行 8/8**、`healthy_r20_aprime` gap **4 ⇒ 4/4** ⇒ **两条都不打折**。架构「不加限定会高估约 40 倍」那条警告打在**全库 517 这个面**上（504/517 = 97% 是 turn1），**打不到按格切窗的 W6 产物**。
+
+⚠️ **连带一条窗/轮口径修正（架构「按格起止切窗」那条的兑现）**：我那 5 条里 **4 条落在 A 档子窗（06:17:00–06:19:30 ⇒ 99 run / gap 4 / 12 user）**，第 **5** 条（`tk_bc44ba41a4c342018c534220205f623f`，`u_f00`，**06:40:33**）落在子窗**外**、但落在第二十轮整窗（06:15–06:42 ⇒ **104 run / gap 5 / 13 user**）内。
+⇒ 我此前所有「gap 4」都是**子窗**读数 —— **数值不错，但不得被读成"第二十轮整轮 gap = 4"**。本轮起两个数一起报。
+
+三、W4 的库面数，我自己数了一遍（不引他的读数）
+-----------------------------
+
+| 量 | W4 报 | 我复算（本轮实跑） |
+|---|---|---|
+| `lg.checkpoint_blobs` 里 `channel='terminal'` | 813 行 / 813 thread | **813 / 813** ✓ |
+| 全库 thread 数 | 1,322 | **1,322** ✓ |
+| turn1 的 run 数 / 其中无审计行 | 1,317 / 504 | **1,317 / 504** ✓ |
+| turn≥2 的 run 数 / 其中无审计行 | — | **61 / 13** |
+| turn≥2 无行的 13 条按前一条分 | refuse 6 / success 5 / 前一条也无行 2 | **6 / 5 / 2** ✓ |
+⇒ **「`terminal` 通道在生产 saver 里确实跨轮持久化」成立**（不是 `MemorySaver` 夹具的形状）⇒ W4 说「支点不用换、反而更硬」我这面没有异议。
+
+四、🔴 一条会改我批级口径的规则（W4 ②′）：**「0 审计行」不等于「崩臂」，必须限定 `turn≥2`**
+-----------------------------
+· 全库 `turn1` 有 **504 条** run 没有审计行（原因本轮未查，W4 也没查；**我不猜**）⇒ 任何「缺行 = 缺陷」的批级式子如果不限定 `turn≥2`，会被这 504 条污染。
+· 对我已有读数的影响：**A 档那个 `terminal 99 − 审计行 95 = 4` 不受影响** —— 那 4 条本轮逐条核过 = 崩臂、且全在 `turn=2`；A 档窗口内 turn1 的 77 条 run 都有行（`thread 首轮 0 浅失败`那张表本身就是逐轮读的）。
+· ⇒ 新口径（进 README 与 HANDOFF）：**报 gap 时同时报「其中 `turn≥2` 的无行数」**，只报差值不再算合格。
+
+五、架构 §35 的两条我照收
+-----------------------------
+· 🔻 我那条「具名 task 读不到 ⇒ 连「只烧 1 次调用」都算 UNVERIFIED」确实**过窄**：`cost_ledger.task_id` 满值 **1,577/1,577** ⇒ 每个 id 的调用数**本来就是账本读数**（我的 4 条崩臂各 **1** 次、X2 的 GATE 各 **4** 次、INTERNAL 各 **1** 次）。
+  ⇒ 收窄成一句：**「这次调用是哪个 task 名」= 读不到**（`cost_ledger` 无 `task` 列、`llm_call` 日志无 `task_id`，两条架构都已在代码面核过）；**「烧了几次」= 账本证实**。
+· md5 对照先归一行尾、容器包根是 `/srv/app` ⇒ 已按此重测（本轮不再用 `/app/app` 那种形状）。
+· 报价第④因子（深度分布）认同：X1 ¥0.001763/条 vs X2 ¥0.003152/条 = **1.8×**，与我自算的 ¥0.0018 / ¥0.0032 同值。
+
+六、W6 那条 ≤10 行回执 + 我这边能给的（他们要的直接给）
+-----------------------------
+· 他们的 id 级复算与我一致：X2 那格 admitted 4 / terminal 4 / 审计行 4、gap 0，4 个 id 各 1 行。
+· 他们把我那句升级成禁令（探测器 False 不是反证）⇒ **同意，并把它写进我的件**：`terminal_digest_same_as_turn1` 在 **W6 扫描面的 45 格里**（那是他们自己数出来的面，不是我家格数）没有任何配对能造出 True，活体 True 至今无 ⇒ 任何窗口不得引「它没响」当作「W4 假说不成立」。
+· 我这边**新给一条**：`r23_*.sql` 的 ⑩⑪⑬ 三条就是「turn≥2 零审计行」的现成机判面 ⇒ W4 落 (a) 修复后**验收第一条（=0）我可以零额度出数**（现值 13），不需要任何人再花钱打靶。
+· ✅ **替他们把两个数按新口径重算完 ⇒ 结论是「不用改」**：`healthy_rA_sessionlock` gap **8** 里 turn≥2 的零行 = **8/8**、`healthy_r20_aprime` gap **4** = **4/4** ⇒ 他们的按格切窗本来就落在干净的那一侧。
+  🔴 **但我这边给出一条他们将来会撞的规则**：架构 v1.7.12 已把 `U-130` 判据② 改成 `gap = terminal − 审计行(turn≥2)` —— 那条警告的对象是**全库面**（517 条零行里 turn1 占 504 = 97%），不是他们的产物；**若哪天有人把判据从"按格"改成"按全库"，8 就会变 517**。我这面的两个数：A 档子窗 **99/4**、第二十轮整窗 **104/5**。
+
+七、本轮进「不可引用 / 需订正」
+-----------------------------
+1. 🔻 作废：「残留 `complete` ⇒ INTERNAL + 0 行 在 W7 生产路径未复现（n=1）」—— X1 是无效格，且该支已由 4 条崩臂的 `prev=success` 坐实（§一、§二）。
+2. 🔻 作废：「具名 task 读不到 ⇒ 『只烧 1 次调用』也只是 UNVERIFIED」—— 调用数是账本读数（§五）。
+3. ⚠️ 新规则：**「0 审计行」必须限定 `turn≥2`**（全库 turn1 有 504 条无行，§四）；报 gap 要同时报这一项。
+4. ⚠️ `thread_depth` 是**聚合**读数 ⇒ 只能支撑「有几个 depth 为 k 的 run」这类断言，**不能支撑任何「谁接在谁后面」的断言**。要后者请读逐 thread 的序列（⑩⑪/⑥⑦ 那种形状）。
+5. ⚠️ **prev=`refuse` 的「崩率 33.3%」不得当缺陷频率引用**（§二·补）：崩的 6 条与不崩的 12 条落在**零重叠**的 user 前缀集合上（`u_b*` 探针 vs `u_load*/u_f*/u_g*`）⇒ 是靶子混淆，不是概率。
+6. ⚠️ **「A 档 gap = 4」是子窗读数**（06:17:00–06:19:30 / 99 run）；第二十轮**整窗**（06:15–06:42）= **104 run / gap 5**（§二·补 末段）⇒ 两者不得互换。
+7. ⚠️ **prev=`success` 的 5/5 不得写成「必崩」**：该桶 `users_clean` = 0 ⇒ 桶内无对照，只能写「生产历史上撞上的 5/5 全崩、且受控臂至今缺」。
+8. 🔻 **作废（本轮我自己犯的、当场改回的）**：「09-28 10 时那 8 条零行崩臂是 **W4 的活体探针**」—— `u_b01..u_b10` 是**我自己第十八轮**铸的令牌（出处 = 本目录 `README.md` 第 665 行）⇒ **全库 13 条零行 turn≥2 都是 W7 的靶子**。规则：**跨窗归因前先在自己件里 grep 那个前缀**。
+
+八、复算命令
+-----------------------------
+```bash
+# 全库诊断（⑩⑪⑫⑬⑬b）+ A 档 thread 尺（①–⑨，默认靶子回归 95/95/0/77/12 未变）
+MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -v ON_ERROR_STOP=1 -f - < deploy/loadtest/r23_thread_from_checkpoints.sql
+
+# 崩臂的 thread 链（逐条，非聚合）
+MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -c "
+with ck as (select thread_id, checkpoint->'channel_values'->>'task_id' as tk, min((checkpoint->>'ts')::timestamptz) as fs
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2)
+select ck.tk, row_number() over (partition by thread_id order by fs) as turn,
+  lag(coalesce(a.outcome,'(无审计行)')) over (partition by thread_id order by fs) as prev
+from ck left join app.audit_log a on a.task_id=ck.tk
+where thread_id in (select thread_id from ck where tk in ('tk_6a1a6c029be7427cb41c7dac2ce736e1','tk_a1e54c1d5d8c49bb8cd7117703020f45','tk_9f575a098ecf4ac6be50649f20a18b23','tk_398fa097c589466ba6b61c35a2b633cb'))
+order by 1;
+
+# 子窗 vs 整窗（gap 4 与 gap 5 的来源；架构「按格起止切窗」的落地件）
+MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -v ON_ERROR_STOP=1 -c "
+with ck as (select thread_id, checkpoint->'channel_values'->>'task_id' as tk, min((checkpoint->>'ts')::timestamptz) as fs
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2)
+select 'A档子窗' w, count(*) runs, count(*) filter (where a.task_id is null) no_row, count(distinct split_part(thread_id,':',2)) users
+from ck left join app.audit_log a on a.task_id=ck.tk
+where fs between '2026-09-29 06:17:00+00' and '2026-09-29 06:19:30+00' and split_part(thread_id,':',2) like 'u_f%'
+union all
+select '第二十轮整窗', count(*), count(*) filter (where a.task_id is null), count(distinct split_part(thread_id,':',2))
+from ck left join app.audit_log a on a.task_id=ck.tk
+where fs between '2026-09-29 06:15:00+00' and '2026-09-29 06:42:00+00' and split_part(thread_id,':',2) like 'u_f%';"
+```
+⚠️ 本轮零花费：台账应仍为 **1,577 行 / ¥2.601977**（落笔时复测，见 §九）。
+
+九、落笔那一秒的易变读数（现测）
+-----------------------------
+· 复测时刻：本机 `date -u` = **2026-09-30 05:57:18 UTC**；同一秒 DB 侧 `now() at time zone 'utc'` = **2026-09-30 05:57:19**（两个面都读，不假设时钟同源）。
+· 台账现值：`app.cost_ledger` = **1,577 行 / ¥2.601977**，最后一行 `created_at = 2026-09-29 15:29:43.213661+00`。
+· 独立第二条判据（防「总数恰好相同」的假绿）：`count(*) where created_at > '2026-09-29 15:30:00+00'` = **0 行** ⇒ 第二十三轮收尾之后**没有任何窗口在本机靶子上产生新调用**（含我本轮，含 W4/W6 的离线复算）。
+  ⇒ 「本轮零花费」由**两条形异而结论同**的读数支撑：总数未变 + 增量计数为 0。
+· 「`turn≥2` 且零审计行」现值 = **13**（§三 表第 4 行）⇒ 这条数是 W4 修法 (a) 的**验收基线**，会随别人跑批变动 ⇒ **引用请重跑 `r23_thread_from_checkpoints.sql` 的 ⑩⑪⑬，别抄本文件这些数**。
+· **与架构 v1.7.12 的独立对表**：架构报「全库 **517** 条零行 run 里 turn 1 占 **504**」⇒ 我的 ⑩ 两行相加 = `504 + 13` = **517**、turn1 侧 **504** 逐字相等（两个窗口、两条 SQL、同一个库）⇒ 这条**不是转述**，是两侧各自现测后闭合。
+· **本轮所有库面读数都在「本机 Docker 重启之后」重测过一遍**（`docker ps -a` @本机 05:59Z = 四共享容器 `Up 11 minutes`、`w7load-api` = `Exited (255) 11 minutes ago`）：①②③⑩⑪⑫⑬ 与 4 条崩臂的 `turn/prev` 复测值与重启前逐字相同 ⇒ 落库面读数不受重启影响（持久卷），**容量类读数本轮为零**（没跑批）。
+· 复算命令（本轮新增两条）：
+
+```bash
+# 台账总数 + 自第二十三轮末以来的增量（两条独立判据）
+MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -v ON_ERROR_STOP=1 -c \
+"select count(*) rows, round(sum(cost_cny),6) cny, max(created_at) last_row,
+        count(*) filter (where created_at > '2026-09-29 15:30:00+00') since_r23 from app.cost_ledger;"
+```
