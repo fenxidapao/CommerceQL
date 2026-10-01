@@ -446,3 +446,88 @@ select '⑮ A17 两臂（分母=run）' as k,
        max(n_audit_rows) filter (where turn >= 2) as max_rows_per_t2_run,
        (count(*) = 0) as scope_empty__if_true_suspect_vars
 from scoped;
+
+-- ⑯ ★ 第二个面 + 判据② 的"读点可行性"（W4 `9319c8d` 第 3 条把它定性成**设计问题**、W6 第十七轮 ⑤ 警告"写面是 thread 级上界、切不出 run 边界" ⇒ 本轮自己量）
+--   面 = `lg.checkpoint_writes`（9 列：thread_id / checkpoint_ns / checkpoint_id / task_id(= LangGraph 内部 UUID，**不是我们的 tk_**) / idx / channel / type / blob / task_path）
+--   连法 = 写行的 `checkpoint_id` 回到 `lg.checkpoints` 里带 `tk_` 的那一行 ⇒ **run 归属**（这一步是我这面的做法，W6 没这么做，所以两侧不必互认）。
+--   现测（全库，零额度）：
+--     · `channel='terminal'` 在写面 = **813 行**，与 `lg.checkpoint_blobs channel='terminal'`（813）**逐字同数**；
+--       但按上面的连法，这 813 行**全部落在 turn1 的 run 上**（turn≥2 = **0**）⇒ 于是有两种解释：① 修复前第 2 轮真的没自己持久化终态（= `U-129` 的机制），
+--       ② 写面对终态是 thread 级黏在第一轮（= W6 的警告）。⇒ **判别的读点**：terminal 写会不会落到"零审计行的崩 run"上？现测 **0 次**（504 条 turn1 零行 run 一条都没有）
+--       ⇒ 说明该面**能区分 run 的成败**、不是恒黏第一轮 ⇒ 解释 ① 更站得住；**但这是排除法不是全等证明**，P-A 那一格的 turn≥2 若有 terminal 写行 ⇒ ①成立且判据② 拿到落库面读点，若仍为 0 ⇒ ②成立、这一维判不了。**两种结果都有信息量。**
+--     · 更有用的读点 = `channel like 'branch:to:%'`（= 逐 run 的**路由/节点集**，共 **8,482 行 / 22 种节点**）⇒ 这就是 W4 候选里的「逐 run `nodes_ran`」，**在落库面上存在**。
+--       pre-fix 基线（全库按 run）：turn≥2 ∧ 零审计行 **13 条**里有 **5 条被路由到 `audit_supp`**（= N-08 那条出口，与 ⑬ 的"prev=success 5 条"逐字对上 ✓）；turn≥2 有审计行 48 条里 **0 条**走 `audit_supp`；
+--       `audit_supp` 全库只有 **70 条 run** 被路由到，全在 turn1 ⇒ "正常轮自己不走它"是有分母的。
+--   ⇒ 用法：修复后的验收除 ⑮ 两臂之外，另看 `t2_routed_audit_supp` **应 = 0**（pre-fix 基线 5）与 `t2_with_terminal_write`（pre-fix 基线 0 ⇒ 若 >0 则判据② 的落库面读点成立）。
+--   🔴 三态与分母同 ⑮：空作用域 ⇒ 派生列给 **NULL**、`scope_empty = t`；所有列分母 = **run**（带 `tk_` 的检查点组），不是 `terminal`。
+with ck as (
+  select thread_id, checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk,
+         min((checkpoint->>'ts')::timestamptz) as first_seen
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2,3
+), run_first as (
+  select thread_id, tk, min(first_seen) as first_seen from ck group by 1,2
+), seq as (
+  select rf.thread_id, rf.tk, rf.first_seen, split_part(rf.thread_id, ':', 2) as usr,
+         row_number() over (partition by rf.thread_id order by rf.first_seen) as turn,
+         (a.task_id is not null) as has_row
+  from run_first rf left join app.audit_log a on a.task_id = rf.tk
+), scoped as (
+  select * from seq
+  where first_seen between :'win_a'::timestamptz and :'win_b'::timestamptz
+    and usr like :'upref'
+), writes as (  -- 逐 run 的写面读数：该 run 自己有没有 terminal 写 / 被路由到哪些出口节点
+  select c.tk,
+         bool_or(w.channel = 'terminal') as wrote_terminal,
+         bool_or(w.channel = 'branch:to:audit_supp') as routed_audit_supp,
+         bool_or(w.channel in ('branch:to:present','branch:to:refuse_out','branch:to:clarify_out','branch:to:error_out')) as routed_terminal_exit,
+         count(distinct w.channel) filter (where w.channel like 'branch:to:%') as n_routes
+  from ck c join lg.checkpoint_writes w on w.checkpoint_id = c.checkpoint_id and w.thread_id = c.thread_id
+  group by 1
+), joined as (
+  select s.tk, s.turn, s.has_row, coalesce(w.wrote_terminal, false) as wrote_terminal,
+         coalesce(w.routed_audit_supp, false) as routed_audit_supp,
+         coalesce(w.routed_terminal_exit, false) as routed_terminal_exit,
+         coalesce(w.n_routes, 0) as n_routes
+  from scoped s left join writes w on w.tk = s.tk
+), agg as (
+  select count(*) as runs_in_scope,
+         count(*) filter (where turn >= 2) as t2_runs,
+         count(*) filter (where turn >= 2 and wrote_terminal) as t2_with_terminal_write,
+         count(*) filter (where turn >= 2 and routed_audit_supp) as t2_routed_audit_supp,
+         count(*) filter (where turn >= 2 and routed_terminal_exit) as t2_routed_terminal_exit,
+         count(*) filter (where turn >= 2 and not has_row and routed_audit_supp) as crash_t2_routed_audit_supp,
+         count(*) filter (where turn >= 2 and n_routes = 0) as t2_runs_no_write_face,
+         max(n_routes) as max_routes_per_run
+  from joined
+)
+select '⑯ 写面可行性（分母=run，面=lg.checkpoint_writes）' as k, agg.runs_in_scope, agg.t2_runs,
+       case when agg.runs_in_scope = 0 then null else agg.t2_with_terminal_write end as t2_with_terminal_write,
+       case when agg.runs_in_scope = 0 then null else agg.t2_routed_audit_supp end as t2_routed_audit_supp,
+       case when agg.runs_in_scope = 0 then null else agg.t2_routed_terminal_exit end as t2_routed_terminal_exit,
+       case when agg.runs_in_scope = 0 then null else agg.crash_t2_routed_audit_supp end as crash_t2_routed_audit_supp,
+       agg.t2_runs_no_write_face, agg.max_routes_per_run,
+       (agg.runs_in_scope = 0) as scope_empty__if_true_suspect_vars
+from agg;
+
+-- ⑯b 全库侧的两条判别读数（不受窗口限定，用来支撑 ⑯ 注释里那段"两种解释"的现测）
+--   (a) terminal 写按 run 归属后落在第几轮 ⇒ 现测应 = 全在 turn1（813 条）、turn≥2 = 0
+--   (b) 这些 terminal 写所归属的 run 里，有多少条**零审计行** ⇒ 现测 = 0（⇒ 该面能区分 run 成败，不是恒黏第一轮）
+with ck as (
+  select thread_id, checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%'
+), runs as (
+  select thread_id, tk, min((c2.ts)::timestamptz) as first_seen
+  from (select thread_id, checkpoint_id, checkpoint->'channel_values'->>'task_id' tk, checkpoint->>'ts' ts
+        from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%') c2
+  group by 1,2
+), rn as (
+  select thread_id, tk, first_seen, row_number() over (partition by thread_id order by first_seen) as turn from runs
+), term_runs as (
+  select distinct c.tk from lg.checkpoint_writes w join ck c
+    on c.checkpoint_id = w.checkpoint_id and c.thread_id = w.thread_id and w.channel = 'terminal'
+)
+select '⑯b 全库 terminal 写的 run 归属' as k,
+       r.turn as turn_of_terminal_write, count(*) as runs,
+       count(*) filter (where a.task_id is null) as zero_audit_row_runs
+from term_runs t join rn r on r.tk = t.tk left join app.audit_log a on a.task_id = t.tk
+group by 1,2 order by 2;
