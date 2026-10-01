@@ -457,7 +457,7 @@ from scoped;
 --       ⇒ 说明该面**能区分 run 的成败**、不是恒黏第一轮 ⇒ 解释 ① 更站得住；**但这是排除法不是全等证明**，P-A 那一格的 turn≥2 若有 terminal 写行 ⇒ ①成立且判据② 拿到落库面读点，若仍为 0 ⇒ ②成立、这一维判不了。**两种结果都有信息量。**
 --     · 更有用的读点 = `channel like 'branch:to:%'`（= 逐 run 的**路由/节点集**，共 **8,482 行 / 22 种节点**）⇒ 这就是 W4 候选里的「逐 run `nodes_ran`」，**在落库面上存在**。
 --       pre-fix 基线（全库按 run）：turn≥2 ∧ 零审计行 **13 条**里有 **5 条被路由到 `audit_supp`**（= N-08 那条出口，与 ⑬ 的"prev=success 5 条"逐字对上 ✓）；turn≥2 有审计行 48 条里 **0 条**走 `audit_supp`；
---       `audit_supp` 全库只有 **70 条 run** 被路由到，全在 turn1 ⇒ "正常轮自己不走它"是有分母的。
+--       🔻 **第三十轮就地订正（原句作废、行数未变）**：被路由到 `audit_supp` 的全库真值 = **75 条 run**（turn1 **70** + turn≥2 **5**）；写面 distinct **thread** = 70、写**行数** = 75 ⇒ 我上一轮那句是把 **thread 数当 run 数**、又漏了 turn≥2 那 5 条（W6 `9abbe47` / W4 `fbd8512` / 架构 `3b697de` 三家同时逮到；正解与机制见 **⑰** 注释）。
 --   ⇒ 用法：修复后的验收除 ⑮ 两臂之外，另看 `t2_routed_audit_supp` **应 = 0**（pre-fix 基线 5）与 `t2_with_terminal_write`（pre-fix 基线 0 ⇒ 若 >0 则判据② 的落库面读点成立）。
 --   🔴 三态与分母同 ⑮：空作用域 ⇒ 派生列给 **NULL**、`scope_empty = t`；所有列分母 = **run**（带 `tk_` 的检查点组），不是 `terminal`。
 with ck as (
@@ -531,3 +531,86 @@ select '⑯b 全库 terminal 写的 run 归属' as k,
        count(*) filter (where a.task_id is null) as zero_audit_row_runs
 from term_runs t join rn r on r.tk = t.tk left join app.audit_log a on a.task_id = t.tk
 group by 1,2 order by 2;
+
+-- ⑰ ★ U-129 验收「三格并报」里我这面负责的 **格2 / 格3**（架构 `3b697de`/`505c243` 已把形状写进 `07 §4.8`；W4 `e8e7a62`/`fbd8512` 建议换形状，我采纳）
+--   格1 = ⑮ 两臂（本件里已有，不动）；**格2 = `t2` 里「被路由进 `audit_supp` ∧ 本轮自己没写 terminal」的 run 数 ⇒ 期望 0，pre-fix 基线 5**；
+--   格3 = `t2` 里「本轮自己有 terminal 写」的 run 数 ⇒ 期望 ≥1，pre-fix 基线 0，**窗内没有 turn≥2 样本时记 `n/a`、不许记 0**（架构明令，本件用 verdict 列把这条做成语句而不是注释）。
+--   ⇒ 为什么格2 比格3 稳（W4 的话，我复算同意）：格2 用**手上已有的 5 条**就能出"修复前后差"，格3 要求窗口里恰好有走到 `complete` 的第 2 轮 ⇒ 取样依赖强。
+-- 🔻 本轮同时把我 ⑯ 的两处过窄句钉死（三家逮到）：
+--   · 被路由到 `audit_supp` 的全库真值 = **75 条 run**（turn1 **70** + turn≥2 **5**）；写面 distinct thread = **70**、写行数 = **75** ⇒ **"70"是 thread 数、不是 run 数**，"全在 turn1"更是错的。
+--     ⚠️ 根因形状 = **同一个名词在两个粒度上是两个数**（与我此前登记的"谓词/分母/面"同族第四种：**粒度**：run vs thread）。⇒ 报数句固定成「数 + 面 + 谓词 + 分母 + **粒度**」。
+--   · 路由集**不是**"每行都能连到 run"：现测 `branch:to:%` = **8,482 行**，能连到带 `tk_` 检查点的 = **7,164 行**、连不上 = **1,318 行**（W6 `d2b7920` 报的 1,318 我这面逐字复现 ✓）。
+--     🔴 **机制我这面查出来了**（W6 标的是"机制未查"）：**1,318 行里有 1,317 行的 `checkpoint_id` 早于该 thread 第一个带 `tk_` 的检查点** ⇒ 那是**"建线期"的路由行、不属于任何 run**，不是 run 覆盖损失；
+--         剩下 **1 行**的 thread **完全没有带 `tk_` 的检查点**（`⑰b` 现测：建线期 1,317 + 无 tk thread 1 = 1,318，两类都**不是 run 覆盖损失**）。
+--       ⚠️ 那条未被路由行触到的 run（`tk_435227…`）**不属于**上面这一类：它的 thread 有 11 条写行、其中 1 条路由行落在**建线期**检查点上，而该 run 自己那唯一 1 个带 `tk_` 的检查点**没有任何写行** ⇒ 「run 起过、一次都没被路由」= 09-19 的早期单检查点样本。
+--     ⇒ 覆盖面正解：**被路由行触到的 tk run = 1,377 / 1,378**（缺的 1 条 = `tk_435227f534da42478bc6ed3475bcc68b`，`T_A:u_c32:ss_8c3fdb…`，turn1、只有 **1** 个检查点、无审计行、09-19 06:21:07Z）。
+--   ★ 顺带给 W4 欠架构的那条「run 边界契约定义」一份**证据**（不是定义，定义归她）：候选 = 「**该 thread 上第一个带 `tk_` 的检查点行 = 本轮开始**」；
+--     现测支持它 = 每 thread 恰有一条更早的路由行（1,317/1,318），所以**按"检查点数 = run 数"或"首条写行 = 首条 run"这类写法都会 off-by-one**；⚠️ 边界：我只量了路由行的时间形状，**没有**证明 subgraph/`checkpoint_ns` 维度上无例外（本测里 `checkpoint_id` 在 `checkpoints` 全部存在、0 行悬空）。
+with ck as (
+  select thread_id, checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk,
+         min((checkpoint->>'ts')::timestamptz) as first_seen
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2,3
+), run_first as (select thread_id, tk, min(first_seen) as first_seen from ck group by 1,2),
+seq as (
+  select rf.thread_id, rf.tk, rf.first_seen, split_part(rf.thread_id, ':', 2) as usr,
+         row_number() over (partition by rf.thread_id order by rf.first_seen) as turn,
+         (a.task_id is not null) as has_row
+  from run_first rf left join app.audit_log a on a.task_id = rf.tk
+), scoped as (
+  select * from seq
+  where first_seen between :'win_a'::timestamptz and :'win_b'::timestamptz
+    and usr like :'upref'
+), w as (
+  select c.tk,
+         bool_or(w2.channel = 'terminal') as wrote_terminal,
+         bool_or(w2.channel = 'branch:to:audit_supp') as routed_audit_supp
+  from ck c join lg.checkpoint_writes w2 on w2.checkpoint_id = c.checkpoint_id and w2.thread_id = c.thread_id
+  group by 1
+), j as (
+  select s.tk, s.turn, coalesce(w.wrote_terminal,false) as wrote_terminal,
+         coalesce(w.routed_audit_supp,false) as routed_audit_supp
+  from scoped s left join w on w.tk = s.tk
+), agg as (
+  select count(*) as runs_in_scope,
+         count(*) filter (where turn >= 2) as t2_runs,
+         count(*) filter (where turn >= 2 and routed_audit_supp and not wrote_terminal) as ge2_routed_supp_no_terminal_write,
+         count(*) filter (where turn >= 2 and wrote_terminal) as ge3_t2_with_terminal_write
+  from j
+)
+select '⑰ U-129 格2/格3（分母=run，粒度=run）' as k, agg.runs_in_scope, agg.t2_runs,
+       case when agg.runs_in_scope = 0 then null else agg.ge2_routed_supp_no_terminal_write end as ge2_routed_supp_no_terminal_write,
+       case when agg.runs_in_scope = 0 or agg.t2_runs = 0 then null
+            else agg.ge3_t2_with_terminal_write end as ge3_t2_with_terminal_write,
+       case when agg.runs_in_scope = 0 then 'NULL__scope_empty（无从判定）'
+            when agg.t2_runs = 0 then 'n/a__窗内没有 turn>=2 样本（不许记 0）'
+            when agg.ge3_t2_with_terminal_write >= 1 then 'ge3 达成（>=1）'
+            else 'ge3 = 0 ⇒ 未达成，或"写面黏性"那一支未解' end as ge3_verdict,
+       case when agg.runs_in_scope = 0 then null
+            when agg.ge2_routed_supp_no_terminal_write = 0 then 'ge2 = 0 ⇒ 达成'
+            else 'ge2 = ' || agg.ge2_routed_supp_no_terminal_write || ' ⇒ 未达成（pre-fix 基线 5）' end as ge2_verdict,
+       (agg.runs_in_scope = 0) as scope_empty__if_true_suspect_vars
+from agg;
+
+-- ⑰b 覆盖面与"建线期"行的形状（不受窗口限定，用来支撑 ⑰ 注释里那三句）
+with ck_all as (
+  select thread_id, checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk, (checkpoint->>'ts')::timestamptz as ts
+  from lg.checkpoints
+), ck_tk as (select * from ck_all where tk like 'tk_%'),
+tf as (select thread_id, min(ts) as first_tk from ck_tk group by 1),
+rt as (select thread_id, checkpoint_id from lg.checkpoint_writes where channel like 'branch:to:%'),
+unm as (
+  select r.thread_id, r.checkpoint_id, a.ts
+  from rt r left join ck_tk c on c.checkpoint_id = r.checkpoint_id and c.thread_id = r.thread_id
+  left join ck_all a on a.checkpoint_id = r.checkpoint_id and a.thread_id = r.thread_id
+  where c.checkpoint_id is null
+)
+select '⑰b 路由行归属形状（全库）' as k,
+       (select count(*) from rt) as route_rows,
+       (select count(*) from ck_tk) as tk_checkpoint_rows,
+       (select count(distinct tk) from ck_tk) as tk_runs,
+       (select count(*) from unm) as route_unmatched_rows,
+       (select count(distinct thread_id) from unm) as route_unmatched_threads,
+       count(*) filter (where u.ts < tf.first_tk) as unmatched_before_first_tk,
+       count(*) filter (where u.ts >= tf.first_tk) as unmatched_at_or_after_first_tk,
+       count(distinct u.thread_id) filter (where u.ts >= tf.first_tk) as threads_with_late_unmatched
+from unm u join tf on tf.thread_id = u.thread_id;
