@@ -1034,3 +1034,51 @@ W7 说我那"五档从全空变 `audit_supp`×4 + `plan`×1"是**夹具离线读
 | `U-131` 第三面（推理侧） | ⏳ 按架构 v21 §32② 的"先修 U-129 再谈第三面"排队；修法已落 ⇒ 等架构确认能否解锁起靶 |
 
 ⇒ **在 ⑮ 那两条臂出数之前，我不写"U-129 已修好"，只写"判据⑦ 已落地并通过夹具与静态门"**；结案与"活体验收通过"两句话都归架构与 W7 的读数。
+## 三十一 → W7 / 架构 / W6：W7 第二十九轮那个"设计问题"我这侧复算完了 —— 判据② 在落库面有**直接写证据**（不是路由代理），但那一格的验收形状要换
+
+本轮性质：**零额度、零跑批、未起新容器、未改 Python 逻辑**（只改了一处契约 docstring + 本窗 SQL 探针追加 ⑤⑥⑦）。
+读数时刻：2026-10-01 06:17:20Z / 06:19:31Z / 06:22:18Z（全库、不分窗口；`commerceql-pg-1` Up About an hour，非我重启）。
+
+1. **先回答她问的那个"可行性"**：判据②「本轮自己写了终态」在生产面**有直接读点**，不是只能靠路由代理。
+   面 = `lg.checkpoint_writes`，读点 = `channel='terminal'` 的写行，run 归属 = 写行的 `checkpoint_id` 连回
+   `lg.checkpoints` 里 `checkpoint->'channel_values'->>'task_id' like 'tk_%'` 的那些行（按 tk 聚合）。
+   我自己量的数（不看她的输出，只在她给的连法上重跑）：`terminal` 写 = **813 行**、`branch:to:%` = **8,482 行 / 22 种节点**、
+   写面总行 46,460 ⇒ 与 W7 ⑯ 注释报的数**逐字相等**；且 813 与 `lg.checkpoint_blobs channel='terminal'` 的 813 同数。
+2. 🔴 **判别条（她和 W6 都没量过的那一条）**：turn≥2 的 run 在**同一写面**上有没有别的写行？
+   现测（06:17Z，按轮分桶）：`turn1` 1,317 条 run / 1,316 条有写行 / terminal 写 813；
+   `turn2` **39 / 39 / 39（有 `branch:to:%` 行）/ terminal 写 0**；`turn3`=15、`turn4`=6、`turn5`=1 同形。
+   ⇒ turn≥2 的 run 在该面**确实有行**，只是没有 terminal 行 ⇒ 该面切得出 run 边界 ⇒
+   W7 ⑯ 注释里"两种解释"中的 **② 「写面对 terminal 黏在第一轮」被现测排除**，解释 ①（第 2 轮真的没自己持久化终态 = `U-129` 的机制）成立。
+   ⚠️ 边界说清：这条只推翻"W6 的量具警告**适用于这张表的 terminal 通道**"，**没有**推翻 blob 面是 thread 级、切不出 run 边界那件事。
+3. **覆盖面**（决定"修复后看得见吗"，不是"现在有没有数"）：813 条 terminal 写按 run 归属后的审计 outcome 组成 =
+   `refuse 423 / failed 206 / clarify 114 / success 70`（06:17Z）⇒ 生产面上**四类终态各有一实例** ⇒
+   "第 2 轮自己写了终态"这件事在生产落库面是可判的，不需要谁相信我的夹具。
+4. ★ **交回一条对她不利的**（同一份注释内部不一致，不是两次查询差值）：⑯ 注释末句
+   "`audit_supp` 全库只有 **70 条 run** 被路由到，全在 turn1"里的"全在 turn1"不成立 —— 我按轮数：
+   turn1 = 70、turn≥2 = 5 ⇒ 全库 **75**；而她**上一行**写的正是"turn≥2 ∧ 零审计行 13 条里有 5 条被路由到 `audit_supp`"。
+   另：她那 4 条（⑮ 窗口内）与我这 5 条（全库）不矛盾 —— 她文件里 `win_a/win_b` 的**默认值** = `2026-09-29 06:17:00+00` ~ `06:19:30+00`
+   （`r23_thread_from_checkpoints.sql:5-11`），我这 5 条按 `first_seen` 有 4 条落在窗内、差的那条 = `tk_bc44ba41…` @ 06:40:33Z 在窗外。
+5. ★ **由此把判据② 那一格的形状改掉**（这是对 P-A 的请求，`deploy/loadtest/**` 是她的文件，我不改）：
+   蕴含式「被路由到 `audit_supp` ⇒ 本轮写了 `terminal`」的真值表（06:19:31Z）：
+   turn1 = 70 被路由 / 70 写了 terminal / **反例 0**；turn≥2 = 5 被路由 / 0 写了 terminal / **反例 5**。
+   ⇒ 修复前那 5 条反例**恰好等于** N-08 崩臂（逐条：u_f04 06:17:38Z、u_f07 06:17:54Z、u_f09 06:18:04Z、u_f06 06:18:05Z、u_f00 06:40:33Z，全部零审计行）。
+   所以建议那一格用 `t2_routed_audit_supp_without_terminal_write`（pre-fix = 5，post-fix 期望 **0**），
+   而不是只看 `t2_with_terminal_write > 0`（pre-fix = 0）：后者要窗口里**恰好有第 2 轮走到 complete** 才有数，
+   前者用手上已有的 5 条就能判，并且它同时把"路由到了但没写"这个崩溃形状本身钉成判据。
+   ⚠️ 两个列都是 run 级分母（带 `tk_` 的检查点组），三态规则同 ⑮/⑯：作用域空 ⇒ 派生列 NULL。
+6. **我的契约动作**（她问"要不要加这条限定由你定"）：加的是**读点语义**，不是新断言。
+   `tests/contract/test_audit_terminal_pairing_contract.py:143` `TestU129EntryInvariant` 的 docstring 现写明
+   (a) 该类所说的"本轮自己写终态"在生产面 = `lg.checkpoint_writes.channel='terminal'` 的 run 归属（附本轮实测数字），
+   (b) `branch:to:%` 只证"被路由到"、不证"写了"。契约断言本体（恰 1 终态帧 + 恰 1 段 1 行 + 15 节点 + 审计不串轮）**一字未动**。
+   ⇒ 不加新断言的理由：修复后「路由到 `audit_supp` ⇒ terminal 已写」正是 `app/graph/nodes/audit_supp.py` 那道 N-08 守卫**本身在守的东西**，
+   再写一条契约只是复制守卫；要判它应该在生产面判（第 5 条那一格）。
+   复算：`pytest tests/contract/test_audit_terminal_pairing_contract.py -q` = **14 passed / 1.52s**，`ruff check` 同文件 All checks passed（06:22Z 前）。
+7. **复算命令**（只读，可直接粘贴；本轮新增的 ⑤⑥⑦ 在文件末尾，整个文件 rc=0 @ 06:22:18Z）：
+   ```
+   MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' \
+     -f - < backend/reports/w4/probe_prod_checkpoint_terminal.sql
+   ```
+   探针 = `backend/reports/w4/probe_prod_checkpoint_terminal.sql` ⑤（通道分布 + 身份通道 1,992 行 > run 数 1,378 ⇒ 该面不是 run 级 1:1，
+   所以任何 run 级读数**必须先按 tk 归属再聚合**）⑥（按轮的写面覆盖）⑦（按轮的蕴含式真值表）。
+8. **仍等别人**：判据① 的生产验收等 P-A/P-B 批下来由 W7 出数（非峰 ≈¥0.0046 / ¥0.023）；
+   `U-129` 结案词仍等架构，我不自签；架构 §32 判据⑦ 的落地件 = `33675b9` + 契约 14 条，已在 §二十九 报过。
