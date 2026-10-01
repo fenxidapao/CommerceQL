@@ -889,7 +889,8 @@ def test_the_pairing_arm_anchors_w7_section_15(monkeypatch):
     for face in ("d73a201", "v1.7.14", "⑮", "overcount_pairing", "checkpoint_writes"):
         assert face in faces, f"pairing_faces 少了 {face} 这一面"
     assert "thread 级上界" in faces, "写面必须自带量纲限制，否则会被读成 run 级证据"
-    assert mod.THREAD_RULER_SECTIONS[-1] == "⑮" and len(mod.THREAD_RULER_SECTIONS) == 8
+    assert mod.THREAD_RULER_SECTIONS[-1] == "⑯b" and len(mod.THREAD_RULER_SECTIONS) == 10
+    assert "⑯" in mod.THREAD_RULER_SECTIONS, "⑯/⑯b 没进锚点 ⇒ 他撤掉写面归属那条语句时我方不会红"
 
 
 def test_the_checkpoint_writes_face_is_a_crosscheck_not_a_ruler(monkeypatch):
@@ -919,17 +920,72 @@ def test_the_checkpoint_writes_face_is_a_crosscheck_not_a_ruler(monkeypatch):
     assert (eq["a_minus_b"], eq["b_minus_a"], eq["equal"]) == (0, 1, False)
     assert eq["b_threads_without_any_tk"] == 1, "写面里有我方尺上没有的 thread ⇒ 不许静默并入"
     assert block["turn2plus_overlap"]["a_turn2plus_intersect_b"] == 0
-    assert block["turn2plus_overlap"]["attributable_to_a_specific_turn"] is False
+    #: 🔻 第十八轮改口：第十七轮这里**写死 False**（"归不出轮次"是转述、不是我方读数）⇒ 现在没传归属数据
+    #:    必须落 `None`（= **没测**），既不真也不假。
+    assert block["turn2plus_overlap"]["attributable_to_a_specific_turn"] is None
+    assert block["run_attribution"] is None
     assert block["terminal_writes"]["any_double_terminal_write"] is False
     assert block["shape"]["thread_sets_equal_across_faces"] is False, "1,318 ≠ 1,322 必须报出来"
     double = mod.writes_crosscheck(ruler, {**shape, "max_terminal_writes_per_thread": 2}, {"th:1"})
     assert double["terminal_writes"]["any_double_terminal_write"] is True
-    assert len(block["limits"]) == 3 and "UUID" in block["limits"][0]
+    assert len(block["limits"]) == 3 and "checkpoint_id" in block["limits"][0]
+    assert "按通道集" in block["limits"][0], "限制句必须按通道集分列，不许整张表一刀切"
     assert "不是判据" in block["verdict_role"] and "classify()" in block["verdict_role"]
     assert mod.thread_position(ruler).get("checkpoint_writes") is None
     assert mod.thread_position({**ruler, "writes": block})["checkpoint_writes"] == block
     text = mod.CHECKPOINT_WRITES_SHAPE_SQL
     assert "except" in text.lower() and "thread_id is null" not in text, "对撞用集合差，不用 is null"
+
+
+def test_run_attribution_is_measured_per_channel_set(monkeypatch):
+    """🔴 第十八轮：第十七轮我**先**把「切不出 run 边界」写成限制句（那是架构 §38 ② 的转述），本轮自己复算后
+    发现 terminal 写**能**按 `checkpoint_id` 归到 run、而路由集**不能全归** ⇒ 钉四件事：
+    ① 覆盖面按通道集分列（`terminal_unmatched_rows` vs `route_unmatched_rows`），不许整张表一刀切；
+    ② 归属后的 turn 用**我方尺**数（先编号、后归属），尺里没有的 tk 落 `unknown_runs` 而不是被丢掉；
+    ③ 判别读点（terminal 落不落"零审计行的崩 run"）必须成字段，因为它决定这句话能不能说"排除黏性解释"；
+    ④ `attributable_to_a_specific_turn` 从此是**测量值**：`unmatched > 0` 或有 unknown ⇒ 不许闭合。
+    """
+    mod = _load_probe(monkeypatch)
+    ruler = {"by_tk": {
+        "tk_a": {"thread_id": "th:1", "turn": 1, "first_seen": None},
+        "tk_b": {"thread_id": "th:1", "turn": 2, "first_seen": None},
+        "tk_c": {"thread_id": "th:2", "turn": 2, "first_seen": None},
+    }, "ambiguous_tk_to_threads": [], "usable": True}
+    rows_by_tk = {"tk_a": 1, "tk_b": 0, "tk_c": 1}
+    join = {"terminal_rows_via_join": 2, "terminal_matched_rows": 2, "terminal_unmatched_rows": 0,
+            "route_rows": 8482, "route_channels": 22, "route_unmatched_rows": 1318,
+            "route_unmatched_threads": 1318, "tk_runs_touched": 3}
+    block = mod.writes_attribution(join, {"tk_a"}, {"tk_c", "tk_ghost"}, ruler, rows_by_tk)
+    assert block["coverage"]["join_covers_terminal_rows"] is True
+    assert block["terminal_writes_on_runs"] == {"runs": 1, "turn1": 1, "turn2plus": 0, "unknown_runs": 0,
+                                                "zero_audit_row_runs": 0, "crash_turn2plus_runs": 0}
+    supp = block["audit_supp_routes_on_runs"]
+    assert (supp["runs"], supp["turn2plus"], supp["unknown_runs"]) == (2, 1, 1), supp
+    assert supp["crash_turn2plus_runs"] == 0, "tk_c 有审计行 ⇒ 不能算成崩 run 上的路由"
+    disc = block["discriminator"]
+    assert (disc["terminal_writes_at_turn2plus"], disc["terminal_on_crash_turn2plus_runs"]) == (0, 0)
+    assert (disc["audit_supp_at_turn2plus"], disc["audit_supp_on_crash_turn2plus_runs"]) == (1, 0)
+    assert block["attribution_closes"] is True
+    assert "排除法" in block["discriminator"]["reads"], "全等证明要 P-A ⇒ 这句必须自带，不靠读者想到"
+    #: 上面 `attributable_to_a_specific_turn` 必须跟着归属走（不是恒 False、也不是恒 True）
+    shape2 = {"rows_all": 1, "threads_all": 1, "ck_threads_all": 1, "ck_only_threads": 0,
+              "writes_only_threads": 0, "terminal_rows": 1, "terminal_threads": 1,
+              "max_terminal_writes_per_thread": 1}
+    blk = mod.writes_crosscheck(ruler, shape2, {"th:1"}, attrib=block)
+    assert blk["turn2plus_overlap"]["attributable_to_a_specific_turn"] is True
+    assert blk["run_attribution"] is block
+    assert "UNVERIFIED" in " ".join(blk["limits"])
+    #: 反头：terminal 有连不到的行 / 尺里没有的 tk ⇒ 都不许报"闭合"
+    open_join = {**join, "terminal_unmatched_rows": 5}
+    assert mod.writes_attribution(open_join, {"tk_a"}, set(), ruler, rows_by_tk)["attribution_closes"] is False
+    unknown = mod.writes_attribution(join, {"tk_ghost"}, set(), ruler, rows_by_tk)
+    assert unknown["attribution_closes"] is False and unknown["terminal_writes_on_runs"]["unknown_runs"] == 1
+    #: 有 turn≥2 的 terminal 写 ⇒ 也**不**叫"闭合"（那条句子的含义是"全落第一轮"，见 limits 第 1 条）
+    assert mod.writes_attribution(join, {"tk_a", "tk_b"}, set(), ruler, rows_by_tk)["attribution_closes"] is False
+    #: 器件形状两条：归属查询里不许出现 `is null` 当集合差、tk 清单必须逐行取回（不在库里数 turn）
+    for const in (mod.WRITES_ATTRIBUTION_SQL, mod.TERMINAL_RUN_TKS_SQL, mod.AUDIT_SUPP_RUN_TKS_SQL):
+        assert "row_number()" not in const, "turn 只能由我方尺数（第三份真相禁令）"
+    assert "branch:to:audit_supp" in mod.AUDIT_SUPP_RUN_TKS_SQL
 
 
 def test_the_direct_form_is_blind_to_a_double_written_run(monkeypatch):

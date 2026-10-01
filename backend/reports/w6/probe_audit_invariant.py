@@ -390,16 +390,21 @@ def overlap_pairs(rows: list[dict]) -> list[tuple[str, str]]:
 #:    ／⑩ 「0 审计行 = 崩臂」必须限定 `turn>=2`／⑭ 四条措辞纪律 + `gap_literal_DO_NOT_USE` 的命名
 #:    ／⑭b "先过滤再算 turn"的假绿守卫（W7 第二十八轮升级成三态：`NULL / t / f`，列名列数未动）
 #:    ／⑭c "读得太早"的假红守卫／**⑮ = 判据② 的两臂配对（臂1 零行 / 臂2 行数 > 1，分母 = run，空作用域 NULL）**
+#:    ／**⑯ = 写面(`lg.checkpoint_writes`)能否落到 run 的可行性 + `branch:to:%` 路由集**
+#:    ／**⑯b = 全库侧：terminal 写按 run 归属落在第几轮 + 这些 run 里有几条零审计行**
 #:    —— ⑮ 是 W7 按架构 `v1.7.14` 新起的**独立语句**（他明说"不给 ⑭ 加列"）⇒ 我方把配对断言的**外部对应件**
 #:    锚在这里：他删/改名 ⇒ 我方红（借语义不锚 = 第十四轮那条纪律的反面）。
 #:    ⚠️ 为什么本窗口要自己接这把尺：架构在 `07 §4.8` 的 `U-130` 上按它加了 **`turn≥2` 限定**（v1.7.12，
 #:    基准 `399b786`）—— "0 审计行"不是崩臂独有指纹，不加限定的批级计数会把崩臂**高估约 40 倍**
 #:    ⇒ 我方那条"少落 = 缺陷"的读数必须带 turn 维度。
-#:    ⚠️ 行号只在**读数那一秒**有效 ⇒ 引用以标签为准。本轮实测（树 `5cf9b33`）：⑭b `:346`、⑮ `:418`、
-#:    件规模 = **19 标签块 / 按 `;` 切非空 22 / 448 行**（⚠️ 上一把记的 18/21 作废于 W7 第二十八轮新增 ⑮ ——
-#:    这类数**随别人一次提交就变**，所以一律"数 + 当时 tree + 方法"三件同写，交付 §5.50）。
-THREAD_RULER_SOURCE = "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮（按标签锚定，行号会漂）"
-THREAD_RULER_SECTIONS = ("①", "⑨", "⑩", "⑫b", "⑭", "⑭b", "⑭c", "⑮")
+#:    ⚠️ 行号只在**读数那一秒**有效 ⇒ 引用以标签为准。第十八轮实测（树 `db9e27a`，W7 第二十九轮）：
+#:    ⑭b `:346`、⑮ `:418`（**未漂**，他在 ⑮ 之后追加）、⑯ `:450`、⑯b `:512`；
+#:    件规模 = **21 段 / 带圈标签行 22（含 ⑯ 内部一行 `-- ②` 子注释）/ 按 `;` 切非空 24 条 / 533 行**
+#:    （⚠️ 上一把记的 19/22/448 作废于同一轮的 ⑯⑯b 追加 ⇒ 又是"别人一次正常提交就让我的现测过期"，交付 §5.53）；
+#:    字节面 = **LF**（`CRLF 行数 = 0`）⇒ `md5(raw) = md5(LF) = 3ec339227dbd…`、`md5(CRLF) = dd9c11947ba4…`
+#:    （🔴 报 md5 必须说面 + 报行数必须说方法：`wc -l` 与 `splitlines()` 在这一秒同 = 533，`split('\\n')` = 534）。
+THREAD_RULER_SOURCE = "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮⑯⑯b（按标签锚定，行号会漂）"
+THREAD_RULER_SECTIONS = ("①", "⑨", "⑩", "⑫b", "⑭", "⑭b", "⑭c", "⑮", "⑯", "⑯b")
 
 #: 只取全库的 `(thread, tk, 首次出现时间)`；**分桶与赋 turn 号都在 Python 里做**
 #: ⇒ 不经过任何展开/聚合，避开交付 §5.40 那一族（"经过展开的行数就不是行数"）。
@@ -463,6 +468,52 @@ select (select count(*) from lg.checkpoint_writes) as rows_all,
 #: 对撞要按**集合**比，不是按数比 ⇒ 取回带终态写的 thread 清单（今天 813 条，逐行取回）。
 TERMINAL_WRITE_THREADS_SQL = """
 select distinct thread_id from lg.checkpoint_writes where channel = 'terminal'
+"""
+
+#: 🔴 第十八轮新增：**写面能不能落到 run**（W7 `⑯/⑯b` 提的那条路，我方自己走一遍、**不复制他的 SQL**）。
+#:    连法 = 写行的 `checkpoint_id` 回连 `lg.checkpoints` 里**带 `tk_` 的那一行** ⇒ 得到 run。
+#:    ⚠️ 两件必须同时报，否则这句话会被读成"归属免费"：
+#:    ① **覆盖面**（`*_unmatched` = 连不到任何 `tk_` 检查点的写行）——今天 terminal = **0**、
+#:      `branch:to:%` = **非 0** ⇒ 终态写可全量归属，**路由集不是**（用 distinct thread 把"每 thread 一条"这形状钉住，
+#:      机制仍 UNVERIFIED）；
+#:    ② 归属完的 run 上**turn 由我方尺在全历史上数**（⑭b 那条假绿纪律在这里同样成立：先编号、后归属）。
+#:    出口列名规矩：`rows` 只数行、`runs` 只数 run、`channels` 只数通道种数。
+WRITES_ATTRIBUTION_SQL = """
+with c as (
+  select distinct checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%'
+), w as (
+  select checkpoint_id, thread_id, channel from lg.checkpoint_writes
+  where channel = 'terminal' or channel like 'branch:to:%'
+)
+select count(*) filter (where w.channel = 'terminal') as terminal_rows_via_join,
+       count(*) filter (where w.channel = 'terminal' and c.tk is not null) as terminal_matched_rows,
+       count(*) filter (where w.channel = 'terminal' and c.tk is null) as terminal_unmatched_rows,
+       count(*) filter (where w.channel like 'branch:to:%') as route_rows,
+       count(distinct w.channel) filter (where w.channel like 'branch:to:%') as route_channels,
+       count(*) filter (where w.channel like 'branch:to:%' and c.tk is null) as route_unmatched_rows,
+       count(distinct w.thread_id) filter (where w.channel like 'branch:to:%' and c.tk is null)
+           as route_unmatched_threads,
+       count(distinct c.tk) as tk_runs_touched
+from w left join c on c.checkpoint_id = w.checkpoint_id
+"""
+
+#: 两条 tk 清单（逐行取回后在 Python 里配我方尺数 turn ⇒ 不在库里 `row_number()`，避免第三份真相）。
+TERMINAL_RUN_TKS_SQL = """
+select distinct c.tk from lg.checkpoint_writes w
+  join (select distinct checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk
+        from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%') c
+    on c.checkpoint_id = w.checkpoint_id
+  where w.channel = 'terminal'
+"""
+
+#: `branch:to:audit_supp` = N-08 那条出口的**路由集**（判据② 的候选生产读点）。
+AUDIT_SUPP_RUN_TKS_SQL = """
+select distinct c.tk from lg.checkpoint_writes w
+  join (select distinct checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk
+        from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%') c
+    on c.checkpoint_id = w.checkpoint_id
+  where w.channel = 'branch:to:audit_supp'
 """
 
 
@@ -595,18 +646,73 @@ def _scope_block(scope: dict | None, tk_runs: int, turn2plus: int) -> dict | Non
     }
 
 
-#: 架构 §38 ② 实测的三件"不能升成 run 级判据"的理由 ⇒ **落在产物里**，不然下一轮的引用者只会看到
-#: "两侧都是 813" 并把它当成同一条断言的两个证据。
+#: 🔴 第十八轮**改掉**了上一版的一条限制句（自账见交付 §5.53）：第十七轮我把"这张表 `task_id` 是内部 UUID"
+#:    直接写成"run 边界切不出来"，那是**架构 §38 ② 的转述**、我方没复算；本轮自己走 `checkpoint_id` 回连后
+#:    现测 = **terminal 写可全量归属到 run**（`unmatched_rows = 0`），而**路由集 `branch:to:%` 不能**
+#:    ⇒ 限制句必须按"哪一集能归、哪一集不能"分开写，不能整张表一刀切。
 WRITES_FACE_LIMITS = (
-    "它的 `task_id` 是 LangGraph 内部 UUID、不是应用侧 `tk_` run 号 ⇒ **run 边界在这张表上切不出来**"
-    "（架构 §38 ② 实测；这件归 W4 出设计）",
-    "`max_terminal_writes_per_thread` 是 **thread 级上界**，不是 run 级 ⇒ 它 = 1 只说"
+    "归属是**按通道集分别成立**的：`channel='terminal'` 经 `checkpoint_id` 回连 `tk_` 检查点 ⇒ 本轮实测 "
+    "`unmatched_rows = 0`（可归属）；`branch:to:%` 同法有 **非 0 的 `route_unmatched_rows`** ⇒ 路由集**不**全量可归"
+    "（机制未查、标 UNVERIFIED）⇒ 引用「写面能落到 run」必须带是哪个通道集",
+    "`max_terminal_writes_per_thread` 仍是 **thread 级上界**，与 run 级归属是两件事 ⇒ 它 = 1 只说"
     "「没有任何 thread 写过两次终态」，**不能代** `multi_row_turn2plus_runs`（那臂数的是审计行）",
-    "两数各按各的谓词与面（审计面 vs checkpoint 写面）⇒ **同向、不互认、不可相加**；相等只是巧合",
+    "两侧各按各的谓词与面（审计面 vs checkpoint 写面）、各按各的窗口与前缀 ⇒ **同向、不互认、不可相加**；"
+    "相等只是巧合（W7 `⑯` 的连法与我方相同，但他算他的窗、我方算全库 ⇒ 同名数不等也不必然是矛盾）",
 )
 
 
-def writes_crosscheck(ruler: dict, shape: dict, terminal_threads: set[str]) -> dict:
+def _runs_by_turn(tk_set: set[str], by_tk: dict, rows_by_tk: dict[str, int]) -> dict:
+    """把一串 run（`tk_`）按**我方尺的 turn** 分桶，并顺带数其中"零审计行"的 run。
+
+    ⚠️ 尺里没有的 tk ⇒ 单列 `unknown_runs`，**不静默丢**（丢了就等于把覆盖面算没）。
+    """
+    out = {"runs": len(tk_set), "turn1": 0, "turn2plus": 0, "unknown_runs": 0,
+           "zero_audit_row_runs": 0, "crash_turn2plus_runs": 0}
+    for tk in tk_set:
+        entry = by_tk.get(tk)
+        if entry is None:
+            out["unknown_runs"] += 1
+            continue
+        turn = int(entry["turn"])
+        out[_bucket(turn)] += 1
+        if int(rows_by_tk.get(tk, 0)) == 0:
+            out["zero_audit_row_runs"] += 1
+            if turn >= 2:
+                out["crash_turn2plus_runs"] += 1
+    return out
+
+
+def writes_attribution(join: dict, terminal_runs: set[str], audit_supp_runs: set[str],
+                       ruler: dict, rows_by_tk: dict[str, int]) -> dict:
+    """纯函数：写面 → run 的归属结果（输入由调用方逐行取回，turn 用我方尺数）。"""
+    by_tk = ruler.get("by_tk") or {}
+    t = _runs_by_turn(terminal_runs, by_tk, rows_by_tk)
+    s = _runs_by_turn(audit_supp_runs, by_tk, rows_by_tk)
+    unmatched = int(join["terminal_unmatched_rows"])
+    return {
+        "method": "写行的 `checkpoint_id` 回连 `lg.checkpoints` 里带 `tk_` 的行 ⇒ run；"
+                  "turn 由我方尺在**全历史**上数（先编号、后归属，与 W7 ⑭b 同判据）",
+        "coverage": {**join, "join_covers_terminal_rows": unmatched == 0},
+        "terminal_writes_on_runs": t,
+        "audit_supp_routes_on_runs": s,
+        #: 🔑 判别的读点（架构 §38 ② 留的那个设计问题，本轮有了形状）：
+        #:    · terminal 写**只落 turn1、且从不落零审计行的 run** ⇒ 该面**能区分 run 成败** ⇒
+        #:      「写面对终态黏在第一轮」这个解释被**排除法削弱**（不是全等证明）；
+        #:    · 修复后若 `terminal_writes_on_runs.turn2plus > 0` ⇒ 判据② 在**生产落库面**上拿到 run 级读点；
+        #:      若仍 = 0 ⇒ 黏性解释成立，这一维**判不了**（两种结果都有信息量 ⇒ 不许把 0 读成"通过"）。
+        "discriminator": {
+            "terminal_on_crash_turn2plus_runs": t["crash_turn2plus_runs"],
+            "terminal_writes_at_turn2plus": t["turn2plus"],
+            "audit_supp_at_turn2plus": s["turn2plus"],
+            "audit_supp_on_crash_turn2plus_runs": s["crash_turn2plus_runs"],
+            "reads": "全等证明要 P-A 那一格（修法后进图的 run）；本轮全是修法前历史 ⇒ 只作**排除法**与基线。",
+        },
+        "attribution_closes": bool(unmatched == 0 and not t["unknown_runs"] and not t["turn2plus"]),
+    }
+
+
+def writes_crosscheck(ruler: dict, shape: dict, terminal_threads: set[str],
+                      attrib: dict | None = None) -> dict:
     """把台账第 8 面与我方 thread 尺做**集合对撞**（纯函数，输入由调用方从库里取回）。
 
     ⚠️ 这一臂今天多半不报任何东西（两侧都等于 813）。它防的是**将来**：`terminal` 若在某个 run 上双写，
@@ -643,10 +749,12 @@ def writes_crosscheck(ruler: dict, shape: dict, terminal_threads: set[str]) -> d
         "turn2plus_overlap": {
             "a_turn2plus_threads_with_audit_row": len(a2p),
             "a_turn2plus_intersect_b": len(a2p & terminal_threads),
-            #: 🔴 写面**归不出这一支属于第几轮**（缺 run 边界）⇒ 这里只能说"有重叠"，
-            #:    不许写成「这 28 条的终态写在第 2 轮」或「写在第 1 轮」。
-            "attributable_to_a_specific_turn": False,
+            #: 🔴 第十七轮这里**写死 False**（"归不出轮次"是他转述的设计问题、我方未复算）；
+            #:    第十八轮改成**测量值**：terminal 写归属后全落 turn1 且覆盖面闭合 ⇒ `attribution_closes`。
+            #:    取不到归属数据 ⇒ `None`（= **没测**），既不写 True 也不写 False。
+            "attributable_to_a_specific_turn": None if attrib is None else attrib["attribution_closes"],
         },
+        "run_attribution": attrib,
         "limits": WRITES_FACE_LIMITS,
         "verdict_role": "**对照面，不是判据**：`classify()` 不读本块，判据② 的两条断言仍以"
                         "`crash_turn2plus` / `multi_row_turn2plus_runs` 为准（交付 §4.26）。",
@@ -980,7 +1088,8 @@ def summarize(rows: list[dict], skew_s: float | None, ruler: dict | None = None)
                                   "落库面读数 = 本产物 thread_channel.overcount_pairing",
                                   "W7 落库面独立语句 = r23_thread_from_checkpoints.sql 段 ⑮",
                                   "checkpoint 写面（台账第 8 面）= 本产物 db_wide.checkpoint_writes"
-                                  " ⇒ **thread 级上界**、切不出 run 边界（见该块 limits）"),
+                                  " ⇒ thread 级上界看 `max_terminal_writes_per_thread`、run 级归属看"
+                                  " `run_attribution`（覆盖面按通道集分列，路由集不全可归）"),
                 "cells_measured": sum(1 for r in rows if r.get("thread_position")),
                 "cells_with_multi_row_turn2plus": sum(1 for r in rows
                                                       if (r.get("thread_position") or {}).get("multi_row_turn2plus_runs")),
@@ -1229,7 +1338,16 @@ async def measure(rows: list[dict], table: str = "audit_log") -> tuple[list[dict
                         "writes_only_threads", "terminal_rows", "terminal_threads",
                         "max_terminal_writes_per_thread")
                 tset = {str(r[0]) for r in await (await conn.execute(TERMINAL_WRITE_THREADS_SQL)).fetchall()}
-                ruler["writes"] = writes_crosscheck(ruler, dict(zip(keys, shape_row, strict=True)), tset)
+                join_keys = ("terminal_rows_via_join", "terminal_matched_rows", "terminal_unmatched_rows",
+                             "route_rows", "route_channels", "route_unmatched_rows",
+                             "route_unmatched_threads", "tk_runs_touched")
+                join = dict(zip(join_keys, await (await conn.execute(WRITES_ATTRIBUTION_SQL)).fetchone(),
+                                strict=True))
+                t_runs = {str(r[0]) for r in await (await conn.execute(TERMINAL_RUN_TKS_SQL)).fetchall()}
+                s_runs = {str(r[0]) for r in await (await conn.execute(AUDIT_SUPP_RUN_TKS_SQL)).fetchall()}
+                attrib = writes_attribution(join, t_runs, s_runs, ruler, rows_by_tk)
+                ruler["writes"] = writes_crosscheck(ruler, dict(zip(keys, shape_row, strict=True)), tset,
+                                                    attrib=attrib)
             except Exception as writes_exc:
                 ruler["writes"] = {"available": False, "error": safe_error_text(writes_exc)}
             #: 全库那一维**算一次**存下来（`max_lag_s` 要给逐格的 `too_soon_to_read` 当阈值，
