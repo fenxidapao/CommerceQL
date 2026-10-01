@@ -574,6 +574,7 @@ seq as (
   select count(*) as runs_in_scope,
          count(*) filter (where turn >= 2) as t2_runs,
          count(*) filter (where turn >= 2 and routed_audit_supp and not wrote_terminal) as ge2_routed_supp_no_terminal_write,
+         count(*) filter (where turn >= 2 and routed_audit_supp) as t2_routed_supp,
          count(*) filter (where turn >= 2 and wrote_terminal) as ge3_t2_with_terminal_write
   from j
 )
@@ -586,9 +587,11 @@ select '⑰ U-129 格2/格3（分母=run，粒度=run）' as k, agg.runs_in_scop
             when agg.ge3_t2_with_terminal_write >= 1 then 'ge3 达成（>=1）'
             else 'ge3 = 0 ⇒ 未达成，或"写面黏性"那一支未解' end as ge3_verdict,
        case when agg.runs_in_scope = 0 then null
-            when agg.ge2_routed_supp_no_terminal_write = 0 then 'ge2 = 0 ⇒ 达成'
-            else 'ge2 = ' || agg.ge2_routed_supp_no_terminal_write || ' ⇒ 未达成（pre-fix 基线 5）' end as ge2_verdict,
-       (agg.runs_in_scope = 0) as scope_empty__if_true_suspect_vars
+            when agg.t2_routed_supp = 0 then 'n/a__格2 空真（窗内 turn>=2 无一条被路由进 audit_supp ⇒ 架构 v1.7.17 的第四件前置 t2_routed_supp > 0 不满足，不许记 0）'
+            when agg.ge2_routed_supp_no_terminal_write = 0 then 'ge2 = 0 且 t2_routed_supp = ' || agg.t2_routed_supp || ' ⇒ 非空真达成'
+            else 'ge2 = ' || agg.ge2_routed_supp_no_terminal_write || ' ⇒ 未达成（pre-fix 基线：A 档子窗 4 / 全库 5 ⇒ 引用必带作用域）' end as ge2_verdict,
+       (agg.runs_in_scope = 0) as scope_empty__if_true_suspect_vars,
+       case when agg.runs_in_scope = 0 then null else agg.t2_routed_supp end as t2_routed_supp__ge2_第四件前置
 from agg;
 
 -- ⑰b 覆盖面与"建线期"行的形状（不受窗口限定，用来支撑 ⑰ 注释里那三句）

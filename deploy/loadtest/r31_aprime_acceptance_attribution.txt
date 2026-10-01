@@ -1,0 +1,138 @@
+# 第三十一轮 · P-A′ 验收臂实跑（2026-10-01）：三格并报第一次有"修复后读数"
+
+⚠️ 本件不含题面、不含 SQL 文本、不含结果行（N-11 同源）。题面与令牌只在 `E:/tmp_w7/`，令牌已删。
+⚠️ 落笔秒读数见 §七，任何"随秒变"的数引用前重跑对应命令。
+
+一、批准与执行
+-----------------------------
+· 总控 10-01 晚「待我点头的，按推荐跑」⇒ 执行 **P-A′**（架构 v1.7.17 已把报价改形并写进 `07 §4.8` 的 `U-129` 行）。
+· 几何（与报价逐字对齐）：**3 对 = 6 条准入**，串行 `--concurrency 1 --max-requests 2 --reuse-sessions --session-pool 1`，
+  每对一个新用户（`u_r3101/02/03`、租户 `T_A`、`ttl=1800s`、RS256 开发令牌放 `E:/tmp_w7/`）。
+· 靶子形状按三家约束选（**不得是 `session-lock` 形状**）：题目对 = **取自 pre-fix 那 5 条格2 崩臂的"上一轮"**（见 §二）。
+· 被测构建 = `w7load-api:0930r11`（基准 `9998de1`）；`git log 9998de1..HEAD -- backend/app` = **空** ⇒ **app 侧无漂移、不需重建**；
+  两层身份都现证：容器内 `graph/state.py` md5 = **`58dc5462abb53070b794e18a3538b4ff`**（= post-fix 的 CRLF 面）；
+  import 级 = **`n_fields=47 / terminal_in=True / groups=11`、`docker_exec_rc=0`（不接管道）**。
+· 前置五查：`healthz/ready` **200**、`include_router` **5**、`app.cost_ledger` 起点 **1,577 / ¥2.601977 / 09-29 15:29:43Z**、
+  `app.embed_doc` **197**、峰非峰 = **非峰**（北京 20:5x）。Ollama `bge-m3` 在跑。
+· ⚠️ 一次命令形状错误（**没花钱**）：第一次用 `../.venv/...` ⇒ **`rc=127`**（venv 在仓库根，`deploy/loadtest` 下应是 `../../.venv`）；
+  台账随后仍 1,577 ⇒ 证明那三次调用一个包都没发出去。
+
+二、★ 靶子是怎么挑出来的（零额度取证，可复算）
+-----------------------------
+· 语句 = `E:/tmp_w7/r31_recon.sql`（临时件、不入库）。全库筛「`turn>=2` ∧ 被路由进 `audit_supp` ∧ 本轮自己没写 terminal」⇒ **5 条**，
+  逐条 `prev_outcome` **全是 `success`**、`turn` 全是 **2**、题面长度 26–36，映射回 `deploy/loadtest/questions_T_A_time.txt` 的**行号**：
+
+| thread 前缀 | 崩臂 `tk`（前 8 位） | turn | prev outcome | 题库行号（turn1） |
+|---|---|---|---|---|
+| u_f04 | `tk_6a1a6c02` | 2 | success | 4 |
+| u_f06 | `tk_398fa097` | 2 | success | 6 |
+| u_f00 | `tk_bc44ba41` | 2 | success | 5 |
+| u_f07 | `tk_a1e54c1d` | 2 | success | 7 |
+| u_f09 | `tk_9f575a09` | 2 | success | 14 |
+
+· ⇒ 我取 **(4,16) / (5,17) / (6,18)** 三对（第 2 轮的题 = 原批 42 条轮转下"同一会话下一题"的行号 = `行号+12 mod 42`；
+  ⚠️ 这条推断只对 4/5/6/7 成立，第 14 行需要 `s=13` 越出 12 会话 ⇒ **不据此外推**，只用作取样理由、不当判据）。
+
+三、★★ 验收读数（分母 = run、粒度 = run；尺 = `r23_thread_from_checkpoints.sql` 的 ⑮/⑰/⑰b + 守卫 ⑭b/⑭c）
+-----------------------------
+· **新格（`12:55:00–12:57:30Z` / `u_r31%`，post-fix）**：
+
+| 件 | 读数 |
+|---|---|
+| ⑭b | threads **3** / runs **6** / 有窗前的历史 **0** / `window_turn_would_be_wrong = f` |
+| ⑭c | runs 6 / `crash_turn2plus` **0** / 最后一条 run `12:56:27` / 年龄 **245.4s** / 观测 max lag **187.6s**（n=867）/ **`too_soon_to_read = f`** ⇒ 本组读数**有引用资格** |
+| ⑮（格1） | runs 6 / t2 3 / **臂1 = 0** / **臂2 = 0** / `max_rows_per_t2_run = 1` / `scope_empty = f` |
+| ⑰（格2/格3） | runs 6 / t2 3 / **格2 = 0** / **格3 = 3** / `ge3_verdict = ge3 达成(>=1)` / `ge2_verdict = ge2 = 0 且 t2_routed_supp = 1 ⇒ 非空真达成` / **第四件前置列 = 1** |
+
+· 逐 run 路由读点（给 W4 的判据② 生产面；`E:/tmp_w7/pa_perrun.txt`）：
+
+| thread（后 6 位） | turn | 被路由进 `audit_supp` | 本轮自己写 terminal | 路由通道数 | outcome |
+|---|---|---|---|---|---|
+| `e93c97` | 1 | t | t | 15 | success |
+| `e93c97` | **2** | **t** | **t** | 14 | success |
+| `e5031c` | 1 | f | t | 9 | failed（`GATE_AST_REJECTED`） |
+| `e5031c` | 2 | f | t | 8 | failed（`GATE_AST_REJECTED`） |
+| `42fc87` | 1 | t | t | 15 | success |
+| `42fc87` | 2 | f | t | 8 | failed（`GATE_AST_REJECTED`） |
+
+⇒ 🔴 **这一列是本轮最硬的一条**：pre-fix 全库 **813 条 terminal 写行 100% 落在 turn1**、turn≥2 一条都没有（= 我 ⑯b 量的"写面黏性"）；
+  post-fix **6/6 每条 run 都自己写了 terminal、3/3 个 turn≥2 都写了** ⇒ 机制级差值，不只是格3 的计数。
+· 服务端日志侧（零额度）：`docker logs --since 25m w7load-api` 里 `graph_run_failed` / 「终态已被设置」/ `assert_terminal_is_settable`
+  **命中 0 次**（`grep -c` 直出 0）；同窗 `llm_call` **24 条** ⇒ 与台账 24 次**逐字闭合**。
+
+四、四作用域并报（架构要求"基线不是常数、是作用域 × 家族表"，本轮重测）
+-----------------------------
+| 作用域 | runs | t2 | 格2 | 格3 | `t2_routed_supp`（第四件前置） | `ge2_verdict` |
+|---|---|---|---|---|---|---|
+| 新格 post-fix `u_r31%` | **6** | 3 | **0** | **3** | **1** | **非空真达成** |
+| `session-lock` 窗 `u_b%` | 16 | 8 | 0 | 0 | **0** | 🔻 旧读数"达成"作废 ⇒ 现记 **`n/a__格2 空真`** |
+| A 档 pre-fix 子窗 `u_f%` | 99 | 22 | **4** | 0 | 4 | 未达成（pre-fix 基线） |
+| 全库宽窗 `%` | **1,384** | **64** | **5** | **3** | **6** | 未达成（残留 5 条全是 pre-fix） |
+
+· 🔴 **全库基线被我这轮改了三个数**（别窗正在引旧值，必须重录）：runs **1,378 → 1,384**、t2 **61 → 64**、格3 **0 → 3**、前置 **5 → 6**；
+  **格2 仍 = 5**（新增 3 条 turn≥2 都写了 terminal ⇒ 不落入格2）⇒ 「5 条一条没消」这句现在**不成立**，成立的是「**残留 5 条全部属 pre-fix 时段**」。
+· 🟢 `session-lock` 那一格从"看起来达成"变成 **`n/a`** = 架构 v1.7.17 那条前置落成语句的直接收益（我上一轮的假绿条件被列住，不再靠读者记得）。
+
+五、💰 花费：实际 **¥0.033723**，比报价上限 ¥0.023 高 **≈1.47 倍**（超因已量死）
+-----------------------------
+· 闭合三件：台账 **1,577 → 1,601（+24 行）**、`sum(cost_cny)` **¥2.601977 → ¥2.635700（+¥0.033723）**、`is_peak = f`（全部非峰，与报价档位一致）。
+· 逐用户：**`u_r3101` 8 次 ¥0.009954 / `u_r3102` 8 次 ¥0.010892 / `u_r3103` 8 次 ¥0.012877** ⇒ 24 次 = 6 run × **4.0 次/run**。
+· 🔴 **超支归因（有对照，不是猜）**：我报价用的是 **per-run 非峰 ¥0.00227**（取自"41 具名 task / ¥0.0930"那一档 = **混着崩臂与浅失败**的批量，
+  崩臂只 1 次调用）。本轮靶子**期望全部走完整链** ⇒ 同一把尺量两个窗：
+
+| 窗 | 调用数 | 花费 | 具名 task | 每 task 调用 | 每 task 均价 | 档位 |
+|---|---|---|---|---|---|---|
+| A 档 09-29 06:15–06:45Z | 298 | ¥0.832504 | 104 | **2.87** | ¥0.008005 | 峰 |
+| 本轮 P-A′ 10-01 12:55–12:57Z | 24 | ¥0.033723 | 6 | **4.0** | **¥0.005621** | 非峰 |
+
+⇒ **规矩（补进"压测报价五因子"）：报价的"每条平均调用数"必须按靶子形状取，不能取全库均值。**
+  验收类靶子（期望全成功、全深链）应按 **≈¥0.006/run（非峰）** 报；混着崩臂/浅失败的批量才按 ¥0.002–0.003/run。
+  按这条重算，本轮**本来应该报 ¥0.036**（6 × ¥0.0056 ≈ ¥0.034）。
+
+六、欠账与未做（如实登记，不写"达成"）
+-----------------------------
+1. 🔴 **会话锁正读数 = 未采**（本轮唯一没交到的那件）：P-A′ 我列的四件里有"跑中采样 `*lock*`/`rl:*`"，
+   实际我没在途采样 ⇒ 跑后 `redis-cli --scan '*lock*'` = **0 键**（dbsize 191，属平凡零）。
+   ⇒ 这一件记 **UNVERIFIED**，补采需要 **2 条准入 ≈¥0.011**（同形状再打 1 对 + 在途采样），**未批不跑**。
+2. ⚠️ 6 条里 **3 条 `GATE_AST_REJECTED`**（`e5031c` 两轮 + `42fc87` turn2）⇒ 属 gate 面、与 `U-129` 无关，
+   但**它没被我解释** ⇒ 只登记读数，不写成"题库不合口味"（无对照）。
+3. ⚠️ 第 14 行的取样推断不外推（见 §二）。
+4. 🔴 `run 边界契约定义` 归 W4：我这轮交的仍是证据（`checkpoint_ns` 我这面未证、W4 已证全空 12,004 行非空 0）。
+
+七、门禁与落笔秒读数（现测，别抄）
+-----------------------------
+· 件规模变了（W6 守卫要重录）：**md5(LF) = `a87040ab13b1…`**、**619 行**、**23 标签块**（`^-- ` + 带圈号）、**含分号行 26**；
+  本轮只在 `⑰` 语句**内部**加一列 + 改 `ge2_verdict` 分支 ⇒ **锚点未漂**：`⑭b` 346 / `⑮` 418 / `⑯` 450 / `⑯b` 512 / `⑰` 535 /（`⑰b` 594→**597**，因 ⑰ 内加 3 行）。
+· 四作用域 `ON_ERROR_STOP=1` 实跑 **sql_rc=0 ×4**（含空作用域那格仍给 NULL）。
+· `HEAD` 现读 = **`8d170f2`** = `git ls-remote origin main`（本轮起点；`git log 9998de1..HEAD -- backend/app` = 空）。
+· `docs/07` 盘上 = **v1.7.17**、CR = LF = **3,635**；取号锚点 `^> \*\*下一个可用号 =` 命中需现测（本轮**零取号**）。
+· 容器：`w7load-api` = `0930r11`（`Up`、health 200）；旧的 0928r10 同名容器**已改名保留** = `w7load-api_pre0930r11_bak`（没删，可回滚）；
+  共享 `pg`/`redis`/`api`/`pgbouncer` 全程未重启（`Up 6 hours+`）。
+· 时段：跑批 12:55–12:57Z = 北京 **20:5x 非峰**；`is_peak` 由 `cost_ledger` 直读 = **f**（不是我自己按 `budget.py` 推的）。
+
+八、复算命令（本轮实际用的那组，零额度部分可直接抄）
+-----------------------------
+```bash
+# 1) 起靶子（先确认镜像与身份；旧容器改名让位，不删）
+docker rename w7load-api w7load-api_pre0930r11_bak
+cd deploy/loadtest && docker tag w7load-api:0930r11 w7load-api:latest \
+  && docker compose -p w7load -f compose.loadtest.yml up -d
+MSYS_NO_PATHCONV=1 docker exec w7load-api grep -c include_router /srv/app/main.py        # 5
+MSYS_NO_PATHCONV=1 docker exec w7load-api python -c "from app.graph.state import RUN_SCOPED_STATE_FIELDS as S, STATE_GROUPS; print(len(S), 'terminal' in S, len(STATE_GROUPS))"   # 不接管道，47 True 11
+
+# 2) 三对串行（题库行号 4/16、5/17、6/18；题面与令牌只在 E:/tmp_w7）
+cd deploy/loadtest && for n in 1 2 3; do ../../.venv/Scripts/python.exe driver.py --scenario steady \
+  --concurrency 1 --max-requests 2 --reuse-sessions --session-pool 1 \
+  --questions-file E:/tmp_w7/pa_pair$n.txt --tokens E:/tmp_w7/pa_tok$n.txt \
+  --target http://127.0.0.1:18000/api/v1 --out E:/tmp_w7/pa_r$n.json; done
+
+# 3) 验收读数（等新格 run 的年龄 > max lag 才引；⑭c = f 才许引）
+for v in "-v win_a='2026-10-01 12:55:00+00' -v win_b='2026-10-01 12:57:30+00' -v upref='u_r31%'" \
+         "-v win_a='2026-09-28 10:22:17+00' -v win_b='2026-09-28 10:22:41+00' -v upref='u_b%'" \
+         "-v win_a='2026-09-29 06:17:00+00' -v win_b='2026-09-29 06:19:30+00' -v upref='u_f%'" \
+         "-v win_a='2020-01-01 00:00:00+00' -v win_b='2120-01-01 00:00:00+00' -v upref='%'"; do
+  eval "MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -v ON_ERROR_STOP=1 $v -f - < deploy/loadtest/r23_thread_from_checkpoints.sql" | grep -E '^(⑰|⑮|⑭c|⑭b) '; done
+
+# 4) 花费闭合（24 行 / ¥0.033723 / 全非峰 / 每 task 4.0 次调用）
+docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F"|" -c "select user_id, count(*), round(sum(cost_cny),6), count(distinct task_id), bool_or(is_peak) from app.cost_ledger where created_at > '2026-10-01 12:00:00+00' group by 1;"
+```
