@@ -1558,6 +1558,28 @@ W4 §④ 报的形状批级不变量抓不到：`refuse` 之后第 2 轮**复用
 
 **⑧ 容器卫生（一次真实障碍 + 可回滚处置）**：起靶子时撞名 —— 旧的 **`0928r10`（pre-fix！）** 容器仍占着 `w7load-api` 这个名字。🔴 **直接 `up -d` 会失败、直接 `docker start` 会把陈旧 pre-fix 镜像当被测构建 ⇒ 我把它改名 `w7load-api_pre0930r11_bak` 保留（没删）**，`up -d` 后 `down` 收掉本轮容器。另一次零成本错误：`../.venv/...` ⇒ **`rc=127`**（venv 在仓库根，`deploy/loadtest` 下要写 `../../.venv`），台账当场仍 1,577 ⇒ 证明一个包没发。
 
+#### 三.0.1ac ★ 第三十二轮（首测 2026-10-01 13:2x–13:4xZ、**落笔前重测 15:5x–16:00Z 逐条复现** / 落笔北京 **10-02 00:00 非峰**（跨了午夜 ⇒ 时段档由 21:4x 直接跳到 00:00，两处都是非峰）· **零额度、零跑批、未动共享栈、未改 Python**）：回验收窗口（QA）第一轮 ②③ 两条请办 ⇒ 把**部署面**盘清了；顺手量到一条 🔴 **安全面实测**（`api` 经局域网 IP 直连 = `200`）与一条 🔴 **本窗自曝**（观测栈至今没有运行面闭合记录）
+
+正文 = **`deploy/COMPOSE_SURFACE_DIFF_20261001.md`**（六节：全 profile 展开 / 与 `docs/05 §D.5` 差异表 / 运行面 / 与 QA 读数的对表 / 建议但不擅自做 / 复算命令）。本节只留**逐对象标面**那张表和两句结论。
+
+**① 🔴 容器名不作为身份判据（QA ③ 点名的"名字与镜像反着长"，我认）**：现测逐对象标面（`docker inspect` 直读 `Config.Image` / imgID / `Created` / `State.Status` / `StartedAt`）——
+
+| 对象（名字） | `Config.Image` | imgID | 面 |
+|---|---|---|---|
+| `w7load-api_pre0930r11_bak` | **`w7load-api:0928r10`** | `4806c5687c4e` | 🔻 **pre-fix**（容器 `created = 2026-09-28T13:39:34Z`、exited；名字里写的"pre0930r11"是"0930r11 之前那批"的口语名，不是镜像名） |
+| `w7load-api:0930r11` / `:latest`（镜像，无容器） | — | **`8c1eb47fb118`** | ✅ **被测构建**（基准 `9998de1`，含 `33675b9` 修法；两层身份证据见 §三.0.1y/1z）；本轮 `down` 后不留容器 |
+| `commerceql-api-1` | `commerceql-api` | `7098716adf2e` | 🔻 **陈旧主栈镜像**（容器 `created = 2026-09-18T07:44:47Z`、`StartedAt = 2026-10-01T04:49:47Z`）⇒ **不是被测构建**（W6 在用，本窗不动） |
+| `commerceql-pg-1` / `commerceql-redis-1` / `commerceql-pgbouncer-1` | `pgvector/pgvector:pg16` / `redis:7-alpine` / `edoburu/pgbouncer:latest` | `ccc6e83d6e35` / `ff02b58f971e` / `4c1ca296ef52` | 🟢 共享数据面（四个 `commerceql-*` 容器 project 标签同为 `commerceql`、config_files = `deploy/docker-compose.yml`） |
+| `web` / `worker` / `prometheus` / `grafana` | — | — | ⚠️ **无容器**（`web` 连 profile 都没有、`worker` 在 `async`、后两个在 `observability`）；镜像面：`nginx:1.27-alpine` **MISSING**、`grafana/grafana:11.2.0` **MISSING**、`prom/prometheus:v2.54.1` present |
+
+**② 🔴 运行面安全实测（有对照、有边界，别读成"已被入侵"）**：`curl http://10.89.175.120:8000/api/v1/healthz/live` ⇒ **`200`**；`socket.connect` 到同一局域网 IP ⇒ **6379 / 5432 / 6432 可建连**、80 / 3000 / 9090 `ConnectionRefused`（服务没起）。⇒ 三件事同时成立：**a)** `docs/05 §D.5` 关键点 2 明文"`api` 用 `expose` 不用 `ports`，理由 = 不经 Nginx 直连会绕过限流与安全响应头"，而盘上 `api` 是 `published: "8000"` ⇒ **契约第 2 条被破坏**；**b)** `compose` 渲染里 `api`/`pg`/`redis`/`pgbouncer` **未见 `host_ip`**（只有 `prometheus`/`grafana` 写了 `127.0.0.1`），`netstat` 同向（`0.0.0.0` 监听）；**c)** `redis` 的 `command` 只有 `--appendonly no --maxmemory-policy allkeys-lru` ⇒ **没有 `requirepass` 声明**。⚠️ **边界**：我只做到"能建连 + healthz 返 200"，**没有**发任何 Redis/PG 命令 ⇒ "能否未授权读写"**未证**；风险级别请 **W0/总控** 裁。
+
+**③ 🔻 本窗自曝（观测面归 W7，所以这条打在我自己身上）**：`deploy/observability/` 配置齐全（6 件），但**运行面从来是零** —— 而且 `deploy/observability/README.md:11` 从 09-18 起就写着「**仍未在真实运行时验证过：本窗口没起观测栈、没做过一次抓取、没在 Grafana 里渲染过面板**」⇒ 这句**到本轮仍没有闭合记录**。⇒ 落地定义第 4 条（部署面可复现）当前不成立，**一半在这里**；闭它的动作 = `docker compose --profile observability up -d prometheus grafana`（需拉 grafana 镜像；3000/9090 已绑回环 ⇒ **不触发"暴露 3000 必须先设 Grafana 口令"那条纪律**）⇒ **等总控一句"起"**，我不擅自起。
+
+**④ 与 QA 第一轮 ①④ 的对表**：8 服务 / 3 卷 / `web` 无 profile 却无容器 / `0930r11 = 8c1eb47fb118` / `0928r10 = 4806c5687c4e` @`2026-09-28T13:39:34Z` / `commerceql-api` built 09-18 ⇒ **六条全部独立复算通过、逐字同**；补一条粒度：**"实际容器 4 个"只在 `--filter status=running` 面成立**，`docker ps -a` 全列是 **5**（多我那个退出的 `…_bak`）⇒ 报数带面（与 §三.0.1aa 的"面/粒度"同规）。
+
+**⑤ 📌 门禁与卫生**：本轮**零花费**（没打 LLM；台账仍 **1,601 / ¥2.635700**，`09-29 15:30Z` 后增量只涨自上一轮跑批）、**没 `up`/`down` 共享栈**、**没改 `docker-compose.yml` 一个字节**、`docs/**` 只读；令牌三个上一轮已删、本轮未铸。
+
 ### 三.1 装载（本轮实测读数）
 
 `load_synth_to_pg.py` 用 W1A 的 `data/generator/seed_generator.py`（确定性、附录 C §C.12 规模）
