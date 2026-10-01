@@ -392,19 +392,23 @@ def overlap_pairs(rows: list[dict]) -> list[tuple[str, str]]:
 #:    ／⑭c "读得太早"的假红守卫／**⑮ = 判据② 的两臂配对（臂1 零行 / 臂2 行数 > 1，分母 = run，空作用域 NULL）**
 #:    ／**⑯ = 写面(`lg.checkpoint_writes`)能否落到 run 的可行性 + `branch:to:%` 路由集**
 #:    ／**⑯b = 全库侧：terminal 写按 run 归属落在第几轮 + 这些 run 里有几条零审计行**
+#:    ／**⑰ = U-129 验收「三格并报」的格2／格3（格2 = `t2` 被路由进 `audit_supp` ∧ 本轮没写 terminal ⇒ 期望 0，
+#:      pre-fix 基线 5；格3 = `t2` 本轮自己有 terminal 写 ⇒ 期望 ≥1，pre-fix 基线 0，窗内无 turn≥2 样本记 `n/a`）**
+#:    ／**⑰b = 路由行的覆盖面形状（建线期行 vs 真覆盖损失的拆分，不受窗口限定）**
 #:    —— ⑮ 是 W7 按架构 `v1.7.14` 新起的**独立语句**（他明说"不给 ⑭ 加列"）⇒ 我方把配对断言的**外部对应件**
 #:    锚在这里：他删/改名 ⇒ 我方红（借语义不锚 = 第十四轮那条纪律的反面）。
 #:    ⚠️ 为什么本窗口要自己接这把尺：架构在 `07 §4.8` 的 `U-130` 上按它加了 **`turn≥2` 限定**（v1.7.12，
 #:    基准 `399b786`）—— "0 审计行"不是崩臂独有指纹，不加限定的批级计数会把崩臂**高估约 40 倍**
 #:    ⇒ 我方那条"少落 = 缺陷"的读数必须带 turn 维度。
-#:    ⚠️ 行号只在**读数那一秒**有效 ⇒ 引用以标签为准。第十八轮实测（树 `db9e27a`，W7 第二十九轮）：
-#:    ⑭b `:346`、⑮ `:418`（**未漂**，他在 ⑮ 之后追加）、⑯ `:450`、⑯b `:512`；
-#:    件规模 = **21 段 / 带圈标签行 22（含 ⑯ 内部一行 `-- ②` 子注释）/ 按 `;` 切非空 24 条 / 533 行**
-#:    （⚠️ 上一把记的 19/22/448 作废于同一轮的 ⑯⑯b 追加 ⇒ 又是"别人一次正常提交就让我的现测过期"，交付 §5.53）；
-#:    字节面 = **LF**（`CRLF 行数 = 0`）⇒ `md5(raw) = md5(LF) = 3ec339227dbd…`、`md5(CRLF) = dd9c11947ba4…`
-#:    （🔴 报 md5 必须说面 + 报行数必须说方法：`wc -l` 与 `splitlines()` 在这一秒同 = 533，`split('\\n')` = 534）。
-THREAD_RULER_SOURCE = "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮⑯⑯b（按标签锚定，行号会漂）"
-THREAD_RULER_SECTIONS = ("①", "⑨", "⑩", "⑫b", "⑭", "⑭b", "⑭c", "⑮", "⑯", "⑯b")
+#:    ⚠️ 行号只在**读数那一秒**有效 ⇒ 引用以标签为准。第十九轮实测（树 `beac8c6`，尺件在 W7 `810aa25`；
+#:    工作树 == HEAD，`git diff --stat` 对该文件为空）：⑭b `:346`、⑮ `:418`、⑯ `:450`、⑯b `:512` **未漂**，
+#:    新 ⑰ `:535`、⑰b `:594`；件规模 = **23 个标签 / 带圈标签行 24（⑯ 内部有一行 `-- ②` 子注释）/
+#:    按 `;` 切非空 26 条 / 616 行（`splitlines()` 与 `wc -l` 两口径同值）/ 43,876 字节**；
+#:    字节面 = **LF**（CRLF 行数 0）⇒ `md5(raw) = md5(LF) = b5a1bd546688…`、`md5(CRLF) = e86f72f56330…`。
+#:    🔻 第十八轮录的 21/24/533 与 `3ec339227dbd…` 作废于 W7 第三十轮追加 ⑰⑰b（第三次同类过期，交付 §5.54）。
+#:    ⚠️ 报这类数一律「数 + 方法名 + 当时 tree」三件同写，且**下一轮必须重新现测**。
+THREAD_RULER_SOURCE = "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮⑯⑯b⑰⑰b（按标签锚定，行号会漂）"
+THREAD_RULER_SECTIONS = ("①", "⑨", "⑩", "⑫b", "⑭", "⑭b", "⑭c", "⑮", "⑯", "⑯b", "⑰", "⑰b")
 
 #: 只取全库的 `(thread, tk, 首次出现时间)`；**分桶与赋 turn 号都在 Python 里做**
 #: ⇒ 不经过任何展开/聚合，避开交付 §5.40 那一族（"经过展开的行数就不是行数"）。
@@ -508,12 +512,57 @@ select distinct c.tk from lg.checkpoint_writes w
 """
 
 #: `branch:to:audit_supp` = N-08 那条出口的**路由集**（判据② 的候选生产读点）。
+#: ⚠️ 只取 `tk` 清单 ⇒ thread 数由**我方尺**从 tk 反推（交付 §5.54 的"粒度"形状：同一批里 run 数 ≠ thread 数，
+#:    两个都要报，不能只报一个 —— W7 ⑯ 那句"70 条全在 turn1"就是这么来的）。
 AUDIT_SUPP_RUN_TKS_SQL = """
 select distinct c.tk from lg.checkpoint_writes w
   join (select distinct checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk
         from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%') c
     on c.checkpoint_id = w.checkpoint_id
   where w.channel = 'branch:to:audit_supp'
+"""
+
+#: 被路由行触到的 run（判"这一面切不切得出**第 2 轮**"要用它，不是用 terminal）。
+ROUTE_RUN_TKS_SQL = """
+select distinct c.tk from lg.checkpoint_writes w
+  join (select distinct checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk
+        from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%') c
+    on c.checkpoint_id = w.checkpoint_id
+  where w.channel like 'branch:to:%'
+"""
+
+#: 🔴 第十八轮我方报的"1,318 行连不到 `tk_` 检查点、机制未查"⇒ 第十九轮**自己把它拆开**。
+#:    三分类之和必须 = `route_unmatched_rows`（**闭合**才算解释成立；不闭合就还是"机制未查"）：
+#:    ① 该写行自己的 `ts` **早于**本 thread 第一个带 `tk_` 的检查点 ⇒「建线期路由行」（不属于任何 run、不是覆盖损失）；
+#:    ② 不早于 ⇒ 真·覆盖损失（本轮要盯的就是这一类**该为 0**）；
+#:    ③ 该 thread **完全没有**带 `tk_` 的检查点 ⇒ 连"第一个"都无从谈起（`tk → thread` 之外那一小撮）。
+#:    ⚠️ 出口列名规矩：`rows` 只数行、`threads` 只数 thread、`runs` 只数 run。
+ROUTE_UNMATCHED_SHAPE_SQL = """
+with all_ck as (
+  select thread_id, checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk,
+         (checkpoint->>'ts')::timestamptz as ts
+  from lg.checkpoints
+), tk_ck as (
+  select distinct thread_id, checkpoint_id from all_ck where tk like 'tk_%'
+), first_tk as (
+  select thread_id, min(ts) as first_tk_ts from all_ck where tk like 'tk_%' group by thread_id
+), routed as (
+  select thread_id, checkpoint_id from lg.checkpoint_writes where channel like 'branch:to:%'
+), unmatched as (
+  select r.thread_id, r.checkpoint_id, a.ts
+  from routed r
+  left join tk_ck t on t.checkpoint_id = r.checkpoint_id and t.thread_id = r.thread_id
+  left join all_ck a on a.checkpoint_id = r.checkpoint_id and a.thread_id = r.thread_id
+  where t.checkpoint_id is null
+)
+select (select count(*) from routed) as route_rows,
+       (select count(*) from unmatched) as route_unmatched_rows,
+       (select count(distinct thread_id) from unmatched) as route_unmatched_threads,
+       count(*) filter (where u.ts < f.first_tk_ts) as unmatched_before_first_tk,
+       count(*) filter (where u.ts >= f.first_tk_ts) as unmatched_at_or_after_first_tk,
+       count(*) filter (where f.thread_id is null) as unmatched_on_threads_without_tk,
+       count(distinct u.thread_id) filter (where u.ts >= f.first_tk_ts) as threads_with_real_loss_rows
+from unmatched u left join first_tk f on f.thread_id = u.thread_id
 """
 
 
@@ -646,18 +695,17 @@ def _scope_block(scope: dict | None, tk_runs: int, turn2plus: int) -> dict | Non
     }
 
 
-#: 🔴 第十八轮**改掉**了上一版的一条限制句（自账见交付 §5.53）：第十七轮我把"这张表 `task_id` 是内部 UUID"
-#:    直接写成"run 边界切不出来"，那是**架构 §38 ② 的转述**、我方没复算；本轮自己走 `checkpoint_id` 回连后
-#:    现测 = **terminal 写可全量归属到 run**（`unmatched_rows = 0`），而**路由集 `branch:to:%` 不能**
-#:    ⇒ 限制句必须按"哪一集能归、哪一集不能"分开写，不能整张表一刀切。
+#: 🔴 第十八轮**改掉**了上一版的一条限制句（自账见交付 §5.53），第十九轮又**补量**了它留下的那一格
+#:    （「1,318 行连不到、机制未查」⇒ 本轮三分类拆开、见 `unmatched_route_rows_shape`，交付 §5.54）。
 WRITES_FACE_LIMITS = (
-    "归属是**按通道集分别成立**的：`channel='terminal'` 经 `checkpoint_id` 回连 `tk_` 检查点 ⇒ 本轮实测 "
-    "`unmatched_rows = 0`（可归属）；`branch:to:%` 同法有 **非 0 的 `route_unmatched_rows`** ⇒ 路由集**不**全量可归"
-    "（机制未查、标 UNVERIFIED）⇒ 引用「写面能落到 run」必须带是哪个通道集",
+    "归属**按通道集分别成立**：`channel='terminal'` 经 `checkpoint_id` 回连 ⇒ 本轮实测 `unmatched_rows = 0`（全可归）；"
+    "`branch:to:%` 有一批不可归的行，第十九轮拆开后 = 建线期路由行 + 无 `tk_` 的 thread（两类都**不是** run "
+    "覆盖损失，真损失列 `unmatched_at_or_after_first_tk` 应为 0）⇒ 引用「写面能落到 run」必须带是哪个通道集 + 这一格"
+    "（条数只看本产物 `unmatched_route_rows_shape`，别抄文案里的数字）",
     "`max_terminal_writes_per_thread` 仍是 **thread 级上界**，与 run 级归属是两件事 ⇒ 它 = 1 只说"
     "「没有任何 thread 写过两次终态」，**不能代** `multi_row_turn2plus_runs`（那臂数的是审计行）",
-    "两侧各按各的谓词与面（审计面 vs checkpoint 写面）、各按各的窗口与前缀 ⇒ **同向、不互认、不可相加**；"
-    "相等只是巧合（W7 `⑯` 的连法与我方相同，但他算他的窗、我方算全库 ⇒ 同名数不等也不必然是矛盾）",
+    "两侧各按各的谓词、面、窗口与前缀，且**粒度不同**（rows / runs / threads 三个数常常不等，见 `granularity`）"
+    "⇒ **同向、不互认、不可相加**；相等只是巧合（W7 ⑯⑰ 的连法与我方相同，但他算他的窗、我方算全库）",
 )
 
 
@@ -683,29 +731,68 @@ def _runs_by_turn(tk_set: set[str], by_tk: dict, rows_by_tk: dict[str, int]) -> 
 
 
 def writes_attribution(join: dict, terminal_runs: set[str], audit_supp_runs: set[str],
+                       route_runs: set[str], unmatched_shape: dict,
                        ruler: dict, rows_by_tk: dict[str, int]) -> dict:
-    """纯函数：写面 → run 的归属结果（输入由调用方逐行取回，turn 用我方尺数）。"""
+    """纯函数：写面 → run 的归属结果（输入由调用方逐行取回，turn 用我方尺数）。
+
+    🔴 三个粒度各数各的（W7 ⑯ 那句「70 条全在 turn1」的根因 = 把 **thread 数当 run 数**报）⇒
+       每一集 `rows` / `runs` / `threads` **成对报**，不相等时用 `runs_vs_threads_differ` 点名。
+    """
     by_tk = ruler.get("by_tk") or {}
     t = _runs_by_turn(terminal_runs, by_tk, rows_by_tk)
     s = _runs_by_turn(audit_supp_runs, by_tk, rows_by_tk)
+    rt = _runs_by_turn(route_runs, by_tk, rows_by_tk)
+
+    def _threads(tks: set[str]) -> int:
+        return len({str(by_tk[k]["thread_id"]) for k in tks if k in by_tk})
+
+    counts = {"terminal": {"runs": t["runs"], "threads": _threads(terminal_runs)},
+              "audit_supp": {"runs": s["runs"], "threads": _threads(audit_supp_runs)},
+              "route": {"runs": rt["runs"], "threads": _threads(route_runs)}}
     unmatched = int(join["terminal_unmatched_rows"])
+    before = int(unmatched_shape["unmatched_before_first_tk"])
+    after = int(unmatched_shape["unmatched_at_or_after_first_tk"])
+    no_tk = int(unmatched_shape["unmatched_on_threads_without_tk"])
+    total_un = int(unmatched_shape["route_unmatched_rows"])
     return {
         "method": "写行的 `checkpoint_id` 回连 `lg.checkpoints` 里带 `tk_` 的行 ⇒ run；"
                   "turn 由我方尺在**全历史**上数（先编号、后归属，与 W7 ⑭b 同判据）",
         "coverage": {**join, "join_covers_terminal_rows": unmatched == 0},
         "terminal_writes_on_runs": t,
         "audit_supp_routes_on_runs": s,
-        #: 🔑 判别的读点（架构 §38 ② 留的那个设计问题，本轮有了形状）：
-        #:    · terminal 写**只落 turn1、且从不落零审计行的 run** ⇒ 该面**能区分 run 成败** ⇒
-        #:      「写面对终态黏在第一轮」这个解释被**排除法削弱**（不是全等证明）；
-        #:    · 修复后若 `terminal_writes_on_runs.turn2plus > 0` ⇒ 判据② 在**生产落库面**上拿到 run 级读点；
-        #:      若仍 = 0 ⇒ 黏性解释成立，这一维**判不了**（两种结果都有信息量 ⇒ 不许把 0 读成"通过"）。
+        #: 🔑 这一格回答「该面切不切得出**第 2 轮**」：路由行按 run 归属后 turn≥2 有没有行（不看 terminal）。
+        "route_rows_on_runs": rt,
+        "granularity": {**counts,
+                        "runs_vs_threads_differ": [k for k, v in counts.items()
+                                                   if v["runs"] != v["threads"]],
+                        "note": "报数五件 = 数 + 面 + 谓词 + 分母 + **粒度**（本项目第四种混淆形状）"},
+        "unmatched_route_rows_shape": {
+            **unmatched_shape,
+            #: 三分类之和必须恰等于总数 ⇒ **闭合**才可以说"机制已查"。
+            "closure_adds_up": before + after + no_tk == total_un,
+            #: 🔴 两条 join 形状必须给出同一个 `route_unmatched_rows`：归属语句只按 `checkpoint_id` 连，
+            #:    本语句多绑了一个 `thread_id` ⇒ 不等就说明写行的 thread 与检查点的 thread 有对不上的（第三种形状）。
+            "agrees_with_attribution_join": bool(
+                total_un == int(join["route_unmatched_rows"])
+                and int(unmatched_shape["route_rows"]) == int(join["route_rows"])),
+            "real_coverage_loss_rows": after,
+            "reads": "早于本 thread 第一个带 `tk_` 检查点的路由行（建线期）与「该 thread 完全没有 `tk_` 检查点」"
+                     "两类都**不是** run 覆盖损失 ⇒ 只有 `unmatched_at_or_after_first_tk` 那一类才是，本轮应为 0；"
+                     "若非 0 ⇒ 「路由集可归属」这句要重开。",
+        },
+        #: 🔑 判别条（判据② 生产面读点的形状，本轮同时有 terminal 与路由两维）：
+        #:    · terminal 写全落 turn1、且不落零审计行 run；
+        #:    · 同面上 turn≥2 的 run **有路由行** ⇒ 该面切得出第 2 轮 ⇒ 黏性解释被**现测排除**。
         "discriminator": {
             "terminal_on_crash_turn2plus_runs": t["crash_turn2plus_runs"],
             "terminal_writes_at_turn2plus": t["turn2plus"],
+            "route_rows_at_turn2plus": rt["turn2plus"],
             "audit_supp_at_turn2plus": s["turn2plus"],
             "audit_supp_on_crash_turn2plus_runs": s["crash_turn2plus_runs"],
-            "reads": "全等证明要 P-A 那一格（修法后进图的 run）；本轮全是修法前历史 ⇒ 只作**排除法**与基线。",
+            "face_can_split_turn2plus": bool(rt["turn2plus"] > 0 and t["turn2plus"] == 0),
+            "reads": "路由行在 turn≥2 有行而 terminal 写没有 ⇒ 排除「黏在第一轮」；修复后若 "
+                     "`terminal_writes_at_turn2plus > 0` ⇒ 判据② 拿到 run 级落库面读点，若仍 = 0 ⇒ 该维判不了 "
+                     "⇒ **两种结果都有信息量，0 不许读成「通过」**（pre-fix 它本就 = 0 ⇒ 单独当验收位会恒真）。",
         },
         "attribution_closes": bool(unmatched == 0 and not t["unknown_runs"] and not t["turn2plus"]),
     }
@@ -1345,7 +1432,13 @@ async def measure(rows: list[dict], table: str = "audit_log") -> tuple[list[dict
                                 strict=True))
                 t_runs = {str(r[0]) for r in await (await conn.execute(TERMINAL_RUN_TKS_SQL)).fetchall()}
                 s_runs = {str(r[0]) for r in await (await conn.execute(AUDIT_SUPP_RUN_TKS_SQL)).fetchall()}
-                attrib = writes_attribution(join, t_runs, s_runs, ruler, rows_by_tk)
+                rt_runs = {str(r[0]) for r in await (await conn.execute(ROUTE_RUN_TKS_SQL)).fetchall()}
+                un_keys = ("route_rows", "route_unmatched_rows", "route_unmatched_threads",
+                           "unmatched_before_first_tk", "unmatched_at_or_after_first_tk",
+                           "unmatched_on_threads_without_tk", "threads_with_real_loss_rows")
+                un_shape = dict(zip(un_keys, await (await conn.execute(ROUTE_UNMATCHED_SHAPE_SQL)).fetchone(),
+                                    strict=True))
+                attrib = writes_attribution(join, t_runs, s_runs, rt_runs, un_shape, ruler, rows_by_tk)
                 ruler["writes"] = writes_crosscheck(ruler, dict(zip(keys, shape_row, strict=True)), tset,
                                                     attrib=attrib)
             except Exception as writes_exc:
@@ -1582,6 +1675,12 @@ def main() -> int:
     for v in s["violated_cells"]:
         print(f"   ⚠️ {v['receipt']} 分母={v['denominator']}({v['denominator_basis']}) "
               f"审计行={v['audit_rows']} 差={v['diff']}｜对照：该 UTC 日整表现存 {v['rows_that_window_day']} 行")
+    #: 🔴 归属块**崩过一次的症状**是"exit 0 + 产物里那一格整块消失"（本轮实测：一句 SQL 列名写错 ⇒
+    #:    `checkpoint_writes` 退化成 `{available: false}`，上一轮的归属读数跟着没了，而 stdout 一句没报）。
+    #:    ⇒ 判据没红不等于器件在跑 ⇒ 不可用必须喊出来。
+    cw = ((s.get("thread_channel") or {}).get("db_wide") or {}).get("checkpoint_writes") or {}
+    if cw.get("available") is False:
+        print(f"🔴 台账第 8 面不可用 ⇒ 本轮**没有**写面归属读数（不是「归属为 0」）：{cw.get('error')}")
     print(f"written: {out}")
     return 0
 
