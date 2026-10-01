@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-01T05:16:07+00:00",
+  "generated_at_utc": "2026-10-01T06:21:11+00:00",
   "strict_denominator": "terminal − app.audit_log 行数 = 0",
   "denominator_definition": {
     "terminal_outcomes": [
@@ -86,7 +86,7 @@
     },
     "thread_ruler": {
       "available": true,
-      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮（按标签锚定，行号会漂）",
+      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮⑯⑯b（按标签锚定，行号会漂）",
       "usable": true,
       "ambiguous_tk_to_threads": 0,
       "tk_runs": 1378,
@@ -165,12 +165,50 @@
         "turn2plus_overlap": {
           "a_turn2plus_threads_with_audit_row": 28,
           "a_turn2plus_intersect_b": 28,
-          "attributable_to_a_specific_turn": false
+          "attributable_to_a_specific_turn": true
+        },
+        "run_attribution": {
+          "method": "写行的 `checkpoint_id` 回连 `lg.checkpoints` 里带 `tk_` 的行 ⇒ run；turn 由我方尺在**全历史**上数（先编号、后归属，与 W7 ⑭b 同判据）",
+          "coverage": {
+            "terminal_rows_via_join": 813,
+            "terminal_matched_rows": 813,
+            "terminal_unmatched_rows": 0,
+            "route_rows": 8482,
+            "route_channels": 22,
+            "route_unmatched_rows": 1318,
+            "route_unmatched_threads": 1318,
+            "tk_runs_touched": 1377,
+            "join_covers_terminal_rows": true
+          },
+          "terminal_writes_on_runs": {
+            "runs": 813,
+            "turn1": 813,
+            "turn2plus": 0,
+            "unknown_runs": 0,
+            "zero_audit_row_runs": 0,
+            "crash_turn2plus_runs": 0
+          },
+          "audit_supp_routes_on_runs": {
+            "runs": 75,
+            "turn1": 70,
+            "turn2plus": 5,
+            "unknown_runs": 0,
+            "zero_audit_row_runs": 5,
+            "crash_turn2plus_runs": 5
+          },
+          "discriminator": {
+            "terminal_on_crash_turn2plus_runs": 0,
+            "terminal_writes_at_turn2plus": 0,
+            "audit_supp_at_turn2plus": 5,
+            "audit_supp_on_crash_turn2plus_runs": 5,
+            "reads": "全等证明要 P-A 那一格（修法后进图的 run）；本轮全是修法前历史 ⇒ 只作**排除法**与基线。"
+          },
+          "attribution_closes": true
         },
         "limits": [
-          "它的 `task_id` 是 LangGraph 内部 UUID、不是应用侧 `tk_` run 号 ⇒ **run 边界在这张表上切不出来**（架构 §38 ② 实测；这件归 W4 出设计）",
-          "`max_terminal_writes_per_thread` 是 **thread 级上界**，不是 run 级 ⇒ 它 = 1 只说「没有任何 thread 写过两次终态」，**不能代** `multi_row_turn2plus_runs`（那臂数的是审计行）",
-          "两数各按各的谓词与面（审计面 vs checkpoint 写面）⇒ **同向、不互认、不可相加**；相等只是巧合"
+          "归属是**按通道集分别成立**的：`channel='terminal'` 经 `checkpoint_id` 回连 `tk_` 检查点 ⇒ 本轮实测 `unmatched_rows = 0`（可归属）；`branch:to:%` 同法有 **非 0 的 `route_unmatched_rows`** ⇒ 路由集**不**全量可归（机制未查、标 UNVERIFIED）⇒ 引用「写面能落到 run」必须带是哪个通道集",
+          "`max_terminal_writes_per_thread` 仍是 **thread 级上界**，与 run 级归属是两件事 ⇒ 它 = 1 只说「没有任何 thread 写过两次终态」，**不能代** `multi_row_turn2plus_runs`（那臂数的是审计行）",
+          "两侧各按各的谓词与面（审计面 vs checkpoint 写面）、各按各的窗口与前缀 ⇒ **同向、不互认、不可相加**；相等只是巧合（W7 `⑯` 的连法与我方相同，但他算他的窗、我方算全库 ⇒ 同名数不等也不必然是矛盾）"
         ],
         "verdict_role": "**对照面，不是判据**：`classify()` 不读本块，判据② 的两条断言仍以`crash_turn2plus` / `multi_row_turn2plus_runs` 为准（交付 §4.26）。"
       }
@@ -243,13 +281,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 1035773.858,
+        "read_age_s": 1039677.812,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5520.506
+          "read_age_over_max_lag": 5541.313
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -327,13 +365,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 244094.371,
+        "read_age_s": 247998.325,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1300.983
+          "read_age_over_max_lag": 1321.791
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -462,13 +500,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 169072.035,
+        "read_age_s": 172975.989,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 901.126
+          "read_age_over_max_lag": 921.934
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -546,13 +584,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 169238.228,
+        "read_age_s": 173142.183,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 902.012
+          "read_age_over_max_lag": 922.82
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -633,13 +671,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 241888.816,
+        "read_age_s": 245792.77,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1289.228
+          "read_age_over_max_lag": 1310.035
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -721,13 +759,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 240808.224,
+        "read_age_s": 244712.179,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1283.469
+          "read_age_over_max_lag": 1304.276
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -810,13 +848,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 242005.941,
+        "read_age_s": 245909.896,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1289.852
+          "read_age_over_max_lag": 1310.66
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -899,13 +937,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 240678.038,
+        "read_age_s": 244581.993,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1282.775
+          "read_age_over_max_lag": 1303.582
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -986,13 +1024,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 240554.228,
+        "read_age_s": 244458.182,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1282.115
+          "read_age_over_max_lag": 1302.922
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1071,13 +1109,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 242109.045,
+        "read_age_s": 246012.999,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1290.402
+          "read_age_over_max_lag": 1311.209
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1160,13 +1198,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 228526.644,
+        "read_age_s": 232430.599,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1218.01
+          "read_age_over_max_lag": 1238.817
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1246,13 +1284,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 228638.11,
+        "read_age_s": 232542.064,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1218.604
+          "read_age_over_max_lag": 1239.411
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1332,13 +1370,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 228468.087,
+        "read_age_s": 232372.041,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1217.698
+          "read_age_over_max_lag": 1238.505
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1421,13 +1459,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 228841.765,
+        "read_age_s": 232745.72,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1219.689
+          "read_age_over_max_lag": 1240.497
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1506,13 +1544,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 228937.973,
+        "read_age_s": 232841.928,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1220.202
+          "read_age_over_max_lag": 1241.01
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1590,13 +1628,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 850532.168,
+        "read_age_s": 854436.123,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 4533.198
+          "read_age_over_max_lag": 4554.005
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1676,13 +1714,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 844662.193,
+        "read_age_s": 848566.148,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 4501.912
+          "read_age_over_max_lag": 4522.719
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1762,13 +1800,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 754029.928,
+        "read_age_s": 757933.883,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 4018.857
+          "read_age_over_max_lag": 4039.664
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1848,13 +1886,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 681265.343,
+        "read_age_s": 685169.298,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 3631.033
+          "read_age_over_max_lag": 3651.841
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1934,13 +1972,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 662736.59,
+        "read_age_s": 666640.545,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 3532.278
+          "read_age_over_max_lag": 3553.085
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2019,13 +2057,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 663130.824,
+        "read_age_s": 667034.778,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 3534.379
+          "read_age_over_max_lag": 3555.187
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2105,13 +2143,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 662946.365,
+        "read_age_s": 666850.319,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 3533.396
+          "read_age_over_max_lag": 3554.203
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2190,13 +2228,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 663033.804,
+        "read_age_s": 666937.758,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 3533.862
+          "read_age_over_max_lag": 3554.67
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2279,13 +2317,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 244448.548,
+        "read_age_s": 248352.503,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1302.871
+          "read_age_over_max_lag": 1323.678
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2366,13 +2404,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 244287.473,
+        "read_age_s": 248191.427,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1302.012
+          "read_age_over_max_lag": 1322.82
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2452,13 +2490,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 147254.874,
+        "read_age_s": 151158.829,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 784.844
+          "read_age_over_max_lag": 805.652
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2541,13 +2579,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 146997.302,
+        "read_age_s": 150901.257,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 783.472
+          "read_age_over_max_lag": 804.279
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2629,13 +2667,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 146949.272,
+        "read_age_s": 150853.227,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 783.216
+          "read_age_over_max_lag": 804.023
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2716,13 +2754,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 136026.384,
+        "read_age_s": 139930.339,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 724.998
+          "read_age_over_max_lag": 745.806
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2883,13 +2921,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 135983.426,
+        "read_age_s": 139887.38,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 724.769
+          "read_age_over_max_lag": 745.577
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3157,13 +3195,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 1033134.88,
+        "read_age_s": 1037038.834,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5506.44
+          "read_age_over_max_lag": 5527.248
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3236,13 +3274,13 @@
         "terminal_minus_matched_runs": 3,
         "gap_minus_crash_total": 3,
         "identity_holds": true,
-        "read_age_s": 1032898.867,
+        "read_age_s": 1036802.822,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5505.183
+          "read_age_over_max_lag": 5525.99
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3315,13 +3353,13 @@
         "terminal_minus_matched_runs": 35,
         "gap_minus_crash_total": 35,
         "identity_holds": true,
-        "read_age_s": 1032810.261,
+        "read_age_s": 1036714.216,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5504.71
+          "read_age_over_max_lag": 5525.518
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3397,13 +3435,13 @@
         "terminal_minus_matched_runs": 40,
         "gap_minus_crash_total": 40,
         "identity_holds": true,
-        "read_age_s": 1032493.435,
+        "read_age_s": 1036397.39,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5503.022
+          "read_age_over_max_lag": 5523.829
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3479,13 +3517,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 1036115.319,
+        "read_age_s": 1040019.274,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5522.326
+          "read_age_over_max_lag": 5543.133
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3561,13 +3599,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 1036015.663,
+        "read_age_s": 1039919.617,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5521.795
+          "read_age_over_max_lag": 5542.602
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3640,13 +3678,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 1033436.001,
+        "read_age_s": 1037339.956,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5508.045
+          "read_age_over_max_lag": 5528.853
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3722,13 +3760,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 1033214.623,
+        "read_age_s": 1037118.577,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5506.865
+          "read_age_over_max_lag": 5527.673
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3806,13 +3844,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 244484.545,
+        "read_age_s": 248388.499,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1303.063
+          "read_age_over_max_lag": 1323.87
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -4138,10 +4176,10 @@
     },
     "thread_channel": {
       "role": "对照 + 崩臂面标定，不是判据（classify() 不读这一块）",
-      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮（按标签锚定，行号会漂）",
+      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮⑯⑯b（按标签锚定，行号会漂）",
       "available": true,
       "db_wide": {
-        "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮（按标签锚定，行号会漂）",
+        "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮⑯⑯b（按标签锚定，行号会漂）",
         "usable": true,
         "ambiguous_tk_to_threads": 0,
         "tk_runs": 1378,
@@ -4220,12 +4258,50 @@
           "turn2plus_overlap": {
             "a_turn2plus_threads_with_audit_row": 28,
             "a_turn2plus_intersect_b": 28,
-            "attributable_to_a_specific_turn": false
+            "attributable_to_a_specific_turn": true
+          },
+          "run_attribution": {
+            "method": "写行的 `checkpoint_id` 回连 `lg.checkpoints` 里带 `tk_` 的行 ⇒ run；turn 由我方尺在**全历史**上数（先编号、后归属，与 W7 ⑭b 同判据）",
+            "coverage": {
+              "terminal_rows_via_join": 813,
+              "terminal_matched_rows": 813,
+              "terminal_unmatched_rows": 0,
+              "route_rows": 8482,
+              "route_channels": 22,
+              "route_unmatched_rows": 1318,
+              "route_unmatched_threads": 1318,
+              "tk_runs_touched": 1377,
+              "join_covers_terminal_rows": true
+            },
+            "terminal_writes_on_runs": {
+              "runs": 813,
+              "turn1": 813,
+              "turn2plus": 0,
+              "unknown_runs": 0,
+              "zero_audit_row_runs": 0,
+              "crash_turn2plus_runs": 0
+            },
+            "audit_supp_routes_on_runs": {
+              "runs": 75,
+              "turn1": 70,
+              "turn2plus": 5,
+              "unknown_runs": 0,
+              "zero_audit_row_runs": 5,
+              "crash_turn2plus_runs": 5
+            },
+            "discriminator": {
+              "terminal_on_crash_turn2plus_runs": 0,
+              "terminal_writes_at_turn2plus": 0,
+              "audit_supp_at_turn2plus": 5,
+              "audit_supp_on_crash_turn2plus_runs": 5,
+              "reads": "全等证明要 P-A 那一格（修法后进图的 run）；本轮全是修法前历史 ⇒ 只作**排除法**与基线。"
+            },
+            "attribution_closes": true
           },
           "limits": [
-            "它的 `task_id` 是 LangGraph 内部 UUID、不是应用侧 `tk_` run 号 ⇒ **run 边界在这张表上切不出来**（架构 §38 ② 实测；这件归 W4 出设计）",
-            "`max_terminal_writes_per_thread` 是 **thread 级上界**，不是 run 级 ⇒ 它 = 1 只说「没有任何 thread 写过两次终态」，**不能代** `multi_row_turn2plus_runs`（那臂数的是审计行）",
-            "两数各按各的谓词与面（审计面 vs checkpoint 写面）⇒ **同向、不互认、不可相加**；相等只是巧合"
+            "归属是**按通道集分别成立**的：`channel='terminal'` 经 `checkpoint_id` 回连 `tk_` 检查点 ⇒ 本轮实测 `unmatched_rows = 0`（可归属）；`branch:to:%` 同法有 **非 0 的 `route_unmatched_rows`** ⇒ 路由集**不**全量可归（机制未查、标 UNVERIFIED）⇒ 引用「写面能落到 run」必须带是哪个通道集",
+            "`max_terminal_writes_per_thread` 仍是 **thread 级上界**，与 run 级归属是两件事 ⇒ 它 = 1 只说「没有任何 thread 写过两次终态」，**不能代** `multi_row_turn2plus_runs`（那臂数的是审计行）",
+            "两侧各按各的谓词与面（审计面 vs checkpoint 写面）、各按各的窗口与前缀 ⇒ **同向、不互认、不可相加**；相等只是巧合（W7 `⑯` 的连法与我方相同，但他算他的窗、我方算全库 ⇒ 同名数不等也不必然是矛盾）"
           ],
           "verdict_role": "**对照面，不是判据**：`classify()` 不读本块，判据② 的两条断言仍以`crash_turn2plus` / `multi_row_turn2plus_runs` 为准（交付 §4.26）。"
         }
@@ -4249,7 +4325,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5520.506
+            "read_age_over_max_lag": 5541.313
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4271,7 +4347,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 901.126
+            "read_age_over_max_lag": 921.934
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 4,
@@ -4293,7 +4369,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 1283.469
+            "read_age_over_max_lag": 1304.276
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 8,
@@ -4315,7 +4391,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5506.44
+            "read_age_over_max_lag": 5527.248
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4337,7 +4413,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5505.183
+            "read_age_over_max_lag": 5525.99
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4359,7 +4435,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5504.71
+            "read_age_over_max_lag": 5525.518
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4381,7 +4457,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5503.022
+            "read_age_over_max_lag": 5523.829
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4403,7 +4479,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5521.795
+            "read_age_over_max_lag": 5542.602
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4425,7 +4501,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5508.045
+            "read_age_over_max_lag": 5528.853
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4447,7 +4523,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5506.865
+            "read_age_over_max_lag": 5527.673
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4464,7 +4540,7 @@
           "契约文本 = 07 §4.8 U-130 v1.7.14（架构 `44b6783`）",
           "落库面读数 = 本产物 thread_channel.overcount_pairing",
           "W7 落库面独立语句 = r23_thread_from_checkpoints.sql 段 ⑮",
-          "checkpoint 写面（台账第 8 面）= 本产物 db_wide.checkpoint_writes ⇒ **thread 级上界**、切不出 run 边界（见该块 limits）"
+          "checkpoint 写面（台账第 8 面）= 本产物 db_wide.checkpoint_writes ⇒ thread 级上界看 `max_terminal_writes_per_thread`、run 级归属看 `run_attribution`（覆盖面按通道集分列，路由集不全可归）"
         ],
         "cells_measured": 39,
         "cells_with_multi_row_turn2plus": 0,
