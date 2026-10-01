@@ -22,9 +22,11 @@ DSN 的解析与脱敏**只**用 `pg_guard.redact_dsn`（同一份形状 regex�
 - **没有兜底**的 `os.environ.get(VAR)`（缺 env 时得到 None → 夹具自行 skip，这正是想要的形态）。
 
 诚实边界（静态分析的能力上限）：
-- `tests/integration/test_retrieval_fts_pg.py` 的 `_dsn_from_env_file()` 在**运行时**读
-  `deploy/.env` 并把 `@pg:` 改写成 `@127.0.0.1:` —— 静态看不见，本守卫不覆盖（既存机制，
-  是否也要收口归该夹具归属窗口 + 架构裁，本文件只登记）；
+- ✅ **已收口（2026-10-01，W2B）**：本文件曾登记的例外 —— `tests/integration/test_retrieval_fts_pg.py`
+  的 `_dsn_from_env_file()` 在**运行期**读 `deploy/.env` 并把 `@pg:` 改写成 `@127.0.0.1:` ——
+  **已删除**（判据 `docs/07:1133`，v1.7.17；该文件的 DSN 现与另外 8 个 integration 模块同款走
+  `env_dsn`）。接管这一类形态的**第二条守卫** = `tests/contract/test_no_env_file_dsn_derivation.py`
+  （R-ENVFILE：集成模块不得读 `.env`，AST + 简单赋值的传递闭包）⇒ 本文件不再为它开例外；
 - `tests/eval/**` 不在扫描面：W6 的字面量是守卫函数自身的测试输入，归 W6 自治；
 - f-string / 运行期拼接出来的 DSN 静态不可见 —— 本守卫只认「str 常量及其 `+` 拼接、
   可解析的模块级常量名」。

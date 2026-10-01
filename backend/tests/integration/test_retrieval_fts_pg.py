@@ -7,25 +7,32 @@
 2. **DoD③（真网络失败）**：`EMBEDDING_BASE_URL` 指向本机死端口 →
    重试耗尽 → `EmbeddingUnavailable` → 服务层显式降级（N-21 不静默）。
 
-运行方式：
-    ../.venv/Scripts/python.exe -m pytest tests/integration/test_retrieval_fts_pg.py -m integration
+运行方式（本机须先起**一次性**容器；**不得**指向 compose 共享栈）：
+    docker run -d --name cql-it-pg -e POSTGRES_HOST_AUTH_METHOD=trust -p 5433:5432 \
+        pgvector/pgvector:pg16        # 端口任选，只要不与共享栈（5432）冲突
+    RETRIEVAL_TEST_PG_DSN=postgresql://postgres@127.0.0.1:5433/postgres \
+    COMMERCEQL_TEST_RW_DSN=postgresql://postgres@127.0.0.1:5433/postgres \
+        ../.venv/Scripts/python.exe -m pytest tests/integration/test_retrieval_fts_pg.py -m integration
 
-PG DSN（两路分离）：
-- `PROD_DSN` = deploy/.env 的 DATABASE_URL（compose 服务名 `pg` → `127.0.0.1`）：
-  仅用于生产表 schema 对齐检查（只读）。
-- `TEST_DSN` = 环境变量 `RETRIEVAL_TEST_PG_DSN`，缺省回退 `PROD_DSN`：
-  夹具 DDL 用；若该 DSN 的角色无建 schema 权限（如 app_rw），相关用例**如实 skip**。
-  本机推荐：`docker run -d --name cql-it-pg -e POSTGRES_PASSWORD=it -p 5433:5432 postgres:16-alpine`
-  并设 `RETRIEVAL_TEST_PG_DSN=postgresql://postgres:it@127.0.0.1:5433/postgres`。
+PG DSN —— **只认环境变量**（`U-114` 防线①，共享守卫 `tests/integration/_env_dsn.py`）：
+- `TEST_DSN` = `RETRIEVAL_TEST_PG_DSN`：两个夹具的 DDL 用（建临时 schema）。
+- 对齐检查另取 `COMMERCEQL_TEST_RW_DSN`（只读，见 `test_embed_doc_columns_match_...`；
+  缺 `app.embed_doc` 表 = 环境未备 ⇒ **skip 而非 assert**，与"对齐失败"分列）。
+- **缺 env = import 期当场 fail**（禁止 skip、禁止默认值）—— 与另外 8 个 integration 模块同款。
+⚠️ **本文件不再读 `deploy/.env`**（2026-10-01，判据出处 `docs/07:1133`）：旧实现是
+`os.environ.get("RETRIEVAL_TEST_PG_DSN") or _dsn_from_env_file()`，缺 env 时**静默回退到
+compose 共享栈**（`app_rw@127.0.0.1:5432/ecom`），而两个夹具的**第一条语句**就是
+`CREATE EXTENSION` / `CREATE SCHEMA` / `DROP TABLE` ⇒ 本地裸跑 = **在共享库上试写**。
+当时挡住它的**不是守卫、是角色权限**（`app_rw` 无 DDL ⇒ 3 error + 6 skip）——
+"闸门没响，只是门锁着"。⇒ 运行期 DSN 的解析链里**不得出现**「读 `.env` 后赋给夹具变量」；
+静态否定式守卫 = `tests/contract/test_no_env_file_dsn_derivation.py`（扫全 `tests/integration/**`）。
 夹具表落在**临时 schema**，测试后整体丢弃——不是第二份物化真相。
 """
 
 from __future__ import annotations
 
-import os
 import re
 from collections.abc import Mapping, Sequence
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -37,6 +44,7 @@ from app.retrieval.search import RetrievalService
 from app.retrieval.sparse import SparseSearch
 from app.retrieval.tokenizer import tsvector_source
 from app.retrieval.view import BundleView
+from tests.integration._env_dsn import env_dsn
 from tests.unit._retrieval_fixture import FakeCache, load_bundle_view
 
 pytestmark = pytest.mark.integration
@@ -48,32 +56,17 @@ pytest.importorskip("psycopg", reason="psycopg 未安装（集成测试需要真
 import psycopg  # noqa: E402  # importorskip 之后
 
 # ---------------------------------------------------------------------------
-# DSN 定位（两路分离）：
-# - PROD_DSN：deploy/.env 的 DATABASE_URL —— 仅用于生产表 schema 对齐检查（只读）；
-# - TEST_DSN：RETRIEVAL_TEST_PG_DSN（优先）或回退 PROD_DSN —— 夹具 DDL 用。
-#   回退 DSN 的角色（app_rw）无建 schema 权限时，夹具用例如实 skip，不伪装通过。
+# DSN 定位 —— **只认环境变量**（`U-114` 防线①/②，2026-10-01，判据出处 `docs/07:1133`）
+#
+# 历史形态（本条判据的由来，**已删除**）：
+#     PROD_DSN = _dsn_from_env_file()   # 读 deploy/.env，把 `@pg:` 改写成 `@127.0.0.1:`
+#     TEST_DSN = os.environ.get("RETRIEVAL_TEST_PG_DSN") or PROD_DSN
+# ⇒ 缺 env 时不报错、静默回退到共享栈；而下面的夹具立刻在它上面
+#   `CREATE EXTENSION vector` / `CREATE SCHEMA` / `DROP TABLE`。
+# 现在解析链里**只有** `os.environ`（经共享守卫 `env_dsn`）：缺 env = import 期 fail。
 # ---------------------------------------------------------------------------
 
-def _dsn_from_env_file() -> str | None:
-    env_file = Path(__file__).resolve().parents[3] / "deploy" / ".env"
-    if env_file.exists():
-        for line in env_file.read_text(encoding="utf-8").splitlines():
-            if line.startswith("DATABASE_URL="):
-                return line.partition("=")[2].strip().replace(
-                    "postgresql+psycopg://", "postgresql://"
-                ).replace("@pg:", "@127.0.0.1:")
-    return None
-
-
-PROD_DSN: str | None = _dsn_from_env_file()
-TEST_DSN: str | None = os.environ.get("RETRIEVAL_TEST_PG_DSN") or PROD_DSN
-
-_needs_pg = pytest.mark.skipif(
-    TEST_DSN is None, reason="无可用 PG DSN（RETRIEVAL_TEST_PG_DSN / deploy/.env）"
-)
-_needs_prod = pytest.mark.skipif(
-    PROD_DSN is None, reason="无 deploy/.env 生产 DSN（schema 对齐检查需要）"
-)
+TEST_DSN = env_dsn("RETRIEVAL_TEST_PG_DSN")
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +100,6 @@ def _conn(dsn: str) -> psycopg.Connection:
 @pytest.fixture(scope="module")
 def pg_table() -> str:
     """建临时 schema + 夹具表，模块结束整体丢弃。需要 DDL 权限。"""
-    assert TEST_DSN is not None
     try:
         with _conn(TEST_DSN) as conn:
             conn.execute(DDL)
@@ -133,7 +125,6 @@ def write_doc(
     bundle_version: str = BUNDLE_VERSION,
 ) -> None:
     """**写入侧**：tsv 由 `tsvector_source()` 计算 —— N-24 的写入 half。"""
-    assert TEST_DSN is not None
     with _conn(TEST_DSN) as conn:
         conn.execute(
             f"INSERT INTO {table} (doc_id, bundle_version, tenant_id, kind, ref, text, tsv)"
@@ -166,7 +157,6 @@ def make_fetcher(table: str):
     async def fetch(sql: str, params: Mapping[str, Any]) -> Sequence[Mapping[str, Any]]:
         # psycopg 命名参数 %(name)s 形态；我们的模板用 :name（SQLAlchemy 风格）
         sql = to_psycopg_params(sql, params)
-        assert TEST_DSN is not None
         with _conn(TEST_DSN) as conn:
             cur = conn.cursor()
             cur.execute(sql, dict(params))
@@ -282,17 +272,29 @@ def test_bundle_version_isolates(pg_table) -> None:
 # 生产表冒烟（schema 对齐检查；数据填充状态只报告不断言）
 # ---------------------------------------------------------------------------
 
-@_needs_prod
 def test_production_embed_doc_schema_matches_query_template() -> None:
-    """07 §12.2 embed_doc 的列必须与检索 SQL 模板对齐（W2A 物化的契约面）。"""
-    assert PROD_DSN is not None
-    with _conn(PROD_DSN) as conn:
+    """07 §12.2 embed_doc 的列必须与检索 SQL 模板对齐（W2A 物化的契约面）。
+
+    DSN 走 `COMMERCEQL_TEST_RW_DSN`（**显式 opt-in**，CI 注入）：本用例要的是**生产库**的表结构，
+    因此它天然要连共享栈 —— 这是**有意的**、且**只读**（`information_schema.columns`）。
+    缺 env 时按 `env_dsn` 契约**当场 fail**（具名点名缺哪个变量），不 skip、不回退 `deploy/.env`。
+    """
+    prod_dsn = env_dsn("COMMERCEQL_TEST_RW_DSN")
+    with _conn(prod_dsn) as conn:
         cur = conn.cursor()
         cur.execute(
             "SELECT column_name FROM information_schema.columns"
             " WHERE table_schema='app' AND table_name='embed_doc'"
         )
         cols = {r[0] for r in cur.fetchall()}
+    if not cols:
+        # ⚠️ "环境未备"（目标库没有这张表）**必须与"对齐失败"分开**——前者 skip、后者 assert。
+        # 合成一个出口会让"没验到"读成"验过且不对"（本项目对 error 分类的同一条纪律）。
+        pytest.skip(
+            "目标库没有 app.embed_doc —— 本用例验的是**生产表**与检索模板的对齐，"
+            "缺表属环境未备（请把 COMMERCEQL_TEST_RW_DSN 指向带生产 schema 的库），"
+            "不代表对齐失败。"
+        )
     required = {"doc_id", "bundle_version", "tenant_id", "kind", "ref", "text", "tsv", "embedding"}
     missing = required - cols
     assert not missing, f"app.embed_doc 缺列：{missing}（W2A 物化与 07 §12.2 不一致？）"
@@ -374,7 +376,6 @@ CREATE TABLE {DENSE_SCHEMA}.embed_doc (
 @pytest.fixture(scope="module")
 def dense_table() -> str:
     """临时 schema + **真 `vector` 列**（与生产表同为 pgvector 类型）。"""
-    assert TEST_DSN is not None
     with _conn(TEST_DSN) as conn:
         try:
             conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
@@ -396,7 +397,6 @@ def dense_literal(values: list[float]) -> str:
 
 def seed_dense(table: str, version: str, rows: list[tuple[str, str | None]]) -> None:
     """`rows` 的第二个元素 = pgvector 文本字面量；`None` = 该行向量为 NULL。"""
-    assert TEST_DSN is not None
     with _conn(TEST_DSN) as conn:
         for ref, vector in rows:
             conn.execute(

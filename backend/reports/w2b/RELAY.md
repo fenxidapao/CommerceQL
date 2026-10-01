@@ -611,6 +611,79 @@ arch RELAY（`REFERENCE.md:203` 转记的那条）写的是 `binding_state_total
 - 正解：`./.venv/Scripts/lint-imports.exe`（读 `.importlinter`）⇒ 输出 `Contracts: 4 kept, 0 broken.`。CI 另有 `grep -q "Contracts: "` 守卫（`ci.yml:269-278`）。
 - **这不新**：`U-41` 在案、README 已注明、CI 已设守卫 —— 我记它的唯一价值 = **"没输出"不等于"绿"**（这次我是在**已经知道**这条规则的情况下又踩了一次）。
 
+---
+
+## 16. T-02 回执：`test_retrieval_fts_pg.py` 的运行期 DSN 改为**只认环境变量**（U-114 残余面收口）
+
+**任务单**：`reports/qa/TASK_BOARD.md:11`（T-02，QA→W2B＋W0 合批）。
+**判据出处**：`docs/07:1133`（U-114 行末，v1.7.17）逐字「判据 = 该夹具的运行期 DSN 也要过 `pg_guard` 的形状判定，或改为**只认环境变量**」⇒ 本窗取后者。
+
+### 16.1 改动处（文件:行号）
+
+| 文件 | 行 | 动作 |
+|---|---|---|
+| `backend/tests/integration/test_retrieval_fts_pg.py` | 46 | 新增 `from tests.integration._env_dsn import env_dsn`；删 `import os`、`from pathlib import Path`（已无用法） |
+| 同 | 10–29 | docstring 重写：加「运行方式（**一次性**容器，不得指共享栈）」＋「DSN **只认环境变量**」＋历史形态与「挡住它的是角色权限、不是守卫」的诊断 |
+| 同 | 57–68 | 删 `_dsn_from_env_file()` / `PROD_DSN` / `_needs_pg` / `_needs_prod`，替换为 `TEST_DSN = env_dsn("RETRIEVAL_TEST_PG_DSN")`；注释里保留历史形态（本条判据的由来） |
+| 同 | 275–300 | 对齐用例：撤 `@_needs_prod`、改 `env_dsn("COMMERCEQL_TEST_RW_DSN")`；新增 `if not cols: pytest.skip(...)`，把**环境未备**与**对齐失败**分列 |
+| 同 | 5 处 | 删掉全部 `assert TEST_DSN is not None`（`env_dsn` 契约已保证非空、且不得默认值） |
+| `backend/tests/contract/test_no_env_file_dsn_derivation.py` | 新文件 | **否定式守卫 R-ENVFILE**（7 条） |
+| `backend/tests/contract/test_no_shared_ecom_dsn_fallback.py` | 「诚实边界」第 1 条 | 收口原先登记的例外（此前明写「该夹具静态看不见、本守卫不覆盖」） |
+
+### 16.2 双向验
+
+**不给 env**（`env -u` 四个变量）：
+- 具名 fail，形状 = `RuntimeError: 环境变量 RETRIEVAL_TEST_PG_DSN 未设置 —— U-114 防线①…`（**禁 skip、禁默认值**）。全树里表现为 **1 条收集期 error**（`ERROR tests/integration/test_retrieval_fts_pg.py - RuntimeError: 环境变量 RET…`）。
+- **证明未连共享库**（三步，全程零 DB 接触）：
+  1. 静态：新解析链只有 `env_dsn` → `os.environ`；`TEST_DSN` 在**模块第 68 行**求值 ⇒ raise 发生在任何 `psycopg.connect` 之前，夹具根本来不及执行。
+  2. 物证（仓外探针 `_w2b_t02_probe.py` ②）：把**修复前**的 `_dsn_from_env_file()` 从 `fd5f5f2` 的源码里抽出来、在**无任何 PG env** 的进程内 exec 调用 ⇒ 解析出 `app_rw@127.0.0.1:5432/ecom`（经 `redact_dsn` 脱敏，不落凭据）—— 旧路径的终点**就是共享栈**。
+  3. 守恒：state A 里 **0 条 setup error**（旧形态那 3 条 `InsufficientPrivilege` 全消）＋ **0 条 skip** ⇒ 没有任何夹具走到发语句那一步。
+
+**给了 env**（一次性容器 `127.0.0.1:5434`，见 16.4）：
+- `pytest tests/integration/test_retrieval_fts_pg.py -m integration -q -rs` ⇒ **11 passed / 0 skipped / rc=0**。两个夹具的 DDL 落**临时 schema**；对齐用例真跑到 `app.embed_doc` 并把 8 个必需列比中（`assert not missing` 过）。
+
+### 16.3 全树三态（带 HEAD）
+
+| 状态 | 命令 | HEAD | 读数 |
+|---|---|---|---|
+| state A（**不给 env**） | `cd backend && env -u RETRIEVAL_TEST_PG_DSN -u COMMERCEQL_TEST_RW_DSN -u COMMERCEQL_TEST_RO_DSN -u COMMERCEQL_TEST_SUPER_DSN ../.venv/Scripts/python.exe -m pytest -q -rfEs --continue-on-collection-errors --basetemp=<工作区新建目录>` | `3f1c951` | **2289 passed / 0 skipped / 8 errors / 106.01 s / rc=1** |
+| QA 基线（改前） | 同命令、不带 env | `fd5f5f2` | 2284 passed / 6 skipped / 10 errors / rc=1 |
+
+**逐项拆解**（按**形状**拆，不按计数——计数是跨 HEAD 的数，按本项目纪律不作证据）：
+
+| 项 | 改前 | 改后 | 归属 |
+|---|---|---|---|
+| 收集期 error | 7 | 8 | 7 条原样（另外 7 个 integration 模块）＋ 本文件由 setup 面**上移**为收集期 |
+| setup 期 error | 3 | **0** | 三条全是本文件的 `dense_table` 在**共享 ecom** 上试 DDL 被 `InsufficientPrivilege` 拒 —— 这三条是「真的对共享库发起了写请求」的唯一证据，现已归零 |
+| skipped | 6 | **0** | 六条全出自本文件（QA `RELAY.md` F-3 逐字：「后果 = 3 条 setup error + 6 条 skip」） |
+| passed | 2284 | 2289 | = **−2**（本文件那 2 条曾通过的用例随模块一起不再被收集）**＋7**（本窗新守卫 R-ENVFILE 7 条；该文件**未跟踪**，所以 `git diff fd5f5f2..HEAD -- '*tests*'` 为空只说明**已跟踪件**没动） |
+| failed | 0 | **0** | 无 |
+
+⇒ 净效果 = **红 10 → 红 8**，且那 10 条里**唯一「触及共享库」的 3 条被彻底消掉**。
+
+⚠️ 本文件的 error **不是「多了一条」，是换了一类**：从「连上共享栈、试写、被权限拒」换成「缺 env、当场具名 fail」。前者是假绿（挡住它的是角色权限，不是守卫），后者与另外 7 个模块**同款**、是设计内的 fail（`_env_dsn.py` 明写「禁止 skip」）。
+
+### 16.4 一次性容器（点名）
+
+- 名字 `cql-it-pg-w2b-t02`，端口 **5434**（`pgvector/pgvector:pg16`，`POSTGRES_HOST_AUTH_METHOD=trust`）。
+- 5433 当时被**别窗**（W0 的 `cql-u114-probe`）占用 ⇒ 本窗改用 5434、**不动他人容器**。
+- 对该容器跑过 `MIGRATION_DATABASE_URL="postgresql+psycopg://postgres@127.0.0.1:5434/postgres" python -m alembic upgrade head`（0001→0005，rc=0）—— 这是许可的（QA 硬边界禁的是对**共享 ecom** 跑 alembic）。
+- 现状态 = `Exited (0)`（**只停未删**，留证据）；共享栈 4 个容器（`commerceql-pg-1` / `redis` / `api` / `pgbouncer`）**全程未动**。
+
+### 16.5 否定式守卫 R-ENVFILE（`tests/contract/test_no_env_file_dsn_derivation.py`，7 passed）
+
+- 判据：`tests/integration/**` 的模块**不得读任何 `.env` 文件内容**。理由 = 夹具拿到 DSN 后第一条语句就是 DDL ⇒ 链路终点是「在开发机共享库上试写」。
+- 实现：AST 扫 `read_text` / `read_bytes` / `readlines` / `open` ＋ `load_dotenv` / `dotenv_values`；`_env_file_names()` = 简单赋值的**传递闭包**（`env_file = …/".env"` ⇒ taint；`alias = env_file` ⇒ 也 taint；迭代到不动点）；命中报 `行` 与两种 reason（静态含 `.env` / 经变量静态指向 `.env`）。
+- 7 条自测含**历史形态必咬**（用**逐字取自修复前**的源码，断言 `len(hits)==1` 且 reason 含「变量」）、多一跳间接必咬、dotenv 家族必咬、`open()` 必咬、**四类正当形态不咬**（docstring/注释里提 `.env`、`os.environ.get`、文案里写 `deploy/.env`、读别的文件）、**真树零命中且扫描面非空**（`len(scanned) >= 8`）。
+- 诚实边界（写在文件里）：只扫 `tests/integration/**`；静态追同名简单赋值，**跨函数传参看不见**，但总要有一次读调用被拦；与防线②（`test_no_shared_ecom_dsn_fallback.py`）的分工 = 同一 hazard 的两条入口（② 拦「字面默认值」，本守卫拦「运行期从 `.env` 派生」）。
+
+### 16.6 未做 / 需要配合 / 待总控
+
+- **未做**：没跑 `test_semantic_materialization.py`（`U-114` 已知会把 `app.embed_doc` 的向量/tsv 静默清回 NULL ⇒ 本窗全程不碰共享栈）；没改 `docs/**`；`tests/conftest.py` 零改动（T-02 名义上是 W2B＋W0 合批，实际落到 W0 面上的改动为 0）。
+- **顺带一条工具链假红（本轮实测，非新发现）**：第一次「给了 env」的全树跑用了**复用**的 `--basetemp`，pytest 在会话开头清它时被本机 safe-delete 钩子拦（`count=95 > threshold=50`）⇒ 所有请求 `tmp_path` 的用例在 setup 期集体 `SystemExit(1)`，**表现为 90 errors 而不是 0**。同批用例换**空** basetemp 即恢复。⇒ 纪律补一条：`--basetemp` 路径**每次新建**，别复用（本窗 state A/B 与三次定向跑各用各的新目录）。
+- **待总控⑥（原样转达）**：QA 判「一次性容器的起停**不算**『动共享栈』」并已请备案 —— 本窗按此执行，**备案本身仍待总控点头**；若总控否，本窗改用「只读 + 不建容器」的降级方案（代价 = 给不出「给了 env 用例真跑」的读数）。
+- 本窗自行入库并推送（新纪律：自己的提交自己推）。
+
 
 
 
