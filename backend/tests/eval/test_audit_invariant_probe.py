@@ -865,6 +865,73 @@ def test_product_carries_the_attribution_the_horizon_and_the_kind_distribution(m
     assert spread["negative"] == 0
     assert set(spread["gt_s"]) == {str(x) for x in _load_probe(monkeypatch).LAG_BUCKETS_S}
     assert spread["gt_s"]["1"] <= spread["n"] and spread["gt_s"]["188"] == 0
+
+
+def test_the_pairing_arm_anchors_w7_section_15(monkeypatch):
+    """🔴 判据② 的**配对臂**有了外部同形状语句（W7 按 `v1.7.14` 新起的 ⑮）⇒ 借语义就要锚，不能只写在注释里。
+
+    两件分开钉：① `⑮` 在 `THREAD_RULER_SECTIONS` 里 ⇒ 同源守卫会逐标签检查它，他删/改名我方红；
+    ② 产物 `overcount_pairing.external_counterpart` **点名 ⑮** 并写清"同向不互认"（他 ③ 的口径），
+      否则下一轮的引用者只会看到我方一家的数、以为那就是全部接触面。
+    """
+    mod = _load_probe(monkeypatch)
+    assert "⑮" in mod.THREAD_RULER_SECTIONS, "⑮ 没进锚点 ⇒ 他删掉那条两臂语句时我方不会红"
+    assert "⑮" in mod.THREAD_RULER_SOURCE
+    ch = mod.summarize([], 0.0, {"by_tk": {}})["thread_channel"]
+    pair = ch["overcount_pairing"]
+    counterpart = pair["external_counterpart"]
+    assert "⑮" in counterpart and "run" in counterpart, counterpart
+    assert "不互认" in counterpart or "不构成" in counterpart, "外部对应件必须自带不可互认的口径"
+    #: **五面并存**必须落成**清单**（少一面就会被读成一面）：W4 夹具 / `07` 文本 / 我方落库面 / W7 ⑮ /
+    #:   checkpoint 写面（台账第 8 面，第十七轮按架构 §38 ④ 接进来）。
+    faces = " ".join(pair["pairing_faces"])
+    assert len(pair["pairing_faces"]) == 5, pair["pairing_faces"]
+    for face in ("d73a201", "v1.7.14", "⑮", "overcount_pairing", "checkpoint_writes"):
+        assert face in faces, f"pairing_faces 少了 {face} 这一面"
+    assert "thread 级上界" in faces, "写面必须自带量纲限制，否则会被读成 run 级证据"
+    assert mod.THREAD_RULER_SECTIONS[-1] == "⑮" and len(mod.THREAD_RULER_SECTIONS) == 8
+
+
+def test_the_checkpoint_writes_face_is_a_crosscheck_not_a_ruler(monkeypatch):
+    """🔴 架构 §38 ④ 给 W6 的零成本动作 = 拿台账**第 8 面** `lg.checkpoint_writes` 给我方判据② 做**对照**。
+
+    钉四件事（每件都对应一种会把这把尺读歪的方式）：
+    ① 对撞是**集合**对撞（`a_minus_b` / `b_minus_a` 分写）⇒ 只比数会把"两侧都 813"读成同一条断言；
+    ② 写面**归不出轮次**（`attributable_to_a_specific_turn` 恒 False）⇒ 不许写"这轮的终态写在第 2 轮"；
+    ③ `max_terminal_writes_per_thread` 是 **thread 级上界** ⇒ 双写形状（= 2）必须自己变红，不靠读者想到；
+    ④ 取不到 ⇒ `thread_position` 出口是 `None`（**没测**），不能静默变成 `{}` 或 0。
+    """
+    mod = _load_probe(monkeypatch)
+    shape = {"rows_all": 46460, "threads_all": 1318, "ck_threads_all": 1322,
+             "ck_only_threads": 4, "writes_only_threads": 0,
+             "terminal_rows": 813, "terminal_threads": 813, "max_terminal_writes_per_thread": 1}
+    ruler = {"by_tk": {
+        "tk_1": {"thread_id": "th:1", "turn": 1, "audit_rows": 1, "has_row": True,
+                 "first_seen": None, "audit_ts": None},
+        "tk_2": {"thread_id": "th:2", "turn": 1, "audit_rows": 0, "has_row": False,
+                 "first_seen": None, "audit_ts": None},
+        "tk_3": {"thread_id": "th:3", "turn": 2, "audit_rows": 1, "has_row": True,
+                 "first_seen": None, "audit_ts": None},
+    }, "ambiguous_tk_to_threads": [], "usable": True}
+    block = mod.writes_crosscheck(ruler, shape, {"th:1", "th:9"})
+    eq = block["set_equality_with_my_turn1_face"]
+    assert (eq["a_turn1_threads_with_audit_row"], eq["b_terminal_write_threads"]) == (1, 2)
+    assert (eq["a_minus_b"], eq["b_minus_a"], eq["equal"]) == (0, 1, False)
+    assert eq["b_threads_without_any_tk"] == 1, "写面里有我方尺上没有的 thread ⇒ 不许静默并入"
+    assert block["turn2plus_overlap"]["a_turn2plus_intersect_b"] == 0
+    assert block["turn2plus_overlap"]["attributable_to_a_specific_turn"] is False
+    assert block["terminal_writes"]["any_double_terminal_write"] is False
+    assert block["shape"]["thread_sets_equal_across_faces"] is False, "1,318 ≠ 1,322 必须报出来"
+    double = mod.writes_crosscheck(ruler, {**shape, "max_terminal_writes_per_thread": 2}, {"th:1"})
+    assert double["terminal_writes"]["any_double_terminal_write"] is True
+    assert len(block["limits"]) == 3 and "UUID" in block["limits"][0]
+    assert "不是判据" in block["verdict_role"] and "classify()" in block["verdict_role"]
+    assert mod.thread_position(ruler).get("checkpoint_writes") is None
+    assert mod.thread_position({**ruler, "writes": block})["checkpoint_writes"] == block
+    text = mod.CHECKPOINT_WRITES_SHAPE_SQL
+    assert "except" in text.lower() and "thread_id is null" not in text, "对撞用集合差，不用 is null"
+
+
 def test_the_direct_form_is_blind_to_a_double_written_run(monkeypatch):
     """🔴 判据② 现在是**两条**断言（架构 `v1.7.14` 裁直读式时补的那一臂）⇒ 这一条测的就是"为什么要补"。
 
