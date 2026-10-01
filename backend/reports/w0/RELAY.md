@@ -611,3 +611,210 @@ cd $TREE/backend && ../../.venv/Scripts/python.exe -m pytest tests/eval -q --tb=
 而**紧接着的第 88 行**声明"**本注释刻意不写具体数字**" ⇒ 同一段话自我矛盾（且 386+ 现已是 **455**）。
 按第 88 行自己的规则删掉那个括号数字，改为不带数值的表述。⇒ `ci.yml` 归 W0，改动只此一行。
 
+---
+
+## 14 【U-114 残余面回执】夹具已「只认环境变量」，守卫由 W2B 落、W0 只出读数（不占号，2026-10-01，基准 `6b87da9`）
+
+> 受众 = **QA**（本轮派单方）+ **W2B**（实际落码方）+ **架构**（两条守卫谁留）。
+> 🔴 **第一句必须是归属更正**：QA ③ 派的是「W2B（夹具）+ **W0（守卫扩面）**」两半，**实况两半都是 W2B 落的**（§14.5）。
+> W0 本轮的实际产出 = **读数与归因** ＋ 一次**自我撤销**（避免同一 hazard 两份真相）。
+>
+> ⚠️ **基准漂移已并入（别按旧文本引用）**：本回执起笔时 W2B 的改动还在工作树（我第一轮量到的行号是那一版）；
+> 撰写期间他以 **`6b87da9`**「test(w2b/u114): T-02」入库（4 文件 / `+389 −48`：夹具 + 守卫 266 行 +
+> 我防线② 文件 8 行 + 他自己 `reports/w2b/RELAY.md`）。
+> ⇒ **§14.1–§14.8 的行号、「已提交」状态、以及全部读数，一律按 `6b87da9` 重列并重跑过**，不用工作树版。
+
+### 14.0 一句话
+
+派单要的三件事都成立，且**双向都实测过**：缺 env ⇒ `:69` 具名 fail（0 用例执行、未触共享库）；给 env ⇒ 11 passed（跑在独立端口一次性容器上）。
+否定式守卫存在且自咬（R-ENVFILE，7 passed）；全树 `2289 passed / 0 skipped / 0 failed / 8 errors`。
+但**「0 skipped」不等于「skip 家族被消灭」**——产生 QA 基线那 6 个 skip 的降级路径 `:107-108` **仍在**（§14.6）。
+
+### 14.1 改动落点（file:line，改前 = `3f1c951`，改后 = `6b87da9`）
+
+✅ 全部为 **W2B** 的改动，**已由 `6b87da9` 入库**（`git status` 该文件已干净）。下表右列行号均为 **HEAD 现值**。
+
+| 位置 | 改前（`3f1c951`） | 改后（`6b87da9`） |
+|---|---|---|
+| `backend/tests/integration/test_retrieval_fts_pg.py:57` | `def _dsn_from_env_file() -> str \| None:` —— 读 `deploy/.env` 的 `DATABASE_URL`，把 `postgresql+psycopg://`→`postgresql://`、`@pg:`→`@127.0.0.1:` | **函数整块已删** |
+| 同 `:68-69` | `PROD_DSN: str \| None = _dsn_from_env_file()`<br>`TEST_DSN: str \| None = os.environ.get("RETRIEVAL_TEST_PG_DSN") or PROD_DSN` | **`:69`** `TEST_DSN = env_dsn("RETRIEVAL_TEST_PG_DSN")` |
+| 同 `:71-76` | `_needs_pg` / `_needs_prod` 两个 `pytest.mark.skipif` | **已删**（缺 env 改为 import 期 fail） |
+| 同 `:47` | — | 新增 `from tests.integration._env_dsn import env_dsn` |
+| 同 `:282` | （生产表对齐检查经 `PROD_DSN = _dsn_from_env_file()`） | `prod_dsn = env_dsn("COMMERCEQL_TEST_RW_DSN")` |
+| 同 `:22-28` / `:62-66` / `:280` | — | 旧形态改以**注释/docstring** 留档（不参执行） |
+
+`git show --stat 6b87da9` 该文件 = `90 ++++----`；另删掉 `import os` / `from pathlib import Path`（HEAD 版全文 **471 行**）。
+
+### 14.2 双向验（QA ③ 前两条）
+
+**(a) 不给 env ⇒ 具名 fail，且「未连共享库」是结构性的**
+
+```
+cd backend && pytest -q tests/integration/test_retrieval_fts_pg.py
+→ 1 error in 0.47s（0 个用例执行，rc=2；文件仍在，故是 collection error 不是用法错）
+
+RuntimeError: 环境变量 RETRIEVAL_TEST_PG_DSN 未设置 —— U-114 防线①：集成测试拒绝共享库
+字面默认值，缺 env 必须 fail/error（禁止 skip）。请把它指向**一次性测试库**（不要指向共享 ecom）后重跑。
+  tests\integration\test_retrieval_fts_pg.py:69  →  tests\integration\_env_dsn.py:28
+```
+
+- **具名**（点名缺哪一个变量）+ **在 import 期抛** ⇒ 任何 `_conn()` 都还没机会执行 ⇒「没碰共享库」不是运气，是结构。
+- 旁证：共享 `ecom.app.embed_doc` 全程 **197**（改前 197 / (b) 跑完再读 197，§14.8 给命令）。
+- ⚠️ 本机 `deploy/.env` **一直在**，而上面的 fail 照样发生 ⇒ 证明解析链**真的不再看它**（不是"恰好文件不在"）。
+
+**(b) 给了 env ⇒ 用例真跑**
+
+```
+docker run -d --name cql-u114-probe -p 5433:5432 -e POSTGRES_HOST_AUTH_METHOD=trust \
+           -e POSTGRES_DB=ecom pgvector/pgvector:pg16
+cd backend && MIGRATION_DATABASE_URL=postgresql+psycopg://postgres@127.0.0.1:5433/ecom alembic upgrade head
+export RETRIEVAL_TEST_PG_DSN / COMMERCEQL_TEST_RW_DSN / _RO_ / _SUPER_  指向 127.0.0.1:5433/ecom
+pytest -q tests/integration/test_retrieval_fts_pg.py
+→ 11 passed in 6.38s（rc=0）
+```
+
+DSN 形态**照抄 CI**（`ci.yml:124-127`：全部无口令段 + trust 认证，只换端口 5432→5433）。
+⇒ 11 条**真跑过**（既不是 skip 也不是 error），且跑在**独立端口的一次性容器**上。容器跑完即删。
+
+### 14.3 全树三态计数（带 HEAD）
+
+```bash
+cd backend && pytest -q -rfEs --continue-on-collection-errors     # env 全 unset
+→ 2289 passed, 1 warning, 8 errors in 88.50s (0:01:28)     rc=1
+  @ HEAD 6b87da9（干净工作树；与工作树版读数字面一致，故不是"我量的那版"的侥幸）
+```
+
+**8 errors 全部是 8 个 integration 模块各 1 条 collection error，全是 `env_dsn` 具名 `RuntimeError`**：
+`test_audit_append_only` / `test_exec_real_pg` / `test_feedback_store_pg` / `test_migration_0003_views` /
+`test_migration_0004_runtime` / `test_query_plan_store_pg` / `test_retrieval_fts_pg` / `test_semantic_materialization`。
+**`0 skipped` / `0 failed`。**
+
+与 QA ④ 基线对照（2,284 passed / 6 skipped / 10 errors / rc=1 @ `fd5f5f2`）：
+
+| 态 | 基线 `fd5f5f2` | 现在 `6b87da9` | Δ |
+|---|---|---|---|
+| passed | 2,284 | 2,289 | **+5** |
+| skipped | 6 | **0** | **−6** |
+| failed | 0 | 0 | 0 |
+| errors | 10 | **8** | **−2** |
+
+**−6 / −2 的口径我不是估的，是复现出来的**：把 `fd5f5f2` 拍成隔离树、拷入本机 `deploy/.env`（= QA 基线形状），整树跑 ⇒
+**`2284 passed, 6 skipped, 1 warning, 10 errors in 91.27s`** ⇒ **与 QA ④ 逐字吻合**，且 `-rfEs` 把归属直接点出来了：
+
+| 基线那 10 个 error | 归属 |
+|---|---|
+| 7 条 = `env_dsn` 具名 RuntimeError | `test_audit_append_only` / `test_exec_real_pg` / `test_feedback_store_pg` / `test_migration_0003_views` / `test_migration_0004_runtime` / `test_query_plan_store_pg` / `test_semantic_materialization` |
+| **3 条 = `test_retrieval_fts_pg.py::test_dense_*`**（`InsufficientPrivilege: permission denied for database ecom`） | 就是 QA 点的那 3 条 |
+
+| 基线那 6 个 skip | 归属 |
+|---|---|
+| **全部 6 条都在 `test_retrieval_fts_pg.py`**（用例行 `:189/:203/:216/:237/:254/:268`），原因串一律 `夹具 DSN 无 DDL 权限（用 RETRIEVAL_TEST_PG_DSN 指向可建表实例）：permission denied for database ecom` | 同上 |
+
+⇒ **算术闭合**：改后该文件在 `:69` 就 fail ⇒ 那 `3 error + 6 skip` 一起塌缩成 **1 条 collection error**
+⇒ errors `10 − 3 + 1 = 8` ✓、skips `6 − 6 = 0` ✓。**两边的聚合读数（2284/6/10 与 2289/0/8）都已实测复现，非引用。**
+⚠️ **`+5 passed` 不该记在本条头上**：那是 `fd5f5f2 → 6b87da9` 之间其他窗口的用例增量（我未逐条核归属）。
+
+### 14.4 否定式守卫（QA ③ 第四条）
+
+**活着的那条 = W2B 的 `backend/tests/contract/test_no_env_file_dsn_derivation.py`**（**266 行**，已随 `6b87da9` 入库），规则名 **R-ENVFILE**，
+规范头逐字引判据 `docs/07:1133`（v1.7.17）。要点：
+
+- **面** = `tests/integration/**`；**判据式** = 该目录**不得读任何 `.env` 文件内容** —— `read_text` / `read_bytes` / `readlines` / `.open()` / `open()` 且路径里静态含 `.env`，外加 `load_dotenv` / `dotenv_values`。
+- 走 **AST 传递闭包**（`env_file = … / ".env"` 再 `env_file.read_text()` 这种**经变量中转**的写法才是实际形态），不是只认字面量 —— 这点比我自己那版更贴实际形态。
+- **咬合证明**：`test_guard_bites_on_the_historical_shape`（`:199`）**逐字取自修复前的源码**；另 3 条咬法 = 多一跳中转 / dotenv 家族 / 裸 `open()`。
+- **非空跑证明**：`test_guard_spares_the_current_integration_tree_and_is_not_vacuous`（`:262`）带 `assert len(scanned) >= 8`。
+- **当刻读数**：该文件 **7 passed**；与防线② 合跑 = **11 passed in 3.28s**。
+
+**另做三条裸 grep 独立复核同一命题**（不依赖任何守卫代码）：
+
+| 查什么 | 结果 |
+|---|---|
+| `tests/integration/*.py` 里 `read_text\|read_bytes\|readlines\|\.open(` | **零命中** |
+| `tests/` 里 `load_dotenv\|dotenv_values`（排除守卫文件自身） | 只命中 `tests/contract/test_config_failfast.py` —— 它读的是 `.env.example` 做**双向同步断言**，与被测 DSN 无关 |
+| `tests/integration/*.py` 里 `deploy/.env` 字面量 | 只在**注释/docstring**（HEAD 版 `:22` / `:62` / `:280`），**无任何取值调用** |
+
+⇒ QA 要的「**DSN 解析链里不再出现『读 .env 后赋给夹具变量』**」这条否定式，**守卫（AST）与 grep（文本）两条独立路径都成立**。
+
+### 14.5 🔴 归属更正与撞车披露（本条最需要裁定的一段）
+
+- QA ③ 派的是两半：**W2B（夹具）+ W0（守卫扩面）**。
+- 实况：**两半都是 W2B 落的** —— 夹具改动（§14.1）与守卫 `test_no_env_file_dsn_derivation.py`（§14.4）同属 W2B，
+  **且三件（夹具 + 新守卫 + 我文件的 8 行改动）同一条 commit `6b87da9`**；
+  他甚至顺手把我防线② 文件 `test_no_shared_ecom_dsn_fallback.py` 的「诚实边界」条目改成了「✅ **已收口（2026-10-01，W2B）** … 接管这一类形态的**第二条守卫** = `test_no_env_file_dsn_derivation.py`（R-ENVFILE）⇒ 本文件不再为它开例外」。
+- **W0 这一轮先扩了面、再自己撤**：我在防线② 文件里加了 `_scan_deploy_env_reads` 一族（`+146/−5`）；
+  实跑发现本该 1 红却 **7 绿** ⇒ 读码后确认 W2B 已把夹具改好、且已立同款守卫
+  ⇒ **`git checkout -- backend/tests/contract/test_no_shared_ecom_dsn_fallback.py` 整块撤销**（同一 hazard 摆两份真相，正是本项目反复吃过的坑）。
+- ⇒ **请 QA / 架构裁一条**：守卫产物留哪个。**现状 = R-ENVFILE 活着、我的扩面已撤**（我无异议）。
+  若裁定 W0 侧也需保留一条，请明确**分工面**（例如 R-ENVFILE 管「集成目录读 `.env`」、防线② 管「字面量默认值指向共享 `ecom`」），**不能再有第三份**。
+
+### 14.6 🔴 我核出的一条未收口面（不在派单里，也不属本条判据）
+
+`test_retrieval_fts_pg.py:107-108`（`3f1c951` 时为 `:115-116`）的降级路径**仍在**：
+
+```python
+    except psycopg.errors.InsufficientPrivilege as exc:
+        pytest.skip(
+            f"夹具 DSN 无 DDL 权限（用 RETRIEVAL_TEST_PG_DSN 指向可建表实例）：{exc}"
+        )
+```
+
+- **它就是 QA 基线那 6 个 skip 的产生器**。本轮收口删的是「缺 env ⇒ 回退 `.env`」这一环，
+  **没删「env 给了、但该角色无 DDL ⇒ 静默 skip」那一环**。
+- ⚠️ 因此 **§14.3 的「0 skipped」不可读成「skip 家族已被消灭」**：那是因为 env 全 unset（走 import 期 fail），
+  不是因为降级路径没了。**给一个只读 DSN 进去，那 6 条会再次静默 skip，与 QA 基线同形。**
+- 同族另一处 `:290-297`（目标库没有 `app.embed_doc` ⇒ skip）注释里自称刻意与「对齐失败」分开 —— 这条我认为**合理**
+  （它区分了"没验到"与"验过不对"，符合本项目的 error 分类纪律）；
+  `:107` 那条性质不同：它把「**显式指了一个不能建表的实例**」这件**配置错误**降级成了 skip。
+- ⇒ 是否把 `:107` 改成**具名 fail**（"你给的 `RETRIEVAL_TEST_PG_DSN` 无 DDL 权限，这 9 条用例无法执行"）**属判据扩张，我未自行改**。
+  报 QA / 架构裁；归属 **W2B**（该文件属主）。
+
+### 14.7 诚实边界（本条最容易说过头）
+
+- **本条 W0 未落一行代码**：§14.1 的改动与 §14.4 的守卫**都是 W2B 的**，已由 **`6b87da9`** 入库（**不是我的 commit**）。
+  W0 的产出只有读数、归因、和一次撤销。
+- **§14.3 的 8 errors 全部是「环境未备」，无一条产品缺陷**：8 个模块都在 import/collection 期就 fail，一个断言都没跑到。
+- **`+5 passed` 不归本条**：来源是 `fd5f5f2 → 6b87da9` 之间他窗的用例增量，我未逐条核归属。
+- **我没在 CI 上验证过任何一条**（无推送授权）；本轮**未推**任何东西；W2B 的文件我一行未改（属主不在我）。
+- 本机 `deploy/.env` 存在，与「改后代码不再看它」不矛盾 —— 判据要的正是**不依赖它**（§14.2(a) 已证）。
+- 🟡 **一处他窗数字型瑕疵（我未改，只登记）**：该文件 docstring `:21` 写「与另外 **8 个** integration 模块同款」，
+  实测调用 `env_dsn` 的 integration 模块 = **8 个（含本文件）** ⇒ 应为「另外 **7 个**」。
+  量：`grep -rn "env_dsn(" tests/integration/*.py | grep -v _env_dsn.py` ⇒ 8 个文件 / 18 处调用。
+
+### 14.8 验证读数（可复现）+ 容器点名
+
+```bash
+# (a) 不给 env：具名 fail、0 用例执行、未触共享库
+cd backend && pytest -q tests/integration/test_retrieval_fts_pg.py
+#   → 1 error in 0.47s   @ :69 → tests/integration/_env_dsn.py:28
+
+# (b) 给 env：一次性容器（独立端口，DSN 形态照抄 ci.yml:124-127，只换端口）
+docker run -d --name cql-u114-probe -p 5433:5432 -e POSTGRES_HOST_AUTH_METHOD=trust \
+           -e POSTGRES_DB=ecom pgvector/pgvector:pg16
+cd backend && MIGRATION_DATABASE_URL=postgresql+psycopg://postgres@127.0.0.1:5433/ecom alembic upgrade head
+export RETRIEVAL_TEST_PG_DSN=postgresql://postgres@127.0.0.1:5433/ecom      # 另 RW/RO/SUPER 同指 5433
+pytest -q tests/integration/test_retrieval_fts_pg.py   # → 11 passed in 6.38s（rc=0）
+docker rm -f cql-u114-probe
+
+# (c) 全树三态（env 全 unset）
+cd backend && pytest -q -rfEs --continue-on-collection-errors
+#   → 2289 passed, 1 warning, 8 errors in 88.50s   rc=1   @ 6b87da9（干净树）
+
+# (d) 基线形状复现（证明 −6 skip / −2 error 的归属）
+T=/tmp/base_fd5f5f2; rm -rf $T; mkdir -p $T; git archive fd5f5f2 | tar -x -C $T
+cp deploy/.env $T/deploy/.env
+cd $T/backend && pytest -q -rfEs --continue-on-collection-errors
+#   → 2284 passed, 6 skipped, 1 warning, 10 errors in 91.27s   （与 QA ④ 逐字吻合）
+
+# (e) 共享库未被动过的读数
+docker exec commerceql-pg-1 psql -U app_rw -d ecom -tAc "select count(*) from app.embed_doc"
+#   → 197（改前 197 / (b) 跑完再读 197）
+```
+
+⚠️ (a)(b) 两跑**都重跑在 `6b87da9` 的已提交字节上**（不是起笔时的工作树版）—— 因为 W2B 在回执撰写期间入库，
+差一个 docstring 行，行号会差 1。**读数以已提交版本为准。**
+
+**容器点名（QA ⑤ 硬边界要求）**：`cql-u114-probe`，**宿主端口 5433**，镜像 `pgvector/pgvector:pg16`，跑完即删。
+共享栈**一次都没碰**：全程未对共享 `ecom` 跑集成套件、**未对共享库跑 alembic**；`app.embed_doc` 恒 **197**。
+
+⚠️ 另有一个**不是我起的**容器在跑：`cql-it-pg-w2b-t02`（宿主 `:5434`）= **W2B 自己在用**，正是本轮撞车的同一个面（§14.5）。
+
