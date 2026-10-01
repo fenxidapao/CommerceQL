@@ -141,7 +141,17 @@ def test_audit_write_failure_is_the_only_named_zero_row_case() -> None:
 
 
 class TestU129EntryInvariant:
-    """入口不变量 = 组 2–11 每轮复位；含"同 thread 连跑多轮"的真图臂。"""
+    """入口不变量 = 组 2–11 每轮复位；含"同 thread 连跑多轮"的真图臂。
+
+    🔴 「本轮自己写了终态」在**生产落库面**的等价读点（W4 2026-10-01 直读 `lg` 复算）：
+    `lg.checkpoint_writes.channel = 'terminal'` 按写行的 `checkpoint_id` 连回带 `tk_` 的检查点
+    ⇒ run 归属。该面对四种终态都有实例（refuse 423 / failed 206 / clarify 114 / success 70 = 813 条 run），
+    且 turn≥2 的 run **确实有写行**（39/39 有 `branch:to:%` 行）只是 `terminal` = 0 ⇒ 修复前那个 0 是
+    **真读数**，不是"写面黏在第一轮"的量具假象。
+    ⚠️ `branch:to:%` 只证"被路由到"、不证"写了终态"：修复前 `branch:to:audit_supp` = 75 条 run
+    （turn1 的 70 条**全部**带 `terminal` 写；turn≥2 的 5 条**一条都没有**、且全部零审计行）
+    ⇒ 「被路由到出口节点 ⇒ 本轮写了 terminal」这一蕴含式在修复前**恰好只崩在这 5 条崩臂上**。
+    """
 
     def test_run_scoped_set_is_derived_and_contains_terminal(self) -> None:
         """派生集合本身要先钉住：漏一个键 = 那一轮的该键跨轮带回来。"""
