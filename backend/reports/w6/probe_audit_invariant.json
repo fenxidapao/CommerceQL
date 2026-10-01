@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-01T06:21:11+00:00",
+  "generated_at_utc": "2026-10-01T11:39:17+00:00",
   "strict_denominator": "terminal − app.audit_log 行数 = 0",
   "denominator_definition": {
     "terminal_outcomes": [
@@ -86,7 +86,7 @@
     },
     "thread_ruler": {
       "available": true,
-      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮⑯⑯b（按标签锚定，行号会漂）",
+      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮⑯⑯b⑰⑰b（按标签锚定，行号会漂）",
       "usable": true,
       "ambiguous_tk_to_threads": 0,
       "tk_runs": 1378,
@@ -196,19 +196,61 @@
             "zero_audit_row_runs": 5,
             "crash_turn2plus_runs": 5
           },
+          "route_rows_on_runs": {
+            "runs": 1377,
+            "turn1": 1316,
+            "turn2plus": 61,
+            "unknown_runs": 0,
+            "zero_audit_row_runs": 516,
+            "crash_turn2plus_runs": 13
+          },
+          "granularity": {
+            "terminal": {
+              "runs": 813,
+              "threads": 813
+            },
+            "audit_supp": {
+              "runs": 75,
+              "threads": 70
+            },
+            "route": {
+              "runs": 1377,
+              "threads": 1316
+            },
+            "runs_vs_threads_differ": [
+              "audit_supp",
+              "route"
+            ],
+            "note": "报数五件 = 数 + 面 + 谓词 + 分母 + **粒度**（本项目第四种混淆形状）"
+          },
+          "unmatched_route_rows_shape": {
+            "route_rows": 8482,
+            "route_unmatched_rows": 1318,
+            "route_unmatched_threads": 1318,
+            "unmatched_before_first_tk": 1317,
+            "unmatched_at_or_after_first_tk": 0,
+            "unmatched_on_threads_without_tk": 1,
+            "threads_with_real_loss_rows": 0,
+            "closure_adds_up": true,
+            "agrees_with_attribution_join": true,
+            "real_coverage_loss_rows": 0,
+            "reads": "早于本 thread 第一个带 `tk_` 检查点的路由行（建线期）与「该 thread 完全没有 `tk_` 检查点」两类都**不是** run 覆盖损失 ⇒ 只有 `unmatched_at_or_after_first_tk` 那一类才是，本轮应为 0；若非 0 ⇒ 「路由集可归属」这句要重开。"
+          },
           "discriminator": {
             "terminal_on_crash_turn2plus_runs": 0,
             "terminal_writes_at_turn2plus": 0,
+            "route_rows_at_turn2plus": 61,
             "audit_supp_at_turn2plus": 5,
             "audit_supp_on_crash_turn2plus_runs": 5,
-            "reads": "全等证明要 P-A 那一格（修法后进图的 run）；本轮全是修法前历史 ⇒ 只作**排除法**与基线。"
+            "face_can_split_turn2plus": true,
+            "reads": "路由行在 turn≥2 有行而 terminal 写没有 ⇒ 排除「黏在第一轮」；修复后若 `terminal_writes_at_turn2plus > 0` ⇒ 判据② 拿到 run 级落库面读点，若仍 = 0 ⇒ 该维判不了 ⇒ **两种结果都有信息量，0 不许读成「通过」**（pre-fix 它本就 = 0 ⇒ 单独当验收位会恒真）。"
           },
           "attribution_closes": true
         },
         "limits": [
-          "归属是**按通道集分别成立**的：`channel='terminal'` 经 `checkpoint_id` 回连 `tk_` 检查点 ⇒ 本轮实测 `unmatched_rows = 0`（可归属）；`branch:to:%` 同法有 **非 0 的 `route_unmatched_rows`** ⇒ 路由集**不**全量可归（机制未查、标 UNVERIFIED）⇒ 引用「写面能落到 run」必须带是哪个通道集",
+          "归属**按通道集分别成立**：`channel='terminal'` 经 `checkpoint_id` 回连 ⇒ 本轮实测 `unmatched_rows = 0`（全可归）；`branch:to:%` 有一批不可归的行，第十九轮拆开后 = 建线期路由行 + 无 `tk_` 的 thread（两类都**不是** run 覆盖损失，真损失列 `unmatched_at_or_after_first_tk` 应为 0）⇒ 引用「写面能落到 run」必须带是哪个通道集 + 这一格（条数只看本产物 `unmatched_route_rows_shape`，别抄文案里的数字）",
           "`max_terminal_writes_per_thread` 仍是 **thread 级上界**，与 run 级归属是两件事 ⇒ 它 = 1 只说「没有任何 thread 写过两次终态」，**不能代** `multi_row_turn2plus_runs`（那臂数的是审计行）",
-          "两侧各按各的谓词与面（审计面 vs checkpoint 写面）、各按各的窗口与前缀 ⇒ **同向、不互认、不可相加**；相等只是巧合（W7 `⑯` 的连法与我方相同，但他算他的窗、我方算全库 ⇒ 同名数不等也不必然是矛盾）"
+          "两侧各按各的谓词、面、窗口与前缀，且**粒度不同**（rows / runs / threads 三个数常常不等，见 `granularity`）⇒ **同向、不互认、不可相加**；相等只是巧合（W7 ⑯⑰ 的连法与我方相同，但他算他的窗、我方算全库）"
         ],
         "verdict_role": "**对照面，不是判据**：`classify()` 不读本块，判据② 的两条断言仍以`crash_turn2plus` / `multi_row_turn2plus_runs` 为准（交付 §4.26）。"
       }
@@ -281,13 +323,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 1039677.812,
+        "read_age_s": 1058764.013,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5541.313
+          "read_age_over_max_lag": 5643.04
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -365,13 +407,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 247998.325,
+        "read_age_s": 267084.526,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1321.791
+          "read_age_over_max_lag": 1423.517
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -500,13 +542,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 172975.989,
+        "read_age_s": 192062.19,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 921.934
+          "read_age_over_max_lag": 1023.66
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -584,13 +626,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 173142.183,
+        "read_age_s": 192228.384,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 922.82
+          "read_age_over_max_lag": 1024.546
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -671,13 +713,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 245792.77,
+        "read_age_s": 264878.971,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1310.035
+          "read_age_over_max_lag": 1411.762
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -759,13 +801,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 244712.179,
+        "read_age_s": 263798.38,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1304.276
+          "read_age_over_max_lag": 1406.002
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -848,13 +890,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 245909.896,
+        "read_age_s": 264996.097,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1310.66
+          "read_age_over_max_lag": 1412.386
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -937,13 +979,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 244581.993,
+        "read_age_s": 263668.194,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1303.582
+          "read_age_over_max_lag": 1405.308
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1024,13 +1066,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 244458.182,
+        "read_age_s": 263544.383,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1302.922
+          "read_age_over_max_lag": 1404.649
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1109,13 +1151,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 246012.999,
+        "read_age_s": 265099.2,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1311.209
+          "read_age_over_max_lag": 1412.936
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1198,13 +1240,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 232430.599,
+        "read_age_s": 251516.8,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1238.817
+          "read_age_over_max_lag": 1340.544
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1284,13 +1326,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 232542.064,
+        "read_age_s": 251628.265,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1239.411
+          "read_age_over_max_lag": 1341.138
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1370,13 +1412,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 232372.041,
+        "read_age_s": 251458.242,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1238.505
+          "read_age_over_max_lag": 1340.231
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1459,13 +1501,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 232745.72,
+        "read_age_s": 251831.921,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1240.497
+          "read_age_over_max_lag": 1342.223
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1544,13 +1586,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 232841.928,
+        "read_age_s": 251928.129,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1241.01
+          "read_age_over_max_lag": 1342.736
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1628,13 +1670,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 854436.123,
+        "read_age_s": 873522.324,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 4554.005
+          "read_age_over_max_lag": 4655.732
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1714,13 +1756,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 848566.148,
+        "read_age_s": 867652.349,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 4522.719
+          "read_age_over_max_lag": 4624.446
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1800,13 +1842,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 757933.883,
+        "read_age_s": 777020.084,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 4039.664
+          "read_age_over_max_lag": 4141.39
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1886,13 +1928,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 685169.298,
+        "read_age_s": 704255.498,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 3651.841
+          "read_age_over_max_lag": 3753.567
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -1972,13 +2014,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 666640.545,
+        "read_age_s": 685726.746,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 3553.085
+          "read_age_over_max_lag": 3654.812
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2057,13 +2099,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 667034.778,
+        "read_age_s": 686120.979,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 3555.187
+          "read_age_over_max_lag": 3656.913
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2143,13 +2185,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 666850.319,
+        "read_age_s": 685936.52,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 3554.203
+          "read_age_over_max_lag": 3655.93
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2228,13 +2270,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 666937.758,
+        "read_age_s": 686023.959,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 3554.67
+          "read_age_over_max_lag": 3656.396
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2317,13 +2359,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 248352.503,
+        "read_age_s": 267438.704,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1323.678
+          "read_age_over_max_lag": 1425.405
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2404,13 +2446,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 248191.427,
+        "read_age_s": 267277.628,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1322.82
+          "read_age_over_max_lag": 1424.546
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2490,13 +2532,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 151158.829,
+        "read_age_s": 170245.029,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 805.652
+          "read_age_over_max_lag": 907.378
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2579,13 +2621,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 150901.257,
+        "read_age_s": 169987.458,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 804.279
+          "read_age_over_max_lag": 906.005
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2667,13 +2709,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 150853.227,
+        "read_age_s": 169939.427,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 804.023
+          "read_age_over_max_lag": 905.749
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2754,13 +2796,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 139930.339,
+        "read_age_s": 159016.54,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 745.806
+          "read_age_over_max_lag": 847.532
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -2921,13 +2963,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 139887.38,
+        "read_age_s": 158973.581,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 745.577
+          "read_age_over_max_lag": 847.303
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3195,13 +3237,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 1037038.834,
+        "read_age_s": 1056125.035,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5527.248
+          "read_age_over_max_lag": 5628.974
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3274,13 +3316,13 @@
         "terminal_minus_matched_runs": 3,
         "gap_minus_crash_total": 3,
         "identity_holds": true,
-        "read_age_s": 1036802.822,
+        "read_age_s": 1055889.023,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5525.99
+          "read_age_over_max_lag": 5627.716
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3353,13 +3395,13 @@
         "terminal_minus_matched_runs": 35,
         "gap_minus_crash_total": 35,
         "identity_holds": true,
-        "read_age_s": 1036714.216,
+        "read_age_s": 1055800.417,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5525.518
+          "read_age_over_max_lag": 5627.244
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3435,13 +3477,13 @@
         "terminal_minus_matched_runs": 40,
         "gap_minus_crash_total": 40,
         "identity_holds": true,
-        "read_age_s": 1036397.39,
+        "read_age_s": 1055483.59,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5523.829
+          "read_age_over_max_lag": 5625.555
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3517,13 +3559,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 1040019.274,
+        "read_age_s": 1059105.475,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5543.133
+          "read_age_over_max_lag": 5644.86
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3599,13 +3641,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 1039919.617,
+        "read_age_s": 1059005.818,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5542.602
+          "read_age_over_max_lag": 5644.328
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3678,13 +3720,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 1037339.956,
+        "read_age_s": 1056426.157,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5528.853
+          "read_age_over_max_lag": 5630.579
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3760,13 +3802,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 1037118.577,
+        "read_age_s": 1056204.778,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 5527.673
+          "read_age_over_max_lag": 5629.399
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -3844,13 +3886,13 @@
         "terminal_minus_matched_runs": 0,
         "gap_minus_crash_total": 0,
         "identity_holds": true,
-        "read_age_s": 248388.499,
+        "read_age_s": 267474.7,
         "too_soon_to_read": false,
         "reading_precondition": {
           "scope_non_empty": true,
           "aged_beyond_max_lag": false,
           "both_pass": true,
-          "read_age_over_max_lag": 1323.87
+          "read_age_over_max_lag": 1425.597
         },
         "crash_turn2plus_citable": true,
         "edge_control": {
@@ -4176,10 +4218,10 @@
     },
     "thread_channel": {
       "role": "对照 + 崩臂面标定，不是判据（classify() 不读这一块）",
-      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮⑯⑯b（按标签锚定，行号会漂）",
+      "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮⑯⑯b⑰⑰b（按标签锚定，行号会漂）",
       "available": true,
       "db_wide": {
-        "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮⑯⑯b（按标签锚定，行号会漂）",
+        "source": "deploy/loadtest/r23_thread_from_checkpoints.sql 段 ①⑨⑩⑫b⑭⑭b⑭c⑮⑯⑯b⑰⑰b（按标签锚定，行号会漂）",
         "usable": true,
         "ambiguous_tk_to_threads": 0,
         "tk_runs": 1378,
@@ -4289,19 +4331,61 @@
               "zero_audit_row_runs": 5,
               "crash_turn2plus_runs": 5
             },
+            "route_rows_on_runs": {
+              "runs": 1377,
+              "turn1": 1316,
+              "turn2plus": 61,
+              "unknown_runs": 0,
+              "zero_audit_row_runs": 516,
+              "crash_turn2plus_runs": 13
+            },
+            "granularity": {
+              "terminal": {
+                "runs": 813,
+                "threads": 813
+              },
+              "audit_supp": {
+                "runs": 75,
+                "threads": 70
+              },
+              "route": {
+                "runs": 1377,
+                "threads": 1316
+              },
+              "runs_vs_threads_differ": [
+                "audit_supp",
+                "route"
+              ],
+              "note": "报数五件 = 数 + 面 + 谓词 + 分母 + **粒度**（本项目第四种混淆形状）"
+            },
+            "unmatched_route_rows_shape": {
+              "route_rows": 8482,
+              "route_unmatched_rows": 1318,
+              "route_unmatched_threads": 1318,
+              "unmatched_before_first_tk": 1317,
+              "unmatched_at_or_after_first_tk": 0,
+              "unmatched_on_threads_without_tk": 1,
+              "threads_with_real_loss_rows": 0,
+              "closure_adds_up": true,
+              "agrees_with_attribution_join": true,
+              "real_coverage_loss_rows": 0,
+              "reads": "早于本 thread 第一个带 `tk_` 检查点的路由行（建线期）与「该 thread 完全没有 `tk_` 检查点」两类都**不是** run 覆盖损失 ⇒ 只有 `unmatched_at_or_after_first_tk` 那一类才是，本轮应为 0；若非 0 ⇒ 「路由集可归属」这句要重开。"
+            },
             "discriminator": {
               "terminal_on_crash_turn2plus_runs": 0,
               "terminal_writes_at_turn2plus": 0,
+              "route_rows_at_turn2plus": 61,
               "audit_supp_at_turn2plus": 5,
               "audit_supp_on_crash_turn2plus_runs": 5,
-              "reads": "全等证明要 P-A 那一格（修法后进图的 run）；本轮全是修法前历史 ⇒ 只作**排除法**与基线。"
+              "face_can_split_turn2plus": true,
+              "reads": "路由行在 turn≥2 有行而 terminal 写没有 ⇒ 排除「黏在第一轮」；修复后若 `terminal_writes_at_turn2plus > 0` ⇒ 判据② 拿到 run 级落库面读点，若仍 = 0 ⇒ 该维判不了 ⇒ **两种结果都有信息量，0 不许读成「通过」**（pre-fix 它本就 = 0 ⇒ 单独当验收位会恒真）。"
             },
             "attribution_closes": true
           },
           "limits": [
-            "归属是**按通道集分别成立**的：`channel='terminal'` 经 `checkpoint_id` 回连 `tk_` 检查点 ⇒ 本轮实测 `unmatched_rows = 0`（可归属）；`branch:to:%` 同法有 **非 0 的 `route_unmatched_rows`** ⇒ 路由集**不**全量可归（机制未查、标 UNVERIFIED）⇒ 引用「写面能落到 run」必须带是哪个通道集",
+            "归属**按通道集分别成立**：`channel='terminal'` 经 `checkpoint_id` 回连 ⇒ 本轮实测 `unmatched_rows = 0`（全可归）；`branch:to:%` 有一批不可归的行，第十九轮拆开后 = 建线期路由行 + 无 `tk_` 的 thread（两类都**不是** run 覆盖损失，真损失列 `unmatched_at_or_after_first_tk` 应为 0）⇒ 引用「写面能落到 run」必须带是哪个通道集 + 这一格（条数只看本产物 `unmatched_route_rows_shape`，别抄文案里的数字）",
             "`max_terminal_writes_per_thread` 仍是 **thread 级上界**，与 run 级归属是两件事 ⇒ 它 = 1 只说「没有任何 thread 写过两次终态」，**不能代** `multi_row_turn2plus_runs`（那臂数的是审计行）",
-            "两侧各按各的谓词与面（审计面 vs checkpoint 写面）、各按各的窗口与前缀 ⇒ **同向、不互认、不可相加**；相等只是巧合（W7 `⑯` 的连法与我方相同，但他算他的窗、我方算全库 ⇒ 同名数不等也不必然是矛盾）"
+            "两侧各按各的谓词、面、窗口与前缀，且**粒度不同**（rows / runs / threads 三个数常常不等，见 `granularity`）⇒ **同向、不互认、不可相加**；相等只是巧合（W7 ⑯⑰ 的连法与我方相同，但他算他的窗、我方算全库）"
           ],
           "verdict_role": "**对照面，不是判据**：`classify()` 不读本块，判据② 的两条断言仍以`crash_turn2plus` / `multi_row_turn2plus_runs` 为准（交付 §4.26）。"
         }
@@ -4325,7 +4409,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5541.313
+            "read_age_over_max_lag": 5643.04
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4347,7 +4431,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 921.934
+            "read_age_over_max_lag": 1023.66
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 4,
@@ -4369,7 +4453,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 1304.276
+            "read_age_over_max_lag": 1406.002
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 8,
@@ -4391,7 +4475,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5527.248
+            "read_age_over_max_lag": 5628.974
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4413,7 +4497,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5525.99
+            "read_age_over_max_lag": 5627.716
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4435,7 +4519,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5525.518
+            "read_age_over_max_lag": 5627.244
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4457,7 +4541,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5523.829
+            "read_age_over_max_lag": 5625.555
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4479,7 +4563,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5542.602
+            "read_age_over_max_lag": 5644.328
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4501,7 +4585,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5528.853
+            "read_age_over_max_lag": 5630.579
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
@@ -4523,7 +4607,7 @@
             "scope_non_empty": true,
             "aged_beyond_max_lag": false,
             "both_pass": true,
-            "read_age_over_max_lag": 5527.673
+            "read_age_over_max_lag": 5629.399
           },
           "multi_row_turn2plus_runs": 0,
           "second_form_turn2plus": 0,
