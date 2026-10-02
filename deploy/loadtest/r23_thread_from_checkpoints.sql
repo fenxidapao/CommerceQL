@@ -590,6 +590,8 @@ seq as (
          count(*) filter (where turn >= 2 and wrote_terminal) as ge3_t2_with_terminal_write
   from j
 )
+-- 🔻 T-22（2026-10-02，W8）：下面这一行是**混合域**作用域（pre-fix 的崩臂与 post-fix 的新格同框）
+--   ⇒ 它的 `ge2 = 5` **既不得读成"未达成"也不得读成"回归"**，正解 = 该作用域不含可判样本；分域并报见紧随其后的 **⑰c**。
 select '⑰ U-129 格2/格3（分母=run，粒度=run）' as k, agg.runs_in_scope, agg.t2_runs,
        case when agg.runs_in_scope = 0 then null else agg.ge2_routed_supp_no_terminal_write end as ge2_routed_supp_no_terminal_write,
        case when agg.runs_in_scope = 0 or agg.t2_runs = 0 then null
@@ -601,7 +603,7 @@ select '⑰ U-129 格2/格3（分母=run，粒度=run）' as k, agg.runs_in_scop
        case when agg.runs_in_scope = 0 then null
             when agg.t2_routed_supp = 0 then 'n/a__格2 空真（窗内 turn>=2 无一条被路由进 audit_supp ⇒ 架构 v1.7.17 的第四件前置 t2_routed_supp > 0 不满足，不许记 0）'
             when agg.ge2_routed_supp_no_terminal_write = 0 then 'ge2 = 0 且 t2_routed_supp = ' || agg.t2_routed_supp || ' ⇒ 非空真达成'
-            else 'ge2 = ' || agg.ge2_routed_supp_no_terminal_write || ' ⇒ 未达成（pre-fix 基线：A 档子窗 4 / 全库 5 ⇒ 引用必带作用域）' end as ge2_verdict,
+            else 'ge2 = ' || agg.ge2_routed_supp_no_terminal_write || ' ⇒ **本行不作判（混合域）**：作用域含 pre-fix 存量（A 档子窗 4 / 全库 5）⇒ 三态只许读 ⑰c 的分域行，post_fix 那一行才是验收位且须带 t2_routed_supp 的 n' end as ge2_verdict,
        (agg.runs_in_scope = 0) as scope_empty__if_true_suspect_vars,
        case when agg.runs_in_scope = 0 then null else agg.t2_routed_supp end as t2_routed_supp__ge2_第四件前置
 from agg;
@@ -629,3 +631,65 @@ select '⑰b 路由行归属形状（全库）' as k,
        count(*) filter (where u.ts >= tf.first_tk) as unmatched_at_or_after_first_tk,
        count(distinct u.thread_id) filter (where u.ts >= tf.first_tk) as threads_with_late_unmatched
 from unm u join tf on tf.thread_id = u.thread_id;
+
+-- ⑰c ★ 格2／格3 **分域并报**（T-22，2026-10-02 W8；粒度 = run，分母 = 全库带 `tk_` 的检查点组，作用域 = 全库）
+--   要有这一格的原因：⑰ 那一行是**混合域**，把"修法前存量的 5 条崩臂"和"修法后的新格"算进同一个数 ⇒ 三态无从判。
+--   🔴 **分域依据 = 日期代理**（run 首见 ts 与修法落地时刻 `2026-09-30T14:25:35+00`（`33675b9`）比），**不是构建身份**；
+--      严格分域依赖闸门输入的 rev 自报（= **T-11②**，本窗仍欠）⇒ 在那之前本格的标签只许写到"日期代理"，不得写成"按被测构建分域"。
+--   两把尺同框并报（`按修法时刻` 与 `按日`）：今天两者**同域同值**（09-30 全天零 run ⇒ 代理这一次没与构建身份打架），
+--   ⚠️ 这是巧合不是等价的证明 —— 一旦出现"修法时刻之后但仍是旧构建"的 run，两把尺就会分叉，届时以 rev 自报为准。
+--   期望读法：**`pre_fix` 那一行的 ge2 是存量不是回归；`post_fix` 那一行的 ge2 = 0 才当验收位，且必须带 `t2_routed_supp` 的 n**（n = 1 ⇒ 单样本，不得升格成"率"）。
+with ck as (
+  select thread_id, checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk,
+         min((checkpoint->>'ts')::timestamptz) as first_seen
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2,3
+), run_first as ( select thread_id, tk, min(first_seen) as first_seen from ck group by 1,2 ),
+seq as ( select thread_id, tk, first_seen,
+                row_number() over (partition by thread_id order by first_seen) as turn
+         from run_first ),
+wr as ( select c.tk,
+               bool_or(w.channel = 'terminal' and split_part(w.task_path, ', ', 2) <> '__start__') as wrote,
+               bool_or(w.channel = 'branch:to:audit_supp') as supp
+        from ck c join lg.checkpoint_writes w on w.checkpoint_id = c.checkpoint_id and w.thread_id = c.thread_id
+        group by 1 ),
+j as ( select s.tk, s.turn, s.first_seen, coalesce(w.wrote,false) as wrote, coalesce(w.supp,false) as supp
+       from seq s left join wr w on w.tk = s.tk )
+select '⑰c 分域并报' as k, 'A 按修法时刻（日期代理）' as domain_ruler,
+       case when first_seen < timestamptz '2026-09-30 14:25:35+00' then 'pre_fix' else 'post_fix' end as domain,
+       count(*) filter (where turn >= 2) as t2_runs,
+       count(*) filter (where turn >= 2 and supp) as t2_routed_supp__n,
+       count(*) filter (where turn >= 2 and supp and not wrote) as ge2_routed_supp_no_terminal_write,
+       count(*) filter (where turn >= 2 and wrote) as ge3_t2_with_terminal_write
+from j group by 2, 3
+union all
+select '⑰c 分域并报', 'B 按日（QA 第 2 轮那把尺）', date_trunc('day', first_seen)::date::text,
+       count(*) filter (where turn >= 2),
+       count(*) filter (where turn >= 2 and supp),
+       count(*) filter (where turn >= 2 and supp and not wrote),
+       count(*) filter (where turn >= 2 and wrote)
+from j group by 2, 3
+order by 2, 3;
+
+-- ⑱ ★ 形状守卫（T-21，2026-10-02 W8）：排除式 `split_part(task_path, ', ', 2) <> '__start__'` 的正当性**全靠两条形状约定**，
+--   而在本行落地之前**没有任何一件器件守它们** —— 建在这两条之上的谓词共 **8 处**：本件 `:491/:539/:577`、
+--   `backend/reports/w4/probe_prod_checkpoint_terminal.sql:157/189/220/253`、`backend/reports/w6/probe_audit_invariant.py:516`
+--   ⇒ 守卫只放这一处（不三处各抄一份，避免第三份真相）；另两处只写指针，见各自件内注记。
+--   两条各配一个"若变则怎么坏"的方向（**两个方向都是假绿**，这是本号最怕的形状）：
+--     **守卫 1** 不含 `', '` 分隔符的 terminal 行 **必须 = 0** ⇒ 若 > 0：`split_part(…, ', ', 2)` 返回**空串** ⇒ `'' <> '__start__'` **恒真**
+--                ⇒ 入口复位写行被算成"本轮自写终态" = 格3 假绿（**静默失效，零报错**）。
+--     **守卫 2** 含字面 `__start__` 但**不在第 2 段**的 terminal 行 **必须 = 0** ⇒ 若 > 0：**漏排** ⇒ 同一形状的假绿。
+--   ⚠️ 三条写法义务（本窗现测得出，不是推论）：**①** 守卫一律用 `position(', ' in …) = 0` 与**正则** `task_path ~ '__start__'`，
+--     **不得用 `like '%__start__%'`**（LIKE 的 `_` 是单字符通配 ⇒ 形状过宽；正则没有这个毛病）；
+--     **② 不得拿 `type is not null` 当挡** —— 现测 `__start__` 那 6 行的 `type` 存的是**字符串 `'null'`**（`type = 'null'::text` 命中 **6**、`type is null` 命中 **0**；
+--     psql `-t -A` 下真 NULL 显示为空串，所以那一列印出来的 `null` 是值不是空）；
+--     **③ 三态联动**：`shape_ok = f` 时，本件 ⑮/⑯/⑯b/⑰/⑰c 的 `wrote_terminal` 系读数**一律不引用**（不是"重新解释"，是作废）。
+select '⑱ 形状守卫（排除式的正当性前提）' as k,
+       count(*) as terminal_rows,
+       count(*) filter (where position(', ' in task_path) = 0) as g1_no_delim__want_0,
+       count(*) filter (where split_part(task_path, ', ', 2) <> '__start__' and task_path ~ '__start__') as g2_start_outside_seg2__want_0,
+       count(*) filter (where split_part(task_path, ', ', 2) = '__start__') as start_rows_excluded,
+       count(distinct split_part(task_path, ', ', 2)) as seg2_node_kinds,
+       count(*) filter (where split_part(task_path, ', ', 2) = '__start__' and type = 'null'::text) as start_rows_with_literal_null_type,
+       (count(*) filter (where position(', ' in task_path) = 0) = 0
+        and count(*) filter (where split_part(task_path, ', ', 2) <> '__start__' and task_path ~ '__start__') = 0) as shape_ok
+from lg.checkpoint_writes where channel = 'terminal';

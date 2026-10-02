@@ -516,6 +516,34 @@ select distinct c.tk from lg.checkpoint_writes w
   where w.channel = 'terminal' and split_part(w.task_path, ', ', 2) <> '__start__'
 """
 
+#: 🔴 T-22（2026-10-02，W8）：**格2／格3 分域并报**。上面 `writes` 那一片读数全是**混合域**（修法前后的 run 同框）
+#:    ⇒ 单格三态无从判：`pre_fix` 的 ge2 是**存量不是回归**，只有 `post_fix` 那行 = 0 才配当验收位，且必须带 `t2_routed_supp` 的 n。
+#:    ⚠️ **分域依据 = 日期代理**（run 首见 ts 与 W4 修法落地时刻比），**不是构建身份**；严格分域依赖闸门输入自报 rev
+#:    （= 验收窗 T-11②，仍欠）。⇒ 出口必须把这个标签带到读数旁边，别让下一轮把"按日期分域"念成"按被测构建分域"。
+#:    排除式 `split_part(...) <> '__start__'` 的两条形成立刻**不在这件里守**，守在全仓唯一一处 =
+#:    `deploy/loadtest/r23_thread_from_checkpoints.sql` 的 **⑱ 形状守卫**（含 `', '` 缺分隔符 ⇒ `split_part` 返回空串 ⇒ 恒真 ⇒ 假绿）。
+GRID23_BY_DOMAIN_SQL = """
+with ck as (
+  select thread_id, checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk,
+         min((checkpoint->>'ts')::timestamptz) as first_seen
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2,3
+), run_first as ( select thread_id, tk, min(first_seen) as first_seen from ck group by 1,2 ),
+seq as ( select thread_id, tk, first_seen,
+                row_number() over (partition by thread_id order by first_seen) as turn
+         from run_first ),
+wr as ( select c.tk,
+               bool_or(w.channel = 'terminal' and split_part(w.task_path, ', ', 2) <> '__start__') as wrote,
+               bool_or(w.channel = 'branch:to:audit_supp') as supp
+        from ck c join lg.checkpoint_writes w on w.checkpoint_id = c.checkpoint_id and w.thread_id = c.thread_id
+        group by 1 )
+select case when s.first_seen < timestamptz '2026-09-30 14:25:35+00' then 'pre_fix' else 'post_fix' end as domain,
+       count(*) filter (where s.turn >= 2) as t2_runs,
+       count(*) filter (where s.turn >= 2 and coalesce(w.supp,false)) as t2_routed_supp,
+       count(*) filter (where s.turn >= 2 and coalesce(w.supp,false) and not coalesce(w.wrote,false)) as ge2_routed_supp_no_terminal_write,
+       count(*) filter (where s.turn >= 2 and coalesce(w.wrote,false)) as ge3_t2_with_terminal_write
+from seq s left join wr w on w.tk = s.tk group by 1 order by 1
+"""
+
 #: `branch:to:audit_supp` = N-08 那条出口的**路由集**（判据② 的候选生产读点）。
 #: ⚠️ 只取 `tk` 清单 ⇒ thread 数由**我方尺**从 tk 反推（交付 §5.54 的"粒度"形状：同一批里 run 数 ≠ thread 数，
 #:    两个都要报，不能只报一个 —— W7 ⑯ 那句"70 条全在 turn1"就是这么来的）。
@@ -1446,6 +1474,17 @@ async def measure(rows: list[dict], table: str = "audit_log") -> tuple[list[dict
                 attrib = writes_attribution(join, t_runs, s_runs, rt_runs, un_shape, ruler, rows_by_tk)
                 ruler["writes"] = writes_crosscheck(ruler, dict(zip(keys, shape_row, strict=True)), tset,
                                                     attrib=attrib)
+                #: T-22（W8）：混合域的单格不作判 ⇒ 分域两栏**另存一份出口**，不改上面任何一格的形状。
+                grid_cols = ("domain", "t2_runs", "t2_routed_supp", "ge2_routed_supp_no_terminal_write",
+                             "ge3_t2_with_terminal_write")
+                grid_rows = [dict(zip(grid_cols, r, strict=True)) for r in
+                             await (await conn.execute(GRID23_BY_DOMAIN_SQL)).fetchall()]
+                ruler["writes"]["grid23_by_domain"] = {
+                    "domain_ruler": "date_proxy__W4_fix_33675b9@2026-09-30T14:25:35Z",
+                    "domain_ruler_is_not": "构建身份 —— 严格分域待 T-11② 的 self_reported_rev",
+                    "cells": {str(r["domain"]): {c: r[c] for c in grid_cols if c != "domain"} for r in grid_rows},
+                    "read_as": "pre_fix 的 ge2 = 存量不是回归；只有 post_fix 且 ge2 = 0 才是验收位，须带 t2_routed_supp 的 n",
+                }
             except Exception as writes_exc:
                 ruler["writes"] = {"available": False, "error": safe_error_text(writes_exc)}
             #: 全库那一维**算一次**存下来（`max_lag_s` 要给逐格的 `too_soon_to_read` 当阈值，

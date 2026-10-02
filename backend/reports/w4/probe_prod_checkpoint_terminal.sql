@@ -329,3 +329,31 @@ select '⑪ 三面 distinct thread' as k,
        (select count(distinct thread_id) from lg.checkpoint_writes)::text as write_threads,
        (select count(*) from lg.checkpoint_blobs)::text as blob_rows,
        (select count(*) from lg.checkpoint_writes)::text as write_rows;
+
+-- ⑫ ★ 格2／格3 **分域并报**（T-22，2026-10-02 W8）：⑥/⑦/⑧/⑨ 都是**混合域**（修法前后的 run 同框）⇒ 单格三态无从判。
+--   🔴 分域依据 = **日期代理**（run 首见 ts 与修法落地时刻 `2026-09-30T14:25:35+00`（`33675b9`）比），**不是构建身份**；
+--      严格分域依赖闸门输入的 rev 自报 = **T-11②**（W6 面，仍欠）⇒ 在那之前不得把本标签写成"按被测构建分域"。
+--   读法：`pre_fix` 的 ge2 是**存量不是回归**；只有 `post_fix` 那行 = 0 才算验收位，且必须带 `t2_routed_supp` 的 n（n = 1 ⇒ 单样本，不得升格成率）。
+--   ⚠️ 排除式 `split_part(task_path, ', ', 2) <> '__start__'` 的两条形成立刻**不在这件里守**，守在全仓唯一一处 =
+--      `deploy/loadtest/r23_thread_from_checkpoints.sql` 的 **⑱ 形状守卫** ⇒ 引用本格前先读 ⑱ 的 `shape_ok`。
+with ck as (
+  select thread_id, checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk,
+         min((checkpoint->>'ts')::timestamptz) as first_seen
+  from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%' group by 1,2,3
+), run_first as ( select thread_id, tk, min(first_seen) as first_seen from ck group by 1,2 ),
+seq as ( select thread_id, tk, first_seen,
+                row_number() over (partition by thread_id order by first_seen) as turn
+         from run_first ),
+wr as ( select c.tk,
+               bool_or(w.channel = 'terminal' and split_part(w.task_path, ', ', 2) <> '__start__') as wrote,
+               bool_or(w.channel = 'branch:to:audit_supp') as supp
+        from ck c join lg.checkpoint_writes w on w.checkpoint_id = c.checkpoint_id and w.thread_id = c.thread_id
+        group by 1 )
+select '⑫ 分域并报' as k,
+       case when s.first_seen < timestamptz '2026-09-30 14:25:35+00' then 'pre_fix' else 'post_fix' end as domain,
+       count(*) filter (where s.turn >= 2)::text as t2_runs,
+       count(*) filter (where s.turn >= 2 and coalesce(w.supp,false))::text as t2_routed_supp__n,
+       count(*) filter (where s.turn >= 2 and coalesce(w.supp,false) and not coalesce(w.wrote,false))::text as ge2_routed_supp_no_terminal_write,
+       count(*) filter (where s.turn >= 2 and coalesce(w.wrote,false))::text as ge3_t2_with_terminal_write,
+       'date_proxy__33675b9@2026-09-30T14:25:35Z' as domain_ruler
+from seq s left join wr w on w.tk = s.tk group by 1, 2 order by 2;
