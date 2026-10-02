@@ -1,9 +1,9 @@
 {
   "meta": {
-    "generated_at": "2026-10-01T11:40:51+00:00",
+    "generated_at": "2026-10-02T06:11:47+00:00",
     "window": "W6",
     "git": {
-      "rev": "f0fd685",
+      "rev": "8ffb53e",
       "dirty": true
     },
     "run_config": {
@@ -141,12 +141,32 @@
       "gate_id": "G-1",
       "condition": "全部 P0 用例通过",
       "verdict": "FAIL",
-      "measured": "断言失败 0 + error 10 = 红 10 条；unit+contract passed=2284, integration_ran=True",
+      "measured": "断言失败 0 ｜ 环境未备 8（收集期 8 / 夹具期 0） ⇒ 红 8 条（判定只看红的**总条数**，两列不改变判据；「环境未备不该驱动 FAIL」= 判据口径变更 ⇒ 架构 O-1，本窗口不自签）；unit+contract passed=2312, integration_ran=True",
       "basis": "§17.1 单元 + 集成",
       "caveats": [
-        "另有 10 条 **error（测试环境起不来，不是断言失败）** ⇒ 与 failed 分开数，混报会看不出坏的是测试环境还是被测系统；其中**收集期 7 条**（import 期就抛 ⇒ 多为 U-114 防线① 『缺 env 当场抛、禁止 skip/禁止字面默认 DSN』按设计红，不是环境故障。⚠️ 这一类会让不带 `--continue-on-collection-errors` 的全量跑**一条测试都不执行**）／**夹具期 3 条**（收到了但 setup 起不来）；点名：`tests/integration/test_audit_append_only.py`、`tests/integration/test_exec_real_pg.py`、`tests/integration/test_feedback_store_pg.py`、`tests/integration/test_migration_0003_views.py`、`tests/integration/test_migration_0004_runtime.py`、`tests/integration/test_query_plan_store_pg.py`、`tests/integration/test_retrieval_fts_pg.py::test_dense_all_null_column_raises_unavailable_not_type_error`、`tests/integration/test_retrieval_fts_pg.py::test_dense_null_rows_never_crowd_out_valid_vectors`、`tests/integration/test_retrieval_fts_pg.py::test_dense_scope_with_zero_rows_is_not_degradation`、`tests/integration/test_semantic_materialization.py`",
-        "本读数的分层与接触面：集成层文件 = ['tests/integration/_env_dsn.py', 'tests/integration/test_audit_append_only.py', 'tests/integration/test_exec_real_pg.py', 'tests/integration/test_feedback_store_pg.py', 'tests/integration/test_migration_0003_views.py', 'tests/integration/test_migration_0004_runtime.py', 'tests/integration/test_query_plan_store_pg.py', 'tests/integration/test_retrieval_fts_pg.py', 'tests/integration/test_semantic_materialization.py']；被拒的库 = ['ecom']；夹具下发过的 DDL 形状 = CREATE SCHEMA retrieval_dense_it、CREATE TABLE r (截断)、DROP TABLE retrieval_dense_it.embed_doc（连接参数 = 未点名；凭据一律不落盘。整串取自日志文本 ⇒ 只能证明「取到了这些」，不能证明「只做了这些」）"
-      ]
+        "另有 8 条 **error（测试环境起不来，不是断言失败）** ⇒ 与 failed 分开数，混报会看不出坏的是测试环境还是被测系统；其中**收集期 8 条**（import 期就抛 ⇒ 多为 U-114 防线① 『缺 env 当场抛、禁止 skip/禁止字面默认 DSN』按设计红，不是环境故障。⚠️ 这一类会让不带 `--continue-on-collection-errors` 的全量跑**一条测试都不执行**）／**夹具期 0 条**（收到了但 setup 起不来）；点名：`tests/integration/test_audit_append_only.py`、`tests/integration/test_exec_real_pg.py`、`tests/integration/test_feedback_store_pg.py`、`tests/integration/test_migration_0003_views.py`、`tests/integration/test_migration_0004_runtime.py`、`tests/integration/test_query_plan_store_pg.py`、`tests/integration/test_retrieval_fts_pg.py`、`tests/integration/test_semantic_materialization.py`",
+        "本读数的分层与接触面：集成层文件 = ['tests/integration/_env_dsn.py', 'tests/integration/test_audit_append_only.py', 'tests/integration/test_exec_real_pg.py', 'tests/integration/test_feedback_store_pg.py', 'tests/integration/test_migration_0003_views.py', 'tests/integration/test_migration_0004_runtime.py', 'tests/integration/test_query_plan_store_pg.py', 'tests/integration/test_retrieval_fts_pg.py', 'tests/integration/test_semantic_materialization.py']；被拒的库 = 无；夹具下发过的 DDL 形状 = 无（只在日志里取 DDL 形状；取不到 ≠ 这轮对共享库没做任何写操作）（连接参数 = 未点名；凭据一律不落盘。整串取自日志文本 ⇒ 只能证明「取到了这些」，不能证明「只做了这些」）"
+      ],
+      "red_split": {
+        "assertion_failures": 0,
+        "environment_errors": 8,
+        "environment_collect_phase": 8,
+        "environment_fixture_phase": 0,
+        "environment_named": [
+          "tests/integration/test_audit_append_only.py",
+          "tests/integration/test_exec_real_pg.py",
+          "tests/integration/test_feedback_store_pg.py",
+          "tests/integration/test_migration_0003_views.py",
+          "tests/integration/test_migration_0004_runtime.py",
+          "tests/integration/test_query_plan_store_pg.py",
+          "tests/integration/test_retrieval_fts_pg.py",
+          "tests/integration/test_semantic_materialization.py"
+        ],
+        "red_total": 8,
+        "sum_check": true,
+        "columns": "① 断言失败 = `failed`（被测系统 / 测试代码的断言不成立）；② 环境未备 = `error`（收集期 import 就抛 / 夹具期 setup 起不来）",
+        "classification_basis": "按 pytest 的**红法**分（`failed` vs `error`），**不按成因分** ⇒ 两列都不能直接念成「被测系统坏了」或「环境坏了」。本窗 2026-10-02 实测一例反指：同一条全量命令、同一棵树，cwd 落在仓库根时读不到 `backend/pyproject.toml` 的 `asyncio_mode = auto` ⇒ **232 条断言失败**（`async def functions are not natively supported`）而**成因是取数环境**；cwd 落回 `backend/` ⇒ 同一棵树 2,289 passed / 8 errors / 零断言失败 ⇒ **引用两列之前先确认跑批形状**（`--co` 的 head 行会打印 rootdir 与 config）。"
+      }
     },
     {
       "gate_id": "G-2",
@@ -156,7 +176,8 @@
       "basis": "冻结集分层网格（I-1 主口径）",
       "caveats": [
         "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
-      ]
+      ],
+      "red_split": {}
     },
     {
       "gate_id": "G-3",
@@ -166,7 +187,8 @@
       "basis": "§7.8 红队矩阵 + `eval/red_team_cases_v1.json`（冻结）",
       "caveats": [
         "未覆盖 2/50 条 —— 逐条原因见 `reports/w6/redteam_results.json` 的 `not_covered_cases`（本轮实测：2 条成本闸门用例，沙箱无 EXPLAIN ⇒ gate3 恒 SKIPPED，§17.4）"
-      ]
+      ],
+      "red_split": {}
     },
     {
       "gate_id": "G-4",
@@ -177,7 +199,8 @@
       "caveats": [
         "沙箱无 RLS：本轮以执行层租户边界模拟（I-6），与生产 DB 层 RLS 是两条路径 → 不构成 N-07 的完整证据",
         "RT-XT 全部被拦发生在 **SQL 层**（评测侧 TEMP VIEW 边界 + 闸门）⇒ 不构成 N-07 的完整证据。**PG 可达且有 2,023,933 行业务事实数据**（RLS 策略 6 条）⇒ 策略**存在性与有效性均已实测**：逐租户可见数求和恰等于属主总数（不重不漏），零上下文与未知租户两条负对照均返 0 行。⚠️ 但这**不等于**评测走了 PG：本窗口的租户边界仍是 SQLite TEMP VIEW 模拟，「应用运行时经 PG 执行并设好 `app.tenant_id` + `app.shop_ids`」那一跳仍未测。 🔴 并行/串行**不等值**（少算已复现）：`v_order_paid/reset_placeholder` ⇒ 这些形态下的 PG 读数一律不得引用。生产执行链那一格（显式 `set_config`）本轮 等值；成因已定位 = **占位符 GUC 不随并行 worker 传值**（leader 读 `''`、worker 读 NULL，两格相加 = 该租户全量），修法归 PG 配置 / 策略文本（架构裁决见 RELAY A11），本窗口只报读数不代修"
-      ]
+      ],
+      "red_split": {}
     },
     {
       "gate_id": "G-5",
@@ -187,7 +210,8 @@
       "basis": "拒答集 + §C.4.4（两类错误分开统计）",
       "caveats": [
         "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
-      ]
+      ],
+      "red_split": {}
     },
     {
       "gate_id": "G-6",
@@ -201,7 +225,8 @@
         "准入样本 P95 = 7268ms",
         "回执**无** `admission` 分桶 ⇒ 被限流/被拒的请求有多少无从核对（U-106 之前的形状）",
         "⚠️ 回执带 `g6_caveat`：本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标 ⇒ 该 P95 不可判达标，不判 PASS（判据来自 W7 `driver.py` 的同一字段）"
-      ]
+      ],
+      "red_split": {}
     },
     {
       "gate_id": "G-7",
@@ -212,7 +237,8 @@
       "caveats": [
         "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）",
         "比对基准（非外部 BI 权威值）：权威侧 = 语义包 `metrics[].expression + default_predicates + time_basis` 在同一沙箱、同一租户边界（TEMP VIEW）上的直接实现；被比侧 = 冻结集 `gold_sql`（W1A，content_hash 冻结）。⚠️ 本项目无外部 BI 权威值可引 ⇒ 本产物验的是**内部口径一致性**，不是对外部报表数字的验证（§C.4.3 的「已确认权威值」只能降级到这一层，报告须如实写）。"
-      ]
+      ],
+      "red_split": {}
     },
     {
       "gate_id": "G-8",
@@ -224,7 +250,8 @@
         "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）",
         "本批次为**单轮**（`runner.py` 无「clarify → 用户补答 → 再走一次」的第二轮回路）⇒ 后半句「澄清后一次成功率」不可测 ⇒ 整条门禁判 UNVERIFIED（既非 FAIL 也非 PASS）。澄清率那一半是可测的，已作为证据列出。",
         "τ 未校准 → 澄清率的判据点本身未定稿（C.4.6 步骤 4）"
-      ]
+      ],
+      "red_split": {}
     }
   ],
   "gate_summary": {
@@ -246,6 +273,261 @@
       "UNVERIFIED": 2,
       "NOT_AVAILABLE": 0,
       "PARTIAL": 2
+    }
+  },
+  "gate_provenance": {
+    "rows": [
+      {
+        "gate_id": "G-1",
+        "verdict": "FAIL",
+        "artifacts": [
+          {
+            "path": "backend/reports/w6/_full_pytest_1002_r20c.log",
+            "display": "backend/reports/w6/_full_pytest_1002_r20c.log",
+            "present": true,
+            "tracked_in_git": false,
+            "self_reported_at": null,
+            "self_reported_at_key": null,
+            "self_reported_rev": null,
+            "self_reported_rev_key": null,
+            "mtime_utc": "2026-10-02T06:10:58+00:00",
+            "parseable_as_json": false,
+            "parse_error": "JSONDecodeError",
+            "basis": "mtime_only",
+            "arg": "pytest_log"
+          },
+          {
+            "path": "backend/reports/w6/_integration_pytest.log",
+            "display": "backend/reports/w6/_integration_pytest.log",
+            "present": false,
+            "tracked_in_git": false,
+            "self_reported_at": null,
+            "self_reported_at_key": null,
+            "self_reported_rev": null,
+            "self_reported_rev_key": null,
+            "mtime_utc": null,
+            "parseable_as_json": null,
+            "parse_error": null,
+            "basis": "absent",
+            "arg": "integration_log"
+          }
+        ],
+        "recompute": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c \"import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-1', pytest_log='backend/reports/w6/_full_pytest_1002_r20c.log', integration_log='backend/reports/w6/_integration_pytest.log'))\"",
+        "missing_input_reason": null
+      },
+      {
+        "gate_id": "G-2",
+        "verdict": "FAIL",
+        "artifacts": [
+          {
+            "path": "eval/results_v1.json",
+            "display": "eval/results_v1.json",
+            "present": true,
+            "tracked_in_git": true,
+            "self_reported_at": null,
+            "self_reported_at_key": null,
+            "self_reported_rev": null,
+            "self_reported_rev_key": null,
+            "mtime_utc": "2026-09-21T14:33:55+00:00",
+            "parseable_as_json": true,
+            "parse_error": null,
+            "basis": "mtime_only",
+            "arg": "results_path"
+          }
+        ],
+        "recompute": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c \"import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-2', results_path='eval/results_v1.json'))\"",
+        "missing_input_reason": null
+      },
+      {
+        "gate_id": "G-3",
+        "verdict": "PARTIAL",
+        "artifacts": [
+          {
+            "path": "backend/reports/w6/redteam_results.json",
+            "display": "backend/reports/w6/redteam_results.json",
+            "present": true,
+            "tracked_in_git": true,
+            "self_reported_at": null,
+            "self_reported_at_key": null,
+            "self_reported_rev": null,
+            "self_reported_rev_key": null,
+            "mtime_utc": "2026-09-28T10:09:55+00:00",
+            "parseable_as_json": true,
+            "parse_error": null,
+            "basis": "mtime_only",
+            "arg": "redteam_path"
+          }
+        ],
+        "recompute": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c \"import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-3', redteam_path='backend/reports/w6/redteam_results.json'))\"",
+        "missing_input_reason": null
+      },
+      {
+        "gate_id": "G-4",
+        "verdict": "PARTIAL",
+        "artifacts": [
+          {
+            "path": "backend/reports/w6/redteam_results.json",
+            "display": "backend/reports/w6/redteam_results.json",
+            "present": true,
+            "tracked_in_git": true,
+            "self_reported_at": null,
+            "self_reported_at_key": null,
+            "self_reported_rev": null,
+            "self_reported_rev_key": null,
+            "mtime_utc": "2026-09-28T10:09:55+00:00",
+            "parseable_as_json": true,
+            "parse_error": null,
+            "basis": "mtime_only",
+            "arg": "redteam_path"
+          },
+          {
+            "path": "backend/reports/w6/_probe_pg_real.json",
+            "display": "backend/reports/w6/_probe_pg_real.json",
+            "present": true,
+            "tracked_in_git": true,
+            "self_reported_at": null,
+            "self_reported_at_key": null,
+            "self_reported_rev": null,
+            "self_reported_rev_key": null,
+            "mtime_utc": "2026-09-28T10:28:24+00:00",
+            "parseable_as_json": true,
+            "parse_error": null,
+            "basis": "mtime_only",
+            "arg": "pg_probe_path"
+          }
+        ],
+        "recompute": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c \"import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-4', redteam_path='backend/reports/w6/redteam_results.json', pg_probe_path='backend/reports/w6/_probe_pg_real.json'))\"",
+        "missing_input_reason": null
+      },
+      {
+        "gate_id": "G-5",
+        "verdict": "FAIL",
+        "artifacts": [
+          {
+            "path": "eval/results_v1.json",
+            "display": "eval/results_v1.json",
+            "present": true,
+            "tracked_in_git": true,
+            "self_reported_at": null,
+            "self_reported_at_key": null,
+            "self_reported_rev": null,
+            "self_reported_rev_key": null,
+            "mtime_utc": "2026-09-21T14:33:55+00:00",
+            "parseable_as_json": true,
+            "parse_error": null,
+            "basis": "mtime_only",
+            "arg": "results_path"
+          }
+        ],
+        "recompute": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c \"import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-5', results_path='eval/results_v1.json'))\"",
+        "missing_input_reason": null
+      },
+      {
+        "gate_id": "G-6",
+        "verdict": "UNVERIFIED",
+        "artifacts": [
+          {
+            "path": "deploy/loadtest/receipt.json",
+            "display": "deploy/loadtest/receipt.json",
+            "present": true,
+            "tracked_in_git": true,
+            "self_reported_at": "2026-09-19T05:27:26+00:00",
+            "self_reported_at_key": "started_at",
+            "self_reported_rev": null,
+            "self_reported_rev_key": null,
+            "mtime_utc": "2026-09-20T01:27:48+00:00",
+            "parseable_as_json": true,
+            "parse_error": null,
+            "basis": "self_reported_at_only",
+            "arg": "loadtest_receipt"
+          }
+        ],
+        "recompute": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c \"import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-6', loadtest_receipt='deploy/loadtest/receipt.json'))\"",
+        "missing_input_reason": null
+      },
+      {
+        "gate_id": "G-7",
+        "verdict": "FAIL",
+        "artifacts": [
+          {
+            "path": "backend/reports/w6/probe_metric_values.json",
+            "display": "backend/reports/w6/probe_metric_values.json",
+            "present": true,
+            "tracked_in_git": true,
+            "self_reported_at": null,
+            "self_reported_at_key": null,
+            "self_reported_rev": null,
+            "self_reported_rev_key": null,
+            "mtime_utc": "2026-09-18T17:22:48+00:00",
+            "parseable_as_json": true,
+            "parse_error": null,
+            "basis": "mtime_only",
+            "arg": "metric_values_path"
+          }
+        ],
+        "recompute": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c \"import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-7', metric_values_path='backend/reports/w6/probe_metric_values.json'))\"",
+        "missing_input_reason": null
+      },
+      {
+        "gate_id": "G-8",
+        "verdict": "UNVERIFIED",
+        "artifacts": [
+          {
+            "path": "eval/results_v1.json",
+            "display": "eval/results_v1.json",
+            "present": true,
+            "tracked_in_git": true,
+            "self_reported_at": null,
+            "self_reported_at_key": null,
+            "self_reported_rev": null,
+            "self_reported_rev_key": null,
+            "mtime_utc": "2026-09-21T14:33:55+00:00",
+            "parseable_as_json": true,
+            "parse_error": null,
+            "basis": "mtime_only",
+            "arg": "results_path"
+          }
+        ],
+        "recompute": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c \"import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-8', results_path='eval/results_v1.json'))\"",
+        "missing_input_reason": null
+      }
+    ],
+    "report_git": {
+      "rev": "8ffb53e",
+      "dirty": true
+    },
+    "basis_legend": {
+      "self_reported": "产物自己声明了时刻**和**代码版本 ⇒ 最强",
+      "self_reported_at_only": "产物只声明了时刻、没声明代码版本 ⇒ 能定位「哪一次」，不能证明「哪棵树」（本轮全部产物都在这一格或下一格）",
+      "mtime_only": "只有文件系统的 mtime ⇒ **弱证据**：checkout / 复制 / 重命名都会改它，且 mtime 是「最后一次写入」不是「生成时刻」；本机还可能出现中文目录名被平台改写的情况",
+      "absent": "产物不在位 ⇒ 这一格的读数只能靠重跑取证",
+      "mtime_unreadable": "文件在位但连 mtime 都读不到（占用/权限）⇒ 取证等级最低，这一格实际上等于没取证",
+      "no_path": "本窗口没记录该输入的路径"
+    },
+    "gaps": {
+      "gates_with_weak_or_missing_artifact": [
+        "G-1",
+        "G-2",
+        "G-3",
+        "G-4",
+        "G-5",
+        "G-7",
+        "G-8"
+      ],
+      "gates_without_self_reported_rev": [
+        "G-1",
+        "G-2",
+        "G-3",
+        "G-4",
+        "G-5",
+        "G-6",
+        "G-7",
+        "G-8"
+      ],
+      "artifacts_not_tracked_in_git": [
+        "backend/reports/w6/_full_pytest_1002_r20c.log"
+      ],
+      "statement": "本轮实测：八格的输入产物里**没有一个**同时自带「生成时刻 + git rev」（自报 rev 缺 8 格；取证等级落到 mtime/absent 的 7 格）。⇒ 下一轮欠件 = 让探针与 runner 落盘时自带 `generated_at` + `git rev-parse --short HEAD`，而不是靠报告去倒推「这份产物大概是哪棵树生成的」。"
     }
   },
   "grid": {
