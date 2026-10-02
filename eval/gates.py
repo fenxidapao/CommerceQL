@@ -21,7 +21,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Final
 
-__all__ = ["VERDICTS", "Gate", "evaluate_gates"]
+__all__ = ["VERDICTS", "Gate", "evaluate_gates", "red_split", "summary"]
 
 VERDICTS: Final[tuple[str, ...]] = ("PASS", "FAIL", "UNVERIFIED", "NOT_AVAILABLE", "PARTIAL")
 
@@ -46,6 +46,11 @@ class Gate:
     basis: str
     #: 结论成立的前置条件（未满足时说明为什么是 UNVERIFIED 而不是 PASS）。
     caveats: tuple[str, ...] = field(default_factory=tuple)
+    #: 🔴 验收窗口 QA 第一轮 ②(a)：**只有 G-1 会填**（其余格 = 空 dict，序列化里看得见"这一格没有分类"）。
+    #: 判定谓词与 `07:3267` 的原文（「全部 P0 用例通过」）**一字未动** ⇒ 这一格只把红的**构成**摊开，
+    #: 不改变"红多少算不过"。想让它改变判定（例如环境未备记 `NOT_AVAILABLE`）= **判据口径变更**，
+    #: QA 已列 O-1 上呈架构，本窗口不自签。
+    red_split: Mapping[str, Any] = field(default_factory=dict)
 
 
 def _rate(numerator: int, denominator: int) -> float | None:
@@ -121,6 +126,51 @@ def _pg_surface_notes(p0_tests: Mapping[str, Any]) -> tuple[str, ...]:
     return tuple(notes)
 
 
+#: 🔴 验收窗口 QA 第一轮 ②(a) 要求"把 error 拆两列出（环境未备 vs 断言失败）"，且 **G-1 判据原文
+#: （`docs/07:3267`「全部 P0 用例通过」）不许动**。⇒ 下面这一族只做**分类与摊开**，判定谓词与旧写法
+#: 逐字等价（`red_total = failed + errors`，`PASS` 仍要求 `red_total == 0 且集成层跑过`）。
+#: ⚠️ 想改成"环境未备 ⇒ `NOT_AVAILABLE`"= **判据口径变更** ⇒ QA 已列 O-1 上呈架构，本窗口不自签。
+def _error_phase_split(named_errors: Sequence[str], total: int) -> tuple[int | None, int | None]:
+    """把 error 分成「收集期 / 夹具期」；**没点名 ⇒ `(None, None)`（= 未取证），不是 `(0, 0)`**。
+
+    🔴 这一格今天第一次发挥作用：把"取不到"和"取到了但是零"分开，否则引用者会把
+    "未取证"念成"没有收集期错误"（本项目第三形状 = 三态缺失）。
+    """
+    if total == 0:
+        return 0, 0
+    if not named_errors:
+        return None, None
+    collect = sum(1 for t in named_errors if "::" not in str(t))
+    return collect, len(named_errors) - collect
+
+
+def red_split(p0_tests: Mapping[str, Any]) -> dict[str, Any]:
+    """G-1 的红 = **两列**（断言失败 / 环境未备），`_p0_notes()` 与 `measured` 都走这一份（不留两份真相）。"""
+    assertions = int(p0_tests.get("failed") or 0)
+    env = int(p0_tests.get("errors") or 0)
+    named = [str(t) for t in (p0_tests.get("error_tests") or ())]
+    collect, fixture = _error_phase_split(named, env)
+    return {
+        "assertion_failures": assertions,
+        "environment_errors": env,
+        "environment_collect_phase": collect,
+        "environment_fixture_phase": fixture,
+        "environment_named": named,
+        "red_total": assertions + env,
+        #: 两列之和 = 判定驱动量；取不到点名 ⇒ `sum_check = None`（未取证，不当"对上了"）。
+        "sum_check": None if collect is None else (collect + fixture == env),
+        "columns": "① 断言失败 = `failed`（被测系统 / 测试代码的断言不成立）；"
+                   "② 环境未备 = `error`（收集期 import 就抛 / 夹具期 setup 起不来）",
+        "classification_basis": (
+            "按 pytest 的**红法**分（`failed` vs `error`），**不按成因分** ⇒ 两列都不能直接念成"
+            "「被测系统坏了」或「环境坏了」。本窗 2026-10-02 实测一例反指：同一条全量命令、同一棵树，"
+            "cwd 落在仓库根时读不到 `backend/pyproject.toml` 的 `asyncio_mode = auto` ⇒ "
+            "**232 条断言失败**（`async def functions are not natively supported`）而**成因是取数环境**；"
+            "cwd 落回 `backend/` ⇒ 同一棵树 2,289 passed / 8 errors / 零断言失败 ⇒ "
+            "**引用两列之前先确认跑批形状**（`--co` 的 head 行会打印 rootdir 与 config）。"),
+    }
+
+
 def _p0_notes(p0_tests: Mapping[str, Any], ran_integration: bool) -> tuple[str, ...]:
     """G-1 的红**必须点名到测试**。只报 `failed=N` 会被下一轮读成「评测窗口改坏了什么」。
 
@@ -138,18 +188,23 @@ def _p0_notes(p0_tests: Mapping[str, Any], ran_integration: bool) -> tuple[str, 
         notes.append("断言失败逐条点名：" + "、".join(f"`{t}`" for t in named))
     errors = int(p0_tests.get("errors") or 0)
     if errors:
-        named_err = list(p0_tests.get("error_tests") or ())
-        #: 🔴 两种 error 的**归属窗口与修法完全不同**，只报总数会让人去修错的那一层：
+        #: 🔴 分类只由 `red_split()` 出一份（两遍实现 = 迟早对不上）。两种 error 的**归属窗口与修法完全不同**：
         #: 名字里没有 `::` = **收集期**（模块 import 就抛，U-114 防线① 的"缺 env 当场抛"就是这一类，
         #: 它是**按设计红**，不是环境坏了）；带 `::` = 夹具期（测试收到了、setup 起不来）。
-        collect_err = [t for t in named_err if "::" not in t]
-        setup_err = [t for t in named_err if "::" in t]
+        sp = red_split(p0_tests)
+        collect_n, setup_n = sp["environment_collect_phase"], sp["environment_fixture_phase"]
+        named_err = sp["environment_named"]
         split = ""
-        if named_err:
-            split = (f"；其中**收集期 {len(collect_err)} 条**（import 期就抛 ⇒ 多为 U-114 防线① "
+        if collect_n is not None:
+            split = (f"；其中**收集期 {collect_n} 条**（import 期就抛 ⇒ 多为 U-114 防线① "
                      "『缺 env 当场抛、禁止 skip/禁止字面默认 DSN』按设计红，不是环境故障。"
                      "⚠️ 这一类会让不带 `--continue-on-collection-errors` 的全量跑**一条测试都不执行**"
-                     f"）／**夹具期 {len(setup_err)} 条**（收到了但 setup 起不来）")
+                     f"）／**夹具期 {setup_n} 条**（收到了但 setup 起不来）")
+        elif named_err:
+            split = (f"；**两列加起来 {len(named_err)} 条 ≠ 汇总行的 {errors} 条**（`sum_check = false`）"
+                     "⇒ 点名清单不完整，分类数只作下界")
+        else:
+            split = "；**未点名 ⇒ 收集期/夹具期两列都取不到（`null`，不是 0）**"
         notes.append(
             f"另有 {errors} 条 **error（测试环境起不来，不是断言失败）** ⇒ 与 failed 分开数，"
             "混报会看不出坏的是测试环境还是被测系统"
@@ -189,16 +244,24 @@ def evaluate_gates(
         gates.append(Gate("G-1", "全部 P0 用例通过", "NOT_AVAILABLE", "无输入",
                           "§17.1 单元 + 集成", ("本轮未收集 P0 测试结果",)))
     else:
-        failed = int(p0_tests.get("failed", 0)) + int(p0_tests.get("errors", 0))
+        #: 🔴 判定谓词与 QA 来件时的写法**逐字等价**（`red_total = failed + errors`，
+        #: `PASS` 仍要求"两列都零 + 集成层跑过"）⇒ 本节只把红的**构成**摊开成两列，不动 `07:3267` 的原文。
+        sp = red_split(p0_tests)
+        red = sp["red_total"]
         ran_integration = bool(p0_tests.get("integration_ran", False))
+        cols = (f"断言失败 {sp['assertion_failures']} ｜ 环境未备 {sp['environment_errors']}"
+                + (f"（收集期 {sp['environment_collect_phase']} / 夹具期 {sp['environment_fixture_phase']}）"
+                   if sp["environment_collect_phase"] is not None
+                   else "（两列**未取证** = 日志没点名，`null` 不是 0）"))
         gates.append(Gate(
             "G-1", "全部 P0 用例通过",
-            "PASS" if failed == 0 and ran_integration else ("FAIL" if failed else "PARTIAL"),
-            f"断言失败 {int(p0_tests.get('failed', 0))} + error {int(p0_tests.get('errors', 0))}"
-            f" = 红 {failed} 条；unit+contract passed={p0_tests.get('passed')}"
-            f", integration_ran={ran_integration}",
+            "PASS" if red == 0 and ran_integration else ("FAIL" if red else "PARTIAL"),
+            f"{cols} ⇒ 红 {red} 条（判定只看红的**总条数**，两列不改变判据；"
+            "「环境未备不该驱动 FAIL」= 判据口径变更 ⇒ 架构 O-1，本窗口不自签）"
+            f"；unit+contract passed={p0_tests.get('passed')}, integration_ran={ran_integration}",
             "§17.1 单元 + 集成",
             _p0_notes(p0_tests, ran_integration),
+            red_split=sp,
         ))
 
     # ---- G-2 结构 Easy × 语义低 ≥ 95% ----

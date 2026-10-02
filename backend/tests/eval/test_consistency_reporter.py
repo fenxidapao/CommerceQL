@@ -694,6 +694,11 @@ def _minimal_payload() -> dict:
                  "n_dataset_cases": 0, "artifacts_present": {}},
         "gates": [], "gate_summary": {"all_pass": False, "passed": [], "not_pass": {},
                                       "counts": {}},
+        #: 取证面走**同一个构造函数**，不在这里手抄形状：本轮实测说明手抄的桩件
+        #: 会在新节加入后立刻过期（`KeyError: gate_provenance`），而真实装配口不会。
+        "gate_provenance": rp._gate_provenance([], {"results_path": None, "pytest_log": None,
+                                                    "integration_log": None},
+                                               report_git={}),
         "grid": {"matrix": [[{"passed": 0, "total": 0, "pass_rate": None}
                              for _ in rp.grid_mod.SEMS] for _ in rp.grid_mod.LEVELS],
                  "scored_total": 0, "scored_passed": 0, "ex": None,

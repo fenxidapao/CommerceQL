@@ -53,11 +53,13 @@ import grid as grid_mod  # noqa: E402
 __all__ = [
     "build_payload",
     "collect_coverage",
+    "gate_inputs",
     "loadtest_pressure",
     "main",
     "parse_pytest_summary",
     "pg_facts",
     "pg_statement",
+    "recompute_gate",
     "render_markdown",
     "replay_reproducibility",
     "timeout_snapshot_drift",
@@ -611,6 +613,310 @@ def tau_facts() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# 三·补、门禁**取证面**（QA 第一轮 ④ · T-06）
+# ---------------------------------------------------------------------------
+#
+# QA 要的是每格四件：当期产物文件名 + 生成时刻 + 生成用 HEAD + 一条零额度复算命令。
+# 三条设计约束（每条都对应本轮实测撞到的坑，不是风格）：
+# ① **路径取自 build_payload 的入参** ⇒ "报告读的是哪个文件"与"取证指的是哪个文件"
+#    是同一份真相；命令行给了 `--pytest-log` 换文件时，取证面跟着换。
+# ② 复算命令只调用本模块的**纯函数**（零 LLM、零 PG、零写盘）⇒ 不把判据逻辑抄进命令，
+#    否则改判据时命令不会跟着变，QA 复算出来的是旧口径。
+# ③ 命令里**不许出现裸竖线**（本节要渲染进 GFM 表格，代码段内的 `|` 照样劈列）。
+
+#: 每格读哪几个入参产物。键名 = `gate_inputs()` 的形参名，一一对应，可 grep。
+GATE_EVIDENCE: dict[str, tuple[str, ...]] = {
+    "G-1": ("pytest_log", "integration_log"),
+    "G-2": ("results_path",),
+    "G-3": ("redteam_path",),
+    "G-4": ("redteam_path", "pg_probe_path"),
+    "G-5": ("results_path",),
+    "G-6": ("loadtest_receipt",),
+    "G-7": ("metric_values_path",),
+    "G-8": ("results_path",),
+}
+
+#: 产物**自报**时刻的候选键（按优先级）。只认这些名字，认不到就退回 mtime 并降级取证等级 ——
+#: 猜一个相近的键 = 把"没声明"读成"声明了"。
+_AT_KEYS = ("generated_at", "generated_at_utc", "as_of", "started_at", "created_at", "timestamp")
+_REV_KEYS = ("git_rev", "git_sha", "commit", "head", "git_head", "rev")
+
+
+def _first_declared(data: Any, keys: Sequence[str]) -> tuple[str | None, Any]:
+    """在产物顶层（再退到 `meta.*`）找第一个声明键。找不到 ⇒ `(None, None)`，不猜。"""
+    if not isinstance(data, Mapping):
+        return None, None
+    for scope, node in (("", data), ("meta.", data.get("meta") or {})):
+        if not isinstance(node, Mapping):
+            continue
+        for k in keys:
+            if k in node:
+                return f"{scope}{k}", node[k]
+    return None, None
+
+
+def _tracked_in_git(paths: Sequence[str | None]) -> set[str] | None:
+    """一次 `git ls-files` 数出哪些取证产物**真的入库**。
+
+    为什么要单列：`*.log` 被 `.gitignore:47` 全局忽略 ⇒ G-1 的日志只在**本机**存在，
+    QA 在别的树上 checkout 就看不到。把"在位"与"入库"混成一个词，
+    对方会按"仓库里有这个产物"去复算，然后拿到一个"文件不存在"。
+    """
+    rels = [p for p in (_evidence_rel(x) for x in paths) if p]
+    if not rels:
+        return set()
+    try:
+        out = subprocess.run(
+            ["git", "-C", _bootstrap.ROOT, "ls-files", "--", *rels],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=15, check=True,
+        ).stdout
+    except Exception:
+        return None                       # 取不到就写"未知"，不把"未知"渲染成"没入库"
+    return {line.strip() for line in out.splitlines() if line.strip()}
+
+
+def _evidence_rel(path: str | None) -> str | None:
+    """取证面统一用**仓库相对**形式，且按"当初读这个文件时用的解析规则"（进程 cwd）归一。
+
+    🔴 两条都在本轮被实测打出来过：
+    ① 尺子的原点：把 `reports/w6/x.json` 当 `backend/` 相对喂给
+       `git -C <仓库根> ls-files` ⇒ 匹配不到 ⇒ "入 git=否"是**假阴性**（文件其实入库）；
+    ② 解析的原点：reporter 在 `backend/` 里跑、`--pytest-log reports/w6/x.log` 也按
+       `backend/` 解析 —— 取证面若硬按仓库根去拼，就会得出"日志不在位"，
+       而 G-1 的读数恰恰是从这个文件算出来的 ⇒ **判定说跑过、取证说没文件**。
+    仓库外的路径一律返回 `None`：报告是共享产物，不许带出本机绝对路径（含用户名/盘符）。
+    """
+    if not path:
+        return None
+    rel = _rel(os.path.abspath(path))
+    return None if ("仓库外" in rel or rel.startswith("未记录")) else rel
+
+
+def _resolve(path: str | None) -> str | None:
+    """按**进程 cwd** 解析（= 读取该文件时用的同一套规则），绝对路径原样返回。"""
+    return None if not path else os.path.abspath(path)
+
+
+def artifact_evidence(path: str | None, tracked: set[str] | None) -> dict[str, Any]:
+    """单个产物的取证四件：在位 / 自报时刻 / 自报 HEAD / mtime（弱证据）。"""
+    rel = _evidence_rel(path)
+    target = _resolve(path)
+    present = bool(target) and os.path.isfile(target or "")
+    row: dict[str, Any] = {
+        "path": rel,
+        "display": rel or ("（未记录路径）" if not path else "（仓库外 ⇒ 绝对路径不写进共享产物）"),
+        "present": present,
+        "tracked_in_git": None if (tracked is None or not rel) else (rel in tracked),
+        "self_reported_at": None,
+        "self_reported_at_key": None,
+        "self_reported_rev": None,
+        "self_reported_rev_key": None,
+        "mtime_utc": None,
+        "parseable_as_json": None,
+        "parse_error": None,
+        "basis": "no_path" if not path else ("absent" if not present else "mtime_only"),
+    }
+    if not present:
+        return row
+    try:
+        row["mtime_utc"] = dt.datetime.fromtimestamp(
+            os.path.getmtime(target or ""), dt.UTC).isoformat(timespec="seconds")
+    except OSError:
+        #: mtime 取不到只是"取证等级更低"，不是报告写不出来 —— 但**必须留痕**：
+        #: 留 `None` 而下一层的 `basis` 仍写 `mtime_only` 会让人以为 mtime 是空的。
+        row["basis"] = "mtime_unreadable"
+    #: 🔴 G-1 的产物是 **pytest 文本日志**，不是 JSON ⇒ 读声明键时不能假设解析得动。
+    #: 解析失败只记异常**类型名**（不记 message：JSON 报错会把文件内容原样带出来，
+    #: 而产物目录里躺着 DSN/回执，泄一份就是红线事故）。
+    data: Any = None
+    row["parseable_as_json"] = False
+    try:
+        data = _load(target)
+        row["parseable_as_json"] = data is not None
+    except Exception as exc:
+        row["parse_error"] = type(exc).__name__
+    key_at, at = _first_declared(data, _AT_KEYS)
+    key_rev, rev = _first_declared(data, _REV_KEYS)
+    row["self_reported_at"], row["self_reported_at_key"] = at, key_at
+    row["self_reported_rev"], row["self_reported_rev_key"] = rev, key_rev
+    if at is not None and rev is not None:
+        row["basis"] = "self_reported"
+    elif at is not None:
+        row["basis"] = "self_reported_at_only"
+    return row
+
+
+def recompute_command(gate_id: str, artifacts: Sequence[Mapping[str, Any]]) -> str:
+    """一条**零额度**复算命令：从取证面指到的那几个产物，把这格判定再算一遍。
+
+    ⚠️ 命令里的路径一律是**仓库相对**（cwd = 仓库根），与 `_evidence_rel` 同一原点；
+    取不到仓库相对形式（仓库外路径 ⇒ 不许把本机绝对路径写进共享产物）时写成 `=None`，
+    那会让这一格复算出 `NOT_AVAILABLE` —— **故意让它显眼地不对**，而不是悄悄指到别的文件。
+    """
+    args = "".join(
+        f", {a['arg']}={a['path']!r}" if a.get("path") else f", {a['arg']}=None"
+        for a in artifacts
+    )
+    return (
+        "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c "
+        f"\"import sys;sys.path[:0]=['eval','.'];import reporter as r;"
+        f"print(r.recompute_gate({gate_id!r}{args}))\""
+    )
+
+
+def gate_inputs(
+    *,
+    results_path: str = DEFAULT_RESULTS,
+    redteam_path: str = DEFAULT_REDPATH,
+    metric_values_path: str | None = DEFAULT_METRIC_VALUES,
+    pg_probe_path: str | None = DEFAULT_PG_PROBE,
+    pytest_log: str | None = DEFAULT_PYTEST_LOG,
+    integration_log: str | None = DEFAULT_INTEGRATION_LOG,
+    loadtest_receipt: str | None = DEFAULT_LOADTEST_RECEIPT,
+) -> dict[str, Any]:
+    """§17.3 八格判定所需的**全部输入映射**（`evaluate_gates()` 的 kwargs）。
+
+    `build_payload()` 与 QA 的复算命令共用这一个口 ⇒ 「报告用的输入」与
+    「别人能重跑的输入」不会漂移。零 LLM、零 PG 连接、零写盘（只读产物）。
+
+    ⚠️ 这里的 `consistency` 喂的是 **`probe_metric_values.json`**（§C.4.3 权威值比对 = G-7 输入），
+    不是 `consistency_results.json`（§17.6 三测，不参与判定）—— 两个同名文件是本窗口最容易串的一对。
+    """
+    dataset = _bootstrap.load_json(_bootstrap.DATASET_PATH)
+    cases = dataset.get("cases") or []
+    results = _load(results_path) or {}
+    records = results.get("records") or []
+    redteam = _load(redteam_path)
+    pg = pg_facts(pg_probe_path)
+    pg_txt = pg_statement(pg)
+
+    p0 = parse_pytest_summary(pytest_log)
+    p0_integration = parse_pytest_summary(integration_log)
+    if p0 and p0_integration and not p0["integration_ran"]:
+        p0 = {**p0, **{k: v for k, v in p0_integration.items() if k != "source_log"},
+              "source_log": f"{p0['source_log']} + {p0_integration['source_log']}"}
+
+    results_map = {
+        str(r.get("case_id")): {
+            "scored": bool(r.get("scored")),
+            "passed": bool((r.get("verdict") or {}).get("equivalent")),
+            "category": str((r.get("attribution") or {}).get("category") or ""),
+        }
+        for r in records
+    }
+
+    cross_tenant = None
+    if redteam:
+        xt = [r for r in redteam.get("results") or [] if str(r.get("case_id")).startswith("RT-XT")]
+        if xt:
+            cross_tenant = {
+                "leaked": sum(1 for r in xt if not r.get("blocked")),
+                "n_cases": len(xt),
+                # 拦下发生在 SQL 层 ⇒ 与 PG 策略是否生效是两件事，只有后者才算 N-07 完整证据。
+                "pg_rls_verified": False,
+                "notes": [
+                    "RT-XT 全部被拦发生在 **SQL 层**（评测侧 TEMP VIEW 边界 + 闸门）"
+                    "⇒ 不构成 N-07 的完整证据。" + pg_txt,
+                ],
+            }
+    return {
+        "grid": grid_mod.build_grid(cases, results_map),
+        "p0_tests": p0,
+        "red_team": redteam,
+        "cross_tenant": cross_tenant,
+        "refusal": _refusal_counts(records),
+        "pressure": loadtest_pressure(loadtest_receipt),
+        "consistency": _load(metric_values_path),
+        "clarification": _clarify_counts(records),
+        "tau_calibrated": bool(tau_facts()["calibrated_under_eval_env"]),
+    }
+
+
+def recompute_gate(gate_id: str, **paths: Any) -> dict[str, Any]:
+    """QA 复算入口：给定取证面里的产物路径，重算**那一格**并返回整个 `Gate`。
+
+    故意不做缓存、不做"只算不读文件"的捷径 —— 它存在的意义就是让另一个人
+    用一条命令得到与报告相同的判定；捷径一多，就变成只有本窗口能跑的黑话。
+    """
+    gi = gate_inputs(**paths)
+    for g in gates_mod.evaluate_gates(**gi):
+        if g.gate_id == gate_id:
+            return dataclasses.asdict(g)
+    raise KeyError(f"{gate_id} 不在 §17.3 的八格里（词表：G-1…G-8）")
+
+
+def _gate_provenance(
+    gate_list: Sequence[Any],
+    paths: Mapping[str, Any],
+    *,
+    report_git: Mapping[str, Any],
+) -> dict[str, Any]:
+    """把八格的取证面摊成表：产物 / 在位 / 自报时刻 / 自报 HEAD / mtime / 复算命令 / 缺输入原因。"""
+    tracked = _tracked_in_git([paths.get(arg) for arg_names in GATE_EVIDENCE.values()
+                               for arg in arg_names])
+    rows: list[dict[str, Any]] = []
+    for g in gate_list:
+        arg_names = GATE_EVIDENCE.get(g.gate_id, ())
+        arts = []
+        for arg in arg_names:
+            ev = artifact_evidence(paths.get(arg), tracked)
+            ev["arg"] = arg
+            arts.append(ev)
+        row: dict[str, Any] = {
+            "gate_id": g.gate_id,
+            "verdict": g.verdict,
+            "artifacts": arts,
+            "recompute": recompute_command(g.gate_id, arts) if arts else None,
+        }
+        #: 「缺输入的原因」直接引用 `Gate.caveats` 的第一条 ⇒ 不在这里重写一遍，
+        #: 否则同一个"为什么没测"会在 gates.py 与取证表里各长一份，迟早对不上。
+        if g.verdict == "NOT_AVAILABLE":
+            row["missing_input_reason"] = (g.caveats or ("未写原因",))[0]
+        elif arts and not any(a["present"] for a in arts):
+            row["missing_input_reason"] = "判定所用产物**不在位** ⇒ 读数无法取证"
+        else:
+            row["missing_input_reason"] = None
+        rows.append(row)
+
+    weak = [r["gate_id"] for r in rows
+            for a in r["artifacts"] if a["basis"] not in ("self_reported", "self_reported_at_only")]
+    no_rev = [r["gate_id"] for r in rows
+              for a in r["artifacts"] if a["present"] and a["self_reported_rev"] is None]
+    #: 只列**在位但没入库**的：那才是"本机有、别人的树里没有"这一类可执行欠件。
+    #: 不在位的文件也塞进来的话，清单会把"重跑取证"和"补 .gitignore 例外"两件事混成一格。
+    untracked = sorted({a["path"] for r in rows for a in r["artifacts"]
+                        if a["present"] and a["tracked_in_git"] is False})
+    return {
+        "rows": rows,
+        "report_git": dict(report_git),
+        "basis_legend": {
+            "self_reported": "产物自己声明了时刻**和**代码版本 ⇒ 最强",
+            "self_reported_at_only": "产物只声明了时刻、没声明代码版本 ⇒ 能定位「哪一次」，"
+                                     "不能证明「哪棵树」（本轮全部产物都在这一格或下一格）",
+            "mtime_only": "只有文件系统的 mtime ⇒ **弱证据**：checkout / 复制 / 重命名都会改它，"
+                          "且 mtime 是「最后一次写入」不是「生成时刻」；本机还可能出现中文目录名被平台改写的情况",
+            "absent": "产物不在位 ⇒ 这一格的读数只能靠重跑取证",
+            "mtime_unreadable": "文件在位但连 mtime 都读不到（占用/权限）⇒ 取证等级最低，"
+                                "这一格实际上等于没取证",
+            "no_path": "本窗口没记录该输入的路径",
+        },
+        "gaps": {
+            "gates_with_weak_or_missing_artifact": sorted(set(weak)),
+            "gates_without_self_reported_rev": sorted(set(no_rev)),
+            "artifacts_not_tracked_in_git": untracked,
+            "statement": (
+                "本轮实测：八格的输入产物里**没有一个**同时自带「生成时刻 + git rev」"
+                f"（自报 rev 缺 {len(set(no_rev))} 格；取证等级落到 mtime/absent 的 "
+                f"{len(set(weak))} 格）。⇒ 下一轮欠件 = 让探针与 runner 落盘时自带 "
+                "`generated_at` + `git rev-parse --short HEAD`，"
+                "而不是靠报告去倒推「这份产物大概是哪棵树生成的」。"
+            ),
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
 # 四、装配
 # ---------------------------------------------------------------------------
 
@@ -642,53 +948,33 @@ def build_payload(
     pg = pg_facts(pg_probe_path)
     pg_txt = pg_statement(pg)
     cassette_probe = _load(cassette_probe_path)   # 匣带可复算性（纪律二的成立条件）
-    p0 = parse_pytest_summary(pytest_log)
-    # 全量日志是 `.` 输出时看不到集成层是否参与；有定向日志就用它补上取证。
-    p0_integration = parse_pytest_summary(integration_log)
-    if p0 and p0_integration and not p0["integration_ran"]:
-        p0 = {**p0, **{k: v for k, v in p0_integration.items() if k != "source_log"},
-              "source_log": f"{p0['source_log']} + {p0_integration['source_log']}"}
-
-    results_map = {
-        str(r.get("case_id")): {
-            "scored": bool(r.get("scored")),
-            "passed": bool((r.get("verdict") or {}).get("equivalent")),
-            "category": str((r.get("attribution") or {}).get("category") or ""),
-        }
-        for r in records
-    }
-    grid = grid_mod.build_grid(cases, results_map)
     coverage = collect_coverage(records)
-
-    cross_tenant = None
-    if redteam:
-        xt = [r for r in redteam.get("results") or [] if str(r.get("case_id")).startswith("RT-XT")]
-        if xt:
-            cross_tenant = {
-                "leaked": sum(1 for r in xt if not r.get("blocked")),
-                "n_cases": len(xt),
-                # 拦下发生在 SQL 层 ⇒ 与 PG 策略是否生效是两件事，只有后者才算 N-07 完整证据。
-                "pg_rls_verified": False,
-                "notes": [
-                    "RT-XT 全部被拦发生在 **SQL 层**（评测侧 TEMP VIEW 边界 + 闸门）"
-                    "⇒ 不构成 N-07 的完整证据。" + pg_txt,
-                ],
-            }
     tau = tau_facts()
-    clarification = _clarify_counts(records)
-    pressure = loadtest_pressure(loadtest_receipt)
+
+    #: 🔴 八格判定的输入**只有一个来源** = `gate_inputs()`。
+    #: 之前这里是手抄一份装配（`p0` 合并、`results_map`、`cross_tenant`…），
+    #: QA T-06 要求"给一条别人能重跑的复算命令"⇒ 若报告与复算口各装配一次，
+    #: 命令算出来的判定与报告里的可以合法地不一样，那 T-06 就白答了。
+    #: 代价：`results_v1.json` / 日志被读两遍（纯 I/O，零 LLM、零 PG）。
+    gi = gate_inputs(
+        results_path=results_path,
+        redteam_path=redteam_path,
+        metric_values_path=metric_values_path,
+        pg_probe_path=pg_probe_path,
+        pytest_log=pytest_log,
+        integration_log=integration_log,
+        loadtest_receipt=loadtest_receipt,
+    )
+    grid = gi["grid"]
+    p0 = gi["p0_tests"]
+    cross_tenant = gi["cross_tenant"]
+    clarification = gi["clarification"]
+    pressure = gi["pressure"]
+
     gate_list = gates_mod.evaluate_gates(
-        grid=grid,
-        p0_tests=p0,
-        red_team=redteam,
-        cross_tenant=cross_tenant,
-        refusal=_refusal_counts(records),
-        pressure=pressure,                  # §16.5 压测 = W7 的回执；没有 ⇒ NOT_AVAILABLE
+        **gi,
         pressure_report=(os.path.relpath(pressure_report, _bootstrap.ROOT)
                          if pressure_report and os.path.isfile(pressure_report or "") else None),
-        consistency=metric_values,         # G-7 = §C.4.3 核心指标口径一致性（权威值比对）
-        clarification=clarification,
-        tau_calibrated=tau["calibrated_under_eval_env"],
     )
     gate_summary = gates_mod.summary(gate_list)
 
@@ -737,6 +1023,19 @@ def build_payload(
         },
         "gates": [dataclasses.asdict(g) for g in gate_list],
         "gate_summary": gate_summary,
+        "gate_provenance": _gate_provenance(
+            gate_list,
+            {
+                "results_path": results_path,
+                "redteam_path": redteam_path,
+                "metric_values_path": metric_values_path,
+                "pg_probe_path": pg_probe_path,
+                "pytest_log": pytest_log,
+                "integration_log": integration_log,
+                "loadtest_receipt": loadtest_receipt,
+            },
+            report_git=git_rev(),
+        ),
         "grid": {
             "matrix": grid.matrix(),
             "scored_total": grid.scored_total,
@@ -1017,13 +1316,28 @@ def _known_limitations(
 # 五、渲染
 # ---------------------------------------------------------------------------
 
+def _artifact_cell(a: Mapping[str, Any]) -> str:
+    """取证表的一个产物单元 = 路径 + 三态（在位 / 入 git / 取证等级）。
+
+    ⚠️ 分隔符用全角「・」不用 `|`：单元里的裸竖线会把 GFM 表劈成错位的列（本窗口撞过两次）。
+    「在位」与「入 git」必须分两态：`*.log` 被 `.gitignore` 全局忽略 ⇒ 本机有文件 ≠ 别人能复算。
+    """
+    track = {True: "入 git=是", False: "入 git=否（别的树看不到）",
+             None: "入 git=未知（git ls-files 没跑成）"}[a["tracked_in_git"]]
+    return (f"`{a['display']}`・{'在位' if a['present'] else '不在位'}"
+            f"・{track}・等级 `{a['basis']}`")
+
+
 def _md_table(header: Sequence[str], rows: Sequence[Sequence[Any]]) -> str:
     lines = [
         "| " + " | ".join(str(h) for h in header) + " |",
         "|" + "|".join("---" for _ in header) + "|",
     ]
     for row in rows:
-        lines.append("| " + " | ".join(str(c).replace("\n", "<br>") for c in row) + " |")
+        #: 🔴 竖线**必须**转义：单元里的命令/路径含裸 `|` 时，GFM 照样按分隔符劈列 ⇒
+        #: 表会静默变成错位的表，而 diff 里只看得见"多了一个空格"。本窗口撞过两次（DELIVERY §8）。
+        lines.append("| " + " | ".join(
+            str(c).replace("\n", "<br>").replace("|", "\\|") for c in row) + " |")
     return "\n".join(lines)
 
 
@@ -1077,6 +1391,46 @@ def render_markdown(p: Mapping[str, Any]) -> str:
     add("> 本轮 `NOT_AVAILABLE`：" + (
         "、".join(f"`{x}`" for x in na) if na else "（无）"
     ) + "；逐条原因见 §8 已知限制。")
+    add("")
+    add("### 1.1 每格取证面（QA 验收窗第一轮 ④ · T-06）")
+    add("")
+    prov = p["gate_provenance"]
+    add(f"- 本报告生成时的代码版本：`{(prov['report_git'] or {}).get('rev')}`"
+        f"（工作区 dirty = {(prov['report_git'] or {}).get('dirty')}）——"
+        "「生成用 HEAD」只有**这一格**是我方能证的；输入产物自己声明的 HEAD 见下一列。")
+    add("- ⚠️ `mtime` 是**弱证据**（checkout/复制会改它，且它记的是最后一次写入而不是生成时刻）；"
+        "只有 `basis = self_reported*` 的产物才自带时刻。")
+    add("")
+    add(_md_table(
+        ["门禁", "判定", "当期产物（`backend/` 相对）与取证等级", "自报生成时刻（键）",
+         "自报 HEAD", "mtime（弱证据）", "缺输入原因"],
+        [[row["gate_id"], row["verdict"],
+          "<br>".join(_artifact_cell(a) for a in row["artifacts"]) or "—（判定不读文件，由报告内逻辑派生）",
+          "<br>".join(f"`{a['self_reported_at']}`（键 `{a['self_reported_at_key']}`）"
+                      if a["self_reported_at"] is not None else "（产物不自报）"
+                      for a in row["artifacts"]) or "—",
+          "<br>".join(f"`{a['self_reported_rev']}`" if a["self_reported_rev"] is not None
+                      else "（无）" for a in row["artifacts"]) or "—",
+          "<br>".join(str(a["mtime_utc"] or "—") for a in row["artifacts"]) or "—",
+          row["missing_input_reason"] or "—"] for row in prov["rows"]],
+    ))
+    add("")
+    add("零额度复算命令（一格一条；只读产物，不真打、不连 PG、不写盘）：")
+    add("")
+    #: 🔴 循环变量**不许叫 `g`**：`render_markdown` 的正文累加器就叫 `g`（`add = g.append`，
+    #: 末尾 `return "\n".join(g)`）。本轮实测把这一行的 `g` 改成 `row` 之前，
+    #: 整份报告被替换成 56 个字符（`"\n".join(dict)` = 键名串），而 `main()` 照样打印 `generated=`、
+    #: 退出码 0 —— **一个变量名能吃掉整份产物**，而且只有读回渲染文本才发现得了。
+    for row in prov["rows"]:
+        if row["recompute"]:
+            add(f"    {row['recompute']}   # {row['gate_id']}")
+    add("")
+    gp = prov["gaps"]
+    add(f"- 🔴 **取证面的欠件**：{gp['statement']}")
+    if gp["artifacts_not_tracked_in_git"]:
+        add("- 其中**在位但没入库**（被 `.gitignore` 吃掉，别的树 checkout 看不到）："
+            + "、".join(f"`{x}`" for x in gp["artifacts_not_tracked_in_git"])
+            + " ⇒ 这几格的历史读数只能在本机重跑取证，不能引用文件行")
     add("")
 
     add("## 2. EX 与 4×3 分层网格（I-1 主口径）")

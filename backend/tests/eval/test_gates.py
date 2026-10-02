@@ -102,18 +102,94 @@ def test_g1_fail_when_any_p0_red():
     assert _verdict_of(gt.evaluate_gates(**inputs), "G-1").verdict == "FAIL"
 
 
-def test_g1_measured_keeps_assertion_failures_and_fixture_errors_apart():
+def test_g1_measured_keeps_assertion_failures_and_env_errors_apart():
     """🔴 2026-09-21 的真实读数就是这一格：断言失败 0 条、夹具 error 3 条。
 
-    只写 `failed=3` 会被下一轮读成"被测系统坏了三处"，而实际坏的是测试环境
+    只写 `failed=3` 会被下一轮读成「被测系统坏了三处」，而实际坏的是测试环境
     （RELAY O6 那三条 `test_dense_*`）。两个数必须分开出现在 `measured` 里。
+
+    🔻 **本轮就地改口（QA 第一轮 ②(a)）**：第二列的措辞从 `error 3` 改成
+    「环境未备 3」，并点名「判定只看红的总条数 ⇒ 两列不改变判据」。
+    断言跟着改的理由不是文案偏好：原判据字面在 `07:3267`，而 `gates.py` 里
+    **只有 `red_total` 一个判定驱动量** ⇒ 读数必须说清「摊开两列 ≠ 换了判据」，
+    否则下一轮会把这次的结构改动误读成判据变更（那是架构 O-1，本窗不自签）。
     """
     inputs = _all_pass_inputs()
     inputs["p0_tests"] = {"failed": 0, "errors": 3, "passed": 2228, "integration_ran": True}
     gate = _verdict_of(gt.evaluate_gates(**inputs), "G-1")
     assert gate.verdict == "FAIL"
-    assert "断言失败 0" in gate.measured and "error 3" in gate.measured
+    assert "断言失败 0" in gate.measured and "环境未备 3" in gate.measured
     assert "红 3 条" in gate.measured, "合计也要给，但只能在两个分量都在场之后"
+    assert "O-1" in gate.measured, "两列不改变判据这句话必须长在判定值上，不能只在 caveats 里"
+
+
+# ==== QA ②(a) 的两列：只有 G-1 会填，且必须自证「两列之和 = 判定驱动量」====
+def test_red_split_only_fills_g1():
+    """其余七格的 `red_split` 必须是空 dict。
+
+    两列的定义域是 pytest 的红法（`failed` vs `error`）⇒ 别的格填了它就是在
+    借用一个与自己判据无关的词表，下一轮没法复算。
+    """
+    for gate in gt.evaluate_gates(**_all_pass_inputs()):
+        if gate.gate_id == "G-1":
+            assert gate.red_split, "G-1 反而没填两列"
+        else:
+            assert gate.red_split == {}, f"{gate.gate_id} 填了 pytest 专用的 red_split"
+
+
+def test_red_split_columns_sum_to_the_verdict_driver():
+    sp = gt.red_split({"failed": 1, "errors": 4,
+                       "error_tests": ["tests/integration/test_a.py",
+                                       "tests/integration/test_b.py::test_c",
+                                       "tests/integration/test_d.py::test_e",
+                                       "tests/integration/test_f.py::test_g"]})
+    assert sp["assertion_failures"] + sp["environment_errors"] == sp["red_total"] == 5
+    assert sp["environment_collect_phase"] == 1 and sp["environment_fixture_phase"] == 3
+    assert sp["sum_check"] is True, "两列都对上了却不声明 ⇒ 下一轮只能自己再算一遍"
+
+
+def test_red_split_sum_check_is_none_rather_than_true_when_unnamed():
+    """🔴 未取证必须写 `null`，不能默认成「对上了」。
+
+    日志不是 `-rfEs` 跑的就取不到 error 点名（`-r` 里点名要大写 `E`），
+    此时若把 `sum_check` 置 True，读数就长成「分类已核对」，而实际什么都没核对。
+    """
+    sp = gt.red_split({"failed": 0, "errors": 8})
+    assert sp["environment_collect_phase"] is None
+    assert sp["environment_fixture_phase"] is None
+    assert sp["sum_check"] is None
+    assert sp["red_total"] == 8, "取不到分类不影响合计：判定仍然按 8 条红走"
+
+
+def test_red_split_sum_check_is_false_when_named_list_is_incomplete():
+    """点名数 < 汇总行的 error 数 ⇒ `false`，分类数只作下界（不是「数据没问题」）。"""
+    sp = gt.red_split({"failed": 0, "errors": 10, "error_tests": ["tests/integration/test_a.py"]})
+    assert sp["sum_check"] is False
+    assert sp["environment_collect_phase"] == 1 and sp["environment_fixture_phase"] == 0
+
+
+def test_red_split_records_zero_errors_as_zero_not_none():
+    """全绿时两列都是 0 而不是 `null` —— 「没有红」和「没取证」是两个词。"""
+    sp = gt.red_split({"failed": 0, "errors": 0})
+    assert sp["environment_collect_phase"] == 0 and sp["environment_fixture_phase"] == 0
+    assert sp["sum_check"] is True
+
+
+# ==== 谓词等价：摊开两列之后，判定与旧写法必须逐字同结果 ==================
+def test_verdict_predicate_is_unchanged_by_the_two_column_split():
+    """四格真值表：只要有一列红就 FAIL；两列全零但集成没跑 PARTIAL；两列全零且集成跑过才 PASS。"""
+    cases = [
+        ({"failed": 0, "errors": 8, "integration_ran": True}, "FAIL"),
+        ({"failed": 3, "errors": 0, "integration_ran": True}, "FAIL"),
+        ({"failed": 0, "errors": 0, "integration_ran": True}, "PASS"),
+        ({"failed": 0, "errors": 0, "integration_ran": False}, "PARTIAL"),
+    ]
+    for p0, expected in cases:
+        inputs = _all_pass_inputs()
+        inputs["p0_tests"] = {"passed": 100, **p0}
+        got = _verdict_of(gt.evaluate_gates(**inputs), "G-1")
+        assert got.verdict == expected, f"{p0} → {got.verdict}（应为 {expected}）"
+        _assert_words_are_legal([got])
 
 
 def test_g1_error_note_separates_collection_phase_from_fixture_phase():
