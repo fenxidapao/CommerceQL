@@ -682,7 +682,9 @@ arch RELAY（`REFERENCE.md:203` 转记的那条）写的是 `binding_state_total
 - **未做**：没跑 `test_semantic_materialization.py`（`U-114` 已知会把 `app.embed_doc` 的向量/tsv 静默清回 NULL ⇒ 本窗全程不碰共享栈）；没改 `docs/**`；`tests/conftest.py` 零改动（T-02 名义上是 W2B＋W0 合批，实际落到 W0 面上的改动为 0）。
 - **顺带一条工具链假红（本轮实测，非新发现）**：第一次「给了 env」的全树跑用了**复用**的 `--basetemp`，pytest 在会话开头清它时被本机 safe-delete 钩子拦（`count=95 > threshold=50`）⇒ 所有请求 `tmp_path` 的用例在 setup 期集体 `SystemExit(1)`，**表现为 90 errors 而不是 0**。同批用例换**空** basetemp 即恢复。⇒ 纪律补一条：`--basetemp` 路径**每次新建**，别复用（本窗 state A/B 与三次定向跑各用各的新目录）。
 - **待总控⑥（原样转达）**：QA 判「一次性容器的起停**不算**『动共享栈』」并已请备案 —— 本窗按此执行，**备案本身仍待总控点头**；若总控否，本窗改用「只读 + 不建容器」的降级方案（代价 = 给不出「给了 env 用例真跑」的读数）。
-- 本窗自行入库并推送（新纪律：自己的提交自己推）。
+- 本窗自行入库并推送（新纪律：自己的提交自己推）。提交 = **`6b87da9`**（4 files, +389/−48），推送用**显式 refspec** `git push origin 6b87da9:main` ⇒ 远端 `main` `3f1c951` → **`6b87da9`**（已 `git ls-remote origin main` 复核）。
+  ⚠️ 未代推他窗：本地 `main` 之上另有 W0 的 `88df3f6`（同批 T-02 回执）⇒ 常规 `git push origin main` 会把别人的 commit 一起带上。
+  🔴 本轮第 3 类 git 假象：第一次 `git push origin main` **零输出、无报错**，而远端**并未更新** ⇒ 「无输出」既不等于成功也不等于失败，判推送**必须** `git ls-remote`。
 
 
 
