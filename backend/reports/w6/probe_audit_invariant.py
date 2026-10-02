@@ -552,7 +552,7 @@ select case when s.first_seen < timestamptz '2026-09-30 14:25:35+00' then 'pre_f
                  then '非空真达成（ge2 = 0 且 n = ' || count(*) filter (where s.turn >= 2 and coalesce(w.supp,false)) || '）'
             else '未达成（ge2 = ' || count(*) filter (where s.turn >= 2 and coalesce(w.supp,false) and not coalesce(w.wrote,false)) || '）' end as verdict
 from seq s left join wr w on w.tk = s.tk
--- 🔴 T-23 修正（2026-10-02 22:3x，W8 端到端跑出来的，不是推论）：这里**曾经**写 `group by 1, 7` ⇒ PostgreSQL 直接
+-- 🔴 T-23 修正（2026-10-02 22:2x，W8 端到端跑出来的，不是推论）：这里**曾经**写 `group by 1, 7` ⇒ PostgreSQL 直接
 --    `GroupingError: aggregate functions are not allowed in GROUP BY`（第 7 列是含 `count(*) filter` 的 verdict，不能当分组表达式）。
 --    整片 `writes` 读数因此**静默降级**为「台账第 8 面不可用」而 **rc 仍 = 0** ⇒ 分组只按第 1 列（域），verdict 在组内由聚合值派生。
 group by 1 order by 1
