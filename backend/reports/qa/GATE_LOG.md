@@ -77,3 +77,13 @@ PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe -m app.core.enum
 |---|---|---|---|---|---|
 | 运行容器路由面 | `docker exec commerceql-api-1 sh -c "python -c <urllib 自探 127.0.0.1:8000>"`（**进程内**，绕开宿主端口） | **0** | `/api/v1/healthz` **200**（637 B）；`/api/v1/health`／`/api/v1/metrics`／`/metrics`／`/docs`／`/openapi.json` **404** | `304d37a` | 代码路径 = **`/srv/app/`**；`/docs`＋`/openapi.json` 404 是**本轮新量到**的，此前未登记 |
 | dev 占位凭据面 | `git grep -lE "app_(rw\|ro)_pwd" HEAD \| wc -l` | **0** | **21** 个跟踪文件（旧快照 = 9，已过期） | `304d37a` | ⚠️ 该数**随交付涨** ⇒ 一律现读，不写死 |
+
+## 第 8 轮（W8 体制首轮）门禁与探针
+
+| 项 | 命令形状 | 真 `rc` | 读数 | HEAD | 备注 |
+|---|---|---|---|---|---|
+| W8 的复算件自跑 | `docker exec -i commerceql-pg-1 psql -U postgres -d ecom -v ON_ERROR_STOP=1 -t -A -F'\|' -v "win_a=…" -v "win_b=…" -v "upref=%" -f - < deploy/loadtest/r23_thread_from_checkpoints.sql` | **0** | 0 条 ERROR、**51** 个非空行；⑰ = `1384\|64\|5\|3\|ge3 达成\|ge2 = 5 ⇒ 未达成` | `c7cf34a` | ⚠️ 该件是否只读**每次都要重验**：本轮 `grep -i` 三件的 DDL/DML 关键字 = **仅命中 `sys.path.insert` 一处假阳性** ⇒ 只读成立 |
+| like vs split 等价性 | 单条只读 SQL（`-f -`，一条 UNION ALL 打 9 个标签） | **0** | 825／0／6／6／0／0／3／816／6 | `c7cf34a` | 我加跑"漏排"方向（C／D／E 三把尺）全 0 |
+| 格2 按天分域 | 单条只读 SQL（`date_trunc('day', min(ts))` 分组） | **0** | 09-29：5／5／0；10-01：1／0／1 | `c7cf34a` | ⚠️ 日期是**构建身份代理**，不是 rev |
+| 越界检查 | `git show --stat c7cf34a` ＋ `os.stat(docs/07)` ＋ 行数 | **0** | 仅 `reports/w8/**`；`docs/07` mtime `10-02 08:29:58Z`（早于开工）、**3,642** 行未变 | `c7cf34a` | W8 未动契约面 ✓ |
+| 覆盖面计数 | `grep -rn` 排除式（`split_part`／`not like`）三件逐行数 | **0** | r23 **3**（491／**539**／577）＋ w4 **4** ＋ w6 **1** = **8** | `c7cf34a` | 它报的 `:538` off-by-one |
