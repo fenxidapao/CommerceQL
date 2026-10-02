@@ -503,12 +503,17 @@ from w left join c on c.checkpoint_id = w.checkpoint_id
 """
 
 #: 两条 tk 清单（逐行取回后在 Python 里配我方尺数 turn ⇒ 不在库里 `row_number()`，避免第三份真相）。
+#: 🔴 W8 接手（2026-10-02，@ `f485ffe`，验收窗 T-12 的覆盖面延伸）：`TERMINAL_RUN_TKS_SQL` 是**"本轮自己写了终态"的 run 级证据**
+#:    ⇒ 必须排除 `task_path` 第二段 = `__start__` 的入口复位写行（W4 修法 `RUN_SCOPED_STATE_FIELDS` 含 `terminal`，任何 run 走到入口都留一行）。
+#:    同件里 465–474 / 485–503 那几处是**行级与 thread 级普查**，不是 run 级"自写终态"证据 ⇒ **本轮未动**（不动的理由也写在这里，防下一轮误读成"漏改"）。
+#:    现测（全库，2026-10-02）：`channel='terminal'` 825 行／`__start__` 6 行／3 个 thread，ts 全部在 2026-10-01T12:55:28Z 之后
+#:    ⇒ W6 历史批次的 run 级读数作用域内该形状 = 0，**加排除不推翻已登记的数**；换式与不改读数的 A/B 对照见 `backend/reports/w8/RELAY.md` §一。
 TERMINAL_RUN_TKS_SQL = """
 select distinct c.tk from lg.checkpoint_writes w
   join (select distinct checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk
         from lg.checkpoints where checkpoint->'channel_values'->>'task_id' like 'tk_%') c
     on c.checkpoint_id = w.checkpoint_id
-  where w.channel = 'terminal'
+  where w.channel = 'terminal' and split_part(w.task_path, ', ', 2) <> '__start__'
 """
 
 #: `branch:to:audit_supp` = N-08 那条出口的**路由集**（判据② 的候选生产读点）。

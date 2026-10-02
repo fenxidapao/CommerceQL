@@ -141,6 +141,11 @@ union all select 'writes_total', count(*)::text from lg.checkpoint_writes
 union all select 'identity_channel_rows', count(*)::text from lg.checkpoint_writes where channel = 'session_id';
 
 -- ⑥ ★ 判别：按轮分桶看"该 run 有没有任何写行 / 有 branch 行 / 有其它通道行 / 有 terminal 写"
+--   🔴 W8 接手（2026-10-02，@ `f485ffe`，验收窗 T-12 的覆盖面延伸）：本件 ⑥/⑦/⑧/⑨ 四处 `wrote`/`wrote_terminal`
+--     此前**没有**排除 `task_path` 第二段 = `__start__` 的入口复位写行 ⇒ 与 W7 `r23` 同一形状的潜伏假绿（修复后任何 run 走到入口都留一条 terminal 写行）。
+--     现测（全库）：`channel='terminal'` = **825 行**／其中 `__start__` = **6 行 / 3 个 thread**，这 6 行的 ts 全部落在 **2026-10-01T12:55:28Z–12:56:27Z**
+--     ⇒ **本件历史读数（06:17Z / 11:26Z / 11:27Z 三批）作用域内 `__start__` 行数 = 0 ⇒ 加排除不推翻任何已登记的数**，只防下一次重跑。
+--     换式不改动读数的 A/B 对照与复算命令见 `backend/reports/w8/RELAY.md` §一。
 with ck as (
   select thread_id, checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk,
          (checkpoint->>'ts')::timestamptz as ts
@@ -149,7 +154,7 @@ with ck as (
 rn as ( select thread_id, tk, first_seen,
                row_number() over (partition by thread_id order by first_seen) as turn from runs ),
 wr as ( select c.tk,
-               bool_or(w.channel = 'terminal') as wrote_terminal,
+               bool_or(w.channel = 'terminal' and split_part(w.task_path, ', ', 2) <> '__start__') as wrote_terminal,
                bool_or(w.channel like 'branch:to:%') as has_branch_rows,
                bool_or(w.channel <> 'terminal' and w.channel not like 'branch:to:%') as has_other_rows
         from ck c join lg.checkpoint_writes w
@@ -181,7 +186,7 @@ rn as ( select thread_id, tk, first_seen,
                row_number() over (partition by thread_id order by first_seen) as turn from runs ),
 wr as ( select c.tk,
                bool_or(w.channel = 'branch:to:audit_supp') as routed_supp,
-               bool_or(w.channel = 'terminal') as wrote_terminal
+               bool_or(w.channel = 'terminal' and split_part(w.task_path, ', ', 2) <> '__start__') as wrote_terminal
         from ck c join lg.checkpoint_writes w
           on w.checkpoint_id = c.checkpoint_id and w.thread_id = c.thread_id
         group by 1 )
@@ -212,7 +217,7 @@ with ck as (
 rn as ( select thread_id, tk, first_seen, left(split_part(thread_id,':',2),3) as fam,
                row_number() over (partition by thread_id order by first_seen) as turn from runs ),
 wr as ( select c.tk,
-               bool_or(w.channel = 'terminal') as wrote,
+               bool_or(w.channel = 'terminal' and split_part(w.task_path, ', ', 2) <> '__start__') as wrote,
                bool_or(w.channel = 'branch:to:audit_supp') as supp,
                bool_or(w.channel in ('branch:to:present','branch:to:refuse_out','branch:to:clarify_out','branch:to:error_out')) as exitnode,
                count(distinct w.channel) filter (where w.channel like 'branch:to:%') as n_routes
@@ -245,7 +250,7 @@ with ck as (
 rn as ( select thread_id, tk, row_number() over (partition by thread_id order by min(ts)) as turn
         from ck group by 1,2 ),
 wr as ( select c.tk,
-               bool_or(w.channel = 'terminal') as wrote,
+               bool_or(w.channel = 'terminal' and split_part(w.task_path, ', ', 2) <> '__start__') as wrote,
                bool_or(w.channel in ('branch:to:present','branch:to:refuse_out','branch:to:clarify_out','branch:to:error_out')) as exitnode
         from ck c join lg.checkpoint_writes w
           on w.checkpoint_id = c.checkpoint_id and w.thread_id = c.thread_id

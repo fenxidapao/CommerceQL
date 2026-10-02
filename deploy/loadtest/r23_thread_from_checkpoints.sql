@@ -451,6 +451,17 @@ from scoped;
 --   面 = `lg.checkpoint_writes`（9 列：thread_id / checkpoint_ns / checkpoint_id / task_id(= LangGraph 内部 UUID，**不是我们的 tk_**) / idx / channel / type / blob / task_path）
 --   连法 = 写行的 `checkpoint_id` 回到 `lg.checkpoints` 里带 `tk_` 的那一行 ⇒ **run 归属**（这一步是我这面的做法，W6 没这么做，所以两侧不必互认）。
 --   现测（全库，零额度）：
+-- 🔴 尺修正（2026-10-02，验收窗 QA 第二轮 ③ 提出、我这面独立复算坐实 ⇒ **凡以 `terminal` 写行当"本轮自写终态"的证据，一律排除 `task_path` 含 `__start__` 的行**）：
+--   现测全库 `channel='terminal'` = **825 行**，其中 `task_path` 含 `__start__` = **6 行 / 3 个 thread**，且这 6 行**全部落在本轮 P-A′ 新格的三个 thread 上**（`u_r3101`/`e93c97`、`u_r3102`/`e5031c`、`u_r3103`/`42fc87`）。
+--   ⇒ 三点后果：① **历轮的 813 不被推翻**（pre-fix 面上根本没有 `__start__` 行；加本轮 6 条真写行后非 `__start__` = **819**），但 **"逐 thread 恒 1 次"作废**（819 行 / 816 thread）；
+--       ② 本轮**格2/格3 读数不变**（新格 6 条 run 用两个谓词各测：`t_all = 6`、`t_real = 6` ⇒ 排除后仍 6；`branch:to:audit_supp` 的 `__start__` 行 = **0** ⇒ 路由侧不受影响）；
+--       ③ 但**风险是真的**：`__start__` 那行是 W4 修法的**入口复位写行**（`app/graph/state.py` 的 `RUN_SCOPED_STATE_FIELDS` 含 `terminal`、`assert_terminal_is_settable` 要求入口 `terminal is None`），
+--           ⇒ 今后任何一条 run 只要走到入口就会留一条 `terminal` 写行；**不加排除 = "本轮自写终态"会被复位行冒充**（下一批跑批就可能真损失）。
+--   ⇒ 用法变更（通知 W6/架构）：本件 `⑯`/`⑯b`/`⑰` 三处的 `wrote_terminal` 谓词已改 ⇒ **同源读数须重录 md5**；历史基线引这一列的，一律带"是否排除 `__start__`"。
+--   ★ W8 接手订正（2026-10-02，@ `f485ffe`，只读复算）：三处排除式由 `task_path not like '%__start__%'` 改为 **`split_part(task_path, ', ', 2) <> '__start__'`**（与验收窗 T-12 的判据文本同形）。
+--       理由 = LIKE 里的 `_` 是**单字符通配**，`'%__start__%'` 实为"任意两字符 + start + 任意两字符"⇒ 形状**过宽**，将来出现名字里含 `start` 的节点会把真终态写一起排掉（= 格3 假红）。
+--       两式在 `channel='terminal'` 面上**现测同集合**（2026-10-02 全库：总行 **825**／命中 `__start__` **6**／split_part 命中 **6** ⇒ 等势且 like ⊇ split ⇒ 同集合；`task_path is null` 的 terminal 行 **0** ⇒ 换式不会因 NULL 丢行）。
+--       ⇒ 因此这次换式**不改动任何读数**（A/B 对照见 `reports/w8/RELAY.md` §一）。
 --     · `channel='terminal'` 在写面 = **813 行**，与 `lg.checkpoint_blobs channel='terminal'`（813）**逐字同数**；
 --       但按上面的连法，这 813 行**全部落在 turn1 的 run 上**（turn≥2 = **0**）⇒ 于是有两种解释：① 修复前第 2 轮真的没自己持久化终态（= `U-129` 的机制），
 --       ② 写面对终态是 thread 级黏在第一轮（= W6 的警告）。⇒ **判别的读点**：terminal 写会不会落到"零审计行的崩 run"上？现测 **0 次**（504 条 turn1 零行 run 一条都没有）
@@ -477,7 +488,7 @@ with ck as (
     and usr like :'upref'
 ), writes as (  -- 逐 run 的写面读数：该 run 自己有没有 terminal 写 / 被路由到哪些出口节点
   select c.tk,
-         bool_or(w.channel = 'terminal') as wrote_terminal,
+         bool_or(w.channel = 'terminal' and split_part(w.task_path, ', ', 2) <> '__start__') as wrote_terminal,
          bool_or(w.channel = 'branch:to:audit_supp') as routed_audit_supp,
          bool_or(w.channel in ('branch:to:present','branch:to:refuse_out','branch:to:clarify_out','branch:to:error_out')) as routed_terminal_exit,
          count(distinct w.channel) filter (where w.channel like 'branch:to:%') as n_routes
@@ -525,6 +536,7 @@ with ck as (
 ), term_runs as (
   select distinct c.tk from lg.checkpoint_writes w join ck c
     on c.checkpoint_id = w.checkpoint_id and c.thread_id = w.thread_id and w.channel = 'terminal'
+       and split_part(w.task_path, ', ', 2) <> '__start__'
 )
 select '⑯b 全库 terminal 写的 run 归属' as k,
        r.turn as turn_of_terminal_write, count(*) as runs,
@@ -562,7 +574,7 @@ seq as (
     and usr like :'upref'
 ), w as (
   select c.tk,
-         bool_or(w2.channel = 'terminal') as wrote_terminal,
+         bool_or(w2.channel = 'terminal' and split_part(w2.task_path, ', ', 2) <> '__start__') as wrote_terminal,
          bool_or(w2.channel = 'branch:to:audit_supp') as routed_audit_supp
   from ck c join lg.checkpoint_writes w2 on w2.checkpoint_id = c.checkpoint_id and w2.thread_id = c.thread_id
   group by 1
