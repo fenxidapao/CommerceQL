@@ -217,3 +217,45 @@ O-9：G-1 的判定驱动量已被改为含环境未备（W6 a86c091），你上
 ④ 请 W6 把 G-3／G-4 的判定从 PARTIAL 推到可判时，同步把 07 §17.4 那张「沙箱能力缺口表」放进评测报告正文（§17.4 原文要求：否则"评测全绿"会被误读为"生产也全绿"）。
 ⑤ 我要的证据形状：文件:行号 ＋ 命令 ＋ HEAD ＋ 时刻；三态读数（达成／未达成／n/a 含原因）。
 ```
+
+---
+
+# 档位 A 队列（总控 10-02 选档生效 ＋ 本窗 A4 取证已完成）
+
+## 一、A4 的取证把"不确定项"消掉了（我现测，三件）
+
+| 现测 | 结果 | 对档位 A 的含义 |
+|---|---|---|
+| `app` schema 基表启 RLS 的面 | **6 张启**（`campaign`／`order_paid`／`order_refund`／`product`／`shop`／`traffic_daily`）；18 张未启；8 个视图 `v_*` 未启 | 视图未启 = 与 `U-55` 裁定（RLS 落基表、视图保 owner 语义）**一致** ⇒ 不是缺口 |
+| 未启的 18 张里有几张带 `tenant_id` | **只有 4 张**（`audit_log`／`cost_ledger`／`embed_doc`／`gold_query`），其余 14 张**没有租户列** ⇒ RLS 无从谈起 | ⇒ **G-4 的缺口不是"18 张表没做"，而是"这 4 张要不要做"**，是一个可一句话确认的设计问题 |
+| `app_rw`／`app_ro` 的 `rolbypassrls` | 两个都 **f**（且 `rolsuper` = f） | ⇒ 已启的 6 条 policy **真的生效**，不是摆设（这条若不成立，A4 就得改成开发项） |
+| `audit_log` 有没有面向用户的读端点 | `app/api/routers/` 里 **零命中**；repo 侧只在 `startup_assertions.py:164/:542` 做存在性与权限自检 | ⇒ 当前**无跨租户读审计的通路** ⇒ 我把这条担忧**降级为观察项**，不列 A4 阻塞 |
+
+🔴 **顺手量到一条该进集成断言的形状**（`pg_policies` 的 qual 原文）：`order_paid`／`product`／`shop` 三条 policy 的门是
+`(current_setting('app.shop_ids', true) = '' OR shop_id = ANY(string_to_array(current_setting('app.shop_ids', true), ',')))`
+⇒ **未设**该 GUC ⇒ 表达式为 NULL ⇒ 行不可见（fail-closed）；但**显式置成空串 `''` ⇒ 第一个支路为真 ⇒ 该租户下所有店铺可见**。这正是 `U-109` 那条"空值语义把 fail-closed 翻成 fail-open"的门面。⇒ T-14 的跨租户断言必须**两态并报**（未设／空串），只测"未设"会恒绿。
+
+## 二、调整后的转发顺序（覆盖第二轮第四节）
+
+| 现在（批次 1，5 块同时发） | 内容 | 为什么是这个顺序 |
+|---|---|---|
+| **① W7（T-09 ＋ T-12 合并发）** | `U-133` 凭据 ＋ `__start__` 谓词 ＋ 容器面订正 | A1 与 A2 是档位 A 里唯二"不改就会毁数据或误判达成"的项；且都零额度。**注意：T-15（换构建＋观测栈＋五场景）本轮不发**，见下 |
+| **② W2A ＋ W1B（T-14，已收窄）** | 只需一句确认 ＋ 两条集成断言 | 我把集合差量完了 ⇒ 单的问题从"哪些表该有 policy"缩成「**`audit_log`／`cost_ledger`／`embed_doc`／`gold_query` 这 4 张带 `tenant_id` 而未启 RLS 的表，是设计使然还是缺**」（`embed_doc` 我预判是设计使然——`U-60` 的 `'*'` 哨兵靠检索层 `IN ('*', :ctx_tenant)` 守，请 W2A 认或驳） |
+| **③ W0（T-10）** | `U-133` 判据③ 守卫扩面 | 与 ① 同属 `U-133` 但不同文件面（`tests/contract` vs `deploy/**`）⇒ 可并发 |
+| **④ W6（T-11 ①②③）** | 订正"谓词一字未动"＋ 补 rev 自报 ＋ 给最小充分几何 | ①②零额度；③是**档位 B 的前置**，现在只要几何不要跑 ⇒ 不占额度 |
+| **⑤ W1B（T-08）＋ W4（T-12 文本）＋ 架构（T-13 四件上呈）** | 账面与上呈 | T-13 里**请把 O-8 撤下**（你已采纳"先别升判据"）⇒ 只剩 O-6／O-7／O-9 三件 |
+
+| 之后（批次 2） | 内容 | 触发条件 |
+|---|---|---|
+| **不发**：T-15 | 换被测构建 ＋ 起观测栈运行面 ＋ 五场景压测 | 这是**档位 B 的第一动作**，且必须与压测捆绑（现测：不捆绑则单独起栈只抓到 404）。档位 A 期内**不动共享栈** |
+| 额度类 | 评测重跑（G-2／G-5／G-7／G-8）＋ W7 会话锁 ＋ W7 P-C ＋ U-126／U-127 健康态 | 全部列为**后续可选开发**，档位 A 用"边界句"过关 |
+
+## 三、→ W2A ＋ W1B 的改写版粘贴块（用这段替代第二轮 T-14 那段）
+
+```
+[QA→W2A＋W1B · 零花费 · PRD 硬红线（docs/01:607/:609 自写"立即阻断上线"）] ① 我已把集合差量完，你不用重数：app schema 启 RLS = 6 张（campaign/order_paid/order_refund/product/shop/traffic_daily）；未启 18 张，其中带 tenant_id 的只有 4 张 = audit_log/cost_ledger/embed_doc/gold_query；其余 14 张无租户列、RLS 无从谈起。8 个 v_* 视图未启与我现读到的 U-55 裁定一致。app_rw/app_ro 的 rolbypassrls 现读均为 f ⇒ 6 条 policy 真生效。
+② 请 W2A 只答一句（判据出处 docs/01:1265「数据库层 RLS（最终边界）」＋ docs/07 §17.4）：那 4 张是"设计使然"还是"缺"？embed_doc 我预判是设计使然（U-60 的 '*' 哨兵靠检索层 IN ('*', :ctx_tenant) 守），请认或驳，给文件:行号。
+③ 请补两条跨租户集成断言（跑在一次性容器，禁共享 ecom）：(a) 未设 app.tenant_id ⇒ 6 张表零行可见；(b) 🔴 关键——现读 pg_policies 的 qual 形如 (current_setting('app.shop_ids', true) = '' OR shop_id = ANY(...)) ⇒ 请**分两态测**：shop_ids 未设 vs 显式置空串 ''。后者我读出来是"该租户全部店铺可见"，若成立就是 U-109 那条空值语义的门被抄进了 policy，只测前者会恒绿。
+④ 请 W1B 给一条可复算断言：6 条 policy 是否全部由迁移产出（现库 6 = 迁移里的 6），以及 audit_log/cost_ledger 若决定启 RLS 需要第几号迁移。
+⑤ 我这边已备好的复算命令形状：docker exec -i commerceql-pg-1 psql -U postgres -d ecom 上按 pg_class.relrowsecurity ＋ pg_policies ＋ pg_roles 三面各数一次（本窗 10-02 读数见 COMPLETENESS 档位 A 表）。
+```
