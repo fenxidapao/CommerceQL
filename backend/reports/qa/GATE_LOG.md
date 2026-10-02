@@ -70,3 +70,10 @@ PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe -m app.core.enum
 
 1. **机制归因错**：上轮我说 DoD④ 门"匹配不到 `user:pass@host` 形状"，真机制是**只认 `+psycopg` 前缀**。根因 = 我拿 2 字符合成串去测，没把"串太短"和"形状不吃"分离。⇒ 固化成规矩：**测任何形状尺的覆盖面，先量它的最小命中长度（用户／口令／主机各扫一遍长度），再做形状差量。**
 2. **直觉拦住了假绿，但没有拦停我**：`5 passed in 2.50s` 对一个内含 `alembic upgrade head` 的模块级夹具**太快**。我第一反应是怀疑假绿，去查制品才确认是真的（0005＋6＋6）。⇒ 固化成规矩：**夹具里带子进程的件，"用时短"必须用制品自证，不能靠跑通本身。**
+
+## 第 7 轮补：运行面直读（体制变更期取证）
+
+| 探针 | 命令形状 | 真 `rc` | 读数 | HEAD | 备注 |
+|---|---|---|---|---|---|
+| 运行容器路由面 | `docker exec commerceql-api-1 sh -c "python -c <urllib 自探 127.0.0.1:8000>"`（**进程内**，绕开宿主端口） | **0** | `/api/v1/healthz` **200**（637 B）；`/api/v1/health`／`/api/v1/metrics`／`/metrics`／`/docs`／`/openapi.json` **404** | `304d37a` | 代码路径 = **`/srv/app/`**；`/docs`＋`/openapi.json` 404 是**本轮新量到**的，此前未登记 |
+| dev 占位凭据面 | `git grep -lE "app_(rw\|ro)_pwd" HEAD \| wc -l` | **0** | **21** 个跟踪文件（旧快照 = 9，已过期） | `304d37a` | ⚠️ 该数**随交付涨** ⇒ 一律现读，不写死 |
