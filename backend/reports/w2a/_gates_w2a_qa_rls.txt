@@ -1,0 +1,173 @@
+================================================================================
+W2A · QA 10-02 指派 ③ 的取证包 —— 跨租户 RLS 的**行为级**断言
+采集时刻：2026-10-02（本机）｜环境：**一次性容器**（非共享 ecom）
+交付件：backend/tests/integration/test_rls_tenant_isolation.py（新增，5 passed）
+来源：`[QA→W2A＋W1B · 零花费 · PRD 硬红线]` 的 ②③（④ 归 W1B）
+================================================================================
+
+§0 环境与可复现跑法
+--------------------------------------------------------------------------------
+  docker run -d --name pg-rls-w2a-1002 -e POSTGRES_PASSWORD=postgres \
+      -e POSTGRES_DB=ecom_rls -p 55432:5432 pgvector/pgvector:pg16
+  （容器内先 CREATE EXTENSION vector;）
+  DSN ×3（变量名与 ci.yml:125-127 完全一致，故 CI 里同一文件可直接跑）：
+      COMMERCEQL_TEST_SUPER_DSN=postgresql://postgres:postgres@127.0.0.1:55432/ecom_rls
+      COMMERCEQL_TEST_RW_DSN   =postgresql://app_rw:app_rw_pwd@127.0.0.1:55432/ecom_rls
+      COMMERCEQL_TEST_RO_DSN   =postgresql://app_ro:app_ro_pwd@127.0.0.1:55432/ecom_rls
+  .venv/Scripts/python.exe -m pytest tests/integration/test_rls_tenant_isolation.py -v \
+      --basetemp=.pytest_tmp
+
+§1 判据 ③(a)：未设身份 ⇒ 6 张租户视图一律零行（fail-closed）
+--------------------------------------------------------------------------------
+读数（fresh app_ro 连接，不注入任何 GUC）：
+  current_setting('app.tenant_id', true)                = NULL
+  app.v_order_paid / v_order_refund / v_product / v_shop
+     / v_campaign / v_traffic_daily  count(*)           = 0,0,0,0,0,0
+⇒ 「漏注入身份」的失效方向是"什么都看不到"，不是"全看得见"。判据 ③(a) 成立。
+
+§2 判据 ③(b)：`app.shop_ids` 两态 —— **必须分表**（6 张表是 3/3 两种形状）
+--------------------------------------------------------------------------------
+派生规则（权威）：`app/semantics/materialize.py:167-174` 按 `asset.has_column("shop_id")` 二选一
+  · 有 shop_id ⇒ 两分支（tenant 谓词 AND (shop_ids='' OR shop_id = ANY(...))）
+  · 无 shop_id ⇒ 单分支（只有 tenant 谓词）
+
+实测矩阵（租户 T_A；种子 = 每 (租户,店铺) 对 1 行 ⇒ T_A 两店共 2 行）：
+  表             未设     空串''    'S1'     派生形状
+  order_paid        0        2        1      两分支（含 shop）
+  product           0        2        1      两分支（含 shop）
+  shop              0        2        1      两分支（含 shop）
+  order_refund      2        2        2      单分支（仅租户）
+  campaign          2        2        2      单分支（仅租户）
+  traffic_daily     2        2        2      单分支（仅租户）
+
+⇒ 结论分两半，缺任一半都证明不了语义：
+  (i) 两分支表：**未设（NULL）≠ 显式 ''** —— 未设 = 0（NULL 比较恒 NULL ⇒ 行全滤），
+      `''` = 该租户全量 2 行，`'S1'` = 该店 1 行（真子集）。这正是 `07 §13.3` 细节 4（U-109）
+      要求"不得把未设 coalesce 成 `''`"的行为面。
+  (ii) 单分支表：`shop_ids` **惰性**（三态读数恒等 = 租户全量）—— 策略里根本没有店铺分支。
+
+结构面三互证（`test_shop_axis_presence_matches_derivation_rule`）：
+  information_schema 里带 shop_id 的表           = {order_paid, product, shop}
+  pg_policies.qual 里含 'shop_ids' 的表          = 同一集合
+  ⇒ 列存在性 ↔ 策略文本 ↔ 静态分组 三者一致；任一面漂了先红，避免 (b) 在静默前提上假绿。
+
+⚠️ **与 W1B `9f54569` 的订正②同结论**：他们独立从 USING 文本读出同一 3/3 分裂，并提醒
+   "若对 6 张统一断言两态不同 ⇒ 后 3 张会红/空过"。本文件**已是分表断言**（主体 + 惰性对照半边）。
+
+§3 负向对照：证明 (b) 的断言真会拦（不是恒绿）
+--------------------------------------------------------------------------------
+注入（**可逆**，只动 order_paid 一条策略）：把 USING 换成 U-109 细节 4 明文禁止的形态 ——
+    coalesce(current_setting('app.shop_ids', true), '') = ''  OR  shop_id = ANY(...)
+手法：**out-of-tree pytest 插件**（`-p zz_rls_control`，零树改动）把
+    `materialize.derive_policy_statements` 包成"只留 GRANT/REVOKE、policy/rls 清空"，
+    从而让夹具**不重建策略**，注入得以活到被测断言下。
+    （直接改共享工作副本会造成别的窗口撞见瞬时态 —— 与本轮之前那两条红的成因同族，故规避。）
+
+读数：
+  注入态   ⇒ 1 failed / 4 passed
+             红点 = test_shop_ids_unset_vs_explicit_empty_is_distinguishable
+             位置 = 态① `assert unset == 0`，实际 `assert 2 == 0`（app.v_order_paid）
+  还原态   ⇒ 5 passed；`pg_policies` 中 'coalesce' 残留计数 = 0
+⇒ 该断言精确咬住"把未设 coalesce 成空串"这一个变换；恒绿嫌疑排除。
+
+§4 门禁读数（采集时刻 2026-10-02）
+--------------------------------------------------------------------------------
+  ruff check tests/integration/test_rls_tenant_isolation.py     All checks passed!
+  ruff format --check  （同文件）                                1 file already formatted
+  mypy                （同文件）                                Success: no issues found in 1 source file
+  ruff check .                                                 All checks passed!
+  mypy app                                                     Success: no issues found in 147 source files
+  lint-imports                                                 Contracts: 4 kept, 0 broken
+  pytest tests/unit tests/contract                             1877 passed
+  pytest tests/integration/test_rls_tenant_isolation.py        5 passed
+（`1877 passed` 是在**共享工作副本**上跑的，含他窗未入库文件 ⇒ 数字不专属本件；本件的读数是 5 passed。）
+
+§5 QA ② 的回答：那 4 张表是"设计使然"还是"缺"？—— 设计使然，但它们**不是同一类**
+--------------------------------------------------------------------------------
+共同前提：`docs/01:1265` 把攻击面写成「**跨租户读取 | 缺租户谓词 | 数据库层 RLS（最终边界）」，
+而 `docs/01:1256` 的标题就是「**只读账号**挡不住以下攻击面」⇒ 该攻击**只经 `app_ro`**（只读账号）。
+
+实测（一次性容器，`information_schema.role_table_grants`，grantee=app_ro）：
+    app.embed_doc                 ⇒ SELECT        ← **唯一有授权的**
+    app.audit_log / audit_log_supplement / cost_ledger / gold_query / feedback / query_plan
+                                  ⇒ **零行**（app_ro 完全没授权）
+
+闸门白名单实测（`load_bundle(...).allowlist`）：恰好 **8 个视图**
+    v_campaign / v_dim_date / v_order_paid / v_order_refund / v_product / v_region /
+    v_shop / v_traffic_daily
+    四张嫌疑表**零命中** ⇒ 用户 SQL **命名不到**它们（闸门一：表/列白名单拒）。
+
+⇒ 分类：
+  **(A) 构造上不可达（三张：audit_log / cost_ledger / gold_query）**
+      · ①`app_ro` 零 GRANT ⇒ 只读账号连"打开门"都做不到 ⇒ 门上加 RLS 锁（`U-55(a)`：RLS 落基表）
+        是给一扇打不开的门加锁，**不是缺失**。
+      · ② 闸门白名单里也没有 ⇒ 即便给了权限，用户 SQL 也命名不到。
+      · audit_log 另有 `0001:182 GRANT INSERT, SELECT ... TO app_rw`（**不授 app_ro**），与
+        `docs/01:1285`「审计不可变：audit_log 仅 INSERT 权限」一致 ⇒ 运维/合规内部表；
+        cost_ledger 同族（运维/预算内部，`0004:132`）。
+      · gold_query 走 **metadata 池（app_rw）**做 few-shot，不经只读账号 ⇒ 同上。
+
+  **(B) 已裁定例外（一张：embed_doc）—— 认 QA 的预判，但理由链要换**
+      · ✅ 认"设计使然"：`docs/07:2492`（v0.9 契约化：`tenant_id='*'` = 公共语义包派生行的
+        哨兵、检索过滤 = `tenant_id IN ('*', :ctx_tenant)`；Gold Query 类行 tenant_id 永不为 `'*'`）
+        + 裁定行 `docs/07:1113`（U-60，判"契约化"）；实现 `app/retrieval/dense.py:290`、
+        `app/retrieval/sparse.py:72`。
+      · ⚠️ 但**修正一处**：检索层 `IN ('*', :ctx_tenant)` **不是第一道**——第一道是**闸门白名单**
+        （embed_doc 不在 8 个允许视图里）。它是 4 张里**唯一**一张 `app_ro` 有 SELECT 的表 ⇒
+        它也是**唯一**一张"保护确实落在应用层"的表 ⇒ 按 `docs/01:1271`「应用层过滤不得作为唯一
+        手段」，这一条应登记为**已裁定例外（有裁决、有残值风险）**，而不是与 (A) 同级的
+        "结构上不可能"。且哨兵语义**原则上可**写成 RLS
+        （`tenant_id = current_setting('app.tenant_id', true) OR tenant_id = '*'`）——
+        U-60 选择契约化而非加策略，理由**应落在 §12.2**（目前该裁决把哨兵写进契约，但没写
+        "为何不加 RLS"）。**提请架构/W2B 在 §12.2 补一句理由**，否则下一个人会把它读成"缺"。
+
+§6 风险处置与诚实边界
+--------------------------------------------------------------------------------
+· **禁用整表 DELETE（本件纪律）**：`_env_dsn` 只挡"**静默**落共享库"，挡不住有人**显式**
+  export 共享 `ecom` 的 DSN（CI 就是这么做的）。共享 `ecom` 的 `app.order_paid` 有 ~49 万行
+  ⇒ 一个不带谓词的 `DELETE FROM app.order_paid` 会全抹掉。本件种子/收尾一律
+  `WHERE tenant_id = ANY(ARRAY['T_A','T_B'])`（本文件发明的测试租户字面量，真实租户形如 `t_1001`）。
+  收尾实测：跑完 T_A/T_B 六表残留 = **0**。
+· **种子走 SUPER 不走 app_rw**：`materialize` 开了 `FORCE ROW LEVEL SECURITY`，用 app_rw 重跑会
+  撞 WITH CHECK（未设 GUC ⇒ "new row violates row-level security policy"）；超管永远绕过 RLS。
+· 🔴 **本件的惰性断言是"结构钉子"，不是"认可该行为"**：W1B 在 `9f54569` 提出（同族于 `U-131`，
+  但发生在**策略面**）—— 3 张无 `shop_id` 的表让 L3/RLS **表达不了店铺维度**，而
+  `07 §13.2` 写"行级范围**只有 `shop_ids` 一个维度**" ⇒ 一个被限店的 finance/operator 用户
+  在 `v_order_refund` / `v_traffic_daily` / `v_campaign` 上读到**整个租户**的行，且
+  `v_order_refund.sub_order_id` 可 join 回 `v_order_paid.shop_id` ⇒ **可归因到店**。
+  ⇒ 若该条被裁为"应加店铺维度"，`test_shop_ids_is_inert_on_tables_without_shop_column`
+  **必须跟着改**（它现在钉的是现状 = 惰性）。本件只做"把现状变成可复算读数"，**不代裁**。
+· **`rolbypassrls=f` 不足以证明"策略真生效"**（采 W1B 订正①）：本容器实测
+  `relrowsecurity=t` **且** `relforcerowsecurity=t`、`relowner=app_rw` —— 生效真因是 FORCE
+  （表属主对 RLS 免疫，走所有权豁免）。三面读数：
+    表              relrowsecurity  relforcerowsecurity  owner
+    order_paid / order_refund / product / shop / campaign / traffic_daily
+                    t               t                    app_rw     （6/6 一致）
+  ⇒ 建议 ⑤ 复算面用**五面**：`pg_policies` ＋ `relrowsecurity` ＋ `relforcerowsecurity`
+    ＋ `relowner` ＋ `rolbypassrls`。
+· 策略真实 qual（落库后现读，供 ⑤ 对拍）：
+    campaign      : (tenant_id = current_setting('app.tenant_id'::text, true))
+    order_refund  : 同上（单分支）
+    traffic_daily : 同上（单分支）
+    order_paid    : ((tenant_id = current_setting('app.tenant_id'::text, true)) AND
+                     ((current_setting('app.shop_ids'::text, true) = ''::text) OR
+                      (shop_id = ANY (string_to_array(current_setting('app.shop_ids'::text, true), ','::text)))))
+    product       : 同 order_paid
+    shop          : 同 order_paid
+    6 条 policy 名均为 `p_{基表}_tenant`，roles = {public}
+
+§7 ④ 的旁证（归 W1B，我不认领；此处只报我**独立观测到**的那一条）
+--------------------------------------------------------------------------------
+本容器实测：`alembic upgrade head` 之后、`materialize(with_policy=True)` 之前，
+    pg_policies 行数 = **0**（六张表都已存在）；materialize 之后 = **6**。
+⇒ 与 W1B `9f54569` 的结论一致：**策略产出方 = 语义派生器，不是迁移**（迁移产出 0）。
+   故 QA ④ 里"现库 6 = 迁移 6"的对拍形态不成立；下一可用迁移号 = **0006**
+   （W1B 另有建议：先给派生器加"平台表"分支、不占号 —— 那是他们的 ④，我不代答）。
+
+§8 我**没**做的（诚实边界）
+--------------------------------------------------------------------------------
+· ④（迁移来源的可复算断言 + 迁移号决策）＝ W1B（已落 `9f54569` / `tests/unit/test_rls_policy_provenance.py`）。
+· ⑤ 三面复算（pg_class ∕ pg_policies ∕ pg_roles）＝ QA 自己已量（`reports/qa/COMPLETENESS.md`）；
+  本件只补 `relforcerowsecurity` / `relowner` 两面（见 §6）与策略 qual 原文（见 §6）。
+· 未验证"检索连接的 GUC 是否设置" ⇒ U-60 那条"为何不加 RLS"的成本我**没量**（§5）。不猜。
+================================================================================

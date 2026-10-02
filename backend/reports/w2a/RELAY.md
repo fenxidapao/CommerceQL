@@ -790,3 +790,59 @@ pytest tests/unit tests/contract    1810 passed（U-119 刻意红已被 W4 0c596
 本窗口 commit 自行 push；**将连带 W0 的 `36c782a`（防线②）** —— 授权来源 = arch RELAY §24.5
 （dc62468 纪律变更）+ W0 自己的提交说明（预期夹具窗口转绿后入库）。远端 `main` 现为 `e44f721`。
 
+---
+
+## 13. 回 QA 10-02 指派 ③（跨租户 RLS 行为级断言）—— 零花费 · 一次性容器
+
+来源 = `[QA→W2A＋W1B · 零花费 · PRD 硬红线（docs/01:607/:609）]` 的 ②③（④ 归 W1B）。取证包 = `_gates_w2a_qa_rls.txt`。
+
+### 13.1 交付件
+`backend/tests/integration/test_rls_tenant_isolation.py`（新增，**5 passed**）。三条行为断言 + 一条结构钉子 + 一条对照半边：
+
+| 用例 | 断言 |
+|---|---|
+| `test_no_identity_yields_zero_rows_on_all_six_tenant_views` | ③(a) 未设身份 ⇒ 6 张视图**全 0 行** |
+| `test_shop_ids_unset_vs_explicit_empty_is_distinguishable` | ③(b) 主体（**3 张有店铺轴**的表）：未设=0 ／ `''`=租户全量 ／ `'S1'`=该店，且未设 ≠ `''` |
+| `test_shop_ids_is_inert_on_tables_without_shop_column` | ③(b) **对照半边**（另 3 张）：`shop_ids` 三态**恒等**（策略无店铺分支） |
+| `test_empty_shop_ids_never_leaks_another_tenant` | `''` 只放开本租户，6 张都不许看到别家 |
+| `test_shop_axis_presence_matches_derivation_rule` | 结构钉子：`information_schema` 列 ↔ `pg_policies.qual` ↔ 静态分组 三互证 |
+
+### 13.2 🔴 关键发现：**6 张表是 3/3 两种形状**（这就是"只测半边看不出来"的典型）
+`materialize.py:167-174` 按 `asset.has_column("shop_id")` 二选一 ⇒ 实测**只有 `order_paid`/`product`/`shop` 带 `shop_id`**，`order_refund`/`campaign`/`traffic_daily` **没有**（其 PK 分别是 `(tenant_id, refund_id)` / `(tenant_id, campaign_id)` / `(tenant_id, stat_date, sku_id, channel)`）。两态矩阵（T_A）：
+
+```
+order_paid      未设 0   '' 2   'S1' 1    两分支
+product         未设 0   '' 2   'S1' 1    两分支
+shop            未设 0   '' 2   'S1' 1    两分支
+order_refund    未设 2   '' 2   'S1' 2    单分支（shop_ids 惰性）
+campaign        未设 2   '' 2   'S1' 2    单分支
+traffic_daily   未设 2   '' 2   'S1' 2    单分支
+```
+⇒ 若对 6 张**统一**断言"两态不同"，后 3 张会红。**我第一版就撞上了这个**（`order_refund 缺 shop_id`），
+与 W1B `9f54569` 订正②**同一结论**（他们独立从 USING 文本读出同一分裂）。
+
+### 13.3 负向对照（证明断言不恒绿）
+注入 U-109 细节 4 明文禁止的 `coalesce(current_setting('app.shop_ids', true), '') = ''` 到 order_paid
+⇒ **1 failed / 4 passed**，红点精确落在态① `assert 2 == 0` ⇒ 还原后 5 passed、`coalesce` 残留 0。
+手法 = **out-of-tree pytest 插件**（`-p zz_rls_control`，零树改动）旁路"策略重建" ——**不**在共享工作副本上改文件（避免别的窗口撞见瞬时态）。
+
+### 13.4 QA ② 的回答：4 张 = 设计使然，**但分两类**
+- **(A) 构造上不可达（audit_log / cost_ledger / gold_query）**：实测 `role_table_grants` 里 `app_ro` 对这三张**零授权**（7 张里**只有 `embed_doc` 有 SELECT`**）；闸门白名单实测 = 恰好 8 个视图，四张嫌疑表**零命中** ⇒ 用户 SQL 命名不到。`01:1256` 标题即「**只读账号**挡不住…」⇒ 该攻击只经 `app_ro` ⇒ 给打不开的门加 RLS 锁不是"缺"。
+- **(B) 已裁定例外（embed_doc）**：**认** QA 的"设计使然"预判（`07:2492` 契约 + `07:1113` U-60 裁决 + 实现 `dense.py:290`／`sparse.py:72`），**但理由链修正一处**：检索层过滤**不是第一道**，闸门白名单才是；且它是四张里**唯一** app_ro 有 SELECT 的 ⇒ 也是唯一"保护确实落在应用层"的 ⇒ 按 `01:1271` 应登记为**已裁定例外（有残值风险）**，而非同级"结构上不可能"。哨兵语义**原则上可**写成 RLS ⇒ **提请 W2B/架构在 §12.2 补"为何不加 RLS"一句**，否则下一个人会读成"缺"。
+
+### 13.5 纪律增补（本件立）
+- **禁整表 DELETE**：`_env_dsn` 只挡"**静默**落共享库"，挡不住**显式** export 共享 DSN（CI 就这么做）。共享 `ecom.order_paid` ~49 万行 ⇒ 本件种子/收尾一律 `WHERE tenant_id = ANY(ARRAY['T_A','T_B'])`；收尾实测残留 **0**。（第一版写的是整表 `DELETE`，已改。）
+- **种子走 SUPER**：`FORCE RLS` 下用 app_rw 重跑会撞 `WITH CHECK`。
+- **`rolbypassrls=f` 不足以证明策略生效**（采 W1B 订正①）：本容器 6/6 为 `relrowsecurity=t` **且** `relforcerowsecurity=t`、`relowner=app_rw` ⇒ 生效真因是 **FORCE** ⇒ ⑤ 复算面建议用**五面**（`pg_policies` ＋ `relrowsecurity` ＋ `relforcerowsecurity` ＋ `relowner` ＋ `rolbypassrls`）。
+
+### 13.6 ④ 的旁证（归 W1B，我不认领）
+本容器**独立观测**：`alembic upgrade head` 之后、`materialize` 之前 `pg_policies` = **0 行**；之后 = 6 ⇒ 佐证 W1B 的"迁移产出 0、真源 = 派生器"，QA ④ 的"现库 6 = 迁移 6"对拍形态不成立。下一可用迁移号 = `0006`（是否用、以及"平台表"分支，属 W1B）。
+
+### 13.7 门禁
+`ruff check .` 全绿 ／ `ruff format --check` 本件已格式化 ／ `mypy app` 147 files 无问题 ／ `mypy` 本件无问题 ／ `lint-imports` 4 kept 0 broken ／ `tests/unit tests/contract` 1877 passed（共享副本，含他窗未入库件 ⇒ 数字不专属本件）／ 本件 **5 passed**。
+
+### 13.8 ⚠️ 我没做 / 提请裁定
+- 🔴 本件的"惰性断言"是**结构钉子，不是认可**：W1B 在同轮提出（`9f54569`，同族 `U-131` 但发生在**策略面**）—— 3 张无 `shop_id` 的表使 RLS **表达不了店铺维度**，而 `07 §13.2` 写"行级范围只有 `shop_ids` 一个维度" ⇒ 限店的 finance/operator 能在这三张视图上读到**整租户**，且 `v_order_refund.sub_order_id` 可 join 回 `v_order_paid.shop_id` ⇒ 可归因到店。**若裁定"应加店铺维度"，`test_shop_ids_is_inert_on_tables_without_shop_column` 必须跟着改**。我只把现状变成可复算读数，**不代裁**。
+- 未验证"检索连接是否带 tenant GUC" ⇒ §13.4(B) 那条"为何不加 RLS"的成本我**没量**，不猜。
+- 一次性容器 `pg-rls-w2a-1002`（55432）用完即 DROP。
+
