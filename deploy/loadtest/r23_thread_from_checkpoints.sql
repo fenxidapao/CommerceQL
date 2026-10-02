@@ -589,24 +589,36 @@ seq as (
          count(*) filter (where turn >= 2 and routed_audit_supp) as t2_routed_supp,
          count(*) filter (where turn >= 2 and wrote_terminal) as ge3_t2_with_terminal_write
   from j
+), shape as (  -- 🔴 T-23（2026-10-02，W8）：⑱ 的**两条形状约定必须在同一语句里被消费** ⇒ "shape_ok = f 时读数作废"不再是散文。
+  --   尺与 ⑱ 逐字同源（同表、同谓词、同两个式子）；本 CTE 只出三个数，判定词表在下面两个 verdict 里。
+  select (count(*) filter (where position(', ' in task_path) = 0) = 0
+          and count(*) filter (where split_part(task_path, ', ', 2) <> '__start__' and task_path ~ '__start__') = 0) as shape_ok,
+         count(*) filter (where position(', ' in task_path) = 0) as g1_no_delim,
+         count(*) filter (where split_part(task_path, ', ', 2) <> '__start__' and task_path ~ '__start__') as g2_start_outside_seg2
+  from lg.checkpoint_writes where channel = 'terminal'
 )
 -- 🔻 T-22（2026-10-02，W8）：下面这一行是**混合域**作用域（pre-fix 的崩臂与 post-fix 的新格同框）
 --   ⇒ 它的 `ge2 = 5` **既不得读成"未达成"也不得读成"回归"**，正解 = 该作用域不含可判样本；分域并报见紧随其后的 **⑰c**。
+-- 🔴 T-23：两个 verdict 的第一支 = `not shape.shape_ok ⇒ 不可判`；且 `shape_ok`／`g1`／`g2` 三列**与本行同框输出**
+--   ⇒ 读者拿不到守卫位就拿不到判定词（判定与判据输入不可分离，与 `U-129` 行末"第四件前置"同一手法）。
 select '⑰ U-129 格2/格3（分母=run，粒度=run）' as k, agg.runs_in_scope, agg.t2_runs,
        case when agg.runs_in_scope = 0 then null else agg.ge2_routed_supp_no_terminal_write end as ge2_routed_supp_no_terminal_write,
        case when agg.runs_in_scope = 0 or agg.t2_runs = 0 then null
             else agg.ge3_t2_with_terminal_write end as ge3_t2_with_terminal_write,
-       case when agg.runs_in_scope = 0 then 'NULL__scope_empty（无从判定）'
+       case when not shape.shape_ok then '不可判__shape_guard_failed（⑱ 两条形状约定有一条变了 ⇒ wrote_terminal 系读数一律作废，含本行与 ⑰c）'
+            when agg.runs_in_scope = 0 then 'NULL__scope_empty（无从判定）'
             when agg.t2_runs = 0 then 'n/a__窗内没有 turn>=2 样本（不许记 0）'
             when agg.ge3_t2_with_terminal_write >= 1 then 'ge3 达成（>=1）'
             else 'ge3 = 0 ⇒ 未达成，或"写面黏性"那一支未解' end as ge3_verdict,
-       case when agg.runs_in_scope = 0 then null
+       case when not shape.shape_ok then '不可判__shape_guard_failed（同上）'
+            when agg.runs_in_scope = 0 then null
             when agg.t2_routed_supp = 0 then 'n/a__格2 空真（窗内 turn>=2 无一条被路由进 audit_supp ⇒ 架构 v1.7.17 的第四件前置 t2_routed_supp > 0 不满足，不许记 0）'
             when agg.ge2_routed_supp_no_terminal_write = 0 then 'ge2 = 0 且 t2_routed_supp = ' || agg.t2_routed_supp || ' ⇒ 非空真达成'
             else 'ge2 = ' || agg.ge2_routed_supp_no_terminal_write || ' ⇒ **本行不作判（混合域）**：作用域含 pre-fix 存量（A 档子窗 4 / 全库 5）⇒ 三态只许读 ⑰c 的分域行，post_fix 那一行才是验收位且须带 t2_routed_supp 的 n' end as ge2_verdict,
        (agg.runs_in_scope = 0) as scope_empty__if_true_suspect_vars,
-       case when agg.runs_in_scope = 0 then null else agg.t2_routed_supp end as t2_routed_supp__ge2_第四件前置
-from agg;
+       case when agg.runs_in_scope = 0 then null else agg.t2_routed_supp end as t2_routed_supp__ge2_第四件前置,
+       shape.shape_ok as shape_ok__T23, shape.g1_no_delim as g1_no_delim__want_0, shape.g2_start_outside_seg2 as g2_start_outside_seg2__want_0
+from agg, shape;
 
 -- ⑰b 覆盖面与"建线期"行的形状（不受窗口限定，用来支撑 ⑰ 注释里那三句）
 with ck_all as (
@@ -636,9 +648,12 @@ from unm u join tf on tf.thread_id = u.thread_id;
 --   要有这一格的原因：⑰ 那一行是**混合域**，把"修法前存量的 5 条崩臂"和"修法后的新格"算进同一个数 ⇒ 三态无从判。
 --   🔴 **分域依据 = 日期代理**（run 首见 ts 与修法落地时刻 `2026-09-30T14:25:35+00`（`33675b9`）比），**不是构建身份**；
 --      严格分域依赖闸门输入的 rev 自报（= **T-11②**，本窗仍欠）⇒ 在那之前本格的标签只许写到"日期代理"，不得写成"按被测构建分域"。
---   两把尺同框并报（`按修法时刻` 与 `按日`）：今天两者**同域同值**（09-30 全天零 run ⇒ 代理这一次没与构建身份打架），
---   ⚠️ 这是巧合不是等价的证明 —— 一旦出现"修法时刻之后但仍是旧构建"的 run，两把尺就会分叉，届时以 rev 自报为准。
+--   🔻 **措辞降格（2026-10-02 第 3 轮，采 QA 第 3 轮 ③）**：下面 B 那一栏**不是"第二把独立尺"**——现测 t2 run 只落在
+--      09-19(15)／09-28(8)／09-29(38)／10-01(3)，**09-30 与 10-02 各 0 条** ⇒ 边界常量 `09-30 14:25:35Z` 正落在**无样本间隙**里，
+--      A 域与 B 域当期**必然同值**（不是"两把尺互相印证"）。⇒ B 的作用改名为**分布可见性**：它给出"哪些天有 t2 但 supp = 0"，
+--      这一维 A 尺看不到（真值 09-19 15 条、09-28 8 条、09-29 38 条里 supp 分别 = 0/0/5）。**等 T-11② 的 rev 落地，分域才算独立。**
 --   期望读法：**`pre_fix` 那一行的 ge2 是存量不是回归；`post_fix` 那一行的 ge2 = 0 才当验收位，且必须带 `t2_routed_supp` 的 n**（n = 1 ⇒ 单样本，不得升格成"率"）。
+--   🔴 T-23：`verdict__T23` 的第一支 = `not shape_ok ⇒ 不可判` ⇒ ⑱ 的守卫位一旦翻，本表**逐行自动降级**，不靠人记得。
 with ck as (
   select thread_id, checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk,
          min((checkpoint->>'ts')::timestamptz) as first_seen
@@ -653,26 +668,43 @@ wr as ( select c.tk,
         from ck c join lg.checkpoint_writes w on w.checkpoint_id = c.checkpoint_id and w.thread_id = c.thread_id
         group by 1 ),
 j as ( select s.tk, s.turn, s.first_seen, coalesce(w.wrote,false) as wrote, coalesce(w.supp,false) as supp
-       from seq s left join wr w on w.tk = s.tk )
-select '⑰c 分域并报' as k, 'A 按修法时刻（日期代理）' as domain_ruler,
-       case when first_seen < timestamptz '2026-09-30 14:25:35+00' then 'pre_fix' else 'post_fix' end as domain,
-       count(*) filter (where turn >= 2) as t2_runs,
-       count(*) filter (where turn >= 2 and supp) as t2_routed_supp__n,
-       count(*) filter (where turn >= 2 and supp and not wrote) as ge2_routed_supp_no_terminal_write,
-       count(*) filter (where turn >= 2 and wrote) as ge3_t2_with_terminal_write
-from j group by 2, 3
-union all
-select '⑰c 分域并报', 'B 按日（QA 第 2 轮那把尺）', date_trunc('day', first_seen)::date::text,
-       count(*) filter (where turn >= 2),
-       count(*) filter (where turn >= 2 and supp),
-       count(*) filter (where turn >= 2 and supp and not wrote),
-       count(*) filter (where turn >= 2 and wrote)
-from j group by 2, 3
-order by 2, 3;
+       from seq s left join wr w on w.tk = s.tk ),
+shape as (  -- 尺与 ⑱ 逐字同源；只在最外层消费一次 ⇒ 判定词表只有一份抄本
+  select (count(*) filter (where position(', ' in task_path) = 0) = 0
+          and count(*) filter (where split_part(task_path, ', ', 2) <> '__start__' and task_path ~ '__start__') = 0) as shape_ok,
+         count(*) filter (where position(', ' in task_path) = 0) as g1_no_delim,
+         count(*) filter (where split_part(task_path, ', ', 2) <> '__start__' and task_path ~ '__start__') as g2_start_outside_seg2
+  from lg.checkpoint_writes where channel = 'terminal'
+), rows_ as (
+  select 'A 按修法时刻（日期代理，非构建身份）' as domain_ruler,
+         case when first_seen < timestamptz '2026-09-30 14:25:35+00' then 'pre_fix' else 'post_fix' end as domain,
+         count(*) filter (where turn >= 2) as t2_runs,
+         count(*) filter (where turn >= 2 and supp) as t2_routed_supp__n,
+         count(*) filter (where turn >= 2 and supp and not wrote) as ge2_routed_supp_no_terminal_write,
+         count(*) filter (where turn >= 2 and wrote) as ge3_t2_with_terminal_write
+  from j group by 1, 2
+  union all
+  select 'B 按日（分布可见性，当期与 A 必然同值）', date_trunc('day', first_seen)::date::text,
+         count(*) filter (where turn >= 2),
+         count(*) filter (where turn >= 2 and supp),
+         count(*) filter (where turn >= 2 and supp and not wrote),
+         count(*) filter (where turn >= 2 and wrote)
+  from j group by 1, 2
+)
+select '⑰c 分域并报' as k, r.domain_ruler, r.domain, r.t2_runs, r.t2_routed_supp__n,
+       r.ge2_routed_supp_no_terminal_write, r.ge3_t2_with_terminal_write,
+       s.shape_ok as shape_ok__T23, s.g1_no_delim as g1_no_delim__want_0, s.g2_start_outside_seg2 as g2_start_outside_seg2__want_0,
+       case when not s.shape_ok then '不可判__shape_guard_failed（⑱ 两条形状约定有一条变了 ⇒ 本表与 ⑰/⑮/⑯ 的 wrote_terminal 系读数一律作废）'
+            when r.t2_routed_supp__n = 0 then 'n/a__该域空真（无被路由进 audit_supp 的 turn>=2 run ⇒ 第四件前置 t2_routed_supp > 0 不满足，不许记 0）'
+            when r.ge2_routed_supp_no_terminal_write = 0 then '非空真达成（ge2 = 0 且 n = ' || r.t2_routed_supp__n || ' ⇒ 引这格必须同框带 n）'
+            else '未达成（ge2 = ' || r.ge2_routed_supp_no_terminal_write || '，n = ' || r.t2_routed_supp__n || '）' end as verdict__T23
+from rows_ r, shape s order by 2, 3;
 
 -- ⑱ ★ 形状守卫（T-21，2026-10-02 W8）：排除式 `split_part(task_path, ', ', 2) <> '__start__'` 的正当性**全靠两条形状约定**，
 --   而在本行落地之前**没有任何一件器件守它们** —— 建在这两条之上的谓词共 **8 处**：本件 `:491/:539/:577`、
 --   `backend/reports/w4/probe_prod_checkpoint_terminal.sql:157/189/220/253`、`backend/reports/w6/probe_audit_invariant.py:516`
+--   🔻 **同轮订正（第 3 轮 22:2x 现读，W8；原文不删）**：上面那句"共 8 处"是**本窗第 2 轮的尺**，此后我自己新加了 3 个消费面
+--   （本件 **666**、w4 **348**、w6 **535**）⇒ 现读 = **11 处**（`grep -c` 现算，别抄这行）。行号本身也会随追加漂移。
 --   ⇒ 守卫只放这一处（不三处各抄一份，避免第三份真相）；另两处只写指针，见各自件内注记。
 --   两条各配一个"若变则怎么坏"的方向（**两个方向都是假绿**，这是本号最怕的形状）：
 --     **守卫 1** 不含 `', '` 分隔符的 terminal 行 **必须 = 0** ⇒ 若 > 0：`split_part(…, ', ', 2)` 返回**空串** ⇒ `'' <> '__start__'` **恒真**
@@ -683,6 +715,8 @@ order by 2, 3;
 --     **② 不得拿 `type is not null` 当挡** —— 现测 `__start__` 那 6 行的 `type` 存的是**字符串 `'null'`**（`type = 'null'::text` 命中 **6**、`type is null` 命中 **0**；
 --     psql `-t -A` 下真 NULL 显示为空串，所以那一列印出来的 `null` 是值不是空）；
 --     **③ 三态联动**：`shape_ok = f` 时，本件 ⑮/⑯/⑯b/⑰/⑰c 的 `wrote_terminal` 系读数**一律不引用**（不是"重新解释"，是作废）。
+--     🔻 **同轮升格（第 3 轮，T-23）**：上面 ③ 原本只是散文 ⇒ 现在 **⑰ 与 ⑰c 的 verdict 在第一支就消费 `shape_ok`**（同语句内的 `shape` CTE，尺与本行逐字同源），
+--     守卫翻 ⇒ 判定词自动变 `不可判__shape_guard_failed`；反证（注入让 g1 变非 0、看 verdict 真翻）见 `backend/reports/w8/RELAY.md` §三 ＋ 一次性容器 `w8-t23-neg`。
 select '⑱ 形状守卫（排除式的正当性前提）' as k,
        count(*) as terminal_rows,
        count(*) filter (where position(', ' in task_path) = 0) as g1_no_delim__want_0,

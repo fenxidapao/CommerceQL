@@ -535,13 +535,27 @@ wr as ( select c.tk,
                bool_or(w.channel = 'terminal' and split_part(w.task_path, ', ', 2) <> '__start__') as wrote,
                bool_or(w.channel = 'branch:to:audit_supp') as supp
         from ck c join lg.checkpoint_writes w on w.checkpoint_id = c.checkpoint_id and w.thread_id = c.thread_id
-        group by 1 )
+        group by 1 ),
+shape as (  -- T-23：守卫位被判定量消费（尺与 r23 ⑱ 逐字同源），不许只当旁注
+  select (count(*) filter (where position(', ' in task_path) = 0) = 0
+          and count(*) filter (where split_part(task_path, ', ', 2) <> '__start__' and task_path ~ '__start__') = 0) as shape_ok
+  from lg.checkpoint_writes where channel = 'terminal' )
 select case when s.first_seen < timestamptz '2026-09-30 14:25:35+00' then 'pre_fix' else 'post_fix' end as domain,
        count(*) filter (where s.turn >= 2) as t2_runs,
        count(*) filter (where s.turn >= 2 and coalesce(w.supp,false)) as t2_routed_supp,
        count(*) filter (where s.turn >= 2 and coalesce(w.supp,false) and not coalesce(w.wrote,false)) as ge2_routed_supp_no_terminal_write,
-       count(*) filter (where s.turn >= 2 and coalesce(w.wrote,false)) as ge3_t2_with_terminal_write
-from seq s left join wr w on w.tk = s.tk group by 1 order by 1
+       count(*) filter (where s.turn >= 2 and coalesce(w.wrote,false)) as ge3_t2_with_terminal_write,
+       (select shape_ok from shape) as shape_ok,
+       case when not (select shape_ok from shape) then '不可判__shape_guard_failed（排除式前提塌 ⇒ wrote 系读数作废，见 r23 ⑱）'
+            when count(*) filter (where s.turn >= 2 and coalesce(w.supp,false)) = 0 then 'n/a__该域空真（不许记 0）'
+            when count(*) filter (where s.turn >= 2 and coalesce(w.supp,false) and not coalesce(w.wrote,false)) = 0
+                 then '非空真达成（ge2 = 0 且 n = ' || count(*) filter (where s.turn >= 2 and coalesce(w.supp,false)) || '）'
+            else '未达成（ge2 = ' || count(*) filter (where s.turn >= 2 and coalesce(w.supp,false) and not coalesce(w.wrote,false)) || '）' end as verdict
+from seq s left join wr w on w.tk = s.tk
+-- 🔴 T-23 修正（2026-10-02 22:3x，W8 端到端跑出来的，不是推论）：这里**曾经**写 `group by 1, 7` ⇒ PostgreSQL 直接
+--    `GroupingError: aggregate functions are not allowed in GROUP BY`（第 7 列是含 `count(*) filter` 的 verdict，不能当分组表达式）。
+--    整片 `writes` 读数因此**静默降级**为「台账第 8 面不可用」而 **rc 仍 = 0** ⇒ 分组只按第 1 列（域），verdict 在组内由聚合值派生。
+group by 1 order by 1
 """
 
 #: `branch:to:audit_supp` = N-08 那条出口的**路由集**（判据② 的候选生产读点）。
@@ -1475,13 +1489,15 @@ async def measure(rows: list[dict], table: str = "audit_log") -> tuple[list[dict
                 ruler["writes"] = writes_crosscheck(ruler, dict(zip(keys, shape_row, strict=True)), tset,
                                                     attrib=attrib)
                 #: T-22（W8）：混合域的单格不作判 ⇒ 分域两栏**另存一份出口**，不改上面任何一格的形状。
+                #: T-23（W8）：同一条 SQL 里带 `shape_ok` 与 `verdict` ⇒ 守卫翻则**逐域自动降为不可判**，不靠人记得。
                 grid_cols = ("domain", "t2_runs", "t2_routed_supp", "ge2_routed_supp_no_terminal_write",
-                             "ge3_t2_with_terminal_write")
+                             "ge3_t2_with_terminal_write", "shape_ok", "verdict")
                 grid_rows = [dict(zip(grid_cols, r, strict=True)) for r in
                              await (await conn.execute(GRID23_BY_DOMAIN_SQL)).fetchall()]
                 ruler["writes"]["grid23_by_domain"] = {
-                    "domain_ruler": "date_proxy__W4_fix_33675b9@2026-09-30T14:25:35Z",
+                    "domain_ruler": "date_proxy__W4_fix_33675b9@2026-09-30T14:25:35Z（非构建身份）",
                     "domain_ruler_is_not": "构建身份 —— 严格分域待 T-11② 的 self_reported_rev",
+                    "guard": "verdict 由与 r23 ⑱ 同源的 shape_ok 驱动（T-23）：shape_ok = false ⇒ 该域自动降为 不可判__shape_guard_failed",
                     "cells": {str(r["domain"]): {c: r[c] for c in grid_cols if c != "domain"} for r in grid_rows},
                     "read_as": "pre_fix 的 ge2 = 存量不是回归；只有 post_fix 且 ge2 = 0 才是验收位，须带 t2_routed_supp 的 n",
                 }

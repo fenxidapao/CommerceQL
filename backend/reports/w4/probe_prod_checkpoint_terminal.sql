@@ -348,12 +348,22 @@ wr as ( select c.tk,
                bool_or(w.channel = 'terminal' and split_part(w.task_path, ', ', 2) <> '__start__') as wrote,
                bool_or(w.channel = 'branch:to:audit_supp') as supp
         from ck c join lg.checkpoint_writes w on w.checkpoint_id = c.checkpoint_id and w.thread_id = c.thread_id
-        group by 1 )
+        group by 1 ),
+shape as (  -- 🔴 T-23：守卫位必须被判定量消费（不能只当旁注）。尺与 `r23 ⑱` 逐字同源。
+  select (count(*) filter (where position(', ' in task_path) = 0) = 0
+          and count(*) filter (where split_part(task_path, ', ', 2) <> '__start__' and task_path ~ '__start__') = 0) as shape_ok
+  from lg.checkpoint_writes where channel = 'terminal' )
 select '⑫ 分域并报' as k,
        case when s.first_seen < timestamptz '2026-09-30 14:25:35+00' then 'pre_fix' else 'post_fix' end as domain,
        count(*) filter (where s.turn >= 2)::text as t2_runs,
        count(*) filter (where s.turn >= 2 and coalesce(w.supp,false))::text as t2_routed_supp__n,
        count(*) filter (where s.turn >= 2 and coalesce(w.supp,false) and not coalesce(w.wrote,false))::text as ge2_routed_supp_no_terminal_write,
        count(*) filter (where s.turn >= 2 and coalesce(w.wrote,false))::text as ge3_t2_with_terminal_write,
-       'date_proxy__33675b9@2026-09-30T14:25:35Z' as domain_ruler
+       'date_proxy__33675b9@2026-09-30T14:25:35Z（非构建身份；独立分域待 T-11② 的 self_reported_rev）' as domain_ruler,
+       (select shape_ok from shape)::text as shape_ok__T23,
+       case when not (select shape_ok from shape) then '不可判__shape_guard_failed（排除式的前提塌了 ⇒ wrote 系读数作废，见 r23 ⑱）'
+            when count(*) filter (where s.turn >= 2 and coalesce(w.supp,false)) = 0 then 'n/a__该域空真（不许记 0）'
+            when count(*) filter (where s.turn >= 2 and coalesce(w.supp,false) and not coalesce(w.wrote,false)) = 0
+                 then '非空真达成（ge2 = 0 且 n = ' || count(*) filter (where s.turn >= 2 and coalesce(w.supp,false)) || '）'
+            else '未达成（ge2 = ' || count(*) filter (where s.turn >= 2 and coalesce(w.supp,false) and not coalesce(w.wrote,false)) || '）' end as verdict__T23
 from seq s left join wr w on w.tk = s.tk group by 1, 2 order by 2;
