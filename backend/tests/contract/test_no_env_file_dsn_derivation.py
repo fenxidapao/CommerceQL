@@ -1,9 +1,11 @@
-"""`U-114` 残余面 —— 集成夹具禁止从 `.env` 取 DSN（2026-10-01，W2B）。
+"""`U-114` 残余面 + `U-133` 判据③ —— 夹具与**探针**都禁止从 `.env` 取 DSN（2026-10-01 W2B；2026-10-02 扩面 W0）。
 
-为什么要有这条断言（判据出处 `docs/07:1133`，v1.7.17）
+为什么要有这条断言（判据出处 `docs/07:1133` v1.7.17 + `docs/07:1163` v1.7.18）
 --------------------------------------------------------------------------
-判定原句：「该夹具的运行期 DSN 也要过 `pg_guard` 的形状判定，**或改为只认环境变量**」。
-`test_retrieval_fts_pg.py` 走的是第二支（与另外 8 个 integration 模块同款）。
+`U-114` 判定原句：「该夹具的运行期 DSN 也要过 `pg_guard` 的形状判定，**或改为只认环境变量**」。
+`test_retrieval_fts_pg.py` 走的是第二支（与另外 **7** 个 integration 模块同款）。
+`U-133` 判据③ 原句：「`U-114` 防线② 的 AST 守卫扫描面从 `tests/integration/**` 扩到
+**`deploy/loadtest/**` 与 `eval/**`**」——**面二**即由此而来；归属见 `docs/08 §4.1`「扩面归 W0」。
 
 为什么静态守卫是必须的那一半
 --------------------------------------------------------------------------
@@ -19,12 +21,23 @@
 
 本守则（**R-ENVFILE**）
 --------------------------------------------------------------------------
-`tests/integration/**` 的模块**不得读任何 `.env` 文件内容**（`read_text` / `read_bytes` /
-`readlines` / `.open()` / `open()`，路径里静态含 `.env`；以及 `load_dotenv` / `dotenv_values`）。
+**面一（严）：`tests/integration/**`** —— 模块**不得读任何 `.env` 文件内容**（`read_text` /
+`read_bytes` / `readlines` / `.open()` / `open()`，路径里静态含 `.env`；以及
+`load_dotenv` / `dotenv_values`）。
 理由不是洁癖：集成夹具拿到 DSN 后的**第一条语句**就是 DDL（`CREATE SCHEMA` / `DROP TABLE`），
 所以"从 `.env` 取 DSN"这条链路的终点是**在开发机共享库上试写**；要什么值请**显式**走环境变量
 （`tests/integration/_env_dsn.py` 的 `env_dsn`：缺 = 具名 fail，禁 skip）。
 `.env` 读法本身就不是"取配置"的手段 —— 它是**隐式兜底**的入口。
+
+**面二（DSN 限定）：`deploy/loadtest/**` 与 `eval/**`**（`U-133` ③，2026-10-02 W0 扩面）
+—— 这两棵树下 `.env` 读取**只在"取 DSN"时**才算违规：判定式 = 该读取**所在作用域**里出现
+**DSN 键名**（`_DSN_KEY_RE`：`DATABASE_URL` / `DSN` / `*_DB_URL` / `PG*URL` / `POSTGRES*URL` /
+`SQLALCHEMY_DATABASE_URI`）。
+⚠️ **为什么面二不能沿用面一的严规则**：`docs/07:1163` 自带一条**对照件** ——
+`eval/reporter.py:595` 也读 `deploy/.env`，但它只取 `BINDING_TAU*` 开头的键、且把值归一成**布尔**
+（只落"有没有值"，不落值本身）。
+实测（2026-10-02，HEAD `ce85db0`）：同文件在**严规则**下 1 命中（`:597`）、在**面二规则**下
+0 命中 ⇒ 面二不是"给某个文件开后门"，是把判据从**动作**收到**意图**（禁的是"从 `.env` 拿连接串"）。
 
 ⚠️ 走的是**传递闭包**而不是只认字面量：`env_file = … / ".env"` 再 `env_file.read_text()`
 这种**经变量中转**的写法才是实际形态（字面量直写在 `read_text()` 里的写法本案没出现过）。
@@ -36,21 +49,36 @@
   而 docstring 是 `Expr(Constant)`、不在任何读调用子树里；
 - 报错文案里写 `deploy/.env`（如 `pytest.skip("…不要指向 .env…")`）；
 - `os.environ.get(VAR)`（合法取值方式，含缺省即 fail 的形态）；
-- 读**别的**文件（`read_text()` 的路径里没有 `.env`）。
+- 读**别的**文件（`read_text()` 的路径里没有 `.env`）；
+- **面二**上、作用域里**没有 DSN 键名**的 `.env` 读取（对照件 = `eval/reporter.py` 的 τ 校准块）。
 
 诚实边界
 --------------------------------------------------------------------------
-- 只扫 `tests/integration/**`（与防线② 同面）。`tests/conftest.py`、`eval/**` 不在面内 ——
-  若它们也要收口，另开判据，本文件不冒充覆盖；
+- 面一 = `tests/integration/**`（与防线② 同面）；面二 = `deploy/loadtest/**` + `eval/**`。
+  `tests/conftest.py`、`tests/eval/**`、`backend/app/**` 均**不在面内** —— 要收口另开判据，本文件不冒充覆盖。
+- 🔴 **面二首跑（2026-10-02，HEAD `ce85db0`）实测咬到 1 处真违规**，已在下面 `_KNOWN_LEGACY_HITS`
+  具名登记（**只许销账、不许新增**）：`deploy/loadtest/w2b_materialize/_w2b_u112_materialize.py:56`
+  —— `rw_dsn()` 读 `deploy/.env` 的 `DATABASE_URL`、换成宿主 DSN，`:68` 直接 `psycopg.connect`。
+  属主 = **W2B（件）**，所在树 = **W7**（`deploy/**`，`08 §4.1`）⇒ W0 只登记，不代改。
+- 🔴 **但 `U-133` ① 的「主体」两条守卫都咬不到**（别把面二当它的达标凭证）：
+  ① 的形态是 `deploy/loadtest/load_synth_to_pg.py` **完全没有 `os.environ`/`.env` 读取**、
+  却有一个**模块级字面 `DEFAULT_DSN`**（含属主段+口令段，指向共享 `ecom`）被 `--dsn` 当默认值，
+  下游 `:134` 是 `truncate app.{base}`。实测三数：本件 **0 命中**（它不读 `.env`）、
+  防线② **0 命中**（防线② 的入口谓词是 `os.environ.get/getenv` 的**兜底操作数**，裸的模块级常量
+  不在它的形状里）、而它确实是 ①。⇒ ① 的探测器需要**第三条谓词**（"运行期 DSN 的字面默认值"），
+  不在本件能力面内 —— 见 W0 回执 `RELAY.md §15`；本件在面二上只覆盖**读 `.env` 取 DSN** 这一支。
 - 静态追的是**同名简单赋值**；跨函数传参把路径带进来（`f(path)` 里读）看不见 ——
-  但无论怎么传，**总得有一次 `.env` 读调用落地**，本守则就在那一次拦；
-- 与防线② 的分工：防线② 管"字面量默认值指向共享 ecom"，本守则管"从 `.env` 取值"。
+  但无论怎么传，**总得有一次 `.env` 读调用落地**，本守则就在那一次拦。
+- 面二的 DSN 键名判定是**作用域级**近似：键名写在别的函数里、读取写在这个函数里 ⇒ 漏判。
+  它只用来挡"顺手从 `.env` 拿连接串"，不是完备的污点分析。
+- 与防线② 的分工：防线② 管"**env 兜底**到共享 ecom 字面量"，本守则管"从 `.env` 取值"。
   两者是**同一 hazard 的两条入口**，都不许靠"反正权限会挡住"。
 """
 
 from __future__ import annotations
 
 import ast
+import re
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -58,13 +86,38 @@ from typing import Any
 import pytest
 
 _BACKEND_DIR = Path(__file__).resolve().parents[2]  # .../backend
+_REPO_ROOT = _BACKEND_DIR.parent  # .../CommerceQL
 _INTEGRATION_DIR = _BACKEND_DIR / "tests" / "integration"
+_LOADTEST_DIR = _REPO_ROOT / "deploy" / "loadtest"
+_EVAL_DIR = _REPO_ROOT / "eval"
+
+#: 面二（DSN 限定）的两棵树 —— `U-133` 判据③（2026-10-02 扩面）。
+_PROBE_FACES: tuple[Path, ...] = (_LOADTEST_DIR, _EVAL_DIR)
 
 #: 会**读文件内容**的方法名（receiver 链或参数里出现 `.env` 即违规）。
 _READ_METHODS = {"read_text", "read_bytes", "readlines", "open"}
 #: dotenv 家族：默认行为就是读 `.env`（无参调用一律违规）。
 _DOTENV_FUNCS = {"load_dotenv", "dotenv_values"}
 _ENV_FILE_TOKEN = ".env"
+
+#: **DSN 键族**（只对面二生效）：`.env` 里用来取**连接串**的键名。
+#: 两侧用"非标识符字符"边界，而不是裸子串 —— 免得把散文/报告文案里的 `DSN` 字样也算成键名。
+_DSN_KEY_RE = re.compile(
+    r"(?<![A-Za-z0-9_])"
+    r"(?:DATABASE_URL|DB_URL|DSN|SQLALCHEMY_DATABASE_URI|"
+    r"PG[A-Z0-9_]*URL|POSTGRES(?:QL)?[A-Z0-9_]*URL)"
+    r"(?![A-Za-z0-9_])",
+    re.IGNORECASE,
+)
+
+#: **面二存量登记**（`U-133` ③ 扩面首跑实测，2026-10-02 W0）。
+#: 纪律两条：**新增命中一律红**；**存量被修掉后必须销账**（下面两条断言一起逼）。
+#: 登记形状 = `"<repo 相对 posix 路径>:<行号>"`。W0 只登记不代改（属主见文件头「诚实边界」）。
+_KNOWN_LEGACY_HITS: frozenset[str] = frozenset(
+    {
+        "deploy/loadtest/w2b_materialize/_w2b_u112_materialize.py:56",  # W2B 件 / W7 树
+    }
+)
 
 
 def _call_name(func: ast.AST) -> str | None:
@@ -121,8 +174,32 @@ def _env_file_names(tree: ast.Module) -> set[str]:
     return tainted
 
 
-def _scan_source(source: str) -> list[dict[str, Any]]:
-    """返回违规清单（每项：line / call / reason）。纯函数，便于正对照自测。"""
+def _enclosing_scope(tree: ast.Module, lineno: int) -> ast.AST:
+    """读调用所在的最内层作用域（函数体优先，模块兜底）。面二的 DSN 键名判定用它。"""
+    best: ast.AST | None = None
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda):
+            continue
+        end = getattr(node, "end_lineno", None) or node.lineno
+        if not (node.lineno <= lineno <= end):
+            continue
+        if best is None or node.lineno >= best.lineno:
+            best = node
+    return best if best is not None else tree
+
+
+def _names_dsn_key(scope: ast.AST) -> bool:
+    """作用域内的字面量里是否出现 **DSN 键名**（面二判定式）。"""
+    return any(_DSN_KEY_RE.search(text) for text in _strings(scope))
+
+
+def _scan_source(source: str, *, dsn_scoped: bool = False) -> list[dict[str, Any]]:
+    """返回违规清单（每项：line / call / reason）。纯函数，便于正对照自测。
+
+    `dsn_scoped=False` = **面一**：任何 `.env` 读取都违规。
+    `dsn_scoped=True`  = **面二**：仅当该读取**所在作用域内出现 DSN 键名**时才算违规
+    —— 对照件 `eval/reporter.py` 只取 `BINDING_TAU*` 的「有没有值」⇒ 不咬。
+    """
     tree = ast.parse(source)
     tainted = _env_file_names(tree)
     found: list[dict[str, Any]] = []
@@ -154,17 +231,24 @@ def _scan_source(source: str) -> list[dict[str, Any]]:
             found.append(
                 {"line": node.lineno, "call": name, "reason": "读路径经变量静态指向 .env"}
             )
+    if dsn_scoped:
+        found = [hit for hit in found if _names_dsn_key(_enclosing_scope(tree, hit["line"]))]
+        for hit in found:
+            hit["reason"] += "，且作用域内出现 DSN 键名"
     return found
 
 
-def _scan(directory: Path) -> list[dict[str, Any]]:
+def _scan(directory: Path, *, dsn_scoped: bool = False) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for path in sorted(directory.rglob("*.py")):
-        try:
-            where = path.relative_to(_BACKEND_DIR).as_posix()
-        except ValueError:  # tmp_path 等扫描目录外的文件（守卫自测用）
-            where = str(path)
-        for hit in _scan_source(path.read_text(encoding="utf-8")):
+        where = str(path)
+        for base in (_BACKEND_DIR, _REPO_ROOT):  # backend 先试，保持集成面的历史展示形状
+            try:
+                where = path.relative_to(base).as_posix()
+                break
+            except ValueError:  # tmp_path 等两棵根之外的文件（守卫自测用）
+                continue
+        for hit in _scan_source(path.read_text(encoding="utf-8"), dsn_scoped=dsn_scoped):
             out.append({"file": where, **hit})
     return out
 
@@ -264,3 +348,90 @@ def test_guard_spares_the_current_integration_tree_and_is_not_vacuous() -> None:
     scanned = sorted(_INTEGRATION_DIR.rglob("*.py"))
     assert len(scanned) >= 8, f"扫描面异常（{len(scanned)} 个文件）—— 守卫可能指错了目录"
     assert _scan(_INTEGRATION_DIR) == []
+
+
+# ----------------------------------------------------------------------------
+# 面二：探针面（`U-133` 判据③，2026-10-02 W0 扩面；归属 `docs/08 §4.1`「扩面归 W0」）
+#
+# ⚠️ 面二对 `U-133` ①（装载器缺 env 即 `TRUNCATE` 共享库）**不构成检测** —— 见文件头
+#    「诚实边界」第 2 条（`load_synth_to_pg.py` 不读 `.env`，实测 0 命中）。
+#    下面这组断言保的是**回归栅栏**与**规则本身不空转**，不是 ① 的达标凭证。
+# ----------------------------------------------------------------------------
+def test_probe_faces_have_no_new_dotenv_dsn_reads() -> None:
+    """面二零**新增**命中，且扫描面确实非空（防"指错目录也是绿"）。
+
+    存量（`_KNOWN_LEGACY_HITS`）单列 —— 它**不是豁免**：新增一处即红；
+    存量被修掉而不销账也红（否则登记表会烂在原地，变成永久后门）。
+    """
+    loadtest = sorted(_LOADTEST_DIR.rglob("*.py"))
+    eval_tree = sorted(_EVAL_DIR.rglob("*.py"))
+    assert len(loadtest) >= 5, f"deploy/loadtest 扫描面异常（{len(loadtest)} 个文件）"
+    assert len(eval_tree) >= 10, f"eval 扫描面异常（{len(eval_tree)} 个文件）"
+
+    seen = {
+        f"{hit['file']}:{hit['line']}"
+        for face in _PROBE_FACES
+        for hit in _scan(face, dsn_scoped=True)
+    }
+    new = sorted(seen - _KNOWN_LEGACY_HITS)
+    assert not new, (
+        f"面二出现 {len(new)} 处**新增**「从 `.env` 取 DSN」：{new}\n"
+        "修法：DSN 只许来自环境变量或显式参数（缺 = 具名 fail，禁字面默认值、禁 skip）。\n"
+        "（存量登记只覆盖已具名的那一条，新命中的必须是修，不是加进登记表。）"
+    )
+    stale = sorted(_KNOWN_LEGACY_HITS - seen)
+    assert not stale, (
+        f"存量登记已失效：{stale} —— 说明它已被修掉（或行号漂了）。\n"
+        "修掉 ⇒ 请从 `_KNOWN_LEGACY_HITS` 销账；只是行号漂 ⇒ 更新锚点。"
+        "留着不销 = 把一次性存量变成永久后门。"
+    )
+
+
+def test_guard_bites_on_dsn_key_extraction_in_probe_face() -> None:
+    """面二的正对照：读 `.env` **且**作用域内出现 DSN 键名 ⇒ 必须咬中。"""
+    source = (
+        "import os\n"
+        "from pathlib import Path\n"
+        "\n"
+        "def resolve() -> str:\n"
+        "    env_file = Path('deploy') / '.env'\n"
+        "    for line in env_file.read_text().splitlines():\n"
+        "        if line.startswith('DATABASE_URL='):\n"
+        "            return line.partition('=')[2]\n"
+        "    return os.environ['DSN']\n"
+    )
+    hits = _scan_source(source, dsn_scoped=True)
+    assert len(hits) == 1, hits
+    assert "DSN 键名" in hits[0]["reason"]
+
+
+def test_guard_spares_the_reporter_shape_by_rule_not_by_exemption() -> None:
+    """面二不许咬 τ 校准块（只取 `BINDING_TAU*` 的「有没有值」）—— 靠**规则**，不靠文件白名单。
+
+    同时证这条收窄是**承重的**：同一份源码在面一（严）规则下必须命中 1 处，
+    否则 `dsn_scoped` 等于没生效（护栏空转 = 假绿）。
+    """
+    synthetic = (
+        "import os\n"
+        "import re\n"
+        "\n"
+        "def tau() -> dict[str, bool]:\n"
+        "    env_path = os.path.join('deploy', '.env')\n"
+        "    out: dict[str, bool] = {}\n"
+        "    for line in open(env_path, encoding='utf-8'):\n"
+        "        m = re.match(r'\\s*(BINDING_TAU[A-Z_]*)\\s*=\\s*(.*)$', line)\n"
+        "        if m:\n"
+        "            out[m.group(1)] = bool(m.group(2).strip())\n"
+        "    return out\n"
+    )
+    assert _scan_source(synthetic, dsn_scoped=True) == []
+    assert len(_scan_source(synthetic, dsn_scoped=False)) == 1, "收窄必须是承重的"
+
+    real = _EVAL_DIR / "reporter.py"
+    assert real.exists(), "对照件 `eval/reporter.py` 不见了 —— `docs/07:1163` 引的就是它"
+    real_source = real.read_text(encoding="utf-8")
+    assert _scan_source(real_source, dsn_scoped=True) == [], (
+        "面二咬到了 τ 校准块的 `.env` 读取 —— 它只取 `BINDING_TAU*` 的「有没有值」，"
+        "`docs/07:1163` 明写「不是本案」"
+    )
+    assert _scan_source(real_source, dsn_scoped=False), "严规则下它应当命中 —— 面二的收窄才有意义"

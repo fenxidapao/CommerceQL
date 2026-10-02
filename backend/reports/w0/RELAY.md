@@ -818,3 +818,156 @@ docker exec commerceql-pg-1 psql -U app_rw -d ecom -tAc "select count(*) from ap
 
 ⚠️ 另有一个**不是我起的**容器在跑：`cql-it-pg-w2b-t02`（宿主 `:5434`）= **W2B 自己在用**，正是本轮撞车的同一个面（§14.5）。
 
+---
+
+## 15 【U-133 判据③ 回执】AST 守卫扫描面已扩到 `deploy/loadtest/**` + `eval/**`（不占号，2026-10-02，基准 `ce85db0`）
+
+> 受众 = **QA**（派单方）+ **架构**（③ 的谓词面、以及"存量登记"可否接受）+ **W2B**（扩面首跑咬到的存量件属主）。
+> 🔴 三件先说在前面：**①** ③ 的**字面要求与它自己带的对照件互相矛盾**（照字面做必红），我按契约原意实现了**面二**；
+> **②** 扩面**不是空转** —— 首跑咬到 **1 处真违规**（§15.4）；**③** 但 ③ **盖不住 `U-133` ① 本身**（§15.5）。
+
+### 15.0 一句话
+
+`backend/tests/contract/test_no_env_file_dsn_derivation.py` 的扫描面 = `tests/integration/**` ∪ `deploy/loadtest/**` ∪ `eval/**`；
+新面采用 **DSN 限定规则**（只有"从 `.env` 取 DSN"才算违规，判据式 = 读取所在**作用域内出现 DSN 键名**）。
+首跑实测三数：面一 **0** 命中、`deploy/loadtest/**`（12 文件）**1** 处真违规、`eval/**`（18 文件）**0**。
+**扩面后 `tests/contract` 全绿（479 passed）**；ruff 件与整目录均 `All checks passed`。
+
+### 15.1 落了什么（全在 W2B 的那一件上，未新建第二份）
+
+| 位置 | 改动 |
+|---|---|
+| `test_no_env_file_dsn_derivation.py:61-70` | 加 `_REPO_ROOT` / `_LOADTEST_DIR` / `_EVAL_DIR` / `_PROBE_FACES`（面二两棵树） |
+| 同 `:82-89` | 加 `_DSN_KEY_RE`（DSN 键族：`DATABASE_URL`/`DSN`/`*_DB_URL`/`PG*URL`/`POSTGRES*URL`/`SQLALCHEMY_DATABASE_URI`，两侧带标识符边界） |
+| 同 `:95-104` | 加 `_KNOWN_LEGACY_HITS`（存量登记，见 §15.4） |
+| 同 `_enclosing_scope` / `_names_dsn_key` | 新增两个纯函数（作用域定位 + 键名判定） |
+| 同 `_scan_source(source, *, dsn_scoped=False)` | 加参数：`False` = 面一严规则（原行为不变）；`True` = 面二 DSN 限定 |
+| 同 `_scan(directory, *, dsn_scoped=False)` | 同上；并让展示路径先试 `backend` 再试仓库根（`eval/`、`deploy/` 才显示得出来） |
+| 文件头 docstring | 加「面一/面二」说明、`U-133` ③ 判据出处、对照件说明、诚实边界三条 |
+| 新增 4 条测试 | 见 §15.3 |
+
+⚠️ 顺带订正该件 docstring 一处**数字型瑕疵**（`§14.7` 已登记、此处落地）：原文「与另外 **8 个** integration 模块同款」→ **7 个**
+（实测调用 `env_dsn` 的 integration 模块共 8 个、**含本件**）。同一件内改动，已在此具名。
+
+### 15.2 🔴 为什么不能"照字面扩面"：③ 与它自己的对照件互斥
+
+`docs/07:1163` 的 ③ 说「扩到 `deploy/loadtest/**` 与 `eval/**` ⇒ 扩面后 `tests/contract` **须全绿**」，
+**同一格末尾**又写着：「⚠️ 对照件（防下一轮误报）：`eval/reporter.py:595` 也读 `deploy/.env` … ⇒ **不是本案**」。
+
+两条一起看：**现规则（"不得读任何 `.env`"）** 扩到 `eval/**`，`reporter.py` **必被咬中** ⇒ ③ 的"须全绿"当场不成立。
+**实测**（HEAD `ce85db0`，`_scan_source(eval/reporter.py)`）：
+
+| 规则 | 命中 |
+|---|---|
+| 面一（严：任何 `.env` 读取） | **1** 处 —— `eval/reporter.py:597` `open()`（读路径经变量静态指向 `.env`） |
+| 面二（DSN 限定） | **0** 处 |
+
+⇒ 我的解法**不是给 `reporter.py` 开白名单**（那是"缩门禁 scope"），而是把判据从**动作**收到**意图**：
+面二只禁"从 `.env` 拿**连接串**"。`reporter.py` 那个块的形态是 `re.match(r"...BINDING_TAU[A-Z_]*...")` 后 `bool(...)`
+—— 只抽 `BINDING_TAU*` 开头的键、值归一成布尔、**不落值**，作用域内**没有任何 DSN 键名** ⇒ 正当放过。
+**并已证这条收窄是承重的**（不是把规则改松）：同一份合成源码在面一规则下命中 **1**、面二规则下命中 **0**；
+真件 `eval/reporter.py` 在面一规则下**必红**、面二下**为绿**（两条断言都写在 `test_guard_spares_the_reporter_shape_by_rule_not_by_exemption` 里）。
+
+### 15.3 首跑读数（带 HEAD）+ ④ 要的两个 ruff 数
+
+| 项 | 读数 |
+|---|---|
+| HEAD | **`ce85db0`** |
+| 面一 `tests/integration/**` | **0** 命中 |
+| 面二 `deploy/loadtest/**`（12 个 `.py`） | **1** 命中（真违规，见 §15.4） |
+| 面二 `eval/**`（18 个 `.py`） | **0** 命中 |
+| 守卫自身 | **10 passed**（原 7 条 + 新增 3 条） |
+| `pytest -q tests/contract` | **479 passed, 1 warning**，rc=0 |
+| ruff ① **本轮件形状** | `ruff check tests/contract/test_no_env_file_dsn_derivation.py` ⇒ **All checks passed** |
+| ruff ② **整目录形状** | `ruff check tests/contract/` ⇒ **All checks passed** |
+
+新增 3 条测试：
+1. `test_probe_faces_have_no_new_dotenv_dsn_reads` —— 面二零**新增**命中 + 存量被修而不销账也红（双向逼登记表）；
+2. `test_guard_bites_on_dsn_key_extraction_in_probe_face` —— 面二**正对照**：读 `.env` 且作用域有名 DSN 键名 ⇒ 必咬；
+3. `test_guard_spares_the_reporter_shape_by_rule_not_by_exemption` —— 对照件按**规则**放过（含"收窄承重"证明）。
+
+### 15.4 🔴 扩面首跑咬到的真违规（不是我造的，也不是本条的判据）
+
+```
+deploy/loadtest/w2b_materialize/_w2b_u112_materialize.py:56  read_text()  ← 读路径静态含 .env，且作用域内出现 DSN 键名
+```
+
+逐行读码（只报形状、不复述任何值）：该件 `:51` 的 `rw_dsn()` 用 `(REPO / "deploy" / ".env").read_text()`
+取 `DATABASE_URL`、把容器视角的 compose 服务名换成 `127.0.0.1` 后**返回一个可用的 libpq 连接串**；
+`:68` 直接 `psycopg.connect(rw_dsn())`，另在 `:123` / `:167` 复用。
+⇒ 与 `U-114` 残余面**同形**（读 `.env` → 造 DSN → 连**共享 dev 库**），只是宿主在 `deploy/` 而不是 `tests/`。
+⚠️ **同族还有第二件**：`deploy/loadtest/w2b_materialize/_w2b_u112_verify_read.py:30` `from _w2b_u112_materialize import ... rw_dsn`，
+`:_48/:60/:74` 同样用它连库 ⇒ **一处定义、两处使用**。
+
+**我的处理 = 只登记、不代改**（属主 W2B 的件、所在树 `deploy/**` 属 W7）：登记为 `_KNOWN_LEGACY_HITS` 一条，纪律两条 ——
+**新增命中一律红**；**存量修掉后必须销账**（`stale` 断言会在修完未销账时变红，防登记表烂成永久后门）。
+**这不是豁免**：面二对"新出现的同形写法"立即咬。是否另开号上呈，**我不占号**（编号归 QA/架构）。
+
+### 15.5 🔴 ③ **不足以**覆盖 `U-133` ① 本身（这条最重要，别拿 15.3 的全绿当 ① 的达标凭证）
+
+`U-133` ① 的主体是 `deploy/loadtest/load_synth_to_pg.py`：`:42` 一个**模块级字面 `DEFAULT_DSN`**（含属主段+口令段，
+指向共享 `ecom`）、`:183` 把它当 `--dsn` 的 default、`:134` 下游是 `truncate app.{base}`。
+**实测该件在两条守卫下都是 0 命中**：
+
+| 守卫 | 谓词（入口形状） | 在 `load_synth_to_pg.py` 的命中 |
+|---|---|---|
+| 本件 R-ENVFILE（面一/面二） | "读 `.env` 文件内容" | **0** —— 它全文 `os.environ`/`getenv`/`.env` **均 0 处**，根本不读 `.env` |
+| 防线②（`test_no_shared_ecom_dsn_fallback.py`） | "`os.environ.get/getenv` 的**兜底操作数**是共享 `ecom` 字面量" | **0** —— 裸的模块级常量**不在它的形状里**（已在 `deploy/loadtest` 全树 12 文件、`eval` 全树 18 文件各测过） |
+
+⇒ **两条守卫的"面"（path）扩了，"谓词"（shape）都没扩** —— 而 ① 是**第三种形状**：
+"运行期 DSN 的字面默认值"。③ 只说了扩**面**，所以照 ③ 做完**仍然测不到 ①**。
+**我未自行扩判据**（判据扩张要裁）：要真正封 ①，需要一条新谓词 —— 例如
+「`deploy/loadtest/**` 里**任何** DSN 值来源必须可静态判为『环境变量或命令行参数』；
+模块级字面 DSN 常量被当作连接/`--dsn` 默认值即违规」。
+⚠️ 这条**一落就是红的**（`:42` 还在，属 W7 的 ①），与 ③ 的"须全绿"直接冲突 ⇒ **两条路请裁**：
+(A) **等 ① 先落**，再同批落这条谓词（那时它天然绿，"绿"是因为缺陷没了）；
+(B) 现在落成**预期红**并在件里具名登记（违背 ③ 的"须全绿"字面，但护栏立刻开始工作）。
+**我建议 (A)**，理由：本项目已因"改了措辞/换了口径就把判据悄悄放宽"付过代价；`(B)` 的实际效果常常是下一轮把它改成 skip。
+
+### 15.6 答复 ③ 的归属问题（「守卫产物只留一份」由谁持有）
+
+- **产物仍是唯一一份**：`backend/tests/contract/test_no_env_file_dsn_derivation.py`（W2B `6b87da9` 建、W0 本轮扩面）。
+  **持有 = W2B（件主）**；**扩面动作 = W0**（`docs/08 §4.1` 该行明写「守卫扫描面此前只覆盖 `tests/integration/**`，**扩面归 W0**」）。
+  **没有第二棵树、没有第二份规则** —— 与 `§14.5` 撤销那次同一个原则。
+- 关于 `tests/contract/**` 表上写 **W4** 的漂移：**`docs/08:309` 那一行自己已经具名登记过**
+  （「⚠️ 另一处漂移（**归总控裁**，架构不擅改别窗行）：下一行 `tests/contract/**` 表上写 W4，而 git 现测提交分布 = w4 19 / w0 6 / w7 4 / w2b 2 / w2a 2 / retrieval 2」）。
+  ⇒ 本轮我**不新建树**、只在既有件上扩面，**不加剧**该漂移；
+  但**若总控裁定 `tests/contract/**` 归 W4**，则本轮应记为「**W0 代 W4 落笔、需 W4 追认**」（与 `U-124` 里「W2A 代 W0+W1B 落完 ⇒ 追认 + 两份复核回执」同一先例），请裁。
+
+### 15.7 诚实边界
+
+- **`tests/contract` 的"全绿"含一条存量登记**：不是零违例，而是"零**新增**违例 + 一条具名存量"。
+  登记表在件里，可被任何窗口复核；**它不是 skip、不是 `xfail`、不是目录排除**。
+- **我没动 `:107-108`**（`except InsufficientPrivilege: pytest.skip`）—— QA ⑤ 明令不先动，我一行未改；
+  它在 `U-133` 是否属"禁 skip"范围由 QA 的 O-6 上呈架构裁。
+- **我没改 W2B 的 `_w2b_u112_materialize.py` / `_w2b_u112_verify_read.py`，也没改 W7 树里的任何件**（只登记）。
+- **锚点是行号**：`_KNOWN_LEGACY_HITS` 记 `…:56`，该件若被改行会漂 ⇒ `stale` 断言会红并提示"更新锚点"。
+  这是刻意的（宁可吵一次，也不要悄悄失效）。
+- **面二的 DSN 键名判定是作用域级近似**：键名与读取不在同一函数 ⇒ 漏判；它挡"顺手从 `.env` 拿连接串"，不是完备污点分析。
+- **本条不含任何口令字面量**（口径同 `U-134` 的纪律）；所有 DSN 一律只写形状。
+- 本轮**未推**任何东西；也未占号。
+
+### 15.8 验证读数（可复现）
+
+```bash
+# (a) 守卫自身（含面二正/负对照）
+cd backend && pytest -q tests/contract/test_no_env_file_dsn_derivation.py        # → 10 passed
+
+# (b) 扩面后全目录（③ 的验收位）
+cd backend && pytest -q tests/contract --basetemp=/tmp/bt_ct                     # → 479 passed, rc=0
+
+# (c) ruff 两个数（④ 要求）
+cd backend && ruff check tests/contract/test_no_env_file_dsn_derivation.py       # → All checks passed
+cd backend && ruff check tests/contract/                                         # → All checks passed
+
+# (d) 三面命中数（复算 §15.3；纯读、零写）
+cd backend && ../.venv/Scripts/python.exe -c "
+import importlib.util,pathlib
+s=importlib.util.spec_from_file_location('g','tests/contract/test_no_env_file_dsn_derivation.py')
+m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
+for f in m._PROBE_FACES: print(f, len(m._scan(f, dsn_scoped=True)))
+print('面一', len(m._scan(m._INTEGRATION_DIR)))"
+# → deploy/loadtest 1 ／ eval 0 ／ 面一 0
+```
+
+
