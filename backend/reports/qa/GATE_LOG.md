@@ -87,3 +87,17 @@ PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe -m app.core.enum
 | 格2 按天分域 | 单条只读 SQL（`date_trunc('day', min(ts))` 分组） | **0** | 09-29：5／5／0；10-01：1／0／1 | `c7cf34a` | ⚠️ 日期是**构建身份代理**，不是 rev |
 | 越界检查 | `git show --stat c7cf34a` ＋ `os.stat(docs/07)` ＋ 行数 | **0** | 仅 `reports/w8/**`；`docs/07` mtime `10-02 08:29:58Z`（早于开工）、**3,642** 行未变 | `c7cf34a` | W8 未动契约面 ✓ |
 | 覆盖面计数 | `grep -rn` 排除式（`split_part`／`not like`）三件逐行数 | **0** | r23 **3**（491／**539**／577）＋ w4 **4** ＋ w6 **1** = **8** | `c7cf34a` | 它报的 `:538` off-by-one |
+
+## 第 9 轮（W8 第 2 轮复算）
+
+| 项 | 命令形状 | 真 `rc` | 读数 | HEAD | 备注 |
+|---|---|---|---|---|---|
+| r23 全件重跑 | `docker exec -i commerceql-pg-1 psql -U postgres -d ecom -v ON_ERROR_STOP=1 -t -A -F'\|' -v "win_a=…" -v "win_b=…" -v "upref=%" -f - < deploy/loadtest/r23_thread_from_checkpoints.sql` | **0** | **63** 个非空行、**0** 条 ERROR；⑰ 值未动；⑰c `post_fix 3\|1\|0\|3`／`pre_fix 61\|5\|5\|0` ＋ B 尺 9 行；⑱ `825\|0\|0\|6\|8\|6\|t` | `c040280` | 上轮同件旧版 = **51** 非空行 ⇒ 51→63 复现 |
+| 三面（行／run／thread） | 两条只读 SQL：`count(*)`＋`count(distinct thread_id)`＋`count(distinct (thread_id, tk))`，**写件必须用 `checkpoint_id` 同键连接** | **0** | 行 **825／819**（全／排 `__start__`）、thread **816／816**、run **819／819** | `c040280` | 🔴 我第一版只按 `thread_id` 连接 ⇒ 得 **880**＝**我的尺错**（同 thread 多 run 被交叉放大），已重测 |
+| 三处分域互对 | 从 r23／`w4` ⑫／`w6` `GRID23_BY_DOMAIN_SQL` 各抽 SQL 单跑 psql | **0／0／0** | 三件**同值** | `c040280` | w6 的抽取要避 Python 串终止符（我第一次 `sed` 过界 ⇒ `syntax error at or near \"\"\"` 后重取 526–544） |
+| verdict 是否被解析 | `grep -rn "未达成\|不作判" eval/ backend/tests/contract backend/tests/unit` | **0** | **0 命中** ⇒ ⑰ 文案改动 = 标签变更，非判据变更 ✓ | `c040280` | 本项目"两列 vs 并入判定量"那条陷阱的正向反例 |
+| `shape_ok` 消费者 | `grep -rln shape_ok deploy backend eval .github` | **0** | 只有 `r23` 与 `w4 probe_*.sql` **定义**，**零引用** | `c040280` | ⇒ 开 **T-23** |
+| 只读守卫覆盖 | 两次 `grep -rl` ＋ `comm -23`（集合差） | **0** | 连库 py **7**／带守卫 **5**／**无守卫 4** | `c040280` | ⇒ 开 **T-24** |
+| ruff／py_compile | `cd backend/` ＋ `../.venv/Scripts/python.exe -m ruff check reports/w6/probe_audit_invariant.py --config pyproject.toml`；同解释器 `-m py_compile` 同件 | **0／0** | `All checks passed!` | `c040280` | 与 W8 报的 0 条一致 |
+| 零花费与库损伤 | 只读四合一（`app.cost_ledger`）＋ `count(*) from app.embed_doc` | **0** | 台账 **1,601**／**¥2.635700**／max `2026-10-01 12:56:32.538701+00`／**今日（UTC+8）新增 0 条**；`embed_doc` **197** | `c040280` | W8 的"全天零新增"坐实 |
+| 越界检查 | `git show --stat` 三笔 ＋ `wc -l ../docs/07…` ＋ `sed -n '1078p'` | **0** | 三笔仅动 `r23`／w4 sql／w6 py／`reports/w4+ w8/RELAY,DELIVERY`；`docs/07` 仍 **3,642** 行、v1.7.18、L1078 = 「下一个可用号 = `U-135`」 | `c040280` | 它补记引用的三个事实**属实**，非编 |
