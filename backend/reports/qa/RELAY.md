@@ -77,3 +77,143 @@
 - 🔻 **R-3 的初判作废**：把 dev 占位串当活口令泄漏 ⇒ 等值尺现测后撤回；教训 = **命中口令串不等于泄漏，必须先比"它是不是已登记的已知形态"**（本项目 `.gitleaks.toml` 与第一轮记忆都点过这条，我第一次没查就准备报警）。
 - 🔻 **第一轮引用的 `07` 行号全部作废**（1133→1134、1154→1155、1140→1141、1158→1159），改用「行首形状 ＋ 号锚点 ＋ 落笔秒现测」；后续台账引用一律带版本 v1.7.18。
 - 我第一轮把 T-04 说成"只加列不动谓词"的单 ⇒ 现测 W6 已把 `red_total = failed + errors` 写进判定 ⇒ **说明我当时没预判"加列会被顺带并进判定量"这一形态**；已退回订正。
+
+## §三 第三轮（2026-10-02 17:5x +0800 ｜ HEAD `98f8b04` ｜ W7／W1B 两份回执复算 ＋ 我自己两处订正 ｜ 零开发、零额度、零容器）
+
+### 1. 五查随动
+
+HEAD `98f8b04`（＝远端同点，`git rev-parse` 现测 17:5x）；链上三笔新提交 = `9f54569`(W1B RLS 溯源单测)／`7afbde9`(**W0 已落 `U-133` 判据③**：AST 守卫扫描面扩到 `deploy/loadtest/**` ＋ `eval/**`)／`98f8b04`(W0 补读数)。⇒ **总控尚未发的 W6／W4 两块不影响本轮回执**。台账仍 **1,601 / ¥2.635700 / max 10-01 12:56:32Z** ⇒ 今日仍零花费。
+
+### 2. W1B 的回执：达成，且它订正了我两条
+
+| 件 | 我的复算 | 结论 |
+|---|---|---|
+| 「迁移产出 = **0** 条 policy，真源 = `app/semantics/materialize.py::derive_policy_statements()`（ADR-10 派生、发布事务内执行）」 | 我上一轮的 T-14④ 问法（「现库 6 = 迁移 6?」）**形态错了** ⇒ 会把"0 条"读成"缺 6 条" | **采纳并改写**：对拍必须是「派生器 ⇒ 现库」。⇒ 撤回我那句问法 |
+| `tests/unit/test_rls_policy_provenance.py` | 我跑：**6 passed / 0.46 s / rc=0**；且它钉四件（迁移零产走 AST 并排除 docstring、ENABLE／FORCE 成对、命名契约 `p_{基表}_tenant`、"租户级无 shop_id"集合只减不增） | **达成**（零 DB、可照抄命令） |
+| 🔴 「`rolbypassrls = f` 推不出 policy 真生效；表属主对 RLS 免疫，真凭据是 `relforcerowsecurity = t`」 | 我**自己跑五面对撞**：6 张表 `relrowsecurity = t` ＋ **`relforcerowsecurity = t`** ＋ `pg_get_userbyid(relowner) =` **`app_rw`**；`app_rw`／`app_ro` 的 `rolsuper = f`、`rolbypassrls = f` | **我订正自己**：上一轮那句推论不足（owner 是 `app_rw` 自己 ⇒ 只看 bypass 位会得出"只 ENABLE 没 FORCE"的假边界）。结论仍成立（policy 真生效），**依据换成五面** |
+| 「`shop_ids` 谓词只存在于 3/6 张表（`order_paid`／`product`／`shop`），另 3 张只有 `tenant_id`」 | 与我自己现读的 `pg_policies.qual` 原文逐字一致（我上轮引的 qual 正是这三张） | **采纳** ⇒ 转给 W2A：两态断言**必须分表**，统一断言会在后 3 张红或空过 |
+| 🔴 副产物：后 3 张 `tenant_scoped=true` 却无 `shop_id` 列 ⇒ 店铺维度在 L3 表达不了 ⇒ 被限店的 finance／operator 在 `v_order_refund`／`v_traffic_daily`／`v_campaign` 上读到整租户行，且 `v_order_refund.sub_order_id` 可 join 回 `v_order_paid.shop_id` **归因到店** | 我复算：这三张表**确实**只有 `tenant_id = current_setting('app.tenant_id', true)` 一条门（qual 原文）；"可读整租户"是 policy 文本的直接推论，**未做活体越权验证** ⇒ 记 UNVERIFIED | ⇒ **上呈 O-12**（与 `U-131` 同族但发生在**策略面**；判"设计使然 or 缺"归 W2A ＋ 架构，我不取号） |
+
+### 3. W7 的回执：达成，但它的一条机制描述我要订正
+
+| 件 | 我的复算 | 结论 |
+|---|---|---|
+| ① 它坐实我的 R-2，并实测回环登录 = `current_user=postgres`／`rolsuper=true` | 我未重复登录（那是写面动作）；等值尺我上轮已自测 = True | **达成** |
+| ② 🔴 它写「DSN 卫生门 8 passed 一直绿 ⇒ 它的**覆盖面不含** `deploy/loadtest/**`」 | **此说不成立**：现读 `tests/unit/test_migration_dsn_hygiene.py:285` = `for path in sorted(_REPO_ROOT.rglob("*"))` ⇒ 扫的是**整仓工作区（含 `deploy/**`、含未跟踪件）**；放行发生在 `:314-315` 的 `path_allowlisted or _excused_by_allowlist(secret)` ⇒ **扫到了、被 `.gitleaks.toml` 的 allowlist 显式豁免** | ⇒ 含义不同且更重要：豁免已是既成事实（正是 `U-134` 说的"被 allowlist 放行，不是成立"）。**若日后轮换口令，只换口令不改 allowlist 的路径模式，同一个文件仍会被放行** ⇒ 处置必须两步同批：改字面量 ＋ 收 allowlist 范围 |
+| ② 它另抓一份别窗件 `backend/reports/w2d/probe_explain_timing_pg.py:47` | 我现读：该文件 176 行，**:47 含字面 DSN 形状 = True**；而"env 覆盖"在 40–52 行范围内**未命中**（`:46` 注释写"默认 = compose 栈本地 PG"）⇒ 它可能是**无 env 出口的纯默认值** | ⇒ 开 **T-18（W2D）** |
+| ③ `U-133①②` 正在落（默认值 `None` ＋ 新环境变量 ＋ connect 之前具名 fail ＋ 离线 `--self-check` 负向用例） | 未入库前不判 | **待补**（等它的落地件号） |
+| ④ 🔻 它对我的"813 那句已作废"给了更准的面：**6 条 `__start__` 全部落在本轮 P-A′ 那 3 个 thread** ⇒ pre-fix 面无 `__start__` 行 ⇒ **813 作为 pre-fix 面读数不被推翻**；现全库 = 825 行／819 真写／816 thread ⇒ 作废的是「逐 thread 恒 1 次」 | 我复算的 825／6／3 与它逐字同；**W4 说的是"现全库数不再等 813"、W7 说的是"813 是 pre-fix 面"** ⇒ 形状 = **面 ＋ 时点**，两边都对、各说一半 | ⇒ **我订正 O-7 的措辞**：不是"抄本作废"，而是**"该抄本必须标面与时点"**；并订正我上一轮那句"架构 v1.7.15 ④ 已不成立"（写得太宽） |
+| ④ 它改尺后四作用域重跑：**格2／格3 一条没变**（新格 6/3/0/3/前置 1、A 档 99/22/4/0、空窗 NULL、全库 1,384/64/5/3/前置 6）；路由侧 `branch:to:audit_supp` = 78 行／`__start__` 0／thread 72 ⇒ 不需该排除 | 我未复算（那是它的尺与它的窗）；本轮我只复核 `__start__` 形状 | **待补**：我下轮用它的 ⑰ 现读参数自己复算格2／格3 |
+| ⑥ 件又变（md5(LF) `c98d1decaf0c…`、627 行、锚点漂 ⑯b 519／⑰ 543／⑰b 605） | 我未引过这三个锚点 ⇒ 无作废；但**我台账里凡引 `r23_*.sql` 的语句标签者，下轮要按新锚点重取** | 登记 |
+| ⑦ 它点名 `cql-it-pg-t02`／`cql-it-pg-w2b-t02` = W2B 的靶（它不动不删）；`w7load-api_pre0930r11_bak` 处置人 = W7，下轮起靶前 `docker rm` | 我仍不动任何容器 | **达成**，但请 W7 `rm` **之前**先把 `docker inspect`（`Config.Image` ＋ `Created`）与 `docker images` 那两行存进它的 RELAY ⇒ 否则历史里"pre-fix 面"的坐标会断链 |
+
+### 4. 本轮我自己订正两条（写在这里，不在别处悄悄改）
+
+- 🔻 **我上一轮说「`app_rw`／`app_ro` 的 `rolbypassrls` 均为 f ⇒ 6 条 policy 真生效」是推论不足**。正确依据 = 五面（含 `relforcerowsecurity` 与 `relowner`）。结论未变，理由换了。⇒ 复算面从"三面"升为**五面**。
+- 🔻 **我上一轮说「架构 v1.7.15 ④『813 行／逐 thread 恒 1 次』已不成立」写得太宽**。经 W7 的面拆分：作废的是「逐 thread 恒 1 次」；813 作为 **pre-fix 面**读数仍成立。⇒ 措辞改为"抄本必须标面与时点"（O-7 改写）。
+
+### 5. 体制建议（总控问"要不要开一个能改整个项目的新窗口"）
+
+**我的答复：可以开，但只开一只、且关掉他窗；不要两套体制并存。** 三条实测依据：
+1. **收益是真的**：本窗三轮里大约一半时间花在"搬运坐标"（行号、偏移、md5、锚点）——而这正是转述体制的固定成本。
+2. **风险也是真的，且不是"转述不到位"这一种**：三十轮里的高代价事故全部是**读数被当结论**的形状——pre-fix 恒真、粒度（run vs thread）、面（`checkpoints` 1,322 vs `checkpoint_writes` 1,318）、mtime 当 HEAD、陈旧容器当被测构建。本轮两个实例就是我自己的错（`bypassrls` 推论、"813 作废"说过宽）——**是 W1B 与 W7 独立复算抓出来的**。⇒ 写者自己不会抓到自己。
+3. **并发收益会立刻变成负数**：批次 1 之所以能"6 块同时发"，前提是各窗落点不重叠、争用只有 `git index` 的提交时刻。全权窗口若与他窗并存 ⇒ 同一工作副本里多写者 ⇒ 必须串行，反而更慢。
+
+**建议形态（叫它 W8「集成收尾窗」）**：给它**全项目写权限**（改码、改测试、改 `deploy/**`、跑一次性容器、刷 `OVERVIEW.md`），但保留四条边界 ——
+① **判据权威仍在 `docs/07 §4.8`（架构）**：W8 不得自取 `U-xx`、不得改判据措辞；
+② **花钱仍转总控**（四件套照报）；
+③ **提交纪律**：显式路径、禁 `add -A`／`reset`／`--no-verify`、禁 stash；
+④ **验收仍由本窗独立复算**（我不碰它写的码，只裁"执行与证据是否一致"）——这条是我作为 QA 存在的唯一理由，去掉它就等于项目没有闭合判定者。
+排序上也省事：档位 A 的 8 项（A1…A8，7 项零额度）全落进一只手，**预计把我给的 3–5 协作日压到 2–3 天**；仍要留架构与总控的两件事：`U-129`／`U-123` 的结案句落笔、`O-12`（策略面店铺维度）定性。
+
+---
+
+# §四 · 第 7 轮复算（2026-10-02 北京 18:2x 起 · 档位 A 在途件的回执面）
+
+⚠️ 本轮**新增两份入库件**是我上一轮报告里还没有的：`98f8b04`＋`7afbde9`（W0 · T-10）、`8ca95cb`（W2A · T-14③）。总控上一轮说"w2a 和 w0 还在工作"⇒ 我按**盘面**而不是按转述裁：**两件都已落地，且都通过复算**。
+
+## 4.1 W2A（T-14③ 跨租户 RLS 行为断言）＝ **达成**（本窗一次性容器独立复算）
+
+跑法（不抄他们的读数）：自建一次性容器 `qa-rls-recheck`（`pgvector/pgvector:pg16`、端口 **55433**、库 `ecom_qa`），三条 DSN 全部走 env（`COMMERCEQL_TEST_{SUPER,RW,RO}_DSN`），cwd = `backend/`。
+
+| 我测的 | 读数 | 说明 |
+|---|---|---|
+| `pytest tests/integration/test_rls_tenant_isolation.py -q -rfEs` | **rc=0 ／ 5 passed in 2.50s** | 无 skip、无 xfail（`-rfEs` 空输出） |
+| 制品自证（不信 2.5s 这个"太快"的直觉） | `alembic heads` = **0005 (head)**；库内 `relrowsecurity=true` 表数 = **6**；`pg_policies` = **6** 条，命名 `p_<tbl>_tenant`、`cmd=ALL`、`roles={public}` | 夹具**真的**把迁移与策略建出来了，不是拿空库绿 |
+| 3/3 分裂（W2A 与我上轮都断言的形状） | `information_schema.columns` 里带 `shop_id` 的只有 **order_paid／product／shop** | 与 W1B `9f54569` 订正② **同结论** ⇒ 统一断言两态会在另 3 张恒红，他们的"主体＋惰性对照"分组是**必需**的而非修辞 |
+| 共享 `ecom` 未被触碰 | `app.embed_doc` = **197 行**（本轮跑前／跑后同数） | U-114 残余面本轮**无新增** |
+
+**我自己那把尺（不依赖他们的夹具）** —— 在 `app.product` 种 `QA_T1/QA_S1`、`QA_T1/QA_S2`、`QA_T2/QA_S1` 三行，用 `app_ro` 读 `app.v_product`：
+
+| 注入态 | 可见行数 | 判 |
+|---|---|---|
+| 未设任何身份 GUC | **0** | fail-closed ✅ |
+| `tenant_id=QA_T1`，`shop_ids` 未设 | **0** | 未设 ≠ 空串 ✅ |
+| `tenant_id=QA_T1`，`shop_ids=''` | **2** | `''` = 本租户全店铺 ✅ |
+| `tenant_id=QA_T1`，`shop_ids='QA_S1'` | **1** | 子集语义 ✅ |
+| `tenant_id=QA_T1`，`shop_ids='QA_S1,QA_S2'` | **2** | 多值 ✅ |
+| `tenant_id=QA_T2`（别家），`shop_ids=''` | **1** | `''` **不顺带放开别租户** ✅ |
+
+⇒ 我上轮写进 TASK_BOARD 的那句"只测未设会恒绿"成立，而这一族**两态并报**已经落地。收尾我自己种的行残留 = **0**。
+
+**反向对照（本轮我最想做的一条 —— 判"这条断言是不是恒绿"）**：用 out-of-tree 插件（`E:/tmp_qoder/qa_r3/neg/negctrl.py`，**零树改动**）把 `p_product_tenant` 换成 `U-109` 细节 4 **明令禁止**的 `coalesce(current_setting('app.shop_ids', true),'') = ''` ⇒
+`1 failed ／ 4 passed ／ rc=1`，且**只有** `test_shop_ids_unset_vs_explicit_empty_is_distinguishable` 红 ⇒ 还原原策略文本后回到 `5 passed ／ rc=0`。
+⇒ **判：这条断言不是恒绿，细节 4 的边界真的被钉住了。** ⚠️ 顺带量到覆盖面的一条边界（记进 §4.4 O-14 邻接，不单开单）：coalesce 若被加在 **`tenant_id`** 那一支而不是 `shop_ids` 那一支，本轮这 5 条里**只有** (a) `test_no_identity_yields_zero_rows_on_all_six_tenant_views` 会红（它未设身份 ⇒ 走租户支）；而"租户支被 coalesce、店铺支完好"这一形态**没有任何一臂**能抓 —— 因为 5 条里的每一臂在断言租户可见性时都**显式设了** `tenant_id`。
+
+## 4.2 W2A 对我 T-14② 的回答 ＝ **方向成立、口径归架构**
+
+判据出处**行号已核**：`docs/07:1113`（U-60 裁定行）与 `docs/07:2492`（§12.2 `embed_doc` 哨兵契约行）**都对得上**，不是编的行号。
+
+| 他们的说法 | 我的复算 | 裁定 |
+|---|---|---|
+| `audit_log／cost_ledger／gold_query` 三张"constructively 不可达"（`app_ro` 零 GRANT） | `information_schema.role_table_grants` 里 `app_ro` 对这 4 张的 GRANT 数 = **1**，唯一一条是 **`embed_doc \| SELECT`** | **成立**（可复算） |
+| `embed_doc` 靠检索层守 | `app/retrieval/dense.py:290` 确有 `AND tenant_id IN (:tenant_id, '*')`；`:275` 注释点名 `'*'` = 公共哨兵 | 我上轮的预判**方向成立** |
+| "但**第一道**是闸门白名单、不是检索层" | 这是**归属排序**不是执行事实 ⇒ 我不裁 | **上呈架构**（并采纳他们的建议：§12.2 该补一句"为何不加 RLS"，否则下一轮会被别人读成"缺"） |
+
+## 4.3 我上一轮的结论**错在机制**（自曝，并据此重写 O-13）
+
+上轮我说卫生门"结构上匹配不到 `user:pass@host` 形状"。**目标结论对，机制归因错**：我当时只测了 2 字符的合成用户/口令（`uu:pp`），把"串太短"误读成"形状不吃"。本轮把边界量出来后真机制是：
+
+| 形状 | 门的命中条件（实测） |
+|---|---|
+| `postgresql+psycopg://u:p@host` | 用户名 **≥3** 且口令 **≥3** ⇒ 命中 |
+| `postgresql://u:p@host`（**纯 scheme**） | 用户名 1–8 × 口令 1–8 **全 0 命中**；连 `someuser:somepassword@127.0.0.1` 亦 miss |
+
+⇒ **规则以 `+psycopg` 为前置 ⇒ 纯 `postgresql://` 这一族对 DoD④ 永久不可见。** 而 `deploy/loadtest/**`、各探针、以及 W2A 本轮新入库件的运行说明**恰恰都用纯 scheme**。⇒ 详见 §4.4 O-13（已升级为实测缺陷形状）与 T-19。
+
+## 4.4 DoD④ 全仓实测（只报路径／行号／布尔，**不落任何值**）
+
+粗尺：任何 `postgres(ql)?(\+[a-z]+)?://<用户≥3>:<口令≥3>@<host>` 形状。
+
+- 全仓命中该形状 = **61 处**；门规则命中 = **24**；**结构失明 = 37**；失明且**未被 allowlist 放行** = **35**。
+- 落在**实现／部署／测试面**（不是报告面）的失明点：`deploy/loadtest/load_synth_to_pg.py:42`（U-133 ①／R-2 那条属主口令）、`deploy/loadtest/w2b_materialize/_w2b_u112_probe.py:21`、`deploy/loadtest/README.md:1239`、`backend/scripts/probe_pool_close_u53.py:27,28`、`backend/tests/unit/test_health_probes.py:339,372`、**`backend/tests/integration/test_rls_tenant_isolation.py:46,47,48`（W2A 本轮新入库，三条纯 scheme）**。
+- 判据侧原文：`.gitleaks.toml:82`「迁移属主（postgres）的口令形态**不**在放行之列，任何受版本控制的文件里出现属主口令 DSN 都**必须红（DoD④）**」；`:26` 规则自述覆盖面 = "`postgresql+psycopg://user:password@host`"。
+- ⚠️ **同一道门当前是绿的**（`tests/unit/test_migration_dsn_hygiene.py` 我上轮跑 = passed）。⇒ 缺陷形状 = **"门绿 ＋ 它自述承诺覆盖的那族形状扫不到"**，**不是**"有人把某条放行错了"。
+- **不与 `U-134` 重复**：`docs/07:1165` 架构侧已经跑了**两把尺**（形状尺 27 文件／等值尺 18 文件／交集 16），并自证"形状尺对 2 个文件失明"。⇒ 本条是**第三条缝**：**U-134 的形状尺 `postgres(ql)?(\+psycopg)?://…` 能吃纯 scheme，而 `.gitleaks.toml` 的门规则不能吃 ⇒ 判据用的尺 ≠ 门用的尺。**
+
+## 4.5 新登记 O-14（当期**空真**、但下一个写者可在无红条件下种出的形状）
+
+`docs/07:2492` 写「Gold Query 类行的 `tenant_id` **永远非 `'*'`**（租户数据，§11.7）」，而 `embed_doc` **无 RLS 且 `app_ro` 有 SELECT**（本轮实测）⇒ 该不变式**当期无任何守卫**：
+
+| 尺 | 读数 |
+|---|---|
+| 现库 `kind` 分布 | 只有 asset 8 ／ column 75 ／ metric 9 ／ synonym 105，`'*'` 行 = 197、**租户行 = 0** |
+| **gold_query 行数** | **0** ⇒ 不变式当前**空真（vacuous）**，不是"被守住" |
+| 测试面 | `tests/unit/test_retrieval_dense.py:262` 只钉 **SQL 文本**含 `tenant_id IN (:tenant_id, '*')`；全仓**没有**"gold_query 不得带 `'*'`"的行为断言 |
+
+⇒ 一旦 W2B／W6 按计划"追加 gold_query 行"，写进 `'*'` 会**直接跨租户可读**（gold_query 含租户私有 SQL 答案 = 最敏感的一类），且**门禁不红**。⇒ 派单见 T-20（零额度、纯断言）。
+
+## 4.6 总控两条决策生效登记
+
+- **U-134 判据①**（轮换本机栈口令 vs 保留 allowlist 写成显式豁免登记）＝ 按本窗建议落：**不轮换 ＋ 显式豁免登记 ＋ 收 allowlist 范围，两步同批**。⚠️ 连带后果：**"存量一次性治理"必须先知道扩规则会点红几条**（§4.4 的 35）⇒ T-19 从"可选"变成**这一支的必经前置**。
+- **开新窗口（W8 集成收尾窗）**＝ 按 §三.5 的答复执行：**可以开，但只开一只、且关掉他窗**（四条边界不变）。⇒ 见 §4.7 的**移交清单形状**。
+
+## 4.7 若 W8 成立：本窗给它的移交件清单（我这边现成的）
+
+| 直接可用 | 出处 |
+|---|---|
+| 一次性容器**跑法与端口**（55433／`ecom_qa`／三条 env DSN） | 本轮 §4.1 |
+| 反向对照的**手法**（out-of-tree 插件 ＋ 捕获原 `pg_get_expr(polqual)` 再还原） | `E:/tmp_qoder/qa_r3/neg/negctrl.py` |
+| RLS **五面**检查清单（`relrowsecurity`／`relforcerowsecurity`／`relowner`／`pg_policies.qual`／`rolbypassrls`） | 上轮 W1B 订正后固化 |
+| DoD④ 的**两把尺差量**（61／24／37／35）＋ 失明点路径行号 | §4.4 |
+| 门禁命令形状（含 `--continue-on-collection-errors`、`lint-imports.exe` 须在 `backend/` 下、ruff 计数依赖 cwd） | `GATE_LOG.md` |

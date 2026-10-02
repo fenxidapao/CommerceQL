@@ -291,3 +291,87 @@ O-9：G-1 的判定驱动量已被改为含环境未备（W6 a86c091），你上
 [QA→架构 追加 · 零额度 · 未取号] O-10（尺对齐，不是缺陷）：U-133 判据②(b) 与 U-134 判据② 写的存量 = 18，我现测 = 13。差异形状 = 面：我的尺是「git ls-files 的已跟踪文件 × 与 deploy/.env 里 app_rw 口令段逐字节等值」= 13；你那两把尺含形状尺、且含第二把凭据（load_synth_to_pg.py:42 的超管串）。请点名"18"是哪把尺 —— 否则下一轮会多出第四种"两个数都对"的矛盾。
 O-11（给 U-134① 的决策输入）：「保留 allowlist ＋ 显式豁免登记」这一支的前提已被打破 —— app_rw 的口令虽是已登记 dev 占位串，但它就是本机 app_rw 能登录的凭据（等值 = True），而 compose 全文无 host_ip ⇒ 6379／5432／6432／8000 绑 0.0.0.0。⇒ 建议 U-134① 与 A5（host_ip 收敛）一起裁：先收敛回环 ⇒ 走豁免登记可省一次口令轮换与 13 个文件自清；不收敛 ⇒ 只能轮换。我不代裁。
 ```
+
+## 六、第三轮增量（W7／W1B 回执复算完 ⇒ 一张改判 ＋ 两张新单 ＋ 我撤回一句问法）
+
+| 单号 | 交给谁 | 要什么 | 判据出处 | 争用资源 | 花钱否 | 状态 |
+|---|---|---|---|---|---|---|
+| **T-10** | W0 | `U-133` 判据③ 守卫扩面 | `docs/07:1163` | `tests/contract/**` | 否 | **达成**（我复算：`7afbde9` 把 `test_no_env_file_dsn_derivation.py` ＋209 行、面二文档现读为「`deploy/loadtest/**` ＋ `eval/**`」；`cd backend` ＋ `pytest -q tests/contract` = **479 passed / rc=0**） |
+| **T-18** 🔴 | **W2D** | 同款清理：`backend/reports/w2d/probe_explain_timing_pg.py:47` 的字面 DSN | `docs/07:1163`（`U-133` 判据①②，同 `load_synth_to_pg.py` 一条规则）＋ `01 NFR`「密钥仅来自环境变量」`N-15` | `reports/w2d/**` | 否 | 待发（W7 上呈、我现测确认形状） |
+| **T-14④** | W1B ＋ W2A | **我撤回我上一轮的问法**（详见下） | `docs/07:1143`／ADR-10 | — | 否 | 已改写 |
+
+### 🔻 我撤回一句问法（T-14 第④条）
+
+我写的对拍是「**迁移 ⇒ 现库**」，W1B 现读答复：**迁移产出 = 0 条，真源 = `app/semantics/materialize.py::derive_policy_statements()`（ADR-10 派生、发布事务内执行）**；`0003_business_views.py` 的 docstring 自己写着"RLS／POLICY／GRANT 一条都不在这里"。⇒ **写成「迁移 ⇒ 现库」会把"0 条"读成"缺 6 条"，而 0 本就是对的。**
+⇒ 改写后的对拍 = **「派生器 ⇒ 现库」**，且 W1B 已把这条做成可复算断言：`cd backend` ＋ `../.venv/Scripts/python.exe -m pytest -q tests/unit/test_rls_policy_provenance.py` = **6 passed / 0.46 s / rc=0 ＠ `98f8b04`**（我跑）。它钉四件：迁移零产（走 AST 且**排除 docstring**，另设反向对照证明排除真在起作用）、ENABLE／FORCE **逐表成对**、命名契约 `p_{基表}_tenant`、"租户级但无 shop_id 列"集合**只减不增**。
+⇒ 另：W1B 提醒 `audit_log`／`cost_ledger` 是平台表、不在 `loaded.active_assets` 里 ⇒ 派生器结构上遍历不到 ⇒ 正确形态是给派生器加"平台表"分支；**若架构改裁"平台表走迁移"，则必须同批在 ADR-10 写例外**（否则两份真相）。
+
+### → W2D（T-18，可并入批次 1）
+
+```
+[QA→W2D 第三轮 · 零额度] ① 现测：backend/reports/w2d/probe_explain_timing_pg.py 共 176 行，:47 含「scheme://user:pass@host」形态的字面 DSN = True；且在 :40-:52 范围内未命中任何 getenv／environ ⇒ 它可能是**没有 env 出口的纯默认值**（W7 描述为"字面 + env 覆盖"，我这一读更严，请你自证）。
+② 请办：按 U-133 判据①②（07:1163）同规清理 —— 默认值改 None、只认环境变量或显式 --dsn、缺失即具名 fail；回执给文件:行号 ＋ 一条"不传参时连不上任何库"的负向证据。
+③ 提醒：这条不在面二守卫的能力面内（面二只管"从 .env 取 DSN"，见 W0 7afbde9 的自述），卫生门又靠 .gitleaks.toml 放行 ⇒ 现在是**无人守**的状态。
+```
+
+### → W7（两件小跟进，可与批次 1 合并）
+
+```
+[QA→W7 第三轮 · 零额度] ① 你④的面拆分我采纳并订正自己：作废的是「逐 thread 恒 1 次」，813 作为 pre-fix 面读数不被推翻；我已把 O-7 措辞改成「抄本必须标面与时点」。
+② 你②那句「DSN 卫生门的覆盖面不含 deploy/loadtest/**」我复算后要订正：test_migration_dsn_hygiene.py:285 是全仓 rglob（含 deploy/**），放行发生在 :314-315 的 allowlist（路径模式／口令等值）⇒ 是"扫到了但被显式豁免"。含义比你的版本更重：轮换口令若不收 allowlist 的路径模式，同一文件照样绿。已写成 O-13 上呈架构。
+③ 你⑦要 docker rm 那个 pre-fix 容器：可以，但请在 rm **之前**把 docker inspect（Config.Image ＋ Created）与 docker images 那两行原文存进你 RELAY —— 否则历史里"pre-fix 面"的坐标断链，我下轮复算无处对。
+④ 待你回执：U-133①② 落地的件号（默认值 None ＋ 新 env ＋ connect 前具名 fail ＋ --self-check 负向用例）。
+```
+
+## 七、批次表更新（现状）
+
+| 批次 | 待发／在途 | 说明 |
+|---|---|---|
+| 批次 1 | **已发**：W7（T-09①②③ 在途，待件号）、W2A＋W1B（T-14／T-16）、W0（T-10 **已达成**）、W1B（T-08 达成 ＋ 本轮④改判） | W0 一项可直接结案 |
+| 批次 1 尚未发 | **W6（T-11）**、**W4（T-12 ＋ T-17）**、**W2D（T-18 新）** | 三块彼此不争用 ⇒ 可与已发部分同时发 |
+| 批次 3（最后） | 架构：O-6／O-7（**措辞已改写**）／O-9／**O-10**／**O-11**／**O-12**／**O-13** ＋ `U-129`／`U-123` 结案句 | O-8 已撤（总控采纳） |
+
+---
+
+# 八、第 7 轮任务单增量（含**可直接转发的粘贴块**）
+
+## 8.1 状态刷新
+
+| 单号 | 交给谁 | 内容 | 本轮裁定 |
+|---|---|---|---|
+| **T-14③** | W2A ＋ W1B | 跨租户 RLS 两态集成断言 | ✅ **达成**（本窗一次性容器 `5 passed／rc=0` ＋ 反向对照 `1 failed／rc=1` ⇒ 非恒绿）⇒ **T-14 的 ①②③ 全部结案**，④ 已撤回改写 |
+| **T-16** | W2A ＋ W1B | `U-123` 判据② 夹具在真库跑 | ⏳ 未随 `8ca95cb` 落地（该件只含 `test_rls_tenant_isolation.py`）⇒ **仍在途** |
+| **T-10** | W0 | `U-133` 判据③ 守卫扩面 | ✅ **可结案**（`7afbde9`＋`98f8b04`） |
+| **T-19（新）** | W0 ＋ 架构 | DoD④ 门规则**先数一遍扩面会点红几条**（**不许先改文件**） | 🔴 **由 U-134① 的决策派生，是"存量治理"的必经前置** |
+| **T-20（新）** | W2B ＋ W6 | `embed_doc` 的 gold_query 哨兵不变式**加一条行为断言** | 零额度、纯断言；**不取 `U-xx`** |
+
+## 8.2 → W0（T-19）粘贴块 · 零花费
+
+```
+[QA→W0 第 7 轮 · 零花费 · 先数不改] ① 复算结论：DoD④ 的**本机替身门当前是绿的**，但它对 `.gitleaks.toml:82` 自己承诺的形状**永久失明**——规则 `commerceql-dsn-with-password`（pattern 长 47）实测**只吃 `postgresql+psycopg://`**（用户≥3 且口令≥3 才命中），**纯 `postgresql://` 一族 0 命中**（用户 1–8 × 口令 1–8 全 miss，连 `someuser:somepassword@127.0.0.1` 亦 miss）。
+② 我这面已跑（只报路径/行号/布尔，不落任何值）：粗尺 `postgres(ql)?(\+[a-z]+)?://<≥3>:<≥3>@` 全仓 = **61 处**；门命中 **24**；结构失明 **37**；失明且未被 allowlist 放行 **35**。失明点含实现面：`deploy/loadtest/load_synth_to_pg.py:42`、`deploy/loadtest/w2b_materialize/_w2b_u112_probe.py:21`、`deploy/loadtest/README.md:1239`、`backend/scripts/probe_pool_close_u53.py:27,28`、`backend/tests/unit/test_health_probes.py:339,372`、`backend/tests/integration/test_rls_tenant_isolation.py:46,47,48`（W2A 本轮新入库件）。
+③ 🔴 **本轮只要一个数，不要改动**：若把规则扩到吃纯 `postgresql://`，`gitleaks detect` 与本门会**一次性点红几条、落在哪几个文件**？（总控已裁 U-134① = 不轮换＋显式豁免登记＋收 allowlist 范围三步同批 ⇒ 没有这个数，存量治理无法开批，CI 会当场红。）
+④ ⚠️ 两条硬约束（都在你们面上，别绕）：(a) 改正则**禁 `(?!`／`(?<=`**（RE2 不支持，`.gitleaks.toml:28-32` 已记过一次 panic 事故，且 `test_migration_dsn_hygiene.py:72` 有断言钉）；(b) **不得用 `paths` 整文件放行来消红**（`:53` 你们自写的口径：「整文件放行 = 对扫描器不可见，而不是安全」）。
+⑤ 待裁（我已并行上呈架构，你不用等）：DoD④ 的承诺**是"仅 +psycopg 形状"还是"任何 user:pass@host 形状"** —— 这决定是**改门**还是**改那句话**，而改那句话 = 判据变更。
+```
+
+## 8.3 → W2B ＋ W6（T-20）粘贴块 · 零花费
+
+```
+[QA→W2B＋W6 第 7 轮 · 零花费 · 一条断言的形状] ① 判据出处：`docs/07:2492`（§12.2 `embed_doc`）原文「Gold Query 类行的 `tenant_id` **永远非 `'*'`**（租户数据，§11.7）」。
+② 我这面现测：`embed_doc` **未启 RLS**，且 `app_ro` 对 `audit_log/cost_ledger/embed_doc/gold_query` 这 4 张**只对 `embed_doc` 有 SELECT**（`information_schema.role_table_grants` = 1 条）⇒ 它**没有数据库层兜底**，唯一防线是检索层谓词 `app/retrieval/dense.py:290 AND tenant_id IN (:tenant_id, '*')`。
+③ 🔴 现库 `app.embed_doc` 的 `kind` 只有 asset 8／column 75／metric 9／synonym 105，**gold_query = 0 行** ⇒ 该不变式当前是**空真**：没有样本 ⇒ 现在"成立"不作数，而**你们两个窗正是被指派去追加 gold_query 行的**（`07:224` 注释「gold_query 由 W2B/W6 追加」）。测试面 `tests/unit/test_retrieval_dense.py:262` 只钉 SQL **文本**含该谓词，**没有任何断言**拦"`kind='gold_query'` 且 `tenant_id='*'`"。
+④ 请补（二选一即可，都要给 `文件:行号` ＋ 命令 ＋ HEAD）：(a) **写入侧**断言 —— 任何向 `embed_doc` 插 `kind='gold_query'` 的路径，`tenant_id` 必须非 `'*'`（装配期 raise 或参数校验）；或 (b) **只读行为断言** —— 以租户 A 身份检索，注入一条故意标 `'*'` 的 gold_query 夹具，断言 A 检索结果里**不出现** B 的 gold_query（两态并报：`'*'` 与真租户号）。⚠️ 别在共享 `ecom` 上写夹具（U-114），一次性容器同 T-14③ 跑法（端口自己另开，`-d` 指自己的库）。
+⑤ 我为什么开这张单而不是等出事：gold_query = 租户私有的 SQL 答案，是这张表里**最敏感**的一类；它当前**门禁不红**就能被写成公共可读 ⇒ 属"下一个写者无红创建跨租户面"的形状。
+```
+
+## 8.4 批次表（第 7 轮刷新，覆盖 §七）
+
+| 批次 | 待发／在途 | 说明 |
+|---|---|---|
+| **已达成、可结案** | **T-10（W0）**、**T-14①②③（W2A＋W1B）**、**T-08（W1B）** | 三件的复算证据都在本窗盘上，不再等他窗自证 |
+| **批次 1 尚未发** | **W6（T-11）**、**W4（T-12 ＋ T-17）**、**W2D（T-18）** | 三块彼此不争用 ⇒ 可同时发 |
+| **批次 2（本轮新增）** | **W0（T-19，先数不改）**、**W2B＋W6（T-20，纯断言）** | T-19 与 T-11 同属 W6／W0 但**不同文件面**（`eval/gates.py` vs `.gitleaks.toml`＋`ci.yml`）⇒ 可并发 |
+| **仍在途** | **W7（T-09①②③）**、**W2A＋W1B（T-16）** | `8ca95cb` 只含 T-14③ ⇒ T-16 未随件落地 |
+| **批次 3（最后发架构）** | O-6／O-7（改写）／O-9／O-10／O-11／O-12／**O-13（已升级为"判据与门不一致"）**／**O-14（新）** ＋ `U-129`／`U-123` 结案句 ＋ **DoD④ 承诺面归属**（改门 vs 改措辞） | O-8 已按总控裁定撤下 |
+| **档位 A 剩余** | **A5**（`host_ip` 收敛，唯一需动共享栈 ⇒ 须选无他窗跑的时点）、**U-134①②**（现依赖 T-19 的先数一遍） | A1／A2／A3 本轮已落 |
