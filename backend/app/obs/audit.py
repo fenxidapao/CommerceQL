@@ -38,6 +38,16 @@
   要补就必须**同时**给一条 `FOR INSERT WITH CHECK (true)` 的放行策略，
   并把 SELECT 的租户谓词定下来（`tenant_id` 列存在，谓词可表达）。
   这不是"加个策略就完事"，故不在本窗口擅自落 DDL。
+- ⚠️ **上面那条"只写 `FOR SELECT` ⇒ INSERT 被拒"只对 `FOR SELECT` 形态成立**（2026-10-02 补）：
+  若照**语义派生器**的形态写（`app/semantics/materialize.py::derive_policy_statements` 出的是
+  **不带 `FOR` 子句 = `FOR ALL`** 的策略，实测现库 6 条 `cmd = ALL`），其 `USING` 会**兼作 `WITH CHECK`**
+  ⇒ INSERT **不被拒**，而是**受 `tenant_id = current_setting('app.tenant_id', true)` 约束**。
+  ⇒ 失效方向换成另一种："**某条审计写入路径没注入 GUC 时，该行被拒**"（注入面脆弱性见 `U-109`；
+  今天唯一保证是三键同语句注入，`app/repo/dsn.py`）。**两条形态都要防**，别把这条读成"派生器形态就安全"。
+- ⚠️ **必须 `ENABLE` + `FORCE` 成对**（2026-10-02 补）：本表属主 = `app_rw`，而 PG 里
+  **表属主对 RLS 免疫**（走的是所有权豁免，**不是** `rolbypassrls` 属性）⇒ 只 `ENABLE` 不 `FORCE`
+  = **假边界**（外部读数会像"已启 RLS"）。现库 6 张业务表正是 `force = t` 才真生效 ——
+  该不变量已由 `tests/unit/test_rls_policy_provenance.py`（W1B）钉住。
 - **残余风险**：一旦将来出现**租户面**的审计读路径而仍走 `app_rw`，它会**静默**读到别家租户的行。
   届时要么补上面的策略对，要么在运维侧明确"审计仅属主/运维可读"。
 

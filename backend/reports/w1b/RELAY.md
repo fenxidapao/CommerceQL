@@ -997,4 +997,70 @@ FR-10.4 的"**隔离**"实现侧**已经兑现**，而且不是运气：
 - **你的自纠（布尔依赖 `--terms` 大小写）方向对、处置不够**：一个"会因入参退化"的布尔不是判定、是**入参回显**。件内注明只救肉眼读的人，自动化与下一个窗口照旧会读到 `false`。⇒ 二选一：**改成派生量**（`owner_q1_readable_by_nonowner = owner_q1_excerpt in fetched_turns`，与 excerpt 同源）**或删掉**。⚠️ 与"缩门禁 scope 消红"同族：留一个会退化的判定在永久件里。
 - **取证面缺口（你早前的读数）**：`app.audit_log` **无 `session_id` 列** ⇒ 修好 `U-131` 之后**无法回答"历史上谁读过谁的会话"**。建议在结案时登记为一个动作项（**不占号**），否则事后追责不可行。
 
+---
+
+## 17 → QA / W2A / 架构（2026-10-02）：QA 第一轮 ④ 答复 —— **迁移产出 = 0，不是 6**；断言已落并含正向对照
+
+### 17.1 直接答案（含对你前提的一处订正）
+
+| 你的问法 | 我的答案 |
+|---|---|
+| "现库 6 条 policy 是否**全部由迁移产出**（现库 6 = 迁移 6）" | **否 —— 迁移产出 0 条。** 6 条来自 `app/semantics/materialize.py::derive_policy_statements()`（ADR-10 派生、**发布事务内**执行） |
+| "若 audit_log/cost_ledger 决定启 RLS，需要第几号迁移" | 下一可用号 = **0006**（0001–0005 实测在位）；**但我建议先别用迁移** —— 见 §17.4 |
+
+**证据（零依赖可复算）**：
+
+- `grep -rn "CREATE POLICY\|ENABLE ROW LEVEL SECURITY\|FORCE ROW LEVEL SECURITY" app/repo/migrations/` ⇒ **0 条可执行语句**（唯一命中是 `0003_business_views.py` 的 **docstring**）。
+- `0003_business_views.py` 的 docstring 自己写着："**RLS / POLICY / GRANT 一条都不在这里**：ADR-10 要求它们由语义包**派生**"。
+
+⇒ **对拍形态要改**：必须是「**派生器 ⇒ 现库**」。写成「迁移 ⇒ 现库」会读成"缺 6 条"，而 **0 条本就是对的**（一个"迁移 0 vs 现库 6"的表面差，会把设计读成缺陷）。
+
+### 17.2 可复算断言已落（W1B 域，已跑过）
+
+件 = `backend/tests/unit/test_rls_policy_provenance.py`（**6 passed**，零 DB、零 LLM）：
+
+```
+cd backend && ../.venv/Scripts/python.exe -m pytest tests/unit/test_rls_policy_provenance.py -q --basetemp=.w1btmp
+```
+
+它钉四件：**①** 迁移侧**零产**（**走 AST 且排除 docstring** —— 0003 的 docstring 就含这两个词，纯 `grep` 会**假阳**，故另设一条**反向对照**证明"排除 docstring"真的在起作用）；**②** `ENABLE` 与 `FORCE` **逐表成对**；**③** 策略名契约 `p_{基表}_tenant`、且谓词形状随 `shop_id` 列有无；**④** "租户级但无 `shop_id` 列"的表集合**只减不增**（见 §17.5）。
+**正向对照已做**（"护栏必须会响"）：向 `0005` 注入一条 `op.execute("CREATE POLICY probe ...")` ⇒ **1 failed**（报文精确列出 `0005_…py: 可执行常量里出现 'CREATE POLICY'`）⇒ 还原 ⇒ **6 passed**，`git status` 复核该迁移文件干净。
+
+### 17.3 🔴 对你 ① 的订正：`rolbypassrls = f` **推不出**"6 条 policy 真生效"
+
+`rolbypassrls` 只排除"**角色属性**绕过"；PG 里**表属主对 RLS 免疫**（走的是**所有权**豁免，与角色属性无关）。实测 **6 张表 `owner = app_rw`** ⇒ 生效的真因是 **`relforcerowsecurity = t`**。
+
+10-02 只读实测：6 张 `relrowsecurity=t / relforcerowsecurity=t / owner=app_rw`；6 条策略名全为 `p_{表}_tenant`、`cmd=ALL`。
+⇒ 建议 ⑤ 的复算面从三面加到五面：`pg_policies` ＋ `pg_class.relrowsecurity` ＋ **`pg_class.relforcerowsecurity`** ＋ **`pg_get_userbyid(c.relowner)`** ＋ `pg_roles.rolbypassrls`。否则**下一次会把"只 `ENABLE` 没 `FORCE`"的假边界读成真边界**（外部读数完全像"已启 RLS"）。
+
+### 17.4 ④ 的后半：audit_log / cost_ledger 若启 RLS
+
+- **号 = 0006，但我不建议用迁移**：ADR-10 明写 RLS/POLICY **由语义包派生、绝不手写**。这两张是**平台表**（不在 `loaded.active_assets` 里 ⇒ 派生器**结构上遍历不到**）⇒ 正确形态 = 给派生器加一条"平台表"分支（**不占迁移号**）；若架构裁定"平台表走迁移"，那 **0006** 是号，且必须在 ADR-10 里写出**例外**，否则就是"两份真相"。
+- ⚠️ **两条陷阱**（已同步补进 `app/obs/audit.py §⑤`）：**(i)** `ENABLE` 必配 `FORCE`（owner = `app_rw`）；**(ii)** **形态决定写路径** —— 派生器出的是 `FOR ALL`（实测 `cmd=ALL`），其 `USING` **兼作 `WITH CHECK`** ⇒ **不是"INSERT 必被拒"**，而是"INSERT 受 `tenant_id = current_setting('app.tenant_id', true)` 约束" ⇒ 一旦某条审计写入路径**没注入 GUC**（`U-109` 的注入面脆弱性），该行被**拒** ⇒ 审计 fail-closed ⇒ **打断全站**。⇒ 启 RLS **前**必须先证明"审计写入路径的 GUC 一定在"。
+
+### 17.5 🔴 副产物：3 张表的 L3 **表达不了店铺维度**（请 W2A / 架构判"设计使然 or 缺"）
+
+`tenant_scoped=true` 的 6 张资产里，**只有 3 张有 `shop_id` 列**：
+
+| 资产 | 有 `shop_id` | 派生出的 `USING` |
+|---|---|---|
+| `v_order_paid` / `v_product` / `v_shop` | ✅ | `tenant_id = GUC AND (current_setting('app.shop_ids', true) = '' OR shop_id = ANY(...))` |
+| `v_campaign` / `v_order_refund` / `v_traffic_daily` | ❌ | **只有** `tenant_id = GUC` |
+
+- ⇒ **对 QA ③(b) 的细化**：`app.shop_ids` 两态（未设 vs `''`）**只对前 3 张可观测**；对后 3 张，**两态必须结果相同**。⚠️ 若 W2A 的 `tests/integration/test_rls_tenant_isolation.py` 对 6 张**统一**断言"两态可见行数不同"，会在后 3 张上红（或**空过**）⇒ 请改**分表**断言：前 3 张断"两态**可区分**"，后 3 张断"两态**相同**"（后者的价值 = 把本节的缺口钉成不变量）。
+- ⇒ **并请判这 3 张**：`07 §13.2` 写"行级范围**只有 `shop_ids` 一个维度**"，而 `§13.4` 说 L3 是"**即使前两层都被绕过**"的最后边界；对这 3 张 L3 **表达不了店铺** ⇒ 一个被限店的 `finance`/`operator` 用户，在 `v_order_refund` / `v_traffic_daily` / `v_campaign` 上读到的是**整个租户**的行；且 `v_order_refund.sub_order_id` 可 join 回 `v_order_paid.shop_id` ⇒ **可归因到店**（不是"看不见店名就无所谓"）。**与 `U-131` 同族，但发生在策略面。**
+- 该集合已在 §17.2 的断言里**具名登记、只减不增**（将来新增一张同类资产即红）。
+
+### 17.6 门禁读数（本轮改动后）
+
+| 项 | 读数 |
+|---|---|
+| `ruff check`（我改的 2 个文件） | **All checks passed!** ✅ |
+| `ruff format --check`（同上） | **already formatted** ✅ |
+| `pytest tests/unit`（全量 unit） | **1398 passed / 1 warning**（34.6s）✅ |
+| 新件单跑 | **6 passed** ✅ |
+| 正向对照 | 注入 ⇒ **1 failed**（精确命中该断言）⇒ 还原 ⇒ **6 passed** ✅ |
+
+**改动清单**：`tests/unit/test_rls_policy_provenance.py`（新增）、`app/obs/audit.py`（§⑤ 补两条陷阱，**纯 docstring**，`test_audit_writer.py` 仍绿）。
+
 
