@@ -872,12 +872,13 @@ docker exec commerceql-pg-1 psql -U app_rw -d ecom -tAc "select count(*) from ap
 
 | 项 | 读数 |
 |---|---|
-| HEAD | **`ce85db0`** |
+| HEAD（首跑） | **`ce85db0`** |
 | 面一 `tests/integration/**` | **0** 命中 |
 | 面二 `deploy/loadtest/**`（12 个 `.py`） | **1** 命中（真违规，见 §15.4） |
 | 面二 `eval/**`（18 个 `.py`） | **0** 命中 |
 | 守卫自身 | **10 passed**（原 7 条 + 新增 3 条） |
 | `pytest -q tests/contract` | **479 passed, 1 warning**，rc=0 |
+| 复跑（**含本提交的干净 HEAD `7afbde9`**） | `tests/contract` = **479 passed**，rc=0（同一数字，防"首跑是侥幸"） |
 | ruff ① **本轮件形状** | `ruff check tests/contract/test_no_env_file_dsn_derivation.py` ⇒ **All checks passed** |
 | ruff ② **整目录形状** | `ruff check tests/contract/` ⇒ **All checks passed** |
 
