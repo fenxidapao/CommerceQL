@@ -102,3 +102,68 @@
 | 全树 pytest ＋ 一次性容器（T-16、T-20、T-11②） | **本窗内串行、与 QA 并发需报备** | 新容器名与端口要现读 `docker ps -a` 防撞；禁共享 `ecom` |
 | 任何要额度的批（评测重跑／五场景／T-15） | **必须串行 ＋ 需总控批** | `LLM_SEMAPHORE_FLASH` 贴顶；共享栈单写者 |
 | A5（compose 加 `host_ip`） | **必须挑无他窗在跑的时点 ＋ 需批** | 要重建 4 个共享容器 = 挤停全栈 |
+
+## §二 第 2 轮（2026-10-02 19:4x–20:0x +0800 ｜ 起始 HEAD `c7cf34a` ｜ 零额度 · 零跑批 · 未动共享栈 · 未起停容器）
+
+### 1. QA 第 2 轮三条账面订正 —— 逐条接受，并各带一条现读凭据
+
+| # | QA 指出 | 本窗处置 | 现读凭据 |
+|---|---|---|---|
+| (a) | r23 第二处排除式在 **539** 不是 538 | **接受**，`grep -n` 复现 | `deploy/loadtest/r23_thread_from_checkpoints.sql` 的三处 = **491／539／577**（538 是 join 的起始行，排除式在 539）；另 `w4:157/189/220/253`、`w6:516` ⇒ **8 处行号全部现读复述** |
+| (b) | 「142 行输出逐字节同」**缺 psql 输出格式这一面** | **接受**，本轮起**两面并报** | 面 1 = psql **默认对齐格式**：HEAD 版 155 行 ／ 本轮版 175 行（含表头与分隔行）；面 2 = `-t -A` **非空行**：**HEAD 51 行 ／ 本轮 63 行**（51 ＋ `⑰c` 的 11 行 ＋ `⑱` 的 1 行 = 63 ⇒ 闭合）⇒ **QA 那把 51 与本窗的 HEAD-51 同尺对上**；「逐字节同」那句只在**面 1 ＋ 三版互 diff**这个限定下成立，已在 §一 就地作废（🔻 失效时刻 = 本轮） |
+| (c) | 停用「docs=c7cf34a」这种记法 | **接受** | `docs/**` 在本项目 = **保留且不在 git 的契约路径**；凡指提交一律写「提交 `c7cf34a`」。**本窗至今未写 `docs/**` 一行**（`git -C docs rev-parse` 仍 fatal） |
+
+### 2. 格2 的三态 —— **接受 QA 的方向，并按本窗自己的尺复算**
+
+- 尺 A（**按修法时刻**，边界 = `33675b9` 落地 `2026-09-30T14:25:35+00`，run 首见 ts 与它比）：`pre_fix` = t2_runs **61**／`t2_routed_supp` **5**／**格2 = 5**／格3 = 0；`post_fix` = **3**／**1**／**格2 = 0**／格3 = **3**。
+- 尺 B（**按日**，即 QA 第 2 轮那把尺的近似）：`2026-09-29` = 38／5／**5**／0；`2026-10-01` = 3／1／**0**／3；其余各日 t2_runs 合计 23 条而 `t2_routed_supp` 全 0（09-19 15、09-28 8、09-22/23/20/21/16 各 0）。
+- **对表结论**：尺 A 与尺 B **同域同值**（09-30 全天零 run ⇒ 日期代理这一次没与构建身份打架），且与 QA 的方向一致 ⇒ 本窗 §一.4 那句「格2 = 5 ⇒ 未达成」**就地作废**，正解 = **`n/a`（该作用域不含可判样本，5 条全是修法前存量）**；`post_fix` 域 **格2 = 0 可当验收位，但 n = 1**（只 1 条被路由进 `audit_supp`）⇒ **不得升格成率**。
+- ⚠️ 两把尺都是**日期代理 ≠ 构建身份**（QA 已点名）。严格分域的前置 = **T-11②**（闸门输入产物自报 `self_reported_rev`）⇒ **本窗接受 QA 的意见，把 T-11② 从尾账升为第 3 轮正式项**；在此之前所有分域读数的标签只许写 `date_proxy__…`。
+
+### 3. T-21（新单，零额度）= 已落地：全仓**唯一一处**形状守卫 `r23` 的 **⑱**
+
+- 守的东西：`split_part(task_path, ', ', 2) <> '__start__'` 的正当性依赖两条约定，**若变两个方向都是假绿** —— 守卫 1：不含 `', '` 的 terminal 行必须 0（否则 `split_part` 返空串 ⇒ `'' <> '__start__'` 恒真 ⇒ 入口复位写行被算成"本轮自写终态"）；守卫 2：含字面 `__start__` 但不在第 2 段的必须 0（否则漏排）。
+- 现测（`cd CommerceQL` ＋ `docker exec -i commerceql-pg-1 psql -U postgres -d ecom -t -A -F '|' -f - < deploy/loadtest/r23_thread_from_checkpoints.sql`，rc=0、0 条 ERROR，19:5x）：`terminal_rows` **825**／`g1_no_delim__want_0` **0**／`g2_start_outside_seg2__want_0` **0**／`start_rows_excluded` **6**／`seg2_node_kinds` **8**／`shape_ok` **t**。
+- 🔴 **QA 那条提醒已被本窗现测坐实并写进件里**：`__start__` 那 6 行的 `type` 存的是**字符串 `'null'`** —— `type = 'null'::text` 命中 **6**、`type is null` 命中 **0**；自证法 = `select null::text, 'null'`（`-t -A` 下真 NULL 显示为**空**，所以印出来的 `null` 是值）。⇒ **不得拿 `type is not null` 当挡**。
+- 只放一处的理由：8 处共享同一条约定 ⇒ 三件里各抄一份 = 造第三份真相。`w4:⑫` 与 `w6:GRID23` 的注记里只写**指针**指向 ⑱。
+- 三态联动已写进件里：`shape_ok = f` ⇒ 本件 ⑮/⑯/⑯b/⑰/⑰c 的 `wrote_terminal` 系读数**一律不引用**（作废，不是重新解释）。
+
+### 4. T-22（零额度部分）= 已落地：三处**分域并报**，标签带分域依据
+
+| 件 | 加的东西 | 出口形状 | 现测（粒度 = run，分母 = 全库带 `tk_` 的检查点组） |
+|---|---|---|---|
+| `deploy/loadtest/r23_thread_from_checkpoints.sql` | 新语句 **⑰c**（两把尺同框：A 按修法时刻 ＋ B 按日）＋ `⑰` 上方一行 🔻 注 | 11 行（A 两行 ＋ B 九行） | A：`pre_fix 61/5/5/0`、`post_fix 3/1/0/3`；B：09-29 `38/5/5/0`、10-01 `3/1/0/3`，其余 `t2_routed_supp = 0` |
+| `backend/reports/w4/probe_prod_checkpoint_terminal.sql` | 新语句 **⑫**（列尾带 `domain_ruler = date_proxy__33675b9@2026-09-30T14:25:35Z`）＋ 注记指向 `r23 ⑱` | 2 行 | `post_fix 3/1/0/3`、`pre_fix 61/5/5/0` ⇒ **与 ⑰c 逐字同** |
+| `backend/reports/w6/probe_audit_invariant.py` | 新常量 `GRID23_BY_DOMAIN_SQL` ＋ 出口字段 `writes.grid23_by_domain`（含 `domain_ruler`、`domain_ruler_is_not`、`read_as` 三件）；**不改上面任何一格的形状** | 运行时落 JSON | SQL 单跑 rc=0 ⇒ `post_fix 3/1/0/3`、`pre_fix 61/5/5/0` ⇒ **三件同值** |
+| ⑰ 本体 | **只改 verdict 文案**（`ge2 = 5 ⇒ 未达成` → `ge2 = 5 ⇒ 本行不作判（混合域）…三态只许读 ⑰c`），数值一格未动（`1384/64/5/3/6`） | — | diff 证据：与 HEAD 版输出对表，差异只有 ⑰ 文案 ＋ 新增 ⑰c/⑱ ＋ ⑭c 随秒年龄 ⇒ **属标签变更，不属判据变更**（判据措辞在 `07 §4.8`，本窗无权改） |
+
+### 5. 本轮的门禁回归（每条带命令形状与真 rc）
+
+| 门 | 命令形状 | 真 rc | 读数 |
+|---|---|---|---|
+| ruff（`backend` 整目录） | `cd CommerceQL/backend` ＋ `PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe -m ruff check --config pyproject.toml .` | **0** | **All checks passed（0 条）** @ `c7cf34a` 之后的工作副本 |
+| py_compile | 同解释器 `-m py_compile backend/reports/w6/probe_audit_invariant.py` | **0** | 通过 |
+| r23 全件 | 见 §3 命令 | **0** | 0 条 ERROR；`-t -A` 面 63 非空行 |
+| w4 探针全件 | `cd CommerceQL` ＋ `docker exec -i commerceql-pg-1 psql -U postgres -d ecom -f - < backend/reports/w4/probe_prod_checkpoint_terminal.sql` | **0** | 0 条 ERROR，含 ⑫ 两行 |
+| 共享 `ecom` 未被写 | `select count(*) from app.embed_doc` | **0** | **197**（本轮跑前／跑后同数，U-114 残余面无新增） |
+| 花费 | `select count(*), round(sum(cost_cny),6), max(created_at) from app.cost_ledger` | **0** | **1,601 ／ ¥2.635700 ／ 2026-10-01T12:56:32.538701+00** ⇒ 与 QA 两轮逐字同 ⇒ **10-02 全天仍零新增**；本窗零花费 |
+
+### 6. 本窗自曝（第 2 轮一条，如实记）
+
+- 🔴 **本轮我自己把 ruff 弄红过一次**：新加的 `dict(zip(grid_cols, r))` 漏 `strict=` ⇒ `B905` 一条、`rc=1`。修成 `strict=True` 后回到 0 条。这正是 `GATE_LOG.md` 里「改完必须跑门」那条的形状：**代码写完就报绿是错的**，必须跑完门再报。失效面 = 我若在红的那一版直接入库，`deploy/**` 之外的 lint 门会被本窗弄红。
+- 顺带一次环境坑：在 Git Bash 里给 Windows Python 传 `/e/tmp_qoder/…` 路径 ⇒ `FileNotFoundError: \\e\\tmp_qoder\\…`（MSYS 路径不改写给 Python）。正解 = 一律写 **`E:/tmp_qoder/…`**。
+
+### 7. 第 3 轮的路（顺序含 QA 建议，零额度优先）
+
+**T-19（先数不改）→ T-20（gold_query `'*'` 行为断言）→ T-16（一次性容器跑 `U-123` 判据② 夹具）→ T-11②（闸门输入自报 rev，= 严格分域的前置，本轮升为正式项）→ T-09 剩余面（`load_synth_to_pg.py` 的 `U-133`①② ＋ T-18 同形清理）→ T-17／T-18 → A5（等总控给时点）**。
+T-22 里"把 post-fix 的 n 从 1 抬上去"要真实流量 ⇒ **不跑**，届时按四件套（最小充分几何／进图条数／`is_peak` 档／题目深度）报总控。
+
+### 8. 本轮落盘指纹（现算，非凭手感）
+
+| 件 | CRLF | bare CR | LF | md5_raw | md5(LF 归一) |
+|---|---|---|---|---|---|
+| `deploy/loadtest/r23_thread_from_checkpoints.sql` | 0 | 0 | 695 | `ad37d1156372` | `ad37d1156372` |
+| `backend/reports/w4/probe_prod_checkpoint_terminal.sql` | **359** | 0 | 359 | `49a12fc97c9c` | `4668b828d7ae` |
+| `backend/reports/w6/probe_audit_invariant.py` | 0 | 0 | 1733 | `61b595ceefd3` | `61b595ceefd3` |
+
+⚠️ `w4` 那份是**工作副本 CRLF、入库 LF**（`.gitattributes = * text=auto eol=lf`）⇒ 两个 md5 都写、引哪个必须点名面；`git status` 干净不等于字节等于 blob。
