@@ -101,3 +101,16 @@ PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe -m app.core.enum
 | ruff／py_compile | `cd backend/` ＋ `../.venv/Scripts/python.exe -m ruff check reports/w6/probe_audit_invariant.py --config pyproject.toml`；同解释器 `-m py_compile` 同件 | **0／0** | `All checks passed!` | `c040280` | 与 W8 报的 0 条一致 |
 | 零花费与库损伤 | 只读四合一（`app.cost_ledger`）＋ `count(*) from app.embed_doc` | **0** | 台账 **1,601**／**¥2.635700**／max `2026-10-01 12:56:32.538701+00`／**今日（UTC+8）新增 0 条**；`embed_doc` **197** | `c040280` | W8 的"全天零新增"坐实 |
 | 越界检查 | `git show --stat` 三笔 ＋ `wc -l ../docs/07…` ＋ `sed -n '1078p'` | **0** | 三笔仅动 `r23`／w4 sql／w6 py／`reports/w4+ w8/RELAY,DELIVERY`；`docs/07` 仍 **3,642** 行、v1.7.18、L1078 = 「下一个可用号 = `U-135`」 | `c040280` | 它补记引用的三个事实**属实**，非编 |
+
+## 第 10 轮（W8 第 3 轮复算 ＋ 反证自跑）
+
+| 项 | 命令形状 | 真 `rc` | 读数 | HEAD | 备注 |
+|---|---|---|---|---|---|
+| 反证复现（本轮最重的一条） | 自起 `docker run -d --name qa-t23-neg -p 127.0.0.1:55442:5432 -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=ecom_neg pgvector/pgvector:pg16` ＋ 跑夹具 ＋ 用件内 `grab()` 从 `2ae0b43` 与 HEAD 各抽 ⑰／⑰c ＋ 四次 `psql -t -A -F'\|' -v win_a/win_b/upref` | **0／0／0／0** | 旧版假绿逐字复现；新版两个 verdict 同降不可判；⑰c 四行全不可判；夹具自检 g1=1 | `d6a6a2a` | 🔴 夹具明写「绝不得对共享 `ecom` 执行」⇒ 我只在自己的空库里跑，跑完 `docker rm -f` |
+| 守卫在正常态是否静默 | `cd CommerceQL` ＋ `docker exec -i commerceql-pg-1 psql -U postgres -d ecom -t -A -F'\|' -v win_a/win_b/upref -f - < deploy/loadtest/r23_thread_from_checkpoints.sql` | **0** | 63 非空行／0 ERROR／**0 行含 `shape_guard_failed`**；⑰c `post_fix 3\|1\|0\|3\|t\|0\|0\|非空真达成（ge2 = 0 且 n = 1…）`、`pre_fix 61\|5\|5\|0\|t…` | `d6a6a2a` | 与第 9 轮同数 ⇒ 读数未动 |
+| 它的自曝归因核对 | `git show 2ae0b43:backend/reports/w6/probe_audit_invariant.py \| grep -c "group by 1, 7"` ＋ `sed -n '544p'` | **0** | **0 命中**；第 544 行 = `… group by 1 order by 1` | `d6a6a2a` | ⇒ "第 2 轮一直是坏的"错；`9cf77ac` 的 diff 显示是本轮加 verdict 时引入 |
+| 守卫的 scheme 面 | 直调 `eval/pg_guard.force_readonly()`，四 scheme × 发明串 | **0** | 接受 `postgresql`／`postgresql+psycopg`；拒 `+asyncpg`／`postgres`；`leak_user=leak_pass=False` | `d6a6a2a` | 我第一版把 `eval` 相对路径加进 `sys.path`（cwd=`backend/`）⇒ `ModuleNotFoundError`；改绝对路径后成立 |
+| 无守卫探针的实际写法 | 四件各 `grep -oE "postgres(ql)?(\+[a-z]+)?://"` ＋ 环境变量名 | **0** | 全为 `postgresql://` 或 `postgresql+psycopg://`；变量名三处不一（`COMMERCEQL_PROBE_DSN`／`PROBE_PG_DSN`／`COMMERCEQL_TEST_RW_DSN`） | `d6a6a2a` | ⇒ T-24 无迁移障碍 |
+| 它自曝残骸的入库态 | `git show 29a228c:backend/reports/w8/RELAY.md \| wc -l` ＋ `\| md5sum` | **0** | **344 行**、blob md5 `1c955bd8f581a791…` = 它引的值 ✓；工作副本 HEAD = `d7a71c07e655…`（后续加了 14 行） | `d6a6a2a` | 引 md5 必须点名是 blob 面还是工作副本面 |
+| 门禁与库面 | `cd backend/` ＋ `../.venv/Scripts/python.exe -m ruff check --config pyproject.toml .`；只读台账与 `embed_doc` | **0** | ruff `All checks passed!`；台账 **1601**／**¥2.635700**／10-02 起（UTC+8）新增 **0 行**；`embed_doc` **197** | `d6a6a2a` | 零花费坐实 |
+| 越界检查 | `git show --stat` ×4 ＋ `wc -l ../docs/07…` ＋ `sed -n '1078p'` | **0** | 只动 `r23`／w4 sql／w4 RELAY／w6 py／w8 三件；`docs/07` 仍 **3,642 行**／v1.7.18／`L1078` = `U-135` | `d6a6a2a` | 它引用的三个事实属实 |
