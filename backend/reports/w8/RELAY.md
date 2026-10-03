@@ -838,7 +838,13 @@ G-8 UNVERIFIED  澄清率 54/166 = 32.5%；澄清后一次成功 0.0%
 
 ⇒ 题面里的**租户码自指**被判成"未识别实体"。真实用户不会打自己的租户码（这是冻结集为了钉死租户而留下的夹具形状），但产品侧本来也不该问"T_A 是什么意思"。
 改动：`app/planner/payloads.py` 新增 `TENANT_SELF_REFERENCE_NOTE`，只进 `normalize` / `normalize_intent` / `intent` 三个理解任务，**不进 `plan`/`gen_sql`/`repair`**（`constraints` 是多阶段共用文本面，一条措辞改一个阶段的判据 —— 这条边界由 `tests/unit/test_planner_payloads.py::TestTenantSelfReferenceNote` 两面守住）。
-**UNVERIFIED**：23:03 起上游把调用打成 **HTTP 401 `Authentication Fails, Your api key: ****d46d is invalid`**，两次子集试跑（12 条 + 1 条）全部 `llm_degraded / template_only`、实花 ¥0 ⇒ 这条改动的评测收益**没有读数**，要等密钥换掉后重跑 `--live`。匣带里因此混进 4 条"认证失败"响应，已 `git restore` 撤掉（留着就会污染以后的回放）。
+**UNVERIFIED**：23:03 起两次子集试跑（12 条 + 1 条）全部 `llm_degraded / template_only`、实花 ¥0。匣带里因此混进 4 条"认证失败"响应，已 `git restore` 撤掉（留着就会污染以后的回放）。
+🔻 **同轮具名订正（原归因方向写错了；23:4x 现测两把 key 的对照）**：上面这句我原本写成"上游把调用打成 HTTP 401 ⇒ 密钥失效、要换 key"。**不对**。实测三件：
+① `deploy/.env:35` 那把（尾号 `23e8`）直连 `POST https://api.deepseek.com/chat/completions` ⇒ **HTTP 200**（好使）；
+② 我这边的**进程环境变量** `DEEPSEEK_API_KEY`（来源 = Windows **用户级**环境变量，尾号 `d46d`）⇒ **HTTP 401 `Authentication Fails, Your api key: ****d46d is invalid`**；
+③ `eval/_bootstrap.py:68` 用的是 `os.environ.setdefault(key, value)` ⇒ **进程环境赢**，于是壳里那把过期 key 挡住了 `.env` 里的好 key。演示栈不受影响（`docker compose exec -T api printenv DEEPSEEK_API_KEY` 尾号 = `23e8` ⇒ 浏览器那一问是真跑成功、出表 30,768,819.37）。
+⇒ 真实欠账**不是**"额度/密钥要换"，而是"本机有两把同名 key、壳里那把过期"；重跑姿势 = `env -u DEEPSEEK_API_KEY …` 之后再跑（或把用户级变量清掉）。
+🔴 方法论：`401` 这个读数是**真**的，但"所以要换 key"是我给它加的因果，当时没有对照臂。按 `只报实测` 的规矩，因果句必须自己跑对照 ⇒ 本轮补的就是那两发 curl（复算：对两把 key 各发一次 `max_tokens=1` 的 chat 请求，比 HTTP 码）。
 
 ### 9. 演示面复走查（真开浏览器，第五件）
 `api` 镜像重建（含 §2 的四处修复）后走 `deploy/runbook/README.md` §5.1 三步：
@@ -890,7 +896,7 @@ docker compose -f deploy/docker-compose.yml exec -T pg psql -U postgres \
 | --- | --- | --- | --- |
 | 零额度代码面 | 闸门/规划/评测侧改动互不争用（本轮四处修复＋两处评分器修复同轮落地） | — | 单窗体制 |
 | 门禁面 | `pytest -k "ast or gate"` 与探针可与全量套件并行 | 全量套件要 cwd=`backend`；集成层要一次性库；**回放与全量套件别同时跑**（`tests/eval/*` 会读 `eval/results_v1.json`，写到一半就是 JSON 解析错） | 本轮实测过这个串行列 |
-| 要钱的跑批 | — | `--live` 重评测（§8 那条改动的收益仍欠一次读数） | 🔴 **当前阻塞：上游 401，密钥失效** ⇒ 不是额度问题，是凭据问题，要他换 key |
+| 要钱的跑批 | — | `--live` 重评测（§8 那条改动的收益仍欠一次读数） | 🔻 原先写"阻塞＝密钥失效、要他换 key"，**归因错了**（见 §六.8 的对照）：`.env` 那把好使，挡住它的是壳里的用户级旧 key ⇒ 姿势改成 `env -u DEEPSEEK_API_KEY` |
 | 共享栈 | — | `api` recreate、任何落库迁移 | 单写者；本轮 recreate 1 次 |
 | 判据侧待裁 | 可与上述并行（不动代码） | 金标默认谓词口径（§5）、上游不可用的终态归类（§9） | 都影响门禁语义，本窗不自签 |
 
@@ -899,11 +905,14 @@ docker compose -f deploy/docker-compose.yml exec -T pg psql -U postgres \
 > ① `G-2/G-5/G-8` 输入件的取证等级（`eval/reporter.py` 的 `gate_provenance`，`results_v1.json` 现自报 rev＋`dirty=False`）；
 > ② 我说"32 条拒绝里 30 条是闸门自伤"（`backend/reports/w8/probe_live_ast_rejections.json` 的 `class_tally` 与 `model_unknown_column_tally={}` 两栏，命令见 RELAY §六.10①）；
 > ③ 我说"EX=0 有两处是量具"（`tests/eval/test_scorer_sandbox_path.py` 三条守卫，其中一条是 AST 形状尺；反证 = 把 `to_sqlite_sql` 去掉就会红）。
-> 已知欠账：§六.8 的租户自指改动**没有评测读数**（上游 401），别把它算进"已验证"。
+> 已知欠账：§六.8 的租户自指改动**没有评测读数**（壳里那把过期 key 挡住了 `.env` 的好 key，见 §六.8 的 🔻 订正），别把它算进"已验证"。
 >
-> **转密钥／额度持有人**：`DEEPSEEK_API_KEY`（尾号 `d46d`）自 2026-10-03 23:03 +0800 起被打回
-> `Authentication Fails … api key is invalid`。本轮花费只有批前批准的 ¥0.337171 ＋ 演示 1 问 ¥0.003221；
-> 之后两次试跑都是 ¥0（全部降级）。要重跑 §六.8 的收益读数，需要先换密钥。
+> **转密钥／额度持有人（🔻 本段已按实测改写；原先写的是"请换 key"，那句不对）**：
+> 本机有**两把**同名 `DEEPSEEK_API_KEY`。① `deploy/.env:35`（尾号 `23e8`）实测 **HTTP 200**，不需要换；
+> ② Windows **用户级**环境变量那把（尾号 `d46d`）实测 **HTTP 401 `api key is invalid`**。
+> 因为 `eval/_bootstrap.py` 用 `os.environ.setdefault` ⇒ 壳里那把赢，好 key 被挡住。
+> **要做的动作不是发新 key，而是：清掉用户级 `DEEPSEEK_API_KEY`（或让跑批统一用 `env -u DEEPSEEK_API_KEY`）**。
+> 本轮花费仍只有批前批准的 ¥0.337171 ＋ 演示 1 问 ¥0.003221；两次试跑都是 ¥0（全部降级）。
 
 ### 14. 对外件已跟着刷新（第五件的收尾）
 `OVERVIEW.md`（工作树外的对外落点，不在 git 里 ⇒ 无需提交）改了六处、全部带 🔻 而不删历史读数：
