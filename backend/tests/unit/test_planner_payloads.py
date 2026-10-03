@@ -716,3 +716,34 @@ class TestStableTextAndTaskWiring:
             "history_questions"
         ]
         assert "history_questions" not in intent_payload(prompt_ctx, question="q")
+
+
+class TestTenantSelfReferenceNote:
+    """租户自指说明只进**理解三任务**，不进 `plan`/`gen_sql`（`constraints` 是共用文本面）。
+
+    实测（2026-10-03 真打批次）：63 条 `clarify_needed` 里最主要的一类是
+    `reason_code=unmapped_entity` —— 问句里原样出现的租户码被当成"无法映射的实体"，
+    于是最简单的题（"T_A 的在架商品数是多少？"）停在澄清，永远走不到 SQL。
+    """
+
+    def test_note_reaches_the_three_understanding_tasks(self, prompt_ctx: PromptContext) -> None:
+        for payload in (
+            normalize_payload(prompt_ctx, question="q"),
+            normalize_intent_payload(prompt_ctx, question="q"),
+            intent_payload(prompt_ctx, question="q"),
+        ):
+            text = payload["constraints"]
+            assert "范围自指" in text
+            assert "据此判 `clarify_needed`" in text
+            #: 注入防护声明必须仍在（共用文本面：加一句不得把另一句挤掉）
+            assert INJECTION_DECLARATION in text
+
+    def test_note_does_not_leak_into_plan_or_sql(self, prompt_ctx: PromptContext) -> None:
+        """`plan`/`gen_sql`/`repair` 读同一槽位 ⇒ 一条改变另一阶段判据（同 `gen_sql` 表名那次）。"""
+        for name, payload in (
+            ("plan", plan_payload(prompt_ctx, question="q")),
+            ("gen_sql", gen_sql_payload(prompt_ctx, question="q", plan_block="计划块")),
+            ("repair", repair_payload(
+                prompt_ctx, question="q", plan_block="计划块", error_digest="摘要")),
+        ):
+            assert "范围自指" not in payload["constraints"], f"{name} 被顺手改了判据"

@@ -128,6 +128,20 @@ INJECTION_DECLARATION: Final[str] = (
 #: （比照 W3A 对"租户日预算 10 元"的处理）：数字是经验值，不假装它有上游依据。
 MAX_HISTORY_TURNS: Final[int] = 6
 
+#: 理解阶段（`normalize` / `normalize_intent` / `intent`）的**租户自指**说明。
+#: 实测（2026-10-03 真打批次 63 条 `clarify_needed` 响应）：问句里原样出现的租户码被当成
+#: "无法映射到任何已登记资产"的实体 ⇒ 整条链路停在澄清，误拒/澄清率都被这一个 token 抬高。
+#: 数据范围本就由调用者身份确定（RLS + 租户隔离），用户把自己的租户标识打进问句
+#: （复制粘贴、多环境核对）不构成歧义，也不该要求用户解释。
+#: ⚠️ 只进这三个任务，**不进 `plan`**：`constraints` 是多阶段共用文本面，
+#: 一句话改变另一阶段的判据（同 `gen_sql` 表名规则那次的教训）。
+TENANT_SELF_REFERENCE_NOTE: Final[str] = (
+    "【范围自指】数据范围已由调用者身份确定（系统按租户隔离）。"
+    "问句里指向**调用者自身租户**的代号（例如形如 `T_A`/`T_B` 的租户标识、"
+    "「我们租户」「本租户」这类自指）只是对同一范围的重复说明："
+    "**不得**据此判 `clarify_needed`，也**不得**把它列进 `unmapped_terms`。"
+)
+
 
 # ============================================================================
 # 二、注入检测层（**只打标，不拒绝** —— 07 §10.3）
@@ -736,7 +750,7 @@ def normalize_payload(
     """`normalize` 的载荷 —— 历史问题进 `history_questions`（资产里有 `$history_block`）。"""
     payload = _base(ctx, "normalize", question)
     payload["history_questions"] = list(sanitize_history(history))
-    payload["constraints"] = _constraints()
+    payload["constraints"] = _constraints(TENANT_SELF_REFERENCE_NOTE)
     return _with_user_scope(payload, ctx)
 
 
@@ -750,14 +764,14 @@ def normalize_intent_payload(
     """
     payload = _base(ctx, "normalize_intent", question)
     payload["history_questions"] = list(sanitize_history(history))
-    payload["constraints"] = _constraints()
+    payload["constraints"] = _constraints(TENANT_SELF_REFERENCE_NOTE)
     return _with_user_scope(payload, ctx)
 
 
 def intent_payload(ctx: PromptContext, *, question: str) -> dict[str, Any]:
     """`intent` 的载荷 —— 资产无 `$history_block`，故历史不进（**不塞没用上的字段**）。"""
     payload = _base(ctx, "intent", question)
-    payload["constraints"] = _constraints()
+    payload["constraints"] = _constraints(TENANT_SELF_REFERENCE_NOTE)
     return _with_user_scope(payload, ctx)
 
 
