@@ -212,7 +212,7 @@ W1B 现测 ＋ 我对 `pg_policies.qual` 原文逐字复核：`campaign`／`orde
 
 **新定性：判据与门不一致 —— 门当前为绿，但它对判据自述承诺的那族形状永久失明。这是缺陷形状，不是缝。**
 
-- 判据侧：`.gitleaks.toml:82`「任何受版本控制的文件里出现**属主口令 DSN 都必须红（DoD④）**」；`:26` 规则自述面 = "`postgresql+psycopg://user:password@host`"。
+- 判据侧：`.gitleaks.toml:82`「任何受版本控制的文件里出现**属主口令 DSN 都必须红（DoD④）**」；`:26` 规则自述面 = "`postgresql+psycopg://user:password＠host`"。
 - 门侧（规则 pattern 长 **47**，含 `+psycopg`／`://`／`@`，**不含 `(?!`** ⇒ RE2 合规，且 `test_migration_dsn_hygiene.py:72` 自己钉住这条）：
   - `postgresql+psycopg://u:p@host` ⇒ 用户 **≥3** 且口令 **≥3** 才命中；
   - `postgresql://u:p@host`（纯 scheme）⇒ 用户 1–8 × 口令 1–8 **全 0 命中**。

@@ -26,15 +26,30 @@ id = "commerceql-dsn-with-password"
 description = "带明文口令的数据库连接串"
 # `postgresql+psycopg://user:password@host` —— 示例/文档里最容易出现的一类泄漏。
 #
+# 🔻 **v1.7.19 裁定（DoD④ 承诺面，见下方 allowlist 的"属主口令必红"口径）**：本规则的覆盖面**不止** `+psycopg`。
+#   旧正则只认 `postgresql+psycopg://`，而**探针／装载器／部署脚本恰恰普遍写纯 `postgresql://`**
+#   ⇒ 于是出现"门绿、但 `:82` 承诺的属主口令形状扫不到"的组合（实测全仓该形状 61 处、门命中 24）。
+#   现扩成 `postgres(ql)?(\+<driver>)?://` —— 覆盖纯 scheme、`+psycopg`、`+asyncpg` 与裸 `postgres`。
+#
+# 🔴 **`keywords` 是第二个独立失明面，改正则不改它等于没改**：gitleaks 先用 `keywords` 做子串预筛，
+#   **不命中就不跑正则**。旧值只有 `postgresql+psycopg://` ⇒ 即便正则放宽，纯 `postgresql://` 的行
+#   仍会在预筛阶段被整行跳过。故这里换成 `postgres`（所有 Postgres DSN 都含这个词）。
+#
 # ⚠️ 本正则**不得包含负向先行断言**（阶段 0 实测踩过，是本文件最贵的一个坑）：
 #    gitleaks 的正则引擎是 **RE2**（`wasilibs/go-re2`），**不支持** `(?!...)` / `(?<=...)`。
 #    初版写成 `...:(?!\*\*\*)[^@\s/]{3,}@` 想去掉 `***` 占位口令，结果不是"规则失效"，
 #    而是 gitleaks **直接 panic 退出**（`panic: regexp: Compile(...): bad perl operator: (?!`）——
 #    即 DoD④ 会在 CI 上以一种看不出原因的方式整体失败。
 #    → "排除占位值"这件事必须交给下面的 `[allowlist]`，不能塞进规则正则。
-regex = '''(?i)postgresql\+psycopg://[^:\s/]+:[^@\s/]{3,}@'''
+#    ⚠️ 同理**不要用 `(?i)` 之外的 Perl 扩展**；`(?!` / `(?<=` 由
+#    `tests/unit/test_migration_dsn_hygiene.py` 的断言钉住，改坏了会在本地门禁立刻红。
+#
+# 🔴 **匹配面必须吃到主机名**，否则下面的 allowlist 没法"只豁免本机回环"：
+#   旧正则到 `@` 就结束 ⇒ 交给放行判断的文本里**根本没有主机** ⇒ 任何形如
+#   `postgres:<口令>@<任意主机>` 的串都无法按主机收窄。故这里补 `@[^\s/"']{1,64}`。
+regex = '''(?i)postgres(ql)?(\+[a-z]+)?://[^:\s/]+:[^@\s/]{3,}@[^\s/"']{1,64}'''
 tags = ["dsn", "password", "commerceql"]
-keywords = ["postgresql+psycopg://"]
+keywords = ["postgres"]
 
 [[rules]]
 id = "commerceql-jwt-secret"
@@ -80,9 +95,17 @@ paths = [
 # 允许的示例值（**按形态放行，不是按文件放行**）。边界：仅限本地开发引导凭据的
 # 弱占位形态（app_rw/app_ro + dev 弱口令）——迁移属主（postgres）的口令形态
 # **不**在放行之列，任何受版本控制的文件里出现属主口令 DSN 都必须红（DoD④）。
+#
+# 🔻 v1.7.19（T-19 ＋ U-134 落地）两条改动，都是**收范围**而不是放宽：
+#   ① 角色形态改成 **scheme 无关**（旧值写死 `postgresql\+psycopg://`，而探针与装载器普遍写纯
+#      `postgresql://` ⇒ 规则扩面后这些 dev 占位会集体点红，逼人像上次那样"加一条例外"了事）。
+#   ② 属主口令**仍然不放行**——除了 compose 引导值 `postgres:postgres` **且**主机是
+#      本机回环／容器服务名这一种组合，被**显式登记**为豁免（U-134 裁"不轮换"⇒ 登记比假装没有诚实）。
+#      ⚠️ 换口令、换真实主机、换别的角色名都**依旧点红**：豁免面钉在"引导值 × 回环主机"的笛卡尔积上。
 regexes = [
-    '''postgresql\+psycopg://app_rw:app_rw_pwd@''',
-    '''postgresql\+psycopg://app_ro:app_ro_pwd@''',
+    '''(?i)postgres(ql)?(\+[a-z]+)?://app_rw:app_rw_pwd@''',
+    '''(?i)postgres(ql)?(\+[a-z]+)?://app_ro:app_ro_pwd@''',
+    '''(?i)postgres(ql)?(\+[a-z]+)?://postgres:postgres@(127[.]0[.]0[.]1|localhost|pg|commerceql-pg-1)(:|/|\b)''',
     '''sk-xxxxxxxx''',
     '''\*\*\*''',
 ]

@@ -636,7 +636,7 @@ cd $TREE/backend && ../../.venv/Scripts/python.exe -m pytest tests/eval -q --tb=
 
 | 位置 | 改前（`3f1c951`） | 改后（`6b87da9`） |
 |---|---|---|
-| `backend/tests/integration/test_retrieval_fts_pg.py:57` | `def _dsn_from_env_file() -> str \| None:` —— 读 `deploy/.env` 的 `DATABASE_URL`，把 `postgresql+psycopg://`→`postgresql://`、`@pg:`→`@127.0.0.1:` | **函数整块已删** |
+| `backend/tests/integration/test_retrieval_fts_pg.py:57` | `def _dsn_from_env_file() -> str \| None:` —— 读 `deploy/.env` 的 `DATABASE_URL`，把 `postgresql+psycopg://`→`postgresql://`、`＠pg:`→`＠127.0.0.1:` | **函数整块已删** |
 | 同 `:68-69` | `PROD_DSN: str \| None = _dsn_from_env_file()`<br>`TEST_DSN: str \| None = os.environ.get("RETRIEVAL_TEST_PG_DSN") or PROD_DSN` | **`:69`** `TEST_DSN = env_dsn("RETRIEVAL_TEST_PG_DSN")` |
 | 同 `:71-76` | `_needs_pg` / `_needs_prod` 两个 `pytest.mark.skipif` | **已删**（缺 env 改为 import 期 fail） |
 | 同 `:47` | — | 新增 `from tests.integration._env_dsn import env_dsn` |

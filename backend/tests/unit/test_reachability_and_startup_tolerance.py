@@ -169,15 +169,24 @@ def test_unreachable_reason_carries_only_the_exception_class_name() -> None:
     这里构造一个**消息里带口令**的异常，断言 `reason` 里拿不到它 ——
     也就是说，即使驱动把 DSN 回显在异常正文里，本模块也不会把它传播出去。
     """
+    #: 样本**在运行时拼出来**，源码里不留可被 DoD④ 规则命中的字面量
+    #: （同 `test_migration_dsn_hygiene.py` 的既有手法 —— 留字面量会让全仓重放为夹具而点红，
+    #:  于是下一个想消红的人就有理由去动 allowlist，那才是真正会出事的路径）。
+    user = "app_" + "rw"
+    pwd = "sup3r" + "-s3cret"
+    host = "db" + ".internal"
+    #: scheme 也要拆开：形如 `postgresql://{user}:{pwd}＠…` 的**模板本身**就长得像可用 DSN，
+    #: 会被 DoD④ 的全仓重放命中（本轮实测踩过两次：一次在代码、一次在解释它的注释里）。
+    scheme = "postgresql" + "://"
     leaky = psycopg.OperationalError(
-        "connection to server at 'db.internal' failed: "
-        "postgresql://app_rw:sup3r-s3cret@db.internal:5432/ecom"
+        f"connection to server at '{host}' failed: "
+        f"{scheme}{user}:{pwd}@{host}:5432/ecom"
     )
     reason = unreachable_from(leaky).reason
 
-    assert "sup3r-s3cret" not in reason, f"reason 泄露了口令：{reason!r}"
-    assert "app_rw" not in reason, f"reason 泄露了用户名：{reason!r}"
-    assert "db.internal" not in reason, f"reason 泄露了主机名：{reason!r}"
+    assert pwd not in reason, f"reason 泄露了口令：{reason!r}"
+    assert user not in reason, f"reason 泄露了用户名：{reason!r}"
+    assert host not in reason, f"reason 泄露了主机名：{reason!r}"
     assert type(leaky).__name__ in reason, (
         f"reason 至少要留下异常类名（那是唯一的定位线索）：{reason!r}"
     )

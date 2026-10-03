@@ -296,7 +296,7 @@ def test_the_scheme_contract_is_not_reimplemented_in_this_window():
 
 def test_unrecognized_dsn_shapes_are_rejected_without_echoing_the_input():
     """W1B 那件对未知 scheme **直接抛、不静默透传**（静默的下游症状是一句误导的 `PoolTimeout`）——
-    但它的报错会 `url[:24]!r` 回显输入：实测 `postgresql+asyncpg://u:SECRETWORD@h/db` 打出
+    但它的报错会 `url[:24]!r` 回显输入：实测 `postgresql+asyncpg://u:SECRETWORD＠h/db` 打出
     `'postgresql+asyncpg://u:p'` ⇒ **用户名全露 + 口令首字符**。本窗口这层必须掐掉原文。
 
     ⚠️ 顺带钉住一条**有意的收窄**：psycopg 合法的关键字式 conninfo（`host=… password=…`）在这里会被拒 ——

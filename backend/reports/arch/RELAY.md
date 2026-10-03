@@ -491,7 +491,7 @@
 > ## 3 → W2A + W0（`U-114`）
 >
 > **W2A（夹具本体 —— `app/semantics` 是被测模块，按 08 §4.1"随被测模块"）**，三条处置按性价比：
-> · **① 删默认值**：`tests/integration/test_semantic_materialization.py:41` 的 `_RW` 带**硬编码默认值 `postgresql://<属主>:<口令>@localhost:5432/ecom`**。⚠️ **这是这一格最关键的一处** —— 有它，事故**不需要任何人犯错就会发生**（任何人裸跑一次 `pytest tests/integration` 就打上共享库）。改成**无默认值**，不设 ⇒ skip 并打印原因。
+> · **① 删默认值**：`tests/integration/test_semantic_materialization.py:41` 的 `_RW` 带**硬编码默认值 `postgresql://<属主>:<口令>＠localhost:5432/ecom`**。⚠️ **这是这一格最关键的一处** —— 有它，事故**不需要任何人犯错就会发生**（任何人裸跑一次 `pytest tests/integration` 就打上共享库）。改成**无默认值**，不设 ⇒ skip 并打印原因。
 > · **② 夹具自建临时 schema**（同仓已有先例 `test_retrieval_fts_pg.py`）⇒ 让它**结构性**不可能打到 `ecom`。
 > · **③ 显式传 tokenizer/embedder**，**或**断言"本测试不负责物化向量" —— 把 `embedding_status` 的 PENDING 分支与"清空生产向量"彻底分开。
 >

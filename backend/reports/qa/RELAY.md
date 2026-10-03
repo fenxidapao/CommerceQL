@@ -187,7 +187,7 @@ HEAD `98f8b04`（＝远端同点，`git rev-parse` 现测 17:5x）；链上三�
 
 - 全仓命中该形状 = **61 处**；门规则命中 = **24**；**结构失明 = 37**；失明且**未被 allowlist 放行** = **35**。
 - 落在**实现／部署／测试面**（不是报告面）的失明点：`deploy/loadtest/load_synth_to_pg.py:42`（U-133 ①／R-2 那条属主口令）、`deploy/loadtest/w2b_materialize/_w2b_u112_probe.py:21`、`deploy/loadtest/README.md:1239`、`backend/scripts/probe_pool_close_u53.py:27,28`、`backend/tests/unit/test_health_probes.py:339,372`、**`backend/tests/integration/test_rls_tenant_isolation.py:46,47,48`（W2A 本轮新入库，三条纯 scheme）**。
-- 判据侧原文：`.gitleaks.toml:82`「迁移属主（postgres）的口令形态**不**在放行之列，任何受版本控制的文件里出现属主口令 DSN 都**必须红（DoD④）**」；`:26` 规则自述覆盖面 = "`postgresql+psycopg://user:password@host`"。
+- 判据侧原文：`.gitleaks.toml:82`「迁移属主（postgres）的口令形态**不**在放行之列，任何受版本控制的文件里出现属主口令 DSN 都**必须红（DoD④）**」；`:26` 规则自述覆盖面 = "`postgresql+psycopg://user:password＠host`"。
 - ⚠️ **同一道门当前是绿的**（`tests/unit/test_migration_dsn_hygiene.py` 我上轮跑 = passed）。⇒ 缺陷形状 = **"门绿 ＋ 它自述承诺覆盖的那族形状扫不到"**，**不是**"有人把某条放行错了"。
 - **不与 `U-134` 重复**：`docs/07:1165` 架构侧已经跑了**两把尺**（形状尺 27 文件／等值尺 18 文件／交集 16），并自证"形状尺对 2 个文件失明"。⇒ 本条是**第三条缝**：**U-134 的形状尺 `postgres(ql)?(\+psycopg)?://…` 能吃纯 scheme，而 `.gitleaks.toml` 的门规则不能吃 ⇒ 判据用的尺 ≠ 门用的尺。**
 

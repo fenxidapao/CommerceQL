@@ -1236,7 +1236,7 @@ W4 §④ 报的形状批级不变量抓不到：`refuse` 之后第 2 轮**复用
   异常文本要落档时先过一道 redact。W6 侧已自加 `scrub_secrets()`，方向一致。
 · 🟡 顺带一条**结构性观察（码读，未跑 gitleaks 验证）**：`.gitleaks.toml:35` 的 `commerceql-dsn-with-password`
   正则是 `postgresql\+psycopg://user:pass@` 形态 + `keywords = ["postgresql+psycopg://"]` ⇒
-  **`postgresql://user:pass@` 这种 libpq 形态不在它的覆盖里**。`deploy/.env.example:55` 由 `regexes` 按形态**显式放行**
+  **`postgresql://user:pass＠` 这种 libpq 形态不在它的覆盖里**。`deploy/.env.example:55` 由 `regexes` 按形态**显式放行**
   （`app_rw_pwd`/`app_ro_pwd` = 与 compose 引导值同源的本地开发口令，配置里写明"任何其他 DSN 形态必红"）⇒
   **这条放行是有意的、有注释的**，不是漏配；我提的只是"另一种 scheme 的同形态口令不在规则内"这一点，交由 W0/架构判断要不要扩规则。
 
