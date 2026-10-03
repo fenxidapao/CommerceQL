@@ -37,6 +37,24 @@
 | **T-11②**（本轮顺序头项） | **未启动** ⇒ 已登记为第 4 轮头项；它是 ⑰c／⑫／`grid23` 标签从"日期代理"升成"构建身份"的唯一前置 | `TASK_BOARD.md` T-11②；`07 §4.8 U-129` L1155 | `UNVERIFIED` | `RELAY.md` §三.9 | 否 |
 | T-24／T-19／T-20／T-16／T-09 剩余面／T-17／T-18／A5 | 未启动（顺序 `T-11② → T-24 → T-19 → T-20 → T-16`）；T-24 的本轮现读：连库 py 件 7／带守卫 5／无守卫 4 ＋ 一条次序事实（时间列探测在 `force_readonly()` **之前**） | `TASK_BOARD.md` §8.2／§8.3／档位 A §四；QA 第 3 轮 ④ | `UNVERIFIED` | `RELAY.md` §三.5.1③／§三.9 | 仅 A5 要总控给时点 |
 
+## 第 4 轮交付（2026-10-03 11:4x–14:2x +0800 ｜ 起始 HEAD `d38cf55` ｜ 零额度 · 零跑批 · **动了一次共享栈**（A5 recreate）· 起停一只一次性容器（用完即删））
+
+> 体制：本轮起本窗同时持有开发＋架构决策面（总控指令见 `RELAY.md` §四.0），QA 复算移到收尾一次 ⇒
+> 每条结论自带现算命令。`docs/**` 本轮一字未改、未取 `U-xx`。
+
+| 单号 | 交付物 | 判据／任务出处 | 状态 | 证据在 | 要额度过不过 |
+|---|---|---|---|---|---|
+| **T-19 ＋ DoD④ 门面** | 规则正则扩到 `postgres(ql)?(\+[a-z]+)?://…@<主机>`、`keywords` 同改（**第二个独立失明面**）、allowlist 属主口令只在"引导值 × 回环主机"笛卡尔积上豁免；43 处点红治理到 **0** | `docs/07:2492` 一侧的 DoD④ 承诺句 ＋ `reports/qa/COMPLETENESS.md` 第 9 轮两条 blindness | **达成**（`test_migration_dsn_hygiene.py` 8 passed，含全仓重放零未放行命中） | `RELAY.md` §四.1 ＋ commit `720d434` | 否 |
+| **T-19 装载侧 ＋ T-24 探针侧** | 装载器 `DEFAULT_DSN` 删除 ＋ 两条同形状守卫（先解 DSN 再碰文件、空清单即退）；6 处探针兜底全删；w4 的 RO 串不再由 RW 串做字符串手术；w2d 变量名统一 `COMMERCEQL_PROBE_DSN` | `07 §4.8 U-133` 判据①／`U-114`；`reports/qa/TASK_BOARD.md` T-24 | **达成**（五条失败路径真跑：rc 1/1/2/2/2，全部点名缺的变量） | `RELAY.md` §四.2 ＋ commit `335b3d9` | 否 |
+| **T-24 尺子侧** | `_module_str_constants` 补 `AnnAssign`（旧尺对带注解模块常量**整仓静默漏网**）＋ 扫面加 `backend/reports`／`deploy`／`eval` ＋ 正对照第三形 | 同上 ＋ 本窗现测（旧尺给 w2d 判过"零命中"） | **达成**：三面现算 0/0/0，例外 2 处（`versions/0001:77-78`）如实登记为"刻意不扫" | `RELAY.md` §四.2 | 否 |
+| **T-11②** | `build_stamp()` 唯一口接进四个生产者（含 loadtest 回执——原先只写 `finished_at`，而该键不在 reporter 识别列表里）；红队件在干净树上重生成、五字段与 dirty 版逐字段相同 | `reports/qa/TASK_BOARD.md` T-11②；`07 §4.8 U-129` 对"日期代理 vs 构建身份"的前置 | **部分达成**：`results_v1.json` 在 ¥0 下**重建不出来**（回放 rc=0 但 `n_scored=0`、166 条 `cassette_miss`）⇒ G-2/G-5/G-8 输入件仍停在 `mtime_only` | `RELAY.md` §四.3 ＋ commits `97bce0e`／`00d2321` | 🔴 **要**（`--live` 才能升，四件套届时另报） |
+| **T-20** | gold_query 的 `tenant_id` 哨兵不变式接**装配期 raise**（选项 a）＋ 三条测试 ＋ 一次真 A/B 对照（摘掉调用链上那句守卫 ⇒ 用例不红 = 证明它没在自证） | `docs/07:2492`「Gold Query 类行的 `tenant_id` 永远非 `'*'`」＋ QA 第 7 轮 §8.3 现测三条前提 | **达成**（17 passed）；库层 `CHECK` 未做（要在共享栈落迁移） | `RELAY.md` §四.4 ＋ commit `7d1a9c7` | 否 |
+| **T-26** | 三面尺定名 F-pred／F-guard／F-consume ＋ 计数件 ＋ 契约测试（只断言三面齐全，不断言数值）；"8 vs 11"归因 = **注释行算不算** 一根轴 | `reports/qa/RELAY.md` 第 10 轮 ③(b)／新开单 | **达成**：现算 F-pred=8（去守卫自身 3）／F-guard=6／F-consume=5 | `RELAY.md` §四.5 ＋ commit `02bd10e` | 否 |
+| **T-27** | 反证夹具接成可重复门禁：两侧断言（pre-fix 必出假绿 ＋ 新版必出不可判且**⑰c 必须有行**）＋ ci.yml 新 job（一次性库 `ecom_neg`）＋ 对照件入库带 sha256 ＋ 库名 `ecom` 拒跑（实测拒后库内 lg/app 表数 = 0） | 同上 §四.5 新开单；`07 §4.8 U-114` | **达成**：本机一次性容器 8 项全过 rc 0；回执已入库 `fbbb493` | `RELAY.md` §四.5 ＋ `reports/w8/t23_negative_gate_receipt.json` | 否 |
+| **A5** | compose 五个发布端口收到宿主回环，**声明面（`compose config`）与运行面（`docker ps` ＋ `netstat`）两面都量过**；新契约测试钉"回环"＋"宿主端口不重号" | `reports/qa/TASK_BOARD.md` 档位 A A5 ＋ O-11（U-134 前提耦合）；`07 §4.8 U-134` | **达成**： recreate 后 live/ready/web = 200/200/200、`app.embed_doc` 仍 **197 行** | `RELAY.md` §四.6 ＋ commit `8b1aa76` | 否（但要一次共享栈停机，本窗自选时点做完） |
+| **P-4／P-5／P-6** | 新体制下由本窗直接裁（P-4 不升全仓规则／P-5 归已修规则／P-6 出率前置 `n ≥ 20`） | `reports/qa/TASK_BOARD.md` §8.4 批次 C | **已裁**（可逆，代价逐条写明） | `RELAY.md` §四.7 | 否 |
+| T-16／T-09 剩余面／T-17／T-18／T-15 | **未启动**；T-15 仍等"换构建＋观测栈＋压测"捆绑的时点（A5 的 recreate 本轮已单独做过一次，不与 T-15 冲突） | `TASK_BOARD.md` §四／§8.2／T-15 | `UNVERIFIED` | `RELAY.md` §四.10 | T-15 的压测半边要 |
+
 ## 按轮留痕（只追加，不回填到上表的结论行）
 
 | 轮 | 本地提交 | 远端复核 |
@@ -44,3 +62,4 @@
 | 1 | `27c3e08`（`fix(w8/t12)`，3 文件 ＋29/−7，`git show --stat` 复核 = 只含本窗三件）＋ 第二笔报告件提交 `c7cf34a` | 推送后 `git ls-remote origin main` = **`c7cf34ae9993…` ＝ 本地 HEAD ⇒ 同点**（本窗第 2 轮开轮时复核，仍同点） |
 | 2 | 本轮两笔：尺件笔（3 文件 ＋132/−1）＋ 报告件笔（`reports/w8/{RELAY,DELIVERY}.md`） | 推送后的 `ls-remote` 值记在**下一轮**这一列（不为它另起一笔） |
 | 3 | 尺件笔 **`9cf77ac`**（`test+fix(w8/t23)`，4 文件 ＋147/−29；`git show --stat` 复核 = 只含本窗四件：`r23`／`w4` 探针／`w6` 探针／新建夹具件；三件他窗遗留未跟踪物**未 add**）＋ 报告件笔（`reports/w8/{RELAY,DELIVERY}.md` ＋ `reports/w4/RELAY.md` 的 7 行 🔻 收件人补记，原文 1204／1205 一字未动） | 推送后的 `ls-remote` 值记在**下一轮**这一列 |
+| 4 | 五笔尺件 ＋ 一笔回执：`720d434`（DoD④ 门面 11 文件）／`335b3d9`（装载器＋四条探针＋尺子 6 文件）／`7d1a9c7`（T-20 两文件）／`02bd10e`（T-26＋T-27 八文件，含新建 CI job）／`fbbb493`（T-27 回执）／`8b1aa76`（A5 compose ＋ 新契约测试）。每笔都按名 `git add`，**未用 `add -A`**；`git show --stat` 逐笔复核只含该单文件 | 开轮时 `git ls-remote origin main` = `d38cf55`（＝上一轮推送点）⇒ 本轮起点与远端同点；本轮推送后的值记在**下一轮**这一列 |
