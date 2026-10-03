@@ -13,7 +13,8 @@ Gather 不足以证明 worker 真扫了块（W7 与我在同一件事上各被�
 都被 `force_readonly()` 绑上服务端 `default_transaction_read_only`，且 `main()` 在探测前会
 **故意下发一次 `CREATE TABLE` 并期望被拒**，没过闸门就不出产物（见 `eval/pg_guard.py`）。
 ⚠️ `RESET` 本身是对会话状态的改动（U-110 的教训），所以它是被测对象的一部分、不是清场动作。
-跑法：
+跑法（🔴 两条 DSN 都必须**显式给**，缺任意一条即 exit 2、不出产物 —— T-24／U-114 防线①）：
+    COMMERCEQL_TEST_SUPER_DSN='<属主 DSN>' COMMERCEQL_TEST_RO_DSN='<只读 DSN>' \
     PYTHONIOENCODING=utf-8 PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w6/_probe_parallel_states.py
 """
 
@@ -45,12 +46,14 @@ if os.name == "nt":
 #: 要 `SET ROLE app_rw` 复现 W7 的路径），靠"选只读角色"约束不住它 ⇒ 闸门放在服务端
 #: （`default_transaction_read_only`）。`main()` 会在探测前故意写一次并期望被拒。
 #: 依据：W7 2026-09-22 要求"在你们侧加一条会响的守卫"（详见 `eval/pg_guard.py`）。
-RO_DSN = force_readonly(os.environ.get(
-    "COMMERCEQL_TEST_RO_DSN", "postgresql://app_ro:app_ro_pwd@localhost:5432/ecom"
-))
-SUPER_DSN = force_readonly(os.environ.get(
-    "COMMERCEQL_TEST_SUPER_DSN", "postgresql://postgres:postgres@localhost:5432/ecom"
-))
+#: 🔴 **不留指向共享 `ecom` 的字面兜底**（T-24／U-114 防线①）：`force_readonly()` 管"写不进去"，
+#:   不管"拨的是哪个库"；漏带 env 静默回落到 `localhost:5432/ecom` = 拿共享实例当靶子。
+#:   空串过 `force_readonly` 会在 import 期抛（scheme 无法识别），所以先判空再包 ——
+#:   与 `probe_audit_invariant.py` 同形；缺哪条由 `main()` 点名并 exit 2。
+RO_DSN = (force_readonly(os.environ.get("COMMERCEQL_TEST_RO_DSN", ""))
+          if os.environ.get("COMMERCEQL_TEST_RO_DSN") else "")
+SUPER_DSN = (force_readonly(os.environ.get("COMMERCEQL_TEST_SUPER_DSN", ""))
+             if os.environ.get("COMMERCEQL_TEST_SUPER_DSN") else "")
 TENANT = "T_A"
 VIEW = "v_order_paid"
 RUNS = 3
@@ -291,6 +294,14 @@ async def _controls() -> dict:
 async def main() -> int:
     if psycopg is None:
         print("psycopg 不在位 ⇒ 无法探测（不猜结论）")
+        return 2
+
+    # 🔴 先点名"拨的是哪个库"：缺 env 就退，不回落（T-24／U-114 防线①）。
+    missing = [n for n, d in (("COMMERCEQL_TEST_SUPER_DSN", SUPER_DSN),
+                              ("COMMERCEQL_TEST_RO_DSN", RO_DSN)) if not d]
+    if missing:
+        print(f"🔴 未设 {'、'.join(missing)} ⇒ 不探测、不出产物。本脚本的读数会被跨窗口引用，"
+              "连到哪个库必须是显式的。", file=sys.stderr)
         return 2
 
     from pg_guard import open_readonly, redact_dsn, target_stamp

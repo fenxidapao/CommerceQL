@@ -28,6 +28,7 @@ COPY 走文本协议，百万行是分钟级。
 from __future__ import annotations
 
 import argparse
+import os
 import sqlite3
 import sys
 import time
@@ -39,8 +40,24 @@ import psycopg
 #: SQLite 沙箱表 → PG 底表。**dim_tenant 刻意不在表里**：PG 侧没有对应底表
 #: （租户维度由 `app.policy` + RLS 承担），跳过它必须被打印出来，不能静默。
 SKIP_SQLITE_TABLES = {"dim_tenant"}
-DEFAULT_DSN = "postgresql://postgres:postgres@127.0.0.1:5432/ecom"
+#: 🔴 **不留字面属主 DSN**（U-133 判据①）：装载目标必须**显式给**——`--dsn` 或环境变量
+#:   `COMMERCEQL_LOADTEST_PG_DSN`。原先这里是模块级字面串（含属主段＋口令段，指向共享 `ecom`），
+#:   而本件会写 `app.*` 底表 ⇒ "忘了带参数"的默认后果是**往共享实例写数据**。
+#:   ⚠️ 失效方向必须是"跑不起来"，不是"跑到默认目标上"。契约面见
+#:   `backend/tests/contract/test_no_env_file_dsn_derivation.py`。
+LOAD_DSN_ENV = "COMMERCEQL_LOADTEST_PG_DSN"
 BATCH = 50_000
+
+
+def _resolve_dsn(cli_dsn: str | None) -> str:
+    """`--dsn` 优先，其次环境变量；两者都缺 ⇒ 直接退出，不回落到任何字面串。"""
+    dsn = cli_dsn or os.environ.get(LOAD_DSN_ENV, "")
+    if not dsn:
+        raise SystemExit(
+            f"缺装载目标：请给 --dsn，或设置 {LOAD_DSN_ENV}。"
+            "本件会写 app.* 底表 ⇒ 不接受任何默认 DSN（U-133 判据①）。"
+        )
+    return dsn
 
 
 def _sqlite_columns(con: sqlite3.Connection, table: str) -> list[str]:
@@ -104,9 +121,18 @@ def plan(sandbox: sqlite3.Connection) -> list[tuple[str, str]]:
 
 
 def load(args: argparse.Namespace) -> int:
+    # 先解 DSN 再碰文件：反过来的话"缺装载目标"这条拒绝会先留下一个被 sqlite
+    # 顺手创建的空库文件（connect 对不存在的路径是**创建**而不是报错）。
+    dsn = _resolve_dsn(args.dsn)
+    if not os.path.exists(args.sqlite):
+        raise SystemExit(f"[中止] 沙箱文件不存在：{args.sqlite}（不自动创建空库）")
     sandbox = sqlite3.connect(args.sqlite)
-    with psycopg.connect(args.dsn, autocommit=False) as pg:
+    with psycopg.connect(dsn, autocommit=False) as pg:
         pairs = plan(sandbox)
+        if not pairs:
+            print("[中止] 沙箱里没有一张 v_* 表 ⇒ 这个 --sqlite 不是 seed_generator 的产物。"
+                  "空清单会让下面整个循环一次不进并打印「完成」，所以在这里就退。", file=sys.stderr)
+            return 2
         rows_report: list[tuple[str, int, int]] = []
         for s_table, base in pairs:
             s_cols = _sqlite_columns(sandbox, s_table)
@@ -180,7 +206,8 @@ def load(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="SQLite 沙箱 → PG app.* 底表装载（W7 压测前置）")
     p.add_argument("--sqlite", required=True, help="seed_generator.py 的产物路径")
-    p.add_argument("--dsn", default=DEFAULT_DSN, help="必须是有 CREATE/TRUNCATE 权的属主串；默认本机开发实例")
+    p.add_argument("--dsn", default=None,
+                   help=f"必须是有 CREATE/TRUNCATE 权的属主串；不给则读 {LOAD_DSN_ENV}，两者都缺即退出（不留字面默认）")
     p.add_argument("--dry-run", action="store_true", help="只比对列集与行数，不写")
     p.add_argument("--force", action="store_true", help="允许覆盖已有行的底表")
     p.add_argument("--tenant-id", default="T_A",

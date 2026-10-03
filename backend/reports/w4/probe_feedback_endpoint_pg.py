@@ -1,7 +1,9 @@
 """`POST /feedback` **端点层** ①②③ 实证（W1B 开工指令 §4 的验收要件）。
 
-用法（在 `backend/` 下，Docker Desktop 起着、`commerceql-pg-1` healthy）：
+用法（在 `backend/` 下，Docker Desktop 起着、`commerceql-pg-1` healthy；🔴 两条 DSN 必须显式给，
+缺任意一条即 exit 2、不落产物 —— T-24）：
 
+    COMMERCEQL_TEST_RW_DSN='<读写 DSN>' COMMERCEQL_TEST_RO_DSN='<只读 DSN>' \
     python ../.venv/Scripts/python.exe reports/w4/probe_feedback_endpoint_pg.py
 
 ⚠️ 与既有证据的分工（为什么这个探针存在）：
@@ -51,7 +53,13 @@ from app.repo.feedback import FEEDBACK_TABLE  # noqa: E402
 from tests.contract.test_api_runner_contract import _DepsHolder  # noqa: E402
 from tests.unit._redis_fake import FakeRedis  # noqa: E402
 
-_RW_DSN = os.environ.get("COMMERCEQL_TEST_RW_DSN", "postgresql+psycopg://app_rw:app_rw_pwd@localhost:5432/ecom")
+#: 🔴 两条 DSN 一律**显式给**，不留指向共享 `ecom` 的字面兜底（T-24／U-114 防线①）。
+#:   本探针会**写真库**（`app.feedback` 落行），漏带 env 的默认后果是往共享实例写。
+#:   原先只有 RW 一条、且 RO 是靠 `_sqla(_RW_DSN).replace("app_rw:…", "app_ro:…")` 的
+#:   **字符串手术**造出来的 —— 那等于把"口令长什么样"写进了代码：换成真实凭据后它会
+#:   静默产出一条错的 `ANALYTICS_DB_URL`。现在缺任意一条就 exit 2。
+_RW_DSN = os.environ.get("COMMERCEQL_TEST_RW_DSN", "")
+_RO_DSN = os.environ.get("COMMERCEQL_TEST_RO_DSN", "")
 
 MINT_SCRIPT = _BACKEND / "scripts" / "mint_dev_token.py"
 WORKDIR = _BACKEND.parent / ".w4probe"
@@ -118,7 +126,7 @@ def _build_app() -> TestClient:
     errors.install_exception_handlers(app)
     app.include_router(feedback.router, prefix="/api/v1")
 
-    engine = create_async_engine(_RW_DSN, pool_pre_ping=False)
+    engine = create_async_engine(_sqla(_RW_DSN), pool_pre_ping=False)
     runtime = build_runtime(settings=settings, pools=_Pools(engine), redis=FakeRedis())  # type: ignore[arg-type]
     setattr(app.state, RUNTIME_STATE_KEY, runtime)
     setattr(
@@ -155,6 +163,12 @@ def _sqla(dsn: str) -> str:
 
 
 def main() -> int:
+    missing = [n for n, d in (("COMMERCEQL_TEST_RW_DSN", _RW_DSN),
+                              ("COMMERCEQL_TEST_RO_DSN", _RO_DSN)) if not d]
+    if missing:
+        print(f"🔴 未设 {'、'.join(missing)} ⇒ 不探测。本探针会**写** app.feedback，"
+              "连到哪个库必须是显式的（缺 env ≠ 回落到共享 ecom）。", file=sys.stderr)
+        return 2
     if not _pg_ready():
         print("[skip] PG 不可达（起 Docker Desktop / commerceql-pg-1 后重跑）")
         return 3
@@ -165,8 +179,9 @@ def main() -> int:
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     # N-02 读写分离：Settings 校验禁止两 DSN 同值；分析池用 app_ro（探针不触它，仅过校验）。
+    # 🔴 RO 串来自 `COMMERCEQL_TEST_RO_DSN` 本身，不再由 RW 串替换口令段得来（见文件头）。
     os.environ.setdefault("DATABASE_URL", _sqla(_RW_DSN))
-    os.environ.setdefault("ANALYTICS_DB_URL", _sqla(_RW_DSN).replace("app_rw:app_rw_pwd", "app_ro:app_ro_pwd", 1))
+    os.environ.setdefault("ANALYTICS_DB_URL", _sqla(_RO_DSN))
 
     token = _mint()
     client = _build_app()

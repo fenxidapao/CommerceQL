@@ -1,6 +1,7 @@
 """U-96 判据实验：gate3（07 §7.5）规定的 EXPLAIN 形态，能不能给出"预估耗时"？
 
-归属窗口：W2D（`backend/reports/w2d/**`）。可复跑、只读、不写库、不依赖应用代码。
+归属窗口：W2D（`backend/reports/w2d/**`）。可复跑、不依赖应用代码；"只读"这句话由
+`eval/pg_guard.force_readonly()` 在服务端把关（T-24），不是我方自觉。
 
 --------------------------------------------------------------------------
 结论（先写结论，脚本只是复现手段 —— 数字见脚本输出）
@@ -25,12 +26,15 @@
 而是在 §5.4 判据的**来源**上做一次裁定。方案对比与裁定建议见同目录 `RELAY.md` 的 U-96 一节。
 
 --------------------------------------------------------------------------
-跑法
+跑法（🔴 `COMMERCEQL_PROBE_DSN` 必须显式给 —— 缺了即 exit 2、不落产物；T-24／U-114 防线①）
 --------------------------------------------------------------------------
+    COMMERCEQL_PROBE_DSN='<共享库 DSN，只读账号即可>' PYTHONIOENCODING=utf-8 \
     python probe_explain_timing_pg.py
 
-默认连 compose 栈的本地 PG（`postgresql://postgres:postgres@127.0.0.1:5432/ecom`），
-可用 `PROBE_PG_DSN` 环境变量覆盖。
+变量名与 `backend/reports/w6/probe_pg_boundary.py`、`probe_audit_invariant.py` 统一
+（原先这里叫 `PROBE_PG_DSN` 且带一个指向共享 `ecom` 的字面默认值 —— 三条名字各起一个，
+"漏带 env"就会静默打到共享栈）。DSN 一律过 `pg_guard.force_readonly()`：本文 §开头那句
+"可复跑、只读、不写库"从此由服务端把关，不靠我方自觉。
 
 ⚠️ `ANALYZE` 那一步会**真跑查询**（本脚本只用 count/limit/聚合这类廉价形态，且全部带
 `statement_timeout`），**请只在开发库上跑**。
@@ -39,12 +43,19 @@
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
 from typing import Any, Final
 
 import psycopg
 
-#: 探针用的库（默认 = compose 栈本地 PG）。
-DEFAULT_DSN: Final[str] = "postgresql://postgres:postgres@127.0.0.1:5432/ecom"
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parents[2] / "eval"))
+
+from pg_guard import force_readonly, redact_dsn, safe_error_text  # noqa: E402
+
+#: 🔴 只从环境取，不留字面默认（T-24）。名字与 w6 的两条探针一致。
+DSN_ENV: Final[str] = "COMMERCEQL_PROBE_DSN"
 
 #: 探针语句：覆盖"大代价聚合 / 点查 / 高基数分组 / 排序 + LIMIT / 无索引过滤"五种形状。
 #: 前三条用于看"有没有时间字段"，全部五条用于看 cost/ms 比值稳不稳。
@@ -94,9 +105,20 @@ def _plan_doc(cur: psycopg.Cursor[Any], sql: str, *, analyze: bool) -> Any:
 
 
 def main() -> int:
-    dsn = os.environ.get("PROBE_PG_DSN", DEFAULT_DSN)
-    print(f"DSN = {dsn}")
-    with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+    raw = os.environ.get(DSN_ENV, "")
+    if not raw:
+        print(f"🔴 未设 {DSN_ENV} ⇒ 不探测、不出结论。本探针看的是**共享实例**，"
+              "连到哪个库必须是显式的（缺 env ≠ 回落到字面默认）。", file=sys.stderr)
+        return 2
+    dsn = force_readonly(raw)
+    print(f"目标 = {redact_dsn(dsn)}")
+    try:
+        conn = psycopg.connect(dsn)
+    except psycopg.Error as exc:
+        # 🔴 不 print(exc)、不裸 `{exc}`：驱动失败文案里可能带整串 conninfo（`pg_guard.safe_error_text`）
+        print(f"🔴 连不上：{safe_error_text(exc)}", file=sys.stderr)
+        return 2
+    with conn, conn.cursor() as cur:
         cur.execute(f"SET statement_timeout = '{_PROBE_STATEMENT_TIMEOUT}'")
         cur.execute("SHOW server_version")
         version = cur.fetchone()

@@ -3,8 +3,8 @@
 为什么要有这个文件
 --------------------------------------------------------------------------
 上一轮的报告写着「hostname `pg` 不可解析 ⇒ PG 侧全部 UNVERIFIED」。这个结论**来自
-`ANALYTICS_DB_URL` 这一条路**，而集成测试用的是另一条路（`COMMERCEQL_TEST_*_DSN` 默认
-`localhost:5432`）。两条路都验完才有资格说"PG 侧未验证"，否则就是把**自己没测**报告成
+`ANALYTICS_DB_URL` 这一条路**，而集成测试用的是另一条路（`COMMERCEQL_TEST_*_DSN`，从宿主机
+拨 `localhost:5432`）。两条路都验完才有资格说"PG 侧未验证"，否则就是把**自己没测**报告成
 **环境测不了** —— 正是 §17.4 要防的那类叙述。
 
 产出（全部只读）：
@@ -13,7 +13,9 @@
 3. RLS 策略表达式 + `relrowsecurity` / `relforcerowsecurity` 开关
 4. 与 SQLite 沙箱的行数对照（§17.4「SQLite I/O 适配」缺口的量化证据）
 
-运行：PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/_probe_pg_real.py
+运行（🔴 两条 DSN 都必须**显式给**，缺任意一条即 exit 2、不出产物 —— T-24／U-114 防线①）：
+    COMMERCEQL_TEST_SUPER_DSN='<属主 DSN>' COMMERCEQL_TEST_RO_DSN='<只读 DSN>' \
+    PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/_probe_pg_real.py
 """
 
 from __future__ import annotations
@@ -43,12 +45,14 @@ if os.name == "nt":
 #: 验证它真的被拒（`eval/pg_guard.py`）。W7 2026-09-22 要求"加一条会响的守卫"，落在这里。
 from pg_guard import force_readonly, safe_error_text  # noqa: E402
 
-SUPER_DSN = force_readonly(os.environ.get(
-    "COMMERCEQL_TEST_SUPER_DSN", "postgresql://postgres:postgres@localhost:5432/ecom"
-))
-RO_DSN = force_readonly(os.environ.get(
-    "COMMERCEQL_TEST_RO_DSN", "postgresql://app_ro:app_ro_pwd@localhost:5432/ecom"
-))
+#: 🔴 **不留指向共享 `ecom` 的字面兜底**（T-24／U-114 防线①）：`force_readonly()` 管"写不进去"，
+#:   不管"拨的是哪个库" —— 漏带 env 静默回落到 `localhost:5432/ecom` 就等于拿共享实例当探针靶子
+#:   （2026-09-22 一天两轮全表重载的同一形状）。空串过 `force_readonly` 会在 import 期抛
+#:   （scheme 无法识别），所以先判空再包 —— 与 `probe_audit_invariant.py` 同形，缺哪条由 `main()` 点名。
+SUPER_DSN = (force_readonly(os.environ.get("COMMERCEQL_TEST_SUPER_DSN", ""))
+             if os.environ.get("COMMERCEQL_TEST_SUPER_DSN") else "")
+RO_DSN = (force_readonly(os.environ.get("COMMERCEQL_TEST_RO_DSN", ""))
+          if os.environ.get("COMMERCEQL_TEST_RO_DSN") else "")
 SQLITE_DB = REPO / "data" / "ecom_sandbox.db"
 
 TABLES = (
@@ -524,6 +528,14 @@ def parity(sq: dict, pg: dict) -> dict:
 
 async def main() -> None:
     from pg_guard import open_readonly, redact_dsn, target_stamp
+
+    # 🔴 被探测的库必须先被**点名**，否则下面的读数全部属于"不知道连了哪儿"（T-24）。
+    missing = [n for n, d in (("COMMERCEQL_TEST_SUPER_DSN", SUPER_DSN),
+                              ("COMMERCEQL_TEST_RO_DSN", RO_DSN)) if not d]
+    if missing:
+        print(f"🔴 未设 {'、'.join(missing)} ⇒ 不探测、不出产物。本探针连的是共享实例，"
+              "缺显式 DSN 时拒绝回落到任何字面默认值（U-114 防线①）。", file=sys.stderr)
+        raise SystemExit(2)
 
     # 🔴 闸门自证放在最前面：没过就不出产物（一份"我们以为只读"的读数比没有读数更贵）。
     guard: dict[str, object] = {}

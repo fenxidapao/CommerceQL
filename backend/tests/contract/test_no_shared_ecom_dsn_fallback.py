@@ -27,9 +27,17 @@ DSN 的解析与脱敏**只**用 `pg_guard.redact_dsn`（同一份形状 regex�
   **已删除**（判据 `docs/07:1133`，v1.7.17；该文件的 DSN 现与另外 8 个 integration 模块同款走
   `env_dsn`）。接管这一类形态的**第二条守卫** = `tests/contract/test_no_env_file_dsn_derivation.py`
   （R-ENVFILE：集成模块不得读 `.env`，AST + 简单赋值的传递闭包）⇒ 本文件不再为它开例外；
+- ✅ **已收口（2026-10-03，T-24）**：`AnnAssign`（`NAME: Final[str] = "…"`）不进常量表的盲区已补，
+  并同步扫面到 `backend/reports/**`＋`deploy/**`＋`eval/**`；补尺当场抓到 1 处（w2d 的 `DEFAULT_DSN`），
+  加上旧尺本来就能抓到的 5 处 = 6 处，全部改成"缺 env 即 exit 2、不出产物"；
+- ⚠️ **仍不在面内、如实登记的例外**：`app/repo/migrations/versions/0001_roles_and_audit_append_only.py:77-78`
+  有 2 处 `os.environ.get("DATABASE_URL"/"ANALYTICS_DB_URL", <指向共享 ecom 的字面量>)`。
+  它是**已执行过的冻结制品**（W1B 归属，`tests/unit/test_migration_dsn_hygiene.py` 文件头同口径）：
+  改它会让"从零重建的库"与"已建的库"走上不同分支，那比"留一个本机引导凭据"更坏。
+  ⇒ 本守卫的扫描面**刻意不含 `backend/app/**`**，而不是"扫了没扫到"；
 - `tests/eval/**` 不在扫描面：W6 的字面量是守卫函数自身的测试输入，归 W6 自治；
 - f-string / 运行期拼接出来的 DSN 静态不可见 —— 本守卫只认「str 常量及其 `+` 拼接、
-  可解析的模块级常量名」。
+  可解析的模块级常量名（含带注解的）」。
 """
 
 from __future__ import annotations
@@ -44,6 +52,11 @@ import pytest
 _BACKEND_DIR = Path(__file__).resolve().parents[2]  # .../backend
 _REPO_ROOT = _BACKEND_DIR.parent  # .../CommerceQL
 _INTEGRATION_DIR = _BACKEND_DIR / "tests" / "integration"
+#: T-24 新收的三面（2026-10-03）：报告侧探针、压测侧装载脚本、评测执行器。
+#: 收它们的理由不是"顺手扫宽"，而是本轮实测到 `backend/reports/**` 上真有 6 处同形状兜底，
+#: 其中两条（w6 的 `_probe_pg_real.py`／`_probe_parallel_states.py`）**以超管身份**连共享栈 ——
+#: `force_readonly()` 保证写不进去，但保证不了"拨的是哪个库"。
+_PROBE_DIRS = (_BACKEND_DIR / "reports", _REPO_ROOT / "deploy", _REPO_ROOT / "eval")
 
 # DSN 形状/脱敏的唯一真相在 eval/pg_guard.py（W6）；这里只借用，不复制。
 _EVAL_DIR = _REPO_ROOT / "eval"
@@ -74,7 +87,13 @@ def _static_str(node: ast.AST, consts: dict[str, str]) -> str | None:
 
 
 def _module_str_constants(tree: ast.Module) -> dict[str, str]:
-    """模块级 `NAME = <静态 str>` 表（解析 `_SCHEME + ...` 这类拼接兜底的前提）。"""
+    """模块级 `NAME = <静态 str>` 与 `NAME: <ann> = <静态 str>` 表（解析 `_SCHEME + ...` 这类拼接兜底的前提）。
+
+    🔴 `AnnAssign` 那一支是 T-24 补的：带类型注解的模块常量（`DEFAULT_DSN: Final[str] = "…"`）
+    原先**不进这张表** ⇒ 下游 `_static_str(Name)` 查不到 ⇒ 兜底串静默漏网。
+    实测存量：`backend/reports/w2d/probe_explain_timing_pg.py` 正是这一形（注解常量 + `os.environ.get(VAR, DEFAULT_DSN)`），
+    旧尺在整仓上给它判了"零命中"。注解形态在报告脚本里很常见，不是罕见写法。
+    """
     out: dict[str, str] = {}
     for node in tree.body:
         if isinstance(node, ast.Assign) and len(node.targets) == 1:
@@ -83,6 +102,10 @@ def _module_str_constants(tree: ast.Module) -> dict[str, str]:
                 value = _static_str(node.value, out)
                 if value is not None:
                     out[target.id] = value
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            value = _static_str(node.value, out) if node.value is not None else None
+            if value is not None:
+                out[node.target.id] = value
     return out
 
 
@@ -182,6 +205,28 @@ def test_integration_fixtures_have_no_shared_ecom_dsn_fallback() -> None:
 
 
 # ----------------------------------------------------------------------------
+# ②′ T-24：同一把尺也压在**探针与装载脚本**上（原先只量 `tests/integration`，
+#   而"漏带 env 静默打共享栈"这个失效形状与谁是受害者无关）
+# ----------------------------------------------------------------------------
+def test_report_probes_and_loadtest_scripts_have_no_shared_ecom_dsn_fallback() -> None:
+    violations = [v for d in _PROBE_DIRS for v in _scan(d)]
+    if not violations:
+        return
+    table = "\n".join(
+        f"  {v['file']}:{v['line']}  env={v['var']}  →  {v['dsn']}" for v in violations
+    )
+    pytest.fail(
+        f"探针/装载脚本面存在 {len(violations)} 处「指向共享 ecom 的字面默认 DSN」——"
+        "`force_readonly()` 只保证写不进去，不保证拨的是哪个库；漏带 env 时静默回落 = "
+        "把共享实例当探针靶子，而产物看起来是一次真探测：\n"
+        f"{table}\n"
+        "修法（与 `backend/reports/w6/probe_audit_invariant.py` 同形）："
+        "`DSN = force_readonly(os.environ.get(VAR, '')) if os.environ.get(VAR) else ''`，"
+        "并在 `main()` 开头按缺失变量名点名、`exit 2` 不出产物。"
+    )
+
+
+# ----------------------------------------------------------------------------
 # 守卫自身的正对照（常驻 CI：护栏空转 = 假绿，必须当场证伪）
 # ----------------------------------------------------------------------------
 def _write(tmp_path: Path, source: str) -> Path:
@@ -191,7 +236,7 @@ def _write(tmp_path: Path, source: str) -> Path:
 
 
 def test_guard_bites_on_the_real_shapes(tmp_path: Path) -> None:
-    """两种现存肇事形态（内联字面量 / 经模块常量拼接的 scheme）都必须咬中。"""
+    """三种现存肇事形态（内联字面量 / 经模块常量拼接的 scheme / **带注解的模块常量**）都必须咬中。"""
     inline = (
         "import os\n"
         '_RW = os.environ.get(\n'
@@ -213,6 +258,19 @@ def test_guard_bites_on_the_real_shapes(tmp_path: Path) -> None:
     concat_dir.mkdir()
     _write(concat_dir, concat)
     assert len(_scan(concat_dir)) == 1
+
+    # 🔴 第三形 = T-24 补的 `AnnAssign` 盲区：肇事串住在**带注解的模块常量**里，
+    #    兜底位只写常量名。旧尺不解析注解赋值 ⇒ 这一形整仓静默漏网（w2d 实测中过）。
+    annotated = (
+        "import os\n"
+        "from typing import Final\n"
+        'DEFAULT_DSN: Final[str] = "postgresql://app_ro:app_ro_pwd@127.0.0.1:5432/ecom"\n'
+        '_P = os.environ.get("PROBE_PG_DSN", DEFAULT_DSN)\n'
+    )
+    ann_dir = tmp_path / "annotated"
+    ann_dir.mkdir()
+    _write(ann_dir, annotated)
+    assert len(_scan(ann_dir)) == 1, "带注解的模块常量兜底没被咬中 —— 尺子退回 AnnAssign 盲区"
 
 
 def test_guard_bites_on_boolop_fallback(tmp_path: Path) -> None:
