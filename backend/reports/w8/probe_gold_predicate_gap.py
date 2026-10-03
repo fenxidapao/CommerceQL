@@ -37,12 +37,11 @@ import _bootstrap  # noqa: E402
 
 _bootstrap.bootstrap()
 
-import sqlglot  # noqa: E402
-from sqlglot import exp  # noqa: E402
-
 import equivalence as eq  # noqa: E402
 import harness as eval_harness  # noqa: E402
 import runner as eval_runner  # noqa: E402
+import sqlglot  # noqa: E402
+from sqlglot import exp  # noqa: E402
 
 RESULTS = os.path.join(ROOT, "eval", "results_v1.json")
 DB = _bootstrap.SANDBOX_DB
@@ -74,9 +73,9 @@ def _patched_gold(gold_sql: str, predicates: list[str]) -> str:
 
 
 def main() -> int:
-    payload = json.load(open(RESULTS, encoding="utf-8"))
+    with open(RESULTS, encoding="utf-8") as fh:
+        payload = json.load(fh)
     harness = eval_harness.Harness(cassette_path=None, live=False)
-    loaded = harness.loaded
     runtime = harness.runtime
 
     #: 语义包面：域 → 默认谓词；物理表 → 域

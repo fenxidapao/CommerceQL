@@ -17,9 +17,8 @@ from __future__ import annotations
 import ast
 import pathlib
 
-import pytest
-
 import _bootstrap
+import pytest
 
 REPO = pathlib.Path(_bootstrap.ROOT)
 

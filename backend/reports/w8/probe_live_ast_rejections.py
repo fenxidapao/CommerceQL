@@ -33,6 +33,7 @@ import _bootstrap  # noqa: E402
 
 _bootstrap.bootstrap()
 
+import harness as eval_harness  # noqa: E402
 import sqlglot  # noqa: E402
 from sqlglot import exp  # noqa: E402
 
@@ -40,8 +41,6 @@ from app.core.enums import Role  # noqa: E402
 from app.guard import run_gate1  # noqa: E402
 from app.semantics.loader import load_bundle  # noqa: E402
 from app.semantics.runtime import SemanticBundleRuntime  # noqa: E402
-
-import harness as eval_harness  # noqa: E402
 
 RESULTS = os.path.join(ROOT, "eval", "results_v1.json")
 OUT = os.path.join(HERE, "probe_live_ast_rejections.json")
@@ -55,7 +54,6 @@ def _allowlist(runtime: SemanticBundleRuntime, case_id: str, tenant: str) -> dic
 def _model_columns(tree: exp.Expr, allowlist: dict) -> tuple[list[str], list[str]]:
     """返回 (模型引用的列里不在该资产可见面的, 全部限定列引用)。"""
     assets = allowlist.get("assets") or {}
-    tables = {t.name: t for t in tree.find_all(exp.Table)}
     known, unknown = [], []
     for col in tree.find_all(exp.Column):
         qual = col.table or ""
@@ -84,7 +82,8 @@ def _limit_shape(tree: exp.Expr) -> str:
 
 
 def main() -> int:
-    payload = json.load(open(RESULTS, encoding="utf-8"))
+    with open(RESULTS, encoding="utf-8") as fh:
+        payload = json.load(fh)
     records = payload["records"]
     rejected = [r for r in records if r.get("terminal_code") == "GATE_AST_REJECTED"]
     runtime = SemanticBundleRuntime(load_bundle(_bootstrap.BUNDLE_PATH))

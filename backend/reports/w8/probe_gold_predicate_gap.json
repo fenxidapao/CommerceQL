@@ -1,5 +1,5 @@
 {
-  "as_of": "results_v1.json git_rev=1af8f65 mode=replay",
+  "as_of": "results_v1.json git_rev=66d5fba mode=replay",
   "n_cases_with_sql": 41,
   "pred_eq_gold": {
     "False": 38,
