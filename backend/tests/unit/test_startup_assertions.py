@@ -45,6 +45,12 @@ def _settings(app_env: AppEnv = AppEnv.DEV) -> Settings:
         "APP_ENV": app_env,
         "DATABASE_URL": _RW,
         "ANALYTICS_DB_URL": _RO,
+        # 🔴 **必须显式给空**：`Settings` 是 pydantic-settings，没给的键会回落到**进程环境**。
+        #   在 source 过 `deploy/.env` 的 shell 里跑本文件 ⇒ `CORS_ALLOWED_ORIGINS=http://localhost:5173`
+        #   漏进来，prod 那几条用例当场被"APP_ENV=prod 时 CORS 必须为空"打红
+        #   （2026-10-03 实测：只导出这一个变量就复现 4 failed / 25 passed，与集成 DSN 无关）。
+        #   读数不能取决于谁在哪个 shell 里 source 过什么 ⇒ 用例自己把这一位钉成空串。
+        "CORS_ALLOWED_ORIGINS": "",
     }
     if app_env is AppEnv.PROD:
         kwargs.update(
