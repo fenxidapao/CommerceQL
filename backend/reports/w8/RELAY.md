@@ -845,6 +845,9 @@ G-8 UNVERIFIED  澄清率 54/166 = 32.5%；澄清后一次成功 0.0%
 ③ `eval/_bootstrap.py:68` 用的是 `os.environ.setdefault(key, value)` ⇒ **进程环境赢**，于是壳里那把过期 key 挡住了 `.env` 里的好 key。演示栈不受影响（`docker compose exec -T api printenv DEEPSEEK_API_KEY` 尾号 = `23e8` ⇒ 浏览器那一问是真跑成功、出表 30,768,819.37）。
 ⇒ 真实欠账**不是**"额度/密钥要换"，而是"本机有两把同名 key、壳里那把过期"；重跑姿势 = `env -u DEEPSEEK_API_KEY …` 之后再跑（或把用户级变量清掉）。
 🔴 方法论：`401` 这个读数是**真**的，但"所以要换 key"是我给它加的因果，当时没有对照臂。按 `只报实测` 的规矩，因果句必须自己跑对照 ⇒ 本轮补的就是那两发 curl（复算：对两把 key 各发一次 `max_tokens=1` 的 chat 请求，比 HTTP 码）。
+🔻🔻 **同轮第二次订正（上一条的"重跑姿势"也不对，23:5x 现测）**：`env -u DEEPSEEK_API_KEY` 之后跑批**仍然全降级**，因为 `eval/_bootstrap.py:49` 的 `_ENV_DEFAULTS` 给的是**占位值** `sk-placeholder-not-a-real-key` —— **`bootstrap()` 根本不读 `deploy/.env`**（它只 `setdefault` 六个键的占位，`.env` 是容器侧 `env_file` 的事）。现测：`bootstrap()` 之后进程内尾号 = `-key`（占位），`get_settings()` 同值。
+⇒ 正确姿势是**显式覆盖**：`DEEPSEEK_API_KEY=$(sed -n 's/^DEEPSEEK_API_KEY=//p' deploy/.env) .venv/Scripts/python.exe eval/runner.py --live …`（值不进命令行历史、不打印）。
+⇒ 连带一条**新的正面结论**：原来那 ¥0.337171 那批用的是**壳里的 `d46d`**（当时有效，23:03 起 401）⇒ "跑批用的 key ≠ 演示栈用的 key（`.env` 的 `23e8`）"这件事此前**没人写过**，它是本项目第一个"同一评测两把凭据"的分裂面，值得单独开一条判据（评测与生产是否必须同源凭据）。
 
 ### 9. 演示面复走查（真开浏览器，第五件）
 `api` 镜像重建（含 §2 的四处修复）后走 `deploy/runbook/README.md` §5.1 三步：
