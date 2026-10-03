@@ -1,0 +1,54 @@
+{
+  "generated_at": "2026-10-03T06:05:24+00:00",
+  "control_rev": "2ae0b43",
+  "vars": {
+    "win_a": "2020-01-01 00:00:00+00",
+    "win_b": "2120-01-01 00:00:00+00",
+    "upref": "%"
+  },
+  "checks": [
+    {
+      "name": "夹具注入自检",
+      "ok": true,
+      "detail": "fixture_g1_rows = 1（要 1）"
+    },
+    {
+      "name": "⑱ shape_ok 翻假",
+      "ok": true,
+      "detail": "terminal_rows=2 g1=1 g2=0 shape_ok=False"
+    },
+    {
+      "name": "⑰ 新版 ge3 降不可判",
+      "ok": true,
+      "detail": "'不可判__shape_guard_failed（⑱ 两条形状约定有一条变了 ⇒"
+    },
+    {
+      "name": "⑰ 新版 ge2 降不可判",
+      "ok": true,
+      "detail": "'不可判__shape_guard_failed（同上）'"
+    },
+    {
+      "name": "⑰c 新版有行",
+      "ok": true,
+      "detail": "4 行（0 行的通过不算通过：没打中靶子）"
+    },
+    {
+      "name": "⑰c 新版逐行不可判",
+      "ok": true,
+      "detail": "4/4 行 = 不可判"
+    },
+    {
+      "name": "⑰ 对照件复现假绿",
+      "ok": true,
+      "detail": "'ge2 = 0 且 t2_routed_supp = 1 ⇒ 非空真达成'"
+    },
+    {
+      "name": "对照件 git 溯源",
+      "ok": true,
+      "detail": "{'git_check': '一致', 'extracted_chars': '3206'}"
+    }
+  ],
+  "passed": true,
+  "git_rev": "02bd10e",
+  "git_dirty": true
+}
