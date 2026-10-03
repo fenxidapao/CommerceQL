@@ -1,19 +1,19 @@
 {
   "meta": {
-    "generated_at": "2026-10-03T14:22:02+00:00",
+    "generated_at": "2026-10-03T14:49:09+00:00",
     "window": "W6",
     "git": {
-      "rev": "c3b4114",
+      "rev": "66d5fba",
       "dirty": true
     },
     "run_config": {
-      "live": true,
+      "live": false,
       "cassette": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\cassettes\\w6_batch.jsonl",
-      "mode": "record",
+      "mode": "replay",
       "db": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\ecom_sandbox.db",
       "column_top": null,
       "n_requested": 166,
-      "provenance": null,
+      "provenance": "同匣带第 2 次回放（唯一变量=评分器两处缺陷修复 ea0454a）；真打基线见 eval/results_v1_live_20261003T1410Z.json",
       "node_timeouts": {
         "contract": {
           "link": 30.0,
@@ -26,22 +26,16 @@
           "audit_supp": 0.5
         },
         "effective": {
-          "gen_sql": 162.0,
-          "normalize": 162.0,
-          "repair": 162.0,
-          "gate3_cost": 8.0,
-          "plan": 162.0,
-          "audit_supp": 4.0,
-          "execute": 30.0,
-          "intent": 162.0,
-          "gate1_ast": 0.8,
-          "gate2_policy": 0.8,
-          "bind": 162.0,
-          "audit_pre": 8.0,
           "link": 30.0,
-          "mask": 0.8
+          "gate1_ast": 0.1,
+          "gate2_policy": 0.1,
+          "gate3_cost": 1.0,
+          "execute": 30.0,
+          "mask": 0.1,
+          "audit_pre": 1.0,
+          "audit_supp": 0.5
         },
-        "scaled": true,
+        "scaled": false,
         "llm_calling_nodes": [
           "bind",
           "gen_sql",
@@ -130,7 +124,7 @@
       "results": true,
       "redteam": true,
       "consistency": true,
-      "pytest_log": false,
+      "pytest_log": true,
       "metric_probe": true,
       "metric_values": true,
       "pg_probe": true,
@@ -141,13 +135,23 @@
     {
       "gate_id": "G-1",
       "condition": "全部 P0 用例通过",
-      "verdict": "NOT_AVAILABLE",
-      "measured": "无输入",
+      "verdict": "PASS",
+      "measured": "断言失败 0 ｜ 环境未备 0（收集期 0 / 夹具期 0） ⇒ 红 0 条（判定只看红的**总条数**，两列不改变判据；「环境未备不该驱动 FAIL」= 判据口径变更 ⇒ 架构 O-1，本窗口不自签）；离线 passed=2332 ＋ 集成 passed=107, integration_ran=True",
       "basis": "§17.1 单元 + 集成",
       "caveats": [
-        "本轮未收集 P0 测试结果"
+        "本读数的分层与接触面：集成层文件 = ['tests/integration/test_audit_append_only.py', 'tests/integration/test_exec_real_pg.py', 'tests/integration/test_feedback_store_pg.py', 'tests/integration/test_migration_0003_views.py', 'tests/integration/test_migration_0004_runtime.py', 'tests/integration/test_query_plan_store_pg.py', 'tests/integration/test_real_redis_lock_and_ratelimit.py', 'tests/integration/test_retrieval_fts_pg.py', 'tests/integration/test_rls_tenant_isolation.py', 'tests/integration/test_semantic_materialization.py']；被拒的库 = 无；夹具下发过的 DDL 形状 = 无（只在日志里取 DDL 形状；取不到 ≠ 这轮对共享库没做任何写操作）（连接参数 = 未点名；凭据一律不落盘。整串取自日志文本 ⇒ 只能证明「取到了这些」，不能证明「只做了这些」）"
       ],
-      "red_split": {}
+      "red_split": {
+        "assertion_failures": 0,
+        "environment_errors": 0,
+        "environment_collect_phase": 0,
+        "environment_fixture_phase": 0,
+        "environment_named": [],
+        "red_total": 0,
+        "sum_check": true,
+        "columns": "① 断言失败 = `failed`（被测系统 / 测试代码的断言不成立）；② 环境未备 = `error`（收集期 import 就抛 / 夹具期 setup 起不来）",
+        "classification_basis": "按 pytest 的**红法**分（`failed` vs `error`），**不按成因分** ⇒ 两列都不能直接念成「被测系统坏了」或「环境坏了」。本窗 2026-10-02 实测一例反指：同一条全量命令、同一棵树，cwd 落在仓库根时读不到 `backend/pyproject.toml` 的 `asyncio_mode = auto` ⇒ **232 条断言失败**（`async def functions are not natively supported`）而**成因是取数环境**；cwd 落回 `backend/` ⇒ 同一棵树 2,289 passed / 8 errors / 零断言失败 ⇒ **引用两列之前先确认跑批形状**（`--co` 的 head 行会打印 rootdir 与 config）。"
+      }
     },
     {
       "gate_id": "G-2",
@@ -237,9 +241,10 @@
   ],
   "gate_summary": {
     "all_pass": false,
-    "passed": [],
+    "passed": [
+      "G-1"
+    ],
     "not_pass": {
-      "G-1": "NOT_AVAILABLE",
       "G-2": "FAIL",
       "G-3": "PARTIAL",
       "G-4": "PARTIAL",
@@ -249,10 +254,10 @@
       "G-8": "UNVERIFIED"
     },
     "counts": {
-      "PASS": 0,
+      "PASS": 1,
       "FAIL": 3,
       "UNVERIFIED": 2,
-      "NOT_AVAILABLE": 1,
+      "NOT_AVAILABLE": 0,
       "PARTIAL": 2
     }
   },
@@ -260,41 +265,41 @@
     "rows": [
       {
         "gate_id": "G-1",
-        "verdict": "NOT_AVAILABLE",
+        "verdict": "PASS",
         "artifacts": [
           {
             "path": "backend/reports/w6/_full_pytest_w6.log",
             "display": "backend/reports/w6/_full_pytest_w6.log",
-            "present": false,
+            "present": true,
             "tracked_in_git": false,
             "self_reported_at": null,
             "self_reported_at_key": null,
             "self_reported_rev": null,
             "self_reported_rev_key": null,
-            "mtime_utc": null,
-            "parseable_as_json": null,
-            "parse_error": null,
-            "basis": "absent",
+            "mtime_utc": "2026-10-03T14:47:51+00:00",
+            "parseable_as_json": false,
+            "parse_error": "JSONDecodeError",
+            "basis": "mtime_only",
             "arg": "pytest_log"
           },
           {
             "path": "backend/reports/w6/_integration_pytest.log",
             "display": "backend/reports/w6/_integration_pytest.log",
-            "present": false,
+            "present": true,
             "tracked_in_git": false,
             "self_reported_at": null,
             "self_reported_at_key": null,
             "self_reported_rev": null,
             "self_reported_rev_key": null,
-            "mtime_utc": null,
-            "parseable_as_json": null,
-            "parse_error": null,
-            "basis": "absent",
+            "mtime_utc": "2026-10-03T14:46:20+00:00",
+            "parseable_as_json": false,
+            "parse_error": "JSONDecodeError",
+            "basis": "mtime_only",
             "arg": "integration_log"
           }
         ],
         "recompute": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c \"import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-1', pytest_log='backend/reports/w6/_full_pytest_w6.log', integration_log='backend/reports/w6/_integration_pytest.log'))\"",
-        "missing_input_reason": "本轮未收集 P0 测试结果"
+        "missing_input_reason": null
       },
       {
         "gate_id": "G-2",
@@ -305,11 +310,11 @@
             "display": "eval/results_v1.json",
             "present": true,
             "tracked_in_git": true,
-            "self_reported_at": "2026-10-03T14:10:32+00:00",
+            "self_reported_at": "2026-10-03T14:44:06+00:00",
             "self_reported_at_key": "generated_at",
-            "self_reported_rev": "c3b4114",
+            "self_reported_rev": "66d5fba",
             "self_reported_rev_key": "git_rev",
-            "mtime_utc": "2026-10-03T14:10:32+00:00",
+            "mtime_utc": "2026-10-03T14:45:42+00:00",
             "parseable_as_json": true,
             "parse_error": null,
             "basis": "self_reported",
@@ -389,11 +394,11 @@
             "display": "eval/results_v1.json",
             "present": true,
             "tracked_in_git": true,
-            "self_reported_at": "2026-10-03T14:10:32+00:00",
+            "self_reported_at": "2026-10-03T14:44:06+00:00",
             "self_reported_at_key": "generated_at",
-            "self_reported_rev": "c3b4114",
+            "self_reported_rev": "66d5fba",
             "self_reported_rev_key": "git_rev",
-            "mtime_utc": "2026-10-03T14:10:32+00:00",
+            "mtime_utc": "2026-10-03T14:45:42+00:00",
             "parseable_as_json": true,
             "parse_error": null,
             "basis": "self_reported",
@@ -458,11 +463,11 @@
             "display": "eval/results_v1.json",
             "present": true,
             "tracked_in_git": true,
-            "self_reported_at": "2026-10-03T14:10:32+00:00",
+            "self_reported_at": "2026-10-03T14:44:06+00:00",
             "self_reported_at_key": "generated_at",
-            "self_reported_rev": "c3b4114",
+            "self_reported_rev": "66d5fba",
             "self_reported_rev_key": "git_rev",
-            "mtime_utc": "2026-10-03T14:10:32+00:00",
+            "mtime_utc": "2026-10-03T14:45:42+00:00",
             "parseable_as_json": true,
             "parse_error": null,
             "basis": "self_reported",
@@ -474,7 +479,7 @@
       }
     ],
     "report_git": {
-      "rev": "c3b4114",
+      "rev": "66d5fba",
       "dirty": true
     },
     "basis_legend": {
@@ -492,12 +497,16 @@
         "G-7"
       ],
       "gates_without_self_reported_rev": [
+        "G-1",
         "G-4",
         "G-6",
         "G-7"
       ],
-      "artifacts_not_tracked_in_git": [],
-      "statement": "本轮实测：八格的输入产物里**没有一个**同时自带「生成时刻 + git rev」（自报 rev 缺 3 格；取证等级落到 mtime/absent 的 3 格）。⇒ 下一轮欠件 = 让探针与 runner 落盘时自带 `generated_at` + `git rev-parse --short HEAD`，而不是靠报告去倒推「这份产物大概是哪棵树生成的」。"
+      "artifacts_not_tracked_in_git": [
+        "backend/reports/w6/_full_pytest_w6.log",
+        "backend/reports/w6/_integration_pytest.log"
+      ],
+      "statement": "本轮实测：八格的输入产物里**没有一个**同时自带「生成时刻 + git rev」（自报 rev 缺 4 格；取证等级落到 mtime/absent 的 3 格）。⇒ 下一轮欠件 = 让探针与 runner 落盘时自带 `generated_at` + `git rev-parse --short HEAD`，而不是靠报告去倒推「这份产物大概是哪棵树生成的」。"
     }
   },
   "grid": {
@@ -529,11 +538,11 @@
           "struct": "easy",
           "semantic": "high",
           "total": 10,
-          "passed": 0,
-          "pass_rate": 0.0,
+          "passed": 1,
+          "pass_rate": 0.1,
           "attribution": {
             "field_binding": 3,
-            "time_semantics": 7
+            "time_semantics": 6
           }
         }
       ],
@@ -564,12 +573,12 @@
           "struct": "medium",
           "semantic": "high",
           "total": 18,
-          "passed": 0,
-          "pass_rate": 0.0,
+          "passed": 2,
+          "pass_rate": 0.1111,
           "attribution": {
-            "gate_policy_gap": 8,
+            "gate_policy_gap": 7,
             "field_binding": 2,
-            "time_semantics": 7,
+            "time_semantics": 6,
             "over_refusal": 1
           }
         }
@@ -647,8 +656,8 @@
       ]
     ],
     "scored_total": 124,
-    "scored_passed": 0,
-    "ex": 0.0,
+    "scored_passed": 3,
+    "ex": 0.024193548387096774,
     "unattributed_share": 0.0
   },
   "coverage": {
@@ -656,15 +665,15 @@
     "n_scored": 166,
     "n_execute_cases": 124,
     "n_execute_with_sql": 41,
-    "n_execute_with_result": 10,
+    "n_execute_with_result": 41,
     "n_false_clarify": 40,
     "terminal_distribution": {
       "clarify": 54,
-      "complete": 12,
-      "error": 32,
+      "complete": 42,
+      "error": 2,
       "refuse": 68
     },
-    "hash_matches_none_n": 166
+    "hash_matches_none_n": 125
   },
   "over_refusal_split": {
     "total": 43,
@@ -719,21 +728,21 @@
   "attribution_distribution": {
     "ambiguity_not_clarified": 9,
     "field_binding": 40,
-    "gate_policy_gap": 24,
+    "gate_policy_gap": 23,
     "over_refusal": 43,
     "schema_linking_miss": 2,
     "terminal_shape_gap": 5,
-    "time_semantics": 15
+    "time_semantics": 13
   },
   "attribution_split": {
     "distribution": {
       "ambiguity_not_clarified": 9,
       "field_binding": 40,
-      "gate_policy_gap": 24,
+      "gate_policy_gap": 23,
       "over_refusal": 43,
       "schema_linking_miss": 2,
       "terminal_shape_gap": 5,
-      "time_semantics": 15
+      "time_semantics": 13
     },
     "interaction_correct": [
       "C-CAT-01",
@@ -766,7 +775,11 @@
       "R-SEC-04"
     ],
     "unscored": [],
-    "equivalent_so_not_failure": [],
+    "equivalent_so_not_failure": [
+      "E-MET-10",
+      "M-MET-06",
+      "M-MET-07"
+    ],
     "failure_without_attribution": [],
     "note": "`interaction_correct` = 题面本就该拒答/澄清且终态一致 ⇒ **不是失败**，不进归因表；`unscored` = infra_error 等未进判定 ⇒ 不进任何分母；`failure_without_attribution` 已并入 `distribution.unattributed`。"
   },
@@ -1402,7 +1415,7 @@
       "sqlite": "n/a",
       "handling": "评测层夹具：录制回放（07 §17.2）；无网络/无额度时相关门禁判 UNVERIFIED",
       "covered_by_eval": false,
-      "evidence": "产物 `eval/results_v1.json` 的 `config`（`live` / `mode` / `cassette`）+ 逐条 `tokens` / `cost_cny`（本次 run 的实测值经 reporter 补进本行）；本次实测：mode=record，本轮真打 166 条，tokens_total=1637722，cost_cny_total=0.337171",
+      "evidence": "产物 `eval/results_v1.json` 的 `config`（`live` / `mode` / `cassette`）+ 逐条 `tokens` / `cost_cny`（本次 run 的实测值经 reporter 补进本行）；本次实测：mode=replay，回放轮（本轮不出网）；匣带来源：同匣带第 2 次回放（唯一变量=评分器两处缺陷修复 ea0454a）；真打基线见 eval/results_v1_live_20261003T1410Z.json",
       "follow_up": "有网环境全量真跑（见 RELAY 的成本外推与跑批指令）"
     }
   ],
@@ -1428,7 +1441,7 @@
     "🔴 匣带**已失效，报告里的回放读数今天不可零成本复算**：同一批 20 题重放 `w6_batch.jsonl` ⇒ **20/20 全部 miss**（`tokens_total=0`）。miss 的成因实测在上游出站报文变了（语义摘要新增 `## 指标口径` 段，见 W2A `fbae176`），**不在评测侧** ⇒ 要重新出这批读数必须**重新录制**（真打），不得回退到网络静默补数。",
     "**§C.4.3 口径比对**：核心指标 13 条可比对用例中一致 1 条（7.7%），不可归因差异 0 条。一致率低于 95% 是**冻结集 gold 与语义包默认口径不一致**的实测结论（差在 gold 少了 `default_predicates`），不是环境缺陷；比对方是语义包而非外部 BI ⇒ 「已确认权威值」按内部口径降级验证，见 `comparison_basis`。",
     "指标覆盖度：79 条期望 execute 的题面不含任何运行时可达的指标词形（占全集 47.6%）⇒ EX 分母偏小的**上半截**来自目录覆盖，不是模型能力。（覆盖度 ≠ G-7 的口径比对）",
-    "执行层覆盖不完整：execute 用例 124 条中 10 条真拿到结果集。",
+    "执行层覆盖不完整：execute 用例 124 条中 41 条真拿到结果集。",
     "样本量：本轮只有 166 条记录进入网格 —— **任何百分比都是覆盖率读数，不是能力读数**。",
     "红队：66 条全跑（确定性闸门面），未覆盖 2 条成本用例（沙箱无 EXPLAIN）。",
     "**G-8 结构性不可测**：`runner.py` 只跑单轮，没有「clarify 之后把用户补答喂回去」的第二轮回路 ⇒ 「澄清后一次成功率」无从度量。本轮跑了 18 条应澄清题 ⇒ 前半句「澄清率」有读数，后半句无分子 ⇒ 整条门禁判 **UNVERIFIED**。两者都**不是** FAIL：拿评测器自己的缺口给被测系统定罪，会把这条门禁变成不可能通过，下一轮就有人来放宽阈值。本轮 40 条**误澄清**（题面 execute 却 clarify）已计入 §C.4.4 误拒面。该回路缺口属 W6 评测器自身，已上呈（见 RELAY）。"

@@ -760,3 +760,143 @@ rebuild（含 present 计量收口），实证方式不是看时间戳而是**�
 > ④ UI 面：本轮 8 处都是浏览器里打出来的，离线门禁全绿拦不住 ⇒ 若只复算 rc 会**看不见**这一类。
 >    走查最小集见 `deploy/runbook/README.md` §5.1 ＋ `RELAY.md` §五.0。
 > 不可引用清单照旧：`PASS 0/8` 未动、EX 0/11 未动、"生产可部署"不成立（D-H 未裁）。
+
+## §六 第 6 轮（2026-10-03 21:5x–23:2x +0800 ｜ 起始 HEAD `c3b4114` ｜ **本轮花了钱**：一次 `--live` 全量 166 题 ¥0.337171 ＋ 演示面 1 次问答 ¥0.003221 ｜ 动了共享栈：`api` 重建 1 次 ＋ 一次性库 `ecom_w8int` 建→迁移→删）
+
+### 0. 本轮做了什么（一句话）
+把第一批**真打评测**跑完并读到底 —— 结果不是"模型不行"这么省事：**八格里新增的绿、和 EX 从 0 挪到 3，全部来自修我自己的测量器件**；同时把两处判据侧缺口量化到可以直接上呈的形状。
+
+### 1. `--live` 全量批次（¥0.337171 / 166 题）—— 花费与估子
+| 项 | 读数 |
+| --- | --- |
+| 用例 | 166（execute 124 / clarify 18 / refuse 24），`n_scored=166`、`n_unscored=0`、`n_node_timeout=0` |
+| tokens | 1,637,722 |
+| 实花 | **¥0.337171**（跑前计划打印估 ¥0.332 ⇒ 偏差 **+1.6%**） |
+| 墙钟 | 中位 2.921s ／ 合计 876.858s ／ 最长 19.633s（14.6 分钟串行） |
+| 终态 | refuse 68 ／ clarify 54 ／ error 32 ／ complete 12 |
+
+🔻 **同轮订正（原文不删）**：跑批中途我说过"预估偏低 2–5 倍、这轮可能 ¥0.7–1.8"。**那句是错的**，失效时刻 = 批次收尾。成因：我拿**前 23 条**做了外推，而前 10 条是 `E-VER-*`（只发一次 `normalize_intent` 就收口，单条 ¥0.0006–0.0010），后面才进入全链路（单条 ≈¥0.011）。⇒ 报价纪律补一条：**外推要用"同图同形状"的后缀，不要用批次开头**。
+
+### 2. gate1 的四处**闸门自伤**（32 条 `GATE_AST_REJECTED` 逐条归因）
+探针 `reports/w8/probe_live_ast_rejections.py`（零 LLM，产物 `probe_live_ast_rejections.json`，读数时刻 2026-10-03 22:2x）：
+
+- 规则分布 R06 21 ／ R14 8 ／ R04 2 ／ R10 1；
+- **模型编造的列 = 0 条**（`model_unknown_column_tally={}`）⇒ 那 21 条 R06 全是闸门的账；
+- F1（`ORDER BY <本 scope 投影别名>` 认不出归属）15 条、F2（`orders` 域默认谓词注入进没有那三列的 `v_region`/`v_dim_date`/`v_campaign`）8 条。
+
+四处修法（commit `0041d94`，`backend/app/guard/ast_gate.py`）：谓词只注入"该资产表达得出"的（`_inject_predicates`，:468–477）／GROUP·ORDER·HAVING 里的投影别名归到投影 owner（`_resolve_column` + `_clause_key_of`，:92–113）／算术位**数值**字面量放行（`_literal_in_value_position`，:851–860 —— 依据：**冻结集金标自己就有 10 条 `NULLIF(x, 0)`**）／参数化 `LIMIT %(limit)s` 改写成硬上界而不是整条拒绝（`_normalize_limit`，:411–418）。
+反证 12 条进 `tests/unit/test_guard_gate1.py::TestLiveBatchSelfDefects`（恒真式 `1=1` 仍拒、字符串在函数实参位仍拒、`WHERE <别名>` 仍 R06、`LIMIT (SELECT …)` 仍拒）。
+**修后同一份产物复算：32 条 ⇒ 通过 30 / 仍拒 2**（R06、R10 各 1，那两条才是模型的账）。
+
+### 3. 同匣带两次回放 —— 每一版的唯一变量都点名（零成本）
+| 产物 | 唯一变量 | 终态 | `n_equivalent` |
+| --- | --- | --- | --- |
+| `eval/results_v1_live_20261003T1410Z.json` | 真打基线（**延迟/耗时唯一来源**） | refuse 68／clarify 54／error 32／complete 12 | 0 |
+| 回放①（commit `66d5fba`） | gate1 四处修复 | refuse 68／clarify 54／error **2**／complete **42** | 0 |
+| 回放②（工作副本 `eval/results_v1.json`，自报 `git_rev` 见 §6） | 评分器两处修复 | 同上 | **3** |
+
+回放①逐条对照真打：**30 次翻转，全部 `failed → success`，0 次反向**。
+⚠️ 分工不许串：**回放件的 `latency_ms` 里 LLM 段恒 0**（本地取带），**`cost_cny_total` 是从录制用量继承**的同一个 ¥0.337171 ⇒ 它既不是延迟读数、也不是第二次花钱。
+
+### 4. EX=0 里有两处是**我的量具**，不是被测系统（commit `ea0454a`）
+1. `run_in_sandbox` 不做 `%(name)s → :name` 方言桥 ⇒ 凡带绑定参数的被测 SQL 在沙箱恒 `OperationalError: near "%"`（出站契约本身就要求绑定参数；金标不带参数，所以只有预测侧被打死）。
+2. 预测侧的表读 `state["result_rows"]` —— 而 07 §5.2.1 把 `result_rows` 定为**体积字段**（`execute` 只 `context.hold_rows`，行不进 state）⇒ 预测侧恒 0 行。改为与金标**同器同界**复算，并把在线 `row_count` 一并记进 `predicted.state_row_count`（两口径不一致时留在记录里）。
+
+🔻 **同轮订正（原文不删）**：因此第 5 轮 §五.6 与 §五.11 里引用的 `n_equivalent=0`／`EX 0/11` **不能被读成"系统被证明一条都答不对"** —— 当时"0"有两处成因在量具上。这一层的教训写进了新守卫的 docstring：**判据装置坏的时候所有读数会安静地变成 0，而离线门禁全绿**（`tests/eval/test_scorer_sandbox_path.py`，3 条，含一条 AST 形状尺）。
+
+### 5. 金标口径缺口（探针 `reports/w8/probe_gold_predicate_gap.py`，零 LLM）
+41 条有 SQL 的用例上，同器同界跑三个版本：**预测 = 金标原样 = 3 条；预测 = 金标 + 语义包默认谓词 = 22 条** ⇒
+- **19 条的差是"冻结集金标没带指标默认谓词"**（GMV／订单量按语义包只算 已支付·非退款·非测试单，而 `gold_sql` 是裸 `SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '…'`）；
+- 另 **19 条**加了默认谓词仍不等价 ⇒ 那才是真能力缺口。
+
+⇒ **本窗没有动冻结集**（改 `gold_sql` 会破 `content_hash`，N-13 验真当场失败；而且"改考卷让分好看"是我自己不许写的东西）。上呈为**待裁项**：金标该按指标定义（附录 A §A.7.1 的 `default_predicates` 挂在指标上）重造，还是评测口径显式声明"金标 = 裸表扫描"。**这一裁直接决定 G-2/G-7 的天花板。**
+
+### 6. 门禁八格（`eval/reporter.py`，零 LLM；rc=1 = 有格不过，不是崩溃）
+```
+G-1 PASS        红 0 条；离线 passed=2332 ＋ 集成 passed=107，integration_ran=True
+G-2 FAIL        easy×low = 0/10 = 0.0%
+G-3 PARTIAL     放行 0 / 覆盖 48 条（应拦 50，缺 2 条成本闸门用例：沙箱无 EXPLAIN）
+G-4 PARTIAL     跨租户行 0；PG RLS 策略未在真实 DB 层验证
+G-5 FAIL        该拒则拒 19/24 = 79.2%；误拒 43/124 = 34.7%
+G-6 UNVERIFIED  P95 = 7268ms，分母口径未标注（U-106 之前的 W7 回执）
+G-7 FAIL        一致 1/13 = 7.7%；不可归因差异 0
+G-8 UNVERIFIED  澄清率 54/166 = 32.5%；澄清后一次成功 0.0%
+```
+⇒ **`PASS 1/8`**。🔻 订正 §五.11 粘贴块尾行的"不可引用清单"：`PASS 0/8` 已被本轮取代（历史文本不删）。
+取证等级（T-11② 的另一半**闭合**）：`eval/results_v1.json` 现自报 `generated_at` + `git_rev` + `git_dirty=False`，G-2/G-5/G-8 的输入件从 `mtime_only` 升到 **`self_reported`**；仍留 `mtime_only` 的三格是 G-1（`*.log` 按仓库规矩不入库 ⇒ 别人 checkout 拿不到）、G-4（`_probe_pg_real.json`）、G-7（`probe_metric_values.json`）—— 后两件是探针产物，下一轮给它们加 `build_stamp()` 就能同格升级（`deploy/loadtest/driver.py` 已经在这么干，形状照它抄）。
+
+### 7. `git_dirty` 把自己算脏了（commit `2ac3d1e`）
+真打件自报 `git_dirty=True`，而开跑时树是干净的 `c3b4114`。成因：record 模式跑到收尾会写**跟踪件**匣带和**未跟踪**的 `results_v1.json.bak-<stamp>`，而 `build_stamp()` 是在写盘前一刻读 `git status`。⇒ 两处收口：dirty 只统计跟踪件（`--untracked-files=no`）；stamp 在**任何写盘之前**取一次（语义 = 开跑时的树）。
+
+### 8. easy×low 为什么是 0/10 —— 一个 token（本轮最后一枪，**效果 UNVERIFIED**）
+回放②里 easy×low 的 10 条 = **9 条 clarify ＋ 1 条 refuse**，一条都没走到 SQL。翻匣带原文（63 条 `clarify_needed` 响应，最主要一类 `reason_code=unmapped_entity`）：
+> `"clarify_hint": "「T_A」无法映射到任何已登记的活动、店铺、类目或渠道等实体，请说明 T_A 指什么…"`
+
+⇒ 题面里的**租户码自指**被判成"未识别实体"。真实用户不会打自己的租户码（这是冻结集为了钉死租户而留下的夹具形状），但产品侧本来也不该问"T_A 是什么意思"。
+改动：`app/planner/payloads.py` 新增 `TENANT_SELF_REFERENCE_NOTE`，只进 `normalize` / `normalize_intent` / `intent` 三个理解任务，**不进 `plan`/`gen_sql`/`repair`**（`constraints` 是多阶段共用文本面，一条措辞改一个阶段的判据 —— 这条边界由 `tests/unit/test_planner_payloads.py::TestTenantSelfReferenceNote` 两面守住）。
+**UNVERIFIED**：23:03 起上游把调用打成 **HTTP 401 `Authentication Fails, Your api key: ****d46d is invalid`**，两次子集试跑（12 条 + 1 条）全部 `llm_degraded / template_only`、实花 ¥0 ⇒ 这条改动的评测收益**没有读数**，要等密钥换掉后重跑 `--live`。匣带里因此混进 4 条"认证失败"响应，已 `git restore` 撤掉（留着就会污染以后的回放）。
+
+### 9. 演示面复走查（真开浏览器，第五件）
+`api` 镜像重建（含 §2 的四处修复）后走 `deploy/runbook/README.md` §5.1 三步：
+- **第 1 问失败**：`normalize` 撞 15s 节点超时（07 §5.3 生产契约，评测放大不覆盖它）⇒ `template_only` ⇒ 终态 `refuse`，UI 显示"系统里没有这类数据"。**真实原因是上游慢/不可用，文案说的是"没有数据"** —— 与 §8 的 401 同一族：错误分类把凭据失效/超时都收口成 `llm_unavailable → no_data_asset`。**建议开单**（W3A 错误分类 + C-12 四值里没有"上游不可用"这一格，本窗不自签）。
+- **第 2 问同题成功**：表渲染 `gmv = 30768819.37`，与评测沙箱对同一题的复算值**逐位相同** ⇒ 生产链路与评测链路同口径；耗时 15.6s、成本 ¥0.003221、语义包 2026.09.14.1、任务号 `tk_67476aec…` 都在口径条里。
+- 两帧降级都在 UI 上喊了出来（"结果呈现环节降级…本次未能生成图表，已用表格展示"），没有静默。
+- **"把同一问题再问一遍"**仍在同一会话里连问两次 ⇒ 不再 `INTERNAL`（第 5 轮的幂等键修复在位）。
+
+### 10. 复算命令包（都是零额度；形状抄自本轮实跑，改一个字数就变）
+```bash
+# ① gate1 32 条拒绝的逐条归因（零 LLM、零执行）
+PYTHONUTF8=1 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w8/probe_live_ast_rejections.py
+# ② 同匣带回放（唯一变量=代码；~5 分钟，¥0；延迟/花费两栏按 §3 的分工读）
+PYTHONUTF8=1 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --mode replay \
+  --provenance "同匣带复算" --yes
+# ③ 金标默认谓词缺口（零 LLM）
+PYTHONUTF8=1 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w8/probe_gold_predicate_gap.py
+# ④ 八格重算（rc=1 表示"有格没过"，不是崩溃 ⇒ 别接管道吞掉它）
+PYTHONUTF8=1 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/reporter.py
+# ⑤ 闸门反证 12 条 ＋ 评分器守卫 3 条
+cd backend && PYTHONUTF8=1 PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest \
+  tests/unit/test_guard_gate1.py tests/eval/test_scorer_sandbox_path.py -q -p no:randomly
+```
+🔻 **补 §五.10 欠的那件**（第 5 轮写了"集成面闭合"却没留复算命令，本轮重建时才发现）—— 一次性库整段可复跑：
+```bash
+# 建库 → 授权 → alembic 到 0005（迁移要 ALTER ROLE ⇒ MIGRATION 必须用 superuser DSN）
+docker compose -f deploy/docker-compose.yml exec -T pg psql -U postgres \
+  -c "CREATE DATABASE ecom_w8int;" 
+docker compose -f deploy/docker-compose.yml exec -T pg psql -U postgres -d ecom_w8int \
+  -qc "GRANT CREATE, USAGE ON SCHEMA public TO app_rw; GRANT USAGE ON SCHEMA public TO app_ro;"
+docker compose -f deploy/docker-compose.yml exec -T pg psql -U postgres \
+  -qtAc "ALTER DATABASE ecom_w8int OWNER TO app_rw;"
+cd backend && MIGRATION_DATABASE_URL="postgresql+psycopg://postgres:postgres@localhost:5432/ecom_w8int" \
+  PYTHONUTF8=1 ../.venv/Scripts/python.exe -m alembic upgrade head      # → 0005
+# 三个 DSN 都指它（密钥从 deploy/.env 现取现用，别把值写进任何文件或终端历史）
+COMMERCEQL_TEST_RW_DSN=… COMMERCEQL_TEST_RO_DSN=… COMMERCEQL_TEST_SUPER_DSN=… RETRIEVAL_TEST_PG_DSN=… \
+  PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest tests/integration -v -p no:randomly   # → 107 passed
+docker compose -f deploy/docker-compose.yml exec -T pg psql -U postgres \
+  -c "DROP DATABASE IF EXISTS ecom_w8int;"   # 残渣尺：ecom_% 计数回 1（只剩共享 ecom）
+```
+
+### 11. 本窗自曝（三条，都是"下一窗别学"）
+1. **不具代表性的前缀拿来外推**（§1 的 2–5 倍警告）。
+2. **量具没有覆盖率**：评分器两处缺陷让 `EX=0` 存活了不止一轮，而我此前把它当被测事实引用过（§4 的订正）。⇒ 凡是"判据装置"都应有一条自己的守卫，本轮补了 3 条。
+3. **读数写了、命令没写**：§五.10 的集成面读数缺复算命令，本轮要重跑才发现"怎么跑的"已经不在我手里（现在在 §10）。
+
+### 12. 可并发 ／ 必须串行（本轮刷新）
+| 面 | 可以并发 | 必须串行 | 判据／成本 |
+| --- | --- | --- | --- |
+| 零额度代码面 | 闸门/规划/评测侧改动互不争用（本轮四处修复＋两处评分器修复同轮落地） | — | 单窗体制 |
+| 门禁面 | `pytest -k "ast or gate"` 与探针可与全量套件并行 | 全量套件要 cwd=`backend`；集成层要一次性库；**回放与全量套件别同时跑**（`tests/eval/*` 会读 `eval/results_v1.json`，写到一半就是 JSON 解析错） | 本轮实测过这个串行列 |
+| 要钱的跑批 | — | `--live` 重评测（§8 那条改动的收益仍欠一次读数） | 🔴 **当前阻塞：上游 401，密钥失效** ⇒ 不是额度问题，是凭据问题，要他换 key |
+| 共享栈 | — | `api` recreate、任何落库迁移 | 单写者；本轮 recreate 1 次 |
+| 判据侧待裁 | 可与上述并行（不动代码） | 金标默认谓词口径（§5）、上游不可用的终态归类（§9） | 都影响门禁语义，本窗不自签 |
+
+### 13. 给总控的粘贴块
+> **转 QA 窗（收尾复算面，零额度）**：本轮请优先复算三格 ——
+> ① `G-2/G-5/G-8` 输入件的取证等级（`eval/reporter.py` 的 `gate_provenance`，`results_v1.json` 现自报 rev＋`dirty=False`）；
+> ② 我说"32 条拒绝里 30 条是闸门自伤"（`backend/reports/w8/probe_live_ast_rejections.json` 的 `class_tally` 与 `model_unknown_column_tally={}` 两栏，命令见 RELAY §六.10①）；
+> ③ 我说"EX=0 有两处是量具"（`tests/eval/test_scorer_sandbox_path.py` 三条守卫，其中一条是 AST 形状尺；反证 = 把 `to_sqlite_sql` 去掉就会红）。
+> 已知欠账：§六.8 的租户自指改动**没有评测读数**（上游 401），别把它算进"已验证"。
+>
+> **转密钥／额度持有人**：`DEEPSEEK_API_KEY`（尾号 `d46d`）自 2026-10-03 23:03 +0800 起被打回
+> `Authentication Fails … api key is invalid`。本轮花费只有批前批准的 ¥0.337171 ＋ 演示 1 问 ¥0.003221；
+> 之后两次试跑都是 ¥0（全部降级）。要重跑 §六.8 的收益读数，需要先换密钥。

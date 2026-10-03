@@ -74,6 +74,21 @@
 | 🔻 同轮第二次落笔：**集成面闭合 ＋ 一次假红归因** | 一次性库 `ecom_v1int`（建→`alembic` 到 0005→跑→**删**，现查 `ecom_v1%` = 0 行）：`tests/integration` **107 passed**、全量含集成 **2,424 passed / 0 failed** rc=0；`_settings()` 显式钉 `CORS_ALLOWED_ORIGINS=""` | §五.6 那格"集成面本地未跑"被本格取代；`07 §4.8 U-114`（禁指共享库／禁 skip） | **达成**（含三臂对照：净壳 29／只导出该 CORS 变量 4 failed／修复后两态 29） | `RELAY.md` §五.10 ＋ 工作区一笔测试件修复 | 否 |
 | **§12「出第一版」** | 版本报告与 OVERVIEW 刷新随本轮收尾件一起出 | 任务 #12 | **进行中**（本报告件即其交付物） | 本节 ＋ `OVERVIEW.md` | 否 |
 
+## 第 6 轮交付（2026-10-03 21:5x–23:2x +0800 ｜ 起始 HEAD `c3b4114` ｜ **本轮花了钱**：`--live` 全量 166 题 ¥0.337171 ＋ 演示 1 问 ¥0.003221 ｜ **动了共享栈**：`api` 重建 1 次 ＋ 一次性库 `ecom_w8int` 建→迁移→删）
+
+| 面 | 落点 | 判据／实测来源 | 状态 | 证据 |
+|---|---|---|---|---|
+| **第一次真打评测** | 166 题全量、匣带与两份产物入库 | §C.6.1 先报告再跑批（计划打印 ¥0.332 → 实花 **¥0.337171**，+1.6%）；`n_scored=166`、`n_unscored=0`、`n_node_timeout=0` | **达成**（估子准；我中途的"偏低 2–5 倍"警告是错的，已在 §六.1 订正） | `RELAY.md` §六.1 ＋ commit `1af8f65` |
+| **gate1 四处闸门自伤** | `_inject_predicates`／`_resolve_column`＋`_clause_key_of`／`_literal_in_value_position`／`_normalize_limit` ＋ 反证 12 条 | 32 条拒绝逐条复算：R06 21／R14 8／R04 2／R10 1，**模型编造列 0 条**；金标自身含 10 条 `NULLIF(x,0)` | **达成**：同一份产物复算 32 ⇒ 通过 30／仍拒 2（那 2 条是模型的账） | commit `0041d94` ＋ `reports/w8/probe_live_ast_rejections.json` |
+| **同匣带零成本复算** | 回放①（唯一变量=闸门修复） | 逐条对照真打：30 次翻转**全部** `failed→success`、0 反向；error 32→2、complete 12→42 | **达成**（延迟/花费两栏按 §六.3 的分工读，不许串） | commit `66d5fba` |
+| **EX 恒 0 的量具缺陷** | `run_in_sandbox` 补 `%(name)s→:name` 方言桥；预测侧改与金标同器同界复算（不再读体积字段 `result_rows`）；守卫 3 条（含 AST 形状尺） | 出站契约本就要求绑定参数；07 §5.2.1 把 `result_rows` 定为体积字段 ⇒ 只进 `context.hold_rows` | **达成**：`n_equivalent` 0 → **3**（E-MET-10／M-MET-06／M-MET-07）🔻 连带订正第 5 轮引用的 `EX 0/11` | commit `ea0454a` ＋ `tests/eval/test_scorer_sandbox_path.py` |
+| **金标默认谓词缺口** | 探针量化，**不动冻结集** | 41 条有 SQL：预测=金标 3 条／预测=金标＋默认谓词 **22 条** ⇒ 19 条属判据侧、19 条属能力侧 | **上呈待裁**（改 `gold_sql` 会破 `content_hash`，N-13 当场验真失败） | `reports/w8/probe_gold_predicate_gap.json` ＋ `RELAY.md` §六.5 |
+| **八格重算** | `eval/reporter.py`（零 LLM）＋ G-1 规模两栏显示修正 | G-1 PASS（离线 2,332 ＋ 集成 107）／G-2 FAIL easy×low 0/10／G-3·G-4 PARTIAL／G-5 FAIL／G-6·G-8 UNVERIFIED／G-7 FAIL ⇒ **`PASS 1/8`** | **达成**（`PASS 0/8` 作废；历史文本不删，用 🔻 就地订正） | `reports/w6/评测报告与门禁判定.md` ＋ `RELAY.md` §六.6 |
+| **T-11② 闭合** | `build_stamp()` 只统计跟踪件＋stamp 在写盘前取；`git_dirty` 不再被自己的产物淹没 | 真打件自报 `dirty=True` 而开跑时树干净 `c3b4114` | **达成**：G-2／G-5／G-8 输入件取证等级 `mtime_only` → **`self_reported`**（rev 现可读、`dirty=False`） | commit `2ac3d1e` ＋ `RELAY.md` §六.7 |
+| **easy×low 为什么 0/10** | `TENANT_SELF_REFERENCE_NOTE` 只进三个理解任务，`plan`/`gen_sql`/`repair` 一个字不给（两面守卫） | 匣带原文：63 条 `clarify_needed` 里最主要一类 `reason_code=unmapped_entity`，提示语就是"「T_A」无法映射到任何已登记实体" | 🔴 **UNVERIFIED**：23:03 起上游 401（密钥尾号 `d46d` 失效）⇒ 两次子集试跑全降级、实花 ¥0；匣带里 4 条认证错误响应已 `git restore` | `RELAY.md` §六.8 ＋ `tests/unit/test_planner_payloads.py::TestTenantSelfReferenceNote` |
+| **演示面复走查**（第五件） | `api` 重建后真开浏览器走 runbook §5.1 | 第 1 问：`normalize` 撞 15s 生产契约超时 → `template_only` → `refuse(no_data_asset)`，UI 文案"系统里没有这类数据"（**真实原因是上游**）；第 2 问同题：表渲染 `gmv=30768819.37`，与评测沙箱复算**逐位相同**，15.6s／¥0.003221；两帧降级都喊了出来；同题连问不再 `INTERNAL` | **达成并开单建议**（错误分类把凭据失效/超时统一收口成 `llm_unavailable → no_data_asset`，W3A 面） | `RELAY.md` §六.9 |
+| **§五.10 欠的复算命令** | 一次性库整段命令补进 `RELAY.md` §六.10（建库→授权→`alembic` 0005→107 passed→DROP＋残渣尺） | 第 5 轮只写了读数没写命令 ⇒ 本轮要重跑才发现"怎么跑的"已不在我手里 | **达成**（自曝第 3 条） | `RELAY.md` §六.10／§六.11 |
+
 ## 按轮留痕（只追加，不回填到上表的结论行）
 
 | 轮 | 本地提交 | 远端复核 |
@@ -83,3 +98,4 @@
 | 3 | 尺件笔 **`9cf77ac`**（`test+fix(w8/t23)`，4 文件 ＋147/−29；`git show --stat` 复核 = 只含本窗四件：`r23`／`w4` 探针／`w6` 探针／新建夹具件；三件他窗遗留未跟踪物**未 add**）＋ 报告件笔（`reports/w8/{RELAY,DELIVERY}.md` ＋ `reports/w4/RELAY.md` 的 7 行 🔻 收件人补记，原文 1204／1205 一字未动） | 推送后的 `ls-remote` 值记在**下一轮**这一列 |
 | 4 | 五笔尺件 ＋ 一笔回执：`720d434`（DoD④ 门面 11 文件）／`335b3d9`（装载器＋四条探针＋尺子 6 文件）／`7d1a9c7`（T-20 两文件）／`02bd10e`（T-26＋T-27 八文件，含新建 CI job）／`fbbb493`（T-27 回执）／`8b1aa76`（A5 compose ＋ 新契约测试）。每笔都按名 `git add`，**未用 `add -A`**；`git show --stat` 逐笔复核只含该单文件 | 开轮时 `git ls-remote origin main` = `d38cf55`（＝上一轮推送点）⇒ 本轮起点与远端同点；本轮推送后的值记在**下一轮**这一列 |
 | 5 | 两笔尺件：`849b564`（`fix(w8/ui)`，11 文件 ＋130/−39，含新建 `api/base.ts`／`api/base.test.ts`）＋ `e7d9442`（`fix(w8/v1)`，11 文件 ＋143/−22）。两笔都按名 `git add`，**未用 `add -A`**；`git show --stat` 逐笔复核只含本窗文件。另：本轮删掉一个空残渣目录 `deploy/secrets/jwt_public.pem;C/`（09-20 的重定向产物，不在库内、`secrets/` 本就 gitignore） | 推送后的 `ls-remote` 值记在**下一轮**这一列 |
+| 6 | 六笔尺件／证据 ＋ 收尾笔：`0041d94`（gate1 四处修复 ＋ 反证 12 条 ＋ 探针两件）／`2ac3d1e`（`build_stamp` 语义 ＋ stamp 取在写盘前）／`1af8f65`（匣带 409 条 ＋ 真打原始件 ＋ `results_v1.json`）／`ea0454a`（评分器两处缺陷 ＋ 守卫 3 条 ＋ 金标默认谓词探针）／`33736b7`（**修复前**八格读数单独留档，作下一轮的对照基线）／`66d5fba`（回放①读数，含"延迟/花费两栏分工"的警告）。收尾笔：报告件 ＋ 租户自指说明（含两面守卫）＋ G-1 规模两栏。每笔都按名 `git add`，**未用 `add -A`**；`git show --stat` 逐笔复核只含本窗文件。清理：一次性库 `ecom_w8int` 已 DROP（`ecom_%` 计数回 1）、 reporter/runner 留下的 6 个 `.bak-*` 草稿件已删、试跑写进匣带的 4 条认证错误响应已 `git restore` | 推送后的 `ls-remote` 值记在**下一轮**这一列 |
