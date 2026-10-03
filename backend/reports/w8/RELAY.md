@@ -517,3 +517,53 @@ G-6 需要压测；G-3 需要 PG 侧 EXPLAIN 面。
 | 要钱的跑批 | — | `--live` 重评测、压测 | 一律先报四件套再等批准 |
 | 共享栈 | — | T-15（换构建＋观测栈＋压测捆绑）、任何迁移落库 | 单写者资源；A5 的 recreate 已在本轮做完一次 |
 
+### 11. 🔻 同轮具名补记（推送后·收尾前重读权威件 ⇒ 跟着改；时刻 = 2026-10-03 14:3x–14:4x +0800，push 点是 `81248b2`）
+
+推送后本窗又做了一件**会改 §四.8 那一格语义**的事，按本协议就地补记、不回改上文：
+**共享栈的 api 换成了 HEAD 级构建**（原计划捆给 T-15，但 §四.6 已经为 A5 recreate 过一次共享栈，
+同一时点顺手把构建也换掉的成本更低 —— 这是我的决策，代价写在 (6)）。
+
+**(1) 做了什么**：`docker tag commerceql-api:latest commerceql-api:rollback-0918stage0`（回滚点）→
+`docker compose build api` → `up -d --force-recreate api`。构建 rc 0，容器转健康。
+
+**(2) 三层证据同向（§9 (v) 那把尺，逐层都跑了）**
+· 层 1 计数：容器内 `/srv/app` 的 `.py` = **147**（旧镜像 79 ⇒ 这一层有判别力，不是"没被改过的文件"）；
+· 层 2 形状：`openapi.json` 的 path 数 = **12**，集合含 `/api/v1/query`、`/api/v1/clarify`、
+  `/api/v1/feedback`、`/api/v1/query/{task_id}`、`/api/v1/query/{task_id}/cancel`、`/api/v1/session`、
+  `/api/v1/session/{session_id}`、`/api/v1/metrics`、`/api/v1/healthz/drain` 三条 ＋ `/api/v1/healthz` 两条
+  ⇒ 那条"跑批前必须核对 path 集合含 `/api/v1/query`"的契约义务本轮**核对通过**；
+· 层 3 import／行为：`docker exec commerceql-api-1 python -c "…"` 现读
+  `app.graph.state.RUN_SCOPED_STATE_FIELDS` 可导入且 **n = 47**、`STATE_GROUPS` 组数 = 11、
+  `app.semantics.materialize._guard_tenant_private_kinds` **在位**且 `_TENANT_PRIVATE_KINDS = ['gold_query']`
+  ⇒ **§四.4 那件刚提交的代码正在这个容器里跑**（最强的一层，因为它数的就是几分钟前落的那一件）。
+
+**(3) 启动面读数（原样引日志，不美化）**
+`startup_assertions_done` = passed **4** / pending **0**（`analytics_dsn_is_read_only`／
+`embedding_dim_matches_vector_column`／`audit_log_append_only_enforced`／
+`semantic_bundle_passed_five_step_validation`）；`health_probes_registered` 的
+`still_unwired` = **`["llm","embedding"]`**（按 N-21 如实上报，不谎报健康）；
+`binding_tau_uncalibrated` WARN 仍在（U-19：非 prod 放行但不隐瞒）；`graph_runtime_assembled`
+graph_version `0.1.0`；`obs_wiring_done` 的 `unwired_samplers` =
+`["upstream_concurrency（等 W3A 的 inflight(model) 公开读口）"]`。
+探针出网两条：`GET https://api.deepseek.com` = **401 Authorization Required**（无 key 的裸 GET ⇒
+**既不能**读成"key 有效"**也不能**读成"key 无效"）；`GET http://host.docker.internal:11434/api/tags` =
+**200** ⇒ 容器内可达宿主 Ollama。`healthz/live` = 200、`healthz/ready` = 200、`web`（回环 `:80`）= 200。
+
+**(4) 🔴 因此可以说什么、不能说什么**
+可以：**"当前运行构建 = HEAD 级；路由在位、四条启动断言过、ready = 200"**。
+不可以：**"端到端链路可用"** —— 本轮**没有**发过 `POST /api/v1/query`（要打 LLM = 要额度，
+四件套未报未批），也没验过 SSE 帧形状。`OVERVIEW.md` §9 (vi) 那条禁令的**前提**
+（镜像建在 09-18、只有 79 个 `.py`）已不存在，但**纪律留着**：任何活体句必须自带构建指纹三件
+（`.py` 数 ＋ path 集合 ＋ 一条 import 实证），否则该轮读数不可引用 —— 镜像随时会再次落后。
+§6 已加"活体构建面"那一格，§9 (vi) 已就地 🔻 补记（原文一字未删）。
+
+**(5) 权威件重读（推送后现读，不抄本轮开头的快照）**
+`docs/07` = **v1.7.18**、盘上 **3,643** 个换行元素（正文 3,642 行 ＋ 尾空元素，与历轮"3,642 行"同尺）、
+§12.2 的 `embed_doc` 行仍在 **:2492**、现读最大号 = **U-135** ⇒ 本轮**零取号、`docs/**` 一字未改**；
+`docs/08` = **488** 行未变。远端复核：`git ls-remote origin main` = **`81248b22…` = 本地 HEAD ⇒ 同点**。
+
+**(6) 本窗自曝（追加一条）**
+换构建**不在** §四.8 的门禁读数里，是推完 §四.6 之后临时加的判：好处是"出一版"这句话第一次有活体
+构建背书；代价是**占掉了 T-15 里"换构建"那一半**，而 T-15 的捆绑理由（观测栈 ＋ 五场景压测要同一次
+共享栈动作）**没有**被满足 ⇒ 若总控仍按 T-15 打包，那一轮现在只剩"起观测栈 ＋ 抓 `/api/v1/metrics` ＋
+（若批额度）压测"三件，**换构建不必重做**。写在这里是为了让 T-15 的报价不要按四件算。

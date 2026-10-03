@@ -53,7 +53,8 @@
 | **T-27** | 反证夹具接成可重复门禁：两侧断言（pre-fix 必出假绿 ＋ 新版必出不可判且**⑰c 必须有行**）＋ ci.yml 新 job（一次性库 `ecom_neg`）＋ 对照件入库带 sha256 ＋ 库名 `ecom` 拒跑（实测拒后库内 lg/app 表数 = 0） | 同上 §四.5 新开单；`07 §4.8 U-114` | **达成**：本机一次性容器 8 项全过 rc 0；回执已入库 `fbbb493` | `RELAY.md` §四.5 ＋ `reports/w8/t23_negative_gate_receipt.json` | 否 |
 | **A5** | compose 五个发布端口收到宿主回环，**声明面（`compose config`）与运行面（`docker ps` ＋ `netstat`）两面都量过**；新契约测试钉"回环"＋"宿主端口不重号" | `reports/qa/TASK_BOARD.md` 档位 A A5 ＋ O-11（U-134 前提耦合）；`07 §4.8 U-134` | **达成**： recreate 后 live/ready/web = 200/200/200、`app.embed_doc` 仍 **197 行** | `RELAY.md` §四.6 ＋ commit `8b1aa76` | 否（但要一次共享栈停机，本窗自选时点做完） |
 | **P-4／P-5／P-6** | 新体制下由本窗直接裁（P-4 不升全仓规则／P-5 归已修规则／P-6 出率前置 `n ≥ 20`） | `reports/qa/TASK_BOARD.md` §8.4 批次 C | **已裁**（可逆，代价逐条写明） | `RELAY.md` §四.7 | 否 |
-| T-16／T-09 剩余面／T-17／T-18／T-15 | **未启动**；T-15 仍等"换构建＋观测栈＋压测"捆绑的时点（A5 的 recreate 本轮已单独做过一次，不与 T-15 冲突） | `TASK_BOARD.md` §四／§8.2／T-15 | `UNVERIFIED` | `RELAY.md` §四.10 | T-15 的压测半边要 |
+| 🔻 同轮补记：**换构建**（原捆给 T-15 的第一半） | `commerceql-api` 由 09-18 的 79-`.py` 骨架重建为 HEAD 级（147 `.py`／openapi 12 path 含 `/api/v1/query`／import 实证 `RUN_SCOPED_STATE_FIELDS` n=47 ＋ `_guard_tenant_private_kinds` 在位），回滚点 = `commerceql-api:rollback-0918stage0` | `reports/qa/TASK_BOARD.md` T-15（①compose `host_ip` ②换构建 ③观测栈 ④压测）；§9 (vi) 三层证据尺 | **达成（①②两半）**：启动断言 4 passed／0 pending、live/ready/web = 200/200/200；🔴 **未发过 `POST /query`** ⇒ 不得写"端到端可用" | `RELAY.md` §四.11 | ④压测半边要 |
+| T-16／T-09 剩余面／T-17／T-18／T-15 | **未启动**；T-15 现在只剩"起观测栈＋抓 `/api/v1/metrics`＋（若批）压测"三件（换构建已由本窗在本轮做掉，**不必重做** ⇒ 那一轮的报价按三件算） | `TASK_BOARD.md` §四／§8.2／T-15 | `UNVERIFIED` | `RELAY.md` §四.10 ＋ §四.11(6) | T-15 的压测半边要 |
 
 ## 按轮留痕（只追加，不回填到上表的结论行）
 
