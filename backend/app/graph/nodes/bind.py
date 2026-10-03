@@ -182,6 +182,11 @@ async def _online_l4(
         candidates=list(candidate_ids),
         bundle_version=context.bundle_version,
     )
+    # 🔴 用量必须进累加器：`record_usage` 此前只有 normalize/intent/plan/gen_sql/repair 五处，
+    # 而 `l4_score` 的钱是真的花了（落库面有行）。不接 ⇒ 口径条与审计的成本**少一整档**
+    # （2026-10-04 实测：口径条 ¥0.003288 vs 落库面 ¥0.004670）。失败态同样要记（已经付过钱）。
+    if scores.tokens is not None and scores.cost_cny is not None:
+        context.record_usage(scores.tokens, scores.cost_cny)
     if not scores.ok:
         # `failed=True` 是**正常返回值**（N-27 约束④ 的 fail-safe 输入），不是异常。
         context.report_degraded(

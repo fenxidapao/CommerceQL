@@ -487,3 +487,43 @@ class TestIntegrationWithFourLayer:
         assert decision.state is BindingState.AMBIGUOUS
         assert [b.asset_id for b in decision.bindings] == list(CANDIDATES)
         assert decision.clarify_prompt is not None
+
+
+# ============================================================================
+# 九、用量必须随结果对象出去（2026-10-04 实测缺口的另一半）
+# ============================================================================
+
+
+class TestUsageCarriesOut:
+    """`score_l4` 是 L4 唯一的出站口 ⇒ 它是唯一还看得见 token 与钱的地方。
+
+    上游事故：口径条 `¥0.003288` vs 落库面 `¥0.004670`，差值恰为 `l4_score` 那一档
+    （另一半守卫在 `tests/unit/test_bind_l4_usage.py` —— 本模块交出去，`bind` 负责记进累加器）。
+    """
+
+    async def test_ok_outcome_carries_response_usage(self) -> None:
+        outcome = await score_l4(port=_FakePort(), question=QUESTION, candidates=CANDIDATES)
+
+        assert outcome.ok
+        assert outcome.tokens == TokenUsage(input=10, output=10, cache_hit=0, total=20)
+        assert outcome.cost_cny == Decimal("0.0001")
+
+    async def test_failed_parse_still_carries_usage(self) -> None:
+        """解析失败是**产品结论**，但那次调用已经付费 ⇒ 用量不许跟着分数一起丢。"""
+        outcome = await score_l4(port=_FakePort(text="not json"), question=QUESTION, candidates=CANDIDATES)
+
+        assert outcome.failed
+        assert outcome.cost_cny == Decimal("0.0001")
+        assert outcome.tokens is not None
+
+    async def test_paths_that_never_called_out_carry_no_usage(self) -> None:
+        """没出站的早退路径（空问句 / 空候选）没有用量可记 —— 不许凭空给一份。"""
+        port = _FakePort()
+
+        empty_question = await score_l4(port=port, question="", candidates=CANDIDATES)
+        no_candidates = await score_l4(port=port, question=QUESTION, candidates=[])
+
+        assert port.calls == []
+        for outcome in (empty_question, no_candidates):
+            assert outcome.failed
+            assert outcome.tokens is None and outcome.cost_cny is None

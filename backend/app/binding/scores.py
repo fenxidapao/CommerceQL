@@ -28,10 +28,11 @@ import json
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Any, Final
 
 from app.binding.errors import BindingScoreMisuse
-from app.core.contracts import CandidateRef
+from app.core.contracts import CandidateRef, TokenUsage
 from app.core.enums import BindingLayer
 
 __all__ = [
@@ -104,6 +105,12 @@ class ScoreOutcome:
     scores: tuple[RerankScore, ...] = ()
     failed: bool = False
     reason: str | None = None
+    #: 本次 L4 调用的用量（`adopt_l4_candidates` 的注入路径没有出过站 ⇒ 两条都是 `None`）。
+    #: 🔴 它必须存在：`bind` 不在 `record_usage` 的五个节点之列，此前 `l4_score` 的钱只进
+    #: 落库面（`app.cost_ledger`）不进 state ⇒ 口径条与审计的成本少算一整档
+    #: （2026-10-04 实测一条 run：口径条 ¥0.003288 ／ 落库面 ¥0.004670，差的恰是 `l4_score`）。
+    tokens: TokenUsage | None = None
+    cost_cny: Decimal | None = None
 
     @property
     def ok(self) -> bool:

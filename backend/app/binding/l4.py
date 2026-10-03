@@ -44,6 +44,7 @@ L4 是兜底层，且 `binding_layer` 分布可观测（N-27 约束⑤）—— 
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 from typing import Any, Final
 
 from app.binding.scores import L4_SCORE_ITEM_KEYS, ScoreOutcome, parse_scores_json
@@ -209,9 +210,11 @@ async def score_l4(
     #    在这里包 try/except LlmError（先 except LlmRefused: raise）即可，其余代码不动。
     response = await port.call(L4_TASK, payload, model)
 
-    return parse_scores_json(
+    outcome = parse_scores_json(
         response.text,
         expected_ids=expected,
         model_id=response.model,
         prompt_version=response.prompt_version,
     )
+    # 🔴 用量必须随**结果对象**一起出去，且**失败态也要带**（模型回了但内容不可用 ⇒ 钱已经花了）。
+    return replace(outcome, tokens=response.tokens, cost_cny=response.cost_cny)
