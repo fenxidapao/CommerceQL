@@ -49,6 +49,21 @@ TERMINAL_EVENT_MAX_WAIT_S = 600.0  # 兜底：流开了但迟迟不给终止帧
 QUESTION_POOL_DEFAULT = 5  # 轮转题库条数（见 --questions-file）
 
 
+def _build_stamp() -> dict[str, Any]:
+    """让回执自报构建身份（T-11②）——键名必须是 `reporter._AT_KEYS`／`_REV_KEYS` 认得的。
+
+    ⚠️ 回执原本只写 `finished_at`，而**那个键不在识别之列** ⇒ G-6 的输入取证一直退化成 mtime。
+    ⚠️ 不在这里复写一份 git 逻辑：stamp 的唯一实现是 `eval/_bootstrap.build_stamp()`
+    （它已有 `ROOT` 定位与"取不到不猜"的处置），本件只把它的输出面接到运行面上。
+    """
+    eval_dir = Path(__file__).resolve().parents[2] / "eval"
+    if str(eval_dir) not in sys.path:
+        sys.path.insert(0, str(eval_dir))
+    import _bootstrap
+
+    return _bootstrap.build_stamp()
+
+
 # ---------------------------------------------------------------------------
 # 采样与单条请求
 # ---------------------------------------------------------------------------
@@ -1069,6 +1084,9 @@ def roll_up(paths: list[str], out: str) -> int:
             merged["scenarios"].append(s)
     merged["started_at"] = min(started) if started else None
     merged["finished_at"] = max(finished) if finished else None
+    #: T-11②：合成回执也要带 rev ⇒ 否则 G-6 的输入面只有一句 `started_at`、没有代码版本。
+    #: ⚠️ `generated_at` 记的是**本次合成**的时刻，不是被合成的那些样本的时刻。
+    merged.update(_build_stamp())
     Path(out).write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
     changed = sum(1 for d in merged["derived_from"] if d["changed"])
     print(f"[合成] {len(paths)} 份 → {out}：{len(merged['scenarios'])} 条场景，"
@@ -1193,6 +1211,8 @@ def main(argv: list[str] | None = None) -> int:
         print("[中断] 已采到的样本仍写回执", file=sys.stderr)
 
     receipt["finished_at"] = datetime.now(UTC).isoformat(timespec="seconds")
+    #: T-11②：G-6 的输入产物自报构建身份（`generated_at` + `git_rev`）。
+    receipt.update(_build_stamp())
     Path(args.out).write_text(json.dumps(receipt, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[回执] {args.out}")
     return 0

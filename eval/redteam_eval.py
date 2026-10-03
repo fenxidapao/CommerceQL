@@ -722,6 +722,8 @@ def main() -> int:
     args = ap.parse_args()
 
     report = run_redteam_sync()
+    #: T-11②：G-3／G-4 的输入产物过去只有 mtime（09-28）⇒ 属弱证据；自报后升到 `self_reported`。
+    report.update(_bootstrap.build_stamp())
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(report, fh, ensure_ascii=False, indent=2, default=str)

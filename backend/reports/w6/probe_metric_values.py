@@ -390,6 +390,8 @@ def main() -> int:
             "可归因判据是三条同时成立（表达式同形 + 缺集非空 + 补齐后收敛），见本文件 docstring。"
         ),
     }
+    #: T-11②：G-7 的输入产物自报构建身份（此前只有 mtime = 弱证据）。
+    out.update(_bootstrap.build_stamp())
     path = os.path.join(HERE, "probe_metric_values.json")
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(out, fh, ensure_ascii=False, indent=2)

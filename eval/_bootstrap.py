@@ -10,9 +10,11 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
 import json
 import os
+import subprocess
 import sys
 from typing import Any
 
@@ -34,6 +36,7 @@ __all__ = [
     "RED_TEAM_PATH",
     "SANDBOX_DB",
     "bootstrap",
+    "build_stamp",
     "file_sha256",
     "load_json",
     "verify_frozen_inputs",
@@ -76,6 +79,36 @@ def file_sha256(path: str) -> str:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def build_stamp() -> dict[str, Any]:
+    """产物自报构建身份：`generated_at` ＋ `git_rev` ＋ `git_dirty`。
+
+    存在的理由（T-11②）：闸门报告的取证面只认**产物自己声明**的键
+    （`reporter._AT_KEYS` / `_REV_KEYS`），拿不到就退化成 `mtime_only` —— 而 mtime 会被
+    checkout／复制／重命名改写成"最后一次写入"，不是"生成时刻"。此前八个闸门的输入产物
+    **一个都没有声明代码版本** ⇒ "当期格数 = 1/8"，任何 `PASS/FAIL` 都无法证明来自被测的那棵树。
+
+    ⚠️ 取不到 rev 时写 `None`（**不猜**）：宁可留一个空格让报告把它列进 `gaps`，
+    也不要落一个错误的 commit，让人去复现错误的树。
+    """
+    def _git(*args: str) -> str:
+        return subprocess.run(
+            ["git", "-C", ROOT, *args],
+            capture_output=True, text=True, timeout=15, check=True,
+        ).stdout.strip()
+
+    stamp: dict[str, Any] = {
+        "generated_at": dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
+    }
+    try:
+        stamp["git_rev"] = _git("rev-parse", "--short", "HEAD") or None
+        stamp["git_dirty"] = bool(_git("status", "--porcelain"))
+    except Exception as exc:
+        stamp["git_rev"] = None
+        stamp["git_dirty"] = None
+        stamp["git_rev_error"] = type(exc).__name__
+    return stamp
 
 
 def verify_frozen_inputs() -> dict[str, Any]:

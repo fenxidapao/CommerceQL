@@ -616,6 +616,9 @@ def main(argv: list[str] | None = None) -> int:
         "summary": summary,
         "records": batch["records"],
     }
+    #: T-11②：产物自报构建身份 ⇒ `reporter._first_declared` 能在**顶层**取到 `generated_at`／`git_rev`，
+    #: 这一格的取证等级才会从 `mtime_only` 升到 `self_reported`。
+    payload.update(_bootstrap.build_stamp())
     backed_up = _backup(args.out)
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(payload, fh, ensure_ascii=False, indent=2, default=str)
