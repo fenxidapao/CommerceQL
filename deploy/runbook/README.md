@@ -170,6 +170,24 @@ export MIGRATION_DATABASE_URL='<按上面形态填，勿写进任何仓库文件
 cd ../backend && ../.venv/Scripts/python.exe -m alembic upgrade head
 ```
 
+### 5.1 演示登录（D-H 未裁 ⇒ 前端唯一入口是"粘贴测试 token"）
+
+```bash
+# ① 租户必须写**数据里真实存在**的：`app.shop` 实测 T_A(5 店) / T_B(4) / T_C(3)。
+#    签成 `tenant_a` 的表现是"验签通过、五步走完、返回该条件下没有数据"
+#    （RLS 的 `tenant_id = current_setting('app.tenant_id')` 匹配不到行）—— 不是报错，
+#    2026-10-03 本机就是在这里绕了一圈才查到。
+cd ../backend && ../.venv/Scripts/python.exe scripts/mint_dev_token.py --tenant-id T_A --role analyst --ttl 3600
+
+# ② 前端产物必须带调试门：生产构建缺省**不渲染**粘贴框（`VITE_ENABLE_DEBUG_PANEL`），
+#    于是 D-H 未裁的现在**没有任何登录入口**。web 容器只读挂载 `../frontend/dist` ⇒ 重建产物即可，
+#    不用重启容器。
+cd ../frontend && VITE_ENABLE_DEBUG_PANEL=true npm run build
+
+# ③ 浏览器开 http://localhost/login → 粘贴 → 进入。
+#    ⚠️ 令牌只在内存（06 §9.1）⇒ **刷新页面就要重贴**；`--ttl` 到期同样要重贴。
+```
+
 **端口与池速记**：`api` 8000 · `pg` 5432 · `pgbouncer` 6432（⚠️ **容器在跑 ≠ 可用**：该镜像默认监听 **5432**，要靠 compose 里显式的 `LISTEN_PORT: "6432"` 才对得上；且 `auth_type=md5` 与 W1B 角色的 SCRAM 口令不兼容 ⇒ 应用侧**一条连接都进不去**，详见 `RL-3` §2.5）· `redis` 6379 · `web` 80 · Ollama **在宿主** 11434（不在 Compose 内，§18.1）· `worker` 属 `profiles: [async]` **P0 不启用**（ADR-15）。
 **停机宽限**：`api` 的 `stop_grace_period: 40s` 对应 §18.3 的 drain 30s；`healthcheck` 用 **readiness**（不是 liveness），`start_period: 60s`（Ollama 预热慢）。
 **venv**：`CommerceQL/.venv`，从 `backend/` 用 `../.venv/Scripts/python.exe`；本机用 **Git Bash**（不要 PowerShell，零回显）。

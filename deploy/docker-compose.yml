@@ -159,6 +159,14 @@ services:
       DRAIN_TOKEN: ${DRAIN_TOKEN:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    dns:
+      # 本机实测（2026-10-03，同镜像同网络，8 次解析 `api.deepseek.com`）：Docker Desktop 内嵌
+      #   DNS 1 次 gaierror（8.02s）+ 1 次 3.07s，其余 0s；换公网解析 8/8 命中且 ≤0.11s。
+      #   DNS 抖动会把 normalize 节点的 15s 预算吃光 ⇒ 前端只剩 DegradeBar + 拒答卡。
+      # ⚠️ 内网部署（只有企业 DNS 可用）请**删掉这三行**而不是改值：服务名（pg/redis）与
+      #    host.docker.internal 在两种配置下都实测可解析（前者走用户自定义网络，后者走 /etc/hosts）。
+      - 223.5.5.5
+      - 119.29.29.29
     volumes:
       # 语义包只读挂载（W2-INT 转达的部署面缺口，2026-09-16 补）：
       # 不挂载则容器内 /semantic/bundle_*.yaml 永远不存在 → 语义包加载必失败、

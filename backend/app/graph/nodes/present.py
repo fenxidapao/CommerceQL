@@ -35,7 +35,7 @@ from typing import Any
 
 from app.core.enums import ActionTaken, DegradedReason, LatencyKey
 from app.core.errors import ContractViolationError
-from app.graph.nodes._shared import node_latency, rc
+from app.graph.nodes._shared import metering_update, node_latency, rc
 from app.graph.state import GraphState
 from app.obs.logging import get_logger
 
@@ -73,4 +73,11 @@ async def present(state: GraphState) -> dict[str, Any]:
 
     context.report_degraded(DegradedReason.PRESENT_FAILED, ActionTaken.TABLE_ONLY, detail)
     # ⚠️ 不写 `chart_spec` / `insight`：缺席 = 前端不发这两个事件（`events.py` 按非空判定）。
-    return {}
+    # 🔴 **必须在这里收口组 11**（而不是等出口节点的 `terminal_update`）：`meta` 帧由
+    #   `api/runner._extras(PRESENT)` 在**本节点增量并入后**立刻用 `meta_payload(state)` 组装，
+    #   而计量三件套此前只在出口节点写 ⇒ 成功路径上 `state` 里根本没有它们 ⇒
+    #   `meta.cost_cny` 恒 `0`、`meta.latency_ms` 恒 `0`（2026-10-03 浏览器实测：结果表正常出、
+    #   辅助信息行却印"耗时 0.0s ｜ 成本 ¥0"，而 `cost_ledger` 记着 ¥0.007）。
+    #   出口节点随后会再写一次（含 present 自身之后的耗时）—— 两者不同是 C-04 的既定语义，
+    #   不是双计：`meta` 是"下发那一刻的快照"，`audit_log` 段 1 是"落库前的快照"。
+    return metering_update(context)

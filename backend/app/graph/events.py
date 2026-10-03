@@ -349,11 +349,17 @@ def meta_payload(state: Mapping[str, Any], *, bundle_version: str) -> dict[str, 
     **不改变披露策略**"的意思。
     """
     scope = state.get("scope")
+    latency = state.get("latency_ms")
     return {
         "bundle_version": bundle_version,
-        "cost_cny": _jsonable(state.get("cost_cny") or 0),
+        # 契约要**数字**（附录 A 的 `meta` 示例是 `"cost_cny":0.048`），而组 11 存 Decimal
+        #   ⇒ 走 `_jsonable` 会落成字符串 `"0.003821"`（实测：任务记录里就是这个形状）。
+        "cost_cny": float(state.get("cost_cny") or 0),
         "tokens": _jsonable(state.get("tokens") or {}),
-        "latency_ms": _jsonable(state.get("latency_ms") or {}),
+        # 契约要**标量**（同上示例 `"latency_ms":4210`），而 state 里是"分项 + total"的字典
+        #   ⇒ 出站只取 `total`，分项的唯一去处是 `audit_log.latency_ms`（另一次投影）。
+        #   原样发字典会让前端 `(latency_ms / 1000).toFixed(1)` 印成 `NaNs`（2026-10-03 UI 走查实测）。
+        "latency_ms": int(latency.get("total") or 0) if isinstance(latency, Mapping) else int(latency or 0),
         "trace_id": state.get("trace_id"),
         "scope": _jsonable(scope) if scope is not None else _DEFAULT_SCOPE,
         "retrieval_mode": state.get("retrieval_mode"),

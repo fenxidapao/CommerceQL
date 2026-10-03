@@ -27,20 +27,24 @@ D-H（登录端点）未裁 ⇒ **没有任何地方签发令牌**。`/login` �
 
 ```bash
 # 首次：生成密钥对 + 签发 + 自验（令牌打到 stdout）
-python scripts/mint_dev_token.py --tenant-id tenant_a --user-id u_1 --role analyst
+python scripts/mint_dev_token.py --tenant-id T_A --user-id u_1 --role analyst
 
 # 之后：复用私钥（公钥文件已存在时不会覆盖，除非给 --force-public-key）
-python scripts/mint_dev_token.py --tenant-id tenant_a --role analyst
+python scripts/mint_dev_token.py --tenant-id T_A --role analyst
 
-# 让容器里的 api 也能验这枚令牌（compose 没有挂载公钥 ⇒ 必须自己拷；需 -u root）
-python scripts/mint_dev_token.py --tenant-id tenant_a --role analyst \
+# 让容器里的 api 也能验这枚令牌（compose **已经**只读挂载公钥 ⇒ 这个参数只在"不走 compose"时用）
+python scripts/mint_dev_token.py --tenant-id T_A --role analyst \
     --docker-container commerceql-api-1
 ```
 
+🔴 **`--tenant-id` 必须写进数据里真实存在的租户**：演示库的三个租户是 `T_A` / `T_B` / `T_C`
+   （实测 `app.shop`：5 / 4 / 3 家店）。签一枚 `tenant_a` 会**正常通过验签**、走完五步、
+   返回"该条件下没有数据" —— 因为 RLS 的 `tenant_id = current_setting('app.tenant_id')`
+   匹配不到任何行。**不报错、只是空**，最容易误诊成"闸门/模型坏了"。
+
 ⚠️ **持久化公钥的归属不在本脚本**：`deploy/docker-compose.yml` 属 **W0**，
-给 api 加一条 `../deploy/secrets/jwt_public.pem:/run/secrets/jwt_public.pem:ro`
-才能让容器重启后仍然验得过（`--docker-container` 是临时手段）。这条已登记在
-`reports/w1b/RELAY.md`（→ W0）。
+已挂 `./secrets/jwt_public.pem:/run/secrets/jwt_public.pem:ro`（2026-09-18 补，
+登记于 `reports/w1b/RELAY.md` → W0）⇒ 公钥随挂载持久存在，容器重启不失效。
 
 ⚠️ **这是开发工具，不是生产签发器**：私钥以明文落盘、`jti` 用 `uuid4`、
 不做撤销登记。生产由真实 IdP 签发（ADR-17：只把 JWKS 来源做成配置）。
@@ -327,15 +331,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if not copied:
         print(
-            "[next] compose **没有**挂载公钥，容器内的 JWT_PUBLIC_KEY_PATH 默认不存在。二选一：",
+            "[next] compose 的 api 服务**已经**只读挂载公钥"
+            "（`./secrets/jwt_public.pem:/run/secrets/jwt_public.pem:ro`）"
+            "⇒ 走 compose 起的容器不需要任何拷贝，重启也不会失效。",
             file=sys.stderr,
         )
         print(
-            f"       docker cp {args.public_key_out} <容器>:/run/secrets/jwt_public.pem",
-            file=sys.stderr,
-        )
-        print(
-            "       （或给 deploy/docker-compose.yml 的 api 加一条只读挂载后重启）",
+            f"       只有**不走 compose**时才需要手动放："
+            f"docker cp {args.public_key_out} <容器>:/run/secrets/jwt_public.pem",
             file=sys.stderr,
         )
 

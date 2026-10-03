@@ -59,6 +59,10 @@ from app.semantics.models import Alias, Metric
 
 REAL_BUNDLE = Path(__file__).resolve().parents[3] / "semantic" / "bundle_2026.09.14.1.yaml"
 
+#: 提示词资产目录 —— 用于钉"哪条规则该在哪个阶段的提示词里"（见
+#: `test_both_names_reach_the_model_while_the_sql_rule_lives_in_sql_prompts`）。
+_PROMPT_DIR = Path(__file__).resolve().parents[2] / "app" / "llm" / "prompts"
+
 #: `policy()["deny_columns"]` 的**列名部分**（实测 2026-09-17）。
 #: 断言它"不在摘要里"之前，必须先证明它**在**白名单里（否则是空断言）。
 _DENIED_BASENAMES = ("tenant_id", "receiver_phone", "receiver_address", "cost_price")
@@ -312,6 +316,27 @@ class TestSemanticSummary:
         # 摘要里的资产名必须来自**语义层**，不是我写的常量表
         for physical in runtime.asset_allowlist(_ctx()):
             assert str(physical) in summary
+
+    def test_both_names_reach_the_model_while_the_sql_rule_lives_in_sql_prompts(
+        self, runtime: SemanticBundleRuntime, prompt_ctx: PromptContext
+    ) -> None:
+        """R05 只认物理名、PLAN 只写逻辑名 ⇒ 摘要给两个名字，规则只写在 SQL 侧提示词里。
+
+        实测病害（2026-10-03 浏览器走查）：`gen_sql` 跟着口径段写 `FROM traffic_daily`（逻辑名）
+        → R05 拒 → **结构性拒绝不触发 repair**（§5.4）⇒ 用户只看到 `GATE_AST_REJECTED`，
+        重试两次两次都拒（不是随机）。
+        ⚠️ 第一版修法（把资产行主语换成物理名）**是错的**：同一问题同一租户，改前 2 次 PLAN
+        出计划、改后 2 次 PLAN 直接 `blocking_issues` → `refuse(no_data_asset)`，链路退到计划层，
+        而离线单测全绿。⇒ 这条规则只能加在**只有 SQL 阶段会读**的提示词里，本用例钉的就是分工。
+        也不得反向把逻辑名塞进闸门白名单：`traffic_daily` 在库里是基表，放行=绕过视图。
+        """
+        summary = prompt_ctx.semantic_summary
+        body = summary[summary.index("## 认证资产") : summary.index("## 维度与层级")]
+        for physical, entry in runtime.asset_allowlist(_ctx()).items():
+            assert f"- {entry['logical_name']}（物理名 `{physical}`）" in body, f"{physical} 的两个名字不齐"
+        for name in ("gen_sql_v1.txt", "gen_sql_complex_v1.txt", "repair_v1.txt"):
+            text = (_PROMPT_DIR / name).read_text(encoding="utf-8")
+            assert "FROM" in text and "物理名" in text and "不带 schema 前缀" in text, f"{name} 丢了表名规则"
 
     def test_metric_directory_reaches_the_model(
         self, runtime: SemanticBundleRuntime, prompt_ctx: PromptContext

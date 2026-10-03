@@ -306,6 +306,15 @@ def build_semantic_summary(
         "\n".join(metric_lines),
     ]
 
+    # ⚠️ 两个名字**都必须留在清单里**，且主语必须是逻辑名：这份摘要同时喂 PLAN 与 GEN_SQL，
+    #   而 PLAN 的 `assets[].asset` 写的是逻辑名（实测 plan_json：`{"asset": "traffic_daily"}`）。
+    #   2026-10-03 试过把主语换成物理名（两版措辞：先"逻辑名不得写进 SQL"，再"两侧各点名"）：
+    #   同问题、同租户、同语义包 —— 改前 2 次 PLAN 出计划，改后 2 次 PLAN 直接 `blocking_issues`
+    #   → `refuse(no_data_asset)`，链路停在计划层（比 R05 更靠前，且离线单测全绿看不出来）。
+    #   ⇒ "SQL 只许写物理名"这条规则的家在 **SQL 侧的提示词**（`gen_sql_v1` /
+    #   `gen_sql_complex_v1` / `repair_v1` 的硬性规则 2），不在共用的资产清单里。
+    #   ⚠️ 也不得反过来把逻辑名加进闸门白名单：`traffic_daily` 在库里是**基表**，
+    #   放行等于绕过视图（视图侧的脱敏与租户隔离一并绕掉）。
     asset_lines: list[str] = ["## 认证资产（表 / 视图）"]
     for physical in sorted(allowlist):
         entry = allowlist[physical] or {}

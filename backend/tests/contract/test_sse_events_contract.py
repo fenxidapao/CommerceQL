@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 
 import pytest
 
@@ -31,6 +32,7 @@ from app.graph.events import (
     EventRecorder,
     emissions_for_node,
     gate_detail,
+    meta_payload,
     missing_meta_keys,
 )
 from app.graph.nodes import ALL_NODE_NAMES, MAIN_NODE_NAMES, TERMINAL_NODE_NAMES
@@ -46,11 +48,15 @@ _CLEAN_GATES = {
 
 def _meta_payload() -> dict[str, object]:
     # 07 §14.3 约束 7：`meta` 必须带 `scope` 与 `retrieval_mode`（缺一即为契约违规）。
+    # 🔴 `cost_cny` / `latency_ms` 的**类型**按附录 A 的示例写死（数字 / 标量），不是"实现给什么
+    #    就照抄什么"：实现曾把 Decimal 印成 `"0.003821"`、把 latency 的分项字典原样出站，
+    #    而本夹具跟着实现走 ⇒ 契约测试对这个 bug 全程失明（2026-10-03 浏览器走查才暴露：
+    #    前端把字典除以 1000 渲染成 `NaNs`）。类型的正向校验见 `test_meta_numbers_are_numbers`。
     return {
         "bundle_version": "2026.09.1",
-        "cost_cny": "0.0000",
+        "cost_cny": 0.0,
         "tokens": {"input": 1, "output": 1, "cache_hit": 0, "total": 2},
-        "latency_ms": {"total": 10},
+        "latency_ms": 10,
         "trace_id": "trace-1",
         "scope": {"level": "unrestricted"},
         "retrieval_mode": "hybrid",
@@ -278,6 +284,37 @@ def test_meta_missing_keys_are_reported_not_invented() -> None:
         "retrieval_mode",
     )
     assert any("meta 事件缺必填键" in violation for violation in recorder.violations)
+
+
+def test_meta_numbers_are_numbers() -> None:
+    """附录 A 的 `meta` 示例是 `"cost_cny":0.048, "latency_ms":4210` —— **两个都是标量**。
+
+    组 11 在 state 里的形状与出站形状**不同**：`cost_cny` 是 Decimal、`latency_ms` 是
+    "分项 + total" 的字典。原样 `_jsonable` 会得到字符串与字典（2026-10-03 实测：任务记录里
+    就是 `"0.003821"` 与 6 键字典），而前端把 `latency_ms` 当数字除 1000 ⇒ 页面上印 `NaNs`。
+    分项的唯一去处是 `audit_log.latency_ms`（另一次投影），不是 SSE 帧。
+    """
+    meta = meta_payload(
+        {
+            "cost_cny": Decimal("0.003821"),
+            "latency_ms": {"normalize": 1112, "plan": 1738, "total": 7219},
+            "tokens": {"input": 1, "output": 1},
+            "trace_id": "tr",
+        },
+        bundle_version="2026.09.14.1",
+    )
+    assert isinstance(meta["cost_cny"], float)
+    assert meta["cost_cny"] == pytest.approx(0.003821)
+    assert isinstance(meta["latency_ms"], int)
+    assert meta["latency_ms"] == 7219
+
+    # 出口前就终止的路径没有计量 ⇒ 仍要给标量，不给 None / {}（那会让同一处渲染两次）
+    empty = meta_payload({}, bundle_version="2026.09.14.1")
+    assert empty["cost_cny"] == 0.0
+    assert empty["latency_ms"] == 0
+
+    # 整帧可 `json.dumps`：未转换的 Decimal 会在 SSE 生成器内部抛，归因极难
+    json.dumps(meta)
 
 
 def test_stage_values_are_enum_backed() -> None:
