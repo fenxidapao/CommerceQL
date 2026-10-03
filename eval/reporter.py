@@ -795,7 +795,11 @@ def gate_inputs(
     p0_integration = parse_pytest_summary(integration_log)
     if p0 and p0_integration and not p0["integration_ran"]:
         p0 = {**p0, **{k: v for k, v in p0_integration.items() if k != "source_log"},
-              "source_log": f"{p0['source_log']} + {p0_integration['source_log']}"}
+              "source_log": f"{p0['source_log']} + {p0_integration['source_log']}",
+              #: 合并会覆盖 `passed`（后写者=集成层）⇒ 两份规模各自留一档，
+              #: 否则 G-1 那一格会把集成层的 107 说成整个 P0 面的大小。
+              "passed_offline": p0["passed"],
+              "passed_integration": p0_integration["passed"]}
 
     results_map = {
         str(r.get("case_id")): {

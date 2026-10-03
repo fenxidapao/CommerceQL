@@ -253,12 +253,18 @@ def evaluate_gates(
                 + (f"（收集期 {sp['environment_collect_phase']} / 夹具期 {sp['environment_fixture_phase']}）"
                    if sp["environment_collect_phase"] is not None
                    else "（两列**未取证** = 日志没点名，`null` 不是 0）"))
+        #: 规模必须分两份报：`parse_pytest_summary` 的合并把 `passed` 覆盖成了集成层那一个数，
+        #: 直接引它会把"107"读成全量规模（实测离线 2,332 ＋ 集成 107）—— 报数带面。
+        offline, online = p0_tests.get("passed_offline"), p0_tests.get("passed_integration")
+        counts = (f"离线 passed={offline} ＋ 集成 passed={online}"
+                  if offline is not None and online is not None
+                  else f"unit+contract passed={p0_tests.get('passed')}")
         gates.append(Gate(
             "G-1", "全部 P0 用例通过",
             "PASS" if red == 0 and ran_integration else ("FAIL" if red else "PARTIAL"),
             f"{cols} ⇒ 红 {red} 条（判定只看红的**总条数**，两列不改变判据；"
             "「环境未备不该驱动 FAIL」= 判据口径变更 ⇒ 架构 O-1，本窗口不自签）"
-            f"；unit+contract passed={p0_tests.get('passed')}, integration_ran={ran_integration}",
+            f"；{counts}, integration_ran={ran_integration}",
             "§17.1 单元 + 集成",
             _p0_notes(p0_tests, ran_integration),
             red_split=sp,
