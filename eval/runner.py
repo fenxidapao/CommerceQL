@@ -556,6 +556,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--verify-only", action="store_true")
     args = parser.parse_args(argv)
 
+    #: T-11②：构建身份在**任何写盘之前**取。匣带和结果文件是本轮自己的产物 ⇒ 跑到收尾再去读
+    #: `git status`，会把"我写了产物"说成"被测代码不等于这棵树"（`git_dirty=True` 假阳）。
+    stamp = _bootstrap.build_stamp()
+
     evidence = _bootstrap.verify_frozen_inputs()
     if not evidence["checks"]["all_ok"]:
         print("N-13 验真失败：冻结集/沙箱与指纹不一致，拒绝启动。", file=sys.stderr)
@@ -623,8 +627,8 @@ def main(argv: list[str] | None = None) -> int:
         "records": batch["records"],
     }
     #: T-11②：产物自报构建身份 ⇒ `reporter._first_declared` 能在**顶层**取到 `generated_at`／`git_rev`，
-    #: 这一格的取证等级才会从 `mtime_only` 升到 `self_reported`。
-    payload.update(_bootstrap.build_stamp())
+    #: 这一格的取证等级才会从 `mtime_only` 升到 `self_reported`。值取自开跑前那次 `build_stamp()`。
+    payload.update(stamp)
     backed_up = _backup(args.out)
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(payload, fh, ensure_ascii=False, indent=2, default=str)

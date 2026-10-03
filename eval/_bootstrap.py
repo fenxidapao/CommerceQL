@@ -103,7 +103,10 @@ def build_stamp() -> dict[str, Any]:
     }
     try:
         stamp["git_rev"] = _git("rev-parse", "--short", "HEAD") or None
-        stamp["git_dirty"] = bool(_git("status", "--porcelain"))
+        # ⚠️ **`--untracked-files=no`**：dirty 的语义是"**被测代码**是否等于这棵树"，而每次跑批都会
+        #   留下未跟踪的 `results_v1.json.bak-<stamp>`（`runner._backup` 的回滚点）。把它算进 dirty
+        #   ⇒ 第二次跑批起**永远自报 dirty**，"来自哪棵树"这个信号被自己的产物永久淹没。
+        stamp["git_dirty"] = bool(_git("status", "--porcelain", "--untracked-files=no"))
     except Exception as exc:
         stamp["git_rev"] = None
         stamp["git_dirty"] = None
