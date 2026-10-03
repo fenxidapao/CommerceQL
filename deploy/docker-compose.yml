@@ -45,6 +45,20 @@
 #      `tests/unit/test_migration_dsn_hygiene.py` 扫的是整个工作区（含被 ignore 的文件），
 #      属主级字面 DSN 一落进仓库树 DoD④ 就红 ⇒ 只在跑迁移的那个 shell 里 `export`。
 #    `DRAIN_TOKEN` 缺失时应用会在启动时打 `drain_trigger_unavailable` WARN（不静默）。
+#
+# ③ A5（2026-10-03）：**所有**发布端口只绑宿主回环 `127.0.0.1`。
+#    起因不是洁癖 —— U-134 裁的是「属主口令**不轮换** ＋ 显式豁免登记」，而豁免登记的**前提**
+#    就是「这组本机引导凭据只有本机能拨到」。2026-10-01 现测本文件全文无宿主地址 ⇒
+#    5432／6432／6379／8000 绑在 `0.0.0.0`，前提塌 ⇒ 那一支裁定不再成立（QA O-11 点出的正是这个耦合）。
+#    现在由 `backend/tests/contract/test_compose_published_ports.py` 钉两条：
+#      ① 每个 published 端口的宿主地址 ∈ 回环；② 宿主端口**不重号**。
+#      ②是本轮自己踩出来的：改 A5 时把 `web` 那一行误写成 `127.0.0.1:8000:8000`，与 `api` 撞号、
+#      且容器侧 80 没人监听 —— `docker compose config` 与 yaml 解析**都不报**，只有断言拦得住。
+#    🔴 **声明面 ≠ 运行面**：改这几行不会改动已建容器的发布地址。要变运行面需
+#      `docker compose up -d --force-recreate pg pgbouncer redis api web`
+#      —— 那会掐断在途 SSE，属共享栈动作 ⇒ 与 T-15（换构建＋观测栈＋压测）捆成一次做，别单独挤占。
+#      核对一律两面一起看：`docker compose config` ＋ `docker ps --format '{{.Names}}\t{{.Ports}}'`。
+#    要跨设备演示就在对应那一行改回不带地址的形态，并在**行内**登记理由（不要静默改）。
 # ============================================================================
 
 name: commerceql
@@ -63,7 +77,12 @@ services:
       #    它们必须随 alembic 迁移走版本管理（附录 D：RLS 策略也必须纳入迁移）。
       #    归 W1B。这里只保证实例起来。
     ports:
-      - "5432:5432"
+      # 🔴 A5（2026-10-03）：宿主侧只绑回环。本实例的属主凭据是 compose 里的引导值
+      #   `postgres/postgres`（U-134 裁定"不轮换 + 显式豁免登记"），绑 0.0.0.0 等于把
+      #   一组可用口令开放到局域网 —— 豁免登记的前提正是"只有本机能拨到"。
+      #   ⚠️ 改这一行**不会**改动已建容器的发布地址 ⇒ 必须 recreate 才变运行面
+      #   （`docker ps` 的 PORTS 列才是运行面，`docker compose config` 只是声明面）。
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d ecom"]
       interval: 10s
@@ -105,7 +124,7 @@ services:
       #    切换属配置决策，需 W7 + 架构确认，**不要顺手改 .env**。
       AUTH_TYPE: "scram-sha-256"
     ports:
-      - "6432:6432"
+      - "127.0.0.1:6432:6432"   # A5：同 pg，只绑回环（口令豁免登记的前提；生效需 recreate）
     depends_on:
       pg:
         condition: service_healthy
@@ -117,7 +136,7 @@ services:
     # 故 Redis 是硬依赖：挂了要摘流量，而不是降级（附录 A §A.8.1）
     command: ["redis-server", "--appendonly", "no", "--maxmemory-policy", "allkeys-lru"]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"   # A5：Redis 无密码（compose 未设 requirepass）⇒ 对外开等于把会话/锁面交给局域网
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -161,7 +180,9 @@ services:
       #    容器非 root 还得 `-u root`，重启即丢）；现在公钥随挂载持久存在，跨重启不失效。
       - ./secrets/jwt_public.pem:/run/secrets/jwt_public.pem:ro
     ports:
-      - "8000:8000"
+      # A5：只绑宿主回环。压测／探针／本机浏览器拨的都是 `127.0.0.1:8000` ⇒ 形状不变；
+      #   跨设备演示要放开时改回 `"8000:8000"` 并在本行登记理由（不要静默改）。
+      - "127.0.0.1:8000:8000"
     depends_on:
       pg:
         condition: service_healthy
@@ -186,7 +207,12 @@ services:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ../frontend/dist:/usr/share/nginx/html:ro
     ports:
-      - "80:80"
+      # A5：宿主回环。web 是**唯一给浏览器用的入口**，本机 `http://localhost/` 与 UI 验收都不需要
+      #   局域网；要跨设备演示再显式改回 `"80:80"` 并在这里登记理由。
+      #   ⚠️ 容器侧端口是 80（nginx 监听 80），宿主侧也保持 80 —— 上一版本这里曾被误写成
+      #   `127.0.0.1:8000:8000`，那不但把 web 指到 api 的宿主端口（端口冲突 + 容器侧 8000 无人监听），
+      #   还会让"声明面绿、运行面全错"重演一次。`compose config` 与 `docker ps` 要一起看。
+      - "127.0.0.1:80:80"
     depends_on:
       api:
         # ⚠️ 刻意用 service_started（原注释留的"W7 收尾改成 service_healthy"，W7 判定**不改**）：
