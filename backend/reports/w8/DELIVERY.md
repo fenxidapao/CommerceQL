@@ -56,6 +56,23 @@
 | 🔻 同轮补记：**换构建**（原捆给 T-15 的第一半） | `commerceql-api` 由 09-18 的 79-`.py` 骨架重建为 HEAD 级（147 `.py`／openapi 12 path 含 `/api/v1/query`／import 实证 `RUN_SCOPED_STATE_FIELDS` n=47 ＋ `_guard_tenant_private_kinds` 在位），回滚点 = `commerceql-api:rollback-0918stage0` | `reports/qa/TASK_BOARD.md` T-15（①compose `host_ip` ②换构建 ③观测栈 ④压测）；§9 (vi) 三层证据尺 | **达成（①②两半）**：启动断言 4 passed／0 pending、live/ready/web = 200/200/200；🔴 **未发过 `POST /query`** ⇒ 不得写"端到端可用" | `RELAY.md` §四.11 | ④压测半边要 |
 | T-16／T-09 剩余面／T-17／T-18／T-15 | **未启动**；T-15 现在只剩"起观测栈＋抓 `/api/v1/metrics`＋（若批）压测"三件（换构建已由本窗在本轮做掉，**不必重做** ⇒ 那一轮的报价按三件算） | `TASK_BOARD.md` §四／§8.2／T-15 | `UNVERIFIED` | `RELAY.md` §四.10 ＋ §四.11(6) | T-15 的压测半边要 |
 
+## 第 5 轮交付（2026-10-03 14:5x–15:5x +0800 ｜ 起始 HEAD `9f30f73` ｜ **本轮花了钱**：5 run / 28 调用 / ¥0.058674 ｜ **动了共享栈**：`api` 重建 3 次 ＋ compose 给 `api` 加公网 DNS）
+
+> 体制未变（开发＋架构同窗，QA 复算在收尾）。本轮的**验收面**变了：第一次把页面在浏览器里打开
+> （`http://localhost/`，走 nginx 同源面），一次走查打出 8 处 v1 阻断面。`docs/**` 一字未改、未取 `U-xx`。
+
+| 单号 | 交付物 | 判据／任务出处 | 状态 | 证据在 | 要额度过不过 |
+|---|---|---|---|---|---|
+| **V1-UI 走查**（新开，本窗自开自裁） | 第一次真机开页并逐面走：空态、健康点、登录、一次完整问答、错误态、重复提问 | §12「出第一版」的 DoD 里**没有**"面向人的判据要开浏览器"这一条 ⇒ 本轮补进纪律 | **达成**：8 处阻断面全部定位并修，最终一次 run 出 5 行真实结果（`direct 162890 … feed 161618`） | `RELAY.md` §五.0／§五.8(1) | 是（¥0.059，已花） |
+| **前端四处** | API 前缀唯一出处（`base.ts:18` ＋ 4 条断言）、dev 代理不再剥 `/api`、三列 grid 占位改真实零宽（`ChatPage.tsx:484`）、幂等键一次提交一枚（`queryStream.ts:50`） | 本窗现测：产物内 `undefined/api` 3 处、`main` 宽 32px、同问题重问必 `INTERNAL` | **达成**：vitest 19 passed／tsc rc=0／eslint rc=0／build rc=0，产物内该串 **0** 命中 | `RELAY.md` §五.1 ＋ commit `849b564` | 否 |
+| **后端 meta 两处** | `meta_payload` 出站改标量（`events.py:330`／:362）＋ `present` 自己收口组 11（`present.py:83`）＋ 契约夹具改回**契约形状**并加类型断言 | `docs/02_附录A:338` 示例两个都是标量；实测前端印 `NaNs`、`成本 ¥0` 而 `cost_ledger` 记 ¥0.007 | **达成**：修后实测"耗时 14.2s ｜ 成本 ¥0.003171" | `RELAY.md` §五.2／§五.3 ＋ commit `e7d9442` | 否 |
+| **gen_sql 表名规则** | 物理名规则写进**只有 SQL 阶段读**的三个提示词（`gen_sql_v1.txt:19` ＋ complex ＋ repair） | 实测：空态示例问题被 R05 连拒两次，结构性拒绝按 §5.4 不触发 repair | **达成**（同问题同租户重跑：过闸、出结果） | `RELAY.md` §五.2 ＋ commit `e7d9442` | 是（2 run） |
+| 🔻 同轮自曝：**一次失败的修法** | 第一版改的是共用资产清单的主语 ⇒ PLAN 退到 `no_data_asset` 自拒；**已回退**，教训与对照（改前 2 次出计划／改后 2 次自拒）写进 `payloads.py:309-323` | 共用面（一份摘要喂多阶段）上的"更清楚"＝另一阶段的判据变更 | **已回退**（离线 1888 全绿也拦不住 ⇒ 反证用例已补） | `RELAY.md` §五.4 ＋ §五.8(2) | 是（2 run，≈¥0.011） |
+| **api 容器 DNS** | compose 给 `api` 加公网解析（`docker-compose.yml:162`），并写明内网部署该删这三行 | 同镜像同网络 A/B：内嵌 DNS 8 次里 1 次 gaierror(8.02s)＋1 次 3.07s，公网 8/8 ≤0.11s | **达成**：重建后 8/8、`host.docker.internal` 与 `pg`/`redis` 实测仍可解析、ready=200 | `RELAY.md` §五.2／§五.7 | 否 |
+| **演示登录面** | runbook 新增 §5.1 三步（`:173`）＋ `mint_dev_token.py` 的"compose 没挂公钥"陈旧话改掉、演示租户钉 `T_A` | D-H 未裁 ⇒ 生产构建不渲染粘贴框 ⇒ **没有任何登录入口**；签错租户的表现是"五步走完、没有数据"而非报错 | **达成**（本轮全部 UI 证据都走这条登录路） | `RELAY.md` §五.2 ＋ commit `e7d9442` | 否 |
+| **门禁全跑**（任务 #12 的"跑"半边） | 后端全量／contract＋unit／ruff／mypy／lint-imports／前端四件套／DoD④ 等价扫描／一次反证 | §12 收尾四件套 | **达成但有缺口**：`tests/integration` 9 条本地**未跑**（缺 `COMMERCEQL_TEST_*_DSN`，U-114 设计如此，CI 跑）；本机**没有 gitleaks**，只做了 diff 扫描（0 命中） | `RELAY.md` §五.6 | 否 |
+| **§12「出第一版」** | 版本报告与 OVERVIEW 刷新随本轮收尾件一起出 | 任务 #12 | **进行中**（本报告件即其交付物） | 本节 ＋ `OVERVIEW.md` | 否 |
+
 ## 按轮留痕（只追加，不回填到上表的结论行）
 
 | 轮 | 本地提交 | 远端复核 |
@@ -64,3 +81,4 @@
 | 2 | 本轮两笔：尺件笔（3 文件 ＋132/−1）＋ 报告件笔（`reports/w8/{RELAY,DELIVERY}.md`） | 推送后的 `ls-remote` 值记在**下一轮**这一列（不为它另起一笔） |
 | 3 | 尺件笔 **`9cf77ac`**（`test+fix(w8/t23)`，4 文件 ＋147/−29；`git show --stat` 复核 = 只含本窗四件：`r23`／`w4` 探针／`w6` 探针／新建夹具件；三件他窗遗留未跟踪物**未 add**）＋ 报告件笔（`reports/w8/{RELAY,DELIVERY}.md` ＋ `reports/w4/RELAY.md` 的 7 行 🔻 收件人补记，原文 1204／1205 一字未动） | 推送后的 `ls-remote` 值记在**下一轮**这一列 |
 | 4 | 五笔尺件 ＋ 一笔回执：`720d434`（DoD④ 门面 11 文件）／`335b3d9`（装载器＋四条探针＋尺子 6 文件）／`7d1a9c7`（T-20 两文件）／`02bd10e`（T-26＋T-27 八文件，含新建 CI job）／`fbbb493`（T-27 回执）／`8b1aa76`（A5 compose ＋ 新契约测试）。每笔都按名 `git add`，**未用 `add -A`**；`git show --stat` 逐笔复核只含该单文件 | 开轮时 `git ls-remote origin main` = `d38cf55`（＝上一轮推送点）⇒ 本轮起点与远端同点；本轮推送后的值记在**下一轮**这一列 |
+| 5 | 两笔尺件：`849b564`（`fix(w8/ui)`，11 文件 ＋130/−39，含新建 `api/base.ts`／`api/base.test.ts`）＋ `e7d9442`（`fix(w8/v1)`，11 文件 ＋143/−22）。两笔都按名 `git add`，**未用 `add -A`**；`git show --stat` 逐笔复核只含本窗文件。另：本轮删掉一个空残渣目录 `deploy/secrets/jwt_public.pem;C/`（09-20 的重定向产物，不在库内、`secrets/` 本就 gitignore） | 推送后的 `ls-remote` 值记在**下一轮**这一列 |

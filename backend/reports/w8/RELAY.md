@@ -567,3 +567,105 @@ graph_version `0.1.0`；`obs_wiring_done` 的 `unwired_samplers` =
 构建背书；代价是**占掉了 T-15 里"换构建"那一半**，而 T-15 的捆绑理由（观测栈 ＋ 五场景压测要同一次
 共享栈动作）**没有**被满足 ⇒ 若总控仍按 T-15 打包，那一轮现在只剩"起观测栈 ＋ 抓 `/api/v1/metrics` ＋
 （若批额度）压测"三件，**换构建不必重做**。写在这里是为了让 T-15 的报价不要按四件算。
+
+---
+
+## §五 第 5 轮（2026-10-03 14:5x–15:5x +0800 ｜ 起始 HEAD `9f30f73` ｜ **本轮花了钱**：5 次 run / 28 次调用 / ¥0.058674 ｜ **动了共享栈**：`api` 重建 3 次，compose 里给 `api` 加了公网 DNS）
+
+### 0. 触发件：第一次把页面在浏览器里打开
+前四轮的"可用"全部建立在**离线门禁 ＋ curl** 上。本轮第一次真机开页（in-app Browser，
+`http://localhost/` ⇒ 走 `nginx` 同源面，不是 dev 代理面），一次走查打出 **8 处** v1 阻断面
+（前端 4 ＋ 后端/部署 4），其中 4 处是"页面打得开、任何提问必失败"级。
+⇒ 这不是"运气好抓到几个 bug"，是**验收面缺了一整个层**：curl 只看状态码，看不见 `NaNs`、
+看不见 `main` 宽 32px、也不会"把同一个问题再问一遍"。
+
+### 1. 前端四处（commit `849b564`）
+- **`undefined/api/v1`**：四个客户端各写 `${import.meta.env.VITE_API_BASE_URL}/api/v1`，生产没有
+  `.env.production` ⇒ Vite 替换成 `undefined`，旧产物里 3 处字面量。收进唯一出处
+  `frontend/src/api/base.ts:18`（缺省空串 = 同源），`base.test.ts` 四条断言钉住。
+  复算：`cd frontend && npx vitest run src/api/base.test.ts`（4 passed）＋
+  `grep -c "undefined/api" dist/assets/*.js`（现测 **0**，改前 3）。
+- **dev 代理剥 `/api`**：`vite.config.ts` 原有 `rewrite` ⇒ 与 `deploy/nginx.conf:36` 的
+  `proxy_pass`（不剥）不同形 ⇒ 新克隆 `npm run dev` 全站 404（`.env.development` 不入库）。已删。
+- **三列 grid 轨道**：`frontend/src/pages/ChatPage.tsx:484` 的 rail 占位原先是 `display:none`
+  ⇒ 它退出 grid item 序列 ⇒ 三条轨道左移一列 ⇒ `main` **实测宽 32px**（内容 0 ＋ 左右 padding），
+  空态被挤成一条看不见的竖列（`scrollHeight 2704 / clientHeight 502`）。改真实零宽占位后
+  实测 `main` 宽 692.67、轨道解析成 `0px 692.667px 0px`。
+- **幂等键跨调用复用**：`frontend/src/api/queryStream.ts:50` 原先按 `(会话, 问题)` 缓存
+  ⇒ 同一会话把同一个问题再问一遍命中同键 ⇒ 后端沿用**原 `task_id`** 重跑
+  （`app/api/routers/query.py:208-213` 明写"事件重放未接线"）撞 `audit_log` 的
+  `uq_audit_log_task_id` ⇒ `IntegrityError` → N-09 fail-closed → 前端只剩 `INTERNAL`。
+  现改一次提交一枚（409 重试循环仍复用同键，`queryStream.test.ts` 那条断言未动）。
+  复算：`cd frontend && npx vitest run`（19 passed）＋  ledger 侧证：`tk_2ecf6695…` 一个 id
+  挂了 **8 次调用 ¥0.028570**（两次提交的钱记在同一任务号下）。
+
+### 2. 后端／部署四处（commit `e7d9442`）
+- **`meta` 出站形状**（`backend/app/graph/events.py:330`，标量那行在 **:362**）：契约
+  `docs/02_附录A_接口契约详解.md:338` 是 `"cost_cny":0.048,"latency_ms":4210` 两个标量，
+  实现发的是 Decimal→字符串 与"分项＋total"字典 ⇒ 前端 `(latency_ms/1000).toFixed(1)` 印 `NaNs`。
+- **成功路径计量恒 0**（`backend/app/graph/nodes/present.py:83`）：组 11 只在出口节点收口，
+  而 `meta` 帧在 `present` 增量并入后就用 state 组装 ⇒ 读到空。让 `present` 自己收口一次。
+  实测前后对照：同一问题 **修前**"耗时 0.0s ｜ 成本 ¥0"，**修后**"耗时 14.2s ｜ 成本 ¥0.003171"。
+- **`FROM` 表名规则**（`backend/app/llm/prompts/gen_sql_v1.txt:19` ＋ complex ＋ repair）：
+  空态示例问题"各渠道的订单量排名"被 R05 拒 **两次两次**（`FROM traffic_daily` 逻辑名），
+  而结构性拒绝按 §5.4 **不触发 repair** ⇒ 用户只看到 `GATE_AST_REJECTED`。
+- **`api` 容器 DNS**（`deploy/docker-compose.yml:162`）：同镜像同网络 A/B —— 内嵌 DNS 解析
+  `api.deepseek.com` 8 次里 **1 次 gaierror（8.02s）＋ 1 次 3.07s**，公网 8/8 命中且 ≤0.11s；
+  DNS 抖动会把 `normalize` 的 15s 预算吃光（本轮第一条 run 就是这么降级的）。
+  ⚠️ 单加 `dns:` 会打断 `host.docker.internal`（实测 gaierror），compose 已有的 `extra_hosts` 补住。
+- 另：`backend/scripts/mint_dev_token.py` 的"compose 没有挂载公钥"是陈旧话（已挂），演示租户
+  写死 `T_A`（数据里真实存在的是 `T_A/T_B/T_C`；签 `tenant_a` 的表现是"五步走完、该条件下没有数据"
+  **而不是报错**）；`deploy/runbook/README.md:173` 补 §5.1 演示登录三步。
+
+### 3. 元问题（比分条 bug 更贵的那一条）
+契约测试 `tests/contract/test_sse_events_contract.py:47` 的 `_meta_payload()` 是**照抄实现**写的
+（字典 ＋ 字符串），所以它对"形状偏离契约"全程失明。⇒ 契约测试的夹具值必须来自**契约文档**，
+不是来自被测实现；本轮把它改成契约形状并补 `test_meta_numbers_are_numbers`。
+同一族还有 §5 那条：门禁全绿 ≠ 页面可用。
+
+### 4. 一次失败的修法（同轮自曝，原文不删）
+第一条针对 R05 的修法改的是**共用资产清单**的主语（`build_semantic_summary` 的资产行换成物理名开头）。
+实测：同问题、同租户、同语义包 —— **改前 2 次 PLAN 出计划、改后 2 次 PLAN 直接
+`blocking_issues` → `refuse(no_data_asset)`**，链路退到计划层（比 R05 更靠前），而
+`pytest tests/unit tests/contract` 1888 全绿。已回退，规则只放进**只有 SQL 阶段会读**的三个提示词。
+⇒ 教训：共用文本（一份摘要喂多个阶段）上的"更清楚"可能是**另一个阶段的判据变更**；
+   改共用面必须先问谁在读它，本轮是靠真机跑出来的，不是靠读代码想到的。
+
+### 5. 本轮花费（报价按实测，不按估）
+`5 runs / 28 calls / ¥0.058674`。复算（宿主）：
+`docker exec commerceql-pg-1 psql -U postgres -d ecom -c "select count(distinct task_id), count(*), sum(cost_cny) from app.cost_ledger where created_at >= '2026-10-03 06:50:00+00'"`
+分档：成功出结果的 run ≈ **¥0.0057–0.0060 / run**（4 次调用）。两个 **8 次调用**的任务号
+（`tk_b0286fd…` ¥0.011356、`tk_2ecf6695…` ¥0.028570）**不是 repair 重试**，而是 §1 那条幂等键缺陷的
+直接后证：同一会话把同一问题再问一遍 ⇒ 两次提交的钱记在**同一个 `task_id`** 下。
+⇒ "验收类一次 ≈¥0.006" 这一档与既有的报价档位同量级，本轮没有推翻它。
+
+### 6. 门禁读数（每条带命令形状 ＋ 真 rc；形状一变数就变）
+| 项 | 命令（cwd 已写明） | 读数 |
+| --- | --- | --- |
+| 后端全量 | `cd backend && PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest -q --continue-on-collection-errors` | **2332 passed / 9 errors**，rc=**1**（HEAD `e7d9442`） |
+| 那 9 个 error | 同上，逐条 | 全是 `tests/integration` 缺 `COMMERCEQL_TEST_{RW,RO,SUPER}_DSN` 当场 RuntimeError = **U-114 设计如此**（禁止 skip）。⇒ 本地**未跑**，CI 有 trust 服务容器（`ci.yml:125-127`）会跑 |
+| contract＋unit | `… pytest tests/contract tests/unit -q` | 1888 passed，rc=0 |
+| ruff | `… -m ruff check app tests scripts` | All checks passed，rc=0 |
+| mypy | `… -m mypy app` | no issues in **147** files，rc=0 |
+| import-linter | `PYTHONUTF8=1 PYTHONIOENCODING=utf-8 ../.venv/Scripts/lint-imports.exe`（cwd `backend/`） | 4 kept / 0 broken，rc=0 |
+| 前端 | `npx vitest run` / `npx tsc --noEmit -p tsconfig.json` / `npx eslint . --ext .ts,.tsx` / `npm run build` | 19 passed / rc=0 / rc=0 / rc=0，产物 `index-B76P91Ll.js` |
+| DoD④ 等价扫描 | `git diff > /tmp/w.diff && grep -Ec "sk-\|://user:pw@\|PRIVATE KEY\|eyJ" /tmp/w.diff` | **0 命中**，rc=1。⚠️ 本机 **没有 gitleaks**（`command -v gitleaks` 空）⇒ 这是**替代扫描**，不是 gitleaks 门禁本身 |
+| 反证 | 把资产行主语翻回逻辑名 ⇒ 新用例当场红（`RC_NEG=1`），翻回即绿 | 证明 §4 那条教训有闸 |
+
+### 7. 运行面（不是声明面）
+`docker ps`：五只容器全在，端口全部 `127.0.0.1:` 前缀（A5 后形状未变）。`api` 镜像 = 本轮最后一次
+rebuild（含 present 计量收口），实证方式不是看时间戳而是**在容器里 import 后读函数体**：
+`docker exec commerceql-api-1 python -c "…meta_payload(Decimal, 字典) → cost 0.003821(float) / latency 7219(int)"`
+＋ `gen_sql_v1.txt` 内含"不带 schema 前缀" ⇒ 两条都在构建面上。
+`web` 只读挂载 `../frontend/dist` ⇒ 换产物不需要重启容器；现服务的是 **demo 构建**
+（`VITE_ENABLE_DEBUG_PANEL=true`，否则 D-H 未裁的现在**没有任何登录入口**）。
+`healthz/ready` = 200，`/api/v1/session/probe` 带 token = 404 SESSION_NOT_FOUND、不带 = 401 AUTH_FAILED。
+
+### 8. 本窗自曝（三条）
+1. 走查前我**已经**报过"出一版"（§四.11 的换构建）——那句话当时只覆盖到"路由在位 ＋ ready 200"，
+   没覆盖 UI 面；本轮的 8 处里有 4 处本可以在上一轮花 ¥0.006 打出来。纪律补一条：
+   **凡是"面向人"的判据，收尾必须开一次浏览器**，curl 不算。
+2. §5 那次失败修法占用了 2 次真实 run（≈¥0.011）。如果先读 `plan_v1.txt` 与 `plan_json` 的
+   实际形状（PLAN 的 `assets[].asset` 写逻辑名）就能预判冲突 —— 我没读就改了共用面。
+3. `deploy/secrets/jwt_public.pem;C/`（09-20 的一次重定向残渣，空目录）本轮删掉了；
+   它不影响任何判据，但它是"仓库树里有奇怪东西"这一类，早删早报。
