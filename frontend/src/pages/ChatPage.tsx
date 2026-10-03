@@ -34,11 +34,10 @@ import {
   setToken,
   type StreamHandlers,
 } from '../api/queryStream';
+import { API_BASE } from '../api/base';
 import { useChatStore, type Turn } from '../store/chatStore';
 import { track } from '../utils/analytics';
 import type { AsyncTaskResult, QueryOptions, SessionDetail, SseEvent } from '../api/types';
-
-const API_BASE = `${import.meta.env.VITE_API_BASE_URL}/api/v1`;
 
 /** 空状态示例问题（06 §5.1 / 附录 B-5：静态，不做动态推荐） */
 const EXAMPLES = [
@@ -480,7 +479,9 @@ export function ChatPage() {
           gridTemplateColumns: `0px 1fr 0px`,
         }}
       >
-        <div style={{ display: 'none' }} data-rail-placeholder="session-rail-p1" />
+        {/* ⚠️ 不能改成 display:none：那会让它退出 grid item 序列 ⇒ 三条轨道整体左移一列 ⇒
+            main 落进 rail 的 0px 轨道（实测宽 32px = 0 内容 + 左右 padding，页面看着是空白页）。 */}
+        <div data-rail-placeholder="session-rail-p1" style={{ width: 0 }} />
         <main
           ref={scrollRef}
           style={{ overflowY: 'auto', padding: `${tokens.space.lg}px ${tokens.space.md}px` }}

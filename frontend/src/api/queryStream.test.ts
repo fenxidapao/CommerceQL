@@ -2,9 +2,8 @@
  * T2 单测：queryStream（06 §10.1 硬规则逐条对应）
  * 用假 fetch 直接喂字节流，不依赖 MSW node 服务。
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  __clearIdempotencyKeyCache,
   makeIdempotencyKey,
   openQueryStream,
   parseSSEChunk,
@@ -99,9 +98,6 @@ describe('parseSSEChunk', () => {
 });
 
 describe('openQueryStream', () => {
-  beforeEach(() => {
-    __clearIdempotencyKeyCache();
-  });
   afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
@@ -203,13 +199,13 @@ describe('openQueryStream', () => {
     expect(cancelCalls.some((u) => u.includes('/query/tk_timeout/cancel'))).toBe(true);
   });
 
-  it('Idempotency-Key：同会话同问题复用同 key；改问题换新 key', () => {
-    const k1 = makeIdempotencyKey('ss_a', '问题一');
-    const k2 = makeIdempotencyKey('ss_a', '问题一');
-    const k3 = makeIdempotencyKey('ss_a', '问题二');
-    expect(k1).toBe(k2);
-    expect(k1).not.toBe(k3);
+  it('Idempotency-Key：一次提交一枚 —— 同一个问题再问一遍不得复用上一轮的键', () => {
+    const k1 = makeIdempotencyKey('ss_a');
+    const k2 = makeIdempotencyKey('ss_a');
     expect(k1).toMatch(/^q_ss_a_\d+_[0-9a-f-]{36}$/);
+    // 旧实现按 (会话, 问题) 缓存 ⇒ k1 === k2 ⇒ 后端沿用原 task_id 重跑 ⇒
+    // audit_log 唯一约束 IntegrityError ⇒ N-09 fail-closed ⇒ 前端只剩 INTERNAL。
+    expect(k1).not.toBe(k2);
   });
 
   it('409 SESSION_CONFLICT：自动重试 1 次并复用同一幂等键，不进限流态', async () => {

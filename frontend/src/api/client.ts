@@ -4,10 +4,9 @@
  * - 统一解包 ApiEnvelope（A.0.4），失败抛 ApiError（含 code / trace_id / detail）
  * - 读取类限流（429）保留 Retry-After，供页面就地提示（不弹全局错误）
  */
+import { API_BASE } from './base';
 import type { ApiEnvelope, ErrorCode } from './types';
 import { getToken } from './queryStream';
-
-const API_BASE = `${import.meta.env.VITE_API_BASE_URL}/api/v1`;
 
 export class ApiError extends Error {
   code: ErrorCode | string;

@@ -10,9 +10,8 @@
  * - 409 SESSION_CONFLICT 自动重试 1 次（复用同一幂等键），不进限流禁用态
  * - 限流头只认 X-RateLimit-Bucket === 'query' 才喂 QuotaIndicator
  */
+import { API_BASE } from './base';
 import type { QueryOptions, QueryRequest, RateLimitInfo, SseEvent } from './types';
-
-const API_BASE = `${import.meta.env.VITE_API_BASE_URL}/api/v1`;
 
 /** 90s 无事件超时（A.1.4 契约值，禁止收紧） */
 export const NO_EVENT_TIMEOUT_MS = 90_000;
@@ -38,19 +37,18 @@ export function getToken(): string | null {
 // 幂等键（06 §10.2：同一次提交的重试必须复用；改问题后必须换新）
 // ---------------------------------------------------------------------------
 
-const keyCache = new Map<string, string>();
-
-export function makeIdempotencyKey(sessionId: string, question: string): string {
-  const cacheKey = `${sessionId}::${question}`;
-  if (!keyCache.has(cacheKey)) {
-    keyCache.set(cacheKey, `q_${sessionId}_${Date.now()}_${crypto.randomUUID()}`);
-  }
-  return keyCache.get(cacheKey)!;
-}
-
-/** 仅测试用：清空幂等键缓存 */
-export function __clearIdempotencyKeyCache(): void {
-  keyCache.clear();
+/**
+ * 每次调用产出**一枚新键**，复用范围由调用方持有 —— `openQueryStream` 在 409 重试循环
+ * 之前算好一次，所以"同一次提交的重试"天然复用同一个键。
+ *
+ * 🔴 旧实现按 `${sessionId}::${question}` 做模块级缓存（跨调用复用），后果实测过：
+ *   用户"把同一个问题再问一遍"命中同键 ⇒ 后端沿用**原 `task_id`** 重跑
+ *   （§A.12 的事件重放未接线），而 `audit_log.task_id` 上有唯一约束 ⇒ `IntegrityError`
+ *   → N-09 fail-closed（不下发结果）⇒ 前端只剩一个 `INTERNAL`。同会话重问同一个问题**必炸**。
+ *   契约只要求"同 key 24h 返回同一 task_id"，键怎么生成是客户端的事 ⇒ 一次提交一枚。
+ */
+export function makeIdempotencyKey(sessionId: string): string {
+  return `q_${sessionId}_${Date.now()}_${crypto.randomUUID()}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -132,7 +130,8 @@ export async function openQueryStream(
   signal: AbortSignal,
 ): Promise<QueryStreamResult> {
   const sessionId = input.sessionId ?? '';
-  const idempotencyKey = makeIdempotencyKey(sessionId, input.question);
+  // 一次提交算一次：下面的 409 重试循环复用这个值（06 §10.2）
+  const idempotencyKey = makeIdempotencyKey(sessionId);
 
   const body: QueryRequest = {
     question: input.question,
@@ -179,7 +178,7 @@ export async function openClarifyStream(
     selected_value: answer.selected_value ?? null,
     free_text: answer.free_text ?? null,
   };
-  const idempotencyKey = makeIdempotencyKey(sessionId ?? '', `clarify:${clarifyId}`);
+  const idempotencyKey = makeIdempotencyKey(sessionId ?? '');
   const outcome = await doFetch(body, idempotencyKey, handlers, signal, '/clarify');
   return outcome.result;
 }

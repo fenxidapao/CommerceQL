@@ -627,7 +627,8 @@ export interface EvalRunDetail {
 // ---------------------------------------------------------------------------
 
 export interface ImportMetaEnv {
-  readonly VITE_API_BASE_URL: string;
+  /** 可选：production 构建若没给这个变量，旧写法会拼出字面量 `"undefined/api/v1"` —— 见 `base.ts` */
+  readonly VITE_API_BASE_URL?: string;
   readonly VITE_APP_ENV: 'dev' | 'development' | 'staging' | 'production';
   readonly VITE_ENABLE_DEBUG_PANEL?: string;
   readonly VITE_ENABLE_MSW?: string;

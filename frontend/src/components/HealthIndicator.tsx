@@ -6,10 +6,10 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { Popover } from 'antd';
-import { tokens } from '../theme/tokens';
+import { API_BASE } from '../api/base';
 import type { HealthzResponse } from '../api/types';
+import { tokens } from '../theme/tokens';
 
-const API_BASE = `${import.meta.env.VITE_API_BASE_URL}/api/v1`;
 const POLL_INTERVAL_MS = 60_000;
 
 type DotLevel = 'ok' | 'degraded' | 'unhealthy' | 'unknown';
