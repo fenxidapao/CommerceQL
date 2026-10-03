@@ -71,6 +71,7 @@
 | **api 容器 DNS** | compose 给 `api` 加公网解析（`docker-compose.yml:162`），并写明内网部署该删这三行 | 同镜像同网络 A/B：内嵌 DNS 8 次里 1 次 gaierror(8.02s)＋1 次 3.07s，公网 8/8 ≤0.11s | **达成**：重建后 8/8、`host.docker.internal` 与 `pg`/`redis` 实测仍可解析、ready=200 | `RELAY.md` §五.2／§五.7 | 否 |
 | **演示登录面** | runbook 新增 §5.1 三步（`:173`）＋ `mint_dev_token.py` 的"compose 没挂公钥"陈旧话改掉、演示租户钉 `T_A` | D-H 未裁 ⇒ 生产构建不渲染粘贴框 ⇒ **没有任何登录入口**；签错租户的表现是"五步走完、没有数据"而非报错 | **达成**（本轮全部 UI 证据都走这条登录路） | `RELAY.md` §五.2 ＋ commit `e7d9442` | 否 |
 | **门禁全跑**（任务 #12 的"跑"半边） | 后端全量／contract＋unit／ruff／mypy／lint-imports／前端四件套／DoD④ 等价扫描／一次反证 | §12 收尾四件套 | **达成但有缺口**：`tests/integration` 9 条本地**未跑**（缺 `COMMERCEQL_TEST_*_DSN`，U-114 设计如此，CI 跑）；本机**没有 gitleaks**，只做了 diff 扫描（0 命中） | `RELAY.md` §五.6 | 否 |
+| 🔻 同轮第二次落笔：**集成面闭合 ＋ 一次假红归因** | 一次性库 `ecom_v1int`（建→`alembic` 到 0005→跑→**删**，现查 `ecom_v1%` = 0 行）：`tests/integration` **107 passed**、全量含集成 **2,424 passed / 0 failed** rc=0；`_settings()` 显式钉 `CORS_ALLOWED_ORIGINS=""` | §五.6 那格"集成面本地未跑"被本格取代；`07 §4.8 U-114`（禁指共享库／禁 skip） | **达成**（含三臂对照：净壳 29／只导出该 CORS 变量 4 failed／修复后两态 29） | `RELAY.md` §五.10 ＋ 工作区一笔测试件修复 | 否 |
 | **§12「出第一版」** | 版本报告与 OVERVIEW 刷新随本轮收尾件一起出 | 任务 #12 | **进行中**（本报告件即其交付物） | 本节 ＋ `OVERVIEW.md` | 否 |
 
 ## 按轮留痕（只追加，不回填到上表的结论行）

@@ -709,3 +709,54 @@ rebuild（含 present 计量收口），实证方式不是看时间戳而是**�
 不可以：① "门禁通过"（`PASS 0/8` 未动、评测未重跑）；② "数字算对了"（EX 0/11）；
 ③ "生产可部署"（`D-H` 未裁 ⇒ 无登录面；`app/present/` 空壳 ⇒ 无图；`U-128`/`U-129`/`U-131` 三口未转绿）；
 ④ "集成测试过了"（本地**未跑**，只有 CI 那一遍的历史读数）。
+
+### 10. 🔻 同轮第二次落笔：集成面**闭合**了，并归因掉一次我自己造的假红（时刻 = 2026-10-03 16:3x–16:5x +0800，起点 HEAD `f4331d7`）
+
+**(1) 集成面从"本地未跑"变成"本地跑过"** —— §五.6 那格写的"9 errors ⇒ 集成面本地未跑、只有 CI 跑过"**已被本格取代**（原文不删）：
+一次性库 `ecom_v1int`（建库 → `alembic upgrade head` 到 0005 → 跑 → **删**；现查
+`select count(*) from pg_database where datname like 'ecom_v1%'` = **0** ⇒ 没在共享集群里留残渣）。
+- `tests/integration` 单跑：**107 passed**，rc=**0**（31.4s）。
+- 全量（含集成）`pytest -q --continue-on-collection-errors`：**2,424 passed / 0 failed**，rc=**0**（109.9s）。
+  ⚠️ 这个数**不等于** §五.6 那格的 `2,332 passed / 9 errors` ＋ 107：两次的**环境面不同**（那次没导出集成 DSN，
+  集成文件在收集期就 error ⇒ 其用例根本不进分母），且工作副本多了下面那条测试件修复。⇒ 引用"全量多少条"必须带**是否给了集成 DSN** 这一位。
+- 复算：`cd backend && COMMERCEQL_TEST_{SUPER,RW,RO}_DSN=… RETRIEVAL_TEST_PG_DSN=… PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest -q --continue-on-collection-errors`
+  ⚠️ 四个 DSN 里带口令 ⇒ **只在 shell 里临时导出**，写进任何仓库文件都会命中 DoD④（`commerceql-dsn-with-password`）。
+
+**(2) 🔴 一次假红的归因：污染源是"我为了取口令而 `source deploy/.env`"，不是被测代码。**
+第一次带 env 的全量跑出 **5 failed**（全在 `tests/unit/test_startup_assertions.py`）。三臂对照：
+① 净壳该文件 **29 passed**；② 只导出 `CORS_ALLOWED_ORIGINS=http://localhost:5173`（不碰任何 DSN）⇒ **4 failed / 25 passed**；
+③ 修复后两种壳都 **29 passed**。⇒ 根因是 `Settings` 属 pydantic-settings，**用例没显式给的键会回落到进程环境**，
+而 `config.py:197` 的"prod 时 CORS 必须为空"于是被一条 shell 里的残留变量触发。
+**归因方向为什么重要**：第一反应是"集成 DSN 引出来的"，那是错的 —— 集成 DSN 与这 4 条无因果，
+把它记成"跑集成会红"会让下一窗**不敢跑集成**。
+
+**(3) 修法（测试件，一行）**：`tests/unit/test_startup_assertions.py` 的 `_settings()` 里显式
+`"CORS_ALLOWED_ORIGINS": ""`，并把上面三臂对照写进注释。⇒ 用例不再取决于"谁在哪个 shell 里 source 过什么"。
+（只钉这一处观察到的键，**不**顺手给整个 `Settings` 做环境隔离 —— 那会掩盖真实的环境依赖面，属另一件事。）
+
+### 11. 下一步顺序 ＋ 可并发／必须串行（本轮刷新）
+
+| 面 | 现在能并发 | 必须串行 | 为什么 |
+|---|---|---|---|
+| 零额度代码面 | T-16／T-09 剩余面／T-17／T-18 | — | 都不争用共享栈 |
+| 门禁面 | ruff／mypy／import-linter 可与测试同时；`tests/integration` 可与 `unit+contract` 并发（各用各库） | 全量 pytest 需 cwd=`backend`；跑集成需**一次性库**（禁指 `ecom`） | 假红守卫 ＋ U-114 |
+| 要钱的跑批 | — | `--live` 重评测（T-11② 的另一半）、压测 | 一律先报四件套再等批准 |
+| 共享栈 | — | 任何迁移落库、`api`/`pg` recreate | 单写者资源；本轮已 recreate `api` 三次 |
+
+**本窗仍欠的两件（都不是"忘了"，是"要钱或要人"）**：
+1. **T-11② 的另一半**：`eval/results_v1.json` 在 ¥0 下重建不出来（匣带键对着更早的 20 用例集，166 条 `cassette_miss`）
+   ⇒ G-2／G-5／G-8 的输入件取证等级仍停在 `mtime_only`。**要 `--live` 额度**，报价形状见 §五.5（验收类 ≈¥0.006/run）。
+2. **门禁报告未重算** ⇒ `PASS 0/8` 沿用 `8ffb53e` 那份。要重算同样要额度（或至少一次零额度全量评测跑批，取决于匣带能不能命中）。
+
+**给 QA 窗（收尾复算面）的粘贴块** —— 只复算"本轮声称改过"的四格，命令都是零额度：
+
+> 复算 W8 第 5 轮（HEAD `f4331d7` ＋ 工作区一笔测试件修复）。四格：
+> ① `meta` 出站形状：读 `backend/app/graph/events.py:330` 与 `:362`，对照 `docs/02_附录A:338` 的示例（两个都应是标量）；
+>    复算 `cd backend && PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest tests/contract/test_sse_events_contract.py -q`。
+> ② 集成面：`tests/integration` 107 passed 的读数**只在一次性库上成立**，请自建一次性库复算，
+>    并核 `select count(*) from pg_database where datname like 'ecom_v1%'` = 0（W8 声称未留残渣）。
+> ③ 假红归因三臂：净壳 29 passed／只导出 `CORS_ALLOWED_ORIGINS=http://localhost:5173` ⇒ 4 failed／修复后两态 29 passed。
+>    这一格请**优先复算**：它决定"跑集成会不会引假红"这句结论对不对。
+> ④ UI 面：本轮 8 处都是浏览器里打出来的，离线门禁全绿拦不住 ⇒ 若只复算 rc 会**看不见**这一类。
+>    走查最小集见 `deploy/runbook/README.md` §5.1 ＋ `RELAY.md` §五.0。
+> 不可引用清单照旧：`PASS 0/8` 未动、EX 0/11 未动、"生产可部署"不成立（D-H 未裁）。
