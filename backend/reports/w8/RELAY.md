@@ -823,6 +823,10 @@ G-7 FAIL        一致 1/13 = 7.7%；不可归因差异 0
 G-8 UNVERIFIED  澄清率 54/166 = 32.5%；澄清后一次成功 0.0%
 ```
 ⇒ **`PASS 1/8`**。🔻 订正 §五.11 粘贴块尾行的"不可引用清单"：`PASS 0/8` 已被本轮取代（历史文本不删）。
+🔻 **两处同轮跟着改的数**（写完上面那格之后又落了笔）：① G-1 的规模在收尾复跑后是 **离线 2,334 ＋ 集成 107**
+（2,332 是加两条载荷守卫之前的读数，两个都真、时点不同；集成层为当前树重跑过一次，107 未变）；
+② `eval/results_v1.json` 那份回放件自报的 rev 是 **`66d5fba`**，而本报告生成时的工作树已含 `6f763cb`/`254a4d1`
+⇒ **引用 EX 那三个数（0→3）以 `66d5fba` 那棵树为准**，别把后来的措辞改动算进它的收益。
 取证等级（T-11② 的另一半**闭合**）：`eval/results_v1.json` 现自报 `generated_at` + `git_rev` + `git_dirty=False`，G-2/G-5/G-8 的输入件从 `mtime_only` 升到 **`self_reported`**；仍留 `mtime_only` 的三格是 G-1（`*.log` 按仓库规矩不入库 ⇒ 别人 checkout 拿不到）、G-4（`_probe_pg_real.json`）、G-7（`probe_metric_values.json`）—— 后两件是探针产物，下一轮给它们加 `build_stamp()` 就能同格升级（`deploy/loadtest/driver.py` 已经在这么干，形状照它抄）。
 
 ### 7. `git_dirty` 把自己算脏了（commit `2ac3d1e`）
