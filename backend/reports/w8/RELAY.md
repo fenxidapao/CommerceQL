@@ -957,3 +957,78 @@ docker compose -f deploy/docker-compose.yml exec -T pg psql -U postgres \
 **G-5 的读数因此更难看**。我**不打算为了 G-5 好看而回退它** —— 理由写在件里：拒答与澄清在 P0 是两个不同的产品出口，
 把题留在"永远走不下去的那一步"不是修复。**下一步的正确杠杆只有一个**：要么扩语义包的指标面（改内容 ⇒ 全批重录，≈¥0.4），
 要么裁"冻结集这些计数题该不该由 9 指标面回答"（改判据 ⇒ 不动代码）。**两条都不是本窗能自己按下去的**（前者要钱与 W1A 内容，后者是判据）。
+
+### 16. 收尾后又被逮到的一件自家器件缺陷：`l4_score` 的用量从来没进 run 累加器（时刻 = 2026-10-04 01:0x–01:5x +0800，起点 HEAD `079916d`）
+§六.15 之后按第五件（面向人的交付物要真开浏览器）去刷新 `OVERVIEW.md`，路上先撞出两件、再逮出第三件。
+
+**① 上一轮那次走查的构建面是落后的（我自己在 §六.9 写的"镜像含闸门四处修复"只管了闸门）**
+容器内 import 现读：`hasattr(app.planner.payloads, "TENANT_SELF_REFERENCE_NOTE") = **False**`，而闸门那两处（`_clause_key_of`／列面守卫）在位
+⇒ §六.8 那条改动**从来没有活体面证据**，只有评测批次那一份。⇒ 动作：`docker compose build api`（`a3b14d1d597c`）＋ `up -d --force-recreate api`，再带上 ② 的修复重建第二次（`c97ef6d353f8`）。
+三层构建指纹重取：`.py` = 147、`openapi` path = 12（含 `/api/v1/query`）、import 实证 = `ScoreOutcome` 字段集含 `tokens`/`cost_cny` ∧ note 在位 ∧ `bind` 源含 `record_usage`；
+`/api/v1/healthz/{live,ready}` = 200/200，**裸 `/healthz/ready` = 404**（第 5 轮加了 API 前缀 ⇒ 引探针 URL 必须带 `/api/v1`，别拿 404 当"服务没起"）。
+
+**② 同一条 run 的两个成本数不等 ⇒ 顺着差值抓到第三个调用点缺口**
+走查那条 run：口径条 `成本 ¥0.003288`，而同一条 run 在 `app.cost_ledger` 的 sum = `¥0.004670`（4 档）。差值 `¥0.001382` **恰等于** `llm_call` 日志里 `task=l4_score` 那一档。
+根因（一行话）：`record_usage` 全仓只有 **5 个调用点**（`normalize`／`intent`／`plan`／`gen_sql`／`repair`），`bind` 是**唯一"自己出过站却不往累加器记"的节点**
+⇒ `state.cost_cny` ⇒ `present` 出口、口径条、`audit_log` 的成本列**全都少算一整档**，而落库面（网关侧 sink）是对的 ⇒ 两栏从来不等，只是此前没人对撞过。
+修复三处（`git diff` 面 = `app/binding/scores.py` ＋ `app/binding/l4.py` ＋ `app/graph/nodes/bind.py`，＋15 行）：
+`ScoreOutcome` 带出 `tokens: TokenUsage | None` ＋ `cost_cny: Decimal | None`；`score_l4` 用 `dataclasses.replace` 把 `LLMResponse` 的用量挂到结果上（**解析失败也挂** —— 回完话就付过钱了）；`bind` 拿到就 `context.record_usage(...)`。
+守卫 6 条、两个文件、每件事三面：`tests/unit/test_bind_l4_usage.py`（入账／失败仍入账／没出站不许凭空入账）＋ `tests/unit/test_binding_l4.py::TestUsageCarriesOut`（带出／失败带出／早退不带）。
+```bash
+cd backend && PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest \
+  tests/unit/test_bind_l4_usage.py tests/unit/test_binding_l4.py -q -p no:randomly    # → 39 passed
+```
+**闭合证明分两栏（不许串）**：
+- 零额度回放（唯一变量 = 这条修复）：同匣带 166 题，`cost_cny_total` `0.391504` → **`1.131531`**、`tokens_total` 1,836,623 → **2,090,419**、`n_equivalent` 仍是 **6**、终态分布**逐格不变**（48/30/87/1）
+  ⇒ 质量结论不受这条修复影响，变的只有钱。逐档：`l4_score` **73 次 ¥0.741315（65.5%）**、`plan` ¥0.161837、`normalize_intent` ¥0.138684、`gen_sql` ¥0.088006、`repair` ¥0.001689；
+  且**恰好 73 条用例成本变大、93 条逐位不变**（= 走过 `bind` 的那批）⇒ 增量与修复一一对应。产物固定件：`eval/results_replay_after_l4fix_20261003T1722Z.json`。
+- 活体面：修复前同题 `¥0.003288` vs `¥0.004670`；修复后同题（`tk_b6ad22886a0840398dbc176c6701bd66`）口径条 **`¥0.004312` = 落库面 sum `¥0.004312`**，表值 `gmv = 30768819.37` 与前两轮逐位相同。
+🔴 **对自己上一轮的记账要说的话**：§六.1／§六.15 报给总控的 `¥0.337171`／`¥0.391504` 与两个 token 数**都是下限**（少算的恰好是最贵的一档）。
+`¥1.131531` 是**回放继承录制用量**的复算口径，不是 DeepSeek 账单；两批不能相加（同一批匣带条目会重复计价）⇒ **本项目真实累计花费 = `UNVERIFIED`**，等控制台对账或下一次 `--live`。
+
+**③ 顺带量到 L4 为什么这么贵（给下一笔要裁的成本）**：匣带里 115 条 `l4_score` 录制响应，`completion_tokens` 中位 **2,193**、请求侧 `max_tokens` 已是 **2,304**（`router.py:261/288`，注释自述 09-28 由 512 标定而来）
+⇒ "贴顶输出"基本花在 `{candidate_id, score, **reason**}` 的 `reason` 自由文本上。按 `max_tokens` 分组的 `finish_reason`：`512 档 8/8 = length`、`2304 档 7/107 = length(6.5%)`
+⇒ **`U-128` 的现状态 = 大幅缓解、未清零**，且§9 那句"约 64% 未生效"属于 **W7 第十七轮的活体面**，与本行的**匣带面**是两个数、不得互认。
+压 `reason` 是**共用文本面上的措辞改动 = G-2 判据变更** ⇒ 不自动手，登记待裁。
+
+**④ 集成面在当前树重跑（G-1 的输入要跟着树走）**：`ecom_w8int2`／`ecom_w8int3` 两轮，配方同 §六.10（建库→库内授权→`ALTER DATABASE … OWNER`→`MIGRATION_DATABASE_URL` 用超管 DSN 跑 alembic 到 0005→跑→**当场 DROP**）。
+- 离线面同尺重跑：**2,340 passed / 0 failed**（rc 0，90.01s）= 上一读数 2,334 ＋ 本轮 6 条守卫。
+- 🔴 **第一次集成跑出 `1 failed / 60 passed / 37 skipped / 9 errors` —— 38 条红没有一条是被测代码的**：错误行原文 `psycopg.ProgrammingError: missing "=" after "postgresql+psycopg://…"`
+  ⇒ **四个测试 DSN 必须 libpq 形态（`postgresql://`，不带 `+psycopg`）**，`psycopg.connect()` 不认这个后缀；而 `MIGRATION_DATABASE_URL` **反过来必须带**（SQLAlchemy）。
+  改成单变量（只动 DSN 形态）后 = **107 passed / 0 skipped**（rc 0，27.44s；`-v` 重跑 27.71s 同数）。
+- 🔴 **`reporter` 判"集成跑没跑"是靠日志里有没有集成文件名** ⇒ 集成层必须 `-v` 跑；我用 `-q` 那版喂进去，`integration_ran=False`、**G-1 当场从 PASS 掉到 PARTIAL**（真跑了 107 条也一样）。两版都留了读数。
+- 🔴 **自曝一把用错的残渣尺**：§六.10 那句"跑完 DROP 并现查 `pg_database` 里 `ecom_%` = 1，只剩共享库"**是错的** —— SQL `LIKE 'ecom_%'` 里 `_` 是**单字符通配**，而 `ecom` 本身不匹配 ⇒ 那个"1"是**别窗留下的 `ecom_u123_probe`（10 MB）**，不是共享库。
+  改尺 `datname like 'ecom%'` 现算 = **2 个**（`ecom` 505 MB ＋ `ecom_u123_probe` 10 MB）。⇒ 本轮两次的一次性库（`ecom_w8int2`／`ecom_w8int3`）**已 DROP 且不在列表里**；那个探针库不是本窗造的，**未经属主／总控同意不删**。
+- 报告已在当前树重算：`eval/reporter.py` rc **1**（= 有格不过，不是崩溃），`PASS 1/8` 未变、输入件 = 恢复后的第二次真打 `eval/results_v1.json`（md5 `ae06c3b8355b411a1059f8e389e85263`，与固定件 `results_v2_live_20261003T1632Z.json` **同值**；回放产物已改名归档，不覆盖真打件）。
+
+### 17. 可并发 ／ 必须串行（2026-10-04 01:5x 刷新，本轮新加两条被实测咬过的边）
+| 面 | 与什么能并发 | 依据（本轮现测） |
+|---|---|---|
+| 离线 pytest（2,340 条，90s） | 读文档、写文档 | 本轮与 `OVERVIEW.md` 编辑同时进行，互不影响 |
+| 活体延迟／成本读数（浏览器、curl） | **什么都不行** | 🔴 本轮 01:2x 那条 `normalize` 15.0s 超时正落在"pytest＋docker build＋回放"三件事并发的窗口里 ⇒ 该时段活体延迟全部标 `不可引用`（§7 的 G-6 格已把这条写成禁令）；要量延迟就**空机单跑** |
+| 集成层（一次性库） | 只与读类并发 | 同一个 PG 实例 ⇒ 建库/DROP 必须串行；库名带本轮序号（`ecom_w8int2`/`ecom_w8int3`）避免和别窗撞 |
+| 同匣带回放（¥0，约 6 分钟） | 读文档 | 但它**写 `eval/results_v1.json`** ⇒ 跑之前必须先把真打件改名归档或事后恢复（本轮：`results_replay_after_l4fix_20261003T1722Z.json` ＋ 从 `results_v2_live_…` 恢复，md5 对撞 `ae06c3b8…` 通过） |
+| `--live` 真打（要额度） | 串行，且**要批** | 本窗自 10-02 起是唯一开发窗；两次全量已花 ¥0.337171 ＋ ¥0.391504（**均属修复前下限口径**） |
+| `docker compose build api` ＋ recreate | 串行，且必须**早于**任何活体读数 | 本轮两次重建；重建前的镜像现读**缺**载荷改动 ⇒ "镜像＝HEAD 级"必须每次 import 实证，不许沿用上一轮 |
+
+### 18. 给总控的粘贴块（2026-10-04 01:5x，替换 §六.13 里那条花费）
+```
+【 CommerceQL · W8 · 花费订正与三件待裁 】
+
+1) 花费订正（要改账，不是加账）
+   我此前报的 ¥0.337171（第一批全量真打）与 ¥0.391504（第二批）**都是下限**。
+   原因：`l4_score` 那一档调用一直没进 run 成本累加器（`record_usage` 少一个调用点），
+   它恰恰是最贵的一档 —— 零额度回放复算同一份 166 题：¥0.391504 → **¥1.131531**（l4 一档 ¥0.741315 = 65.5%）。
+   真实累计花费我现在**给不出实测数**（回放继承的是录制用量、两批不可相加）⇒ 记 `UNVERIFIED`，
+   要么 DeepSeek 控制台对账（零成本、要你那边权限），要么再跑一次 `--live`（≈¥1.15 按新口径）。**未批 ⇒ 本窗没跑。**
+
+2) 三件待裁（都不是本窗能自己按下去的）
+   a) 冻结集 124 条 execute 里 **63 条（50.8%）**要的指标不在语义包 9 个 metrics 面内 ⇒ 计划层拒答是正确行为。
+      杠杆 = 扩包（改内容，W1A 的件，要重录）或裁"这些计数题该不该由 9 指标面回答"（改判据）。
+   b) 金标 `gold_sql` 缺指标默认谓词（第一批 19/41）⇒ 同族问题，动谁都要先裁。
+   c) L4 的 `reason` 字段让它贴顶输出（completion 中位 2,193 / 上限 2,304）⇒ 压它是**G-2 的判据变更**，不自动手。
+   另：`U-130`（请求级入账完整性无判据）收到**第二个触发面**就是上面第 1 条；建议并号登记，本窗**零取号、`docs/**` 一字未改**。
+
+3) 门禁状态没变：`PASS 1/8`（只有 G-1 绿；离线 2,340 ＋ 集成 107，全在当前树重跑）。
+   对外仍**不得**写"门禁通过"，也**不得**写"结果算对了"（EX = 6/124）。
+```
