@@ -4612,5 +4612,8 @@
         "terminal_shape": "error"
       }
     }
-  ]
+  ],
+  "generated_at": "2026-10-03T05:11:35+00:00",
+  "git_rev": "22e69d3",
+  "git_dirty": false
 }
