@@ -1,0 +1,1422 @@
+{
+  "as_of": "results_v1.json git_rev=1af8f65 mode=replay",
+  "n_cases_with_sql": 41,
+  "pred_eq_gold": {
+    "False": 38,
+    "True": 3
+  },
+  "pred_eq_gold_with_predicates": {
+    "True": 22,
+    "False": 19
+  },
+  "rescued_by_default_predicates": 19,
+  "still_wrong_after_predicates": 19,
+  "rescued_case_ids": [
+    "E-MET-02",
+    "E-MET-03",
+    "E-MET-04",
+    "E-MET-05",
+    "E-MET-06",
+    "E-MET-07",
+    "M-MET-01",
+    "M-MET-03",
+    "H-MET-06",
+    "H-MET-07",
+    "H-MET-08",
+    "H-MET-09",
+    "X-MET-07",
+    "M-IDX-01",
+    "M-IDX-02",
+    "M-IDX-03",
+    "M-IDX-04",
+    "M-IDX-05",
+    "M-IDX-06"
+  ],
+  "rows": [
+    {
+      "case_id": "E-MET-02",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          32486530.79
+        ]
+      ],
+      "gold_p_value": [
+        [
+          30768819.37
+        ]
+      ],
+      "pred_value": [
+        [
+          30768819.37
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "E-MET-03",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          108857094.48
+        ]
+      ],
+      "gold_p_value": [
+        [
+          103385547.56
+        ]
+      ],
+      "pred_value": [
+        [
+          103385547.56
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "E-MET-04",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          60389934.75
+        ]
+      ],
+      "gold_p_value": [
+        [
+          57306143.84
+        ]
+      ],
+      "pred_value": [
+        [
+          57306143.84
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "E-MET-05",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          11995
+        ]
+      ],
+      "gold_p_value": [
+        [
+          11413
+        ]
+      ],
+      "pred_value": [
+        [
+          11413
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "E-MET-06",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          23747
+        ]
+      ],
+      "gold_p_value": [
+        [
+          22536
+        ]
+      ],
+      "pred_value": [
+        [
+          22536
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "E-MET-07",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          59418
+        ]
+      ],
+      "gold_p_value": [
+        [
+          56408
+        ]
+      ],
+      "pred_value": [
+        [
+          56408
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "E-MET-10",
+      "tenant": "T_C",
+      "outcome": "success",
+      "gold_predicates": [
+        "uv >= 0"
+      ],
+      "pred_eq_gold": true,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          602325
+        ]
+      ],
+      "gold_p_value": [
+        [
+          602325
+        ]
+      ],
+      "pred_value": [
+        [
+          602325
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-MET-01",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          "ad",
+          3180811.92
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "ad",
+          2979913.47
+        ]
+      ],
+      "pred_value": [
+        [
+          "search",
+          3342633.37
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-MET-02",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "T_A-S01",
+          3414738.79
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "T_A-S01",
+          3230469.43
+        ]
+      ],
+      "pred_value": [
+        [
+          "T_A-S01",
+          "T_A官方旗舰店1号",
+          3230469.43
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-MET-03",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          null,
+          21105.87
+        ]
+      ],
+      "gold_p_value": [
+        [
+          null,
+          21076.77
+        ]
+      ],
+      "pred_value": [
+        [
+          "3C数码",
+          10157899.14
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-MET-05",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "uv >= 0"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "SKU00001",
+          25140
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "SKU00001",
+          25140
+        ]
+      ],
+      "pred_value": [
+        [
+          "SKU00001",
+          25140
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-MET-06",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "uv >= 0"
+      ],
+      "pred_eq_gold": true,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          "ad",
+          176954
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "ad",
+          176954
+        ]
+      ],
+      "pred_value": [
+        [
+          "search",
+          177260
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-MET-07",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "uv >= 0"
+      ],
+      "pred_eq_gold": true,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          "2026-08-01",
+          15895
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "2026-08-01",
+          15895
+        ]
+      ],
+      "pred_value": [
+        [
+          "2026-08-01",
+          15895
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-MET-08",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "SKU00001",
+          9349072.25
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "SKU00001",
+          8831779.97
+        ]
+      ],
+      "pred_value": [
+        [
+          "SKU00001",
+          "3C数码-子类1-细类1-0001号",
+          8831779.97
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-MET-09",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "SKU00001",
+          18355708.15
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "SKU00001",
+          17365334.67
+        ]
+      ],
+      "pred_value": [
+        [
+          "SKU00001",
+          17365334.67
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-MET-10",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "SKU00001",
+          45339016.46
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "SKU00001",
+          43089944.17
+        ]
+      ],
+      "pred_value": [
+        [
+          "SKU00001",
+          5488785.4
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "H-ENUM-02",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "T_A-S01",
+          1628
+        ]
+      ],
+      "gold_p_value": [],
+      "pred_value": [],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "H-ENUM-03",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "T_A-S01",
+          31945
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "T_A-S01",
+          31834
+        ]
+      ],
+      "pred_value": [
+        [
+          "T_A-S04",
+          "T_A官方旗舰店4号",
+          32391
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "H-MET-01",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "T_A-S01",
+          2200153.08
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "T_A-S01",
+          2072575.84
+        ]
+      ],
+      "pred_value": [
+        [
+          "T_A-S05",
+          "T_A官方旗舰店5号",
+          2111036.33
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "H-MET-02",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "T_A-S01",
+          124253.24
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "T_A-S01",
+          115381.18
+        ]
+      ],
+      "pred_value": [
+        [
+          "T_A-S04",
+          "T_A官方旗舰店4号",
+          128285.65
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "H-MET-03",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "T_A-S01",
+          389666.22000000003
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "T_A-S01",
+          376838.51
+        ]
+      ],
+      "pred_value": [
+        [
+          "T_A-S05",
+          "T_A官方旗舰店5号",
+          424978.4
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "H-MET-04",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "T_A-S01",
+          241346.43
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "T_A-S01",
+          221870.94
+        ]
+      ],
+      "pred_value": [
+        [
+          "T_A-S01",
+          "T_A官方旗舰店1号",
+          221870.94
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "H-MET-05",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "T_A-S01",
+          573889.9
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "T_A-S01",
+          550073.37
+        ]
+      ],
+      "pred_value": [
+        [
+          "T_A官方旗舰店1号",
+          550073.37
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "H-MET-06",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          "东北",
+          1579420.44
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "东北",
+          1514540.7
+        ]
+      ],
+      "pred_value": [
+        [
+          "华东",
+          3401482.44
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "H-MET-07",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          "东北",
+          2955459.4
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "东北",
+          2823451.66
+        ]
+      ],
+      "pred_value": [
+        [
+          "华东",
+          6959051.58
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "H-MET-08",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          "东北",
+          3792884.15
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "东北",
+          3614904.08
+        ]
+      ],
+      "pred_value": [
+        [
+          "华东",
+          8562402.17
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "H-MET-09",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          "东北",
+          5629854.1
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "东北",
+          5366212.47
+        ]
+      ],
+      "pred_value": [
+        [
+          "华东",
+          13456693.54
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "H-MET-10",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "uv >= 0"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "SKU00001",
+          2522
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "SKU00001",
+          2522
+        ]
+      ],
+      "pred_value": [
+        [
+          "SKU00040",
+          "运动户外-子类1-细类2-0040号",
+          4340,
+          0
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "X-MET-05",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "uv >= 0"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "T_A-S01",
+          367931
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "T_A-S01",
+          367931
+        ]
+      ],
+      "pred_value": [
+        [
+          "T_A-S05",
+          "T_A官方旗舰店5号",
+          184763
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "X-MET-06",
+      "tenant": "T_A",
+      "outcome": "failed",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "东北",
+          "T_A-S01",
+          370155.4
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "东北",
+          "T_A-S01",
+          347341.33
+        ]
+      ],
+      "pred_value": [
+        [
+          "东北",
+          "T_A-S01",
+          "T_A官方旗舰店1号",
+          347341.33
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "X-MET-07",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          "东北",
+          "T_A-S01",
+          603333.41
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "东北",
+          "T_A-S01",
+          562826.63
+        ]
+      ],
+      "pred_value": [
+        [
+          "东北",
+          "T_A-S01",
+          562826.63
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "X-MET-08",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "东北",
+          "T_A-S01",
+          764324.0
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "东北",
+          "T_A-S01",
+          719755.01
+        ]
+      ],
+      "pred_value": [
+        [
+          "东北",
+          "T_A-S04",
+          "T_A官方旗舰店4号",
+          805723.91
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "X-MET-09",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          "东北",
+          "T_A-S01",
+          1093937.56
+        ]
+      ],
+      "gold_p_value": [
+        [
+          "东北",
+          "T_A-S01",
+          1021861.2
+        ]
+      ],
+      "pred_value": [
+        [
+          "东北",
+          "T_A-S05",
+          "T_A官方旗舰店5号",
+          1156333.27
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-IDX-01",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          1374.1701984160065
+        ]
+      ],
+      "gold_p_value": [
+        [
+          1367.8901209147464
+        ]
+      ],
+      "pred_value": [
+        [
+          1367.8901209147464
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-IDX-02",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          1368.0267313765949
+        ]
+      ],
+      "gold_p_value": [
+        [
+          1365.3185733936812
+        ]
+      ],
+      "pred_value": [
+        [
+          1365.3185733936812
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-IDX-03",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          1505.7249958892846
+        ]
+      ],
+      "gold_p_value": [
+        [
+          1492.374529203709
+        ]
+      ],
+      "pred_value": [
+        [
+          1492.374529203709
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-IDX-04",
+      "tenant": "T_B",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          1483.4287935155355
+        ]
+      ],
+      "gold_p_value": [
+        [
+          1478.3671244541483
+        ]
+      ],
+      "pred_value": [
+        [
+          1478.3671244541483
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-IDX-05",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          0.04993643841550195
+        ]
+      ],
+      "gold_p_value": [
+        [
+          0.0
+        ]
+      ],
+      "pred_value": [
+        [
+          0.0
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-IDX-06",
+      "tenant": "T_B",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": true,
+      "gold_value": [
+        [
+          0.04985778251783307
+        ]
+      ],
+      "gold_p_value": [
+        [
+          0.0
+        ]
+      ],
+      "pred_value": [
+        [
+          0.0
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "case_id": "M-IDX-09",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          0
+        ]
+      ],
+      "gold_p_value": [],
+      "pred_value": [
+        [
+          0.11489213639526792
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        "OperationalError: no such column: is_test_order"
+      ]
+    },
+    {
+      "case_id": "M-IDX-10",
+      "tenant": "T_A",
+      "outcome": "success",
+      "gold_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "pred_eq_gold": false,
+      "pred_eq_gold_with_predicates": false,
+      "gold_value": [
+        [
+          0
+        ]
+      ],
+      "gold_p_value": [],
+      "pred_value": [
+        [
+          0.12662295924926084
+        ]
+      ],
+      "errors": [
+        null,
+        null,
+        "OperationalError: no such column: is_test_order"
+      ]
+    }
+  ]
+}

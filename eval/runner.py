@@ -82,7 +82,7 @@ from harness import (  # noqa: E402
     eval_node_timeouts,
     identity_for_case,
 )
-from sqlite_exec import open_sandbox_connection  # noqa: E402
+from sqlite_exec import open_sandbox_connection, to_sqlite_sql  # noqa: E402
 
 DEFAULT_OUT = os.path.join(_bootstrap.HERE, "results_v1.json")
 DEFAULT_CASSETTE = os.path.join(_bootstrap.HERE, "cassettes", "w6_batch.jsonl")
@@ -143,6 +143,11 @@ def run_in_sandbox(
         if views
         else sqlite3.connect(Path(db_path).resolve().as_uri() + "?mode=ro", uri=True)
     )
+    #: 🔴 出站契约是 psycopg 的 `%(name)s`（`sql_params` 是接口契约的一部分），沙箱是
+    #: sqlite3 的 `:name` ⇒ 不做这一步方言桥，**任何带绑定参数的被测 SQL 都恒
+    #: `OperationalError: near "%"`**，预测侧永远是空表。2026-10-03 真打批次 EX=0 的
+    #: 第一条根因就在这里（不是"模型全错"）—— 金标不带参数，所以只有预测侧被打死。
+    sql = to_sqlite_sql(sql)
     try:
         cur = con.cursor()
         digest, nrows, ncols = bfs.result_hash(
@@ -286,10 +291,27 @@ async def score_case(
     }
 
     # ---- 等价判定：只有"期望 execute 且两侧都跑出了表"才进分母 ----
-    pred_table = eq.Table(run.result_columns, run.result_rows)
+    # 🔴 预测侧的表**必须**与金标同器同界（沙箱 + TEMP VIEW + 同一哈希函数），不能读
+    # state 的 `result_rows`：07 §5.2.1 把 `result_rows` 定为**体积字段**（execute 只
+    # `context.hold_rows`，行不进 state，state 留 `result_columns`/`row_count`/指纹）。
+    # 读它 ⇒ 预测侧恒 0 行 ⇒ EX 恒 0，而这是测量器件的形状，不是被测系统被证明为 0。
+    # 在线"用户看到的表"另有口径（脱敏后的行经 SSE `result` 帧），那里由组 8 + 缓存承接，
+    # 评测面拿不到；此处把在线 row_count 一并记账，两个口径不一致时留在记录里可见。
+    pred_table = eq.Table((), ())
     verdict = None
+    pred_sandbox = None
     if expected == "execute" and gold_sql and gold_view and not gold_view["error"]:
-        pred_hash = _pred_hash(harness, run, db_path, tenant)
+        if run.sql_text:
+            pred_sandbox = run_in_sandbox(
+                run.sql_text,
+                run.sql_params,
+                tenant=tenant,
+                views=True,
+                db_path=db_path,
+                tenant_scoped_physicals=harness.tenant_scoped_physicals,
+            )
+            pred_table = pred_sandbox["table"]
+        pred_hash = pred_sandbox["hash"] if pred_sandbox else None
         verdict = eq.compare_tables(
             gold_view["table"],
             pred_table,
@@ -302,6 +324,10 @@ async def score_case(
             "columns": list(pred_table.columns),
             "rows": len(pred_table.rows),
             "shape": eq.shape_of(pred_table),
+            # 两个口径同时记账：`state_row_count` = 在线链路自己报的行数（组 8 的
+            # `row_count`，脱敏后、未复算）；`rows` = 沙箱复算口径。不一致就是缺陷信号。
+            "state_row_count": run.row_count,
+            "sandbox_error": (pred_sandbox or {}).get("error"),
         }
     record["verdict"] = (
         None
@@ -347,23 +373,6 @@ def _slim(result: dict[str, Any] | None) -> dict[str, Any] | None:
     if result is None:
         return None
     return {k: result[k] for k in ("hash", "rows", "cols", "error")}
-
-
-def _pred_hash(
-    harness: Harness, run: Any, db_path: str, tenant: str
-) -> str | None:
-    """被测 SQL 的**金标同口径**哈希（复算一次；在线的 `result_fingerprint` 是另一套算法，不能混用）。"""
-    if not run.sql_text:
-        return None
-    again = run_in_sandbox(
-        run.sql_text,
-        run.sql_params,
-        tenant=tenant,
-        views=True,
-        db_path=db_path,
-        tenant_scoped_physicals=harness.tenant_scoped_physicals,
-    )
-    return again["hash"]
 
 
 def _hash_eq(a: str | None, b: str | None) -> bool | None:

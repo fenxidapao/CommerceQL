@@ -671,19 +671,23 @@ def test_real_probe_artifact_wording_names_the_reproduced_undercount():
 def test_timeout_snapshot_drift_names_the_shape_change():
     """§0 同页写着"本次生成时的 commit"和**跑批当时**的超时快照 ⇒ 两者不一致必须点名。
 
-    真实输入：`eval/results_v1.json` 是 09-18 那批，快照里 15 个节点（`normalize` 2.0s、
-    `link` 4.0s）；U-104/U-107 之后当前树只剩 9 个非 LLM 节点。不点名的话读者会拿一张
-    已经不存在的表去引用 §5.3 的超时契约。
+    ⚠️ 输入换成**显式桩件**（旧版直接读 `eval/results_v1.json`，注释写着"09-18 那批 15 个
+    节点"）：2026-10-03 重跑批之后真产物的快照**已经与当前树一致** ⇒ 漂移为真空，那条
+    断言就会随每次重跑批随机变红 —— 而"漂移时必须点名"这条守卫本身没变。
+    守卫的输入是"一张 U-104 之前的旧表"，那就**造**一张，不指望仓库里恰好躺着旧的。
     """
     import harness as h
 
-    snapshot = rp._load(rp.DEFAULT_RESULTS)["config"]["node_timeouts"]["contract"]
-    drift = rp.timeout_snapshot_drift(snapshot)
+    stale = {"normalize": 2.0, "link": 4.0}          # `normalize` 已被移出、`link` 已抬到 30s
+    drift = rp.timeout_snapshot_drift(stale)
     assert drift, "跑批快照与当前树明显不同，却报「无漂移」= 这条守卫失效"
     assert "normalize" in drift and "已移出契约表" in drift
     assert "`link` 4.0s→30.0s" in drift, "值变化的节点要带上前后两个数"
     assert rp.timeout_snapshot_drift(dict(h.NODE_TIMEOUT_S)) == "", "一致时无许无病呻吟"
     assert rp.timeout_snapshot_drift(None) == ""
+    #: 顺带记当前事实（不是判据）：本轮真产物的快照与当前树**一致** ⇒ 报告 §0 不会出漂移提示。
+    snapshot = rp._load(rp.DEFAULT_RESULTS)["config"]["node_timeouts"]["contract"]
+    assert rp.timeout_snapshot_drift(snapshot) == ""
 
 
 def _minimal_payload() -> dict:
