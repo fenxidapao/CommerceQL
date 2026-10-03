@@ -1,19 +1,19 @@
 {
   "meta": {
-    "generated_at": "2026-10-03T15:11:29+00:00",
+    "generated_at": "2026-10-03T16:47:59+00:00",
     "window": "W6",
     "git": {
-      "rev": "3439fe4",
-      "dirty": false
+      "rev": "0ff8f73",
+      "dirty": true
     },
     "run_config": {
-      "live": false,
+      "live": true,
       "cassette": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\cassettes\\w6_batch.jsonl",
-      "mode": "replay",
+      "mode": "record",
       "db": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\ecom_sandbox.db",
       "column_top": null,
       "n_requested": 166,
-      "provenance": "同匣带第 2 次回放（唯一变量=评分器两处缺陷修复 ea0454a）；真打基线见 eval/results_v1_live_20261003T1410Z.json",
+      "provenance": "第二次全量真打（唯一变量=理解阶段加『租户码自指』说明 + 闸门四处修复已在树里）；凭据=deploy/.env 尾号23e8（壳里那把尾号d46d 已 401）",
       "node_timeouts": {
         "contract": {
           "link": 30.0,
@@ -26,16 +26,22 @@
           "audit_supp": 0.5
         },
         "effective": {
-          "link": 30.0,
-          "gate1_ast": 0.1,
-          "gate2_policy": 0.1,
-          "gate3_cost": 1.0,
+          "gate3_cost": 8.0,
+          "repair": 162.0,
+          "audit_pre": 8.0,
+          "bind": 162.0,
           "execute": 30.0,
-          "mask": 0.1,
-          "audit_pre": 1.0,
-          "audit_supp": 0.5
+          "intent": 162.0,
+          "gen_sql": 162.0,
+          "link": 30.0,
+          "mask": 0.8,
+          "plan": 162.0,
+          "gate1_ast": 0.8,
+          "audit_supp": 4.0,
+          "normalize": 162.0,
+          "gate2_policy": 0.8
         },
-        "scaled": false,
+        "scaled": true,
         "llm_calling_nodes": [
           "bind",
           "gen_sql",
@@ -191,7 +197,7 @@
       "gate_id": "G-5",
       "condition": "拒答准确率 ≥ 95%，误拒 ≤ 5%",
       "verdict": "FAIL",
-      "measured": "该拒则拒 19/24 = 79.2%；误拒 43/124 = 34.7%",
+      "measured": "该拒则拒 19/24 = 79.2%；误拒 63/124 = 50.8%",
       "basis": "拒答集 + §C.4.4（两类错误分开统计）",
       "caveats": [
         "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
@@ -229,7 +235,7 @@
       "gate_id": "G-8",
       "condition": "澄清率 ≤ 15% 且澄清后一次成功率 ≥ 80%",
       "verdict": "UNVERIFIED",
-      "measured": "澄清率 54/166 = 32.5%；澄清后一次成功 0.0%",
+      "measured": "澄清率 30/166 = 18.1%；澄清后一次成功 0.0%",
       "basis": "§6.8.3 + N-25",
       "caveats": [
         "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）",
@@ -310,11 +316,11 @@
             "display": "eval/results_v1.json",
             "present": true,
             "tracked_in_git": true,
-            "self_reported_at": "2026-10-03T14:44:06+00:00",
+            "self_reported_at": "2026-10-03T16:29:35+00:00",
             "self_reported_at_key": "generated_at",
-            "self_reported_rev": "66d5fba",
+            "self_reported_rev": "b97920d",
             "self_reported_rev_key": "git_rev",
-            "mtime_utc": "2026-10-03T14:45:42+00:00",
+            "mtime_utc": "2026-10-03T16:46:33+00:00",
             "parseable_as_json": true,
             "parse_error": null,
             "basis": "self_reported",
@@ -394,11 +400,11 @@
             "display": "eval/results_v1.json",
             "present": true,
             "tracked_in_git": true,
-            "self_reported_at": "2026-10-03T14:44:06+00:00",
+            "self_reported_at": "2026-10-03T16:29:35+00:00",
             "self_reported_at_key": "generated_at",
-            "self_reported_rev": "66d5fba",
+            "self_reported_rev": "b97920d",
             "self_reported_rev_key": "git_rev",
-            "mtime_utc": "2026-10-03T14:45:42+00:00",
+            "mtime_utc": "2026-10-03T16:46:33+00:00",
             "parseable_as_json": true,
             "parse_error": null,
             "basis": "self_reported",
@@ -463,11 +469,11 @@
             "display": "eval/results_v1.json",
             "present": true,
             "tracked_in_git": true,
-            "self_reported_at": "2026-10-03T14:44:06+00:00",
+            "self_reported_at": "2026-10-03T16:29:35+00:00",
             "self_reported_at_key": "generated_at",
-            "self_reported_rev": "66d5fba",
+            "self_reported_rev": "b97920d",
             "self_reported_rev_key": "git_rev",
-            "mtime_utc": "2026-10-03T14:45:42+00:00",
+            "mtime_utc": "2026-10-03T16:46:33+00:00",
             "parseable_as_json": true,
             "parse_error": null,
             "basis": "self_reported",
@@ -479,8 +485,8 @@
       }
     ],
     "report_git": {
-      "rev": "3439fe4",
-      "dirty": false
+      "rev": "0ff8f73",
+      "dirty": true
     },
     "basis_legend": {
       "self_reported": "产物自己声明了时刻**和**代码版本 ⇒ 最强",
@@ -519,8 +525,7 @@
           "passed": 0,
           "pass_rate": 0.0,
           "attribution": {
-            "over_refusal": 1,
-            "field_binding": 9
+            "over_refusal": 10
           }
         },
         {
@@ -530,8 +535,7 @@
           "passed": 0,
           "pass_rate": 0.0,
           "attribution": {
-            "over_refusal": 7,
-            "field_binding": 3
+            "over_refusal": 10
           }
         },
         {
@@ -541,8 +545,8 @@
           "passed": 1,
           "pass_rate": 0.1,
           "attribution": {
-            "field_binding": 3,
-            "time_semantics": 6
+            "time_semantics": 8,
+            "over_refusal": 1
           }
         }
       ],
@@ -551,11 +555,11 @@
           "struct": "medium",
           "semantic": "low",
           "total": 10,
-          "passed": 0,
-          "pass_rate": 0.0,
+          "passed": 1,
+          "pass_rate": 0.1,
           "attribution": {
             "over_refusal": 8,
-            "field_binding": 2
+            "field_binding": 1
           }
         },
         {
@@ -573,13 +577,11 @@
           "struct": "medium",
           "semantic": "high",
           "total": 18,
-          "passed": 2,
-          "pass_rate": 0.1111,
+          "passed": 4,
+          "pass_rate": 0.2222,
           "attribution": {
-            "gate_policy_gap": 7,
-            "field_binding": 2,
-            "time_semantics": 6,
-            "over_refusal": 1
+            "gate_policy_gap": 8,
+            "time_semantics": 6
           }
         }
       ],
@@ -591,8 +593,8 @@
           "passed": 0,
           "pass_rate": 0.0,
           "attribution": {
-            "field_binding": 8,
-            "over_refusal": 1
+            "field_binding": 5,
+            "over_refusal": 4
           }
         },
         {
@@ -602,9 +604,9 @@
           "passed": 0,
           "pass_rate": 0.0,
           "attribution": {
-            "field_binding": 3,
-            "gate_policy_gap": 2,
-            "over_refusal": 4
+            "field_binding": 2,
+            "over_refusal": 6,
+            "gate_policy_gap": 1
           }
         },
         {
@@ -615,7 +617,7 @@
           "pass_rate": 0.0,
           "attribution": {
             "gate_policy_gap": 9,
-            "time_semantics": 1
+            "schema_linking_miss": 1
           }
         }
       ],
@@ -627,7 +629,8 @@
           "passed": 0,
           "pass_rate": 0.0,
           "attribution": {
-            "field_binding": 8
+            "field_binding": 6,
+            "over_refusal": 2
           }
         },
         {
@@ -647,8 +650,8 @@
           "passed": 0,
           "pass_rate": 0.0,
           "attribution": {
-            "over_refusal": 4,
-            "gate_policy_gap": 5,
+            "over_refusal": 5,
+            "gate_policy_gap": 4,
             "field_binding": 1,
             "schema_linking_miss": 2
           }
@@ -656,42 +659,56 @@
       ]
     ],
     "scored_total": 124,
-    "scored_passed": 3,
-    "ex": 0.024193548387096774,
+    "scored_passed": 6,
+    "ex": 0.04838709677419355,
     "unattributed_share": 0.0
   },
   "coverage": {
     "n_records": 166,
     "n_scored": 166,
     "n_execute_cases": 124,
-    "n_execute_with_sql": 41,
-    "n_execute_with_result": 41,
-    "n_false_clarify": 40,
+    "n_execute_with_sql": 45,
+    "n_execute_with_result": 45,
+    "n_false_clarify": 16,
     "terminal_distribution": {
-      "clarify": 54,
-      "complete": 42,
-      "error": 2,
-      "refuse": 68
+      "clarify": 30,
+      "complete": 48,
+      "error": 1,
+      "refuse": 87
     },
-    "hash_matches_none_n": 125
+    "hash_matches_none_n": 121
   },
   "over_refusal_split": {
-    "total": 43,
-    "with_bind_l4_degradation": [],
+    "total": 63,
+    "with_bind_l4_degradation": [
+      "M-DIM-06"
+    ],
     "without": [
       "E-VER-01",
+      "E-VER-02",
+      "E-VER-03",
+      "E-VER-04",
+      "E-VER-05",
+      "E-VER-06",
+      "E-VER-07",
+      "E-VER-08",
+      "E-VER-10",
+      "E-VER-11",
       "E-ENUM-01",
       "E-ENUM-02",
       "E-ENUM-03",
       "E-ENUM-04",
       "E-ENUM-05",
+      "E-ENUM-06",
       "E-ENUM-07",
       "E-ENUM-08",
+      "E-ENUM-09",
+      "E-ENUM-10",
+      "E-MET-08",
       "M-DIM-01",
       "M-DIM-02",
-      "M-DIM-03",
       "M-DIM-04",
-      "M-DIM-06",
+      "M-DIM-07",
       "M-DIM-08",
       "M-DIM-09",
       "M-DIM-10",
@@ -704,11 +721,18 @@
       "M-HIER-04",
       "M-HIER-05",
       "M-HIER-06",
+      "H-STR-05",
+      "H-STR-06",
+      "H-STR-08",
       "H-STR-09",
+      "H-ENUM-02",
       "H-CAT-01",
+      "H-CAT-02",
       "H-CAT-03",
       "H-CAT-04",
       "H-CAT-05",
+      "X-STR-02",
+      "X-STR-04",
       "X-ENUM-01",
       "X-ENUM-02",
       "X-ENUM-03",
@@ -721,28 +745,28 @@
       "X-MET-02",
       "X-MET-03",
       "X-MET-04",
-      "M-IDX-07"
+      "X-MET-05"
     ],
     "note": "with_bind_l4 那部分**不得**计入模型误拒（沙箱无 embedding + L4 候选装配解析失败）"
   },
   "attribution_distribution": {
     "ambiguity_not_clarified": 9,
-    "field_binding": 40,
-    "gate_policy_gap": 23,
-    "over_refusal": 43,
-    "schema_linking_miss": 2,
+    "field_binding": 16,
+    "gate_policy_gap": 22,
+    "over_refusal": 63,
+    "schema_linking_miss": 3,
     "terminal_shape_gap": 5,
-    "time_semantics": 13
+    "time_semantics": 14
   },
   "attribution_split": {
     "distribution": {
       "ambiguity_not_clarified": 9,
-      "field_binding": 40,
-      "gate_policy_gap": 23,
-      "over_refusal": 43,
-      "schema_linking_miss": 2,
+      "field_binding": 16,
+      "gate_policy_gap": 22,
+      "over_refusal": 63,
+      "schema_linking_miss": 3,
       "terminal_shape_gap": 5,
-      "time_semantics": 13
+      "time_semantics": 14
     },
     "interaction_correct": [
       "C-CAT-01",
@@ -750,17 +774,17 @@
       "C-CITY-02",
       "C-CITY-03",
       "C-CITY-04",
-      "C-GMV-03",
       "C-REG-01",
       "C-REG-02",
+      "C-REP-02",
       "C-UV-01",
+      "R-GMV-02",
       "R-GMV-03",
       "R-GMV-04",
       "R-NA-03",
       "R-NA-04",
       "R-NA-05",
       "R-NA-06",
-      "R-NA-07",
       "R-NA-08",
       "R-NA-09",
       "R-PII-01",
@@ -777,6 +801,9 @@
     "unscored": [],
     "equivalent_so_not_failure": [
       "E-MET-10",
+      "M-DIM-03",
+      "M-IDX-07",
+      "M-IDX-08",
       "M-MET-06",
       "M-MET-07"
     ],
@@ -1415,7 +1442,7 @@
       "sqlite": "n/a",
       "handling": "评测层夹具：录制回放（07 §17.2）；无网络/无额度时相关门禁判 UNVERIFIED",
       "covered_by_eval": false,
-      "evidence": "产物 `eval/results_v1.json` 的 `config`（`live` / `mode` / `cassette`）+ 逐条 `tokens` / `cost_cny`（本次 run 的实测值经 reporter 补进本行）；本次实测：mode=replay，回放轮（本轮不出网）；匣带来源：同匣带第 2 次回放（唯一变量=评分器两处缺陷修复 ea0454a）；真打基线见 eval/results_v1_live_20261003T1410Z.json",
+      "evidence": "产物 `eval/results_v1.json` 的 `config`（`live` / `mode` / `cassette`）+ 逐条 `tokens` / `cost_cny`（本次 run 的实测值经 reporter 补进本行）；本次实测：mode=record，本轮真打 166 条，tokens_total=1836623，cost_cny_total=0.391504",
       "follow_up": "有网环境全量真跑（见 RELAY 的成本外推与跑批指令）"
     }
   ],
@@ -1441,10 +1468,10 @@
     "🔴 匣带**已失效，报告里的回放读数今天不可零成本复算**：同一批 20 题重放 `w6_batch.jsonl` ⇒ **20/20 全部 miss**（`tokens_total=0`）。miss 的成因实测在上游出站报文变了（语义摘要新增 `## 指标口径` 段，见 W2A `fbae176`），**不在评测侧** ⇒ 要重新出这批读数必须**重新录制**（真打），不得回退到网络静默补数。",
     "**§C.4.3 口径比对**：核心指标 13 条可比对用例中一致 1 条（7.7%），不可归因差异 0 条。一致率低于 95% 是**冻结集 gold 与语义包默认口径不一致**的实测结论（差在 gold 少了 `default_predicates`），不是环境缺陷；比对方是语义包而非外部 BI ⇒ 「已确认权威值」按内部口径降级验证，见 `comparison_basis`。",
     "指标覆盖度：79 条期望 execute 的题面不含任何运行时可达的指标词形（占全集 47.6%）⇒ EX 分母偏小的**上半截**来自目录覆盖，不是模型能力。（覆盖度 ≠ G-7 的口径比对）",
-    "执行层覆盖不完整：execute 用例 124 条中 41 条真拿到结果集。",
+    "执行层覆盖不完整：execute 用例 124 条中 45 条真拿到结果集。",
     "样本量：本轮只有 166 条记录进入网格 —— **任何百分比都是覆盖率读数，不是能力读数**。",
     "红队：66 条全跑（确定性闸门面），未覆盖 2 条成本用例（沙箱无 EXPLAIN）。",
-    "**G-8 结构性不可测**：`runner.py` 只跑单轮，没有「clarify 之后把用户补答喂回去」的第二轮回路 ⇒ 「澄清后一次成功率」无从度量。本轮跑了 18 条应澄清题 ⇒ 前半句「澄清率」有读数，后半句无分子 ⇒ 整条门禁判 **UNVERIFIED**。两者都**不是** FAIL：拿评测器自己的缺口给被测系统定罪，会把这条门禁变成不可能通过，下一轮就有人来放宽阈值。本轮 40 条**误澄清**（题面 execute 却 clarify）已计入 §C.4.4 误拒面。该回路缺口属 W6 评测器自身，已上呈（见 RELAY）。"
+    "**G-8 结构性不可测**：`runner.py` 只跑单轮，没有「clarify 之后把用户补答喂回去」的第二轮回路 ⇒ 「澄清后一次成功率」无从度量。本轮跑了 18 条应澄清题 ⇒ 前半句「澄清率」有读数，后半句无分子 ⇒ 整条门禁判 **UNVERIFIED**。两者都**不是** FAIL：拿评测器自己的缺口给被测系统定罪，会把这条门禁变成不可能通过，下一轮就有人来放宽阈值。本轮 16 条**误澄清**（题面 execute 却 clarify）已计入 §C.4.4 误拒面。该回路缺口属 W6 评测器自身，已上呈（见 RELAY）。"
   ],
   "reproduce": [
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/consistency.py",
