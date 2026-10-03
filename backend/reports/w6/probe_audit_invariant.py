@@ -537,6 +537,8 @@ wr as ( select c.tk,
         from ck c join lg.checkpoint_writes w on w.checkpoint_id = c.checkpoint_id and w.thread_id = c.thread_id
         group by 1 ),
 shape as (  -- T-23：守卫位被判定量消费（尺与 r23 ⑱ 逐字同源），不许只当旁注
+  -- T-26 面名：本行→:541 同时是**判据谓词面 F-pred** 与**守卫面 F-guard**（`as shape_ok` 定义位），
+  --          :549 是**消费位面 F-consume**。计数件 = `deploy/loadtest/shape_guard_faces.py`，引数必带面名。
   select (count(*) filter (where position(', ' in task_path) = 0) = 0
           and count(*) filter (where split_part(task_path, ', ', 2) <> '__start__' and task_path ~ '__start__') = 0) as shape_ok
   from lg.checkpoint_writes where channel = 'terminal' )

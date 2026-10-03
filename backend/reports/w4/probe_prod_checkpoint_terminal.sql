@@ -336,6 +336,9 @@ select '⑪ 三面 distinct thread' as k,
 --   读法：`pre_fix` 的 ge2 是**存量不是回归**；只有 `post_fix` 那行 = 0 才算验收位，且必须带 `t2_routed_supp` 的 n（n = 1 ⇒ 单样本，不得升格成率）。
 --   ⚠️ 排除式 `split_part(task_path, ', ', 2) <> '__start__'` 的两条形成立刻**不在这件里守**，守在全仓唯一一处 =
 --      `deploy/loadtest/r23_thread_from_checkpoints.sql` 的 **⑱ 形状守卫** ⇒ 引用本格前先读 ⑱ 的 `shape_ok`。
+--   🔻 **T-26 面名（2026-10-03）**：本行是**消费位面 F-consume**（`not (select shape_ok from shape)`），
+--      下面 :354 是**判据谓词面 F-pred ＋ 守卫面 F-guard**（同一条排除式在此被复用为守卫定义）。
+--      三面计数与尺定义 = `deploy/loadtest/shape_guard_faces.py`，引数必带面名 ＋ 当时的 HEAD。
 with ck as (
   select thread_id, checkpoint_id, checkpoint->'channel_values'->>'task_id' as tk,
          min((checkpoint->>'ts')::timestamptz) as first_seen

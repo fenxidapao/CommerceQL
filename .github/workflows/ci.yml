@@ -325,6 +325,61 @@ jobs:
         run: mypy app
 
   # --------------------------------------------------------------------------
+  # T-27：⑱ 形状守卫的**反证门禁**（把 W8 第 3 轮那次手工反证固化成机器可重复件）
+  # --------------------------------------------------------------------------
+  # 为什么单开一个 job：T-23 的结论是"⑱ 的 `shape_ok` 真的进了 ⑰/⑰c 的判定量"，
+  # 而它当时**只由一次一次性容器里的手工跑支撑** ⇒ 谁把 verdict 第一支改坏、或把 `shape` CTE
+  # 的连线摘掉，本仓库不会有任何器件红。本 job 每次 push 做两侧断言（同一份注入数据、只换件版本）：
+  #   · pre-fix 对照件（`2ae0b43` 的 ⑰ 逐字抽取，已入库）必须**复现假绿** `非空真达成`；
+  #   · 当前版 ⑰/⑰c/⑱ 必须给 `不可判__shape_guard_failed`，且 ⑰c **必须有行**（0 行的"通过"没打中靶子）。
+  # 库是**另起的一次性实例**（`ecom_neg`）：夹具会 create schema / drop table，
+  # 而 `t23_negative_gate.py` 对库名 == `ecom` 直接拒跑（U-114）。trust 认证 ⇒ DSN 无口令段，不触 DoD④。
+  # ⚠️ 归属：执行环境（本文件）归 W0；被校验的守卫件归 W7（`deploy/loadtest/**`）＋ W8。
+  t23-shape-guard-gate:
+    name: T-23 形状守卫反证（一次性库，T-27）
+    runs-on: ubuntu-latest
+    services:
+      pg-neg:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: ecom_neg
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ecom_neg"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # pg_guard 要 `from app.repo.dsn import to_libpq_conninfo`（scheme 契约的唯一出处）⇒ 装后端包。
+      # 刻意不 `pip install -e ".[dev]"` 之外的东西：本 job 不跑 pytest，只跑一个纯文本 + psycopg 的门禁件。
+      - name: 安装后端（供 eval/pg_guard import app.repo.dsn）
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      # ⚠️ 默认 fetch-depth=1 ⇒ 对照件的 git 溯源在这一格记 **UNVERIFIED**（脚本的设计：
+      #   无历史不红、也不装成已验）。要把它升成"一致"就得给本 job 加 fetch-depth —— 那会拖慢整条
+      #   流水线，而溯源一致性已由本地一次性跑证过（2026-10-03：`一致`，抽取 3,206 字）。
+      - name: 反证门禁（夹具 + 当前版 + pre-fix 对照）
+        env:
+          COMMERCEQL_NEGFIX_DSN: postgresql://postgres@127.0.0.1:5432/ecom_neg
+        run: python deploy/loadtest/t23_negative_gate.py
+
+      # T-26：三面尺的存在性核对（不断言数值，只断言"写了排除式判据的文件必须同文件有守卫定义与消费位"）
+      - name: ⑱ 三面尺接线核对（T-26）
+        run: python deploy/loadtest/shape_guard_faces.py
+
+  # --------------------------------------------------------------------------
   # DoD④：gitleaks 无命中（N-15：密钥不进仓库）
   # --------------------------------------------------------------------------
   secret-scan:
