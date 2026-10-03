@@ -400,12 +400,18 @@ def _plan(
             "契约值（07 §5.3 同形；本轮覆盖超时回归）"
             if node_timeouts is None
             else "已放大 ⇒ "
+            # 🔴 必须用 `.get()`：U-104 把 5 个 LLM 节点移出 `NODE_TIMEOUT_S`、U-107 又把它们的
+            #   硬超时改成执行期解析 ⇒ 放大表是**并集**（`harness.eval_node_timeouts`），直接下标
+            #   会让这张"先报告再跑批"（§C.6.1）的计划在 `bind` 上 `KeyError` 崩掉
+            #   （2026-10-03 实测：不带 `--yes` 只打印计划也 rc=1 ⇒ 自那次改动后没人打出过计划）。
             + ", ".join(
                 f"{k}={v:g}s"
                 for k, v in sorted(node_timeouts.items())
-                if v != NODE_TIMEOUT_S[k]
+                if v != NODE_TIMEOUT_S.get(k)
             )
-            + "（EX 不覆盖 §5.3 超时契约）"
+            + "（EX 不覆盖 §5.3 超时契约；表内无契约值的 LLM 节点："
+            + ", ".join(sorted(set(node_timeouts) - set(NODE_TIMEOUT_S)))
+            + "）"
         ),
     ]
     if live:
