@@ -324,6 +324,89 @@ class TestPredicateInjection:
 
 
 # ---------------------------------------------------------------------------
+# 真打批次 2026-10-03 打出的四处**闸门自伤**（`reports/w8/probe_live_ast_rejections.json`）
+# 每条都带**反证**：放松的一侧必须仍在别处拦住，否则这一节只是把门拆了。
+# ---------------------------------------------------------------------------
+
+class TestLiveBatchSelfDefects:
+    # ---- F2：默认谓词不得注入到"表达不出该谓词"的资产 ----
+    def test_dim_asset_without_predicate_columns_is_not_poisoned(self, allow: dict) -> None:
+        # `v_region` 归 `orders` 域，但它没有 is_test_order/pay_status/refund_status 三列
+        r = run_gate1("SELECT region_name FROM v_region", allow)
+        assert r.passed, r.gate_result.rule_id
+        assert r.applied_predicates == ()
+
+    def test_same_domain_asset_still_gets_injection(self, allow: dict) -> None:
+        # 反证：F2 的修法不是"关掉注入"—— 有列的资产照旧注入
+        r = run_gate1("SELECT sub_order_id FROM v_order_paid", allow)
+        assert r.passed and len(r.applied_predicates) == 3
+
+    # ---- F1：GROUP/ORDER/HAVING 可引用本 scope 的投影别名（Postgres 语义）----
+    def test_order_by_projection_alias_passes(self, allow: dict) -> None:
+        sql = ("SELECT channel, SUM(pv) AS total_pv FROM v_traffic_daily "
+               "GROUP BY channel ORDER BY total_pv DESC")
+        r = run_gate1(sql, allow)
+        assert r.passed, r.gate_result.rule_id
+
+    def test_having_and_group_by_projection_alias_pass(self, allow: dict) -> None:
+        sql = ("SELECT channel AS ch, SUM(pv) AS total_pv FROM v_traffic_daily "
+               "GROUP BY ch HAVING SUM(pv) > 0 ORDER BY total_pv")
+        assert run_gate1(sql, allow).passed
+
+    def test_unknown_sort_key_still_r06(self, allow: dict) -> None:
+        # 反证：不是"排序键一律放行" —— 既不是列也不是别名的排序键仍拒
+        sql = ("SELECT channel, SUM(pv) AS total_pv FROM v_traffic_daily "
+               "GROUP BY channel ORDER BY not_an_alias DESC")
+        r = run_gate1(sql, allow)
+        assert not r.passed and r.gate_result.rule_id == AstRule.R06_COLUMN_ALLOWLIST.value
+
+    def test_where_projection_alias_still_r06(self, allow: dict) -> None:
+        # 反证：WHERE 里写别名 Postgres 直接报错 ⇒ 别名兜底只给 GROUP/ORDER/HAVING
+        r = run_gate1("SELECT channel FROM v_traffic_daily WHERE total_pv > 0", allow)
+        assert not r.passed and r.gate_result.rule_id == AstRule.R06_COLUMN_ALLOWLIST.value
+
+    # ---- R14：算术位的数值字面量（金标自己就用 NULLIF(x, 0)）----
+    def test_nullif_guard_literal_passes(self, allow: dict) -> None:
+        sql = ("SELECT SUM(pay_amount) / NULLIF(COUNT(DISTINCT sub_order_id), 0) AS aov "
+               "FROM v_order_paid WHERE pay_time >= '2026-08-01'")
+        r = run_gate1(sql, allow)
+        assert r.passed, r.gate_result.rule_id
+
+    def test_case_else_literal_passes(self, allow: dict) -> None:
+        sql = ("SELECT SUM(CASE WHEN refund_status = 'refunded' THEN pay_amount ELSE 0 END) "
+               "/ NULLIF(SUM(pay_amount), 0) AS refund_rate FROM v_order_paid")
+        assert run_gate1(sql, allow).passed
+
+    def test_literal_literal_comparison_still_r14(self, allow: dict) -> None:
+        # 反证：恒真比较（字面量-字面量、且无常量在白名单里）仍拒 —— 放松的只是算术位数值。
+        # ⚠️ 刻意用 `1 = 1` 而不是 `'paid' = 'paid'`：后者**本就放行**，因为 `'paid'` 是注入
+        # 谓词的常量（白名单第②类），R14 的第一道 `in allowed_constants` 先短路 —— 这不是
+        # 本轮改动造成的，且这种恒真式不额外放宽任何过滤（它被注入谓词逻辑蕴含），故不改。
+        r = run_gate1("SELECT sub_order_id FROM v_order_paid WHERE 1 = 1", allow)
+        assert not r.passed and r.gate_result.rule_id == AstRule.R14_LITERAL_POLICY.value
+
+    def test_string_literal_outside_value_position_still_r14(self, allow: dict) -> None:
+        # 反证：字符串在函数实参位仍是数据值通道 ⇒ 不放松
+        r = run_gate1("SELECT COALESCE(channel, 'unknown') AS ch FROM v_traffic_daily", allow)
+        assert not r.passed and r.gate_result.rule_id == AstRule.R14_LITERAL_POLICY.value
+
+    # ---- R04：参数化 LIMIT 改写为硬上界，而不是整条拒绝 ----
+    def test_placeholder_limit_is_rewritten_not_rejected(self, allow: dict) -> None:
+        r = run_gate1("SELECT pay_amount FROM v_order_paid LIMIT %(limit)s", allow)
+        assert r.passed, r.gate_result.rule_id
+        assert r.limit_injected and r.limit_injected.get("injected") is True
+        assert f"LIMIT {MAX_ROWS_HARD_LIMIT}" in r.rewritten_sql
+
+    def test_subquery_limit_expression_still_rejected(self, allow: dict) -> None:
+        # 反证：无法静态证明上界的非参数形状仍拒
+        r = run_gate1(
+            "SELECT pay_amount FROM v_order_paid LIMIT (SELECT MAX(quantity) FROM v_order_paid)",
+            allow,
+        )
+        assert not r.passed and r.gate_result.rule_id == AstRule.R04_FORCE_LIMIT.value
+
+
+# ---------------------------------------------------------------------------
 # 告警级（R17–R20）：**必须放行 + 告警**（U-16）
 # ---------------------------------------------------------------------------
 

@@ -89,6 +89,26 @@ def _nearest_select(node: exp.Expr | None) -> exp.Select | None:
     return p
 
 
+def _clause_key_of(scope: exp.Select, node: exp.Expr) -> str | None:
+    """``node`` 挂在 ``scope`` 的哪个子句上（``order`` / ``group`` / ``having`` / ``where`` …）。
+
+    沿父链走到 ``scope`` 为止，取进入的那个子句键。Postgres 只在前三者允许引用投影别名，
+    ``WHERE`` 里写别名是语法错误 ⇒ 别名兜底必须区分句位，不是整体放松 R06。
+    """
+
+    cur: exp.Expr | None = node
+    parent = cur.parent if cur is not None else None
+    while parent is not None and parent is not scope:
+        cur = parent
+        parent = cur.parent
+    if parent is not scope or cur is None:
+        return None
+    for key, value in scope.args.items():
+        if value is cur or (isinstance(value, (list, tuple)) and cur in value):
+            return str(key)
+    return None
+
+
 def _root_select_scopes(root: exp.Expr) -> list[exp.Select]:
     """根级输出 scope：Select 本身；集合查询（UNION/INTERSECT/EXCEPT）的每个分支。"""
 
@@ -399,7 +419,14 @@ def _normalize_limit(
             )
             return {"injected": True, "original_limit": n}
         return None  # n ≤ L：保留
-    # LIMIT 表达式非字面量（子查询/函数）→ 无法静态证明有界 → 拒绝。
+    if isinstance(expr, exp.Placeholder):
+        # 🔴 `LIMIT %(limit)s`（绑定参数）静态证明不了上界 ⇒ **改写**成硬上界，而不是拒绝。
+        # 理由：R04 在 §7.2 的严重级里本来就是 REWRITE；而"绑不上界的参数化 LIMIT"是
+        # 出站 SQL 的正常形状（参数由本系统自己生成）。用 L 替换比拒绝**只严不松**，
+        # 拒绝则把一条合法查询整条杀掉 —— 2026-10-03 真打批次 2 条 `E-MET-*` 栽在这里。
+        query.set("limit", exp.Limit(expression=exp.Literal.number(effective)))
+        return {"injected": True, "original_limit": "PLACEHOLDER"}
+    # LIMIT 表达式非字面量/非占位符（子查询/函数）→ 无法静态证明有界 → 拒绝。
     return _build_reject(AstRule.R04_FORCE_LIMIT)
 
 
@@ -465,6 +492,16 @@ def _inject_predicates(root: exp.Expr, allowlist: Mapping[str, Any]) -> list[str
             node = _parse_predicate(pred_sql)
             if node is None:
                 continue  # 非法谓词由 W2A 校验器负责；此处不放大
+            # 🔴 只注入"这张表表达得出"的谓词。域归类（`assets[].domain`）把 `v_region` /
+            # `v_dim_date` / `v_campaign` 也算进 `orders` 档，而那三张表没有
+            # `is_test_order` / `pay_status` / `refund_status` ⇒ 注入产出一条引用不存在列的
+            # SQL，审计阶段必然 R06，而拒绝理由记在模型头上（`R06` 因此有两种相反含义）。
+            # 取证：2026-10-03 真打批次 32 条 `GATE_AST_REJECTED` 中 21 条 R06 **全部**是闸门
+            # 自伤（`reports/w8/probe_live_ast_rejections.json`：模型编造列 0 条）。
+            # 跳过注入不放松策略：这些谓词在该资产上本来就不可表达。
+            face = {str(c) for c in (asset.get("columns") or {})}
+            if {c.name for c in node.find_all(exp.Column)} - face:
+                continue
             for col in node.find_all(exp.Column):
                 if not col.table:
                     col.set("table", exp.to_identifier(qualifier))
@@ -747,6 +784,16 @@ class _Auditor:
                     return owners[0], colname
                 if len(owners) > 1:
                     return None  # 多义归属
+                # 🔴 F1（07 §7.2 的 R06 允许"排序键写投影别名"吗？Postgres 允许）：
+                # 裸列在本 scope 的表面上无归属，但它**等于本 SELECT 的某个投影别名**，
+                # 且出现在 GROUP BY / ORDER BY / HAVING 里 ⇒ 归到"投影"这一自有 owner。
+                # 不放松审计：别名背后的真实列本身就是 `exp.Column` 节点，已在同一轮
+                # `_check_columns` 里按资产面 + deny 面查过（`SELECT SUM(pay_amount) AS gmv …
+                # ORDER BY gmv` 里的 `pay_amount` 已被查）。
+                # 取证：2026-10-03 真打批次 21 条 R06 中 15 条只栽在 `ORDER BY <别名>`
+                # （`reports/w8/probe_live_ast_rejections.json` 的 F1 计数）。
+                if self._is_projection_alias(scope, colname, col):
+                    return ("projection", colname, frozenset({colname})), colname
             scope = _nearest_select(scope.parent)
         return None
 
@@ -787,6 +834,17 @@ class _Auditor:
             if cte.alias == cte_name:
                 return _projection_names(cte.this)
         return None
+
+    @staticmethod
+    def _is_projection_alias(scope: exp.Select, colname: str, col: exp.Column) -> bool:
+        """``colname`` 是 ``scope`` 的投影别名，且 ``col`` 位于 GROUP BY / ORDER BY / HAVING。"""
+
+        if not any(
+            isinstance(p, exp.Alias) and p.alias == colname for p in scope.expressions
+        ):
+            return False
+        clause = _clause_key_of(scope, col)
+        return clause in ("group", "order", "having")
 
     # -- R09 --
 
@@ -836,7 +894,12 @@ class _Auditor:
             return True
         if isinstance(parent, self._VALUE_PARENTS):
             return self._sibling_has_column(lit)
-        return False
+        # 🔴 算术位的**数值**字面量放行（`NULLIF(cnt, 0)` 的 0、`CASE … ELSE 0`、系数 1.0）。
+        # 冻结集自己的金标就有 10 条 `NULLIF(x, 0)`（`M-IDX-*` 全族）⇒ 按"函数实参一律拒"
+        # 读 §7.2，闸门会永远产不出这些题的等价 SQL（真打批次 8 条 R14 全是这一形）。
+        # 攻击面没有被放松：恒真比较（`1 = 1` / `'x' = 'x'`）落在 `_VALUE_PARENTS` 分支，
+        # 因"无列侧兄弟"照拒；**字符串**字面量在非比较位仍拒（那才是数据值通道）。
+        return not lit.is_string
 
     def _sibling_has_column(self, lit: exp.Expr) -> bool:
         """比较/集合节点的**其他操作数**是否含列引用（含列侧嵌套表达式）。"""
