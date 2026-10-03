@@ -11,10 +11,13 @@ from pathlib import Path
 import pytest
 
 from app.semantics import load_bundle
+from app.semantics import materialize as mz
 from app.semantics.materialize import (
     PolicyStatementSet,
+    SemanticMaterializeError,
     _base_table,
     _build_docs,
+    _guard_tenant_private_kinds,
     _q_ident,
     _qualify,
     content_sha256,
@@ -141,7 +144,7 @@ class TestDocsAndHash:
         docs1 = _build_docs(loaded)  # type: ignore[arg-type]
         docs2 = _build_docs(loaded)  # type: ignore[arg-type]
         assert docs1 == docs2
-        # 8 资产 + 全部列 + 9 指标 + 105 别名（gold_query 归 W2B/W6 追加）
+        # 8 资产 + 全部列 + 9 指标 + 105 别名（gold_query 是租户私有类，**不经这条全局路径**）
         kinds = [d["kind"] for d in docs1]
         assert kinds.count("asset") == 8
         assert kinds.count("metric") == 9
@@ -150,6 +153,40 @@ class TestDocsAndHash:
         assert not any(d["kind"] == "gold_query" for d in docs1)
         # doc_id 版本化（随指针自然失效）
         assert all(d["doc_id"].startswith("2026.09.14.1:") for d in docs1)
+
+    # ------------------------------------------------------------------------
+    # T-20：gold_query 的 `tenant_id` 哨兵不变式（07 §12.2「永远非 `'*'`」）
+    # ------------------------------------------------------------------------
+    def test_guard_rejects_tenant_private_kind(self) -> None:
+        """装配期就抛，而不是等检索层把一个跨租户可见的 SQL 答案放出去。
+
+        ⚠️ 为什么这条断言**不是**空转（QA 第 7 轮现测的两条前提）：
+        · `app.embed_doc` 未启 RLS，`app_ro` 对它**有** SELECT ⇒ 库层没有兜底；
+        · 全局物化路径的 INSERT 把 `tenant_id` **写死**成 `'*'`，而检索谓词
+          `tenant_id IN (:tenant_id, '*')` 对 `'*'` 放行是设计 ⇒ 写错哨兵无人拦。
+        """
+        with pytest.raises(SemanticMaterializeError, match="gold_query"):
+            _guard_tenant_private_kinds([
+                {"kind": "gold_query", "ref": "g1", "text": "…", "doc_id": "v:gold_query:g1"},
+            ])
+
+    def test_guard_passes_the_four_global_kinds(self) -> None:
+        """正对照：四类公共文档必须照常过 —— 否则守卫是"整条路径都不许写"，假阳。"""
+        _guard_tenant_private_kinds([
+            {"kind": k, "ref": f"r{i}", "text": "t", "doc_id": f"v:{k}:r{i}"}
+            for i, k in enumerate(("asset", "column", "metric", "synonym"))
+        ])
+
+    def test_guard_is_wired_into_build_docs(self, loaded: object, monkeypatch: pytest.MonkeyPatch) -> None:
+        """★ 反证接线（T-23 同族教训：守卫"存在于文件里"但没进调用链 = 没有守卫）。
+
+        做法是把 `synonym` 临时降格成"租户私有类"再走**真实语义包**：
+        若 `return docs` 前那句 `_guard_tenant_private_kinds(docs)` 被删掉、或被挪到
+        一条永不执行的分支上，本用例立刻红 —— 而上面两条断言都不会。
+        """
+        monkeypatch.setattr(mz, "_TENANT_PRIVATE_KINDS", frozenset({"synonym"}))
+        with pytest.raises(SemanticMaterializeError, match="synonym"):
+            mz._build_docs(loaded)  # type: ignore[arg-type]
 
     def test_content_sha256_stable(self) -> None:
         h1 = content_sha256(REAL_BUNDLE)

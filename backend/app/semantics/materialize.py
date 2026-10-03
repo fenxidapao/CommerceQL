@@ -220,8 +220,40 @@ def _doc_text_metric(name: str, display: str, expression: str | None, note: str 
     return " ".join(parts)
 
 
+#: 🔴 **`gold_query` 是 `embed_doc` 里唯一的租户私有类**（07 §12.2 原文：「Gold Query 类行的
+#:   `tenant_id` **永远非 `'*'`**（租户数据，§11.7）」）。本模块的每一行都由下面那条 INSERT
+#:   写成 `_GLOBAL_TENANT` ⇒ 谁把 gold_query 塞进语义包文档列表，就是在**当场**造一条
+#:   对所有租户可见的 SQL 答案。为什么必须在装配期拦（T-20，2026-10-03）：
+#:   · `app.embed_doc` **未启 RLS**，且 `app_ro` 对 `audit_log/cost_ledger/embed_doc/gold_query`
+#:     四张表里**只对 `embed_doc` 有 SELECT**（QA 第 7 轮现测 `information_schema.role_table_grants`）
+#:     ⇒ **库层没有兜底**；
+#:   · 唯一防线是检索层谓词 `app/retrieval/dense.py` 的 `tenant_id IN (:tenant_id, '*')`，
+#:     它按 `'*'` **放行**是设计（全局语义要能被所有租户检索到）⇒ 写错哨兵不会被检索层拦；
+#:   · 现库 `kind` 只有 asset/column/metric/synonym、gold_query = 0 行 ⇒ 该不变式当前是**空真**，
+#:     而"空真"意味着下一个写者可以无红创建跨租户面。
+#: 正解不是"在这里放行 gold_query"，而是走**带租户的专用写入路径**（显式非 `'*'`）。
+_TENANT_PRIVATE_KINDS: Final[frozenset[str]] = frozenset({"gold_query"})
+
+
+def _guard_tenant_private_kinds(docs: list[dict[str, str]]) -> None:
+    """装配期不变式：租户私有 `kind` 不得经全局物化路径写入（`raise`，不是 warning）。"""
+    offenders = sorted({d["kind"] for d in docs if d["kind"] in _TENANT_PRIVATE_KINDS})
+    if offenders:
+        raise SemanticMaterializeError(
+            f"embed_doc 全局物化路径收到租户私有 kind={offenders}："
+            "本路径每行都写 tenant_id='*'，而 07 §12.2 要求 gold_query 行的 tenant_id 永远非 '*'。"
+            "请改走带租户的专用写入路径（显式传真实 tenant_id），不要塞进语义包文档列表。"
+        )
+
+
 def _build_docs(loaded: LoadedBundle) -> list[dict[str, str]]:
-    """embed_doc 行（kind ∈ asset|column|metric|synonym；gold_query 由 W2B/W6 追加）。"""
+    """embed_doc 行（kind ∈ asset|column|metric|synonym）。
+
+    ⚠️ 本函数上一版的 docstring 尾巴写着「gold_query 由 W2B/W6 追加」——那是 `docs/07` §12.2
+    表格里 `kind` 取值集的一句转述，但在这里读起来像"往本函数的列表里加一类就行"，
+    而那条路恰好造出跨租户可见的 SQL 答案 ⇒ 现由 `_guard_tenant_private_kinds` 在返回前把关
+    （T-20 选项 (a)：写入侧断言）。
+    """
     docs: list[dict[str, str]] = []
     version = loaded.version
     for asset in loaded.active_assets.values():
@@ -245,6 +277,7 @@ def _build_docs(loaded: LoadedBundle) -> list[dict[str, str]]:
         })
     for d in docs:
         d["doc_id"] = f"{version}:{d['kind']}:{d['ref']}"
+    _guard_tenant_private_kinds(docs)
     return docs
 
 
