@@ -395,3 +395,75 @@ HEAD `98f8b04`（＝远端同点，`git rev-parse` 现测 17:5x）；链上三�
 ## 7.7 一条软性建议（不是退回）
 
 ⑰c 的 `pre_fix` 行 verdict 现在写「**未达成**（ge2 = 5，n = 5）」。事实没问题，但下游若摘走"格2 未达成"三个字，会把**修复前的存量**读成**当前未达成**。建议那一行改「**pre_fix 存量 ⇒ 不作验收判**」，把"未达成"留给 post_fix 域。
+# §八 · 第 5 轮（QA 接续：QA-b）· 两只窗的提示词与长期指令整理 ＋ 开工五查（2026-10-04 15:2x–15:4x +0800 · @ `5307a94`）
+
+## 8.0 本轮性质
+
+总控原话：「按你建议进行整理，完成后发派给 W8 的提示词交给我……目前只有你 QA 窗口和 W8 窗口会参考工作，别的（W0、W1A、W4 等）不会工作。」
+⇒ 本轮**不开发、不花钱**，做三件事：① 删掉两份岗位说明书里的过期件与错口径；② 把易变值从提示词里清出去（改成取数命令）；③ 出 `T-28`（P0 `U-131`）＋ `T-29`（账面同步）。
+
+## 8.1 开工五查（全现测；面 = 工作副本 ＋ 共享栈容器内 psql）
+
+| 项 | 现读 | 复算命令 | 等级 |
+|---|---|---|---|
+| HEAD／远端／提交数／工作区 | `5307a94` ＝ `git ls-remote origin main` 前 8 位（同点）／`git rev-list --count HEAD` = **391**／未提交 **0 行** | `git rev-parse --short HEAD; git ls-remote origin main; git rev-list --count HEAD; git status --porcelain 后数行数` | self（同一次运行） |
+| `docs/07` | v1.7.18／`wc -l` = **3,642**／取号行 `docs/07:1078` = 「下一个可用号 = `U-135`」 | `grep -m1 -n "^\| 文档版本" docs/07_技术设计文档_TDD.md; wc -l …; grep -nE "^> \*\*下一个可用号" …` | self |
+| 门禁产物 | `PASS 1/8`（`gate_summary.counts` = PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2）；`meta.git.rev` = `079916d`、`dirty` = **true**；`meta.generated_at` = `2026-10-03T17:31:38+00:00`；8 格输入里 `self_reported_rev` = null 共 **5 格**、`mtime_utc` 最老 **09-18／09-20／09-28** | `PYTHONUTF8=1 .venv/Scripts/python.exe -c "import json;d=json.load(open('backend/reports/w6/eval_metrics.json',encoding='utf-8'));print(d['gate_summary']['counts'],d['meta']['git'])"` | self（**非当期构建**） |
+| 共享栈 | 5 个容器 `Up 4 hours`（`commerceql-api-1`／`pg-1`／`redis-1`／`pgbouncer-1`／`web-1`）；无 `w7load-api` 残留 | `MSYS_NO_PATHCONV=1 docker ps --format "{{.Names}} {{.Status}}"` | self |
+| 花钱口径 | `app.cost_ledger` = **1,656** 行／**¥2.725108**／`max(created_at)` = `2026-10-04 06:09:59+00`；本轮新增（`> 07:00:00+00`）= **0 行** ⇒ 本窗零花费双向自证 | `MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'\|' -v ON_ERROR_STOP=1 -c "select count(*), round(sum(cost_cny),6), max(created_at) from app.cost_ledger;"` | self |
+
+## 8.2 整理清单（逐件，删除的都是过期件或错口径；历史读数一律没改）
+
+| 件:位置 | 动作 | 原因（现测根据） |
+|---|---|---|
+| `reports/qa/QA_PROMPT.md` §二 纪律行 | 删「`docs/**` 只读（不在 git 里，改了没有回滚点）」，改指 v2 的同步性订正条款 | 现测 `git ls-files docs/ OVERVIEW.md _refs/` = **12 行** ⇒ 同件 `:67`／`:82` 已改、这一处漏改（三处抄本只改两处） |
+| 同件 §5-C／§8 第 2 条／§2 花钱条 | 「四场景」全改 **`07 §16.5` 逐格 ＋ 该节必测断言逐条（当场数）** | 现测 `grep -c 压测 docs/04*.md` = **0**；`docs/07:3161` 自写「本行 5 个场景 = 压测的唯一定义处」；`:3164` 自写「圈号共 8 个而断言只 6 条 ⇒ 条数 = 行首连续编号最大值」 |
+| 同件 §五（总控四步）／§六（12 行种子缺口表） | **整节删除**，改指针 `git show 5307a94:backend/reports/qa/QA_PROMPT.md` | 四步里"粘整段／它自己建目录"已作废且七件已在位；表内 **10 行属主列是停用窗**、U-129 那条现状已变（`reports/w8/PROMPT.md` §4 = 待验收）⇒ 新窗照抄即"转述当读数" |
+| 同件 §6／§7 第 ④ 件 | 「每窗 ≤10 行」→「一块给 W8 的六段粘贴块」；并发/串行表**降为按需** | 编制只剩两窗且总控手工串行转递 ⇒ 表恒等于一行 |
+| 同件 §4 第 1 问 | 新增硬防线：**判据原文只认 `git show HEAD:docs/07…` §4.8 那一行**（尺 `grep -cE "^\| \*\*U-131\*\*"` = **1**），W8 回执里的转述不算判据 | W8 现在同握裁定与交付两只手；`reports/w8/PROMPT.md:45` 自己写着"写契约的手不能同时是验契约的手" |
+| 同件 v2 起手四件 | 删掉抄在里面的 HEAD／提交数／`T-27`／门禁格／`U-131` 两面细节，**每条换成当场取数的命令**；续号尺 = `grep -oE "T-[0-9]{2}" … ｜ sort -u ｜ tail -1` 再 +1 | 现测：14:2x 那批数写的是 `a3834cf`／390，15:24 实测已是 `5307a94`／391 ⇒ 同一天内漂；`OVERVIEW.md:8` 还停在 `b571b40`／382 |
+| `Prompt_QA接力_文档与派单窗.md`／`Prompt_W8接力_开发窗.md` | 压回纯指针（各 ≤12 行），易变值清零 | 两件自己都声明"别在这里抄内容" |
+| 记忆 `user-role-commerceql-owner.md`／`feedback-list-defaults-dont-block.md`／`feedback-report-only-measured.md` | 删三段「覆盖前版本」；其中还有效的 7 条上移进正文，旧段**原文**移到 `E:\01_实训\项目\CommerceQL冗余\memory-dedupe-20261004.md` | 三件各有 **2 份 frontmatter**；且旧半句"动手前等确认再动手"与现行"报完直接开工"在同件里相反并存 |
+| 记忆 `project-qa-window-handover.md` | 删同段第二抄；「提示词两处口径错」升级为两条**一般规则**（引用 G- 数／场景数前先点名是哪一份）；补 ①–⑤ 的 10-04 定稿段 | 现测该段"2026-10-02 QA→W6 第一轮回执"逐字出现 **2 次** |
+| 记忆 `project-commerceql-env-pitfalls.md` | 修「当场重数行尾」那条里被**裸 CR 字节**吃掉的两个 `b.count(...)`（改后 `bare_CR = 0`）；拆一条挤在同一行的双 bullet；「粒度」「面」各删第二抄 | 原句两个 `b.count(b'…')` 之间夹真 CR ⇒ 读起来变成"与自身相比"，规矩不可执行；`粒度` 两条都自称"第四种形状" |
+| 记忆 `project-w6-eval-window-state.md` | 圈号冲突改名 **⑧b／⑨b**；失效引用「与 ⑭b 那条」改成短语名；节首加**编号声明**（新条目不再续圈号） | 现测 ⑧、⑨ 各命中 **2 行**，顺序非单调 ⇒ 该件自己的"位置引用三件"规矩在这件里失效 |
+| 记忆 `project-delivery-round-protocol.md`／`project-w8-single-dev-window.md`／`reference…docs-and-repo.md` | 各补 🔻 10-04 段：三处降档、两窗编制、写面冲突登记 | 体制变了，正文若不跟着记 ⇒ 下一窗会照旧写法交付 |
+| 项目层 `MEMORY.md` | 索引 11 行重写为短行（原 env-pitfalls 那行 **1,523 字符**） | 索引每次会话都吃进去；格式上限 ≈150 字符 |
+
+**形状自检（写盘后回读，盘上文本为尺）**：`QA_PROMPT.md` = 161→162 行、`CRLF = 0`、奇数粗体行 **0**、`****` 命中数 **6 = 改动前 6**（一条都没新增，六处全是 `**`码`**（` 同形的既有史料）、表内空行 **0**、旧窗属主表格行 **0**、`a3834cf`/`b571b40` 残留 **0**。
+「四场景」盘上仍有 **3** 处命中（`:86`／`:120`／`:138`）——**故意留着**：三处都是「别再写"四场景"`"的具名作废句，不是判据本体。
+
+## 8.3 `U-131` 起点读数（QA 自测，面 = 工作副本 @ `5307a94`）
+
+| 判据臂 | 现读 | 复算命令 |
+|---|---|---|
+| ① 载荷带属主 | `SessionMeta` 字段 = `session_id`／`created_at`／`title`／`bundle_version`／`graph_version`／`last_turn_at`／`closed`，**无 `user_id`**（`backend/app/api/state_store.py:140-146`） | `grep -n "class SessionMeta" -A 14 backend/app/api/state_store.py` |
+| ② 单一强制点 | `get_session` 只用租户级键：`cache_keys.session_meta(ctx.tenant_id, session_id)`（同件 `:358-371`；键定义 `backend/app/cache/keys.py:177`）⇒ **无属主比对** | `grep -n "def get_session" -A 18 backend/app/api/state_store.py` |
+| ③ 两入口 | 都把"存在性"当"属主性"：`app/api/routers/query.py:182`、`app/api/routers/session.py:118` 同调 `store.get_session` | `grep -n "store.get_session" backend/app/api/routers/query.py backend/app/api/routers/session.py` |
+| ④ 契约半 | **缺臂而非缺绿**：`tests/contract/test_api_endpoints_contract.py:191`（`ss_nope`）与 `:226`（`ss_ghost`）断言的是"**不存在**的会话 ⇒ 404"，**跨属主那一臂结构性不存在** ⇒ 这两条修复前就绿，**不得当结案证据**（pre-fix 就为 0 同族） | `grep -n "SESSION_NOT_FOUND" backend/tests/contract/test_api_endpoints_contract.py` ＋ 读那两行的 docstring |
+| ④ 活体半 | `deploy/loadtest/probe_session_owner.py`／`probe_session_owner_context.py` **在位**（W7 期的永久件）⇒ 结案可直接用它，不必新造靶子 | `ls deploy/loadtest/probe_session_owner*.py` |
+| 状态 | **未修**（四臂全部现测为"缺"），`§4.8` 里它的等级 = **P0 安全**；`OVERVIEW.md §9` 的对外红线"不得写跨用户隔离已达成"与本号同源 | 上表四条逐条 |
+
+## 8.4 本轮我欠的两件（不是无限期，下一轮第一件事）
+
+- **`OVERVIEW.md:8` 证据行刷新**：现测仍写 `b571b40`／382 次提交，而 HEAD 已 `5307a94`／391 ⇒ 这格是我的活。没做的**真实原因**是我把预算给了提示词整理＋`T-28` 取证，不是"被 W8 挡住"。
+- **`OVERVIEW.md` §7 门禁格 ＋ §9 404 两面**的同步性订正：§7 那格要带"非当期构建"限定（8 格输入里 `self_reported_rev` = null 5 格、最老 mtime 09-18）；§9 要分"前端路由已装配／后端端点未接线"两面。两处都要先现读再落笔，且 `OVERVIEW` 里版本类抄本**跨节同改**（§0／§5／§6／§7／§8 至少五处）。
+
+## 8.5 新单与串行说明（一行）
+
+`T-28`（U-131，P0，零额度为主）＋ `T-29`（W8 自刷 `PROMPT.md` §1↔§2⑤ 与 §4 的数）——两块都在 `TASK_BOARD.md` §14.2；**本轮唯一争用面** = W8 若为结案重建 `api` 容器／起一次性库，则 QA 的 `docker ps` 与台账读数要等它跑完再取（我已在 8.1 取完，W8 跑完我不重取，下一轮重取）。
+
+## 8.6 自我暴露（本轮我犯的）
+
+① venv 相对路径层数**连错两次**：在 `backend/reports/qa/` 下写 `../../../../.venv/…`、在 `CommerceQL/` 下写 `../.venv/…` ⇒ 都是 `No such file or directory`（rc 127），正数是 `../../../` 与 `./`。这条坑早就写在记忆里，我**动手前没把要用的命令与本节逐字对一遍**。
+② 第一次归档脚本里把带反引号的路径塞进 `bash -c` 的双引号串 ⇒ 被命令替换吃掉，落进记忆文件的那句缺了路径（已用 `Write` 成脚本文件重做并修回）。同族坑也在记忆里，第二次仍犯。
+⇒ 处置：从现在起，**含反引号或中文路径的落盘一律走 Write/Edit 或先写成脚本文件**；跑任何命令前先在本窗 §3 表里逐字对形状。
+## 8.7 盘上存量渲染缺陷（本轮现测到、**故意没改**，理由随件登记）
+
+| 件 | 位置（现读行号） | 缺陷 | 为什么本轮不动 |
+|---|---|---|---|
+| `TASK_BOARD.md` | L252 表内空行 1 处（`**⑤ W1B（T-08）＋ W4（T-12 文本）＋ 架构（T-13 四件上呈）**` 那张表被劈开） | 后半段不按表格渲染 | 那是**第 2–3 轮的史料表**，不是本轮要往里追加的表；改它=重排历史行，且本轮我的追加在 §14（另一张表） |
+| `TASK_BOARD.md` | L92／L156／L157 三行奇数粗体 | 粗体跨度未闭合 ⇒ 渲染吞标记 | 同上：属旧轮次正文；`QA_PROMPT.md` 侧本轮已核到「改动前后 `****` 与奇数粗体行的**新增数 = 0**」（脚本比对 HEAD 版） |
+| `QA_LEDGER.md` | L101／L102 两行 9 格、而同表表头尺 15 格 | 列数不一致 ⇒ 那两行错位渲染 | 属第 10 轮那张表；本轮追加的是「第 11 轮」那张（8 格，逐行尺过） |
+
+⇒ 处置口径（沿用本项目既定做法）：**只修「正要往里追加的那张表」，其余登记不擅动**；下一次谁要往这三处追加，第一件事是先把它自己的列数尺对上。

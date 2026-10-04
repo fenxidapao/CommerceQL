@@ -495,3 +495,46 @@ O-11（给 U-134① 的决策输入）：「保留 allowlist ＋ 显式豁免登
 | 件 | 内容 |
 |---|---|
 | **P-4′（改写）** | 要不要把「凡以 `channel='terminal'` 写行充当"本轮自写终态"证据者，**必排 `__start__` ＋ 必带三面名（判据谓词／守卫／消费位）**」升成 `U-129`（`07:1155`）的一句引用规则。W8 现测：判据谓词面 8／守卫面 1／消费位面 5，反证已复现假绿→降不可判。 |
+
+
+# §14 · 第 5 轮（QA 接续：QA-b）· 2026-10-04 15:4x +0800 · @ `5307a94`
+
+## 14.1 状态刷新（只登记本轮新开的两单）
+
+| 单号 | 优先级 | 要什么 | 判据出处 | 复算命令（QA 已跑通） | 争用面 | 花费 |
+|---|---|---|---|---|---|---|
+| **T-28** | **P0（安全）** | `U-131` 四臂全绿 ＋ 三面结案 ＋ contract 同型断言 | `docs/07:1159`（尺 = `grep -cE "^\| \*\*U-131\*\*" docs/07_技术设计文档_TDD.md` = **1**） | `grep -n "class SessionMeta" -A 14 backend/app/api/state_store.py` ＋ `grep -n "def get_session" -A 18 backend/app/api/state_store.py` ＋ `grep -n "SESSION_NOT_FOUND" backend/tests/contract/test_api_endpoints_contract.py` | 若为活体结案重建 `api` 容器 ⇒ 与 QA 的 `docker ps` 串行；一次性库建删自负 | 读侧 404 零额度；写侧 `POST /query` 一条会进图（≈¥0.006–0.011，先报几何与 `is_peak`） |
+| **T-29** | P2（账面同步，不阻塞） | 刷 `reports/w8/PROMPT.md`：§1 权限段与 §2⑤ 的写面口径对称化、`_refs/` 属主点名、§4 那批 14:2x 读数改成取数命令或重跑带时刻＋HEAD | `reports/qa/RELAY.md` §8.0 与 §8.5；冲突本体 = `w8/PROMPT.md:29` vs `:31`／`:43` | `git grep -n "_refs" -- backend/reports` ＋ `git ls-files docs/ OVERVIEW.md _refs/ ｜ wc -l`（现测 12） | 只动 W8 自己的件 | 否 |
+
+## 14.2 → W8 第 5 轮粘贴块（总控照抄转发 · 主单零额度）
+
+```
+[QA→W8 第 5 轮 · 主单 T-28（U-131，P0 安全）＋ 顺带 T-29（账面同步，不阻塞）]
+
+【目标】把 U-131「同租户内跨属主会话可读」按 07 §4.8 判据修掉，并交齐三面结案证据；顺带把你 PROMPT.md 里那处写面口径与已漂的起点数改掉（T-29）。
+
+【起点读数】QA 2026-10-04 15:2x–15:4x +0800 现测 @ HEAD `5307a94`（工作区 clean、与 origin/main 同点、`git rev-list --count HEAD` = 391）：
+  ① 载荷无属主——`backend/app/api/state_store.py:140-146` 的 SessionMeta 字段 = session_id／created_at／title／bundle_version／graph_version／last_turn_at／closed，**没有 user_id**；
+  ② 键只到租户级——同件 `:358-371` 的 get_session 只用 `cache_keys.session_meta(ctx.tenant_id, session_id)`（键定义 `backend/app/cache/keys.py:177`），**无属主比对**；
+  ③ 两入口都把"存在性"当"属主性"——`app/api/routers/query.py:182`、`app/api/routers/session.py:118` 同调 store.get_session；
+  ④ 契约面是**缺臂不是缺绿**——`tests/contract/test_api_endpoints_contract.py:191`（ss_nope）与 `:226`（ss_ghost）断言的是"不存在的会话 ⇒ 404"，跨属主那一臂结构性不存在 ⇒ 这两条修复前就绿，**不得当结案证据**；
+  ⑤ 结案靶子已在位——`deploy/loadtest/probe_session_owner.py` 与 `probe_session_owner_context.py`（W7 期永久件），别新造；
+  ⑥ 门禁产物不是当期——`backend/reports/w6/eval_metrics.json` 的 meta.git.rev = `079916d`、dirty = true，8 格输入里 self_reported_rev 为 null 共 5 格、最老 mtime 落在 09-18／09-20／09-28 ⇒ 引 `PASS 1/8` 必须带"非当期构建"限定，对外仍不得写"门禁通过"。
+
+【边界】只改 `backend/app/**` ＋ `backend/tests/**`；`OVERVIEW.md §6/§7/§9`、`docs/**` 同步性订正、`deliverables/ACCEPTANCE.md`、`backend/reports/qa/**` = QA 地盘，你别动。
+  集成只打一次性库、跑完 DROP 并现查残渣（尺 = `datname like 'ecom%'`，注意 `LIKE 'ecom_%'` 里下划线是单字符通配）；禁 `git add -A`／reset／clean；历史读数只用 🔻 追加不改写。
+
+【判据】原文只认 `docs/07:1159` 那一行（尺 = `grep -cE "^\| \*\*U-131\*\*" docs/07_技术设计文档_TDD.md`，命中数 = 1）；你回执里对判据的转述我按"待比对对象"处理：
+  ① `create_session` 的载荷与 `SessionMeta` 必须带属主 `user_id`；
+  ② **单一强制点**：属主比对只写在 `StateStore.get_session()`，不等 ⇒ 返回 `None`（两个端点现有 404 分支自动生效）；🚫 不得在端点各写一遍（那正是"第三个入口漏检"的成因）；
+  ③ **属主缺失 = fail-closed**：修复前写入的旧会话（无 user_id）与"不匹配"同样按 `None` 处理，并记一条内部 WARN 计数；🚫 不得因"读不到属主"放行；🚫 不得返回 403/401 或 404-with-detail（附录 A 要与"不存在"不可区分）；
+  ④ 结案必须**三面齐**：读 = 非属主 `GET /session/{sid}` ⇒ 404 `SESSION_NOT_FOUND`；写 = 非属主 `POST /query` ⇒ 404（**不得只修 GET**）；推理 = 明确"不适用"或补一轮打到 `gen_sql` 的对照；**并且** `tests/contract/**` 落同型断言（跨属主 → 404、属主 → 200）——只交读侧我不转绿；
+  ⑤⑥⑦ 禁止：不得加"管理员可读他人会话"豁免（契约无 carve-out，安全语义取更保守者）；不得顺手改键格式／键族（键加 user_id 会牵动会话列表与 `sess:plan` 寻址，不解本号；要按属主做列表分页请另开一号）。
+
+【交付】代码 ＋ contract 断言 ＋ 三面证据；落盘 `reports/w8/RELAY.md` 新节（每条结论带 文件:行号 ＋ 读数时刻 ＋ 能跑出该数的命令）＋ `DELIVERY.md` 一行；按你 §5 给我 ≤250 字短回执（改了哪些面／判据与取号／跑了什么／读数带面与粒度／没达成的／要 QA 同步的格／复算入口）。
+  复算入口（零额度，我先跑过）：`cd backend && grep -n "class SessionMeta" -A 14 app/api/state_store.py` ／ `grep -n "def get_session" -A 18 app/api/state_store.py` ／ `PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest tests/contract -v -k session`。
+  写侧那一臂若要真打：先报最小充分几何（1 对足够）＋ `is_peak` 档读值 ＋ 预估（验收类 ≈¥0.006/run、每对 ≈¥0.011），事后在回执里带 `app.cost_ledger` 的行增与金额增量。
+  T-29（不阻塞）：你 `reports/w8/PROMPT.md` §1 把 `docs/01–08`＋`OVERVIEW.md`＋`_refs/` 列进"你的权限"，同件 §1 末段与 §2⑤ 又写"这些是 QA 地盘你别动" ⇒ 请二选一、两侧措辞对称，并把 `_refs/` 的属主点名（QA 只领了 docs/OVERVIEW/ACCEPTANCE）；§4 那批 14:2x 的读数已漂（现测 HEAD 与提交数都不是那个值），改成"当场取数的命令"或重跑后带时刻＋HEAD。
+
+【不许做】不取新 `U-xx`（本号已占、`§4.8` 下一个可用号现读仍是那句自述值，要取先三查）；不改 `§4.8` 判据措辞（要改就在那一行落笔并逐臂复查原判据现在还防着什么）；不动 `eval/` 冻结集与匣带；不清旧窗目录、不清 `ecom_u123_probe`（别窗对象）；不写"门禁通过"、不写"跨用户隔离已达成"（本轮修完也只能写"该项已结案、门禁仍 1/8"）。
+```
