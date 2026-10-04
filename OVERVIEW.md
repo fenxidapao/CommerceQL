@@ -393,6 +393,11 @@ DoD④ 全仓重放 = **零未放行命中**（= 每个命中都落在豁免面�
   `deploy/runbook/README.md` §5.1。⚠️ 两个坑实测过：令牌只在内存 ⇒ **刷新页面就要重贴**；
   `--tenant-id` 必须是数据里真实存在的（`T_A`/`T_B`/`T_C`），签成 `tenant_a` 的表现是
   "五步走完、该条件下没有数据"而**不是报错**（RLS 匹配不到行），最容易误诊成闸门或模型坏了。
+- 🟠 **顶栏两个入口点了必出错误卡（P1，10-04 14:0x 真机截图取证，未修）**：`/semantic/metrics`（口径字典）与 `/eval/runs`（评测）两条前端路由**已建页面**，但它们要调的后端端点**没接线** ——
+  现读 `openapi.json` 的 12 条 path 里没有 `semantic`/`eval` 任何一条 ⇒ 两页都渲染出**HTTP 404 错误卡**（页面本身在、数据拿不到）。
+  证据：`deliverables/screenshots/07_page_semantic_metrics_HTTP404.png`、`08_page_eval_runs_HTTP404.png`。
+  ⇒ 影响两件事：① 第 5 轮那次浏览器走查的覆盖面**只包含问答链路**，"页面打得开"当时是按问答页判的，顶栏另两个入口没人点过 ⇒ 面向人的判据要**逐入口点一遍**，不是"主链路通"；
+  ② 演示与交付包里已明写"别点这两个链接"（`deliverables/ACCEPTANCE.md` §3）。⚠️ 补端点属新功能面（口径字典只读接口 ＋ 评测报告读取接口），本窗**未做**，登记待排。
 - 🟡 **`api` 容器现在依赖公网 DNS 解析器（P2，10-03 本机 A/B 实测后写进 compose）**：
   Docker Desktop 内嵌 DNS 解析 `api.deepseek.com` 8 次里 1 次 `gaierror`（8.02s）＋1 次 3.07s，
   足以吃光 `normalize` 节点的 15s 预算 ⇒ 前端表现为降级＋拒答。`deploy/docker-compose.yml` 已给

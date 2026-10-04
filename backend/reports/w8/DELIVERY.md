@@ -118,3 +118,10 @@
   ④ 门复跑：DoD④ 替身 8 passed ＋ 离线全量 **2,340 passed / 0 failed**（含 docs 的树，rc 0）。
   ⑤ 交付包：`git archive --format=zip -o "E:\01_实训\项目\CommerceQL_v1_20261004.zip" HEAD`（筛选口径 = 跟踪集 ⇒ 天然排除 `.venv`／`node_modules`／**421 MB 沙箱库**／`deploy/.env`／`*.bak-*`／`*.log`）；包外需收件人自补三件：`deploy/.env`、`data/ecom_sandbox.db`（`seed_generator.py` 重建，**本窗未重跑 ⇒ UNVERIFIED**）、宿主 Ollama `:11434`。
   ⑥ 结论：可交 = 一版可跑、可复算、状态诚实的工程作品；**不可**交成"可上线系统"（`PASS 1/8`、EX 6/124、`U-131` 未修）。细节：`RELAY.md` §六.20。
+
+- 🔻 **同轮第六次落笔（验收通知落地）**（2026-10-04 13:5x–14:2x +0800，起点 HEAD `60624ff`）
+  ① 新增 `deliverables/ACCEPTANCE.md`（包入口页：导览／跑法／**演示脚本 5 条问句 ↔ 5 张截图**／PPT 素材 a–e 映射／答辩红线表）＋ `deliverables/screenshots/` **7 张真机截图**（结果表含口径条、五渠道订单量多行表、两张澄清卡、一张 PII 拒答卡、两张缺陷取证）⇒ 提交 `8e5b029`。
+  ② 🔴 截图顺手打出一个 **P1 新缺口**：顶栏「口径字典」「评测」两页必出 HTTP 404（前端路由在、后端端点未接线，`openapi` 12 条里没有）⇒ 已入 `OVERVIEW §9`；连带订正一句旧表述——第 5 轮"浏览器走查通过"的覆盖面**只有问答链路**，面向人的判据要逐入口点。
+  ③ 交付包两版（含 `.git` 历史 ＋ `frontend/dist` ＋ 两份 pytest 日志；禁物断言：无 `.env`／无 `*.pem`／无 venv／无 `node_modules`，且 `deploy/.env.example` **必须在**）：轻包 **26.50 MB／1,421 件**，重包 **120.68 MB／1,422 件**（多一件 420 MB 沙箱库）；两包 `testzip` 完整。夜里那份 7.2 MB 旧包移到 `旧包_已作废\`（未删）。
+  ④ 本轮演示花费按落库面现算 = **6 run／15 次调用／¥0.016933**（三条早退的只有 1 次调用 ¥0.0006–0.0010，全链路三条 ¥0.0042–0.0058；这批**含 `l4_score`**，与夜里旧口径不可混比）。
+  ⑤ 三条自曝：内嵌浏览器不可见时 `take_snapshot` 能读但 `take_screenshot` 必失败（改本机 Edge headless ＋ CDP，独立 user-data-dir）；注入串用 `replace('%TOKEN%')` 反被占位符吞掉（回显 `len=7` 是唯一线索 ⇒ 一律 `JSON.stringify` 整段注入）；禁物规则子串匹配误伤 `.env.example` ⇒ 打完必须**正面断言该在的在**。
