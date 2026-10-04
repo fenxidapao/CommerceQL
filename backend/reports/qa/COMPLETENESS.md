@@ -270,3 +270,28 @@ W1B 现测 ＋ 我对 `pg_policies.qual` 原文逐字复核：`campaign`／`orde
 | B 缺陷 | `U-130` | 🔴 断言⑥ 那条量**本轮未交** | `07:3164`（v1.7.18 分母 = `terminal`）＋ `T-33` |
 | C 交付面 | 顶栏四端点（`A.7.1`／`A.7.2`／`A.9.3`／`A.9.4`） | **未启动**（本轮改动面只有 `docs/07` 一行、`OVERVIEW`、`eval_metrics`＋三件产物、`keys.py` 注释、九份横幅） | `git diff --name-only a84fc6f..ec69f8d`（14 件，无 router／前端面） |
 | C 交付面 | `07 §16.5` 场景逐格／断言逐条 | **未查**（尺 = 现读 `docs/07:3161`／`:3164`，条数当场数） | `RELAY.md` §8.1 记的现测：5 场景／6 断言（10-04 15:2x） |
+
+
+## 第 14 轮（2026-10-04 22:2x · @ `0d2570f`／409 笔）增量
+
+| 面 | 项 | 现读 | 取证 |
+|---|---|---|---|
+| C 交付面 | 评测报告页三端点 `A.9.2／A.9.3／A.9.4` ＋ `A.9.5 GET /admin/audit` | **仍未实现（各路径命中 0）** ⇒ 本轮起挂 `T-34` 主单（前三轮挂"未启动"却无单，属**派单漏**） | `docs/02:15` 为 A.9.2–A.9.4 入册行、`docs/01:271` 列 P0；命中数尺见下面围栏 |
+| C 交付面 | `backend/app/present/` | **空壳未动**（目录只有 `__init__.py`，292 B，mtime 09-15 15:49） | `ls -l backend/app/present/` |
+| C 交付面 | `A.7.1／A.7.2`（语义指标口径字典／认证资产） | **仍未实现（命中 0）**，`T-34` 里作"做不完要明写"的次项 | 同下面围栏 |
+| E 证据面 | `U-129` 四条引用清单 | **①②④ 达成／③ 未交** ⇒ 不转绿 | `RELAY §11.2` 表 ＋ ⑰c 原始两行 |
+| E 证据面 | G-1 输入面三件当期化 | 两把日志 mtime 20:36／20:38 ＋ `gate_inputs_p0_summary.json`（rev `4566e84`／406 笔／dirty false／两日志 sha256）⇒ 等级 `mtime_only` → **`self_reported`** | `ls -l backend/reports/w6/*.log` ＋ 该 JSON 的 `git_rev`／`commit_count` |
+| E 证据面 | 🔴 两处新失明 | 守卫支静默丢第二份红（`reporter.py:898`）＋ 默认路径读上两轮日志（`:75`／`:80`）⇒ 均**非判据变更**，缺的是自描述 | `E:/tmp_qoder/g1_two_state_qa.json` 四对 |
+| E 证据面 | 🔴 `domain_ruler` 上限 | 落库面无构建身份键（0／0 行）⇒ **date_proxy 是结构性上限**，修法后域不可自证于库面 | `RELAY §11.6` |
+| D 文档面 | 版本抄本 | `v1.7.19` 三处而版本历史表无行、`:11` 与 `OVERVIEW:8`／`:118` 仍 v1.7.18 ⇒ **同改未完成** | `grep -c "v1.7.19" docs/07_技术设计文档_TDD.md` = 3；版本历史表那把尺（行首竖线在表内写作全形）＝ `grep -n "^｜ \*\*v1.7.1[89]\*\*" docs/07_技术设计文档_TDD.md` 只命中 `:80`，实跑请用真竖线 |
+| D 文档面 | 对外 HEAD | `OVERVIEW:161` 主格 382／`b571b40` vs 本窗现测 **409／`0d2570f`**（差 27 笔）；`:8` 取证时刻 01:40 | `git rev-list --count HEAD` ＋ `git ls-remote origin main` |
+| A 门禁面 | 八格 | 仍 **PASS 1/8** ⇒ 对外不写"门禁通过" | `eval_metrics.json` 的 `gate_summary` @ `d93db8f`／dirty false |
+| B 花费面 | 台账 | **1,674／¥2.753794／max 09:16:55Z 未动**（W8 第 10 轮零花费 ＋ 本窗复算零花费） | 件内 `cost_ledger_before = after` ＋ 我 ⑰c 前后各读 |
+
+交付面命中数尺（仓库根跑，五条路径逐条 `wc -l`，本窗 22:2x 现读全为 **0**）：
+
+```
+for p in "semantic/metrics" "semantic/assets" "admin/eval/datasets" "admin/eval/runs" "admin/audit"; do
+  printf "%-26s hits=%s\n" "$p" "$(grep -rn -- "$p" backend/app | wc -l)"
+done
+```

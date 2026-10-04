@@ -581,3 +581,132 @@ HEAD `ec69f8d` ＝ `git ls-remote origin main` 前 9 位 ／ `git rev-list --cou
 
 `U-131` 已结案（§4.8 那行由 W8 落笔 ✓）；`U-129` 三格达成但**缺 `U-130` 耦合量 ⇒ 待验收**；门禁 `PASS 1/8` 且 G-1 只到 `mtime_only`；对外硬伤余下：四端点（`A.7.1`／`A.7.2`／`A.9.3`／`A.9.4`）＋ `present/` 空壳。
 ⇒ 下一块 = **`T-33` 主单（`U-130` 对账量，零额度）＋ 顺带 ① T-32 修法（判据口径变更＋两态反证）＋ 顺带 ② `gate_inputs` 汇总入库件**。见 `TASK_BOARD.md` §16.2。
+
+
+---
+
+# §十一 第 8 轮验收（2026-10-04 22:1x–22:2x +0800 · @ `0d2570f`／409 笔 · QA 接续：QA-b · 本轮 = W8 第 10 轮回执复算）
+
+## 11.0 开工读数（现测，四条同一次运行内取）
+
+`git rev-parse --short HEAD` = `0d2570f` ｜ `git rev-list --count HEAD` = **409** ｜ `git status --porcelain` = **0 行** ｜ `git ls-remote origin main` = `0d2570f92ce6…` ⇒ 与本地同点（双向 0 偏差）。22:26 +0800 复测仍 409／同点。
+零花费基线（跑前跑后同值）：台账 **1,674 行／¥2.753794／`max(created_at)` = 2026-10-04 09:16:55**。本窗整轮只读、未建库；残渣尺 `datname like 'ecom%'` = `ecom` ＋ `ecom_u123_probe`（后者属别窗，不删）。
+
+## 11.1 T-33 取数件我这一面重跑 = 判定量零差 ⇒ **达成**（不是我引用它的自证）
+
+```
+PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/t33_u130_coupling.py --out E:/tmp_qoder/t33_recheck.json
+PYTHONUTF8=1 .venv/Scripts/python.exe E:/tmp_qoder/diff_t33.py backend/reports/w8/t33_u130_coupling.json E:/tmp_qoder/t33_recheck.json
+```
+
+⚠️ **`--out` 必带**：件内 `:338` 的默认输出路径就在 W8 自己的目录 ⇒ 不带 `--out` 的复算会**改写他窗入库件**（本窗不改）。
+
+diff 读数：`total_diff_paths=13` = **6 条 meta**（`generated_at_utc`、`reading_window_utc[0..1]`、`git.rev`、`git.rev_full`、`git.commit_count` 407→409）＋ **7 条时钟派生句**。那 7 条全部落在 `faces.R_receipt_request_grain.items[*].静默前置`，件内 `:320` 写的是 `age / MAX_AUDIT_LAG_S` ⇒ 随读数时刻动，**不是判定量**。
+
+判定量逐位相同（本窗重跑 vs 入库件）：面 R `in_scope_receipts = 7`、`sum_of_gaps = 4`；面 W 全库 `runs 1408／t2 71／terminal_writes 843／audit_rows 891／runs_without_audit_row 517／gap_down 0／gap_up 48／multi_row_runs 0`；修法后域 `runs 30／t2 10／runs_without_audit_row 0`；修法前域 `1378／61／813／861／517／0／48／0`；`exemption_set`、`audit_surface.era`、`shape_guard_T18`、`terminal_lexicon` **全等**。
+
+⇒ **T-33 达成**，且"可复现"这一条是被**第二只手**跑出来的（你自家连跑三遍只证稳定，不证不是转录）。
+
+## 11.2 `U-129` 的引用清单四条（`docs/07:1155` v1.7.10 那句"固定为四条"）—— 我逐条自己复算
+
+| 条 | 判据要求的读数 | 本窗复算（时刻／命令／`文件:行号`） | 三态 |
+|---|---|---|---|
+| ① | 三格并报（格1 两臂 = 0 ∧ 格2 = 0 带 `n` ∧ 格3 ≥ 1） | 自己抽 `deploy/loadtest/r23_thread_from_checkpoints.sql:657-701`（⑰c）只读跑（命令见下围栏），跑前跑后台账同值 | **达成**（引这格必带 `n = 5`） |
+| ② | `U-130` 判据② 的直读式 = 0 ＋ 耦合等式 | 11.1 的 `gap_down = 0`（post_fix 域 `runs 30／t2 10` ⇒ 非空真）＋ 面 R 差 4 逐条具名归 X1 | **落库面达成／回执面 post_fix = UNVERIFIED** |
+| ③ | 修法后的 `ok` 率与 H（带镜像 tag 或 rev ＋ 时刻 ＋ 首格作废声明） | 尺 = `ls -lt deploy/loadtest/*.json`，最新件 `r23_errorresidual_c2n4_pool1.json` **09-29 23:29（本地）** ⇒ 全部早于修法时刻 `2026-09-30 14:25:35+00`（件内 `fix_moment` 同值） | **未交** |
+| ④ | 零额度夹具证"同 thread 第二个 run 起点 `terminal is None`" | `backend/tests/contract/test_audit_terminal_pairing_contract.py:143`（`:134` 为判据⑦ 注释锚），`cd backend` 后单跑该文件 ⇒ **14 passed in 1.76s**（`TestU129EntryInvariant` 占 7 条）@ 22:1x +0800 | **达成** |
+
+⑰c 的本窗原始两行（22:2x 现跑；围栏才是命令与产物，表格里那些数只是转述）：
+
+```
+$ cat E:/tmp_qoder/qa_rerun_17c.py        # begin; \set ON_ERROR_STOP on … rollback; 经 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -t -A -F '|'
+LEDGER BEFORE : 1674|2.753794|2026-10-04 09:16:55
+⑰c 分域并报|A 按修法时刻（日期代理，非构建身份）|post_fix|10|5|0|10|t|0|0|非空真达成（ge2 = 0 且 n = 5）
+⑰c 分域并报|A 按修法时刻（日期代理，非构建身份）|pre_fix|61|5|5|0|t|0|0|未达成（ge2 = 5，n = 5）
+LEDGER AFTER  : 1674|2.753794|2026-10-04 09:16:55
+RESIDUE (datname like 'ecom%') : ecom|530848791 | ecom_u123_probe|10854927
+```
+
+B 尺（按日）同跑可见：`2026-09-29 → 38／5／5／0`（未达成）、`10-01 → 3／1／0／3`、`10-03 → 5／4／0／5`（非空真），其余六日 `n/a__该域空真` ⇒ 与 T-31 入库件逐位相同；且**分布可见性**继续支持 v1.7.17 那句"边界常量落在无样本间隙里"（B 尺当期给不了交叉验证，只给分布）。
+
+⇒ **判词（①）：四条只差 ③，`U-129` 不转绿、不结案。** 对外可写：三格并报达成（带 `n = 5`）＋ 入口不变量夹具 14 绿 ＋ `U-130` 的量在**修法后域**读 0；不可写：已修／已结案／"缺口全库为 0"。
+⚠️ 措辞纪律：`07:1155` v1.7.5 那句耦合（`admitted − 审计行数 = 豁免集合`）在 **pre_fix A 档窗读 4 ≠ 0** ⇒ 等式只在**修法后域**闭合；落笔不带域就是过宽结论。
+
+## 11.3 T-32 修法（`eval/reporter.py:785 merge_p0_logs`）我这一面复算 = **坐实**
+
+夹具四对（件 = `E:/tmp_qoder/g1_two_state_qa.py`，产物 = `E:/tmp_qoder/g1_two_state_qa.json`；夹具落 `E:/tmp_qoder/` 而非仓库，是因为 `.gitignore:47` 全局忽略 `*.log` ⇒ 落仓库只会造一份永不入库的"证据"）：
+
+| 喂进去的两把日志 | 判定量 | verdict | 判读 |
+|---|---|---|---|
+| 真实当期：`_full_pytest_1004_rT32.log` ＋ `_integration_pytest_1004_rT32.log` | 红 0；离线 `passed 2359` ＋ 集成 `107` | **PASS** | 与你回执逐位相同 |
+| 注入：离线 1 红 ＋ 集成 0 红（上一轮我造那对） | `assertion_failures 1／red_total 1`，点名 `tests/unit/test_startup_assertions.py::test_x` | **FAIL** | 🔴 上一轮同对日志读 **PASS** ⇒ 失明已修 |
+| 注入（反向）：离线 0 红 ＋ 集成 1 failed ＋ 1 error | `assertion_failures 1／environment_errors 1／red_total 2`，两列**分列未混** | **FAIL** | 🔴 反向也不被覆盖 ⇒ "两侧相加"两向都成立 |
+| 你的 12 条两态反证夹具 | — | **12 passed** | `tests/eval/test_gate_inputs_p0_merge_two_state.py` 我复跑绿 |
+
+⇒ **T-32 达成**（口径变更落在 `docs/07:3272` G-1 行 ＋ `:3253` 集成行；判据措辞「全部 P0 用例通过」我核 = 一字未动）。
+
+## 11.4 🔴 新发现（a）守卫支会**静默丢掉第二份日志的红**（`eval/reporter.py:898`）
+
+尺：`if p0 and p0_integration and not p0["integration_ran"]` —— 第一槽只要点过 `tests/integration/*.py`（= 整树 `-v` 那种日志）就**不进合并支**。注入实测：第一槽喂 0 红但 `integration_ran=True` 的日志、第二槽喂 `1 failed ＋ 1 error` ⇒ **verdict = PASS**、`measured` 只给 `unit+contract passed=107` 那一支，第二份日志的红**一条都不进判定量**；唯一线索是措辞从「离线…＋集成…」换成「unit+contract…」——肉眼可辨，器件不喊。
+
+判读：注释（`:800-804`）给的前提"防同一条红数两遍"**只在两份日志同源时成立**；不同源时今天的形状是"静默丢"。这条**不是**判据口径变更（谓词仍是"红的总条数 = 0"），要的是**自描述**：守卫支被走到时点名"第二份日志未参与合并 ⇒ 其红未计入"＋两槽 `source_log` 与 sha256 短哈希，并把反证从两态扩到**四态**。
+
+## 11.5 🔴 新发现（b）`recompute_gate('G-1')` 不带参数读的是**上两轮**的日志
+
+尺：`eval/reporter.py:75` 默认 `_full_pytest_w6.log`、`:80` 默认 `_integration_pytest.log`；盘上现测 mtime = **10-04 01:30／01:31**，而当期两份是 `…_1004_rT32.log`（**20:36／20:38**）。实测：不带参数 ⇒ `离线 passed = 2,340 ＋ 集成 107` ⇒ **PASS**；带当期 ⇒ `2,359 ＋ 107` ⇒ **PASS**。两个 PASS 的 `measured` 除规模外形状逐字相同，且**都不点名日志文件**。
+
+⇒ "任何人都能一条命令重跑出同一判定"只对**显式带两把路径**的命令成立。要么默认值做当期性检查（与 `gate_inputs_p0_summary.json` 的 `log_path`／`log_sha256` 不一致就报错），要么判定面自带文件名＋短哈希。本窗已把我那份岗位说明书 §3 的 G-1 复算段改成显式两路径。
+
+## 11.6 🔴 新发现（c）落库面**结构性没有构建身份** ⇒ `domain_ruler = date_proxy` 是上限不是偷懒
+
+现测（只读、台账前后同值）：`lg.checkpoints` 里 `channel_values->>'bundle_version'` 非空 **0 行**、`->>'graph_version'` 非空 **0 行**（`tk_` run 总 **1,408**）；post_fix 的 **30** 条 run 里带 `model_version`／`prompt_version` 的只 **21** 条，且全库 `model_version` 只 **2** 个值、`prompt_version` **4** 个 ⇒ 这两个键不是构建身份。
+
+三条后果（写面归 W8）：**①** `07:1155` 那条"严格分域依赖 rev 自报"在落库面**不可追认**，历史 run 一律只能 `date_proxy`；**②** post_fix（30／10）与 pre_fix（1,378／61）的分界**不可能自证于库面** ⇒ 当期性只能走**回执侧**构建身份（`07 §16.5` 三层证据：镜像内 md5 ＋ 工作树 ＋ HEAD blob）；**③** 真要升级 = 新增"run 自报构建身份"的面 ⇒ **取号权在 W8**（现读 `docs/07:1078` = `U-135`），本窗不取也不催。
+
+## 11.7 抄本漂移两处（归 W8 写面，我只点名不动笔）
+
+**（a）版本号**：`v1.7.19` 全文 **3** 处（`:13`／`:3253`／`:3272`），但 §版本历史表最新一行 = `:80 **v1.7.18**`、`:11`「文档版本」= **v1.7.18**，`OVERVIEW.md:8` 与 `:118` 也读 **v1.7.18**。⇒ 要么补一行 ＋ bump 三处抄本，要么撤回 v1.7.19 只留行内注记；**别留半句**（`§20.4` ㉑ 同族血案正是"版本号有、表里没行"）。
+**（b）对外 HEAD**：`OVERVIEW.md:161` 主格 **382／`b571b40`**（行内 🔻 追加到 404／`1a2e474`），本窗现测 **409／`0d2570f`** ⇒ 差 **27 笔**；`:8` 取证时刻仍 01:40。自指警告照抄保留，主格换现读 ＋ 带时点。
+尺（仓库根）：`grep -c "v1.7.19" docs/07_技术设计文档_TDD.md` = 3 ｜ `grep -n "^| \*\*v1.7.1[89]\*\*" docs/07_技术设计文档_TDD.md` 只命中 `:80` ｜ 文件仍 **3,642 行**。
+
+## 11.8 三条裁定（总控指名要 QA 给；落笔与取号权在 W8，本窗只给验收判词与意见）
+
+**① `U-129`** —— **不转绿**（见 11.2，四条只差 ③，且唯一缺口已量化）。
+**② `§4.8` 要不要为 T-32 的口径变更另落一行** —— **不要**。`§4.8` 是缺陷登记／取号表，取号尺只认"落号行 ＋ 那句显式指针"（`OVERVIEW:365` 已自曝过一次"扫最大号 +1"的假尺）；给一条**不占号且已修**的装配口径插行 = 造第五处抄本。现权威已在 `docs/07:3272` G-1 行，且那行三件齐全：具名失效形状（"G-1 判 PASS"）＋ 反证件路径 ＋ 取证等级升档说明。代价 = 只读 `§4.8` 的人不知道发生过 ⇒ 请在 `:3272` 行尾补一句历史指针。若 W8 判不同，需给理由并逐臂复查"这条原判据现在还防着什么"。
+**③ X5／X6 算不算豁免** —— **都不算，两问分开**：
+- **X6**（`recursion_limit` 超限）：`docs/07:2879` G4 行明写**审计 ✅** ⇒ 有审计行是契约**要求**，而代码走 X1 那条 `except Exception`（全仓 `grep -rn GraphRecursionError backend/app` 命中 **0**，本窗复算同值）⇒ **契约冲突 = 缺陷**，不是豁免。与 `U-129` 同支不同触发面 ⇒ 按 `§4.8` 规则② 与 `U-127`／`U-129` 先例**两号不并**；建议取号（`U-135` 起），结案用零额度夹具（打到 25 步的桩件），不打活体。
+- **X5**（停服排水注入终止帧、不经图）：当期 `members_current = 面上无样本` ⇒ 三态记 **`n/a__无样本（需停服夹具）`，不得记 0**。形状上与 `:2876` G1 同族（设计豁免），但**契约未具名** ⇒ 转正要在决策表加行 = 契约变更，由 W8 裁；转正前任何 X5 样本出现必须先具名上呈，不得直接进豁免集合。
+- 附带一条账（防过宽结论）：**当期豁免集合成员 = 0**，面 R 那 4 条差全归 X1（缺陷）⇒ 耦合等式只在**修法后域**闭合。
+
+## 11.9 本窗自曝两件
+
+**①** 我第一版 diff 件的 meta 白名单太窄 ⇒ 把 7 条**时钟派生句**报成"判定量差"，是回头读 `:320` 才排除的，不是先想到的。今后凡 `age`／`elapsed`／`ratio` 类派生字段先进白名单再比。
+**②** 我第一版注入件写 `g.verdict` ⇒ `AttributeError`：`recompute_gate()` 返 `dataclasses.asdict()`（`eval/reporter.py:942-952`）不是 `Gate` 对象。器件 rc=1 ＋ stdout 空 ⇒ 差点被我读成"G-1 跑不出东西"；改键访问重跑才拿到四对结果（已进本机坑记忆）。
+
+## 11.10 队列与下一块
+
+`T-34`（`TASK_BOARD.md §17.2`）：**主单 = 评测报告页三端点 `A.9.2／A.9.3／A.9.4`（＋ `A.9.5 GET /admin/audit`）＋ `backend/app/present/` 空壳**。现测这五条契约路径在 `backend/app/**` 命中 **0**（尺见 `COMPLETENESS` 第 14 轮那行的围栏命令），`present/` 只有 `__init__.py`（292 B，mtime 09-15 15:49），而 `docs/01:271` 把评测报告页列 **P0**。
+🔴 **这条是我的派单漏**：它在 `COMPLETENESS` 挂了三轮"C 交付面·未启动"，却**从未有过一张 `T-` 单** ⇒ 没派单 = 没干活的条件，责任在派单方不在执行方。
+顺带零额度三件 = 11.4／11.5（输入面自描述）、11.7（两处抄本）、11.6（`date_proxy` 上限落进契约面）。
+花钱项**待总控批**（本轮别跑）：U-129 的 ③ ＋ 面 R 的 post_fix 回执 = 一次花费补两个缺口，最小臂 6 条准入 ≈ ¥0.014–0.023。
+
+
+## 11.12 🔻 同轮补记（22:4x +0800）：两件复算尺已落成**入库永久件**（§11.1／§11.4／§11.5 引的 `E:/tmp_qoder/*` 是本机临时件、不可依赖）
+
+| 永久件 | 顶掉哪条一次性尺 | 现跑结果（时刻／命令） |
+|---|---|---|
+| `backend/reports/qa/prompts/probe_g1_merge_four_state.py` | §11.4／§11.5 的 `E:/tmp_qoder/g1_two_state_qa.py` ＋ 两份 fake 日志 | 四态全「复现」（`now` 列逐格等），态③ 标 **未修**（`now = PASS`／`want = FAIL`）⇒ 那正是 `T-34 顺带 A` 的验收位；附臂（当期真实两把日志）= PASS。22:4x 现跑 **rc=0** |
+| `backend/reports/qa/prompts/diff_recompute_meta.py` | §11.1 的 `E:/tmp_qoder/diff_t33.py` | 对 `t33_u130_coupling.json` vs 我的重跑件：默认白名单下 `判定量 = 7`（全是 `~静默前置` 派生句），加尾缀规则后 **`judgment = 0`、rc=0** |
+
+命令（仓库根跑；`PYTHONUTF8=1` 与 `.venv` 是这台机器的两个前置条件，缺任一都会假退）：
+
+```
+PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/qa/prompts/probe_g1_merge_four_state.py
+PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/qa/prompts/diff_recompute_meta.py \
+  backend/reports/w8/t33_u130_coupling.json E:/tmp_qoder/t33_recheck.json \
+  generated_at_utc generated_at reading_window_utc git.rev git.rev_full git.commit_count "~静默前置"
+```
+
+⚠️ 两处用法坑（写下来免得下一任再猜）：**①** 尾缀规则写作 `~字段名`，且**一旦给可选白名单就是整列替换**、不叠加默认六条 ⇒ 上面那条把默认六条一起列出来；**②** 判定量差非 0 时件里 rc=1，但 `… ｜ head`、`… ｜ tail` 这类管道会把 rc 吃掉 ⇒ 取 rc 一律 `> 文件 2>&1` 之后单独 `echo $?`（本项目第 N 次登记同族坑）。
+
+自曝第三件（同族）：我第一版永久件把仓库根算成 `parents[3]` ⇒ 指到 `backend/`，四态全 `ModuleNotFoundError: reporter` ＋ 附臂报"日志不在位"——**"器件报错"与"读数真为 0"在两处同时假退**。现按 `parents[4]` 并把 ROOT 印在件首行（`[件自证]`），深度一律现测不心算。

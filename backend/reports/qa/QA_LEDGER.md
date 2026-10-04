@@ -140,3 +140,21 @@
 | `T-11②` 第二实例 | 引用规则（四件一起引） | W8 | `basis` 四态＋`gaps` 两组已长在产物里；`_*.log` 仍 `tracked_in_git = false` | `grep -o '"basis": "[a-z_]*"' backend/reports/w6/eval_metrics.json ｜ sort ｜ uniq -c` | 同上 | 三查 n/a（取证面，非读数） | ✅ **闭为"已知等级"**；升级 = 汇总落成入库件 ⇒ `T-33` 顺带 ③ |
 | 我这面的红项 | `ruff` | QA | `probe_u131_readonly.py:18` 改 `[*MINT, …]`；`ruff check --config pyproject.toml reports/qa` = **All checks passed**；件重跑读数未变、台账 1,674 → 1,674 | `cd backend && PYTHONUTF8=1 ../.venv/Scripts/python.exe -m ruff check --config pyproject.toml reports/qa` | 同上 | n/a | ✅ 闭；同轮自曝两把尺（`NR` vs `FNR`＝横幅数 1→**10**；管道 grep 吃行 ⇒ 改落盘再读） |
 | 构建身份 | `U-131` 面 | W8 | 容器内 `/srv/app/api/state_store.py` md5 = `e31e41c3…` = `git show HEAD:` blob ⇒ 本轮未重建镜像，被测构建仍含修法 | `MSYS_NO_PATHCONV=1 docker exec commerceql-api-1 md5sum /srv/app/api/state_store.py` | 同上 | n/a | ✅ 有效 |
+
+
+## 第 14 轮追加（2026-10-04 22:1x–22:2x +0800 · @ `0d2570f`／409 笔 · QA 接续：QA-b · 本轮 = W8 第 10 轮回执复算）
+
+| 项 | 判词 | 尺（可自跑，命令全文在 `RELAY §十一`） |
+|---|---|---|
+| T-32（G-1 合并支两侧相加） | ✅ **达成（判据口径变更，已坐实）** | 四对夹具：真日志 PASS／脏离线 FAIL／脏集成 FAIL／12 条夹具绿；判据措辞「全部 P0 用例通过」核 `docs/07:3272` = 未动 |
+| T-33（`U-130` 的两面耦合量） | ✅ **达成（判定量零差）** | 重跑到 `E:/tmp_qoder/t33_recheck.json` ＋ 递归 diff ⇒ 13 差 = 6 meta ＋ 7 时钟派生句；判定量全等 |
+| `U-129` 转绿 | ❌ **不转绿**（四条只差 ③） | ①三格我跑 ⑰c 达成（带 `n = 5`）；②落库面 0 达成、回执面 post_fix UNVERIFIED；③最新回执 09-29 23:29 本地，早于修法时刻；④`test_audit_terminal_pairing_contract.py:143` 14 passed |
+| 裁② 口径变更要不要进 `§4.8` | ✅ **裁"不要"**，改为 `:3272` 行尾补历史指针 | `grep -c "merge_p0_logs" docs/07_技术设计文档_TDD.md` = 1（在 `:3272` 行内）；`§4.8` 只认落号行与那句显式指针 |
+| 裁③ X5／X6 是否豁免 | ✅ **裁"都不算"**：X6 = 契约冲突缺陷（建议取号、零额度夹具钉）；X5 = `n/a__无样本`，不得记 0 | `docs/07:2879` G4 行审计列 = ✅；`grep -rn GraphRecursionError backend/app` = 0 命中 |
+| 🔴 新发现（a）守卫支丢第二份日志的红 | ⏳ 进 `T-34` 顺带 A（**非**判据变更，缺的是自描述） | 注入实测 PASS（第二槽 1 failed ＋ 1 error 未进判定量），`eval/reporter.py:898` |
+| 🔴 新发现（b）默认路径读上两轮日志 | ⏳ 进 `T-34` 顺带 A | `eval/reporter.py:75`／`:80` vs 盘上 mtime；不带参数读 2,340／带当期读 2,359，两个 PASS 形状同 |
+| 🔴 新发现（c）落库面无构建身份 | ⏳ 进 `T-34` 顺带 C（上限写进契约面） | `bundle_version`／`graph_version` 非空行 = 0／0（`tk_` run 1,408）；post_fix 30 条里 21 条带 model／prompt_version，值域 2 与 4 |
+| 抄本漂移（版本号 ＋ 对外 HEAD） | ⏳ 进 `T-34` 顺带 B（W8 写面） | `v1.7.19` 三处而版本历史表无行；`:11` 与 `OVERVIEW:8`／`:118` 仍 v1.7.18；`OVERVIEW:161` 主格 382／`b571b40` vs 现测 409／`0d2570f` |
+| 评测报告页三端点 ＋ `present/` 空壳 | 🔴 **`T-34` 主单**（QA 自曝：挂三轮无单） | 五条契约路径在 `backend/app` 各 `grep -rn` 命中 0；`present/` 仅 `__init__.py` 292 B |
+| 门禁对外口径 | ✅ 未变：**不可写"门禁通过"** | `eval_metrics.json` @ `d93db8f`／dirty false／20:57Z：G-1 PASS，G-2／G-5／G-7 FAIL，G-3／G-4 PARTIAL，G-6／G-8 UNVERIFIED ⇒ PASS 1/8 |
+| 本窗花费 | **0**（账本 1,674／¥2.753794 跑前跑后同值；未建库，残渣尺同值） | 件内 `cost_ledger_before = after` ＋ 我 ⑰c 前后各读一次同值 |
