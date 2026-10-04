@@ -1332,3 +1332,135 @@ EOL 尺（16:2x 实跑，rc=0，输出 12 行）：`cd "C:/Users/林琪荣/.qode
 ① `probe_session_owner_context.py` 那个 `--control` 语义我是**读码才知道**的 —— 第一次跑直接带着 `--control`，产出了一份自相矛盾的产物（`asked_by=owner` 却报"非属主写入"）。要是没往下读第 5 步的码，就会把它当"写侧未闭合"报出去。**教训**：借别人的取证件，先读它的分支再跑。
 ② §八.1 里我一度照抄 QA 块的 `:191/:226` 做基准 —— 现读 `:189/:405` ⇒ 差异一半是我自己插入造成的、一半不是。两份坐标今后**各自按尺引**，别互认。
 ③ `lint-imports` 那格我还是**没跑成**（gbk 崩）。按纪律写 `UNVERIFIED`，不拿"以前绿过"顶替。
+
+
+## §九 第 9 轮（**T-30 当期门禁重算 ＋ T-31 审计三格** ｜ 2026-10-04 18:3x–19:2x +0800 ｜ 起始 HEAD `a84fc6f`（399 笔、工作树 0 行、`git ls-remote origin main` 同点）｜ **零额度 · 零跑批 · 未重建镜像 · 未连共享库写面**（只读探针 ＋ 一次性库 `ecom_t30_it` 建→迁移→跑→当场 DROP））
+
+### §九.0 开工读数（六查，逐条现跑）
+
+| 查 | 现读 | 复算 |
+|---|---|---|
+| 起点与远端同点 | `a84fc6f` ＝ `origin/main`，`git status --porcelain` = **0 行**，`git rev-list --count HEAD` = **399** | `git fetch --all -q && git rev-parse --short HEAD && git ls-remote origin main && git status --porcelain \| wc -l && git rev-list --count HEAD` |
+| `docs/07` 未被别手改 | **v1.7.18**、**3,642 行**、取号行 `:1078` = `U-135`、`U-129` 行在 `:1155`、`U-131` 行在 `:1159`（三条行位尺本轮**落笔后重测仍逐字未漂**） | `wc -l docs/07_技术设计文档_TDD.md` ＋ `sed -n '1078p;1155p;1159p' 同件` |
+| 门禁产物不是当期（起点） | `eval_metrics.json` 的 `meta.git` = `{079916d, dirty:true}`、5 格输入 `self_reported_rev = null`、最老 `mtime_utc` = 09-18（G-7 件） | `PYTHONUTF8=1 .venv/Scripts/python.exe -c "import json;d=json.load(open('backend/reports/w6/eval_metrics.json',encoding='utf-8'));print(d['meta']['git'])"`（**本轮重算后**同一把尺给出 `{a84fc6f, true}` ⇒ 这一行是**改前**读数，🔻 保留） |
+| U-131 三面已由 QA 验收 | 来件：逐臂 `reports/qa/RELAY.md` §9.2，状态翻转由本窗落笔 ⇒ 已做（§九.5） | `awk 'NR==1159' docs/07_技术设计文档_TDD.md \| tail -c 400` |
+| 本机解释器面 | `.venv` 可用；**系统 `python` 是 Anaconda 的 pydantic v1** ⇒ 用它跑 `reporter.py` 直接 `ImportError`（§九.1 自曝） | `.venv/Scripts/python.exe -c "import pydantic;print(pydantic.VERSION)"` 对比 `python -c "import pydantic;print(pydantic.VERSION)"` |
+| U-132（WMI 停摆）在不在 | **不在**：`platform.machine()` 与 `import sqlalchemy` 现测 **0.96s** ⇒ 本轮所有离线读数**不需要** shim，也不用挂"这条前提" | `PYTHONUTF8=1 python -c "import time;t=time.time();import sqlalchemy;print(round(time.time()-t,2))"` |
+
+### §九.1 🔴 自曝第一条：重算第一次"跑成功"是假的（管道吞退出码 ＋ 用错解释器，第三次撞同一条坑）
+
+我按 §3 的短命令重算八格，命令尾部接了 `| tail -6`，打出的 `reporter_rc=0` 是 **`tail` 的退出码**；真因是那条命令用了**系统 `python`**（Anaconda，`pydantic` v1）⇒
+`eval/reporter.py:591 tau_facts()` 里 `from app.core.config import get_settings` 抛 `ImportError: cannot import name 'field_validator' from 'pydantic' (D:\anacoda3\...)`，
+**`eval_metrics.json` 一个字都没被写**，而我盯着屏幕上的 `rev 079916d` 把它当成了"重算结果"看了约半分钟。
+抓住它的还是那条报警器：**判定集合与上一份逐字相同 ＋ `dirty` 与 rev 都是旧的** ⇒ 我先怀疑"输入没喂进去"而不是先怀疑结论。
+正解（本窗既定形状，已在 §九.4 复跑）：`cd backend && PYTHONUTF8=1 PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe ../eval/reporter.py --no-backup --pytest-log … --integration-log …`
+**rc 单独取、不接管道**（`> file 2>&1; echo rc=$?`）。⇒ 入册：`eval_metrics.json` 的 `meta.git` 这一格不是装饰，它是"重算真发生过没有"的**唯一机械证据**（`08 §6.6` 同族）。
+
+### §九.2 G-1 的输入怎么当期化的（两把日志 ＋ 一把对照 ＋ 一次性库全链）
+
+**一次性库**：`ecom_t30_it`（**禁指共享 `ecom`**，U-114 防线①）。链 = `CREATE DATABASE` → 容器内取 `POSTGRES_PASSWORD`、`deploy/.env` 的 `app_rw`／`app_ro` 口令**在子 shell 内解析**（不 `source` 到当前壳）
+→ `MIGRATION_DATABASE_URL=postgresql+psycopg://…`（**带** `+psycopg`，SQLAlchemy 面）跑 `alembic upgrade head` → 四个测试 DSN 用 `postgresql://`（**不带**，`psycopg.connect()` 不认后缀）→ 跑完 **`DROP DATABASE`**。
+凭据与 `.sh` 只在仓库外 `E:/tmp_qoder/t30/env.sh`（`chmod 600`），**一个字节都没进仓库**（DoD④ 的仓内重放门扫的是工作区）。
+🔴 **落笔前的三件并报（差点误报成泄漏，也差点漏掉）**：① 对全部待提交新增行跑密钥形状尺 `grep -Ec '://[^/:@[:space:]]+:[^@[:space:]]+@'` = **0 命中**；
+② 拿 `POSTGRES_PASSWORD` 的**值**当模式串再扫，命中 **6 行** —— 一一行看过去全是 `psql -U postgres` 与 `postgresql://` 里的**用户名**，
+本机那个 superuser 口令的值恰好等于常见词 `postgres` ⇒ **属命中口令串但不是泄漏**（这条对照不写出来，下一轮就会把我自己的件读成 DoD④ 违例）；
+③ `DEEPSEEK_API_KEY`／`DRAIN_TOKEN`／`JWT_SECRET` 三个键名在新增行里各 **0 命中**。⚠️ 顺带一条本机事实（**不是本号、不上升为判据**）：`POSTGRES_PASSWORD` = 那个 8 字符常见词
+⇒ 与 §9 的 `U-133`（`load_synth_to_pg.py:42` 的字面口令与 compose 等值）同源同形，**是否算缺陷由总控／QA 判**，本窗不改 `deploy/**`。
+
+| 面 | 读数（**全部 rc 单独取**） | 命令（cwd = `backend/`） |
+|---|---|---|
+| 离线面 | **2,347 passed ／ 0 failed ／ 0 errors ／ 1 warning ／ rc 0 ／ 81.86s**，**一个集成 DSN 都没给** | `PYTHONUTF8=1 PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest -q -rfEs --continue-on-collection-errors --ignore=tests/integration` |
+| 集成面 | **107 passed ／ 0 failed ／ 27.19s ／ rc 0**（`-v` ⇒ 日志里点名 10 个 `tests/integration/*.py`，`integration_ran` 才取得到） | 同上但 `pytest -v -rfEs tests/integration` ＋ 先 `source env.sh` |
+| 🔴 合树对照臂 | **2,454 passed ／ 0 failed ／ 0 errors ／ 107.90s ／ rc 0**，且 **2,347 ＋ 107 = 2,454 逐位对撞**；分层 = unit 1,422／contract 493／eval 408／integration 107／graph_snapshot 13／redteam 11（六档相加 = 2,454 ✓） | `pytest -v -rfEs --continue-on-collection-errors`（带四个 DSN，整树含集成） |
+| 制品自证（不只看 rc） | 迁移刚完成时：`alembic_version = 0005`、`information_schema.tables where table_schema='app'` = **32**、`pg_policies`（`schemaname='app'`）= **0**、启 RLS = **0**。跑完全树之后**同一库**再查：`pg_policies` = **12**（`app=6, semantic=6`）、启 RLS 表 = **8** | `docker exec -i commerceql-pg-1 psql -U postgres -d ecom_t30_it -t -A -F'\|' -c "select count(*) from pg_policies"` ⇒ ⚠️ **两个时点都要报**：把后者写成"迁移交付的形状"会把集成层自己建的对象算进地基 |
+| 残渣尺 | `datname like 'ecom%'`：建库前 **2** → DROP 后 **2**（`ecom` 530,848,791 B ＋ 别窗的 `ecom_u123_probe` 10,854,927 B ⇒ **后者不是本窗造的，不删**）。🔴 `LIKE 'ecom_%'` 那句**不要用**（`_` 是单字符通配，`ecom` 本身不匹配） | `docker exec -i commerceql-pg-1 psql -U postgres -d postgres -t -A -c "select count(*) from pg_database where datname like 'ecom%'"` |
+| 零花费双向自证 | `app.cost_ledger` 现读 **1,674 行 ／ ¥2.753794** ⇒ 与来件起点读数**逐位相同**（没涨一条、没涨一分） | `docker exec -i commerceql-pg-1 psql -U postgres -d ecom -t -A -F'\|' -c "select count(*), to_char(sum(cost_cny),'FM999990.000000') from app.cost_ledger"` |
+| 共享库只读面 | 三条探针语句全部包在 `begin; … rollback;` 里 ⇒ 该事务内任何写都会被回滚；`ecom` 大小从上一轮登记的 505 MB 变 506 MB（**成因未核**，同容器内 `api` 常驻在跑，本窗不写因果） | `git show a84fc6f:deploy/loadtest/r23_thread_from_checkpoints.sql`（件本身未改一行） |
+
+### §九.3 构建身份：dirty 面逐件点名（"当期"这个词必须有尺）
+
+`meta.git = {rev: a84fc6f, dirty: true}`。落 `eval_metrics.json` 那一秒的脏面 = **11 行**，逐件：
+`backend/app/cache/keys.py`（＋3／−1，**整段在 docstring 里**）＋ 九份 `backend/reports/{w2-int,w3-int,w3a,w3b,w3c,w4,w5,w6,w7}/PROMPT.md`（各 ＋445 B 的停用横幅）＋ 未跟踪的 `backend/reports/w8/t31_three_cells.json`。
+⇒ 尺（两条，都要跑）：`git diff --stat a84fc6f -- backend/app backend/tests eval frontend deploy` **只给 `keys.py` 一件**；`git diff a84fc6f -- backend/app/cache/keys.py` 逐行看那三行是不是代码。
+🔴 三条日志件（`_full_pytest_1004_rT30.log`／`_integration_pytest_1004_rT30.log`／`_full_pytest_v_1004_rT30_ctrl.log`）**不入 git**：尺 = `git check-ignore -v backend/reports/w6/_full_pytest_1004_rT30.log`
+⇒ `.gitignore:47:*.log`（**有规则**那一支，不是"未跟踪"那一支）⇒ 别人 checkout 看不到 ⇒ G-1 的复算必须**本机重跑两把日志**，不能只跑 `recompute_gate`。
+
+### §九.4 八格重算（唯一装配口，一次都没在别处装配）
+
+命令（`reporter_rc=1` = "门禁未全过"的那个语义退出码，不是失败）：
+`cd backend && PYTHONUTF8=1 PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe ../eval/reporter.py --no-backup --pytest-log reports/w6/_full_pytest_1004_rT30.log --integration-log reports/w6/_integration_pytest_1004_rT30.log > /e/tmp_qoder/t30/reporter.out 2>&1; echo rc=$?`
+⇒ **PASS 1 ／ FAIL 3（G-2／G-5／G-7）／ UNVERIFIED 2（G-6／G-8）／ PARTIAL 2（G-3／G-4）／ NOT_AVAILABLE 0**。
+🔴 **判定集合与上一份逐格同词**，这不是"无事发生"：本轮确实换了 G-1 的输入而词没变 ⇒ 上一份的 G-1 本来就是 PASS（红 0），本轮抬的是**输入的当期性**（`079916d`＋dirty → `a84fc6f`），不是把红洗成绿。
+八格各自的 数／面／谓词／分母／粒度 ＋ 时刻／HEAD／等级／复算命令 = **对外落点已写好**，`OVERVIEW.md:212`（表 A）与 `OVERVIEW.md:223`（表 B）；🔴 **七格的数仍属旧构建**：G-2／G-5／G-8 = `b97920d`（10-03 16:29:35Z 自报），G-3／G-4 = `22e69d3`，G-6 无 rev（09-19 自报时刻），G-7 无 rev（mtime 09-18 = 最老）。
+
+### §九.5 落笔位置（逐条 文件:行号 ＋ 现测时刻）
+
+| 件 | 位置 | 动了什么 |
+|---|---|---|
+| `OVERVIEW.md` | `:184`（门禁定义）、`:191`（最新一份报告）、`:203`（G-1 那行）、`:212`／`:223`（新表 A／B）、`:246`（第 9 轮状态声明） | §17.3 与 §C.8 的**两份条数**点名；重算时刻与 dirty 面；G-1 换成当期两把日志 ＋ 合树对照；八件口径两表；第 9 轮"动了什么／没动什么" |
+| `OVERVIEW.md §6` | `:161`／`:162`／`:163`／`:164`／`:165` 五处行内 🔻 | 提交数 399／`a84fc6f`、后端 147 件／38,104 行（＋55 = `state_store.py` 逐位对得上）、前端 39／8,442（`git diff --name-only b571b40..HEAD -- frontend` = 0 行）、测试 128／2,096（＋7 = 属主契约七条）、离线与集成两把 ＋ 对照臂 |
+| `docs/07_技术设计文档_TDD.md` | `:1159`（`U-131` 那行**行末追加**状态段） | 状态从"未修"翻 **🟢 结案**；**判据①～⑦ 与 v1.7.6／v1.7.7 措辞一字未动**；行数 3,642 不变、`:1078`／`:1155` 两把行位尺逐字未漂（落笔前后各测一遍） |
+| `backend/app/cache/keys.py` | `:179`／`:181-182` | `session_meta` 的值清单补 `user_id` ＋ "属主缺失即按会话不存在处理、不得回退成租户级放行" |
+| 九份旧窗 `PROMPT.md` | 各件 `:3`（标题＋空行之后的第一行） | 「本席位已停用」横幅。尺 = `awk 'NR==3 && /停用/' backend/reports/<窗>/PROMPT.md \| wc -l` ⇒ 十份（含上轮的 `arch`）现读各 **1** |
+
+### §九.6 🔴 器件发现一（不修，登记）：`gate_inputs()` 的合并把 **`failed`／`errors` 只取集成层那份**
+
+`eval/reporter.py:800-806`：当离线日志 `integration_ran=False` 时用集成层日志**覆盖合并**，其中 `passed` 用两个专键留住了（`passed_offline`／`passed_integration`，前几轮修过的老坑），
+但 `failed`／`errors` **没有同构处理** ⇒ 若离线面有 1 条红、集成层干净，`red_split()` 拿到的就是 `0＋0` ⇒ **G-1 会判 PASS**。
+本轮**实测排除**了它对本轮的污染：那把整树单日志对照臂（§九.2 第三行）在**同一棵树、同一次跑**里给的是 `0 failed／0 errors／2,454 passed`，与两把分开的日志**相加逐位对撞** ⇒ 今天的红两列不是被合并抹掉的。
+🔴 **修法属判据面**（改 `red_total` 的来源 = 改 G-1 判定驱动量）⇒ 本窗不自签，建议开 **`T-32`**：合并时 `failed`／`errors` 取**两支之和**（或至少把"另一支的红"并进 `caveats` 并让 `verdict` 不可绿）。复算形状 = 造一份"离线面含 1 条 failed"的假日志喂 `recompute_gate('G-1', …)`，看它今天会不会给 PASS（**别在真树里注入红**）。
+
+### §九.7 🔴 器件发现二（不修，登记）：G-1 的取证等级停在 `mtime_only`，因为 pytest 日志**没有自报构建身份的字段**
+
+八格里 5 格 `self_reported_rev = null`（`079916d` 那份也是 5 格 ⇒ **这一维本轮一格未动**）。要把 G-1 也抬到 `self_reported`，唯一姿势 = 在跑批时把 `git rev-parse --short HEAD` ＋ `git status --porcelain` 行数**写进日志的固定字段**并被 `parse_pytest_summary()` 读出来 ⇒
+动的是**唯一装配口** ＋ 与 `评测报告与门禁判定.md` 的取证表形状 ⇒ 登记为 **`T-11②` 的第二实例**（同一族：闸门输入件要自报构建身份），不自裁。
+本轮的替代做法（**是旁证、不是等级**）：`meta.git` 同框 ＋ §九.3 那条"脏面逐件只有 docstring"的尺。
+
+### §九.8 T-31：`U-129` 审计三格已交（件 = `backend/reports/w8/t31_three_cells.json`，29,450 B，含 `generated_at`／`git`／三条作用域原始行）
+
+尺 = `deploy/loadtest/r23_thread_from_checkpoints.sql` 的 ⑮／⑰／⑰c／⑱ 四段，**一字未改**，用 `sed -n '1,18p;418,449p;547,622p;647,702p;703,760p'` 抽出后包 `begin; … rollback;`；
+复算（零额度、只读）：`MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -v ON_ERROR_STOP=1 -v "win_a=2026-09-30 14:25:35+00" -v "win_b=2100-01-01 00:00:00+00" -v "upref=%" -f - < 抽件`
+⚠️ 抽件时**第 1–18 行必须整段带上**：那是三个 `\if :{?var}` 守卫，只取到 15 行会得到 `reached EOF without finding closing \endif(s)`（本轮实撞一次；只在**给了 `-v` 覆盖**时才报，默认值那一支跑得动 ⇒ 长得像"变量写法错"而不是"我截错了"）。
+
+| 格 | post-fix 域现读（粒度 = run，分母 = 该域带 `tk_` 的 run） | 判定词 |
+|---|---|---|
+| **格1**（⑮ 两臂） | `runs_in_scope=30 ／ t2_runs=10 ／ 臂1（turn≥2 且审计 0 行）=0 ／ 臂2（>1 行）=0 ／ max_rows_per_t2_run=1 ／ scope_empty=f` | **非空真达成**（前置 `t2_runs=10 > 0` 满足 ⇒ 那个 0 不是空集给的） |
+| **格2**（⑰c `post_fix` 行） | `ge2_routed_supp_no_terminal_write = 0`，同作用域第四件前置 `t2_routed_supp = 5` | **非空真达成**（引它**必须同框带 n=5**，v1.7.17 明令） |
+| **格3**（⑰c `post_fix` 行） | `ge3_t2_with_terminal_write = 10 ≥ 1` | **达成** |
+| ⑱ 形状守卫 | `terminal_rows = 879 ／ g1_no_delim = 0 ／ g2_start_outside_seg2 = 0 ／ start_rows_excluded = 33 ／ seg2_node_kinds = 9 ／ shape_ok = t` | 格2／格3 的成立条件在位（`shape_ok = f` 时上面三行自动降为"不可判"） |
+
+🔴 四条不许越过的边界：**分域依据是日期代理不是构建身份**（`T-11②` 未闭 ⇒ 标签只许写到"日期代理"）；
+**混合域不作判**（⑰ 在 `upref=%` 宽窗给 `ge2 = 5`、⑮ 给臂1 = **13**，那些是 pre-fix 存量 ⇒ 与 `RELAY §七` 同规，不得读成回归）；
+**`10-04` 那一域 `t2_routed_supp = 0` ⇒ 格2 记 `n/a__该域空真`、不记 0**（件里的 `verdict__t23` 自己就是这么出的，不是我替它写的）；
+**判据措辞一字未动** ⇒ `docs/07:1155` 本轮没进 diff（`git diff --name-only -- docs/07` 只有 `:1159` 那一行）。
+⇒ **本号是否转绿由 QA 复算裁**（来件明令"审计三格未查 ⇒ 不得转绿"，本轮把"未查"这一条消掉了）；A 档子窗（`u_f%`／06:17:00–06:19:30Z）我**同尺重跑**给 `99 ／ 22 ／ 臂1 4 ／ ge2 4 ／ ge3 0` ⇒ 与 v1.7.17 登记的基线**逐位相同** ⇒ 这三把尺我没改。
+🟢 另有一条**"这一格与窗无关"的实测**（不是我假设）：⑰c 与⑱ 在三个作用域下的行签名 `distinct = 1`（件里 `scope_invariance` 字段）。
+
+### §九.9 静态门重跑（`keys.py` 改过 ⇒ 三把都重跑，rc 各自单独取）
+
+| 门 | 现读 | 命令（cwd = `backend/`） |
+|---|---|---|
+| mypy | `Success: no issues found in 147 source files`，rc 0 | `../.venv/Scripts/python.exe -m mypy app` |
+| import-linter | `Contracts: 4 kept, 0 broken.`，rc 0（**不带 `check` 子命令**，带了是 rc 2 的用法错） | `../.venv/Scripts/lint-imports.exe` |
+| 🔴 ruff | **两把形状都要报**（`backend/` 那把尺）：`ruff check --config pyproject.toml app` = **All checks passed!／rc 0**；`ruff check --config pyproject.toml .`（整目录）= **1 error**：`RUF005 … concat` 在 `reports/qa/prompts/probe_u131_readonly.py:18` ⇒ **QA 独占面的件**（`git log -1 -- 该件` = `a84fc6f`，QA 第 6 轮 18:27 入库），本窗**不改别人的写面**；`app/cache/keys.py` 单件跑 = rc 0 | `../.venv/Scripts/python.exe -m ruff check --config pyproject.toml .` |
+| ⚠️ 由此带出的一条 CI 线索（**推断，非实测**） | `.github/workflows/ci.yml:319-321` 的 ruff 步 = `working-directory: backend` ＋ `ruff check .` ⇒ 与上面那把整目录尺**同形**，且 `backend/pyproject.toml` 现读**没有** `exclude`／`force-exclude`（`grep -n exclude backend/pyproject.toml` = 0 命中；`per-file-ignores` 只有两条、不覆盖 `reports/**`）⇒ **按命令形状推断 CI 的 ruff job 在 `a84fc6f` 上会红**，红因 = QA 那一件。🔻 **同轮降级（落笔后自查抓到）**：CI 的**实跑状态我没测到**（本机 `command -v gh` 为空 ⇒ 取不到 run 结论）⇒ 这一句的正解是 **UNVERIFIED（推断，尺已给）**，不得写成"现在就是红的"；要证实只许看 Actions 那一次运行。⇒ **报给 QA 一行改**（`[*MINT, "--user-id", user_id]`），本窗不动别人的写面 | 尺 = `grep -n "ruff check" .github/workflows/ci.yml` ＋ `grep -n exclude backend/pyproject.toml` ＋ `sed -n '177,182p' backend/pyproject.toml` |
+
+### §九.10 串行资源与"本轮没做的事"
+
+串行资源本轮占用：PG（一次性库建→迁移→跑→DROP ＋ 只读探针，共享 `ecom` 只读）；Redis **未碰**；docker **未 build、未 recreate**（`api` 仍是上轮那张镜像）；`deploy/.env` 只读、口令未落盘；额度 **0**（`cost_ledger` 行数与和值逐位未涨 = §九.2 最后一行）。
+🔴 没做也不假装做了的：**没重跑 `--live`**（G-2／G-5／G-8 的数因此仍是 `b97920d` 那三格）；**没重录红队产物**（G-3／G-4 同前）；**没动 `eval/` 冻结集与匣带**；**没取新号**（两条都属既有号）；
+**没清 `ecom_u123_probe`、没清旧窗目录内容**；**没修 §九.6／§九.7 两处器件**（判据面）；**没动 `reports/qa/**`**。
+⇒ 仍欠的对外面：`OVERVIEW §6` 那四条未接线端点（A.7.1／A.7.2／A.9.3／A.9.4）、`present/` 空壳、`U-133`／`U-134`、以及长期指令面（两层记忆 ＋ 两份接力件）的**唯一写者定名**——上一条本轮又出现同一形状：`backend/reports/qa/TASK_BOARD.md` 在我工作期间被别手推进（`a84fc6f`），我没进那个面。
+
+### §九.11 本轮自曝三条（先于 QA 逮到）
+
+① §九.1 那条：**用错解释器 ＋ 管道吞 rc**，把"没写成功的旧产物"当"重算结果"读了半分钟（本项目第三次撞"管道吞退出码"，前两次记在 `§5.18`／`§八`）。
+② 第一次跑 r23 抽件时**只截到第 15 行**（`\if` 守卫块被截断），报错形状长得像"变量写法错"；同一轮第一次读八格时我把 `grep -c` 的**字段位次**数错位，差点把 S1 宽窗的 `t2_routed_supp` 报成 4（真值 10）——抓住它的还是**分子分母反推**（`ge2=5 ⊆ routed ⇒ routed ≥ 5`）， ⇒ 已改成按表头 zip 解析（`capture_three_cells.py`），落笔的数取自件、不取自我的肉眼。
+③ 横幅第一版把**复算尺写成了自己的命中行**（`grep -c "本席位已停用"` 得 2，因为命令文本里含那个串）⇒ 尺改成 `awk 'NR==3 && /停用/'` 后十份各 1；这条与 `§七.10` 的"引用规则的模式串等同于触犯规则"同族，**落笔的尺必须先在自己件里跑一遍**。
+
+### §九.12 三处"看见了但本轮没改"，理由写在这里（免得下一轮把"故意没改"读成漏改）
+
+① **`DELIVERY.md:102` 那一行是 5 列、它所在的表是 3 列**（第 6 轮留下的排版缺陷）。本轮没动它 = 那是**历史结论行的结构**，改它要重排整行（不是在尾部追加），而 `§五` 那批留痕行的既有引用者按现形状读。尺 = `python /e/tmp_qoder/t30/table_ruler.py backend/reports/w8/DELIVERY.md`（v3 口径：**只按未转义竖线切列**，跨过表内空行续比）⇒ 本轮新增两段 `col_mismatch = 0`。
+② **`OVERVIEW.md §6` 那五行行内追加后列数仍全 3**（与 HEAD 逐行对撞：`python /e/tmp_qoder/t30/row_probe.py` 现算，五行现列数 = HEAD 列数 = 3）⇒ 我没把那张表撑破。🔻 **同轮订正（ attribution 先写错了）**：本轮 splice 脚本里那把 `col_count = len(line.split("|")) - 2` 报了"162／163／170 三处不符"，**是尺自己的口径错**（它按裸竖线切列，把 `\|` 转义也算成分隔符 ⇒ 三行都是"读数里带 `\| wc -l`"的行）；换成 **v3 尺**（`re.split(r"(?<!\\)\|", line)`，跨过表内空行续比，件 = `/e/tmp_qoder/t30/table_ruler.py`）后 §6／§7 全部 `col_mismatch = 0`。⇒ 又是"同一句计数两把尺两个数"第四实例：**报数必须带尺名**。
+③ **`reports/qa/prompts/probe_u131_readonly.py:18` 那条 `RUF005`** 在 QA 独占面上 ⇒ 只点名、不改（边界：本窗写面不含 `reports/qa/**`）。
+

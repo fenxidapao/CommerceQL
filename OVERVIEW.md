@@ -158,11 +158,11 @@ w3a w3b w3c w3-int w4 w5 w6 w7`）各自留有 `PROMPT/DELIVERY/RELAY`。`app/` 
 
 | 项 | 读数 | 出处 / 复现 |
 |---|---|---|
-| 提交数 / HEAD | **382 / `b571b40`**（2026-10-04 01:40 现读，`git ls-remote origin main` = `b571b40` 与 `git rev-parse HEAD` **同一次运行内全等** ⇒ 双向 0 偏差；上一读数 380 / `079916d` ⇒ L4 计量修复 ＋ 报告笔共 **＋2 笔**。⚠️ 本行自指：落报告的提交本身也计入，引用前实跑 `git rev-list --count HEAD` ＋ `git ls-remote origin main`） | `git rev-list --count HEAD` ＋ `git ls-remote origin main` |
-| 后端规模 | 147 个模块文件、**38,049 个换行**（2026-10-04 01:38 现算，尺 = `git ls-files backend/app` 里 `.py` 的 `cat \| wc -l`，**HEAD 与工作树此刻同值**；含 L4 计量修复 ＋15 行）。🔴 **自曝上一读数少数 2 行**：本格 23:1x 记的是 `38,032`，而**同一棵树**（`703aae6..079916d` 之间 `backend/app` 零改动，`git diff --stat` 空）重算给 `38,034` ⇒ 差 2 行不在代码、在**我那次求和**；旁证 = 同一把尺在第 5 轮那个 rev 上重算 `e7d9442` = **37,957**，与当时登记的数**逐位相同** ⇒ 尺没问题、上一格是转录错 | 见左列命令，cwd = 仓库根 |
-| 前端规模 | 39 个 ts/tsx、**8,442 个换行**（2026-10-04 01:0x 重算，与上一读数**逐位相同** ⇒ 第 6 轮前端零改动这条是被重测出来的，不是沿用：`git diff --stat 703aae6..HEAD -- frontend` 空） | `git ls-files frontend/src` 里 `.(ts\|tsx)` 逐文件行数求和 |
-| 测试规模 | **128 个 `backend/tests/**.py` ／ `def test_` 共 2,089 条**（2026-10-04 01:41 现读，**HEAD 口径**（`b571b40`，此刻与工作树同值）；上一读数 127 / 2,083 = 第 6 轮 ⇒ ＋1 文件／＋6 条 = L4 用量守卫两面各三面。🔴 两把尺必须点名：`git grep -c … HEAD` 数不到**没提交**的文件，工作树尺数得到 ⇒ 提交前引 HEAD 尺会少 6 条。🔴 **111 与 126/127/128 不是同一把尺**：旧那把数的是"至少含一条 `def test_` 的文件"，本格数的是目录下全部 `.py`。用例数才是可比值） | `git grep -c "def test_" HEAD -- backend/tests`（HEAD 尺）／`grep -rc "def test_" backend/tests --include=*.py`（工作树尺）＋ `git ls-files backend/tests` |
-| 本机离线门禁（**不是**评测报告那一格） | **2,293 passed / 0 failed**，面 = `tests/unit` ＋ `tests/contract` ＋ `tests/eval`，cwd=backend、rc 0（2026-10-03 15:5x 现跑，HEAD `e7d9442`；上一读数 2,291 = 第 4 轮同尺同面，差 2 条即本轮新增的两条用例）。🔴 **与下面那格 `passed=2312` 不是同一把尺**：那格是评测报告在 `8ffb53e` 上的"unit+contract ＋ integration 已跑"口径，本格含 `tests/eval`、不含 integration ⇒ 两者不相减。另：全量 `pytest -q --continue-on-collection-errors` = **2,332 passed / 9 errors**，那 9 条**全是** `tests/integration` 缺 `COMMERCEQL_TEST_{RW,RO,SUPER}_DSN` 的当场 error（U-114 设计如此：禁止 skip），⇒ 集成面本地**未跑**、CI 跑。🔻 **10-03 第 5 轮同轮就地订正（原文不删）**：这一格"未跑"已不成立 —— 用一次性库（`ecom_v1int`，建→迁移→跑→删）复算后 `tests/integration` **107 passed**、全量含集成 **2,424 passed / 0 failed**（rc 0，HEAD `f4331d7`）。⚠️ 两把尺的差在**是否给了集成 DSN**：没给时那 9 个文件在收集期就 error ⇒ 其用例根本不进分母，所以 `2,332` 与 `2,424` **不是**"回归/新增"关系。另：第一次带 env 跑出的 5 条红经三臂对照归因 = **shell 里残留的 `CORS_ALLOWED_ORIGINS` 漏进 `Settings`**（pydantic-settings 未显式给的键回落进程环境），不是被测代码，也不是集成 DSN；测试件已把这一位钉成空串。🔻 **10-03 第 6 轮在当前树重跑（原文不删）**：面 = `pytest tests -q --ignore=tests/integration`（含 `redteam`／`graph_snapshot`，比上面那把"unit＋contract＋eval"宽）= **2,334 passed / 0 failed**，集成层同树重跑 **107 passed** ⇒ 一次性库换成 `ecom_w8int` 重建后跑完即 DROP（现查 `pg_database` 里 `ecom_%` = 1，只剩共享库）。这两栏就是 §7 那格 G-1 转 PASS 的输入。🔻 **10-04 01:2x 在当前工作树（含 `l4_score` 计量修复）重跑同尺**：离线面 = **2,340 passed / 0 failed**（`pytest tests -q --ignore=tests/integration`，rc 0，90.01s；比上一读数 ＋6 = 两条 L4 用量守卫）；集成面 = **107 passed / 0 skipped / 0 failed**（一次性库 `ecom_w8int2`：建→授权→owner→alembic 到 0005→跑→**当场 DROP**，rc 0，27.44s）。🔴 **这两次复算各逮到一件我自己的错**：① 第一次集成跑给的是 `1 failed / 60 passed / 37 skipped / 9 errors`，逐条看错误行 = `psycopg.ProgrammingError: missing "=" after "postgresql+psycopg://…"` ⇒ **四个测试 DSN 必须是 libpq 形态（`postgresql://`，不带 `+psycopg`）**，`psycopg.connect()` 不认这个后缀，而 `MIGRATION_DATABASE_URL` 反过来**必须带**（SQLAlchemy）—— 修表单变量后才是上面那个 107，**那 38 条红没有一条是被测代码的**；② 上一轮那句"残渣尺现查 `ecom_%` = 1，只剩共享库"**是错的**：SQL 的 `LIKE 'ecom_%'` 里 `_` 是**单字符通配**，而共享库名 `ecom` 本身**不匹配**这个模式 ⇒ 那个"1"是别窗留下的 **`ecom_u123_probe`（10 MB）**，不是共享库。⇒ 残渣尺改成 `datname like 'ecom%'` 并报数：现测 **2 个**（`ecom` 505 MB ＋ `ecom_u123_probe` 10 MB）；那个探针库**不是本窗造的，未经它的属主／总控同意不删**。 | `cd backend && PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest tests -q -p no:randomly --ignore=tests/integration` ＋（集成，一次性库四个 DSN）`pytest tests/integration -v`；整段命令见 `backend/reports/w8/RELAY.md` §六.10 |
+| 提交数 / HEAD | **382 / `b571b40`**（2026-10-04 01:40 现读，`git ls-remote origin main` = `b571b40` 与 `git rev-parse HEAD` **同一次运行内全等** ⇒ 双向 0 偏差；上一读数 380 / `079916d` ⇒ L4 计量修复 ＋ 报告笔共 **＋2 笔**。⚠️ 本行自指：落报告的提交本身也计入，引用前实跑 `git rev-list --count HEAD` ＋ `git ls-remote origin main`）。🔻 **10-04 18:4x 第 9 轮现读** = **399 笔／`a84fc6f`**（`git ls-remote origin main` 给同一个点，工作树脏 12 行全是本窗文档件 ＋ 一件未跟踪 JSON）⇒ 比上面那格 382／`b571b40` 多 **17 笔** = W8 第 8 轮的 3 笔 ＋ QA 第 5／6 轮的若干笔，**不相减、只现读** | `git rev-list --count HEAD` ＋ `git ls-remote origin main` |
+| 后端规模 | 147 个模块文件、**38,049 个换行**（2026-10-04 01:38 现算，尺 = `git ls-files backend/app` 里 `.py` 的 `cat \| wc -l`，**HEAD 与工作树此刻同值**；含 L4 计量修复 ＋15 行）。🔴 **自曝上一读数少数 2 行**：本格 23:1x 记的是 `38,032`，而**同一棵树**（`703aae6..079916d` 之间 `backend/app` 零改动，`git diff --stat` 空）重算给 `38,034` ⇒ 差 2 行不在代码、在**我那次求和**；旁证 = 同一把尺在第 5 轮那个 rev 上重算 `e7d9442` = **37,957**，与当时登记的数**逐位相同** ⇒ 尺没问题、上一格是转录错。🔻 **10-04 18:4x 同尺现算** = **147 个文件／38,104 个换行**（＋55 行逐位对得上：`git diff --stat b571b40..HEAD -- backend/app` = 1 文件 ＋55／−2，那一件就是 `app/api/state_store.py` 的 U-131 三面） | 见左列命令，cwd = 仓库根 |
+| 前端规模 | 39 个 ts/tsx、**8,442 个换行**（2026-10-04 01:0x 重算，与上一读数**逐位相同** ⇒ 第 6 轮前端零改动这条是被重测出来的，不是沿用：`git diff --stat 703aae6..HEAD -- frontend` 空）。🔻 **10-04 18:4x 再重算仍 39／8,442**（`git diff --name-only b571b40..HEAD -- frontend` = **0 行** ⇒ 第 8–9 轮前端零改动也是现测的） | `git ls-files frontend/src` 里 `.(ts\|tsx)` 逐文件行数求和 |
+| 测试规模 | **128 个 `backend/tests/**.py` ／ `def test_` 共 2,089 条**（2026-10-04 01:41 现读，**HEAD 口径**（`b571b40`，此刻与工作树同值）；上一读数 127 / 2,083 = 第 6 轮 ⇒ ＋1 文件／＋6 条 = L4 用量守卫两面各三面。🔴 两把尺必须点名：`git grep -c … HEAD` 数不到**没提交**的文件，工作树尺数得到 ⇒ 提交前引 HEAD 尺会少 6 条。🔴 **111 与 126/127/128 不是同一把尺**：旧那把数的是"至少含一条 `def test_` 的文件"，本格数的是目录下全部 `.py`。用例数才是可比值）。🔻 **10-04 18:4x 现读** = **128 文件／`def test_` 2,096 条**（HEAD 尺 @ `a84fc6f`；上一读数 128／2,089 ⇒ **＋7 条 = `TestSessionOwnership` 那七条属主契约用例**，文件数不变） | `git grep -c "def test_" HEAD -- backend/tests`（HEAD 尺）／`grep -rc "def test_" backend/tests --include=*.py`（工作树尺）＋ `git ls-files backend/tests` |
+| 本机离线门禁（**不是**评测报告那一格） | **2,293 passed / 0 failed**，面 = `tests/unit` ＋ `tests/contract` ＋ `tests/eval`，cwd=backend、rc 0（2026-10-03 15:5x 现跑，HEAD `e7d9442`；上一读数 2,291 = 第 4 轮同尺同面，差 2 条即本轮新增的两条用例）。🔴 **与下面那格 `passed=2312` 不是同一把尺**：那格是评测报告在 `8ffb53e` 上的"unit+contract ＋ integration 已跑"口径，本格含 `tests/eval`、不含 integration ⇒ 两者不相减。另：全量 `pytest -q --continue-on-collection-errors` = **2,332 passed / 9 errors**，那 9 条**全是** `tests/integration` 缺 `COMMERCEQL_TEST_{RW,RO,SUPER}_DSN` 的当场 error（U-114 设计如此：禁止 skip），⇒ 集成面本地**未跑**、CI 跑。🔻 **10-03 第 5 轮同轮就地订正（原文不删）**：这一格"未跑"已不成立 —— 用一次性库（`ecom_v1int`，建→迁移→跑→删）复算后 `tests/integration` **107 passed**、全量含集成 **2,424 passed / 0 failed**（rc 0，HEAD `f4331d7`）。⚠️ 两把尺的差在**是否给了集成 DSN**：没给时那 9 个文件在收集期就 error ⇒ 其用例根本不进分母，所以 `2,332` 与 `2,424` **不是**"回归/新增"关系。另：第一次带 env 跑出的 5 条红经三臂对照归因 = **shell 里残留的 `CORS_ALLOWED_ORIGINS` 漏进 `Settings`**（pydantic-settings 未显式给的键回落进程环境），不是被测代码，也不是集成 DSN；测试件已把这一位钉成空串。🔻 **10-03 第 6 轮在当前树重跑（原文不删）**：面 = `pytest tests -q --ignore=tests/integration`（含 `redteam`／`graph_snapshot`，比上面那把"unit＋contract＋eval"宽）= **2,334 passed / 0 failed**，集成层同树重跑 **107 passed** ⇒ 一次性库换成 `ecom_w8int` 重建后跑完即 DROP（现查 `pg_database` 里 `ecom_%` = 1，只剩共享库）。这两栏就是 §7 那格 G-1 转 PASS 的输入。🔻 **10-04 01:2x 在当前工作树（含 `l4_score` 计量修复）重跑同尺**：离线面 = **2,340 passed / 0 failed**（`pytest tests -q --ignore=tests/integration`，rc 0，90.01s；比上一读数 ＋6 = 两条 L4 用量守卫）；集成面 = **107 passed / 0 skipped / 0 failed**（一次性库 `ecom_w8int2`：建→授权→owner→alembic 到 0005→跑→**当场 DROP**，rc 0，27.44s）。🔴 **这两次复算各逮到一件我自己的错**：① 第一次集成跑给的是 `1 failed / 60 passed / 37 skipped / 9 errors`，逐条看错误行 = `psycopg.ProgrammingError: missing "=" after "postgresql+psycopg://…"` ⇒ **四个测试 DSN 必须是 libpq 形态（`postgresql://`，不带 `+psycopg`）**，`psycopg.connect()` 不认这个后缀，而 `MIGRATION_DATABASE_URL` 反过来**必须带**（SQLAlchemy）—— 修表单变量后才是上面那个 107，**那 38 条红没有一条是被测代码的**；② 上一轮那句"残渣尺现查 `ecom_%` = 1，只剩共享库"**是错的**：SQL 的 `LIKE 'ecom_%'` 里 `_` 是**单字符通配**，而共享库名 `ecom` 本身**不匹配**这个模式 ⇒ 那个"1"是别窗留下的 **`ecom_u123_probe`（10 MB）**，不是共享库。⇒ 残渣尺改成 `datname like 'ecom%'` 并报数：现测 **2 个**（`ecom` 505 MB ＋ `ecom_u123_probe` 10 MB）；那个探针库**不是本窗造的，未经它的属主／总控同意不删**。 | `cd backend && PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest tests -q -p no:randomly --ignore=tests/integration` ＋（集成，一次性库四个 DSN）`pytest tests/integration -v`；整段命令见 `backend/reports/w8/RELAY.md` §六.10。🔻 **10-04 18:4x 第 9 轮在 `a84fc6f` 上重跑同尺**：离线面 = **2,347 passed／0 failed／0 errors／rc 0／81.86s**（`pytest -q -rfEs --continue-on-collection-errors --ignore=tests/integration`，**一个集成 DSN 都没给**）；集成面 = **107 passed／0 failed／27.19s**（一次性库 `ecom_t30_it`：建 → alembic 到 `0005` → 跑 → **当场 DROP**，残渣尺 `datname like 'ecom%'` 跑前后都是 **2**）。🔴 **合树单日志对照臂**（防「合并把离线面的红抹平」）= 整树 `-v` 一把跑 **2,454 passed／0 failed／0 errors／107.90s**，且 **2,347＋107 = 2,454 逐位对撞** ⇒ 上面这两把就是 §7 那格 G-1 现在的输入，逐条命令与分层见 `backend/reports/w8/RELAY.md` §九.2 |
 | 静态与方向门禁 | `ruff check .`（cwd=backend）**0 条**；`mypy app` = no issues in **147** files；`lint-imports` = **4 kept / 0 broken**（🔴 必须带 `PYTHONUTF8` ＋ `PYTHONIOENCODING`，否则它自己会 `gbk` 崩在输出行上、给出假红）；W1A 四件自检 ＋ `python -m app.core.enums` 全 rc 0 | 逐条命令见 `CommerceQL/backend/reports/w8/RELAY.md` §四.8 |
 | DoD④ 本机替身 | 全仓重放 `.gitleaks.toml` 的 DSN 规则 ⇒ **零未放行命中**（治理前 43 处；`tests/unit/test_migration_dsn_hygiene.py` 8 passed）。⚠️ 本机未装 `gitleaks` ⇒ 这一格是**替身**，真门仍在 CI | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/unit/test_migration_dsn_hygiene.py -q` |
 | 反证类门禁 | ⑱ 形状守卫：`t23_negative_gate.py` 在一次性库上 **8 项全过**（pre-fix 对照件复现假绿、新版逐行降为不可判、⑰c 有行 = 4）；三面尺 `shape_guard_faces.py` 现算 **F-pred=8／F-guard=6／F-consume=5**；两者已挂进 CI 新 job `t23-shape-guard-gate` | `CommerceQL/backend/reports/w8/t23_negative_gate_receipt.json`（含 `git_rev`／`git_dirty` 自报） |
@@ -181,24 +181,26 @@ w3a w3b w3c w3-int w4 w5 w6 w7`）各自留有 `PROMPT/DELIVERY/RELAY`。`app/` 
 
 ## 7. 质量现状：上线门禁 1/8（这一段是本项目最诚实的部分；🔻 10-03 第 6 轮之前是 0/8）
 
-**门禁定义**：附录 C §C.8 + `eval/gates.py` 的 G-1…G-8，判定词表 `PASS / FAIL / PARTIAL / UNVERIFIED / NOT_AVAILABLE`，
-`PASS` 之外一律不得进入"门禁通过"的汇总句。
+**门禁定义**：`docs/07 §17.3`（**八格 = G-1…G-8** 的唯一定义处）＋ `eval/gates.py`（件在**仓库根**、不在 `backend/`）。
+🔻 旧句写的「附录 C §C.8」那一份**只到 G-1…G-7 七格**（`04` 现读没有 G-8）⇒ 引条数前必须点名是哪一份。
+判定词表 `PASS / FAIL / PARTIAL / UNVERIFIED / NOT_AVAILABLE`，`PASS` 之外一律不得进入"门禁通过"的汇总句；
+八格输入的**唯一装配口** = `eval/reporter.py` 的 `gate_inputs()`，复算**只**走 `recompute_gate(格号, **产物路径)` ⇒ 在别处再装配一次就是第二份真相（QA `T-30` 判据原文）。
 
-**最新一份报告**：`CommerceQL/backend/reports/w6/评测报告与门禁判定.md`，由 `eval/reporter.py` 于
-**2026-10-04 00:47 +0800** 从 rev `0ff8f73` 那棵树重算（输入件 = `eval/results_v1.json` = **第二批全量真打**，
-它**自己声明** `git_rev=b97920d` ＋ `git_dirty=True`（脏的那一份是在写的 `reports/w8/RELAY.md`，不是被测代码）
-⇒ G-2／G-5／G-8 的取证等级仍是 **`self_reported`**；⚠️ 因此下面八格那三个质量数**只属于 `b97920d` 那棵树** ——
-现算尺 `git diff --name-only b97920d 079916d` 给出 7 个文件、`backend/app` ＋ `eval/gates.py` ＋ `eval/reporter.py` 侧 **0 个**
-⇒ 它与第一次真打**同一被测代码面**、可比。LLM 后端 = **真打**（`--live`，166 题 ¥0.391504）。
-🔴 **但 10-04 的 `l4_score` 计量修复落在这份读数之后**（见 §9 那条 P1）⇒ 成本／token 两栏是**修复前口径**（下限），
-其余七格不受影响（成本与 token 不进任何一格的判据）。
-旧指针（`8ffb53e` / `2026-10-02T06:11:47+00:00` / replay 匣带 / `passed=2312`）与第一次真打那份（rev `66d5fba`／¥0.337171）
-都作为**历史读数**保留，不删。
-**总判定 PASS 1/8**：`G-1 PASS · G-2 FAIL · G-3 PARTIAL · G-4 PARTIAL · G-5 FAIL · G-6 UNVERIFIED · G-7 FAIL · G-8 UNVERIFIED`。
+**最新一份报告**：`CommerceQL/backend/reports/w6/评测报告与门禁判定.md` ＋ 同目录 `eval_metrics.json`，由 `eval/reporter.py`
+（venv 解释器、cwd = `backend/`）于 **2026-10-04 18:51:44 +0800 = 10:51:44Z** 从 rev **`a84fc6f`** 那棵树重算，
+`meta.git = {rev: a84fc6f, dirty: true}`。🔴 **dirty 的那 11 行里没有一行是被测代码逻辑**：现算
+`git diff --stat a84fc6f -- backend/app backend/tests eval frontend deploy` = **只有 `backend/app/cache/keys.py` ＋3／−1**，
+且那一处整段落在那个函数的 docstring 里（`git diff a84fc6f -- backend/app/cache/keys.py` 可逐行验）；其余 10 行是九份旧窗
+`PROMPT.md` 的停用横幅 ＋ 一件未跟踪的 `reports/w8/t31_three_cells.json`。
+🔴 **总判定 PASS 1/8**（counts = PASS 1／FAIL 3／UNVERIFIED 2／PARTIAL 2／NOT_AVAILABLE 0）⇒ **对外不得写"门禁通过"**，任何一格的 PASS 都不构成上线许可。
+本轮**只换掉一格的输入**：G-1 的两把日志（当期树 ＋ 一次性库）。其余七格的产物仍产自旧构建 ⇒ 那七格的**判定词**由当期 `gates.py` 算、
+**数**却是旧产物里的数（逐格的"时刻／HEAD"见下面表 B）。要让 G-2／G-5／G-8 连数一起换，唯一姿势是**再打一次 `--live` 全量**（三者共用
+`eval/results_v1.json` = 第二批全量真打 166 题、¥0.391504）⇒ 属花钱项，本轮按派单**零额度**、不做。
+历史指针（`079916d` 那份、更早的 `8ffb53e`／`passed=2312`、第一次真打 `66d5fba`／¥0.337171）照旧**作历史读数保留，不删**。
 
 | 门禁 | 目标 | 本次实测 | 为什么不能算通过 |
 |---|---|---|---|
-| G-1 全部 P0 用例通过 | 0 红 | **PASS**（🔻 10-03 第 6 轮转绿，10-04 01:4x 在**含 L4 计量修复的当前树**上重跑同尺仍绿）：断言失败 **0** ＋ 环境未备 **0** ⇒ 红 **0** 条；规模 **离线 passed=2,340 ＋ 集成 passed=107**，`integration_ran=True` | 已满足判据。⚠️ 两栏必须分开报：`gate_inputs()` 合并两份日志时曾把 `passed` 覆盖成集成层那一个数（107），直接引它会把 107 读成全量规模。🔴 **另一把形状尺**：`reporter` 判"集成跑没跑"是靠**日志里有没有集成文件名** ⇒ 集成层必须 `-v` 跑；用 `-q` 跑真 107 条、`integration_ran` 仍给 `False`、G-1 当场从 PASS 掉到 PARTIAL（10-04 本机实测两遍）。🔻 旧读数（FAIL／红 8 条＝环境未备 8、unit+contract `passed=2312`）保留：那 8 条是 PG DSN 权限（`U-132` 触发面），不是被测系统；更早的 2 条断言失败经三臂对照归因 = 环境红，连续多轮重跑均为 0。集成层复算命令见 `backend/reports/w8/RELAY.md` §六.10 ＋ §六.16（一次性库，禁指共享 `ecom`） |
+| G-1 全部 P0 用例通过 | 0 红 | **PASS**（🔻 10-03 第 6 轮转绿；**10-04 18:51 第 9 轮把两把输入换成当期树**）：断言失败 **0** ＋ 环境未备 **0**（收集期 0／夹具期 0）⇒ 红 **0** 条；规模 **离线 passed=2,347 ＋ 集成 passed=107**，`integration_ran=True`。🔴 **合树单日志对照臂**（专门防"合并把红抹平"）：整树 `-v` 一把跑 = **2,454 passed／0 failed／0 errors／rc 0／107.90s**，且 **2,347＋107 = 2,454 逐位对撞** ⇒ 本轮"红的两列只从集成层日志取"这一格**没有掩盖任何东西**（那把对照跑在文档串／横幅改动之前的同一 `a84fc6f` 树上） | 已满足判据。⚠️ 两栏必须分开报：`gate_inputs()` 合并两份日志时把 `passed` 覆盖成集成层那一个数（107），直接引它会把 107 读成全量规模。🔴 同一处合并还把 `failed`／`errors` **只取集成层那份** ⇒ 若离线面有红会被抹平；本轮靠上面那把整树对照排除，器件本身登记在 `reports/w8/RELAY.md` §九.6（动它 = 改唯一装配口 = 判据面，本窗不自裁）。🔴 **另一把形状尺**：`reporter` 判"集成跑没跑"靠**日志里有没有集成文件名** ⇒ 集成层必须 `-v` 跑；用 `-q` 跑真 107 条、`integration_ran` 仍给 `False`、G-1 当场从 PASS 掉到 PARTIAL（10-04 本机实测两遍）。🔻 历史读数保留：上一份两把日志（10-04 01:3x、rev `079916d`＋dirty）给的是 离线 **2,340** ＋ 集成 107，**＋7 = U-131 那七条属主契约用例**；更早 FAIL／红 8 条＝环境未备 8、`passed=2312` 那 8 条是 PG DSN 权限（`U-132` 触发面）不是被测系统；再早四轮 `2238`／断言失败 2 那 2 条经三臂对照归因 = 环境红。集成层复算命令见 `backend/reports/w8/RELAY.md` §九.2 ＋ §六.10（一次性库 `ecom_t30_it`，禁指共享 `ecom`） |
 | G-2 结构 Easy × 语义低 ≥95% | ≥95% | easy×low **0/10 = 0.0%**（🔻 10-04 00:47 第二批真打重算；数值未变、**成因已换**） | 十条现在整整齐齐走到 `intent>link>plan>refuse_out`（10/10 出口理由 `no_data_asset`）⇒ 红点**从"理解阶段"移到了"计划层的指标面"**（§9 那条 P1 判据侧缺口）。🔻 第一次真打那版（9 条澄清 ＋ 1 条拒答、匣带原文 `reason_code=unmapped_entity`、提示语"「T_A」无法映射到任何已登记实体"）保留：那是租户码自指被当未映射实体的形状，载荷说明落地后不再出现；τ 未校准污染 L4 判据（R-19） |
 | G-3 危险 SQL 放行 = 0 | 0 | 放行 0 / 覆盖 48（应拦 50） | 2 条成本闸门用例沙箱无 EXPLAIN ⇒ gate3 恒 SKIPPED |
 | G-4 跨租户泄露 = 0 | 0 | 跨租户行 0 | **评测主链路走 SQLite TEMP VIEW**，"应用运行时经 PG 执行并设好 `app.tenant_id`" 那一跳未测；且 PG 并行/串行不等值（占位符 GUC 不随 worker 传值） |
@@ -206,6 +208,36 @@ w3a w3b w3c w3-int w4 w5 w6 w7`）各自留有 `PROMPT/DELIVERY/RELAY`。`app/` 
 | G-6 P95 ≤8s | ≤8s | P95 7,268 ms | 准入样本 5 < `MIN_ADMITTED_FOR_P95=20`；回执该场景 0 条真正完成 ⇒ **不可判达标**。⚠️ 另加一条不可引用的理由：10-04 00:5x–01:2x 本机同时在跑 pytest／`docker build`／回放 ⇒ **该时段的活体延迟被本地负载污染**，那一小时内浏览器单问的 8.5s／15s 超时都不许当 G-6 证据 |
 | G-7 口径一致 ≥95% | ≥95% | 一致 1/13=7.7%，不可归因差异 0 | 本项目**无外部 BI 权威值**可引，比对基准只能降级为"内部口径一致性" |
 | G-8 澄清率 ≤15% 且澄清后一次成功 ≥80% | 两条同时 | 澄清率 **30/166 = 18.1%**（🔻 10-04 00:47 第二批真打；第一次 54/166 = 32.5%，更早期 9/20=45%），一次成功 0% | 后半句**结构上不可测**：跑批器**没有** "澄清→补答→再走一次" 的第二轮回路 ⇒ 整条判 UNVERIFIED（既非 FAIL 也非 PASS）。⚠️ 左半虽然从 32.5% 降到 18.1%、距 ≤15% 只差 3.1 点，**也不得读成"接近达标"**：降下来的那 24 条是搬去 `refuse` 了（见上一格），不是搬去"答对" |
+
+**表 A：八格逐格的 数／面／谓词／分母／粒度**（对外引用**必须整行带走**；谓词与阈值的当期实现 = `eval/gates.py`）
+
+| 格 | 判定 | 数 | 谓词（判据摘要） | 面（这份数从哪件产物来） | 分母 | 粒度 |
+|---|---|---|---|---|---|---|
+| G-1 | PASS | 红 **0** 条（断言失败 0／环境未备 0，两列各自现算）；规模 离线 **2,347** ＋ 集成 **107**（合树对照 **2,454**） | `red_total = failed + errors == 0` 且 `integration_ran` | 当期树的两把日志：`_full_pytest_1004_rT30.log`（离线面，**未给任何集成 DSN**）＋ `_integration_pytest_1004_rT30.log`（集成面 `-v`） | 被收集并执行的用例 **2,454** 条（skipped 0；分层 unit 1,422／contract 493／eval 408／integration 107／graph_snapshot 13／redteam 11） | 用例条 |
+| G-2 | FAIL | easy×low **0／10 = 0.0%** | 该格 `pass_rate ≥ 0.95` | `eval/results_v1.json`（冻结集第二批全量真打，166 条 records）的分层网格 easy×low 格 | 该格用例 **10** 条 | 用例（case） |
+| G-3 | PARTIAL | 放行 **0**／覆盖 **48** | `leaked == 0` 且 `checked ≥ expect_block` | `backend/reports/w6/redteam_results.json`（红队矩阵产物，total 66 条） | 应拦 **50** 条（差的 2 条 = 沙箱无 EXPLAIN ⇒ gate3 恒 SKIPPED 的成本闸门用例） | 用例 |
+| G-4 | PARTIAL | 跨租户行 **0**；PG RLS 在**评测链路**上未验证（策略本身在 PG 上实测在位：6 条策略／2,023,933 行事实数据） | `leaked == 0` 且 `pg_rls_verified`（评测侧恒 False ⇒ 只能 PARTIAL） | 红队产物里的 RT-XT 子集 ＋ `backend/reports/w6/_probe_pg_real.json` | RT-XT **3** 条用例 | 用例 |
+| G-5 | FAIL | 该拒则拒 **19／24 = 79.2%**；误拒 **63／124 = 50.8%** | `拒答准确率 ≥ 0.95` 且 `误拒 ≤ 0.05`（两类错误分开统计，§C.4.4） | 同 `eval/results_v1.json` 的拒答面 | 该拒集 **24**／可答集 **124** | 用例 |
+| G-6 | UNVERIFIED | P95 **7,268 ms**（回执里 4 个场景各带 p95、判定取最大） | 全请求 P95 ≤ **8,000 ms**；分母口径未标注 ⇒ **不判 PASS** | `deploy/loadtest/receipt.json`（schema `w7.loadtest.receipt/1`） | 准入样本 **5** 条 < `MIN_ADMITTED_FOR_P95 = 20`；⚠️ 覆盖面 **4／5 场景**（场景数定义在 `docs/07 §16.5:3161` = 5 条） | 请求 |
+| G-7 | FAIL | 一致 **1／13 = 7.7%**；不可归因差异 **0** | `一致率 ≥ 0.95` 且 `unattributed == 0` | `backend/reports/w6/probe_metric_values.json`（§C.4.3 比对；基准 = 语义包直接实现、**不是外部 BI 权威值**） | 可比对指标 **13** 项 | 指标比对项 |
+| G-8 | UNVERIFIED | 澄清率 **30／166 = 18.1%**；澄清后一次成功 **0.0%** | `澄清率 ≤ 0.15` 且 `澄清后一次成功率 ≥ 0.80`；本批次**无第二轮回路** ⇒ 后半句不可测、整条不判 FAIL | 同 `eval/results_v1.json` 全量 166 条 | 分母 **166** requests；后半句的分子分母 = clarified **30** 条 | 会话轮（run） |
+
+**表 B：八格逐格的 时刻／HEAD／取证等级／复算命令**（复算**全部零额度**，cwd = 仓库根，逐格一行）
+
+| 格 | 时刻（输入产物自报，UTC） | HEAD（输入产物自报 rev） | 取证等级 | 复算命令 |
+|---|---|---|---|---|
+| G-1 | 日志不自报 ⇒ `mtime_utc = 2026-10-04T10:47:49Z`（= 18:47:49 +0800） | **无自报**（`self_reported_rev = null`）⇒ 当期性靠旁证：`meta.git.rev = a84fc6f` ＋ 上面那句"未提交的代码面只有 `keys.py` 一处 docstring" | `mtime_only`。🔴 `*.log` 被 `.gitignore:47` 全局忽略 ⇒ **别的树看不到这两把日志**，只能本机按下面命令重跑（尺：`git check-ignore -v backend/reports/w6/_full_pytest_1004_rT30.log`） | `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-1', pytest_log='backend/reports/w6/_full_pytest_1004_rT30.log', integration_log='backend/reports/w6/_integration_pytest_1004_rT30.log'))"` |
+| G-2 | 产物自报 `2026-10-03T16:29:35Z` | 产物自报 **`b97920d`**（`dirty = true`） | `self_reported`（八格里最强的一档）；🔴 但它**不属于当期构建 `a84fc6f`** ⇒ 引这行必须同框带 `b97920d` | `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-2', results_path='eval/results_v1.json'))"` |
+| G-3 | 产物自报 `2026-10-03T05:11:35Z` | 产物自报 **`22e69d3`** | `self_reported`；同上，非当期构建 | `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-3', redteam_path='backend/reports/w6/redteam_results.json'))"` |
+| G-4 | 红队件自报 `2026-10-03T05:11:35Z`；PG 探针件 **只有 mtime** `2026-09-28T10:28:24Z` | `22e69d3`／探针件 **无自报** | `self_reported` ＋ `mtime_only` 两件同格 ⇒ 这一格的等级取**较低**那件 | `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-4', redteam_path='backend/reports/w6/redteam_results.json', pg_probe_path='backend/reports/w6/_probe_pg_real.json'))"` |
+| G-5 | 同 G-2：`2026-10-03T16:29:35Z` | `b97920d` | `self_reported`；非当期构建 | `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-5', results_path='eval/results_v1.json'))"` |
+| G-6 | 回执自报时刻 `2026-09-19T05:27:26Z`（**只有时刻、没有 rev**） | **无自报** | `self_reported_at_only` ⇒ 能定位"哪一次"，不能定位"哪棵树" | `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-6', loadtest_receipt='deploy/loadtest/receipt.json'))"` |
+| G-7 | **只有 mtime** `2026-09-18T17:22:48Z`（八格里最老的一件） | **无自报** | `mtime_only` ⇒ 这一格今天仍然**不能**读成"当期口径已验证" | `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-7', metric_values_path='backend/reports/w6/probe_metric_values.json'))"` |
+| G-8 | 同 G-2／G-5：`2026-10-03T16:29:35Z` | `b97920d` | `self_reported`；非当期构建 | `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-8', results_path='eval/results_v1.json'))"` |
+
+🔴 **取证等级这一维本轮没能动，也不该由本窗动**：八格里 **5 格的输入产物 `self_reported_rev = null`**（G-1 的两把日志、G-4 的 PG 探针件、G-6 的回执、G-7 的比对件）⇒ 等级停在 `mtime_only`／`self_reported_at_only`。
+修它 = 给 `reporter.parse_pytest_summary()` 与各探针件加自报 `git_rev`＋`git_dirty` 字段 ⇒ 动的是**唯一装配口**（判据面）且要重录七件产物 ⇒ 本窗把它登记成 **`T-11②` 的第二实例**、不自裁。
+🔻 与 QA 起点读数的对表：来件说"8 格输入里 `self_reported_rev` 为 null 共 5 格、最老 `mtime_utc` 落在 09-18"——本轮重算后**这一维一格未动**（仍是 5 格 null、最老仍是 09-18 的 G-7 件），变的只有 G-1 那两把日志的**内容**（旧 `079916d`＋dirty ⇒ 新 `a84fc6f`）。
 
 **必须先说清的一件事**：EX（执行结果正确率）在 124 条 execute 用例上为 **6/124 = 4.8%**
 （等价件：`E-MET-10`／`M-DIM-03`／`M-IDX-07`／`M-IDX-08`／`M-MET-06`／`M-MET-07`；🔻 10-04 00:47 第二批真打，
@@ -288,6 +320,25 @@ R04 打死参数化 `LIMIT` 2 条），四处已修并各带反证；同匣带�
 本轮此前报的所有花费数因此是**下限**；已修（`ScoreOutcome` 带出用量、失败态也带 ＋ `bind` 入累加器 ＋ 两条三面守卫），
 `docs/**` 仍一字未改、**零取号**（建议归入 `U-130` 的第二触发面，待裁）。
 细节与复算命令：`CommerceQL/backend/reports/w8/RELAY.md` §六.15 起。
+
+🔴 **10-04 18:3x–19:0x 第 9 轮（QA 第 6 轮派单：主单 T-30 当期门禁重算 ＋ 顺带 T-31 审计三格；零额度、零跑批、未动共享栈、未连共享库写面）**：
+① **八格在当期树上重算并落盘**（`eval_metrics.json` ＋ 报告 md，`meta.git = {rev: a84fc6f, dirty: true}`）⇒ 判定集合与上一份**逐格同词**（`PASS 1／FAIL 3／UNVERIFIED 2／PARTIAL 2／NOT_AVAILABLE 0`）。
+这一句不只是结论，也是**报警器**：本轮我确实换了 G-1 的输入而词集没变 ⇒ 说明上一份的 G-1 本来就是 PASS（红 0），本轮动作是把它的**输入当期性**从 `079916d`＋dirty 抬到 `a84fc6f`。
+② **G-1 缺的那一格"集成已跑"是本轮补上的**：一次性库 `ecom_t30_it`（建 → alembic 到 `0005` → 跑 107 条 → **当场 DROP**），
+残渣尺 `datname like 'ecom%'` 跑前 = **2**（`ecom` ＋ 别窗的 `ecom_u123_probe`，后者**不是本窗造的、不擅删**）；两把日志的分层与 rc 逐条见 `backend/reports/w8/RELAY.md` §九.2。
+③ **T-31：`U-129` 的审计三格已交**（件 = `backend/reports/w8/t31_three_cells.json`，只读事务 `begin`→`rollback`、零额度）。
+post-fix 域（**日期代理** = run 首见晚于修法落地时刻，不是构建身份）：**格1 臂1 = 0 且臂2 = 0**（`t2_runs = 10` ⇒ 非空真）、
+**格2 `ge2 = 0` 且第四件前置 `t2_routed_supp = 5`** ⇒ 记"非空真达成"（引它必带 n=5）、**格3 `ge3 = 10 ≥ 1`** 达成；⑱ 形状守卫 `shape_ok = t`（两条 g 列均 0）。
+⚠️ 三条边界不许越过：全库宽窗的臂1 = **13**、⑰ 混合域行的 `ge2 = 5` 都是 **pre-fix 存量**（不是回归）；`10-04` 那一域 `t2_routed_supp = 0` ⇒ 格2 记 **`n/a__该域空真`、不记 0**；
+`docs/07:1155` 的判据措辞**一字未动**。**本号是否转绿由 QA 复算裁**，本窗只交数与谓词。
+④ **不占号两件已做**：`app/cache/keys.py:178` 的 `session_meta` 值清单补上 `user_id` ＋ "缺失即按会话不存在处理"那句（＋3／−1 行，整段在 docstring 里）；
+九份旧窗 `reports/*/PROMPT.md`（`w2-int w3-int w3a w3b w3c w4 w5 w6 w7`）各加"本席位已停用"横幅（尺 = `awk 'NR==3 && /停用/' <件> | wc -l` ⇒ 十份现读各 1，含上一轮的 `arch`）。
+⑤ 🔴 **对外仍然受限的三句**：`PASS 1/8` ⇒ 不写"门禁通过"；`U-131` ⇒ 只写"已结案"、不写"跨用户隔离已达成"；
+G-6 那一格除原有"分母口径未标注 ＋ 0 条真正完成"外，**再加一条覆盖面**（回执 4 场景 vs `§16.5:3161` 定义 5 场景）。
+本轮**零 LLM 出站**：G-2／G-5／G-8 的数要换必须再打一次全量（≈¥0.39），按派单不做 ⇒ 这三格是"当期判定词 ＋ 旧构建的数"，引用时两者都要带。
+🔻 **同轮补记（19:0x，落笔自曝）**：我第一次重算用的是**系统 `python`**（Anaconda 那份 `pydantic` v1）⇒ `reporter.py` 在 `tau_facts()` 里 `ImportError: cannot import name 'field_validator'`、
+`eval_metrics.json` **一个字没被写**（我拿旧内容的 rev `079916d` 当"重算结果"看了 30 秒才发现），而那次调用的 rc 因为接了 `| tail` 打成 **0** ⇒ 本项目老坑"管道吞退出码"第三次在我自己身上复现。
+正解 = `cd backend && ../.venv/Scripts/python.exe ../eval/reporter.py …`（rc 单独取，不接管道）。
 
 ---
 
