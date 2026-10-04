@@ -1167,6 +1167,19 @@ QA 写的项目记忆索引里有一句「另记 `w8/PROMPT` §1↔§2⑤ 写面
 `grep -o "T-2[0-9]" backend/reports/qa/TASK_BOARD.md | sort -u` 最大 = **`T-27`**，**`T-28`／`T-29` 都没有行**；`TASK_BOARD.md` mtime = 10-04 **02:41**（本轮未变）。
 ⇒ 结论：**冲突本身已按 §0′ ① 裁完**（W8 写全部入库件含 `07 §4.8`，QA 独占 `reports/qa/**`；`OVERVIEW §6/§7/§9` 由 W8 刷新、每格带口径五件），但**单号未落账 ⇒ 本窗不占 `T-xx` 号**（续号尺归 QA：只认 `TASK_BOARD.md` 现读最大值 ＋1）。
 🔴 顺带一条同族新形态：**索引行也能冒充"已开的单"**（与 `07 §4.8` 那句"指针行会冒充已占用号"同族，只是面从 `U-xx` 换到 `T-xx`）⇒ 已写进本段，供 QA 记账时补尺。
+🔻 **同轮再补（16:3x，推送后·收尾前重读权威件时逮到）**：本段那句"表内最大 `T-27`"是 **16:2x** 的读数 ⇒ **16:22 `TASK_BOARD.md` 已被 QA 那一只手更新、16:25 随 `6d7c208` 入库**，现读 `grep -o "T-[0-9][0-9]" | sort -u` 最大 = **`T-29`**，两单都发给本窗：**`T-28`（P0 安全 · `U-131` 四臂全绿＋三面结案＋contract 同型断言，判据 `docs/07:1159`）**、**`T-29`（P2 账面同步 · 就是要裁 §1↔§2⑤ 那处写面冲突 ＋ `_refs/` 属主 ＋ §4 那批 14:2x 读数改成取数命令）**。⇒ §5 的裁定照旧成立，**只是"未落单"这句现在只覆盖 16:2x**；`T-29` 的处置见 §七.12。
+
+### 12. `T-29` 的处置（本窗已裁并已把自己件改到对称；一条实测把 §4 纠正了）
+
+| `T-29` 要求 | 本窗处置 | 复算 |
+|---|---|---|
+| §1 权限段与 §2⑤ 写面**对称化**（"二选一"） | **选"全归 W8"** ⇒ §0′ ① ＋ §2⑤ 同改，§1 末段旧句不留抄本（指 `git show 5307a94:`）；`Prompt_W8接力` 那句"你别动"同改 | `grep -c "QA 窗地盘" backend/reports/w8/PROMPT.md` = **0**；`grep -n "v2.1 ①" ` ≥ 2 |
+| `_refs/` 属主点名 | 已补进 §0′ ① 的清单（`docs/_refs/**` = 本窗写） | `grep -n "docs/_refs" backend/reports/w8/PROMPT.md` |
+| §4 那批 14:2x 读数改成取数命令或重跑带时刻＋HEAD | **部分完成**：§4 头部两条 🔻（16:06 ＋ 16:1x）＋ 门禁格补 `gate_summary` 实读 ＋ 取号行给行号与尺 ＋ 404 那条整条重跑（下表）。**其余 §4 读数（`metric_coverage`、三把尺分歧、`U-133/134` 面）本窗没重跑 ⇒ 仍是前手数，已在本段 §七.7 挂"零进展"** | `git show --stat HEAD` ＋ `grep -c "🔻" backend/reports/w8/PROMPT.md` |
+
+🔴 **重跑 §4 时纠出前手两处不准（本窗 16:2x，HEAD `dcf1c1d`，四把尺都真跑过 rc=0）**：① 前端路由在 `App.tsx:27-29`，**不是 `:33-35`**；② **未接线的端点是四条不是三条** —— 前手只数了 A.7.1／A.7.2／A.9.3，漏了 `EvalReportPage.tsx:149` 的 `GET /admin/eval/runs/{run_id}` = **A.9.4**。
+`backend/app/main.py:474-482` 现读 = **5 条 `include_router`**、`backend/app/api/routers/` 现读 = **5 个模块**（clarify／feedback／health／query／session）⇒ 四条端点全未落地，**这条对 `T-28` 之外的下一轮有形状影响**（要接的是四个口，不是三个）。
+尺：`grep -n "Route path" frontend/src/App.tsx` ＋ `grep -n "include_router" backend/app/main.py`（输出 5）＋ `ls backend/app/api/routers/`（去 `__init__`／`__pycache__` 后 5）。
 
 ### 6. 本轮改了哪些件（写面清单 ＋ 复算）
 

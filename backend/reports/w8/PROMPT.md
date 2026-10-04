@@ -12,7 +12,7 @@
 
 | # | 订正 | 它覆盖掉谁 |
 |---|---|---|
-| ① | **写者按目录切，不按语义切**：`OVERVIEW.md`、`docs/**`（含 `07 §4.8` 登记行与判据措辞）、`deliverables/ACCEPTANCE.md`、`backend/**`、`frontend/**`、`deploy/**`、仓库根 `eval/**` ＝**本窗写**；**QA 只写 `backend/reports/qa/**`**，它对别处的错只开 `T-xx` 单、由本窗量完自己落笔 | §1 末句"你只写自己的账面"、§2⑤、`Prompt_W8接力` 里那句"docs 是 QA 地盘你别动"、`QA_PROMPT` v2 §3 的"同步性订正归你" |
+| ① | **写者按目录切，不按语义切**：`OVERVIEW.md`、`docs/**`（含 `07 §4.8` 登记行与判据措辞）、`docs/_refs/**`、`deliverables/ACCEPTANCE.md`、`backend/**`、`frontend/**`、`deploy/**`、仓库根 `eval/**` ＝**本窗写**；**QA 只写 `backend/reports/qa/**`**，它对别处的错只开 `T-xx` 单、由本窗量完自己落笔 | §1 末句"你只写自己的账面"、§2⑤、`Prompt_W8接力` 里那句"docs 是 QA 地盘你别动"、`QA_PROMPT` v2 §3 的"同步性订正归你"（→ 已由 `T-29` 触发本条裁定） |
 | ② | **编制只有两只窗：W8 ＋ QA。** `reports/w0…w7/**`、`reports/arch/**` ＝史料，不工作 ⇒ 并发表不再有"哪只窗能异步"，只写**本轮哪些动作争用同一件资源**（`git` 索引 / 共享 `ecom` / 共享栈 / 被测镜像 / 匣带 / `reports/qa/**`） | §5 第三条"并发/串行表"、记忆里"按窗口粒度回答" |
 | ③ | **取号权在本窗**（`docs/07 §4.8` 现读 `:1078` = `U-135`）。记忆《单开发窗 W8 体制》里 10-03 那句"取号权没转移"作废 | 同件 `:14`／`:32` |
 | ④ | **花钱不必事前请示、事后报口径**（本项目内覆盖 user 层《报完计划直接开工》的第①类）；事后必须带**数＋面＋时段（`is_peak`）＋单价来源** | user 记忆 `feedback-list-defaults-dont-block` ① |
@@ -90,7 +90,10 @@ QA 窗出「任务粘贴块」 → 总控原样转给你 → 你一路做到交�
 - `U-129` 属主在自己会话上**第 2 轮追问崩**：修法已落地 ⇒ 状态 = **待验收**（既不得写"已修好"、也不得写"必崩"）。验收面含"把同一问题再问一遍"。
 
 **P1（点得开、拿不到数据）**
-- 🔴 **顶栏两个入口 HTTP 404**：前端路由**已装配**（`frontend/src/App.tsx:33-35`），未接线的是**后端端点** —— 页面调 `GET /semantic/metrics`、`GET /semantic/assets`、`GET /admin/eval/runs`（`SemanticPage.tsx:124,156`、`EvalRunsPage.tsx:97`），而 `main.py:474-482` 只挂 `health/query/session/clarify/feedback`（`backend/app/api/routers/` 实测就这 5 件）⇒ 契约附录 **A.7.1 / A.7.2 / A.9.3** 从未落地。证据 `deliverables/screenshots/07_,08_`。
+- 🔴 **顶栏两个入口 HTTP 404 ＝ 后端四条端点从未落地**（🔻 本窗 16:2x 现测，HEAD `dcf1c1d`；前手那行有两处不准：路由行号已漂、少算一条）：
+  前端路由**已装配**在 `frontend/src/App.tsx:27-29`（**不是 `:33-35`**）；未接线的是**后端端点**，四个调用点 = `SemanticPage.tsx:124`（`GET /semantic/metrics` = **A.7.1**）、`:156`（`GET /semantic/assets` = **A.7.2**）、`EvalRunsPage.tsx:97`（`GET /admin/eval/runs` = **A.9.3**）、**`EvalReportPage.tsx:149`（`GET /admin/eval/runs/{run_id}` = A.9.4 ⇐ 前手漏计）**；
+  而 `backend/app/main.py:474-482` 只 `include_router` **五件**（health／query／session／clarify／feedback，`backend/app/api/routers/` 现读也正好这五个文件）⇒ **A.7.1／A.7.2／A.9.3／A.9.4 四条全未落地**。
+  证据 `deliverables/screenshots/07_,08_`。复算：`grep -n "Route path" frontend/src/App.tsx`、`grep -rn "apiGet" frontend/src/pages/{SemanticPage,EvalRunsPage,EvalReportPage}.tsx`、`grep -n "include_router" backend/app/main.py`、`ls backend/app/api/routers/`。
 - **门禁 `PASS 1/8`**（`backend/reports/w6/eval_metrics.json`，生成 `2026-10-03T17:31:38+00:00`，`meta.git.rev=079916d` **dirty**；🔻 16:06 本窗重读：`gate_summary.passed = ['G-1']`、`all_pass = false`，**与当前 HEAD `5307a94` 有 revision 差 ⇒ 这份产物不代表被测构建**）⇒ **对外任何场合不得写"门禁通过"**。动判据前读**三处**、并点名你在引哪一处：定义处 `docs/07 §17.3:3268`（**G-1…G-8**）、`docs/04 附录C §C.8`（现读**只有 `G-1…G-7`**）、实现 `eval/gates.py`（**仓库根**，`:1` 的 docstring 自认"07 §17.3／附录C §C.8"）。复算：`python -c "import json;d=json.load(open('backend/reports/w6/eval_metrics.json',encoding='utf-8'));print(d['gate_summary'])"`。
 - **判据侧三把尺的分歧**（这些要**裁**，不是 bug）：`metric_coverage` = 166 题里 61 题命中指标词、execute 无指标词 79 题（miss 47.6%）；`reports/w8/probe_gold_predicate_gap.json` = 41 条有 gold SQL 的用例加默认谓词后**仍有 19 条不等价**；`G-5` 该拒则拒 19/24、误拒 63/124。
 - `U-133`/`U-134` 取证面凭据与破坏性默认值缺口（`OVERVIEW.md §9`）。
