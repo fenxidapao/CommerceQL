@@ -177,8 +177,10 @@ def session_plan(tenant_id: str, session_id: str) -> str:
 def session_meta(tenant_id: str, session_id: str) -> str:
     """会话元数据键（W4 转述 #3，2026-09-18）。格式：`sess:meta:{tenant}:{session_id}`。
 
-    值形态由 W4 定：`created_at` / `title` / `bundle_version` / `graph_version` /
+    值形态由 W4 定：`user_id` / `created_at` / `title` / `bundle_version` / `graph_version` /
     `last_turn_at` / `closed`（W0 只出键构造）。
+    ⚠️ `user_id` 是属主校验的唯一依据（U-131）：键里只有 `tenant_id`，同租户内跨属主能不能读
+    全看值里这一格，所以它**缺失即按"会话不存在"处理**，不得回退成租户级放行。
 
     ⚠️ **必须带租户**：会话标题与轮次时间属租户数据；W4 已明确本组**不新增无租户键**。
     ⚠️ 与 `session_plan` 的分工：meta = 会话级元数据（单值），plan = 轮次计划摘要（List）。
