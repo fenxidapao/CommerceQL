@@ -1654,3 +1654,23 @@ integration_ran, integration_files_seen, failed_tests, error_tests}` ＋ 各自 
 「当期重算 ＋ 自报 rev 的入库取证件在位」）。
 ⑤ X5／X6 两类**我没有算进豁免集合**（一个契约未具名、一个与 `07:2879` 的 G4 行冲突）⇒ 若你把它们算成豁免，
 本量的"豁免基数"就从 0 变成"类别存在、样本为 0"，请给判词。
+
+### §十.10 🔻 同轮补记：干净树重算的递归 diff 实测（把 §十.5／③ 那句「本轮提交后为是」变成被测出来的数）
+
+同一套命令共跑**三遍**，每遍的自报面都记在产物里（**引用时必须点名是哪一遍**）：
+
+| 遍 | 树状态（产物自报） | 命令 | 与上一遍的递归叶子差异 |
+|---|---|---|---|
+| 1 | rev `1a2e474`／dirty=True（T-33 件）；`e900105`／dirty=True（G-1 取证件与报告） | 带改动工作树上跑（本轮前半段） | — |
+| 2 | rev `4566e84`／dirty=**False** | `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/t33_u130_coupling.py` ＋ `cd backend && ../.venv/Scripts/python.exe ../eval/reporter.py --emit-p0-summary reports/w8/gate_inputs_p0_summary.json --pytest-log … --integration-log …` | T-33 **16 条** ／ 取证件 **4 条** |
+| 3 | rev `ce1dec4`／dirty=False；报告 `eval_metrics.json` 自报 `d93db8f`／dirty=False | 顺序＝**提交第 2 遍的取证件（→`ce1dec4`）→ 在干净树跑 T-33 第三遍 → 提交它（→`d93db8f`）→ 在干净树跑** `../eval/reporter.py --no-backup --pytest-log … --integration-log …`（rc=1 是「未全绿」的正常返回） | T-33 **12 条** ／ 报告 **10 条** |
+
+尺 = 把两份 JSON 展平成叶子路径逐条比（脚本 = scratch `E:/tmp_qoder/r10/`）。**差异全部是时间或 rev 系**：
+
+- T-33 那 **16 条**（第 1→2 遍）= 时刻 3 格（`generated_at_utc` ＋ `reading_window_utc` 两格）＋ `git` 6 格（rev／rev_full／commit_count／dirty／dirty_files 两项）＋ 7 条「**静默前置**」句子里那个 `该窗结束到读数时刻 ≈ N 倍 max lag` 的 **N**（它是读数时刻的函数，不是判定量）；**12 条**（第 2→3 遍）= 同样三组，但 `git` 只剩 3 格（dirty 已是 False、`dirty_files` 无变）、「静默前置」只剩 6 条（有一格的 N 跨分钟没进位）；
+- G-1 取证件那 4 条 = `generated_at`／`git_rev`／`git_dirty`／`commit_count`，计数列（`passed 2359＋107=2466`、`failed 0`、`errors 0`、10 个集成文件名、两份日志的 sha256 与 mtime）**一格未动**；
+- 报告那 10 条 = 5 格 meta/时间（`meta.generated_at`／`meta.git.rev`／`meta.git.dirty`／`report_git.rev`／`report_git.dirty`）＋ 3 格第三件取证件的自报面随第 2 遍重发而更新（`mtime_utc`／`self_reported_at`／`self_reported_rev`）＋ **2 格与时间无关、且是本轮预期的那一处**：`rows[G-1].artifacts[2].tracked_in_git` 否→**是**，连带 `gaps.artifacts_not_tracked_in_git` 从 3 项缩到 **2 项**（只剩两份 `.log`）。
+- **判定量 0 处差异**：八格 verdict 与计数 `PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2`、`gap_down 0`／`gap_up 48`／零行 cohort 六行、shape guard `879／0／0／33`、台账 `1,674／¥2.753794`、残渣尺 `ecom%` = 2 只库，逐位相同。
+- 报告 md 因上面那 2 格变了 **5 行**（生成时刻、两处 rev／dirty 声明、G-1 取证行的「入 git」列、以及那条未入库清单）。
+
+三条纪律自查：① **pytest 没有在这几遍里重跑** —— 输入是两份 `.log`，其 sha256（`7e81f22a6145…`／`b54aa36a9f88…`）未变 ⇒ 重跑只会换个时刻；② 每遍产物只覆盖自己那一格的自报面，**没有手改任何判定字段**；③ 全程零额度（`app.cost_ledger` 三遍前后都是 **1,674 行／¥2.753794／max 09:16:55Z**），只读探针外层仍是 `begin; … rollback;`，残渣尺 `datname like 'ecom%'` 前后都是 2。

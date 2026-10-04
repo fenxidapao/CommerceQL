@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generated_at": "2026-10-04T12:44:25+00:00",
+    "generated_at": "2026-10-04T12:57:06+00:00",
     "window": "W6",
     "git": {
-      "rev": "e900105",
-      "dirty": true
+      "rev": "d93db8f",
+      "dirty": false
     },
     "run_config": {
       "live": true,
@@ -307,12 +307,12 @@
             "path": "backend/reports/w8/gate_inputs_p0_summary.json",
             "display": "backend/reports/w8/gate_inputs_p0_summary.json",
             "present": true,
-            "tracked_in_git": false,
-            "self_reported_at": "2026-10-04T12:44:25+00:00",
+            "tracked_in_git": true,
+            "self_reported_at": "2026-10-04T12:55:00+00:00",
             "self_reported_at_key": "generated_at",
-            "self_reported_rev": "e900105935d58980f47ea8632bd87a3a0958ff20",
+            "self_reported_rev": "4566e84fc6b98a6d4cdf7cd8ac12a69ed61b7bfe",
             "self_reported_rev_key": "git_rev",
-            "mtime_utc": "2026-10-04T12:44:25+00:00",
+            "mtime_utc": "2026-10-04T12:55:00+00:00",
             "parseable_as_json": true,
             "parse_error": null,
             "basis": "self_reported",
@@ -500,8 +500,8 @@
       }
     ],
     "report_git": {
-      "rev": "e900105",
-      "dirty": true
+      "rev": "d93db8f",
+      "dirty": false
     },
     "basis_legend": {
       "self_reported": "产物自己声明了时刻**和**代码版本 ⇒ 最强",
@@ -525,8 +525,7 @@
       ],
       "artifacts_not_tracked_in_git": [
         "backend/reports/w6/_full_pytest_1004_rT32.log",
-        "backend/reports/w6/_integration_pytest_1004_rT32.log",
-        "backend/reports/w8/gate_inputs_p0_summary.json"
+        "backend/reports/w6/_integration_pytest_1004_rT32.log"
       ],
       "statement": "本轮实测：八格的输入产物里**没有一个**同时自带「生成时刻 + git rev」（自报 rev 缺 4 格；取证等级落到 mtime/absent 的 3 格）。⇒ 下一轮欠件 = 让探针与 runner 落盘时自带 `generated_at` + `git rev-parse --short HEAD`，而不是靠报告去倒推「这份产物大概是哪棵树生成的」。"
     }
