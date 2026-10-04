@@ -205,10 +205,16 @@ def test_provenance_gap_counts_are_recomputed_not_written(tmp_path):
                                             "integration_ran": True,
                                             "error_tests": ["tests/integration/test_a.py"]})
     missing = str(tmp_path / "gone.json")
-    prov = rp._gate_provenance(gate_list, {"pytest_log": missing, "integration_log": None},
+    #: 🔴 T-32（QA 第 7 轮 ③）起，G-1 的取证面是**三件**：两份 `.log` ＋ 一份入库取证件。
+    #: 第三件不是装饰 —— `.log` 受 `.gitignore:47` 约束永不入库 ⇒ 等级结构性封顶在 `mtime_only`；
+    #: 要把 G-1 升到 `self_reported` 只有这条路（`gate_inputs_p0_summary.json` 自报 rev/dirty/时刻）。
+    #: 这一列从 2 变 3 是**有意的**，所以断言写死长度与顺序：少一件/多一件都得在这里红。
+    prov = rp._gate_provenance(gate_list, {"pytest_log": missing, "integration_log": None,
+                                           "p0_summary_path": None},
                                report_git={"rev": None, "dirty": None})
     g1 = next(r for r in prov["rows"] if r["gate_id"] == "G-1")
-    assert [a["basis"] for a in g1["artifacts"]] == ["absent", "no_path"]
+    assert [a["arg"] for a in g1["artifacts"]] == ["pytest_log", "integration_log", "p0_summary_path"]
+    assert [a["basis"] for a in g1["artifacts"]] == ["absent", "no_path", "no_path"]
     assert "G-1" in prov["gaps"]["gates_with_weak_or_missing_artifact"]
     #: 不在位的文件**不进**"在位但没入库"清单 —— 那格只放"本机有、别人的树里没有"这一类可执行欠件。
     assert prov["gaps"]["artifacts_not_tracked_in_git"] == []

@@ -34,6 +34,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import datetime as dt
+import hashlib
 import json
 import os
 import re
@@ -77,6 +78,12 @@ DEFAULT_METRIC_PROBE = os.path.join(W6_DIR, "probe_metric_coverage.json")
 DEFAULT_METRIC_VALUES = os.path.join(W6_DIR, "probe_metric_values.json")
 DEFAULT_PG_PROBE = os.path.join(W6_DIR, "_probe_pg_real.json")
 DEFAULT_INTEGRATION_LOG = os.path.join(W6_DIR, "_integration_pytest.log")
+W8_DIR = os.path.join(_bootstrap.ROOT, "backend", "reports", "w8")
+#: ③（QA 第 7 轮）G-1 的**入库取证件**：两份 pytest 日志的计数 ＋ 文件名 ＋ git 三面 ＋ 时刻。
+#: 为什么要它 = `.gitignore:47` 全局忽略 `*.log` ⇒ 那两份日志**永不入库** ⇒ G-1 的取证等级
+#: 结构性封顶在 `mtime_only`。本件把同一批读数连自报的 rev/dirty 一起落成 JSON ⇒ 可升到 `self_reported`。
+#: ⚠️ 它是**取证件、不是判定输入**：G-1 的红仍由 `parse_pytest_summary()` 当场从日志算，本件只供事后对表。
+DEFAULT_P0_SUMMARY = os.path.join(W8_DIR, "gate_inputs_p0_summary.json")
 #: 匣带**可复算性**探针（同一批 20 题、`--mode replay`、只测命中率）。
 #: 它不是批次读数 —— 它回答的是"报告里那些回放读数今天还能不能零成本重算"。
 DEFAULT_CASSETTE_PROBE = os.path.join(W6_DIR, "cassette_replay_probe.json")
@@ -626,7 +633,7 @@ def tau_facts() -> dict[str, Any]:
 
 #: 每格读哪几个入参产物。键名 = `gate_inputs()` 的形参名，一一对应，可 grep。
 GATE_EVIDENCE: dict[str, tuple[str, ...]] = {
-    "G-1": ("pytest_log", "integration_log"),
+    "G-1": ("pytest_log", "integration_log", "p0_summary_path"),
     "G-2": ("results_path",),
     "G-3": ("redteam_path",),
     "G-4": ("redteam_path", "pg_probe_path"),
@@ -765,6 +772,99 @@ def recompute_command(gate_id: str, artifacts: Sequence[Mapping[str, Any]]) -> s
     )
 
 
+def _git(*args: str) -> str:
+    """仓库根的一次性 git 读数（与 `_tracked_in_git()` 同原点，避免 `backend/` 相对的假阴性）。"""
+    try:
+        out = subprocess.run(["git", "-C", _bootstrap.ROOT, *args], capture_output=True,
+                             text=True, encoding="utf-8", errors="replace", timeout=15)
+    except Exception:
+        return ""
+    return (out.stdout or "").strip()
+
+
+def merge_p0_logs(offline: Mapping[str, Any], integration: Mapping[str, Any]) -> dict[str, Any]:
+    """把两份 pytest 日志的计数合成 G-1 的一份输入（**T-32 口径变更**，2026-10-04 第 10 轮）。
+
+    🔴 修的是"后写者覆盖"这一类失明。旧写法 `{**离线, **集成}` 会把 `failed` / `errors`
+    一并覆盖成**集成层**那两个数 ⇒ 离线面有红、集成面干净时 `red_split()` 读到 0，
+    **G-1 当场从 FAIL 翻成 PASS**（QA 第 7 轮 ④ 注入夹具实测坐实：离线 `1 failed, 2347 passed`
+    ＋ 集成 `107 passed` ⇒ 判定量 `{failed: 0, errors: 0}`、verdict = PASS）。
+    旧版只给 `passed` 留了两档，**红的两列没留** —— 正是"规模报了、没报红在哪一面"的形状。
+
+    现行口径（每一列都**两侧留档**，引用时能点名红在哪一面）：
+      · `passed` / `failed` / `errors` / `skipped` = 两侧**相加**；
+      · `failed_tests` / `error_tests` / `integration_files_seen` = **并集**（G-1 的 notes 逐条引它）；
+      · `integration_ran` = 两侧 **OR**；`pg_surface` = 有值的那一份（DDL／权限面只在集成日志里出现）。
+
+    ⚠️ 为什么不取 max：max 会**低估**"两面各一条红"那种形状（1＋1 ⇒ 1）。
+       相加的前提是两份日志的用例集**不相交**，这一前提由调用侧的
+       `not offline["integration_ran"]` 守住 —— 若离线日志自己点过 `tests/integration/*.py`
+       （= 喂的是整树 `-v` 那种日志），不进这一支：那份日志已含集成层的红，再加会重复计。
+       反证与两态夹具 = `backend/tests/eval/test_gate_inputs_p0_merge_two_state.py`。
+    """
+    merged = dict(offline)
+    for key in ("passed", "failed", "errors", "skipped"):
+        o, i = int(offline.get(key) or 0), int(integration.get(key) or 0)
+        merged[key] = o + i
+        merged[f"{key}_offline"] = o
+        merged[f"{key}_integration"] = i
+    for key in ("failed_tests", "error_tests", "integration_files_seen"):
+        o = sorted(set(offline.get(key) or ()))
+        i = sorted(set(integration.get(key) or ()))
+        merged[key] = sorted(set(o) | set(i))
+        merged[f"{key}_offline"] = o
+        merged[f"{key}_integration"] = i
+    merged["integration_ran"] = bool(offline.get("integration_ran")) or bool(integration.get("integration_ran"))
+    merged["pg_surface"] = offline.get("pg_surface") or integration.get("pg_surface")
+    merged["source_log"] = f"{offline.get('source_log')} + {integration.get('source_log')}"
+    #: 两面的集成说明各留一档（旧写法会吃掉离线那一句）。
+    merged["integration_note_offline"] = offline.get("integration_note")
+    merged["integration_note_integration"] = integration.get("integration_note")
+    merged["integration_note"] = integration.get("integration_note") or offline.get("integration_note")
+    merged["merge_policy"] = ("T-32：计数两侧相加、点名列取并集、`integration_ran` 取 OR"
+                              " ⇒ 任何一面的红都不会被另一面的 0 覆盖")
+    return merged
+
+
+def p0_summary_evidence(
+    offline: Mapping[str, Any] | None,
+    integration: Mapping[str, Any] | None,
+    path: str | None,
+) -> dict[str, Any]:
+    """③ 入库取证件与**当场解析**的两份日志对表：判定不读它，只报"对不对得上"。
+
+    对表只比四件计数与 `integration_ran` ⇒ 不一致就非空报出，
+    绝不让入库件变成第二份过期真相（那正是本项目反复踩的"两份真相"形状）。
+    """
+    row = {
+        "path": _evidence_rel(_resolve(path)),
+        "present": bool(path) and os.path.isfile(path or ""),
+        "loaded": False,
+        "declared": {},
+        "mismatch": [],
+    }
+    if not row["present"]:
+        row["mismatch"].append("取证件不在位 ⇒ G-1 的取证等级停在 `mtime_only`")
+        return row
+    data = _load(path)
+    if not isinstance(data, Mapping):
+        row["mismatch"].append("取证件不是 JSON 对象 ⇒ 无法对表")
+        return row
+    row["loaded"] = True
+    row["declared"] = {k: data.get(k) for k in ("generated_at", "git_rev", "git_dirty", "commit_count")
+                       if k in data}
+    for side, parsed in (("offline", offline), ("integration", integration)):
+        stored = data.get(side) or {}
+        for key in ("passed", "failed", "errors", "skipped"):
+            want = stored.get(key)
+            got = None if parsed is None else parsed.get(key)
+            if want is not None and got is not None and int(want) != int(got):
+                row["mismatch"].append(f"{side}.{key}: 取证件 {want} ≠ 当场解析 {got}")
+        if parsed is not None and bool(stored.get("integration_ran")) != bool(parsed.get("integration_ran")):
+            row["mismatch"].append(f"{side}.integration_ran 不一致")
+    return row
+
+
 def gate_inputs(
     *,
     results_path: str = DEFAULT_RESULTS,
@@ -773,6 +873,7 @@ def gate_inputs(
     pg_probe_path: str | None = DEFAULT_PG_PROBE,
     pytest_log: str | None = DEFAULT_PYTEST_LOG,
     integration_log: str | None = DEFAULT_INTEGRATION_LOG,
+    p0_summary_path: str | None = DEFAULT_P0_SUMMARY,
     loadtest_receipt: str | None = DEFAULT_LOADTEST_RECEIPT,
 ) -> dict[str, Any]:
     """§17.3 八格判定所需的**全部输入映射**（`evaluate_gates()` 的 kwargs）。
@@ -791,15 +892,16 @@ def gate_inputs(
     pg = pg_facts(pg_probe_path)
     pg_txt = pg_statement(pg)
 
-    p0 = parse_pytest_summary(pytest_log)
+    p0_offline = parse_pytest_summary(pytest_log)
     p0_integration = parse_pytest_summary(integration_log)
+    p0 = p0_offline
     if p0 and p0_integration and not p0["integration_ran"]:
-        p0 = {**p0, **{k: v for k, v in p0_integration.items() if k != "source_log"},
-              "source_log": f"{p0['source_log']} + {p0_integration['source_log']}",
-              #: 合并会覆盖 `passed`（后写者=集成层）⇒ 两份规模各自留一档，
-              #: 否则 G-1 那一格会把集成层的 107 说成整个 P0 面的大小。
-              "passed_offline": p0["passed"],
-              "passed_integration": p0_integration["passed"]}
+        #: 🔴 T-32：旧写法 `{**离线, **集成}` 会用集成层的 `failed`/`errors` 覆盖离线那两个数
+        #: ⇒ 「离线有红却判 PASS」。现走 `merge_p0_logs()`（两侧相加＋点名取并集，两档都留）。
+        p0 = merge_p0_logs(p0, p0_integration)
+    if p0 is not None:
+        #: ③ 与入库取证件对表（只报差，不参与判定）。
+        p0 = {**p0, "p0_summary_artifact": p0_summary_evidence(p0_offline, p0_integration, p0_summary_path)}
 
     results_map = {
         str(r.get("case_id")): {
@@ -931,6 +1033,7 @@ def build_payload(
     consistency_path: str = DEFAULT_CONSPATH,
     pytest_log: str | None = DEFAULT_PYTEST_LOG,
     integration_log: str | None = DEFAULT_INTEGRATION_LOG,
+    p0_summary_path: str | None = DEFAULT_P0_SUMMARY,
     metric_probe_path: str | None = DEFAULT_METRIC_PROBE,
     metric_values_path: str | None = DEFAULT_METRIC_VALUES,
     pg_probe_path: str | None = DEFAULT_PG_PROBE,
@@ -967,6 +1070,7 @@ def build_payload(
         pg_probe_path=pg_probe_path,
         pytest_log=pytest_log,
         integration_log=integration_log,
+        p0_summary_path=p0_summary_path,
         loadtest_receipt=loadtest_receipt,
     )
     grid = gi["grid"]
@@ -1036,6 +1140,7 @@ def build_payload(
                 "pg_probe_path": pg_probe_path,
                 "pytest_log": pytest_log,
                 "integration_log": integration_log,
+                "p0_summary_path": p0_summary_path,
                 "loadtest_receipt": loadtest_receipt,
             },
             report_git=git_rev(),
@@ -1667,6 +1772,72 @@ def render_markdown(p: Mapping[str, Any]) -> str:
 # 六、CLI
 # ---------------------------------------------------------------------------
 
+def _summary_side(parsed: Mapping[str, Any] | None, path: str | None) -> dict[str, Any]:
+    """取证件里的「一面」：四件计数 ＋ 点名清单 ＋ 日志文件名清单 ＋ 该日志的 sha256/mtime。
+
+    ⚠️ 日志本身**不入库**（`.gitignore:47` 全局忽略 `*.log`）⇒ sha256 是唯一能跨机核验的身份；
+       引用本件时要连 sha256 一起引，否则下一轮无法证明「取证件对的是那一份日志」。
+    """
+    parsed = parsed or {}
+    rel = _evidence_rel(_resolve(path))
+    tracked = _tracked_in_git([path])
+    out = {
+        "log_path": rel if rel else ("（未给）" if not path else "（仓库外 ⇒ 不写绝对路径）"),
+        "tracked_in_git": None if tracked is None or not rel else (rel in tracked),
+        "log_sha256": None,
+        "log_mtime_utc": None,
+        "passed": parsed.get("passed"),
+        "failed": parsed.get("failed"),
+        "errors": parsed.get("errors"),
+        "skipped": parsed.get("skipped"),
+        "integration_ran": parsed.get("integration_ran"),
+        "integration_files_seen": parsed.get("integration_files_seen"),
+        "failed_tests": parsed.get("failed_tests"),
+        "error_tests": parsed.get("error_tests"),
+    }
+    target = _resolve(path)
+    if target and os.path.isfile(target):
+        with open(target, "rb") as fh:
+            out["log_sha256"] = hashlib.sha256(fh.read()).hexdigest()
+        out["log_mtime_utc"] = dt.datetime.fromtimestamp(os.path.getmtime(target), dt.UTC).isoformat(
+            timespec="seconds")
+    return out
+
+
+def build_p0_summary(pytest_log: str | None, integration_log: str | None) -> dict[str, Any]:
+    """③ 生成 G-1 的入库取证件（与 `gate_inputs()` 共用同一把尺 = `parse_pytest_summary()`）。
+
+    自报键固定用顶层 `generated_at` ＋ `git_rev` ＋ `git_dirty` ——
+    `artifact_evidence()` 的 `_AT_KEYS` / `_REV_KEYS` 认的就是这两个名字；
+    换成别的名字 = 取证等级悄悄停在 `mtime_only` 而没人报（本项目最怕的「静默降级」形状）。
+    """
+    offline = parse_pytest_summary(pytest_log)
+    integration = parse_pytest_summary(integration_log)
+    merged = (merge_p0_logs(offline, integration)
+              if offline and integration and not offline.get("integration_ran") else offline) or {}
+    keys = ("passed", "failed", "errors", "skipped", "integration_ran",
+            "passed_offline", "passed_integration", "failed_offline", "failed_integration",
+            "errors_offline", "errors_integration", "failed_tests", "error_tests", "merge_policy")
+    return {
+        "artifact": "gate_inputs_p0_summary",
+        "purpose": "G-1 的入库取证件（QA 第 7 轮 ③）：两份 pytest 日志的计数连 rev/dirty/时刻一起入库，"
+                   "让取证等级从 `mtime_only` 升到 `self_reported`。"
+                   "⚠️ 判定输入仍是两份日志本身（唯一装配口 = `gate_inputs()`）；"
+                   "本件与日志不一致时 `gate_inputs()` 会在 `p0_tests.p0_summary_artifact.mismatch` 里报出来。",
+        "generated_at": dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
+        "git_rev": _git("rev-parse", "HEAD"),
+        "git_dirty": bool(_git("status", "--porcelain")),
+        "commit_count": int(_git("rev-list", "--count", "HEAD") or 0),
+        "ruler": "eval/reporter.py:parse_pytest_summary()（与 G-1 的判定输入同一把尺）",
+        "ruler_scope": "四件计数取日志**末 4000 字符**的 summary 行；点名面取全文"
+                       "（尺名 = `_FAILED_TEST_RE` / `_ERROR_TEST_RE` / `_INTEGRATION_FILE_RE`）",
+        "integration_ran_rule": "只看日志文本里有没有点到 `tests/integration/*.py` ⇒ 集成层必须 `-v` 跑",
+        "offline": _summary_side(offline, pytest_log),
+        "integration": _summary_side(integration, integration_log),
+        "merged_view_for_g1": {k: merged.get(k) for k in keys},
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="W6 评测报告装配（只读产物，零 LLM）")
     ap.add_argument("--results", default=DEFAULT_RESULTS)
@@ -1674,6 +1845,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--consistency", default=DEFAULT_CONSPATH)
     ap.add_argument("--pytest-log", default=DEFAULT_PYTEST_LOG)
     ap.add_argument("--integration-log", default=DEFAULT_INTEGRATION_LOG)
+    ap.add_argument("--p0-summary", default=DEFAULT_P0_SUMMARY,
+                    help="G-1 的入库取证件路径（对表用，不是判定输入）")
+    ap.add_argument("--emit-p0-summary", metavar="OUT", default=None,
+                    help="只生成取证件（零 LLM、零 PG）：两份日志的计数连 git 三面落成 JSON 后退出")
     ap.add_argument("--metric-probe", default=DEFAULT_METRIC_PROBE)
     ap.add_argument("--metric-values", default=DEFAULT_METRIC_VALUES)
     ap.add_argument("--pg-probe", default=DEFAULT_PG_PROBE)
@@ -1688,11 +1863,24 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-backup", action="store_true", help="默认覆盖前先 mv 备份（§C.6.1 纪律三）")
     args = ap.parse_args(argv)
 
+    if getattr(args, "emit_p0_summary", None):
+        summary = build_p0_summary(args.pytest_log, args.integration_log)
+        out_path = args.emit_p0_summary
+        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+        with open(out_path, "w", encoding="utf-8") as fh:
+            json.dump(summary, fh, ensure_ascii=False, indent=2, sort_keys=True)
+            fh.write("\n")
+        print(f"取证件已落 {out_path}（offline passed={summary['offline']['passed']}"
+              f" / integration passed={summary['integration']['passed']}"
+              f" / git_rev={summary['git_rev'][:7]} / dirty={summary['git_dirty']}）")
+        return 0
+
     payload = build_payload(
         results_path=args.results, redteam_path=args.redteam, consistency_path=args.consistency,
         pytest_log=args.pytest_log, integration_log=args.integration_log,
         metric_probe_path=args.metric_probe, metric_values_path=args.metric_values,
         pg_probe_path=args.pg_probe, cassette_probe_path=args.cassette_probe,
+        p0_summary_path=args.p0_summary,
         loadtest_receipt=args.loadtest_receipt, pressure_report=args.pressure_report,
     )
     md = render_markdown(payload)
