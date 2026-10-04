@@ -1110,3 +1110,10 @@ cd CommerceQL && git archive --format=zip -o "E:/01_实训/项目/CommerceQL_v1_
 ① 内嵌浏览器面板不可见时 `take_screenshot` 直接给 `NATIVE_BROWSER_VIEWPORT_UNAVAILABLE(viewport=0x0)`，`take_snapshot` 却照常工作 ⇒ **结构可读 ≠ 可截图**；换本机 Edge `--headless=new` ＋ CDP（独立 `--user-data-dir`，不动用户正在用的浏览器）才拿到图。
 ② 令牌注入第一次全失败，报"无法创建会话：令牌格式非法"，而我单独 curl 同一把令牌是通的 —— 决定性证据是脚本回显 **`len=7`**：我用 `src.replace('%TOKEN%', token)` 拼 JS，占位符没被替换、把字面量 `%TOKEN%`（正好 7 字符）填进了输入框。⇒ 拼注入串一律 `JSON.stringify(值)` 整段进模板，**不要对源码串做占位符 replace**。
 ③ 禁物规则写成子串匹配 ⇒ `deploy/.env` 误伤 `deploy/.env.example`，第一次打的包里**恰好缺了收件人唯一需要的模板文件**。⇒ 排除规则要按"整路径等值"写，且打完要**正面断言该在的在**（`.env.example` 在包 ＝ True），不能只断言不该在的不在。
+
+🔻 **同轮具名补记：交付包已按最终树重打（时刻 = 2026-10-04 14:3x +0800）**
+上面表里那两个哈希属于"提交 `8e5b029` 时的工作树"，随后又落了 §六.21 与 §9 那条 P1 ⇒ 已用最终树重打，**以这两行为准**：
+- 轻包 `E:\01_实训\项目\CommerceQL_交付_轻包_20261004.zip`｜**26.64 MB／1,429 件**｜`sha256 = 39236e5a4db8cfedbc8f5660f749c656778c2123377ff52bc143ec7694be3075`
+- 重包 `E:\01_实训\项目\CommerceQL_交付_含沙箱库_20261004.zip`｜**120.81 MB／1,430 件**｜`sha256 = 5cf5cb7c1363f09da5dde2e2e3e523dcedcffb9f6a9833c27d49652f920541c8`
+- 源 = 提交 **`8301532`**（远端同值）；两包 `testzip()` = `None`；断言同上（无 `deploy/.env`／无 `*.pem`／无 venv／无 `node_modules`，`deploy/.env.example` 在）。
+- ⚠️ 自指限制照旧：**本行不在这两个包里**（包不可能自含自己的哈希）⇒ 需要"含本行"的包，按 `pack.py` 那条命令对更新后的 HEAD 重跑即可，差异只有 `RELAY.md` 一个文件。
