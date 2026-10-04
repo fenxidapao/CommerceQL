@@ -1,9 +1,9 @@
 {
   "artifact": "gate_inputs_p0_summary",
-  "commit_count": 405,
-  "generated_at": "2026-10-04T12:44:25+00:00",
-  "git_dirty": true,
-  "git_rev": "e900105935d58980f47ea8632bd87a3a0958ff20",
+  "commit_count": 406,
+  "generated_at": "2026-10-04T12:55:00+00:00",
+  "git_dirty": false,
+  "git_rev": "4566e84fc6b98a6d4cdf7cd8ac12a69ed61b7bfe",
   "integration": {
     "error_tests": [],
     "errors": 0,
