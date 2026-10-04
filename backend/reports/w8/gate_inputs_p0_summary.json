@@ -1,9 +1,9 @@
 {
   "artifact": "gate_inputs_p0_summary",
-  "commit_count": 406,
-  "generated_at": "2026-10-04T12:55:00+00:00",
+  "commit_count": 411,
+  "generated_at": "2026-10-04T16:46:24+00:00",
   "git_dirty": false,
-  "git_rev": "4566e84fc6b98a6d4cdf7cd8ac12a69ed61b7bfe",
+  "git_rev": "772eba91abdb9eb8040dd206820b95c0116510a3",
   "integration": {
     "error_tests": [],
     "errors": 0,
@@ -22,9 +22,9 @@
       "test_semantic_materialization.py"
     ],
     "integration_ran": true,
-    "log_mtime_utc": "2026-10-04T12:38:52+00:00",
-    "log_path": "backend/reports/w6/_integration_pytest_1004_rT32.log",
-    "log_sha256": "b54aa36a9f88eea324561cf6e65d9ccbfacbc241815918d8a9b0c3379a3038a3",
+    "log_mtime_utc": "2026-10-04T16:34:32+00:00",
+    "log_path": "backend/reports/w6/_integration_pytest_1004_rT34b.log",
+    "log_sha256": "7401f3a8ea3c8f053bdc0184a71c1b082d5cf8ccf9e1a32f48119c3d96028edd",
     "passed": 107,
     "skipped": 0,
     "tracked_in_git": false
@@ -41,9 +41,9 @@
     "failed_tests": [],
     "integration_ran": true,
     "merge_policy": "T-32：计数两侧相加、点名列取并集、`integration_ran` 取 OR ⇒ 任何一面的红都不会被另一面的 0 覆盖",
-    "passed": 2466,
+    "passed": 2496,
     "passed_integration": 107,
-    "passed_offline": 2359,
+    "passed_offline": 2389,
     "skipped": 0
   },
   "offline": {
@@ -53,10 +53,10 @@
     "failed_tests": [],
     "integration_files_seen": [],
     "integration_ran": false,
-    "log_mtime_utc": "2026-10-04T12:36:33+00:00",
-    "log_path": "backend/reports/w6/_full_pytest_1004_rT32.log",
-    "log_sha256": "7e81f22a61451fec366c9d862cb2ed7895c4a656e7cad1c3ab30956ba6ded993",
-    "passed": 2359,
+    "log_mtime_utc": "2026-10-04T16:45:44+00:00",
+    "log_path": "backend/reports/w6/_full_pytest_1004_rT34b.log",
+    "log_sha256": "7cdc916ba9a42d34b498393291702dad1c0c261f45160c8f0e00bf3b521f0959",
+    "passed": 2389,
     "skipped": 0,
     "tracked_in_git": false
   },
