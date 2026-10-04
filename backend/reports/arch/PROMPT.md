@@ -1,5 +1,10 @@
 # 【窗口提示词 · 技术架构窗口（W-ARCH）】
 
+> 🔴 **本席位已停用（2026-10-04，W8 窗按总控裁定落此横幅）**：架构面的判据裁定与 `U-xx` 取号已并入 `backend/reports/w8/PROMPT.md`（现 v2.1 §0′），
+> **不要再开架构窗、也不要照本件正文做事** —— 它第 §一.3 条"输出现状报告…等用户确认后再动手"与 §13"接任第一天 checklist 复核 `U-121`"都是 09-28 的旧体制，
+> 与现行两窗串行制（W8＋QA）冲突。本件与 `RELAY.md` **只作史料**；同目录 **`HANDOVER.md` 的血案全表仍是 W8 的必读件**（见 `reports/w8/PROMPT.md` §3 按需读）。
+> 复算（零额度）：`git log -1 --format=%h_%s -- backend/reports/arch/PROMPT.md`、`grep -n "已停用" backend/reports/arch/PROMPT.md`。
+
 > 用法：把本文**下方那条分隔线之后的内容**整段复制，作为新会话的第一条消息（分隔线以上的三行是给你自己看的用法说明，不用复制）。
 > 骨架沿用 `reports/w7/PROMPT.md`（定位 → 契约纪律 → 现状 → 任务 → 必读 → 硬约束 → 决策点 → 交付 → 边界 → 环境坑），并按架构窗口的职责改写。
 > 配套：**`reports/arch/HANDOVER.md`**（岗位说明书，**新窗口必须先读**）｜`reports/arch/RELAY.md`（逐窗口转述件）｜本项目为 `E:\01_实训\项目\基于Text2SQL的电商数据分析Agent\CommerceQL`。

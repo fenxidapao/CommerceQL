@@ -1117,3 +1117,95 @@ cd CommerceQL && git archive --format=zip -o "E:/01_实训/项目/CommerceQL_v1_
 - 重包 `E:\01_实训\项目\CommerceQL_交付_含沙箱库_20261004.zip`｜**120.81 MB／1,430 件**｜`sha256 = 5cf5cb7c1363f09da5dde2e2e3e523dcedcffb9f6a9833c27d49652f920541c8`
 - 源 = 提交 **`8301532`**（远端同值）；两包 `testzip()` = `None`；断言同上（无 `deploy/.env`／无 `*.pem`／无 venv／无 `node_modules`，`deploy/.env.example` 在）。
 - ⚠️ 自指限制照旧：**本行不在这两个包里**（包不可能自含自己的哈希）⇒ 需要"含本行"的包，按 `pack.py` 那条命令对更新后的 HEAD 重跑即可，差异只有 `RELAY.md` 一个文件。
+
+---
+
+## §七 第 7 轮（W8 席位接续 · **提示词与长期指令整理轮** ｜ 2026-10-04 15:5x–16:2x +0800 ｜ 起始 HEAD `5307a94` ｜ 零额度 · 零跑批 · 未动共享栈 · 未起停容器 · 未连库）
+
+### 1. 接续代号（先自曝一处名分未定）
+
+§六.19–21 与两份 v2 接力件由前一手在 10-04 13:5x–15:13 落笔；`PROMPT.md` v2 头部把接续例子写成 `W8b`，但**前手没在本件自记代号** ⇒ 本手自称 **W8c**。请 QA 记账时定名（本手不冒认前手）。
+
+### 2. 本轮唯一裁定源 ＝ `reports/w8/PROMPT.md` §0′（八条），本段不抄内容
+
+总控 16:0x 批准整理 ＋ 重申「只有 QA 窗和 W8 窗会工作，W0／W1A／W4 等旧窗不工作」。八条里对本窗动作影响最大的三条：
+**① 写者按目录切、不按语义切**（`OVERVIEW.md`／`docs/**` 含 `07 §4.8`／`ACCEPTANCE.md`／仓库根 `eval/**` = W8；**QA 独占 `reports/qa/**`**）；
+**② 交付只剩两支文本**（W8 短回执 ＋ QA 任务块，"每窗一段粘贴块"停用）；**⑦ `P-` 队列本窗自裁**。
+⇒ 本轮**不改写** `QA_PROMPT.md`、不改写两份接力件里别人已写的句子；§4 是撞车登记。
+
+### 3. 现测读数（每条都是本手这轮跑的；尺 ＋ 结果）
+
+| 项 | 尺 ＋ 现读 | 时刻｜HEAD |
+|---|---|---|
+| 远端同点 | `git fetch` rc=0 ＋ `git ls-remote origin main` = `5307a941433e…` ＝本地 HEAD | 16:2x｜`5307a94` |
+| 提交数 | `git rev-list --count HEAD` = **391** | 16:06｜同上 |
+| 工作区 | `git status --porcelain` = 0 行（16:06）→ **3 行 M**（16:2x，见 §七.4） | 两个时点都写 |
+| 取号行 | `grep -n "^> \*\*下一个可用号" docs/07_*.md` = **`:1078` 行 = `U-135`** | 16:06｜`5307a94` |
+| 门禁产物 | `eval_metrics.json` 的 `gate_summary.passed = ['G-1']`、`counts = PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2／NOT_AVAILABLE 0`；`meta.git.rev = 079916d`、`dirty = true` ⇒ **不代表当前构建 `5307a94`** | 16:1x｜`5307a94` |
+| 闸门条数三上游 | `docs/07 §17.3` 在 **:3268**（写 G-1…G-8）／`docs/04 附录C` 现读**只有 `G-1…G-7`**／实现 `eval/gates.py:1`（仓库根） | 16:1x |
+| 压测定义唯一处 | `docs/04` 全文 `压测` **0 命中**、`四场景` **0 命中**、`场景` 6 次；`docs/07 §16.5` = **:3161 场景行（①–⑤ 五个）**、**:3164 必测断言行（6 条）** | 16:0x |
+| `eval` 路径 | `ls backend/` = `alembic.ini／app／pyproject.toml／reports／scripts／tests` ⇒ **`backend/eval` 不存在**；`eval/gates.py` = 31,635 B（10-03 22:48） | 16:1x |
+
+复算（一条命令出上面 5 个门禁数）：`python -c "import json;d=json.load(open('backend/reports/w6/eval_metrics.json',encoding='utf-8'));print(d['gate_summary']['passed'],d['gate_summary']['counts'],d['meta']['git'])"`
+
+### 4. 🔴 撞车登记：16:11–16:18 有**另一只手在写同一批共享文件**（本窗不是唯一写者）
+
+| 件 | 实测变化 | 判为哪只手 |
+|---|---|---|
+| `reports/qa/QA_PROMPT.md` | 16:11，diff `+43／−54`（起手四件改成"只给取数命令、不抄值"、加"旧窗已停止工作"） | **QA**（本窗全程未写、未 `add`） |
+| `Prompt_W8接力_开发窗.md`（仓库外） | 16:12，1,896 → 2,624 B（删 HEAD 快照、加"编制只有两只窗"） | **QA**；本窗随后只做三处定点 Edit（边界那句 ＋ 两处 v2.1 指针） |
+| `Prompt_QA接力_文档与派单窗.md` | 16:11，2,433 → 2,809 B | **QA** |
+| `.qoder/memory` **user 层** | 16:14–16:16：`user-role` 3,632→3,296 B、`feedback-report-only-measured` 8,736→10,356→7,088 B、`feedback-list-defaults` 3,746→4,273→2,551 B、`MEMORY.md` 1,400→1,467 B | **QA** ⇒ 本窗**没动 user 层任何一件**（原计划的"删三段覆盖前版本"由它做完，已核：三段正文现在都在 `E:\01_实训\项目\CommerceQL冗余\memory-dedupe-20261004.md`，该件 8,003 B 存在） |
+| `.qoder/memory` **项目层** | 16:13 `arch-ruling`、16:16 `qa-handover` 4,691→5,081 B、16:17 `env-pitfalls` 62,538→62,601 B、16:18 `delivery-protocol`；`MEMORY.md` 索引 7,077 → **2,793 B**（最长行 1,523 → **224** 字符） | **两只手都进过**（`MEMORY.md` 瘦身 ＝ QA；`project-w8-single-dev-window.md` 的 v2.1 段 ＝ 本窗） |
+
+⇒ **本窗自曝的第一条后果**：我 16:1x 在 `project-delivery-round-protocol.md` 第 4 件里插了两行"停用这条前半"，而 QA 已在同件末尾写了语义相同的「🔻 第 6 件 三处降档」⇒ **我造出了第三份抄本**，正是本轮在审的病。16:19 已**撤掉我那两行、保留 QA 那份**。复算：`grep -c "v2.1 停用这条的前半" project-delivery-round-protocol.md` = **0**、`grep -c "第 6 件" ` = **1**。
+⇒ **要总控定的一件事（不自裁，因为动的是别手的写面）**：把**长期指令面**（两层记忆 ＋ 两份接力件 ＋ `reports/arch/**`）的整理权收给一只窗；建议 = **归 W8**，QA 只留 `reports/qa/**`。否则"去重"这件事本身每轮都在产新抄本。
+
+### 5. `T-29` 的处置：**盘上没有这张单**（转述 ≠ 证据）
+
+QA 写的项目记忆索引里有一句「另记 `w8/PROMPT` §1↔§2⑤ 写面冲突（**T-29 待 W8 裁**）」⇒ 本窗现读：
+`grep -o "T-2[0-9]" backend/reports/qa/TASK_BOARD.md | sort -u` 最大 = **`T-27`**，**`T-28`／`T-29` 都没有行**；`TASK_BOARD.md` mtime = 10-04 **02:41**（本轮未变）。
+⇒ 结论：**冲突本身已按 §0′ ① 裁完**（W8 写全部入库件含 `07 §4.8`，QA 独占 `reports/qa/**`；`OVERVIEW §6/§7/§9` 由 W8 刷新、每格带口径五件），但**单号未落账 ⇒ 本窗不占 `T-xx` 号**（续号尺归 QA：只认 `TASK_BOARD.md` 现读最大值 ＋1）。
+🔴 顺带一条同族新形态：**索引行也能冒充"已开的单"**（与 `07 §4.8` 那句"指针行会冒充已占用号"同族，只是面从 `U-xx` 换到 `T-xx`）⇒ 已写进本段，供 QA 记账时补尺。
+
+### 6. 本轮改了哪些件（写面清单 ＋ 复算）
+
+| 件 | 改了什么 | 复算 |
+|---|---|---|
+| `reports/w8/PROMPT.md` | v2 → **v2.1**：新增 §0′ 八条订正表；§1 修 `eval` 真实路径；§2⑤ 写面只剩 `reports/qa/**`；§3 拆"每轮必读四件／按需"；§4 两条 🔻 补记（16:06 与 16:1x）；§5 三处（P- 自裁／串行资源表／回执模板第三行） | `git diff --stat` ＝ 本件；`grep -c "v2.1" ` = 10；表列数尺 = 2 个表块、宽度异常 **0** |
+| `reports/arch/PROMPT.md` | 顶部加 🔴 **停用横幅**（判据＋取号已并入 W8；正文"等用户确认再动手／§13 复核 `U-121`"不得再执行；`HANDOVER.md` 血案表仍为必读） | `grep -n "已停用" backend/reports/arch/PROMPT.md` |
+| `Prompt_W8接力_开发窗.md`（仓库外，总控件） | 三处定点：边界那句改成 v2.1 ① 的写面切法；权威版本号 → v2.1 ＋"先读 §0′"；落盘三件里"并发表"→"串行资源表" | `grep -n "唯一别碰的写面" ../../Prompt_W8接力_开发窗.md` |
+| `project-w8-single-dev-window.md`（项目记忆） | 追加 🔻 v2.1 定版段（三条体制事实 ＋ 两条真跑过的复算命令）；两处就地 🔻（14 行"不自取 `U-xx`"、42 行"取号权没转移"标作废） | `grep -c "v2.1 体制定版"` = 1 |
+| 本件 ＋ `DELIVERY.md` | §七（本段）＋ 第 7 轮交付行 | `tail -1 backend/reports/w8/DELIVERY.md` |
+
+**本窗故意未做**（不是漏）：user 层记忆（别手 16:16 后未再动 `feedback-self-serve-env`，那格"按窗口粒度答并发"仍待改 ⇒ 等 §七.4 的整理权定了再收）；`QA_PROMPT.md` 的六处过期文本 ⇒ 见 §七.9 交给 QA 自己落；四份大体积记忆件的**内部**去重（`env-pitfalls` 里"粒度"三处、"面"两处、"集合差"两处；`arch-write-discipline` 那段自标"期望值已过期，只作史料"的约 35 个脚本名）**一行没删**。
+
+### 7. 遗留与 `UNVERIFIED`（本窗对 §4 任务池的进度＝零）
+
+- **本轮没跑测试／门禁／集成／UI** ⇒ `U-131`（同租户跨属主会话可读）**未动**、`A.7.1／A.7.2／A.9.3` 三端点**未接线**、门禁**没重算**、`OVERVIEW §6/§7/§9` **没刷新**。PROMPT §4 里除 §七.3 那七行外**仍是前手 14:2x 的读数**。
+- `OVERVIEW.md:8` 证据行仍写 `b571b40`、§6 提交数格仍非 391 ⇒ 现属 W8 写面（§0′ ①），下轮开工第一件事随跑批一起刷。
+- 未查：`docs/07 §4.8` 里 `U-135` 以下是否已被任何件"名义占用"（本轮只取号行，没做双向 grep）⇒ 若要取号，先按老尺 grep 代码 ＋ commit message。
+
+### 8. 串行资源（本轮唯一争用面）
+
+- `git` 索引：本窗只 `add` 五个文件（`w8/{PROMPT,RELAY,DELIVERY}.md` ＋ `arch/PROMPT.md` ＋ 本段），**`backend/reports/qa/QA_PROMPT.md` 那 3 行 M 之一不 add、不 stash、不"顺手整理"**。
+- 未争用：共享 `ecom`、共享栈、被测镜像、匣带、`OVERVIEW.md`、`docs/**`。
+
+### 9. 给 QA 的同步块（本窗不代改，请 QA 自己量了落笔）
+
+```
+[→QA 整理轮 · 零花费] ① 体制：写者已按目录切——OVERVIEW.md／docs/**（含 07 §4.8）／ACCEPTANCE.md／仓库根 eval/** = W8 写；你只写 reports/qa/**。
+  你那份 QA_PROMPT 顶部 v2 §3「docs 同步性订正归你」与 §2 纪律行「docs/** 只读（不在 git 里）」都跟这条冲突，请就地作废或改指 w8/PROMPT.md §0′。
+② 单号：你说"T-29 待 W8 裁"，但 TASK_BOARD.md 现读最大 T-27、mtime 10-04 02:41 ⇒ 请补尺：T-xx 只认表内现读最大值＋1，索引行/散文里的号不算已占用。
+③ 判据原文：04 全文「压测」0 命中、「四场景」0 命中；压测唯一定义处 = docs/07 §16.5 的 :3161（场景 ①–⑤ 五个）＋ :3164（必测断言 6 条）。你 §5-C／§8.2 那两处"四场景"要改指这两行。
+④ 闸门条数：定义处 07 §17.3:3268（G-1…G-8）、04 附录C 只有 G-1…G-7、实现 eval/gates.py（仓库根，backend/ 下无 eval/）。引条数必须点名是哪一份。
+⑤ 产物身份：eval_metrics.json 的 meta.git.rev=079916d 且 dirty=true，当前 HEAD 5307a94 ⇒ §7 那格请按"不代表被测构建"写。
+⑥ 复算：git -C CommerceQL ls-remote origin main；git -C CommerceQL status --porcelain；
+   python -c "import json;d=json.load(open('backend/reports/w6/eval_metrics.json',encoding='utf-8'));print(d['gate_summary']['passed'],d['meta']['git'])"
+```
+
+### 10. 本窗自曝（三条）
+
+① **我造了第三份抄本**（§七.4）：在别手已写「三处降档」的同件里又插了一遍同义规矩 ⇒ 撤了。教训：**写记忆前先 `ls -l` 看 mtime**，比"写得对"更省一轮。
+② **16:06 那格"工作区 clean"只活了 5 分钟**：状态级断言必须写两个时点，不能回去改第一条 ⇒ PROMPT §4 用 🔻 再补一条，这才是"历史读数不改写"的正确用法。
+③ **我给出一条自己没跑过的复算命令**（往记忆里写 python 单行时漏 `import time`）⇒ 违反"复算入口必须能原样跑出那个数"，已换成 §七.4 那两条 16:16 真跑过的尺。下次写"复算"二字前先跑一遍，别先落笔。
