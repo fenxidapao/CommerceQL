@@ -134,3 +134,12 @@
 - 进度对表：**P0／P1 零进展**（`U-131` 未动、顶栏那 **四条**未接端点 A.7.1／A.7.2／A.9.3／A.9.4 未落地（🔻 前手只数了三条，现测见 §七.12）、`OVERVIEW §6/§7/§9` 未刷新、门禁产物仍 `rev 079916d` ＋ `dirty`）⇒ **本行不得被读成"交付面有推进"**。
 - 🔻 **同轮补记（16:2x，提交 `f7076d9` 之后）**：上面"改的面"少列了一批 ⇒ 本窗随后又定点改了**项目记忆四件**（`memory-layers` 规则 1＋2 实测证伪后改写、`sole-writer` 加两处降档、`reference` 加定名尺、`MEMORY.md` 索引补 4 条钩子），并把 §七.6 的写面清单补成 `RELAY.md` **§七.11**；第二笔提交 `dcf1c1d` 只动本窗自己的 `RELAY.md` ＋ 本件（门禁**依旧没重算**）。
 - 🔻 **同轮补记（16:3x）**：QA 于 16:22 更新 `TASK_BOARD`、16:25 随 `6d7c208` 入库，开出 **`T-28`（P0 · `U-131`，判据 `docs/07:1159` 本窗已复核 = 唯一命中）** ＋ **`T-29`（P2 · 就是要裁 §1↔§2⑤ 写面冲突）**。⇒ **`T-29` 本轮已处置**（§0′ ① 定"全归 W8"＋补 `_refs/` 属主＋§4 三条读数重跑），处置细节与两处纠前手数（路由 `:27-29` 非 `:33-35`；未接线端点**四条**非三条，漏的是 A.9.4 `EvalReportPage.tsx:149`）见 `RELAY.md` **§七.12**。**`T-28` 未开工**（下轮主单，本轮零进展）。
+
+## 第 8 轮交付（**T-28 · `U-131` 修复** ｜ 2026-10-04 17:0x–17:2x +0800 ｜ 起始 HEAD `55751e0`、代码 `4a070ae` ｜ **本轮花了钱**：18 条调用／**¥0.028686**（全非峰）｜ **动了共享栈**：`api` 重建 ＋ recreate ｜ 一次性库零、未跑迁移）
+
+- ① **改了什么**：`app/api/state_store.py`（`SessionMeta.user_id` `:157`、`create_session` 写入 `:354`、**`get_session` 单一强制点** `:379`、内部拒绝计数 `:115`、载荷重建补属主 `:450`）＋ `tests/contract/test_api_endpoints_contract.py` 新增 `TestSessionOwnership` **7 条**。**键与键族一字未动**（判据⑦），`app/cache/keys.py` 不在改动集 ⇒ `git show --stat 4a070ae` 只有两文件。
+- ② **三面结案（活体，被测构建 = `4a070ae`，两层身份见 `RELAY.md` §八.6）**：读 = 非属主 `GET` **404**；写 = 非属主 `POST /query` **404**（`task_id=None`、0 帧）；**推理 = 机械可证"不适用"**（那一臂连 `GraphDeps` 都没构造）。每个 404 之前属主已真实产生一轮 ⇒ **不是空靶**。复算：`cd deploy/loadtest ＋ …python.exe probe_session_owner_context.py --target http://127.0.0.1:8000/api/v1 --tokens <两支令牌文件> --out E:/tmp_w7/x.json`（**不带 `--control`** 才是非属主臂；`:18000` 在本机连不通）。
+- ③ **离线面**：新契约 7 passed ＋ 整文件 **31 passed**；全树 **2,362 passed / 0 failed / 9 errors**（9 条全是 `tests/integration` 缺 DSN ⇒ 环境未备，**0 条断言失败**）；`mypy` 过、`ruff` 全树过；**`lint-imports` 未跑成**（gbk 崩）⇒ 该格 `UNVERIFIED`。
+- ④ 🔴 **顺手修掉一处会产假话的取证件**：`probe_session_owner_context.py` 的 `--control` 是**换臂不是加臂**（`asker = owner if args.control`），而旧 `5_owner_get` 无条件写 `nonowner_followup_written_into_owner_session=True` ⇒ 正对照臂下产物自称"非属主把追问写进了属主会话"。改后同臂复跑 = **False**（新增 `control_followup_present_in_owner_session=True`）。旧产物那份自相矛盾的读数已在 `RELAY.md` §八.5 点名，**不得引用**。
+- ⑤ **对外文档面**：`OVERVIEW.md §9` 的 `U-131` 那格从"未修"改为 **修复已落地、待验收**（原历史读数保留）；`§6/§7` **没刷**（门禁没重算）。🔴 对外仍不得写"门禁通过"，也**不得写"跨用户隔离已达成"**；`U-129` 状态不变（旁证只到客户端面，审计三格未查 ⇒ 见 §八.5 末段）。
+- ⑥ **两条自曝**：借别窗永久件时先没读它的分支就跑了第一轮（差点把正确的正对照报成"写侧未闭合"）；照抄 QA 块坐标 `:191/:226` 做基准（本手现读 `:189/:405`，一半位移是自己插的行造成的）⇒ 跨窗坐标一律各自按尺引。

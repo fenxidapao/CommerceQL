@@ -1237,3 +1237,98 @@ QA 写的项目记忆索引里有一句「另记 `w8/PROMPT` §1↔§2⑤ 写面
 EOL 尺（16:2x 实跑，rc=0，输出 12 行）：`cd "C:/Users/林琪荣/.qoder/projects/E--01---------Text2SQL-------Agent/memory" && python -c "import glob;[print(f,open(f,'rb').read().count(13),open(f,'rb').read().count(10)) for f in sorted(glob.glob('*.md'))]"`
 ⇒ 本窗改的四件里三件 **CR=0**（`memory-layers` 0／40、`sole-writer` 0／36、`reference` 0／39），索引 `MEMORY.md` 是 **CRLF**（13／13）⇒ 补钩子时按 CRLF 走；`env-pitfalls` 那 1 个杂 CR 已被别手在 16:17–16:2x 归一（现读 0／215）。
 🔴 仍未做（不是漏，是**主动让手**）：`env-pitfalls`／`arch-write-discipline`／`w6-eval-window-state` 三件的**内部去重**（别手 16:17–16:18 正逐件走过 ⇒ 再进就撞）；user 层 `feedback-self-serve-env` 的"按窗口粒度答并发"条（16:16 后未动，但属别手面）。这两项等总控把**长期指令整理权**定给一只窗之后一并收。
+
+---
+
+## §八 第 8 轮（**T-28 ＝ `U-131` 修复轮** ｜ 2026-10-04 17:0x–17:2x +0800 ｜ 起始 HEAD `55751e0`、代码提交 `4a070ae` ｜ **本轮花了钱**：属主 5 次进图 turn／18 条调用／**¥0.028686**，全部 `is_peak=false` ｜ **动了共享栈**：`api` 镜像重建 1 次 ＋ recreate 1 次（一次性库零、未跑迁移）
+
+### 1. QA 块给的六条起点读数，本手逐条复测（不一致处点名，不互认）
+
+| # | QA 块（15:2x–15:4x @ `5307a94`） | 本手现测（17:0x–17:2x @ `4a070ae`） | 判定 |
+|---|---|---|---|
+| ① 载荷无属主 | `state_store.py:140-146` 七个字段、无 `user_id` | 修复前 `SessionMeta` 确为 7 字段无属主（`git show 55751e0:…` 复算）；修复后 `user_id` 在 `:157`、写入点 `:354` | **一致** |
+| ② 键只到租户级 | `keys.py:177` = `sess:meta:{tenant}:{session}` | 同（比对逻辑没进键 ⇒ 判据⑦ 守住） | **一致** |
+| ③ 两个入口 | `query.py:182`／`session.py:118` | `grep -n "store.get_session"` = **`query.py:182` ＋ `session.py:118`**，全仓**只有这两个调用点** | **一致** |
+| ④ 契约缺臂 | `:191`（`ss_nope`）／`:226`（`ss_ghost`） | 本手现读 = **`:189`**（`ss_nope`）／**`:405`**（`ss_ghost`）。`ss_ghost` 的位移是本窗插入 185 行所致；`ss_nope` 那 **2 行差**不是本窗造成的（插入点在它之后）⇒ 两份坐标不可互认，各自按尺引 | **部分不一致** |
+| ⑤ 结案靶子在位 | 两个永久件 | `deploy/loadtest/probe_session_owner.py` **5,650 B**、`probe_session_owner_context.py` 原 **13,348 B**；**本窗未新造探针** ⇒ 但读码读出一件必须报的事，见 §八.5 | **一致 ＋ 一处器件缺陷** |
+| ⑥ 门禁产物非当期 | `rev=079916d`／`dirty`／8 格里 5 格 `self_reported_rev=null` | `gate_summary.passed=['G-1']`、`counts = PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2`、`meta.git.rev=079916d`、`dirty=true` | **一致**（`self_reported_rev` 那 5 格本手**未重算** ⇒ 只引 QA 的数，不升格） |
+
+### 2. 判据四条逐条对表（原文只认 `docs/07:1159`，尺 = `grep -cE "^\| \*\*U-131\*\*" docs/07_技术设计文档_TDD.md` = **1**）
+
+| 判据 | 落点 | 怎么证的 |
+|---|---|---|
+| ① 载荷与类型都带属主 | `state_store.py:157`（`SessionMeta.user_id`）＋ `:354`（`create_session` 写进 JSON） | 契约测试 `test_create_session_persists_owner_in_payload` 直读 Redis 载荷断 `user_id == "u_001"`；活体面 `redis-cli GET sess:meta:T_A:ss_88c4…` 现读含 `"user_id":"u_t28_owner"` |
+| ② **单一强制点** | `get_session`（`:379`）一处比对；端点**零改动** | `grep -rn "store.get_session" app/` 仍只有两个调用点 ⇒ 404 分支自动生效；🚫 没有第三处比对（判据② 禁的就是这个） |
+| ③ 缺失也 fail-closed ＋ 一条内部 WARN 计数 | `:379` 内 `if not owner or str(owner) != ctx.user_id` ＋ `SESSION_OWNER_DENIED`（`:115`）＋ `:450` 载荷重建补属主 | 两条测试：`test_legacy_payload_without_owner_fails_closed`（旧无主载荷 ⇒ 连属主本人 404）与 `test_denied_read_bumps_internal_warning_counter`（一次拒绝 ⇒ 计数 **+1**，不是"日志里应该有"） |
+| ④ 三面 ＋ 契约同型断言 | `tests/contract/test_api_endpoints_contract.py` 新增 `TestSessionOwnership` **7 条** | 见 §八.3（活体）＋ §八.4（离线） |
+| ⑤⑥⑦ 禁止项 | 未返回 403／401（测试直接断 `!= 403`）；无管理员豁免分支（码里无 role 判断）；键与键族一字未动 | `git show --stat 4a070ae` = 只有 `state_store.py` ＋ 契约件两文件；`app/cache/keys.py` **不在改动集内** |
+
+### 3. 三面结案证据（**活体**，被测构建 = `4a070ae`，`commerceql-api-1` @ `127.0.0.1:8000`）
+
+| 面 | 读数 | 产物（仓库外，md5 在此以便复算） |
+|---|---|---|
+| **读** | 非属主 `GET /session/{sid}` = **404**、`owner_q1_readable_by_nonowner = False`、`turn_count = 0` | `E:/tmp_w7/probe_owner_context_t28_nocontrol.json`（`9f35b943…`） |
+| **写** | 非属主 `POST /query` 带属主 `sid` = **404 `SESSION_NOT_FOUND`**、`task_id = None`、**`events_seen` 为空**（连 `ack` 都没有）、属主侧 `nonowner_followup_written_into_owner_session = False`、`turn_count` 仍 = 1 | 同件 ＋ `probe_owner_t28.json`（`baafd6dc…`，`probe_session_owner.py --owner-ask`：`[判定] 符合契约（非属主被拒）`） |
+| **推理** | **机械可证"不适用"**：非属主那一臂 0 帧 0 `task_id` ⇒ 端点在**步骤 3（会话存在性）**就退出，`normalize`／`gen_sql`／LLM 一次都没被碰。正对照同在：属主 Q1 = 200、`stages_seen` 到 `executing／gate_passed`、terminal `complete` | 同件（`2_owner_q1` vs `4_nonowner_followup` 两格并列） |
+
+⚠️ 三面都是**非空靶**：每个 404 之前，同一会话已由**属主**真实产生过一轮（Q1 走完图、审计与 `turn_count=1`）⇒ "非属主读到 0"不是"本来就没内容"（pre-fix-0 那条守卫在这格是主动做的）。
+
+### 4. 离线面（零额度）与静态面
+
+| 件 | 读数 | 尺 |
+|---|---|---|
+| 新契约类 | `TestSessionOwnership` **7 passed** | `cd backend ＋ PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest tests/contract/test_api_endpoints_contract.py -q -k "Ownership or persists_owner"` |
+| 整个契约文件 | **31 passed / 0 failed** | 同上不带 `-k` |
+| 全树（离线，含 docstring 面） | **2,362 passed / 0 failed / 9 errors / 81.77s / rc=1**（HEAD `55751e0` ＋ 本窗工作树）| `cd backend ＋ … -m pytest -q -rfEs --continue-on-collection-errors` |
+| 那 9 条 error 的性质 | **全部** `tests/integration/*` 的 `RuntimeError: 环境变量 …DSN` ⇒ **环境未备类，0 条断言失败**（与 QA_PROMPT §3 的旧基线"10 errors"不同源，跨 HEAD 不可比） | `grep -c "^ERROR tests/integration" ＋ grep -cE "^FAILED"`（后者 = **0**） |
+| 类型／风格 | `mypy` 两文件 **Success**；`ruff check .`（`backend/` 下）全树 **All checks passed** | 命令见 §八.6 |
+| `lint-imports` | **没跑成**：`.venv/Scripts/lint-imports.exe` 在这台机器抛 `'gbk' codec can't decode byte 0xae`（既有形状，非本次引入）⇒ 本格 `UNVERIFIED` | 直调 exe、**不接管道**看真 rc |
+
+### 5. 🔴 本轮顺手逮到并修掉的**取证件缺陷**（`deploy/loadtest/probe_session_owner_context.py`）
+
+读码（`:230`）见 `asker = owner if args.control else other` ⇒ **`--control` 是"换臂"而不是"加一臂"**；而 `5_owner_get` 里那格以前**无条件**写
+`nonowner_followup_written_into_owner_session = any(追问在属主会话里)` ⇒ 正对照臂下产物会**一边写 `asked_by = owner(正对照)`、一边写"非属主的追问被写进了属主会话"**。
+⇒ 谁按那个布尔结案，就会把一次**正确的**正对照读成"写侧污染仍在"。修法：按臂拆键（旧键名保留、正对照臂下如实写 `False`；新增 `control_followup_present_in_owner_session`）。
+**改后同臂复跑**（`E:/tmp_w7/probe_owner_context_t28_ctrl2.json`，`b7a20147…`）：`asked_by = owner(正对照)`、`q_http = 200`、
+`nonowner_followup_written_into_owner_session = **False**`（改前那次 = `True`）、`control_followup_present_in_owner_session = True` ⇒ 器件不再产假话。
+
+附带一条**只算读数、不算结案**的旁证：同臂里属主在自己会话上的**第 2 轮**追问 = 200、`task_id` 有值、`terminal_without_any_stage = False`、`terminal_digest_same_as_turn1 = False`
+⇒ 客户端面看不到 `U-129` 的崩形或静默复用形。**但 `U-129` 的判据是审计三格并报**，本窗没查审计面 ⇒ **不得据此写 `U-129` 已修好**（状态仍是"待验收"）。
+
+### 6. 被测构建身份（两层证据，改前／改后各一次）
+
+- **改前**：`docker exec commerceql-api-1 python -c "import inspect,app.api.state_store as s;print('SESSION_OWNER_DENIED' in inspect.getsource(s))"` = **False**（且容器内该文件 `grep -c user_id` = 5）⇒ 旧镜像确实没有本次改动。
+- **改后**：同一条 = **True**；`docker exec commerceql-api-1 sh -c "md5sum /srv/app/api/state_store.py"` = **`e31e41c3f153a6f809a57e584f2c28a9`** = 仓库文件 md5（LF 归一前后同值 ⇒ 行尾不是变量）@ HEAD `4a070ae`。
+- 栈身份不是"阶段 0 骨架"：容器内 `http://127.0.0.1:8000/api/v1/healthz` 现读 `status=ok`、`graph_compiled=true`、`llm_reachable=true`、`embedding_reachable=true`、`bundle_version=2026.09.14.1`（`/openapi.json` 在生产构建下**不渲染**，所以 target_check 走 healthz ＋ import 级，不走 openapi）。
+- ⚠️ 宿主端口 = **`127.0.0.1:8000`**（compose `ports: "127.0.0.1:8000:8000"`）⇒ 探针默认的 `:18000` 在这台机器上**连不通**（本窗第一次 curl 得 `http=000`），必须显式 `--target`。
+
+### 7. 花费口径（事后报，`§0′ ④`）
+
+- **本轮实花**：**18 条调用／¥0.028686**，`bool_and(is_peak=false) = true` ⇒ **全部非峰档**；本轮均值 **¥0.001594/调用**。
+- **几何**：3 次探针运行里**属主**共 5 次进图 turn（`probe_session_owner.py --owner-ask` 1 次；`context --control` Q1＋正对照追问 2 次；`context` 无 control Q1 1 次；修器件后复跑 control 1 次）；**非属主那些臂 ¥0**（404 不进图 —— 这本身就是修复的证据形状）。
+- **台账前后**：改前 `1,656 行／¥2.725108`（`max(created_at)=2026-10-04 06:09:59Z`）→ 改后 `1,674 行／¥2.753794`，增量 = 18／¥0.028686（**逐字对得上 §八.7 第一条**）。
+- **单价分档现读**（出价前先跑的那把尺）：`select is_peak, count(*), round(avg(cost_cny),6) from app.cost_ledger group by 1;` ⇒ 非峰 **1,238／¥0.001357**、峰 **418／¥0.002500**。
+- ⚠️ 历史所有花费仍是**下界**（`l4_score` 曾不进累加器）。
+
+### 8. 串行资源（本轮争用面）
+
+- **共享栈**：`api` 镜像重建 ＋ recreate（**独占动作**，QA 同期若在读活体面会被换了构建 —— 复算前请重取 `Config.Image` 与 `md5sum`）。
+- `git` 索引：本轮两次提交都按名 `add`（`4a070ae` = 码＋契约；下一次 = 探针件 ＋ `OVERVIEW §9` ＋ 本两件账面）。
+- 零争用：共享 `ecom` 写面（**没跑迁移、没跑 `tests/integration`**）、匣带（未重写）、一次性库（未建）。
+- 令牌卫生：两支 dev 令牌写在 `E:/tmp_w7/`（仓库外）且**用完即删**，17:1x 已 `rm`，现读 `ls | grep -c tok` = **0**；公钥未覆盖（未加 `--force-public-key`）⇒ 不打断别人的联调令牌。
+
+**提交前的凭据字面量自查（两把尺，`§2①` 的工序）**：尺 = 拿 `deploy/.env` 的 21 个非空值对"待提交四件"做**字面量包含**检查（值不打印，只报键名与行号）。
+
+| 结论 | 数 |
+|---|---|
+| **本轮 diff 新增行命中** | **0**（`git diff -U0` 只取 `+` 行再逐值 count） |
+| 真凭据（`DEEPSEEK_API_KEY`／`DRAIN_TOKEN`／JWT 私钥口令）在四份件里 | **0** |
+| `OVERVIEW.md` 既有命中 6 处 = 哪些 | `LLM_MODEL_FAST` ×3（`:98/:340/:498`）＋ `LLM_MODEL_STRONG` ×2（`:98/:498`）＋ `EMBEDDING_MODEL` ×1（`:94`）⇒ **是模型标识符、不是秘密**（对外技术栈本来就要写它）；它们与 `.env.example` 不同值只是因为示例文件留空／给了别的默认值 |
+| `RELAY.md` 既有命中 6 处 = 哪些 | dev 占位形态（`app_rw_pwd`／`app_ro_pwd` 族，`.gitleaks.toml` 按形态放行）＋ 配置串（`TIMEZONE`／`CORS_ALLOWED_ORIGINS`／`DEEPSEEK_BASE_URL`）⇒ 同属 `U-134` 那笔"轮换 vs 豁免"未裁项，**不是新暴露** |
+| ⚠️ 方法自曝 | 第一版脚本把"只在 `.env` 出现的键"当成真凭据 ⇒ 误报 6 处（模型名被点红）。**"命中"要分两把尺：与 `.env.example` 同值 = dev 形态；值本身是不是秘密要看键语义**。第二版按键名逐个报，才判清 |
+
+### 9. 本窗自曝（三条）
+
+① `probe_session_owner_context.py` 那个 `--control` 语义我是**读码才知道**的 —— 第一次跑直接带着 `--control`，产出了一份自相矛盾的产物（`asked_by=owner` 却报"非属主写入"）。要是没往下读第 5 步的码，就会把它当"写侧未闭合"报出去。**教训**：借别人的取证件，先读它的分支再跑。
+② §八.1 里我一度照抄 QA 块的 `:191/:226` 做基准 —— 现读 `:189/:405` ⇒ 差异一半是我自己插入造成的、一半不是。两份坐标今后**各自按尺引**，别互认。
+③ `lint-imports` 那格我还是**没跑成**（gbk 崩）。按纪律写 `UNVERIFIED`，不拿"以前绿过"顶替。
