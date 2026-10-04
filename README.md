@@ -25,7 +25,7 @@ docker compose -f deploy/docker-compose.yml up -d --build pg redis api
 
 # 3) 验三探针
 curl -i http://127.0.0.1:8000/api/v1/healthz/live     # 期望 200
-curl -i http://127.0.0.1:8000/api/v1/healthz/ready    # 阶段 0 期望 503（硬依赖未接）
+curl -i http://127.0.0.1:8000/api/v1/healthz/ready    # 当前栈实测 200（阶段 0 那句"期望 503"已过期；⚠️ 探针必须带 /api/v1 前缀，裸 /healthz/ready 是 404）
 curl -i http://127.0.0.1:8000/api/v1/healthz          # 期望 503 + degraded_dependencies
 ```
 
