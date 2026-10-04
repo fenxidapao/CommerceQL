@@ -12,7 +12,7 @@ import { Button, Form, Input, Modal, Select, Table, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { ApiError, apiGet, apiPost } from '../api/client';
-import type { EvalDataset, EvalRunListItem, EvalRunRequest, EvalRunStatus, Paged } from '../api/types';
+import type { EvalDataset, EvalRunListItem, EvalRunRequest, EvalRunStatus, Metric, Paged } from '../api/types';
 import { ErrorCard } from '../components';
 import { tokens } from '../theme/tokens';
 
@@ -49,12 +49,18 @@ function Badge({ text, tone }: { text: string; tone: Tone }) {
   );
 }
 
-/** 比例显示格式化（0.812 → 81.2%），非业务计算 */
-function pct(v: number): string {
-  return `${(v * 100).toFixed(1)}%`;
+/** 比例显示格式化（0.812 → 81.2%），非业务计算。
+ *  🔻 T-34：`null` = 这一格产物里没有数 ⇒ 显示「未记录」；渲染成 `0.0%`/`NaN%` 是把"没数"伪装成测量。*/
+function pct(v: Metric): string {
+  return v === null || v === undefined ? '未记录' : `${(v * 100).toFixed(1)}%`;
 }
 
-function fmtTime(iso?: string): string {
+function show(v: Metric | string | undefined, unit = ''): string {
+  if (v === null || v === undefined || v === '') return '未记录';
+  return `${v}${unit}`;
+}
+
+function fmtTime(iso?: string | null): string {
   if (!iso) return '—';
   const d = dayjs(iso);
   return d.isValid() ? d.format('YYYY-MM-DD HH:mm') : iso;
@@ -175,9 +181,9 @@ export function EvalRunsPage() {
       width: 180,
       render: (_, r) => (
         <div style={{ fontSize: tokens.font.size.caption, lineHeight: `${tokens.font.lineHeight.caption}px` }}>
-          <div>{r.model}</div>
-          <div style={{ color: tokens.color.text.tertiary }}>{r.prompt_version}</div>
-          <div style={{ color: tokens.color.text.tertiary }}>口径包 {r.bundle_version}</div>
+          <div>{show(r.model)}</div>
+          <div style={{ color: tokens.color.text.tertiary }}>{show(r.prompt_version)}</div>
+          <div style={{ color: tokens.color.text.tertiary }}>口径包 {show(r.bundle_version)}</div>
         </div>
       ),
     },
@@ -196,8 +202,16 @@ export function EvalRunsPage() {
       title: '门禁',
       key: 'gate',
       width: 96,
+      // 🔻 T-34：三态。`gate_passed === null` 是"这一批没有门禁判定"，
+      // 旧代码的两分支会把它渲染成红色「未过门禁」——那是把"没算"说成"算出坏了"。
       render: (_, r) =>
-        r.gate_passed ? <Badge text="已过门禁" tone="success" /> : <Badge text="未过门禁" tone="error" />,
+        r.gate_passed === true ? (
+          <Badge text="已过门禁" tone="success" />
+        ) : r.gate_passed === false ? (
+          <Badge text="未过门禁" tone="error" />
+        ) : (
+          <Badge text="无门禁判定" tone="neutral" />
+        ),
     },
     {
       title: 'headline 摘要',
@@ -208,10 +222,10 @@ export function EvalRunsPage() {
             {[
               ['EX', pct(r.headline.ex)],
               ['拒答真阳性率', pct(r.headline.refusal_true_positive_rate)],
-              ['危险 SQL 放行', String(r.headline.dangerous_sql_passed)],
-              ['跨租户泄露', String(r.headline.cross_tenant_leaks)],
-              ['P95 延迟', `${r.headline.p95_latency_ms} ms`],
-              ['总成本', `${r.headline.cost_total_cny} 元`],
+              ['危险 SQL 放行', show(r.headline.dangerous_sql_passed)],
+              ['跨租户泄露', show(r.headline.cross_tenant_leaks)],
+              ['P95 延迟', show(r.headline.p95_latency_ms, ' ms')],
+              ['总成本', show(r.headline.cost_total_cny, ' 元')],
             ].map(([label, value]) => (
               <span key={label} style={{ fontSize: tokens.font.size.caption, color: tokens.color.text.secondary }}>
                 {label} <strong style={{ color: tokens.color.text.primary }}>{value}</strong>

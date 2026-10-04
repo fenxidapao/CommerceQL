@@ -215,6 +215,44 @@ def _p0_notes(p0_tests: Mapping[str, Any], ran_integration: bool) -> tuple[str, 
                 "小写 `e` 不收 error）⇒ 按 §8 的重跑命令取证"
             )
         )
+    #: 🔻 T-34 顺带 A（QA 第 8 轮 §11.4）：守卫支被走到 ⇒ 第二份日志**整份不参与合并**。
+    #: 旧形状里这件事是静默的（判定量不计、器件不喊），于是 `PASS` 有了第二种读法。
+    #: 谓词一字不动，只把"哪一槽没进判定"写进 caveats。
+    skipped = p0_tests.get("merge_skipped")
+    if isinstance(skipped, Mapping):
+        red = skipped.get("skipped_red") or {}
+        stamp = (p0_tests.get("input_stamps") or {}).get("integration") or {}
+        notes.append(
+            f"⚠️ 合并支**未走**（{skipped.get('because')}）⇒ 第二槽 `{stamp.get('path')}`"
+            f"（sha256 {stamp.get('sha256_12')}）的红**未计入本判定**："
+            f"那一槽 failed={red.get('failed')} errors={red.get('errors')}。"
+            f"「两份日志同源」这个前提**只有**在同一次整树跑批时成立；不同源时这条 PASS 只覆盖第一槽"
+            "⇒ 不得写成「两面都没红」"
+        )
+    #: 🔻 T-34 顺带 A（QA 第 8 轮 ④b）：默认路径与实读路径都要自报，PASS 也要能点名文件。
+    stamps = p0_tests.get("input_stamps") or {}
+    if stamps:
+        sides = []
+        for label in ("offline", "integration"):
+            stamp = stamps.get(label) or {}
+            if not stamp:
+                continue
+            sides.append(
+                f"{label} = `{stamp.get('path')}`（sha256 {stamp.get('sha256_12')}，"
+                f"{'默认路径 ⇒ 可能不是本轮日志' if stamp.get('used_default_path') else '显式传参'}）"
+            )
+        if sides:
+            notes.append("G-1 输入自报（判定不读这一句，但引用本读数必须带上）：" + "｜".join(sides))
+    drift = list((p0_tests.get("p0_summary_artifact") or {}).get("mismatch") or ())
+    if drift:
+        notes.append("🔴 入库取证件与本次输入**不一致**（不一致 = 取证件不代表这一格）：" + "；".join(str(d) for d in drift))
+    #: 🔻 T-34 顺带 A：部分重叠那一支（旧守卫在这里静默丢红）现在的代价写在规模上。
+    if p0_tests.get("overlap_suspected"):
+        notes.append(
+            "⚠️ 两槽日志的用例集**可能相交**（离线槽点过集成层文件名，但未逐字覆盖另一槽的全部文件）"
+            " ⇒ `passed` 是**并集上界**（两侧相加），真实规模看 `passed_offline`／`passed_integration` 两档；"
+            "**红仍按两侧相加计**（少算一条红才是不可接受的）"
+        )
     # **不管红不红**都要声明 PG 接触面：全绿的一轮也可能悄悄连了共享库。
     notes.extend(_pg_surface_notes(p0_tests))
     return tuple(notes)

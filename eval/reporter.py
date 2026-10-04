@@ -782,6 +782,48 @@ def _git(*args: str) -> str:
     return (out.stdout or "").strip()
 
 
+def _input_stamp(path: str | None, default: str | None) -> dict[str, Any]:
+    """点名"这一格的输入到底是哪一个文件"（QA 第 8 轮 ④b：两个 PASS 形状逐字相同却不点名日志）。
+
+    `used_default_path=True` 是**风险提示而不是判据**：默认值指向上一次跑批留下的日志，
+    换了树、忘了传参 ⇒ 读到的仍是"上一次的红"。sha256 短哈希让这件事可当场看出。
+    """
+    rel = _evidence_rel(_resolve(path)) if path else None
+    out: dict[str, Any] = {
+        "path": rel,
+        "present": bool(path) and os.path.isfile(path or ""),
+        "sha256_12": None,
+        "mtime_utc": None,
+        "used_default_path": path is not None and default is not None and os.path.abspath(path) == os.path.abspath(default),
+    }
+    if out["present"] and path:
+        try:
+            with open(path, "rb") as handle:
+                out["sha256_12"] = hashlib.sha256(handle.read()).hexdigest()[:12]
+            out["mtime_utc"] = dt.datetime.fromtimestamp(
+                os.path.getmtime(path), dt.UTC
+            ).isoformat(timespec="seconds")
+        except OSError:
+            out["sha256_12"] = None
+    return out
+
+
+def covers_integration(offline: Mapping[str, Any], integration: Mapping[str, Any]) -> bool:
+    """两份日志是否**同源**（= 离线槽那一把已经整份覆盖了集成槽点名的文件）。
+
+    🔻 T-34 顺带 A（QA 第 8 轮 §11.4）：旧守卫只看「离线槽有没有点过集成文件名」，
+    那等于**假设**了两份日志同源；假设不成立时第二槽的红被静默丢掉（器件不喊）。
+    现在守卫的是可核的事实：集成槽点名的文件集合必须**逐个**出现在离线槽里 ⇒ 才允许跳过合并。
+    部分重叠（整树跑批只点到一部分文件）**必须合并** —— 宁可 `passed` 偏成并集上界（会喊出来），
+    也不让任何一槽的红静默不计。
+    """
+    if not bool(offline.get("integration_ran")):
+        return False
+    seen_off = {str(x) for x in (offline.get("integration_files_seen") or ())}
+    seen_int = {str(x) for x in (integration.get("integration_files_seen") or ())}
+    return bool(seen_int) and seen_int <= seen_off
+
+
 def merge_p0_logs(offline: Mapping[str, Any], integration: Mapping[str, Any]) -> dict[str, Any]:
     """把两份 pytest 日志的计数合成 G-1 的一份输入（**T-32 口径变更**，2026-10-04 第 10 轮）。
 
@@ -830,11 +872,17 @@ def p0_summary_evidence(
     offline: Mapping[str, Any] | None,
     integration: Mapping[str, Any] | None,
     path: str | None,
+    stamps: tuple[Mapping[str, Any], Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """③ 入库取证件与**当场解析**的两份日志对表：判定不读它，只报"对不对得上"。
 
     对表只比四件计数与 `integration_ran` ⇒ 不一致就非空报出，
     绝不让入库件变成第二份过期真相（那正是本项目反复踩的"两份真相"形状）。
+
+    🔻 T-34 顺带 A（QA 第 8 轮 ④b）：`stamps` 给了本次**实际读的**两把路径与哈希 ⇒
+    取证件声明的 `log_path`/`log_sha256` 与实读不一致时同样进 `mismatch`。
+    这一处只点名、不改判据：默认路径指向上两轮日志时，判定仍是真判定，
+    但"这一格的数来自哪个文件"必须能被读者看见。
     """
     row = {
         "path": _evidence_rel(_resolve(path)),
@@ -862,6 +910,22 @@ def p0_summary_evidence(
                 row["mismatch"].append(f"{side}.{key}: 取证件 {want} ≠ 当场解析 {got}")
         if parsed is not None and bool(stored.get("integration_ran")) != bool(parsed.get("integration_ran")):
             row["mismatch"].append(f"{side}.integration_ran 不一致")
+    if stamps is not None:
+        pairs = (("offline", stamps[0]), ("integration", stamps[1]))
+        for side, stamp in pairs:
+            stored = data.get(side) or {}
+            declared_path = str(stored.get("log_path") or "").replace("\\", "/")
+            used_path = str(stamp.get("path") or "").replace("\\", "/")
+            declared_sha = str(stored.get("log_sha256") or "")
+            used_sha = str(stamp.get("sha256_12") or "")
+            if declared_path and used_path and not declared_path.endswith(used_path) and not used_path.endswith(declared_path):
+                row["mismatch"].append(
+                    f"{side} 实读日志 = `{used_path}` ≠ 取证件声明的 `{declared_path}` ⇒ 取证件不代表本次判定"
+                )
+            elif declared_sha and used_sha and not declared_sha.startswith(used_sha):
+                row["mismatch"].append(
+                    f"{side} 日志内容已变：取证件 `{declared_sha[:12]}` ≠ 当场 `{used_sha}` ⇒ 取证件是旧的"
+                )
     return row
 
 
@@ -894,14 +958,45 @@ def gate_inputs(
 
     p0_offline = parse_pytest_summary(pytest_log)
     p0_integration = parse_pytest_summary(integration_log)
+    #: 🔻 T-34 顺带 A（QA 第 8 轮 ④b）：两把路径先自报身份，PASS 也要能点名"读的是哪个文件"。
+    stamp_offline = _input_stamp(pytest_log, DEFAULT_PYTEST_LOG)
+    stamp_integration = _input_stamp(integration_log, DEFAULT_INTEGRATION_LOG)
     p0 = p0_offline
-    if p0 and p0_integration and not p0["integration_ran"]:
-        #: 🔴 T-32：旧写法 `{**离线, **集成}` 会用集成层的 `failed`/`errors` 覆盖离线那两个数
-        #: ⇒ 「离线有红却判 PASS」。现走 `merge_p0_logs()`（两侧相加＋点名取并集，两档都留）。
-        p0 = merge_p0_logs(p0, p0_integration)
+    merge_skipped: dict[str, Any] | None = None
+    overlap_suspected = False
+    if p0 and p0_integration:
+        if not p0["integration_ran"]:
+            #: 🔴 T-32：旧写法 `{**离线, **集成}` 会用集成层的 `failed`/`errors` 覆盖离线那两个数
+            #: ⇒ 「离线有红却判 PASS」。现走 `merge_p0_logs()`（两侧相加＋点名取并集，两档都留）。
+            p0 = merge_p0_logs(p0, p0_integration)
+        elif covers_integration(p0, p0_integration):
+            #: 🔻 T-34 顺带 A：这一支是**可核的同源**（离线槽逐字点过集成槽的全部文件）⇒ 不合并是对的，
+            #: 但"没合并"这件事必须写进 caveats —— 静默与静默差一个名字，就会变成第二种读法。
+            merge_skipped = {
+                "skipped_side": "integration",
+                "because": "离线槽已逐字点名集成槽的全部文件（`covers_integration()` 现测为真）⇒ 不合并，防同一条红数两遍",
+                "skipped_red": {
+                    "failed": int(p0_integration.get("failed") or 0),
+                    "errors": int(p0_integration.get("errors") or 0),
+                },
+                "premise": "可核：两槽文件集同幅 ⇒ 这一句 PASS 覆盖两面",
+            }
+        else:
+            #: 🔴 QA 第 8 轮 §11.4 实测的那一支：旧守卫只看"离线槽点过集成文件名"就整份丢弃第二槽，
+            #: 部分重叠时第二槽的红静默不计 ⇒ 现在**照常合并**，并把"规模可能是并集上界"喊出来。
+            overlap_suspected = True
+            p0 = merge_p0_logs(p0, p0_integration)
     if p0 is not None:
         #: ③ 与入库取证件对表（只报差，不参与判定）。
-        p0 = {**p0, "p0_summary_artifact": p0_summary_evidence(p0_offline, p0_integration, p0_summary_path)}
+        p0 = {
+            **p0,
+            "input_stamps": {"offline": stamp_offline, "integration": stamp_integration},
+            "merge_skipped": merge_skipped,
+            "overlap_suspected": overlap_suspected,
+            "p0_summary_artifact": p0_summary_evidence(
+                p0_offline, p0_integration, p0_summary_path, (stamp_offline, stamp_integration)
+            ),
+        }
 
     results_map = {
         str(r.get("case_id")): {
@@ -1026,6 +1121,24 @@ def _gate_provenance(
 # 四、装配
 # ---------------------------------------------------------------------------
 
+def _artifact_stamp(path: str | None) -> dict[str, Any] | None:
+    """点名"这份报告的 records 到底是从哪个文件读的"（T-34 的批次↔报告配对唯一依据）。
+
+    为什么不能靠内容哈希配对：盘上有 **5 份**批次产物、冻结集哈希同一个值 ⇒
+    用哈希猜会把门禁报告的网格/判词冒充到别的批次上（QA 第 8 轮 §起点读数 的同一族形状：
+    "换个面读数就是换一把尺"）。这里给的是**出处自报**：路径 + sha256 + mtime + 文件名主干。
+    """
+    if not path:
+        return None
+    file = Path(path)
+    base = {"path": str(path).replace(os.sep, "/"), "stem": file.stem}
+    if not file.is_file():
+        return {**base, "present": False, "sha256": None, "mtime_utc": None}
+    digest = hashlib.sha256(file.read_bytes()).hexdigest()
+    mtime = dt.datetime.fromtimestamp(file.stat().st_mtime, dt.UTC).isoformat(timespec="seconds")
+    return {**base, "present": True, "sha256": digest, "mtime_utc": mtime}
+
+
 def build_payload(
     *,
     results_path: str = DEFAULT_RESULTS,
@@ -1115,6 +1228,8 @@ def build_payload(
             "git": git_rev(),
             "run_config": results.get("config"),
             "run_frozen_evidence": results.get("frozen_evidence"),
+            #: 🔻 T-34：读侧（`app/present`）需要知道这份报告配的是哪一批次产物 ⇒ 出处自报。
+            "results_artifact": _artifact_stamp(results_path),
             "frozen_recheck_now": _safe(_bootstrap.verify_frozen_inputs),
             "dataset_version": dataset.get("dataset_version"),
             "n_dataset_cases": len(cases),

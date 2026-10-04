@@ -162,8 +162,23 @@ export type DatasetStatus = 'frozen' | 'draft';
 /** 评测运行状态（A.9.3） */
 export type EvalRunStatus = 'queued' | 'running' | 'complete' | 'failed';
 
-/** 评测网格 verdict（A.9.4） */
-export type GridVerdict = 'pass' | 'fail';
+/** 评测网格 verdict（A.9.4）。
+ *
+ * 🔻 T-34（2026-10-04）：多出的 `unverified` 不是"第三种失败"，而是**不设阈值的格**
+ * （PRD §13.2 的 Extra Hard 行原文「不设硬性阈值（仅报告）」）。
+ * 把它折成 `pass` 会让"没判"读起来像"过了"，折成 `fail` 会让它读起来像"没过"。
+ */
+export type GridVerdict = 'pass' | 'fail' | 'unverified';
+
+/** 门禁判定 verdict（A.9.4 的 `gate.items[]`）—— 词表定义在 `docs/07 §17.3`，是**五值**。
+ *
+ * 🔻 T-34：契约示例只写了 `pass`/`fail`，而盘上的八格里今天真有 `partial`（G-3/G-4）
+ * 与 `unverified`（G-6/G-8）。前端旧类型只有两值 ⇒ `fail` 之外的四种判词全被渲染成绿色。
+ */
+export type GateVerdict = 'pass' | 'fail' | 'partial' | 'unverified' | 'not_available';
+
+/** 后端"未记录"的数值口径：`null` = 产物里没有这一格，**不是 0**（详见 A.9.4 的 `unavailable`）。 */
+export type Metric = number | null;
 
 /** 评测难度轴取值（A.9.4） */
 export type DifficultyStruct = 'easy' | 'medium' | 'hard' | 'extra_hard';
@@ -529,23 +544,25 @@ export interface EvalDataset {
 }
 
 export interface EvalHeadline {
-  ex: number;
-  refusal_true_positive_rate: number;
-  dangerous_sql_passed: number;
-  cross_tenant_leaks: number;
-  p95_latency_ms: number;
-  cost_total_cny: number;
+  ex: Metric;
+  refusal_true_positive_rate: Metric;
+  dangerous_sql_passed: Metric;
+  cross_tenant_leaks: Metric;
+  p95_latency_ms: Metric;
+  cost_total_cny: Metric;
 }
 
 export interface EvalRunListItem {
   run_id: string;
   dataset_id: string;
-  model: string;
-  prompt_version: string;
-  bundle_version: string;
+  /** 🔻 T-34：批次产物未自报构建身份 ⇒ 可为 `null`（渲染成「未记录」，不是空字符串） */
+  model: string | null;
+  prompt_version: string | null;
+  bundle_version: string | null;
   status: EvalRunStatus;
-  gate_passed: boolean;
-  started_at: string;
+  /** `null` = 这一批**没有对应的门禁判定**（≠ 没过） */
+  gate_passed: boolean | null;
+  started_at: string | null;
   ended_at?: string;
   headline?: EvalHeadline;
   note?: string;
@@ -556,8 +573,9 @@ export interface GridCell {
   semantic: DifficultySemantic;
   total: number;
   passed: number;
-  ex: number;
-  target: number;
+  ex: Metric;
+  /** `null` = 该格不设阈值（Extra Hard），页面显示「仅报告」 */
+  target: number | null;
   verdict: GridVerdict;
 }
 
@@ -570,7 +588,7 @@ export interface AttributionItem {
 export interface GateItem {
   id: string;
   name: string;
-  verdict: GridVerdict;
+  verdict: GateVerdict;
   detail?: string;
 }
 
@@ -583,8 +601,8 @@ export interface EvalCase {
   actual_behavior: string;
   result_equivalent: boolean;
   attribution?: string;
-  latency_ms: number;
-  cost_cny: number;
+  latency_ms: Metric;
+  cost_cny: Metric;
 }
 
 /** A.9.4 聚合部分：grid/attribution/gate 均由后端聚合，前端零聚合代码 */
@@ -592,32 +610,46 @@ export interface EvalRunDetail {
   run: {
     run_id: string;
     dataset_id: string;
-    dataset_content_hash: string;
-    model: string;
-    prompt_version: string;
-    bundle_version: string;
+    dataset_content_hash: string | null;
+    model: string | null;
+    prompt_version: string | null;
+    bundle_version: string | null;
     status: EvalRunStatus;
-    started_at: string;
+    started_at: string | null;
     ended_at?: string;
   };
   /** 平台管理员跨租户视角时显式标注 */
   scope?: 'cross_tenant';
   overall: {
-    ex: number;
-    refusal: { true_positive_rate: number; false_positive_rate: number; reason_accuracy: number };
-    clarify: { trigger_accuracy: number; post_clarify_accuracy: number; avg_rounds: number };
-    consistency: { rate: number; attributable_rate: number };
-    efficiency: { seq_scan_rate: number; cartesian_count: number; p95_exec_ms: number };
-    security: { dangerous_sql_passed: number; cross_tenant_leaks: number; pii_leaks: number };
-    latency: { p50_ms: number; p95_ms: number };
-    cost: { total_cny: number; per_query_cny: number; cache_hit_rate: number };
+    ex: Metric;
+    refusal: { true_positive_rate: Metric; false_positive_rate: Metric; reason_accuracy: Metric };
+    clarify: { trigger_accuracy: Metric; post_clarify_accuracy: Metric; avg_rounds: Metric };
+    consistency: { rate: Metric; attributable_rate: Metric };
+    efficiency: { seq_scan_rate: Metric; cartesian_count: Metric; p95_exec_ms: Metric };
+    security: { dangerous_sql_passed: Metric; cross_tenant_leaks: Metric; pii_leaks: Metric };
+    latency: { p50_ms: Metric; p95_ms: Metric };
+    cost: { total_cny: Metric; per_query_cny: Metric; cache_hit_rate: Metric };
   };
   grid: {
     axes: { struct: DifficultyStruct[]; semantic: DifficultySemantic[] };
     cells: GridCell[];
   };
   attribution: AttributionItem[];
-  gate: { passed: boolean; items: GateItem[] };
+  gate: { passed: boolean | null; items: GateItem[] };
+  /** 🔻 T-34 附加面（已在 `docs/02` §A.9.4 处留笔）：产物出处 ＋ 每一个 `null` 的解释。
+   * 少了 `unavailable`，页面上的「未记录」就只是"没数"；有了它才是"这一格为什么没有数"。 */
+  provenance?: {
+    artifact: string;
+    runs_dir: string;
+    gate_report: string;
+    gate_report_linked: boolean;
+    gate_report_stem: string | null;
+    batch_git_rev: string | null;
+    batch_git_dirty: boolean | null;
+    eval_tenants: string[] | null;
+    rerun_in_endpoint: boolean;
+  };
+  unavailable?: { field: string; reason: string }[];
   /** include_cases=true 时才返回；不返回 gold_sql / predicted_sql */
   cases?: Paged<EvalCase>;
 }

@@ -157,6 +157,12 @@ services:
       # ⚠️ 留空**不是**"功能降级但仍可用"：`POST /healthz/drain` 一律 403（fail-closed），
       #    应用会在启动时打 `drain_trigger_unavailable` WARN。设置它 = 允许 pre-stop 摘流量。
       DRAIN_TOKEN: ${DRAIN_TOKEN:-}
+      # 🔻 T-34（评测报告页的三个只读端点）：镜像里只 `COPY backend/app`（`deploy/Dockerfile:32`），
+      # 而这两个路径指的是**产物**（评测批次 JSON 与门禁报告）⇒ 与 `/semantic` 同一先例走只读挂载。
+      # ⚠️ 非 Settings 字段（同 `DRAIN_TOKEN` 的处理），因此不在 `deploy/.env.example` 里；
+      #    不挂载的后果是页面能打开、每个批次都读到 404 `RUN_NOT_FOUND`（**不是**"降级但可用"）。
+      COMMERCEQL_EVAL_RUNS_DIR: /eval_artifacts
+      COMMERCEQL_EVAL_GATE_REPORT: /eval_reports/eval_metrics.json
     extra_hosts:
       - "host.docker.internal:host-gateway"
     dns:
@@ -173,6 +179,11 @@ services:
       # readiness 持续 503。路径与 settings.SEMANTIC_BUNDLE_PATH 默认值对应；
       # 语义包升级（版本指针切换）只改宿主文件 + 重启 api，不改 compose。
       - ../semantic:/semantic:ro
+      # 🔻 T-34：评测产物的只读挂载（数据源 = 已入库产物，端点内不重跑评测、不连库）。
+      # `eval/results_*.json` ＋ 两份冻结集 ＝ 列表页与详情页的全部输入；
+      # `backend/reports/w6/eval_metrics.json` ＝ 门禁判定与 4×3 网格的权威数（只配它自报的那一批次）。
+      - ../eval:/eval_artifacts:ro
+      - ../backend/reports/w6:/eval_reports:ro
       # 验签公钥只读挂载（W1B 转达，2026-09-18）：
       # 路径与 settings.JWT_PUBLIC_KEY_PATH 默认值（/run/secrets/jwt_public.pem）对应。
       # 不挂载则该路径不存在 → TokenVerifier 的 JWKS 源加载失败 → 认证链整条不可用；

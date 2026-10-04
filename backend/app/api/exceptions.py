@@ -34,8 +34,11 @@ from app.core.errors import CommerceQLError
 __all__ = [
     "ClarifyExpired",
     "ClarifyInvalidOption",
+    "DatasetNotFound",
+    "ForbiddenScope",
     "IdempotencyConflict",
     "InvalidRequest",
+    "RunNotFound",
     "SessionNotFound",
     "TaskNotFound",
     "TaskNotCancellable",
@@ -81,6 +84,38 @@ class SessionNotFound(CommerceQLError):
     """会话不存在 / 不属于本租户（附录 A §A.5.2 的 404）。"""
 
     default_code = "SESSION_NOT_FOUND"
+
+
+class RunNotFound(CommerceQLError):
+    """`GET /admin/eval/runs/{run_id}` 的 404（附录 A §A.9.4，T-34）。
+
+    ⚠️ 与 `SessionNotFound` 同形处理：产物**不在位**与 `run_id` **形状不合法**共用这一个码。
+    区分它们等于让调用方用 404 的差异去枚举"服务器上有哪些评测产物文件"。
+    """
+
+    default_code = "RUN_NOT_FOUND"
+
+
+class DatasetNotFound(CommerceQLError):
+    """按 `dataset_id` 过滤时该评测集不存在（附录 A §A.9.3／§A.9.1 的 404，T-34）。
+
+    注意与 `RUN_NOT_FOUND` 分码：附录 A 的错误码表把两者列为不同码（`docs/02:1016-1018`），
+    历史问题 B-20 就是"声明了码却没进表 ⇒ 前端落入未知码分支"，此处按表给码。
+    """
+
+    default_code = "DATASET_NOT_FOUND"
+
+
+class ForbiddenScope(CommerceQLError):
+    """角色不足以看这个面（附录 A §A.9.4 的 403，T-34）。
+
+    🔴 **这是本项目第一个 HTTP 层的角色门禁**（此前 `platform_admin` 只出现在图内
+    scope 计算与 `errors.py` 的 `detail` 白名单里，接入层没有任何 403 抛出点）。
+    ⇒ 只复用既有 JWT 验签链（`deps.authenticate`），**不新造令牌通道**；
+      也不得反过来给"管理员可读他人会话"开口子（`U-131` 判据⑥ 同源）。
+    """
+
+    default_code = "FORBIDDEN_SCOPE"
 
 
 class IdempotencyConflict(CommerceQLError):

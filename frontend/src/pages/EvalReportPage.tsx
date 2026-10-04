@@ -14,9 +14,30 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import dayjs from 'dayjs';
 import { ApiError, apiGet } from '../api/client';
-import type { EvalCase, EvalRunDetail, GateItem, GridCell } from '../api/types';
+import type { EvalCase, EvalRunDetail, GateItem, GridCell, Metric } from '../api/types';
 import { ErrorCard } from '../components';
 import { tokens } from '../theme/tokens';
+
+/** 判词 → 文案 + 颜色（06 §11.3：`pass` success ／ `fail` error）。
+ *
+ * 🔻 T-34：旧代码只有 `fail ? error : success` 两个分支，于是 `partial`（G-3/G-4 今天真是这个值）
+ * 与 `unverified`（G-6/G-8）会被渲染成**绿色"通过"** —— 那正是本项目最忌的"没验看起来像过了"。
+ * 五值各有各的颜色，`未通过` 与 `未验证` 不共用一个词。
+ */
+const GATE_VERDICT: Record<string, { text: string; tone: 'success' | 'error' | 'degraded' | 'neutral' }> = {
+  pass: { text: '通过', tone: 'success' },
+  fail: { text: '未通过', tone: 'error' },
+  partial: { text: '部分通过', tone: 'degraded' },
+  unverified: { text: '未验证', tone: 'neutral' },
+  not_available: { text: '未取证', tone: 'neutral' },
+};
+
+/** 网格格子的底色（`unverified` = 该格不设阈值，只报告，不判过与不过） */
+const CELL_TONE: Record<string, 'success' | 'error' | 'neutral'> = {
+  pass: 'success',
+  fail: 'error',
+  unverified: 'neutral',
+};
 
 const STRUCT_TEXT: Record<string, string> = {
   easy: '简单',
@@ -31,12 +52,23 @@ const SEMANTIC_TEXT: Record<string, string> = {
   high: '高语义',
 };
 
-/** 比例显示格式化（0.812 → 81.2%），非业务计算 */
-function pct(v: number): string {
-  return `${(v * 100).toFixed(1)}%`;
+/** 比例显示格式化（0.812 → 81.2%），非业务计算。
+ *
+ * 🔻 T-34：`null` 走「未记录」，**不许**渲染成 `0.0%` 或 `NaN%`。
+ * 理由与后端一致：`0.0%` 在表里读起来像一次真实测量，而那一格根本没数。
+ */
+function pct(v: Metric): string {
+  return v === null || v === undefined ? '未记录' : `${(v * 100).toFixed(1)}%`;
 }
 
-function fmtTime(iso?: string): string {
+/** 一般数值/文本显示（同样是 `null` ≠ 0 ≠ 空字符串） */
+function show(v: Metric | string | boolean | undefined, unit = ''): string {
+  if (v === null || v === undefined) return '未记录';
+  if (typeof v === 'boolean') return v ? '是' : '否';
+  return `${v}${unit}`;
+}
+
+function fmtTime(iso?: string | null): string {
   if (!iso) return '—';
   const d = dayjs(iso);
   return d.isValid() ? d.format('YYYY-MM-DD HH:mm') : iso;
@@ -66,9 +98,11 @@ function SectionTitle({ text }: { text: string }) {
   return <h2 style={sectionTitleStyle}>{text}</h2>;
 }
 
-/** 门禁徽章（verdict=pass → success / fail → error） */
+/** 门禁徽章（五值判词各有文案与颜色，见 `GATE_VERDICT`） */
 function GateBadge({ item }: { item: GateItem }) {
-  const c = item.verdict === 'fail' ? tokens.color.error : tokens.color.success;
+  const tone = GATE_VERDICT[item.verdict]?.tone ?? 'neutral';
+  const c = tokens.color[tone];
+  const text = GATE_VERDICT[item.verdict]?.text ?? item.verdict;
   return (
     <span
       data-testid="eval-gate-badge"
@@ -85,7 +119,7 @@ function GateBadge({ item }: { item: GateItem }) {
       }}
     >
       {item.id} {item.name}：
-      {item.verdict === 'fail' ? '未通过' : '通过'}
+      {text}
       {item.detail ? `（${item.detail}）` : ''}
     </span>
   );
@@ -123,8 +157,8 @@ const CASE_FIELDS: { label: string; get: (c: EvalCase) => string }[] = [
   { label: '实际行为', get: (c) => c.actual_behavior },
   { label: '结果等价', get: (c) => (c.result_equivalent ? '是' : '否') },
   { label: '归因', get: (c) => c.attribution ?? '—' },
-  { label: '耗时', get: (c) => `${c.latency_ms} ms` },
-  { label: '成本', get: (c) => `${c.cost_cny} 元` },
+  { label: '耗时', get: (c) => show(c.latency_ms, ' ms') },
+  { label: '成本', get: (c) => show(c.cost_cny, ' 元') },
 ];
 
 export function EvalReportPage() {
@@ -201,10 +235,10 @@ export function EvalReportPage() {
   const runInfo: [string, string][] = [
     ['运行 ID', run.run_id],
     ['评测集 ID', run.dataset_id],
-    ['评测集内容哈希', run.dataset_content_hash],
-    ['模型', run.model],
-    ['Prompt 版本', run.prompt_version],
-    ['口径包版本', run.bundle_version],
+    ['评测集内容哈希', show(run.dataset_content_hash)],
+    ['模型', show(run.model)],
+    ['Prompt 版本', show(run.prompt_version)],
+    ['口径包版本', show(run.bundle_version)],
     ['状态', run.status],
     ['开始时间', fmtTime(run.started_at)],
     ['结束时间', fmtTime(run.ended_at)],
@@ -212,25 +246,25 @@ export function EvalReportPage() {
 
   // 总体结果：security.* 三项置顶并 error 色高亮（红线 = 0）
   const overallRows: OverallRow[] = [
-    { key: 's1', category: '安全（红线）', label: '危险 SQL 放行', value: String(overall.security.dangerous_sql_passed), danger: true },
-    { key: 's2', category: '安全（红线）', label: '跨租户泄露', value: String(overall.security.cross_tenant_leaks), danger: true },
-    { key: 's3', category: '安全（红线）', label: 'PII 泄露', value: String(overall.security.pii_leaks), danger: true },
+    { key: 's1', category: '安全（红线）', label: '危险 SQL 放行', value: show(overall.security.dangerous_sql_passed), danger: true },
+    { key: 's2', category: '安全（红线）', label: '跨租户泄露', value: show(overall.security.cross_tenant_leaks), danger: true },
+    { key: 's3', category: '安全（红线）', label: 'PII 泄露', value: show(overall.security.pii_leaks), danger: true },
     { key: 'ex', category: '总体', label: 'EX 综合', value: pct(overall.ex) },
     { key: 'r1', category: '拒答', label: '真阳性率', value: pct(overall.refusal.true_positive_rate) },
     { key: 'r2', category: '拒答', label: '假阳性率', value: pct(overall.refusal.false_positive_rate) },
     { key: 'r3', category: '拒答', label: '原因准确率', value: pct(overall.refusal.reason_accuracy) },
     { key: 'c1', category: '澄清', label: '触发准确率', value: pct(overall.clarify.trigger_accuracy) },
     { key: 'c2', category: '澄清', label: '澄清后准确率', value: pct(overall.clarify.post_clarify_accuracy) },
-    { key: 'c3', category: '澄清', label: '平均澄清轮次', value: `${overall.clarify.avg_rounds} 轮` },
+    { key: 'c3', category: '澄清', label: '平均澄清轮次', value: show(overall.clarify.avg_rounds, ' 轮') },
     { key: 'k1', category: '一致性', label: '口径一致性', value: pct(overall.consistency.rate) },
     { key: 'k2', category: '一致性', label: '可归因率', value: pct(overall.consistency.attributable_rate) },
     { key: 'e1', category: '效率', label: '全表扫描率', value: pct(overall.efficiency.seq_scan_rate) },
-    { key: 'e2', category: '效率', label: '笛卡尔积次数', value: `${overall.efficiency.cartesian_count} 次` },
-    { key: 'e3', category: '效率', label: 'P95 执行耗时', value: `${overall.efficiency.p95_exec_ms} ms` },
-    { key: 'l1', category: '延迟', label: 'P50 延迟', value: `${overall.latency.p50_ms} ms` },
-    { key: 'l2', category: '延迟', label: 'P95 延迟', value: `${overall.latency.p95_ms} ms` },
-    { key: 'm1', category: '成本', label: '总成本', value: `${overall.cost.total_cny} 元` },
-    { key: 'm2', category: '成本', label: '单次查询成本', value: `${overall.cost.per_query_cny} 元` },
+    { key: 'e2', category: '效率', label: '笛卡尔积次数', value: show(overall.efficiency.cartesian_count, ' 次') },
+    { key: 'e3', category: '效率', label: 'P95 执行耗时', value: show(overall.efficiency.p95_exec_ms, ' ms') },
+    { key: 'l1', category: '延迟', label: 'P50 延迟', value: show(overall.latency.p50_ms, ' ms') },
+    { key: 'l2', category: '延迟', label: 'P95 延迟', value: show(overall.latency.p95_ms, ' ms') },
+    { key: 'm1', category: '成本', label: '总成本', value: show(overall.cost.total_cny, ' 元') },
+    { key: 'm2', category: '成本', label: '单次查询成本', value: show(overall.cost.per_query_cny, ' 元') },
     { key: 'm3', category: '成本', label: '缓存命中率', value: pct(overall.cost.cache_hit_rate) },
   ];
 
@@ -299,6 +333,22 @@ export function EvalReportPage() {
         </div>
       )}
 
+      {gate.passed === null && (
+        <div
+          style={{
+            marginTop: tokens.space.xs,
+            background: tokens.color.neutral.bg,
+            border: `1px solid ${tokens.color.neutral.border}`,
+            color: tokens.color.neutral.text,
+            borderRadius: tokens.radius.md,
+            padding: `${tokens.space.xxs}px ${tokens.space.sm}px`,
+            fontSize: tokens.font.size.body,
+          }}
+        >
+          本批次没有对应的门禁判定（后端返回 `gate.passed = null`）⇒ 既不能读成「过了」，也不能读成「没过」。
+        </div>
+      )}
+
       {/* 区块 1：运行信息 */}
       <div style={sectionStyle}>
         <SectionTitle text="运行信息" />
@@ -335,6 +385,29 @@ export function EvalReportPage() {
         />
       </div>
 
+      {/* 未记录口径与产物出处（后端 `unavailable`／`provenance` 两个附加面的直读，零判断） */}
+      {(detail.unavailable?.length ?? 0) > 0 && (
+        <div style={sectionStyle} data-testid="eval-unavailable">
+          <SectionTitle text="本页哪些格子是「未记录」，为什么" />
+          <ul style={{ marginTop: tokens.space.xs, paddingLeft: tokens.space.lg, fontSize: tokens.font.size.caption }}>
+            {(detail.unavailable ?? []).map((row) => (
+              <li key={row.field}>
+                <code>{row.field}</code> —— {row.reason}
+              </li>
+            ))}
+          </ul>
+          {detail.provenance && (
+            <div style={{ fontSize: tokens.font.size.caption, color: tokens.color.text.tertiary }}>
+              数据源 = <code>{detail.provenance.runs_dir}</code> 里的 <code>{detail.provenance.artifact}</code>
+              （批次自报 HEAD <code>{show(detail.provenance.batch_git_rev)}</code>
+              {detail.provenance.batch_git_dirty === true ? '，dirty' : ''}）｜门禁报告
+              {detail.provenance.gate_report_linked ? '已配对' : '未配对'}
+              ｜端点内未重跑评测 = {show(detail.provenance.rerun_in_endpoint === false ? '是' : '否')}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 区块 4：4×3 双维度网格 */}
       <div style={sectionStyle}>
         <SectionTitle text="双维度网格（4×3）" />
@@ -364,7 +437,7 @@ export function EvalReportPage() {
                 const cell = cellMap.get(`${st}|${sem}`);
                 // cells 中缺失的格子显示为空（不显示 0%，避免把「未测」误读为「全错」）
                 if (!cell) return <div key={`${st}|${sem}`} style={{ minHeight: 64 }} />;
-                const c = cell.verdict === 'fail' ? tokens.color.error : tokens.color.success;
+                const c = tokens.color[CELL_TONE[cell.verdict] ?? 'neutral'];
                 // 契约里 extra_hard 行的 target 为 null → 显示「仅报告」而非达标/未达标
                 const target: number | null = cell.target;
                 return (
@@ -429,9 +502,14 @@ export function EvalReportPage() {
         <SectionTitle text="成本" />
         <div style={{ marginTop: tokens.space.xs, display: 'flex', gap: tokens.space.sm, flexWrap: 'wrap' }}>
           {[
-            { label: '总成本', value: `${overall.cost.total_cny} 元`, degraded: false },
-            { label: '单次查询成本', value: `${overall.cost.per_query_cny} 元`, degraded: false },
-            { label: '缓存命中率', value: pct(overall.cost.cache_hit_rate), degraded: overall.cost.cache_hit_rate < 0.6 },
+            { label: '总成本', value: show(overall.cost.total_cny, ' 元'), degraded: false },
+            { label: '单次查询成本', value: show(overall.cost.per_query_cny, ' 元'), degraded: false },
+            {
+              label: '缓存命中率',
+              value: pct(overall.cost.cache_hit_rate),
+              // ⚠️ `null` 不算"低于 60%"：那是未记录，不是劣化（NFR-4.3 的尺只量有数的格子）
+              degraded: overall.cost.cache_hit_rate !== null && overall.cost.cache_hit_rate < 0.6,
+            },
           ].map((kpi) => {
             const c = kpi.degraded ? tokens.color.degraded : tokens.color.neutral;
             return (
