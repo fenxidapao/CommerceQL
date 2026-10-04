@@ -250,11 +250,24 @@ async def main() -> None:
         }
 
         g_owner = await get_sess(client, owner, sid)
+        #: 属主会话里到底有没有那句追问 —— 这条事实**两只臂都会成立**。
+        followup_in_owner_session = any(args.followup[:10] in q for q in g_owner["questions"])
         rep["5_owner_get"] = {
             "http": g_owner["http"],
             "turn_count": len(g_owner["questions"]),
             "turn_count_grew_vs_nonowner_view": len(g_owner["questions"]) > rep["3_nonowner_get"]["turn_count"],
-            "nonowner_followup_written_into_owner_session": any(args.followup[:10] in q for q in g_owner["questions"]),
+            # 🔴 **本行以前是个假证据发生器**（2026-10-04 实测到，修于 `T-28` 轮）：第 4 步的问句在
+            # `--control` 臂上是**属主自己**发的（`asker = owner if args.control`），"属主会话里出现这句"
+            # 是应有结果 —— 而旧写法无条件把它写成 `nonowner_followup_written_into_owner_session=True`，
+            # 于是产物一边写 `asked_by = owner(正对照)`、一边写"非属主的追问被写进了属主会话" ⇒
+            # 读产物的人（QA／架构）会据此判"写侧仍未闭合"。**按臂拆开**：本键只在"真的是非属主发问"那一臂
+            # 承载语义；正对照臂的那格另存 `control_followup_present_in_owner_session`（键未改名，旧读数仍可比）。
+            "nonowner_followup_written_into_owner_session": (
+                False if args.control else followup_in_owner_session
+            ),
+            "control_followup_present_in_owner_session": (
+                followup_in_owner_session if args.control else None
+            ),
         }
 
     Path(args.out).write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
