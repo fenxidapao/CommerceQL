@@ -538,3 +538,43 @@ O-11（给 U-134① 的决策输入）：「保留 allowlist ＋ 显式豁免登
 
 【不许做】不取新 `U-xx`（本号已占、`§4.8` 下一个可用号现读仍是那句自述值，要取先三查）；不改 `§4.8` 判据措辞（要改就在那一行落笔并逐臂复查原判据现在还防着什么）；不动 `eval/` 冻结集与匣带；不清旧窗目录、不清 `ecom_u123_probe`（别窗对象）；不写"门禁通过"、不写"跨用户隔离已达成"（本轮修完也只能写"该项已结案、门禁仍 1/8"）。
 ```
+
+
+# §15 · 第 6 轮（QA 接续：QA-b）· 2026-10-04 18:1x +0800 · @ `eb72ec9`
+
+## 15.1 状态刷新
+
+| 单号 | 状态 | 依据（QA 现测，@ `eb72ec9`） |
+|---|---|---|
+| **T-28**（`U-131` P0 安全） | ✅ **达成 · 可结案** | 判据五臂逐臂复算过（`RELAY.md` §9.2）：① `state_store.py:157` 有 `user_id`；② 强制点在 `get_session`（`:399-408`），两端重复比对命中 **0**；③ 旧载荷 fail-closed ＋ `:110` 内部计数；④ 三面 ＋ 契约 7 passed，活体两臂我**自测**（属主 GET 200／非属主 GET 404／非属主 POST 404 且首字节 `{` 未进图，台账 1,674 → 1,674）；⑤⑥⑦ 无 403/401、无管理员豁免命中、键族未动。§4.8 那行的状态翻转归 W8 落笔 |
+| **T-29**（写面与 §4 数字） | ✅ **处置完毕，但处置方式变了体制** | 它把 `OVERVIEW.md`／`docs/**`／`ACCEPTANCE.md` 收回自写（`reports/w8/PROMPT.md:46`、`:58`），并已照此写了 `OVERVIEW.md:319` ⇒ 我这份 `QA_PROMPT.md` v2 §3 已对齐（单写者原则仍成立）。**请总控点头**：对外三节今后由 W8 写、QA 复算判红；要收回 QA 需两处对称改 |
+| 它自报的花费 | ✅ 口径齐、数复现 | 本轮 18 行／¥0.028686／`bool_and(not is_peak)` = t；全库 1,674／¥2.753794（**仍是下界**，L4 修复前的用量未入账） |
+| 它交回的 UNVERIFIED 一格 | ✅ 我替它闭了 | `lint-imports` = **4 kept／0 broken，rc=0**（不带 `check` 子命令） |
+| 活体产物在库外 | 🟠 不阻塞结案 | `E:/tmp_w7/*.json` 未入库 ⇒ 记 `self_reported（未入库）`；结案证据改指本轮入库件 `backend/reports/qa/prompts/probe_u131_readonly.py` |
+| 门禁当期性 | 🔴 **未闭 ⇒ 新单 `T-30`** | `eval_metrics.json` 仍是 `079916d`＋dirty、5 格无 `self_reported_rev`、最老输入 mtime 09-18 ⇒ 对外仍不得写"门禁通过" |
+| `U-129` | 🔴 **不得转绿 ⇒ 新单 `T-31`** | 它自己写明只到客户端面、审计三格未查（`07:1155` 行内 v1.7.17 三格并报，格2 前置 `t2_routed_supp > 0` 要现测） |
+| 旧窗件停用横幅 | 🟠 部分做了 | 它只给 `reports/arch/PROMPT.md` 加了横幅（现读首行）；`w2-int`／`w3-int`／`w3a`／`w3b`／`w3c`／`w4`／`w5`／`w6`／`w7` 九份**还没有** |
+
+## 15.2 → W8 第 6 轮粘贴块（总控照抄转发 · 主单零额度）
+
+```
+[QA→W8 第 6 轮 · 主单 T-30（当期门禁重算，零额度）＋ 顺带 T-31（U-129 审计三格）]
+
+【目标】把 G-1…G-8 八格在**当期构建**上重算并落 `eval_metrics.json` ＋ `OVERVIEW §6/§7`；顺带补 `U-129` 的审计三格。对外口径现在由你写，QA 只复算判红。
+
+【起点读数】QA 2026-10-04 17:5x–18:1x +0800 现测 @ `eb72ec9`（工作树 0 行、与 origin/main 同点；`docs/07` 一字未改：v1.7.18、3,642 行、取号行 `:1078` = `U-135`）：
+  ① `U-131` 我已验收**达成**（逐臂见 `reports/qa/RELAY.md` §9.2），§4.8 `:1159` 那行的状态翻转由你落笔，别再写"未修"；
+  ② 门禁产物不是当期：`backend/reports/w6/eval_metrics.json` 的 `meta.git.rev` = `079916d`、`dirty` = true，8 格输入里 `self_reported_rev` 为 null 共 5 格、最老 `mtime_utc` 落在 09-18；
+  ③ 全树我这边刚跑：**2,362 passed / 0 FAILED / 9 errors（85.24s）**，9 条全是 `tests/integration` 缺 DSN 的收集期 error、断言失败 0 ⇒ 离线面在当期树上是绿的，但**集成面没跑过 ⇒ G-1 的"集成已跑"输入还没喂进去**；
+  ④ `lint-imports` 我替你补跑：**4 kept / 0 broken, rc=0**（在 `backend/` 下用 `../.venv/Scripts/lint-imports.exe`，**不带 `check` 子命令**）；
+  ⑤ 活体两臂我自测过且零花费：属主 `GET` = 200、非属主 `GET` = 404 `SESSION_NOT_FOUND`、非属主 `POST /query` = 404 且首字节 `{`（未进图；台账 1,674 → 1,674）。件已入库 = `backend/reports/qa/prompts/probe_u131_readonly.py`，你不用重跑，但 `E:/tmp_w7` 那份未入库产物今后别当证据引。
+
+【边界】`OVERVIEW.md`／`docs/**`／`ACCEPTANCE.md` 按你 v2.1 ① 归你写，我不碰；但**对外每一格必须自带 数＋面＋谓词＋分母＋粒度＋时刻＋HEAD＋复算命令**，缺一项我在 `reports/qa/` 点名并把该格判成"对外不可引用"。`backend/reports/qa/**` 仍是我独占，你别动。集成只打一次性库、跑完 DROP 并现查残渣（尺 = `datname like 'ecom%'`）；禁 `git add -A`／reset／clean；历史读数只用 🔻 追加。
+
+【判据】八格 = `eval/gates.py`（在**仓库根**，不在 `backend/`）＋ 定义处 `docs/07 §17.3`（`04 §C.8` 只到 G-7，引条数前先点名是哪一份）；八格输入的**唯一装配口 = `reporter.gate_inputs()`**，复算只走 `recompute_gate(gate_id, **产物路径)`，在任何别处再装配一次就是第二份真相。`U-129` = `docs/07:1155` 行内 v1.7.17 的**三格并报**，格2 前置现测 `t2_routed_supp > 0`，无样本记 `n/a` 不许记 0；客户端面已交（属主第 2 轮 200、`terminal_digest` 未复用），**审计三格未查 ⇒ 本号不得转绿**。
+
+【交付】`eval_metrics.json` 重算件 ＋ 当期 `meta.git.rev`/`dirty` 同框；`OVERVIEW §6/§7` 刷新（提交数／HEAD 现测，别抄我这轮的 `eb72ec9`）；`reports/w8/RELAY.md` 新节逐条带 `文件:行号`＋时刻＋复算命令，`DELIVERY.md` 一行；短回执 ≤250 字按你 §5 模板。顺带两件（都不占号）：① `backend/app/cache/keys.py:178-186` 的 `session_meta` docstring 值形态清单没跟 `user_id`（现测 `grep -c user_id` = 0）⇒ 注释落后实现；② `reports/{w2-int,w3-int,w3a,w3b,w3c,w4,w5,w6,w7}/PROMPT.md` 九份还没有"本席位已停用"横幅（你已给 `arch` 加了同款）。
+  复算入口（零额度）：`cd backend && PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest -q -rfEs --continue-on-collection-errors` ／ `../.venv/Scripts/lint-imports.exe` ／ 集成面按记忆《本机环境坑》最后那条配方（四个测试 DSN 用 `postgresql://`、`MIGRATION_DATABASE_URL` 用 `+psycopg`，日志必须 `-v`，否则 `integration_ran` 判不出、G-1 假退 PARTIAL）。
+
+【不许做】不取新号（本轮两条都属既有号）；不改 `§4.8` 判据措辞（要改就在那一行落笔并逐臂复查原判据现在还防着什么）；不动 `eval/` 冻结集与匣带；**门禁重算前 §7 任何一格不得写 PASS**，`PASS 1/8` 未全绿期间对外不得写"门禁通过"；`U-131` 只写"已结案"、不写"跨用户隔离已达成"；不清 `ecom_u123_probe`（别窗对象）、不清旧窗目录内容。
+```

@@ -13,10 +13,13 @@
 >    **不向它们派单、不引它们散文里的读数、不写"等某窗交付"**。跨窗动作一律经 W8。
 > 2. **判据权威现在在 W8 手上**（不在"架构窗"）。⇒ 你**仍然不取 `U-xx` 号、不改判据措辞**（v1 §2 那条不变），
 >    但"上呈架构"这个动作改成**开一张 `T-xx` 单写明"要 W8 裁什么"＋你的现测支撑**。W8 的裁定落在 `docs/07 §4.8`。
-> 3. **你的写面扩大**（这是 v2 最主要的新增职能）：`docs/01–08`、`OVERVIEW.md`、`deliverables/ACCEPTANCE.md`
->    **由你维护同步** —— 但只许**同步性订正**（抄本与代码/产物不一致、版本号与日期、失效指针、§6/§7/§9 的读数格），
->    **不许动 `docs/07 §4.8` 的登记行与判据措辞**（那是 W8 独占写面，你写了就是撞车）。
->    前提已变：`docs/**` 与 `OVERVIEW.md` **10-04 起已入 git**（`3b695a9`）⇒ "改了没有回滚点"那句作废，回滚点＝历史。
+> 3. 🔻🔻 **写面归属（10-04 18:1x 二次改判，两处对称）**：`OVERVIEW.md`、`docs/**`、`deliverables/ACCEPTANCE.md`
+>    **归 W8 自写**（它 `reports/w8/PROMPT.md:46`／`:58` 的 v2.1 ①/⑤ 已这么裁，并已照此写了 `OVERVIEW.md:319`）。
+>    ⇒ 本窗 v2 §3 第一版那句"这三处由你维护同步"**作废**；你仍然只写 `backend/reports/qa/**`（W8 对它只读）。
+>    **体制上仍成立**（一个文件一个写者），但代价要记牢：对外三节今后只有一份来源、没有第二只手在旁边同步 ⇒
+>    ① 每轮把 §6/§7/§9 的数**当待验读数复算**，没复算过的格在你地盘记 `self_reported`；
+>    ② 每格都要求自带 数＋面＋谓词＋分母＋粒度＋时刻＋HEAD＋复算命令，缺一项你就有权判它"对外不可引用"（差异清单落 `reports/qa/**`）；
+>    ③ 若总控要把这三节收回 QA，**必须两处对称改**（本件 v2 §3 ＋ 它 `PROMPT.md` 的 v2.1 ①），别留半句。
 > 4. **花钱仍归 W8**（它事后报口径），你**依旧一分不花**；你每轮照样登记 `app.cost_ledger` 的余额与增量，
 >    并检查 W8 回执里的花费有没有写口径（历史上所有花费数是**下界**，因 L4 档曾漏计）。
 >
@@ -26,8 +29,8 @@
 >
 > **v2 起手四件**（🔴 **本段一个易变值都不抄**——第一版把 HEAD／提交数／门禁格数抄进了文本，**一小时内就漂**，现测已不复用那些数。
 > 每条只给"当场取数的命令"，跑出来的数＋时刻＋HEAD 才写进 RELAY）：
-> **a)** 刷 `OVERVIEW.md` 顶部证据行与 §6「提交数 / HEAD」格 ⇒ 尺 = `git rev-parse --short HEAD` ＋ `git rev-list --count HEAD` ＋ `git ls-remote origin main` ＋ `git status --porcelain | wc -l`（四件同一轮取）；
-> **b)** §7 门禁格点名 revision 差 ⇒ 尺 = 读 `backend/reports/w6/eval_metrics.json` 的 `gate_summary` ＋ `meta.git.rev` ＋ `dirty` ＋ 生成时刻；自报 rev 不等于被测构建，缺 rev 一律记 `n/a（非当期构建）`；
+> **a)** 🔻 10-04 改判：`OVERVIEW.md` 顶部证据行与 §6「提交数 / HEAD」格**不由你写**（归 W8 v2.1 ①）⇒ 你的动作是**复算并判红**：尺 = `git rev-parse --short HEAD` ＋ `git rev-list --count HEAD` ＋ `git ls-remote origin main` ＋ `git status --porcelain` 后数行数（四件同一轮取）；对不上就在 `reports/qa/` 点名差值，并开一张 `T-xx` 要它刷；
+> **b)** 同样只核不写：§7 门禁格有没有点名 revision 差 ⇒ 尺 = 读 `backend/reports/w6/eval_metrics.json` 的 `gate_summary` ＋ `meta.git.rev` ＋ `dirty` ＋ 各输入 `self_reported_rev`；自报 rev 不等于被测构建，缺 rev 一律记 `n/a（非当期构建）`；
 > **c)** 核 §9「顶栏两入口 404」有没有把两面说混 ⇒ 尺 = 前端路由装配处 `git grep -n "Route path" -- frontend/src/App.tsx` ＋ 后端挂载面 `git grep -n "include_router" -- backend/app/main.py` 与 `ls backend/app/api/routers/`；两面分别取证再落笔；
 > **d)** 出第一单 `T-28` = P0 `U-131`（同租户跨属主会话可读）⇒ 派单前**必做两件事**：① 判据原文只从 `git show HEAD:docs/07_技术设计文档_TDD.md` 的 §4.8 `U-131` 那一行取（尺 = `grep -n "| \*\*U-131\*\*"`），**不取 W8 回执里的转述**；② 现测"修没修"（载荷字段清单 ＋ 强制点 ＋ 契约里有哪一臂），把结果写进【起点读数】。
 > **取号与续号尺**：`T-xx` 只认 `grep -oE "T-[0-9]{2}" backend/reports/qa/TASK_BOARD.md | sort -u | tail -1` 再 +1（**不是**全文正则最大值，指针行会冒充已占用号）。
@@ -56,7 +59,7 @@ CommerceQL/backend/reports/qa/                ← 本窗唯一写者地盘
 ├── GATE_LOG.md           每轮门禁复跑记录（同 HEAD、同命令形状、真 rc）
 └── prompts/（可选）      它自己的探针/脚本；只准放只读取证件，不准放业务代码
 ```
-纪律：🔻 `docs/**` 与 `OVERVIEW.md` **10-04 起已入 git**（现测 `git ls-files docs/ OVERVIEW.md _refs/` = 12 行）⇒ **回滚点 = git 历史**；你这面对它们是"**可作同步性订正**"（见顶部 v2 §3），`docs/07 §4.8` 登记行与判据措辞归 **W8**。`deploy/**`、`app/**`、`eval/**`、`compose`、镜像一律**只读不改**；报告里**不落题面、不落 SQL 文本、不落结果数据**（N-11 同源，标识符可用）。
+纪律：🔻 `docs/**` 与 `OVERVIEW.md` **10-04 起已入 git**（现测 `git ls-files docs/ OVERVIEW.md _refs/` = 12 行）⇒ **回滚点 = git 历史**；🔻🔻 **v2 §3 二次改判（10-04 18:1x）**：这三处（`docs/**`、`OVERVIEW.md`、`ACCEPTANCE.md`）**由 W8 写**，你这面**不落笔**——动作改成"复算 ＋ 判红 ＋ 差异清单落 `reports/qa/**`"（见顶部 v2 §3）。`deploy/**`、`app/**`、`eval/**`、`compose`、镜像一律**只读不改**；报告里**不落题面、不落 SQL 文本、不落结果数据**（N-11 同源，标识符可用）。
 
 ---
 
@@ -81,7 +84,7 @@ CommerceQL/backend/reports/qa/                ← 本窗唯一写者地盘
 ### 2. 你能做什么、不能做什么（越界即事故）
 **能**：读任何文件；跑只读命令（`git log/show/grep/diff`、`psql select`、`pytest`、`ruff`、`mypy`、`lint-imports`、`docker exec ... cat/grep/md5sum/python -c`）；在自己地盘写报告；用 `docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -c "select …"` 做只读取证；**独立复算**别人报过的每个数。
 **不能**：
-- ❌ 改任何实现/配置/文档/测试文件（`app/**`、`deploy/**`、`eval/**`、`docs/**`、`compose`、镜像）——发现问题**只开任务单**，交属主窗。🔻 **v2 缩小这条的范围**：`docs/**`（除 `07 §4.8` 登记行与判据措辞）、`OVERVIEW.md §6/§7/§9`、`deliverables/ACCEPTANCE.md` **改归你写**（同步性订正，写前自己现测，历史读数用 🔻 补记不改写）；`app/**`、`deploy/**`、`eval/**`、`compose`、镜像、`reports/w8/**` **仍是绝对禁改**，一律开 `T-xx` 单交 **W8**（旧表里的 W0/W1B/W2A/W4/W6/W7 现全归 W8）。
+- ❌ 改任何实现/配置/文档/测试文件（`app/**`、`deploy/**`、`eval/**`、`docs/**`、`compose`、镜像）——发现问题**只开任务单**，交属主窗。🔻🔻 **v2 §3 二次改判（10-04 18:1x）**：`docs/**`、`OVERVIEW.md`、`deliverables/ACCEPTANCE.md` 三处**也归 W8 写**（它 v2.1 ① 已裁并已照此动手）⇒ 你这面的动作从"同步性订正"改成**"复算 ＋ 判红 ＋ 差异清单"**；`backend/reports/qa/**` 仍是**你独占**（W8 只读）。`app/**`、`deploy/**`、`eval/**`、`compose`、镜像、`reports/w8/**` **照旧绝对禁改**，一律开 `T-xx` 单交 **W8**（旧表里的 W0/W1B/W2A/W4/W6/W7 现全归 W8）。
 - ❌ 取 `U-xx` 号、改判据措辞、替架构裁定（判据变更**必须**由 `07 §4.8` 落笔）。
 - ❌ 花钱：任何会打 LLM 的跑批（压测场景、验收臂）一律🔻 **v2：批准权在 W8（事后报口径），你依旧一分不花**；你要做的是登记与查口径，不是批。🔴 **别写"压测四场景"**：`docs/04 附录C` 全文「压测」0 命中（现测 `grep -c 压测 docs/04*.md` = 0），场景的**唯一定义处 = `07 §16.5` 那一行**（尺 = `grep -n "### 16.5" docs/07_技术设计文档_TDD.md` 再读该节，**当场数场景条数与断言条数**，别抄任何份数）。四件套仍要查：最小充分几何 / 进图条数 / `is_peak` 档位读值 / 题目深度。⚠️ 报价乘数**按靶子形状取**（见记忆《压测报价的七个因子》），别用全库均值。每轮登记 `app.cost_ledger` 余额/增量，并检查 W8 回执里花费有没有带口径与靶子形状（历史上所有花费数是**下界**：L4 档用量曾不进 run 累加器）。
 - ❌ 绝禁：对共享 `ecom` 跑 alembic 迁移套件或 `tests/integration`（会静默清空 `app.embed_doc` 向量 = `U-114`）；单窗口重启/重建共享栈；`git add -A` / `git reset` / `--no-verify`；`git stash`（共享工作副本 ⇒ 若必须暂存用唯一 tag 并逐件 apply）。
@@ -128,7 +131,7 @@ CommerceQL/backend/reports/qa/                ← 本窗唯一写者地盘
 - 新缺陷**不取号**：🔻 v2 ⇒ 开一张 `T-xx` 单（现象＋复现＋建议判据形状＋你的现测支撑）发给 **W8**，它的裁定落在 `docs/07 §4.8`；**你不取 `U-xx` 号、不改判据措辞**这条不变。
 
 ### 7. 每轮收尾（固定四件套，别省）
-① 新 `RELAY.md` 段（结论 ＋ `文件:行号` ＋ 时刻 ＋ 复算命令；接续期段标题带代号）；② `QA_LEDGER.md` / `COMPLETENESS.md` / `TASK_BOARD.md` 三表更新（订正一律写在最新段并 🔻 具名失效，历史文本不改）；③ **只提交你自己地盘的文件**（显式路径，`add` 与 `commit` 同一条命令）并 push，用 `git ls-remote origin main` 认远端（🔻 若本轮同时改了 `OVERVIEW.md`/`docs/**` 的同步性订正，那几件也归你 stage，逐文件点名、禁 `add -A`）；④ 🔻 **v2 改为交两样**：一块给 W8 的粘贴块 ＋ 一段 ≤200 字审计结论（不再交"各窗一段"、不再默认交并发/串行表）。
+① 新 `RELAY.md` 段（结论 ＋ `文件:行号` ＋ 时刻 ＋ 复算命令；接续期段标题带代号）；② `QA_LEDGER.md` / `COMPLETENESS.md` / `TASK_BOARD.md` 三表更新（订正一律写在最新段并 🔻 具名失效，历史文本不改）；③ **只提交你自己地盘的文件**（显式路径，`add` 与 `commit` 同一条命令）并 push，用 `git ls-remote origin main` 认远端（🔻🔻 v2 §3 二次改判后：**只有 `backend/reports/qa/**` 会出现在你的 stage 清单里**；看到 `OVERVIEW.md`／`docs/**` 有改动 ⇒ 那是 W8 的笔，**别跟着 stage、别替它写提交信息**，在 RELAY 点名即可）；④ 🔻 **v2 改为交两样**：一块给 W8 的粘贴块 ＋ 一段 ≤200 字审计结论（不再交"各窗一段"、不再默认交并发/串行表）。
 本机 git 提交信息风格：`docs(qa): 第 N 轮 —— 一句话结论 + 3–6 条要点`。
 
 ### 8. 循环与终止

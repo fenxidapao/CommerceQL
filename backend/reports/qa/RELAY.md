@@ -467,3 +467,58 @@ HEAD `98f8b04`（＝远端同点，`git rev-parse` 现测 17:5x）；链上三�
 | `QA_LEDGER.md` | L101／L102 两行 9 格、而同表表头尺 15 格 | 列数不一致 ⇒ 那两行错位渲染 | 属第 10 轮那张表；本轮追加的是「第 11 轮」那张（8 格，逐行尺过） |
 
 ⇒ 处置口径（沿用本项目既定做法）：**只修「正要往里追加的那张表」，其余登记不擅动**；下一次谁要往这三处追加，第一件事是先把它自己的列数尺对上。
+# §九 · 第 6 轮（QA 接续：QA-b）· W8 第 8 轮回执复算（2026-10-04 17:5x–18:1x +0800 · @ `eb72ec9`）
+
+## 9.1 本轮五查（简版，全现测）
+
+| 项 | 现读 | 复算命令 |
+|---|---|---|
+| HEAD／远端／工作树 | `eb72ec9` ＝ `git ls-remote origin main` 前 9 位 ／未提交 **0 行** ／本轮 W8 三笔：`4a070ae`（`state_store.py` ＋185 行契约件）／`23998db`（取证件 `--control` 臂）／`eb72ec9`（`OVERVIEW.md` ＋ w8 账面） | `git rev-parse --short HEAD; git ls-remote origin main; git status --porcelain; git show --stat --oneline 4a070ae` |
+| `docs/07` **一字未改** | v1.7.18 ／ `wc -l` = **3,642** ／ 取号行 `:1078` = 「下一个可用号 = `U-135`」／ `U-131` 判据行仍在 `:1159`（`grep -cE "^\| \*\*U-131\*\*"` = 1） | 同左三条 |
+| 共享栈与构建身份 | `commerceql-api-1` Up；容器内 `/srv/app/api/state_store.py` md5 = `e31e41c3f153a6f809a57e584f2c28a9` ＝ 工作副本 ＝ `git show HEAD:` blob（**三向同值**、工作副本 CRLF = 0）⇒ 被测构建含本次改动 | `MSYS_NO_PATHCONV=1 docker exec commerceql-api-1 md5sum /srv/app/api/state_store.py` ＋ 仓库侧 `hashlib.md5` 对 `git show HEAD:…` |
+| 花费核查 | 本轮新增（`created_at > 2026-10-04 07:00:00+00`）= **18 行／¥0.028686／`bool_and(not is_peak)` = t** ⇒ 与它报的**逐字同**；全库 **1,674／¥2.753794**／`max` = `2026-10-04 09:16:55+00` | `docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'\|' -v ON_ERROR_STOP=1 -t -c "select count(*), round(sum(cost_cny),6), bool_and(not is_peak) from app.cost_ledger where created_at > '2026-10-04 07:00:00+00';"` |
+| 本窗自测花费 | 我跑完活体两臂后台账 **1,674 → 1,674、¥2.753794 未变** ⇒ QA 侧零花费（双向自证） | 同左，跑前跑后各一次 |
+
+## 9.2 `U-131` 逐臂复算（面 = 工作副本 @ `eb72ec9` ＋ 活体 `127.0.0.1:8000`）
+
+| 臂 | 判据原文（`07:1159`）要点 | 我怎么量的 | 读数 | 判定 |
+|---|---|---|---|---|
+| ① 载荷带属主 | `create_session` 载荷与 `SessionMeta` 必须带 `user_id` | `grep -n "class SessionMeta" -A 16 backend/app/api/state_store.py` | `user_id: str` 在 `:157`；行内还点名「`U-131` 判据①」 | **达成** |
+| ② 单一强制点 | 比对只写在 `get_session`，不等 ⇒ `None`；🚫 不得在端点各写一遍 | `grep -n "def get_session" -A 30 同件` ＋ `grep -nE "user_id" backend/app/api/routers/query.py backend/app/api/routers/session.py ｜ grep -iE "owner\|meta\|!= "` | `:399-408` `owner = payload.get("user_id")` → `if not owner or str(owner) != ctx.user_id:` → warning → `return None`；**两端的重复比对命中 0** | **达成** |
+| ③ fail-closed ＋ 内部计数 | 属主缺失与不匹配同样 `None` ＋ 一条内部 WARN 计数；🚫 不得 403/401 | 读码 ＋ 契约件（`test_legacy_payload_without_owner_fails_closed`、`test_denied_read_bumps_internal_warning_counter`）＋ 计数件在 `:110` | 「`not owner`」那一支覆盖旧载荷；403/401 无路径 | **达成** |
+| ④ 三面 ＋ 契约同型 | 读 = 404、写 = 404、推理 = 不适用或补对照；**且** `tests/contract/**` 同型断言 | 我自己跑的活体两臂（零额度）＋ `pytest tests/contract/test_api_endpoints_contract.py -q -k Ownership` | 属主 `GET` = **200**（⇒ 靶子非空真）；非属主 `GET` = **404 ＋ `SESSION_NOT_FOUND`**；非属主 `POST /query` = **404 ＋ `SESSION_NOT_FOUND`**，响应首字节 **`{`**（不是 SSE ⇒ 未进图，台账 0 增）＝ **推理臂判"不适用"由我方实测得出**；契约 **7 passed**（`TestSessionOwnership` @ `:286`） | **达成** |
+| ⑤⑥⑦ 禁止 | 不改 404 语义／不加管理员豁免／不动键族 | `grep -nE "ADMIN\|admin\|豁免\|bypass" state_store.py`（命中 0）；`git diff --name-only 5307a94..eb72ec9` 不含 `cache/keys.py`；`keys.py:177` 签名仍是 `(tenant_id, session_id)` | 三条全部合规 | **达成** |
+| 判别力（pre-fix 面） | 「0 不说明修好了」那条 | 修复前 `get_session` 里**没有属主那一支**（读码）＋ W7 史实活体读数（非属主 200／`turns_readable_by_nonowner = 2`，`07:1159` 行内）⇒ 本轮 C／D 的 404 **有判别力**；旧镜像未重起（不擅动共享容器） | **成立**（按读码＋史实两路，不是单臂） | **达成** |
+
+⇒ **本窗判词：`U-131` 达成，可结案**（§4.8 那行的状态翻转归 W8 落笔，我不改判据登记行）。
+取证件本轮入库：`backend/reports/qa/prompts/probe_u131_readonly.py`（只印状态码／布尔／计数，不落令牌、不落题面、不落结果行）⇒ 任何窗下一轮都能零额度复算，**不必依赖 `E:/tmp_w7` 里那份未入库的活体产物**（那份按规矩记 `self_reported（未入库）`）。
+
+## 9.3 我替它补掉的一格 UNVERIFIED
+
+`lint-imports` 它上轮报「gbk 崩 ⇒ UNVERIFIED」。我在 `backend/` 下用 `../.venv/Scripts/lint-imports.exe`（**不带 `check` 子命令**，带了会 `Got unexpected extra argument`）跑成：**R-DEP-1／2／3／4 全 KEPT，Contracts: 4 kept, 0 broken，rc=0** @ `eb72ec9`。⇒ 该格闭，无需它再跑。
+
+## 9.4 全树复算（目录级计数带 HEAD）
+
+`cd backend && PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest -q -rfEs --continue-on-collection-errors` ⇒ **2,362 passed / 0 FAILED / 9 errors，85.24s** @ `eb72ec9` 工作树；9 条 error 全为 `tests/integration/*` 缺 `COMMERCEQL_TEST_{RW,RO,SUPER}_DSN`（`U-114` 设计如此，禁 skip）；断言失败 0 ⇒ **逐字复现它的报数**。
+⚠️ 这只证明**离线面**；G-1 要的"集成跑过"必须有 `-v` 日志 ＋ 一次性库，`eval_metrics.json` 仍是 `079916d` 那份 ⇒ **当期门禁未重算**（= `T-30`）。
+
+## 9.5 写面冲突（本轮最重要的一条体制事实）
+
+- 它把 `T-29` 处置成：**v2.1 ①/⑤ —— `OVERVIEW.md`、`docs/**`、`deliverables/ACCEPTANCE.md` 改归 W8 自写**，只留 `backend/reports/qa/**` 给 QA（现读 `reports/w8/PROMPT.md:46`、`:58`）。同轮它并已按此动手：`OVERVIEW.md:319` 那格是它写的（`eb72ec9`）。
+- 而我这份 `QA_PROMPT.md` v2 §3 当时把这四项列为 QA 写面 ⇒ **两份岗位说明书正面相反**。谁写不重要，**"一个文件一个写者"才重要**：现在归属明确到一只手的写法是自洽的，我已把本件对齐（🔻 见下），保留的防线是 **QA 独立复算 ＋ 有权判红 ＋ 差异清单落我地盘**。
+- 代价随件说清：① 对外三节的每个数今后只有一份来源（W8），**没有第二只手在旁边同步** ⇒ 我每轮要把 §6/§7/§9 的数**当作待验读数**复算，不复算过的那格在 `reports/qa/` 里记 `self_reported`；② 原 v2 起手四件的 a/b/c（刷 OVERVIEW）**改性质为"核而不写"**；③ 若哪天你要把对外落点收回 QA，只需回退我这份 v2 §3 与它 `PROMPT.md` 的 v2.1 ①，两处对称改、别留半句。
+
+## 9.6 本轮新登记（两条，都不占号）
+
+| 项 | 现读 | 处置 |
+|---|---|---|
+| `app/cache/keys.py:178-186` 的 `session_meta` docstring 值形态清单**没跟 `user_id`** | `grep -c user_id` = **0**（而实现里载荷已带属主）⇒ 注释落后实现，属"改签名漏注释"同族 | 进 `T-30` 顺带清单（改注释不动判据） |
+| 空题面 `POST /query` 我实测 **400**（不是 422） | `question` 的 `min_length=1` 在 `app/api/dto/query.py:108`，而出口给 400；**附录 A 对这条的形状我本轮没现读到规定原文** ⇒ 记 **UNVERIFIED／未查**，不据此说它错 | 谁要引用"422 才对"之前，先现读 `02 附录A` 的校验错误形状；本轮不进单，登记在案 |
+
+## 9.7 自我暴露（本轮）
+
+`lint-imports` 我第一次按 `lint-imports check` 跑 ⇒ `Got unexpected extra argument (check)`（rc=2）。这条不在记忆里（记忆里只写了 exe 路径与 cwd），**新坑已补进本件 §9.3 并同步进项目记忆《本机环境坑》**。
+
+## 9.8 下一块单（见 `TASK_BOARD.md` §15.2）
+
+`T-30` 当期门禁重算（零额度为主，含集成面一次性库配方）＋ `T-31` `U-129` 审计三格（零额度，无样本记 `n/a`）；顺带 `keys.py` 注释与九份旧窗 `PROMPT.md` 停用横幅。`U-131` 本轮**已验收达成**，不再占队列。
