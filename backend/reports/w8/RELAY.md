@@ -1042,3 +1042,32 @@ cd backend && PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest \
 | 全仓最大跟踪文件 | `eval/cassettes/w6_batch.jsonl` **13.6 MB**（其后各件均 ≤0.5 MB；`.git` 18 MB） | 体积本身没问题；但匣带=录制件，含真实 prompt 文本，**别当"私有数据"外发** |
 | 入口文档互打脸 | `README.md:12-15` 已把"当前进度"表删掉并指向 `OVERVIEW §6/§7`（✅ 不再过期）；同节 `:28` 那句 `# 阶段 0 期望 503` 是旧的 | 本轮改 `:28` 为"实测 200，且探针必须带 `/api/v1` 前缀（裸 `/healthz/ready` = 404）"；🔻 同时订正 `OVERVIEW.md` 里那句"README 停在 09-16 已过期"——**它本身已经过期了** |
 🔴 **一句话结论（给总控）**：作为**一版可跑、可复算、诚实标注状态的工程作品**——可以交；作为**PRD 口径的"可上线系统"**——不能交，`PASS 1/8`，且 `U-131`（同租户内跨属主会话可读**且可写**）未修 ⇒ **"用户隔离"这句在修复前不得出现在任何对外材料里**。
+
+### 20. 打包：`docs/01–08` ＋ `OVERVIEW.md` ＋ `_refs/` 进 git，并出交付 zip（时刻 = 2026-10-04 02:0x–02:2x +0800，起点 HEAD `a29fedc`）
+总控只要一件事："能不能打包交"。§六.19 量出的那条自指缺口（README 指向仓库外的文件、契约文档 0 跟踪）本轮闭合。
+
+**做了什么**：`git mv` 语义的搬运（内容一字未改）—— 新增 **12 个跟踪文件** = `docs/` 8 份契约文档 ＋ `_refs/` 3 件（OVERVIEW §11 引它）＋ `OVERVIEW.md`；
+`docs/*.bak-*` 七份**不进仓库**，移到工作区外归档 `E:\01_实训\项目\CommerceQL建议删除垃圾\docs-bak-20261004\`（移动非删除，已在该目录 `MANIFEST.md` 记账）。
+现算对照：搬前 `git ls-files docs` = **0**（盘上 15 个文件）→ 搬后 = **8**；`wc -l` 复算 07 = **3,642**、08 = **487**，与证据行那两个既有读数**逐位相同** ⇒ 内容确实没动。
+⚠️ 一处**字节级副作用要说清**：`.gitattributes` 的 `* text=auto eol=lf` ⇒ 入库 blob 是 LF、本机工作副本仍是 CRLF ⇒ 今后比对 `docs/**` 必须逐文件行尾归一（`§16.5` 三层证据那条纪律同样适用于文档）。
+
+**入库前的凭据检查（这是本轮唯一"差点做错"的一步）**：按 `deploy/.env` 现读的**四条真凭据**（元数据 RW 口令、分析库 RO 口令、`DEEPSEEK_API_KEY`、`DRAIN_TOKEN`）做"字面量包含"检查，值一律不打印、只报命中数 ——
+- 待入库 12 个文件：命中 **0**（`docs/05` 那两行 DSN 例子与 `docs/07:1134/1163` 都是形状／占位符，不是可用凭据）。
+- 但 `OVERVIEW.md` 命中 **2** —— 是我为了描述"固定串尺"落下的**两个口令字面量本身**（`U-134` 系）。⇒ 提交前改成形状描述（读数 18／15／9 不动），再复扫 = 命中 **0** 才 `git add`。
+- 🔴 复扫全仓时发现**另有 8 个此前已跟踪、且早已推上 GitHub 的文件仍含同样字面量**：`backend/reports/qa/{QA_LEDGER,RELAY,TASK_BOARD}.md`、`w2b/RELAY.md`、`w6/DELIVERY.md`、`w7/HANDOFF_W7.md`、`w8/PROMPT.md`、`deploy/loadtest/README.md`。
+  ⇒ 这不是本轮造成的、也不是本轮能"顺手清掉"的（**git 历史里仍在**）⇒ 仍是 `U-134` 那句"**轮换口令 vs 写成显式豁免 = 总控决策**"。本轮只登记，不擅动、不代裁。
+- 仓库自有替身门 `tests/unit/test_migration_dsn_hygiene.py` = **8 passed**（用项目自己那条规则全仓重放，零未放行命中）；离线全量在含 docs 的树上重跑 = **2,340 passed / 0 failed**（rc 0，86.93s）。
+
+**交付 zip 的做法与为什么**：用 `git archive`（**不是** zip 整个目录）——
+```bash
+cd CommerceQL && git archive --format=zip -o "E:/01_实训/项目/CommerceQL_v1_20261004.zip" HEAD
+```
+理由：工作树里有 `.venv/`、`frontend/node_modules/`、**421 MB 的 `data/ecom_sandbox.db`**、`deploy/.env`（真凭据）、各 `.bak-*`、`*.log`、缓存目录 —— 手挑排除项一定会漏。
+`git archive` 的筛选口径 = **跟踪集**，交付内容 ≡ 仓库内容，收件人可与 `git ls-files` 逐条核对。⚠️ 本机未装 `zip`（`git archive` 自带 zip 写出，不需要它）。
+
+**收件人要自己补的三件（包里没有，且必须由用户本机持有）**：① `deploy/.env`（从 `deploy/.env.example` 复制并填 `DEEPSEEK_API_KEY`）；
+② 评测沙箱库 `data/ecom_sandbox.db` —— 用 `python data/generator/seed_generator.py --out data/ecom_sandbox.db` 重建（脚本头自述确定性、CI 引它；🔴 **本窗没有当场重跑生成** ⇒ "一键可重建"这句仍是 `UNVERIFIED`）；
+③ Ollama 在宿主 `:11434`（不在 compose 内，稠密检索路依赖，缺席则检索降级为 `sparse_only`，属 RL-2 的既定行为）。
+
+**对外句子边界（本轮再确认一次）**：可以交 = **一版可跑、可复算、状态诚实标注的工程作品**（链路真跑通 ＋ 2,340/107 全绿 ＋ 浏览器走查过 ＋ 每条读数带指针）；
+**不可以**交成"可上线系统"：`PASS 1/8`、EX **6/124**、误拒 63/124、`U-131` 未修 ⇒ "门禁通过／结果算对了／用户隔离"三句在任何对外材料里都不得出现。

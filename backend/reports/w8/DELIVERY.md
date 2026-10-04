@@ -110,3 +110,11 @@
   ⑥ 🔴 **残渣尺纠错**：§六.10 那句"现查 `ecom_%` = 1，只剩共享库"是错的（SQL `LIKE` 里 `_` 是**单字符通配**，`ecom` 本身不匹配该模式）⇒ 那个"1"其实是别窗留下的 `ecom_u123_probe`；正确现算 `datname like 'ecom%'` = **2 个**（`ecom` 505 MB ＋ `ecom_u123_probe` 10 MB，**非本窗造的，未经同意不删**）。
   ⑦ **顺带量到 `U-128` 现状与本项目最贵的措辞**：`app/llm/router.py:261/288` 已 `512→2304`；匣带 115 条 L4 响应按档分 `finish_reason` = **`512 档 8/8=length`、`2304 档 7/107=length（6.5%）`** ⇒ **大幅缓解、未清零**（⚠️ 这是**匣带面**，与 W7 第十七轮活体的"约 64% 未生效"是两个数、不得互认）；L4 `completion_tokens` 中位 **2,193** 贴着上限 ⇒ 钱花在 `{candidate_id, score, reason}` 的 `reason` 自由文本上，压它属 **G-2 判据变更**，登记待裁、不自动手。
   ⑧ 对外件 `OVERVIEW.md`：证据行（380 / `079916d`，`docs/07 v1.7.18`／`08 v1.4.1`／U-135 指针三处今日重读）＋ §1 ＋ §6 五格 ＋ §7（G-1／G-2／G-5／G-6／G-8 ＋ EX `6/124` ＋ 两条新状态声明）＋ §9 六条（金标默认谓词／指标面覆盖／上游不可用归类／夹具痕迹／L4 计量／`U-128` 现状）全部就地刷新，历史读数一律 🔻 追加不删。细节：`RELAY.md` §六.16／§六.17／§六.18。
+
+- 🔻 **同轮第五次落笔（打包）**（2026-10-04 02:0x–02:2x +0800，起点 HEAD `a29fedc`）
+  ① `docs/01–08` ＋ `OVERVIEW.md` ＋ `_refs/` 进 git（新增 **12** 个跟踪文件；`git ls-files docs` 0→**8**；`wc -l` 复算 07=3,642／08=487 与搬前逐位一致 ⇒ 内容未改，只有 `.gitattributes` 的 LF 归一副作用）。
+  ② `docs/*.bak-*` 七份移到工作区外归档（移动非删除，`MANIFEST.md` 已记账）⇒ docs 的回滚点此后 = git 历史。
+  ③ 🔴 **入库前凭据检查逮到自己一处**：`OVERVIEW.md` 含 `.env` 里两条真口令的字面量（为描述"固定串尺"而落）⇒ 提交前脱敏成形状、复扫命中 **0** 才 add。全仓复扫另有 **8 个早已跟踪并推送**的文件仍含同样字面量（`qa/{QA_LEDGER,RELAY,TASK_BOARD}`／`w2b/RELAY`／`w6/DELIVERY`／`w7/HANDOFF_W7`／`w8/PROMPT`／`deploy/loadtest/README`）⇒ 属 `U-134` 未裁项，本窗只登记、不擅动。
+  ④ 门复跑：DoD④ 替身 8 passed ＋ 离线全量 **2,340 passed / 0 failed**（含 docs 的树，rc 0）。
+  ⑤ 交付包：`git archive --format=zip -o "E:\01_实训\项目\CommerceQL_v1_20261004.zip" HEAD`（筛选口径 = 跟踪集 ⇒ 天然排除 `.venv`／`node_modules`／**421 MB 沙箱库**／`deploy/.env`／`*.bak-*`／`*.log`）；包外需收件人自补三件：`deploy/.env`、`data/ecom_sandbox.db`（`seed_generator.py` 重建，**本窗未重跑 ⇒ UNVERIFIED**）、宿主 Ollama `:11434`。
+  ⑥ 结论：可交 = 一版可跑、可复算、状态诚实的工程作品；**不可**交成"可上线系统"（`PASS 1/8`、EX 6/124、`U-131` 未修）。细节：`RELAY.md` §六.20。
