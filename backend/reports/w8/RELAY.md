@@ -1369,7 +1369,7 @@ EOL 尺（16:2x 实跑，rc=0，输出 12 行）：`cd "C:/Users/林琪荣/.qode
 
 | 面 | 读数（**全部 rc 单独取**） | 命令（cwd = `backend/`） |
 |---|---|---|
-| 离线面 | **2,347 passed ／ 0 failed ／ 0 errors ／ 1 warning ／ rc 0 ／ 81.86s**，**一个集成 DSN 都没给** | `PYTHONUTF8=1 PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest -q -rfEs --continue-on-collection-errors --ignore=tests/integration` |
+| 离线面 | **2,347 passed ／ 0 failed ／ 0 errors ／ 1 warning ／ rc 0 ／ 81.86s**，**一个集成 DSN 都没给**。🔻 **落笔后在最终提交树 `cbff229` 上同尺重跑离线面** = **2,347 passed ／ 0 failed ／ 0 errors ／ rc 0 ／ 103.40s**（与 18:47 那把**逐位相同**，只差耗时）⇒ 我后面写进 `OVERVIEW`／`RELAY`／`docs/07` 的正文没有把**扫工作区那一族**跑红（`tests/unit/test_migration_dsn_hygiene.py` 单独重跑 = 8 passed／5.66s） | `PYTHONUTF8=1 PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest -q -rfEs --continue-on-collection-errors --ignore=tests/integration` |
 | 集成面 | **107 passed ／ 0 failed ／ 27.19s ／ rc 0**（`-v` ⇒ 日志里点名 10 个 `tests/integration/*.py`，`integration_ran` 才取得到） | 同上但 `pytest -v -rfEs tests/integration` ＋ 先 `source env.sh` |
 | 🔴 合树对照臂 | **2,454 passed ／ 0 failed ／ 0 errors ／ 107.90s ／ rc 0**，且 **2,347 ＋ 107 = 2,454 逐位对撞**；分层 = unit 1,422／contract 493／eval 408／integration 107／graph_snapshot 13／redteam 11（六档相加 = 2,454 ✓） | `pytest -v -rfEs --continue-on-collection-errors`（带四个 DSN，整树含集成） |
 | 制品自证（不只看 rc） | 迁移刚完成时：`alembic_version = 0005`、`information_schema.tables where table_schema='app'` = **32**、`pg_policies`（`schemaname='app'`）= **0**、启 RLS = **0**。跑完全树之后**同一库**再查：`pg_policies` = **12**（`app=6, semantic=6`）、启 RLS 表 = **8** | `docker exec -i commerceql-pg-1 psql -U postgres -d ecom_t30_it -t -A -F'\|' -c "select count(*) from pg_policies"` ⇒ ⚠️ **两个时点都要报**：把后者写成"迁移交付的形状"会把集成层自己建的对象算进地基 |
@@ -1392,6 +1392,8 @@ EOL 尺（16:2x 实跑，rc=0，输出 12 行）：`cd "C:/Users/林琪荣/.qode
 ⇒ **PASS 1 ／ FAIL 3（G-2／G-5／G-7）／ UNVERIFIED 2（G-6／G-8）／ PARTIAL 2（G-3／G-4）／ NOT_AVAILABLE 0**。
 🔴 **判定集合与上一份逐格同词**，这不是"无事发生"：本轮确实换了 G-1 的输入而词没变 ⇒ 上一份的 G-1 本来就是 PASS（红 0），本轮抬的是**输入的当期性**（`079916d`＋dirty → `a84fc6f`），不是把红洗成绿。
 八格各自的 数／面／谓词／分母／粒度 ＋ 时刻／HEAD／等级／复算命令 = **对外落点已写好**，`OVERVIEW.md:212`（表 A）与 `OVERVIEW.md:223`（表 B）；🔴 **七格的数仍属旧构建**：G-2／G-5／G-8 = `b97920d`（10-03 16:29:35Z 自报），G-3／G-4 = `22e69d3`，G-6 无 rev（09-19 自报时刻），G-7 无 rev（mtime 09-18 = 最老）。
+
+🔻 **同轮第二次重算（11:23:28Z @ `cbff229`、工作树 0 行）**：与第一次（10:51:44Z @ `a84fc6f`＋dirty）做**全量递归 diff** ⇒ 差异**只有 5 条 meta／report_git 字段**（`generated_at`、`meta.git.rev`、`meta.git.dirty` true→false、`gate_provenance.report_git.rev`、`.dirty`），八格的 verdict／measured／caveats／取证面逐字节相同。尺（零额度、可复跑）= 先把产物 `cp` 到仓库外，再同一条 reporter 命令跑第二遍，最后用递归 diff 数差异条目（本窗两份 = `E:/tmp_qoder/t30/eval_metrics_run1.json` 与入库件）。⇒ 来件起点读数②现在**一半闭、一半仍开**：**闭**的是 rev／dirty 那一半（现读 `cbff229`＋false）；**仍开**的是 5 格无自报 rev（§九.7，`T-11②` 的第二实例）。
 
 ### §九.5 落笔位置（逐条 文件:行号 ＋ 现测时刻）
 

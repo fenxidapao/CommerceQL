@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generated_at": "2026-10-04T10:51:44+00:00",
+    "generated_at": "2026-10-04T11:23:28+00:00",
     "window": "W6",
     "git": {
-      "rev": "a84fc6f",
-      "dirty": true
+      "rev": "cbff229",
+      "dirty": false
     },
     "run_config": {
       "live": true,
@@ -485,8 +485,8 @@
       }
     ],
     "report_git": {
-      "rev": "a84fc6f",
-      "dirty": true
+      "rev": "cbff229",
+      "dirty": false
     },
     "basis_legend": {
       "self_reported": "产物自己声明了时刻**和**代码版本 ⇒ 最强",
