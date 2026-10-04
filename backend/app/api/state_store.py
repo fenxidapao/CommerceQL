@@ -82,9 +82,12 @@ from app.cache import keys as cache_keys
 from app.core.contracts import IdentityContext
 from app.core.enums import TaskStatus
 from app.graph.build import GRAPH_VERSION as _GRAPH_VERSION
+from app.obs.logging import get_logger
 
 if TYPE_CHECKING:  # pragma: no cover - 仅为类型检查
     from redis.asyncio import Redis
+
+_log = get_logger(__name__)
 
 __all__ = [
     "CLARIFY_TTL_S",
@@ -103,6 +106,13 @@ TASK_TTL_S: Final[int] = cache_keys.DEFAULT_TTL_S["task_state"]
 
 #: 澄清有效期（5 分钟）—— 附录 A §A.13。过期 → `CLARIFY_EXPIRED` 410。
 CLARIFY_TTL_S: Final[int] = cache_keys.DEFAULT_TTL_S["clarify_context"]
+
+#: 会话属主校验拒绝的**内部计数**（`U-131` 判据③要求"记一条内部 WARN 计数"）。
+#: ⚠️ 两条诚实边界：**①** 它是进程内计数，只随 `warning` 日志带出，**没有**进 `/metrics` ——
+#:    指标本体由 W0 落（见 `app/api/deps.py` 那句"不自行登记同名 Counter"），要进观测面请单开一格；
+#: **②** 多副本部署下每进程各计各的，所以它**不是**"全项目拒绝次数"，只是"本进程看见过多少回"。
+#: 日志里**不落 `user_id`/`tenant_id`**（`contracts.py:76`：两者是 PII，进日志受审计约束）。
+SESSION_OWNER_DENIED: Final[dict[str, int]] = {"count": 0}
 
 #: 任务终态集合（**8 值里的后 6 个**）。进终态后不可取消（§A.3 的 `TASK_NOT_CANCELLABLE`）。
 #:
@@ -135,9 +145,16 @@ def _now_iso() -> str:
 
 @dataclass(frozen=True, slots=True)
 class SessionMeta:
-    """会话元数据（附录 A §A.5.4 的字段集）。"""
+    """会话元数据（附录 A §A.5.4 的字段集）。
+
+    🔴 `user_id` = **属主**（`U-131` 判据①）：附录 A `:1097` 的 `SESSION_NOT_FOUND` 触发条件逐字
+    是"`session_id` 不存在**或不属于当前用户**"，而修复前这份载荷里**根本没有属主字段** ⇒
+    "存在性"被当成"属主性"用。它**只用于服务端比对**，不出现在任何响应体里
+    （§A.5.2 的 `SessionDetailData` 只有 `session_id`/`turns`/`context_cursor`）。
+    """
 
     session_id: str
+    user_id: str
     created_at: str
     title: str | None
     bundle_version: str | None
@@ -332,6 +349,9 @@ class RedisStateStore:
             self._session_key(ctx),
             {
                 "session_id": ctx.session_id,
+                # 🔴 属主（U-131 判据①）：键只到租户级（`sess:meta:{tenant}:{session}`），
+                # 所以"谁建的这个会话"**只能**记在载荷里 —— 键不动（判据⑦）。
+                "user_id": ctx.user_id,
                 "created_at": created,
                 "title": None,
                 "bundle_version": None,
@@ -344,9 +364,10 @@ class RedisStateStore:
         # ⚠️ 逐个字段构造而不是 `SessionMeta(**meta)`：后者要求 mypy 从 `dict[str, object]`
         # 反推出每个字段的具体类型（做不到，会报三处 arg-type），而**为过类型检查去放宽
         # `SessionMeta` 的字段类型**（例如全改 `object`）代价更大 —— 那会让"这个字段是 str"
-        # 这件事在类型层面消失。逐字段写一遍的代价是 7 行，换来的是字段类型仍然可查。
+        # 这件事在类型层面消失。逐字段写一遍的代价是 8 行，换来的是字段类型仍然可查。
         return SessionMeta(
             session_id=ctx.session_id,
+            user_id=ctx.user_id,
             created_at=created,
             title=None,
             bundle_version=None,
@@ -356,12 +377,38 @@ class RedisStateStore:
         )
 
     async def get_session(self, ctx: IdentityContext, session_id: str) -> SessionMeta | None:
+        """读会话元数据 —— 🔴 **属主校验的唯一强制点**（`U-131` 判据②）。
+
+        三条口径都是判据写死的，改动前任一条都要回 `docs/07 §4.8:1159` 对表：
+
+        - **不符 = 缺失 = `None`**：载荷属主 ≠ `ctx.user_id`，或属主字段**根本没有**
+          （修复前写入的旧会话）⇒ 一律按"不存在"处理。🚫 **不得**因"读不到属主"放行（判据③ fail-closed）。
+        - **对外不可区分**：两个端点都把 `None` 映射成 404 `SESSION_NOT_FOUND`
+          （附录 A `:1097` 的触发条件逐字 = "`session_id` 不存在**或不属于当前用户**"）。
+          🚫 不得改成 403/401，也不得在 detail 里写"该会话存在但你不是属主"（判据⑤ —— 那等于给攻击者
+          一台"存在性枚举机"，与本文件 §二 对 `task_state` 的处理同源）。
+        - **比对只写在这一处**：端点各写一遍 = "第三个入口漏检"的成因（判据② 的 🚫）。
+          现读调用面只有 `routers/query.py:182`（写侧）与 `routers/session.py:118`（读侧）；
+          同租户键的 `get_turns` 载荷里没有可比对的属主，其**唯一**调用点在 `routers/session.py:121`
+          —— 位于 `meta is None → 404` 之后 ⇒ 本函数是它的前置门（新增调用点时必须保持这个先后）。
+        """
         key = cache_keys.session_meta(ctx.tenant_id, session_id)
         payload = await self._read_json(key)
         if payload is None:
             return None
+        owner = payload.get("user_id")
+        if not owner or str(owner) != ctx.user_id:
+            SESSION_OWNER_DENIED["count"] += 1
+            _log.warning(
+                "session_owner_denied",
+                session_id=session_id,
+                denied_total=SESSION_OWNER_DENIED["count"],
+                extra_fact="属主缺失或不符 ⇒ 与'不存在'同形返回 None（U-131 判据②③）",
+            )
+            return None
         return SessionMeta(
             session_id=str(payload.get("session_id") or session_id),
+            user_id=str(owner),
             created_at=str(payload.get("created_at") or ""),
             title=payload.get("title"),
             bundle_version=payload.get("bundle_version"),
@@ -395,6 +442,12 @@ class RedisStateStore:
         图内仍取激活版本）。"""
         key = self._session_key(ctx)
         payload = await self._read_json(key) or {}
+        # 🔴 属主**旧值优先**，但缺失时必须补上 `ctx.user_id`（`U-131` 判据① 的配套）：
+        # `_read_json` 返回 `None` 时（TTL 过期）这里等于"重建载荷"，不补属主的话重建出来的载荷
+        # 会被 `get_session` 按"属主缺失"fail-closed ⇒ 会话从"还能读"静默变成"谁也读不到"。
+        # 已有属主时不覆盖：正常路径下调用方就是属主（`get_session` 已在前面放行才走得到这里），
+        # 覆盖只会把"旧属主"改写成本轮调用者，那才是真的把所有权系统改成"先到先得"。
+        payload["user_id"] = payload.get("user_id") or ctx.user_id
         if not payload.get("title") and title:
             payload["title"] = title
         payload["bundle_version"] = payload.get("bundle_version") or bundle_version

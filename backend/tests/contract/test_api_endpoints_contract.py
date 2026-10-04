@@ -32,7 +32,7 @@ from __future__ import annotations
 import asyncio
 import json
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastapi import FastAPI
@@ -41,8 +41,9 @@ from fastapi.testclient import TestClient
 from app.api import errors
 from app.api.deps import GRAPH_RUNTIME_STATE_KEY, RUNTIME_STATE_KEY, GraphRuntime, build_runtime
 from app.api.routers import clarify, query, session
-from app.api.state_store import RedisStateStore
+from app.api.state_store import SESSION_OWNER_DENIED, RedisStateStore
 from app.auth.tokens import VerifiedToken
+from app.cache import keys as cache_keys
 from app.core.config import get_settings
 from app.core.contracts import IdentityContext
 from app.core.enums import RateLimitBucket, Role
@@ -210,6 +211,186 @@ class TestSessionEndpoints:
         sid = created["data"]["session_id"]
         resp = client.get(f"{API_PREFIX}/session/{sid}", headers=_auth())
         assert "sql" not in json.dumps(resp.json()["data"])
+
+
+# ===========================================================================
+# 一·B、会话**属主**（`U-131`，P0 安全）—— 单一强制点 ＋ fail-closed ＋ 三面结案
+# ===========================================================================
+#
+# 为什么这一组必须存在而不是"探针跑一下就算"：本号四条事实里第 ④ 条是**活体越权**
+# （W7 用非属主令牌拿到属主会话的 200 ＋ 完整 SSE），而既有隔离证据全是**跨租户**的
+# ⇒ "租户对、人不对"这一格以前没有任何自动化守卫。契约层把它钉住，才不会再漂回来。
+#
+# 三条判据对应三组断言：**判据①** 载荷带属主 ／ **判据②** 比对只在 `get_session` 一处
+# （所以这里全部走 HTTP，不去端点上找第二处） ／ **判据③** 属主缺失也 fail-closed。
+
+#: **同租户内的另一个属主** —— 越权面正是"租户对、人不对"。
+_OTHER_USER = VerifiedToken(
+    subject="u_002",
+    tenant_id="t_001",
+    role=Role.OPERATOR,
+    scope_claims=(),
+    shop_ids=(),
+    jti="jti-2",
+    issued_at=datetime.now(UTC) - timedelta(minutes=1),
+    expires_at=datetime.now(UTC) + timedelta(hours=1),
+    kid="kid-1",
+)
+
+#: 另一个租户的同一 `user_id` —— 既有跨租户隔离面的回归位（不得被本次改动带坏）。
+_OTHER_TENANT = VerifiedToken(
+    subject="u_001",
+    tenant_id="t_002",
+    role=Role.OPERATOR,
+    scope_claims=(),
+    shop_ids=(),
+    jti="jti-3",
+    issued_at=datetime.now(UTC) - timedelta(minutes=1),
+    expires_at=datetime.now(UTC) + timedelta(hours=1),
+    kid="kid-1",
+)
+
+
+def _switchable_client(
+    mode: str = "refuse_intent",
+) -> tuple[TestClient, _StubVerifier, _DepsHolder, FakeRedis]:
+    """一份共享 Redis 的应用 ＋ **可换身份**的验签替身（两个属主读同一份载荷）。
+
+    ⚠️ 用"改 `verifier.token`"而不是"再开一个 client"：两臂必须打在**同一条 `sess:meta` 载荷**上，
+    各开一个 client 就变成两份 Redis，测出来的是"我没建那个会话"而不是"我不是属主"。
+
+    返回的是 `new_deps` 那个**替身对象本身**（不是 `GraphRuntime`）：`GraphRuntime.new_deps`
+    的静态类型是 `Callable[[], GraphDeps]`（那是"每请求一份"的类型层保证，见 `app/api/deps.py`），
+    而 `_DepsHolder` 多带一个 `calls` 计数 —— 读的是同一个对象，只是类型上看不见那格计数。
+    """
+    verifier = _StubVerifier(_OPERATOR)
+    client, runtime, fake = _client(mode, verifier=verifier)
+    return client, verifier, cast(_DepsHolder, runtime.new_deps), fake
+
+
+#: 404 封套里**每请求都不同**的两个字段 —— 它们不是"信息"，比对时必须摘掉。
+#: ⚠️ 别把它们当成可泄露面：`trace_id` 是本轮新生成的（`ctx.trace_id`），
+#: `server_time` 是服务器时钟；两者在"不存在"与"不属于你"两条路径上都是**各自独立取值**的。
+_VOLATILE_ENVELOPE_KEYS = ("trace_id", "server_time")
+
+
+def _comparable_envelope(body: dict[str, Any]) -> dict[str, Any]:
+    """摘掉逐请求浮动的两个字段后的 404 封套（判据③"与不存在不可区分"的比较形状）。
+
+    剩下**每一个字段连值都要相等**：`code`、`message` 文案、`detail`、`suggestions`，
+    以及"字段集合本身"（多一根字段就是泄露）。
+    """
+    return {k: v for k, v in body.items() if k not in _VOLATILE_ENVELOPE_KEYS}
+
+
+class TestSessionOwnership:
+    """`U-131`：读侧 404 ／ 写侧 404 ／ 推理侧＝**图根本没进**（比"不适用"这句散文可证）。"""
+
+    def test_create_session_persists_owner_in_payload(self) -> None:
+        """判据①：`create_session` 的**载荷**必须带属主（键不动 ⇒ 只能记在值里，判据⑦）。"""
+        client, _, _, fake = _switchable_client()
+        sid = client.post(f"{API_PREFIX}/session", headers=_auth()).json()["data"]["session_id"]
+        raw = asyncio.run(fake.get(cache_keys.session_meta("t_001", sid)))
+        assert raw is not None, "会话载荷没写进去"
+        assert json.loads(raw).get("user_id") == "u_001", "载荷里没有属主 ⇒ get_session 无从比对"
+
+    def test_nonowner_get_is_404_and_indistinguishable_from_absent(self) -> None:
+        """读侧：非属主 → 404 `SESSION_NOT_FOUND`，且与"会话不存在"**同形**（判据③⑤）。"""
+        client, verifier, _, _ = _switchable_client()
+        sid = client.post(f"{API_PREFIX}/session", headers=_auth()).json()["data"]["session_id"]
+
+        verifier.token = _OTHER_USER  # 同租户、换人
+        denied = client.get(f"{API_PREFIX}/session/{sid}", headers=_auth())
+        absent = client.get(f"{API_PREFIX}/session/ss_nope", headers=_auth())
+
+        assert denied.status_code == 404, "跨属主读别人会话不得是 200"
+        assert denied.status_code != 403, "403 = 承认『会话存在但你不行』（判据⑤）"
+        assert denied.json()["code"] == absent.json()["code"] == "SESSION_NOT_FOUND"
+        # 字段集合本身也要相同 —— 多一根字段（如 `exists`/`owner`）就是存在性 oracle。
+        assert set(denied.json()) == set(absent.json()), "两条 404 的字段集合不得有差"
+        assert _comparable_envelope(denied.json()) == _comparable_envelope(absent.json()), (
+            "除 trace_id／server_time 外，两个 404 必须逐字段等值（文案与 detail 都不许透露存在）"
+        )
+        assert denied.json()["detail"] is None, (
+            "本端点把 detail 留在日志、不落封套 —— 一旦有人把它透出 `session_id`，就得改成与不存在同形"
+        )
+
+    def test_cross_tenant_get_still_404(self) -> None:
+        """既有面不回归：跨租户同 `user_id` 读不到（本次改动只加人级比对）。"""
+        client, verifier, _, _ = _switchable_client()
+        sid = client.post(f"{API_PREFIX}/session", headers=_auth()).json()["data"]["session_id"]
+        verifier.token = _OTHER_TENANT
+        assert client.get(f"{API_PREFIX}/session/{sid}", headers=_auth()).status_code == 404
+
+    def test_nonowner_post_query_404_and_never_enters_graph(self) -> None:
+        """**写侧**（判据④：不得只修 GET）：非属主 `POST /query` → 404，且**没进图**。
+
+        `new_deps` 是"每请求一份"的工厂 ⇒ `calls` 不变就是"这一轮连 `GraphDeps` 都没造出来"，
+        也就是 `normalize`/`gen_sql`/LLM 一次都没被碰 —— 推理侧那句"不适用"在这里是**机械**的，
+        不是散文。
+        """
+        client, verifier, holder, _ = _switchable_client()
+        sid = client.post(f"{API_PREFIX}/session", headers=_auth()).json()["data"]["session_id"]
+        before = holder.calls
+
+        verifier.token = _OTHER_USER
+        resp = _post_query(client, session_id=sid)
+
+        assert resp.status_code == 404
+        assert resp.json()["code"] == "SESSION_NOT_FOUND"
+        assert holder.calls == before, (
+            "非属主请求竟进了图 ⇒ 会写历史、占会话锁、花钱（W7 活体正是这一格）"
+        )
+
+    def test_owner_post_query_does_enter_graph(self) -> None:
+        """正向对照臂（没有它，上面那条 `== before` 是无信息的）：属主自己问 → 200 且进图 ＋1。"""
+        client, _, holder, _ = _switchable_client()
+        sid = client.post(f"{API_PREFIX}/session", headers=_auth()).json()["data"]["session_id"]
+        before = holder.calls
+
+        resp = _post_query(client, session_id=sid)
+
+        assert resp.status_code == 200, "修属主不得把属主自己的路也堵掉"
+        assert holder.calls == before + 1, "计数器若从不增长，负向臂的 0 就没有意义"
+
+    def test_legacy_payload_without_owner_fails_closed(self) -> None:
+        """判据③：修复**前**写入的旧会话（载荷无 `user_id`）也按"不存在"处理 —— 连属主本人都读不到。"""
+        client, _, _, fake = _switchable_client()
+        sid = "ss_legacy_no_owner"
+        asyncio.run(
+            fake.set(
+                cache_keys.session_meta("t_001", sid),
+                json.dumps(
+                    {
+                        "session_id": sid,
+                        "created_at": "2026-01-01T00:00:00+08:00",
+                        "title": "修复前的旧标题",
+                        "bundle_version": None,
+                        "graph_version": None,
+                        "last_turn_at": None,
+                        "closed": False,
+                    }
+                ),
+            )
+        )
+        resp = client.get(f"{API_PREFIX}/session/{sid}", headers=_auth())
+        assert resp.status_code == 404, "读不到属主就放行 = fail-open（判据③明令禁止）"
+        assert resp.json()["code"] == "SESSION_NOT_FOUND"
+
+    def test_denied_read_bumps_internal_warning_counter(self) -> None:
+        """判据③要求的"记一条内部 WARN 计数"：一次拒绝 ⇒ 计数 **+1**（不是"日志里应该有"）。"""
+        client, verifier, _, fake = _switchable_client()
+        sid = "ss_counted_denied"
+        asyncio.run(
+            fake.set(
+                cache_keys.session_meta("t_001", sid),
+                json.dumps({"session_id": sid, "created_at": "x", "closed": False, "user_id": "u_999"}),
+            )
+        )
+        before = SESSION_OWNER_DENIED["count"]
+        verifier.token = _OPERATOR  # 载荷属主是 u_999 ⇒ 这一臂是"属主不符"，不是"缺失"
+        assert client.get(f"{API_PREFIX}/session/{sid}", headers=_auth()).status_code == 404
+        assert SESSION_OWNER_DENIED["count"] == before + 1
 
 
 # ===========================================================================
