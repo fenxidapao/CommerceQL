@@ -578,3 +578,43 @@ O-11（给 U-134① 的决策输入）：「保留 allowlist ＋ 显式豁免登
 
 【不许做】不取新号（本轮两条都属既有号）；不改 `§4.8` 判据措辞（要改就在那一行落笔并逐臂复查原判据现在还防着什么）；不动 `eval/` 冻结集与匣带；**门禁重算前 §7 任何一格不得写 PASS**，`PASS 1/8` 未全绿期间对外不得写"门禁通过"；`U-131` 只写"已结案"、不写"跨用户隔离已达成"；不清 `ecom_u123_probe`（别窗对象）、不清旧窗目录内容。
 ```
+
+# §16 · 第 7 轮（QA 接续：QA-b）· 2026-10-04 19:3x +0800 · @ `ec69f8d`（403 笔）
+
+## 16.1 状态刷新
+
+| 单号 | 状态 | 依据（QA 现测） |
+|---|---|---|
+| **T-30**（八格当期化） | ✅ **达成**，引用降级一条 | `meta.git = {cbff229, dirty:false}` 复现；`counts` = PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2；`gate_provenance.rows` = 8、每格带 `basis`＋`recompute`。🔴 **G-1 的 `PASS` 只到 `mtime_only`**（两份输入是未入库 `.log`）⇒ 跨窗引用须写成"重跑取证"，别写"当期入库证据" |
+| **T-31**（`U-129` 三格） | 🟠 **三格达成／本号仍待验收** | S2 域：格1 两臂 0／格2 `ge2 = 0 ∧ n = 5`／格3 `ge3 = 10`／`⑱ shape_ok = t`；混合域与六个空域分别记"不作判"与 `n/a__该域空真` ⇒ 纪律正确。**缺 `07:1155` 行内的第二条耦合：`terminal − app.audit_log = 豁免集合（逐条具名）`** ⇒ 新单 `T-33` |
+| **T-32**（G-1 合并支） | 🔴 **成立 = 判据口径变更** | 我注入两份假日志（离线 `1 failed, 2347 passed` ＋ 集成 `107 passed`）调 `recompute_gate('G-1')` ⇒ 判定量变 `{failed: 0, errors: 0}`、**verdict = PASS**（假绿实测复现）。退回一句：「2,454 = 2,347＋107 ⇒ 证合并没吞红」不成立，加法只覆盖 `passed` |
+| **T-11② 第二实例** | ✅ **闭为"已知等级"** | `basis`／`gaps` 两键已在产物里；剩下的升级动作（汇总落成入库件）进 `T-33` 顺带 ② |
+| 它请我修的红项 | ✅ 已修 | `probe_u131_readonly.py:18` → `[*MINT, …]`；`ruff check --config pyproject.toml reports/qa` = All checks passed；件重跑读数不变、台账 1,674 → 1,674 |
+| 九份旧窗停用横幅 | ✅ 复现（我的尺错过一次） | 正尺 `awk 'FNR==3 && /停用/' */PROMPT.md` = **10 件**；我第一版用 `NR==3` 得 1 ⇒ 跨文件计数尺要点名 `NR`／`FNR` |
+| `docs/07` 改动面 | ✅ 与声明一致 | `git diff -U0 a84fc6f..HEAD -- docs/07…` 只有 **`@@ -1159 +1159 @@`** 一个 hunk ⇒ 取号行 `:1078` 与 `U-129` 行 `:1155` 一字未动 |
+| 花费 | ✅ 零 | 全库 1,674／¥2.753794／`max` `09:16:55Z` 与开工值同；我重跑探针也是 0 增 |
+
+## 16.2 → W8 第 7 轮粘贴块（总控照抄转发 · 全单零额度）
+
+```
+[QA→W8 第 7 轮 · 主单 T-33（U-129 结案缺的那条 U-130 对账量）＋ 顺带两件（T-32 修法／gate_inputs 入库件）]
+
+【目标】把 `U-129` 推到可结案：补 `07:1155` 行内的第二条耦合量（`terminal − app.audit_log = 豁免集合`，豁免逐条具名）；顺带修 G-1 的合并支失明（这条我判成**判据口径变更**，要留笔）＋ 把两份 pytest 日志的汇总落成入库件。
+
+【起点读数】QA 2026-10-04 19:0x–19:3x +0800 现测 @ `ec69f8d`（403 笔、工作树 0 行、与 origin/main 同点）：
+  ① T-30 **达成**：`eval_metrics.json` 的 `meta.git` = {`cbff229`, dirty **false**}、`counts` = PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2、`gate_provenance.rows` = 8 且每格带 `basis`＋`recompute`；
+  ② T-31 **三格达成**：S2 域 格1 两臂 = 0、格2 `ge2 = 0 ∧ t2_routed_supp = 5`、格3 `ge3 = 10`、`⑱ shape_ok = t`；混合域你标"不作判"、六个空域标 `n/a__该域空真` —— 两处纪律都对，保持；
+  ③ 🔴 但结案的第二条耦合没交：`07:1155` 行内「**本号转绿必须引用 `U-130` 的量**」＋ v1.7.18 已把分母从 `admitted` 订正为 **`terminal`** ⇒ 现在要的是 `terminal − app.audit_log 行数 = 豁免集合大小` 且豁免**逐条具名**（哪些终态不写段 1、为什么）；`t31_three_cells.json` 里没有这一项；
+  ④ T-32 我实测坐实：注入夹具（离线 `1 failed, 2347 passed` ＋ 集成 `107 passed`，文件在 `E:/tmp_qoder/fake_offline.log`／`fake_integration.log`）走 `recompute_gate('G-1', …)` ⇒ 判定量 `{failed: 0, errors: 0}`、**verdict = PASS**。根因在 `eval/reporter.py:794-802`（`{**p0, **集成各键}` 把 `failed`／`errors` 一并覆盖，只有 `passed` 补了 `passed_offline`／`passed_integration`）与 `eval/gates.py:147-158`（`red_split()` 读的就是这两个键）。你回执那句"2,454 = 2,347＋107 ⇒ 证合并没吞红"请退回改写：加法只覆盖 `passed` 那一支；
+  ⑤ G-1 的当期 PASS 目前只到 `basis = mtime_only`（两份输入是未入库 `.log`，`.gitignore:47`）⇒ 对外引用只能写"重跑取证"，别写"当期入库证据"；
+  ⑥ 零额度确认：台账 1,674 行／¥2.753794／`max` = 09:16:55Z 与开工值同；我这轮重跑探针也没花钱（属主 GET 200／非属主 GET 404／非属主 POST 404 首字节 `{`，容器内 `state_store.py` md5 = HEAD blob）。
+
+【边界】`OVERVIEW.md`／`docs/**`（含 `07 §4.8`）／`ACCEPTANCE.md` 归你写，我不碰；`backend/reports/qa/**` 仍我独占，你别动（那件 RUF005 我已经自己修了，不用你管）。这条量走**只读**取证（`deploy/loadtest/r23_thread_from_checkpoints.sql` 或 `backend/reports/w6/probe_audit_invariant.py` 一族），**外层必须包 `begin; … rollback;`**；绝不指共享 `ecom` 做写操作、绝不跳测试；禁 `git add -A`／reset／clean。
+
+【判据】`U-130` 的量按 `docs/07 §16.5:3164` 断言⑥（v1.7.18 分母订正后 = **`terminal`**）＋ `U-129` 行内 v1.7.17 的三格并报（`07:1155`）；⚠️ 该断言与 `U-130` 判据② 的落库面直读式**不同口径**，分母来源／粒度／可用面三件都不同 ⇒ **不得并读、不得互引**。T-32 的改法 = `failed`／`errors` **两侧取 max 或相加**、`error_tests` 取并集 ⇒ 这是 **G-1 判据口径变更**，要在 §4.8／`§17.1` 那一行留笔，并逐臂复查"原判据还防着什么"（它防的正是"P0 面有红却写 PASS"）。
+
+【交付】① `T-33` 读数落一份**入库 JSON**（建议 `backend/reports/w8/t33_u130_coupling.json`）：分子分母、`terminal` 的词表出处、豁免集合逐条具名、作用域与时刻、`git` 三面（rev／dirty／commit_count）、外加一条"零额度只读"自证（`begin;rollback;` 与台账未涨）；`U-129` 的转绿与否**由我按这条量判**，你别自己写"已结案"。② T-32 修法配**两态反证夹具**：脏态（离线 1 红／集成 0 红 ⇒ 判定必须翻成 FAIL）＋ 净态（本轮真实两份 ⇒ PASS 且八格历史读数一格未动）；夹具自含、绝不在共享树上留、`finally` 里清。③ gate_inputs 汇总入库件：把两份 pytest 日志的 `{passed, failed, errors, integration_ran, 文件名清单}` 连 rev/dirty/时刻 一起落成 JSON，让 G-1 的等级从 `mtime_only` 升到 `self_reported`。④ 落盘 `reports/w8/RELAY.md` 新节＋`DELIVERY.md` 一行，短回执 ≤250 字按你 §5 模板，"要 QA 同步"那栏现在归你、别再写给我。
+  复算入口（零额度）：`cd backend && PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest -q -rfEs --continue-on-collection-errors` ／ `../.venv/Scripts/lint-imports.exe`（不带 `check`）／ 注入夹具那条：`PYTHONUTF8=1 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-1', pytest_log='E:/tmp_qoder/fake_offline.log', integration_log='E:/tmp_qoder/fake_integration.log')['verdict'])"`（仓库根跑）。
+
+【不许做】不取新号（本轮都是既有号的事）；不改 `U-129`／`U-130` 的判据措辞，除 T-32 那一处口径变更且必须 §4.8 留笔；不动 `eval/` 冻结集与匣带；**在 `U-130` 那条量交齐之前 `U-129` 不得写"已修／已结案"**；门禁未全绿期间对外不得写"门禁通过"（现在还是 PASS 1/8，且 G-1 只到 `mtime_only`）；不写"跨用户隔离已达成"（`U-131` 已结案只到"该项"）；不清 `ecom_u123_probe`、不清旧窗目录内容。
+```

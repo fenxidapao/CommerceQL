@@ -522,3 +522,62 @@ HEAD `98f8b04`（＝远端同点，`git rev-parse` 现测 17:5x）；链上三�
 ## 9.8 下一块单（见 `TASK_BOARD.md` §15.2）
 
 `T-30` 当期门禁重算（零额度为主，含集成面一次性库配方）＋ `T-31` `U-129` 审计三格（零额度，无样本记 `n/a`）；顺带 `keys.py` 注释与九份旧窗 `PROMPT.md` 停用横幅。`U-131` 本轮**已验收达成**，不再占队列。
+# §十 · 第 7 轮（QA 接续：QA-b）· W8 第 9 轮回执复算（2026-10-04 19:0x–19:3x +0800 · @ `ec69f8d`，403 笔）
+
+## 10.1 五查（简版）
+
+HEAD `ec69f8d` ＝ `git ls-remote origin main` 前 9 位 ／ `git rev-list --count HEAD` = **403** ／ `git status --porcelain` = **0 行**。
+本轮 W8 三笔：`485b511`（八格重算件＋三格入库件）／`cbff229`（§4.8 那行落笔＋OVERVIEW §6/§7）／`ec69f8d`（干净树第二次重算＋同轮 🔻 订正）。
+`docs/07` = **3,642 行、v1.7.18**，`git diff -U0 a84fc6f..HEAD -- docs/07…` 的 hunk 头只有 **`@@ -1159 +1159 @@`** ⇒ **只动了 `U-131` 那一行、`:1078` 取号行与 `:1155` 的 `U-129` 行逐字节未动**（它这条声明我复算通过）。
+
+## 10.2 T-30（八格当期化）——**达成，但有一格降级引用**
+
+| 项 | 现测 | 等级 |
+|---|---|---|
+| 当期身份 | `meta.git` = **{rev: `cbff229`, dirty: **false**}**、`meta.generated_at` = `2026-10-04T11:23:28+00:00` | self（我读产物） |
+| 总判定 | `gate_summary.counts` = **PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2／NOT_AVAILABLE 0** ⇒ 仍 `PASS 1/8`，对外未写"门禁通过" ✓ | self |
+| 八格取证面 | `gate_provenance.rows` = **8 行**，每行带 `artifacts[].path／tracked_in_git／self_reported_rev／mtime_utc／basis／arg` ＋ `recompute` 一条命令 ＋ `missing_input_reason` | self |
+| 它自己点的缺口 | `gaps`：弱证据格 = **G-1／G-4／G-7**；无自报 rev 的格 = **G-1／G-4／G-6／G-7**；未入库件 = 那两条 `_*.log` | self |
+| 🔴 引用限制（本窗判词） | G-1 的两份输入是 `.log`，`tracked_in_git = false`、`self_reported_rev = null`、`basis = mtime_only` ⇒ **G-1 的 PASS 只能重跑取证、不可跨窗引用**（`.gitignore:47` 那条同族）；余七格数值仍出自 `b97920d`／`22e69d3`／09-18·19 的无 rev 件 ⇒ 引"当期"只到 `meta.git` 那一层，**别把八格都说成当期** | — |
+
+## 10.3 T-31（`U-129` 审计三格）——**三格达成／本号不得转绿**
+
+件 = `backend/reports/w8/t31_three_cells.json`（18:51，`git = {a84fc6f, dirty: true, 399 笔}` ⇒ 引用要带"出自 dirty 树"这一句；性质是只读 SQL（外层 `begin; … rollback;`），不影响判定）。
+
+| 格 | 判据原文要点（`docs/07:1155`，v1.7.17 三格并报） | 它的读数（S2 post-fix 域） | 我的判定 |
+|---|---|---|---|
+| 格1 | `⑮ 臂1 = 0 ∧ 臂2 = 0` | `runs_in_scope = 30`、`t2_runs = 10`、臂1 = **0**、臂2 = **0**、`max_rows_per_t2_run = 1` | **达成** |
+| 格2 | `t2_routed_audit_supp_without_terminal_write = 0` **且第四件前置 `t2_routed_supp > 0`**（pre-fix 基线 5） | `ge2 = 0` 且 `n(t2_routed_supp) = 5` ⇒ **非空真达成，引这格必带 n** | **达成** |
+| 格3 | `t2_with_terminal_write ≥ 1`（pre-fix 基线 0；无样本记 `n/a` 不记 0） | `ge3 = 10` | **达成** |
+| 形状守卫 | `⑱ shape_ok`（排除式的正当性前提） | `g1_no_delim = 0`、`g2_start_outside_seg2 = 0`、`shape_ok = t` | **达成** |
+| 混合域纪律 | 全库宽窗 `⑰` 那一行 `ge2 = 5` **不作判**（含 pre-fix 存量） | 它写的正是"本行不作判（混合域）"，且把 `t2_runs = 61` 那一域判"未达成（ge2 = 5）" | **纪律正确** ✓ |
+| 空域纪律 | 六个 `t2_routed_supp = 0` 的域 | 全记 **`n/a__该域空真`**、没有一个记 0 | **正确** ✓ |
+
+🔴 **但 `07:1155` 行内还有第二条结案耦合**（我本轮现读到的原文）：「**本号转绿必须引用 `U-130` 的量**（`terminal − app.audit_log 行数 = 已知豁免集合的大小`，豁免**逐条具名**；v1.7.18 已把分母从 `admitted` 订正为 `terminal`）」——本轮件里**没有这一项**。
+⇒ **本窗判词：三格并报达成，`U-129` 维持「待验收」，缺一条 `U-130` 对账量 ⇒ 这就是 `T-33` 主单。**（零额度可得，不需要花一分钱。）
+
+## 10.4 T-32 —— **成立，且性质是判据口径变更**（本窗用注入法实测复现）
+
+读码（`eval/reporter.py:794-802`）：合并支把两份日志的汇总做 `{**p0, **{k: v for k, v in p0_integration.items() if k != "source_log"}}` ⇒ **`passed` 被集成层覆盖**（它为此补了 `passed_offline`／`passed_integration` 两档），而 **`failed`／`errors` 同样被覆盖、没有任何补偿**；`eval/gates.py:147-158 red_split()` 判定的正是这两个键（`assertion_failures = p0_tests["failed"]`、`environment_errors = p0_tests["errors"]`）。
+
+我构造两份假日志（`E:/tmp_qoder/fake_offline.log` = `1 failed, 2347 passed`、`fake_integration.log` = `107 passed`，均为**注入夹具、不是读数**）调 `recompute_gate('G-1', …)` ⇒
+`合并后进判定量的 = {passed: 107, failed: 0, errors: 0}`，**`G-1 verdict = PASS`**、`measured` 还写着「断言失败 0 ｜ 红 0 条；离线 passed=2347 ＋ 集成 passed=107」。
+⇒ **"离线有红"这一形状对 G-1 结构性失明 = 假绿方向**，正是这条判据存在的目的（P0 面有红却写 PASS）。
+🔴 顺带退回它一句表述：回执里那句「全树对照臂 2,454 = 前两者之和 ⇒ 证合并没吞红」**不支撑**——加法只覆盖 `passed` 那一支，`failed`/`errors` 被覆盖那一支没有对照。**代码结论不变，措辞要改。**
+本窗裁定：**改法 = `failed`／`errors` 两侧取 max（或相加）＋ `error_tests` 取并集**；这属于 **G-1 判据口径变更** ⇒ 必须在 `docs/07 §4.8`／`§17.1` 那一行留笔并逐臂复查"原判据还防着什么"，且要配**两态反证夹具**（脏态：离线 1 红／集成 0 红 ⇒ 必须 FAIL；净态：本轮真实两份 ⇒ PASS 且历史读数一格不动）。我上面那两条注入文件可直接当脏态夹具（`finally` 里删、绝不在共享树上留）。
+
+## 10.5 T-11② 第二实例（pytest 日志不自报 rev/dirty）——**闭为"已知等级"，不是闭为"已修"**
+
+现测：`gate_provenance.rows` 已给每格 `basis ∈ {self_reported, self_reported_at_only, mtime_only, absent}` ＋ `gaps` 两组点名 ⇒ **缺口从"没人知道"变成"长在产物里"**，这半我判**达成**。
+剩下那半（`_*.log` 被 `.gitignore:47` 忽略 ⇒ 永远 `mtime_only`）不是靠提醒能修的：`07:1155` 的引用规则要求"能复算" ⇒ 正解是**把两份日志的汇总落成入库 JSON（自带 rev/dirty／命令／时刻）**，属新增产物、不动判据 ⇒ 进 `T-33` 顺带 ②。在那之前引用 G-1 一律带 `basis = mtime_only`。
+
+## 10.6 两件它请我做的／我自己曝的
+
+- ✅ `prompts/probe_u131_readonly.py:18` 的 `RUF005` 已改成 `[*MINT, "--user-id", user_id]`；`cd backend && ruff check --config pyproject.toml reports/qa` = **All checks passed**。件重跑一次（零额度）：`A 200｜B 属主 GET 200｜C 非属主 GET 404 SESSION_NOT_FOUND｜D 非属主 POST 404 且首字节 {`｜**台账 1,674 → 1,674**；容器内 `state_store.py` md5 = `e31e41c3…` = `git show HEAD:` blob ⇒ **被测构建仍含 `U-131` 修法**（本轮未重建镜像，也不需）。
+- 🔴 我这边**尺自曝一次**：数"停用横幅"我第一次用 `awk 'NR==3 && /停用/' */PROMPT.md` 得 **1** —— `NR` 在多文件间是**累计行号**，正解是 `FNR==3` ⇒ 现测 **10 件**（`arch` ＋ 九份旧窗）＝ 它的声明复现。同族教训：**跨文件计数的尺必须点名是 `NR` 还是 `FNR`**。
+- 🔴 还有一次**流程自曝**：重跑探针时我先用 `… 2>&1 | grep -E "^[A-E]_"` 取读数，屏幕上什么都没出（管道与缓冲把行吃了），**我据此差点写"探针没出结果"**；改成 `> file 2>&1` 再读文件才拿到上面那五行。⇒ 与本窗 §8.6 同族：**结论只从产物文件读**。
+
+## 10.7 队列与下一块
+
+`U-131` 已结案（§4.8 那行由 W8 落笔 ✓）；`U-129` 三格达成但**缺 `U-130` 耦合量 ⇒ 待验收**；门禁 `PASS 1/8` 且 G-1 只到 `mtime_only`；对外硬伤余下：四端点（`A.7.1`／`A.7.2`／`A.9.3`／`A.9.4`）＋ `present/` 空壳。
+⇒ 下一块 = **`T-33` 主单（`U-130` 对账量，零额度）＋ 顺带 ① T-32 修法（判据口径变更＋两态反证）＋ 顺带 ② `gate_inputs` 汇总入库件**。见 `TASK_BOARD.md` §16.2。

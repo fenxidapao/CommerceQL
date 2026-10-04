@@ -15,7 +15,7 @@ MINT = ["../.venv/Scripts/python.exe", "scripts/mint_dev_token.py", "--tenant-id
 
 def token_for(user_id: str) -> str:
     r = subprocess.run(
-        MINT + ["--user-id", user_id],
+        [*MINT, "--user-id", user_id],
         cwd=str(Path(__file__).resolve().parents[3]),
         capture_output=True,
         text=True,
