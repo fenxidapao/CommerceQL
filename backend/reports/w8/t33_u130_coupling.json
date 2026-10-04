@@ -1,0 +1,1326 @@
+{
+  "artifact": "t33_u130_coupling",
+  "purpose": "QA 第 7 轮 T-33：`U-129` 结案所必需的第二条耦合量（`docs/07:1155` 行内 v1.7.5 那句「本号转绿必须引用 `U-130` 的量」 ＋ `docs/07 §16.5:3164` 断言⑥ 的 v1.7.18 分母订正）",
+  "generated_at_utc": "2026-10-04T12:18:49Z",
+  "reading_window_utc": [
+    "2026-10-04T12:18:49Z",
+    "2026-10-04T12:19:04Z"
+  ],
+  "git": {
+    "rev": "1a2e474",
+    "rev_full": "1a2e474ec355392ce5483880dc6071c1139cade3",
+    "commit_count": 404,
+    "dirty": true,
+    "dirty_files": [
+      "backend/reports/w8/t33_u130_coupling.json",
+      "backend/reports/w8/t33_u130_coupling.py"
+    ]
+  },
+  "zero_quota_readonly_selfproof": {
+    "cost_ledger_before": {
+      "rows": "1674",
+      "sum_cny": "2.753794",
+      "max_created_at_utc": "2026-10-04 09:16:55"
+    },
+    "cost_ledger_after": {
+      "rows": "1674",
+      "sum_cny": "2.753794",
+      "max_created_at_utc": "2026-10-04 09:16:55"
+    },
+    "unchanged": true,
+    "outer_transaction": "每条语句外层 begin; … rollback;（本件 `_psql()`）⇒ 服务端零持久写",
+    "no_dsn_used": "取数走 `docker exec … psql -d ecom`（容器内 trust 认证），本件不含任何 DSN／口令",
+    "residue_ruler_datname_like_ecom": [
+      {
+        "datname": "ecom",
+        "bytes": 530848791
+      },
+      {
+        "datname": "ecom_u123_probe",
+        "bytes": 10854927
+      }
+    ],
+    "note": "残渣尺 = 建库前后同值（本窗未建任何库）；`ecom_u123_probe` 是别窗对象，本窗不删"
+  },
+  "terminal_lexicon": {
+    "definition": "发出终止事件（SSE `terminal: true` 帧）的 run 数；request 粒度、由客户端侧数出来的",
+    "vocabulary_source": "deploy/loadtest/driver.py:371-376 `_TERMINAL_OUTCOMES` = {ok, clarify, refuse, error_frame, async_degraded}",
+    "counter_source": "deploy/loadtest/driver.py `_admission()` 里 `buckets[\"terminal\"] += 1`（同一函数把 `truncated`／4xx／5xx／超时都排除在外）",
+    "server_side_event_vocabulary": "backend/app/core/enums.py:146 `SSE_TERMINAL_EVENTS` = {complete, clarify, refuse, error}（≠ 驱动 outcome 词表，两把尺各有各的名单）",
+    "denominator_ruling": "docs/07 §16.5:3164 断言⑥ ＋ v1.7.18 就地订正（`admitted` → `terminal`）；同版点名本断言与 `U-130` 判据②（落库面直读式数 run）不同口径 ⇒ 不得并读、不得互引",
+    "excluded_from_denominator": [
+      "truncated（2xx 但流里无终止帧）",
+      "http_4xx（含 409 SESSION_CONFLICT）",
+      "http_5xx",
+      "timeout / conn_error",
+      "rejected_429（判据⑤ 明令不得进分母）"
+    ]
+  },
+  "shape_guard_T18": {
+    "terminal_write_rows": 879,
+    "g1_no_delim__want_0": 0,
+    "g2_start_outside_seg2__want_0": 0,
+    "start_rows_excluded": 33,
+    "shape_ok": true,
+    "ruler": "与 deploy/loadtest/r23_thread_from_checkpoints.sql 的 ⑱ 同源两式（守卫翻 ⇒ 本件 wrote 系读数一律 null）"
+  },
+  "audit_surface": {
+    "table": "app.audit_log（段1）／app.audit_log_supplement（段2）；段1 只有 `task_id` 一个 run 键（**无 `thread_id`、无 `trace_id` 列**，现读 information_schema）",
+    "uniqueness_backstop": "backend/app/repo/migrations/versions/0001_roles_and_audit_append_only.py:152 `CONSTRAINT uq_audit_log_task_id UNIQUE (task_id)` ⇒「多落」在库面上被约束挡死，本件的 `multi_row_runs` 是旁证而不是唯一守卫",
+    "era": {
+      "first_row_utc": "2026-09-19 05:14:39",
+      "last_row_utc": "2026-10-04 09:16:56",
+      "rows": 891,
+      "distinct_task_id": 891
+    }
+  },
+  "faces": {
+    "R_receipt_request_grain": {
+      "numerator": "回执里的 `admission.terminal`（见 `terminal_lexicon`）",
+      "denominator_side": "同窗 run 集合的 `app.audit_log` 段1 行数",
+      "in_scope_receipts": 7,
+      "sum_of_gaps": 4,
+      "gap_named_and_cross_check": {
+        "zero_audit_runs_found_on_landing_face": 4,
+        "task_ids": [
+          "tk_398fa097c589466ba6b61c35a2b633cb",
+          "tk_6a1a6c029be7427cb41c7dac2ce736e1",
+          "tk_9f575a098ecf4ac6be50649f20a18b23",
+          "tk_a1e54c1d5d8c49bb8cd7117703020f45"
+        ],
+        "cross_check_vs_committed_artifact": {
+          "source": "deploy/loadtest/r20_internal_attribution.txt:23-26（4 条 `graph_run_failed`，`error_type=ValueError`，detail=「终态已被设置（N-08）」）",
+          "ids": [
+            "tk_398fa097c589466ba6b61c35a2b633cb",
+            "tk_6a1a6c029be7427cb41c7dac2ce736e1",
+            "tk_9f575a098ecf4ac6be50649f20a18b23",
+            "tk_a1e54c1d5d8c49bb8cd7117703020f45"
+          ],
+          "sets_equal": true
+        },
+        "attribution": "差 4 全部落 X1 类（崩臂，`U-129` 的缺陷面）⇒ **不落入「已知豁免集合」**；其余 6 格差 0（非空真：那 6 格的 `terminal` 都 > 0）"
+      },
+      "items": [
+        {
+          "receipt": "deploy/loadtest/healthy_r20_aprime_c12n108.json",
+          "started_at": "2026-09-29T06:17:08+00:00",
+          "finished_at": "2026-09-29T06:18:21+00:00",
+          "terminal": 99,
+          "admitted": 99,
+          "rejected_429": 9,
+          "other_http_4xx": 0,
+          "http_5xx": 0,
+          "unresolved": 0,
+          "codes": {
+            "GATE_AST_REJECTED": 43,
+            "INTERNAL": 17,
+            "RATE_LIMITED": 9
+          },
+          "codes_task_ids": null,
+          "window_used": [
+            "2026-09-29 06:17:08+00",
+            "2026-09-29 06:18:21+00"
+          ],
+          "run_set_ruler": "run 首见 ts ∈ 回执自己的 started_at..finished_at；审计**按 task_id join、不带时间谓词**（⑭c 的写入延迟 max 187.623s 因此不参与本读数）",
+          "landing_face": {
+            "runs": 99,
+            "t2_runs": 22,
+            "terminal_writes_landing": 77,
+            "audit_rows": 95,
+            "runs_with_audit": 95,
+            "runs_without_audit_row": 4,
+            "gap_down_terminal_no_audit": 0,
+            "gap_up_audit_no_terminal": 18,
+            "multi_row_runs": 0
+          },
+          "gap_receipt_face__terminal_minus_audit_rows": 4,
+          "gap_down_members_named__terminal_write_no_row": [],
+          "zero_audit_runs_in_window_named": [
+            {
+              "task_id": "tk_398fa097c589466ba6b61c35a2b633cb",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:18:05",
+              "usr": "u_f06",
+              "audit_outcome": "(无段1行)",
+              "audit_rows": "0"
+            },
+            {
+              "task_id": "tk_6a1a6c029be7427cb41c7dac2ce736e1",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:17:38",
+              "usr": "u_f04",
+              "audit_outcome": "(无段1行)",
+              "audit_rows": "0"
+            },
+            {
+              "task_id": "tk_9f575a098ecf4ac6be50649f20a18b23",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:18:04",
+              "usr": "u_f09",
+              "audit_outcome": "(无段1行)",
+              "audit_rows": "0"
+            },
+            {
+              "task_id": "tk_a1e54c1d5d8c49bb8cd7117703020f45",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:17:54",
+              "usr": "u_f07",
+              "audit_outcome": "(无段1行)",
+              "audit_rows": "0"
+            }
+          ],
+          "gap_up_members_named__row_no_terminal_write": [
+            {
+              "task_id": "tk_04785dfb2848457b9a645cdb69a6681c",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:18:09",
+              "usr": "u_f03",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_1c2a8291a547466980036234662adc9b",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:18:11",
+              "usr": "u_f11",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_1c9ac3ee687e41309f948acb0abb419b",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:17:55",
+              "usr": "u_f11",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_22f5e63380684b1bafb786d18ec73e54",
+              "turn": "3",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:18:05",
+              "usr": "u_f05",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_26f3e886794045d8936e7d71241186f3",
+              "turn": "3",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:18:07",
+              "usr": "u_f11",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_374013d8df684e1799e6211325047c45",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:18:02",
+              "usr": "u_f09",
+              "audit_outcome": "clarify",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_3910189db6d5461ca4893644cb993f82",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:17:53",
+              "usr": "u_f12",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_3b31e7cfe6d8492a926ff616b70a2adb",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:17:37",
+              "usr": "u_f01",
+              "audit_outcome": "refuse",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_4166764282df44aa82d1735c11281f8c",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:18:02",
+              "usr": "u_f03",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_50c4611b34324c7ab6a53543cd40eb56",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:17:35",
+              "usr": "u_f05",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_5ac01638586145b68fbf5d9a29ae20d9",
+              "turn": "4",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:18:09",
+              "usr": "u_f11",
+              "audit_outcome": "refuse",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_711f61e28dbf434ba17a460deacf9407",
+              "turn": "3",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:17:57",
+              "usr": "u_f11",
+              "audit_outcome": "refuse",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_7d1ca568f378400fb278473001b6f4f7",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:17:53",
+              "usr": "u_f11",
+              "audit_outcome": "refuse",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_8641ed9982c740f5a7d783dd3ce886a4",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:18:10",
+              "usr": "u_f10",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_a241c2d8ce5448c484a6573e6f62b728",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:18:07",
+              "usr": "u_f05",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_bb96bf9772d44fbab63e42c03b23d041",
+              "turn": "3",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:17:55",
+              "usr": "u_f10",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_c9ac8a3ba65945fdbbf9f666c40883ef",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:17:44",
+              "usr": "u_f10",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_e80df4fafdfe42109878f2ba6a6f6369",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 06:17:44",
+              "usr": "u_f08",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            }
+          ],
+          "静默前置": "该窗结束到读数时刻 ≈ 2,418 倍 max lag ⇒ 无「读得太早」风险"
+        },
+        {
+          "receipt": "deploy/loadtest/healthy_r20_warm_c1n1.json",
+          "started_at": "2026-09-29T06:15:28+00:00",
+          "finished_at": "2026-09-29T06:15:39+00:00",
+          "terminal": 1,
+          "admitted": 1,
+          "rejected_429": 0,
+          "other_http_4xx": 0,
+          "http_5xx": 0,
+          "unresolved": 0,
+          "codes": {},
+          "codes_task_ids": null,
+          "window_used": [
+            "2026-09-29 06:15:28+00",
+            "2026-09-29 06:15:39+00"
+          ],
+          "run_set_ruler": "run 首见 ts ∈ 回执自己的 started_at..finished_at；审计**按 task_id join、不带时间谓词**（⑭c 的写入延迟 max 187.623s 因此不参与本读数）",
+          "landing_face": {
+            "runs": 1,
+            "t2_runs": 0,
+            "terminal_writes_landing": 1,
+            "audit_rows": 1,
+            "runs_with_audit": 1,
+            "runs_without_audit_row": 0,
+            "gap_down_terminal_no_audit": 0,
+            "gap_up_audit_no_terminal": 0,
+            "multi_row_runs": 0
+          },
+          "gap_receipt_face__terminal_minus_audit_rows": 0,
+          "gap_down_members_named__terminal_write_no_row": [],
+          "zero_audit_runs_in_window_named": [],
+          "gap_up_members_named__row_no_terminal_write": [],
+          "静默前置": "该窗结束到读数时刻 ≈ 2,419 倍 max lag ⇒ 无「读得太早」风险"
+        },
+        {
+          "receipt": "deploy/loadtest/r22_lock_c8n8.json",
+          "started_at": "2026-09-29T12:21:51+00:00",
+          "finished_at": "2026-09-29T12:21:58+00:00",
+          "terminal": 1,
+          "admitted": 1,
+          "rejected_429": 0,
+          "other_http_4xx": 7,
+          "http_5xx": 0,
+          "unresolved": 0,
+          "codes": {
+            "SESSION_CONFLICT": 7
+          },
+          "codes_task_ids": {},
+          "window_used": [
+            "2026-09-29 12:21:51+00",
+            "2026-09-29 12:21:58+00"
+          ],
+          "run_set_ruler": "run 首见 ts ∈ 回执自己的 started_at..finished_at；审计**按 task_id join、不带时间谓词**（⑭c 的写入延迟 max 187.623s 因此不参与本读数）",
+          "landing_face": {
+            "runs": 1,
+            "t2_runs": 0,
+            "terminal_writes_landing": 1,
+            "audit_rows": 1,
+            "runs_with_audit": 1,
+            "runs_without_audit_row": 0,
+            "gap_down_terminal_no_audit": 0,
+            "gap_up_audit_no_terminal": 0,
+            "multi_row_runs": 0
+          },
+          "gap_receipt_face__terminal_minus_audit_rows": 0,
+          "gap_down_members_named__terminal_write_no_row": [],
+          "zero_audit_runs_in_window_named": [],
+          "gap_up_members_named__row_no_terminal_write": [],
+          "静默前置": "该窗结束到读数时刻 ≈ 2,302 倍 max lag ⇒ 无「读得太早」风险"
+        },
+        {
+          "receipt": "deploy/loadtest/r22_threadcell_c12n24.json",
+          "started_at": "2026-09-29T12:26:00+00:00",
+          "finished_at": "2026-09-29T12:26:16+00:00",
+          "terminal": 24,
+          "admitted": 24,
+          "rejected_429": 0,
+          "other_http_4xx": 0,
+          "http_5xx": 0,
+          "unresolved": 0,
+          "codes": {},
+          "codes_task_ids": {},
+          "window_used": [
+            "2026-09-29 12:26:00+00",
+            "2026-09-29 12:26:16+00"
+          ],
+          "run_set_ruler": "run 首见 ts ∈ 回执自己的 started_at..finished_at；审计**按 task_id join、不带时间谓词**（⑭c 的写入延迟 max 187.623s 因此不参与本读数）",
+          "landing_face": {
+            "runs": 24,
+            "t2_runs": 2,
+            "terminal_writes_landing": 22,
+            "audit_rows": 24,
+            "runs_with_audit": 24,
+            "runs_without_audit_row": 0,
+            "gap_down_terminal_no_audit": 0,
+            "gap_up_audit_no_terminal": 2,
+            "multi_row_runs": 0
+          },
+          "gap_receipt_face__terminal_minus_audit_rows": 0,
+          "gap_down_members_named__terminal_write_no_row": [],
+          "zero_audit_runs_in_window_named": [],
+          "gap_up_members_named__row_no_terminal_write": [
+            {
+              "task_id": "tk_2239007b484f4037b37079f53a2f83c2",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 12:26:01",
+              "usr": "u_g03",
+              "audit_outcome": "clarify",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_d8e731abc35a4262a205d3a2fd6bd66a",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 12:26:01",
+              "usr": "u_g01",
+              "audit_outcome": "refuse",
+              "audit_rows": "1"
+            }
+          ],
+          "静默前置": "该窗结束到读数时刻 ≈ 2,300 倍 max lag ⇒ 无「读得太早」风险"
+        },
+        {
+          "receipt": "deploy/loadtest/r22_threadturn_c4n12_pool1.json",
+          "started_at": "2026-09-29T12:26:54+00:00",
+          "finished_at": "2026-09-29T12:26:58+00:00",
+          "terminal": 12,
+          "admitted": 12,
+          "rejected_429": 0,
+          "other_http_4xx": 0,
+          "http_5xx": 0,
+          "unresolved": 0,
+          "codes": {},
+          "codes_task_ids": {},
+          "window_used": [
+            "2026-09-29 12:26:54+00",
+            "2026-09-29 12:26:58+00"
+          ],
+          "run_set_ruler": "run 首见 ts ∈ 回执自己的 started_at..finished_at；审计**按 task_id join、不带时间谓词**（⑭c 的写入延迟 max 187.623s 因此不参与本读数）",
+          "landing_face": {
+            "runs": 12,
+            "t2_runs": 8,
+            "terminal_writes_landing": 4,
+            "audit_rows": 12,
+            "runs_with_audit": 12,
+            "runs_without_audit_row": 0,
+            "gap_down_terminal_no_audit": 0,
+            "gap_up_audit_no_terminal": 8,
+            "multi_row_runs": 0
+          },
+          "gap_receipt_face__terminal_minus_audit_rows": 0,
+          "gap_down_members_named__terminal_write_no_row": [],
+          "zero_audit_runs_in_window_named": [],
+          "gap_up_members_named__row_no_terminal_write": [
+            {
+              "task_id": "tk_111b9ef504004ea08efb3451c8783867",
+              "turn": "3",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 12:26:57",
+              "usr": "u_g03",
+              "audit_outcome": "clarify",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_236df9a08157462eaad8267e3d1e4a2a",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 12:26:55",
+              "usr": "u_g03",
+              "audit_outcome": "clarify",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_26e4026fbf164b1dae036603af9502d4",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 12:26:56",
+              "usr": "u_g04",
+              "audit_outcome": "clarify",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_2b2616f9ba324592b163ae7409b73647",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 12:26:56",
+              "usr": "u_g02",
+              "audit_outcome": "clarify",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_8dc9b3b63d9649d38151f930e3c25e16",
+              "turn": "3",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 12:26:57",
+              "usr": "u_g02",
+              "audit_outcome": "clarify",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_988cdd4a9e044ea9a9b11038227d487b",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 12:26:55",
+              "usr": "u_g01",
+              "audit_outcome": "refuse",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_c450821be7f64c1c8b032f01449b53b0",
+              "turn": "3",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 12:26:57",
+              "usr": "u_g01",
+              "audit_outcome": "refuse",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_fdc3bde9942a4d43878fe1d00e68364b",
+              "turn": "3",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 12:26:57",
+              "usr": "u_g04",
+              "audit_outcome": "clarify",
+              "audit_rows": "1"
+            }
+          ],
+          "静默前置": "该窗结束到读数时刻 ≈ 2,300 倍 max lag ⇒ 无「读得太早」风险"
+        },
+        {
+          "receipt": "deploy/loadtest/r23_completeresidual_c2n4_pool1.json",
+          "started_at": "2026-09-29T15:28:57+00:00",
+          "finished_at": "2026-09-29T15:29:07+00:00",
+          "terminal": 4,
+          "admitted": 4,
+          "rejected_429": 0,
+          "other_http_4xx": 0,
+          "http_5xx": 0,
+          "unresolved": 0,
+          "codes": {},
+          "codes_task_ids": {},
+          "window_used": [
+            "2026-09-29 15:28:57+00",
+            "2026-09-29 15:29:07+00"
+          ],
+          "run_set_ruler": "run 首见 ts ∈ 回执自己的 started_at..finished_at；审计**按 task_id join、不带时间谓词**（⑭c 的写入延迟 max 187.623s 因此不参与本读数）",
+          "landing_face": {
+            "runs": 4,
+            "t2_runs": 2,
+            "terminal_writes_landing": 2,
+            "audit_rows": 4,
+            "runs_with_audit": 4,
+            "runs_without_audit_row": 0,
+            "gap_down_terminal_no_audit": 0,
+            "gap_up_audit_no_terminal": 2,
+            "multi_row_runs": 0
+          },
+          "gap_receipt_face__terminal_minus_audit_rows": 0,
+          "gap_down_members_named__terminal_write_no_row": [],
+          "zero_audit_runs_in_window_named": [],
+          "gap_up_members_named__row_no_terminal_write": [
+            {
+              "task_id": "tk_901d9144f65345d1b1de9891089d2501",
+              "turn": "3",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 15:29:00",
+              "usr": "u_h01",
+              "audit_outcome": "clarify",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_9f03be54eb60469ca7d3c3524cb970d6",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 15:28:59",
+              "usr": "u_h01",
+              "audit_outcome": "clarify",
+              "audit_rows": "1"
+            }
+          ],
+          "静默前置": "该窗结束到读数时刻 ≈ 2,242 倍 max lag ⇒ 无「读得太早」风险"
+        },
+        {
+          "receipt": "deploy/loadtest/r23_errorresidual_c2n4_pool1.json",
+          "started_at": "2026-09-29T15:29:37+00:00",
+          "finished_at": "2026-09-29T15:29:44+00:00",
+          "terminal": 4,
+          "admitted": 4,
+          "rejected_429": 0,
+          "other_http_4xx": 0,
+          "http_5xx": 0,
+          "unresolved": 0,
+          "codes": {
+            "GATE_AST_REJECTED": 2,
+            "INTERNAL": 2
+          },
+          "codes_task_ids": {
+            "GATE_AST_REJECTED": [
+              "tk_90bbc3aaa8c84c6fa5761571e1c53492",
+              "tk_e208331bf06445cebdcda557660282e9"
+            ],
+            "INTERNAL": [
+              "tk_60de763666dd4834b2c70bc3efb03b96",
+              "tk_e80bcacbd7a34b56b9ef6c95775e65bb"
+            ]
+          },
+          "window_used": [
+            "2026-09-29 15:29:37+00",
+            "2026-09-29 15:29:44+00"
+          ],
+          "run_set_ruler": "run 首见 ts ∈ 回执自己的 started_at..finished_at；审计**按 task_id join、不带时间谓词**（⑭c 的写入延迟 max 187.623s 因此不参与本读数）",
+          "landing_face": {
+            "runs": 4,
+            "t2_runs": 2,
+            "terminal_writes_landing": 2,
+            "audit_rows": 4,
+            "runs_with_audit": 4,
+            "runs_without_audit_row": 0,
+            "gap_down_terminal_no_audit": 0,
+            "gap_up_audit_no_terminal": 2,
+            "multi_row_runs": 0
+          },
+          "gap_receipt_face__terminal_minus_audit_rows": 0,
+          "gap_down_members_named__terminal_write_no_row": [],
+          "zero_audit_runs_in_window_named": [],
+          "gap_up_members_named__row_no_terminal_write": [
+            {
+              "task_id": "tk_60de763666dd4834b2c70bc3efb03b96",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 15:29:43",
+              "usr": "u_h01",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            },
+            {
+              "task_id": "tk_e80bcacbd7a34b56b9ef6c95775e65bb",
+              "turn": "2",
+              "wrote_terminal": "false",
+              "first_seen_utc": "2026-09-29 15:29:43",
+              "usr": "u_h02",
+              "audit_outcome": "failed",
+              "audit_rows": "1"
+            }
+          ],
+          "静默前置": "该窗结束到读数时刻 ≈ 2,241 倍 max lag ⇒ 无「读得太早」风险"
+        }
+      ],
+      "coverage_note": "带 `admission.terminal` 字段的入库回执只有这 7 份，且**全部早于修法时刻** ⇒ **修法后的回执面 = UNVERIFIED**（补一份当期回执要花钱，本窗未申请、未花）"
+    },
+    "W_landing_run_grain": {
+      "ruler": "分母侧 = run（`lg.checkpoints` 里带 `tk_` 的组）；终态写 = `lg.checkpoint_writes` 里 `channel='terminal'` 且 `split_part(task_path, ', ', 2) <> '__start__'`；审计侧 = `app.audit_log` 段1 按 `task_id` join（不带时间谓词）",
+      "why_two_directions": "v1.7.14 裁定②：`gap_down` 之外必须配一条对「多落」敏感的 `gap_up`；两向**分列、不相减**",
+      "blind_spot_of_this_face": "本面的分子是「这一轮自己写了终态通道」，而崩臂（X1）连终态都没写 ⇒ 它们在本面的分子与减数里都不在场 ⇒ **`gap_down = 0` 在本面不等于「账平了」**。要把崩臂数出来只能用面 R（回执 `terminal` 含 `error_frame`），或用签名 `n_audit = 0 ∧ turn >= 2`（见 `zero_audit_cohort`）。⇒ 本面与面 R 是**互补**关系，不是彼此的复核",
+      "wide": {
+        "runs": 1408,
+        "t2_runs": 71,
+        "terminal_writes_landing": 843,
+        "audit_rows": 891,
+        "runs_with_audit": 891,
+        "runs_without_audit_row": 517,
+        "gap_down_terminal_no_audit": 0,
+        "gap_up_audit_no_terminal": 48,
+        "multi_row_runs": 0,
+        "gap_down_members_named": [],
+        "gap_up_members_named": [
+          {
+            "task_id": "tk_04785dfb2848457b9a645cdb69a6681c",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:18:09",
+            "usr": "u_f03",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_111b9ef504004ea08efb3451c8783867",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 12:26:57",
+            "usr": "u_g03",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_1c2a8291a547466980036234662adc9b",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:18:11",
+            "usr": "u_f11",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_1c9ac3ee687e41309f948acb0abb419b",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:17:55",
+            "usr": "u_f11",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_2239007b484f4037b37079f53a2f83c2",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 12:26:01",
+            "usr": "u_g03",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_22f5e63380684b1bafb786d18ec73e54",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:18:05",
+            "usr": "u_f05",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_2319fa304ac04e32b2899ef7b04264a5",
+            "turn": "4",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:30",
+            "usr": "u_load3",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_236df9a08157462eaad8267e3d1e4a2a",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 12:26:55",
+            "usr": "u_g03",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_26e4026fbf164b1dae036603af9502d4",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 12:26:56",
+            "usr": "u_g04",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_26f3e886794045d8936e7d71241186f3",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:18:07",
+            "usr": "u_f11",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_2b2616f9ba324592b163ae7409b73647",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 12:26:56",
+            "usr": "u_g02",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_374013d8df684e1799e6211325047c45",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:18:02",
+            "usr": "u_f09",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_3910189db6d5461ca4893644cb993f82",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:17:53",
+            "usr": "u_f12",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_3b31e7cfe6d8492a926ff616b70a2adb",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:17:37",
+            "usr": "u_f01",
+            "audit_outcome": "refuse",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_4166764282df44aa82d1735c11281f8c",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:18:02",
+            "usr": "u_f03",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_4d410fb9c7d44f2e833759f39fadd34c",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:29",
+            "usr": "u_load2",
+            "audit_outcome": "refuse",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_50c4611b34324c7ab6a53543cd40eb56",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:17:35",
+            "usr": "u_f05",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_51315341917c422ca1f857306fd5d242",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:29",
+            "usr": "u_load5",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_56c0045a69184703881ce675b67710aa",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 12:27:56",
+            "usr": "u_g01",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_5ac01638586145b68fbf5d9a29ae20d9",
+            "turn": "4",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:18:09",
+            "usr": "u_f11",
+            "audit_outcome": "refuse",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_6054a46becd640509dc0e3b5a40e3888",
+            "turn": "4",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:30",
+            "usr": "u_load4",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_60de763666dd4834b2c70bc3efb03b96",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 15:29:43",
+            "usr": "u_h01",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_6b45e26718d54d6eb00605fb9352c748",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:28",
+            "usr": "u_load5",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_710a8f4e8e5e442cb25126898ba92e87",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:28",
+            "usr": "u_load1",
+            "audit_outcome": "refuse",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_711f61e28dbf434ba17a460deacf9407",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:17:57",
+            "usr": "u_f11",
+            "audit_outcome": "refuse",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_76117705344a45efa1d6c87020f8e4a4",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:29",
+            "usr": "u_load3",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_7d1ca568f378400fb278473001b6f4f7",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:17:53",
+            "usr": "u_f11",
+            "audit_outcome": "refuse",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_84927bd66c0144a9a6d78b73837a241f",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:28",
+            "usr": "u_load4",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_8641ed9982c740f5a7d783dd3ce886a4",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:18:10",
+            "usr": "u_f10",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_883e17f6b5d64d9492092c4000d13836",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:30",
+            "usr": "u_load2",
+            "audit_outcome": "refuse",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_8dc9b3b63d9649d38151f930e3c25e16",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 12:26:57",
+            "usr": "u_g02",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_901d9144f65345d1b1de9891089d2501",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 15:29:00",
+            "usr": "u_h01",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_96aef66b9ead4a31967c3d7b256f0c59",
+            "turn": "4",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:30",
+            "usr": "u_load1",
+            "audit_outcome": "refuse",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_988cdd4a9e044ea9a9b11038227d487b",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 12:26:55",
+            "usr": "u_g01",
+            "audit_outcome": "refuse",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_9d5fb6980cb54eecadd6cdab9f66ca12",
+            "turn": "5",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:31",
+            "usr": "u_load3",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_9f03be54eb60469ca7d3c3524cb970d6",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 15:28:59",
+            "usr": "u_h01",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_a241c2d8ce5448c484a6573e6f62b728",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:18:07",
+            "usr": "u_f05",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_b1dc1006f1994e9bbcdf535ef842a6b1",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:28",
+            "usr": "u_load3",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_bb96bf9772d44fbab63e42c03b23d041",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:17:55",
+            "usr": "u_f10",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_c450821be7f64c1c8b032f01449b53b0",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 12:26:57",
+            "usr": "u_g01",
+            "audit_outcome": "refuse",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_c819d2f3009e4f0fa452bed4a4c238a2",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:29",
+            "usr": "u_load4",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_c9ac8a3ba65945fdbbf9f666c40883ef",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:17:44",
+            "usr": "u_f10",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_d7e882da51bc4c6cb27fb018727aece3",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:29",
+            "usr": "u_load1",
+            "audit_outcome": "refuse",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_d8e731abc35a4262a205d3a2fd6bd66a",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 12:26:01",
+            "usr": "u_g01",
+            "audit_outcome": "refuse",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_e80bcacbd7a34b56b9ef6c95775e65bb",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 15:29:43",
+            "usr": "u_h02",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_e80df4fafdfe42109878f2ba6a6f6369",
+            "turn": "2",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 06:17:44",
+            "usr": "u_f08",
+            "audit_outcome": "failed",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_eadd1451da354909a14f7a263a403cb5",
+            "turn": "4",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-19 05:27:30",
+            "usr": "u_load5",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          },
+          {
+            "task_id": "tk_fdc3bde9942a4d43878fe1d00e68364b",
+            "turn": "3",
+            "wrote_terminal": "false",
+            "first_seen_utc": "2026-09-29 12:26:57",
+            "usr": "u_g04",
+            "audit_outcome": "clarify",
+            "audit_rows": "1"
+          }
+        ]
+      },
+      "post_fix_domain": {
+        "fix_moment": "2026-09-30 14:25:35+00",
+        "domain_ruler": "日期代理 = run 首见 ts 与 `33675b9` 落地时刻比，**不是构建身份**（严格分域依赖 T-11② 的 rev 自报，本窗仍欠）",
+        "runs": 30,
+        "t2_runs": 10,
+        "terminal_writes_landing": 30,
+        "audit_rows": 30,
+        "runs_with_audit": 30,
+        "runs_without_audit_row": 0,
+        "gap_down_terminal_no_audit": 0,
+        "gap_up_audit_no_terminal": 0,
+        "multi_row_runs": 0,
+        "gap_down_members_named": []
+      },
+      "pre_fix_domain": {
+        "fix_moment": "2026-09-30 14:25:35+00",
+        "runs": 1378,
+        "t2_runs": 61,
+        "terminal_writes_landing": 813,
+        "audit_rows": 861,
+        "runs_with_audit": 861,
+        "runs_without_audit_row": 517,
+        "gap_down_terminal_no_audit": 0,
+        "gap_up_audit_no_terminal": 48,
+        "multi_row_runs": 0
+      },
+      "zero_audit_cohort": {
+        "ruler": "run 首见日 × 是否 `turn≥2` × 是否早于修法时刻（粒度 = run）",
+        "rows": [
+          {
+            "day": "2026-09-16",
+            "turn_ge2": "false",
+            "pre_fix": "true",
+            "runs": 50
+          },
+          {
+            "day": "2026-09-19",
+            "turn_ge2": "false",
+            "pre_fix": "true",
+            "runs": 437
+          },
+          {
+            "day": "2026-09-20",
+            "turn_ge2": "false",
+            "pre_fix": "true",
+            "runs": 15
+          },
+          {
+            "day": "2026-09-21",
+            "turn_ge2": "false",
+            "pre_fix": "true",
+            "runs": 2
+          },
+          {
+            "day": "2026-09-28",
+            "turn_ge2": "true",
+            "pre_fix": "true",
+            "runs": 8
+          },
+          {
+            "day": "2026-09-29",
+            "turn_ge2": "true",
+            "pre_fix": "true",
+            "runs": 5
+          }
+        ],
+        "landing_blindness_probe": {
+          "all_zero_row_runs": {
+            "runs": 517,
+            "t2_runs": 13,
+            "routed_to_audit_pre": 0,
+            "routed_to_execute": 0,
+            "routed_to_audit_supp": 5,
+            "routed_to_terminal_exit": 0
+          },
+          "turn1_zero_row_runs": {
+            "runs": 504,
+            "t2_runs": 0,
+            "routed_to_audit_pre": 0,
+            "routed_to_execute": 0,
+            "routed_to_audit_supp": 0,
+            "routed_to_terminal_exit": 0
+          },
+          "turn2plus_zero_row_runs": {
+            "runs": 13,
+            "t2_runs": 13,
+            "routed_to_audit_pre": 0,
+            "routed_to_execute": 0,
+            "routed_to_audit_supp": 5,
+            "routed_to_terminal_exit": 0
+          },
+          "non_vacuity_check_whole_db": "branch:to:audit_pre=87, branch:to:audit_supp=91, branch:to:execute=91",
+          "non_vacuity_meaning": "这两个路由式在全库面上**有实例** ⇒ 上面那三个桶里的 0 是真读数，不是量具空转（本项目对「整列为 0」的固定自检）",
+          "ruler": "路由 = `lg.checkpoint_writes.channel` 等于具名 `branch:to:<节点>`（与 ⑯ 同尺）；该面只证「被路由到」、不证节点执行成功（`07` v1.7.16 ③ 的界）"
+        },
+        "reading": "517 条零审计行 = 504 条 turn1（09-16 50／09-19 437／09-20 15／09-21 2）＋ 13 条 turn≥2（09-28 8／09-29 5）。两向都测到：这 517 条**同时**无终态写（`gap_down` 读 0 的机制性原因）⇒ 它们在断言⑥ 的分子与减数里都不在场。turn1 那 504 条的落库签名 = 从未被路由到 `audit_pre`、从未到 `execute`、从未到四个终态出口（尺 = `lg.checkpoint_writes.channel` 的具名 `branch:to:<节点>`，与 ⑯ 同尺；非空性自检见 `landing_blindness_probe.non_vacuity_check_whole_db`）；turn≥2 那 13 条里有 5 条到过 `audit_supp` ⇒ 与 ⑰ 登记的 pre-fix 基线 5 对上。而它们所在的那些天**本身有审计行**（`audit_surface.era` ＋ 逐日现算）⇒ 「建线期表还没建」这句解释**只能覆盖 09-16 的 50 条**（早于段1 首行 2026-09-19 05:14:39），覆盖不了 09-19~09-21 那 454 条；那 454 条的**构建身份仍 = `UNVERIFIED`**（无 rev 自报 = T-11②），本件只登记签名、不替它们编成因"
+      },
+      "gap_up_cohort": {
+        "ruler": "同上三件（只筛 `n_audit > 0 and not wrote`）",
+        "rows": [
+          {
+            "day": "2026-09-19",
+            "turn_ge2": "true",
+            "pre_fix": "true",
+            "runs": 15
+          },
+          {
+            "day": "2026-09-29",
+            "turn_ge2": "true",
+            "pre_fix": "true",
+            "runs": 33
+          }
+        ],
+        "reading": "48 条全部 `turn≥2`、全部早于修法时刻 ⇒ 与 `U-129` 修法前的形状（第 2 轮从不自写终态）同形；修法后该向 = 0"
+      }
+    }
+  },
+  "exemption_set": {
+    "instruction": "逐条具名（类别 ＋ 代码位置 ＋ 为什么不写段1 ＋ 当期成员数）。本件**不下结案判词** —— `U-129` 转绿与否由 QA 按这条量判。",
+    "categories": [
+      {
+        "id": "X1",
+        "name": "崩臂：图内抛异常 ⇒ runner 的 `except Exception` 只补发 `error(INTERNAL)` 帧、不补审计行",
+        "kind": "**缺陷（归 `U-129` 修），不是豁免** ⇒ 差额里落到这一类的成员不得算进「已知豁免」",
+        "code_basis": "backend/app/api/runner.py:482-501（`graph_run_failed` 分支：`_log.error(...)` ＋ `recorder.push(Emission(SseEvent.ERROR, …))`，全支无 `write_audit_pre` 调用；对照同文件 `_record_cancellation()` `:669-699` 有两段式补偿）",
+        "why_it_looks_like_an_exemption": "它发了终止帧 ⇒ 进 `terminal` 分母，却一行审计都不留 ⇒ 差 ＋1；形状与设计豁免同形，只有代码位置能分开"
+      },
+      {
+        "id": "X2",
+        "name": "段1 写库失败 ⇒ fail-closed：仍发 `error` 帧、0 行是设计",
+        "kind": "**设计豁免（决策表 G1）**",
+        "code_basis": "backend/app/graph/nodes/audit_pre.py:41-54（`ok = await write_audit_pre(state)` 失败 ⇒ `terminal_update(event=\"error\", outcome=FAILED, code=INTERNAL)`）＋ backend/app/graph/nodes/error_out.py:88-94（`error_audit_missing` / `outcome=\"terminal_still_sent\"`，同形见 clarify_out.py:64-70、refuse_out.py:66-72）",
+        "contract_basis": "docs/07:2876 决策表 G1 行：事件 `error`／term ✅／审计 ❌（写不进去）／outcome `failed`",
+        "why_legitimate": "写不进段1 就终止该 run，宁可留一条「有终态无审计」的具名例外，也不假装账平了",
+        "members_current": "面上无样本（需要「段1 写库失败」夹具才能出现；本轮只读取证未造该臂）"
+      },
+      {
+        "id": "X3",
+        "name": "从未进图的请求：429 限流／409 会话锁／幂等冲突／会话不存在",
+        "kind": "**分母纪律**（判据⑤ 明令不得进分母 ⇒ 它们不是豁免集合的成员，本件把它们与 `terminal` 同幅呈现）",
+        "code_basis": "backend/app/api/routers/query.py:199-203（幂等冲突）与 :221-222（会话锁），锁在 backend/app/api/deps.py:413-442；这些都发生在 `runner.stream()` 之前 ⇒ 既无终止帧也无审计行",
+        "members_current": "回执面同幅列在各格的 `rejected_429`／`other_http_4xx` 两栏（7 格里 429 共 9 条、4xx 共 7 条，都在同一窗内被排除出分母）"
+      },
+      {
+        "id": "X4",
+        "name": "断流／取消：客户端取消或流断 ⇒ **不发终止事件**，但按 `§8.3 要求②` 补一条段1（`outcome=failed`）",
+        "kind": "**反方向成员（算进 `gap_up`，不算 `gap_down` 的豁免）**",
+        "code_basis": "backend/app/api/runner.py:398（注释原文「**不发终态事件**（§14.2 E7 原文：'无事件（流已断）'）」）＋ :685（`wrote = await write_audit_pre(state, outcome=Outcome.FAILED)`，失败则 :688 `cancel_audit_missing`）",
+        "effect_on_quantity": "行 > 终态 ⇒ 让 `terminal − 行数` 往**负**走；所以本件把两个方向分列，绝不相减成一个「缺口」"
+      },
+      {
+        "id": "X5",
+        "name": "优雅停服时由 ASGI 中间件注入的终止帧（绕过图 ⇒ 无段1）",
+        "kind": "**豁免候选，契约未具名**（本件只登记，不擅自算成豁免）",
+        "code_basis": "backend/app/main.py:61 `_drain_terminal_frame()`（在 `:472` 交给 `ObservingMiddleware`）＋ backend/app/obs/instrumentation.py:581 `_drain_stream()`：直接往 `send` 写终止帧、不经图内 `write_audit_pre`",
+        "members_current": "面上无样本（本轮窗口内无停服排水；判它需要停服夹具）"
+      },
+      {
+        "id": "X6",
+        "name": "`recursion_limit` 超限：契约要求审计 ✅，代码走的是 X1 那条 `except Exception`",
+        "kind": "**读码发现的口径冲突 ⇒ 不得算豁免，上呈待裁**",
+        "code_basis": "docs/07:2879 决策表 G4 行（`error`／term ✅／**审计 ✅**／outcome `failed`）vs backend/app/api/runner.py:482-501（该异常未被具名捕获：全仓 `grep -rn GraphRecursionError backend/app` 零命中）",
+        "members_current": "面上无样本（要触发得把图打到 25 步；本轮零额度未造）"
+      }
+    ],
+    "cardinality_current_readings": {
+      "receipt_face__gap_total": 4,
+      "receipt_face__explained_as_X1_defect": 4,
+      "receipt_face__explained_as_named_exemption": 0,
+      "landing_face__gap_down_total": 0,
+      "landing_face__gap_down_in_post_fix_domain": 0,
+      "landing_face__post_fix_runs_in_scope": 30,
+      "landing_face__post_fix_t2_runs_in_scope": 10,
+      "reading": "面上当期：设计豁免（X2／X5／X6 那三类需夹具才能出现的）成员 = 0；`gap_down` 在修法后作用域非空（runs/turn≥2 见上）的前提下读得 0；唯一的非零差 = 修法前 A 档窗的 4 条崩臂，已逐条具名并与入库件对表"
+    }
+  },
+  "discipline_notes": [
+    "本件与 `U-130` 判据②（v1.7.14 起的落库面直读式）**不得并读、不得互引**：分母来源、粒度、可用面三件都不同（§16.5:3164 v1.7.18 末段）。",
+    "被 429／409 拒的请求**不进分母**（判据⑤），本件把它们与 `terminal` 同幅呈现而不是减掉。",
+    "`n/a__该域空真` 与 `0` 分列：作用域为空 ⇒ null；有样本而读得 0 ⇒ 才是验收位。",
+    "三态纪律：面 W 的 `gap_down` 对崩臂是**结构性失明**（见 `blind_spot_of_this_face`）⇒ 引用「0」必须同框引用面 R 的那 4 条具名差，否则会把「没数到」读成「没有」。",
+    "本件不下结案判词，也不写 `U-129` 的状态；转绿与否由 QA 按这两面的读数裁。"
+  ]
+}

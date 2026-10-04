@@ -1466,3 +1466,191 @@ EOL 尺（16:2x 实跑，rc=0，输出 12 行）：`cd "C:/Users/林琪荣/.qode
 ② **`OVERVIEW.md §6` 那五行行内追加后列数仍全 3**（与 HEAD 逐行对撞：`python /e/tmp_qoder/t30/row_probe.py` 现算，五行现列数 = HEAD 列数 = 3）⇒ 我没把那张表撑破。🔻 **同轮订正（ attribution 先写错了）**：本轮 splice 脚本里那把 `col_count = len(line.split("|")) - 2` 报了"162／163／170 三处不符"，**是尺自己的口径错**（它按裸竖线切列，把 `\|` 转义也算成分隔符 ⇒ 三行都是"读数里带 `\| wc -l`"的行）；换成 **v3 尺**（`re.split(r"(?<!\\)\|", line)`，跨过表内空行续比，件 = `/e/tmp_qoder/t30/table_ruler.py`）后 §6／§7 全部 `col_mismatch = 0`。⇒ 又是"同一句计数两把尺两个数"第四实例：**报数必须带尺名**。
 ③ **`reports/qa/prompts/probe_u131_readonly.py:18` 那条 `RUF005`** 在 QA 独占面上 ⇒ 只点名、不改（边界：本窗写面不含 `reports/qa/**`）。
 
+## §十 第 10 轮（**T-33 `U-130` 对账量 ＋ T-32 G-1 合并支修法 ＋ gate_inputs 入库件** ｜ 2026-10-04 20:1x–20:5x +0800 ｜ 起点 HEAD `1a2e474`（404 笔、工作树 0 行、`git ls-remote origin main` 与 `git rev-parse HEAD` 同次运行全等）｜ **零额度 · 零跑批 · 未重建镜像 · 共享 `ecom` 只走只读事务**（一次性库 `ecom_t32_it` 建→迁移→跑→当场 DROP））
+
+### §十.0 开工六查（每轮现测，不引上一轮）
+
+| 查 | 现读 | 尺（cwd = 仓库根 `CommerceQL/`） |
+|---|---|---|
+| 提交数 / HEAD | **404 / `1a2e474`**（= QA 第 7 轮那笔），与 `git ls-remote origin main` **同次运行全等** | `git rev-list --count HEAD` ＋ `git ls-remote origin main` |
+| 工作树 | 0 行（`git status --porcelain` 空） | `git status --porcelain` |
+| 共享栈 | `commerceql-{api,web,pgbouncer,redis,pg}` 五只 Up（api/redis/pg 带 healthy），api 起于 3 小时前 ⇒ **本轮不重建、不动它** | `docker ps --format "{{.Names}} {{.Status}}"` |
+| 台账起点（零额度尺） | `app.cost_ledger` = **1,674 行 ／ ¥2.753794 ／ max 2026-10-04 09:16:55Z** ⇒ 与来件起点读数**逐位相同** | `docker exec -i commerceql-pg-1 psql -U postgres -d ecom -t -A -F'\|' -c "select count(*), to_char(sum(cost_cny),'FM999990.000000'), max(created_at) from app.cost_ledger"` |
+| 只读探针守卫 | ⑱ 形状守卫现测 `terminal_write_rows = 879`、`g1 = 0`、`g2 = 0`、`start_rows_excluded = 33`、**`shape_ok = t`** ⇒ 本窗全部 `wrote_terminal` 系读数**可用**（守卫翻则一律降 null，不降 0） | `t33_u130_coupling.py` 的 `shape_guard()`（尺与 ⑱ 同源） |
+| 段1 表时代 | `app.audit_log` 首行 `2026-09-19 05:14:39Z`、末行 `2026-10-04 09:16:56Z`、**891 行 ／ 891 个 distinct `task_id`** ⇒ 一 run 一行今天在面上成立（旁证 = `uq_audit_log_task_id` 唯一约束） | 同上件 `audit_era()` |
+
+### §十.1 先自曝两条（本轮自己的错，先于 QA 逮到）
+
+① 🔴 **第 9 轮写下的那句「合树对照 2,454 = 2,347＋107 逐位对撞 ⇒ 证合并没吞红」是错的，本轮退回改写**。
+错因 = **把加法当成了两列的证明**：`gate_inputs()` 的合并支只对 `passed` 留了两档，`failed`／`errors` 是
+`{**离线, **集成}` **整键覆盖** ⇒ 对撞式只核验了规模那一支。QA 第 7 轮 ④ 用注入夹具（离线 `1 failed, 2347 passed`
+＋集成 `107 passed`）实测出判定量 `{failed: 0, errors: 0}`、verdict = **PASS**，我按同一对夹具重跑旧装配式
+→ `red_split()["red_total"] == 0` 复现成功（`tests/eval/test_gate_inputs_p0_merge_two_state.py::test_old_cover_policy_would_have_reported_zero_red`）。
+⇒ 登记为方法论：**"两数相加相等"只证明被加的那一列没被覆盖，不证明别的列也没被覆盖**（与 `§20.4` ㉗"聚合派生量要反推约束"同族）。
+② 🔴 **本窗 T-33 探针第一版用错了尺**：把 `split_part(task_path, ', ', 2)` 当"被路由到的节点"。现测该列的第 2 段是**发起写入的那一步**，
+路由目标在 **`channel`** 里（`branch:to:<节点>`，与 ⑯ 同尺）。两把尺在全库读出的是**不同的东西**：`channel` 面现测
+`branch:to:audit_pre` = **87 行**、`branch:to:execute` = **91 行**，而 `split_part(task_path, ', ', 2)` 在全库有 **21 个 distinct 值**、
+那些值是"发起这一步写入的节点"⇒ 第一版那句"从未被路由到 `audit_pre`／`executing`"当时是**拿错面读出来的**，已按 ⑯ 的尺重算并写进 §十.2 的签名表。
+教训同族 = `§20.4` ㉖（序列断言要逐链读数）：**换一个面读数就是换一把尺，尺名要写在字段名里**。
+
+### §十.2 T-33：`terminal − 段1 行数 = 豁免集合` 的两面读数（件 = `backend/reports/w8/t33_u130_coupling.py`，产物 = 同名 JSON）
+
+判据 = `docs/07 §16.5:3164` 断言⑥（v1.7.18 分母已由 `admitted` 订正为 **`terminal`**）＋ `07:1155` 行内 v1.7.5 那句
+「本号转绿必须引用 `U-130` 的量」。`terminal` 的**词表出处**（引用本量必须同框给）：
+`deploy/loadtest/driver.py:371-376` 的 `_TERMINAL_OUTCOMES` = {ok, clarify, refuse, error_frame, async_degraded}，
+计数处 = `driver.py:_admission()`（`buckets["terminal"] += 1`，同函数把 `truncated`／4xx／5xx／超时全排除在外）；
+服务端事件词表另有其名 = `backend/app/core/enums.py:146 SSE_TERMINAL_EVENTS` = {complete, clarify, refuse, error}（**两把尺各有各的名单**）。
+
+**面 R（回执／request 粒度；7 份带 `admission.terminal` 的入库回执，全部早于修法时刻）**
+
+| 回执 | `terminal` | `admitted` | 429 | 4xx | 同窗 run | run 有段1 行 | 段1 行数 | **差 = terminal − 行数** | 面 W `gap_down` | 面 W `gap_up` |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `healthy_r20_aprime_c12n108.json` | **99** | 99 | 9 | 0 | 99 | 95 | 95 | **+4** | 0 | 18 |
+| `healthy_r20_warm_c1n1.json` | 1 | 1 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 |
+| `r22_lock_c8n8.json` | 1 | 1 | 0 | **7** | 1 | 1 | 1 | 0 | 0 | 0 |
+| `r22_threadcell_c12n24.json` | 24 | 24 | 0 | 0 | 24 | 24 | 24 | 0 | 0 | 2 |
+| `r22_threadturn_c4n12_pool1.json` | 12 | 12 | 0 | 0 | 12 | 12 | 12 | 0 | 0 | 8 |
+| `r23_completeresidual_c2n4_pool1.json` | 4 | 4 | 0 | 0 | 4 | 4 | 4 | 0 | 0 | 2 |
+| `r23_errorresidual_c2n4_pool1.json` | 4 | 4 | 0 | 0 | 4 | 4 | 4 | 0 | 0 | 2 |
+| **合计** | 145 | — | 9 | 7 | — | — | — | **＋4** | **0** | 32 |
+
+🔴 那 **4** 条**逐条具名**，且与入库件**两条独立算法对撞全等**：
+`tk_398fa097c589466ba6b61c35a2b633cb`／`tk_6a1a6c029be7427cb41c7dac2ce736e1`／`tk_9f575a098ecf4ac6be50649f20a18b23`／`tk_a1e54c1d5d8c49bb8cd7117703020f45`
+= 落库面上"同窗零段1 行"的四条 run ∩ `deploy/loadtest/r20_internal_attribution.txt:23-26` 那四条 `graph_run_failed`
+（`error_type=ValueError`、detail=「终态已被设置（N-08）」）⇒ JSON 里 `cross_check_vs_committed_artifact.sets_equal = true`。
+**归因 = X1 崩臂（`U-129` 的缺陷面），不是豁免** ⇒ 面 R 的"已知豁免集合基数"= **0**（判据⑥ 要的差全部有名字、没有一条是"说不清去向"）。
+🔻 一条历史读数不删：v1.7.9 当年报的是"差 4 ＝ 同窗 99 对 95"，本轮同一把尺重算仍是 99／95／4 ⇒ **数没漂**，漂的是**解释**（当时没有豁免类别表）。
+
+**面 W（落库面／run 粒度）**
+
+| 域 | run | `turn≥2` | 自写终态 | 段1 行数 | **`gap_down`（写终态却无行）** | `gap_up`（有行却没写终态） | 多行 run |
+|---|---|---|---|---|---|---|---|
+| 全库 | 1,408 | 71 | 843 | 891 | **0** | 48 | 0 |
+| 修法前（首见 < `2026-09-30 14:25:35Z`，**日期代理**） | 1,378 | 61 | 813 | 861 | **0** | 48 | 0 |
+| 🔴 修法后 | **30** | **10** | **30** | **30** | **0** | **0** | 0 |
+
+⇒ 修法后那一域的 `gap_down = 0` **有读点**（`runs = 30 ∧ t2 = 10` 非空 ⇒ 不是"没行可看"的形状），这正是 `§七` 那条
+"pre-fix 就为 0 不得当验收位"要求补的第二侧：**post-fix 作用域非空 ＋ 读数为 0**。
+
+🔴 **面 W 的结构性失明（引用它的 0 必须同框带这一句）**：崩臂连 `terminal` 通道都没写 ⇒ 它在面 W 的**分子与减数里都不在场** ⇒
+"`gap_down = 0`"在这一面**不等于账平**。能数出崩臂的只有两条路：面 R（`terminal` 含 `error_frame`），或签名 `n_audit = 0 ∧ turn ≥ 2`。
+
+**零审计行那批（517 条）的签名与分代**（路由尺 = `lg.checkpoint_writes.channel` 等于具名 `branch:to:<节点>`，与 ⑯ 同尺；非空性自检 = 全库三条通道分别有 `branch:to:audit_pre` **87**／`branch:to:execute` **91**／`branch:to:audit_supp` **91** 行 ⇒ 桶里那些 0 是真读数、不是量具空转）：
+
+| 桶 | run | 到过 `audit_pre` | 到过 `execute` | 到过 `audit_supp` | 到过四个终态出口 |
+|---|---|---|---|---|---|
+| 全部零行 run | 517 | 0 | 0 | 5 | 0 |
+| 其中 `turn=1` | 504 | 0 | 0 | 0 | 0 |
+| 其中 `turn≥2` | 13 | 0 | 0 | **5** | 0 |
+
+逐日／逐轮：09-16 50 ＋ 09-19 437 ＋ 09-20 15 ＋ 09-21 2（全 `turn=1`）＝ 504；09-28 8 ＋ 09-29 5（全 `turn≥2`）＝ 13。
+🔴 那句"建线期表还没建"**只覆盖 09-16 那 50 条**（早于段1 首行 09-19 05:14:39Z）；09-19~09-21 那 454 条**所在日有审计行**
+⇒ 解释不成立，它们的**构建身份 = `UNVERIFIED`**（无 rev 自报 = **T-11②** 仍未闭）。本件只登记签名与天数，不替它们编成因。
+`turn≥2` 那 13 条里的 5 条到过 `audit_supp` ⇒ 与 `r23…sql` ⑰ 登记的 pre-fix 基线 **5** 对上（第三侧独立印证）。
+
+### §十.3 豁免集合逐条具名（QA 要的"哪些终态不写段 1、为什么"）
+
+| 类 | 是什么 | 代码位置（本轮逐条现读核对） | 当期成员数 | 定性 |
+|---|---|---|---|---|
+| **X1** | 图内抛异常 ⇒ runner 的 `except Exception` 只补发 `error(INTERNAL)` 帧、不补审计 | `backend/app/api/runner.py:482-501`（对照同文件 `_record_cancellation()` `:669-699` 的两段式补偿） | 面 R 差 **4**（具名见上） | 🔴 **缺陷，不是豁免**（归 `U-129`） |
+| **X2** | 段1 写库失败 ⇒ fail-closed，仍发 `error` 帧、0 行是设计 | `backend/app/graph/nodes/audit_pre.py:41-54` ＋ `error_out.py:88-94`（`error_audit_missing`／`outcome=terminal_still_sent`；同形 `clarify_out.py:64-70`、`refuse_out.py:66-72`） ＋ 契约例外见 `tests/contract/test_audit_terminal_pairing_contract.py` | **面上无样本**（要"段1 写库失败"夹具才出现；本窗零额度未造） | ✅ 设计豁免（`07:2876` 决策表 G1） |
+| **X3** | 从未进图：429 限流／409 会话锁／幂等冲突／会话不存在 | `backend/app/api/routers/query.py:199-203`（幂等）与 `:221-222`（锁），锁在 `backend/app/api/deps.py:413-442` | 与分母同幅呈现：面 R 七格 **429 共 9、4xx 共 7** | ⚠️ **分母纪律**（判据⑤ 明令不得进分母）⇒ 不是豁免成员 |
+| **X4** | 断流／取消：**不发终止事件**，但按 `§8.3 要求②` 补一条段1（`outcome=failed`） | `backend/app/api/runner.py:398`（注释原文「不发终态事件（§14.2 E7 原文：无事件（流已断）」）＋ `:685`（`write_audit_pre(..., Outcome.FAILED)`，失败则 `:688 cancel_audit_missing`） | 面上不可与修法前存量分离 ⇒ 全部落 `gap_up`（48 条，逐条 `turn≥2 ∧ pre-fix`） | 🔴 **反方向**：让 `terminal − 行数` 往**负**走，与本断言的豁免无关 |
+| **X5** | 优雅停服时 ASGI 中间件直接注入终止帧（不经图 ⇒ 无段1） | `backend/app/main.py:61 _drain_terminal_frame()`（`:472` 交中间件）＋ `backend/app/obs/instrumentation.py:581 _drain_stream()` | **面上无样本**（本轮窗口内无停服排水） | 🟡 **豁免候选，契约未具名** ⇒ 只登记、不擅自算成豁免 |
+| **X6** | `recursion_limit` 超限：契约 G4 行要求**审计 ✅**，代码走的是 X1 那条 `except Exception` | `docs/07:2879`（G4 行）vs `runner.py:482-501`；全仓 `grep -rn "GraphRecursionError" backend/app` **零命中** | **面上无样本**（要打到 25 步才触发） | 🔴 **口径冲突 ⇒ 上呈待裁，不得算豁免** |
+
+🔴 **判词不由本窗写**：`U-129` 转绿与否按这条量由 QA 裁（派单原话）。本件与 `U-130` 判据②（v1.7.14 起的落库面直读式数 run）
+**不得并读、不得互引**：分母来源（回执计数 vs 落库面枚举）／粒度（request vs run）／可用面（断言⑥ 要有压测回执在场；判据② 零额度随时可复核）三件都不同。
+
+复算（零额度、只读；cwd = 仓库根）：`PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/t33_u130_coupling.py`
+⇒ 重落 `t33_u130_coupling.json`（含 `git` 三面 ＋ `begin;…rollback;` 与台账未涨的自证 ＋ 残渣尺）。
+件内每条 SQL 外层都包 `begin; … rollback;`（`_psql()`），**未指共享库做任何写操作**、未跳测试。
+
+### §十.4 T-32：修法 ＋ 两态反证（这条是 **G-1 判据口径变更**，留笔在 `07 §17.3` 的 G-1 行与 `§17.1` 的集成行，v1.7.19）
+
+| 臂 | 输入 | 判定量 | verdict | 这条臂守着什么 |
+|---|---|---|---|---|
+| **修复前对照** | 同一对夹具日志，按旧式 `{**离线, **集成}` | `red_total = 0` | （旧装配式）PASS | 🔴 **失明复现**：不写这条臂，"我修好了"就只是叙述 |
+| **脏态** | 离线 `1 failed, 2347 passed` ＋ 集成 `107 passed` | `failed=1 errors=0 ⇒ red_total=1` | **FAIL** | 原判据防的正是"P0 面有红却写 PASS" |
+| **脏态（集成侧红）** | 离线全绿 ＋ 集成 `106 passed, 1 error` | `red_total=1` | FAIL | 反向也一样：集成层的红不许被离线的全绿覆盖 |
+| **两面各一条** | 离线 1 failed ＋ 集成 1 error | `failed=1 errors=1 ⇒ red_total=2` | FAIL | ⚠️ 若取 **max** 会读成 1 ⇒ 这条臂否证"取 max"这个改法 |
+| **净态** | 本轮真实两份（2,359 ＋ 107） | `red_total=0`、`integration_ran=True` | **PASS** | 修法没把当期判定改坏 |
+| **整树 `-v` 守卫** | 一把日志自己点了集成文件名 | 不进合并支：`passed = 2453`（**没加** 107）、无 `passed_integration` 键 | FAIL（因那条红） | 相加的前提 = 两面用例集不相交；这条臂守"不许重复计" |
+| **八格逐格对表** | 净态 ＋ 其余走默认产物 | 八格 verdict 与**已入库报告**逐格相等 | `PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2` | 改合并支**没动其它七格**（是被测出来的，不是叙述） |
+
+件 = `backend/tests/eval/test_gate_inputs_p0_merge_two_state.py`（12 collected，全在 `tmp_path` 里造日志 ⇒ **共享树上不留一件**，
+`test_tmp_fixtures_never_land_on_the_shared_tree` 当场断言临时目录在仓库根之外）。跑法：
+`cd backend && PYTHONUTF8=1 PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest -q tests/eval/test_gate_inputs_p0_merge_two_state.py`
+
+QA 那条注入夹具的复算命令我今天重跑仍复现（修法后 verdict 由 PASS 翻成 FAIL）：
+`PYTHONUTF8=1 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-1', pytest_log='E:/tmp_qoder/fake_offline.log', integration_log='E:/tmp_qoder/fake_integration.log')['verdict'])"` ⇒ **FAIL**
+
+配套改动（一条都不能少，否则"改法"不完整）：`gate_inputs()` 形参加 `p0_summary_path`、`GATE_EVIDENCE["G-1"]` 由两件变**三件**、
+`build_payload()` 的取证 `paths` 映射补 `p0_summary_path`（漏这一处 = 第三件在取证行里显示 `no_path`，我第一次就漏了，
+靠 `reports/w6/eval_metrics.json` 的 `artifacts` 那行现读逮到），并**顺改** `tests/eval/test_gate_provenance.py` 那条钉件数的断言
+（`["absent","no_path"]` → `["absent","no_path","no_path"]` ＋ 断言 `arg` 序列 ⇒ 第三件是**有意的**，少一件/多一件都得在这里红）。
+
+### §十.5 ③：G-1 的取证等级为什么能升、升到哪一格为止
+
+入库件 = `backend/reports/w8/gate_inputs_p0_summary.json`，内容 = 两份日志各自的 `{passed, failed, errors, skipped,
+integration_ran, integration_files_seen, failed_tests, error_tests}` ＋ 各自 `log_path`／`tracked_in_git`／**`log_sha256`**／mtime
+＋ 顶层 `generated_at`／`git_rev`／`git_dirty`／`commit_count` ＋ 合并视图 `merged_view_for_g1`。
+尺 = 与判定同一把 = `parse_pytest_summary()`（另写一份求和 = 第二份真相）。生成命令：
+`cd backend && PYTHONUTF8=1 PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe ../eval/reporter.py --emit-p0-summary reports/w8/gate_inputs_p0_summary.json --pytest-log reports/w6/_full_pytest_1004_rT32.log --integration-log reports/w6/_integration_pytest_1004_rT32.log`（rc 0）
+
+| G-1 的取证三件（现读自 `eval_metrics.json` 的 `gate_provenance.rows[G-1].artifacts`） | 在位 | 入 git | 等级 | 自报 |
+|---|---|---|---|---|
+| `pytest_log` = `backend/reports/w6/_full_pytest_1004_rT32.log` | 是 | **否**（`.gitignore:47` 忽略 `*.log`） | `mtime_only` | 只有 mtime `2026-10-04T12:36:33Z`；sha256 前 12 位 `7e81f22a6145`（记在取证件里） |
+| `integration_log` = `backend/reports/w6/_integration_pytest_1004_rT32.log` | 是 | **否** | `mtime_only` | mtime `2026-10-04T12:38:52Z`；sha256 `b54aa36a9f88` |
+| `p0_summary_path` = `backend/reports/w8/gate_inputs_p0_summary.json` | 是 | **本轮提交后为是** | **`self_reported`** | `git_rev`（现读 `e900105`）＋ `generated_at` ＋ dirty ＋ commit_count |
+
+⚠️ 边界要说准：**升的是"本格有一件自报身份的入库取证件"**，两份 `.log` 本身仍是 `mtime_only`（结构升不上去）。
+⇒ 对外可写「当期重算 ＋ 自报 rev 的入库取证件在位」，**不可**写成「G-1 的全部输入都已入库」。
+另有一条会响的守卫：`p0_summary_evidence()` 会把取证件与**当场解析**的日志逐列对表，不一致 ⇒
+`p0_tests.p0_summary_artifact.mismatch` 非空（夹具 `test_p0_summary_crosscheck_is_loud_when_it_disagrees` 造一次漂移验它会响）。
+
+### §十.6 一次性库全链 ＋ 残渣 ＋ 零额度自证（集成面输入要跟着树走，所以重跑了一遍）
+
+| 步 | 现读 | 命令（cwd = 仓库根） |
+|---|---|---|
+| 建库 | `CREATE DATABASE ecom_t32_it` | `docker exec -i commerceql-pg-1 psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE ecom_t32_it"` |
+| 库内授权 ＋ owner | `GRANT CREATE, USAGE ON SCHEMA public TO app_rw; GRANT USAGE … app_ro;` ⇒ `ALTER DATABASE … OWNER TO app_rw` | 同容器 `psql`，两条分开跑 |
+| 迁移 | `alembic upgrade head` rc 0 ⇒ 现读 `alembic_version = 0005`、`app` schema 表 **32** 张 | `cd backend` ＋ 仓库外 scratch `E:/tmp_qoder/t32/env.sh`（`chmod 600`，凭据只在里面，**一个字节都没进仓库**）＋ `../.venv/Scripts/python.exe -m alembic upgrade head` |
+| 集成面 | **107 passed／0 failed／27.87s／rc 0**，`-v` ⇒ 日志点名 10 个 `tests/integration/*.py`（`integration_ran` 才取到） | `pytest -v -rfEs --continue-on-collection-errors tests/integration`（四个 DSN 全指 `ecom_t32_it`；DSN 用 `postgresql://` 形态，`MIGRATION_DATABASE_URL` 才带 `+psycopg`） |
+| DROP ＋ 残渣尺 | `DROP DATABASE` 后 `datname like 'ecom%'` = **2**（`ecom` 530,848,791 B ＋ 别窗 `ecom_u123_probe` 10,854,927 B ⇒ **后者不删**）；建库前也是 2 ⇒ 本窗无残渣 | `psql -d postgres -t -A -c "select datname, pg_database_size(datname) from pg_database where datname like 'ecom%' order by 1"`（🔴 不要用 `LIKE 'ecom_%'`，`_` 是单字符通配） |
+| 零额度（跑前跑后） | `app.cost_ledger` = **1,674 行／¥2.753794**，与 §十.0 起点**逐位相同**；`t33_u130_coupling.json` 里 `unchanged = true` | 件内 `ledger()` 前后各取一次；同尺命令见 §十.0 |
+| 离线面 | **2,359 passed／0 failed／0 errors／1 warning／rc 0／95.36s**（未给任何集成 DSN） | `cd backend && PYTHONUTF8=1 PYTHONIOENCODING=utf-8 ../.venv/Scripts/python.exe -m pytest -q -rfEs --continue-on-collection-errors --ignore=tests/integration` |
+
+### §十.7 静态门与落笔尺
+
+| 门 | 现读 | 命令（cwd = `backend/`） |
+|---|---|---|
+| mypy | `Success: no issues found in 147 source files`，rc 0 | `../.venv/Scripts/python.exe -m mypy app` |
+| import-linter | `Contracts: 4 kept, 0 broken.`，rc 0（**不带 `check`**，且必须带 `PYTHONUTF8`＋`PYTHONIOENCODING`，否则 `gbk` 崩在输出行上给假红） | `PYTHONUTF8=1 PYTHONIOENCODING=utf-8 ../.venv/Scripts/lint-imports.exe` |
+| ruff 两把形状 | `check app` = **All checks passed!**；`check .`（整目录）= **All checks passed!／0 条** ⇒ 第 9 轮那 1 条 `RUF005` 已由 QA 自行修掉（`reports/qa/**`，我没动别人写面）。⚠️ CI 实果本机**不可核**（无 `gh`）⇒ 只写"红因消失"，不写"CI 绿" | `../.venv/Scripts/python.exe -m ruff check --config pyproject.toml app` ／ `.` |
+| ruff 的 `eval/` 侧 | `cd backend && ruff check --config pyproject.toml ../eval` = **21 条**，与第 9 轮**逐位相同** ⇒ 本轮改 `eval/reporter.py` 没加条数（CI 不覆盖 `eval/`，这条是自查不是门） | 同左 |
+| DSN 卫生门（扫全工作区，含 `reports/**`） | `tests/unit/test_migration_dsn_hygiene.py` = **8 passed／6.17s**；本轮新增行里对密钥形状尺 `grep -Ec '://[^/:@[:space:]]+:[^@[:space:]]+@'` = **0 命中**（凭据只在仓库外 `E:/tmp_qoder/t32/env.sh`） | `../.venv/Scripts/python.exe -m pytest -q tests/unit/test_migration_dsn_hygiene.py` |
+| `docs/07` 行位尺 | **3,642 CRLF ＋ 裸 CR 0**（落笔前后同值）；改动行 = **仅 `13`／`3253`／`3272`** 三行、每行**行内追加**；§4.8 的 `:1155`（U-129）与 `:1157`（U-130）**逐字节未动**（脚本内断言） | 落笔件 = `E:/tmp_qoder/…/patch_docs07_rT32.py`（一次性、不入库），复算 = `git diff --stat -- docs/07…` ＋ `python -c` 数 `b.count(b'\r\n')` |
+| 表格列数尺（只切**未转义**竖线） | `OVERVIEW.md` 578 行／列数不一致 **0**；`RELAY.md`／`PROMPT.md` 0；`DELIVERY.md` 仅 `:102` 那一行（第 6 轮遗留、已登记）；`docs/07` 8 处不一致 = **865／1128／1131／1132／1685／1686／1848／3493**，本轮三行**不在其中** ⇒ 不是新造 | 尺 = `re.split(r"(?<!\\)\|", line)` 逐表比对分隔行列数（脚本 = scratch `ruler10.py`） |
+
+### §十.8 本轮"看见但没改"与"欠着"的（免得下一轮把故意读成漏改）
+
+① **X6（`recursion_limit` 的 G4 行 vs 代码）只上呈、不动代码** —— 动它是改契约实现面，且要一条触发 25 步的夹具；本窗零额度、不擅改。
+② **X5（停服排水注入终止帧）契约未具名** ⇒ 只登记为豁免候选，不自签成豁免（自签 = 给判据加一条没人批的例外）。
+③ **T-11②（pytest 日志／产物不自报 rev＋dirty）本轮只闭了 G-1 这一半**（取证件自报），其余产物（红队／网格／回执）仍 `mtime_only`。
+④ 面 R 的**修法后回执面 = `UNVERIFIED`**：7 份带 `terminal` 的入库回执全部早于修法时刻，补一份要花钱 ⇒ 未申请、未花。
+⑤ 09-19~09-21 那 **454 条零行 run 的构建身份仍 `UNVERIFIED`**（同 ③ 的根因）⇒ 本件只给签名与天数。
+⑥ 仍欠的旧账未动：四条未接线端点（A.7.1／A.7.2／A.9.3／A.9.4）、`app/present/` 空壳、`U-133`／`U-134`、匣带键与全量集不同源那条（`eval/` 冻结集不许动）。
+
+### §十.9 要 QA 同步（这一栏按 §5 模板从本轮起归我写）
+
+① **T-33 已交、请裁 `U-129`**：面 R 差 4 已逐条具名并与 `r20_internal_attribution.txt:23-26` 集合全等；面 W 修法后域
+`runs 30／t2 10／gap_down 0`（非空真）；豁免集合里设计类当期成员 = 0。判据⑥ 与判据② 不可互引那句我照抄在件里，没有并读。
+② **T-32 已按你给的修法做（两侧相加，不是取 max）**，两态反证 ＋ 修复前对照 ＋ 整树 `-v` 不重复相加都在；
+`07 §17.3`／`§17.1` 的留笔是 v1.7.19，**判据措辞一字未动**。请核："这条口径变更是否还需要单独在 §4.8 落一行"（我判为不需要：本轮零取号、
+且它改的是装配口不是判据词表），如你判需要，给行位我再补。
+③ **你那条"2,454 对撞请退回改写"我已执行**（`OVERVIEW §6`／`§7` 两处 🔻 ＋ 本节 §十.1① 记了错因）。
+④ **G-1 的等级**：三件里第三件 `self_reported`、两份 `.log` 仍 `mtime_only` ⇒ 请核"对外表述上限"应写成哪一句（我给的是
+「当期重算 ＋ 自报 rev 的入库取证件在位」）。
+⑤ X5／X6 两类**我没有算进豁免集合**（一个契约未具名、一个与 `07:2879` 的 G4 行冲突）⇒ 若你把它们算成豁免，
+本量的"豁免基数"就从 0 变成"类别存在、样本为 0"，请给判词。

@@ -156,3 +156,42 @@
 - ⑧ 静态门重跑：mypy **147 件 no issues**、`lint-imports` **4 kept／0 broken**（不带 `check`）、ruff **两把形状**：`check app` = 全绿 rc 0，`check .`（整目录）= **1 error** 且**不在本窗写面** —— 落在 QA 的 `reports/qa/prompts/probe_u131_readonly.py:18`（`RUF005`，`a84fc6f` 入库）。⚠️ 由此带出一条**标着 UNVERIFIED 的 CI 线索**：`ci.yml:319-321` 的 ruff 步与整目录那把**同形**、`pyproject.toml` 无 `exclude` ⇒ **按命令形状推断 CI 会红**，但 CI 实跑状态我没测到（本机没有 `gh`）⇒ 不写成"就是红的"；**报给 QA 一行改，本窗不动别人的面**。
 - ⑨ 本轮**自曝三条**（先于 QA 逮到，全文 `RELAY §九.11`）：① 重算第一次用**系统 `python`**（Anaconda `pydantic` v1 ⇒ `ImportError`）而 **rc 被 `| tail` 吃成 0** ⇒ 我把"没写成功的旧产物"当结果读了半分钟（本项目第三次撞管道吞退出码）；② r23 抽件只截到第 15 行 ⇒ `\if` 守卫块被劈断，报错形状长得像"变量写法错"；同轮把 S1 宽窗的 `t2_routed_supp` 按肉眼位数读成 4（真值 10），靠**分子分母反推**抓住 ⇒ 落笔的数改为按表头 zip 解析、取自入库件；③ 横幅第一版把**复算尺写成了自己的命中行**（`grep -c "本席位已停用"` = 2）⇒ 换 `awk 'NR==3'` 那把。
 - ⑩ 🔻 **进度对表（这一行不得被读成"交付面有推进"的抵消项）**：`PASS 1/8` 未动、七格的数未换；仍欠 `OVERVIEW §6` 的四条未接线端点（A.7.1／A.7.2／A.9.3／A.9.4）、`app/present/` 空壳、`U-133`／`U-134`、§九.6／§九.7 两处器件（建议并成 `T-32`），以及**长期指令面的唯一写者定名**（本轮 `reports/qa/TASK_BOARD.md` 又被别手推进过一次，我没进那个面）。
+## 第 10 轮交付（QA 第 7 轮派单 ｜ T-33 主单 ＋ T-32／③ 顺带 ｜ 2026-10-04 20:1x–20:5x +0800 ｜ **零额度、零跑批、未重建镜像、共享库只读**）
+
+- ① **T-33 达成（数交了、判词没写）**：`U-129` 结案所必需的第二条耦合量已算成入库件
+  `backend/reports/w8/t33_u130_coupling.json`（取数件 = 同名 `.py`，每条语句外层 `begin; … rollback;`）。
+  **面 R（回执／request）** = 7 份带 `admission.terminal` 的入库回执逐格对表，差合计 **＋4**，全部在 A 档那一格
+  （`terminal 99 − 段1 行 95`），4 条**逐条具名**并与 `deploy/loadtest/r20_internal_attribution.txt:23-26` 那 4 条
+  `graph_run_failed` **集合全等** ⇒ 归 X1 崩臂（`U-129` 的缺陷面），**不算豁免**。
+  **面 W（落库面／run）** = 全库 `gap_down = 0`、修法后域 `runs 30／t2 10／gap_down 0`（**非空真**）；
+  反向 `gap_up = 48` 全部 `turn≥2 ∧ pre-fix`。🔴 并附**面 W 的结构性失明**那一句（崩臂两侧都不在场 ⇒ 那个 0 不等于账平）。
+- ② **豁免集合按类别逐条具名**（X1 崩臂／X2 决策表 G1 fail-closed／X3 未进图＝分母纪律／X4 断流取消＝反方向／
+  X5 停服排水＝豁免候选／X6 `recursion_limit` ＝ 与 `07:2879` 的 G4 行口径冲突）；每条给 `文件:行号` ＋ 当期成员数，
+  其中 X2／X5／X6 **面上无样本**（要夹具才出现，本窗零额度未造）。**`U-129` 是否转绿由 QA 裁**，本窗未写"已修／已结案"。
+- ③ **T-32 达成**：`gate_inputs()` 的合并支由 `{**离线, **集成}` 改成 `merge_p0_logs()`
+  （四件计数两侧相加、点名列取并集、`integration_ran` 取 OR、每列留 `_offline`／`_integration` 两档）；
+  **不取 max** 的依据 = 两面各一条红那种形状 max 会低估（有一条臂专门否证）。
+  两态反证 ＋ **修复前对照臂**（同一对旧式必读 0）＋ 整树 `-v` 不重复相加 ＋ **八格逐格与已入库报告对表**
+  ⇒ `backend/tests/eval/test_gate_inputs_p0_merge_two_state.py`（12 collected 全绿；夹具只在 `tmp_path`，共享树上不留一件）。
+- ④ **③ 入库件达成**：`backend/reports/w8/gate_inputs_p0_summary.json`（两份日志的计数＋集成文件名清单＋各自 sha256/mtime
+  ＋ `generated_at`／`git_rev`／`git_dirty`／`commit_count` ＋ 合并视图），生成器 = `reporter.py --emit-p0-summary`
+  （尺与判定同一把）。G-1 的取证面由两件变**三件**，第三件等级 = **`self_reported`**；两份 `.log` 仍 `mtime_only`
+  （`.gitignore:47` ⇒ 结构上升不了），所以对外上限是「当期重算 ＋ 自报 rev 的入库取证件在位」。
+  另有一条会响的守卫：取证件与当场解析不一致 ⇒ `p0_summary_artifact.mismatch` 非空（夹具造漂移验过它会响）。
+- ⑤ **判据口径变更留笔（唯一动 `docs/**` 的一处）**：`docs/07` v1.7.19 在 `§17.3` 的 G-1 行与 `§17.1` 的集成行**行内追加**；
+  行数 **3,642 CRLF／裸 CR 0** 不变、改动行仅 `13`／`3253`／`3272`、§4.8 的 `:1155`／`:1157` 两行**逐字节未动**（脚本断言）。
+  `U-129`／`U-130` 的判据措辞一字未改，**零取号**。
+- ⑥ **上一条对撞结论退回改写**：第 9 轮那句「2,454 = 2,347＋107 ⇒ 证合并没吞红」错在**把加法当成了两列的证明**
+  （`failed`／`errors` 当时是整键覆盖，加法只核验 `passed` 那一支）⇒ `OVERVIEW §6`／`§7` 与本窗 `RELAY §十.1①` 三处就地 🔻，原文不删。
+- ⑦ **当期输入**：离线 **2,359 passed／0 红／rc 0／95.36s**（未给集成 DSN）＋ 集成 **107 passed／27.87s／rc 0**
+  （一次性库 `ecom_t32_it`：建→授权→owner→alembic 到 `0005`（32 张表）→`-v` 跑→**当场 DROP**；残渣尺 `datname like 'ecom%'` 前后都是 **2**）。
+  `总判定 PASS 1/8` 未动 ⇒ 对外仍不写"门禁通过"。
+- ⑧ 静态门：mypy **147 件 no issues**、`lint-imports` **4 kept／0 broken**、ruff **`check app` 与 `check .` 双形状全绿**
+  （第 9 轮那 1 条 `RUF005` 已由 QA 自修）、`eval/` 侧尺 **21 条与上一轮逐位相同**、DSN 卫生门 **8 passed**。
+- ⑨ 本轮**自曝两条**（先于 QA 逮到，全文 `RELAY §十.1`）：① 那条对撞结论的解释错了（见 ⑥）；
+  ② T-33 探针第一版**把 `task_path` 的第 2 段当"被路由到的节点"**（真尺是 `channel = 'branch:to:<节点>'`，与 ⑯ 同）
+  ⇒ 已按正确的尺重算并登记。另有一条靠现读逮到的自漏：`build_payload()` 的取证 `paths` 映射第一次没补 `p0_summary_path`
+  ⇒ 第三件在取证行显示 `no_path`，是 `eval_metrics.json` 的 `artifacts` 那行现读把我拦下来的。
+- ⑩ **本轮没做／仍欠**：没重跑评测（G-2／G-5／G-8 要换数必须再打全量 ≈¥0.39，未申请）；没造 X2／X5／X6 的夹具臂；
+  没补修法后的压测回执 ⇒ **面 R 的修法后域 = `UNVERIFIED`**；09-19~09-21 那 454 条零行 run 的构建身份仍 `UNVERIFIED`（= T-11②）；
+  旧账四条未接线端点／`app/present/` 空壳／`U-133`／`U-134` 未动。逐条见 `RELAY §十.8`。
