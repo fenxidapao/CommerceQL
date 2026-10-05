@@ -1,9 +1,9 @@
 {
   "artifact": "gate_inputs_p0_summary",
-  "commit_count": 421,
-  "generated_at": "2026-10-05T05:17:38+00:00",
+  "commit_count": 432,
+  "generated_at": "2026-10-05T07:14:04+00:00",
   "git_dirty": false,
-  "git_rev": "6dd996bf30ceaba45923a2259ad0d714db538e2d",
+  "git_rev": "2d5897582ca25938c296f68b038fceb4f1bc749c",
   "integration": {
     "error_tests": [],
     "errors": 0,
@@ -22,9 +22,9 @@
       "test_semantic_materialization.py"
     ],
     "integration_ran": true,
-    "log_mtime_utc": "2026-10-05T05:16:50+00:00",
-    "log_path": "backend/reports/w6/_integration_pytest_1005_rT35.log",
-    "log_sha256": "967aa5d2c61f9771595ace16856dbc0dea9edbebd186fe59b41ba992135f5e9b",
+    "log_mtime_utc": "2026-10-05T07:06:42+00:00",
+    "log_path": "backend/reports/w6/_integration_pytest_1005_rT36.log",
+    "log_sha256": "176eb1bcd590f237fa11973d75f1e70d59e3f86ae9c616f323ec20443e93e5f7",
     "passed": 107,
     "skipped": 0,
     "tracked_in_git": false
@@ -41,9 +41,9 @@
     "failed_tests": [],
     "integration_ran": true,
     "merge_policy": "T-32：计数两侧相加、点名列取并集、`integration_ran` 取 OR ⇒ 任何一面的红都不会被另一面的 0 覆盖",
-    "passed": 2496,
+    "passed": 2499,
     "passed_integration": 107,
-    "passed_offline": 2389,
+    "passed_offline": 2392,
     "skipped": 0
   },
   "offline": {
@@ -53,10 +53,10 @@
     "failed_tests": [],
     "integration_files_seen": [],
     "integration_ran": false,
-    "log_mtime_utc": "2026-10-05T05:16:09+00:00",
-    "log_path": "backend/reports/w6/_full_pytest_1005_rT35.log",
-    "log_sha256": "1f8b4b3963a6c4961292a1b6bfe246f8e4226368d0b5d37ff10593562aca4433",
-    "passed": 2389,
+    "log_mtime_utc": "2026-10-05T07:05:35+00:00",
+    "log_path": "backend/reports/w6/_full_pytest_1005_rT36.log",
+    "log_sha256": "364d8ab5477b527e58944f8f13697d03aefecf316af0201153cee96a72bf7997",
+    "passed": 2392,
     "skipped": 0,
     "tracked_in_git": false
   },
