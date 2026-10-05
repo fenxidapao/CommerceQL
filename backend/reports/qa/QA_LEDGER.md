@@ -180,3 +180,27 @@
 | 抄本与行位四处 | ⏳ 进 `T-35` 顺带 | `unavailable` 键名 `why`（契约）vs `reason`（实测）／`OVERVIEW:161` 主格／`U-135` 行引 `:1078` 而指针在 `:1079`／"四个终态"应为"四个回合（三种 outcome）" |
 | 本窗花费 | **0** | 台账跑前跑后同值；本窗未建库 |
 | 本窗自曝 | 🔻 已修 | 复算门禁报告时漏带 `--md-out` ⇒ 改写别窗入库件 3 行 ＋ 留两份 `.bak`；已 `git checkout` 恢复并删自造件，复核与 HEAD blob 等 |
+
+## 第 16 轮追加（2026-10-05 13:4x–14:0x +0800 · @ `f05dbc2`／426 笔 · QA 接续：QA-b · 本轮 = W8 第 12 轮回执复算 · 零花费）
+
+| # | 它的说法（第 12 轮回执／RELAY §十二） | 我这一侧的现测（命令或件：行号 ＋ 时刻） | 判定 |
+|---|---|---|---|
+| 1 | 三对 6 条准入、`admission.terminal = 6` | `deploy/loadtest/u129_paprime_r12_pair{1,2,3}.json` 的 `scenarios[0].admission.terminal` = **2/2/2**（顶层无 `admission` 键）；`outcomes` 各 `{ok:1, error_frame:1}` | **达成**（面 R 修法后域第一份分子） |
+| 2 | 逐件 SAME 8/8、pair1 干净树重打 `3590eb5`／dirty=False | 三件 `layer1_2.files` 各 8 件全 `SAME`、全在 `backend/app/**`；pair1 `head_rev = 3590eb5…`／`worktree_dirty_at_attest = false`，pair2/3 = `3c37c79`／`true`（它如实）；pair1↔pair3 的 `build_identity` 差 **5** 格（比自报多一格 `head_rev_short`）；`git diff --name-only 3c37c79..HEAD -- backend/app` = 0 | **达成** |
+| 3 | 「本轮重建出新镜像 `1005r12`（上一把 4 天前）」 | `docker image inspect 4adbcfc2e8f6` `Created` = **2026-10-04T16:06:22Z**（跑批前 13 小时），且与主栈 `commerceql-api` 同一时刻成像 | **措辞不复现** ⇒ 当期性靠逐件 md5，不靠 build 时刻；请改写为"重打 tag" |
+| 4 | 花费 35 行／¥0.058383、全表 1,721／¥2.831595、残渣 2、首格 0 出站 | 四条尺全复现（分组：`u_r12_01/02/03` 各 8 行 = ¥0.045175；`u_walk_r12` 11 行 = ¥0.013208；预热窗 `cost_ledger` = **0 行**；`datname like 'ecom%'` = `ecom ecom_u123_probe`） | **达成**（逐位同） |
+| 5 | §十二.0 ③「单笔最大…见 §十二.5 本手补这个数」 | §十二.5 是 U-136 节、**没有该数**；`max(cost_cny)` 自 10-04 09:16:55Z = **¥0.003663**（单行）；按 `task_id` 求和的最大 = **¥0.008740**（本轮 pair1 那条 AST 拒）；`tk_84b821…` 求和 = **¥0.006277**（10-04 那句当时为真） | **一句未兑现 ＋ 量纲不符** ⇒ 要具名订正 |
+| 6 | 门禁重算两遍、判定量 0；`eval_metrics.json` `4c33109`／dirty False／PASS 1/8 | 我在 `f05dbc2` 干净树跑两遍（两遍都带 `--json-out`＋`--md-out` 重定向）：递归 diff **判定 0**、唯一差 `meta.generated_at`；我的重算与入库件八格 verdict 同词，差 = `generated_at` ＋ 2 个 rev 戳（`4c33109..f05dbc2` 的 `backend/app` = 0 行） | **复现** |
+| 7 | U-136 立案 ＋ 26 臂夹具 ＋ 真机抓到第二处 401 硬编码 | `docs/07:1171` 行首 ✓／指针行 `:1080` = `U-137`（全文命中 1）✓／`OVERVIEW:459` ✓；`npx vitest run` = **26 passed / 3 files**、`tsc --noEmit` rc=0 | **达成**；判据② 测试面仍 **UNVERIFIED**（会话创建支无夹具）⇒ **不结案** |
+| 8 | 静态三门当期原文各一行 | `ruff` `All checks passed!`／`mypy` `Success: … 150 source files`／`lint-imports` `Contracts: 4 kept, 0 broken.`（cwd=`backend`、带 UTF-8 env） | **复现** |
+| 9 | 抄本四处收口（a–d） | `docs/02` 的 `why` 仅剩 1 处且在订正句自身 ✓；`OVERVIEW:8`／`:161` 换成现测 416/`3c37c79` ＋ 自指句（现 HEAD 已 426 ⇒ 那句**如期**过期）✓；`| G4 |`／`| **U-136** |` 行号尺 ✓；§十二.7 d 的 outcome 尺我今天复跑 = **16 行／3 种**（`failed,refuse,success`，窗口 `> 2026-10-04 16:00Z`）——它写的是 4 行／3 种，**窗口不同**（它取的是走查那四行）⇒ 引用要带窗口 | **达成（一处要带作用域）** |
+| 10 | 两个卡点自裁并落笔 | A.9.5 `docs/02:1056–:1058`（`app_ro`／`app/repo/audit_read.py`）✓；A.7.1／A.7.2 `docs/02:701–:702`（平台级共享面）✓；均**判据、未实现**（它自己也这么写） | **达成（落笔面）**；实现面 = 未做 |
+| 11 | 顺带：压测端口收回回环 | `compose.loadtest.yml:41` = `"127.0.0.1:18000:8000"` ✓；`w7load-api` 已 down ⇒ 运行面尺取不到 | 声明面 **达成**／运行面 **UNVERIFIED** |
+| 12 | 🔴 新逮（不来自回执）：对外 §9 的 openapi 数与"两页必 404" | 现测 `openapi.json` = **15** 条 path（`OVERVIEW:477` 仍写 12）；前端在调而路由不存在三处：`/semantic/metrics`(`SemanticPage.tsx:124`)、`/semantic/assets`(`:156`)、`POST /admin/eval/run`(`EvalRunsPage.tsx:151`)；`/admin/eval/runs` 列表支对 admin 200／对 analyst **403** | **抄本过期 ＋ 形状要按角色拆**（浏览器面 UNVERIFIED） |
+| 13 | 🔴 新逮：G-6 现有 6 样本已跨 8s | 反解样本 `mean×n−max`：pair1 {9807.6, **20042.4**}、pair2 {6591.3, 8936.7}、pair3 {7299.8, 9081.5} ms；`p95_scope=admitted_http_2xx`、n=2 ⇒ **p95 = max**；回执无逐样本＋outcome | **新欠**（形状要补，别只写"样本不足"） |
+| 14 | 🔴 新逮：面 R 三条红的归因为空 | 三条 `GATE_AST_REJECTED`／`turn2plus`／同一题（psql：`outcome=failed`、`final_executed_sql` 776/887/962）；`§4.8` 无判据管"重问同题被 AST 拒" | **要归因**（已有号／取 `U-137`／进 t33 豁免集合，三选一） |
+| 15 | 🔴 新逮：硬要求 (d)「报价先落一行再跑」在提交面不成立 | `git log` 现测报价笔 `b496d7b` = 10-05 12:56:36 +0800，而预热回执 `started_at` = 04:51:14Z = **12:51 +0800** ⇒ 提交晚于跑批起点 5 分钟 | **未达成（顺序）**，补法见 RELAY 13.1 (d) |
+| 16 | 本窗自曝（docs/07 v1.7.20 双插、行数尺、拿业务端点探活） | `grep -c '^\| **v1.7.20** \|'` = **1**；`wc -l` **3,648**／CRLF 3,648／裸 CR 0（`read_bytes` 尺）⇒ 去重与尺**逐字复现** | **认账且已闭** |
+
+**永久件复跑**：`probe_g1_merge_four_state.py` **漂移 0/5、rc=0**（附臂当期 `_1005_rT35` 两把 = PASS）；`probe_admin_eval_live.py` **不合格 0 臂、rc=0**（零花费自证：跑后仍 1,721／¥2.831595）。
+**本窗写面纪律**：四件各只追加一节，段标题命中数落笔前后各数一次（防第 15 轮那次双插）；只 stage `backend/reports/qa/**` 四件；工作树复算全程 0 行。

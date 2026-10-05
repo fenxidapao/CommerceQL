@@ -843,3 +843,106 @@ TASK_BOARD.md:   行 791 -> 733（删 58 行，位置 = 第 681 行起）
 
 **教训两条**：**①** 追加型脚本必须带"该段是否已存在"的自守卫（本项目"历史读数只追加不改写"这条纪律，反过来也要求**追加动作本身要幂等**）；
 **②** 我把两条命令串成一行 ⇒ 第一条的输出被我 `2>/dev/null` 吞掉，于是**没看见它在干活** ⇒ 与记忆里"管道吞退出码"同族，这次吞的是"整段重复"这种看得见却没人看的东西。
+
+## §十三 第 16 轮复算（2026-10-05 13:4x–14:0x +0800 · @ `f05dbc2`／426 笔 · 本轮 = W8 第 12 轮回执复算 · QA 零花费）
+
+### 13.0 起点读数（本手自己跑，不引回执）
+
+| 项 | 现测 | 尺 |
+|---|---|---|
+| HEAD／笔数／远端 | `f05dbc2`／426／`git ls-remote origin main` = `f05dbc248dfd` ⇒ 同点 | `git rev-parse --short HEAD` ＋ `git rev-list --count HEAD` ＋ `git ls-remote origin main` |
+| 工作树 | `git status --porcelain` = **0 行** ⇒ 本窗复算全程未写脏（含重跑 reporter，两遍都带 `--json-out` ＋ `--md-out` 重定向到 `E:/tmp_qoder/`） | 跑前跑后各一次 |
+| 台账 | 1,721 行／¥2.831595／最新 `2026-10-05 05:28:19.308155+00` ⇒ 与本窗 12:2x 那次逐位同（本轮**零出站**） | `select count(*), sum(cost_cny), max(created_at) from app.cost_ledger` |
+| 0 偏差触及本窗写面 | `git log --oneline 3c37c79..HEAD -- backend/reports/qa` = **0 笔** ⇒ 它没动我的件 | 同上 |
+
+### 13.1 T-35 主单四条硬要求逐条裁
+
+| 硬要求 | 它的交付 | 我的现测 | 裁定 |
+|---|---|---|---|
+| **(a)** 新镜像首格作废 ＋ 预热一格 | `u129_paprime_r12_warm.json`：`admission {admitted 1, terminal 1, rejected_429 0}`、`outcomes {refuse:1}`，不进分母 | 预热窗 `04:48:00Z–04:52:04Z` 的 `app.cost_ledger` = **0 行** ⇒ 首格真没发包 ✓；🔴 但该件 `build_identity = null`（三对都有、作废格没有） | **达成**（附一条小欠：作废格也该带身份，否则"作废"这句也无法当期化） |
+| **(b)** 回执自报构建身份 | 三对各带 `build_identity`，逐件 SAME 8/8 | 三件各 **8 个文件全 `SAME`**、全在 `backend/app/**`、`matched_variant = worktree_raw`；三件 `image_id` 同一枚 `4adbcfc2e8f6`；层 3 `RUN_SCOPED_STATE_FIELDS present=true`；pair1 与 pair3 的 `build_identity` 差异 = **5 格**（`attested_at_utc`／`container_created_at`／`head_rev`／`head_rev_short`／`worktree_dirty_at_attest`），比它自报的"只有 4 格"多一格 `head_rev_short`（同值副本，无实质）；`git diff --name-only 3c37c79..HEAD -- backend/app` = **0 行** ⇒ "当期性等价"这句成立 | **达成** ＋ 一处措辞要订正（见 13.3） |
+| **(c)** 落库面分域只写 `date_proxy` | 三件全按 `date_proxy`，`07` 的 U-129 行尾那句未动 | `git show HEAD:docs/07…` 现读该行尾仍是 v1.7.19 那句上限（`domain_ruler = date_proxy` ＋ 当期性走回执侧）⇒ **一字未动** ✓ | **达成** |
+| **(d)** 报价先落一行再跑 | 报价行 `b496d7b`（13:0x）在跑批（04:51–04:53Z = 12:51–13:53 本地? 见下）之前 | `git log --format=%h\|%ad --date=iso` 现测：`b496d7b` = 2026-10-05 12:56:36 +0800，回执 `started_at` = 04:51:14Z = **12:51 +0800** ⇒ **报价笔比第一把跑批晚 5 分钟** | 🔴 **未达成（一处顺序）**：它 §十二.0 把"先落报价"写成 12:5x，实际入库的那笔 `b496d7b` 时间戳晚于跑批起点 ⇒ "先落一行再跑"这条在**提交面**没钉住（工作树里先写、提交在后 ≠ 可核的先落）。要补的话很轻：报价行的提交时刻必须早于回执 `started_at`，尺 = 两条命令对撞。 |
+
+### 13.2 `U-129` 四条引用复判 ⇒ **仍不转绿（只差 ③，与上一轮同格）**
+
+| 引用 | 我的现测 | 判定 |
+|---|---|---|
+| ① 三格读数 | 沿用我第 15 轮自抽 ⑰c 的跑法（未变） | 达成 |
+| ② 落库面 ＋ 回执面 post_fix | 落库面 `gap_down = 0` ✓；**回执面现在有当期样本了**：三对 `admission.terminal = 2/2/2 ⇒ 6`，且带逐件 SAME 的构建身份 ⇒ 从 **UNVERIFIED 升格为达成** | **达成**（本轮唯一升格项） |
+| ③ 旧几何同形状的 `ok` 率 ＋ H ＋ 轮次分布 | 它按上界 ¥0.6 自停（旧几何折 ≈¥0.745），**没跑** | **未交** ⇒ 本号不转绿 |
+| ④ 零额度夹具 | `backend/tests/contract/test_audit_terminal_pairing_contract.py`（第 15 轮 14 passed） | 达成 |
+
+🔴 读数姿势两处（写下来给下一窗省事）：**顶层没有 `admission` 键**，它在 `scenarios[0].admission`（我第一遍按顶层读 ⇒ 读到空，差点误报"回执没带准入"）；三对 `outcomes` 各 `{ok:1, error_frame:1}` ⇒ 合计 `ok 3／error_frame 3`，`ok` 率 50% 的分母就是 6。
+
+### 13.3 构建身份面的当期性：靠 md5 三向，不靠"重建"这句
+
+- 🔴 **一句不复现（措辞层面）**：§十二.1′ 写「12:5x 由 `docker build` 从当期树起 ⇒ **新镜像** `w7load-api:1005r12`」。实测 `docker image inspect 4adbcfc2e8f6 --format {{.Created}}` = **`2026-10-04T16:06:22Z`**，且与主栈 `commerceql-api:latest`（`d92684e2a781` 是另一枚）同源同刻的那把 `Created` 也是 `2026-10-04T16:06:22Z` ⇒ **镜像内容在跑批前 13 小时就成型了，本轮那一次 build 产出的是同一枚 digest**。
+  ⇒ 结论不是"它造假"，而是**当期性的承重墙换了**：成立的是"逐件 `container md5 = 工作树 raw`"（我复测见下），不成立的是"本轮重建出新代码"。**引用面请写"重打 tag"，别写"新镜像"** —— 后者会被读成"代码面这轮换过"。
+- 我这一侧的三向复测（主栈 `commerceql-api-1`，零额度）：`api/routers/admin_eval.py`／`present/eval_report.py`／`present/artifacts.py`／`api/exceptions.py`／`main.py`／`api/runner.py` **六件 container = worktree = HEAD blob(LF) 全等**；`api/routers/__init__.py` 与 `graph/state.py` 是 **worktree = container，但 ≠ HEAD blob raw**（工作树 CRLF、blob LF）⇒ 三向尺必须**带 LF 归一的变体列**（它的 `build_identity` 正是这个形状，做法对）。
+- 🔴 我自己的两处尺坏（先怀疑尺）：① 第一遍用 `docker exec C md5sum /srv/app/f` 直调拿到**空串** ⇒ 误报 6 件 DIFF，改 `docker exec C sh -c "md5sum …"` 后全 SAME；② 一度把 pair1 的 `build_identity` 当成"跑测当时"的自证，实际 `attested_at_utc` = 05:31:41Z 晚于该件 `finished_at` 04:52:34Z（是提交后的重打，容器也 recreate 过）⇒ **作废格与 pair2/3 的 attestation 时刻不同源，引用时要点名是哪一把**。
+
+### 13.4 花费与残渣：逐位复现（本轮无新增出站）
+
+| 项 | 它的账 | 我的现测（同一条尺） | 判定 |
+|---|---|---|---|
+| 三对（`u_r12_01/02/03`） | 各 8 行／合计 ¥0.045175 | 8／8／8 行，¥0.015419＋¥0.015538＋¥0.014218 = **¥0.045175** | ✓ 逐位同 |
+| 走查 `u_walk_r12` | 11 行／¥0.013208 | 11 行／**¥0.013208**（含计划外两笔 `ping`/`ping2`） | ✓ |
+| 本轮合计 | 35 行／¥0.058383 | `created_at >= 04:45:00Z` ⇒ **35 行／¥0.058383**、`bool_and(not is_peak) = true` | ✓ |
+| 全表 | 1,721／¥2.831595 | **1,721／¥2.831595** | ✓ |
+| 一次性库残渣 | 2 | `datname like 'ecom%'` = `ecom ecom_u123_probe` = **2** | ✓ 真 DROP 了 |
+| 首格作废 | 0 出站 | 04:48–04:52:04Z = **0 行** | ✓ |
+
+🔴 一处**指向不存在的读数 ＋ 量纲不符**（§十二.0 ③）：它写"单笔最大…本手补这个数，见 §十二.5"，但 §十二.5 是 U-136 那节、**没有这个数**；而且它给的尺 `select max(cost_cny)` 量的是**单行**，与"单笔 = 一个任务 ¥0.006277"不同维。我三维都测了：单行最大 = **¥0.003663**（自 10-04 09:16:55Z，n=48）；单任务求和的最大 = **¥0.008740**（就是本轮 pair1 那条被 AST 拒的 run）；`tk_84b821…` 单任务求和 = **¥0.006277** ✓（那句在 10-04 是真）。⇒ 订正两条：①"单笔最大 ¥0.006277"**从今天起不成立**（被本轮自己的臂抬到 ¥0.008740）；② 这句话的尺必须写明是**按 `task_id` 求和**那一维。
+
+### 13.5 门禁面：我的独立重算与它的入库件同词
+
+- 两遍递归 diff（`f05dbc2` 干净树，两把当期日志 `_full_pytest_1005_rT35.log` ＋ `_integration_pytest_1005_rT35.log`）：**判定量差 = 0**，唯一差 = `meta.generated_at`（06:00:06 → 06:00:09Z）。
+- 我的重算 vs 它的入库件 `eval_metrics.json`：八格 verdict **逐格同词**（`PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2`，passed = `['G-1']`），差 = 3 条，其中 1 条是 `meta.generated_at`、2 条是 rev 戳（`meta.git.rev`／`gate_provenance.report_git.rev` = 我 `f05dbc2` vs 它 `4c33109`）⇒ **不是判定差**，且 `4c33109..HEAD` 的 `backend/app` = **0 行** ⇒ 被测代码面未变。
+- 入库件自报 `git = {4c33109, dirty false}`，落后 HEAD 7 笔 ⇒ 引用时带上这两格；G-1 的输入仍是同一对当期日志（我 13:1x 复跑取证件 sha 与盘上一致）。
+
+### 13.6 三件永久件 ＋ 静态面复跑（全部本轮实测）
+
+| 件 | 现测 | rc |
+|---|---|---|
+| `backend/reports/qa/prompts/probe_g1_merge_four_state.py`（五态） | **漂移 0 格／5**；态⑤ 仍钉 `red_total = 1`；附臂用的是当期 `_…_1005_rT35` 两把 ⇒ **PASS** | 0 |
+| `backend/reports/qa/prompts/probe_admin_eval_live.py`（21 臂，打主栈 `:8000`） | **不合格 0 臂**；`unavailable = 6 行`、网格 12／门禁 8、analyst 三处 `403 FORBIDDEN_SCOPE`、带参 `data` sha256 与无参全等、未知批次 `404 RUN_NOT_FOUND`；跑后账本 = 1,721／¥2.831595 ⇒ **零花费自证** | 0 |
+| `ruff check app tests`／`mypy app`／`lint-imports`（cwd=`backend`，带 UTF-8） | `All checks passed!`／`Success: no issues found in 150 source files`／`Contracts: 4 kept, 0 broken.` | 0／0／0 |
+| `npx vitest run`（frontend） | **26 passed / 3 files**（`queryStream.test.ts` 19 ＋ `ErrorCard.test.tsx` 3 ＋ 余 4） | 0 |
+| `npx tsc --noEmit` | 无输出 | 0 |
+| `docs/07 §4.8` 落号面 | 行首 `\| **U-136** \|` = **:1171** ✓；指针行 = **:1080**「下一个可用号 = `U-137`」✓（全文 `U-137` 命中 **1**，未双写）；`OVERVIEW:459` 那条 ✓；`docs/02` 里 `why` 仅剩 **1** 处、且落在订正句自身 ✓；v1.7.20 行首命中 **1**、`wc -l` **3,648**、CRLF 3,648／裸 CR 0 ⇒ 它 §十二.10 的自曝与去重尺**逐字复现** | — |
+| `docs/02` 两处自裁 | A.9.5 判据在 **:1056–:1058**（`app_ro`／新增 `app/repo/audit_read.py`）✓；A.7.1／A.7.2 口径在 **:701–:702** ✓ ⇒ **落的是判据、代码未动**（它自己也这么写） | — |
+| 压测端口 | `compose.loadtest.yml:41` = `"127.0.0.1:18000:8000"` ✓；主栈五容器现读端口全 `127.0.0.1` ✓；`w7load-api` 已 `down` ⇒ **运行面尺本轮取不到**（UNVERIFIED，声明面 ✓） | — |
+
+### 13.7 🔴 本轮新逮三件（都不在它的账上）
+
+**(A) 对外 §9 那条"未接线端点"的数与形状都漂了**（现测 `GET /api/v1/openapi.json` = **15** 条 path，`OVERVIEW:477` 仍写"12 条 path"）：
+- 前端**在调而路由不存在**的三处（代码面直接可核，无需花钱）：`GET /semantic/metrics`（`frontend/src/pages/SemanticPage.tsx:124`）、`GET /semantic/assets`（同件 `:156`）、`POST /admin/eval/run`（`EvalRunsPage.tsx:151`）⇒ `backend/app/api/routers/` 里**没有 semantic 路由器**，`admin_eval.py` 只有 **3 条 `@router.get`**。
+- 「两页都渲染 404 错误卡」这句现在**要拆**：`/eval/runs` 的**列表支**打的是 `/admin/eval/runs`，对 `platform_admin` 是真 200（我 21 臂里 200 ＋ `grid.cells=12`／`gate.items=8`），对 `analyst` 是 **403 `FORBIDDEN_SCOPE`**；只有**发起评测**那一支必失败。`/semantic/metrics` 两页仍是 404。演示默认令牌是什么角色 ⇒ 决定这句怎么写，`deliverables/ACCEPTANCE.md:57` 与 `OVERVIEW:476–480` 同源、要一起改。
+- ⚠️ 我这轮**没做浏览器走查**（只取了 HTTP 面与代码面）⇒ "页面渲染成什么样"记 **UNVERIFIED**，归 W8 真机那一臂。
+
+**(B) G-6 除了"样本不足"，现有 6 条样本已经跨过 8s 线**：三对 `latency_ms` 反解出的两条样本分别是 pair1 `{9,807.6 ms, 20,042.4 ms}`、pair2 `{6,591.3, 8,936.7}`、pair3 `{7,299.8, 9,081.5}`（尺：`mean × samples − max = 另一条`）⇒ **`p95_scope = admitted_http_2xx`，n=2 时 p95 恒等于 max**；把回执里那条 20.0s 与 9.8s 报成"达标"是错的，报成"不达标"同样错（分母 2）。回执**没有逐样本 ＋ outcome 标签** ⇒ 下一窗只能重跑。
+
+**(C) 面 R 那 3 条红的归因是空的**：三条全 `stage=sql_ready`／`code=GATE_AST_REJECTED`／`turn2plus`、且是**同一道题**（我 psql 复现：`outcome=failed`、`final_executed_sql` 长度 776／887／962、`raw_question` 全 = 「上个月复购率最高的 10 个店铺是哪些？」）。`07 §4.8` 现在**没有任何一条判据**管"同会话重问同题被 AST 闸门拒"，而它落在 `U-129` 的读数面上就当 `error_frame` 计进了分母 ⇒ **要么归到已有号、要么取新号（现读下一可用 = `U-137`）、要么在 t33 的豁免集合里点名它是哪一类**。悬着不行：面 R 的 `ok` 率 50% 现在没有解释人。
+
+### 13.8 裁定四条（本轮）
+
+1. **`U-129` 仍不转绿**（③ 未交；②③ 中只有 ② 本轮升格达成）。四条引用清单**不扩第五条**（第 15 轮那句照用）。
+2. **`U-136` 不结案**：判据① **达成**（夹具 19＋3 臂、我复跑 26 passed、tsc rc=0）；判据② 的**会话创建支无单元夹具 ⇒ 测试面 UNVERIFIED**（它自己也这么写）。要么补夹具壳、要么把判据② 明写"只由真机臂钉"——后者属**判据措辞变更 ⇒ 逐臂复查**，我不替它做。
+3. **X 分类不动**：本轮三条 `GATE_AST_REJECTED` **不**自动进豁免集合（13.7 C）。
+4. **§4.8 不另落行**：13.7 A 是**抄本过期**、不是新缺陷，按"订正句 ＋ 带时点"走，别为它取号。
+
+### 13.9 队列与下一块
+
+- 写面状态：本窗四件已追加（RELAY §十三／QA_LEDGER 第 16 轮／COMPLETENESS 第 16 轮增量／TASK_BOARD §19 ＋ T-36 块），仅本窗路径入库。
+- 下一块 = **T-36**（零额度五件：面 R 归因／U-136 夹具面／t33 当期件／抄本三处 ＋ §十二.0 ③ 订正／G-6 逐样本形状）。
+- 🔴 **待总控拍两条**（我不动钱、不改判据）：**① 钱**——旧几何 `c12/n108` 唯一"同形状"那把 ≈**¥0.745**（超上界，它已自停），中间几何 `c3/n30` ≈21 准入 ≈**¥0.16**（够 G-6 的 ≥20 样本、能把"题目"与"轮次"分开，但**必须改名**、不得再叫"旧几何同形状"；代价 = 并发不同名 ⇒ H 的口径与 `U-126` 配平表不同源，引用要另起一句）；**② 收尾与否**——见 13.10。
+
+### 13.10 收尾读数（答总控"是不是要准备收尾了"）
+
+**实测的未闭面**（不是情绪、是数）：门禁 **PASS 1/8**（`G-2/G-5/G-7` FAIL、`G-3/G-4` PARTIAL、`G-6/G-8` UNVERIFIED，我本轮独立重算同词）；`U-129` 四条差 ③、`U-130` 的耦合件仍是 10-04 20:56 那份（`rev ce1dec4`，**未含本轮 6 条 post_fix 准入**）、`U-136` 判据② 测试面 UNVERIFIED、`U-135` 已立案但 X6 家族无当期样本、对外 §9 的未接线端点**三处**（前端在调、路由不存在）＋ 两条自裁判据**未实现**（A.9.5 读路径、A.7.1/A.7.2 已裁未接线）。⇒ **不建议现在就收尾**；建议**两笔收清**：第 13 轮（T-36，零额度）把上面这些钉成"要么达成、要么明写不修"，第 14 轮做一次**收口件**（当期报告重算入库 ＋ OVERVIEW/ACCEPTANCE 对外面按现状改写 ＋ 若总控批钱就带上 G-6 那把）。**唯一必须总控自己拍的**：要不要为 G-6/U-129 ③ 再花 ¥0.16 或 ¥0.745，以及未接线那三处是"v1 缺口如实登记"还是"补完再收"。
+
+### 13.11 本窗自曝两件
+
+1. 我第一遍读四份回执时按**顶层** `admission` 取数（取到空），差点写成"回执没带准入"——实际在 `scenarios[0].admission`。教训与上一轮同族：**读别人的产物先读它的 schema，别按契约名猜键**。
+2. 我的三向 md5 尺第一遍是坏的（`docker exec` 直调 `md5sum` 空返回）却先打印了 6 件 DIFF ⇒ **尺坏会伪装成被测面坏**；`sh -c` 包一层后全 SAME。已在 13.3 记下命令形状。
