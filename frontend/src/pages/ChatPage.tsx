@@ -127,7 +127,8 @@ export function ChatPage() {
   const [fillText, setFillText] = useState<string | null>(null);
   const [drawerTurnKey, setDrawerTurnKey] = useState<string | null>(null);
   const [healthLevel, setHealthLevel] = useState<'ok' | 'degraded' | 'unhealthy' | 'unknown'>('unknown');
-  const [sessionCreateError, setSessionCreateError] = useState<string | null>(null);
+  // U-136：会话创建失败也是用户可见错误 ⇒ 连同契约码与 trace_id 一起留，不得压成一句字符串（那会把 401 显示成 INTERNAL）
+  const [sessionCreateError, setSessionCreateError] = useState<{ message: string; code: string; traceId: string } | null>(null);
   const [creatingSession, setCreatingSession] = useState(false);
   const [authExpired, setAuthExpired] = useState(false);
   const [tick, setTick] = useState(() => Date.now());
@@ -392,7 +393,12 @@ export function ChatPage() {
           navigate(`/chat/${sid}`, { replace: true });
         } catch (err) {
           setCreatingSession(false);
-          setSessionCreateError(err instanceof Error ? err.message : '无法创建会话');
+          const apiErr = err instanceof ApiError ? err : null;
+          setSessionCreateError({
+            message: err instanceof Error ? err.message : '无法创建会话',
+            code: apiErr?.code ?? 'INTERNAL',
+            traceId: apiErr?.traceId ?? '',
+          });
           return;
         }
         setCreatingSession(false);
@@ -573,9 +579,11 @@ export function ChatPage() {
 
                 {sessionCreateError && (
                   <ErrorCard
-                    code="INTERNAL"
-                    message={`无法创建会话：${sessionCreateError}`}
-                    traceId=""
+                    code={
+                      KNOWN_ERRORS.has(sessionCreateError.code) ? sessionCreateError.code : 'INTERNAL'
+                    }
+                    message={`无法创建会话：${sessionCreateError.message}`}
+                    traceId={sessionCreateError.traceId}
                     retryable
                     onRetry={() => setSessionCreateError(null)}
                   />
