@@ -372,6 +372,11 @@ def main() -> int:
     zero_in_a_window = sorted({m["task_id"] for i in rc_items
                                for m in i["zero_audit_runs_in_window_named"]})
     receipt_total_gap = sum(int(i["gap_receipt_face__terminal_minus_audit_rows"] or 0) for i in rc_items)
+    zero_gap_items = sum(1 for i in rc_items
+                         if i["gap_receipt_face__terminal_minus_audit_rows"] == 0)
+    post_fix_items = sum(1 for i in rc_items
+                         if datetime.fromisoformat(str(i["started_at"]))
+                         >= datetime.fromisoformat(FIX_MOMENT))
 
     payload = {
         "artifact": "t33_u130_coupling",
@@ -412,12 +417,15 @@ def main() -> int:
                         "ids": crash_named_committed,
                         "sets_equal": sorted(crash_named_committed) == zero_in_a_window,
                     },
-                    "attribution": "差 4 全部落 X1 类（崩臂，`U-129` 的缺陷面）⇒ **不落入「已知豁免集合」**；"
-                                   "其余 6 格差 0（非空真：那 6 格的 `terminal` 都 > 0）",
+                    "attribution": f"差 {receipt_total_gap} 全部落 X1 类（崩臂，`U-129` 的缺陷面）⇒ "
+                                   f"**不落入「已知豁免集合」**；其余 {zero_gap_items} 格差 0"
+                                   f"（非空真：那 {zero_gap_items} 格的 `terminal` 都 > 0）",
                 },
                 "items": rc_items,
-                "coverage_note": "带 `admission.terminal` 字段的入库回执只有这 7 份，且**全部早于修法时刻** ⇒ "
-                                 "**修法后的回执面 = UNVERIFIED**（补一份当期回执要花钱，本窗未申请、未花）",
+                "coverage_note": f"带 `admission.terminal` 字段的入库回执现读 **{len(rc_items)}** 份，其中 **{post_fix_items}** "
+                                 f"份晚于修法时刻 `{FIX_MOMENT}` ⇒ 修法后的回执面**有当期样本**（不再是 UNVERIFIED）；"
+                                 f"其余 {len(rc_items) - post_fix_items} 份早于修法时刻，只能作历史读数引用。"
+                                 f"本件全程只读、零花费（见 `zero_quota_readonly_selfproof`）。",
             },
             "W_landing_run_grain": {
                 "ruler": "分母侧 = run（`lg.checkpoints` 里带 `tk_` 的组）；终态写 = `lg.checkpoint_writes` 里 "
