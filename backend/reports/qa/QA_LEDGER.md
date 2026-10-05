@@ -221,3 +221,22 @@
 | 10 | 🔻 本窗自曝（第二件，见 RELAY 14.2） | 我给 `U-129` 的 ③ 加了"旧几何同形状"五个字 —— **盘上原文没有**（`docs/07:1158` 的 v1.7.10 那句只要求 `ok` 率＋H＋身份三件）⇒ 它为此自停 ¥0.745 是我造成的 ⇒ **≈¥0.16 那把按盘上口径即交齐 ③** | **我撤回自订条件** |
 
 **总判定**：T-36 五件**全部达成**；`U-136` **结案**；`U-129` 仍差 ③（已便宜）；`U-137` 立案成立、面 R 的红有归了；门禁 **PASS 1/8** 未动。
+
+## 第 18 轮追加（2026-10-06 00:0x–00:4x +0800 · @ `b45e47f`／446 笔 · QA 接续：QA-b · 本轮 = W8 第 14 轮回执复算 · 零花费）
+
+| # | 它的说法（第 14 轮 · T-37） | 我的现测 | 判定 |
+|---|---|---|---|
+| 1 | 离线 2454／rc 0（面 = unit＋contract＋eval） | 我第一遍跑窄面得 **2030** ⇒ 差点误报"不复现"；按它的面重跑 = **2454 passed in 106.71s** ✓ | **达成 ＋ 我自曝 15.4-1** |
+| 2 | 集成 124／11 件；一次性库建→0006→跑→DROP，残渣 2 | **未重跑**（UNVERIFIED 那一层我如实写）；日志逐件相加 = 19+17+16+15+11+11+9+9+6+6+5 = **124** ✓，17 新臂件名与臂名点名到位；残渣现查 = **2**；`public.alembic_version` = **0006** | **日志面复算成立／重跑面 UNVERIFIED** |
+| 3 | 门禁两遍判定量 0，八格 PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2 | 我在 `b45e47f` 干净树用当期两把日志重算：**G-1 PASS（2454＋124，红 0，两层 ran）**，八格与入库件**同词**；两遍差只有 `meta.generated_at` | **复现** |
+| 4 | 取证件仍 `2d58975`／432 ⇒ caveat 自报"取证件 ≠ 本次输入" | 我的重算里该 caveat 逐字冒出（证件指 1005_rT36 两把、本次读 `w8/_r14_*` 与 `_integration_pytest_1006_rT37.log`，sha 现打印） | **成立 ⇒ 裁定见 15.3 前段／T-38 必须当期化** |
+| 5 | A1：活体 9 指标／8 资产、无 `scope` 键、`denied_columns` 不入表头 | 我的新永久件 **30 臂 rc=0**：`total=9/8`、`data` 内无 `scope`、`?q=客单价` 两遍 sha 同、契约九键齐；渲染红线用**产物尺**核：nginx 服务的 `index-B-QCGZTh.js` 内 `denied_columns` 命中 **0**，且与 `frontend/dist` 同名件 md5 **逐字节同** | **达成** |
+| 6 | A2：三键一条语句／租户 905 vs 跨租户 907／第二道未落且自报 | 活体 `identity_guc={keys:3,count:1,is_local:true,reset:false}`、`rls={enabled:false,policies:0,second_guarantee_in_place:false}`、`enforced_by` **2 条**、905／907 ✓、参数不改 `data` ✓、analyst 403／非法参数 400 ✓；库侧 `app_ro`=1 连接、`app_rw`=4 连接（`rolbypassrls=false`）、两张审计表 owner=`postgres` | **部分达成**（判据 6／7 落；缺的那条见 15.2／15.3） |
+| 7 | A3：`run_id` 恒 null、真发起 schema 面不可表达、报价 538–620 条／¥0.337–0.392 | 活体 `status=dry_run`／`run_id=null`／`launched=false`／`launch_blockers` **3 条具名**；`dry_run:false` 400、多余键 400、analyst 403、未知集 404 `DATASET_NOT_FOUND`；读码确认零出站的机制 | **达成** |
+| 8 | A5：vitest 33／5、两态对撞、还原后 md5 = `938469e4…` | 我跑 **33 passed / 5 files**、`tsc` **零输出（rc=0）**、`eslint` **rc=0**；工作树 `EvalRunsPage.tsx` md5 = **`938469e43c4742efe09b534cc3c2d3d8`** = HEAD 归一 ✓ 无残留变异 | **达成** |
+| 9 | 抄本 19 条 path（代码 19／重建前 15） | `openapi.json` 现读 **19**；`commerceql-api-1` 镜像 `ca34ea791a81` `Created=10-05T15:19:25Z`（**真重建**，与第 12 轮那次"重打 tag"不同）；五个新件三向 md5 全 SAME | **达成（引用带 15:19Z）** |
+| 10 | §14.4 上呈：第二道只能靠策略 DDL，与 provenance 守卫冲突 | 两侧都读了（守卫 AST 扫非 docstring 常量、文件头"迁移产出 0 条"的理由）⇒ 冲突为真；我给**四条约束**并把它写进 15.3，其中"写入角色是 `app_rw`、属主是 `postgres`"这条是我这侧实测补强的 | **裁定已给，落笔／取号权在 W8** |
+| 11 | 零花费：台账首末同值 ¥2.831595；金路未跑 | 现读 `1,721／¥2.831595／max 05:28:19Z`；我的 30 臂件跑前跑后同值 | **双侧零出站** |
+| 12 | 🔻 自曝两件（`read_text()` 把 `docs/07` 整树归一、`Edit` 锚点吃行尾） | 现读 `docs/07` 工作树 **CRLF 3650／裸 CR 0**、`git show HEAD:` 那侧 CRLF **0**、`git status` 干净 ⇒ 那句"这不是漏改，是 .gitattributes `eol=lf`"我复现 ✓ | **认账且已闭** |
+
+**新增永久件**：`backend/reports/qa/prompts/probe_t37_surfaces_live.py`（30 臂，零额度零出站，只印状态码／计数／键名／sha；跑法在文件头）。

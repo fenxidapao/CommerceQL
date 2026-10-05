@@ -1005,3 +1005,57 @@ HEAD `416f448`／439 笔／`git ls-remote origin main` 同点；`git status --po
 **顺序应当是：先补端点（代码面定型）→ 再跑那把花钱的（当期性覆盖最终构建）→ 收口。** 理由：`U-129` 的 ③ 与 G-6 的引用都要求"当期构建"；若先跑批、后补端点，那把批的构建身份就**不是交付构建**，下一轮还得重花钱。
 ⇒ **T-37 = 零额度主单（补三处缺失路由 ＋ A.9.5 读路径实现）＋ 14.5 三小格**；**T-38 = 花钱那把（`c=3/n=30`，≈21 准入，预计 ≤¥0.20）＋ 收口件（当期报告重算入库、对外面按现状改写）**。`POST /admin/eval/run` 那一支一按就出站 ⇒ **T-37 内只实现＋夹具，不得真跑**。
 🔴 待总控确认的就剩一条：**认可"¥0.16 那把按盘上 ③ 口径即算交齐"**（我已撤回自己加的"同形状"条件），以及端点补齐后的演示脚本要不要点"发起评测"（那会花钱）。
+
+## §十五 第 18 轮复算（2026-10-06 00:0x–00:4x +0800 · @ `b45e47f`／446 笔 · 本轮 = W8 第 14 轮（T-37）复算 · QA 零花费）
+
+### 15.0 起点读数（本手自取）
+
+`b45e47f`／446 笔／`git ls-remote origin main` = `b45e47f` 同点／工作树 **0 行**／`git log 87507b8..HEAD -- backend/reports/qa` = **0 笔**。台账 `1,721 行／¥2.831595／max 10-05 05:28:19Z`，与我 21:2x 那次逐位同；**我这轮的 30 臂活体件跑前跑后同值** ⇒ 双侧零出站。残渣尺 `datname like 'ecom%'` = `ecom ecom_u123_probe` = **2**（`ecom_t37a2_r14`／`ecom_t37it_r14` 真 DROP 了）。
+
+### 15.1 逐条复算（含我自己两处尺错，先写自己）
+
+| 面 | 它的读数 | 我的独立现测 | 判定 |
+|---|---|---|---|
+| 离线面 | **2454 passed／rc 0**，面 = `tests/unit`＋`tests/contract`＋`tests/eval` | 我第一遍只跑 `unit`＋`contract` ⇒ **2030 passed**，我当时会读成"差 424 条 = 不复现"；按它写的三面重跑 = **2454 passed, 1 warning in 106.71s** ✓ **逐位同** | **达成**（🔻 我自曝：面没读全就先怀疑别人，见 15.4） |
+| 集成面 | 124 passed／11 个文件，一次性库建→`0006`→跑→DROP | **我没有重跑**（要起一次性库＋迁移，本轮不做）。改为**逐件核它的日志**：`_integration_pytest_1006_rT37.log` 里 11 个文件臂数相加 = 19+17+16+15+11+11+9+9+6+6+5 = **124** ✓；新增 17 臂全在 `tests/integration/test_audit_read_rls.py`，臂名点名到位（含 `test_rls_state_reports_the_actual_catalog`／`test_no_injection_reads_zero_rows_under_the_policy`／`test_missing_insert_policy_is_the_trap_obs_audit_records`／`test_audit_write_survives_the_policy_pair`／`test_nothing_from_this_file_is_left_behind`） | **日志面复算成立／重跑面 UNVERIFIED**（我不把"读过日志"写成"跑过"） |
+| 门禁八格 | PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2，入库件自报 `0ef587f`／dirty false | 我用当期两把日志在 `b45e47f` 干净树重算：**G-1 PASS，离线 passed=2454 ＋ 集成 passed=124，断言失败 0／环境未备 0 ⇒ 红 0 条，两层均 ran**；八格 verdict 与入库件**逐词同**；`counts` 同；我这份自报 `b45e47f`／dirty false（差的就是 rev 戳） | **达成（复算过）** |
+| 取证件那句 | 「`gate_inputs_p0_summary.json` 仍停 `2d58975`／432 ⇒ caveat 会自报『取证件 ≠ 本次输入』」 | 我的重算里这条 caveat **确实自己冒出来**，且逐字对得上：证件声明的两把是 `1005_rT36`，本次读的是 `w8/_r14_offline_cleantree.log`（sha `f20a6e392962`）＋ `_integration_pytest_1006_rT37.log`（sha `13d50705c55c`） | **达成 ＋ 见 15.3 裁定** |
+| A1 两张 GET | 活体 9 指标／8 资产，无 `scope` 键 | 我的新永久件 `backend/reports/qa/prompts/probe_t37_surfaces_live.py`（30 臂 rc=0，零出站）：`total=9／items=9`、`total=8／items=8`、整份 `data` 里 **搜不到 `scope`** ✓、`?q=客单价` 两遍 sha 全等 ✓、§A.7.2 契约九键齐 ✓ | **达成** |
+| A1 渲染红线 | 「表头没有 `denied_columns` 列」 | 我第一版把尺写成"响应里不得出现 `denied_columns`" ⇒ **假红**（`docs/02:712-725` 的契约**就含**这一格，红线在**渲染侧**：`SemanticPage.tsx:5/332` 刻意不渲染）。改成不依赖浏览器的尺：**nginx 正在服务的 `assets/index-B-QCGZTh.js` 里 `grep -c denied_columns` = 0**，且该件与 `frontend/dist` 同名件 **md5 逐字节同**（`ec84c17e…`）⇒ 产物即当期构建、渲染面确实不含那格 | **达成（尺我自己修对了，见 15.4）** |
+| A2 读路径 | 三键一条语句／905 vs 907／第二道未落且自报 | 活体：`identity_guc = {keys:3, statement_count:1, is_local:true, reset_issued:false}` ✓；`rls = {enabled:false, forced:false, policies:0, second_guarantee_in_place:false}` ✓；`scope.enforced_by` **只有两条** ✓；租户 `total=905`／跨租户 `total=907`（差 2 行 = 另一租户）✓；带 `?tenant_id=T_C&user_id=…` 时 `data` sha **不变**且 `scope.tenant_id` 仍 `T_A` ✓；analyst ⇒ `403 FORBIDDEN_SCOPE`；`scope=bogus`／`pii_hit=maybe` ⇒ `400 INVALID_REQUEST`。库侧另核：`pg_stat_activity` 现读 **`app_rw`=4 连接／`app_ro`=1 连接** ⇒ 读路径真走 `app_ro`；`app.alembic_version` 无该表、`public.alembic_version` = **0006**；两张审计表 owner=**postgres**、`relrowsecurity=false`、`relforcerowsecurity=false`、`pg_policies`(app) = 6（全是语义资产那条链） | **达成（但见 15.2：判据只落了 6／7）** |
+| A3 预检 | `run_id` 恒 null、真发起 schema 面不可表达、报价 538–620 条／¥0.337–0.392 | 活体：`status='dry_run'`、`run_id=null`、`launched=false`、`launch_blockers` **3 条具名**、`quote` 面在位（`cases_total`／调用数区间／金额区间／`basis.mode`）✓；`dry_run:false` ⇒ **400**；多一个键 ⇒ **400**；analyst ⇒ **403**；未知 `dataset_id` ⇒ **404 `DATASET_NOT_FOUND`** ✓。读码确认 `app/present/eval_launch.py` 只读盘上产物、`_live_batches()` 取 `config.live is True` 的批次、不 import `eval/runner.py` ⇒ **零出站的机制成立** | **达成** |
+| A5 抓到的缺陷 | `EvalRunsPage` 取数 effect 自取消；两态对撞 pre-fix 3 红 1 绿／post-fix 4 绿 | 我跑 `vitest run` = **33 passed / 5 files** ✓、`tsc --noEmit` **0 字节输出（无错）** ✓、`eslint . --ext .ts,.tsx` **rc=0** ✓；`EvalRunsPage.tsx` 工作树 md5 = **`938469e43c4742efe09b534cc3c2d3d8`** = `git show HEAD:` 归一后同值 ⇒ **无残留变异** ✓（它给的那个还原 md5 逐字对上） | **达成** |
+| 当期构建身份 | 「api 镜像重建 ＋ force-recreate，19 条 path」 | `commerceql-api-1` 镜像 `ca34ea791a81`，`Created = 2026-10-05T15:19:25Z`、容器 `StartedAt = 15:19:28Z` ⇒ **本轮真重建**（不是重打 tag）；`openapi.json` 现读 **19 条 path**（含 `/semantic/metrics`、`/semantic/assets`、`/admin/audit`、`/admin/eval/run`）；五个新／改件三向 `container = worktree = HEAD blob(LF)` **全 SAME**（`api/routers/semantic.py`、`api/routers/admin_audit.py`、`repo/audit_read.py`、`present/audit_view.py`、`api/routers/admin_eval.py`） | **达成（引用"19 条"须带 15:19Z 这把构建）** |
+
+### 15.2 🔴 裁定：A2 = **实现落地 ＋ 第二道具名未落**，不得写成"A.9.5 已实现（双保证）"
+
+`docs/02:1056-1058` 那五条判据里，"第一道在码 ＋ **RLS 双保证**"这一条只落了一半；它把状态**现查并自报** `second_guarantee_in_place = false`、`enforced_by` 只给两条 —— 这是**证据面诚实**，我认。但对外措辞必须与之同形：可写"读路径已实现，身份由服务端 WHERE ＋ 三键 GUC 保证；第二道 RLS **今天不在位**（现查值）"，🚫 不可写"双保证已落地"。⇒ 这一格记 **部分达成**，缺口不是执行面而是那条判据本身（见 15.3 上呈）。
+
+### 15.3 裁它上呈的那一项（§14.4：第二道只能靠策略 DDL，而 provenance 守卫禁迁移里出 RLS DDL）
+
+先确认冲突为真（我读了两侧）：`tests/unit/test_rls_policy_provenance.py` ① 段用 AST 扫 `versions/` 全部四位迁移的**非 docstring** 字符串常量，禁 `CREATE POLICY`／`ENABLE|FORCE ROW LEVEL SECURITY`，理由写在文件头——「策略只能由 `materialize()` 从语义包派生，落迁移就会与派生器形成**两份真相**」；而审计两张表**不是语义资产** ⇒ 派生器永远不会给它们出策略 ⇒ 第二道在现有纪律下**结构性无法落地**。它推荐的"具名豁免面"方向我认可，但**四条约束**必须同轮成立（缺一就是给自己开新病根）：
+
+1. **豁免表要逐表名枚举**（`app.audit_log`／`app.audit_log_supplement`），🚫 不得写成"非语义资产的表"这种开放判据 —— 守卫防的是"两份真相"，开放豁免＝下一个窗把业务表也塞进来。
+2. **写路径角色先数出来再落 DDL**（这条它只半句带过，我这侧补实）：现读 `pg_stat_activity` ⇒ 写入用 **`app_rw`（4 条连接，`rolsuper=false`、`rolbypassrls=false`）**，而两张表 owner = **`postgres`** ⇒ 关键点不是 `FORCE`，而是 **`ENABLE` 一旦为真、`app_rw` 的 INSERT 立刻受策略管**（属主免疫只保护 `postgres`）。所以落 DDL 那天**必须同一事务**给 `FOR INSERT WITH CHECK (true)`，否则审计写失败 = 触发 fail-closed = 全线 500。它那两个集成臂（`test_missing_insert_policy_is_the_trap_obs_audit_records`／`test_audit_write_survives_the_policy_pair`）正是这一对的两态证明 ✓，但**目前只在一次性库的自造策略对上跑** ⇒ 要求：落共享库那天，同一对断言要能在**迁移后的真库**上跑通（否则回归只在测试里成立）。
+3. **多处抄本同改**：守卫文件头那句「答案是否 —— 迁移产出 0 条」与 ① 段断言、`0003` docstring 的阳性标本、以及 §14.2 表里"迁移侧零产"这一行，豁免落地那天**必须同轮改**（历史读数 🔻 追加、不删）；不然下一窗读到的"迁移 0 条 vs 现库 8 条"会被当成漂移。
+4. **翻转要有人数**：`second_guarantee_in_place` 从 `false` 翻 `true` 的那一刻，`OVERVIEW §9`／`deliverables/ACCEPTANCE.md` 里"RLS 未落 DDL"那两处措辞、以及 `enforced_by` 的条数断言（我 30 臂件里现在卡的是 **2 条**）要一起翻，且由**现查**驱动 —— 我的件已按现查写，翻转那天它会自己报 `enforced_by=3`，不用改断言逻辑。
+
+🔴 流程面：这条属"守卫覆盖面变更"，**取号与落笔权在你**（要不要占新号、还是记进 `U-13x` 之外的纪律条目由你按 `§4.8` 裁）；我不写判据、不替你落笔。
+🔴 排序面（要总控点头的那一句）：**第二道落不落，决定 T-38 那笔钱什么时候花**。若总控要落 ⇒ 先落 DDL、再跑那把 ≥20 准入的批（否则跑完又改代码面，当期性作废、同样的钱花两遍）；若总控判"这轮不落" ⇒ 直接跑 T-38，对外按 15.2 的措辞写"第二道不在位（现查）"。
+
+### 15.4 本窗自曝两件
+
+1. **面没读全就先怀疑别人**：我看到 2,454 时按 `unit`＋`contract` 跑出 2,030，第一反应是"这一格不复现"。它的 §14.7 命令形状列里**明写了三面**；是我没读命令就把差值挂到对方账上。⇒ 规则升格：**报"不复现"之前，先把对方那条命令逐字读一遍**（`cd`／参数／选择集），差值能解释就先解释再落判词。
+2. **红线尺写反方向**：我那条"响应里不得出现 `denied_columns`"把自己气到了 —— 契约里就有这格，红线在**渲染侧**。改成的正确尺（服务端产物 grep ＋ 与 `dist` 逐字节同）反而比浏览器断言更硬。⇒ 记一句：**"存在性泄露"这类红线，量的是"谁会看到它"，不是"它在不在 payload 里"**。
+3. 附带：`_served_bundle()` 第一版把仓库根写成 `parents[3]` ⇒ `frontend/dist` 拼到 `backend/frontend/…` 拿不到件，那条臂假红（这已是本窗系列第 N 次栽在深度上，件里现在两行常量并打印，见 `probe_t37_surfaces_live.py:28-32`）。
+
+### 15.5 小欠两件（进 T-38 随交）
+
+- **条数对账的基线要点名**：§14.7 写「上一轮离线 **2453** → 本轮 **2454**（＋1）」，但**入库件**与盘上日志的上一轮读数是 **2,392**（`_full_pytest_1005_rT36.log`，我 21:2x 核过）。两个都对，差的是"基线是哪把日志"：2453 是你们轮内中间跑、2392 是入库那份。⇒ 引用"＋1／＋17"这类增量时必须写"相对哪把日志或哪个件"，否则下一窗拿 2392 去对 2454 会得出"＋62 条从哪来"的假问题。
+- **`tsc` 的报法**：`npx tsc --noEmit` 成功时**零输出**，"rc=0" 要配 `wc -c 输出 = 0` 才是完整读数（本窗两份都这样核）。
+
+### 15.6 队列
+
+- **T-38（下轮 · 已批钱）**：一把 `c=3/n=30`（≈21 准入）的当期批 ⇒ 同批交齐 `U-129`③ ＋ G-6 首个可引用 P95 ＋ 把 `gate_inputs_p0_summary.json` 一起当期化；上界 **¥0.25**。
+- **收口件（T-38 内同轮）**：`OVERVIEW`／`ACCEPTANCE` 按现状改写（PASS 1/8、三处新路由在位、第二道不在位是现查值、演示不点「发起评测」）。
+- 🔴 待总控一句：**第二道 RLS 落不落**（15.3 的四条约束是我给的验收形状）。默认建议：**先跑 T-38、第二道留到收口之后**——因为落它要动共享库迁移与写路径，风险形状和"把评测跑完收口"不是一类事，别在同一轮里既改判据边界又花唯一的钱。
