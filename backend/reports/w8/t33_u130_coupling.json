@@ -1,28 +1,28 @@
 {
   "artifact": "t33_u130_coupling",
   "purpose": "QA 第 7 轮 T-33：`U-129` 结案所必需的第二条耦合量（`docs/07:1155` 行内 v1.7.5 那句「本号转绿必须引用 `U-130` 的量」 ＋ `docs/07 §16.5:3164` 断言⑥ 的 v1.7.18 分母订正）",
-  "generated_at_utc": "2026-10-04T12:56:20Z",
+  "generated_at_utc": "2026-10-05T07:08:34Z",
   "reading_window_utc": [
-    "2026-10-04T12:56:20Z",
-    "2026-10-04T12:56:35Z"
+    "2026-10-05T07:08:34Z",
+    "2026-10-05T07:08:52Z"
   ],
   "git": {
-    "rev": "ce1dec4",
-    "rev_full": "ce1dec4513dcf4fddbac9247e699bbfc367a1f39",
-    "commit_count": 407,
+    "rev": "bc63aee",
+    "rev_full": "bc63aeeb2ebf73f9dbf7256e12975237fefb9002",
+    "commit_count": 431,
     "dirty": false,
     "dirty_files": []
   },
   "zero_quota_readonly_selfproof": {
     "cost_ledger_before": {
-      "rows": "1674",
-      "sum_cny": "2.753794",
-      "max_created_at_utc": "2026-10-04 09:16:55"
+      "rows": "1721",
+      "sum_cny": "2.831595",
+      "max_created_at_utc": "2026-10-05 05:28:19"
     },
     "cost_ledger_after": {
-      "rows": "1674",
-      "sum_cny": "2.753794",
-      "max_created_at_utc": "2026-10-04 09:16:55"
+      "rows": "1721",
+      "sum_cny": "2.831595",
+      "max_created_at_utc": "2026-10-05 05:28:19"
     },
     "unchanged": true,
     "outer_transaction": "每条语句外层 begin; … rollback;（本件 `_psql()`）⇒ 服务端零持久写",
@@ -30,7 +30,7 @@
     "residue_ruler_datname_like_ecom": [
       {
         "datname": "ecom",
-        "bytes": 530848791
+        "bytes": 532552727
       },
       {
         "datname": "ecom_u123_probe",
@@ -54,10 +54,10 @@
     ]
   },
   "shape_guard_T18": {
-    "terminal_write_rows": 879,
+    "terminal_write_rows": 911,
     "g1_no_delim__want_0": 0,
     "g2_start_outside_seg2__want_0": 0,
-    "start_rows_excluded": 33,
+    "start_rows_excluded": 49,
     "shape_ok": true,
     "ruler": "与 deploy/loadtest/r23_thread_from_checkpoints.sql 的 ⑱ 同源两式（守卫翻 ⇒ 本件 wrote 系读数一律 null）"
   },
@@ -66,16 +66,16 @@
     "uniqueness_backstop": "backend/app/repo/migrations/versions/0001_roles_and_audit_append_only.py:152 `CONSTRAINT uq_audit_log_task_id UNIQUE (task_id)` ⇒「多落」在库面上被约束挡死，本件的 `multi_row_runs` 是旁证而不是唯一守卫",
     "era": {
       "first_row_utc": "2026-09-19 05:14:39",
-      "last_row_utc": "2026-10-04 09:16:56",
-      "rows": 891,
-      "distinct_task_id": 891
+      "last_row_utc": "2026-10-05 05:28:20",
+      "rows": 907,
+      "distinct_task_id": 907
     }
   },
   "faces": {
     "R_receipt_request_grain": {
       "numerator": "回执里的 `admission.terminal`（见 `terminal_lexicon`）",
       "denominator_side": "同窗 run 集合的 `app.audit_log` 段1 行数",
-      "in_scope_receipts": 7,
+      "in_scope_receipts": 11,
       "sum_of_gaps": 4,
       "gap_named_and_cross_check": {
         "zero_audit_runs_found_on_landing_face": 4,
@@ -334,7 +334,7 @@
               "audit_rows": "1"
             }
           ],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,430 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,779 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/healthy_r20_warm_c1n1.json",
@@ -368,7 +368,7 @@
           "gap_down_members_named__terminal_write_no_row": [],
           "zero_audit_runs_in_window_named": [],
           "gap_up_members_named__row_no_terminal_write": [],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,431 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,780 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/r22_lock_c8n8.json",
@@ -404,7 +404,7 @@
           "gap_down_members_named__terminal_write_no_row": [],
           "zero_audit_runs_in_window_named": [],
           "gap_up_members_named__row_no_terminal_write": [],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,314 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,663 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/r22_threadcell_c12n24.json",
@@ -457,7 +457,7 @@
               "audit_rows": "1"
             }
           ],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,312 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,661 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/r22_threadturn_c4n12_pool1.json",
@@ -564,7 +564,7 @@
               "audit_rows": "1"
             }
           ],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,312 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,661 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/r23_completeresidual_c2n4_pool1.json",
@@ -617,7 +617,7 @@
               "audit_rows": "1"
             }
           ],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,254 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,603 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/r23_errorresidual_c2n4_pool1.json",
@@ -682,7 +682,161 @@
               "audit_rows": "1"
             }
           ],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,253 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,603 倍 max lag ⇒ 无「读得太早」风险"
+        },
+        {
+          "receipt": "deploy/loadtest/u129_paprime_r12_pair1.json",
+          "started_at": "2026-10-05T04:52:04+00:00",
+          "finished_at": "2026-10-05T04:52:34+00:00",
+          "terminal": 2,
+          "admitted": 2,
+          "rejected_429": 0,
+          "other_http_4xx": 0,
+          "http_5xx": 0,
+          "unresolved": 0,
+          "codes": {
+            "GATE_AST_REJECTED": 1
+          },
+          "codes_task_ids": {
+            "GATE_AST_REJECTED": [
+              "tk_8fbf1cf3129246acad1513576af23382"
+            ]
+          },
+          "window_used": [
+            "2026-10-05 04:52:04+00",
+            "2026-10-05 04:52:34+00"
+          ],
+          "run_set_ruler": "run 首见 ts ∈ 回执自己的 started_at..finished_at；审计**按 task_id join、不带时间谓词**（⑭c 的写入延迟 max 187.623s 因此不参与本读数）",
+          "landing_face": {
+            "runs": 2,
+            "t2_runs": 1,
+            "terminal_writes_landing": 2,
+            "audit_rows": 2,
+            "runs_with_audit": 2,
+            "runs_without_audit_row": 0,
+            "gap_down_terminal_no_audit": 0,
+            "gap_up_audit_no_terminal": 0,
+            "multi_row_runs": 0
+          },
+          "gap_receipt_face__terminal_minus_audit_rows": 0,
+          "gap_down_members_named__terminal_write_no_row": [],
+          "zero_audit_runs_in_window_named": [],
+          "gap_up_members_named__row_no_terminal_write": [],
+          "静默前置": "该窗结束到读数时刻 ≈ 44 倍 max lag ⇒ 无「读得太早」风险"
+        },
+        {
+          "receipt": "deploy/loadtest/u129_paprime_r12_pair2.json",
+          "started_at": "2026-10-05T04:52:34+00:00",
+          "finished_at": "2026-10-05T04:52:50+00:00",
+          "terminal": 2,
+          "admitted": 2,
+          "rejected_429": 0,
+          "other_http_4xx": 0,
+          "http_5xx": 0,
+          "unresolved": 0,
+          "codes": {
+            "GATE_AST_REJECTED": 1
+          },
+          "codes_task_ids": {
+            "GATE_AST_REJECTED": [
+              "tk_51912ce6bdb946018a2ea2f0e3d3cf6f"
+            ]
+          },
+          "window_used": [
+            "2026-10-05 04:52:34+00",
+            "2026-10-05 04:52:50+00"
+          ],
+          "run_set_ruler": "run 首见 ts ∈ 回执自己的 started_at..finished_at；审计**按 task_id join、不带时间谓词**（⑭c 的写入延迟 max 187.623s 因此不参与本读数）",
+          "landing_face": {
+            "runs": 2,
+            "t2_runs": 1,
+            "terminal_writes_landing": 2,
+            "audit_rows": 2,
+            "runs_with_audit": 2,
+            "runs_without_audit_row": 0,
+            "gap_down_terminal_no_audit": 0,
+            "gap_up_audit_no_terminal": 0,
+            "multi_row_runs": 0
+          },
+          "gap_receipt_face__terminal_minus_audit_rows": 0,
+          "gap_down_members_named__terminal_write_no_row": [],
+          "zero_audit_runs_in_window_named": [],
+          "gap_up_members_named__row_no_terminal_write": [],
+          "静默前置": "该窗结束到读数时刻 ≈ 43 倍 max lag ⇒ 无「读得太早」风险"
+        },
+        {
+          "receipt": "deploy/loadtest/u129_paprime_r12_pair3.json",
+          "started_at": "2026-10-05T04:52:50+00:00",
+          "finished_at": "2026-10-05T04:53:07+00:00",
+          "terminal": 2,
+          "admitted": 2,
+          "rejected_429": 0,
+          "other_http_4xx": 0,
+          "http_5xx": 0,
+          "unresolved": 0,
+          "codes": {
+            "GATE_AST_REJECTED": 1
+          },
+          "codes_task_ids": {
+            "GATE_AST_REJECTED": [
+              "tk_0696f1a885ef4cb9abad1e310be8e8c4"
+            ]
+          },
+          "window_used": [
+            "2026-10-05 04:52:50+00",
+            "2026-10-05 04:53:07+00"
+          ],
+          "run_set_ruler": "run 首见 ts ∈ 回执自己的 started_at..finished_at；审计**按 task_id join、不带时间谓词**（⑭c 的写入延迟 max 187.623s 因此不参与本读数）",
+          "landing_face": {
+            "runs": 2,
+            "t2_runs": 1,
+            "terminal_writes_landing": 2,
+            "audit_rows": 2,
+            "runs_with_audit": 2,
+            "runs_without_audit_row": 0,
+            "gap_down_terminal_no_audit": 0,
+            "gap_up_audit_no_terminal": 0,
+            "multi_row_runs": 0
+          },
+          "gap_receipt_face__terminal_minus_audit_rows": 0,
+          "gap_down_members_named__terminal_write_no_row": [],
+          "zero_audit_runs_in_window_named": [],
+          "gap_up_members_named__row_no_terminal_write": [],
+          "静默前置": "该窗结束到读数时刻 ≈ 43 倍 max lag ⇒ 无「读得太早」风险"
+        },
+        {
+          "receipt": "deploy/loadtest/u129_paprime_r12_warm.json",
+          "started_at": "2026-10-05T04:51:14+00:00",
+          "finished_at": "2026-10-05T04:51:39+00:00",
+          "terminal": 1,
+          "admitted": 1,
+          "rejected_429": 0,
+          "other_http_4xx": 0,
+          "http_5xx": 0,
+          "unresolved": 0,
+          "codes": {},
+          "codes_task_ids": {},
+          "window_used": [
+            "2026-10-05 04:51:14+00",
+            "2026-10-05 04:51:39+00"
+          ],
+          "run_set_ruler": "run 首见 ts ∈ 回执自己的 started_at..finished_at；审计**按 task_id join、不带时间谓词**（⑭c 的写入延迟 max 187.623s 因此不参与本读数）",
+          "landing_face": {
+            "runs": 1,
+            "t2_runs": 0,
+            "terminal_writes_landing": 1,
+            "audit_rows": 1,
+            "runs_with_audit": 1,
+            "runs_without_audit_row": 0,
+            "gap_down_terminal_no_audit": 0,
+            "gap_up_audit_no_terminal": 0,
+            "multi_row_runs": 0
+          },
+          "gap_receipt_face__terminal_minus_audit_rows": 0,
+          "gap_down_members_named__terminal_write_no_row": [],
+          "zero_audit_runs_in_window_named": [],
+          "gap_up_members_named__row_no_terminal_write": [],
+          "静默前置": "该窗结束到读数时刻 ≈ 44 倍 max lag ⇒ 无「读得太早」风险"
         }
       ],
       "coverage_note": "带 `admission.terminal` 字段的入库回执只有这 7 份，且**全部早于修法时刻** ⇒ **修法后的回执面 = UNVERIFIED**（补一份当期回执要花钱，本窗未申请、未花）"
@@ -692,11 +846,11 @@
       "why_two_directions": "v1.7.14 裁定②：`gap_down` 之外必须配一条对「多落」敏感的 `gap_up`；两向**分列、不相减**",
       "blind_spot_of_this_face": "本面的分子是「这一轮自己写了终态通道」，而崩臂（X1）连终态都没写 ⇒ 它们在本面的分子与减数里都不在场 ⇒ **`gap_down = 0` 在本面不等于「账平了」**。要把崩臂数出来只能用面 R（回执 `terminal` 含 `error_frame`），或用签名 `n_audit = 0 ∧ turn >= 2`（见 `zero_audit_cohort`）。⇒ 本面与面 R 是**互补**关系，不是彼此的复核",
       "wide": {
-        "runs": 1408,
-        "t2_runs": 71,
-        "terminal_writes_landing": 843,
-        "audit_rows": 891,
-        "runs_with_audit": 891,
+        "runs": 1424,
+        "t2_runs": 77,
+        "terminal_writes_landing": 859,
+        "audit_rows": 907,
+        "runs_with_audit": 907,
         "runs_without_audit_row": 517,
         "gap_down_terminal_no_audit": 0,
         "gap_up_audit_no_terminal": 48,
@@ -1140,11 +1294,11 @@
       "post_fix_domain": {
         "fix_moment": "2026-09-30 14:25:35+00",
         "domain_ruler": "日期代理 = run 首见 ts 与 `33675b9` 落地时刻比，**不是构建身份**（严格分域依赖 T-11② 的 rev 自报，本窗仍欠）",
-        "runs": 30,
-        "t2_runs": 10,
-        "terminal_writes_landing": 30,
-        "audit_rows": 30,
-        "runs_with_audit": 30,
+        "runs": 46,
+        "t2_runs": 16,
+        "terminal_writes_landing": 46,
+        "audit_rows": 46,
+        "runs_with_audit": 46,
         "runs_without_audit_row": 0,
         "gap_down_terminal_no_audit": 0,
         "gap_up_audit_no_terminal": 0,
@@ -1228,7 +1382,7 @@
             "routed_to_audit_supp": 5,
             "routed_to_terminal_exit": 0
           },
-          "non_vacuity_check_whole_db": "branch:to:audit_pre=87, branch:to:audit_supp=91, branch:to:execute=91",
+          "non_vacuity_check_whole_db": "branch:to:audit_pre=93, branch:to:audit_supp=97, branch:to:execute=97",
           "non_vacuity_meaning": "这两个路由式在全库面上**有实例** ⇒ 上面那三个桶里的 0 是真读数，不是量具空转（本项目对「整列为 0」的固定自检）",
           "ruler": "路由 = `lg.checkpoint_writes.channel` 等于具名 `branch:to:<节点>`（与 ⑯ 同尺）；该面只证「被路由到」、不证节点执行成功（`07` v1.7.16 ③ 的界）"
         },
@@ -1308,8 +1462,8 @@
       "receipt_face__explained_as_named_exemption": 0,
       "landing_face__gap_down_total": 0,
       "landing_face__gap_down_in_post_fix_domain": 0,
-      "landing_face__post_fix_runs_in_scope": 30,
-      "landing_face__post_fix_t2_runs_in_scope": 10,
+      "landing_face__post_fix_runs_in_scope": 46,
+      "landing_face__post_fix_t2_runs_in_scope": 16,
       "reading": "面上当期：设计豁免（X2／X5／X6 那三类需夹具才能出现的）成员 = 0；`gap_down` 在修法后作用域非空（runs/turn≥2 见上）的前提下读得 0；唯一的非零差 = 修法前 A 档窗的 4 条崩臂，已逐条具名并与入库件对表"
     }
   },
