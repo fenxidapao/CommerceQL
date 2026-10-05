@@ -93,6 +93,39 @@ function readRateLimit(headers: Headers): RateLimitInfo | null {
   return { bucket, limit, remaining, reset };
 }
 
+/**
+ * 请求级失败也要带得出错误码（`U-136`，07 §14.2 H 组 / 附录 A A.0.4）。
+ * 统一响应信封里的 `code` 是用户唯一的出路：401 压成 `HTTP 401` ⇒ 错误卡既没有编号、
+ * 也说不出"该重新登录"。`code`／`traceId` 缺失时如实给 `null`，不编。
+ */
+export class StreamTransportError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | null,
+    readonly traceId: string | null,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'StreamTransportError';
+  }
+}
+
+/** 尽力读信封；非 JSON（例如代理直接回 HTML）时回三个 `null`，不改写状态码语义。 */
+async function readEnvelope(
+  resp: Response,
+): Promise<{ code: string | null; message: string; traceId: string | null }> {
+  try {
+    const body = (await resp.json()) as { code?: unknown; message?: unknown; trace_id?: unknown };
+    return {
+      code: typeof body.code === 'string' ? body.code : null,
+      message: typeof body.message === 'string' ? body.message : '',
+      traceId: typeof body.trace_id === 'string' ? body.trace_id : null,
+    };
+  } catch {
+    return { code: null, message: '', traceId: null };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 流客户端
 // ---------------------------------------------------------------------------
@@ -265,7 +298,11 @@ async function doFetch(
 
   if (!resp.ok || !resp.body) {
     cleanup();
-    handlers.onTransportError(new Error(`HTTP ${resp.status}`));
+    const env = await readEnvelope(resp);
+    // 状态码原样保留（🚫 不得把 401 报成 403/500）；message 用后端的，缺了才回落到 HTTP 行
+    handlers.onTransportError(
+      new StreamTransportError(env.message || `HTTP ${resp.status}`, env.code, env.traceId, resp.status),
+    );
     return none;
   }
 

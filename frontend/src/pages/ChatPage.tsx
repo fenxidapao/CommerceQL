@@ -31,10 +31,13 @@ import {
   openClarifyStream,
   openQueryStream,
   stopCurrentQuery,
+  StreamTransportError,
   setToken,
   type StreamHandlers,
 } from '../api/queryStream';
 import { API_BASE } from '../api/base';
+// 契约码表只有一份：错误卡的 `KNOWN_ERRORS`（U-136 用它判"传输层拿到的是不是契约码"）
+import { KNOWN_ERRORS } from '../components/ErrorCard';
 import { useChatStore, type Turn } from '../store/chatStore';
 import { track } from '../utils/analytics';
 import type { AsyncTaskResult, QueryOptions, SessionDetail, SseEvent } from '../api/types';
@@ -286,7 +289,13 @@ export function ChatPage() {
         } else if (err.message === 'no_event_timeout') {
           patchTurn(turnKey, { outcome: 'failed', transportError: 'no_event_timeout' });
         } else {
-          patchTurn(turnKey, { outcome: 'failed', transportError: err.message });
+          // U-136：请求级错误的 `code` 必须走到渲染侧（401 ⇒ 「重新登录」，不是「查询过程中发生错误」）
+          const env = err instanceof StreamTransportError ? err : null;
+          patchTurn(turnKey, {
+            outcome: 'failed',
+            transportError: env?.code ?? err.message,
+            transportTraceId: env?.traceId ?? null,
+          });
         }
       },
       onRateLimit: (info) => setRateLimit(info),
@@ -1018,7 +1027,9 @@ function TurnView(props: TurnViewProps) {
               ? 'SESSION_CONFLICT'
               : turn.transportError === 'TASK_NOT_FOUND' || turn.transportError === 'async_expired'
                 ? 'TASK_NOT_FOUND'
-                : 'INTERNAL'
+                : KNOWN_ERRORS.has(turn.transportError ?? '')
+                  ? (turn.transportError as string)
+                  : 'INTERNAL'
           }
           message={
             turn.transportError === 'no_event_timeout'
@@ -1031,7 +1042,7 @@ function TurnView(props: TurnViewProps) {
                     ? '后台查询执行失败'
                     : '查询过程中发生错误'
           }
-          traceId={turn.taskId ?? ''}
+          traceId={turn.taskId ?? turn.transportTraceId ?? ''}
           retryable={turn.transportError === 'SESSION_CONFLICT' || turn.transportError === 'async_failed'}
           onRetry={onRetry}
           onRefill={onSuggest}

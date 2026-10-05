@@ -70,6 +70,10 @@ function primaryText(code: string, message: string, detail?: Record<string, unkn
   switch (code) {
     case 'INVALID_REQUEST':
       return `请求参数有误：${String(detail?.field ?? message)}`;
+    case 'AUTH_FAILED':
+    case 'TOKEN_REVOKED':
+      // U-136：401 的唯一出路是重新登录；后端原文（如「令牌已过期」）留在下面的次要行里
+      return '登录已过期或令牌无效，请重新登录';
     case 'GATE_AST_REJECTED':
       return `查询被安全校验拒绝：${String(detail?.violation ?? message)}`;
     case 'GATE_POLICY_REJECTED':
@@ -113,9 +117,11 @@ export function ErrorCard({
   const c = toneColor(tone);
   const unknown = !CODE_TONE[code] && code !== 'INTERNAL' && !KNOWN_ERRORS.has(code);
   const maySeeDetail = role === 'analyst' || role === 'platform_admin';
+  // U-136 判据②：请求级失败（如 401）可能既没有 taskId 也没有 trace_id ⇒ 编号退回 `code`，**不留空**
+  const errorRef = traceId || code;
 
   const copyTrace = async () => {
-    await navigator.clipboard.writeText(`code=${code} trace_id=${traceId} message=${message}`);
+    await navigator.clipboard.writeText(`code=${code} trace_id=${errorRef} message=${message}`);
     setCopied(true);
     void antdMessage.success('已复制错误信息', 1.5);
     setTimeout(() => setCopied(false), 1500);
@@ -207,13 +213,13 @@ export function ErrorCard({
       </div>
 
       <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-        <span style={{ fontFamily: 'ui-monospace, Menlo, Consolas, monospace' }}>错误编号：{traceId}</span>
+        <span style={{ fontFamily: 'ui-monospace, Menlo, Consolas, monospace' }}>错误编号：{errorRef}</span>
         <Button
           type="text"
           size="small"
           icon={<CopyOutlined />}
           aria-label="复制错误编号"
-          onClick={() => void navigator.clipboard.writeText(traceId)}
+          onClick={() => void navigator.clipboard.writeText(errorRef)}
           style={{ color: 'inherit', fontSize: 12 }}
         >
           复制
@@ -266,8 +272,8 @@ export function ErrorCard({
   );
 }
 
-/** A.11 已知错误码（未知码兜底用） */
-const KNOWN_ERRORS = new Set([
+/** A.11 已知错误码（未知码兜底用；`ChatPage` 的传输层也用它判"这串是不是契约码"，不留第二份抄本） */
+export const KNOWN_ERRORS = new Set([
   'INVALID_REQUEST',
   'AUTH_FAILED',
   'TOKEN_REVOKED',

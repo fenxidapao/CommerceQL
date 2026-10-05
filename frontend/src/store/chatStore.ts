@@ -56,6 +56,8 @@ export interface Turn {
   error?: ErrorEvent;
   /** 传输层错误（非契约错误码） */
   transportError?: string;
+  /** 请求级错误信封里的 `trace_id`（`U-136`：401 这类错误**没有** taskId，编号得从信封取） */
+  transportTraceId?: string | null;
   /** 澄清后重新执行的次数（复用同一条 StageBar，追加而非新建） */
   clarifyCount: number;
   /** 转异步后轮询拿到的结果：结果块顶部保留一条降级条 */

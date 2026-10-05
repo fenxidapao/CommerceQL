@@ -7,6 +7,7 @@ import {
   makeIdempotencyKey,
   openQueryStream,
   parseSSEChunk,
+  StreamTransportError,
   NO_EVENT_TIMEOUT_MS,
   type StreamHandlers,
 } from './queryStream';
@@ -299,5 +300,89 @@ describe('openQueryStream', () => {
     expect(h.events.map((e) => e.event)).toEqual(['meta', 'complete']);
     expect((h.events[0].data as { _raw: string })._raw).toBe('{broken');
     expect(h.terminals).toEqual(['complete']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// U-136：请求级失败（**过期令牌臂**，零额度）也要把统一响应信封的 `code` 带出来
+//   判据①：401 → `code = AUTH_FAILED`（状态码原样，不得改成 403/500，不得回显令牌）
+// ---------------------------------------------------------------------------
+describe('U-136 传输层错误信封', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** 后端 401 的真实形状（2026-10-05 04:32:05Z 现测：`trace_id` 为 `null`） */
+  function envelope401(message: string): Response {
+    return new Response(
+      JSON.stringify({
+        code: 'AUTH_FAILED',
+        message,
+        detail: null,
+        suggestions: null,
+        trace_id: null,
+        server_time: '2026-10-05T04:32:05+00:00',
+      }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('401 的 AUTH_FAILED 与后端原文都传到渲染侧', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(envelope401('令牌已过期')));
+    const caught: unknown[] = [];
+    const h: StreamHandlers = {
+      onEvent: () => {},
+      onTerminal: () => {},
+      onTransportError: (err) => caught.push(err),
+    };
+    await openQueryStream({ question: '探针', sessionId: null }, h, new AbortController().signal);
+    const err = caught[0] as StreamTransportError;
+    expect(err).toBeInstanceOf(StreamTransportError);
+    expect(err.code).toBe('AUTH_FAILED');
+    expect(err.status).toBe(401);
+    expect(err.message).toBe('令牌已过期');
+    expect(err.traceId).toBeNull();
+  });
+
+  it('错误面不回显令牌：message / code 里都不可能出现 JWT 片段', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(envelope401('令牌格式非法')));
+    const caught: unknown[] = [];
+    const h: StreamHandlers = {
+      onEvent: () => {},
+      onTerminal: () => {},
+      onTransportError: (err) => caught.push(err),
+    };
+    await openQueryStream({ question: '探针', sessionId: null }, h, new AbortController().signal);
+    const err = caught[0] as StreamTransportError;
+    expect(`${err.code} ${err.message}`).not.toMatch(/eyJ|Bearer/);
+  });
+
+  it('非 JSON 响应体（网关 HTML 错误页）不炸链：code 给 null、状态码原样', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<html>bad gateway</html>', { status: 502 })));
+    const caught: unknown[] = [];
+    const h: StreamHandlers = {
+      onEvent: () => {},
+      onTerminal: () => {},
+      onTransportError: (err) => caught.push(err),
+    };
+    await openQueryStream({ question: '探针', sessionId: null }, h, new AbortController().signal);
+    const err = caught[0] as StreamTransportError;
+    expect(err.code).toBeNull();
+    expect(err.status).toBe(502);
+    expect(err.message).toBe('HTTP 502');
+  });
+
+  it('409 仍走会话冲突自动重试支路，不被新错误类型抢走', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(new Response(JSON.stringify({ code: 'SESSION_CONFLICT' }), { status: 409 }))
+        .mockResolvedValueOnce(makeResponse(encodeStream('event: refuse\ndata: {"terminal":true}\n\n'))),
+    );
+    const h = makeHandlers();
+    await openQueryStream(INPUT, h, new AbortController().signal);
+    expect(h.conflictRetries).toEqual([1]);
+    expect(h.terminals).toEqual(['refuse']);
   });
 });
