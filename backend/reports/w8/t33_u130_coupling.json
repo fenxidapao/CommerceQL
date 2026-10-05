@@ -1,15 +1,15 @@
 {
   "artifact": "t33_u130_coupling",
   "purpose": "QA 第 7 轮 T-33：`U-129` 结案所必需的第二条耦合量（`docs/07:1155` 行内 v1.7.5 那句「本号转绿必须引用 `U-130` 的量」 ＋ `docs/07 §16.5:3164` 断言⑥ 的 v1.7.18 分母订正）",
-  "generated_at_utc": "2026-10-05T07:08:34Z",
+  "generated_at_utc": "2026-10-05T07:24:45Z",
   "reading_window_utc": [
-    "2026-10-05T07:08:34Z",
-    "2026-10-05T07:08:52Z"
+    "2026-10-05T07:24:45Z",
+    "2026-10-05T07:25:04Z"
   ],
   "git": {
-    "rev": "bc63aee",
-    "rev_full": "bc63aeeb2ebf73f9dbf7256e12975237fefb9002",
-    "commit_count": 431,
+    "rev": "eecb616",
+    "rev_full": "eecb616318d908f5d97244f6584295e2db4ee190",
+    "commit_count": 435,
     "dirty": false,
     "dirty_files": []
   },
@@ -95,7 +95,7 @@
           ],
           "sets_equal": true
         },
-        "attribution": "差 4 全部落 X1 类（崩臂，`U-129` 的缺陷面）⇒ **不落入「已知豁免集合」**；其余 6 格差 0（非空真：那 6 格的 `terminal` 都 > 0）"
+        "attribution": "差 4 全部落 X1 类（崩臂，`U-129` 的缺陷面）⇒ **不落入「已知豁免集合」**；其余 10 格差 0（非空真：那 10 格的 `terminal` 都 > 0）"
       },
       "items": [
         {
@@ -334,7 +334,7 @@
               "audit_rows": "1"
             }
           ],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,779 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,784 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/healthy_r20_warm_c1n1.json",
@@ -368,7 +368,7 @@
           "gap_down_members_named__terminal_write_no_row": [],
           "zero_audit_runs_in_window_named": [],
           "gap_up_members_named__row_no_terminal_write": [],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,780 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,785 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/r22_lock_c8n8.json",
@@ -404,7 +404,7 @@
           "gap_down_members_named__terminal_write_no_row": [],
           "zero_audit_runs_in_window_named": [],
           "gap_up_members_named__row_no_terminal_write": [],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,663 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,668 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/r22_threadcell_c12n24.json",
@@ -457,7 +457,7 @@
               "audit_rows": "1"
             }
           ],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,661 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,667 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/r22_threadturn_c4n12_pool1.json",
@@ -564,7 +564,7 @@
               "audit_rows": "1"
             }
           ],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,661 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,666 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/r23_completeresidual_c2n4_pool1.json",
@@ -617,7 +617,7 @@
               "audit_rows": "1"
             }
           ],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,603 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,608 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/r23_errorresidual_c2n4_pool1.json",
@@ -682,7 +682,7 @@
               "audit_rows": "1"
             }
           ],
-          "静默前置": "该窗结束到读数时刻 ≈ 2,603 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 2,608 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/u129_paprime_r12_pair1.json",
@@ -722,7 +722,7 @@
           "gap_down_members_named__terminal_write_no_row": [],
           "zero_audit_runs_in_window_named": [],
           "gap_up_members_named__row_no_terminal_write": [],
-          "静默前置": "该窗结束到读数时刻 ≈ 44 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 49 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/u129_paprime_r12_pair2.json",
@@ -762,7 +762,7 @@
           "gap_down_members_named__terminal_write_no_row": [],
           "zero_audit_runs_in_window_named": [],
           "gap_up_members_named__row_no_terminal_write": [],
-          "静默前置": "该窗结束到读数时刻 ≈ 43 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 49 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/u129_paprime_r12_pair3.json",
@@ -802,7 +802,7 @@
           "gap_down_members_named__terminal_write_no_row": [],
           "zero_audit_runs_in_window_named": [],
           "gap_up_members_named__row_no_terminal_write": [],
-          "静默前置": "该窗结束到读数时刻 ≈ 43 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 49 倍 max lag ⇒ 无「读得太早」风险"
         },
         {
           "receipt": "deploy/loadtest/u129_paprime_r12_warm.json",
@@ -836,10 +836,10 @@
           "gap_down_members_named__terminal_write_no_row": [],
           "zero_audit_runs_in_window_named": [],
           "gap_up_members_named__row_no_terminal_write": [],
-          "静默前置": "该窗结束到读数时刻 ≈ 44 倍 max lag ⇒ 无「读得太早」风险"
+          "静默前置": "该窗结束到读数时刻 ≈ 49 倍 max lag ⇒ 无「读得太早」风险"
         }
       ],
-      "coverage_note": "带 `admission.terminal` 字段的入库回执只有这 7 份，且**全部早于修法时刻** ⇒ **修法后的回执面 = UNVERIFIED**（补一份当期回执要花钱，本窗未申请、未花）"
+      "coverage_note": "带 `admission.terminal` 字段的入库回执现读 **11** 份，其中 **4** 份晚于修法时刻 `2026-09-30 14:25:35+00` ⇒ 修法后的回执面**有当期样本**（不再是 UNVERIFIED）；其余 7 份早于修法时刻，只能作历史读数引用。本件全程只读、零花费（见 `zero_quota_readonly_selfproof`）。"
     },
     "W_landing_run_grain": {
       "ruler": "分母侧 = run（`lg.checkpoints` 里带 `tk_` 的组）；终态写 = `lg.checkpoint_writes` 里 `channel='terminal'` 且 `split_part(task_path, ', ', 2) <> '__start__'`；审计侧 = `app.audit_log` 段1 按 `task_id` join（不带时间谓词）",
