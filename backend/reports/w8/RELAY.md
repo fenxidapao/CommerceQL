@@ -1742,7 +1742,7 @@ integration_ran, integration_files_seen, failed_tests, error_tests}` ＋ 各自 
 | `/chat` 第 1 问 | 「各渠道的订单量排名」⇒ **拒答**（`refuse`／`no_data_asset`，degraded「智能解析暂不可用，本次按固定模板查询」）；`app.audit_log` 该 turn `latency_ms = {"total": 42604, "normalize": 42587}`（`node_timeout_degraded` 16:15:09Z）⇒ 与账面 误拒 63/124 同形，**不改口** |
 | `/chat` 第 2 问（旗舰） | 「上个月华东区 GMV 是多少，环比怎么样」⇒ 走到安全校验被拒 `GATE_AST_REJECTED`（16:18:14Z，audit `outcome=failed`）；**换全新会话＋全新身份复现同一条**（16:23:10Z）⇒ 不是重放/会话态造成的；这条是账面已知（§二.「gate1 四处闸门自伤」，`RELAY.md:611`／`:780`） |
 | **同一个问题再问一遍** | 同一会话 16:23:47Z ⇒ **出表**：`month/gmv/gmv_prev_period/gmv_mom_ratio` 两行（2026-09 = 1,609,316.70，环比 −5.88%），耗时 6.3s／成本 ¥0.006277／语义包 2026.09.14.1／任务号 `tk_84b821a7203a4b6fb944dbc97c2d3f80`；带 `c11-degrade-bar`「结果呈现环节降级」＋ `c5-chart-missing`「本次未能生成图表，已用表格展示」 |
-| 重放面（U-129 侧证） | 上述四个终态在 `app.audit_log` **逐条有行**（16:15:09／16:18:14／16:23:10／16:23:47，`refuse`／`failed`／`failed`／`success`）⇒ 这一段活体上配对成立；**不据此把 `U-129` 转绿**（裁定①） |
+| 重放面（U-129 侧证） | 上述四个终态在 `app.audit_log` **逐条有行**（16:15:09／16:18:14／16:23:10／16:23:47，`refuse`／`failed`／`failed`／`success`）⇒ 这一段活体上配对成立；🔻 **10-05 13:0x 第 12 轮具名订正（QA 第 15 轮 12.8 d，原句不删）**：本行"四个终态"用词过宽 —— 那四行是**四个回合**、**三种 outcome**（`refuse`／`failed`×2／`success`，**没有 `clarify`**）；终态词表是四类，读成"四类各有实例"就是过宽结论 ⇒ 该读数的覆盖面按三种计。**不据此把 `U-129` 转绿**（裁定①） |
 
 两条**没立案**的观察（先测了再说，不凭形状猜）：
 - 表头看起来重复 ⇒ 第二个 `tr` 是 rc-table 的 `ant-table-measure-row`，`aria-hidden=true`、`height:0px` ⇒ **屏幕上看不到**，不是缺陷。
@@ -1847,3 +1847,39 @@ integration_ran, integration_files_seen, failed_tests, error_tests}` ＋ 各自 
    仓库内**没留任何残骸**（`git status --porcelain` 现读无该项）⇒ scratch 一律 `E:/tmp_qoder/…`。
 5. **第一遍全量 pytest 没带 `--ignore=tests/integration`** ⇒ 9 条收集期错（DSN 缺失，U-114 防线① 的正确行为）被当成结果；
    离线口径必须显式排除集成目录，且 `exit 0` 是 `tail` 的、不是 pytest 的。
+
+
+## §十二 第 12 轮（**T-35：已批花费那一把 ＋ 零额度四件** ｜ 起始 HEAD `3c37c79`／416 笔 ｜ **本轮花了钱**：见 §十二.6 的事后报 ｜ **动了共享栈**：`w7load-api` 镜像重建 1 次 ＋ 第二个 api 容器起停、一次性库 `ecom_t35_it` 建→迁移→删）
+
+### 0. 开工读数（QA §十二 那七条，本手逐条重跑）
+
+| # | QA 第 15 轮的读数 | 本手现测（UTC 时刻 ／ 命令） | 判定 |
+| --- | --- | --- | --- |
+| ① | T-34 三端点 21 臂全合格（它用自己的永久件） | 复跑 `backend/reports/qa/prompts/probe_admin_eval_live.py`（12:5x，见 §十二.3） | 待 §十二.3 填 |
+| ② | 探针已重取基准、五态 rc=0、态⑤ 钉住"同源跳过时 `red_total` 必为 1" | 12:52 复跑同一件：**漂移 0 格／5**，末行 `[附] 当期真实两把日志（mtime 最新，不参与计数）→ PASS ｜ 用的是 _full_pytest_1004_rT34b.log ＋ _integration_pytest_1004_rT34b.log`；🔻 我第一遍把 态⑤ 打印的三条 caveat 误读成"当期取证件过期"，实际那是夹具臂的**故意不一致演示**（当场 sha `f80a2120bc42`／`11e96e645618` = tmp 日志；入库件记的 `7cdc916ba9a4`／`7401f3a8ea3c` = 盘上 rT34b 两把，`sha256sum` 逐一对上）⇒ **读别人的器件先读它的打印规则**（上一轮同族自曝，这次是我自己再犯） | ✓ 且我抓到自己的误读 |
+| ③ | 花费逐位闭合；唯"单笔最大 ¥0.006277"它记 UNVERIFIED | `select max(cost_cny) from app.cost_ledger where created_at > '2026-10-04 09:16:55Z'`（12:5x）= 见 §十二.5 | 本手补这个数 |
+| ④ | 残渣尺 = 2；五件容器 md5 = 工作树 = HEAD blob 全 SAME | 现读 `datname like 'ecom%'` = `ecom` ＋ `ecom_u123_probe` = 2 ✓ | ✓ |
+| ⑤ | 🔴 `ruff check app tests` 在 `9e45281` 给 **1 error**（UP020），而我回执写"All checks passed" | 本手在 `3c37c79` 干净树**先复现**：`tests\contract\test_recursion_limit_audit_contract.py:73:10: UP020` ⇒ **QA 对、我那句不复现**；改 `io.open`→`open` 后三件全绿（§十二.2） | **认账**（§十二.4 具名订正） |
+| ⑥ | `U-129` 仍不转绿：② 回执面 post_fix 无当期样本、③ 未交 | 现读 `ls -lt deploy/loadtest/*.json` 最新 = 我本轮起的（跑前基线确为 09-29 23:29 那把）⇒ 面 R 分子**确实没有当期样本** | 本轮主单就是补它 |
+| ⑦ | 台账基线 1,686／¥2.773212／16:23:45.461529Z | 12:5x 复跑同一条 = **1686｜2.773212｜2026-10-04 16:23:45.461529+00** ✓ 逐位同 | 跑前基线定住 |
+
+### 1. 💰 报价先落这一行（派发硬要求 (d)；两把**分列、不相减**）
+
+**将要跑的几何与单价来源**（单价全部取**同形状那一批的账面实测**，不取全库均值 —— `07 §16.5` 报价四因子）：
+
+| 臂 | 命令形状（旧几何同形状） | 进图条数 | 每条调用数 | 单价来源 | 报价（非峰） |
+| --- | --- | --- | --- | --- | --- |
+| 预热一格（**作废**，不进分母） | `--scenario steady --concurrency 1 --max-requests 1 --reuse-sessions --session-pool 1` | 1 | 4（深链首轮） | 第三十一轮验收类 `¥0.006/run` | **≈¥0.006**（作废≠免费，账要闭） |
+| **最小臂 P-A′ 3 对**（U-129 ③ ＋ 面 R 第一份分子） | `--scenario steady --concurrency 1 --max-requests 2 --reuse-sessions --session-pool 1` × 3 | 6 | 2.2–4 | 同形状第三十一轮实付 **¥0.033723**（24 条调用，非峰） | **≈¥0.034**（区间 ¥0.014–0.034，取上界） |
+| 旧几何 108 那条（`healthy_r20_aprime_c12n108` 同形状） | `--scenario steady --concurrency 12 --max-requests 108 --reuse-sessions --session-pool 12`，题库 `questions_T_A_time.txt` | ≈99 | 混跑类 2.87／验收类 4.0 | 非峰每准入 ¥0.002–0.003（混跑）／¥0.006（验收类） | **¥0.30–0.59**（区间，不含上面两臂） |
+
+**本手的自约束**：派发说「预计超过 ¥0.6 ⇒ 停下、把报价与两种几何的差别交给 QA 转总控」。
+⇒ 我按 **预热 ＋ 最小臂**（合计上限 **¥0.04**）先跑，跑完用**当期构建的账面实测单价**重算第三行；
+重算值 > ¥0.56 ⇒ **不跑第三行**，把两把几何的差别（能不能给 G-6 的 P95、面 R 分子大小）交回 QA。
+**批准依据**：本块派发原文「总控已对本块的【主单】批了花费（原话"准许花钱"）」。
+
+### 1′. 跑批前置：构建身份（硬要求 (b)）与首格作废（硬要求 (a)）
+
+- 新镜像 = **`w7load-api:1005r12`**（= `:latest`，image id `4adbcfc2e8f6`），12:5x 由 `docker build -f deploy/Dockerfile -t w7load-api:1005r12 .` 从当期树起（上一把是 4 天前的 `0930r11` / `8c1eb47fb118`，**不能拿它测当期修法**）。
+- 第二个 api 容器 = `w7load-api`（`compose.loadtest.yml`，宿主 `18000`，复用同一套 pg/redis ⇒ **数据是真的，进程是第二个**）；`/api/v1/healthz/ready` 现读 **200**。
+- 逐件三向尺 ＋ 层 3 行为级实证落在 **`deploy/loadtest/attest_build_identity.py`**（新永久件，零额度只读），结果写进回执的 `build_identity` 块 ⇒ 见 §十二.3。
