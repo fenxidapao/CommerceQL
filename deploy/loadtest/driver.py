@@ -527,6 +527,11 @@ def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: a
         "latency_ms_all_ms": {"p50": _pct(all_totals, 50), "p95": _pct(all_totals, 95),
                               "samples": len(all_totals)},
         "ttfb_ms": {"p50": _pct(ttfbs, 50), "p95": _pct(ttfbs, 95)},
+        # 🔻 T-36 E（QA 13.7 B）：聚合量在 n=2 时 `p95` **恒等于 `max`** ⇒ 只报五个数会把"两个样本"
+        #    读成"一个分布"。逐样本毫秒 ＋ outcome 标签一并落进回执，下一窗要按样本重算就不必重跑（花钱）。
+        #    口径见 07 §16.5：`admitted < MIN_ADMITTED_FOR_P95` ⇒ 聚合量**不得**引用为达标／不达标，
+        #    但逐样本是实测读数（可以引"哪一条多少毫秒、什么终态"，不可以引"这批 P95 是多少"）。
+        "latency_samples_ms": _latency_samples(samples),
         "outcomes": by_outcome,
         "codes": _codes(samples),
         # 关联键：让 `codes` 里每一格都能被 `app.audit_log` / `app.cost_ledger` 复算（见 helper 注释）。
@@ -622,6 +627,28 @@ def _codes(samples: list[Sample]) -> dict[str, int]:
 #: 每个错误码最多留几条关联键。12 = "够对方抽样定位"又不把回执撑大；截断是**有意的**，
 #: 全量键在 `app.audit_log` 里按时间窗本来就能反查出来。
 CODES_TASK_IDS_CAP: Final[int] = 12
+
+
+def _latency_samples(samples: list[Sample]) -> list[dict[str, object]]:
+    """逐样本延迟 ＋ 终态标签（T-36 E）。
+
+    只装**观测值与标识符**：`total_ms` / `ttfb_ms` / `outcome` / `code` / `task_id` ——
+    不含查询文本与结果数据（N-11 同一条关注，与 `_codes_task_ids` 一个口径）。
+    排序 = `total_ms` 升序 ⇒ 同一批样本两次 roll-up 输出一致（可复算）。
+    """
+    out: list[dict[str, object]] = []
+    for s in samples:
+        if not _admitted(s) or s.total_ms is None:
+            continue
+        out.append({
+            "total_ms": round(s.total_ms, 1),
+            "ttfb_ms": round(s.ttfb_ms, 1) if s.ttfb_ms is not None else None,
+            "outcome": s.outcome,
+            "code": s.code,
+            "task_id": s.task_id,
+        })
+    out.sort(key=lambda d: (d["total_ms"] is None, d["total_ms"]))
+    return out
 
 
 def _codes_task_ids(samples: list[Sample]) -> dict[str, list[str]]:
@@ -857,6 +884,24 @@ async def self_check() -> int:
         return 3
     # ★ 关联键接线也要在**调用点**钉（同 U-120 三态那条的教训）：桩里唯一带码的终止帧是
     #   脚本第 4 条（索引 3）的 `error` ⇒ 整字典相等，不留"字段存在但恒空"的空间。
+    # ★ T-36 E（QA 13.7 B）：逐样本延迟必须在**调用点**钉住 —— n=2 时 `p95` 恒 = `max`，
+    #   只报聚合量会把"两个样本"读成"一个分布"。三条断言：同分母、升序、字段集合固定（不含查询文本）。
+    lat_samples = sum_low.get("latency_samples_ms")
+    if not isinstance(lat_samples, list):
+        print("[自检失败] latency_samples_ms 缺失或不是列表 ⇒ 回执形状没接上", file=sys.stderr)
+        return 3
+    want_keys = {"total_ms", "ttfb_ms", "outcome", "code", "task_id"}
+    if any(set(d.keys()) != want_keys for d in lat_samples):
+        print(f"[自检失败] 逐样本字段集合不对：{[sorted(d) for d in lat_samples][:2]}"
+              f"（期望 {sorted(want_keys)}）⇒ 要么漏字段，要么把内容写进了回执（N-11）", file=sys.stderr)
+        return 3
+    if len(lat_samples) != sum_low["latency_ms"]["samples"]:
+        print(f"[自检失败] 逐样本条数 {len(lat_samples)} ≠ latency_ms.samples "
+              f"{sum_low['latency_ms']['samples']} ⇒ 两栏分母不同源，聚合量与样本不可对账", file=sys.stderr)
+        return 3
+    if [d["total_ms"] for d in lat_samples] != sorted(d["total_ms"] for d in lat_samples):
+        print("[自检失败] 逐样本未按 total_ms 升序 ⇒ 同一批样本两次 roll-up 输出不一致（不可复算）", file=sys.stderr)
+        return 3
     want_codes_tasks = {"INTERNAL": ["tk_stub_3"]}
     if sum_low.get("codes_task_ids") != want_codes_tasks:
         print(f"[自检失败] codes_task_ids 接线不对：{sum_low.get('codes_task_ids')!r}"
