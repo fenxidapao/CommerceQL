@@ -2126,3 +2126,120 @@ QA 12.6 在 `9e45281` 干净树上跑出 1 error（UP020），而我 §十一.2 
 2. **搭坏 jsdom 桩两次**：先是没补 `scrollIntoView`（`bottomRef.current?.scrollIntoView is not a function`），再是把 `healthz` 标志位放在顶层 ⇒ `HealthIndicator` 读 `checks.llm_reachable` 得 `undefined` ⇒ 臂红了三次才修好尺。⇒ 补第三方件的桩之前先读那个件怎么取数。
 3. **诊断别人的器件先读它的取数写法**：探针第一版把三条红分错类（`injection_self_defect`），因为我自己写 `_join_sides` 时用 `parent.args.get("from")`，而这台 sqlglot 的键叫 `from_` ⇒ 取到 `None`。改成 `from app.guard.ast_gate import _FROM_KEY` 后与闸门同源。
 4. **变异对照要临时改在产件**：为证 E 件的四臂自检不是摆设，本窗把 `driver.py:534` 注释掉跑了一次（rc=3），用**备份 ＋ `md5sum` 全等**复原（`f222c4e921bf…`、`git status` = 0 行），没在 git 面留下任何痕迹、也没用 `checkout`/`reset` 去"抹"改动。
+
+## §十四 第 14 轮（**T-37 · QA 第 17 轮派单「主单五件 A–E ＋ 随交四件 B–E」** ｜ 2026-10-05 21:0x–10-06 00:2x +0800 ／ 13:0x–16:2x UTC ｜ 起始 HEAD `416f448`／439 笔（QA 侧读数，我方起点同）｜ 代码笔依次 `122ea08`（A1）→ `c7b1d24`（A3 后端）→ `ae575b2`（A3 前端）→ `0c69d56`（A2）→ `0ef587f`（A4·A5·B·C·D·E）｜ **本轮零花费**（总控未批新额度 ⇒ 金路一把没跑，自证 §14.7）｜ **动了共享栈**：`api` 镜像重建 2 次 ＋ recreate、`web` 的 `dist` 重构建 3 次（其中一次带 `VITE_ENABLE_DEBUG_PANEL=true`）、共享 `ecom` 跑 `alembic upgrade head`（`0005 → 0006`，只 GRANT／REVOKE）；一次性库 `ecom_t37a2_r14`（A2 专用）与 `ecom_t37it_r14`（集成面）各自建→迁移→跑→当场 DROP）
+
+> 本轮是 QA 那句「**把『点了必 404』变成『点了有数据』**」的执行轮。三处缺失路由（A.7.1／A.7.2／A.9.1）＋ A.9.5 读路径全部落地；
+> 🔴 而且 A5 那一次真机走查**当场逮到一个自 W5 就在树里的静默前端缺陷**并修掉 —— 这是本项目第一次由"浏览器点一遍"抓出**单元测试与契约测试都测不到**的一类红（形状见 §14.5）。
+
+### 14.0 起点先复核（不抄来件）
+
+| 复核项 | 我方现测（时刻＋尺） | 与来件 |
+|---|---|---|
+| 远端与本地同点 | `git rev-parse --short HEAD` = `416f448`／`git rev-list --count HEAD` = **439**／`git status --porcelain` = **0 行**／`git ls-remote origin main` 与 HEAD 同次运行全等 | 逐位同 |
+| 台账（零花费基线） | `app.cost_ledger` = **1,721 行／¥2.831595／max 2026-10-05 05:28:19.308155+00** | 逐位同 |
+| 起点路由面 | 活体 `curl :8000/api/v1/openapi.json` = **15 条 path**（`semantic`／`admin/eval/run`／`admin/audit` **一条都没有**） | 同（来件写 15） |
+| `app_ro` 对审计表 | `information_schema.role_table_grants` 现读 = **零授权**（只有 `app_rw`／`postgres`） | 🔴 来件没提 ⇒ 这条决定了 A2 必须带一条迁移 |
+| alembic 现读 | `select version_num from public.alembic_version` = **0005** | 同 |
+
+### 14.1 A1 `GET /semantic/metrics` ＋ `GET /semantic/assets`（判据 `docs/02:701-702`）—— 达成
+
+- **落点**：`backend/app/present/semantic_dict.py`（L3 投影）＋ `backend/app/api/routers/semantic.py`（L5）＋ `app/api/exceptions.py::NoDataAsset` ＋ `main.py` 挂路由；前端 `SemanticPage.tsx:124`／`:156` 两支现在真拿到数据。
+- **红线两条都带尺**：① 响应**不声称本租户口径** —— `data` 的键集只有 `items／total／limit／offset／has_more`，全 JSON 里**没有** `scope` 键（尺：`t37_a5_browser_walk.py` 的 `live_reads`，或 `python -c "import json;print('scope' in json.load(open(...)))"` ⇒ `False`）；② 不带 `scope: cross_tenant` ⇒ 同一条尺覆盖。
+- **缺装载具名失败**：语义包没装载 ⇒ **422 `NO_DATA_ASSET`**（不是压成 500、也不是给空 200）；契约件 14 臂。
+- **负向用例**：`analyst`／`platform_admin` 都该 200（共享面不设角色门禁，设了就是错）⇒ 变异尺里有一条"给共享面加角色门禁"，**打上去必红**（§14.6）。
+- **活体读数**：`total = 9`（指标）／`total = 8`（资产）。
+
+### 14.2 A2 A.9.5 审计读路径（判据 `docs/02:1056-1058`，本轮从"已裁"变"已实现"）—— 达成（🔴 第二道**未落**，见 §14.4）
+
+- **落点**：`backend/app/repo/audit_read.py`（**L0，只 SELECT**，没进只写的 `audit_store.py`）＋ `app/present/audit_view.py`（L3）＋ `app/api/routers/admin_audit.py`（L5）＋ `deps.py` 装 `AuditReadDAO(pools.analytics)` ＋ 迁移 `0006_audit_read_grant.py`。
+- **逐条对判据（每条都有测试面或活体面钉住）**：
+  | 判据 | 落点与尺 |
+  |---|---|
+  | `app_ro` 只读连接 | `deps.py` 装配期写死分析池；契约件 `test_read_path_uses_the_analytics_pool_not_metadata` 做**源码级**断言 |
+  | 只 SELECT | 契约件对读路径跑禁词族（词边界正则，`truncated` 这种列名不误报） |
+  | GUC 三键同一条语句 | `_INJECT_SQL` = `SELECT set_config(k,:k,true), …` 一条三键；响应自报 `identity_guc = {statement_count: 1, is_local: true, reset_issued: false, keys: 三键}`；活体现读同形 |
+  | `WHERE tenant_id = JWT.tenant_id` ＋ RLS 双保证 | 第一道在码里（`build_queries` 纯函数 ⇒ 离线可钉）；🔴 第二道**策略不在位** ⇒ 响应把 `pg_class.relrowsecurity`／`relforcerowsecurity`／`pg_policies` 计数**现查**出来，`second_guarantee_in_place = false` |
+  | `tenant_id`／`user_id` 不得做成查询参数 | 路由签名里没有这两个名；活体反证 = 带 `?tenant_id=T_C` 仍回 `scope.tenant_id = T_A` 且 `items` 里只有 `T_A` |
+  | `platform_admin` 走 `scope: cross_tenant` | `scope=cross_tenant` ⇒ `scope.level = cross_tenant`／`tenant_id = null`；租户视角 `total = 905`、跨租户 `total = 907`，同一页里出现 2 行 `tenant_a` ⇒ **切得开是被数出来的**（粒度 = 行，尺 = `t37_a5_browser_walk.json` 的 `live_reads.tenant_split_proof`） |
+  | 管理员类限流 5/min | `RateLimitBucket.ADMIN`；429 面在第 13 轮的 `test_admin_audit_contract.py` 里钉（第 6 次 429 ＋ `Retry-After: 60`） |
+  | 断言进 `tests/integration/**` ＋ `tests/contract/**` | 集成 **17 臂**（一次性库自造策略对）＋ 契约 **39 臂** |
+- **活体负向用例（11 例，逐个具名，`evidence/t37_a5/neg_0*.json`）**：403 `FORBIDDEN_SCOPE`（analyst）／401（无令牌）／400 `INVALID_REQUEST`（`scope=bogus`、`pii_hit=maybe`）／404 `DATASET_NOT_FOUND`（detail 点名 `dataset_id`）／400（请求体多一个键，`extra = forbid`）等。
+- **集成面证到的一件事值得单说**：`test_no_injection_reads_zero_rows_under_the_policy` ＋ `test_injected_guc_enforces_isolation_without_the_where` ⇒ 在自造策略对下，**丢掉服务端 WHERE 也切不开**（RLS 独立生效）；`test_missing_insert_policy_is_the_trap_obs_audit_records` 复现了"只 `ENABLE` 不给 INSERT 放行 ⇒ 写路径 42501"这个陷阱（`obs/audit.py` 早就登记过，本轮第一次被跑出来）。
+
+### 14.3 A3 `POST /admin/eval/run`（判据 `docs/02` A.9.1，`:829-843`）—— 达成（**只交预检**，本轮零出站）
+
+- **先给方案再落地**（派单要求）：`docs/02` 的 A.9.1 原文要 `{"run_id","status":"queued"}` ⇒ 需要「运行登记表 ＋ 进程内执行通道 ＋ 已批额度」三件，盘上**一件都没有**（逐件可核，见响应 `launch_blockers`）。
+- **做法**：DTO 里 `dry_run: Literal[True] = True` ＋ `extra = forbid` ⇒ **"真发起"在 schema 面不可表达**，而不是"实现了、运行时拒绝"——后者要发明第 29 个错误码，而 `docs/02:1119` 明写"本表是错误码唯一来源"。
+- **角色 fail-closed**：非 `platform_admin` ⇒ **403 `FORBIDDEN_SCOPE`**（不是 401 也不是 500；6 个角色逐个臂）。
+- **回显"多少条调用 ＋ 报价"**：活体（`ds_v1_frozen`）= 166 题、`llm_calls 538～620`、非峰 `¥0.337171～¥0.391504`、保守 `¥0.901214`、峰档上界 `¥0.783008`、乘数 `×2.00`（`budget.PRICES` 逐格），基准 = `3 份产物 / 2 批独立观测`（🔴 **文件数 ≠ 批次数**：盘上有同批副本）。
+- **模型归属不可证**：观测批次 `config` 不自报 `model` ⇒ `model_attribution.evidenced_by_basis` 恒 `False`，且报价不得写成"某模型单价 × 条数"。
+- **前端**：`EvalRunsPage.tsx:244` 的调用点不再写"评测已发起"、不刷列表、不关弹窗；面板标题直接写「预检结果 —— 未发起评测（`run_id` 为空，零出站、零花费）」。
+- **夹具纪律**：批次产物只写进 `tmp_path`（共享树上**不留一件**）；契约件 33 臂（含 `--` 钉 import 抄本、把 `httpx` 两条路径换成会抛的实现仍 200 = 零出站的运行时证法）。
+- ⚠️ **本轮不得真发起评测** ⇒ 没发起：`run_id` 全程为 `null`。
+
+### 14.4 🔴 需上呈总控的一项（A2 的第二道保证 = 一个上游冲突，本窗不擅自绕过）
+
+- **冲突形状**：`tests/unit/test_rls_policy_provenance.py` 明令**迁移里不得出现 RLS DDL**（防"策略随迁移漂走"），而 A.9.5 判据要的"双保证"里的第二道**只能靠策略 DDL** 落地 ⇒ 两条规矩不能同时满足。
+- 且实测推翻了旧文档的一处前提：`obs/audit.py` ⑤ 段说"本表属主 = `app_rw`、属主免疫" ⇒ 现读 `pg_class` 里两张审计表的属主是 **`postgres`**（不是 `app_rw`）。所以"只 `ENABLE` 不 `FORCE` 是假边界"这句对本表**不成立**，但"`FORCE` 会把写路径（同连接角色）拖进缺 INSERT 策略陷阱"成立（§14.2 那条集成臂就是它）。
+- **本轮的做法**：迁移 `0006` 只落 `GRANT SELECT TO app_ro` ＋ 显式 `REVOKE` 写权限；**策略 DDL 不落**；读路径照做三键注入并把策略状态**现查**进响应（"第二道今天不在位"成为页面可见事实）；隔离性由集成件在一次性库里自造策略对**连库证明**。
+- **推荐默认**（本窗自裁，等总控点头）：给 provenance 守卫加一个**具名豁免面** —— "非语义资产的表（审计两张）允许在迁移里落 RLS 策略对，且必须同语句给 `FOR INSERT WITH CHECK (true)`"。
+- **代价**：那条守卫的覆盖面从"所有迁移"收窄为"语义资产以外的迁移"，豁免名单本身要有人守着（否则下一个窗会把业务表也塞进豁免）；另一条备选（把策略放在迁移外的一次性运维脚本）会把"策略在位与否"变成**部署顺序问题**，更难核。
+
+### 14.5 A5 真机走查 —— 达成（🔴 逮到一个 W5 就在的静默缺陷，当场修 ＋ 双态对撞）
+
+- **走查形状**：浏览器 → nginx `:80` → api `:8000` → PostgreSQL（**不是 MSW mock**）。链路前提两条现补：`docker build -f deploy/Dockerfile` ＋ `--force-recreate api`（镜像里才有新路由），`VITE_ENABLE_DEBUG_PANEL=true npm run build`（生产构建默认不渲染粘贴框）。
+- **读数**：「指标」9 条／「数据资产」8 行（表头**没有** `denied_columns` 列 = 红线）；搜「客单价」**两遍**都是 `1 / 共 1`；评测页弹窗选集→填三格→「生成预检」⇒ 面板出现；**同一填法再点一遍 = 面板文本逐字符相同**（两遍 819 字符、`identical = true`）。
+- 视口 = **531 × 559**（dpr 1.5）⇒ 拿到了，所以 A5 不是 UNVERIFIED；⚠️ 但窄视口下宽表横向滚动的**排版**复核本轮没做 ⇒ 那一格记 **UNVERIFIED**（`t37_a5_browser_walk.json` 的 `browser_walk.unverified` 里也这么写）。
+- 🔴 **金路（`POST /api/v1/query`）没走**：那是 LLM 出站，而派单本轮**零额度** ⇒ 写"没走"而不是"达成"。这一格的代价是明说的：走查覆盖的是新路由的数据面，端到端问答链路的最新一次真机证据仍停在第 5／6 轮那批。
+- **抓到的缺陷（形状值得登记成教训）**：评测弹窗「评测集」下拉**恒为"暂无数据"**，而 `GET /admin/eval/datasets` 是 **200 且两条**。DOM 尺 = `document.querySelectorAll('.ant-select-item-option').length` pre-fix **0** ／ post-fix **2**。
+  成因 = `EvalRunsPage` 的取数 effect 把**自己正在 `set` 的** `datasetsLoading` 放进了**依赖数组** ⇒ 依赖一变 React 先跑上一轮 cleanup（`cancelled = true`）⇒ `.then`／`.catch`／`.finally` 三个 `if (!cancelled)` **全部跳过** ⇒ 候选恒空、**连 403 的报错都被吞掉**、`loading` 永远 `true`。
+  归属：`git log -L 219,236` 现读 = **`e01c198`（W5）** 起就在，A.9.2 端点接上之后才**第一次可见** ⇒ 教训一句话：**"路由没接"会掩护一整类前端缺陷**（同一形状在 MSW mock 下也不会红，因为 mock 走的是另一条装配）。
+  修法 ＋ 对照：`frontend/src/pages/EvalRunsPage.test.tsx`（4 臂，含"空列表也照样渲染"的对照臂与"403 不许静默"臂）⇒ 同一件源码两态对撞 **pre-fix 3 红 1 绿 ／ post-fix 4 绿**；还原源文件后 md5 = `938469e43c4742efe09b534cc3c2d3d8` 与修后件逐字相同（证"变异只是那一处"）。
+- 前端三门：`tsc --noEmit` **rc = 0** ／ `vitest run` = **33 passed / 5 files**（上一轮 29／4 ＋ 本件 4 臂）／ `eslint . --ext .ts,.tsx` **rc = 0**。
+- 证据入库：截图 5 张 `backend/reports/w8/screens/a5_*.png` ＋ 活体响应 20 份 `backend/reports/w8/evidence/t37_a5/` ＋ 装配件 `t37_a5_browser_walk.py`（**计数现算**，含 `identity` 自报三格）。
+
+### 14.6 随交四件 B／C／D／E
+
+| 件 | 落点（文件:行号 ＋ 时刻） | 尺 / 复算命令 | 状态 |
+|---|---|---|---|
+| **B** `U-136` 结案落笔 | `docs/07_技术设计文档_TDD.md:1172` 的 U-136 行状态格 ＋ `OVERVIEW.md:469` 那条（10-05 23:5x +0800 落笔） | 两处同改、🔻 追加、原句不删；**判据措辞一字未动**（改完 `grep -c "结案判据（两条，零额度）"` = 1 ⇒ 判据原文仍在） | 达成 |
+| **C** 归因件补自报身份 | `backend/reports/w8/probe_r13_gate_rejections.py:132-161`（`_self_identity` ＋ `_receipt_selection`）＋ 重发 `.json`（`identity`／`receipt_selection` 两格） | 现跑：`rev 0c69d56`／`dirty true`／`captured_at 2026-10-05T15:48:50Z`；`--receipt` 缺省 ⇒ mode = `default_glob_by_mtime`，三把回执逐件点名（`pair1 8411B 05:31:46Z`／`pair2 8405B 04:55:09Z`／`pair3 8405B 04:55:14Z`）；结论未变 `{cte_side_join: 3}`／`{R10: 3}` | 达成（`T-11 ②` 第三实例） |
+| **D** 作废格补 `note` | `deploy/loadtest/u129_paprime_r12_warm.json` 的 `note`（字节级替换，CRLF 227／裸 CR 0 **前后不变**） | 本轮现测 `docker image inspect w7load-api:latest` = `sha256:4adbcfc2e8f6…` ＝ 件内所记 ⇒ "digest 未变"可证；补打时刻 `attested 07:05:50Z` 比 `started_at 04:51:14Z` 晚 **2h14m36s** 写进 note | 达成 |
+| **E** 引用口径统一 | `PROMPT.md §2 ④`（加严：两格并报）＋ `DELIVERY.md` 第 13 轮 ⑥ 就地补记（`a688473` = **入库笔**、件内自报 = `2d58975`／432 笔） | 产物侧形状 = 件内 `identity` 块（本轮新增两把尺 ⇒ `T-11 ②` 第三、第四实例） | 达成 |
+
+### 14.7 当期门禁重算（干净树 ＋ 两遍对撞）＋ 零花费自证
+
+| 面 | 读数 | 命令形状 |
+|---|---|---|
+| 静态三门 | `ruff check app tests` **All checks passed!／rc 0**；`mypy app` **no issues in 158 source files**；`lint-imports` **4 kept, 0 broken**（`.venv/Scripts/lint-imports.exe`，cwd = `backend/`，`PYTHONUTF8=1`） | 见 `PROMPT.md §5` 的门禁段 |
+| 离线面 | **2454 passed／0 failed／1 warning／94.58s／rc 0**（面 = `tests/unit` ＋ `tests/contract` ＋ `tests/eval`，`--continue-on-collection-errors`） | `cd backend && PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest tests/unit tests/contract tests/eval -q --continue-on-collection-errors` |
+| 集成面 | **124 passed／0 failed／29.30s／rc 0**，11 个文件；一次性库 `ecom_t37it_r14`：建 → 授权 → `alembic upgrade head`（`version_num = 0006`／`app` schema **32** 表）→ 跑 `-v` → **当场 DROP**；残渣尺 `datname like 'ecom%'` = **2**（`ecom` ＋ 别窗 `ecom_u123_probe`，**未动**） | 四个测试 DSN 全用 `postgresql://` 形态（libpq），只有 `MIGRATION_DATABASE_URL` 带 `+psycopg` |
+| 条数对账 | 上一轮离线 **2453** → 本轮 **2454**（＋1 = A3 那条"计数现读"新臂）；上一轮集成 **107** → 本轮 **124**（＋17 = A2 新件）⇒ **两个增量都能被本轮新增的用例数解释**，没有"数自己漂" | — |
+| 两遍重算 | reporter 两遍都带 `--json-out` ＋ `--md-out` 指**仓库外**、干净树（`0ef587f`／`dirty false`）；差尺点名 6 项白名单 ⇒ 差集总数 **1** ｜ meta **1** ｜ **判定量 0**（唯一 meta 差 = `generated_at` 12s） | `../.venv/Scripts/python.exe reports/qa/prompts/diff_recompute_meta.py A.json B.json generated_at git.rev git.rev_full git.commit_count "~静默前置" "~generated_at"` |
+| 八格 | **PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2**（`G-2`／`G-5`／`G-7` FAIL、`G-3`／`G-4` PARTIAL、`G-6`／`G-8` UNVERIFIED）⇒ 与来件**逐词同**，G-1 输入换成当期两把日志（`断言失败 0 ＋ 环境未备 0 ⇒ 红 0 条；离线 passed=2454 ＋ 集成 passed=124, integration_ran=True`） | 入库件 = `backend/reports/w6/eval_metrics.json` ＋ `评测报告与门禁判定.md`（件内自报 `rev 0ef587f`／`dirty false`） |
+| 零花费自证 | `app.cost_ledger` 本轮首末读数**同值** = **1,721 行／¥2.831595／max 2026-10-05 05:28:19Z**（与来件、与 §14.0 起点逐位同）⇒ 零出站；A3 的报价是从**既有**真打批次外推的，本轮没新增一笔 | `docker compose -f deploy/docker-compose.yml exec -T pg psql -U postgres -d ecom -Atc "select count(*), sum(cost_cny), max(created_at) from app.cost_ledger;"` |
+| 变异尺（三把，全入库） | A1 6 条／A2 22 条／A3 15 条 ⇒ **不闭合条数都是 0**，还原后逐文件 md5 与进入前一致 | `cd backend && ../.venv/Scripts/python.exe reports/w8/t37_a{1,2,3}_mutations.py`（🔻 本轮把前两把从仓库外 scratch **归进 `reports/w8/`**，路径改成 `Path(__file__)` 派生 ⇒ 别窗可原地复跑；⚠️ 这三把都会**临时改生产件字节**，只在无别窗在途改动时跑） |
+
+> 🔴 **当期入库件里 G-1 的第一条 caveat 会自己冒红，先在这里说明白**（免得被读成一格新红）：
+> `gate_inputs_p0_summary.json` 的**件内自报**仍停在 `rev 2d58975`／432 笔／`generated_at 2026-10-05T07:14:04Z`，
+> 而它自己声明的两把输入日志是 1005 那批 ⇒ reporter 里 T-32 那道守卫如实报出
+> 「**取证件与本次输入不一致**：`offline.passed` 2392 ≠ 当场解析 2454；`integration.passed` 107 ≠ 124 ⇒ 取证件不代表本次判定」。
+> 判定面没受影响：G-1 读的是**当场解析的两把当期日志**（`断言失败 0 ＋ 环境未备 0 ⇒ 红 0 条`、两层均 ran），
+> 该证件只提供输入面自描述、不提供 passed 数；下一期把它一起当期化即可闭合这一句。
+> 复算尺（点名的就是当期两把日志，证件路径照旧）：
+> `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-1', pytest_log='backend/reports/w8/_r14_offline_cleantree.log', integration_log='backend/reports/w8/_integration_pytest_1006_rT37.log', p0_summary_path='backend/reports/w8/gate_inputs_p0_summary.json'))"`
+
+### 14.8 🔴 本窗自曝两笔（写下来是为了下一轮不再犯）
+
+1. **`Path.read_text()` 把 CRLF 吞成 LF ⇒ 写回去就归一了整份 `docs/07`**（10-05 23:5x，实锤：`CRLF 3650 → 0`）。当场用字节级还原（`raw.replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')`）复原，再用 `git diff --ignore-cr-at-eol` 证明**只有该改那一行**变了。⇒ 新规矩进记忆：**改 CRLF 文件只许 `read_bytes`／`write_bytes` ＋ 只替换字节跨度**（`Path.write_text(..., newline="")` 挡不住，因为读的时候已经折掉了）。
+2. **`Edit` 的锚点吃掉行尾**（同日，改 `DELIVERY.md` 第 13 轮 ⑥ 那句）：我把"整行"当锚点写成"行的一段前缀"，替换后原文的**后半句被并到我新写的最后一行尾巴上**；靠 `git show HEAD:…| sed -n '265p'` 取回原句、逐字重述才补上。⇒ 落笔规矩（同族第二次）：**锚点取整行或行尾收尾符，new_string 里把锚点原文一字不改重述**，改完立刻 `grep` 那句"应该还在的尾巴"。
+3. 附带一笔小的：第一次往浏览器里粘令牌是我**手抄**的 ⇒ 头部 base64 被改坏（会 401）。改成"页面 `fetch` 仓库外一次性 CORS 服务取令牌 ＋ 原生 setter 派 event"，凭据不进对话、也不再手抄（这个形状值得留：`E:/tmp_qoder/r14/serve_tok.py`，用完即删、不入库）。
+
+### 14.9 交回 QA 的复核点（按难验程度排序）＋ T-38 状态
+
+1. **A2 的第二道保证 = 待裁定**（§14.4）：请 QA 判"我到底该不该给 provenance 守卫开豁免面" —— 这是**判据面**冲突，不是执行面；本轮已按"不落 DDL ＋ 现查上报"的保守形态交出去。
+2. **A3 的"预检 ≠ 发起"**：对外两句措辞的红线在 `ACCEPTANCE.md` §3 与 `OVERVIEW §9` 都改了；请核"有没有任何一句把报价写成已花费"。
+3. **A5 缺陷的归属与修法**：`EvalRunsPage.test.tsx` 4 臂可独立复跑（`cd frontend && npx vitest run`），两态对撞请复现"把依赖数组改回去 ⇒ 3 条红"。
+4. **124 条集成**（＋17 全来自 A2 新件）与一次性库自证：请核"跑完 DROP、残渣尺 = 2"。
+5. 🔴 **`U-129` ③／G-6 仍欠同一把真跑**：T-38 的已批几何 = `--scenario steady --concurrency 3 --max-requests 30 --reuse-sessions --session-pool 3`（≈21 准入，≤¥0.20）。**代码面本轮已定型**（A1–A3 全落），下一把可以直接起；H 那一格必须带 `c=3` 自己的并发，不续算 `U-126` 的 `c=12`／`c=100` 配平表。⚠️ 报价笔时刻按 QA 订正后的口径（`b496d7b` 的 **commit date** 13:11:24，尺 = `git log -1 --format=%cd`），本窗照此引、不再自订加严。
