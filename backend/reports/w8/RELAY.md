@@ -1857,7 +1857,7 @@ integration_ran, integration_files_seen, failed_tests, error_tests}` ＋ 各自 
 | --- | --- | --- | --- |
 | ① | T-34 三端点 21 臂全合格（它用自己的永久件） | 复跑 `backend/reports/qa/prompts/probe_admin_eval_live.py`（12:5x，见 §十二.3） | 待 §十二.3 填 |
 | ② | 探针已重取基准、五态 rc=0、态⑤ 钉住"同源跳过时 `red_total` 必为 1" | 12:52 复跑同一件：**漂移 0 格／5**，末行 `[附] 当期真实两把日志（mtime 最新，不参与计数）→ PASS ｜ 用的是 _full_pytest_1004_rT34b.log ＋ _integration_pytest_1004_rT34b.log`；🔻 我第一遍把 态⑤ 打印的三条 caveat 误读成"当期取证件过期"，实际那是夹具臂的**故意不一致演示**（当场 sha `f80a2120bc42`／`11e96e645618` = tmp 日志；入库件记的 `7cdc916ba9a4`／`7401f3a8ea3c` = 盘上 rT34b 两把，`sha256sum` 逐一对上）⇒ **读别人的器件先读它的打印规则**（上一轮同族自曝，这次是我自己再犯） | ✓ 且我抓到自己的误读 |
-| ③ | 花费逐位闭合；唯"单笔最大 ¥0.006277"它记 UNVERIFIED | `select max(cost_cny) from app.cost_ledger where created_at > '2026-10-04 09:16:55Z'`（12:5x）= 见 §十二.5 | 本手补这个数 |
+| ③ | 花费逐位闭合；唯"单笔最大 ¥0.006277"它记 UNVERIFIED | `select max(cost_cny) from app.cost_ledger where created_at > '2026-10-04 09:16:55Z'`（12:5x）= 见 §十二.5 | 本手补这个数 🔻 **10-05 15:0x 订正两件（QA 第 16 轮 13.4，原句不删）**：**a)** 那句「见 §十二.5」是**指向不存在的读数** —— §十二.5 是 U-136 那节，里面没有这个数（本窗当时把「要补的数」写成了「已补的指向」）。**b)** 那条尺量的**不是「单笔」那一维**：`max(cost_cny)` 量的是**单行**最大值，而「单笔 = 一个 `task_id` 的求和」是另一维。三维现测（谓词 `created_at > 2026-10-04 09:16:55Z`，n=48，14:4x 复算）：**单行最大 = ¥0.003663**；**按 `task_id` 求和的最大 = ¥0.008740**（= 本轮 pair1 那条被 AST 拒的 run，见 §十三.1）；`tk_84b821…` 单任务求和 = ¥0.006277 是 **QA 第 16 轮 13.4 的读数**（本窗不复算该条：引用要带完整 `task_id`，本窗只有前缀）⇒ **那句在 10-04 是真、从今天起不成立**（被本窗自己的臂从 ¥0.006277 抬到 ¥0.008740）。⇒ 今后引用「单笔最大」必须写明是**按 `task_id` 求和**那一维。 |
 | ④ | 残渣尺 = 2；五件容器 md5 = 工作树 = HEAD blob 全 SAME | 现读 `datname like 'ecom%'` = `ecom` ＋ `ecom_u123_probe` = 2 ✓ | ✓ |
 | ⑤ | 🔴 `ruff check app tests` 在 `9e45281` 给 **1 error**（UP020），而我回执写"All checks passed" | 本手在 `3c37c79` 干净树**先复现**：`tests\contract\test_recursion_limit_audit_contract.py:73:10: UP020` ⇒ **QA 对、我那句不复现**；改 `io.open`→`open` 后三件全绿（§十二.2） | **认账**（§十二.4 具名订正） |
 | ⑥ | `U-129` 仍不转绿：② 回执面 post_fix 无当期样本、③ 未交 | 现读 `ls -lt deploy/loadtest/*.json` 最新 = 我本轮起的（跑前基线确为 09-29 23:29 那把）⇒ 面 R 分子**确实没有当期样本** | 本轮主单就是补它 |
@@ -1877,10 +1877,11 @@ integration_ran, integration_files_seen, failed_tests, error_tests}` ＋ 各自 
 ⇒ 我按 **预热 ＋ 最小臂**（合计上限 **¥0.04**）先跑，跑完用**当期构建的账面实测单价**重算第三行；
 重算值 > ¥0.56 ⇒ **不跑第三行**，把两把几何的差别（能不能给 G-6 的 P95、面 R 分子大小）交回 QA。
 **批准依据**：本块派发原文「总控已对本块的【主单】批了花费（原话"准许花钱"）」。
+🔴 **10-05 15:0x 认账一处顺序（QA 13.1 (d)，判词 = 未达成，本窗不辩）**：派发硬要求 (d) 是「报价**先落一行**在你 RELAY 再跑」，而本窗把报价写进工作树之后**先跑了跑批、后提交** —— `git log --format=%h|%ad --date=iso` 现测 `b496d7b` = **12:56:36 +0800**，三份回执的 `started_at` = **04:51:14Z = 12:51 +0800** ⇒ 提交面晚 **≈5 分钟**。「工作树里先写了」不等于**可核的先落**：能被第二只手复算的只有提交时刻。⇒ 纪律改写一句：**报价笔的 committer date 必须早于回执 `started_at`，跑批前先把那一行提交上去**；尺 = `git log -1 --format=%h|%aI <报价笔>` 与回执里的 `started_at` 对撞。
 
 ### 1′. 跑批前置：构建身份（硬要求 (b)）与首格作废（硬要求 (a)）
 
-- 新镜像 = **`w7load-api:1005r12`**（= `:latest`，image id `4adbcfc2e8f6`），12:5x 由 `docker build -f deploy/Dockerfile -t w7load-api:1005r12 .` 从当期树起（上一把是 4 天前的 `0930r11` / `8c1eb47fb118`，**不能拿它测当期修法**）。
+- 新镜像 = **`w7load-api:1005r12`**（= `:latest`，image id `4adbcfc2e8f6`），12:5x 由 `docker build -f deploy/Dockerfile -t w7load-api:1005r12 .` 从当期树起（上一把是 4 天前的 `0930r11` / `8c1eb47fb118`，**不能拿它测当期修法**）。 🔻 **10-05 15:0x 措辞订正（QA 13.3，原句不删）**：「新镜像」这句**不成立** —— `docker image inspect 4adbcfc2e8f6 --format {{.Created}}` = **`2026-10-04T16:06:22Z`**（跑批前 13 小时），本轮那一次 `docker build` 产出的是**同一枚 digest** ⇒ 正确说法是**重打 tag**（`1005r12` → `:latest`），不是「代码面这轮换过」。⇒ 当期性的承重墙换到了**逐件三向 md5**（`container md5 = 工作树 raw = HEAD blob(LF)`，本窗 8 件 SAME ＋ QA 六件 SAME）；「上一把 `0930r11` 不能测当期修法」这句**仍然成立**，但成立理由是**内容 md5 对不上当期树**，不是「镜像旧」。
 - 第二个 api 容器 = `w7load-api`（`compose.loadtest.yml`，宿主 `18000`，复用同一套 pg/redis ⇒ **数据是真的，进程是第二个**）；`/api/v1/healthz/ready` 现读 **200**。
 - 逐件三向尺 ＋ 层 3 行为级实证落在 **`deploy/loadtest/attest_build_identity.py`**（新永久件，零额度只读），结果写进回执的 `build_identity` 块 ⇒ 见 §十二.3。
 
@@ -1970,7 +1971,7 @@ QA 12.6 在 `9e45281` 干净树上跑出 1 error（UP020），而我 §十一.2 
 | a | `unavailable` 键名 | **以实现与活体为准 = `[{field, reason}]`**；`docs/02:1036` 那行具名"原写 `why`、只留这一处权威"；前端类型同形（`types.ts` 的 `unavailable?: {field, reason}[]`） | `grep -n "why" docs/02_附录A_接口契约详解.md` ⇒ 仅 **1** 处命中、且命中在**订正句自身**；QA 永久件 `probe_admin_eval_live.py` 打印的 `字段=['field','reason']` 与契约一致 |
 | b | `OVERVIEW:161`「提交数／HEAD」主格 | **主格换成现测 416／`3c37c79` ＋ 带时点**（原 382／`b571b40` 降为"历史读数、勿当现状"，不删）；同一文件两个对外落点（`:8` 与 `:161`）本轮并平 | 尺 = 同一次运行内 `git rev-list --count HEAD` ＋ `git ls-remote origin main` 对撞；⚠️ 本行仍自指，本窗后续笔次不在里面 |
 | c | `U-135` 行与 `OVERVIEW:373` 的「现读 `:1078`」 | 两处都改成**取号时点口径**（"取号时点现测 `:1079`；该行位置随插行漂移 ⇒ 只认行首语句"），`OVERVIEW:373` 的下一可用号 → **`U-137`**（现测指针行 `:1080`） | `grep -n '^> \*\*下一个可用号' docs/07_技术设计文档_TDD.md` = `:1080`；`| **U-136** |` = `:1171`；`| G4 |` = `:2885` |
-| d | 走查那段"四个终态" | §十一.4 重放面那行**原句不删**、🔻 具名补记：那四行是**四个回合、三种 outcome**（`refuse`／`failed`×2／`success`，**无 `clarify`**），覆盖面按三种计 | 尺 = `select outcome from app.audit_log where "timestamp" > '2026-10-04 16:00Z'` ⇒ 4 行／3 种 |
+| d | 走查那段"四个终态" | §十一.4 重放面那行**原句不删**、🔻 具名补记：那四行是**四个回合、三种 outcome**（`refuse`／`failed`×2／`success`，**无 `clarify`**），覆盖面按三种计 | 尺 = `select outcome from app.audit_log where "timestamp" > '2026-10-04 16:00Z'` ⇒ 4 行／3 种 |　🔻 **10-05 15:0x 补一条窗口**：那条尺的谓词要**带时间窗**才成立 —— 本窗那句是「`timestamp > '2026-10-04 16:00Z'` 且只数走查那一段」= **4 行／3 种**；同尺放宽到 QA 第 16 轮的窗口 = **16 行／3 种**。⇒ 「4 行／3 种」不带窗口就是**过宽读数**（数对、谓词不完整，本项目同族第 N 次），引用时必须连窗口一起带。
 
 ### 8. 顺带 D：两个卡点**本窗自裁并落笔**（不再挂给已停用的架构窗）
 
