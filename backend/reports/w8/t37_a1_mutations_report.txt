@@ -1,0 +1,14 @@
+cwd=E:\01_实训\项目\基于Text2SQL的电商数据分析Agent\CommerceQL
+[变异] updated_at 拿 created_at 冒充
+    rc=1  1 failed, 1 warning in 1.37s
+[变异] denied_columns 硬编造（脱离 policy 同源）
+    rc=1  1 failed, 1 warning in 1.41s
+[变异] 限流桶 READ → QUERY（渲染字典页吃问答额度）
+    rc=1  1 failed, 1 passed, 1 warning in 1.43s
+[变异] 给共享面加角色门禁（analyst 得 403）
+    rc=1  1 failed, 1 warning in 1.42s
+[变异] 缺装载时压成内部错误（不具名）
+    rc=1  1 failed, 1 warning in 1.27s
+[变异] 分页壳把 total 报成当前页条数
+    rc=1  1 failed, 1 warning in 1.41s
+[汇总] 不闭合条数 = 0

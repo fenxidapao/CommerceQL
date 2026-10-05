@@ -58,6 +58,17 @@ cd CommerceQL/frontend && VITE_ENABLE_DEBUG_PANEL=true npm run build   # 然后 
 对 `platform_admin` 给 200（网格 12 格／门禁 8 条），对 **analyst 给 403 `FORBIDDEN_SCOPE`**（角色门禁 fail-closed）；
 评测页**发起支** `POST /api/v1/admin/eval/run` 与口径字典的 `/semantic/metrics`／`/semantic/assets` **仍无路由** ⇒ 点了必 404。
 📌 演示默认令牌是什么角色，决定观众看到 200 还是 403 ⇒ 别把 403 讲成"坏了"（那是设计）。缺口登记在 `OVERVIEW.md` §9，两张 404 现状截图仍是 `07/08_page_*_HTTP404.png`（页面渲染层本轮未重跑，记 UNVERIFIED）。
+🔻 **10-05 第 14 轮 23:3x +0800 现测订正（`OVERVIEW.md` §9 同源同改；上面那段原句保留作历史取证）**：
+`openapi.json` 现读 **19 条 path**（原写 15 条是重建前的活体面，本轮 `docker build` ＋ recreate 后两个面才对上；尺 = `curl -s http://127.0.0.1:8000/api/v1/openapi.json` 数 `paths`）。
+新增四条：`GET /semantic/metrics`、`GET /semantic/assets`、`POST /admin/eval/run`、`GET /admin/audit`；迁移数 **5 → 6**（新增 `0006_audit_read_grant.py`，活体 `alembic_version` = `0006`）。
+⇒ 演示脚本因此**可以**加两步、也**必须**改掉一句话：
+① 「口径字典」两页现在**有数据**（活体 `total = 9` 条指标／`8` 行资产），不再是 404 错误卡 ⇒ 上面那句"仍必 404"作废；截图换成 `backend/reports/w8/screens/a5_semantic_*.png`（旧的 `07/08_page_*_HTTP404.png` 只作历史取证）。
+② 「评测」页发起支现在 200，但**它是预检不是发起**：面板标题就写着「预检结果 —— 未发起评测（`run_id` 为空，零出站、零花费）」。
+🚫 讲法只许是"这批要打 538～620 条调用、非峰 ¥0.337171～¥0.391504、保守口径 ¥0.901214，**还没打**"；
+说成"评测已发起／这是本次花的钱"就是把预检讲成执行（三条缺口 `eval_run_registry`／`in_process_runner`／`approved_spend` 逐条写在响应的 `launch_blockers` 里，可直接指着念）。
+③ 审计读 `GET /admin/audit` 有端点**没有页面**（`App.tsx:3` 那条分期未落地仍成立）⇒ 演示只能走 `curl`，别在页面上找它。
+⚠️ 另两条讲答辩时要一起带着：审计响应的 `rls.second_guarantee_in_place = false` 是**现查**出来的（第二道保证不在位，是已登记的待裁定项，不是"做好了但没显示"）；
+`tenant_id`／`user_id` 不是查询参数（带 `?tenant_id=T_C` 仍只回 `T_A` 的行），这一条可以现场演示。
 
 ## 4. PPT 素材映射（a–e）
 

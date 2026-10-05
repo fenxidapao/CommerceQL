@@ -8,8 +8,9 @@
 §A.9.1 原文（`docs/02:829-843`）给的是 `{"run_id": "run_01J8XA", "status": "queued"}` ——
 那要求**服务端真有一个运行登记表＋一条会把 166 题打完的通道**。现读盘上两件都不存在：
 
-- 没有评测运行表：`backend/app/repo/migrations/versions/` 只有 `0001`–`0005` 五个文件
-  （`ls | grep -v __init__ | wc -l` ⇒ 5），库里没有任何"评测运行"关系的落点；
+- 没有评测运行表：`backend/app/repo/migrations/versions/` 里的迁移**没有一张**建 eval／run
+  关系（尺：`grep -ic "create table" versions/*.py` 逐件看表名），而本模块落笔时新增的 0006
+  是审计**读**授权 ⇒ 计数一律现读（`_migration_inventory`），不写死在上一次读数里；
 - 跑批通道在进程外：执行体是仓库根 `eval/runner.py:538 main()`（argparse CLI），
   `backend/app/**` 里不 import 它（排除本文件后 `grep -rn "import runner|from eval|eval\\.runner" backend/app` ⇒ 0 命中）。
 
@@ -50,6 +51,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 from statistics import median
 from typing import Any, Final
 
@@ -66,14 +68,32 @@ LLM_NODE_NAMES: Final[frozenset[str]] = frozenset(
 #: 用于"峰 / 非峰乘数"的模型（§A.9.1 的默认档，也是价表里唯一给全两档且被实测用过的）。
 _RATIO_MODEL: Final[str] = "deepseek-flash"
 
+#: 迁移目录（`_migration_inventory` 的唯一取数面）。
+_MIGRATIONS_DIR: Final[Path] = Path(__file__).resolve().parents[1] / "repo" / "migrations" / "versions"
+
+
+def _migration_inventory() -> tuple[int, str, str]:
+    """现读 `versions/` 下的四位前缀迁移数与首末号（不写死）。
+
+    🔴 这条自述的上一版写的是「只有 `0001`–`0005` 五个文件」，而 0006（审计读授权）
+    一落地它就成了假事实 —— 而且红得很难看：端点照旧 200、报价照旧对，只有这句话在骗人。
+    ⇒ 自描述计数只许现读，不许抄上一次读数。
+    """
+    revs = sorted(p.name[:4] for p in _MIGRATIONS_DIR.glob("[0-9][0-9][0-9][0-9]_*.py"))
+    if not revs:
+        return 0, "—", "—"
+    return len(revs), revs[0], revs[-1]
+
 
 def launch_blockers() -> list[dict[str, str]]:
     """真发起这一支今天缺什么（逐条给"可核的事实"，不是待办情绪）。"""
+    count, first, last = _migration_inventory()
     return [
         {
             "missing": "eval_run_registry",
-            "detail": "库里没有评测运行表：`app/repo/migrations/versions/` 只有 0001–0005 五个文件"
-                      " ⇒ §A.9.1 的 `run_id`／`status=queued` 无出处，不许编一个",
+            "detail": f"库里没有评测运行表：`app/repo/migrations/versions/` 现读 {count} 个迁移"
+                      f"（{first}–{last}），逐件 `grep -i 'create table'` 里没有 eval／run 关系"
+                      f" ⇒ §A.9.1 的 `run_id`／`status=queued` 无出处，不许编一个",
         },
         {
             "missing": "in_process_runner",

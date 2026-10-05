@@ -2,7 +2,7 @@
   "schema": "w7.loadtest.receipt/1",
   "started_at": "2026-10-05T04:51:14+00:00",
   "target": "http://127.0.0.1:18000/api/v1",
-  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）｜🔻 10-05 第 14 轮（T-37 D）补记身份来源：本件的 `build_identity` 是**提交后补打**的（`attested_at_utc` 07:05:50Z 比回执自己的 `started_at` 04:51:14Z 晚 2 小时 14 分 36 秒），本轮现测 `docker image inspect w7load-api:latest` 的 Id 仍 = `sha256:4adbcfc2e8f62ccf5a8a73a97c0102030b16b197f67da2da8e216a38c174bee9` ⇒ **镜像 digest 未变**、补打的身份与跑批时是同一个构建；⚠️ 引用时把「入库笔」与「件内自报 rev」分开写（本件自报 `git_rev = 3c37c79` ＋ `git_dirty = true`，而它落库的那一笔是另一回事）",
   "scenarios": [
     {
       "scenario": "steady",

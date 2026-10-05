@@ -33,6 +33,7 @@ import json
 import os
 import subprocess
 import sys
+from datetime import UTC, datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))  # reports/w8 -> backend -> repo
@@ -91,7 +92,8 @@ def _sql_of(task_id: str) -> dict[str, str]:
 def _rejecting_task_ids(receipts: list[str]) -> list[dict[str, str]]:
     out: list[dict[str, str]] = []
     for path in receipts:
-        payload = json.load(open(path, encoding="utf-8"))
+        with open(path, encoding="utf-8") as fh:
+            payload = json.load(fh)
         for sc in payload.get("scenarios") or []:
             adm = sc.get("admission") or {}
             for code, ids in (sc.get("codes_task_ids") or {}).items():
@@ -123,15 +125,54 @@ def _join_sides(tree: exp.Expr) -> list[dict[str, object]]:
     return rows
 
 
+def _self_identity() -> dict[str, object]:
+    """🔻 10-05 T-37 C：产物**自报身份三格**（rev／dirty／时刻）。
+
+    这是 `T-11 ②` 的第三实例（前两处 = `t33_u130_coupling.json`、`gate_inputs_p0_summary.json`）：
+    引用一个离线读数时必须能问"它是哪一笔、干净与否、什么时候取的"，否则下一轮只能靠文档里
+    的一句话相信它 —— 而本项目"两跑矛盾"的成因形状之一就是**分母含目录／件内自报 rev 与入库笔混写**。
+    ⚠️ `dirty` 记的是**取数那一秒的工作树**，不是提交后的状态 ⇒ 引用时两件事分开引。
+    """
+    def git(*args: str) -> str:
+        return subprocess.run(
+            ["git", *args], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace"
+        ).stdout.strip()
+
+    return {
+        "rev": git("rev-parse", "--short", "HEAD"),
+        "rev_full": git("rev-parse", "HEAD"),
+        "commit_count": int(git("rev-list", "--count", "HEAD") or 0),
+        "dirty": bool(git("status", "--porcelain")),
+        "captured_at_utc": datetime.now(UTC).isoformat(timespec="seconds"),
+    }
+
+
+def _receipt_selection(receipts: list[str], explicit: bool) -> dict[str, object]:
+    """`--receipt` 缺省时**点名用了哪几把**（缺省 = 按 mtime 取 `RECEIPT_GLOB` 全组）。"""
+    return {
+        "mode": "explicit_cli" if explicit else "default_glob_by_mtime",
+        "glob": os.path.relpath(os.path.join(ROOT, RECEIPT_GLOB), ROOT),
+        "container": CONTAINER,
+        "files": [
+            {
+                "path": os.path.relpath(p, ROOT),
+                "mtime_utc": datetime.fromtimestamp(os.path.getmtime(p), UTC).isoformat(timespec="seconds"),
+                "bytes": os.path.getsize(p),
+            }
+            for p in receipts
+        ],
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--receipt", action="append", default=None,
-                    help="可多次；缺省 = 按 mtime 取最新一组 %s" % RECEIPT_GLOB)
+                    help=f"可多次；缺省 = 按 mtime 取最新一组 {RECEIPT_GLOB}")
     args = ap.parse_args(argv)
 
     receipts = args.receipt or sorted(glob.glob(os.path.join(ROOT, RECEIPT_GLOB)),
                                      key=os.path.getmtime)
-    print("所用回执（按 mtime）：")
+    print(f"所用回执（mode = {'explicit_cli' if args.receipt else 'default_glob_by_mtime'}）：")
     for r in receipts:
         print("  -", os.path.relpath(r, ROOT))
 
@@ -187,6 +228,8 @@ def main(argv: list[str] | None = None) -> int:
     tally = dict(collections.Counter(r["class"] for r in rows).most_common())
     rule_tally = dict(collections.Counter(r["rule_id"] for r in rows).most_common())
     out = {
+        "identity": _self_identity(),
+        "receipt_selection": _receipt_selection(receipts, explicit=bool(args.receipt)),
         "face": "面 R 的 GATE_AST_REJECTED 归因（**离线器件产出** ⇒ 依 U-125 判据④ 引用时必须标"
                 "「来自离线器件」，不得写成生产可观测）",
         "receipts_used": [os.path.relpath(r, ROOT) for r in receipts],

@@ -466,6 +466,7 @@ DoD④ 全仓重放 = **零未放行命中**（= 每个命中都落在豁免面�
   🚫 **不得**为此把 401 改成 403／500（状态码语义 = `附录A` A.0.4 ＋ §14.2 H 组），**不得**把令牌写进任何文案或日志。
   结案判据两条（已钉零额度夹具 `queryStream.test.ts` 4 臂 ＋ `ErrorCard.test.tsx` 3 臂）：① 流侧 `code`／`status`／`traceId` 原样透传；② 渲染侧编号非空（缺 `trace_id` 时退回 `code`）且 401 走「请重新登录」文案。
   ⚠️ 本格只登记立案与夹具形状，**不写"已修"**：401 的浏览器真机臂在验收窗复算前不算数。
+  🔻 **10-05 第 14 轮 23:5x +0800 结案落笔（依 QA 第 17 轮 `backend/reports/qa/RELAY.md:983` 的裁定句「`U-136` ⇒ 结案（转绿）」；本窗只落状态，**判据措辞一字未动**）**：判据①／② 两面现由零额度夹具钉住 = `queryStream.test.ts` 19 臂 ＋ `ErrorCard.test.tsx` 3 臂 ＋ `ChatPage.test.tsx` 3 臂（QA 于 `RELAY:976` 复跑 = 29 passed／4 files、`tsc --noEmit` rc=0；本窗 10-05 23:3x 当期复跑 = **33 passed／5 files**，增量是本轮新增的 `EvalRunsPage.test.tsx` 4 臂、与本号无关 ⇒ 不许把 33 读成 29 的订正）。真机臂本轮另有一次独立走查证据：未登录直接打开 `/semantic/metrics` ⇒ 错误卡渲染「登录已过期或令牌无效，请重新登录」＋「错误编号：`AUTH_FAILED`」，读数登记在 `backend/reports/w8/t37_a5_browser_walk.json` 的 `browser_walk.readings` 末条。 ⇒ **本格状态改为「已结案（转绿）」**，上面那句立案原话保留作历史取证。
 - **`app/present/` 已落投影、仍未落图内侧**（🔻 10-05 第 11 轮）：A.9.2–A.9.4 的网格聚合在 `present/eval_report.py`，而每轮回答的 `chart_spec` 仍在 `graph/nodes/present.py`，包边界与文档表述**仍待对齐**。
 - **`deploy/docker-compose.yml` 的 `worker` 服务无实现**：命令是 `python -m app.worker`，但 `backend/app/worker.py` 不存在（已核对）。
 - **令牌吊销只有内存版**：`app/auth/` 自述 Redis 吊销表未落地。
@@ -501,6 +502,48 @@ DoD④ 全仓重放 = **零未放行命中**（= 每个命中都落在豁免面�
   ⇒ 所以这句要写成：**"评测页列表支按角色给 200／403、发起支必 404；口径字典两页必 404"**，不得再写"两页都必出 404 卡"。
   ④ ⚠️ 演示默认令牌的角色决定观众看到 200 还是 403 ⇒ 交付包的措辞已同步（`deliverables/ACCEPTANCE.md` §3）。
   ⑤ 页面**渲染**层面的读数本轮未重跑（只取 HTTP 面与代码面）⇒ "错误卡长什么样"记 **UNVERIFIED**，归真机那一臂。
+  🔻 **订正二（10-05 第 14 轮 23:3x +0800 @ HEAD `0c69d56`，T-37 A1／A2／A3 落地 ＋ A5 真机走查；上面两条原句保留作历史取证）**：
+  ① **数量**：`openapi.json` 现读 **19 条 path**（活体尺 = `curl -s http://127.0.0.1:8000/api/v1/openapi.json` 后数 `paths`；
+  代码面同尺 = 离线 `create_app().openapi()` 也 = 19 ⇒ 这一格两个面**第一次对上**，靠的是本轮 `docker build` ＋
+  `--force-recreate api`：重建**前**活体是 **15**（镜像落后一笔），重建后才是 19 ⇒ 引"19"必须连重建时刻一起引）。
+  新增四条逐个点名：`GET /api/v1/semantic/metrics`、`GET /api/v1/semantic/assets`、`POST /api/v1/admin/eval/run`、
+  `GET /api/v1/admin/audit`。容器身份三件照旧在位：`/srv/app` 的 `.py` = **158**（上一读数 147）、path 集含上述四条、
+  import 实证 = `app.repo.audit_read.AuditReadDAO` 可导入。
+  ② **形状**：上面那句"发起支必 404；口径字典两页必 404"**作废**，改成三句 ——
+  · **口径字典两页 200 且拿到真数据**：`/semantic/metrics` 活体 `total = 9`、`/semantic/assets` `total = 8`，
+  前端调用点 `SemanticPage.tsx:124`／`:156` 不再落空；红线复核 = 响应 `data` 的键集只有
+  `items／total／limit／offset／has_more`，**没有** `scope` 键 ⇒ 页面不可能声称"本租户口径"。
+  · **评测页发起支 200，但语义是"预检"不是"发起"**：`run_id = null`、`status = "dry_run"`、`launched = false`，
+  报价逐格带出处（活体：166 题、538～620 次调用、非峰 ¥0.337171～¥0.391504、保守口径 ¥0.901214、
+  峰档上界 ¥0.783008、乘数 ×2.00、3 份产物 = **2 批**独立观测）；`launch_blockers` 三条在响应里点名缺什么。
+  🔴 所以这一支**不得**写成"评测已发起"，也不得把报价当"本次花费"——它是从既有真打批次外推的。
+  · **审计读 `GET /api/v1/admin/audit` 新增**（无 UI，`App.tsx:3` 那条"分期未落地"仍然成立）：
+  `platform_admin` ⇒ 200（活体 `total = 905`，`scope.level = tenant`、`scope.tenant_id = T_A`、`source = jwt`）；
+  其余角色 ⇒ 403 `FORBIDDEN_SCOPE`；无令牌 ⇒ 401；`scope=bogus`／`pii_hit=maybe` ⇒ 400 `INVALID_REQUEST`；
+  未知 `dataset_id` ⇒ 404 `DATASET_NOT_FOUND`（detail 点名是哪一格）；请求体多一个键 ⇒ 400（`extra = forbid`）。
+  `tenant_id`／`user_id` **不是查询参数**的活体反证 = 带 `?tenant_id=T_C` 仍回 `scope.tenant_id = T_A` 且 `items` 里只有 `T_A`。
+  身份 GUC 三键**同一条语句**注入（响应自报 `identity_guc.statement_count = 1`／`is_local = true`／`reset_issued = false`）。
+  🔴 **第二道保证今天不在位，而且是页面可见的事实**：响应里 `rls = {enabled: false, forced: false, policies: 0,
+  second_guarantee_in_place: false}` 是**现查** `pg_class`／`pg_policies` 出来的（策略 DDL 被迁移守卫禁产，需裁定，见 `backend/reports/w8/RELAY.md` §十四 那条"需上呈"）；
+  跨租户视角另给一次读数：`scope=cross_tenant` ⇒ `total = 907`（比租户视角多 2 行 ⇒ "切得开"是被数出来的，不是被说出来的）。
+  ③ **迁移数 5 → 6**：尺 = `ls backend/app/repo/migrations/versions/*.py`（除 `__init__`）⇒ **6**，新增的是
+  `0006_audit_read_grant.py`（只落 `GRANT SELECT … TO app_ro` ＋ 显式 `REVOKE` 写权限，**不落 RLS DDL**）；
+  活体 `select version_num from public.alembic_version` ⇒ **0006**（本轮已对共享 `ecom` 跑过 `alembic upgrade head`；
+  跑之前 `app_ro` 对两张审计表**零授权**，是现读的）。
+  ④ **A5 真机走查（浏览器，不是 mock）**：登录 → 顶栏两入口逐一点开 →「指标」9 条／「数据资产」8 行、
+  搜「客单价」**两遍**都是 1 条（`1 / 共 1`）→ 评测页弹窗选集、填三格、点「生成预检」面板出现，
+  **同一填法再点一遍 ⇒ 面板文本逐字符相同**（两遍均 819 字符、`identical = true`）。
+  截图四张入库 = `backend/reports/w8/screens/a5_*.png`；⚠️ 视口 = `531 × 559`（dpr 1.5）⇒ 窄屏下宽表横向滚动的**排版**复核仍记 **UNVERIFIED**，
+  本轮取的是"数据到没到／文案对不对"这一层。
+  ⑤ 🔴 **走查当场抓到一个 P1 前端缺陷并修掉**：评测弹窗里「评测集」下拉恒为"暂无数据"，而 `GET /admin/eval/datasets`
+  是 **200 且两条**（DOM 尺 = `document.querySelectorAll('.ant-select-item-option').length` ⇒ 0）。
+  成因 = `EvalRunsPage.tsx` 那个 effect 把**自己正在改的** `datasetsLoading` 放进了依赖数组 ⇒ 依赖一变 React 先跑上一轮 cleanup
+  （`cancelled = true`）⇒ `.then`／`.catch`／`.finally` 里三个 `if (!cancelled)` **全部跳过** ⇒ 候选恒空、**连 403 的报错都被吞掉**、
+  loading 永远停在 true。这形状自 `e01c198`（W5）就在树里，是 A.9.2 端点接上之后才**第一次能被看见**——
+  ⇒ 印证本项目那条老教训：**"路由没接"会掩护一整类前端缺陷**。修法 = loading 不进依赖数组、两个分支各自复位；
+  夹具 = `frontend/src/pages/EvalRunsPage.test.tsx`（4 臂，含"空列表也照样渲染"的对照臂与"403 不许静默"臂），
+  同一件源码两态对撞：**pre-fix 3 红 1 绿 ／ post-fix 4 绿**（还原后 md5 `938469e4…` 与修后件逐字相同）。
+  前端三门现测：`tsc --noEmit` rc = 0 ／ `vitest run` = **33 passed / 5 files**（上一轮 29／4）／ `eslint` rc = 0。
 - 🟡 **`api` 容器现在依赖公网 DNS 解析器（P2，10-03 本机 A/B 实测后写进 compose）**：
   Docker Desktop 内嵌 DNS 解析 `api.deepseek.com` 8 次里 1 次 `gaierror`（8.02s）＋1 次 3.07s，
   足以吃光 `normalize` 节点的 15s 预算 ⇒ 前端表现为降级＋拒答。`deploy/docker-compose.yml` 已给

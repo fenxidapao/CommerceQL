@@ -30,6 +30,9 @@
 8. **抄本钉等值**：`LLM_NODE_NAMES == frozenset(_LLM_NODE_TASKS)`（L3 不能向上 import L4，
    所以只有测试可以跨层核对）；`CONTRACT_REQUEST_KEYS == EvalRunRequest` 的字段集。
 9. **限流桶 = `admin`**（不是 `read`），第 6 次 ⇒ 429 `RATE_LIMITED` ＋ `Retry-After: 60`。
+10. **自描述计数现读**：`eval_run_registry` 那条 blocker 的文案里「现读 N 个迁移（首–末）」
+    必须等于 `versions/` 目录**当前**的文件数 —— 上一版写死「0001–0005 五个文件」，
+    0006 一落地这句话就成假事实，而端点仍 200 ⇒ 缺陷是**安静的**。
 
 夹具纪律：批次产物与冻结集只写进 `tmp_path`（仓库根之外）⇒ **共享树上不留一件**；
 零额度、零库连接、零 LLM 出站。
@@ -39,6 +42,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -77,6 +81,7 @@ EVAL_LAUNCH_IMPORTS: frozenset[str] = frozenset(
         "datetime.UTC",
         "datetime.datetime",
         "decimal.Decimal",
+        "pathlib.Path",
         "statistics.median",
         "typing.Any",
         "typing.Final",
@@ -85,6 +90,9 @@ EVAL_LAUNCH_IMPORTS: frozenset[str] = frozenset(
         "app.present.eval_report",
     }
 )
+# 🔻 10-05 第 14 轮新增 `pathlib.Path`（按上面那条断言的要求先写清"它不出站"）：
+# 它只为 `_migration_inventory` 读 `app/repo/migrations/versions/` 的**目录清单**（现读迁移数，
+# 见本文件第 10 条），读的是随包的源码目录、不是用户输入，也不开任何网络连接。
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +285,24 @@ def test_dry_run_never_invents_a_run_id(runs: Path) -> None:
         "in_process_runner",
         "approved_spend",
     }
+
+
+def test_registry_blocker_counts_migrations_live_instead_of_copying_the_last_reading(runs: Path) -> None:
+    """自描述计数必须**现读**：上一版这里写死「0001–0005 五个文件」，0006 一落地就变成假事实。
+
+    缺陷的坏形状是**安静的** —— 端点照旧 200、报价照旧对，只有那句 `detail` 在骗人，
+    所以这一臂比的不是文案而是「文案里的数字 == 盘上当前的文件数」。
+    """
+    data = _data(_post(_client(_token(Role.PLATFORM_ADMIN)), {"dataset_id": "ds_v1_frozen"}))
+    registry = next(b for b in data["launch_blockers"] if b["missing"] == "eval_run_registry")
+    versions = Path(eval_launch.__file__).resolve().parents[1] / "repo" / "migrations" / "versions"
+    live = sorted(p.name[:4] for p in versions.glob("[0-9][0-9][0-9][0-9]_*.py"))
+    assert len(live) > 0
+    stated = re.search(r"现读 (\d+) 个迁移（(\d{4})–(\d{4})）", registry["detail"])
+    assert stated is not None, f"detail 里没给可核的计数与首末号：{registry['detail']}"
+    assert int(stated.group(1)) == len(live)
+    assert (stated.group(2), stated.group(3)) == (live[0], live[-1])
+    assert "0006" in live, "0006（审计读授权）必须在这把尺的读数里 ⇒ 否则这条臂退化成恒真"
 
 
 def test_echo_is_the_request_body_verbatim(runs: Path) -> None:

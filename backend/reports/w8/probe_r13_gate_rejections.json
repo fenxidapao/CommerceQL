@@ -6,7 +6,36 @@
     "上个月复购率最高的 10 个店铺是哪些？"
   ],
   "face": "面 R 的 GATE_AST_REJECTED 归因（**离线器件产出** ⇒ 依 U-125 判据④ 引用时必须标「来自离线器件」，不得写成生产可观测）",
+  "identity": {
+    "captured_at_utc": "2026-10-05T15:48:50+00:00",
+    "commit_count": 444,
+    "dirty": true,
+    "rev": "0c69d56",
+    "rev_full": "0c69d5604ab9734d312b52acca14b5afd65d85a5"
+  },
   "n_rejected": 3,
+  "receipt_selection": {
+    "container": "commerceql-pg-1",
+    "files": [
+      {
+        "bytes": 8405,
+        "mtime_utc": "2026-10-05T04:55:09+00:00",
+        "path": "deploy\\loadtest\\u129_paprime_r12_pair2.json"
+      },
+      {
+        "bytes": 8405,
+        "mtime_utc": "2026-10-05T04:55:14+00:00",
+        "path": "deploy\\loadtest\\u129_paprime_r12_pair3.json"
+      },
+      {
+        "bytes": 8411,
+        "mtime_utc": "2026-10-05T05:31:46+00:00",
+        "path": "deploy\\loadtest\\u129_paprime_r12_pair1.json"
+      }
+    ],
+    "glob": "deploy\\loadtest\\u129_paprime_r12_pair*.json",
+    "mode": "default_glob_by_mtime"
+  },
   "receipts_used": [
     "deploy\\loadtest\\u129_paprime_r12_pair2.json",
     "deploy\\loadtest\\u129_paprime_r12_pair3.json",

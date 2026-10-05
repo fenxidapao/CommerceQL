@@ -216,24 +216,31 @@ export function EvalRunsPage() {
   };
 
   // 打开弹窗时按需拉取评测集候选值（A.9.2）
+  //
+  // 🔴 第 14 轮真机走查抓到的缺陷与这里的形状（`e01c198` 起就在，A.9.2 端点接上后才第一次可见）：
+  // `datasetsLoading` **既在这个 effect 的依赖数组里、又在 effect 体内被 `setDatasetsLoading(true)` 改**
+  // ⇒ 依赖一变 React 先跑上一轮的 cleanup（`cancelled = true`），本轮又被 `datasetsLoading` 的守卫挡回去，
+  // 于是上一轮 Promise 落地时 `.then`／`.catch`／`.finally` 里那三个 `if (!cancelled)` **全部跳过**
+  // ⇒ 候选恒空（HTTP 200 也空）、403 也静默、loading 永远停在 true。
+  // ⇒ 规矩：**不要把"本次请求自己的状态"放进依赖数组**；loading 在两个分支里各自复位，
+  //   `ignore` 只用来挡"弹窗已关／组件已卸载"之后的写入。
   useEffect(() => {
-    if (!modalOpen || datasets !== null || datasetsLoading) return;
-    let cancelled = false;
+    if (!modalOpen || datasets !== null) return;
+    let ignore = false;
     setDatasetsLoading(true);
     apiGet<{ items: EvalDataset[]; total: number }>('/admin/eval/datasets')
       .then((d) => {
-        if (!cancelled) setDatasets(d.items);
+        setDatasetsLoading(false);
+        if (!ignore) setDatasets(d.items);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setModalError(toApiError(err));
-      })
-      .finally(() => {
-        if (!cancelled) setDatasetsLoading(false);
+        setDatasetsLoading(false);
+        if (!ignore) setModalError(toApiError(err));
       });
     return () => {
-      cancelled = true;
+      ignore = true;
     };
-  }, [modalOpen, datasets, datasetsLoading]);
+  }, [modalOpen, datasets]);
 
   const submit = async (values: EvalRunRequest) => {
     setSubmitting(true);

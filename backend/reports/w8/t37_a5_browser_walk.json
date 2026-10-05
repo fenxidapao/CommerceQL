@@ -1,0 +1,555 @@
+{
+  "identity": {
+    "rev": "0c69d56",
+    "rev_full": "0c69d5604ab9734d312b52acca14b5afd65d85a5",
+    "commit_count": 444,
+    "dirty": true,
+    "captured_at_utc": "2026-10-05T15:44:32+00:00",
+    "note": "本件自报身份 = 装配这一秒的工作树；与活体读数（23:1x–23:4x +0800）不是同一秒 ⇒ 引用时两件事分开引。"
+  },
+  "scope_of_this_artifact": "T-37 A1／A2／A3 的**活体面**读数 ＋ A5 浏览器走查的 DOM 尺；零出站、零花费。",
+  "openapi": {
+    "code_face": {
+      "face": "代码面（离线 create_app().openapi()）",
+      "count": 19,
+      "paths": [
+        "/api/v1/admin/audit",
+        "/api/v1/admin/eval/datasets",
+        "/api/v1/admin/eval/run",
+        "/api/v1/admin/eval/runs",
+        "/api/v1/admin/eval/runs/{run_id}",
+        "/api/v1/clarify",
+        "/api/v1/feedback",
+        "/api/v1/healthz",
+        "/api/v1/healthz/drain",
+        "/api/v1/healthz/live",
+        "/api/v1/healthz/ready",
+        "/api/v1/metrics",
+        "/api/v1/query",
+        "/api/v1/query/{task_id}",
+        "/api/v1/query/{task_id}/cancel",
+        "/api/v1/semantic/assets",
+        "/api/v1/semantic/metrics",
+        "/api/v1/session",
+        "/api/v1/session/{session_id}"
+      ]
+    },
+    "live_face_after_rebuild": {
+      "face": "活体面（:8000 容器，curl /api/v1/openapi.json）",
+      "count": 19,
+      "paths": [
+        "/api/v1/admin/audit",
+        "/api/v1/admin/eval/datasets",
+        "/api/v1/admin/eval/run",
+        "/api/v1/admin/eval/runs",
+        "/api/v1/admin/eval/runs/{run_id}",
+        "/api/v1/clarify",
+        "/api/v1/feedback",
+        "/api/v1/healthz",
+        "/api/v1/healthz/drain",
+        "/api/v1/healthz/live",
+        "/api/v1/healthz/ready",
+        "/api/v1/metrics",
+        "/api/v1/query",
+        "/api/v1/query/{task_id}",
+        "/api/v1/query/{task_id}/cancel",
+        "/api/v1/semantic/assets",
+        "/api/v1/semantic/metrics",
+        "/api/v1/session",
+        "/api/v1/session/{session_id}"
+      ]
+    },
+    "live_face_before_rebuild": {
+      "face": "活体面（重建前，镜像落后一笔）",
+      "count": 15,
+      "paths": [
+        "/api/v1/admin/eval/datasets",
+        "/api/v1/admin/eval/runs",
+        "/api/v1/admin/eval/runs/{run_id}",
+        "/api/v1/clarify",
+        "/api/v1/feedback",
+        "/api/v1/healthz",
+        "/api/v1/healthz/drain",
+        "/api/v1/healthz/live",
+        "/api/v1/healthz/ready",
+        "/api/v1/metrics",
+        "/api/v1/query",
+        "/api/v1/query/{task_id}",
+        "/api/v1/query/{task_id}/cancel",
+        "/api/v1/session",
+        "/api/v1/session/{session_id}"
+      ]
+    },
+    "new_paths_named": [
+      "/api/v1/semantic/metrics",
+      "/api/v1/semantic/assets",
+      "/api/v1/admin/eval/run",
+      "/api/v1/admin/audit"
+    ]
+  },
+  "migrations": {
+    "count": 6,
+    "first": "0001",
+    "last": "0006",
+    "files": [
+      "0001_roles_and_audit_append_only.py",
+      "0002_semantic_materialization.py",
+      "0003_business_views.py",
+      "0004_cost_ledger_and_query_plan.py",
+      "0005_feedback_and_gold_query.py",
+      "0006_audit_read_grant.py"
+    ]
+  },
+  "alembic_version_live": "0006",
+  "alembic_version_ruler": "psql -Atc \"select version_num from public.alembic_version\"（共享 ecom，本轮 upgrade head 之后）",
+  "live_reads": {
+    "semantic_metrics": {
+      "total": 9,
+      "item_keys": [
+        "bundle_version",
+        "created_at",
+        "default_aggregation",
+        "default_predicates",
+        "definition_note",
+        "display_name",
+        "domain",
+        "expression",
+        "name",
+        "owner",
+        "status",
+        "synonyms",
+        "time_basis",
+        "unit",
+        "updated_at",
+        "version"
+      ]
+    },
+    "semantic_assets": {
+      "total": 8,
+      "item_keys": [
+        "certified",
+        "column_count",
+        "denied_columns",
+        "domain",
+        "freshness_sla",
+        "grain",
+        "logical_name",
+        "owner",
+        "physical_asset"
+      ]
+    },
+    "audit_tenant_view": {
+      "total": 905,
+      "scope": {
+        "level": "tenant",
+        "tenant_id": "T_A",
+        "source": "jwt",
+        "enforced_by": [
+          "server_where_on_jwt_tenant",
+          "identity_guc_injection"
+        ]
+      },
+      "identity_guc": {
+        "keys": [
+          "app.tenant_id",
+          "app.role",
+          "app.shop_ids"
+        ],
+        "statement_count": 1,
+        "is_local": true,
+        "reset_issued": false
+      },
+      "rls": {
+        "table": "app.audit_log",
+        "enabled": false,
+        "forced": false,
+        "policies": 0,
+        "second_guarantee_in_place": false
+      },
+      "item_keys": [
+        "bundle_version",
+        "columns_accessed",
+        "cost_cny",
+        "latency_ms",
+        "latency_total_ms",
+        "log_id",
+        "model_version",
+        "outcome",
+        "pii_columns_hit",
+        "pii_hit",
+        "prompt_version",
+        "question_preview",
+        "refusal_reason",
+        "role",
+        "row_count_returned",
+        "scope_level",
+        "tables_accessed",
+        "task_id",
+        "tenant_id",
+        "timestamp",
+        "truncated",
+        "user_id"
+      ]
+    },
+    "eval_datasets": {
+      "total": 2,
+      "ids": [
+        "ds_v1_frozen",
+        "ds_v1_red_team"
+      ]
+    },
+    "tenant_split_proof": {
+      "tenant_view": {
+        "requested_scope": "tenant",
+        "scope_tenant_id": "T_A",
+        "total": 905,
+        "rows_in_page": 500,
+        "tenant_counts_in_page": {
+          "T_A": 500
+        },
+        "artifact": "tenant500.json"
+      },
+      "cross_tenant_view": {
+        "requested_scope": "cross_tenant",
+        "scope_tenant_id": null,
+        "total": 907,
+        "rows_in_page": 500,
+        "tenant_counts_in_page": {
+          "T_A": 498,
+          "tenant_a": 2
+        },
+        "artifact": "cross500.json"
+      },
+      "delta_check": {
+        "cross_minus_tenant_total": 2,
+        "non_own_tenant_rows_in_cross_page": 2,
+        "note": "本轮这两个读数**恰好都是 2**，但把它们写成恒等是越界：左边是全表 `count(*)` 之差，右边只是**这一页 500 行**里非本租户的行数 ⇒ 并列报，不合成一个「结论数」。"
+      }
+    },
+    "eval_run_precheck": {
+      "status": "dry_run",
+      "launched": false,
+      "run_id": null,
+      "quote": {
+        "dataset_id": "ds_v1_frozen",
+        "cases_total": 166,
+        "basis": {
+          "mode": "same_dataset",
+          "why": "基准批次的 `frozen_evidence` 与被请求集内容哈希一致 ⇒ 可直接比",
+          "artifacts": [
+            {
+              "artifact": "results_v1",
+              "generated_at": "2026-10-03T16:29:35+00:00",
+              "git_rev": "b97920d",
+              "cases": 166,
+              "llm_calls": 620,
+              "cost_cny_total": 0.391504,
+              "cost_cny_per_case": {
+                "min": 0.000755,
+                "median": 0.002134,
+                "max": 0.005418
+              },
+              "dataset_content_hash": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609",
+              "tier_observed": "off_peak"
+            },
+            {
+              "artifact": "results_v1_live_20261003T1410Z",
+              "generated_at": "2026-10-03T14:10:32+00:00",
+              "git_rev": "c3b4114",
+              "cases": 166,
+              "llm_calls": 538,
+              "cost_cny_total": 0.337171,
+              "cost_cny_per_case": {
+                "min": 0.00064,
+                "median": 0.001858,
+                "max": 0.005429
+              },
+              "dataset_content_hash": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609",
+              "tier_observed": "off_peak"
+            },
+            {
+              "artifact": "results_v2_live_20261003T1632Z",
+              "generated_at": "2026-10-03T16:29:35+00:00",
+              "git_rev": "b97920d",
+              "cases": 166,
+              "llm_calls": 620,
+              "cost_cny_total": 0.391504,
+              "cost_cny_per_case": {
+                "min": 0.000755,
+                "median": 0.002134,
+                "max": 0.005418
+              },
+              "dataset_content_hash": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609",
+              "tier_observed": "off_peak"
+            }
+          ],
+          "artifacts_available": 3,
+          "distinct_batches": 2
+        },
+        "estimate": {
+          "llm_calls_low": 538,
+          "llm_calls_high": 620,
+          "cost_cny_off_peak_low": 0.337171,
+          "cost_cny_off_peak_high": 0.391504,
+          "cost_cny_off_peak_conservative": 0.901214,
+          "cost_cny_peak_upper_bound": 0.783008,
+          "method": "每案实测值 × cases_total（批内求和／条数，不是模型侧估算）"
+        },
+        "tier": {
+          "now": "off_peak",
+          "at_peak_now": false,
+          "rule": "app/llm/budget.classify_tier（北京工作日 09–12／14–18 = 峰）",
+          "peak_multiplier": {
+            "model": "deepseek-flash",
+            "off_peak_cache_miss_usd_per_mtok": "0.15",
+            "peak_cache_miss_usd_per_mtok": "0.30",
+            "multiplier": "2.00",
+            "source": "app/llm/budget.py 的 PRICES（逐格照抄 PRD §12.3）"
+          }
+        },
+        "model_attribution": {
+          "requested_model": null,
+          "evidenced_by_basis": false,
+          "detail": "观测批次的 `config` 不自报 model ⇒ 这些钱对应哪个模型**不可证**；引用本报价不得写成『某模型的单价 × 条数』"
+        }
+      },
+      "launch_blockers": [
+        {
+          "missing": "eval_run_registry",
+          "detail": "库里没有评测运行表：`app/repo/migrations/versions/` 现读 6 个迁移（0001–0006），逐件 `grep -i 'create table'` 里没有 eval／run 关系 ⇒ §A.9.1 的 `run_id`／`status=queued` 无出处，不许编一个"
+        },
+        {
+          "missing": "in_process_runner",
+          "detail": "执行体是仓库根的 `eval/runner.py:538 main()`（argparse CLI），`app/**` 不 import 它 ⇒ 端点若『看起来发起了』就必然是在骗调用方"
+        },
+        {
+          "missing": "approved_spend",
+          "detail": "本端点一次真跑 = 出站打到 LLM；派单本轮为**零额度** ⇒ 代码面上不可表达该分支（`dry_run` 只接受字面 `true`）"
+        }
+      ]
+    }
+  },
+  "negatives": [
+    {
+      "case": "01",
+      "expectation": "analyst 打 GET /admin/audit ⇒ 期望 403 FORBIDDEN_SCOPE",
+      "code": "FORBIDDEN_SCOPE",
+      "scope": null,
+      "identity_guc": null,
+      "rls": null,
+      "detail": null,
+      "tenants_in_items": null,
+      "total": null,
+      "artifact": "neg_01.json"
+    },
+    {
+      "case": "02",
+      "expectation": "无令牌打 GET /admin/audit ⇒ 期望 401",
+      "code": "AUTH_FAILED",
+      "scope": null,
+      "identity_guc": null,
+      "rls": null,
+      "detail": null,
+      "tenants_in_items": null,
+      "total": null,
+      "artifact": "neg_02.json"
+    },
+    {
+      "case": "03",
+      "expectation": "scope=bogus ⇒ 期望 400 INVALID_REQUEST",
+      "code": "INVALID_REQUEST",
+      "scope": null,
+      "identity_guc": null,
+      "rls": null,
+      "detail": null,
+      "tenants_in_items": null,
+      "total": null,
+      "artifact": "neg_03.json"
+    },
+    {
+      "case": "04",
+      "expectation": "pii_hit=maybe ⇒ 期望 400 INVALID_REQUEST",
+      "code": "INVALID_REQUEST",
+      "scope": null,
+      "identity_guc": null,
+      "rls": null,
+      "detail": null,
+      "tenants_in_items": null,
+      "total": null,
+      "artifact": "neg_04.json"
+    },
+    {
+      "case": "05",
+      "expectation": "把 tenant_id 做成查询参数 ⇒ 期望被忽略（仍是 JWT 的 T_A）",
+      "code": "OK",
+      "scope": {
+        "level": "tenant",
+        "tenant_id": "T_A",
+        "source": "jwt",
+        "enforced_by": [
+          "server_where_on_jwt_tenant",
+          "identity_guc_injection"
+        ]
+      },
+      "identity_guc": {
+        "keys": [
+          "app.tenant_id",
+          "app.role",
+          "app.shop_ids"
+        ],
+        "statement_count": 1,
+        "is_local": true,
+        "reset_issued": false
+      },
+      "rls": {
+        "table": "app.audit_log",
+        "enabled": false,
+        "forced": false,
+        "policies": 0,
+        "second_guarantee_in_place": false
+      },
+      "detail": null,
+      "tenants_in_items": [
+        "T_A"
+      ],
+      "total": 905,
+      "artifact": "neg_05.json"
+    },
+    {
+      "case": "06",
+      "expectation": "scope=cross_tenant（platform_admin）⇒ 期望 200 且 total 比租户视角大",
+      "code": "OK",
+      "scope": {
+        "level": "cross_tenant",
+        "tenant_id": null,
+        "source": "jwt",
+        "enforced_by": [
+          "server_where_on_jwt_tenant",
+          "identity_guc_injection"
+        ]
+      },
+      "identity_guc": {
+        "keys": [
+          "app.tenant_id",
+          "app.role",
+          "app.shop_ids"
+        ],
+        "statement_count": 1,
+        "is_local": true,
+        "reset_issued": false
+      },
+      "rls": {
+        "table": "app.audit_log",
+        "enabled": false,
+        "forced": false,
+        "policies": 0,
+        "second_guarantee_in_place": false
+      },
+      "detail": null,
+      "tenants_in_items": [
+        "T_A"
+      ],
+      "total": 907,
+      "artifact": "neg_06.json"
+    },
+    {
+      "case": "07",
+      "expectation": "POST /admin/eval/run（dry_run=true）⇒ 期望 200 且 launched=false",
+      "code": "OK",
+      "scope": null,
+      "identity_guc": null,
+      "rls": null,
+      "detail": null,
+      "tenants_in_items": null,
+      "total": null,
+      "artifact": "neg_07.json"
+    },
+    {
+      "case": "08",
+      "expectation": "analyst 打 POST /admin/eval/run ⇒ 期望 403",
+      "code": "FORBIDDEN_SCOPE",
+      "scope": null,
+      "identity_guc": null,
+      "rls": null,
+      "detail": null,
+      "tenants_in_items": null,
+      "total": null,
+      "artifact": "neg_08.json"
+    },
+    {
+      "case": "09",
+      "expectation": "dry_run=false ⇒ 期望 400（真发起在 schema 面不可表达）",
+      "code": "INVALID_REQUEST",
+      "scope": null,
+      "identity_guc": null,
+      "rls": null,
+      "detail": null,
+      "tenants_in_items": null,
+      "total": null,
+      "artifact": "neg_09.json"
+    },
+    {
+      "case": "10",
+      "expectation": "未知 dataset_id ⇒ 期望 404 DATASET_NOT_FOUND 且 detail 点名",
+      "code": "DATASET_NOT_FOUND",
+      "scope": null,
+      "identity_guc": null,
+      "rls": null,
+      "detail": {
+        "dataset_id": "ds_nope"
+      },
+      "tenants_in_items": null,
+      "total": null,
+      "artifact": "neg_10.json"
+    },
+    {
+      "case": "11",
+      "expectation": "请求体多一个键 tenant_id ⇒ 期望 400（extra=forbid）",
+      "code": "INVALID_REQUEST",
+      "scope": null,
+      "identity_guc": null,
+      "rls": null,
+      "detail": null,
+      "tenants_in_items": null,
+      "total": null,
+      "artifact": "neg_11.json"
+    }
+  ],
+  "browser_walk": {
+    "face": "真机（浏览器 → nginx :80 → api :8000），不是 MSW mock",
+    "viewport": {
+      "inner_width": 531,
+      "inner_height": 559,
+      "device_pixel_ratio": 1.5
+    },
+    "readings": [
+      "顶栏「口径字典」→「指标」9 条（已加载 9 / 共 9）；「数据资产」8 行、表头无 denied_columns 列",
+      "搜索「客单价」**两遍**：两遍都是 `1 / 共 1`，同一张卡片文本",
+      "顶栏「评测」→ 弹窗标题「发起评测 —— 当前只出预检报价」、按钮文案「生成预检」（不是「发起」）",
+      "选集 ds_v1_frozen ＋ 填三格 ＋ 点「生成预检」⇒ data-testid=eval-precheck 面板出现",
+      "**同一填法再点一遍 ⇒ 面板文本逐字符相同**（两遍均 819 字符，identical=true）",
+      "负向：未登录直接 URL 打开 /semantic/metrics ⇒ 错误卡「错误编号：AUTH_FAILED」（= U-136 修法的真机形状）"
+    ],
+    "defect_found_and_fixed": {
+      "symptom": "弹窗里「评测集」下拉恒为「暂无数据」，而 GET /admin/eval/datasets = 200 且 data.items 两条",
+      "dom_ruler_pre_fix": "document.querySelectorAll('.ant-select-item-option').length ⇒ 0",
+      "dom_ruler_post_fix": "同一把尺 ⇒ 2（ds_v1_frozen（1，166 例）／ds_v1_red_team（1，66 例））",
+      "cause": "EvalRunsPage 的取数 effect 把自己正在 set 的 datasetsLoading 放进了依赖数组 ⇒ 依赖一变先跑 cleanup（cancelled=true）⇒ .then/.catch/.finally 三个守卫全跳过：候选恒空、403 被吞、loading 永真",
+      "since_commit": "e01c198（W5）",
+      "first_visible_after": "A.9.2 端点接上（c7b1d24 之后）⇒ 路由没接掩护了整整一类前端缺陷",
+      "fixture": "frontend/src/pages/EvalRunsPage.test.tsx（4 臂）",
+      "two_state_control": "pre-fix 3 红 1 绿 ／ post-fix 4 绿（还原源文件后 md5 938469e43c4742efe09b534cc3c2d3d8 与修后件相同）"
+    },
+    "screenshots": [
+      "backend/reports/w8/screens/a5_semantic_assets.png",
+      "backend/reports/w8/screens/a5_semantic_metrics_search.png",
+      "backend/reports/w8/screens/a5_semantic_metrics_search2.png",
+      "backend/reports/w8/screens/a5_eval_modal_before.png",
+      "backend/reports/w8/screens/a5_eval_precheck_panel.png"
+    ],
+    "unverified": [
+      "窄视口（531×559）下宽表横向滚动的**排版**复核：本轮只取「数据到没到／文案对不对」这一层 ⇒ UNVERIFIED",
+      "问答金路（POST /api/v1/query）本轮**没走**：那是 LLM 出站，而派单本轮零额度 ⇒ 不许写成达成"
+    ]
+  }
+}
