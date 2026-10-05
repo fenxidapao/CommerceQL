@@ -1,6 +1,6 @@
-"""`GET /api/v1/admin/eval/datasets` · `/runs` · `/runs/{run_id}`（附录 A §A.9.2–§A.9.4）。
+"""`GET /api/v1/admin/eval/datasets` · `/runs` · `/runs/{run_id}` ＋ `POST /api/v1/admin/eval/run`（附录 A §A.9.1–§A.9.4）。
 
-层号：L5｜归属窗口：W8（T-34，2026-10-04）。
+层号：L5｜归属窗口：W8（T-34 读面 2026-10-04；T-37 预检面 2026-10-05）。
 
 --------------------------------------------------------------------------
 一、这个文件为什么"薄"，以及薄的边界在哪
@@ -45,12 +45,13 @@ from app.api.deps import (
     trace_scope,
 )
 from app.api.dto.common import OkEnvelope
+from app.api.dto.eval_run import EvalRunRequest
 from app.api.exceptions import DatasetNotFound, ForbiddenScope, RunNotFound
 from app.api.ratelimit import RateLimitQuota
 from app.auth.tokens import VerifiedToken
 from app.core.contracts import IdentityContext
 from app.core.enums import RateLimitBucket, Role
-from app.present import eval_report
+from app.present import eval_launch, eval_report
 from app.present.artifacts import ArtifactNotFound
 
 __all__ = ["router"]
@@ -169,6 +170,47 @@ async def get_run(
         except ArtifactNotFound as exc:
             raise RunNotFound("评测批次不存在", detail={"run_id": run_id}) from exc
         return _ok(data, ctx, quota)
+
+
+@router.post(
+    "/run",
+    summary="触发评测（§A.9.1）—— 本轮只交付 dry-run 预检",
+    responses={
+        400: {"description": "INVALID_REQUEST（含 `dry_run=false`：真发起今天不可表达）"},
+        401: {"description": "AUTH_FAILED"},
+        403: {"description": "FORBIDDEN_SCOPE"},
+        404: {"description": "DATASET_NOT_FOUND"},
+        429: {"description": "配额超限（管理员类桶 5/min）"},
+    },
+)
+async def trigger_eval_run(
+    request: Request,
+    body: EvalRunRequest,
+    token: Annotated[VerifiedToken, Depends(authenticate)],
+) -> JSONResponse:
+    """评测**预检**（§A.9.1）：回显这批多少条调用、大概多少钱；**不发起、不出站、不连库**。
+
+    🔴 这一支今天**不产生 `run_id`**（响应里如实是 `null`，`status="dry_run"`）。
+    §A.9.1 原文的 `{"run_id": "run_01J8XA", "status": "queued"}` 要求服务端有运行登记表
+    与进程内执行通道，两件都不在盘上（逐条见 `data.launch_blockers`）——
+    拿一个编出来的 `run_id` 返回是**造假**，比 404 更糟：`EvalRunsPage` 会去轮询一个不存在的批次。
+
+    三处判据（`docs/02 §A.9.1 补记`，本窗 T-37 落笔）：
+    ① 角色 **fail-closed**：`role != platform_admin` ⇒ 403 `FORBIDDEN_SCOPE`
+       （不是 401 —— 令牌是好的，越的是权限；也不是 500 —— 没有未捕获异常）；
+    ② 报价只从盘上 `config.live = true` 的批次产物外推（`app/present/eval_launch.py`），
+       每格都自带出处（产物名 ＋ `git_rev` ＋ `generated_at` ＋ 档位）；
+    ③ 真发起在 **schema 面**不可表达（DTO 的 `dry_run: Literal[True]`），
+       所以不存在"传个参数就花钱"的路径。
+    """
+    ctx = new_identity(token, session_id=_ADMIN_SCOPE_SESSION)
+    remember_identity(request, ctx)
+    async with trace_scope(ctx):
+        _require_platform_admin(token)
+        quota = await check_rate_limit(request, RateLimitBucket.ADMIN, ctx)
+        if body.dataset_id not in eval_report.dataset_ids():
+            raise DatasetNotFound("评测集不存在", detail={"dataset_id": body.dataset_id})
+        return _ok(eval_launch.dry_run(body.model_dump()), ctx, quota)
 
 
 def _ok(data: Any, ctx: IdentityContext, quota: RateLimitQuota) -> JSONResponse:
