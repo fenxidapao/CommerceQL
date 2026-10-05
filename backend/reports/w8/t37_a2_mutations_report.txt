@@ -1,0 +1,28 @@
+基线 rc=0 :: 39 passed, 1 warning in 1.57s
+A1 租户谓词换成恒真 :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.87s
+A2 谓词参数给成 None :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.93s
+A3 租户判断反过来（跨租户恒真） :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.84s
+A4 count 被分页切过 :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.88s
+A5 排序去掉 tiebreaker :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.90s
+A6 LEFT JOIN 换成 INNER :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.97s
+A7 is_local 写成 false :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.90s
+A8 只注入两键（判据② 明令禁止） :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.82s
+A9 pii_hit 两支同文 :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.82s
+A10 outcome 绑成枚举成员名 :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.83s
+A11 has_more 恒假 :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.84s
+A12 预览不截断（全文下发） :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.79s
+A13 缺成本补零 :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.90s
+A14 双保证判据放宽成 or :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.88s
+A15 pii_hit 恒假 :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.89s
+A16 身份来源写成 query :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.98s
+A17 注入语句数写成 3 :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.83s
+A18 去掉角色门禁 :: rc=1 翻红 ✓ :: 6 failed, 33 passed, 1 warning in 1.94s
+A19 吃读取类桶 :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.86s
+A20 跨租户参数不生效 :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.94s
+A21 跨租户标签不写 :: rc=1 翻红 ✓ :: 1 failed, 38 passed, 1 warning in 1.92s
+A22 路由前缀写错 :: rc=1 翻红 ✓ :: 30 failed, 9 passed, 1 warning in 2.14s
+还原后逐文件 md5 与进入前一致 = True
+  admin_audit.py: fc59870412d15f3f4639d1a854a949b3 == fc59870412d15f3f4639d1a854a949b3
+  audit_view.py: bccf5e4c4124b25d1ba49386a3de8f98 == bccf5e4c4124b25d1ba49386a3de8f98
+  audit_read.py: 3bdae88fd83bd842441f22fa652d3db2 == 3bdae88fd83bd842441f22fa652d3db2
+不闭合条数 = 0

@@ -23,7 +23,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import errors, sse
 from app.api.deps import GRAPH_RUNTIME_STATE_KEY, RUNTIME_STATE_KEY, build_runtime
-from app.api.routers import admin_eval, clarify, feedback, health, query, semantic, session
+from app.api.routers import (
+    admin_audit,
+    admin_eval,
+    clarify,
+    feedback,
+    health,
+    query,
+    semantic,
+    session,
+)
 from app.core.clock import Clock
 from app.core.config import AppEnv, get_settings
 from app.core.enums import Dependency, ErrorCode, SseEvent
@@ -485,6 +494,11 @@ def create_app() -> FastAPI:
     # 不连库、不出站。容器里这两个路径来自只读挂载（`deploy/docker-compose.yml`），
     # 产物不在位时如实 404，不会退化成"页面能开但数字是编的"。
     app.include_router(admin_eval.router, prefix=API_PREFIX)
+    # --- A2：§A.9.5 审计读路径（T-37，2026-10-05）---
+    # 连接角色 = `app_ro`（只读池），端点内不写、不出站；租户过滤由服务端按 JWT 拼，
+    # `tenant_id`／`user_id` 不是查询参数。表上 RLS 策略**当前不在位**（DDL 通道待裁定），
+    # 响应里的 `rls` 块现查 `pg_class`／`pg_policies`，把"第二道保证有没有"如实报给读的人。
+    app.include_router(admin_audit.router, prefix=API_PREFIX)
     # --- W8 语义字典只读面（T-37，2026-10-05）---
     # §A.7.1／§A.7.2：口径字典 = 平台级共享面（`docs/02:700-706` 的 10-05 裁定），
     # 数据源 = 装配期已装载的 `SemanticBundleRuntime`。装载失败时软降级（进程照起），

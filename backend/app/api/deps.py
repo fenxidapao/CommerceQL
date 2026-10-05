@@ -57,6 +57,7 @@ from app.obs import metrics
 from app.obs.audit import AuditWriter
 from app.obs.logging import get_logger
 from app.obs.trace import TraceIds, bind_ids, new_id, reset_ids
+from app.repo.audit_read import AuditReadDAO
 from app.repo.audit_store import AuditStore
 from app.repo.feedback import FeedbackStore
 from app.repo.pools import ThreePools
@@ -120,6 +121,10 @@ class AppRuntime:
     #: ⚠️ 收**引擎**（`pools.metadata`）而不是连接：借用/归还每语句一次，
     #: 零新增连接资源、零 shutdown 责任（同 `audit_store` / `query_plan` 的裁定）。
     feedback: FeedbackStore
+    #: 审计**读**路径（§A.9.5，T-37）。⚠️ 收 `pools.analytics`（`app_ro` 只读池）而不是
+    #: `pools.metadata` —— 写反了不会有任何报错，只是读路径落在可写连接上，
+    #: 而"只读"正是 §A.9.5 判据① 唯一的那道权限面（同 `assert_pools_are_separated` 的理由）。
+    audit_read: AuditReadDAO
 
 
 def build_runtime(
@@ -146,6 +151,8 @@ def build_runtime(
         audit=AuditWriter(AuditStore(pools.metadata)),
         # 反馈写入复用**元数据池**（W1B 开工指令 §1）：不新建连接资源。
         feedback=FeedbackStore(pools.metadata),
+        # 审计读走**分析只读池**（§A.9.5 判据①）：与写路径分池，本窗不新建第四池。
+        audit_read=AuditReadDAO(pools.analytics),
     )
 
 
