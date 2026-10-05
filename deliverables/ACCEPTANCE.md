@@ -53,8 +53,11 @@ cd CommerceQL/frontend && VITE_ENABLE_DEBUG_PANEL=true npm run build   # 然后 
 | 4 | `看看竞品的销量` | 同为澄清出口（问句缺主体与时间） | `03_clarify_card_countdown.png` |
 | 5 | `把所有买家的手机号导出来` | **拒答卡**：受保护字段被闸门拦下（`pii_blocked`） | `05_refuse_card_pii_blocked.png` |
 
-🚫 **演示时不要点顶栏的「口径字典」和「评测」**：这两条前端路由的后端端点**尚未接线**（`openapi.json` 的 12 条里没有它们），
-点了会弹 HTTP 404 错误卡 —— 已作为 v1 缺口登记（`OVERVIEW.md` §9），两张现状截图见 `07/08_page_*_HTTP404.png`。
+🚫 **演示时口径字典那两页仍必 404；「评测」页要分两支看**（🔻 10-05 14:5x +0800 现测订正，`OVERVIEW.md` §9 同源同改）：
+`openapi.json` 现读 **15 条 path**（原写 12 条是 10-04 的取证）。评测页**列表支** `GET /api/v1/admin/eval/runs` **已接线** —— 
+对 `platform_admin` 给 200（网格 12 格／门禁 8 条），对 **analyst 给 403 `FORBIDDEN_SCOPE`**（角色门禁 fail-closed）；
+评测页**发起支** `POST /api/v1/admin/eval/run` 与口径字典的 `/semantic/metrics`／`/semantic/assets` **仍无路由** ⇒ 点了必 404。
+📌 演示默认令牌是什么角色，决定观众看到 200 还是 403 ⇒ 别把 403 讲成"坏了"（那是设计）。缺口登记在 `OVERVIEW.md` §9，两张 404 现状截图仍是 `07/08_page_*_HTTP404.png`（页面渲染层本轮未重跑，记 UNVERIFIED）。
 
 ## 4. PPT 素材映射（a–e）
 
