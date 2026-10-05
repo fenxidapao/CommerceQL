@@ -38,6 +38,7 @@ __all__ = [
     "ForbiddenScope",
     "IdempotencyConflict",
     "InvalidRequest",
+    "NoDataAsset",
     "RunNotFound",
     "SessionNotFound",
     "TaskNotFound",
@@ -116,6 +117,22 @@ class ForbiddenScope(CommerceQLError):
     """
 
     default_code = "FORBIDDEN_SCOPE"
+
+
+class NoDataAsset(CommerceQLError):
+    """这个面上**没有任何可用数据资产**（附录 A §A.11 的 422，T-37 新增抛出点）。
+
+    ⚠️ 它与查询链路的"拒答"共用一个码，但**不共用一句话**：
+    查询链路那句的成因是"这个问题映射不到指标"，而本抛出点的成因写在
+    `detail.reason`（今天只有一种：`semantic_bundle_not_loaded` = 语义包没装载）。
+    把两种成因压进同一句文案就是 `U-137` 刚为 R10 立过的那条规矩所禁止的形态。
+
+    ⚠️ 也**不是** `INTERNAL`：`main.py` 第 4 步是**软降级**（装载失败进程照起、
+    `healthz` 报 `semantic_bundle_loaded=false`），所以"字典为空"是**设计性失败**，
+    压成 500 会让调用方以为服务崩了（同族病灶见 `U-131`／`U-136`）。
+    """
+
+    default_code = "NO_DATA_ASSET"
 
 
 class IdempotencyConflict(CommerceQLError):

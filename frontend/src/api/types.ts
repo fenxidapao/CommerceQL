@@ -473,16 +473,28 @@ export interface FeedbackResponse {
 export interface MetricItem {
   name: string;
   display_name: string;
-  expression: string;
-  default_aggregation: string;
-  unit: string;
-  owner: string;
+  /**
+   * 🔻 T-37（2026-10-05）：`status='draft'` 的指标**允许为 `null`** —— 包内没写公式
+   * （`app/semantics/models.py:174-194` 只要求非 draft 指标必带 `expression`／`unit`／`time_basis`）。
+   * ⚠️ `null` 的含义是**口径未定**，不是"公式为空"，前端必须显示成「未定」。
+   */
+  expression: string | null;
+  default_aggregation: string | null;
+  unit: string | null;
+  owner: string | null;
   domain: string;
-  definition_note: string;
+  definition_note: string | null;
   default_predicates: string[];
   synonyms: string[];
-  bundle_version: string;
-  updated_at: string;
+  /** 来源 = 运行时激活版本（`meta.version`），逐条同值：它说的是"这批读的是哪个包"。 */
+  bundle_version: string | null;
+  /** 🔴 语义包内**没有**这个字段（实测 0/9）⇒ 后端恒给 `null`；不许拿 `created_at` 冒充。 */
+  updated_at: string | null;
+  /** 契约外附加键（§A.7.1 补记登记），来源都是包内实有字段。 */
+  status?: 'active' | 'draft' | 'deprecated';
+  created_at?: string | null;
+  version?: number | null;
+  time_basis?: string | null;
 }
 
 export interface SemanticAsset {
@@ -493,7 +505,9 @@ export interface SemanticAsset {
   owner: string;
   certified: boolean;
   domain: string;
+  /** 派生量 = `len(columns)`（包内没有 `column_count` 字段）。 */
   column_count: number;
+  /** 派生量 = `policies.deny_columns` 按 `<logical>.<col>` 前缀分组（与 AST-R07 同源一份）。 */
   /** ⚠️ 口径字典页不得展示本字段（权限边界） */
   denied_columns?: string[];
 }

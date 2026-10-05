@@ -50,12 +50,13 @@ function Chip({ text, tone = 'neutral' }: { text: string; tone?: Tone }) {
 }
 
 /** 单位显示（CNY → 元，其余原样） */
-function unitText(unit: string): string {
+function unitText(unit: string | null): string {
+  if (unit === null) return '未定';
   return unit === 'CNY' ? '元' : unit;
 }
 
-function firstLine(note: string): string {
-  return note.split('\n')[0];
+function firstLine(note: string | null): string {
+  return note ? note.split('\n')[0] : '';
 }
 
 function fmtTime(iso: string): string {
@@ -276,7 +277,7 @@ export function SemanticPage() {
               {m.display_name}
             </div>
             <div
-              title={m.definition_note}
+              title={m.definition_note ?? undefined}
               style={{
                 marginTop: 2,
                 fontSize: tokens.font.size.caption,
@@ -290,7 +291,9 @@ export function SemanticPage() {
             </div>
             <div style={{ marginTop: tokens.space.xs, display: 'flex', gap: tokens.space.xs }}>
               <Chip text={m.domain} tone="brand" />
-              <Chip text={m.owner} />
+              {m.owner ? <Chip text={m.owner} /> : null}
+              {/* draft = 包内口径未定（后端如实给 null 公式）；显示出来才不会被读成"公式是空的" */}
+              {m.status && m.status !== 'active' ? <Chip text={`口径 ${m.status}`} /> : null}
             </div>
           </div>
         ))}
@@ -460,7 +463,10 @@ export function SemanticPage() {
         footer={
           selected ? (
             <div style={{ fontSize: tokens.font.size.caption, color: tokens.color.text.tertiary }}>
-              口径包版本 {selected.bundle_version} · 更新于 {fmtTime(selected.updated_at)}
+              口径包版本 {selected.bundle_version ?? '—'} ·{' '}
+              {selected.updated_at
+                ? `更新于 ${fmtTime(selected.updated_at)}`
+                : '更新时间：语义包内未带该字段（后端如实给 null）'}
             </div>
           ) : null
         }
@@ -481,7 +487,7 @@ export function SemanticPage() {
 
             <div style={{ marginTop: tokens.space.sm, display: 'flex', gap: tokens.space.xs, flexWrap: 'wrap' }}>
               <Chip text={`域：${selected.domain}`} tone="brand" />
-              <Chip text={`Owner：${selected.owner}`} />
+              {selected.owner ? <Chip text={`Owner：${selected.owner}`} /> : <Chip text="Owner：包内未填" />}
               <Chip text={`单位：${unitText(selected.unit)}`} />
             </div>
 
@@ -506,10 +512,11 @@ export function SemanticPage() {
                           wordBreak: 'break-all',
                         }}
                       >
-                        {selected.expression}
+                        {selected.expression ??
+                          '（口径未定：包内这条指标没有公式。它是 draft，不得被引用，也不是"公式为空"）'}
                       </pre>
                       <div style={{ marginTop: tokens.space.xs, fontSize: tokens.font.size.caption, color: tokens.color.text.secondary }}>
-                        默认聚合：{selected.default_aggregation}
+                        默认聚合：{selected.default_aggregation ?? '未定'}
                       </div>
                     </div>
                   ),

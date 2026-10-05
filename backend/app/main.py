@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import errors, sse
 from app.api.deps import GRAPH_RUNTIME_STATE_KEY, RUNTIME_STATE_KEY, build_runtime
-from app.api.routers import admin_eval, clarify, feedback, health, query, session
+from app.api.routers import admin_eval, clarify, feedback, health, query, semantic, session
 from app.core.clock import Clock
 from app.core.config import AppEnv, get_settings
 from app.core.enums import Dependency, ErrorCode, SseEvent
@@ -485,6 +485,11 @@ def create_app() -> FastAPI:
     # 不连库、不出站。容器里这两个路径来自只读挂载（`deploy/docker-compose.yml`），
     # 产物不在位时如实 404，不会退化成"页面能开但数字是编的"。
     app.include_router(admin_eval.router, prefix=API_PREFIX)
+    # --- W8 语义字典只读面（T-37，2026-10-05）---
+    # §A.7.1／§A.7.2：口径字典 = 平台级共享面（`docs/02:700-706` 的 10-05 裁定），
+    # 数据源 = 装配期已装载的 `SemanticBundleRuntime`。装载失败时软降级（进程照起），
+    # 本两端点因此给 422 `NO_DATA_ASSET` 而**不是** 500。
+    app.include_router(semantic.router, prefix=API_PREFIX)
     # 🔴 未接线（T6）：`app.state[GRAPH_RUNTIME_STATE_KEY]` 还没装配 ⇒ 上面三个端点
     #    会以 `500 INTERNAL`（`deps.get_graph_runtime` 的显式拒答）结束，**不是**"能用"。
     #    这一步必须与 `build_gateway` / `BindingService` / 图编译一起做（T6），
