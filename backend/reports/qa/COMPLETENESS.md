@@ -295,3 +295,45 @@ for p in "semantic/metrics" "semantic/assets" "admin/eval/datasets" "admin/eval/
   printf "%-26s hits=%s\n" "$p" "$(grep -rn -- "$p" backend/app | wc -l)"
 done
 ```
+
+
+## 第 14 轮（2026-10-04 22:2x · @ `0d2570f`／409 笔）增量
+
+| 面 | 项 | 现读 | 取证 |
+|---|---|---|---|
+| C 交付面 | 评测报告页三端点 `A.9.2／A.9.3／A.9.4` ＋ `A.9.5 GET /admin/audit` | **仍未实现（各路径命中 0）** ⇒ 本轮起挂 `T-34` 主单（前三轮挂"未启动"却无单，属**派单漏**） | `docs/02:15` 为 A.9.2–A.9.4 入册行、`docs/01:271` 列 P0；命中数尺见下面围栏 |
+| C 交付面 | `backend/app/present/` | **空壳未动**（目录只有 `__init__.py`，292 B，mtime 09-15 15:49） | `ls -l backend/app/present/` |
+| C 交付面 | `A.7.1／A.7.2`（语义指标口径字典／认证资产） | **仍未实现（命中 0）**，`T-34` 里作"做不完要明写"的次项 | 同下面围栏 |
+| E 证据面 | `U-129` 四条引用清单 | **①②④ 达成／③ 未交** ⇒ 不转绿 | `RELAY §11.2` 表 ＋ ⑰c 原始两行 |
+| E 证据面 | G-1 输入面三件当期化 | 两把日志 mtime 20:36／20:38 ＋ `gate_inputs_p0_summary.json`（rev `4566e84`／406 笔／dirty false／两日志 sha256）⇒ 等级 `mtime_only` → **`self_reported`** | `ls -l backend/reports/w6/*.log` ＋ 该 JSON 的 `git_rev`／`commit_count` |
+| E 证据面 | 🔴 两处新失明 | 守卫支静默丢第二份红（`reporter.py:898`）＋ 默认路径读上两轮日志（`:75`／`:80`）⇒ 均**非判据变更**，缺的是自描述 | `E:/tmp_qoder/g1_two_state_qa.json` 四对 |
+| E 证据面 | 🔴 `domain_ruler` 上限 | 落库面无构建身份键（0／0 行）⇒ **date_proxy 是结构性上限**，修法后域不可自证于库面 | `RELAY §11.6` |
+| D 文档面 | 版本抄本 | `v1.7.19` 三处而版本历史表无行、`:11` 与 `OVERVIEW:8`／`:118` 仍 v1.7.18 ⇒ **同改未完成** | `grep -c "v1.7.19" docs/07_技术设计文档_TDD.md` = 3；版本历史表那把尺（行首竖线在表内写作全形）＝ `grep -n "^｜ \*\*v1.7.1[89]\*\*" docs/07_技术设计文档_TDD.md` 只命中 `:80`，实跑请用真竖线 |
+| D 文档面 | 对外 HEAD | `OVERVIEW:161` 主格 382／`b571b40` vs 本窗现测 **409／`0d2570f`**（差 27 笔）；`:8` 取证时刻 01:40 | `git rev-list --count HEAD` ＋ `git ls-remote origin main` |
+| A 门禁面 | 八格 | 仍 **PASS 1/8** ⇒ 对外不写"门禁通过" | `eval_metrics.json` 的 `gate_summary` @ `d93db8f`／dirty false |
+| B 花费面 | 台账 | **1,674／¥2.753794／max 09:16:55Z 未动**（W8 第 10 轮零花费 ＋ 本窗复算零花费） | 件内 `cost_ledger_before = after` ＋ 我 ⑰c 前后各读 |
+
+交付面命中数尺（仓库根跑，五条路径逐条 `wc -l`，本窗 22:2x 现读全为 **0**）：
+
+```
+for p in "semantic/metrics" "semantic/assets" "admin/eval/datasets" "admin/eval/runs" "admin/audit"; do
+  printf "%-26s hits=%s\n" "$p" "$(grep -rn -- "$p" backend/app | wc -l)"
+done
+```
+
+
+## 第 15 轮（2026-10-05 12:2x · @ `9e45281`／413 笔）增量
+
+| 面 | 项 | 现读 | 取证 |
+|---|---|---|---|
+| C 交付面 | 评测报告页三端点 `A.9.2／A.9.3／A.9.4` ＋ `app/present/` | 🔴→✅ **落地**（上轮 0 命中 → 本轮 `admin_eval.py` 181 行 ＋ `present/` 三件 701 行；`docs/02` 新增 12 行留笔登记两个可选键） | 永久件 `prompts/probe_admin_eval_live.py` 21 臂 rc=0（12:1x）；契约件 24 条绿；`git diff --name-only 2d23354..HEAD` 含 router／present／frontend 两件 |
+| C 交付面 | `A.9.5 GET /admin/audit` | ❌ **未做（具名）**：`app/repo/audit_store.py:204` 是刻意只写的 DAO ⇒ 开读路径要先定连接角色与 GUC 形态；该项**现在归 W8 裁**（架构窗停用） | `grep -rn "admin/audit" backend/app` 仍 0 命中；回执 §十一.9 |
+| C 交付面 | `A.7.1／A.7.2` | ❌ **未做（具名）**：`app/api/deps.py:726` 单 bundle、无租户维度 ⇒ 裸接即口径跨租户可见 | 同上尺；`app/core/config.py:106` 现读单一 `SEMANTIC_BUNDLE_PATH` |
+| C 交付面 | 🔴 新缺口 401 → 错误卡「错误编号：（空）」 | **本窗裁"立案"**（零额度夹具可钉）；`OVERVIEW §9` 现读**无**此条 | 它的 16:19:16.808Z 日志行 ＋ `c12-error-card` DOM；复算需过期令牌臂 |
+| E 证据面 | 三端点活体取证等级 | **`self_reported` ＋ QA 独立活体复算**（信封 `code`、分页、五值、缺口 6 行全部被第二只手跑过）；`.log` 仍 `mtime_only`（不入库属预期） | 永久件打印面（无令牌无正文）＋ `gate_inputs_p0_summary.json` @ `772eba9`／dirty false |
+| E 证据面 | G-1 输入面 | 默认路径两把**未改**（`:75`／`:80`），改为在 `caveats` 里自报路径＋sha256＋`used_default_path` ⇒ 11.5 的"要么改默认、要么点名"取后者，合规 | `eval_metrics.json` G-1 `caveats[0]` 全文；我的五态件 rc=0 |
+| E 证据面 | 静态门 | 🔴 **一句不复现**：`ruff check app tests` = 1 error（UP020 @ U-135 夹具件 `:73`）；`mypy` Success；`lint-imports` 4 kept（须 `PYTHONUTF8=1`，否则 gbk 崩 rc 非 0） | `cd backend` 三条命令现跑 12:0x |
+| D 文档面 | 版本抄本 | ✅ `v1.7.19` 并平四处（`07:11`／`:80` 新增行／`OVERVIEW:8`／`:118`）；`docs/07` = **3,645 行** | `grep -n "^｜ **v1.7.19**" docs/07…`（竖线在表内作全形）只命中 `:80` |
+| D 文档面 | 🔻 残留四处 | `unavailable` 键名两处抄本不同名／`OVERVIEW:161` 主格未换／`U-135` 行引 `:1078` 实为 `:1079`／"四个终态"措辞 | `RELAY §十二.12.8` 四条各带尺 |
+| A 门禁面 | 八格 | 仍 **PASS 1/8** ⇒ 对外不写"门禁通过" | `eval_metrics.json` @ `005d691`／dirty false／16:47:05Z |
+| B 花费面 | 台账 | **1,686／¥2.773212／max 16:23:45.461529Z**（本轮 W8 花 12 条／¥0.019418 已复算闭合；本窗复算零花费） | 增量谓词 ＋ 跑前跑后同值 |

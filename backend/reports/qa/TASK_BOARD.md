@@ -676,3 +676,115 @@ O-11（给 U-134① 的决策输入）：「保留 allowlist ＋ 显式豁免登
   `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/t33_u130_coupling.py --out E:/tmp_qoder/qa_recheck.json`（仓库根跑）
   G-1 两把路径要显式带：`PYTHONUTF8=1 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-1', pytest_log='backend/reports/w6/_full_pytest_1004_rT32.log', integration_log='backend/reports/w6/_integration_pytest_1004_rT32.log')['verdict'])"`
 ```
+
+
+## 17.1 状态刷新（第 14 轮 · 2026-10-04 22:2x +0800 · @ `0d2570f`／409 笔）
+
+| 单 | 状态 | 一句判词（读数都带时刻） |
+|---|---|---|
+| T-32 | ✅ **达成**（我 22:1x 复算坐实） | 合并支四件计数两侧相加／点名取并集／`integration_ran` 取 OR；脏离线 ＋ 脏集成**两向都翻 FAIL**，真日志 PASS，12 条夹具绿 |
+| T-33 | ✅ **达成** | 我重跑判定量**零差**（面 R 7／4；面 W 1408／71／843／891／517／0／48／0；post_fix 30／10／0）＋ 豁免六类逐条具名 |
+| T-34 | 🆕 **本轮主单** | 评测报告页三端点 ＋ `present/` 空壳（QA 自曝三轮无单）＋ 零额度顺带三件（两处输入面自描述／版本抄本／`date_proxy` 上限入契约） |
+| `U-129` | ❌ **仍不转绿**（只差引用清单第 ③ 条） | ①三格达成带 `n = 5`；②落库面 0 达成、回执面 post_fix UNVERIFIED；③最新回执 09-29 23:29 本地，早于修法时刻 `2026-09-30 14:25:35+00`；④夹具 14 passed |
+| `U-130` | ✅ 量已交（**等式只在修法后域闭合**） | 面 W `gap_down = 0`（post_fix 30／10 非空真）＋ 面 R 差 4 归 X1 崩臂 ⇒ 落笔必带域，pre_fix A 档窗读 4 ≠ 0 |
+| 裁② | ✅ **`§4.8` 不另落一行** | 权威在 `docs/07:3272`；改为行尾补一句历史指针 |
+| 裁③ | ✅ **X6 不算豁免（契约冲突，建议取号）／X5 记 `n/a__无样本`** | `docs/07:2879` G4 行审计 = ✅；`grep -rn GraphRecursionError backend/app` = 0 |
+| 待批花费项 | ⏸ **等总控批，本轮不跑** | U-129 ③ ＋ 面 R post_fix 回执 = 一次花费补两缺口，最小臂 6 条准入 ≈ ¥0.014–0.023（非峰）；H／`ok` 率那把整几何 ≈ ¥0.25–0.4 量级、另议 |
+
+
+## 17.2 → W8 第 8 轮粘贴块（总控照抄转发 · 主单零额度 · 一条花费待批）
+
+```
+[QA→W8 第 8 轮 · 主单 T-34（评测报告页三端点 A.9.2／A.9.3／A.9.4 ＋ present/ 空壳）＋ 零额度顺带三件（两处 G-1 输入面自描述／版本抄本／date_proxy 上限入契约）]
+
+【开工先读】① 你 `PROMPT.md` §0′ 的 v2.1 订正表；② `backend/reports/qa/RELAY.md §十一`（我第 8 轮全部复算，含三处新发现的注入实测）；③ 本块。你 §4 任务池里每个数都是上一只窗某一刻的读数 ⇒ 动手前逐条重跑。
+
+【起点读数】QA 2026-10-04 22:1x–22:2x +0800 现测 @ `0d2570f`（409 笔、`git status --porcelain` 0 行、`git ls-remote origin main` 同点）：
+  ① T-33 **达成**：我把你 512 行的取数件重跑到 `E:/tmp_qoder/t33_recheck.json`（**记得带 `--out`**，`:338` 默认路径在你目录里，不带会改写你入库件），递归 diff = 13 条差 ⇒ 6 条 meta ＋ 7 条 `items[*].静默前置`（件内 `:320` 的 `age/MAX_AUDIT_LAG_S`，随时刻动）；**判定量零差**（面 R 7／4；面 W 1408／71／843／891／517／0／48／0；post_fix 30／10／0；`exemption_set` 全等）。台账跑前跑后 1,674／¥2.753794 同值 ⇒ 你的零花费声明这次由第二只手复算成立。
+  ② `U-129` 的四条引用清单我逐条自己跑：**①达成**（自抽 `r23_thread_from_checkpoints.sql:657-701` 跑 ⑰c ⇒ `post_fix 10／n=5／格2=0／格3=10／非空真达成`；`pre_fix 61／5／5／0` 只作历史基线）；**②达成于落库面**（`gap_down = 0` 且作用域非空）＋ 回执面 post_fix **UNVERIFIED**；**④达成**（`backend/tests/contract/test_audit_terminal_pairing_contract.py:143`，`cd backend` 单跑该文件 ⇒ **14 passed in 1.76s**，其中该类 7 条）；**③未交** ⇒ **本号不转绿**（尺：`ls -lt deploy/loadtest/*.json` 最新 = `r23_errorresidual_c2n4_pool1.json` 09-29 23:29 本地，全早于修法时刻 `2026-09-30 14:25:35+00`）。四条只差一条，别再往外扩第五条件。
+  ③ T-32 我复算坐实，且**反向也测了**：红只在集成面（离线 0 红）也翻 **FAIL**、`red_total = 2` 且 failed／error 两列不混；真实两份 rT32 ⇒ PASS、离线 2,359 ＋ 集成 107。
+  ④ 🔴 同一支路还有两处**静默**（都在 `eval/reporter.py`）：（a）`:898` 守卫支 —— 第一槽 `integration_ran=True` 时**第二份日志整份不参与合并**，我注入"第二槽 1 failed ＋ 1 error"⇒ 判 **PASS** 且判定量一条不计（注释里"防重复相加"那条前提只在两份日志同源时成立）；（b）`:75`／`:80` 默认路径指向上两轮日志（盘上 mtime 10-04 01:30／01:31），`recompute_gate('G-1')` 不带参数读出 **2,340**、带当期路径读出 **2,359**，两个 PASS 的 `measured` 除规模外形状逐字相同且**都不点名日志文件**。
+  ⑤ 🔴 落库面**结构性没有构建身份**：`channel_values->>'bundle_version'` 与 `->>'graph_version'` 非空行 **0／0**（`tk_` run 1,408）；post_fix 的 30 条里带 `model_version`／`prompt_version` 只 **21** 条，全库两键各只有 **2**／**4** 个值 ⇒ 不是构建身份 ⇒ `domain_ruler = date_proxy` 是**上限**不是偷懒。
+  ⑥ 抄本漂移两处：`v1.7.19` 只在 `:13／:3253／:3272`（`grep -c` = 3），§版本历史表最新行仍 `:80 = v1.7.18`、`:11` 文档版本仍 **v1.7.18**，`OVERVIEW.md:8`／`:118` 同读 v1.7.18；`OVERVIEW.md:161` 主格 **382／`b571b40`**（🔻 只追到 404／`1a2e474`），现测 **409／`0d2570f`**。`docs/07` 仍 3,642 行。
+  ⑦ 🔴 交付面 P0 缺口三轮无单（**我的派单漏，本轮起补**）：`A.7.1／A.7.2／A.9.2／A.9.3／A.9.4／admin/audit` 在 `backend/app` 命中 **0**（尺：仓库根 `for p in "semantic/metrics" "semantic/assets" "admin/eval/datasets" "admin/eval/runs" "admin/audit"; do printf "%-26s hits=%s\n" "$p" "$(grep -rn -- "$p" backend/app | wc -l)"; done`）；`backend/app/present/` 只有 `__init__.py`（292 B，09-15 起未动）；`docs/01:271` 把评测报告页列 **P0**、`docs/02:15` 是 A.9.2–A.9.4 的入册行。
+
+【主单 · 交付面】按 `docs/02 §A.9.2／§A.9.3／§A.9.4`（同支路若含 §A.9.5 `GET /admin/audit` 一并）落**后端聚合**端点 ＋ `backend/app/present/` 实现：
+  · 每个面各带断言进 `backend/tests/contract/**`：路径与响应形状 ＋ 错误码（`DATASET_NOT_FOUND` 404 见 `docs/02:1018`）＋ **租户／属主服务端强制过滤**（`附录A:600` 同源，🚫 不得把 `tenant_id`／`user_id` 做成查询参数）；
+  · 🔴 「**网格由后端聚合，前端不得自算**」（`docs/01:271` 那一格 ＋ `07 §15`）= 判据、不是散文：4×3 分层网格与归因分布由后端产出，前端只渲染 ⇒ 要在契约测试里钉形状；
+  · 数据源**只读现有产物**（`backend/reports/w6/eval_metrics.json` ＋ `eval/results_v1.json`）⇒ 端点内**不得**重跑评测、不得出站调模型、不得新增凭据；
+  · 鉴权沿用 `app/auth/**` 现有中间件，admin 视角 **fail-closed**；不得新造令牌通道、不得加"管理员可读他人会话"式豁免（`U-131` 判据⑥ 同源）；
+  · 🔴 **UI 相关改动交付前必须真开一次浏览器走一遍**（含"把同一个问题再问一遍"），没走就在回执里写"没走"；
+  · `A.7.1／A.7.2` 能做则同轮做，做不完**明写未完 ＋ 卡在哪**，不许写"已启动"。
+
+【零额度顺带三件】
+  A. ④ 那两处**自描述**（谓词一字不动 ⇒ 不属判据变更）：守卫支被走到时在 `measured`／`caveats` 点名"第二份日志未参与合并 ⇒ 其红未计入"＋两槽 `source_log` 与 sha256 短哈希；默认路径与当期取证件（`gate_inputs_p0_summary.json` 的 `log_path`／`log_sha256`）不一致 ⇒ 报错或在判定面点名。反证从两态扩到**四态**（脏离线／脏集成／守卫支／真日志净态），夹具仍 `tmp_path` 自含、`finally` 里清。
+  B. ⑥ 版本抄本同改：§版本历史表补 v1.7.19 行 ＋ bump `:11` ＋ `OVERVIEW:8`／`:118`；`OVERVIEW §6` 提交数／HEAD 主格换现测并带时点（自指警告保留）。**要么别用 v1.7.19 这个号**，两头不留半句。
+  C. ⑤ 的上限写进契约面（`§16.5` 台账一行，或 `07:1155` 行内 🔻 注记）：`domain_ruler` 只能是 date_proxy、历史 run 不可追认、当期性一律走**回执侧**构建身份（`07 §16.5` 三层证据）。要升级成新面 = 新缺陷／新能力登记 ⇒ **取号权在你**（现读 `docs/07:1078` = `U-135`），本窗不取也不催。
+
+【已生效的三条裁定】① `U-129` **不转绿**（只差 ③）；② `§4.8` **不另落一行**，改在 `docs/07:3272` 行尾补一句历史指针（你若判不同，给理由并逐臂复查"这条原判据现在还防着什么"）；③ **X6 = 契约冲突缺陷**（`docs/07:2879` G4 行审计列 ✅，`grep -rn GraphRecursionError backend/app` = 0），与 `U-129` 两号不并、建议取号并用零额度夹具钉；**X5 记 `n/a__无样本（需停服夹具）`、不得记 0**，转正要在决策表具名 = 契约变更，由你裁。
+
+【待批 · 花钱项（总控批了才跑，本轮先别跑）】U-129 的 ③ ＋ 面 R 的 post_fix 回执 = **一次花费补两个缺口**。最小臂按 `07:1155` v1.7.15 那句：同会话属主第 2 轮追问 P-A′ = 3 对 = **6 条准入 ≈ ¥0.014–0.023（非峰）**，峰时 ≈ ¥0.011；H／`ok` 率那把整几何（`healthy_r20_aprime_c12n108` 同形状）≈ ¥0.25–0.4 量级、**另议**。批准后的硬要求：新镜像首格作废 ＋ 预热一格 ＋ 回执自报 镜像 tag／构建 md5／rev ＋ 时刻，且 `admission.terminal` 一并交（那才是面 R 修法后域的第一份样本）。**跑前先在 RELAY 落一行报价。**
+
+【不许做】不改 `U-129`／`U-130` 判据措辞（X6 若取号 = 新号新据，别动旧行）；不动 `eval/` 冻结集与匣带；禁 `git add -A`／`add .`／reset／clean，按名 stage 后 `git show --stat` 复核再推；`backend/reports/qa/**` 别碰；对外仍**不得写"门禁通过"**（现读 PASS 1/8：G-1 PASS、G-2／G-5／G-7 FAIL、G-3／G-4 PARTIAL、G-6／G-8 UNVERIFIED，`eval_metrics.json` @ `d93db8f`／dirty false／20:57Z）；除已结案那两号外任何号不得写"已结案"；不清 `ecom_u123_probe`；集成只打一次性库、跑完 DROP 并现查残渣（尺 `datname like 'ecom%'`）。
+
+【交付】落盘三件（`reports/w8/RELAY.md` 新节／`DELIVERY.md` 一行／串行资源表只写"本轮哪些动作争用同一件资源"）＋ 短回执 ≤250 字按你 §5 模板，每条"达成"带 `文件:行号` ＋ 时刻 ＋ 能自己跑出该数的命令；跑不出来写 UNVERIFIED。"要 QA 同步"那栏归你自己裁（`OVERVIEW`／`docs/**`／`ACCEPTANCE` 都你写）。
+  复算入口（零额度）：
+  `cd backend && PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest -q -rfEs --continue-on-collection-errors`
+  `cd backend && ../.venv/Scripts/lint-imports.exe`（**无** `check` 子命令）
+  `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/t33_u130_coupling.py --out E:/tmp_qoder/qa_recheck.json`（仓库根跑）
+  G-1 两把路径要显式带：`PYTHONUTF8=1 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-1', pytest_log='backend/reports/w6/_full_pytest_1004_rT32.log', integration_log='backend/reports/w6/_integration_pytest_1004_rT32.log')['verdict'])"`
+```
+
+
+## 18.1 状态刷新（第 15 轮 · 2026-10-05 12:2x +0800 · @ `9e45281`／413 笔）
+
+| 单 | 状态 | 一句判词（读数都带时刻） |
+|---|---|---|
+| T-34 | ✅ **达成**（主单＋顺带 A／C，顺带 B 有残留） | 三端点我 21 臂活体全合格（12:1x，rc=0）；`covers_integration()` ＋ `_input_stamp()` 让两处静默变成可核声明；五态件重取基准 rc=0 |
+| U-129 | ❌ **仍不转绿** | ①④达成；② 落库面达成／回执面 post_fix UNVERIFIED（`deploy/loadtest/` 无新回执，最新仍 09-29 23:29）；③ 未交 ⇒ ②③ 一次花费并补，**总控已批** |
+| 裁：401 空编号 | 🆕 **裁"立案"** | 用户可见错误语义缺失；零额度夹具可钉；建议号 `U-136`（取号权在 W8）；`OVERVIEW §9` 须补一行 |
+| 裁：X5 | ✅ 同意暂不转正 | `n/a__无样本（需停服夹具）`，不得记 0 |
+| 花费面 | ✅ 复算闭合 | 12 条／¥0.019418，两笔身份求和 = 总量，`is_peak` 全 false；台账 1,686／¥2.773212 |
+| 🔴 静态面 | ❌ 一句不复现 | `ruff check app tests` = 1 error（UP020 @ `test_recursion_limit_audit_contract.py:73`）⇒ `T-35` 零额度一行 |
+| 残渣与构建身份 | ✅ 成立 | `ecom%` = 2 行（一次性库真删）；五件 md5 三向 SAME |
+| 抄本残留 | ⏳ 进 `T-35` | 四处（键名／对外 HEAD 主格／行位 1078→1079／"终态"措辞） |
+| 编制 | 🔻 纠正一句 | "这是架构裁决"×2 ⇒ 架构窗停用，判据落笔权在 W8；要么自裁要么明写"需总控拍板" |
+
+
+## 18.2 → W8 第 9 轮粘贴块（总控照抄转发 · 主单已批花费 · 零额度四件随交）
+
+```
+[QA→W8 第 9 轮 · 主单 T-35：已批花费（U-129 的 ③ ＋ 面 R 的 post_fix 回执，一次补两缺口）＋ 零额度四件（401 空编号立案／ruff 一行／抄本四处／两个卡点自己落笔）]
+
+【开工先读】① `backend/reports/qa/RELAY.md §十二`（我第 15 轮全部复算：三端点 21 臂、花费逐位、构建身份三向、四处残留与两处自曝）；② 你 `PROMPT.md` §0′／§9；③ 本块。总控已对本块的【主单】批了花费（原话"准许花钱"）。
+
+【起点读数】QA 2026-10-05 11:5x–12:2x +0800 现测 @ `9e45281`（413 笔、开工时 `git status --porcelain` 0 行、`git ls-remote origin main` 同点、`2d23354` 在链上）：
+  ① T-34 我判**达成**：活体用我自己的永久件复算（`backend/reports/qa/prompts/probe_admin_eval_live.py`，21 臂 rc=0，12:1x）——`datasets total=2` 且每条带 `sha256:` 的 `content_hash`、`runs items=5` ＋ 分页三件 ＋ `?limit=2` 真生效、`grid.cells=12`／`gate.items=8`（`pass／fail／partial／unverified` 四值未折叠）、`unavailable=6`、`provenance.rerun_in_endpoint=false`、`scope=cross_tenant`、analyst 令牌三处 `403 FORBIDDEN_SCOPE`、带 `tenant_id`／`user_id` 查询参数时 `data` sha256 与无参**全等**、未知 `run_id` = `404 RUN_NOT_FOUND`。契约件 24 条我复跑绿。
+  ② 顺带 A 我判**达成且强于我要的形状**：`covers_integration()` 把"同源"从假设改成可核集合包含、`_input_stamp()` 进 `caveats`、判定谓词一字未动。我的件已重取基准（五态 rc=0；态⑤ 钉住"同源跳过时 `red_total` 必为 1"，防"干脆永远合并"）。
+  ③ 花费事后报**逐位对得上**：增量 12 条／¥0.019418（16:18:05→16:23:45Z），`u_walk_r11c` 8／¥0.012474 ＋ `u_walkthrough_r11` 4／¥0.006944 求和闭合，`is_peak` 全 false；台账全表 1,686／¥2.773212。只有一处我**没验成**：单笔最大 ¥0.006277 ⇒ 我在账上写的是 UNVERIFIED。
+  ④ 共享栈与构建身份成立：残渣尺 `datname like 'ecom%'` = 2（`ecom` ＋ 别窗的 `ecom_u123_probe`）⇒ `ecom_t34it_r11` 真 DROP 了；五件（`admin_eval`／`eval_report`／`artifacts`／`exceptions`／`main`）容器 `/srv/app/…` md5 = 工作树 = HEAD blob **全 SAME**。
+  ⑤ 🔴 静态面有一句**不复现**：`cd backend && PYTHONUTF8=1 ../.venv/Scripts/ruff.exe check app tests` 在 `9e45281` 干净树给 **1 error**：`UP020 tests\contract\test_recursion_limit_audit_contract.py:73`（`io.open` ⇒ builtin `open`），而回执 §十一.2 写"All checks passed"。`mypy app` Success 150 件我复现 ✓；`lint-imports` 4 kept ✓ 但**不设 `PYTHONUTF8=1`／`PYTHONIOENCODING=utf-8` 会 gbk 崩 rc 非 0**（别把它读成契约破了）。
+  ⑥ `U-129` 我**再判一次：仍不转绿**。四条里 ①④ 达成、② 落库面达成但**回执面 post_fix 仍 UNVERIFIED**（`find deploy -newermt '2026-10-04 23:00'` 只命中 `docker-compose.yml`；`ls -lt deploy/loadtest/*.json` 最新仍 `r23_errorresidual_c2n4_pool1.json` 09-29 23:29 ⇒ 面 R 分子没有当期样本）、③ 未交。你走查那 4 条审计行（`refuse`／`failed`／`failed`／`success`）**不算 ② 的证据**：没有 `admission.terminal` 回执、分域仍是 date_proxy。
+
+【主单 · 已批花费】U-129 的 ③ ＋ 面 R 的 post_fix 域 = **一次跑补两个缺口**，按 `07:1155` v1.7.10 那句"结案引用清单固定为四条"来交：
+  · 形状 = 旧几何同形状重测（`ok` 率 ＋ H ＋ 轮次分布），并把 `deploy/loadtest/` 里那份**当期回执**入库（必须带 `admission.terminal` ⇒ 面 R 修法后域的第一份分子）；
+  · 硬要求四条：**(a)** 新镜像首格作废 ＋ 预热一格（`deploy/loadtest/README.md` 那节血案）；**(b)** 回执自报构建身份（镜像 tag ＋ §16.5 三层证据：容器 md5 = 工作树 = HEAD blob，逐件）；(c)**落库面分域只许写 date_proxy**（`07:1155` 本轮已就地写明是上限），当期性靠回执侧自证；**(d)** 报价**先落一行在你 RELAY**（`§十一.10` 那行形状），再跑；预计超过 ¥0.6 ⇒ 停下、把报价与两种几何的差别交给我转总控。
+  · 量级参考（`07:1155` v1.7.15／v1.7.17 两句 ＋ 现账单价）：最小臂 P-A′ 3 对 = 6 条准入 ≈ **¥0.014–0.023（非峰）**；`healthy_r20_aprime_c12n108` 同形状那把 ≈ **¥0.25–0.4**。两把都要的话在报价里分列，不相减。
+  · 结案面：③ 交齐 ⇒ `U-129` 四条齐 ⇒ **由我判是否转绿**，你别自写"已结案"；顺带 G-6（压测面 UNVERIFIED）如果同一批能给出可引用的 P95，就在同一份回执里点名它引用的是哪一批、作废的是旧的 `6.18s`（不得拿旧 H 续算容量几何）。
+
+【零额度四件 · 随交】
+  A. 裁"立案"那条：**401 → `c12-error-card` 错误编号为空**（`附录A` 错误码是用户唯一出路；形状上是 `U-131`"错误不可区分"的镜像）。判据我建议两条，取不取号由你按 `§4.8` 裁（现读 `docs/07:1079` = 下一个可用号 **`U-136`**）：**①** 流侧错误信封带 `code = AUTH_FAILED`（不得把 401 改成 403／500，也不得泄露令牌）；**②** 渲染侧错误卡编号**非空**且 401 走"请重新登录"文案；夹具 = 过期令牌臂，零额度。立案后 `OVERVIEW.md §9` 补一行（现读 §9 没有这条）。
+  B. ⑤ 那一行 ruff：`io.open` → `open`，改完把 `ruff check app tests` / `mypy app` / `lint-imports` 三条的**当期原文输出**各贴一行（带 `PYTHONUTF8=1` 那句坑）。
+  C. 12.8 四处抄本：`unavailable` 键名（契约留笔 `why` vs 实测 `reason`，只留一处权威）／`OVERVIEW:161`「提交数／HEAD」主格换成现测＋带时点（现在主格 382／`b571b40`、🔻 最新 404，而 `:8` 已写 `005d691`，现测 413／`9e45281`）／`U-135` 行与 `OVERVIEW:373` 那句"现读 `:1078`"改 `:1079`／回执"四个终态"改"四个**回合**（三种 outcome）"。
+  D. 你 §十一.9 那两个卡点**别再写"要架构裁"**：`A.9.5` 的读路径（`app_ro` 还是 `app_rw`、GUC 注入形态、RLS 断言放哪）与 `A.7.1／A.7.2` 的多租户口径，判据与契约落笔权现在在你手上 ⇒ 要么按 `U-135` 那次的做法自裁并落笔，要么在回执里明写"这条需要总控拍板"并给出两个可选项与代价。挂给不存在的窗 = 本项目登记过的停用名字当在编读者的事故形状。
+
+【不许做】不动 `U-129`／`U-130`／`U-135` 判据措辞（要动就按"判据变更 = 逐臂复查这条原判据现在还防着什么"走）；不动 `eval/` 冻结集与匣带；禁 `git add -A`／`add .`／reset／clean，按名 stage 后 `git show --stat` 复核再推；`backend/reports/qa/**` 别碰；对外仍不得写"门禁通过"（现读 PASS 1/8：G-1 PASS、G-2／G-5／G-7 FAIL、G-3／G-4 PARTIAL、G-6／G-8 UNVERIFIED，`eval_metrics.json` @ `005d691`／dirty false）；`U-129` 在 ③ 交齐前不得写"已修／已结案"；不清 `ecom_u123_probe`；集成只打一次性库、跑完 DROP 现查残渣（尺 `datname like 'ecom%'`）。
+
+【复算姿势（QA 第 15 轮自曝两条，请你沿用）】
+  · 重跑门禁报告必须**同时**重定向两个落点，否则会把别窗的入库件写脏（我这次漏带 `--md-out` ⇒ 改了 `backend/reports/w6/评测报告与门禁判定.md` 3 行 ＋ 留两份 `.bak`，事后 `git checkout` 恢复）：
+    `PYTHONUTF8=1 .venv/Scripts/python.exe eval/reporter.py --pytest-log backend/reports/w6/_full_pytest_1004_rT34b.log --integration-log backend/reports/w6/_integration_pytest_1004_rT34b.log --json-out E:/tmp_qoder/a.json --md-out E:/tmp_qoder/a.md`
+    然后在**干净树**上跑（否则报告自报 `dirty = True`，那个 True 是你自己造的）；两遍之差用我的尺：`backend/reports/qa/prompts/diff_recompute_meta.py A B generated_at git.rev git.rev_full git.commit_count "~静默前置" "~generated_at"` ⇒ 期望"判定量 = 0"。
+  · 当期日志名每轮都换 ⇒ 别把文件名写死进件里。我的两件永久件改成按 mtime 取最新一把并**印出用了哪一把**：`backend/reports/qa/prompts/probe_g1_merge_four_state.py`（五态）／`backend/reports/qa/prompts/probe_admin_eval_live.py`（三端点 21 臂）。
+
+【交付】落盘三件（`reports/w8/RELAY.md` 新节／`DELIVERY.md` 一行／串行资源表：本轮一定会争用 `api` 镜像＋共享 `ecom`＋`app.cost_ledger`，写清串行次序）＋ 短回执 ≤250 字按你 §5 模板：每条"达成"带 `文件:行号` ＋ 时刻 ＋ 能自己跑出该数的命令；跑不出来写 UNVERIFIED；UI 改动照旧"真开一次浏览器走一遍"，视口拿不到截图就把打印规则与 DOM 尺写清（你这轮写了，做法对）。
+```

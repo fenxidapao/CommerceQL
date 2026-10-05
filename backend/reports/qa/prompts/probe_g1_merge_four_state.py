@@ -1,20 +1,21 @@
-r"""QA 永久反证件：G-1 输入装配的**四态**（T-32 修法 ＋ QA 第 8 轮 §11.4／§11.5 两处新失明的尺）。
+r"""QA 永久反证件：G-1 输入装配的**五态**（T-32 修法 ＋ QA 第 8 轮 §11.4／§11.5 ＋ W8 第 11 轮换法）。
 
-零额度：零 LLM 出站、零库连接、零写盘。四份 pytest 日志由本件自造在 `tempfile.mkdtemp()`、
+零额度：零 LLM 出站、零库连接、零写盘。五份 pytest 日志由本件自造在 `tempfile.mkdtemp()`、
 `finally` 删 ⇒ 不依赖本机临时目录，也不需要 `.log` 入库（`.gitignore:47` 全局忽略 `*.log`）。
 
-为什么是四态而不是 W8 那 12 条两态夹具的复制：`eval/reporter.py:898` 的合并支带一个守卫
-`if p0 and p0_integration and not p0["integration_ran"]` —— 第一槽只要点过 `tests/integration/*.py`
-就**整份跳过第二槽**（件内注释：防同一条红数两遍）。该前提只在"两份日志同源"时成立；
-不同源时第二槽的红**静默不计**、器件不喊 ⇒ QA 第 8 轮实测（`reports/qa/RELAY.md §十一.11.4`）。
+为什么是五态而不是 W8 那 15 条夹具的复制：`eval/reporter.py` 的旧守卫（QA 第 8 轮 §11.4）只看
+"离线槽有没有点过集成文件名"，那等于**假设**两槽同源；假设不成立时第二槽的红**静默不计**、器件不喊。
+W8 第 11 轮把它换成可核的事实 = `covers_integration()`（集成槽点名的文件须逐个出现在离线槽里才允许跳过）
+⇒ "跳过"合法（态⑤）与"部分重叠必须合并"（态③）各占一格，另两态测双向红（态①／态②）、一态净态对照（态④）。
 
-用法（仓库根跑；cwd 不敏感，件内自带绝对 `sys.path`）：
+用法（仓库根或任意 cwd，件内自带绝对 `sys.path`）：
     PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/qa/prompts/probe_g1_merge_four_state.py
 
-退出码：0 = 四态实测与 `now` 列逐格相等（= 复现 2026-10-04 22:1x 基准）；1 = 有格子偏离。
-两列期望的分工：`now` = 今天已知形状（含 §11.4 那处**未修**）；`want` = `T-34 顺带 A` 交付后应有形状。
-⇒ 态③ 今天 `now = PASS` 而 `want = FAIL` ⇒ **这一格的"未修"是刻意的验收位**，
-   修法落地后该格应 `now` 与 `want` 同为 FAIL（或器件自描述 ⇒ 届时重取基准并具名订正）。
+退出码：0 = 五态的 `verdict` 与 `red_total` 双双等于基准列；1 = 任一格偏离 ⇒ 装配面又动了，须重取基准并具名订正。
+`now` 基准列于 **2026-10-05 04:1x 重取**（QA 第 15 轮，HEAD `9e45281`，W8 第 11 轮交付后）⇒ `want` 与 `now` 已并平，
+所以本件从"验收位"转成"**回归件**"。
+🔴 态⑤ 另钉一条：同源跳过时 `red_total` 必须是 **1 而不是 2** ⇒ 防"干脆改成永远合并"把同一条红数两遍
+   （那正是 `merge_p0_logs` 件内注释里"`passed` 会偏成并集上界"的前提）。
 """
 
 from __future__ import annotations
@@ -31,7 +32,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[4]
 PY = sys.executable
 W6 = ROOT / "backend" / "reports" / "w6"
-REAL_LOGS = (W6 / "_full_pytest_1004_rT32.log", W6 / "_integration_pytest_1004_rT32.log")
 
 OFFLINE_RED = """collected 2348 items
 tests/unit/test_startup_assertions.py .F
@@ -57,6 +57,16 @@ FAILED tests/integration/test_audit_append_only.py::test_audit_append_only_x - A
 ERROR tests/integration/test_feedback_store_pg.py::test_feedback_store_pg - RuntimeError: teardown boom
 =================== 1 failed, 105 passed, 1 error in 30.11s ===================
 """
+#: 整树 `-v` 那种日志：既点单元／契约、又**整份覆盖**集成槽点名的文件 ⇒ 这才是守卫支唯一该跳过的形状。
+WHOLE_TREE_RED = """collected 2456 items
+tests/unit/test_config.py ..............................                 [ 42%]
+tests/integration/test_rls_tenant_isolation.py ......................... [ 96%]
+tests/integration/test_audit_append_only.py F                            [ 98%]
+tests/integration/test_feedback_store_pg.py .                            [100%]
+=================================== FAILURES ===================================
+FAILED tests/integration/test_audit_append_only.py::test_audit_append_only_x - AssertionError: boom
+======================== 1 failed, 2455 passed in 121.30s ========================
+"""
 
 #: `recompute_gate()` 返的是 `dataclasses.asdict()`（dict）不是 `Gate` 对象 ⇒ 只能按键取
 #: （QA 第 8 轮 §11.9 自曝：写 `g.verdict` ⇒ `AttributeError`，rc=1 ＋ stdout 空，易被读成"没跑出东西"）。
@@ -66,12 +76,23 @@ SNIPPET = (
     "kw=json.loads(sys.argv[2]);"
     "g=r.recompute_gate('G-1',**kw);"
     "print(json.dumps({'verdict':g['verdict'],'red':g['red_split'],"
-    "'measured':str(g['measured'])[-240:]},ensure_ascii=False))"
+    "'measured':str(g['measured'])[-240:],"
+    "'caveats':[str(c)[-260:] for c in g['caveats']]},ensure_ascii=False))"
 )
 
 
 def _fwd(p: object) -> str:
     return str(p).replace("\\", "/")
+
+
+def newest(prefix: str) -> Path | None:
+    """当期那把日志 = 目录里该前缀下 **mtime 最新**的一份。
+
+    🔻 QA 第 15 轮：第一版把文件名写死成 `_…_rT32.log`，下一轮换成了 `rT34b` ⇒ 附臂静默变 SKIP。
+    "写死当期文件名"的件天生一轮就烂 ⇒ 按 mtime 取，并把**用的哪一把**印出来。
+    """
+    cands = sorted(W6.glob(f"{prefix}*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return cands[0] if cands else None
 
 
 def run(pytest_log: str, integration_log: str) -> tuple[int, object]:
@@ -82,37 +103,40 @@ def run(pytest_log: str, integration_log: str) -> tuple[int, object]:
                        capture_output=True, text=True, encoding="utf-8", errors="replace")
     out = (p.stdout or "").strip()
     if p.returncode != 0 or not out:
-        return (p.returncode or 1), (_fwd(out or (p.stderr or "").strip()))[-300:]
+        return (p.returncode or 1), _fwd(out or (p.stderr or "").strip())[-300:]
     return 0, json.loads(out)
 
 
 def main() -> int:
     print(f"[件自证] ROOT = {_fwd(ROOT)}（parents[4] 现测）｜夹具目录 = mkdtemp，跑完即删")
-    tmp = Path(tempfile.mkdtemp(prefix="qa_g1_four_state_"))
+    tmp = Path(tempfile.mkdtemp(prefix="qa_g1_five_state_"))
     try:
         def w(name: str, body: str) -> str:
             path = tmp / name
             path.write_text(body, encoding="utf-8")
             return _fwd(path)
 
-        cases = (
-            # (说明, 离线槽, 集成槽, 今天实测 now, T-34A 后应有 want)
-            ("态① 脏离线／净集成（红在离线 —— T-32 修的就是这一支）",
+        cases = [
+            # (说明, 离线槽, 集成槽, 基准 now, 应有 want, 期望 red_total)
+            ("态① 脏离线／净集成（红在离线 —— T-32 修的那一支）",
              w("offline_red.log", OFFLINE_RED), w("integration_clean.log", INTEGRATION_CLEAN),
-             "FAIL", "FAIL"),
+             "FAIL", "FAIL", 1),
             ("态② 净离线／脏集成（反向：`failed` 与 `error` 两列都要进判定量）",
              w("offline_clean.log", OFFLINE_CLEAN), w("integration_red.log", INTEGRATION_RED),
-             "FAIL", "FAIL"),
-            ("态③ 守卫支（离线槽点过集成文件 ⇒ 第二槽整份不参与合并）",
+             "FAIL", "FAIL", 2),
+            ("态③ 部分重叠（离线槽只点到集成槽的一部分文件 ⇒ 必须合并、不许静默丢红）",
              w("integ_clean_as_offline.log", INTEGRATION_CLEAN),
-             w("integration_red_2.log", INTEGRATION_RED), "PASS", "FAIL"),
+             w("integration_red_2.log", INTEGRATION_RED), "FAIL", "FAIL", 2),
             ("态④ 净态对照（两槽都 0 红 ⇒ 判据谓词未动，仍应 PASS）",
              w("offline_clean_2.log", OFFLINE_CLEAN), w("integration_clean_2.log", INTEGRATION_CLEAN),
-             "PASS", "PASS"),
-        )
+             "PASS", "PASS", 0),
+            ("态⑤ 真同源（离线槽整份覆盖集成槽点名的文件 ⇒ 允许跳过合并，红只数一遍）",
+             w("whole_tree_red.log", WHOLE_TREE_RED), w("integration_red_3.log", INTEGRATION_RED),
+             "FAIL", "FAIL", 1),
+        ]
 
         drift = 0
-        for label, offline, integration, now, want in cases:
+        for label, offline, integration, now, want, want_red in cases:
             rc, g = run(offline, integration)
             if rc != 0:
                 print(f"[ERR ] {label}\n        器件跑不起来 rc={rc}：{g}")
@@ -120,26 +144,33 @@ def main() -> int:
                 continue
             red = g["red"]
             same = g["verdict"] == now
-            drift += 0 if same else 1
-            print(f"[{'复现' if same else '漂移'}｜{'已修' if g['verdict'] == want else '未修'}] {label}")
+            red_ok = red.get("red_total") == want_red
+            drift += 0 if (same and red_ok) else 1
+            print(f"[{'复现' if same else '漂移'}｜{'红数对' if red_ok else '红数错'}"
+                  f"｜{'达标' if g['verdict'] == want else '偏离'}] {label}")
             print(f"        verdict = {g['verdict']}（now {now}／want {want}）"
                   f" ｜ assertion_failures = {red.get('assertion_failures')}"
                   f" ｜ environment_errors = {red.get('environment_errors')}"
-                  f" ｜ red_total = {red.get('red_total')}")
-            print(f"        measured… = {g['measured'][-150:]}")
+                  f" ｜ red_total = {red.get('red_total')}（期望 {want_red}）")
+            print(f"        measured… = {g['measured'][-140:]}")
+            for c in (g.get("caveats") or []):
+                print(f"        caveat… = {c[-150:]}")
 
-        if all(p.exists() for p in REAL_LOGS):
-            rc, g = run(_fwd(REAL_LOGS[0]), _fwd(REAL_LOGS[1]))
-            print(f"[附] 当期真实两把日志（不参与四态计数）→ "
-                  f"{g['verdict'] if rc == 0 else str(g)[:220]}")
+        off_real, int_real = newest("_full_pytest"), newest("_integration_pytest")
+        if off_real and int_real:
+            rc, g = run(_fwd(off_real), _fwd(int_real))
+            print(f"[附] 当期真实两把日志（mtime 最新，不参与计数）→ "
+                  f"{g['verdict'] if rc == 0 else str(g)[:220]}"
+                  f" ｜ 用的是 {off_real.name} ＋ {int_real.name}")
         else:
             print("[附] 当期真实日志不在位 ⇒ 该臂 UNVERIFIED（`*.log` 不入库属预期）")
 
-        print(f"\n漂移 {drift} 格／4（rc=1 ⇒ 装配面与 2026-10-04 22:1x 基准不一致，须重取基准并具名订正）")
+        print(f"\n漂移 {drift} 格／5（基准 = 10-05 04:1x 重取，含 W8 第 11 轮 "
+              f"`covers_integration()` 与输入自报两件）")
         return 1 if drift else 0
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

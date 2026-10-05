@@ -158,3 +158,43 @@
 | 评测报告页三端点 ＋ `present/` 空壳 | 🔴 **`T-34` 主单**（QA 自曝：挂三轮无单） | 五条契约路径在 `backend/app` 各 `grep -rn` 命中 0；`present/` 仅 `__init__.py` 292 B |
 | 门禁对外口径 | ✅ 未变：**不可写"门禁通过"** | `eval_metrics.json` @ `d93db8f`／dirty false／20:57Z：G-1 PASS，G-2／G-5／G-7 FAIL，G-3／G-4 PARTIAL，G-6／G-8 UNVERIFIED ⇒ PASS 1/8 |
 | 本窗花费 | **0**（账本 1,674／¥2.753794 跑前跑后同值；未建库，残渣尺同值） | 件内 `cost_ledger_before = after` ＋ 我 ⑰c 前后各读一次同值 |
+
+
+## 第 14 轮追加（2026-10-04 22:1x–22:2x +0800 · @ `0d2570f`／409 笔 · QA 接续：QA-b · 本轮 = W8 第 10 轮回执复算）
+
+| 项 | 判词 | 尺（可自跑，命令全文在 `RELAY §十一`） |
+|---|---|---|
+| T-32（G-1 合并支两侧相加） | ✅ **达成（判据口径变更，已坐实）** | 四对夹具：真日志 PASS／脏离线 FAIL／脏集成 FAIL／12 条夹具绿；判据措辞「全部 P0 用例通过」核 `docs/07:3272` = 未动 |
+| T-33（`U-130` 的两面耦合量） | ✅ **达成（判定量零差）** | 重跑到 `E:/tmp_qoder/t33_recheck.json` ＋ 递归 diff ⇒ 13 差 = 6 meta ＋ 7 时钟派生句；判定量全等 |
+| `U-129` 转绿 | ❌ **不转绿**（四条只差 ③） | ①三格我跑 ⑰c 达成（带 `n = 5`）；②落库面 0 达成、回执面 post_fix UNVERIFIED；③最新回执 09-29 23:29 本地，早于修法时刻；④`test_audit_terminal_pairing_contract.py:143` 14 passed |
+| 裁② 口径变更要不要进 `§4.8` | ✅ **裁"不要"**，改为 `:3272` 行尾补历史指针 | `grep -c "merge_p0_logs" docs/07_技术设计文档_TDD.md` = 1（在 `:3272` 行内）；`§4.8` 只认落号行与那句显式指针 |
+| 裁③ X5／X6 是否豁免 | ✅ **裁"都不算"**：X6 = 契约冲突缺陷（建议取号、零额度夹具钉）；X5 = `n/a__无样本`，不得记 0 | `docs/07:2879` G4 行审计列 = ✅；`grep -rn GraphRecursionError backend/app` = 0 命中 |
+| 🔴 新发现（a）守卫支丢第二份日志的红 | ⏳ 进 `T-34` 顺带 A（**非**判据变更，缺的是自描述） | 注入实测 PASS（第二槽 1 failed ＋ 1 error 未进判定量），`eval/reporter.py:898` |
+| 🔴 新发现（b）默认路径读上两轮日志 | ⏳ 进 `T-34` 顺带 A | `eval/reporter.py:75`／`:80` vs 盘上 mtime；不带参数读 2,340／带当期读 2,359，两个 PASS 形状同 |
+| 🔴 新发现（c）落库面无构建身份 | ⏳ 进 `T-34` 顺带 C（上限写进契约面） | `bundle_version`／`graph_version` 非空行 = 0／0（`tk_` run 1,408）；post_fix 30 条里 21 条带 model／prompt_version，值域 2 与 4 |
+| 抄本漂移（版本号 ＋ 对外 HEAD） | ⏳ 进 `T-34` 顺带 B（W8 写面） | `v1.7.19` 三处而版本历史表无行；`:11` 与 `OVERVIEW:8`／`:118` 仍 v1.7.18；`OVERVIEW:161` 主格 382／`b571b40` vs 现测 409／`0d2570f` |
+| 评测报告页三端点 ＋ `present/` 空壳 | 🔴 **`T-34` 主单**（QA 自曝：挂三轮无单） | 五条契约路径在 `backend/app` 各 `grep -rn` 命中 0；`present/` 仅 `__init__.py` 292 B |
+| 门禁对外口径 | ✅ 未变：**不可写"门禁通过"** | `eval_metrics.json` @ `d93db8f`／dirty false／20:57Z：G-1 PASS，G-2／G-5／G-7 FAIL，G-3／G-4 PARTIAL，G-6／G-8 UNVERIFIED ⇒ PASS 1/8 |
+| 本窗花费 | **0**（账本 1,674／¥2.753794 跑前跑后同值；未建库，残渣尺同值） | 件内 `cost_ledger_before = after` ＋ 我 ⑰c 前后各读一次同值 |
+
+
+## 第 15 轮追加（2026-10-05 11:5x–12:2x +0800 · @ `9e45281`／413 笔 · QA 接续：QA-b · 本轮 = W8 第 11 轮回执复算）
+
+| 项 | 判词 | 尺（本窗自己跑，命令全文在 `RELAY §十二`） |
+|---|---|---|
+| T-34 主单（A.9.2／A.9.3／A.9.4 ＋ `present/` 投影） | ✅ **达成** | 我的新永久件 `prompts/probe_admin_eval_live.py` 活体 **21 臂 rc=0**：`total=2`／`items=5`／`grid.cells=12`／`gate.items=8`（五值未折叠）／`unavailable=6`／`rerun_in_endpoint=false`／`scope=cross_tenant`／analyst 三处 `403 FORBIDDEN_SCOPE`／带 `tenant_id`／`user_id` 参数 `data` sha256 全等／未知批次 `404 RUN_NOT_FOUND`；契约件 24 条我复跑绿 |
+| 顺带 A（G-1 两处静默） | ✅ **达成（且强于我要的形状）** | `covers_integration()` 把"同源"从假设改成可核集合包含 ＋ `_input_stamp()` 进 `caveats`；`eval/gates.py` 判定谓词一字未动；三件测试 **42 passed**；我的五态件重取基准后 **rc=0**（态⑤ 钉"同源跳过 `red_total` 必为 1"） |
+| 顺带 B（版本抄本） | 🟡 **达成但有残留** | `07:11`／`:80` 版本历史行／`OVERVIEW:8`／`:118` 已并平 v1.7.19 ✓；但 `OVERVIEW:161`「提交数／HEAD」主格仍 382／`b571b40`、最新 🔻 到 404，现测 413／`9e45281` ⇒ 进 `T-35` |
+| 顺带 C（上限入契约 ＋ 取号） | ✅ **达成** | `U-135` 行在 `:1168`、指针行 `:1079` 已推进到 `U-136`；`U-129` 行内 🔻 补 date_proxy 上限；`U-130` 行一字未动；X5 记 `n/a__无样本` 并明写"暂不转正" |
+| 裁②（§4.8 不另落一行） | ✅ **执行到位** | `docs/07:3275` G-1 行尾新增「📌 历史指针」并写明"属史料、不入契约、不得当判据引用" |
+| 花费事后报 | ✅ **逐位对得上**（单笔最大那条 UNVERIFIED） | 增量 `12｜¥0.019418｜16:18:05→16:23:45Z`，两笔身份求和闭合，`is_peak` 全 false；台账全表 `1686｜2.773212` |
+| 共享栈与构建身份 | ✅ **成立** | 残渣尺 `ecom%` = 2（一次性库真 DROP）；五件容器 md5 = 工作树 = HEAD blob 全 SAME（`/srv/app/…`） |
+| 它的"重算自证" | ✅ **复现，且比我更严** | 我两遍跑 `reporter`：差集 1 条 = `meta.generated_at`（时钟派生），判定量零差 |
+| 🔴 静态面读数 | ❌ **一句不复现** | `ruff check app tests` 在 `9e45281` 干净树给 **1 error（UP020 @ tests/contract/test_recursion_limit_audit_contract.py:73）**，而回执 §十一.2 写"全部 passed"；`mypy app` Success 150 件 ✓；`lint-imports` 4 kept ✓ 但**不设 `PYTHONUTF8` 会 gbk 崩** |
+| `U-129` 转绿 | ❌ **仍不转绿** | ①④达成、② 落库面达成／回执面 post_fix UNVERIFIED（`deploy/loadtest/` 无新回执，最新仍 09-29 23:29）、③ 未交 ⇒ ②③ 同一次花费可并补（总控已批） |
+| 裁：401 → 错误卡空编号 | ✅ **裁"立案"** | 用户可见错误语义缺失 ＋ `U-131` 那条"错误不可区分"的镜像；零额度可钉；建议号 `U-136`，且 `OVERVIEW §9` 现读没有这条 ⇒ 立案后补一行 |
+| 裁：X5 转正 | ✅ **同意暂不转正** | 无样本；转正 = 决策表加行 = 契约变更 |
+| 🔻 编制纠正 | ⏳ 进 `T-35` 顺带 | §十一.9 两处"这是架构裁决"⇒ 架构窗停用，判据落笔权在 W8；别把待办挂给不存在的窗 |
+| 抄本与行位四处 | ⏳ 进 `T-35` 顺带 | `unavailable` 键名 `why`（契约）vs `reason`（实测）／`OVERVIEW:161` 主格／`U-135` 行引 `:1078` 而指针在 `:1079`／"四个终态"应为"四个回合（三种 outcome）" |
+| 本窗花费 | **0** | 台账跑前跑后同值；本窗未建库 |
+| 本窗自曝 | 🔻 已修 | 复算门禁报告时漏带 `--md-out` ⇒ 改写别窗入库件 3 行 ＋ 留两份 `.bak`；已 `git checkout` 恢复并删自造件，复核与 HEAD blob 等 |
