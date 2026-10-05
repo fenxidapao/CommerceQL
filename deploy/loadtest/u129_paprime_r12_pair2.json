@@ -1,0 +1,249 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-10-05T04:52:34+00:00",
+  "target": "http://127.0.0.1:18000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 1,
+        "duration_s": 600.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": true,
+        "questions": "合成题库 5 条轮转",
+        "request_cap": 2
+      },
+      "requests": 2,
+      "wall_s": 15.638,
+      "throughput_rps": 0.128,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 2,
+        "rejected_429": 0,
+        "other_http_4xx": 0,
+        "http_5xx": 0,
+        "unresolved": 0,
+        "terminal": 2
+      },
+      "rejection_headers": {},
+      "quota_headers_by_status": {},
+      "thread_depth": {
+        "depth_hist": {
+          "1": 1,
+          "2": 1
+        },
+        "unsessioned": 0,
+        "threads": 1,
+        "by_outcome": {
+          "ok": {
+            "turn1": 1,
+            "turn2plus": 0,
+            "unsessioned": 0
+          },
+          "error_frame": {
+            "turn1": 0,
+            "turn2plus": 1,
+            "unsessioned": 0
+          }
+        },
+        "by_code": {
+          "GATE_AST_REJECTED": {
+            "turn1": 0,
+            "turn2plus": 1,
+            "unsessioned": 0
+          }
+        }
+      },
+      "latency_ms": {
+        "p50": 6591.3,
+        "p95": 8936.7,
+        "p99": 8936.7,
+        "max": 8936.7,
+        "mean": 7764.0,
+        "samples": 2
+      },
+      "latency_ms_all_ms": {
+        "p50": 6591.3,
+        "p95": 8936.7,
+        "samples": 2
+      },
+      "ttfb_ms": {
+        "p50": 3.8,
+        "p95": 7.6
+      },
+      "outcomes": {
+        "ok": 1,
+        "error_frame": 1
+      },
+      "codes": {
+        "GATE_AST_REJECTED": 1
+      },
+      "codes_task_ids": {
+        "GATE_AST_REJECTED": [
+          "tk_51912ce6bdb946018a2ea2f0e3d3cf6f"
+        ]
+      },
+      "terminal_provenance": {
+        "ok": {
+          "stage=executing|reason=none": 1
+        },
+        "error_frame": {
+          "stage=sql_ready|reason=none": 1
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": null,
+      "g6_caveat": "准入样本仅 2 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足"
+    }
+  ],
+  "target_check": {
+    "url": "http://127.0.0.1:18000/api/v1/openapi.json",
+    "paths_total": 15,
+    "has_query": true,
+    "query_paths": [
+      "/api/v1/query",
+      "/api/v1/query/{task_id}",
+      "/api/v1/query/{task_id}/cancel"
+    ]
+  },
+  "finished_at": "2026-10-05T04:52:50+00:00",
+  "generated_at": "2026-10-05T04:52:50+00:00",
+  "git_rev": "3c37c79",
+  "git_dirty": true,
+  "build_identity": {
+    "attested_at_utc": "2026-10-05T04:55:04+00:00",
+    "container": "w7load-api",
+    "image_ref": "w7load-api:latest",
+    "image_id": "sha256:4adbcfc2e8f62ccf5a8a73a97c0102030b16b197f67da2da8e216a38c174bee9",
+    "container_created_at": "2026-10-05T04:45:38.807323655Z",
+    "image_tags_seen": [
+      "w7load-api:1005r12 4adbcfc2e8f6",
+      "w7load-api:latest 4adbcfc2e8f6",
+      "w7load-api:0930r11 8c1eb47fb118",
+      "w7load-api:0928r10 4806c5687c4e",
+      "w7load-api:0928r9 f9b0936cb5ae",
+      "w7load-api:0923r8 b38c0fcacfb3",
+      "w7load-api:0923r7 ccabcfd72399",
+      "w7load-api:0922r6 e0c623dff4b5",
+      "w7load-api:0921r5 521956b57699",
+      "w7load-api:0921r4 b07a786cd95d",
+      "w7load-api:0921r2wt 740f437ac09a",
+      "w7load-api:0921r3 f885487619bf",
+      "w7load-api:0921r1 edf41777ee46",
+      "w7load-api:0920r2 00b5e2dd0223"
+    ],
+    "head_rev": "3c37c797ffdffbd06a5d04a27266e1dcc6825457",
+    "head_rev_short": "3c37c79",
+    "worktree_dirty_at_attest": true,
+    "layer1_2": {
+      "files": [
+        {
+          "path": "backend/app/graph/state.py",
+          "container_md5": "58dc5462abb53070b794e18a3538b4ff",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "58dc5462abb53070b794e18a3538b4ff",
+            "worktree_lf": "0474ef6af7e32345b538456c28735513",
+            "head_blob_lf": "10dbb4e1fc4f62d0f46506268e87ecd6"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/edges.py",
+          "container_md5": "8f3386b260d610694ed6a8d101b90316",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "8f3386b260d610694ed6a8d101b90316",
+            "worktree_lf": "9e065a34468c7e2e41bf108bcaf4f4c3",
+            "head_blob_lf": "5dffa78f869a040359d8ac67571a1247"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/events.py",
+          "container_md5": "6ea163911f0d6875ea0f6168cfd16ce0",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "6ea163911f0d6875ea0f6168cfd16ce0",
+            "worktree_lf": "b0ecf6768ae5ba745c37d4cd8a647f37",
+            "head_blob_lf": "9f6aaffe6ede3cde2ed09d38858385ec"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/audit_pre.py",
+          "container_md5": "afd477cdade9781410e57623b7090e3b",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "afd477cdade9781410e57623b7090e3b",
+            "worktree_lf": "865ae3936919279a8e6d0dae059d02ef",
+            "head_blob_lf": "12c547cb10b6e5100a0dd85630bcc843"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/mask.py",
+          "container_md5": "ed20983ffb4d14cfd4616c5fc9a68554",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "ed20983ffb4d14cfd4616c5fc9a68554",
+            "worktree_lf": "5e821f88488845990a7cdae0c7166b5f",
+            "head_blob_lf": "179d47637acff4563da235aa183ba509"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/repair.py",
+          "container_md5": "3f49f47047ea17a9eab331f1da3ccbbb",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "3f49f47047ea17a9eab331f1da3ccbbb",
+            "worktree_lf": "ce9ad0464abc186d987eb0b5662e061c",
+            "head_blob_lf": "d330cc5031c6c72f00474b79929246b9"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/trusted_context.py",
+          "container_md5": "e2a0c8b08872b7a08e0cb312987ed789",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "e2a0c8b08872b7a08e0cb312987ed789",
+            "worktree_lf": "e2a0c8b08872b7a08e0cb312987ed789",
+            "head_blob_lf": "7736d1d7ca802d81db77d8f93c408ecd"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/api/runner.py",
+          "container_md5": "84a86573907cb8b3bb77d60a4cb27ae6",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "84a86573907cb8b3bb77d60a4cb27ae6",
+            "worktree_lf": "84a86573907cb8b3bb77d60a4cb27ae6",
+            "head_blob_lf": "a1af11d18db6095cf35db410b3f6065b"
+          },
+          "verdict": "SAME"
+        }
+      ],
+      "app_tree_aggregate": {
+        "files_count_git": 150,
+        "container_aggregate_md5": "2df51a5b67b38bda822fd6933e28f77b",
+        "worktree_raw_aggregate_md5": "2d890f96e7ef5e0a861bba19a5c52eec",
+        "head_blob_lf_aggregate_md5": "c69a251f0d8a040a3bcad7fad6ba3b4a",
+        "note": "容器侧是 raw 字节、git 侧是 LF blob ⇒ 聚合值不保证相等；逐件面见 layer1_2.files"
+      }
+    },
+    "layer3_behavior": {
+      "module": "app.graph.state",
+      "symbol": "RUN_SCOPED_STATE_FIELDS",
+      "present": true,
+      "size": 47
+    },
+    "why_this_matters": "落库面没有构建身份列（07 §4.8 的 U-129 行尾上限）⇒ 当期性只能由这一格自证"
+  }
+}
