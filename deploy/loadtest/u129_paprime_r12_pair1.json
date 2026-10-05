@@ -115,11 +115,11 @@
   "git_rev": "3c37c79",
   "git_dirty": true,
   "build_identity": {
-    "attested_at_utc": "2026-10-05T04:54:58+00:00",
+    "attested_at_utc": "2026-10-05T05:31:41+00:00",
     "container": "w7load-api",
     "image_ref": "w7load-api:latest",
     "image_id": "sha256:4adbcfc2e8f62ccf5a8a73a97c0102030b16b197f67da2da8e216a38c174bee9",
-    "container_created_at": "2026-10-05T04:45:38.807323655Z",
+    "container_created_at": "2026-10-05T05:30:24.588536765Z",
     "image_tags_seen": [
       "w7load-api:1005r12 4adbcfc2e8f6",
       "w7load-api:latest 4adbcfc2e8f6",
@@ -136,9 +136,9 @@
       "w7load-api:0921r1 edf41777ee46",
       "w7load-api:0920r2 00b5e2dd0223"
     ],
-    "head_rev": "3c37c797ffdffbd06a5d04a27266e1dcc6825457",
-    "head_rev_short": "3c37c79",
-    "worktree_dirty_at_attest": true,
+    "head_rev": "3590eb5c8dd80dab36a1bac7ed133f33b9dc2b8c",
+    "head_rev_short": "3590eb5",
+    "worktree_dirty_at_attest": false,
     "layer1_2": {
       "files": [
         {

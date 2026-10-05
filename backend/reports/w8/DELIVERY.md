@@ -219,3 +219,37 @@ QA ⑤ 的当期性上限写进 `U-129` 行内；**X5 记 `n/a__无样本（需�
 （单 bundle 全局加载 ⇒ 裸接就是跨租户可见，口径未裁）；`app/present/` 图内侧仍未落（走查里那条「本次未能生成图表」就是它）。
 ⑫ **花钱事后报**：走查副产 12 条／**¥0.019418**（非峰）；**待批项没跑**，报价先行落在 `RELAY §十一.10`。
 ⑬ **对外口径**：门禁 **PASS 1/8** ⇒ 仍**不得**写「门禁通过」；除已结案两号外没有任何号写结案；`ecom_u123_probe` 未清。
+
+## 第 12 轮交付（QA 第 9 轮派发 ｜ 主单 **T-35**（已批花费）＋ 零额度四件 ｜ 2026-10-05 12:4x–13:4x +0800 ／ 04:4x–05:4x UTC ｜ 起始 HEAD `3c37c79`／416 笔 ｜ **本轮花了钱**：35 行／**¥0.058383** ｜ **动了共享栈**：`w7load-api` 重建 1 次 ＋ 为端口收口 recreate 1 次 ｜ 一次性库 `ecom_t35_it` 建→迁移→跑→当场 DROP）
+
+① **主单（面 R 修法后的第一份当期分子）入库**：`deploy/loadtest/u129_paprime_r12_pair{1,2,3}.json`，
+`admission.terminal` 合计 **6**（每对 `{admitted:2, terminal:2, rejected_429:0}`）、`outcomes ok 3 / error_frame 3`、
+`codes GATE_AST_REJECTED ×3` 全落 `turn2plus`（笔 `6dd996b`）⇒ 该格此前 **0 行样本**。
+② **四条硬要求逐条交**（表在 `RELAY §十二.3`）：(a) 作废格回执入库 `u129_paprime_r12_warm.json`（`admitted 1`／`refuse`／**台账 0 行**）；
+(b) 逐件三向 SAME **8/8** ＋ 层 3 `RUN_SCOPED_STATE_FIELDS` `present=true` ＋ 镜像 id `4adbcfc2e8f6`（永久件 `attest_build_identity.py`）；
+(c) 分域只写 `date_proxy`、当期性由回执自证；(d) **报价先落一行**在跑批之前的笔 `b496d7b`。
+③ 🔴 **旧几何那把没跑**：当期实测单价 `¥0.045175 ÷ 6 = ¥0.00753/准入`，`healthy_r20_aprime_c12n108` 同形状 99 准入 ≈ **¥0.745 > 批准上界 ¥0.6** ⇒ 按派发停手；
+两把几何的差别（能不能给 G-6 的 P95、题目效应与轮次效应能不能分）落在 `RELAY §十二.3′` 交回 QA 转总控 ⇒ **③ 未达成，`U-129` 不写"已修／已结案"**。
+④ **G-6**：本轮三把 `latency_ms.samples` 各 **2**（< 本窗下限 20）⇒ **无可引用 P95**；`6.18s` 的作废句仍可写，且现在能点名作废理由 = **没有 ≥20 样本的当期批**。
+⑤ **零额度 A（顺带立案）**：取号 **`U-136`**（落号行现测 `docs/07:1171`，指针行改「下一个可用号 = `U-137`」@ `:1080`）＋ `OVERVIEW.md:459` 补 §9 一行
+＋ 夹具 7 臂（`queryStream.test.ts` 共 19 臂、`ErrorCard.test.tsx` 3 臂 ⇒ `npx vitest run` = **26 passed／3 files**，`tsc --noEmit` rc=0）；
+活体信封原文（13:22 +0800 真取）：HTTP **401** ＋ `{code:"AUTH_FAILED", message:"令牌已过期", trace_id:null}`。
+⑥ 🔴 **真机臂抓到第二处**：金路第一步是 `POST /api/v1/session` 而不是 `POST /query`，而 `ChatPage` 会话创建支硬编码 `code="INTERNAL" traceId=""`
+⇒ 第一遍页面读到「错误编号：INTERNAL」；修 `26f246e`（`sessionCreateError` 改存 `{message, code, traceId}`，渲染共用一份 `KNOWN_ERRORS`），
+复测（新产物 `index-CQtFdrXg.js`）：「错误编号：AUTH_FAILED」＋「登录已过期或令牌无效，请重新登录」＋「重新登录」按钮，网络面仍 **401**（未改码、令牌不进 DOM）。
+⚠️ 这支**没有单元夹具**（ChatPage 无测试壳）⇒ 判据②在测试面 = **UNVERIFIED**，只有真机臂。
+⑦ **零额度 B**：`io.open`→`open` 一行（`2bd4035`）＋ 三门**当期原文**各一行（`RELAY §十二.2`）：ruff `All checks passed!` ／
+mypy `Success: no issues found in 150 source files` ／ import-linter `Contracts: 4 kept, 0 broken.`（三条 rc=0，均设 `PYTHONUTF8=1`）。
+⑧ **零额度 C**：抄本四处收口（`unavailable` 键名只留 `[{field, reason}]`、`OVERVIEW:161` 主格换现测 416／`3c37c79` 带时点、
+`U-135` 行与 `OVERVIEW:373` 改取号时点口径 ＋ 下一可用号 `U-137`、"四个终态"🔻 具名订正为"四个回合／三种 outcome"）——尺与落点在 `RELAY §十二.7`。
+⑨ **零额度 D**：两个卡点**本窗自裁并落笔**（不再挂给已停用的架构窗）：A.9.5 读路径五条判据（`app_ro`／`app/repo/audit_read.py` 只 SELECT／
+GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` 做成参数／断言位置＋限流管理员类 5/min）＋ A.7.1／A.7.2 多租户口径（口径字典 = 平台级共享面）
+⇒ **本轮落的是判据、代码未实现**，`OVERVIEW §9` 那条"四条未接线端点"未变。
+⑩ **当期门禁重算**：离线 **2,389 passed**（带 `--ignore=tests/integration`）＋ 一次性库集成 **107 passed／rc 0**（DROP 后残渣尺 `datname like 'ecom%'` = 2）
+⇒ `gate_inputs_p0_summary.json`（rev `6dd996b`／dirty **False**）＋ `eval_metrics.json`（rev `4c33109`／dirty False／**PASS 1/8**）；
+**干净树跑两遍落 tmp ＋ QA 的尺** `diff_recompute_meta.py` ⇒ 差集 **1** ／ meta **1** ／ **判定量 0**（唯一一条 = `meta.generated_at`）。
+⑪ **顺带（不占号）**：压测 api 宿主端口 `0.0.0.0:18000` → `127.0.0.1:18000`（`3590eb5`；声明面 `compose config` = `host_ip: 127.0.0.1`、运行面 `docker port` 单条 ＋ `netstat` 无 `0.0.0.0`）
+⇒ `OVERVIEW §9(b)` 那句"只绑回环"此前从不覆盖第二只容器，U-134 的豁免前提补上一条腿。请 QA 并进复核清单。
+⑫ **花钱事后报**：**35 行／¥0.058383**（三对 24 行／¥0.045175 ＋ 走查 11 行／¥0.013208，全非峰 `bool_and(not is_peak)=t`）；
+台账全表 `1,686／¥2.773212 → **1,721／¥2.831595**`；🔴 超本窗自约束 **¥0.005175**、且含**计划外两笔**（把业务端点当探活 ⇒ `ping`／`ping2` 进图被 `refuse` 仍计费）——认账在 `RELAY §十二.6`。
+⑬ **对外口径**：门禁 **PASS 1/8** ⇒ 仍**不得**写「门禁通过」；`U-129`／`U-136` 一律写"待验收窗复算"，本窗不自写结案；`ecom_u123_probe` 未清、`reports/qa/**` 未动。

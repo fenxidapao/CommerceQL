@@ -1883,3 +1883,128 @@ integration_ran, integration_files_seen, failed_tests, error_tests}` ＋ 各自 
 - 新镜像 = **`w7load-api:1005r12`**（= `:latest`，image id `4adbcfc2e8f6`），12:5x 由 `docker build -f deploy/Dockerfile -t w7load-api:1005r12 .` 从当期树起（上一把是 4 天前的 `0930r11` / `8c1eb47fb118`，**不能拿它测当期修法**）。
 - 第二个 api 容器 = `w7load-api`（`compose.loadtest.yml`，宿主 `18000`，复用同一套 pg/redis ⇒ **数据是真的，进程是第二个**）；`/api/v1/healthz/ready` 现读 **200**。
 - 逐件三向尺 ＋ 层 3 行为级实证落在 **`deploy/loadtest/attest_build_identity.py`**（新永久件，零额度只读），结果写进回执的 `build_identity` 块 ⇒ 见 §十二.3。
+
+### 2. 静态三门当期原文（顺带 B —— 派发原话「改完把三条的**当期原文输出**各贴一行」）
+
+| 门 | 当期原文（逐字一行） | rc | 复算命令 |
+|---|---|---|---|
+| ruff | `All checks passed!` | 0 | `cd backend && PYTHONUTF8=1 ../.venv/Scripts/ruff.exe check app tests` |
+| mypy | `Success: no issues found in 150 source files` | 0 | 同 cwd 换 `../.venv/Scripts/mypy.exe app` |
+| lint-imports | `Contracts: 4 kept, 0 broken.` | 0 | 同 cwd 换 `../.venv/Scripts/lint-imports.exe`（**无 `check` 子命令**） |
+
+⚠️ 两条本机坑都在这一格里：① **必须** `PYTHONUTF8=1`（QA 12.6 同读数：不设时 lint-imports 打印 `KEPT` 前的符号就 `'gbk' codec can't decode` 崩、rc 非 0，那不是契约破了）；② **不要走管道** —— 三条都重定向到 `E:/tmp_qoder/r12_*.txt` 后单独 `echo rc=$?`，管道会把退出码吞成 0（本窗上一轮犯过）。
+被修的那一行 = `backend/tests/contract/test_recursion_limit_audit_contract.py:73` 的 `io.open(…)` → `open(…)` ＋ 删 `import io`（笔 `2bd4035`），该夹具仍 **3 passed**。
+
+### 3. 主单 T-35：四条硬要求逐条交（**面 R 的第一份当期分子已入库**）
+
+| 硬要求 | 交付 | 现测尺（能自己跑出这个数） |
+|---|---|---|
+| **(a)** 新镜像首格作废 ＋ 预热一格 | 预热格回执**入库** = `deploy/loadtest/u129_paprime_r12_warm.json`：`admission {admitted:1, terminal:1, rejected_429:0}`、`outcomes {refuse:1}`、`wall_s 25.5` ⇒ **不进任何分母** | `select count(*) from app.cost_ledger where created_at between timestamptz '2026-10-05 04:48:00+00' and timestamptz '2026-10-05 04:52:04+00'` = **0** ⇒ 首格没发一个包（`refuse` 落在 LLM 之前）；三对的首行在 04:52:04 |
+| **(b)** 回执自报构建身份（镜像 tag ＋ §16.5 三层证据逐件） | 三份回执各带 `build_identity`：**逐件 SAME 8/8** ＋ 层 3 `app.graph.state.RUN_SCOPED_STATE_FIELDS` `present=true` ＋ 镜像 `w7load-api:latest`（id `4adbcfc2e8f6…`）＋ `container_created_at` | `PYTHONUTF8=1 .venv/Scripts/python.exe deploy/loadtest/attest_build_identity.py --receipt deploy/loadtest/u129_paprime_r12_pair1.json` ⇒ 打印 `逐件 SAME 8/8｜层3 present=True｜HEAD … dirty=…`；🔴 三件在**跑测当时**记 `worktree_dirty_at_attest = True`（在制品未入库，如实不涂改），提交后重打 pair1 = **`HEAD 3590eb5 / dirty=False / SAME 8/8`**；两把的差别只有 `attested_at_utc`／`container_created_at`／`head_rev`／`dirty`（容器为本轮端口收口被 recreate ⇒ 创建时刻必然变，**镜像 id 未变**）；被自证的 8 件全在 `backend/app/**`，而 `git diff --name-only 3c37c79..HEAD -- backend/app` = **0 行** ⇒ 当期性等价于跑测那把 |
+| **(c)** 落库面分域只许写 `date_proxy` | 三件与本节全部按 `date_proxy` 写；**当期性只靠回执侧自证**（`admission.terminal` ＋ `build_identity`） | `07:1155` 的 U-129 行尾那句上限本轮未动（派发禁动判据措辞） |
+| **(d)** 报价先落一行再跑 | 已落在 §十二.1（跑批**之前**的笔 `b496d7b`） | 报价 vs 实测：**最小臂 报 ≈¥0.034 → 实 ¥0.045175**（＋33%）；**旧几何 报 ¥0.30–0.59 → 按当期单价折 ¥0.745 > ¥0.6 ⇒ 未跑**（处置见 §十二.3′） |
+
+**读数本体**（三对 ＝ 6 条准入；`steady / c=1 / n=2 / reuse-sessions / pool=1`；题库 = 合成 5 条轮转取前两条）：
+
+| 项 | 读数 | 判读 |
+|---|---|---|
+| `admission.admitted` / `.terminal` | 每对 **2 / 2** ⇒ 合计 **6 / 6** | 面 R「修法后域」的**第一份分子**（此前该格 0 行样本） |
+| `outcomes` | 每对 `{ok:1, error_frame:1}` ⇒ 合计 `ok 3 / error_frame 3` | `ok` 率 = **3/6 = 50%**，**分母只有 6** |
+| `codes` | `GATE_AST_REJECTED` × 3，全部落 `turn2plus` | 触发面 = AST 闸门，不是 U-129 那条入口复位 |
+| 失败跟的是**题目**还是 **turn** | 🔴 **分不开**：三对失败 task join `app.audit_log` ⇒ 三条 `raw_question` 全是「上个月复购率最高的 10 个店铺是哪些？」、`outcome` 全 `failed`、`final_executed_sql` 全非空；而三条 `ok` 都是轮转的第 1 题 | 最小臂每题各跑一次 ⇒ **题目效应与轮次效应完全同序** ⇒ ③ 要的「旧几何同形状的 `ok` 率＋H＋轮次分布」**这把拿不到**（尺：`codes_task_ids` 取 3 个 `tk_` → `select task_id, outcome, left(raw_question,28) from app.audit_log where task_id in (…)`） |
+| `latency_ms.samples` / `g6_caveat` | 每把 **2** 条；caveat 原文「准入样本仅 2 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足」 | ⇒ **G-6 本轮无可引用 P95**；旧的 `6.18s` 作废句**仍可写**，且现在能点名：作废依据不是"数错了"，而是**没有任何一把 ≥20 样本的当期批** |
+| `thread_depth.depth_hist` | 每对 `{1:1, 2:1}` ⇒ 深度分布 = 1 轮／2 轮各半，**n=6** | 形状对，量不够 |
+
+### 3′. 超上界就停下：旧几何那把**没跑**，两把几何的差别交回 QA 转总控
+
+- 报价行落下时估 ¥0.30–0.59；跑完两臂后用**当期账面实测单价** `¥0.045175 ÷ 6 准入 = ¥0.00753/准入` 重算：`healthy_r20_aprime_c12n108` 同形状 = 108 请求 − 9 未准入 ⇒ **99 条准入 × ¥0.00753 ≈ ¥0.745** ⇒ **> 批准上界 ¥0.6 ⇒ 不跑**（派发原话：「预计超过 ¥0.6 ⇒ 停下、把报价与两种几何的差别交给我转总控」）。
+- 两把几何的**实质差别**（要转上去的就是这张表）：
+
+| | 最小臂（本轮跑了） | 旧几何 c12/n108（本轮没跑） |
+|---|---|---|
+| 准入条数 | 6 | ≈99 |
+| 能不能给 G-6 的 P95 | ❌ 样本 2/把 < 20 | ✅ 唯一能满足 ≥20 的形状 |
+| 能不能给"旧几何同形状的 `ok` 率＋H" | ❌ 题目与 turn 同序混淆 | ✅ 5 题轮转 × 多轮 ⇒ 两者可分 |
+| 面 R 分子 | **已有第一份**（6 条、`terminal=6`） | 只是把分子从 6 抬到 ≈99 |
+| 非峰花费 | ¥0.045175 | ≈¥0.745（**超上界**） |
+
+- ⇒ **结案面**：U-129 的 ③ 要的就是「旧几何同形状重测」这一栏 ⇒ 本窗**不写"③ 已交齐"、更不写"已结案"**；转绿与否归 QA。要 ③ 真闭合需**追加授权 ≈¥0.75**，或换一把 ≥20 准入的中间几何（例：`c=3/n=30` ≈ 21 准入 ≈ **¥0.16**，够 G-6 样本下限、也够把题目与 turn 分开），代价 = 形状与旧几何**不同名**，引用时必须改名、不得再叫"旧几何同形状"。
+
+### 4. 认账一处：§十一.2 那句「All checks passed!」在被第二只手跑时不成立
+
+QA 12.6 在 `9e45281` 干净树上跑出 1 error（UP020），而我 §十一.2 写的是"全绿"。复核：那句话**跑的时候不假**（跑在那件夹具入库之前），**落笔时已假**（`772eba9` 把夹具带了进去）⇒ 判词按 QA 的：**不是造假，是"静态门全绿"这句没跟着最后一笔重跑**。
+本窗把纪律改成一句可执行的：**报静态门之前先 `git status --porcelain` 取一次数，落笔的原文必须来自"树上已有全部件"之后的那一次运行**（§十二.2 的三条就是 13:0x 在 416 笔之后重跑的）。
+
+### 5. 顺带 A：`U-136` 立案 ＋ 夹具，以及浏览器真机臂抓出的**第二处**
+
+- **取号**：`U-136` 落在 `docs/07 §4.8`（现测行首 `| **U-136** |` 在 **:1171**），依据 = 上一版指针行那句「下一个可用号 = `U-136`」（v1.7.19 现测 `:1079`）；本轮落笔后指针行 = **:1080**，已改「下一个可用号 = **`U-137`**」。🔻 顺带停止一处反复漂移的抄本：**行号不当坐标**，取号只认那句行首语句（QA 12.8 c 是第三次踩）。
+- **对外落点**：`OVERVIEW.md §9` 已补一行（现测 **:459**，就在 `app/present/` 那条之前）—— 派发点名「现读 §9 没有这条」，现在有了。
+- **判据两条**（写进 07 的 U-136 行，未动任何既有判据措辞）：① 流侧信封 `code`／`status`／`traceId` 原样透传（🚫 不得把 401 改 403／500、不得泄露令牌）；② 渲染侧「错误编号」**非空**（缺 `trace_id` 时退回 `code`）且 401 走「请重新登录」文案。
+- **活体形状**（本轮真取，已写进落号行）：`curl` 过期令牌臂 ⇒ **HTTP 401** ＋ `{"code":"AUTH_FAILED","message":"令牌已过期","trace_id":null,…}`（`trace_id` **恒为 null** 就是"编号为空"的病根之一）。
+- **夹具**：`frontend/src/api/queryStream.test.ts` **19** 臂（含本轮新增的 4 条传输层信封臂）＋ `frontend/src/components/ErrorCard.test.tsx` **3** 臂 ⇒ `npx vitest run` = **26 passed / 3 files**；`npx tsc --noEmit` rc=0。
+- 🔴 **真机臂抓到第二处（这才是走查的价值）**：金路第一步不是 `POST /query`，而是 **`POST /api/v1/session`**（无会话时先建会话），而 `ChatPage` 的会话创建失败支把 `ApiError` 丢成一句字符串、`ErrorCard` 硬编码 `code="INTERNAL" traceId=""` ⇒ 第一遍浏览器读到的是「错误编号：**INTERNAL**」。修在 `26f246e`（`sessionCreateError` 改存 `{message, code, traceId}`，渲染按同一份 `KNOWN_ERRORS` 选码）。
+  修后真机复测（产物 = `index-CQtFdrXg.js`；构建身份尺 = `fetch('/')` 的 script src 与该文件名同名）：`错误编号：AUTH_FAILED` ＋「登录已过期或令牌无效，请重新登录」＋ 按钮含「重新登录」「复制」；网络面 `POST /api/v1/session` = **401**（未改码）；`document.body.innerText` 不含令牌前/后 24 字符（不泄露）。
+  ⚠️ **未达成的一栏如实写**：会话创建这支**没有单元夹具**（`ChatPage` 无测试壳）⇒ 只有真机臂钉；判据②在测试面上 = **UNVERIFIED**。
+- **附带澄清一件**（免得下一个窗误判）：`--ttl 1` 的令牌在 8s 后**仍被接受**，本窗第一遍读成"过期不拒 = 缺陷"；读码后改口 = `backend/app/auth/tokens.py:56` `JWKS_LEEWAY_S = 60`（契约明写 ±60s 时钟偏移容忍）⇒ **设计内**，要 401 必须过期 **> 60s**。本窗第一把探针因此白发了两题（见 §十二.6 的计划外两笔）。
+- **走查的打印规则与 DOM 尺**（截图拿不到：`take_screenshot` 报 `NATIVE_BROWSER_VIEWPORT_UNAVAILABLE`，而页面自报 `innerWidth×innerHeight = 530×557`、`visible=true`、`visibilityState=hidden` ⇒ 视口面不可用，按派发要求改 DOM 尺）：① 文案面 `document.body.innerText` 分段，匹配含「错误编号：」的 `span`；② 该 `span` 的 `getComputedStyle` ⇒ `ui-monospace, Menlo, Consolas, monospace / 12px`；③ 动作面 `card.querySelectorAll('button')` 文本集合；④ 网络面 `list_network_requests` 读 `POST /api/v1/session` 的状态码；⑤ 泄露面 `innerText.includes(tok.slice(0,24))` 取反。
+- **金路两回合无回归**（同一把新产物、有效令牌）：`turn1 ok 9.7s ¥0.005525` ＋ **把同一个问题再问一遍** `turn2 ok 7.8s ¥0.005548`（会话 `ss_31f13b3e…`，语义包 `2026.09.14.1`），页面无错误卡、结果表在位。
+
+### 6. 💰 花钱事后报（派发：报价先行 ＋ 事后报）
+
+| 笔 | 身份 | 台账行数 | 金额 | 峰时 |
+|---|---|---|---|---|
+| 预热一格（作废） | 无记账 | **0** | ¥0.000000 | n/a |
+| 最小臂三对（主单） | `u_r12_01/02/03` 各 8 行 | **24** | **¥0.045175** | `bool_and(not is_peak)` = **t** |
+| 浏览器走查（金路两回合） | `u_walk_r12` | UI 自报 ¥0.005525 ＋ ¥0.005548 | 该身份合计 **11 行／¥0.013208** | 非峰 |
+| 🔴 同身份里的**计划外两笔** | `u_walk_r12`（`ping`／`ping2` 探活问句） | 与上并集后 = 11 行 | 差额 ≈¥0.002135 | 非峰 |
+| **本轮合计** | | **35 行** | **¥0.058383** | 全非峰 |
+
+- 台账全表：`1,686 → **1,721** 行 ／ ¥2.773212 → **¥2.831595**`（尺：`select count(*), to_char(sum(cost_cny),'FM999990.000000') from app.cost_ledger`；跑前跑后各读一次）。
+- 🔴 **超出自约束的地方本窗不圆场**：§十二.1 里我给自己写的"先跑前两臂、合计上限 **¥0.04**"，实测两臂 = **¥0.045175** ⇒ 超 **¥0.005175**；对派发的量级参考（P-A′ 6 准入 ≈ ¥0.014–0.023）是 **≈2 倍**。成因本窗**未证**（候选：轮转题的每条调用数 > 报价取的 4 条/准入；或 `turn2` 深链用量随题变化）⇒ 记 **UNVERIFIED**，不当场改报价模型。
+- ⚠️ 计划外两笔的成因写清楚：我把 `ping`／`ping2` 当"不会进图的探活问句"，实际它们**进了图并被 `refuse`**，而 `refuse` 一样发计费包。教训落成一句：**探活只用 `/api/v1/healthz/ready`（本轮实测 200），永远不要用业务端点探活**。
+
+### 7. 顺带 C：抄本四处收口（QA 12.8 a–d）
+
+| # | 处 | 处置 | 现测尺 |
+|---|---|---|---|
+| a | `unavailable` 键名 | **以实现与活体为准 = `[{field, reason}]`**；`docs/02:1036` 那行具名"原写 `why`、只留这一处权威"；前端类型同形（`types.ts` 的 `unavailable?: {field, reason}[]`） | `grep -n "why" docs/02_附录A_接口契约详解.md` ⇒ 仅 **1** 处命中、且命中在**订正句自身**；QA 永久件 `probe_admin_eval_live.py` 打印的 `字段=['field','reason']` 与契约一致 |
+| b | `OVERVIEW:161`「提交数／HEAD」主格 | **主格换成现测 416／`3c37c79` ＋ 带时点**（原 382／`b571b40` 降为"历史读数、勿当现状"，不删）；同一文件两个对外落点（`:8` 与 `:161`）本轮并平 | 尺 = 同一次运行内 `git rev-list --count HEAD` ＋ `git ls-remote origin main` 对撞；⚠️ 本行仍自指，本窗后续笔次不在里面 |
+| c | `U-135` 行与 `OVERVIEW:373` 的「现读 `:1078`」 | 两处都改成**取号时点口径**（"取号时点现测 `:1079`；该行位置随插行漂移 ⇒ 只认行首语句"），`OVERVIEW:373` 的下一可用号 → **`U-137`**（现测指针行 `:1080`） | `grep -n '^> \*\*下一个可用号' docs/07_技术设计文档_TDD.md` = `:1080`；`| **U-136** |` = `:1171`；`| G4 |` = `:2885` |
+| d | 走查那段"四个终态" | §十一.4 重放面那行**原句不删**、🔻 具名补记：那四行是**四个回合、三种 outcome**（`refuse`／`failed`×2／`success`，**无 `clarify`**），覆盖面按三种计 | 尺 = `select outcome from app.audit_log where "timestamp" > '2026-10-04 16:00Z'` ⇒ 4 行／3 种 |
+
+### 8. 顺带 D：两个卡点**本窗自裁并落笔**（不再挂给已停用的架构窗）
+
+- **A.9.5 读路径**（`docs/02` A.9.5 末，判据五条）：连接角色 = **`app_ro`**；新增 `app/repo/audit_read.py`（L0，只 `SELECT`，**不进**只写的 `audit_store.py`）；GUC 三键**同一条语句**注入（禁单键、禁 `RESET` 留半截）；`WHERE tenant_id = JWT.tenant_id` ＋ RLS **双保证**，`tenant_id`／`user_id` **不得**做成查询参数，`platform_admin` 走 `scope: cross_tenant`；断言落 `tests/integration/**` ＋ `tests/contract/**`；限流 = 管理员类 **5/min**；**未裁项 = 无**（本轮裁、**未实现** ⇒ 落的是判据不是代码）。
+- **A.7.1／A.7.2 多租户口径**（`docs/02` 该两节末）：口径字典 = **平台级共享面**，当期按单一 `SEMANTIC_BUNDLE_PATH` 装载（`app/api/deps.py:726`）⇒ 响应**不得**声称"本租户口径"、**不得**带 `scope: cross_tenant`；将来若分租户 = **契约变更**（要按"判据变更 = 逐臂复查这条原判据现在还防着什么"走），本轮不预支。
+- 形状纪律：这两段写的是**判据**，代码未动 ⇒ 对外不得写成"端点已补齐"；`OVERVIEW §9` 那条"顶栏两个入口点了必出错误卡（四条未接线端点）"本轮**未变**。
+
+### 8′. 顺带（不占号）：压测 api 的宿主端口收回回环
+
+- 现测（改动前）：`docker port w7load-api` = **`0.0.0.0:18000` ＋ `[::]:18000`** ⇒ 局域网可达；主栈四端口是 `127.0.0.1`。`OVERVIEW §9(b)` 那句"四端口只绑回环"从来没覆盖第二只容器 ⇒ **U-134 的"不轮换 ＋ 显式豁免"前提缺一条腿**。
+- 修法：`deploy/loadtest/compose.loadtest.yml:38` → `"127.0.0.1:18000:8000"`（笔 `3590eb5`）。
+- 两面尺：声明面 `docker compose -f deploy/loadtest/compose.loadtest.yml config` ⇒ `host_ip: 127.0.0.1`；运行面 recreate `loadapi` 后 `docker port` = 单条 `127.0.0.1:18000`、`netstat -ano \| grep :18000` 无 `0.0.0.0`。容器身份未漂：镜像仍 `w7load-api:latest`、`/api/v1/healthz/ready` = 200、`openapi` 15 条 path 含 `/api/v1/query`（U-114 那条"跑批前先核对 path 集合"过）。
+
+### 9. 串行资源表（本轮一定争用的面 ＋ 次序）
+
+| 资源 | 本轮怎么用 | 串行次序／让位条件 |
+|---|---|---|
+| `api` 镜像 ＋ 第二只容器 `w7load-api` | 12:5x 重建 1 次（tag `1005r12` = `:latest`，id `4adbcfc2e8f6`）→ 跑三对 → 13:3x 为 §十二.8′ 的端口收口 **recreate 1 次** → 收尾 `down` | 只在主单跑批期间占；QA 复算若不在位，自己 `docker compose -f deploy/loadtest/compose.loadtest.yml up -d loadapi` |
+| 共享 `ecom`（写面） | 三对与走查都写 `app.cost_ledger`／`app.audit_log`（**真实写入 = 压测的定义，不是事故**） | 跑批期间不并行第二个写者；本轮全程 `c=1` 串行 |
+| 一次性库 `ecom_t35_it` | 建 → 授权 → `alembic upgrade head`（`version_num = 0005`／`app` schema **32** 表）→ **107 passed／rc 0／27.35s** → **DROP** | 残渣尺 `datname like 'ecom%'` = **2**（`ecom` ＋ 别窗 `ecom_u123_probe`，**未动**）；🔻 别用 `LIKE 'ecom_%'`（`_` 是单字符通配） |
+| 🔴 迁移 0001 的 `ALTER ROLE`（**集群级对象**） | `MIGRATION_DATABASE_URL` 给超管，同时把 `DATABASE_URL`／`ANALYTICS_DB_URL` 给成**真实口令** | ⚠️ 形状坑：0001 对**已存在**的角色执行 `ALTER ROLE … PASSWORD`，而 `migrations/versions/0001_roles_and_audit_append_only.py:77` 带 `app_rw_pwd` **字面默认值** ⇒ 不给那两条 env 就会把活体的 `app_rw` 口令改掉。本窗第一次跑 rc=1 是"角色不存在/权限不够"，反而救了场（`app_rw` 故意无 `CREATEROLE`）。事后尺：`psql -U app_rw -d ecom -c 'select count(*) from app.cost_ledger'` 仍可连 ⇒ 无副作用 |
+| `app.cost_ledger` 记账 | 见 §十二.6 | 报价先行、事后报，跑前跑后各读一次全表数 |
+| `reports/qa/**` | **只读**（派发禁令） | 本轮只读 `RELAY §十二` 与那两件永久件 |
+| git 索引 | 按名 stage，本轮 10 笔 | 禁 `add -A`／`add .`／reset／clean；每笔 `git show --stat` 复核 |
+
+### 10. 要 QA 同步与本窗自曝
+
+**要 QA 同步四件**：
+1. **T-35 主单只交了一半**：面 R 的第一份当期分子在库（6 条准入、`terminal=6`、逐件 SAME 8/8），但 ③ 要的"旧几何同形状"因**超上界没跑** ⇒ 请按 §十二.3′ 的两种处置给方向（追加授权 ≈¥0.75，或 ≈¥0.16 的中间几何并**改名**、不得再叫"旧几何同形状"）。
+2. **`U-136` 判据②在测试面是 UNVERIFIED**（会话创建支无单元夹具）⇒ 若验收要"能自己跑出来的判据"，请点名"过期 **> 60s**"这个前提（`JWKS_LEEWAY_S = 60`），否则你们复算也会撞上本窗第一遍那种"过期不拒"的假缺陷。
+3. **G-6 那句 `6.18s` 作废现在有了正向理由**：不是数错，是**没有 ≥20 样本的当期批**（本轮三把各 2 条）。
+4. **压测 api 的对外绑定已收回回环** ⇒ 请并进 U-134 前提的复核清单（尺见 §十二.8′）。
+
+**本窗自曝三件**（都是这次跑出来的）：
+1. **追加型落盘又不幂等**：`docs/07` 的 v1.7.20 修订行被**插了两份**（`:80`／`:81`，只差行尾那个自测行数尺）。与 QA §十二.12 同族。已按"只删第二次出现"处置，复尺 = 行首 `^| **v1.7.20** |` 命中数 **1**、`wc -l` 3,648 ／ 切分 3,649 ／ CRLF 3,648 ／ 裸 CR 0。教训落成一句：**插入型脚本落笔前先数段首命中数，插完立刻再数一次，并把这把尺写进被插的那一行**。
+2. **自测行数写在被改的那一行里 ⇒ 必然漂**（先去重再测、再回填；这次两份副本各带一个数，正是这个形状）。
+3. **拿业务端点当探活** ⇒ 白发两题（§十二.6）。另外本轮的凭据 scratch（`E:/tmp_qoder/r12_tok_*.txt`、`r12_tokens.txt`、`r12/env.sh`、`r12/pgpw.txt`）**全部 chmod 600、收尾即删、一个字节没进仓库**；令牌进浏览器走的是本机 `127.0.0.1:8799` 的临时 broker（跑完即 `taskkill`），没经过我的打字面。
