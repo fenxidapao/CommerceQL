@@ -415,7 +415,72 @@ export const handlers = [
     );
   }),
 
-  http.post('*/api/v1/admin/eval/run', () => {
-    return HttpResponse.json(envelope({ run_id: 'run_mock002', status: 'queued' }));
+  // §A.9.1 补记（T-37）：真端点今天**只出预检**，mock 必须同形状 ——
+  // 否则 demo 里"评测已发起"这条路会在联调当天变成"页面能开但数字是假的"。
+  http.post('*/api/v1/admin/eval/run', async ({ request }) => {
+    const body = (await request.json()) as { dataset_id?: string };
+    return HttpResponse.json(
+      envelope({
+        run_id: null,
+        status: 'dry_run',
+        launched: false,
+        echo: { dataset_id: body.dataset_id ?? 'ds_v1_frozen', dry_run: true },
+        quote: {
+          dataset_id: body.dataset_id ?? 'ds_v1_frozen',
+          cases_total: 166,
+          basis: {
+            mode: 'same_dataset',
+            why: '基准批次的 frozen_evidence 与被请求集内容哈希一致 ⇒ 可直接比',
+            artifacts: [
+              {
+                artifact: 'results_v1_live_20261003T1410Z',
+                generated_at: '2026-10-03T14:10:32+00:00',
+                git_rev: 'c3b4114',
+                cases: 166,
+                llm_calls: 538,
+                cost_cny_total: 0.337171,
+                cost_cny_per_case: { min: 0.00064, median: 0.001858, max: 0.005429 },
+                dataset_content_hash: 'sha256:43e153de',
+                tier_observed: 'off_peak',
+              },
+            ],
+            artifacts_available: 1,
+            distinct_batches: 1,
+          },
+          estimate: {
+            llm_calls_low: 538,
+            llm_calls_high: 538,
+            cost_cny_off_peak_low: 0.337171,
+            cost_cny_off_peak_high: 0.337171,
+            cost_cny_off_peak_conservative: 0.901214,
+            cost_cny_peak_upper_bound: 0.674342,
+            method: '每案实测值 × cases_total（批内求和／条数，不是模型侧估算）',
+          },
+          tier: {
+            now: 'off_peak',
+            at_peak_now: false,
+            rule: 'app/llm/budget.classify_tier（北京工作日 09–12／14–18 = 峰）',
+            peak_multiplier: {
+              model: 'deepseek-flash',
+              off_peak_cache_miss_usd_per_mtok: '0.15',
+              peak_cache_miss_usd_per_mtok: '0.30',
+              multiplier: '2.00',
+              source: 'app/llm/budget.py 的 PRICES',
+            },
+          },
+          model_attribution: {
+            requested_model: 'deepseek-flash',
+            evidenced_by_basis: false,
+            detail: '观测批次的 config 不自报 model ⇒ 这些钱对应哪个模型不可证',
+          },
+        },
+        launch_blockers: [
+          { missing: 'eval_run_registry', detail: '库里没有评测运行表（迁移只到 0005）' },
+          { missing: 'in_process_runner', detail: '执行体是 eval/runner.py 的 CLI，app/** 不 import 它' },
+          { missing: 'approved_spend', detail: '真跑一次 = 出站打 LLM，本轮零额度' },
+        ],
+        how_to_launch: '三件齐 ⇒ 见 docs/02 §A.9.1 补记',
+      }),
+    );
   }),
 ];

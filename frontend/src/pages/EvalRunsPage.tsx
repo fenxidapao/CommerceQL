@@ -3,16 +3,26 @@
  * - 数据源：A.9.3 GET /admin/eval/runs（Paged<EvalRunListItem>）
  * - **只渲染 headline 摘要**，点行才拉详情（避免 N+1，A.0.6）
  * - 发起评测：A.9.1 POST /admin/eval/run；dataset_id 候选值来自 A.9.2
+ *   🔻 T-37（2026-10-05）：该端点当前只回**预检**（`run_id: null`／`status: "dry_run"`），
+ *   故此页把响应渲染成"这批多少条调用＋多少钱"，**不写**"评测已发起"。
  * - 前端零判断权：不做任何指标聚合；比例字段仅做显示格式化
  */
 import { useCallback, useEffect, useState } from 'react';
 import type { HTMLAttributes } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Form, Input, Modal, Select, Table, message } from 'antd';
+import { Button, Form, Input, Modal, Select, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { ApiError, apiGet, apiPost } from '../api/client';
-import type { EvalDataset, EvalRunListItem, EvalRunRequest, EvalRunStatus, Metric, Paged } from '../api/types';
+import type {
+  EvalDataset,
+  EvalRunListItem,
+  EvalRunPrecheck,
+  EvalRunRequest,
+  EvalRunStatus,
+  Metric,
+  Paged,
+} from '../api/types';
 import { ErrorCard } from '../components';
 import { tokens } from '../theme/tokens';
 
@@ -60,6 +70,16 @@ function show(v: Metric | string | undefined, unit = ''): string {
   return `${v}${unit}`;
 }
 
+/** 报价显示格式化（不是业务计算）：`null` = 盘上没有真打批次 ⇒「无观测基准」。
+ *  🔴 这里**不许**把 `null` 渲染成 `¥0`：那会把"没基准"伪装成"基准是零"。 */
+function yuan(v: number | null | undefined): string {
+  return v === null || v === undefined ? '无观测基准' : `¥${v.toFixed(6)}`;
+}
+
+function calls(v: number | null | undefined): string {
+  return v === null || v === undefined ? '无观测基准' : `${v} 次`;
+}
+
 function fmtTime(iso?: string | null): string {
   if (!iso) return '—';
   const d = dayjs(iso);
@@ -78,6 +98,74 @@ const STATUS_TEXT: Record<EvalRunStatus, string> = {
   failed: '运行失败',
 };
 
+const BASIS_MODE_TEXT: Record<string, string> = {
+  same_dataset: '基准与本次同集（内容哈希一致）',
+  extrapolated_from_other_dataset: '本次这集没真打过 ⇒ 按另一集的每案口径外推（方向 = 上界）',
+  no_live_batch: '盘上没有真打过的批次 ⇒ 无观测基准',
+};
+
+/** §A.9.1 补记（T-37）的预检面板：**只读响应，不做任何本地计算**（07 的"前端零判断权"）。 */
+function PrecheckPanel({ data }: { data: EvalRunPrecheck }) {
+  const { quote } = data;
+  const est = quote.estimate;
+  const line = (label: string, value: string) => (
+    <div style={{ display: 'flex', gap: tokens.space.xs }}>
+      <span style={{ color: tokens.color.text.tertiary, minWidth: 76 }}>{label}</span>
+      <span style={{ color: tokens.color.text.primary }}>{value}</span>
+    </div>
+  );
+  return (
+    <div
+      data-testid="eval-precheck"
+      style={{
+        marginTop: tokens.space.sm,
+        padding: tokens.space.sm,
+        border: `1px solid ${tokens.color.neutral.border}`,
+        borderRadius: tokens.radius.md,
+        background: tokens.color.neutral.bg,
+        fontSize: tokens.font.size.caption,
+        lineHeight: `${tokens.font.lineHeight.caption}px`,
+      }}
+    >
+      <div style={{ fontWeight: tokens.font.weight.medium, marginBottom: tokens.space.xs }}>
+        预检结果 —— 未发起评测（run_id 为空，零出站、零花费）
+      </div>
+      {line('题数', `${quote.cases_total} 题`)}
+      {line('LLM 调用', `${calls(est.llm_calls_low)} ～ ${calls(est.llm_calls_high)}`)}
+      {line('非峰报价', `${yuan(est.cost_cny_off_peak_low)} ～ ${yuan(est.cost_cny_off_peak_high)}`)}
+      {line('保守口径', yuan(est.cost_cny_off_peak_conservative))}
+      {line('峰档上界', yuan(est.cost_cny_peak_upper_bound))}
+      {line(
+        '当前档位',
+        `${quote.tier.now}${quote.tier.at_peak_now ? '（现在就是峰档）' : ''} · 峰/非峰乘数 ×${quote.tier.peak_multiplier.multiplier}`,
+      )}
+      {line(
+        '基准',
+        `${BASIS_MODE_TEXT[quote.basis.mode] ?? quote.basis.mode} · ${quote.basis.artifacts_available} 份产物 / ${quote.basis.distinct_batches} 批独立观测`,
+      )}
+      {quote.basis.artifacts.length > 0 && (
+        <div style={{ marginTop: tokens.space.xs, color: tokens.color.text.tertiary }}>
+          出处：
+          {quote.basis.artifacts
+            .map((a) => `${a.artifact}（${a.git_rev ?? 'rev 未记录'}，${a.cost_cny_total ?? '未记录'} 元）`)
+            .join(' · ')}
+        </div>
+      )}
+      <div style={{ marginTop: tokens.space.xs, color: tokens.color.text.tertiary }}>{quote.basis.why}</div>
+      <div style={{ marginTop: tokens.space.xs, color: tokens.color.text.secondary }}>
+        模型归属：{quote.model_attribution.detail}
+      </div>
+      <div style={{ marginTop: tokens.space.xs }}>
+        {data.launch_blockers.map((b) => (
+          <div key={b.missing} style={{ color: tokens.color.text.tertiary }}>
+            · 缺 {b.missing}：{b.detail}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function EvalRunsPage() {
   const navigate = useNavigate();
   const [form] = Form.useForm<EvalRunRequest>();
@@ -94,6 +182,8 @@ export function EvalRunsPage() {
   const [datasetsLoading, setDatasetsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState<ApiError | null>(null);
+  /** §A.9.1 补记（T-37）：这一支今天只回预检 ⇒ 结果留在弹窗里看，不写进列表（列表里没有假批次）。 */
+  const [precheck, setPrecheck] = useState<EvalRunPrecheck | null>(null);
   const datasetId = Form.useWatch('dataset_id', form);
 
   const loadRuns = useCallback(async () => {
@@ -121,6 +211,7 @@ export function EvalRunsPage() {
 
   const openModal = () => {
     setModalError(null);
+    setPrecheck(null);
     setModalOpen(true);
   };
 
@@ -148,11 +239,10 @@ export function EvalRunsPage() {
     setSubmitting(true);
     setModalError(null);
     try {
-      await apiPost<{ run_id: string; status: EvalRunStatus }>('/admin/eval/run', values);
-      void message.success('评测已发起');
-      setModalOpen(false);
-      form.resetFields();
-      await loadRuns();
+      // 🔴 今天这一支**不会**发起评测：响应是预检（`launched: false`），
+      // 所以这里不关弹窗、不刷列表、不写"评测已发起"——那三件事都会把预检说成已执行。
+      const data = await apiPost<EvalRunPrecheck>('/admin/eval/run', { ...values, dry_run: true });
+      setPrecheck(data);
     } catch (err) {
       const e = toApiError(err);
       if (e.httpStatus === 429) {
@@ -395,12 +485,15 @@ export function EvalRunsPage() {
 
       <Modal
         open={modalOpen}
-        title="发起评测"
-        okText="发起"
-        cancelText="取消"
+        title="发起评测 —— 当前只出预检报价"
+        okText="生成预检"
+        cancelText="关闭"
         confirmLoading={submitting}
         onOk={() => form.submit()}
-        onCancel={() => setModalOpen(false)}
+        onCancel={() => {
+          setModalOpen(false);
+          setPrecheck(null);
+        }}
         destroyOnClose
       >
         <Form<EvalRunRequest> form={form} layout="vertical" onFinish={(v) => void submit(v)}>
@@ -453,6 +546,8 @@ export function EvalRunsPage() {
             <Input.TextArea rows={2} maxLength={200} placeholder="本次评测的目的（可留空）" />
           </Form.Item>
         </Form>
+
+        {precheck && <PrecheckPanel data={precheck} />}
 
         {modalError && (
           <ErrorCard

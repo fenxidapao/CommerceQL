@@ -544,6 +544,65 @@ export interface EvalRunRequest {
   prompt_version: string;
   bundle_version: string;
   note?: string;
+  /** §A.9.1 补记（T-37）：后端只接受字面 `true`；传 `false` 得 400 INVALID_REQUEST。 */
+  dry_run?: true;
+}
+
+/** 报价的逐份出处（盘上 `config.live = true` 的批次产物）。 */
+export interface EvalQuoteBasisRow {
+  artifact: string;
+  generated_at: string | null;
+  git_rev: string | null;
+  cases: number;
+  llm_calls: number;
+  cost_cny_total: number | null;
+  cost_cny_per_case: { min: number; median: number; max: number } | null;
+  dataset_content_hash: string | null;
+  tier_observed: string | null;
+}
+
+export interface EvalPeakMultiplier {
+  model: string;
+  off_peak_cache_miss_usd_per_mtok: string;
+  peak_cache_miss_usd_per_mtok: string;
+  multiplier: string;
+  source: string;
+}
+
+/** §A.9.1 补记（T-37）：`estimate` 的每一格都来自**观测外推**，不是模型侧估算。
+ *  🔴 全 `null` = 盘上没有真打批次 ⇒ 显示「无观测基准」，前端不得自己乘一个数。 */
+export interface EvalRunQuote {
+  dataset_id: string;
+  cases_total: number;
+  basis: {
+    mode: 'same_dataset' | 'extrapolated_from_other_dataset' | 'no_live_batch';
+    why: string;
+    artifacts: EvalQuoteBasisRow[];
+    artifacts_available: number;
+    distinct_batches: number;
+  };
+  estimate: {
+    llm_calls_low: number | null;
+    llm_calls_high: number | null;
+    cost_cny_off_peak_low: number | null;
+    cost_cny_off_peak_high: number | null;
+    cost_cny_off_peak_conservative: number | null;
+    cost_cny_peak_upper_bound: number | null;
+    method: string;
+  };
+  tier: { now: string; at_peak_now: boolean; rule: string; peak_multiplier: EvalPeakMultiplier };
+  model_attribution: { requested_model: string | null; evidenced_by_basis: boolean; detail: string };
+}
+
+/** `POST /admin/eval/run` 今天的响应 = 预检，不是发起（`run_id` 恒 `null`）。 */
+export interface EvalRunPrecheck {
+  run_id: null;
+  status: 'dry_run';
+  launched: false;
+  echo: EvalRunRequest;
+  quote: EvalRunQuote;
+  launch_blockers: { missing: string; detail: string }[];
+  how_to_launch: string;
 }
 
 export interface EvalDataset {
