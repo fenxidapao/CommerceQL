@@ -19,7 +19,6 @@
 
 from __future__ import annotations
 
-import io
 import os
 from typing import Any
 
@@ -70,7 +69,7 @@ def _drive(emissions: list[dict[str, Any]] | None = None) -> tuple[list[tuple[st
 
 
 def _tdd_lines() -> list[str]:
-    with io.open(_TDD, encoding="utf-8") as fh:
+    with open(_TDD, encoding="utf-8") as fh:
         return fh.read().splitlines()
 
 
