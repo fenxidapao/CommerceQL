@@ -70,6 +70,12 @@ cd CommerceQL/frontend && VITE_ENABLE_DEBUG_PANEL=true npm run build   # 然后 
 ⚠️ 另两条讲答辩时要一起带着：审计响应的 `rls.second_guarantee_in_place = false` 是**现查**出来的（第二道保证不在位，是已登记的待裁定项，不是"做好了但没显示"）；
 `tenant_id`／`user_id` 不是查询参数（带 `?tenant_id=T_C` 仍只回 `T_A` 的行），这一条可以现场演示。
 
+🔻 **10-06 第 15 轮（T-38）收口订正（`OVERVIEW.md` §6/§7 同源同改；上面几段原句保留作取证）**：
+① 🔴 **演示脚本硬红线：不当场点「发起评测」去跑评测**。那一支现在只会给**预检**（`run_id` 恒 `null`、面板自己写着"未发起评测"），点了**不花钱**；但讲成"这就是评测在跑"是假的，而**真发起**要打 **538～620 条调用／¥0.337171～¥0.391504**（保守口径 ¥0.901214）⇒ 那是**另一笔钱、另一轮批准**。可以现场点的只有「口径字典」两页，审计读仍走 `curl`。
+② 「评测」页弹窗里那个**「评测集」下拉直到 10-05 才真有数据** —— 之前恒"暂无数据"是前端一处自取消的 `useEffect`（`EvalRunsPage.tsx`：把自己正在 `set` 的 loading 放进了依赖数组 ⇒ cleanup 抢先置 `cancelled` ⇒ `then`/`catch`/`finally` 全跳过，**连 403 都被吞**）。缺陷自 `e01c198`（W5）就在树里、路由接上之后才第一次可见，已修 ＋ 4 臂回归件 `EvalRunsPage.test.tsx` ⇒ 演示前不用手工塞夹具；DOM 尺 = `document.querySelectorAll('.ant-select-item-option').length` 应为 **2**。
+③ 🔴 **上面第 62 行那句"本轮 `docker build` ＋ recreate 后两个面才对上"要按现状降调**：第 15 轮**没有重建镜像**。19 条 path 的当期性锚 = 镜像 `sha256:ca34ea791a81…`（`Created = 2026-10-05T15:19:25Z`）＋ 容器 `commerceql-api-1`（`Created = 2026-10-05T15:19:26Z`）＋ **逐件三面 md5 18/18 SAME ＋ 全量 `app/**.py` 158/158 三面聚合相等 ＋ 层 3 `RUN_SCOPED_STATE_FIELDS` present（size = 47）**，复算 = `deploy/loadtest/attest_build_identity.py --container commerceql-api-1 --receipt <回执路径>`。⇒ 当期性**只由 md5／层 3 自证**，"重建过"不作为证据。
+④ 上线门禁 **PASS 1/8** 未变（八格 = PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2）⇒ 仍**不得写"门禁通过"**；本轮那把真跑批（`steady c=3 n=30`，准入 **9**、实付 **¥0.066117**／全非峰）**没有改变 `G-6` 判向**（9 < 样本下限 20 ⇒ `g6_p95_le_8s = null`）⇒ 答辩里不许报"端到端 P95 达标"，只可报"样本不足，`G-6` 待一把 ≥20 准入的批"（两条可选形状与其价格见 `OVERVIEW.md` §6 收口段）。
+
 ## 4. PPT 素材映射（a–e）
 
 - **a 项目背景**：`OVERVIEW.md` §1（三十秒电梯版）＋ §2 主张 1（同一批模型 Spider 1.0 86.6% vs Spider 2.0 10.1%）。

@@ -1,9 +1,9 @@
 {
   "artifact": "gate_inputs_p0_summary",
-  "commit_count": 432,
-  "generated_at": "2026-10-05T07:14:04+00:00",
+  "commit_count": 449,
+  "generated_at": "2026-10-06T04:42:25+00:00",
   "git_dirty": false,
-  "git_rev": "2d5897582ca25938c296f68b038fceb4f1bc749c",
+  "git_rev": "bea724a55c15692715c7245d4b09434b573dffe0",
   "integration": {
     "error_tests": [],
     "errors": 0,
@@ -11,6 +11,7 @@
     "failed_tests": [],
     "integration_files_seen": [
       "test_audit_append_only.py",
+      "test_audit_read_rls.py",
       "test_exec_real_pg.py",
       "test_feedback_store_pg.py",
       "test_migration_0003_views.py",
@@ -22,10 +23,10 @@
       "test_semantic_materialization.py"
     ],
     "integration_ran": true,
-    "log_mtime_utc": "2026-10-05T07:06:42+00:00",
-    "log_path": "backend/reports/w6/_integration_pytest_1005_rT36.log",
-    "log_sha256": "176eb1bcd590f237fa11973d75f1e70d59e3f86ae9c616f323ec20443e93e5f7",
-    "passed": 107,
+    "log_mtime_utc": "2026-10-06T04:42:13+00:00",
+    "log_path": "backend/reports/w8/_integration_pytest_1006_rT38.log",
+    "log_sha256": "38dd6207b4c9686d5abe57e460d376a16d01b4f976adf585c88630111d952056",
+    "passed": 124,
     "skipped": 0,
     "tracked_in_git": false
   },
@@ -41,9 +42,9 @@
     "failed_tests": [],
     "integration_ran": true,
     "merge_policy": "T-32：计数两侧相加、点名列取并集、`integration_ran` 取 OR ⇒ 任何一面的红都不会被另一面的 0 覆盖",
-    "passed": 2499,
-    "passed_integration": 107,
-    "passed_offline": 2392,
+    "passed": 2578,
+    "passed_integration": 124,
+    "passed_offline": 2454,
     "skipped": 0
   },
   "offline": {
@@ -53,10 +54,10 @@
     "failed_tests": [],
     "integration_files_seen": [],
     "integration_ran": false,
-    "log_mtime_utc": "2026-10-05T07:05:35+00:00",
-    "log_path": "backend/reports/w6/_full_pytest_1005_rT36.log",
-    "log_sha256": "364d8ab5477b527e58944f8f13697d03aefecf316af0201153cee96a72bf7997",
-    "passed": 2392,
+    "log_mtime_utc": "2026-10-06T04:38:47+00:00",
+    "log_path": "backend/reports/w8/_r15_offline_cleantree.log",
+    "log_sha256": "df857544fa7be8af086a2b5f21f9a5a25161dd7f20b3ed04cac38b336afd59cb",
+    "passed": 2454,
     "skipped": 0,
     "tracked_in_git": false
   },
