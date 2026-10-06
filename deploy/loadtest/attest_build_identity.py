@@ -85,29 +85,55 @@ def attest_file(container: str, rel: str, head_rev: str) -> dict[str, object]:
     }
 
 
-def attest_tree(container: str, head_rev: str) -> dict[str, object]:
-    """聚合尺：对 `app/**.py` 排序后逐文件 md5 再取一次 md5（行尾按容器里的原字节）。
+#: 容器侧列内容 = 对 `/srv/app` 下每个 `.py` 取**行尾归一后**的 md5 ＋ 相对路径（正斜杠）。
+#: 走 `python -c` 而非 shell 管道：subprocess 以列表传参 ⇒ 不经 shell、没有引号地狱。
+_CONTAINER_LIST_SNIPPET = (
+    "import hashlib,pathlib;"
+    "root=pathlib.Path('/srv/app');"
+    "fs=sorted(p for p in root.rglob('*.py'));"
+    "lines=[hashlib.md5(p.read_bytes().replace(bytes([13,10]),bytes([10]))).hexdigest()"
+    "+'  '+str(p.relative_to(root)).replace(chr(92),'/') for p in fs];"
+    "print(chr(10).join(lines))"
+)
 
-    ⚠️ 已知失真面（`07 §16.5` 层 2 那条）：镜像里的行尾 = **构建那一秒工作副本的字节**，
-    与 git 存的 LF 无关 ⇒ 聚合值只用于"两边同形不同批次"的粗筛，逐件仍以 `attest_file` 为准。
+
+def _git_bytes(*args: str) -> bytes:
+    """原文字节取 blob：**不能**复用 `_git()`（那条走 `text=True` ＋ `strip()` ⇒ 会吃掉行尾与文件末尾换行）。"""
+    p = subprocess.run(["git", *args], cwd=ROOT, capture_output=True)
+    if p.returncode != 0:
+        raise SystemExit(f"git {' '.join(args)} rc={p.returncode}: {(p.stderr or b'')[-300:].decode('utf-8', 'replace')}")
+    return p.stdout
+
+
+def _lf_md5(data: bytes) -> str:
+    return hashlib.md5(data.replace(b"\r" + b"\n", b"\n")).hexdigest()
+
+
+def attest_tree(container: str, head_rev: str) -> dict[str, object]:
+    """聚合尺（`app/**.py` 全量）：三面各自**行尾归一**后逐文件 md5，再对整段列表取一次 md5。
+
+    🔴 **旧形状那把是坏尺（本窗 10-06 自曝）**：容器侧原本跑 `find . | xargs md5sum | md5sum`，
+    行里带 `./` 前缀、而 git 侧拼的是不带前缀的相对路径 ⇒ **三列结构上永远不可能相等** ⇒
+    它报的"不等"**不是**漂移证据，只证明自己没被校准过。换代成三面同源之后，
+    这一格才第一次能当**全量**证据（任一件内容差一个字节就整列错开）；逐件面仍是独立第二把尺。
     """
     rels = [l for l in _git("ls-files", "backend/app").split("\n") if l.endswith(".py")]
-    container_line = _run(
-        ["docker", "exec", container, "sh", "-c",
-         f"cd {CONTAINER_APP_DIR} && find . -name '*.py' | sort | xargs md5sum | md5sum"]
-    ).split()[0]
-    work_lines = "\n".join(f"{_md5(open(os.path.join(ROOT, r), 'rb').read())}  {r.split('backend/app/', 1)[1]}"
-                           for r in sorted(rels, key=lambda x: x.split("backend/app/", 1)[1]))
-    head_lines = "\n".join(
-        f"{_md5((_git('show', f'{head_rev}:{r}')).replace(chr(13) + chr(10), chr(10)).encode())}  {r.split('backend/app/', 1)[1]}"
-        for r in sorted(rels, key=lambda x: x.split("backend/app/", 1)[1])
-    )
+    keyed = sorted(rels, key=lambda r: r.split("backend/app/", 1)[1])
+    container_lines = _run(["docker", "exec", container, "python", "-c", _CONTAINER_LIST_SNIPPET])
+    c_list = "\n".join(l for l in container_lines.split("\n") if l.strip())
+    w_list = "\n".join(f"{_lf_md5(open(os.path.join(ROOT, r), 'rb').read())}  {r.split('backend/app/', 1)[1]}"
+                       for r in keyed)
+    h_list = "\n".join(f"{_lf_md5(_git_bytes('show', f'{head_rev}:{r}'))}  {r.split('backend/app/', 1)[1]}"
+                       for r in keyed)
+    c_md5, w_md5, h_md5 = (_md5(x.encode()) for x in (c_list, w_list, h_list))
     return {
         "files_count_git": len(rels),
-        "container_aggregate_md5": container_line,
-        "worktree_raw_aggregate_md5": _md5(work_lines.encode()),
-        "head_blob_lf_aggregate_md5": _md5(head_lines.encode()),
-        "note": "容器侧是 raw 字节、git 侧是 LF blob ⇒ 聚合值不保证相等；逐件面见 layer1_2.files",
+        "files_count_container": len([l for l in c_list.split("\n") if l.strip()]),
+        "aggregate_md5_lf_normalized": {"container": c_md5, "worktree": w_md5, "head_blob": h_md5},
+        "three_way_equal": c_md5 == w_md5 == h_md5,
+        "ruler": "三面同一算法：LF 归一后逐文件 md5 ＋「md5 + 两个空格 + 相对路径」整段列表再取 md5",
+        "note": ("🔻 旧版聚合尺因容器侧带 `./` 前缀而三列永不相等 ⇒ 当时的『不等』不构成证据；"
+                 "本字段换代后才有判别力。逐件面 `layer1_2.files` 是独立第二把尺，两把相互印证。"),
     }
 
 
@@ -161,9 +187,13 @@ def main(argv: list[str] | None = None) -> int:
         fh.write("\n")
 
     same = sum(1 for f in block["layer1_2"]["files"] if f["verdict"] == "SAME")
+    agg = block["layer1_2"]["app_tree_aggregate"]
     print(f"build_identity 写入 {args.receipt}｜逐件 SAME {same}/{len(block['layer1_2']['files'])}"
+          f"｜聚合三面 equal={agg['three_way_equal']}"
+          f"（{agg['files_count_container']}/{agg['files_count_git']} 件）"
           f"｜层3 present={block['layer3_behavior']['present']}｜HEAD {head_rev[:7]} dirty={dirty}")
-    return 0 if same == len(block["layer1_2"]["files"]) and block["layer3_behavior"]["present"] else 1
+    return 0 if (same == len(block["layer1_2"]["files"]) and agg["three_way_equal"]
+                 and block["layer3_behavior"]["present"]) else 1
 
 
 if __name__ == "__main__":

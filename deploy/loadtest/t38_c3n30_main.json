@@ -1,0 +1,475 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-10-06T04:25:59+00:00",
+  "target": "http://127.0.0.1:8000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注） ｜ T-38 身份取证（主批）：分母 = admission.admitted = 9（429 拒 20 条按 U-106 排除在 P95 之外）；报价笔 67be6b0 的 committer date = 2026-10-06T04:24:29Z，**早于**本回执 started_at 2026-10-06T04:25:59Z（差 90 秒，尺见 backend/reports/w8/t38_assembled.json 的 b 格）；build_identity 为**跑后补打**（04:33:18Z），跑前 04:24:43Z 已独立取过一次，逐件 18/18 SAME ＋ 全量 158 件三面相等 ＋ 层 3 present；镜像未在本轮重建（Created 2026-10-05T15:19:25Z）；样本 9 < MIN_ADMITTED_FOR_P95 = 20 ⇒ G-6 本批**不可引用**（caveat 原文见 g6_caveat）。",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 3,
+        "duration_s": 600.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": true,
+        "questions": "合成题库 5 条轮转",
+        "request_cap": 30
+      },
+      "requests": 30,
+      "wall_s": 22.002,
+      "throughput_rps": 1.364,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 9,
+        "rejected_429": 20,
+        "other_http_4xx": 1,
+        "http_5xx": 0,
+        "unresolved": 0,
+        "terminal": 9
+      },
+      "rejection_headers": {
+        "409": {
+          "retry_after=3": 1
+        },
+        "429": {
+          "retry_after=30": 20
+        }
+      },
+      "quota_headers_by_status": {
+        "409": {
+          "none": 1
+        },
+        "429": {
+          "bucket+limit+remaining+reset": 20
+        }
+      },
+      "thread_depth": {
+        "depth_hist": {
+          "1": 7,
+          "2": 5,
+          "3+": 18
+        },
+        "unsessioned": 0,
+        "threads": 7,
+        "by_outcome": {
+          "error_frame": {
+            "turn1": 2,
+            "turn2plus": 1,
+            "unsessioned": 0
+          },
+          "ok": {
+            "turn1": 3,
+            "turn2plus": 1,
+            "unsessioned": 0
+          },
+          "clarify": {
+            "turn1": 0,
+            "turn2plus": 1,
+            "unsessioned": 0
+          },
+          "http_4xx": {
+            "turn1": 2,
+            "turn2plus": 19,
+            "unsessioned": 0
+          },
+          "refuse": {
+            "turn1": 0,
+            "turn2plus": 1,
+            "unsessioned": 0
+          }
+        },
+        "by_code": {
+          "GATE_AST_REJECTED": {
+            "turn1": 2,
+            "turn2plus": 1,
+            "unsessioned": 0
+          }
+        }
+      },
+      "latency_ms": {
+        "p50": 6959.5,
+        "p95": 9291.9,
+        "p99": 9291.9,
+        "max": 9291.9,
+        "mean": 6488.4,
+        "samples": 9
+      },
+      "latency_ms_all_ms": {
+        "p50": 2.5,
+        "p95": 8249.2,
+        "samples": 30
+      },
+      "ttfb_ms": {
+        "p50": 7.2,
+        "p95": 1614.4
+      },
+      "latency_samples_ms": [
+        {
+          "total_ms": 1125.5,
+          "ttfb_ms": 7.2,
+          "outcome": "clarify",
+          "code": null,
+          "task_id": "tk_ac39b7f44b504854a7d9062caa8a7979"
+        },
+        {
+          "total_ms": 3024.9,
+          "ttfb_ms": 6.5,
+          "outcome": "refuse",
+          "code": null,
+          "task_id": "tk_dbe74db24fae48a38da247a1aba5db38"
+        },
+        {
+          "total_ms": 6697.0,
+          "ttfb_ms": 6.9,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_cd3e5da8be9349668427693322ac526e"
+        },
+        {
+          "total_ms": 6713.8,
+          "ttfb_ms": 22.0,
+          "outcome": "error_frame",
+          "code": "GATE_AST_REJECTED",
+          "task_id": "tk_02f6fd3af0e6451cb18ee6d12fc69c13"
+        },
+        {
+          "total_ms": 6959.5,
+          "ttfb_ms": 5.8,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_3b55f345bf184c0ca2b8cc133d219056"
+        },
+        {
+          "total_ms": 8107.3,
+          "ttfb_ms": 6.5,
+          "outcome": "error_frame",
+          "code": "GATE_AST_REJECTED",
+          "task_id": "tk_201e967563994cae817eb519fbba8069"
+        },
+        {
+          "total_ms": 8226.5,
+          "ttfb_ms": 22.4,
+          "outcome": "error_frame",
+          "code": "GATE_AST_REJECTED",
+          "task_id": "tk_ca342fa63c0044d98461f6184ebbd994"
+        },
+        {
+          "total_ms": 8249.2,
+          "ttfb_ms": 13.0,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_f15d357370b1407d8b11a4a869b3bd69"
+        },
+        {
+          "total_ms": 9291.9,
+          "ttfb_ms": 1614.4,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_83f693afb1e74b1db8c6b59bdda0ce2b"
+        }
+      ],
+      "outcomes": {
+        "error_frame": 3,
+        "ok": 4,
+        "clarify": 1,
+        "http_4xx": 21,
+        "refuse": 1
+      },
+      "codes": {
+        "GATE_AST_REJECTED": 3,
+        "SESSION_CONFLICT": 1,
+        "RATE_LIMITED": 20
+      },
+      "codes_task_ids": {
+        "GATE_AST_REJECTED": [
+          "tk_02f6fd3af0e6451cb18ee6d12fc69c13",
+          "tk_201e967563994cae817eb519fbba8069",
+          "tk_ca342fa63c0044d98461f6184ebbd994"
+        ]
+      },
+      "terminal_provenance": {
+        "error_frame": {
+          "stage=sql_ready|reason=none": 3
+        },
+        "ok": {
+          "stage=executing|reason=none": 4
+        },
+        "clarify": {
+          "stage=intent|reason=time_ambiguous": 1
+        },
+        "http_4xx": {
+          "stage=none|reason=none": 21
+        },
+        "refuse": {
+          "stage=plan_ready|reason=no_data_asset": 1
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": null,
+      "g6_caveat": "准入样本仅 9 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足；另有 20 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）"
+    }
+  ],
+  "target_check": {
+    "url": "http://127.0.0.1:8000/api/v1/openapi.json",
+    "paths_total": 19,
+    "has_query": true,
+    "query_paths": [
+      "/api/v1/query",
+      "/api/v1/query/{task_id}",
+      "/api/v1/query/{task_id}/cancel"
+    ]
+  },
+  "finished_at": "2026-10-06T04:26:21+00:00",
+  "generated_at": "2026-10-06T04:26:21+00:00",
+  "git_rev": "67be6b0",
+  "git_dirty": false,
+  "build_identity": {
+    "attested_at_utc": "2026-10-06T04:33:18+00:00",
+    "container": "commerceql-api-1",
+    "image_ref": "commerceql-api",
+    "image_id": "sha256:ca34ea791a81fae6f5f03249451214872bcd424b150549454d93e3412c4fbcb5",
+    "container_created_at": "2026-10-05T15:19:26.686587752Z",
+    "image_tags_seen": [
+      "w7load-api:1005r12 4adbcfc2e8f6",
+      "w7load-api:latest 4adbcfc2e8f6",
+      "w7load-api:0930r11 8c1eb47fb118",
+      "w7load-api:0928r10 4806c5687c4e",
+      "w7load-api:0928r9 f9b0936cb5ae",
+      "w7load-api:0923r8 b38c0fcacfb3",
+      "w7load-api:0923r7 ccabcfd72399",
+      "w7load-api:0922r6 e0c623dff4b5",
+      "w7load-api:0921r5 521956b57699",
+      "w7load-api:0921r4 b07a786cd95d",
+      "w7load-api:0921r2wt 740f437ac09a",
+      "w7load-api:0921r3 f885487619bf",
+      "w7load-api:0921r1 edf41777ee46",
+      "w7load-api:0920r2 00b5e2dd0223"
+    ],
+    "head_rev": "67be6b0a64b73d156f74453bcaa274bdae57b993",
+    "head_rev_short": "67be6b0",
+    "worktree_dirty_at_attest": true,
+    "layer1_2": {
+      "files": [
+        {
+          "path": "backend/app/graph/state.py",
+          "container_md5": "58dc5462abb53070b794e18a3538b4ff",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "58dc5462abb53070b794e18a3538b4ff",
+            "worktree_lf": "0474ef6af7e32345b538456c28735513",
+            "head_blob_lf": "10dbb4e1fc4f62d0f46506268e87ecd6"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/edges.py",
+          "container_md5": "8f3386b260d610694ed6a8d101b90316",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "8f3386b260d610694ed6a8d101b90316",
+            "worktree_lf": "9e065a34468c7e2e41bf108bcaf4f4c3",
+            "head_blob_lf": "5dffa78f869a040359d8ac67571a1247"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/events.py",
+          "container_md5": "6ea163911f0d6875ea0f6168cfd16ce0",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "6ea163911f0d6875ea0f6168cfd16ce0",
+            "worktree_lf": "b0ecf6768ae5ba745c37d4cd8a647f37",
+            "head_blob_lf": "9f6aaffe6ede3cde2ed09d38858385ec"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/build.py",
+          "container_md5": "22c72ffe2e1f535f2c9da310cfc298e5",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "22c72ffe2e1f535f2c9da310cfc298e5",
+            "worktree_lf": "22c72ffe2e1f535f2c9da310cfc298e5",
+            "head_blob_lf": "d6c75ec8a0c9599b530cde49acba435b"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/_shared.py",
+          "container_md5": "adff46716a7e03a093d5a44b97f3cd1d",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "adff46716a7e03a093d5a44b97f3cd1d",
+            "worktree_lf": "adff46716a7e03a093d5a44b97f3cd1d",
+            "head_blob_lf": "d450af8c3b607aee7149585b12b6216d"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/audit_supp.py",
+          "container_md5": "182829037e7c521fd9d62cdfeeee33a4",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "182829037e7c521fd9d62cdfeeee33a4",
+            "worktree_lf": "182829037e7c521fd9d62cdfeeee33a4",
+            "head_blob_lf": "5c92f7fb6000dd2dc1f1146224deaa8f"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/audit_pre.py",
+          "container_md5": "afd477cdade9781410e57623b7090e3b",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "afd477cdade9781410e57623b7090e3b",
+            "worktree_lf": "865ae3936919279a8e6d0dae059d02ef",
+            "head_blob_lf": "12c547cb10b6e5100a0dd85630bcc843"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/mask.py",
+          "container_md5": "ed20983ffb4d14cfd4616c5fc9a68554",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "ed20983ffb4d14cfd4616c5fc9a68554",
+            "worktree_lf": "5e821f88488845990a7cdae0c7166b5f",
+            "head_blob_lf": "179d47637acff4563da235aa183ba509"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/repair.py",
+          "container_md5": "3f49f47047ea17a9eab331f1da3ccbbb",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "3f49f47047ea17a9eab331f1da3ccbbb",
+            "worktree_lf": "ce9ad0464abc186d987eb0b5662e061c",
+            "head_blob_lf": "d330cc5031c6c72f00474b79929246b9"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/trusted_context.py",
+          "container_md5": "e2a0c8b08872b7a08e0cb312987ed789",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "e2a0c8b08872b7a08e0cb312987ed789",
+            "worktree_lf": "e2a0c8b08872b7a08e0cb312987ed789",
+            "head_blob_lf": "7736d1d7ca802d81db77d8f93c408ecd"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/api/runner.py",
+          "container_md5": "84a86573907cb8b3bb77d60a4cb27ae6",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "84a86573907cb8b3bb77d60a4cb27ae6",
+            "worktree_lf": "84a86573907cb8b3bb77d60a4cb27ae6",
+            "head_blob_lf": "a1af11d18db6095cf35db410b3f6065b"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/api/errors.py",
+          "container_md5": "95807b7bbee884ab70adb8b62326600a",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "95807b7bbee884ab70adb8b62326600a",
+            "worktree_lf": "95807b7bbee884ab70adb8b62326600a",
+            "head_blob_lf": "e199a614f65b1838c78286be494befa3"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/api/ratelimit.py",
+          "container_md5": "7d2cdc4d387ae9339e6d03792e196a2a",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "7d2cdc4d387ae9339e6d03792e196a2a",
+            "worktree_lf": "7d2cdc4d387ae9339e6d03792e196a2a",
+            "head_blob_lf": "2de7fc0c422a4dcb4116b61bc80c088e"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/repo/audit_read.py",
+          "container_md5": "3bdae88fd83bd842441f22fa652d3db2",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "3bdae88fd83bd842441f22fa652d3db2",
+            "worktree_lf": "3bdae88fd83bd842441f22fa652d3db2",
+            "head_blob_lf": "afeaaf955b180a3455c58a7c5401fb3d"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/api/routers/semantic.py",
+          "container_md5": "713e628346badd5e3810c065d2e26c79",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "713e628346badd5e3810c065d2e26c79",
+            "worktree_lf": "713e628346badd5e3810c065d2e26c79",
+            "head_blob_lf": "d89704ad0eabfe2bb4f0620d76cbf488"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/api/routers/admin_audit.py",
+          "container_md5": "fc59870412d15f3f4639d1a854a949b3",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "fc59870412d15f3f4639d1a854a949b3",
+            "worktree_lf": "fc59870412d15f3f4639d1a854a949b3",
+            "head_blob_lf": "83489eb979899677d86f0cce03f8b44a"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/present/audit_view.py",
+          "container_md5": "bccf5e4c4124b25d1ba49386a3de8f98",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "bccf5e4c4124b25d1ba49386a3de8f98",
+            "worktree_lf": "bccf5e4c4124b25d1ba49386a3de8f98",
+            "head_blob_lf": "7cf3ff5136345d4b63fe6a65021f9bf1"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/present/eval_launch.py",
+          "container_md5": "971c951fb97ded589bfa256e42fedb83",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "971c951fb97ded589bfa256e42fedb83",
+            "worktree_lf": "971c951fb97ded589bfa256e42fedb83",
+            "head_blob_lf": "a26f9c0767e5d4308bcdd00fe2176fdc"
+          },
+          "verdict": "SAME"
+        }
+      ],
+      "app_tree_aggregate": {
+        "files_count_git": 158,
+        "files_count_container": 158,
+        "aggregate_md5_lf_normalized": {
+          "container": "2a7e07f45f842e1524ef30570fcd7f30",
+          "worktree": "2a7e07f45f842e1524ef30570fcd7f30",
+          "head_blob": "2a7e07f45f842e1524ef30570fcd7f30"
+        },
+        "three_way_equal": true,
+        "ruler": "三面同一算法：LF 归一后逐文件 md5 ＋「md5 + 两个空格 + 相对路径」整段列表再取 md5",
+        "note": "🔻 旧版聚合尺因容器侧带 `./` 前缀而三列永不相等 ⇒ 当时的『不等』不构成证据；本字段换代后才有判别力。逐件面 `layer1_2.files` 是独立第二把尺，两把相互印证。"
+      }
+    },
+    "layer3_behavior": {
+      "module": "app.graph.state",
+      "symbol": "RUN_SCOPED_STATE_FIELDS",
+      "present": true,
+      "size": 47
+    },
+    "why_this_matters": "落库面没有构建身份列（07 §4.8 的 U-129 行尾上限）⇒ 当期性只能由这一格自证"
+  }
+}

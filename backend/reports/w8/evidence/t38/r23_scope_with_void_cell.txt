@@ -1,0 +1,127 @@
+k|pairs|distinct_tk|multi_thread_tk
+①唯一性|1434|1434|0
+(1 row)
+k|audit_rows|mapped|unmapped|threads|users
+②覆盖|10|10|0|4|1
+(1 row)
+k|first_in_window|had_history
+③thread 起点|4|0
+(1 row)
+prev|cur|n
+success|success|2
+clarify|failed|1
+failed|clarify|1
+failed|success|1
+success|refuse|1
+(5 rows)
+jump|n
+refuse→failed|0
+failed→refuse|0
+任意→failed(浅失败族)|3
+(3 rows)
+prev_on_thread|n
+(0 rows)
+arm|runs|shallow_failed|deep_failed|ok|refuse|clarify
+thread 第 2 轮+|6|0|1|3|1|1
+thread 首轮|4|0|2|2|0|0
+(2 rows)
+depth|threads|runs
+1 轮|1|1
+3 轮|3|9
+(2 rows)
+tk|thread_id|turn|no_audit_row
+tk_6a1a6c029be7427cb41c7dac2ce736e1|T_A:u_f04:ss_855a8ae7da8e4646908680261201d96a|2|t
+tk_398fa097c589466ba6b61c35a2b633cb|T_A:u_f06:ss_74cb4f539a94489e88ab66da133b184a|2|t
+tk_a1e54c1d5d8c49bb8cd7117703020f45|T_A:u_f07:ss_e664858de2ab486ca4d033c556278dc7|2|t
+tk_9f575a098ecf4ac6be50649f20a18b23|T_A:u_f09:ss_fd3739ac40f348f598107a234fde5964|2|t
+(4 rows)
+arm|runs|no_audit_row
+turn1|1351|504
+turn2plus|83|13
+(2 rows)
+prev_outcome|no_row_turn2plus
+refuse|6
+success|5
+(前一条也无行)|2
+(3 rows)
+k|rows_|threads_
+checkpoint_blobs channel=terminal|872|847
+(1 row)
+k|rows_|threads_
+全库 thread 数|1356|0
+(1 row)
+k|n
+⑫b 无谓词 thread|1356
+(1 row)
+k|n
+⑫b 带 tk_ 谓词 thread|1351
+(1 row)
+k|n
+⑫b 无任何 tk_ 组的 thread|5
+(1 row)
+prev_outcome|turn2plus_runs|no_row|no_row_pct|users_bear|users_clean
+refuse|22|6|27.3|6|8
+clarify|21|0|0.0|0|9
+failed|20|0|0.0|0|12
+success|18|5|27.8|5|10
+(前一条也无行)|2|2|100.0|1|0
+(5 rows)
+prev_outcome|hour_bucket|no_row|runs|users
+refuse|09-28 10|t|6|u_b01,u_b02,u_b03,u_b04,u_b05,u_b07
+success|09-29 06|t|5|u_f00,u_f04,u_f06,u_f07,u_f09
+success|10-01 12|f|2|u_r3101,u_r3103
+success|10-03 07|f|1|u_demo
+success|10-03 17|f|1|u_dev
+success|10-04 09|f|2|u_t28_owner
+success|10-05 04|f|3|u_r12_01,u_r12_02,u_r12_03
+success|10-05 05|f|1|u_walk_r12
+success|10-06 04|f|3|u_t38c3
+(前一条也无行)|09-28 10|t|2|u_b07
+(10 rows)
+k|runs_all|runs_turn1|runs_t2|rows_t2|crash_turn2plus|gap_literal_do_not_use|gap_both_restricted|users_n|scope_empty__if_true_suspect_vars
+⑭验收(按前缀+窗)|10|4|6|6|0|4|0|1|f
+(1 row)
+k|threads_in_win|runs_in_win|threads_with_prehistory|window_turn_would_be_wrong
+⑭b turn 计算顺序守卫|4|10|0|f
+(1 row)
+k|runs_in_scope|crash_turn2plus|last_run_in_scope|read_age_s|observed_max_lag_s|lag_sample_n|too_soon_to_read
+⑭c 读数年龄与静默期|10|0|10-06 04:26:15|157.2|187.6|917|t
+(1 row)
+k|runs_in_scope|t2_runs|arm1_zero_row_runs__want_0|arm2_multi_row_runs__want_0|max_rows_per_t2_run|scope_empty__if_true_suspect_vars
+⑮ A17 两臂（分母=run）|10|6|0|0|1|f
+(1 row)
+k|runs_in_scope|t2_runs|t2_with_terminal_write|t2_routed_audit_supp|t2_routed_terminal_exit|crash_t2_routed_audit_supp|t2_runs_no_write_face|max_routes_per_run|scope_empty__if_true_suspect_vars
+⑯ 写面可行性（分母=run，面=lg.checkpoint_writes）|10|6|6|3|6|0|0|16|f
+(1 row)
+k|turn_of_terminal_write|runs|zero_audit_row_runs
+⑯b 全库 terminal 写的 run 归属|1|847|0
+⑯b 全库 terminal 写的 run 归属|2|17|0
+⑯b 全库 terminal 写的 run 归属|3|4|0
+⑯b 全库 terminal 写的 run 归属|4|1|0
+(4 rows)
+k|runs_in_scope|t2_runs|ge2_routed_supp_no_terminal_write|ge3_t2_with_terminal_write|ge3_verdict|ge2_verdict|scope_empty__if_true_suspect_vars|t2_routed_supp__ge2_第四件前置|shape_ok__t23|g1_no_delim__want_0|g2_start_outside_seg2__want_0
+⑰ U-129 格2/格3（分母=run，粒度=run）|10|6|0|6|ge3 达成（>=1）|ge2 = 0 且 t2_routed_supp = 3 ⇒ 非空真达成|f|3|t|0|0
+(1 row)
+k|route_rows|tk_checkpoint_rows|tk_runs|route_unmatched_rows|route_unmatched_threads|unmatched_before_first_tk|unmatched_at_or_after_first_tk|threads_with_late_unmatched
+⑰b 路由行归属形状（全库）|9095|11376|1434|1352|1352|1351|0|0
+(1 row)
+k|domain_ruler|domain|t2_runs|t2_routed_supp__n|ge2_routed_supp_no_terminal_write|ge3_t2_with_terminal_write|shape_ok__t23|g1_no_delim__want_0|g2_start_outside_seg2__want_0|verdict__t23
+⑰c 分域并报|A 按修法时刻（日期代理，非构建身份）|post_fix|22|10|0|22|t|0|0|非空真达成（ge2 = 0 且 n = 10 ⇒ 引这格必须同框带 n）
+⑰c 分域并报|A 按修法时刻（日期代理，非构建身份）|pre_fix|61|5|5|0|t|0|0|未达成（ge2 = 5，n = 5）
+⑰c 分域并报|B 按日（分布可见性，当期与 A 必然同值）|2026-09-16|0|0|0|0|t|0|0|n/a__该域空真（无被路由进 audit_supp 的 turn>=2 run ⇒ 第四件前置 t2_routed_supp > 0 不满足，不许记 0）
+⑰c 分域并报|B 按日（分布可见性，当期与 A 必然同值）|2026-09-19|15|0|0|0|t|0|0|n/a__该域空真（无被路由进 audit_supp 的 turn>=2 run ⇒ 第四件前置 t2_routed_supp > 0 不满足，不许记 0）
+⑰c 分域并报|B 按日（分布可见性，当期与 A 必然同值）|2026-09-20|0|0|0|0|t|0|0|n/a__该域空真（无被路由进 audit_supp 的 turn>=2 run ⇒ 第四件前置 t2_routed_supp > 0 不满足，不许记 0）
+⑰c 分域并报|B 按日（分布可见性，当期与 A 必然同值）|2026-09-21|0|0|0|0|t|0|0|n/a__该域空真（无被路由进 audit_supp 的 turn>=2 run ⇒ 第四件前置 t2_routed_supp > 0 不满足，不许记 0）
+⑰c 分域并报|B 按日（分布可见性，当期与 A 必然同值）|2026-09-22|0|0|0|0|t|0|0|n/a__该域空真（无被路由进 audit_supp 的 turn>=2 run ⇒ 第四件前置 t2_routed_supp > 0 不满足，不许记 0）
+⑰c 分域并报|B 按日（分布可见性，当期与 A 必然同值）|2026-09-23|0|0|0|0|t|0|0|n/a__该域空真（无被路由进 audit_supp 的 turn>=2 run ⇒ 第四件前置 t2_routed_supp > 0 不满足，不许记 0）
+⑰c 分域并报|B 按日（分布可见性，当期与 A 必然同值）|2026-09-28|8|0|0|0|t|0|0|n/a__该域空真（无被路由进 audit_supp 的 turn>=2 run ⇒ 第四件前置 t2_routed_supp > 0 不满足，不许记 0）
+⑰c 分域并报|B 按日（分布可见性，当期与 A 必然同值）|2026-09-29|38|5|5|0|t|0|0|未达成（ge2 = 5，n = 5）
+⑰c 分域并报|B 按日（分布可见性，当期与 A 必然同值）|2026-10-01|3|1|0|3|t|0|0|非空真达成（ge2 = 0 且 n = 1 ⇒ 引这格必须同框带 n）
+⑰c 分域并报|B 按日（分布可见性，当期与 A 必然同值）|2026-10-03|5|4|0|5|t|0|0|非空真达成（ge2 = 0 且 n = 4 ⇒ 引这格必须同框带 n）
+⑰c 分域并报|B 按日（分布可见性，当期与 A 必然同值）|2026-10-04|4|1|0|4|t|0|0|非空真达成（ge2 = 0 且 n = 1 ⇒ 引这格必须同框带 n）
+⑰c 分域并报|B 按日（分布可见性，当期与 A 必然同值）|2026-10-05|4|1|0|4|t|0|0|非空真达成（ge2 = 0 且 n = 1 ⇒ 引这格必须同框带 n）
+⑰c 分域并报|B 按日（分布可见性，当期与 A 必然同值）|2026-10-06|6|3|0|6|t|0|0|非空真达成（ge2 = 0 且 n = 3 ⇒ 引这格必须同框带 n）
+(15 rows)
+k|terminal_rows|g1_no_delim__want_0|g2_start_outside_seg2__want_0|start_rows_excluded|seg2_node_kinds|start_rows_with_literal_null_type|shape_ok
+⑱ 形状守卫（排除式的正当性前提）|931|0|0|59|9|59|t
+(1 row)
