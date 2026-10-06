@@ -1159,11 +1159,11 @@ B ｜ 装配件那把"花费窗锚在 git 提交时刻"的尺，裁一次（QA �
 - ⚠️ 不许顺手改聚合键（`读数.aggregate_three_way_equal` 与尺 `:150` 的旧键兼容是第 19 轮刚钉的）。
 
 C ｜ 门禁判词的**身份面**重取一把（零额度，但必须"先入库再起跑"）
-- 现读事实：`backend/reports/w6/eval_metrics.json` 自报 `meta.git.rev = f7bf106`（`git rev-list --count f7bf106` = **457**）而 HEAD = **469**；装配件 f 格 = `5a6caed`／456 笔／offline **2,485**／integration **124** ⇒ **两份取证件互也不同面、且都旧 12 笔**。判定分布我重数 = PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2（没变）。
+- 现读事实：`backend/reports/w6/eval_metrics.json` 自报 `meta.git.rev = f7bf106`（`git rev-list --count f7bf106` = **457**）；装配件 f 格 = `5a6caed`／**456** 笔／offline **2,485**／integration **124** ⇒ **两份取证件互也不同面（差一笔）**。🔴 HEAD 一栏请按起跑时实读（尺 = `git rev-parse --short HEAD` ＋ `git rev-list --count HEAD`）；QA 第 23 轮落库后现测 = `c082e90`／**470** 笔 ⇒ 那两份分别旧 **13／14** 笔。判定分布我重数 = PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2（没变）。
 - 🔴 **两把 G-1 判定输入本窗已现读 = 都在场**（`backend/reports/w8/_r16_offline_cleantree.log` **3,423 B / 10-06 15:19**、`_integration_pytest_1006_rT39_v.log` **15,600 B / 10-06 15:21**）⇒ **C 不需要重跑任何测试**：直接重跑 `eval/reporter.py`（两遍、`--json-out`/`--md-out` 指**仓库外**、干净树），用尺 `reports/qa/prompts/diff_recompute_meta.py` 判"判定量 = 0"，最后一把写回库内件。
   - ⚠️ 但这两把是**未跟踪件**（`.gitignore:47 *.log`）⇒ 异地不可复算（§4.8 v1.7.24 第三条），入库件的 `meta.git` 只代表"当时代跑过这两把日志"，不代表"别人能重跑"。
   - 🚫 不许 `-q` 跑集成再喂 reporter（第 16 轮自曝：G-1 会掉成 `PARTIAL`）；若你们选择连一次性库一起重建集成面，那才需要 建→授权→owner→alembic `0006`→`-v`→当场 DROP→残渣尺 = 2。
-- 结案条件 = 入库件 `meta.git.rev` = 当期 HEAD 且 `dirty = false` ＋ 八格判定词**一格没变**（变了就具名报哪格）＋ 复算入口两格并报。
+- 结案条件 = 入库件 `meta.git.rev` = 起跑后当期 HEAD 且 `dirty = false` ＋ 八格判定词**一格没变**（变了就具名报哪格）＋ 复算入口两格并报（件内自报 ⟷ `git log -1 --format=%h -- backend/reports/w6/eval_metrics.json`）。
 
 D ｜ 收尾一致性一把（对外三件互指要对得上）
 - `OVERVIEW §7` 报告指针、`DELIVERY` 第 19/20 轮行、`ACCEPTANCE §5`/`§6` 现状句三处逐处现读：轮次、HEAD 短码＋笔数、门禁八格、G-6「9 < 20 不可引用」、`PASS 1/8`、"镜像未重建 ⇒ 页面看不到新文案"、"演示那句仍卡 R06 列面"。
