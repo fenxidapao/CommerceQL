@@ -2603,3 +2603,121 @@ QA 12.6 在 `9e45281` 干净树上跑出 1 error（UP020），而我 §十一.2 
 
 - 本节落笔时 HEAD = `360498d`／**460** 笔；本段落笔笔 = **下一笔**（尺 = `git log -1 --format='%h %cI' -- backend/reports/w8/RELAY.md`）⇒ 🔴 本轮**没有新的门禁入库件**，两个身份格分别是：`eval_metrics.json` 自报 `f7bf106`／dirty false ⟷ 其入库笔 `ee7c3d9`。
 - 落笔尺（都跑了）：**行首段标题命中** `## §十八` = 追加前 **0** ⟷ 追加后 **1**（🔴 只数行首；本行自己就带一次引用）；`## §十七` 仍 = **1**（§17.6 ⑧ 那条就地 🔻 不新增段标题，尺 = 现读 `startswith`）；排版尺 = `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/_audit_layout.py backend/reports/w8/RELAY.md "## §十八"` ⇒ 本节新增问题必须 **0**；行尾尺 = `RELAY.md` CRLF **0**、LF == 行数。
+
+
+## §十九 第 18 轮复算（**W8 第 18 轮 T-42「零额度三件 A–C」｜本轮唯一代码写面 = 量具自己** ｜ 2026-10-06 19:2x 起 ＋0800 ／ 11:2x 起 UTC ｜ 起点 HEAD `28c580b`／462 笔 ｜ 🔴 **零额度、零出站、没建一次性库**；共享 `ecom` 只走 `begin; … rollback;`）
+
+> 判向一句话：**A 的三条结案读数全部现测拿到（尺修好了、而且第 ③ 条是红的 —— 红才对）；B 四处同轮换完并各自钉了就地 🔻；C 本窗裁定取 `U-139`。** 真正的新信息有两条：① 那句「三面相等」不是"当时算错"，是**当时那把尺没量 git 面**（结论没错、证据强度被高估）；② **被测容器 `w7load-api` 已不在场** ⇒ 下一把花钱批（T-40）的靶子必须总控点一句。
+
+### 19.0 起点、边界、零花费（同次运行）
+
+| 尺 | 读数 |
+|---|---|
+| 起点 | HEAD `28c580b`／**462** 笔／`git status --porcelain` = **0 行**；`git ls-remote origin main` = `28c580b…` 全等（第 17 轮 `07b4c90` 已在里面） |
+| 越界尺（写面） | 本轮改动 = **4 件已跟踪 ＋ 1 个新目录**：`deploy/loadtest/attest_build_identity.py`（唯一代码件）／`OVERVIEW.md`／`docs/07_技术设计文档_TDD.md`／`deliverables/ACCEPTANCE.md` ＋ 未跟踪 `backend/reports/w8/evidence/t42/`（3 件取证件）。逐路径计数：`backend/app` **0**／`backend/tests` **0**／`eval` **0**／`frontend` **0**／`backend/reports/qa` **0**／`deploy/loadtest/driver.py` **0** ⇒ 派单"一字不动"六面全部成立 |
+| 🔴 额度 | **零花费**：`app.cost_ledger` = **1,757 行／¥2.897712／max `2026-10-06 04:26:19.595108+00`** ⟷ 第 15／16／17 轮收口值**逐位相同**（尺 = `docker exec -i commerceql-pg-1 psql -U postgres -d ecom -q -t -A -c "begin; … rollback;"`，现测 11:30:40Z） |
+| 只读面没被写 | `app.audit_log` = **917 行／max `"timestamp" = 2026-10-06 04:26:21.437511+00`**（＝第 15 轮那把批的末行）⇒ 本轮**零业务写** |
+| 一次性库 | **本轮没建**（派单禁止）⇒ 残渣尺 `datname like 'ecom%'` = **2**（`ecom` ＋ 别窗的 `ecom_u123_probe`，不删） |
+| Docker 面 | **没 build／没 recreate／没 start**；只用 `docker exec … md5sum` ＋ `docker exec … python -c`（层 3 与聚合尺）＋ `docker inspect` 读 |
+| 新增跟踪件凭据扫描 | 新落盘 3 件取证件 ＋ 1 件改动尺 ⇒ 六类字面量（`DEEPSEEK_API_KEY`／`-----BEGIN`／`postgresql://`／`password`／`secret`／`sk-`）逐件扫 = **0 命中** |
+
+### 19.1 A ｜ 坏尺的机制、修法与单变量对照（同一件、同一容器、同一 HEAD，只换尺）
+
+**机制**（`deploy/loadtest/attest_build_identity.py` 现读行号）：`_run()` 在 `:54` 返回 `(p.stdout or "").strip()`，`_git()`（`:57`）复用它，而旧 `attest_file()` 的 blob 取面（`:71`）写的就是 `(_git("show", f"{rev}:{rel}")).replace("\r\n","\n").encode()` ⇒ **Python 源文件必有结尾换行** ⇒ `head_blob_lf` 比的是"去掉结尾换行的 git 输出" ⇒ **结构上永远不等于真 blob** ⇒ "三面"里 git 那一面从未参与比较。同一条链上 `attest_tree()` 是**对的**（它走 `_git_bytes()` ＋ `_lf_md5()`）⇒ 这处坏只坏在逐件面。
+
+| 件 | 容器 md5 | `worktree_raw` | `worktree_lf` | `head_blob_lf` **修前** | `head_blob_lf` **修后** | 独立真值 `git show HEAD:… \| md5sum` | 两链判定（修后） |
+|---|---|---|---|---|---|---|---|
+| `backend/app/api/ratelimit.py` | `7d2cdc4d…` | `7d2cdc4d…` | `7d2cdc4d…` | `2de7fc0c…`（✗） | **`7d2cdc4d…`** | `7d2cdc4d…` | **① 三把全等 ＋ 链一 SAME ＋ 链二 SAME** |
+| `backend/app/graph/state.py` | `58dc5462…` | `58dc5462…` | `0474ef6a…` | `10dbb4e1…`（✗，＝第 17 轮我算出的那个值） | **`0474ef6af7e32345b538456c28735513`** | `0474ef6af7e32345b538456c28735513` | **② 逐字符同值 ＋ 链一 SAME（命中 `worktree_raw`＝CRLF 面）＋ 链二 SAME** |
+| `backend/app/guard/ast_gate.py` | `cf698983…` | `f0c9e616…` | `a9443bff…` | `922d420c…`（✗） | **`a9443bff…`** | `a9443bff…` | **③ 无命中（`verdict = DIFF`／`matched_variant = null`）＝尺有判别力；链二 SAME／链一 DIFF** |
+
+聚合面（`app/**.py` 全量，158 件对 158 件）：**链一 = False**（容器侧 `2a7e07f4…` ⟂ 工作树＝HEAD `f49903a2…`）、**链二 = True** ⇒ 与第 16 轮改了 `app/guard/**` 两件而镜像未重建这件事**完全自洽**；层 3 `RUN_SCOPED_STATE_FIELDS` present、size = **47**。
+
+**修法**：`blob = _git_bytes("show", f"{head_rev}:{rel}")` ＋ `head_blob_lf = _lf_md5(blob)`（**不 strip**）；三把变体逐把具名保留；新增逐件 `worktree_vs_head_lf`（链二直读）与聚合 `two_links`（`container_vs_worktree`／`worktree_vs_head`）。⚠️ **旧键 `three_way_equal` 保留不删**——它有下游消费者 `backend/reports/w8/t38_assemble.py:195`，而"本轮代码写面只有一件"是硬边界 ⇒ 我在键旁注了"等价于两链同时为真"，没去动第二件代码（记在 §19.7 第 4 条）。
+
+**`--self-test` 三臂**（零 docker、零网络，形状照 `tests/contract/` 那种"正例 ＋ 对拍 ＋ 负例"，因为 `backend/tests/**` 本轮冻结）：① 钉住 `33675b9:backend/app/graph/state.py` 的 blob md5 = `0474ef6af7e32345b538456c28735513`（**这串是 `§16.5` 层 2 表现测表里的事实**，不是我造的基准）；② `git show` 与 `git rev-parse ＋ git cat-file` **两条独立取面路径**对拍（避免同源自证）；③ 负例 = 结尾换行被 strip 必须改变 md5（`b8ddd125… ⟂ dc5cbb8a…`）⇒ **谁把 `.strip()` 加回 blob 那一路，本臂就红**。现测 **3/3 PASS／rc 0**。
+🔴 为什么第 ③ 条红才是 A 达成：派单原话"不许把尺糊成 SAME"。修后 `ast_gate.py` 报 DIFF ⇒ 说明这把握住了"容器 ≠ 工作树"，也正是限定语 (c) 的硬证据（第 16 轮的改动在树里、不在构建里）。
+
+### 19.2 B ｜ 四处同轮 ＋ 三处就地 🔻（行号现测）
+
+| # | 文件 : 行号（本轮写后现测） | 落点 | 行首锚点（写前命中 ⟷ 写后命中） |
+|---|---|---|---|
+| 1 | `OVERVIEW.md:233–236`（新块）＋ `:234`（首条 bullet 行首） | §6 第 18 轮块：两链定义 ＋ 三条修后读数 ＋ "不是把第 15 轮判作废" ＋ 环境事实 | `🔻 **10-06 19:2x 起` **0 ⟷ 1** |
+| 2 | `OVERVIEW.md:185`（第 15 轮那句旧主张后面） | **就地** 🔻：那句「全量 158/158 三面聚合相等（容器 = 工作树 = HEAD blob）」钉上订正标记 | 锚点串 `158/158 三面聚合相等（LF 归一后` **1 ⟷ 1**（行内追加，原文一字未删） |
+| 3 | `OVERVIEW.md:261`（§7「两个身份格」那行行尾） | §7 只证链二（reporter 的 `rev + dirty`），链一不在它输出里 ⇒ 凡涉活体容器的当期句两链并报 | 该行行尾新增，行首串不变 |
+| 4 | `deliverables/ACCEPTANCE.md:91–95`（新块）＋ `:76`／`:82`（两处旧句就地钉 🔻） | ① 「三面」二字作废 ＋ 答辩讲法；② 三条结案读数 ＋ 复算入口；③ 演示前置（容器不在场 ⇒ 别把共享栈读数当被测构建） | `🔻 **10-06 19:2x +0800` **0 ⟷ 1**；两个旧锚各 **1 ⟷ 1** |
+| 5 | `docs/07_技术设计文档_TDD.md:3228`（§16.5 三层表**层 1 行**） | 定义处换代：`单文件 md5 **两链**相等` ＋ 🔻 订正本行原句「三面相等」＋ 修后三把现测 | `单文件 md5 **两链**相等` **0 ⟷ 1**；`单文件 md5 三面相等` **1 ⟷ 0** |
+| 6 | `docs/07_技术设计文档_TDD.md:1162`（**`U-129` 行限定语 (a)** 行尾） | (a) 的**事实描述**按两链读；判据措辞一字未动（原判据① 那句「三面转绿读数」指的是审计三面，与构建身份无关 ⇒ **不改、也不冲突**） | `就地订正 (a) 那半句` **0 ⟷ 1** |
+| 7 | `docs/07_技术设计文档_TDD.md:80`（**v1.7.25 修订行**内） | 🔴 **点名两份抄本**：层 1 行（已就地改）＋ **v1.7.22 修订行**里那句「全量 158 件三面聚合相等」⇒ 历史修订行**不回改**，由新行具名作废其措辞 | `点名两份抄本` **1 ⟷ 2**（第 1 次是 v1.7.15 那轮的同族句） |
+
+⚠️ **一句必须留档的限定**：`docs/07:82`（v1.7.22 修订行）与 `OVERVIEW:185`／`ACCEPTANCE:76`／`:82` 里的**数字与读数都不动**——本轮改的是"这句话能支撑什么结论"，不是"当时量到了什么"。
+
+### 19.3 C ｜ 取号裁定：**取 `U-139`**（本窗裁，QA 已把裁定权交回）
+
+- **取号依据（盘上唯一权威）** = `docs/07 §4.8` 指针行 v1.7.24 那句「下一个可用号 = `U-139`」；本轮落笔后该行（`:1085`）已抬到 **`U-140`**，登记表新增 **`U-139` 行（`:1179`）**，修订表新增 **v1.7.25（`:80`）**，`文档版本` 字段（`:11`）一并抬到 v1.7.25。
+- **三条理由全部采纳**：① 错述被**对外件**引用（`OVERVIEW`／`ACCEPTANCE` 都写着「158 件三面相等」）⇒ 跨窗可读，不是本窗内部事；② 修法动 `deploy/**` ⇒ **不是纯落笔**；③ 与 `U-138`（回执分组键／形状）对象不同 ⇒ 按 §4.8 规则 ② 不并号。
+- **否掉的另一形状**（"不取号、只在 §4.8 具名登记错述"）：登记句没法承载**判据**——这把尺需要一条能被复算的结案条件（三条读数 ＋ `--self-test`），而 §4.8 的"不占号纪律"要求"无判据的流程规则不立案"。⇒ **取号更符合盘上规矩**。
+
+### 19.4 门与回归面（本轮 rc 全部现测）
+
+| 尺 | 读数 |
+|---|---|
+| `ruff check --config pyproject.toml app`（cwd = `backend/`） | **rc 0／All checks passed!**（`backend/app` 本轮 0 差异 ⇒ 属"未改动确认"） |
+| `mypy app` | **Success: no issues found in 158 source files** |
+| `lint-imports`（cwd = `backend/`，认 `Contracts:` 行） | **4 kept, 0 broken** |
+| `pytest tests/contract tests/redteam tests/graph_snapshot -q` | **639 passed／rc 0**（＝契约 615 ＋ 红队 11 ＋ 快照 13，逐目录相加对得上） |
+| 前端两门 `npx tsc --noEmit`／`npx eslint . --ext .ts,.tsx` | 各 **rc 0／输出 0 字节**（`git diff --name-only HEAD -- frontend` = **0 行**） |
+| `attest_build_identity.py --self-test` | **3/3 PASS／rc 0** |
+| 🔻 **本窗自曝两处落笔缺陷**（都由列数尺抓到、当场修，见 §19.6 第 2 条） | ① 层 1 行被我**重复了一次行首前缀** `> \| **1（最弱）** \| `；② 三个表行里的 code span `` `git show HEAD:… \| md5sum` `` 用了**裸竖线** ⇒ 会把表格切开 ⇒ 全改成转义竖线（尺 = `E:/tmp_qoder/r18/fix_docs_table.py`） |
+
+### 19.5 串行资源表（六面逐条给尺，落笔时重跑）
+
+| 资源面 | 本轮处置 | 尺与读数 |
+|---|---|---|
+| git 索引 | **只按名 stage**，无 `add -A`／`add .`／reset／clean | 见 §19.0 越界尺行（4 件 ＋ 1 新目录）；提交后 `git show --stat` 复核落 §19.6 |
+| 共享 `ecom` | **只读**（一律 `begin; … rollback;`） | 台账 1,757／¥2.897712／max 未变 ＋ `audit_log` 917 行／max `04:26:21.437511+00` 未涨 ⇒ **本轮零写、零调用** |
+| 一次性库 | **没建**（派单禁止） | 残渣 `datname like 'ecom%'` = **2** |
+| 容器面 | **没 build／没 recreate／没 start**，只 `docker exec` 读 | 🔴 **新事实**：`w7load-api` **不在 `docker ps -a`**（只剩 6 天前的 `w7load-api_pre0930r11_bak`），镜像 `w7load-api:latest` = digest `4adbcfc2e8f6`／image `Created 2026-10-04T16:06:22.532865Z` ⇒ 本轮容器面取自**共享栈** `commerceql-api-1`（`image_ref commerceql-api`／`image_id sha256:ca34ea791a81…`／容器 `Created 2026-10-05T15:19:26.686587Z`）⇒ 与 `§16.5` **禁令 ②**（共享栈不是被测构建）有张力，见 §19.6 第 3 条 |
+| 凭据 | 永不提交、永不打印 | 新增/改动四件六类字面量 **0 命中**；本轮没读过 `deploy/.env` 内容 |
+| 🔴 额度 | **零花费** | 台账逐位同前轮（§19.0）；T-40 那把**没启动、没预检发起、没花一分钱** |
+
+### 19.6 交回总控（本轮新增的三句）
+
+1. 🔴 **T-40 的靶子要先点一句**：被测容器已不在场（§19.5），要么**照实按"被测面 = 共享栈镜像 `ca34ea791a81…`"跑**（第 15 轮那把批本来就是这面），要么**单独批一次重建**。⚠️ 重建镜像归总控 ⇒ 本窗不擅自 `docker build`。
+2. ⚠️ **旧标签错位一处（不改历史读数，只改标签）**：`§16.5`／回执里那句「镜像 `Created = 2026-10-05T15:19:26Z`」量的是**容器**创建时间（`docker inspect .Created` 打在容器上），镜像的 `Created` = `2026-10-05T15:19:25Z`（`commerceql-api`）／`2026-10-04T16:06:22Z`（`w7load-api:latest`）⇒ 两链措辞里必须分开写，本轮已按此写。
+3. ⚠️ **`t38_assemble.py` 仍读旧键 `three_way_equal`**：我保留该键（等价"两链都真"）以守"本轮代码写面只有一件"⇒ 若 QA 认为该件也该改成两链口径，那是一笔新边界（属第 19 轮或并入 T-40 随交）。
+
+### 19.7 没达成什么（如实）
+
+1. **门禁八格本轮没重算**：判定输入（两把日志／p0-summary／回执）一字未动 ⇒ 对外仍 **PASS 1/8**（入库件是第 16 轮那份）。尺的修复不改变任何判定量。
+2. **`G-6`／`U-138` 后半仍未结**：要那份带 `worker_session_depth` 的真回执 ＝ 出站一把 ⇒ 等 T-40（本窗没花一分钱）。
+3. **活体页面仍看不到新文案**：镜像没重建 ⇒ 限定语 (c) 成立，本轮 §19.1 那张表反而把它量成了硬读数。
+4. **`deploy/**` 整体不在 ruff 门禁面里**：现测 `ruff check --config backend/pyproject.toml deploy` = **25 条**（含我这件的 7 条 E741/SIM115，全部在**我没碰的行**上）⇒ 改动前后**同一件计数 7 → 7（未新增）**。是否把 `deploy/**` 纳入门禁面属判据／边界，本窗不自扩。
+
+### 19.8 复算入口（全部零额度）
+
+```bash
+# A：尺自检（不碰容器、不出站）
+PYTHONUTF8=1 .venv/Scripts/python.exe deploy/loadtest/attest_build_identity.py --self-test
+# A：三条结案读数（把回执指到仓库外副本，🔴 别指入库回执）
+printf '{}\n' > E:/tmp_qoder/r18/probe_post.json
+PYTHONUTF8=1 .venv/Scripts/python.exe deploy/loadtest/attest_build_identity.py \
+  --receipt E:/tmp_qoder/r18/probe_post.json --container commerceql-api-1 \
+  --files backend/app/api/ratelimit.py,backend/app/graph/state.py,backend/app/guard/ast_gate.py
+# ② 的独立真值（派单给的那把尺，逐字符对 `head_blob_lf`）
+git show HEAD:backend/app/graph/state.py | md5sum     # 0474ef6af7e32345b538456c28735513
+# ① 的钉住真值（§16.5 层 2 表那行）
+git show 33675b9:backend/app/graph/state.py | md5sum  # 0474ef6af7e32345b538456c28735513
+# 零花费与残渣
+docker exec -i commerceql-pg-1 psql -U postgres -d ecom -q -t -A -c "begin; select count(*), to_char(sum(cost_cny),'FM999990.000000'), max(created_at) from app.cost_ledger; rollback;"
+docker exec -i commerceql-pg-1 psql -U postgres -d postgres -q -t -A -c "begin; select datname from pg_database where datname like 'ecom%'; rollback;"
+```
+
+入库取证件 = `backend/reports/w8/evidence/t42/attest_pre_fix_probe.json`（修前控制）／`attest_post_fix_probe.json`（修后）／`attest_closure.json`（三条读数 ＋ 独立真值 ＋ 聚合两链）。
+
+### 19.9 落笔身份（两格并报）
+
+- 本段落笔时 HEAD = `28c580b`／**462** 笔；本窗的落库笔 = **下一笔**（尺 = `git log -1 --format='%h %cI' -- backend/reports/w8/RELAY.md`）⇒ 🔴 件内自报与入库笔天然差一笔，引用时两格并报。
+- 落笔尺：`## §十九` 行首命中 **追加前 0 ⟷ 追加后 1**；`## 第 18 轮交付` 行首命中 **0 ⟷ 1**；`docs/07` 行尾 = **CRLF 3658 == 行数 − 1、裸 LF = 0**（两口径并报：`wc -l` 3658 ⟷ 按 `\r\n` 切分 3659 条含末空串）；`OVERVIEW`／`ACCEPTANCE`／`RELAY`／`DELIVERY` 全 LF。
+- 排版尺（第 16 轮那把多重集）：`docs/07` 改前 **23** ⟷ 改后 **23**（**新增 0／消失 0**）、`OVERVIEW` **2 ⟷ 2**、`ACCEPTANCE` **0 ⟷ 0**。
+- 本轮**没动**的代码面：`backend/app/**`／`backend/tests/**`／`eval/`／`deploy/loadtest/driver.py`／迁移／`test_rls_policy_provenance.py`／`backend/reports/qa/**`（QA 面仍归 QA 那一只手）。
