@@ -1,0 +1,99 @@
+{
+  "attested_by": "deploy/loadtest/attest_build_identity.py（T-42 A 修后）",
+  "container": "commerceql-api-1",
+  "image_ref": "commerceql-api",
+  "image_id": "sha256:ca34ea791a81fae6f5f03249451214872bcd424b150549454d93e3412c4fbcb5",
+  "container_created_at": "2026-10-05T15:19:26.686587752Z",
+  "head_rev_pre": "28c580b8df94fa7dbad413e5c6b1a7555f193d55",
+  "head_rev_post": "28c580b8df94fa7dbad413e5c6b1a7555f193d55",
+  "worktree_dirty_at_attest_post": true,
+  "dirty_scope": "git status --porcelain 只有 deploy/loadtest/attest_build_identity.py；git status --porcelain -- backend/app = 0 行",
+  "defect": "修前 _git('show') 走 _run(...).strip() ⇒ head_blob_lf = md5(strip(blob))，结构上不等于真 blob",
+  "rows": [
+    {
+      "path": "backend/app/api/ratelimit.py",
+      "independent_truth_head_blob_lf": "7d2cdc4d387ae9339e6d03792e196a2a",
+      "pre_head_blob_lf": "2de7fc0c422a4dcb4116b61bc80c088e",
+      "post_head_blob_lf": "7d2cdc4d387ae9339e6d03792e196a2a",
+      "container": "7d2cdc4d387ae9339e6d03792e196a2a",
+      "post_variants": {
+        "worktree_raw": "7d2cdc4d387ae9339e6d03792e196a2a",
+        "worktree_lf": "7d2cdc4d387ae9339e6d03792e196a2a",
+        "head_blob_lf": "7d2cdc4d387ae9339e6d03792e196a2a"
+      },
+      "post_matched_variant": "worktree_raw",
+      "post_verdict": "SAME",
+      "post_worktree_vs_head_lf": "SAME"
+    },
+    {
+      "path": "backend/app/graph/state.py",
+      "independent_truth_head_blob_lf": "0474ef6af7e32345b538456c28735513",
+      "pre_head_blob_lf": "10dbb4e1fc4f62d0f46506268e87ecd6",
+      "post_head_blob_lf": "0474ef6af7e32345b538456c28735513",
+      "container": "58dc5462abb53070b794e18a3538b4ff",
+      "post_variants": {
+        "worktree_raw": "58dc5462abb53070b794e18a3538b4ff",
+        "worktree_lf": "0474ef6af7e32345b538456c28735513",
+        "head_blob_lf": "0474ef6af7e32345b538456c28735513"
+      },
+      "post_matched_variant": "worktree_raw",
+      "post_verdict": "SAME",
+      "post_worktree_vs_head_lf": "SAME"
+    },
+    {
+      "path": "backend/app/guard/ast_gate.py",
+      "independent_truth_head_blob_lf": "a9443bff14973301c27d16ef386d3c3f",
+      "pre_head_blob_lf": "922d420c4c1ba3ccdafb23ba701abea9",
+      "post_head_blob_lf": "a9443bff14973301c27d16ef386d3c3f",
+      "container": "cf698983db685b21d46e9accbe9da7c5",
+      "post_variants": {
+        "worktree_raw": "f0c9e6160392f025433c7314950feb3d",
+        "worktree_lf": "a9443bff14973301c27d16ef386d3c3f",
+        "head_blob_lf": "a9443bff14973301c27d16ef386d3c3f"
+      },
+      "post_matched_variant": null,
+      "post_verdict": "DIFF",
+      "post_worktree_vs_head_lf": "SAME"
+    }
+  ],
+  "aggregate_pre": {
+    "files_count_git": 158,
+    "files_count_container": 158,
+    "aggregate_md5_lf_normalized": {
+      "container": "2a7e07f45f842e1524ef30570fcd7f30",
+      "worktree": "f49903a22cf04d3a9d98c84971270a6c",
+      "head_blob": "f49903a22cf04d3a9d98c84971270a6c"
+    },
+    "three_way_equal": false,
+    "ruler": "三面同一算法：LF 归一后逐文件 md5 ＋「md5 + 两个空格 + 相对路径」整段列表再取 md5",
+    "note": "🔻 旧版聚合尺因容器侧带 `./` 前缀而三列永不相等 ⇒ 当时的『不等』不构成证据；本字段换代后才有判别力。逐件面 `layer1_2.files` 是独立第二把尺，两把相互印证。"
+  },
+  "aggregate_post": {
+    "files_count_git": 158,
+    "files_count_container": 158,
+    "aggregate_md5_lf_normalized": {
+      "container": "2a7e07f45f842e1524ef30570fcd7f30",
+      "worktree": "f49903a22cf04d3a9d98c84971270a6c",
+      "head_blob": "f49903a22cf04d3a9d98c84971270a6c"
+    },
+    "two_links": {
+      "container_vs_worktree": false,
+      "worktree_vs_head": true
+    },
+    "three_way_equal": false,
+    "ruler": "三面同一算法：LF 归一后逐文件 md5 ＋「md5 + 两个空格 + 相对路径」整段列表再取 md5",
+    "note": "🔻 旧版聚合尺因容器侧带 `./` 前缀而三列永不相等 ⇒ 当时的『不等』不构成证据；本字段换代后才有判别力。逐件面 `layer1_2.files` 是独立第二把尺，两把相互印证。🔻 T-42 B：相等按 `two_links` 两链引，不写『三面相等』——链一（容器 ⟷ 工作树）是这把尺量到的，链二（工作树 ⟷ HEAD）另由 `worktree_vs_head` ＋ 跑前 `worktree_dirty_at_attest` 供给。"
+  },
+  "layer3_post": {
+    "module": "app.graph.state",
+    "symbol": "RUN_SCOPED_STATE_FIELDS",
+    "present": true,
+    "size": 47
+  },
+  "closure_readings": {
+    "①_ratelimit_三把全等": true,
+    "②_state_head_blob_lf_逐字符等于独立真值": true,
+    "③_ast_gate_无命中": true
+  },
+  "self_test": "python deploy/loadtest/attest_build_identity.py --self-test ⇒ 3/3 PASS, rc=0（零 docker／零出站）"
+}

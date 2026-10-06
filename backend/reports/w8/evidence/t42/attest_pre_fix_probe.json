@@ -1,0 +1,84 @@
+{
+  "build_identity": {
+    "attested_at_utc": "2026-10-06T11:12:08+00:00",
+    "container": "commerceql-api-1",
+    "image_ref": "commerceql-api",
+    "image_id": "sha256:ca34ea791a81fae6f5f03249451214872bcd424b150549454d93e3412c4fbcb5",
+    "container_created_at": "2026-10-05T15:19:26.686587752Z",
+    "image_tags_seen": [
+      "w7load-api:1005r12 4adbcfc2e8f6",
+      "w7load-api:latest 4adbcfc2e8f6",
+      "w7load-api:0930r11 8c1eb47fb118",
+      "w7load-api:0928r10 4806c5687c4e",
+      "w7load-api:0928r9 f9b0936cb5ae",
+      "w7load-api:0923r8 b38c0fcacfb3",
+      "w7load-api:0923r7 ccabcfd72399",
+      "w7load-api:0922r6 e0c623dff4b5",
+      "w7load-api:0921r5 521956b57699",
+      "w7load-api:0921r4 b07a786cd95d",
+      "w7load-api:0921r3 f885487619bf",
+      "w7load-api:0921r2wt 740f437ac09a",
+      "w7load-api:0921r1 edf41777ee46",
+      "w7load-api:0920r2 00b5e2dd0223"
+    ],
+    "head_rev": "28c580b8df94fa7dbad413e5c6b1a7555f193d55",
+    "head_rev_short": "28c580b",
+    "worktree_dirty_at_attest": false,
+    "layer1_2": {
+      "files": [
+        {
+          "path": "backend/app/api/ratelimit.py",
+          "container_md5": "7d2cdc4d387ae9339e6d03792e196a2a",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "7d2cdc4d387ae9339e6d03792e196a2a",
+            "worktree_lf": "7d2cdc4d387ae9339e6d03792e196a2a",
+            "head_blob_lf": "2de7fc0c422a4dcb4116b61bc80c088e"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/graph/state.py",
+          "container_md5": "58dc5462abb53070b794e18a3538b4ff",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "58dc5462abb53070b794e18a3538b4ff",
+            "worktree_lf": "0474ef6af7e32345b538456c28735513",
+            "head_blob_lf": "10dbb4e1fc4f62d0f46506268e87ecd6"
+          },
+          "verdict": "SAME"
+        },
+        {
+          "path": "backend/app/guard/ast_gate.py",
+          "container_md5": "cf698983db685b21d46e9accbe9da7c5",
+          "matched_variant": null,
+          "variants": {
+            "worktree_raw": "f0c9e6160392f025433c7314950feb3d",
+            "worktree_lf": "a9443bff14973301c27d16ef386d3c3f",
+            "head_blob_lf": "922d420c4c1ba3ccdafb23ba701abea9"
+          },
+          "verdict": "DIFF"
+        }
+      ],
+      "app_tree_aggregate": {
+        "files_count_git": 158,
+        "files_count_container": 158,
+        "aggregate_md5_lf_normalized": {
+          "container": "2a7e07f45f842e1524ef30570fcd7f30",
+          "worktree": "f49903a22cf04d3a9d98c84971270a6c",
+          "head_blob": "f49903a22cf04d3a9d98c84971270a6c"
+        },
+        "three_way_equal": false,
+        "ruler": "三面同一算法：LF 归一后逐文件 md5 ＋「md5 + 两个空格 + 相对路径」整段列表再取 md5",
+        "note": "🔻 旧版聚合尺因容器侧带 `./` 前缀而三列永不相等 ⇒ 当时的『不等』不构成证据；本字段换代后才有判别力。逐件面 `layer1_2.files` 是独立第二把尺，两把相互印证。"
+      }
+    },
+    "layer3_behavior": {
+      "module": "app.graph.state",
+      "symbol": "RUN_SCOPED_STATE_FIELDS",
+      "present": true,
+      "size": 47
+    },
+    "why_this_matters": "落库面没有构建身份列（07 §4.8 的 U-129 行尾上限）⇒ 当期性只能由这一格自证"
+  }
+}
