@@ -177,7 +177,7 @@ w3a w3b w3c w3-int w4 w5 w6 w7`）各自留有 `PROMPT/DELIVERY/RELAY`。`app/` 
 🔻 **10-04 01:5x 重读 `README.md` —— 这一句已经不适用了，就地订正**：那张表**已被删除**，`README.md:12-15` 现在写的就是"进度与上线门禁的唯一当前真相 = 根 `OVERVIEW.md` §6/§7"
 ⇒ 入口不再互相打脸。⚠️ 但同一节 `README.md:28` 那句 `# 阶段 0 期望 503（硬依赖未接）` **仍是旧的**（当前栈 `/api/v1/healthz/ready` 实测 **200**）⇒ 本轮已改成"就绪即 200，503 属阶段 0 旧形状"。
 
-🔻 **10-06 第 15 轮（T-38，QA 第 17 轮派单）收口读数 —— 上面表内各格是历轮快照，现状以这一段为准**（面 = 干净树 `bea724a`／**449** 笔（⚠️ 本行落笔那一笔会把它后移 ⇒ 引用前重跑 `git rev-list --count HEAD` ＋ `git ls-remote origin main`）；时刻 = 2026-10-06 12:4x–12:5x ＋0800 = 04:4x–04:5xZ；粒度 = 逐格点名）：
+🔻 **10-06 第 15 轮（T-38，QA 第 17 轮派单）收口读数 —— 上面表内各格是历轮快照，现状以这一段为准**（面 = 干净树 `bea724a`／**449** 笔（⚠️ 本行落笔那一笔会把它后移 ⇒ 引用前重跑 `git rev-list --count HEAD` ＋ `git ls-remote origin main`）；时刻 = 2026-10-06 12:4x–12:5x ＋0800 = 04:4x–04:5xZ；🔻 **同轮补记（两个面不许混成一个）**：`bea724a` 是**本段落笔时的工作面**，而**门禁那两格**（离线 2,454／集成 124 ⇒ `PASS 1/8`）的**干净树 = `9398fad`／450**、两遍重算都在那棵树上做 ⇒ 引 `PASS 1/8` 认 `9398fad`，引本段其余读数认 `bea724a`；粒度 = 逐格点名）：
 
 - **离线面**：**2,454 passed／0 failed／1 warning／105.70s／rc 0**（面 = `tests/unit` ＋ `tests/contract` ＋ `tests/eval`，cwd = `backend/`，日志 = `backend/reports/w8/_r15_offline_cleantree.log`）。
 - **集成面**：**124 passed／0 failed／29.31s／rc 0**（11 个文件）；一次性库 `ecom_t38it_r15`：建 → 库内授权 → `alembic upgrade head`（`version_num = **0006**`／`app` schema **32** 张表）→ 跑 `-v` → **当场 DROP**；残渣尺 `datname like 'ecom%'` = **2**（`ecom` ＋ 别窗 `ecom_u123_probe`，**未动**）。🔴 本轮**逮到一条配方坑**（第一次跑就是那个形状）：`RETRIEVAL_TEST_PG_DSN` 若给 `app_rw`，在新建的一次性库上会 `permission denied for database` ⇒ **6 skipped ＋ 3 errors**（那 3 条不 skip、直接 setup error）⇒ 该 DSN 要给可建表的超管串，另外三个 DSN 仍用 libpq 形态。
