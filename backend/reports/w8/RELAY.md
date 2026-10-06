@@ -2721,3 +2721,109 @@ docker exec -i commerceql-pg-1 psql -U postgres -d postgres -q -t -A -c "begin; 
 - 落笔尺：`## §十九` 行首命中 **追加前 0 ⟷ 追加后 1**；`## 第 18 轮交付` 行首命中 **0 ⟷ 1**；`docs/07` 行尾 = **CRLF 3658 == 行数 − 1、裸 LF = 0**（两口径并报：`wc -l` 3658 ⟷ 按 `\r\n` 切分 3659 条含末空串）；`OVERVIEW`／`ACCEPTANCE`／`RELAY`／`DELIVERY` 全 LF。
 - 排版尺（第 16 轮那把多重集）：`docs/07` 改前 **23** ⟷ 改后 **23**（**新增 0／消失 0**）、`OVERVIEW` **2 ⟷ 2**、`ACCEPTANCE` **0 ⟷ 0**。
 - 本轮**没动**的代码面：`backend/app/**`／`backend/tests/**`／`eval/`／`deploy/loadtest/driver.py`／迁移／`test_rls_policy_provenance.py`／`backend/reports/qa/**`（QA 面仍归 QA 那一只手）。
+
+## §二十 第 19 轮复算（**W8 第 19 轮 T-43「零额度四件 A–D」｜本轮零代码语义改动** ｜ 2026-10-06 19:3x 起 ＋0800 ／ 11:3x 起 UTC ｜ 起点 HEAD `3f6a4cc`／466 笔 ｜ 🔴 **零额度、零出站、零容器动作**（没 build、没 up/down、没 start），没建一次性库）
+
+> 判向一句话：**A 把第 18 轮漏掉的第五处抄本（装配件自己那两句）补上并重跑，diff 证明「除 A 的措辞与 f 格跟上之外没有一格判定词变」；B 选「乙：具名登记」并把三把 ruff 计数钉在盘上；C 的未闭清单按现状列全 ＋ 现读补两枚 QA 清单外的号；D 采纳成 §4.8 规则 ④。** 本轮**零取号**（`U-140` 仍未动用）。
+
+### 20.0 起点、边界、零花费（同次运行，尺 = `backend/reports/w8/t43_readings.py`）
+
+| 尺 | 读数 |
+|---|---|
+| 起点 | HEAD `3f6a4cc`／**466** 笔／`git status --porcelain` = **0 行**；`git ls-remote origin main` = `3f6a4cc…` 全等（第 18 轮三笔 ＋ QA 第 22 轮都在里面） |
+| 写面 | 改动 = `OVERVIEW.md`／`docs/07_技术设计文档_TDD.md`／`deliverables/ACCEPTANCE.md`／**`deploy/loadtest/README.md`（只在文末追加一节 ⇒ 就是 B 的"表态"面）**／`backend/reports/w8/t38_assemble.py` ＋ 重跑的 `t38_assembled.json` ＋ 新器件 `t43_readings.py` ＋ 取证件 `evidence/t43/` |
+| 越界尺 | `git diff --name-only HEAD -- backend/app backend/tests eval frontend backend/reports/qa deploy/loadtest/driver.py` 里 **只有** `deploy/loadtest/README.md`（B 指定的那份登记面）⇒ 派单"一字不动"六面成立；本轮**没动 `deploy/**` 任何 `.py`** |
+| 🔴 额度 | **零花费**：`app.cost_ledger` = **1,757 行／¥2.897712／max `2026-10-06 04:26:19.595108+00`** ⟷ 第 15／16／17／18 轮收口值**逐位相同** |
+| 只读面没被写 | `app.audit_log` = **917 行／max `"timestamp" = 2026-10-06 04:26:21.437511+00`**（未涨）⇒ 本轮零业务写；所有 CQ 都包在 `begin; … rollback;` 里 |
+| 一次性库 | **没建** ⇒ 残渣尺 `datname like 'ecom%'` = **2**（`ecom` ＋ 别窗的 `ecom_u123_probe`，不删） |
+| Docker 面 | 只 `docker ps -a`／`image inspect`／`exec … md5sum` 三种**读**动作；`commerceql-api-1` 状态 = `Up (healthy)`，`w7load-api` 仍不在场 |
+| 新增跟踪件凭据扫描 | `t43_readings.py` ＋ `evidence/t43/t43_readings.json` ＋ `t38_assembled.json`（改动件）扫六类字面量 = **0 命中**；台账／审计读数里不含任何 DSN 或口令 |
+
+### 20.1 A ｜ 第五处抄本：装配件那两句 ＋ 重跑的三组 diff
+
+**事实（QA 第 22 轮点名的两处，本窗现读源）**：`backend/reports/w8/t38_assemble.py` 旧 `:189` 的 `c_build_identity.verdict` 写「达成（**三面**全量相等 ＋ 逐件 18/18 ＋ 层 3 ＋ 跑前独立一次）」、旧 `:203` 的 `当期性写法` 是**命令句**「只写『逐件 18/18 ＋ 全量 158 件**三面相等** ＋ 层 3 符号 present』」⇒ 第 18 轮我只改了文档，**没改这件**，于是"第五处抄本"仍在对内产出旧口径。
+
+**修法与守住的兼容**：两句改成两链并报（原句留在 🔻 引用里作取证），🔴 **没动聚合键**：`读数.aggregate_three_way_equal` 仍读 `agg["three_way_equal"]`（尺 `:150` 那侧保留该键、注释点名本件 `:195` 是消费者），键面仍是 **9 个**、八格 `verdict` 逻辑一字未改。
+
+| 复算 | 读数 | 判 |
+|---|---|---|
+| 装配件**跑两遍**的递归 diff（尺 = `t43_readings.py`） | 差异 **2 处**：`/generated_at_utc` ＋ `/identity/captured_at_utc` | **幂等成立**（只差时钟） |
+| 对**入库版**（`git show HEAD:…`）的递归 diff | 差异 **8 处** = **5 处装配时刻身份格**（`rev`／`rev_short`／`commit_count`／两个时钟）＋ **2 处本轮措辞**（c 格两句）＋ **1 处 f 格跟上盘上取证件** | 🔴 **除 c／f 之外没有任何一格 `verdict` 变**（器件里 `other_verdicts` 现读 = 空列表） |
+| f 格那一处为什么变 | `gate_inputs_p0_summary.json` 早在第 16 轮 `f7bf106` 就当期化到 `5a6caed`／456 笔／offline **2,485**／integration **124**，而入库的装配件产在它**之前**（07:07Z，当时读到 `bea724a`／449／2,454）⇒ 本次只是跟上盘上件 | 不是本轮改数，是**跟上**；两格并报写在 `RELAY §20.1` |
+| 「三面」字样 | 装配件里 **4 处**，**命令句残留 = 0**（全部落在「原写／原命令／作废／换代」语境里） | A 的结案条件闭合 |
+
+### 20.2 B ｜ 选**乙：具名登记**（两处落盘），并写下为什么不选甲
+
+三把 ruff 现测（cwd = `backend/`、`--config pyproject.toml`、计数只认 `--output-format=json` 的 finding 条数）：
+
+| 尺 | 读数 |
+|---|---|
+| 三门整目录命令面 `ruff check … reports/w8 tests/contract app` | **rc 0／0 条／All checks passed** ⇒ 🔴 **命令面里没有 `deploy/**`** |
+| 单件 `ruff check … ../deploy/loadtest/attest_build_identity.py` | **rc 1／7 条**（`E741`×4 ＋ `SIM115`×3，全在第 18 轮没碰的行）；第 18 轮计数 **7 → 7** 复核成立 |
+| 整面 `ruff check … ../deploy` | **rc 1／25 条**（`RUF100` 6／`E702` 6／`E741` 4／`SIM115` 3／`F401` 3／`I001` 1／`F541` 1／`E731` 1） |
+
+**为什么不选甲**（写进 `docs/07 §16.5` 第四条 ＋ README 三.0.21 两处）：纳入 = 必须同轮清掉 **25 条** ⇒ 其中 **18 条在归档探针件**里（`probe_l4_candidate_bound.py`／`probe_rls_face_locator.py`／`w2b_materialize/*`；同一条读数在 README `:1251`／`:1352` 有更早登记，当时数的是 18 条）⇒ 改它们 = 动别人落过的取证面 ＋ 让「件」与「当时取证读数」不再逐字对应；而只清自己这件**并不消除**「命令面不含 `deploy/**`」。⇒ 甲的本质是一次**门禁面变更**，归总控点句 ＋ QA 出块。
+**由此成立的两条纪律**（本窗自订，不是判据）：① 写「三门全绿」必须同时点名命令面；② 谁改 `deploy/loadtest/*.py`，谁在 README 记一次单件 ruff 计数（改前 ⟷ 改后并报）。
+落点：`docs/07:3246`（§16.5 三条禁令之后，🔻 点名两份抄本）＋ `deploy/loadtest/README.md:1980`（新节 三.0.21）。
+
+### 20.3 C ｜ 未闭清单定稿 ＋ 靶子格写实
+
+- 落点：`OVERVIEW.md:698–717`（§9 末，`## 10.` 之前）＋ `deliverables/ACCEPTANCE.md:121–140`（§5 末，`## 6.` 之前）＋ `OVERVIEW.md:236`（§6 那条环境事实行尾的指针句）。
+- 七枚 open 号逐号现读**状态格末句**（尺 = `E:/tmp_qoder/r19/status_tails.py`）：`U-126`／`U-128`／`U-130`／`U-132`／`U-133`／`U-134`／`U-138` ⇒ 与来件清单一致，逐条附了盘上原话。
+- 🔴 **本窗现读补两枚来件清单外的"带未闭词"号**（只列事实、不自裁入集）：`U-127` =「三侧同批、**缺一即不可结案**」＋「升 P0 与否留待健康态复算」；`U-135` =「**本窗裁定：暂不转正**」（转正 = 契约变更）。
+- 靶子三格现读（尺 = 器件；`U-137` 落地笔 = `4704966`／2026-10-06 15:19:04 ＋0800 = 07:19Z）：`commerceql-api:latest` `ca34ea791a81`／镜像 `Created 2026-10-05T15:19:25Z`（容器 `15:19:26Z`）⇒ **容器内 `ast_gate.py` md5 = `cf698983…` ⟂ HEAD `a9443bff…` ⇒ 实测不含**；`w7load-api:latest` `4adbcfc2e8f6`／镜像 `Created 2026-10-04T16:06:22Z` ⇒ 只按时刻推断不含、本轮没起容器 ⇒ **记 `UNVERIFIED-面`**；`w7load-api` 容器不在 `docker ps -a`。
+  ⇒ 句子必须带 image id，且 🚫 在总控点「要不要 build」之前不许写"新代码已在被测构建里"。
+
+### 20.4 D ｜ 采纳，落 `docs/07 §4.8` 规则 **④**（`:1186`）
+
+「当轮取号当轮结案」只允许用于**离线自检／静态断言可自证**的缺陷；判据含活体读数、跨窗对撞或需新批的号 ⇒ 当轮不得自写结案。⚠️ 属**纪律**不属判据（八格判据与本表各号判据措辞一字未动）；在案先例自指：`U-129` 转绿靠 QA 裁、`U-138` 后半等出站批 ⇒ 那两格本窗都没自裁。
+
+### 20.5 门与回归面（本轮 rc 全部现测）
+
+| 尺 | 读数 |
+|---|---|
+| `ruff check --config pyproject.toml reports/w8 tests/contract app`（三门整目录面） | **rc 0／All checks passed!**（本轮新落盘的器件在内） |
+| `mypy app`／`lint-imports` | **no issues in 158 source files**／**4 kept, 0 broken**（`backend/app` 0 差异 ⇒ 属未改动确认） |
+| `pytest tests/contract tests/redteam tests/graph_snapshot -q` | **639 passed／rc 0**（＝615＋11＋13，逐目录相加） |
+| `attest_build_identity.py --self-test`（第 18 轮那把尺的自检） | 沿用第 18 轮 **3/3 PASS**；本轮没动该件 ⇒ 属"未改动确认" |
+| 排版尺（第 16 轮那把多重集） | `docs/07` **23 ⟷ 23（新增 0）**；`OVERVIEW` **2 ⟷ 2**；`ACCEPTANCE` **0 ⟷ 0**；`deploy/loadtest/README.md` **2 ⟷ 2**（那 2 条是历史行、不是本轮引入） |
+| 行／列数尺 | `docs/07` 修订行 **26 → 27**（旧行未减）、§4.8 登记行 **129 → 129**（本轮零取号）、§16.5 三层表 **8 → 8**；新行 v1.7.26 = **2 列**＝邻居 |
+
+### 20.6 串行资源表（六面）
+
+见 §20.0 整表（git 索引／共享 `ecom`／一次性库／容器面／凭据／额度 六面逐条给尺）。补一句：本轮**没有**任何"起容器才能取"的读数 ⇒ 第 18 轮那条"w7load-api 不在场"的缺口本轮**仍未补**，且已被写成靶子格交给总控定点。
+
+### 20.7 🔻 本窗自曝三笔（都在我自己身上，落笔后被尺抓到）
+
+1. **同款错误第二次**：新落盘的器件 `t43_readings.py` 自带 **6 条 ruff 红**（`UP009`×1 ＋ `B905`×1 ＋ `RUF059`×1 ＋ `E741`×3），是三门那把 `ruff check … reports/w8` **当场抓出来的**（第 15 轮"尺进树没跑整目录 ruff"那笔的正是同一族）⇒ 已全修，修后三门面 **rc 0／0 条**。规矩补一句：**新落任何进 `reports/w8` 的件，先跑三门那把，再谈读数**。
+2. **计数被自己的输出格式骗**：第一版 `ruff()` 用正则数文本模式里的规则名 ⇒ 把整面 **25 条数成 44 条**（ruff 会把 help 段再印一遍规则代码）。⇒ 改成 `--output-format=json` 只数 finding 条数（器件 docstring 已写明这条坑）。
+3. **备份漏做**：为落笔准备的四个 `.bak` 是在一条 heredoc 里 `cp` ＋ 写脚本同一条命令里跑的，bash 解析失败 ⇒ **`cp` 也没执行**（整个命令列表没跑）⇒ 改从 `git show HEAD:<路径>` 取基线，比较尺照用。教训 = **备份与写盘脚本不要塞进同一条命令**。
+
+### 20.8 没达成什么（如实）
+
+1. **八格判定词本轮没重算**：判定输入没变（两把日志／p0-summary／回执）⇒ 对外仍 **PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2**，🚫 不得写"门禁通过"；`G-6` 仍不可引用（9 < 20）。
+2. **`U-127`／`U-135` 的"是不是 open"没裁**：本窗只列盘上原话与尺，并进并进 open 集属裁定 ⇒ 交回 QA／总控。
+3. **`deploy/**` 纳不纳入三门没自决**（选乙就是把它挂成显式缺口）；真要纳入，需要一次门禁面变更 ＋ 清 25 条。
+4. **`w7load-api` 容器面没恢复**（禁容器动作）⇒ `ast_gate.py` 在 `w7load-api:latest` 里到底是哪个字节，仍是 `UNVERIFIED-面`。
+5. `U-138` 后半 ＋ `G-6` 样本仍等 **T-40**（且 T-40 的**靶子**现在多了一层前置：先定"哪份镜像"）。
+
+### 20.9 复算入口（全部零额度）
+
+```bash
+# A／B／C 的取证件（一次跑完：两遍 diff ⟷ 对入库版 diff ⟷ 三面字样 ⟷ 三把 ruff ⟷ 靶子三格 ⟷ 三条零花费自证）
+PYTHONUTF8=1 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w8/t43_readings.py
+# 产物：backend/reports/w8/evidence/t43/t43_readings.json
+cd backend && ../.venv/Scripts/python.exe -m ruff check --config pyproject.toml reports/w8 tests/contract app   # 三门整目录面
+../.venv/Scripts/python.exe -m ruff check --config pyproject.toml ../deploy/loadtest/attest_build_identity.py    # 单件 7 条
+../.venv/Scripts/python.exe -m ruff check --config pyproject.toml ../deploy                                      # 整面 25 条
+# 只读面（共享 ecom 一律 begin; … rollback;）
+docker exec -i commerceql-pg-1 psql -U postgres -d ecom -q -t -A -c "begin; select count(*), to_char(sum(cost_cny),'FM999990.000000'), max(created_at) from app.cost_ledger; rollback;"
+docker exec -i commerceql-api-1 md5sum /srv/app/guard/ast_gate.py    # cf698983… ≠ git show HEAD:backend/app/guard/ast_gate.py 的 LF md5 a9443bff…
+```
+
+### 20.10 落笔身份（两格并报）
+
+- 本段落笔时 HEAD = `3f6a4cc`／**466** 笔；本窗落库笔 = **下一笔**（尺 = `git log -1 --format='%h %cI' -- backend/reports/w8/RELAY.md`）⇒ 件内自报与入库笔天然差一笔。
+- 行首锚点尺：`## §二十 第 19 轮复算` 追加前 **0** ⟷ 追加后 **1**；`## 第 19 轮交付` 追加前 **0** ⟷ 追加后 **1**（🔴 只数行首，正文里的引用不计）。
+- 行尾尺：`docs/07` **CRLF 3660 == 行数 − 1、裸 LF = 0**（两口径并报：`wc -l` 3660 ⟷ 按 `\r\n` 切分 3661 条含末空串）；`deploy/loadtest/README.md` **CRLF 2000、裸 LF = 0**；`OVERVIEW`／`ACCEPTANCE`／`RELAY`／`DELIVERY` 全 LF；本轮**没动** `.py` 判定语义（`deploy/loadtest/*.py` 一件没碰）。
+- 本轮**零取号**：`U-140` 未启用 ⇒ §4.8 指针行的数字不改，只加了规则 ④。
