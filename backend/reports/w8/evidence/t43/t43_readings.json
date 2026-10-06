@@ -1,0 +1,184 @@
+{
+  "artifact": "commerceql.w8.t43_readings/1",
+  "taken_at_utc": "2026-10-06T14:36:56+00:00",
+  "装配件重跑rc": 0,
+  "边界自证": {
+    "零出站": true,
+    "零容器动作": "只 docker ps/inspect/exec 读 ⇒ 没 build、没 up/down、没 start（派单禁）",
+    "共享库": "全部 begin; … rollback;",
+    "台账": "1757|2.897712|2026-10-06 04:26:19.595108+00",
+    "审计行": "917|2026-10-06 04:26:21.437511+00",
+    "残渣": [
+      "ecom",
+      "ecom_u123_probe"
+    ]
+  },
+  "A_装配件两遍递归diff": {
+    "差异处数": 2,
+    "路径": [
+      "/generated_at_utc",
+      "/identity/captured_at_utc"
+    ],
+    "判": "只差时钟字段 ⇒ 幂等成立"
+  },
+  "A_对入库版递归diff": {
+    "差异处数": 8,
+    "分类计数": {
+      "装配时刻身份格（件内自报 ⟷ 现 HEAD）": 5,
+      "A 件本轮措辞（两链换代）": 2,
+      "f 格跟上盘上取证件（第 16 轮 f7bf106 已当期化）": 1
+    },
+    "除c与f之外还有verdict变吗": false,
+    "那些路径": [],
+    "逐处": [
+      {
+        "path": "/generated_at_utc",
+        "入库版": "2026-10-06T07:07:05+00:00",
+        "现版": "2026-10-06T14:36:55+00:00"
+      },
+      {
+        "path": "/hard_requirements/c_build_identity/verdict",
+        "入库版": "达成（三面全量相等 ＋ 逐件 18/18 ＋ 层 3 ＋ 跑前独立一次）",
+        "现版": "达成（**链一** 容器 ⟷ 工作树字节 ＝ 逐件 18/18 ＋ 聚合容器面 ⟷ 工作树面；**链二** 工作树 ⟷ "
+      },
+      {
+        "path": "/hard_requirements/c_build_identity/当期性写法",
+        "入库版": "只写『逐件 18/18 ＋ 全量 158 件三面相等 ＋ 层 3 符号 present』；🚫 不写『本轮重建出新镜像』（",
+        "现版": "只写**两链**：链一『容器 ⟷ 工作树字节』（这把尺真量到的：逐件 `verdict` ＋ 聚合容器面 ⟷ 工作树面）"
+      },
+      {
+        "path": "/hard_requirements/f_p0_summary_current/verdict",
+        "入库版": "证件 rev = bea724a / 449 笔 / generated 2026-10-06T04:42:25+00:",
+        "现版": "证件 rev = 5a6caed / 456 笔 / generated 2026-10-06T07:22:35+00:"
+      },
+      {
+        "path": "/identity/captured_at_utc",
+        "入库版": "2026-10-06T07:07:05+00:00",
+        "现版": "2026-10-06T14:36:55+00:00"
+      },
+      {
+        "path": "/identity/commit_count",
+        "入库版": "453",
+        "现版": "466"
+      },
+      {
+        "path": "/identity/rev",
+        "入库版": "70012e711832cf9e6735dedbc60cefa0219dbb53",
+        "现版": "3f6a4cc126fcdba5c3e9b707d898a70740a7417b"
+      },
+      {
+        "path": "/identity/rev_short",
+        "入库版": "70012e7",
+        "现版": "3f6a4cc"
+      }
+    ]
+  },
+  "A_三面字样": {
+    "次数": 4,
+    "全部在订正或原句引用语境": true,
+    "命令句残留数": 0,
+    "上下文": [
+      {
+        "上下文": "＝ 跑前 `git_dirty = false` ＋ 层 3 present。🔻 本句原写「三面全量相等 ＋ 逐件 18/18 ＋ 层 3 ＋ 跑前独立一次」，『三面』二字按 `U-1",
+        "在订正或原句引用语境": true
+      },
+      {
+        "上下文": "ent。🔻 本句原写「三面全量相等 ＋ 逐件 18/18 ＋ 层 3 ＋ 跑前独立一次」，『三面』二字按 `U-139` 换代成两链，见本格 `当期性写法`）\", \"读数\": {\"co",
+        "在订正或原句引用语境": true
+      },
+      {
+        "上下文": "dirty = false`）。🔻 本句原命令「只写『逐件 18/18 ＋ 全量 158 件三面相等 ＋ 层 3 符号 present』」——**『三面』二字作废**：当时那把逐件尺的",
+        "在订正或原句引用语境": true
+      },
+      {
+        "上下文": "件 18/18 ＋ 全量 158 件三面相等 ＋ 层 3 符号 present』」——**『三面』二字作废**：当时那把逐件尺的 git 面走 `_run().strip()`（吃了结",
+        "在订正或原句引用语境": true
+      }
+    ]
+  },
+  "A_两链句现读": {
+    "verdict": "达成（**链一** 容器 ⟷ 工作树字节 ＝ 逐件 18/18 ＋ 聚合容器面 ⟷ 工作树面；**链二** 工作树 ⟷ HEAD ＝ 跑前 `git_dirty = false` ＋ 层 3 present。🔻 本句原写「三面全量相等 ＋ 逐件 18/18 ＋ 层 3 ＋ 跑前独立一次」，『三面』二字按 `U-139` 换代成两链，见本格 `当期性写法`）",
+    "当期性写法": "只写**两链**：链一『容器 ⟷ 工作树字节』（这把尺真量到的：逐件 `verdict` ＋ 聚合容器面 ⟷ 工作树面）＋ 链二『工作树 ⟷ HEAD』（逐件 `worktree_vs_head_lf` ＋ 跑前 `git_dirty = false`）。🔻 本句原命令「只写『逐件 18/18 ＋ 全量 158 件三面相等 ＋ 层 3 符号 present』」——**『三面』二字作废**：当时那把逐件尺的 git 面走 `_run().strip()`（吃了结尾换行）⇒ 结构上永不等于真 blob ⇒ 那一面从未参与比较（`U-139`，10-06 第 18 轮修尺；修后现测 `ratelimit.py` 三把全等、`state.py` 的 `head_blob_lf` 与 `git show HEAD:… | md5sum` 逐字符同值、`ast_gate.py` 无命中）。🔴 **数字与读数一律不动**（本格 `读数` 那八键照旧），改的只是「这句能支撑什么结论」。🚫 仍不写『本轮重建出新镜像』：`image_id` 那格 = 镜像 `commerceql-api` `Created = 2026-10-05T15:19:25Z`，`container_created_at` 那格 = **容器** `2026-10-05T15:19:26Z`（两个面、只差一秒，不可互换）⇒ 都不是本轮新建。",
+    "旧键与键面未动": {
+      "aggregate_three_way_equal": true,
+      "读数键数": 9,
+      "键名": [
+        "aggregate_files",
+        "aggregate_three_way_equal",
+        "container",
+        "container_created_at",
+        "head_rev_at_attest",
+        "image_id",
+        "layer3",
+        "per_file_same",
+        "pre_run_attestation"
+      ]
+    }
+  },
+  "B_ruff三把": {
+    "三门整目录命令面": {
+      "命令": "ruff check --config pyproject.toml --output-format=json reports/w8 tests/contract app",
+      "rc": 0,
+      "条数": 0,
+      "汇总": "All checks passed",
+      "规则分布": {},
+      "涉及文件": []
+    },
+    "单件": {
+      "命令": "ruff check --config pyproject.toml --output-format=json ../deploy/loadtest/attest_build_identity.py",
+      "rc": 1,
+      "条数": 7,
+      "汇总": "Found 7 errors",
+      "规则分布": {
+        "E741": 4,
+        "SIM115": 3
+      },
+      "涉及文件": [
+        "\\deploy\\loadtest\\attest_build_identity.py"
+      ]
+    },
+    "deploy整面": {
+      "命令": "ruff check --config pyproject.toml --output-format=json ../deploy",
+      "rc": 1,
+      "条数": 25,
+      "汇总": "Found 25 errors",
+      "规则分布": {
+        "E702": 6,
+        "RUF100": 6,
+        "E741": 4,
+        "F401": 3,
+        "SIM115": 3,
+        "E731": 1,
+        "F541": 1,
+        "I001": 1
+      },
+      "涉及文件": [
+        "\\deploy\\loadtest\\attest_build_identity.py",
+        "\\deploy\\loadtest\\probe_l4_candidate_bound.py",
+        "\\deploy\\loadtest\\probe_rls_face_locator.py",
+        "\\deploy\\loadtest\\probe_searchpath_a_arm.py",
+        "\\deploy\\loadtest\\w2b_materialize\\_w2b_u112_control.py",
+        "\\deploy\\loadtest\\w2b_materialize\\_w2b_u112_materialize.py",
+        "\\deploy\\loadtest\\w2b_materialize\\_w2b_u112_probe.py"
+      ]
+    }
+  },
+  "C_靶子三格": {
+    "U-137落地笔": "4704966 2026-10-06T15:19:04+08:00 feat(w8/第16轮 T-39): U-137 落地（闸门 JOIN 侧资产口径 + R10/R11 文案拆句）+ U-138 落地（thread_depth 改名 w",
+    "镜像id与时刻": {
+      "commerceql-api:latest": "sha256:ca34ea791a81fae6f5f03249451214872bcd424b150549454d93e3412c4fbcb5 2026-10-05T15:19:25.20781035Z",
+      "w7load-api:latest": "sha256:4adbcfc2e8f62ccf5a8a73a97c0102030b16b197f67da2da8e216a38c174bee9 2026-10-04T16:06:22.532865304Z"
+    },
+    "容器内ast_gate_md5": "cf698983db685b21d46e9accbe9da7c5",
+    "HEAD_blob_LF_md5": "a9443bff14973301c27d16ef386d3c3f",
+    "链一判定": "DIFF（容器 ≠ HEAD）",
+    "容器在场": {
+      "commerceql-api-1": [
+        "commerceql-api-1|Up 10 hours (healthy)|commerceql-api"
+      ],
+      "w7load系": [
+        "w7load-api_pre0930r11_bak|Exited (255) 6 days ago|w7load-api:0928r10"
+      ]
+    }
+  }
+}

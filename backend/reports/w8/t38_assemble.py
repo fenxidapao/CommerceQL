@@ -186,7 +186,10 @@ def main() -> int:
                 "教训来源": "第 12 轮那次报价笔晚 20 分 10 秒 ⇒ (d) 判未达成；本轮把报价做成**先提交的产物**",
             },
             "c_build_identity": {
-                "verdict": "达成（三面全量相等 ＋ 逐件 18/18 ＋ 层 3 ＋ 跑前独立一次）",
+                "verdict": "达成（**链一** 容器 ⟷ 工作树字节 ＝ 逐件 18/18 ＋ 聚合容器面 ⟷ 工作树面；"
+                           "**链二** 工作树 ⟷ HEAD ＝ 跑前 `git_dirty = false` ＋ 层 3 present。"
+                           "🔻 本句原写「三面全量相等 ＋ 逐件 18/18 ＋ 层 3 ＋ 跑前独立一次」，"
+                           "『三面』二字按 `U-139` 换代成两链，见本格 `当期性写法`）",
                 "读数": {"container": main_r["build_identity"]["container"],
                          "image_id": main_r["build_identity"]["image_id"],
                          "container_created_at": main_r["build_identity"]["container_created_at"],
@@ -200,7 +203,15 @@ def main() -> int:
                                                  "per_file_same": f"{sum(1 for f in pre['layer1_2']['files'] if f['verdict'] == 'SAME')}/{len(pre['layer1_2']['files'])}",
                                                  "image_id": pre["image_id"]}},
                 "尺": "deploy/loadtest/attest_build_identity.py（聚合面 10-06 换代：旧尺容器侧带 `./` 前缀 ⇒ 三列永不相等 = 坏尺，本轮起才有判别力）",
-                "当期性写法": "只写『逐件 18/18 ＋ 全量 158 件三面相等 ＋ 层 3 符号 present』；🚫 不写『本轮重建出新镜像』（镜像 Created = 2026-10-05T15:19:25Z，与容器 Created 同批，非本轮新建）",
+                "当期性写法": "只写**两链**：链一『容器 ⟷ 工作树字节』（这把尺真量到的：逐件 `verdict` ＋ 聚合容器面 ⟷ 工作树面）"
+                             "＋ 链二『工作树 ⟷ HEAD』（逐件 `worktree_vs_head_lf` ＋ 跑前 `git_dirty = false`）。"
+                             "🔻 本句原命令「只写『逐件 18/18 ＋ 全量 158 件三面相等 ＋ 层 3 符号 present』」——**『三面』二字作废**："
+                             "当时那把逐件尺的 git 面走 `_run().strip()`（吃了结尾换行）⇒ 结构上永不等于真 blob ⇒ 那一面从未参与比较"
+                             "（`U-139`，10-06 第 18 轮修尺；修后现测 `ratelimit.py` 三把全等、`state.py` 的 `head_blob_lf` 与 "
+                             "`git show HEAD:… | md5sum` 逐字符同值、`ast_gate.py` 无命中）。🔴 **数字与读数一律不动**（本格 `读数` 那八键照旧），"
+                             "改的只是「这句能支撑什么结论」。🚫 仍不写『本轮重建出新镜像』：`image_id` 那格 = 镜像 `commerceql-api` "
+                             "`Created = 2026-10-05T15:19:25Z`，`container_created_at` 那格 = **容器** `2026-10-05T15:19:26Z`"
+                             "（两个面、只差一秒，不可互换）⇒ 都不是本轮新建。",
             },
             "d_latency_samples": {
                 "verdict": "达成" if len(scen.get("latency_samples_ms") or []) == admitted else "🔴 未达成",

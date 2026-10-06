@@ -1,13 +1,13 @@
 {
   "artifact": "commerceql.w8.t38_assembled/1",
   "task": "T-38 主单：一把 c=3/n=30 的当期批（U-129 ③ ＋ G-6 P95）",
-  "generated_at_utc": "2026-10-06T07:07:05+00:00",
+  "generated_at_utc": "2026-10-06T14:36:55+00:00",
   "identity": {
-    "rev": "70012e711832cf9e6735dedbc60cefa0219dbb53",
-    "rev_short": "70012e7",
-    "commit_count": 453,
+    "rev": "3f6a4cc126fcdba5c3e9b707d898a70740a7417b",
+    "rev_short": "3f6a4cc",
+    "commit_count": 466,
     "dirty": true,
-    "captured_at_utc": "2026-10-06T07:07:05+00:00",
+    "captured_at_utc": "2026-10-06T14:36:55+00:00",
     "口径": "PROMPT §2 ④ 两格并报：本块 = **装配那一刻**的树；两把回执各自另有件内 `git_rev`／`git_dirty`（跑那一刻）"
   },
   "geometry_requested": {
@@ -46,7 +46,7 @@
       "教训来源": "第 12 轮那次报价笔晚 20 分 10 秒 ⇒ (d) 判未达成；本轮把报价做成**先提交的产物**"
     },
     "c_build_identity": {
-      "verdict": "达成（三面全量相等 ＋ 逐件 18/18 ＋ 层 3 ＋ 跑前独立一次）",
+      "verdict": "达成（**链一** 容器 ⟷ 工作树字节 ＝ 逐件 18/18 ＋ 聚合容器面 ⟷ 工作树面；**链二** 工作树 ⟷ HEAD ＝ 跑前 `git_dirty = false` ＋ 层 3 present。🔻 本句原写「三面全量相等 ＋ 逐件 18/18 ＋ 层 3 ＋ 跑前独立一次」，『三面』二字按 `U-139` 换代成两链，见本格 `当期性写法`）",
       "读数": {
         "container": "commerceql-api-1",
         "image_id": "sha256:ca34ea791a81fae6f5f03249451214872bcd424b150549454d93e3412c4fbcb5",
@@ -69,7 +69,7 @@
         }
       },
       "尺": "deploy/loadtest/attest_build_identity.py（聚合面 10-06 换代：旧尺容器侧带 `./` 前缀 ⇒ 三列永不相等 = 坏尺，本轮起才有判别力）",
-      "当期性写法": "只写『逐件 18/18 ＋ 全量 158 件三面相等 ＋ 层 3 符号 present』；🚫 不写『本轮重建出新镜像』（镜像 Created = 2026-10-05T15:19:25Z，与容器 Created 同批，非本轮新建）"
+      "当期性写法": "只写**两链**：链一『容器 ⟷ 工作树字节』（这把尺真量到的：逐件 `verdict` ＋ 聚合容器面 ⟷ 工作树面）＋ 链二『工作树 ⟷ HEAD』（逐件 `worktree_vs_head_lf` ＋ 跑前 `git_dirty = false`）。🔻 本句原命令「只写『逐件 18/18 ＋ 全量 158 件三面相等 ＋ 层 3 符号 present』」——**『三面』二字作废**：当时那把逐件尺的 git 面走 `_run().strip()`（吃了结尾换行）⇒ 结构上永不等于真 blob ⇒ 那一面从未参与比较（`U-139`，10-06 第 18 轮修尺；修后现测 `ratelimit.py` 三把全等、`state.py` 的 `head_blob_lf` 与 `git show HEAD:… | md5sum` 逐字符同值、`ast_gate.py` 无命中）。🔴 **数字与读数一律不动**（本格 `读数` 那八键照旧），改的只是「这句能支撑什么结论」。🚫 仍不写『本轮重建出新镜像』：`image_id` 那格 = 镜像 `commerceql-api` `Created = 2026-10-05T15:19:25Z`，`container_created_at` 那格 = **容器** `2026-10-05T15:19:26Z`（两个面、只差一秒，不可互换）⇒ 都不是本轮新建。"
     },
     "d_latency_samples": {
       "verdict": "达成",
@@ -255,7 +255,7 @@
     },
     "e_键名漂移": "本格的 `thread_depth` 是 T-38 那份回执的原样搬运；U-138 落地后**新回执**给的是 `worker_session_depth`（键语义自报、且显式声明不是服务端 thread）⇒ 读新批时把这一格换成 `worker_session_depth`，契约测试 = `backend/tests/contract/test_loadtest_thread_key_contract.py`",
     "f_p0_summary_current": {
-      "verdict": "证件 rev = bea724a / 449 笔 / generated 2026-10-06T04:42:25+00:00 / offline passed = 2454 / integration passed = 124 → 与本轮干净树一致才算达成（装配件不下这一判，留给门禁那件）",
+      "verdict": "证件 rev = 5a6caed / 456 笔 / generated 2026-10-06T07:22:35+00:00 / offline passed = 2485 / integration passed = 124 → 与本轮干净树一致才算达成（装配件不下这一判，留给门禁那件）",
       "尺": "PYTHONUTF8=1 .venv/Scripts/python.exe -c \"import sys;sys.path[:0]=['eval','.'];import reporter;…\" --emit-p0-summary backend/reports/w8/gate_inputs_p0_summary.json"
     }
   },
