@@ -2243,3 +2243,131 @@ QA 12.6 在 `9e45281` 干净树上跑出 1 error（UP020），而我 §十一.2 
 3. **A5 缺陷的归属与修法**：`EvalRunsPage.test.tsx` 4 臂可独立复跑（`cd frontend && npx vitest run`），两态对撞请复现"把依赖数组改回去 ⇒ 3 条红"。
 4. **124 条集成**（＋17 全来自 A2 新件）与一次性库自证：请核"跑完 DROP、残渣尺 = 2"。
 5. 🔴 **`U-129` ③／G-6 仍欠同一把真跑**：T-38 的已批几何 = `--scenario steady --concurrency 3 --max-requests 30 --reuse-sessions --session-pool 3`（≈21 准入，≤¥0.20）。**代码面本轮已定型**（A1–A3 全落），下一把可以直接起；H 那一格必须带 `c=3` 自己的并发，不续算 `U-126` 的 `c=12`／`c=100` 配平表。⚠️ 报价笔时刻按 QA 订正后的口径（`b496d7b` 的 **commit date** 13:11:24，尺 = `git log -1 --format=%cd`），本窗照此引、不再自订加严。
+
+## §十六 第 15 轮（**T-38 · QA 第 17 轮派单「主单 = 一把 c3/n30 当期批 ＋ 收口件 ＋ 随交两小格」** ｜ 2026-10-06 12:1x–12:5x ＋0800 ／ 04:1x–04:5x UTC ｜ 起始 HEAD `2a82131`／447 笔（QA 第 18 轮那笔）｜ 本轮笔依次 `67be6b0`（**报价笔**）→ `bea724a`（两把回执＋结件＋修尺）→ `9398fad`（收口件＋取号 `U-138`＋取证件当期化）→ 本段落笔笔 ｜ 🔴 **本轮花了钱：¥0.066117／36 行台账／10 个 `task_id`／全非峰**（上界 ¥0.25，总控已批）｜ **动了共享栈**：向共享 `ecom` 写了 10 条 run 的审计与台账（正常业务写面）、**未重建镜像、未 recreate、未跑迁移**（共享库 `alembic_version` 仍 = `0006`）；一次性库 `ecom_t38it_r15` 建→迁移→跑→当场 DROP）
+
+> 本轮是"补完再收"的第二半：**把唯一一笔已批的钱花在 `U-129` ③ 与 `G-6` 上**，同时把对外四处按现状收口。
+> 结论先行：**六条硬要求 (a)–(f) 逐格交付**，但 🔴 **`G-6` 的判向没变**（准入 9 < 样本下限 20），
+> 而且本轮**量化了一个结构性事实**：单用户的一把 `steady c=3/n=30` 批**不可能拿到 ≥20 准入**（原因见 §16.5）⇒ 要样本就得换形状，
+> 而换形状超出"一把批"的字面授权 ⇒ **本窗不擅自做，交回**。
+
+### 16.0 起点复核（不抄来件，全部现测）
+
+| 复核项 | 我方现测（时刻 ＋ 尺） | 与来件 |
+|---|---|---|
+| 远端与本地同点 | `git rev-parse --short HEAD` = `2a82131`／`git rev-list --count HEAD` = **447**／`git status --porcelain` = **0 行**／`git ls-remote origin main` 同次运行全等 | 来件起点 `b45e47f`／446 = QA **复算时点**；本轮开工现读 `2a82131`／447 ⇒ 差的那 1 笔就是 QA 第 18 轮自己的落笔（同点、不矛盾） |
+| 台账（花钱前基线） | `app.cost_ledger` = **1,721 行／¥2.831595／max 2026-10-05 05:28:19.308155+00** | 逐位同 |
+| 🔴 时钟三面对表（本轮新增的前置，因为它决定 (b) 那格可不可比） | 宿主 `date -u` = `2026-10-06T04:16:56Z` ＝ 外部 `curl -sI https://api.github.com/zen` 的 `Date` 头 `Tue, 06 Oct 2026 04:16:56 GMT` ＝ 容器 `date -u` `04:16:58Z`（差 ≤2s） | 来件没提，但**上一轮同一台机器上宿主与容器曾相差 11h39m**（宿主 `2026-10-05T16:31:54Z` ⟷ `docker inspect .State.StartedAt = 2026-10-06T04:10:42Z` 且 `docker ps` 当时报 "Up 4 minutes"）⇒ **凡跨面比时间，先对表并点名比的是哪一侧的钟**（已写进 `OVERVIEW §7` 的 🔻 补记与报价格 `clock_caveat`） |
+| 被测构建 | `commerceql-api-1`：镜像 `sha256:ca34ea791a81…`（`Created = 2026-10-05T15:19:25Z`）、容器 `Created = 2026-10-05T15:19:26Z`、`openapi.json` = **19 条 path** | 逐位同（QA 15.1 那格的真重建结论） |
+| 令牌与租户 | `POST /api/v1/session`（`--tenant-id T_A --user-id u_t38c3 --role analyst`）⇒ **200**、`data.session_id` 在位；⚠️ 本轮**签了一枚新前缀** `u_t38c3`（`§4.8` 的"新前缀 ＋ 新时间窗"纪律），凭据只落 `E:/tmp_qoder/r15/tok_t38.txt`（仓库外，收尾删） | 来件没提（这条是落库面作用域可切的前提） |
+| 量具 | `driver.py --self-check` ⇒ **[自检通过] 10/10 分类正确／rc 0**（零外呼）；`--dry-run` 打印几何 ⇒ **rc 0** | 同 |
+
+### 16.1 主单：几何、两把回执、实付
+
+- **几何（逐字照派单）**：`--scenario steady --concurrency 3 --max-requests 30 --reuse-sessions --session-pool 3`，目标 = 共享 `:8000`（**不是**另起 `w7load-api`）；令牌 1 枚（`u_t38c3`）。
+- **预热作废格 (a)**：同几何 `--max-requests 1` ⇒ `admitted=1／terminal=1／outcomes={ok:1}`、墙钟 17.2s、`started_at 04:25:06Z`；件 = `deploy/loadtest/t38_c3n30_warm.json`。🔴 它**不进任何分母**：落库面两把窗之一**具名剔掉** `tk_e52c0019f24d4c09b58facd9e7a0f59f`（见 §16.4），且 `t38_assembled.json` 的 `a_void_cell` 格写了这条。
+- **主批**：件 = `deploy/loadtest/t38_c3n30_main.json`，`started_at 04:25:59Z`／`finished_at 04:26:21Z`／墙钟 **22.002s**。
+- **实付**：窗 ≥ 报价笔 committer date ⇒ **36 行／¥0.066117／`min 04:25:06.4245Z`／`max 04:26:19.5951Z`／10 个 `task_id`／`bool_and(not is_peak) = t`**；台账总量 `1,721→1,757`、`¥2.831595→¥2.897712` ⇒ **上界 ¥0.25 未越**（用掉 26.4%）。🔴 **当期单价 = ¥0.006612／准入**（10 准入含作废格那 1 条），**低于**报价里两个基线（来件 ¥0.00753、第 12 轮账面 ¥0.00973）。
+- **复算**：`docker exec -i commerceql-pg-1 psql -U postgres -d ecom -q -t -A -c "begin; select count(*), to_char(sum(cost_cny),'FM999990.000000'), min(created_at), max(created_at), count(distinct task_id), bool_and(not is_peak) from app.cost_ledger where created_at >= '<报价笔 cd>'; rollback;"`
+
+### 16.2 六条硬要求逐格（判定 ＋ 尺，全部现读自 `backend/reports/w8/t38_assembled.json`）
+
+| # | 判据 | 结论 | 尺 / 读数 |
+|---|---|---|---|
+| **a** | 预热一格作废、不进任何分母；作废格 `note` 点名"身份若为后补" | **达成** | `admitted=1`；`note` 已写"跑后补打（`04:33:24Z` 比 `started_at 04:25:06Z` 晚 8m18s）＋ 跑前 `04:24:43Z` 独立一次"；落库面另给"剔作废"那把窗 |
+| **b** | 报价笔 commit date **早于**主批回执 `started_at` | **达成（差 90.0 秒）** | 报价笔 = `67be6b0`，`git log -1 --format=%cd --date=iso-strict` = **`2026-10-06T12:24:29+08:00` = 04:24:29Z** ⟷ `started_at 04:25:59Z`；🔴 报价是**先提交的产物**（`deploy/loadtest/t38_c3n30_quote.json` ＋ 装配件 `backend/reports/w8/t38_quote.py`），第 12 轮那次"报价笔晚 20 分 10 秒"的形态在结构上被排掉 |
+| **c** | 逐件构建身份：三向 md5 ＋ 层 3 ＋ 镜像 digest ＋ `container_created_at`；⚠️ 当期性只靠逐件 md5 | **达成** | **逐件 18/18 SAME** ＋ **全量 `app/**.py` 158/158 三面聚合相等**（容器 = 工作树 = HEAD blob，LF 归一后）＋ 层 3 `RUN_SCOPED_STATE_FIELDS` present、**size = 47** ＋ 镜像 `sha256:ca34ea791a81…`／容器 `Created 2026-10-05T15:19:26Z` ＋ **跑前 04:24:43Z 一次、跑后 04:33:18Z 一次**（两次同 HEAD `67be6b0`）；对外措辞已按"本轮未重建镜像"写 |
+| **d** | `latency_samples_ms` 逐样本 ＋ outcome 标签（T-36 E 那件第一次真用上） | **达成** | **n = 9 = `admission.admitted`**；每样本键 = `{total_ms, ttfb_ms, outcome, code, task_id}`（升序、只装准入、不含题面）|
+| **e** | 读数面 `admission／outcomes／codes＋codes_task_ids／thread_depth／p95_scope／g6_caveat 原文` | **达成** | 逐格见 §16.3，原文照抄进 `t38_assembled.json` 的 `hard_requirements.e_reading_surface` |
+| **f** | 同批把 `gate_inputs_p0_summary.json` 当期化 ⇒ "取证件 ≠ 本次输入"那句 caveat 消失 | **达成** | `--emit-p0-summary`（零额度）重发 ⇒ 件内自报 `git_rev = bea724a…`／**449** 笔／`git_dirty = false`／offline **2,454**／integration **124**；🔴 重发后的 `eval_metrics.json` 里 **`grep -c 取证件` = 0** ⇒ 上一轮那条 caveat **本轮闭合**（尺就这一句 grep） |
+
+### 16.3 读数面逐格（主批，粒度 = run）
+
+- `admission` = **`{admitted: 9, rejected_429: 20, other_http_4xx: 1, http_5xx: 0, unresolved: 0, terminal: 9}`**（`terminal == admitted` ⇒ 这批**没有**"200 但流断在半途"的形状）。
+- `outcomes` = `{ok: 4, error_frame: 3, clarify: 1, refuse: 1, http_4xx: 21}`；`codes` = `{GATE_AST_REJECTED: 3, SESSION_CONFLICT: 1, RATE_LIMITED: 20}`。
+  🔴 **三条 `GATE_AST_REJECTED` = `U-137` 那一面（闸门不认 CTE 侧），不是 `U-129` 的入口复位面**：`codes_task_ids` 具名 `tk_02f6fd3a…`／`tk_201e9675…`／`tk_ca342fa6…`，`terminal_provenance` 给 `error_frame: stage=sql_ready|reason=none ×3`；`refuse` 那条是 `stage=plan_ready|reason=no_data_asset`（PLAN 自拒，正常出口）。⇒ **不进 `U-129` 的分子、也不进 `t33` 的豁免集合**（QA 13.8 裁定③ 照用）。
+- **`INTERNAL` 0 条、`graph_run_failed` 0 条**（`error_messages = {}`）⇒ `U-129` 第二触发面（属主在自己会话第 2 轮崩）在**当期构建**上这批没撞上；⚠️ 但这是"这批没撞上"，**不是"已修"**（§16.4 用落库面三格给正向证据，转绿判词仍归 QA）。
+- `thread_depth`（**回执侧**，键 = `(worker, session_id)`）= `{threads: 7, depth_hist: {1:7, 2:5, 3+:18}, by_outcome: {ok: {turn1:3, turn2plus:1}, error_frame: {turn1:2, turn2plus:1}, clarify: {turn2plus:1}, refuse: {turn2plus:1}, http_4xx: {turn1:2, turn2plus:19}}}` ⇒ 🔴 **这把尺与库面 thread 尺不等价（7 vs 3）⇒ 已立 `U-138`**（§16.6）。
+- `p95_scope` = **`admitted_http_2xx`**；`latency_ms` = `{p50: 6959.5, p95: 9291.9, p99: 9291.9, max: 9291.9, mean: 6488.4, samples: 9}`；`ttfb_ms` = `{p50: 7.2, p95: 1614.4}`；`throughput_rps` = 1.364。
+- `g6_p95_le_8s` = **`null`**；`g6_caveat` **原文**：「准入样本仅 9 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足；另有 20 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）」。
+- `rejection_headers` = `{409: {retry_after=3: 1}, 429: {retry_after=30: 20}}`；`quota_headers_by_status` = `{409: {none: 1}, 429: {bucket+limit+remaining+reset: 20}}` ⇒ 429 那一支**四头齐**、409 不带配额头（`Retry-After` 走另一张定值表），与 `U-119` 那对分维结论一致。
+
+### 16.4 `U-129` 三格并报（落库面 ＋ 一次性归档两份，粒度 = run）
+
+- **作用域**（写进正文，不靠读者推）：`user_id = 'u_t38c3'`、窗 `win_a = 2026-10-06 04:25:59+00`／`win_b = 04:27:00+00`（**具名剔除作废格** `tk_e52c0019f24d4c09b58facd9e7a0f59f`），第二把窗 `win_a = 04:25:00+00`（含作废格）作对照。
+- 尺 = `deploy/loadtest/r23_thread_from_checkpoints.sql` 的 ⑮／⑰，两份输出归档在 `backend/reports/w8/evidence/t38/r23_scope_{excl,with}_void_cell.txt`。
+- **格1（= ⑮ 两臂）**：**臂1 = 0 ∧ 臂2 = 0** ⇒ 达成（分母 run = 9／10）。
+- **格2（`t2_routed_audit_supp_without_terminal_write = 0` ＋ 第四件前置 非空真）**：**= 0**，且同作用域 **`t2_routed_supp = 3 > 0`** ⇒ verdict 串自己写「**ge2 = 0 且 t2_routed_supp = 3 ⇒ 非空真达成**」。**没满足前置的那一类域一律记 `n/a__靶子形状不含 prev=success 的第 2 轮`，不许记 0**（`§4.8` 那条陷阱本轮没踩）。
+- **格3（`t2_with_terminal_write ≥ 1`）**：**达成**（verdict 串「ge3 达成（>=1）」）。
+- 存量域不折叠：⑰c 的 `pre_fix` 域仍 **ge2 = 5（n = 5）**、`post_fix` 域 **ge2 = 0（n = 10）** ⇒ 两个时点同框。
+- 🔴 **两把尺的 turn 数不一致，先说清**：落库面 `t2_runs = 6`，而回执侧 `by_outcome` 里准入的 `turn2plus` = 4 ⇒ 差在**分组键**（§16.6 的 `U-138`），不是数据丢了；凡"第 N 轮"的结论本轮**只从库面那把取**。
+- **本窗措辞纪律**：只写"三格并报数已交"，🚫 不写"已修／已结案"（转绿归 QA 重判）。
+
+### 16.5 🔴 `G-6` 判向 = 未达成 ＋ 一个结构性事实（这条是本轮最该被读到的）
+
+- **判向**：`admitted = 9 < MIN_ADMITTED_FOR_P95 = 20`（现读 `deploy/loadtest/driver.py:370`）⇒ `g6_p95_le_8s = null` ＋ caveat 原文 ⇒ **本轮那批的 P95 不可引用为达标或不达标**；旧的 6.18s／9.81s／20.04s 那批**不被取代**（引用它们仍须各带自己的 n 与作废声明）。
+- **结构性事实（不是执行事故）**：QUERY 桶 = **10／用户·分钟**（`app/api/ratelimit.py:203` 现读 `RateLimitRule(QUERY, 10, 100)` = 用户 10、租户 100），而 **429 是秒回** ⇒ 30 条请求在 **22 秒**内全部发出 ⇒ 只有第一个分钟窗的量能被准入 ⇒ **单用户的一把 `c=3/n=30` 批在机制上拿不到 ≥20 准入**。⚠️ 我报价里那句"预计 ≈21 准入（区间 18–30）"**把 429 当成耗时请求算了**（假设墙钟 ≈150s），被实测否证 —— 报价的**金额**结论没受影响（实付 ¥0.066 < 期望 ¥0.158），受影响的是**样本数**这一格，已如实记在 `quote vs measured` 里。
+- **两条可选形状（本窗不擅自做，交回裁）**：① **`c=1` 串行 n=30** ⇒ 墙钟 ≈300s、可准入 ≈28（≥20 ⇒ G-6 第一次可引用），代价 = **丢掉"并发"那一格**（QA 明确要 H 带 `c=3` 自己的并发）；② **多用户令牌 ＋ 保持 `c=3`**（3 枚令牌 × 各自 10/min）⇒ 可准入 ≈28–30、约 **¥0.19–0.21**（本轮剩余 ¥0.184 ⇒ 3 枚全准入会**贴穿上界**），代价 = 靶子从"单用户多会话"变成"多用户"，`thread_depth`／429 画像的读法要一起改。⇒ **请 QA/总控点名要哪条**，或直接判"G-6 留给评测那条路"。
+- **`U-129` ③ 与 `G-6` 不是同一件事**：三格并报（§16.4）**已交齐且非空真**，`G-6` 只差样本数 ⇒ 别让"G-6 未达成"把 `U-129` 的正向证据一起吃掉，也别反过来写。
+
+### 16.6 🔴 取号一枚 `U-138`（本窗自取，依据 = `docs/07 §4.8` 指针行 v1.7.21 那句「下一个可用号 = `U-138`」）
+
+- **机制**：`deploy/loadtest/driver.py::_thread_depth` 的分组键是 **`(worker, session_id)`**，而它的 docstring 写「按 (worker, session_id) = 同一个 thread」—— 服务端 thread 实为 **`tenant:user:session`**（`lg.checkpoints.thread_id`）。单用户 ＋ `c=3` ＋ `--session-pool 3` 下两者**不等价**：回执 `threads = 7`、库面 = **3**（含作废格 4）。⇒ 回执侧的 `turn1` 虚高，"同一 thread 的第 N 轮"这类分母在回执侧不可用。
+- **判据三条**（写进 `docs/07 §4.8` 的 `U-138` 行）：① 键必须与库面同键，**或**改名（如 `worker_session_groups`）并停止自称 thread；② 两把不等价时**必须同框并报**（本轮形状 = `t38_assembled.json::thread_key_discrepancy`）；③ 凡"第 N 轮"的结论只从库面取。**复算命令**在该行内，两把并排 ⇒ `3 ≠ 7` 可自跑。
+- **边界**：这是**量具的键命名/错位**问题，不是生产缺陷（落库面一直对）⇒ 本号不动 `app/**`；与 `U-129`／`U-130` **不并**（`§4.8` 规则②：触发面相同 ≠ 缺陷相同）。**本窗不自写「已结案」**。
+
+### 16.7 🔴 本窗自曝四笔（都是"尺自己坏/自己错"，不是被测代码）
+
+1. **聚合 md5 尺原来是坏的**：`attest_build_identity.py` 的容器侧跑 `find . | xargs md5sum | md5sum`，行里带 `./` 前缀、而 git 侧拼的是不带前缀的相对路径 ⇒ **三列结构上永远不可能相等** ⇒ 上一轮我引的那个"聚合值不等"（并解释成"容器 raw vs LF blob 归一差异"）**根本不是证据，是我把一把坏尺当已知失真面接受了**。✅ 已换代：三面同源（各自 LF 归一后逐文件 md5 ＋ 整段列表再取 md5），本轮现测 **158/158 三面相等**，并把这条判据接进 rc（`rc=0` 现在同时要求逐件 SAME ＋ 聚合相等 ＋ 层 3）。⇒ **教训：尺的"已知失真面"这句话必须先证明失真机制成立，否则它就是"尺坏"的别名。**
+2. **报价的墙钟假设错在把 429 当耗时请求**：`t38_quote.py` 用"pair1 = 2 条／29.97s ⇒ 单条 ≈15s"外推 30 条 ≈150s ⇒ 预计准入 21；实测 22.0s／准入 9（20 条秒回 429）。金额结论偏低而非偏高（没越上界），但**样本数那一格被我的算式骗了** ⇒ 已把"429 秒回"写进报价件与 §16.5 的前提，并把"桶速率 × 墙钟"这条算式点名成可判伪式。
+3. **一次性库配方第一次跑给了错的 DSN**：`RETRIEVAL_TEST_PG_DSN` 给 `app_rw` ⇒ 新建库上 `permission denied for database` ⇒ **6 skipped ＋ 3 errors**（那 3 条连 skip 都不给，直接 setup error）。改成超管串后才 **124 passed／rc 0**。⇒ 该 DSN **必须可建表**（与另外三个用 `app_rw`／`app_ro` 的 libpq 串不同），已写进 `OVERVIEW §6` 收口段。
+4. 附带一笔小的：`t38_quote.py` 第一版把仓库根取成 `parents[2]` ⇒ 拼出 `backend/deploy/loadtest/driver.py` ⇒ "尺坏"分支自己炸（**同一深度坑第三次**，QA 15.4-3 也是它）⇒ 现在件里 `assert DRIVER.exists()` 并打印 `[ROOT]`。
+
+### 16.8 当期门禁重算 ＋ 零越界自证
+
+| 面 | 读数 | 命令形状 |
+|---|---|---|
+| 静态三门 | `ruff check app tests` **All checks passed!／rc 0**；`mypy app` **no issues in 158 source files**；`lint-imports` **4 kept, 0 broken** | cwd = `backend/`，`PYTHONUTF8=1` ＋ `PYTHONIOENCODING=utf-8`，`../.venv/Scripts/lint-imports.exe` |
+| 离线面 | **2,454 passed／0 failed／1 warning／105.70s／rc 0**（`tests/unit`＋`tests/contract`＋`tests/eval`） | `cd backend && PYTHONIOENCODING=utf-8 PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest tests/unit tests/contract tests/eval -q --continue-on-collection-errors` |
+| 集成面 | **124 passed／0 failed／29.31s／rc 0**（11 个文件）；一次性库 `ecom_t38it_r15` → `0006`／`app` **32** 表 → 跑 `-v` → **当场 DROP**；残渣尺 `datname like 'ecom%'` = **2**（`ecom` ＋ 别窗 `ecom_u123_probe`，**未动**） | 配方四串（**不写死在仓库里**：超管口令在容器内 `printenv POSTGRES_PASSWORD` 现取、`app_rw`／`app_ro` 口令取 `deploy/.env` 的两条 URL，只在子壳里导出）：`COMMERCEQL_TEST_SUPER_DSN`／`RW`／`RO` 三串走 libpq 形态指 `127.0.0.1:5432/ecom_t38it_r15`，`RETRIEVAL_TEST_PG_DSN` 🔴 **必须给可建表的那一把（超管）**，`MIGRATION_DATABASE_URL` 同 host／库但带 SQLAlchemy 方言前缀；`pytest tests/integration -v` 那支必须 `‖ RC=$?` 兜住 —— 否则 `set -e` 会让跑红时**跳过 DROP**（本轮第一次就是这么撞的） |
+| 两遍重算 | reporter 两遍都带 `--json-out` ＋ `--md-out` 指**仓库外**、**干净树**（`9398fad`／`dirty false`）；差尺点名 6 项白名单 ⇒ 差集总数 **1** ｜ meta **1** ｜ 🔴 **判定量 0**（唯一 meta 差 = `generated_at` 3 秒） | `../.venv/Scripts/python.exe reports/qa/prompts/diff_recompute_meta.py gate_A.json gate_B.json generated_at git.rev git.rev_full git.commit_count "~静默前置" "~generated_at"` |
+| 八格 | **PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2**（`G-1` PASS；`G-2`／`G-5`／`G-7` FAIL；`G-3`／`G-4` PARTIAL；`G-6`／`G-8` UNVERIFIED）⇒ 与来件**逐词同**；`G-6` 的输入**仍是 `deploy/loadtest/receipt.json` 那份 roll-up**（本轮没把新批喂给它 —— 9 样本不够判，喂了就是把"样本不足"改成"P95 超预算"的第二份真相） | 入库件 = `backend/reports/w6/eval_metrics.json` ＋ `评测报告与门禁判定.md`（件内自报 `rev 9398fad`／`dirty false`，入库笔 = 本段落笔笔，两格并报） |
+| 前端（本轮没动代码，只做回归核） | `npx tsc --noEmit` ⇒ **rc 0 ＋ 输出 0 字节**（按 QA 15.5 第 2 条的完整报法，不再只报 rc）；`npx vitest run` ⇒ **33 passed／5 files／rc 0**；`eslint` 未重跑 ⇒ 记 **UNVERIFIED**（本轮前端零改动，尺 = `git diff --name-only b45e47f..HEAD -- frontend` = **0 行**（本轮前端零改动）） | `cd frontend && npx tsc --noEmit \| wc -c` ＋ `npx vitest run` |
+| 花钱自证 | 窗内 **36 行／¥0.066117／全非峰**；台账 `1,721→1,757`、`¥2.831595→¥2.897712`；⚠️ **本轮唯一出站面 = 那 10 条 run**，除它之外**零出站**（评测发起支没点、`--live` 全量没打） | §16.1 那条 psql |
+| 判据/写面自查 | `U-129`／`U-130`／`U-135`／`U-136`／`U-137` 五行判据措辞 **一字未动**（尺 = 五行行首各命中 1 ＋ `git diff` 增删行里不含这五行）；**迁移目录 0 改动**、`tests/unit/test_rls_policy_provenance.py` **0 改动**；`eval/` 冻结集与匣带 **0 改动**；`backend/reports/qa/**` **只读**（0 笔触及）；仓库内**凭据 0 字节**新增（`test_migration_dsn_hygiene.py` 8 passed） | `git diff --name-only 2a82131..HEAD -- backend/reports/qa backend/app/repo/migrations backend/tests/unit/test_rls_policy_provenance.py eval` ⇒ **空**；`git log -1 --format=%h -- backend/reports/qa` 仍是 QA 自己那笔 `2a82131` |
+
+### 16.9 收口件 R1／R2／R3 与随交两小格（逐处贴尺）
+
+- **R1 `OVERVIEW §6`**：新增"第 15 轮收口读数"段（八小格：离线／集成／静态三门／路由面与当期性锚／A.9.5 第二道现查不在位／活体与实付／G-6 判向／`U-129` 三格 ＋ `U-138` ＋ 演示红线），表内各格保留为历轮快照。尺 = 每格自带命令，可原地复跑。
+- **R1 `OVERVIEW §7`**：报告指针 🔻 就地换到本轮那份（两格并报改成**自指写法**：件内自报 = 现读 `meta.git`，入库笔 = `git log -1 --format=%h -- backend/reports/w6/eval_metrics.json`，⚠️ 本窗自己的落盘笔会继续后移 ⇒ 引用前实跑）；并加"时钟三面对表"那条 🔻 补记。
+- **R1 `deliverables/ACCEPTANCE.md §3`**：新增四条 —— ① 🔴 **演示硬红线：不当场点「发起评测」**（真发起 = 538–620 条／¥0.337171～¥0.391504，是另一笔钱）；② 评测集下拉的 DOM 尺（应为 **2**）＋ 那处 `useEffect` 缺陷的归属句；③ 🔴 **上面"本轮 docker build ＋ recreate"那句按现状降调**（第 15 轮**未重建**，当期性改由逐件 18/18 ＋ 全量 158/158 ＋ 层 3 支撑）；④ `PASS 1/8` ⇒ 仍不得写"门禁通过"，且本轮那批**没改变 `G-6` 判向**。A.9.5 措辞与 QA 15.2 同形（只可说"第二道今天不在位（现查）"，🚫 不说"双保证已落地"）。
+- **R2**：以上全部 🔻 追加、原句不删；`docs/07` 的 `U-136`／`U-129` 等行本轮**没动**。
+- **R3（条数基线点名）**：`OVERVIEW §7` 里写死三句话 —— 本轮**没新增用例** ⇒ 离线 **2,454**／集成 **124** 与**第 14 轮入库那份逐位相同（＋0／＋0）**；"＋62／＋17"只对**第 13 轮入库那份（2,392／107）**说；"＋1"只对**第 14 轮轮内中间跑（2,453）**说。裸写增量会造出"＋62 条从哪来"的假问题（= QA 15.5 第 1 条）。
+- **随交两小格**：① 基线点名（上面 R3，已落 `OVERVIEW §7` 与 §十六.8）；② `tsc` 报法改成 **rc 0 ＋ 输出字节数 0**（§16.8 那格已按新形状报，并点名 `eslint` 本轮没重跑 ⇒ UNVERIFIED）。
+
+### 16.10 交回 QA／总控的三点（按需要回复的紧迫度排）
+
+1. 🔴 **`G-6` 要哪一条形状**（§16.5）：`c=1` 串行（丢并发那一格）／多用户令牌保 `c=3`（≈¥0.19–0.21，会贴穿上界）／或判"留给评测那条路"。**本轮已停手，等一句。**
+2. **`U-129` 转不转绿归你**：三格并报已交且非空真（`t2_routed_supp = 3`），当期性由"逐件 18/18 ＋ 全量 158/158 三面 ＋ 层 3 ＋ 跑前独立一次"支撑；本窗措辞只到"数已交"。
+3. **第二道 RLS 仍未排期**：本轮按总控默认**没动**迁移与 provenance 守卫；你 15.3 那四条约束（逐表枚举豁免／`ENABLE` ＋ `FOR INSERT WITH CHECK` 同事务且断言要在迁移后的真库跑一遍／守卫文件头那句与 §14.2 同轮改／翻转时两处对外措辞一起翻）我已收进本窗待办，**落笔那轮按这四条验收形状做**。
+
+### 16.11 串行资源表（本轮哪些动作争用同一件资源 ｜ 尺 = `PROMPT.md §5` v2.1 ② 那六个面）
+
+| 资源 | 本轮动了没有 | 现测证据（右列读数在**落笔时 05:06:17Z 重跑过一遍**，命令随格给） |
+| --- | --- | --- |
+| `git` 索引 | 动了 4 次，**全部按名 stage**（无 `add -A`／`add .`／未 reset／未 clean） | `67be6b0`（报价件）→ `bea724a`（10 文件 ＋2225/−18）→ `9398fad`（4 文件）→ 本段落笔笔；每笔落库后 `git show --stat` 逐条核过 ｜ 尺 = `git log --format='%h %cd' -4` |
+| 共享 `ecom` | **写了**（正常业务写面，非 DDL、未跑迁移） | 本轮 10 个 `task_id` 的 `t2_routed_audit` ＋ `cost_ledger` 行（实付 ¥0.066117／36 行台账，作用域 `user_id='u_t38c3'`）；`alembic_version` 落笔现读仍 = **`0006`**。一次性库 `ecom_t38it_r15` 建→迁移→跑 124→**当场 DROP**，残渣尺 `datname like 'ecom%'` 跑前跑后 = **2**、落笔再读 = **2**（`ecom, ecom_u123_probe`；那个探针库不是本窗造的 ⇒ 未清、未动）｜ 尺 = `docker exec commerceql-pg-1 psql -U postgres -d postgres -Atc "select count(*) from pg_database where datname like 'ecom%'"` |
+| 共享栈（五件容器） | **只被打、没被改**，但🔴 **本轮全部活体读数落在一次冷启动之后** | 宿主 `LastBootUpTime = 2026-10-06 12:04:56 +0800`（= `04:04:56Z`）；五件 `created` 分别 = 10-03（api = 10-05T15:19:26Z）、`StartedAt` **全部 = 10-06T04:10:42.88–42.90Z** ⇒ 一次冷启动把整栈带起来；`docker ps` 五条 `127.0.0.1:P->P`（发布端口仍只绑回环）、`/api/v1/healthz/ready` = **200**；主批 `started_at 04:25:59Z` = 起来之后 **≈15 分钟** ｜ 尺 = `docker inspect commerceql-api-1 commerceql-web-1 commerceql-pgbouncer-1 commerceql-redis-1 commerceql-pg-1 --format '{{.Name}} created={{.Created}} started={{.State.StartedAt}}'` |
+| 被测镜像 | **未 build、未 recreate** | `created ≠ StartedAt` 正是"起旧容器、没造新容器"那一形状（api 容器 `created 2026-10-05T15:19:26Z` ／ `started 2026-10-06T04:10:42Z`）；镜像 `Created 2026-10-05T15:19:25Z`、digest `sha256:ca34ea791a81…` ⇒ 当期性由**逐件 md5 18/18 SAME ＋ 全量 `app/**.py` 聚合 158/158 三面相等 ＋ 层 3 `RUN_SCOPED_STATE_FIELDS` size=47** 三件支撑，🚫 不写"本轮重建出新镜像"（`OVERVIEW §6` 里"本轮 docker build"那句已在收口件按现状降调） |
+| 匣带重写 | **没发生** | `git diff --name-only 2a82131..HEAD -- eval` = **0 行**（落笔重跑）；`eval_metrics.json` 的 `meta.cassette` 仍指原路径 |
+| `reports/qa/**` | **只读** | `git diff --name-only 2a82131..HEAD -- backend/reports/qa` = **0 行**（那把 30 臂探针 `probe_t37_surfaces_live.py` 一字未改、断言未动） |
+
+⚠️ 争用前提里**有一条没量到**：本轮**没有**测"跑批时段是否有别的窗同时打共享栈／同时花额度" ⇒ 逐样本延迟的**独占性 UNVERIFIED**。这与 §16.5 是同一件事（本批 `9 < 20` 已不可引用，不必为它补测；但若将来要拿 `c=3` 的延迟当 `G-6` 证据，必须先把这条量出来）。
+
+🔴 补记（**落笔时才量到的新事实**：宿主 `LastBootUpTime` 是这一格新的；`StartedAt = 04:10:42Z` 我在 §16.0 只当**时钟对表的旁证**记过，**没把它当「本轮活体读数的热机前提」来记**）：五件容器于 `04:10:42.9Z` 一起起来，而宿主 `04:04:56Z` 刚重启 ⇒ 本轮的活体读数（含预热作废格与主批 9 条）**全部落在一次栈冷启动之后**，而我先前只按"时钟三面对表"核过时间、没核过"栈热了多久"。它不改任何已交结论（跑批前 ≈15 分钟已起完、`ready` 200、构建身份三件跑前跑后各取一次且同 HEAD），但它给 §16.5 那条"`G-6` 本批不可引用"**又添一个独立理由**：冷启动段的延迟本就不该进 p95 分母，而本批 9 条里有几条沾到冷启动**我没量** ⇒ 这一格同样记 UNVERIFIED，不补测（因为分母已经不够，补它不改变判向）。⇒ 教训：**"活体读数之前先问这台机器多久前起过"，这是"时钟对表"之外的一格。**
+
+### 16.12 落笔身份（两格并报）
+
+- 本节落笔时 HEAD = `9398fad`／450 笔（上一笔 cd = `2026-10-06 12:50:17 +0800`）；本节引用的入库件自报 `meta.git.rev = 9398fad`／`dirty false`（= **两遍重算所在的树**），把该件字节进仓库的那一笔 = **本节落笔那一笔**（不是 `9398fad`；落笔后现读 `git log -1 --oneline -- backend/reports/w8/RELAY.md`）。
+- 落笔尺（三件都跑）：段标题命中数 = `1`（判据 = 下面那行现读的 `§十六 命中数`，必须等于 1；追加前先量 `RELAY.read_text().count( MARK )` 与 `BODY.count( MARK )` 相加）；排版尺（cwd = 仓库根）= `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/_audit_layout.py backend/reports/w8/RELAY.md "## §十六"`（**尺本轮已进树**，先前跑它在仓库外 `E:/tmp_qoder/r15/`；两个位置现读同一份输出）⇒ 本节新增问题必须 0；上一笔时刻 = `2026-10-06 12:50:17 +0800`。
+
