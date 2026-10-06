@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import datetime as dt
 import json
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -88,6 +87,20 @@ def spend_window(since_iso: str) -> dict:
                            "max_created_at": grand_max}}
 
 
+def spend_for_tasks(task_ids: list[str]) -> dict:
+    """按**主批那 9 个 run 的 `task_id` 具名取台账** ⇒ 分子与分母（`admitted`）严格同面。
+
+    ⚠️ 不用"时间窗减一秒"这种做法：回执的 `finished_at` 只到秒，而末帧调用落在 `04:26:21.407`，
+    按秒取整会把这一条切在窗外（T-39 A 撞 H 时就是被这个边界骗过一次）。具名 `task_id` 才稳。
+    """
+    ids = ",".join(f"'{t}'" for t in task_ids)
+    rows, total, distinct, lo, hi = psql(
+        f"select count(*), to_char(sum(cost_cny),'FM999990.000000'), count(distinct task_id),"
+        f" min(created_at), max(created_at) from app.cost_ledger where task_id in ({ids});").split("|")
+    return {"task_ids_given": len(task_ids), "rows": int(rows), "sum_cny": float(total),
+            "distinct_task_ids_billed": int(distinct), "first_created_at": lo, "last_created_at": hi}
+
+
 def main() -> int:
     quote, main_r, void_r = jload(QUOTE), jload(MAIN), jload(VOID)
     scen = main_r["scenarios"][0]
@@ -104,7 +117,25 @@ def main() -> int:
     terminal = int(scen["admission"]["terminal"])
     floor = int(quote["sample_floor"]["MIN_ADMITTED_FOR_P95"])
     spend = spend_window(quote_utc.astimezone(dt.UTC).isoformat(timespec="microseconds"))
-    unit_measured = round(spend["sum_cny"] / (admitted + 1), 6)  # +1 = 作废格那一次准入
+    # 🔴 T-39 B（F4）：旧写法 `spend["sum_cny"] / (admitted + 1)` 的 `+1` 把作废那跑算回了分母，
+    # 与同文件 docstring「作废格不进任何分母」直接打架。改法 = 分子也换成**具名 9 个 run** 的花费，
+    # 两边同面 ⇒ 单价真叫 `cny_per_admission`；整窗（含作废）那把另起一个名字并报。
+    main_only = spend_for_tasks([str(s["task_id"]) for s in (scen.get("latency_samples_ms") or [])])
+    unit_measured = round(main_only["sum_cny"] / admitted, 6)
+    unit_window_incl_void = round(spend["sum_cny"] / (admitted + int(void_scen["admission"]["admitted"])), 6)
+
+    # 两把 thread 尺里的"回执那把"：U-138 落地后新键 = `worker_session_depth`/`groups`，
+    # 旧那份（T-38 当期批）= `thread_depth`/`threads` ⇒ 两种都接住，但**键名与实际读到的那一面**必须同框点名。
+    depth_raw = scen.get("worker_session_depth") or scen.get("thread_depth") or {}
+    key_in_receipt = ("worker_session_depth" if scen.get("worker_session_depth") else "thread_depth（U-138 改名之前）")
+    depth_cell = {
+        "groups": depth_raw.get("groups", depth_raw.get("threads")),
+        "grouping_key": depth_raw.get("grouping_key", "(worker, session_id)"),
+        "depth_hist": depth_raw.get("depth_hist"),
+        "key_in_receipt": key_in_receipt,
+    }
+    if depth_cell["groups"] is None:
+        raise SystemExit("尺坏：回执里两把键名都取不到组数（不要退回硬抄 7）")
 
     agg = main_r["build_identity"]["layer1_2"]["app_tree_aggregate"]
     pre = jload(EVID / "build_identity_pre_run.json")["build_identity"]
@@ -180,6 +211,9 @@ def main() -> int:
                 "来源": "T-36 E 那件（driver.py `latency_samples_ms`）第一次真用上",
             },
             "e_reading_surface": {k: scen.get(k) for k in TERMINAL_KEYS},
+            "e_键名漂移": ("本格的 `thread_depth` 是 T-38 那份回执的原样搬运；U-138 落地后**新回执**给的是 "
+                        "`worker_session_depth`（键语义自报、且显式声明不是服务端 thread）⇒ 读新批时把这一格换成 `worker_session_depth`，"
+                        "契约测试 = `backend/tests/contract/test_loadtest_thread_key_contract.py`"),
             "f_p0_summary_current": {
                 "verdict": "见 `p0_check`（本件不写库，判定由那格给）",
                 "尺": "PYTHONUTF8=1 .venv/Scripts/python.exe -c \"import sys;sys.path[:0]=['eval','.'];import reporter;…\" --emit-p0-summary backend/reports/w8/gate_inputs_p0_summary.json",
@@ -188,6 +222,8 @@ def main() -> int:
         "g6": {
             "sample_floor": floor,
             "admitted_this_batch": admitted,
+            "terminal_this_batch": terminal,
+            "admitted_eq_terminal": admitted == terminal,
             "可引用": admitted >= floor,
             "verdict": ("达成：P95 可引用" if admitted >= floor else
                         f"🔴 未达成：{admitted} < 下限 {floor} ⇒ G-6 继续不可引用"),
@@ -216,17 +252,28 @@ def main() -> int:
                    "-v upref='u_t38c3%' -f - < deploy/loadtest/r23_thread_from_checkpoints.sql",
         },
         "thread_key_discrepancy": {
-            "receipt_侧": {"threads": scen["thread_depth"]["threads"],
-                           "分组键": "(worker, session_id) —— `driver.py::_thread_depth` 的 docstring 自己称它 thread",
-                           "depth_hist": scen["thread_depth"]["depth_hist"]},
+            "receipt_侧": {"组数": depth_cell["groups"],
+                           "分组键": depth_cell["grouping_key"],
+                           "depth_hist": depth_cell["depth_hist"],
+                           "回执键名": depth_cell["key_in_receipt"],
+                           "改名依据": "U-138① —— 旧键 `thread_depth`/`threads` 自称 thread ⇒ 新回执改叫 `worker_session_depth`/`groups`；"
+                                   "本件读的是 T-38 当期那份（改名**之前**跑的），所以回执里的键仍是旧名，两格在此对上"},
             "库面": {"分组键": "tenant:user:session（`lg.checkpoints.thread_id`）",
+                     "尺": "deploy/loadtest/r23_thread_from_checkpoints.sql ⑮/⑰（剔作废那跑）",
                      "含作废": scope("2026-10-06 04:25:00+00", False)["server_threads"],
                      "剔作废": scope("2026-10-06 04:25:00+00", True)["server_threads"]},
-            "结论": "两把不等价（7 vs 3）⇒ 凡『同一 thread 的第 N 轮』只从库面取；回执侧 `thread_depth` 在本几何下把 thread 拆细了 ⇒ 已按新缺陷上呈（§十六）",
+            "结论": "两把不等价（组数 vs 库面 thread 数）⇒ 凡『同一 thread 的第 N 轮』只从库面取（U-138③）；"
+                    "本格 = U-138② 要求的『同框并报』落点",
         },
         "spend": {**spend, "cap_cny": CAP_CNY,
                   "within_cap": spend["sum_cny"] <= CAP_CNY,
+                  "main_batch_only_named_tasks": main_only,
                   "unit_measured_cny_per_admission": unit_measured,
+                  "unit_分子分母同面": f"分子 = 具名 {main_only['distinct_task_ids_billed']} 个 run 的 ¥{main_only['sum_cny']}；"
+                                   f"分母 = admitted {admitted}；作废那跑（¥0.007166）不在分子里",
+                  "unit_cny_per_run_in_window_incl_void": unit_window_incl_void,
+                  "两把单价的差别": f"¥{unit_measured}（剔作废、具名）vs ¥{unit_window_incl_void}（整窗含作废 ÷ 10 run）"
+                                f" ⇒ 旧写法把它叫 per_admission 是自相矛盾，本轮改名并同框并报",
                   "对表": {"报价 low/expected/high": quote["budget"]["cost_range_cny"],
                            "实付": spend["sum_cny"],
                            "偏差原因": "墙钟 22s（429 秒回）≠ 报价假设的 ~150s ⇒ 准入 9 而非 21 ⇒ 实付低于期望"},
@@ -248,18 +295,29 @@ def main() -> int:
     print(f"G-6 = {out['g6']['verdict']}")
     print(f"实付 = ¥{spend['sum_cny']} / 上界 ¥{CAP_CNY} ｜ 当期单价 ¥{unit_measured}/准入 ｜ "
           f"非峰 = {spend['all_non_peak']}")
-    print(f"thread 两把 = 回执 {scen['thread_depth']['threads']} vs 库面 {out['thread_key_discrepancy']['库面']['剔作废']}")
+    print(f"两把尺 = 回执侧 {depth_cell['groups']} 组（键名 {key_in_receipt}）vs 库面 {out['thread_key_discrepancy']['库面']['剔作废']} 条 thread")
     print(f"产物 = {OUT.relative_to(ROOT)}")
     return 0
 
 
 def _p0_verdict() -> str:
-    """(f)：证件里的 `git_rev` 与两把日志名是否已跟上本轮 ⇒ 只看件，不重算门禁。"""
+    """(f)：证件里的 `git_rev`／笔数／两把 `passed` 是否已跟上本轮 ⇒ 只看件，不重算门禁。
+
+    🔴 T-39 B 修坏尺：旧写法 `re.search(r"passed=(\\d+)", str(p0["offline"]))` **恒不命中**
+    （`offline` 是 dict，`str()` 出来是 `'passed': 2454`，冒号不是等号）⇒ 那半格永远印 `—`。
+    ⇒ 改成直取键值；拿不到就按 docstring 自己的规矩写 `UNVERIFIED`，不给"看起来像读数"的占位符。
+    """
     p0 = jload(W8 / "gate_inputs_p0_summary.json")
-    m = re.search(r"passed=(\d+)", str(p0.get("offline", {})))
+
+    def passed(side: str) -> str:
+        block = p0.get(side)
+        value = block.get("passed") if isinstance(block, dict) else None
+        return str(value) if isinstance(value, int) else "UNVERIFIED"
+
     return (f"证件 rev = {str(p0.get('git_rev'))[:7]} / {p0.get('commit_count')} 笔 / "
-            f"generated {p0.get('generated_at')} / offline passed = {m.group(1) if m else '—'} "
-            f"→ 与本轮干净树一致才算达成（装配件不下这一判，留给门禁那件）")
+            f"generated {p0.get('generated_at')} / offline passed = {passed('offline')} / "
+            f"integration passed = {passed('integration')}"
+            f" → 与本轮干净树一致才算达成（装配件不下这一判，留给门禁那件）")
 
 
 if __name__ == "__main__":

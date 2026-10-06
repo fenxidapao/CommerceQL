@@ -99,7 +99,10 @@ class Sample:
     #: 四头名唯一出处 = `app/api/ratelimit.py:147-150`）。旧量具只读 `retry-after` ⇒ 这条判据
     #: **从未被本窗口的任何回执证过**（"没读到"与"没有"同形）。只在 `status >= 400` 一侧记。
     quota_headers: tuple[str, ...] = ()
-    #: thread 身份的两半（都是**标识符不是内容**，与 `task_id` 同一卫生类）。
+    #: (worker, session) 组身份的两半（都是**标识符不是内容**，与 `task_id` 同一卫生类）。
+    #: 🔴 U-138：这两个字段**拼不出**服务端 thread —— `thread_id = {tenant}:{user}:{session}`
+    #:    （`app/api/runner.py:196`）里 `tenant` 与 `user` 要从令牌解，压测件不碰 DB 也不解 JWT ⇒
+    #:    本尺只数"组"，thread 一律走库面那把（`r23_thread_from_checkpoints.sql`）。
     #: 服务端 `thread_id = {tenant}:{user}:{session}`（`app/api/runner.py:196`）里：
     #: ① `user` 由 **worker 序号**定（`worker_token(i)` 的 `i` 是 worker 序号，`:320`）；
     #: ② `session` 由**请求序号**定（`session_pool[i % len]` 的 `i` 是全局游标，`:298`）。
@@ -430,13 +433,20 @@ def _rejections(samples: list[Sample]) -> dict[str, dict[str, int]]:
     return out
 
 
-def _thread_depth(samples: list[Sample]) -> dict[str, Any]:
-    """按 **(worker, session_id) = 同一个 thread** 给样本排第几轮，再按深度切读数。
+def _worker_session_depth(samples: list[Sample]) -> dict[str, Any]:
+    """按 **(worker, session_id)** 这一组给样本排第几轮，再按深度切读数。
 
-    存在的理由 = 第二十一轮那笔账（`r21_turn_index_attribution.txt` 表 1/表 2）：那次按
-    **user** 排轮次，而 U-129 第二触发面的机制前提按 **thread** 才成立。两把尺在本几何下
-    **不等价**（`sid` 随请求序号轮转），所以这里给出 thread 尺，并保留"无会话"一桶如实暴露
-    `--reuse-sessions` 没开的事实。
+    🔴 **U-138（2026-10-06 立案并落地）**：这把尺的键**不是**服务端 thread。服务端
+    `thread_id = {tenant}:{user}:{session}`（`app/api/runner.py:196`），而这里的键是
+    `(worker 序号, session_id)` ⇒ 同一把批实测 **回执 7 组 vs 库面 3 条 thread**，不等价。
+    三条落地要求逐条对上：
+    ① 键名与文案**不再自称 thread**（旧 `thread_depth` / `threads` 已废，见返回体的 `grouping_key`）；
+    ② 两把不等价 ⇒ **必须同框并报**，库面尺 = `deploy/loadtest/r23_thread_from_checkpoints.sql` 的 ⑮/⑰
+       （本尺只给 `server_thread_ruler` 指针，不在此处查库 —— 压测件不开 DB 连接）；
+    ③ 凡"同一 thread 的第 N 轮"这类结论**只从库面那把取**，本尺只支撑"同一 `(worker, session)` 组的第 N 条"。
+
+    存在的理由仍是第二十一轮那笔账（`r21_turn_index_attribution.txt` 表 1/表 2）：那次按
+    **user** 排轮次、又被当成 **thread** 尺读，而 `sid` 随请求序号轮转 ⇒ 聚合读数撑不起序列断言。
     ⚠️ 深度顺序 = 样本**完成顺序**（`samples.append` 的到达序），不是发出序；并发下两者可差几秒。
     """
     seen: dict[tuple[int, str], int] = {}
@@ -460,8 +470,13 @@ def _thread_depth(samples: list[Sample]) -> dict[str, Any]:
         if s.code:
             c = by_code.setdefault(s.code, {"turn1": 0, "turn2plus": 0, "unsessioned": 0})
             c[arm] += 1
-    return {"depth_hist": depth_hist, "unsessioned": unsessioned,
-            "threads": len(seen), "by_outcome": by_outcome, "by_code": by_code}
+    return {"grouping_key": "(worker, session_id)",
+            "is_server_thread": False,
+            "server_thread_key": "{tenant}:{user}:{session}（app/api/runner.py 的 thread_id 形状）",
+            "server_thread_ruler": "deploy/loadtest/r23_thread_from_checkpoints.sql ⑮/⑰（库面，须剔作废那跑）",
+            "groups": len(seen),
+            "depth_hist": depth_hist, "unsessioned": unsessioned,
+            "by_outcome": by_outcome, "by_code": by_code}
 
 
 def _quota_headers_by_status(samples: list[Sample]) -> dict[str, dict[str, int]]:
@@ -519,7 +534,7 @@ def _summarize(spec: ScenarioSpec, samples: list[Sample], wall_s: float, args: a
         "admission": admission,
         "rejection_headers": _rejections(samples),
         "quota_headers_by_status": _quota_headers_by_status(samples),
-        "thread_depth": _thread_depth(samples),
+        "worker_session_depth": _worker_session_depth(samples),
         "latency_ms": {"p50": _pct(totals, 50), "p95": p95_total, "p99": _pct(totals, 99),
                        "max": round(totals[-1], 1) if totals else None,
                        "mean": round(statistics.fmean(totals), 1) if totals else None,
@@ -987,23 +1002,28 @@ async def self_check() -> int:
         print(f"[自检失败] X-RateLimit 四头指纹不对：{quota_fp}（期望 {want_quota}）", file=sys.stderr)
         return 3
 
-    # thread 深度尺的离线双向自证（第二十一轮那笔账的量具面：user 尺 ≠ thread 尺）。
-    # 为什么不能只靠真跑批：`--reuse-sessions` 关着的时候 thread 尺整根悬空（全落 `unsessioned`），
+    # (worker, session) 组深度尺的离线双向自证（第二十一轮那笔账的量具面：user 尺 ≠ thread 尺 ≠ 本尺）。
+    # 为什么不能只靠真跑批：`--reuse-sessions` 关着的时候这把尺整根悬空（全落 `unsessioned`），
     # 那格回执里没有任何东西能暴露"键根本没接上"。
+    # 🔴 U-138：夹具同时钉住"不再自称 thread"那两面 —— 键名不许出现 `thread_depth`/`threads`，
+    #    且必须显式声明 `is_server_thread = False` 并给出库面尺指针（缺一条 = 抄本又漂回"thread"）。
     td_samples = [
         Sample("ok", 200, 1.0, 1.0, 1, worker=0, session_id="sA"),
         Sample("error_frame", 200, 1.0, 1.0, 1, code="INTERNAL", worker=0, session_id="sA"),
         Sample("refuse", 200, 1.0, 1.0, 1, worker=1, session_id="sB"),
         Sample("ok", 200, 1.0, 1.0, 1, worker=2, session_id=None),
     ]
-    want_td = {"depth_hist": {"1": 2, "2": 1}, "unsessioned": 1, "threads": 2,
+    want_td = {"grouping_key": "(worker, session_id)", "is_server_thread": False,
+               "server_thread_key": "{tenant}:{user}:{session}（app/api/runner.py 的 thread_id 形状）",
+               "server_thread_ruler": "deploy/loadtest/r23_thread_from_checkpoints.sql ⑮/⑰（库面，须剔作废那跑）",
+               "groups": 2, "depth_hist": {"1": 2, "2": 1}, "unsessioned": 1,
                "by_outcome": {"ok": {"turn1": 1, "turn2plus": 0, "unsessioned": 1},
                               "error_frame": {"turn1": 0, "turn2plus": 1, "unsessioned": 0},
                               "refuse": {"turn1": 1, "turn2plus": 0, "unsessioned": 0}},
                "by_code": {"INTERNAL": {"turn1": 0, "turn2plus": 1, "unsessioned": 0}}}
-    td_got = _thread_depth(td_samples)
+    td_got = _worker_session_depth(td_samples)
     if td_got != want_td:
-        print(f"[自检失败] thread 深度尺不对：{td_got}（期望 {want_td}）", file=sys.stderr)
+        print(f"[自检失败] (worker, session) 组深度尺不对：{td_got}（期望 {want_td}）", file=sys.stderr)
         return 3
     print(f"[自检通过] 10/10 分类正确；样本 p95={p95}ms（桩注入的最大延迟 3000ms）；"
           f"g6_caveat {len(gate_cases)} 情形判向正确；g6_p95_le_8s {len(bool_cases)} 情形三态正确"

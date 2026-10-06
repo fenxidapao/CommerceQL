@@ -92,6 +92,21 @@ def _msg_scope() -> str:
     return "查询涉及的数据范围超出你的权限"
 
 
+def _msg_join_path() -> str:
+    """AST-R10 的出口文案（`U-137` 落地，2026-10-06）。
+
+    ⚠️ 这句**不许**与 `_msg_scope()` 合并：`R05/R13` 是"数据范围"判定（越权类，`FORBIDDEN_SCOPE`），
+    而 R10 是"**连接路径未在口径字典认证**"（`GATE_AST_REJECTED`）—— 两侧资产常常都在 allowlist 内，
+    把它们报成"超出你的权限"是把量具形状说成安全结论（`docs/07` §7.2 AST-R10 行 v1.7.23 定义补句）。
+    """
+    return "这个查询的表连接路径系统未认证，请换一种问法"
+
+
+def _msg_cartesian() -> str:
+    """AST-R11 的出口文案（同上，`U-137`）：表对已认证但 ON 条件列不匹配 = **笛卡尔风险**，不是越权。"""
+    return "这个查询的关联条件可能产生笛卡尔积，请指明用哪个字段关联"
+
+
 def _msg_protected() -> str:
     return "查询包含受保护字段"
 
@@ -161,13 +176,13 @@ _RULE_LIST: Final[tuple[RuleDef, ...]] = (
         AstRule.R10_JOIN_PATH,
         AstRuleSeverity.BLOCK,
         ErrorCode.GATE_AST_REJECTED,
-        _msg_scope(),
+        _msg_join_path(),
     ),
     RuleDef(
         AstRule.R11_CARTESIAN,
         AstRuleSeverity.BLOCK,
         ErrorCode.GATE_AST_REJECTED,
-        _msg_scope(),
+        _msg_cartesian(),
     ),
     RuleDef(
         AstRule.R12_RECURSIVE_CTE,

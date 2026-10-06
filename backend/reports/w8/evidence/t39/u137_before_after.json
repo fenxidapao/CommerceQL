@@ -1,0 +1,107 @@
+{
+  "arms": {
+    "after": "当期实现（`app/guard/ast_gate.py::_side_logical()` 按资产口径展开）",
+    "before": "离线对照臂 = 把 `_side_logical` 换成落地前语义（不展开 CTE）后对同一条 SQL 跑 `run_gate1`（本窗自订，单变量）",
+    "credibility_check": {
+      "r13_archive_class_tally": {
+        "cte_side_join": 3
+      },
+      "r13_archive_rule_tally": {
+        "R10": 3
+      },
+      "⚠️ 不许用回执 code 反推 rule_id": "`app/graph/nodes/error_out.py:64` 把**任何** AST 闸门拒绝映射成 `GATE_AST_REJECTED` ⇒ 回执里的 code 分不清 R06/R10（这正是 `U-125`「rule_id 无出口」的另一面）。",
+      "为什么期望本身是错的": "第 13 轮那三条（`tk_8fbf1cf3…`／`tk_51912ce6…`／`tk_0696f1a8…`）与本轮这三条（T-38 批）**不是同一批 SQL 变体**，把前一批的 tally 当后一批的对照位 = 拿另一个题面的读数当验收位（§4.8 规则：pre-fix 就为 0 不得当验收位）。⇒ 期望作废，只留「对照臂 vs 当期实现」这一对**同一条 SQL 的单变量对撞**。",
+      "本窗自订的期望（**已被现测推翻，原文保留**）": "我原先要求对照臂把这三条复现成 R10×3，参照物是第 13 轮归档 `u137_before.json` 的 rule_id_tally。",
+      "现测": {
+        "after_arm_rule_ids": [
+          "R06",
+          "R10",
+          "R06"
+        ],
+        "legacy_arm_rule_ids": [
+          "R06",
+          "R10",
+          "R10"
+        ],
+        "对照臂给出 R10×3": false
+      }
+    }
+  },
+  "artifact": "commerceql.w8.t39_u137_before_after/1",
+  "generated_at_utc": "2026-10-06T07:07:09+00:00",
+  "git_rev": "70012e711832cf9e6735dedbc60cefa0219dbb53",
+  "git_rev_short": "70012e7",
+  "question": "上个月复购率最高的 10 个店铺是哪些？（同一题在 T-38 批里生成了三条变体）",
+  "reading": "三条变体里**只有一条**的归因被本轮改动改变（['tk_ca342fa63…']：R10 → R06 —— CTE 侧按资产展开后连接路径判定通过，露出真正的列面违规）；仍 R10 那一条是**真该拒**（其资产对不在认证边集内），但它今天起的文案不再是「超出你的权限」；前后同为 R06 的那条与本号无关 ⇒ 🔴 **第 15 轮 RELAY §16.3／OVERVIEW 里『三条 GATE_AST_REJECTED 明确归 U-137 面』那句是过度归因，本轮就地订正**。三条**没有一条**翻成放行（after = {'R06|passed=False': 2, 'R10|passed=False': 1}）⇒ 演示那句「上个月复购率最高的 10 个店铺是哪些？」在离线面**仍不出数**，而活体面连本轮改动都还没带上（镜像未重建）。⇒ QA 16.5(ii) 那条「先落 U-137 再演示」（出路 a）**前提不成立**，已写进本轮交回。",
+  "receipt": "deploy/loadtest/t38_c3n30_main.json（三条 GATE_AST_REJECTED 的 task_id 取自 codes_task_ids）",
+  "rows": [
+    {
+      "after_current_impl": {
+        "passed": false,
+        "rule_id": "R06",
+        "user_message": "查询包含受保护字段"
+      },
+      "before_legacy_arm": {
+        "passed": false,
+        "rule_id": "R06",
+        "user_message": "查询包含受保护字段"
+      },
+      "note": "",
+      "raw_question": "本周客单价的环比变化是多少？",
+      "sql_chars": 1312,
+      "sql_len_matches_declared": true,
+      "task_id": "tk_02f6fd3af0e6451cb18ee6d12fc69c13",
+      "tenant_id": "T_A",
+      "user_id": "u_t38c3"
+    },
+    {
+      "after_current_impl": {
+        "passed": false,
+        "rule_id": "R10",
+        "user_message": "这个查询的表连接路径系统未认证，请换一种问法"
+      },
+      "before_legacy_arm": {
+        "passed": false,
+        "rule_id": "R10",
+        "user_message": "这个查询的表连接路径系统未认证，请换一种问法"
+      },
+      "note": "",
+      "raw_question": "本周客单价的环比变化是多少？",
+      "sql_chars": 897,
+      "sql_len_matches_declared": true,
+      "task_id": "tk_201e967563994cae817eb519fbba8069",
+      "tenant_id": "T_A",
+      "user_id": "u_t38c3"
+    },
+    {
+      "after_current_impl": {
+        "passed": false,
+        "rule_id": "R06",
+        "user_message": "查询包含受保护字段"
+      },
+      "before_legacy_arm": {
+        "passed": false,
+        "rule_id": "R10",
+        "user_message": "这个查询的表连接路径系统未认证，请换一种问法"
+      },
+      "note": "",
+      "raw_question": "上个月复购率最高的 10 个店铺是哪些？",
+      "sql_chars": 894,
+      "sql_len_matches_declared": true,
+      "task_id": "tk_ca342fa63c0044d98461f6184ebbd994",
+      "tenant_id": "T_A",
+      "user_id": "u_t38c3"
+    }
+  ],
+  "tally_after": {
+    "R06|passed=False": 2,
+    "R10|passed=False": 1
+  },
+  "zero_egress": true,
+  "归因变化": {
+    "改了的": [
+      "tk_ca342fa63…"
+    ],
+    "翻成放行的": []
+  }
+}

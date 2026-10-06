@@ -1959,3 +1959,21 @@ python driver.py --target http://127.0.0.1:18000/api/v1 --scenario steady \
 
 ⇒ 纪律：**任何"N 并发下全崩"的结论，都要先用 `--max-requests 1` 复现一次**。
 不花额度、几秒钟，但能把"容量问题"和"根本跑不通"这两种完全不同的病分开 —— 它们的修法、归属、优先级都不一样。
+
+### 🔻 第二十五轮（2026-10-06，W8 第 16 轮 / T-39 C）：`thread_depth` 这个键名**已废** ⇒ 新名 `worker_session_depth`
+
+- 依据 = `docs/07 §4.8` 台账行的 **`U-138`**。上面各轮凡是拿 `thread_depth` 说"thread"的句子**不删**（历史读数只 🔻 追加），
+  但从现在起一律**只当"同一 `(worker, session)` 组的第 N 条"**读；凡"同一 thread 的第 N 轮"这类结论**只从库面那把取**
+  （尺 = `deploy/loadtest/r23_thread_from_checkpoints.sql` 的 ⑮/⑰，且必须剔动作废那一跑）。
+- 落地形状：`driver.py::_worker_session_depth()` 在读数里**自报** `grouping_key = "(worker, session_id)"` ＋
+  `is_server_thread = false` ＋ `server_thread_ruler` 指针，计数键由 `threads` 改叫 `groups`；
+  `--self-check` 仍 **10/10 rc 0**（夹具同步钉住"不再自称 thread"那两面，缺一条就红）。
+- 🔴 **不升 schema 版本号**（`SCHEMA_VERSION` 仍 = `w7.loadtest.receipt/1`）：这份回执的唯一消费者
+  `eval/reporter.py:185` 是**按版本串相等**才认它的 ⇒ 升版会让 `G-6` 的输入静默变 `None`
+  （reporter 自己的注释原话："W7 刻意不升版本号，升了就静默变 NOT_AVAILABLE；多出来的键必须无害"）。
+  ⇒ 所以这次改名只动**消费者不读**的那一格；要动读得到的格（`latency_ms`／`admission`／`p95_scope`）必须连 `eval/` 一起裁，那是判据面、不由本窗自改。
+- 契约（零额度、不连库）：`backend/tests/contract/test_loadtest_thread_key_contract.py`，5 条 =
+  ①尺自报键名且显式否证 thread；②库面那把仍按 `thread_id` 整串分组（两把形状都被钉住，"不等价"才可判伪）；
+  ③产出键名守卫；④当期批两把**同框并报**；⑤本 README 这条抄本同步。
+- 结案条件（判据原文三条之外的本窗自订面）：契约绿 ＋ `backend/reports/w8/t38_assembled.json::thread_key_discrepancy`
+  里 `receipt_侧.组数` 与 `库面.剔作废` 两格齐 —— 本窗只交数与形状，`U-138` 的转绿判词归 QA。

@@ -1,0 +1,182 @@
+{
+  "class_tally": {
+    "cte_side_join": 3
+  },
+  "distinct_questions": [
+    "上个月复购率最高的 10 个店铺是哪些？"
+  ],
+  "face": "面 R 的 GATE_AST_REJECTED 归因（**离线器件产出** ⇒ 依 U-125 判据④ 引用时必须标「来自离线器件」，不得写成生产可观测）",
+  "identity": {
+    "captured_at_utc": "2026-10-05T15:48:50+00:00",
+    "commit_count": 444,
+    "dirty": true,
+    "rev": "0c69d56",
+    "rev_full": "0c69d5604ab9734d312b52acca14b5afd65d85a5"
+  },
+  "n_rejected": 3,
+  "receipt_selection": {
+    "container": "commerceql-pg-1",
+    "files": [
+      {
+        "bytes": 8405,
+        "mtime_utc": "2026-10-05T04:55:09+00:00",
+        "path": "deploy\\loadtest\\u129_paprime_r12_pair2.json"
+      },
+      {
+        "bytes": 8405,
+        "mtime_utc": "2026-10-05T04:55:14+00:00",
+        "path": "deploy\\loadtest\\u129_paprime_r12_pair3.json"
+      },
+      {
+        "bytes": 8411,
+        "mtime_utc": "2026-10-05T05:31:46+00:00",
+        "path": "deploy\\loadtest\\u129_paprime_r12_pair1.json"
+      }
+    ],
+    "glob": "deploy\\loadtest\\u129_paprime_r12_pair*.json",
+    "mode": "default_glob_by_mtime"
+  },
+  "receipts_used": [
+    "deploy\\loadtest\\u129_paprime_r12_pair2.json",
+    "deploy\\loadtest\\u129_paprime_r12_pair3.json",
+    "deploy\\loadtest\\u129_paprime_r12_pair1.json"
+  ],
+  "rows": [
+    {
+      "certified_edges": [
+        "dim_date–campaign",
+        "order_paid–dim_date",
+        "order_paid–order_refund",
+        "order_paid–product",
+        "order_paid–region",
+        "order_paid–shop",
+        "product–order_paid",
+        "product–shop",
+        "traffic_daily–dim_date",
+        "traffic_daily–product"
+      ],
+      "certified_edges_n": 10,
+      "class": "cte_side_join",
+      "cte_names": [
+        "buyer_shop_cnt",
+        "shop_rate"
+      ],
+      "error_code": "GATE_AST_REJECTED",
+      "join_sides": [
+        {
+          "lefts": [
+            "shop_rate"
+          ],
+          "on": "v_shop.shop_id = shop_rate.shop_id",
+          "right": "v_shop"
+        }
+      ],
+      "passed": false,
+      "raw_question": "上个月复购率最高的 10 个店铺是哪些？",
+      "receipt": "u129_paprime_r12_pair2.json",
+      "receipt_admitted": 2,
+      "receipt_terminal": 2,
+      "role": "analyst",
+      "rule_id": "R10",
+      "self_defect": "F1 排序键用了投影别名 ['repurchase_rate_90d']（gate1 不登记同 scope 的投影别名 ⇒ R06）",
+      "sql_len_declared": 887,
+      "sql_len_decoded": 887,
+      "task_id": "tk_51912ce6bdb946018a2ea2f0e3d3cf6f",
+      "tenant_id": "T_A",
+      "user_id": "u_r12_02",
+      "user_message": "查询涉及的数据范围超出你的权限"
+    },
+    {
+      "certified_edges": [
+        "dim_date–campaign",
+        "order_paid–dim_date",
+        "order_paid–order_refund",
+        "order_paid–product",
+        "order_paid–region",
+        "order_paid–shop",
+        "product–order_paid",
+        "product–shop",
+        "traffic_daily–dim_date",
+        "traffic_daily–product"
+      ],
+      "certified_edges_n": 10,
+      "class": "cte_side_join",
+      "cte_names": [
+        "buyer_shop_cnt"
+      ],
+      "error_code": "GATE_AST_REJECTED",
+      "join_sides": [
+        {
+          "lefts": [
+            "buyer_shop_cnt"
+          ],
+          "on": "v_shop.shop_id = buyer_shop_cnt.shop_id",
+          "right": "v_shop"
+        }
+      ],
+      "passed": false,
+      "raw_question": "上个月复购率最高的 10 个店铺是哪些？",
+      "receipt": "u129_paprime_r12_pair3.json",
+      "receipt_admitted": 2,
+      "receipt_terminal": 2,
+      "role": "analyst",
+      "rule_id": "R10",
+      "self_defect": "F1 排序键用了投影别名 ['repurchase_rate_90d']（gate1 不登记同 scope 的投影别名 ⇒ R06）",
+      "sql_len_declared": 776,
+      "sql_len_decoded": 776,
+      "task_id": "tk_0696f1a885ef4cb9abad1e310be8e8c4",
+      "tenant_id": "T_A",
+      "user_id": "u_r12_03",
+      "user_message": "查询涉及的数据范围超出你的权限"
+    },
+    {
+      "certified_edges": [
+        "dim_date–campaign",
+        "order_paid–dim_date",
+        "order_paid–order_refund",
+        "order_paid–product",
+        "order_paid–region",
+        "order_paid–shop",
+        "product–order_paid",
+        "product–shop",
+        "traffic_daily–dim_date",
+        "traffic_daily–product"
+      ],
+      "certified_edges_n": 10,
+      "class": "cte_side_join",
+      "cte_names": [
+        "base",
+        "buyer_cnt",
+        "shop_rate"
+      ],
+      "error_code": "GATE_AST_REJECTED",
+      "join_sides": [
+        {
+          "lefts": [
+            "shop_rate"
+          ],
+          "on": "v_shop.shop_id = shop_rate.shop_id",
+          "right": "v_shop"
+        }
+      ],
+      "passed": false,
+      "raw_question": "上个月复购率最高的 10 个店铺是哪些？",
+      "receipt": "u129_paprime_r12_pair1.json",
+      "receipt_admitted": 2,
+      "receipt_terminal": 2,
+      "role": "analyst",
+      "rule_id": "R10",
+      "self_defect": "F1 排序键用了投影别名 ['repurchase_rate_90d']（gate1 不登记同 scope 的投影别名 ⇒ R06）",
+      "sql_len_declared": 962,
+      "sql_len_decoded": 962,
+      "task_id": "tk_8fbf1cf3129246acad1513576af23382",
+      "tenant_id": "T_A",
+      "user_id": "u_r12_01",
+      "user_message": "查询涉及的数据范围超出你的权限"
+    }
+  ],
+  "rule_id_tally": {
+    "R10": 3
+  },
+  "verdict": "三条红 = **同一形状**：JOIN 的一侧是 CTE 名（先聚合再连维表），而 `_join_verdict` 的左侧候选取 `from_.find_all(exp.Table)` 的 `t.name` ⇒ CTE 名不在认证边集 ⇒ 落 R10；且 `R10` 的用户文案是 `_msg_scope()`「查询涉及的数据范围超出你的权限」⇒ **把「路径未认证」报成越权**。⇒ 既不是 `U-129` 的入口复位面、也不是模型编列（`self_defect` 的 F1 只是别名排序的旁证），`§4.8` 现无判据覆盖 ⇒ 取新号。"
+}

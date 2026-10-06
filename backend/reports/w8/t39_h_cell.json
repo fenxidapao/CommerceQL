@@ -1,0 +1,234 @@
+{
+  "meta": {
+    "window": "W8 第 16 轮 / T-39 A",
+    "zero_egress": true,
+    "ruler": "backend/reports/w8/t39_h_cell.py",
+    "source_of_rows": "docker logs commerceql-api-1（只读，服务端零写）",
+    "rev_and_time": {
+      "receipt_git_rev": "67be6b0",
+      "receipt_git_dirty": false,
+      "receipt_started_at": "2026-10-06T04:25:59+00:00",
+      "receipt_finished_at": "2026-10-06T04:26:21+00:00",
+      "head_at_measurement": "70012e7"
+    },
+    "void_cell_declaration": {
+      "task_id": "tk_e52c0019…（只作标识，日志行里**没有** run 标识 ⇒ 归属只能按时间窗）",
+      "void_run_window_from_its_own_receipt": [
+        "2026-10-06T04:25:06+00:00",
+        "2026-10-06T04:25:23+00:00"
+      ],
+      "void_run_admission": {
+        "admitted": 1,
+        "rejected_429": 0,
+        "other_http_4xx": 0,
+        "http_5xx": 0,
+        "unresolved": 0,
+        "terminal": 1
+      },
+      "statement": "首格（预热／作废格）不进任何分母：不进 ok 率、不进 H 的节点集合读数、不进 P95。窄窗（主批自有 `started_at→finished_at`）不含它；宽窗（⑮⑰ 那把 04:25:00→04:27:00Z）**含**它的 4 条 ⇒ 两把并报。"
+    }
+  },
+  "ok_rate": {
+    "numerator_ok": 4,
+    "denominator_admitted": 9,
+    "rate_of_admitted": 0.4444,
+    "denominator_fired": 30,
+    "rate_of_fired": 0.1333,
+    "note": "两个分母必须点名：`ok/admitted`（准入面，跨批与 W7 那把比只用这把）与 `ok/发出`（含 429 拒的整批面）。",
+    "outcomes": {
+      "error_frame": 3,
+      "ok": 4,
+      "clarify": 1,
+      "http_4xx": 21,
+      "refuse": 1
+    },
+    "admission": {
+      "admitted": 9,
+      "rejected_429": 20,
+      "other_http_4xx": 1,
+      "http_5xx": 0,
+      "unresolved": 0,
+      "terminal": 9
+    }
+  },
+  "by_window": {
+    "narrow_incl_last_frame": {
+      "window": [
+        "2026-10-06T04:25:59Z",
+        "2026-10-06T04:26:22Z"
+      ],
+      "llm_call_rows": 32,
+      "void_run_rows_inside": 0,
+      "void_run_tasks_inside": [],
+      "node_set_present": [
+        "gen_sql",
+        "l4_score",
+        "normalize_intent",
+        "plan",
+        "repair"
+      ],
+      "per_node": {
+        "gen_sql": {
+          "n": 7,
+          "p50_ms": 1838.0,
+          "min_ms": 1630.0,
+          "max_ms": 2757.0
+        },
+        "l4_score": {
+          "n": 7,
+          "p50_ms": 2021.0,
+          "min_ms": 1869.0,
+          "max_ms": 2584.0
+        },
+        "normalize_intent": {
+          "n": 9,
+          "p50_ms": 1076.0,
+          "min_ms": 948.0,
+          "max_ms": 1211.0
+        },
+        "plan": {
+          "n": 8,
+          "p50_ms": 1657.0,
+          "min_ms": 1147.0,
+          "max_ms": 2104.0
+        },
+        "repair": {
+          "n": 1,
+          "p50_ms": 1533.0,
+          "min_ms": 1533.0,
+          "max_ms": 1533.0
+        }
+      },
+      "H_nominal_four_slots": 6.59,
+      "H_missing_slots": [],
+      "extra_slots_beyond_nominal": [
+        "repair"
+      ],
+      "H_including_extra_slots": 8.12,
+      "delta_vs_5.99s_nominal_four": 0.6
+    },
+    "narrow_excl_last_frame": {
+      "window": [
+        "2026-10-06T04:25:59Z",
+        "2026-10-06T04:26:21Z"
+      ],
+      "llm_call_rows": 31,
+      "void_run_rows_inside": 0,
+      "void_run_tasks_inside": [],
+      "node_set_present": [
+        "gen_sql",
+        "l4_score",
+        "normalize_intent",
+        "plan",
+        "repair"
+      ],
+      "per_node": {
+        "gen_sql": {
+          "n": 6,
+          "p50_ms": 2008.5,
+          "min_ms": 1630.0,
+          "max_ms": 2757.0
+        },
+        "l4_score": {
+          "n": 7,
+          "p50_ms": 2021.0,
+          "min_ms": 1869.0,
+          "max_ms": 2584.0
+        },
+        "normalize_intent": {
+          "n": 9,
+          "p50_ms": 1076.0,
+          "min_ms": 948.0,
+          "max_ms": 1211.0
+        },
+        "plan": {
+          "n": 8,
+          "p50_ms": 1657.0,
+          "min_ms": 1147.0,
+          "max_ms": 2104.0
+        },
+        "repair": {
+          "n": 1,
+          "p50_ms": 1533.0,
+          "min_ms": 1533.0,
+          "max_ms": 1533.0
+        }
+      },
+      "H_nominal_four_slots": 6.76,
+      "H_missing_slots": [],
+      "extra_slots_beyond_nominal": [
+        "repair"
+      ],
+      "H_including_extra_slots": 8.3,
+      "delta_vs_5.99s_nominal_four": 0.77
+    },
+    "wide_r23_window": {
+      "window": [
+        "2026-10-06T04:25:00Z",
+        "2026-10-06T04:27:01Z"
+      ],
+      "llm_call_rows": 36,
+      "void_run_rows_inside": 4,
+      "void_run_tasks_inside": [
+        "gen_sql",
+        "l4_score",
+        "normalize_intent",
+        "plan"
+      ],
+      "node_set_present": [
+        "gen_sql",
+        "l4_score",
+        "normalize_intent",
+        "plan",
+        "repair"
+      ],
+      "per_node": {
+        "gen_sql": {
+          "n": 8,
+          "p50_ms": 1820.0,
+          "min_ms": 1630.0,
+          "max_ms": 2757.0
+        },
+        "l4_score": {
+          "n": 8,
+          "p50_ms": 2157.5,
+          "min_ms": 1869.0,
+          "max_ms": 2584.0
+        },
+        "normalize_intent": {
+          "n": 10,
+          "p50_ms": 1049.0,
+          "min_ms": 814.0,
+          "max_ms": 1211.0
+        },
+        "plan": {
+          "n": 9,
+          "p50_ms": 1660.0,
+          "min_ms": 1147.0,
+          "max_ms": 2104.0
+        },
+        "repair": {
+          "n": 1,
+          "p50_ms": 1533.0,
+          "min_ms": 1533.0,
+          "max_ms": 1533.0
+        }
+      },
+      "H_nominal_four_slots": 6.69,
+      "H_missing_slots": [],
+      "extra_slots_beyond_nominal": [
+        "repair"
+      ],
+      "H_including_extra_slots": 8.22,
+      "delta_vs_5.99s_nominal_four": 0.7
+    }
+  },
+  "reference_lines": {
+    "U-126_v1.7.4_订正①_名义四格_H": 5.99,
+    "U-126_v1.7.5_区间_H": [
+      5.99,
+      6.18
+    ],
+    "ruler_for_slots": "H 一律按『当日实际发 LLM 的节点集合』取，不得照抄名义分配（docs/07 U-126 行）"
+  }
+}

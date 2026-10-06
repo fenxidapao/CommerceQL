@@ -1,13 +1,13 @@
 {
   "artifact": "commerceql.w8.t38_assembled/1",
   "task": "T-38 主单：一把 c=3/n=30 的当期批（U-129 ③ ＋ G-6 P95）",
-  "generated_at_utc": "2026-10-06T04:35:44+00:00",
+  "generated_at_utc": "2026-10-06T07:07:05+00:00",
   "identity": {
-    "rev": "67be6b0a64b73d156f74453bcaa274bdae57b993",
-    "rev_short": "67be6b0",
-    "commit_count": 448,
+    "rev": "70012e711832cf9e6735dedbc60cefa0219dbb53",
+    "rev_short": "70012e7",
+    "commit_count": 453,
     "dirty": true,
-    "captured_at_utc": "2026-10-06T04:35:45+00:00",
+    "captured_at_utc": "2026-10-06T07:07:05+00:00",
     "口径": "PROMPT §2 ④ 两格并报：本块 = **装配那一刻**的树；两把回执各自另有件内 `git_rev`／`git_dirty`（跑那一刻）"
   },
   "geometry_requested": {
@@ -253,14 +253,17 @@
       },
       "error_messages": {}
     },
+    "e_键名漂移": "本格的 `thread_depth` 是 T-38 那份回执的原样搬运；U-138 落地后**新回执**给的是 `worker_session_depth`（键语义自报、且显式声明不是服务端 thread）⇒ 读新批时把这一格换成 `worker_session_depth`，契约测试 = `backend/tests/contract/test_loadtest_thread_key_contract.py`",
     "f_p0_summary_current": {
-      "verdict": "证件 rev = 2d58975 / 432 笔 / generated 2026-10-05T07:14:04+00:00 / offline passed = — → 与本轮干净树一致才算达成（装配件不下这一判，留给门禁那件）",
+      "verdict": "证件 rev = bea724a / 449 笔 / generated 2026-10-06T04:42:25+00:00 / offline passed = 2454 / integration passed = 124 → 与本轮干净树一致才算达成（装配件不下这一判，留给门禁那件）",
       "尺": "PYTHONUTF8=1 .venv/Scripts/python.exe -c \"import sys;sys.path[:0]=['eval','.'];import reporter;…\" --emit-p0-summary backend/reports/w8/gate_inputs_p0_summary.json"
     }
   },
   "g6": {
     "sample_floor": 20,
     "admitted_this_batch": 9,
+    "terminal_this_batch": 9,
+    "admitted_eq_terminal": true,
     "可引用": false,
     "verdict": "🔴 未达成：9 < 下限 20 ⇒ G-6 继续不可引用",
     "g6_p95_le_8s": null,
@@ -352,20 +355,23 @@
   },
   "thread_key_discrepancy": {
     "receipt_侧": {
-      "threads": 7,
-      "分组键": "(worker, session_id) —— `driver.py::_thread_depth` 的 docstring 自己称它 thread",
+      "组数": 7,
+      "分组键": "(worker, session_id)",
       "depth_hist": {
         "1": 7,
         "2": 5,
         "3+": 18
-      }
+      },
+      "回执键名": "thread_depth（U-138 改名之前）",
+      "改名依据": "U-138① —— 旧键 `thread_depth`/`threads` 自称 thread ⇒ 新回执改叫 `worker_session_depth`/`groups`；本件读的是 T-38 当期那份（改名**之前**跑的），所以回执里的键仍是旧名，两格在此对上"
     },
     "库面": {
       "分组键": "tenant:user:session（`lg.checkpoints.thread_id`）",
+      "尺": "deploy/loadtest/r23_thread_from_checkpoints.sql ⑮/⑰（剔作废那跑）",
       "含作废": 4,
       "剔作废": 3
     },
-    "结论": "两把不等价（7 vs 3）⇒ 凡『同一 thread 的第 N 轮』只从库面取；回执侧 `thread_depth` 在本几何下把 thread 拆细了 ⇒ 已按新缺陷上呈（§十六）"
+    "结论": "两把不等价（组数 vs 库面 thread 数）⇒ 凡『同一 thread 的第 N 轮』只从库面取（U-138③）；本格 = U-138② 要求的『同框并报』落点"
   },
   "spend": {
     "since": "2026-10-06T04:24:29.000000+00:00",
@@ -382,7 +388,18 @@
     },
     "cap_cny": 0.25,
     "within_cap": true,
-    "unit_measured_cny_per_admission": 0.006612,
+    "main_batch_only_named_tasks": {
+      "task_ids_given": 9,
+      "rows": 32,
+      "sum_cny": 0.058951,
+      "distinct_task_ids_billed": 9,
+      "first_created_at": "2026-10-06 04:25:59.579633+00",
+      "last_created_at": "2026-10-06 04:26:19.595108+00"
+    },
+    "unit_measured_cny_per_admission": 0.00655,
+    "unit_分子分母同面": "分子 = 具名 9 个 run 的 ¥0.058951；分母 = admitted 9；作废那跑（¥0.007166）不在分子里",
+    "unit_cny_per_run_in_window_incl_void": 0.006612,
+    "两把单价的差别": "¥0.00655（剔作废、具名）vs ¥0.006612（整窗含作废 ÷ 10 run） ⇒ 旧写法把它叫 per_admission 是自相矛盾，本轮改名并同框并报",
     "对表": {
       "报价 low/expected/high": {
         "low": 0.13554,

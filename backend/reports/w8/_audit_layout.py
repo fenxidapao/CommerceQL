@@ -19,9 +19,9 @@ def cells(row: str) -> int:
     return len(PIPE.findall(row.strip())) - 1
 
 
-start = next((i for i, l in enumerate(lines, 1) if mark and l.startswith(mark)), None)
+start = next((i for i, ln in enumerate(lines, 1) if mark and ln.startswith(mark)), None)
 if mark:
-    print(f"段标题命中数（必须 1）= {sum(1 for l in lines if l.startswith(mark))} ｜ 起始行 = {start}")
+    print(f"段标题命中数（必须 1）= {sum(1 for ln in lines if ln.startswith(mark))} ｜ 起始行 = {start}")
 print(f"bytes = {len(raw)} ｜ CRLF = {raw.count(bytes([13, 10]))} ｜ lines = {len(lines)}")
 
 problems, tables, i = [], 0, 0
@@ -50,8 +50,8 @@ print(f"表块 = {tables} ｜ 问题合计 = {len(problems)} ｜ 被检节之内
 for n, m in in_scope[:12]:
     print(f"  ✗ {n}: {m}")
 blank, triples = 0, []
-for n, l in enumerate(lines, 1):
-    if l.strip() == "":
+for n, ln in enumerate(lines, 1):
+    if ln.strip() == "":
         blank += 1
     else:
         if blank >= 3:

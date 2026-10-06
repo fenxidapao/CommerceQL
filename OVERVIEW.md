@@ -185,11 +185,39 @@ w3a w3b w3c w3-int w4 w5 w6 w7`）各自留有 `PROMPT/DELIVERY/RELAY`。`app/` 
 - **路由面**：`openapi.json` 现读 **19 条 path**（代码面 19 ＋ 重建前活体 15 ＋ 重建后活体 19 三格并报，四条新增 = `/semantic/metrics`、`/semantic/assets`、`/admin/eval/run`、`/admin/audit`）。**当期性锚**（本轮**未重建镜像** ⇒ 🚫 不许写"本轮重建出新镜像"）：镜像 `sha256:ca34ea791a81…` `Created = 2026-10-05T15:19:25Z` ＋ 容器 `commerceql-api-1` `Created = 2026-10-05T15:19:26Z` ＋ **逐件三面 md5 18/18 SAME** ＋ **全量 `app/**.py` 158/158 三面聚合相等（LF 归一后，容器 = 工作树 = HEAD blob）** ＋ 层 3 `RUN_SCOPED_STATE_FIELDS` present（size = **47**）＋ 跑前 04:24:43Z 独立取过一次证。🔴 那条聚合尺**原来是坏尺**（容器侧带 `./` 前缀、git 侧不带 ⇒ 三列永不相等 ⇒ 以前的"不等"不构成证据），本轮换代后第一次有判别力。
 - **A.9.5 的第二道保证 = 现查不在位**：`rls.enabled = false`／`forced = false`／审计两张表在 `pg_policies` 里 **0 条** ⇒ 响应 `second_guarantee_in_place = false` 是**现查值**。对外只可写"身份由服务端 `WHERE tenant_id = JWT.tenant_id` ＋ 三键 GUC 保证；第二道 RLS 今天不在位"，🚫 **不得写"双保证已落地"**（QA 15.2 裁"部分达成"；豁免面落笔 = 待排期，四条验收约束在 `backend/reports/qa/RELAY.md §15.3`，我方上呈的形状在 `backend/reports/w8/RELAY.md §14.4`；本轮按总控默认**不动迁移、不动 `test_rls_policy_provenance.py`**）。
 - **活体（本轮真跑的那一笔，已批花费）**：几何 `steady --concurrency 3 --max-requests 30 --reuse-sessions --session-pool 3` ⇒ **`admitted = 9`／`terminal = 9`／`rejected_429 = 20`／一条 409 `SESSION_CONFLICT`／`INTERNAL` 0 条／`graph_run_failed` 0 条**；`outcomes = {ok:4, error_frame:3（全 `GATE_AST_REJECTED` = `U-137` 面）, clarify:1, refuse:1, http_4xx:21}`；墙钟 **22.0s**；实付 **¥0.066117**（36 行台账／10 个 `task_id`／**全非峰**）≤ 上界 ¥0.25；当期单价 **¥0.006612／准入**（比第 12 轮账面 ¥0.00973 低）。
+  🔻 **10-06 第 16 轮就地订正两处（原句保留）**：① 上面那句"三条 `error_frame` 全 = `U-137` 面"**是过度归因** —— 对同一条候选 SQL 跑"落地前语义对照臂 vs 当期实现"（零出站件 `backend/reports/w8/t39_u137_before_after.py`）实测 = **一条改判（`tk_ca342fa6…` R10 → R06）、一条仍 R10（真该拒，只是文案不再是"越权"）、一条前后同为 R06（与本号无关）**；
+  ② 单价 ¥0.006612 的分子含作废那一跑而分母叫"每准入"是**自相矛盾**（QA F4）⇒ 修正解 = **¥0.00655／准入**（分子 = 具名 9 个 run 的 ¥0.058951／32 行，分母 = 9），整窗含作废那把改叫 `unit_cny_per_run_in_window_incl_void` = ¥0.006612。尺 = `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/t38_assemble.py`。
 - **G-6 判向（本批不改判）**：`9 < MIN_ADMITTED_FOR_P95 = 20`（`deploy/loadtest/driver.py:370` 现读）⇒ `g6_p95_le_8s = null` ＋ caveat 原文 ⇒ **P95 仍不可引用**，旧的 6.18s／9.81s 那批**不被取代**。🔴 并且本轮把原因量化了：**单用户的一把批结构性拿不到 ≥20 样本** —— QUERY 桶 = 10/用户·分钟（`app/api/ratelimit.py:203` 现读 `RateLimitRule(QUERY, 10, 100)`）而 429 **秒回** ⇒ 30 条挤在 22 秒内发完 ⇒ 只有一个窗口的量能准入。要拿到样本只有两条路（① `c=1` 串行 ≈300s，能准入 ~28 但**丢掉 c=3 那一格并发**；② 多用户令牌保住 `c=3`，可准入 ~28、约 ¥0.19），**两条都超出"一把批"的字面授权 ⇒ 已交回，本窗不擅自做**。
 - **`U-129` 三格并报（落库面，作用域 = `user_id = 'u_t38c3'`，具名剔除作废格那一条）**：**格1** = ⑮ 两臂 `0 ∧ 0`；**格2** = `t2_routed_audit_supp_without_terminal_write = 0` **且第四件前置 `t2_routed_supp = 3 > 0` ⇒ 非空真达成**；**格3** = `t2_with_terminal_write ≥ 1` ⇒ 达成；pre-fix 基线仍 = **5**（存量域不折叠）。🔴 本窗只交数与形状，**"已修／已结案"由验收窗写**（复算 = `deploy/loadtest/r23_thread_from_checkpoints.sql` 的 ⑮／⑰，参数 `win_a='2026-10-06 04:25:59+00' win_b='2026-10-06 04:27:00+00' upref='u_t38c3%'`；两份输出已归档 `backend/reports/w8/evidence/t38/`）。
 - 🔴 **新立一号 `U-138`**（取号依据 = `docs/07 §4.8` 指针行 v1.7.21 那句「下一个可用号 = `U-138`」）：压测回执 `thread_depth` 的分组键是 `(worker, session_id)`，而服务端 thread 是 `tenant:user:session` ⇒ 同一把批实测 **7 ≠ 3**，"第 N 轮"的分母在回执侧不可用 ⇒ 判据三条与复算命令见 `docs/07 §4.8` 的 `U-138` 行。
 - **演示脚本红线（新增一条，`deliverables/ACCEPTANCE.md` §3 同源同改）**：🚫 **不当场点「发起评测」** —— 那一支现在是**预检**（`run_id` 恒 `null`、面板自己写着"未发起评测"），而"真发起"要打 **538–620 条调用／¥0.337–0.392**，那是另一笔钱、另一轮批准。
 - **对外口径不变**：上线门禁 **PASS 1/8** ⇒ 任何场合**不得写"门禁通过"**。
+
+🔻 **10-06 第 16 轮（T-39，QA 第 19 轮派单；🔴 本轮零额度／零出站／共享库只走只读事务）收口读数 —— 上面第 15 轮那段保留为历史读数，本轮没花一分钱**（面 = 工作树在 `70012e7`／453 笔之上；时刻 = 13:5x–15:0x ＋0800；粒度 = 逐格点名，每格自带可复跑命令）：
+
+- **`U-129` 结案引用 ③ 的两半现在同格齐了（`ok` 率 ＋ H）**：`ok` 率 = **4／`admitted` 9 = 44.4%**（另一把分母 = 4／发出 30 = 13.3% ⇒ 跨批比只许用准入那一把，两个分母不许混）；
+  **H 按通则「一律按当日实际发 LLM 的节点集合取」= 本批节点集合含第 5 档 `repair` ⇒ 权威读法 H = 8.12s**（窄窗四格 6.59s ＋ `repair` p50 1533ms）。
+  与盘上 `U-126` 那句「W7 四格 p50 相加 = H = **5.99s**」**同口径可比**的那把 = **6.59s**（窄窗 `04:25:59→04:26:22Z`：`normalize_intent 1076.0(n9) ／ plan 1657.0(n8) ／ l4_score 2021.0(n7) ／ gen_sql 1838.0(n7)`）；
+  宽窗（⑮⑰ 那把 `04:25:00→04:27:01Z`）= 6.69s／含 `repair` 8.22s，🔴 **但宽窗含作废那跑的 4 条**（作废格的时间落 `04:25:06–04:25:23`）⇒ 用它算 H 等于把作废格拉回分母，本窗只把它作"同 ⑮⑰ 作用域"的参照值。尺 = `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/t39_h_cell.py`（只读 `docker logs`，产物 `backend/reports/w8/t39_h_cell.json`）。
+- 🔴 **与 QA 第 19 轮那把 H 的差 = 一个窗边界，两把都留**：QA 的窄窗 `--until 04:26:21Z` 把落在 `04:26:21.407071` 的那条 `gen_sql`（1802ms）切在窗外 ⇒ 它得 **6.76／8.30s**、本窗含末帧得 **6.59／8.12s**。
+  谁也不覆盖谁；引用必须点名"含末帧还是切末帧"（这是本项目第 N 次撞上"取窗不具名"）。
+- **`repair` 口径裁定（本窗采哪条 ＋ 理由）**：采**含 `repair`** 为权威。理由 = ① 通则字面写的是"实际节点集合"，`repair`（闸门拒后修 SQL 那一跑）本批真的发了一次（n = 1）；
+  ② H 的用途是**槽位配平**，一个 run 占着槽位的时间包含 `repair` 那一段；四格那把只作与历史值同口径的可比值并报。
+  ⚠️ 方法论诚实面：H 的口径是"逐槽 p50 相加"，而 `llm_call` 日志行**没有 run 标识** ⇒ "逐 run 相加再取分位数"这把**做不到**（不是没做），所以只能沿用盘上口径。
+- **连带义务（`U-126` v1.7.5 那句 `H ∈ [5.99, 6.18]`）**：本期四把读数 **6.59／6.69／6.76／8.12／8.30 全部穿破上界** ⇒ 那个区间已不是本期形状；
+  而「`U-128` 落地后仍须同一口径复测一次」那条回交义务**本轮交不回数**（`U-128` 未落地 ⇒ 没有可复测的对象）⇒ **写明仍未，槽位配平表因此仍不按现状收**（不擅自动判据）。
+- 🔴 **`U-137` 已落地（离线面），但演示那句今天仍不出数**：实现 = `app/guard/ast_gate.py::_side_logical()`（CTE／派生侧展开成其所读取的资产集合）；
+  文案 = `app/guard/rules.py` 的 `_msg_join_path()`／`_msg_cartesian()` ⇒ **R10/R11 不再与"越权"共用一句**（R05/R13 原句不动），抄本 = `docs/07 §7.2` AST-R10 行 v1.7.23 落地句 ＋ §7.6 分组**由一行拆三行**；
+  夹具 = `backend/tests/contract/test_r10_cte_join_contract.py` **五条**（含"CTE 体内藏未认证边仍 R10"那支反面形状，防"CTE 一律放行"）；冻结红队 R10 三臂 **仍 `R10`×3**、`tests/redteam` 11 passed。
+  🔻 **对外只可写**："闸门的路径未认证与越权**已分句**；『先聚合再连维表』这一形状在离线面按资产口径参与判定（夹具那条 776 字符骨架现在放行）；**这道题在活体里生成的三条变体今天仍全被拒**（R06×2／R10×1，见上面那条订正），且**活体面还没带上本轮改动**（镜像 `Created = 2026-10-05T15:19:25Z`、未 build／未 recreate）。"
+  🚫 不得写"演示那道题修好了"。
+- **`U-138` 已落地（量具面，`app/**` 一字未动）**：`thread_depth` → **`worker_session_depth`**，读数里自报 `grouping_key = "(worker, session_id)"` ＋ `is_server_thread = false` ＋ 库面尺指针，计数键 `threads` → `groups`；
+  `--self-check` **10/10 rc 0**；新契约 `backend/tests/contract/test_loadtest_thread_key_contract.py` **5 条**（含"当期回执两把同框并报"）。
+  🔴 **刻意不升 `SCHEMA_VERSION`**（仍 `w7.loadtest.receipt/1`）：唯一消费者 `eval/reporter.py:185` 按版本串相等才认这份回执，升版会让 **G-6 的输入静默变 `None`**（reporter 自己注释原话）⇒ 改名只动消费者不读的格。
+- **B 三处（F2／F3／F4）已当场修并重跑装配**：f 格现读 `证件 rev = bea724a / 449 笔 / generated 04:42:25 / offline passed = 2454 / integration passed = 124`；
+  `passed` 那半格的坏尺（`str(dict)` 里找 `passed=` 恒不命中 ⇒ 永远印 `—`）改成直取键值、拿不到写 `UNVERIFIED`；单价分子分母同面（见上面第 15 轮那格的订正）。尺同上，产物 `backend/reports/w8/t38_assembled.json`。
+- **静态与测试面（计数全部带 HEAD，现测于 `70012e7` 之上的工作树）**：`ruff check --config pyproject.toml app` ＋ 整目录那把尺 = **All checks passed!／0 条**（🔴 第 15 轮我把 `_audit_layout.py` 拷进树时**没跑整目录那把尺** ⇒ 带着 3 条 `E741` 进库、本轮才发现，已改名修掉，见 `RELAY §17.7`）；
+  `mypy app` = **no issues in 158 source files**；`lint-imports` = **4 kept／0 broken**；离线面与集成面的读数见 `backend/reports/w8/RELAY.md §十七`。
 
 ---
 

@@ -531,11 +531,14 @@ class _Auditor:
         self.deny_columns: frozenset[str] = frozenset(allowlist.get("deny_columns") or ())
         self.allowed_constants: frozenset[str] = literal_allowlist
         self.warnings: list[Gate1Warning] = []
+        #: `U-137`：CTE 别名 → CTE 体。`run()` 每次重建；JOIN 侧的资产口径展开靠它。
+        self.cte_bodies: dict[str, exp.Expr] = {}
 
     # -- 主流程 --
 
     def run(self, root: exp.Expr) -> Gate1Report | None:
         cte_names = {c.alias for c in root.find_all(exp.CTE)}
+        self.cte_bodies = {c.alias: c.this for c in root.find_all(exp.CTE)}
 
         # R12：递归 CTE（P0 直接拒绝）
         for w in root.find_all(exp.With):
@@ -625,6 +628,30 @@ class _Auditor:
 
     # -- R10/R11 --
 
+    def _side_logical(self, name: str, _stack: frozenset[str] = frozenset()) -> set[str]:
+        """把一个 JOIN 侧的名字解析成**它实际读取的资产逻辑名集合**（`U-137`，07 §7.2 资产口径）。
+
+        - 资产名 → `{logical_name}`（与旧行为逐位相同）；
+        - CTE 名 → 递归展开该 CTE 体里读到的资产（嵌套 CTE 顺着 `cte_bodies` 继续展开；
+          已在栈里的名字跳过，自引用图不炸栈）；
+        - 其他（未知别名 / 空 CTE）→ `{name}` ⇒ 匹配不到任何认证边 ⇒ **照旧落 R10**。
+
+        ⚠️ 放宽面只到"CTE 侧按其所含资产参与判定"为止：CTE 体内部的 JOIN 仍被全树遍历审到，
+        资产面与列面仍受 R05/R06/R07 约束 ⇒ 红队三臂（真实资产对、无 CTE 侧）不受影响。
+        """
+        asset = self.assets.get(name)
+        if asset is not None:
+            return {str(asset.get("logical_name", name))}
+        body = self.cte_bodies.get(name)
+        if body is None or name in _stack:
+            return {name}
+        stack = _stack | {name}
+        out: set[str] = set()
+        for table in body.find_all(exp.Table):
+            if table.name:
+                out |= self._side_logical(table.name, stack)
+        return out
+
     def _join_verdict(self, join: exp.Join) -> Gate1Report | None:
         """单条 JOIN 的路径判定。``None`` = 通过；否则返回拒绝报告（R10 或 R11）。"""
 
@@ -661,19 +688,22 @@ class _Auditor:
         if not cond_cols:
             return _build_reject(AstRule.R10_JOIN_PATH)
 
-        right_asset = self.assets.get(right.name, {})
-        right_logical = right_asset.get("logical_name", right.name)
+        # 🔴 `U-137`（07 §7.2 AST-R10 行 v1.7.23 定义补句）：这里的「左表 / 右表」指**资产**。
+        # sqlglot 把 CTE 引用也解析成 `exp.Table`（名字 = CTE 别名），旧实现直接拿那个名字去比认证边
+        # ⇒ "先聚合（CTE）再连维表"这一产品主形态永远匹配不到边、落 R10，且文案把它报成越权。
+        # 现在把两侧各自展开成"实际读取的资产逻辑名集合"，只要**有一对**落在认证边上就算路径已认证。
+        left_logical: set[str] = set()
         for left in dict.fromkeys(lefts):
-            left_asset = self.assets.get(left, {})
-            left_logical = left_asset.get("logical_name", left)
-            for entry in self.joins:
-                pair = {entry.get("left"), entry.get("right")}
-                if {left_logical, right_logical} != pair:
-                    continue
-                # ③ 认证边存在：条件列必须 ⊆ 认证列，否则笛卡尔风险 → R11
-                if not cond_cols <= set(entry.get("on_columns") or []):
-                    return _build_reject(AstRule.R11_CARTESIAN)
-                return None
+            left_logical |= self._side_logical(left)
+        right_logical = self._side_logical(right.name)
+        for entry in self.joins:
+            pair = {entry.get("left"), entry.get("right")}
+            if not any({lo, ro} == pair for lo in left_logical for ro in right_logical):
+                continue
+            # ③ 认证边存在：条件列必须 ⊆ 认证列，否则笛卡尔风险 → R11
+            if not cond_cols <= set(entry.get("on_columns") or []):
+                return _build_reject(AstRule.R11_CARTESIAN)
+            return None
         # ④ 无认证边 → R10
         return _build_reject(AstRule.R10_JOIN_PATH)
 
