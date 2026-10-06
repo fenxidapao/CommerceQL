@@ -1977,3 +1977,24 @@ python driver.py --target http://127.0.0.1:18000/api/v1 --scenario steady \
   ③产出键名守卫；④当期批两把**同框并报**；⑤本 README 这条抄本同步。
 - 结案条件（判据原文三条之外的本窗自订面）：契约绿 ＋ `backend/reports/w8/t38_assembled.json::thread_key_discrepancy`
   里 `receipt_侧.组数` 与 `库面.剔作废` 两格齐 —— 本窗只交数与形状，`U-138` 的转绿判词归 QA。
+#### 三.0.21 W8 第 19 轮（2026-10-06 · 19:3x–20:1x ＋0800 ／ 11:3x–12:1x UTC · 零额度、零容器动作）：**登记一条门禁边界** —— `deploy/**` 不在三门 ruff 命令面里
+
+**为什么登记在这一件里**：QA 第 22 轮 T-43 B 让本窗在两条出路里选一条并写明理由。本窗**选「乙：具名登记」**，不选「甲：纳入三门 ＋ 同轮清掉」。
+
+**现测三把尺**（cwd = `backend/`、解释器 = `.venv/Scripts/python.exe`、`--config pyproject.toml`）：
+
+| 尺 | 读数 | 说明 |
+|---|---|---|
+| 门禁那把（整目录） | `ruff check --config pyproject.toml reports/w8 tests/contract app` = **rc 0／All checks passed!** | 🔴 **命令面里没有 `deploy/**`** ⇒「三门全绿」这句话天然不包含量具件 |
+| 单件 | `ruff check --config pyproject.toml ../deploy/loadtest/attest_build_identity.py` = **7 条**（`E741`×4 ＋ `SIM115`×3）／rc 1 | 全在第 18 轮**没碰的行**上；改动前后计数 **7 → 7**（第 18 轮已报，本窗复核成立） |
+| 整面 | `ruff check --config pyproject.toml ../deploy` = **25 条**／rc 1 | 分裂：`RUF100` 6／`E702` 6／`E741` 4／`SIM115` 3／`F401` 3／`I001` 1／`F541` 1／`E731` 1 |
+
+**为什么不走甲**（代价不对称，如实写）：纳入 = 必须**同轮**清掉 25 条 ⇒ 其中 **18 条在归档探针件**里（`probe_l4_candidate_bound.py`／`probe_rls_face_locator.py`／`w2b_materialize/*`；
+同一条读数在本 README 第 21 轮那一节（约 `:1251`）与第 22 轮的 ruff 形状行（约 `:1352`）里**有更早登记**，当时数的是 18 条）。那些件是**别人落过的取证面**，
+改它们 = 动实现 ＋ 让「件」与「当时的取证读数」不再逐字对应；而只清我这一个文件**并不解决**「命令面不含 `deploy/**`」这件事本身。
+⇒ 甲的净收益是「红不再静默」，但它要用一次**门禁面变更**来换 —— 那属总控点句 ＋ QA 出块的范畴，不由实现窗自扩。
+
+**由此成立的纪律（本窗自订，欢迎 QA 改）**：
+1. 引用「三门全绿」必须**同时点名命令面**（现读形状 = `reports/w8` ＋ `tests/contract` ＋ `app`），🚫 不许写成「全仓 ruff 全绿」；
+2. **谁改 `deploy/loadtest/*.py`，谁在本 README 记一次单件 ruff 计数**（改前 ⟷ 改后两数并报）⇒ 量具件的红不再静默累积，而不必先动门禁面。本轮 = 纯落笔、零代码改动，沿用 **7 → 7**；
+3. ⚠️ 顺带复核一条形状坑（第 18 轮踩过）：不带 `--config` 从仓库根跑 ruff 会读到**默认规则集** ⇒ 计数随命令形状变（`:1352` 那句早就点名「计数依赖命令形状」）⇒ 报数五件里的「面 ＋ 谓词」必须写全。
