@@ -1,0 +1,17 @@
+{
+  "artifact": "commerceql.w8.t41_r06_block_cell/1",
+  "gate_result": {
+    "passed": false,
+    "reason": "查询包含受保护字段",
+    "rule_id": "R06",
+    "user_message": "查询包含受保护字段"
+  },
+  "raw_question": "上个月复购率最高的 10 个店铺是哪些？",
+  "sql_chars": 894,
+  "sql_len_matches_declared": true,
+  "surface": "HEAD 工作树的 app/guard（第 16 轮 U-137 落地之后）",
+  "task_id": "tk_ca342fa63c0044d98461f6184ebbd994",
+  "zero_egress": true,
+  "读法": "拦点 = R06（列面／受保护字段），与 JOIN 路径无关 ⇒ `U-137` 的结案不覆盖'这句能不能出数'；要让它出数得动语义包／列权限面（另一件主单）。",
+  "边界": "依 U-125 判据④，本件的 rule_id/reason 归因 = 离线器件读数，不是生产可观测。"
+}

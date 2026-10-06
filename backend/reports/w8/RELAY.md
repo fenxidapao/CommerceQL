@@ -2463,6 +2463,7 @@ QA 12.6 在 `9e45281` 干净树上跑出 1 error（UP020），而我 §十一.2 
 ⑥ **测试面（计数带所在面，逐把点名）**：离线面 `2,485 passed／0 failed／1 warning／rc 0／108.11s`，日志 `backend/reports/w8/_r16_offline_cleantree.log`（sha256 `fd824d67…`）—— ⚠️ **文件名里的 `cleantree` 对这把不成立**：它 15:17:42 起跑、15:19:30 收尾，而 `4704966` 在 15:19:04 入库 ⇒ **跨在提交边界上**；所在面按尺点名 = `git diff --name-only 4704966 -- backend/app deploy` = **0 行**（`app/**`＋`deploy/**` 与该笔逐字节相同），`backend/tests` 那 **1 行**差异 = 本段落笔前对 `test_r10_cte_join_contract.py` **文档串**的"四条→五条"订正（不改用例数，现测该文件仍 **5 passed**）。集成面 `124 passed／0 failed／rc 0`，日志 `_integration_pytest_1006_rT39_v.log`（sha256 `7efabf59…`，15:21:52 收尾 ⇒ 在 `4704966` 之后、一次性库 `ecom_t39it_r16`，**必须 `-v`**）；新落的两组契约 ＋ 红队一把 = **21 passed／rc 0**（5 ＋ 5 ＋ 11，现测 15:3x，树 = `f7bf106` ＋ 本段落笔前的文档面）。
 ⑦ **门禁重算**：`eval/reporter.py --pytest-log … --integration-log … --p0-summary … --no-backup` ⇒ `backend/reports/w6/eval_metrics.json` ＋ `评测报告与门禁判定.md` = **PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2**（G-1 PASS；G-2／G-5／G-7 FAIL；G-3／G-4 PARTIAL；G-6／G-8 UNVERIFIED），件内自报 `rev f7bf106／dirty false／generated 07:23:55Z`；🔴 **八格判定词与第 15 轮逐格同词** ⇒ 对外仍**不得写"门禁通过"**。复算姿势按派单：两遍都带 `--json-out`＋`--md-out` 指**仓库外**、干净树 ⇒ 差尺 `reports/qa/prompts/diff_recompute_meta.py A B generated_at git.rev git.rev_full git.commit_count "~静默前置" "~generated_at"` 判 **判定量 = 0**（唯一差 = `meta.generated_at`，3 秒）；`grep -c 取证件` 报告 md = **0**。
 🔴 **⑧ 计数增量必须点名基线**：离线 **2,485** 对本窗开工同尺实采 **2,478**（HEAD `4f08698`）= **＋7**（本窗确证 = 新增 U-138 契约 5 条 ＋ R10 契约件由 3 支改 5 支 ⇒ ＋2）；而对第 15 轮入库件登记的 **2,454** 差 **+24 无法归因** ⇒ 按「只报实测」列为**交回项**（§17.9），本窗**不自编解释**。集成 **124** 与第 15 轮逐位相同（＋0）。
+🔻 **第 17 轮（T-41 B；QA 第 20 轮 G2 点名）就地订正本条的"同尺"二字（原句保留作取证）**：**这两个数分属两把尺 ⇒ 不可相减**。第 15 轮登记的 **2,454** 的面 = **三目录**（`tests/unit`＋`tests/contract`＋`tests/eval`，逐字见本文件 §16.8 那行）；本轮 **2,478／2,485** 的面 = **五目录**（再加 `tests/redteam` 11 ＋ `tests/graph_snapshot` 13；`tests/` 下总共六个目录 ⇒ "五目录"与"整树减集成"是同一把尺）。逐目录 `--collect-only -q`（条数取 `::` 行数）**本窗在两棵树上各跑一遍** = `4f08698` 归档副本（`E:/tmp_qoder/r17/base`，758 个文件）与 HEAD `360498d` 工作树：unit 1,422‖1,422／contract **608‖615**（＋7 = 线程键契约 ＋5、R10 契约 3→5 ＋2）／eval 424‖424／redteam 11‖11／graph_snapshot 13‖13 ⇒ **三目录小计 2,454‖2,461**、**五目录小计 2,478‖2,485**。**上面那句「＋24 无法归因」因此归因完成 = 11 ＋ 13**（面加宽，方向是**变严**、不改判向，破的是可比性）⇒ 结案条件同格闭合：**逐目录之和 == 日志里的 passed 数**（2,485 ⟷ `_r16_offline_cleantree.log` 末行 `2485 passed`）。落点同步 = `OVERVIEW §7` 第 16 轮指针 ④ 的 🔻 补记 ＋ `ACCEPTANCE §5`（两处引用都带面名）。
 
 ### 17.7 自曝清单（本轮在我自己身上复现的坑，逐条给尺）
 
@@ -2501,3 +2502,104 @@ QA 12.6 在 `9e45281` 干净树上跑出 1 error（UP020），而我 §十一.2 
 
 - 本节落笔时 HEAD = `f7bf106`／456 笔（尺 = `git rev-parse --short HEAD` ＋ `git rev-list --count HEAD`）；本节引用的入库件自报 = `meta.git.rev = f7bf106`／`dirty false`／`generated 2026-10-06T07:23:55+00:00`，而**把该件字节进仓库的那一笔 = 本段落笔那一笔**（不是 `f7bf106`）⇒ 引用前实跑 `git log -1 --format=%h -- backend/reports/w6/eval_metrics.json`。
 - 落笔尺（三件都跑）：段标题命中数 = `sum(1 for ln in RELAY.read_text(encoding="utf-8").splitlines() if ln.startswith("## §十七"))` ⇒ 追加前必须 **0**、追加后必须 **1**（🔴 只数**行首**，正文里对这一节的引用不算；本行就是一处引用）；排版尺 = `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/_audit_layout.py backend/reports/w8/RELAY.md "## §十七"` ⇒ 本节新增问题必须 **0**；行尾尺 = 该文件 `CRLF == 0、bareLF == 行数`（RELAY 是 LF 件）。
+
+## §十八 第 17 轮（**T-41 · QA 第 20 轮派单「零额度四件 A–D，全是落笔与口径，不动实现」** ｜ 2026-10-06 18:3x–18:5x ＋0800 ／ 10:3x–10:5x UTC ｜ 起点 HEAD `360498d`／**460** 笔（QA 第 20 轮那两笔之上）｜ 本轮笔 = 本段落笔笔 ｜ 🔴 **本轮零花费／零出站／共享库只走只读事务** ｜ **`app/**`＋`tests/**`＋`deploy/**`＋`eval/**` 一字未动**（尺 = `git diff --name-only HEAD -- backend/app backend/tests deploy eval` 给 **0 行**）；未重建镜像、未 recreate、未跑迁移、未建一次性库）
+
+### 18.0 派单四件状态（先结论，再给格）
+
+| 件 | 派单原文要点 | 本轮状态 | 落点（现读行号） |
+|---|---|---|---|
+| A | 两格裁定落盘，**照限定语写、不许写成光句** | **达成** | `docs/07:1161`（`U-129` 状态格）＋ `:1176`（`U-137` 状态格）＋ `:80`（v1.7.24 修订行）＋ `OVERVIEW:224` ＋ `ACCEPTANCE:85/107` |
+| B | 面名点清：把"离线 2,485"的面**逐目录**写出来 | **达成**（+24 归因完成、结案条件闭合） | 本节 §18.2 ＋ `RELAY §17.6 ⑧` 就地 🔻 ＋ `OVERVIEW:268` ＋ `ACCEPTANCE:106` |
+| C | G-1 判定输入未跟踪 ⇒ 把复算姿势写死 | **达成** | `OVERVIEW:296`（G-1 格内）＋ `docs/07:3242`（§16.5 新增第三条）＋ 本节 §18.3 |
+| D | `ACCEPTANCE` 演示口径补"真实拦点" | **达成**（现读可指） | `ACCEPTANCE:86` ＋ 尺 `backend/reports/w8/t41_r06_block_cell.py` ＋ 产物 `evidence/t41/r06_block_cell.json` |
+| 随带 | —— | **两处派单外落笔（都在写面内、都具名）** | ① `docs/07:1177` = `U-138` 行 🔻 进度补记（QA 第 20 轮 **G1** 点名「这一行会把下一窗读偏」，判据措辞一字未动）；② `docs/07:11` = **`文档版本` 字段两轮漏改**（曾停在 `v1.7.21`，而修订表已有 v1.7.22／v1.7.23）⇒ 抬到 `v1.7.24` 并具名 |
+
+### 18.1 A ｜ 两格裁定落到盘上（三条限定语逐条在文本里）
+
+📌 **判据原文逐字现读**（`docs/07:1161` 的 `U-129` 行内，落笔前 `grep` 过）：
+- v1.7.10 那句 = 「**本号转绿会作废三批读数，转绿语必须点名**：一旦 ⑦ 的入口复位（或 `route_terminal` 入口幂等收口）落地并换镜像，W7 侧的 **`ok` 率 / H 实测值（当前引用 `6.18s`）/ 轮次分布**都要**重测后才可引用**；并按 W7 既有规矩**新镜像首格作废 + 跑前预热一格**」⇒ 限定语 (b) 照抄进状态格（含 `6.18s` 那一格的名字）。
+- v1.7.13 句 A = 「**结案不依赖活体臂**：原"崩点两臂活体复现 ≈¥0.02/次"**从结案必要条件删除**（不是降级）」⇒ 状态格里明写"本号不许再跟 `G-6` 那笔钱焊回一条"。
+- 结案引用四件（同格逐件点名当期位置）：① 三格并报 = `RELAY §16.4` ＋ `evidence/t38/r23_scope_{with,excl}_void_cell.txt`；② `U-130` 判据② 直读式 = **0**（`deploy/loadtest/r23_thread_from_checkpoints.sql` ⑮／⑰）；③ `ok` 率 ＋ 三把窗 H = `t39_h_cell.json`；④ 夹具 = `backend/tests/contract/test_audit_terminal_pairing_contract.py`（本轮单跑该件 ＋ 另三组 = **35 passed／rc 0**，见 §18.7）。
+- 🔴 **限定语 (a) 的当期值是本窗现测的，不是抄来的**：`deploy/loadtest/attest_build_identity.py --receipt <仓库外副本> --container commerceql-api-1 --files backend/app/guard/ast_gate.py,backend/app/guard/rules.py,backend/app/api/ratelimit.py` ⇒ `attested_at = 2026-10-06T10:36:52Z`、**逐件 SAME 1/3**（`ratelimit.py` SAME，`ast_gate.py`／`rules.py` **DIFF**）、**全量聚合 equal = false**（158 件对 158 件、聚合串不等）、**层 3 present = true**、容器 `Created = 2026-10-05T15:19:26Z` ⇒ 三条限定语里 (a)(c) 同时被钉成硬证据，并给对外加一句硬话：**"158/158 三面相等"只对 `4f08698` 之前的构建可用**。⚠️ 跑这把尺时**没有**碰仓库里那份 `deploy/loadtest/t38_c3n30_main.json`（它会把 `build_identity` 块**写回**回执 ⇒ 用今天的身份追认昨天的批 = 造假），改的是仓库外两份副本 `E:/tmp_qoder/r17/attest_probe*.json`。
+- `U-137`（`:1176`）状态格同格写明**不覆盖什么**：改判 1 条／放行 0 条／题面 2 个 ＋ 演示那句现落 R06（见 §18.4）。🚫 两格都**没有**写"门禁通过"，也**没有**动判据措辞（只追加）。
+
+### 18.2 B ｜ 面名点清（逐目录两棵树，零出站）
+
+尺 = `cd backend && PYTHONUTF8=1 ../.venv/Scripts/python.exe -m pytest tests/<目录> --collect-only -q -p no:randomly`，条数取 `::` 行数；`4f08698` 那棵树 = `git archive 4f08698 | tar -x` 到 `E:/tmp_qoder/r17/base`（758 个文件，含 `pyproject.toml` ⇒ 收集可跑）。
+
+| 目录 | `4f08698` | HEAD `360498d` | 差 |
+|---|---|---|---|
+| `tests/unit` | 1,422 | 1,422 | 0 |
+| `tests/contract` | **608** | **615** | **＋7** |
+| `tests/eval` | 424 | 424 | 0 |
+| `tests/redteam` | 11 | 11 | 0 |
+| `tests/graph_snapshot` | 13 | 13 | 0 |
+| **三目录小计**（第 15 轮登记的面） | **2,454** | **2,461** | ＋7 |
+| **五目录小计**（第 16 轮实际的面） | **2,478** | **2,485** | ＋7 |
+
+⇒ ① 上一轮那句「＋24 **无法归因**」**归因完成 = `tests/redteam` 11 ＋ `tests/graph_snapshot` 13**（一条没丢、没多出，也不是幻觉）；② 🔴 上一轮的**"同尺"二字作废** ⇒ 2,454 与 2,485 **不可相减**；③ 结案条件闭合：**逐目录之和 == 日志 passed**（2,485 ⟷ `_r16_offline_cleantree.log` 末行 `2485 passed, 1 warning in 108.11s`）；④ 加宽方向是**变严**（多跑两个目录）⇒ 门禁判向不受影响，破的是可比性（QA G2 的原话）。落点：本节上面 §17.6 ⑧ 的就地 🔻 ＋ `OVERVIEW:268` ＋ `ACCEPTANCE:106`（两处对外引用都带面名）。
+
+### 18.3 C ｜ G-1 的判定输入是未跟踪日志 ⇒ 复算姿势写死
+
+三件现测（本窗独立跑，不引 QA 的数）：
+1. `git ls-files backend/reports/w8/_r16_offline_cleantree.log backend/reports/w8/_integration_pytest_1006_rT39_v.log` = **0 行**；
+2. `git check-ignore -v backend/reports/w8/_r16_offline_cleantree.log` = **`.gitignore:47:*.log`**；
+3. `git archive 360498d | tar -x -C E:/tmp_qoder/r17/head_tree`（**副本里 `.log` 文件数 = 0**，已量）⇒ 在该副本里跑 `eval/reporter.py --p0-summary backend/reports/w8/gate_inputs_p0_summary.json --json-out … --md-out … --no-backup` ⇒ **`G-1 = NOT_AVAILABLE`**，counts = **PASS 0／FAIL 3／PARTIAL 2／UNVERIFIED 2／NOT_AVAILABLE 1**，其余七格**逐词与入库件相同**（G-2／G-5／G-7 FAIL、G-3／G-4 PARTIAL、G-6／G-8 UNVERIFIED），现测时刻 `2026-10-06T10:3xZ`。
+⇒ **规矩落两处**：`OVERVIEW:296`（G-1 格内，带"仍不得写门禁通过"）＋ `docs/07:3242`（§16.5 三条禁令之后新增第三条）。句子里都点名：**复算 G-1 必须连那两把日志一起在场；只有 p0-summary 时 G-1 只可引到 `self_reported`，不得声称"异地可复算"** ⇒ 判定面（日志）与取证面（入库件）分开。
+⚠️ **本轮没有重算门禁入库件**（判定输入未动 ⇒ 重跑只会改 `meta.*`）：`backend/reports/w6/eval_metrics.json` 仍是第 16 轮那份，自报 `f7bf106`／dirty false，入库笔 `ee7c3d9`（尺 = `git log -1 --format=%h -- backend/reports/w6/eval_metrics.json`）⇒ 对外总数仍 **PASS 1/8**。
+
+### 18.4 D ｜ 演示那句的真实拦点（零出站现读）
+
+件 = `backend/reports/w8/t41_r06_block_cell.py`（SQL 只读自 `app.audit_log.final_executed_sql`，外层 `begin; … rollback;`；闸门纯静态），产物 = `backend/reports/w8/evidence/t41/r06_block_cell.json`。现读三件：`passed = False`、`rule_id = R06`、**`reason = 查询包含受保护字段`**（题面 = 「上个月复购率最高的 10 个店铺是哪些？」，`sql_len_matches_declared` 真）。
+⇒ `ACCEPTANCE:86` 补的就是这一句：拦点在**列面／语义包**，不在 JOIN 路径、也不在权限 ⇒ **要让它出数得动语义包／列权限面 = 另一件主单**；🚫 不许讲成"`U-137` 修完就能演示"。⚠️ 依 `U-125` 判据④，这类 `rule_id`／`reason` 归因**只算离线器件读数**（生产回执只有 `GATE_AST_REJECTED`），对外句子里已带这句。
+
+### 18.5 🔴 本轮逮到一处自家量具坏尺（只报不修，`deploy/**` 不在本轮写面）
+
+`deploy/loadtest/attest_build_identity.py` 的 `_run()`（现读 `:50-54`，那句 `return (p.stdout or "").strip()` 在 **`:54`**），而 `attest_file()`（现读 `:69`）用 `_git("show", …)` 取 blob（现读 `:71`）⇒ **`head_blob_lf` 那一列比的是"git 输出去掉首尾空白后的串"，结构上永远不等于真 blob**（真 blob 恒以一个 `\n` 结尾）。
+对照证据（同一文件两把尺并排）：`backend/app/graph/state.py` ⇒ 工具给 `head_blob_lf = 10dbb4e1fc4f62d0f46506268e87ecd6`；本窗自算 `git show HEAD:` 行尾归一 md5 = **`0474ef6af7e32345b538456c28735513`**，而 `blob.rstrip()` 的 md5 = **`10dbb4e1…`** ⇒ **strip 机制坐实**；顺带 `0474ef6a…` 与 `docs/07:3234` 那张现测对撞表里「`33675b9` 的 blob」逐位相同 ⇒ 表没错、错的是这把尺。
+影响面（诚实说清）：① 层 1/2 的 SAME 是靠 `worktree_raw`／`worktree_lf` 命中（本轮 `matched_variant = worktree_raw`）⇒ **第 15 轮那句"逐件 18/18 SAME"不是假结论**，但"三面"里 **git 那一面从来没被真正比过**（列在、无判别力）；② 全量聚合走 `_git_bytes`（不 strip）⇒ **不受影响**；③ 层 3 与字节无关 ⇒ 不受影响。
+建议修法（**不在本轮做**）：`attest_file()` 改用 `_git_bytes("show", …)`，或加一条 `--no-strip` 支；若总控要点号，`U-139` 仍未动用（现读 `docs/07:1084` 行首那句「下一个可用号 = `U-139`」）⇒ **本窗不擅自占号**。
+
+### 18.6 抄本与版本面（同轮同改的两处）
+
+- **`文档版本` 字段**（`docs/07:11`）：`v1.7.21` → `v1.7.24` ＋ 具名订正句。尺 = 现读该行版本号 ⟷ 修订表最新行（`:80` = `| **v1.7.24** |`）⇒ 两面对上；⚠️ 引用 TDD 版本只认本字段，别拿修订表行号当它。
+- **§16.5 那句"两条禁令"有两份抄本** = 正文 `:3242` ＋ 修订表 v1.7.15 行 `:88`（锚点命中 2 次 ⇒ 第一次落笔被守卫拦下，改带行尾 `\r\n` 才唯一）。新增第三条**只落正文**，历史修订行按"读数不重写"不动，并在句子里点名第二份抄本的位置。
+
+### 18.7 静态与测试面（本轮 rc；计数带所在树）
+
+| 尺 | 读数 | 所在面 |
+|---|---|---|
+| `ruff check --config pyproject.toml reports/w8 tests/contract app`（整目录那把） | **rc 0／All checks passed!**（日志 `E:/tmp_qoder/r17/ruff_r17.log`，19 字节） | HEAD `360498d` ＋ 本轮文档改动 |
+| `pytest tests/contract/test_r10_cte_join_contract.py …_thread_key_contract.py …_terminal_pairing_contract.py tests/redteam -q` | **35 passed／rc 0**（5 ＋ 5 ＋ **14** ＋ 11；尺分档 = 审计终态配对契约本轮第一次单列） | 同上 |
+| `mypy app`／`lint-imports`／离线全量／集成 | **本轮没重跑** ⇒ 依据 = 代码面零差异（`git diff --name-only HEAD -- backend/app backend/tests deploy eval` = **0 行**）⇒ 沿用第 16 轮读数并具名"未重跑"，🚫 不写成"本轮全绿" | 第 16 轮那两把日志 |
+| 门禁八格 | **PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2**（入库件未重算，见 §18.3）⇒ 对外 **PASS 1/8**，不得写"门禁通过" | 自报 `f7bf106`／入库笔 `ee7c3d9` |
+| 排版尺 | `docs/07` 改前 23 条 ⟷ 改后 23 条（**新增 0**）；`OVERVIEW` 2 ⟷ 2；`ACCEPTANCE` 0 ⟷ 0；`RELAY`／`DELIVERY` 见 §18.10 的落笔尺 | 尺 = `E:/tmp_qoder/r17/list_layout_problems.py` ＋ `cmp_docs_layout.py`（一律写成 `.py` 文件落盘，避开内联 `-c` 里那个竖线断言被 shell 打断的老坑） |
+| 行尾尺 | `docs/07` **CRLF = 3656 == 行数、裸 LF = 0**（两口径并报：`wc -l` 3656 ⟷ 按 `\r\n` 切分 3657 条含末空串）；`OVERVIEW`／`ACCEPTANCE` CRLF = **0**；`RELAY` LF | 现测 |
+
+### 18.8 串行资源表（六面逐条给尺，落笔时重跑）
+
+| 资源面 | 本轮处置 | 尺与读数（现测 18:3x–18:5x ＋0800） |
+|---|---|---|
+| git 索引 | **只按名 stage**，无 `add -A`／`add .`／reset／clean | 本轮改动 = 3 件文档（`docs/07`／`OVERVIEW`／`ACCEPTANCE`）＋ 1 件尺（`backend/reports/w8/t41_r06_block_cell.py`）＋ 1 件产物（`evidence/t41/r06_block_cell.json`）＋ RELAY／DELIVERY |
+| 共享 `ecom` | **只读**（一律 `begin; … rollback;`） | 本轮新增审计行 = **0**：`select count(*) from app.audit_log where "timestamp" >= '2026-10-06 04:26:20+00'` 仍 = **2**（两行都属第 15 轮那把批） |
+| 一次性库 | **本轮没建**（派单四件都不需要集成层） | 残渣尺 `datname like 'ecom%'` = **2**（`ecom` ＋ 别窗的 `ecom_u123_probe`，不删） |
+| 共享栈五件容器 | **只被读，没被改**；本轮没打任何业务端点 | `docker inspect commerceql-api-1` = `Created 2026-10-05T15:19:26.686587752Z`／`StartedAt 2026-10-06T04:10:42.9Z`（与第 15／16 轮同值）；`docker exec … date -u` = `10:38:39Z` ⟷ 宿主同秒 |
+| 被测镜像 | **未 build、未 recreate** | 镜像 `sha256:ca34ea791a81…` 未变 ⇒ 当期性**由构建身份自证**，本轮那次现测是 **DIFF**（见 §18.1）⇒ 只可用于第 15 轮那把批，🚫 不写"活体面已带本轮改动" |
+| `eval/` 冻结集与匣带 ＋ `reports/qa/**` ＋ 迁移 ＋ provenance 守卫 ＋ `app/**`／`deploy/**`／`tests/**` | **一字未动** | `git diff --name-only HEAD -- backend/app backend/tests deploy eval` = **0 行**；`-- backend/reports/qa` = **0**（本轮只读过它） |
+| 🔴 额度 | **零花费** | `app.cost_ledger` = **1,757 行／¥2.897712／max `2026-10-06 04:26:19.595108+00`** ⟷ 第 15／16 轮收口值**逐位相同** |
+| 新增跟踪件的凭据扫描 | 本轮新增 **2** 件（尺 ＋ 产物） | 六类字面量（`DEEPSEEK_API_KEY`／`-----BEGIN`／`postgresql://`／`password`／`secret`／`sk-`）逐行 grep ⇒ **0 命中**；`deploy/.env` 与 `deploy/secrets/*.pem` 未提交未打印 |
+| 仓库外副本（本轮新增四份） | 只在 `E:/tmp_qoder/r17/`，收尾即删 | `base/`（`4f08698` 归档）／`head_tree/`（`360498d` 归档）／`attest_probe*.json`（回执副本）／`c_g1_notavail.{json,md}` |
+
+### 18.9 交回项（本窗不擅自做）
+
+1. 🔴 **§18.5 那处量具坏尺**：改 `deploy/loadtest/attest_build_identity.py` ＋ 是否占号 `U-139` ⇒ **请总控点一句**（写面与作用域都超出本轮派单）。
+2. 🔴 **T-40 那把批的上界**（QA 17.6(ii) 建议 ¥0.30 ＋ `n` 封顶 28）：没点上界不下发；`U-138` 后半（带 `worker_session_depth` 的真回执）已按 QA 17.2③ 与之**并成同一把**。
+3. 🔴 **演示那句要真出数** = 语义包／列权限面（R06 列面）⇒ 另一件主单，本轮不动。
+4. ⚠️ **`U-126` 槽位配平表**：`U-129` 转绿**作废三批历史读数** ⇒ 需要一批新 `ok` 率／H／轮次分布才收；本轮零出站 ⇒ 不交。
+5. ⚠️ **豁免面落笔（RLS 第二道保证）** ＋ `reporter` 合并口形状 ⇒ 仍属判据面，本窗不自裁。
+
+### 18.10 落笔身份（两格并报）
+
+- 本节落笔时 HEAD = `360498d`／**460** 笔；本段落笔笔 = **下一笔**（尺 = `git log -1 --format='%h %cI' -- backend/reports/w8/RELAY.md`）⇒ 🔴 本轮**没有新的门禁入库件**，两个身份格分别是：`eval_metrics.json` 自报 `f7bf106`／dirty false ⟷ 其入库笔 `ee7c3d9`。
+- 落笔尺（都跑了）：**行首段标题命中** `## §十八` = 追加前 **0** ⟷ 追加后 **1**（🔴 只数行首；本行自己就带一次引用）；`## §十七` 仍 = **1**（§17.6 ⑧ 那条就地 🔻 不新增段标题，尺 = 现读 `startswith`）；排版尺 = `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/_audit_layout.py backend/reports/w8/RELAY.md "## §十八"` ⇒ 本节新增问题必须 **0**；行尾尺 = `RELAY.md` CRLF **0**、LF == 行数。

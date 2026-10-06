@@ -221,6 +221,16 @@ w3a w3b w3c w3-int w4 w5 w6 w7`）各自留有 `PROMPT/DELIVERY/RELAY`。`app/` 
 - **静态与测试面（计数全部带 HEAD，现测于 `70012e7` 之上的工作树）**：`ruff check --config pyproject.toml app` ＋ 整目录那把尺 = **All checks passed!／0 条**（🔴 第 15 轮我把 `_audit_layout.py` 拷进树时**没跑整目录那把尺** ⇒ 带着 3 条 `E741` 进库、本轮才发现，已改名修掉，见 `RELAY §17.7`）；
   `mypy app` = **no issues in 158 source files**；`lint-imports` = **4 kept／0 broken**；前端两门（本轮 `frontend/**` 一字未动 ⇒ 属"未改动确认"）= `npx tsc --noEmit` **rc 0／输出 0 字节**、`npx eslint . --ext .ts,.tsx` **rc 0／0 字节**（本窗现测 `07:35Z`，与 QA 第 19 轮那把 eslint 同值但不互相顶替）；离线面与集成面的读数见 `backend/reports/w8/RELAY.md §十七`。
 
+🔻 **10-06 第 17 轮（T-41 · QA 第 20 轮派单「零额度四件 A–D，全是落笔与口径」）收口读数 —— 上面第 16 轮那段保留，本轮没动一行实现代码、没花一分钱**（面 = 工作树在 `360498d`／459 笔之上；时刻 = 18:3x–18:5x ＋0800 ／ 10:3x–10:5x UTC；尺全部是盘上产物 ＋ 只读事务）：
+
+- 🟢 **`U-129` 转绿（QA 第 20 轮裁定，2026-10-06；本窗只把裁定落盘、不自裁）**，状态格落在 `docs/07 §4.8` 该行（结案引用四件逐件点名当期位置：① `RELAY §16.4` ＋ `evidence/t38/r23_scope_*.txt`；② 直读式 = 0（`r23_thread_from_checkpoints.sql` ⑮／⑰）；③ `t39_h_cell.json` 的 `ok` 率与三把窗 H；④ `test_audit_terminal_pairing_contract.py`）。🔴 **三条限定语必须与"转绿"同框（缺一即按 `UNVERIFIED` 记）**：**(a)** 当期性**只认构建身份**（逐件 md5 ＋ 全量 158 件聚合 ＋ 层 3 `RUN_SCOPED_STATE_FIELDS`），🚫 不得用 `app.audit_log` 的日期窗追认当期；**(b)** 该行 v1.7.10 那句照抄 = **「本号转绿会作废三批读数，转绿语必须点名」** ⇒ W7 侧的 **`ok` 率 / H 实测值（当时引用 `6.18s`）/ 轮次分布**三批自本刻起**一律作废、须重测后才可引用**，并按规矩「**新镜像首格作废 ＋ 跑前预热一格**」；**(c)** 镜像 `Created = 2026-10-05T15:19:26Z`、第 15／16 轮**都没重建** ⇒ 🚫 不得写"活体面已带本轮改动"。⚠️ **v1.7.13 句 A 照用 = 「结案不依赖活体臂」** ⇒ 本号**不许再跟 `G-6` 那笔钱焊回一条**（样本几何是 `G-6` 的前提，不是本号的前提）。
+  🔻 **本轮把 (a)/(c) 现测成硬证据**（零出站；尺 = `deploy/loadtest/attest_build_identity.py --receipt <仓库外副本> --container commerceql-api-1 --files backend/app/guard/ast_gate.py,backend/app/guard/rules.py,backend/app/api/ratelimit.py`，`attested_at = 2026-10-06T10:36:52Z`）：逐件 **SAME 1/3**（`ratelimit.py` SAME，`ast_gate.py`／`rules.py` **DIFF**）、全量聚合 **equal = false**（158 件对 158 件、聚合串不等）、层 3 **present = true** ⇒ 🔴 **"158/158 三面相等"这句话只对 `4f08698` 之前的构建成立，自第 16 轮 `U-137` 落进 `app/guard/**` 起不得再照抄**（这不推翻转绿，因为引用面是第 15 轮那把批当时取到的三面）。
+- 🟢 **`U-137` 已结案（QA 第 20 轮裁定）**，🔴 **同格写明它不覆盖什么**：随交件实测 = 3 条 `GATE_AST_REJECTED` 里**改判 1 条、放行 0 条、题面 2 个**；演示那句「上个月复购率最高的 10 个店铺是哪些？」**今天仍不出数**，现读拦点 = **R06 =「查询包含受保护字段」**（`gate_result.reason` 现读，尺 = `backend/reports/w8/t41_r06_block_cell.py`，产物 `backend/reports/w8/evidence/t41/r06_block_cell.json`；依 `U-125` 判据④，这类 `rule_id` 归因**只算离线器件**）⇒ 属**列面／语义包**、与 JOIN 路径无关 ⇒ 要让它出数得动**语义包／列权限面 = 另一件主单**，🚫 不许讲成"`U-137` 修完就能演示"。
+- 🔴 **B 面名点清（QA 第 20 轮 G2）**：第 15 轮登记的 **2,454** 的面 = **三目录**（`tests/unit`＋`tests/contract`＋`tests/eval`），而第 16 轮的 **2,478／2,485** 的面 = **五目录**（再加 `tests/redteam` 11 ＋ `tests/graph_snapshot` 13）⇒ 上面那条「开工同尺实采 2,478 ⇒ ＋7」里的**"同尺"不成立**、两数不可相减；逐目录 `--collect-only -q` 两棵树实测（闭合表在 `§7` 第 16 轮指针 ④ 的 🔻 补记）⇒ **+24 归因完成 = 11 ＋ 13**、结案条件（逐目录之和 == 日志 passed）**闭合**。
+- 🔴 **C（QA 第 20 轮 G3）**：G-1 的判定输入是那两把 **未跟踪** `.log`（`.gitignore:47`）⇒ 整树 `git archive` 到仓库外只带 p0-summary 重算 ⇒ **G-1 掉成 `NOT_AVAILABLE`（PASS 0/8）**，其余七格逐词同 ⇒ 引用规矩已落 `§7` 的 G-1 格 ＋ `docs/07 §16.5`（v1.7.24 新增第三条）。
+- ⚠️ **本轮另两处落笔**：`U-138` 行加 🔻 进度补记（改名与契约已在第 16 轮落盘、仍欠一份**带 `worker_session_depth` 的真回执** ⇒ 状态 = **部分达成、不结案**，按 QA 17.2③ 与 **T-40 并成同一把批**）；`docs/07` 的 **`文档版本` 字段两轮漏改**（曾停在 `v1.7.21` 而修订表已有 v1.7.22／v1.7.23）⇒ 本轮抬到 **v1.7.24** 并具名。
+- **对外口径不变**：门禁 **PASS 1/8**（本轮没动判定输入 ⇒ 入库件仍是第 16 轮那份，自报 `f7bf106`／dirty false，入库笔 `ee7c3d9`）⇒ 任何场合**不得写"门禁通过"**；`G-6` 仍不可引用（9 < 20）；演示三句维持（🚫 不当场点「发起评测」／「评测集」下拉 DOM 尺 = **2**／新文案在活体页面上**还看不到**，镜像未重建）。
+
 ---
 
 ## 7. 质量现状：上线门禁 1/8（这一段是本项目最诚实的部分；🔻 10-03 第 6 轮之前是 0/8）
@@ -255,6 +265,19 @@ w3a w3b w3c w3-int w4 w5 w6 w7`）各自留有 `PROMPT/DELIVERY/RELAY`。`app/` 
 ② 两把当期输入 = `backend/reports/w8/_r16_offline_cleantree.log`（**2,485 passed／0 failed／rc 0**）＋ `backend/reports/w8/_integration_pytest_1006_rT39_v.log`（一次性库 `ecom_t39it_r16`：建 → 授权 → owner → alembic 到 `0006` → `-v` 跑 → **当场 DROP**，**124 passed／rc 0**，残渣尺 `datname like 'ecom%'` = **2** = 共享 `ecom` ＋ 别窗的 `ecom_u123_probe`，后者不删）⇒ `integration_ran = True`。🔴 **本轮在自己身上复现了上面 G-1 格那条"形状尺"**：集成层先按 `-q` 跑 ⇒ 日志里没有 `tests/integration/*.py` 文件名 ⇒ `reporter` 判集成没跑、G-1 当场从 PASS 掉到 **PARTIAL**；改 `-v` 重跑才对上（那份 `-q` 日志已删，不留第二真相）。⚠️ **两把日志的"所在面"分开点名**：上面那句"干净树"只描述 **reporter 那两遍重算**；离线那把跑的文件名叫 `_r16_offline_cleantree.log`，但它**跨在提交边界上**（15:17:42 起、15:19:30 止，`4704966` 在 15:19:04 入库）⇒ 对那把跑不许写"干净树跑的"，所在面按尺认 = `git diff --name-only 4704966 -- backend/app deploy` **0 行**（被测代码面与该笔逐字节相同）。详见 `RELAY §17.6 ⑥` ＋ `§17.7` 第 8 条自曝。
 ③ 八格判定词**未变** = **PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2**（G-1 PASS；G-2／G-5／G-7 FAIL；G-3／G-4 PARTIAL；G-6／G-8 UNVERIFIED）⇒ 🔴 对外**仍不得写"门禁通过"**；`G-6` 仍不可引用（当期样本 9 < 下限 20，本轮零出站、没有新批）。两遍重算的递归 diff ⇒ **判定量 0**，唯一差 = `meta.generated_at`（相差 3 秒）；报告 md 里「取证件」字样命中 **0**。
 ④ ⚠️ **条数增量必须点名基线**（QA 15.5 第 1 条同源）：离线 **2,485** 对本窗开工同尺实采 **2,478**（HEAD `4f08698`）= **＋7**（本窗确证：新增 U-138 契约 5 条 ＋ `test_r10_cte_join_contract.py` 由 3 支改 5 支 ⇒ ＋2）；而对第 15 轮入库件登记的 **2,454** 差 **+24 无法归因** ⇒ 🔴 按「只报实测」列为**交回项**，本窗不自编解释，等 QA 用同一 `--collect-only` 口径与同一 HEAD 对撞。集成 **124** 与第 15 轮逐位相同（＋0）。
+🔻 **第 17 轮（T-41 B；QA 第 20 轮 G2 点名）就地订正本条的"同尺"二字（原句保留作取证）：面变了 ⇒ 这几个数分属两把尺，不可混比。** 第 15 轮登记的 **2,454** 的面 = **三目录**（`tests/unit` ＋ `tests/contract` ＋ `tests/eval`，逐字见 `backend/reports/w8/RELAY.md §16.8` 那行），而 **2,478／2,485** 的面 = **五目录**（再加 `tests/redteam` ＋ `tests/graph_snapshot`；`tests/` 下总共就这六个目录 ⇒ "五目录"与"整树减集成"是同一把尺）。逐目录 `--collect-only -q`（条数取 `::` 行数）本窗在**两棵树各跑一遍**：
+
+| 目录 | `4f08698`（第 16 轮开工前） | HEAD `360498d` | 差 |
+|---|---|---|---|
+| `tests/unit` | 1,422 | 1,422 | 0 |
+| `tests/contract` | **608** | **615** | **＋7**（线程键契约 ＋5、R10 契约 3→5 ＋2） |
+| `tests/eval` | 424 | 424 | 0 |
+| `tests/redteam` | 11 | 11 | 0 |
+| `tests/graph_snapshot` | 13 | 13 | 0 |
+| **三目录小计**（第 15 轮登记的面） | **2,454** | **2,461** | ＋7 |
+| **五目录小计**（本轮实际的面） | **2,478** | **2,485** | ＋7 |
+
+⇒ 上一轮那句「**＋24 无法归因**」现在**归因完成 = `tests/redteam` 11 ＋ `tests/graph_snapshot` 13**（第 16 轮把面从三目录加宽到五目录），一条测试都没丢、也没多出；🔴 结案条件同格闭合 = **逐目录之和 == 日志里的 passed 数**（五目录 2,485 ⟷ `_r16_offline_cleantree.log` 末行 `2485 passed`）。⚠️ 加宽方向是**变严**（多跑两个目录）⇒ 不改任何门禁判向，破的只是**可比性** ⇒ 从本刻起引用这两个数**必须带面名**（"三目录 2,454"／"五目录 2,485"），🚫 不许再写"同尺 ＋7"或把 2,454 与 2,485 相减。
 
 🔻 **同轮第二次重算（19:23:28 +0800 = 11:23:28Z，在已经提交完的干净树 `cbff229` 上跑）**：八格的判定词、`measured`、caveats 与整个取证面**逐字节未变** —— 两份产物的全量递归 diff 只有 **5 条**（`meta.generated_at`、`meta.git.rev` 由 `a84fc6f` 到 `cbff229`、`meta.git.dirty` 由 true 到 false、`gate_provenance.report_git.rev` 与 `.dirty`）。⇒ 这一条同时把来件起点读数②（「`eval_metrics.json` 仍是 `079916d`＋dirty」）**结掉一半**：产物现在自报 **`cbff229` ＋ dirty=false**，而「重算可复现」不再是我的叙述、是这 5 条 diff。⚠️ 引用 `meta.git` 时**必须点名是哪一次**：18:51 那次给 `a84fc6f`＋dirty，19:23 这次给 `cbff229`＋干净。
 
@@ -270,7 +293,7 @@ w3a w3b w3c w3-int w4 w5 w6 w7`）各自留有 `PROMPT/DELIVERY/RELAY`。`app/` 
 `merge_skipped`／`overlap_suspected` ＋ `_p0_notes()` 的对应 caveat；
 QA 的四态探针现读 **态①②④ 复现、态③ = FAIL ＝ want**（该件 rc=1 只因其 `now` 仍是修前基准 —— 探针自己留了「届时重取基准并具名订正」）。🔻 **10-05 第 13 轮（T-36，零额度）当期重算**：两把输入换成干净树 `a688473` 跑的
 `_full_pytest_1005_rT36.log`（sha256 `364d8ab5…`，**2,392 passed／0 failed／1 warning／rc 0**）＋ `_integration_pytest_1005_rT36.log`（sha256 `176eb1bc…`，一次性库 `ecom_t36_it` 迁移到 `0005`／**107 passed**／跑完 DROP、残渣尺 `datname like 'ecom%'` = **2**）
-⇒ 合并 **2,499**、红 **0**、判定仍 **PASS**、**全表仍 PASS 1/8**（同词：G-2／G-5／G-7 FAIL、G-3／G-4 PARTIAL、G-6／G-8 UNVERIFIED）；离线比第 11／12 轮的 2,389 **＋3** = 本轮新落号 `U-137` 的三条契约臂。两遍重算（仓库外 `--json-out`＋`--md-out`）递归 diff **判定量 = 0**、唯一差 `meta.generated_at` ⇒ 入库件 `9f183e1` 自报 `rev a688473`／`dirty false`。**仍不得写"门禁通过"** |
+⇒ 合并 **2,499**、红 **0**、判定仍 **PASS**、**全表仍 PASS 1/8**（同词：G-2／G-5／G-7 FAIL、G-3／G-4 PARTIAL、G-6／G-8 UNVERIFIED）；离线比第 11／12 轮的 2,389 **＋3** = 本轮新落号 `U-137` 的三条契约臂。两遍重算（仓库外 `--json-out`＋`--md-out`）递归 diff **判定量 = 0**、唯一差 `meta.generated_at` ⇒ 入库件 `9f183e1` 自报 `rev a688473`／`dirty false`。**仍不得写"门禁通过"** 🔻 **第 17 轮（T-41 C；QA 第 20 轮 G3 ＋ 本窗独立复算坐实）新增一条引用规矩（判据措辞一字未动）**：本格的**判定输入是那两把 `.log`，而 `.log` 全被 `.gitignore:47` 忽略 ⇒ 未跟踪**（现测 = `git ls-files backend/reports/w8/_r16_offline_cleantree.log` 给 **0 行** ＋ `git check-ignore -v` 指到 **`.gitignore:47:*.log`**）⇒ 把整树 `git archive` 到仓库外、只带 `gate_inputs_p0_summary.json` 去重算 ⇒ **G-1 从 `PASS` 掉成 `NOT_AVAILABLE`**（counts = **PASS 0／FAIL 3／PARTIAL 2／UNVERIFIED 2／NOT_AVAILABLE 1**，其余七格**逐词相同**；本窗现测 `2026-10-06T10:3xZ`，副本在 `E:/tmp_qoder/r17/head_tree`）。⇒ **复算 G-1 必须连那两把日志一起在场**；手上只有 p0-summary 时，本格只可引到 **`self_reported`** 那一格，🚫 **不得声称"异地可复算／拿仓库就能重跑 G-1"**。判定面（日志）与取证面（入库件）是两件事 ⇒ 同一规矩已落 `docs/07 §16.5`（v1.7.24 第三条）。**仍不得写"门禁通过"** |
 | G-2 结构 Easy × 语义低 ≥95% | ≥95% | easy×low **0/10 = 0.0%**（🔻 10-04 00:47 第二批真打重算；数值未变、**成因已换**） | 十条现在整整齐齐走到 `intent>link>plan>refuse_out`（10/10 出口理由 `no_data_asset`）⇒ 红点**从"理解阶段"移到了"计划层的指标面"**（§9 那条 P1 判据侧缺口）。🔻 第一次真打那版（9 条澄清 ＋ 1 条拒答、匣带原文 `reason_code=unmapped_entity`、提示语"「T_A」无法映射到任何已登记实体"）保留：那是租户码自指被当未映射实体的形状，载荷说明落地后不再出现；τ 未校准污染 L4 判据（R-19） |
 | G-3 危险 SQL 放行 = 0 | 0 | 放行 0 / 覆盖 48（应拦 50） | 2 条成本闸门用例沙箱无 EXPLAIN ⇒ gate3 恒 SKIPPED |
 | G-4 跨租户泄露 = 0 | 0 | 跨租户行 0 | **评测主链路走 SQLite TEMP VIEW**，"应用运行时经 PG 执行并设好 `app.tenant_id`" 那一跳未测；且 PG 并行/串行不等值（占位符 GUC 不随 worker 传值） |
