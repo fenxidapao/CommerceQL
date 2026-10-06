@@ -1,0 +1,78 @@
+{
+  "schema": "commerceql.loadtest.quote/1",
+  "task": "T-38 主单（U-129 ③ ＋ G-6 首个可引用 P95）",
+  "generated_at_utc": "2026-10-06T04:24:18+00:00",
+  "git_rev_at_quote": "2a82131f675b09806833dcff8891aa7ee63866ed",
+  "worktree_dirty_at_quote": true,
+  "geometry": {
+    "scenario": "steady",
+    "concurrency": 3,
+    "max_requests": 30,
+    "reuse_sessions": true,
+    "session_pool": 3,
+    "command": "python deploy/loadtest/driver.py --scenario steady --concurrency 3 --max-requests 30 --reuse-sessions --session-pool 3 --tokens <仓库外一次性令牌文件> --out <回执路径>"
+  },
+  "budget": {
+    "approved_cap_cny": 0.25,
+    "approved_by": "总控（第 15 轮 T-38 派单：已批花费，上界 ¥0.25，超过就停并把报价交回）",
+    "unit_baselines": {
+      "unit_dispatch_cny_per_admission": 0.00753,
+      "unit_r12_ledger_cny_per_admission": 0.00973,
+      "口径": "两个数都保留：`unit_dispatch` 照引来件不改；`unit_r12_ledger` = 第 12 轮那把批（窗 ≥ 2026-10-05 04:45:00+00）的 `sum(cost_cny) ÷ admitted` = 0.058383 ÷ 6。一条准入的调用数随题面变（1～4 次），所以不得把任一数当'均价'外推。"
+    },
+    "predicted_admissions": {
+      "expected": 21,
+      "range": [
+        18,
+        30
+      ],
+      "依据": "见本件 docstring 的桶算式；实际准入由回执 `admission.admitted` 读数，不由本行认定"
+    },
+    "cost_range_cny": {
+      "low": 0.13554,
+      "expected": 0.15813,
+      "high": 0.2919
+    },
+    "cap_breach_condition": "实付 > 0.25 ⇒ 立即停：不补跑、不为凑样本加批，把回执与差值交回 QA 转总控",
+    "cap_breach_threshold_admissions": 25
+  },
+  "sample_floor": {
+    "MIN_ADMITTED_FOR_P95": 20,
+    "read_from": "deploy/loadtest/driver.py 的 `MIN_ADMITTED_FOR_P95` 那一行（本件现读，不抄文档）",
+    "若不足": "admitted < 20 ⇒ G-6 继续 `g6_p95_le_8s = null` ＋ `g6_caveat` 原文，🚫 不得把该批的 P95 引用为达标或不达标"
+  },
+  "void_cell": {
+    "purpose": "预热一格（硬要求 a）⇒ 不进任何分母、不进 P95 样本、不进 U-129 的分子",
+    "geometry_override": {
+      "max_requests": 1
+    },
+    "note_rule": "作废格回执的 `note` 必须点名其构建身份是跑前取还是跑后补打"
+  },
+  "reading_surface_required": [
+    "admission.admitted",
+    "admission.terminal",
+    "outcomes",
+    "codes",
+    "codes_task_ids",
+    "thread_depth",
+    "p95_scope",
+    "g6_caveat",
+    "latency_samples_ms",
+    "build_identity"
+  ],
+  "ledger_baseline": {
+    "rows": 1721,
+    "sum_cny": 2.831595,
+    "max_created_at": "2026-10-05 05:28:19.308155+00",
+    "captured_at_utc": "2026-10-06T04:24:18+00:00",
+    "r12_window": {
+      "since": "2026-10-05 04:45:00+00",
+      "rows": 35,
+      "sum_cny": 0.058383,
+      "admitted": 6,
+      "unit_cny_per_admission": 0.00973
+    }
+  },
+  "clock_caveat": "跨面比时间前必须先对表：本轮起每把批都记 `host date -u` ⟷ 容器 `date -u` ⟷ 外部 HTTP `Date` 头三处（同机曾出现主机钟与容器钟差 11h39m 的一次实测）",
+  "ruler_b": "git log -1 --format=%cd --date=iso-strict <报价笔>  <  主批回执 started_at（报价笔 = 本件 JSON 的入库笔，不是本件生成时刻）"
+}
