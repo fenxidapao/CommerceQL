@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -51,6 +52,7 @@ from app.semantics.runtime import SemanticBundleRuntime  # noqa: E402
 RECEIPT = ROOT / "deploy" / "loadtest" / "t38_c3n30_main.json"
 OUT = ROOT / "backend" / "reports" / "w8" / "evidence" / "t39" / "u137_before_after.json"
 R13_ARCHIVE = ROOT / "backend" / "reports" / "w8" / "evidence" / "t39" / "u137_before.json"
+DEMO_QUESTION = "上个月复购率最高的 10 个店铺是哪些？"
 
 
 def record_of(task_id: str) -> dict[str, str]:
@@ -131,7 +133,8 @@ def main() -> int:
         "git_rev_short": subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
                                         capture_output=True, text=True).stdout.strip(),
         "zero_egress": True,
-        "question": "上个月复购率最高的 10 个店铺是哪些？（同一题在 T-38 批里生成了三条变体）",
+        "question": DEMO_QUESTION,
+        "question_tally_per_rejected_run": dict(sorted(Counter(r["raw_question"] or "?" for r in rows).items())),
         "receipt": "deploy/loadtest/t38_c3n30_main.json（三条 GATE_AST_REJECTED 的 task_id 取自 codes_task_ids）",
         "arms": {
             "before": "离线对照臂 = 把 `_side_logical` 换成落地前语义（不展开 CTE）后对同一条 SQL 跑 `run_gate1`（本窗自订，单变量）",
@@ -162,13 +165,22 @@ def main() -> int:
         tally[key] = tally.get(key, 0) + 1
     out["tally_after"] = dict(sorted(tally.items()))
     out["归因变化"] = {"改了的": changed, "翻成放行的": flipped_pass}
+    demo = [r for r in rows if r["raw_question"] == DEMO_QUESTION]
+    out["归因变化"]["演示那句所在的那一条"] = [
+        {"task_id": r["task_id"], "before": r["before_legacy_arm"]["rule_id"],
+         "after": r["after_current_impl"]["rule_id"], "passed": r["after_current_impl"]["passed"]}
+        for r in demo]
     out["reading"] = (
-        f"三条变体里**只有一条**的归因被本轮改动改变（{changed}：R10 → R06 —— CTE 侧按资产展开后连接路径判定通过，"
+        f"本批 {len(rows)} 条 `GATE_AST_REJECTED` 来自 **{len(set(r['raw_question'] for r in rows))} 个题面**"
+        f"（逐题计数见 `question_tally_per_rejected_run`）⇒ 🔻 本件初版把它写成『同一题的三条变体』是**错的**，"
+        "题面取自 `app.audit_log.raw_question` 现读，按实报错改正。"
+        f"其中**只有一条**的归因被本轮改动改变（{changed}：R10 → R06 —— CTE 侧按资产展开后连接路径判定通过，"
         "露出真正的列面违规）；仍 R10 那一条是**真该拒**（其资产对不在认证边集内），但它今天起的文案不再是"
         "「超出你的权限」；前后同为 R06 的那条与本号无关 ⇒ 🔴 **第 15 轮 RELAY §16.3／OVERVIEW 里"
         "『三条 GATE_AST_REJECTED 明确归 U-137 面』那句是过度归因，本轮就地订正**。"
-        f"三条**没有一条**翻成放行（after = {out['tally_after']}）⇒ 演示那句「上个月复购率最高的 10 个店铺是哪些？」"
-        "在离线面**仍不出数**，而活体面连本轮改动都还没带上（镜像未重建）。"
+        f"演示那句「{DEMO_QUESTION}」**恰是被改判的那一条**（{len(demo)} 条）。三条**没有一条**翻成放行"
+        f"（after = {out['tally_after']}）⇒ 演示那句"
+        "在离线面**仍不出数**（改判后落在 R06 = 列面/受保护字段），而活体面连本轮改动都还没带上（镜像未重建）。"
         "⇒ QA 16.5(ii) 那条「先落 U-137 再演示」（出路 a）**前提不成立**，已写进本轮交回。")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

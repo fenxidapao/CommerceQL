@@ -2371,3 +2371,133 @@ QA 12.6 在 `9e45281` 干净树上跑出 1 error（UP020），而我 §十一.2 
 - 本节落笔时 HEAD = `9398fad`／450 笔（上一笔 cd = `2026-10-06 12:50:17 +0800`）；本节引用的入库件自报 `meta.git.rev = 9398fad`／`dirty false`（= **两遍重算所在的树**），把该件字节进仓库的那一笔 = **本节落笔那一笔**（不是 `9398fad`；落笔后现读 `git log -1 --oneline -- backend/reports/w8/RELAY.md`）。
 - 落笔尺（三件都跑）：段标题命中数 = `1`（判据 = 下面那行现读的 `§十六 命中数`，必须等于 1；追加前先量 `RELAY.read_text().count( MARK )` 与 `BODY.count( MARK )` 相加）；排版尺（cwd = 仓库根）= `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/_audit_layout.py backend/reports/w8/RELAY.md "## §十六"`（**尺本轮已进树**，先前跑它在仓库外 `E:/tmp_qoder/r15/`；两个位置现读同一份输出）⇒ 本节新增问题必须 0；上一笔时刻 = `2026-10-06 12:50:17 +0800`。
 
+## §十七 第 16 轮（**T-39 · QA 第 19 轮派单「主单五件 A–E，🔴 本轮零额度」** ｜ 2026-10-06 13:5x–15:4x ＋0800 ／ 05:5x–07:4x UTC ｜ 起始 HEAD `70012e7`／453 笔（QA 第 19 轮那笔，现测 `git rev-list --count HEAD`）｜ 本轮笔序 `4704966`（代码＋契约＋量具＋docs＋OVERVIEW）→ `1e98aa7` → `5a6caed` → `f7bf106`（**取证件三连发**，见 §17.6 ③）→ 本段落笔笔 ｜ 🔴 **本轮零花费／零出站**（金路一把没跑，自证见 §17.8 最后一行）｜ **未重建镜像、未 recreate、未跑迁移、匣带零重写**；一次性库 `ecom_t39it_r16`：建 → 授权 → owner → alembic 到 `0006` → `-v` 跑 → **当场 DROP**）
+
+### 17.0 派单五件逐件状态（先给结论，再给格）
+
+| 件 | 派单原文要点 | 本轮状态 | 落点 |
+|---|---|---|---|
+| A | 补 `U-129` 结案引用 ③ 的 **H 半格**（`ok` 率＋H＋rev＋时刻＋首格作废声明；先裁 `repair` 口径；具名取窗与每格 n；冷启动未剥离同框写；连带义务） | **达成**（零出站，只从既有 `docker logs` 取数） | §17.1 |
+| B | `t38_assemble.py` 三处当场修（F2 f 格快照／F3 `passed` 坏尺／F4 单价分母自相矛盾）＋零额度重跑装配 | **达成** | §17.2 |
+| C | `U-138` 落地（量具面，🚫 不动 `app/**`）＋离线契约＋结案条件「契约绿 ＋ 一把当期回执两把同框」 | **达成，但结案条件的后半要再一把批才算数 ⇒ 交回** | §17.3 |
+| D | `U-137` 落地（§7.2 资产口径 ⇒ CTE／派生侧参与判定；R10/R11 不与越权共用一句；三处抄本同轮同改；夹具转绿且直连对照仍 `passed=True`；红队三臂不退步；随交演示那句前后归因；`ACCEPTANCE` 写"未认证 ≠ 越权"） | **代码＋文案＋抄本＋夹具达成；"演示那句能出数"不成立 ⇒ 如实报** | §17.4／§17.5 |
+| E | 收口面同步（`OVERVIEW §6` 补 A 两数；`ACCEPTANCE §3` 保持现状措辞；三门＋离线＋集成各报 rc＋计数带 HEAD；`tsc` rc 0＋字节数；eslint 注归属） | **达成** | §17.6 |
+
+### 17.1 A ｜ `U-129` 结案引用 ③ 的 H 半格（零出站）
+
+📌 **判据原文（逐字，`docs/07` 的 `U-129` 行 ③，现读 `:1159`；位置随插行漂移 ⇒ 只认句首"③"）**：「③ W7 重测后的 `ok` 率与 H（带镜像 tag 或 rev + 时刻 + 首格已作废的声明）」
+📌 **H 口径原文（`U-126` 行 v1.7.4 订正① ＋ 通则）**：「真实四次 = normalize / plan / l4_score / gen_sql，W7 四格 p50 相加 = H = **5.99s**」＋「**H 一律按"当日实际发 LLM 的节点集合"取，不得照抄名义分配**」。
+⇒ 本轮**没有镜像 tag**（未重建）⇒ 按判据的"或"支取 **rev ＋ 时刻 ＋ 首格作废声明**三件：回执 `deploy/loadtest/t38_c3n30_main.json` 自报 `git_rev = 67be6b0`／`dirty = false`／`started_at = 2026-10-06T04:25:59Z`／`finished_at = 04:26:21Z`；**测量动作所在树** HEAD = `70012e7`（两格分开，别把"数据所在批"当"尺所在的树"）；**首格作废声明** = `tk_e52c0019f24d4c09b58facd9e7a0f59f`（其自有回执窗 `04:25:06–04:25:23Z`，admitted 1／ok 1）**不进任何分母**（不进 ok 率、不进 H 的节点集合、不进 P95）。
+
+**三把窗对撞表**（尺 = `backend/reports/w8/t39_h_cell.py`，只读 `docker logs commerceql-api-1`，服务端零写；产物 `backend/reports/w8/t39_h_cell.json`）：
+
+| 窗（具名边界，UTC） | `llm_call` 行数 | 逐槽 p50 ms（n） | 四格 H | 含 `repair` H | 对 5.99s 的差 |
+|---|---|---|---|---|---|
+| **窄窗·含末帧**（本窗采为权威）`04:25:59 → 04:26:22` | 32 | `normalize_intent 1076.0(9)`／`plan 1657.0(8)`／`l4_score 2021.0(7)`／`gen_sql 1838.0(7)`／`repair 1533.0(1)` | **6.59** | **8.12** | ＋0.60 |
+| 窄窗·**切末帧**（= QA 第 19 轮那把）`04:25:59 → 04:26:21` | 31 | 同上，唯 `gen_sql **2008.5(6)**` | 6.76 | **8.30** | ＋0.77 |
+| 宽窗（⑮⑰ 那把作用域）`04:25:00 → 04:27:01` | 36（🔴 **含作废那跑的 4 条**） | `normalize 1049.0(10)`／`plan 1660.0(9)`／`l4_score 2157.5(8)`／`gen_sql 1820.0(8)`／`repair 1533.0(1)` | 6.69 | 8.22 | ＋0.70 |
+
+🔴 **与 QA 撞值的处置 = 采来撞、不采抄，且差因已定位到"一个窗边界"**：派单给的是窄窗 **6.76**／宽窗 **6.69**／含 `repair` **8.30** ⇒ 本窗**逐位复现**（上面第二、三行）；差别只有一处 —— QA 的 `--until 04:26:21Z` 把落在 `04:26:21.407071` 的那条 `gen_sql`（1802 ms）**切在窗外**，本窗含末帧 ⇒ 同一个 p50 从 2008.5 变 1838.0。**谁也不覆盖谁**；引用这两把 H 时**必须点名"含末帧还是切末帧"**（本项目第 N 次撞在"取窗不具名"上）。
+🔴 与 5.99s 的偏差**具名** = ＋0.60～＋0.77s（四格那把）／＋2.13～＋2.31s（含 `repair` 那把）。
+
+**`ok` 率（两把分母不许混）**：分子 `ok` = **4** ⇒ **4／`admitted` 9 = 0.4444**（准入面，跨批与 W7 那把比**只许用这把**）；另一把 **4／发出 30 = 0.1333**（含 20 条 429 的整批面）。outcomes 全形 = `{ok:4, error_frame:3, clarify:1, refuse:1, http_4xx:21}`。
+
+**`repair` 口径裁定（本窗自裁，派单只要求"两条都给＋写明采哪条"）**：采**含 `repair`（H = 8.12s）为权威**。理由 = ① 通则字面写的是"**实际发 LLM 的节点集合**"，而本批 `repair`（闸门拒后修 SQL 那一跑）**真的发了一次**（n = 1，现读 `by_window.*.per_node.repair`）；② H 的用途是**槽位配平**，一个 run 占着槽位的时间包含 `repair` 那一段。四格那把（6.59s）只作"与盘上 `U-126` 历史值同口径可比值"并报。⚠️ 两读法差 = **23.2%**（8.12 vs 6.59），与派单说的"约 23%"对上。
+⚠️ **方法论诚实面（不是没做，是没尺）**：`llm_call` 日志行**没有 run 标识** ⇒ "逐 run 相加再取分位数"这把**做不到**；所以"节点集合"只能按**窗内出现过哪些节点**取，作废格只能按**时间窗**剔除（`task_id` 归属恒 0 那条弯路已在本件里改掉）。
+🔴 **同框必带：冷启动未剥离** —— 现测宿主 `LastBootUpTime = 2026-10-06 04:04:56Z`、容器 `commerceql-api-1` `State.StartedAt = 04:10:42.902509577Z`（`Created` 仍是 10-05 那次 `15:19:26Z`）⇒ 主批 `04:25:59Z` = 容器起后 **15m17s**／宿主重启后 **21m03s**。本轮唯一的剥离动作 = **预热那一跑被具名作废**，它剥的是"第一批"而不是"每一槽"；加上无 run 标识 ⇒ 想按 run 剥也没有尺。⇒ 只许写"当期批、作废格已剔除、**冷启动未剥离**"，🚫 不许写"已剥离冷启动效应"。
+
+🔴 **连带义务（派单 A④）**：`U-126` 行 v1.7.5 用的是区间 `H ∈ [5.99, 6.18]` ⇒ 本期五把读数 **6.59／6.69／6.76／8.12／8.30 全部穿破上界**，那个区间已不是本期形状；而「`U-128` 落地后仍须同一口径复测一次」那条回交义务**本轮交不回数**（`U-128` 未落地 ⇒ 没有可复测的对象）⇒ **写明仍未**，**槽位配平表因此还不能按现状收**（本窗不动判据、不动配平表）。
+🚫 本节**不写**"已修／`U-129` 已结案"——转绿判词归 QA。
+
+### 17.2 B ｜ `t38_assemble.py` 三处坏尺当场修 ＋ 零额度重跑装配
+
+| # | 派单点名的坏处 | 修法（现读行号） | 重跑后的读数 |
+|---|---|---|---|
+| F2 | f 格是**刷新前的快照**（`_p0_verdict()` 是现读，但装配跑在 `bea724a` 那笔、取证件在下一笔 `9398fad` 才当期化 ⇒ 装配之后没重跑装配） | `t38_assemble.py:303 _p0_verdict()` 保持现读；本轮在**取证件当期化之后**重跑装配 ⇒ 快照与证件同源 | 现读 `证件 rev = bea724a / 449 笔 / generated 04:42:25 / offline passed = 2454 / integration passed = 124`（这是 **T-38 那一份**，本轮没把它换成第 16 轮的数 ⇒ 换数在 §17.6 那三件新件里） |
+| F3 | `passed` 那半格是**坏尺**：在 `str(dict)` 里找 `passed=` ⇒ 恒不命中 ⇒ 永远印 `—` | `t38_assemble.py:312 passed(side)` 改**直取键值**，非 `int` 一律写 `UNVERIFIED`（不许用字符串扫描冒充读数） | 两栏都拿到数（见上一行） |
+| F4 | 单价分子分母**自相矛盾**：分子含作废那跑、分母叫"每准入" | `:124 unit_measured = 具名 9 个 run 的 ¥0.058951 ÷ 9`；`:125` 整窗含作废那把**改名** `unit_cny_per_run_in_window_incl_void` | **¥0.00655／准入**（剔作废、具名）vs **¥0.006612／窗内 run**（含作废 ÷10）⇒ 两把同框并报；第 15 轮那句"当期单价 ¥0.006612／准入"就地订正（`OVERVIEW §6` 同源同改） |
+| 随带 | 读回执的分组键随 `U-138` 改名漂移 | `:129 depth_raw = scen.get("worker_session_depth") or scen.get("thread_depth") or {}`（两代键都能读）＋ `:214 e_键名漂移` 一格说明 | 装配不再会因为改名而静默拿到 `{}` |
+
+尺 ＋ 复跑 = `PYTHONUTF8=1 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w8/t38_assemble.py`（只读产物 ＋ 只读 SQL，零出站；产物 `backend/reports/w8/t38_assembled.json`）。
+
+### 17.3 C ｜ `U-138` 落地（量具面，🔴 `app/**` 一字未动）
+
+采判据①的**改名那一支**（压测件不解 JWT、不连库 ⇒ 客户端**拼不出** `{tenant}:{user}:{session}`，硬凑只会造出第二份假 thread 真相）：
+- `deploy/loadtest/driver.py:436 _worker_session_depth()`（原 `_thread_depth`）、`:537` 产出键 `worker_session_depth`、计数键 `threads` → `groups`，键内**自报** `grouping_key = "(worker, session_id)"`（`:474` `is_server_thread: False`）＋ `server_thread_ruler` 指向库面尺 `deploy/loadtest/r23_thread_from_checkpoints.sql`；
+- 🔴 **刻意不升 `SCHEMA_VERSION`**（`:47` 仍 `w7.loadtest.receipt/1`）：唯一消费者 `eval/reporter.py:185` 按版本串**相等**才认这份回执 ⇒ 升版会让 **G-6 的输入静默变 `None`**（reporter 自己的注释原话）⇒ 改名只动"消费者不读的格"，这条写进 `deploy/loadtest/README.md` 的 🔻 段（CRLF 件，字节级追加：1961 → 1979 行）；
+- 判据②（同框并报）落点 = `backend/reports/w8/t38_assembled.json::thread_key_discrepancy`（`:254`）：回执侧 **7 组**（键 `(worker, session_id)`，`depth_hist = {1:7, 2:5, 3+:18}`）‖ 库面 **3 条**（键 `tenant:user:session`，剔作废；含作废 = 4）⇒ **7 ≠ 3 同框**；
+- 判据③（"同一 thread 第 N 轮"只从库面取）＝ 写进契约件 docstring ＋ README 抄本。
+- **离线契约** = `backend/tests/contract/test_loadtest_thread_key_contract.py` **5 条全绿**（`--self-check` 那把也重跑：**10/10 分类正确／rc 0**，现测 15:3x ＋0800）。
+
+🔴 **结案条件的诚实面（派单原文"契约绿 ＋ 一把当期回执两把同框"）**：契约绿 ✓；"两把同框"目前**只有装配件那一份**（读的是 **T-38 改名之前**跑的那份回执，键名仍是 `thread_depth`）⇒ **带 `worker_session_depth` 的真回执要等下一把批**，而批 = 花钱 ⇒ 本轮零额度**不交**，登记在 §17.9 交回项。契约第 4 条钉的是归档件在位且两格非 null，**不冒充**"新键已在真回执里出现过"。
+
+### 17.4 D ｜ `U-137` 落地（实现＋文案＋抄本，三处同轮同改）
+
+判据原文（`docs/07` 的 `U-137` 行裁定句，逐字）：「§7.2 **AST-R10** 的「左表 / 右表」指**资产** ⇒ CTE / 派生侧按其所含资产参与认证判定；R10/R11 属「路径未认证／笛卡尔风险」，**不得**与「越权」共用一句 ⇒ 修那天 §7.6 的分组与 `rules.py` 的文案**必须同轮同改**」。本轮三处**同笔**落下：
+1. **实现** `backend/app/guard/ast_gate.py`（CRLF 件，字节级：1006 → 1036 行）：`:541 self.cte_bodies = {c.alias: c.this for c in root.find_all(exp.CTE)}` ＋ `:631 _side_logical()`（资产 → `{logical_name}`；CTE → **递归展开其所读取的资产**，`frozenset` 栈防自引用；未知名 → `{name}` 保留旧行为）＋ `:697-698` 边匹配改"任一侧展开后成对即认证"。**放宽面止于**"按所含资产参与判定"：CTE 体内的 JOIN 仍被全树遍历审到 ⇒ 把 `v_order_paid CROSS JOIN v_traffic_daily` 装进 CTE 里**仍落 R10**（夹具第 2 条钉死）；资产面／列面仍受 R05/R06/R07 约束。
+2. **文案** `backend/app/guard/rules.py:95-107`：新增 `_msg_join_path()` = 「这个查询的表连接路径系统未认证，请换一种问法」（`:102`）与 `_msg_cartesian()` = 「这个查询的关联条件可能产生笛卡尔积，请指明用哪个字段关联」（`:107`）；R10/R11 换用之，**R05/R13 的越权句与 R06/R07 的受保护字段句一字未动**（契约第 4 条双向钉：R10/R11 文案里不许出现「权限」，同时断言 R05/R13 原句不变）。
+3. **抄本** `docs/07`（CRLF，字节级：3652 → 3655 行）：§7.2 AST-R10 定义行（现读 `:1836`；⚠️ 派单写的 `:1833` 是插行之前的位置 ⇒ **位置随插行漂移，只认行首 `| **AST-R10** |`**）加 **v1.7.23 落地句**（"上面那句把 CTE 名当表名查 ⇒ 落 R10 自本行起是**落地前形状**"）；§7.6 文案分组 `AST-R05 / R10 / R11 / R13` **一行拆三行**（现读 `:1958`／`:1959`／`:1960`）；`U-137` 行**只追加 🔻 落地补记、判据措辞一字未动**；新增 v1.7.23 修订行。排版尺 = `E:/tmp_qoder/r16/cmp_docs_layout.py <HEAD 那份> <工作树>` ⇒ 改前 23 条／改后 23 条，**新增 0／消失 0**（本轮两次改 docs 都跑过这把）。
+- **夹具**：`backend/tests/contract/test_r10_cte_join_contract.py` 由 3 条改 **5 条全绿** —— 第 13 轮那三条**转绿**（①放行支：CTE 侧 `passed is True`，且"资产直连"对照 `passed=True` ✓；②冻结红队三臂仍 `R10`×3；③台账与抄本同改）＋ 本窗自补两支（反面"CTE 体内藏未认证边仍 R10"、文案双向钉）。`tests/redteam` **11 passed／rc 0** ⇒ RT-R10-001/002/003 不退步。
+- 🔴 **归因仍属离线器件**：依 `U-125` 判据④，按 `rule_id` 的归因不得写成生产可观测（`app/graph/nodes/error_out.py:64` 把**任何** AST 拒绝映射成 `GATE_AST_REJECTED` ⇒ 回执 code 分不清 R06/R10）。
+
+### 17.5 D 随交 ｜ 演示那句的前后归因对撞（＋两处自曝订正）
+
+件 = `backend/reports/w8/t39_u137_before_after.py`（零出站：SQL 只读自 `app.audit_log.final_executed_sql`，外层 `begin; … rollback;`；闸门纯静态），产物 `backend/reports/w8/evidence/t39/u137_before_after.json`（现测 `rev = f7bf106`／`generated 2026-10-06T07:29:09+00:00`）。
+对照臂 = 把 `_side_logical` 换成落地前语义（单值、不展开 CTE）再对**同一条 SQL** 跑一遍（本窗自订、单变量）。
+
+| `task_id` | 题面（`raw_question` 现读） | 对照臂 | 当期实现 | `passed` |
+|---|---|---|---|---|
+| `tk_02f6fd3af…` | 本周客单价的环比变化是多少？ | R06 | R06 | False（与本号无关） |
+| `tk_201e96756…` | 本周客单价的环比变化是多少？ | R10 | R10 | False（**真该拒**：资产对不在认证边集内，只是文案不再是越权句） |
+| `tk_ca342fa63…` | **上个月复购率最高的 10 个店铺是哪些？** | R10 | **R06** | False（⇒ 演示那句**恰是被改判的那一条**，但**仍不出数**） |
+
+⇒ **结论三条**：① 三条 `GATE_AST_REJECTED` 里只有 **1 条**改判、**0 条**翻成放行（`tally_after = {R06\|passed=False: 2, R10\|passed=False: 1}`）；② 演示那句在**离线面仍被拒**（改判后落在 R06 = 列面），而**活体面连本轮改动都还没带上**（镜像未重建）⇒ QA 16.5(ii) 那条「先落 `U-137` 再演示」（出路 a）**前提不成立**，已进 §17.9 交回；③ 🔴 **两处自曝订正（本窗写错、本窗现测推翻，原句都留在件里）**：(a) 初版把这三条说成"**同一题的三条变体**"是**错的** —— 现读是 **2 个题面**（复购率 1 条／客单价 2 条），已按实报错改正并落 `question_tally_per_rejected_run`；(b) 第 15 轮 RELAY §16.3／`OVERVIEW §6` 那句"三条 `error_frame` 明确归 `U-137` 面"= **过度归因**，实测只有 1/3 落在本号面 ⇒ 两处已 🔻 就地订正。⚠️ 还有一处自曝：我原先要求对照臂必须复现第 13 轮归档的 `R10×3` —— **期望本身是错的**（那三条与本轮这三条不是同一批 SQL 变体 ⇒ 拿另一题面的读数当验收位，违反 `§4.8` 的"pre-fix 就为 0 不得当验收位"）⇒ 只保留"同一条 SQL 的单变量对撞"。
+
+### 17.6 E ｜ 收口面同步 ＋ 静态三门／测试面（每个数都带所在树）
+
+① `OVERVIEW.md §6`：补 A 的两个数（`ok` 率 ＋ H，**带取窗与每格 n**）＋ 第 15 轮那两格的 🔻 订正（过度归因、单价 ¥0.00655）＋ `U-137`／`U-138` 落地句；`§7`：报告指针 🔻 换到本轮那份。
+② `deliverables/ACCEPTANCE.md §3`：新增第 16 轮段（🔴「**未认证 ≠ 越权**」写进去了 ＋ 演示那句"落地后仍不出数"＋ 活体面没带本轮改动）；**现状措辞全部保持** = `PASS 1/8`、🚫 不当场点「发起评测」（预检 ≠ 执行）、DOM 尺 = 下拉 **2** 条、当期性**不写"本轮重建"**。顺带把 §5 那格"离线 2,340 ＋ 集成 107"补了 🔻 现读数（那是对外会念的句子，不补就是旧数冒充现状）。
+③ **取证件三连发（新坑，写下来防重犯）**：件内自报的 `git_rev` 与"把它提交入库"那一笔**天然差一笔** ⇒ `1e98aa7`（`bea724a` 面）→ `5a6caed`（改指 `-v` 日志）→ `f7bf106`（自报 `5a6caed`／**dirty false**）。尺 = `git log -1 --format=%h -- backend/reports/w6/eval_metrics.json` ⟷ 件内 `meta.git`，**两格并报**。
+④ **静态三门**（现测 15:2x ＋0800，工作树 = `4704966` 之后的 `app/**` 逐字节等同）：`ruff check --config pyproject.toml app` **All checks passed!**；整目录那把 `ruff check reports/w8 tests/contract app` 亦 **All checks passed!**／**0 条**；`mypy app` = **no issues in 158 source files**；`lint-imports`（`.exe`，**不带 `check` 子命令**）= **4 kept／0 broken**。
+⑤ **前端两门**（本轮 `frontend/**` 一字未动 ⇒ 这两个数是"未改动确认"，不是"新改动验证"）：`npx tsc --noEmit` = **rc 0／输出 0 字节**（现测 `2026-10-06T07:35:22Z`，日志 `E:/tmp_qoder/r16/tsc_r16.log`）；`npx eslint . --ext .ts,.tsx` = **rc 0／0 字节**（同批）。⚠️ 归属：这两把尺由**本窗现测**；QA 侧第 19 轮那句"eslint rc 0"是**独立第二把**，两边同值但不互相顶替。
+⑥ **测试面（计数带所在面，逐把点名）**：离线面 `2,485 passed／0 failed／1 warning／rc 0／108.11s`，日志 `backend/reports/w8/_r16_offline_cleantree.log`（sha256 `fd824d67…`）—— ⚠️ **文件名里的 `cleantree` 对这把不成立**：它 15:17:42 起跑、15:19:30 收尾，而 `4704966` 在 15:19:04 入库 ⇒ **跨在提交边界上**；所在面按尺点名 = `git diff --name-only 4704966 -- backend/app deploy` = **0 行**（`app/**`＋`deploy/**` 与该笔逐字节相同），`backend/tests` 那 **1 行**差异 = 本段落笔前对 `test_r10_cte_join_contract.py` **文档串**的"四条→五条"订正（不改用例数，现测该文件仍 **5 passed**）。集成面 `124 passed／0 failed／rc 0`，日志 `_integration_pytest_1006_rT39_v.log`（sha256 `7efabf59…`，15:21:52 收尾 ⇒ 在 `4704966` 之后、一次性库 `ecom_t39it_r16`，**必须 `-v`**）；新落的两组契约 ＋ 红队一把 = **21 passed／rc 0**（5 ＋ 5 ＋ 11，现测 15:3x，树 = `f7bf106` ＋ 本段落笔前的文档面）。
+⑦ **门禁重算**：`eval/reporter.py --pytest-log … --integration-log … --p0-summary … --no-backup` ⇒ `backend/reports/w6/eval_metrics.json` ＋ `评测报告与门禁判定.md` = **PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2**（G-1 PASS；G-2／G-5／G-7 FAIL；G-3／G-4 PARTIAL；G-6／G-8 UNVERIFIED），件内自报 `rev f7bf106／dirty false／generated 07:23:55Z`；🔴 **八格判定词与第 15 轮逐格同词** ⇒ 对外仍**不得写"门禁通过"**。复算姿势按派单：两遍都带 `--json-out`＋`--md-out` 指**仓库外**、干净树 ⇒ 差尺 `reports/qa/prompts/diff_recompute_meta.py A B generated_at git.rev git.rev_full git.commit_count "~静默前置" "~generated_at"` 判 **判定量 = 0**（唯一差 = `meta.generated_at`，3 秒）；`grep -c 取证件` 报告 md = **0**。
+🔴 **⑧ 计数增量必须点名基线**：离线 **2,485** 对本窗开工同尺实采 **2,478**（HEAD `4f08698`）= **＋7**（本窗确证 = 新增 U-138 契约 5 条 ＋ R10 契约件由 3 支改 5 支 ⇒ ＋2）；而对第 15 轮入库件登记的 **2,454** 差 **+24 无法归因** ⇒ 按「只报实测」列为**交回项**（§17.9），本窗**不自编解释**。集成 **124** 与第 15 轮逐位相同（＋0）。
+
+### 17.7 自曝清单（本轮在我自己身上复现的坑，逐条给尺）
+
+1. 🔴 **`-q` 让 G-1 从 PASS 掉到 PARTIAL**：集成层先按 `-q` 跑 ⇒ 日志里没点到 `tests/integration/*.py` ⇒ `reporter` 判集成没跑。`OVERVIEW §7` G-1 格**早就写着这条**，我本轮还是踩了 ⇒ 已改 `-v` 重跑并**删掉 `-q` 那份日志**（不留第二真相）。
+2. 🔴 **第 15 轮把尺拷进树没跑整目录 ruff** ⇒ 3 条 `E741`（`l` 作变量名）进了库，本轮才发现（已改名 `ln`；`F841 terminal` 一并落进 g6 格）。尺 = 上面 §17.6 ④ 那把整目录命令。
+3. 🔴 **两条归因错在自己写的件里**（见 §17.5 ③：同一题三条变体／三条全归 `U-137`）＋ **一个被现测推翻的自订期望**（对照臂必须复现 `R10×3`）。
+4. 🔴 **`docs/07` v1.7.23 行初版把 C／D 两件的产物写串**（C 那一支里写的是 D 的夹具与文案，D 整支缺失）⇒ 已按派单逐件拆开并在行尾留 🔻 自曝（订正只动本窗这一行，判据行与历史行一字未动）。
+5. ⚠️ **Write 出的 `.py` 忘 `if __name__ == "__main__"` 守卫 ⇒ rc 0 空跑**（"exit 0 ≠ 跑完"在我身上第 N 次复现）；本轮所有尺件都补了守卫并现读打印。
+6. ⚠️ **heredoc／`-c` 内联写带 `(?<!\\)\|` 的尺再次被打断**（本轮竖线尺在 `python -c` 里炸成 `unterminated subpattern`）⇒ 一律落成 `.py` 文件。
+7. ⚠️ **CRLF 大文件只能字节级读写**（`ast_gate.py`／`driver.py`／`docs/07`／`deploy/loadtest/README.md` 四件）；本轮每改一件都现测 `CRLF == 行数、裸 LF == 0`。
+8. 🔴 **自己起的日志文件名是错的**：`_r16_offline_cleantree.log` 那一把**跨在提交边界上**（15:17:42 起 → 15:19:30 止，`4704966` 落在 15:19:04）⇒ "干净树"这个词对它不成立。日志**没重跑**（重跑要再动取证件与入库件，收益只有命名）⇒ 改在 §17.6 ⑥ 用尺点名所在面（`app`＋`deploy` 与该笔 **0 行差异**），🚫 不写"干净树跑的"。⚠️ 下一轮若要"干净树"这四个字，必须**先入库、再起跑**。
+
+### 17.8 串行资源表（六面逐条给尺，落笔时重跑）
+
+| 资源面 | 本轮处置 | 尺与读数（现测 15:3x–15:4x ＋0800） |
+|---|---|---|
+| git 索引 | **只按名 stage**，无 `add -A`／`add .`／reset／clean | `git show --stat 4704966` = 17 件（全部点名）；写面外文件 0 条 |
+| 共享 `ecom` | **只读**（外层一律 `begin; … rollback;`） | 本轮新增审计行 = **0**：`select count(*) from app.audit_log where "timestamp" >= '2026-10-06 04:26:20+00'` = **2**，两行都属**第 15 轮那把批**（`tk_201e96…` 04:26:20.015／`tk_3b55f3…` 04:26:21.437，`user_id = u_t38c3`）⇒ 本轮没写过 |
+| 一次性库 | 建 → 授权 → owner → alembic `0006` → `-v` 跑 → **当场 DROP** | `ecom_t39it_r16`；残渣尺 `select datname from pg_database where datname like 'ecom%'` = **2**（`ecom` ＋ 别窗的 `ecom_u123_probe`，**不删**） |
+| 共享栈五件容器 | **只被打读面，没被改**；本轮连打都没打（除只读 `docker logs`） | `commerceql-api-1` `StartedAt = 04:10:42.9Z`／`Created = 10-05T15:19:26Z`（与第 15 轮同值 ⇒ 没 recreate） |
+| 镜像 | **未 build、未 recreate** | 镜像 `sha256:ca34ea791a81…`、`Created 2026-10-05T15:19:25Z` 未变 ⇒ 当期性只由 md5／层 3 自证，🚫 不写"本轮重建" |
+| `eval/` 冻结集与匣带 ＋ `reports/qa/**` ＋ 迁移 ＋ provenance 守卫 | **一字未动** | `git diff --name-only 70012e7..HEAD -- eval` = **0**；`-- backend/reports/qa` = **0**；`-- backend/app/repo/migrations backend/tests/unit/test_rls_policy_provenance.py` = **0**；`-- backend/app` = **2**（只有 `guard/ast_gate.py` ＋ `guard/rules.py`，属 D 的写面） |
+| 🔴 额度 | **零花费** | `app.cost_ledger` 现读 = **1,757 行／¥2.897712／max `2026-10-06 04:26:19.595108+00`**，与第 15 轮收口值**逐位相同** ⇒ 本轮没产生任何调用 |
+| 新增跟踪文件的凭据扫描 | 本轮新增 **6** 件（`尺 = git diff --name-only --diff-filter=A 70012e7..HEAD`）：3 尺件（`t39_h_cell.py`／`t39_u137_before_after.py`／新契约）＋ 3 产物（两份 `evidence/t39/*.json` ＋ `t39_h_cell.json`） | 扫描面 = `DEEPSEEK_API_KEY`／`-----BEGIN`／`postgresql://`／`password`／`secret`／`sk-` 六类字面量逐行 grep ⇒ **0 命中**；`deploy/.env` 与 `deploy/secrets/*.pem` **未提交、未打印**（`git status` 里不出现） |
+
+### 17.9 交回项（本窗不擅自做，逐条给"为什么不能在本窗做"）
+
+1. 🔴 **`G-6` 的两条替代形状**（c=1 串行 ≈300s 丢并发格／多用户令牌保 c=3 ≈¥0.19）＝ **两条都花钱**，且都超出"一把批"的字面授权 ⇒ 仍交回（第 15 轮已上呈，本轮未动）。
+2. 🔴 **`U-138` 结案条件的后半**要一份**带 `worker_session_depth` 的真回执** ⇒ 只有新批才有；本轮已把装配件的两把同框交齐，缺的那格登记在此。
+3. 🔴 **离线计数 2,485 对第 15 轮登记的 2,454 差 ＋24 无法归因** ⇒ 请 QA 用同一 `--collect-only` 口径 ＋ 同一 HEAD 对撞（本窗不猜原因）。
+4. 🔴 **QA 16.5(ii) 出路 (a)「先落 `U-137` 再演示」前提不成立**：落地后演示那句仍被拒（R06），要让它真出数得改**语义包／提示面**，那是另一件主单。
+5. ⚠️ **`U-126` v1.7.5 的区间与「`U-128` 落地后同口径复测」**：本轮写明仍未 ⇒ 槽位配平表不按现状收。
+6. ⚠️ **豁免面落笔（RLS 第二道保证）与 `reporter` 合并口的两列形状**：仍属判据面，本窗不自裁。
+
+### 17.10 落笔身份（两格并报）
+
+- 本节落笔时 HEAD = `f7bf106`／456 笔（尺 = `git rev-parse --short HEAD` ＋ `git rev-list --count HEAD`）；本节引用的入库件自报 = `meta.git.rev = f7bf106`／`dirty false`／`generated 2026-10-06T07:23:55+00:00`，而**把该件字节进仓库的那一笔 = 本段落笔那一笔**（不是 `f7bf106`）⇒ 引用前实跑 `git log -1 --format=%h -- backend/reports/w6/eval_metrics.json`。
+- 落笔尺（三件都跑）：段标题命中数 = `sum(1 for ln in RELAY.read_text(encoding="utf-8").splitlines() if ln.startswith("## §十七"))` ⇒ 追加前必须 **0**、追加后必须 **1**（🔴 只数**行首**，正文里对这一节的引用不算；本行就是一处引用）；排版尺 = `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/_audit_layout.py backend/reports/w8/RELAY.md "## §十七"` ⇒ 本节新增问题必须 **0**；行尾尺 = 该文件 `CRLF == 0、bareLF == 行数`（RELAY 是 LF 件）。

@@ -6,15 +6,17 @@
 | 实现 | `app/guard/ast_gate.py::_side_logical()` 把 JOIN 两侧各自展开成"实际读取的资产逻辑名集合"，再与认证边比；CTE 体内的 JOIN 仍被全树遍历审计，资产/列面仍受 R05/R06/R07 约束 |
 | 落地前形状（保留作反证参照） | 旧实现把 CTE 名直接当左表 ⇒ `self.assets.get(cte)` = `{}` ⇒ 永远匹配不到边 ⇒ 落 R10，且文案 = "查询涉及的数据范围超出你的权限"（第 13 轮面 R 三条红 `tk_8fbf1cf3…`／`tk_51912ce6…`／`tk_0696f1a8…` 全是这一形状） |
 
-四条夹具的分工（判据原文 = `docs/07` 的 `U-137` 行格 2「结案判据」，逐字照钉）：
+五条夹具的分工（判据原文 = `docs/07` 的 `U-137` 行格 2「结案判据」，逐字照钉；第 13 轮那三条转绿 ＋ 本窗补两条）：
 
 1. `test_cte_side_join_resolves_to_asset_closure` —— **①放行那一支**：机制前提仍在（左侧解析成 CTE 名、且 CTE 名不在资产面），
    但按资产口径必须 `passed=True`；**同件「资产直连」对照仍须 `passed=True`**（钉住归因机制，防止"因别的原因放行"被读成修好了）。
-2. `test_frozen_redteam_r10_arms_still_block` —— **②逐臂复查**：三条冻结红队臂（RT-R10-001/002/003）都是真实资产对、
+2. `test_cte_side_does_not_become_a_blanket_pass` —— **本窗自订的反面形状**：CTE 体内藏未认证资产对仍须 R10，
+   防"把 `_side_logical` 写成 CTE 一律放行"也能让第 1 条绿。
+3. `test_frozen_redteam_r10_arms_still_block` —— **②逐臂复查**：三条冻结红队臂（RT-R10-001/002/003）都是真实资产对、
    不含 CTE 侧 ⇒ 放宽面动不到它们；若将来某臂带 CTE ⇒ 前提变、必须重裁（那条守卫仍钉在断言里）。
-3. `test_r10_r11_wording_is_not_the_overreach_one` —— **①文案那一支**：R10/R11 的用户文案**不得**与 R05/R13 的
+4. `test_r10_r11_wording_is_not_the_overreach_one` —— **①文案那一支**：R10/R11 的用户文案**不得**与 R05/R13 的
    "超出你的权限"共用一句（这是判据的第二半，也是演示红线那句话的根因）。
-4. `test_u137_registered_and_docs_carry_the_asset_ruling` —— **③台账与两处抄本同改**：`U-137` 行在位 ＋
+5. `test_u137_registered_and_docs_carry_the_asset_ruling` —— **③台账与两处抄本同改**：`U-137` 行在位 ＋
    §7.2 AST-R10 行带 v1.7.21 定义补句 **与** v1.7.23 落地句 ＋ §7.6 的分组已拆开。
 
 零额度：`run_gate1` 纯静态（sqlglot ＋ 语义包 YAML），不发 LLM、不连库、不碰匣带。
