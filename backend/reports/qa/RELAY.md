@@ -1397,3 +1397,82 @@ C 要的是**引用口径**落笔，不是重算。判定输入（两把日志 �
 - T-40 仍在 §25.3，**现在等两句授权：上界 ＋ 靶子 (甲)／(乙)**。
 - 取号：指针行现读 = 下一个可用号 **`U-140`**（`docs/07:1085` 行首串；行号会漂，只认行首）。
 - 本窗落笔尺：四件锚点追加前各 **0**、追加后各 **1**；EOL 用 `read_bytes` 量；时刻 = 落笔那一秒现读 `date`（21:4x ＋0800），不用起草表钟。
+
+## §二十 第 23 轮复算（**W8 第 19 轮 T-43「零额度四件 A–D」＝第五处抄本 ＋ lint 覆盖面表态 ＋ 未闭清单定稿 ＋ §4.8 规则④** ｜ 2026-10-06 23:4x–23:5x ＋0800 ／ 15:4x–15:5x UTC ｜ 起点 HEAD `259aec9`／**469** 笔 ｜ 🔴 **本窗零额度、零出站、零容器动作**；🔴 **本窗没在真树里跑装配件**（那会写 W8 的产物面），改在仓库外副本跑，见 20.2）
+
+> 判向一句话：**四件我全部复现（含幂等那格，我用仓库外副本独立跑出来）；另外抓到一把活的坏尺 —— 装配件把花费窗锚在"报价件最后一次被提交的时刻"，不是"报价生成的时刻"。当期数值差 = 0（我量过），但它随时会自己挪窗，甚至在只有一笔提交的副本里直接把窗掏空。**
+
+### 20.0 起点、边界、零花费
+
+| 尺 | 读数 |
+|---|---|
+| 起点 | HEAD `259aec9`／**469** 笔／`git status --short` **0 行**；`git ls-remote origin main` = `259aec92b496…` 全等；三笔 `f4b8398`（A ＋ 器件）→ `53e12d9`（B／C／D）→ `259aec9`（RELAY＋DELIVERY），`git show --stat` 逐笔点名 |
+| 写面 | `git diff --name-only 3f6a4cc..HEAD` = **10 件**：`OVERVIEW.md`／`docs/07`／`deliverables/ACCEPTANCE.md`／`backend/reports/w8/**`（6 件）／**`deploy/loadtest/README.md`** |
+| ⚠️ 边界自审（我派单里两句打架，我裁） | 0′ 写了「`deploy/**` 也不动」，B 出路乙又要求「在 `deploy/loadtest/README.md` 具名登记」⇒ **本窗裁：以 B 那句为准**，那份 README 是**文档不是判定语义**，登记动作合法。他们没自取解释、照字面把越界尺里唯一一条 README 报了出来 ⇒ 处置正确 |
+| 🔴 额度 | `app.cost_ledger` 现读 = **1,757／¥2.897712／max `2026-10-06 04:26:19.595108+00`** ⇒ 与第 15–18 轮收口值**逐位相同** = **零出站** |
+| 只读面 | `app.audit_log` = **917／max `04:26:21.437511+00`**（未涨）；残渣 `datname like 'ecom%'` = **2**（`ecom`＋`ecom_u123_probe`，没删） |
+| 容器面 | 共享栈五件 `Up 11 hours`；`w7load` 系只有 `w7load-api_pre0930r11_bak`（`Exited (255)`）⇒ 没 build、没 up/down、没 start |
+| 实现面 | `git diff --name-only 3f6a4cc..HEAD -- backend/app backend/tests eval frontend backend/reports/w6 deploy/loadtest/driver.py` = **0 行** ⇒ 门禁入库件与冻结集一字未动 |
+| 新增跟踪件 | `--diff-filter=A 3f6a4cc..HEAD` = **2**（`t43_readings.py`＋`evidence/t43/t43_readings.json`）⇒ 六类凭据字面量我逐件 grep = **0 命中** |
+
+### 20.1 回执五点逐点复算
+
+| # | 来件说法 | 我这侧独立尺与读数 | 判 |
+|---|---|---|---|
+| A | 第五处抄本改两链 ＋ 重跑装配 | 我读 `git show HEAD:…t38_assembled.json`：「三面」**次数 4 / 含该字样行数 2**（两个键各含两处：🔻 原句 ＋ 『三面』二字换代说明），**命令句 = 0**；键面 `读数` 仍 **9 键**、`aggregate_three_way_equal` 在位 ✓；对入库版（`3f6a4cc`）我独立递归 diff = **8 处**，与他们的分解**逐路径同值**（2 时钟＋`rev`／`rev_short`／`commit_count`＋c 格两句＋f 格一句）⚠️ 笔数口径：他们件内自报 `commit_count = 466` = 装配那一刻的 HEAD，现 HEAD = **469** ⇒ 不是矛盾，是"提交后没重跑器件"（他们已在来件里预告这个陷阱） | **达成** |
+| B | 选乙、两处登记；三门 0／单件 7／整面 25 | 三把我自跑：三门整目录 **rc 0／All checks passed**、单件 **7**（`E741`×4＋`SIM115`×3）、`deploy` 整面 **25**，规则分布 `RUF100 6／E702 6／E741 4／SIM115 3／F401 3／I001 1／F541 1／E731 1` **与他们逐字同分布**；落点 `docs/07:3246`（行尾追加，旧 1,219 字符是新 2,155 的**前缀** ⇒ 原句没被改写 ✓）＋ `README.md:1980` 三.0.21 ✓；🔴 顺带我验了他们 20.7① 的自曝：`ruff check reports/w8/t43_readings.py` 现读 **0 条** ⇒ 那 6 条是**入库前自己清掉的**，三门 rc 0 与"新器件在树里"两件事不冲突 | **达成** |
+| C | 未闭清单定稿 ＋ 靶子格写实 | 锚点行首现读各 **1**：`OVERVIEW:698`／`:236`、`ACCEPTANCE:121`；靶子三格我复现：镜像 `ca34ea791a81`（`2026-10-05T15:19:25Z`）／`4adbcfc2e8f6`（`2026-10-04T16:06:22Z`）；`docker exec commerceql-api-1 md5sum /srv/app/guard/ast_gate.py` = **`cf698983db685b21d46e9accbe9da7c5`**，我另算 `git show HEAD:…` 原样 md5 = LF 归一 md5 = **`a9443bff14973301c27d16ef386d3c3f`**，工作树 raw = `f0c9e616…`（CRLF）归一后 = `a9443bff…` ⇒ **链一 DIFF、链二 SAME 逐位复现** | **达成** |
+| D | §4.8 规则④ 落 `:1186`、判据措辞一字未改 | 行首 `> ④` 命中行 = **1186**（另两处 `2286`／`3378` 是他节的 ④，不冲突）；`git diff -U0 3f6a4cc..HEAD -- docs/07` **只有 4 个 hunk**：`:11` 版本字段 v1.7.25→v1.7.26、`:80` 插一行修订行、`:1186` **纯插入**（`@@ -1184,0 +1186 @@` = 删 0 行）、`:3246` 行尾追加 ⇒ **没有任何一格的判据正文被改** ✓；行尾尺：`docs/07` CRLF **3660 == 换行数 3660、裸 LF = 0** | **达成** |
+| 随附 | 他们 20.5「639 passed」 | 我同尺重跑 `pytest -p no:cacheprovider tests/contract tests/redteam tests/graph_snapshot -q` ⇒ 见 20.5（落笔时现读） | **达成／待 20.5 收口** |
+
+### 20.2 🔴 本窗新笔：装配件把**花费窗锚在 git 提交时刻**（活的坏尺，当期收益 = 0）
+
+机制（现读 `t38_assemble.py:109–119`）：`quote_commit = git log -1 --format=%H -- deploy/loadtest/t38_c3n30_quote.json` ⟶ `quote_cd = git log -1 --format=%cd --date=iso-strict` ⟶ `quote_utc` ⟶ `spend_window(quote_utc)` ⇒ **窗起点 = "那件最后一次被提交"的 committer date，不是报价回执里的 `generated_at_utc`**。
+
+| 我量的两把窗 | 锚点来源 | 读数 |
+|---|---|---|
+| 尺实际在用 | 提交时刻 `67be6b0` 的 committer date = **`04:24:29Z`** | `spend.since = 2026-10-06T04:24:29+00:00`（入库件现读） |
+| 语义上应为 | 回执 `generated_at_utc` = **`04:24:18Z`** | — |
+| **两把窗的台账数** | — | **同值**：`36 行／¥0.066117／10 个 distinct task_id`，因为首条台账落在 `04:25:06.424528Z`，晚于两个锚点 ⇒ 🔻 **当期读数不受影响，这不是"数错了"，是"窗会自己挪"** |
+| 反证（我造的场景） | 把整树 `git archive` 到仓库外、`git init` 成一笔提交 ⇒ committer date = 当下 | 窗内 **0 行** ⇒ `to_char(sum)` = NULL ⇒ **`float('')` ValueError 当场炸**（`r24_tree` 第一次跑就是这个形状） |
+
+⇒ 两个后果：**① 任何再次提交 `deploy/loadtest/t38_c3n30_quote.json` 的动作**（改格式、补字段都行）都会把窗整体后移，**单价与实付跟着变而代码一字没改**；**② 极端情况下窗被掏空**，今天运气好是响亮地炸，换成有行但少的窗就是静默给一个小数。修法 = 一行：锚点改读 `quote["generated_at_utc"]`。**我在仓库外副本验过可行**（最小补丁一行 ⇒ 连跑两遍 rc 0、单价 `¥0.00655/准入`、实付 `¥0.066117`、thread 两把 7 组‖3 条、G-6 未达成 9<20 **全部与入库件同值**）。
+⚠️ 归属：这格在 `backend/reports/w8/**` = 他们写面、零额度 ⇒ 落 **T-44 B**，不占号（先由他们裁要不要占 `U-140`；**若占号，请按刚落的规则 ④ 走 ⇒ 这格判据是离线的，当轮可结**）。
+
+### 20.3 幂等那格我是怎么独立复现的（不采信转述，也不脏他们写面）
+
+🔴 约束：跑装配件会写 `backend/reports/w8/t38_assembled.json`（W8 产物面）⇒ **我在真树里一次都没跑**。姿势 = `git archive HEAD` 到 `E:/tmp_qoder/r24_tree` ＋ 该副本 `git init` 一笔 ⇒ 连跑两遍递归 diff = **2 处，路径 `/generated_at_utc` 与 `/identity/captured_at_utc`** ⇒ **他们的"只差两个时钟字段"独立复现 ✓**。
+副本与真树的差我具名报：递归 diff 出 **9 处** = 2 时钟 ＋ 4 身份（`rev`/`rev_short`/`commit_count`=1/`quote_commit`）＋ `quote_committer_date` ＋ `b_…delta_s`（90.0→101.0，同一把坏尺的产物）＋ `spend.since`（= 我打的那一行补丁）。⇒ **除这几处外没有第二真相**。
+
+### 20.4 裁定三件（来件"请 QA 裁／请总控点"）
+
+**① `U-127`／`U-135` 进不进 open 集 = 都进，对外未闭清单从七枚改九枚。**
+- `U-127`（P1）：判据 ①–④ 要 `app/llm/**`＋`app/graph/**`＋`app/obs/**` **三侧同批**（代码），判据④ 明确要**一次真压测里 `LLM_CONCURRENCY_EXCEEDED` 非 0** ⇒ 属"需新批"那一族。⚠️ 它的**升 P0 触发条件我今天判不了，而且判不了本身就是这个号的症状**：现读该批窗（`>= 04:24:00Z`）`outcome='refuse'` = **1 行**，而"这行是容量还是真没数据"在今天的观测面上**不可分**（这正是 §4.8 那行的论证）⇒ 按「不可判」登记，🚫 不许写"未触发"。（尺：`begin; select count(*) from app.audit_log where outcome='refuse' and "timestamp" >= '2026-10-06 04:24:00+00'; rollback;`）
+- `U-135`（P1）：判据是**零额度夹具**（桩件抛 `GraphRecursionError` ⇒ 终态 1 帧 ＋ 段 1 审计写 1 行），但"修"要动 `app/**` 那条通用 `except` ⇒ 不是落笔能闭的号。盘上那句「本窗裁定：暂不转正」管的是 **X5 那半格**（停服排水豁免），**不是本号结案** ⇒ 他们把它列成"带未闭词"是对的。
+- 顺带一条纪律复现：**§4.8 指针行从 `:1085` 漂到 `:1086`**（他们插了 v1.7.26 修订行）⇒ 我第 22 轮写的行号已过期，本窗照旧只认行首串「下一个可用号 =」。**引用行号必须现读**这条又对了一次。
+
+**③ `deploy/**` 纳不纳入三门 = 维持他们的"乙：具名登记"，本窗不推动纳入。** 理由是我量出来的分布：25 条里 **18 条在归档探针件**（`probe_l4_candidate_bound.py` 7／`_w2b_u112_control.py` 5／`_w2b_u112_probe.py` 2／`probe_rls_face_locator.py` 2／`probe_searchpath_a_arm.py` 1／`_w2b_u112_materialize.py` 1），那些是**历史器件不是活代码** ⇒ 纳入 = 逼下一窗改归档件 ＋ 属**门禁命令面变更**（判据侧）。⇒ 两条纪律我认可并转抄进本轮台账：写「三门全绿」必须点名命令面；谁改 `deploy/loadtest/*.py` 谁在 README 记一次改前/改后单件计数。
+
+**② 靶子那格：我给总控的是实测三句话，不是推荐。**
+1. 🔴 **「镜像构建时刻前最后一笔」这个代理不安全**，我自己先推翻了自己的数：第一把我传的是 `--before="2026-10-05 15:19:25"`（把 UTC 的镜像时刻当本地时间喂给 git ⇒ 早了 8 小时），算出"差 14 件"；换成正确基准（`0c69d56`@`23:07:10+0800`）⇒ 差 **3 件**。改锚后我现读那三件的容器面 md5，三件**并不都等于 `0c69d56` 那一笔**（`rules.py` 等、`present/eval_launch.py` 不等）⇒ **不能拿"构建时刻前最后一笔"去推镜像里是什么代码**。所以本轮把这句话降级为**逐件对撞**：`docker exec … md5sum` 三件 = 容器 `ast_gate cf698983…` ⟂ HEAD `a9443bff…`（**DIFF**）、`rules.py 3fbf9dca…` ⟂ HEAD `a06e7ce6…`（**DIFF**）、`present/eval_launch.py 971c951f…` = HEAD（**SAME**）⇒ 结论不变：**今天落地的 `U-137`（闸门资产口径 ＋ R10/R11 新文案）不在共享栈那个面上**，而且这轮的实测面比"两件文案"更明确 —— 就是那**两件**。
+2. **DB 面已经跟上**：`select version_num from alembic_version` = **`0006`** ⇒ 选 (乙) 不需要跑迁移、不需要动共享库 ⇒ **乙的代价只剩"一次 build"本身**（时长我仍没量过 ⇒ 回执必须现测并报）。
+3. 驱动侧（`deploy/loadtest/driver.py`，U-138 新键在那一侧）**不在镜像里** ⇒ `U-138` 结案条件后半**两把靶子都能交**；只有 G-6 判词对哪份构建成立这一件事由靶子决定。
+⇒ **我现在把推荐从"乙"改成：想今晚收 = (甲) 合法，但判词必须挂 `ca34ea791a81` 并写"不含今天落地的 guard 两件（闸门资产口径 ＋ R10/R11 文案）"；想让判词对当期构建 = (乙)，代价 = 一次本地 build（不碰共享栈、不动库，`alembic_version` 已在 `0006`）。两条都比 (丙) recreate 好。** 点哪句归总控。
+
+### 20.5 门与回归面（我这侧现读）
+
+| 尺 | 读数 | 判 |
+|---|---|---|
+| `ruff check --config pyproject.toml reports/w8 tests/contract app` | **rc 0／All checks passed** | ✓ |
+| `ruff check … ../deploy/loadtest/attest_build_identity.py`／`../deploy` | **7**／**25** | ✓ 与他们同值 |
+| `pytest -p no:cacheprovider tests/contract tests/redteam tests/graph_snapshot -q` | **639 passed／1 warning／rc 0**（我同尺重跑，与来件逐位同值） | ✓ 复现 |
+| 门禁入库件 `backend/reports/w6/eval_metrics.json` | 判定分布 **PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2**（8 格）✓ 未变；🔴 它自报 `meta.git.rev = f7bf106`（该笔 = **457** 笔）⟷ 现 HEAD `259aec9` = **469** 笔 ⇒ **判词的身份面停在第 16 轮**，对外引用必须点名 `f7bf106` 那一面，🚫 不得写成"当期构建" | 交 T-44 C |
+| 取证件两份的身份格 | 装配件 f 格 = `5a6caed`／**456** 笔／offline **2,485**／integration **124** ⟷ `eval_metrics.json` = `f7bf106`／**457** 笔 ⇒ 两个都是旧面且**互相也不同面**（差一笔） | 交 T-44 C |
+
+### 20.6 下轮指针
+
+- 派单块 = `backend/reports/qa/TASK_BOARD.md` **§26.2（T-44 零额度四件 A–D）**。
+- T-40 仍在 **§26.3**，等总控点**两句**：上界（建议 ¥0.30／`n ≤ 28`）＋ 靶子（甲／乙，20.4② 给了实测三句话）。
+- 取号：指针行现读 = 下一个可用号 **`U-140`**（行首串 `> **下一个可用号 =`，`docs/07:1086`）。
+- 本窗落笔尺：四件锚点追加前各 **0**、追加后各 **1**；EOL 用 `read_bytes` 量；排版尺 `## §二十` 本节新增问题必须 **0**；时刻 = 落笔那一秒现读 `date`。
+- 🔴 本窗**没在真树里跑过任何会写产物面的器件**（装配件／attest 器都只在仓库外副本跑）⇒ W8 写面零字节变动，`git status` 落笔前仍 **0 行**。
