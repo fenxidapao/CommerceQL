@@ -1697,3 +1697,19 @@ C 要的是**引用口径**落笔，不是重算。判定输入（两把日志 �
 ### 24.6 本窗自曝（第 26 轮内三条）
 
 ① naive 竖线尺 ⇒ 派单事实前提错（24.1）；② `_audit_layout.py` 传错 `mark` ⇒ 分列读数不可用（24.2）；③ 否定词表不全 ⇒ 误报 3 处「门禁通过」（24.4）。三条共同形状 = **我报"缺数/多列"之前没有先证明我的尺能看见它** —— 与 §「判缺数前先证模式能命中」同族，今天第三次犯，升级为动手前必答项。
+
+### 24.7 附二（15:2x–15:3x ＋0800 追加）：验收原文入档 ＋ 出货大包 v1 ＋ 泄漏面三条扫描
+
+总控改需求：**「打包的项目可以大一点」＋ PPT 交给另一窗（workBuddy）做 ＋ 判据文件 = `E:/01_实训/项目验收流程2.txt`**。
+
+| 尺 | 现读 |
+|---|---|
+| 验收原文（26 行，逐字入档） | PPT 五段 = a) 项目背景 b) 开发目的 c) 项目过程、步骤、流程 d) **项目运行效果截图** e) 项目心得；🔴 另三条约束原文 = 「汇报时长15分钟」「**单页PPT信息不要太密集**…PPT只是一个参考」「**PPT的AI痕迹请自行去除**」；发件面 = 「项目压缩包发到李老师邮箱」「**压缩包名称是学生姓名，格式：张三（26嘉大班）**」「内容：PPT ＋ 项目相关的所有文件：项目代码、文档、脚本等」「**如果有涉及到本地部署模型的，你发模型的下载链接即可**」；🔴 第 19 行 = 「不参加汇报的同学也要发项目相关文件到邮箱」⇒ 总控说"不用答辩"仍要交 PPT ＋ 包 |
+| 本地模型命中判定 | **命中**：`backend/app/core/config.py:89` `EMBEDDING_BASE_URL = "http://127.0.0.1:11434"` ⟂ `:90` `EMBEDDING_MODEL = "bge-m3"` ⟂ `backend/app/retrieval/dense.py:125` `class OllamaEmbedder` ⇒ 嵌入在宿主 Ollama，生成在公网 DeepSeek ⇒ 提交说明必须给 `ollama pull bge-m3`，🚫 权重不进包 |
+| 大包 v1 | `git archive HEAD` 内容 ＋ `提交历史_487笔.txt`（102,722 B）＋ `提交说明.md` ⇒ **`CommerceQL_提交包_大件v1_rev_89a8d4d.zip` = 9,520,241 B／凭据条目 0**；🔴 仍**不含 `.git`**（24.8 那条尺未出读数） |
+| 外层 scratch 泄漏面（打包范围一放大就必查） | `CommerceQL` 之外 **307** 个文件（排除 `.venv`／`node_modules`／`__pycache__`／`.workbuddy`）与 `deploy/.env` 真值同哈希命中 = **0** ｜ PEM 头 0 |
+| 提交说明泄漏面 | `git log --all --format=%B` = **488** 段／496,892 B，`sk-` 形 **1** 条（夹具），与真值同哈希 = **0** ｜ PEM 头 0 ⇒ 「过程证据」可以外发 |
+| PPT 的 d 段素材 | 可用 5 张 = `deliverables/screenshots/01_result_table_with_cost_bar`／`02_multirow_table_channel_rank`／`03_clarify_card_countdown`／`04_clarify_card_analysis`／`05_refuse_card_pii_blocked`；辅助 5 张 = `backend/reports/w8/screens/a5_*`。🔴 `07_page_semantic_metrics_HTTP404.png`／`08_page_eval_runs_HTTP404.png` 是**缺陷证据**，不得当"运行效果"引用 |
+| 我给执行窗的提示词 | 落点 = 仓库外 `E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/PPT窗_PROMPT.md`（指针式：边界＋判据原文＋按顺序的权威件路径；不复述项目内容） |
+
+⚠️ **未闭两条**：① 含 `.git` 的大包（历史独有 1,376 个 blob 的真值对撞**仍在跑**）；② 压缩包最终名要的是**学生姓名**，这一格只有总控有 ⇒ 我没代填。
