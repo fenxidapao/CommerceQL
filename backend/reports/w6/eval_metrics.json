@@ -1,9 +1,9 @@
 {
   "meta": {
-    "generated_at": "2026-10-06T07:23:55+00:00",
+    "generated_at": "2026-10-07T05:27:34+00:00",
     "window": "W6",
     "git": {
-      "rev": "f7bf106",
+      "rev": "88f3500",
       "dirty": false
     },
     "run_config": {
@@ -508,7 +508,7 @@
       }
     ],
     "report_git": {
-      "rev": "f7bf106",
+      "rev": "88f3500",
       "dirty": false
     },
     "basis_legend": {

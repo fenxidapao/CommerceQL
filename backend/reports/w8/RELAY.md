@@ -2951,3 +2951,81 @@ PYTHONUTF8=1 .venv/Scripts/python.exe deploy/loadtest/attest_build_identity.py -
 git diff --name-only 983214c..HEAD | grep -E "\.(json|py|md)$" | tr "\n" "\0" \
   | xargs -0 grep -lInE "(sk-[A-Za-z0-9]{12,}|AKIA[0-9A-Z]{16}|password[[:space:]]*=[[:space:]]*[^[:space:]]+|Bearer [A-Za-z0-9._-]{16,}|BEGIN (RSA )?PRIVATE KEY|postgres://[^[:space:]]*:[^[:space:]]+@)" ; echo "scan_rc=$? (1 = 0 命中)"
 ```
+
+
+## §廿二 第 21 轮复算（**W8 第 21 轮 T-46「收尾两件：措辞同步 ＋ 门禁判词身份面」** ｜ 作业窗 ≈ 13:2x–13:3x ＋0800 ／ 05:2x–05:3x UTC（本段落笔时刻 = 落笔那一秒现读 `date` = 2026-10-07 13:35:07 +0800，按 `docs/07 §4.8` 规则 ⑤）｜ 起点 HEAD `88f3500`／480 笔（= QA 第 24 轮落库笔）｜ 🔴 **零额度：台账逐位不动**）
+
+### 22.0 结论先行（三句）
+
+1. **B 达成**：门禁判词的**身份面**已跟上当期 HEAD —— 干净树两遍 `eval/reporter.py`（`--json-out`／`--md-out` 指**仓库外**）⇒ **判定量差 = 0**（唯一差 `meta.generated_at`，11 秒）；对上一版入库件差 **3 处、全是身份／时钟** ⇒ **八格逐词没变**（PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2），🔴 对外仍 **PASS 1/8**，🚫 不得写「门禁通过」。
+2. **A 达成**：open 集 **十枚改九枚**（`U-138` 经 QA 第 24 轮裁定结案，出集搬进「已裁」面并带**一条必带限定语**）；同轮改掉那一个词 —— 身份那格**不写「换指所致」**、写**当期读数就是 18/20**。
+3. **零出站自证**：`app.cost_ledger` 现读 **1,830 行／¥3.025849／max `2026-10-07 04:28:00.872275+00`**（与第 20 轮收口值**逐位相同**）、`audit_log` = 937 未涨、残渣尺 = **2**、五件容器只 `ps` 未动。
+
+### 22.1 A｜落点逐处（改完现读，不是计划）
+
+| 落点 | 改了什么 | 尺与本窗读数 |
+|---|---|---|
+| `OVERVIEW.md:700` ＋ `ACCEPTANCE.md:123` | open 计数行：**九枚** ＋ 🔻 时序面（原句「十枚…」保留在同一行内） ＋ 逐号列清 | 行首逐号 = **8 行承载 9 号**（`U-126／127／128／130／132／133＋134 同行／135／140`）；尺 = 逐行 `startswith("  \`U-1")` 计数 ＋ `U-1\d\d` 令牌去重（两把并报，第 20 轮那次「9 行当 9 号」的错不再犯） |
+| `OVERVIEW.md:711` ＋ `ACCEPTANCE.md:134` | 「已裁四格」→「**已裁五格**」，`U-138` 的**原句整段搬入**（一字未改）＋ 结案裁定 ＋ 限定语 | 搬入断言 = 原句片段「改名 ＋ 契约已在第 16 轮落盘」全文命中 **1**（从 open 行搬到已裁行，不是删） |
+| `OVERVIEW.md:710` ＋ `ACCEPTANCE.md:133` | 🔻 再时序一句：上一句「现读 = 十枚」是第 20 轮面 ⇒ 现在回到**九枚**、尺换成 **8 行承载 9 号** | 「十枚」在两文件各剩 **2** 处、全在 🔻 时序语境（现读逐处核过，无一当现状念） |
+| `OVERVIEW.md:720` ＋ `ACCEPTANCE.md:143` | 新增 🔻 改词条（QA 第 24 轮 21.4 点名） | 措辞 = **「当期读数就是 18/20：今天落地的 `guard` 两件在树里、不在 `ca34ea791a81` 那份构建里」**；链二仍 20/20 SAME ⟂ 链一 `container_vs_worktree = false` 不变 |
+| `docs/07:1180`（`U-138` 状态格） | 🔻 追加结案句 ＋ 限定语 ＋ 量具缺口具名（`driver.py` 落 per-request session **未做**） | 行按未转义竖线切 = **4 段**（= 邻居 `U-137`）；**判据措辞一字未动**，原句「部分达成、不结案」保留作时序面 |
+| `docs/07:80`（新 `v1.7.28` 行）＋ `:11`（`文档版本`） | 修订表加一行 ＋ 字段同步（纪律要求：改 `§4.8` 内容必抬版本，第 17 轮那笔「两轮漏改」不再犯） | `v1.7.28` 行首命中 **1**、与邻居 `v1.7.27` 同段数（3 段）；文件 CRLF **3,664**、裸 LF **0**；指针行现读仍 = `U-141`（本轮**零取号**） |
+
+### 22.2 B｜两把尺的读数（逐条给）
+
+- 两遍互 diff（`diff_recompute_meta.py p1 p2 generated_at git.rev git.rev_full git.commit_count "~静默前置" "~generated_at"`）：**差集 1 ／ meta 1 ／ 判定量 0**（唯一差 `meta.generated_at` `05:27:23 → 05:27:34`），rc **0**。
+- 新遍 ⟂ 上一版入库件（同一把尺、默认白名单）：差集 **3**，全部是身份／时钟 = `meta.git.rev` 与 `gate_provenance.report_git.rev`（`f7bf106` → **`88f3500`**）＋ `meta.generated_at`；🔴 **默认白名单把两把 `rev` 记成"判定量差"**（尺只按点分路径前缀匹配，`git.rev` 不匹配 `meta.git.rev`）⇒ 我把两条**具名加进白名单**再跑 ⇒ 判定量 **0**（rc 0）。**这是尺的行为、不是我糊过去**，两把都印在回执里。
+- 八格逐词对照（入库版 ⟷ 新遍）：G-1 **PASS**、G-2 **FAIL**、G-3 **PARTIAL**、G-4 **PARTIAL**、G-5 **FAIL**、G-6 **UNVERIFIED**、G-7 **FAIL**、G-8 **UNVERIFIED** ⇒ **一格没变**；`counts` 逐键同（PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2／NOT_AVAILABLE 0）。
+- 入库件写回 = **最后一遍**（`--no-backup`，旧版在 `ee7c3d9` 那笔里可取）；`git diff --numstat` = JSON **3 行** ⟂ md **3 行**（就是上面那三处身份／时钟，别的字节没动）；报告 md 里「取证件」字样命中 **0**。
+- 复算入口**两格并报**：件内自报 = `meta.git.rev = 88f3500`／`dirty = false`／`generated_at = 2026-10-07T05:27:34+00:00` ⟷ 入库笔 = `git log -1 --format=%h -- backend/reports/w6/eval_metrics.json`（本轮那一笔，**天然与自报差一笔**，第 16 轮那条坑照旧具名）。
+- 🔻 引用规矩（`§4.8` v1.7.24 第三条）同轮带上：G-1 的判定输入是那两把 `.log`，**未跟踪**（`.gitignore:47 *.log`）⇒ 异地只可引到 `self_reported`，🚫 不许声称"别人能重跑"。
+
+### 22.3 边界自证（写面 ⟂ 未动面）
+
+- 写面：`OVERVIEW.md` ＋ `deliverables/ACCEPTANCE.md` ＋ `docs/07`（A 明写的「状态格 🔻 追加」）＋ `backend/reports/w6/eval_metrics.json`＋`backend/reports/w6/评测报告与门禁判定.md` ＋ `backend/reports/w8/RELAY.md`＋`DELIVERY.md`＋`evidence/t46/gate_identity_diff.txt`（三把尺的 stdout 原样存盘）。
+- 未动面尺（应全 = **0 行**）：`git diff --name-only 88f3500 -- backend/app backend/tests eval deploy frontend backend/repo/migrations backend/reports/qa`；本轮**没碰** `docs/07` 之外的 CRLF 件（`deploy/loadtest/README.md` 一字未动）。
+- 零出站：台账／审计／残渣／容器见 22.0 第 3 句；没 build、没 up、没 start、没调模型。
+- 一轮一笔：本轮只交 **1 笔**（`git log --oneline 88f3500..HEAD` 收尾时应 = 1 行）。
+
+### 22.4 🔴 现读发现（只报不改）
+
+`docs/07:1181`（`U-139` 行）按未转义竖线切 = **5 段** ⟂ 邻居 `U-137`／`U-138` = **4 段** ⇒ 该行 code span 里有**裸竖线**（第 18 轮那笔排版事故的残留面）。动它 = 改别人的落笔面 ⇒ **本轮不改**，已在 `v1.7.28` 修订行具名登记，归总控点句。
+
+### 22.5 自曝四笔（本轮，都在我身上）
+
+1. **A 件第一版脚本没保住"原句"**：我打算把 `U-138` 从 open 行改写成结案句、原句只留关键词 ⇒ 自写的「旧句必须仍可指到」断言**当场拦下**（assert 在写盘之前，文件未被改）。正确姿势 = **整段原句搬进已裁行**，已按此改完。⚠️ 这是第 17／20 轮那条「追加不许吞旧行」的**第三种形态**（这次是"搬走"而非"覆盖"）。
+2. **把尺的单位写错**：`diff_recompute_meta` 与我的 `cols()` 都是**按未转义竖线切段**，`| a | b |` 给 **3 段**（不是 2 列）⇒ 我第一版断言写死 `== 2` 直接假失败。已改成「与邻居同段数」这把相对尺，并在句子里写"段"不写"列"。
+3. **默认白名单会把身份字段算成判定量差**（见 22.2 第二条）⇒ 我第一次拿默认白名单跑「新遍 ⟂ 入库件」得到 rc 1、判定量 2，差点读成"判定变了"。规矩补一条：**跨代比对（身份换代）必须显式点名换代字段，且两把都印**（默认那把照实报 rc 1）。
+4. **写面字面缺口具名**：0′ 清单没列 `docs/07`，但 A 明写「＋ `docs/07` 状态格 🔻 追加」⇒ 我按 A 的字面动了 `docs/07`（三处、字节级）。若 0′ 优先，这算**越面**，请 QA 裁定；`v1.7.28` 版本行属 `§4.8` 既有纪律（改内容必抬版），不属顺手。
+
+### 22.6 串行资源表（六面逐条给尺）
+
+| 资源面 | 本轮 | 尺 |
+|---|---|---|
+| `git` 索引 | 唯一写者 = 本窗；**一轮一笔**；按名 stage，禁 `add -A`／reset／clean | `git status --short`（落笔前应只含我要交的 6 件）＋ `git show --stat` 逐笔复核 |
+| 共享 `ecom` | **只读**（`begin; … rollback;`）；台账／审计／残渣逐位不动（见 22.0） | `docker exec -i commerceql-pg-1 psql -U postgres -d ecom -q -t -A -c "begin; select count(*), to_char(sum(cost_cny),'FM999990.000000'), max(created_at) from app.cost_ledger; rollback;"` |
+| 共享栈 | **未动**；五件在场、`Up` 时长 = 第 20 轮那次重启带的 | `docker ps --format '{{.Names}} {{.Status}}'` |
+| 被测镜像 | **未 build**；本轮零活体读数（A／B 都是盘上件 ⟂ 只读 SQL） | `docker image inspect commerceql-api:latest -f '{{.Id}}'` 应仍 = `ca34ea791a81…` |
+| 匣带重写 | **0**（`eval/**` 一字未动，本轮只**读** `eval/reporter.py` 并跑它） | `git diff --name-only 88f3500 -- eval` = 空 |
+| `reports/qa/**` | **只读**；本轮读的是 `qa/RELAY.md:1480–1544`（第 24 轮裁定）与 `prompts/diff_recompute_meta.py`（借她的尺） | `git diff --name-only HEAD -- backend/reports/qa` = 0 行 |
+
+### 22.7 复算入口（四条，全零额度）
+
+```bash
+# ① 两遍重算（仓库外输出、干净树）—— 跑第 3 遍会多一个 generated_at，不改变判定
+PYTHONUTF8=1 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/reporter.py \
+  --pytest-log backend/reports/w8/_r16_offline_cleantree.log \
+  --integration-log backend/reports/w8/_integration_pytest_1006_rT39_v.log \
+  --p0-summary backend/reports/w8/gate_inputs_p0_summary.json \
+  --json-out E:/tmp_qoder/r21/p3.json --md-out E:/tmp_qoder/r21/p3.md --no-backup   # rc=1 = 有门禁没过，正常
+# ② 两遍互 diff（默认白名单）⇒ 判定量应 = 0
+PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/qa/prompts/diff_recompute_meta.py \
+  E:/tmp_qoder/r21/p1.json E:/tmp_qoder/r21/p2.json generated_at git.rev git.rev_full git.commit_count "~静默前置" "~generated_at"
+# ③ 跨代比对（换代字段要显式点名，否则算判定量差）
+PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/qa/prompts/diff_recompute_meta.py \
+  backend/reports/w6/eval_metrics.json E:/tmp_qoder/r21/p2.json "~静默前置" "~generated_at" meta.generated_at meta.git.rev gate_provenance.report_git.rev
+# ④ 身份两格并报 ＋ 八格逐词
+PYTHONUTF8=1 .venv/Scripts/python.exe -c "import json;d=json.load(open('backend/reports/w6/eval_metrics.json',encoding='utf-8'));print(d['meta']['git'],d['meta']['generated_at']);print(d['gate_summary'])"
+git log -1 --format='%h 入库笔' -- backend/reports/w6/eval_metrics.json
+```

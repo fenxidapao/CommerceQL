@@ -1,0 +1,49 @@
+W8 第 21 轮 T-46 B｜门禁判词身份面重取的三把尺原样输出（零额度、零出站）
+基线件 = 上一版入库件（`git show 88f3500:backend/reports/w6/eval_metrics.json` 抽到仓库外副本 E:/tmp_qoder/r21/inrepo_prev.json）
+入库件（本轮写回后）sha256 前 12 位 = 069294996228（尺 = hashlib 实算 ⟂ `sha256sum` 管道在中文路径上会给带反斜杠的串）
+基线副本 sha256 前 12 位 = 4860ed1d802d
+### ① 两遍互 diff（默认白名单）
+$ backend/reports/qa/prompts/diff_recompute_meta.py E:/tmp_qoder/r21/p1.json E:/tmp_qoder/r21/p2.json generated_at git.rev git.rev_full git.commit_count ~静默前置 ~generated_at
+rc=0
+A = E:/tmp_qoder/r21/p1.json
+B = E:/tmp_qoder/r21/p2.json
+白名单 = generated_at ＋ git.rev ＋ git.rev_full ＋ git.commit_count ＋ ~静默前置 ＋ ~generated_at
+差集总数 = 1 ｜ meta（允许差） = 1 ｜ **判定量（必须 0）** = 0
+--- meta 差（逐条列出，别只报条数）---
+  meta.generated_at [value]: "2026-10-07T05:27:23+00:00"  ->  "2026-10-07T05:27:34+00:00"
+--- 判定量差（非 0 即「重跑不闭合」）---
+
+
+### ② 新遍 ⟂ 上一版入库件（默认白名单 ⇒ 换代字段算判定量差，rc 1）
+$ backend/reports/qa/prompts/diff_recompute_meta.py E:/tmp_qoder/r21/p2.json E:/tmp_qoder/r21/inrepo_prev.json generated_at git.rev git.rev_full git.commit_count ~静默前置 ~generated_at
+rc=1
+A = E:/tmp_qoder/r21/p2.json
+B = E:/tmp_qoder/r21/inrepo_prev.json
+白名单 = generated_at ＋ git.rev ＋ git.rev_full ＋ git.commit_count ＋ ~静默前置 ＋ ~generated_at
+差集总数 = 3 ｜ meta（允许差） = 1 ｜ **判定量（必须 0）** = 2
+--- meta 差（逐条列出，别只报条数）---
+  meta.generated_at [value]: "2026-10-07T05:27:34+00:00"  ->  "2026-10-06T07:23:55+00:00"
+--- 判定量差（非 0 即「重跑不闭合」）---
+  gate_provenance.report_git.rev [value]: "88f3500"  ->  "f7bf106"
+  meta.git.rev [value]: "88f3500"  ->  "f7bf106"
+
+
+### ③ 同一比对、显式点名换代字段（⇒ 判定量 0）
+$ backend/reports/qa/prompts/diff_recompute_meta.py E:/tmp_qoder/r21/p2.json E:/tmp_qoder/r21/inrepo_prev.json ~静默前置 ~generated_at meta.generated_at meta.git.rev gate_provenance.report_git.rev
+rc=0
+A = E:/tmp_qoder/r21/p2.json
+B = E:/tmp_qoder/r21/inrepo_prev.json
+白名单 = ~静默前置 ＋ ~generated_at ＋ meta.generated_at ＋ meta.git.rev ＋ gate_provenance.report_git.rev
+差集总数 = 3 ｜ meta（允许差） = 3 ｜ **判定量（必须 0）** = 0
+--- meta 差（逐条列出，别只报条数）---
+  gate_provenance.report_git.rev [value]: "88f3500"  ->  "f7bf106"
+  meta.generated_at [value]: "2026-10-07T05:27:34+00:00"  ->  "2026-10-06T07:23:55+00:00"
+  meta.git.rev [value]: "88f3500"  ->  "f7bf106"
+--- 判定量差（非 0 即「重跑不闭合」）---
+
+
+### ④ 新遍的八格逐词（stdout 摘要）
+$ -c import json;d=json.load(open('E:/tmp_qoder/r21/p2.json',encoding='utf-8'));print(d['meta']['git'], d['meta']['generated_at']);print(json.dumps(d['gate_summary'],ensure_ascii=False))
+rc=0
+{'rev': '88f3500', 'dirty': False} 2026-10-07T05:27:34+00:00
+{"all_pass": false, "passed": ["G-1"], "not_pass": {"G-2": "FAIL", "G-3": "PARTIAL", "G-4": "PARTIAL", "G-5": "FAIL", "G-6": "UNVERIFIED", "G-7": "FAIL", "G-8": "UNVERIFIED"}, "counts": {"PASS": 1, "FAIL": 3, "UNVERIFIED": 2, "NOT_AVAILABLE": 0, "PARTIAL": 2}}
