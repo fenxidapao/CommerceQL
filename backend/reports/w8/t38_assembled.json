@@ -1,59 +1,133 @@
 {
   "artifact": "commerceql.w8.t38_assembled/1",
-  "task": "T-38 主单：一把 c=3/n=30 的当期批（U-129 ③ ＋ G-6 P95）",
-  "generated_at_utc": "2026-10-06T14:36:55+00:00",
+  "task": "T-45 主单：一把 3 令牌／c=3／n=28 的当期批（靶子甲 ＋ U-129 ③ ＋ U-138 结案后半 ＋ G-6 够格样本）",
+  "读的哪一份回执": {
+    "口径": "本件每个数都来自下面这几把；路径是**显式常量**，不靠文件名猜",
+    "quote": {
+      "path": "deploy\\loadtest\\t45_3u_c3_n28_quote.json",
+      "generated_at_utc": "2026-10-07T04:24:31+00:00",
+      "上界": 0.3,
+      "报价笔": "92b960b"
+    },
+    "main": {
+      "path": "deploy\\loadtest\\t45_3u_c3_n28_main.json",
+      "started_at": "2026-10-07T04:27:23+00:00",
+      "finished_at": "2026-10-07T04:28:03+00:00",
+      "件内git_rev": "92b960b",
+      "admitted": 18,
+      "样本数": 18
+    },
+    "void_两把": [
+      {
+        "path": "deploy\\loadtest\\t45_3u_c3_n28_warm.json",
+        "started_at": "2026-10-07T04:25:41+00:00",
+        "admitted": 1
+      },
+      {
+        "path": "deploy\\loadtest\\t45_3u_c3_n28_warm2.json",
+        "started_at": "2026-10-07T04:27:09+00:00",
+        "admitted": 1
+      }
+    ],
+    "历史件不被读": "deploy/loadtest/t38_c3n30_*.json 三把只作第 15／16 轮读数的落点留在盘上，🚫 不许覆盖"
+  },
+  "generated_at_utc": "2026-10-07T04:54:01+00:00",
   "identity": {
-    "rev": "3f6a4cc126fcdba5c3e9b707d898a70740a7417b",
-    "rev_short": "3f6a4cc",
-    "commit_count": 466,
+    "rev": "92b960b9cb7e0a2035f9681fc4acc84d0958afbe",
+    "rev_short": "92b960b",
+    "commit_count": 475,
     "dirty": true,
-    "captured_at_utc": "2026-10-06T14:36:55+00:00",
+    "captured_at_utc": "2026-10-07T04:54:01+00:00",
     "口径": "PROMPT §2 ④ 两格并报：本块 = **装配那一刻**的树；两把回执各自另有件内 `git_rev`／`git_dirty`（跑那一刻）"
   },
   "geometry_requested": {
     "scenario": "steady",
     "concurrency": 3,
-    "max_requests": 30,
+    "max_requests": 28,
     "reuse_sessions": true,
     "session_pool": 3,
-    "command": "python deploy/loadtest/driver.py --scenario steady --concurrency 3 --max-requests 30 --reuse-sessions --session-pool 3 --tokens <仓库外一次性令牌文件> --out <回执路径>"
+    "user_tokens": 3,
+    "target": "http://127.0.0.1:8000/api/v1（共享栈 `commerceql-api-1`，镜像 `ca34ea791a81` = 靶子甲）",
+    "command": "../.venv/Scripts/python.exe driver.py --scenario steady --concurrency 3 --max-requests 28 --reuse-sessions --session-pool 3 --tokens <仓库外一次性三枚令牌文件> --out ../deploy/loadtest/t45_3u_c3_n28_main.json",
+    "warm_cell_command": "同上，但 --max-requests 1 ⇒ 具名作废件 t45_3u_c3_n28_warm.json，不进任何分母"
   },
   "hard_requirements": {
     "a_void_cell": {
-      "verdict": "达成",
+      "verdict": "达成（两格各 1 条准入，具名剔除）",
       "读数": {
-        "void_admitted": 1,
-        "void_started_at": "2026-10-06T04:25:06+00:00",
-        "void_outcomes": {
-          "ok": 1
+        "void_admitted_1": 1,
+        "void_admitted_2": 1,
+        "void_started_at": [
+          "2026-10-07T04:25:41+00:00",
+          "2026-10-07T04:27:09+00:00"
+        ],
+        "void_outcomes": [
+          {
+            "ok": 1
+          },
+          {
+            "ok": 1
+          }
+        ],
+        "void_p95_两把": [
+          15629.0,
+          6665.5
+        ],
+        "void_具名花费": {
+          "task_ids_given": 2,
+          "rows": 8,
+          "sum_cny": 0.012971,
+          "distinct_task_ids_billed": 2,
+          "first_created_at": "2026-10-07 04:25:41.497611+00",
+          "last_created_at": "2026-10-07 04:27:14.617944+00"
         },
-        "不进分母": "主批分母 = 9（不含作废格那 1 条具名 task_id）"
+        "不进分母": "主批分母 = 18（不含上面两格共 2 条具名 task_id）"
       },
-      "尺": "回执 `scenarios[0].admission.admitted` ⟷ 主批窗口的具名剔除（`task_id <> VOID_TASK`）",
-      "note_rule": "作废格 `note` 已点名其身份为跑后补打（跑前另有独立取证，见 build_identity_pre_run）"
+      "尺": "回执 `scenarios[0].admission.admitted` ⟷ 主批窗口的具名剔除（`task_id not in VOID_TASKS`）",
+      "note_rule": "两格预热的回执里都**没有** `build_identity`（驱动不产这格）；主批身份 = 跑后由 attest_build_identity.py 补打，跑前那半取源 = 报价件 `target_face`。两格预热各干什么：第 1 格吸收冷启动（宿主 12:06:51 ＋0800 才开机、栈 04:08:02Z 起，单发 15,629ms），第 2 格验上游门 ④（同形状单发 6,665.5ms）"
     },
     "b_quote_before_started_at": {
       "verdict": "达成",
       "读数": {
-        "quote_commit": "67be6b0",
-        "quote_committer_date": "2026-10-06T12:24:29+08:00",
-        "main_started_at": "2026-10-06T04:25:59+00:00",
-        "delta_s": 90.0,
-        "void_started_at": "2026-10-06T04:25:06+00:00",
-        "void_also_after_quote": true
+        "quote_commit": "92b960b",
+        "quote_committer_date": "2026-10-07T12:24:43+08:00",
+        "main_started_at": "2026-10-07T04:27:23+00:00",
+        "delta_s": 160.0,
+        "void_started_at": [
+          "2026-10-07T04:25:41+00:00",
+          "2026-10-07T04:27:09+00:00"
+        ],
+        "void_also_after_quote": [
+          true,
+          true
+        ],
+        "两把锚点并报": {
+          "窗锚（本件起改指这个）": "2026-10-07T04:24:31+00:00",
+          "笔锚（只有 (b) 格用）": "2026-10-07T12:24:43+08:00",
+          "为什么两把都要留": "笔锚问『先报价后跑』，窗锚定『这段台账算谁的』——混用就回到第 15 轮那个隐患：报价件再被提交一次，整窗平移"
+        }
       },
       "尺": "git log -1 --format=%cd --date=iso-strict <报价笔>  ⟷  回执 started_at（两侧都转 UTC 再比）",
       "教训来源": "第 12 轮那次报价笔晚 20 分 10 秒 ⇒ (d) 判未达成；本轮把报价做成**先提交的产物**"
     },
     "c_build_identity": {
-      "verdict": "达成（**链一** 容器 ⟷ 工作树字节 ＝ 逐件 18/18 ＋ 聚合容器面 ⟷ 工作树面；**链二** 工作树 ⟷ HEAD ＝ 跑前 `git_dirty = false` ＋ 层 3 present。🔻 本句原写「三面全量相等 ＋ 逐件 18/18 ＋ 层 3 ＋ 跑前独立一次」，『三面』二字按 `U-139` 换代成两链，见本格 `当期性写法`）",
+      "verdict": "达成（**链一** 容器 ⟷ 工作树字节 = 逐件 18/20 SAME，DIFF = ['ast_gate.py', 'rules.py']；聚合 two_links.container_vs_worktree = False —— 靶子甲下**预期就是 False**，它证的是『今天的改动在树里、不在被测构建里』，不是这把批跑坏了）；**链二** 工作树 ⟷ HEAD = 逐件 20/20 SAME ＋ 聚合 two_links.worktree_vs_head = True（全量 158 件） ＋ 层 3 符号 present。🔻 原句「三面全量相等 ＋ 逐件 18/18 ＋ 层 3 ＋ 跑前独立一次」⇒『三面』按 `U-139` 换代成两链；『跑前独立一次』本轮也换掉 = 跑前只做了 --self-test ＋ 报价件 target_face",
       "读数": {
         "container": "commerceql-api-1",
         "image_id": "sha256:ca34ea791a81fae6f5f03249451214872bcd424b150549454d93e3412c4fbcb5",
         "container_created_at": "2026-10-05T15:19:26.686587752Z",
-        "head_rev_at_attest": "67be6b0",
-        "per_file_same": "18/18",
-        "aggregate_three_way_equal": true,
+        "head_rev_at_attest": "92b960b",
+        "per_file_same": "18/20",
+        "per_file_headlink_same": "20/20",
+        "逐件DIFF清单": [
+          "ast_gate.py",
+          "rules.py"
+        ],
+        "two_links": {
+          "container_vs_worktree": false,
+          "worktree_vs_head": true
+        },
+        "aggregate_three_way_equal": false,
         "aggregate_files": "158/158",
         "layer3": {
           "module": "app.graph.state",
@@ -61,10 +135,21 @@
           "present": true,
           "size": 47
         },
-        "pre_run_attestation": {
-          "attested_at_utc": "2026-10-06T04:24:43+00:00",
-          "head_rev_short": "67be6b0",
-          "per_file_same": "18/18",
+        "跑前身份取源": {
+          "来自": "报价件 target_face（本轮先起跑、后打逐件身份 ⇒ 没有跑前的逐件 attestation）",
+          "quote_generated_at_utc": "2026-10-07T04:24:31+00:00",
+          "image_created_utc": "2026-10-05T15:19:25.20781035Z",
+          "container_created_utc": "2026-10-05T15:19:26.686587752Z",
+          "container_started_utc": "2026-10-07T04:08:02.791504113Z",
+          "ast_gate_容器md5": "cf698983db685b21d46e9accbe9da7c5",
+          "ast_gate_HEAD的LF面md5": "a9443bff14973301c27d16ef386d3c3f",
+          "四把钟": {
+            "host_utc": "2026-10-07T04:24:32+00:00",
+            "pg_container_utc": "2026-10-07T04:24:32",
+            "api_container_utc": "2026-10-07T04:24:32",
+            "db_now": "2026-10-07 04:24:32.643038+00"
+          },
+          "self_test_起跑前": "attest_build_identity.py --self-test ⇒ 3/3 PASS",
           "image_id": "sha256:ca34ea791a81fae6f5f03249451214872bcd424b150549454d93e3412c4fbcb5"
         }
       },
@@ -74,7 +159,7 @@
     "d_latency_samples": {
       "verdict": "达成",
       "读数": {
-        "n_samples": 9,
+        "n_samples": 18,
         "keys_per_sample": [
           "code",
           "outcome",
@@ -82,178 +167,238 @@
           "total_ms",
           "ttfb_ms"
         ],
-        "admitted": 9
+        "admitted": 18
       },
       "尺": "逐样本数 ⟷ `admission.admitted` 必须相等；样本只装准入、升序、不含题面（N-11）",
       "来源": "T-36 E 那件（driver.py `latency_samples_ms`）第一次真用上"
     },
     "e_reading_surface": {
       "admission": {
-        "admitted": 9,
-        "rejected_429": 20,
-        "other_http_4xx": 1,
+        "admitted": 18,
+        "rejected_429": 2,
+        "other_http_4xx": 8,
         "http_5xx": 0,
         "unresolved": 0,
-        "terminal": 9
+        "terminal": 18
       },
       "outcomes": {
-        "error_frame": 3,
-        "ok": 4,
-        "clarify": 1,
-        "http_4xx": 21,
-        "refuse": 1
+        "ok": 10,
+        "error_frame": 4,
+        "http_4xx": 10,
+        "refuse": 4
       },
       "codes": {
-        "GATE_AST_REJECTED": 3,
-        "SESSION_CONFLICT": 1,
-        "RATE_LIMITED": 20
+        "GATE_AST_REJECTED": 4,
+        "{\"code\":\"SESSION_NOT_FOUND\",\"message\":\"会话不存在或已过期": 8,
+        "RATE_LIMITED": 2
       },
       "codes_task_ids": {
         "GATE_AST_REJECTED": [
-          "tk_02f6fd3af0e6451cb18ee6d12fc69c13",
-          "tk_201e967563994cae817eb519fbba8069",
-          "tk_ca342fa63c0044d98461f6184ebbd994"
+          "tk_1cc478a326cd472f9851bfe240802e66",
+          "tk_6ba7ade1964f40c3ba46930da6790cc3",
+          "tk_b7a345e42f30475da3072295dbce5843",
+          "tk_d10e7f81f2d1402b928d5efbe9ecf864"
         ]
       },
-      "thread_depth": {
+      "thread_depth": null,
+      "worker_session_depth": {
+        "grouping_key": "(worker, session_id)",
+        "is_server_thread": false,
+        "server_thread_key": "{tenant}:{user}:{session}（app/api/runner.py 的 thread_id 形状）",
+        "server_thread_ruler": "deploy/loadtest/r23_thread_from_checkpoints.sql ⑮/⑰（库面，须剔作废那跑）",
+        "groups": 7,
         "depth_hist": {
           "1": 7,
-          "2": 5,
-          "3+": 18
+          "2": 6,
+          "3+": 15
         },
         "unsessioned": 0,
-        "threads": 7,
         "by_outcome": {
+          "ok": {
+            "turn1": 1,
+            "turn2plus": 9,
+            "unsessioned": 0
+          },
           "error_frame": {
             "turn1": 2,
-            "turn2plus": 1,
-            "unsessioned": 0
-          },
-          "ok": {
-            "turn1": 3,
-            "turn2plus": 1,
-            "unsessioned": 0
-          },
-          "clarify": {
-            "turn1": 0,
-            "turn2plus": 1,
+            "turn2plus": 2,
             "unsessioned": 0
           },
           "http_4xx": {
-            "turn1": 2,
-            "turn2plus": 19,
+            "turn1": 4,
+            "turn2plus": 6,
             "unsessioned": 0
           },
           "refuse": {
             "turn1": 0,
-            "turn2plus": 1,
+            "turn2plus": 4,
             "unsessioned": 0
           }
         },
         "by_code": {
           "GATE_AST_REJECTED": {
             "turn1": 2,
-            "turn2plus": 1,
+            "turn2plus": 2,
             "unsessioned": 0
           }
         }
       },
       "p95_scope": "admitted_http_2xx",
       "g6_p95_le_8s": null,
-      "g6_caveat": "准入样本仅 9 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足；另有 20 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）",
+      "g6_caveat": "准入样本仅 18 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足；另有 2 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）",
       "latency_samples_ms": [
         {
-          "total_ms": 1125.5,
-          "ttfb_ms": 7.2,
-          "outcome": "clarify",
+          "total_ms": 3068.1,
+          "ttfb_ms": 3.7,
+          "outcome": "refuse",
           "code": null,
-          "task_id": "tk_ac39b7f44b504854a7d9062caa8a7979"
+          "task_id": "tk_c08cdfbc39384ea7a80ad8799582036f"
         },
         {
-          "total_ms": 3024.9,
+          "total_ms": 3252.2,
+          "ttfb_ms": 7.2,
+          "outcome": "refuse",
+          "code": null,
+          "task_id": "tk_87392d3068f64bdf8913957bc33989c4"
+        },
+        {
+          "total_ms": 3278.9,
+          "ttfb_ms": 3.3,
+          "outcome": "refuse",
+          "code": null,
+          "task_id": "tk_e26708e5e3794efb8ce2ccd301e4519a"
+        },
+        {
+          "total_ms": 3590.9,
           "ttfb_ms": 6.5,
           "outcome": "refuse",
           "code": null,
-          "task_id": "tk_dbe74db24fae48a38da247a1aba5db38"
+          "task_id": "tk_c8be2fc681a04758a20b3b0ad95711f1"
         },
         {
-          "total_ms": 6697.0,
-          "ttfb_ms": 6.9,
+          "total_ms": 5858.9,
+          "ttfb_ms": 4.0,
           "outcome": "ok",
           "code": null,
-          "task_id": "tk_cd3e5da8be9349668427693322ac526e"
+          "task_id": "tk_f6aecac8e79441de8c890dd187445b9a"
         },
         {
-          "total_ms": 6713.8,
-          "ttfb_ms": 22.0,
+          "total_ms": 6180.6,
+          "ttfb_ms": 15.1,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_704036dd6f9845279608c2f184d350a1"
+        },
+        {
+          "total_ms": 6404.7,
+          "ttfb_ms": 3.8,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_1a61e66145444e96878e1a037fae9303"
+        },
+        {
+          "total_ms": 6884.8,
+          "ttfb_ms": 24.6,
           "outcome": "error_frame",
           "code": "GATE_AST_REJECTED",
-          "task_id": "tk_02f6fd3af0e6451cb18ee6d12fc69c13"
+          "task_id": "tk_d10e7f81f2d1402b928d5efbe9ecf864"
         },
         {
-          "total_ms": 6959.5,
+          "total_ms": 7011.0,
+          "ttfb_ms": 3.6,
+          "outcome": "error_frame",
+          "code": "GATE_AST_REJECTED",
+          "task_id": "tk_6ba7ade1964f40c3ba46930da6790cc3"
+        },
+        {
+          "total_ms": 7041.1,
+          "ttfb_ms": 6.4,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_4d742c1ad9e5435489846b6bea719009"
+        },
+        {
+          "total_ms": 7216.2,
+          "ttfb_ms": 6.2,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_df50355880af43149975d57917d7aa1b"
+        },
+        {
+          "total_ms": 7226.0,
           "ttfb_ms": 5.8,
           "outcome": "ok",
           "code": null,
-          "task_id": "tk_3b55f345bf184c0ca2b8cc133d219056"
+          "task_id": "tk_1c40582adc194b45ae0635f33c5e0276"
         },
         {
-          "total_ms": 8107.3,
+          "total_ms": 7293.7,
+          "ttfb_ms": 5.4,
+          "outcome": "error_frame",
+          "code": "GATE_AST_REJECTED",
+          "task_id": "tk_b7a345e42f30475da3072295dbce5843"
+        },
+        {
+          "total_ms": 7314.9,
+          "ttfb_ms": 6.0,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_76edc46752964a4387c76bdb1e4a31af"
+        },
+        {
+          "total_ms": 7524.2,
+          "ttfb_ms": 3.5,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_5b71329cfd7745d1833ea5adc0d8b26f"
+        },
+        {
+          "total_ms": 8090.1,
+          "ttfb_ms": 6.2,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_725d6787ea2c43218419ed45e408186f"
+        },
+        {
+          "total_ms": 8838.5,
           "ttfb_ms": 6.5,
-          "outcome": "error_frame",
-          "code": "GATE_AST_REJECTED",
-          "task_id": "tk_201e967563994cae817eb519fbba8069"
-        },
-        {
-          "total_ms": 8226.5,
-          "ttfb_ms": 22.4,
-          "outcome": "error_frame",
-          "code": "GATE_AST_REJECTED",
-          "task_id": "tk_ca342fa63c0044d98461f6184ebbd994"
-        },
-        {
-          "total_ms": 8249.2,
-          "ttfb_ms": 13.0,
           "outcome": "ok",
           "code": null,
-          "task_id": "tk_f15d357370b1407d8b11a4a869b3bd69"
+          "task_id": "tk_bdbf86eba8664b989e48eb2a3e80c048"
         },
         {
-          "total_ms": 9291.9,
-          "ttfb_ms": 1614.4,
-          "outcome": "ok",
-          "code": null,
-          "task_id": "tk_83f693afb1e74b1db8c6b59bdda0ce2b"
+          "total_ms": 8887.4,
+          "ttfb_ms": 24.3,
+          "outcome": "error_frame",
+          "code": "GATE_AST_REJECTED",
+          "task_id": "tk_1cc478a326cd472f9851bfe240802e66"
         }
       ],
       "terminal_provenance": {
-        "error_frame": {
-          "stage=sql_ready|reason=none": 3
-        },
         "ok": {
-          "stage=executing|reason=none": 4
+          "stage=executing|reason=none": 10
         },
-        "clarify": {
-          "stage=intent|reason=time_ambiguous": 1
+        "error_frame": {
+          "stage=sql_ready|reason=none": 4
         },
         "http_4xx": {
-          "stage=none|reason=none": 21
+          "stage=none|reason=none": 10
         },
         "refuse": {
-          "stage=plan_ready|reason=no_data_asset": 1
+          "stage=plan_ready|reason=no_data_asset": 4
         }
       },
       "rejection_headers": {
-        "409": {
-          "retry_after=3": 1
+        "404": {
+          "retry_after=missing": 8
         },
         "429": {
-          "retry_after=30": 20
+          "retry_after=30": 2
         }
       },
       "error_messages": {}
     },
-    "e_键名漂移": "本格的 `thread_depth` 是 T-38 那份回执的原样搬运；U-138 落地后**新回执**给的是 `worker_session_depth`（键语义自报、且显式声明不是服务端 thread）⇒ 读新批时把这一格换成 `worker_session_depth`，契约测试 = `backend/tests/contract/test_loadtest_thread_key_contract.py`",
+    "e_键名漂移": "🔻 本句原写『本格 `thread_depth` 是 T-38 那份回执的原样搬运 ⇒ 读新批时换成 `worker_session_depth`』；**第 20 轮读的就是新批** ⇒ `TERMINAL_KEYS` 已同时列入两把键名，现读本批回执给的是新键 `worker_session_depth` ⇒ **U-138 结案条件后半到位**；契约测试 = `backend/tests/contract/test_loadtest_thread_key_contract.py`",
     "f_p0_summary_current": {
       "verdict": "证件 rev = 5a6caed / 456 笔 / generated 2026-10-06T07:22:35+00:00 / offline passed = 2485 / integration passed = 124 → 与本轮干净树一致才算达成（装配件不下这一判，留给门禁那件）",
       "尺": "PYTHONUTF8=1 .venv/Scripts/python.exe -c \"import sys;sys.path[:0]=['eval','.'];import reporter;…\" --emit-p0-summary backend/reports/w8/gate_inputs_p0_summary.json"
@@ -261,31 +406,31 @@
   },
   "g6": {
     "sample_floor": 20,
-    "admitted_this_batch": 9,
-    "terminal_this_batch": 9,
+    "admitted_this_batch": 18,
+    "terminal_this_batch": 18,
     "admitted_eq_terminal": true,
     "可引用": false,
-    "verdict": "🔴 未达成：9 < 下限 20 ⇒ G-6 继续不可引用",
+    "verdict": "🔴 未达成：18 < 下限 20 ⇒ G-6 继续不可引用",
     "g6_p95_le_8s": null,
-    "g6_caveat_原文": "准入样本仅 9 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足；另有 20 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）",
+    "g6_caveat_原文": "准入样本仅 18 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足；另有 2 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）",
     "本批_p95_读数": {
-      "p50": 6959.5,
-      "p95": 9291.9,
-      "p99": 9291.9,
-      "max": 9291.9,
-      "mean": 6488.4,
-      "samples": 9
+      "p50": 7011.0,
+      "p95": 8887.4,
+      "p99": 8887.4,
+      "max": 8887.4,
+      "mean": 6386.8,
+      "samples": 18
     },
     "旧读数处置": "本轮不产生可引用 P95 ⇒ 旧的那把（第 12 轮 9.81/20.04/8.94/9.08s 与 6.18s 一类）**不被取代**，引用它们仍须带各自 n 与作废声明",
-    "结构性发现": "单用户稳态一把批**拿不到 ≥20 准入**：QUERY 桶 = 10/用户·分钟（`app/api/ratelimit.py:203`），而 429 是秒回 ⇒ 30 条请求在 22 秒内全部发出 ⇒ 只有第一个窗口的 10 条被准入。要 ≥20 样本只有两条路：① c=1 串行（墙钟 ~300s，能准入 ~28，但**丢掉 c=3 并发**那一格）；② 多用户令牌（3 枚 ⇒ 3 个用户各自 10/min ⇒ 可准入 ~28–30，c=3 保留）。两条都超出本轮『一把批』的字面范围 ⇒ 已交回不擅自做"
+    "结构性发现": "🔴 第 20 轮现测：**多用户令牌这条路今天也没买到 ≥20 准入** —— 3 枚令牌／c=3／n=28 ⇒ admitted = 18、rejected_429 = 2、other_http_4xx = 8（全是 `SESSION_NOT_FOUND`，404 的 header 面 = {'retry_after=missing': 8}）⇒ 差的那几条不是限流吃掉的、是**会话形状吃掉的**；墙钟 40.157s（不是第 15 轮的 22s）。机制（读码 `deploy/loadtest/driver.py:324-325` ⟷ `:349-350`）：`sid = session_pool[i % len(pool)]` 里的 `i` 是**每个 worker 自己的请求计数**，而令牌是 `tokens[worker_idx % len(tokens)]` **按 worker 固定** ⇒ 池子第 j 项由 `tokens[j % n]` 铸造，两者不同余时这一发就拿别人的会话号去打 ⇒ RLS 下 404。⚠️ 逐条 (worker, session) 归属回执里没记 ⇒ 该半格记 `UNVERIFIED`，机制只由读码成立。🔻 原句（第 15 轮）『单用户一把批拿不到 ≥20 ⇒ 两条路：① c=1 串行 ② 多用户令牌』——② 今天跑了，结论改成『② 要先让会话与令牌对齐』（同形状下 `--session-pool 1`，或下一把改形状），本窗无权加第二把 ⇒ 交回总控，不擅自补跑"
   },
   "u129_three_cells": {
     "口径": "格1 = ⑮ 两臂（臂1 ∧ 臂2 皆 0）；格2 = `t2_routed_audit_supp_without_terminal_write` = 0 且第四件前置 `t2_routed_supp > 0`（非空真）；格3 = `t2_with_terminal_write ≥ 1`",
     "harness_rows": {
       "格1_含作废": [
         "r23_scope_with_void_cell.txt",
-        "10",
-        "6",
+        "20",
+        "15",
         "0",
         "0",
         "1",
@@ -293,8 +438,8 @@
       ],
       "格1_剔作废": [
         "r23_scope_excl_void_cell.txt",
-        "9",
-        "6",
+        "18",
+        "15",
         "0",
         "0",
         "1",
@@ -302,56 +447,56 @@
       ],
       "格2格3_含作废": [
         "r23_scope_with_void_cell.txt",
-        "10",
-        "6",
+        "20",
+        "15",
         "0",
-        "6",
+        "15",
         "ge3 达成（>=1）",
-        "ge2 = 0 且 t2_routed_supp = 3 ⇒ 非空真达成",
+        "ge2 = 0 且 t2_routed_supp = 9 ⇒ 非空真达成",
         "f",
-        "3",
+        "9",
         "t",
         "0",
         "0"
       ],
       "格2格3_剔作废": [
         "r23_scope_excl_void_cell.txt",
-        "9",
-        "6",
+        "18",
+        "15",
         "0",
-        "6",
+        "15",
         "ge3 达成（>=1）",
-        "ge2 = 0 且 t2_routed_supp = 3 ⇒ 非空真达成",
+        "ge2 = 0 且 t2_routed_supp = 9 ⇒ 非空真达成",
         "f",
-        "3",
+        "9",
         "t",
         "0",
         "0"
       ],
       "尺自检_剔作废": [
         "r23_scope_excl_void_cell.txt",
-        "1434",
-        "1434",
+        "1454",
+        "1454",
         "0"
       ]
     },
     "scope_readings": {
-      "含作废格_窗_04:25:00Z": {
-        "audit_rows": 10,
-        "runs": 10,
-        "server_threads": 4
+      "含两格预热": {
+        "audit_rows": 20,
+        "runs": 20,
+        "server_threads": 5
       },
-      "具名剔除作废格": {
-        "audit_rows": 9,
-        "runs": 9,
+      "具名剔除两格预热": {
+        "audit_rows": 18,
+        "runs": 18,
         "server_threads": 3
       }
     },
     "两份归档": {
-      "with_void": "evidence/t38/r23_scope_with_void_cell.txt",
-      "excl_void": "evidence/t38/r23_scope_excl_void_cell.txt"
+      "with_void": "evidence/t45/r23_scope_with_void_cell.txt",
+      "excl_void": "evidence/t45/r23_scope_excl_void_cell.txt"
     },
-    "复算": "MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -v win_a='2026-10-06 04:25:59+00' -v win_b='2026-10-06 04:27:00+00' -v upref='u_t38c3%' -f - < deploy/loadtest/r23_thread_from_checkpoints.sql"
+    "复算": "MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' -v win_a='2026-10-07 04:27:23+00' -v win_b='2026-10-07 04:28:30+00' -v upref='u_t45c3%' -f - < deploy/loadtest/r23_thread_from_checkpoints.sql"
   },
   "thread_key_discrepancy": {
     "receipt_侧": {
@@ -359,74 +504,74 @@
       "分组键": "(worker, session_id)",
       "depth_hist": {
         "1": 7,
-        "2": 5,
-        "3+": 18
+        "2": 6,
+        "3+": 15
       },
-      "回执键名": "thread_depth（U-138 改名之前）",
-      "改名依据": "U-138① —— 旧键 `thread_depth`/`threads` 自称 thread ⇒ 新回执改叫 `worker_session_depth`/`groups`；本件读的是 T-38 当期那份（改名**之前**跑的），所以回执里的键仍是旧名，两格在此对上"
+      "回执键名": "worker_session_depth",
+      "改名依据": "U-138① —— 旧键 `thread_depth`/`threads` 自称 thread ⇒ 新回执改叫 `worker_session_depth`/`groups`；🔻 原句『本件读的是 T-38 当期那份（改名之前跑的）』已过期 ⇒ 第 20 轮读的是 t45 主批，现读回执里就是**新键**（`key_in_receipt` = `worker_session_depth`）⇒ **U-138 结案条件后半到位**"
     },
     "库面": {
       "分组键": "tenant:user:session（`lg.checkpoints.thread_id`）",
       "尺": "deploy/loadtest/r23_thread_from_checkpoints.sql ⑮/⑰（剔作废那跑）",
-      "含作废": 4,
+      "含作废": 5,
       "剔作废": 3
     },
     "结论": "两把不等价（组数 vs 库面 thread 数）⇒ 凡『同一 thread 的第 N 轮』只从库面取（U-138③）；本格 = U-138② 要求的『同框并报』落点"
   },
   "spend": {
-    "since": "2026-10-06T04:24:29.000000+00:00",
-    "rows": 36,
-    "sum_cny": 0.066117,
-    "first_created_at": "2026-10-06 04:25:06.424528+00",
-    "last_created_at": "2026-10-06 04:26:19.595108+00",
-    "distinct_task_ids": 10,
+    "since": "2026-10-07T04:24:31.000000+00:00",
+    "rows": 73,
+    "sum_cny": 0.128137,
+    "first_created_at": "2026-10-07 04:25:41.497611+00",
+    "last_created_at": "2026-10-07 04:28:00.872275+00",
+    "distinct_task_ids": 20,
     "all_non_peak": true,
     "ledger_now": {
-      "rows": 1757,
-      "sum_cny": 2.897712,
-      "max_created_at": "2026-10-06 04:26:19.595108+00"
+      "rows": 1830,
+      "sum_cny": 3.025849,
+      "max_created_at": "2026-10-07 04:28:00.872275+00"
     },
-    "cap_cny": 0.25,
+    "cap_cny": 0.3,
     "within_cap": true,
     "main_batch_only_named_tasks": {
-      "task_ids_given": 9,
-      "rows": 32,
-      "sum_cny": 0.058951,
-      "distinct_task_ids_billed": 9,
-      "first_created_at": "2026-10-06 04:25:59.579633+00",
-      "last_created_at": "2026-10-06 04:26:19.595108+00"
+      "task_ids_given": 18,
+      "rows": 65,
+      "sum_cny": 0.115166,
+      "distinct_task_ids_billed": 18,
+      "first_created_at": "2026-10-07 04:27:23.61862+00",
+      "last_created_at": "2026-10-07 04:28:00.872275+00"
     },
-    "unit_measured_cny_per_admission": 0.00655,
-    "unit_分子分母同面": "分子 = 具名 9 个 run 的 ¥0.058951；分母 = admitted 9；作废那跑（¥0.007166）不在分子里",
-    "unit_cny_per_run_in_window_incl_void": 0.006612,
-    "两把单价的差别": "¥0.00655（剔作废、具名）vs ¥0.006612（整窗含作废 ÷ 10 run） ⇒ 旧写法把它叫 per_admission 是自相矛盾，本轮改名并同框并报",
+    "unit_measured_cny_per_admission": 0.006398,
+    "unit_分子分母同面": "分子 = 具名 18 个 run 的 ¥0.115166；分母 = admitted 18；两格预热（具名 8 行台账 / ¥0.012971）不在分子里",
+    "unit_cny_per_run_in_window_incl_void": 0.006407,
+    "两把单价的差别": "¥0.006398（剔作废、具名 18 run） vs ¥0.006407（整窗含作废 ÷ 20 准入） ⇒ 第 15 轮那把是 9 准入 ÷ 1 格作废，本轮是 18 准入 ÷ 2 格作废 ⇒ 两把都要报名字",
     "对表": {
       "报价 low/expected/high": {
-        "low": 0.13554,
-        "expected": 0.15813,
-        "high": 0.2919
+        "low": 0.131,
+        "expected": 0.1834,
+        "high": 0.2751
       },
-      "实付": 0.066117,
-      "偏差原因": "墙钟 22s（429 秒回）≠ 报价假设的 ~150s ⇒ 准入 9 而非 21 ⇒ 实付低于期望"
+      "实付": 0.128137,
+      "偏差原因": "准入 18 落在报价区间 [20, 28] 之下沿 ⇒ shortfall 全部来自 8 条 404（会话形状）而不是 429 ⇒ 实付低于期望；报价的账面单价 ¥0.00655/准入 本轮逐值复现"
     },
     "台账首末": {
       "本轮前": {
-        "rows": 1721,
-        "sum_cny": 2.831595,
-        "max_created_at": "2026-10-05 05:28:19.308155+00",
-        "captured_at_utc": "2026-10-06T04:24:18+00:00",
-        "r12_window": {
-          "since": "2026-10-05 04:45:00+00",
-          "rows": 35,
-          "sum_cny": 0.058383,
-          "admitted": 6,
-          "unit_cny_per_admission": 0.00973
+        "rows": 1757,
+        "sum_cny": 2.897712,
+        "max_created_at": "2026-10-06 04:26:19.595108+00",
+        "captured_at_utc": "2026-10-07T04:24:31+00:00",
+        "r15_named_runs": {
+          "task_ids": 9,
+          "rows": 32,
+          "sum_cny": 0.058951,
+          "admitted": 9,
+          "unit_cny_per_admission": 0.00655
         }
       },
       "本轮后": {
-        "rows": 1757,
-        "sum_cny": 2.897712,
-        "max_created_at": "2026-10-06 04:26:19.595108+00"
+        "rows": 1830,
+        "sum_cny": 3.025849,
+        "max_created_at": "2026-10-07 04:28:00.872275+00"
       }
     }
   },

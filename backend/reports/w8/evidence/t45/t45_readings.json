@@ -1,0 +1,172 @@
+{
+  "taken_at_utc": "2026-10-07T04:44:40+00:00",
+  "HEAD": "92b960b",
+  "八格_verdict_对照_入库版⟷本轮": {
+    "a_void_cell": {
+      "入库版（第15轮那把）": "达成",
+      "本轮（第20轮换指后）": "达成（两格各 1 条准入，具名剔除）",
+      "同词": false
+    },
+    "b_quote_before_started_at": {
+      "入库版（第15轮那把）": "达成",
+      "本轮（第20轮换指后）": "达成",
+      "同词": true
+    },
+    "c_build_identity": {
+      "入库版（第15轮那把）": "达成（**链一** 容器 ⟷ 工作树字节 ＝ 逐件 18/18 ＋ 聚合容器面 ⟷ 工作树面；**链二** 工作树 ⟷ HEAD ＝ 跑前 `git_dirty = false` ＋ 层 3 present。🔻 本句原写「三面全量相等 ＋ 逐件 18/18 ＋ 层 3 ＋ 跑前独立一次」，『三面』二字按 `U-139` 换代成两链，见本格",
+      "本轮（第20轮换指后）": "达成（**链一** 容器 ⟷ 工作树字节 = 逐件 18/20 SAME，DIFF = ['ast_gate.py', 'rules.py']；聚合 two_links.container_vs_worktree = False —— 靶子甲下**预期就是 False**，它证的是『今天的改动在树里、不在被测构建里』，不是这把批跑坏了）；**链二** 工作树 ⟷ HEAD = 逐件 20/20 SAME ＋ 聚合 two_links.worktree_vs_head = Tr",
+      "同词": false
+    },
+    "d_latency_samples": {
+      "入库版（第15轮那把）": "达成",
+      "本轮（第20轮换指后）": "达成",
+      "同词": true
+    },
+    "e_reading_surface": {
+      "入库版（第15轮那把）": "None",
+      "本轮（第20轮换指后）": "None",
+      "同词": true
+    },
+    "e_键名漂移": {
+      "入库版（第15轮那把）": "None",
+      "本轮（第20轮换指后）": "🔻 本句原写『本格 `thread_depth` 是 T-38 那份回执的原样搬运 ⇒ 读新批时换成 `worker_session_depth`』；**第 20 轮读的就是新批** ⇒ `TERMINAL_KEYS` 已同时列入两把键名，现读本批回执给的是新键 `worker_session_depth` ⇒ **U-138 结案条件后半到位**；契约测试 = `backend/tests/contract/test_loadtest_thread_key_contract",
+      "同词": false
+    },
+    "f_p0_summary_current": {
+      "入库版（第15轮那把）": "证件 rev = 5a6caed / 456 笔 / generated 2026-10-06T07:22:35+00:00 / offline passed = 2485 / integration passed = 124 → 与本轮干净树一致才算达成（装配件不下这一判，留给门禁那件）",
+      "本轮（第20轮换指后）": "证件 rev = 5a6caed / 456 笔 / generated 2026-10-06T07:22:35+00:00 / offline passed = 2485 / integration passed = 124 → 与本轮干净树一致才算达成（装配件不下这一判，留给门禁那件）",
+      "同词": true
+    }
+  },
+  "g6": {
+    "入库版": "🔴 未达成：9 < 下限 20 ⇒ G-6 继续不可引用",
+    "本轮": "🔴 未达成：18 < 下限 20 ⇒ G-6 继续不可引用",
+    "结案条件三条": {
+      "rejected_429≈0？": 2,
+      "admitted≥20？": 18,
+      "非配额档？": "steady 非 tenant-quota 档（codes 里没有 QUOTA 类）"
+    },
+    "g6_p95_le_8s": null,
+    "caveat_原文": "准入样本仅 18 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足；另有 2 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）"
+  },
+  "u138_后半": {
+    "回执键名": "worker_session_depth",
+    "groups": 7,
+    "grouping_key": "(worker, session_id)",
+    "depth_hist": {
+      "1": 7,
+      "2": 6,
+      "3+": 15
+    },
+    "库面_threads": {
+      "分组键": "tenant:user:session（`lg.checkpoints.thread_id`）",
+      "尺": "deploy/loadtest/r23_thread_from_checkpoints.sql ⑮/⑰（剔作废那跑）",
+      "含作废": 5,
+      "剔作废": 3
+    },
+    "同框并报在产物格": true
+  },
+  "spend": {
+    "since": "2026-10-07T04:24:31.000000+00:00",
+    "rows": 73,
+    "sum_cny": 0.128137,
+    "first_created_at": "2026-10-07 04:25:41.497611+00",
+    "last_created_at": "2026-10-07 04:28:00.872275+00",
+    "distinct_task_ids": 20,
+    "all_non_peak": true,
+    "ledger_now": {
+      "rows": 1830,
+      "sum_cny": 3.025849,
+      "max_created_at": "2026-10-07 04:28:00.872275+00"
+    },
+    "cap_cny": 0.3,
+    "within_cap": true,
+    "main_batch_only_named_tasks": {
+      "task_ids_given": 18,
+      "rows": 65,
+      "sum_cny": 0.115166,
+      "distinct_task_ids_billed": 18,
+      "first_created_at": "2026-10-07 04:27:23.61862+00",
+      "last_created_at": "2026-10-07 04:28:00.872275+00"
+    },
+    "unit_measured_cny_per_admission": 0.006398,
+    "unit_分子分母同面": "分子 = 具名 18 个 run 的 ¥0.115166；分母 = admitted 18；两格预热（具名 8 行台账 / ¥0.012971）不在分子里",
+    "unit_cny_per_run_in_window_incl_void": 0.006407,
+    "两把单价的差别": "¥0.006398（剔作废、具名 18 run） vs ¥0.006407（整窗含作废 ÷ 20 准入） ⇒ 第 15 轮那把是 9 准入 ÷ 1 格作废，本轮是 18 准入 ÷ 2 格作废 ⇒ 两把都要报名字",
+    "对表": {
+      "报价 low/expected/high": {
+        "low": 0.131,
+        "expected": 0.1834,
+        "high": 0.2751
+      },
+      "实付": 0.128137,
+      "偏差原因": "准入 18 落在报价区间 [20, 28] 之下沿 ⇒ shortfall 全部来自 8 条 404（会话形状）而不是 429 ⇒ 实付低于期望；报价的账面单价 ¥0.00655/准入 本轮逐值复现"
+    },
+    "台账首末": {
+      "本轮前": {
+        "rows": 1757,
+        "sum_cny": 2.897712,
+        "max_created_at": "2026-10-06 04:26:19.595108+00",
+        "captured_at_utc": "2026-10-07T04:24:31+00:00",
+        "r15_named_runs": {
+          "task_ids": 9,
+          "rows": 32,
+          "sum_cny": 0.058951,
+          "admitted": 9,
+          "unit_cny_per_admission": 0.00655
+        }
+      },
+      "本轮后": {
+        "rows": 1830,
+        "sum_cny": 3.025849,
+        "max_created_at": "2026-10-07 04:28:00.872275+00"
+      }
+    }
+  },
+  "读的哪一份回执": {
+    "口径": "本件每个数都来自下面这几把；路径是**显式常量**，不靠文件名猜",
+    "quote": {
+      "path": "deploy\\loadtest\\t45_3u_c3_n28_quote.json",
+      "generated_at_utc": "2026-10-07T04:24:31+00:00",
+      "上界": 0.3,
+      "报价笔": "92b960b"
+    },
+    "main": {
+      "path": "deploy\\loadtest\\t45_3u_c3_n28_main.json",
+      "started_at": "2026-10-07T04:27:23+00:00",
+      "finished_at": "2026-10-07T04:28:03+00:00",
+      "件内git_rev": "92b960b",
+      "admitted": 18,
+      "样本数": 18
+    },
+    "void_两把": [
+      {
+        "path": "deploy\\loadtest\\t45_3u_c3_n28_warm.json",
+        "started_at": "2026-10-07T04:25:41+00:00",
+        "admitted": 1
+      },
+      {
+        "path": "deploy\\loadtest\\t45_3u_c3_n28_warm2.json",
+        "started_at": "2026-10-07T04:27:09+00:00",
+        "admitted": 1
+      }
+    ],
+    "历史件不被读": "deploy/loadtest/t38_c3n30_*.json 三把只作第 15／16 轮读数的落点留在盘上，🚫 不许覆盖"
+  },
+  "两遍装配": {
+    "差异": "只差 generated_at_utc 与 identity.captured_at_utc（尺 = E:/tmp_qoder/r19/rdiff.py）"
+  },
+  "上游门四判": {
+    "①warm单发≤8s": "上游侧现测 375–655ms（容器内 5 发全 200）⇒ 满足",
+    "②连续3次无5xx": "5/5 = 200 ⇒ 满足",
+    "③healthz 不假负": "llm_reachable/embedding_reachable = true、degraded_dependencies=[] ⇒ 满足",
+    "④c=1 预检≥1条 ok": "两格预热各 admitted=1／outcomes={ok:1} ⇒ 满足"
+  },
+  "环境事实": {
+    "宿主开机": "2026-10-07 12:06:51 ＋0800",
+    "栈 StartedAt": "2026-10-07T04:08:02Z",
+    "预热一格单发": 15629.0,
+    "预热二格单发": 6665.5,
+    "主批墙钟": 40.157
+  }
+}

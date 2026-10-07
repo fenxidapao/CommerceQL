@@ -1,0 +1,108 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-10-07T04:27:09+00:00",
+  "target": "http://127.0.0.1:8000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 3,
+        "duration_s": 600.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": true,
+        "questions": "合成题库 5 条轮转",
+        "request_cap": 1
+      },
+      "requests": 1,
+      "wall_s": 6.782,
+      "throughput_rps": 0.147,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 1,
+        "rejected_429": 0,
+        "other_http_4xx": 0,
+        "http_5xx": 0,
+        "unresolved": 0,
+        "terminal": 1
+      },
+      "rejection_headers": {},
+      "quota_headers_by_status": {},
+      "worker_session_depth": {
+        "grouping_key": "(worker, session_id)",
+        "is_server_thread": false,
+        "server_thread_key": "{tenant}:{user}:{session}（app/api/runner.py 的 thread_id 形状）",
+        "server_thread_ruler": "deploy/loadtest/r23_thread_from_checkpoints.sql ⑮/⑰（库面，须剔作废那跑）",
+        "groups": 1,
+        "depth_hist": {
+          "1": 1
+        },
+        "unsessioned": 0,
+        "by_outcome": {
+          "ok": {
+            "turn1": 1,
+            "turn2plus": 0,
+            "unsessioned": 0
+          }
+        },
+        "by_code": {}
+      },
+      "latency_ms": {
+        "p50": 6665.5,
+        "p95": 6665.5,
+        "p99": 6665.5,
+        "max": 6665.5,
+        "mean": 6665.5,
+        "samples": 1
+      },
+      "latency_ms_all_ms": {
+        "p50": 6665.5,
+        "p95": 6665.5,
+        "samples": 1
+      },
+      "ttfb_ms": {
+        "p50": 3.7,
+        "p95": 3.7
+      },
+      "latency_samples_ms": [
+        {
+          "total_ms": 6665.5,
+          "ttfb_ms": 3.7,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_17db76d050f743ac85a5082d20f7a616"
+        }
+      ],
+      "outcomes": {
+        "ok": 1
+      },
+      "codes": {},
+      "codes_task_ids": {},
+      "terminal_provenance": {
+        "ok": {
+          "stage=executing|reason=none": 1
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": null,
+      "g6_caveat": "准入样本仅 1 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足"
+    }
+  ],
+  "target_check": {
+    "url": "http://127.0.0.1:8000/api/v1/openapi.json",
+    "paths_total": 19,
+    "has_query": true,
+    "query_paths": [
+      "/api/v1/query",
+      "/api/v1/query/{task_id}",
+      "/api/v1/query/{task_id}/cancel"
+    ]
+  },
+  "finished_at": "2026-10-07T04:27:16+00:00",
+  "generated_at": "2026-10-07T04:27:16+00:00",
+  "git_rev": "92b960b",
+  "git_dirty": false
+}

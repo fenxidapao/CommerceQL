@@ -1,0 +1,581 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-10-07T04:27:23+00:00",
+  "target": "http://127.0.0.1:8000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 3,
+        "duration_s": 600.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": true,
+        "questions": "合成题库 5 条轮转",
+        "request_cap": 28
+      },
+      "requests": 28,
+      "wall_s": 40.157,
+      "throughput_rps": 0.697,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 18,
+        "rejected_429": 2,
+        "other_http_4xx": 8,
+        "http_5xx": 0,
+        "unresolved": 0,
+        "terminal": 18
+      },
+      "rejection_headers": {
+        "404": {
+          "retry_after=missing": 8
+        },
+        "429": {
+          "retry_after=30": 2
+        }
+      },
+      "quota_headers_by_status": {
+        "404": {
+          "none": 8
+        },
+        "429": {
+          "bucket+limit+remaining+reset": 2
+        }
+      },
+      "worker_session_depth": {
+        "grouping_key": "(worker, session_id)",
+        "is_server_thread": false,
+        "server_thread_key": "{tenant}:{user}:{session}（app/api/runner.py 的 thread_id 形状）",
+        "server_thread_ruler": "deploy/loadtest/r23_thread_from_checkpoints.sql ⑮/⑰（库面，须剔作废那跑）",
+        "groups": 7,
+        "depth_hist": {
+          "1": 7,
+          "2": 6,
+          "3+": 15
+        },
+        "unsessioned": 0,
+        "by_outcome": {
+          "ok": {
+            "turn1": 1,
+            "turn2plus": 9,
+            "unsessioned": 0
+          },
+          "error_frame": {
+            "turn1": 2,
+            "turn2plus": 2,
+            "unsessioned": 0
+          },
+          "http_4xx": {
+            "turn1": 4,
+            "turn2plus": 6,
+            "unsessioned": 0
+          },
+          "refuse": {
+            "turn1": 0,
+            "turn2plus": 4,
+            "unsessioned": 0
+          }
+        },
+        "by_code": {
+          "GATE_AST_REJECTED": {
+            "turn1": 2,
+            "turn2plus": 2,
+            "unsessioned": 0
+          }
+        }
+      },
+      "latency_ms": {
+        "p50": 7011.0,
+        "p95": 8887.4,
+        "p99": 8887.4,
+        "max": 8887.4,
+        "mean": 6386.8,
+        "samples": 18
+      },
+      "latency_ms_all_ms": {
+        "p50": 3590.9,
+        "p95": 8838.5,
+        "samples": 28
+      },
+      "ttfb_ms": {
+        "p50": 6.0,
+        "p95": 24.6
+      },
+      "latency_samples_ms": [
+        {
+          "total_ms": 3068.1,
+          "ttfb_ms": 3.7,
+          "outcome": "refuse",
+          "code": null,
+          "task_id": "tk_c08cdfbc39384ea7a80ad8799582036f"
+        },
+        {
+          "total_ms": 3252.2,
+          "ttfb_ms": 7.2,
+          "outcome": "refuse",
+          "code": null,
+          "task_id": "tk_87392d3068f64bdf8913957bc33989c4"
+        },
+        {
+          "total_ms": 3278.9,
+          "ttfb_ms": 3.3,
+          "outcome": "refuse",
+          "code": null,
+          "task_id": "tk_e26708e5e3794efb8ce2ccd301e4519a"
+        },
+        {
+          "total_ms": 3590.9,
+          "ttfb_ms": 6.5,
+          "outcome": "refuse",
+          "code": null,
+          "task_id": "tk_c8be2fc681a04758a20b3b0ad95711f1"
+        },
+        {
+          "total_ms": 5858.9,
+          "ttfb_ms": 4.0,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_f6aecac8e79441de8c890dd187445b9a"
+        },
+        {
+          "total_ms": 6180.6,
+          "ttfb_ms": 15.1,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_704036dd6f9845279608c2f184d350a1"
+        },
+        {
+          "total_ms": 6404.7,
+          "ttfb_ms": 3.8,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_1a61e66145444e96878e1a037fae9303"
+        },
+        {
+          "total_ms": 6884.8,
+          "ttfb_ms": 24.6,
+          "outcome": "error_frame",
+          "code": "GATE_AST_REJECTED",
+          "task_id": "tk_d10e7f81f2d1402b928d5efbe9ecf864"
+        },
+        {
+          "total_ms": 7011.0,
+          "ttfb_ms": 3.6,
+          "outcome": "error_frame",
+          "code": "GATE_AST_REJECTED",
+          "task_id": "tk_6ba7ade1964f40c3ba46930da6790cc3"
+        },
+        {
+          "total_ms": 7041.1,
+          "ttfb_ms": 6.4,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_4d742c1ad9e5435489846b6bea719009"
+        },
+        {
+          "total_ms": 7216.2,
+          "ttfb_ms": 6.2,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_df50355880af43149975d57917d7aa1b"
+        },
+        {
+          "total_ms": 7226.0,
+          "ttfb_ms": 5.8,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_1c40582adc194b45ae0635f33c5e0276"
+        },
+        {
+          "total_ms": 7293.7,
+          "ttfb_ms": 5.4,
+          "outcome": "error_frame",
+          "code": "GATE_AST_REJECTED",
+          "task_id": "tk_b7a345e42f30475da3072295dbce5843"
+        },
+        {
+          "total_ms": 7314.9,
+          "ttfb_ms": 6.0,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_76edc46752964a4387c76bdb1e4a31af"
+        },
+        {
+          "total_ms": 7524.2,
+          "ttfb_ms": 3.5,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_5b71329cfd7745d1833ea5adc0d8b26f"
+        },
+        {
+          "total_ms": 8090.1,
+          "ttfb_ms": 6.2,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_725d6787ea2c43218419ed45e408186f"
+        },
+        {
+          "total_ms": 8838.5,
+          "ttfb_ms": 6.5,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_bdbf86eba8664b989e48eb2a3e80c048"
+        },
+        {
+          "total_ms": 8887.4,
+          "ttfb_ms": 24.3,
+          "outcome": "error_frame",
+          "code": "GATE_AST_REJECTED",
+          "task_id": "tk_1cc478a326cd472f9851bfe240802e66"
+        }
+      ],
+      "outcomes": {
+        "ok": 10,
+        "error_frame": 4,
+        "http_4xx": 10,
+        "refuse": 4
+      },
+      "codes": {
+        "GATE_AST_REJECTED": 4,
+        "{\"code\":\"SESSION_NOT_FOUND\",\"message\":\"会话不存在或已过期": 8,
+        "RATE_LIMITED": 2
+      },
+      "codes_task_ids": {
+        "GATE_AST_REJECTED": [
+          "tk_1cc478a326cd472f9851bfe240802e66",
+          "tk_6ba7ade1964f40c3ba46930da6790cc3",
+          "tk_b7a345e42f30475da3072295dbce5843",
+          "tk_d10e7f81f2d1402b928d5efbe9ecf864"
+        ]
+      },
+      "terminal_provenance": {
+        "ok": {
+          "stage=executing|reason=none": 10
+        },
+        "error_frame": {
+          "stage=sql_ready|reason=none": 4
+        },
+        "http_4xx": {
+          "stage=none|reason=none": 10
+        },
+        "refuse": {
+          "stage=plan_ready|reason=no_data_asset": 4
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": null,
+      "g6_caveat": "准入样本仅 18 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足；另有 2 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）"
+    }
+  ],
+  "target_check": {
+    "url": "http://127.0.0.1:8000/api/v1/openapi.json",
+    "paths_total": 19,
+    "has_query": true,
+    "query_paths": [
+      "/api/v1/query",
+      "/api/v1/query/{task_id}",
+      "/api/v1/query/{task_id}/cancel"
+    ]
+  },
+  "finished_at": "2026-10-07T04:28:03+00:00",
+  "generated_at": "2026-10-07T04:28:03+00:00",
+  "git_rev": "92b960b",
+  "git_dirty": false,
+  "build_identity": {
+    "attested_at_utc": "2026-10-07T04:32:03+00:00",
+    "container": "commerceql-api-1",
+    "image_ref": "commerceql-api",
+    "image_id": "sha256:ca34ea791a81fae6f5f03249451214872bcd424b150549454d93e3412c4fbcb5",
+    "container_created_at": "2026-10-05T15:19:26.686587752Z",
+    "image_tags_seen": [
+      "w7load-api:1005r12 4adbcfc2e8f6",
+      "w7load-api:latest 4adbcfc2e8f6",
+      "w7load-api:0930r11 8c1eb47fb118",
+      "w7load-api:0928r10 4806c5687c4e",
+      "w7load-api:0928r9 f9b0936cb5ae",
+      "w7load-api:0923r8 b38c0fcacfb3",
+      "w7load-api:0923r7 ccabcfd72399",
+      "w7load-api:0922r6 e0c623dff4b5",
+      "w7load-api:0921r5 521956b57699",
+      "w7load-api:0921r4 b07a786cd95d",
+      "w7load-api:0921r2wt 740f437ac09a",
+      "w7load-api:0921r3 f885487619bf",
+      "w7load-api:0921r1 edf41777ee46",
+      "w7load-api:0920r2 00b5e2dd0223"
+    ],
+    "head_rev": "92b960b9cb7e0a2035f9681fc4acc84d0958afbe",
+    "head_rev_short": "92b960b",
+    "worktree_dirty_at_attest": true,
+    "layer1_2": {
+      "files": [
+        {
+          "path": "backend/app/graph/state.py",
+          "container_md5": "58dc5462abb53070b794e18a3538b4ff",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "58dc5462abb53070b794e18a3538b4ff",
+            "worktree_lf": "0474ef6af7e32345b538456c28735513",
+            "head_blob_lf": "0474ef6af7e32345b538456c28735513"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/graph/edges.py",
+          "container_md5": "8f3386b260d610694ed6a8d101b90316",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "8f3386b260d610694ed6a8d101b90316",
+            "worktree_lf": "9e065a34468c7e2e41bf108bcaf4f4c3",
+            "head_blob_lf": "9e065a34468c7e2e41bf108bcaf4f4c3"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/graph/events.py",
+          "container_md5": "6ea163911f0d6875ea0f6168cfd16ce0",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "6ea163911f0d6875ea0f6168cfd16ce0",
+            "worktree_lf": "b0ecf6768ae5ba745c37d4cd8a647f37",
+            "head_blob_lf": "b0ecf6768ae5ba745c37d4cd8a647f37"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/graph/build.py",
+          "container_md5": "22c72ffe2e1f535f2c9da310cfc298e5",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "22c72ffe2e1f535f2c9da310cfc298e5",
+            "worktree_lf": "22c72ffe2e1f535f2c9da310cfc298e5",
+            "head_blob_lf": "22c72ffe2e1f535f2c9da310cfc298e5"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/_shared.py",
+          "container_md5": "adff46716a7e03a093d5a44b97f3cd1d",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "adff46716a7e03a093d5a44b97f3cd1d",
+            "worktree_lf": "adff46716a7e03a093d5a44b97f3cd1d",
+            "head_blob_lf": "adff46716a7e03a093d5a44b97f3cd1d"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/audit_supp.py",
+          "container_md5": "182829037e7c521fd9d62cdfeeee33a4",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "182829037e7c521fd9d62cdfeeee33a4",
+            "worktree_lf": "182829037e7c521fd9d62cdfeeee33a4",
+            "head_blob_lf": "182829037e7c521fd9d62cdfeeee33a4"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/audit_pre.py",
+          "container_md5": "afd477cdade9781410e57623b7090e3b",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "afd477cdade9781410e57623b7090e3b",
+            "worktree_lf": "865ae3936919279a8e6d0dae059d02ef",
+            "head_blob_lf": "865ae3936919279a8e6d0dae059d02ef"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/mask.py",
+          "container_md5": "ed20983ffb4d14cfd4616c5fc9a68554",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "ed20983ffb4d14cfd4616c5fc9a68554",
+            "worktree_lf": "5e821f88488845990a7cdae0c7166b5f",
+            "head_blob_lf": "5e821f88488845990a7cdae0c7166b5f"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/repair.py",
+          "container_md5": "3f49f47047ea17a9eab331f1da3ccbbb",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "3f49f47047ea17a9eab331f1da3ccbbb",
+            "worktree_lf": "ce9ad0464abc186d987eb0b5662e061c",
+            "head_blob_lf": "ce9ad0464abc186d987eb0b5662e061c"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/graph/nodes/trusted_context.py",
+          "container_md5": "e2a0c8b08872b7a08e0cb312987ed789",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "e2a0c8b08872b7a08e0cb312987ed789",
+            "worktree_lf": "e2a0c8b08872b7a08e0cb312987ed789",
+            "head_blob_lf": "e2a0c8b08872b7a08e0cb312987ed789"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/api/runner.py",
+          "container_md5": "84a86573907cb8b3bb77d60a4cb27ae6",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "84a86573907cb8b3bb77d60a4cb27ae6",
+            "worktree_lf": "84a86573907cb8b3bb77d60a4cb27ae6",
+            "head_blob_lf": "84a86573907cb8b3bb77d60a4cb27ae6"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/api/errors.py",
+          "container_md5": "95807b7bbee884ab70adb8b62326600a",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "95807b7bbee884ab70adb8b62326600a",
+            "worktree_lf": "95807b7bbee884ab70adb8b62326600a",
+            "head_blob_lf": "95807b7bbee884ab70adb8b62326600a"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/api/ratelimit.py",
+          "container_md5": "7d2cdc4d387ae9339e6d03792e196a2a",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "7d2cdc4d387ae9339e6d03792e196a2a",
+            "worktree_lf": "7d2cdc4d387ae9339e6d03792e196a2a",
+            "head_blob_lf": "7d2cdc4d387ae9339e6d03792e196a2a"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/repo/audit_read.py",
+          "container_md5": "3bdae88fd83bd842441f22fa652d3db2",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "3bdae88fd83bd842441f22fa652d3db2",
+            "worktree_lf": "3bdae88fd83bd842441f22fa652d3db2",
+            "head_blob_lf": "3bdae88fd83bd842441f22fa652d3db2"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/api/routers/semantic.py",
+          "container_md5": "713e628346badd5e3810c065d2e26c79",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "713e628346badd5e3810c065d2e26c79",
+            "worktree_lf": "713e628346badd5e3810c065d2e26c79",
+            "head_blob_lf": "713e628346badd5e3810c065d2e26c79"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/api/routers/admin_audit.py",
+          "container_md5": "fc59870412d15f3f4639d1a854a949b3",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "fc59870412d15f3f4639d1a854a949b3",
+            "worktree_lf": "fc59870412d15f3f4639d1a854a949b3",
+            "head_blob_lf": "fc59870412d15f3f4639d1a854a949b3"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/present/audit_view.py",
+          "container_md5": "bccf5e4c4124b25d1ba49386a3de8f98",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "bccf5e4c4124b25d1ba49386a3de8f98",
+            "worktree_lf": "bccf5e4c4124b25d1ba49386a3de8f98",
+            "head_blob_lf": "bccf5e4c4124b25d1ba49386a3de8f98"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/present/eval_launch.py",
+          "container_md5": "971c951fb97ded589bfa256e42fedb83",
+          "matched_variant": "worktree_raw",
+          "variants": {
+            "worktree_raw": "971c951fb97ded589bfa256e42fedb83",
+            "worktree_lf": "971c951fb97ded589bfa256e42fedb83",
+            "head_blob_lf": "971c951fb97ded589bfa256e42fedb83"
+          },
+          "verdict": "SAME",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/guard/ast_gate.py",
+          "container_md5": "cf698983db685b21d46e9accbe9da7c5",
+          "matched_variant": null,
+          "variants": {
+            "worktree_raw": "f0c9e6160392f025433c7314950feb3d",
+            "worktree_lf": "a9443bff14973301c27d16ef386d3c3f",
+            "head_blob_lf": "a9443bff14973301c27d16ef386d3c3f"
+          },
+          "verdict": "DIFF",
+          "worktree_vs_head_lf": "SAME"
+        },
+        {
+          "path": "backend/app/guard/rules.py",
+          "container_md5": "3fbf9dcae312db70eb1fdb24969a77c1",
+          "matched_variant": null,
+          "variants": {
+            "worktree_raw": "a06e7ce6bacc07a9b840c1198379e3fa",
+            "worktree_lf": "a06e7ce6bacc07a9b840c1198379e3fa",
+            "head_blob_lf": "a06e7ce6bacc07a9b840c1198379e3fa"
+          },
+          "verdict": "DIFF",
+          "worktree_vs_head_lf": "SAME"
+        }
+      ],
+      "app_tree_aggregate": {
+        "files_count_git": 158,
+        "files_count_container": 158,
+        "aggregate_md5_lf_normalized": {
+          "container": "2a7e07f45f842e1524ef30570fcd7f30",
+          "worktree": "f49903a22cf04d3a9d98c84971270a6c",
+          "head_blob": "f49903a22cf04d3a9d98c84971270a6c"
+        },
+        "two_links": {
+          "container_vs_worktree": false,
+          "worktree_vs_head": true
+        },
+        "three_way_equal": false,
+        "ruler": "三面同一算法：LF 归一后逐文件 md5 ＋「md5 + 两个空格 + 相对路径」整段列表再取 md5",
+        "note": "🔻 旧版聚合尺因容器侧带 `./` 前缀而三列永不相等 ⇒ 当时的『不等』不构成证据；本字段换代后才有判别力。逐件面 `layer1_2.files` 是独立第二把尺，两把相互印证。🔻 T-42 B：相等按 `two_links` 两链引，不写『三面相等』——链一（容器 ⟷ 工作树）是这把尺量到的，链二（工作树 ⟷ HEAD）另由 `worktree_vs_head` ＋ 跑前 `worktree_dirty_at_attest` 供给。"
+      }
+    },
+    "layer3_behavior": {
+      "module": "app.graph.state",
+      "symbol": "RUN_SCOPED_STATE_FIELDS",
+      "present": true,
+      "size": 47
+    },
+    "why_this_matters": "落库面没有构建身份列（07 §4.8 的 U-129 行尾上限）⇒ 当期性只能由这一格自证",
+    "claim_shape": "两链并报：链一「容器 ⟷ 工作树字节」= 逐件 verdict ＋ 聚合 two_links.container_vs_worktree；链二「工作树 ⟷ HEAD」= 逐件 worktree_vs_head_lf ＋ 聚合 two_links.worktree_vs_head ＋ worktree_dirty_at_attest。🚫 本件不产出『三面相等』这句"
+  }
+}
