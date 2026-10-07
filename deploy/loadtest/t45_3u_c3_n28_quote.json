@@ -1,0 +1,93 @@
+{
+  "artifact": "commerceql.w8.t45_quote/1",
+  "task": "T-45 主单：一把 3 令牌／c=3／n=28 的出站批（靶子甲 ＋ U-138 结案条件后半 ＋ G-6 够格样本）",
+  "generated_at_utc": "2026-10-07T04:24:31+00:00",
+  "git_rev_at_quote": "7a8b1a6e3e3e96726c4f9b8b10f3a239cc2db3c9",
+  "commit_count_at_quote": 474,
+  "worktree_dirty_at_quote": true,
+  "approved_by": "总控 10-07 00:40 ＋0800 点句（T-45 派单 0′）：上界 ¥0.30、靶子 = 甲、禁第二把／禁改限流／禁 c>3",
+  "geometry": {
+    "scenario": "steady",
+    "concurrency": 3,
+    "max_requests": 28,
+    "reuse_sessions": true,
+    "session_pool": 3,
+    "user_tokens": 3,
+    "target": "http://127.0.0.1:8000/api/v1（共享栈 `commerceql-api-1`，镜像 `ca34ea791a81` = 靶子甲）",
+    "command": "../.venv/Scripts/python.exe driver.py --scenario steady --concurrency 3 --max-requests 28 --reuse-sessions --session-pool 3 --tokens <仓库外一次性三枚令牌文件> --out ../deploy/loadtest/t45_3u_c3_n28_main.json",
+    "warm_cell_command": "同上，但 --max-requests 1 ⇒ 具名作废件 t45_3u_c3_n28_warm.json，不进任何分母"
+  },
+  "budget": {
+    "approved_cap_cny": 0.3,
+    "unit_baselines": {
+      "unit_dispatch_cny_per_admission": 0.00655,
+      "unit_r15_ledger_cny_per_admission": 0.00655,
+      "口径": "`unit_dispatch` 照引来件不改；`unit_r15_ledger` = 第 15 轮那把主批具名 9 个 run 的 `sum(cost_cny) ÷ admitted` = 0.058951 ÷ 9。一条准入的调用数随题面变 ⇒ 两个数都保留，不得当均价外推。"
+    },
+    "rate_bucket_arithmetic": {
+      "per_user_per_min": 10,
+      "per_tenant_per_min": 100,
+      "read_from": "backend/app/api/ratelimit.py:203",
+      "window_s": 60,
+      "推论": "3 枚令牌 × 每用户 10/min ⇒ 一把分钟窗内准入上限 30；本批 n = 28 ⇒ 期望准入 ≤ 28，429 只在某用户被连发时才可能出现"
+    },
+    "predicted_admissions": {
+      "expected": 28,
+      "range": [
+        20,
+        28
+      ],
+      "依据": "见上面两格；实际准入由回执 `admission.admitted` 读数认定，不由本行认定"
+    },
+    "cost_range_cny": {
+      "low": 0.131,
+      "expected": 0.1834,
+      "high": 0.2751
+    },
+    "cap_breach_condition": "实付 > 0.3 ⇒ 立即停：不补跑、不为凑样本加批，把回执与差值交回 QA 转总控",
+    "cap_breach_threshold_admissions": 45
+  },
+  "sample_floor": {
+    "MIN_ADMITTED_FOR_P95": 20,
+    "read_from": "deploy/loadtest/driver.py 的 `MIN_ADMITTED_FOR_P95` 那一行（本件现读，不抄文档）",
+    "若不足": "admitted < 20 ⇒ G-6 继续 `g6_p95_le_8s = null` ＋ `g6_caveat` 原文，🚫 不得把该批 P95 引用为达标或不达标"
+  },
+  "void_cell": {
+    "purpose": "预热一格 ⇒ 不进任何分母、不进 P95 样本（宿主 12:06:51 ＋0800 才开机、栈热机约 8 分钟 ⇒ 冷启动由这格吸收）",
+    "geometry_override": {
+      "max_requests": 1
+    },
+    "note_rule": "作废格回执的 `note` 必须点名其构建身份是跑前取还是跑后补打"
+  },
+  "target_face": {
+    "container": "commerceql-api-1",
+    "image_created_utc": "2026-10-05T15:19:25.20781035Z",
+    "container_created_utc": "2026-10-05T15:19:26.686587752Z",
+    "container_started_utc": "2026-10-07T04:08:02.791504113Z",
+    "host_boot": "2026-10-07T12:06:51+08:00（`Get-CimInstance Win32_OperatingSystem.LastBootUpTime` 现读）",
+    "ast_gate_md5_in_container": "cf698983db685b21d46e9accbe9da7c5",
+    "ast_gate_md5_head_lf": "a9443bff14973301c27d16ef386d3c3f",
+    "口径": "靶子甲 = 10-05 那个构建 ⇒ 链一（容器 ⟷ 工作树）对 `guard/**` **预期就是 DIFF**（今天落的两件不在镜像里），🚫 不得写「当期构建已含本轮改动」，判词必须挂 image id"
+  },
+  "clocks_at_quote": {
+    "host_utc": "2026-10-07T04:24:32+00:00",
+    "pg_container_utc": "2026-10-07T04:24:32",
+    "api_container_utc": "2026-10-07T04:24:32",
+    "db_now": "2026-10-07 04:24:32.643038+00",
+    "口径": "跨面比时间前四把钟同秒才允许引用窗（本项目 09-20 曾实测主机钟与容器钟差 11h39m）"
+  },
+  "ledger_baseline": {
+    "rows": 1757,
+    "sum_cny": 2.897712,
+    "max_created_at": "2026-10-06 04:26:19.595108+00",
+    "captured_at_utc": "2026-10-07T04:24:31+00:00",
+    "r15_named_runs": {
+      "task_ids": 9,
+      "rows": 32,
+      "sum_cny": 0.058951,
+      "admitted": 9,
+      "unit_cny_per_admission": 0.00655
+    }
+  },
+  "ruler_b": "git log -1 --format=%cd --date=iso-strict <报价笔>  <  主批回执 started_at；本件的 `generated_at_utc` 同时是装配件 `spend_window` 的左锚点（D 件改锚后）"
+}
