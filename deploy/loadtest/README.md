@@ -1999,3 +1999,31 @@ python driver.py --target http://127.0.0.1:18000/api/v1 --scenario steady \
 1. 引用「三门全绿」必须**同时点名命令面**（现读形状 = `reports/w8` ＋ `tests/contract` ＋ `app`），🚫 不许写成「全仓 ruff 全绿」；
 2. **谁改 `deploy/loadtest/*.py`，谁在本 README 记一次单件 ruff 计数**（改前 ⟷ 改后两数并报）⇒ 量具件的红不再静默累积，而不必先动门禁面。本轮 = 纯落笔、零代码改动，沿用 **7 → 7**；
 3. ⚠️ 顺带复核一条形状坑（第 18 轮踩过）：不带 `--config` 从仓库根跑 ruff 会读到**默认规则集** ⇒ 计数随命令形状变（`:1352` 那句早就点名「计数依赖命令形状」）⇒ 报数五件里的「面 ＋ 谓词」必须写全。
+#### 三.0.22 W8 第 20 轮（2026-10-07 · 作业窗 ≈ 12:0x–12:5x ＋0800 ／ 04:0x–04:5x UTC（本行时刻 = 落笔那一秒现读 `date` = 2026-10-07 12:53:30 +0800，按 `docs/07 §4.8` 规则 ⑤）· 🔴 **本轮有花费**）：一把 **3 枚用户令牌／c=3／n=28** 的出站批（靶子甲）
+
+- **授权面**：总控 10-07 00:40 ＋0800 点句（T-45 派单 0′）= 上界 **¥0.30**、靶子 = **甲**（共享栈 `commerceql-api-1`，宿主 `127.0.0.1:8000`，镜像 `ca34ea791a81`）；🚫 不 build、不 recreate、不 up/down；🚫 不加第二把、不改限流值、不改 `c>3`。
+- **几何（逐字）**：`--scenario steady --concurrency 3 --max-requests 28 --reuse-sessions --session-pool 3 --tokens <仓库外三枚令牌文件>`；计划先跑 `--dry-run` 并**看输出**（`并发=3 时长=600.0 总请求=—` ⇒ 到数即停靠 `--max-requests`，🚫 不许拿 rc 0 当「真跑了」）。
+- **起跑前三条自检（全过才起）**：① `attest_build_identity.py --self-test` = **3/3 PASS**；② `docker ps` 五件在场 ＋ `docker exec commerceql-api-1 md5sum /srv/app/guard/ast_gate.py` = `cf698983db685b21d46e9accbe9da7c5`；③ 桶算术从 `backend/app/api/ratelimit.py:203` 现读 = 每用户 **10/min** ⟂ 每租户 100/min ⇒ 3 枚令牌分钟窗上限 30 ≥ 目标 20。
+- **上游门四判（README 三.0.1）**：① 上游 warm 单发（容器内 5 发）= **375/430/540/542/655 ms**、全 200 ⇒ 满足；② 无 5xx ⇒ 满足；③ `/api/v1/healthz` = `llm_reachable/embedding_reachable = true`、`degraded_dependencies = []` ⇒ 满足；④ `c=1` 预检 ≥1 条 `ok` ⇒ 两格预热各 1 条 `ok` ⇒ 满足。**环境事实**：宿主 **12:06:51 ＋0800 才开机**、栈 `StartedAt 04:08:02Z` ⇒ 第 1 格预热单发 **15,629ms**（冷启动），第 2 格 **6,665.5ms**（热态）⇒ 绝对 P95 只能在热态面引用。
+- **主批读数**（件 = `deploy/loadtest/t45_3u_c3_n28_main.json`，`git_rev = 92b960b`／`dirty = false`，`started_at 04:27:23Z → finished_at 04:28:03Z`，墙钟 **40.157s**）：`admitted = 18`、`terminal = 18`、`rejected_429 = 2`（`retry_after=30`）、`other_http_4xx = 8`（全 `SESSION_NOT_FOUND`，`retry_after=missing`）、`outcomes = {ok 10, error_frame 4, refuse 4, http_4xx 10}`、`codes = {GATE_AST_REJECTED 4, SESSION_NOT_FOUND 8, RATE_LIMITED 2}`、`p95 = 8,887.4ms`（**n = 18**）⇒ `g6_p95_le_8s = null` ＋ caveat 原文。**G-6 三条结案条件：① 勉强（2/28）②不满足（18 < 20）③满足 ⇒ 仍不可引用**。
+- **两把 thread 尺同框**：回执侧 `worker_session_depth` = **7 组**（键 `(worker, session_id)`，`depth_hist {1:7, 2:6, 3+:15}`）‖ 库面 = **剔作废 3 条 / 含两格预热 5 条**（键 `tenant:user:session`，尺 `r23_thread_from_checkpoints.sql` `-v win_a='2026-10-07 04:27:23+00' -v win_b='2026-10-07 04:28:30+00' -v upref='u_t45c3%'`）⇒ 两把不等价，凡「同一 thread 第 N 轮」只从库面取（`U-138`③）。
+- **实付**：台账 `1,757 → 1,830` 行、`¥2.897712 → ¥3.025849` ⇒ **本批 ¥0.128137**（≤ 上界 ¥0.30，含两格预热）；单价两把同框 = 具名 18 个 run `¥0.006398/准入` ‖ 整窗含作废 ÷ 20 准入 `¥0.006407`；报价那两把基线（来件 ¥0.00655 ‖ 第 15 轮账面 ¥0.00655）本轮逐值复现。
+- 🔴 **新笔（`U-140`，本窗第 20 轮自取号、open、当轮不结案）**：多令牌几何下**会话与令牌不绑定** ⇒ 8 条 `SESSION_NOT_FOUND` 吃掉分母。机制由读码成立：`driver.py:343-344` 用 `tokens[j % n]` 铸池子，`:349-350` 把令牌按 **worker 序号**固定，而 `:324-325` 的 `sid = session_pool[i % len(pool)]` 里 `i` 是**每 worker 自己的请求计数** ⇒ 不同余时拿别人的会话号打。⚠️ 回执没有 per-request 的 `(worker, session)` 字段 ⇒ 逐条归属 `UNVERIFIED`；按 `docs/07 §4.8` 规则 ④（判据含活体读数）⇒ **当轮不得自写结案**，须等总控点句后再一把。
+- **本轮 `deploy/loadtest/**` 只加了产物文件**（`t45_3u_c3_n28_quote.json`／`_warm.json`／`_warm2.json`／`_main.json`），`driver.py` 与 `attest_build_identity.py` **一字未动** ⇒ 三.0.21 那条「谁改 `.py` 谁记单件 ruff 计数」的纪律本轮**不适用**（写明免得被当成漏记）。
+- **复算入口（零额度部分）**：
+
+  ```bash
+  # ① 装配 ⟷ 取证（读盘上产物 ＋ 只读事务，不发包）
+  PYTHONUTF8=1 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w8/t38_assemble.py
+  PYTHONUTF8=1 PYTHONIOENCODING=utf-8 python backend/reports/w8/evidence/t45/t45_readings.json  # 只读该件
+  # ② 两把 thread 尺
+  MSYS_NO_PATHCONV=1 docker exec -i commerceql-pg-1 psql -U postgres -d ecom -A -F'|' \
+    -v win_a='2026-10-07 04:27:23+00' -v win_b='2026-10-07 04:28:30+00' -v upref='u_t45c3%' \
+    -f - < deploy/loadtest/r23_thread_from_checkpoints.sql
+  # ③ 实付逐位对撞（共享 ecom 一律 begin; … rollback;）
+  docker exec -i commerceql-pg-1 psql -U postgres -d ecom -q -t -A -c \"
+    begin; select count(*), to_char(sum(cost_cny),'FM999990.000000'), max(created_at) from app.cost_ledger; rollback;\"
+  # ④ 身份两链（链一在本靶子下预期就是 DIFF：guard 两件不在镜像里）
+  PYTHONUTF8=1 .venv/Scripts/python.exe deploy/loadtest/attest_build_identity.py --self-test
+  ```
+
