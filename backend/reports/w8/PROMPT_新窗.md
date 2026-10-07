@@ -24,7 +24,7 @@
 ## 2. 开工五查（先跑这五条，确认你看到的盘 == 我留下的盘）
 
 1. `cd CommerceQL && git rev-parse --short HEAD && git rev-list --count HEAD && git ls-remote origin main && git status --porcelain`
-   ⇒ 我交接时 = **`0d065b2`／489 笔／远端同点／工作树 0 行**（`0d065b2` 是 QA 第 27 轮落库笔，含"最终合包"）。
+   ⇒ 起草时现读 = **`0d065b2`／489 笔／远端同点／工作树 0 行**（`0d065b2` 是 QA 第 27 轮落库笔，含"最终合包"）。🔴 **本件自身的落库笔会把这两个数后移一笔** ⇒ 你开工时以 `git rev-parse --short HEAD` 与 `git rev-list --count HEAD` 的**当期实读**为准，🚫 不许把上面那对当"当期"（本项目第 16 轮那条"取证件三连发天然差一笔"的坑，这里同一形状）。
 2. 台账＋残渣＋容器：见上面 §1 那三条尺，读数应逐位相同。
 3. 门禁当期判词：`backend/reports/w6/eval_metrics.json` 的 `meta.git` ⟂ `generated_at` ⟂ `gates[]`
    ⇒ 现读 = **`rev 88f3500`／`dirty false`／generated `2026-10-07T05:27:34+00:00`／PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2**（入库笔另格 = `git log -1 --format=%h -- backend/reports/w6/eval_metrics.json` = `e940192`）⇒ 对外只写 **PASS 1/8**，🚫 不得写"门禁通过"。
