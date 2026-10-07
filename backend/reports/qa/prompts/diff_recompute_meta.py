@@ -51,15 +51,33 @@ def walk(a: object, b: object, path: str = "") -> list[tuple[str, str, object, o
     return diffs
 
 
-def _hit(path: str, meta: tuple[str, ...]) -> bool:
-    """白名单匹配：普通前缀 ＋ 以 `~` 开头的**尾缀**规则（用于 `…items[7].静默前置` 这类下标不定的派生句）。"""
-    return any((p.endswith(m[1:]) if m.startswith("~") else p.startswith(m)) for p in [path] for m in meta)
+def _hit(path: str, meta: tuple[str, ...], *, dotted_anywhere: bool = False) -> bool:
+    """白名单匹配：普通前缀 ＋ 以 `~` 开头的**尾缀**规则（用于 `…items[7].静默前置` 这类下标不定的派生句）。
+
+    🔴 `dotted_anywhere`（QA 第 25 轮加）：白名单里带点的规则（`git.rev`）默认**只按前缀**匹配 ⇒
+    从根走的递归路径是 `meta.git.rev` / `gate_provenance.report_git.rev`，**不会**被豁免 ⇒
+    "同树两遍"用默认白名单就能得 rc 0，"跨代（换代件 ⟷ 新件）"用同一把白名单会得到非零判定量。
+    开这个开关 = 让带点规则在**任意层**匹配（`p == m` 或 `p` 以 `.`+m 结尾或 `p` 含 `.`+m+`.`）。
+    ⚠️ 它只改变"算不算 meta"，**不隐藏差集**：两把计数与逐条差集永远都印，退出码用哪一把由开关决定。
+    """
+    for m in meta:
+        if m.startswith("~"):
+            if path.endswith(m[1:]):
+                return True
+            continue
+        if path.startswith(m):
+            return True
+        if dotted_anywhere and "." in m and (path == m or path.endswith("." + m) or ("." + m + ".") in ("." + path + ".")):
+            return True
+    return False
 
 
 def main(argv: list[str]) -> int:
+    relax = "--relax-dotted" in argv
+    argv = [a for a in argv if a != "--relax-dotted"]
     if len(argv) < 3:
         print(__doc__)
-        print("用法：diff_recompute_meta.py <A.json> <B.json> [meta 前缀 …]（尾缀规则写作 ~字段名）")
+        print("用法：diff_recompute_meta.py <A.json> <B.json> [meta 前缀 …] [--relax-dotted]（尾缀规则写作 ~字段名）")
         return 2
     try:
         a = json.loads(Path(argv[1]).read_text(encoding="utf-8"))
@@ -70,20 +88,25 @@ def main(argv: list[str]) -> int:
     meta = tuple(argv[3:]) if len(argv) > 3 else DEFAULT_META
 
     diffs = walk(a, b)
-    in_meta = [d for d in diffs if _hit(d[0], meta)]
-    judgment = [d for d in diffs if not _hit(d[0], meta)]
+    strict = [d for d in diffs if not _hit(d[0], meta)]
+    loose = [d for d in diffs if not _hit(d[0], meta, dotted_anywhere=True)]
+    in_strict = [d for d in diffs if _hit(d[0], meta)]
     print(f"A = {argv[1]}\nB = {argv[2]}")
     print(f"白名单 = {'默认六条' if len(argv) <= 3 else ' ＋ '.join(meta)}")
-    print(f"差集总数 = {len(diffs)} ｜ meta（允许差） = {len(in_meta)} ｜ **判定量（必须 0）** = {len(judgment)}")
-    print("--- meta 差（逐条列出，别只报条数）---")
-    for p, kind, x, y in in_meta:
-        print(f"  {p} [{kind}]: {json.dumps(x, ensure_ascii=False)[:90]}  ->  "
-              f"{json.dumps(y, ensure_ascii=False)[:90]}")
-    print("--- 判定量差（非 0 即「重跑不闭合」）---")
-    for p, kind, x, y in judgment:
-        print(f"  {p} [{kind}]: {json.dumps(x, ensure_ascii=False)[:140]}  ->  "
-              f"{json.dumps(y, ensure_ascii=False)[:140]}")
-    return 1 if judgment else 0
+    print(f"差集总数 = {len(diffs)}")
+    print(f"  【严格＝前缀】meta（允许差） = {len(in_strict)} ｜ **判定量** = {len(strict)}")
+    print(f"  【宽松＝带点规则任意层】判定量 = {len(loose)}"
+          f" ｜ 两把之差（被宽松豁免掉的） = {len(strict) - len(loose)}")
+    print(f"  退出码取 = {'宽松' if relax else '严格'}")
+    print("--- 差集逐条（一条都不藏）---")
+    for p, kind, x, y in diffs:
+        tag = "meta(严格)" if _hit(p, meta) else ("meta(仅宽松)" if _hit(p, meta, dotted_anywhere=True) else "判定量")
+        print(f"  [{tag}] {p} {kind}: {json.dumps(x, ensure_ascii=False)[:110]}  ->  "
+              f"{json.dumps(y, ensure_ascii=False)[:110]}")
+    judged = loose if relax else strict
+    if relax and strict and not loose:
+        print("⚠️ 本判定来自 --relax-dotted：换代比对把 rev／commit_count 一类身份字段豁免掉了 ⇒ 引用时必须点名'哪些路径是被豁免的身份字段'。")
+    return 1 if judged else 0
 
 
 if __name__ == "__main__":
