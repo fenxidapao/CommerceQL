@@ -44,7 +44,7 @@
 
 1. `backend/reports/w8/RELAY.md` 新节（结论 ＋ `文件:行号` ＋ 现读时刻 ＋ 复算命令 ＋ **串行资源表六面**：`git` 索引／共享 `ecom`／共享栈／被测镜像／匣带重写／`reports/qa/**`，逐条给尺）。
 2. `backend/reports/w8/DELIVERY.md` 一节（① … ⑩，含**自曝**那一格）。
-3. 给总控的**短回执**（本轮派单封顶 ≤80 字）＋**给 QA 的粘贴块**（含"没做什么"与"请裁的格"）。
+3. 给总控的**短回执**（🔒 ≤80 字是 **T-49 派单的本轮临时封顶**；岗位说明书 `PROMPT.md §5` 常态上限 ≤250 字，别拿 80 当常设尺）＋**给 QA 的粘贴块**（含"没做什么"与"请裁的格"）。
 4. 按名 stage → **一轮一笔**提交 → push → 现读 `HEAD == origin/main` ＋ `git status` 空。
 5. 只报实测：没跑就写 `UNVERIFIED`；`exit 0 ≠ 跑完`；管道会吞退出码；因果句要有对照组。
 
@@ -52,5 +52,5 @@
 
 - 报完计划直接开工。只有这四种情况停下来问总控：**花钱**、**动别的窗写面**、**改判据措辞**、**不可逆动作**。
 - 判据与 `U-xx`：你有权裁，但**当轮取号当轮结案只适用于"离线自检／静态断言可自证"的缺陷**（`§4.8` 规则④）；含活体读数的号当轮不得自写结案。
-- 环境坑（中文 Windows ＋ Git Bash 的十数条）：先读 Qoder 项目记忆 `…\memory\project-commerceql-env-pitfalls.md` **尾部**（现最新到 10-07 第 21 轮），别凭索引猜；交付协议与多窗写者规矩在同目录 `project-delivery-round-protocol.md`／`project-multiwindow-sole-writer.md`。
+- 环境坑（中文 Windows ＋ Git Bash 的十数条）：先读 Qoder 项目记忆 `…\memory\project-commerceql-env-pitfalls.md` **尾部**（件按轮次 🔻 追加，**只认尾部最新一段，轮次号不再维护**——起草时写"第 21 轮"，10-07 当晚已到第 25–26 轮；别凭索引猜）；交付协议与多窗写者规矩在同目录 `project-delivery-round-protocol.md`／`project-multiwindow-sole-writer.md`。
 - 想知道上一轮发生了什么：`git log -6 --format='%h %s'`（QA 第 24–27 轮的复算全在 `backend/reports/qa/RELAY.md §廿一`起）；W8 自己的账在 `RELAY.md §廿一／§廿二／§廿三`（§廿三 = 第 22 轮，T-48 两件达成）。
