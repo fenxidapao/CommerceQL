@@ -20,7 +20,7 @@
 
 ## 2. 开工五查（先跑这五条，确认你看到的盘 == 我留下的盘）
 
-1. `cd CommerceQL && git rev-parse --short HEAD && git rev-list --count HEAD && git ls-remote origin main && git status --porcelain`（🔻 第 28 轮订正错对：`89a8d4d` 点实 = **487** 笔，旧文“488”是下一点 `e3c3789` 的笔数＝起草数误配当期；第 28 轮开工现读 = **`1a70cc1`／491 笔／远端同点／树 0**。本件自身落库笔也会后移 HEAD ⇒ 永远以开工当期 `git rev-parse` 实读为准，🚫 不许把任何起草快照当当期）
+1. `cd CommerceQL && git rev-parse --short HEAD && git rev-list --count HEAD && git ls-remote origin main && git status --porcelain`（🔻 第 28 轮订正错对：`89a8d4d` 点实 = **487** 笔，旧文“488”是下一点 `e3c3789` 的笔数＝起草数误配当期；第 28 轮开工现读 = **`1a70cc1`／491 笔／远端同点／树 0**；🔻 第 30 轮交接现读 = **`0f7d7f9`／496 笔／工作树 0**（R29 验收账落笔时**未 push**，远端尚在 `3f85bd4` ⇒ 开工先 `git ls-remote` 比对，属正常态）。链：487(`89a8d4d`)→488(`e3c3789`)→491(`1a70cc1`)→494(`9efe3f2`)→495(`3f85bd4`)→496(`0f7d7f9`)。本件自身落库笔也会后移 HEAD ⇒ 永远以开工当期 `git rev-parse` 实读为准，🚫 不许把任何起草快照当当期）
 2. 台账（应逐位不动）：`docker exec -i commerceql-pg-1 psql -U postgres -d ecom -q -t -A -c "begin; select count(*), to_char(sum(cost_cny),'FM999990.000000'), max(created_at) from app.cost_ledger; rollback;"` ⇒ `1830|3.025849|2026-10-07 04:28:00.872275+00`
 3. 残渣：`… -c "select datname from pg_database where datname like 'ecom%' order by 1;"` ⇒ `ecom`、`ecom_u123_probe`
 4. 容器：`docker ps --format "{{.Names}} {{.Status}}"` ⇒ 共享栈五件 `commerceql-{api,web,pgbouncer,redis,pg}-1` 均 `Up`（`CommerceQL/deploy` 起的）
@@ -30,9 +30,11 @@
 
 | # | 事项 | 指针（现读位置） |
 |---|---|---|
-| 1 | **W8 第 23 轮 T-48 的验收结论已交、T-49 已派未回**：等 W8 回执后复算 A（§4.8 两行"多一格"＝渲染丢内容）＋ B（注入段纪律升格） | `backend/reports/qa/TASK_BOARD.md` 最新节（现读 `## 31. T-49`），粘贴块在 §31.2 |
+| 1 | ✅ **T-49 第 29 轮验收闭环（A 达成＋B 达成）**：五把尺独立复算全过；W8 提交 `3f85bd4`（仅 docs/07，+5/-3，已 push）；两处不翻转瑕疵（台账尾格誊成 00:00:00、113“行”实为 113 个 U 号／121 表格行）见 RELAY §26.3。**当前无在途派单** | `RELAY.md` §廿六；`TASK_BOARD.md` §32 |
 | 2 | ✅ **第 27 轮已闭环（细节只认 RELAY §24.7–24.9，不再当未办追）**：PPT 14 页复算达成（两处只能指图＝P10「5.5/6.5 秒」与 10-04 截图时间戳）；最终包两档已出＝`林琪荣（26嘉大班）.zip` **51,158,862 B** ＋ `_不含git_备选.zip` **11,583,556 B**，四道闸门全 0；含 `.git` 已由未批转可批；🔴 发送由总控本人做；T-40 旧演示请示已撤件，要演示重开新单不复活旧单 | `RELAY.md` §24.7／§24.8／§24.9（行号会漂，只认节首串）；判据原文 `E:/01_实训/项目验收流程2.txt` |
 | 3 | 已知不闭（不得写成已达成）：`U-140` 判据含活体读数⇒当轮不结案；三格 FAIL 同因「τ 未校准」；`G-3`／`G-4` 两条未覆盖属沙箱能力；`G-8` 无第二轮回路 | `docs/07 §4.8` 各行（行号会漂，只认行首串）；判据定义处 `docs/07 §17.3` |
+| 4 | **UI 取证（R30 总控问“页面简陋”，只登记不派单，取号权在 W8）**：前端**严格参照 06**（路由逐行＝§2.1 P0 五页＋三错误页；17 组件与 §4.0 同名；tokens.ts 逐字自 §3.7；空状态逐字同 §5.1）；“简陋”主因＝§3.1 **刻意选的 AntD5 基线**（无品牌规范、禁渐变发光）。缺陷候选二：① `/chat` 空状态 5 例题渲染两遍（中央卡片 `ChatPage.tsx:759` ＋ 底部蓝字 chips `ChatPage.tsx:642`／`AskBox.tsx:116`）；② 06 §14.2 Checklist 的 D 组真机流式项、B/G 截图项（灰阶四态、存在性泄露比对）、F 组 axe-core 0-critical 自 w5 起 BLOCKED 无闭环记录。P1 未做（SessionRail／审计页／设置页）属分期非缺陷 | `docs/06` §3.1／§5.1／§14.2；`w5/DELIVERY.md` 第三节；`RELAY.md` §27.2 |
+| 5 | **待总控点句三件**：① `COMPLETENESS.md` 要不要加封版声明；② R29/R30 的 QA 账 push 与否（未说不 push）；③ UI 两候选是否立单（立则 W8 取号，QA 只给证据） | 本件 §1；`git ls-remote` 对拍 |
 
 ## 4. 读数的形状要求（本项目踩得最多的坑）
 
@@ -60,5 +62,6 @@
 
 - venv 在 `CommerceQL/.venv/Scripts/python.exe`（不是 `backend/.venv`）；`PYTHONUTF8=1 PYTHONIOENCODING=utf-8`；Windows 版 python 吃 `E:/…` 不吃 `/e/…`；docker/psql 路径要 `MSYS_NO_PATHCONV=1`。
 - 管道吞退出码（`cmd | tail` 的 `$?` 是 `tail` 的）⇒ 要 rc 就 `> file` 再 `echo rc=$?`；`exit 0 ≠ 跑完`。
-- 生成器脚本落 `E:/tmp_qoder/`（仓库外），文件名先 `ls` 再调用（上一窗连错三次）。
+- docker CLI 常常不在本壳 PATH（报“术语 docker 不识别”≠没装/≠引擎停）⇒ 全路径 `C:/Users/林琪荣/AppData/Local/Programs/DockerDesktop/resources/bin/docker.exe`；判引擎 ＝ `docker version` client/server 双版本 rc 0 ＋ `docker info` Server 段（CLI 在 PATH ≠ 引擎 Up）。
+- 生成器脚本落仓库外临时目录（`E:/tmp_qoder/` 或系统 `%TEMP%`），跑完即删、勿进仓库；文件名先 `ls` 再调用（上一窗连错三次）。
 - 420 MiB 的 `data/ecom_sandbox.db` 与 `frontend/node_modules` 是 `.gitignore` 内的**可再生物**（生成器随包：`data/generator/`、`data/schema.sql`）⇒ 不进包，也别说"包不够大"。
