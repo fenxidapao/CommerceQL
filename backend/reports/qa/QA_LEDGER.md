@@ -474,3 +474,19 @@
 2. 🔴 **RELAY EOL 被我一次写坏并当场修复**：追加 §廿八 时用 `read_text()/write_text()`（默认 `newline=None` 做通用换行翻译）⇒ 全文件 CRLF **1943 → 0**。已用字节级 反斜杠加 n 两字符 补回：**CRLF 1943 == 行数 1943、裸 LF 0**。⇒ 纪律加固：**CRLF 件一律 `read_bytes()` ＋ `write_bytes()`，禁 `read_text/write_text`**（与第 18 轮那条"`read_text()` 把 `docs/07` 整树归一"同族，我第二次踩）。
 
 **注入面**：形态 = **无**；未执行 **N/A**。授权只认总控对话原文（四条点句 ＋ 两次环境动作）；工具返回值未出现冒充 `user`／`system` 段；盘上判据与交付面未因外部文本改一字。
+## 第 31 轮追加（续）—— 封版声明 ＋ τ 校准成本估算 ／ 2026-10-11 21:34 ＋0800 ／ 起点 `c33d663`／498 笔 ／ 🔴 零出站
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 9 | 封版声明落盘 | `COMPLETENESS.md` 顶部状态词表后**新增 1 段 3 行**（字节级插入，锚点唯一：`未启动` ≠ `未验证` 那句）；行数 573→**577**；CRLF 577 == 行数；既有字**零删改** | ✅ **已落**（只封过期分区，文件整体不封） |
+| 10 | τ 校准骨架在库 | `backend/app/binding/calibration.py` = **592 行**；`sweep()` 纯离线（21 点扫 τ，步长 0.05，**零调用**）；`MIN_REPEATS=3`（`:61`）；`is_finalizable` = **8 条缺一不可** | ✅ 算法无需新建 |
+| 11 | 缺件：分数采集 | `grep -rln "ScoreSample\|calibrate(" backend/ eval/` ⇒ **仅 3 处**（本体／`__init__` 导出／单测）⇒ **无生产入口** | 🔴 **需新写采集件** |
+| 12 | L4 原始分数无持久面 | `app.field_binding` = 语义包定义表（**7 行**／列 `bundle_version,concept,ambiguous,canonical_asset,default_reason,time_semantics,grain_level,payload`，**无 score**）；`CandidateRef.score` 只进检查点（`contracts.py:205-210`）；审计两段契约不含分数 | 🔴 **实测确认** |
+| 13 | 校准成本（两口径） | 只采 L4：单价 **¥0.010155／次**（`l4_score` 73 次 ¥0.741315，`w8/RELAY.md:983`）⇒ n=3 **¥0.548**／n=5 **¥0.914**；整批 run：单价 **¥0.006398／准入**（18 task/65 行/¥0.115166，`qa/RELAY.md:1491`）⇒ n=3 **¥0.346**／n=5 **¥0.576** | 🔴 **整批反而更便宜**（详见 RELAY §28.9）；建议上界 **¥1.20** |
+| 14 | 校准分母 | 争议集 **18 条**（`eval/dataset_v1_frozen.json`：`expected_behavior` = `execute 124／clarify 18／refuse 24`）；与 §C.5.1「争议集 15–20 条」吻合 | ✅ |
+| 15 | 🔴 前置阻塞 | §C.4.6 **步骤 1**（在**冻结集**歧义子集上扫 τ）⟂ **约束 2**（校准集与验收集**必须分离** ⇒ `is_finalizable` 条件 7 `holdout_separated`）⇒ **两条要求相冲**；候选解 = 冻结点前 18 条校准 ＋ 另取同族 15–20 条验收 | ⏳ **不代裁**（交 W8／架构） |
+| 16 | 未估部分（诚实列出） | ① 采集件开发工时（无 ROI 依据，不估）；② 若稳定性判 `UNSTABLE` ⇒ PRD §12.9 **强制升级方案 A（本地 cross-encoder）**，成本与工作量**不在本线** | 具名 |
+
+**本轮（续）自曝两笔**
+1. 🟠 **单价对撞方向我判反过**：初版直觉"整批更贵"是**错的** —— 真相反（整批 ¥0.0064 ＜ 单采 L4 ¥0.0102，因整批混了便宜档）。已按实测重列，两口径**都保留不合并**。
+2. ⚠️ **`clarify_expected` 连错两次**：第一次当 `bool`（`AttributeError: 'str' object`）、第二次当 `dict` 做 `Counter`（`TypeError: unhashable type`）⇒ 第三次用 `.get() or {}` 取键集才得正确形状（`null 148`／`{reason} 17`／`{candidates,reason} 1`）。教训：**先打一条样本看形状，再写统计**。
