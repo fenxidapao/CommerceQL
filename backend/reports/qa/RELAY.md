@@ -1995,3 +1995,89 @@ C 要的是**引用口径**落笔，不是重算。判定输入（两把日志 �
 2. ⚠️ **本轮读 `clarify_expected` 连错两次**：第一次按 `bool` 判（`AttributeError: 'str' object`）、第二次按 `dict` 键 `collections.Counter`（`TypeError: unhashable type`）⇒ **第三次才用 `.get() or {}` 取键集**得到正确形状（`null 148`／`{reason} 17`／`{candidates,reason} 1`）。⇒ 教训：**先打一条样本看形状，再写统计**（与本项目"先证尺能看见它"同族）。
 
 审计结论（≤200 字）：R31 续、零出站。① 封版声明已落 `COMPLETENESS.md` 顶部（只封**过期分区**、不封文件本体）。② τ 校准成本：**算法骨架已在库**（`calibration.py` 592 行，`sweep` 纯离线零调用，单测用已知值对照）；**缺的是分数采集件**（全仓仅 3 处 `ScoreSample` 命中＝本体/导出/单测，且 L4 原始分数**无持久面**——`field_binding` 是定义表、审计契约无分数）。分母 = 争议集 **18 条**；成本 **n=3 ¥0.35–0.55 ／ n=5 ¥0.58–0.91**（两口径，整批更便宜），建议上界 **¥1.20**。🔴 **前置阻塞一条**：§C.4.6 步骤 1（在冻结集歧义子集上扫）与约束 2（校准/验收分离）**相冲**，候选解 = 冻结点前 18 条校准 ＋ 另取同族 15–20 条验收；不代裁。自曝：单价初版对撞方向判反（已订正）＋ `clarify_expected` 连错两次。
+## §廿九 第 31 轮 · T-50 验收（**A 达成 ＋ B 达成；三处发现，其一 W8 未登记** ｜ 2026-10-11 22:43 ＋0800 ｜ `0fd3062`／500 笔 ｜ 🔴 本窗零出站）
+
+> 判向一句话：**T-50 两半都达成（我逐把独立复算，读数与回执逐位同）。但 W8 登记的"评测侧需跟改"经实测是假警报；而它漏掉的一面——改名改变了前端用户可见文案——是真的。**
+
+### 29.0 起点与边界（现读）
+
+- HEAD `0fd3062`／**500** 笔／工作树 **0**／`git ls-remote` = `0fd3062…` 全等（W8 已 push `2ae2230..0fd3062`，含本窗两笔）。
+- W8 提交 `0fd3062` 文件面 = **3 件**（`backend/app/graph/nodes/bind.py` 9/1、`backend/reports/w8/RELAY.md` +38、`backend/reports/w8/t50_reason_probe.py` +76）⇒ 越界尺：未碰 `docs/07`／`eval/**`／`deploy/**`／`tests/**`／容器 **✓**（本窗 `git diff --name-only` 复算）。
+- 台账 `1830|3.025849|2026-10-07 04:28:00.872275+00` 逐位同；残渣 `ecom`＋`ecom_u123_probe` **✓**；零取号（§4.8 指针行仍 `U-141`）**✓**。
+
+### 29.1 A ｜ 判据③ 反静默 —— **达成**
+
+| 尺 | W8 回执 | 本窗独立复算 | 判 |
+|---|---|---|---|
+| `reason.value` ∉ `llm_unavailable` 家族 | `plan_generation_failed` | **同**（本窗自跑 `t50_reason_probe.py`，`in llm_unavailable family? = False`） | ✓ |
+| 夹具 | 既有夹具 3 passed | **3 passed in 0.73s**（本窗自跑 `pytest -q tests/unit/test_bind_l4_usage.py`） | ✓ |
+| 用量照记 | usage 仍记 | **同**（`usage_recorded = [(TokenUsage(input=100, output=20, cache_hit=0, total=120), Decimal('0.0007'))]`） | ✓ |
+| `detail.reason` 保真 | `invalid_json:…` | **同**（`"invalid_json:Expecting value: line 1 column 1 (char 0)"`） | ✓ |
+| diff 面 | 9/1，全在一处 | **同**（`git show --numstat` = `9 1 backend/app/graph/nodes/bind.py`；diff 仅 `@@ -189,8 +189,16 @@` 一处） | ✓ |
+| `ruff` | rc=0 | 未复跑（属实现面自证，本窗只核 rc 声明不代跑；**记为未复算**） | ⚠️ `UNVERIFIED` |
+
+**判据③ 字面达成**。⚠️ 但须记一条**具名程度不足**（不影响达成，属既有契约槽位缺失）：`plan_generation_failed` 的值义是"计划生成失败"，而本场景是"**绑定精排（bind.l4）内容不可用**"⇒ 值**不指代截断这个形状**。根因 = C-08 八值无"输出不可用"槽位（本窗现读 `core/enums.py:449-456` 八值逐字核过），W8 已在代码注释与回执里**自曝**，并挂 `U-75` 扩枚举。⇒ **不算违例，算既有缺口**。
+
+### 29.2 B ｜ 判据④ H 回执 —— **达成**
+
+本窗自跑 `t39_h_cell.py`（`PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/t39_h_cell.py`，rc=0）：
+
+| 窗 | 行数 | H（四格，不含 repair） | H_all（含 repair） |
+|---|---|---|---|
+| 含末帧 | 32（void 0） | **6.59 s** | **8.12 s** |
+| 切末帧 | 31（void 0） | **6.76 s** | **8.30 s** |
+| 宽窗 | 36（void 4） | **6.69 s** | **8.22 s** |
+
+- 与 W8 回执**逐位同**；`ok 率 = 4/9 = 0.4444` 亦现读复现。
+- 🔴 **穿破成立**：全部 **> `U-126` 区间上界 6.18 s**（区间原文 `H ∈ [5.99, 6.18]`，出处 `U-126` 行 v1.7.5）⇒ W8 写"须点名"是**如实**。
+- ⚠️ **计数瑕疵（不翻转）**：W8 写"**五把**全部穿破"但所列 = **六个值**（3 窗 × 2 口径）。本窗登记为誊写瑕疵，实质结论不变（六值全在上界之上）。
+
+### 29.3 🔴 发现一：W8 登记的"评测侧需跟改"**不成立**（实测反证）
+
+W8 回执称：`eval/reporter.py` 的 `split_over_refusal` 按 **`code=="llm_unavailable"`** ＋ `stage=="bind.l4"` 认「环境型误拒」⇒ 改名后不再命中，评测侧需跟改。
+
+**本窗实测（三组对照，直接调该函数）**：
+
+| 输入 `code` | `detail.stage` | `with_bind_l4_degradation` |
+|---|---|---|
+| `llm_unavailable` | `bind.l4` | `['X']` |
+| `plan_generation_failed` | `bind.l4` | `['X']` |
+| `ANY_RANDOM_STRING` | `bind.l4` | `['X']` |
+| `plan_generation_failed` | `bind.l2` | `[]` |
+
+⇒ **判定函数 `has_l4()` 只看 `detail.stage == "bind.l4"`，完全不读 `code`**（现读 `eval/reporter.py:571-576`，`_L4_STAGE = "bind.l4"` 定义在 `:105`）。**改名后该识别照样命中 ⇒ "需跟改"是假警报**，评测侧无需为此改动。
+- ⚠️ 唯一真实残留 = **文档陈旧**：`eval/reporter.py:566` 的 docstring 仍写 `llm_unavailable → reduced_candidates`（该串是**注释**不是逻辑）。属 `eval/**` 写面，**本窗不动**，登记为可选清理项。
+- ⇒ 教训同族：**"读起来像依赖 code"≠"真的依赖 code"** —— 只读 docstring 不读实现，会把注释当契约。
+
+### 29.4 🔴 发现二：W8 **未登记**的一处真实副作用 —— 前端用户可见文案被改名改变
+
+现读 `frontend/src/components/DegradeBar.tsx:28-48` 的 `degradeText(reason, action)` 是**顺序 if 链**，命中即返回：
+
+| # | 条件 | 文案 |
+|---|---|---|
+| 2 | `reason === 'llm_unavailable'` **或** `action === 'template_only'` | 「智能解析暂不可用，本次按固定模板查询，结果范围可能受限」 |
+| 4 | **`action === 'reduced_candidates'`** 或 `reason === 'cache_fallback'` | 「本次返回了部分结果，部分数据未能获取」 |
+
+而 `bind.py` 这次降级的 `action_taken` **恒为 `REDUCED_CANDIDATES`**（本窗现读 `t50_reason_probe.py` 输出：`action_taken = reduced_candidates`）：
+
+- **改名前**：第 2 条先命中（`reason === 'llm_unavailable'`）⇒ 文案 = 「智能解析暂不可用，本次按固定模板查询…」
+- **改名后**：第 2 条不命中（reason 变了、action 非 template_only）⇒ 落到**第 4 条**（`action === 'reduced_candidates'`）⇒ 文案 = 「**本次返回了部分结果，部分数据未能获取**」
+
+⇒ **用户可见文案确实变了**，且两个都不精确：
+- 旧文案错在"按固定模板查询"（实际没走模板查询）
+- 新文案错在"**部分数据未能获取**"（实际是 L4 候选被缩减后继续走原链路，SQL 照常执行、数据是全的）⇒ **新文案在"用户会不会以为数据缺了一块"这个维度上更可疑**。
+
+**旁证一条**：`docs/06:1102-1105` 的 §4.11 文案表里，那一格写的是 **`reduced_result`**，而实现判的是 `reduced_candidates` ⇒ **文档与实现用词本就不一致**（属既有，非本次引入）。
+
+### 29.5 ⚠️ 发现三：`t50_reason_probe.py` 的**入口未给全**（可复现性）
+
+- 按回执字面 `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/t50_reason_probe.py` 从仓库根跑 ⇒ **`ModuleNotFoundError: No module named 'app'`**（`:20` `from app.core.contracts import …`，脚本**无 `sys.path` 引导**，与同目录 `t39_h_cell.py` 有 `sys.path.insert` 的写法不一致）。
+- 本窗补 `PYTHONPATH=backend` 前置后才跑通。⇒ **登记为可复现性瑕疵（不影响达成）**：新窗照回执字面跑会失败，建议 W8 后续脚本统一带 path 引导。
+
+### 29.6 U-128 的结案口径（**本窗按字面从严：不单独结案**）
+
+- 落地事实齐：判据 ①②（前轮）＋ ③（本轮 A）＋ ④（本轮 B）**四条的"落地"动作全部到位**，H 已交回。
+- 🔴 但 `U-128` 行判据 ④ 的标题原文含「**（本号不得单独结案）**」⇒ 字面读 = 结案时点须与 `U-126` 联立。
+- ⇒ **本窗裁定：`U-128` = 落地（四判据到位）但不单独结案**；结案须与 `U-126` 配平表同步。若 W8 认为 ④ 的原意只是"必须交 H 才可结案"，**一句裁定即可结案**（判据措辞解释权在 W8，本窗不自裁）。
+
+审计结论（≤200 字）：T-50 **A 达成 ＋ B 达成**，两半本窗逐把独立复算、读数与回执逐位同（reason=plan_generation_failed ∉ 该家族；夹具 3 passed；H 六值 6.59/6.76/6.69/8.12/8.30/8.22 全 > 6.18 穿破成立）。**三处发现**：① W8 登记的"评测侧需跟改"**实测不成立** —— `has_l4()` 只看 `detail.stage`、不读 `code`（三组对照：code 换任意串仍命中）⇒ 假警报，仅 docstring 陈旧；② **W8 未登记的真副作用**：改名令前端 `DegradeBar` 文案由"按固定模板查询"变为「部分数据未能获取」（因 `action=reduced_candidates` 先命中 `:38`）；③ `t50_reason_probe.py` 无 path 引导，照回执字面跑不通（需 `PYTHONPATH=backend`）。`U-128` 四判据落地齐，但按 ④ 标题"不得单独结案"**本窗不结案**。

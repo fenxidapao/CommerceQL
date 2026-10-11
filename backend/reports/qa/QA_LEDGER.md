@@ -490,3 +490,31 @@
 **本轮（续）自曝两笔**
 1. 🟠 **单价对撞方向我判反过**：初版直觉"整批更贵"是**错的** —— 真相反（整批 ¥0.0064 ＜ 单采 L4 ¥0.0102，因整批混了便宜档）。已按实测重列，两口径**都保留不合并**。
 2. ⚠️ **`clarify_expected` 连错两次**：第一次当 `bool`（`AttributeError: 'str' object`）、第二次当 `dict` 做 `Counter`（`TypeError: unhashable type`）⇒ 第三次用 `.get() or {}` 取键集才得正确形状（`null 148`／`{reason} 17`／`{candidates,reason} 1`）。教训：**先打一条样本看形状，再写统计**。
+## T-50 验收（W8 第 24 轮）／ 2026-10-11 22:43 ＋0800 ／ `0fd3062`／500 笔 ／ 本窗零出站
+
+| # | 判据 | W8 回执 | 本窗独立复算 | 判 |
+|---|---|---|---|---|
+| A1 | `reason.value` ∉ `llm_unavailable` 家族 | `plan_generation_failed` | **同**（自跑探针：`in llm_unavailable family? = False`） | ✅ |
+| A2 | 夹具 | 3 passed | **3 passed in 0.73s**（自跑） | ✅ |
+| A3 | 用量照记 | 是 | **同**（`TokenUsage(100,20,0,120)` ＋ `Decimal('0.0007')`） | ✅ |
+| A4 | `detail.reason` 保真 | `invalid_json:…` | **同** | ✅ |
+| A5 | diff 面 | 9/1 全一处 | **同**（`9 1 bind.py`；仅 `@@ -189,8 +189,16 @@`） | ✅ |
+| A6 | `ruff` rc=0 | 声称 | **未复跑**（实现面自证） | ⚠️ UNVERIFIED |
+| B1 | H 三窗 × 2 口径 | 6.59/6.76/6.69 ＋ 8.12/8.30/8.22 | **逐位同**（自跑 `t39_h_cell.py`） | ✅ |
+| B2 | 穿破 `U-126` 上界 6.18 | 须点名 | **六值全 > 6.18 ⇒ 成立** | ✅ |
+| B3 | `ok 率` | — | **4/9 = 0.4444**（复现） | ✅ |
+| C1 | 台账逐位 | 同 | **同** `1830|3.025849|2026-10-07 04:28:00.872275+00` | ✅ |
+| C2 | 残渣 | 2 | **同** | ✅ |
+| C3 | 越界尺 | 0 行 | **同**（未碰 docs/07·eval·deploy·tests·容器） | ✅ |
+| C4 | 零取号 | 指针 `U-141` | **同** | ✅ |
+
+**三处发现（本窗）**
+1. 🔴 **W8 登记的"评测侧需跟改"实测不成立**：`eval/reporter.py:571-576` 的 `has_l4()` **只看 `detail.stage == "bind.l4"`、不读 `code`**；三组对照（`llm_unavailable`／`plan_generation_failed`／`ANY_RANDOM_STRING` 配 `bind.l4` 全部命中；`bind.l2` 不命中）⇒ 改名后识别照样命中 ⇒ **假警报**。仅 `:566` docstring 陈旧（属 `eval/**` 写面，本窗不动）。
+2. 🔴 **W8 未登记的真副作用**：`frontend/src/components/DegradeBar.tsx:28-48` 是**顺序 if 链**；`action` 恒为 `reduced_candidates` ⇒ 改名后第 2 条不再命中、**落到第 4 条** ⇒ 用户可见文案由「智能解析暂不可用，本次按固定模板查询…」变为「**本次返回了部分结果，部分数据未能获取**」。两个都不精确（新文案在"以为数据缺了"这一维更可疑）。旁证：`docs/06:1105` 表里写 `reduced_result`，实现判 `reduced_candidates` ⇒ 既有用词不一致。
+3. ⚠️ **`t50_reason_probe.py` 入口未给全**：照回执字面从仓库根跑 ⇒ `ModuleNotFoundError: No module named 'app'`（无 `sys.path` 引导；同目录 `t39_h_cell.py` 有）。补 `PYTHONPATH=backend` 才通。
+
+**`U-128` 结案口径**：四判据落地动作齐（①②前轮＋③④本轮），但判据 ④ 标题含「**本号不得单独结案**」⇒ 本窗**不结案**，结案须与 `U-126` 联立；若 W8 认定 ④ 原意仅"必须交 H"，一句裁定即可结案。
+
+**🔴 本窗自曝（越界一次，已恢复）**：复算判据④ 时我按回执字面跑了 `t39_h_cell.py`，该脚本**落盘写回** `backend/reports/w8/t39_h_cell.json`（W8 写面，非本窗）⇒ 工作树出现一处越界改动：`head_at_measurement` `70012e7` → `0fd3062`（仅 meta 字段）。**已 `git checkout --` 单文件恢复**，恢复后 `git diff` 为空。
+- ⚠️ 教训：**跑别窗的取证脚本前先读它写不写盘**（`t39_h_cell.py` 尾行有 `落盘 …` —— 我当时看见了却仍然执行）。
+- ✅ 附带的**有用证据**：该次重跑除 `head_at_measurement` 一个 meta 字段外，**其余读数逐位不变**（H 六值、行数 32/31/36、void 0/0/4、各节点 p50、`ok` 率 4/9）⇒ 正合"重算类交付只许差 `meta` 字段"那把尺，**判据④ 的可复现性由此得到独立印证**。
