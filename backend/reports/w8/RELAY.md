@@ -3064,3 +3064,41 @@ git log -1 --format='%h 入库笔' -- backend/reports/w6/eval_metrics.json
 - 自曝三笔：① `U-138` 行尾那个分隔符**是我第 21 轮 append 掉的**（把文字接在了行尾竖线之后 ⇒ 最后一格不闭合），本轮只是把我弄丢的东西补回来；② 生成脚本里我连踩两次**串内反斜杠转义**（先 `"` 被批量替换成 `'` 反而炸了一处 lambda，后 `py_compile` 才拦住 ⇒ 文件未损）；③ 派单的事实前提我**现读推翻了一处**（「SQL 没转义」），按「别人的解释先测」的规矩照实报，不顺着写。
 - 串行资源表六面（PROMPT §5 v2.1 ②）：`git` 索引 = 本窗唯一写者、一轮一笔、按名 stage；共享 `ecom` = 只读事务、逐位不动；共享栈 = 五件在场零动作；被测镜像 = 未 build、本轮零活体读数；匣带 = 0 重写（`git diff --name-only 77aa6f8 -- eval` = 0 行）；`reports/qa/**` = 只读（读的是 `qa/RELAY.md §廿二` 与 `_audit_layout.py` 借尺）。
 - 复算入口：`PYTHONUTF8=1 python backend/reports/w8/_audit_layout.py docs/07_技术设计文档_TDD.md '### 4.8'`；`git diff --name-only 77aa6f8 -- backend/app backend/tests eval deploy`；台账那条 `begin;…rollback;`。
+
+
+## §廿四 第 24 轮复算（**W8 第 24 轮 T-50「U-128 收尾：判据③ 反静默 ＋ 判据④ H 回执」｜QA 第 31 轮派｜🔴 零额度、零出站、零容器动作、未建一次性库、未重建镜像、未跑迁移** ｜ 作业窗 ≈ 22:0x–22:2x ＋0800 ／ 14:0x–14:2x UTC（本段落笔时刻 = 现读 `date` = **2026-10-11 22:17:20 +0800**，`docs/07 §4.8` 规则 ⑤） ｜ 起点 HEAD `5bfccd5`／**499** 笔 ｜ 20 分钟封顶）
+
+### 24.0 结论先行
+
+1. **A（判据③ 反静默）已落**：`bind._online_l4` 的 `not scores.ok` 支**不再**报 `LLM_UNAVAILABLE` ⇒ 改报 `PLAN_GENERATION_FAILED`；具名原因（`invalid_json:…`）仍留在 `detail.reason`。真·模型不可用由 `port.call` 抛 `LlmError` ⇒ 走 `except LlmError` → `llm_error_update`，**不经此处** ⇒ `llm_unavailable` 语义完整留给真·模型不可用。**一处语义改动，未动任何判据措辞、未取号**。
+2. **B（判据④ H 回执）三把窗已复算**（尺 = `t39_h_cell.py`，只读 `docker logs commerceql-api-1`，零出站）⇒ 三把 H 逐位复现，**五把读数全部穿破** `U-126` 区间 `H ∈ [5.99, 6.18]`（须点名）。
+3. **零额度自证**：台账 `1,830／¥3.025849／max 2026-10-07 04:28:00.872275+00` 逐位不动（现读），残渣 `ecom ＋ ecom_u123_probe`，容器五件在场零动作。
+
+### 24.1 A｜判据③（尺① 夹具读数 ＋ 尺② diff/ruff）
+
+- 现读改动点（行首串 ⟂ 现读行号）：`backend/app/graph/nodes/bind.py:190` 行首 `    if not scores.ok:`；`:201` 行首 `            DegradedReason.PLAN_GENERATION_FAILED,`（原 `DegradedReason.LLM_UNAVAILABLE,`）。语义改动 = **1 行**，其余 = 解释性注释（同「该一处」）。
+- **尺① 夹具跑通 ＋ reason 取值打印**（尺 = `reports/w8/t50_reason_probe.py`，与 `tests/unit/test_bind_l4_usage.py::test_failed_parse_still_bills` 同形替身，零出站）：
+  - `refs = ()`、`n_degradations = 1`、`action_taken = reduced_candidates`、`detail.reason = invalid_json:Expecting value: line 1 column 1 (char 0)`、用量照记（`¥0.0007`）。
+  - **`reason.value = plan_generation_failed`** ⇒ 「在 `llm_unavailable` 家族?」= **False** ✔
+  - 既有夹具 `pytest -q tests/unit/test_bind_l4_usage.py` = **3 passed**。
+- **尺②**：`git diff --numstat -- backend/app/graph/nodes/bind.py` = **9 插入 / 1 删除**（= 1 语义行 ＋ 8 注释行，全在 `_online_l4` 该一处）；`ruff check app/graph/nodes/bind.py` = **All checks passed! / rc=0**。
+- ⚠️ **值的选择依据（非静默凑值）**：C-08 的 8 值里**没有**「输出不可用」的槽位 ⇒ 取最近的「生成/解析失败」值；与 W3B 对 `sql_generation_failed` **复用 `plan_generation_failed`** 同取向；具名价值待 `U-75` 扩枚举（`understanding_failed`／`sql_generation_failed`）落地后再换。**未新增 `LlmTruncated` 类**（不改契约）。
+- ⚠️ **跨窗耦合（点名）**：`eval/reporter.py` 的 `split_over_refusal` 按 `code == "llm_unavailable"` ＋ `detail.stage == "bind.l4"` 认「环境导致的误拒」⇒ 本条改名后该识别**不再命中**；`tests/eval/test_consistency_reporter.py:272` 自造字面量仍绿，但**评测侧需跟着改**（`eval/**` 不在本窗写面，未动）。
+
+### 24.2 B｜判据④（三窗 H，尺 = `t39_h_cell.py`，只读日志）
+
+| 窗（具名边界，UTC） | `llm_call` 行数 | 逐槽 p50 ms（n） | 四格 H | 含 `repair` H |
+|---|---|---|---|---|
+| 窄窗·**含末帧** `04:25:59 → 04:26:22` | 32 | `normalize_intent 1076.0(9)`／`plan 1657.0(8)`／`l4_score 2021.0(7)`／`gen_sql 1838.0(7)`／`repair 1533.0(1)` | **6.59** | **8.12** |
+| 窄窗·**切末帧** `04:25:59 → 04:26:21` | 31 | 同上，唯 `gen_sql 2008.5(6)` | **6.76** | **8.30** |
+| **宽窗** `04:25:00 → 04:27:01` | 36（含作废那跑 4 行） | `normalize_intent 1049.0(10)`／`plan 1660.0(9)`／`l4_score 2157.5(8)`／`gen_sql 1820.0(8)`／`repair 1533.0(1)` | **6.69** | **8.22** |
+
+- **口径**：H = 四格（`normalize_intent`＋`plan`＋`l4_score`＋`gen_sql`）p50 之和；「含 `repair`」= 加第 5 档（本批 `repair` 真发 1 次，n=1）。与 QA 第 19／20 轮**同口径**（同一 `t39_h_cell.py`、同一三窗边界）——**本窗自己跑出来的，不是抄派单参考值**。
+- 🔴 **与 `U-126` 区间的关系**：`U-126` 行 v1.7.5 用 `H ∈ [5.99, 6.18]`；本期**五把读数（6.59／6.69／6.76／8.12／8.30）全部穿破上界** ⇒ 该区间已不是本期形状。
+- ⚠️ **读了什么、没读什么**：读的是**既有 `docker logs`**（容器 `2026-10-11T12:12:42Z` 重启但**未重建** ⇒ 10-06／10-07 那批日志仍在）；**未起新批、未花额度**。本段**不写「已修／已结案」**（转绿判词归 QA）。本窗**不改** `U-126` 配平表（`docs/07` 不在本轮写面）。
+- 🔻 **一处自曝**：跑尺时 `t39_h_cell.py` 会把 `head_at_measurement` 刷成本轮 HEAD（`70012e7 → 5bfccd5`）⇒ 那属**回改历史读数**，本窗已**逐字改回** `70012e7`（读数本身逐位不变，唯一差 = 该身份字段；尺 = `git diff --numstat -- backend/reports/w8/t39_h_cell.json` 应 = 0）。
+
+### 24.3 边界、没碰清单与复算入口
+
+- **没碰**：`docs/07`（本轮不在写面，判据措辞一字未动）、`backend/app/llm/**`（①② 已落）、`backend/tests/**`、`eval/**`、`deploy/**`、任何容器 recreate；**零取号**（`§4.8` 指针行现读仍 `U-141`）。
+- 复算入口：A 尺① = `PYTHONUTF8=1 PYTHONPATH=backend .venv/Scripts/python.exe backend/reports/w8/t50_reason_probe.py`；A 夹具 = `pytest -q tests/unit/test_bind_l4_usage.py`；B = `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/t39_h_cell.py`（只读日志）；台账 = 容器内 `select count(*),sum(cost_cny),max(created_at) from app.cost_ledger`（只读）。

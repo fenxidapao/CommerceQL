@@ -189,8 +189,16 @@ async def _online_l4(
         context.record_usage(scores.tokens, scores.cost_cny)
     if not scores.ok:
         # `failed=True` 是**正常返回值**（N-27 约束④ 的 fail-safe 输入），不是异常。
+        # 🔴 `U-128 判据③`（反静默）：本条**不是**"模型不可用" —— 模型回了、内容不可用
+        #    （截断 / 解析失败，具体原因见 detail 的 `reason`）。报 `LLM_UNAVAILABLE` 会把
+        #    "我们配置/载荷不够"混进"模型不可达"族（方向错）。真·模型不可用由 `port.call`
+        #    抛 `LlmError` ⇒ 走本函数上层的 `llm_error_update`（`bind` 的 `except LlmError`），
+        #    **不经此处** ⇒ `llm_unavailable` 语义完整留给真·模型不可用。
+        #    ⚠️ C-08 的 8 值里没有"输出不可用"的槽位 ⇒ 取最近的"生成/解析失败"值
+        #    （与 W3B 对 `sql_generation_failed` 复用 `plan_generation_failed` 同取向）；具名价值
+        #    待 `U-75` 扩枚举（`understanding_failed` / `sql_generation_failed`）落地后再换。
         context.report_degraded(
-            DegradedReason.LLM_UNAVAILABLE,
+            DegradedReason.PLAN_GENERATION_FAILED,
             ActionTaken.REDUCED_CANDIDATES,
             {"stage": "bind.l4", "reason": scores.reason},
         )
