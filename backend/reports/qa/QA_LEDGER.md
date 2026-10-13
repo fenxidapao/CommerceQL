@@ -652,3 +652,26 @@
 | 18 | 注入形态 | **无** | N/A |
 
 **Scope 限制（诚实登记）**：本节全部为**只读**（git／文件／JSON／PRD 读）＋ 本窗写面落盘；**未执行任何外部程序、未调用模型、未写 `backend/reports/qa/**` 之外任何文件**。未向 W8 发任何指令（派单块待总控点句）。
+
+## R31m · W8 第 30 轮 T-51 条件①（L4 触发率）验收：**读数成立 ／ 口径收窄为下界** ＋ 一条常驻口径 ／ 2026-10-13 16:26 ＋0800 ／ 起点 `d7037ff`／515 笔 ／ 🔴 零出站
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | W8 提交面 | `git show --stat d7037ff` ＝ **3 件**（`backend/reports/w8/{RELAY.md, DELIVERY.md, PROMPT_新窗.md}`）共 +95 行；**已 push**（`origin/main` ＝ `d7037ff`）；工作树仅 `?? .workbuddy/` | ✅ |
+| 2 | A1 读数 | `L1\|unresolved\|36`、`L3\|resolved_default\|319`，合计 **355**；`count(distinct task_id)=355`（一任务一行） | ✅ 逐位复现 |
+| 3 | A2 尺自检 | `CHECK (binding_layer = ANY (ARRAY['L1','L2','L3','L4']))` ⇒ **尺能看见 L4**；`binding_layer/state/plan_summary` 三列 `NULL` = **0/0/0**；`bundle_version` 唯一 = `2026.09.14.1` | ✅ 成立 |
+| 4 | B1 写面唯一 | 全仓 `query_plan_writer=` **仅两处**：`deps.py:829`（生产 `QueryPlanStore`）／`harness.py:758`（`None`） | ✅ 成立 |
+| 5 | B2 在线路径 | `bind.py:95` 唯一调用点、**无注入分支**；四层顺序 `L1→L2→L3→L4`（`four_layer.py:237-291`）；L3 拒收 `:335`（`declared_ambiguous` ⇒ `return None`）⇒ 「城市」`ambiguous=True` ⇒ **L4 可达** | ✅ 成立 |
+| 6 | 🔻 **口径收窄** | 「355 行只来自活体路径」**方向成立**，但该面是**下界**：`bind.py:140-153` 的 `_write_query_plan` **在 AMBIGUOUS 分支之外无条件执行** ⇒ 落库面不会漏 `ambiguous` 行；而 `query_plan` 的 `ambiguous` ＝ **0/355**、`audit_log` 的 `clarify` ＝ **139** | 🔻 收窄 |
+| 7 | 同窗覆盖率 | `timestamp >= 2026-09-22`：审计面 **839 行**，带 `query_plan` 的 **355** ⇒ **42.3%**；同窗 `outcome` ＝ `refuse 397`／`failed 235`／`success 109`／`clarify **98**` | ✅ 现读 |
+| 8 | 🔴 **决定性证据** | `eval/results_v2_live_20261003T1632Z.json` 166 records：`terminal_event=clarify` 的 **30 条 nodes 末两位全部 `intent → clarify_out`**（含 `bind` = 0）；走到 `bind` 的 **73 条**终态 `complete 48`／`refuse 24`／`error 1` ⇒ **无 clarify**；`C-CITY-01..04` 现读 `trusted_context→normalize→intent→clarify_out`、`binding_status=None` | ✅ 主因定为「`intent` 层截胡」 |
+| 9 | 旁证 | 166 条里 **63 条误拒中 39 条从未到过 `bind`**（`execute` 期望被判 `refuse`）⇒ 「过早终止」是**系统性**形状 | ✅ |
+| 10 | 样本面 | 现读题面 **0/355** 提及「城市/city」⇒ 样本里也没有该类题（**次要因，非主因**） | ✅ |
+| 11 | **新立常驻口径** | 报「L4 触发率」必须同报三样：(a) 观测面 ＋ (b) **该面覆盖的图阶段** ＋ (c) **样本里是否有该概念的题**；三缺一不得引用 | 登记 |
+| 12 | 更宽出口（未读） | `binding_layer_total`：`service.py:421 self._observer.on_binding(event)` 在 `_emit` 内、由 `resolve_detailed` 主路径（`:349`）调用 ⇒ 覆盖**每一次四层判定**；`deps.py:768 observer=MetricsBindingObserver()` 已接 | 补读提请 |
+| 13 | 冲突整理验收 | `PROMPT_新窗` §2 查5 的 G-6 🔻 **与 QA §34／§4.1 逐句一致**；§2 查1 远端 🔻 成立；冲突③（QA 已自订正六件）／④（docstring **已闭勿再改**）／⑤（`docs/07:1090` ＝ `U-141`）均无动作 | ✅ |
+| 14 | 裁决 | **读数段**：该面 L4 ＝ 0/355 ⇒ 条件① 在该面**不满足** ✅ ｜ **制度段**：⚠️ 不宜一步定案为「全系统不满足」（该面是下界、更宽的面未读） | 分两段 |
+| 15 | 花费 | 台账 `1830\|3.025849\|2026-10-07 04:28:00.872275+00` **逐位不动**；余额仍 **¥0.577069**；W8 本轮零出站 ✅ | ✅ |
+| 16 | 注入形态 | **无** | N/A |
+
+**Scope 限制（诚实登记）**：本节全部为**只读**（git／文件／JSON／psql `begin;…rollback;`）＋ 本窗写面落盘；**未执行任何外部程序、未调用模型、未写 `backend/reports/qa/**` 之外任何文件**。未向 W8 发任何指令（派单块待总控点句）。
