@@ -428,3 +428,17 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 ⑧ **自曝**：本轮首次查 `app.audit_log` 用了不存在的列 `terminal_event` ⇒ 报错后先查 `information_schema.columns` 再重查（列名实为 `outcome`／`refusal_reason`）。教训：**只读查询前先确认列名**，别照抄其它件的字段名。
 ⑨ **边界**：写面 = `docs/07` ＋ `backend/reports/w8/**`；`reports/qa/**` 只读；`backend/app`／`tests`／`eval`／`deploy`／容器**未动**；禁 `add -A`／reset／clean，按名 stage 后 `git show --stat` 复核；判据措辞**未改**（只增 `U-141` 行与指针）。
 ⑩ **对外口径**：门禁 **PASS 1/8**（🚫 不得写「门禁通过」）；`G-6` 维持 UNVERIFIED；`G-2/G-5/G-7` 维持 FAIL；🚫 不得写「τ 已校准」「T-51 已完成」；现 open 集 = 九枚 ＋ `U-141` ⇒ **十枚**。
+
+
+## 第 32 轮交付（读法入册＋订正＋复原 ｜ PROMPT §3 取法命令 ＋ U-141 计数粒度 🔻 ＋ 复原误删 70 行 ｜ 作业窗 ≈ 2026-10-13 22:02 +0800（落笔现读 `date`）｜ 起点 HEAD `a39bf70`／519 笔 ｜ 🔴 零额度：台账逐位 = 1,830／¥3.025849／max 2026-10-07 04:28:00.872275+00；残渣 = ecom ＋ ecom_u123_probe ｜ 一轮一笔 ｜ 零出站）
+
+① **A｜复原误删（最优先）**：开工见 `M backend/reports/w8/` 两件、`git diff --stat` = **70 删除/0 新增**（= `529f2bf` 那笔内容被删）⇒ 判**误删** ⇒ `git checkout --` 复原，现读工作树 = HEAD、两段锚点各 1；QA §46.3 的点名已闭环。
+② **A｜读法命令入 PROMPT §3 第 2 条**（QA §46.2）：`TASK_BOARD.md` → 最后一节 ＋ 取法 `grep '^## ' | tail -1` → `sed -n "{N},$p"`；`RELAY.md` 末两节同法；写明「不要整读」。+6/−1 行。
+③ **B｜`U-141` 计数粒度 🔻 订正**：「全部止于 `intent` 层」→「全部止于 `bind` 之前的层（`intent` **29** ＋ `normalize` **1**）」；判据措辞未改、只订计数；🔴 结论不变（触达 `bind` = 0）。
+④ **B｜独立复算**：clarify = **30**；倒数第二节点 = **intent 29 / normalize 1** ⇒ 与 QA §46.2 逐位一致。
+⑤ **自曝**：第 31 轮那 70 行掉在工作树里，本窗**追加后未当场复量字节/mtime** ⇒ 未及时自查到；本轮起补「落盘后对拍 HEAD blob 字节数」这一步。
+⑥ **C｜给 QA §46.2 的答复**：派单两条**均已执行**（PROMPT §3 取法 ＋ `U-141` 计数订正）；§46.3 的误删点名**已复原**并具名说明。
+⑦ **边界**：写面 = `backend/reports/w8/PROMPT.md` ＋ `docs/07`（仅 `U-141` 行追加）＋ `backend/reports/w8/**`；`reports/qa/**` 只读；`app`／`tests`／`eval`／`deploy`／容器**未动**；禁 `add -A`／reset／clean，按名 stage 后 `git show --stat` 复核；判据措辞**未改**。
+⑧ **对外口径**：门禁 **PASS 1/8**（🚫 不得写「门禁通过」）；`G-6` 维持 UNVERIFIED；`G-2/G-5/G-7` 维持 FAIL；open 集 = **十枚**（含 `U-141`）；🚫 不得写「τ 已校准」「T-51 已完成」。
+⑨ **本轮零取号**（指针现读仍 `U-142`）。
+⑩ **没做什么**：未整读任何长件；未归档/拆分/删旧节；未改 QA 写面；未花钱。

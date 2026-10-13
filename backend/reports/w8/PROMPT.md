@@ -66,7 +66,12 @@ QA 窗出「任务粘贴块」 → 总控原样转给你 → 你一路做到交�
 **每轮必读（顺序不能换，全部现测）**
 
 1. `git fetch` ＋ `git status --porcelain` ＋ `git rev-parse --short HEAD`。工作区里不是你的未提交改动 ⇒ **别碰、别 add、别顺手整理**，只在回执里点一句它挂在哪儿。
-2. `backend/reports/qa/TASK_BOARD.md` 的**最新一块粘贴块**——本轮要你做的事（🔻 10-08 去快照：`T-xx` 最大值落笔前现读，尺 = `grep -oE 'T-[0-9]+' backend/reports/qa/TASK_BOARD.md | sort -t- -k2 -n | tail -1`，新单＝最大值＋1；索引行与散文里的号不算已占用）。
+2. `backend/reports/qa/TASK_BOARD.md` 的**最后一节**——本轮要你做的事（🔻 10-08 去快照：`T-xx` 最大值落笔前现读，尺 = `grep -oE 'T-[0-9]+' backend/reports/qa/TASK_BOARD.md | sort -t- -k2 -n | tail -1`，新单＝最大值＋1；索引行与散文里的号不算已占用）。
+   🔻 **取法（2026-10-13 加，只读末节、不整读；该件只追加、当期永远在末尾）**：
+      `F=backend/reports/qa/TASK_BOARD.md; N=$(grep -n '^## ' "$F" | tail -1 | cut -d: -f1); sed -n "${N},\$p" "$F"`
+   🔻 **同理：`backend/reports/qa/RELAY.md` 只读末两节**（该件亦只追加）：
+      `F=backend/reports/qa/RELAY.md;   N=$(grep -n '^## ' "$F" | tail -1 | cut -d: -f1); sed -n "${N},\$p" "$F"`
+   🔴 **不要整读**：两件头部已有「当期指针」块（`TASK_BOARD`／`RELAY` 各 `:6–12`）说明同一件事。
 3. `backend/reports/w8/RELAY.md` **末两段**——上一任的最后读数与**它自己暴露的错**（🔻 10-08 去快照：节号会漂，现读末两节标题 = `grep -n '^## ' backend/reports/w8/RELAY.md | tail -3`）。
 4. **本机命令形状的坑**（不在仓库，在你的项目记忆）：《CommerceQL 本机环境坑》＝**唯一权威**，《W6 评测窗口指针件》＝取证尺与判据形状，《每轮交付协议》＝落盘接口。先点名这七条，它们能把一整轮变成"修环境问题"：`PYTHONUTF8`＋`PYTHONIOENCODING` 双设 ／ `-p no:randomly` 空转 ／ `TZ=… date` 在这台 Git-Bash 返回 UTC ／ cwd≠`backend/` ⇒ `asyncio_mode` 失效造成假断言失败潮 ／ 集成日志必须 `-v`（`-q` 无文件名 ⇒ reporter 判不出 `integration_ran`，`G-1` 会假退 PARTIAL）／ Docker Desktop 内嵌 DNS 会抖 ／ 演示登录三件（生产构建不渲染粘贴框、令牌只在内存、`--tenant-id` 只认 `T_A/T_B/T_C` 且签错**不报错只给空结果**）。
 

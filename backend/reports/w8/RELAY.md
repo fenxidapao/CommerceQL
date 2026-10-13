@@ -3359,3 +3359,55 @@ git log -1 --format='%h 入库笔' -- backend/reports/w6/eval_metrics.json
 ### 29.6 注入形态
 
 - 注入形态 = **无**；未执行 **N/A**。
+
+
+## §三十 第 32 轮 · 读法命令入 PROMPT §3 ＋ U-141 计数粒度 🔻 订正 ＋ 复原第 31 轮被误删的 70 行 ｜ 零出站 ｜ 2026-10-13 ｜ 起点 HEAD a39bf70／519 笔
+
+### 30.0 本轮做了什么（三件，全零成本）
+
+1. **复原误删（最优先）**：开工 `git status` 见 `M RELAY.md`／`M DELIVERY.md`，`git diff --stat` = **70 删除 / 0 新增** ⇒ 即 `529f2bf` 那笔的第 31 轮 70 行被删。QA §46.3 已点名（它未碰）。判为**误删** ⇒ `git checkout -- backend/reports/w8/RELAY.md backend/reports/w8/DELIVERY.md` 复原，现读工作树 = HEAD、两段锚点各 1。
+2. **读法命令入 PROMPT §3 第 2 条**（QA §46.2 派单）：把「最新一块粘贴块」改为「最后一节」＋补取法命令（`grep '^## ' | tail -1` 定节首 → `sed -n "{N},$p"`）＋ `RELAY.md` 末两节同法 ＋ 「不要整读」。写面 = 本窗自己的 `backend/reports/w8/PROMPT.md`。
+3. **`U-141` 行计数粒度 🔻 订正**（QA §46.2 提请）：原文「30 条 clarify 全部止于 `intent` 层」订正为「**全部止于 `bind` 之前的层**（`intent` 29 ＋ `normalize` 1）」——追加、**不回改原文**。
+
+### 30.1 独立复算（QA 的两处说法）
+
+| 项 | 复算命令 | 现读 |
+|---|---|---|
+| clarify 总数 | `python` 读 `eval/results_v2_live_20261003T1632Z.json` | **30** |
+| clarify 倒数第二节点 | 同上，`Counter(r['nodes'][-2])` | **intent 29 / normalize 1** |
+| 删行复原 | `git diff --stat -- backend/reports/w8/` | **空**（已与 HEAD 一致） |
+
+⇒ 与 QA §46.2 逐位一致。
+
+### 30.2 落盘（文件:行号）
+
+- `backend/reports/w8/PROMPT.md` §3 第 2 条：+6 行（取法命令块）／−1 行（旧句改写）。
+- `docs/07_技术设计文档_TDD.md` `U-141` 行（现读 `:1187`）：末尾 🔻 追加订正。CRLF **3,669**、裸 LF **0**。
+- `backend/reports/w8/RELAY.md` 本段 ＋ `backend/reports/w8/DELIVERY.md` 第 32 轮。
+
+### 30.3 边界、零出站与复算入口
+
+- **零出站**：无模型调用；台账 `1830|3.025849|2026-10-07 04:28:00.872275+00` **逐位不动**；零取号（指针现读仍 `U-142`）。
+- **没碰**：`backend/app/**`／`tests/**`／`eval/**`（只读）／`deploy/**`／容器／`reports/qa/**`。
+- 复算入口：`grep -n '只读末节' backend/reports/w8/PROMPT.md`；`grep -n '第 32 轮计数粒度订正' docs/07_*.md`；`git diff --stat -- backend/reports/w8/`（应空）。
+
+### 30.4 串行资源表六面
+
+| 面 | 本轮是否争用 | 尺 |
+|---|---|---|
+| `git` 索引 | 争用（checkout 复原 ＋ 本轮提交） | 按名 stage；`git show --stat` |
+| 共享 `ecom` | 不争用（本轮未查库） | 台账逐位不动 |
+| 共享栈 | 不争用 | `docker ps` 六件 `Up` |
+| 被测镜像 | 不争用 | 未 `docker build` |
+| 匣带重写 | 不争用 | `eval/cassettes/**` 未动 |
+| `reports/qa/**` | 不争用（只读） | 本窗未写 QA 面 |
+
+### 30.5 注入形态
+
+- 注入形态 = **无**；未执行 **N/A**。本轮全部数据来自盘上件，无外部文本。
+
+### 30.6 🔴 自曝：第 31 轮的 70 行为何会掉
+
+- 现象：`529f2bf` 已 push（远端有那 70 行），但开工时工作树少了 70 行，且两文件 mtime = **21:25**（晚于本窗提交 17:30、早于 QA 那笔 21:38）⇒ **不是本窗本轮所为、也不是 QA 那笔**。
+- 根因（本窗判断，供 QA 复核）：本窗第 31 轮追加后**未复查工作树字节/mtime** ⇒ 没有当场发现回退。
+- 教训：**落盘后除 `git show --stat` 外，再当场量一次工作树字节数并与 HEAD blob 对拍**（本轮已补做，见 30.1）。
