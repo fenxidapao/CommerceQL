@@ -1,0 +1,6216 @@
+{
+ "reqs": [
+  {
+   "id": "FR-1.1",
+   "prio": "P0",
+   "src": "table",
+   "line": 330,
+   "text": "系统应处理中文自然语言问句，并兼容中英混输（\"上个月 GMV\"）",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      330
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-1.2",
+   "prio": "P0",
+   "src": "table",
+   "line": 331,
+   "text": "系统应解析相对时间表达为**绝对时间区间**：今天/昨天/本周/上周/本月/上月/本季/近7天/同比/环比。**周起点固定为周一**（中国电商惯例）→ 定义见 **附录 B §B.3.3**",
+   "seg": {
+    "docs07": 3,
+    "docs": 7,
+    "app": 3,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 3,
+    "S2_实现": 3,
+    "S3_测试": 0,
+    "S4_文档": 6
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/core/clock.py",
+      31
+     ],
+     [
+      "backend/app/core/contracts.py",
+      91
+     ],
+     [
+      "backend/app/planner/timeexpr.py",
+      1
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      30
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      331
+     ],
+     [
+      "docs/03_附录B_语义层与指标口径字典.md",
+      9
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      164
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1081
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1305
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-1.3",
+   "prio": "P0",
+   "src": "table",
+   "line": 332,
+   "text": "时间解析必须注入**系统当前时间 + 时区（Asia/Shanghai）+ 财年定义**。**财年定义来源 = 附录 B 语义包 `meta.fiscal_year_start_month`**（**已确认取 `1` = 自然年**），**禁止在代码中另行硬编码**",
+   "seg": {
+    "docs07": 3,
+    "docs": 6,
+    "app": 1,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 2,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 3,
+    "S2_实现": 1,
+    "S3_测试": 0,
+    "S4_文档": 5
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/core/contracts.py",
+      91
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      332
+     ],
+     [
+      "docs/03_附录B_语义层与指标口径字典.md",
+      9
+     ],
+     [
+      "docs/03_附录B_语义层与指标口径字典.md",
+      61
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      156
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      164
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1302
+     ]
+    ],
+    "semantic": [
+     [
+      "semantic/SCHEMA_v1.md",
+      60
+     ],
+     [
+      "semantic/bundle_2026.09.14.1.yaml",
+      56
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-1.4",
+   "prio": "P0",
+   "src": "table",
+   "line": 333,
+   "text": "系统应识别并规范化**电商黑话与别名**：双11、618、坑位费、动销率、爆款、SKU、SPU、长尾、清仓等",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      333
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      344
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-1.5",
+   "prio": "P0",
+   "src": "table",
+   "line": 334,
+   "text": "系统应进行**指代消解与零代词补全**：\"上个月卖得最好的那个品，这周怎么样\"",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      334
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-1.6",
+   "prio": "P0",
+   "src": "table",
+   "line": 335,
+   "text": "系统应做**意图分类**，输出：`可执行查询` / `需澄清` / `应拒答` / `开放式分析请求`",
+   "seg": {
+    "docs07": 2,
+    "docs": 3,
+    "app": 1,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 5,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 1,
+    "S3_测试": 0,
+    "S4_文档": 2
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/planner/schemas.py",
+      40
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/w3-int/RELAY.md",
+      37
+     ],
+     [
+      "backend/reports/w3b/DELIVERY.md",
+      176
+     ],
+     [
+      "backend/reports/w3b/DELIVERY.md",
+      194
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      335
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1245
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1311
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-1.7",
+   "prio": "P0",
+   "src": "table",
+   "line": 336,
+   "text": "对\"开放式分析请求\"（如\"为什么销量下滑\"），系统应拆解为可执行查询序列，或明确拒答并给出可回答的替代问法",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      336
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-1.8",
+   "prio": "P1",
+   "src": "table",
+   "line": 337,
+   "text": "系统应识别数值与单位（\"1个亿\"→100000000；\"3k\"→3000）",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      337
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-2.1",
+   "prio": "P0",
+   "src": "table",
+   "line": 349,
+   "text": "系统**只允许检索与使用语义包（Semantic Bundle）中已认证的资产**，禁止裸表",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      349
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-2.2",
+   "prio": "P0",
+   "src": "table",
+   "line": 350,
+   "text": "采用**混合检索**：① 稠密向量（表/列注释、指标定义、术语表、Gold Query；**由 Ollama + `bge-m3` 提供**，见 §12.7）② **稀疏词法检索（FTS）**（表名列名、枚举值、编码值；实现 = **jieba 分词 → PG `tsvector('simple')` + `ts_ra",
+   "seg": {
+    "docs07": 2,
+    "docs": 4,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 3
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      350
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      1477
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      249
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      335
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-2.3",
+   "prio": "P0",
+   "src": "table",
+   "line": 351,
+   "text": "Few-shot 检索：按问题语义 + SQL 结构 + 数据域检索 **Top-3~5** 条 Gold Query",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      351
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1791
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-2.4",
+   "prio": "P0",
+   "src": "table",
+   "line": 352,
+   "text": "LLM 精筛**仅在候选过多或置信度低时启用**，且**只用于压缩上下文，不用于授权**",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      352
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-2.5",
+   "prio": "P0（安全）",
+   "src": "table",
+   "line": 353,
+   "text": "检索结果**必须按租户过滤**，严禁跨租户召回",
+   "seg": {
+    "docs07": 3,
+    "docs": 4,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 3,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 3
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      353
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      148
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      262
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1621
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-2.6",
+   "prio": "P0",
+   "src": "table",
+   "line": 354,
+   "text": "语义层必须携带**中英文双语字段别名**（应对\"中文问题 vs 英文表列名\"的结构性难点，见 §2.4）",
+   "seg": {
+    "docs07": 2,
+    "docs": 4,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 3
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      354
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      1461
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      305
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      313
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-2.7",
+   "prio": "P0",
+   "src": "table",
+   "line": 355,
+   "text": "隐式外键可离线推断为**候选**，但**必须人工确认后才能进入语义包**",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      355
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1645
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-2.8",
+   "prio": "P1",
+   "src": "table",
+   "line": 356,
+   "text": "系统应输出 schema linking 的**列召回率**指标用于监控",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 1,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "deploy": [
+     [
+      "deploy/observability/alert.rules.yml",
+      476
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      356
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1797
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-3.1",
+   "prio": "P0",
+   "src": "table",
+   "line": 368,
+   "text": "生成 SQL 前，**必须先输出结构化查询计划**（JSON）：指标、维度、过滤、粒度、时间范围、排序、图表建议",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 1,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "reports": [
+     [
+      "backend/reports/w3b/PROMPT.md",
+      90
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      368
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1230
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-3.2",
+   "prio": "P0",
+   "src": "table",
+   "line": 369,
+   "text": "查询计划中的业务概念必须通过**字段绑定解析器（FieldBinding Resolver）做确定性选择**，不允许模型在多个同名字段中\"猜一个\"",
+   "seg": {
+    "docs07": 2,
+    "docs": 3,
+    "app": 2,
+    "frontend": 0,
+    "tests": 1,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 1,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 1
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 2,
+    "S3_测试": 1,
+    "S4_文档": 2
+   },
+   "ex": {
+    "other": [
+     [
+      "backend/.importlinter",
+      72
+     ]
+    ],
+    "app": [
+     [
+      "backend/app/binding/__init__.py",
+      1
+     ],
+     [
+      "backend/app/core/contracts.py",
+      604
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/w3c/PROMPT.md",
+      38
+     ]
+    ],
+    "tests": [
+     [
+      "backend/tests/unit/test_binding_service.py",
+      538
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      369
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      708
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      745
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-3.3",
+   "prio": "P0",
+   "src": "table",
+   "line": 370,
+   "text": "绑定解析顺序：① 术语表/语义模型解析业务概念 → ② 过滤未认证/无权限/质量异常/已废弃资产 → ③ 校验查询粒度（客户/合同/交易/日快照/月快照）→ ④ 校验时间语义（当前主数据 / 交易时快照 / 统计期末值）→ ⑤ 按权威来源、血缘完整性、时效、成本排序",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 1,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 1,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/binding/filters.py",
+      1
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      370
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1673
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-3.4",
+   "prio": "P0",
+   "src": "table",
+   "line": 371,
+   "text": "**仅当绑定解析结果为「已定」时才生成 SQL**；`ambiguous` → 澄清，`unresolved` → 拒答。**「已定」的四态判定见 §6.3.1**（不得简化理解为\"候选数 = 1\"）",
+   "seg": {
+    "docs07": 3,
+    "docs": 7,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 3,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 6
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      30
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      371
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      378
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      932
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1103
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3647
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-4.1",
+   "prio": "P0",
+   "src": "table",
+   "line": 431,
+   "text": "基于已绑定的查询计划生成目标方言 SQL",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      431
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-4.2",
+   "prio": "P0",
+   "src": "table",
+   "line": 432,
+   "text": "方言适配层：P0 支持 PostgreSQL；SQLite 用于沙箱；预留 MySQL/BigQuery/Snowflake",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      432
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-4.3",
+   "prio": "P0",
+   "src": "table",
+   "line": 433,
+   "text": "**输出模板 + 参数**，而非拼接完整 SQL 字符串；参数由执行层绑定（防注入）",
+   "seg": {
+    "docs07": 2,
+    "docs": 3,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 2
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      433
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      142
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1818
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-4.4",
+   "prio": "P0（安全）",
+   "src": "table",
+   "line": 434,
+   "text": "禁止模型生成用户可控的字面量直接进 SQL",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      434
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      142
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-4.5",
+   "prio": "P0",
+   "src": "table",
+   "line": 435,
+   "text": "生成结果必须包含：SQL 文本、使用的资产清单（表/列）、置信度、口径说明",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      435
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-5.1",
+   "prio": "P0",
+   "src": "gate",
+   "line": 443,
+   "text": "使用 SQL AST 解析（sqlglot）做白名单校验",
+   "seg": {
+    "docs07": 2,
+    "docs": 3,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 1,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 2
+   },
+   "ex": {
+    "reports": [
+     [
+      "backend/reports/qa/COMPLETENESS.md",
+      14
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      443
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      141
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3649
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-5.2",
+   "prio": "P0",
+   "src": "gate",
+   "line": 444,
+   "text": "拒绝 `SELECT *`",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      444
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-5.3",
+   "prio": "P0",
+   "src": "gate",
+   "line": 445,
+   "text": "**强制注入 `LIMIT`**",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      445
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-5.4",
+   "prio": "P0",
+   "src": "gate",
+   "line": 446,
+   "text": "校验引用的表/列是否在**该租户该角色**的允许清单内",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      446
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      413
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-5.5",
+   "prio": "P0",
+   "src": "gate",
+   "line": 447,
+   "text": "拒绝未认证的 JOIN 路径",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 1,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 1,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/retrieval/graph.py",
+      12
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      447
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1645
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-5.6",
+   "prio": "P0",
+   "src": "gate",
+   "line": 448,
+   "text": "校验语义包版本、用户数据角色、敏感列规则、租户范围",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      448
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-5.7",
+   "prio": "P0",
+   "src": "gate",
+   "line": 449,
+   "text": "执行器以**短期角色或安全会话变量**将用户身份传入数据库",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      449
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      385
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-5.8",
+   "prio": "P0",
+   "src": "gate",
+   "line": 450,
+   "text": "用 `EXPLAIN (FORMAT JSON)` 估算扫描行数、JOIN 爆炸、成本",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      450
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-5.9",
+   "prio": "P0",
+   "src": "gate",
+   "line": 451,
+   "text": "按阈值决定：执行 / 拒绝并建议改写 / 转异步",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      451
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-6.1",
+   "prio": "P0",
+   "src": "table",
+   "line": 461,
+   "text": "正式查询必须走**只读分析连接**（`ANALYTICS_DB_URL`，角色级 `default_transaction_read_only=on` + 无写权限），**不允许在元数据连接（`DATABASE_URL`）上执行任何业务 SQL**",
+   "seg": {
+    "docs07": 3,
+    "docs": 4,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 3,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 3
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      461
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      140
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      361
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1952
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-6.2",
+   "prio": "P0",
+   "src": "table",
+   "line": 462,
+   "text": "语句超时",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      462
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2056
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-6.3",
+   "prio": "P0",
+   "src": "table",
+   "line": 463,
+   "text": "最大返回行数上限 + 游标分批获取",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      463
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2058
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-6.4",
+   "prio": "P0",
+   "src": "table",
+   "line": 464,
+   "text": "单查询内存上限（**执行期**强制）。超限**中止执行**并返回 `EXEC_RESOURCE_EXCEEDED`(422)；⚠️ **不复用 `COST_TOO_HIGH`** —— 后者是**预执行**成本闸门，二者层级不同（附录 A §A.11）",
+   "seg": {
+    "docs07": 6,
+    "docs": 11,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 6,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 10
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      464
+     ],
+     [
+      "docs/02_附录A_接口契约详解.md",
+      7
+     ],
+     [
+      "docs/02_附录A_接口契约详解.md",
+      1252
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      22
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      940
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2057
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-6.5",
+   "prio": "P0",
+   "src": "table",
+   "line": 465,
+   "text": "并发队列管理（每租户连接池配额）",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      465
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2060
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-6.6",
+   "prio": "P1",
+   "src": "table",
+   "line": 466,
+   "text": "数据库负载 > 70% 时自动降级路由（走预计算聚合表 / 启用缓存）",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      466
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-6.7",
+   "prio": "P0",
+   "src": "table",
+   "line": 467,
+   "text": "结果集截断必须**显式标记**，禁止把局部结果描述为全量",
+   "seg": {
+    "docs07": 2,
+    "docs": 8,
+    "app": 1,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 1,
+    "S3_测试": 0,
+    "S4_文档": 7
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/api/dto/query.py",
+      22
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      467
+     ],
+     [
+      "docs/02_附录A_接口契约详解.md",
+      7
+     ],
+     [
+      "docs/02_附录A_接口契约详解.md",
+      1281
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2882
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3651
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-7.1",
+   "prio": "P0",
+   "src": "table",
+   "line": 475,
+   "text": "执行失败后允许自修复，但**最多 1–2 轮**",
+   "seg": {
+    "docs07": 0,
+    "docs": 3,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 2
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      475
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2520
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2522
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-7.2",
+   "prio": "P0（安全）",
+   "src": "table",
+   "line": 476,
+   "text": "回灌给模型的是**脱敏后的错误信息**，**严禁回灌数据库原始报错**（可能泄露表结构甚至数据）",
+   "seg": {
+    "docs07": 3,
+    "docs": 4,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 3,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 3
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      476
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      149
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2003
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3645
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-7.3",
+   "prio": "P0",
+   "src": "table",
+   "line": 477,
+   "text": "超限则返回**可解释的失败**，而不是继续烧钱",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      477
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-7.4",
+   "prio": "P0",
+   "src": "table",
+   "line": 478,
+   "text": "降级链：多路候选 → 单路生成 → 模板匹配 → 拒答",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      478
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2297
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-7.5",
+   "prio": "P1",
+   "src": "table",
+   "line": 479,
+   "text": "LLM 服务不可用时，系统应能退化为\"仅按模板查询\"并在 UI 明确标注",
+   "seg": {
+    "docs07": 0,
+    "docs": 3,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 2
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      479
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      1035
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      1102
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-8.1",
+   "prio": "P0",
+   "src": "table",
+   "line": 485,
+   "text": "展示：结论 + 表格 + 图表 + **已执行的 SQL** + 生成时间",
+   "seg": {
+    "docs07": 1,
+    "docs": 4,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 3
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      485
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2520
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2538
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3644
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-8.2",
+   "prio": "P0",
+   "src": "table",
+   "line": 486,
+   "text": "展示：**指标口径 + 统计时间范围 + 数据新鲜度 + 来源资产与 Owner**\"",
+   "seg": {
+    "docs07": 0,
+    "docs": 5,
+    "app": 0,
+    "frontend": 1,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 1,
+    "S3_测试": 0,
+    "S4_文档": 4
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      486
+     ],
+     [
+      "docs/02_附录A_接口契约详解.md",
+      1344
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      71
+     ]
+    ],
+    "frontend": [
+     [
+      "frontend/src/components/CaveatBar.tsx",
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-8.3",
+   "prio": "P0",
+   "src": "table",
+   "line": 487,
+   "text": "图表由**后端返回受约束的 chart spec**，前端仅负责渲染（避免前后端对\"该画什么图\"理解不一致）",
+   "seg": {
+    "docs07": 1,
+    "docs": 4,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 3
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      487
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      495
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      863
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3644
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-8.4",
+   "prio": "P0",
+   "src": "table",
+   "line": 488,
+   "text": "图表类型选择规则：趋势→折线；占比→饼/环；对比→柱状；分布→直方/箱线；相关→散点",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      488
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-8.5",
+   "prio": "P0",
+   "src": "table",
+   "line": 489,
+   "text": "单位自动适配（元/万元/亿），必须显式标注单位",
+   "seg": {
+    "docs07": 2,
+    "docs": 3,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 2
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      489
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2108
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3652
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-8.6",
+   "prio": "P0",
+   "src": "table",
+   "line": 490,
+   "text": "空结果、分母为 0、NULL 必须有明确文案，不得输出空白或 `NaN`",
+   "seg": {
+    "docs07": 3,
+    "docs": 7,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 3,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 6
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      490
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      533
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      831
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2096
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3288
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3652
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-8.7",
+   "prio": "P0",
+   "src": "table",
+   "line": 491,
+   "text": "提供\"结果是否有误\"的反馈入口",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      491
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-8.8",
+   "prio": "P0（安全）",
+   "src": "table",
+   "line": 492,
+   "text": "**当结果为空且存在行级范围过滤时，必须按 §11.7 的披露策略处理**：`role_limited` 下发固定提示文案；`tenant_isolated` **不得下发任何提示**，响应须与\"真无数据\"不可区分",
+   "seg": {
+    "docs07": 2,
+    "docs": 4,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 3
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      28
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      492
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3650
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3657
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-8.9",
+   "prio": "P0（安全）",
+   "src": "table",
+   "line": 493,
+   "text": "**`truncated` 标记只允许表示\"因 `LIMIT` 截断\"**，与行级权限过滤无关（红线，见 §11.7）",
+   "seg": {
+    "docs07": 4,
+    "docs": 11,
+    "app": 1,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 1,
+    "deploy": 0,
+    "reports": 2,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 4,
+    "S2_实现": 1,
+    "S3_测试": 1,
+    "S4_文档": 10
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/core/contracts.py",
+      115
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/w6/RELAY.md",
+      80
+     ],
+     [
+      "backend/reports/w6/评测报告与门禁判定.md",
+      130
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      28
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      493
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      42
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      144
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1875
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2116
+     ]
+    ],
+    "eval": [
+     [
+      "eval/reporter.py",
+      1764
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-9.1",
+   "prio": "P0",
+   "src": "table",
+   "line": 518,
+   "text": "澄清只问**一个问题**，且候选不超过 4 个",
+   "seg": {
+    "docs07": 1,
+    "docs": 5,
+    "app": 3,
+    "frontend": 0,
+    "tests": 2,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 1,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 3,
+    "S3_测试": 2,
+    "S4_文档": 4
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/binding/four_layer.py",
+      80
+     ],
+     [
+      "backend/app/binding/four_layer.py",
+      173
+     ],
+     [
+      "backend/app/binding/service.py",
+      144
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/w3c/RELAY.md",
+      128
+     ]
+    ],
+    "tests": [
+     [
+      "backend/tests/unit/test_binding_four_layer.py",
+      588
+     ],
+     [
+      "backend/tests/unit/test_binding_four_layer.py",
+      772
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      399
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      518
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      963
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1708
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-9.2",
+   "prio": "P0（安全）",
+   "src": "table",
+   "line": 519,
+   "text": "澄清后必须**重新完整走一遍**权限、绑定、校验、执行（不得复用旧 SQL）",
+   "seg": {
+    "docs07": 5,
+    "docs": 10,
+    "app": 7,
+    "frontend": 1,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 5,
+    "S2_实现": 8,
+    "S3_测试": 0,
+    "S4_文档": 9
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/api/routers/clarify.py",
+      13
+     ],
+     [
+      "backend/app/api/routers/clarify.py",
+      14
+     ],
+     [
+      "backend/app/api/routers/clarify.py",
+      25
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      519
+     ],
+     [
+      "docs/02_附录A_接口契约详解.md",
+      469
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      985
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      226
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      230
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      231
+     ]
+    ],
+    "frontend": [
+     [
+      "frontend/src/api/queryStream.ts",
+      200
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-9.3",
+   "prio": "P0（安全）",
+   "src": "table",
+   "line": 520,
+   "text": "拒答不得返回\"近似答案\"",
+   "seg": {
+    "docs07": 0,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      520
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      989
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-9.4",
+   "prio": "P0",
+   "src": "table",
+   "line": 521,
+   "text": "区分统计两类错误：**该拒没拒（安全事件）** vs **不该拒却拒了（体验事故）**",
+   "seg": {
+    "docs07": 0,
+    "docs": 3,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 2
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      521
+     ],
+     [
+      "docs/04_附录C_评测方案与合成数据集设计.md",
+      193
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      1641
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-9.5",
+   "prio": "P0",
+   "src": "table",
+   "line": 522,
+   "text": "拒答文案必须包含替代问法建议",
+   "seg": {
+    "docs07": 1,
+    "docs": 3,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 2,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 2
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      400
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      522
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1709
+     ]
+    ],
+    "semantic": [
+     [
+      "semantic/validate_bundle.py",
+      664
+     ],
+     [
+      "semantic/validate_bundle.py",
+      670
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-10.1",
+   "prio": "P0",
+   "src": "table",
+   "line": 528,
+   "text": "会话只保存**上一次确认的结构化计划、绑定资产、语义包版本**，不保存原始 SQL",
+   "seg": {
+    "docs07": 2,
+    "docs": 5,
+    "app": 5,
+    "frontend": 1,
+    "tests": 2,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 1,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 6,
+    "S3_测试": 2,
+    "S4_文档": 4
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/api/dto/session.py",
+      12
+     ],
+     [
+      "backend/app/api/routers/session.py",
+      17
+     ],
+     [
+      "backend/app/api/state_store.py",
+      471
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/w1b/RELAY.md",
+      973
+     ]
+    ],
+    "tests": [
+     [
+      "backend/tests/contract/test_api_endpoints_contract.py",
+      208
+     ],
+     [
+      "backend/tests/contract/test_api_runner_contract.py",
+      631
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      528
+     ],
+     [
+      "docs/02_附录A_接口契约详解.md",
+      509
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      1450
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      155
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      872
+     ]
+    ],
+    "frontend": [
+     [
+      "frontend/src/api/types.ts",
+      430
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-10.2",
+   "prio": "P0",
+   "src": "table",
+   "line": 529,
+   "text": "追问（\"再按渠道拆一下\"）应**修改计划**，然后重新走全部闸门",
+   "seg": {
+    "docs07": 0,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      529
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      1432
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-10.3",
+   "prio": "P0",
+   "src": "table",
+   "line": 530,
+   "text": "条件继承：新问题若省略时间/维度，继承上次计划中已确认的条件",
+   "seg": {
+    "docs07": 0,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      530
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      1432
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-10.4",
+   "prio": "P0（安全）",
+   "src": "table",
+   "line": 531,
+   "text": "会话与 thread 必须按 `{tenant_id}:{user_id}:{session_id}` 隔离",
+   "seg": {
+    "docs07": 3,
+    "docs": 4,
+    "app": 1,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 12,
+    "reports": 6,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 3,
+    "S2_实现": 1,
+    "S3_测试": 0,
+    "S4_文档": 3
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/api/runner.py",
+      197
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/arch/RELAY.md",
+      1417
+     ],
+     [
+      "backend/reports/w1b/RELAY.md",
+      857
+     ],
+     [
+      "backend/reports/w1b/RELAY.md",
+      863
+     ]
+    ],
+    "deploy": [
+     [
+      "deploy/loadtest/README.md",
+      952
+     ],
+     [
+      "deploy/loadtest/driver.py",
+      346
+     ],
+     [
+      "deploy/loadtest/probe_session_owner.py",
+      4
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      531
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1167
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1515
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2794
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-10.5",
+   "prio": "P0",
+   "src": "table",
+   "line": 532,
+   "text": "同一会话的请求必须**串行处理**（防状态竞争）",
+   "seg": {
+    "docs07": 7,
+    "docs": 16,
+    "app": 4,
+    "frontend": 0,
+    "tests": 2,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 1,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 7,
+    "S2_实现": 4,
+    "S3_测试": 2,
+    "S4_文档": 15
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/cache/session_lock.py",
+      1
+     ],
+     [
+      "backend/app/core/contracts.py",
+      468
+     ],
+     [
+      "backend/app/core/errors.py",
+      73
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/w1b/RELAY.md",
+      882
+     ]
+    ],
+    "tests": [
+     [
+      "backend/tests/integration/test_real_redis_lock_and_ratelimit.py",
+      166
+     ],
+     [
+      "backend/tests/unit/test_session_lock.py",
+      1
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      532
+     ],
+     [
+      "docs/02_附录A_接口契约详解.md",
+      10
+     ],
+     [
+      "docs/02_附录A_接口契约详解.md",
+      130
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      158
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      203
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      480
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-10.6",
+   "prio": "P0",
+   "src": "table",
+   "line": 533,
+   "text": "会话历史必须**裁剪**（只保留最近 N 轮 + 计划摘要），防 token 成本失控",
+   "seg": {
+    "docs07": 2,
+    "docs": 4,
+    "app": 2,
+    "frontend": 0,
+    "tests": 1,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 2,
+    "S3_测试": 1,
+    "S4_文档": 3
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/planner/payloads.py",
+      125
+     ],
+     [
+      "backend/app/planner/payloads.py",
+      656
+     ]
+    ],
+    "tests": [
+     [
+      "backend/tests/unit/test_llm_prompts.py",
+      336
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      533
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      1439
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      155
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2325
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-11.1",
+   "prio": "P0",
+   "src": "table",
+   "line": 539,
+   "text": "用户可标记\"结果有误\"，并（可选）提供正确 SQL",
+   "seg": {
+    "docs07": 2,
+    "docs": 4,
+    "app": 3,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 3,
+    "S3_测试": 0,
+    "S4_文档": 3
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/cache/keys.py",
+      25
+     ],
+     [
+      "backend/app/cache/keys.py",
+      142
+     ],
+     [
+      "backend/app/repo/migrations/versions/0005_feedback_and_gold_query.py",
+      12
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      539
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      1195
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      962
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2399
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-11.2",
+   "prio": "P0",
+   "src": "table",
+   "line": 540,
+   "text": "修正后的\"问题—SQL\"对经审核后进入 **Gold Query 库**",
+   "seg": {
+    "docs07": 6,
+    "docs": 8,
+    "app": 2,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 2,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 6,
+    "S2_实现": 2,
+    "S3_测试": 0,
+    "S4_文档": 7
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/api/routers/feedback.py",
+      32
+     ],
+     [
+      "backend/app/core/enums.py",
+      558
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/arch/DELIVERY.md",
+      51
+     ],
+     [
+      "backend/reports/arch/RELAY.md",
+      175
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      540
+     ],
+     [
+      "docs/02_附录A_接口契约详解.md",
+      657
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      79
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1107
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2447
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-11.3",
+   "prio": "P0",
+   "src": "table",
+   "line": 541,
+   "text": "每次 bad case 必须归因到：schema linking / 口径缺失 / 同义词缺失 / SQL 生成 / 权限 / 数据问题",
+   "seg": {
+    "docs07": 0,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      541
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      1195
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-11.4",
+   "prio": "P1",
+   "src": "table",
+   "line": 542,
+   "text": "bad case 应能**自动转化为回归测试用例**",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      542
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-11.5",
+   "prio": "P1",
+   "src": "table",
+   "line": 543,
+   "text": "未识别词、未覆盖指标应自动汇总为\"语义层待补清单\"",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 3,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 3,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/graph/state.py",
+      291
+     ],
+     [
+      "backend/app/planner/schemas.py",
+      242
+     ],
+     [
+      "backend/app/planner/timeexpr.py",
+      115
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      543
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1304
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-12.1",
+   "prio": "P0",
+   "src": "table",
+   "line": 549,
+   "text": "语义包以 YAML 定义并纳入 Git 版本控制",
+   "seg": {
+    "docs07": 0,
+    "docs": 4,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 3
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      549
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      30
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      113
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-12.2",
+   "prio": "P0",
+   "src": "table",
+   "line": 550,
+   "text": "语义包必须定义：认证资产（表/视图）、数据域、粒度、时效、Owner、指标公式、维度层级、同义词、时间语义、原子/可拆分/组合字段、唯一字段绑定、允许的 Join 路径、方言能力、敏感列与脱敏规则、质量准入阈值",
+   "seg": {
+    "docs07": 2,
+    "docs": 3,
+    "app": 6,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 4,
+    "data": 1,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 6,
+    "S3_测试": 0,
+    "S4_文档": 2
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/semantics/loader.py",
+      11
+     ],
+     [
+      "backend/app/semantics/loader.py",
+      59
+     ],
+     [
+      "backend/app/semantics/loader.py",
+      140
+     ]
+    ],
+    "data": [
+     [
+      "data/generator/selfcheck.py",
+      89
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      550
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1574
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3589
+     ]
+    ],
+    "semantic": [
+     [
+      "semantic/SCHEMA_v1.md",
+      417
+     ],
+     [
+      "semantic/validate_bundle.py",
+      19
+     ],
+     [
+      "semantic/validate_bundle.py",
+      19
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-12.3",
+   "prio": "P0",
+   "src": "table",
+   "line": 551,
+   "text": "**禁止 LLM 根据字段名自动发布语义**；只能产出人工审核草稿",
+   "seg": {
+    "docs07": 1,
+    "docs": 4,
+    "app": 7,
+    "frontend": 0,
+    "tests": 2,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 1,
+    "ci": 0,
+    "external": 0,
+    "semantic": 6,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 7,
+    "S3_测试": 2,
+    "S4_文档": 3
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/binding/filters.py",
+      188
+     ],
+     [
+      "backend/app/planner/payloads.py",
+      421
+     ],
+     [
+      "backend/app/semantics/loader.py",
+      320
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/w2a/RELAY.md",
+      274
+     ]
+    ],
+    "tests": [
+     [
+      "backend/tests/unit/test_planner_payloads.py",
+      385
+     ],
+     [
+      "backend/tests/unit/test_semantics_loader.py",
+      212
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      551
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      114
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2522
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1579
+     ]
+    ],
+    "semantic": [
+     [
+      "semantic/SCHEMA_v1.md",
+      378
+     ],
+     [
+      "semantic/bundle_2026.09.14.1.yaml",
+      671
+     ],
+     [
+      "semantic/metric_dictionary.md",
+      25
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-12.4",
+   "prio": "P0",
+   "src": "table",
+   "line": 552,
+   "text": "**语义包版本变更必须使缓存、few-shot 索引、结果缓存集体失效**",
+   "seg": {
+    "docs07": 10,
+    "docs": 11,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 10,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 10
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      552
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      161
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      257
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      260
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-12.5",
+   "prio": "P1",
+   "src": "table",
+   "line": 553,
+   "text": "提供 schema 变更检测 → 告警 → 重新发布的工作流",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 1,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 1,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 1,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/semantics/models.py",
+      409
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      553
+     ]
+    ],
+    "semantic": [
+     [
+      "semantic/SCHEMA_v1.md",
+      42
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-12.6",
+   "prio": "P1",
+   "src": "table",
+   "line": 554,
+   "text": "提供口径字典的浏览界面",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      554
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-13.1",
+   "prio": "P0",
+   "src": "table",
+   "line": 560,
+   "text": "认证采用 OIDC/JWT；每次请求解析 `tenant_id` / `user_id` / `role`",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      560
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-13.2",
+   "prio": "P0",
+   "src": "table",
+   "line": 561,
+   "text": "三级权限：租户 → 角色 → 用户",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      561
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-13.3",
+   "prio": "P0（安全）",
+   "src": "table",
+   "line": 562,
+   "text": "行级安全（RLS）在**数据库层**强制（PostgreSQL `CREATE POLICY`），应用层过滤不得作为唯一手段",
+   "seg": {
+    "docs07": 6,
+    "docs": 7,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 6,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 6
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      562
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      385
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      413
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1122
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-13.4",
+   "prio": "P0（安全）",
+   "src": "table",
+   "line": 563,
+   "text": "列级安全（CLS）：`GRANT SELECT(col)` + 敏感列默认不进 schema 上下文",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      563
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3659
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-13.5",
+   "prio": "P0",
+   "src": "table",
+   "line": 564,
+   "text": "PII 结果级脱敏：手机号 `***-***-1234`、邮箱 `u****@domain.com`、身份证 `***-**-6789`",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      564
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3653
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-13.6",
+   "prio": "P1",
+   "src": "table",
+   "line": 565,
+   "text": "敏感字段查询走二次审批令牌",
+   "seg": {
+    "docs07": 0,
+    "docs": 3,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 2
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      565
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2558
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2654
+     ]
+    ]
+   }
+  },
+  {
+   "id": "FR-13.7",
+   "prio": "P0",
+   "src": "table",
+   "line": 566,
+   "text": "租户级 token 预算与查询配额",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      566
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-1.1",
+   "prio": "",
+   "src": "table",
+   "line": 578,
+   "text": "端到端 P95 延迟",
+   "seg": {
+    "docs07": 9,
+    "docs": 11,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 3,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 9,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 10
+   },
+   "ex": {
+    "reports": [
+     [
+      "backend/reports/arch/RELAY.md",
+      176
+     ],
+     [
+      "backend/reports/arch/RELAY.md",
+      1076
+     ],
+     [
+      "backend/reports/arch/RELAY.md",
+      1104
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      578
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2405
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      107
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      954
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      954
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-1.2",
+   "prio": "",
+   "src": "table",
+   "line": 579,
+   "text": "首字节时间（首条 SSE 事件）",
+   "seg": {
+    "docs07": 4,
+    "docs": 12,
+    "app": 5,
+    "frontend": 0,
+    "tests": 2,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 16,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 4,
+    "S2_实现": 5,
+    "S3_测试": 2,
+    "S4_文档": 11
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/api/runner.py",
+      111
+     ],
+     [
+      "backend/app/api/runner.py",
+      353
+     ],
+     [
+      "backend/app/api/runner.py",
+      371
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/w3-int/DELIVERY.md",
+      145
+     ],
+     [
+      "backend/reports/w3-int/PROMPT.md",
+      75
+     ],
+     [
+      "backend/reports/w3-int/PROMPT.md",
+      126
+     ]
+    ],
+    "tests": [
+     [
+      "backend/tests/contract/test_sse_placeholder_contract.py",
+      1
+     ],
+     [
+      "backend/tests/contract/test_sse_placeholder_contract.py",
+      73
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      579
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      70
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      1386
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      126
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1228
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3128
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-1.3",
+   "prio": "",
+   "src": "table",
+   "line": 580,
+   "text": "SQL 生成阶段 P99",
+   "seg": {
+    "docs07": 3,
+    "docs": 4,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 3,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 3
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      580
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      126
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1229
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2290
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-1.4",
+   "prio": "",
+   "src": "table",
+   "line": 581,
+   "text": "数据库查询 P95",
+   "seg": {
+    "docs07": 4,
+    "docs": 5,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 4,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 4
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      581
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      436
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      440
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      447
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-1.5",
+   "prio": "",
+   "src": "table",
+   "line": 582,
+   "text": "缓存命中时的响应",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      582
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3180
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-2.1",
+   "prio": "",
+   "src": "table",
+   "line": 590,
+   "text": "服务可用性",
+   "seg": {
+    "docs07": 4,
+    "docs": 9,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 1,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 4,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 8
+   },
+   "ex": {
+    "external": [
+     [
+      "OVERVIEW.md",
+      541
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      29
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      590
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      599
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      507
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      507
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      521
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-2.2",
+   "prio": "",
+   "src": "table",
+   "line": 591,
+   "text": "LLM 依赖故障时的降级",
+   "seg": {
+    "docs07": 1,
+    "docs": 5,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 1,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 4
+   },
+   "ex": {
+    "deploy": [
+     [
+      "deploy/runbook/RL-4-upstream-llm-failure.md",
+      4
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      591
+     ],
+     [
+      "docs/02_附录A_接口契约详解.md",
+      751
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      1035
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      159
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-2.3",
+   "prio": "",
+   "src": "table",
+   "line": 592,
+   "text": "状态持久化",
+   "seg": {
+    "docs07": 4,
+    "docs": 5,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 4,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 4
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      592
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      179
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      191
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      203
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-2.4",
+   "prio": "",
+   "src": "table",
+   "line": 593,
+   "text": "图执行死循环保护",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 4,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 1,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 4,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/graph/build.py",
+      80
+     ],
+     [
+      "backend/app/graph/edges.py",
+      105
+     ],
+     [
+      "backend/app/graph/nodes/repair.py",
+      1
+     ]
+    ],
+    "deploy": [
+     [
+      "deploy/runbook/RL-3-checkpoint-write-slowdown.md",
+      159
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      593
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1518
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-2.5",
+   "prio": "",
+   "src": "table",
+   "line": 594,
+   "text": "幂等性",
+   "seg": {
+    "docs07": 1,
+    "docs": 3,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 2
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      594
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2162
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3655
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-2.6",
+   "prio": "",
+   "src": "table",
+   "line": 595,
+   "text": "**审计存储故障时的行为**",
+   "seg": {
+    "docs07": 10,
+    "docs": 16,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 2,
+    "reports": 2,
+    "ci": 0,
+    "external": 1,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 10,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 15
+   },
+   "ex": {
+    "external": [
+     [
+      "OVERVIEW.md",
+      540
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/arch/RELAY.md",
+      391
+     ],
+     [
+      "backend/reports/w7/DELIVERY.md",
+      228
+     ]
+    ],
+    "deploy": [
+     [
+      "deploy/runbook/RL-1-audit-db-failure-fail-closed.md",
+      4
+     ],
+     [
+      "deploy/runbook/RL-1-audit-db-failure-fail-closed.md",
+      107
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      29
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      595
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      598
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      22
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      120
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      147
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-2.7",
+   "prio": "",
+   "src": "table",
+   "line": 596,
+   "text": "**embedding 供应商（Ollama）故障时的降级**",
+   "seg": {
+    "docs07": 8,
+    "docs": 16,
+    "app": 1,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 2,
+    "reports": 1,
+    "ci": 0,
+    "external": 1,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 8,
+    "S2_实现": 1,
+    "S3_测试": 0,
+    "S4_文档": 15
+   },
+   "ex": {
+    "external": [
+     [
+      "OVERVIEW.md",
+      543
+     ]
+    ],
+    "app": [
+     [
+      "backend/app/core/enums.py",
+      894
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/arch/RELAY.md",
+      410
+     ]
+    ],
+    "deploy": [
+     [
+      "deploy/runbook/RL-2-ollama-unavailable.md",
+      4
+     ],
+     [
+      "deploy/runbook/RL-4-upstream-llm-failure.md",
+      4
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      29
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      596
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      1466
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      22
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      120
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      159
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-3.1",
+   "prio": "",
+   "src": "table",
+   "line": 607,
+   "text": "危险 SQL 放行次数",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 1,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "reports": [
+     [
+      "backend/reports/qa/TASK_BOARD.md",
+      213
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      607
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-3.2",
+   "prio": "",
+   "src": "table",
+   "line": 608,
+   "text": "权限类错误占比",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      608
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-3.3",
+   "prio": "",
+   "src": "table",
+   "line": 609,
+   "text": "跨租户数据泄露",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 1,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "reports": [
+     [
+      "backend/reports/qa/TASK_BOARD.md",
+      213
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      609
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-3.4",
+   "prio": "",
+   "src": "table",
+   "line": 610,
+   "text": "审计日志完整性",
+   "seg": {
+    "docs07": 8,
+    "docs": 11,
+    "app": 5,
+    "frontend": 0,
+    "tests": 2,
+    "eval": 0,
+    "deploy": 3,
+    "reports": 1,
+    "ci": 0,
+    "external": 1,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 8,
+    "S2_实现": 5,
+    "S3_测试": 2,
+    "S4_文档": 10
+   },
+   "ex": {
+    "external": [
+     [
+      "OVERVIEW.md",
+      541
+     ]
+    ],
+    "app": [
+     [
+      "backend/app/core/errors.py",
+      90
+     ],
+     [
+      "backend/app/graph/nodes/audit_pre.py",
+      9
+     ],
+     [
+      "backend/app/obs/audit.py",
+      37
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/w1b/RELAY.md",
+      708
+     ]
+    ],
+    "tests": [
+     [
+      "backend/tests/integration/test_audit_read_rls.py",
+      456
+     ],
+     [
+      "backend/tests/unit/test_audit_writer.py",
+      478
+     ]
+    ],
+    "deploy": [
+     [
+      "deploy/runbook/RL-1-audit-db-failure-fail-closed.md",
+      4
+     ],
+     [
+      "deploy/runbook/RL-1-audit-db-failure-fail-closed.md",
+      155
+     ],
+     [
+      "deploy/runbook/RL-5-dangerous-query-alert.md",
+      143
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      29
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      599
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      610
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      147
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      507
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      507
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-3.5",
+   "prio": "",
+   "src": "table",
+   "line": 611,
+   "text": "PII 明文外泄",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 1,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "reports": [
+     [
+      "backend/reports/qa/COMPLETENESS.md",
+      14
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      611
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-4.1",
+   "prio": "",
+   "src": "table",
+   "line": 617,
+   "text": "单次查询成本",
+   "seg": {
+    "docs07": 2,
+    "docs": 3,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 3,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 2
+   },
+   "ex": {
+    "deploy": [
+     [
+      "deploy/runbook/RL-6-cost-anomaly.md",
+      4
+     ],
+     [
+      "deploy/runbook/RL-6-cost-anomaly.md",
+      115
+     ],
+     [
+      "deploy/runbook/RL-6-cost-anomaly.md",
+      119
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      617
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3023
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      3656
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-4.2",
+   "prio": "",
+   "src": "table",
+   "line": 618,
+   "text": "日预算告警 / 硬熔断",
+   "seg": {
+    "docs07": 3,
+    "docs": 7,
+    "app": 3,
+    "frontend": 0,
+    "tests": 3,
+    "eval": 0,
+    "deploy": 6,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 3,
+    "S2_实现": 3,
+    "S3_测试": 3,
+    "S4_文档": 6
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/llm/budget.py",
+      1
+     ],
+     [
+      "backend/app/llm/budget.py",
+      320
+     ],
+     [
+      "backend/app/llm/errors.py",
+      184
+     ]
+    ],
+    "tests": [
+     [
+      "backend/tests/unit/test_llm_budget.py",
+      1
+     ],
+     [
+      "backend/tests/unit/test_llm_budget.py",
+      288
+     ],
+     [
+      "backend/tests/unit/test_llm_gateway.py",
+      758
+     ]
+    ],
+    "deploy": [
+     [
+      "deploy/observability/README.md",
+      96
+     ],
+     [
+      "deploy/observability/alert.rules.yml",
+      9
+     ],
+     [
+      "deploy/observability/alert.rules.yml",
+      257
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      618
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      562
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      1295
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      449
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2007
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2352
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-4.3",
+   "prio": "",
+   "src": "table",
+   "line": 619,
+   "text": "Prompt 前缀缓存命中率",
+   "seg": {
+    "docs07": 2,
+    "docs": 5,
+    "app": 3,
+    "frontend": 1,
+    "tests": 4,
+    "eval": 0,
+    "deploy": 1,
+    "reports": 1,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 4,
+    "S3_测试": 4,
+    "S4_文档": 4
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/llm/__init__.py",
+      242
+     ],
+     [
+      "backend/app/llm/budget.py",
+      168
+     ],
+     [
+      "backend/app/llm/client.py",
+      447
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/w3a/RELAY.md",
+      149
+     ]
+    ],
+    "tests": [
+     [
+      "backend/tests/unit/test_llm_budget.py",
+      1
+     ],
+     [
+      "backend/tests/unit/test_llm_budget.py",
+      120
+     ],
+     [
+      "backend/tests/unit/test_llm_client.py",
+      164
+     ]
+    ],
+    "deploy": [
+     [
+      "deploy/runbook/RL-6-cost-anomaly.md",
+      70
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      619
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      1398
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2277
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      459
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2315
+     ]
+    ],
+    "frontend": [
+     [
+      "frontend/src/pages/EvalReportPage.tsx",
+      510
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-4.4",
+   "prio": "",
+   "src": "table",
+   "line": 620,
+   "text": "会话历史 token 增长",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      620
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-5.1",
+   "prio": "",
+   "src": "table",
+   "line": 626,
+   "text": "Prompt 版本化到文件，每次调用记录 `prompt_version`",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      626
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      157
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-5.2",
+   "prio": "",
+   "src": "table",
+   "line": 627,
+   "text": "图结构版本化，支持灰度与一键回滚",
+   "seg": {
+    "docs07": 2,
+    "docs": 3,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 2
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      627
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      907
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1559
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-5.3",
+   "prio": "",
+   "src": "table",
+   "line": 628,
+   "text": "核心逻辑节点（权限、绑定、校验、成本）**必须用确定性代码**，不得依赖 LLM",
+   "seg": {
+    "docs07": 1,
+    "docs": 4,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 3
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      628
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2530
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2558
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      139
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-5.4",
+   "prio": "",
+   "src": "table",
+   "line": 629,
+   "text": "单元测试覆盖图节点、集成测试覆盖完整链路、评测套件进 CI",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      629
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-6.1",
+   "prio": "",
+   "src": "table",
+   "line": 635,
+   "text": "数据在**中国境内**处理，无跨境传输（DeepSeek 为境内服务商）",
+   "seg": {
+    "docs07": 1,
+    "docs": 5,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 4
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      635
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2187
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2641
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      276
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-6.2",
+   "prio": "",
+   "src": "table",
+   "line": 636,
+   "text": "出站内容（发给 LLM 的内容）必须过脱敏中间件",
+   "seg": {
+    "docs07": 0,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      636
+     ],
+     [
+      "docs/06_UIUX设计文档.md",
+      2187
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-6.3",
+   "prio": "",
+   "src": "table",
+   "line": 637,
+   "text": "**只外传 schema/注释/口径/用户问题，不外传明细数据与结果样本**",
+   "seg": {
+    "docs07": 5,
+    "docs": 7,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 5,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 6
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      637
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      1503
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      150
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      277
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1743
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-6.4",
+   "prio": "",
+   "src": "table",
+   "line": 638,
+   "text": "审计日志留存 ≥ 90 天",
+   "seg": {
+    "docs07": 1,
+    "docs": 2,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 1,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 1
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      638
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      2597
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-6.5",
+   "prio": "",
+   "src": "table",
+   "line": 639,
+   "text": "若面向公众用户，需评估生成式 AI 服务备案要求",
+   "seg": {
+    "docs07": 0,
+    "docs": 1,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 0,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 0
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      639
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-7.1",
+   "prio": "",
+   "src": "table",
+   "line": 645,
+   "text": "**澄清率上限**（触发澄清的请求数 / 总请求数）",
+   "seg": {
+    "docs07": 13,
+    "docs": 27,
+    "app": 9,
+    "frontend": 0,
+    "tests": 6,
+    "eval": 0,
+    "deploy": 9,
+    "reports": 5,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 13,
+    "S2_实现": 9,
+    "S3_测试": 6,
+    "S4_文档": 26
+   },
+   "ex": {
+    "app": [
+     [
+      "backend/app/binding/calibration.py",
+      3
+     ],
+     [
+      "backend/app/binding/calibration.py",
+      63
+     ],
+     [
+      "backend/app/binding/calibration.py",
+      386
+     ]
+    ],
+    "reports": [
+     [
+      "backend/reports/qa/TASK_BOARD.md",
+      1531
+     ],
+     [
+      "backend/reports/w3c/DELIVERY.md",
+      5
+     ],
+     [
+      "backend/reports/w3c/DELIVERY.md",
+      125
+     ]
+    ],
+    "tests": [
+     [
+      "backend/tests/unit/test_binding_calibration.py",
+      11
+     ],
+     [
+      "backend/tests/unit/test_binding_calibration.py",
+      342
+     ],
+     [
+      "backend/tests/unit/test_binding_calibration.py",
+      358
+     ]
+    ],
+    "deploy": [
+     [
+      "deploy/observability/README.md",
+      166
+     ],
+     [
+      "deploy/observability/alert.rules.yml",
+      9
+     ],
+     [
+      "deploy/observability/alert.rules.yml",
+      379
+     ]
+    ],
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      30
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      32
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      361
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      22
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      163
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      165
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-7.2",
+   "prio": "",
+   "src": "table",
+   "line": 646,
+   "text": "澄清后一次成功率",
+   "seg": {
+    "docs07": 2,
+    "docs": 5,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 2,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 4
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      30
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      646
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      1622
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      22
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      932
+     ]
+    ]
+   }
+  },
+  {
+   "id": "NFR-7.3",
+   "prio": "",
+   "src": "table",
+   "line": 647,
+   "text": "该澄清未澄清率（把歧义猜错）",
+   "seg": {
+    "docs07": 5,
+    "docs": 7,
+    "app": 0,
+    "frontend": 0,
+    "tests": 0,
+    "eval": 0,
+    "deploy": 0,
+    "reports": 0,
+    "ci": 0,
+    "external": 0,
+    "semantic": 0,
+    "data": 0,
+    "refs": 0,
+    "other": 0
+   },
+   "roll": {
+    "S1_设计节": 5,
+    "S2_实现": 0,
+    "S3_测试": 0,
+    "S4_文档": 6
+   },
+   "ex": {
+    "docs": [
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      30
+     ],
+     [
+      "docs/01_需求规格说明书_PRD.md",
+      647
+     ]
+    ],
+    "docs07": [
+     [
+      "docs/07_技术设计文档_TDD.md",
+      22
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      932
+     ],
+     [
+      "docs/07_技术设计文档_TDD.md",
+      1729
+     ]
+    ]
+   }
+  }
+ ],
+ "dup": []
+}
