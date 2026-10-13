@@ -8,6 +8,10 @@
 
 候选表纪律：只登记**语义包里有真实竞争绑定对**的题（机器可复算），其余题**拒绝出站**
 （它们不是"两个绑定竞争"，构造候选 = 伪造输入）。理由与分类见 `t51_scope.json`。
+
+⚠️ **读法声明（第 28 轮补）**：`spend_cny` 输出的是**字符串**（money 用字符串是本项目既有口径 ——
+`llm_call` 日志行的 `cost_cny` 同形）。消费方一律 `Decimal(str(x))` 读，**禁止 `float()`**；
+顺带说明：`float(row["spend_cny"])` 在本字段上会**抛 `TypeError`**，不是"静默出错"。
 """
 
 from __future__ import annotations
