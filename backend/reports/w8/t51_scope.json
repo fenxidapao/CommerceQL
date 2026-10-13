@@ -1,0 +1,206 @@
+{
+  "n_clarify": 18,
+  "by_kind": {
+    "绑定竞争（L4 候选空间内）": 4,
+    "时间窗未定（不在 L4 候选空间）": 6,
+    "其它": 3,
+    "指标口径未定（不在 L4 候选空间）": 3,
+    "开放式问法（不在 L4 候选空间）": 1,
+    "值域未定义（不在 L4 候选空间）": 1
+  },
+  "rows": [
+    {
+      "case_id": "C-CITY-01",
+      "question": "城市维度的 GMV 是多少？",
+      "bkr": [
+        "fuzzy:city_ambiguity"
+      ],
+      "kind": "绑定竞争（L4 候选空间内）",
+      "has_real_pair": true,
+      "why": "「城市」有收货城市与店铺城市两个绑定，且**同 grain_level（=4）**"
+    },
+    {
+      "case_id": "C-CITY-02",
+      "question": "各城市的订单量分别是多少？",
+      "bkr": [
+        "fuzzy:city_ambiguity"
+      ],
+      "kind": "绑定竞争（L4 候选空间内）",
+      "has_real_pair": true,
+      "why": "同上：收货侧 vs 店铺侧同粒度竞争"
+    },
+    {
+      "case_id": "C-CITY-03",
+      "question": "广州的销售额是多少？",
+      "bkr": [
+        "fuzzy:city_ambiguity",
+        "metric:gmv"
+      ],
+      "kind": "绑定竞争（L4 候选空间内）",
+      "has_real_pair": true,
+      "why": "「广州」可指收货城市或店铺所在城市"
+    },
+    {
+      "case_id": "C-CITY-04",
+      "question": "城市口径下哪个卖得最好？",
+      "bkr": [
+        "fuzzy:city_ambiguity"
+      ],
+      "kind": "绑定竞争（L4 候选空间内）",
+      "has_real_pair": true,
+      "why": "同 C-CITY-01"
+    },
+    {
+      "case_id": "C-GMV-01",
+      "question": "本月的 GMV 是多少？",
+      "bkr": [
+        "fuzzy:relative_time",
+        "metric:gmv"
+      ],
+      "kind": "时间窗未定（不在 L4 候选空间）",
+      "has_real_pair": false,
+      "why": "「本月」= 当前自然月还是最近 30 天？须澄清"
+    },
+    {
+      "case_id": "C-GMV-02",
+      "question": "上个月的销售额是多少？",
+      "bkr": [
+        "fuzzy:relative_time",
+        "metric:gmv"
+      ],
+      "kind": "时间窗未定（不在 L4 候选空间）",
+      "has_real_pair": false,
+      "why": "「上个月」在语义包里有定义（日历上月首日 00:00:00 至末日 23:59:59），但**时区与是否含端**须回显确认"
+    },
+    {
+      "case_id": "C-GMV-03",
+      "question": "最近的 GMV 怎么样？",
+      "bkr": [
+        "fuzzy:relative_time",
+        "metric:gmv"
+      ],
+      "kind": "时间窗未定（不在 L4 候选空间）",
+      "has_real_pair": false,
+      "why": "「最近」无定义窗口"
+    },
+    {
+      "case_id": "C-GMV-04",
+      "question": "最近一周的 GMV 环比是多少？",
+      "bkr": [
+        "fuzzy:relative_time",
+        "metric:gmv"
+      ],
+      "kind": "时间窗未定（不在 L4 候选空间）",
+      "has_real_pair": false,
+      "why": "「最近一周」起点未定（周起点是 monday，但「最近」未必对齐自然周）"
+    },
+    {
+      "case_id": "C-RATE-01",
+      "question": "退款率是多少？",
+      "bkr": [
+        "metric:refund_rate"
+      ],
+      "kind": "其它",
+      "has_real_pair": false,
+      "why": "退款率有金额口径与单量口径；本包只定义金额口径，须确认或告知不支持"
+    },
+    {
+      "case_id": "C-RATE-02",
+      "question": "退货率最高的商品是哪个？",
+      "bkr": [
+        "metric:refund_rate",
+        "fuzzy:refund"
+      ],
+      "kind": "指标口径未定（不在 L4 候选空间）",
+      "has_real_pair": false,
+      "why": "「退货」与「退款」在数据上只有 refund_status，须澄清映射"
+    },
+    {
+      "case_id": "C-REP-01",
+      "question": "复购率是多少？",
+      "bkr": [
+        "metric:repurchase_rate_90d"
+      ],
+      "kind": "其它",
+      "has_real_pair": false,
+      "why": "复购窗口固定 90 天且不含首单口径，须回显确认"
+    },
+    {
+      "case_id": "C-REP-02",
+      "question": "复购情况怎么样？",
+      "bkr": [
+        "metric:repurchase_rate_90d",
+        "fuzzy:open_ended"
+      ],
+      "kind": "开放式问法（不在 L4 候选空间）",
+      "has_real_pair": false,
+      "why": "开放式问法，既没有时间窗也没有维度"
+    },
+    {
+      "case_id": "C-UV-01",
+      "question": "这段时间的 UV 是多少？",
+      "bkr": [
+        "metric:uv",
+        "fuzzy:relative_time"
+      ],
+      "kind": "时间窗未定（不在 L4 候选空间）",
+      "has_real_pair": false,
+      "why": "UV 是自然日窗口口径，跨日直接累加会重复计数；区间未定"
+    },
+    {
+      "case_id": "C-UV-02",
+      "question": "总访客数是多少？",
+      "bkr": [
+        "metric:uv"
+      ],
+      "kind": "其它",
+      "has_real_pair": false,
+      "why": "「总」= 全期去重还是逐日累加？本包未定义 uv_period"
+    },
+    {
+      "case_id": "C-AOV-01",
+      "question": "客单价是多少？",
+      "bkr": [
+        "metric:aov",
+        "fuzzy:relative_time"
+      ],
+      "kind": "时间窗未定（不在 L4 候选空间）",
+      "has_real_pair": false,
+      "why": "客单价无时间窗"
+    },
+    {
+      "case_id": "C-REG-01",
+      "question": "华东的销量是多少？",
+      "bkr": [
+        "value_map:region",
+        "fuzzy:metric"
+      ],
+      "kind": "指标口径未定（不在 L4 候选空间）",
+      "has_real_pair": false,
+      "why": "「销量」未定义：是单量还是金额？且「华东」需按 value_map 展开"
+    },
+    {
+      "case_id": "C-REG-02",
+      "question": "南方卖得怎么样？",
+      "bkr": [
+        "fuzzy:region_undefined"
+      ],
+      "kind": "值域未定义（不在 L4 候选空间）",
+      "has_real_pair": false,
+      "why": "「南方」不在 region.value_map 的 7 个大区里 → 需澄清或告知不支持"
+    },
+    {
+      "case_id": "C-CAT-01",
+      "question": "哪个品类卖得最好？",
+      "bkr": [
+        "hierarchy:category",
+        "fuzzy:metric"
+      ],
+      "kind": "指标口径未定（不在 L4 候选空间）",
+      "has_real_pair": false,
+      "why": "品类有三层（l1/l2/l3），且「卖得最好」的口径未定"
+    }
+  ],
+  "env_keys_loaded": 62,
+  "candidate_policy": "只对语义包内有真实竞争绑定对的题出站；其余题拒绝构造候选（构造 = 伪造输入）"
+}

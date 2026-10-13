@@ -1,0 +1,365 @@
+{
+  "scope": {
+    "run": "T-51 段1 诊断（city 族子集）",
+    "paired_cases": [
+      "C-CITY-01",
+      "C-CITY-02",
+      "C-CITY-03",
+      "C-CITY-04"
+    ],
+    "n_samples": 4,
+    "repeats": 3,
+    "epsilon": 0.05,
+    "note": "只覆盖 city_ambiguity 一族（语义包内唯一有真实竞争绑定对的族）"
+  },
+  "samples": [
+    {
+      "case_id": "C-CITY-01",
+      "question": "城市维度的 GMV 是多少？",
+      "candidate_ids": [
+        "order_paid.receiver_city",
+        "shop.city"
+      ],
+      "repeats": [
+        [
+          0.6,
+          0.5
+        ],
+        [
+          0.6,
+          0.5
+        ],
+        [
+          0.85,
+          0.4
+        ]
+      ],
+      "gold_candidate_id": null,
+      "gaps": [
+        0.09999999999999998,
+        0.09999999999999998,
+        0.44999999999999996
+      ]
+    },
+    {
+      "case_id": "C-CITY-02",
+      "question": "各城市的订单量分别是多少？",
+      "candidate_ids": [
+        "order_paid.receiver_city",
+        "shop.city"
+      ],
+      "repeats": [
+        [
+          0.6,
+          0.5
+        ],
+        [
+          0.75,
+          0.35
+        ],
+        [
+          0.6,
+          0.5
+        ]
+      ],
+      "gold_candidate_id": null,
+      "gaps": [
+        0.09999999999999998,
+        0.4,
+        0.09999999999999998
+      ]
+    },
+    {
+      "case_id": "C-CITY-03",
+      "question": "广州的销售额是多少？",
+      "candidate_ids": [
+        "order_paid.receiver_city",
+        "shop.city"
+      ],
+      "repeats": [
+        [
+          0.55,
+          0.5
+        ],
+        [
+          0.55,
+          0.5
+        ],
+        [
+          0.55,
+          0.5
+        ]
+      ],
+      "gold_candidate_id": null,
+      "gaps": [
+        0.050000000000000044,
+        0.050000000000000044,
+        0.050000000000000044
+      ]
+    },
+    {
+      "case_id": "C-CITY-04",
+      "question": "城市口径下哪个卖得最好？",
+      "candidate_ids": [
+        "order_paid.receiver_city",
+        "shop.city"
+      ],
+      "repeats": [
+        [
+          0.62,
+          0.55
+        ],
+        [
+          0.62,
+          0.55
+        ],
+        [
+          0.62,
+          0.55
+        ]
+      ],
+      "gold_candidate_id": null,
+      "gaps": [
+        0.06999999999999995,
+        0.06999999999999995,
+        0.06999999999999995
+      ]
+    }
+  ],
+  "failures": [],
+  "spend_cny": "0.017626",
+  "stability": {
+    "verdict": "unstable",
+    "max_gap_std": 0.20207259421636903,
+    "min_kendall": 1.0,
+    "repeats": 3,
+    "per_sample": [
+      {
+        "sample_id": "C-CITY-01",
+        "gaps": [
+          0.09999999999999998,
+          0.09999999999999998,
+          0.44999999999999996
+        ],
+        "gap_std": 0.20207259421636903,
+        "kendalls": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      {
+        "sample_id": "C-CITY-02",
+        "gaps": [
+          0.09999999999999998,
+          0.4,
+          0.09999999999999998
+        ],
+        "gap_std": 0.17320508075688776,
+        "kendalls": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      {
+        "sample_id": "C-CITY-03",
+        "gaps": [
+          0.050000000000000044,
+          0.050000000000000044,
+          0.050000000000000044
+        ],
+        "gap_std": 0.0,
+        "kendalls": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      {
+        "sample_id": "C-CITY-04",
+        "gaps": [
+          0.06999999999999995,
+          0.06999999999999995,
+          0.06999999999999995
+        ],
+        "gap_std": 0.0,
+        "kendalls": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    ]
+  },
+  "curve": [
+    {
+      "tau": 0.0,
+      "binding_accuracy": 0.0,
+      "should_clarify_but_did_not": 1.0,
+      "clarify_rate": 0.0,
+      "decided": 4,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.05,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.1,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.15000000000000002,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.2,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.25,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.30000000000000004,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.35000000000000003,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.4,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.45,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.5,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.55,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.6000000000000001,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.65,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.7000000000000001,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.75,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.8,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.8500000000000001,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.9,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 0.9500000000000001,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    },
+    {
+      "tau": 1.0,
+      "binding_accuracy": null,
+      "should_clarify_but_did_not": 0.0,
+      "clarify_rate": 1.0,
+      "decided": 0,
+      "should_clarify_total": 4
+    }
+  ]
+}

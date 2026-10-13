@@ -3102,3 +3102,52 @@ git log -1 --format='%h 入库笔' -- backend/reports/w6/eval_metrics.json
 
 - **没碰**：`docs/07`（本轮不在写面，判据措辞一字未动）、`backend/app/llm/**`（①② 已落）、`backend/tests/**`、`eval/**`、`deploy/**`、任何容器 recreate；**零取号**（`§4.8` 指针行现读仍 `U-141`）。
 - 复算入口：A 尺① = `PYTHONUTF8=1 PYTHONPATH=backend .venv/Scripts/python.exe backend/reports/w8/t50_reason_probe.py`；A 夹具 = `pytest -q tests/unit/test_bind_l4_usage.py`；B = `PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/t39_h_cell.py`（只读日志）；台账 = 容器内 `select count(*),sum(cost_cny),max(created_at) from app.cost_ledger`（只读）。
+
+
+## §廿五 第 27 轮 · T-51 τ 校准第一轮（**段1 诊断已跑 ／ 段2 按派单 B1 停手** ｜ 2026-10-13 ｜ 起点 HEAD `854f1ce`／509 笔 ｜ 🔴 **花钱轮**：实付 **¥0.022931**（15 次 `l4_score`）／上界 ¥0.60）
+
+### 25.0 结论先行（三条，按重要性）
+
+1. 🔴 **段1 判 `UNSTABLE` ⇒ 按派单 B1 原句「判 UNSTABLE ⇒ 停手交回」停手**：`max_gap_std = 0.2021 ≥ τ 分辨率 0.05`（§C.4.6 约束5）⇒ **禁止定稿 τ** ⇒ PRD §12.9 强制升级方案 A。⇒ **段2（定稿扫描）未跑、未花钱**（跑了也必 `is_finalizable=False`）。
+2. 🔴 **A1 的输入按原样**（18 条各 3 次）**不可诚实构造**：18 条争议集里**只有 4 条**（`C-CITY-01..04`）存在"两个字段绑定竞争"的**真实候选对**；其余 14 条的歧义发生在**时间窗 / 指标口径 / 值域 / 层级**层（`clarify_expected.reason` 逐条现读），**不在 L4 的候选空间内** ⇒ 为它们编候选 = **伪造输入**，故**拒绝对那 14 条出站**。⇒ 本窗只对 4 条真配对的题跑（4×3＝12 次）。
+3. ⚠️ **台账增量 = 0**：`build_gateway` 未传 `ledger` ⇒ 走 `InMemoryCostLedgerSink`（`app/llm/__init__.py:617`）⇒ 本路径**不写** `app.cost_ledger`（现读仍 `1830|3.025849|2026-10-07 04:28:00.872275+00`）。**钱花了**（¥0.022931，逐笔取自 `ScoreOutcome.cost_cny`），只是**这条路径的账不落库** —— 这是一条应登记的**口径缺口**，不是"没花钱"。
+
+### 25.1 段1 ｜ A1 采集（真打，n=3）
+
+- 口径：只读冻结集；只出站 `l4_score`；候选对 = `order_paid.receiver_city` ⟷ `shop.city`（来源 = 语义包 `field_bindings.城市.candidates`，与 `C-CITY-01` 自带候选**同一对** ⇒ 非本窗编造）。
+- 现读分数（第 1/2/3 次重复）：
+
+| case | repeats（`receiver_city`, `shop.city`） | gaps |
+|---|---|---|
+| C-CITY-01 | (0.60,0.50) ／ (0.60,0.50) ／ (0.85,0.40) | 0.10 ／ 0.10 ／ **0.45** |
+| C-CITY-02 | (0.60,0.50) ／ (0.75,0.35) ／ (0.60,0.50) | 0.10 ／ **0.40** ／ 0.10 |
+| C-CITY-03 | (0.55,0.50) ×3 | 0.05 ／ 0.05 ／ 0.05 |
+| C-CITY-04 | (0.62,0.55) ×3 | 0.07 ／ 0.07 ／ 0.07 |
+
+- `failures = []`（12 次全 `ok`，`finish_reason=stop`）。
+
+### 25.2 段1 ｜ B1 稳定性（`assess_stability`，判据 = **max** 分差 std）
+
+- **verdict = `unstable`**；`max_gap_std = 0.2021`（阈值 `TAU_SWEEP_STEP = 0.05`）；`min_kendall = 1.0000`（**只进报告、不参与判据** —— 约束5 把 Kendall 列在"报告"侧）。
+- 🟡 **形状值得记一笔**：**排名恒一致**（每条 `kendalls = [1.0,1.0,1.0]`）而**分差抖动 4.5 倍**（0.10 → 0.45）。⇒ 该打分器的噪声**打在"差多少"上，不打在"谁高"上** —— 而 τ/ε 判定吃的正是分差。这条形状支持"升级方案 A"而不是"多打几次取平均"（后者被约束5 明令禁止）。
+
+### 25.3 段1 ｜ C1 τ—响应曲线（21 点，零调用）
+
+- 拐点：**τ = 0.05 是唯一非平凡台阶**（复用第 1 次重复的分差 `[0.10,0.10,0.05,0.07]`，ε = 0.05）。
+  - `τ = 0.00` ⇒ `decided = 4`、`clarify_rate = 0.000`、**安全侧错误（本该澄清却判唯一）= 1.000（4/4）**。
+  - `τ ≥ 0.05` ⇒ `decided = 0`、`clarify_rate = 1.000`、安全侧错误 = 0.000、`binding_accuracy = None`（子集为空 ⇒ 给 `None` 不给 0.0，`calibration.py:309-311`）。
+- ⚠️ **本集合金标准全为 `None`（"本该澄清"）** ⇒ `binding_accuracy` **恒为 `0.0`/`None`**，该列在本子集上**无信息量**（不是打分器准确率）。曲线在本子集只能回答"安全侧错误率随 τ 怎么走"。
+- 🔴 **`binding_layer` 层分布 = 缺（`None`）**：校准报告要求"由调用方从**运行时观测**带入"（`calibration.py:409`）⇒ 本窗的 **L4-only 诊断路径拿不到** ⇒ 即便稳定性过了，`is_finalizable` 也会卡在第 8 条。
+
+### 25.4 段2 ｜ **未跑**，两条独立 blocker（每条单独足以拦下）
+
+- **① 派单自身条款**：B1 判 `UNSTABLE` ⇒「停手交回（PRD §12.9 强制升级方案 A）」⇒ 定稿扫描产出必然 `is_finalizable=False`，花钱无对象。
+- **② 造题阻塞（同 §25.0-2 的根因）**：留出集要求"同族 15–20 条"，而**只有 city 族**（字段口径轴）存在真实绑定竞争对；`time`／`metric`／值域／层级 四类歧义**没有候选对可造** ⇒ 3 轴配额（时间 6 ｜ 字段 7 ｜ 值域 2）**结构上凑不齐**。从 148 条非歧义骨架"改造"能得到的仍只是 city 族的同题面变体（1/3 轴），且与冻结集同源。
+- ⇒ **建议**（交总控/QA 裁，本窗不擅自改单）：T-51 的段2 与"L4 τ 校准"这个形态**同时**要重裁 —— 因为 ① 说打分器本身要换（方案 A），② 说绝大多数澄清题根本不走 L4。
+
+### 25.5 花费、边界与复算入口
+
+- **实付 ¥0.022931**：smoke（1 条 ×3 ＝ 3 次）¥0.005305 ＋ 段1（4 条 ×3 ＝ 12 次）¥0.017626；**15 次调用**，全部 `l4_score`／`deepseek-flash`／`finish_reason=stop`；上界 ¥0.60 ⇒ **余 ¥0.577069**。**段2 一分未花。**
+- **没碰**：`eval/dataset_v1_frozen.json`（只读）／`app/**`／`tests/**`／`deploy/**`／容器（未 build、未 recreate）；**零取号**（指针行现读仍 `U-141`）；`app.cost_ledger` 未写入（见 §25.0-3）。
+- 产物（全在 `backend/reports/w8/`）：`t51_collect.py`（采集件）／`t51_scope.json`（18 条按"歧义发生的层"分类 ＋ 候选表纪律）／`t51_stage1_city_only.json`（段1 真读数）／`t51_stage1_city_only_smoke.json`（冒烟 1 条证据）。
+- 复算入口：`.venv\Scripts\python.exe backend/reports/w8/t51_collect.py`（真打，15 次 ≈ ¥0.023）；`PYTHONUTF8=1 .venv\Scripts\python.exe -m pytest -q backend/tests/unit/test_binding_calibration.py`（校准脚手架 51 条，离线）。
