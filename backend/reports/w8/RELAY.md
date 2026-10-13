@@ -3224,3 +3224,82 @@ git log -1 --format='%h 入库笔' -- backend/reports/w6/eval_metrics.json
 - **零出站**：本轮无任何模型调用；台账 `1830|3.025849|2026-10-07 04:28:00.872275+00` **逐位不动**（起草时重跑）；**零取号**（指针行现读仍 `U-141`）。
 - **没碰**：`eval/**`／`app/**`／`tests/**`／`deploy/**`／容器；`docs/**`／`OVERVIEW.md`／`deliverables/**` **只读**。
 - 复算入口：`grep -n "Decimal(str" backend/reports/w8/t51_collect.py`（订正后的那句）；`git diff --numstat`（本件应只动 `PROMPT_新窗.md` ＋ `t51_collect.py` ＋ 本段所在的 `RELAY.md`）。
+
+
+## §廿八 第 30 轮 · 冲突整理（🔻 订正 ×2 已落盘）＋ 取 L4 触发率（零成本，命中 app.query_plan）｜ 零出站／零取号 ｜ 2026-10-13 ｜ 起点 HEAD 8cbb58d／514 笔
+
+### 28.0 本轮做了什么（两件，都零成本）
+
+1. **冲突整理（总控点"按你建议整理"）**：上一轮开工现读对出的五条冲突/误导，**material 的两条已以 🔻 落盘**（历史原文不删）—— 见 §28.1。
+2. **取 L4 触发率（T-51 方案 A 三条前置的第 1 条）**：原判"要真流量=花钱"，本轮**发现零成本取证面** —— `app.query_plan.binding_layer` 已由生产路径落库（迁移 0004），**只读共享 `ecom` 即得**（`begin; … rollback;`）。
+
+### 28.1 冲突整理（五条；前两条已落盘）
+
+| # | 冲突/误导 | 处置 | 落点 |
+|---|---|---|---|
+| ① | 本窗 `PROMPT_新窗 §2 查5` 写「p95 现值 8,887.4 ms ⇒ 够格即 FAIL」＝**混用两把的错述**（QA 已判：`reports/qa/RELAY §34`／`PROMPT_新窗 §4.1`） | 🔻 **已订正**：两把并报、皆不可引用、判向维持 UNVERIFIED | `PROMPT_新窗.md` §2 查5 下 🔻 块 |
+| ② | 本窗 `PROMPT_新窗 §2 查1` 写「远端 `main` 停在 `00bb620`／R31l 未推」＝**起草时快照**（现读远端＝`8cbb58d`＝本地齐平） | 🔻 **已订正**：标为起草时快照、非当期 | `PROMPT_新窗.md` §2 查1 下 🔻 块 |
+| ③ | 容器件数「五/六」不一致 | 非 W8 件错（本窗写**六件**，与盘上一致）；QA 已在其 §12 自我订正为六件 | 仅记账，无 W8 改动 |
+| ④ | QA §42.2 提请订正 `t51_collect.py` docstring「float() 会抛 TypeError」 | **已闭**：本窗第 29 轮已改为「理由 = 十进制精度」（`t51_collect.py:14`）⇒ 勿重改 | `RELAY §廿七`；`t51_collect.py:14` |
+| ⑤ | 取号行陷阱：`docs/07:1089` 段落内含「下一可用号 = `U-107`」（史料），真指针＝`:1090` 行首 | 仅记账（尺＝行首 `^> **下一个可用号` 现读） | `docs/07:1090` |
+
+### 28.2 取 L4 触发率 —— 零成本取证面（`app.query_plan.binding_layer`）
+
+**现读（`2026-10-13 15:42 +0800`，只读共享 `ecom`）**：
+
+| binding_layer | binding_state | 行数 |
+|---|---|---|
+| L1 | unresolved | 36 |
+| L3 | resolved_default | 319 |
+| （无 L2） | — | 0 |
+| （无 L4） | — | 0 |
+| **合计** | — | **355** |
+
+⇒ **L4 触发率 = 0 / 355 = 0.0%**（四舍五入 0.00%），**< 10%**。
+
+**尺（复算，只读、不带写）**：
+`docker exec -i commerceql-pg-1 psql -U postgres -d ecom -q -t -A -F'|' -c "begin; select coalesce(binding_layer,'<null>'), coalesce(binding_state,'<null>'), count(*) from app.query_plan group by 1,2 order by 1,2; rollback;"`
+
+### 28.3 尺自检（先证"尺能看见 L4"，再报"L4=0"）
+
+- **域含 L4**：表级 CHECK 现读 = `binding_layer = ANY (ARRAY['L1','L2','L3','L4'])` ⇒ 该列的**取值域含 L4**，L4 若发生**必然可见**（不是被上游丢弃的 B 类盲区）。复算见 §28.6。
+- **无 NULL 干扰**：`binding_layer IS NULL` = **0 行** ⇒ 355 行**全部有明确判定层**，0 不是"缺列被当 0"。
+- **单 bundle**：`bundle_version` 现读全为 `2026.09.14.1`（355 行同一包）⇒ 读数不受跨包混样污染。
+- ⇒ 结论成立：**355 条判定里 L4 一次未触发**，不是尺的盲区。
+
+### 28.4 口径（为什么这 355 行是"活体路径"，不是评测注入）
+
+- 🔴 **eval 侧不写此表**：`eval/harness.py:758` 现读 = `query_plan_writer=None` ⇒ **评测跑不产 `app.query_plan` 行**（其 docstring 表行 17 明载"评测不产出生产审计行，`None` 走已登记降级路径"）。
+- ⇒ `app.query_plan` 的 355 行**只能来自活体 API 路径**（`bind` 节点 `_write_query_plan`）。而 `bind.py` 现读走**在线** `score_l4`（模块 docstring §一："L4 走在线入口，不走注入入口"）⇒ 这 355 行正是**真实四层判定**，L4 未被触发**不是构造性结果**。
+- ⚠️ **对 `/metrics` 的对照**：`binding_layer_total` 现值 = **全 0**（容器 ~1h 前重启 ⇒ 计数器清空；A 类恒 0 已导出）⇒ **只读 DB 才是可用面**，`/metrics` 需新流量才有数。
+
+### 28.5 结论（对 PRD §12.9 的推论）
+
+- **PRD §12.9 条件① 「L4 触发率 > 10%」现读 = 不满足（0%）**。复算：`docs/01` §12.9（现读 `:1523`）「仅当同时满足 ① L4 触发率 > 10% …」。
+- ⚠️ **只裁条件①，不裁方案 A 全套**：条件②「L4 误判 `ambiguous` 是主因」与条件③「语义层补全后仍不降」**本轮未取**（②须 L4 样本，而 L4=0 ⇒ 结构性无可归因样本）；⇒ **方案 A 三前置 = 1/3 现读（①不满足）**，**不得**据此单独判"方案 A 不成立"或"成立"（一个号只裁一件事；本窗只落"① 的读数"）。
+- **与段1 τ 诊断的关系**：段1 已判 `UNSTABLE`；本轮 ① 进一步显示**L4 连触发都几乎不发生** ⇒ 两条独立证据**同向**（τ 校准在现语义包下不可行）。
+- **零出站、零取号**：本轮无模型调用（余额仍 ¥0.577069）；`§4.8` 指针行现读仍 `U-141`，**未取号**（形态裁定已落，但①的读数不构成新缺陷的唯一证据 ⇒ 不单独立号）。
+
+### 28.6 边界、零取号理由与复算入口
+
+- **本轮 wrote**：`backend/reports/w8/PROMPT_新窗.md`（两处 🔻）＋ 本段所在的 `RELAY.md` ＋ `DELIVERY.md`。**没碰** `eval/**`／`app/**`／`tests/**`／`deploy/**`／容器；`docs/**`／`OVERVIEW.md`／`deliverables/**` **只读**。
+- 复算入口：
+  - L4 分布：见 §28.2 那条 psql 尺（只读）。
+  - 域含 L4：`docker exec -i commerceql-pg-1 psql -U postgres -d ecom -q -t -A -c "begin; select pg_get_constraintdef(oid) from pg_constraint where conrelid='app.query_plan'::regclass and contype='c'; rollback;"`
+  - eval 不写表：`grep -n 'query_plan_writer=None' eval/harness.py`
+  - 在线 L4：`grep -n 'score_l4' backend/app/graph/nodes/bind.py`
+
+### 28.7 串行资源表六面（逐条给尺）
+
+| 面 | 本轮是否争用 | 尺 |
+|---|---|---|
+| `git` 索引 | 争用（本轮提交） | 按名 stage；`git show --stat` |
+| 共享 `ecom` | **只读争用**（`begin; … rollback;`） | 台账 `1830|3.025849|2026-10-07 04:28:00.872275+00` **逐位不动** |
+| 共享栈 | 不争用（未 build／未 recreate） | `docker ps` 六件 `Up` 不变 |
+| 被测镜像 | 不争用 | 未 `docker build` |
+| 匣带重写 | 不争用 | `eval/cassettes/**` 未动 |
+| `reports/qa/**` | 不争用（只读） | 本窗未写 QA 面 |
+
+### 28.8 注入形态
+
+- 注入形态 = **无**；未执行 **N/A**。本轮全部数据来自盘上件与只读 SQL，无外部文本。
