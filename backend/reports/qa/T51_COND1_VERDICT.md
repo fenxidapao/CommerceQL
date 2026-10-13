@@ -148,3 +148,51 @@ W8 第 30 轮的 4 条证成链**逐条成立**（`harness.py:758=None` 写面�
 | `bind` → `clarify_out` | **字段绑定型**（经 `binding_ambiguity`） | `ambiguous_field_binding` |
 
 现读铁证：`eval` 166 条里 **30 条 `clarify` 全部止于 `intent`** ⇒ **绑定型澄清路径在冻结集上从未被走到**（本窗只陈述现象，**不判为缺陷**；立号与否待总控点名）。
+
+
+## 三、2026-10-13 追加（R31m · 续）：**`binding_layer_total` 面已实测** ＋ 一条**双向确认的零触达**
+
+> 追加现读：**2026-10-13 16:32 ＋0800** ｜ 起点 HEAD **`d7037ff`／515 笔** ｜ 本窗 **零出站**（唯一外部动作 ＝ `curl` 本机回环只读端点）
+
+### 3.1 🔴 `binding_layer_total` 实测（QA 自己读，不是转述）
+
+```
+curl -s http://127.0.0.1:8000/api/v1/metrics   ⇒ http=200 bytes=20825
+```
+
+| 指标 | 现读 |
+|---|---|
+| `binding_layer_total{layer="L1"}` | **0** |
+| `binding_layer_total{layer="L2"}` | **0** |
+| `binding_layer_total{layer="L3"}` | **0** |
+| `binding_layer_total{layer="L4"}` | **0** |
+| `binding_state_total{state="ambiguous"}` | **0**（另三态亦全 0） |
+| `binding_tau_calibrated` | **0** |
+
+⇒ **两个独立面（`query_plan` 落库面 ＋ `/api/v1/metrics` 计数面）现读都是 L4 ＝ 0**。
+
+### 3.2 ⚠️ 但该面**不可独立引用**：采样窗 = 0
+
+- 🔴 **四值全 0 ⇒「零样本」，不是「零发生」** —— 全 0 意味着 **自本进程启动以来没有任何一次绑定判定被计数**（若真的跑过判定，L1/L3 不可能是 0）。
+- 旁证：同一次抓取里 `binding_tau_calibrated = 0`（该值由启动时设置、与流量无关，故可读）；而计数类全 0。
+- 旁证二：本轮 `query_plan` **355 行**（同一栈、同一镜像），说明**历史上确实跑过大量判定** ⇒ 计数器为 0 **只能是重启归零 + 重启后零流量**。
+- ⇒ **本窗 R31m §38.4 立的「必须同报采样窗」正是为此**：该面现读 **窗 = 0**，**不得**用它作条件① 的第二独立证据。
+
+### 3.3 🔴 一条**双向确认**的零触达（本窗最终形态）
+
+| 方向 | 现读 |
+|---|---|
+| **口径面**：`app.query_plan` 的 `ambiguous` | **0 / 355** |
+| **面**：`/api/v1/metrics` 的 `binding_state_total{state="ambiguous"}` | **0**（窗 = 0，独立价值有限，但方向一致） |
+| **判据面**：冻结集 18 条 `expected_behavior='clarify'` 里，实际 `outcome='clarify'` | **9 条**（另 5 条判 `refuse`／3 条判 `success`／1 条 `failed`） |
+| 其中 **触达 `bind`** 的 | **0 条** —— 9/9 全部止于 **`intent`** |
+| 全 166 条里 **触达 `bind` 且 `binding_status='ambiguous'`** 的 | **0 条** |
+| 期望 clarify 且实际 clarify 且触达 `bind` 的 | **0 条** |
+
+⇒ **「绑定型澄清」路径（`bind` → `ambiguous` → `clarify_out`）在冻结集 166 条上从未被走到**；**9 条成功的澄清全部是 `intent` 层的时间/意图型**。
+⇒ 该路径是 **FR-9.1／N-27** 与 **门禁 G-8** 的关键输入 ⇒ 本窗**只陈述事实与读数**，**不判为缺陷**（是否缺陷由 W8 取号裁定）；但 **必须防越线**：🚫 不得写「绑定型澄清已验证」。
+
+### 3.4 🔴 与之配套的**第二条**常驻口径（本窗新立）
+
+> **澄清的两类不可混算。** `intent`／`normalize` 层产出的是**时间/意图型**澄清（`reason='time_ambiguous'`，文案为**占位常量** —— 现读 `clarify_out.py:20` 登记「模型给的澄清提示在这一版**丢失**」：`UnderstandOutcome.clarify_hint` 存在（`engine.py:428` 已赋值），但 `state_payload()`（`engine.py:257-267`）**不把它写进 state**）；`bind` 层产出的是**字段绑定型**澄清（`reason='ambiguous_field_binding'`，经 `binding_ambiguity.prompt`，含真实候选）。
+> ⇒ 统计/引用「澄清率（G-8／NFR-7.1）」时，**必须区分两类**并说明**各自样本量**；把两者合算会**掩盖绑定型样本 = 0** 这一事实。
