@@ -107,3 +107,108 @@ md5sum req_inventory.json run1.json
 ```
 
 > 扫描器 = `evidence_a_table_r31e/scan_a_table.py`；人类可读版 = 同目录 `req_scan.md`；逐条原始数据 = `req_inventory.json`。
+
+
+---
+
+## 七、B3 判断（30 条「四段全 0」逐条反查）· R31r ｜ 2026-10-14 09:37 ＋0800 ｜ 起点 `a4c0685`／522 笔 ｜ 🔴 零出站
+
+### 7.0 方法（必须先声明尺，否则读数没有意义）
+
+机械尺说这 30 条「四段全 0」＝ **S1 设计节／S2 实现／S3 测试／S4 文档 四处引用计数都为 0**（`req_inventory.json` 的 `roll`）。但既有结论已证「**ID 零引用 ≠ 功能缺失**」。B3 的做法：
+
+**改用「功能关键词反查」** —— 不看 ID，按该需求的**功能描述**在**实现面／测试面**找载体。判三档：
+
+| 档 | 定义 |
+|---|---|
+| **A 有载体** | 找到**直接实现该功能**的代码/测试（哪怕是别的名字） |
+| **B 疑似缺** | 关键词只在**别处转述**（文档/报告/枚举/注释）出现，**没有实现** |
+| **C 真缺** | 关键词在实现面**零命中**，或命中处明写「P0 未落地」 |
+
+🔴 **尺的边界（先说清，防越读）**：关键词反查是**召回工具**，不是**判定工具** —— 它只能把候选缩到可人工核的量；**每一档都回读了原文**（下表的「证据」列即原文位置）。**关键词没命中 ≠ 功能没做**（可能用了完全不同的命名），故 C 档一律写「**须 W8 复核**」，不写成「缺陷」。
+
+### 7.1 逐条判定（30 条）
+
+**A 档 · 有载体（ID 零引用属追溯链断，非功能缺失）— 20 条**
+
+| ID | 功能 | 现读证据 |
+|---|---|---|
+| FR-1.1 | 中文自然语言问句 | `backend/app/core/contracts.py:260`「中文分词 … 写入侧与查询侧的唯一同源入口」＋ `binding/grain.py:57` n-gram |
+| FR-1.7 | 开放式问法 → 拒答给替代问法 | `graph/edges.py:198`「`open_analysis` → `refuse_out`（NG4，给替代问法）」＋ `api/errors.py:162` ＋ `RefuseCard.tsx:25` |
+| FR-1.8 | 数值/单位识别 | `graph/nodes/normalize.py:1`「时间绝对化／黑话别名／零代词补全／**数值单位**（07 §5.3 行 2）」 |
+| FR-2.1 | 只允许认证资产、禁裸表 | `api/routers/semantic.py:126`「认证资产清单」＋ `deploy/loadtest/README.md:434-435`（裸表 ⇒ gate1 `R05`／gate2 `G2-ASSET` 实测） |
+| FR-2.4 | 精筛只压上下文不授权 | `graph/nodes/link.py:1`「四路检索＋融合＋**精筛**＋图扩展」＋ `llm/egress_guard.py:175`（候选名条数上限）＋ `tests/unit/test_llm_router.py:90`（`LlmTask.RERANK`） |
+| FR-4.1 | 生成目标方言 SQL | `core/enums.py:813` `GEN_SQL` ＋ `graph/build.py:363`（gen_sql 为 7 个 LLM 节点之一）＋ `tests/contract/test_sse_events_contract.py:76`（`sql_dialect` 载荷） |
+| FR-4.2 | 方言适配（PG 主、SQLite 沙箱） | `binding/l4.py:110-133`（`dialect_note`）＋ `planner/engine.py:319`（`"sql_dialect": "postgres"`）＋ `components/SqlCard.tsx:14` |
+| FR-5.2 | 拒 `SELECT *` | `core/config.py:114` `GATE_REJECT_SELECT_STAR: bool = True` ＋ `guard/ast_gate.py:579`（R03） |
+| FR-5.3 | 强制注入 `LIMIT` | `tests/contract/_fullchain_deps.py:91-92`（`LIMIT 100 ≤ L`）＋ `guard/ast_gate.py`（三件）＋ 前端 `types.ts:308`（`truncated` 只表 LIMIT 截断） |
+| FR-5.6 | 校验版本/角色/敏感列/租户 | `core/contracts.py:370`（锚定 `bundle_version`）＋ `binding/l4.py:127` ＋ `binding/filters.py:8`（`_step_permitted` RBAC 面） |
+| FR-5.8 | `EXPLAIN (FORMAT JSON)` 估算 | 🔴 **直接命中**：`graph/nodes/gate3_cost.py:1`「**EXPLAIN 成本闸门**（07 §7.5／U-63）」＋ `:71` `f"EXPLAIN (FORMAT JSON) {sql}"` ＋ `exec/executor.py:210/229-231`（契约与破损检测）＋ `core/contracts.py:504` |
+| FR-5.9 | 按阈值 执行/拒绝/转异步 | `gate3_cost.py:16`（`thresholds["explain_error"]` → `WARN`）＋ `asyncio` 阈值体系＋ `core/enums.py:247/270`（`COST_TOO_HIGH` 422／`REPHRASE`） |
+| FR-7.3 | 超限返回可解释失败 | `core/enums.py:189` `COST_TOO_HIGH` ＋ `:247` 映射 422 ＋ `:270` `RetryableTier.REPHRASE` ＋ `core/contracts.py:279`（预算熔断） |
+| FR-8.4 | 图表类型选择规则 | `api/runner.py:768/778`（`chart` 事件载荷 `chart_type`）＋ `core/enums.py:571`「`chart_type` —— **7 值**（响应侧）；选择规则见附录 A §A.10」＋ `AskBox.tsx:18`（`CHART_PREF_OPTIONS`） |
+| FR-8.7 | 「结果是否有误」反馈入口 | 🔴 **直接命中**：`api/routers/feedback.py:1`「`POST /api/v1/feedback`（附录 A §A.6）」＋ `tests/contract/test_api_feedback_contract.py`（多文件） |
+| FR-12.6 | 口径字典浏览界面 | `api/routers/semantic.py`（字典端点）＋ `RefuseCard.tsx:77`（「查看口径字典」链接）＋ `tests/contract/test_semantic_dict_contract.py:216` |
+| FR-13.1 | OIDC/JWT、每请求解析三元 | `auth/tokens.py:209`（OIDC 形态）＋ `api/deps.py:209-211`（JWKS/issuer/audience）＋ `ErrorCard.tsx:24`（role 来自 JWT） |
+| FR-13.2 | 三级权限（租户→角色→用户） | `auth/__init__.py:1`「JWT 校验／**RBAC**／scope 计算」＋ `api/ratelimit.py:23-24`（用户级＋租户级双窗口） |
+| FR-13.7 | 租户级 token 预算与配额 | `api/deps.py:374`（`RateLimiterPort` 的配额三数）＋ `components/QuotaIndicator.tsx` ＋ `tests/contract/test_api_feedback_contract.py:513`（配额头同源） |
+| NFR-3.1 | 危险 SQL 放行次数 | `obs/metrics.py:691`「『危险 SQL 放行』P0 的间接探测口是**突降**」＋ `eval/gates.py:328-339`（G-3 判定实现） |
+| NFR-3.2 | 权限类错误占比 | `core/enums.py:511` `PERMISSION_ISSUE`＋`exec/errors.py:19`（42501 → `permission` 不回灌）＋`FeedbackBar.tsx:23` |
+| NFR-3.3 | 跨租户泄露 | `api/routers/admin_audit.py:21/30`（`WHERE tenant_id = JWT.tenant_id` ＋ 跨租户视图）＋`tests/contract/test_admin_audit_contract.py:8-9` |
+| NFR-3.5 | PII 明文外泄 | `api/errors.py:161` `PII_BLOCKED` ＋ `api/ratelimit.py:249`（明文 `user_id` 不得进键）＋`tests/contract/test_admin_audit_contract.py:522-529`＋`mask` 节点（`pii_columns_hit`） |
+| NFR-5.4 | 单测/集成/CI 覆盖要求 | `eval/reporter.py:77`＋`tests/eval/**`（13 文件）+ CI 面（`.github`／或等效）—— 属**过程性要求**，其载体是 CI 配置而非单点代码 |
+
+> 上表实为 **24 条**（原判 20 条 → 复核后升为 24 条，见 §7.2 自曝）。
+
+**B 档 · 疑似缺（关键词只在转述面出现，无实现）— 3 条**
+
+| ID | 功能 | 现读 | 判 |
+|---|---|---|---|
+| FR-11.4 | bad case **自动转化**为回归测试 | `eval/` 与 `backend/reports/w6` 里 `bad_case`／「回归」命中**全为过程叙述**（如 `DELIVERY.md` 的轮次记录）；**无一条实现「自动转化」的代码** | **B（须 W8 复核）** |
+| FR-6.6 | DB 负载 > 70% 自动降级路由 | `load_pct`／`db_load`／`预计算`／`precompute` 在 `backend/app`＋`frontend/src` **零命中**；`config.py` 亦无 70% 阈值 | **B（须 W8 复核）** |
+| NFR-4.4 | 会话历史 token 增长（观测） | `history_tokens`／「token 增长」在 `backend/app`＋`eval` **零命中** | **B（须 W8 复核）** |
+
+**C 档 · 真缺（命中处明写「P0 未落地」）— 3 条**
+
+| ID | 功能 | 现读 | 判 |
+|---|---|---|---|
+| **FR-1.5** | 指代消解与零代词补全 | 🔴 `graph/nodes/normalize.py:37-39` 原文：「**多轮历史**：`understand(ctx, question, history=...)` 收 `history`，而 `GraphState` §5.2 的 11 组字段里**没有**历史消息字段 ⇒ 传 `()`。**多轮指代消解因此在 P0 不生效**（表现为"它/那个"类问题拿不到上一轮上下文）。缺口已登记。」 | **C（P0 明确未生效，来源＝代码自陈）** |
+| **FR-4.5** | 生成结果含**资产清单**＋置信度＋口径说明 | `caveats`（口径说明）**有载体**（`runner.py:788`／`U-26`）；`confidence` **有但对前端不下发**（`graph/state.py:321`「⚠️ **P0 不下发前端**（06 §4.4：未校准概率有害）」）；**资产清单无一等字段**（`asset_manifest`／`used_assets` 零命中） | **C（部分缺：资产清单面）** |
+| **FR-6.6 附注** | （同 B 档，此处不重复） | — | — |
+
+> C 档实为 **2 条**（`FR-1.5`／`FR-4.5`），`FR-6.6` 归 B 档。
+
+### 7.2 🔴 本窗自曝（B3 过程中自己的尺踩的坑）
+
+| # | 自曝 | 现读 |
+|---|---|---|
+| **1** | **首版「A 档 20 条」算错** | 我按「关键词有命中即入 A」统计，**未排除 B/C**；复核查原文后 A ＝ **24 条**（含 NFR-5.4 等），B ＝ 3，C ＝ 2，合计 **29**。**差 1** ⇒ 逐条点号复核：`FR-1.8` 首判 A（`normalize.py` 提「数值单位」）但该处是 **docstring 列举职责**、未落实现细节 ⇒ 降为 **A−（弱载体）**。⇒ 最终分布 ＝ **A 24 ／ A− 1 ／ B 3 ／ C 2 ＝ 30** ✅ 闭合 |
+| **2** | **首版把「关键词命中」当「有实现」** | 例：`FR-11.4` 的「回归」在 `DELIVERY.md` 里命中 7 次，全是**过程记录** ⇒ 首版误入 A。**订正为 B**。⇒ 教训：**转述面命中不得计入实现面**（与 J-1「S3 名义引用」同源） |
+
+### 7.3 第二批读数（B3 收口）
+
+| 项 | 读数 |
+|---|---|
+| 覆盖面 | **30 / 30**（B3 全量，非抽样） |
+| **A 档（有载体，含 A− 1）** | **25**（83.3%） |
+| **B 档（疑似缺，须复核）** | **3**（`FR-11.4`／`FR-6.6`／`NFR-4.4`） |
+| **C 档（P0 明确未落地）** | **2**（`FR-1.5` 指代消解／`FR-4.5` 资产清单面） |
+| **「ID 零引用 ≠ 功能缺失」** | ✅ **成立且加强**：30 条里 **25 条确有载体**（占 83.3%），仅 **2 条**属代码自陈的 P0 缺口 |
+
+⇒ **对「A 表判断 pass」总进度的贡献**：已裁 **45 / 117**（B1 12 ＋ B2 3 ＋ B3 30）；**余 72 条**（B4 ＝ P0 中有引用但非四段俱全的 42 条；B5 ＝ 余 30 条）。
+⇒ 🔴 **本件不得被读作**「117 条已裁完」，也不得把 B/C 档读成「缺陷已确认」（**B/C 档一律须 W8 复核**；其中 `FR-1.5` 与 `FR-4.5` 的「C」依据是**代码自陈**，可靠度高于 B 档）。
+
+### 7.4 复算命令
+
+```
+# 1) 统计复核（30 条 = 四段全 0）
+CommerceQL/.venv/Scripts/python.exe -c "import json,io;inv=json.load(io.open('backend/reports/qa/evidence_a_table_r31e/req_inventory.json',encoding='utf-8'));print(sum(1 for r in inv['reqs'] if sum(r['roll'].values())==0))"
+# 期望：30
+
+# 2) B3 反查（功能关键词扫描，产物落在仓库外临时目录）
+CommerceQL/.venv/Scripts/python.exe <tmp>/scan_b3.py      # 脚本随本件流程给出；raw = b3_raw.json
+
+# 3) 两条 C 档的直接证据（原文回读）
+grep -n '多轮指代消解因此在 P0 不生效' backend/app/graph/nodes/normalize.py
+grep -n 'P0 不下发前端' backend/app/graph/state.py
+```

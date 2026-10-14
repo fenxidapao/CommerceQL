@@ -1,0 +1,290 @@
+{
+ "FR-1.1": [
+  "backend/app/binding/grain.py:57:#: 问句里做 n-gram 扫描的最大词长（中文粒度词实测 ≤ 4 字；留到 8 是为了将来英文短语）。",
+  "backend/app/core/contracts.py:260:    \"\"\"中文分词 —— **写入侧（物化 `tsvector`）与查询侧的唯一同源入口**（N-24 / ADR-07）。",
+  "backend/app/graph/nodes/clarify_out.py:21:| `options[].label` | **无来源**：`CandidateRef` 只有 `asset_id`（无人类可读标签） ⇒ label 与 value 同值 | 登记：附录 A §A.1.4 示例里的 label 是中文短语（\"收货城市\"），其来源应是语义包的列注释，而绑定层出参里没有它 |",
+  "backend/tests/eval/test_redteam_logic.py:323:    assert all(len(n) >= 2 for n in vocab), \"单字符名会把任何中文文案判成泄露\"",
+  "backend/tests/eval/test_redteam_logic.py:341:    \"\"\"中文/字母紧邻不算命中：`uv_order_paidx` 里不许揪出 `order_paid`（误报会让红队整批假红）。\"\"\"",
+  "backend/tests/unit/test_migration_dsn_hygiene.py:171:    #   但系统 ACP 仍是 cp936 —— 中文 Windows runner 的常见形态）都会让两侧不一致：",
+  "eval/reporter.py:119:    \"\"\"报告是**共享产物** ⇒ 里面不该出现本机绝对路径（含用户名/盘符/中文目录）。",
+  "eval/reporter.py:1099:                          \"且 mtime 是「最后一次写入」不是「生成时刻」；本机还可能出现中文目录名被平台改写的情况\","
+ ],
+ "FR-1.5": [
+  "backend/app/api/dto/session.py:74:    #: 多轮指代消解需要\"历史消息\"载体，而 `GraphState` §5.2 的 11 组字段里没有它",
+  "backend/app/api/routers/session.py:126:                # ⚠️ P0 恒 `None`：多轮指代消解需要\"历史消息\"载体，而 `GraphState` 的",
+  "backend/app/graph/nodes/normalize.py:38:   §5.2 的 11 组字段里**没有**历史消息字段 ⇒ 传 `()`。多轮指代消解因此在 P0 不生效",
+  "eval/cassettes/w6_batch.jsonl:40:{\"key\": \"sha256:6afd21661fd88a07c94657a96ef16293063252c69200f67176bd21373e981db0\", \"path\": \"/chat/completions\", \"request\": {\"max_tokens\": 384, \"messages\": [{\"content\": \"\\n你是 CommerceQL 的「",
+  "eval/cassettes/w6_batch.jsonl:117:{\"key\": \"sha256:a778dd011a10b78c2159888dc046ae436be6c2522f1af0d5e2d294aafe68d416\", \"path\": \"/chat/completions\", \"request\": {\"max_tokens\": 600, \"messages\": [{\"content\": \"\\n你是 CommerceQL 的",
+  "eval/cassettes/w6_batch.jsonl:124:{\"key\": \"sha256:e66b7faf524049c320b88d035eb62c1ec4b8629f388ad3bc40e2bb52bd434926\", \"path\": \"/chat/completions\", \"request\": {\"max_tokens\": 384, \"messages\": [{\"content\": \"\\n你是 CommerceQL 的",
+  "deploy/runbook/RL-3-checkpoint-write-slowdown.md:28:> ⚠️ **记法约定（先看这条再抄指标名）**：下表里 `stage_duration_seconds{stage=...}` / `http_request_duration_seconds{endpoint=...}` 这种写法指代的是**指标族**，",
+  "backend/app/graph/nodes/normalize.py:1:\"\"\"节点 2 `normalize` —— 时间绝对化 / 黑话别名 / 零代词补全 / 数值单位（07 §5.3 行 2）。"
+ ],
+ "FR-1.7": [
+  "backend/app/api/errors.py:162:    RefuseReason.OPEN_ANALYSIS.value: \"这类开放式分析不在本产品的回答范围内。\",",
+  "frontend/src/components/RefuseCard.tsx:25:  open_analysis: '原因：这是一个开放式分析问题，系统只做数据查询，不做归因与预测',",
+  "eval/case_library.py:445:     {\"reason\": \"开放式问法，既没有时间窗也没有维度\"}),",
+  "eval/case_library.py:466:# 覆盖：PII 导出 / 越权（跨租户）/ 无对应资产 / 开放式 / 提示词套取 / 成本熔断",
+  "eval/dataset_v1_frozen.json:5486:        \"reason\": \"开放式问法，既没有时间窗也没有维度\"",
+  "backend/app/core/enums.py:432:    OPEN_ANALYSIS = \"open_analysis\"",
+  "backend/app/graph/edges.py:198:    `open_analysis` → `refuse_out`（NG4，给替代问法）；`executable` → `link`。\"\"\"",
+  "backend/app/graph/nodes/refuse_out.py:12:| `route_after_intent`（`intent=refuse` / `open_analysis`） | `state.intent_detail.refuse_kind` ← `PlannerEngine` 的 `UnderstandOutcome`（**模型/规则给出的**，不是我们编的） |"
+ ],
+ "FR-1.8": [
+  "backend/app/api/errors.py:424:        # 把问题正文/参数值写回响应体既没有诊断价值（字段名就够了），",
+  "backend/app/api/runner.py:50:| `progress` | **恒 `null`** | 文档只在 §A.2 的示例里出现 `0.7`，**没有任何映射规则**（阶段→数值）。按 U-22 不发明数字 ⇒ 不下发。前端不消费该字段（06 §2301 只约束评测页\"不显示虚假百分比\"） |",
+  "backend/app/binding/__init__.py:12:| ``scores.py`` | L4 分数值对象（`RerankScore`）+ 严格 JSON 解析 + 注入式适配缝（`adopt_l4_candidates`） |",
+  "frontend/src/api/types.ts:180:/** 后端\"未记录\"的数值口径：`null` = 产物里没有这一格，**不是 0**（详见 A.9.4 的 `unavailable`）。 */",
+  "frontend/src/components/CaveatBar.tsx:95:        <span>本次未返回口径说明，数值请谨慎使用</span>",
+  "frontend/src/components/ResultBlock.tsx:144:    '精确数值请查看下方「查看数据表」',",
+  "backend/tests/contract/test_admin_eval_report_contract.py:101:# 合成产物（形状与真产物一致，数值刻意小而可手算）",
+  "backend/tests/contract/test_cache_keys_contract.py:210:    # 数值本身由 W4 转述给定：状态/租约 1h、会话元数据 1d"
+ ],
+ "FR-2.1": [
+  "eval/MANIFEST_v1.json:96:    \"method\": \"对 data/ecom_sandbox.db 的 8 个**认证视图**逐个 COUNT(*)；不查裸表。\",",
+  "deploy/loadtest/README.md:434:   （`ast_gate.py:531-534`：带 schema 前缀 = 绕白名单形态）；裸表 `order_paid` ⇒ gate1 `R05` / gate2 `G2-ASSET`",
+  "deploy/loadtest/README.md:435:   ⇒ ✅ 顺带排掉一条我本来担心的洞：**deny 列经裸表名绕不过去**（裸表 + `receiver_phone` 仍是 `R05`/`G2-ASSET`）。",
+  "deploy/loadtest/README.md:466:2. **`repair` 这一跳本轮花了 ¥0.006592**（单次最贵，`cache_hit_ratio=0.0`），产出是一条被 gate1 `R05` 拒的裸表 SQL",
+  "backend/app/api/routers/semantic.py:115:    summary=\"认证资产清单（§A.7.2）\",",
+  "backend/app/api/routers/semantic.py:126:    \"\"\"认证资产清单（§A.7.2）。",
+  "backend/app/planner/payloads.py:199:    \"（指标口径、认证资产、列、维度、字段绑定、同义词）。\"",
+  "backend/tests/contract/test_r10_cte_join_contract.py:13:2. `test_cte_side_does_not_become_a_blanket_pass` —— **本窗自订的反面形状**：CTE 体内藏未认证资产对仍须 R10，"
+ ],
+ "FR-2.4": [
+  "backend/app/graph/nodes/link.py:1:\"\"\"节点 4 `link` —— 四路检索 + 融合 + 精筛 + 图扩展（07 §5.3 行 4）。",
+  "backend/app/llm/egress_guard.py:175:#: 候选名条数上限（精筛/L4 的 Top-N 量级；07 §6.7 融合截断后不会有几百条）。",
+  "backend/app/llm/egress_guard.py:276:    #: ① **候选资产名列表**（精筛 / L4 打分器需要）。",
+  "backend/tests/contract/test_decision_table_b_c.py:138:        \"\"\"B3 精筛后候选仍过多 → 同 B2 的 `clarify`，选项截断到 `MAX_CLARIFY_OPTIONS`(=4)。\"\"\"",
+  "backend/tests/unit/test_llm_router.py:90:        LlmTask.RERANK: 0.8,             # §16.1 行4「精筛」",
+  "backend/app/binding/__init__.py:154:    require_rerank_scores,",
+  "backend/app/binding/__init__.py:215:    \"require_rerank_scores\",",
+  "backend/app/binding/scores.py:7:    \"叫不叫 reranker\"是形式要求，**实质要禁的是双塔余弦** —— 它衡量\"名字像不像\"，"
+ ],
+ "FR-4.1": [
+  "backend/app/core/enums.py:813:    GEN_SQL = \"gen_sql\"",
+  "backend/app/graph/build.py:363:#: ⚠️ **LLM 节点不在本表**：走 DeepSeek 的 7 节点（normalize/intent/plan/gen_sql/present/repair/bind）",
+  "backend/app/graph/build.py:393:#: （`gen_sql_complex`）在此按**基 task** 解析：当前两档都路由 `ModelKey.FAST`，值相同；",
+  "frontend/src/mocks/handlers.ts:324:            prompt_version: 'gen_sql_v7',",
+  "frontend/src/mocks/handlers.ts:357:          prompt_version: 'gen_sql_v7',",
+  "frontend/src/pages/EvalRunsPage.test.tsx:263:      ['Prompt 版本', 'gen_sql_v1'],",
+  "backend/tests/contract/_fullchain_deps.py:5:`link → bind → plan → gen_sql → 三闸门 → execute → repair → mask → audit_pre →",
+  "backend/tests/contract/_fullchain_deps.py:315:    （gen_sql 阶段拒绝）。`repair_sqls` 按序消费（E2 需要\"两轮都给坏 SQL\"）。"
+ ],
+ "FR-4.2": [
+  "backend/app/binding/l4.py:110:    dialect_note: str = \"\",",
+  "backend/app/binding/l4.py:124:    | `dialect_note` | 方言说明 | `l4_score_v1` 资产**引用了它**（`$dialect_note`）→ 不发会留下未替换的占位符。填的是自产稳定文本 |",
+  "backend/app/binding/l4.py:133:    ⚠️ `dialect_note` 的**默认值是空串**，此时渲染会填进 `（语义包摘要未提供）` 那类占位文案；",
+  "frontend/src/api/types.ts:299:  dialect?: string;",
+  "frontend/src/components/SqlCard.tsx:14:  dialect: 'postgresql';",
+  "frontend/src/mocks/fixtures.ts:46:      data: { stage: 'sql_ready', elapsed_ms: 2180, dialect: 'postgresql', confidence: 0.87, sql: SQL_TEXT, terminal: false },",
+  "backend/tests/contract/test_r10_cte_join_contract.py:99:    tree = sqlglot.parse_one(_sql(_CTE_JOIN_SQL), dialect=\"postgres\")",
+  "backend/tests/contract/test_sse_events_contract.py:76:            {\"sql_text\": \"SELECT 1\", \"sql_dialect\": \"postgres\", \"confidence\": 0.9},"
+ ],
+ "FR-4.5": [
+  "backend/app/repo/migrations/versions/0004_cost_ledger_and_query_plan.py:123:    #   confidence     NULL     —— 澄清/未解析路径没有置信度可言。",
+  "backend/app/repo/query_plan.py:89:#: （unresolved 等态没有判定层/置信度可言）。",
+  "backend/tests/integration/test_query_plan_store_pg.py:208:    \"\"\"`unresolved` 终态形态：无判定层 / 无置信度 / 摘要缺省（0004 的可空性裁定）。\"\"\"",
+  "backend/tests/unit/test_query_plan_store.py:296:    \"\"\"`unresolved` 终态的形态：没有判定层、没有置信度、摘要可以缺（0004 的可空性裁定）。\"\"\"",
+  "backend/app/graph/events.py:200:            \"confidence\": update.get(\"confidence\"),",
+  "backend/app/graph/state.py:160:        \"confidence\",",
+  "backend/app/graph/state.py:321:    confidence: float                  # ⚠️ **P0 不下发前端**（06 §4.4：未校准概率有害）",
+  "frontend/src/api/types.ts:300:  confidence?: number;"
+ ],
+ "FR-5.2": [
+  "backend/app/api/routers/admin_audit.py:14:   **不是** `pools.metadata`。写反了不会有任何报错，只是读路径变成可写连接上的 SELECT",
+  "backend/app/core/config.py:114:    GATE_REJECT_SELECT_STAR: bool = True",
+  "backend/app/core/contracts.py:346:    #:    ⇒ 裁剪面下 `SELECT receiver_phone` **解析失败 ⇒ ④ 完全不响**（越权列漏检）。",
+  "frontend/src/components/SqlCard.tsx:26:  /\\b(SELECT|FROM|WHERE|GROUP BY|ORDER BY|LIMIT|JOIN|LEFT JOIN|RIGHT JOIN|INNER JOIN|ON|AND|OR|NOT|IN|AS|CASE|WHEN|THEN|ELSE|END|SUM|COUNT|AVG|MAX|MIN|DISTINCT|BETWEEN|LIKE|DESC|ASC",
+  "frontend/src/mocks/fixtures.ts:9:const SQL_TEXT = `SELECT r.region_name,",
+  "frontend/src/mocks/fixtures.ts:174:  { event: 'stage', data: { stage: 'sql_ready', elapsed_ms: 1900, dialect: 'postgresql', confidence: 0.62, sql: 'SELECT ...', terminal: false }, delayMs: 150 },",
+  "backend/tests/contract/_fullchain_deps.py:92:GREEN_SQL = \"SELECT order_id, amount FROM fact_orders WHERE region_code = 440000 LIMIT 100\"",
+  "backend/tests/contract/test_admin_audit_contract.py:1:\"\"\"T-37 A2（QA 第 14 轮主单）：§A.9.5 `GET /admin/audit` 的契约面 ＋ \"读路径只 SELECT\"的源码级断言。"
+ ],
+ "FR-5.3": [
+  "backend/app/api/deps.py:404:    default_code = \"RATE_LIMITED\"",
+  "backend/app/api/errors.py:23:from app.api.ratelimit import RATE_LIMIT_HEADER_NAMES, RateLimitQuota",
+  "backend/app/api/errors.py:28:    RATE_LIMIT_BUCKET_RETRY_AFTER_S,",
+  "frontend/src/api/types.ts:60:  | 'RATE_LIMITED'",
+  "frontend/src/api/types.ts:308:  /** 仅表示因 LIMIT 截断，与 RLS 过滤无关（A.1.5 红线2） */",
+  "frontend/src/components/ErrorCard.tsx:6: * - 辨析：SESSION_CONFLICT(409) ≠ RATE_LIMITED(429)（不喂 QuotaIndicator）；",
+  "backend/tests/contract/_fullchain_deps.py:91:#: 绿灯 SQL：单表、白名单列、列-常量比较（R14 值位）、LIMIT 100 ≤ L(=min(1000,10000))。",
+  "backend/tests/contract/_fullchain_deps.py:92:GREEN_SQL = \"SELECT order_id, amount FROM fact_orders WHERE region_code = 440000 LIMIT 100\""
+ ],
+ "FR-5.6": [
+  "backend/app/api/dto/eval_run.py:54:    bundle_version: str | None = Field(default=None, description=\"语义包版本\")",
+  "backend/app/binding/l4.py:127:    | `bundle_version` | 语义包版本 | 前缀按它冻结；也是分数可追溯的上下文 |",
+  "backend/app/core/contracts.py:370:    #: 本次请求锚定的语义包版本。**必须**与 `active_version()` 同时刻读取 ——",
+  "frontend/src/pages/ChatPage.tsx:689:                      溯源（指标 → 来源资产 → 语义包版本）：",
+  "frontend/src/pages/ChatPage.tsx:710:                    <div>语义包版本：{drawerTurn.meta?.bundle_version ?? '—'}</div>",
+  "backend/tests/contract/_fullchain_deps.py:85:#: 语义包版本（`FullChainSemantics.active_version` 与 allowlist 的 `bundle_version` 同值）。",
+  "backend/tests/graph_snapshot/test_graph_wiring.py:215:        \"\"\"端到端：官方构造的状态必须真的能过 `trusted_context`（含语义包版本固定）。\"\"\"",
+  "eval/cassettes/w6_batch.jsonl:1:{\"key\": \"sha256:52d1c7e29696889987d1e98db4c0aaa2509805c44aefbcaeda683832c07754a0\", \"path\": \"/chat/completions\", \"request\": {\"max_tokens\": 384, \"messages\": [{\"content\": \"\\n你是 CommerceQL 的「问"
+ ],
+ "FR-5.8": [
+  "backend/app/core/contracts.py:504:#: `EXPLAIN (FORMAT JSON)`（07 §7.5）解析后的计划载荷 —— **两种\"拿不到计划\"是两条语义**：",
+  "backend/app/core/contracts.py:509:#: | **抛异常** | 有这个能力、但**本次** EXPLAIN 失败 | `WARN`（`explain_error`，§14.2 D5，**不阻断**） |",
+  "backend/app/core/contracts.py:511:#: 把前者写成异常 ⇒ 沙箱里的 gate3 从 `SKIPPED` 变 `WARN`，报告会读成\"EXPLAIN 失败过一次\"；",
+  "backend/tests/contract/_fullchain_deps.py:63:    \"GREEN_EXPLAIN\",",
+  "backend/tests/contract/_fullchain_deps.py:94:#: 绿灯 EXPLAIN 计划（Total Cost 100 ≪ pass 阈值 50000 → gate3 PASS）。",
+  "backend/tests/contract/_fullchain_deps.py:95:GREEN_EXPLAIN: dict[str, Any] = {",
+  "eval/build_red_team.py:266:   \"degraded\", \"SQLite 沙箱无法给出 EXPLAIN 成本 → **必须报『未评估』而不是报『通过』**\",",
+  "eval/gap_table.py:40:        capability=\"EXPLAIN (FORMAT JSON) / gate3 成本闸门\","
+ ],
+ "FR-5.9": [
+  "backend/app/api/deps.py:474:#: `SparseSearch` 的归一化标志与低分阈值（W2B 的装配示例用它自己的取值）。",
+  "backend/app/api/deps.py:656:    **没有**成本阈值；语义包 YAML 里也 grep 不到 `gate3` / `total_cost` / `rows_pass`。",
+  "backend/app/api/routers/health.py:72:#: 事件循环阻塞阈值（附录 A §A.8.2：\"阻塞 > 5s → 503\"）。",
+  "frontend/src/api/types.ts:167: * 🔻 T-34（2026-10-04）：多出的 `unverified` 不是\"第三种失败\"，而是**不设阈值的格**",
+  "frontend/src/api/types.ts:168: * （PRD §13.2 的 Extra Hard 行原文「不设硬性阈值（仅报告）」）。",
+  "frontend/src/api/types.ts:650:  /** `null` = 该格不设阈值（Extra Hard），页面显示「仅报告」 */",
+  "backend/tests/contract/_fullchain_deps.py:94:#: 绿灯 EXPLAIN 计划（Total Cost 100 ≪ pass 阈值 50000 → gate3 PASS）。",
+  "backend/tests/contract/test_admin_eval_report_contract.py:448:    #: Extra Hard 不设阈值 ⇒ `target` 必须是**字面 null**，判词也不许是 pass/fail"
+ ],
+ "FR-6.6": [
+  "backend/app/api/sse.py:38:#: 存在的理由：反向代理/负载均衡各有空闲超时，静默连接会被单方面切断，",
+  "backend/app/graph/build.py:299:    混进了**探针自己造的负载** —— 结论就不可用了。",
+  "deploy/loadtest/README.md:219:`ok` 恒 0 ⇒ P95 没有分母。⇒ 这一类失败**与负载无关**，跑批不会让它变得可测。",
+  "deploy/loadtest/README.md:225:   其中至少这一整类其实是**数据未就绪**，与负载无关 —— 归因作废，改判见 `RELAY.md` §二十⑥。",
+  "deploy/loadtest/README.md:1624:| ② `SET LOCAL` 身份在连接复用时正确复位（ADR-09 验证③） | 负载下跨租户抽查：同连接先后服务不同 token，看结果是否串号 | ✅ **可判**（装载后的视图带 `tenant_id`，可用 `app.shop_ids`/`app.tenant_id` 的可见行数差做对照） |",
+  "backend/app/api/deps.py:174:    若这里放实例，端点就会在编译期共享一个引擎 —— 并发时 A 请求的降级事件发给 B 的流。",
+  "backend/app/api/deps.py:376:    实现上没有那个方法时**降级为只回判定**：此时三头不下发、`Bucket` 头照发 ——",
+  "backend/app/api/deps.py:466:#: 而\"降级时的权重重分配必须是确定性规则\"（同节明文）。放进可配置项会让"
+ ],
+ "FR-7.3": [
+  "backend/app/api/deps.py:367:    \"\"\"限流拦截。超限 → 抛 `RateLimited`（映射为 `429`，**由端点层的统一出口**处理）。",
+  "backend/app/api/ratelimit.py:18:   它会把\"1 秒内打了 100 次\"判成超限，却对\"100 个长连接挂着不结束\"完全无感 ——",
+  "backend/app/api/ratelimit.py:69:#:   - `allowed`：`1` 放行 / `0` 超限；",
+  "frontend/src/mocks/handlers.ts:59:        { code: 'RATE_LIMITED', message: '查询类配额超限', trace_id: 'tr_mock429', server_time: NOW },",
+  "backend/tests/contract/test_decision_table_d_e.py:186:        \"\"\"D7 执行期资源上限超限 → `error(EXEC_RESOURCE_EXCEEDED)`（已开始执行）。\"\"\"",
+  "backend/tests/contract/test_decision_table_d_e.py:195:        # 资源超限不可修（不进 repair）—— 与 timeout 同判据。",
+  "backend/tests/contract/test_decision_table_d_e.py:236:        # 三次执行（首跳 + 两次修复后）+ 两次 repair，然后超限收口。",
+  "deploy/.env.example:85:EXEC_MAX_MEMORY_MB=512            # 超限 → EXEC_RESOURCE_EXCEEDED(422)，与 COST_TOO_HIGH 是两个码"
+ ],
+ "FR-8.4": [
+  "backend/app/llm/prompts/present_v1.txt:29:1. 只选**能表达该维度组合**的图型：类别对比用柱状、时间趋势用折线、",
+  "frontend/src/components/AskBox.tsx:20:  { value: 'line', label: '折线' },",
+  "frontend/src/components/ResultBlock.tsx:124:  line: '折线图',",
+  "backend/app/llm/prompts/present_v1.txt:30:   构成占比用饼/环、双指标关系用散点。不要为了好看而选图型。",
+  "frontend/src/components/AskBox.tsx:23:  { value: 'pie', label: '饼环' },",
+  "frontend/src/components/ResultBlock.tsx:128:  pie: '饼图',",
+  "frontend/src/components/TruncateBar.tsx:5: * - 截断 + 饼图 → 额外 degraded 提示「占比不可信」",
+  "frontend/src/components/AskBox.tsx:21:  { value: 'bar', label: '柱状' },"
+ ],
+ "FR-8.7": [
+  "backend/app/api/deps.py:120:    #: 反馈落库（`POST /feedback` 的唯一写入通道，W1B 提供）。",
+  "backend/app/api/deps.py:138:    ⚠️ 四个具体实现（锁 / 限流 / 审计 / 反馈落库）在这里 `new` 出来而不是让调用方注入：",
+  "backend/app/api/deps.py:152:        # 反馈写入复用**元数据池**（W1B 开工指令 §1）：不新建连接资源。",
+  "frontend/src/components/FeedbackBar.tsx:2: * C13 FeedbackBar 反馈条（06 §4.13）",
+  "frontend/src/components/FeedbackBar.tsx:74:        {submittedReason ? `已反馈（${REASON_TEXT[submittedReason]}）` : '已反馈，谢谢'}",
+  "frontend/src/components/FeedbackBar.tsx:84:          修改反馈",
+  "backend/tests/contract/test_api_feedback_contract.py:325:    但幂等三元组从此变成\"按租户去重\" —— 同一租户下 A 用户的反馈会把 B 用户的顶掉。",
+  "backend/tests/contract/test_api_feedback_contract.py:492:    assert body[\"trace_id\"], \"trace_id 必须下发（否则前端无法反馈问题）\""
+ ],
+ "FR-11.4": [
+  "frontend/src/api/base.test.ts:2: * `src/api/base.ts` 的回归测试（A5 之后发现的 v1 阻断面）。",
+  "backend/tests/eval/test_consistency_reporter.py:725:    \"\"\"`?` 桶事故的回归测试：交互层判对与 unscored **不是**失败。"
+ ],
+ "FR-12.6": [
+  "backend/app/api/routers/semantic.py:15:`docs/02:700-706`（10-05 裁定）：口径字典 = **平台级共享面**，`app/semantics/` 里没有按",
+  "backend/app/api/routers/semantic.py:65:#: 口径字典页**不属于任何用户会话**（同 `admin_eval.py:63` 的理由：`build_identity`",
+  "backend/app/api/routers/semantic.py:80:            \"口径字典当前不可用：语义包未装载（可核对 /healthz 的 semantic_bundle_loaded）\",",
+  "frontend/src/api/types.ts:511:  /** ⚠️ 口径字典页不得展示本字段（权限边界） */",
+  "frontend/src/components/RefuseCard.tsx:77:            可以试着换个说法，或查看 <Link to=\"/semantic/metrics\">口径字典</Link> 了解系统能回答什么",
+  "frontend/src/mocks/scenarios.md:39:| `GET /semantic/metrics` / `GET /semantic/assets` | 口径字典数据（assets 含 denied_columns，但字典页不得展示） |",
+  "backend/tests/contract/test_semantic_dict_contract.py:216:    assert \"口径字典\" in env[\"message\"], \"文案要与查询链路的『拒答』分开（两个触发面不共用一句）\"",
+  "backend/app/api/exceptions.py:131:    `healthz` 报 `semantic_bundle_loaded=false`），所以\"字典为空\"是**设计性失败**，"
+ ],
+ "FR-13.1": [
+  "backend/app/auth/tokens.py:209:    是**空格分隔的字符串**，而不少 IdP（含部分 OIDC 实现）直接给 JSON 数组。",
+  "frontend/src/pages/LoginPage.tsx:3: * - P0 为壳形态：主按钮走 OIDC 重定向形态；真实 IdP 未接入前只做提示",
+  "frontend/src/pages/LoginPage.tsx:92:        登录端点属架构未决项（D-H），当前为本地 stub，真实 OIDC 流程待裁决后接入",
+  "backend/app/api/deps.py:209:        jwks=JwksCache(PemFileJwksSource(settings.JWT_PUBLIC_KEY_PATH)),",
+  "backend/app/api/deps.py:210:        issuer=settings.JWT_ISSUER,",
+  "backend/app/api/deps.py:211:        audience=settings.JWT_AUDIENCE,",
+  "frontend/src/api/queryStream.test.ts:347:  it('错误面不回显令牌：message / code 里都不可能出现 JWT 片段', async () => {",
+  "frontend/src/components/ErrorCard.tsx:24:  /** JWT 中的 role（判定必须基于 JWT，不依赖后端未返回字段） */"
+ ],
+ "FR-13.2": [
+  "backend/app/auth/__init__.py:1:\"\"\"CommerceQL 后端包：JWT 校验 / RBAC / scope 计算 / 不可变 TrustedContext。",
+  "backend/app/binding/filters.py:8:| ② | 过滤未认证 / 无权限 / 质量异常 / 已废弃 | `_step_permitted()`：RBAC 面（allowlist + deny 列）。<br>⚠️ **质量面已在 loader 完成**（`quality_gates.on_violation=exclude_from_context`）→ 被排除的资产在 `runtime.asset()` 里*",
+  "backend/app/binding/filters.py:93:    #: L3 只认**声明的那个**。若拿 `refs` 做 L3 判据，canonical 被 RBAC 过滤掉时会**静默改绑",
+  "backend/tests/unit/test_binding_four_layer.py:489:        旧实现拿扁平 `refs` 做 L3 判据 → canonical 被 RBAC 淘汰时会**静默绑到 buyer_id**，",
+  "backend/app/api/exceptions.py:85:    \"\"\"会话不存在 / 不属于本租户（附录 A §A.5.2 的 404）。\"\"\"",
+  "backend/app/api/ratelimit.py:23:   本模块 `check()` 现对四个桶同时执行用户级与租户级两条窗口（`ADMIN` 桶租户列是 `—`，不设限）。",
+  "backend/app/api/ratelimit.py:24:   两维度必落不同 ZSET：用户键 `rl:{bucket}:{tenant}:{user}` / 租户键 `rl:t:{bucket}:{tenant}`。",
+  "frontend/src/api/types.ts:694:  /** 平台管理员跨租户视角时显式标注 */"
+ ],
+ "FR-13.7": [
+  "backend/app/api/deps.py:374:    端口 `RateLimiterPort` 只有 `check`，因为\"配额三数\"是接入层展示需要的东西，",
+  "backend/app/api/errors.py:82:        那些头的语义是\"配额剩余\"，而 `SESSION_CONFLICT`(409) 与闸门拒绝都不是配额事件 ——",
+  "backend/app/api/errors.py:279:    会话串行冲突不是配额事件，给了会让前端进入限流禁用态。故本函数**只在两处调用**：",
+  "frontend/src/components/QuotaIndicator.tsx:2: * C14 QuotaIndicator 配额与限流指示（06 §4.14）",
+  "frontend/src/mocks/handlers.ts:59:        { code: 'RATE_LIMITED', message: '查询类配额超限', trace_id: 'tr_mock429', server_time: NOW },",
+  "backend/tests/contract/test_api_endpoints_contract.py:536:            assert name not in resp.headers, f\"{name} 不得出现在 409 上（它不是配额事件）\"",
+  "backend/tests/contract/test_api_feedback_contract.py:127:    `deps.check_rate_limit` 优先取 `check_with_quota`，而配额三数（`Limit`/`Remaining`/",
+  "backend/tests/contract/test_api_feedback_contract.py:513:    \"\"\"`429` 的配额头必须与本次判定**同源**（防\"响应说还剩 3 次、状态码却是 429\"）。\"\"\""
+ ],
+ "NFR-3.1": [
+  "backend/app/obs/metrics.py:691:        \"『危险 SQL 放行』P0 的间接探测口是**突降**，不是突增。rule_id 空值 = 载体本轮未给规则号\",",
+  "frontend/src/mocks/handlers.ts:407:            { id: 'G-3', name: '危险 SQL 放行 = 0', verdict: 'pass' },",
+  "frontend/src/pages/EvalReportPage.tsx:249:    { key: 's1', category: '安全（红线）', label: '危险 SQL 放行', value: show(overall.security.dangerous_sql_passed), danger: true },",
+  "frontend/src/pages/EvalRunsPage.tsx:322:              ['危险 SQL 放行', show(r.headline.dangerous_sql_passed)],",
+  "backend/tests/contract/test_admin_eval_report_contract.py:279:            {\"gate_id\": \"G-3\", \"condition\": \"危险 SQL 放行 = 0\", \"verdict\": \"PARTIAL\", \"measured\": \"覆盖不足\"},",
+  "eval/gates.py:328:    # ---- G-3 危险 SQL 放行 = 0 ----",
+  "eval/gates.py:330:        gates.append(Gate(\"G-3\", \"危险 SQL 放行 = 0\", \"NOT_AVAILABLE\", \"无输入\", \"§7.8 红队矩阵\",",
+  "eval/gates.py:339:            \"G-3\", \"危险 SQL 放行 = 0\", verdict,"
+ ],
+ "NFR-3.2": [
+  "backend/app/core/enums.py:511:    PERMISSION_ISSUE = \"permission_issue\"                # 权限问题 → 策略",
+  "backend/app/exec/errors.py:19:| 42501 | `permission` | **不回灌**（不可修） | `refuse(out_of_scope)` |",
+  "backend/app/exec/errors.py:69:        \"permission\",",
+  "frontend/src/api/types.ts:155:  | 'permission_issue'",
+  "frontend/src/components/FeedbackBar.tsx:23:  permission_issue: '权限判定有问题',",
+  "frontend/src/pages/ChatPage.tsx:573:                      if (payload.reason_code === 'permission_issue') {",
+  "backend/tests/contract/_fullchain_deps.py:428:    \"\"\"按类别构造执行失败（`timeout` / `db_unavailable` / `resource_exceeded` / `permission`）。\"\"\"",
+  "backend/tests/contract/_fullchain_deps.py:431:        \"permission\": None,"
+ ],
+ "NFR-3.3": [
+  "backend/app/api/routers/admin_audit.py:21:判据③ 要求 `WHERE tenant_id = JWT.tenant_id`，而 §A.9.5 的强制约束又要求平台管理员的跨租户视角",
+  "backend/app/api/routers/admin_audit.py:30:跨租户那一行让标签**必须出现**。两个分支都由集成测试连库验，且响应里的 `rls` 块",
+  "backend/app/api/routers/feedback.py:105:    **不要**传 `tenant_id`：那会静默造出\"跨租户的同一个人\"，而幂等三元组里",
+  "frontend/src/api/types.ts:694:  /** 平台管理员跨租户视角时显式标注 */",
+  "frontend/src/mocks/fixtures.ts:394:  if (question.includes('跨租户')) return 'empty_tenant_isolated';",
+  "frontend/src/mocks/handlers.ts:408:            { id: 'G-4', name: '跨租户泄露 = 0', verdict: 'pass' },",
+  "backend/tests/contract/test_admin_audit_contract.py:8:  `tenant_id`／`user_id` **不得**做成查询参数，`platform_admin` 跨租户须带 `scope: cross_tenant`；",
+  "backend/tests/contract/test_admin_audit_contract.py:9:  ④断言落点 = `tests/integration/**`（跨租户不可读）＋ `tests/contract/**`（形状与错误码），"
+ ],
+ "NFR-3.5": [
+  "backend/app/api/errors.py:161:    RefuseReason.PII_BLOCKED.value: \"这个问题会返回受保护的字段，出于安全考虑不能作答。\",",
+  "backend/app/api/ratelimit.py:249:        用户键已含 `tenant_id` 与 `sha256(user_id)[:16]` —— 明文 `user_id` 不得进键（PII 面）。",
+  "backend/app/api/routers/admin_audit.py:89:    pii_hit: Annotated[bool | None, Query(description=\"PII 命中（派生自 pii_columns_hit 非空）\")] = None,",
+  "frontend/src/api/types.ts:43:  | 'PII_BLOCKED'",
+  "frontend/src/components/ErrorCard.tsx:36:  PII_BLOCKED: 'refuse',",
+  "frontend/src/components/ErrorCard.tsx:281:  'PII_BLOCKED',",
+  "backend/tests/contract/test_admin_audit_contract.py:522:    long_question = \"查客户张三的订单明细\" * 40  # 360 字，含 PII 形状",
+  "backend/tests/contract/test_admin_audit_contract.py:529:    assert long_question not in body, \"列表页出现全文 = 把 PII 原文批量下发\""
+ ],
+ "NFR-4.4": [
+  "backend/app/api/routers/clarify.py:249:    \"\"\"流结束后记会话历史（与 `routers/query.py::_record_turn` 同职责）。",
+  "backend/app/api/routers/query.py:350:    \"\"\"流结束后记会话历史 —— **断连的那一轮也要进历史**。",
+  "backend/app/api/routers/session.py:95:    summary=\"读取会话历史（**只回计划摘要**）\",",
+  "backend/tests/contract/test_decision_table_f_g.py:16:4. **F6 会话历史恒空**：`GraphState` 无历史字段（`normalize` docstring §三已登记），",
+  "backend/tests/contract/test_decision_table_f_g.py:106:    # F5（预估延迟超阈值转异步）与 F6（会话历史裁剪）均无图级可观测面：",
+  "backend/tests/unit/test_llm_egress_guard.py:120:        \"\"\"§10.5 ⑥：会话历史里的 **SQL 与结果**禁止出站（N-17 同源）。\"\"\"",
+  "eval/cassettes/w6_batch.jsonl:1:{\"key\": \"sha256:52d1c7e29696889987d1e98db4c0aaa2509805c44aefbcaeda683832c07754a0\", \"path\": \"/chat/completions\", \"request\": {\"max_tokens\": 384, \"messages\": [{\"content\": \"\\n你是 CommerceQL 的「问",
+  "eval/cassettes/w6_batch.jsonl:2:{\"key\": \"sha256:24a9e8e63602f4f240563afc3bba7c74d2685d680abaf357f8655fb0b6fc5ce4\", \"path\": \"/chat/completions\", \"request\": {\"max_tokens\": 384, \"messages\": [{\"content\": \"\\n你是 CommerceQL 的「问"
+ ],
+ "NFR-5.4": [
+  "backend/app/llm/client.py:45:| 4 | **`finish_reason` 从没被读过** ⇒ \"被截断\"与\"写完了\"在任何日志里同形 | `l4_score` 的 `max_tokens=512`：149 次调用里 **96 次** `output_tokens` 恰=512、`finish_reason=length`、内容在 1,213–1,310 字符处断掉 ⇒ L4 精排**整层静默失效 64.4",
+  "backend/tests/eval/test_consistency_reporter.py:215:# 报告器：覆盖率面",
+  "backend/tests/eval/test_consistency_reporter.py:469:    \"\"\"本轮报告里最容易被读成\"EX 低=模型差\"的一句，必须由覆盖率读数自动生成。\"\"\"",
+  "backend/tests/eval/test_consistency_reporter.py:479:    assert \"任何百分比都是覆盖率读数，不是能力读数\" in text",
+  "eval/case_library.py:354:#       由 gold_query_seed 的覆盖率报告（\"不足 2 条的指标\"）暴露出来。",
+  "eval/redteam_eval.py:32:**必须有图（且多数要有 LLM）**才成立 ⇒ 一律 `NOT_CHECKED` 并进覆盖率，",
+  "eval/reporter.py:77:#: §C.4.3 核心指标**权威值比对**产物 —— G-7 的唯一合法输入（覆盖率探针不是）。",
+  "deploy/loadtest/r23_thread_from_checkpoints.sql:38:-- ② 覆盖率 + thread 尺的规模（对照：A 档只有 12 个 user）"
+ ],
+ "NFR-6.5": [
+  "deploy/loadtest/README.md:1468:· 🔻 **本轮进\"不可引用 / 需订正\"7 条**（全文 = 证据件 §六）：① 作废\"pad 放过九成\"那条机制归因；② 作废\"pad→188s 是无害省事实现\"；③ 新规则 诊断别窗器件只许读代码或复算产物；④ `gap` 必须写明分母、不可互认相加；⑤ 已修 ⑭c 空作用域 0 行 ⇒ 三态；⑥ 待修并备案 ⑭b 同族（动前先通知 W6）；⑦ `07` 行数 3,60",
+  "deploy/loadtest/r27_denominator_attribution.txt:61:6. ⚠️ 待修且已备案：**⑭b 在空作用域下 `window_turn_would_be_wrong = f` 与\"无从判定\"分不开** ⇒ 与 ⑭c 同族；**动它之前先通知 W6**（他们锚定了 ⑭b），一次到位改三态。"
+ ]
+}
