@@ -1,0 +1,423 @@
+[
+ {
+  "id": "FR-1.2",
+  "n_test_files": 3,
+  "grade": "S3-实质",
+  "per_kw": {
+   "resolve_time": 1,
+   "relative_time": 2,
+   "周起点": 3
+  }
+ },
+ {
+  "id": "FR-1.3",
+  "n_test_files": 7,
+  "grade": "S3-实质",
+  "per_kw": {
+   "Asia/Shanghai": 8,
+   "财年": 0
+  }
+ },
+ {
+  "id": "FR-1.4",
+  "n_test_files": 15,
+  "grade": "S3-实质",
+  "per_kw": {
+   "黑话": 9,
+   "synonym": 12,
+   "双11": 3
+  }
+ },
+ {
+  "id": "FR-1.6",
+  "n_test_files": 9,
+  "grade": "S3-实质",
+  "per_kw": {
+   "classify_intent": 1,
+   "IntentKind": 7,
+   "意图分类": 2
+  }
+ },
+ {
+  "id": "FR-2.2",
+  "n_test_files": 11,
+  "grade": "S3-实质",
+  "per_kw": {
+   "Rrf": 0,
+   "RRF": 2,
+   "hybrid": 5,
+   "稠密": 5,
+   "LlmTask.RERANK": 1
+  }
+ },
+ {
+  "id": "FR-2.3",
+  "n_test_files": 19,
+  "grade": "S3-实质",
+  "per_kw": {
+   "few_shot": 7,
+   "few-shot": 4,
+   "gold_query": 13
+  }
+ },
+ {
+  "id": "FR-2.5",
+  "n_test_files": 27,
+  "grade": "S3-实质",
+  "per_kw": {
+   "tenant_scope": 26,
+   "scope 过滤": 0,
+   "按租户过滤": 1,
+   "scope_level": 2
+  }
+ },
+ {
+  "id": "FR-2.6",
+  "n_test_files": 23,
+  "grade": "S3-实质",
+  "per_kw": {
+   "en_alias": 0,
+   "双语": 0,
+   "alias": 23
+  }
+ },
+ {
+  "id": "FR-2.7",
+  "n_test_files": 2,
+  "grade": "S3-实质",
+  "per_kw": {
+   "隐式外键": 0,
+   "join_path": 2,
+   "inferred_fk": 0
+  }
+ },
+ {
+  "id": "FR-3.1",
+  "n_test_files": 9,
+  "grade": "S3-实质",
+  "per_kw": {
+   "plan_summary": 15,
+   "Plan(": 1,
+   "结构化查询计划": 2
+  }
+ },
+ {
+  "id": "FR-3.3",
+  "n_test_files": 5,
+  "grade": "S3-实质",
+  "per_kw": {
+   "五步": 2,
+   "five_step": 1,
+   "resolve_detailed": 2
+  }
+ },
+ {
+  "id": "FR-3.4",
+  "n_test_files": 20,
+  "grade": "S3-实质",
+  "per_kw": {
+   "RESOLVED_UNIQUE": 7,
+   "ambiguous": 19
+  }
+ },
+ {
+  "id": "FR-4.3",
+  "n_test_files": 28,
+  "grade": "S3-实质",
+  "per_kw": {
+   "sql_params": 8,
+   "params 绑定": 0,
+   "模板": 23
+  }
+ },
+ {
+  "id": "FR-4.4",
+  "n_test_files": 49,
+  "grade": "S3-实质",
+  "per_kw": {
+   "R14": 9,
+   "字面量": 43,
+   "literal": 14
+  }
+ },
+ {
+  "id": "FR-5.1",
+  "n_test_files": 13,
+  "grade": "S3-实质",
+  "per_kw": {
+   "sqlglot": 6,
+   "ast_gate": 11
+  }
+ },
+ {
+  "id": "FR-5.4",
+  "n_test_files": 38,
+  "grade": "S3-实质",
+  "per_kw": {
+   "allowlist": 29,
+   "allowed": 18,
+   "该角色": 1
+  }
+ },
+ {
+  "id": "FR-5.5",
+  "n_test_files": 9,
+  "grade": "S3-实质",
+  "per_kw": {
+   "R10": 9,
+   "join_path": 2,
+   "未认证的 JOIN": 0
+  }
+ },
+ {
+  "id": "FR-5.7",
+  "n_test_files": 33,
+  "grade": "S3-实质",
+  "per_kw": {
+   "SET LOCAL": 3,
+   "set_config": 12,
+   "app_ro": 30,
+   "会话变量": 2
+  }
+ },
+ {
+  "id": "FR-6.1",
+  "n_test_files": 24,
+  "grade": "S3-实质",
+  "per_kw": {
+   "ANALYTICS_DB_URL": 18,
+   "read_only": 8,
+   "default_transaction_read_only": 6
+  }
+ },
+ {
+  "id": "FR-6.2",
+  "n_test_files": 9,
+  "grade": "S3-实质",
+  "per_kw": {
+   "statement_timeout": 9
+  }
+ },
+ {
+  "id": "FR-6.3",
+  "n_test_files": 26,
+  "grade": "S3-实质",
+  "per_kw": {
+   "EXEC_MAX_ROWS": 4,
+   "max_rows": 21,
+   "游标": 6,
+   "cursor": 21
+  }
+ },
+ {
+  "id": "FR-6.4",
+  "n_test_files": 3,
+  "grade": "S3-实质",
+  "per_kw": {
+   "EXEC_RESOURCE_EXCEEDED": 4,
+   "work_mem": 0,
+   "resource_exceeded": 3
+  }
+ },
+ {
+  "id": "FR-6.5",
+  "n_test_files": 32,
+  "grade": "S3-实质",
+  "per_kw": {
+   "连接池": 3,
+   "pool": 22,
+   "semaphore": 5,
+   "配额": 12
+  }
+ },
+ {
+  "id": "FR-6.7",
+  "n_test_files": 37,
+  "grade": "S3-实质",
+  "per_kw": {
+   "truncated": 24,
+   "截断": 30
+  }
+ },
+ {
+  "id": "FR-7.2",
+  "n_test_files": 21,
+  "grade": "S3-实质",
+  "per_kw": {
+   "safe_error": 2,
+   "脱敏": 18,
+   "sanitize": 4,
+   "不回灌": 5
+  }
+ },
+ {
+  "id": "FR-7.4",
+  "n_test_files": 34,
+  "grade": "S3-实质",
+  "per_kw": {
+   "降级链": 8,
+   "TEMPLATE_ONLY": 3,
+   "template_only": 5,
+   "degrade": 52
+  }
+ },
+ {
+  "id": "FR-8.1",
+  "n_test_files": 45,
+  "grade": "S3-实质",
+  "per_kw": {
+   "sql_text": 22,
+   "present": 37,
+   "生成时间": 0
+  }
+ },
+ {
+  "id": "FR-8.2",
+  "n_test_files": 4,
+  "grade": "S3-实质",
+  "per_kw": {
+   "freshness": 5,
+   "数据新鲜度": 3,
+   "Owner": 3
+  }
+ },
+ {
+  "id": "FR-8.3",
+  "n_test_files": 3,
+  "grade": "S3-实质",
+  "per_kw": {
+   "chart_type": 6,
+   "chart_spec": 1,
+   "受约束": 2
+  }
+ },
+ {
+  "id": "FR-8.5",
+  "n_test_files": 50,
+  "grade": "S3-实质",
+  "per_kw": {
+   "unit": 57,
+   "万元": 2,
+   "单位适配": 0
+  }
+ },
+ {
+  "id": "FR-8.6",
+  "n_test_files": 7,
+  "grade": "S3-实质",
+  "per_kw": {
+   "NaN": 8,
+   "空结果": 8,
+   "EMPTY_RESULT": 0
+  }
+ },
+ {
+  "id": "FR-8.8",
+  "n_test_files": 7,
+  "grade": "S3-实质",
+  "per_kw": {
+   "role_limited": 5,
+   "SHOP_LIMITED": 1,
+   "披露": 8
+  }
+ },
+ {
+  "id": "FR-9.2",
+  "n_test_files": 3,
+  "grade": "S3-实质",
+  "per_kw": {
+   "完整重跑": 0,
+   "不复用": 3,
+   "FR-9.2": 1
+  }
+ },
+ {
+  "id": "FR-9.5",
+  "n_test_files": 7,
+  "grade": "S3-实质",
+  "per_kw": {
+   "替代问法": 1,
+   "suggestion": 11,
+   "alternatives": 2
+  }
+ },
+ {
+  "id": "FR-10.4",
+  "n_test_files": 10,
+  "grade": "S3-实质",
+  "per_kw": {
+   "thread": 10,
+   "session_id 隔离": 0,
+   "tenant:user:session": 1
+  }
+ },
+ {
+  "id": "FR-11.1",
+  "n_test_files": 5,
+  "grade": "S3-实质",
+  "per_kw": {
+   "/feedback": 5,
+   "feedback": 11,
+   "结果有误": 2
+  }
+ },
+ {
+  "id": "FR-11.2",
+  "n_test_files": 15,
+  "grade": "S3-实质",
+  "per_kw": {
+   "gold_query": 13,
+   "Gold Query": 5
+  }
+ },
+ {
+  "id": "FR-12.2",
+  "n_test_files": 9,
+  "grade": "S3-实质",
+  "per_kw": {
+   "认证资产": 7,
+   "Owner": 3,
+   "维度层级": 0
+  }
+ },
+ {
+  "id": "FR-12.4",
+  "n_test_files": 0,
+  "grade": "S3-无",
+  "per_kw": {
+   "bundle_version 变更": 0,
+   "invalidate": 0,
+   "版本变更": 0
+  }
+ },
+ {
+  "id": "FR-13.3",
+  "n_test_files": 27,
+  "grade": "S3-实质",
+  "per_kw": {
+   "CREATE POLICY": 4,
+   "RLS": 30,
+   "row level": 0
+  }
+ },
+ {
+  "id": "FR-13.4",
+  "n_test_files": 24,
+  "grade": "S3-实质",
+  "per_kw": {
+   "deny_columns": 18,
+   "CLS": 5,
+   "GRANT SELECT": 5
+  }
+ },
+ {
+  "id": "FR-13.5",
+  "n_test_files": 49,
+  "grade": "S3-实质",
+  "per_kw": {
+   "receiver_phone": 20,
+   "mask": 22,
+   "PII": 28
+  }
+ }
+]
