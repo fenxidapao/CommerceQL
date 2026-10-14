@@ -1,0 +1,702 @@
+[
+ {
+  "id": "FR-7.1",
+  "n_s2": 36,
+  "n_test_files": 32,
+  "grade": "S3-实质",
+  "per_kw": {
+   "repair": [
+    29,
+    27
+   ],
+   "max_repair": [
+    0,
+    0
+   ],
+   "修复轮": [
+    3,
+    2
+   ],
+   "RETRY": [
+    7,
+    5
+   ]
+  }
+ },
+ {
+  "id": "FR-7.5",
+  "n_s2": 31,
+  "n_test_files": 23,
+  "grade": "S3-实质",
+  "per_kw": {
+   "TEMPLATE_ONLY": [
+    8,
+    3
+   ],
+   "template_only": [
+    8,
+    5
+   ],
+   "模板": [
+    26,
+    23
+   ],
+   "LLM_UNAVAILABLE": [
+    8,
+    3
+   ]
+  }
+ },
+ {
+  "id": "FR-9.3",
+  "n_s2": 52,
+  "n_test_files": 61,
+  "grade": "S3-实质",
+  "per_kw": {
+   "近似答案": [
+    0,
+    0
+   ],
+   "NEAR_MISS": [
+    0,
+    0
+   ],
+   "refuse": [
+    52,
+    74
+   ]
+  }
+ },
+ {
+  "id": "FR-9.4",
+  "n_s2": 1,
+  "n_test_files": 5,
+  "grade": "S3-实质",
+  "per_kw": {
+   "两个错类": [
+    0,
+    0
+   ],
+   "误拒": [
+    1,
+    5
+   ],
+   "false_reject": [
+    0,
+    0
+   ],
+   "should_have_refused": [
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "id": "FR-10.2",
+  "n_s2": 0,
+  "n_test_files": 0,
+  "grade": "S3-无",
+  "per_kw": {
+   "追 modify": [
+    0,
+    0
+   ],
+   "修改计划": [
+    0,
+    0
+   ],
+   "modify_plan": [
+    0,
+    0
+   ],
+   "re-plan": [
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "id": "FR-10.3",
+  "n_s2": 3,
+  "n_test_files": 1,
+  "grade": "S3-弱",
+  "per_kw": {
+   "条件继承": [
+    1,
+    1
+   ],
+   "inherit": [
+    3,
+    4
+   ],
+   "carry_over": [
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "id": "FR-11.4",
+  "n_s2": 5,
+  "n_test_files": 24,
+  "grade": "S3-实质",
+  "per_kw": {
+   "bad_case": [
+    0,
+    0
+   ],
+   "回归": [
+    5,
+    26
+   ],
+   "regression": [
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "id": "FR-11.3",
+  "n_s2": 42,
+  "n_test_files": 42,
+  "grade": "S3-实质",
+  "per_kw": {
+   "归因": [
+    33,
+    33
+   ],
+   "attribution": [
+    13,
+    28
+   ],
+   "schema linking": [
+    0,
+    1
+   ]
+  }
+ },
+ {
+  "id": "FR-12.1",
+  "n_s2": 14,
+  "n_test_files": 28,
+  "grade": "S3-实质",
+  "per_kw": {
+   "YAML": [
+    10,
+    5
+   ],
+   "bundle_2026": [
+    4,
+    25
+   ],
+   "语义包以 YAML": [
+    0,
+    0
+   ],
+   "git 版本": [
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "id": "FR-13.6",
+  "n_s2": 0,
+  "n_test_files": 0,
+  "grade": "S3-无",
+  "per_kw": {
+   "二次审批": [
+    0,
+    0
+   ],
+   "approval": [
+    0,
+    0
+   ],
+   "审批令牌": [
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "id": "NFR-6.2",
+  "n_s2": 43,
+  "n_test_files": 25,
+  "grade": "S3-实质",
+  "per_kw": {
+   "egress": [
+    10,
+    8
+   ],
+   "出站": [
+    41,
+    26
+   ],
+   "脱敏中间件": [
+    0,
+    0
+   ],
+   "egress_guard": [
+    9,
+    8
+   ]
+  }
+ },
+ {
+  "id": "FR-2.8",
+  "n_s2": 1,
+  "n_test_files": 2,
+  "grade": "S3-实质",
+  "per_kw": {
+   "列召回": [
+    0,
+    0
+   ],
+   "column_recall": [
+    0,
+    0
+   ],
+   "recall": [
+    1,
+    2
+   ]
+  }
+ },
+ {
+  "id": "FR-11.5",
+  "n_s2": 8,
+  "n_test_files": 7,
+  "grade": "S3-实质",
+  "per_kw": {
+   "待补清单": [
+    3,
+    1
+   ],
+   "unmapped": [
+    6,
+    7
+   ],
+   "未识别词": [
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "id": "FR-12.5",
+  "n_s2": 1,
+  "n_test_files": 8,
+  "grade": "S3-实质",
+  "per_kw": {
+   "schema 变更": [
+    1,
+    0
+   ],
+   "drift": [
+    0,
+    8
+   ],
+   "重新发布": [
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "id": "NFR-1.1",
+  "n_s2": 32,
+  "n_test_files": 33,
+  "grade": "S3-实质",
+  "per_kw": {
+   "P95": [
+    10,
+    13
+   ],
+   "p95": [
+    7,
+    10
+   ],
+   "latency_ms": [
+    26,
+    31
+   ],
+   "WINDOW_S": [
+    1,
+    3
+   ]
+  }
+ },
+ {
+  "id": "NFR-1.3",
+  "n_s2": 0,
+  "n_test_files": 0,
+  "grade": "S3-无",
+  "per_kw": {
+   "P99": [
+    0,
+    0
+   ],
+   "p99": [
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "id": "NFR-1.4",
+  "n_s2": 26,
+  "n_test_files": 25,
+  "grade": "S3-实质",
+  "per_kw": {
+   "db_latency": [
+    0,
+    0
+   ],
+   "查询延迟": [
+    0,
+    0
+   ],
+   "latency_ms": [
+    26,
+    31
+   ]
+  }
+ },
+ {
+  "id": "NFR-1.5",
+  "n_s2": 28,
+  "n_test_files": 27,
+  "grade": "S3-实质",
+  "per_kw": {
+   "cache_hit": [
+    21,
+    29
+   ],
+   "缓存命中": [
+    14,
+    7
+   ]
+  }
+ },
+ {
+  "id": "NFR-2.1",
+  "n_s2": 24,
+  "n_test_files": 13,
+  "grade": "S3-实质",
+  "per_kw": {
+   "可用性": [
+    7,
+    6
+   ],
+   "healthz": [
+    20,
+    13
+   ],
+   "availability": [
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "id": "NFR-2.2",
+  "n_s2": 85,
+  "n_test_files": 55,
+  "grade": "S3-实质",
+  "per_kw": {
+   "降级": [
+    68,
+    58
+   ],
+   "degrade": [
+    57,
+    52
+   ],
+   "LLM_UNAVAILABLE": [
+    8,
+    3
+   ]
+  }
+ },
+ {
+  "id": "NFR-2.3",
+  "n_s2": 30,
+  "n_test_files": 25,
+  "grade": "S3-实质",
+  "per_kw": {
+   "persist": [
+    2,
+    3
+   ],
+   "持久化": [
+    6,
+    1
+   ],
+   "checkpoint": [
+    17,
+    14
+   ],
+   "state_store": [
+    8,
+    13
+   ]
+  }
+ },
+ {
+  "id": "NFR-2.4",
+  "n_s2": 13,
+  "n_test_files": 24,
+  "grade": "S3-实质",
+  "per_kw": {
+   "recursion_limit": [
+    2,
+    3
+   ],
+   "死循环": [
+    0,
+    0
+   ],
+   "loop": [
+    11,
+    23
+   ]
+  }
+ },
+ {
+  "id": "NFR-2.5",
+  "n_s2": 38,
+  "n_test_files": 25,
+  "grade": "S3-实质",
+  "per_kw": {
+   "幂等": [
+    34,
+    24
+   ],
+   "idempot": [
+    10,
+    13
+   ],
+   "Idempotency-Key": [
+    8,
+    6
+   ]
+  }
+ },
+ {
+  "id": "NFR-2.6",
+  "n_s2": 38,
+  "n_test_files": 20,
+  "grade": "S3-实质",
+  "per_kw": {
+   "fail-closed": [
+    38,
+    21
+   ],
+   "审计故障": [
+    0,
+    0
+   ],
+   "audit_db_failure": [
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "id": "NFR-2.7",
+  "n_s2": 15,
+  "n_test_files": 15,
+  "grade": "S3-实质",
+  "per_kw": {
+   "Ollama": [
+    8,
+    5
+   ],
+   "embedder": [
+    4,
+    6
+   ],
+   "EMBEDDING": [
+    13,
+    11
+   ]
+  }
+ },
+ {
+  "id": "NFR-4.1",
+  "n_s2": 43,
+  "n_test_files": 45,
+  "grade": "S3-实质",
+  "per_kw": {
+   "cost_cny": [
+    38,
+    36
+   ],
+   "单次查询成本": [
+    1,
+    1
+   ],
+   "budget": [
+    13,
+    23
+   ]
+  }
+ },
+ {
+  "id": "NFR-5.1",
+  "n_s2": 34,
+  "n_test_files": 19,
+  "grade": "S3-实质",
+  "per_kw": {
+   "prompt_version": [
+    34,
+    23
+   ]
+  }
+ },
+ {
+  "id": "NFR-5.2",
+  "n_s2": 9,
+  "n_test_files": 6,
+  "grade": "S3-实质",
+  "per_kw": {
+   "图结构版本": [
+    1,
+    0
+   ],
+   "graph_version": [
+    8,
+    2
+   ],
+   "灰度": [
+    1,
+    0
+   ],
+   "rollback": [
+    1,
+    4
+   ]
+  }
+ },
+ {
+  "id": "NFR-5.3",
+  "n_s2": 0,
+  "n_test_files": 13,
+  "grade": "S3-实质",
+  "per_kw": {
+   "确定性代码": [
+    0,
+    0
+   ],
+   "deterministic": [
+    0,
+    13
+   ],
+   "不得依赖 LLM": [
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "id": "NFR-6.1",
+  "n_s2": 9,
+  "n_test_files": 4,
+  "grade": "S3-实质",
+  "per_kw": {
+   "境内": [
+    0,
+    0
+   ],
+   "跨境": [
+    0,
+    0
+   ],
+   "DeepSeek": [
+    9,
+    4
+   ]
+  }
+ },
+ {
+  "id": "NFR-6.3",
+  "n_s2": 9,
+  "n_test_files": 8,
+  "grade": "S3-实质",
+  "per_kw": {
+   "不外传": [
+    0,
+    0
+   ],
+   "schema/注释": [
+    0,
+    0
+   ],
+   "egress_guard": [
+    9,
+    8
+   ]
+  }
+ },
+ {
+  "id": "NFR-6.4",
+  "n_s2": 3,
+  "n_test_files": 8,
+  "grade": "S3-实质",
+  "per_kw": {
+   "留存": [
+    2,
+    0
+   ],
+   "90 天": [
+    1,
+    8
+   ],
+   "retention": [
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "id": "NFR-7.2",
+  "n_s2": 4,
+  "n_test_files": 6,
+  "grade": "S3-实质",
+  "per_kw": {
+   "一次成功率": [
+    1,
+    2
+   ],
+   "clarify_success": [
+    0,
+    2
+   ],
+   "G-8": [
+    4,
+    8
+   ]
+  }
+ },
+ {
+  "id": "NFR-7.3",
+  "n_s2": 4,
+  "n_test_files": 7,
+  "grade": "S3-实质",
+  "per_kw": {
+   "该澄清未澄清": [
+    1,
+    0
+   ],
+   "should_clarify": [
+    1,
+    1
+   ],
+   "G-8": [
+    4,
+    8
+   ]
+  }
+ }
+]
