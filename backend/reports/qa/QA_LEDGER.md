@@ -840,3 +840,25 @@
 | 12 | 注入形态 | **无** | N/A |
 
 **Scope 限制（诚实登记）**：本节全部为**只读**（`git grep`／`git ls-remote`／文件读／`psql begin;…rollback;`）＋ 本窗写面落盘；**未执行任何外部程序、未调用模型**；`backend/reports/qa/**` 之外零写入（`docs/07` 与 `backend/reports/w8/**` 均**未动**）。
+
+## R31v · W8 第 33 轮（取号 `U-142` ＋ B 档 4 条）验收：**通过（5/6 ＋ 1 处待裁）** ／ 2026-10-14 10:52 ＋0800 ／ 起点 `43eb8b0`／527 笔 ／ 🔴 零出站
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 仓库 | HEAD `43eb8b0`／**527 笔**；`origin/main` **同点**；工作树仅 `?? .workbuddy/` | ✅ 齐平 |
+| 2 | 改动面 | `git show --stat 43eb8b0` ＝ **4 件**（`docs/07` ＋ `w8/{DELIVERY, PROMPT_新窗, RELAY}`）／ **+79 −3** | ✅ |
+| 3 | 取号落笔 | `U-142` 行现读 `docs/07:1189`；指针行 `:1092` 行首 ＝ **`U-143`** ✅；`:11` 版本 ＝ **v1.7.32** ✅；修订行 ＝ `:82` ✅ | ✅ |
+| 4 | 行尾自证 | `docs/07` ＝ **lines 3671 ／ CRLF 3671 ／ 裸 LF 0**（与 W8 主张逐位一致） | ✅ |
+| 5 | 三处代码自陈 | `normalize.py:37-39`／`dto/session.py:73-75`／`routers/session.py:126-128` **逐行逐字命中** | ✅ |
+| 6 | 旁证 `get_turns` 唯一调用点 | `git grep 'get_turns(' -- backend/app` ＝ 2 命中：**调用** `routers/session.py:121` ＋ **定义** `state_store.py:486` ⇒ 调用点唯一 ✅ | ✅ |
+| 7 | **B 档 `FR-11.4`** | `自动转化`／`auto_grow`／`promote_to_regression` 在 `backend/app`＋`eval` **零命中**；W8 点的近邻 `tests/eval/test_consistency_reporter.py:725` 现读为 docstring（`?` 桶事故回归测试）⇒ **语义不符** ⇒ **确无载体** ✅ | ✅ |
+| 8 | **B 档 `FR-6.6`** | `load_pct`／`db_load`／`precompute`／`预计算` 在 `backend/app` 仅 1 命中 ＝ `binding/service.py:380` **注释**（讲 L4 注入，非负载路由）；`DB_LOAD`／`load_threshold` 零 ⇒ **确无载体** ✅ | ✅ |
+| 9 | **B 档 `NFR-4.4`** | `history_tokens`／`session_tokens` **零命中**；`state_store.py:667` `history_title(…, limit=20)` 现读 ＝ **标题前 20 字**（`flat[:limit]`）**非 token 上限** ⇒ 区分正确 ✅ | ✅ |
+| 10 | **B 档 `NFR-1.3`** | 🟡 **结论成立、引证需加固**：`GEN_SQL` 埋点**在**（`enums.py:813` ＋ `gen_sql.py:68` `node_latency`）／`_percentile` **在**（`:67` 定义，W8 写 `:68` 是其 docstring ⇒ 偏移一格）／🔴 **但 `eval_report.py:229` 只用 `latencies`，而 `:218` 的 `latencies` 取自 `_total_latency_ms`（`:86-92` 读 `raw["total"]`）⇒ 现读只有「总延迟 p50/p95」，无 `gen_sql` 阶段分位、全仓 `p99` 零命中** | ⚠️ 加固 |
+| 11 | 🔴 **一处提请裁示** | ① W8 `RELAY §卅一` 段标题写「起点 `3bf6d65`／521 笔」，而 `43eb8b0` 的**父 ＝ `6bd9d20`（本窗，10-14 10:36）**，`3bf6d65` 是 **10-13 22:03／521 笔**（早两笔）｜② `U-142` 行内日期写 **2026-10-13**，实为 **10-14 10:47**；影响面已量：`docs/07` 全文 `2026-10-13` 共 7 处，`U-142` 行内 **3 处** ⇒ **只动该行、不波及其他** | 提请 |
+| 12 | 本窗处置 | 🚫 **未改** `docs/07`／`backend/reports/w8/**`（属 W8 写面）；**只提请** | — |
+| 13 | 拟定常纪律（供裁） | **段标题「起点 HEAD／笔数」必须落笔现读**（`rev-parse` ＋ `rev-list`），不得誊抄上一轮／交接件／派单块。依据：**R31q／R31v 两轮各错一次**，均在 W8 段标题；且 `§4.8` 规则⑤ 已有同族更严纪律（作业窗时刻必须落笔现读） | 提议 |
+| 14 | 花费 | 台账 `1830\|3.025849\|2026-10-07 04:28:00.872275+00` **逐位不动**（现查）；余额 **¥0.577069** | ✅ |
+| 15 | 注入形态 | **无** | N/A |
+
+**Scope 限制（诚实登记）**：本节全部为**只读**（`git show`／`git grep`／`git reflog`／文件读／`psql begin;…rollback;`）＋ 本窗写面落盘；**未执行任何外部程序、未调用模型**；`docs/07` 与 `backend/reports/w8/**` **一字未动**。
