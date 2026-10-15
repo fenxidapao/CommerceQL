@@ -1047,3 +1047,31 @@
 **Scope 限制（诚实登记）**：本节为**只读**（`git show`／`git diff --numstat`／`grep`／`git grep`／Python 读文件／`psql begin;…rollback;`／`docker ps`）＋ 本窗写面落盘；**未执行任何 W8 脚本、未调用模型、未动容器**；`docs/07`／`OVERVIEW.md`／`deliverables/**`／`backend/reports/w8/**` **一字未动**。
 **审计器 v2 的限制（一并登记）**：① 只覆盖**只读**入口（7 条未审）；② 只覆盖抽到的 24 条（非完备集）；③ **判定器未经反向策反测试**（本轮自曝）；④ 尺自检只证明「能看见已知存在的目标」、**不证明判定逻辑正确**；⑤ **扫不到「已经改好的错」**（第 7 条已给实例）。
 
+## R31ad · 🔴 **主线重启诊断**（总控点句「重启主线」后第一步）／ 2026-10-15 10:07 ＋0800 ／ 起点 `3c18094`／541 笔 ／ 🔴 零出站、零花费、只读
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 仓库 | HEAD `3c18094`／**541 笔**；`origin/main` **同点**；工作树仅 `?? .workbuddy/` | ✅ |
+| 2 | 性质 | 总控点句「**重启主线**」后的**第一步**；**不是** W8 回执验收；全程**只读**（读 `eval/results_v1.json`＋`semantic/*.yaml`＋`plan.py` 注释） | 登记 |
+| 3 | 动机 | 连 6 轮（`§33`–`§39`）都在修标注/口径 ⇒ **重启第一步 = 先把卡点找对**，不是继续干活 | 登记 |
+| 4 | 🔴 **结论（一句话）** | **G-2（easy×low 0/10）与 G-5（误拒 63/124）同根因，且不是 τ／打分器／embedding** —— 是**语义包 `metric` 覆盖不足** | 🔴 发现 |
+| 5 | 证据① G-2 面 | `easy×low = 10`｜`outcome = {'refuse': 10}`｜`refusal_reason = {'no_data_asset': 10}`｜`expected = {'execute': 10}` | ✅ |
+| 6 | 证据② G-2 ⊆ 误拒 | `set(G-2) ⊆ set(误拒 63) = True` | ✅ |
+| 7 | 证据③ 误拒构成 | 误拒 **63** 条 **100% `no_data_asset`**（`pii_blocked`／`out_of_scope` 各 9 **不在误拒内**） | ✅ |
+| 8 | 🔴 证据④ **embedding 不是根因** | 期望 execute 的 124 条：**success 45／45 含 `embedding_unavailable`（100%）** ⟷ **误拒 63／63 含（100%）** ⇒ **两组同率、零区分力** | 🔴 决定性 |
+| 9 | 证据⑤ 停止点 | 误拒 `nodes 末位 = refuse_out` **63/63**；`retrieval_counts.assets = 8`（**非空召回**）；`gate_decisions` **空** | ✅ |
+| 10 | 根因（读代码） | `backend/app/graph/nodes/plan.py:24`：「模型**给出了** `blocking_issues` ⇒ 直接 `refuse(no_data_asset)`，不发 degraded —— 它是**产品结论**（"这问题需要的数据不在语义层"）」 | 登记 |
+| 11 | 语义层缺什么 | 语义包现读 **`metrics` 9 个**／**`assets` 8 个**；误拒题要的（在架商品数／浏览量／加购／商品数／SKU 数／SPU 数／店铺数／活动数／省份覆盖／类目 group by）**在 `metrics` 里几乎都没有**，而**物理列/资产都在**（`sku.on_sale`／`sku_day_channel`／`spu_id`／`shop`／`campaign`／`province`／`category_l1-3`） | ✅ |
+| 12 | 🔴 **方案 A 未触发** | PRD §12.9 三条前置：① L4 触发率 > 10%（**现读 0.0%**）❌ ② L4 误判 `ambiguous` 是主因（**bind 层 clarify = 0**；主因 = plan 层）❌ ③ 未取 ⇒ **三条全不满足** | 🔴 裁定 |
+| 13 | 🔴 **方向性提示** | **`T-51`（τ／E-5）对准的是 G-8**，而 G-2/G-5 的红点**在 `plan` 层** ⇒ 前几轮 τ 方向的投入**不覆盖这两格** | 🔴 提请 |
+| 14 | 🔴 **硬前提（待总控裁）** | `semantic/**` **不在 W8 `PROMPT.md §1` 权限清单里**（清单：`backend/**`／`eval/**`／`frontend/**`／`deploy/**`／`docs/**`／`OVERVIEW.md`／`_refs/`，**无 `semantic/`**）⇒ 扩语义包 = **动别的窗写面** ⇒ 按 `PROMPT.md §6` **须总控点句** | 🔴 待裁 |
+| 15 | 建议做法 | ① 先出**缺口清单**（只读、不动 YAML）② 补完后**重跑冻结集**看是否真降 ③ ⚠️ **可能降、也可能不降** ⇒ 如实报 | 建议 |
+| 16 | 🔴 **红线** | 🚫 不得为迎合 63 条去改冻结集或改判据；🚫 不得按题面逐条特判 —— 冻结集是**验收标准**，不是待优化训练集 | 🔴 红线 |
+| 17 | 归档 | `backend/reports/qa/evidence_main_r31ad/`：`diag_g2.py`（md5 `05cca08bffb9`）／`diag_main.py`（`e2290cf51e89`）／`diag_emb.py`（`74eb9aca7f7c`）＋三条实跑输出 ＋ `README.md`；**七件均 LF** | ✅ |
+| 18 | 本诊断的限制 | ① 只在**旧批** `results_v1.json` 上跑（新批未核）② 「metric 缺」是**人工比对**（非判定器）⇒ 数量「≥40」是**估** ③ `blocking_issues` 路径**读代码**得知、未取单条原文 ④ `M-DIM-*` 是否真因 metric 缺**待核** | ⚠️ 登记 |
+| 19 | 花费 | 台账 `1830\|3.025849\|2026-10-07 04:28:00.872275+00` **逐位不动**（现查）；余额 **¥0.577069** | ✅ |
+| 20 | 注入形态 | **无** | N/A |
+
+**Scope 限制（诚实登记）**：本节为**只读**（读 `eval/results_v1.json`／`semantic/bundle_2026.09.14.1.yaml`／`backend/app/graph/nodes/plan.py`／Python 统计／`psql begin;…rollback;`）＋ 本窗写面落盘；**未执行任何 W8 脚本、未调用模型、未动容器**；`docs/07`／`OVERVIEW.md`／`deliverables/**`／`backend/reports/w8/**`／`semantic/**` **一字未动**。
+
+**待总控点句 3 项**：① 🔴 **`semantic/**` 改不改？谁改？**（**硬前提**）② 是否发 `TASK_BOARD §57.4` 块 ③ 🔴 **主线优先级**是否调整为「**先补语义层（G-2/G-5）→ 再回头 τ（G-8）**」。
