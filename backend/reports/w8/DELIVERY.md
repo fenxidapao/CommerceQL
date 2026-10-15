@@ -593,3 +593,20 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 ⑧ **边界**：`app/**`／`tests/**`／`eval/**`（未改任何既有件）／`deploy/**`／`docs/**`／`OVERVIEW.md`／`deliverables/**`／容器／`reports/qa/**`（只读）**均未动**；探针件与 3 次冒烟产物全落 `%TEMP%\w8r43\`、**未入仓**；`eval/cassettes/w6_batch.jsonl` 未动。
 ⑨ **上呈两条（未擅自定）**：① 🔴 **重跑额度**——(a1) 批 ≈¥3.7 跑 63 条／(a2) 只跑 G-2 的 10 条 ≈¥0.58（≈余额）／(a3) 3–5 条定性 ≈¥0.17–0.29；② 🟡 **重跑方式**——授权"无匣带 live"（否则门永远过不了）。另登记：**匣带层 live-record 解码缺陷**建议单列一轮修（真因刚定位、修法未定，不擅改评测传输层）。
 ⑩ **零取号**（指针仍 `U-143`）；起点落笔现读 = `7210a58`／**549 笔**。
+
+## 第 44 轮交付（匣带 record 头归一 ＋ 扫描抽脚本 ＋ a3 5 条：🟡 4/5 转 success ｜ 派单 = QA §62.7（顺序按 §62.5） ｜ 作业窗 ≈ 2026-10-15 18:1x–18:5x +0800 ｜ 起点 HEAD `bdcd111`／550 笔 ｜ 🔴 台账现读 `1830|3.025849|2026-10-07 04:28:00.872275+00` 逐位不动（可打「本项目账面零花费」，**不打「零出站」**）｜ 本轮真实出站花费 **¥0.053505** ｜ 零取号（`U-143`）｜ 一轮一笔）
+
+① **① 修匣带 record 分支响应头（最高优先，1 行）**：真因点 = `eval/cassette.py` record 分支把上游**全部**响应头照带（含 `content-encoding: gzip` 与压缩版 `content-length`），而 `content=` 是 `aread()` 后的**已解压明文** ⇒ 构造即抛 `DecodingError`。改法＝新增 `_STRIPPED_RESPONSE_HEADERS = {content-encoding, content-length, transfer-encoding}` 并过滤（**与 replay 分支 `_to_response` 同旨**，只是保留其余上游头）。
+**QA 回归脚本实跑**（`reports/qa/evidence_cassette_r31ai/repro_decoding.py`，只读引用未改）：② 端到端段 **`transport 返回了响应（未报错）`**、头 = `{'content-type':'application/json','content-length':'42'}`、`resp.content` 可读 ✅（① 段仍抛，但那是"httpx 行为演示"、**不走本模块**，不属本修复范围）。
+**带匣带 live 实跑**：a3 的 5 条 **`n_unscored = 0`**（前三轮那种整批 `LLM_UPSTREAM_ERROR` 已消失）。
+**回放校验（零出站）**：`--mode replay` ⇒ **逐位复现** `complete 4 / refuse 1 ｜ tokens 124011 ｜ cost 0.053505` ⇒ **回放能力已保住并实测**。
+② **② 扫描抽成脚本**：新增 [scan_secrets.py](file:///e:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL/backend/scripts/scan_secrets.py) —— 三条规则与 allowlist 语义**运行时从 `.gitleaks.toml` 读**（单一出处，本文件**不含任何规则正则**），区间锚点/后缀沿用 §廿一 原口径，退出码改直白（`0 = 0 命中`）。**实跑** `0 命中／78 件`；**自匹配自查 0**。`RELAY §廿一` 第 ⑤ 行已改成**只引脚本名**（`:2950-2963`），留**两版审计原文**指针（`git show 7210a58:` ＝ 最早连续正则版；`git show bdcd111:` ＝ 第 43 轮截断版）。
+③ **③ a3：G-2 面前 5 条**（**按 `case_id` 字典序取前 5，非挑拣**）：**4/5 由 refuse→success**，生成的 SQL **逐字就是新指标的 `expression`** —— `on_sale_product_cnt`(E-VER-02)／`off_sale_product_cnt`(03)／`shop_cnt`(05)／`day_cnt`(01)；证据从 n=1 提到 **n=4**。
+两处**保留的缺陷/登记**：`E-VER-01` success 但 `equivalent=false`＋`gate_policy_gap` ＝ **第 40 轮就登记过的冻结集内部口径冲突**（题面要 2026-08、gold 是全表 730）实测证实，**不改判据**；`E-VER-04`（SPU 数）**仍 refuse**（`no_data_asset`，停在 `plan → refuse_out`，带 `embedding_unavailable → sparse_only`）⇒ **归因在检索/绑定层**（指标 `spu_cnt` 已在包里），不是指标层缺 → 登记单列。
+④ **🔴 单价修正**：a3 实测 **¥0.010701/条**（`cache_hit/input = 106112/113938 = 93%`）⟷ 第 43 轮单发 **¥0.058163/条**（冷缓存 30%）⇒ 差 **5.4×**，机制＝**提示缓存**（摘要 13,364 字符批内共享前缀）。⇒ **63 条外推 ¥0.6742**（第 43 轮同口径 ¥3.66 ⇒ 低 5.4×），仍 **1.17× 余额（¥0.577069）／1.12× 上界（¥0.60）** ⇒ **仍须总控裁**。两数都对：成批才是评测真实场景 ⇒ **¥0.6742 才是 63 条的正确估算**。
+⑤ **离线全量现读**：`pytest backend/tests --ignore=backend/tests/integration -q` → **`2485 passed`（0 failed）** —— 第 43 轮那唯一一红（`test_migration_dsn_hygiene`）**已随之转绿**；机械护栏 `test_migration_dsn_hygiene` **8 passed**。
+⑥ **边界**：改动 = `eval/cassette.py`（派单明令点名的真因点）＋ 新增 `backend/scripts/scan_secrets.py`、`eval/cassettes/w8_r44_a3.jsonl`、`eval/results_a3_r44.json` ＋ `reports/w8/**`。**未动** `backend/app/**`（含 `_shared.llm_error_update` 丢弃 `detail` 的缺陷，需明示授权才动）／`frontend`／`deploy`／`docs`／`OVERVIEW.md`／`deliverables`／容器／**`reports/qa/**`（只读）**；`w6_batch.jsonl` 未动。
+⑦ **匣带无凭据**（已查）：`Authorization`／`Bearer`／`sk-`／`api_key` **各 0**；gitleaks 三规则 **各 0**。
+⑧ **上呈/待办**：① 🔴 **额度复议**（63 条 ≈¥0.6742；备选：只跑 G-2 的 10 条 ≈¥0.107 **已进预算**／全量 166 ≈¥1.78）；② 🔴 `E-VER-04` 检索层缺陷单列；③ 🔴 `_shared` 丢弃 `detail` 建议同修（需授权）；④ 🟡 `F-1…F-5` 排在 #1 之后；⑤ 🟡 对外件口径刷新仍留专门一轮；⑥ `test_semantic_materialization.py` 三处字面量仍"已改未验"。
+⑨ **产品含义（派单 §62.7 五，随回执带上）**：单次问答成本上涨与「补 metric 让 G-2/G-5 变绿」是**同一动作的两面** —— 机制＝语义摘要 13,364 字符被 `normalize/intent/plan/gen_sql` **4 个节点各吃一遍**。⚠️ 本轮把这条**量化修正**了：**成批时缓存命中 93% ⇒ 真实单价 ¥0.0107/条**，不再是冷启动的 ¥0.058。
+⑩ **零取号**（指针仍 `U-143`）；起点落笔现读 = `bdcd111`／**550 笔**。

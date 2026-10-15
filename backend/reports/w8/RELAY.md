@@ -2948,15 +2948,19 @@ docker exec -i commerceql-pg-1 psql -U postgres -d ecom -q -t -A \
 # ④ 量具自证（三臂，零 docker／零出站）
 PYTHONUTF8=1 .venv/Scripts/python.exe deploy/loadtest/attest_build_identity.py --self-test
 # ⑤ 凭据字面量扫描（新增跟踪件；命中数必须 = 0）
-#  🔻 第 43 轮（QA §61.7 三）**形态修**：末段的 DSN 正则**拆成两段**写 —— 只留前半段 `postgres://`。
-#     ① 语义上**只会更宽**（原正则本就以 `postgres://` 起头 ⇒ 前半段单写 = 多扫、不漏）；
-#     ② 修的是**形态**不是**读数**：本命令的**结论**（scan_rc 语义、"0 命中"）一字未动；
-#     ③ **审计原文**（含未拆前的连续正则）：
-#        `git show 7210a58:backend/reports/w8/RELAY.md`（本行 = `:2952`）
-#        `git log -S "<该连续正则>" --all` 现读 = **4 个提交** ⇒ 该字面量**已在历史里**
-#        ⇒ **CI 的 gitleaks 走全历史仍会命中** ⇒ 按总控裁定 (a) **登记为已知红**（见 RELAY §43.4）。
-git diff --name-only 983214c..HEAD | grep -E "\.(json|py|md)$" | tr "\n" "\0" \
-  | xargs -0 grep -lInE "(sk-[A-Za-z0-9]{12,}|AKIA[0-9A-Z]{16}|password[[:space:]]*=[[:space:]]*[^[:space:]]+|Bearer [A-Za-z0-9._-]{16,}|BEGIN (RSA )?PRIVATE KEY|postgres://" ; echo "scan_rc=$? (1 = 0 命中)"
+#  🔻 **第 44 轮（QA §62.7 二）改为「引脚本名、不抄正则」**：扫描已抽成
+#     `backend/scripts/scan_secrets.py`（规则**运行时**从 `.gitleaks.toml` 读 ⇒ 单一出处；
+#     区间锚点与文件后缀沿用本行原口径）⇒ 一次性消掉两个根因：
+#       ① 命令**对自身自匹配**；② 截断成 `postgres://` 后**命中面被放大且与结论脱钩**
+#          （QA 实测：被测 74 文件里命中 7 件、含 `reports/qa/*` 三件，而结论仍写「= 0」）。
+#  ⚠️ 退出码约定**随之改直白**：**0 = 0 命中（通过）／1 = 有命中**（不再是 grep 的「1 = 没命中」）。
+#  ⚠️ 诚实上限：本脚本是 CI 的**下界** —— 只复放**本项目自有 3 条规则**、只看**工作区当前内容**；
+#     CI 的 gitleaks 另有默认规则集（`.gitleaks.toml [extend] useDefault=true`）与 `fetch-depth: 0`
+#     **全历史** ⇒ 历史里的旧命中（第 43 轮已登记的**已知红**）**不在本脚本能力内**。
+#  🔴 **审计原文**（本行改过两版，都可追）：
+#     ① 最早（未拆前的**连续正则**）：`git show 7210a58:backend/reports/w8/RELAY.md`（该行 = `:2952`）
+#     ② 第 43 轮的**截断版**：`git show bdcd111:backend/reports/w8/RELAY.md`（`:2951-2959`）
+PYTHONUTF8=1 .venv/Scripts/python.exe backend/scripts/scan_secrets.py --since 983214c ; echo "scan_rc=$? (0 = 0 命中)"
 ```
 
 
@@ -4263,5 +4267,138 @@ tokens  = {input: 24610, output: 2493, cache_hit: 7424, total: 27103} ｜ cost_c
 | 6 | `test_semantic_materialization.py` 三处字面量"已改未验" | 仍待一次性库实跑 |
 
 ### 43.9 注入形态
+
+- 注入形态 = **无**；未执行 **N/A**。
+
+## §四二 第 44 轮 · 匣带 record 头归一（1 行修）＋ 扫描抽脚本 ＋ a3 5 条（🟡 4/5 转 success）｜ 2026-10-15 ｜ 起点 HEAD bdcd111／550 笔
+
+### 44.0 本轮做了什么（派单 = QA 第 32 轮 R31ai §62.7；顺序按 §62.5「修匣带 → 修扫描脚本 → a3」）
+
+| # | 项 | 状态 |
+|---|---|---|
+| ① | **修匣带 record 分支响应头**（最高优先，1 行） | ✅ 已修；**QA 的回归脚本 ② 段不再抛**；**回放逐位复现**（§44.1） |
+| ② | **抽扫描脚本**（报告只引脚本名、不抄正则） | ✅ `backend/scripts/scan_secrets.py`（**0 命中／78 件**；自匹配 **0**）（§44.2） |
+| ③ | **a3：G-2 面前 5 条**（带匣带，额度已裁 ¥0.291） | ✅ 已跑：**4/5 由 refuse→success**，实花 **¥0.053505**（**远低于预算**，见 §44.4） |
+| ④ | `F-1…F-5` | ⏸ 按 §62.5 排序：**排在「依 a3 单价复议额度」之后** ⇒ 本轮不动 |
+| ⑤ | 零取号（指针 `U-143`） | ✅ 未取号 |
+
+### 44.1 ① 匣带 record 头归一（真因点 = `eval/cassette.py` 的 record 分支）
+
+**改法**（与 replay 分支 `_to_response` 同旨，只是**保留其余上游头**）：
+
+```python
+# 新增模块级常量（剔除描述"上游压缩态"的三个头）
+_STRIPPED_RESPONSE_HEADERS: Final[frozenset[str]] = frozenset(
+    {"content-encoding", "content-length", "transfer-encoding"})
+# record 分支返回处
+headers={k: v for k, v in response.headers.items()
+         if k.lower() not in _STRIPPED_RESPONSE_HEADERS},
+```
+
+**① QA 回归脚本实跑**（件 = `reports/qa/evidence_cassette_r31ai/repro_decoding.py`，**只读引用、未改动**）：
+
+| 段 | 改前（QA 第 43 轮实测） | **改后现读** |
+|---|---|---|
+| ① 最小单元（手工造 gzip 头 ＋ 明文） | 🔴 抛 `DecodingError` | 🔴 **仍抛** —— ⚠️ 这一段是"httpx 行为演示"，**不走本模块**，故**本修复不涉及它**（不算未达标） |
+| ② **端到端经 `CassetteTransport(mode="record")`** | 🔴 抛 `DecodingError` | ✅ **`transport 返回了响应（未报错）`**，头 = `{'content-type': 'application/json', 'content-length': '42'}`，`resp.content` 可读 |
+| ③ replay 分支对照 | 不抛（本来就好） | 不抛 |
+
+**② 带匣带 live 实跑**：a3 的 5 条 **`n_unscored = 0`**（第 41/42/43 轮那种 `LLM_UPSTREAM_ERROR` 整批 error **已消失**）。
+**③ 回放校验（零出站、零花费，证明"保住回放能力"）**：`--mode replay --cassette eval/cassettes/w8_r44_a3.jsonl` ⇒ **逐位复现**：
+
+```text
+terminal_distribution = {complete: 4, refuse: 1}   ← 与录制批逐条同
+tokens_total = 124011 ｜ cost_cny_total = 0.053505  ← 与录制批逐位同
+n_unscored = 0（无 CassetteMiss）
+```
+
+### 44.2 ② 扫描抽成脚本（消掉「自匹配」＋「面放大／与结论脱钩」两个根因）
+
+**新增** `backend/scripts/scan_secrets.py`（**规则不写在本文件里**）：
+
+- 三条规则（`commerceql-deepseek-key`／`commerceql-dsn-with-password`／`commerceql-jwt-secret`）**运行时从 `.gitleaks.toml` 读** ⇒ **单一出处**（该 toml 自己注释里就写了"不在这里重写一份正则，否则变成验我自己写的那条"）；
+- `allowlist` 语义（`regexes` 5／`stopwords` 4／`paths` 9）**同步复放**；
+- 区间锚点与文件后缀沿用 `RELAY §廿一` 原口径（`--since 983214c`，`.json/.py/.md`）；
+- 退出码**改直白**：`0 = 0 命中（通过）`／`1 = 有命中`（不再是 grep 的「1 = 没命中」）。
+
+**实跑**：
+
+```text
+面 = git diff --name-only 983214c..HEAD，文本后缀 ('.json', '.py', '.md')
+规则出处 = .gitleaks.toml（3 条）｜被测文件 = 78 件
+✅ 0 命中
+```
+
+**自匹配自查**：把 `.gitleaks.toml` 的三条规则跑在**本脚本源码**上 ⇒ **各 0 命中**。
+**`RELAY §廿一` 第 ⑤ 行**已随之改成**只引脚本名**（`:2950-2963`），并留**两版审计原文**指针（`git show 7210a58:` ＝ 最早连续正则版；`git show bdcd111:` ＝ 第 43 轮截断版）。
+⚠️ **诚实上限已写进脚本输出**：它只复放**本项目自有 3 条规则**、只看**工作区当前内容**、**不看历史** ⇒ 是 CI 的**下界**（CI 另有默认规则集 ＋ `fetch-depth: 0` 全历史）。
+
+### 44.3 ③ a3：G-2 面前 5 条（**按 case_id 字典序取前 5，非挑拣**）
+
+**选样规则**（先说规则再说结果，避免被读成挑拣）：派单要求 **a3 ＝ 5 条**；本窗取 **G-2 门的分母 10 条（`easy×low`）里按 `case_id` 字典序的前 5 条**。
+
+**逐条读数**（`eval/results_a3_r44.json`，匣带 `eval/cassettes/w8_r44_a3.jsonl`）：
+
+| case_id | 题面 | 改前（v1） | **现读** | 生成 SQL（正对上新指标） |
+|---|---|---|---|---|
+| `E-VER-01` | T_A 2026-08 的日期维表有多少天 | refuse | 🟡 **success，但 `verdict.equivalent=false`** | `COUNT(*) AS day_cnt FROM v_dim_date WHERE year=… AND month=…` |
+| `E-VER-02` | T_A 的在架商品数 | refuse | ✅ **success**（`equivalent=true`） | `COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE` |
+| `E-VER-03` | T_A 的下架商品数 | refuse | ✅ **success**（`true`） | `COUNT(*) AS off_sale_product_cnt … WHERE on_sale = FALSE` |
+| `E-VER-04` | T_A 的 SPU 数 | refuse | 🔴 **仍 refuse**（`no_data_asset`） | （无 SQL；链停在 `plan → refuse_out`） |
+| `E-VER-05` | T_A 的店铺数 | refuse | ✅ **success**（`true`） | `COUNT(*) AS shop_cnt FROM v_shop` |
+
+**三条要点**：
+
+1. 🟡 **4/5 由 refuse → success**，且生成的 SQL **逐字就是新指标的 `expression`**（`on_sale_product_cnt`／`off_sale_product_cnt`／`shop_cnt`／`day_cnt`）⇒ 与第 43 轮 n=1 同向，**证据从 n=1 提到 n=4**。
+2. 🔴 **`E-VER-01` 的 `verdict=false` 不是新缺陷，是第 40 轮就登记过的「冻结集内部口径冲突」被实测证实**：题面要"2026-08 的天数"，而 gold 是**全表** `COUNT(*)`（=730）⇒ 模型按题面加了月份筛选 ⇒ `attribution = gate_policy_gap`。**不改判据、不改冻结集**（承 §40.4）。
+3. 🔴 **`E-VER-04`（SPU 数）仍拒**：`refusal_reason = no_data_asset`，链停在 `plan → refuse_out`，且带 `degradations = [{reason: embedding_unavailable, action_taken: sparse_only}]` ⇒ **具名的剩余缺陷**：SPU 指标已在包里（`spu_cnt`），但**稀疏回退下没被召回/落位** ⇒ 这不是"指标没补"，而是**检索/绑定面在无嵌入时看不到它**。⇒ 登记（§44.7 #2）。
+
+### 44.4 🔴 单价修正：a3 实测 **¥0.010701/条** ⟷ 第 43 轮 **¥0.058163/条**（差 **5.4×**，机制 = 提示缓存）
+
+| 批 | tokens/条 | **cache_hit/input** | ¥/条 |
+|---|---|---|---|
+| 第 43 轮 单发（`E-VER-02`，**冷缓存**） | 27,103 | 7,424 / 24,610 = **30%** | **0.058163** |
+| **本轮 a3（5 条成批）** | 24,802 | **106,112 / 113,938 = 93%** | **0.010701** |
+
+**⇒ 外推 63 条 ＝ ¥0.6742**（第 43 轮的同口径外推是 ¥3.66 ⇒ **低 5.4×**）。
+⚠️ **仍未进预算**：¥0.6742 ＝ **1.17× 余额**（¥0.577069）／**1.12× 上界**（¥0.60）⇒ **仍须总控裁**（§44.7 #1）。
+⚠️ **机制说明（免得被读成"第 43 轮算错了"）**：两数都对 —— 差异来自**提示缓存**（语义摘要 13,364 字符在批内共享前缀 ⇒ 成批时命中率 ~93%；单发冷启动只有 30%）。**成批**才是评测的真实场景，故 **¥0.6742 才是 63 条的正确估算**；单发 ¥0.058 只是"冷缓存上限"。
+
+### 44.5 边界、花费、取号与复算入口
+
+- **台账逐位不动**：`app.cost_ledger` 现读 **`1830|3.025849|2026-10-07 04:28:00.872275+00`**（照 §60.6 口径：可打「**本项目账面零花费**」，**不打「零出站」**）。
+- **本轮真实出站花费**：**¥0.053505**（a3 5 条，`runner` summary）。🔴 **这是本轮的真相**：账面不动 ≠ 没花钱。
+- **未动**：`backend/app/**`（含 `_shared.llm_error_update` —— 它丢弃 `detail` 的缺陷**本轮不修**，见 §44.7 #3）、`frontend/**`、`deploy/**`、`docs/**`、`OVERVIEW.md`、`deliverables/**`、容器、**`reports/qa/**`（只读）**。
+- **零取号**：`docs/07_技术设计文档_TDD.md:1094` 指针行仍 **「下一个可用号 = `U-143`」**。
+- **离线全量现读**：`pytest backend/tests --ignore=backend/tests/integration -q` → **`2485 passed`**（**0 failed**）—— 第 43 轮那唯一一红（`test_migration_dsn_hygiene`）**已随之转绿**。
+- **复算入口**（**带时点**：第 44 轮／起点 HEAD `bdcd111`）：
+  - ① 匣带回归（QA 件，只读）：`PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/qa/evidence_cassette_r31ai/repro_decoding.py` → **实跑** ② 段 `transport 返回了响应（未报错）`。
+  - ② 回放：`… runner.py --cases E-VER-01,E-VER-02,E-VER-03,E-VER-04,E-VER-05 --mode replay --cassette eval/cassettes/w8_r44_a3.jsonl --out <新路径> --yes` → **实跑** `complete 4 / refuse 1 ｜ tokens 124011 ｜ cost 0.053505`（**零出站**）。
+  - ③ 扫描：`PYTHONUTF8=1 .venv/Scripts/python.exe backend/scripts/scan_secrets.py --since 983214c` → **实跑** `0 命中／78 件`。
+  - ④ DSN 单测（机械护栏）：`pytest backend/tests/unit/test_migration_dsn_hygiene.py -q` → **实跑** `8 passed`。
+
+### 44.6 串行资源表六面
+
+| 面 | 本轮是否争用 | 尺 |
+|---|---|---|
+| `git` 索引 | 争用（本轮提交） | 按名 stage；`git show --stat` |
+| 共享 `ecom` | 只读一次（台账） | `begin; … rollback;`；台账逐位不动 |
+| 共享栈 | 不争用 | 未 up/down/build |
+| 被测镜像 | 不争用 | 未 `docker build` |
+| 匣带 | **新增 1 件**（`eval/cassettes/w8_r44_a3.jsonl`，311,592 字符／18 报文） | 已查：`Authorization`／`Bearer`／`sk-`／`api_key` **各 0**；gitleaks 三规则 **各 0** ⇒ **无凭据入带**；`w6_batch.jsonl` 未动 |
+| `reports/qa/**` | 不争用（只读） | 本窗未写 QA 面 |
+
+### 44.7 待办与回单
+
+| # | 项 | 说明 |
+|---|---|---|
+| 1 | 🔴 **重跑额度（复议）** | a3 实测单价 **¥0.010701/条** ⇒ 63 条 **≈¥0.6742**（1.17× 余额 ¥0.577069；1.12× 上界 ¥0.60）。请总控裁：抬上界 / 只跑 G-2 的 10 条（≈¥0.107，**已进预算**）/ 全量 166（≈¥1.78） |
+| 2 | 🔴 **`E-VER-04` 的具名剩余缺陷**：「SPU 数」指标已在包里，**稀疏回退**（`embedding_unavailable → sparse_only`）下未被召回 ⇒ 归因在**检索/绑定层**，不在指标层。建议下一轮单列 |
+| 3 | 🔴 `_shared.llm_error_update` **丢弃 `exc.detail`** | 是"猜三轮根因"的机制性来源（§43.1）⇒ 建议随 #2 一起修（属 `app/**`，需**明示授权**才动） |
+| 4 | 🟡 `F-1…F-5`（46 条非 metric 面） | 按 §62.5 排序：**排在 #1 之后**（且实测会动 `grain_index`，须独立设计与验收） |
+| 5 | 🟡 对外件口径刷新（`OVERVIEW.md` 三处「9 个」＋ DSN 差异措辞） | 仍留**专门一轮**（派单禁夹带、避免行位漂移） |
+| 6 | `test_semantic_materialization.py` 三处字面量"已改未验" | 仍待一次性库实跑 |
+
+### 44.8 注入形态
 
 - 注入形态 = **无**；未执行 **N/A**。

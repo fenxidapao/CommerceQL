@@ -53,6 +53,14 @@ __all__ = ["CassetteMiss", "CassetteTransport", "MODES"]
 Mode = Literal["record", "replay"]
 MODES: Final[tuple[str, ...]] = ("record", "replay")
 
+# 🔴 record 分支**必须剔除**的响应头（W8 第 44 轮，QA §62.7 一）：
+#   匣带里 `content=` 存的是 `aread()` 之后的**已解压明文**，而这三个头描述的是**上游压缩态**
+#   ⇒ 原样带上会让 httpx 再解一次 ⇒ 构造即抛 `DecodingError`（`Error -3 incorrect header check`）。
+#   `content-length` httpx 会按 `content=` 自行重算，故一并剔除即可。
+_STRIPPED_RESPONSE_HEADERS: Final[frozenset[str]] = frozenset(
+    {"content-encoding", "content-length", "transfer-encoding"}
+)
+
 
 class CassetteMiss(RuntimeError):
     """回放未命中（fail-fast）—— 详见模块 docstring §二。"""
@@ -170,7 +178,12 @@ class CassetteTransport(httpx.AsyncBaseTransport):
         self._dirty += 1
         return httpx.Response(
             status_code=response.status_code,
-            headers=dict(response.headers),
+            # 🔴 W8 第 44 轮（QA §62.7 一）：`content=` 是 `aread()` **已解压**后的明文，
+            #    所以**不能**把上游的 `content-encoding` / `content-length` 原样带上 ——
+            #    否则 httpx 会按 gzip 再解一次 ⇒ 构造即抛 `DecodingError`（record 分支独有）。
+            #    与 replay 分支（`_to_response`）同旨，只是这里**保留其余上游头**（如 x-request-id）。
+            headers={k: v for k, v in response.headers.items()
+                     if k.lower() not in _STRIPPED_RESPONSE_HEADERS},
             content=content,
             extensions={"request": request},
         )
