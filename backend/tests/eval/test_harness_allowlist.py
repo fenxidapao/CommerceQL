@@ -381,7 +381,9 @@ async def test_retrieval_fixture_excludes_deny_columns_and_keeps_all_metrics(har
         denied_columns=tuple(harness.runtime.policy().get("deny_columns") or ()),
     ).search_full("各大区 GMV", analyst_ctx, RetrievalMode.HYBRID)
     assert len(trimmed.columns) == 3 < len(full.columns)
-    assert len(trimmed.metrics) == len(full.metrics) == 8
+    # `column_top` 只裁剪**列**面，不裁剪指标面 ⇒ 两侧的指标候选必须相等且为**全量**
+    # （★ W8 第 41 轮：真实包 active 指标 8 → 21，本字面量随之更新）。
+    assert len(trimmed.metrics) == len(full.metrics) == 21
 
 
 async def test_offline_retrieval_degrades_loudly_instead_of_faking_hybrid(harness, analyst_ctx):

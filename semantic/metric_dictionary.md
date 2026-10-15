@@ -4,7 +4,7 @@
 
 > **本文件由 `semantic/render_metric_dictionary.py` 从 `bundle_2026.09.14.1.yaml` 自动生成，请勿手改。**
 >
-> 语义包版本 `2026.09.14.1`｜状态 `candidate`｜指标口径 hash `ecbcb01b08d9563e`
+> 语义包版本 `2026.10.15.1`｜状态 `candidate`｜指标口径 hash `6e44e05a44af9155`
 >
 > 时区 `Asia/Shanghai`；财年起始月 `1`；周起点 `monday`。
 
@@ -21,6 +21,19 @@
 | `uv` | UV | traffic | 人 | sum | active | operations | stat_date |
 | `pay_cvr` | 支付转化率 | traffic | ratio | ratio_of_sums | active | operations | stat_date |
 | `sell_through_rate` | 动销率 | products |  |  | draft |  | — |
+| `pv` | 浏览量 | traffic | 次 | sum | active | operations | stat_date |
+| `cart_add_cnt` | 加购次数 | traffic | 次 | sum | active | operations | stat_date |
+| `product_cnt` | 商品数 | products | 个 | count | active | operations | current |
+| `on_sale_product_cnt` | 在架商品数 | products | 个 | count | active | operations | current |
+| `off_sale_product_cnt` | 下架商品数 | products | 个 | count | active | operations | current |
+| `spu_cnt` | SPU 数 | products | 个 | count_distinct | active | operations | current |
+| `avg_list_price` | 商品平均标价 | products | CNY | avg | active | operations | current |
+| `shop_cnt` | 店铺数 | products | 个 | count | active | operations | current |
+| `campaign_cnt` | 活动数 | orders | 个 | count | active | operations | current |
+| `province_cnt` | 覆盖省份数 | orders | 个 | count | active | operations | current |
+| `province_covered_cnt` | 收货省份覆盖数 | orders | 个 | count_distinct | active | operations | pay_time |
+| `day_cnt` | 天数 | orders | 天 | count | active | operations | current |
+| `refunded_order_cnt` | 全额退款订单数 | orders | 笔 | count_distinct | active | finance | pay_time |
 
 > **`status = draft` 的指标没有 `default_binding`、也没有别名** —— 这是刻意的：未定口径的指标不得被检索命中（附录 C §C.5.2 / FR-12.3）。
 >
@@ -144,6 +157,136 @@
 - **口径说明**：
   - 口径待业务确认（观察周期、分母是否含下架商品）。**确认前不对外开放**。
 - **同义词（须与别名表一致）**：动销率、动销
+
+### 2.10 `pv` — 浏览量
+
+- **表达式**：`SUM(traffic_daily.pv)`
+- **默认聚合**：`sum`｜**单位**：次｜**域**：traffic｜**Owner**：operations｜**状态**：`active`
+- **默认绑定**：资产 `traffic_daily`｜时间基准 `stat_date`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：浏览量只存在于流量表，时间随统计日
+- **口径说明**：
+  - 页面浏览量：**不去重**、按次累计。与 `uv`（按用户去重、自然日窗口）**不是同一件事** —— 把 pv 当 uv 报，等于把跨日重复计数说成访客数。跨日区间可直接累加（uv 不可以）。
+- **同义词（须与别名表一致）**：浏览量、PV、pv、页面浏览量、浏览次数、访问量、曝光量
+
+### 2.11 `cart_add_cnt` — 加购次数
+
+- **表达式**：`SUM(traffic_daily.cart_add_cnt)`
+- **默认聚合**：`sum`｜**单位**：次｜**域**：traffic｜**Owner**：operations｜**状态**：`active`
+- **默认绑定**：资产 `traffic_daily`｜时间基准 `stat_date`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：加购行为记在流量日粒度表上
+- **口径说明**：
+  - 加购次数：**不去重**、按次计数。是转化漏斗的中间一步（uv → 加购 → 支付），与 `pay_cvr` 串联使用。
+- **同义词（须与别名表一致）**：加购次数、加购数、加购量、加购、加购人次
+
+### 2.12 `product_cnt` — 商品数
+
+- **表达式**：`COUNT(*)`
+- **默认聚合**：`count`｜**单位**：个｜**域**：products｜**Owner**：operations｜**状态**：`active`
+- **默认绑定**：资产 `product`｜时间基准 `current`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：商品数是维表存量口径，时间语义为当前值
+- **口径说明**：
+  - **存量**计数（维表快照，非交易口径）：不区分上/下架。 `time_basis = current` ⇒ 与任何时间区间**无关**；"某月的商品数"在语义上不存在 （若要"某月新上架数"须另立指标，本包未定义 ⇒ 不得被生成）。
+- **同义词（须与别名表一致）**：商品数、商品数量、商品个数、SKU数、SKU数量、sku数、款式数、货品数
+
+### 2.13 `on_sale_product_cnt` — 在架商品数
+
+- **表达式**：`COUNT(*) WHERE on_sale = true`
+- **默认聚合**：`count`｜**单位**：个｜**域**：products｜**Owner**：operations｜**状态**：`active`
+- **默认绑定**：资产 `product`｜时间基准 `current`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：在架商品数是维表存量口径，时间语义为当前值
+- **口径说明**：
+  - **在售状态的存量**商品数。过滤条件 `on_sale = true` **写在 `expression` 里** （不是 `default_predicates`）：本包的 `default_predicates` 是**域级**业务规则， gate1 R06 会把它注入到**本域每一个能表达它的资产**上 ⇒ 写在域里会让 "任意商品查询"都被强制只看在架（静默算错）。谓词一律写 `on_sale = true`， 不写 `on_sale <> false`（后者会漏掉 `on_sale IS NULL` 的行）。
+- **同义词（须与别名表一致）**：在架商品数、在架商品、在售商品数、在售商品、上架商品数、在架SKU数、在售SKU数、在架商品个数
+
+### 2.14 `off_sale_product_cnt` — 下架商品数
+
+- **表达式**：`COUNT(*) WHERE on_sale = false`
+- **默认聚合**：`count`｜**单位**：个｜**域**：products｜**Owner**：operations｜**状态**：`active`
+- **默认绑定**：资产 `product`｜时间基准 `current`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：下架商品数是维表存量口径，时间语义为当前值
+- **口径说明**：
+  - **已下架的存量**商品数（过滤条件同样写在 `expression` 里，理由见上条）。 与 `on_sale_product_cnt` **互补**，但**两者相加 ≠ product_cnt** （`on_sale IS NULL` 的行两边都不计）。
+- **同义词（须与别名表一致）**：下架商品数、下架商品、停售商品数、已下架商品数
+
+### 2.15 `spu_cnt` — SPU 数
+
+- **表达式**：`COUNT(DISTINCT product.spu_id) WHERE on_sale = true`
+- **默认聚合**：`count_distinct`｜**单位**：个｜**域**：products｜**Owner**：operations｜**状态**：`active`
+- **默认绑定**：资产 `product`｜时间基准 `current`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：SPU 由 SKU 表唯一承载，默认按在售口径计数
+- **口径说明**：
+  - **按 `spu_id` 去重**的存量计数（"款数"），默认按**在售**口径（过滤条件写在 `expression` 里）。 若要"全部款数（含已下架）"，须显式去掉该过滤 —— 默认口径**不是**全量， 这是刻意选定的业务默认，已在披露文案里说明。
+- **同义词（须与别名表一致）**：SPU数、SPU数量、SPU个数、款数、款式数量
+
+### 2.16 `avg_list_price` — 商品平均标价
+
+- **表达式**：`AVG(product.list_price) WHERE on_sale = true`
+- **默认聚合**：`avg`｜**单位**：CNY｜**域**：products｜**Owner**：operations｜**状态**：`active`
+- **默认绑定**：资产 `product`｜时间基准 `current`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：标价是商品维表列，默认按在售口径取均值
+- **口径说明**：
+  - **标价（吊牌价），非成交价**，默认按在售口径（过滤条件写在 `expression` 里）。 成交侧的"件单价 / 客单价"分别由 `aov` 与 `blacklist_terms` 里的"件单价"承接 —— **不要**把本条当成交价用。
+- **同义词（须与别名表一致）**：商品平均标价、平均标价、平均吊牌价、标价均值、商品平均吊牌价
+
+### 2.17 `shop_cnt` — 店铺数
+
+- **表达式**：`COUNT(*)`
+- **默认聚合**：`count`｜**单位**：个｜**域**：products｜**Owner**：operations｜**状态**：`active`
+- **默认绑定**：资产 `shop`｜时间基准 `current`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：店铺数是维表存量口径，时间语义为当前值
+- **口径说明**：
+  - **存量**店铺数（维表快照）。⚠️ 与「各店铺的…」（按 `shop_id` 分组）不同：后者是分组面，不是本指标。
+- **同义词（须与别名表一致）**：店铺数、店铺数量、店铺个数、门店数、店铺家数
+
+### 2.18 `campaign_cnt` — 活动数
+
+- **表达式**：`COUNT(*)`
+- **默认聚合**：`count`｜**单位**：个｜**域**：orders｜**Owner**：operations｜**状态**：`active`
+- **默认绑定**：资产 `campaign`｜时间基准 `current`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：活动数是维表存量口径，时间语义为当前值
+- **口径说明**：
+  - **存量**活动数（维表快照）。⚠️ **刻意不挂 `campaign_type = 'normal_sale'` 默认谓词**： "活动数"到底含不含大促（`prom_618` / `prom_double11` 共 12 条）**尚未经业务确认** ⇒ 默认口径取**全量**（`v_campaign` 84 条），要只看日常促销请在问句里显式限定类型。
+- **同义词（须与别名表一致）**：活动数、活动数量、活动个数、活动场次、促销活动数
+
+### 2.19 `province_cnt` — 覆盖省份数
+
+- **表达式**：`COUNT(*)`
+- **默认聚合**：`count`｜**单位**：个｜**域**：orders｜**Owner**：operations｜**状态**：`active`
+- **默认绑定**：资产 `region`｜时间基准 `current`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：省份清单是公共参考维表，时间语义为当前值
+- **口径说明**：
+  - **`v_region` 维表上的存量省份数**（现读 31）。⚠️ 与 `province_covered_cnt` （订单实覆盖，落在 `order_paid`）**同名根不同资产** —— 按"大区（`region_name`）" 筛选或分组时用本条；问"实际卖出去了几个省"用 `province_covered_cnt`。
+- **同义词（须与别名表一致）**：省份数、省份数量、省份个数、覆盖省份数、省份覆盖数
+
+### 2.20 `province_covered_cnt` — 收货省份覆盖数
+
+- **表达式**：`COUNT(DISTINCT order_paid.region_code) WHERE region_code IS NOT NULL`
+- **默认聚合**：`count_distinct`｜**单位**：个｜**域**：orders｜**Owner**：operations｜**状态**：`active`
+- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：收货省份覆盖数依赖订单事实，时间随支付时间
+- **口径说明**：
+  - **订单实际覆盖到的收货省份数**（跨列去重，落在事实表）。与 `province_cnt` （维表清单）**不是同一件事**：一个是"能覆盖"，一个是"已覆盖"。 `region_code IS NOT NULL` 写在 `expression` 里（理由同 `on_sale_product_cnt`： 域级谓词会被 gate1 R06 注入到本域**所有**资产）。
+- **同义词（须与别名表一致）**：收货省份覆盖数、收货省份数、收货覆盖省份数
+
+### 2.21 `day_cnt` — 天数
+
+- **表达式**：`COUNT(*)`
+- **默认聚合**：`count`｜**单位**：天｜**域**：orders｜**Owner**：operations｜**状态**：`active`
+- **默认绑定**：资产 `dim_date`｜时间基准 `current`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：天数是公共日历维表口径，时间语义为当前值
+- **口径说明**：
+  - **日历维表的存量天数**（`v_dim_date` 现读 730，区间 2024-10-01 … 2026-09-30）。 问"某月有多少天"须**显式**加月份筛选谓词 —— 本指标默认**不带**任何时间谓词。
+- **同义词（须与别名表一致）**：天数、日期数、日历天数、日期维表天数、统计天数、日期个数
+
+### 2.22 `refunded_order_cnt` — 全额退款订单数
+
+- **表达式**：`COUNT(DISTINCT order_paid.sub_order_id) WHERE refund_status = 'refunded' AND pay_status = 'paid'`
+- **默认聚合**：`count_distinct`｜**单位**：笔｜**域**：orders｜**Owner**：finance｜**状态**：`active`
+- **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`（读 `time_basis`，非 time_field）
+  - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：退款笔数以支付子订单为分母，时间随支付时间
+- **口径说明**：
+  - **按退款状态计数**（不是比率）。两条过滤**写在 `expression` 里**（理由同 `on_sale_product_cnt`：域级谓词会被 R06 注入到本域所有资产，`refund_status = 'refunded'` 若进域会让**任何订单查询**都被过滤成"只看全额退款单"）。 口径镜像 `refund_rate` 的例外模式：分子正是退款行为本身。 若要"部分退款"或"无退款"笔数，请显式限定 `refund_status`，本指标默认只给"全额退款"。
+- **同义词（须与别名表一致）**：全额退款订单数、退款订单数、全额退款笔数、退款笔数、退款单量
 
 ## 3. 易混指标对照（**口径差异必须显式**）
 

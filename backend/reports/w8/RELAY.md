@@ -3879,3 +3879,154 @@ expected=execute           = 124
 ### 40.9 注入形态
 
 - 注入形态 = **无**；未执行 **N/A**。
+
+## §卅九 第 41 轮 · 落语义包（13 指标）＋ 🔴 重跑被上游故障挡住（**读数未取得，花费 ¥0**）｜ 2026-10-15 ｜ 起点 HEAD ce54b41／543 笔（作业中 QA 落 `a943575`／545 笔）
+
+### 41.0 本轮做了什么（派单 = QA 第 32 轮 R31af §59.7；总控原话「其中需要我授权、点头、批准的都准许，尽量少阻塞」）
+
+| # | 项 | 状态 |
+|---|---|---|
+| ① | **落 `semantic/**`**：+13 指标 ＋ +71 别名 ＋ `meta.version` 递增 | ✅ 已落 |
+| ② | 试做「非 metric 面」（5 维度）| 🔴 **试做后撤回**（改判既有 grain 解析，6 断言红）——见 §41.2 |
+| ③ | 试做「指标专属 `default_predicates`」（6 条）| 🔴 **试做后撤回**（域级谓词会被 R06 全域注入）——见 §41.2 |
+| ④ | **`PROMPT.md §1` 补 `semantic/**` 归属**（总控批）| ✅ 已落（三条纪律 ＋ 连带面清单 ＋ 两条红线） |
+| ⑤ | **重跑冻结集看 G-2/G-5 是否真降** | 🔴 **未取得读数**：上游 LLM 端点故障（§41.4）⇒ 本轮**零出站读数、零花费** |
+| ⑥ | 零取号（指针 `U-143`） | ✅ 未取号 |
+
+### 41.1 落地内容（口径五件式：数／面／谓词／分母／粒度）
+
+| 面 | 改前（第 40 轮现读） | 改后（本轮现读） |
+|---|---|---|
+| 指标 `metrics` | 9 | **22**（其中 active 21 ＋ draft 1） |
+| 别名 `aliases`（term 一对一） | 105 | **176**（+71） |
+| 维度 `dimensions` | 6 | **6**（试做 5 个后撤回，见 §41.2） |
+| 域级谓词 `default_predicates` | 5 条（orders 3 ＋ traffic 1 ＋ …） | **5 条**（未新增，见 §41.2） |
+| `meta.version` | `2026.09.14.1` | **`2026.10.15.1`**（🔴 **文件名保持** `bundle_2026.09.14.1.yaml`，理由已就地写在 `:50-54`） |
+| YAML 体积 | 1225 行 | **88,550 字节**（校验器现读） |
+| `validate_bundle.py` | PASS=31 / FAIL=0 / SKIP=1 / WARN=2 | **PASS=31 / FAIL=0 / SKIP=1 / WARN=2**（**逐项同基线**，34 项） |
+| 语义摘要（T_A×analyst） | 8,235 字符 | 13,364 字符（**余量 26,636 ≫ 0 ⇒ 无截断**；指标段 2,264→5,601） |
+
+**13 条新指标**（全部 `status: active`）：`pv`／`cart_add_cnt`／`product_cnt`／`on_sale_product_cnt`／`off_sale_product_cnt`／`spu_cnt`／`avg_list_price`／`shop_cnt`／`campaign_cnt`／`province_cnt`／`province_covered_cnt`／`day_cnt`／`refunded_order_cnt`。
+**补入理由（按 QA §59.3 要求写对）＝ 产品语义层完整性**，不是"这题过不了"：traffic 域此前只有去重人数 `uv` 一个流量指标；**6 张维资产（product／shop／campaign／region／dim_date）一个存量指标都没有**，而 `on_sale`／`spu_id`／`list_price`／`city`／`campaign_type`／`region_name`／`date_key` 全是**已认证的列**。
+**`time_basis: current`** 是本包首次出现的取值（语义 = 维表存量口径，与时间区间无关），理由已就地写在 `:684-685`。
+
+### 41.2 两处「试做后撤回」（**本轮最有价值的部分** —— 零成本实测出两条结构性约束）
+
+**A｜5 个新维度（SKU／SPU／campaign_type／region_name／product_category）⇒ 撤回**
+它们**不是**加法：`grain_index` 把 `grain_levels` 集合相同的维度**合并成 family 名**，且 `level_of_ref` 的列名-前缀启发式被新维度**改判** ⇒ 实跑 **6 个既有断言变红**（`test_binding_grain.py`／`test_binding_four_layer.py`）：
+· `order_paid.category_l1` 的 family：`'category'` → **`'category+product_category'`**；
+· `product.sku_name` 从"无族"变成 `sku` 族 `level=1`（只因它前缀是 `sku_`）；
+· 大区级问句拿到 `region_name` 而不是原 `region`；L2 判词从 `resolved_unique` 翻成 `ambiguous`／`l4_unavailable:parse_failed`。
+⇒ 撤回后**同两个测试文件立刻转绿**（证据 = §41.3 的离线全量跑）。
+⇒ 第 40 轮清单件的 `F-1…F-5` 因此**仍为未办项**；它们需要**独立一轮**重新设计"如何不扰动既有 family/level 解析"。
+（撤回说明就地留在 YAML `:1044-1059`，**不删理由**。）
+
+**B｜6 条"指标专属"域级谓词（`refund_status = 'refunded'`／`region_code IS NOT NULL`／`on_sale = true|false`／`pv >= 0`／`cart_add_cnt >= 0`）⇒ 撤回**
+`default_predicates[<域>]` 是**域级**规则，gate1 **R06** 把它注入本域**每一个能表达它的资产**（test_guard_gate1 两红）：
+· 把 `refund_status = 'refunded'`／`region_code IS NOT NULL` 加进 `orders` 域后，一句普通的
+  `SELECT sub_order_id FROM v_order_paid` 的 `applied_predicates` **3 → 5**
+  ⇒ **任何 GMV／订单量查询都会被静默过滤成"只看全额退款单"**；
+· 把 `on_sale = true` 加进新开的 `products` 域后，`SELECT sku_name FROM v_product` 也会被注入。
+⇒ **本包没有"指标专属谓词"的承载位** ⇒ 指标专属过滤**只能写进 `expression`**
+（`COUNT(*) WHERE on_sale = true` 等 5 条，与第 40 轮清单件 §40.3 ③ 的写法**逐字一致**）。
+⇒ 13 条新指标**一律不挂 `default_predicates`**（撤回说明就地留在 YAML `:1262-1280`）。
+
+### 41.3 连带面：同轮更新的字面量 ＋ 离线测试读数
+
+改 `semantic/**` 会连带红 6 个**别窗**的测试（都在本窗写面内，都是"钉住真实包形状"的字面量）：
+
+| 文件 | 改的字面量 |
+|---|---|
+| `backend/tests/unit/test_semantics_loader.py` | 版本号 ×1、别名数 105→176 ×2（含 docstring） |
+| `backend/tests/unit/test_materialize_derivation.py` | `metric` 9→22、`synonym` 105→176、`doc_id` 前缀版本 ×1 |
+| `backend/tests/unit/test_binding_service.py` | 版本号 ×2 |
+| `backend/tests/contract/test_semantic_dict_contract.py` | 版本号 ×1 |
+| `backend/tests/unit/test_retrieval_search.py` | `BUNDLE_VERSION` ×1 |
+| `backend/tests/eval/test_harness_allowlist.py` | active 指标数 8→21 ×1 |
+
+**离线全量测试现读**（面 = `backend/tests` − `tests/integration`，cwd = 仓库根）：
+
+```text
+1 failed, 2484 passed, 1 warning in 108.58s
+FAILED backend\tests\unit\test_migration_dsn_hygiene.py::test_repo_wide_replay_of_the_dod4_rule_is_green
+    backend/reports/w8/RELAY.md:2952  postgres://[^[:space:]]*:[^[:space:]]+@)
+```
+
+🔴 那**唯一一红是既有红**（**不是本轮引入**）：`RELAY.md:2952` 是 §廿一 时代 W8 自己写下的 **DoD④ grep 命令的 pattern 字面量**。
+证据（两格）：`git show HEAD:…/RELAY.md` 的 `:2952` 与工作树**逐字相同**；另核 `git show ce54b41:…` 的 `:2952` **同样逐字相同** ⇒ 该红在第 40 轮与更早已在。**本轮不修**（修它 = 改写 §廿一 的历史行，违反 §2④）；登记为待办（§41.8）。
+（`tests/integration` 22 项 **未跑**：`_env_dsn.py` 的 U-114 防线要求一次性库 DSN 环境变量，本轮未起一次性库 ⇒ 收集期即 error，**属既定行为不是回归**。其中 `test_semantic_materialization.py` 的 `9/105/version` 三处字面量**已按 §41.3 同源更新**，但**未实跑** ⇒ 登记为"已改未验"。）
+
+### 41.4 🔴 重跑：到哪一步、为什么没跑成（**三件探针证据**）
+
+**审批链**：QA §59.6 实测"全量 166 ＝ ¥0.3915 ＞ 现余额 ¥0.577069 的上界占用"，建议 **(b) 只重跑误拒 63 条（≈¥0.149）**；总控原话「都准许」⇒ 本窗采 **(b)**。
+**已跑的那一把（空批）**：命令 = `eval/runner.py --cases <63 个 case_id> --live --yes --cassette eval/cassettes/w8_r41_wrong63.jsonl --out eval/results_v1_after_r41.json`（成本预估 ≈409,500 tokens / ≈¥0.126）。
+实跑 **160.08s** 结束，产出 summary **逐字**：
+
+```text
+terminal_distribution: {"refuse": 62, "error": 1} ｜ attribution: {"over_refusal": 62, "sql_generation": 1}
+n_execute_with_sql: 0 ｜ n_equivalent: 0 ｜ tokens_total: 0 ｜ cost_cny_total: 0.0
+wall_s: {"max": 16.12, "median": 0.207, "sum": 160.08}
+```
+
+日志里 **63/63** 全是 `llm_degraded … error=LlmTimeout … task=normalize_intent` ＋ `llm_falling_back_to_template`。
+🔴 **判定：这批测的是上游宕机，不是本轮的语义包改动** ⇒ **不是读数**。
+
+**探针三件（诊断，零成本）**：
+
+| # | 探针 | 实跑 |
+|---|---|---|
+| ① | `GET https://api.deepseek.com/models`（带凭据，**不打印**） | **HTTP 200**，返回模型清单含 **`deepseek-flash`（DeepSeek-V4.1-Flash）** ⇒ **凭据有效、模型名存在** |
+| ② | `POST /chat/completions`（`deepseek-flash` / `deepseek-v4-pro`，`max_tokens=1`） | **3 轮共 6 次全部 `httpx.ReadTimeout`**（30s／45s／60s／90s 四档超时一致） |
+| ③ | 同端点**对照**：`POST` `deepseek-chat` | **HTTP 503** `{"error":{"message":"Service is too busy. We advise users to temporarily switch to alternative LLM API service providers."…}}` |
+| ④ | 联网基线 | `https://www.baidu.com/` **200**、`https://pypi.org/simple/` **200**、`GET https://api.deepseek.com/`（无凭据）**401** ⇒ **不是本机断网** |
+
+⇒ 结论：**上游服务端过载／故障**（平台侧），与本窗凭据、网络、YAML 变更**均无关**。
+⇒ 依纪律：**不刷重试**（已有界试过 3 轮）；把重跑**留给下一轮**。总控的"尽量少阻塞"**不等于编造测量**。
+
+**死批产物已隔离**（advisor 建议 ＋ 自判）：`eval/results_v1_after_r41.json` 与 `eval/cassettes/w8_r41_wrong63.jsonl` **已删**——
+前者留着必被误读成"补了指标没用"；后者录的是超时垃圾，留着会让**任何人 replay 都确定性复现废结果**（比全超时更糟）。
+基线件 `eval/results_v1.json` **未被动**（`git status` 无它；`cost_cny_total` 仍是 0.391504）。
+
+### 41.5 结构性结论（两条已写进 `PROMPT.md §1` 的 v2.2 块，防第二轮再踩）
+
+1. 🔴 **`default_predicates[<域>]` ＝ 域级业务规则**，不是"给一个指标加过滤"（gate1 R06 全域注入）⇒ 指标专属过滤写 `expression`。
+2. 🔴 **新增 `dimensions` 不是加法**：会改 `grain_index` 的 family 名与 `level_of_ref` 的列名启发式（实测 6 断言红）⇒ 必须独立设计与独立验收。
+另：**`semantic/**` 的归属此前不在任何窗的清单里**（W8 §1 与 QA §58.2 风险四都点过）⇒ 本轮按总控点句补进 `PROMPT.md §1`，并附**三条改动纪律**（版本递增／校验器全绿／生成件重跑）。
+
+### 41.6 边界、零花费、零取号与复算入口
+
+- **零花费（逐位）**：`app.cost_ledger` 现读 **`1830|3.025849|2026-10-07 04:28:00.872275+00`**（空批 `tokens_total=0`／`cost_cny_total=0.0` 与之互证）；残渣 `datname like 'ecom%'` = `ecom | ecom_u123_probe`。
+- **零取号**：`docs/07_技术设计文档_TDD.md:1094` 指针行现读仍 **「下一个可用号 = `U-143`」**。
+- **未动**：`backend/app/**`、`frontend/**`、`deploy/**`（含 `deploy/.env` 与 compose）、`docs/**`、`OVERVIEW.md`、`deliverables/**`、`eval/**`（除删掉的两个死批产物**未真删任何既有件**）、容器（未 build／未 up-down）。
+- **复算入口**（**带时点**：第 41 轮／起点 HEAD `ce54b41`）：
+  - ① 语义包校验：`PYTHONUTF8=1 .venv/Scripts/python.exe semantic/validate_bundle.py` → **实跑** `88550 bytes … 总计 34 项：PASS=31 FAIL=0 SKIP=1 WARN=2`（target = `semantic/**`，非 RELAY ⇒ 无自指）。
+  - ② 摘要长度：`PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/w8/probe_semantic_summary.py` → **实跑** `T_A：chars=13364 ｜ 余量=26636 ｜ 截断=False`（件 = `probe_semantic_summary.json`）。
+  - ③ 离线全量：`PYTHONUTF8=1 .venv/Scripts/python.exe -m pytest backend/tests --ignore=backend/tests/integration -q` → **实跑** `1 failed, 2484 passed`（唯一红 = 既有 `test_migration_dsn_hygiene`，理由见 §41.3）。
+  - ④ 上游可用性（**若要再判"能不能跑"**）：`GET {base_url}/models` 带凭据（**不得打印**）＝ 200 才算"上游活着"；`POST` 一条 `max_tokens=1` 的 `deepseek-flash` 若无回落日志才放全批。
+
+### 41.7 串行资源表六面
+
+| 面 | 本轮是否争用 | 尺 |
+|---|---|---|
+| `git` 索引 | 争用（本轮提交） | 按名 stage；`git show --stat` |
+| 共享 `ecom` | 只读两次（台账/残渣） | `begin; … rollback;`；台账逐位不动 |
+| 共享栈 | 不争用 | 未 up/down/build；容器未动 |
+| 被测镜像 | 不争用 | 未 `docker build` |
+| 匣带重写 | **试写过一次又删净** | `eval/cassettes/w6_batch.jsonl` **未动**；`w8_r41_wrong63.jsonl` 已删 |
+| `reports/qa/**` | 不争用（只读） | 本窗未写 QA 面 |
+
+### 41.8 待办与回单（**未办，未擅自扩权**）
+
+| # | 项 | 说明 |
+|---|---|---|
+| 1 | 🔴 **重跑（63 条 or 全量）** | 被上游故障挡住 ⇒ **下一轮**在"上游 `/models` 200 ＋ 单发冒烟无 `template_only` 回落"两个门之后再做；额度与口径已由总控批过 |
+| 2 | 🔴 **非 metric 面（`F-1…F-5`）** | 试做已证"会改判 grain 解析"（§41.2 A）⇒ 需**独立一轮**：先设计"不扰动既有 family/level"，再落、再验 |
+| 3 | `OVERVIEW.md` 三处 `9 个` 已过期（`:33`／`:413`／`:656`） | 本轮**未改**（避免行位漂移打断 QA 的行号引用）⇒ 建议下一轮以 **🔻 追加订正**方式做"对外数字当期化" |
+| 4 | `RELAY.md:2952` 的 dsn_hygiene 既有红 | 见 §41.3；修它 = 改历史行 ⇒ 建议单独一轮裁 |
+| 5 | `test_semantic_materialization.py` 三处字面量已改**未实跑** | 要实跑须起一次性库（`COMMERCEQL_TEST_*_DSN`）⇒ 随 #1 或 #6 一起 |
+| 6 | QA §59.3 的"独立对照批" | 🔴 **前提不成立**：现读 `results_v2_live_20261003T1632Z.json` 与 `results_v1.json` **outcome 逐条 0 差异**、`config` 与 `cost_cny_total` **逐字相同** ⇒ 两者**是同一批的两次留痕，不是两批**。故"只降 v1 那批 = 疑似拟合"这条判据**无法执行**，需另设对照（如另录一批、或验收集） |
+| 7 | **总控原话（要求带回 QA 窗口，逐字）** | 「其中需要我授权、点头、批准的都准许，尽量少阻塞，到时候回执，也把这句话带回给QA窗口，说是我说的」 |
+
+### 41.9 注入形态
+
+- 注入形态 = **无**；未执行 **N/A**。

@@ -46,7 +46,12 @@
 # ============================================================================
 
 meta:
-  version: "2026.09.14.1"
+  version: "2026.10.15.1"          # ★ W8 第 41 轮递增（原 2026.09.14.1）：+13 指标 / +71 别名（维度与域级谓词试做后撤回）
+  # ⚠️ 文件名**保持** `bundle_2026.09.14.1.yaml`（`eval/_bootstrap.py` 与 `deploy/.env.example`
+  #    都把该文件名硬编码为 `SEMANTIC_BUNDLE_PATH`）⇒ **文件名与版本号刻意解耦**：
+  #    版本真相只在 YAML 的 `meta.version`（SCHEMA_v1.md §9 纪律 1 要求内容变更必须递增版本号，
+  #    而 §5 纪律 3 明确"本文件与 YAML 不一致时以 YAML 为准"）。
+  #    改文件名会波及 ~40 处引用（config 默认值／tests／probes／docs），与本轮授权范围不成比例。
   domain: ["orders", "products", "traffic"]
   dialect: postgresql
   published_at: "2026-09-15T20:00:00+08:00"
@@ -670,6 +675,277 @@ metrics:
     # 若 draft 也带 default_binding，L3 会把它当成"有默认口径"而放行 —— 那正是
     # FR-12.3「禁止 LLM 自动发布语义」要防的事。
 
+  # ==========================================================================
+  # ★★ W8 第 41 轮新增 13 条（`meta.version` 同步递增为 2026.10.15.1）
+  # ==========================================================================
+  # 依据 = `backend/reports/w8/probe_semantic_metric_gap.md`（第 40 轮只读清单件，
+  # 按 `gold_sql` 结构反推）。**补入理由 = 产品语义层完整性，不是"某题过不了"**：
+  #   · traffic 域现只有 `uv`（去重人数）一个流量指标 ⇒ 缺 `pv`（不去重浏览量）与 `cart_add_cnt`；
+  #   · **6 张维表/维资产一个存量指标都没有** —— `product.on_sale`／`product.spu_id`／
+  #     `product.list_price`／`shop.shop_id`／`campaign.campaign_id`／`region.province_name`／
+  #     `dim_date.date_key` **全是已认证的列**，却没有任何指标能引用它们；
+  #   · orders 域缺"按退款状态计数"的口径（现有 `refund_rate` 只给比率，不给笔数）。
+  # ⚠️ 这 13 条**同日后的任何用户问题同等地被命中**，不是给冻结集开的特例口子。
+  # `time_basis: current` 是本文件里**首次**出现的取值 —— 语义 = "维表存量口径，
+  #   与任何时间区间无关"（对齐 `time_semantics.current`）。存量读数**不要**按月解释。
+
+  - name: pv
+    display_name: 浏览量
+    domain: traffic
+    expression: "SUM(traffic_daily.pv)"
+    default_aggregation: sum
+    unit: 次
+    owner: operations
+    status: active
+    definition_note: >
+      页面浏览量：**不去重**、按次累计。与 `uv`（按用户去重、自然日窗口）**不是同一件事** ——
+      把 pv 当 uv 报，等于把跨日重复计数说成访客数。跨日区间可直接累加（uv 不可以）。
+    default_binding:
+      asset: traffic_daily
+      reason: "浏览量只存在于流量表，时间随统计日"
+    time_basis: stat_date
+    synonyms: ["浏览量", "PV", "pv", "页面浏览量", "浏览次数", "访问量", "曝光量"]
+    created_at: "2026-10-15"
+    version: 1
+
+  - name: cart_add_cnt
+    display_name: 加购次数
+    domain: traffic
+    expression: "SUM(traffic_daily.cart_add_cnt)"
+    default_aggregation: sum
+    unit: 次
+    owner: operations
+    status: active
+    definition_note: "加购次数：**不去重**、按次计数。是转化漏斗的中间一步（uv → 加购 → 支付），与 `pay_cvr` 串联使用。"
+    default_binding:
+      asset: traffic_daily
+      reason: "加购行为记在流量日粒度表上"
+    time_basis: stat_date
+    synonyms: ["加购次数", "加购数", "加购量", "加购", "加购人次"]
+    created_at: "2026-10-15"
+    version: 1
+
+  - name: product_cnt
+    display_name: 商品数
+    domain: products
+    expression: "COUNT(*)"
+    default_aggregation: count
+    unit: 个
+    owner: operations
+    status: active
+    definition_note: >
+      **存量**计数（维表快照，非交易口径）：不区分上/下架。
+      `time_basis = current` ⇒ 与任何时间区间**无关**；"某月的商品数"在语义上不存在
+      （若要"某月新上架数"须另立指标，本包未定义 ⇒ 不得被生成）。
+    default_binding:
+      asset: product
+      reason: "商品数是维表存量口径，时间语义为当前值"
+    time_basis: current
+    synonyms: ["商品数", "商品数量", "商品个数", "SKU数", "SKU数量", "sku数", "款式数", "货品数"]
+    created_at: "2026-10-15"
+    version: 1
+
+  - name: on_sale_product_cnt
+    display_name: 在架商品数
+    domain: products
+    expression: "COUNT(*) WHERE on_sale = true"
+    default_aggregation: count
+    unit: 个
+    owner: operations
+    status: active
+    definition_note: >
+      **在售状态的存量**商品数。过滤条件 `on_sale = true` **写在 `expression` 里**
+      （不是 `default_predicates`）：本包的 `default_predicates` 是**域级**业务规则，
+      gate1 R06 会把它注入到**本域每一个能表达它的资产**上 ⇒ 写在域里会让
+      "任意商品查询"都被强制只看在架（静默算错）。谓词一律写 `on_sale = true`，
+      不写 `on_sale <> false`（后者会漏掉 `on_sale IS NULL` 的行）。
+    default_binding:
+      asset: product
+      reason: "在架商品数是维表存量口径，时间语义为当前值"
+    time_basis: current
+    synonyms: ["在架商品数", "在架商品", "在售商品数", "在售商品", "上架商品数", "在架SKU数", "在售SKU数", "在架商品个数"]
+    created_at: "2026-10-15"
+    version: 1
+
+  - name: off_sale_product_cnt
+    display_name: 下架商品数
+    domain: products
+    expression: "COUNT(*) WHERE on_sale = false"
+    default_aggregation: count
+    unit: 个
+    owner: operations
+    status: active
+    definition_note: >
+      **已下架的存量**商品数（过滤条件同样写在 `expression` 里，理由见上条）。
+      与 `on_sale_product_cnt` **互补**，但**两者相加 ≠ product_cnt**
+      （`on_sale IS NULL` 的行两边都不计）。
+    default_binding:
+      asset: product
+      reason: "下架商品数是维表存量口径，时间语义为当前值"
+    time_basis: current
+    synonyms: ["下架商品数", "下架商品", "停售商品数", "已下架商品数"]
+    created_at: "2026-10-15"
+    version: 1
+
+  - name: spu_cnt
+    display_name: SPU 数
+    domain: products
+    expression: "COUNT(DISTINCT product.spu_id) WHERE on_sale = true"
+    default_aggregation: count_distinct
+    unit: 个
+    owner: operations
+    status: active
+    definition_note: >
+      **按 `spu_id` 去重**的存量计数（"款数"），默认按**在售**口径（过滤条件写在 `expression` 里）。
+      若要"全部款数（含已下架）"，须显式去掉该过滤 —— 默认口径**不是**全量，
+      这是刻意选定的业务默认，已在披露文案里说明。
+    default_binding:
+      asset: product
+      reason: "SPU 由 SKU 表唯一承载，默认按在售口径计数"
+    time_basis: current
+    synonyms: ["SPU数", "SPU数量", "SPU个数", "款数", "款式数量"]
+    created_at: "2026-10-15"
+    version: 1
+
+  - name: avg_list_price
+    display_name: 商品平均标价
+    domain: products
+    expression: "AVG(product.list_price) WHERE on_sale = true"
+    default_aggregation: avg
+    unit: CNY
+    owner: operations
+    status: active
+    definition_note: >
+      **标价（吊牌价），非成交价**，默认按在售口径（过滤条件写在 `expression` 里）。
+      成交侧的"件单价 / 客单价"分别由 `aov` 与 `blacklist_terms` 里的"件单价"承接 ——
+      **不要**把本条当成交价用。
+    default_binding:
+      asset: product
+      reason: "标价是商品维表列，默认按在售口径取均值"
+    time_basis: current
+    synonyms: ["商品平均标价", "平均标价", "平均吊牌价", "标价均值", "商品平均吊牌价"]
+    created_at: "2026-10-15"
+    version: 1
+
+  - name: shop_cnt
+    display_name: 店铺数
+    domain: products
+    expression: "COUNT(*)"
+    default_aggregation: count
+    unit: 个
+    owner: operations
+    status: active
+    definition_note: "**存量**店铺数（维表快照）。⚠️ 与「各店铺的…」（按 `shop_id` 分组）不同：后者是分组面，不是本指标。"
+    default_binding:
+      asset: shop
+      reason: "店铺数是维表存量口径，时间语义为当前值"
+    time_basis: current
+    synonyms: ["店铺数", "店铺数量", "店铺个数", "门店数", "店铺家数"]
+    created_at: "2026-10-15"
+    version: 1
+
+  - name: campaign_cnt
+    display_name: 活动数
+    domain: orders
+    expression: "COUNT(*)"
+    default_aggregation: count
+    unit: 个
+    owner: operations
+    status: active
+    definition_note: >
+      **存量**活动数（维表快照）。⚠️ **刻意不挂 `campaign_type = 'normal_sale'` 默认谓词**：
+      "活动数"到底含不含大促（`prom_618` / `prom_double11` 共 12 条）**尚未经业务确认**
+      ⇒ 默认口径取**全量**（`v_campaign` 84 条），要只看日常促销请在问句里显式限定类型。
+    default_binding:
+      asset: campaign
+      reason: "活动数是维表存量口径，时间语义为当前值"
+    time_basis: current
+    synonyms: ["活动数", "活动数量", "活动个数", "活动场次", "促销活动数"]
+    created_at: "2026-10-15"
+    version: 1
+
+  - name: province_cnt
+    display_name: 覆盖省份数
+    domain: orders
+    expression: "COUNT(*)"
+    default_aggregation: count
+    unit: 个
+    owner: operations
+    status: active
+    definition_note: >
+      **`v_region` 维表上的存量省份数**（现读 31）。⚠️ 与 `province_covered_cnt`
+      （订单实覆盖，落在 `order_paid`）**同名根不同资产** —— 按"大区（`region_name`）"
+      筛选或分组时用本条；问"实际卖出去了几个省"用 `province_covered_cnt`。
+    default_binding:
+      asset: region
+      reason: "省份清单是公共参考维表，时间语义为当前值"
+    time_basis: current
+    synonyms: ["省份数", "省份数量", "省份个数", "覆盖省份数", "省份覆盖数"]
+    created_at: "2026-10-15"
+    version: 1
+
+  - name: province_covered_cnt
+    display_name: 收货省份覆盖数
+    domain: orders
+    expression: "COUNT(DISTINCT order_paid.region_code) WHERE region_code IS NOT NULL"
+    default_aggregation: count_distinct
+    unit: 个
+    owner: operations
+    status: active
+    definition_note: >
+      **订单实际覆盖到的收货省份数**（跨列去重，落在事实表）。与 `province_cnt`
+      （维表清单）**不是同一件事**：一个是"能覆盖"，一个是"已覆盖"。
+      `region_code IS NOT NULL` 写在 `expression` 里（理由同 `on_sale_product_cnt`：
+      域级谓词会被 gate1 R06 注入到本域**所有**资产）。
+    default_binding:
+      asset: order_paid
+      reason: "收货省份覆盖数依赖订单事实，时间随支付时间"
+    time_basis: pay_time
+    synonyms: ["收货省份覆盖数", "收货省份数", "收货覆盖省份数"]
+    created_at: "2026-10-15"
+    version: 1
+
+  - name: day_cnt
+    display_name: 天数
+    domain: orders
+    expression: "COUNT(*)"
+    default_aggregation: count
+    unit: 天
+    owner: operations
+    status: active
+    definition_note: >
+      **日历维表的存量天数**（`v_dim_date` 现读 730，区间 2024-10-01 … 2026-09-30）。
+      问"某月有多少天"须**显式**加月份筛选谓词 —— 本指标默认**不带**任何时间谓词。
+    default_binding:
+      asset: dim_date
+      reason: "天数是公共日历维表口径，时间语义为当前值"
+    time_basis: current
+    synonyms: ["天数", "日期数", "日历天数", "日期维表天数", "统计天数", "日期个数"]
+    created_at: "2026-10-15"
+    version: 1
+
+  - name: refunded_order_cnt
+    display_name: 全额退款订单数
+    domain: orders
+    expression: "COUNT(DISTINCT order_paid.sub_order_id) WHERE refund_status = 'refunded' AND pay_status = 'paid'"
+    default_aggregation: count_distinct
+    unit: 笔
+    owner: finance
+    status: active
+    definition_note: >
+      **按退款状态计数**（不是比率）。两条过滤**写在 `expression` 里**（理由同
+      `on_sale_product_cnt`：域级谓词会被 R06 注入到本域所有资产，`refund_status = 'refunded'`
+      若进域会让**任何订单查询**都被过滤成"只看全额退款单"）。
+      口径镜像 `refund_rate` 的例外模式：分子正是退款行为本身。
+      若要"部分退款"或"无退款"笔数，请显式限定 `refund_status`，本指标默认只给"全额退款"。
+    default_binding:
+      asset: order_paid
+      reason: "退款笔数以支付子订单为分母，时间随支付时间"
+    time_basis: pay_time
+    synonyms: ["全额退款订单数", "退款订单数", "全额退款笔数", "退款笔数", "退款单量"]
+    created_at: "2026-10-15"
+    version: 1
+
 # ============================================================================
 # 3. 维度与层级
 # ============================================================================
@@ -754,6 +1030,23 @@ dimensions:
       （对齐 07 §6.8.1：**同粒度不同语义**才是必须澄清的形态；
        "城市 vs 区县"因粒度不同而**不**触发澄清 —— 上游 PRD §6.2 的举例与 §6.3.1 相反，
        以 §6.3.1 为准，已登记 U-10。）
+
+  # ==========================================================================
+  # 🔴 W8 第 41 轮**试做后又撤回**的 5 个维度（SKU / SPU / campaign_type /
+  #    region_name / product_category）—— **结论：它们不是"纯新增"**
+  # ==========================================================================
+  # 试做实测（零出站，`backend/tests/unit/test_binding_grain.py` ＋
+  # `test_binding_four_layer.py` ＋ `test_binding_four_layer.TestLevel2` 共 **6 个断言红**）：
+  #   ① `grain_index` 把 **`grain_levels` 集合相同**的维度**合并成一个 family 名** ⇒
+  #      加 `product_category`（与 `category` 同刻度）后 `order_paid.category_l1` 的 family
+  #      变成 `'category+product_category'`（原 `'category'`）；
+  #   ② `level_of_ref` 的列名-前缀启发式被新维度**改判** ⇒
+  #      加 `sku`（绑定 `product.sku_id`）后 `product.**sku_name**` 从"无族"变成 `sku` 族 level=1；
+  #      加 `region_name` 后大区级问句拿到的是 `region_name` 而不是原 `region`；
+  #   ③ 上述两条合起来把 L2 的确定性判词翻成 `ambiguous` / `l4_unavailable:parse_failed`。
+  # ⇒ **判定**：这 5 个面**会改变既有路径的判定**（不是加法），必须在**独立一轮**里
+  #    连同"如何不扰动既有 family/level 解析"一起设计 ＋ 单独验收；
+  #    **本轮不落**（见 `RELAY §41.5`）。第 40 轮清单件的 `F-1…F-5` 因此**仍为未办项**。
 
 # ============================================================================
 # 4. 字段绑定（**唯一性保障 —— 核心机制**）
@@ -956,6 +1249,26 @@ default_predicates:
       owner: data-team
       applies_to: [uv, pay_cvr]
 
+  # ==========================================================================
+  # 🔴 W8 第 41 轮**试做后又撤回**的新增域级谓词（`refund_status = 'refunded'` /
+  #    `region_code IS NOT NULL` / `on_sale = true` / `on_sale = false` /
+  #    `pv >= 0` / `cart_add_cnt >= 0`）—— **结论：域级谓词不是"给一个指标加过滤"**
+  # ==========================================================================
+  # 试做实测（零出站，`backend/tests/unit/test_guard_gate1.py` 两红）：
+  #   · gate1 **R06** 把**本域**（`default_predicates[<domain>]`）的谓词注入到
+  #     **该域下每一个能表达出它的资产** —— 不只是"用到某指标的查询"。
+  #   实跑：把 `refund_status = 'refunded'` / `region_code IS NOT NULL` 加进 `orders` 域后，
+  #     一句普通的 `SELECT sub_order_id FROM v_order_paid` 的 `applied_predicates`
+  #     从 **3 条变成 5 条**（多了 `refund_status = 'refunded'` 与 `region_code IS NOT NULL`）
+  #     ⇒ **任何 GMV / 订单量查询都会被过滤成"只看全额退款单"**，静默算错。
+  #   同理把 `on_sale = true` 加进新开的 `products` 域后，
+  #     `SELECT sku_name FROM v_product` 也会被注入 `on_sale = true`（原设计"products 域无谓词"）。
+  # ⇒ **判定**：本包**没有**"指标专属谓词"的承载位 —— 域级谓词 = **全域业务规则**。
+  #    指标专属过滤只能写进 **`expression`**（形如 `COUNT(*) WHERE on_sale = true`，
+  #    渲染口径见 `payloads._metric_section` 的「表达式：」行），
+  #    这**正是**第 40 轮清单件 §40.3 ③ 的写法（派单原话即"`COUNT(*) WHERE on_sale = true`"）。
+  # ⇒ 本轮**不新增任何域级谓词**；13 条新指标**一律不挂 `default_predicates`**（见 `RELAY §41.5`）。
+
 # ============================================================================
 # 7. 别名表（L1 层唯一入口）
 # ============================================================================
@@ -1004,6 +1317,89 @@ aliases:
   - { term: "uv",        lang: en, maps_to_kind: metric, maps_to_ref: uv, category: metric }
   - { term: "访客数",     lang: zh, maps_to_kind: metric, maps_to_ref: uv, category: metric }
   - { term: "独立访客",   lang: zh, maps_to_kind: metric, maps_to_ref: uv, category: metric }
+
+  # ---- ★ W8 第 41 轮新增 13 条指标的别名（**与 `metrics[].synonyms` 逐字一致**）----
+  # ⚠️ 两处必须一致是**校验器断言 3h**（`metric.synonyms ⊆ aliases` 的 term 集）；
+  #    且 `term` 必须**一对一**（3c）⇒ 下列词面与既有 105 个 term **互斥**，逐条已核：
+  #    · 不用「流量」（已指 asset `traffic_daily`）、不用「商品/店铺/省份/SKU/SPU/款/活动名」
+  #      （已指 asset 或列）；
+  #    · `product_cnt` 与 `on_sale_product_cnt`、`province_cnt` 与 `province_covered_cnt`
+  #      **同词根必须互斥切分** —— 「在架/在售/上架」修饰词一律归 on_sale 那条，
+  #      「收货」修饰词一律归 province_covered_cnt，其余归无谓词那两条。
+  #    · 🔴 **词面不得含空白**（实测：`retrieval/value` 的自定义词典加载对含空格词
+  #      直接 `ValueError`）⇒ 与题面里带空格的写法（如「SPU 数」）对齐时，只收
+  #      **无空格形态**（「SPU数」）；解析侧的空白折叠由分词器负责，不靠词表。
+  - { term: "浏览量",     lang: zh, maps_to_kind: metric, maps_to_ref: pv, category: metric }
+  - { term: "PV",        lang: en, maps_to_kind: metric, maps_to_ref: pv, category: metric }
+  - { term: "pv",        lang: en, maps_to_kind: metric, maps_to_ref: pv, category: metric }
+  - { term: "页面浏览量",  lang: zh, maps_to_kind: metric, maps_to_ref: pv, category: metric }
+  - { term: "浏览次数",   lang: zh, maps_to_kind: metric, maps_to_ref: pv, category: metric }
+  - { term: "访问量",     lang: zh, maps_to_kind: metric, maps_to_ref: pv, category: metric }
+  - { term: "曝光量",     lang: zh, maps_to_kind: metric, maps_to_ref: pv, category: metric }
+  - { term: "加购次数",   lang: zh, maps_to_kind: metric, maps_to_ref: cart_add_cnt, category: metric }
+  - { term: "加购数",     lang: zh, maps_to_kind: metric, maps_to_ref: cart_add_cnt, category: metric }
+  - { term: "加购量",     lang: zh, maps_to_kind: metric, maps_to_ref: cart_add_cnt, category: metric }
+  - { term: "加购",      lang: zh, maps_to_kind: metric, maps_to_ref: cart_add_cnt, category: metric }
+  - { term: "加购人次",   lang: zh, maps_to_kind: metric, maps_to_ref: cart_add_cnt, category: metric }
+  - { term: "商品数",     lang: zh, maps_to_kind: metric, maps_to_ref: product_cnt, category: metric }
+  - { term: "商品数量",   lang: zh, maps_to_kind: metric, maps_to_ref: product_cnt, category: metric }
+  - { term: "商品个数",   lang: zh, maps_to_kind: metric, maps_to_ref: product_cnt, category: metric }
+  - { term: "SKU数",     lang: zh, maps_to_kind: metric, maps_to_ref: product_cnt, category: metric }
+  - { term: "SKU数量",   lang: zh, maps_to_kind: metric, maps_to_ref: product_cnt, category: metric }
+  - { term: "sku数",     lang: zh, maps_to_kind: metric, maps_to_ref: product_cnt, category: metric }
+  - { term: "款式数",     lang: zh, maps_to_kind: metric, maps_to_ref: product_cnt, category: metric }
+  - { term: "货品数",     lang: zh, maps_to_kind: metric, maps_to_ref: product_cnt, category: metric }
+  - { term: "在架商品数",  lang: zh, maps_to_kind: metric, maps_to_ref: on_sale_product_cnt, category: metric }
+  - { term: "在架商品",   lang: zh, maps_to_kind: metric, maps_to_ref: on_sale_product_cnt, category: metric }
+  - { term: "在售商品数",  lang: zh, maps_to_kind: metric, maps_to_ref: on_sale_product_cnt, category: metric }
+  - { term: "在售商品",   lang: zh, maps_to_kind: metric, maps_to_ref: on_sale_product_cnt, category: metric }
+  - { term: "上架商品数",  lang: zh, maps_to_kind: metric, maps_to_ref: on_sale_product_cnt, category: metric }
+  - { term: "在架SKU数",  lang: zh, maps_to_kind: metric, maps_to_ref: on_sale_product_cnt, category: metric }
+  - { term: "在售SKU数",  lang: zh, maps_to_kind: metric, maps_to_ref: on_sale_product_cnt, category: metric }
+  - { term: "在架商品个数", lang: zh, maps_to_kind: metric, maps_to_ref: on_sale_product_cnt, category: metric }
+  - { term: "下架商品数",  lang: zh, maps_to_kind: metric, maps_to_ref: off_sale_product_cnt, category: metric }
+  - { term: "下架商品",   lang: zh, maps_to_kind: metric, maps_to_ref: off_sale_product_cnt, category: metric }
+  - { term: "停售商品数",  lang: zh, maps_to_kind: metric, maps_to_ref: off_sale_product_cnt, category: metric }
+  - { term: "已下架商品数", lang: zh, maps_to_kind: metric, maps_to_ref: off_sale_product_cnt, category: metric }
+  - { term: "SPU数",     lang: zh, maps_to_kind: metric, maps_to_ref: spu_cnt, category: metric }
+  - { term: "SPU数量",   lang: zh, maps_to_kind: metric, maps_to_ref: spu_cnt, category: metric }
+  - { term: "SPU个数",   lang: zh, maps_to_kind: metric, maps_to_ref: spu_cnt, category: metric }
+  - { term: "款数",      lang: zh, maps_to_kind: metric, maps_to_ref: spu_cnt, category: metric }
+  - { term: "款式数量",   lang: zh, maps_to_kind: metric, maps_to_ref: spu_cnt, category: metric }
+  - { term: "商品平均标价", lang: zh, maps_to_kind: metric, maps_to_ref: avg_list_price, category: metric }
+  - { term: "平均标价",   lang: zh, maps_to_kind: metric, maps_to_ref: avg_list_price, category: metric }
+  - { term: "平均吊牌价",  lang: zh, maps_to_kind: metric, maps_to_ref: avg_list_price, category: metric }
+  - { term: "标价均值",   lang: zh, maps_to_kind: metric, maps_to_ref: avg_list_price, category: metric }
+  - { term: "商品平均吊牌价", lang: zh, maps_to_kind: metric, maps_to_ref: avg_list_price, category: metric }
+  - { term: "店铺数",     lang: zh, maps_to_kind: metric, maps_to_ref: shop_cnt, category: metric }
+  - { term: "店铺数量",   lang: zh, maps_to_kind: metric, maps_to_ref: shop_cnt, category: metric }
+  - { term: "店铺个数",   lang: zh, maps_to_kind: metric, maps_to_ref: shop_cnt, category: metric }
+  - { term: "门店数",     lang: zh, maps_to_kind: metric, maps_to_ref: shop_cnt, category: metric }
+  - { term: "店铺家数",   lang: zh, maps_to_kind: metric, maps_to_ref: shop_cnt, category: metric }
+  - { term: "活动数",     lang: zh, maps_to_kind: metric, maps_to_ref: campaign_cnt, category: metric }
+  - { term: "活动数量",   lang: zh, maps_to_kind: metric, maps_to_ref: campaign_cnt, category: metric }
+  - { term: "活动个数",   lang: zh, maps_to_kind: metric, maps_to_ref: campaign_cnt, category: metric }
+  - { term: "活动场次",   lang: zh, maps_to_kind: metric, maps_to_ref: campaign_cnt, category: metric }
+  - { term: "促销活动数",  lang: zh, maps_to_kind: metric, maps_to_ref: campaign_cnt, category: metric }
+  - { term: "省份数",     lang: zh, maps_to_kind: metric, maps_to_ref: province_cnt, category: metric }
+  - { term: "省份数量",   lang: zh, maps_to_kind: metric, maps_to_ref: province_cnt, category: metric }
+  - { term: "省份个数",   lang: zh, maps_to_kind: metric, maps_to_ref: province_cnt, category: metric }
+  - { term: "覆盖省份数",  lang: zh, maps_to_kind: metric, maps_to_ref: province_cnt, category: metric }
+  - { term: "省份覆盖数",  lang: zh, maps_to_kind: metric, maps_to_ref: province_cnt, category: metric }
+  - { term: "收货省份覆盖数", lang: zh, maps_to_kind: metric, maps_to_ref: province_covered_cnt, category: metric }
+  - { term: "收货省份数",  lang: zh, maps_to_kind: metric, maps_to_ref: province_covered_cnt, category: metric }
+  - { term: "收货覆盖省份数", lang: zh, maps_to_kind: metric, maps_to_ref: province_covered_cnt, category: metric }
+  - { term: "天数",      lang: zh, maps_to_kind: metric, maps_to_ref: day_cnt, category: metric }
+  - { term: "日期数",     lang: zh, maps_to_kind: metric, maps_to_ref: day_cnt, category: metric }
+  - { term: "日历天数",   lang: zh, maps_to_kind: metric, maps_to_ref: day_cnt, category: metric }
+  - { term: "日期维表天数", lang: zh, maps_to_kind: metric, maps_to_ref: day_cnt, category: metric }
+  - { term: "统计天数",   lang: zh, maps_to_kind: metric, maps_to_ref: day_cnt, category: metric }
+  - { term: "日期个数",   lang: zh, maps_to_kind: metric, maps_to_ref: day_cnt, category: metric }
+  - { term: "全额退款订单数", lang: zh, maps_to_kind: metric, maps_to_ref: refunded_order_cnt, category: metric }
+  - { term: "退款订单数",  lang: zh, maps_to_kind: metric, maps_to_ref: refunded_order_cnt, category: metric }
+  - { term: "全额退款笔数", lang: zh, maps_to_kind: metric, maps_to_ref: refunded_order_cnt, category: metric }
+  - { term: "退款笔数",   lang: zh, maps_to_kind: metric, maps_to_ref: refunded_order_cnt, category: metric }
+  - { term: "退款单量",   lang: zh, maps_to_kind: metric, maps_to_ref: refunded_order_cnt, category: metric }
 
   # ---- 实体与维度类（附录 B §B.3.2）----
   - { term: "品",        lang: zh, maps_to_kind: asset, maps_to_ref: product, category: entity }
