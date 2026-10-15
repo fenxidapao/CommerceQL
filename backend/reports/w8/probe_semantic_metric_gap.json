@@ -1,0 +1,1571 @@
+{
+  "round": 40,
+  "generated_at_utc": "2026-10-15T02:36:00+00:00",
+  "scope": "只读清单件；**不动 `semantic/**` YAML**、不改冻结集、不改判据、不取号",
+  "inputs": {
+    "dataset": "eval/dataset_v1_frozen.json",
+    "results": "eval/results_v1.json",
+    "bundle_read_only": "semantic/bundle_2026.09.14.1.yaml"
+  },
+  "method": "按 gold_sql 的『聚合函数＋聚合源列＋计数源表』反推缺口（不读题面关键词）；QA 侧同类诊断是按题面关键词人工比对（其 README §7 限制②）",
+  "funnel": {
+    "expected_execute": 124,
+    "false_refusal": 63,
+    "refusal_reason": {
+      "no_data_asset": 63
+    },
+    "stop_node": {
+      "refuse_out": 63
+    }
+  },
+  "qa_r31ad_recheck": {
+    "① G-2 面构成": {
+      "n": 10,
+      "outcome": {
+        "refuse": 10
+      },
+      "refusal_reason": {
+        "no_data_asset": 10
+      },
+      "expected": {
+        "execute": 10
+      }
+    },
+    "② G-2 ⊆ 误拒": true,
+    "③ 误拒理由 100% no_data_asset": true,
+    "④ embedding 伴随率（零区分力？）": {
+      "success 含 embedding": "45/45",
+      "误拒 含 embedding": "63/63",
+      "判": "两组同率（100%/100%）⇒ 无区分力，非根因"
+    },
+    "⑤ 停止点与召回": {
+      "nodes 末位": {
+        "refuse_out": 63
+      },
+      "retrieval_counts.assets": {
+        "8": 63
+      },
+      "gate_decisions 非空": 0
+    }
+  },
+  "existing_metrics_read_only": 9,
+  "proposed_new_metrics": 13,
+  "proposed_metric_names": [
+    "pv",
+    "cart_add_cnt",
+    "on_sale_product_cnt",
+    "off_sale_product_cnt",
+    "product_cnt",
+    "spu_cnt",
+    "avg_list_price",
+    "shop_cnt",
+    "campaign_cnt",
+    "province_cnt",
+    "province_covered_cnt",
+    "day_cnt",
+    "refunded_order_cnt"
+  ],
+  "gaps": [
+    {
+      "metric": "pv",
+      "display_name": "浏览量",
+      "asset": "traffic_daily",
+      "expression": "SUM(traffic_daily.pv)",
+      "default_aggregation": "sum",
+      "unit": "次",
+      "default_predicates": [
+        "pv >= 0"
+      ],
+      "predicate_reason": "防御性谓词：与 uv 同族，排除脏数据负数",
+      "time_basis": "stat_date",
+      "synonyms": [
+        "浏览量",
+        "PV",
+        "pv",
+        "页面浏览量",
+        "浏览次数",
+        "访问量",
+        "流量",
+        "曝光量"
+      ],
+      "definition_note": "不去重；跨日区间可安全累加（与 uv 不同，uv 跨日累加会重复计数）。",
+      "uncertainty": [],
+      "asset_grain": "sku_day_channel",
+      "covers": [
+        "E-ENUM-01",
+        "E-ENUM-02",
+        "E-ENUM-03",
+        "E-ENUM-04",
+        "E-ENUM-05",
+        "M-DIM-01",
+        "M-DIM-02",
+        "M-ENUM-01",
+        "M-ENUM-02",
+        "M-ENUM-03",
+        "M-ENUM-04",
+        "X-ENUM-01",
+        "X-ENUM-02",
+        "X-ENUM-03",
+        "X-ENUM-04",
+        "X-ENUM-05",
+        "X-ENUM-06",
+        "X-ENUM-07",
+        "X-ENUM-08",
+        "X-MET-01",
+        "X-MET-02",
+        "X-MET-03",
+        "X-MET-04",
+        "X-MET-05",
+        "X-STR-02",
+        "X-STR-04"
+      ],
+      "n_covers": 26
+    },
+    {
+      "metric": "cart_add_cnt",
+      "display_name": "加购次数",
+      "asset": "traffic_daily",
+      "expression": "SUM(traffic_daily.cart_add_cnt)",
+      "default_aggregation": "sum",
+      "unit": "次",
+      "default_predicates": [
+        "cart_add_cnt >= 0"
+      ],
+      "predicate_reason": "防御性谓词：同 pv/uv 族",
+      "time_basis": "stat_date",
+      "synonyms": [
+        "加购次数",
+        "加购数",
+        "加购量",
+        "加购",
+        "加购人次"
+      ],
+      "definition_note": "不去重、按次计数。",
+      "uncertainty": [],
+      "asset_grain": "sku_day_channel",
+      "covers": [
+        "M-DIM-10"
+      ],
+      "n_covers": 1
+    },
+    {
+      "metric": "on_sale_product_cnt",
+      "display_name": "在架商品数",
+      "asset": "product",
+      "expression": "COUNT(*)",
+      "default_aggregation": "count",
+      "unit": "个",
+      "default_predicates": [
+        "on_sale = true"
+      ],
+      "predicate_reason": "「在架/在售/上架」的商品 = on_sale 为真",
+      "time_basis": "current",
+      "synonyms": [
+        "在架商品数",
+        "在架商品",
+        "在售商品数",
+        "在售商品",
+        "上架商品数",
+        "在架SKU数",
+        "在售SKU数",
+        "在架商品个数"
+      ],
+      "definition_note": "维表快照口径（time_semantics=current），非交易口径。",
+      "uncertainty": [
+        "🔴 `E-ENUM-06…10` 的 gold_sql **不带** `on_sale = 1`，而这 5 条的题面**写着**「在架」→ 本指标一旦挂 `on_sale = true` 默认谓词，这 5 条**会作答但计数与 gold 不等**（`v_product` 现读 on_sale=1 为 5631 / 全表 6000）。**属冻结集内部口径冲突：只登记，不得为迎合它改判据。**",
+        "`on_sale` 为 NULL 的行不存在（现读仅 0/1 两值）⇒ `on_sale = true` 与 `on_sale <> false` 等价的说法**不成立**（NULL 会被 `<> false` 漏掉），谓词一律写 `on_sale = true`。"
+      ],
+      "asset_grain": "sku",
+      "covers": [
+        "E-VER-02",
+        "E-VER-10",
+        "E-VER-11",
+        "H-CAT-01",
+        "H-CAT-02",
+        "H-CAT-03",
+        "H-CAT-04",
+        "H-CAT-05",
+        "H-STR-05",
+        "H-STR-06",
+        "H-STR-08",
+        "M-HIER-01",
+        "M-HIER-02"
+      ],
+      "n_covers": 13
+    },
+    {
+      "metric": "off_sale_product_cnt",
+      "display_name": "下架商品数",
+      "asset": "product",
+      "expression": "COUNT(*)",
+      "default_aggregation": "count",
+      "unit": "个",
+      "default_predicates": [
+        "on_sale = false"
+      ],
+      "predicate_reason": "「下架/停售」的商品 = on_sale 为假",
+      "time_basis": "current",
+      "synonyms": [
+        "下架商品数",
+        "下架商品",
+        "停售商品数",
+        "已下架商品数"
+      ],
+      "definition_note": "与 on_sale_product_cnt 互补，**不可相加代替 product_cnt**（category_l1 为 NULL 的 60 行两指标都不计）。",
+      "uncertainty": [],
+      "asset_grain": "sku",
+      "covers": [
+        "E-VER-03"
+      ],
+      "n_covers": 1
+    },
+    {
+      "metric": "product_cnt",
+      "display_name": "商品数",
+      "asset": "product",
+      "expression": "COUNT(*)",
+      "default_aggregation": "count",
+      "unit": "个",
+      "default_predicates": [],
+      "predicate_reason": "",
+      "time_basis": "current",
+      "synonyms": [
+        "商品数",
+        "商品数量",
+        "商品个数",
+        "SKU数",
+        "SKU数量",
+        "sku数",
+        "款式数",
+        "货品数"
+      ],
+      "definition_note": "不区分上下架的存量计数（含 category_l1 为 NULL 的 60 行）。",
+      "uncertainty": [
+        "与 on_sale_product_cnt **同词根**（「商品数」「SKU数」）→ L1 别名表必须做**互斥切分**（「在架/在售/上架」修饰词归 on_sale 那条），否则 L1 会把带修饰词的问题也命中本指标。"
+      ],
+      "asset_grain": "sku",
+      "covers": [
+        "E-ENUM-06",
+        "E-ENUM-07",
+        "E-ENUM-08",
+        "E-ENUM-09",
+        "E-ENUM-10",
+        "M-DIM-06",
+        "M-DIM-07",
+        "M-DIM-09",
+        "M-HIER-04",
+        "M-HIER-05",
+        "M-HIER-06"
+      ],
+      "n_covers": 11
+    },
+    {
+      "metric": "spu_cnt",
+      "display_name": "SPU 数",
+      "asset": "product",
+      "expression": "COUNT(DISTINCT product.spu_id)",
+      "default_aggregation": "count_distinct",
+      "unit": "个",
+      "default_predicates": [
+        "on_sale = true"
+      ],
+      "predicate_reason": "对齐 gold_sql（`E-VER-04` 的 gold 带 `on_sale = 1`）—— ⚠️ 题面并无此限定",
+      "time_basis": "current",
+      "synonyms": [
+        "SPU 数",
+        "SPU数",
+        "SPU数量",
+        "SPU个数",
+        "款数",
+        "款式数量"
+      ],
+      "definition_note": "按 spu_id 去重。",
+      "uncertainty": [
+        "题面「T_A 的 SPU 数是多少」**无在架限定**，而 gold_sql 带 `on_sale = 1`（`v_product` 全表 6000 行 / on_sale=1 为 5631 行）→ 默认谓词的取舍直接决定能否与 gold 对齐，**须业务确认**。"
+      ],
+      "asset_grain": "sku",
+      "covers": [
+        "E-VER-04"
+      ],
+      "n_covers": 1
+    },
+    {
+      "metric": "avg_list_price",
+      "display_name": "商品平均标价",
+      "asset": "product",
+      "expression": "AVG(product.list_price)",
+      "default_aggregation": "avg",
+      "unit": "CNY",
+      "default_predicates": [
+        "on_sale = true"
+      ],
+      "predicate_reason": "对齐 gold_sql（`H-STR-09` 的 gold 带 `on_sale = 1`）—— ⚠️ 题面并无此限定",
+      "time_basis": "current",
+      "synonyms": [
+        "商品平均标价",
+        "平均标价",
+        "平均吊牌价",
+        "标价均值",
+        "商品平均吊牌价"
+      ],
+      "definition_note": "标价 = 吊牌价，**非成交价**（成交侧用 aov / 件单价）。",
+      "uncertainty": [
+        "同 `spu_cnt`：gold 带未在题面出现的 `on_sale = 1`。"
+      ],
+      "asset_grain": "sku",
+      "covers": [
+        "H-STR-09"
+      ],
+      "n_covers": 1
+    },
+    {
+      "metric": "shop_cnt",
+      "display_name": "店铺数",
+      "asset": "shop",
+      "expression": "COUNT(*)",
+      "default_aggregation": "count",
+      "unit": "个",
+      "default_predicates": [],
+      "predicate_reason": "",
+      "time_basis": "current",
+      "synonyms": [
+        "店铺数",
+        "店铺数量",
+        "店铺个数",
+        "门店数",
+        "店铺家数"
+      ],
+      "definition_note": "`v_shop` 现读 12 行。",
+      "uncertainty": [
+        "gold_sql 为 `COUNT(*) … WHERE city IS NOT NULL`（现读仍为 12，因 city 无 NULL）；题面无该限定 → 默认谓词**建议不挂**，但须登记与 gold 的这点差异。"
+      ],
+      "asset_grain": "shop",
+      "covers": [
+        "E-VER-05"
+      ],
+      "n_covers": 1
+    },
+    {
+      "metric": "campaign_cnt",
+      "display_name": "活动数",
+      "asset": "campaign",
+      "expression": "COUNT(*)",
+      "default_aggregation": "count",
+      "unit": "个",
+      "default_predicates": [],
+      "predicate_reason": "",
+      "time_basis": "current",
+      "synonyms": [
+        "活动数",
+        "活动数量",
+        "活动个数",
+        "活动场次",
+        "促销活动数"
+      ],
+      "definition_note": "`v_campaign` 现读 84 行（normal_sale 72 / prom_618 6 / prom_double11 6）。",
+      "uncertainty": [
+        "🔴 **同一指标两条 gold 口径互斥**：`E-VER-06`（T_A 的活动数）gold 带 `campaign_type = 'normal_sale'`（=72），而 `M-DIM-04`（各活动类型的活动数）gold **无谓词**（=84）。⇒ 挂默认谓词必错其一。**建议不挂**，并把它作为「口径待业务确认」登记。"
+      ],
+      "asset_grain": "campaign",
+      "covers": [
+        "E-VER-06",
+        "M-DIM-04"
+      ],
+      "n_covers": 2
+    },
+    {
+      "metric": "province_cnt",
+      "display_name": "覆盖省份数",
+      "asset": "region",
+      "expression": "COUNT(*)",
+      "default_aggregation": "count",
+      "unit": "个",
+      "default_predicates": [],
+      "predicate_reason": "",
+      "time_basis": "current",
+      "synonyms": [
+        "覆盖省份数",
+        "省份数",
+        "省份数量",
+        "省份个数",
+        "省份覆盖数",
+        "覆盖省份"
+      ],
+      "definition_note": "`v_region` 现读 31 行；大区（华东 7 / 华北 5 / 西南 5 / 西北 5 / 华南 3 / 华中 3 / 东北 3）由 `region_name` 承载。",
+      "uncertainty": [
+        "`E-VER-07` 的「华东」是**大区层级**筛选，`M-DIM-08` 的「7 个大区各覆盖」是**按大区分组** → 二者都还要 `region` 侧的**大区绑定面**（见 non_metric_faces F-4）。"
+      ],
+      "asset_grain": "province",
+      "covers": [
+        "E-VER-07",
+        "M-DIM-08"
+      ],
+      "n_covers": 2
+    },
+    {
+      "metric": "province_covered_cnt",
+      "display_name": "收货省份覆盖数",
+      "asset": "order_paid",
+      "expression": "COUNT(DISTINCT order_paid.region_code)",
+      "default_aggregation": "count_distinct",
+      "unit": "个",
+      "default_predicates": [
+        "region_code IS NOT NULL"
+      ],
+      "predicate_reason": "对齐 gold_sql（`E-VER-08`）",
+      "time_basis": "pay_time",
+      "synonyms": [
+        "收货省份覆盖数",
+        "收货省份数",
+        "覆盖省份数(收货)",
+        "省份覆盖",
+        "收货覆盖省份数"
+      ],
+      "definition_note": "跨列去重计数，落在事实表 order_paid 上；与 `region` 资产上的 `province_cnt` **不是同一件事**（一个是维表存量、一个是订单实覆盖）。",
+      "uncertainty": [
+        "与 `province_cnt` 中文名高度重叠（都可叫「覆盖省份数」）→ 别名表须做互斥切分，否则 L1 歧义。"
+      ],
+      "asset_grain": "sub_order",
+      "covers": [
+        "E-VER-08"
+      ],
+      "n_covers": 1
+    },
+    {
+      "metric": "day_cnt",
+      "display_name": "天数",
+      "asset": "dim_date",
+      "expression": "COUNT(*)",
+      "default_aggregation": "count",
+      "unit": "天",
+      "default_predicates": [],
+      "predicate_reason": "",
+      "time_basis": "current",
+      "synonyms": [
+        "天数",
+        "日期数",
+        "日历天数",
+        "日期维表天数",
+        "统计天数",
+        "日期个数"
+      ],
+      "definition_note": "`v_dim_date` 现读 730 行（2024-10-01 … 2026-09-30）。",
+      "uncertainty": [
+        "gold_sql 为**全表** `COUNT(*)`（=730），而题面写「**2026-08** 的日期维表有多少天」（应含月份筛选 = 31）→ 作答后**计数必与 gold 不等**。属冻结集内部口径冲突，**只登记、不改判据**。"
+      ],
+      "asset_grain": "day",
+      "covers": [
+        "E-VER-01"
+      ],
+      "n_covers": 1
+    },
+    {
+      "metric": "refunded_order_cnt",
+      "display_name": "全额退款订单数",
+      "asset": "order_paid",
+      "expression": "COUNT(DISTINCT order_paid.sub_order_id)",
+      "default_aggregation": "count_distinct",
+      "unit": "笔",
+      "default_predicates": [
+        "refund_status = 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "predicate_reason": "对齐 gold_sql（`H-ENUM-02`）；分子正是退款行为本身，故**不套** `refund_status <> 'refunded'`",
+      "time_basis": "pay_time",
+      "synonyms": [
+        "全额退款订单数",
+        "退款订单数",
+        "全额退款笔数",
+        "退款笔数",
+        "退款单量"
+      ],
+      "definition_note": "口径参照 `refund_rate` 的例外模式：谓词**不含** `refund_status <> 'refunded'`。",
+      "uncertainty": [
+        "`H-ENUM-03`（「无退款」状态的订单数）**已 success** —— 说明该族目前靠模型即兴表达 `refund_status` 谓词；补本指标后需确认是否**只**覆盖 `全额退款` 而把「无退款/部分退款」留给通用 `order_cnt` ＋显式谓词。"
+      ],
+      "asset_grain": "sub_order",
+      "covers": [
+        "H-ENUM-02"
+      ],
+      "n_covers": 1
+    }
+  ],
+  "not_gap": {
+    "E-MET-08": "冻结集 `notes` 原文明写：**反面口径**（「故意不套默认谓词，用来测 W6 的『口径一致性』能否识别默认谓词缺失」）⇒ 它要的**不是**新 metric（恰恰相反，要的是「同一个 pay_amount 表达式**不许**自动带上 gmv 的默认谓词」）。补 metric 会**破坏**该用例的设计意图。"
+  },
+  "non_metric_faces": {
+    "F-1": {
+      "face": "SKU 维度（`sku_id`）**未定义**",
+      "why": "`dimensions` 现有 6 个（`region`/`category`/`channel`/`time`/`shop`/`city`），**没有** SKU 维度。`M-MET-05`（各 `sku_id` 的 UV）能 success ⇒ 该面可能只差 metric、不差维度，**故列为不确定项**。",
+      "authorized_this_round": false,
+      "cases": [
+        "M-DIM-01",
+        "M-ENUM-01",
+        "M-ENUM-02",
+        "M-ENUM-03",
+        "M-ENUM-04",
+        "X-STR-02",
+        "X-STR-04"
+      ],
+      "n_cases": 7
+    },
+    "F-2": {
+      "face": "SPU 维度（`spu_id`）**未定义**",
+      "why": "`M-DIM-06`（各 SPU 的 SKU 数）需按 `spu_id` 分组，`dimensions` 无此维度。",
+      "authorized_this_round": false,
+      "cases": [
+        "M-DIM-06"
+      ],
+      "n_cases": 1
+    },
+    "F-3": {
+      "face": "类目维度在 **`product` 侧**无绑定",
+      "why": "`dimensions.category.binding` = `order_paid.category_l1`；而 30 条的 gold 都在 **`v_product`** 上按 `category_l1`/`category_l2` 筛选或分组（其中 13 条是 3 表 JOIN：`X-ENUM-*` / `X-MET-*`）。**不是** metric 面。",
+      "authorized_this_round": false,
+      "cases": [
+        "E-ENUM-06",
+        "E-ENUM-07",
+        "E-ENUM-08",
+        "E-ENUM-09",
+        "E-ENUM-10",
+        "H-CAT-01",
+        "H-CAT-02",
+        "H-CAT-03",
+        "H-CAT-04",
+        "H-CAT-05",
+        "M-DIM-07",
+        "M-DIM-09",
+        "M-HIER-01",
+        "M-HIER-02",
+        "M-HIER-04",
+        "M-HIER-05",
+        "M-HIER-06",
+        "X-ENUM-01",
+        "X-ENUM-02",
+        "X-ENUM-03",
+        "X-ENUM-04",
+        "X-ENUM-05",
+        "X-ENUM-06",
+        "X-ENUM-07",
+        "X-ENUM-08",
+        "X-MET-01",
+        "X-MET-02",
+        "X-MET-03",
+        "X-MET-04",
+        "X-MET-05"
+      ],
+      "n_cases": 30
+    },
+    "F-4": {
+      "face": "大区（`region_name`）在 **`region` 资产侧**无绑定",
+      "why": "`dimensions.region` 的 `binding` = `order_paid.region_code`（收货省），`region_name` 只出现在 `value_map`（业务约定）。`E-VER-07`/`M-DIM-08` 的 gold 直接读 `v_region.region_name`。",
+      "authorized_this_round": false,
+      "cases": [
+        "E-VER-07",
+        "M-DIM-08"
+      ],
+      "n_cases": 2
+    },
+    "F-5": {
+      "face": "活动类型维度（`campaign.campaign_type`）**未定义**",
+      "why": "`M-DIM-04` 需按 `campaign_type` 分组。",
+      "authorized_this_round": false,
+      "cases": [
+        "M-DIM-04"
+      ],
+      "n_cases": 1
+    },
+    "F-6": {
+      "face": "店铺维度（`shop.shop_id`）**已有** ＋ `product→shop` join **已有** ⇒ **不是缺口**",
+      "why": "25 条都走这两条既有路径；`F-6` 登记在案只为**排除**它（避免下一轮把它当缺口再补一遍）。",
+      "authorized_this_round": true,
+      "cases": [
+        "H-CAT-01",
+        "H-CAT-02",
+        "H-CAT-03",
+        "H-CAT-04",
+        "H-CAT-05",
+        "H-ENUM-02",
+        "H-STR-05",
+        "H-STR-06",
+        "H-STR-08",
+        "H-STR-09",
+        "X-ENUM-01",
+        "X-ENUM-02",
+        "X-ENUM-03",
+        "X-ENUM-04",
+        "X-ENUM-05",
+        "X-ENUM-06",
+        "X-ENUM-07",
+        "X-ENUM-08",
+        "X-MET-01",
+        "X-MET-02",
+        "X-MET-03",
+        "X-MET-04",
+        "X-MET-05",
+        "X-STR-02",
+        "X-STR-04"
+      ],
+      "n_cases": 25
+    }
+  },
+  "coverage": {
+    "total_false_refusal": 63,
+    "pure_metric_only": 16,
+    "pure_metric_only_cases": [
+      "E-ENUM-01",
+      "E-ENUM-02",
+      "E-ENUM-03",
+      "E-ENUM-04",
+      "E-ENUM-05",
+      "E-VER-01",
+      "E-VER-02",
+      "E-VER-03",
+      "E-VER-04",
+      "E-VER-05",
+      "E-VER-06",
+      "E-VER-08",
+      "E-VER-10",
+      "E-VER-11",
+      "M-DIM-02",
+      "M-DIM-10"
+    ],
+    "needs_non_metric_face": 46,
+    "needs_non_metric_face_cases": [
+      "E-ENUM-06",
+      "E-ENUM-07",
+      "E-ENUM-08",
+      "E-ENUM-09",
+      "E-ENUM-10",
+      "E-VER-07",
+      "H-CAT-01",
+      "H-CAT-02",
+      "H-CAT-03",
+      "H-CAT-04",
+      "H-CAT-05",
+      "H-ENUM-02",
+      "H-STR-05",
+      "H-STR-06",
+      "H-STR-08",
+      "H-STR-09",
+      "M-DIM-01",
+      "M-DIM-04",
+      "M-DIM-06",
+      "M-DIM-07",
+      "M-DIM-08",
+      "M-DIM-09",
+      "M-ENUM-01",
+      "M-ENUM-02",
+      "M-ENUM-03",
+      "M-ENUM-04",
+      "M-HIER-01",
+      "M-HIER-02",
+      "M-HIER-04",
+      "M-HIER-05",
+      "M-HIER-06",
+      "X-ENUM-01",
+      "X-ENUM-02",
+      "X-ENUM-03",
+      "X-ENUM-04",
+      "X-ENUM-05",
+      "X-ENUM-06",
+      "X-ENUM-07",
+      "X-ENUM-08",
+      "X-MET-01",
+      "X-MET-02",
+      "X-MET-03",
+      "X-MET-04",
+      "X-MET-05",
+      "X-STR-02",
+      "X-STR-04"
+    ],
+    "not_covered_by_any_metric": [
+      "E-MET-08"
+    ],
+    "by_metric": {
+      "pv": {
+        "n": 26,
+        "cases": [
+          "E-ENUM-01",
+          "E-ENUM-02",
+          "E-ENUM-03",
+          "E-ENUM-04",
+          "E-ENUM-05",
+          "M-DIM-01",
+          "M-DIM-02",
+          "M-ENUM-01",
+          "M-ENUM-02",
+          "M-ENUM-03",
+          "M-ENUM-04",
+          "X-ENUM-01",
+          "X-ENUM-02",
+          "X-ENUM-03",
+          "X-ENUM-04",
+          "X-ENUM-05",
+          "X-ENUM-06",
+          "X-ENUM-07",
+          "X-ENUM-08",
+          "X-MET-01",
+          "X-MET-02",
+          "X-MET-03",
+          "X-MET-04",
+          "X-MET-05",
+          "X-STR-02",
+          "X-STR-04"
+        ]
+      },
+      "cart_add_cnt": {
+        "n": 1,
+        "cases": [
+          "M-DIM-10"
+        ]
+      },
+      "on_sale_product_cnt": {
+        "n": 13,
+        "cases": [
+          "E-VER-02",
+          "E-VER-10",
+          "E-VER-11",
+          "H-CAT-01",
+          "H-CAT-02",
+          "H-CAT-03",
+          "H-CAT-04",
+          "H-CAT-05",
+          "H-STR-05",
+          "H-STR-06",
+          "H-STR-08",
+          "M-HIER-01",
+          "M-HIER-02"
+        ]
+      },
+      "off_sale_product_cnt": {
+        "n": 1,
+        "cases": [
+          "E-VER-03"
+        ]
+      },
+      "product_cnt": {
+        "n": 11,
+        "cases": [
+          "E-ENUM-06",
+          "E-ENUM-07",
+          "E-ENUM-08",
+          "E-ENUM-09",
+          "E-ENUM-10",
+          "M-DIM-06",
+          "M-DIM-07",
+          "M-DIM-09",
+          "M-HIER-04",
+          "M-HIER-05",
+          "M-HIER-06"
+        ]
+      },
+      "spu_cnt": {
+        "n": 1,
+        "cases": [
+          "E-VER-04"
+        ]
+      },
+      "avg_list_price": {
+        "n": 1,
+        "cases": [
+          "H-STR-09"
+        ]
+      },
+      "shop_cnt": {
+        "n": 1,
+        "cases": [
+          "E-VER-05"
+        ]
+      },
+      "campaign_cnt": {
+        "n": 2,
+        "cases": [
+          "E-VER-06",
+          "M-DIM-04"
+        ]
+      },
+      "province_cnt": {
+        "n": 2,
+        "cases": [
+          "E-VER-07",
+          "M-DIM-08"
+        ]
+      },
+      "province_covered_cnt": {
+        "n": 1,
+        "cases": [
+          "E-VER-08"
+        ]
+      },
+      "day_cnt": {
+        "n": 1,
+        "cases": [
+          "E-VER-01"
+        ]
+      },
+      "refunded_order_cnt": {
+        "n": 1,
+        "cases": [
+          "H-ENUM-02"
+        ]
+      },
+      "E-MET-08": {
+        "n": 1,
+        "cases": [
+          "E-MET-08"
+        ]
+      }
+    }
+  },
+  "landing_prereq": {
+    "aliases": "`synonyms` ⊆ `aliases` 的 term 集是**校验器断言**（`validate_bundle.py` 步骤③）⇒ 落 YAML 时**必须同步补 `aliases`** 的指标类别名条目（一对一）。",
+    "default_predicates": "`metrics[].default_predicates` 与顶层 `default_predicates[域][].applies_to`**双向一致**也是断言（同上）⇒ 新增谓词必须两处都写。",
+    "duplicate_terms": "本件内 `product_cnt` / `on_sale_product_cnt` 与 `province_cnt` / `province_covered_cnt` **中文名重叠**，落 YAML 时必须做**互斥切分**，否则 `aliases.term` 的一对一断言（现 105/105）会 FAIL。",
+    "version": "改语义包 ⇒ 必须递增 `meta.version`（形态 `YYYY.MM.DD.N`，`07 §6.1`），且缓存 / few-shot 索引失效（附录 B §B.4.1）。"
+  },
+  "cases": [
+    {
+      "case_id": "E-ENUM-01",
+      "template_block": "B",
+      "difficulty": "easy×medium",
+      "question": "T_A 直播渠道一共带来多少浏览量？",
+      "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'live'",
+      "gap_metric": "pv",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-ENUM-02",
+      "template_block": "B",
+      "difficulty": "easy×medium",
+      "question": "T_A 搜索渠道一共带来多少浏览量？",
+      "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'search'",
+      "gap_metric": "pv",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-ENUM-03",
+      "template_block": "B",
+      "difficulty": "easy×medium",
+      "question": "T_A 推荐渠道一共带来多少浏览量？",
+      "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'feed'",
+      "gap_metric": "pv",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-ENUM-04",
+      "template_block": "B",
+      "difficulty": "easy×medium",
+      "question": "T_A 付费广告渠道一共带来多少浏览量？",
+      "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'ad'",
+      "gap_metric": "pv",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-ENUM-05",
+      "template_block": "B",
+      "difficulty": "easy×medium",
+      "question": "T_A 直接访问渠道一共带来多少浏览量？",
+      "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'direct'",
+      "gap_metric": "pv",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-ENUM-06",
+      "template_block": "B",
+      "difficulty": "easy×medium",
+      "question": "T_A 的「3C数码」在架商品有多少个？",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '3C数码'",
+      "gap_metric": "product_cnt",
+      "non_metric_faces": [
+        "F-3"
+      ],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-ENUM-07",
+      "template_block": "B",
+      "difficulty": "easy×medium",
+      "question": "T_A 的「家用电器」在架商品有多少个？",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '家用电器'",
+      "gap_metric": "product_cnt",
+      "non_metric_faces": [
+        "F-3"
+      ],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-ENUM-08",
+      "template_block": "B",
+      "difficulty": "easy×medium",
+      "question": "T_A 的「美妆个护」在架商品有多少个？",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '美妆个护'",
+      "gap_metric": "product_cnt",
+      "non_metric_faces": [
+        "F-3"
+      ],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-ENUM-09",
+      "template_block": "B",
+      "difficulty": "easy×medium",
+      "question": "T_B 的「服饰鞋包」在架商品有多少个？",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '服饰鞋包'",
+      "gap_metric": "product_cnt",
+      "non_metric_faces": [
+        "F-3"
+      ],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-ENUM-10",
+      "template_block": "B",
+      "difficulty": "easy×medium",
+      "question": "T_C 的「食品生鲜」在架商品有多少个？",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '食品生鲜'",
+      "gap_metric": "product_cnt",
+      "non_metric_faces": [
+        "F-3"
+      ],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-MET-08",
+      "template_block": "C",
+      "difficulty": "easy×high",
+      "question": "T_A 从 2026-08-01 起的付费金额合计（含未支付）是多少？",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_status = 'unpaid'",
+      "gap_metric": "E-MET-08",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-VER-01",
+      "template_block": "A",
+      "difficulty": "easy×low",
+      "question": "T_A 2026-08 的日期维表有多少天？",
+      "gold_sql": "SELECT COUNT(*) FROM v_dim_date",
+      "gap_metric": "day_cnt",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-VER-02",
+      "template_block": "A",
+      "difficulty": "easy×low",
+      "question": "T_A 的在架商品数是多少？",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE on_sale = 1",
+      "gap_metric": "on_sale_product_cnt",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-VER-03",
+      "template_block": "A",
+      "difficulty": "easy×low",
+      "question": "T_A 的下架商品数是多少？",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE on_sale = 0",
+      "gap_metric": "off_sale_product_cnt",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-VER-04",
+      "template_block": "A",
+      "difficulty": "easy×low",
+      "question": "T_A 的SPU 数是多少？",
+      "gold_sql": "SELECT COUNT(DISTINCT spu_id) FROM v_product WHERE on_sale = 1",
+      "gap_metric": "spu_cnt",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-VER-05",
+      "template_block": "A",
+      "difficulty": "easy×low",
+      "question": "T_A 的店铺数是多少？",
+      "gold_sql": "SELECT COUNT(*) FROM v_shop WHERE city IS NOT NULL",
+      "gap_metric": "shop_cnt",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-VER-06",
+      "template_block": "A",
+      "difficulty": "easy×low",
+      "question": "T_A 的活动数是多少？",
+      "gold_sql": "SELECT COUNT(*) FROM v_campaign WHERE campaign_type = 'normal_sale'",
+      "gap_metric": "campaign_cnt",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-VER-07",
+      "template_block": "A",
+      "difficulty": "easy×low",
+      "question": "T_A 的华东覆盖省份数是多少？",
+      "gold_sql": "SELECT COUNT(*) FROM v_region WHERE region_name = '华东'",
+      "gap_metric": "province_cnt",
+      "non_metric_faces": [
+        "F-4"
+      ],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-VER-08",
+      "template_block": "A",
+      "difficulty": "easy×low",
+      "question": "T_A 的收货省份覆盖数是多少？",
+      "gold_sql": "SELECT COUNT(DISTINCT region_code) FROM v_order_paid WHERE region_code IS NOT NULL",
+      "gap_metric": "province_covered_cnt",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-VER-10",
+      "template_block": "A",
+      "difficulty": "easy×low",
+      "question": "T_B 的在架商品数是多少？",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE on_sale = 1",
+      "gap_metric": "on_sale_product_cnt",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "E-VER-11",
+      "template_block": "A",
+      "difficulty": "easy×low",
+      "question": "T_C 的在架商品数是多少？",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE on_sale = 1",
+      "gap_metric": "on_sale_product_cnt",
+      "non_metric_faces": [],
+      "group_by": ""
+    },
+    {
+      "case_id": "H-CAT-01",
+      "template_block": "H",
+      "difficulty": "hard×medium",
+      "question": "T_A 的「3C数码」各店铺的商品数分别是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '3C数码' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gap_metric": "on_sale_product_cnt",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "H-CAT-02",
+      "template_block": "H",
+      "difficulty": "hard×medium",
+      "question": "T_A 的「家用电器」各店铺的商品数分别是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '家用电器' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gap_metric": "on_sale_product_cnt",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "H-CAT-03",
+      "template_block": "H",
+      "difficulty": "hard×medium",
+      "question": "T_A 的「服饰鞋包」各店铺的商品数分别是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '服饰鞋包' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gap_metric": "on_sale_product_cnt",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "H-CAT-04",
+      "template_block": "H",
+      "difficulty": "hard×medium",
+      "question": "T_A 的「食品生鲜」各店铺的商品数分别是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '食品生鲜' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gap_metric": "on_sale_product_cnt",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "H-CAT-05",
+      "template_block": "H",
+      "difficulty": "hard×medium",
+      "question": "T_A 的「美妆个护」各店铺的商品数分别是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '美妆个护' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gap_metric": "on_sale_product_cnt",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "H-ENUM-02",
+      "template_block": "H",
+      "difficulty": "hard×medium",
+      "question": "T_A 处于「全额退款」状态的订单在各店铺分别是多少笔？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id",
+      "gap_metric": "refunded_order_cnt",
+      "non_metric_faces": [
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "H-STR-05",
+      "template_block": "G",
+      "difficulty": "hard×low",
+      "question": "T_A 位于南京的店铺各有多少个商品？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '南京市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gap_metric": "on_sale_product_cnt",
+      "non_metric_faces": [
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "H-STR-06",
+      "template_block": "G",
+      "difficulty": "hard×low",
+      "question": "T_A 位于西安的店铺各有多少个商品？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '西安市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gap_metric": "on_sale_product_cnt",
+      "non_metric_faces": [
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "H-STR-08",
+      "template_block": "G",
+      "difficulty": "hard×low",
+      "question": "T_A 位于郑州的店铺各有多少个商品？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '郑州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gap_metric": "on_sale_product_cnt",
+      "non_metric_faces": [
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "H-STR-09",
+      "template_block": "G",
+      "difficulty": "hard×low",
+      "question": "T_A 各店铺的商品平均标价是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, AVG(v_product.list_price) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gap_metric": "avg_list_price",
+      "non_metric_faces": [
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "M-DIM-01",
+      "template_block": "D",
+      "difficulty": "medium×low",
+      "question": "T_A 的各 SKU 的浏览量分别是多少？",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily GROUP BY sku_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-1"
+      ],
+      "group_by": "sku_id"
+    },
+    {
+      "case_id": "M-DIM-02",
+      "template_block": "D",
+      "difficulty": "medium×low",
+      "question": "T_A 的各渠道的浏览量分别是多少？",
+      "gold_sql": "SELECT channel, SUM(pv) FROM v_traffic_daily GROUP BY channel",
+      "gap_metric": "pv",
+      "non_metric_faces": [],
+      "group_by": "channel"
+    },
+    {
+      "case_id": "M-DIM-04",
+      "template_block": "D",
+      "difficulty": "medium×low",
+      "question": "T_A 的各活动类型的活动数分别是多少？",
+      "gold_sql": "SELECT campaign_type, COUNT(*) FROM v_campaign GROUP BY campaign_type",
+      "gap_metric": "campaign_cnt",
+      "non_metric_faces": [
+        "F-5"
+      ],
+      "group_by": "campaign_type"
+    },
+    {
+      "case_id": "M-DIM-06",
+      "template_block": "D",
+      "difficulty": "medium×low",
+      "question": "T_A 的各 SPU 的 SKU 数分别是多少？",
+      "gold_sql": "SELECT spu_id, COUNT(*) FROM v_product GROUP BY spu_id",
+      "gap_metric": "product_cnt",
+      "non_metric_faces": [
+        "F-2"
+      ],
+      "group_by": "spu_id"
+    },
+    {
+      "case_id": "M-DIM-07",
+      "template_block": "D",
+      "difficulty": "medium×low",
+      "question": "T_A 的各二级类目的商品数分别是多少？",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product GROUP BY category_l2",
+      "gap_metric": "product_cnt",
+      "non_metric_faces": [
+        "F-3"
+      ],
+      "group_by": "category_l2"
+    },
+    {
+      "case_id": "M-DIM-08",
+      "template_block": "D",
+      "difficulty": "medium×low",
+      "question": "7 个大区各覆盖的省份数分别是多少？",
+      "gold_sql": "SELECT region_name, COUNT(*) FROM v_region GROUP BY region_name",
+      "gap_metric": "province_cnt",
+      "non_metric_faces": [
+        "F-4"
+      ],
+      "group_by": "region_name"
+    },
+    {
+      "case_id": "M-DIM-09",
+      "template_block": "D",
+      "difficulty": "medium×low",
+      "question": "各一级类目的商品数分别是多少？",
+      "gold_sql": "SELECT category_l1, COUNT(*) FROM v_product GROUP BY category_l1",
+      "gap_metric": "product_cnt",
+      "non_metric_faces": [
+        "F-3"
+      ],
+      "group_by": "category_l1"
+    },
+    {
+      "case_id": "M-DIM-10",
+      "template_block": "D",
+      "difficulty": "medium×low",
+      "question": "各渠道的加购次数合计分别是多少？",
+      "gold_sql": "SELECT channel, SUM(cart_add_cnt) FROM v_traffic_daily GROUP BY channel",
+      "gap_metric": "cart_add_cnt",
+      "non_metric_faces": [],
+      "group_by": "channel"
+    },
+    {
+      "case_id": "M-ENUM-01",
+      "template_block": "E",
+      "difficulty": "medium×medium",
+      "question": "T_A 直播渠道各 SKU 的浏览量分别是多少？",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily WHERE channel = 'live' GROUP BY sku_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-1"
+      ],
+      "group_by": "sku_id"
+    },
+    {
+      "case_id": "M-ENUM-02",
+      "template_block": "E",
+      "difficulty": "medium×medium",
+      "question": "T_A 搜索渠道各 SKU 的浏览量分别是多少？",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily WHERE channel = 'search' GROUP BY sku_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-1"
+      ],
+      "group_by": "sku_id"
+    },
+    {
+      "case_id": "M-ENUM-03",
+      "template_block": "E",
+      "difficulty": "medium×medium",
+      "question": "T_A 推荐渠道各 SKU 的浏览量分别是多少？",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily WHERE channel = 'feed' GROUP BY sku_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-1"
+      ],
+      "group_by": "sku_id"
+    },
+    {
+      "case_id": "M-ENUM-04",
+      "template_block": "E",
+      "difficulty": "medium×medium",
+      "question": "T_A 付费广告渠道各 SKU 的浏览量分别是多少？",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily WHERE channel = 'ad' GROUP BY sku_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-1"
+      ],
+      "group_by": "sku_id"
+    },
+    {
+      "case_id": "M-HIER-01",
+      "template_block": "E",
+      "difficulty": "medium×medium",
+      "question": "T_A 各一级类目的在架商品数分别是多少？",
+      "gold_sql": "SELECT category_l1, COUNT(*) FROM v_product WHERE on_sale = 1 GROUP BY category_l1",
+      "gap_metric": "on_sale_product_cnt",
+      "non_metric_faces": [
+        "F-3"
+      ],
+      "group_by": "category_l1"
+    },
+    {
+      "case_id": "M-HIER-02",
+      "template_block": "E",
+      "difficulty": "medium×medium",
+      "question": "T_A 各二级类目的在架商品数分别是多少？",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE on_sale = 1 GROUP BY category_l2",
+      "gap_metric": "on_sale_product_cnt",
+      "non_metric_faces": [
+        "F-3"
+      ],
+      "group_by": "category_l2"
+    },
+    {
+      "case_id": "M-HIER-04",
+      "template_block": "E",
+      "difficulty": "medium×medium",
+      "question": "3C数码下一级各子类的商品数分别是多少？",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE category_l1 = '3C数码-子类1' GROUP BY category_l2",
+      "gap_metric": "product_cnt",
+      "non_metric_faces": [
+        "F-3"
+      ],
+      "group_by": "category_l2"
+    },
+    {
+      "case_id": "M-HIER-05",
+      "template_block": "E",
+      "difficulty": "medium×medium",
+      "question": "家用电器下一级各子类的商品数分别是多少？",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE category_l1 = '家用电器-子类1' GROUP BY category_l2",
+      "gap_metric": "product_cnt",
+      "non_metric_faces": [
+        "F-3"
+      ],
+      "group_by": "category_l2"
+    },
+    {
+      "case_id": "M-HIER-06",
+      "template_block": "E",
+      "difficulty": "medium×medium",
+      "question": "服饰鞋包下一级各子类的商品数分别是多少？",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE category_l1 = '服饰鞋包-子类1' GROUP BY category_l2",
+      "gap_metric": "product_cnt",
+      "non_metric_faces": [
+        "F-3"
+      ],
+      "group_by": "category_l2"
+    },
+    {
+      "case_id": "X-ENUM-01",
+      "template_block": "K",
+      "difficulty": "extra×medium",
+      "question": "T_A 的「3C数码」商品在各店铺的浏览量合计是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '3C数码' GROUP BY v_shop.shop_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "X-ENUM-02",
+      "template_block": "K",
+      "difficulty": "extra×medium",
+      "question": "T_A 的「家用电器」商品在各店铺的浏览量合计是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '家用电器' GROUP BY v_shop.shop_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "X-ENUM-03",
+      "template_block": "K",
+      "difficulty": "extra×medium",
+      "question": "T_A 的「服饰鞋包」商品在各店铺的浏览量合计是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '服饰鞋包' GROUP BY v_shop.shop_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "X-ENUM-04",
+      "template_block": "K",
+      "difficulty": "extra×medium",
+      "question": "T_A 的「食品生鲜」商品在各店铺的浏览量合计是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '食品生鲜' GROUP BY v_shop.shop_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "X-ENUM-05",
+      "template_block": "K",
+      "difficulty": "extra×medium",
+      "question": "T_A 的「美妆个护」商品在各店铺的浏览量合计是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '美妆个护' GROUP BY v_shop.shop_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "X-ENUM-06",
+      "template_block": "K",
+      "difficulty": "extra×medium",
+      "question": "T_A 的「家居家装」商品在各店铺的浏览量合计是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '家居家装' GROUP BY v_shop.shop_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "X-ENUM-07",
+      "template_block": "K",
+      "difficulty": "extra×medium",
+      "question": "T_A 的「母婴玩具」商品在各店铺的浏览量合计是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '母婴玩具' GROUP BY v_shop.shop_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "X-ENUM-08",
+      "template_block": "K",
+      "difficulty": "extra×medium",
+      "question": "T_A 的「运动户外」商品在各店铺的浏览量合计是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '运动户外' GROUP BY v_shop.shop_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "X-MET-01",
+      "template_block": "L",
+      "difficulty": "extra×high",
+      "question": "T_A「3C数码」自 2026-08-01 起各店铺的浏览量分别是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '3C数码' AND v_traffic_daily.stat_date >= '2026-08-01' GROUP BY v_shop.shop_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "X-MET-02",
+      "template_block": "L",
+      "difficulty": "extra×high",
+      "question": "T_A「家用电器」自 2026-08-01 起各店铺的浏览量分别是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '家用电器' AND v_traffic_daily.stat_date >= '2026-08-01' GROUP BY v_shop.shop_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "X-MET-03",
+      "template_block": "L",
+      "difficulty": "extra×high",
+      "question": "T_A「服饰鞋包」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '服饰鞋包' AND v_traffic_daily.stat_date >= '2026-06-01' GROUP BY v_shop.shop_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "X-MET-04",
+      "template_block": "L",
+      "difficulty": "extra×high",
+      "question": "T_A「食品生鲜」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '食品生鲜' AND v_traffic_daily.stat_date >= '2026-06-01' GROUP BY v_shop.shop_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "X-MET-05",
+      "template_block": "L",
+      "difficulty": "extra×high",
+      "question": "T_A「美妆个护」自 2026-05-01 起各店铺的浏览量分别是多少？",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '美妆个护' AND v_traffic_daily.stat_date >= '2026-05-01' GROUP BY v_shop.shop_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-3",
+        "F-6"
+      ],
+      "group_by": "v_shop.shop_id"
+    },
+    {
+      "case_id": "X-STR-02",
+      "template_block": "J",
+      "difficulty": "extra×low",
+      "question": "T_A 在 杭州市 的店铺各 SKU 浏览量合计是多少？",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '杭州市' GROUP BY v_product.sku_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-1",
+        "F-6"
+      ],
+      "group_by": "v_product.sku_id"
+    },
+    {
+      "case_id": "X-STR-04",
+      "template_block": "J",
+      "difficulty": "extra×low",
+      "question": "T_A 在 武汉市 的店铺各 SKU 浏览量合计是多少？",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '武汉市' GROUP BY v_product.sku_id",
+      "gap_metric": "pv",
+      "non_metric_faces": [
+        "F-1",
+        "F-6"
+      ],
+      "group_by": "v_product.sku_id"
+    }
+  ]
+}

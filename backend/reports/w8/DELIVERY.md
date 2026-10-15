@@ -540,3 +540,16 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 ⑧ **对外口径（改名写死）**：门禁 **PASS 1/8**（🚫 不得写「门禁通过」）；`G-6` 维持 UNVERIFIED；`G-2/G-5/G-7` 维持 FAIL；🔴 **open 集现读 = 十一枚**。
 ⑨ **本轮零取号**（指针现读仍 `U-143`）；段标题起点落笔现读 = `bce6417`／**539 笔**。
 ⑩ **没做什么**：未整读长件；未改 QA 写面；未花钱；未动 `app`/`tests`/`eval`/`deploy`/容器；未改任何号的判据或状态。
+
+## 第 40 轮交付（主线重启·语义层 metric 缺口清单 ｜ **只读清单件，🔴 一个 YAML 字都没动** ｜ 作业窗 ≈ 2026-10-15 10:2x–10:3x +0800（落笔现读 `date`）｜ 起点 HEAD `ce54b41`／543 笔 ｜ 🔴 零额度：台账逐位 = `1830|3.025849|2026-10-07 04:28:00.872275+00`；残渣 = `ecom` ＋ `ecom_u123_probe` ｜ 零出站 ｜ 零取号（指针 `docs/07:1094` 现读仍 `U-143`）｜ 一轮一笔）
+
+① **主单（QA 第 32 轮 §58.1，`TASK_BOARD.md:3298-3342`）**：出 `backend/reports/w8/probe_semantic_metric_gap.{json,md}` ＋ 量具 `…py`。逐条给 ①缺口 metric 名 ②目标 `asset` ③`expression` ＋ `default_predicates` ④`synonyms` ⑤覆盖预估（case_id 列表）。
+② **建议新增 `metrics` = 13 条**：`pv`(26)／`cart_add_cnt`(1)／`on_sale_product_cnt`(13)／`off_sale_product_cnt`(1)／`product_cnt`(11)／`spu_cnt`(1)／`avg_list_price`(1)／`shop_cnt`(1)／`campaign_cnt`(2)／`province_cnt`(2)／`province_covered_cnt`(1)／`day_cnt`(1)／`refunded_order_cnt`(1)。
+③ **不建议补 = 1 条**：`E-MET-08` —— 冻结集 `notes` **原文明写**是**反面口径**用例（测「同一 `pay_amount` 表达式不许自动带 `gmv` 默认谓词」）⇒ 补 metric **破坏**其设计意图。
+④ **非 metric 面 6 个**（本轮**未授权**）：`F-1` SKU 维度缺(7)／`F-2` SPU 维度缺(1)／`F-3` 类目维度在 `product` 侧无绑定(**30**)／`F-4` 大区在 `region` 侧无绑定(2)／`F-5` 活动类型维度缺(1)／`F-6` 店铺维度＋`product→shop` join **已有、非缺口**(25)。
+⑤ **覆盖预估合计**：**误拒 63 = 只补 metric 16 ＋ 还须附面 46 ＋ 不建议补 1**（16 ＋ 46 ＋ 1 = 63 ✅）。
+⑥ **方法增量**：缺口判定从 QA 的「**题面关键词人工比对** ≥40（估）」改为 **按 `gold_sql` 结构反推**（聚合函数＋源列＋计数源表＋WHERE/GROUP BY，**不读题面**）⇒ 逐 case 可对拍、给出 case 级覆盖列表。
+⑦ **五条独立复核全成立**（本窗自算）：① G-2 10/10 `refuse`·`no_data_asset` ② `set(G-2) ⊆ 误拒` ③ 误拒 63/63 `no_data_asset` ④ `embedding_unavailable` 伴随率 **success 45/45 ⟷ 误拒 63/63（同率 ⇒ 零区分力）** ⑤ 停止点 `refuse_out` 63/63、`retrieval_counts.assets` = 8、`gate_decisions` 空。
+⑧ **登记（只登记、不改判据／不改冻结集）**：`E-ENUM-06…10` 题面「在架」⟷ gold 无 `on_sale`；`E-VER-06` ⟷ `M-DIM-04` 同指标两条 gold **口径互斥**（72 ⟷ 84）；`E-VER-04`/`H-STR-09` gold 带题面无的 `on_sale=1`；`E-VER-01` gold 全表 730 ⟷ 题面「2026-08」(31)；`M-HIER-04/05/06` gold 筛选值 `'3C数码-子类1'` 沙箱**不存在**（`LIKE '%-子类%'` = 0 行）；`H-STR`/`X-STR` 同模板 5 `clarify` ／ 3 `refuse` ⇒ **补 metric 后可能转 clarify，不保证变绿**（QA 风险二）。
+⑨ **回单请示（未办）**：QA §58.2 风险四建议「在 `PROMPT.md §1` 补写 `semantic/**` 归属」＝**扩写面**（治理变更）⇒ 本轮**不做**，请总控一句确认。下一轮「改 YAML ＋ 重跑冻结集」属**出站／花费**，须**先批额度**（不擅自开跑）。
+⑩ **边界**：写面 = `backend/reports/w8/**`；🔴 `semantic/**` **一字未动**；`docs/07`／`app`／`tests`／`eval`／`deploy`／容器**未动**；`reports/qa/**` 只读；禁 `add -A`／reset／clean，按名 stage 后 `git show --stat` 复核；判据措辞**未改**；**零取号**（指针仍 `U-143`）。

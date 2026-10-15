@@ -3786,3 +3786,96 @@ git log -1 --format='%h 入库笔' -- backend/reports/w6/eval_metrics.json
 ### 39.5 注入形态
 
 - 注入形态 = **无**；未执行 **N/A**。
+
+## §卅八 第 40 轮 · 主线重启：语义层 `metrics` 缺口清单（**只读清单件，🔴 不动 YAML**）｜ 零出站 ｜ 2026-10-15 ｜ 起点 HEAD ce54b41／543 笔
+
+### 40.0 本轮做了什么（一件；派单 = QA 第 32 轮 §58.1，`TASK_BOARD.md:3298-3342`，总控照抄转发）
+
+1. **主单**：按 §58.1 三、出 `backend/reports/w8/` 下的**清单件**（JSON ＋ 简表），逐条给 ①缺口 metric 名（英标 ＋ 中文 display_name）②目标 `asset` ③建议 `expression` ＋ `default_predicates` ④建议 `synonyms` ⑤**覆盖预估**（case_id 列表）。
+2. 🔴 **未动 `semantic/**` YAML**（派单原话：「本轮的验收物 = 这份清单，不是改好的 YAML」）；未改**冻结集**、未改**判据**、**零取号**。
+3. 顺带**独立复核** QA `evidence_main_r31ad` 的**五条**断言（本窗自算，不抄其输出）。
+
+### 40.1 方法（与 QA `diag_main.py` 的**唯一差别** ＝ 本轮的增值点）
+
+| 面 | QA R31ad | **本轮** |
+|---|---|---|
+| 缺口判定依据 | **题面关键词人工比对** `metrics` 列表（其 README §7 限制②**自述**） | **`gold_sql` 结构**：聚合函数 ＋ 聚合源列 ＋ 计数源表 ＋ WHERE/GROUP BY（**不读题面**） |
+| 缺口数量 | 「≥ 40」＝**估** | **逐 case 一票**，可对拍 |
+| 分类 | metric 缺口 ／ group-by 面（**未核**，列为待核） | metric 缺口 ＋ **非 metric 面 `F-1…F-6` 逐条归位** |
+| 覆盖预估 | 未给 case 级列表 | **给 case_id 列表**（每 metric 一份 ＋ 三桶合计） |
+
+### 40.2 独立复算（QA R31ad 五条逐条成立，落笔前现读）
+
+现读（第 40 轮、起点 HEAD `ce54b41`）实跑：
+
+```text
+expected=execute           = 124
+其中误拒(outcome=refuse)   = 63 | reason={'no_data_asset': 63}
+停止节点                   = {'refuse_out': 63}
+   ① G-2 = 10 条 | outcome={'refuse': 10} | reason={'no_data_asset': 10} | ⊆误拒=True
+   ③ 误拒理由只有 no_data_asset = True
+   ④ embedding 伴随 success 45/45 ⟷ 误拒 63/63
+   ⑤ nodes 末位={'refuse_out': 63} | assets={8: 63} | gate_decisions 非空=0
+```
+
+⇒ **五条全部复现**（① ② ③ ④ ⑤ 逐条成立；`embedding_unavailable` 两组**同率 100%/100%** ⇒ **无区分力**，确认**不是**根因）。
+
+### 40.3 清单正文（摘要；全文见两件）
+
+- **建议新增 `metrics` = 13 条**：`pv`(26)／`cart_add_cnt`(1)／`on_sale_product_cnt`(13)／`off_sale_product_cnt`(1)／`product_cnt`(11)／`spu_cnt`(1)／`avg_list_price`(1)／`shop_cnt`(1)／`campaign_cnt`(2)／`province_cnt`(2)／`province_covered_cnt`(1)／`day_cnt`(1)／`refunded_order_cnt`(1)。
+- **不建议补 = 1 条**：`E-MET-08` —— 冻结集 `notes` **原文明写**其为**反面口径**用例（测「同一个 `pay_amount` 表达式**不许**自动带上 `gmv` 的默认谓词」）⇒ 补 metric 会**破坏**该用例设计意图。
+- **非 metric 面 6 个**（`F-1…F-5` 本轮**未授权**，`F-6` 只为排除）：`F-1` SKU 维度缺(7)／`F-2` SPU 维度缺(1)／`F-3` 类目维度在 `product` 侧无绑定(**30**)／`F-4` 大区在 `region` 侧无绑定(2)／`F-5` 活动类型维度缺(1)／`F-6` 店铺维度＋`product→shop` join **已有、非缺口**(25)。
+- **⑤ 覆盖预估合计**：**误拒 63 = 只补 metric 16 ＋ 还须附面 46 ＋ 不建议补 1**（16 ＋ 46 ＋ 1 = 63 ✅）。
+- **asset 口径点名**：派单用 **`grain` token**（`sub_order`／`sku`／`province`／`sku_day_channel`／`day` …），本件用 **`logical_name`**（`order_paid`／`product`／`region`／`traffic_daily`／`dim_date` …），对照已写进 §1 表括号内 —— **两种指法不得混用**。
+
+### 40.4 登记：与冻结集的**内部口径冲突**（🔴 只登记、**不改判据、不改冻结集**）
+
+| case | 冲突 | 处置 |
+|---|---|---|
+| `E-ENUM-06…10` | 题面写「**在架**商品」，而 gold_sql **不带** `on_sale = 1` | 若 `on_sale_product_cnt` 挂 `on_sale = true` ⇒ 作答**但不等于 gold**（5631 vs 6000）。**登记**，不为迎合它去掉默认谓词 |
+| `E-VER-06` ⟷ `M-DIM-04` | 同一「活动数」两条 gold **口径互斥**：前者带 `campaign_type='normal_sale'`(72)、后者**无谓词**(84) | `campaign_cnt` 默认谓词**建议不挂**，作为「口径待业务确认」登记 |
+| `E-VER-04`／`H-STR-09` | gold 带 `on_sale = 1`，**题面无此限定** | 本件按 gold 挂谓词，并就地标注 ⚠️（须业务确认） |
+| `E-VER-01` | gold 是**全表** `COUNT(*)`(730)，题面写「**2026-08** … 有多少天」(应 31) | 只登记；**不改判据** |
+| `M-HIER-04/05/06` | gold 的筛选值 `category_l1 = '3C数码-子类1'` 在沙箱**不存在**（实测 `LIKE '%-子类%'` = **0 行**） | 只登记（gold 侧疑似占位值） |
+| `H-STR-01…08`（同模板，gold 形态完全相同） | 8 条分叉为 **5 `clarify` ／ 3 `refuse`**（广州/杭州/成都/武汉/长沙 澄清 ⟷ 南京/西安/郑州 拒） | ⇒ 该族**不是数据缺**（`v_shop.city` 实测 12 值，不含广州/成都/武汉/长沙/西安 → 那几条 gold 本就 0 行），而是**模型行为不稳** |
+| `X-STR-01…08`（同模板） | **6 `clarify` ／ 2 `refuse`** | 同上；补 metric 后**可能转 execute、也可能仍转 clarify** ⇒ **不保证变绿**（QA 风险二） |
+
+### 40.5 落盘（文件:行号）
+
+- `backend/reports/w8/probe_semantic_metric_gap.py`（新增，量具；**全程只读**两份冻结/结果件 ＋ 语义包 YAML，无出站）
+- `backend/reports/w8/probe_semantic_metric_gap.json`（新增；`cases[]` 含 63 条 `gold_sql` 全文，可直接对拍）
+- `backend/reports/w8/probe_semantic_metric_gap.md`（新增，简表）：`§0` 漏斗＋五条复核 `:7`｜`§1` 清单 `:30`｜`§1.1` 逐条 `:48`｜`§2` 不补 `:178`｜`§3` 非 metric 面 `:182`｜`§4` 覆盖预估 `:200`｜`§5` 落地前置 `:208`｜`§6` 纪律 `:215`｜`§7` 复算入口 `:222`｜`§8` 附录 63 条 `:247`
+- `backend/reports/w8/RELAY.md`（本节）／`backend/reports/w8/DELIVERY.md`（第 40 轮）
+
+### 40.6 边界、零出站与复算入口（按 `PROMPT.md §5` v2.2 三条纪律）
+
+- **零出站**：无模型调用、无 `--live`、无 `docker build`／`up/down`；**未连共享库写面**（唯一 DB 接触 = `data/ecom_sandbox.db` **只读** `mode=ro`）。
+- **零花费证据**（现读）：`app.cost_ledger` → `1830|3.025849|2026-10-07 04:28:00.872275+00` **逐位不动**；残渣 `datname like 'ecom%'` = `ecom | ecom_u123_probe`；容器 6 件 `Up`。
+- **零取号**：`docs/07_技术设计文档_TDD.md:1094` 指针行现读仍 = **「下一个可用号 = `U-143`」**（版本字段 `:11` = `v1.7.34`）。
+- **复算入口**（**带时点**：第 40 轮／起点 HEAD `ce54b41`）：
+  - ① 清单复跑：`PYTHONUTF8=1 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w8/probe_semantic_metric_gap.py` → **实跑** 见 §40.2 代码块（`63 / 16 ＋ 46 ＋ 1 / 13 条`）。target = 本窗件、**非** RELAY ⇒ 无自指。
+  - ② 五条复核的金标准仍是 `eval/results_v1.json` ＋ `eval/dataset_v1_frozen.json`（本窗件**不落**这两份，只落 `gold_sql` 摘录到 JSON 的 `cases[]`）⇒ QA 可直接用自己那套 `evidence_main_r31ad/*.py` 对拍。
+- **没碰**：`semantic/**`（🔴 本轮明令不动）／`backend/app/**`／`tests/**`／`eval/**`／`deploy/**`／容器／`docs/07`／`reports/qa/**`（只读）。
+
+### 40.7 串行资源表六面
+
+| 面 | 本轮是否争用 | 尺 |
+|---|---|---|
+| `git` 索引 | 争用（本轮提交） | 按名 stage；`git show --stat` |
+| 共享 `ecom` | 只读一次（台账/残渣） | `begin; … rollback;`；台账逐位不动 |
+| 共享栈 | 不争用 | 6 件 `Up`（未起停） |
+| 被测镜像 | 不争用 | 未 `docker build` |
+| 匣带重写 | 不争用 | `eval/cassettes/**` 未动 |
+| `reports/qa/**` | 不争用（只读） | 本窗未写 QA 面 |
+
+### 40.8 回单请示 / 待点句（**未办，未擅自扩权**）
+
+| # | 事项 | 本窗立场 |
+|---|---|---|
+| 1 | QA §58.2 风险四建议「在 `PROMPT.md §1` 补写 `semantic/**` 归属」 | ⚠️ 该动作 = **扩写面**（把 `semantic/**` 写进 W8 权限清单）⇒ 属**治理变更**，**本轮不做**，请总控一句确认后再落。 |
+| 2 | QA §58.3 待点句（确认授权范围 = 「仅新增 `metrics` ＋ 配套字段；超出须回单」） | 本轮**严格在范围内**（**一个 YAML 字都没动**）；无需扩权。 |
+| 3 | 下一轮（§58.1 五、预告）：改 `semantic/**` ⇒ **重跑冻结集**看 G-2/G-5/G-8 是否**真降** | 预告已读；🔴 重跑属**出站／花费**，须总控**先批额度**，本窗不擅自开跑。且 QA 风险三要求用 `results_v2_live` 作**独立对照**，避免过拟合。 |
+
+### 40.9 注入形态
+
+- 注入形态 = **无**；未执行 **N/A**。
