@@ -1,0 +1,9 @@
+base_url = https://api.deepseek.com
+key      = <35 chars, 不打印>
+host env 代理变量 = http_proxy=set, https_proxy=set, HTTP_PROXY=set, HTTPS_PROXY=set, no_proxy=unset, NO_PROXY=unset
+
+httpx 0.28.1
+
+[direct(trust_env=False) ] http=200 t=0.28s models=['deepseek-flash', 'deepseek-v4-pro']
+[env-proxy(trust_env=True)] http=200 t=0.24s models=['deepseek-flash', 'deepseek-v4-pro']
+[explicit-env-proxy      ] http=200 t=0.24s models=['deepseek-flash', 'deepseek-v4-pro']

@@ -1,0 +1,46 @@
+# 🔻 R31ah 脱敏：[原文件里 2 处 DoD④ 触发串已拆段] —— 归档时未脱敏，被本门实测揪出（同族第 4 例）。
+.......F                                                                 [100%]
+================================== FAILURES ===================================
+_______________ test_repo_wide_replay_of_the_dod4_rule_is_green _______________
+
+    def test_repo_wide_replay_of_the_dod4_rule_is_green() -> None:
+        """★ 本机可跑的 DoD④ 替身：全仓重放**同一条**规则，必须零未放行命中。
+    
+        为什么需要它（实测，不是推测）：
+          · 本机 `gitleaks` **未安装**（`gitleaks version` → command not found），
+            所以 DoD④ 目前**只在 CI 上**存在 —— 本机提交前没有任何反馈；
+          · 这一步在 2026-09-16 实际抓到了"修好两个文件、却在自己新加的文件里
+            把同一个问题种回去"（见本文件 `test_allowlist_must_not_legalise_...` 内注释）。
+            **没有全仓视角，这类"修 A 造 B"根本看不见。**
+    
+        与 CI 的差别（写清楚，不假装等价）：
+          · CI 用 `gitleaks detect`（只扫 **git 追踪**的文件、含全部历史）；
+            本测试扫**工作区**（含未跟踪文件）→ 对"还没 commit 的新文件"更严格，
+            但**不看历史**（历史里的泄漏要靠 CI 的 `fetch-depth: 0`）。
+        """
+        rule = _dsn_rule()
+        violations: list[str] = []
+        for path, text in _iter_text_files():
+            rel = path.relative_to(_REPO_ROOT).as_posix()
+            path_allowlisted = any(re.search(str(p), rel) for p in _path_allowlist_patterns())
+            for lineno, line in enumerate(text.splitlines(), 1):
+                for match in rule.finditer(line):
+                    secret = match.group(0)
+                    if path_allowlisted or _excused_by_allowlist(secret):
+                        continue
+                    violations.append(f"{rel}:{lineno}  {secret}")
+>       assert not violations, (
+            "以下位置触发了 DoD④ 的 DSN 规则且未被放行 —— CI 的 gitleaks 会红：\n  "
+            + "\n  ".join(violations)
+            + "\n\n修法：删掉字面量、改读环境变量；**不要**加进 .gitleaks.toml 的 allowlist。"
+        )
+E       AssertionError: 以下位置触发了 DoD④ 的 DSN 规则且未被放行 —— CI 的 gitleaks 会红：
+E           backend/reports/w8/RELAY.md:2952  <DSN 触发串：`postgres://` 与 `[^…]+@)` 两段，原文一条连续正则>
+E         
+E         修法：删掉字面量、改读环境变量；**不要**加进 .gitleaks.toml 的 allowlist。
+E       assert not ['backend/reports/w8/RELAY.md:2952  <DSN 触发串：`postgres://` 与 `[^…]+@)` 两段，原文一条连续正则>']
+
+tests\unit\test_migration_dsn_hygiene.py:321: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/unit/test_migration_dsn_hygiene.py::test_repo_wide_replay_of_the_dod4_rule_is_green
+1 failed, 7 passed in 10.07s
