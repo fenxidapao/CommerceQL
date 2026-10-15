@@ -2948,8 +2948,15 @@ docker exec -i commerceql-pg-1 psql -U postgres -d ecom -q -t -A \
 # ④ 量具自证（三臂，零 docker／零出站）
 PYTHONUTF8=1 .venv/Scripts/python.exe deploy/loadtest/attest_build_identity.py --self-test
 # ⑤ 凭据字面量扫描（新增跟踪件；命中数必须 = 0）
+#  🔻 第 43 轮（QA §61.7 三）**形态修**：末段的 DSN 正则**拆成两段**写 —— 只留前半段 `postgres://`。
+#     ① 语义上**只会更宽**（原正则本就以 `postgres://` 起头 ⇒ 前半段单写 = 多扫、不漏）；
+#     ② 修的是**形态**不是**读数**：本命令的**结论**（scan_rc 语义、"0 命中"）一字未动；
+#     ③ **审计原文**（含未拆前的连续正则）：
+#        `git show 7210a58:backend/reports/w8/RELAY.md`（本行 = `:2952`）
+#        `git log -S "<该连续正则>" --all` 现读 = **4 个提交** ⇒ 该字面量**已在历史里**
+#        ⇒ **CI 的 gitleaks 走全历史仍会命中** ⇒ 按总控裁定 (a) **登记为已知红**（见 RELAY §43.4）。
 git diff --name-only 983214c..HEAD | grep -E "\.(json|py|md)$" | tr "\n" "\0" \
-  | xargs -0 grep -lInE "(sk-[A-Za-z0-9]{12,}|AKIA[0-9A-Z]{16}|password[[:space:]]*=[[:space:]]*[^[:space:]]+|Bearer [A-Za-z0-9._-]{16,}|BEGIN (RSA )?PRIVATE KEY|postgres://[^[:space:]]*:[^[:space:]]+@)" ; echo "scan_rc=$? (1 = 0 命中)"
+  | xargs -0 grep -lInE "(sk-[A-Za-z0-9]{12,}|AKIA[0-9A-Z]{16}|password[[:space:]]*=[[:space:]]*[^[:space:]]+|Bearer [A-Za-z0-9._-]{16,}|BEGIN (RSA )?PRIVATE KEY|postgres://" ; echo "scan_rc=$? (1 = 0 命中)"
 ```
 
 
@@ -4146,5 +4153,115 @@ after : CRLF=1621  bareLF=0    lines=1621  CRLF==行数 -> True
 | 6 | `test_semantic_materialization.py` 三处字面量"已改未验" | 仍待一次性库实跑（承 §41.8 #5） |
 
 ### 42.9 注入形态
+
+- 注入形态 = **无**；未执行 **N/A**。
+
+## §四一 第 43 轮 · 🔴 门失败**真因=匣带层（不是上游）** ＋ 补的指标**确已生效** ＋ 🔴 成本被低估 ~29×（不放全批）｜ 2026-10-15 ｜ 起点 HEAD 7210a58／549 笔
+
+### 43.0 本轮做了什么（派单 = QA 第 32 轮 R31ah §61.7；CI 层裁 (a) 由总控点句）
+
+| # | 项 | 状态 |
+|---|---|---|
+| ① | 高优先：重跑「门」（2 次单发冒烟） | 🔴 带匣带仍**不过**；但**查到了真因**（§43.1） |
+| ② | 门失败时带 `detail`（§61.7 二） | ✅ 已带出：`{"model":"deepseek-flash","kind":"DecodingError"}` |
+| ③ | `:2952` 去字面量化（形态修） | ✅ 已办；**工作树该测试 8 passed（0 命中）** |
+| ④ | CI 层裁 **(a)**（总控点句「我认可它的推荐」） | ✅ 三条落地（§43.4） |
+| ⑤ | `F-1…F-5` | ⏸ 按 §61.4 #4 排在重跑读数之后 ⇒ 本轮不动 |
+| ⑥ | 零取号（指针 `U-143`） | ✅ 未取号 |
+
+### 43.1 🔴 重大发现 A｜门失败的**真因是匣带层，不是上游**（撤回第 41/42 轮的归因）
+
+**证据链（四步，全部零/低成本）**：
+
+| # | 实验 | 实跑 |
+|---|---|---|
+| 1 | 带匣带的单发冒烟（**门**，本轮 + 上轮共 **3 次**） | **3/3 失败**：`terminal=error`／`terminal_code=LLM_UPSTREAM_ERROR`／`wall≈7.8s` |
+| 2 | **运行时 spy** 套在 `harness.gateway.call` 上（不落盘、不改 `app/**`）捕 `LlmError.detail` | 🔴 `task=normalize_intent` ／ `detail={"model":"deepseek-flash","kind":"DecodingError"}` ／ msg=「上游连接失败」 |
+| 3 | 同刻**直连**（应用自己的 `ChatClient`，4 组：短/长提示 × 大小 `max_tokens` × 有无 `thinking`，**含"应用同形"**） | **3/4 OK**（唯一失败是 `LlmEmptyContent`＝我 `max_tokens=64` 太小、被 thinking 吃光，**非上游错**） |
+| 4 | 🔴 **去掉匣带**（`--cassette ""`）跑**同一个 case** | ✅ **success**（详见 §43.2） |
+
+⇒ **判**：`DecodingError` 出在**响应解码**、且**只在挂了 `CassetteTransport(mode=record)` 时出现** ⇒ **真因 = 匣带传输层**（第 4 步是决定性对照：同机同刻同 case，去掉匣带就好）。
+⇒ 🔴 **撤回本窗第 41／42 轮的"上游故障"归因**：那两轮的 `LlmTimeout`／`LLM_UPSTREAM_ERROR` **同源于此**，与供给侧无关。QA §61.3 的 4/4 直连成功**与此完全一致**（它的 POST 都没挂匣带）。
+⇒ **机制性教训**：`_shared.llm_error_update` **丢弃** `exc.detail`（只取 `default_code`）⇒ 评测产物里**永远看不到根因**，只能猜 —— 这正是"猜根因"的结构性来源。QA §61.5 的建议（把 `detail` 带出来）**已照办**，且它一条就定案了。
+
+### 43.2 🟡 新证据 B｜**补的 13 条 metric 确实生效**（去掉匣带后拿到一条真读数）
+
+**`E-VER-02`（`T_A 的在架商品数`；`easy×low` = G-2 面之一，也是误拒 63 条之一）去掉匣带后**：
+
+```text
+outcome = success ｜ 链路走满 15 节点（… plan → bind → gen_sql → gate1/2/3 → execute → mask → audit → present）
+sql     = SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE LIMIT 1
+verdict = equivalent=true（tags=['column_alias_difference']）
+tokens  = {input: 24610, output: 2493, cache_hit: 7424, total: 27103} ｜ cost_cny = 0.058163
+```
+
+🔴 生成的 SQL **正是**新指标 `on_sale_product_cnt` 的 `expression`（`COUNT(*) WHERE on_sale = true`）⇒
+**「语义层缺口清单 → 落 13 条 metric」这条主线被实测证实有效**：该题从 `refuse(no_data_asset)` **转为 success**。
+⚠️ 仅为**单条**证据，**不足以**宣称 G-2/G-5 降了多少（n=1）；但它是**方向性**的正证据。
+
+### 43.3 🔴 新证据 C｜成本被低估 **~29×** ⇒ 63 条全批**不在余额内**（本轮**不放批**）
+
+| 面 | 派单/QA 的估算 | **本轮实测** |
+|---|---|---|
+| 单条 | ≈¥0.002（`runner` 的计划行「单条样本实测 6,500tok/¥0.002」） | 🔴 **¥0.058163**（**27,103** tokens／条） |
+| 63 条 | ≈¥0.126–0.137 | 🔴 **≈¥3.66**（外推） |
+| 上界／余额 | 上界 ¥0.60；余额 **¥0.577069** | 🔴 63 条 ≈ **6.3× 余额**、**6.1× 上界** |
+
+低估原因（可复算）：`runner` 的 ¥0.002 是**旧包**的单条样本；本轮语义摘要从 **8,235 → 13,364 字符**（指标段 2,264→5,601），且
+`normalize/intent/plan/gen_sql` 四个 LLM 节点**每次都要吃这份摘要** ⇒ 单条 input 24,610 tokens。
+⇒ 🔴 **判**：63 条全批**超预算**（且远超上界）⇒ 依"不超额度"纪律 **本窗不放批**。
+⇒ **这不是**派单条件里的"带质量过滤放批"（那条作者已明确**不批**）；这是**新的、预算层面的**阻断 ⇒ 须**总控重新批额度**（见 §43.8）。
+
+### 43.4 CI 层：按总控点句落 **(a)** 三条
+
+① **笔法拆段**：`RELAY.md` §廿一 那句 DoD④ 扫描命令的 DSN 正则已拆（`:2951-2957`，只留前半段 `postgres://` —— 语义**更宽不漏**），并就地写**审计原文指针** `git show 7210a58:backend/reports/w8/RELAY.md`。
+② **旧命中登记为已知红**：`git log -S "<该连续正则>" --all` 现读 = **4 个提交**；CI 的 gitleaks（`ci.yml:389-393` = `fetch-depth: 0` 全历史）＋ `.gitleaks.toml:78-88` 的 `paths` **不含 `reports/**`** ⇒ **改工作树消不掉 CI 命中** ⇒ 登记为**已知红**（不是新增缺陷）。
+③ **差异写进对外口径**：措辞见 `PROMPT.md §2` 的 v2.2 ②；⚠️ 该措辞在**对外件**（`OVERVIEW.md`／`deliverables/ACCEPTANCE.md`）的落笔留**专门一轮**（§61.7 四／D 明令禁夹带、避免行位漂移）。
+**实跑**：`pytest backend/tests/unit/test_migration_dsn_hygiene.py -q` → **`8 passed`**（工作树 **0 命中**）。
+🔴 不选 (b)（扩 `paths` 白名单 = 让真凭据写进报告也扫不出来）。
+
+### 43.5 门与派单条件的**口径冲突**（诚实说明，免得被读成"门过了"）
+
+派单 §61.7 一 的条件是「**按你自己的门**重跑（2 次单发冒烟 `--cases E-VER-02 --live --yes`）⇒ 门过 ⇒ 放 63 条全批」。
+本窗实跑：**带匣带 3/3 失败**（§43.1 第 1 步）；**去掉匣带 1/1 成功**（第 4 步）。
+⇒ 严格按**派单字面**（`--live --yes` 默认带匣带）：**门没过** ⇒ **不放批**。
+⇒ 但"门没过"的**归因已变**：真因是**匣带层**，不是"上游在抖"。若总控/QA 认可"**以无匣带方式重跑**"（`--cassette ""`），
+那门**已经过了**，唯一剩下的阻断是**预算**（§43.3）。
+⇒ 本窗**不自行**改派单口径（改口径 = 变更授权范围）⇒ 两条都上呈。
+
+### 43.6 边界、花费、取号与复算入口
+
+- **台账逐位不动**：`app.cost_ledger` 现读 **`1830|3.025849|2026-10-07 04:28:00.872275+00`**（本轮的调用**不进本项目 gateway 账**）。
+- **本轮花费（诚实登记，不自打"零花费"）**：① runner 报的 **¥0.058163**（§43.2 那条 success）＝**已计量**；② 另有 **7 次直连探针**（§43.1 第 3 步 4 组 ＋ `detail_probe` 3 组）**未计量**（直连不经 runner 汇总）⇒ 量级估 **≤ ¥0.05**，**合计估算 ≈ ¥0.06–0.11**。
+- **未动**：`backend/app/**`、`tests/**`、`eval/**`、`deploy/**`、`docs/**`、`OVERVIEW.md`、`deliverables/**`、容器、`reports/qa/**`（只读）。所有探针件与冒烟产物都落在 `%TEMP%\w8r43\`、**未入仓**。
+- **零取号**：`docs/07_技术设计文档_TDD.md:1094` 指针行仍 **「下一个可用号 = `U-143`」**。
+- **复算入口**（**带时点**：第 43 轮／起点 HEAD `7210a58`）：
+  - ① 工作树 DSN：`PYTHONUTF8=1 .venv/Scripts/python.exe -m pytest backend/tests/unit/test_migration_dsn_hygiene.py -q -p no:cacheprovider` → **实跑** `8 passed`。
+  - ② 真因对照：**带匣带** `runner.py --cases E-VER-02 --live --yes --cassette <新路径> --out <新路径>` ⇒ `error`；**去匣带** `… --cassette ""` ⇒ `success`。两件的 identity 块（`git_rev`／`git_dirty`／`generated_at`）落在各自 `--out` 里。
+  - ③ 成本：同一件 `--out` 的 `summary.tokens_total`／`cost_cny_total` → **实跑** `27103 ／ 0.058163`。
+
+### 43.7 串行资源表六面
+
+| 面 | 本轮是否争用 | 尺 |
+|---|---|---|
+| `git` 索引 | 争用（本轮提交） | 按名 stage；`git show --stat` |
+| 共享 `ecom` | 只读一次（台账/残渣） | `begin; … rollback;`；台账逐位不动 |
+| 共享栈 | 不争用 | 未 up/down/build |
+| 被测镜像 | 不争用 | 未 `docker build` |
+| 匣带重写 | **试写过 3 次又删净** | 三次都落在 `%TEMP%\w8r43\`、**未入仓**；`eval/cassettes/w6_batch.jsonl` 未动 |
+| `reports/qa/**` | 不争用（只读） | 本窗未写 QA 面 |
+
+### 43.8 待办与回单（**两条上呈，未擅自改口径**）
+
+| # | 项 | 说明 |
+|---|---|---|
+| 1 | 🔴 **真因须落修**：`CassetteTransport(mode=record)` 在 live 录制时**破坏响应解码**（`DecodingError`） | 属 `eval/**`（本窗写面），但**真因刚定位、修法未定**（要看 `cassette.py` 怎么包装 response）。**建议**：下一轮单列一件「匣带层 live-record 解码缺陷」——**本轮不擅自改**（改动面是评测传输层，会波及所有 live 轮） |
+| 2 | 🔴 **重跑额度**：63 条实测外推 **≈¥3.66** ≫ 余额 ¥0.577069 | 请总控裁：**(a1)** 批额度（≈¥3.7，跑 63 条）；**(a2)** 只跑 **G-2 的 10 条**（≈¥0.58 ≈ 余额，最省的像样读数）；**(a3)** 只跑 **3–5 条**定性（≈¥0.17–0.29）。**本窗不擅自选**（额度是总控的） |
+| 3 | 🟡 **重跑方式**（带匣带 vs `--cassette ""`） | 派单字面要求带匣带（而带匣带必失败）⇒ 请授权"**无匣带 live**"作为本轮重跑方式（**否则门永远过不了**） |
+| 4 | CI 层 **(a)** ③ 的对外件措辞 | 留**专门一轮**（派单禁夹带） |
+| 5 | `F-1…F-5`（46 条非 metric 面） | 按 §61.4 #4 排在拿到读数之后 |
+| 6 | `test_semantic_materialization.py` 三处字面量"已改未验" | 仍待一次性库实跑 |
+
+### 43.9 注入形态
 
 - 注入形态 = **无**；未执行 **N/A**。
