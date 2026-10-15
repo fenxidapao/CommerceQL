@@ -3723,7 +3723,7 @@ git log -1 --format='%h 入库笔' -- backend/reports/w6/eval_metrics.json
 
 - **零出站**：无模型调用；台账 `1830|3.025849|2026-10-07 04:28:00.872275+00` **逐位不动**；零取号（指针现读仍 `U-143`）。
 - **没碰**：`docs/07`（本轮未动）／`backend/app/**`／`tests/**`／`eval/**`／`deploy/**`／容器／`reports/qa/**`。
-- 复算入口：`grep -c '**④**' OVERVIEW.md deliverables/ACCEPTANCE.md`（各 2）；`python -c "import pathlib;print(len([l for l in pathlib.Path('OVERVIEW.md').read_text(encoding='utf-8').split(chr(10)) if l.startswith('- **open 集 = 十一枚**')][0]))"`（应 = **836**）。
+- 复算入口：`python -c "import pathlib;[print(f,[l for l in pathlib.Path(f).read_text(encoding='utf-8').split(chr(10)) if l.startswith('- **open 集 = 十一枚**')][0].count('**④**')) for f in ('OVERVIEW.md','deliverables/ACCEPTANCE.md')]"` → 实跑 **2 ／ 2**（目标行**行内**计数；第 39 轮、HEAD `bce6417`）；🔴 **口径点名**：同串 `grep -c '**④**'` 数的是**命中行数** = **3 ／ 3**、全文**出现次数** = **4 ／ 4** ⇒ 三种口径**勿混**（🔻 第 39 轮订正：原写「各 2」但入口用 `grep -c` ⇒ 原样实跑得 3，属**预期与口径不符**；QA §54.3／§55.2 提请）；`python -c "import pathlib;print(len([l for l in pathlib.Path('OVERVIEW.md').read_text(encoding='utf-8').split(chr(10)) if l.startswith('- **open 集 = 十一枚**')][0]))"`（应 = **836**）。
 
 ### 38.5 串行资源表六面
 
@@ -3737,5 +3737,52 @@ git log -1 --format='%h 入库笔' -- backend/reports/w6/eval_metrics.json
 | `reports/qa/**` | 不争用（只读） | 本窗未写 QA 面 |
 
 ### 38.6 注入形态
+
+- 注入形态 = **无**；未执行 **N/A**。
+
+
+## §卅七 第 39 轮 · §38.4 复算入口① 口径订正 ＋ 三条「复算入口」纪律入 PROMPT.md ｜ 零出站 ｜ 2026-10-15 ｜ 起点 HEAD bce6417／539 笔
+
+### 39.0 本轮做了什么（两件，全零成本；QA 第 31 轮 §54.5 ＋ §55.6 派单）
+
+1. **A｜`§38.4` 复算入口① 订正**（QA §54.5 一 必做）：原文 `grep -c '**④**' OVERVIEW.md deliverables/ACCEPTANCE.md`（**各 2**）—— **入口口径与预期不符**（`grep -c` 数**行数** ⇒ 原样实跑 **3／3**；目标行**行内**才是 **2／2**）。⇒ 改为**行内计数**命令（应 = 2），并**点名三种口径**、附**实跑输出**。
+2. **B｜三条「复算入口」纪律写入 `PROMPT.md §5`**（QA §55.6，**总控点「按它开工」＝采纳**）：① 带**时点**（第 n 轮／HEAD）② 附**实跑输出**＋点名口径 ③ **禁自指**（附自查法）。⚠️ 属纪律、不属判据。
+
+### 39.1 独立复算（QA 指控逐条成立，落笔前现读）
+
+| 口径 | 命令 | 实跑（第 39 轮、HEAD `bce6417`） |
+|---|---|---|
+| `grep -c '**④**'`（**命中行数**） | 0-用行匹配 | **3 ／ 3**（`:700` 含 2 处 ＋ `:708` ＋ `:711`） |
+| Python `count`（**全文出现次数**） | `read_text().count('**④**')` | **4 ／ 4** |
+| **目标行内**（`:700`／`:123`） | 取该行 `.count('**④**')` | **2 ／ 2** ✅（＝主张本义） |
+
+⇒ QA §54.3「预期值与实跑不符」**成立**；同族**第三次**（E 自指死尺／B 条件核不上／本处预期值不符）。
+
+### 39.2 落盘（文件:行号）
+
+- `backend/reports/w8/RELAY.md`：`§38.4` 入口① 改行内计数 ＋ 口径点名 ＋ 🔻 具名（1 行替换）。
+- `backend/reports/w8/PROMPT.md`：`§5` 末尾（`exit 0 ≠ 跑完` 行之上）新增「复算入口的写法（v2.2 三条纪律）」5 行块。
+- `backend/reports/w8/DELIVERY.md`：第 39 轮。
+
+### 39.3 边界、零出站与复算入口
+
+- **零出站**：无模型调用；台账 `1830|3.025849|2026-10-07 04:28:00.872275+00` **逐位不动**；零取号（指针现读仍 `U-143`）。
+- **没碰**：`docs/07`（本轮未动）／`backend/app/**`／`tests/**`／`eval/**`／`deploy/**`／容器／`reports/qa/**`。
+- 复算入口（本轮、HEAD `bce6417`）：
+  - `grep -n '复算入口的写法（v2.2 三条纪律' backend/reports/w8/PROMPT.md  →  实跑 **1 命中**（PROMPT.md 内，非自指：本条在 RELAY）
+  - `python -c "import pathlib;[print(f,[l for l in pathlib.Path(f).read_text(encoding='utf-8').split(chr(10)) if l.startswith('- **open 集 = 十一枚**')][0].count('**④**')) for f in ('OVERVIEW.md','deliverables/ACCEPTANCE.md')]"  →  实跑 **2 ／ 2**（目标 = 对外两件、**非 RELAY** ⇒ 无自指。🔻 第 39 轮就地订正：原入口② `grep … RELAY.md` **自指**（命中 §39.3 本条 ＋ 表内 2 行，共 3）⇒ 已换 target 文件）
+
+### 39.4 串行资源表六面
+
+| 面 | 本轮是否争用 | 尺 |
+|---|---|---|
+| `git` 索引 | 争用（本轮提交） | 按名 stage；`git show --stat` |
+| 共享 `ecom` | 不争用（未查库） | 台账逐位不动 |
+| 共享栈 | 不争用 | `docker ps` 六件 `Up` |
+| 被测镜像 | 不争用 | 未 `docker build` |
+| 匣带重写 | 不争用 | `eval/cassettes/**` 未动 |
+| `reports/qa/**` | 不争用（只读） | 本窗未写 QA 面 |
+
+### 39.5 注入形态
 
 - 注入形态 = **无**；未执行 **N/A**。
