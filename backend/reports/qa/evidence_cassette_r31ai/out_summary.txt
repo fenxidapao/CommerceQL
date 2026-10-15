@@ -1,0 +1,8 @@
+semantic bundle loaded: version=2026.09.14.1 status=candidate assets=8 excluded=0 warnings=1
+semantic bundle loaded: version=2026.10.15.1 status=candidate assets=8 excluded=0 warnings=1
+MAX_SEMANTIC_SUMMARY_CHARS = 40000
+  写前(9 指标, a943575)      yaml= 62129B  version=2026.09.14.1     摘要 chars=[8235, 8235, 8235] 截断=False
+  现读(22 指标)              yaml= 88633B  version=2026.10.15.1     摘要 chars=[13364, 13364, 13364] 截断=False
+
+  摘要增长 = +5129 chars（1.62×，+62.3%）
+  W8 报值 = 8,235 → 13,364（+5,129，1.62×）

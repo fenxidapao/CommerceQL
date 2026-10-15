@@ -1,0 +1,16 @@
+改动前 :2952 = 'stgres://[^[:space:]]*:[^[:space:]]+@)" ; echo "scan_rc=$? (1 = 0 命中)"'
+改动后 :2959 = '}|BEGIN (RSA )?PRIVATE KEY|postgres://" ; echo "scan_rc=$? (1 = 0 命中)"'
+
+--- 尺自检 ---
+  OLD 命中 GOOD = True (应 True)
+  OLD 命中 BAD  = False (应 False)
+  ✅ 通过
+
+--- 自匹配矩阵（行 × pattern）---
+           |     改动前(OLD) |     改动后(NEW)
+----------------------------------------
+改动前的行      |         True |         True
+改动后的行      |        False |         True
+
+--- 被测集合里是否有该文件 ---
+  集合 = 74 | 含 w8/RELAY.md = True

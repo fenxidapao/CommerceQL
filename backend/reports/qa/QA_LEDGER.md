@@ -1205,3 +1205,34 @@
 **Scope 限制（诚实登记）**：本节为**只读**（`git show`／`git diff`／`grep`／Python 读行／`psql begin;…rollback;`／`docker logs`／`docker ps`）＋ **本窗写面落盘** ＋ 🔴 **本节含出站**（见 #20）。`docs/07`／`OVERVIEW.md`／`deliverables/**`／`semantic/**`／`backend/reports/w8/**` **一字未动**（`materialize_derivation`／`w8` 各件均未碰）。
 
 **归档**：`backend/reports/qa/evidence_outage_r31ah/`（`probe_path.py` `5bee02558aad`／`out_path.txt` `e45361ae4d83`／`probe_post.py` `59289cfdd512`／`out_post.txt` `9b2b107865d1`／`out_dsn.txt` `e228992649bb`／`README.md`；**六件均 LF**）。
+## R31ai · W8 第 43 轮（真因＝匣带层 ＋ 指标生效 ＋ 成本低估 29× ＋ `:2952` 拆段 ＋ CI (a) 落地）**验收通过（6/6）** ＋ 一处新发现 ＋ 额度三裁 ／ 2026-10-15 17:20 ＋0800 ／ 起点 `bdcd111`／550 笔 ／ 🔴 **零出站、零花费**
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 仓库 | HEAD `bdcd111`／**550 笔**；`origin/main` **同点**；工作树 = `?? .workbuddy/` ＋ 本节改动 | ✅ |
+| 2 | 改动面 | `git show --stat bdcd111` ＝ **3 件**（`w8/{DELIVERY.md +13, PROMPT.md +6, RELAY.md +119}`）；`semantic/**` 内容 **未动**（`git diff --stat bdcd111^ HEAD -- semantic/` 空）；`app`／`tests`／`eval`／`frontend`／`deploy`／`docs`／`OVERVIEW.md`／`deliverables`／容器 **未动** | ✅ |
+| 3 | 🔴 **真因＝匣带层**（**本窗离线复现**） | `evidence_cassette_r31ai/out_repro.txt` 实读：① `httpx.Response(headers={"content-encoding":"gzip"}, content=<明文>)` **构造即抛 `DecodingError`**（`Error -3 … incorrect header check`）；② `CassetteTransport(mode='record')` ＋ **真 gzip 上游** ⇒ **同样抛**；③ MRO `DecodingError→RequestError→HTTPError` ⇒ **必被 `client.py:346 except httpx.HTTPError` 捕获**；④ replay 分支 `cassette.py:197-202` **显式覆盖 headers** ⇒ **只 record 炸** | ✅ **成立（确定性，非间歇）** |
+| 4 | 真因点（读码） | `eval/cassette.py:171-176`（record）`headers=dict(response.headers)` **原样带上游全部响应头**（含 `content-encoding: gzip` ＋ **压缩版** `content-length`），而 `content=` 用 `await response.aread()` 之后的**已解压明文**；`eval/harness.py:699-700`（`cassette_path and live` ⇒ `mode="record"`）⇒ **带匣带 live 必走此路** | ✅ |
+| 5 | 机制来源（丢 detail） | `backend/app/graph/nodes/_shared.py:178-205` `llm_error_update`：`LlmRefused` 先分流，否则 `code = getattr(exc,"default_code",None) or INTERNAL` ⇒ **只取 `default_code`、不带 `detail`**；`client.py:346-350` 的 `detail={"model","kind"}` **恰是 W8 spy 捕到的两键形** | ✅ |
+| 6 | 🟡 补的 metric 已生效（n=1） | ⚠️ 产物落 `%TEMP%\w8r43\`、**未入仓 ⇒ 不可复算**（不判真假）；**旁证成立**：语义包确有 `on_sale_product_cnt` 且其 `expression` 为 `on_sale = TRUE` 计数形，与所报 SQL **形态一致** | ✅（**不得引作降幅**） |
+| 7 | 🔴 成本低估 29× | ⚠️ 单例读数（27,103 tok／¥0.058163）**不可复算**；🔴 **本窗独立复算两条派生物**：**摘要长度** `8,235 → 13,364`（**+5,129 ／ 1.62× ／ +62.3%**，未截断，上限 40,000）**逐位吻合**（`evidence_cassette_r31ai/out_summary.txt`）；**算术**见 #9 | ✅ |
+| 8 | `:2952` 去字面量化 ＋ 审计指针 | 该连续正则在 `w8/RELAY.md` **命中 = 0**；`:2951-2957` 有 🔻 形态说明 ＋ `git show 7210a58:…` **审计指针** ＋ `git log -S … = 4 个提交` 登记；**机械护栏实跑 `8 passed`（工作树 0 命中）** | ✅（副作用见 #10） |
+| 9 | CI 裁 **(a)** 三条落地 | `PROMPT.md` `v2.2 ②`：① 笔法**拆段** ② **旧命中登记为已知红**（`ci.yml:389-393` `fetch-depth:0` 全历史 ＋ `.gitleaks.toml:78-88` `paths` 无 `reports/**`）③ **差异进对外口径**（措辞：「本地 `8 passed`（工作树 0 命中）；**CI 的 gitleaks 走全历史仍会命中 4 个历史提交** ⇒ 登记为已知红，非新增缺陷」）＋「**不选 (b)**」＋ **机械化护栏**；对外两件 **留专门一轮**（遵派单禁夹带） | ✅ |
+| 10 | 🔴 **新发现｜截断式拆段的副作用**（**不是翻案**） | `out_selfmatch.txt`（**尺已自检**：正例 True／反例 False）：**改动前的行** × `改动前 pattern` = **True（自匹配）**；**改动后的行** × `改动后 pattern` = **True（自匹配）** ⇒ ① **自匹配非本轮引入**（🚫 不得说 W8 新造）；② 🔴 **但命中面被放大** —— 在该命令**自己记录**的被测集合（`983214c..HEAD` 内 json/py/md，**74** 文件）里，截断后**命中 7 个文件**（含 `reports/qa/{QA_LEDGER,RELAY,TASK_BOARD}.md` ＋ `evidence_outage_r31ah/README.md`），**而结论仍写「命中数必须 = 0」** ⇒ **命令与结论脱钩** | ⚠️ **提请（下一轮办）** |
+| 11 | #10 的建议 | 把凭据扫描**抽成脚本**（如 `backend/scripts/scan_secrets.py`），**报告只引脚本名、不抄正则** ⇒ 一次性消掉「gitleaks 连续字面量」＋「命令自匹配」两件事 | 建议 |
+| 12 | 🔴 额度算术 | `63 × 0.058163 = ¥3.6643`（**6.35× 余额**／**6.11× 上界**）；`10 × 0.058163 = ¥0.581630` ⇒ 🔴 **超账面余额 ¥0.004561**（按实余 ≈¥0.469 超 **24%**）；`5 × … = ¥0.290815`；`3 × … = ¥0.174489` ⇒ **a2 是 W8 自己列的选项里超预算的那一个**（本窗点名） | ✅ 复核一致 |
+| 13 | 边界／零取号／成本自陈 | 台账 `1830\|3.025849\|2026-10-07 04:28:00.872275+00` **逐位不动**；指针 `docs/07:1094` 仍 **`U-143`**、**无 `U-143` 行**；W8 **未自打「零花费」** 而分列「已计量 ¥0.058163 ＋ 7 次探针未计量（估 ≤¥0.05）」 ⇒ **口径正确** | ✅ |
+| 14 | ✅ **正面记录** | W8 **自行撤回**第 41／42 轮的「上游故障」归因；并**用 QA 在 `§61.7 二` 要的 `detail`** 一轮内闭环（`{"model":"deepseek-flash","kind":"DecodingError"}`）⇒ **`§61.7 二` 这条零成本建议直接产出了真因** | ✅ |
+| 15 | 注入形态 | **无** | N/A |
+| 16 | 🔴 **本窗出站／花费** | **零出站、零花费** —— 本节全部诊断均为**离线复现**（对比 `§57.8` 的 7 次出站） | ✅ |
+
+**四处裁定**：① **方式** ⇒ 授权「**无匣带 live**」**但附三条件**（**优先同轮修匣带 1 行**／不修则产物须具名「不可回放」／用本窗 `repro_decoding.py` 作回归测试）；② **额度** ⇒ **a1／a2 不可行**（a2 超余额 ¥0.004561；a1 须抬上界至 ≥¥3.7 ≈ 6.2×），**本轮裁 a3 的 5 条 ¥0.290815**，并**明写「a3 只能定性、算不出 G-2 门（分母 10）」**；③ **修匣带单列一轮** ⇒ ✅ 同意且**建议提前**（它阻断「live ＋ 录带」整条路径）；④ **排序** ⇒ **修匣带 → 修扫描脚本 → a3 跑 5 条 → 依 a3 单价复议额度 → `F-1…F-5`**。
+
+**须上呈的产品含义**：单例 ¥0.058 的机制 ＝ **摘要 13,364 字符被 4 个 LLM 节点各吃一遍**（本窗复算 **+62.3%**）⇒ **「补 metric 让 G-2/G-5 变绿」与「单次问答成本上涨」是同一动作的两面** ⇒ 刷新对外件那一轮**应并书这条代价**。
+
+**🔴 本窗自曝：一条结论换了 3 版尺，v1 还是循环测试** —— ① 正则写进 **shell 行内**（引号吞转义）＋ 拿**改动后**的行测**改动前**的 pattern ⇒ **假 False ＋ 循环测试**（已作废未入档）；② Python `re` 直接用 **POSIX `[[:space:]]`**（Python 不支持）⇒ 又**假 False**；③ 对照串构造错（该正则要求 `@` **紧跟** `)`）⇒ 🔴 **尺自检当场拦下**。
+⇒ **自订纪律（加强版）**：凡「**A 是否匹配 B**」类结论，必须 ① pattern **写进脚本文件**；② 同时给**正例 True ＋ 反例 False** 两把自检；③ 🔴 **被测对象与被测 pattern 必须同版本**（`git show <ref>` 取），否则是**循环测试**。这是 `§57.7 ①`「引用即命中」家族的**姊妹形态：尺自己也在家族里**。
+
+**Scope 限制（诚实登记）**：本节为**只读**（`git show`／`git diff`／`grep`／Python 读行与子串）＋ **本窗写面落盘** ＋ **离线复现脚本自建自跑**；🔴 **未跑 W8 的任何脚本**（`probe_semantic_summary.py` **会写**它自己的产物 ⇒ 本窗**自建**探针）；**未跑** `--live` harness；**未动**容器；`semantic/**`／`backend/app/**`／`backend/tests/**`／`docs/07`／`OVERVIEW.md`／`deliverables/**`／`backend/reports/w8/**` **一字未动**。
+
+**归档**：`backend/reports/qa/evidence_cassette_r31ai/`（`README.md`／`repro_decoding.py` `3efa09de834e`／`out_repro.txt` `3d2a5ec493a5`／`selfmatch2.py` `6c0a95047ef5`／`out_selfmatch.txt` `6e9ad03dbdfe`／`probe_summary_len.py` `85311b051257`／`out_summary.txt` `b2488502d902`；**七件均 LF、无凭据、无 DSN 连续字面量** —— 归档前实测全 0）。
