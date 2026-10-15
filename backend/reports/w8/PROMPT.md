@@ -45,8 +45,12 @@ QA 窗出「任务粘贴块」 → 总控原样转给你 → 你一路做到交�
 
 🔻 **→ v2.1 ①**：**除 `backend/reports/w8/**` 之外没有别人的地盘**——`OVERVIEW.md`、`docs/**`、`deliverables/ACCEPTANCE.md` 由本窗量完自己落笔；`backend/reports/qa/**` = **QA 独占**（本窗只读）。历史账面（`reports/w0…w7/**`、`reports/arch/**`）可就地加 ★/🔻 注记，但**不改写既有读数**。v2 那句"你只写自己的账面 / docs 是 QA 地盘"不在此文里留抄本 ⇒ 原文见 `git show 5307a94:backend/reports/w8/PROMPT.md` §1 末段。
 
-🔻 **→ v2.2 ①（W8 第 41 轮补入，总控 2026-10-15 点句「都准许」＝采纳 QA 第 32 轮 R31af §59.8 第 1 项）**：**`semantic/**`（现读 = `bundle_2026.09.14.1.yaml`／`SCHEMA_v1.md`／`metric_dictionary.md`／`validate_bundle.py`／`render_metric_dictionary.py`／`__pycache__`）＝ 本窗写**（此前它**不在任何窗的清单里**，第 40 轮清单件 `README §4` 与 QA §58.2 风险四都点过这个空位）。
+🔻 **→ v2.2 ①（W8 第 41 轮补入；授权出处见下，🔻 第 42 轮按 QA §60.8 五 把原话写全）**：**`semantic/**`（现读 = `bundle_2026.09.14.1.yaml`／`SCHEMA_v1.md`／`metric_dictionary.md`／`validate_bundle.py`／`render_metric_dictionary.py`／`__pycache__`）＝ 本窗写**（此前它**不在任何窗的清单里**，第 40 轮清单件 `README §4` 与 QA §58.2 风险四都点过这个空位）。
+**授权出处（🔴 逐字，避免读者误读为独立授权语）**：第 41 轮总控转发派单 §58.1 时附的原话是 ——
+「**其中需要我授权、点头、批准的都准许，尽量少阻塞，到时候回执，也把这句话带回给QA窗口，说是我说的**」。
+本窗据此认定「批准成立」（QA §60.7 已核**归属成立**，仅建议措辞写全 ⇒ 即本行）。
 **改动纪律（三条，缺一即视为不合规）**：① 必须递增 `meta.version`（形态 `YYYY.MM.DD.N`）；② 必须附 `semantic/validate_bundle.py` **全绿证据**（现读基线 = **PASS=31 / FAIL=0 / SKIP=1 / WARN=2**，34 项）；③ 必须重跑 `semantic/render_metric_dictionary.py`（生成件不许留在旧版，否则 = 第二真相）。
+**行尾纪律（🔻 第 42 轮按 QA §60.8 三 选项 (a) 定）**：本件是**工作树 CRLF 件**（现读 `CRLF=1621 == 行数`，裸 LF=0）⇒ 改它一律**字节级读写并显式保持 CRLF**（`.gitattributes` 的 `* text=auto eol=lf` 只管**入库 blob**，管不到工作树）。
 ⚠️ 已知**连带面**（改本目录会红，须同轮更新字面量）：`backend/tests/unit/test_semantics_loader.py`（版本号／别名条数）、`backend/tests/unit/test_materialize_derivation.py`（metric／synonym 条数）、`backend/tests/unit/test_binding_service.py` 与 `backend/tests/contract/test_semantic_dict_contract.py`（版本号）、`backend/tests/unit/test_retrieval_search.py`（`BUNDLE_VERSION`）、`backend/tests/eval/test_harness_allowlist.py`（active 指标数）。
 ⚠️ **结构性红线（第 41 轮实测得出）**：`default_predicates[<域>]` 是**域级**规则 ⇒ gate1 R06 会把它注入本域**每一个**能表达它的资产；给单个指标加过滤**不许**写在这里（须写进 `expression`）。新增 `dimensions` **不是**加法 —— 它会改 `grain_index` 的 family／level 解析（实测 6 个断言红）。两条都见 `RELAY §41.5`。
 
