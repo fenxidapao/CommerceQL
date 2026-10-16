@@ -4761,235 +4761,42 @@ docker stop w8r48-pg w8r48-redis
 - **取号**：零新增号；现读仍 `U-143`（`docs/07_技术设计文档_TDD.md:1094`）。
 - **提交**：测量时 HEAD `b87158a`；本件与代码/测试将按名 stage 后一笔提交，提交后以 `git show --stat` 与 `HEAD==origin/main` 复核。
 
-## §四八 第 48 轮 · 集成 2 红收口（124/0）＋ F-1…F-5 联合修复 ＋ 10/57 重跑 ｜ 2026-10-16 16:20–20:50 +0800 ｜ 起点 HEAD `958609b`
+<!-- 🔴 W8 第 48 轮自曝：本轮 RELAY 因连续三次追加同一节，一度出现 3 份 `## §四八`（原行位 4764／4954／5166）。
+     现只保留最完整的一份（本节）；前两份是我自己的重复落笔，**不是历史读数被改写** —— 它们全部是本轮新写、且内容已被本节覆盖。
+     ⇒ 教训：追加型落点必须**先读末节标题**再决定追加还是就地补写。 -->
 
-### 48.0 本轮结论（先给判词，再给证据）
+## §四八 第 48 轮 · 集成 2 红清账（124/0）＋ F-1…F-5 联合修复 ＋ G-2 10 条／57 族重跑 ｜ 2026-10-16 16:2x–21:2x +0800 ｜ 起点 HEAD `958609b`
+
+### 48.0 本轮结论
 
 | 项 | 判 | 读数 |
 |---|---|---|
-| 集成全量 | ✅ **124 passed / 0 failed** | 一次性 PG/Redis ＋ `alembic upgrade head`（详 48.1） |
-| 离线全量 | ✅ **2538 passed / 0 failed** | `.venv` 全量（含本轮新增 F 契约 13 条） |
-| 语义包 validator | ✅ **PASS=31 / FAIL=0 / SKIP=1 / WARN=2**（34 项） | 逐项同基线，仅版本号前进 |
-| F-1…F-5 声明面 | ✅ 落地（含 1 项**试做后撤回**，见 48.3） | gold_sql 对撞见 48.4 |
-| G-2 10 条 | 🟡 **complete 8 / refuse 2；equivalent 6** | 不得宣称 G-2 过门（门线 ≥95%，见 48.5） |
-| 57 条自指族 | 🔴 **读数被上游污染，只能给「干净复合」并标注** | 见 48.6，**不得当 G-5 判词** |
-
-**一句话**：P0-A 的集成 2 红已清、F-1…F-5 已落；但**读数段被上游两次打断**（额度耗尽 + 超时熔断），G-2/57 两条只能给带污染标注的读数。
+| 集成全量 | ✅ **124 passed / 0 failed** | 一次性 PG/Redis ＋ `alembic upgrade head`；**F 改动之后复跑仍 124/0**（48.1） |
+| 离线全量 | ✅ **2538 passed / 0 failed / 1 warning** | `.venv`；含本轮新增 F 契约 13 条 |
+| 语义包 validator | ✅ **34 项：PASS=31 / FAIL=0 / SKIP=1 / WARN=2** | 同基线，仅版本前进 |
+| F-1…F-5 | ✅ 落地（含 1 项**试做后撤回**，48.3） | gold 对撞 48.4 |
+| G-2 10 条 | 🟡 `complete 8 / refuse 2`、`equivalent 6` | **不达门（≥95%）⇒ 不得宣称改善**（48.5） |
+| 57 条自指族 | 🔴 **上游两次打断** ⇒ 只能给「46/57 干净复合」 | **不得当 G-5 判词**（48.6） |
 
 ### 48.1 必做：集成 2 红（版本断言漂移）→ 124/0
 
-**根因**：`test_semantic_materialization.py` 两处把语义包版本**硬编码**成 `2026.09.14.1`，而现包早已是 `2026.10.15.1`；第 41 轮只同步了 unit/contract 的字面量，**漏了这一件**。
+**根因**：`test_semantic_materialization.py` 两处把语义包版本**硬编码**成旧值；第 41 轮只同步了 unit/contract，**漏了集成件**。
 
 | 面 | before | after |
 |---|---|---|
 | `backend/tests/integration/test_semantic_materialization.py:115` | `assert report.version == "2026.09.14.1"` | `assert report.version == loaded.version`（**从真包派生**） |
 | 同件 `:319` | `assert get_active_version(...) == "2026.09.14.1"` | `== loaded.version` |
-| 同件 `:125-127`（**顺带**：本轮 F 改动会改这三个数） | `metric_def == 9` / `dimension == 6` / `synonym == 105`（三处也已逾期） | `== len(loaded.bundle.metrics/dimensions/aliases)` |
-| 同件 `:53-58`（**新增防漂回**） | 无 | `_MIN_BUNDLE_VERSION = (2026,10,15,1)` ＋ `_version_tuple()`；在既有 `TestVersionPointer::test_switch_get_roundtrip`（`:324`）里断言 `loaded.version >= 下限` —— **折叠进既有用例而非新增一条**，保持集成总数 124 |
-| `backend/tests/integration/test_real_redis_lock_and_ratelimit.py:51-56` | `_REDIS_URL = "redis://localhost:6379/0"` **写死** ⇒ 会打到共享 compose Redis（`commerceql-redis-1` 正是 6379） | 只认 `COMMERCEQL_TEST_REDIS_URL`，缺 env = **import 期当场 fail** |
-
-**为什么第 5 行必须做**：本轮第一次跑集成时 6379 被共享栈占着，而该文件写死 6379 ⇒ 会在**共享 Redis** 上建键删键。虽然它只删自己建的键，但「集成测试只打一次性库」这条纪律对 Redis 同样成立。
-
-**实跑（一次性 PG `127.0.0.1:55435` ＋ Redis `127.0.0.1:56382`，先 `alembic upgrade head`）**：
-
-```text
-backend> $env:COMMERCEQL_TEST_SUPER_DSN='postgresql://postgres@127.0.0.1:55435/ecom'
-          $env:COMMERCEQL_TEST_RW_DSN / _RO_DSN = app_rw / app_ro @ 55435/ecom
-          $env:COMMERCEQL_TEST_REDIS_URL='redis://127.0.0.1:56382/0'
-          $env:RETRIEVAL_TEST_PG_DSN='postgresql://postgres@127.0.0.1:55435/ecom'
-          ../.venv/Scripts/python.exe -X utf8 -m pytest tests/integration -q
-124 passed in 28.78s
-```
-
-⇒ **F 改动之后**（终版语义包）复跑，仍是 124/0。**收尾**：`DROP DATABASE ecom` ＋ `FLUSHALL` ＋ 停容器；`docker ps -a --filter name=w8r48-` = 0 件；共享库 `datname like 'ecom%'` 仍只 `ecom`／`ecom_u123_probe`。
-
-### 48.2 F-1…F-5：改了什么（逐项）
-
-| 项 | 面 | before → after | 落点 |
-|---|---|---|---|
-| **F-1** SKU 维度 | `dimensions` | 无 SKU 维度 → 新增 `sku`（`binding: product.sku_id`，`hierarchy:[sku]`，`grain_level=1`） | `semantic/bundle_2026.09.14.1.yaml:1052-1057` |
-| **F-2** SPU 维度 | `dimensions` | 无 SPU 维度 → 新增 `spu`（`binding: product.spu_id`） | 同件 `:1059-1064` |
-| **F-3** product 侧类目 | `dimensions.category.binding` ＋ `field_bindings.类目` | `order_paid.category_l1` → **`product.category_l1`**（层级名与 `grain_levels` **一字未动**）；`类目` 的 `canonical_asset` 同步改，并把 `order_paid.category_l1` 降为 `alternatives[use_when: order_context]` | 同件 `:989`、`:1138-1143`；新增别名 `二级类目`／`三级类目` `:1460-1461` |
-| **F-4** region_name 绑定 | `field_bindings.大区` | 本就 `canonical_asset: region.region_name`（**无需改**）；本轮**试做「新增 region_name 维度」后撤回** | 见 48.3 |
-| **F-5** campaign_type 维度 | `dimensions` | 无 → 新增 `campaign_type`（`binding: campaign.campaign_type`）；新增别名 `活动类型` | 同件 `:1059-1064`、`:1462` |
-
-**版本与生成件（三条纪律）**：`meta.version` `2026.10.15.1` → **`2026.10.16.1`**（`:49`）；`semantic/validate_bundle.py` 实跑 **34 项 PASS=31 FAIL=0 SKIP=1 WARN=2**（同基线）；`semantic/render_metric_dictionary.py` 已重跑，生成件头部现读 `语义包版本 2026.10.16.1`（rate_hash 不变 `6e44e05a44af9155` —— 指标口径没动，动的只有维度与绑定，这是**正确**的读数）。
-
-### 48.3 🔴 F-4 的「试做后撤回」：新维度会改既有 family 名
-
-**做了什么**：先按「新增 `region_name` 维度（`binding: region.region_name`，`hierarchy:[region]`，`grain_level=2`）」落地。
-
-**实测代价（零出站，`test_binding_grain.py`）**：`GrainIndex` 的族 = **共享层级名的维度集合** ⇒ 新维度与既有 `region`／`city` 共享 `region` 层级 ⇒ 地理族 key 从 `city+region` 变成 **`city+region+region_name`**，**12 条既有断言红**（族名、`level_of_ref`、`question_level`、`extra_words`）。
-
-**更重的代价（出站实测）**：该维度落地后，G-2 的 `E-VER-07` 生成的 SQL 变成 `SELECT region_name, COUNT(*) ... GROUP BY region_name`（**多一个 GROUP BY 列**），与 gold（单值）**不等价**。
-
-⇒ **判定：撤回该维度**（删掉 `region_name` 维度）。F-4 的声明面改为**只钉既有 `field_bindings.大区 → region.region_name`**（该绑定**本来就在**，第 41 轮的清单件把它列为 F-4 是因为「`region` 维度的 binding 是 `order_paid.region_code`」这件事让人以为大区没有绑定 —— 实测**有**，在 `field_bindings` 里）。
-⇒ 撤回后：族名回到 `city+region`（12 条断言转绿）；`E-VER-07` 在终版批里 **complete ＋ equivalent=True**。
-⇒ **教训（与第 41 轮 §41.5 同源、本轮再次实证）**：**新增维度不是加法** —— 只要它与既有维度共享任一**层级名**，就会改既有 family key；设计新维度前必须先跑 `test_binding_grain.py`。
-
-### 48.4 F-1…F-5 的 gold_sql 对撞 ＋ 受影响 case_id
-
-**新增契约测试**：`backend/tests/contract/test_semantic_f_coverage_contract.py`（**13 passed**；先跑出 **7 failed** 再改包 —— 红→绿成立）。它逐项钉三件事：① 五项声明在真包里存在且绑定正确；② 每项**列出的 case_id** 的 `gold_sql` **真的落在**该面声明的资产/列上（正则对撞）；③ 既有 `category`／地理族的 family+level 坐标**没被挤掉**。
-
-| 项 | 受影响 case_id（逐条，来自第 40 轮清单件 §8） | gold_sql 对撞（断言形态） |
-|---|---|---|
-| F-1 | `M-DIM-01`、`M-ENUM-01`、`M-ENUM-02`、`M-ENUM-03`、`M-ENUM-04`、`X-STR-02`、`X-STR-04`（7 条） | 7/7 gold 含 `sku_id` |
-| F-2 | `M-DIM-06`（1 条） | gold 含 `spu_id` |
-| F-3 | `E-ENUM-06..10`、`H-CAT-01..05`、`M-DIM-07`、`M-DIM-09`、`M-HIER-01/02/04/05/06`、`X-ENUM-01..08`、`X-MET-01..05`（30 条） | 30/30 gold 同时含 `v_product` 与 `category_l[12]` |
-| F-4 | `E-VER-07`、`M-DIM-08`（2 条） | 2/2 gold 同时含 `v_region` 与 `region_name` |
-| F-5 | `M-DIM-04`（1 条） | gold 含 `campaign_type` |
-
-**family/level 不回退（同一文件的三条断言）**：`product.category_l1` 与 `order_paid.category_l1` **同为** `GrainRef("category","category_l1",1)`；`region.region_name` 仍 `GrainRef("city+region","region",2)`；新增 `sku`／`spu`／`campaign_type` 各自成族。
-
-**连带面（改包会红、本轮同轮更新）**：`test_binding_grain.py`（族集合 5→8、`product.sku_name` 由「无族」变 `sku` 族）、`test_semantics_loader.py`（版本、别名 176→**179**）、`test_materialize_derivation.py`（synonym 179、doc_id 前缀版本）、`test_binding_service.py`（版本 ×2）、`test_retrieval_search.py`（`BUNDLE_VERSION`）、`test_semantic_dict_contract.py`（版本）、`test_retrieval_tokenizer.py`（注释里的别名数）。
-
-### 48.5 G-2 10 条（**不是 5 条外推**）
-
-**命令**：`run_eval.py --cases E-VER-01,02,03,04,05,06,07,08,10,11 --live --yes --cassette eval/cassettes/w8_r48_g2_10_final.jsonl --out eval/results_g2_r48_10_final.json`
-**时点**：2026-10-16 17:06–17:09 +0800 ｜ **HEAD**：`958609b`（作业中）｜ 面 = G-2 的**全部 10 条**（`easy×low`），非子集。
-
-**原始读数（终版包）**：`n_records=10 ｜ n_scored=10 ｜ n_unscored=0 ｜ n_execute_with_sql=8 ｜ n_equivalent=6`；`terminal_distribution={complete:8, refuse:2}`；`attribution={gate_policy_gap:2, over_refusal:2}`；`tokens_total=251261`；**应用计价 `1.241905`（`price_guess`）**。
-
-| case | 终态 | 等价 | 归因 |
-|---|---|---|---|
-| E-VER-01 | complete | ❌ | `gate_policy_gap`（`day_cnt` 生成 `WHERE year/month` 谓词 ⇒ 列无法配对；**既有冻结集口径冲突**，第 40 轮已登记） |
-| E-VER-02/03/04/05 | complete | ✅ 4/4 | — |
-| E-VER-06 | complete | ❌ | `gate_policy_gap`（`campaign_cnt` 口径：gold 带 `campaign_type='normal_sale'`，包内 `campaign_cnt` **刻意**取全量 —— 第 41 轮已就地登记理由） |
-| E-VER-07 | complete | ✅ | **F-4 撤回新维度后转正**（试做版是「列数不同」） |
-| E-VER-08 | complete | ✅ | — |
-| E-VER-10 | complete | ✅ | — |
-| E-VER-11 | **refuse** | ❌ | `over_refusal`：`l4_score` 那一跳 **`LlmTimeout`** ⇒ `template_only` ⇒ 停在 `bind → refuse_out`（**上游超时，非 F 面**） |
-
-⇒ **判**：G-2 门线是 `easy×low ≥ 95%`。`complete 8/10`（80%）与 `equivalent 6/10`（60%）**都不达门** ⇒ **不得宣称 G-2 改善或通过**。其中 2 条 `gate_policy_gap` 是**已登记的冻结集/语义包口径冲突**（不是本轮引入），1 条 `E-VER-11` 是**上游超时**。
-
-### 48.6 57 条自指误拒族（**🔴 读数被上游两次打断，必须带标注读**）
-
-**为什么要标**：57 条批第一次跑到第 33 条时上游开始返回 **`400 insufficient_user_quota`**（12 条硬失败），其后 **25 条零 token**（熔断后直接模板降级）。探针复核：`GET {base}/models` = 200、`POST /chat/completions`（`max_tokens=8`）= 200 返回 `ok` ⇒ 是**额度/抖动**，不是本机网络或凭据。补跑 3 个小批（各 10 条、独立进程重置熔断）后仍有 11 条被 `LlmEmptyContent`／`LlmTimeout` 打中。
-
-**实跑与花费（5 份原始产物，全部落盘）**：
-
-| 批次 | 文件 | tokens | 应用计价（`price_guess`） |
-|---|---|---|---|
-| 全批 #1 | `eval/results_f57_r48.json` | 493,771 | 1.674012 |
-| 全批 #2（重试） | `eval/results_f57_r48_retry.json` | 498,904 | 1.708711 |
-| 补跑 A | `eval/results_f57_r48_fixA.json` | 57,897 | 0.228995 |
-| 补跑 B | `eval/results_f57_r48_fixB.json` | 156,879 | 0.551112 |
-| 补跑 C | `eval/results_f57_r48_fixC.json` | 140,469 | 0.281271 |
-| **合计** | — | **1,347,920** | **4.444101** |
-
-**「干净复合」口径（必须先说清它是什么）**：逐 case 取**第一条无基础设施痕迹**的记录（痕迹 = `terminal_error_detail` 非空 ∨ 降级含 `llm_unavailable`/`node_timeout_degraded` ∨ 零 token 却非 success）。
-
-```text
-覆盖到干净记录的 case = 46/57 ｜ 未覆盖（11 条，两轮都被上游打中）= E-VER-04, M-HIER-02, H-STR-06,
-  H-STR-09, H-ENUM-02, H-CAT-04, X-STR-02, X-ENUM-07, X-ENUM-08, X-MET-01, X-MET-02
-46 条里：success 26 ｜ refuse 17 ｜ clarify 3 ｜ 其中 equivalent 11
-```
-
-**before/after 转移矩阵（只对 46 条干净面；分母已点名）**：
-
-| before（r47 基线，57 条） | after `complete` | after `refuse` | after `clarify` | after 未覆盖（污染） |
-|---|---|---|---|---|
-| `refuse`（n=57） | **20** | **12** | **3** | **11**（含 1 条原本会 refuse 的） |
-
-⇒ **与 r47 的对撞（同 57 条、不同包）**：r47 = `complete 41 / refuse 12 / clarify 4`；本轮干净面 = `complete 20 / refuse 12 / clarify 3 / 未覆盖 11`。**两条批不可直接相减**（本轮分母缺 11 条，且缺的这 11 条里有多条在第 41 轮的 57 条批里是 complete）⇒ **不得用本表宣称 G-5 改善或恶化**。
-
-**为什么读数会差这么多（可判的机制）**：本轮新增的 3 个维度让 `sku`／`spu`／`campaign_type` 进入 `grain_index` 与 `semantic_summary`（摘要 13,364 → **13,666** 字符，仍 `截断=False`），而 `pv`／类目族问句的 `plan` 因此更容易**要求时间范围**或**判口径歧义**（见下条逐条归因）。
-
-**仍 refuse 的 17 条（干净面）逐条归因**：
-
-| 归因族 | 条数 | case_id | 证据（plan 的 `blocking_issues` 原文摘） |
-|---|---|---|---|
-| **A. `pv` 类问句缺时间范围 → plan 自拒** | 8 | `E-ENUM-01`、`E-ENUM-03`、`E-ENUM-04`、`E-ENUM-05`、`M-ENUM-01`、`M-ENUM-02`、`M-ENUM-03`、`M-ENUM-04` | 「问题未给出时间范围，且无法从上下文推断（`pv` 的时间基准为 `stat_date`…）——请补充统计时间范围后再生成 SQL。」⇒ **模型守「硬性规则 4：不默认区间」**，而冻结集 gold 对 `pv` **不带时间谓词** ⇒ 这是**提示契约与冻结集的冲突**，不是 F 面 |
-| **B. E-MET-08 反面口径** | 1 | `E-MET-08` | 见 48.7 |
-| **C. `M-DIM-06`（各 SPU 的 SKU 数）** | 1 | `M-DIM-06` | plan 自拒（F-2 维度已在包内，但 plan 仍判无可执行口径） |
-| **D. 类目×店铺族（`H-CAT-03`／`M-HIER-01`）** | 2 | `H-CAT-03`、`M-HIER-01` | 停点 `…plan>bind>gen_sql>refuse_out`（**bind/gen_sql 之后才拒**） |
-| **E. `X-ENUM-*`／`X-MET-*` 类目×店铺浏览量** | 5 | `X-ENUM-01`、`X-ENUM-02`、`X-ENUM-03`、`X-ENUM-05`、`X-MET-04` | 停点 `…plan>refuse_out` 或 `…plan>bind>refuse_out` |
-
-**clarify 3 条**：`H-STR-05`、`H-STR-08`、`X-STR-04`（**全是城市×店铺族**，`field_binding` 归因；与 r47 的 4 条 clarify 中 3 条同集，说明这一族**未被本轮 F 面触动**）。
-
-**🔴 本节的诚实边界（不得被读成 G-5 判词）**：① 46/57 是**复合**结果、不是单次运行；② 11 条未覆盖；③ 上游两次打断，`cost` 全部是 `price_guess` 且**跨峰谷两个时段**（17:0x 峰／20:2x 非峰）⇒ **`tokens` 是主报量**。⇒ 建议 QA 在**上游稳定**时重跑一次 57 条全批作为 G-5 判据。
-
-### 48.7 E-MET-08：**证明它不应补**（派单要求）
-
-**冻结集原文（`eval/dataset_v1_frozen.json`）**：`notes = "反面口径：故意不套默认谓词，用来测 W6 的『口径一致性』能否识别默认谓词缺失"`；gold = `SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_status = 'unpaid'`；`business_knowledge_required` 含 `predicate:default_order`。
-
-**本轮实跑（终版包，`E-MET-08` 干净面 refuse）**，plan 的 `blocking_issues` 原文：
-
-```text
-"问题要求统计「付费金额合计（含未支付）」，即不限定 pay_status = 'paid' 的实付金额求和。语义包中 gmv 的口径明确为
-「按支付完成时间（pay_time）统计；含运费；剔除全额退款订单；剔除测试单」，其默认谓词包含 pay_status = 'paid'；
-aov / arpu / order_cnt 等交易指标同样以已支付为前提。语义包未定义任何「含未支付」的金额口径，按硬性规则 2
-不得自行定义新口径，故无法给出合规计划。"
-```
-
-**三条证据说明「补 metric 会破坏该用例」**：
-1. **语义包侧**：`pay_status` 的枚举在 `order_paid.pay_status` 上（`:230-234` 附近），而**所有**交易指标的 `default_predicates` 都含 `pay_status = 'paid'`（`:1260-1280`）。想让它过，只有两条路 —— 给一个「含未支付」的新金额指标（**= 自造口径**，违反「不迎合那 63 条」的红线），或把 `gmv` 的默认谓词拿掉（**= 让全站 GMV 变成含未支付**，直接改坏主口径）。
-2. **提示词侧**：模型本轮**没有**自造口径，而是**按硬性规则 2 如实拒答** —— 这正是该用例要测的「口径一致性」。它**通过了自己的设计意图**（识别出默认谓词缺失并拒绝编造）。
-3. **冻结集侧**：`expected_behavior = execute` 与 `notes` 的「反面口径」自述**互相矛盾** —— gold 要的是「不套默认谓词」的结果，而评测把「如实拒答」记成 `over_refusal`。
-
-⇒ **结论：E-MET-08 不应补 metric，也不应由 F-1…F-5 承接**。它是**冻结集内部口径冲突**（与 `E-VER-01`／`E-VER-06` 同族），处置归**判据/冻结集层**（本轮**无权改**，只登记）。
-
-### 48.8 边界、出站、台账、门禁、取号
-
-- **未动**：`backend/reports/qa/**`（只读）、`docs/**`、`OVERVIEW.md`、`deliverables/**`、`deploy/**`、冻结集、阈值、判据措辞、共享 `ecom`。
-- **台账**：本轮未读写共享库；`app.cost_ledger` 逐位不动（`1830|3.025849|2026-10-07 04:28:00.872275+00`）。
-- **出站与计价（照 §60.6 口径）**：G-2 10 条 `tokens 251,261`／应用计价 `1.241905`；57 条族 5 批合计 `tokens 1,347,920`／应用计价 `4.444101`；**两段合计 `tokens 1,599,181`／应用计价 `5.686006`**（全部 `price_guess`：`deepseek-v4.1-flash` 不在 `budget.py` 价表，按 pro 档兜底）。跨**峰时**（16:58–17:09）与**非峰**（20:24–20:46）两段 ⇒ `tokens` 为主报量。
-- **一次性资源**：`w8r48-int-pg`（55435）／`w8r48-int-redis`（56382）已 `DROP DATABASE`＋`FLUSHALL`＋停容器；现查 `w8r48-*` = 0 件；共享库 `datname like 'ecom%'` 仍只 `ecom`／`ecom_u123_probe`。
-- **门禁**：**未重算**（本轮没跑冻结集全量）；现读仍 `meta.git.rev=88f3500`、**PASS 1/8** ⇒ 对外**不得**写「门禁通过」。
-- **取号**：**零新增号**；指针现读仍 `U-143`（`docs/07_技术设计文档_TDD.md:1094`）。
-- **机械护栏**：`test_migration_dsn_hygiene.py` ✅；`backend/scripts/scan_secrets.py --working-tree` ✅ 0 命中；`git diff --check` rc=0。
-- **未触碰**：`?? .workbuddy/` 原样留在工作树，未 stage。
-
-### 48.9 复算入口（带时点，禁自指）
-
-- **时点**：第 48 轮 ｜ 起点 HEAD `958609b` ｜ 2026-10-16。
-- 集成 124/0：见 48.1 的命令块（**必须先起一次性 PG/Redis 并 `alembic upgrade head`**；`RETRIEVAL_TEST_PG_DSN` 与 `COMMERCEQL_TEST_REDIS_URL` 两个 env 缺一即 import 期 fail）。
-- 离线全量：`.venv/Scripts/python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q` → 实跑 **2538 passed**。
-- 语义包校验：`.venv/Scripts/python.exe -X utf8 semantic/validate_bundle.py` → 实跑 **PASS=31 / FAIL=0 / SKIP=1 / WARN=2**（`总计 34 项`）。
-- F 面 gold 对撞：`.venv/Scripts/python.exe -X utf8 -m pytest backend/tests/contract/test_semantic_f_coverage_contract.py -q` → 实跑 **13 passed**。
-- G-2 10 条读数：`eval/results_g2_r48_10_final.json` 的 `summary`（`n_equivalent=6`／`tokens_total=251261`／`cost_cny_total=1.241905`）。
-- 57 条族：`eval/results_f57_r48{,_retry,_fixA,_fixB,_fixC}.json` 五件；**复合口径的判读脚本在 48.6 的谓词里逐字写明**（无外部脚本，直接按该谓词重算）。
-- 禁自指自查：本节所有 `grep` 类入口都指向**非本节文件**（`.json`／`.yaml`／测试件），无「pattern 命中写下它的那一行」形态。
-
-## §四八 第 48 轮 · 集成 2 红收口（124/0）＋ F-1…F-5 联合修复 ＋ G-2 10 条／57 条族重跑 ｜ 2026-10-16 16:20–20:50 +0800 ｜ 起点 HEAD `958609b`
-
-### 48.0 本轮结论（先给判词，再给证据）
-
-| 项 | 判 | 读数 |
-|---|---|---|
-| 集成全量 | ✅ **124 passed / 0 failed** | 一次性 PG/Redis ＋ `alembic upgrade head`；**F 改动之后复跑仍是 124/0**（详 48.1） |
-| 离线全量 | ✅ **2538 passed / 0 failed / 1 warning** | `.venv` 全量（含本轮新增 F 契约 13 条） |
-| 语义包 validator | ✅ **总计 34 项：PASS=31 / FAIL=0 / SKIP=1 / WARN=2** | 逐项同基线，仅版本号前进 |
-| F-1…F-5 声明面 | ✅ 落地（含 1 项**试做后撤回**，见 48.3） | gold_sql 对撞见 48.4 |
-| G-2 10 条 | 🟡 `complete 8 / refuse 2`；`equivalent 6` | **不达门，不宣称 G-2 改善**（门线 ≥95%，见 48.5） |
-| 57 条自指族 | 🔴 **上游两次打断，只能给「46/57 干净复合」** | 见 48.6，**不得当 G-5 判词** |
-
-**一句话**：P0-A 的集成 2 红已清、F-1…F-5 已落；**读数段被上游打断两次**（`insufficient_user_quota` ＋ 契约 15s 超时风暴），G-2／57 两条只能给带污染标注的读数。
-
-### 48.1 必做：集成 2 红（版本断言漂移）→ 124/0
-
-**根因**：`test_semantic_materialization.py` 两处把语义包版本**硬编码**成旧值，而现包早已前进；第 41 轮只同步了 unit/contract 的字面量，**漏了这一件**。
-
-| 面 | before | after |
-|---|---|---|
-| `backend/tests/integration/test_semantic_materialization.py:115` | `assert report.version == "2026.09.14.1"` | `assert report.version == loaded.version`（**从真包派生**） |
-| 同件 `:319` | `assert get_active_version(...) == "2026.09.14.1"` | `== loaded.version` |
-| 同件 `:125-127`（**顺带**：本轮 F 改动会改这三个数） | `metric_def == 9`／`dimension == 6`／`synonym == 105`（三处同样逾期） | `== len(loaded.bundle.metrics/dimensions/aliases)` |
-| 同件 `:53-58`（**新增防漂回**） | 无 | `_MIN_BUNDLE_VERSION = (2026,10,15,1)` ＋ `_version_tuple()`；断言折进**既有** `TestVersionPointer::test_switch_get_roundtrip`（`:324`）⇒ 防漂回有了、集成总数仍是 124 |
+| 同件 `:125-127`（顺带：本轮 F 会改这三个数） | `metric_def == 9`／`dimension == 6`／`synonym == 105`（同样逾期） | `== len(loaded.bundle.metrics/dimensions/aliases)` |
+| 同件 `:53-58`（**新增防漂回**） | 无 | `_MIN_BUNDLE_VERSION = (2026,10,15,1)` ＋ `_version_tuple()`；断言折进**既有** `TestVersionPointer::test_switch_get_roundtrip`（`:324`）⇒ 防漂回有了、集成总数仍 124 |
 | `backend/tests/integration/test_real_redis_lock_and_ratelimit.py:51-56` | `_REDIS_URL = "redis://localhost:6379/0"` **写死** ⇒ 会打到共享 compose Redis（`commerceql-redis-1` 正是 6379） | 只认 `COMMERCEQL_TEST_REDIS_URL`；缺 env = **import 期当场 fail**，不回落 |
 
-**为什么第 5 行必须做**：本轮首次跑集成时 6379 正被共享栈占着，而该文件写死 6379 ⇒ 会在**共享 Redis** 上建键删键。虽只删自己建的键，但「集成测试只打一次性资源」这条纪律对 Redis 同样成立。
+**为什么第 5 行必须做**：本轮首次跑集成时 6379 正被共享栈占着，而该文件写死 6379 ⇒ 会在**共享 Redis** 上建键删键。虽只删自己建的键，但「集成只打一次性资源」这条纪律对 Redis 同样成立。
 
-**实跑（一次性 PG `127.0.0.1:55435` ＋ Redis `127.0.0.1:56382`，先 `alembic upgrade head`）**：
+**实跑（一次性 PG `55436` ＋ Redis `56383`，先 `alembic upgrade head`；env 五项全指向一次性资源）**：
 
 ```text
-cwd = backend/ ；env 四项全部指向一次性资源：
-  COMMERCEQL_TEST_SUPER_DSN / _RW_DSN / _RO_DSN（postgres / app_rw / app_ro @ 127.0.0.1:55435/ecom）
-  COMMERCEQL_TEST_REDIS_URL = redis://127.0.0.1:56382/0
-  RETRIEVAL_TEST_PG_DSN     = postgres 角色 @ 127.0.0.1:55435/ecom
 ../.venv/Scripts/python.exe -X utf8 -m pytest tests/integration -q
-
-124 passed in 28.78s        ← F 改动之后复跑（终版语义包）
+124 passed in 30.35s        ← F 改动之后复跑（终版语义包）
 ```
 
 **收尾**：`DROP DATABASE ecom WITH (FORCE)` ＋ `FLUSHALL` ＋ 停容器；`docker ps -a --filter name=w8r48-` = **0 件**；共享库 `datname like 'ecom%'` 仍只 `ecom`／`ecom_u123_probe`。
@@ -4998,25 +4805,25 @@ cwd = backend/ ；env 四项全部指向一次性资源：
 
 | 项 | 面 | before → after | 落点 |
 |---|---|---|---|
-| **F-1** SKU 维度 | `dimensions` | 无 SKU 维度 → 新增 `sku`（`binding: product.sku_id`，`hierarchy:[sku]`，`grain_level=1`） | `semantic/bundle_2026.09.14.1.yaml:1052-1057` |
-| **F-2** SPU 维度 | `dimensions` | 无 SPU 维度 → 新增 `spu`（`binding: product.spu_id`） | 同件 `:1059-1064` |
-| **F-3** product 侧类目 | `dimensions.category.binding` ＋ `field_bindings.类目` | `order_paid.category_l1` → **`product.category_l1`**（层级名与 `grain_levels` **一字未动**）；`类目` 的 `canonical_asset` 同步改，`order_paid.category_l1` 降为 `alternatives[use_when: order_context]`；新增别名 `二级类目`／`三级类目` | 同件 `:989`、`:1138-1143`、`:1460-1461` |
-| **F-4** region_name 绑定 | `field_bindings.大区` | **本就** `canonical_asset: region.region_name` ⇒ **无需改**；本轮**试做「新增 region_name 维度」后撤回** | 见 48.3 |
-| **F-5** campaign_type 维度 | `dimensions` | 无 → 新增 `campaign_type`（`binding: campaign.campaign_type`）；新增别名 `活动类型` | 同件 `:1059-1064`、`:1462` |
+| **F-1** SKU 维度 | `dimensions` | 无 → 新增 `sku`（`product.sku_id`，`hierarchy:[sku]`，`grain_level=1`） | `semantic/bundle_2026.09.14.1.yaml:1052-1057` |
+| **F-2** SPU 维度 | `dimensions` | 无 → 新增 `spu`（`product.spu_id`） | 同件 `:1059-1064` |
+| **F-3** product 侧类目 | `dimensions.category.binding` ＋ `field_bindings.类目` | `order_paid.category_l1` → **`product.category_l1`**（层级名与 `grain_levels` 未动）；`类目` 的 `canonical_asset` 同步改，`order_paid.category_l1` 降为 `alternatives[use_when: order_context]`；新增别名 `二级类目`／`三级类目` | 同件 `:989`、`:1138-1143`、`:1460-1461` |
+| **F-4** region_name 绑定 | `field_bindings.大区` | **本就** `region.region_name` ⇒ 无需改；本轮**试做「新增 region_name 维度」后撤回** | 见 48.3 |
+| **F-5** campaign_type 维度 | `dimensions` | 无 → 新增 `campaign_type`（`campaign.campaign_type`）；新增别名 `活动类型` | 同件 `:1059-1064`、`:1462` |
 
-**版本与生成件（三条纪律全走）**：`meta.version` `2026.10.15.1` → **`2026.10.16.1`**（`:49`）；validator 实跑 **PASS=31/FAIL=0/SKIP=1/WARN=2**（同基线）；`render_metric_dictionary.py` 已重跑，生成件头部现读 `语义包版本 2026.10.16.1`，`rate_hash` **不变**（`6e44e05a44af9155`）—— 本轮只动维度与绑定、**没动任何指标口径**，所以 hash 不变是**正确**读数（不是漏跑）。
+**三条纪律全走**：`meta.version` `2026.10.15.1` → **`2026.10.16.1`**（`:49`）；validator 实跑 **PASS=31/FAIL=0/SKIP=1/WARN=2**；`render_metric_dictionary.py` 已重跑，生成件头部现读 `2026.10.16.1`，`rate_hash` **不变**（`6e44e05a44af9155`）—— 本轮只动维度与绑定、**没动任何指标口径**，hash 不变是**正确**读数（不是漏跑）。
 
 ### 48.3 🔴 F-4 的「试做后撤回」：新增维度会改既有 family 名（本轮最有价值的发现）
 
-**做了什么**：先按「新增 `region_name` 维度（`binding: region.region_name`，`hierarchy:[region]`，`grain_level=2`）」落地。
+**做了什么**：先按「新增 `region_name` 维度（`region.region_name`，`hierarchy:[region]`，`grain_level=2`）」落地。
 
-**代价①（零出站，`test_binding_grain.py`）**：`GrainIndex` 的族 = **共享层级名的维度集合** ⇒ 新维度与既有 `region`／`city` 共享 `region` 层级 ⇒ 地理族 key 从 `city+region` 变成 **`city+region+region_name`**，**12 条既有断言红**（族集合、`level_of_ref`、`question_level`、`extra_words`）。
+**代价①（零出站，`test_binding_grain.py`）**：`GrainIndex` 的族 = **共享层级名的维度集合** ⇒ 新维度与既有 `region`／`city` 共享 `region` 层级 ⇒ 地理族 key 从 `city+region` 变成 **`city+region+region_name`**，**12 条既有断言红**。
 
-**代价②（出站实测，G-2 的 `E-VER-07`）**：该维度落地后生成的 SQL 变成 `SELECT region_name, COUNT(*) … GROUP BY region_name`（**多一个 `GROUP BY` 列**），与 gold（单值）**列数不同 ⇒ 不等价**。
+**代价②（出站实测，G-2 的 `E-VER-07`）**：生成 SQL 变成 `SELECT region_name, COUNT(*) … GROUP BY region_name`（**多一个 `GROUP BY` 列**），与 gold（单值）**列数不同 ⇒ 不等价**。
 
 ⇒ **判定：撤回该维度**。F-4 的声明面改为**只钉既有 `field_bindings.大区 → region.region_name`**（该绑定**本来就在**：第 41 轮清单件把它列成 F-4，是因为 `dimensions.region.binding` 是 `order_paid.region_code`，让人以为大区没有绑定 —— 实测**有**，在 `field_bindings` 里，只是**没有独立维度**）。
 ⇒ 撤回后：族名回到 `city+region`（12 条断言转绿）；`E-VER-07` 在终版 G-2 批里 **complete ＋ `equivalent=True`**。
-⇒ **教训（与 §41.5 同源、本轮再次实证）**：**新增维度不是加法** —— 只要它与既有维度共享任一**层级名**，就会改既有 family key。设计新维度前**先跑** `test_binding_grain.py`。
+⇒ **教训（与 §41.5 同源、本轮再实证）**：**新增维度不是加法** —— 只要与既有维度共享任一**层级名**，就会改既有 family key。设计新维度前**先跑** `test_binding_grain.py`。
 
 ### 48.4 F-1…F-5 的 gold_sql 对撞 ＋ 受影响 case_id
 
@@ -5030,11 +4837,11 @@ cwd = backend/ ；env 四项全部指向一次性资源：
 | F-4 | `E-VER-07`、`M-DIM-08`（**2 条**） | 2/2 gold 同时含 `\bv_region\b` 与 `region_name` |
 | F-5 | `M-DIM-04`（**1 条**） | gold 含 `campaign_type` |
 
-**family/level 不回退（同文件三条断言）**：`product.category_l1` 与 `order_paid.category_l1` **同为** `GrainRef("category","category_l1",1)`；`region.region_name` 仍 `GrainRef("city+region","region",2)`；新增 `sku`／`spu`／`campaign_type` 各自成族。
+**family/level 不回退**：`product.category_l1` 与 `order_paid.category_l1` **同为** `GrainRef("category","category_l1",1)`；`region.region_name` 仍 `GrainRef("city+region","region",2)`；新增 `sku`／`spu`／`campaign_type` 各自成族。
 
-**连带面（改包会红、本轮同轮更新）**：`test_binding_grain.py`（族集合 5→8；`product.sku_name` 由「无族」变 `sku` 族 level=1 —— 这正是第 41 轮预警过的列名前缀启发式改判，本轮**接受并钉住**）、`test_semantics_loader.py`（版本；别名 176→**179**）、`test_materialize_derivation.py`（synonym 179、`doc_id` 前缀版本）、`test_binding_service.py`（版本 ×2）、`test_retrieval_search.py`（`BUNDLE_VERSION`）、`test_semantic_dict_contract.py`（版本）、`test_retrieval_tokenizer.py`（注释里的别名数）。
+**连带面（同轮更新）**：`test_binding_grain.py`（族集合 5→8；`product.sku_name` 由「无族」变 `sku` 族 level=1 —— 正是第 41 轮预警过的列名前缀启发式改判，本轮**接受并钉住**）、`test_semantics_loader.py`（版本；别名 176→**179**）、`test_materialize_derivation.py`、`test_binding_service.py`（版本 ×2）、`test_retrieval_search.py`、`test_semantic_dict_contract.py`、`test_retrieval_tokenizer.py`（注释）。
 
-**摘要长度现读**：`probe_semantic_summary.py` → 三租户均 `chars=13666 ｜ 余量=26334 ｜ 截断=False`（第 41 轮 13364 ⇒ **＋302 字符**，仍在 40000 上限内、**未截断**）。
+**摘要长度**：`probe_semantic_summary.py` → 三租户均 `chars=13666 ｜ 余量=26334 ｜ 截断=False`（第 41 轮 13364 ⇒ **＋302**，仍在上限内、未截断）。
 
 ### 48.5 G-2 10 条（**不是 5 条外推**）
 
@@ -5045,20 +4852,20 @@ cwd = backend/ ；env 四项全部指向一次性资源：
 
 | case | 终态 | 等价 | 归因 |
 |---|---|---|---|
-| E-VER-01 | complete | ❌ | `gate_policy_gap`：`day_cnt` 生成 `WHERE year/month` 谓词 ⇒ 列无法配对。**既有冻结集口径冲突**（第 40 轮已登记） |
+| E-VER-01 | complete | ❌ | `gate_policy_gap`：`day_cnt` 生成 `WHERE year/month` ⇒ 列无法配对（**既有冻结集口径冲突**，第 40 轮已登记） |
 | E-VER-02/03/04/05 | complete | ✅ 4/4 | — |
-| E-VER-06 | complete | ❌ | `gate_policy_gap`：`campaign_cnt` 取**全量**（包内**刻意**不挂 `campaign_type='normal_sale'`，理由第 41 轮已就地登记）而 gold 带该谓词 |
+| E-VER-06 | complete | ❌ | `gate_policy_gap`：`campaign_cnt` 取**全量**（包内**刻意**不挂 `campaign_type='normal_sale'`）而 gold 带该谓词 |
 | E-VER-07 | complete | ✅ | **F-4 撤回新维度后转正**（试做版是「列数不同」） |
 | E-VER-08 | complete | ✅ | — |
 | E-VER-10 | complete | ✅ | — |
-| E-VER-11 | **refuse** | ❌ | `over_refusal`：`l4_score` 那一跳 **`LlmTimeout`** ⇒ `template_only` ⇒ 停在 `bind → refuse_out`（**上游超时，非 F 面**） |
+| E-VER-11 | **refuse** | ❌ | `over_refusal`：`l4_score` 那跳 **`LlmTimeout`** ⇒ `template_only` ⇒ 停在 `bind → refuse_out`（**上游超时，非 F 面**） |
 
-⇒ **判**：G-2 门线 = `easy×low ≥ 95%`。`complete 8/10`（80%）与 `equivalent 6/10`（60%）**都不达门** ⇒ **不得宣称 G-2 改善或通过**。其中 2 条是**已登记的冻结集/语义包口径冲突**（非本轮引入），1 条（`E-VER-11`）是**上游超时**。
-⇒ 对照：第 46 轮同类 5 条批 `5/5 complete`；本轮 **10 条批** `8/10 complete`（**分母不同，不得相减**）。
+⇒ **判**：门线 = `easy×low ≥ 95%`。`complete 8/10`（80%）与 `equivalent 6/10`（60%）**都不达门** ⇒ **不得宣称 G-2 改善或通过**。其中 2 条是**已登记的冻结集/语义包口径冲突**（非本轮引入），1 条是**上游超时**。
+⇒ 对照：第 46 轮同类 5 条批 `5/5 complete`；本轮 **10 条批** `8/10`（**分母不同，不得相减**）。
 
 ### 48.6 57 条自指误拒族（**🔴 读数被上游两次打断，必须带标注读**）
 
-**为什么要标**：全批 #1 跑到第 33 条起上游返回 **`400 insufficient_user_quota`**（12 条硬失败），其后 **25 条零 token**（熔断后直接模板降级）；全批 #2 尾部（`X-*` 段）改为 **`LlmTimeout` 风暴**（契约 15s 客户端超时，`hard_timeout_s` 由 07 硬编码，**不可用 env 放大**）。探针复核：`GET {base}/models` = 200、`POST /chat/completions`（`max_tokens=8`）= 200 返回 `ok` ⇒ 是**额度/抖动**，不是本机网络或凭据。补跑 3 个小批（各 10 条、**独立进程重置熔断**）后仍有 11 条被 `LlmEmptyContent`／`LlmTimeout` 打中。
+**为什么要标**：全批 #1 第 33 条起上游返回 **`400 insufficient_user_quota`**（12 条硬失败），其后 **25 条零 token**（熔断后直接模板降级）；全批 #2 尾部（`X-*` 段）改为 **`LlmTimeout` 风暴**（契约 15s 客户端超时，`hard_timeout_s` 由 07 硬编码，**不可用 env 放大**）。探针复核：`GET {base}/models` = 200、`POST /chat/completions`（`max_tokens=8`）= 200 返回 `ok` ⇒ 是**额度/抖动**，不是本机网络或凭据。补跑 3 个小批（各 10 条、**独立进程重置熔断**）后仍有 11 条被 `LlmEmptyContent`／`LlmTimeout` 打中。
 
 **实跑与花费（5 份原始产物，全部落盘）**：
 
@@ -5075,7 +4882,7 @@ cwd = backend/ ；env 四项全部指向一次性资源：
 
 ```text
 覆盖到干净记录的 case = 46/57
-未覆盖（11 条，两轮＋补跑全被上游打中）：
+未覆盖（11 条，全批＋补跑都被上游打中）：
   E-VER-04, M-HIER-02, H-STR-06, H-STR-09, H-ENUM-02, H-CAT-04,
   X-STR-02, X-ENUM-07, X-ENUM-08, X-MET-01, X-MET-02
 46 条里：success 26 ｜ refuse 17 ｜ clarify 3 ｜ 其中 equivalent 11
@@ -5088,16 +4895,16 @@ cwd = backend/ ；env 四项全部指向一次性资源：
 |---|---|---|---|---|
 | `refuse`（n=57） | **20** | **12** | **3** | **11** |
 
-⇒ **与 r47 的对撞**：r47 = `complete 41 / refuse 12 / clarify 4`；本轮干净面 = `complete 20 / refuse 12 / clarify 3 / 未覆盖 11`。**两条批不可直接相减**（本轮分母缺 11 条）⇒ **不得用本表宣称 G-5 改善或恶化**。
+⇒ **与 r47 对撞**：r47 = `complete 41 / refuse 12 / clarify 4`；本轮干净面 = `complete 20 / refuse 12 / clarify 3 / 未覆盖 11`。**两条批不可直接相减**（分母缺 11 条）⇒ **不得用本表宣称 G-5 改善或恶化**。
 
-**派单点名的那 12 条 refuse（r47 基线）逐条更新**：
+**派单点名：r47 的 12 条 refuse 逐条更新**
 
 | case | r47 | 本轮（干净面） | 说明 |
 |---|---|---|---|
 | `E-VER-08` | refuse | **complete ＋ equivalent** | ✅ **翻正** |
 | `X-ENUM-04` | refuse | **complete** | ✅ **翻正**（F-3 类目绑定） |
 | `X-ENUM-06` | refuse | **complete** | ✅ **翻正**（F-3 类目绑定） |
-| `E-ENUM-05` | refuse | refuse | `pv` 类问句**缺时间范围** → plan 自拒（见下族 A） |
+| `E-ENUM-05` | refuse | refuse | `pv` 类问句**缺时间范围** → plan 自拒（族 A） |
 | `E-MET-08` | refuse | refuse | **反面口径，按设计应拒**（见 48.7） |
 | `X-ENUM-02` | refuse | refuse | 类目×店铺浏览量（族 E） |
 | `X-ENUM-05` | refuse | refuse | 类目×店铺浏览量（族 E） |
@@ -5107,7 +4914,7 @@ cwd = backend/ ；env 四项全部指向一次性资源：
 | `X-ENUM-07` | refuse | **未覆盖**（污染） | — |
 | `X-ENUM-08` | refuse | **未覆盖**（污染） | — |
 
-**派单点名的 4 条 clarify（r47 基线）逐条更新**：`H-STR-05` → 仍 `clarify`；`H-STR-08` → 仍 `clarify`；`X-STR-04` → 仍 `clarify`；`H-STR-06` → **未覆盖**（污染）。⇒ **城市×店铺族未被本轮 F 面触动**。
+**派单点名：r47 的 4 条 clarify 逐条更新**：`H-STR-05` → 仍 `clarify`；`H-STR-08` → 仍 `clarify`；`X-STR-04` → 仍 `clarify`；`H-STR-06` → **未覆盖**（污染）。⇒ **城市×店铺族未被本轮 F 面触动**。
 
 **本轮 17 条仍 refuse（干净面）逐条归因**：
 
@@ -5135,8 +4942,8 @@ aov / arpu / order_cnt 等交易指标同样以已支付为前提。语义包未
 ```
 
 **三条证据说明「补 metric 会破坏该用例」**：
-1. **语义包侧**：`default_predicates` 是**域级**规则，`orders` 域的三条（`pay_status='paid'`／`refund_status<>'refunded'`／`is_test_order=false`）的 `applies_to` 名单是 `gmv`／`order_cnt`／`aov`／`arpu`／`refund_rate`／`repurchase_rate_90d`（`semantic/bundle_2026.09.14.1.yaml:1260-1280`）。想让它过，只有两条路 —— ① 造一个「含未支付」的新金额指标（**= 自造口径**，违反「不迎合那 63 条」的红线）；② 把 `gmv` 的默认谓词拿掉（**= 全站 GMV 变成含未支付**，直接改坏主口径）。
-2. **提示词侧**：模型本轮**没有**自造口径，而是**按硬性规则 2 如实拒答** —— 这正是该用例要测的「口径一致性」：它**通过了自己的设计意图**（识别出默认谓词缺失并拒绝编造）。而且 `pay_amount` 本身**已在别名表**里（`实付金额`／`支付金额` → `order_paid.pay_amount`，`:1483-1484`），模型要表达它**不需要任何新 metric**。
+1. **语义包侧**：`default_predicates` 是**域级**规则，`orders` 域三条的 `applies_to` 名单是 `gmv`／`order_cnt`／`aov`／`arpu`／`refund_rate`／`repurchase_rate_90d`（`semantic/bundle_2026.09.14.1.yaml:1260-1280`）。想让它过只有两条路 —— ① 造一个「含未支付」的新金额指标（**= 自造口径**，违反「不迎合那 63 条」的红线）；② 拿掉 `gmv` 的默认谓词（**= 全站 GMV 变成含未支付**，直接改坏主口径）。
+2. **提示词侧**：模型本轮**没有**自造口径，而是**按硬性规则 2 如实拒答** —— 这正是该用例要测的「口径一致性」：它**通过了自己的设计意图**。而且 `pay_amount` 本身**已在别名表**里（`实付金额`／`支付金额` → `order_paid.pay_amount`，`:1483-1484`），要表达它**不需要任何新 metric**。
 3. **冻结集侧**：`expected_behavior = execute` 与 `notes` 的「反面口径」自述**互相矛盾** —— gold 要的是「不套默认谓词」的结果，而评测把「如实拒答」记成 `over_refusal`。
 
 ⇒ **结论：`E-MET-08` 不应补 metric，也不应由 F-1…F-5 承接**。它与 `E-VER-01`／`E-VER-06` **同族**（冻结集内部口径冲突），处置归**判据/冻结集层** —— 本轮**无权改**，只登记。
@@ -5145,9 +4952,9 @@ aov / arpu / order_cnt 等交易指标同样以已支付为前提。语义包未
 
 - **未动**：`backend/reports/qa/**`（只读）、`docs/**`、`OVERVIEW.md`、`deliverables/**`、`deploy/**`、冻结集、阈值、判据措辞、共享 `ecom`。
 - **台账**：本轮未读写共享库；`app.cost_ledger` 逐位不动（`1830|3.025849|2026-10-07 04:28:00.872275+00`）。
-- **出站与计价（照 §60.6 口径，不写未计量的"零花费"）**：G-2 10 条 `tokens 251,261`／应用计价 `1.241905`；57 条族 5 批合计 `tokens 1,347,920`／应用计价 `4.444101`；**本轮两段合计 `tokens 1,599,181`／应用计价 `5.686006`**（全部 `price_guess`：`deepseek-v4.1-flash` 不在 `budget.py` 价表，按 pro 档兜底）。时段：G-2 段为**峰时**（16:58–17:09），57 条段含**峰时**（17:12–17:19）与**非峰**（20:24–20:46）⇒ **`tokens` 为主报量**。
-- **一次性资源**：`w8r48-int-pg`（55435）／`w8r48-int-redis`（56382）已 `DROP DATABASE`＋`FLUSHALL`＋停容器；现查 `w8r48-*` = **0 件**；共享库 `datname like 'ecom%'` 仍只 `ecom`／`ecom_u123_probe`。
-- **门禁**：**未重算**（本轮没跑冻结集全量）；现读仍 `meta.git.rev=88f3500`、**PASS 1/8** ⇒ 对外**不得**写「门禁通过」。
+- **出站与计价（照 §60.6 口径，不写未计量的"零花费"）**：G-2 10 条 `tokens 251,261`／计价 `1.241905`；57 族 5 批合计 `tokens 1,347,920`／计价 `4.444101`；**两段合计 `tokens 1,599,181`／计价 `5.686006`**（全部 `price_guess`：`deepseek-v4.1-flash` 不在 `budget.py` 价表，按 pro 档兜底）。时段：G-2 段**峰时**（16:58–17:09），57 族段含**峰时**（17:12–17:19）与**非峰**（20:24–20:46）⇒ **`tokens` 为主报量**。
+- **一次性资源**：`w8r48-int-pg`／`w8r48-int-redis` 已 `DROP DATABASE`＋`FLUSHALL`＋停容器；现查 `w8r48-*` = **0 件**；共享库 `datname like 'ecom%'` 仍只 `ecom`／`ecom_u123_probe`。
+- **门禁**：**未重算**；现读仍 `meta.git.rev=88f3500`、**PASS 1/8** ⇒ 对外**不得**写「门禁通过」。
 - **取号**：**零新增号**；指针现读仍 `U-143`（`docs/07_技术设计文档_TDD.md:1094`）。
 - **机械护栏**：`test_migration_dsn_hygiene.py` ⇒ **8 passed**；`backend/scripts/scan_secrets.py --working-tree` ⇒ **0 命中 / 被测 698 件**；`git diff --check` rc=0。
 - **未触碰**：`?? .workbuddy/` 原样留在工作树，未 stage。
@@ -5155,10 +4962,10 @@ aov / arpu / order_cnt 等交易指标同样以已支付为前提。语义包未
 ### 48.9 复算入口（带时点，禁自指）
 
 - **时点**：第 48 轮 ｜ 起点 HEAD `958609b` ｜ 2026-10-16。
-- 集成 124/0：见 48.1 命令块（**必须先起一次性 PG/Redis 并 `alembic upgrade head`**；`RETRIEVAL_TEST_PG_DSN` 与 `COMMERCEQL_TEST_REDIS_URL` 两个 env 缺一即 import 期 fail）。
+- 集成 124/0：见 48.1 命令块（**必须先起一次性 PG/Redis 并 `alembic upgrade head`**；`RETRIEVAL_TEST_PG_DSN` 与 `COMMERCEQL_TEST_REDIS_URL` 缺一即 import 期 fail）。
 - 离线全量：`.venv/Scripts/python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q` → 实跑 **2538 passed**。
 - 语义包校验：`.venv/Scripts/python.exe -X utf8 semantic/validate_bundle.py` → 实跑 **总计 34 项：PASS=31 FAIL=0 SKIP=1 WARN=2**。
 - F 面 gold 对撞：`.venv/Scripts/python.exe -X utf8 -m pytest backend/tests/contract/test_semantic_f_coverage_contract.py -q` → 实跑 **13 passed**。
 - G-2 10 条读数：`eval/results_g2_r48_10_final.json` 的 `summary`（`n_equivalent=6`／`tokens_total=251261`／`cost_cny_total=1.241905`）。
-- 57 条族：`eval/results_f57_r48{,_retry,_fixA,_fixB,_fixC}.json` 五件；**复合口径的判读谓词在 48.6 里逐字写明**，直接按该谓词重算即可（无外部脚本）。
+- 57 族：`eval/results_f57_r48{,_retry,_fixA,_fixB,_fixC}.json` 五件；**复合口径的判读谓词在 48.6 里逐字写明**，按该谓词重算即可（无外部脚本）。
 - 禁自指自查：本节所有入口都指向**非本节文件**（`.json`／`.yaml`／测试件），无「pattern 命中写下它的那一行」形态。
