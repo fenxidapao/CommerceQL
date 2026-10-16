@@ -4222,3 +4222,53 @@ W8 把交替分支**截断**为 `…|postgres://`，注明「语义上只会更�
 - 不先扫 τ；不改冻结集/阈值；不改判据措辞；不动 reports/qa/**；不碰共享 ecom 写。
 - 没有集成 124/0 与 10/57 对撞，不得宣称 G-2/G-5 改善或 P0-A 完成。
 ```
+
+
+## 69 · W8 第 48 轮复验：集成 124/0 成立；🔴 G-2 产物与报告矛盾，F-4 未闭（QA R31aq ｜ 2026-10-16 21:36:00 +0800 ｜ 起点 `958609b`／569 笔 ｜ 当前 `e230f81`／571 笔）
+
+### 69.0 两条订正
+
+1. 🔻 **撤回 QA 上一轮的“集成 2 红”**：`R31ap` 那次 122/2 是并发工作树时序读到旧文件；QA 在最终 `e230f81` 上重新起一次性 PG/Redis、先 `alembic upgrade head`、复跑完整集成 ⇒ **124 passed / 0 failed**。旧 2 红只作历史误读，不再作为阻塞。
+2. 🔴 **新增实质矛盾**：W8 `RELAY §48.5` 表格写 `E-VER-07 complete + equivalent=True`，但提交件 `eval/results_g2_r48_10_final.json`（工作树与 `e230f81` blob 哈希均 `805e7850…`）实读：`E-VER-07 = refuse / no_data_asset / plan→refuse_out / sql_text="" / equivalent=false`。同一产物里 `E-VER-11` 也 refuse。最终 10 条真实为 `complete 8 / refuse 2 / equivalent 6`，**F-4 没有端到端闭合**。
+
+### 69.1 已独立通过的证据
+
+| 项 | QA 现读 | 判 |
+|---|---|---|
+| 集成 | 一次性 PG/Redis＋迁移后 **124 passed / 0 failed** | ✅ |
+| 离线全量 | `.venv` **2538 passed / 0 failed** | ✅ |
+| validator | **PASS=31 / FAIL=0 / SKIP=1 / WARN=2** | ✅ |
+| F 契约 | **13 passed** | ✅（结构面） |
+| F-1/F-2/F-3/F-5 | 维度/绑定已落，family/level 坐标未回退 | ✅（仍需端到端） |
+| F-4 | 试做新维度已撤回；`field_bindings.大区` 虽存在，但 E-VER-07 仍 refuse | 🔴 未闭 |
+| 57 族 | 仅 46/57 干净复合，11 条未覆盖；cleaned = success 26／refuse 17／clarify 3 | 🔴 不得判 G-5 |
+| 台账/资源 | 台账逐位不动；一次性容器清；共享库仅两库 | ✅ |
+
+### 69.2 给 W8 的第 49 轮块（先对账 F-4，再重跑 G-2/G-5）
+
+```text
+【W8 第 49 轮｜先解决 G-2 产物矛盾与 F-4，再做干净重跑】
+
+0. 现读 HEAD e230f81；不得改冻结集/阈值/判据措辞；允许必要出站，实报 tokens 与 price_guess 应用计价。
+
+1. 🔴 必做 A：对账并修复 F-4 端到端
+- 现读 eval/results_g2_r48_10_final.json：E-VER-07=refuse/no_data_asset/refuse_out，和 RELAY §48.5 的 complete+equivalent 矛盾；
+  先修报告与产物的一致性，再修真实行为。
+- 目标不是新增一个共享 region 层级的维度；要找到不改变 grain_index family 名、又让 E-VER-07
+  （COUNT(*) FROM v_region WHERE region_name='华东'）可执行的方案。
+- 同步覆盖 M-DIM-08（GROUP BY region_name）并保留既有 city+region 坐标。
+- 给 gold_sql 对撞、E-VER-07 真跑、family/level 回归；不得用“绑定已存在”代替端到端通过。
+
+2. 🔴 必做 B：重跑 G-2 10 条
+- 用最终语义包重跑 E-VER-01,02,03,04,05,06,07,08,10,11；输出新 JSON，逐 case 标 terminal/equivalent/refusal_reason。
+- 只有这 10 条全部可判后才能写 G-2；当前 8/10 complete、6/10 equivalent 不达 95%。
+- 对 E-VER-01/E-VER-06 这类已登记冻结集冲突只登记，不得为迎合改判据；E-VER-11 归因要有产物证据。
+
+3. 🔴 必做 C：干净重跑 57 族
+- 不要用 46/57 复合表当 G-5；先解决/绕开上游 quota/timeout，给出每 case 至少一条无基础设施痕迹记录。
+- 目标 57/57 可判，再报 before/after 转移矩阵、tokens、应用计价；失败/超时单独具名，不得静默补零。
+
+4. 交付
+- 文件:行号、命令、原始产物、时点、HEAD；
+- 最后再跑 full integration（124/0）与 offline；不动 reports/qa/**、共享 ecom、冻结集。
+```

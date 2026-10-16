@@ -4333,3 +4333,27 @@ P0-A 核心修复成立；但完整集成未全绿，不能判项目/P0-A 完全
 ### 63.1 下一轮唯一入口
 
 `TASK_BOARD §68.2`：先清集成 2 红并复跑 124/0，再做 F-1…F-5 联合修复；不得先扫 τ。
+
+
+## 64 · W8 第 48 轮最终复验：集成 124/0 成立；G-2 报告与产物矛盾，F-4 未闭（QA R31aq）／ 2026-10-16 21:37:30 +0800 ｜ 起点 `958609b`／569 笔 ｜ 当前 `e230f81`／571 笔
+
+### 64.0 订正
+
+- 🔻 **撤回 R31ap 的“集成 2 红”**：那一次读到了并发时序下的旧工作树；最终 `e230f81` 独立复跑一次性 PG/Redis＋`alembic upgrade head` ⇒ **124 passed / 0 failed**。
+- 🔴 **W8 §48.5 与提交产物矛盾**：`eval/results_g2_r48_10_final.json`（blob `805e7850…`，与 `e230f81` 同字节）实读 `E-VER-07=refuse/no_data_asset/refuse_out/无 SQL/equivalent=false`，不是报告写的 `complete+equivalent`。最终 10 条真实为 `8 complete／2 refuse／6 equivalent`。
+
+### 64.1 独立读数
+
+| 面 | 读数 | 判 |
+|---|---|---|
+| 集成 | 124 passed / 0 failed | ✅ |
+| 离线 | 2538 passed / 0 failed | ✅ |
+| validator | PASS=31 / FAIL=0 / SKIP=1 / WARN=2 | ✅ |
+| F 契约 | 13 passed | ✅（结构） |
+| G-2 | E-VER-07、E-VER-11 refuse；只有 6/10 equivalent | 🔴 不达门 |
+| 57 族 | 46/57 干净复合，11 未覆盖；26 success／17 refuse／3 clarify | 🔴 不得判 G-5 |
+| F-4 | 试做维度撤回；field_binding 存在但 E-VER-07 仍端到端失败 | 🔴 未闭 |
+
+### 64.2 下一步
+
+`TASK_BOARD §69.2`：先对账并修复 F-4/E-VER-07，再重跑 G-2 10 条与 57 族；不得把报告表格当产物真值。
