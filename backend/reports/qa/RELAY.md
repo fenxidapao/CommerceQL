@@ -4144,3 +4144,80 @@ W8 建议「单列一轮修匣带 live-record 解码缺陷」。**本窗同意**
 | 出站 | 🔴 **零出站** —— 本节**未发任何外部请求**（对比 `§57.8` 的 7 次出站；本轮全部诊断均为**离线复现**） |
 | 未跑 | **未跑** W8 的任何脚本（其 `probe_semantic_summary.py` **会写**自己的产物 ⇒ 本窗**自建**探针）；**未跑** `--live` harness；**未动**容器；`semantic/**`／`backend/app/**` **未改** |
 | 归档 | `backend/reports/qa/evidence_cassette_r31ai/`（六件**均 LF**；**无凭据、无 DSN 连续字面量** —— 归档前实测全 0） |
+## 59 · W8 第 44 轮：主交付通过（7/9）＋ 🔴 E-VER-04 归因驳回 ＋ replay 成本/扫描计数两处口径返工（QA 第 33 轮 R31ak）／ 2026-10-16 11:01:17 +0800 ｜ 起点 `1bf0b0e`／553 笔 ｜ ⚠️ 无计费出站；一次远端查询尝试未联通
+### 59.0 结论
+
+**主交付通过 7/9，不开全绿。** 匣带修复、回归②、扫描器最终状态、a3、replay 的 outcome/tokens、E-VER-01 登记、DSN/离线护栏成立；
+🔴 E-VER-04 的检索/绑定归因被匣带原文否定；🟡 replay 成本与扫描计数需按峰谷、HEAD 口径订正。
+
+### 59.1 开工与边界
+
+| 项 | 现读 |
+|---|---|
+| 起点 | `1bf0b0e`／553 笔；`1bf0b0e` 只追加 `PROMPT_新窗 §14`，不改变待验收对象 `0f63223`／552 笔 |
+| 工作树 | 仅 `?? .workbuddy/`；本窗只新增 `backend/reports/qa/**` |
+| 台账 | `1830|3.025849|2026-10-07 04:28:00.872275+00` 逐位不动 |
+| 容器 | 六件 Up；未动容器 |
+| 门禁 | 仍 `88f3500／dirty=false`：PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2 |
+| 出站 | ⚠️ 无计费出站；开工五查的 `git ls-remote` 因 `ssh.github.com` DNS 失败而未联通；replay 为本地匣带回放 |
+
+### 59.2 W8 提交面
+
+`0f63223` 只改六件：`eval/cassette.py`、`backend/scripts/scan_secrets.py`、`eval/cassettes/w8_r44_a3.jsonl`、`eval/results_a3_r44.json`、两份 W8 报告。
+`docs/07` 未动；`semantic/**` 内容未动；`w6_batch.jsonl` 未动；未出现新取号。
+
+### 59.3 匣带修复与 replay
+
+| 检查 | 结果 |
+|---|---|
+| record diff | 新增固定剔除集合：`content-encoding`／`content-length`／`transfer-encoding`；其余头保留 |
+| 回归① | `DecodingError` 仍复现，证明尺能看见旧故障 |
+| 回归② | 经 `CassetteTransport(record)` 返回响应，不再抛；body 可读 |
+| replay 结果 | `complete 4／refuse 1`、`n_equivalent=3`、`n_unscored=0`、`tokens=124011` |
+| 出站 | replay 模式未发模型请求 |
+
+🔴 **成本反证**：录制 `0.053505`（2026-10-15 22:39 非峰）；QA replay `0.107013`（2026-10-16 10:16 峰）。
+tokens 不变而成本 `2.0000×`，说明成本按 replay 当前时段重算，不是匣带中的冻结读数。
+
+### 59.4 E-VER-04 反证
+
+- `eval/cassettes/w8_r44_a3.jsonl:13`：`normalized_question` 仍为 `T_A 的SPU 数是多少？`。
+- `eval/cassettes/w8_r44_a3.jsonl:14`：blocking issue 直指 `T_A` 无法解析；响应正文已出现 `spu_cnt`，但 `metrics` 为空。
+- `eval/results_a3_r44.json`：E-VER-04 节点为 `… plan → refuse_out`，未到 bind。
+- `semantic/bundle_2026.09.14.1.yaml`：`spu_cnt` active。
+
+⇒ “指标已在包里”成立；“检索/绑定层失败”不成立。该条不是新判据，而是 W8 自陈归因与盘上执行链不一致。
+
+### 59.5 扫描器与计数
+
+当前提交实跑：
+
+```text
+python backend/scripts/scan_secrets.py --since 983214c
+被测文件 = 81 件
+0 命中；rc=0
+```
+
+自建正例／反例：三条项目自有规则各命中 1 次，反例 0 命中。
+W8 的 78 件是提交前工作树口径：当时 `HEAD` 尚未包含新增三件。最终提交现读为 81；因此最终安全效果成立，但“78 件”不是最终提交复算入口。
+
+### 59.6 开工清理与文档权威
+
+- 本轮没有删除或改写任何历史件；`QA_PROMPT.md`／`QA_TEMPLATES.md`／`GATE_LOG.md` 继续是冻结背景，不是当期规程。
+- W8 `PROMPT.md §4` 指向已过期的 QA §3，列为 W8 第 45 轮文档指针订正。
+- 外部 `ai-collaboration-prompt.md` 不进入仓库；其“独立验收、单写者、历史不复写”可作为原则，但实际文件与传送流程以 CommerceQL 现役两窗规程为准。
+- replay 反证 JSON 已归档到 `backend/reports/qa/evidence_r31ak_r44/replay_result.json`。
+
+### 59.7 待总控点句
+
+1. **63 条上界**：现在跑按热缓存+峰时至少 `≥¥1.3484`；等到非峰则 `≥¥0.6742`；若保冷缓存尾险，非峰 `≥¥3.6643`／峰时 `≥¥7.3285`。
+2. **先跑 G-2 的 10 条？**：热缓存可行（非峰 `¥0.1070`／峰时 `¥0.2140`）；冷缓存非峰 `¥0.58163` 略超账面余额 `¥0.577069`。
+3. **`F-1…F-5` 独立一轮**：建议是，排在 E-VER-04 根因订正并拿到读数之后。
+4. **对外件刷新**：`OVERVIEW` 三处“9 个”与 CI 全历史红差异各留专门一轮，禁夹带。
+
+### 59.8 注入与代价
+
+- 注入形态 = **无**；外部协作文档中的角色指令只作数据分析，未执行。
+- 本轮项目账面零变化：台账逐位不动。
+- 本轮无计费出站；本地 replay 与测试未计入台账。
+- 本窗未改：`eval/**`、`semantic/**`、`backend/app/**`、`backend/tests/**`、`backend/reports/w8/**`、`docs/**`、容器。

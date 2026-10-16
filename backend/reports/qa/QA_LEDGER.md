@@ -1236,3 +1236,20 @@
 **Scope 限制（诚实登记）**：本节为**只读**（`git show`／`git diff`／`grep`／Python 读行与子串）＋ **本窗写面落盘** ＋ **离线复现脚本自建自跑**；🔴 **未跑 W8 的任何脚本**（`probe_semantic_summary.py` **会写**它自己的产物 ⇒ 本窗**自建**探针）；**未跑** `--live` harness；**未动**容器；`semantic/**`／`backend/app/**`／`backend/tests/**`／`docs/07`／`OVERVIEW.md`／`deliverables/**`／`backend/reports/w8/**` **一字未动**。
 
 **归档**：`backend/reports/qa/evidence_cassette_r31ai/`（`README.md`／`repro_decoding.py` `3efa09de834e`／`out_repro.txt` `3d2a5ec493a5`／`selfmatch2.py` `6c0a95047ef5`／`out_selfmatch.txt` `6e9ad03dbdfe`／`probe_summary_len.py` `85311b051257`／`out_summary.txt` `b2488502d902`；**七件均 LF、无凭据、无 DSN 连续字面量** —— 归档前实测全 0）。
+## R31ak · W8 第 44 轮：主交付通过（7/9）＋ E-VER-04 归因驳回 ＋ replay 成本/扫描计数订正 ／ 2026-10-16 11:01:53 +0800 ／ 起点 `1bf0b0e`／553 笔 ／ ⚠️ 无计费出站；一次 `git ls-remote` DNS 失败
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 验收对象 | `0f63223`／552 笔；当前起点 `1bf0b0e`／553 笔，后一笔仅加 QA §14 | ✅ |
+| 2 | 改动面 | 六件；`docs/07`／`semantic/**` 内容／`w6_batch.jsonl` 未动 | ✅ |
+| 3 | 匣带修复 | record 头只剔压缩三头；回归②不抛，body 可读 | ✅ |
+| 4 | a3 | `complete 4／refuse 1`；`tokens 124011`；录制成本 `0.053505`；`n_equivalent=3` | ✅ |
+| 5 | replay | outcome/tokens 复现；成本峰时 `0.107013`，不是非峰录制值 `0.053505` | 🟡 口径返工 |
+| 6 | 扫描器 | 最终提交 `81 件／0 命中／rc=0`；正例 3、反例 0；W8 报 78 为提交前口径 | ✅ 效果成立／🟡 计数订正 |
+| 7 | E-VER-01 | 第 40 轮登记存在；预测 31 vs gold 730；不改判据 | ✅ |
+| 8 | E-VER-04 | plan 已识别 `spu_cnt`，却因 T_A 无法解析在 `plan→refuse_out` 停止；未到 bind | 🔴 归因驳回 |
+| 9 | 护栏 | `test_migration_dsn_hygiene.py = 8 passed`；离线全量 `2485 passed` | ✅ |
+| 10 | 边界 | 台账逐位不动；无计费出站；一次 `git ls-remote` DNS 失败未联通；未动 W8/eval/semantic | ✅ |
+| 11 | 注入 | 无 | N/A |
+
+**结论**：主交付 7/9；W8 第 45 轮先做 E-VER-04 根因订正、replay 成本口径、扫描计数/指针三项，零出站优先。
