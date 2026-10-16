@@ -4015,3 +4015,34 @@ W8 把交替分支**截断**为 `…|postgres://`，注明「语义上只会更�
 - 不动 reports/qa/**、semantic/**、冻结集、ecom 台账；密钥只从 deploy/.env 读取，不回显、不提交。
 - 回执 ≤250 字：文件:行号 + 实跑命令/输出 + 时点 + HEAD。
 ```
+## 65 · W8 第 45 轮**验收通过（4/4 主项）**：A 根因重裁成立、B 双时段、C 工作树扫描、D 指针清理（QA R31am ｜ 2026-10-16 14:11:50 +0800 ｜ 起点 `7e6c6e7`／555 笔 ｜ 🔴 零出站、零花费）
+
+### 65.0 结论
+
+**A/B/C/D 四个主项全部成立。** A 的根因链由 QA 独立 replay 与匣带原文复核；B 的峰/非峰成本与固定 tokens 复核一致；C 的工作树扫描和 8 条自检通过；D 的指针已落地。
+唯一口径漂移：W8 报告写 `83 @7e6c6e7` 是对的；最终提交 `22dda6f` 因新增 `test_scan_secrets.py`，当前 `--since 983214c` 复跑为 **84 件**。这不是 A/B/C/D 失败，但引用最新 HEAD 时必须写 84。
+
+### 65.1 独立复算
+
+| # | 项 | QA 现读 | 判 |
+|---|---|---|---|
+| A | E-VER-04 根因 | 单例 replay：`nodes=trusted_context→normalize→intent→link→plan→refuse_out`、`refusal_reason=no_data_asset`；匣带 #13 normalize 保留 `T_A`，#14 plan 含 blocking、`metrics=[]`，且请求没有【范围自指】；源码 `backend/app/planner/payloads.py:136-143` 与 `backend/app/graph/nodes/plan.py:90-107` 与 W8 描述一致 | ✅ 成立 |
+| A 影响面 | 自指统计 | 独立脚本按 `T_[ABC]` 词界：全 166 中 119 含自指；误拒 63 中 57 含自指，57/57 末节点为 `refuse_out` | ✅ 成立（只登记，不据此断言因果） |
+| B | 回放成本 | QA 14:08 峰时 replay：tokens `124011`、cost `0.107013`；录制非峰 `0.053505`；比值 2.0000× | ✅ 成立 |
+| C | 扫描 | `test_scan_secrets.py=8 passed`；`--working-tree` 684 件 / 0 命中 / rc=0；最终 `--since 983214c` 当前 HEAD=84 件 / 0 命中 / rc=0；83 仅属 `7e6c6e7` | ✅ 主项成立；🟡 84 口径订正 |
+| D | 指针 | W8 `PROMPT.md §4` 已取消 QA §3 的当期地位，改指 `PROMPT_新窗 §14` 与 QA `TASK_BOARD` 最新末节 | ✅ 成立 |
+| 定价 | caveat | 未补价表；未知模型按 `deepseek-v4-pro` 兜底并保留 `price_guess`；`tokens` 作主报量 | ✅ 决策成立；⚠️ 7.3× 是 cache-hit 单价格比，不是实际总成本固定倍率 |
+| 回归 | 离线全量 | `pytest backend/tests --ignore=backend/tests/integration -q` = `2493 passed` | ✅ |
+| 边界 | 台账/取号 | 台账逐位不动；无新增取号；W8 只改 5 件，未动 QA/语义包/冻结集/app/deploy/容器 | ✅ |
+
+### 65.2 给 W8 的小订正块（不是返工主项）
+
+```text
+【W8 第 46 轮前置｜只订正两处口径，不重跑付费任务】
+
+1. 扫描计数补一行：最终提交 22dda6f @当前 HEAD 的 `--since 983214c` = 84 件 / 0 命中 / rc=0；
+   原 83 @7e6c6e7 保留为历史锚点，不删。
+2. 价格措辞收紧：7.3× 只是 cache-hit 单价（flash 非峰 0.003 vs pro 0.022）的比值；
+   不能用它乘以整条 cost。请统一写「未知模型按 pro 档兜底，实际高估倍率取决于 token 构成；tokens 才是主报量」。
+3. 不改价表、不重跑 45 轮证据；如总控提供 kuaipao.pro 权威价目，再走价格表变更。
+```

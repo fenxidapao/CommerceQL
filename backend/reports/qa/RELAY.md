@@ -4264,3 +4264,34 @@ W8 的 78 件是提交前工作树口径：当时 `HEAD` 尚未包含新增三�
 - `QA_PROMPT.md`／`QA_TEMPLATES.md`／`GATE_LOG.md` 继续冻结为背景，不删史、不续写。
 - W8 `PROMPT.md §4` 的 QA §3 过期指针列入第 45 轮清理任务。
 - 本次 API 配置改动属总控临时授权的 QA 越界执行；未形成代码提交。
+## 61 · W8 第 45 轮验收：4/4 主项通过；E-VER-04 根因成立、双时段成本、工作树扫描、指针清理（QA R31am）／ 2026-10-16 14:12:09 +0800 ｜ 起点 `7e6c6e7`／555 笔 ｜ 🔴 零出站、零花费
+
+### 61.0 结论
+
+**四个主项全部成立。** W8 的回执没有翻案，A 的旧归因已撤回；唯一需补的是最终 HEAD 扫描计数从 83 漂到 84，以及 7.3× 的限定语。
+
+### 61.1 独立复算
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 提交面 | `22dda6f`／556 笔；只改 5 件：W8 报告 2 件＋DELIVERY，`scan_secrets.py`，`test_scan_secrets.py`；QA/语义包/冻结集/app/deploy/容器未动 | ✅ |
+| 2 | A 归因 | 单例 replay E-VER-04：nodes 到 `plan→refuse_out`、no_data_asset；匣带 #13 保留 T_A、#14 plan blocking 且 metrics 空；payloads.py:136-143／plan.py:90-107 证据吻合 | ✅ |
+| 3 | A 影响面 | `T_[ABC]` 词界自检：166 中 119 含自指；误拒 63 中 57 含自指，57/57 末节点 refuse_out；只登记 | ✅ |
+| 4 | B 双时段 | 独立 replay（14:08 峰）tokens 124011、cost 0.107013；录制非峰 0.053505；2.0000× | ✅ |
+| 5 | C 扫描 | 新增测试 8 passed；`--working-tree` 684/0/rc0；最终 HEAD `--since` 84/0/rc0；83 是 7e6c6e7 锚点 | ✅ 主项；🟡 84 订正 |
+| 6 | D 指针 | W8 PROMPT §4 已改指 QA PROMPT_新窗 §14 与 TASK_BOARD 最新末节 | ✅ |
+| 7 | 定价 | 保留 caveat、未补价表；未知模型 pro 兜底、price_guess；tokens 主报量 | ✅（7.3× 需限定为 cache-hit 价格比） |
+| 8 | 回归 | 离线全量 2493 passed；新增扫描测试 8 passed；台账逐位不动 | ✅ |
+| 9 | 边界 | 零出站、零花费；无取号；工作树仅 `.workbuddy/` | ✅ |
+
+### 61.2 给 W8 的小订正
+
+- 在当前 HEAD `22dda6f` 补记：`--since 983214c = 84 件 / 0 命中 / rc=0`；保留 `83 @7e6c6e7` 历史锚点。
+- 价格口径写明：`7.3×` 仅是 cache-hit 单价比，实际成本高估受 input/output/cache 构成影响。
+- 不重跑付费任务、不改价表、不改 A/B/C/D 证据。
+
+### 61.3 注入与边界
+
+- 注入形态 = 无；未执行 N/A。
+- 本轮 QA 仅 replay/只读扫描/离线测试，无模型出站；旧的 QA live smoke 不在 W8 第 45 轮内。
+- W8 未写 `reports/qa/**`；QA 本轮未改 W8 文件。
