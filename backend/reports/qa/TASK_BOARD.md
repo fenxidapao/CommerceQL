@@ -4136,3 +4136,11 @@ W8 把交替分支**截断**为 `…|postgres://`，注明「语义上只会更�
 - 实跑：`5 passed`：无身份 6 视图零行、`shop_ids` 未设 vs 显式空串可区分、无店铺列表惰性、显式空串不跨租户。
 - 收尾：停止容器；因 `--rm` 已自动删除，随后 `docker rm` 报“no such container”，不是残留；`docker ps -a` 该名 0 件，共享库残渣仍只 `ecom`／`ecom_u123_probe`。
 - 判：G-4 的**真实 PG RLS 行为面**已有当前证据；U-131 的 API 三面仍须按 §67.3 真测。
+### 67.5 P0-A 定向交叉复核（QA R31ao 追加）
+
+- `backend/tests/contract/test_audit_terminal_pairing_contract.py::TestU129EntryInvariant` ＋ `backend/tests/contract/test_graph_timeout_contract.py::TestU129SingleTerminal` 独立实跑 = **10 passed**；说明入口复位/单终态契约面已在。
+- `llm_error_update` 现读 `backend/app/graph/nodes/_shared.py:204-205` 仍只取 `default_code`，抛 `error` 时未把 `exc.detail` 带进终态 ⇒ 该缺陷未修。
+- `normalize` 现读 `backend/app/graph/nodes/normalize.py:37-39` 明写 `GraphState` 无历史字段、当前传空历史 ⇒ U-142 不是测试缺口，是实际载体缺口。
+- `present` 现读 `backend/app/graph/nodes/present.py:6-12` 仍是 P0 诚实降级，`presenter` 恒 None ⇒ 结论/图表呈现仍未完成，归 P0-D。
+
+**P0-A 最小闭环判据**：U-131 live 三面、U-129 属主二轮、真实历史载体、normalize 确定性剥离、`detail` 保留；五项都有当前证据才算完成。
