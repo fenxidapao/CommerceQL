@@ -4177,3 +4177,48 @@ W8 把交替分支**截断**为 `…|postgres://`，注明「语义上只会更�
 - 根因：测试字面量没有随语义包版本更新；W8 第 44 轮 §44.7 #6 已登记“三处字面量已改未验”，现在给出真实红证据。
 - 收尾：专用 PG/Redis 已停删，`docker ps -a` 无临时件；共享库仍只 `ecom`／`ecom_u123_probe`。
 - **W8 动作**：把两处断言与文档/版本字面量同步到当前语义包版本，重跑整个 `tests/integration`，目标 124 passed；不得把该红藏在 unit/contract 目录。
+## 68 · W8 第 47 轮 P0-A 验收：核心修复成立、集成 2 红未清（QA R31ap ｜ 2026-10-16 16:25:48 +0800 ｜ 起点 `311e9e5`／566 笔 ｜ 当前 `7b0a88c`／568 笔）
+
+### 68.0 验收结论
+
+**P0-A 主修复成立，但项目未全绿。** 两笔提交 `b87158a`＋`7b0a88c` 已覆盖 normalize 剥离、history 载体、`terminal_error_detail`、clarify 属主门和 U-129 二轮。
+
+### 68.1 独立复算
+
+| 项 | QA 现读 | 判 |
+|---|---|---|
+| 新单测＋契约 | `test_llm_error_detail`＋`test_tenant_self_reference_strip`＋`test_session_history_carrier`＋`test_api_endpoints_contract` = **63 passed** | ✅ |
+| 离线全量 | `.venv` 独立复跑 = **2525 passed / 0 failed** | ✅ |
+| normalize after | `a1fix5`：5/5 complete、4/5 equivalent（E-VER-01 仍是已登记冻结集冲突） | ✅（不得宣称 5/5 等价） |
+| 57 条自指族 | `41 complete / 12 refuse / 4 clarify`；41 条中仅 16 equivalent；应用计价 4.810022（price_guess） | 🟡 改善但未闭 |
+| history | `history_questions` 已进组 1、入口播种并传到 normalize；W8 明示 `gen_sql` 仍无直接历史占位符 | ✅ 接线成立／边界保留 |
+| U-131/U-129 | W8 一次性 PG/Redis 活体证据：跨属主读/写 404、非属主图调用 0、属主二轮 refuse→complete；契约回归也通过 | ✅ 活体主项成立 |
+| 集成全量 | QA 一次性 PG/Redis 独立复跑：**122 passed / 2 failed**；红点仍是 `test_semantic_materialization.py:115/:319` 断言旧包 `2026.09.14.1`，实际 `2026.10.15.1` | 🔴 阻塞全绿 |
+| 边界 | 台账逐位不动；共享库仅 `ecom`／`ecom_u123_probe`；临时容器已清；无新增取号 | ✅ |
+
+### 68.2 给 W8 的下一轮块（先清红，再做 F 面）
+
+```text
+【W8 第 48 轮｜P0-A 收尾 + F-1…F-5 联合修复】
+
+0. 现读 HEAD 7b0a88c；总控已授权必要出站/花费，实报 tokens/应用计价（price_guess）。
+
+1. 🔴 必做：清集成 2 红
+- backend/tests/integration/test_semantic_materialization.py:115 与 :319 不得再硬编码 2026.09.14.1；
+  改为从 loaded.version 派生或同步到 2026.10.15.1，并加一条防漂回断言。
+- 在一次性 PG/Redis（先 alembic upgrade head）上复跑完整 tests/integration；目标 124 passed / 0 failed。
+- 这是 P0-A 关闭条件，不能只交 2525 离线数。
+
+2. 🔴 F-1…F-5 联合修复
+- F-1 SKU 维度、F-2 SPU 维度、F-3 product 侧 category 绑定、F-4 region_name 绑定、F-5 campaign_type 维度，逐项设计，不得破坏 family/level/grain_index。
+- 每项给 gold_sql 对撞、受影响的 case_id、单测/契约测试；semantic bundle 走版本递增＋ validator＋渲染件同步。
+
+3. 重跑读数
+- 先重跑 G-2 10 条，再重跑 57 条自指误拒族（或等价完整子集）；给 before/after 转移矩阵、等价数、tokens、应用计价。
+- 不允许用 5 条批外推 G-2；只有 10 条批可判 G-2。
+- 12 条仍 refuse、4 条 clarify 的逐条归因必须更新；E-MET-08 若仍是反面口径，证明它不应补。
+
+4. 不做
+- 不先扫 τ；不改冻结集/阈值；不改判据措辞；不动 reports/qa/**；不碰共享 ecom 写。
+- 没有集成 124/0 与 10/57 对撞，不得宣称 G-2/G-5 改善或 P0-A 完成。
+```
