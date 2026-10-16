@@ -4144,3 +4144,20 @@ W8 把交替分支**截断**为 `…|postgres://`，注明「语义上只会更�
 - `present` 现读 `backend/app/graph/nodes/present.py:6-12` 仍是 P0 诚实降级，`presenter` 恒 None ⇒ 结论/图表呈现仍未完成，归 P0-D。
 
 **P0-A 最小闭环判据**：U-131 live 三面、U-129 属主二轮、真实历史载体、normalize 确定性剥离、`detail` 保留；五项都有当前证据才算完成。
+### 67.6 🔻 收口顺序订正：先 normalize＋F/metrics，后 τ
+
+现读证据推翻 §67.1 里“P0-B 先做 T-51／τ”的排序：
+
+- `backend/reports/qa/evidence_main_r31ad/README.md:9`：G-2 与 G-5 是同一根因，**不是 τ、不是打分器、不是 embedding**；主因是 metric 覆盖不足。
+- 同件 `:17-19`：G-2 面 10/10 refuse／no_data_asset，63 条误拒 100% 同因，embedding 在 success 45/45 与误拒 63/63 两组同率、零区分力。
+- W8 第 45 轮已证 57/63 误拒含租户自指并全停 `refuse_out`；本窗又确认 `normalize.py:37-39` 无历史载体、`_shared.py:204-205` 丢 detail。
+- T-51 段 1 现读 UNSTABLE；L4 触发率现读 0/355；全包只有 1 个竞争 concept、2 个 asset、同族题 4 条 ⇒ 现在继续单独扫 τ 没有可校准样本。
+
+**订正后的顺序**：
+
+1. 先做 §67.2 的 P0-A（normalize／U-131／U-129/U-142／detail）。
+2. 紧接着做 F-1…F-5＋已落 13 metric 的联合修复，先重放/重跑 G-2 的 10 条与 63 条误拒族。
+3. 只有 G-2/G-5 修复后仍受 L4 影响，再回头做 τ；不得把 τ 当 G-2/G-5 的前置借口。
+4. G-8 的二轮回路另做，不和 τ 混号。
+
+🔴 **对 W8 的效力**：§67.2 仍有效，但其中“T-51／τ”步骤顺延到 F/metrics 联合验证之后；当前先修 P0-A，再做 F 面，不先烧 τ。
