@@ -4161,3 +4161,10 @@ W8 把交替分支**截断**为 `…|postgres://`，注明「语义上只会更�
 4. G-8 的二轮回路另做，不和 τ 混号。
 
 🔴 **对 W8 的效力**：§67.2 仍有效，但其中“T-51／τ”步骤顺延到 F/metrics 联合验证之后；当前先修 P0-A，再做 F 面，不先烧 τ。
+### 67.7 P0-D 前端基线（QA R31ao 追加）
+
+- `npm run typecheck` = 通过（rc=0）。
+- `npm test -- --run` = **5 files / 33 passed**；stderr 有 jsdom `getComputedStyle` 未实现和 antd deprecation 警告，但测试无失败。
+- `npm run build` = 成功；`dist/assets/index-…js` = **2,199.47 kB（gzip 719.06 kB）**，Vite 报“>500 kB”警告，属性能/分包债务。
+- `backend/app/graph/nodes/present.py:6-12` 仍是 P0 诚实降级、`presenter=None` ⇒ **图表/结论呈现仍未接线**。
+- **结论**：P0-D 的基座类型/单测/构建可用；需要实际补 present 接口与 UI 接线，并在真实浏览器跑四态（执行/澄清/拒答/降级）+ 二轮。
