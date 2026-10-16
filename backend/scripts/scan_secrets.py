@@ -36,7 +36,6 @@ import re
 import subprocess
 import sys
 import tomllib
-from collections.abc import Iterator
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -44,6 +43,14 @@ _GITLEAKS_TOML = _REPO_ROOT / ".gitleaks.toml"
 _DEFAULT_SINCE = "983214c"
 _TEXT_SUFFIXES = (".json", ".py", ".md")
 _MASK_KEEP = 6
+#: 🔻 第 45 轮（QA §63.4／§64.1 四）：`--since` 是**提交史**口径 ⇒ 看不到**未跟踪的新件**；
+#: `--working-tree` 补这一面。跳过目录与 `tests/unit/test_migration_dsn_hygiene.py`
+#: 的 `_SKIP_DIRS` **同源**（理由同：第三方/构建产物里塞满假密钥样本，会把真命中淹掉）。
+_SKIP_DIRS = frozenset({
+    ".git", ".venv", "venv", "__pycache__", "node_modules",
+    ".mypy_cache", ".ruff_cache", ".pytest_cache",
+    ".import_linter_cache", ".lintprobe", "htmlcov",
+})
 
 
 def _load_gitleaks_config() -> dict[str, object]:
@@ -81,10 +88,10 @@ def _allowlist(cfg: dict[str, object]) -> tuple[list[re.Pattern[str]], list[str]
     return excused, stopwords, paths
 
 
-def _changed_files(since: str) -> list[str]:
+def _changed_files(since: str, root: Path = _REPO_ROOT) -> list[str]:
     proc = subprocess.run(
         ["git", "diff", "--name-only", f"{since}..HEAD"],
-        cwd=_REPO_ROOT, capture_output=True, text=True, encoding="utf-8", check=False,
+        cwd=root, capture_output=True, text=True, encoding="utf-8", check=False,
     )
     if proc.returncode != 0:
         print(f"[用法错] git diff 失败（锚点 {since} 是否存在？）：{proc.stderr.strip()}", file=sys.stderr)
@@ -92,16 +99,28 @@ def _changed_files(since: str) -> list[str]:
     return [ln.strip() for ln in proc.stdout.splitlines() if ln.strip().endswith(_TEXT_SUFFIXES)]
 
 
+def _worktree_files(root: Path) -> list[str]:
+    """工作树口径：全仓文本件（含**未跟踪**的新件），跳过 `_SKIP_DIRS`。"""
+    out: list[str] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or _SKIP_DIRS & set(path.parts):
+            continue
+        if path.suffix not in _TEXT_SUFFIXES:
+            continue
+        out.append(path.relative_to(root).as_posix())
+    return out
+
+
 def _mask(secret: str) -> str:
     return secret[:_MASK_KEEP] + "…" + f"（{len(secret)} 字符）" if len(secret) > _MASK_KEEP else "…"
 
 
-def _scan(paths: list[str], rules: list[tuple[str, re.Pattern[str]]],
+def _scan(root: Path, paths: list[str], rules: list[tuple[str, re.Pattern[str]]],
           excused: list[re.Pattern[str]], stopwords: list[str],
           allow_paths: list[re.Pattern[str]]) -> list[str]:
     hits: list[str] = []
     for rel in paths:
-        abs_path = _REPO_ROOT / rel
+        abs_path = root / rel
         if not abs_path.is_file():
             continue
         path_excused = any(p.search(rel) for p in allow_paths)
@@ -124,25 +143,35 @@ def _scan(paths: list[str], rules: list[tuple[str, re.Pattern[str]]],
 def main() -> int:
     ap = argparse.ArgumentParser(description="凭据字面量扫描（DoD④ 本机替身；规则出处 = .gitleaks.toml）")
     ap.add_argument("--since", default=_DEFAULT_SINCE, help=f"区间起点（默认 {_DEFAULT_SINCE}）")
+    ap.add_argument("--working-tree", action="store_true",
+                    help="改扫**工作树**（含未跟踪新件），而非 `--since` 区间内的已提交件")
+    ap.add_argument("--root", default=str(_REPO_ROOT), help="扫描根（测试用；默认仓库根）")
     args = ap.parse_args()
 
+    root = Path(args.root)
     cfg = _load_gitleaks_config()
     rules = _rules(cfg)
     excused, stopwords, allow_paths = _allowlist(cfg)
-    paths = _changed_files(args.since)
 
-    print(f"面 = git diff --name-only {args.since}..HEAD，文本后缀 {_TEXT_SUFFIXES}")
+    if args.working_tree:
+        paths = _worktree_files(root)
+        face = f"工作树全仓文本件（跳过 {len(_SKIP_DIRS)} 类构建/第三方目录）"
+    else:
+        paths = _changed_files(args.since, root)
+        face = f"git diff --name-only {args.since}..HEAD"
+
+    print(f"面 = {face}，文本后缀 {_TEXT_SUFFIXES}")
     print(f"规则出处 = .gitleaks.toml（{len(rules)} 条：{'｜'.join(r[0] for r in rules)}）")
     print(f"allowlist 语义已同步（regexes={len(excused)}｜stopwords={len(stopwords)}｜paths={len(allow_paths)}）")
     print(f"被测文件 = {len(paths)} 件")
 
-    hits = _scan(paths, rules, excused, stopwords, allow_paths)
+    hits = _scan(root, paths, rules, excused, stopwords, allow_paths)
     if hits:
         print(f"\n🔴 命中 {len(hits)} 处（CI 的 gitleaks 会红）：")
         for h in hits:
             print("   " + h)
         return 1
-    print("\n✅ 0 命中（本项目自有规则 × 区间内变更文件）")
+    print("\n✅ 0 命中（本项目自有规则 × 本次面）")
     print("⚠️ 本脚本是 CI 的下界：gitleaks 默认规则集（useDefault=true）与**全历史**不在本脚本内。")
     return 0
 

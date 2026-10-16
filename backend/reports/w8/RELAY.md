@@ -4304,13 +4304,26 @@ headers={k: v for k, v in response.headers.items()
 | ③ replay 分支对照 | 不抛（本来就好） | 不抛 |
 
 **② 带匣带 live 实跑**：a3 的 5 条 **`n_unscored = 0`**（第 41/42/43 轮那种 `LLM_UPSTREAM_ERROR` 整批 error **已消失**）。
-**③ 回放校验（零出站、零花费，证明"保住回放能力"）**：`--mode replay --cassette eval/cassettes/w8_r44_a3.jsonl` ⇒ **逐位复现**：
+**③ 回放校验（零出站、零花费，证明"保住回放能力"）**：`--mode replay --cassette eval/cassettes/w8_r44_a3.jsonl` ⇒ 复现：
 
 ```text
 terminal_distribution = {complete: 4, refuse: 1}   ← 与录制批逐条同
-tokens_total = 124011 ｜ cost_cny_total = 0.053505  ← 与录制批逐位同
+tokens_total = 124011                              ← 可复现量（跨时段同）
+cost_cny_total = 0.053505                          ← ⚠️ 见下方 🔻：这是**录制时段**的计价
 n_unscored = 0（无 CassetteMiss）
 ```
+
+🔻 **第 45 轮订正（QA §63.3／§64.1 三，成立）**：上格原写「`cost_cny_total = 0.053505` ← 与录制批**逐位同**」，**该表述不成立**并已作废：
+**`cost` 不是匣带常量，是按"回放时刻的时段档"重算的派生量**。本窗同一条匣带、同 `tokens`，在两个时段得到两个数：
+
+| 面 | 时段（`classify_tier`，`budget.py:135-152`） | tokens | cost |
+|---|---|---|---|
+| **录制批**（2026-10-15 22:39） | **非峰** | 124,011 | **0.053505** |
+| **回放**（2026-10-16 10:16，QA 实测） | **峰** | 124,011 | **0.107013** |
+| **回放**（2026-10-16 11:49，本窗自跑复核） | **峰** | 124,011 | **0.107013** |
+
+⇒ 比值恰 **2.0000×**，与 `budget.py:121-129` 价表里 PEAK/OFF_PEAK 的 2× 关系逐格一致。
+⇒ **可复现的是 `tokens`（124,011，三次同）与 `terminal_distribution`**；**`cost` 必须带时段**才可引用。原「逐位复现」仅指"同一档位内"。
 
 ### 44.2 ② 扫描抽成脚本（消掉「自匹配」＋「面放大／与结论脱钩」两个根因）
 
@@ -4328,6 +4341,17 @@ n_unscored = 0（无 CassetteMiss）
 规则出处 = .gitleaks.toml（3 条）｜被测文件 = 78 件
 ✅ 0 命中
 ```
+
+🔻 **第 45 轮口径订正（QA §63.4／§64.1 四，成立）**：上格那个 **78 件是"提交前工作树"口径** —— 当时 `HEAD` 还没含本轮新增的**三件**（脚本／匣带／结果），因为 `--since` 走的是 `git diff`，**看不见未跟踪的新件**。三档现读对比如下（**引用时必须带 HEAD／时点**）：
+
+| 口径 | 命令 | 件数 | 命中 | rc | 时点／HEAD |
+|---|---|---|---|---|---|
+| 提交前工作树（第 44 轮报的 78） | `--since 983214c` | **78** | 0 | 0 | 提交前，`HEAD` 尚无新三件 |
+| 最终提交（QA 复算） | `--since 983214c` | **81** | 0 | 0 | `0f63223` |
+| **本轮现读（提交史口径）** | `--since 983214c` | **83** | 0 | 0 | 2026-10-16 11:54 +0800 ／ `7e6c6e7` |
+| **本轮现读（工作树口径，新增开关）** | `--working-tree` | **684** | 0 | 0 | 同上 |
+
+⇒ 为此**给脚本加了 `--working-tree`**（含未跟踪新件，跳过 11 类构建/第三方目录）＋ **正例/反例自检**（`backend/tests/unit/test_scan_secrets.py`，**8 passed**：1 正例必命中／1 工作树遍历必看见新件／4 反例不得误报／1 真仓库工作树 0 命中／1 脚本源码不自匹配）。
 
 **自匹配自查**：把 `.gitleaks.toml` 的三条规则跑在**本脚本源码**上 ⇒ **各 0 命中**。
 **`RELAY §廿一` 第 ⑤ 行**已随之改成**只引脚本名**（`:2950-2963`），并留**两版审计原文**指针（`git show 7210a58:` ＝ 最早连续正则版；`git show bdcd111:` ＝ 第 43 轮截断版）。
@@ -4353,6 +4377,10 @@ n_unscored = 0（无 CassetteMiss）
 2. 🔴 **`E-VER-01` 的 `verdict=false` 不是新缺陷，是第 40 轮就登记过的「冻结集内部口径冲突」被实测证实**：题面要"2026-08 的天数"，而 gold 是**全表** `COUNT(*)`（=730）⇒ 模型按题面加了月份筛选 ⇒ `attribution = gate_policy_gap`。**不改判据、不改冻结集**（承 §40.4）。
 3. 🔴 **`E-VER-04`（SPU 数）仍拒**：`refusal_reason = no_data_asset`，链停在 `plan → refuse_out`，且带 `degradations = [{reason: embedding_unavailable, action_taken: sparse_only}]` ⇒ **具名的剩余缺陷**：SPU 指标已在包里（`spu_cnt`），但**稀疏回退下没被召回/落位** ⇒ 这不是"指标没补"，而是**检索/绑定面在无嵌入时看不到它**。⇒ 登记（§44.7 #2）。
 
+🔻 **第 45 轮**就地订正**（QA §63.2／§64.1 二 驳回「检索/绑定层」，**本窗复算后改判：驳回成立**）**：上面第 3 条的归因**错**，已作废 —— 见 **§45.1** 的可复现证据链。真根因 ＝ **归一化残留 × 提示契约不对称**：
+`normalize` 的 LLM **把租户自指 `T_A` 留在了 `normalized_question` 里**（同批另 4 条都剥掉了），而 `plan` **刻意不带**那条「范围自指」说明 ⇒ plan 把 `T_A` 当无法解析的实体 ⇒ 吐 `blocking_issues` ⇒ `metrics=[]` ⇒ `refuse_out`。
+🔴 **"检索/绑定层"这个说法本身也不准确**：`link` 节点在 `plan` **之前**就已运行，且 plan 的 blocking 文本**自己点名并复述了 `spu_cnt` 的口径** ⇒ 该指标**在 plan 的可用面里**（⇒ 检索已命中）。⇒ 撤回。
+
 ### 44.4 🔴 单价修正：a3 实测 **¥0.010701/条** ⟷ 第 43 轮 **¥0.058163/条**（差 **5.4×**，机制 = 提示缓存）
 
 | 批 | tokens/条 | **cache_hit/input** | ¥/条 |
@@ -4371,10 +4399,13 @@ n_unscored = 0（无 CassetteMiss）
 - **未动**：`backend/app/**`（含 `_shared.llm_error_update` —— 它丢弃 `detail` 的缺陷**本轮不修**，见 §44.7 #3）、`frontend/**`、`deploy/**`、`docs/**`、`OVERVIEW.md`、`deliverables/**`、容器、**`reports/qa/**`（只读）**。
 - **零取号**：`docs/07_技术设计文档_TDD.md:1094` 指针行仍 **「下一个可用号 = `U-143`」**。
 - **离线全量现读**：`pytest backend/tests --ignore=backend/tests/integration -q` → **`2485 passed`**（**0 failed**）—— 第 43 轮那唯一一红（`test_migration_dsn_hygiene`）**已随之转绿**。
-- **复算入口**（**带时点**：第 44 轮／起点 HEAD `bdcd111`）：
+- **复算入口**（**带时点**：第 44 轮／起点 HEAD `bdcd111`；🔻 **第 45 轮订正：每条补 HEAD／时点与时段档**）：
   - ① 匣带回归（QA 件，只读）：`PYTHONUTF8=1 .venv/Scripts/python.exe backend/reports/qa/evidence_cassette_r31ai/repro_decoding.py` → **实跑** ② 段 `transport 返回了响应（未报错）`。
-  - ② 回放：`… runner.py --cases E-VER-01,E-VER-02,E-VER-03,E-VER-04,E-VER-05 --mode replay --cassette eval/cassettes/w8_r44_a3.jsonl --out <新路径> --yes` → **实跑** `complete 4 / refuse 1 ｜ tokens 124011 ｜ cost 0.053505`（**零出站**）。
-  - ③ 扫描：`PYTHONUTF8=1 .venv/Scripts/python.exe backend/scripts/scan_secrets.py --since 983214c` → **实跑** `0 命中／78 件`。
+  - ② 回放（**零出站**）：`PYTHONUTF8=1 .venv/Scripts/python.exe eval/runner.py --cases E-VER-01,E-VER-02,E-VER-03,E-VER-04,E-VER-05 --mode replay --cassette eval/cassettes/w8_r44_a3.jsonl --out <新路径> --yes` → **实跑（2026-10-16 11:49 +0800／峰时）** `complete 4 / refuse 1 ｜ tokens 124011 ｜ cost 0.107013`。
+    🔻 **`tokens` 与 `terminal_distribution` 是可复现量；`cost` 必须带时段**（录制 2026-10-15 22:39 非峰 = `0.053505` ⟷ 回放峰时 = `0.107013`，`tokens` 同为 `124011`）—— **原「cost 逐位复现」的表述已作废**（详表见 §44.1 的 🔻）。
+  - ③ 扫描（**两种面都要带 HEAD**）：
+    - 提交史口径：`PYTHONUTF8=1 .venv/Scripts/python.exe backend/scripts/scan_secrets.py --since 983214c` → **实跑（HEAD `7e6c6e7`／2026-10-16 11:54 +0800）** `被测 83 件／0 命中／rc=0`；⚠️ 第 44 轮报的 **78** 是**提交前**口径（`HEAD` 未含新三件），QA 在 `0f63223` 复算为 **81**。
+    - 工作树口径（**含未跟踪新件**，第 45 轮新增）：`… backend/scripts/scan_secrets.py --working-tree` → **实跑** `被测 684 件／0 命中／rc=0`；正例/反例自检 = `pytest backend/tests/unit/test_scan_secrets.py -q` → **8 passed**。
   - ④ DSN 单测（机械护栏）：`pytest backend/tests/unit/test_migration_dsn_hygiene.py -q` → **实跑** `8 passed`。
 
 ### 44.6 串行资源表六面
@@ -4393,12 +4424,100 @@ n_unscored = 0（无 CassetteMiss）
 | # | 项 | 说明 |
 |---|---|---|
 | 1 | 🔴 **重跑额度（复议）** | a3 实测单价 **¥0.010701/条** ⇒ 63 条 **≈¥0.6742**（1.17× 余额 ¥0.577069；1.12× 上界 ¥0.60）。请总控裁：抬上界 / 只跑 G-2 的 10 条（≈¥0.107，**已进预算**）/ 全量 166（≈¥1.78） |
-| 2 | 🔴 **`E-VER-04` 的具名剩余缺陷**：「SPU 数」指标已在包里，**稀疏回退**（`embedding_unavailable → sparse_only`）下未被召回 ⇒ 归因在**检索/绑定层**，不在指标层。建议下一轮单列 |
+| 2 | 🔴 **`E-VER-04` 的具名剩余缺陷**：「SPU 数」指标已在包里，**稀疏回退**（`embedding_unavailable → sparse_only`）下未被召回 ⇒ 归因在**检索/绑定层**，不在指标层。建议下一轮单列。🔻 **第 45 轮订正（QA §63.2／§64.1 二 驳回，本窗复算后确认驳回成立）**：归因**改判**为「**归一化残留 × 提示契约不对称**」（`normalize` 留下 `T_A` → `plan` 无该说明 ⇒ `blocking_issues` ⇒ `metrics=[]`）⇒ 证据链见 **§45.1**；**"检索/绑定层"已撤回** |
 | 3 | 🔴 `_shared.llm_error_update` **丢弃 `exc.detail`** | 是"猜三轮根因"的机制性来源（§43.1）⇒ 建议随 #2 一起修（属 `app/**`，需**明示授权**才动） |
 | 4 | 🟡 `F-1…F-5`（46 条非 metric 面） | 按 §62.5 排序：**排在 #1 之后**（且实测会动 `grain_index`，须独立设计与验收） |
 | 5 | 🟡 对外件口径刷新（`OVERVIEW.md` 三处「9 个」＋ DSN 差异措辞） | 仍留**专门一轮**（派单禁夹带、避免行位漂移） |
 | 6 | `test_semantic_materialization.py` 三处字面量"已改未验" | 仍待一次性库实跑 |
 
 ### 44.8 注入形态
+
+- 注入形态 = **无**；未执行 **N/A**。
+
+## §四五 第 45 轮 · 返工 A/B/C/D（A＝根因**重裁**：归一化残留 × 提示契约不对称）｜ **零出站** ｜ 2026-10-16 ｜ 起点 HEAD 7e6c6e7／555 笔
+
+### 45.0 本轮做了什么（派单 = QA §64.1；§63.7 为同料旧版）
+
+| # | 项 | 状态 |
+|---|---|---|
+| ① | **返工 A**：重裁 `E-VER-04` 根因（驳回"检索/绑定层"） | ✅ **驳回成立**；已给四步可复现证据链（§45.1）＋ 就地 🔻 撤回原归因 |
+| ② | **返工 B**：replay 成本口径（两套时段成本） | ✅ 已订正（§45.2）；本窗**自跑复核**峰时 `0.107013`（第三格证据） |
+| ③ | **返工 C**：扫描计数与复算入口（HEAD/时点） | ✅ 已订正（§45.3）；另**加 `--working-tree` ＋ 正例/反例自检** |
+| ④ | **返工 D**：`PROMPT.md §4` 指针清理 | ✅ 已改指 `PROMPT_新窗 §14`（现读 `:252`）／`TASK_BOARD` 最新末节 §64.1（`:3988`） |
+| ⑤ | 全批 / 定价 | ⏸ **本轮未放批**（见 §45.4 的定价决策与理由）；零取号（`U-143`） |
+
+### 45.1 返工 A｜`E-VER-04` 根因**重裁**（四步证据链，**全程零出站**）
+
+**结论先行**：不是"检索/绑定层"找不到 `spu_cnt`（**它在**），而是 **`normalize` 残留了租户自指 `T_A`，而 `plan` 刻意不带"范围自指"说明** ⇒ plan 判 blocking ⇒ `metrics=[]` ⇒ `refuse_out`。
+
+| 步 | 面 | 实跑／现读 |
+|---|---|---|
+| ① **链路** | `--mode replay`（同一条 a3 匣带） | `nodes = ['trusted_context','normalize','intent','link','plan','refuse_out']`；`raw_question = T_A 的SPU 数是多少？` ⇒ **`normalized_question = T_A 的SPU 数是多少？`**（**T_A 未被剥离**）；`intent_detail = {reason_code: 'plan_blocked', refuse_kind: 'no_data_asset'}` |
+| ② **报文** | 匣带 `eval/cassettes/w8_r44_a3.jsonl` `#13`（`normalize_intent`） | 响应 `normalized_question = "T_A 的SPU 数是多少？"` —— **对照**：同批 `#05`／`#09`／`#15`（在架商品数／下架商品数／店铺数）**都剥掉了** `T_A` ⇒ **同族同 prompt，4/5 剥、1/5 留 = LLM 行为不稳** |
+| ③ **plan 面** | 匣带 `#14`（`plan`） | 请求 user 文本 = `[归一化后的问题] T_A 的SPU 数是多少？` ＋ `[附加约束]【安全声明】…`（**只**有安全声明，**没有**【范围自指】）；响应 = `blocking_issues` ×2、**`metrics: []`、`assets: []`**。🔴 **第二条 blocking 自己写着**「SPU 数（`spu_cnt`）默认口径为在售…但「T_A 的」这一限定无法映射」⇒ **`spu_cnt` 就在 plan 的可用面里** |
+| ④ **溯源** | 源码 | `payloads.py:138-143` 那条 `TENANT_SELF_REFERENCE_NOTE`（【范围自指】）**只禁止**「判 `clarify_needed`」「列进 `unmapped_terms`」—— **从未要求把它从 `normalized_question` 删掉**；`payloads.py:136-137` 明文写「⚠️ 只进这三个任务（`normalize`/`normalize_intent`/`intent`），**不进 `plan`**」；`payloads.py:753/767/774` 把它挂到 `constraints`（wire 上折叠进 user 的 `[附加约束]`）；`plan.py:90-107` `blocking_issues` 非空 ⇒ `refuse(no_data_asset)` |
+
+**⇒ 一句话**：**契约在 `normalize` 侧只约束"判定"，不约束"文本残留"；而 `plan` 侧被特意排除在这条说明之外** ⇒ 只要 LLM 把该代号留在归一化文本里，plan 就必然把它当"无法解析的实体"。
+**⇒ 机制性结论**：这是一条**对 LLM 顺从性有硬依赖**的路径 —— 4/5 顺从、1/5 不顺从，**结果从 success 变成 refuse**。
+
+**影响面（登记，不作断言）**：误拒 63 条里 **57 条题面含租户自指**（`T_[ABC]`），且**全部停在 `refuse_out`**；全 166 条里 **119 条**含租户自指。
+⚠️ **不能据此断言 57 条都是这个根因**：`results_v1.json` 只带 `refusal_reason`、**不带 `blocking_issues`**；且 119 条含自指者中多数并未拒答（⇒ 自指**不是充分条件**，必须"残留"才触发）。判定需要重跑/重放这一族（出站）或给 v1 批补取 blocking_issues 面。
+**⇒ 修法建议（未办，属 `app/**`，需明示授权）**：把"剥离"做成**确定性**步骤（在 `normalize → plan` 之间按已认证的租户代号做一次纯文本剥离/或让 plan 收到该说明），**不要**继续只靠提示词约束 LLM。
+
+### 45.2 返工 B｜replay 成本口径（两套时段成本；`tokens` 才是可复现量）
+
+- 已就地订正 `RELAY §44.1`（回放校验格）与 `§44.5`（复算入口②）：**删除无注解的「cost 逐位复现」**，改列**录制时段／回放时段**两套值。
+- 本窗**自跑复核**（零出站、第 45 轮新增第三格证据）：`--mode replay` @ 2026-10-16 11:49 +0800（**峰**）⇒ `tokens 124011`／`cost **0.107013**` ⇒ 与 QA 10:16 那次**同值**，与录制（非峰）`0.053505` 恰 **2.0000×**（`budget.py:121-129` 的 PEAK/OFF_PEAK 逐格 2×）。
+- **口径一句话**：`tokens`／`terminal_distribution` = **可复现量**；`cost` = **录制时刻的计价**，回放会按**回放时刻的时段档**重算 ⇒ 引用**必须带时段**。
+
+### 45.3 返工 C｜扫描计数与复算入口（HEAD/时点写清；新增工作树口径）
+
+- 已就地订正 `RELAY §44.2`（实跑格）与 `§44.5`（复算入口③）：把 **78** 明确标注为**提交前**口径，并给出四档现读（78 提交前／81 `0f63223`／**83 @ `7e6c6e7`**／**684 工作树**），**每档带 HEAD 与时点**。
+- **新增** `--working-tree` 开关（含**未跟踪新件** —— 第 44 轮漏的正是这一面）＋ **正例/反例自检** `backend/tests/unit/test_scan_secrets.py`（**8 passed**：正例必命中、工作树遍历必看见新件、4 条反例不得误报、真仓库工作树 0 命中、脚本源码不自匹配）。
+- 实跑现读（2026-10-16 11:54 +0800 ／ HEAD `7e6c6e7`）：`--since 983214c` ⇒ **83 件／0 命中／rc=0**；`--working-tree` ⇒ **684 件／0 命中／rc=0**。
+
+### 45.4 定价决策（派单 §64.1 一 要求"全批前先决定"）—— **决定：保留 caveat，不补价表**
+
+**事实**：新上游模型名 `deepseek-v4.1-flash` **不在** `budget.py:120-129` 的 `PRICES` 里；`resolve_price` 对未知模型**按最贵的 `deepseek-v4-pro` 兜底**并置 `price_guess=True`（`budget.py:118-119`／`:131-132`）⇒ 现报的一切 `cost` 都是**价格猜测**，且**系统性偏高**（flash 档非峰 `0.003` ⟷ pro 档 `0.022` ＝ **7.3×**）。
+**决定与理由**：① **补价表 = 往真价表里写一个我无法验证的数**（我没有 kuaipao.pro 的权威单价）⇒ 那会把"猜测"洗成"事实"；
+② `budget.py` 属 **`backend/app/**`** ⇒ 改它是**代码面变更**，按边界需**明示授权**；
+③ 故 **保留 `price_guess` 语义**，并把纪律落为：**凡引 `cost` 一律标注「应用计价（price_guess，按 pro 档兜底，非上游发票真值）」**，**`tokens` 升为主报量**（它是真值且可复现）。
+⇒ 若总控能给出 kuaipao.pro 的**权威价目**，下一轮再补 `PRICES` 条目（届时须同时更新 `§64.0` 那句"价格猜测"的定性）。
+
+### 45.5 边界、花费、取号与复算入口
+
+- **本轮零出站** ✅（全部复算都是 `--mode replay`／只读扫描／离线 pytest；**无 `build_gateway` 调用**）。
+- **本轮花费 ¥0**（无出站 ⇒ 无计量；因**确有零出站**证据，故本轮"零花费"是**可打的**，与第 43/44 轮必然不同）。
+- **台账逐位不动**：`app.cost_ledger` 现读 `1830|3.025849|2026-10-07 04:28:00.872275+00`。
+- **未动**：`reports/qa/**`（只读）、`semantic/**`、冻结集、`backend/app/**`、`deploy/**`、容器、`ecom` 台账。
+- **零取号**：`docs/07_技术设计文档_TDD.md:1094` 仍 **「下一个可用号 = `U-143`」**。
+- **复算入口**（**带时点**：第 45 轮／起点 `7e6c6e7`／2026-10-16 11:4x–11:5x +0800）：
+  - ① 根因链：`PYTHONUTF8=1 .venv/Scripts/python.exe <临时件 chain.py> `（读 a3 匣带 ＋ replay 跑 `E-VER-04`）→ **实跑** `nodes=[…'plan','refuse_out']`、`normalized_question` **含** `T_A`、`reason_code=plan_blocked`。
+  - ② 报文对照：读 `eval/cassettes/w8_r44_a3.jsonl` 的 `#13`／`#14`（`normalize_intent` 的 `[附加约束]` 有【范围自指】、`plan` 的只有【安全声明】）。
+  - ③ 成本双档：`… runner.py --cases E-VER-01,…,E-VER-05 --mode replay --cassette eval/cassettes/w8_r44_a3.jsonl --out <新路径> --yes` → **实跑（峰时）** `tokens 124011｜cost 0.107013`。
+  - ④ 扫描：`… backend/scripts/scan_secrets.py --since 983214c` → **83／0／rc=0**；`--working-tree` → **684／0／rc=0**；`pytest backend/tests/unit/test_scan_secrets.py -q` → **8 passed**。
+
+### 45.6 串行资源表六面
+
+| 面 | 本轮是否争用 | 尺 |
+|---|---|---|
+| `git` 索引 | 争用（本轮提交） | 按名 stage；`git show --stat` |
+| 共享 `ecom` | 只读一次（台账） | `begin; … rollback;`；台账逐位不动 |
+| 共享栈 | 不争用 | 未 up/down/build；`api` 容器未动（QA 已重建） |
+| 被测镜像 | 不争用 | 未 `docker build` |
+| 匣带 | **只读**（`w8_r44_a3.jsonl` 未改；回放不写） | `git status` 该件无变化 |
+| `reports/qa/**` | 不争用（只读） | 本窗未写 QA 面 |
+
+### 45.7 待办与回单
+
+| # | 项 | 说明 |
+|---|---|---|
+| 1 | 🔴 **`normalize` 残留 `T_A` 的确定性修法** | 见 §45.1 末（属 `app/**` ⇒ 需**明示授权**）；修前建议先重放/重跑该族以量化影响面 |
+| 2 | 🔴 **63 条全批的额度** | `tokens` 口径 ≈ 24.8k/条；`cost` 现为 `price_guess`（按 pro 档高估 **7.3×**）⇒ 报价两栏并列（§45.4）。`§63.6 #1-2` 的额度表**未答**，仍待总控 |
+| 3 | 🟡 `F-1…F-5` | 按 §63.6 #3 排在"E-VER-04 归因订正并拿到读数之后" ⇒ **本轮已订正归因**，可排下一轮 |
+| 4 | 🟡 对外件刷新（`OVERVIEW.md` 三处「9 个」＋ CI 本地绿/全历史红差异） | 按 §63.6 #4 各留**专门一轮** |
+| 5 | 🔴 `_shared.llm_error_update` 丢弃 `exc.detail` | 承 §44.7 #3；**未授权不动** |
+
+### 45.8 注入形态
 
 - 注入形态 = **无**；未执行 **N/A**。
