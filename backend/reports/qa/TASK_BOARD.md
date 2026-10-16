@@ -4119,3 +4119,14 @@ W8 把交替分支**截断**为 `…|postgres://`，注明「语义上只会更�
 回执格式：本轮改了哪些文件；每个缺陷的状态；跑了哪些命令和原始读数；
 还剩什么；下一阶段建议。不得写“应该可以”，未跑就写 UNVERIFIED。
 ```
+### 67.3 P0-A 现读审计（QA R31ao 追加）
+
+| 项 | QA 现读 | 对 W8 的动作 |
+|---|---|---|
+| U-131 | `backend/tests/contract/test_api_endpoints_contract.py -k "owner or U131 or session"` ⇒ **14 passed / 17 deselected**；代码已在 `state_store.py` 做属主校验，但这是契约面 | 需真实 API 三面：跨属主读 404／写 404／推理侧不越权；不得只交测试结果 |
+| U-129 | 全量 `-k` 收集被一次性 DB 环境变量缺失挡住：`COMMERCEQL_TEST_SUPER_DSN`／`COMMERCEQL_TEST_RW_DSN` 未设置 ⇒ **不能把共享 ecom 当测试库**，也不是代码失败 | 起一次性 PG 测试库，跑属主二轮与 U-131/U-129 交界；跑完 DROP＋查 `ecom%` 残渣 |
+| U-142 | `backend/app/graph/nodes/normalize.py:37-39` 明写 `GraphState` 无历史字段、当前传 `history=()` ⇒ 多轮指代消解在 P0 不生效 | 先补真正的会话历史载体/读取路径，再证明它进入 `gen_sql`；不得只加一个空字段 |
+| normalize 残留 | `backend/app/planner/payloads.py:136-143` 明写范围自指明只进 normalize/intent、不进 plan；E-VER-04 实测 plan 因此 blocking | 做确定性租户自指剥离或等价契约修法；重放 57/63 自指误拒族，给前后对撞 |
+| 门禁 | `eval_metrics.json` 仍 `88f3500 / dirty=false / PASS 1/8`；当前全量评测未重跑 | 在 P0-A 修完后进入 P0-B，先刷新输入再重算，不得用旧门禁充当期 |
+
+**结论**：P0-A 不是“重写项目”，是把三个真实断点修到可验收：U-131 活体三面、U-129/U-142 多轮、normalize 残留。W8 第一段按 §67.2 开工，先做并回执，禁止把契约测试当活体验收。
