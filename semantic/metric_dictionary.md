@@ -4,7 +4,7 @@
 
 > **本文件由 `semantic/render_metric_dictionary.py` 从 `bundle_2026.09.14.1.yaml` 自动生成，请勿手改。**
 >
-> 语义包版本 `2026.10.15.1`｜状态 `candidate`｜指标口径 hash `6e44e05a44af9155`
+> 语义包版本 `2026.10.16.1`｜状态 `candidate`｜指标口径 hash `6e44e05a44af9155`
 >
 > 时区 `Asia/Shanghai`；财年起始月 `1`；周起点 `monday`。
 

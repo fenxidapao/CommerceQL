@@ -70,13 +70,16 @@ class _FakeReader:
 
 class TestFamilyDerivation:
     def test_real_bundle_families(self, index: GrainIndex) -> None:
-        """实测 5 族：地理族由 `region`+`city` 合并而成（共享 province/city 且值一致）。"""
+        """实测 8 族：地理族由 `region`+`city` 合并；新增 SKU/SPU/campaign_type 各自成族。"""
         assert {fam.key for fam in index.families} == {
             "category",
             "channel",
             "city+region",
             "shop",
             "time",
+            "sku",
+            "spu",
+            "campaign_type",
         }
         geog = index.family("city+region")
         assert geog is not None
@@ -127,7 +130,7 @@ class TestLevelOfRef:
             ("traffic_daily.channel", GrainRef("channel", "channel", 1)),
             ("shop.shop_name", GrainRef("shop", "shop", 1)),
             # 匹配不到层级 → None（问句粒度判据取不到时**不猜**）
-            ("product.sku_name", None),
+            ("product.sku_name", GrainRef("sku", "sku", 1)),
             ("order_paid.pay_time", None),
             # 非列级引用（指标名 / 纯表名）→ None
             ("gmv", None),

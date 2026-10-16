@@ -423,7 +423,7 @@ class TestObserver:
         assert event.reason == "alias_unique"
         assert event.scope_was_set is False
         assert event.tau_is_calibrated is True
-        assert event.bundle_version == "2026.10.15.1"
+        assert event.bundle_version == "2026.10.16.1"
 
     def test_event_carries_no_unbounded_label_content(self, runtime: SemanticBundleRuntime) -> None:
         """`BindingEvent` **不得**含概念名/问句/租户 —— 标签只允许有界基数。"""
@@ -475,7 +475,7 @@ class TestGrainIndexCache:
         assert service.grain_index is not first
 
     def test_index_reports_the_derived_bundle_version(self, runtime: SemanticBundleRuntime) -> None:
-        assert _service(runtime).grain_index.bundle_version == "2026.10.15.1"
+        assert _service(runtime).grain_index.bundle_version == "2026.10.16.1"
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]

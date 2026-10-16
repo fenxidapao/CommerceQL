@@ -636,3 +636,12 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - 一次性 PG/Redis：`w8r48-pg`／`w8r48-redis`，跑后 DROP `ecom`、停删容器；残渣现查 `w8r48-*` = 0，共享库仅 `ecom`／`ecom_u123_probe`。
 - 出站：仅启动健康预热 `GET https://kuaipao.pro/v1`（404）；非模型请求，`tokens=0`、应用计价 `0`，无评测批。
 - 门禁：未重算，仍 `PASS 1/8`；零取号（现读 `U-143`）；未写 `reports/qa/**`、未改冻结集/阈值/判据措辞。
+
+## 第 48 轮交付（集成 2 红 → **124/0** ＋ F-1…F-5 联合修复 ＋ G-2 10 条／57 条族重跑 ｜ 起点 HEAD `958609b` ｜ 2026-10-16 16:20–20:50 +0800 ｜ 一轮一笔）
+
+- **改了**：`semantic/bundle_2026.09.14.1.yaml`（`meta.version` → `2026.10.16.1`；F-1 `sku`／F-2 `spu`／F-5 `campaign_type` 三维度；F-3 `category.binding` 与 `field_bindings.类目` 改 `product.category_l1`；新增 `二级/三级类目`、`活动类型` 别名）＋ `semantic/metric_dictionary.md`（渲染件已重跑）＋ `backend/tests/contract/test_semantic_f_coverage_contract.py`（新增 13 条 gold 对撞）＋ `backend/tests/integration/test_semantic_materialization.py`（版本/计数改**从真包派生**、加 `_MIN_BUNDLE_VERSION` 防漂回）＋ `backend/tests/integration/test_real_redis_lock_and_ratelimit.py`（Redis 只认 `COMMERCEQL_TEST_REDIS_URL`，不再回落共享 6379）＋ 7 个别窗测试的连带字面量。
+- **实跑**：集成 **124 passed / 0 failed**（一次性 PG 55435 ＋ Redis 56382，先 `alembic upgrade head`；F 改动后复跑同读数）；离线全量 **2538 passed / 0 failed**；validator **PASS=31 / FAIL=0 / SKIP=1 / WARN=2**；F 契约 **13 passed**。
+- **读数**：G-2 10 条 `complete 8 / refuse 2`、`equivalent 6`、`tokens 251,261`、计价 `1.241905`（`price_guess`）⇒ **不达门，不宣称 G-2 改善**；57 条族被上游额度/超时两次打断，只能给 **46/57 干净复合**（`complete 20 / refuse 12 / clarify 3`，另 11 条未覆盖），5 批合计 `tokens 1,347,920`、计价 `4.444101`（`price_guess`）⇒ **不得当 G-5 判词**。
+- **本轮最有价值的发现**：**F-4 试做「新增 `region_name` 维度」后撤回** —— 与既有维度共享层级名会改 `grain_index` 的 **family key**（`city+region` → `city+region+region_name`，12 条断言红），且实测让 `E-VER-07` 多一个 `GROUP BY` 列而**不等价**；撤回后族名复原、`E-VER-07` 转等价。F-4 的声明面改为只钉**既有** `field_bindings.大区 → region.region_name`。
+- **E-MET-08**：三条证据（语义包全指标 `pay_status='paid'` 默认谓词／模型如实按「硬性规则 2」拒答／冻结集 `notes` 自述「反面口径」）⇒ **不应补 metric**，属冻结集内部口径冲突（与 `E-VER-01`／`E-VER-06` 同族），处置归判据层。
+- **门禁**：**未重算**，仍 `PASS 1/8`；零取号（`U-143`）；未写 `reports/qa/**`、未改冻结集/阈值/判据措辞、未写共享 `ecom`。

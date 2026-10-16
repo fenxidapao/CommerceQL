@@ -27,7 +27,7 @@ def test_custom_dict_loaded_from_bundle() -> None:
     assert "坑位费" in terms
     assert "SKU" in terms
     assert "动销率" in terms
-    # 数量级 sanity：105 别名 + 列级 synonyms + 15 黑话 + enum 标签
+    # 数量级 sanity：179 别名 + 列级 synonyms + 15 黑话 + enum 标签
     assert len(terms) >= 120
 
 

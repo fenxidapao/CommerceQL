@@ -152,7 +152,7 @@ def test_metrics_shape_covers_contract_and_does_not_invent_updated_at() -> None:
     for row in data["items"]:
         assert set(row) >= METRIC_CONTRACT_KEYS, f"契约键缺失：{METRIC_CONTRACT_KEYS - set(row)}"
         assert row["updated_at"] is None, "包内 0/9 有 `updated_at` ⇒ 不许拿 created_at 冒充"
-        assert row["bundle_version"] == "2026.10.15.1"
+        assert row["bundle_version"] == "2026.10.16.1"
     drafts = [r for r in data["items"] if r["status"] == "draft"]
     assert drafts, "真包里有 draft 指标（sell_through_rate）⇒ 被过滤掉就是抹平"
     for d in drafts:

@@ -1,5 +1,5 @@
 # ============================================================================
-# CommerceQL 语义包 v2026.09.14.1
+# CommerceQL 语义包 v2026.10.16.1
 # 归属窗口：W1A（docs/08 §4.1：`semantic/**` 归 W1A）
 # Owner: data-team（占位）    审批: 待签    生效: 2026-09-15
 #
@@ -46,7 +46,7 @@
 # ============================================================================
 
 meta:
-  version: "2026.10.15.1"          # ★ W8 第 41 轮递增（原 2026.09.14.1）：+13 指标 / +71 别名（维度与域级谓词试做后撤回）
+  version: "2026.10.16.1"          # ★ W8 第 48 轮递增：补 F-1/F-2/F-5 维度 + F-3/F-4 绑定
   # ⚠️ 文件名**保持** `bundle_2026.09.14.1.yaml`（`eval/_bootstrap.py` 与 `deploy/.env.example`
   #    都把该文件名硬编码为 `SEMANTIC_BUNDLE_PATH`）⇒ **文件名与版本号刻意解耦**：
   #    版本真相只在 YAML 的 `meta.version`（SCHEMA_v1.md §9 纪律 1 要求内容变更必须递增版本号，
@@ -980,13 +980,20 @@ dimensions:
       "西南": ["500000", "510000", "520000", "530000", "540000"]
       "西北": ["610000", "620000", "630000", "640000", "650000"]
       "东北": ["210000", "220000", "230000"]
-    note: "禁止让模型猜大区归属；未列入 value_map 的省 → 归'其他'或不支持。"
+    note: >
+      本维度的 binding 仍用于 value_map（华东→省编码集）的订单侧展开；大区名称本身由
+      独立的 region_name 维度绑定 region.region_name。禁止让模型猜大区归属；未列入
+      value_map 的省 → 归'其他'或不支持。
 
   - name: category
-    binding: order_paid.category_l1
+    binding: product.category_l1
     hierarchy: [category_l1, category_l2, category_l3]
     grain_levels: { category_l1: 1, category_l2: 2, category_l3: 3 }
     grain_level: 3
+    note: >
+      F-3：商品侧类目以 product.category_l1 为规范绑定；订单上下文可经
+      order_paid.sku_id = product.sku_id 对齐。层级名与 grain_levels 保持不变，
+      故 category family 不新增、不重命名。
 
   - name: channel
     binding: traffic_daily.channel
@@ -1030,6 +1037,27 @@ dimensions:
       （对齐 07 §6.8.1：**同粒度不同语义**才是必须澄清的形态；
        "城市 vs 区县"因粒度不同而**不**触发澄清 —— 上游 PRD §6.2 的举例与 §6.3.1 相反，
        以 §6.3.1 为准，已登记 U-10。）
+
+  - name: sku
+    binding: product.sku_id
+    hierarchy: [sku]
+    grain_levels: { sku: 1 }
+    grain_level: 1
+    note: "F-1：SKU 粒度。订单/流量/商品资产均有 sku_id；按查询所在事实资产选择具体列。"
+
+  - name: spu
+    binding: product.spu_id
+    hierarchy: [spu]
+    grain_levels: { spu: 1 }
+    grain_level: 1
+    note: "F-2：SPU 粒度。product.spu_id 为规范锚点，一个 SPU 可含多个 SKU。"
+
+  - name: campaign_type
+    binding: campaign.campaign_type
+    hierarchy: [campaign_type]
+    grain_levels: { campaign_type: 1 }
+    grain_level: 1
+    note: "F-5：活动类型维度；枚举 normal_sale / prom_618 / prom_double11。"
 
   # ==========================================================================
   # 🔴 W8 第 41 轮**试做后又撤回**的 5 个维度（SKU / SPU / campaign_type /
@@ -1107,10 +1135,14 @@ field_bindings:
     note: "⚠️ order_paid.channel 同样存在（成交渠道）。订单域问题应绑 order_paid.channel"
 
   - concept: 类目
-    canonical_asset: order_paid.category_l1
+    canonical_asset: product.category_l1
     time_semantics: current
     grain_level: 1
-    default_reason: "订单上下文下的类目以成交记录为准"
+    default_reason: "商品侧类目以 product.category_l1 为准"
+    alternatives:
+      - asset: order_paid.category_l1
+        use_when: order_context
+        note: "订单上下文可按 sku_id 对齐到 product.category_l1；需要订单快照时保留本备选。"
 
   - concept: 大区
     canonical_asset: region.region_name
@@ -1424,7 +1456,10 @@ aliases:
   - { term: "省",        lang: zh, maps_to_kind: column, maps_to_ref: region.province_name, category: dimension }
   - { term: "类目",      lang: zh, maps_to_kind: dimension, maps_to_ref: category, category: dimension }
   - { term: "品类",      lang: zh, maps_to_kind: dimension, maps_to_ref: category, category: dimension }
-  - { term: "一级类目",   lang: zh, maps_to_kind: column, maps_to_ref: order_paid.category_l1, category: dimension }
+  - { term: "一级类目",   lang: zh, maps_to_kind: column, maps_to_ref: product.category_l1, category: dimension }
+  - { term: "二级类目",   lang: zh, maps_to_kind: column, maps_to_ref: product.category_l2, category: dimension }
+  - { term: "三级类目",   lang: zh, maps_to_kind: column, maps_to_ref: product.category_l3, category: dimension }
+  - { term: "活动类型",   lang: zh, maps_to_kind: dimension, maps_to_ref: campaign_type, category: dimension }
   - { term: "渠道",      lang: zh, maps_to_kind: dimension, maps_to_ref: channel, category: dimension }
   - { term: "来源",      lang: zh, maps_to_kind: column, maps_to_ref: traffic_daily.channel, category: dimension }
   - { term: "流量来源",   lang: zh, maps_to_kind: column, maps_to_ref: traffic_daily.channel, category: dimension }

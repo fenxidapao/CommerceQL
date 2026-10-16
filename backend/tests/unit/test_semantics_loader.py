@@ -73,7 +73,7 @@ def _identity(role: Role = Role.ANALYST) -> IdentityContext:
 class TestRealBundle:
     def test_loads_green(self) -> None:
         loaded = load_bundle(REAL_BUNDLE)
-        assert loaded.version == "2026.10.15.1"   # ★ W8 第 41 轮递增
+        assert loaded.version == "2026.10.16.1"   # ★ W8 第 48 轮递增
         assert loaded.status == "candidate"
         # 8 资产全部过质量门槛（W1A：quality_score 全部 ≥ 0.90）
         assert len(loaded.active_assets) == 8
@@ -348,11 +348,11 @@ class TestRuntime:
             {"surface": "GMV", "canonical": "metric:gmv", "kind": "metric"},
         )
 
-    def test_alias_unique_105(self) -> None:
-        """W1A 交付口径：别名一对一（由 loader 的重复 term 断言强制）。
-        ★ W8 第 41 轮：真实包别名 105 → 176（新增 13 条指标的同义词）。"""
+    def test_alias_unique_179(self) -> None:
+        """W1A 交付口径：别名一对一（由 loader 的重复 term 强制）。
+        ★ W8 第 48 轮：真实包别名 176 → 179（F-3/F-5 新增 3 条）。"""
         loaded = load_bundle(REAL_BUNDLE)
-        assert len(loaded.bundle.aliases) == 176
+        assert len(loaded.bundle.aliases) == 179
 
     def test_blacklist_refuse_and_clarify(self, runtime: SemanticBundleRuntime) -> None:
         refuse = runtime.lookup_blacklist("坑位费")
@@ -576,6 +576,6 @@ class TestRuntime:
         而两张表漂移的后果是模型按摘要里的词形问、L1 却查不到，静默落到 L4 近似匹配。
         """
         aliases = runtime.aliases()
-        assert len(aliases) == 176
+        assert len(aliases) == 179
         for alias in aliases:
             assert runtime.resolve_alias(alias.term) is alias

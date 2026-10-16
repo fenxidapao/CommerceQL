@@ -49,6 +49,14 @@ REAL_BUNDLE = (
     Path(__file__).resolve().parents[3] / "semantic" / "bundle_2026.09.14.1.yaml"
 )
 
+#: 版本防漂回下限：升级可以前进，但测试不得再拿旧 2026.09.14.1 当期望。
+_MIN_BUNDLE_VERSION = (2026, 10, 15, 1)
+
+def _version_tuple(value: str) -> tuple[int, int, int, int]:
+    parts = tuple(int(part) for part in value.split("."))
+    assert len(parts) == 4, f"语义包版本必须为 YYYY.MM.DD.N：{value!r}"
+    return parts
+
 
 class _StubRedis:
     """内存 stub：只验证 switch/get/rollback 的**语义**（键值读写），不验证连接。"""
@@ -112,11 +120,11 @@ class TestMaterializeRows:
         self, loaded: Any, migrated: None
     ) -> None:
         report = materialize(loaded, dsn=_RW, with_policy=False)
-        assert report.version == "2026.09.14.1"
+        assert report.version == loaded.version
         assert report.rows["asset"] == 8
-        assert report.rows["metric_def"] == 9
-        assert report.rows["dimension"] == 6
-        assert report.rows["synonym"] == 105
+        assert report.rows["metric_def"] == len(loaded.bundle.metrics)
+        assert report.rows["dimension"] == len(loaded.bundle.dimensions)
+        assert report.rows["synonym"] == len(loaded.bundle.aliases)
         # U-123：缺派生器 ⇒ embed_doc **整体跳过删插**（连 DELETE 都不做），不是插 NULL 行
         assert report.rows["embed_doc"] == 0
         assert report.doc_count == 0
@@ -313,10 +321,11 @@ class TestPolicyAndConsistency:
 
 class TestVersionPointer:
     def test_switch_get_roundtrip(self, loaded: Any, migrated: None) -> None:
+        assert _version_tuple(loaded.version) >= _MIN_BUNDLE_VERSION
         r = _StubRedis()
         assert get_active_version(r, key=_POINTER_KEY) is None  # 未发布 = 如实 None
         switch_version(r, loaded.version, key=_POINTER_KEY)
-        assert get_active_version(r, key=_POINTER_KEY) == "2026.09.14.1"
+        assert get_active_version(r, key=_POINTER_KEY) == loaded.version
 
     def test_rollback_requires_existing_version(
         self, loaded: Any, migrated: None

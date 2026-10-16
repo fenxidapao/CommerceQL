@@ -17,7 +17,8 @@
 
 ## 与 `test_audit_append_only.py` 相同的两条纪律
 
-- **无 Redis 自动 skip**，且 skip 理由写清楚 —— 不静默假绿；
+- **Redis 连接串只认 `COMMERCEQL_TEST_REDIS_URL`**：缺 env = import 期当场 fail（不得回落到共享 compose Redis）；
+  连不上才 skip，且 skip 理由写清楚 —— 不静默假绿；
 - **负向对照**：先证明"正常路径真的能过"（拿得到锁 / 放行 10 次），
   再证明"拒绝路径真的会拒"。只测拒绝的话，一个把键名写错、连不上的实现也会"通过"。
 
@@ -29,6 +30,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 import uuid
 from collections.abc import AsyncIterator
@@ -45,9 +47,13 @@ from app.core.errors import SessionLockConflict
 
 pytestmark = pytest.mark.integration
 
-#: 真 Redis 的连接串。默认指向 compose 的宿主映射端口 —— 与 `docker-compose.yml` 一致，
-#: 这样"测试能过"与"栈能起"用的是同一套地址。
-_REDIS_URL = "redis://localhost:6379/0"
+#: 真 Redis 的连接串。必须显式指向**一次性 Redis**，防止集成测试误写共享实例。
+_REDIS_URL = os.environ.get("COMMERCEQL_TEST_REDIS_URL", "")
+if not _REDIS_URL:
+    raise RuntimeError(
+        "环境变量 COMMERCEQL_TEST_REDIS_URL 未设置 —— 集成 Redis 测试拒绝回落到共享端口 6379。"
+        "请把它指向一次性 Redis（不要指向共享 commerceql-redis-1）。"
+    )
 
 
 def _ctx(
