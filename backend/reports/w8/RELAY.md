@@ -4822,7 +4822,7 @@ docker stop w8r48-pg w8r48-redis
 **代价②（出站实测，G-2 的 `E-VER-07`）**：生成 SQL 变成 `SELECT region_name, COUNT(*) … GROUP BY region_name`（**多一个 `GROUP BY` 列**），与 gold（单值）**列数不同 ⇒ 不等价**。
 
 ⇒ **判定：撤回该维度**。F-4 的声明面改为**只钉既有 `field_bindings.大区 → region.region_name`**（该绑定**本来就在**：第 41 轮清单件把它列成 F-4，是因为 `dimensions.region.binding` 是 `order_paid.region_code`，让人以为大区没有绑定 —— 实测**有**，在 `field_bindings` 里，只是**没有独立维度**）。
-⇒ 撤回后：族名回到 `city+region`（12 条断言转绿）；`E-VER-07` 在终版 G-2 批里 **complete ＋ `equivalent=True`**。
+⇒ 撤回后：族名回到 `city+region`（12 条断言转绿）。🔴 **但 `E-VER-07` 并未因此转正** —— 终版产物 `eval/results_g2_r48_10_final.json` 实读 **`refuse`／`no_data_asset`／`plan→refuse_out`／`sql_text=""`／`equivalent=false`**。本行原文写的「complete ＋ equivalent=True」是我**读错产物**（把「新维度试做版」的失败与「撤回后」的期望混写），已由 QA `TASK_BOARD §69.0` 逮出；**就地撤回**，详见 §四九。
 ⇒ **教训（与 §41.5 同源、本轮再实证）**：**新增维度不是加法** —— 只要与既有维度共享任一**层级名**，就会改既有 family key。设计新维度前**先跑** `test_binding_grain.py`。
 
 ### 48.4 F-1…F-5 的 gold_sql 对撞 ＋ 受影响 case_id
@@ -4855,7 +4855,7 @@ docker stop w8r48-pg w8r48-redis
 | E-VER-01 | complete | ❌ | `gate_policy_gap`：`day_cnt` 生成 `WHERE year/month` ⇒ 列无法配对（**既有冻结集口径冲突**，第 40 轮已登记） |
 | E-VER-02/03/04/05 | complete | ✅ 4/4 | — |
 | E-VER-06 | complete | ❌ | `gate_policy_gap`：`campaign_cnt` 取**全量**（包内**刻意**不挂 `campaign_type='normal_sale'`）而 gold 带该谓词 |
-| E-VER-07 | complete | ✅ | **F-4 撤回新维度后转正**（试做版是「列数不同」） |
+| E-VER-07 | **refuse** | ❌ | 🔴 **实读产物为 refuse**（`no_data_asset`／`plan→refuse_out`）—— 本行原写 complete 是**错的**；真根因见 §四九。**F-4 未闭** |
 | E-VER-08 | complete | ✅ | — |
 | E-VER-10 | complete | ✅ | — |
 | E-VER-11 | **refuse** | ❌ | `over_refusal`：`l4_score` 那跳 **`LlmTimeout`** ⇒ `template_only` ⇒ 停在 `bind → refuse_out`（**上游超时，非 F 面**） |
@@ -4969,3 +4969,133 @@ aov / arpu / order_cnt 等交易指标同样以已支付为前提。语义包未
 - G-2 10 条读数：`eval/results_g2_r48_10_final.json` 的 `summary`（`n_equivalent=6`／`tokens_total=251261`／`cost_cny_total=1.241905`）。
 - 57 族：`eval/results_f57_r48{,_retry,_fixA,_fixB,_fixC}.json` 五件；**复合口径的判读谓词在 48.6 里逐字写明**，按该谓词重算即可（无外部脚本）。
 - 禁自指自查：本节所有入口都指向**非本节文件**（`.json`／`.yaml`／测试件），无「pattern 命中写下它的那一行」形态。
+
+## §四九 第 49 轮 · F-4 端到端闭账 ＋ G-2 10 条／57 族干净重跑 ｜ 2026-10-16 21:4x – 23:0x +0800 ｜ 起点 HEAD `5b90893`
+
+### 49.0 🔴 先自曝：上一轮 §48.5 的那行是**错的**
+
+QA `TASK_BOARD §69.0` 逮出的矛盾**成立**，我已独立复算：
+
+```text
+eval/results_g2_r48_10_final.json  →  E-VER-07 = refuse / no_data_asset / plan→refuse_out / sql_text="" / equivalent=false
+```
+
+而 §48.5 表格里写的是 `complete ＋ equivalent=True`。**产物为准，报告为错。**
+错因：我把「F-4 新维度试做版失败」与「撤回后的期望」混写，**没有回读产物就写了结论**。
+处置：§48.5 那一行**已就地撤回并标注**（保留原文 + 🔻 说明，不改写历史）。
+
+### 49.1 F-4 的真根因（与维度无关）
+
+**复算过程（零出站）**：
+1. `resolve_concept("大区", runtime).refs` **本来就含 `region.region_name`**（`field_bindings.大区` 早已正确，第 48 轮"绑定已存在"这句是**对的**）⇒ **维度不是死因**；
+2. 读 `eval/cassettes/w8_r48_g2_10_final.jsonl` 里 E-VER-07 的 plan **原始响应**，`blocking_issues` 原文是：
+
+```text
+"问题中的「华东覆盖省份数」存在口径歧义：province_cnt（维表存量省份数，按 region.region_name 大区筛选）
+ 与 province_covered_cnt（订单实际覆盖的收货省份数，落在 order_paid）同名根不同资产，语义包明确要求
+ 按大区筛选时用前者、问「实际卖出去了几个省」用后者，二者不可自行择一。"
+```
+
+⇒ **真死因 = `province_cnt.definition_note` 里那句「同名根不同资产…二者不可自行择一」把 plan 推向了"必须澄清"**，而 `plan.blocking_issues` 非空 ⇒ `refuse(no_data_asset)`（`nodes/plan.py:90-105`）。
+⇒ 这是一条**语义包文案缺陷**：说明写了"两者不同"，却没给"问句该怎么判"的可执行规则。
+
+### 49.2 修法（两条口径说明改为可判；不碰维度/不碰 family）
+
+| 面 | before | after |
+|---|---|---|
+| `semantic/bundle_2026.09.14.1.yaml:875-878`（`province_cnt.definition_note`） | 「…与 `province_covered_cnt` **同名根不同资产** —— 按"大区（`region_name`）"筛选或分组时用本条；问"实际卖出去了几个省"用 `province_covered_cnt`。」 | 「…按 `region_name` 筛选或分组即得，**不需要澄清、不需要时间范围**。判别：问"某大区/区域有多少个省""某大区的**覆盖省份数**"→ **本条**。」 |
+| 同件 `:895-899`（`province_covered_cnt.definition_note`） | 「…与 `province_cnt` **不是同一件事**：一个是"能覆盖"，一个是"已覆盖"。」 | 「…只应答"实际卖出去的/成交覆盖到的省份数"（**须给时间范围**）；问"某大区的覆盖省份数"用 `province_cnt`。」 |
+| `:49`（版本） | `2026.10.16.1` | **`2026.10.16.2`** |
+
+**为什么不是改维度**：`dimensions.region` 的 `binding` 承载 **`value_map`**（华东→省编码集），其物化路径由 `BundleView.value_entries()` 按 `(binding 资产, binding 列)` 展开 —— 改列会让「华南」等**值检索**整条失效（`test_retrieval_value.py::test_value_map_route` 就是那条守卫）。大区名走的是**别名/family 通路**，不是改这个 binding。**也没有新增任何共享 `region` 层级的维度** ⇒ `city+region` family key 未变。
+
+**新增/更新的守卫（`backend/tests/contract/test_semantic_f_coverage_contract.py`，18 passed）**：
+- `test_region_province_metrics_carry_a_decidable_rule`：两个指标的 `definition_note` **不得**再含「同名根不同资产」「不可自行择一」；`province_cnt` 必须含「不需要澄清」「region_name」「覆盖省份数」。**先 RED（1 failed）后 GREEN**；
+- `test_region_gold_sql_faces_are_covered`：E-VER-07（标量）与 M-DIM-08（`GROUP BY`）**两条 gold 形态**都被覆盖；
+- `test_dimension_region_binding_stays_order_side`：`dimensions.region.binding` 必须仍是 `order_paid.region_code` 且 `value_map` 仍含「华东」（防"改 binding 换大区名"这条错路）；
+- `test_region_name_resolves_from_alias_without_new_family`：`大区 → region.region_name`，且 family 集合里**没有** `city+region+region_name`。
+
+**family/level 回归**：`region.region_name` 仍 `GrainRef("city+region","region",2)`；`test_binding_grain.py` 12 条断言全绿（族集合仍 8 族，地理族 key 仍 `city+region`）。
+
+### 49.3 F-4 端到端证据（派单目标）
+
+| case | gold_sql | 实跑 SQL | 判定 |
+|---|---|---|---|
+| **E-VER-07** | `SELECT COUNT(*) FROM v_region WHERE region_name='华东'` | `SELECT COUNT(*) AS province_cnt FROM v_region WHERE region_name = %(region_name)s LIMIT 1` | **complete ＋ equivalent=True**（`eval/results_r49_ever07c.json`） |
+| **M-DIM-08** | `SELECT region_name, COUNT(*) FROM v_region GROUP BY region_name` | `SELECT v_region.region_name AS region_name, COUNT(*) AS province_cnt FROM v_region GROUP BY v_region.region_name ORDER BY province_cnt DESC LIMIT 100` | **complete ＋ equivalent=True**（`eval/results_r49_mdim08c.json`） |
+
+⇒ **F-4 端到端闭合**（两条 gold 形态都走通，且未新增维度、未改 family）。
+
+### 49.4 G-2 全部 10 条（干净重跑，B 项）
+
+**方法**：新增**带重试的干净批跑器**（`%TEMP%\w8r48\clean_batch.py`，**非入库件**）。它**不改任何超时/判据** —— 只做「同批多轮尝试、逐 case 取第一条无痕迹记录」。**为什么必须这样**：`deepseek-v4.1-flash` 的客户端硬上限是 07 §10.2 的 **15s**（判据值，不可改），而该上游当前尾延迟经常 >15s（实测连 `max_tokens=8` 都撞 `finish_reason=length`）⇒ 单轮批跑会随机撞 `LlmTimeout`。痕迹判定与 46/57 复合表**同口径**（`terminal_error_detail` / 降级含 `llm_unavailable`/`node_timeout_degraded` / 零 token 非 success）。
+
+**命令**：`python %TEMP%\w8r48\clean_batch.py --prefix g2 --cases E-VER-01,02,03,04,05,06,07,08,10,11 --max-rounds 4 --out eval/results_g2_r49_clean.json`
+**结果**：`n_clean=10 ｜ n_unresolved=0`（第 1 轮 8 条干净，E-VER-06/07 第 2/3 轮补齐）。
+
+| case | terminal | equivalent | refusal_reason |
+|---|---|---|---|
+| E-VER-01 | `complete` | ❌ | —（`gate_policy_gap`：`day_cnt` 生成 `WHERE year/month`；**已登记冻结集冲突**） |
+| E-VER-02 | `complete` | ✅ | — |
+| E-VER-03 | `complete` | ✅ | — |
+| E-VER-04 | **`refuse`** | ❌ | `no_data_asset`（`bind→refuse_out`，`spu_cnt` 候选未召回，**检索面**） |
+| E-VER-05 | `complete` | ✅ | — |
+| E-VER-06 | **`refuse`** | ❌ | `no_data_asset`（`bind→gen_sql→refuse_out`；**已登记冻结集冲突**：gold 带 `campaign_type='normal_sale'` 而包内 `campaign_cnt` **刻意**取全量） |
+| E-VER-07 | `complete` | ✅ | —（**F-4 本轮闭合**） |
+| E-VER-08 | **`refuse`** | ❌ | `no_data_asset`（`plan→refuse_out`；plan 要求时间范围而 gold 无时间谓词） |
+| E-VER-10 | `complete` | ✅ | — |
+| E-VER-11 | `complete` | ✅ | — |
+
+**读数**：`complete 7 / refuse 3`；**`equivalent 6`**；`tokens_total`（10 条干净记录之和）与计价见 `eval/results_g2_r49_clean.json`。
+
+⇒ **判**：G-2 门线 = `easy×low ≥ 95%`。`complete 7/10`（70%）与 `equivalent 6/10`（60%）**都不达门** ⇒ **不得宣称 G-2 改善或通过**；也**不得**用 5 条批外推。
+⇒ **E-VER-01 / E-VER-06 / E-VER-08 只登记、不迎合**（前两条是已登记的冻结集/包口径冲突；E-VER-08 是"事实表口径必须给时间范围"与冻结集 gold 无时间谓词的冲突）。
+⇒ **E-VER-04 相对第 47 轮退化（success→refuse）**：卡在 `bind`，`spu_cnt` 的列候选在 `embedding_unavailable → sparse_only` 下没被召回 —— **检索面缺口**（非 F 面），已具名登记。
+
+### 49.5 57 条自指族（57/57 全可判，C 项）
+
+**命令**：`python %TEMP%\w8r48\clean_batch.py --prefix f57b --cases <57 个 case_id> --max-rounds 5 --out eval/results_f57_r49_clean.json`
+**结果**：`n_clean=57 ｜ n_unresolved=0`（第 1 轮 47 条、第 2 轮 9 条、第 4 轮 1 条）⇒ **每 case 都有一条无基础设施痕迹记录**。
+
+**读数为单一口径**（不再是复合表）：`success 36 ｜ refuse 20 ｜ clarify 1`；**`equivalent 13`**；`tokens_total 1,292,210`；**应用计价 `3.713444`（`price_guess`）**。
+
+**before(`results_a1fix57_r47.json`, 同 57 条) → after 转移矩阵**：
+
+| before ↓ / after → | `complete` | `refuse` | `clarify` | 行合计 |
+|---|---|---|---|---|
+| `complete` | **29** | 12 | 0 | 41 |
+| `refuse` | **5** | 7 | 0 | 12 |
+| `clarify` | 2 | 1 | **1** | 4 |
+| **列合计** | 36 | 20 | 1 | 57 |
+
+**r47 的 12 条 refuse**：`E-VER-08`→refuse、`E-ENUM-05`→**complete**、`E-MET-08`→refuse、`H-ENUM-02`→**complete**、`H-CAT-04`→**complete**、`X-STR-02`→refuse、`X-ENUM-02`→**complete**、`X-ENUM-04`→refuse、`X-ENUM-05`→refuse、`X-ENUM-06`→refuse、`X-ENUM-07`→refuse、`X-ENUM-08`→refuse。
+**r47 的 4 条 clarify**：`H-STR-05`→refuse、`H-STR-06`→**complete**、`H-STR-08`→refuse、`X-STR-04`→clarify。
+
+**🔴 必须同说的不稳定**：`E-VER-07` 在**本 57 族批里是 `refuse`**（`link→plan→refuse_out`），而 §49.3/§49.4 的 G-2 干净记录里是 **`success ＋ equivalent`**。⇒ **同一 case 同一包、跨批结论不一致**，属**上游抖动下的稳定性问题**（plan 偶发又走"需要澄清"那条路）。**不得**只取对我有利的那一条 ⇒ 如实并报，并把该不稳定登记为下一轮首查项。
+
+### 49.6 🔴 本轮第二个自曝：批跑器文件命名冲突
+
+`clean_batch.py` 初版**没有批次前缀**，G-2 批与 57 族批共用 `w8_r49_clean_r{N}` 文件名 ⇒ 两批的 `r1/r2` 产物**互相覆盖**（57 族把 G-2 的 `r1` 覆盖掉了）。
+处置：给器加 `--prefix`（`--prefix g2` / `--prefix f57b`），**57 族已用新前缀重跑并留证**；G-2 的干净结论取自 `results_g2_r49_clean.json`（该文件是聚合产物、未受覆盖影响，且其每条记录都带 `_clean_round` 与来源批次）。
+⇒ 教训：**批跑器的产物名必须带批次 tag**，否则"我跑了两批"在盘上只剩一批。
+
+### 49.7 边界、出站、台账、门禁、取号
+
+- **未动**：`backend/reports/qa/**`（只读）、冻结集、阈值、判据措辞、`deploy/**`、共享 `ecom`。
+- **台账**：未读写共享库；`app.cost_ledger` 逐位不动。
+- **出站与计价（本轮，全部 `price_guess`）**：G-2 干净批 `tokens/计价` 见 `results_g2_r49_clean.json`；57 族干净批 `tokens 1,292,210`／计价 **`3.713444`**；另有若干单条重试与失败轮（产物全落 `eval/results_r49_*.json` 与 `eval/results_g2_r49_*.json`，可逐件核）。**`tokens` 为主报量。**
+- **一次性资源**：本轮集成用一次性 PG/Redis，已 `DROP DATABASE`＋`FLUSHALL`＋停容器；共享库现查仍只 `ecom`／`ecom_u123_probe`。
+- **门禁**：**未重算**；仍 `PASS 1/8` ⇒ 对外不得写"门禁通过"。
+- **取号**：**零新增号**；指针仍 `U-143`。
+- **机械护栏**：`test_migration_dsn_hygiene.py` ✅；`scan_secrets.py --working-tree` ✅ 0 命中。
+
+### 49.8 复算入口（带时点，禁自指）
+
+- **时点**：第 49 轮 ｜ 起点 HEAD `5b90893` ｜ 2026-10-16。
+- F-4 口径说明守卫：`.venv/Scripts/python.exe -X utf8 -m pytest backend/tests/contract/test_semantic_f_coverage_contract.py -q` → 实跑 **18 passed**。
+- family/level 回归：同目录 `test_binding_grain.py` → 实跑全绿（族集合 8 族、地理族 key `city+region`）。
+- E-VER-07 端到端：`eval/results_r49_ever07c.json`（`complete ＋ equivalent=True`）。
+- M-DIM-08 端到端：`eval/results_r49_mdim08c.json`（`complete ＋ equivalent=True`）。
+- G-2 10 条：`eval/results_g2_r49_clean.json`（`n_clean=10`／逐 case terminal/eq/reason）。
+- 57 族：`eval/results_f57_r49_clean.json`（`n_clean=57`／`n_unresolved=0`／矩阵见 49.5）。
+- 禁自指自查：以上入口均指向**非本节文件**，无"pattern 命中写下它的那一行"形态。

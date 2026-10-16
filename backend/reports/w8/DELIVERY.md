@@ -645,3 +645,15 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **本轮最有价值的发现**：**F-4 试做「新增 `region_name` 维度」后撤回** —— 与既有维度共享层级名会改 `grain_index` 的 **family key**（`city+region` → `city+region+region_name`，12 条断言红），且实测让 `E-VER-07` 多一个 `GROUP BY` 列而**不等价**；撤回后族名复原、`E-VER-07` 转等价。F-4 的声明面改为只钉**既有** `field_bindings.大区 → region.region_name`。
 - **E-MET-08**：三条证据（语义包全指标 `pay_status='paid'` 默认谓词／模型如实按「硬性规则 2」拒答／冻结集 `notes` 自述「反面口径」）⇒ **不应补 metric**，属冻结集内部口径冲突（与 `E-VER-01`／`E-VER-06` 同族），处置归判据层。
 - **门禁**：**未重算**，仍 `PASS 1/8`；零取号（`U-143`）；未写 `reports/qa/**`、未改冻结集/阈值/判据措辞、未写共享 `ecom`。
+
+## 第 49 轮交付（F-4 端到端闭账 ＋ G-2 10 条／57 族干净重跑 ｜ 起点 HEAD `5b90893` ｜ 2026-10-16 21:4x–23:0x +0800 ｜ 一轮一笔）
+
+- **🔴 先对账**：QA 逮出的 §48.5 矛盾**成立** —— 产物实读 `E-VER-07 = refuse`，报告写 `complete` 是**错的**；§48.5 那一行已**就地撤回并标注**（不改写历史）。
+- **F-4 真根因**（与维度无关）：`province_cnt.definition_note` 里「同名根不同资产…不可自行择一」把 plan 推向 blocking ⇒ `refuse`。修法 = 把两条口径说明改为**可判规则**（`semantic/bundle_2026.09.14.1.yaml:875-878`、`:895-899`）＋版本 `2026.10.16.1 → 2026.10.16.2`；**未新增维度、未改 `city+region` family**。
+- **F-4 端到端闭合**：`E-VER-07` = `complete ＋ equivalent`（`v_region` + `region_name`，SQL 与 gold 同形）；`M-DIM-08` = `complete ＋ equivalent`（`GROUP BY region_name`）。两条 gold 形态都有守卫（`test_semantic_f_coverage_contract.py`，**18 passed**，先 RED 后 GREEN）。
+- **G-2 10 条（干净重跑）**：`n_clean=10 ｜ n_unresolved=0`；`complete 7 / refuse 3`、`equivalent 6` ⇒ **不达门（≥95%），不宣称改善**。E-VER-01/06/08 作**已登记冻结集冲突**只登记；E-VER-04 相对 r47 退化（`bind` 拿不到 `spu_cnt` 候选）**具名登记为检索面缺口**。
+- **57 族（干净重跑）**：`n_clean=57 ｜ n_unresolved=0` —— **每 case 至少一条无基础设施痕迹记录**；`success 36 / refuse 20 / clarify 1`、`equivalent 13`、`tokens 1,292,210`、计价 **`3.713444`**（`price_guess`）；转移矩阵见 `RELAY §49.5`。
+- **🔴 自曝两件**：① §48.5 结论与产物矛盾（上游见 A 项）；② `clean_batch.py` 初版**无批次前缀**导致 G-2/57 族产物互相覆盖，已加 `--prefix` 并用新前缀重跑 57 族。
+- **🔴 不稳定项**：`E-VER-07` 在 G-2 干净批是 `success`、在 57 族干净批是 `refuse`（同包同 case 跨批不一致）⇒ 如实并报，登记为下一轮首查。
+- **复跑（D 项）**：`tests/integration` **124 passed / 0 failed**（一次性 PG/Redis ＋ `alembic upgrade head`）；离线 **2543 passed / 0 failed**；validator **PASS=31 / FAIL=0 / SKIP=1 / WARN=2**。
+- **边界**：未动 `reports/qa/**`、冻结集、阈值、判据措辞、共享 `ecom`；一次性容器已清；台账逐位不动；零取号（`U-143`）；门禁**未重算**（仍 `PASS 1/8`）。

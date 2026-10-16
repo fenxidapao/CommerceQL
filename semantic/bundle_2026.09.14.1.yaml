@@ -46,7 +46,7 @@
 # ============================================================================
 
 meta:
-  version: "2026.10.16.1"          # ★ W8 第 48 轮递增：补 F-1/F-2/F-5 维度 + F-3/F-4 绑定
+  version: "2026.10.16.2"          # ★ W8 第 49 轮递增：F-4 两条口径说明改为可判（消 plan 歧义自拒）
   # ⚠️ 文件名**保持** `bundle_2026.09.14.1.yaml`（`eval/_bootstrap.py` 与 `deploy/.env.example`
   #    都把该文件名硬编码为 `SEMANTIC_BUNDLE_PATH`）⇒ **文件名与版本号刻意解耦**：
   #    版本真相只在 YAML 的 `meta.version`（SCHEMA_v1.md §9 纪律 1 要求内容变更必须递增版本号，
@@ -873,9 +873,9 @@ metrics:
     owner: operations
     status: active
     definition_note: >
-      **`v_region` 维表上的存量省份数**（现读 31）。⚠️ 与 `province_covered_cnt`
-      （订单实覆盖，落在 `order_paid`）**同名根不同资产** —— 按"大区（`region_name`）"
-      筛选或分组时用本条；问"实际卖出去了几个省"用 `province_covered_cnt`。
+      **`v_region` 维表上的存量省份数**（现读 31），按 `region_name` 筛选或分组即得，
+      **不需要澄清、不需要时间范围**。判别：问"某大区/区域有多少个省""某大区的
+      覆盖省份数"→ **本条**。
     default_binding:
       asset: region
       reason: "省份清单是公共参考维表，时间语义为当前值"
@@ -893,8 +893,8 @@ metrics:
     owner: operations
     status: active
     definition_note: >
-      **订单实际覆盖到的收货省份数**（跨列去重，落在事实表）。与 `province_cnt`
-      （维表清单）**不是同一件事**：一个是"能覆盖"，一个是"已覆盖"。
+      **订单实际覆盖到的收货省份数**（跨列去重，落在事实表）。只应答"实际卖出去的/
+      成交覆盖到的省份数"（须给时间范围）；问"某大区的覆盖省份数"用 `province_cnt`。
       `region_code IS NOT NULL` 写在 `expression` 里（理由同 `on_sale_product_cnt`：
       域级谓词会被 gate1 R06 注入到本域**所有**资产）。
     default_binding:

@@ -155,6 +155,107 @@ def test_existing_region_level_is_not_displaced(runtime: SemanticBundleRuntime) 
     )
 
 
+def test_region_province_metrics_carry_a_decidable_rule(
+    runtime: SemanticBundleRuntime,
+) -> None:
+    """F-4 真死因：plan 读口径说明里的"同名根不同资产"就判 blocking ⇒ refuse。
+
+    E-VER-07 的 gold 落在 `v_region`，而 plan 的原文 blocking 是
+    「`province_cnt` 与 `province_covered_cnt` 同名根不同资产…二者不可自行择一」。
+    ⇒ 口径说明必须给出**可直接执行**的判别规则，且不得留下会把模型推向
+    「无法自行择一」的措辞。本测试是那条修复的防漂回钉。
+    """
+    for name in ("province_cnt", "province_covered_cnt"):
+        m = runtime.metric(name)
+        assert m is not None
+        note = str(m.definition_note or "")
+        assert "同名根不同资产" not in note, f"{name} 的口径说明仍含触发 blocking 的措辞"
+        assert "不可自行择一" not in note, f"{name} 的口径说明仍含触发 blocking 的措辞"
+
+    pc = str(runtime.metric("province_cnt").definition_note or "")
+    assert "不需要澄清" in pc, "province_cnt 必须明说：清单口径不需要澄清"
+    assert "region_name" in pc, "province_cnt 必须点明按 region_name 取"
+    # E-VER-07 的原问法是「华东覆盖省份数」，判别规则必须**逐字点名**这个说法归本条，
+    # 否则 plan 会把它读成 province_covered_cnt 并因缺时间范围判 blocking（实测复现）。
+    assert "覆盖省份数" in pc, "province_cnt 的判别规则必须点名「覆盖省份数」归本条"
+
+
+def test_province_cnt_and_covered_cnt_have_disjoint_synonyms(
+    runtime: SemanticBundleRuntime,
+) -> None:
+    """F-4 配套：`覆盖省份数` 必须**唯一**指向 `province_cnt`。
+
+    E-VER-07 问「华东覆盖省份数」，gold 落在 `v_region`。若这个说法同时被
+    `province_covered_cnt` 的同义词覆盖，plan 会判「同名根不同资产」的口径歧义而
+    `refuse(no_data_asset)` —— 这正是终版 G-2 产物里 E-VER-07 的真实死因。
+    """
+    def syn(name: str) -> set[str]:
+        m = runtime.metric(name)
+        assert m is not None, f"缺少指标 {name}"
+        return {str(x) for x in m.synonyms}
+
+    overlap = syn("province_cnt") & syn("province_covered_cnt")
+    assert overlap == set(), f"两个指标的同义词不得重叠，实得 {sorted(overlap)}"
+    assert "覆盖省份数" in syn("province_cnt")
+    aliases = runtime.resolve_alias("覆盖省份数")
+    assert aliases is not None
+    assert str(getattr(aliases, "maps_to_ref", "")) == "province_cnt"
+
+
+def test_region_gold_sql_faces_are_covered(
+    cases: dict[str, dict[str, object]],
+) -> None:
+    """F-4 的**两条** gold 形态都要被覆盖（派单点名）。
+
+    E-VER-07 = 标量（`WHERE region_name='华东'`）；M-DIM-08 = 分组（`GROUP BY region_name`）。
+    只覆盖其中一条 ⇒ 另一条仍会退化成 region_code（M-DIM-08 的原始死因）。
+    """
+    scalar = str(cases["E-VER-07"]["gold_sql"])
+    grouped = str(cases["M-DIM-08"]["gold_sql"])
+    assert "v_region" in scalar and "region_name" in scalar and "group by" not in scalar.lower()
+    assert "v_region" in grouped and "region_name" in grouped and "group by" in grouped.lower()
+
+
+def test_dimension_region_binding_stays_order_side(
+    runtime: SemanticBundleRuntime,
+) -> None:
+    """F-4 不许把 `dimensions.region.binding` 直接改成 region_name。
+
+    理由：`dimensions.region` 承载 `value_map`（华东→省编码集）—— 其物化路径由
+    `BundleView.value_entries()` 按 `(binding 资产, binding 列)` 展开，改列会让
+    「华南」等**值检索**整条失效（见 `test_retrieval_value.py::test_value_map_route`）。
+    大区名走的是别名/family 通路，不是改这个 binding。
+    """
+    region = runtime.dimension("region")
+    assert region is not None
+    assert region.binding == "order_paid.region_code"
+    assert region.value_map, "value_map 必须仍在 region 维度上"
+    assert "华东" in region.value_map
+
+
+def test_region_name_resolves_from_alias_without_new_family(
+    runtime: SemanticBundleRuntime,
+) -> None:
+    """F-4：`大区` 必须解析到 **region.region_name**（而不是 dimension region 的 region_code）。
+
+    否则 M-DIM-08（GROUP BY region_name）会退化成 GROUP BY region_code，
+    而 E-VER-07（WHERE region_name='华东'）连列都对不上。
+    同时钉住：不得靠新增共享 `region` 层级的维度来做（那会把 family key 从
+    `city+region` 改成 `city+region+region_name`）。
+    """
+    from app.binding.filters import resolve_concept
+
+    res = resolve_concept("大区", runtime)
+    assert res is not None, "大区 必须能解析"
+    assert "region.region_name" in res.refs, f"大区 应解析到 region.region_name，实得 {res.refs}"
+
+    index = GrainIndex.build(runtime)
+    fam_keys = {fam.key for fam in index.families}
+    assert "city+region" in fam_keys, f"地理族 key 被改了：{sorted(fam_keys)}"
+    assert "city+region+region_name" not in fam_keys, "不得用新增共享层级的维度来解 F-4"
+    assert index.level_of_ref("region.region_name") == GrainRef("city+region", "region", 2)
+
+
 def test_new_f_families_are_present_without_renaming_existing_ones(
     runtime: SemanticBundleRuntime,
 ) -> None:

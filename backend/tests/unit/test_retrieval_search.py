@@ -32,7 +32,7 @@ from tests.unit._retrieval_fixture import (
     make_identity,
 )
 
-BUNDLE_VERSION = "2026.10.16.1"   # ★ W8 第 48 轮：真实包 meta.version 递增
+BUNDLE_VERSION = "2026.10.16.2"   # ★ W8 第 49 轮：真实包 meta.version 递增
 
 
 class FakeEmbedder:

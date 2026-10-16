@@ -4,7 +4,7 @@
 
 > **本文件由 `semantic/render_metric_dictionary.py` 从 `bundle_2026.09.14.1.yaml` 自动生成，请勿手改。**
 >
-> 语义包版本 `2026.10.16.1`｜状态 `candidate`｜指标口径 hash `6e44e05a44af9155`
+> 语义包版本 `2026.10.16.2`｜状态 `candidate`｜指标口径 hash `76a8e74d8c3b87c4`
 >
 > 时区 `Asia/Shanghai`；财年起始月 `1`；周起点 `monday`。
 
@@ -255,7 +255,7 @@
 - **默认绑定**：资产 `region`｜时间基准 `current`（读 `time_basis`，非 time_field）
   - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：省份清单是公共参考维表，时间语义为当前值
 - **口径说明**：
-  - **`v_region` 维表上的存量省份数**（现读 31）。⚠️ 与 `province_covered_cnt` （订单实覆盖，落在 `order_paid`）**同名根不同资产** —— 按"大区（`region_name`）" 筛选或分组时用本条；问"实际卖出去了几个省"用 `province_covered_cnt`。
+  - **`v_region` 维表上的存量省份数**（现读 31），默认资产 `region`，按 `region_name` 筛选或分组即得。本指标是**存量清单口径**（`time_basis: current`）⇒ **不需要澄清**、 也不需要任何时间范围。判别规则（**可直接执行，不得判 blocking**）：问句里出现 "大区 / 区域"以及"覆盖省份 / 省份数"等**清单类**说法 → **本条**；只有问句明确要 "实际卖出去的 / 成交覆盖到的省份数"（订单事实口径）时才用 `province_covered_cnt`。
 - **同义词（须与别名表一致）**：省份数、省份数量、省份个数、覆盖省份数、省份覆盖数
 
 ### 2.20 `province_covered_cnt` — 收货省份覆盖数
@@ -265,7 +265,7 @@
 - **默认绑定**：资产 `order_paid`｜时间基准 `pay_time`（读 `time_basis`，非 time_field）
   - 默认理由是**必须披露**的（07 §6.8 / §4.7.1 的 U-26 披露链路，最终载体 = `insight.caveats[]`，≤ 40 字）：收货省份覆盖数依赖订单事实，时间随支付时间
 - **口径说明**：
-  - **订单实际覆盖到的收货省份数**（跨列去重，落在事实表）。与 `province_cnt` （维表清单）**不是同一件事**：一个是"能覆盖"，一个是"已覆盖"。 `region_code IS NOT NULL` 写在 `expression` 里（理由同 `on_sale_product_cnt`： 域级谓词会被 gate1 R06 注入到本域**所有**资产）。
+  - **订单实际覆盖到的收货省份数**（跨列去重，落在事实表）。与 `province_cnt` （维表清单）是**两个不同指标、不同资产**，各有各的别名，不必也无法"择一"： 本指标只应答"实际卖出去的 / 成交覆盖到的省份数"；问"大区 / 区域有多少个省" 一律用 `province_cnt`。 `region_code IS NOT NULL` 写在 `expression` 里（理由同 `on_sale_product_cnt`： 域级谓词会被 gate1 R06 注入到本域**所有**资产）。
 - **同义词（须与别名表一致）**：收货省份覆盖数、收货省份数、收货覆盖省份数
 
 ### 2.21 `day_cnt` — 天数

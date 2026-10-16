@@ -73,7 +73,7 @@ def _identity(role: Role = Role.ANALYST) -> IdentityContext:
 class TestRealBundle:
     def test_loads_green(self) -> None:
         loaded = load_bundle(REAL_BUNDLE)
-        assert loaded.version == "2026.10.16.1"   # ★ W8 第 48 轮递增
+        assert loaded.version == "2026.10.16.2"   # ★ W8 第 49 轮递增
         assert loaded.status == "candidate"
         # 8 资产全部过质量门槛（W1A：quality_score 全部 ≥ 0.90）
         assert len(loaded.active_assets) == 8

@@ -146,7 +146,7 @@ class TestDocsAndHash:
         assert docs1 == docs2
         # 8 资产 + 全部列 + 22 指标 + 179 别名（gold_query 是租户私有类，**不经这条全局路径**）
         # ★ W8 第 48 轮：真实交付包内容变更（176→179 别名 / `meta.version`
-        #   2026.10.15.1→2026.10.16.1）⇒ 本组**钉住真实包形状**的字面量随之更新。
+        #   2026.10.15.1→2026.10.16.2）⇒ 本组**钉住真实包形状**的字面量随之更新。
         kinds = [d["kind"] for d in docs1]
         assert kinds.count("asset") == 8
         assert kinds.count("metric") == 22
@@ -154,7 +154,7 @@ class TestDocsAndHash:
         assert kinds.count("column") > 0
         assert not any(d["kind"] == "gold_query" for d in docs1)
         # doc_id 版本化（随指针自然失效）
-        assert all(d["doc_id"].startswith("2026.10.16.1:") for d in docs1)
+        assert all(d["doc_id"].startswith("2026.10.16.2:") for d in docs1)
 
     # ------------------------------------------------------------------------
     # T-20：gold_query 的 `tenant_id` 哨兵不变式（07 §12.2「永远非 `'*'`」）
