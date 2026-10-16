@@ -4168,3 +4168,12 @@ W8 把交替分支**截断**为 `…|postgres://`，注明「语义上只会更�
 - `npm run build` = 成功；`dist/assets/index-…js` = **2,199.47 kB（gzip 719.06 kB）**，Vite 报“>500 kB”警告，属性能/分包债务。
 - `backend/app/graph/nodes/present.py:6-12` 仍是 P0 诚实降级、`presenter=None` ⇒ **图表/结论呈现仍未接线**。
 - **结论**：P0-D 的基座类型/单测/构建可用；需要实际补 present 接口与 UI 接线，并在真实浏览器跑四态（执行/澄清/拒答/降级）+ 二轮。
+### 67.8 隔离集成套件独立复核（QA R31ao 追加）
+
+- 环境：专用 `pgvector/pgvector:pg16` ＋ `redis:7-alpine`；先对一次性库跑 `alembic upgrade head`，再接 `tests/integration`。
+- 结果：**122 passed / 2 failed / 0 skipped**；失败均在 `backend/tests/integration/test_semantic_materialization.py`：
+  - `:115` 断言 `report.version == "2026.09.14.1"`，现读实际 `2026.10.15.1`；
+  - `:319` 断言 active version 为 `2026.09.14.1`，现读实际 `2026.10.15.1`。
+- 根因：测试字面量没有随语义包版本更新；W8 第 44 轮 §44.7 #6 已登记“三处字面量已改未验”，现在给出真实红证据。
+- 收尾：专用 PG/Redis 已停删，`docker ps -a` 无临时件；共享库仍只 `ecom`／`ecom_u123_probe`。
+- **W8 动作**：把两处断言与文档/版本字面量同步到当前语义包版本，重跑整个 `tests/integration`，目标 124 passed；不得把该红藏在 unit/contract 目录。
