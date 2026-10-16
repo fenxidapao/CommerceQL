@@ -4130,3 +4130,9 @@ W8 把交替分支**截断**为 `…|postgres://`，注明「语义上只会更�
 | 门禁 | `eval_metrics.json` 仍 `88f3500 / dirty=false / PASS 1/8`；当前全量评测未重跑 | 在 P0-A 修完后进入 P0-B，先刷新输入再重算，不得用旧门禁充当期 |
 
 **结论**：P0-A 不是“重写项目”，是把三个真实断点修到可验收：U-131 活体三面、U-129/U-142 多轮、normalize 残留。W8 第一段按 §67.2 开工，先做并回执，禁止把契约测试当活体验收。
+### 67.4 一次性 PG RLS 独立复核（QA R31ao 追加）
+
+- 按 `backend/tests/integration/test_rls_tenant_isolation.py` 自带命令启动专用 `pgvector/pgvector:pg16` 容器 `qa-rls-r31ao`，只测一次性库 `ecom_rls`。
+- 实跑：`5 passed`：无身份 6 视图零行、`shop_ids` 未设 vs 显式空串可区分、无店铺列表惰性、显式空串不跨租户。
+- 收尾：停止容器；因 `--rm` 已自动删除，随后 `docker rm` 报“no such container”，不是残留；`docker ps -a` 该名 0 件，共享库残渣仍只 `ecom`／`ecom_u123_probe`。
+- 判：G-4 的**真实 PG RLS 行为面**已有当前证据；U-131 的 API 三面仍须按 §67.3 真测。
