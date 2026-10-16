@@ -3974,3 +3974,44 @@ W8 把交替分支**截断**为 `…|postgres://`，注明「语义上只会更�
 - 本轮优先零出站；不动 reports/qa/**、semantic/**、冻结集、ecom 台账；仍零取号。
 - 回执 ≤250 字：每条带文件:行号 + 实跑命令/输出 + 时点 + HEAD。
 ```
+## 64 · 新上游前置验收通过（E-VER-02 live success）＋ 给 W8 的正式粘贴块（QA R31al ｜ 2026-10-16 11:33:41 +0800 ｜ 起点 `ad7f531`／554 笔 ｜ ⚠️ 已出站并有应用计价）
+
+### 64.0 前置结果
+
+- `deploy/.env` 已切到 `DEEPSEEK_BASE_URL=https://kuaipao.pro/v1`；fast／strong 均裁为 `deepseek-v4.1-flash`。
+- `commerceql-api-1` 已强制重建并 healthy；容器内端点、模型名、密钥存在性已核，密钥未回显、未入库。
+- 新上游 `/v1/models` 返回 200；正式 live 响应模型逐条为 `deepseek-v4.1-flash`。
+- `E-VER-02` 单条 live：`complete`、`equivalent=true`、`tokens=27047`、墙钟 `19.619s`、应用计价 `cost=0.299444`。
+- ⚠️ 新模型名不在 `budget.py` 价格表，应用按最贵模型兜底计价，成本是**价格猜测**而非新上游发票真值；全批前须补价格口径或保留 caveat。
+- 自曝：第一次 smoke 误用默认匣带，令 `eval/cassettes/w6_batch.jsonl` +1 行；已从 HEAD blob 按原 CRLF 恢复，`git diff` 空。
+
+### 64.1 给 W8 的正式粘贴块（第 45 轮）
+
+```text
+【W8 第 45 轮正式开工｜新上游已切换，总控已授权花费】
+
+一、现读前置（不要重复换 API、不要打印密钥）
+- deploy/.env 已是 https://kuaipao.pro/v1；fast/strong 均为 deepseek-v4.1-flash。
+- api 容器已重建且 healthy；新上游 E-VER-02 live 已通过：complete / equivalent=true / tokens 27047 / 应用计价 0.299444。
+- 新模型名尚未进 budget.py 价格表，当前 cost 是兜底估价（price_guess 语义）；全批前先决定补价表还是保留 caveat。
+
+二、返工 A｜E-VER-04 根因必须重裁
+- 匣带 :13 normalize 仍留 T_A；:14 plan 已点名 spu_cnt，却因 T_A 无法解析产生 blocking issue，metrics=[]，链路 plan → refuse_out。
+- 请沿 trusted-context / normalize / plan 给出可复现证据链；不得继续写“检索/绑定层”。
+
+三、返工 B｜replay 成本口径订正
+- 录制 0.053505 是非峰时；QA 峰时 replay 为 0.107013，tokens 仍 124011。
+- 在 W8 RELAY §44.5 与复算入口写明录制时段 / 回放时段两套成本；保留 tokens 可复现，删除无注解的“cost 逐位复现”。
+
+四、返工 C｜扫描计数与复算入口
+- 78 件是提交前 HEAD 口径；最终 0f63223 现读 = 81 件 / 0 命中 / rc=0。
+- 写清 HEAD/时点；若希望覆盖工作树，修扫描器并附正例+反例。
+
+五、清理 D｜文档指针
+- backend/reports/w8/PROMPT.md §4 的“当期任务只认 QA §3”已过期，改为指 QA PROMPT_新窗 §14 或 TASK_BOARD 最新末节。
+
+六、执行与边界
+- 总控已授权新上游与花费；不必再逐次等预算点句，但每条出站、模型、tokens、应用计价必须实报，禁止写未计量的“零花费”。
+- 不动 reports/qa/**、semantic/**、冻结集、ecom 台账；密钥只从 deploy/.env 读取，不回显、不提交。
+- 回执 ≤250 字：文件:行号 + 实跑命令/输出 + 时点 + HEAD。
+```

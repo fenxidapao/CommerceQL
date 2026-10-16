@@ -4221,3 +4221,46 @@ W8 的 78 件是提交前工作树口径：当时 `HEAD` 尚未包含新增三�
 - 本轮项目账面零变化：台账逐位不动。
 - 本轮无计费出站；本地 replay 与测试未计入台账。
 - 本窗未改：`eval/**`、`semantic/**`、`backend/app/**`、`backend/tests/**`、`backend/reports/w8/**`、`docs/**`、容器。
+## 60 · 新上游切换前置验收：E-VER-02 live success，W8 正式块已出（QA R31al）／ 2026-10-16 11:33:53 +0800 ｜ 起点 `ad7f531`／554 笔 ｜ ⚠️ 已出站，应用计价 ¥0.299444
+
+### 60.0 结论
+
+新上游配置已生效，容器 healthy，单条 `E-VER-02` live 完整跑通；W8 第 45 轮正式粘贴块落在 `TASK_BOARD §64.1`。
+
+### 60.1 配置与安全
+
+| 项 | 现读 |
+|---|---|
+| 端点 | `https://kuaipao.pro/v1` |
+| 模型 | fast／strong 均 `deepseek-v4.1-flash` |
+| 容器 | `commerceql-api-1` 强制重建后 healthy |
+| 密钥 | 仅写本机 gitignored `deploy/.env`；未回显、未入库 |
+| 备份 | `E:\tmp_qoder\commerceql_deploy_env_backup_r31ak_20261016_112148` |
+| 仓库 | `git status` 仅 `?? .workbuddy/` |
+
+`/v1/models` GET 返回 200；第一次旧模型名 smoke 为 0 token 的 `LLM_UPSTREAM_ERROR`；映射到新模型后 live 成功。
+
+### 60.2 正式 smoke
+
+| 项 | 读数 |
+|---|---|
+| case | `E-VER-02` |
+| 终态 | `complete`；SQL 为 `on_sale_product_cnt` 计数 |
+| 等价 | `equivalent=true` |
+| tokens | `input=24595 / output=2452 / cache_hit=0 / total=27047` |
+| 应用计价 | `¥0.299444` |
+| 墙钟 | `19.619s` |
+| 新上游响应模型 | `deepseek-v4.1-flash` |
+
+⚠️ 新模型名不在 `backend/app/llm/budget.py` 的价格表，应用按最贵模型兜底，`cost=0.299444` 是价格猜测，不是新上游账单真值；全批前须补价格口径或保留该 caveat。
+
+### 60.3 自曝与恢复
+
+第一次 smoke 未显式指定匣带，runner 默认给 `eval/cassettes/w6_batch.jsonl` 追加 1 行。已用 `git show HEAD:eval/cassettes/w6_batch.jsonl` 原始 blob 按原 CRLF 恢复；当前 `git diff` 为空，未提交任何 W8 产物。
+
+### 60.4 开工清理
+
+- 外部通用协作稿未进入仓库；现役权威仍是两窗规程与 QA 最新末节。
+- `QA_PROMPT.md`／`QA_TEMPLATES.md`／`GATE_LOG.md` 继续冻结为背景，不删史、不续写。
+- W8 `PROMPT.md §4` 的 QA §3 过期指针列入第 45 轮清理任务。
+- 本次 API 配置改动属总控临时授权的 QA 越界执行；未形成代码提交。
