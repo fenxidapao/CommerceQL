@@ -4316,3 +4316,48 @@ W8 把交替分支**截断**为 `…|postgres://`，注明「语义上只会更�
 - 文件:行号、命令、原始产物、时点、HEAD；最后复跑 integration 124/0 与 offline。
 - 不动 reports/qa/**、共享 ecom、冻结集；门禁未重算前不得写“通过”。
 ```
+
+## 71 · W8 第 50 轮验收：15s 超时归因成立；超时语义仍误记 no_data_asset（QA R31as ｜ 2026-10-16 23:50:10 +0800 ｜ 起点 `7086ff7`／574 笔 ｜ 当前 `83a5bf2`／575 笔）
+
+### 71.0 结论
+
+W8 的定位成立：E-VER-07 失败跳精确落在 15s 客户端硬上限，plan 响应整条缺席；M-DIM-08 失败是 bind 的 L4 跳被同一上限掐断。**但根因属可修缺陷**：超时被记成 `refuse(no_data_asset)`，把“上游慢”伪装成“没有这类数据”，且 `bind` 在生产清单里只拿 0.2s（与 harness 清单不一致）。门禁仍 `PASS 1/8`。
+
+### 71.1 独立复算
+
+| 项 | QA 现读 | 判 |
+|---|---|---|
+| E-VER-07 6 次 | 1 complete／5 refuse；失败 plan 15008–15020ms、两次 normalize 15121/15130ms；失败 run 的 plan_seen 全 False | ✅ 归因成立 |
+| M-DIM-08 5 次 | 2 complete／3 refuse；失败 plan_seen True、blocking=[]，cassette 无字段绑定记录 ⇒ bind 的 L4 被 15s 掐断 | ✅ 归因成立 |
+| 代码位 | `router.py:167-170` 15s；`plan.py:71-86` PlannerError→refuse(no_data_asset)；`bind.py:94-97` L4；`build.py:395-402` 含 bind；`harness.py:581-585` 明写 bind 0.2s 不一致 | ✅ 真实 |
+| 集成 | 一次性 PG/Redis＋迁移后 **124 passed / 0 failed** | ✅ |
+| 离线全量 | **2543 passed / 0 failed** | ✅ |
+| 台账/资源 | 台账逐位不动；临时 PG/Redis 清；共享库仅两库 | ✅ |
+| G-2 / 57 族 | 仍 7/3/6 与 36/20/1、13 等价 | 🔴 门禁未改善 |
+
+### 71.2 第 51 轮 W8 块（治超时语义与清单不一致，不动 15s 判据值）
+
+```text
+【W8 第 51 轮｜修超时语义与节点清单不一致；不改 07 的 15s】
+
+0. 现读 HEAD 83a5bf2；不改冻结集/阈值/判据措辞；允许出站，实报 tokens 与 price_guess 计价。
+
+1. 🔴 必做 A：统一 LLM 节点清单（消 0.2s vs 15s）
+- app/graph/build.py 的 _LLM_NODE_TASKS 与 eval/harness.py 的 LLM_CALLING_NODES 双向对齐；
+- 判据仍是“节点是否触达 deps.llm”，以代码为准；bind 生产侧必须拿到与评测侧一致的硬超时；
+- 加一条契约测试，防两份清单再漂移。
+
+2. 🔴 必做 B：超时不得记成 no_data_asset
+- plan.py 的 PlannerError 分支与 bind 的 L4 超时分支：超时/上游错误应走 error 或明确的 degraded+澄清，
+  不得落 refuse(no_data_asset)；
+- 若产品确实要 fail-safe 澄清，需给出与 C-12 拒答取值一致的映射与审计字段；
+- 加超时回归测试（可注入慢桩，零出站）。
+
+3. 复算
+- 重跑 E-VER-07 n>=6、M-DIM-08 n>=5：失败不得再是 no_data_asset，且延迟分布要能区分上游慢与业务拒答；
+- 重跑 G-2 10 条与 57 族，给新转移矩阵；仍不达门就如实写，不得为凑门改判据；
+- 最后复跑 integration 124/0 与 offline；不动 reports/qa/**、共享 ecom、冻结集。
+
+4. 不做
+- 不改 15s（07 §10.2 判据值）；不先扫 τ；不动冻结集/阈值。
+```
