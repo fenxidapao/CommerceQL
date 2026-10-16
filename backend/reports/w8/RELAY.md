@@ -4667,3 +4667,96 @@ history_questions = ["上个月各渠道的浏览量分别是多少？", "各店
 ### 46.7 注入形态
 
 - 注入形态 = **无**；未执行 **N/A**。
+
+## §四七 第 47 轮 · P0-A 活体收口（U-131 写侧修复 ＋ U-129 属主二轮）｜ 2026-10-16 15:54–16:03 +0800 ｜ 起点 HEAD `b87158a`
+
+### 47.0 本轮结论
+
+- **U-131 活体三面已闭**：跨属主读 `404 SESSION_NOT_FOUND`；跨属主 `POST /clarify` 与 `POST /query` 均 `404`，图工厂 **零增量调用**；属主自己的澄清仍可正常消费。
+- **U-129 属主同会话二轮已闭**：同一会话第一轮 `refuse`、第二轮 `complete`，图工厂调用 **2/2**，第二轮审计行 `outcome=success`，没有复用第一轮终态。
+- **修复面**：`backend/app/api/routers/clarify.py:127-135` 在消费澄清上下文之前补 `get_session` 属主门；该门复用 `state_store.get_session` 的唯一属主比对点，先于 `drop_clarify` 与跑图。
+- **回归面**：`backend/tests/contract/test_api_endpoints_contract.py:396-431` 新增非属主 clarify 用例；先实跑红（`200 != 404`），修复后实跑绿。
+- **离线全量**：`.\.venv\Scripts\python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q` ⇒ **`2525 passed / 0 failed / 1 warning`**（新增用例使基线 2524→2525）。
+
+### 47.1 U-131｜真实 API 三面：read / write / inference
+
+**一次性环境**：新建 `w8r48-pg`（`pgvector/pgvector:pg16`，宿主 55434）＋ `w8r48-redis`（`redis:7-alpine`，宿主 56381），先执行 `alembic upgrade head`；用 `deploy/.env` 装载应用配置（不回显值），JWT 是临时测试密钥。共享 `ecom` 未连接。
+
+**命令（实跑）**：
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 %TEMP%\w8r48\probe_live.py
+```
+
+**原始输出（`%TEMP%\w8r48\probe_live.json`，与终端输出一致）**：
+
+```json
+{
+  "u131_read_owner": 200,
+  "u131_read_other": { "status": 404, "code": "SESSION_NOT_FOUND" },
+  "u131_first_terminal": "clarify",
+  "u131_clarify_denied": { "status": 404, "code": "SESSION_NOT_FOUND", "calls_before": 1, "calls_after": 1 },
+  "u131_query_denied": { "status": 404, "code": "SESSION_NOT_FOUND", "calls_after": 1 },
+  "u131_owner_turns_after_denied": 1,
+  "u131_owner_clarify": { "status": 200, "terminal": "clarify", "calls_after": 2 }
+}
+```
+
+**判读口径**：`面` = `TestClient(app)` 真实路由 ＋ 真实一次性 Redis/PG；`谓词` = 非属主身份请求 `GET /session/{id}`／`POST /clarify`／`POST /query`；`分母` = 每种写侧 1 次；`粒度` = 请求级。`calls_before/after` 是 `GraphRuntime.new_deps` 的调用计数；非属主三面均未进入 runner，故推理侧没有机会读属主历史。
+
+**红→绿证据**：
+
+- 修复前定向实跑：`test_nonowner_clarify_404_and_context_not_consumed` ⇒ `1 failed`，断言原始输出为 `assert 200 == 404`；
+- 修复后同命令 ⇒ `1 passed`；
+- 修复后全 `test_api_endpoints_contract.py` ⇒ `32 passed`。
+
+### 47.2 U-129｜同会话第二轮：不得崩、不得复用第一轮终态
+
+**实跑命令**：同上一条（同一 `probe_live.py` 连续跑两步）。
+
+**原始输出（同一 JSON 的 `u129` 块）**：
+
+```json
+{
+  "first_status": 200,
+  "first_terminal": "refuse",
+  "second_status": 200,
+  "second_terminal": "complete",
+  "graph_factory_calls": 2,
+  "first_audit": [{ "raw_question": "第一轮：缺表拒答", "outcome": "refuse", "refusal_reason": "no_data_asset" }],
+  "second_audit": [{ "raw_question": "第二轮：补全后执行", "outcome": "success", "final_executed_sql": "SELECT ..." }],
+  "turns": [
+    { "outcome": "success", "question": "第二轮：补全后执行" },
+    { "outcome": "refuse", "question": "第一轮：缺表拒答" }
+  ]
+}
+```
+
+**判读**：终态从 `refuse` 变为 `complete`，且每轮各有独立审计行与独立图工厂调用；第二轮没有沿用第一轮的 `terminal`/SQL。二轮后的会话历史按最新在前返回 2 条，符合 `append_turn` 的 LPUSH 顺序。
+
+### 47.3 一次性资源与残渣
+
+```powershell
+docker exec w8r48-pg psql -U postgres -d postgres -Atc "SELECT datname FROM pg_database WHERE datname LIKE 'ecom%' ORDER BY 1"
+# before_drop: ecom
+docker exec w8r48-pg psql -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "DROP DATABASE ecom WITH (FORCE);"
+# DROP DATABASE
+docker exec w8r48-pg psql -U postgres -d postgres -Atc "SELECT datname FROM pg_database WHERE datname LIKE 'ecom%' ORDER BY 1"
+# after_drop_oneoff: （空）
+docker stop w8r48-pg w8r48-redis
+# stop_rc=0
+```
+
+- 现查 `docker ps -a --filter name=w8r48-` ⇒ **0 件**；
+- 共享库现查 `datname LIKE 'ecom%'` ⇒ `ecom`、`ecom_u123_probe`（既有对象，未触碰）；
+- `w8ot-pg`／`w8ot-redis` 的上一任一次性容器已在开工时删除；`docker ps -a --filter name=w8ot-` 现读 0 件。
+
+### 47.4 出站、台账、门禁、取号
+
+- **机械护栏**：`test_migration_dsn_hygiene.py` ⇒ **8 passed**；`backend/scripts/scan_secrets.py --working-tree` ⇒ **0 命中 / 被测 690 件**；`git diff --check` ⇒ rc=0。
+- **未触碰**：`?? .workbuddy/` 原样留在工作树，未 stage。
+- **出站**：探针启动期健康连接预热实打 `GET https://kuaipao.pro/v1`，响应 `404`；这是**非模型请求**，`tokens=0`、应用计价 `0`、无模型调用。没有跑评测／没有出站批。
+- **台账**：本轮不改共享库，`app.cost_ledger` 未在本轮读写；历史读数留旧值，不与本轮 live 混淆。
+- **门禁**：未重算；现读仍是 `meta.git.rev=88f3500`、`PASS 1/8`，对外不得写“门禁通过”。
+- **取号**：零新增号；现读仍 `U-143`（`docs/07_技术设计文档_TDD.md:1094`）。
+- **提交**：测量时 HEAD `b87158a`；本件与代码/测试将按名 stage 后一笔提交，提交后以 `git show --stat` 与 `HEAD==origin/main` 复核。

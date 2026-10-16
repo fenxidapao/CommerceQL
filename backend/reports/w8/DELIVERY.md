@@ -628,3 +628,11 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 ⑧ **待办**：① 🔴 `normalize` 残留的**确定性修法**（属 `app/**`，需授权；修前建议重放该族量化影响面）；② 🔴 63 条额度（`tokens` 24.8k/条；`cost` 双栏并列），`§63.6 #1-2` 仍未答；③ 🟡 `F-1…F-5`（归因已订正，可排下轮）；④ 🟡 对外件刷新两处各留专门一轮；⑤ 🔴 `_shared` 丢弃 `detail` 未授权不动。
 ⑨ **零取号**（指针 `U-143`）；起点落笔现读 = `7e6c6e7`／**555 笔**。
 ⑩ **回执**：见当轮对话（**≤250 字**：文件:行号 ＋ 实跑命令/输出 ＋ 时点 ＋ HEAD）。
+
+## 第 47 轮交付（P0-A 活体收口：U-131 写侧修复 ＋ U-129 属主二轮｜ 2026-10-16 15:54–16:03 +0800 ｜ 起点 HEAD `b87158a`／567 笔 ｜ 一轮一笔）
+
+- 改了：`backend/app/api/routers/clarify.py:127-135`（clarify 消费前补唯一属主门 `get_session`）＋ `backend/app/api/state_store.py:391-392`（调用面注释同步）＋ `backend/tests/contract/test_api_endpoints_contract.py:396-431`（非属主 clarify 回归，先红后绿）。
+- 实跑：离线全量 `2525 passed / 0 failed / 1 warning`；定向契约 `32 passed`；真实 API 三面与非属主澄清拒绝见 `RELAY §四七`。
+- 一次性 PG/Redis：`w8r48-pg`／`w8r48-redis`，跑后 DROP `ecom`、停删容器；残渣现查 `w8r48-*` = 0，共享库仅 `ecom`／`ecom_u123_probe`。
+- 出站：仅启动健康预热 `GET https://kuaipao.pro/v1`（404）；非模型请求，`tokens=0`、应用计价 `0`，无评测批。
+- 门禁：未重算，仍 `PASS 1/8`；零取号（现读 `U-143`）；未写 `reports/qa/**`、未改冻结集/阈值/判据措辞。

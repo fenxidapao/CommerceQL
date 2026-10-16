@@ -393,6 +393,41 @@ class TestSessionOwnership:
         assert SESSION_OWNER_DENIED["count"] == before + 1
 
 
+    def test_nonowner_clarify_404_and_context_not_consumed(self) -> None:
+        """`U-131` 写侧：非属主回答澄清 → 404，且**不得**进图或消费上下文。
+
+        `POST /clarify` 的请求体只有 `clarify_id`，上下文按租户键读取；若不补属主门，
+        同租户的另一用户拿到 id 就能把答案写进属主会话。这里同时钉住三件事：
+        拒绝形状与读侧同形、图工厂零次调用、属主仍可正常消费这条澄清。
+        """
+        client, verifier, holder, _ = _switchable_client("time_unparsable")
+        with client.stream(
+            "POST", f"{API_PREFIX}/query", json={"question": "x"}, headers=_auth()
+        ) as r:
+            frames = _frames(b"".join(r.iter_bytes()))
+        clarify_id = next(d for e, d in frames if e == "clarify")["clarify_id"]
+        before = holder.calls
+
+        verifier.token = _OTHER_USER
+        denied = client.post(
+            f"{API_PREFIX}/clarify",
+            json={"clarify_id": clarify_id, "free_text": "2026 年 8 月"},
+            headers=_auth(),
+        )
+        assert denied.status_code == 404, "同租户非属主回答澄清不得进入属主会话"
+        assert denied.json()["code"] == "SESSION_NOT_FOUND"
+        assert holder.calls == before, "非属主澄清请求竟造了 GraphDeps ⇒ 推理侧会读到属主上下文"
+
+        verifier.token = _OPERATOR
+        allowed = client.post(
+            f"{API_PREFIX}/clarify",
+            json={"clarify_id": clarify_id, "free_text": "2026 年 8 月"},
+            headers=_auth(),
+        )
+        assert allowed.status_code == 200, "拒绝非属主时不得顺手消费掉属主的澄清上下文"
+        assert holder.calls == before + 1, "属主自己的澄清应答必须正常进图一次"
+
+
 # ===========================================================================
 # 二、查询 SSE（附录 A §A.1）
 # ===========================================================================

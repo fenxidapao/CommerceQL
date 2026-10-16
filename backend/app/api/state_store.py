@@ -388,7 +388,8 @@ class RedisStateStore:
           🚫 不得改成 403/401，也不得在 detail 里写"该会话存在但你不是属主"（判据⑤ —— 那等于给攻击者
           一台"存在性枚举机"，与本文件 §二 对 `task_state` 的处理同源）。
         - **比对只写在这一处**：端点各写一遍 = "第三个入口漏检"的成因（判据② 的 🚫）。
-          现读调用面只有 `routers/query.py:182`（写侧）与 `routers/session.py:118`（读侧）；
+          现读调用面有 `routers/query.py:182`（写侧）、`routers/session.py:118`（读侧）与
+          `routers/clarify.py:130`（澄清应答的属主门，必须在 `drop_clarify`/跑图之前）；
           同租户键的 `get_turns` 载荷里没有可比对的属主，其**唯一**调用点在 `routers/session.py:121`
           —— 位于 `meta is None → 404` 之后 ⇒ 本函数是它的前置门（新增调用点时必须保持这个先后）。
         """

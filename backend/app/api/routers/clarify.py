@@ -63,7 +63,12 @@ from app.api.deps import (
 )
 from app.api.dto.clarify import ClarifyRequest
 from app.api.dto.query import MAX_QUESTION_LEN
-from app.api.exceptions import ClarifyExpired, ClarifyInvalidOption, InvalidRequest
+from app.api.exceptions import (
+    ClarifyExpired,
+    ClarifyInvalidOption,
+    InvalidRequest,
+    SessionNotFound,
+)
 from app.api.runner import RunRequest, SseRunner
 from app.api.sse import SSE_MEDIA_TYPE
 from app.api.state_store import ClarifyContext, RedisStateStore
@@ -88,6 +93,7 @@ _ANSWER_MARKER = "（澄清补充：{answer}）"
     response_class=StreamingResponse,
     responses={
         200: {"content": {SSE_MEDIA_TYPE: {}}, "description": "与 /query 相同的事件流"},
+        404: {"description": "SESSION_NOT_FOUND（澄清上下文不属于当前用户）"},
         410: {"description": "CLARIFY_EXPIRED（上下文不存在或已过期）"},
         422: {"description": "CLARIFY_INVALID_OPTION（选项不在上下文里）"},
         429: {"description": "配额超限（查询类桶）"},
@@ -116,6 +122,16 @@ async def answer_clarify(
         # "不存在"与"过期"同形同码（§A.13：有效期 5 分钟）—— 对用户是同一件事：重问一遍。
         raise ClarifyExpired(
             "澄清已过期，请重新提问", detail={"clarify_id": body.clarify_id}
+        )
+
+    # --- 2.5 属主门（U-131 写侧）：澄清上下文只含 session_id，必须回到
+    #        `get_session` 这一处唯一强制点核对属主。必须在 drop/跑图之前：
+    #        否则同租户的非属主拿到 clarify_id 就能消费上下文并把答案写进属主会话。---
+    owner_ctx = new_identity(token, session_id=context.session_id)
+    remember_identity(request, owner_ctx)
+    if await store.get_session(owner_ctx, context.session_id) is None:
+        raise SessionNotFound(
+            "会话不存在或已过期", detail={"session_id": context.session_id}
         )
 
     # --- 3. 校验选项（附录 A §A.4 的 422）---
