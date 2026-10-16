@@ -4272,3 +4272,47 @@ W8 把交替分支**截断**为 `…|postgres://`，注明「语义上只会更�
 - 文件:行号、命令、原始产物、时点、HEAD；
 - 最后再跑 full integration（124/0）与 offline；不动 reports/qa/**、共享 ecom、冻结集。
 ```
+
+## 70 · W8 第 49 轮验收：F-4 单例闭环成立；E-VER-07 跨批不稳定、G-2/G-5 未达门（QA R31ar ｜ 2026-10-16 23:24:09 +0800 ｜ 起点 `5b90893`／572 笔 ｜ 当前 `f774672`／573 笔）
+
+### 70.0 验收结论
+
+**F-4 的单例端到端闭合成立，但跨批稳定性未成立，G-2/G-5 仍未达门，项目未收口。**
+
+### 70.1 独立复算
+
+| 项 | QA 现读 | 判 |
+|---|---|---|
+| 集成 | 一次性 PG/Redis＋迁移后 **124 passed / 0 failed** | ✅ |
+| 离线全量 | `.venv` **2543 passed / 0 failed** | ✅ |
+| validator | **PASS=31 / FAIL=0 / SKIP=1 / WARN=2**（版本 2026.10.16.2） | ✅ |
+| F 契约＋family | `test_semantic_f_coverage_contract`＋`test_binding_grain` = **46 passed** | ✅ |
+| F-4 单例 | `results_r49_ever07c.json`：E-VER-07 complete+equivalent；`results_r49_mdim08c.json`：M-DIM-08 complete+equivalent；family 仍 `city+region` | ✅ 单例成立 |
+| G-2 10 条 | `results_g2_r49_clean.json`：7 complete／3 refuse／6 equivalent | 🔴 不达 95% |
+| 57 族 | `results_f57_r49_clean.json`：36 success／20 refuse／1 clarify；13 equivalent；57/57 干净 | 🔴 不达 G-5 |
+| E-VER-07 跨批 | G-2 单例/干净批 complete+equivalent ⟷ 57 族批 refuse | 🔴 不稳定，未闭 |
+| 边界 | 台账逐位不动；临时 PG/Redis 清；共享库仅两库；零取号 | ✅ |
+
+### 70.2 第 50 轮 W8 块（先解稳定性，再谈门禁）
+
+```text
+【W8 第 50 轮｜先解 E-VER-07 跨批不稳定，再做 G-2/G-5 归因】
+
+0. 现读 HEAD f774672；不改冻结集/阈值/判据；允许必要出站，实报 tokens 与 price_guess 计价。
+
+1. 🔴 必做 A：E-VER-07 跨批稳定性
+- 同一语义包 2026.10.16.2：G-2 干净批 complete+equivalent，57 族批 refuse/link→plan→refuse_out。
+- 找出 plan 偶发走“需要澄清/blocking_issues”的条件；不要只挑成功那条。
+- 要求：对 E-VER-07 连跑 n≥5（同身份、同问句），报每次 terminal/refusal_reason/plan blocking 原文；若仍抖动，定位到提示/阈值/上游哪一层。
+- 同步复核 M-DIM-08 的稳定性。
+
+2. 🔴 必做 B：G-2 与 G-5 的真实归因
+- G-2：7 complete／3 refuse／6 equivalent 中，逐条给原因；已登记的冻结集冲突（E-VER-01/06/08）只登记。
+- E-VER-04 的退化（r47 success → r49 refuse）归因到检索面，需给可复现证据与修复建议。
+- 57 族：36/20/1 的 20 条 refuse、1 条 clarify 逐条归类；equivalent 13 条列明。
+- 不得用跨批复合表凑数；每 case 用同口径单次/稳定重跑。
+
+3. 交付
+- 文件:行号、命令、原始产物、时点、HEAD；最后复跑 integration 124/0 与 offline。
+- 不动 reports/qa/**、共享 ecom、冻结集；门禁未重算前不得写“通过”。
+```

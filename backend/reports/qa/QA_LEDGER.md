@@ -1319,3 +1319,19 @@
 
 **订正**：R31ap 的“集成 2 红”由并发旧工作树造成，已撤回；最终集成 124/0 成立。
 **下一步**：`TASK_BOARD §69.2`：先修 F-4/E-VER-07 并统一报告与产物，再重跑 G-2 10 条和 57 族。
+
+## R31ar · W8 第 49 轮验收：F-4 单例闭环、E-VER-07 跨批不稳定 ／ 2026-10-16 23:25:18 +0800 ／ 起点 `5b90893`／572 笔
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 提交 | `f774672`／573 笔；语义包 2026.10.16.2、F 契约、G-2/57 产物 | ✅ |
+| 2 | 集成 | 一次性 PG/Redis＋迁移后 124 passed / 0 failed | ✅ |
+| 3 | 离线 | 2543 passed / 0 failed | ✅ |
+| 4 | validator/F | PASS=31/FAIL=0/SKIP=1/WARN=2；F+grain 46 passed | ✅ |
+| 5 | F-4 | E-VER-07、M-DIM-08 单例 complete+equivalent；family 仍 city+region | ✅ 单例 |
+| 6 | G-2 10 | 7 complete／3 refuse／6 equivalent | 🔴 未达门 |
+| 7 | 57族 | 36 success／20 refuse／1 clarify；13 equivalent；57/57干净 | 🔴 未达 G-5 |
+| 8 | 跨批 | E-VER-07：G-2 success vs 57族 refuse | 🔴 不稳定 |
+| 9 | 边界 | 台账不动；临时资源清；共享库两库；零取号 | ✅ |
+
+**结论**：F-4 修法成立但稳定性与门禁未闭；下一轮按 `TASK_BOARD §70.2` 先做 E-VER-07 n≥5 稳定性，再逐条归因 G-2/G-5。
