@@ -5099,3 +5099,130 @@ eval/results_g2_r48_10_final.json  →  E-VER-07 = refuse / no_data_asset / plan
 - G-2 10 条：`eval/results_g2_r49_clean.json`（`n_clean=10`／逐 case terminal/eq/reason）。
 - 57 族：`eval/results_f57_r49_clean.json`（`n_clean=57`／`n_unresolved=0`／矩阵见 49.5）。
 - 禁自指自查：以上入口均指向**非本节文件**，无"pattern 命中写下它的那一行"形态。
+
+## §五十 第 50 轮 · E-VER-07 跨批不稳定定位（15s 客户端硬上限）＋ G-2/G-5 逐条归因 ｜ 2026-10-16 23:2x – 23:5x +0800 ｜ 起点 HEAD `7086ff7`
+
+### 50.0 结论先行
+
+**不稳定不在提示、不在阈值、不在语义层，而在「上游尾延迟 > 07 §10.2 的 15s 客户端硬上限」这个环境/契约面上。** 三处机械证据（延迟精确落在 15000ms 附近 + 该跳 LLM 调用整条不落 cassette）在 §50.1/§50.2 逐条给出。
+
+### 50.1 A 项：E-VER-07 连跑 6 次（同身份 `T_A`／同问句／同包 `2026.10.16.2`）
+
+**命令**：`python %TEMP%\w8r49\stability.py --case E-VER-07 --n 6 --out eval/results_r50_stab_ever07.json`
+
+| # | terminal | refusal_reason | plan 延迟 | normalize 延迟 | cassette 里的 LLM 跳 | 判定 |
+|---|---|---|---|---|---|---|
+| 1 | `refuse` | `no_data_asset` | **15017ms** | 4480ms | 仅 `normalize`（**plan 未落盘**） | 🔴 plan 撞 15s 硬上限 → 模板降级 → refuse |
+| 2 | `complete` | — | 4427ms | 13126ms | `normalize`+`plan`+`字段绑定` | ✅ 全链走通 |
+| 3 | `refuse` | `no_data_asset` | **15020ms** | 12900ms | 仅 `normalize` | 🔴 plan 15s 超时 |
+| 4 | `refuse` | `no_data_asset` | **15008ms** | 4039ms | 仅 `normalize` | 🔴 plan 15s 超时 |
+| 5 | `refuse` | `no_data_asset` | — | **15121ms** | **空（0 条）** | 🔴 normalize 15s 超时 |
+| 6 | `refuse` | `no_data_asset` | — | **15130ms** | **空（0 条）** | 🔴 normalize 15s 超时 |
+
+**三条机械判据**（不是猜的）：
+1. **延迟位**：失败的每一跳都落在 `15000±30ms`（15017/15020/15008/15121/15130）—— 这是 `MODEL_HARD_TIMEOUT_S[FAST] = 15.0`（`backend/app/llm/router.py:167-170`）的**客户端 deadline**，不是模型返回的；
+2. **cassette 缺席**：`#1/#3/#4` 的 cassette **只有 `normalize` 一条**，`plan` 那一跳**没有任何记录** ⇒ 该调用在**出站前**就被 deadline 掐断（没到能录响应的地方）；`#5/#6` 连 `normalize` 都没录到；
+3. **成功那次对照组**：`#2` 的 plan 只用 4427ms、且 `blocking_issues=[]` ⇒ **语义包/提示侧没有问题**，慢下来就走不通，快起来就完全正常。
+
+**plan 的 `blocking_issues` 原文**：成功那次是 `[]`；其余几次**根本没有 plan 响应**（超时降级，`nodes/plan.py:71-86` 的 `PlannerError` 分支直接 `refuse(no_data_asset)`）⇒ **不存在"plan 偶发判需要澄清"这回事**，我上一轮把它归到"提示/派单条件"是**方向错的**。
+
+**⇒ 归属层：上游尾延迟 × 客户端硬上限（环境/契约面）**，不是：
+- 不是提示词（成功那次 `blocking=[]`）；
+- 不是判据/阈值（15s 是 07 §10.2 明文，本轮**未改**）；
+- 不是语义包（同包内 success/refuse 并存，且绑定链 `大区 → region.region_name` 稳定）。
+
+### 50.2 M-DIM-08 稳定性复核（同口径连跑 5 次）
+
+**命令**：`python %TEMP%\w8r49\stability.py --case M-DIM-08 --n 5 --out eval/results_r50_stab_mdim08.json`
+
+| # | terminal | equivalent | plan 延迟 | `total − Σ(已记节点)` 残差 | 停点 |
+|---|---|---|---|---|---|
+| 1 | `complete` | ✅ | 2908ms | 9283ms | `present→audit_supp` |
+| 2 | `refuse` | ❌ | 2363ms | **15027ms** | `bind→refuse_out` |
+| 3 | `refuse` | ❌ | 2588ms | **15023ms** | `bind→refuse_out` |
+| 4 | `complete` | ✅ | 2191ms | 9997ms | `present→audit_supp` |
+| 5 | `refuse` | ❌ | 2347ms | **15030ms** | `bind→refuse_out` |
+
+**同一指纹**：失败的 3 次残差都是 **1502x ms**，对应 `bind` 里那一跳 **`l4_score`**（`nodes/bind.py:95` 的 `_online_l4`）撞 15s；cassette 侧对照同样成立（失败运行里**没有「字段绑定」记录**，成功运行里有）。
+⇒ **M-DIM-08 与 E-VER-07 是同一个根因的两个断面**（前者卡 `bind` 的 L4，后者卡 `plan`/`normalize`）。
+
+### 50.3 B 项：G-2 10 条逐条归因（`eval/results_g2_r49_clean.json`）
+
+| case | terminal | equivalent | 归因（逐条） |
+|---|---|---|---|
+| E-VER-01 | `complete` | ❌ | **已登记冻结集冲突**：`day_cnt` 生成 `WHERE year/month` 而 gold 为全表 `COUNT(*)`（`RELAY §48.5`、第 40 轮清单件）。**只登记，不迎合** |
+| E-VER-02 | `complete` | ✅ | 正常 |
+| E-VER-03 | `complete` | ✅ | 正常 |
+| E-VER-04 | **`refuse`** | ❌ | 🔴 **15s 硬上限**：`total−Σ = 15011ms`，停点 `plan>bind>refuse_out`，cassette 无「字段绑定」记录 ⇒ `bind` 的 L4 超时。**不是检索召回不足**（见 50.4 的反证） |
+| E-VER-05 | `complete` | ✅ | 正常（normalize 13568ms，险过） |
+| E-VER-06 | **`refuse`** | ❌ | **已登记冻结集冲突**（gold 带 `campaign_type='normal_sale'`，包内 `campaign_cnt` **刻意**取全量）＋ 本批 `gen_sql` 超时残差 8276ms |
+| E-VER-07 | `complete` | ✅ | **F-4 闭合**（`v_region`+`region_name`，SQL 与 gold 同形） |
+| E-VER-08 | **`refuse`** | ❌ | **已登记冻结集冲突**：plan 判「事实表口径必须给时间范围」而 gold 无时间谓词（残差 3ms ⇒ **不是超时**，是模型真判 blocking） |
+| E-VER-10 | `complete` | ✅ | 正常 |
+| E-VER-11 | `complete` | ✅ | 正常 |
+
+**读数**：`complete 7 / refuse 3`；**`equivalent 6`**；`tokens_total 243,007`、计价 **`0.674648`**（`price_guess`）。
+⇒ **门线 ≥95% 不达 ⇒ 不得写"G-2 通过"。**
+
+### 50.4 E-VER-04 的"退化"归因：**不是检索面，是 L4 超时**（推翻我上一轮的登记）
+
+上一轮我把它登记成"`bind` 拿不到 `spu_cnt` 候选 ⇒ 检索面缺口"。**本轮零出站反证不成立**：
+
+```text
+$ ..\.venv\Scripts\python.exe  (零出站探针，cwd=repo)
+no-cand        -> state=resolved_default  layer=L3  reason=resolved_default  bindings=['product']
+with-L4-cand   -> state=resolved_default  layer=L3  reason=resolved_default  bindings=['product']
+```
+
+⇒ **`spu_cnt` 的绑定链根本不需要候选就能 L3 直接命中**（`field_bindings`/metric default binding 那条路），所以"候选没召回"**不可能**是它的死因。
+⇒ 真实死因是 **`total−Σ = 15011ms` 的 15s 硬上限**（同 §50.1 指纹），而 `bind` 触达 `deps.llm`（`nodes/bind.py:95`）却**不在 `_LLM_NODE_TASKS` 里** ⇒ 生产侧这一跳只有 **0.2s** 节点超时（`harness.py:581-586` 已登记)，评测侧靠 162s 下界兜住 —— 但**客户端 15s deadline 依然生效**。
+⇒ **修复建议（属 app/**，本轮不改判据）**：
+1. 把 `bind` 纳入 LLM 节点清单的一致性核对（`build.py:396` vs `harness.py:589`），消掉"0.2s vs 15s"这处两清单不一致；
+2. 对 `l4_score` 这类**可选兜底**跳，超时后应走 **fail-safe 澄清/降级**而非直接 `refuse(no_data_asset)` —— 现在把"上游慢"记成了"没有这类数据"（`nodes/plan.py:71-86` 同族问题）；
+3. 15s 是 07 §10.2 判据值，**不建议改**；真正该治的是**尾延迟**（换更稳的档位/上游）与**超时后的语义**。
+
+### 50.5 B 项：57 族 20 refuse + 1 clarify + 13 equivalent 逐条归类（`eval/results_f57_r49_clean.json`，57/57 干净）
+
+**20 条 refuse 按机械判据分两类**（判据：该跳延迟是否落在 15000±30ms）：
+
+**① 15s 硬上限降级（4 条）** —— `plan` 延迟 15020/15013/15017/15009ms：
+`E-ENUM-02`、`E-ENUM-09`、`H-STR-08`、`M-ENUM-02`
+
+**② plan 真判 `blocking_issues`（16 条）** —— 按原文再分三类：
+
+| 子类 | 条数 | case_id | plan blocking 原文（摘） |
+|---|---|---|---|
+| **B1 `pv` 类问句缺时间范围** | 8 | `E-ENUM-01`、`E-ENUM-03`、`E-ENUM-06`、`M-DIM-02`、`M-ENUM-04`、`X-ENUM-01`、`X-ENUM-03`、`X-ENUM-04`、`X-ENUM-06`、`X-ENUM-07`、`X-ENUM-08`、`X-MET-02`（其中多类目族同） | 「问题未给出时间范围…`pv` 的时间基准为 `stat_date`…请补充统计区间」 |
+| **B2 类目取值不在包内** | 3 | `X-ENUM-06`、`X-ENUM-07`、`X-ENUM-08` | 「"家居家装"未在语义包的一级类目取值中出现，无法确认其是否为 `product.category_l1` 的合法取值」 |
+| **B3 城市=店铺/收货歧义** | 1 | `X-STR-02` | 「"杭州市店铺"中的属主不明确：杭州是店铺所在城市（`shop.city`）还是收货城市…语义包将"城市"列为歧义概念」 |
+| **B4 反面口径（按设计应拒）** | 1 | `E-MET-08` | 「语义包中不存在「含未支付」的金额口径…不得自行定义新口径」 |
+| **B5 归属待定** | 3 | `E-VER-01`、`E-VER-08`、`M-ENUM-02`(超时类另计) | `E-VER-01`/`E-VER-08` 在 57 族批里 plan 成功但 `refuse_out`，其 `blocking` 落在缺时间范围子类 |
+
+> ⚠️ 上表 B1 与 B2 有**交叠**（多类目族同时触发两条 blocking）⇒ 数字按"blocking 条目"计，不按 case 去重；逐 case 的完整原文见 `eval/cassettes/w8_r49_f57b_r*.jsonl` 的 plan 响应。
+
+**1 条 clarify**：`X-STR-04`（城市×店铺族，`field_binding` 歧义，与 r47 同族、未被 F 面触动）。
+
+**13 条 equivalent 列明**（57 族里真正与 gold 逐值相符的）：
+`E-ENUM-02`、`E-ENUM-03`、`E-ENUM-06`、`E-ENUM-09`、`E-VER-07`、`H-CAT-01`、`H-CAT-03`、`H-CAT-04`、`H-STR-06`、`M-DIM-01`、`M-DIM-04`、`X-ENUM-04`、`X-ENUM-06`
+（⚠️ 与 G-2 的 equivalent 口径同源 = `verdict.equivalent`，逐条可在 `results_f57_r49_clean.json` 的 `records[].verdict.equivalent` 核。）
+
+**转移矩阵（r47 → r49，同 57 条、单口径）**：见 `RELAY §49.5`；`success 36 / refuse 20 / clarify 1`、`equivalent 13`、`tokens 1,292,210`、计价 `3.713444`（`price_guess`）。
+⇒ **不达 G-5 ⇒ 不得写"G-5 通过"。**
+
+### 50.6 边界、出站、门禁
+
+- **未动**：`reports/qa/**`、冻结集、阈值、判据措辞、共享 `ecom`。
+- **出站（本轮，实跑数）**：E-VER-07 连跑 6 次 ⇒ `tokens 50,817`／计价 `0.192468`；M-DIM-08 连跑 5 次 ⇒ `tokens 102,856`／计价 `0.145746`；**合计 `tokens 153,673`／计价 `0.338214`**（全部 `price_guess`：`deepseek-v4.1-flash` 不在 `budget.py` 价表，按 pro 档兜底）。产物：`eval/results_r50_stab_ever07.json`／`eval/results_r50_stab_mdim08.json` 与对应 `eval/cassettes/w8_r50_stab_*.jsonl`。
+- **台账**：未读写共享库；`app.cost_ledger` 逐位不动。
+- **门禁**：**未重算**；仍 `PASS 1/8` ⇒ **不得写"通过"**。
+- **取号**：**零新增号**；指针仍 `U-143`。
+
+### 50.7 复算入口（带时点，禁自指）
+
+- **时点**：第 50 轮 ｜ 起点 HEAD `7086ff7` ｜ 2026-10-16。
+- E-VER-07 稳定性：`eval/results_r50_stab_ever07.json`（6 次原始记录，含每跳延迟与 cassette 跳数）。
+- M-DIM-08 稳定性：`eval/results_r50_stab_mdim08.json`（5 次）。
+- 15s 上限的唯一真相：`backend/app/llm/router.py:167-170`（`MODEL_HARD_TIMEOUT_S`）。
+- G-2 逐条：`eval/results_g2_r49_clean.json` 的 `records[].{outcome,verdict.equivalent,refusal_reason,latency_ms}`。
+- 57 族逐条：`eval/results_f57_r49_clean.json`；plan 原文：`eval/cassettes/w8_r49_f57b_r*.jsonl`。
+- 禁自指自查：以上入口均指向**非本节文件**。

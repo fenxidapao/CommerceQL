@@ -1,0 +1,674 @@
+{
+  "case": "M-DIM-08",
+  "n": 5,
+  "runs": [
+    {
+      "tag": 1,
+      "record": {
+        "case_id": "M-DIM-08",
+        "question": "7 个大区各覆盖的省份数分别是多少？",
+        "tenant": "T_A",
+        "expected_behavior": "execute",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "low",
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "terminal_error_detail": {},
+        "outcome": "success",
+        "refusal_reason": null,
+        "binding_status": "resolved_default",
+        "sql_text": "SELECT v_region.region_name AS region_name, COUNT(*) AS province_cnt FROM v_region GROUP BY v_region.region_name ORDER BY province_cnt DESC LIMIT 100",
+        "sql_params": {},
+        "sql_dialect": "postgres",
+        "limit_injected": null,
+        "applied_predicates": [],
+        "gate_decisions": {
+          "1": "pass/True",
+          "2": "pass/True",
+          "3": "skipped/False"
+        },
+        "gate1_reject_rule": null,
+        "exec_error_class": null,
+        "degradations": [
+          {
+            "reason": "embedding_unavailable",
+            "action_taken": "sparse_only"
+          },
+          {
+            "reason": "present_failed",
+            "action_taken": "table_only",
+            "detail": {
+              "stage": "present",
+              "reason": "presenter_absent",
+              "binding_disclosure": "省份清单是公共参考维表，时间语义为当前值"
+            }
+          }
+        ],
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "latency_ms": {
+          "normalize": 2916,
+          "linking": 0,
+          "plan": 2908,
+          "gen_sql": 2106,
+          "gate": 15,
+          "exec": 4,
+          "present": 0,
+          "total": 17232
+        },
+        "tokens": {
+          "input": 24834,
+          "output": 2663,
+          "cache_hit": 19712,
+          "total": 27497
+        },
+        "cost_cny": 0.064516,
+        "infra_error": null,
+        "scored": true,
+        "unscored_reason": null,
+        "gold": {
+          "gold_sql": "SELECT region_name, COUNT(*) FROM v_region GROUP BY region_name",
+          "frozen_hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+          "via_view": {
+            "hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+            "rows": 7,
+            "cols": 2,
+            "error": null
+          },
+          "via_wrap": {
+            "hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+            "rows": 7,
+            "cols": 2,
+            "error": null
+          },
+          "view_eq_wrap": true,
+          "wrap_eq_frozen": true
+        },
+        "predicted": {
+          "hash": "sha256:b9a0d69858481f93c3106106a5064e283b8f6cb7b2243b68fcede310a8edf904",
+          "columns": [
+            "region_name",
+            "province_cnt"
+          ],
+          "rows": 7,
+          "shape": {
+            "columns": [
+              "region_name",
+              "province_cnt"
+            ],
+            "row_count": 7,
+            "head_rows": [
+              [
+                "华东",
+                7
+              ],
+              [
+                "华北",
+                5
+              ],
+              [
+                "西北",
+                5
+              ],
+              [
+                "西南",
+                5
+              ],
+              [
+                "东北",
+                3
+              ]
+            ]
+          },
+          "state_row_count": 7,
+          "sandbox_error": null
+        },
+        "verdict": {
+          "equivalent": true,
+          "hash_matches": false,
+          "tags": [
+            "column_alias_difference"
+          ],
+          "diffs": [],
+          "unmatched": 0,
+          "equivalent_despite_hash_mismatch": true
+        },
+        "attribution": null,
+        "wall_s": 17.239
+      },
+      "plan_seen": true,
+      "blocking_issues": [],
+      "degradations": [
+        "embedding_unavailable",
+        "present_failed"
+      ]
+    },
+    {
+      "tag": 2,
+      "record": {
+        "case_id": "M-DIM-08",
+        "question": "7 个大区各覆盖的省份数分别是多少？",
+        "tenant": "T_A",
+        "expected_behavior": "execute",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "low",
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "refuse_out"
+        ],
+        "terminal_event": "refuse",
+        "terminal_code": null,
+        "terminal_error_detail": {},
+        "outcome": "refuse",
+        "refusal_reason": "no_data_asset",
+        "binding_status": null,
+        "sql_text": "",
+        "sql_params": {},
+        "sql_dialect": "",
+        "limit_injected": null,
+        "applied_predicates": [],
+        "gate_decisions": {},
+        "gate1_reject_rule": null,
+        "exec_error_class": null,
+        "degradations": [
+          {
+            "reason": "embedding_unavailable",
+            "action_taken": "sparse_only"
+          }
+        ],
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "latency_ms": {
+          "normalize": 2599,
+          "linking": 0,
+          "plan": 2363,
+          "total": 19989
+        },
+        "tokens": {
+          "input": 15748,
+          "output": 216,
+          "cache_hit": 15616,
+          "total": 15964
+        },
+        "cost_cny": 0.006095,
+        "infra_error": null,
+        "scored": true,
+        "unscored_reason": null,
+        "gold": {
+          "gold_sql": "SELECT region_name, COUNT(*) FROM v_region GROUP BY region_name",
+          "frozen_hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+          "via_view": {
+            "hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+            "rows": 7,
+            "cols": 2,
+            "error": null
+          },
+          "via_wrap": {
+            "hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+            "rows": 7,
+            "cols": 2,
+            "error": null
+          },
+          "view_eq_wrap": true,
+          "wrap_eq_frozen": true
+        },
+        "predicted": {
+          "hash": null,
+          "columns": [],
+          "rows": 0,
+          "shape": {
+            "columns": [],
+            "row_count": 0,
+            "head_rows": []
+          },
+          "state_row_count": 0,
+          "sandbox_error": null
+        },
+        "verdict": {
+          "equivalent": false,
+          "hash_matches": null,
+          "tags": [],
+          "diffs": [
+            "列数不同：金标 2 / 预测 0"
+          ],
+          "unmatched": 0,
+          "equivalent_despite_hash_mismatch": false
+        },
+        "attribution": {
+          "category": "over_refusal",
+          "signal": "可回答的题被判拒答",
+          "severity": "normal"
+        },
+        "wall_s": 19.995
+      },
+      "plan_seen": true,
+      "blocking_issues": [],
+      "degradations": [
+        "embedding_unavailable"
+      ]
+    },
+    {
+      "tag": 3,
+      "record": {
+        "case_id": "M-DIM-08",
+        "question": "7 个大区各覆盖的省份数分别是多少？",
+        "tenant": "T_A",
+        "expected_behavior": "execute",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "low",
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "refuse_out"
+        ],
+        "terminal_event": "refuse",
+        "terminal_code": null,
+        "terminal_error_detail": {},
+        "outcome": "refuse",
+        "refusal_reason": "no_data_asset",
+        "binding_status": null,
+        "sql_text": "",
+        "sql_params": {},
+        "sql_dialect": "",
+        "limit_injected": null,
+        "applied_predicates": [],
+        "gate_decisions": {},
+        "gate1_reject_rule": null,
+        "exec_error_class": null,
+        "degradations": [
+          {
+            "reason": "embedding_unavailable",
+            "action_taken": "sparse_only"
+          }
+        ],
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "latency_ms": {
+          "normalize": 1988,
+          "linking": 0,
+          "plan": 2588,
+          "total": 19599
+        },
+        "tokens": {
+          "input": 15748,
+          "output": 238,
+          "cache_hit": 15616,
+          "total": 15986
+        },
+        "cost_cny": 0.006404,
+        "infra_error": null,
+        "scored": true,
+        "unscored_reason": null,
+        "gold": {
+          "gold_sql": "SELECT region_name, COUNT(*) FROM v_region GROUP BY region_name",
+          "frozen_hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+          "via_view": {
+            "hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+            "rows": 7,
+            "cols": 2,
+            "error": null
+          },
+          "via_wrap": {
+            "hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+            "rows": 7,
+            "cols": 2,
+            "error": null
+          },
+          "view_eq_wrap": true,
+          "wrap_eq_frozen": true
+        },
+        "predicted": {
+          "hash": null,
+          "columns": [],
+          "rows": 0,
+          "shape": {
+            "columns": [],
+            "row_count": 0,
+            "head_rows": []
+          },
+          "state_row_count": 0,
+          "sandbox_error": null
+        },
+        "verdict": {
+          "equivalent": false,
+          "hash_matches": null,
+          "tags": [],
+          "diffs": [
+            "列数不同：金标 2 / 预测 0"
+          ],
+          "unmatched": 0,
+          "equivalent_despite_hash_mismatch": false
+        },
+        "attribution": {
+          "category": "over_refusal",
+          "signal": "可回答的题被判拒答",
+          "severity": "normal"
+        },
+        "wall_s": 19.61
+      },
+      "plan_seen": true,
+      "blocking_issues": [],
+      "degradations": [
+        "embedding_unavailable"
+      ]
+    },
+    {
+      "tag": 4,
+      "record": {
+        "case_id": "M-DIM-08",
+        "question": "7 个大区各覆盖的省份数分别是多少？",
+        "tenant": "T_A",
+        "expected_behavior": "execute",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "low",
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "terminal_error_detail": {},
+        "outcome": "success",
+        "refusal_reason": null,
+        "binding_status": "resolved_default",
+        "sql_text": "SELECT v_region.region_name AS region_name, COUNT(*) AS province_cnt FROM v_region GROUP BY v_region.region_name ORDER BY province_cnt DESC LIMIT 100",
+        "sql_params": {},
+        "sql_dialect": "postgres",
+        "limit_injected": null,
+        "applied_predicates": [],
+        "gate_decisions": {
+          "1": "pass/True",
+          "2": "pass/True",
+          "3": "skipped/False"
+        },
+        "gate1_reject_rule": null,
+        "exec_error_class": null,
+        "degradations": [
+          {
+            "reason": "embedding_unavailable",
+            "action_taken": "sparse_only"
+          },
+          {
+            "reason": "present_failed",
+            "action_taken": "table_only",
+            "detail": {
+              "stage": "present",
+              "reason": "presenter_absent",
+              "binding_disclosure": "省份清单是公共参考维表，时间语义为当前值"
+            }
+          }
+        ],
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "latency_ms": {
+          "normalize": 2012,
+          "linking": 0,
+          "plan": 2191,
+          "gen_sql": 2341,
+          "gate": 15,
+          "exec": 2,
+          "present": 0,
+          "total": 16558
+        },
+        "tokens": {
+          "input": 24833,
+          "output": 2619,
+          "cache_hit": 21760,
+          "total": 27452
+        },
+        "cost_cny": 0.054617,
+        "infra_error": null,
+        "scored": true,
+        "unscored_reason": null,
+        "gold": {
+          "gold_sql": "SELECT region_name, COUNT(*) FROM v_region GROUP BY region_name",
+          "frozen_hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+          "via_view": {
+            "hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+            "rows": 7,
+            "cols": 2,
+            "error": null
+          },
+          "via_wrap": {
+            "hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+            "rows": 7,
+            "cols": 2,
+            "error": null
+          },
+          "view_eq_wrap": true,
+          "wrap_eq_frozen": true
+        },
+        "predicted": {
+          "hash": "sha256:b9a0d69858481f93c3106106a5064e283b8f6cb7b2243b68fcede310a8edf904",
+          "columns": [
+            "region_name",
+            "province_cnt"
+          ],
+          "rows": 7,
+          "shape": {
+            "columns": [
+              "region_name",
+              "province_cnt"
+            ],
+            "row_count": 7,
+            "head_rows": [
+              [
+                "华东",
+                7
+              ],
+              [
+                "华北",
+                5
+              ],
+              [
+                "西北",
+                5
+              ],
+              [
+                "西南",
+                5
+              ],
+              [
+                "东北",
+                3
+              ]
+            ]
+          },
+          "state_row_count": 7,
+          "sandbox_error": null
+        },
+        "verdict": {
+          "equivalent": true,
+          "hash_matches": false,
+          "tags": [
+            "column_alias_difference"
+          ],
+          "diffs": [],
+          "unmatched": 0,
+          "equivalent_despite_hash_mismatch": true
+        },
+        "attribution": null,
+        "wall_s": 16.563
+      },
+      "plan_seen": true,
+      "blocking_issues": [],
+      "degradations": [
+        "embedding_unavailable",
+        "present_failed"
+      ]
+    },
+    {
+      "tag": 5,
+      "record": {
+        "case_id": "M-DIM-08",
+        "question": "7 个大区各覆盖的省份数分别是多少？",
+        "tenant": "T_A",
+        "expected_behavior": "execute",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "low",
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "refuse_out"
+        ],
+        "terminal_event": "refuse",
+        "terminal_code": null,
+        "terminal_error_detail": {},
+        "outcome": "refuse",
+        "refusal_reason": "no_data_asset",
+        "binding_status": null,
+        "sql_text": "",
+        "sql_params": {},
+        "sql_dialect": "",
+        "limit_injected": null,
+        "applied_predicates": [],
+        "gate_decisions": {},
+        "gate1_reject_rule": null,
+        "exec_error_class": null,
+        "degradations": [
+          {
+            "reason": "embedding_unavailable",
+            "action_taken": "sparse_only"
+          }
+        ],
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "latency_ms": {
+          "normalize": 2029,
+          "linking": 0,
+          "plan": 2347,
+          "total": 19406
+        },
+        "tokens": {
+          "input": 15748,
+          "output": 209,
+          "cache_hit": 13824,
+          "total": 15957
+        },
+        "cost_cny": 0.014114,
+        "infra_error": null,
+        "scored": true,
+        "unscored_reason": null,
+        "gold": {
+          "gold_sql": "SELECT region_name, COUNT(*) FROM v_region GROUP BY region_name",
+          "frozen_hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+          "via_view": {
+            "hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+            "rows": 7,
+            "cols": 2,
+            "error": null
+          },
+          "via_wrap": {
+            "hash": "sha256:f075332434dc017c11e0418cc9e4ce2cd84f8f41c5219a04107067bf4871f5d0",
+            "rows": 7,
+            "cols": 2,
+            "error": null
+          },
+          "view_eq_wrap": true,
+          "wrap_eq_frozen": true
+        },
+        "predicted": {
+          "hash": null,
+          "columns": [],
+          "rows": 0,
+          "shape": {
+            "columns": [],
+            "row_count": 0,
+            "head_rows": []
+          },
+          "state_row_count": 0,
+          "sandbox_error": null
+        },
+        "verdict": {
+          "equivalent": false,
+          "hash_matches": null,
+          "tags": [],
+          "diffs": [
+            "列数不同：金标 2 / 预测 0"
+          ],
+          "unmatched": 0,
+          "equivalent_despite_hash_mismatch": false
+        },
+        "attribution": {
+          "category": "over_refusal",
+          "signal": "可回答的题被判拒答",
+          "severity": "normal"
+        },
+        "wall_s": 19.412
+      },
+      "plan_seen": true,
+      "blocking_issues": [],
+      "degradations": [
+        "embedding_unavailable"
+      ]
+    }
+  ]
+}

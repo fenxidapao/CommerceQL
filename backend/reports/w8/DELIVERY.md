@@ -657,3 +657,14 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **🔴 不稳定项**：`E-VER-07` 在 G-2 干净批是 `success`、在 57 族干净批是 `refuse`（同包同 case 跨批不一致）⇒ 如实并报，登记为下一轮首查。
 - **复跑（D 项）**：`tests/integration` **124 passed / 0 failed**（一次性 PG/Redis ＋ `alembic upgrade head`）；离线 **2543 passed / 0 failed**；validator **PASS=31 / FAIL=0 / SKIP=1 / WARN=2**。
 - **边界**：未动 `reports/qa/**`、冻结集、阈值、判据措辞、共享 `ecom`；一次性容器已清；台账逐位不动；零取号（`U-143`）；门禁**未重算**（仍 `PASS 1/8`）。
+
+## 第 50 轮交付（E-VER-07 跨批不稳定定位 ＋ G-2/G-5 逐条归因 ｜ 起点 HEAD `7086ff7` ｜ 2026-10-16 23:2x–23:5x +0800 ｜ 一轮一笔）
+
+- **A 项结论**：不稳定**不在提示、不在阈值、不在语义层**，而在「**上游尾延迟 > 07 §10.2 的 15s 客户端硬上限**」。E-VER-07 连跑 6 次：3 次 `plan` 延迟 **15017/15020/15008ms**、2 次 `normalize` **15121/15130ms**，且失败运行的 **cassette 里该跳整条缺席**（出站前被 deadline 掐断）；成功那次 `plan` 仅 4427ms、`blocking=[]` ⇒ 快就通、慢就拒。
+- **M-DIM-08 同因**：连跑 5 次，3 次失败残差 **15027/15023/15030ms**（`bind` 的 `l4_score` 撞 15s），成功 2 次 equivalent。
+- **B 项 G-2 逐条**：`complete 7 / refuse 3`、`equivalent 6`；E-VER-01/06/08 作**已登记冻结集冲突**只登记；**E-VER-04 归因推翻 —— 不是检索面**（零出站证明 `spu_cnt` 无需候选即 L3 命中），真因是 `bind` 的 L4 15s 超时（残差 15011ms）。
+- **B 项 57 族逐条**：20 refuse = **4 条 15s 超时** + **16 条 plan 真判 blocking**（缺时间范围/类目取值不在包内/城市歧义/反面口径）；1 clarify = `X-STR-04`；13 条 equivalent 已列明。
+- **复跑（D 项）**：`tests/integration` **124 passed / 0 failed**（一次性 PG/Redis ＋ `alembic upgrade head`）；离线 **2543 passed / 0 failed**。
+- **出站（实报）**：稳定性探针合计 `tokens 153,673`／计价 `0.338214`（`price_guess`）。
+- **修复建议（属 app/**，本轮未动判据）**：① `bind` 纳入 LLM 节点清单一致性核对（现 `_LLM_NODE_TASKS` 缺它，生产侧只给 0.2s）；② L4 这类可选兜底跳超时后应 fail-safe 降级/澄清，而非 `refuse(no_data_asset)`（把"上游慢"记成"没有这类数据"）；③ 15s 是判据值不改，治尾延迟与超时语义。
+- **边界**：未动 `reports/qa/**`、冻结集、阈值、判据、共享 `ecom`；一次性容器已清；台账逐位不动；零取号（`U-143`）；门禁**未重算**（仍 `PASS 1/8`，**不得写"通过"**）。
