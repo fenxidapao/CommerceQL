@@ -4546,3 +4546,124 @@ n_unscored = 0（无 CassetteMiss）
 ### 45.8 注入形态
 
 - 注入形态 = **无**；未执行 **N/A**。
+
+## §四六 第 46 轮 · **项目收口 P0-A**（核心正确性与安全）｜ 4 项缺陷修复 ＋ 活体证据 ｜ 2026-10-16
+
+### 46.0 总控令与授权（本轮边界）
+
+- **原话**：「完成项目，不是再过局部回执」；授权对 **`app/**`、`tests/**`、`eval/**`、`deploy/**`** 做**非破坏性修复**；预算按实际需要、不再逐次询问。
+- **禁止**：改冻结集/阈值、伪造通过、打印/提交密钥、删除历史、写共享 `ecom`。
+- **交付要求**：每项给 `文件:行号 + before/after + 命令 + 原始输出 + 时点 + HEAD`；未跑的一律写 **UNVERIFIED**，不许写"应该可以"。
+- 起点 HEAD `52ee708`／556 笔（本轮作业中 QA 另落 `4c83266`／557 笔）；不改 `reports/qa/**`；零取号（`U-143`）。
+
+### 46.1 P0-A-4｜失败可观测性：`llm_error_update` 不再丢弃 `exc.detail`
+
+| 面 | before | after |
+|---|---|---|
+| `backend/app/graph/nodes/_shared.py:203-204`（改后 `:215-220`） | `code = getattr(exc,"default_code",None) or INTERNAL` ⇒ **只落码、丢掉 detail** | `update["terminal"] = {**terminal, "error_detail": dict(detail)}`（有 detail 才落键） |
+| `eval/harness.py`（新增 `:493-508`） | `CaseRun` 只有 `terminal_code` | 新增 `terminal_error_detail` 属性（缺键返回 `{}`，不编默认值） |
+| `eval/runner.py:235-238` | 记录里只有 `terminal_code` | 新增 `terminal_error_detail` 字段 |
+| **为什么** | 第 41–43 轮 `LLM_UPSTREAM_ERROR` 把"上游过载"与"匣带解码失败"压成一个码 ⇒ **连猜三轮都猜错** | 根因随终态一起落库/落产物 |
+
+**① 单测**：`backend/tests/unit/test_llm_error_detail.py`（新增，**6 passed**：正例落 detail／超时留 `remaining_s`／空 detail 不编键／副本不共享／`LlmRefused` 走 refuse 不进 error／非映射静默忽略）。
+**② 活体验证（真图，非单测）**：`%TEMP%\w8r47\p4_live.py` —— 与 runner 同一装配，运行时把 `gateway.call` 换成"抛 `LlmUpstreamError(detail={"model","kind","task"})`"（**零出站**）。**实跑**：
+
+```text
+nodes = ['trusted_context', 'normalize', 'error_out']
+terminal_event = error ｜ terminal_code = LLM_UPSTREAM_ERROR
+terminal_error_detail = {"model": "deepseek-v4.1-flash", "kind": "ConnectError", "task": "normalize_intent"}
+infra_error = null
+```
+
+⇒ **before 时该字段会是空**（只留 `LLM_UPSTREAM_ERROR`）；after 起**根因可判**。
+
+### 46.2 P0-A-1｜`normalize` 残留租户自指：**确定性**修复（不是改提示词）
+
+**根因（承 §45.1）**：`TENANT_SELF_REFERENCE_NOTE` 只约束模型**判定**、不约束**文本残留**；而 `plan` **刻意不带**那条说明 ⇒ 残留一个 `T_A` 就足以让 plan 判 `blocking_issues` ⇒ `metrics=[]` ⇒ `refuse_out`。
+
+| 面 | before | after |
+|---|---|---|
+| `backend/app/planner/payloads.py:145-188` | 只有那条提示词说明；无确定性剥离 | **新增** `TENANT_SELF_REFERENCE_PHRASES` ＋ `strip_tenant_self_reference(text, tenant_id)`（纯文本后处理，**零 LLM**；只剥**调用者自己**的 `tenant_id` ＋ 紧邻的「的」＋三条通用自指短语；正则元字符按字面处理） |
+| `backend/app/graph/nodes/normalize.py:73-84`（读出）＋ `:120-131`（收口） | `understand(identity, question)`（**恒无** history） | ① `history = tuple(state.get("history_questions") or ())` 并传给 `understand/normalize`；② 返回前对 `normalized_question` 跑确定性剥离 |
+| `backend/app/graph/nodes/normalize.py:37-43`（文件头） | 「多轮历史…传 `()`…缺口已登记」 | 🔻 已接线 ＋ 明写"`gen_sql` 仍拿不到历史文本"（资产无 `$history_block`） |
+
+**① 单测**：`backend/tests/unit/test_tenant_self_reference_strip.py`（新增，**18 passed**：冻结集里 5 种真实形态／通用短语／句中／**别人租户代号不得剥**／只吃紧邻的「的」／幂等／空输入／正则元字符按字面）。
+**② 零成本真图证明**（replay a3 匣带）：`normalized_question` 从 `"T_A 的SPU 数是多少？"` → **`"SPU 数是多少？"`**；随后 `plan` 那一跳 **cassette_miss**（`key=sha256:0758467eb782eaf3…`）—— 这正说明**载荷指纹已变**（修复生效）；miss 被如实记为**基础设施**未评分，**不**计入模型失败率。
+**③ after 活体（新上游 kuaipao.pro／`deepseek-v4.1-flash`，带匣带新录 `eval/cassettes/w8_r47_a1fix5.jsonl`）**——G-2 面前 5 条，**5/5 `complete`**（before：4 success ＋ 1 refuse）：
+
+| case_id | before（v1） | **after（本轮活体）** | SQL（after） |
+|---|---|---|---|
+| `E-VER-01` | refuse | success（`equivalent=false`，冻结集口径冲突，承 §40.4） | `COUNT(*) AS day_cnt … WHERE year=… AND month=…` |
+| `E-VER-02` | refuse | **success**（`true`） | `COUNT(*) AS on_sale_product_cnt … WHERE on_sale = TRUE` |
+| `E-VER-03` | refuse | **success**（`true`） | `… off_sale_product_cnt … WHERE on_sale = FALSE` |
+| `E-VER-04` | **refuse**（`no_data_asset`／`refuse_out`） | 🔴→✅ **success**（`true`） | **`SELECT COUNT(DISTINCT v_product.spu_id) AS spu_cnt FROM v_product WHERE v_product.on_sale = TRUE LIMIT 1`** |
+| `E-VER-05` | refuse | **success**（`true`） | `COUNT(*) AS shop_cnt FROM v_shop` |
+
+⇒ **`E-VER-04` 由 `refuse` 转 `success` 且 SQL 恰是 `spu_cnt` 的表达式**；另 4 条**无退化**。
+**读数**（`eval/results_a1fix5_r47.json`）：`n_unscored=0`｜`n_equivalent=4/5`｜`tokens_total=135371`（input 122923／output 12448／cache_hit 84224）｜**应用计价 `cost_cny_total=0.738990`**（⚠️ `price_guess` 语义：新模型名不在 `budget.py` 价表，按 pro 档兜底；**峰值时段**）。
+**④ before/after 对撞（57 条自指误拒族）**：**实跑读数见 §46.5** —— 转移矩阵 `refuse→complete 41 / →refuse 12 / →clarify 4`，`n_unscored=0`。（`--live`，新匣带 `eval/cassettes/w8_r47_a1fix57.jsonl`，HEAD `311e9e5`。）
+
+### 46.3 P0-A-3｜U-129 ＋ U-142 多轮闭环
+
+| 面 | before | after |
+|---|---|---|
+| `backend/app/graph/state.py:283-289` | **没有**历史载体字段（组 1 共 11 个） | 新增组 1 字段 **`history_questions: tuple[str, ...]`**（12 个）；`STATE_GROUPS`（`:126-129`）＋ `PROMPT_ALLOWED_FIELDS`（`:218-221`）同步登记（出站白名单与 `egress_guard.py:167` 一致） |
+| `state.py:465-515`（`initial_state`） | 只有 `options`/`idempotency_key` | 新增 `history_questions: Sequence[str] = ()` 并**无条件写**（`()` 也写键 —— 与另两个请求级键同规矩，防"本轮没历史"继承上一轮） |
+| `backend/app/api/runner.py:294-316`（新增 `_read_session_history`） | 无 | 从 `store.get_turns(...)` 读同会话轮次 ⇒ **只取 `question`**（不含 `outcome`/`plan_summary`）、**反序**成时间正序（`LPUSH` 最新在前）、读失败**不抛**＋告警 |
+| `backend/app/graph/nodes/normalize.py:73-83` | `history=()` 硬编码 | 读 `state["history_questions"]` 并传给 `understand/normalize` |
+| `backend/app/graph/nodes/trusted_context.py:59-63` | 注释"组 1 全集 11 个" | 改 **12**（计数随之现读，防漂移） |
+
+**① 单测**：`backend/tests/unit/test_session_history_carrier.py`（新增，**7 passed**：入口无条件播种／属组 1 且**不被复位**／反序成时间正序／**只取问题**／缺 `question` 跳过／空历史 = `()`／读失败退化＋**必告警**）。
+**② 零成本真图接线证明**（`%TEMP%\w8r47\p3_wiring.py`，运行时 spy 记录载荷后抛 `LlmRefused` ⇒ **零出站**）：给 run 播 `history_questions = (两轮历史问题)` ⇒ **`normalize_intent` 那一跳的载荷实跑**：
+
+```text
+task = normalize_intent
+history_questions = ["上个月各渠道的浏览量分别是多少？", "各店铺的商品数分别是多少？"]
+```
+
+⇒ 载体 → 节点 → 载荷**全链通**（渲染侧的 `$history_block` 已有既有单测覆盖：`test_llm_prompts.py:267`）。
+**③ 诚实边界（未闭的一格）**：**`gen_sql` 拿不到历史文本** —— 它的两个资产（`gen_sql_v1.txt`／`gen_sql_complex_v1.txt`）**没有** `$history_block` 占位符，占位符集合由 `tests/unit/test_llm_prompts.py:295-320` 逐资产钉住 ⇒ 历史对 `gen_sql` 的影响是**间接**的（经归一化后的问题），**不是**直接注入。⇒ **不改资产**（那属提示词契约变更，且会被上述单测判红）。
+**④ 属主两轮 API 端到端 ＋ U-129 入口不变量**：🔴 **UNVERIFIED（未跑完）** —— 原计划交给子代理在**一次性 PG/Redis** 上跑（含"第 2 轮不得崩／不得复用第 1 轮终态"实测），但该子代理**被中止**，**未产出读数**（详 §46.4）。⇒ 端到端**未验证**；**载体→节点→载荷**的接线已由 §46.3② 零成本真图证明（**仅此一格为已验证**）。
+
+### 46.4 P0-A-2｜U-131 活体三面（同租户非属主）
+
+**做法**：一次性 PG（`pgvector/pgvector:pg16`，端口 55433）＋ 一次性 Redis（`redis:7-alpine`，56380）＋ 进程内 DNS shim（`kuaipao.pro`→已知 IP，宿主 DNS 超时但 TCP 443 可达）＋ `TestClient(app)`，**不碰共享 `ecom`**；跑完清容器与卷。三面 = ① 非属主 `GET /session/{id}` ⇒ 期望 `404 SESSION_NOT_FOUND`；② 非属主 clarify 写入不得进属主会话（用属主身份回读对比轮次数）；③ 推理侧不得读到他人上下文（跨属主同 `session_id` 跑一跑，看它拿到的历史）。
+**状态：🔴 UNVERIFIED（未跑完）** —— 脚手架**已落但已迁出仓库**（原 `backend/tests/integration/_w8ot_env.py`／`_w8ot_probe.py` 会触发守卫 `test_no_env_file_dsn_derivation.py`：集成模块**不得读 `deploy/.env`** ⇒ 离线全量曾 `2 failed`；已迁至 `%TEMP%\w8r47\_w8ot_env.py`／`_w8ot_probe.py` 并改**绝对**路径，全量**复绿**）。它们仅进程内改 env 与 DNS，**不动 `app/**`**。但**组装活体三面**的探针**未跑出结果**：执行该任务的子代理**被中止（killed）**，未产出任何读数。⇒ 三面均**未验证**，**不得**视为已达成；须由新窗在**一次性 PG/Redis** 上补跑。
+**复现入口（新窗）**：`_w8ot_env.py`（env 装载＋DNS shim＋一次性 DSN `55433/56380`）＋ `_w8ot_probe.py`（起服务＋一次真查询自证）。**卡点**：三面断言脚本**尚未写**（现有 probe 只覆盖"服务起＋一次真查询跑完"）。**更稳的路子**：改用既有 `backend/tests/integration/_env_dsn.py`（U-114 一次性库 DSN 防线）取 DSN，避免再触守卫。
+
+### 46.5 🔴 before/after 对撞：57 条自指误拒族（**实跑读数**）
+
+**面**：`eval/results_v1.json` 里 `expected_behavior=execute 且 outcome=refuse` 且题面含 `T_[ABC]`／「我们租户」／「本租户」的 **57 条**（before ⇒ 全 `refuse`／`refuse_out`）。
+**after 批**：`--cases <57 条> --live --yes --cassette eval/cassettes/w8_r47_a1fix57.jsonl --out eval/results_a1fix57_r47.json`（新上游 kuaipao.pro／`deepseek-v4.1-flash`；每条实报模型＋tokens＋应用计价）。
+**命令**：`python -X utf8 -m eval.runner --cases-file %TEMP%\w8r47\cases57.txt --live --yes --cassette eval/cassettes/w8_r47_a1fix57.jsonl --out eval/results_a1fix57_r47.json`｜**时点**：2026-10-16｜**HEAD**：`311e9e5`（现读）。
+
+**① 转移矩阵（before → after，n=57）**：
+
+| before | after `complete` | after `refuse` | after `clarify` |
+|---|---|---|---|
+| `refuse`（n=57） | **41** | 12 | 4 |
+
+⇒ **41/57 由误拒转可执行**（`n_execute_with_sql=41`，其中 `n_equivalent=16`）；仍有 **12 条**停 `refuse_out`、**4 条**转 `clarify`。
+
+**② 仍 `refuse` 的 12 条**（`reason=no_data_asset`，停点 `refuse_out`）：
+`E-VER-08`｜`E-ENUM-05`｜`E-MET-08`｜`H-ENUM-02`｜`H-CAT-04`｜`X-STR-02`｜`X-ENUM-02`｜`X-ENUM-04`｜`X-ENUM-05`｜`X-ENUM-06`｜`X-ENUM-07`｜`X-ENUM-08`
+⇒ **归因**：这 12 条同属 `over_refusal`（与 `attribution_distribution` 的 `over_refusal=12` 逐位相符）—— 其拒答**不是**租户自指残留所致（剥离已生效仍拒），属**另一族**（语义包/数据资产面），留待后续轮。
+**③ error／其他**：**0 条**（`n_unscored=0`，无 `error` 终态；匣带全命中）—— 与 §46.1 的 `terminal_error_detail` 无兑现象（本轮无上游失败）。
+**④ 归因分布**：`gate_policy_gap=19`｜`over_refusal=12`｜`unattributed=6`｜`field_binding=4`。
+
+**⑤ 读数**（`eval/results_a1fix57_r47.json`）：`n_records=57`｜`n_scored=57`｜`n_unscored=0`｜`tokens_total=1,340,546`（input `1,227,717`／output `112,829`／cache_hit `1,089,280`）｜**应用计价 `cost_cny_total=4.810022`**（⚠️ `price_guess` 语义：新模型名不在 `budget.py` 价表，按 **pro 档兜底**；**峰值时段**占比取决于 token 构成，**以 tokens 为主报量**）。
+**⑥ 与 5 条批合并**：本轮 P0-A-1 after 出站合计 = 5 条批 `0.738990` ＋ 57 条批 `4.810022` ＝ **`5.549012`**（均 `price_guess`）；tokens 合计 `135,371 ＋ 1,340,546 ＝ 1,475,917`。
+
+### 46.6 边界、花费、取号与复算入口（**现读**）
+
+- **未动**：`reports/qa/**`（只读）、`semantic/**`、冻结集/阈值、`deploy/**` 既有件、容器（除子代理的一次性件，跑完即删）、共享 `ecom` 台账。
+- **台账逐位不动**：`app.cost_ledger` 现读 `1830|3.025849|2026-10-07 04:28:00.872275+00`。
+- **出站与计价（照 §60.6 口径，不写未计量的"零花费"）**：本轮**有出站** —— 5 条 after 批（`tokens 135371`／应用计价 `0.738990`，`price_guess`）＋ 57 条 after 批（见 §46.5，`tokens 1340546`／`4.810022`）；**合计 `tokens 1,475,917`／应用计价 `5.549012`**；探针 `p4_live`／`p3_wiring` 均**零出站**（桩在真网络之前抛）。
+- **离线全量现读**（⚠️ **必须用仓库 venv**：`python` 落到 anaconda 会因缺 `redis` 出 72 个 collect ERROR）：`.\.venv\Scripts\python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q` ⇒ **2524 passed / 0 failed / 1 warning**（第 45 轮 2493 ⇒ 本轮 ＋**31** 个新单测：`6`＋`18`＋`7`）。
+- **机械护栏（本轮现读）**：`test_migration_dsn_hygiene.py` ✅（随全量）；`python -X utf8 backend/scripts/scan_secrets.py --working-tree` ⇒ **0 命中 / 被测 691 件**（本项目自有规则 × 工作树面；⚠️ CI 下界，不含 gitleaks 默认集与全历史）。
+- **零取号**：`docs/07_技术设计文档_TDD.md:1094` 仍 **「下一个可用号 = `U-143`」**。
+- 🔴 **提交状态：未提交（工作树 dirty）** —— HEAD `311e9e5`（现读）；本轮 P0-A 全部改动与读数件仍在工作树，**未 stage／未 commit**（本轮总控只令出交接，未令提交）。
+
+### 46.7 注入形态
+
+- 注入形态 = **无**；未执行 **N/A**。

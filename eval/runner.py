@@ -233,6 +233,9 @@ async def score_case(
         "nodes": list(run.nodes),
         "terminal_event": run.terminal_event,
         "terminal_code": run.terminal_code,
+        # 🔴 P0-A-4：上游失败的**根因细节**（`{"model":…, "kind":…}` 等）。此前只落 `code`
+        # ⇒ `LLM_UPSTREAM_ERROR` 分不清"上游抖/超时"与"响应解码失败"（第 41–43 轮实测猜错三轮）。
+        "terminal_error_detail": run.terminal_error_detail,
         "outcome": run.outcome,
         "refusal_reason": run.refusal_reason,
         "binding_status": run.binding_status,

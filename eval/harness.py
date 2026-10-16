@@ -491,6 +491,23 @@ class CaseRun:
         return str(code) if code else None
 
     @property
+    def terminal_error_detail(self) -> dict[str, Any]:
+        """🔴 P0-A-4（2026-10-16）：终态里的**根因细节**（`terminal["error_detail"]`）。
+
+        为什么要有它：`terminal_code = LLM_UPSTREAM_ERROR` 只说"上游失败了"，
+        而根因（如 `{"model": …, "kind": "DecodingError"}` 与"上游在抖/超时"是**两种完全不同的事**）
+        此前被 `_shared.llm_error_update` 丢掉 ⇒ 产物里不可判根因（第 41–43 轮实测**猜错三轮**）。
+        ⚠️ 缺键 / 非映射一律返回 `{}`（**不编默认值**）：空 == "本次终态里没有这项信息"。
+        """
+        terminal = self.state.get("terminal") or {}
+        detail = (
+            terminal.get("error_detail")
+            if isinstance(terminal, Mapping)
+            else _raw_field(terminal, "error_detail")
+        )
+        return dict(detail) if isinstance(detail, Mapping) else {}
+
+    @property
     def degradations(self) -> tuple[dict[str, Any], ...]:
         return tuple(dict(d) for d in (self.state.get("degradations") or ()))
 

@@ -86,8 +86,11 @@ __all__ = [
     "normalize_payload",
     "plan_payload",
     "repair_payload",
+    "TENANT_SELF_REFERENCE_NOTE",
+    "TENANT_SELF_REFERENCE_PHRASES",
     "sanitize_few_shots",
     "sanitize_history",
+    "strip_tenant_self_reference",
     "summary_gaps",
 ]
 
@@ -141,6 +144,51 @@ TENANT_SELF_REFERENCE_NOTE: Final[str] = (
     "「我们租户」「本租户」这类自指）只是对同一范围的重复说明："
     "**不得**据此判 `clarify_needed`，也**不得**把它列进 `unmapped_terms`。"
 )
+
+#: 通用自指短语（**不含具体租户代号** —— 代号部分由 `tenant_id` 运行时提供）。
+#: 与上面那条说明里的举例**同源**（说明里列的形态就是这三种），不许各自演化。
+TENANT_SELF_REFERENCE_PHRASES: Final[tuple[str, ...]] = ("我们租户", "本租户", "我们公司")
+
+
+def strip_tenant_self_reference(text: str, tenant_id: str) -> str:
+    """🔴 **确定性**剥离句首/句中指向**调用者自身租户**的自指（P0-A-1，2026-10-16）。
+
+    ──────── 为什么必须有这一步（实测，不是推测）────────
+    `TENANT_SELF_REFERENCE_NOTE` 只约束模型的**判定**（"不得据此判 clarify／不得列进
+    `unmapped_terms`"），**没有**约束**文本残留**；而 `plan` 阶段**刻意不带**那条说明
+    （见上一条注释的 ⚠️）。实测（第 45 轮，匣带 `w8_r44_a3.jsonl` `#13`／`#14`）：
+      · 同一批 5 条里 **4 条**模型自己把 `T_A` 剥掉了，**1 条**（`E-VER-04`）没剥 ⇒
+        `normalized_question` 里留着 `T_A` ⇒ `plan` 判"实体「T_A」无法在语义包中解析" ⇒
+        `blocking_issues` ⇒ `metrics=[]` ⇒ **`refuse_out`**（本可 success 的题被误拒）。
+    ⇒ 靠提示词约束 LLM 的**顺从性**来保证一条**确定性**要求，是根因；本函数把它做成
+      **纯文本后处理**（零 LLM、零网络、可复算）。
+
+    ──────── 规则（窄而确定）────────
+    · **只剥调用者自己的 `tenant_id`**（服务端可信身份，`IdentityContext`）——
+      **不**剥别的租户代号（问"T_B 的商品数"是**跨租户**问题，必须留着让 plan 照常拦）；
+    · 连带剥掉紧跟其后的**所属格「的」**与两侧空白（"T_A 的SPU 数" → "SPU 数"，
+      "T_A 2026-08 的…" → "2026-08 的…"：`的` 只在**紧跟代号**时才吃，不会误吃后面的）；
+    · 三条通用自指短语（"我们租户"／"本租户"／"我们公司"）同规则处理；
+    · **不做**任何模糊匹配（不用 `T_.` 之类通配 —— 那会误剥别的租户代号）。
+    · 幂等：剥完再剥一次结果不变（单测钉住）。
+
+    ⚠️ **可审计**：`raw_question` 原样留在 state 里 ⇒ 这一步是**可逆可查**的派生，
+      没有"把用户的话改掉了却查不到原文"的问题。
+    """
+    if not text:
+        return text
+    codes = [tenant_id] if tenant_id else []
+    patterns = [re.escape(code) for code in codes] + [
+        re.escape(phrase) for phrase in TENANT_SELF_REFERENCE_PHRASES
+    ]
+    cleaned = text
+    for pattern in patterns:
+        # `\s*<代号>\s*的?` —— `的` 可选，且只在**紧跟代号**时被吃掉。
+        cleaned = re.sub(rf"\s*{pattern}\s*的?", "", cleaned)
+    # 剥完可能留下句首/句尾的悬空标点与多余空格；只做**归一**，不重排语序。
+    cleaned = re.sub(r"^[，、,;；:\s]+", "", cleaned)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+    return cleaned
 
 
 # ============================================================================

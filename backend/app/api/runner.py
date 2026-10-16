@@ -291,16 +291,45 @@ class SseRunner:
 
     # -- 主流程 -------------------------------------------------------------
 
+    async def _read_session_history(self, identity: IdentityContext) -> tuple[str, ...]:
+        """读同会话的历史**问题**（最新在前 → 反序成时间正序）。
+
+        🔴 P0-A-3（U-142）：这是"多轮指代"的**唯一载体**。三条边界：
+        · **只取 `question`** —— `get_turns` 里还有 `outcome` / `plan_summary` / `bundle_version`，
+          它们**不得**出站（§10.5 ⑥ 禁"历史 SQL 与结果"；`plan_summary` 是计划摘要，
+          也不能进 prompt —— 只有**问题本身**在 `egress_guard._EGRESS_ALLOWED_KEYS` 里）；
+        · 上限交给 `payloads.sanitize_history`（`MAX_HISTORY_TURNS`）—— 与提示词侧的截断**同一处**，
+          不在这里另设一个数（否则两处各自演化）；
+        · 读失败**不抛**：只告警 + 返回空历史（与 `clarify.py:272-278` 的写失败同口径）。
+        """
+        try:
+            turns = await self._store.get_turns(identity, identity.session_id)
+        except Exception as exc:  # noqa: BLE001 —— 历史是增强项，不得炸掉本轮
+            _log.warning(
+                "session_history_read_failed",
+                task_id=identity.task_id,
+                error_type=type(exc).__name__,
+                extra_fact="读失败 → 本轮以空历史继续（多轮指代退化为单轮）",
+            )
+            return ()
+        questions = [str(t.get("question")) for t in turns if isinstance(t, Mapping) and t.get("question")]
+        return tuple(reversed(questions))  # 存储是最新在前（LPUSH），提示词要时间正序
+
     async def stream(self, req: RunRequest) -> AsyncIterator[bytes]:
         """跑图并逐帧产出 SSE 字节（**首个 yield 是 `ack`**，W5 的硬要求）。"""
         recorder = EventRecorder(encoder=sse.encode, explain=req.explain)
         run_context = RunContext(self._new_deps(), recorder=recorder)
+        #: 🔴 P0-A-3（U-142）：把同会话的**历史问题**播种进组 1 的 `history_questions`。
+        #: 读失败**不抛**（与 `clarify.py:272-278` 的写失败同口径：历史是增强项，
+        #: 不能因为 Redis 抖一下把一次正常查询炸成 `INTERNAL`）—— 只告警 + 传空历史。
+        history = await self._read_session_history(req.identity)
         state = initial_state(
             req.identity,
             raw_question=req.question,
             # ⚠️ `options` 必须是**纯 dict**（见 `RunRequest` 的注释）。
             options=dict(req.options) if req.options else None,
             idempotency_key=req.idempotency_key,
+            history_questions=history,
         )
         #: 用初始 state 播种累积器（组 1 的身份字段不经任何节点的增量，见 `_RunTrace`）。
         trace = _RunTrace(state=dict(state))

@@ -34,9 +34,13 @@
 --------------------------------------------------------------------------
 三、两个"要了但给不了"的入参（如实登记，不编）
 --------------------------------------------------------------------------
-1. **多轮历史**：`understand(ctx, question, history=...)` 收 `history`，而 `GraphState`
-   §5.2 的 11 组字段里**没有**历史消息字段 ⇒ 传 `()`。多轮指代消解因此在 P0 不生效
-   （表现为"它/那个"类问题拿不到上一轮上下文）。缺口已登记。
+1. **多轮历史**：`understand(ctx, question, history=...)` 收 `history`。🔻 **P0-A-3 已接线**
+   （2026-10-16）：`GraphState` 新增组 1 字段 `history_questions`（`state.py:283-289`），
+   由 `runner` 从 `sess:plan:{tenant}:{sid}` 播种，本节点读出后传给 `understand/normalize`
+   ⇒ 历史问题落进 `$history_block`（`normalize_v1.txt:32` / `normalize_intent_v1.txt:42`）。
+   ⚠️ **`gen_sql` 仍拿不到历史文本**：它的资产（`gen_sql_v1.txt` / `gen_sql_complex_v1.txt`）
+   **没有** `$history_block` 占位符，而占位符集合由 `tests/unit/test_llm_prompts.py:295-320`
+   逐资产钉住 ⇒ 历史对 `gen_sql` 的影响是**间接**的（经"归一化后的问题"），不是直接注入。
 2. **`resolved_terms` 的语义包批量命中**：`SemanticBundleRuntime.resolve_terms()` 提供
    O(1) 批量命中，但 `understand()` 内部已经做了时间词与别名解析（`resolve_time` 走
    `semantics`），故本节**不重复**调一次 —— 同一事实算两遍必然漂移。
@@ -58,6 +62,7 @@ from app.graph.nodes._shared import (
 from app.graph.state import GraphState
 from app.llm.errors import LlmError
 from app.planner.errors import PlannerError
+from app.planner.payloads import strip_tenant_self_reference
 from app.planner.schemas import IntentKind
 
 __all__ = ["normalize"]
@@ -69,13 +74,17 @@ async def normalize(state: GraphState) -> dict[str, Any]:
     deps = deps_of()
     identity = identity_of(state)
     question = str(state.get("raw_question") or "")
+    #: 🔴 **P0-A-3（U-142）｜真实历史载体**：从组 1 的 `history_questions` 取同会话历史问题
+    #: （**只问题**，不含 SQL 与结果 —— N-17 / §10.5 ⑥）。此前这里恒传 `()`，
+    #: 表现为多轮指代（"它/那个/再看一下"）拿不到上一轮上下文 —— 缺口已登记 U-142。
+    history = tuple(state.get("history_questions") or ())
 
     try:
         with node_latency(LatencyKey.NORMALIZE):
             if deps.merged_understand:
-                outcome = await deps.planner.understand(identity, question)
+                outcome = await deps.planner.understand(identity, question, history=history)
             else:
-                outcome = await deps.planner.normalize(identity, question)
+                outcome = await deps.planner.normalize(identity, question, history=history)
     except LlmError as exc:
         # 顺序刻意：`LlmRefused` 在 `llm_error_update` 内部最先分流（产品结论 ≠ 故障）。
         return llm_error_update(state, exc, stage="normalize")
@@ -110,4 +119,15 @@ async def normalize(state: GraphState) -> dict[str, Any]:
         return update
 
     context.record_usage(outcome.meta.tokens, outcome.meta.cost_cny)
-    return dict(outcome.state_payload())
+    update: dict[str, Any] = dict(outcome.state_payload())
+    # 🔴 P0-A-1（2026-10-16）：**确定性**剥掉指向调用者自身租户的自指。
+    #   为什么放在这里而不是提示词里：`normalized_question` 的残留**只有**本节点能收口，
+    #   而下游 `plan` **刻意不带**那条「范围自指」说明（`payloads.py:136-137`）⇒
+    #   残留一个 `T_A` 就足以让 plan 判 blocking、把本可 success 的题变成 `refuse_out`。
+    #   实测：同批 5 条里 4 条模型自己剥了、1 条没剥 ⇒ 该路径**依赖 LLM 顺从性**，必须由代码兜住。
+    cleaned = strip_tenant_self_reference(
+        str(update.get("normalized_question") or ""), identity.tenant_id
+    )
+    if cleaned != update.get("normalized_question"):
+        update["normalized_question"] = cleaned
+    return update

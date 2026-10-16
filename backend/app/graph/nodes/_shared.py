@@ -191,6 +191,17 @@ def llm_error_update(state: GraphState, exc: Exception, *, stage: str) -> dict[s
     （`app/llm/__init__.py` 的 `_emit`），这里再发一条会把同一跳记成两次。
     只有"模板无命中"这一跳是网关**没有**发的（它直接抛异常）—— 但那一跳没有对应的
     `DegradedReason` 取值（C-08 的 8 值里没有"拒答"），故也不在此处编一个。
+
+    🔴 **P0-A-4（2026-10-16）｜本函数此前**丢弃** `exc.detail`**：终态只留 `default_code`
+    （= `LLM_UPSTREAM_ERROR`），而根因（`{"model":…, "kind":"DecodingError"}`）被扔掉 ⇒
+    产物里**不可判根因**，排查只能靠猜（第 41–43 轮实测**猜错了三轮**）。
+    现改为把 `exc.detail` 一并落进终态：`terminal["error_detail"]`。
+    · **只搬 `detail`，不搬 `message`／原始报文**：`detail` 是**本项目自己**在抛点构造的
+      （`app/llm/client.py:342-361` 全是 `{"model", "kind"|"status"|"remaining_s"}` 这种
+      结构化键，且其注释明写"**不把异常文本带出去**"）⇒ 无 PII、无上游原文、长度可控；
+    · `LlmRefused` 不在此列（它是产品结论，`detail` 本就为 `None`，且走 refuse 分支）；
+    · `terminal` 本就是 `OpaquePayload`（`{event, code?, reason?}`）⇒ **加一个键不需要
+      改 `GraphState` 的字段分组**（改字段要动 `FIELD_GROUP`／三列分类，属 schema 变更）。
     """
     if isinstance(exc, LlmRefused):
         return terminal_update(
@@ -202,7 +213,11 @@ def llm_error_update(state: GraphState, exc: Exception, *, stage: str) -> dict[s
             reason=RefuseReason.NO_DATA_ASSET.value,
         )
     code = getattr(exc, "default_code", None) or ErrorCode.INTERNAL.value
-    return terminal_update(state, event="error", outcome=Outcome.FAILED, code=str(code))
+    update = terminal_update(state, event="error", outcome=Outcome.FAILED, code=str(code))
+    detail = getattr(exc, "detail", None)
+    if isinstance(detail, dict) and detail:
+        update["terminal"] = {**update["terminal"], "error_detail": dict(detail)}
+    return update
 
 
 def rich_method(port: Any, name: str, *, why: str) -> Callable[..., Any]:

@@ -63,7 +63,7 @@ r"""`GraphState` —— 图的**唯一**状态契约（07 §5.2 的机器化；�
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from decimal import Decimal
 from typing import Any, Final, TypedDict
 
@@ -124,6 +124,7 @@ STATE_GROUPS: Final[Mapping[str, tuple[str, ...]]] = {
         "scope_claims",
         "shop_ids",
         "raw_question",
+        "history_questions",   # 🔴 P0-A-3 新增（U-142 的载体）：同会话历史问题，入口播种
         "options",
         "idempotency_key",
     ),
@@ -215,6 +216,9 @@ CHECKPOINT_EXCLUDED_FIELDS: Final[frozenset[str]] = frozenset(
 PROMPT_ALLOWED_FIELDS: Final[frozenset[str]] = frozenset(
     {
         "raw_question",       # ⚠️ 唯一允许出站的用户输入，且必须包裹在分隔符内（§10）
+        #: 🔴 P0-A-3：历史**问题**可出站（`egress_guard.py:167` 的 `_EGRESS_ALLOWED_KEYS`
+        #: 早就把它列在白名单里了）；且 §10.5 ⑥ 明文只禁"历史里的 **SQL 与结果**"。
+        "history_questions",
         "normalized_question",
         "time_range",
         "resolved_terms",
@@ -281,6 +285,12 @@ class GraphState(TypedDict, total=False):
     scope_claims: tuple[str, ...]
     shop_ids: tuple[str, ...]          # 空 = 不限制（07 §13.2）
     raw_question: str                  # ⚠️ 唯一允许出站的用户输入
+    #: 🔴 **U-142 的真实历史载体**（P0-A-3，2026-10-16）：同会话**历史问题**（**只问题，不含 SQL 与结果** ——
+    #: N-17）。由 `runner` 从 `sess:plan:{tenant}:{sid}` 播种（`state_store.get_turns`），
+    #: `normalize` 读它并传给 `understand(..., history=…)`，落进 `$history_block`。
+    #: ⚠️ 此前**没有**这个字段 ⇒ `normalize` 只能调 `history=()`（缺口登记 U-142），
+    #: 表现为"多轮指代（它/那个）拿不到上一轮上下文"。字段属**组 1**（入口播种、之后只读）。
+    history_questions: tuple[str, ...]
     options: OpaquePayload | None      # U-24：`RunOptions`；判据⑦ 起本轮没带 = `None`（键恒存在）
     idempotency_key: str | None
 
@@ -458,6 +468,7 @@ def initial_state(
     raw_question: str,
     options: OpaquePayload | None = None,
     idempotency_key: str | None = None,
+    history_questions: Sequence[str] = (),
 ) -> GraphState:
     """图入口的初始状态：组 1 由请求重写，**组 2–11 一律显式复位成 `None`**。
 
@@ -498,6 +509,10 @@ def initial_state(
     # 继承上一轮的 `options` / `idempotency_key` —— 那是请求级输入，不是会话级配置。
     state["options"] = options
     state["idempotency_key"] = idempotency_key
+    #: 🔴 P0-A-3（U-142）：历史**问题**（不含 SQL/结果）—— 与上两个键一样**无条件写**
+    #: （`()` 也写）。理由同：它是**每轮请求级**输入；条件写会让"本轮没历史"继承上一轮的键。
+    #: ⚠️ 本轮的空白历史必须留下**空元组**而不是 `None`（`normalize` 按 `or ()` 读）。
+    state["history_questions"] = tuple(history_questions)
     return state
 
 
