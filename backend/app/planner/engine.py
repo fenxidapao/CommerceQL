@@ -139,7 +139,8 @@ _ModelT = TypeVar("_ModelT", bound=BaseModel)
 _CONSTANT_EQUALITY_FILTER: Final[re.Pattern[str]] = re.compile(
     r"^\s*(?P<lhs>[A-Za-z_][A-Za-z0-9_]*(?:\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)?)"
     r"\s*=\s*(?P<rhs>'(?:[^']|'')*'|\"(?:[^\"]|\"\")*\"|"
-    r"[+-]?\d+(?:\.\d+)?|true|false|%[A-Za-z_][A-Za-z0-9_]*s)\s*$",
+    r"[+-]?\d+(?:\.\d+)?|true|false|%[A-Za-z_][A-Za-z0-9_]*s)"
+    r"(?:\s*(?:（[^）]*）|\([^)]*\)))?\s*$",
     re.IGNORECASE,
 )
 
@@ -173,33 +174,81 @@ def _dimension_binding_refs(semantics: SemanticBundlePort, dim_name: str) -> tup
     return tuple(re.sub(r"\s+", "", ref) for ref in refs)
 
 
+def _grain_key(grain: str | None) -> str | None:
+    """取 grain 的主粒度词（如 `region（大区）` → `region`）。
+
+    grain 允许多种人类可读说明，不能拿整句做等值比较；只认括号/空白前的首个词。
+    返回 `None` = 没有可判的 grain，守卫一律不动（fail-safe）。
+    """
+    if not grain:
+        return None
+    key = re.split(r"[\s（(｜|]", grain.strip(), maxsplit=1)[0].strip().lower()
+    return key or None
+
+
+def _question_explicitly_groups(
+    question: str,
+    semantics: SemanticBundlePort,
+    matched_names: set[str],
+) -> bool:
+    """题面是否明确要求“按这个维度分组”？
+
+    这是守卫保留/删除的最终语义载体；`grain` 只是模型计划的自述，单看它会被
+    E-VER-07 的“grain=region、实际单值计数”骗过。
+    """
+    q = question.lower()
+    if not any(cue in q for cue in ("按", "各", "每", "分组", "group by")):
+        return False
+    terms = {name.lower() for name in matched_names if name}
+    aliases = getattr(semantics, "aliases", None)
+    if callable(aliases):
+        for alias in aliases():
+            if (
+                getattr(alias, "maps_to_kind", None) == "dimension"
+                and getattr(alias, "maps_to_ref", None) in matched_names
+            ):
+                terms.add(str(alias.term).lower())
+    return any(term in q for term in terms if term)
+
+
 def _demote_constant_filter_dimensions(
-    plan: Plan, semantics: SemanticBundlePort
+    plan: Plan, semantics: SemanticBundlePort, normalized_question: str
 ) -> tuple[Plan, tuple[str, ...]]:
-    """把被**单值等值筛选**钉死的维度从分组维度里降级。
+    """在**可判的组合条件**下，去掉被常量筛选重复表达的维度。
 
-    实例（W8 第 52 轮 E-VER-07）：模型交出
-    `dimensions=["region"]` + `filters=["region.region_name = '华东'"]` +
-    `output_columns=["region_name", "province_cnt"]`。这会让 SQL 多出
-    `SELECT region_name ... GROUP BY region_name`，而 gold 是单值 `COUNT(*)`。
-    等值筛选已经把该列钉成常量，再按它分组只改变输出形状、不改变值。
+    不是“筛选列与维度同名就删”：题面明确“按该维度分组”时，
+    “先筛常量、再按该维度分组”是合法请求，必须保留。
 
-    只在**代码可判**时动作；命中后保留原始 `filters`，只去掉冗余维度与对应输出列。
+    只在一个**代码可判**的窄条件下动作：
+    1. 过滤是单值等值，且该维度确实被它命中；
+    2. 题面没有“按/各/每/分组”等显式分组信号命中该维度；
+    3. grain 存在（无 grain 时 fail-safe 不动，模型明确 `grain` 指向该维度也不单独保命）。
+
+    例：E-VER-07 题面“华东的覆盖省份数”没有分组意图 ⇒ 删维度；
+    题面“华东各大区的覆盖省份数”命中“各 + 大区” ⇒ 保留。
     """
     lhs_values = tuple(
         parsed for parsed in (_constant_filter_lhs(expr) for expr in plan.filters) if parsed
     )
-    if not plan.dimensions or not lhs_values:
+    if not plan.dimensions or not lhs_values or not _grain_key(plan.grain):
         return plan, ()
 
     removed: list[str] = []
     for dim_name in plan.dimensions:
         refs = set(_dimension_binding_refs(semantics, dim_name))
+        matched_names: set[str] = {dim_name.lower()}
+        for ref in refs:
+            matched_names.update(part.lower() for part in ref.replace(".", " ").split())
+        matched = False
         for qualifier, column in lhs_values:
             lhs = f"{qualifier}.{column}" if qualifier else column
             if lhs in refs or qualifier == dim_name or column == dim_name:
-                removed.append(dim_name)
-                break
+                matched = True
+                matched_names.update(name.lower() for name in (qualifier, column) if name)
+        if matched and not _question_explicitly_groups(
+            normalized_question, semantics, matched_names
+        ):
+            removed.append(dim_name)
     if not removed:
         return plan, ()
 
@@ -657,7 +706,9 @@ class PlannerEngine:
                 attempts=exc.attempts,
                 detail={"last_validation_error": _first_line(exc.digest), "task": "plan"},
             ))
-        normalized_plan, demoted = _demote_constant_filter_dimensions(parsed, self._semantics)
+        normalized_plan, demoted = _demote_constant_filter_dimensions(
+            parsed, self._semantics, normalized_question
+        )
         if demoted:
             _log.warning(
                 "plan_constant_filter_dimension_demoted",

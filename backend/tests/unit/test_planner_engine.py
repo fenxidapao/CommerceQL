@@ -657,6 +657,50 @@ class TestPlanFor:
         assert outcome.plan_summary.dimensions == []
 
     @pytest.mark.asyncio
+    async def test_constant_filter_with_trailing_annotation_is_still_demoted(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        """live 形态：模型给值加了中文括注，不能因此绕过单值等值识别。"""
+        body = _plan_body(
+            metrics=[{"name": "province_cnt", "caliber": "COUNT(*) 省份数"}],
+            dimensions=["region"],
+            filters=["region.region_name = '华东'（大区维度取值）"],
+            grain="province（v_region 省级粒度）",
+            output_columns=["region_name", "province_cnt"],
+            assets=[{"asset": "region", "join_key": None}],
+        )
+        engine, _, _ = _engine({"plan": [body]}, runtime, clock)
+        outcome = await engine.plan_for(_ctx(), normalized_question="华东覆盖省份数是多少？")
+
+        assert outcome.plan.dimensions == []
+        assert outcome.plan.output_columns == ["province_cnt"]
+
+    @pytest.mark.asyncio
+    async def test_same_column_filter_with_explicit_group_grain_is_preserved(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        """🔴 QA §73 边界：`先筛华东、再按大区分组` 是合法请求。
+
+        同列筛选本身不构成“删维度”的依据；`grain=region` 明确要求该维度分组时，
+        守卫必须保留 `dimensions=["region"]` 与对应输出列。
+        """
+        body = _plan_body(
+            metrics=[{"name": "province_cnt", "caliber": "COUNT(*) 大区省份数"}],
+            dimensions=["region"],
+            filters=["region.region_name = '华东'"],
+            grain="region",
+            order_by=[],
+            limit=10,
+            assets=[{"asset": "region", "join_key": None}],
+            output_columns=["region_name", "province_cnt"],
+        )
+        engine, _, _ = _engine({"plan": [body]}, runtime, clock)
+        outcome = await engine.plan_for(_ctx(), normalized_question="华东各大区的覆盖省份数是多少？")
+
+        assert outcome.plan.dimensions == ["region"]
+        assert outcome.plan.output_columns == ["region_name", "province_cnt"]
+
+    @pytest.mark.asyncio
     async def test_group_by_dimension_without_constant_filter_is_preserved(
         self, runtime: SemanticBundleRuntime, clock: FrozenClock
     ) -> None:
@@ -691,6 +735,25 @@ class TestPlanFor:
         )
         engine, _, _ = _engine({"plan": [body]}, runtime, clock)
         outcome = await engine.plan_for(_ctx(), normalized_question="华东附近大区的覆盖省份数是多少？")
+
+        assert outcome.plan.dimensions == ["region"]
+        assert outcome.plan.output_columns == ["region_name", "province_cnt"]
+
+    @pytest.mark.asyncio
+    async def test_in_filter_does_not_demote_dimension(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        """`IN` 是多值域筛选，可能确实需要按同列分组，守卫不得碰。"""
+        body = _plan_body(
+            metrics=[{"name": "province_cnt", "caliber": "COUNT(*) 按大区"}],
+            dimensions=["region"],
+            filters=["region.region_name IN ('华东', '华南')"],
+            grain="region",
+            output_columns=["region_name", "province_cnt"],
+            assets=[{"asset": "region", "join_key": None}],
+        )
+        engine, _, _ = _engine({"plan": [body]}, runtime, clock)
+        outcome = await engine.plan_for(_ctx(), normalized_question="华东华南各大区的覆盖省份数是多少？")
 
         assert outcome.plan.dimensions == ["region"]
         assert outcome.plan.output_columns == ["region_name", "province_cnt"]
