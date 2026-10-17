@@ -57,3 +57,14 @@
 ## 4. 申请事项
 
 请总控在 A/B/C/D 中明确裁决，并指定若选 B 时谁负责改冻结集或包内口径。W8 在收到裁决前不会自行豁免、删例或改判据。
+
+
+---
+
+## 5. 第 55 轮状态：总控已选 B，待逐条确认后才落地（2026-10-17 20:05–20:20 +0800｜HEAD `1305ef6`）
+
+- 总控选择：**B 契约澄清/改 gold**；要求 W8 在改冻结基准前先回传逐条 diff。
+- W8 已出零出站提案：`backend/reports/w8/G2_CONTRACT_CLARIFICATION_PROPOSAL.md`；机器可读证据：`eval/results_r55_g2_contract_proposal.json`。
+- 本件状态：**提案 only**。未改 `eval/dataset_v1_frozen.json`、未改 gold seed、未改语义包、未改阈值/判据/15s、未动 `reports/qa/**`。
+- 候选统一哈希（仅内存）：dataset `sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5`；seed `sha256:812728f1be0dc1d7e58474f5bfe76c301e60a51f30deb280f232bee72af47466`。文件 SHA 待正式写盘后生成。
+- 关键待总控逐条确认：① E-VER-01 新 gold 月份过滤；② E-VER-06 新 gold 全量；③ E-VER-08 新问句/新 gold 补 `2026-08` 支付时间范围；④ 是否接受 `easy×low` 10→8、`medium×low` 10→12 的网格迁移；⑤ 推荐路线不改语义包内容，是否仍要求无内容空跳版。

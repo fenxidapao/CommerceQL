@@ -1,0 +1,130 @@
+{
+  "round": 55,
+  "mode": "zero-outbound-proposal-no-frozen-change",
+  "head": "1305ef6",
+  "observed_at": "2026-10-17T20:05:00+08:00",
+  "baseline_files": {
+    "dataset": {
+      "path": "eval/dataset_v1_frozen.json",
+      "sha256": "d0929fb2f09007d6ce30d5660a13c30a2c94a7ba5573633c41f1f62fec11b680",
+      "version": "1",
+      "content_hash": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609"
+    },
+    "gold_seed": {
+      "path": "eval/gold_query_seed_v1.json",
+      "sha256": "67e553424458d12c1dd3b4005ec8117c6b60fa280ce810539134752e86a387b6",
+      "version": "1",
+      "content_hash": "sha256:2b23d7ef4d5d5eb8690699af86237c8413e4e6bf04d9104ad61d17228aa5ea4a"
+    },
+    "bundle": {
+      "path": "semantic/bundle_2026.09.14.1.yaml",
+      "sha256": "2c802e24f799d2904b369120317bbfd3e2fbb444c7c50462046184039753da82",
+      "meta_version": "2026.10.16.2"
+    }
+  },
+  "proposed_combined": {
+    "dataset_content_hash_in_memory": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+    "gold_seed_content_hash_in_memory": "sha256:812728f1be0dc1d7e58474f5bfe76c301e60a51f30deb280f232bee72af47466",
+    "dataset_file_sha256": "UNVERIFIED_UNTIL_BUILD_WRITE",
+    "gold_seed_file_sha256": "UNVERIFIED_UNTIL_BUILD_WRITE",
+    "semantic_bundle_change_required": false,
+    "note": "推荐路线不改语义包内容；若改 E-VER-08 为允许无时间，必须改 province_covered_cnt 并升 meta.version。"
+  },
+  "cases": [
+    {
+      "case_id": "E-VER-01",
+      "question_before": "T_A 2026-08 的日期维表有多少天？",
+      "question_after": "T_A 2026-08 的日期维表有多少天？",
+      "gold_before": "SELECT COUNT(*) FROM v_dim_date",
+      "gold_after": "SELECT COUNT(*) FROM v_dim_date WHERE year = 2026 AND month = 8",
+      "result_before": 730,
+      "result_after": 31,
+      "gold_result_hash_before": "sha256:16b496dc3e59e31900eadc8ea34f7d81c17dbc66bc5039ceb1c69dad8d00fdba",
+      "gold_result_hash_after": "sha256:c1bffd7deb46a23060777bdadfad8d42da45d2ba5b1a50add3365db9836daeff77",
+      "package_authority": "semantic/bundle_2026.09.14.1.yaml:908-925",
+      "difficulty_before": "easy×low",
+      "difficulty_after": "medium×low",
+      "affected_cases": [
+        "E-VER-01"
+      ],
+      "impact_note": "M-DIM-03 is date grouping but does not consume day_cnt/gold value."
+    },
+    {
+      "case_id": "E-VER-06",
+      "question_before": "T_A 的活动数是多少？",
+      "question_after": "T_A 的活动数是多少？",
+      "gold_before": "SELECT COUNT(*) FROM v_campaign WHERE campaign_type = 'normal_sale'",
+      "gold_after": "SELECT COUNT(*) FROM v_campaign",
+      "result_before": 24,
+      "result_after": 28,
+      "gold_result_hash_before": "sha256:82b91475bfef6bda1fa9d517cd3ee39804d3dc28da9965046ad3c14d5f58dd15",
+      "gold_result_hash_after": "sha256:b73dcfb64f4e95199c480115f45f7604040d5e9015dc672bd88c17224da6674f",
+      "package_authority": "semantic/bundle_2026.09.14.1.yaml:847-865",
+      "difficulty_before": "easy×low",
+      "difficulty_after": "easy×low",
+      "affected_cases": [
+        "E-VER-06",
+        "M-DIM-04"
+      ],
+      "impact_note": "M-DIM-04 already groups all campaign types; no SQL/hash change."
+    },
+    {
+      "case_id": "E-VER-08",
+      "question_before": "T_A 的收货省份覆盖数是多少？",
+      "question_after": "T_A 2026-08 的收货省份覆盖数是多少？",
+      "gold_before": "SELECT COUNT(DISTINCT region_code) FROM v_order_paid WHERE region_code IS NOT NULL",
+      "gold_after": "SELECT COUNT(DISTINCT region_code) FROM v_order_paid WHERE region_code IS NOT NULL AND pay_time >= '2026-08-01' AND pay_time < '2026-09-01'",
+      "result_before": 31,
+      "result_after": 31,
+      "gold_result_hash_before": "sha256:a0b3c1b524fb20987722479c2fbef657cd73096342a271eec179c4507631c89f",
+      "gold_result_hash_after": "sha256:a0b3c1b524fb20987722479c2fbef657cd73096342a271eec179c4507631c89f",
+      "package_authority": "semantic/bundle_2026.09.14.1.yaml:887-905",
+      "difficulty_before": "easy×low",
+      "difficulty_after": "medium×low",
+      "affected_cases": [
+        "E-VER-08",
+        "E-VER-07",
+        "M-DIM-08"
+      ],
+      "impact_note": "E-VER-08 is the only province_covered_cnt case; E-VER-07/M-DIM-08 stay on v_region/province_cnt and must be asserted unchanged."
+    }
+  ],
+  "grid_after": {
+    "easy": {
+      "low": 8,
+      "medium": 10,
+      "high": 10
+    },
+    "medium": {
+      "low": 12,
+      "medium": 10,
+      "high": 18
+    },
+    "hard": {
+      "low": 9,
+      "medium": 9,
+      "high": 10
+    },
+    "extra": {
+      "low": 8,
+      "medium": 8,
+      "high": 12
+    }
+  },
+  "boundaries": {
+    "frozen_files_changed": false,
+    "semantic_bundle_changed": false,
+    "thresholds_changed": false,
+    "criterion_wording_changed": false,
+    "timeout_15s_changed": false,
+    "reports_qa_touched": false,
+    "shared_ecom_touched": false,
+    "outbound_calls": 0,
+    "tokens": 0,
+    "price_guess_cny": 0
+  },
+  "commands": [
+    ".venv/Scripts/python.exe -X utf8 eval/build_frozen_set.py --no-write",
+    "in-memory monkeypatch of eval/case_library.py then build_frozen_set.build(write=False)"
+  ]
+}

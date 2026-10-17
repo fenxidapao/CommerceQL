@@ -5663,3 +5663,39 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 - **全量失败批**：`results_r54_full166.json` = 166 records、166 `LLM_UPSTREAM_ERROR`、0 token、0 price_guess；首批连接失败后 `LlmCircuitOpen`。pilot3 = 3/3 同类错误。
 - **未动**：代码、`reports/qa/**`、共享 `ecom`、冻结集、阈值、判据措辞、07 §10.2 的 15s；门禁未重算；U-127 open。
 - **复算入口**：A 读 `eval/results_r54_ever08_cross_batch.json`；B 读 `eval/results_r54_g2_conflicts.json`＋`backend/reports/w8/G2_EXEMPTION_REQUEST.md`；C 读 `eval/results_r54_full_denominator_structure.json`＋`eval/results_r54_g5_partial.json`＋`eval/results_r54_full166.json`。以上入口不命中本节自身。
+
+
+## §五五 第 55 轮 · G-2 B 案契约澄清逐条 diff 提案（零出站，未落地）｜ 2026-10-17 20:05–20:20 +0800｜HEAD `1305ef6`
+
+### 55.0 边界与结论
+
+- 总控已选 B，但要求先回传逐条 before/after；本轮**不改冻结集/语义包/阈值/判据/15s**，不动 `reports/qa/**`，不写出站。
+- 提案：`backend/reports/w8/G2_CONTRACT_CLARIFICATION_PROPOSAL.md`；证据：`eval/results_r55_g2_contract_proposal.json`。
+- 推荐三条：E-VER-01 月份过滤；E-VER-06 全量活动数；E-VER-08 题面/gold 补 `2026-08` `pay_time` 范围。
+- 候选统一 `dataset.content_hash=sha256:31f3385f...d7c5`、seed `content_hash=sha256:812728f1...7466`；均为内存复算，文件 SHA 仍 **UNVERIFIED**。
+- 网格候选：`easy×low 10→8`、`medium×low 10→12`；12 格均仍 ≥8。
+
+### 55.1 E-VER-01
+
+- 旧：`SELECT COUNT(*) FROM v_dim_date` → 730；`16b496dc...`；`easy×low`。
+- 新：`SELECT COUNT(*) FROM v_dim_date WHERE year = 2026 AND month = 8` → 31；`c1bffd7d...`；`medium×low`。
+- 包内 `day_cnt` 已在 `semantic/bundle_2026.09.14.1.yaml:908-925` 要求月份筛选；本提案仅让 gold 回归定义，不新增语义维度。
+
+### 55.2 E-VER-06
+
+- 旧：`SELECT COUNT(*) FROM v_campaign WHERE campaign_type = 'normal_sale'` → T_A 24；`82b91475...`。
+- 新：`SELECT COUNT(*) FROM v_campaign` → T_A 28；`b73dcfb6...`；保持 `easy×low`。
+- 已与 `M-DIM-04` 的全类型分组口径对齐；不改 `M-DIM-04`。
+
+### 55.3 E-VER-08
+
+- 旧：`T_A 的收货省份覆盖数是多少？` + 无时间 gold → 31；`a0b3c1b5...`；历史 G-2 `refuse/no_data_asset`、57 `clarify`。
+- 新：`T_A 2026-08 的收货省份覆盖数是多少？` + `pay_time >= '2026-08-01' AND pay_time < '2026-09-01'` → 31；hash 恰好同为 `a0b3c1b5...`，但时间语义已显式化；`medium×low`。
+- `province_covered_cnt` 在包内已要求 `time_basis=pay_time`，推荐路线不改包；若产品选择“允许无时间”，必须改包定义并升版。
+
+### 55.4 复算、未决、边界
+
+- 旧基线命令：`.\.venv\Scripts\python.exe -X utf8 eval/build_frozen_set.py --no-write` → 实跑 `content_hash=sha256:43e153...8609`、124/18/24、12 格 ≥8。
+- 候选复算：在内存 monkeypatch `eval/case_library.py` 三条声明后 `build_frozen_set.build(write=False)` → 实跑候选 `content_hash=sha256:31f3385f...d7c5`、网格仍 ≥8；**未写盘**。
+- 未决：总控需逐条确认 3 个 diff、网格迁移、是否要求无内容变化的语义包版本跳变，以及是否把 E-VER-08 `domain=products→orders` 另列第 4 条。
+- 未跑：G-2 10 条/完整 G-5/ integration/offline 的重新基线复算；因本轮无落地代码或冻结输入变更，绝不能写“门禁通过”或“G-2/G-5 改善”。门禁仍为历史 `PASS 1/8`，U-127 仍 open。

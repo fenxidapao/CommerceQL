@@ -697,3 +697,12 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **C**：G-5 完整分母 166（execute124/clarify18/refuse24）；现有 57 子集只覆盖 57 应答题、0 应拒答题；最小补测 91 条。全量 166/pilot3 因 provider 故障 0 token、不可判。
 - **复跑**：integration 124/0；offline 分段合计 2562/0；E-VER-07/M-DIM-08 replay 均 equivalent=1，E-VER-08 两分支按原终态命中。
 - **边界**：未改代码、QA、冻结集/阈值/判据、共享 ecom、15s；门禁未重算 `PASS 1/8`；U-127 open。
+
+
+## 第 55 轮交付（G-2 B 案契约澄清逐条 diff 提案 ｜ 起点/现读 `1305ef6` ｜ 2026-10-17 20:05–20:20 +0800）
+
+- **A（提案）**：`backend/reports/w8/G2_CONTRACT_CLARIFICATION_PROPOSAL.md` 已给出 E-VER-01/06/08 的题面、旧/新 gold、包内口径、结果 hash、结构影响和受影响 M/D/E；机器证据 `eval/results_r55_g2_contract_proposal.json`。
+- **候选读数**：E-VER-01 `730→31 / c1bffd...`；E-VER-06 `24→28 / b73dcf...`；E-VER-08 `31→31 / a0b3c1...`（SQL 时间范围显式化）；统一候选 `dataset.content_hash=sha256:31f3385f...d7c5`、seed `sha256:812728f1...7466`。
+- **网格影响**：`easy×low 10→8`、`medium×low 10→12`；12 格仍均 ≥8，需由 builder 正式重算。
+- **边界**：未改冻结集/语义包/阈值/判据/15s、未动 QA、未写共享 `ecom`、未出站；`semantic/SCHEMA_v1.md:430-433` 说明不改包内容就不应空跳版本，是否仍要求空跳需总控裁。
+- **未跑**：未做重新基线后的 G-2/G-5/integration/offline；门禁未重算，仍 `PASS 1/8`；U-127 open。
