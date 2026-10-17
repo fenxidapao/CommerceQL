@@ -683,3 +683,10 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **读数**：G-2 clean `9 complete/1 refuse`、等效 7；57 clean `45 complete/9 refuse/3 clarify`、等效 17；均不达门。integration `124/0`；offline `2559/0`。
 - **出站**：本轮 live `2,038,722 tokens`／`price_guess 7.115591 CNY`。
 - **边界**：未动 `reports/qa/**`、共享 `ecom`、冻结集/阈值/判据；15s 未改；门禁未重算（`PASS 1/8`）；零取号 `U-143`。
+## 第 53 轮交付（维度守卫收窄 ＋ live 绑定 b70822e ＋ G-2/57 续跑 ｜ 起点 `9e0eace` ｜ 2026-10-17 17:5x–18:5x +0800 ｜ 证据提交后续）
+
+- **A**：守卫改为 grain＋题面显式分组语义；同列筛选但明确按该维度分组保留，E-VER-07 仍降级；LIKE/IN 与带括注等值覆盖。
+- **B**：最终 live 稳定性 E-VER-07 `6/6 complete+eq`、M-DIM-08 `5/5 complete+eq`，产物自报 `git_rev=b70822e`、`git_dirty=false`；旧探索失败样本保留在 `E:\codex\w8r53\`。
+- **C**：G-2 clean `9 complete/1 refuse`、eq7；57 clean `45 complete/9 refuse/3 clarify`、eq19；均不达门。integration `124/0`；offline `2562/0`。
+- **出站**：最终绑定面 `2,093,500 tokens / price_guess 6.597075`；含探索/中断总面 `2,927,600 / 8.789877`。
+- **边界**：未动 QA、共享 ecom、冻结集/阈值/判据、15s；门禁未重算（`PASS 1/8`）；U-127 open；零取号 `U-143`。

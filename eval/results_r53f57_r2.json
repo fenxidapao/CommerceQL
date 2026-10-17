@@ -1,0 +1,1137 @@
+{
+  "frozen_evidence": {
+    "checks": {
+      "dataset_content_hash": {
+        "expected": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609",
+        "actual": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609",
+        "ok": true
+      },
+      "sandbox_db_sha256": {
+        "expected": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "actual": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "ok": true
+      },
+      "red_team_content_hash_present": true,
+      "gold_seed_derived_from_dataset_hash": true,
+      "all_ok": true
+    },
+    "dataset_version": "1",
+    "frozen_at": "2026-09-16",
+    "n_cases": 166,
+    "content_hash": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609",
+    "red_team": {
+      "content_hash": "sha256:886cb57052368541e60727cbcee78db2aa1ad1c381cb083a540673999ed9d01d",
+      "n_cases": 66
+    },
+    "gold_seed": {
+      "content_hash": "sha256:2b23d7ef4d5d5eb8690699af86237c8413e4e6bf04d9104ad61d17228aa5ea4a",
+      "n_seeds": 119
+    }
+  },
+  "config": {
+    "live": true,
+    "cassette": "eval/cassettes/w8_r53f57_r2.jsonl",
+    "mode": "record",
+    "db": "e:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\ecom_sandbox.db",
+    "column_top": null,
+    "n_requested": 7,
+    "provenance": "W8 r53 clean-retry r53f57 round r2; bundle 2026.10.16.2; timeout=error",
+    "node_timeouts": {
+      "contract": {
+        "link": 30.0,
+        "gate1_ast": 0.1,
+        "gate2_policy": 0.1,
+        "gate3_cost": 1.0,
+        "execute": 30.0,
+        "mask": 0.1,
+        "audit_pre": 1.0,
+        "audit_supp": 0.5
+      },
+      "effective": {
+        "present": 162.0,
+        "gate2_policy": 0.8,
+        "normalize": 162.0,
+        "intent": 162.0,
+        "execute": 30.0,
+        "gate1_ast": 0.8,
+        "audit_supp": 4.0,
+        "plan": 162.0,
+        "audit_pre": 8.0,
+        "gen_sql": 162.0,
+        "mask": 0.8,
+        "bind": 162.0,
+        "gate3_cost": 8.0,
+        "link": 30.0,
+        "repair": 162.0
+      },
+      "scaled": true,
+      "llm_calling_nodes": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "not_in_contract": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "kept_as_contract": [
+        "execute",
+        "link"
+      ],
+      "cpu_factor": 8.0,
+      "llm_node_floor_s": 162.0
+    }
+  },
+  "summary": {
+    "n_records": 7,
+    "n_scored": 7,
+    "n_unscored": 0,
+    "n_node_timeout": 0,
+    "n_execute_scored": 7,
+    "n_execute_with_sql": 6,
+    "n_equivalent": 3,
+    "terminal_distribution": {
+      "error": 1,
+      "complete": 6
+    },
+    "attribution_distribution": {
+      "sql_generation": 1,
+      "gate_policy_gap": 3
+    },
+    "tokens_total": 164802,
+    "cost_cny_total": 0.632403,
+    "wall_s": {
+      "max": 35.867,
+      "median": 18.746,
+      "sum": 158.673
+    }
+  },
+  "records": [
+    {
+      "case_id": "E-VER-01",
+      "question": "T_A 2026-08 的日期维表有多少天？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "error_out"
+      ],
+      "terminal_event": "error",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "terminal_error_detail": {
+        "task": "normalize_intent",
+        "reason": "upstream_fault_then_template_miss",
+        "last_degrade_error": "LlmTimeout"
+      },
+      "outcome": "failed",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 15125,
+        "total": 15130
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cost_cny": 0.0,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "SELECT COUNT(*) FROM v_dim_date",
+        "frozen_hash": "sha256:16b496dc3e59e31900eadc8ea34f7d81c17dbc66bc5039ceb1c69dad8d00fdba",
+        "via_view": {
+          "hash": "sha256:16b496dc3e59e31900eadc8ea34f7d81c17dbc66bc5039ceb1c69dad8d00fdba",
+          "rows": 1,
+          "cols": 1,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:16b496dc3e59e31900eadc8ea34f7d81c17dbc66bc5039ceb1c69dad8d00fdba",
+          "rows": 1,
+          "cols": 1,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": null,
+        "columns": [],
+        "rows": 0,
+        "shape": {
+          "columns": [],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": null,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 1 / 预测 0"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "sql_generation",
+        "signal": "链路在生成前失败（终态 error 且无 SQL）",
+        "severity": "normal"
+      },
+      "wall_s": 15.136
+    },
+    {
+      "case_id": "E-VER-11",
+      "question": "T_C 的在架商品数是多少？",
+      "tenant": "T_C",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE LIMIT 1",
+      "sql_params": {},
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "在架商品数是维表存量口径，时间语义为当前值"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 5249,
+        "linking": 0,
+        "plan": 2320,
+        "gen_sql": 1974,
+        "gate": 16,
+        "exec": 3,
+        "present": 0,
+        "total": 18286
+      },
+      "tokens": {
+        "input": 24807,
+        "output": 2515,
+        "cache_hit": 23040,
+        "total": 27381
+      },
+      "cost_cny": 0.047234,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "SELECT COUNT(*) FROM v_product WHERE on_sale = 1",
+        "frozen_hash": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+        "via_view": {
+          "hash": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+          "rows": 1,
+          "cols": 1,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:743b9101ba13bdcfab5bc2630ff480d19d3351065078cffef8a1a0f41281da16",
+          "rows": 1,
+          "cols": 1,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:91bdc3a7b2a1ff0089cb3defd30a1374d2e0a120949aa96c2b04805463ea695a",
+        "columns": [
+          "on_sale_product_cnt"
+        ],
+        "rows": 1,
+        "shape": {
+          "columns": [
+            "on_sale_product_cnt"
+          ],
+          "row_count": 1,
+          "head_rows": [
+            [
+              1877
+            ]
+          ]
+        },
+        "state_row_count": 1,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": true,
+        "hash_matches": false,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": true
+      },
+      "attribution": null,
+      "wall_s": 18.294
+    },
+    {
+      "case_id": "E-ENUM-01",
+      "question": "T_A 直播渠道一共带来多少浏览量？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "medium",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT SUM(traffic_daily.pv) AS pv FROM v_traffic_daily AS traffic_daily WHERE traffic_daily.channel = %(channel)s AND traffic_daily.uv >= 0 LIMIT 100",
+      "sql_params": {
+        "channel": "live"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "uv >= 0"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "浏览量只存在于流量表，时间随统计日"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 3142,
+        "linking": 0,
+        "plan": 3771,
+        "gen_sql": 3639,
+        "gate": 3,
+        "exec": 43,
+        "present": 0,
+        "total": 18489
+      },
+      "tokens": {
+        "input": 24678,
+        "output": 2417,
+        "cache_hit": 0,
+        "total": 27331
+      },
+      "cost_cny": 0.149619,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'live'",
+        "frozen_hash": "sha256:fbdc1fd3e250da80851d19e8605395dd94ded8cc751af0a67933952b8d8235b4",
+        "via_view": {
+          "hash": "sha256:fbdc1fd3e250da80851d19e8605395dd94ded8cc751af0a67933952b8d8235b4",
+          "rows": 1,
+          "cols": 1,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:fbdc1fd3e250da80851d19e8605395dd94ded8cc751af0a67933952b8d8235b4",
+          "rows": 1,
+          "cols": 1,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:7d21d08a20c23d1273f9c0c194acf5bd83150f71e10a601d767a170271fa617a",
+        "columns": [
+          "pv"
+        ],
+        "rows": 1,
+        "shape": {
+          "columns": [
+            "pv"
+          ],
+          "row_count": 1,
+          "head_rows": [
+            [
+              12673801
+            ]
+          ]
+        },
+        "state_row_count": 1,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": true,
+        "hash_matches": false,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": true
+      },
+      "attribution": null,
+      "wall_s": 18.746
+    },
+    {
+      "case_id": "M-ENUM-02",
+      "question": "T_A 搜索渠道各 SKU 的浏览量分别是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT traffic_daily.sku_id AS sku_id, SUM(traffic_daily.pv) AS pv FROM v_traffic_daily AS traffic_daily WHERE traffic_daily.channel = %(channel)s AND traffic_daily.uv >= 0 AND traffic_daily.uv >= 0 GROUP BY traffic_daily.sku_id ORDER BY pv DESC LIMIT 1000",
+      "sql_params": {
+        "channel": "search"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "uv >= 0"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "浏览量只存在于流量表，时间随统计日"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 3529,
+        "linking": 0,
+        "plan": 3834,
+        "gen_sql": 4223,
+        "gate": 3,
+        "exec": 1596,
+        "present": 0,
+        "total": 21557
+      },
+      "tokens": {
+        "input": 24705,
+        "output": 2536,
+        "cache_hit": 0,
+        "total": 27477
+      },
+      "cost_cny": 0.151419,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily WHERE channel = 'search' GROUP BY sku_id",
+        "frozen_hash": "sha256:fc9b6a1a94b3f62d0e8ec643505202eab0643bc66b5213765aae0d1c3e107fbe",
+        "via_view": {
+          "hash": "sha256:fc9b6a1a94b3f62d0e8ec643505202eab0643bc66b5213765aae0d1c3e107fbe",
+          "rows": 2000,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:fc9b6a1a94b3f62d0e8ec643505202eab0643bc66b5213765aae0d1c3e107fbe",
+          "rows": 2000,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:99157eb5b3a8662c22fd3f5e3999bb82c123c3c5d4eab3e1b5e547b54491f100",
+        "columns": [
+          "sku_id",
+          "pv"
+        ],
+        "rows": 1000,
+        "shape": {
+          "columns": [
+            "sku_id",
+            "pv"
+          ],
+          "row_count": 1000,
+          "head_rows": [
+            [
+              "SKU00001",
+              169007
+            ],
+            [
+              "SKU00003",
+              162428
+            ],
+            [
+              "SKU00002",
+              161876
+            ],
+            [
+              "SKU00004",
+              161190
+            ],
+            [
+              "SKU00005",
+              153892
+            ]
+          ]
+        },
+        "state_row_count": 1000,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": false,
+        "tags": [],
+        "diffs": [
+          "行数不同：金标 2000 / 预测 1000"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "gate_policy_gap",
+        "signal": "闸门自身判据缺陷：F1 排序键用了投影别名 ['pv']（gate1 不登记同 scope 的投影别名 ⇒ R06）",
+        "severity": "gate"
+      },
+      "wall_s": 31.782
+    },
+    {
+      "case_id": "M-ENUM-03",
+      "question": "T_A 推荐渠道各 SKU 的浏览量分别是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT traffic_daily.sku_id AS sku_id, SUM(traffic_daily.pv) AS pv FROM v_traffic_daily AS traffic_daily WHERE traffic_daily.channel = %(channel)s AND traffic_daily.uv >= 0 GROUP BY traffic_daily.sku_id ORDER BY pv DESC LIMIT 1000",
+      "sql_params": {
+        "channel": "feed"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "uv >= 0"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "浏览量只存在于流量表，时间随统计日"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 4388,
+        "linking": 0,
+        "plan": 5677,
+        "gen_sql": 3747,
+        "gate": 3,
+        "exec": 2106,
+        "present": 0,
+        "total": 25686
+      },
+      "tokens": {
+        "input": 24765,
+        "output": 2556,
+        "cache_hit": 1280,
+        "total": 27498
+      },
+      "cost_cny": 0.146182,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily WHERE channel = 'feed' GROUP BY sku_id",
+        "frozen_hash": "sha256:ebab89385d0843612c2e15a9ff98850fda9c970ccc9f13759a7e27dc8a846941",
+        "via_view": {
+          "hash": "sha256:ebab89385d0843612c2e15a9ff98850fda9c970ccc9f13759a7e27dc8a846941",
+          "rows": 2000,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:ebab89385d0843612c2e15a9ff98850fda9c970ccc9f13759a7e27dc8a846941",
+          "rows": 2000,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:96a3e9dd7f4d5c51747280449c7330a2f83fc98a28ccb53035814de9ac7d7595",
+        "columns": [
+          "sku_id",
+          "pv"
+        ],
+        "rows": 1000,
+        "shape": {
+          "columns": [
+            "sku_id",
+            "pv"
+          ],
+          "row_count": 1000,
+          "head_rows": [
+            [
+              "SKU00001",
+              166202
+            ],
+            [
+              "SKU00002",
+              164689
+            ],
+            [
+              "SKU00003",
+              161292
+            ],
+            [
+              "SKU00004",
+              157560
+            ],
+            [
+              "SKU00005",
+              156990
+            ]
+          ]
+        },
+        "state_row_count": 1000,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": false,
+        "tags": [],
+        "diffs": [
+          "行数不同：金标 2000 / 预测 1000"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "gate_policy_gap",
+        "signal": "闸门自身判据缺陷：F1 排序键用了投影别名 ['pv']（gate1 不登记同 scope 的投影别名 ⇒ R06）",
+        "severity": "gate"
+      },
+      "wall_s": 35.867
+    },
+    {
+      "case_id": "M-HIER-01",
+      "question": "T_A 各一级类目的在架商品数分别是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT v_product.category_l1 AS category_l1, COUNT(*) AS on_sale_product_cnt FROM v_product WHERE v_product.on_sale = TRUE GROUP BY v_product.category_l1 ORDER BY on_sale_product_cnt DESC LIMIT 100",
+      "sql_params": {},
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "在架商品数是维表存量口径，时间语义为当前值"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 2740,
+        "linking": 0,
+        "plan": 4222,
+        "gen_sql": 2449,
+        "gate": 2,
+        "exec": 2,
+        "present": 0,
+        "total": 17132
+      },
+      "tokens": {
+        "input": 24851,
+        "output": 2622,
+        "cache_hit": 21760,
+        "total": 27532
+      },
+      "cost_cny": 0.054744,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "SELECT category_l1, COUNT(*) FROM v_product WHERE on_sale = 1 GROUP BY category_l1",
+        "frozen_hash": "sha256:e21aada40aa08f62e02d2151ca8a0d27ff85d470dff7f6ed1261eb3b28dd7ad5",
+        "via_view": {
+          "hash": "sha256:e21aada40aa08f62e02d2151ca8a0d27ff85d470dff7f6ed1261eb3b28dd7ad5",
+          "rows": 9,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:e21aada40aa08f62e02d2151ca8a0d27ff85d470dff7f6ed1261eb3b28dd7ad5",
+          "rows": 9,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:4650c8df55ae5067f5aba031c5a531ae428760dbf03a0d34d4203eb5dfb4c4e6",
+        "columns": [
+          "category_l1",
+          "on_sale_product_cnt"
+        ],
+        "rows": 9,
+        "shape": {
+          "columns": [
+            "category_l1",
+            "on_sale_product_cnt"
+          ],
+          "row_count": 9,
+          "head_rows": [
+            [
+              "服饰鞋包",
+              239
+            ],
+            [
+              "美妆个护",
+              235
+            ],
+            [
+              "家用电器",
+              234
+            ],
+            [
+              "家居家装",
+              234
+            ],
+            [
+              "食品生鲜",
+              232
+            ]
+          ]
+        },
+        "state_row_count": 9,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": true,
+        "hash_matches": false,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": true
+      },
+      "attribution": null,
+      "wall_s": 17.143
+    },
+    {
+      "case_id": "X-ENUM-07",
+      "question": "T_A 的「母婴玩具」商品在各店铺的浏览量合计是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "medium",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT p.shop_id AS shop_id, s.shop_name AS shop_name, SUM(t.pv) AS pv FROM v_traffic_daily AS t JOIN v_product AS p ON t.sku_id = p.sku_id JOIN v_shop AS s ON p.shop_id = s.shop_id WHERE p.category_l1 = %(category_l1)s AND t.uv >= 0 GROUP BY p.shop_id, s.shop_name ORDER BY pv DESC LIMIT 1000",
+      "sql_params": {
+        "category_l1": "母婴玩具"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "uv >= 0"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "浏览量只存在于流量表，时间随统计日"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 4358,
+        "linking": 0,
+        "plan": 3327,
+        "gen_sql": 3703,
+        "gate": 8,
+        "exec": 287,
+        "present": 0,
+        "total": 19645
+      },
+      "tokens": {
+        "input": 24807,
+        "output": 2599,
+        "cache_hit": 15360,
+        "total": 27583
+      },
+      "cost_cny": 0.083205,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '母婴玩具' GROUP BY v_shop.shop_id",
+        "frozen_hash": "sha256:de25abf1cd0530fd15defbfa7c51bd790e81ce311ad5138e41aa3d77eb760c61",
+        "via_view": {
+          "hash": "sha256:de25abf1cd0530fd15defbfa7c51bd790e81ce311ad5138e41aa3d77eb760c61",
+          "rows": 5,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:de25abf1cd0530fd15defbfa7c51bd790e81ce311ad5138e41aa3d77eb760c61",
+          "rows": 5,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:0212bf646631b1b593400eef8b061a917485a2b40f2fe774933edaa065a511bc",
+        "columns": [
+          "shop_id",
+          "shop_name",
+          "pv"
+        ],
+        "rows": 5,
+        "shape": {
+          "columns": [
+            "shop_id",
+            "shop_name",
+            "pv"
+          ],
+          "row_count": 5,
+          "head_rows": [
+            [
+              "T_A-S02",
+              "T_A官方旗舰店2号",
+              1904524
+            ],
+            [
+              "T_A-S05",
+              "T_A官方旗舰店5号",
+              1638848
+            ],
+            [
+              "T_A-S03",
+              "T_A官方旗舰店3号",
+              1478005
+            ],
+            [
+              "T_A-S01",
+              "T_A官方旗舰店1号",
+              1293262
+            ],
+            [
+              "T_A-S04",
+              "T_A官方旗舰店4号",
+              1259851
+            ]
+          ]
+        },
+        "state_row_count": 5,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": false,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 3"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "gate_policy_gap",
+        "signal": "闸门自身判据缺陷：F1 排序键用了投影别名 ['pv']（gate1 不登记同 scope 的投影别名 ⇒ R06）",
+        "severity": "gate"
+      },
+      "wall_s": 21.705
+    }
+  ],
+  "generated_at": "2026-10-17T10:47:07+00:00",
+  "git_rev": "b70822e",
+  "git_dirty": false
+}

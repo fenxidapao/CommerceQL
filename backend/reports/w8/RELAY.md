@@ -5504,3 +5504,94 @@ M-DIM-08  n_records=1 n_scored=1 n_unscored=0 n_equivalent=1
 - **出站实报（本轮，所有 live）**：`tokens 2,038,722`／`price_guess 7.115591 CNY`。分面：G-2＋57 实际 `1,741,186 / 6.193832`；稳定性主跑＋补跑 `297,536 / 0.921759`。模型均为 `deepseek-v4.1-flash`，按未知模型 pro 档兜底并标 `price_guess`。
 - **未动**：`reports/qa/**`、共享 `ecom`、冻结集、阈值、判据措辞；07 §10.2 的 15s 未改；门禁未重算，仍 `PASS 1/8`；零取号 `U-143`。
 - **复算入口**：A 修复前形状读 `eval/results_r52_ever07_pre_fix_shape.json`；A/B 回归读 `backend/tests/unit/test_planner_engine.py`、`test_llm_client.py`、`test_llm_gateway.py`；回放读 `eval/replay_bound.py`＋`eval/cassettes/w8_r52_stab_*.jsonl`；G-2/57 读 `eval/results_g2_r52_clean.json`／`eval/results_f57_r52_clean.json`。以上入口不命中本节自身。
+
+## §五三 第 53 轮 · 维度守卫收窄 ＋ live 绑定提交 ＋ 门禁主线续跑 ｜ 2026-10-17 17:5x–18:5x +0800 ｜ 起点 `9e0eace` ／ 代码提交 `b70822e`
+
+### 53.0 结论分层
+
+| 项 | 判 | 现读 |
+|---|---|---|
+| A. 同列筛选边界 | ✅ 修正 | 守卫不再仅凭筛选列同名删维度；合法“先筛华东、再按大区分组”保留；E-VER-07 单值计数仍降级；LIKE/IN 不碰；带括注单值筛选也识别 |
+| A. 最终 live 稳定性 | ✅ **绑定 `b70822e`** | E-VER-07 **6/6 complete+equivalent**；M-DIM-08 **5/5 complete+equivalent**；无上游错误 |
+| A. 探索失败保留 | ✅ 分开记 | 最终提交前实验 11+11 次：1 次 `LlmTimeout/l4_score`、1 次 `LlmTimeout/normalize_intent`、1 次 `LlmTimeout/l4_score`；另有一次 provider 中断批 68 条中 58 条错误（2 ConnectError、1 ConnectTimeout、54 LlmCircuitOpen、1 gen_sql timeout），原产物在 `E:\codex\w8r53\` |
+| B. live 绑定 | ✅ | `results_r53_stab_*.json`、G-2/57 round 文件自报 `git_rev=b70822e`、`git_dirty=false`；replay 入口命中并自报同点 |
+| C. G-2 | 🔴 不达门 | clean `complete 9 / refuse 1`、`equivalent 7`；E-VER-08 仍业务 refuse |
+| C. 57 族 | 🔴 不达 G-5 | clean `complete 45 / refuse 9 / clarify 3`、`equivalent 19`；原始首跑另有 5 条上游 error |
+| integration / offline | ✅ | `124 passed / 0 failed`；`2562 passed / 0 failed / 1 warning` |
+| U-127 | 🟡 open | 客户端排队预算已收窄；W7 `llm_queue_wait_ms`／真压测非零未补 |
+
+> 口径纪律：最终 live 的 6/6、5/5 只说明**最终代码提交上的稳定性样本**；G-2/G-5 仍未达门，不得写成门禁通过。
+
+### 53.1 A：守卫边界与回归
+
+**修正点**：`backend/app/planner/engine.py:139-146` 只识单值等值（`=`，值可为字符串/数字/布尔/参数，并允许尾随中英文括注）；`:177-224` 以 `grain` 主粒度 + 题面显式分组语义判定。题面没有“按/各/每/分组”命中该维度时，才把冗余维度降级；命中时保留。缺 grain 时 fail-safe 保留。
+
+**回归测试**（`backend/tests/unit/test_planner_engine.py`）：
+- `:631` E-VER-07 单值计数 + `grain=province` ⇒ 降级 `dimensions=[]`；
+- `:660` 带 `（大区维度取值）` 的中文尾注等值筛选 ⇒ 仍降级；
+- `:679` 同列筛选 + 题面/`grain=region` 明确分组 ⇒ 保留；
+- `:704` 无筛选 M-DIM-08 ⇒ 保留；
+- `:725` `LIKE` ⇒ 不碰；
+- `:743` `IN` ⇒ 不碰。
+定向实跑：`pytest planner＋llm client＋gateway＋replay contract -q` ⇒ **149 passed / 0 failed / 2.77s**。
+
+**live 反证**：修正前中间实验 run2/run3 的 plan 为 `dimensions=["region"]`、`grain=region`、题面无分组意图，曾产出多列 `GROUP BY`；最终 `b70822e` 上 E-VER-07 6 次成功全部是单值 `COUNT(*)`。M-DIM-08 5 次成功均保留 `GROUP BY region_name`。
+
+### 53.2 B：live 证据绑定
+
+**最终稳定性**（代码提交 `b70822e`，工作树只有 `?? .workbuddy/`，`git_dirty=false`）：
+
+| case | 尝试 | complete+eq | 上游 error | SQL 形状 |
+|---|---:|---:|---:|---|
+| E-VER-07 | 6 | **6** | 0 | 6/6 单值 `COUNT(*) ... WHERE region_name=...` |
+| M-DIM-08 | 5 | **5** | 0 | 5/5 `GROUP BY region_name` |
+
+产物：`eval/results_r53_stab_E-VER-07_{1..6}.json`、`eval/results_r53_stab_M-DIM-08_{1..5}.json`；对应 cassettes；均自报 `git_rev=b70822e`、`git_dirty=false`。
+
+**保留历史失败样本**（未混入最终分母）：
+- `E:\codex\w8r53\stale_0000e42`：11 条，1 条 `LlmTimeout/l4_score`；
+- `E:\codex\w8r53\stale_eee99a4`：11 条，1 条 `LlmTimeout/normalize_intent`、1 条 `LlmTimeout/l4_score`；
+- `E:\codex\w8r53\aborted_c_runner`：68 条，58 条上游/熔断错误（2 `ConnectError`、1 `ConnectTimeout`、54 `LlmCircuitOpen`、1 `LlmTimeout/gen_sql`）。
+- 注：这些是**代码提交前探索/中断批**，自报旧 commit；最终证据只引用 `b70822e` 面。
+
+### 53.3 C：G-2 与 57 族
+
+**G-2 clean（`eval/results_g2_r53_clean.json`，绑定 `b70822e`）**：`complete 9 / refuse 1`、`equivalent 7`。
+- `E-VER-01/06`：`gate_policy_gap`（冻结集时间谓词/活动全量口径冲突，只登记）；
+- `E-VER-08`：`refuse/no_data_asset`（业务侧，非超时）；
+- `E-VER-02/03/04/05/07/10/11`：complete+eq。
+原始 round 文件保留 5 条错误：`normalize_intent/plan/gen_sql/l4_score` 的 `LlmTimeout`（见 `results_r53g2_r{1..4}.json`）。
+
+**57 族 clean（`eval/results_f57_r53_clean.json`，绑定 `b70822e`）**：`complete 45 / refuse 9 / clarify 3`、`equivalent 19`。
+- refuse 9：`E-MET-08`、`M-DIM-01`、`M-ENUM-04`、`X-ENUM-02`、`X-ENUM-04`、`X-ENUM-05`、`X-ENUM-06`、`X-ENUM-08`、`X-STR-04`（均业务 `no_data_asset`，非超时；E-MET-08 仍反面口径）；
+- clarify 3：`E-VER-08`、`M-DIM-06`、`H-STR-05`（`field_binding` 歧义）；
+- 原始首跑 error 5：`E-VER-01` ConnectError、`E-VER-11/M-HIER-01/X-ENUM-07` l4_score timeout、`M-ENUM-02` normalize_intent timeout；后续轮均为重试补跑。
+
+**转移矩阵（r52 clean → r53 clean，terminal/equivalent）**：
+
+| before → after | 条数 |
+|---|---:|
+| complete/eq → complete/eq | 15 |
+| complete/eq → complete/neq | 1 |
+| complete/eq → refuse/neq | 1 |
+| complete/neq → complete/eq | 1 |
+| complete/neq → complete/neq | 21 |
+| complete/neq → refuse/neq | 4 |
+| complete/neq → clarify/neq | 2 |
+| refuse/neq → complete/eq | 1 |
+| refuse/neq → complete/neq | 3 |
+| refuse/neq → refuse/neq | 4 |
+| refuse/neq → clarify/neq | 1 |
+| clarify/neq → complete/eq | 2 |
+| clarify/neq → complete/neq | 1 |
+
+⇒ 57/57 可判，但 **19/57 equivalent，不达 G-5**；G-2 同样不达 95%。
+
+### 53.4 复跑、出站、边界
+
+- **integration**：一次性 PG 55439 / Redis 56386，`alembic upgrade head` ⇒ **124 passed / 0 failed / 35.50s**；DROP 后残渣仅共享 `ecom`、`ecom_u123_probe`，容器 0 件。
+- **offline**：`.\.venv\Scripts\python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q` ⇒ **2562 passed / 0 failed / 1 warning / 111.46s**。
+- **最终绑定 live 出站**：稳定性 `301,124 tokens / 0.676223`；G-2 rounds `308,482 / 0.822977`；57 rounds `1,483,894 / 5.097875`；**小计 `2,093,500 / 6.597075`**（全 `price_guess`）。
+- **探索/中断批另报**：`289,967 / 0.756654`（stale_0000e42）＋`262,158 / 0.571627`（stale_eee99a4）＋`281,975 / 0.864521`（aborted_c_runner）＝`834,100 / 2.192802`；**本轮实际合计 `2,927,600 tokens / 8.789877`**。
+- **未动**：`reports/qa/**`、共享 `ecom`、冻结集、阈值、判据措辞、07 §10.2 的 15s；门禁未重算仍 `PASS 1/8`；零取号 `U-143`；U-127 仍 open。
+- **复算入口**：绑定 live 读 `eval/results_r53_stab_*.json` 与 `eval/results_{g2,f57}_r53_clean.json`；原始轮读 `eval/results_r53{g2,f57}_r*.json`；回放命令 `python eval/replay_bound.py --cases E-VER-07 --mode replay --cassette eval/cassettes/w8_r53_stab_E-VER-07_1.jsonl --out E:\codex\w8r53\replay_E-VER-07_1.json --provenance ... --yes`（M-DIM-08 同法换 `_2`）；以上入口不命中本节自身。

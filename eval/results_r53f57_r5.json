@@ -1,0 +1,263 @@
+{
+  "frozen_evidence": {
+    "checks": {
+      "dataset_content_hash": {
+        "expected": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609",
+        "actual": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609",
+        "ok": true
+      },
+      "sandbox_db_sha256": {
+        "expected": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "actual": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "ok": true
+      },
+      "red_team_content_hash_present": true,
+      "gold_seed_derived_from_dataset_hash": true,
+      "all_ok": true
+    },
+    "dataset_version": "1",
+    "frozen_at": "2026-09-16",
+    "n_cases": 166,
+    "content_hash": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609",
+    "red_team": {
+      "content_hash": "sha256:886cb57052368541e60727cbcee78db2aa1ad1c381cb083a540673999ed9d01d",
+      "n_cases": 66
+    },
+    "gold_seed": {
+      "content_hash": "sha256:2b23d7ef4d5d5eb8690699af86237c8413e4e6bf04d9104ad61d17228aa5ea4a",
+      "n_seeds": 119
+    }
+  },
+  "config": {
+    "live": true,
+    "cassette": "eval/cassettes/w8_r53f57_r5.jsonl",
+    "mode": "record",
+    "db": "e:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\ecom_sandbox.db",
+    "column_top": null,
+    "n_requested": 1,
+    "provenance": "W8 r53 clean-retry r53f57 round r5; bundle 2026.10.16.2; timeout=error",
+    "node_timeouts": {
+      "contract": {
+        "link": 30.0,
+        "gate1_ast": 0.1,
+        "gate2_policy": 0.1,
+        "gate3_cost": 1.0,
+        "execute": 30.0,
+        "mask": 0.1,
+        "audit_pre": 1.0,
+        "audit_supp": 0.5
+      },
+      "effective": {
+        "plan": 162.0,
+        "gate2_policy": 0.8,
+        "repair": 162.0,
+        "mask": 0.8,
+        "bind": 162.0,
+        "gen_sql": 162.0,
+        "gate3_cost": 8.0,
+        "link": 30.0,
+        "audit_supp": 4.0,
+        "normalize": 162.0,
+        "intent": 162.0,
+        "execute": 30.0,
+        "gate1_ast": 0.8,
+        "audit_pre": 8.0,
+        "present": 162.0
+      },
+      "scaled": true,
+      "llm_calling_nodes": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "not_in_contract": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "kept_as_contract": [
+        "execute",
+        "link"
+      ],
+      "cpu_factor": 8.0,
+      "llm_node_floor_s": 162.0
+    }
+  },
+  "summary": {
+    "n_records": 1,
+    "n_scored": 1,
+    "n_unscored": 0,
+    "n_node_timeout": 0,
+    "n_execute_scored": 1,
+    "n_execute_with_sql": 1,
+    "n_equivalent": 0,
+    "terminal_distribution": {
+      "complete": 1
+    },
+    "attribution_distribution": {
+      "gate_policy_gap": 1
+    },
+    "tokens_total": 27493,
+    "cost_cny_total": 0.082027,
+    "wall_s": {
+      "max": 22.629,
+      "median": 22.629,
+      "sum": 22.629
+    }
+  },
+  "records": [
+    {
+      "case_id": "E-VER-01",
+      "question": "T_A 2026-08 的日期维表有多少天？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "easy",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT COUNT(*) AS day_cnt FROM v_dim_date WHERE year = %(year)s AND month = %(month)s LIMIT 100",
+      "sql_params": {
+        "year": 2026,
+        "month": 8
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "天数是公共日历维表口径，时间语义为当前值"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 6850,
+        "linking": 0,
+        "plan": 4203,
+        "gen_sql": 3382,
+        "gate": 12,
+        "exec": 2,
+        "present": 0,
+        "total": 22623
+      },
+      "tokens": {
+        "input": 24709,
+        "output": 2548,
+        "cache_hit": 15360,
+        "total": 27493
+      },
+      "cost_cny": 0.082027,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "SELECT COUNT(*) FROM v_dim_date",
+        "frozen_hash": "sha256:16b496dc3e59e31900eadc8ea34f7d81c17dbc66bc5039ceb1c69dad8d00fdba",
+        "via_view": {
+          "hash": "sha256:16b496dc3e59e31900eadc8ea34f7d81c17dbc66bc5039ceb1c69dad8d00fdba",
+          "rows": 1,
+          "cols": 1,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:16b496dc3e59e31900eadc8ea34f7d81c17dbc66bc5039ceb1c69dad8d00fdba",
+          "rows": 1,
+          "cols": 1,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:7f45bd1fd9759eda4b33e8e56a8ff0e5e946636e31c046f6d82bc7cac1f99855",
+        "columns": [
+          "day_cnt"
+        ],
+        "rows": 1,
+        "shape": {
+          "columns": [
+            "day_cnt"
+          ],
+          "row_count": 1,
+          "head_rows": [
+            [
+              31
+            ]
+          ]
+        },
+        "state_row_count": 1,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": false,
+        "tags": [],
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "gate_policy_gap",
+        "signal": "闸门自身判据缺陷：F2 域 `orders` 的默认谓词列 ['is_test_order', 'pay_status', 'refund_status'] 被注入到缺列资产 `v_dim_date`（注入后必然 R06）",
+        "severity": "gate"
+      },
+      "wall_s": 22.629
+    }
+  ],
+  "generated_at": "2026-10-17T10:50:50+00:00",
+  "git_rev": "b70822e",
+  "git_dirty": false
+}
