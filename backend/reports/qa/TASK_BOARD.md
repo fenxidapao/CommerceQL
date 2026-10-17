@@ -4659,3 +4659,71 @@ W8 的定位成立：E-VER-07 失败跳精确落在 15s 客户端硬上限，pla
 - **无阻塞点句**。三项已确认：① 三条 diff 照提案（E-VER-01/06/08）；② 语义包不空跳版本（只升 dataset/seed 1→2）；③ E-VER-08 `domain` 不捆绑、另立登记。
 - 预热三项（166 全灭根因／批量跑续跑加固／91 条清单与入口）已并入第 56 轮块 A/B/C，不另开轮次；若总控希望拆开单跑，回一句即可改派。
 - 非阻塞遗留：若后续要把 E-VER-08 的 `domain=products` 作为第 4 条契约 diff，需重新批准并重算候选 hash；本轮不做。
+
+## 76 · W8 第 56 轮验收：重基线与跑批加固成立；三条契约冲突转等价；G-2/G-5 仍 FAIL（超时尾部＋误拒簇）（QA R31ax ｜ 2026-10-17 22:14:58 +0800 ｜ HEAD `3bae850`／588 笔）
+
+### 76.0 结论
+
+**A/B 落地成立，C 有实质推进但两格仍未达门，项目未收口。**
+
+- **A**：dataset v2 独立复算一致（`content_hash=sha256:31f338…d7c5`；网格 `easy/low 8`、`medium/low 12`、12 格 ≥8；`124/18/24`）；三条 diff 落地（E-VER-01 月份谓词／E-VER-06 全量／E-VER-08 题面+`pay_time`），E-VER-07/M-DIM-08 未变；seed v2 `2f91ed…` 与对账件（提案 `812728…` 系旧难度未重算，未改判据）；`MANIFEST` 记批准人＝总控并 supersedes v1；豁免流程关闭。
+- **B**：r54 根因＝响应前 `ConnectError×4 → CircuitOpen×162`（0 token、cassette 0 字节），现端点健康；runner 加 checkpoint/resume/传输层退避重试/并发帽，**硬超时零重试**（E5/7/10 `retries=0`；E-VER-11 传输层重试 3 次后成功）。
+- **C**：G-2 10 条 **7 eq**（E1/6/8 全部转等价；E5/7/10 `LlmTimeout`）；G-5 148 条应拒 **24/24**、误拒 **14/124=11.3%**、`LlmTimeout` 15 条 ⇒ **均未达门**；18 clarify 单列诊断（clarify 8／complete 2／refuse 7／error 1）。
+- **门禁独立重算件**：G-2 FAIL（easy×low 7/8=87.5%）、G-5 FAIL、G-8 UNVERIFIED；**官方 `eval_metrics.json` 未刷新（`88f3500`／PASS 1/8）**。
+- 本窗登记：超时落点跨批漂移（E-VER-06 在 G-2 批过、G-5 批超时；E-VER-05/07/10 反之）⇒ 支持“provider 侧延迟波动＋硬超时不重试”归因，非逻辑回归；G-2 分母 10→8 是已批准难度迁移的后果（登记不改判据）。
+
+### 76.1 独立复算
+
+| 面 | QA 现读 | 判 |
+|---|---|---|
+| 提交／树 | HEAD＝`origin/main`＝`3bae850`／588 笔；工作树仅 `?? .workbuddy/` | ✅ |
+| 五查 | 台账 `1830\|3.025849\|2026-10-07 04:28:00.872275+00`（逐位不动）；残渣仅两库；共享栈 6 件 Up；门禁 `88f3500`／PASS 1/8 | ✅ |
+| A 数据集 | 独立复跑 `build_frozen_set --no-write` ⇒ `31f338…d7c5`、`8/12` 网格、`124/18/24`；文件 SHA `51a631dc…` 与 W8 自证一致 | ✅ |
+| A 三 diff | E1 月份谓词、E6 全量、E8 `pay_time` 均在冻结集内；E7/M-DIM-08 仍 `v_region` 且无时间谓词 | ✅ |
+| A seed／对账 | seed v2 `2f91ed…`、`derived_from=31f338…`；对账件记录 `812728→2f91ed` 根因（难度重排）；MANIFEST revision＝批准人总控＋理由＋supersedes v1 | ✅ |
+| B 根因／加固 | 诊断件：`ConnectError`→`CircuitOpen` 序列、端点健康、pilot complete；`hard_timeout_retry=false`；E-VER-11 `runner_transport_retries=3` | ✅ |
+| C G-2 | 10 条：7 complete+eq；E5（plan）、E7/E10（l4_score）`LLM_UPSTREAM_ERROR`（last_degrade=LlmTimeout）；`232,137 tok／0.506298` | 🔴 未达门 |
+| C G-5 | 148 条：应拒 24/24；误拒 14/124=11.3%（我按记录逐条重算一致）；error 15 均 LlmTimeout；eq 27/124；`2,778,228 tok／9.931561` | 🔴 未达门 |
+| clarify 18 | `clarify 8／complete 2／refuse 7／error 1`；`258,563 tok／0.615126`；单列不占 G-5 分母 | ✅ 登记 |
+| 门禁重算件 | G-2 `7/8=87.5%` FAIL、G-5 FAIL（误拒 11.3%>5%）、G-8 UNVERIFIED；官方未刷新 | 🔴 未重算 |
+| 回归（QA 自跑） | 离线 **2568/0**；一次性 PG 55493／Redis 56393＋alembic 集成 **124/0**（容器已清）；replay E7/M08 均 complete+eq=1 @`3bae850`／dirty=false | ✅ |
+| 护栏 | hygiene＋scan 单测 16 passed；新增 checkpoint 单测＋契约件 24 passed；`scan_secrets --since 1ec8f4d` → 24 件／0 命中／rc=0 | ✅ |
+| 出站账 | 绑定 `3,268,928 tok／11.052985`（含 pilot `3,296,322／11.115942`，W8 自报、未入台账）；台账口径不变 | ✅ 两把尺 |
+| 边界 | 未动 `reports/qa/**`、`semantic/**`、`docs/**`、`backend/app/**`；U-127 仍 open | ✅ |
+
+### 76.2 第 57 轮 W8 块（可整段复制）
+
+```text
+【W8 第 57 轮｜超时尾部＋误拒簇治理，随后二轮复跑（先零出站归因）】
+
+0. 现读 HEAD 3bae850。不改阈值/判据措辞/07 §10.2 的 15s/语义包/gold；不动 backend/reports/qa/**、不碰共享 ecom 写；
+   逐批实报 tokens、price_guess、时段、HEAD。维持纪律：硬超时=判据失败、不重试、不剔分母。
+
+1. 🔴 A 超时尾部归因（先零出站）
+- 三批合计 19 条 LlmTimeout：G-2 批 3（E-VER-05=plan；E-VER-07/E-VER-10=l4_score）、G-5 批 15（清单见 RELAY §56.3）、clarify 批 1。
+- 逐条给：节点、节点耗时 p50/p95/max、该跳请求体规模（tokens/字段数）、当批并发/退避状态、同批成功样本对照。
+- 回答：①触顶是否集中在 plan/l4_score 且与请求体膨胀或上游窗口相关；②在不改判据的前提下，可做哪些延迟治理
+  （请求体裁剪、缓存复用、排队/并发策略；重试仅限传输层）。给候选修复清单＋证据，先不动语义行为。
+
+2. 🔴 B 误拒簇 14 条＋归因空洞清理
+- 14 条：E-ENUM-04、E-MET-06、M-DIM-01/05、M-ENUM-02/03、M-MET-01/09/10、H-ENUM-01/03/04、M-IDX-09/10。
+- 逐条给：plan blocking 原文、gate 决策、检索命中面（是否 no_data_asset 误判）、与语义包口径对照；分三类：
+  可修（绑定/检索/计划面）／冻结口径冲突／provider 超时。可修的修＋回归测试；不得为贴 gold 改判据。
+- 同时清 full166 归因里的 unattributed 4。
+
+3. 🔴 C 二轮复跑（证据绑新 content_hash＋git_rev＋dirty=false）
+- G-2 10 条、G-5 148 条、clarify 18 诊断批各重跑一次；checkpoint/resume 用起来，断点重跑不算“重刷”。
+- 目标：G-2 easy×low ≥95%（8 条分母）；G-5 误拒 ≤5%（≤6/124）且应拒保持 24/24。
+- 超时仍存即如实单列，不剔分母不写达标；给“provider 波动 vs 应用延迟”的结论证据。
+- 末尾出 G-2/G-5 重算件（G-8 维持 UNVERIFIED 诊断件）；官方门禁 json 未刷新就写未刷新，不手改。
+
+4. 边界/不做
+- 不改 15s/阈值/判据/语义包/gold；不碰 reports/qa/**；U-127 仍 open。
+- 想放宽“硬超时=判据失败、不剔除”的纪律 = 只能提申请交总控，不得自行放宽。
+- G-8 二轮回路（clarify→补答→再走）不夹带在本轮，另立轮次（待总控点句）。
+```
+
+### 76.3 总控侧待点句
+
+- ① 超时纪律：维持“硬超时=判据失败、不重试、不剔分母”（我建议维持；若认为 provider 窗口波动应另立重跑/剔除政策，需你明批）。② G-8 二轮回路（clarify→补答→再走）是否在 G-2/G-5 收敛后立即排一轮（我建议排）。③ E-VER-08 `domain=products` 仍另立登记、无动作。
+- 下一轮（57）复跑预估 ¥10～14（price_guess 口径，含重试尾险；以上轮 11.05 为基）。无其他阻塞。

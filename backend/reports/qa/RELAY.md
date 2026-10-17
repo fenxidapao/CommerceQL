@@ -4576,3 +4576,39 @@ A/B/C 主路径成立：守卫已按 grain＋题面显式分组语义收窄；E-
 - 注入形态 ＝ **无**；未执行 N/A。
 - 本轮 QA 未计费出站（replay 只读匣带）；一次性 PG/Redis 已清。
 - 未动业务代码、冻结集、阈值、判据和共享 ecom；台账逐位不动。
+
+## 71 · W8 第 56 轮验收：重基线与跑批加固成立；三条契约冲突转等价；G-2/G-5 仍 FAIL（超时尾部＋误拒簇）（QA R31ax ｜ 2026-10-17 22:14:58 +0800 ｜ HEAD `3bae850`／588 笔）
+
+### 71.0 结论
+
+第 56 轮 A（重基线）与 B（根因/加固）落地成立；C 两批复跑真实可判但**未达门**：G-2 7/10 eq、G-5 应拒 24/24＋误拒 11.3%。官方门禁仍未刷新（`88f3500`／PASS 1/8）。
+
+### 71.1 独立复算
+
+| 面 | QA 现读 | 判 |
+|---|---|---|
+| 提交／树 | HEAD＝`origin/main`＝`3bae850`／588 笔；工作树仅 `?? .workbuddy/` | ✅ |
+| A 数据集复算 | 我独立跑 `build_frozen_set --no-write`：网格 `easy/low 8`、`medium/low 12`、12 格 ≥8、`124/18/24`、`31f338…d7c5` | ✅ 与写盘逐位一致 |
+| A 文件态 | dataset file sha `51a631dc…`；seed file sha `ca413baf…`；seed `2f91ed…`／`derived_from=31f338…`；对账件根因＝提案未重跑难度迁移（`results_r56_hash_reconciliation.json`） | ✅ |
+| A MANIFEST／豁免 | revision：`approved_by=总控`、理由、supersedes v1（旧 hash/sha）；`G2_EXEMPTION_REQUEST.md` 已写“仅存历史、豁免关闭” | ✅ |
+| B 根因 | r54：`ConnectError×4 → CircuitOpen×162`、0 token、cassette 0 字节；现端点 404 健康响应；pilot `complete+eq`（旧 HEAD、只作健康样本） | ✅ |
+| B 加固行为 | `hard_timeout_retry=false`；E5/E7/E10 `last_degrade_error=LlmTimeout`、`runner_transport_retries=0`；E-VER-11 传输层重试 3 次后 complete | ✅ |
+| C G-2 | 10 条 7 eq：E1/6/8 转等价（契约修复生效）；E5=plan、E7/E10=l4_score 超时；`232,137／0.506298` | 🔴 |
+| C G-5 | 148：应拒 24/24；误拒 14/124=11.3%（逐条重算与矩阵一致）；error 15（均 LlmTimeout）；eq 27/124；`2,778,228／9.931561` | 🔴 |
+| clarify 18 | `clarify 8／complete 2／refuse 7／error 1`；`258,563／0.615126`；单列诊断 | ✅ |
+| 门禁重算件 | G-2 `easy×low 7/8=87.5%` FAIL；G-5 FAIL；G-8 UNVERIFIED（单轮不可测） | 🔴 官方未刷新 |
+| 回归（QA 自跑） | 离线 2568/0；集成 124/0（PG 55493／Redis 56393＋alembic，已清）；replay E7/M08 eq=1 @3bae850/dirty=false | ✅ |
+| 护栏 | hygiene＋scan 单测 16 passed；checkpoint 单测＋契约件 24 passed；`scan_secrets --since 1ec8f4d` 24 件／0 命中 | ✅ |
+| 出站账 | 绑定 `3,268,928 tok／11.052985`；含 pilot `3,296,322／11.115942`；台账 `1830／3.025849／…` 逐位不动（harness 不入账） | ✅ 两把尺 |
+
+### 71.2 已登记观察（不改判据）
+
+- 超时落点跨批漂移：E-VER-06 G-2 批 `complete`、G-5 批 `LlmTimeout`；E-VER-05/07/10 反之 ⇒ 超时为随机尾部（provider 侧），非逻辑回归。
+- G-2 分母 10→8：easy×low 在批准的三条 diff 后迁移为 8 条（E1/E8 升 medium），属预先披露的后果；重算件按 8 条分母判 FAIL。
+- 重算件保留 τ 未校准 caveat（R-19）与 G-8 单轮不可测 caveat，均照录。
+
+### 71.3 注入与边界
+
+- 注入形态 ＝ **无**；未执行 N/A。
+- 本轮 QA 未计费出站（replay 只读匣带）；一次性 PG/Redis 已清并复查残渣。
+- 未动业务代码、冻结集、阈值、判据和共享 ecom；台账逐位不动。
