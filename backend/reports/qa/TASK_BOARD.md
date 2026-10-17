@@ -4585,3 +4585,77 @@ W8 的定位成立：E-VER-07 失败跳精确落在 15s 客户端硬上限，pla
 - 是否同意对 G-2 的 E-VER-01/06/08 冻结口径冲突启动正式豁免/契约处理；若不同意，需明确哪一条契约要改、由谁改。
 - 是否先批准 W8 做完整 G-5 分母清算，再做下一轮 live 全量；或要求先交结构清单再决定额度。
 - 是否允许把 `E:\codex\w8r53` 的探索总账作为本轮花费，而把 `2,093,500 / 6.597075` 只作最终绑定面；两项不得混报成“单次最终批”。
+
+## 75 · W8 第 54+55 轮验收：结构清算与契约澄清提案成立；三条 diff 经总控确认（B 案）；G-2 仍 FAIL、门禁仍 PASS 1/8（QA R31aw ｜ 2026-10-17 20:27:02 +0800 ｜ HEAD `a2e165e`／585 笔）
+
+### 75.0 结论
+
+**第 54 轮（结构清算）与第 55 轮（零出站提案）主路径均成立，项目仍未收口。**
+
+- 第 54 轮：E-VER-08 跨批不一致已归因为「缺时间范围」冻结冲突；G-2 结构上限 `7/10` 与豁免材料落盘；G-5 完整分母 `124 execute / 18 clarify / 24 refuse`、最小补测 `91 条（67 execute＋24 refuse）` 清算成立。全量 166 与 pilot3 均因上游故障全 `error`、0 token，**不可判**——不得写成"G-5 已跑"。
+- 第 55 轮：三条 diff（E-VER-01 `730→31`／E-VER-06 `24→28`／E-VER-08 `31→31` 题面+gold 补 `pay_time`）逐条复核成立，未碰任何冻结物；候选 `content_hash` 仅为内存复算值，落盘后以 builder 实算为准。
+- **总控已裁决（本窗落账）**：采纳 B 案＝契约澄清/改 gold；三条 diff 照提案；语义包**不空跳版本**；E-VER-08 `domain=products` 本次不捆绑、另立登记。
+- 🔴 在重新基线并重跑前：**G-2 继续 FAIL、门禁继续 `88f3500`／PASS 1/8**；U-127 仍 open。
+
+### 75.1 独立复算
+
+| 面 | QA 现读 | 判 |
+|---|---|---|
+| 提交／树 | HEAD＝`origin/main`＝`a2e165e`／585 笔；工作树仅 `?? .workbuddy/` | ✅ |
+| 旧基线复算 | `build_frozen_set --no-write` → 12 格均 ≥8；`124/18/24`；`content_hash=sha256:43e153…8609`（与 W8 自证逐位一致） | ✅ |
+| 第 54 轮产物 | 全量 166：`error 166`／`tokens=0`／`cost=0`；pilot3：`error 3`／`tokens=0`；两件 cassette 均 0 字节 | ✅（不可判，非合格读数） |
+| 第 54 轮 replay | QA 自跑（`a2e165e`／`dirty=false`）：E-VER-07 `complete+eq=1`；M-DIM-08 `complete+eq=1`；E-VER-08 `g2=refuse`／`57=clarify`（均 eq=0） | ✅ 与登记一致 |
+| 第 55 轮提案 | 5 件均为报告/证据，未改 `eval/**` 冻结物或 `semantic/**`；三条 diff 数值与包内口径复核一致 | ✅ |
+| 离线全量 | **2562 passed / 0 failed / 1 warning**（127.79s） | ✅ |
+| 集成 | 一次性 PG 55492／Redis 56392＋`alembic upgrade head`：**124 passed / 0 failed**（31.43s）；容器已清 | ✅ |
+| 护栏 | `migration_dsn_hygiene`＋`scan_secrets` 单测 16 passed；`scan_secrets --since d61e254` → 15 件／0 命中／rc=0 | ✅ |
+| 五查 | 台账 `1830\|3.025849\|2026-10-07 04:28:00.872275+00`（逐位不动）；残渣仅 `ecom`／`ecom_u123_probe`；共享栈 6 件 Up | ✅ |
+| 门禁 | `88f3500`／dirty false／PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2 | 🔴 未重算 |
+| 出站账 | 本窗 0 出站（replay 只读匣带）；台账口径不变 | ✅ |
+
+### 75.2 第 56 轮 W8 块（可整段复制）
+
+```text
+【W8 第 56 轮｜G-2 B 案落地＋重基线复跑（总控已逐条确认）】
+
+0. 现读 HEAD a2e165e。总控已确认：三条 diff 按 G2_CONTRACT_CLARIFICATION_PROPOSAL.md 落地；
+   语义包不空跳版本（只升 dataset/seed 1→2）；E-VER-08 domain=products 本次不捆绑、另立登记。
+   不改阈值/判据措辞、不改 07 §10.2 的 15s、不动 backend/reports/qa/**、不碰共享 ecom 写。
+   允许必要出站：逐批实报 tokens、price_guess、时段、HEAD。
+
+1. A 落地（一次性，不零散补丁）
+- eval/case_library.py：E-VER-01 gold 加 year=2026 AND month=8（题面不动；notes 删“条件数必须为 0”残留）；
+  E-VER-06 gold 去掉 campaign_type='normal_sale' 改全量（题面不动）；
+  E-VER-08 题面与 gold 同步补 2026-08 的 pay_time 范围（'2026-08-01' <= pay_time < '2026-09-01'）。
+- eval/build_frozen_set.py：DATASET_VERSION 1→2，由 builder 实算每例 gold_result_hash、结构档、grid、content_hash；
+  eval/build_gold_seed.py：seed 1→2 并从新冻结集重新生成。禁止手填 hash；新文件 SHA 写盘后生成。
+- 落盘后现读 content_hash：应与提案内存候选 31f338…／seed 812728… 一致；不一致先停下查差异，不得先跑钱。
+- eval/MANIFEST_v1.json：记旧版本/旧 hash → 新版本/新 hash、修改理由、批准人＝总控、日期；旧基线由 git 历史保留。
+- 契约防漂回测试：E-VER-01 含月份谓词、E-VER-06 为全量、E-VER-08 含 pay_time；
+  且 E-VER-07/M-DIM-08 仍含 v_region 且不含时间谓词。
+- backend/reports/w8/G2_EXEMPTION_REQUEST.md 顶部加状态行：总控已选 B 案（契约澄清），本文仅存历史，
+  不再申请豁免（豁免流程自此关闭）。
+
+2. B 跑前加固（先零出站）
+- 查清 r54 全量166＋pilot3 全体 LLM_UPSTREAM_ERROR（0 token、cassette 全空）根因：provider 侧还是管道侧，给证据。
+- 批量跑加断点续跑/checkpoint/传输层失败退避重试/并发上限治理；
+  15s 硬超时是判据事件：不得重试、不得改口径。给 diff 与零出站自证。
+
+3. C 复跑（顺序：先小后大；证据须绑新 content_hash＋git_rev＋dirty=false）
+- G-2 10 条全跑：目标 10/10 equivalent（未达则逐条归因，不得宣称达成）；
+  给 before/after、终态、SQL、equivalent、tokens、price_guess。
+- G-5：在新基线上跑 91 条最小补测（67 execute＋24 refuse），并重跑既有 57 子集（推荐按完整 148＝124 execute＋24 refuse
+  一次跑清）；给逐条矩阵；error/timeout 单列，不得先剔分母再写达标；18 条 clarify 另表诊断。
+- 按项目既有流程重算门禁所需输入（G-2/G-5 两格）；门禁产物未刷新就写未刷新，不手填读数。
+- 末尾复跑 integration 124/0、offline；保留失败与补跑记录。
+
+4. 边界
+- 未重跑前：G-2 继续 FAIL、门禁继续 PASS 1/8；不得把目标值写成已达成。
+- 不动 reports/qa/**；不改 15s/阈值/判据；不碰共享 ecom；U-127 仍 open；台账逐位不动口径不变。
+```
+
+### 75.3 总控侧待点句
+
+- **无阻塞点句**。三项已确认：① 三条 diff 照提案（E-VER-01/06/08）；② 语义包不空跳版本（只升 dataset/seed 1→2）；③ E-VER-08 `domain` 不捆绑、另立登记。
+- 预热三项（166 全灭根因／批量跑续跑加固／91 条清单与入口）已并入第 56 轮块 A/B/C，不另开轮次；若总控希望拆开单跑，回一句即可改派。
+- 非阻塞遗留：若后续要把 E-VER-08 的 `domain=products` 作为第 4 条契约 diff，需重新批准并重算候选 hash；本轮不做。

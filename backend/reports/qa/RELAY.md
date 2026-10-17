@@ -4535,3 +4535,44 @@ A/B/C 主路径成立：守卫已按 grain＋题面显式分组语义收窄；E-
 - 注入形态 ＝ **无**；未执行 N/A。
 - 本轮 QA 未计费出站；只读产物、跑官方 replay；一次性 PG/Redis 已清。
 - 未动业务代码、冻结集、阈值、判据和共享 ecom。
+
+## 70 · W8 第 54+55 轮验收：结构清算与契约澄清提案成立；三条 diff 经总控确认（B 案）；G-2 仍 FAIL、门禁仍 PASS 1/8（QA R31aw ｜ 2026-10-17 20:27:02 +0800 ｜ HEAD `a2e165e`／585 笔）
+
+### 70.0 结论
+
+第 54 轮（结构清算）与第 55 轮（零出站提案）**主路径成立**；总控已选 B 案（契约澄清/改 gold）并逐条确认三条 diff，**未落地前 G-2 仍 FAIL、门禁仍 PASS 1/8**。
+
+- 第 54 轮三件：E-VER-08 跨批差异＝"事实表要求时间范围 vs 题面/gold 无时间谓词"冻结冲突（非可修回归）；G-2 结构上限 `7/10`＋豁免申请；G-5 完整分母 `124/18/24`、最小补测 91 条。
+- 全量 166 与 pilot3：上游故障全 `error`、0 token、cassette 0 字节 ⇒ 不可判（不当读数用）。
+- 第 55 轮提案三条 diff：E-VER-01 `730→31`（gold 加月份谓词）；E-VER-06 `24→28`（gold 去 `normal_sale` 改全量）；E-VER-08 `31→31`（题面+gold 补 `2026-08` `pay_time`，值不变、语义显式化）。网格迁移 `easy/low 10→8`、`medium/low 10→12`，12 格仍 ≥8；候选 `content_hash`（内存）`31f338…`／seed `812728…`，**落盘前不生效**。
+
+### 70.1 独立复算
+
+| 面 | QA 现读 | 判 |
+|---|---|---|
+| 提交／树 | HEAD＝`origin/main`＝`a2e165e`／585 笔；工作树仅 `?? .workbuddy/` | ✅ |
+| 开工五查 | 台账逐位不动；残渣仅两库；共享栈 6 件 Up（含期望外 `agent-platform-redis`）；门禁 `88f3500`／PASS 1/8 | ✅ |
+| 旧基线 | `build_frozen_set --no-write`：12 格 ≥8；`124/18/24`；`43e153…8609` | ✅ |
+| 第 54 轮全量 | 166 件全 `error`、`tokens_total=0`、`cost=0`；wall 中位 0.014s | ✅ 不可判 |
+| 第 54 轮 pilot3 | 3 件全 `error`、0 token | ✅ 不可判 |
+| r54 cassette | `w8_r54_full166.jsonl`／`w8_r54_pilot3.jsonl` 均 0 字节 | ✅ |
+| replay（QA 自跑） | `a2e165e`／`dirty=false`：E-VER-07 `complete+eq=1`；M-DIM-08 `complete+eq=1`；E-VER-08 g2 `refuse`／57 `clarify`（eq=0） | ✅ |
+| 第 55 轮提案 | 未碰冻结物/语义包；三条 diff 与包内 `day_cnt`／`campaign_cnt`／`province_covered_cnt` 口径复核一致 | ✅ |
+| 离线全量 | **2562 passed / 0 failed / 1 warning**（127.79s） | ✅ |
+| 集成 | 一次性 PG 55492／Redis 56392＋alembic：**124 passed / 0 failed**（31.43s）；跑后容器已清、共享库仍两库 | ✅ |
+| 护栏 | DSN hygiene＋scan_secrets 单测 16 passed；`scan_secrets --since d61e254` 15 件／0 命中／rc=0 | ✅ |
+| 门禁 | `88f3500`／PASS 1/8（未重算） | 🔴 |
+| 出站账 | 本窗 0 出站；台账口径不变 | ✅ |
+
+### 70.2 总控裁决落账（本轮）
+
+- 采纳 B 案：三条 diff 照提案（E-VER-01 改 gold／E-VER-06 改 gold 为全量／E-VER-08 题面+gold 补 `2026-08`）。
+- 语义包不空跳版本：只升 `dataset_version`／`seed_version` 1→2；`meta.version` 不动。
+- E-VER-08 `domain=products` 本次不捆绑、另立登记；如后续要做需第 4 条 diff 重批。
+- 第 56 轮块已出（`TASK_BOARD §75.2`）：落地＋跑前加固＋G-2/G-5 复跑＋门禁输入重算。
+
+### 70.3 注入与边界
+
+- 注入形态 ＝ **无**；未执行 N/A。
+- 本轮 QA 未计费出站（replay 只读匣带）；一次性 PG/Redis 已清。
+- 未动业务代码、冻结集、阈值、判据和共享 ecom；台账逐位不动。
