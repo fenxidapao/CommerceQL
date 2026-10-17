@@ -1,0 +1,81 @@
+{
+  "generated_at": "2026-10-17T19:18:07+0800",
+  "code_head": "b70822e",
+  "evidence_head": "2d26d0a",
+  "case_id": "E-VER-08",
+  "question": "T_A 的收货省份覆盖数是多少？",
+  "gold_sql": "SELECT COUNT(DISTINCT region_code) FROM v_order_paid WHERE region_code IS NOT NULL",
+  "bundle_metric": {
+    "name": "province_covered_cnt",
+    "yaml": "semantic/bundle_2026.09.14.1.yaml:887-904",
+    "definition_note_contains": "须给时间范围",
+    "time_basis": "pay_time"
+  },
+  "batches": [
+    {
+      "batch": "G2",
+      "round": 2,
+      "source": "eval/results_r53g2_r2.json",
+      "terminal_event": "refuse",
+      "refusal_reason": "no_data_asset",
+      "equivalent": false,
+      "normalize": {
+        "normalized_question": "T_A 的收货省份覆盖数是多少？",
+        "intent": "query",
+        "confidence": 0.93,
+        "time_expression": null,
+        "unmapped_terms": [],
+        "clarify_hint": null,
+        "reason_code": null
+      },
+      "plan": {
+        "assets": [
+          {
+            "asset": "order_paid",
+            "join_key": null
+          }
+        ],
+        "blocking_issues": [
+          "问题未提供时间范围：province_covered_cnt（收货省份覆盖数）的时间基准是 pay_time，需要指定统计区间（如某月、近7天、某活动期间），不能默认为“本月”。"
+        ],
+        "dimensions": [],
+        "filters": [],
+        "grain": "整体汇总（无分组，单行）",
+        "limit": 1,
+        "metrics": [
+          {
+            "caliber": "province_covered_cnt：COUNT(DISTINCT order_paid.region_code) WHERE region_code IS NOT NULL，按支付时间 pay_time 统计，跨列去重，只计入实际成交覆盖到的收货省份；默认谓词 pay_status = 'paid'、refund_status <> 'refunded'、is_test_order = false",
+            "name": "province_covered_cnt"
+          }
+        ],
+        "order_by": [],
+        "output_columns": [
+          "province_covered_cnt"
+        ],
+        "time_range": {
+          "end": null,
+          "start": null
+        }
+      }
+    },
+    {
+      "batch": "57",
+      "round": 1,
+      "source": "eval/results_r53f57_r1.json",
+      "terminal_event": "clarify",
+      "refusal_reason": null,
+      "equivalent": false,
+      "normalize": {
+        "normalized_question": "T_A 的收货省份覆盖数是多少？",
+        "intent": "clarify_needed",
+        "confidence": 0.55,
+        "clarify_hint": "查询收货省份覆盖数需要时间范围（该指标以支付时间为时间基准），请补充统计区间，例如上月、近7天或具体日期段。",
+        "reason_code": "missing_time_range",
+        "time_expression": null,
+        "unmapped_terms": []
+      },
+      "plan": null
+    }
+  ],
+  "conclusion": "两批都因 province_covered_cnt 缺时间范围而拒绝；差异仅为模型选择 intent=clarify_needed 或 plan blocking_issues。根因属冻结集“事实表口径须给时间范围 vs gold 无时间谓词”冲突，不是普通回归。"
+}

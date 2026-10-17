@@ -1,0 +1,63 @@
+{
+  "generated_at": "2026-10-17T19:18:17+0800",
+  "code_head": "b70822e",
+  "g2_denominator": 10,
+  "threshold": 0.95,
+  "conflicts": [
+    {
+      "case_id": "E-VER-01",
+      "question": "T_A 2026-08 的日期维表有多少天？",
+      "expected_behavior": "execute",
+      "gold_sql": "SELECT COUNT(*) FROM v_dim_date",
+      "gold_result_hash": "sha256:16b496dc3e59e31900eadc8ea34f7d81c17dbc66bc5039ceb1c69dad8d00fdba",
+      "terminal_event": "complete",
+      "outcome": "success",
+      "refusal_reason": null,
+      "equivalent": false,
+      "sql_text": "SELECT COUNT(*) AS day_cnt FROM v_dim_date WHERE year = %(year)s AND month = %(month)s LIMIT 10000",
+      "attribution": {
+        "category": "gate_policy_gap",
+        "signal": "闸门自身判据缺陷：F2 域 `orders` 的默认谓词列 ['is_test_order', 'pay_status', 'refund_status'] 被注入到缺列资产 `v_dim_date`（注入后必然 R06）",
+        "severity": "gate"
+      }
+    },
+    {
+      "case_id": "E-VER-06",
+      "question": "T_A 的活动数是多少？",
+      "expected_behavior": "execute",
+      "gold_sql": "SELECT COUNT(*) FROM v_campaign WHERE campaign_type = 'normal_sale'",
+      "gold_result_hash": "sha256:82b91475bfef6bda1fa9d517cd3ee39804d3dc28da9965046ad3c14d5f58dd15",
+      "terminal_event": "complete",
+      "outcome": "success",
+      "refusal_reason": null,
+      "equivalent": false,
+      "sql_text": "SELECT COUNT(*) AS campaign_cnt FROM v_campaign LIMIT 1",
+      "attribution": {
+        "category": "gate_policy_gap",
+        "signal": "闸门自身判据缺陷：F2 域 `orders` 的默认谓词列 ['is_test_order', 'pay_status', 'refund_status'] 被注入到缺列资产 `v_campaign`（注入后必然 R06）",
+        "severity": "gate"
+      }
+    },
+    {
+      "case_id": "E-VER-08",
+      "question": "T_A 的收货省份覆盖数是多少？",
+      "expected_behavior": "execute",
+      "gold_sql": "SELECT COUNT(DISTINCT region_code) FROM v_order_paid WHERE region_code IS NOT NULL",
+      "gold_result_hash": "sha256:a0b3c1b524fb20987722479c2fbef657cd73096342a271eec179c4507631c89f",
+      "terminal_event": "refuse",
+      "outcome": "refuse",
+      "refusal_reason": "no_data_asset",
+      "equivalent": false,
+      "sql_text": "",
+      "attribution": {
+        "category": "over_refusal",
+        "signal": "可回答的题被判拒答",
+        "severity": "normal"
+      }
+    }
+  ],
+  "theoretical_max_if_three_conflicts_remain_non_equivalent": 7,
+  "theoretical_max_rate": 0.7,
+  "pass_requirement_with_ten_cases": "至少 9.5/10；整数分子下必须 10/10",
+  "conclusion": "不改冻结集/判据/阈值时，E-VER-01/06/08 三条结构冲突使 G-2 不可能达到 0.95；需要总控正式裁豁免、契约澄清或重定义分母。"
+}

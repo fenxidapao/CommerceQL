@@ -5595,3 +5595,71 @@ M-DIM-08  n_records=1 n_scored=1 n_unscored=0 n_equivalent=1
 - **探索/中断批另报**：`289,967 / 0.756654`（stale_0000e42）＋`262,158 / 0.571627`（stale_eee99a4）＋`281,975 / 0.864521`（aborted_c_runner）＝`834,100 / 2.192802`；**本轮实际合计 `2,927,600 tokens / 8.789877`**。
 - **未动**：`reports/qa/**`、共享 `ecom`、冻结集、阈值、判据措辞、07 §10.2 的 15s；门禁未重算仍 `PASS 1/8`；零取号 `U-143`；U-127 仍 open。
 - **复算入口**：绑定 live 读 `eval/results_r53_stab_*.json` 与 `eval/results_{g2,f57}_r53_clean.json`；原始轮读 `eval/results_r53{g2,f57}_r*.json`；回放命令 `python eval/replay_bound.py --cases E-VER-07 --mode replay --cassette eval/cassettes/w8_r53_stab_E-VER-07_1.jsonl --out E:\codex\w8r53\replay_E-VER-07_1.json --provenance ... --yes`（M-DIM-08 同法换 `_2`）；以上入口不命中本节自身。
+
+## §五四 第 54 轮 · E-VER-08 冻结冲突对撞 ＋ G-2 结构上限/正式豁免申请 ＋ G-5 完整分母清算 ｜ 2026-10-17 19:1x–19:2x +0800 ｜ 起点 `d61e254`（QA-only；代码基线 `b70822e`）
+
+### 54.0 结论
+
+| 项 | 判 | 现读 |
+|---|---|---|
+| A. E-VER-08 跨批差异 | ✅ 根因判定 | 两批都在“缺时间范围”停；G-2 走 `normalize→query→plan blocking→refuse/no_data_asset`，57 走 `normalize→clarify_needed→clarify`；均为非等价 |
+| A. 修复 | 不做 | 属既有“事实表口径须给时间范围 vs gold 无时间谓词”冻结冲突；不得为了让某批 execute 改 metric/prompt/判据 |
+| B. G-2 结构上限 | 🔴 | 10 条中 E-VER-01/06/08 三条结构冲突；当前判据下理论最大等价数 = **7/10 = 70%**，低于 95% 所需 10/10 |
+| B. G-2 正式申请 | ✅ 已出材料 | `backend/reports/w8/G2_EXEMPTION_REQUEST.md`；列出豁免、契约澄清、重定义分母、维持现状四种处置及代价 |
+| C. G-5 完整分母 | 🔴 UNVERIFIED | 完整分母 `execute 124 / clarify 18 / refuse 24`；现有 57 子集只覆盖 57 应答题和 0 应拒答题；最小补测 = 67 execute＋24 refuse = 91 条 |
+| C. 全量再跑 | ❌ 不可用 | `results_r54_full166.json` 166/166 均为 `LLM_UPSTREAM_ERROR`、0 token、熔断；pilot 3/3 同类失败 ⇒ provider 窗口不可用 |
+| replay | ✅ | E-VER-07/M-DIM-08 均 equivalent=1；E-VER-08 G-2=refuse、57=clarify，均在 `d61e254/dirty=false` 命中 |
+| integration / offline | ✅ | 124 passed/0 failed；offline 2562 passed/0 failed（3 条环境敏感测试分开跑） |
+| 门禁 | 🔴 未重算 | 仍 `PASS 1/8`；U-127 open |
+
+### 54.1 A：E-VER-08 三列对撞与结论
+
+**证据**：`eval/results_r54_ever08_cross_batch.json`。
+
+| batch | normalize | plan blocking 原文 | terminal | equivalent |
+|---|---|---|---|---|
+| G-2 round2 | `query` | “问题未提供时间范围：`province_covered_cnt` … `time_basis=pay_time`，需要指定统计区间” | `refuse/no_data_asset` | false |
+| 57 round1 | `clarify_needed`，`reason_code=missing_time_range` | 未到 plan | `clarify` | false |
+
+**题面/gold/包内口径**：题面 `T_A 的收货省份覆盖数是多少？`；gold `SELECT COUNT(DISTINCT region_code) FROM v_order_paid WHERE region_code IS NOT NULL`（无时间谓词）；`semantic/bundle_2026.09.14.1.yaml:887-904` 的 `province_covered_cnt` 为 `time_basis=pay_time`，定义自述“须给时间范围”。⇒ 跨批终态差异是**同根因两条拒绝出口**，登记为“冻结冲突导致终态不稳定”，非普通回归。
+
+### 54.2 B：G-2 结构上限与正式申请
+
+**结构上限**：阈值 `>=0.95`；10 条时 PASS 需 **10/10**。若 E-VER-01/06/08 三条冲突继续非等价，理论最大 = **7/10 = 70%**。三条证据：
+- E-VER-01：题面 `2026-08`，gold 全表 `COUNT(*) FROM v_dim_date`；包内 `day_cnt` `:908-922` 要求月份筛选。
+- E-VER-06：gold `campaign_type='normal_sale'`；包内 `campaign_cnt` `:847-863` 刻意取全量，且 `M-DIM-04` 的 gold 又无该谓词。
+- E-VER-08：见 54.1。
+
+**正式材料**：`backend/reports/w8/G2_EXEMPTION_REQUEST.md` 已列出：
+1. 正式豁免三例外（保留 10 条全量诊断）；
+2. 契约澄清/改 gold（需产品/架构共同裁定）；
+3. 重定义分母（冲突外子集，双口径透明）；
+4. 维持现状（G-2 继续 FAIL）。
+W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
+
+### 54.3 C：G-5 完整分母清算
+
+**结构清单**：`eval/results_r54_full_denominator_structure.json`、`eval/results_r54_g5_partial.json`。完整数据集：`execute 124 / clarify 18 / refuse 24`。
+
+现有 57 子集（全部是 execute）：
+- `complete+equivalent 19`；
+- `complete 非等价 26`；
+- `refuse 9`（其中 7 条缺时间范围冻结冲突、1 条 E-MET-08 反面口径、1 条城市/店铺绑定歧义）；
+- `clarify 3`（E-VER-08 时间范围；H-STR-05/M-DIM-06 绑定/指标歧义）。
+
+**完整 G-5 关键缺口**：`correct_refused` 需要 24 条应拒答题，本轮 0 条；`answerable_total` 124，现有只覆盖 57，缺 67。⇒ 最小补测块 = **91 条**（67 execute＋24 refuse）；18 条 clarify 非 G-5 必需，但 G-8 需要，单列。全量 166 与 pilot 3 均因 provider 故障未产出可判样本；不得从 57 子集外推 G-5。
+
+### 54.4 复跑与 replay
+
+- `E-VER-07`：`eval/results_r54_replay_E-VER-07.json`，replay 命中，`equivalent=1`；
+- `M-DIM-08`：同法，`equivalent=1`；
+- `E-VER-08`：G-2 分支 replay = `refuse/no_data_asset`，57 分支 replay = `clarify`；均 `git_rev=d61e254/dirty=false`。
+- 以上 replay 均零出站；stdout 的 GBK 解码异常只是 PowerShell 捕获子进程输出，artifact 已正常写入（JSON 可读）。
+
+### 54.5 复跑、出站与边界
+
+- **integration**：一次性 `w8r54-int-pg`／`w8r54-int-redis`（宿主 55439／56386）＋ Alembic → **124 passed / 0 failed / 33.01s**；DROP 后残渣仅共享 `ecom`、`ecom_u123_probe`。
+- **offline**：主体 `--basetemp=.venv\\pytest_tmp_r54`（跳过区）⇒ `2559 passed / 2 failed / 1 deselected`；失败仅因临时目录必须在仓库外的环境断言；三条环境敏感测试在系统外部临时根单独跑 ⇒ `3 passed`。两段合计 **2562 passed / 0 failed**；临时目录已删除。
+- **全量失败批**：`results_r54_full166.json` = 166 records、166 `LLM_UPSTREAM_ERROR`、0 token、0 price_guess；首批连接失败后 `LlmCircuitOpen`。pilot3 = 3/3 同类错误。
+- **未动**：代码、`reports/qa/**`、共享 `ecom`、冻结集、阈值、判据措辞、07 §10.2 的 15s；门禁未重算；U-127 open。
+- **复算入口**：A 读 `eval/results_r54_ever08_cross_batch.json`；B 读 `eval/results_r54_g2_conflicts.json`＋`backend/reports/w8/G2_EXEMPTION_REQUEST.md`；C 读 `eval/results_r54_full_denominator_structure.json`＋`eval/results_r54_g5_partial.json`＋`eval/results_r54_full166.json`。以上入口不命中本节自身。

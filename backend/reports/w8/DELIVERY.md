@@ -690,3 +690,10 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **C**：G-2 clean `9 complete/1 refuse`、eq7；57 clean `45 complete/9 refuse/3 clarify`、eq19；均不达门。integration `124/0`；offline `2562/0`。
 - **出站**：最终绑定面 `2,093,500 tokens / price_guess 6.597075`；含探索/中断总面 `2,927,600 / 8.789877`。
 - **边界**：未动 QA、共享 ecom、冻结集/阈值/判据、15s；门禁未重算（`PASS 1/8`）；U-127 open；零取号 `U-143`。
+## 第 54 轮交付（E-VER-08 冻结冲突对撞 ＋ G-2 豁免申请 ＋ G-5 完整分母清算 ｜ 起点 `d61e254`／代码 `b70822e` ｜ 2026-10-17 19:1x–19:2x +0800）
+
+- **A**：E-VER-08 两批同为缺时间范围：G-2 `refuse/no_data_asset`，57 `clarify`；登记为冻结冲突导致的出口不稳定，不改 metric/prompt/判据。
+- **B**：G-2 现有三条冻结冲突，10 条分母理论最大 7/10=70%；正式材料见 `backend/reports/w8/G2_EXEMPTION_REQUEST.md`，W8 不自行豁免。
+- **C**：G-5 完整分母 166（execute124/clarify18/refuse24）；现有 57 子集只覆盖 57 应答题、0 应拒答题；最小补测 91 条。全量 166/pilot3 因 provider 故障 0 token、不可判。
+- **复跑**：integration 124/0；offline 分段合计 2562/0；E-VER-07/M-DIM-08 replay 均 equivalent=1，E-VER-08 两分支按原终态命中。
+- **边界**：未改代码、QA、冻结集/阈值/判据、共享 ecom、15s；门禁未重算 `PASS 1/8`；U-127 open。
