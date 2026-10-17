@@ -1,0 +1,30 @@
+{
+  "round": 56,
+  "head_before": "1ec8f4d",
+  "checked_at": "2026-10-17T20:45:00+08:00",
+  "dataset": {
+    "candidate_expected": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+    "actual": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+    "match": true,
+    "version": "2",
+    "frozen_at": "2026-10-17"
+  },
+  "gold_seed": {
+    "candidate_expected": "sha256:812728f1be0dc1d7e58474f5bfe76c301e60a51f30deb280f232bee72af47466",
+    "actual": "sha256:2f91ed51e0c97fcbb45b7a59eabc13067167747df52d5cae6d1b37cfe339a592",
+    "match": false,
+    "version": "2"
+  },
+  "root_cause": "提案候选 seed hash 只替换了 question/gold_sql，未重跑 build_frozen_set 后的 difficulty_struct/difficulty_semantic；E-VER-01 和 E-VER-08 由 easy→medium 后改变 seed 排序，因此 812728 不再是落盘后的真实 seed hash。",
+  "evidence": [
+    "旧数据集 a2e165e:eval/dataset_v1_frozen.json + 仅替换 question/gold_sql ⇒ 812728f1...",
+    "新数据集 dataset_v1_frozen.json（builder 重算 difficulty/grid）⇒ 2f91ed51...",
+    "第一处分歧位于 seed 排序第 49 项：候选 E-VER-01 vs 实际 E-VER-02"
+  ],
+  "decision": "不再为迎合 812728 改动难度字段或 seed 排序；应以 builder 实算 2f91ed51... 为 v2 seed 真值，并在复跑前记录该勘误。",
+  "outbound": {
+    "calls": 0,
+    "tokens": 0,
+    "price_guess_cny": 0
+  }
+}

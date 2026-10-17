@@ -271,3 +271,42 @@ def test_new_f_families_are_present_without_renaming_existing_ones(
     assert index.level_of_ref("region.region_name") == GrainRef(
         "city+region", "region", 2
     )
+
+
+def test_g2_contract_gold_no_longer_has_frozen_conflicts(
+    cases: dict[str, dict[str, object]],
+) -> None:
+    """第 56 轮冻结基线 v2 的防漂回钉。
+
+    三条冲突必须同时保持：
+    - E-VER-01：题面 2026-08 必须落到月份谓词；
+    - E-VER-06：活动数按包内全量口径，不得重新加 normal_sale；
+    - E-VER-08：事实表收货省份覆盖数必须显式带 pay_time 月份范围。
+    同时保证 F-4 的 E-VER-07/M-DIM-08 仍走 v_region 且不带时间谓词。
+    """
+    e1 = str(cases["E-VER-01"]["gold_sql"]).lower()
+    e6 = str(cases["E-VER-06"]["gold_sql"]).lower()
+    e8 = str(cases["E-VER-08"]["gold_sql"]).lower()
+    e7 = str(cases["E-VER-07"]["gold_sql"]).lower()
+    m8 = str(cases["M-DIM-08"]["gold_sql"]).lower()
+
+    assert "year = 2026" in e1 and "month = 8" in e1
+    assert "campaign_type" not in e6
+    assert "pay_time" in e8 and "2026-08-01" in e8 and "2026-09-01" in e8
+
+    assert "v_region" in e7 and "region_name" in e7 and "pay_time" not in e7
+    assert "v_region" in m8 and "group by" in m8 and "pay_time" not in m8
+
+
+def test_g2_v2_frozen_baseline_is_versioned_and_locked() -> None:
+    dataset = json.loads(DATASET.read_text(encoding="utf-8"))
+    seed = json.loads((REPO / "eval" / "gold_query_seed_v1.json").read_text(encoding="utf-8"))
+    assert dataset["dataset_version"] == "2"
+    assert dataset["content_hash"] == (
+        "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5"
+    )
+    assert seed["seed_version"] == "2"
+    assert seed["derived_from_content_hash"] == dataset["content_hash"]
+    assert seed["content_hash"] == (
+        "sha256:2f91ed51e0c97fcbb45b7a59eabc13067167747df52d5cae6d1b37cfe339a592"
+    )

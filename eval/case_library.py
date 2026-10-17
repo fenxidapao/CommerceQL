@@ -79,19 +79,22 @@ def mk(cid, block, q, sql, tags, domain, tenant=None, behavior="execute",
 # 形状：单表 / 1 列 / 1 聚合 / ≤1 条件（条件多了 o 就 +1，掉出 easy）
 # ============================================================================
 mk("E-VER-01", "A", "T_A 2026-08 的日期维表有多少天？",
-   "SELECT COUNT(*) FROM v_dim_date", [], "orders", "T_A",
-   notes="无 tenant 的公共维表；为保持 easy，条件数必须为 0")
+   "SELECT COUNT(*) FROM v_dim_date WHERE year = 2026 AND month = 8", [], "orders", "T_A",
+   notes="公共日期维表；题面要求 2026-08，gold 显式加月份筛选")
 for i, (label, sql) in enumerate([
     ("在架商品数", "SELECT COUNT(*) FROM v_product WHERE on_sale = 1"),
     ("下架商品数", "SELECT COUNT(*) FROM v_product WHERE on_sale = 0"),
     ("SPU 数", "SELECT COUNT(DISTINCT spu_id) FROM v_product WHERE on_sale = 1"),
     ("店铺数", "SELECT COUNT(*) FROM v_shop WHERE city IS NOT NULL"),
-    ("活动数", "SELECT COUNT(*) FROM v_campaign WHERE campaign_type = 'normal_sale'"),
+    ("活动数", "SELECT COUNT(*) FROM v_campaign"),
     ("华东覆盖省份数", "SELECT COUNT(*) FROM v_region WHERE region_name = '华东'"),
     ("收货省份覆盖数", "SELECT COUNT(DISTINCT region_code) FROM v_order_paid "
-                 "WHERE region_code IS NOT NULL"),
+                 "WHERE region_code IS NOT NULL AND pay_time >= '2026-08-01' "
+                 "AND pay_time < '2026-09-01'"),
 ]):
-    mk(f"E-VER-{i + 2:02d}", "A", f"T_A 的{label}是多少？", sql, [], "products", "T_A",
+    question = (f"T_A 2026-08 的{label}是多少？" if label == "收货省份覆盖数"
+                else f"T_A 的{label}是多少？")
+    mk(f"E-VER-{i + 2:02d}", "A", question, sql, [], "products", "T_A",
        notes="维表原始计数：无口径、无映射、无隐式过滤 → 语义最低档")
 mk("E-VER-10", "A", "T_B 的在架商品数是多少？",
    "SELECT COUNT(*) FROM v_product WHERE on_sale = 1", [], "products", "T_B")

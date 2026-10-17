@@ -43,10 +43,24 @@ sys.path.insert(0, os.path.join(ROOT, "data", "generator"))
 
 from layering import annotate_case, grid  # noqa: E402
 
-DATASET_VERSION = "1"
+DATASET_VERSION = "2"
 DB_PATH = os.path.join(ROOT, "data", "ecom_sandbox.db")
 OUT_DATASET = os.path.join(HERE, "dataset_v1_frozen.json")
 OUT_MANIFEST = os.path.join(HERE, "MANIFEST_v1.json")
+FROZEN_AT = "2026-10-17"
+REVISION = {
+    "approved_by": "总控",
+    "approved_at": "2026-10-17",
+    "change_reason": "G-2 B 案契约澄清：E-VER-01 月份过滤、E-VER-06 全量活动数、E-VER-08 pay_time 时间范围",
+    "supersedes": {
+        "dataset_version": "1",
+        "content_hash": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609",
+        "file_sha256": "d0929fb2f09007d6ce30d5660a13c30a2c94a7ba5573633c41f1f62fec11b680",
+        "gold_seed_version": "1",
+        "gold_seed_content_hash": "sha256:2b23d7ef4d5d5eb8690699af86237c8413e4e6bf04d9104ad61d17228aa5ea4a",
+        "gold_seed_file_sha256": "67e553424458d12c1dd3b4005ec8117c6b60fa280ce810539134752e86a387b6"
+    }
+}
 
 MIN_PER_CELL = 8
 LEVELS = ["easy", "medium", "hard", "extra"]
@@ -239,7 +253,7 @@ def build(check: bool = False, write: bool = True) -> int:
 
     dataset = {
         "dataset_version": DATASET_VERSION,
-        "frozen_at": "2026-09-16",
+        "frozen_at": FROZEN_AT,
         "frozen_rule": "一经生成即冻结；任何改动必须升 dataset_version 并重算 content_hash",
         "content_hash": chash,
         "sandbox_db_sha256": file_sha256(DB_PATH),
@@ -281,6 +295,7 @@ def build(check: bool = False, write: bool = True) -> int:
         },
         "counts": counts,
         "grid": {lv: {s: g[lv][s] for s in SEMS} for lv in LEVELS},
+        "revision": REVISION,
         "environment": {
             "python": sys.version.split()[0],
             "sqlite": sqlite3.sqlite_version,

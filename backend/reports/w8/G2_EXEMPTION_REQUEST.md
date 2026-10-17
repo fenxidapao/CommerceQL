@@ -1,5 +1,7 @@
 # G-2 正式豁免／契约处理申请（W8 第 54 轮）
 
+> **第 56 轮状态：总控已选 B 案（契约澄清/改 gold）。本文仅存历史；不再申请豁免，豁免流程自此关闭。**
+
 - 申请方：W8 开发窗；申请时点：2026-10-17 19:18 +0800。
 - 现读工作树 HEAD：`d61e254`（QA-only；被测代码提交 `b70822e`）。
 - 证据：`eval/results_r54_g2_conflicts.json`、`eval/results_g2_r53_clean.json`、`eval/dataset_v1_frozen.json`、`semantic/bundle_2026.09.14.1.yaml`。

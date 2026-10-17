@@ -100,7 +100,7 @@ def main(argv=None) -> int:
                              x["difficulty_struct"], x["difficulty_semantic"], x["case_id"])))]
 
     payload = {
-        "seed_version": "1",
+        "seed_version": "2",
         "derived_from": "eval/dataset_v1_frozen.json",
         "derived_from_content_hash": ds["content_hash"],
         "policy": "从冻结集派生（不新增 SQL 文本）；同一 gold_sql 只保留一条",

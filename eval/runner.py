@@ -92,6 +92,91 @@ DEFAULT_CASSETTE = os.path.join(_bootstrap.HERE, "cassettes", "w6_batch.jsonl")
 _OBSERVED_INPUT_TOKENS = 6500
 _OBSERVED_COST_CNY = 0.002
 
+#: 可安全重试的传输层故障；`LlmTimeout` 刻意不在其中（15s/契约超时是判据事件）。
+_TRANSIENT_RETRY_KINDS = frozenset(
+    {"ConnectError", "ConnectTimeout", "ReadTimeout", "WriteTimeout", "PoolTimeout", "RemoteProtocolError"}
+)
+_TRANSIENT_RETRY_MARKERS = frozenset(
+    {"LlmCircuitOpen", "LlmUpstreamError", "LlmConcurrencyExceeded", "upstream_fault_then_template_miss"}
+)
+
+
+def _error_markers(record: Mapping[str, Any]) -> set[str]:
+    detail = record.get("terminal_error_detail") or {}
+    if not isinstance(detail, Mapping):
+        return set()
+    return {str(v) for v in detail.values() if v is not None}
+
+
+def _is_hard_timeout_record(record: Mapping[str, Any]) -> bool:
+    return "LlmTimeout" in _error_markers(record) or "TimeoutError" in _error_markers(record)
+
+
+def _is_transient_transport_record(record: Mapping[str, Any]) -> bool:
+    """只认传输/上游可用性故障；硬超时永远返回 False。"""
+    if record.get("terminal_event") != "error":
+        return False
+    if _is_hard_timeout_record(record):
+        return False
+    markers = _error_markers(record)
+    return bool(markers & (_TRANSIENT_RETRY_KINDS | _TRANSIENT_RETRY_MARKERS))
+
+
+def _resume_should_skip(record: Mapping[str, Any]) -> bool:
+    """断点续跑只跳过已终结且**不可自动重试**的记录。
+
+    - complete/refuse/clarify：已完成，跳过；
+    - 硬超时：按判据事件留在原记录，**不重试**；
+    - 传输层故障：允许再跑一次（是否重试由 runner 的退避参数控制）；
+    - 其他未评分/未知错误：保守重跑一次。
+    """
+    if record.get("scored") is not True:
+        return False
+    if record.get("terminal_event") != "error":
+        return True
+    if _is_hard_timeout_record(record):
+        return True
+    return not _is_transient_transport_record(record)
+
+
+def _load_checkpoint(path: str, *, expected_content_hash: str) -> dict[str, dict[str, Any]]:
+    p = Path(path)
+    if not p.is_file():
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for raw in p.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        entry = json.loads(line)
+        if entry.get("dataset_content_hash") != expected_content_hash:
+            raise ValueError(
+                "checkpoint 的 dataset_content_hash 与当前冻结集不一致："
+                f"{entry.get('dataset_content_hash')} != {expected_content_hash}"
+            )
+        record = entry.get("record")
+        if isinstance(record, Mapping) and record.get("case_id"):
+            out[str(record["case_id"])] = dict(record)
+    return out
+
+
+def _append_checkpoint(
+    path: str,
+    record: Mapping[str, Any],
+    *,
+    dataset_content_hash: str,
+    checkpoint_meta: Mapping[str, Any] | None,
+) -> None:
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    entry = {
+        "dataset_content_hash": dataset_content_hash,
+        **(dict(checkpoint_meta or {})),
+        "record": dict(record),
+    }
+    with p.open("a", encoding="utf-8", newline="\n") as fh:
+        fh.write(json.dumps(entry, ensure_ascii=False, sort_keys=True, default=str) + "\n")
+
 
 # ---------------------------------------------------------------------------
 # 一、沙箱执行（金标侧 / 被测侧共用）
@@ -447,6 +532,12 @@ async def run_batch(
     db_path: str,
     column_top: int | None,
     node_timeout_overrides: Mapping[str, float] | None,
+    max_concurrency: int | None = None,
+    checkpoint_path: str | None = None,
+    resume_records: Mapping[str, Mapping[str, Any]] | None = None,
+    checkpoint_meta: Mapping[str, Any] | None = None,
+    transport_retries: int = 2,
+    transport_backoff_s: float = 2.0,
 ) -> dict[str, Any]:
     """串行跑完整批。**整批只有一个 event loop**（纪律由 `run_batch_sync` 唯一持有）。
 
@@ -460,22 +551,53 @@ async def run_batch(
         cassette_mode=mode,
         column_top=column_top,
         node_timeout_overrides=node_timeout_overrides,
+        max_concurrency=max_concurrency,
     )
     allowlist = harness.semantics.guard_allowlist(
         identity_for_case("ALLOWLIST", "T_A"), max_rows=None
     )
     records: list[dict[str, Any]] = []
+    resumed = dict(resume_records or {})
     try:
         for index, case in enumerate(cases, start=1):
+            case_id = str(case["case_id"])
+            existing = resumed.get(case_id)
+            if existing is not None and _resume_should_skip(existing):
+                print(f"[{index}/{len(cases)}] {case_id} checkpoint-skip", flush=True)
+                records.append(dict(existing))
+                continue
+
             started = time.monotonic()
-            print(f"[{index}/{len(cases)}] {case['case_id']}", flush=True)
-            record = await score_case(
-                harness, case, allowlist=allowlist, db_path=db_path
-            )
+            print(f"[{index}/{len(cases)}] {case_id}", flush=True)
+            record: dict[str, Any] = {}
+            retry_attempt = 0
+            while True:
+                record = await score_case(
+                    harness, case, allowlist=allowlist, db_path=db_path
+                )
+                if _is_transient_transport_record(record) and retry_attempt < max(0, transport_retries):
+                    delay = max(0.0, transport_backoff_s) * (2 ** retry_attempt)
+                    retry_attempt += 1
+                    print(
+                        f"    transient upstream failure; retry {retry_attempt}/"
+                        f"{max(0, transport_retries)} after {delay:.1f}s",
+                        flush=True,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                break
             # 墙钟（含沙箱复算）。`latency_ms` 来自图内计时，超时中断的用例拿不到，
             # 没有这一列就没法把"卡住"和"很快失败"区分开（真打批次必须能看出去向）。
             record["wall_s"] = round(time.monotonic() - started, 3)
+            record["runner_transport_retries"] = retry_attempt
             records.append(record)
+            if checkpoint_path:
+                _append_checkpoint(
+                    checkpoint_path,
+                    record,
+                    dataset_content_hash=str((checkpoint_meta or {}).get("dataset_content_hash") or ""),
+                    checkpoint_meta=checkpoint_meta,
+                )
     finally:
         written = harness.save_cassette()
         await harness.aclose()
@@ -483,6 +605,7 @@ async def run_batch(
         "records": records,
         "cassette_entries_written": written,
         "node_timeout_overrides": dict(harness.node_timeout_overrides),
+        "max_concurrency": harness.max_concurrency,
     }
 
 
@@ -556,6 +679,34 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--db", default=_bootstrap.SANDBOX_DB)
     parser.add_argument("--column-top", type=int, default=None)
     parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument(
+        "--checkpoint",
+        default=None,
+        help="逐条 JSONL 检查点路径；配合 --resume 可断点续跑",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="从 --checkpoint 读取已完成记录；硬超时记录按判据保留，传输故障可继续等待重试",
+    )
+    parser.add_argument(
+        "--transport-retries",
+        type=int,
+        default=2,
+        help="runner 层对 ConnectError/CircuitOpen 等传输故障的最大重试次数；LlmTimeout 不重试",
+    )
+    parser.add_argument(
+        "--transport-backoff-s",
+        type=float,
+        default=2.0,
+        help="runner 层传输故障退避基数（秒）；第 n 次等待 base*2^n",
+    )
+    parser.add_argument(
+        "--max-concurrency",
+        type=int,
+        default=None,
+        help="本次批次的额外并发帽，只收窄 Settings.LLM_MAX_CONCURRENCY",
+    )
     parser.add_argument("--yes", action="store_true", help="确认执行（不带则只打印计划）")
     parser.add_argument(
         "--provenance",
@@ -583,6 +734,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     if args.verify_only:
         return 0
+
+    checkpoint_path = args.checkpoint
+    if args.resume and not checkpoint_path:
+        checkpoint_path = str(Path(args.out).with_suffix(".checkpoint.jsonl"))
+    resume_records: dict[str, dict[str, Any]] = {}
+    if args.resume:
+        resume_records = _load_checkpoint(
+            str(checkpoint_path), expected_content_hash=str(evidence["content_hash"])
+        )
+        print(f"断点续跑：checkpoint={checkpoint_path} loaded={len(resume_records)}")
 
     dataset = _bootstrap.load_json(_bootstrap.DATASET_PATH)
     cases = load_cases(
@@ -621,6 +782,16 @@ def main(argv: list[str] | None = None) -> int:
         db_path=args.db,
         column_top=args.column_top,
         node_timeout_overrides=node_timeouts,
+        max_concurrency=args.max_concurrency,
+        checkpoint_path=checkpoint_path,
+        resume_records=resume_records if args.resume else None,
+        checkpoint_meta={
+            "dataset_content_hash": evidence["content_hash"],
+            "git_rev": stamp.get("git_rev"),
+            "git_dirty": stamp.get("git_dirty"),
+        },
+        transport_retries=max(0, args.transport_retries),
+        transport_backoff_s=max(0.0, args.transport_backoff_s),
     )
     summary = summarize(batch["records"])
     payload = {
@@ -634,6 +805,11 @@ def main(argv: list[str] | None = None) -> int:
             "n_requested": len(cases),
             "provenance": args.provenance,
             "node_timeouts": describe_node_timeouts(batch["node_timeout_overrides"]),
+            "max_concurrency": batch.get("max_concurrency"),
+            "checkpoint": checkpoint_path,
+            "resume": bool(args.resume),
+            "transport_retries": max(0, args.transport_retries),
+            "transport_backoff_s": max(0.0, args.transport_backoff_s),
         },
         "summary": summary,
         "records": batch["records"],

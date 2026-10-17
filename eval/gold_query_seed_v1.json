@@ -1,7 +1,7 @@
 {
-  "seed_version": "1",
+  "seed_version": "2",
   "derived_from": "eval/dataset_v1_frozen.json",
-  "derived_from_content_hash": "sha256:43e153de0203258c3497bd271d73c9a62f5307f907cbe5bff7cad6f5a9fe8609",
+  "derived_from_content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
   "policy": "从冻结集派生（不新增 SQL 文本）；同一 gold_sql 只保留一条",
   "coverage": {
     "unique_sql": 119,
@@ -30,11 +30,11 @@
     "per_cell": {
       "easy×medium": 10,
       "easy×high": 9,
-      "easy×low": 8,
+      "medium×low": 12,
+      "easy×low": 6,
       "hard×medium": 8,
       "hard×high": 10,
       "hard×low": 9,
-      "medium×low": 10,
       "medium×medium": 10,
       "medium×high": 17,
       "extra×high": 12,
@@ -45,7 +45,7 @@
     "cells_with_no_seed": []
   },
   "warning": "few-shot 示例**不得绕过闸门** —— 示例 SQL 同样要过 W4 守卫（07 纪律）",
-  "content_hash": "sha256:2b23d7ef4d5d5eb8690699af86237c8413e4e6bf04d9104ad61d17228aa5ea4a",
+  "content_hash": "sha256:2f91ed51e0c97fcbb45b7a59eabc13067167747df52d5cae6d1b37cfe339a592",
   "seeds": [
     {
       "seed_id": "GQ-001",
@@ -1001,20 +1001,6 @@
     },
     {
       "seed_id": "GQ-049",
-      "source_case_id": "E-VER-01",
-      "question": "T_A 2026-08 的日期维表有多少天？",
-      "gold_sql": "SELECT COUNT(*) FROM v_dim_date",
-      "metric": "(none)",
-      "domain": "orders",
-      "difficulty_struct": "easy",
-      "difficulty_semantic": "low",
-      "business_knowledge_required": [],
-      "must_contain": [],
-      "must_not_contain": [],
-      "notes": "无 tenant 的公共维表；为保持 easy，条件数必须为 0"
-    },
-    {
-      "seed_id": "GQ-050",
       "source_case_id": "E-VER-02",
       "question": "T_A 的在架商品数是多少？",
       "gold_sql": "SELECT COUNT(*) FROM v_product WHERE on_sale = 1",
@@ -1028,7 +1014,7 @@
       "notes": "维表原始计数：无口径、无映射、无隐式过滤 → 语义最低档"
     },
     {
-      "seed_id": "GQ-051",
+      "seed_id": "GQ-050",
       "source_case_id": "E-VER-03",
       "question": "T_A 的下架商品数是多少？",
       "gold_sql": "SELECT COUNT(*) FROM v_product WHERE on_sale = 0",
@@ -1042,7 +1028,7 @@
       "notes": "维表原始计数：无口径、无映射、无隐式过滤 → 语义最低档"
     },
     {
-      "seed_id": "GQ-052",
+      "seed_id": "GQ-051",
       "source_case_id": "E-VER-04",
       "question": "T_A 的SPU 数是多少？",
       "gold_sql": "SELECT COUNT(DISTINCT spu_id) FROM v_product WHERE on_sale = 1",
@@ -1056,7 +1042,7 @@
       "notes": "维表原始计数：无口径、无映射、无隐式过滤 → 语义最低档"
     },
     {
-      "seed_id": "GQ-053",
+      "seed_id": "GQ-052",
       "source_case_id": "E-VER-05",
       "question": "T_A 的店铺数是多少？",
       "gold_sql": "SELECT COUNT(*) FROM v_shop WHERE city IS NOT NULL",
@@ -1070,10 +1056,10 @@
       "notes": "维表原始计数：无口径、无映射、无隐式过滤 → 语义最低档"
     },
     {
-      "seed_id": "GQ-054",
+      "seed_id": "GQ-053",
       "source_case_id": "E-VER-06",
       "question": "T_A 的活动数是多少？",
-      "gold_sql": "SELECT COUNT(*) FROM v_campaign WHERE campaign_type = 'normal_sale'",
+      "gold_sql": "SELECT COUNT(*) FROM v_campaign",
       "metric": "(none)",
       "domain": "products",
       "difficulty_struct": "easy",
@@ -1084,7 +1070,7 @@
       "notes": "维表原始计数：无口径、无映射、无隐式过滤 → 语义最低档"
     },
     {
-      "seed_id": "GQ-055",
+      "seed_id": "GQ-054",
       "source_case_id": "E-VER-07",
       "question": "T_A 的华东覆盖省份数是多少？",
       "gold_sql": "SELECT COUNT(*) FROM v_region WHERE region_name = '华东'",
@@ -1098,21 +1084,7 @@
       "notes": "维表原始计数：无口径、无映射、无隐式过滤 → 语义最低档"
     },
     {
-      "seed_id": "GQ-056",
-      "source_case_id": "E-VER-08",
-      "question": "T_A 的收货省份覆盖数是多少？",
-      "gold_sql": "SELECT COUNT(DISTINCT region_code) FROM v_order_paid WHERE region_code IS NOT NULL",
-      "metric": "(none)",
-      "domain": "products",
-      "difficulty_struct": "easy",
-      "difficulty_semantic": "low",
-      "business_knowledge_required": [],
-      "must_contain": [],
-      "must_not_contain": [],
-      "notes": "维表原始计数：无口径、无映射、无隐式过滤 → 语义最低档"
-    },
-    {
-      "seed_id": "GQ-057",
+      "seed_id": "GQ-055",
       "source_case_id": "E-ENUM-01",
       "question": "T_A 直播渠道一共带来多少浏览量？",
       "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'live'",
@@ -1128,7 +1100,7 @@
       "notes": "需知道「直播」= channel 枚举值 live；1 个条件 → 仍是 easy"
     },
     {
-      "seed_id": "GQ-058",
+      "seed_id": "GQ-056",
       "source_case_id": "E-ENUM-02",
       "question": "T_A 搜索渠道一共带来多少浏览量？",
       "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'search'",
@@ -1144,7 +1116,7 @@
       "notes": "需知道「搜索」= channel 枚举值 search；1 个条件 → 仍是 easy"
     },
     {
-      "seed_id": "GQ-059",
+      "seed_id": "GQ-057",
       "source_case_id": "E-ENUM-03",
       "question": "T_A 推荐渠道一共带来多少浏览量？",
       "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'feed'",
@@ -1160,7 +1132,7 @@
       "notes": "需知道「推荐」= channel 枚举值 feed；1 个条件 → 仍是 easy"
     },
     {
-      "seed_id": "GQ-060",
+      "seed_id": "GQ-058",
       "source_case_id": "E-ENUM-04",
       "question": "T_A 付费广告渠道一共带来多少浏览量？",
       "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'ad'",
@@ -1176,7 +1148,7 @@
       "notes": "需知道「付费广告」= channel 枚举值 ad；1 个条件 → 仍是 easy"
     },
     {
-      "seed_id": "GQ-061",
+      "seed_id": "GQ-059",
       "source_case_id": "E-ENUM-05",
       "question": "T_A 直接访问渠道一共带来多少浏览量？",
       "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'direct'",
@@ -1192,7 +1164,7 @@
       "notes": "需知道「直接访问」= channel 枚举值 direct；1 个条件 → 仍是 easy"
     },
     {
-      "seed_id": "GQ-062",
+      "seed_id": "GQ-060",
       "source_case_id": "E-ENUM-06",
       "question": "T_A 的「3C数码」在架商品有多少个？",
       "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '3C数码'",
@@ -1208,7 +1180,7 @@
       "notes": "「一级类目」是枚举值，属 A 类知识"
     },
     {
-      "seed_id": "GQ-063",
+      "seed_id": "GQ-061",
       "source_case_id": "E-ENUM-07",
       "question": "T_A 的「家用电器」在架商品有多少个？",
       "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '家用电器'",
@@ -1224,7 +1196,7 @@
       "notes": "「一级类目」是枚举值，属 A 类知识"
     },
     {
-      "seed_id": "GQ-064",
+      "seed_id": "GQ-062",
       "source_case_id": "E-ENUM-08",
       "question": "T_A 的「美妆个护」在架商品有多少个？",
       "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '美妆个护'",
@@ -1240,7 +1212,7 @@
       "notes": "「一级类目」是枚举值，属 A 类知识"
     },
     {
-      "seed_id": "GQ-065",
+      "seed_id": "GQ-063",
       "source_case_id": "E-ENUM-09",
       "question": "T_B 的「服饰鞋包」在架商品有多少个？",
       "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '服饰鞋包'",
@@ -1256,7 +1228,7 @@
       "notes": "「一级类目」是枚举值，属 A 类知识"
     },
     {
-      "seed_id": "GQ-066",
+      "seed_id": "GQ-064",
       "source_case_id": "E-ENUM-10",
       "question": "T_C 的「食品生鲜」在架商品有多少个？",
       "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '食品生鲜'",
@@ -1272,7 +1244,7 @@
       "notes": "「一级类目」是枚举值，属 A 类知识"
     },
     {
-      "seed_id": "GQ-067",
+      "seed_id": "GQ-065",
       "source_case_id": "X-STR-01",
       "question": "T_A 在 广州市 的店铺各 SKU 浏览量合计是多少？",
       "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '广州市' GROUP BY v_product.sku_id",
@@ -1286,7 +1258,7 @@
       "notes": "3 表 JOIN + WHERE + GROUP BY → c1=4 → extra"
     },
     {
-      "seed_id": "GQ-068",
+      "seed_id": "GQ-066",
       "source_case_id": "X-STR-02",
       "question": "T_A 在 杭州市 的店铺各 SKU 浏览量合计是多少？",
       "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '杭州市' GROUP BY v_product.sku_id",
@@ -1300,7 +1272,7 @@
       "notes": "3 表 JOIN + WHERE + GROUP BY → c1=4 → extra"
     },
     {
-      "seed_id": "GQ-069",
+      "seed_id": "GQ-067",
       "source_case_id": "X-STR-03",
       "question": "T_A 在 成都市 的店铺各 SKU 浏览量合计是多少？",
       "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '成都市' GROUP BY v_product.sku_id",
@@ -1314,7 +1286,7 @@
       "notes": "3 表 JOIN + WHERE + GROUP BY → c1=4 → extra"
     },
     {
-      "seed_id": "GQ-070",
+      "seed_id": "GQ-068",
       "source_case_id": "X-STR-04",
       "question": "T_A 在 武汉市 的店铺各 SKU 浏览量合计是多少？",
       "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '武汉市' GROUP BY v_product.sku_id",
@@ -1328,7 +1300,7 @@
       "notes": "3 表 JOIN + WHERE + GROUP BY → c1=4 → extra"
     },
     {
-      "seed_id": "GQ-071",
+      "seed_id": "GQ-069",
       "source_case_id": "X-STR-05",
       "question": "T_A 在 南京市 的店铺各 SKU 浏览量合计是多少？",
       "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '南京市' GROUP BY v_product.sku_id",
@@ -1342,7 +1314,7 @@
       "notes": "3 表 JOIN + WHERE + GROUP BY → c1=4 → extra"
     },
     {
-      "seed_id": "GQ-072",
+      "seed_id": "GQ-070",
       "source_case_id": "X-STR-06",
       "question": "T_A 在 西安市 的店铺各 SKU 浏览量合计是多少？",
       "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '西安市' GROUP BY v_product.sku_id",
@@ -1356,7 +1328,7 @@
       "notes": "3 表 JOIN + WHERE + GROUP BY → c1=4 → extra"
     },
     {
-      "seed_id": "GQ-073",
+      "seed_id": "GQ-071",
       "source_case_id": "X-STR-07",
       "question": "T_A 在 长沙市 的店铺各 SKU 浏览量合计是多少？",
       "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '长沙市' GROUP BY v_product.sku_id",
@@ -1370,7 +1342,7 @@
       "notes": "3 表 JOIN + WHERE + GROUP BY → c1=4 → extra"
     },
     {
-      "seed_id": "GQ-074",
+      "seed_id": "GQ-072",
       "source_case_id": "X-STR-08",
       "question": "T_A 在 郑州市 的店铺各 SKU 浏览量合计是多少？",
       "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '郑州市' GROUP BY v_product.sku_id",
@@ -1384,7 +1356,7 @@
       "notes": "3 表 JOIN + WHERE + GROUP BY → c1=4 → extra"
     },
     {
-      "seed_id": "GQ-075",
+      "seed_id": "GQ-073",
       "source_case_id": "X-ENUM-01",
       "question": "T_A 的「3C数码」商品在各店铺的浏览量合计是多少？",
       "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '3C数码' GROUP BY v_shop.shop_id",
@@ -1400,7 +1372,7 @@
       "notes": ""
     },
     {
-      "seed_id": "GQ-076",
+      "seed_id": "GQ-074",
       "source_case_id": "X-ENUM-02",
       "question": "T_A 的「家用电器」商品在各店铺的浏览量合计是多少？",
       "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '家用电器' GROUP BY v_shop.shop_id",
@@ -1416,7 +1388,7 @@
       "notes": ""
     },
     {
-      "seed_id": "GQ-077",
+      "seed_id": "GQ-075",
       "source_case_id": "X-ENUM-03",
       "question": "T_A 的「服饰鞋包」商品在各店铺的浏览量合计是多少？",
       "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '服饰鞋包' GROUP BY v_shop.shop_id",
@@ -1432,7 +1404,7 @@
       "notes": ""
     },
     {
-      "seed_id": "GQ-078",
+      "seed_id": "GQ-076",
       "source_case_id": "X-ENUM-04",
       "question": "T_A 的「食品生鲜」商品在各店铺的浏览量合计是多少？",
       "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '食品生鲜' GROUP BY v_shop.shop_id",
@@ -1448,7 +1420,7 @@
       "notes": ""
     },
     {
-      "seed_id": "GQ-079",
+      "seed_id": "GQ-077",
       "source_case_id": "X-ENUM-05",
       "question": "T_A 的「美妆个护」商品在各店铺的浏览量合计是多少？",
       "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '美妆个护' GROUP BY v_shop.shop_id",
@@ -1464,7 +1436,7 @@
       "notes": ""
     },
     {
-      "seed_id": "GQ-080",
+      "seed_id": "GQ-078",
       "source_case_id": "X-ENUM-06",
       "question": "T_A 的「家居家装」商品在各店铺的浏览量合计是多少？",
       "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '家居家装' GROUP BY v_shop.shop_id",
@@ -1480,7 +1452,7 @@
       "notes": ""
     },
     {
-      "seed_id": "GQ-081",
+      "seed_id": "GQ-079",
       "source_case_id": "X-ENUM-07",
       "question": "T_A 的「母婴玩具」商品在各店铺的浏览量合计是多少？",
       "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '母婴玩具' GROUP BY v_shop.shop_id",
@@ -1496,7 +1468,7 @@
       "notes": ""
     },
     {
-      "seed_id": "GQ-082",
+      "seed_id": "GQ-080",
       "source_case_id": "X-ENUM-08",
       "question": "T_A 的「运动户外」商品在各店铺的浏览量合计是多少？",
       "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '运动户外' GROUP BY v_shop.shop_id",
@@ -1512,7 +1484,7 @@
       "notes": ""
     },
     {
-      "seed_id": "GQ-083",
+      "seed_id": "GQ-081",
       "source_case_id": "H-STR-01",
       "question": "T_A 位于广州的店铺各有多少个商品？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '广州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1526,7 +1498,7 @@
       "notes": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard"
     },
     {
-      "seed_id": "GQ-084",
+      "seed_id": "GQ-082",
       "source_case_id": "H-STR-02",
       "question": "T_A 位于杭州的店铺各有多少个商品？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '杭州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1540,7 +1512,7 @@
       "notes": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard"
     },
     {
-      "seed_id": "GQ-085",
+      "seed_id": "GQ-083",
       "source_case_id": "H-STR-03",
       "question": "T_A 位于成都的店铺各有多少个商品？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '成都市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1554,7 +1526,7 @@
       "notes": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard"
     },
     {
-      "seed_id": "GQ-086",
+      "seed_id": "GQ-084",
       "source_case_id": "H-STR-04",
       "question": "T_A 位于武汉的店铺各有多少个商品？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '武汉市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1568,7 +1540,7 @@
       "notes": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard"
     },
     {
-      "seed_id": "GQ-087",
+      "seed_id": "GQ-085",
       "source_case_id": "H-STR-05",
       "question": "T_A 位于南京的店铺各有多少个商品？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '南京市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1582,7 +1554,7 @@
       "notes": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard"
     },
     {
-      "seed_id": "GQ-088",
+      "seed_id": "GQ-086",
       "source_case_id": "H-STR-06",
       "question": "T_A 位于西安的店铺各有多少个商品？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '西安市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1596,7 +1568,7 @@
       "notes": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard"
     },
     {
-      "seed_id": "GQ-089",
+      "seed_id": "GQ-087",
       "source_case_id": "H-STR-07",
       "question": "T_A 位于长沙的店铺各有多少个商品？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '长沙市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1610,7 +1582,7 @@
       "notes": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard"
     },
     {
-      "seed_id": "GQ-090",
+      "seed_id": "GQ-088",
       "source_case_id": "H-STR-08",
       "question": "T_A 位于郑州的店铺各有多少个商品？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '郑州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1624,7 +1596,7 @@
       "notes": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard"
     },
     {
-      "seed_id": "GQ-091",
+      "seed_id": "GQ-089",
       "source_case_id": "H-STR-09",
       "question": "T_A 各店铺的商品平均标价是多少？",
       "gold_sql": "SELECT v_shop.shop_id, AVG(v_product.list_price) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1638,7 +1610,7 @@
       "notes": ""
     },
     {
-      "seed_id": "GQ-092",
+      "seed_id": "GQ-090",
       "source_case_id": "H-CAT-01",
       "question": "T_A 的「3C数码」各店铺的商品数分别是多少？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '3C数码' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1654,7 +1626,7 @@
       "notes": "2 表 + 2 个条件 + GROUP BY → 需核对是否落在 hard"
     },
     {
-      "seed_id": "GQ-093",
+      "seed_id": "GQ-091",
       "source_case_id": "H-CAT-02",
       "question": "T_A 的「家用电器」各店铺的商品数分别是多少？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '家用电器' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1670,7 +1642,7 @@
       "notes": "2 表 + 2 个条件 + GROUP BY → 需核对是否落在 hard"
     },
     {
-      "seed_id": "GQ-094",
+      "seed_id": "GQ-092",
       "source_case_id": "H-CAT-03",
       "question": "T_A 的「服饰鞋包」各店铺的商品数分别是多少？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '服饰鞋包' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1686,7 +1658,7 @@
       "notes": "2 表 + 2 个条件 + GROUP BY → 需核对是否落在 hard"
     },
     {
-      "seed_id": "GQ-095",
+      "seed_id": "GQ-093",
       "source_case_id": "H-CAT-04",
       "question": "T_A 的「食品生鲜」各店铺的商品数分别是多少？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '食品生鲜' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1702,7 +1674,7 @@
       "notes": "2 表 + 2 个条件 + GROUP BY → 需核对是否落在 hard"
     },
     {
-      "seed_id": "GQ-096",
+      "seed_id": "GQ-094",
       "source_case_id": "H-CAT-05",
       "question": "T_A 的「美妆个护」各店铺的商品数分别是多少？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '美妆个护' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
@@ -1718,7 +1690,7 @@
       "notes": "2 表 + 2 个条件 + GROUP BY → 需核对是否落在 hard"
     },
     {
-      "seed_id": "GQ-097",
+      "seed_id": "GQ-095",
       "source_case_id": "H-ENUM-01",
       "question": "T_A 处于「部分退款」状态的订单在各店铺分别是多少笔？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'partial' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id",
@@ -1734,7 +1706,7 @@
       "notes": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard；枚举映射属 A 类 → 中"
     },
     {
-      "seed_id": "GQ-098",
+      "seed_id": "GQ-096",
       "source_case_id": "H-ENUM-02",
       "question": "T_A 处于「全额退款」状态的订单在各店铺分别是多少笔？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id",
@@ -1750,7 +1722,7 @@
       "notes": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard；枚举映射属 A 类 → 中"
     },
     {
-      "seed_id": "GQ-099",
+      "seed_id": "GQ-097",
       "source_case_id": "H-ENUM-03",
       "question": "T_A 处于「无退款」状态的订单在各店铺分别是多少笔？",
       "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'none' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id",
@@ -1764,6 +1736,34 @@
       "must_contain": [],
       "must_not_contain": [],
       "notes": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard；枚举映射属 A 类 → 中"
+    },
+    {
+      "seed_id": "GQ-098",
+      "source_case_id": "E-VER-01",
+      "question": "T_A 2026-08 的日期维表有多少天？",
+      "gold_sql": "SELECT COUNT(*) FROM v_dim_date WHERE year = 2026 AND month = 8",
+      "metric": "(none)",
+      "domain": "orders",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "business_knowledge_required": [],
+      "must_contain": [],
+      "must_not_contain": [],
+      "notes": "公共日期维表；题面要求 2026-08，gold 显式加月份筛选"
+    },
+    {
+      "seed_id": "GQ-099",
+      "source_case_id": "E-VER-08",
+      "question": "T_A 2026-08 的收货省份覆盖数是多少？",
+      "gold_sql": "SELECT COUNT(DISTINCT region_code) FROM v_order_paid WHERE region_code IS NOT NULL AND pay_time >= '2026-08-01' AND pay_time < '2026-09-01'",
+      "metric": "(none)",
+      "domain": "products",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "business_knowledge_required": [],
+      "must_contain": [],
+      "must_not_contain": [],
+      "notes": "维表原始计数：无口径、无映射、无隐式过滤 → 语义最低档"
     },
     {
       "seed_id": "GQ-100",

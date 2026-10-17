@@ -681,10 +681,15 @@ class Harness:
         db_path: str | None = None,
         column_top: int | None = None,
         node_timeout_overrides: Mapping[str, float] | None = None,
+        max_concurrency: int | None = None,
     ) -> None:
         if live and cassette_path and cassette_mode not in ("record", "replay"):
             raise ValueError(f"未知匣带模式：{cassette_mode}")
         self.settings = settings or get_settings()
+        #: 评测批次的额外并发帽；None = 沿用 Settings。它只收窄，不放大生产配置。
+        self.max_concurrency = (
+            max(1, int(max_concurrency)) if max_concurrency is not None else None
+        )
         self.loaded = load_bundle(bundle_path or _bootstrap.BUNDLE_PATH)
         self.runtime = SemanticBundleRuntime(self.loaded)
         # 与 `app/api/deps.py` 同一个类：闸门判据由端口自己给（`guard_allowlist`），
@@ -736,13 +741,18 @@ class Harness:
         if self.transport is None:
             return None
         s = self.settings
+        concurrency = (
+            min(s.LLM_MAX_CONCURRENCY, self.max_concurrency)
+            if self.max_concurrency is not None
+            else s.LLM_MAX_CONCURRENCY
+        )
         return ChatClient(
             base_url=s.DEEPSEEK_BASE_URL,
             api_key=s.DEEPSEEK_API_KEY.get_secret_value(),
             model_names={"fast": s.LLM_MODEL_FAST, "strong": s.LLM_MODEL_STRONG},
-            max_concurrency=s.LLM_MAX_CONCURRENCY,
-            semaphore_flash=s.LLM_SEMAPHORE_FLASH,
-            semaphore_pro=s.LLM_SEMAPHORE_PRO,
+            max_concurrency=concurrency,
+            semaphore_flash=min(s.LLM_SEMAPHORE_FLASH, concurrency),
+            semaphore_pro=min(s.LLM_SEMAPHORE_PRO, concurrency),
             max_retries=s.LLM_MAX_RETRIES,
             circuit_fails=s.LLM_CIRCUIT_FAILS,
             circuit_open_s=s.LLM_CIRCUIT_OPEN_S,
