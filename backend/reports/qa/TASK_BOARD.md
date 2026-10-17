@@ -4361,3 +4361,81 @@ W8 的定位成立：E-VER-07 失败跳精确落在 15s 客户端硬上限，pla
 4. 不做
 - 不改 15s（07 §10.2 判据值）；不先扫 τ；不动冻结集/阈值。
 ```
+
+## 72 · W8 第 51 轮验收：超时语义主路径成立；E-VER-07 语义抖动、`LlmSaturated` 归类与提交绑定未闭（QA R31at ｜ 2026-10-17 13:04:42 +0800 ｜ 起点 `50d6575`／576 笔 ｜ 当前 `1c2c336`／577 笔）
+
+### 72.0 结论
+
+**A／B 主路径可收，但不能把第 51 轮写成项目已收口。** W8 的清单单源化与超时终态改造已过独立复算：LLM 节点超时不再在终态落 `refuse(no_data_asset)`，live 原始产物里 `E-VER-02`、`H-STR-05` 均为 `error(LLM_UPSTREAM_ERROR)` 且带 `last_degrade_error=LlmTimeout`。
+
+仍在开放的三件事：
+
+1. 🔴 **E-VER-07 仍有语义抖动**：6 次 `complete`，但仅 `2/6 equivalent`；4 次 SQL 为 `SELECT region_name, COUNT(*) … WHERE region_name=… GROUP BY region_name`，gold 为 `SELECT COUNT(*) … WHERE region_name=…`。问题问“华东覆盖省份数”，筛选列不应被当成分组维度。这是语义／计划缺陷，不是 15s 超时。
+2. 🔴 **`LlmSaturated` 归类需复核**：本轮把 `LlmSaturated` 放进 `_UPSTREAM_FAULT_DEGRADES`，并令其 `default_code=LLM_UPSTREAM_ERROR`；但 07 §10.1 明写信号量等待超时走 `degraded(llm_concurrency_exceeded, reduced_candidates)`，且 `client.py` 的该异常在拿并发位前触发。当前映射与专用 `LLM_CONCURRENCY_EXCEEDED` 码冲突；生产路径又因 15s < 20s 仍不可达（U-127 未闭）。
+3. 🔴 **证据没有绑到提交**：稳定性 live 产物实读 `git_rev=50d6575`、`git_dirty=true`；QA 用官方 runner 对已入库 stability 匣带做零出站 replay，报 `cassette_miss`、该条 `n_unscored=1`。因此现有 live 读数可读、不可按 `1c2c336` 提交后回放。
+
+门禁仍未重算，现读 `PASS 1/8`（`backend/reports/w6/eval_metrics.json`，`meta.git.rev=88f3500`）。不得写“门禁通过”。
+
+### 72.1 独立复算（QA 现读）
+
+| 面 | QA 现读 | 判 |
+|---|---|---|
+| 提交／树 | `HEAD=1c2c336`／577 笔；开工现读 `origin/main` 同点；工作树仅 `?? .workbuddy/` | ✅ |
+| 定向契约 | `test_llm_node_manifest_contract`、`test_graph_timeout_contract`、`test_llm_gateway`、`test_decision_table_f_g` 合计 **85 passed / 0 failed** | ✅ |
+| 离线全量 | **2551 passed / 0 failed / 1 warning**（113.45s） | ✅ |
+| 集成 | 一次性 PG 55439／Redis 56386，先 `alembic upgrade head`：**124 passed / 0 failed**（33.03s），跑后容器已清 | ✅ |
+| E-VER-07 | 6 次均 `complete`、0 个 `no_data_asset`；`equivalent 2/6`；失败形态 = 多一列 `region_name` 且 `GROUP BY region_name` | 🔴 语义未闭 |
+| M-DIM-08 | 5 次均 `complete`、`equivalent 5/5` | ✅ |
+| G-2 10 条 | 原始首跑 `complete 8 / error 1 / refuse 1`、`equivalent 6`；clean `complete 9 / refuse 1`、`equivalent 7` | 🔴 不达 95% |
+| 57 族 | 原始首跑 `complete 44 / error 1 / refuse 10 / clarify 2`、`equivalent 16`；clean `complete 45 / refuse 10 / clarify 2`、`equivalent 16` | 🔴 不达 G-5 |
+| 提交后回放 | 对 `w8_r51_stab_E-VER-07_1` 与 `w8_r51_stab_M-DIM-08_1` 逐条跑 `eval/runner.py --mode replay` ⇒ `cassette_miss`、`n_scored=0` | 🔴 复算链未闭 |
+| 安全／边界 | scan_secrets `30 件 / 0 命中 / rc=0`；DSN hygiene `8 passed`；台账 `1830 / 3.025849 / 2026-10-07 04:28:00.872275+00`；共享库仅 `ecom`、`ecom_u123_probe` | ✅ |
+| 门禁 | `88f3500`／`dirty false`／PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2 | 🔴 一格未变绿 |
+
+**🔻 本窗对 R31as 的订正**：`R31as` 写的“`bind` 生产侧只拿 0.2s、与评测清单不一致”**撤回**。起点 `50d6575:backend/app/graph/build.py:395-403` 本来就含 `"bind": "l4_score"`，`_effective_limit_for("bind")` 已是执行期客户端超时（当前 15s）；改前真正的清单差异是评测侧手抄集漏 `present`。旧行保留为历史，读时以本行和 `RELAY §67` 为准。
+
+### 72.2 第 52 轮 W8 块（可整段复制）
+
+```text
+【W8 第 52 轮｜收口 E-VER-07 语义抖动；核正饱和归类；让证据可回放】
+
+0. 现读 HEAD 1c2c336；不改 07 §10.2 的 15s、不改冻结集/阈值/判据措辞、不动 reports/qa/**；
+   允许出站，但先做零出站复算；每次实报 tokens、price_guess 计价、时段、HEAD。按 A→B→C 分层，
+   未完成的部分写 UNVERIFIED，不得混成一句“已通过”。
+
+1. 🔴 必做 A：E-VER-07 的“筛选列被当分组维度”
+- 现读 6 次：6/6 complete、2/6 equivalent；4 次 SQL 是
+  SELECT ... region_name, COUNT(*) ... WHERE region_name=... GROUP BY region_name，
+  gold 是 SELECT COUNT(*) ... WHERE region_name=...。这不是超时，是语义/计划错误。
+- 先在零出站 cassette replay 或桩上复现至少 6 次，逐次留 plan.blocking、SQL 形状、等价判定；
+  再按代码事实修根因（语义包、plan、prompt、编排后处理均可，选一个能归因的入口）。
+- 加回归：单值筛选不得被误判成分组维度；同时保留 M-DIM-08 的 GROUP BY region_name 正路径。
+- 复算 G-2 10 条与 57 族；仍不达门就如实写，不得为凑门改判据。
+
+2. 🔴 必做 B：饱和归类与 U-127
+- 现读 _UPSTREAM_FAULT_DEGRADES 含 LlmSaturated，LlmSaturated.default_code 已改成
+  LLM_UPSTREAM_ERROR；但 07 §10.1 说信号量等待超时走
+  degraded(llm_concurrency_exceeded, reduced_candidates)，client.py 的该异常也在拿并发位前触发。
+- 请按契约做 exact mapping：说明为何不是专用 LLM_CONCURRENCY_EXCEEDED，或撤回/收窄这次改码；
+  补零出站注入测试，断言错误码、Retry-After 与 degraded 事件三者一致。U-127 未真正修复前不得写关闭。
+
+3. 🔴 必做 C：证据绑定
+- 现有 live 产物 git_rev=50d6575、git_dirty=true；QA 跑官方 runner replay 报 cassette_miss。
+- 请提交可与 HEAD 绑定的回放入口／匣带（或零出站自建探针），让 E-VER-07 与 M-DIM-08 在
+  git_rev=1c2c336（或下一提交）可复算；若只能用 live，明确“live 不覆盖超时/尾延迟”的边界。
+
+4. 文档与收口
+- 同步修正被本轮改动作废的 docs/07 旧句（如 bind 超时 → refuse(no_data_asset)、旧清单 0.2/162 的描述）；
+  若无写权只上呈总控，不擅自改。
+- 最后复跑 integration 124/0 与 offline；不动 reports/qa/**、共享 ecom、冻结集/阈值；门禁未重算就写未重算。
+```
+
+### 72.3 总控侧仍待点句
+
+- 是否接受“`LlmSaturated` 先按 07 §10.1 的 `degraded(llm_concurrency_exceeded, …)` 归口，而不是 `LLM_UPSTREAM_ERROR`”这一纠偏方向。
+- 是否允许下一轮把 `docs/07` 与本轮代码改动相关的旧句同步；若不允许，请指定其它落点。
+- 是否要求先完成 E-VER-07 的零出站复现，再决定是否做新一轮 live G-2／57 全量重跑。
+
+### 72.4 追加观察（R31at）
+
+- `LlmCircuitOpen` 的新默认码断言不覆盖生产熔断路径：`backend/app/llm/client.py:216-221` 在熔断开路时实际抛 `LlmTimeout`，`:235-242` 的半开在途分支也同形；全仓 `raise LlmCircuitOpen` 命中 0。第 52 轮 B 项应把“实际路径是否可判”与“类默认码”分开报，补可触达测试或具名登记未接线状态。

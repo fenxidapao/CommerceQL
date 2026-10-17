@@ -4402,3 +4402,52 @@ W8 的 15s 归因成立且机械可复算；但这是可修缺陷：超时被落
 ### 66.2 下一步
 
 `TASK_BOARD §71.2`：统一 LLM 节点清单，超时不得记 `no_data_asset`，加超时回归；不动 07 的 15s。
+
+## 67 · W8 第 51 轮验收：A／B 主路径成立；E-VER-07 语义抖动、`LlmSaturated` 归类与提交绑定仍未闭（QA R31at ｜ 2026-10-17 13:05:09 +0800 ｜ 起点 `50d6575`／576 笔 ｜ 当前 `1c2c336`／577 笔）
+
+### 67.0 结论
+
+W8 对 `normalize`／`intent`／`plan`／`gen_sql`／`repair`／`bind` 的超时出路改造，主路径成立：超时冒到终态时是 `error(LLM_UPSTREAM_ERROR)`，不再落 `refuse(no_data_asset)`；网关在模板无命中时会把“已降级的上游故障”改抛 `LlmUpstreamError`；新增清单契约与端到端桩测试已过。
+
+但不能把本轮写成项目已收口：
+
+- **E-VER-07 仍有语义抖动**：6／6 `complete`、0 个 `no_data_asset`，但仅 2／6 `equivalent`。4 次 SQL 把筛选列 `region_name` 当成分组维度，gold 只返回单列计数；这是计划／语义缺陷，不是超时。
+- **`LlmSaturated` 归类未获证据支持**：本轮同时把 `LlmSaturated` 放进 `_UPSTREAM_FAULT_DEGRADES`，并令 `default_code=LLM_UPSTREAM_ERROR`。07 §10.1 规定该触发点走 `degraded(llm_concurrency_exceeded, reduced_candidates)`；`client.py` 的该异常发生在拿并发位前，不是上游 5xx。至少需要一个 exact mapping／撤回，并补零出站测试；U-127 仍未闭。
+- **提交后复算链未闭**：稳定性 live 产物实读 `git_rev=50d6575`、`git_dirty=true`；QA 用官方 `eval/runner.py --mode replay` 对两条入库 stability 匣带试跑，均 `cassette_miss`、`n_scored=0`。原始产物可以人工复读，但不能据此声称“在 `1c2c336` 上可回放”。
+- **门禁仍为 `PASS 1/8`**（`backend/reports/w6/eval_metrics.json`，`meta.git.rev=88f3500`）；G-2／G-5 仍未达门，G-3／G-4／G-6／G-7／G-8 未动。
+
+### 67.1 QA 独立复算
+
+| 面 | QA 现读 | 判 |
+|---|---|---|
+| 提交／树 | `HEAD=1c2c336`／577 笔；开工现读 `origin/main` 同点；工作树仅 `?? .workbuddy/` | ✅ |
+| 定向契约 | 清单契约＋图超时契约＋`test_llm_gateway`＋`test_decision_table_f_g` 合计 **85 passed / 0 failed** | ✅ |
+| 离线全量 | **2551 passed / 0 failed / 1 warning**（113.45s） | ✅ |
+| 集成 | 一次性 PG 55439／Redis 56386，先 `alembic upgrade head`：**124 passed / 0 failed**（33.03s）；跑后删容器，共享库仍仅两库 | ✅ |
+| E-VER-07 | 6 次均 `complete`；`equivalent 2/6`；4 次多 `region_name` ＋ `GROUP BY region_name` | 🔴 |
+| M-DIM-08 | 5 次均 `complete`、`equivalent 5/5` | ✅ |
+| G-2 10 条 | 原始 `complete 8 / error 1 / refuse 1`、`equivalent 6`；clean `complete 9 / refuse 1`、`equivalent 7` | 🔴 不达 95% |
+| 57 族 | 原始 `complete 44 / error 1 / refuse 10 / clarify 2`、`equivalent 16`；clean `complete 45 / refuse 10 / clarify 2`、`equivalent 16` | 🔴 不达 G-5 |
+| 计数/费用 | clean G-2 262,161 tokens／0.619638；clean 57 族 1,414,870／4.537529；稳定性 300,889／0.547342；三件按 clean 相加 1,977,920／5.704509。W8 回执的 1,985,762／5.741467 包含 57 族原始首跑＋补跑面（4.574487），引用时必须同时写面 | 🟡 可对账 |
+| 安全/机械 | scan_secrets `30 件 / 0 命中 / rc=0`；DSN hygiene `8 passed`；工作树未写业务面 | ✅ |
+| 回放 | 两条 stability 匣带官方 replay 均 miss | 🔴 |
+
+### 67.2 🔻 本窗订正（自曝）
+
+**撤回 `R31as` 的“`bind` 生产侧只拿 0.2s、与评测清单不一致”**。以起点 `50d6575:backend/app/graph/build.py:395-403` 逐字现读，`"bind": "l4_score"` 已在表内；`_effective_limit_for("bind")` 早已解析成客户端硬超时（现读 15s）。改前真正的清单差异是评测侧手抄集漏 `present`。旧的 `TASK_BOARD §71`／`RELAY §66`／`QA_LEDGER R31as` 文本按“历史不改写”保留，但不得再单独引用；本行起以本节的撤回为准。
+
+同类残留：W8 旧 `RELAY §50`／`DELIVERY` 第 50 轮条目仍写“`bind` 不在 `_LLM_NODE_TASKS`、只拿 0.2s”，其第 51 轮新节虽已自曝纠偏，旧段落仍是矛盾源，引用时必须带第 51 轮覆盖。`docs/07` 的旧 `bind` 超时描述与旧 `0.2／162` 清单描述也仍待同步或上呈总控。
+
+### 67.3 下一步
+
+下一轮块已落 `TASK_BOARD §72.2`：先做零出站修正 `E-VER-07` 的筛选/分组抖动，再核正 `LlmSaturated` 与 U-127，最后把证据绑到提交并复跑；不先扫 τ，不改冻结集/阈值/15s，不在未重算门禁时写“通过”。
+
+### 67.4 注入与边界
+
+- 注入形态 ＝ **无**；未执行 N/A。
+- 本轮 QA 未计费出站；只读产物并使用官方 replay（miss 如实登记），未写业务代码、未改冻结集或阈值。
+- 台账逐位不动：`1830 / 3.025849 / 2026-10-07 04:28:00.872275+00`；一次性容器已清；共享库仅 `ecom`、`ecom_u123_probe`。
+
+### 67.5 追加观察（R31at）
+
+- 同一项证据缺口：`LlmCircuitOpen` 的新默认码断言不等于生产路径已验证。`client.py:216-221` 熔断开路实际抛 `LlmTimeout`，`:235-242` 半开在途分支同形；全仓 `raise LlmCircuitOpen` 为 0。第 52 轮 B 项须补可触达测试或明确登记该类当前未接线，不能把 `test_timeout_error_code_is_recoverable_and_attributable` 当成运行时覆盖。

@@ -1349,3 +1349,21 @@
 | 7 | 边界 | 台账不动；临时资源清；共享库两库；零取号 | ✅ |
 
 **结论**：归因成立，但项目未闭；下一轮按 `TASK_BOARD §71.2` 统一节点清单并修超时语义，不动 15s。
+
+## R31at · W8 第 51 轮验收：A／B 主路径成立；E-VER-07 语义抖动、`LlmSaturated` 归类与提交绑定未闭 ／ 2026-10-17 13:05:19 +0800 ／ 起点 `50d6575`／576 笔 ｜ 当前 `1c2c336`／577 笔
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 提交／树 | `HEAD=1c2c336`／577 笔；开工现读 `origin/main` 同点；工作树仅 `?? .workbuddy/` | ✅ |
+| 2 | 超时语义 | LLM 节点超时终态 `error(LLM_UPSTREAM_ERROR)`；`E-VER-02`／`H-STR-05` 原始失败带 `last_degrade_error=LlmTimeout` | ✅ 主路径 |
+| 3 | 定向／离线 | 定向 85 passed／0 failed；离线 2551 passed／0 failed | ✅ |
+| 4 | 集成 | 一次性 PG/Redis＋迁移后 124 passed／0 failed；临时容器已清 | ✅ |
+| 5 | E-VER-07 | 6 次 complete、0 个 `no_data_asset`、equivalent 2/6；4 次把筛选列当分组维度 | 🔴 语义未闭 |
+| 6 | M-DIM-08 | 5 次 complete＋equivalent | ✅ |
+| 7 | G-2／57 | clean 9 complete／1 refuse、equivalent 7；57 clean 45 complete／10 refuse／2 clarify、equivalent 16 | 🔴 不达门 |
+| 8 | 提交后回放 | 官方 runner 对两条 stability 匣带 replay 均 `cassette_miss`；live 产物 git_rev=50d6575／dirty=true | 🔴 复算链未闭 |
+| 9 | 饱和归类 | `LlmSaturated` 被归入 `_UPSTREAM_FAULT_DEGRADES` 且默认码改为 `LLM_UPSTREAM_ERROR`；与 07 §10.1 的 `degraded(llm_concurrency_exceeded, …)` 冲突，U-127 未闭 | 🔴 待核 |
+| 10 | 门禁／边界 | 门禁 `88f3500`／PASS 1/8；台账逐位不动；共享库仅两库；scan_secrets 0 命中；DSN hygiene 8 passed | ✅/🔴 |
+
+**结论**：第 51 轮 A／B 主路径可收，但项目未收口；下一轮按 `TASK_BOARD §72.2` 先修 E-VER-07 语义抖动，再核正饱和归类并补齐可复算证据。
+**🔻 自曝**：撤回 R31as 的“`bind` 生产侧只拿 0.2s”错误断言；起点 `50d6575:build.py` 已含 `"bind": "l4_score"`，改前真正差异是评测侧漏 `present`。旧行保留，引用时以 R31at 为准。
