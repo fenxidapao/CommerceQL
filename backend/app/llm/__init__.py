@@ -102,13 +102,13 @@ from app.llm.errors import (
 
 #: 🔴 W8 第 51 轮：降级异常里"**上游故障**"的那几类 —— 它们意味着"上游没答上来"，
 #: 若模板层也无命中，产物应报 `error`（工程故障）而不是 `refuse`（产品结论，C-12）。
-#: 刻意**不含** `LlmEmptyContent`（模型成功但思考吃光 max_tokens ⇒ 空产出）与
-#: `LlmBudgetExceeded`（我们自己的预算策略）—— 那两类仍走 §10.2 末行的 `refuse`，
-#: 由既有测试 `test_no_template_hit_is_a_refusal_not_an_error` 等守着。
+#: 刻意**不含** `LlmEmptyContent`（模型成功但思考吃光 max_tokens ⇒ 空产出）、
+#: `LlmBudgetExceeded`（我们自己的预算策略）与 `LlmSaturated`（本地并发位等待）——
+#: 前者两类仍走 §10.2 末行的 `refuse`；饱和则走专用
+#: `LLM_CONCURRENCY_EXCEEDED`，不能被混成“上游坏了”。
 _UPSTREAM_FAULT_DEGRADES: tuple[type[LlmError], ...] = (
     LlmTimeout,
     LlmCircuitOpen,
-    LlmSaturated,
 )
 
 from app.llm.prompts import load_prompt, render_messages
@@ -432,8 +432,9 @@ class LlmGateway:
             attempts.append(weaker)
 
         degraded_so_far = False
-        #: 记录**最后一次降级异常的类型**（只记类型，不记异常文本 —— N-12 的反向）。
+        #: 记录**最后一次降级异常的类型与结构化 detail**（不记异常文本 —— N-12 的反向）。
         last_degrade_error: type[LlmError] | None = None
+        last_degrade_exc: LlmError | None = None
         for idx, model_key in enumerate(attempts):
             wire = build_wire_request(
                 egress,
@@ -461,12 +462,15 @@ class LlmGateway:
                     raise  # F2/F3 与契约错误：不降级
                 degraded_so_far = True
                 last_degrade_error = type(exc)
+                last_degrade_exc = exc
                 is_last_model_attempt = idx == len(attempts) - 1
                 reason = self._reason_for(exc)
-                if is_last_model_attempt:
-                    action = ActionTaken.TEMPLATE_ONLY
-                elif reason is DegradedReason.LLM_CONCURRENCY_EXCEEDED:
+                # 07 §10.1 的专用出口优先于“最后一次模型尝试”的通用兜底：
+                # 饱和必须始终报 `reduced_candidates`（advisory），否则事件与失败原因不一致。
+                if reason is DegradedReason.LLM_CONCURRENCY_EXCEEDED:
                     action = ActionTaken.REDUCED_CANDIDATES
+                elif is_last_model_attempt:
+                    action = ActionTaken.TEMPLATE_ONLY
                 else:
                     action = ActionTaken.SWITCHED_TO_WEAK_MODEL
                 self._emit(
@@ -538,6 +542,16 @@ class LlmGateway:
             # 一旦降级过（超时/空 content/熔断……），"最终没答案"的**首要原因**是上游坏了，
             # 把它报成 `refuse(no_data_asset)` 就是第 50 轮实测的误记
             # （G-2 3 条 refuse 里 1 条、57 族 20 条里 4 条）。
+            if isinstance(last_degrade_exc, LlmSaturated):
+                raise LlmSaturated(
+                    "并发位等待超时且模板层无命中 —— 容量故障，不是产品拒答",
+                    detail={
+                        **last_degrade_exc.detail,
+                        "task": task,
+                        "reason": "saturation_then_template_miss",
+                        "last_degrade_error": last_degrade_exc.__class__.__name__,
+                    },
+                ) from exc
             if last_degrade_error in _UPSTREAM_FAULT_DEGRADES:
                 raise LlmUpstreamError(
                     "上游降级链走完仍无产出，且模板层无命中 —— 工程故障，不是产品拒答",

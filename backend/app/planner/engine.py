@@ -59,6 +59,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -132,6 +133,94 @@ _log = logging.getLogger(__name__)
 MAX_REPAIR_ATTEMPTS: Final[int] = 1
 
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
+
+#: 只认**单值等值**筛选：`region.region_name = '华东'` / `region_name = %(region)s`。
+#: `LIKE` / `IN` / 列与列比较一律不碰 —— 那些可能确实需要分组维度。
+_CONSTANT_EQUALITY_FILTER: Final[re.Pattern[str]] = re.compile(
+    r"^\s*(?P<lhs>[A-Za-z_][A-Za-z0-9_]*(?:\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)?)"
+    r"\s*=\s*(?P<rhs>'(?:[^']|'')*'|\"(?:[^\"]|\"\")*\"|"
+    r"[+-]?\d+(?:\.\d+)?|true|false|%[A-Za-z_][A-Za-z0-9_]*s)\s*$",
+    re.IGNORECASE,
+)
+
+
+def _constant_filter_lhs(filter_expr: str) -> tuple[str, str] | None:
+    """返回等值筛选左侧的 `(限定名, 列名)`；不是单值等值则返回 `None`。"""
+    match = _CONSTANT_EQUALITY_FILTER.match(filter_expr)
+    if match is None:
+        return None
+    lhs = re.sub(r"\s+", "", match.group("lhs"))
+    if "." in lhs:
+        qualifier, column = lhs.rsplit(".", 1)
+        return qualifier, column
+    return "", lhs
+
+
+def _dimension_binding_refs(semantics: SemanticBundlePort, dim_name: str) -> tuple[str, ...]:
+    """读可选语义能力，返回该维度的绑定引用；没有该能力时返回空元组。"""
+    dimensions = getattr(semantics, "dimensions", None)
+    if not callable(dimensions):
+        return ()
+    refs: list[str] = []
+    for dim in dimensions():
+        if getattr(dim, "name", None) != dim_name:
+            continue
+        binding = getattr(dim, "binding", None)
+        if binding:
+            refs.append(str(binding))
+        bindings = getattr(dim, "bindings", None) or {}
+        refs.extend(str(value) for value in bindings.values())
+    return tuple(re.sub(r"\s+", "", ref) for ref in refs)
+
+
+def _demote_constant_filter_dimensions(
+    plan: Plan, semantics: SemanticBundlePort
+) -> tuple[Plan, tuple[str, ...]]:
+    """把被**单值等值筛选**钉死的维度从分组维度里降级。
+
+    实例（W8 第 52 轮 E-VER-07）：模型交出
+    `dimensions=["region"]` + `filters=["region.region_name = '华东'"]` +
+    `output_columns=["region_name", "province_cnt"]`。这会让 SQL 多出
+    `SELECT region_name ... GROUP BY region_name`，而 gold 是单值 `COUNT(*)`。
+    等值筛选已经把该列钉成常量，再按它分组只改变输出形状、不改变值。
+
+    只在**代码可判**时动作；命中后保留原始 `filters`，只去掉冗余维度与对应输出列。
+    """
+    lhs_values = tuple(
+        parsed for parsed in (_constant_filter_lhs(expr) for expr in plan.filters) if parsed
+    )
+    if not plan.dimensions or not lhs_values:
+        return plan, ()
+
+    removed: list[str] = []
+    for dim_name in plan.dimensions:
+        refs = set(_dimension_binding_refs(semantics, dim_name))
+        for qualifier, column in lhs_values:
+            lhs = f"{qualifier}.{column}" if qualifier else column
+            if lhs in refs or qualifier == dim_name or column == dim_name:
+                removed.append(dim_name)
+                break
+    if not removed:
+        return plan, ()
+
+    removed_set = set(removed)
+    constant_names = {
+        name
+        for qualifier, column in lhs_values
+        if qualifier in removed_set or column in removed_set
+        for name in (qualifier, column)
+        if name
+    }
+    output_columns = [
+        column for column in plan.output_columns if column.strip() not in constant_names
+    ]
+    normalized = plan.model_copy(
+        update={
+            "dimensions": [dim for dim in plan.dimensions if dim not in removed_set],
+            "output_columns": output_columns,
+        }
+    )
+    return normalized, tuple(removed)
 
 
 # ============================================================================
@@ -568,10 +657,22 @@ class PlannerEngine:
                 attempts=exc.attempts,
                 detail={"last_validation_error": _first_line(exc.digest), "task": "plan"},
             ))
+        normalized_plan, demoted = _demote_constant_filter_dimensions(parsed, self._semantics)
+        if demoted:
+            _log.warning(
+                "plan_constant_filter_dimension_demoted",
+                extra={
+                    "removed_dimensions": list(demoted),
+                    "filters": list(normalized_plan.filters),
+                    "output_columns_before": list(parsed.output_columns),
+                    "output_columns_after": list(normalized_plan.output_columns),
+                    "extra_fact": "单值等值筛选列不得再作为分组维度（W8 第 52 轮 E-VER-07 回归）",
+                },
+            )
         latency = _elapsed_ms(started, self._monotonic())
         return PlanOutcome(
-            plan=parsed,
-            plan_summary=parsed.to_summary(),
+            plan=normalized_plan,
+            plan_summary=normalized_plan.to_summary(),
             meta=meta,
             attempts=attempts,
             latency_ms=latency,

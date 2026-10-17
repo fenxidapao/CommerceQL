@@ -5366,3 +5366,141 @@ oneoff_after_drop=
 - **门禁**：未重算，现读仍 `PASS 1/8`（`backend/reports/w6/eval_metrics.json`，`meta.git.rev=88f3500`）；不得写“通过”。
 - **取号**：零新增号；现读 `U-143`（`docs/07_技术设计文档_TDD.md:1094`）。
 - **复算入口**：G-2 读 `eval/results_r51g2_r1.json`＋`eval/results_g2_r51_clean.json`；57 族读 `eval/results_r51f57_r1.json`＋`eval/results_f57_r51_clean.json`；稳定性读 `eval/results_r51_stab_E-VER-07_*.json`／`_M-DIM-08_*.json`；清单事实读 `backend/app/graph/build.py:395-403`＋`eval/harness.py:98-103,592`；超时分流读 `backend/app/graph/build.py:454-586`＋`backend/app/llm/__init__.py:527-550`。以上均为非本节文件，无自指。
+
+## §五二 第 52 轮 · E-VER-07 语义抖动收口 ＋ 饱和/熔断归类核正 ＋ 证据可回放 ｜ 2026-10-17 13:2x–14:0x +0800 ｜ 起点 `c4e4e34`（被测代码 `1c2c336`）
+
+### 52.0 结论分层
+
+| 层 | 判 | 现读 |
+|---|---|---|
+| A. E-VER-07 筛选列当维度 | ✅ 代码修复有机械回归 | 修复前 6 次零出站形状复现：4 次 `dimensions` 含 `region`、SQL 多 `GROUP BY`；修复后 live 不再产出该形状，单值筛选只出 `COUNT(*)` |
+| A. 稳定性 | 🟡 仍受上游尾延迟影响 | E-VER-07 11 次尝试（6 主跑 + 5 补跑）中 5 次 `complete+equivalent`、6 次 `LLM_UPSTREAM_ERROR`；**0 次 `no_data_asset`、0 次维度形状性非等价** |
+| B. 饱和归类 | ✅ 专用码恢复 | `LlmSaturated → LLM_CONCURRENCY_EXCEEDED`；`_acquire=min(20s,remaining-ε)`；零出站断言码/Retry-After/degraded 三者一致 |
+| B. U-127 | 🟡 **仍未关闭** | 客户端“排队先于节点超时”已修；W7 `llm_queue_wait_ms` 与真压测非零未补 |
+| B. 熔断路径 | ✅ 具名可达 | `client.py` 开路/半开路径实际抛 `LlmCircuitOpen`，不再是类默认码与生产路径两张皮 |
+| C. 回放入口 | ✅ | `eval/replay_bound.py` 从匣带绑定 base URL/model；`E-VER-07`、`M-DIM-08` 新匣带回放命中 |
+| G-2 10 条 | 🔴 不达门 | 原始 `complete 8 / error 1 / refuse 1`、等效 6；干净重跑 `complete 9 / refuse 1`、等效 7 |
+| 57 族 | 🔴 不达 G-5 | 原始 `complete 41 / error 4 / refuse 9 / clarify 3`、等效 15；干净重跑 `complete 45 / refuse 9 / clarify 3`、等效 17 |
+| integration / offline | ✅ | `124 passed / 0 failed`；`2559 passed / 0 failed / 1 warning` |
+
+### 52.1 A：修复前零出站复现（6 次）
+
+**产物**：`eval/results_r52_ever07_pre_fix_shape.json`（从第 51 轮 6 份已提交匣带与结果派生，零出站、零模型调用）。
+
+| run | plan dimensions | plan filters | plan blocking | SQL 形状 | equivalent |
+|---|---|---|---|---|---|
+| 1 | `["region"]` | `region.region_name='华东'` | `[]` | `SELECT region_name, COUNT(*) ... GROUP BY region_name` | false |
+| 2 | `["region"]` | 同左 | `[]` | 同左 | false |
+| 3 | `[]` | 同左 | `[]` | `SELECT COUNT(*) ... WHERE region_name=...` | true |
+| 4 | `["region"]` | 同左 | `[]` | 同左 1 | false |
+| 5 | `[]` | 同左 | `[]` | 同左 3 | true |
+| 6 | `["region"]` | 同左 | `[]` | 同左 1 | false |
+
+⇒ 机械复现成立：4/6 是 `plan` 把单值筛选列又当分组维度；`plan.blocking` 均为空，排除“计划自拒/超时”解释。
+
+### 52.2 A：代码修复与回归
+
+**入口**：`backend/app/planner/engine.py:147-175` 解析单值等值筛选；`:176-230` 在 `plan_for` 返回前把被该筛选钉死的维度和对应输出列降级；`:660-675` 写结构化 warning。规则刻意只吃 `=` 的常量 RHS（字符串/数字/参数），`LIKE`/`IN`/列比较不碰。
+
+**回归**：
+- `backend/tests/unit/test_planner_engine.py:631-658`：E-VER-07 形状 ⇒ `dimensions=[]`、`output_columns=["province_cnt"]`；
+- 同件 `:660-679`：无筛选的 M-DIM-08 形状 ⇒ `dimensions=["region"]` 原样保留；
+- 同件 `:681-698`：`LIKE` 反向对照不降级。
+- live 侧：补跑 `3b`、`5` 的计划仍有 `dimensions=["region"]`/`["region_name"]`，但最终 SQL 都是单值 `SELECT COUNT(*) ... WHERE region_name=...`；日志出现 `plan_constant_filter_dimension_demoted`，证明守卫实际生效。
+
+### 52.3 A：修复后 E-VER-07 / M-DIM-08 稳定性
+
+**E-VER-07**（主跑 6 + 补跑 5；命令见 `eval/` 结果与 `%TEMP%\w8r52_ever07_*.log`）：
+
+| 尝试 | terminal | equivalent | 说明 |
+|---|---|---|---|
+| 1 | complete | true | 单值 `COUNT(*)` |
+| 2 / 2b / 2c | error | false | `LLM_UPSTREAM_ERROR`；`LlmTimeout`，normalize 15.1s |
+| 3 | error | false | `LLM_UPSTREAM_ERROR`；`LlmTimeout` |
+| 3b | complete | true | 计划原给 `region`，守卫后单值 SQL |
+| 4 | complete | true | 单值 `COUNT(*)` |
+| 5 | complete | true | 计划原给 `region_name`，守卫后单值 SQL |
+| 6 / 6b | error | false | `LLM_UPSTREAM_ERROR`；ConnectError |
+| 6c | complete | true | 单值 `COUNT(*)` |
+
+⇒ 11 次尝试中 5 次 `complete+equivalent`、6 次上游故障；**没有一次 complete 后的维度形状错误，也没有 `no_data_asset`**。失败均带 `terminal_error_detail`，可区分 `LlmTimeout` 与 `ConnectError`。
+
+**M-DIM-08**：主跑 5 次（1 次 ConnectError、1 次 15s 超时、3 次 complete+eq）＋ 2 次补跑（均 complete+eq）⇒ 已取得 **5 条 complete+equivalent**；成功 SQL 均保留 `SELECT region_name, COUNT(*) ... GROUP BY region_name`，正路径未被降级守卫破坏。
+
+### 52.4 B：饱和、重试与熔断的 exact mapping
+
+| 面 | 文件:行号 | 现读 |
+|---|---|---|
+| 饱和专用码 | `backend/app/llm/errors.py:163-179` | 撤回第 51 轮的 `LLM_UPSTREAM_ERROR` 改码，恢复 `LLM_CONCURRENCY_EXCEEDED`（✅，Retry-After=5） |
+| 网关最终出口 | `backend/app/llm/__init__.py:435-465`、`:527-560` | 保留 `last_degrade_exc`；饱和走 `LlmSaturated(reason=saturation_then_template_miss)`，不混入通用上游故障；饱和动作固定 `reduced_candidates` |
+| 客户端排队 | `backend/app/llm/client.py:82-92`、`:310-345` | `SEMAPHORE_WAIT_HEADROOM_S=1.0`；等待上限 = `min(20s, remaining-ε)`，使 U-127 的“没排到位”在节点 15s 前可出 |
+| 熔断实际路径 | `backend/app/llm/client.py:216-246` | 开路与半开在途均实际抛 `LlmCircuitOpen`，类默认码与生产路径同源 |
+| Retry-After | `backend/app/core/enums.py:341-352` | 饱和 = 5s，上游故障 = 30s；由唯一映射表提供 |
+
+**零出站测试**：
+- `backend/tests/unit/test_llm_client.py:533-559`：等待先于节点 deadline ⇒ `LlmSaturated`，且未出网；
+- `backend/tests/unit/test_llm_gateway.py:763-799`：饱和 + 模板 miss ⇒ 专用码、`Retry-After=5`、degraded `reduced_candidates` 三者一致；
+- `backend/tests/unit/test_llm_client.py:597-650`：开路/半开实际路径抛具名 `LlmCircuitOpen`。
+- 定向实跑：`pytest backend/tests/unit/test_planner_engine.py backend/tests/unit/test_llm_client.py backend/tests/unit/test_llm_gateway.py backend/tests/contract/test_replay_bound_contract.py -q` ⇒ **152 passed**；含图超时契约的更大定向面 ⇒ **170 passed**。
+
+**U-127 边界**：客户端侧候选 (b) 已落，但 07 §U-127 明确要求 W7 的 `llm_queue_wait_ms` 与一次真压测非零读数；这两项未跑/未实现 ⇒ **U-127 保持 open，不得写“关闭”**。`docs/07` 旧句已在 `:1464`、`:1483`、`:2284` 就地标注订正。
+
+### 52.5 C：证据绑定与可回放
+
+**新入口**：`eval/replay_bound.py`。它只读匣带的 `path`/`model`，推导 base URL 与模型 ID，再原样调用官方 `eval/runner.py`；replay 模式不构造 upstream、不回退网络。
+
+**实跑（提交前工作树）**：
+
+```text
+replay_bound: base_url=https://kuaipao.pro/v1 fast=deepseek-v4.1-flash strong=deepseek-v4.1-flash
+E-VER-07  n_records=1 n_scored=1 n_unscored=0 n_equivalent=1
+M-DIM-08  n_records=1 n_scored=1 n_unscored=0 n_equivalent=1
+```
+
+对应新匣带：`eval/cassettes/w8_r52_stab_E-VER-07_1.jsonl`、`eval/cassettes/w8_r52_stab_M-DIM-08_2.jsonl`。契约 `backend/tests/contract/test_replay_bound_contract.py:40-71` 钉住 path/model 绑定与拒绝未知 path。
+
+### 52.6 G-2 与 57 族终版（不达门，如实）
+
+**G-2**：
+
+| 次面 | complete | error | refuse | equivalent |
+|---|---:|---:|---:|---:|
+| 原始首跑 `eval/results_r52g2_r1.json` | 8 | 1 | 1 | 6 |
+| 干净重跑 `eval/results_g2_r52_clean.json` | 9 | 0 | 1 | 7 |
+
+逐 case：`E-VER-01` complete/neq（冻结集时间谓词冲突）；`E-VER-02/03/04/05` complete/eq；`E-VER-06` complete/neq（campaign 口径冲突）；`E-VER-07` complete/eq；`E-VER-08` refuse/no_data_asset（业务拒答）；`E-VER-10/11` complete/eq。**7/10 等效，不达 95%**。
+
+**57 族**：
+
+| 次面 | complete | error | refuse | clarify | equivalent |
+|---|---:|---:|---:|---:|---:|
+| 原始首跑 `eval/results_r52f57_r1.json` | 41 | 4 | 9 | 3 | 15 |
+| 干净重跑 `eval/results_f57_r52_clean.json` | 45 | 0 | 9 | 3 | 17 |
+
+**原始 4 条 error**（均 `LLM_UPSTREAM_ERROR`，不是 `no_data_asset`）：`E-VER-01`、`E-ENUM-03`、`E-ENUM-05`、`M-ENUM-03`；分别有 `LlmTimeout`/任务阶段 detail。**clean 的 9 条 refuse**：`E-ENUM-01`、`E-MET-08`、`E-VER-08`、`M-ENUM-02`、`M-ENUM-04`、`X-ENUM-04`、`X-ENUM-07`、`X-MET-01`、`X-STR-04`；**3 条 clarify**：`H-STR-06`、`H-STR-08`、`X-STR-02`。E-MET-08 仍是反面口径（全指标默认 `pay_status='paid'`），不应补 metric。
+
+**转移矩阵（r51 clean → r52 clean）**：
+
+| before → after | 条数 |
+|---|---:|
+| complete/eq → complete/eq | 12 |
+| complete/eq → complete/neq | 2 |
+| complete/eq → refuse/neq | 2 |
+| complete/neq → complete/eq | 2 |
+| complete/neq → complete/neq | 24 |
+| complete/neq → refuse/neq | 2 |
+| refuse/neq → complete/eq | 3 |
+| refuse/neq → complete/neq | 2 |
+| refuse/neq → refuse/neq | 5 |
+| complete/neq → clarify/neq | 1 |
+| clarify/neq → clarify/neq | 2 |
+
+⇒ 57 族已 57/57 可判，但 **17 equivalent，不达 G-5**；不得把 45 complete 写成本轮 G-5 通过。
+
+### 52.7 终版复跑、出站、边界
+
+- **integration**：一次性 PG 55439 / Redis 56386，Alembic → 0006：`124 passed / 0 failed / 31.70s`；跑完 `DROP DATABASE ecom`，一次性库空，共享库仅 `ecom`、`ecom_u123_probe`，容器 0 件。
+- **offline**：`.\.venv\Scripts\python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q` ⇒ **2559 passed / 0 failed / 1 warning / 111.53s**。
+- **出站实报（本轮，所有 live）**：`tokens 2,038,722`／`price_guess 7.115591 CNY`。分面：G-2＋57 实际 `1,741,186 / 6.193832`；稳定性主跑＋补跑 `297,536 / 0.921759`。模型均为 `deepseek-v4.1-flash`，按未知模型 pro 档兜底并标 `price_guess`。
+- **未动**：`reports/qa/**`、共享 `ecom`、冻结集、阈值、判据措辞；07 §10.2 的 15s 未改；门禁未重算，仍 `PASS 1/8`；零取号 `U-143`。
+- **复算入口**：A 修复前形状读 `eval/results_r52_ever07_pre_fix_shape.json`；A/B 回归读 `backend/tests/unit/test_planner_engine.py`、`test_llm_client.py`、`test_llm_gateway.py`；回放读 `eval/replay_bound.py`＋`eval/cassettes/w8_r52_stab_*.jsonl`；G-2/57 读 `eval/results_g2_r52_clean.json`／`eval/results_f57_r52_clean.json`。以上入口不命中本节自身。

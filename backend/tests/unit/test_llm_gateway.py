@@ -65,6 +65,7 @@ from app.llm.errors import (
     LlmConcurrencyExceeded,
     LlmEgressViolation,
     LlmRefused,
+    LlmSaturated,
     LlmUnknownModel,
     LlmUnknownTask,
     LlmUpstreamError,
@@ -758,6 +759,44 @@ class TestDegradeToTemplateAndRefuse:
         assert ei.value.detail.get("reason") == "upstream_fault_then_template_miss"
         assert ei.value.detail.get("last_degrade_error") == "LlmTimeout"
 
+
+    async def test_saturation_then_template_miss_keeps_the_dedicated_concurrency_code(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """🔴 W8 第 52 轮：本地信号量饱和冒到终态时，仍必须是并发专用码。
+
+        断言三者一致：
+        ① 降级事件 = `llm_concurrency_exceeded / reduced_candidates`；
+        ② 终态异常 = `LlmSaturated`，`default_code=LLM_CONCURRENCY_EXCEEDED`；
+        ③ 该码的 `Retry-After` 默认值 = 5s（由 `core.enums` 唯一真相表提供）。
+        """
+        from app.core.enums import ErrorCode, RETRY_AFTER_DEFAULT_S
+
+        monkeypatch.setattr("app.llm.client.SEMAPHORE_WAIT_TIMEOUT_S", 0.01)
+
+        async def responder(i: int, r: httpx.Request) -> httpx.Response:
+            await asyncio.sleep(0.3)
+            return json_ok(content='{"sql":"SELECT 1"}')
+
+        up = FakeUpstream(responder)
+        gw, _, events, _ = _gw(up, semaphore_flash=1)
+        try:
+            holder = asyncio.create_task(gw.call("gen_sql", _payload()))
+            await asyncio.sleep(0.03)
+            with pytest.raises(LlmSaturated) as ei:
+                await gw.call("gen_sql", _payload())
+            await holder
+        finally:
+            await gw.aclose()
+
+        assert ei.value.default_code == ErrorCode.LLM_CONCURRENCY_EXCEEDED.value
+        assert ei.value.detail["reason"] == "saturation_then_template_miss"
+        assert ei.value.detail["last_degrade_error"] == "LlmSaturated"
+        assert RETRY_AFTER_DEFAULT_S[ErrorCode.LLM_CONCURRENCY_EXCEEDED] == 5
+        sat = [e for e in events if e.reason is DegradedReason.LLM_CONCURRENCY_EXCEEDED]
+        assert sat, "饱和必须留下 degraded 事件"
+        assert sat[0].action_taken is ActionTaken.REDUCED_CANDIDATES
+        assert up.sent == 1, "排队失败那次不得发请求"
 
     async def test_default_template_provider_is_a_declared_gap_not_an_implementation(self) -> None:
         """🔴 诚实声明钉成断言：P0 的模板层**是空的**（`gold_query` 未接线）。

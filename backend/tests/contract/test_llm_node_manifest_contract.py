@@ -168,8 +168,11 @@ def test_timeout_error_code_is_recoverable_and_attributable() -> None:
     里的 `last_degrade_error` / `reason` 区分具体成因。
     """
     _ensure_import_path()
+    from app.core.enums import ErrorCode, RETRY_AFTER_DEFAULT_S
     from app.llm.errors import LlmCircuitOpen, LlmSaturated, LlmTimeout
 
     assert LlmTimeout.default_code == "LLM_UPSTREAM_ERROR"
     assert LlmCircuitOpen.default_code == "LLM_UPSTREAM_ERROR"
-    assert LlmSaturated.default_code == "LLM_UPSTREAM_ERROR"
+    # 🔴 W8 第 52 轮：饱和不是通用上游故障，专用码必须保留。
+    assert LlmSaturated.default_code == ErrorCode.LLM_CONCURRENCY_EXCEEDED.value
+    assert RETRY_AFTER_DEFAULT_S[ErrorCode.LLM_CONCURRENCY_EXCEEDED] == 5

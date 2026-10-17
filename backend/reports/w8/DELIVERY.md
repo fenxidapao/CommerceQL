@@ -675,3 +675,11 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **复跑**：integration **124 passed / 0 failed**（一次性 PG/Redis，已 DROP＋查残渣）；offline **2551 passed / 0 failed**；定向 **79 passed**。
 - **边界**：未改 `reports/qa/**`、冻结集、阈值、判据措辞、共享 `ecom`、07 §10.2 的 15s；门禁未重算仍 `PASS 1/8`；零取号（`U-143`）。
 - **出站**：本轮 live 合计 `tokens 1,985,762`、`price_guess 5.741467 CNY`（`deepseek-v4.1-flash` 按 pro 档兜底）。
+## 第 52 轮交付（E-VER-07 语义守卫 ＋ 饱和/熔断归类 ＋ 绑定回放 ｜ 起点 `c4e4e34` / 代码 `1c2c336` ｜ 2026-10-17 13:2x–14:0x +0800 ｜ 一轮一笔）
+
+- **A**：`plan_for` 新增单值等值筛选维度降级守卫；修复前 6 次形状复现 4 红/2 绿；修复后 E-VER-07 成功 SQL 全部为单值 `COUNT(*)`（3b/5 的计划原始含维度但被守卫降级），M-DIM-08 GROUP BY 正路径保留。
+- **B**：`LlmSaturated` 恢复 `LLM_CONCURRENCY_EXCEEDED`；网关饱和出口固定 `reduced_candidates`；`_acquire=min(20s,remaining-ε)`；开路/半开实际抛 `LlmCircuitOpen`；零出站测试 152/170 passed。U-127 仍 open（W7 指标/真压测未补）。
+- **C**：新增 `eval/replay_bound.py`，从匣带绑定 base URL/model；E-VER-07 与 M-DIM-08 已零出站 replay 命中。
+- **读数**：G-2 clean `9 complete/1 refuse`、等效 7；57 clean `45 complete/9 refuse/3 clarify`、等效 17；均不达门。integration `124/0`；offline `2559/0`。
+- **出站**：本轮 live `2,038,722 tokens`／`price_guess 7.115591 CNY`。
+- **边界**：未动 `reports/qa/**`、共享 `ecom`、冻结集/阈值/判据；15s 未改；门禁未重算（`PASS 1/8`）；零取号 `U-143`。

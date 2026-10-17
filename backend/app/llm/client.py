@@ -66,6 +66,7 @@ import httpx
 
 from app.core.contracts import TokenUsage
 from app.llm.errors import (
+    LlmCircuitOpen,
     LlmConcurrencyExceeded,
     LlmEmptyContent,
     LlmError,
@@ -78,12 +79,17 @@ __all__ = [
     "Completion",
     "ChatClient",
     "SEMAPHORE_WAIT_TIMEOUT_S",
+    "SEMAPHORE_WAIT_HEADROOM_S",
     "BACKOFF_SCHEDULE_S",
     "BACKOFF_JITTER_RATIO",
 ]
 
 #: 信号量等待上限（07 §10.1 "排队"行）。超时 → `LlmSaturated` → 降级。
 SEMAPHORE_WAIT_TIMEOUT_S: Final[float] = 20.0
+
+#: 留给拿到并发位后的实际 HTTP 传输；U-127 的 `remaining - ε` 里的 ε。
+#: 没有它时 20s 等待 > 节点 15s 硬超时，饱和出口永远跑不到。
+SEMAPHORE_WAIT_HEADROOM_S: Final[float] = 1.0
 
 #: 429 的退避档位（07 §10.1：0.5s / 1s / 2s，最多 3 次）。
 BACKOFF_SCHEDULE_S: Final[tuple[float, ...]] = (0.5, 1.0, 2.0)
@@ -215,7 +221,9 @@ class ChatClient:
         now = self._monotonic()
         if breaker.is_open(now, self._circuit_open_s):
             # 07 §10.2：开路期间**直接走降级链，不发请求**。
-            raise LlmTimeout(
+            # 🔴 W8 第 52 轮：生产路径必须抛**具名熔断类**，否则类默认码与
+            #    实际路径可判性是两张皮（旧实现抛 LlmTimeout，全仓 raise LlmCircuitOpen=0）。
+            raise LlmCircuitOpen(
                 "熔断已开路，本次不发请求",
                 detail={"model": model, "circuit_open_s": self._circuit_open_s},
             )
@@ -235,7 +243,7 @@ class ChatClient:
         if breaker.opened_at is not None:
             # 半开：只放 1 个探测请求进去。其余并发请求继续按开路处理（不发请求）。
             if breaker.half_open_probe_in_flight:
-                raise LlmTimeout(
+                raise LlmCircuitOpen(
                     "熔断半开，已有 1 个探测请求在途", detail={"model": model}
                 )
             breaker.half_open_probe_in_flight = True
@@ -299,11 +307,20 @@ class ChatClient:
         jitter = base * BACKOFF_JITTER_RATIO
         return max(0.0, base + self._rng.uniform(-jitter, jitter))
 
-    async def _acquire(self, model: str) -> None:
-        """先拿全局位、再拿模型位，都用同一个 20s 上限（07 §10.1）。"""
+    async def _acquire(self, model: str, remaining_s: float) -> None:
+        """先拿全局位、再拿模型位；等待上限同时受 20s 与本次剩余预算约束。
+
+        U-127：单看 20s 会让节点 15s 硬超时先赢，`LlmSaturated` 永不外抛。
+        这里按既定候选 (b) 取 `min(20s, remaining-ε)`，让“没排到位”先说话；
+        ε = `SEMAPHORE_WAIT_HEADROOM_S`，给拿到位后的 HTTP 调用留最小传输余量。
+        """
         sem = self._model_sem.get(model)
+        wait_limit = min(
+            SEMAPHORE_WAIT_TIMEOUT_S,
+            max(0.0, remaining_s - SEMAPHORE_WAIT_HEADROOM_S),
+        )
         try:
-            async with asyncio.timeout(SEMAPHORE_WAIT_TIMEOUT_S):
+            async with asyncio.timeout(wait_limit):
                 await self._global_sem.acquire()
                 try:
                     if sem is not None:
@@ -313,8 +330,14 @@ class ChatClient:
                     raise
         except TimeoutError as exc:
             raise LlmSaturated(
-                "等待并发位超过 20s（07 §10.1 排队上限）",
-                detail={"model": model, "wait_timeout_s": SEMAPHORE_WAIT_TIMEOUT_S},
+                "等待并发位超时（07 §10.1 排队上限 / 本次剩余预算）",
+                detail={
+                    "model": model,
+                    "wait_timeout_s": round(wait_limit, 3),
+                    "configured_wait_timeout_s": SEMAPHORE_WAIT_TIMEOUT_S,
+                    "remaining_s": round(remaining_s, 3),
+                    "headroom_s": SEMAPHORE_WAIT_HEADROOM_S,
+                },
             ) from exc
 
     def _release(self, model: str) -> None:
@@ -326,8 +349,15 @@ class ChatClient:
     async def _attempt(
         self, *, model: str, wire_body: Mapping[str, Any], remaining: float
     ) -> Completion:
-        await self._acquire(model)
+        wait_started = self._monotonic()
+        await self._acquire(model, remaining)
+        remaining = max(0.0, remaining - (self._monotonic() - wait_started))
         t0 = self._monotonic()
+        if remaining <= 0:
+            raise LlmTimeout(
+                "拿到并发位后传输 deadline 已耗尽",
+                detail={"model": model, "remaining_s": 0.0},
+            )
         try:
             async with asyncio.timeout(remaining):
                 resp = await self._client.post(

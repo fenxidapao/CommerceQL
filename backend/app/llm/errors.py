@@ -171,11 +171,14 @@ class LlmSaturated(LlmError):
     网关能做的实物动作是**换到弱模型**（flash 的 8 个并发位远多于 pro 的 2 个，
     在 pro 饱和时几乎必然可用）。这条不对称必须写清，否则 `action_taken` 就是在撒谎。
 
-    🔴 **W8 第 51 轮改码**（同 `LlmTimeout`）：饱和 = 上游侧资源不足，
-    冒到调用方时归 `LLM_UPSTREAM_ERROR`。
+    🔴 **W8 第 52 轮订正（撤回第 51 轮改码）**：饱和是**本地并发位等待**，
+    不是通用上游故障；若它在模板 miss 后冒到调用方，专用码必须是
+    `LLM_CONCURRENCY_EXCEEDED`（✅，`Retry-After=5`），不能再归
+    `LLM_UPSTREAM_ERROR`。生产主路径仍应由 `degraded(llm_concurrency_exceeded,
+    reduced_candidates)` 吃掉；本码只负责“没被模板吃掉且必须外抛”的终态。
     """
 
-    default_code = "LLM_UPSTREAM_ERROR"
+    default_code = "LLM_CONCURRENCY_EXCEEDED"
 
 
 class LlmEmptyContent(LlmError):

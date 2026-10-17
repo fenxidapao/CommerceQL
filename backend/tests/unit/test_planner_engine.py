@@ -628,6 +628,74 @@ class TestPlanFor:
         assert "SELECT" not in blob.upper()
 
     @pytest.mark.asyncio
+    async def test_constant_filter_dimension_is_demoted_before_sql_generation(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        """🔴 E-VER-07 回归：单值等值筛选列不得再被当成分组维度。
+
+        模型原计划（第 51 轮 6 次里 4 次）:
+        `dimensions=["region"]` + `filters=["region.region_name = '华东'"]` +
+        `output_columns=["region_name","province_cnt"]`。
+        代码应在 plan 出口去掉冗余维度/输出列，gold 形态保持单值 `COUNT(*)`。
+        """
+        body = _plan_body(
+            metrics=[{"name": "province_cnt", "caliber": "COUNT(*) 省份数"}],
+            dimensions=["region"],
+            filters=["region.region_name = '华东'"],
+            grain="province",
+            order_by=[],
+            limit=1,
+            assets=[{"asset": "region", "join_key": None}],
+            output_columns=["region_name", "province_cnt"],
+        )
+        engine, _, _ = _engine({"plan": [body]}, runtime, clock)
+        outcome = await engine.plan_for(_ctx(), normalized_question="华东的覆盖省份数是多少？")
+
+        assert outcome.plan.dimensions == []
+        assert outcome.plan.output_columns == ["province_cnt"]
+        assert outcome.plan.filters == ["region.region_name = '华东'"]
+        assert outcome.plan_summary.dimensions == []
+
+    @pytest.mark.asyncio
+    async def test_group_by_dimension_without_constant_filter_is_preserved(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        """M-DIM-08 正路径：无等值筛选时，`GROUP BY region_name` 的维度必须保留。"""
+        body = _plan_body(
+            metrics=[{"name": "province_cnt", "caliber": "COUNT(*) 按大区"}],
+            dimensions=["region"],
+            filters=[],
+            grain="region",
+            order_by=[],
+            limit=10,
+            assets=[{"asset": "region", "join_key": None}],
+            output_columns=["region_name", "province_cnt"],
+        )
+        engine, _, _ = _engine({"plan": [body]}, runtime, clock)
+        outcome = await engine.plan_for(_ctx(), normalized_question="各大区的覆盖省份数是多少？")
+
+        assert outcome.plan.dimensions == ["region"]
+        assert outcome.plan.output_columns == ["region_name", "province_cnt"]
+
+    @pytest.mark.asyncio
+    async def test_non_equality_filter_does_not_demote_dimension(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        """反向对照：`LIKE`/`IN` 可能确实需要分组，守卫不得扩大成“看到同名就删”。"""
+        body = _plan_body(
+            metrics=[{"name": "province_cnt", "caliber": "COUNT(*) 按大区"}],
+            dimensions=["region"],
+            filters=["region.region_name LIKE '华%'"],
+            output_columns=["region_name", "province_cnt"],
+            assets=[{"asset": "region", "join_key": None}],
+        )
+        engine, _, _ = _engine({"plan": [body]}, runtime, clock)
+        outcome = await engine.plan_for(_ctx(), normalized_question="华东附近大区的覆盖省份数是多少？")
+
+        assert outcome.plan.dimensions == ["region"]
+        assert outcome.plan.output_columns == ["region_name", "province_cnt"]
+
+    @pytest.mark.asyncio
     async def test_blocking_issues_alone_is_a_legal_plan(
         self, runtime: SemanticBundleRuntime, clock: FrozenClock
     ) -> None:

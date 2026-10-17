@@ -1,0 +1,94 @@
+{
+  "generated_at": "2026-10-17T14:00:26+0800",
+  "source": "zero-egress parse of committed W8 r51 E-VER-07 cassettes + results",
+  "why": "reproduce the pre-fix filter-as-grouping-dimension defect without network",
+  "n": 6,
+  "records": [
+    {
+      "run": 1,
+      "terminal_event": "complete",
+      "outcome": "success",
+      "equivalent": false,
+      "plan_dimensions": [
+        "region"
+      ],
+      "plan_filters": [
+        "region.region_name = '华东'"
+      ],
+      "plan_blocking_issues": [],
+      "sql_text": "SELECT v_region.region_name AS region_name, COUNT(*) AS province_cnt FROM v_region WHERE v_region.region_name = %(region_name)s GROUP BY v_region.region_name LIMIT 1",
+      "refusal_reason": null
+    },
+    {
+      "run": 2,
+      "terminal_event": "complete",
+      "outcome": "success",
+      "equivalent": false,
+      "plan_dimensions": [
+        "region"
+      ],
+      "plan_filters": [
+        "region.region_name = '华东'"
+      ],
+      "plan_blocking_issues": [],
+      "sql_text": "SELECT v_region.region_name AS region_name, COUNT(*) AS province_cnt FROM v_region WHERE v_region.region_name = %(region_name)s GROUP BY v_region.region_name LIMIT 100",
+      "refusal_reason": null
+    },
+    {
+      "run": 3,
+      "terminal_event": "complete",
+      "outcome": "success",
+      "equivalent": true,
+      "plan_dimensions": [],
+      "plan_filters": [
+        "region.region_name = '华东'"
+      ],
+      "plan_blocking_issues": [],
+      "sql_text": "SELECT COUNT(*) AS province_cnt FROM v_region WHERE region_name = %(region_name)s LIMIT 1",
+      "refusal_reason": null
+    },
+    {
+      "run": 4,
+      "terminal_event": "complete",
+      "outcome": "success",
+      "equivalent": false,
+      "plan_dimensions": [
+        "region"
+      ],
+      "plan_filters": [
+        "region.region_name = '华东'"
+      ],
+      "plan_blocking_issues": [],
+      "sql_text": "SELECT v_region.region_name AS region_name, COUNT(*) AS province_cnt FROM v_region WHERE v_region.region_name = %(region_name)s GROUP BY v_region.region_name LIMIT 100",
+      "refusal_reason": null
+    },
+    {
+      "run": 5,
+      "terminal_event": "complete",
+      "outcome": "success",
+      "equivalent": true,
+      "plan_dimensions": [],
+      "plan_filters": [
+        "region.region_name = '华东'"
+      ],
+      "plan_blocking_issues": [],
+      "sql_text": "SELECT COUNT(*) AS province_cnt FROM v_region WHERE region_name = %(region_name)s LIMIT 1",
+      "refusal_reason": null
+    },
+    {
+      "run": 6,
+      "terminal_event": "complete",
+      "outcome": "success",
+      "equivalent": false,
+      "plan_dimensions": [
+        "region"
+      ],
+      "plan_filters": [
+        "region.region_name = '华东'"
+      ],
+      "plan_blocking_issues": [],
+      "sql_text": "SELECT v_region.region_name AS region_name, COUNT(*) AS province_cnt FROM v_region WHERE v_region.region_name = %(region_name)s GROUP BY v_region.region_name LIMIT 100",
+      "refusal_reason": null
+    }
+  ]
+}

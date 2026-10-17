@@ -1461,7 +1461,7 @@ backend/
 >
 > **落地口径（归 W4；⚠️ 不得写死一个数）**：`bind` 的硬超时 = `resolve_route(LlmTask.L4_SCORE).model_key` 的 `hard_timeout_s(...)` —— 即**复用 `_client_timeout_for`（`build.py:417-424`）那条执行期解析**。**推荐形态**：`NODE_TIMEOUT_S` **删** `"bind": 0.2`、`_LLM_NODE_TASKS`（类型是 `dict[str, str]`）**加** `"bind": "l4_score"`（`L4_TASK` 与 `LlmTask.L4_SCORE` 的一致性已由 `tests/unit/test_binding_l4.py` 交叉钉住）。⚠️ **不许两表并存**：`_effective_limit_for` 先查 `_LLM_NODE_TASKS` ⇒ 留在表里的 0.2 会变成**死值**，再造一处"两列互相顶替"的观感。
 >
-> **出口（已就位，不要动）**：`bind` 超时的出路**表里已经写了** —— `_timeout_fallback` 的 `bind` 分支（`build.py:550-555`）→ `refuse(no_data_asset)`（W4 具名裁决"无绑定 → refuse"）⇒ **符合规则 3（不落 `INTERNAL`）**。W7 观测到的 `terminal_provenance = stage=plan_ready|reason=no_data_asset` 与它**同形**（`bind` 不发 stage ⇒ 终止旁边最后一个 stage 帧是 `plan_ready`）。⚠️ **架构已复核一处当初担心的代价，结论是"不用做"**：`bind` 的最坏停顿从 0.2s 变 15s 后，`plan_ready` 之后会不会"长时间无帧"？—— **不会**：`runner.py:383-387` 的**心跳**（`_heartbeat_s`）是独立于 stage 帧的通道（其注释明写它是"唯一允许在终态之后发出的事件"）⇒ **不新增任何进度机制**。
+> **出口（🔻 W8 r52 订正，旧句作废）**：`bind` 超时的出路是 `error(LLM_UPSTREAM_ERROR)` ＋ `error_detail.reason=timeout`；旧的 `refuse(no_data_asset)` 结论已被本轮代码事实推翻（它把上游慢误记成“业务缺数据”）。W7 旧观测到的 `reason=no_data_asset` 是同形历史症状，不再作为当前出口定义。⚠️ **架构已复核一处当初担心的代价，结论是"不用做"**：`bind` 的最坏停顿从 0.2s 变 15s 后，`plan_ready` 之后会不会"长时间无帧"？—— **不会**：`runner.py:383-387` 的**心跳**（`_heartbeat_s`）是独立于 stage 帧的通道（其注释明写它是"唯一允许在终态之后发出的事件"）⇒ **不新增任何进度机制**。
 >
 > **五处同改清单（v1.5 的"三处"在本次扩到五处 —— 实测耦合点比文档记的多）**：
 >
@@ -1480,7 +1480,7 @@ backend/
 >
 > **契约测试同步（⚠️ v1.5 订正，本窗口认错）**：`tests/contract/test_graph_timeout_contract.py` **不是键集断言，而是值级断言** —— `EXPECTED_TIMED_NODES` 逐节点给出数值（含 `"bind": 0.2` 这类），末以 `assert NODE_TIMEOUT_S == EXPECTED_TIMED_NODES` 整体比较 ⇒ **改表必红**。**本节 v1.3 原写"钉的是键集 ⇒ 不需要改断言"，该结论已被证伪并撤回**（W7 与 W4 `RELAY §十④` **各自独立**提出，架构采认）。W4 已**整体重写**该测试（`EXPECTED_TIMED_NODES` 收敛为 9 节点、新增 `EXPECTED_LLM_NODES`、重组 `TestTimeoutTable`/`TestWrapper`/`TestClientTimeoutResolution`/`TestAssembly`、删除因附注③ 失效的 `TestMergedUnderstandSlack`）。⇒ **纪律更新：改 `NODE_TIMEOUT_S` 必须让"§5.3 表 / 代码常量 / 该契约测试"三处同时一致**（原"只同步文档即可"的说法作废）。
 
-> ⚠️ **v1.7.3 补注（`U-127`）：本表对"容量不足"这一成因是**失明的**。** 所有在线 LLM 节点的硬超时 = flash 15s，而 `§10.1` 的信号量等待上限 = 20s ⇒ **拿不到并发位时永远是节点先掐**，于是 `llm_concurrency_exceeded` 这一档**在这张表里今天走不到**（`normalize` 那一行只会给 `llm_unavailable`）。⇒ 修复归 **`U-127`**；在此之前**引用本表 `normalize`/`plan`/`gen_sql` 三行的降级原因时，必须写明"容量类失败也被并入其中"**（不是推测：`client.py` 的等待与 `t0` 取值次序见 `U-127` 事实栏）。
+> ⚠️ **v1.7.3 补注（`U-127`）**：旧实现下本表对"容量不足"这一成因是**失明的** —— 所有在线 LLM 节点的硬超时 = flash 15s，而 `§10.1` 的信号量等待上限 = 20s ⇒ 拿不到并发位时节点先掐，`llm_concurrency_exceeded` 走不到。<br>🔻 **W8 r52 订正**：`client.py::_acquire` 已改为 `min(20s, remaining-ε)`，信号量饱和可在节点超时前进入专用 degraded 面；剩余盲区仍是“其他节点工作耗尽 deadline”而非“等待上限本身”。**`U-127` 仍未关闭**（W7 `llm_queue_wait_ms` 与真压测非零未补）。
 
 #### 5.3.1 审计的两段式落地（**ADR-14 的实现方式**）
 
@@ -2281,7 +2281,7 @@ bind
 | 请求生命周期 | 从发出到**响应完成**算一个并发位（含流式读取完毕） |
 | 多进程扩展 | P0 单进程 → 进程内信号量够用；**若扩多 worker，必须改为 Redis 令牌桶**（否则总并发 = 进程数 × 8，会撞上游）→ 写进 §18 runbook |
 | 429 处理 | **指数退避 + jitter**：0.5s / 1s / 2s，最多 3 次；仍 429 → `error(LLM_CONCURRENCY_EXCEEDED)`（502，`retryable=true`） |
-| 排队 | 信号量等待上限 **20s**；超时 → `degraded(llm_concurrency_exceeded, reduced_candidates)` 或降级到单路。<br>⚠️ **v1.7.3：该出口在生产不可达** ⇒ **`U-127`（P1）**。成因 = **两处各自合规的值互斥**：在线 LLM 节点硬超时 = flash **15s**（`U-104/U-107` 规则 2），而本行的 `LlmSaturated` 要等满 **20s**，且等待**不吃** `remaining` ⇒ **15 < 20 ⇒ 永远先被节点掐掉**，容量不足被记成 `node_timeout_degraded` ⇒ `refuse(no_data_asset)`。**🔴 本行那句 `degraded(llm_concurrency_exceeded, reduced_candidates)` 在修复前不得引用为"已实现的降级面"。** |
+| 排队 | 信号量等待上限 **20s**；超时 → `degraded(llm_concurrency_exceeded, reduced_candidates)` 或降级到单路。<br>⚠️ **v1.7.3 曾登记 `U-127`（P1）：旧实现把该出口做成生产不可达** —— 在线 LLM 节点硬超时 = flash **15s**，而 `LlmSaturated` 固定等 **20s** 且等待不吃 `remaining` ⇒ 节点先赢。<br>🔻 **W8 r52 客户端侧订正**：`_acquire` 已按 U-127 候选 (b) 收窄为 `min(20s, remaining-ε)`（ε=1s），并补零出站注入测试钉住 `degraded(llm_concurrency_exceeded,reduced_candidates)`、专用码与 `Retry-After=5`。**U-127 仍未关闭**：W7 的 `llm_queue_wait_ms` 与真压测非零读数未补，不得把本行读成“容量问题已解决”。 |
 | 与审计 | 每次调用记录 `model_version` + `prompt_version` + tokens（N-19） |
 
 ### 10.2 超时、熔断与降级链

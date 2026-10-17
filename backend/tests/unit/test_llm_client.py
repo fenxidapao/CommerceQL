@@ -34,6 +34,7 @@ from app.llm.client import (
     Completion,
 )
 from app.llm.errors import (
+    LlmCircuitOpen,
     LlmConcurrencyExceeded,
     LlmEmptyContent,
     LlmSaturated,
@@ -529,6 +530,37 @@ class TestConcurrency:
         finally:
             await client.aclose()
 
+    async def test_saturation_wins_before_the_node_deadline(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """U-127 客户端侧回归：等待上限必须吃到 `remaining-ε`，不能只看 20s。
+
+        设 deadline=0.05s、固定 20s、ε=0.01s，占位者睡 0.2s。若实现仍等 20s，
+        这条会先得到 `LlmTimeout`；正确实现应在约 0.04s 抛 `LlmSaturated`，
+        让“没排到位”在节点 15s 硬超时之前可判。
+        """
+        monkeypatch.setattr("app.llm.client.SEMAPHORE_WAIT_TIMEOUT_S", 20.0)
+        monkeypatch.setattr("app.llm.client.SEMAPHORE_WAIT_HEADROOM_S", 0.01)
+
+        async def responder(i: int, r: httpx.Request) -> httpx.Response:
+            await asyncio.sleep(0.2)
+            return json_ok()
+
+        up = FakeUpstream(responder)
+        client = _client(up, max_concurrency=1, semaphore_flash=1)
+        try:
+            holder = asyncio.create_task(_call(client, deadline_s=1.0))
+            await asyncio.sleep(0.02)
+            with pytest.raises(LlmSaturated) as ei:
+                await _call(client, deadline_s=0.05)
+            await holder
+        finally:
+            await client.aclose()
+        assert ei.value.detail["wait_timeout_s"] < 0.05
+        assert ei.value.detail["remaining_s"] <= 0.05
+        assert ei.value.detail["headroom_s"] == 0.01
+        assert up.sent == 1  # 排队失败的那次没有出网
+
     async def test_waiting_too_long_for_a_slot_is_saturation(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -574,10 +606,11 @@ class TestCircuitBreaker:
             assert up.sent == 5
             assert client.circuit_is_open("m-flash") is True
 
-            with pytest.raises(LlmTimeout) as ei:
+            with pytest.raises(LlmCircuitOpen) as ei:
                 await _call(client)
             assert up.sent == 5, "开路期间不得发出任何请求"
             assert ei.value.detail["model"] == "m-flash"
+            assert ei.value.default_code == "LLM_UPSTREAM_ERROR"
         finally:
             await client.aclose()
 
@@ -622,7 +655,7 @@ class TestCircuitBreaker:
 
             probe = asyncio.create_task(_call(client))
             await asyncio.sleep(0.02)  # 让探测走到"在途"
-            with pytest.raises(LlmTimeout) as ei:
+            with pytest.raises(LlmCircuitOpen) as ei:
                 await _call(client)
             assert "半开" in ei.value.message
             assert up.sent == 6
