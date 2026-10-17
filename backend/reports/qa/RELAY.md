@@ -4495,3 +4495,43 @@ C 项主路径成立：`eval/replay_bound.py` 在 `afa18fe`／`dirty=false` 上�
 - 注入形态 ＝ **无**；未执行 N/A。
 - 本轮 QA 未计费出站；只读产物、跑官方 replay；一次性 PG/Redis 已清。
 - 台账逐位不动：`1830 / 3.025849 / 2026-10-07 04:28:00.872275+00`；共享库仅 `ecom`、`ecom_u123_probe`。
+
+## 69 · W8 第 53 轮验收：守卫边界与 live 绑定成立；E-VER-08 跨批不一致、G-2 结构上限与 G-5 未达门（QA R31av ｜ 2026-10-17 19:07:57 +0800 ｜ 代码提交 `b70822e` ｜ 证据 HEAD `2d26d0a`／582 笔）
+
+### 69.0 结论
+
+A/B/C 主路径成立：守卫已按 grain＋题面显式分组语义收窄；E-VER-07 最终 live 6/6 complete+eq、M-DIM-08 5/5 complete+eq，全部自报 `b70822e`／`dirty=false`；replay 在 `2d26d0a` 上两条均命中且等价。定向 149/0、离线 2562/0、一次性集成 124/0。
+
+三项未闭：
+
+1. **E-VER-08 跨批终态不一致**：G-2 clean = `refuse/no_data_asset`，57 clean = `clarify/field_binding`；同题同代码、两者均非等价。历史已登记其为核心“事实表要求时间范围 vs gold 无时间谓词”的冻结口径冲突；本轮应把它列为冻结冲突下的终态不稳定，而不是普通可修回归。
+2. **G-2 结构上限**：10 条分母中 E-VER-01/06 已登记冻结冲突，E-VER-08 也属冻结口径冲突。按当前判据不改冻结集/阈值时，G-2 无法达到 95%；即使 E-VER-08 不计，也只能到 8/10。必须由总控决定正式豁免或契约处理，不能让 W8 自行改口径。
+3. **G-5 未达门**：clean 57 族 `complete 45 / refuse 9 / clarify 3`、`equivalent 19`；尚未按完整门禁分母清算，不能写成 G-5 通过。
+
+门禁仍为 `88f3500`／`PASS 1/8`；U-127 仍 open。
+
+### 69.1 独立复算
+
+| 面 | QA 现读 | 判 |
+|---|---|---|
+| 提交／树 | 代码 `b70822e`；证据 HEAD／原点 `2d26d0a`／582 笔；工作树仅 `?? .workbuddy/` | ✅ |
+| 定向 | 149 passed／0 failed | ✅ |
+| 离线 | 2562 passed／0 failed／1 warning | ✅ |
+| 集成 | 一次性 PG 55441／Redis 56388＋alembic：124 passed／0 failed；容器清 | ✅ |
+| 稳定性 | E-VER-07 6/6 complete+eq；M-DIM-08 5/5 complete+eq；逐件 b70822e／dirty=false | ✅ |
+| replay | 两条在 2d26d0a／dirty=false 上 n_scored=1、n_equivalent=1 | ✅ |
+| G-2 clean | complete 9／refuse 1，equivalent 7；E-VER-01/06/08 非等价 | 🔴 未达门 |
+| 57 clean | complete 45／refuse 9／clarify 3，equivalent 19 | 🔴 未达 G-5 |
+| 出站账 | 稳定性 301,124／0.676223；G-2 rounds 308,482／0.822977；57 rounds 1,483,894／5.097875；绑定小计 2,093,500／6.597075；探索 834,100／2.192802；总面 2,927,600／8.789877 | ✅ 可加总 |
+| 机械／边界 | scan_secrets 26 件／0 命中；DSN hygiene 8 passed；台账逐位不动；共享库两库 | ✅ |
+| 门禁 | 88f3500／PASS 1/8 | 🔴 未重算 |
+
+### 69.2 下一步
+
+下一轮块已落 `TASK_BOARD §74.2`：E-VER-08 先按冻结冲突登记并做三项对撞；G-2 准备正式豁免/契约处理材料；G-5 按完整门禁分母逐条清算。不得继续只拿 10/57 子集与门禁措辞打转。
+
+### 69.3 注入与边界
+
+- 注入形态 ＝ **无**；未执行 N/A。
+- 本轮 QA 未计费出站；只读产物、跑官方 replay；一次性 PG/Redis 已清。
+- 未动业务代码、冻结集、阈值、判据和共享 ecom。
