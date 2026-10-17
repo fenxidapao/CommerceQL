@@ -4439,3 +4439,78 @@ W8 的定位成立：E-VER-07 失败跳精确落在 15s 客户端硬上限，pla
 ### 72.4 追加观察（R31at）
 
 - `LlmCircuitOpen` 的新默认码断言不覆盖生产熔断路径：`backend/app/llm/client.py:216-221` 在熔断开路时实际抛 `LlmTimeout`，`:235-242` 的半开在途分支也同形；全仓 `raise LlmCircuitOpen` 命中 0。第 52 轮 B 项应把“实际路径是否可判”与“类默认码”分开报，补可触达测试或具名登记未接线状态。
+
+## 73 · W8 第 52 轮验收：A/B/C 主项成立；维度守卫边界与 live 证据绑定仍未闭（QA R31au ｜ 2026-10-17 16:46:35 +0800 ｜ 起点 `c4e4e34`／578 笔 ｜ 当前 `afa18fe`／579 笔）
+
+### 73.0 结论
+
+**第 52 轮 A/B/C 三项主路径均可收，但仍不能写成项目收口。**
+
+已成立：
+
+1. **A 主路径**：修复前 6 份零出站派生记录复现 4 次“筛选列又被当分组维度”；修复后 11 次尝试中 5 次 `complete+equivalent`、6 次 `LLM_UPSTREAM_ERROR`、0 次 `no_data_asset`；成功的 E-VER-07 全部是单值 `SELECT COUNT(*) ... WHERE region_name=...`。
+2. **B 主路径**：`LlmSaturated` 已恢复 `LLM_CONCURRENCY_EXCEEDED`；`_acquire=min(20s,remaining-1s)`；熔断开路与半开在途实际抛 `LlmCircuitOpen`。W8 明确保留 U-127 open，口径正确。
+3. **C 主路径**：`eval/replay_bound.py` 在提交后 `afa18fe`／`dirty=false` 上独立复跑，E-VER-07 与 M-DIM-08 均 `n_scored=1`、`n_unscored=0`、`n_equivalent=1`。
+
+仍开放：
+
+1. 🔴 **维度降级守卫有语义越界**：现读 `_demote_constant_filter_dimensions` 只要“筛选左值与维度同名”就删维度。QA 用合法计划 `dimensions=["region"] + filters=["region.region_name = '华东'"] + grain="region"` 直接调用该函数，得到 `removed=("region",)`、`dimensions=[]`、`output_columns=["province_cnt"]`。因此“先筛华东、再按大区分组”这类合法请求会被错误降级。当前 3 条测试只覆盖 E-VER-07、无筛选正路径与 `LIKE` 反例，未覆盖这一边界。
+2. 🔴 **live 产物仍没有绑到提交**：所有 `results_r52_stab_*.json` 实读 `git_rev=c4e4e34`、`git_dirty=true`。C 项 replay 已绑到 `afa18fe`，但 replay 只能证明匣带可复放，不能把当时的 live 尾延迟/上游故障重演。必须分开写“replay 已绑提交”与“live 未绑提交”。
+3. 🔴 **G-2／G-5 仍未达门**：clean G-2 为 9 complete／1 refuse、7 equivalent；clean 57 族为 45 complete／10 refuse／3 clarify、17 equivalent。门禁仍 `PASS 1/8`。
+
+### 73.1 独立复算
+
+| 面 | QA 现读 | 判 |
+|---|---|---|
+| 提交／树 | `HEAD=afa18fe`／579 笔；远端同点；工作树仅 `?? .workbuddy/` | ✅ |
+| 定向 | planner＋llm client＋gateway＋replay contract＋graph timeout＋manifest 契约 = **173 passed / 0 failed** | ✅ |
+| 离线全量 | **2559 passed / 0 failed / 1 warning**（115.28s） | ✅ |
+| 集成 | 一次性 PG 55440／Redis 56387，先 `alembic upgrade head`：**124 passed / 0 failed**（32.50s）；跑后容器清 | ✅ |
+| E-VER-07 | 11 次：5 complete+eq、6 error；0 no_data_asset；成功 SQL 全为单值计数 | ✅ 形状修复 |
+| M-DIM-08 | 7 次：5 complete+eq、2 error；5 条成功均保留 `GROUP BY region_name` | ✅ |
+| replay | 两条均在 `afa18fe`／`dirty=false` 命中并等价 | ✅ |
+| 维度守卫反例 | 合法“同列筛选＋分组”被删成 `dimensions=[]` | 🔴 越界 |
+| G-2／57 | clean 9/0/1、eq7；clean 45/0/9/3、eq17 | 🔴 不达门 |
+| 安全／边界 | scan_secrets 37 件／0 命中；DSN hygiene 8 passed；台账逐位不动；共享库两库 | ✅ |
+| 门禁 | `88f3500`／PASS 1/8 | 🔴 未重算 |
+
+**费用对账**：按已提交产物逐件求和，E-VER-07 11 件 `144,640 tokens / 0.682389`，M-DIM-08 7 件 `152,896 / 0.239370`；合计稳定性 `297,536 / 0.921759`。G-2 clean `262,659 / 0.913156`；57 clean `1,407,479 / 4.971459`；G-2+57 clean 合计 `1,670,138 / 5.884615`。W8 报的 `2,038,722 / 7.115591` 包含 G-2/57 原始首跑＋补跑面（`1,741,186 / 6.193832`）；引用时须同时写面，不能与 clean 数字混算。
+
+### 73.2 第 53 轮 W8 块（可整段复制）
+
+```text
+【W8 第 53 轮｜收窄维度守卫；把 live 证据绑到提交；继续门禁主线】
+
+0. 现读 HEAD afa18fe；不改 07 §10.2 的 15s、不改冻结集/阈值/判据措辞、不动 reports/qa/**；
+   允许出站，但先做零出站复算；每次实报 tokens、price_guess 计价、时段、HEAD。
+
+1. 🔴 必做 A：修维度守卫的合法同列分组边界
+- 现读 _demote_constant_filter_dimensions 会把
+  dimensions=["region"] + filters=["region.region_name = '华东'"] + grain="region"
+  也降成 dimensions=[]，导致“先筛华东、再按大区分组”的合法请求被删维度。
+- 判据应是“该维度在本题中是否本来就需要分组”，不是“筛选左值与维度同名”。
+  至少给出可判载体（grain / output intent / 题面维度语义）并加反向测试：
+  ① E-VER-07 单值计数仍降级；② 同列筛选但明确按该维度分组时保留；③ 无筛选 M-DIM-08 保留；④ LIKE/IN 不碰。
+- 重放 E-VER-07 与 M-DIM-08 匣带，确认 1 的修复没有回退；再跑 G-2 10 条与 57 族，仍不达门就如实写。
+
+2. 🔴 必做 B：把 live 证据绑到提交
+- 现有 results_r52_stab_*.json 全为 git_rev=c4e4e34、git_dirty=true；replay 已绑 afa18fe 但只证明匣带可复放。
+- 请把下一轮 live 稳定性产物在干净树、提交后自报 git_rev、git_dirty=false；
+  如果做不到，就在报告里分两行写“replay 可复算”与“live 未绑提交”，不得合并成“证据已绑”。
+- 保留原始失败与补跑，不得只留成功样本；给出尝试分母、上游错误类型与延迟。
+
+3. 🔴 必做 C：继续门禁主线
+- G-2/G-5 仍未达门；按现读逐条归因，不先扫 τ、不改判据、不为凑门改冻结集。
+- 优先处理可归因的语义/计划缺口；冻结集内部冲突只登记，不迎合。
+- 最后复跑 integration 124/0 与 offline；门禁未重算就写未重算，U-127 仍 open。
+
+4. 交付
+- 文件:行号、命令、原始产物、时点、HEAD；列出本轮未动边界；
+- 不得把 5/11 complete+eq 写成“E-VER-07 已稳定通过”，也不得把 G-2/G-5 的 clean 读数写成门禁通过。
+```
+
+### 73.3 总控侧待点句
+
+- 是否接受“维度守卫必须读取题目确实要分组的证据，而不能仅凭筛选列同名就降级”这一纠偏方向。
+- 是否要求 W8 在下一轮先做 live 干净树复跑，再做门禁重算；或允许 replay 先收、live 后补。
+- 是否允许继续出站到足以完成门禁归因的规模；若给上界，请按面（G-2／57／稳定性）分别给。

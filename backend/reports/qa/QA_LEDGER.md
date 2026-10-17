@@ -1367,3 +1367,21 @@
 
 **结论**：第 51 轮 A／B 主路径可收，但项目未收口；下一轮按 `TASK_BOARD §72.2` 先修 E-VER-07 语义抖动，再核正饱和归类并补齐可复算证据。
 **🔻 自曝**：撤回 R31as 的“`bind` 生产侧只拿 0.2s”错误断言；起点 `50d6575:build.py` 已含 `"bind": "l4_score"`，改前真正差异是评测侧漏 `present`。旧行保留，引用时以 R31at 为准。
+
+## R31au · W8 第 52 轮验收：A/B/C 主项成立；维度守卫越界与 live 证据未绑提交 ／ 2026-10-17 16:47:00 +0800 ／ 起点 `c4e4e34`／578 笔 ｜ 当前 `afa18fe`／579 笔
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 提交／树 | `HEAD=afa18fe`／579 笔；远端同点；工作树仅 `?? .workbuddy/` | ✅ |
+| 2 | 定向 | 173 passed／0 failed | ✅ |
+| 3 | 离线 | 2559 passed／0 failed | ✅ |
+| 4 | 集成 | 一次性 PG/Redis＋迁移后 124 passed／0 failed；容器清 | ✅ |
+| 5 | E-VER-07 | 11 次：5 complete+eq、6 upstream error、0 no_data_asset；成功 SQL 单值计数 | ✅ 形状修复 |
+| 6 | M-DIM-08 | 7 次：5 complete+eq、2 error；成功保留 GROUP BY | ✅ |
+| 7 | 回放 | 两条在 `afa18fe`／dirty=false 上 n_scored=1、n_equivalent=1 | ✅ |
+| 8 | 维度守卫 | 合法同列筛选＋分组被删成 dimensions=[]；当前测试未覆盖 | 🔴 |
+| 9 | live 绑定 | 稳定性产物 git_rev=c4e4e34、dirty=true | 🔴 |
+| 10 | G-2／57 | clean 9/0/1、eq7；clean 45/0/9/3、eq17 | 🔴 不达门 |
+| 11 | 门禁／边界 | PASS 1/8；台账逐位不动；共享库两库；scan_secrets 0 命中 | ✅/🔴 |
+
+**结论**：A/B/C 主路径可收，但项目未收口；下一轮按 `TASK_BOARD §73.2` 收窄维度守卫、把 live 绑到干净提交并继续门禁归因。

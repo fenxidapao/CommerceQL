@@ -4451,3 +4451,47 @@ W8 对 `normalize`／`intent`／`plan`／`gen_sql`／`repair`／`bind` 的超时
 ### 67.5 追加观察（R31at）
 
 - 同一项证据缺口：`LlmCircuitOpen` 的新默认码断言不等于生产路径已验证。`client.py:216-221` 熔断开路实际抛 `LlmTimeout`，`:235-242` 半开在途分支同形；全仓 `raise LlmCircuitOpen` 为 0。第 52 轮 B 项须补可触达测试或明确登记该类当前未接线，不能把 `test_timeout_error_code_is_recoverable_and_attributable` 当成运行时覆盖。
+
+## 68 · W8 第 52 轮验收：A/B/C 主项成立；维度守卫边界与 live 证据绑定仍未闭（QA R31au ｜ 2026-10-17 16:46:50 +0800 ｜ 起点 `c4e4e34`／578 笔 ｜ 当前 `afa18fe`／579 笔）
+
+### 68.0 结论
+
+A 项语义抖动主路径成立：修复前 6 份零出站派生记录中 4 次出现“筛选列又当分组维度”，修复后 E-VER-07 的 5 次 `complete` 全为单值 `COUNT(*)` 且全部 `equivalent`；6 次失败均为 `LLM_UPSTREAM_ERROR`，0 次 `no_data_asset`。M-DIM-08 的 5 条成功均保留 `GROUP BY region_name`。
+
+B 项主路径成立：`LlmSaturated` 恢复 `LLM_CONCURRENCY_EXCEEDED`，`_acquire=min(20s,remaining-1s)`，开路与半开实际抛 `LlmCircuitOpen`；U-127 仍 open，W8 没有把它写成关闭。
+
+C 项主路径成立：`eval/replay_bound.py` 在 `afa18fe`／`dirty=false` 上独立复跑，E-VER-07 与 M-DIM-08 均 `n_scored=1`、`n_unscored=0`、`n_equivalent=1`。
+
+仍未闭：
+
+- **维度守卫越界**：`_demote_constant_filter_dimensions` 只看“筛选左值与维度同名”，会把合法的 `dimensions=["region"] + filters=["region.region_name = '华东'"] + grain="region"` 也删成 `dimensions=[]`；QA 直接调用该函数复现 `removed=("region",)`。
+- **live 未绑提交**：11 份 E-VER-07 与 7 份 M-DIM-08 稳定性产物实读 `git_rev=c4e4e34`、`git_dirty=true`。C 项 replay 只证明匣带可复放，不等于 live 尾延迟/上游故障可复现。
+- **门禁仍未改善**：clean G-2 = 9 complete／1 refuse、eq7；clean 57 族 = 45 complete／10 refuse／3 clarify、eq17；门禁仍 `PASS 1/8`。
+
+### 68.1 独立复算
+
+| 面 | QA 现读 | 判 |
+|---|---|---|
+| 提交／树 | `HEAD=afa18fe`／579 笔；远端同点；工作树仅 `?? .workbuddy/` | ✅ |
+| 定向 | planner＋llm client＋gateway＋replay contract＋graph timeout＋manifest 契约 = **173 passed / 0 failed** | ✅ |
+| 离线 | **2559 passed / 0 failed / 1 warning**（115.28s） | ✅ |
+| 集成 | 一次性 PG 55440／Redis 56387＋alembic：**124 passed / 0 failed**（32.50s）；容器清 | ✅ |
+| E-VER-07 | 11 次：5 complete+eq、6 error、0 no_data_asset；成功 SQL 全为单值计数 | ✅ 形状修复 |
+| M-DIM-08 | 7 次：5 complete+eq、2 error；成功均保留 `GROUP BY region_name` | ✅ |
+| replay | 两条在 `afa18fe`／`dirty=false` 命中且等价 | ✅ |
+| 守卫反例 | 合法同列筛选＋分组被删成 `dimensions=[]` | 🔴 |
+| G-2／57 | clean 9/0/1、eq7；clean 45/0/9/3、eq17 | 🔴 不达门 |
+| 安全／边界 | scan_secrets 37 件／0 命中；DSN hygiene 8 passed；台账逐位不动；共享库两库 | ✅ |
+| 门禁 | `88f3500`／PASS 1/8 | 🔴 未重算 |
+
+**费用对账**：E-VER-07 11 件 `144,640 / 0.682389`；M-DIM-08 7 件 `152,896 / 0.239370`；稳定性合计 `297,536 / 0.921759`。clean G-2 `262,659 / 0.913156`；clean 57 族 `1,407,479 / 4.971459`。W8 的 `2,038,722 / 7.115591` 含原始首跑＋补跑面，引用时须写面。
+
+### 68.2 下一步
+
+下一轮块已落 `TASK_BOARD §73.2`：先收窄维度守卫并补合法同列分组反例，再把 live 产物绑到干净提交，最后继续 G-2/G-5 归因；不改 15s、不改冻结集/阈值，不先扫 τ。
+
+### 68.3 注入与边界
+
+- 注入形态 ＝ **无**；未执行 N/A。
+- 本轮 QA 未计费出站；只读产物、跑官方 replay；一次性 PG/Redis 已清。
+- 台账逐位不动：`1830 / 3.025849 / 2026-10-07 04:28:00.872275+00`；共享库仅 `ecom`、`ecom_u123_probe`。
