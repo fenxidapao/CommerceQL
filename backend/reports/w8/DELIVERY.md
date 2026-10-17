@@ -706,3 +706,12 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **网格影响**：`easy×low 10→8`、`medium×low 10→12`；12 格仍均 ≥8，需由 builder 正式重算。
 - **边界**：未改冻结集/语义包/阈值/判据/15s、未动 QA、未写共享 `ecom`、未出站；`semantic/SCHEMA_v1.md:430-433` 说明不改包内容就不应空跳版本，是否仍要求空跳需总控裁。
 - **未跑**：未做重新基线后的 G-2/G-5/integration/offline；门禁未重算，仍 `PASS 1/8`；U-127 open。
+
+
+## 第 56 轮交付（G-2 B 案落地＋新基线全量复跑 ｜ 代码提交 `00318f6` ｜ 2026-10-17 20:35–21:40 +0800）
+
+- **A**：三条 diff 已一次性落地；dataset v2 `content_hash=31f3385f...`；seed v2 写盘真值 `2f91ed51...`（提案 `812728...` 是未重跑难度的旧候选，已出 `results_r56_hash_reconciliation.json`，未为迎合旧候选改难度）。
+- **B**：r54 provider 根因锁定为响应前 ConnectError→CircuitOpen，非管道；runner 新增 checkpoint/resume/传输退避/并发帽，硬超时明确不重试；零出站单测 `4 passed`。
+- **C**：G-2 10 条 `7 equivalent/10`（E-VER-01/06/08 修复，E-VER-05/07/10 超时），tokens `232,137`/`0.506298`；G-5 148 条 `24/24` 应拒但误拒 `14/124=11.3%`，tokens `2,778,228`/`9.931561`；18 clarify 单列 `258,563`/`0.615126`。
+- **门禁**：G-2/G-5 独立重算均 FAIL；官方 `eval_metrics.json` 未刷新；G-8 单轮 UNVERIFIED。
+- **回归**：integration `124/0`；offline `2568/0`；最终 live 产物 `git_rev=00318f6/dirty=false`、dataset v2；未改阈值/判据/15s/QA/共享 ecom；U-127 open。

@@ -1,0 +1,83 @@
+{
+  "round": 56,
+  "head": "00318f6",
+  "observed_at": "2026-10-17T21:32:00+08:00",
+  "r54_failure": {
+    "artifact": "eval/results_r54_full166.json",
+    "records": 166,
+    "terminal_distribution": {
+      "error": 166
+    },
+    "error_detail_first_cases": [
+      {
+        "case_id": "E-VER-01",
+        "kind": "ConnectError"
+      },
+      {
+        "case_id": "E-VER-02",
+        "kind": "ConnectError"
+      }
+    ],
+    "connect_error_count": 4,
+    "circuit_open_error_count": 162,
+    "cassette_paths": [
+      "eval/cassettes/w8_r54_full166.jsonl",
+      "eval/cassettes/w8_r54_pilot3.jsonl"
+    ],
+    "cassette_bytes": [
+      0,
+      0
+    ],
+    "tokens_total": 0,
+    "price_guess_cny": 0.0
+  },
+  "network_probe": {
+    "dns_resolution": {
+      "host": "kuaipao.pro",
+      "addresses": [
+        "61.241.13.22"
+      ],
+      "observed_ms": 29
+    },
+    "endpoint_probe": {
+      "path": "https://kuaipao.pro/v1",
+      "http_status": 404,
+      "server": "Tengine",
+      "attempts": [
+        "system-dns",
+        "113.113.100.57",
+        "61.241.13.22"
+      ]
+    },
+    "conclusion": "r54 的 166 条均在 HTTP 响应前失败；当前同端点三条路径均收到 404 健康响应，故归因于当时 provider/网络窗口，不是 runner 解析/管道逻辑。"
+  },
+  "pipeline_smoke": {
+    "artifact": "eval/results_r56_pilot1.json",
+    "case_id": "E-VER-01",
+    "terminal": "complete",
+    "equivalent": true,
+    "tokens_total": 27394,
+    "price_guess_cny": 0.062957,
+    "runner_transport_retries": 0,
+    "git_rev": "1ec8f4d",
+    "git_dirty": true,
+    "note": "pilot 在加固代码提交前运行，只作管道健康样本；正式读数用 00318f6 的 G-2/G-5 产物。"
+  },
+  "runner_hardening": {
+    "checkpoint": true,
+    "resume": true,
+    "transport_retry_kinds": [
+      "ConnectError",
+      "ConnectTimeout",
+      "ReadTimeout",
+      "WriteTimeout",
+      "PoolTimeout",
+      "RemoteProtocolError",
+      "LlmCircuitOpen",
+      "LlmUpstreamError",
+      "LlmConcurrencyExceeded"
+    ],
+    "hard_timeout_retry": false,
+    "max_concurrency_cap": true
+  }
+}

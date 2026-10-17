@@ -1,0 +1,283 @@
+{
+  "round": 56,
+  "before_artifact": "eval/results_g2_r53_clean.json",
+  "after_artifact": "eval/results_r56_g2_10.json",
+  "before_content_hash": null,
+  "after_content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+  "after_git": {
+    "rev": "00318f6",
+    "dirty": false
+  },
+  "before": {
+    "equivalent": 7
+  },
+  "after": {
+    "equivalent": 7,
+    "tokens_total": 232137,
+    "price_guess_cny": 0.506298
+  },
+  "rows": [
+    {
+      "case_id": "E-VER-01",
+      "before": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": false,
+        "sql": "SELECT COUNT(*) AS day_cnt FROM v_dim_date WHERE year = %(year)s AND month = %(month)s LIMIT 10000",
+        "error_detail": {},
+        "tokens_total": 27478,
+        "cost_cny": 0.151076,
+        "runner_transport_retries": 0
+      },
+      "after": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS day_cnt FROM v_dim_date WHERE date_key >= %(start_date)s AND date_key <= %(end_date)s LIMIT 100",
+        "error_detail": {},
+        "tokens_total": 27454,
+        "cost_cny": 0.047756,
+        "runner_transport_retries": 0
+      }
+    },
+    {
+      "case_id": "E-VER-02",
+      "before": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE LIMIT 1",
+        "error_detail": {},
+        "tokens_total": 27358,
+        "cost_cny": 0.047491,
+        "runner_transport_retries": 0
+      },
+      "after": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE LIMIT 1",
+        "error_detail": {},
+        "tokens_total": 27316,
+        "cost_cny": 0.053771,
+        "runner_transport_retries": 0
+      }
+    },
+    {
+      "case_id": "E-VER-03",
+      "before": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS off_sale_product_cnt FROM v_product WHERE on_sale = FALSE LIMIT 1",
+        "error_detail": {},
+        "tokens_total": 28871,
+        "cost_cny": 0.074662,
+        "runner_transport_retries": 0
+      },
+      "after": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS off_sale_product_cnt FROM v_product WHERE on_sale = FALSE LIMIT 1",
+        "error_detail": {},
+        "tokens_total": 27378,
+        "cost_cny": 0.052756,
+        "runner_transport_retries": 0
+      }
+    },
+    {
+      "case_id": "E-VER-04",
+      "before": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(DISTINCT v_product.spu_id) AS spu_cnt FROM v_product WHERE v_product.on_sale = TRUE LIMIT 1",
+        "error_detail": {},
+        "tokens_total": 27445,
+        "cost_cny": 0.11727,
+        "runner_transport_retries": 0
+      },
+      "after": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(DISTINCT v_product.spu_id) AS spu_cnt FROM v_product WHERE v_product.on_sale = TRUE LIMIT 1",
+        "error_detail": {},
+        "tokens_total": 27515,
+        "cost_cny": 0.054852,
+        "runner_transport_retries": 0
+      }
+    },
+    {
+      "case_id": "E-VER-05",
+      "before": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS shop_cnt FROM v_shop LIMIT 1",
+        "error_detail": {},
+        "tokens_total": 27141,
+        "cost_cny": 0.044953,
+        "runner_transport_retries": 0
+      },
+      "after": {
+        "terminal_event": "error",
+        "terminal_code": "LLM_UPSTREAM_ERROR",
+        "refusal_reason": null,
+        "equivalent": false,
+        "sql": "",
+        "error_detail": {
+          "task": "plan",
+          "reason": "upstream_fault_then_template_miss",
+          "last_degrade_error": "LlmTimeout"
+        },
+        "tokens_total": 7847,
+        "cost_cny": 0.037066,
+        "runner_transport_retries": 0
+      }
+    },
+    {
+      "case_id": "E-VER-06",
+      "before": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": false,
+        "sql": "SELECT COUNT(*) AS campaign_cnt FROM v_campaign LIMIT 1",
+        "error_detail": {},
+        "tokens_total": 27269,
+        "cost_cny": 0.040645,
+        "runner_transport_retries": 0
+      },
+      "after": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS campaign_cnt FROM v_campaign LIMIT 100",
+        "error_detail": {},
+        "tokens_total": 27484,
+        "cost_cny": 0.151826,
+        "runner_transport_retries": 0
+      }
+    },
+    {
+      "case_id": "E-VER-07",
+      "before": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS province_cnt FROM v_region WHERE region_name = %(region_name)s LIMIT 1",
+        "error_detail": {},
+        "tokens_total": 27302,
+        "cost_cny": 0.11505,
+        "runner_transport_retries": 0
+      },
+      "after": {
+        "terminal_event": "error",
+        "terminal_code": "LLM_UPSTREAM_ERROR",
+        "refusal_reason": null,
+        "equivalent": false,
+        "sql": "",
+        "error_detail": {
+          "task": "l4_score",
+          "reason": "upstream_fault_then_template_miss",
+          "last_degrade_error": "LlmTimeout"
+        },
+        "tokens_total": 15942,
+        "cost_cny": 0.005851,
+        "runner_transport_retries": 0
+      }
+    },
+    {
+      "case_id": "E-VER-08",
+      "before": {
+        "terminal_event": "refuse",
+        "terminal_code": null,
+        "refusal_reason": "no_data_asset",
+        "equivalent": false,
+        "sql": "",
+        "error_detail": {},
+        "tokens_total": 16056,
+        "cost_cny": 0.007601,
+        "runner_transport_retries": 0
+      },
+      "after": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(DISTINCT v_order_paid.region_code) AS province_covered_cnt FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.region_code IS NOT NULL AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_time < %(end_ts)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+        "error_detail": {},
+        "tokens_total": 27742,
+        "cost_cny": 0.052739,
+        "runner_transport_retries": 0
+      }
+    },
+    {
+      "case_id": "E-VER-10",
+      "before": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE LIMIT 1",
+        "error_detail": {},
+        "tokens_total": 28905,
+        "cost_cny": 0.060376,
+        "runner_transport_retries": 0
+      },
+      "after": {
+        "terminal_event": "error",
+        "terminal_code": "LLM_UPSTREAM_ERROR",
+        "refusal_reason": null,
+        "equivalent": false,
+        "sql": "",
+        "error_detail": {
+          "task": "l4_score",
+          "reason": "upstream_fault_then_template_miss",
+          "last_degrade_error": "LlmTimeout"
+        },
+        "tokens_total": 15973,
+        "cost_cny": 0.006305,
+        "runner_transport_retries": 0
+      }
+    },
+    {
+      "case_id": "E-VER-11",
+      "before": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE LIMIT 1",
+        "error_detail": {},
+        "tokens_total": 27269,
+        "cost_cny": 0.040364,
+        "runner_transport_retries": 0
+      },
+      "after": {
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE LIMIT 1",
+        "error_detail": {},
+        "tokens_total": 27486,
+        "cost_cny": 0.043376,
+        "runner_transport_retries": 3
+      }
+    }
+  ]
+}

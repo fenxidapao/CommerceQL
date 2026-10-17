@@ -5699,3 +5699,55 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 - 候选复算：在内存 monkeypatch `eval/case_library.py` 三条声明后 `build_frozen_set.build(write=False)` → 实跑候选 `content_hash=sha256:31f3385f...d7c5`、网格仍 ≥8；**未写盘**。
 - 未决：总控需逐条确认 3 个 diff、网格迁移、是否要求无内容变化的语义包版本跳变，以及是否把 E-VER-08 `domain=products→orders` 另列第 4 条。
 - 未跑：G-2 10 条/完整 G-5/ integration/offline 的重新基线复算；因本轮无落地代码或冻结输入变更，绝不能写“门禁通过”或“G-2/G-5 改善”。门禁仍为历史 `PASS 1/8`，U-127 仍 open。
+
+
+## §五六 第 56 轮 · G-2 B 案落地 ＋ 新基线全量复跑 ｜ 2026-10-17 20:35–21:40 +0800 ｜ 代码提交 `00318f6`
+
+### 56.0 A：一次性落地与哈希对账
+
+- **源 diff**：`eval/case_library.py:81-96` 三条声明按 `backend/reports/w8/G2_CONTRACT_CLARIFICATION_PROPOSAL.md` 落地；`eval/build_frozen_set.py:46-64` 升 `DATASET_VERSION=2` 并写 revision 元数据；`eval/build_gold_seed.py:103` 升 seed 2。
+- **生成**：先 `python -X utf8 eval/build_frozen_set.py`，再 `python -X utf8 eval/build_gold_seed.py`；两件 check 命令复跑均 OK。未手填任何 generated hash。
+- **dataset 对账**：候选 `sha256:31f3385f...d7c5`，写盘现读一致；dataset file SHA `51a631dcfd6b03ad29a015b4e3022b9ac6d028b31501aba89d3c0b2083328ebb`；`frozen_at=2026-10-17`。
+- **gold seed 对账**：提案候选 `sha256:812728f1...7466`，写盘现读为 `sha256:2f91ed51e0c97fcbb45b7a59eabc13067167747df52d5cae6d1b37cfe339a592`；**不一致，已停下查清且未先跑钱**。根因是提案内存复算只替换 question/gold_sql，没有重跑 E-VER-01/E-VER-08 的 difficulty 迁移；builder 按新难度重排 seed 后，正确真值就是 `2f91ed51...`。差异证据：`eval/results_r56_hash_reconciliation.json`。未为迎合旧候选改动难度/排序；seed file SHA `ca413baf3f1dbc1f26280e945ed0dff3914771ae0335e3bdea76165619e7e1bc`。
+- **契约防漂回**：`backend/tests/contract/test_semantic_f_coverage_contract.py` 新增 2 条；分别锁 E-VER-01 月份、E-VER-06 全量、E-VER-08 `pay_time`，并锁 E-VER-07/M-DIM-08 仍走 `v_region` 且无时间谓词；另锁 v2 content/seed hash。
+- **豁免终结**：`backend/reports/w8/G2_EXEMPTION_REQUEST.md:3` 顶部已写入“总控已选 B 案；本文仅存历史，豁免流程关闭”。
+
+### 56.1 B：provider 根因与跑批加固
+
+- **r54 根因证据**：`eval/results_r54_full166.json` 166/166 `error`、首批 4 条 `ConnectError`、随后 162 条 `LlmCircuitOpen`；`w8_r54_full166.jsonl`／`w8_r54_pilot3.jsonl` 均为 0 字节；tokens=0。当前 `kuaipao.pro` 解析到 `61.241.13.22`，`/v1` 三条路径（系统 DNS、113.113.100.57、61.241.13.22）均返回 HTTP 404；r56 pilot 用同一条 runner 全链路完成 E-VER-01 `complete+equivalent`、27,394 tokens。⇒ 归因是当时 provider/网络窗口，不是 runner 解析管道；证据 `eval/results_r56_provider_diagnosis.json`。
+- **runner 加固**：`eval/runner.py:96-179` 加传输故障识别、JSONL checkpoint、`--resume`、退避重试；`eval/runner.py:535-608` 每条写 checkpoint，硬超时 `_resume_should_skip=True`（不重试），ConnectError/CircuitOpen 可重试；`eval/runner.py:683-713` 新增 CLI `--checkpoint/--resume/--transport-retries/--transport-backoff-s/--max-concurrency`；`eval/harness.py:684-756` 只收窄并发帽。
+- **零出站自证**：`backend/tests/eval/test_eval_runner_checkpoint.py` 4 条；实测 `24 passed` 连 contract；`test_llm_client.py` 34 passed。硬超时断言为“不重试”，不是再跑一次。
+
+### 56.2 C1：G-2 定向 10 条
+
+- **命令**：`.venv` 经 `E:\codex\w8r53\run_eval.py`，cases=E-VER-01/02/03/04/05/06/07/08/10/11，`--live --yes --transport-retries 3 --transport-backoff-s 5 --max-concurrency 2`。
+- **before**：`eval/results_g2_r53_clean.json` = 7/10 equivalent；E-VER-01/06/08 非等价。
+- **after**：`eval/results_r56_g2_10.json` = **7/10 equivalent**；E-VER-01/06/08 均 `complete+equivalent`，但 E-VER-05/07/10 变成 `LlmTimeout`（E-VER-05 plan、E-VER-07/10 l4_score）；E-VER-11 遇 CircuitOpen 后 runner 重试 3 次成功。
+- **读数**：10/10 可判；`7 complete / 3 error`；`tokens 232,137`、`price_guess 0.506298`；矩阵 `eval/results_r56_g2_matrix.json`；绑定 `git_rev=00318f6/dirty=false`、dataset v2。
+
+### 56.3 C2：G-5 完整分母 148
+
+- **命令**：一次性 148 = 124 execute + 24 refuse，`--live --yes --checkpoint ... --transport-retries 3 --transport-backoff-s 5 --max-concurrency 2`。
+- **结果**：`complete 81 / error 15 / refuse 38 / clarify 14`；应拒 24/24 = 100.0%；误拒 14/124 = 11.3%；execute equivalent 27/124；`tokens 2,778,228`、`price_guess 9.931561`。
+- **error/timeout 单列**：15 条均 `LlmTimeout`：E-VER-06, E-ENUM-01/02/03/08, E-MET-01/08/09, M-DIM-10, M-ENUM-04, M-HIER-04/05, H-STR-09, H-CAT-05, X-ENUM-01；不剔分母、不称达标。
+- **误拒逐条**：E-ENUM-04, E-MET-06, M-DIM-01/05, M-ENUM-02/03, M-MET-01/09/10, H-ENUM-01/03/04, M-IDX-09/10（14 条；与矩阵 line 对齐）。逐条矩阵：`eval/results_r56_g5_matrix.json`；合并全量：`eval/results_r56_full166.json`。
+
+### 56.4 C3：18 条 clarify 诊断
+
+- `eval/results_r56_clarify_18.json`：`clarify 8 / complete 2 / refuse 7 / error 1`；tokens 258,563、price_guess 0.615126；逐条矩阵 `eval/results_r56_clarify_matrix.json`。该批**不是 G-5 分母**，只作 G-8 诊断。
+
+### 56.5 门禁重算（G-2/G-5 两格）
+
+- `eval/results_r56_gate_recompute.json`（用 `reporter.recompute_gate`，输入 `eval/results_r56_full166.json`）：
+  - **G-2**：`easy×low 7/8 = 87.5%` ⇒ FAIL；
+  - **G-5**：`24/24 = 100.0%`；误拒 `14/124 = 11.3%` ⇒ FAIL；
+  - **G-8**：单轮不可测 ⇒ UNVERIFIED（澄清率 22/166=13.3%）。
+- 官方 `backend/reports/w6/eval_metrics.json` **未刷新**（仍 rev `88f3500` / PASS 1/8）；本件只落独立重算证据，不把局部重算冒充全门禁刷新。
+
+### 56.6 回归、边界、出站
+
+- **integration**：一次性 PG/Redis＋alembic ⇒ `124 passed / 0 failed / 32.32s`；DROP 后临时库残渣为空，共享库仅 `ecom`＋`ecom_u123_probe`。
+- **offline**：`.\.venv\Scripts\python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q` ⇒ `2568 passed / 0 failed / 1 warning / 137.08s`。
+- **出站实报**：pilot `27,394 / 0.062957`（自报旧 HEAD `1ec8f4d/dirty=true`，只作管道健康样本）；最终绑定 G-2 `232,137 / 0.506298`、G-5 `2,778,228 / 9.931561`、clarify `258,563 / 0.615126`；最终绑定小计 **3,268,928 tokens / 11.052985 price_guess CNY**，含 pilot 全轮 **3,296,322 / 11.115942**。
+- **边界**：未改阈值/判据措辞/07 §10.2 15s/语义包；未动 `backend/reports/qa/**`；未写共享 `ecom`；U-127 open；G-2 仍 FAIL、G-5 仍 FAIL，官方门禁未刷新；E-VER-08 `domain=products` 未捆绑、另立登记。
+- **复算入口**：A 读 `eval/dataset_v1_frozen.json`、`eval/gold_query_seed_v1.json`、`eval/results_r56_hash_reconciliation.json`；B 读 `eval/runner.py:96-179`、`eval/results_r56_provider_diagnosis.json`、`backend/tests/eval/test_eval_runner_checkpoint.py`; C 读 `eval/results_r56_g2_matrix.json`、`eval/results_r56_g5_matrix.json`、`eval/results_r56_clarify_matrix.json`、`eval/results_r56_gate_recompute.json`。以上入口均不命中本节自身。

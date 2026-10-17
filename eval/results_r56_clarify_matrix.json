@@ -1,0 +1,215 @@
+{
+  "round": 56,
+  "artifact": "eval/results_r56_clarify_18.json",
+  "head": "00318f6",
+  "git_dirty": false,
+  "n": 18,
+  "actual": {
+    "clarify": 8,
+    "complete": 2,
+    "refuse": 7,
+    "error": 1
+  },
+  "tokens_total": 258563,
+  "price_guess_cny": 0.615126,
+  "rows": [
+    {
+      "case_id": "C-CITY-01",
+      "expected": "clarify",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 7881,
+      "cost_cny": 0.037544
+    },
+    {
+      "case_id": "C-CITY-02",
+      "expected": "clarify",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 7863,
+      "cost_cny": 0.003602
+    },
+    {
+      "case_id": "C-CITY-03",
+      "expected": "clarify",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 7860,
+      "cost_cny": 0.003579
+    },
+    {
+      "case_id": "C-CITY-04",
+      "expected": "clarify",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 7898,
+      "cost_cny": 0.037783
+    },
+    {
+      "case_id": "C-GMV-01",
+      "expected": "clarify",
+      "terminal": "complete",
+      "refusal_reason": null,
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 27505,
+      "cost_cny": 0.056848
+    },
+    {
+      "case_id": "C-GMV-02",
+      "expected": "clarify",
+      "terminal": "complete",
+      "refusal_reason": null,
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 27228,
+      "cost_cny": 0.147065
+    },
+    {
+      "case_id": "C-GMV-03",
+      "expected": "clarify",
+      "terminal": "refuse",
+      "refusal_reason": "no_data_asset",
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 16080,
+      "cost_cny": 0.042764
+    },
+    {
+      "case_id": "C-GMV-04",
+      "expected": "clarify",
+      "terminal": "error",
+      "refusal_reason": null,
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 28226,
+      "cost_cny": 0.066265
+    },
+    {
+      "case_id": "C-RATE-01",
+      "expected": "clarify",
+      "terminal": "refuse",
+      "refusal_reason": "no_data_asset",
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 16057,
+      "cost_cny": 0.016249
+    },
+    {
+      "case_id": "C-RATE-02",
+      "expected": "clarify",
+      "terminal": "refuse",
+      "refusal_reason": "no_data_asset",
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 16237,
+      "cost_cny": 0.011186
+    },
+    {
+      "case_id": "C-REP-01",
+      "expected": "clarify",
+      "terminal": "refuse",
+      "refusal_reason": "no_data_asset",
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 16050,
+      "cost_cny": 0.07715
+    },
+    {
+      "case_id": "C-REP-02",
+      "expected": "clarify",
+      "terminal": "refuse",
+      "refusal_reason": "no_data_asset",
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 16049,
+      "cost_cny": 0.00858
+    },
+    {
+      "case_id": "C-UV-01",
+      "expected": "clarify",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 7849,
+      "cost_cny": 0.003415
+    },
+    {
+      "case_id": "C-UV-02",
+      "expected": "clarify",
+      "terminal": "refuse",
+      "refusal_reason": "no_data_asset",
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 16028,
+      "cost_cny": 0.014644
+    },
+    {
+      "case_id": "C-AOV-01",
+      "expected": "clarify",
+      "terminal": "refuse",
+      "refusal_reason": "no_data_asset",
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 16089,
+      "cost_cny": 0.009162
+    },
+    {
+      "case_id": "C-REG-01",
+      "expected": "clarify",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 7875,
+      "cost_cny": 0.037488
+    },
+    {
+      "case_id": "C-REG-02",
+      "expected": "clarify",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 7932,
+      "cost_cny": 0.038289
+    },
+    {
+      "case_id": "C-CAT-01",
+      "expected": "clarify",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error_kind": null,
+      "error_task": null,
+      "equivalent": false,
+      "tokens_total": 7856,
+      "cost_cny": 0.003513
+    }
+  ]
+}
