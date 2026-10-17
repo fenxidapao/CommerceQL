@@ -87,6 +87,11 @@ L4_OUTPUT_SCHEMA: Final[str] = (
 
 #: 出站附加约束（`$constraints`）。**自产稳定文本** —— 不含时间戳/随机数/租户信息，
 #: 否则上游前缀缓存命中率归零（07 §10.3 硬规则 1/3）。
+#: 单次 L4 打分的候选上限。网关允许 200 条，但 66 条候选会让输出超过 2304 token，
+#: 实测 `finish_reason=length` 且整份 JSON 不可解析。这个截断在**字段绑定层**发生：
+#: 只减少“同时送进打分器的候选数”，不改变问句、计划或 SQL 语义。
+L4_MAX_CANDIDATES: Final[int] = 30
+
 L4_CONSTRAINTS: Final[str] = (
     "1. 你判的是「这个字段**是不是用户要的那个**」，不是「这个名字像不像」。"
     "名字表面相似但语义不同的候选必须给低分。\n"
@@ -196,10 +201,13 @@ async def score_l4(
     expected = [cid for cid in candidates if cid]
     if not expected:
         return ScoreOutcome(failed=True, reason="no_candidates")
+    # 超长候选会稳定触发输出截断；只送前 L4_MAX_CANDIDATES 条。
+    # 这是载荷裁剪，不是判据放宽：被裁掉的候选不会进入 L4 比较。
+    sent = expected[:L4_MAX_CANDIDATES]
 
     payload = build_l4_payload(
         question=question,
-        candidates=expected,
+        candidates=sent,
         semantic_summary=semantic_summary,
         dialect_note=dialect_note,
         output_schema=output_schema,
@@ -212,7 +220,7 @@ async def score_l4(
 
     outcome = parse_scores_json(
         response.text,
-        expected_ids=expected,
+        expected_ids=sent,
         model_id=response.model,
         prompt_version=response.prompt_version,
     )

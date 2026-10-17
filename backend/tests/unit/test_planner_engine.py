@@ -1216,3 +1216,70 @@ class TestCallMeta:
         assert merged.tokens.total == 43
         assert merged.cost_cny == Decimal("0.003")
         assert merged.calls == 2
+
+
+class TestTimeBlockerDemotion:
+    """W8 r57：缺时间范围不是 no_data_asset，除非指标定义显式要求。"""
+
+    @pytest.mark.asyncio
+    async def test_missing_time_range_on_pv_is_demoted_to_open_interval(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        body = _plan_body(
+            metrics=[{"name": "pv", "caliber": "SUM(traffic_daily.pv)"}],
+            assets=[{"asset": "traffic_daily", "join_key": None}],
+            filters=["traffic_daily.channel = 'ad'"],
+            output_columns=["pv"],
+            blocking_issues=["问题未给出时间范围，且无法从上下文推断"],
+        )
+        engine, _, _ = _engine({"plan": [body]}, runtime, clock)
+        outcome = await engine.plan_for(
+            _ctx(), normalized_question="付费广告渠道一共带来多少浏览量？"
+        )
+        assert outcome.plan.blocking_issues == []
+        assert outcome.plan.time_range.start is None
+        assert outcome.plan.time_range.end is None
+
+    @pytest.mark.asyncio
+    async def test_missing_end_on_order_cnt_is_demoted(self, runtime: SemanticBundleRuntime, clock: FrozenClock) -> None:
+        body = _plan_body(
+            metrics=[{"name": "order_cnt", "caliber": "COUNT(DISTINCT sub_order_id)"}],
+            assets=[{"asset": "order_paid", "join_key": None}],
+            filters=["pay_time >= '2026-06-01'"],
+            time_range={"start": "2026-06-01", "end": None},
+            output_columns=["order_cnt"],
+            blocking_issues=["时间范围的结束端未给出（只说了“从 2026-06-01 起”）"],
+        )
+        engine, _, _ = _engine({"plan": [body]}, runtime, clock)
+        outcome = await engine.plan_for(_ctx(), normalized_question="从 2026-06-01 起的订单量是多少？")
+        assert outcome.plan.blocking_issues == []
+        assert outcome.plan.time_range.start == "2026-06-01"
+        assert outcome.plan.time_range.end is None
+
+    @pytest.mark.asyncio
+    async def test_province_covered_cnt_still_requires_time_range(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        body = _plan_body(
+            metrics=[{"name": "province_covered_cnt", "caliber": "COUNT(DISTINCT region_code)"}],
+            assets=[{"asset": "order_paid", "join_key": None}],
+            output_columns=["province_covered_cnt"],
+            blocking_issues=["问题未给出时间范围"],
+        )
+        engine, _, _ = _engine({"plan": [body]}, runtime, clock)
+        outcome = await engine.plan_for(_ctx(), normalized_question="收货省份覆盖数是多少？")
+        assert outcome.plan.blocking_issues == ["问题未给出时间范围"]
+
+    @pytest.mark.asyncio
+    async def test_non_time_blocker_is_not_demoted(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        body = _plan_body(
+            metrics=[{"name": "pv", "caliber": "SUM(traffic_daily.pv)"}],
+            assets=[{"asset": "traffic_daily", "join_key": None}],
+            output_columns=["pv"],
+            blocking_issues=["订单表与流量表无关联路径"],
+        )
+        engine, _, _ = _engine({"plan": [body]}, runtime, clock)
+        outcome = await engine.plan_for(_ctx(), normalized_question="跨订单与流量分析")
+        assert outcome.plan.blocking_issues == ["订单表与流量表无关联路径"]

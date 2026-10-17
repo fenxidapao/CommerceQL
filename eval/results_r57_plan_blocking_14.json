@@ -1,0 +1,125 @@
+{
+  "round": 57,
+  "head": "d3ff032",
+  "rows": [
+    {
+      "case_id": "E-ENUM-04",
+      "question": "T_A 付费广告渠道一共带来多少浏览量？",
+      "normalized_question": "付费广告渠道一共带来多少浏览量？",
+      "plan_blocking_issues": [
+        "问题未给出时间范围（如“近7天”“上月”等），且无法从上下文推断；pv 的时间基准为 traffic_daily.stat_date，缺少时间范围会导致跨日累计口径不确定，请补充时间范围。"
+      ],
+      "plan_raw_present": true
+    },
+    {
+      "case_id": "E-MET-06",
+      "question": "T_A 从 2026-06-01 起的订单量是多少？",
+      "normalized_question": "从 2026-06-01 起的订单量是多少？",
+      "plan_blocking_issues": [
+        "时间范围的结束端未给出（只说了“从 2026-06-01 起”，没有说截止到哪一天），无法确定统计区间，请补充截止日期"
+      ],
+      "plan_raw_present": true
+    },
+    {
+      "case_id": "M-DIM-01",
+      "question": "T_A 的各 SKU 的浏览量分别是多少？",
+      "normalized_question": "本租户各 SKU 的浏览量分别是多少？",
+      "plan_blocking_issues": [],
+      "plan_raw_present": false
+    },
+    {
+      "case_id": "M-DIM-05",
+      "question": "T_A 的各城市的店铺数分别是多少？",
+      "normalized_question": "各城市的店铺数分别是多少？",
+      "plan_blocking_issues": [
+        "“城市”为歧义概念（候选：order_paid.receiver_city 与 shop.city），不得自行选定。本问句问的是“店铺数”，店铺资产 shop 的城市列 shop.city 是唯一可用的城市列（order_paid 不在本查询资产内），故按 shop.city 分组；若业务实际想按收货城市统计，请澄清。"
+      ],
+      "plan_raw_present": true
+    },
+    {
+      "case_id": "M-ENUM-02",
+      "question": "T_A 搜索渠道各 SKU 的浏览量分别是多少？",
+      "normalized_question": "搜索渠道各 SKU 的浏览量分别是多少？",
+      "plan_blocking_issues": [
+        "问题未给出时间范围，且无法从上下文推断（pv 的时间基准为 traffic_daily.stat_date，跨日区间可直接累加，但必须显式给出区间）——请补充统计时间范围（如某月、近7天等）。"
+      ],
+      "plan_raw_present": true
+    },
+    {
+      "case_id": "M-ENUM-03",
+      "question": "T_A 推荐渠道各 SKU 的浏览量分别是多少？",
+      "normalized_question": "推荐渠道各 SKU 的浏览量分别是多少？",
+      "plan_blocking_issues": [
+        "问题未给出时间范围，且无法从上下文推断（pv 的时间基准为 traffic_daily.stat_date），请补充统计区间。"
+      ],
+      "plan_raw_present": true
+    },
+    {
+      "case_id": "M-MET-01",
+      "question": "T_A 从 2026-08-01 起各渠道的 GMV 分别是多少？",
+      "normalized_question": "从 2026-08-01 起各渠道的 GMV 分别是多少？",
+      "plan_blocking_issues": [
+        "无法确定“渠道”的取值来源：语义包中 channel 维度的绑定为 traffic_daily.channel（流量域），而 GMV 指标落在 order_paid（交易域）；order_paid.channel 列虽存在但语义包未将其登记为 channel 维度的绑定列，且两表之间没有登记任何关联键（traffic_daily 粒度为 sku_day_channel，order_paid 粒度为 sub_order），按资产硬性规则 3 不得猜测关联路径。",
+        "时间范围未闭合：“从 2026-08-01 起”只有起点、无终点，无法确定统计区间上界。"
+      ],
+      "plan_raw_present": true
+    },
+    {
+      "case_id": "M-MET-09",
+      "question": "T_A 六月起各 SKU 的 GMV 分别是多少？",
+      "normalized_question": "T_A 六月起各 SKU 的 GMV 分别是多少？",
+      "plan_blocking_issues": [],
+      "plan_raw_present": false
+    },
+    {
+      "case_id": "M-MET-10",
+      "question": "T_A 一月起各 SKU 的 GMV 分别是多少？",
+      "normalized_question": "T_A 一月起各 SKU 的 GMV 分别是多少？",
+      "plan_blocking_issues": [],
+      "plan_raw_present": false
+    },
+    {
+      "case_id": "H-ENUM-01",
+      "question": "T_A 处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "normalized_question": "处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "plan_blocking_issues": [
+        "问句未给出时间范围，且无法从上下文推断；order_cnt 的时间基准为 pay_time，需业务确认统计区间（如不限定则按全量历史统计）。",
+        "「部分退款」在语义包中未登记为 refund_status 的取值枚举（仅出现 'refunded' 全额退款），此处按字面取 refund_status = 'partial_refund'，若实际取值不同需澄清。"
+      ],
+      "plan_raw_present": true
+    },
+    {
+      "case_id": "H-ENUM-03",
+      "question": "T_A 处于「无退款」状态的订单在各店铺分别是多少笔？",
+      "normalized_question": "无退款状态的订单在各店铺分别是多少笔？",
+      "plan_blocking_issues": [
+        "问题未给出时间范围，且无法从上下文推断（order_cnt 的时间基准为 pay_time），按规则不得默认“本月”，需用户明确统计区间。"
+      ],
+      "plan_raw_present": true
+    },
+    {
+      "case_id": "H-ENUM-04",
+      "question": "T_A 处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "normalized_question": "处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "plan_blocking_issues": [
+        "问句未给出时间范围，且无法从上下文推断；order_cnt 的时间基准为 pay_time，需业务确认统计区间（如不限定则按全量历史统计）。",
+        "「部分退款」在语义包中未登记为 refund_status 的取值枚举（仅出现 'refunded' 全额退款），此处按字面取 refund_status = 'partial_refund'，若实际取值不同需澄清。"
+      ],
+      "plan_raw_present": true
+    },
+    {
+      "case_id": "M-IDX-09",
+      "question": "T_A 自 2026-06-01 起的 90 天复购率是多少？",
+      "normalized_question": "自 2026-06-01 起的 90 天复购率是多少？",
+      "plan_blocking_issues": [],
+      "plan_raw_present": true
+    },
+    {
+      "case_id": "M-IDX-10",
+      "question": "T_A 自 2026-03-01 起的 90 天复购率是多少？",
+      "normalized_question": null,
+      "plan_blocking_issues": [],
+      "plan_raw_present": false
+    }
+  ]
+}

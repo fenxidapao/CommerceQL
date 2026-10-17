@@ -328,6 +328,28 @@ def _denied_basenames(policy: Mapping[str, Any]) -> frozenset[str]:
     return frozenset(n for n in names if n)
 
 
+def _column_enum_hints(semantics: SemanticBundlePort, logical_asset: str) -> dict[str, str]:
+    """从语义包取列枚举，渲染成“值=中文名”。
+
+    计划阶段若看不到 `refund_status` / `channel` 的枚举，会把 `partial` 猜成
+    `partial_refund`，并因此写 blocking。这里只读语义包已有声明，不新增取值。
+    """
+    getter = getattr(semantics, "asset", None)
+    if not callable(getter):
+        return {}
+    asset = getter(logical_asset)
+    if asset is None:
+        return {}
+    out: dict[str, str] = {}
+    for col in getattr(asset, "columns", ()) or ():
+        enum = getattr(col, "enum", None) or {}
+        if enum:
+            out[str(col.name)] = "枚举=" + "、".join(
+                f"{value}={label}" for value, label in enum.items()
+            )
+    return out
+
+
 def build_semantic_summary(
     ctx: IdentityContext,
     semantics: SemanticBundlePort,
@@ -397,9 +419,12 @@ def build_semantic_summary(
             asset_lines.append("    （本角色的可见列为空）")
             continue
         comments = _column_comments(semantics, logical)
+        enum_hints = _column_enum_hints(semantics, logical)
         for col in kept:
             note = comments.get(col)
-            asset_lines.append(f"    - {col}" + (f"：{note}" if note else ""))
+            hint = enum_hints.get(col)
+            detail = "；".join(x for x in (note, hint) if x)
+            asset_lines.append(f"    - {col}" + (f"：{detail}" if detail else ""))
 
     dimension_lines: list[str] = ["## 维度与层级"]
     for dim in _sorted_dimensions(semantics):

@@ -211,6 +211,59 @@ def _question_explicitly_groups(
     return any(term in q for term in terms if term)
 
 
+_TIME_BLOCKER_MARKERS = (
+    "时间范围", "时间区间", "时间基准", "时间口径",
+    "截止", "结束端", "起止", "未给出时间", "缺少时间", "无时间范围",
+)
+
+
+def _is_time_only_blocker(issue: str) -> bool:
+    text = str(issue)
+    return any(marker in text for marker in _TIME_BLOCKER_MARKERS)
+
+
+def _metric_requires_time_range(metric: Any) -> bool:
+    note = str(getattr(metric, "definition_note", "") or "")
+    return any(marker in note for marker in ("须给时间范围", "必须给时间范围", "需要指定统计区间"))
+
+
+def _demote_time_blockers(
+    plan: Plan, semantics: SemanticBundlePort
+) -> tuple[Plan, tuple[str, ...]]:
+    """把“缺时间范围”从 plan 阻塞项降为可执行的开区间计划。
+
+    语义包只声明指标的 `time_basis`，**没有**把“必须有时间范围”作为所有事实指标的通用
+    前置条件；`TimeWindow.start/end` 的 None 本来就表示该侧无边界。原提示词把
+    “未给出时间”一律升级成 `blocking_issues`，导致 pv/order_cnt/gmv 等可全历史聚合的
+    问题被误拒（G-5 over_refusal）。
+
+    例外：指标定义**显式**写了“须给时间范围”（如 province_covered_cnt）时保留阻塞。
+    这里只处理时间类阻塞；关联路径、歧义等其它阻塞原样保留。
+    """
+    if not plan.blocking_issues or not plan.metrics:
+        return plan, ()
+    metrics = []
+    for item in plan.metrics:
+        metric = semantics.metric(str(item.name))
+        if metric is not None:
+            metrics.append(metric)
+    # 指标名由模型自由填写；若一个都解析不到，就无法证明“该指标允许全历史”。
+    # 这种情况下保守保留原阻塞，避免把未知口径误放行。
+    if len(metrics) != len(plan.metrics):
+        return plan, ()
+    if any(_metric_requires_time_range(m) for m in metrics):
+        return plan, ()
+    kept: list[str] = []
+    removed: list[str] = []
+    # 若阻塞项里同时有非时间问题（歧义/关联缺失/枚举未登记），不能被一起降级。
+    # 这里只移除**只谈时间**的条目，并逐条保留其它阻塞。
+    for issue in plan.blocking_issues:
+        (removed if _is_time_only_blocker(issue) else kept).append(issue)
+    if not removed:
+        return plan, ()
+    return plan.model_copy(update={"blocking_issues": kept}), tuple(removed)
+
+
 def _demote_constant_filter_dimensions(
     plan: Plan, semantics: SemanticBundlePort, normalized_question: str
 ) -> tuple[Plan, tuple[str, ...]]:
@@ -706,8 +759,18 @@ class PlannerEngine:
                 attempts=exc.attempts,
                 detail={"last_validation_error": _first_line(exc.digest), "task": "plan"},
             ))
+        time_demoted_plan, time_demoted = _demote_time_blockers(parsed, self._semantics)
+        if time_demoted:
+            _log.warning(
+                "plan_time_blocker_demoted",
+                extra={
+                    "removed_blocking_issues": list(time_demoted),
+                    "metrics": [m.name for m in time_demoted_plan.metrics],
+                    "extra_fact": "缺时间范围不是数据缺失；TimeWindow 的 None 表示该侧开区间",
+                },
+            )
         normalized_plan, demoted = _demote_constant_filter_dimensions(
-            parsed, self._semantics, normalized_question
+            time_demoted_plan, self._semantics, normalized_question
         )
         if demoted:
             _log.warning(

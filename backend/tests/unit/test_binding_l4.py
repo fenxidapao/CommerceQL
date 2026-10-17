@@ -527,3 +527,16 @@ class TestUsageCarriesOut:
         for outcome in (empty_question, no_candidates):
             assert outcome.failed
             assert outcome.tokens is None and outcome.cost_cny is None
+
+
+class TestCandidateCap:
+    async def test_l4_sends_at_most_thirty_candidates(self) -> None:
+        """66 条候选会让 2304 token 输出被截断；裁剪只影响 L4 打分面。"""
+        from app.binding.l4 import L4_MAX_CANDIDATES
+
+        port = _FakePort()
+        candidates = tuple(f"asset.col_{i}" for i in range(66))
+        await score_l4(port=port, question=QUESTION, candidates=candidates)
+        payload = port.calls[0][1]
+        assert len(payload["candidates"]) == L4_MAX_CANDIDATES
+        assert tuple(payload["candidates"]) == candidates[:L4_MAX_CANDIDATES]

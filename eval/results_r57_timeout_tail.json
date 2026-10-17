@@ -1,0 +1,491 @@
+{
+  "round": 57,
+  "observed_at": "2026-10-17T22:40:00+08:00",
+  "head": "d3ff032",
+  "count": 19,
+  "rows": [
+    {
+      "batch": "g2",
+      "case_id": "E-VER-05",
+      "task": "plan",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 4889,
+        "linking": 0,
+        "plan": 15006,
+        "total": 19899
+      },
+      "tokens": {
+        "input": 7727,
+        "output": 61,
+        "cache_hit": 0,
+        "total": 7847
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 19.907,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g2",
+      "case_id": "E-VER-07",
+      "task": "l4_score",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 1794,
+        "linking": 1,
+        "plan": 2416,
+        "total": 19231
+      },
+      "tokens": {
+        "input": 15741,
+        "output": 201,
+        "cache_hit": 15616,
+        "total": 15942
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 19.237,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g2",
+      "case_id": "E-VER-10",
+      "task": "l4_score",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 1828,
+        "linking": 0,
+        "plan": 2207,
+        "total": 19053
+      },
+      "tokens": {
+        "input": 15739,
+        "output": 234,
+        "cache_hit": 15616,
+        "total": 15973
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 19.063,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "E-VER-06",
+      "task": "plan",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 5859,
+        "linking": 0,
+        "plan": 15016,
+        "total": 20881
+      },
+      "tokens": {
+        "input": 7726,
+        "output": 48,
+        "cache_hit": 7552,
+        "total": 7833
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 20.887,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "E-ENUM-01",
+      "task": "gen_sql",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 3705,
+        "linking": 0,
+        "plan": 4259,
+        "gen_sql": 15014,
+        "total": 30697
+      },
+      "tokens": {
+        "input": 17010,
+        "output": 2424,
+        "cache_hit": 1280,
+        "total": 19552
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 30.929,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "E-ENUM-02",
+      "task": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15017,
+        "total": 15019
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 15.244,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "E-ENUM-03",
+      "task": "plan",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 2849,
+        "linking": 1,
+        "plan": 15017,
+        "total": 17870
+      },
+      "tokens": {
+        "input": 7729,
+        "output": 51,
+        "cache_hit": 0,
+        "total": 7839
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 18.094,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "E-ENUM-08",
+      "task": "gen_sql",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 3044,
+        "linking": 0,
+        "plan": 3592,
+        "gen_sql": 15014,
+        "total": 29814
+      },
+      "tokens": {
+        "input": 16992,
+        "output": 2288,
+        "cache_hit": 0,
+        "total": 19457
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 29.83,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "E-MET-01",
+      "task": "plan",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 3287,
+        "linking": 0,
+        "plan": 15020,
+        "total": 18312
+      },
+      "tokens": {
+        "input": 7737,
+        "output": 77,
+        "cache_hit": 0,
+        "total": 7873
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 18.352,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "E-MET-08",
+      "task": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15013,
+        "total": 15014
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 16.071,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "E-MET-09",
+      "task": "gen_sql",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 9277,
+        "linking": 0,
+        "plan": 4816,
+        "gen_sql": 15008,
+        "total": 38822
+      },
+      "tokens": {
+        "input": 17034,
+        "output": 2479,
+        "cache_hit": 7808,
+        "total": 19631
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 38.854,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "M-DIM-10",
+      "task": "gen_sql",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 4323,
+        "linking": 0,
+        "plan": 4226,
+        "gen_sql": 15014,
+        "total": 31659
+      },
+      "tokens": {
+        "input": 17016,
+        "output": 2422,
+        "cache_hit": 0,
+        "total": 19556
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 32.717,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "M-ENUM-04",
+      "task": "plan",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 8363,
+        "linking": 0,
+        "plan": 15010,
+        "total": 23380
+      },
+      "tokens": {
+        "input": 7734,
+        "output": 56,
+        "cache_hit": 0,
+        "total": 7849
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 31.435,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "M-HIER-04",
+      "task": "l4_score",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 5190,
+        "linking": 0,
+        "plan": 4983,
+        "total": 25183
+      },
+      "tokens": {
+        "input": 15682,
+        "output": 222,
+        "cache_hit": 7552,
+        "total": 16022
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 25.191,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "M-HIER-05",
+      "task": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15018,
+        "total": 15019
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 15.026,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "H-STR-09",
+      "task": "gen_sql",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 2992,
+        "linking": 0,
+        "plan": 5714,
+        "gen_sql": 15008,
+        "total": 36079
+      },
+      "tokens": {
+        "input": 16979,
+        "output": 2365,
+        "cache_hit": 0,
+        "total": 19521
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 36.086,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "H-CAT-05",
+      "task": "l4_score",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 4002,
+        "linking": 0,
+        "plan": 4331,
+        "total": 23352
+      },
+      "tokens": {
+        "input": 15684,
+        "output": 194,
+        "cache_hit": 0,
+        "total": 15996
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 23.362,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "X-ENUM-01",
+      "task": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15010,
+        "total": 15011
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 15.775,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    },
+    {
+      "batch": "clarify",
+      "case_id": "C-GMV-04",
+      "task": null,
+      "kind": null,
+      "latency_ms": {
+        "normalize": 1947,
+        "linking": 0,
+        "plan": 3027,
+        "gen_sql": 4505,
+        "gate": 6,
+        "total": 20196
+      },
+      "tokens": {
+        "input": 24972,
+        "output": 3195,
+        "cache_hit": 21120,
+        "total": 28226
+      },
+      "runner_transport_retries": 0,
+      "wall_s": 20.2,
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "git_rev": "00318f6",
+      "git_dirty": false
+    }
+  ],
+  "cassette_sha256": {
+    "eval/cassettes/w8_r56_g2_10.jsonl": "65e3d65a47dddb823dc3745816d9370e417969e54a79533c1994997f0b8ee626",
+    "eval/cassettes/w8_r56_g5_148.jsonl": "a845d79259fb87cce0701b656762fe6ee95c4b1df210d8919b32f4736aad8128",
+    "eval/cassettes/w8_r56_clarify_18.jsonl": "36e4f04935d6de68786eace3997768290e075b2046659cddd10a968811a6948f"
+  },
+  "success_controls": {
+    "plan_total_ms": {
+      "n": 110,
+      "p50": 3187.0,
+      "p95": 6303.6,
+      "max": 14213
+    },
+    "gen_sql_ms": {
+      "n": 91,
+      "p50": 3181.0,
+      "p95": 7033.0,
+      "max": 14068
+    },
+    "normalize_ms": {
+      "n": 157,
+      "p50": 2060.0,
+      "p95": 6565.2,
+      "max": 13670
+    },
+    "total_ms": {
+      "n": 157,
+      "p50": 15421.0,
+      "p95": 25819.4,
+      "max": 33521
+    }
+  },
+  "root_cause": {
+    "classification": "mixed_provider_tail_and_payload_size",
+    "evidence": [
+      "19 timeouts all end at 15008–15020ms (hard 15s), not at an application-level 1s/2s budget.",
+      "Success controls in the same batches: plan p95 6303.6ms, gen_sql p95 7033.0ms, normalize p95 6565.2ms; 15s is ~2.1–2.4x those p95 values.",
+      "Timeouts cluster in plan(5), gen_sql(5), normalize_intent(4), l4_score(4), with one clarify-batch gen_sql timeout lacking task detail.",
+      "L4 request bodies contain 66 column candidates and completed with finish_reason=length at 2304 output tokens; this is deterministic payload/output truncation, not only provider tail.",
+      "4 normalize_intent timeouts have 0 tokens recorded because the request timed out before response; this is provider/network tail rather than request-body size (same payload succeeds elsewhere)."
+    ],
+    "fix_candidates": [
+      "Cap L4 candidates to 30 (implemented, zero-outbound test) to avoid output-token truncation.",
+      "Keep transport retry for ConnectError/CircuitOpen only; never retry LlmTimeout.",
+      "Use per-batch max_concurrency=2 and checkpoint/resume (implemented r56) to reduce provider saturation.",
+      "Potential future work: cache stable prompt prefixes and reduce plan/semantic summary size; not implemented in r57."
+    ]
+  }
+}
