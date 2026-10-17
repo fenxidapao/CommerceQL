@@ -95,7 +95,12 @@ from app.core.clock import Clock  # noqa: E402
 from app.core.config import Settings, get_settings  # noqa: E402
 from app.core.contracts import CandidateRef, IdentityContext  # noqa: E402
 from app.core.enums import ActionTaken, DegradedReason, GateNo, RetrievalMode, Role  # noqa: E402
-from app.graph.build import GRAPH_RECURSION_LIMIT, NODE_TIMEOUT_S, build_graph  # noqa: E402
+from app.graph.build import (  # noqa: E402
+    GRAPH_RECURSION_LIMIT,
+    NODE_TIMEOUT_S,
+    _LLM_NODE_TASKS,
+    build_graph,
+)
 from app.graph.context import (  # noqa: E402
     GraphDeps,
     RunContext,
@@ -566,8 +571,8 @@ def identity_for_case(case_id: str, tenant: str, *, role: Role = Role.ANALYST) -
 · U-107（d387347，W4）把"预算当硬超时"这个病害整体改掉 —— LLM 节点的硬超时**不再写死**，
   执行期经 `_LLM_NODE_TASKS` → `resolve_route` → `hard_timeout_s` 解析为**客户端超时**
   （§10.2：flash 15s / pro 45s）。⇒ 当年"`normalize` 契约 2.0s 被打断"那一格已不成立
- （它的生效值现在是 15s）；但 `bind` **仍留在表里、仍是 0.2s**，而 `nodes/bind.py:180`
-  确实触达 `deps.llm` ⇒ 生产侧这一格仍是缺口，本窗口只上呈不代修（RELAY G3）。
+ （它的生效值现在是 15s）；`bind` 也已纳入 `_LLM_NODE_TASKS`（`nodes/bind.py` 确实触达
+`deps.llm`），生产与评测两侧同走客户端硬超时，不再有 0.2s / 162s 的清单漂移。
 
 放大不拍脑袋：下界由文档自己的数字推出 ⇒ `EVAL_LLM_NODE_TIMEOUT_S`。
 放大的代价必须写清：**真打轮的 EX 不覆盖 07 §5.3 超时契约**（进 §17.4 缺口表）——
@@ -575,20 +580,16 @@ U-107 之后这句更具体：LLM 节点生产走 15s/45s，评测兜到 162s，
 匣带回放轮**不放大**（回放不出网）⇒ 那一轮仍是契约/客户端超时，可用于超时回归。
 """
 
-#: 会做出站 LLM 调用的节点（判据 = `app/graph/nodes/*.py` 里是否触达 `deps.llm`；
-#: 实测命中：`normalize` `intent` `plan` `bind` `gen_sql` `repair`；
-#: `link` 只走本地检索、`present` 是启发式排版，故不在此列）。
-#: ⚠️ 与 app 自己的 `_LLM_NODE_TASKS`（`build.py:396`）**双向都不一致**（U-107 后实测）：
-#: · `bind`：`nodes/bind.py:180` 确实经 `context.deps.llm` 走 L4 精排，却不在那份清单里
-#:   ⇒ `_effective_limit_for("bind") = 0.2s`（`normalize`/`gen_sql` 都解析成 15s）。
-#:   生产路径上 L4 那一跳只有 0.2s，而评测侧的下界把它兜住了 ——
-#:   "评测比生产宽松"的存量一处，已上呈 RELAY G3（不在本窗口替对方改契约）。
-#: · `present`：那份清单里有，而 `nodes/present.py` 全文件对 `llm` **零命中** ⇒ 对方比代码宽。
-#:   对本窗口无害（多给一档客户端超时不会假绿），但结论要留下：**两份清单谁都不是权威**，
-#:   判据只能是"代码是否触达 `deps.llm`"，所以本清单不改成照抄 `_LLM_NODE_TASKS`。
-LLM_CALLING_NODES: frozenset[str] = frozenset(
-    {"normalize", "intent", "plan", "bind", "gen_sql", "repair"}
-)
+#: 会做出站 LLM 调用的节点 —— 🔴 **从生产清单派生，不再手抄**（W8 第 51 轮）。
+#:
+#: 历史缺陷（第 50 轮实测）：本常量曾是**手抄的副本**，与生产侧 `app/graph/build.py` 的
+#: `_LLM_NODE_TASKS` 双向漂移 —— `bind` 在评测清单里、不在生产清单里 ⇒ 生产侧那一跳
+#: 只拿 §5.3 的 0.2s 契约值，而评测侧拿 162s 下界（"评测比生产宽松"）。
+#: 现在**单一真相源 = `_LLM_NODE_TASKS`**，本常量只是它的 frozenset 视图；
+#: 任一侧想加/删节点，都会同时改变两侧（结构上不可能再漂移），
+#: 且 `backend/tests/contract/test_llm_node_manifest_contract.py` 会另按**代码事实**
+#: （节点源文件是否触达出站端口）做独立复核。
+LLM_CALLING_NODES: frozenset[str] = frozenset(_LLM_NODE_TASKS)
 
 #: 一次节点内 LLM 路径的**最坏合法**耗时（全部取自契约，不是经验值）：
 #:   信号量排队上限 20s            —— 07 §10.1"排队等待上限 20s"

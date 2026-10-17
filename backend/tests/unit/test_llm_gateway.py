@@ -30,6 +30,8 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+
+import httpx
 from collections.abc import Callable, Mapping
 from datetime import datetime
 from decimal import Decimal
@@ -710,6 +712,52 @@ class TestDegradeToTemplateAndRefuse:
         assert ei.value.detail["task"] == "gen_sql"
         assert ledger.entries == []
         assert events[-1].action_taken is ActionTaken.TEMPLATE_ONLY
+
+    async def test_timeout_then_no_template_is_an_error_not_a_refusal(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """🔴 W8 第 51 轮：**因上游故障降级**后模板仍无命中 ⇒ `LlmUpstreamError`（error）。
+
+        历史缺陷（第 50 轮实测）：超时 → 降级链 → 模板无命中 → 一律抛 `LlmRefused`
+        ⇒ 被 `llm_error_update` 映射成 `refuse(no_data_asset)`，把"上游慢"伪装成
+        "系统没有这类数据"（G-2/57 族的误拒里混着这类）。
+
+        判据（C-12 的边界）：
+        · **没降级**、纯模板层没这个问题的库 ⇒ 仍是产品结论 `LlmRefused`（拒答），
+          由 `test_no_template_hit_is_a_refusal_not_an_error` 守着；
+        · **降级过**（上游超时/空 content 等）后模板也无命中 ⇒ 工程故障，必须 error。
+        """
+        # 用**真实超时**触发 `ChatClient._attempt` 的 `asyncio.timeout` → `LlmTimeout`
+        # （httpx 的 ReadTimeout 会被归成 `LlmUpstreamError` 且不降级 —— 那是另一条路径）。
+        # 把 §10.2 的硬超时打桩成极小值，避免在测试里真等 15s（**不改任何生产常量**）。
+        import app.llm as llm_pkg
+
+        monkeypatch.setattr(llm_pkg, "hard_timeout_s", lambda model_key: 0.05)
+
+        async def _slow(i: int, r: httpx.Request) -> httpx.Response:
+            await asyncio.sleep(5.0)
+            raise AssertionError("不该走到这里：deadline 应先到")
+
+        up = FakeUpstream(_slow)
+        original = llm_pkg.hard_timeout_s
+        llm_pkg.hard_timeout_s = lambda model_key: 0.05  # type: ignore[assignment]
+        try:
+            gw, _, events, _ = _gw(up)  # 默认 NullTemplateProvider = 无模板命中
+            with pytest.raises(LlmUpstreamError) as ei:
+                await gw.call("gen_sql", _payload())
+        finally:
+            await gw.aclose()
+            llm_pkg.hard_timeout_s = original  # type: ignore[assignment]
+        assert ei.value.default_code == "LLM_UPSTREAM_ERROR"
+        # 降级仍如实记录（不得因为改抛 error 就把"上游不可用"吞掉）
+        assert events, "降级事件被吞掉了 —— 上游慢这件事必须可观测"
+        assert any(e.reason is DegradedReason.LLM_UNAVAILABLE for e in events), (
+            f"降级的 reason 应为 llm_unavailable，实得 {[e.reason for e in events]}"
+        )
+        # 可判根因：detail 里点名"是上游故障降级引发的模板无命中"，与真 5xx 分开
+        assert ei.value.detail.get("reason") == "upstream_fault_then_template_miss"
+        assert ei.value.detail.get("last_degrade_error") == "LlmTimeout"
+
 
     async def test_default_template_provider_is_a_declared_gap_not_an_implementation(self) -> None:
         """🔴 诚实声明钉成断言：P0 的模板层**是空的**（`gold_query` 未接线）。

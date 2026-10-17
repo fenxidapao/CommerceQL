@@ -458,10 +458,9 @@ def _timeout_fallback(name: str, state: GraphState, effective: float) -> dict[st
     execute → EXEC_TIMEOUT）。`_RERAISE_TIMEOUT_NODES` 不在本表 —— 由 `_with_node_timeout`
     上抛（见该常量 docstring）。
 
-    ⚠️ 每次转移都**镜像该节点自身处理同源失败的分支**（`normalize.py` 的 `PlannerError`
-    → `report_degraded(LLM_UNAVAILABLE, TEMPLATE_ONLY)` + refuse；……），让"运行中超时"
-    与"节点内失败"两条路径产出**同形**的终态 —— 上游一慢从此走降级链，而不是 re-raise
-    成 `error(INTERNAL)` → `ok=0`（这是 w7 🔴-0 的正解）。
+    ⚠️ 每次转移都**镜像该节点自身处理同源失败的分支**。W8 第 51 轮起，触达 LLM 的节点
+    把超时视为**上游工程故障**：保留 `degraded` 审计后终态落 `error(LLM_UPSTREAM_ERROR)`，
+    不再伪装成业务 `refuse(no_data_asset)`；`link` 等非 LLM 节点的既有文档转移不变。
     """
     from app.core.enums import (
         ActionTaken,
@@ -503,26 +502,48 @@ def _timeout_fallback(name: str, state: GraphState, effective: float) -> dict[st
                 reason, action, {"stage": name, "reason": "timeout", "limit_s": effective}
             )
 
+    # ------------------------------------------------------------------
+    # LLM 节点超时（W8 第 51 轮订正：**工程故障，不是业务拒答**）
+    # ------------------------------------------------------------------
+    # 🔴 历史行为（本轮改前）：`normalize`/`intent`/`plan`/`gen_sql`/`repair` 超时一律
+    #    `refuse(no_data_asset)`。后果是把"上游慢/不可用"伪装成"系统没有这类数据"：
+    #    第 50 轮实测 G-2 的 3 条 refuse 里 1 条、57 族的 20 条里 4 条都是**超时误记**，
+    #    直接污染 G-5 的误拒分母。
+    # 🔴 订正依据 = C-12 的边界（`docs/07` :887 / :2002）：`refuse` = **产品结论**
+    #    （系统不回答这类问题），`error` = **工程故障**（生成的查询不合规 / 执行失败）。
+    #    超时属后者 ⇒ 走 `error`。**15s 是 07 §10.2 判据值，本轮不动。**
+    # ⚠️ 归属码取 `LLM_UPSTREAM_ERROR`（502 / ✅ 可重试）：附录 A §A.11 的 28 码里
+    #    **没有**"LLM 超时"专用码，而超时与 5xx 同族（上游侧、可重试）—— 新增码要同步
+    #    §A.11 + 07 §4.2 断言集，超出本窗写权。`error_detail` 带 `reason: "timeout"` 可区分。
+    _LLM_TIMEOUT_CODE = ErrorCode.LLM_UPSTREAM_ERROR.value
+
+    def _timeout_error() -> dict[str, Any]:
+        """LLM 节点超时的统一终态：`error(LLM_UPSTREAM_ERROR)` + 可判根因的 detail。"""
+        update = _terminal(
+            event="error", outcome=Outcome.FAILED, code=_LLM_TIMEOUT_CODE
+        )
+        if update.get("terminal"):
+            update["terminal"] = {
+                **update["terminal"],
+                "error_detail": {"reason": "timeout", "stage": name, "limit_s": effective},
+            }
+        return update
+
     if name == "normalize":
-        # 镜像 `normalize.py` 的 `PlannerError` 分支（§5.3 行 2：模板 → 无命中 → 拒答）。
+        # §5.3 行 2：模板兜底 → 上游不可用（**不是**"没有数据"）。
         _degraded(DegradedReason.LLM_UNAVAILABLE, ActionTaken.TEMPLATE_ONLY)
-        update: dict[str, Any] = {
+        update = {
             "intent": IntentKind.REFUSE.value,
             "intent_detail": {
                 "reason_code": "understand_unavailable",
                 "refuse_kind": RefuseReason.NO_DATA_ASSET.value,
             },
         }
-        update.update(
-            _terminal(
-                event="refuse", outcome=Outcome.REFUSE,
-                reason=RefuseReason.NO_DATA_ASSET.value,
-            )
-        )
+        update.update(_timeout_error())
         return update
 
     if name == "intent":
-        # 镜像 `intent.py` 的 `PlannerError` 分支（§5.3 行 3）：单跑路径**不** report_degraded。
+        # §5.3 行 3：单跑路径**不** report_degraded（镜像节点自身）。
         update = {
             "intent": IntentKind.REFUSE.value,
             "intent_detail": {
@@ -530,29 +551,18 @@ def _timeout_fallback(name: str, state: GraphState, effective: float) -> dict[st
                 "refuse_kind": RefuseReason.NO_DATA_ASSET.value,
             },
         }
-        update.update(
-            _terminal(
-                event="refuse", outcome=Outcome.REFUSE,
-                reason=RefuseReason.NO_DATA_ASSET.value,
-            )
-        )
+        update.update(_timeout_error())
         return update
 
     if name == "plan":
-        # 镜像 `plan.py` 的 `PlannerError` 分支（§5.3 行 5）。
+        # §5.3 行 5：计划生成失败 = 上游不可用。
         _degraded(DegradedReason.PLAN_GENERATION_FAILED, ActionTaken.TEMPLATE_ONLY)
-        return _terminal(
-            event="refuse", outcome=Outcome.REFUSE,
-            reason=RefuseReason.NO_DATA_ASSET.value,
-        )
+        return _timeout_error()
 
     if name in ("gen_sql", "repair"):
-        # 镜像 `gen_sql.py` / `repair.py` 的 `PlannerError` 分支（§5.3 行 7 / 16）。
+        # §5.3 行 7 / 16。
         _degraded(DegradedReason.LLM_UNAVAILABLE, ActionTaken.TEMPLATE_ONLY)
-        return _terminal(
-            event="refuse", outcome=Outcome.REFUSE,
-            reason=RefuseReason.NO_DATA_ASSET.value,
-        )
+        return _timeout_error()
 
     if name == "present":
         # 镜像 `present.py`（§14.2 F4）：degraded + 空增量 = 仅表格。
@@ -568,11 +578,11 @@ def _timeout_fallback(name: str, state: GraphState, effective: float) -> dict[st
         )
 
     if name == "bind":
-        # W4 具名裁决（§5.3 行 6「无绑定 → refuse」）：绑定超时 = 无绑定产物 → 拒答。
-        return _terminal(
-            event="refuse", outcome=Outcome.REFUSE,
-            reason=RefuseReason.NO_DATA_ASSET.value,
-        )
+        # 🔴 第 51 轮订正：`bind` 会走 `deps.llm` 的 L4 精排（`nodes/bind.py:180`），
+        # 它的超时同样是**上游不可用**，不是"没有绑定产物 ⇒ 用户的问题没有数据"。
+        # 旧行为 `refuse(no_data_asset)` 是第 50 轮实测的误记来源之一（M-DIM-08 3/5 次）。
+        _degraded(DegradedReason.LLM_UNAVAILABLE, ActionTaken.TEMPLATE_ONLY)
+        return _timeout_error()
 
     if name == "gate1_ast":
         return _terminal(
@@ -631,10 +641,8 @@ def _with_node_timeout(name: str, fn: Any, *, overrides: Mapping[str, float] | N
 
     | 节点 | 超时动作 |
     |---|---|
-    | normalize / plan / gen_sql / repair | `degraded(lm_unavailable / plan_generation_failed, template_only)` + `refuse(no_data_asset)` |
-    | intent | `refuse(no_data_asset)`（不发 degraded，镜像节点自身） |
+    | normalize / intent / plan / gen_sql / repair / bind | `degraded(...)`（按原节点语义）+ `error(LLM_UPSTREAM_ERROR)`；`error_detail.reason=timeout`，不发 `no_data_asset` |
     | link | `degraded(embedding_unavailable, sparse_only)` + `refuse(no_data_asset)` |
-    | bind | `refuse(no_data_asset)`（W4 具名裁决：无绑定 → refuse） |
     | present | `degraded(present_failed, table_only)` + 空增量（仅表格） |
     | gate1_ast / gate2_policy | `error(GATE_AST_REJECTED / GATE_POLICY_REJECTED)` |
     | gate3_cost | `run_gate3(explain_error=True)` → WARN + `gate_update`（跳过并标注，不设终态） |

@@ -1,0 +1,922 @@
+{
+  "case": "E-VER-07",
+  "n": 6,
+  "runs": [
+    {
+      "tag": 1,
+      "record": {
+        "case_id": "E-VER-07",
+        "question": "T_A 的华东覆盖省份数是多少？",
+        "tenant": "T_A",
+        "expected_behavior": "execute",
+        "difficulty_struct": "easy",
+        "difficulty_semantic": "low",
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "terminal_error_detail": {},
+        "outcome": "success",
+        "refusal_reason": null,
+        "binding_status": "resolved_default",
+        "sql_text": "SELECT v_region.region_name AS region_name, COUNT(*) AS province_cnt FROM v_region WHERE v_region.region_name = %(region_name)s GROUP BY v_region.region_name LIMIT 1",
+        "sql_params": {
+          "region_name": "华东"
+        },
+        "sql_dialect": "postgres",
+        "limit_injected": null,
+        "applied_predicates": [],
+        "gate_decisions": {
+          "1": "pass/True",
+          "2": "pass/True",
+          "3": "skipped/False"
+        },
+        "gate1_reject_rule": null,
+        "exec_error_class": null,
+        "degradations": [
+          {
+            "reason": "embedding_unavailable",
+            "action_taken": "sparse_only"
+          },
+          {
+            "reason": "present_failed",
+            "action_taken": "table_only",
+            "detail": {
+              "stage": "present",
+              "reason": "presenter_absent",
+              "binding_disclosure": "省份清单是公共参考维表，时间语义为当前值"
+            }
+          }
+        ],
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "latency_ms": {
+          "normalize": 6383,
+          "linking": 1,
+          "plan": 2268,
+          "gen_sql": 2230,
+          "gate": 12,
+          "exec": 1,
+          "present": 0,
+          "total": 19319
+        },
+        "tokens": {
+          "input": 24816,
+          "output": 2494,
+          "cache_hit": 18432,
+          "total": 27310
+        },
+        "cost_cny": 0.067855,
+        "infra_error": null,
+        "scored": true,
+        "unscored_reason": null,
+        "gold": {
+          "gold_sql": "SELECT COUNT(*) FROM v_region WHERE region_name = '华东'",
+          "frozen_hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+          "via_view": {
+            "hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+            "rows": 1,
+            "cols": 1,
+            "error": null
+          },
+          "via_wrap": {
+            "hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+            "rows": 1,
+            "cols": 1,
+            "error": null
+          },
+          "view_eq_wrap": true,
+          "wrap_eq_frozen": true
+        },
+        "predicted": {
+          "hash": "sha256:f323a625704474c4c02aa06cdd420b11f4f59f1cdd6f23906f509a04335a196e",
+          "columns": [
+            "region_name",
+            "province_cnt"
+          ],
+          "rows": 1,
+          "shape": {
+            "columns": [
+              "region_name",
+              "province_cnt"
+            ],
+            "row_count": 1,
+            "head_rows": [
+              [
+                "华东",
+                7
+              ]
+            ]
+          },
+          "state_row_count": 1,
+          "sandbox_error": null
+        },
+        "verdict": {
+          "equivalent": false,
+          "hash_matches": false,
+          "tags": [],
+          "diffs": [
+            "列数不同：金标 1 / 预测 2"
+          ],
+          "unmatched": 0,
+          "equivalent_despite_hash_mismatch": false
+        },
+        "attribution": {
+          "category": "gate_policy_gap",
+          "signal": "闸门自身判据缺陷：F2 域 `orders` 的默认谓词列 ['is_test_order', 'pay_status', 'refund_status'] 被注入到缺列资产 `v_region`（注入后必然 R06）",
+          "severity": "gate"
+        },
+        "wall_s": 19.325
+      },
+      "plan_seen": true,
+      "blocking_issues": [],
+      "terminal_code": null,
+      "error_detail": {},
+      "degradations": [
+        "embedding_unavailable",
+        "present_failed"
+      ]
+    },
+    {
+      "tag": 2,
+      "record": {
+        "case_id": "E-VER-07",
+        "question": "T_A 的华东覆盖省份数是多少？",
+        "tenant": "T_A",
+        "expected_behavior": "execute",
+        "difficulty_struct": "easy",
+        "difficulty_semantic": "low",
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "terminal_error_detail": {},
+        "outcome": "success",
+        "refusal_reason": null,
+        "binding_status": "resolved_default",
+        "sql_text": "SELECT v_region.region_name AS region_name, COUNT(*) AS province_cnt FROM v_region WHERE v_region.region_name = %(region_name)s GROUP BY v_region.region_name LIMIT 100",
+        "sql_params": {
+          "region_name": "华东"
+        },
+        "sql_dialect": "postgres",
+        "limit_injected": null,
+        "applied_predicates": [],
+        "gate_decisions": {
+          "1": "pass/True",
+          "2": "pass/True",
+          "3": "skipped/False"
+        },
+        "gate1_reject_rule": null,
+        "exec_error_class": null,
+        "degradations": [
+          {
+            "reason": "embedding_unavailable",
+            "action_taken": "sparse_only"
+          },
+          {
+            "reason": "present_failed",
+            "action_taken": "table_only",
+            "detail": {
+              "stage": "present",
+              "reason": "presenter_absent",
+              "binding_disclosure": "省份清单是公共参考维表，时间语义为当前值"
+            }
+          }
+        ],
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "latency_ms": {
+          "normalize": 4343,
+          "linking": 0,
+          "plan": 1829,
+          "gen_sql": 2269,
+          "gate": 13,
+          "exec": 1,
+          "present": 0,
+          "total": 18945
+        },
+        "tokens": {
+          "input": 24812,
+          "output": 2501,
+          "cache_hit": 20224,
+          "total": 27313
+        },
+        "cost_cny": 0.059817,
+        "infra_error": null,
+        "scored": true,
+        "unscored_reason": null,
+        "gold": {
+          "gold_sql": "SELECT COUNT(*) FROM v_region WHERE region_name = '华东'",
+          "frozen_hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+          "via_view": {
+            "hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+            "rows": 1,
+            "cols": 1,
+            "error": null
+          },
+          "via_wrap": {
+            "hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+            "rows": 1,
+            "cols": 1,
+            "error": null
+          },
+          "view_eq_wrap": true,
+          "wrap_eq_frozen": true
+        },
+        "predicted": {
+          "hash": "sha256:f323a625704474c4c02aa06cdd420b11f4f59f1cdd6f23906f509a04335a196e",
+          "columns": [
+            "region_name",
+            "province_cnt"
+          ],
+          "rows": 1,
+          "shape": {
+            "columns": [
+              "region_name",
+              "province_cnt"
+            ],
+            "row_count": 1,
+            "head_rows": [
+              [
+                "华东",
+                7
+              ]
+            ]
+          },
+          "state_row_count": 1,
+          "sandbox_error": null
+        },
+        "verdict": {
+          "equivalent": false,
+          "hash_matches": false,
+          "tags": [],
+          "diffs": [
+            "列数不同：金标 1 / 预测 2"
+          ],
+          "unmatched": 0,
+          "equivalent_despite_hash_mismatch": false
+        },
+        "attribution": {
+          "category": "gate_policy_gap",
+          "signal": "闸门自身判据缺陷：F2 域 `orders` 的默认谓词列 ['is_test_order', 'pay_status', 'refund_status'] 被注入到缺列资产 `v_region`（注入后必然 R06）",
+          "severity": "gate"
+        },
+        "wall_s": 18.95
+      },
+      "plan_seen": true,
+      "blocking_issues": [],
+      "terminal_code": null,
+      "error_detail": {},
+      "degradations": [
+        "embedding_unavailable",
+        "present_failed"
+      ]
+    },
+    {
+      "tag": 3,
+      "record": {
+        "case_id": "E-VER-07",
+        "question": "T_A 的华东覆盖省份数是多少？",
+        "tenant": "T_A",
+        "expected_behavior": "execute",
+        "difficulty_struct": "easy",
+        "difficulty_semantic": "low",
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "terminal_error_detail": {},
+        "outcome": "success",
+        "refusal_reason": null,
+        "binding_status": "resolved_default",
+        "sql_text": "SELECT COUNT(*) AS province_cnt FROM v_region WHERE region_name = %(region_name)s LIMIT 1",
+        "sql_params": {
+          "region_name": "华东"
+        },
+        "sql_dialect": "postgres",
+        "limit_injected": null,
+        "applied_predicates": [],
+        "gate_decisions": {
+          "1": "pass/True",
+          "2": "pass/True",
+          "3": "skipped/False"
+        },
+        "gate1_reject_rule": null,
+        "exec_error_class": null,
+        "degradations": [
+          {
+            "reason": "embedding_unavailable",
+            "action_taken": "sparse_only"
+          },
+          {
+            "reason": "present_failed",
+            "action_taken": "table_only",
+            "detail": {
+              "stage": "present",
+              "reason": "presenter_absent",
+              "binding_disclosure": "省份清单是公共参考维表，时间语义为当前值"
+            }
+          }
+        ],
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "latency_ms": {
+          "normalize": 2359,
+          "linking": 0,
+          "plan": 2153,
+          "gen_sql": 2155,
+          "gate": 13,
+          "exec": 2,
+          "present": 0,
+          "total": 16668
+        },
+        "tokens": {
+          "input": 24785,
+          "output": 2409,
+          "cache_hit": 23040,
+          "total": 27194
+        },
+        "cost_cny": 0.045641,
+        "infra_error": null,
+        "scored": true,
+        "unscored_reason": null,
+        "gold": {
+          "gold_sql": "SELECT COUNT(*) FROM v_region WHERE region_name = '华东'",
+          "frozen_hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+          "via_view": {
+            "hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+            "rows": 1,
+            "cols": 1,
+            "error": null
+          },
+          "via_wrap": {
+            "hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+            "rows": 1,
+            "cols": 1,
+            "error": null
+          },
+          "view_eq_wrap": true,
+          "wrap_eq_frozen": true
+        },
+        "predicted": {
+          "hash": "sha256:3993dabd617d24a09f1fb19447ebd91c6d749c253b72cceb8abe39e72ea923a5",
+          "columns": [
+            "province_cnt"
+          ],
+          "rows": 1,
+          "shape": {
+            "columns": [
+              "province_cnt"
+            ],
+            "row_count": 1,
+            "head_rows": [
+              [
+                7
+              ]
+            ]
+          },
+          "state_row_count": 1,
+          "sandbox_error": null
+        },
+        "verdict": {
+          "equivalent": true,
+          "hash_matches": false,
+          "tags": [
+            "column_alias_difference"
+          ],
+          "diffs": [],
+          "unmatched": 0,
+          "equivalent_despite_hash_mismatch": true
+        },
+        "attribution": null,
+        "wall_s": 16.673
+      },
+      "plan_seen": true,
+      "blocking_issues": [],
+      "terminal_code": null,
+      "error_detail": {},
+      "degradations": [
+        "embedding_unavailable",
+        "present_failed"
+      ]
+    },
+    {
+      "tag": 4,
+      "record": {
+        "case_id": "E-VER-07",
+        "question": "T_A 的华东覆盖省份数是多少？",
+        "tenant": "T_A",
+        "expected_behavior": "execute",
+        "difficulty_struct": "easy",
+        "difficulty_semantic": "low",
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "terminal_error_detail": {},
+        "outcome": "success",
+        "refusal_reason": null,
+        "binding_status": "resolved_default",
+        "sql_text": "SELECT v_region.region_name AS region_name, COUNT(*) AS province_cnt FROM v_region WHERE v_region.region_name = %(region_name)s GROUP BY v_region.region_name LIMIT 100",
+        "sql_params": {
+          "region_name": "华东"
+        },
+        "sql_dialect": "postgres",
+        "limit_injected": null,
+        "applied_predicates": [],
+        "gate_decisions": {
+          "1": "pass/True",
+          "2": "pass/True",
+          "3": "skipped/False"
+        },
+        "gate1_reject_rule": null,
+        "exec_error_class": null,
+        "degradations": [
+          {
+            "reason": "embedding_unavailable",
+            "action_taken": "sparse_only"
+          },
+          {
+            "reason": "present_failed",
+            "action_taken": "table_only",
+            "detail": {
+              "stage": "present",
+              "reason": "presenter_absent",
+              "binding_disclosure": "省份清单是公共参考维表，时间语义为当前值"
+            }
+          }
+        ],
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "latency_ms": {
+          "normalize": 7697,
+          "linking": 0,
+          "plan": 2340,
+          "gen_sql": 2678,
+          "gate": 10,
+          "exec": 1,
+          "present": 0,
+          "total": 22223
+        },
+        "tokens": {
+          "input": 24820,
+          "output": 2525,
+          "cache_hit": 24320,
+          "total": 27345
+        },
+        "cost_cny": 0.041638,
+        "infra_error": null,
+        "scored": true,
+        "unscored_reason": null,
+        "gold": {
+          "gold_sql": "SELECT COUNT(*) FROM v_region WHERE region_name = '华东'",
+          "frozen_hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+          "via_view": {
+            "hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+            "rows": 1,
+            "cols": 1,
+            "error": null
+          },
+          "via_wrap": {
+            "hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+            "rows": 1,
+            "cols": 1,
+            "error": null
+          },
+          "view_eq_wrap": true,
+          "wrap_eq_frozen": true
+        },
+        "predicted": {
+          "hash": "sha256:f323a625704474c4c02aa06cdd420b11f4f59f1cdd6f23906f509a04335a196e",
+          "columns": [
+            "region_name",
+            "province_cnt"
+          ],
+          "rows": 1,
+          "shape": {
+            "columns": [
+              "region_name",
+              "province_cnt"
+            ],
+            "row_count": 1,
+            "head_rows": [
+              [
+                "华东",
+                7
+              ]
+            ]
+          },
+          "state_row_count": 1,
+          "sandbox_error": null
+        },
+        "verdict": {
+          "equivalent": false,
+          "hash_matches": false,
+          "tags": [],
+          "diffs": [
+            "列数不同：金标 1 / 预测 2"
+          ],
+          "unmatched": 0,
+          "equivalent_despite_hash_mismatch": false
+        },
+        "attribution": {
+          "category": "gate_policy_gap",
+          "signal": "闸门自身判据缺陷：F2 域 `orders` 的默认谓词列 ['is_test_order', 'pay_status', 'refund_status'] 被注入到缺列资产 `v_region`（注入后必然 R06）",
+          "severity": "gate"
+        },
+        "wall_s": 22.228
+      },
+      "plan_seen": true,
+      "blocking_issues": [],
+      "terminal_code": null,
+      "error_detail": {},
+      "degradations": [
+        "embedding_unavailable",
+        "present_failed"
+      ]
+    },
+    {
+      "tag": 5,
+      "record": {
+        "case_id": "E-VER-07",
+        "question": "T_A 的华东覆盖省份数是多少？",
+        "tenant": "T_A",
+        "expected_behavior": "execute",
+        "difficulty_struct": "easy",
+        "difficulty_semantic": "low",
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "terminal_error_detail": {},
+        "outcome": "success",
+        "refusal_reason": null,
+        "binding_status": "resolved_default",
+        "sql_text": "SELECT COUNT(*) AS province_cnt FROM v_region WHERE region_name = %(region_name)s LIMIT 1",
+        "sql_params": {
+          "region_name": "华东"
+        },
+        "sql_dialect": "postgres",
+        "limit_injected": null,
+        "applied_predicates": [],
+        "gate_decisions": {
+          "1": "pass/True",
+          "2": "pass/True",
+          "3": "skipped/False"
+        },
+        "gate1_reject_rule": null,
+        "exec_error_class": null,
+        "degradations": [
+          {
+            "reason": "embedding_unavailable",
+            "action_taken": "sparse_only"
+          },
+          {
+            "reason": "present_failed",
+            "action_taken": "table_only",
+            "detail": {
+              "stage": "present",
+              "reason": "presenter_absent",
+              "binding_disclosure": "省份清单是公共参考维表，时间语义为当前值"
+            }
+          }
+        ],
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "latency_ms": {
+          "normalize": 7406,
+          "linking": 0,
+          "plan": 3916,
+          "gen_sql": 9047,
+          "gate": 15,
+          "exec": 2,
+          "present": 0,
+          "total": 30928
+        },
+        "tokens": {
+          "input": 24777,
+          "output": 2616,
+          "cache_hit": 21248,
+          "total": 27452
+        },
+        "cost_cny": 0.056631,
+        "infra_error": null,
+        "scored": true,
+        "unscored_reason": null,
+        "gold": {
+          "gold_sql": "SELECT COUNT(*) FROM v_region WHERE region_name = '华东'",
+          "frozen_hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+          "via_view": {
+            "hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+            "rows": 1,
+            "cols": 1,
+            "error": null
+          },
+          "via_wrap": {
+            "hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+            "rows": 1,
+            "cols": 1,
+            "error": null
+          },
+          "view_eq_wrap": true,
+          "wrap_eq_frozen": true
+        },
+        "predicted": {
+          "hash": "sha256:3993dabd617d24a09f1fb19447ebd91c6d749c253b72cceb8abe39e72ea923a5",
+          "columns": [
+            "province_cnt"
+          ],
+          "rows": 1,
+          "shape": {
+            "columns": [
+              "province_cnt"
+            ],
+            "row_count": 1,
+            "head_rows": [
+              [
+                7
+              ]
+            ]
+          },
+          "state_row_count": 1,
+          "sandbox_error": null
+        },
+        "verdict": {
+          "equivalent": true,
+          "hash_matches": false,
+          "tags": [
+            "column_alias_difference"
+          ],
+          "diffs": [],
+          "unmatched": 0,
+          "equivalent_despite_hash_mismatch": true
+        },
+        "attribution": null,
+        "wall_s": 30.934
+      },
+      "plan_seen": true,
+      "blocking_issues": [],
+      "terminal_code": null,
+      "error_detail": {},
+      "degradations": [
+        "embedding_unavailable",
+        "present_failed"
+      ]
+    },
+    {
+      "tag": 6,
+      "record": {
+        "case_id": "E-VER-07",
+        "question": "T_A 的华东覆盖省份数是多少？",
+        "tenant": "T_A",
+        "expected_behavior": "execute",
+        "difficulty_struct": "easy",
+        "difficulty_semantic": "low",
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "terminal_event": "complete",
+        "terminal_code": null,
+        "terminal_error_detail": {},
+        "outcome": "success",
+        "refusal_reason": null,
+        "binding_status": "resolved_default",
+        "sql_text": "SELECT v_region.region_name AS region_name, COUNT(*) AS province_cnt FROM v_region WHERE v_region.region_name = %(region_name)s GROUP BY v_region.region_name LIMIT 100",
+        "sql_params": {
+          "region_name": "华东"
+        },
+        "sql_dialect": "postgres",
+        "limit_injected": null,
+        "applied_predicates": [],
+        "gate_decisions": {
+          "1": "pass/True",
+          "2": "pass/True",
+          "3": "skipped/False"
+        },
+        "gate1_reject_rule": null,
+        "exec_error_class": null,
+        "degradations": [
+          {
+            "reason": "embedding_unavailable",
+            "action_taken": "sparse_only"
+          },
+          {
+            "reason": "present_failed",
+            "action_taken": "table_only",
+            "detail": {
+              "stage": "present",
+              "reason": "presenter_absent",
+              "binding_disclosure": "省份清单是公共参考维表，时间语义为当前值"
+            }
+          }
+        ],
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "latency_ms": {
+          "normalize": 2213,
+          "linking": 0,
+          "plan": 1966,
+          "gen_sql": 2477,
+          "gate": 14,
+          "exec": 2,
+          "present": 0,
+          "total": 17246
+        },
+        "tokens": {
+          "input": 24783,
+          "output": 2462,
+          "cache_hit": 22912,
+          "total": 27304
+        },
+        "cost_cny": 0.046958,
+        "infra_error": null,
+        "scored": true,
+        "unscored_reason": null,
+        "gold": {
+          "gold_sql": "SELECT COUNT(*) FROM v_region WHERE region_name = '华东'",
+          "frozen_hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+          "via_view": {
+            "hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+            "rows": 1,
+            "cols": 1,
+            "error": null
+          },
+          "via_wrap": {
+            "hash": "sha256:23143e4bf336651eff6e8bfb38801eac38e5d22c3c71822614c88f396ae317e6",
+            "rows": 1,
+            "cols": 1,
+            "error": null
+          },
+          "view_eq_wrap": true,
+          "wrap_eq_frozen": true
+        },
+        "predicted": {
+          "hash": "sha256:f323a625704474c4c02aa06cdd420b11f4f59f1cdd6f23906f509a04335a196e",
+          "columns": [
+            "region_name",
+            "province_cnt"
+          ],
+          "rows": 1,
+          "shape": {
+            "columns": [
+              "region_name",
+              "province_cnt"
+            ],
+            "row_count": 1,
+            "head_rows": [
+              [
+                "华东",
+                7
+              ]
+            ]
+          },
+          "state_row_count": 1,
+          "sandbox_error": null
+        },
+        "verdict": {
+          "equivalent": false,
+          "hash_matches": false,
+          "tags": [],
+          "diffs": [
+            "列数不同：金标 1 / 预测 2"
+          ],
+          "unmatched": 0,
+          "equivalent_despite_hash_mismatch": false
+        },
+        "attribution": {
+          "category": "gate_policy_gap",
+          "signal": "闸门自身判据缺陷：F2 域 `orders` 的默认谓词列 ['is_test_order', 'pay_status', 'refund_status'] 被注入到缺列资产 `v_region`（注入后必然 R06）",
+          "severity": "gate"
+        },
+        "wall_s": 17.254
+      },
+      "plan_seen": true,
+      "blocking_issues": [],
+      "terminal_code": null,
+      "error_detail": {},
+      "degradations": [
+        "embedding_unavailable",
+        "present_failed"
+      ]
+    }
+  ]
+}

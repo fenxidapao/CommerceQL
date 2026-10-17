@@ -90,11 +90,27 @@ from app.llm.client import ChatClient
 from app.llm.egress_guard import EgressPayload, build_wire_request
 from app.llm.errors import (
     DEGRADABLE_LLM_ERRORS,
+    LlmCircuitOpen,
     LlmError,
     LlmRefused,
     LlmSaturated,
     LlmTemplateMiss,
+    LlmTimeout,
+    LlmUpstreamError,
 )
+
+
+#: 🔴 W8 第 51 轮：降级异常里"**上游故障**"的那几类 —— 它们意味着"上游没答上来"，
+#: 若模板层也无命中，产物应报 `error`（工程故障）而不是 `refuse`（产品结论，C-12）。
+#: 刻意**不含** `LlmEmptyContent`（模型成功但思考吃光 max_tokens ⇒ 空产出）与
+#: `LlmBudgetExceeded`（我们自己的预算策略）—— 那两类仍走 §10.2 末行的 `refuse`，
+#: 由既有测试 `test_no_template_hit_is_a_refusal_not_an_error` 等守着。
+_UPSTREAM_FAULT_DEGRADES: tuple[type[LlmError], ...] = (
+    LlmTimeout,
+    LlmCircuitOpen,
+    LlmSaturated,
+)
+
 from app.llm.prompts import load_prompt, render_messages
 from app.llm.router import (
     MODEL_AUTO,
@@ -416,6 +432,8 @@ class LlmGateway:
             attempts.append(weaker)
 
         degraded_so_far = False
+        #: 记录**最后一次降级异常的类型**（只记类型，不记异常文本 —— N-12 的反向）。
+        last_degrade_error: type[LlmError] | None = None
         for idx, model_key in enumerate(attempts):
             wire = build_wire_request(
                 egress,
@@ -442,6 +460,7 @@ class LlmGateway:
                 if not isinstance(exc, DEGRADABLE_LLM_ERRORS):
                     raise  # F2/F3 与契约错误：不降级
                 degraded_so_far = True
+                last_degrade_error = type(exc)
                 is_last_model_attempt = idx == len(attempts) - 1
                 reason = self._reason_for(exc)
                 if is_last_model_attempt:
@@ -505,12 +524,30 @@ class LlmGateway:
                 cost_cny=entry.cost_cny,
             )
 
-        # ⑥ 模板层 → 拒答
+        # ⑥ 模板层 → 拒答 / 上游故障
         _log.info("llm_falling_back_to_template", task=task, prompt_version=prompt_version)
         try:
             return self._template_or_refuse(task, payload)
         except LlmTemplateMiss as exc:  # pragma: no cover - 当前 provider 不改抛
             raise LlmRefused(str(exc)) from exc
+        except LlmRefused as exc:
+            # 🔴 W8 第 51 轮：把"**因上游故障降级**后模板仍无命中"与"纯模板没这个库"分开。
+            #
+            # C-12 的边界：`refuse` = 产品结论（系统不回答这类问题），`error` = 工程故障。
+            # 前者只在**没降级**（模型压根没被调用/调用成功但模板无库）时成立；
+            # 一旦降级过（超时/空 content/熔断……），"最终没答案"的**首要原因**是上游坏了，
+            # 把它报成 `refuse(no_data_asset)` 就是第 50 轮实测的误记
+            # （G-2 3 条 refuse 里 1 条、57 族 20 条里 4 条）。
+            if last_degrade_error in _UPSTREAM_FAULT_DEGRADES:
+                raise LlmUpstreamError(
+                    "上游降级链走完仍无产出，且模板层无命中 —— 工程故障，不是产品拒答",
+                    detail={
+                        "task": task,
+                        "reason": "upstream_fault_then_template_miss",
+                        "last_degrade_error": last_degrade_error.__name__,
+                    },
+                ) from exc
+            raise
 
     def estimate_cost(self, payload: Mapping[str, Any]) -> Decimal:
         """pre-flight 成本估算（**高峰价上界**，TCO 纪律）。

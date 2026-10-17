@@ -135,10 +135,16 @@ class LlmTimeout(LlmError):
     """**F1**：单次调用超时 → **可降级**（`degraded` + `switched_to_weak_model`）。
 
     ⚠️ 超时**不是** `EXEC_TIMEOUT` 那类"⭕ 需改请求"的码：本类在网关内部被降级链吃掉，
-    正常流量里不该冒到 API 层。冒到 API 层 = 降级链也走完了，此时应抛 `LlmRefused`。
+    正常流量里不该冒到 API 层。
+
+    🔴 **W8 第 51 轮改码**（原 `INTERNAL` → `LLM_UPSTREAM_ERROR`）：本类**冒到调用方**时
+    只有一种情形 —— 降级链也走完了（如熔断开路 / 半开探测在途）。那时把"上游不可用"
+    报成 `INTERNAL` 会让根因不可判（第 50 轮实测：产物里只有 `INTERNAL`，分不出是超时还是别的）。
+    附录 A §A.11 的 28 码里**没有**"LLM 超时"专用码，而超时与 5xx 同族（上游侧、✅ 可重试）
+    ⇒ 归 `LLM_UPSTREAM_ERROR`（502），具体成因由 `error_detail` 区分。
     """
 
-    default_code = "INTERNAL"
+    default_code = "LLM_UPSTREAM_ERROR"
 
 
 class LlmCircuitOpen(LlmError):
@@ -146,9 +152,12 @@ class LlmCircuitOpen(LlmError):
 
     ⚠️ 开路期间"根本不发请求"，这正是 `LLM_UPSTREAM_ERROR` 的 `Retry-After` 必须
     **不得小于开路时长**（30s）的机制来源（07 §14.4.1）。
+
+    🔴 **W8 第 51 轮改码**（同 `LlmTimeout`）：它冒到调用方时同样是"上游不可用"，
+    归 `LLM_UPSTREAM_ERROR`（其 `Retry-After=30` 恰好覆盖开路时长，正好对得上）。
     """
 
-    default_code = "INTERNAL"
+    default_code = "LLM_UPSTREAM_ERROR"
 
 
 class LlmSaturated(LlmError):
@@ -161,9 +170,12 @@ class LlmSaturated(LlmError):
     `reduced_candidates` 只能作为**建议**通过 `DegradationSink` 传给编排层。
     网关能做的实物动作是**换到弱模型**（flash 的 8 个并发位远多于 pro 的 2 个，
     在 pro 饱和时几乎必然可用）。这条不对称必须写清，否则 `action_taken` 就是在撒谎。
+
+    🔴 **W8 第 51 轮改码**（同 `LlmTimeout`）：饱和 = 上游侧资源不足，
+    冒到调用方时归 `LLM_UPSTREAM_ERROR`。
     """
 
-    default_code = "INTERNAL"
+    default_code = "LLM_UPSTREAM_ERROR"
 
 
 class LlmEmptyContent(LlmError):

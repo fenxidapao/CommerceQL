@@ -668,3 +668,10 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **出站（实报）**：稳定性探针合计 `tokens 153,673`／计价 `0.338214`（`price_guess`）。
 - **修复建议（属 app/**，本轮未动判据）**：① `bind` 纳入 LLM 节点清单一致性核对（现 `_LLM_NODE_TASKS` 缺它，生产侧只给 0.2s）；② L4 这类可选兜底跳超时后应 fail-safe 降级/澄清，而非 `refuse(no_data_asset)`（把"上游慢"记成"没有这类数据"）；③ 15s 是判据值不改，治尾延迟与超时语义。
 - **边界**：未动 `reports/qa/**`、冻结集、阈值、判据、共享 `ecom`；一次性容器已清；台账逐位不动；零取号（`U-143`）；门禁**未重算**（仍 `PASS 1/8`，**不得写"通过"**）。
+## 第 51 轮交付（LLM 清单统一 ＋ 超时语义订正 ＋ G-2/57/稳定性重跑 ｜ 起点 HEAD `50d6575` ｜ 2026-10-17 12:09–12:4x +0800 ｜ 一轮一笔）
+
+- **结论**：A 项清单统一（生产/评测同源，`bind` 实效 15s，防漂移契约 6 passed）；B 项超时/上游故障冒到终态为 `error(LLM_UPSTREAM_ERROR)`，原始首跑的 `E-VER-02`、`H-STR-05` 均有 `last_degrade_error=LlmTimeout`，不再记 `no_data_asset`。
+- **读数**：E-VER-07 6/6 complete、0 no_data_asset、equivalent 2/6；M-DIM-08 5/5 complete+equivalent；G-2 原始 8/1/1 = complete/error/refuse、等效 6，干净重跑 9/0/1、等效 7（不达 95%）；57 族原始 44/1/10/2 = complete/error/refuse/clarify、等效 16，干净重跑 45/0/10/2、等效 16（不达 G-5）。
+- **复跑**：integration **124 passed / 0 failed**（一次性 PG/Redis，已 DROP＋查残渣）；offline **2551 passed / 0 failed**；定向 **79 passed**。
+- **边界**：未改 `reports/qa/**`、冻结集、阈值、判据措辞、共享 `ecom`、07 §10.2 的 15s；门禁未重算仍 `PASS 1/8`；零取号（`U-143`）。
+- **出站**：本轮 live 合计 `tokens 1,985,762`、`price_guess 5.741467 CNY`（`deepseek-v4.1-flash` 按 pro 档兜底）。

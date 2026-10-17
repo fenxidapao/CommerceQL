@@ -109,8 +109,13 @@ class TestWrapper:
             asyncio.run(wrapped({}))
         assert calls == [1]
 
-    def test_llm_node_timeout_degrades_to_refuse(self) -> None:
-        """LLM 节点超时 → 复用 §5.3 失败转移列（gen_sql → degraded + refuse），**不 re-raise**。"""
+    def test_llm_node_timeout_is_an_error_not_a_business_refusal(self) -> None:
+        """🔴 第 51 轮订正：LLM 节点超时 = **工程故障** ⇒ `error(LLM_UPSTREAM_ERROR)`。
+
+        旧行为是 `refuse(no_data_asset)` —— 那会把"上游慢"伪装成"系统没有这类数据"
+        （C-12 的边界：`refuse` = 产品结论，`error` = 工程故障；超时属后者）。
+        仍**不 re-raise**（§5.3.0 附注②：走失败转移，不落 `INTERNAL`）。
+        """
         ctx, token = _make_ctx()
         try:
 
@@ -120,9 +125,12 @@ class TestWrapper:
 
             wrapped = _with_node_timeout("gen_sql", _slow, overrides={"gen_sql": 0.05})
             result = asyncio.run(wrapped({}))
-            assert result["terminal"]["event"] == "refuse"
-            assert result["terminal"]["reason"] == RefuseReason.NO_DATA_ASSET.value
-            assert result["outcome"] == Outcome.REFUSE
+            assert result["terminal"]["event"] == "error", (
+                f"超时不得是拒答：{result['terminal']}"
+            )
+            assert result["terminal"]["code"] == ErrorCode.LLM_UPSTREAM_ERROR.value
+            assert result["outcome"] == Outcome.FAILED
+            # 降级仍要如实记（不能因为改成 error 就把"上游不可用"这件事吞掉）
             degradations = ctx.degradations()
             assert len(degradations) == 1
             assert degradations[0]["reason"] == DegradedReason.LLM_UNAVAILABLE.value
@@ -278,7 +286,10 @@ class TestU129SingleTerminal:
             terminal_update(state, event="error", outcome=Outcome.FAILED, code="INTERNAL")
 
     def test_fallback_still_sets_terminal_when_none_exists(self) -> None:
-        """回归保护（U-107 出路表不动）：无既有终态时 normalize 仍须恰设一次 refuse。"""
+        """回归保护：无既有终态时 normalize 超时仍须恰设一次终态 —— 但**是 error，不是 refuse**。
+
+        （第 51 轮订正：上游不可用属工程故障；`N-08` 的"必须有终态"不因此放松。）
+        """
         _ctx, token = _make_ctx()
         try:
 
@@ -288,7 +299,30 @@ class TestU129SingleTerminal:
 
             wrapped = _with_node_timeout("normalize", _slow, overrides={"normalize": 0.05})
             result = asyncio.run(wrapped({}))
-            assert result["terminal"]["event"] == "refuse"
-            assert result["terminal"]["reason"] == RefuseReason.NO_DATA_ASSET.value
+            assert result["terminal"]["event"] == "error"
+            assert result["terminal"]["code"] == ErrorCode.LLM_UPSTREAM_ERROR.value
+        finally:
+            clear_run_context(token)
+
+    def test_timeout_terminal_never_uses_no_data_asset(self) -> None:
+        """🔴 派单 B 的机械护栏：**任何**节点超时的终态都不得是 `refuse(no_data_asset)`。
+
+        超时 = 工程故障（C-12）；把它折成业务拒答会污染 G-5 的误拒统计
+        （第 50 轮实测：G-2 的 3 条 refuse 里 1 条、57 族的 20 条里 4 条都是超时误记）。
+        """
+        _ctx, token = _make_ctx()
+        try:
+            for node in ("normalize", "plan", "gen_sql", "repair", "bind"):
+                async def _slow(state: dict, *, _n: str = node) -> dict:
+                    await asyncio.sleep(5.0)
+                    return {}
+
+                wrapped = _with_node_timeout(node, _slow, overrides={node: 0.05})
+                result = asyncio.run(wrapped({}))
+                terminal = result.get("terminal") or {}
+                assert not (
+                    terminal.get("event") == "refuse"
+                    and terminal.get("reason") == RefuseReason.NO_DATA_ASSET.value
+                ), f"{node} 超时被记成业务拒答：{terminal}"
         finally:
             clear_run_context(token)

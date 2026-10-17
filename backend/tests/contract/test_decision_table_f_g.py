@@ -50,11 +50,16 @@ def _reasons(frames: list[tuple[str, dict[str, Any]]]) -> list[tuple[str, str]]:
 class TestGroupF:
     """F 组：LLM 与呈现类（07 §14.2 L2698–L2703）。"""
 
-    def test_f1_llm_timeout_becomes_internal(self) -> None:
-        """F1 LLM 超时 → `error(INTERNAL)`（图内可测面无降级链，差异 1）。
+    def test_f1_llm_timeout_becomes_upstream_error(self) -> None:
+        """F1 LLM 超时 → `error(LLM_UPSTREAM_ERROR)`。
 
-        ⚠️ 07 字面 `degraded + switched_to_weak_model`；脚本件直抛时网关降级链不在
-        图内，`default_code="INTERNAL"` 折成 error（登记 RELAY §九）。
+        🔴 **W8 第 51 轮订正**（原：`error(INTERNAL)`）：超时是**上游侧、可重试**的工程故障，
+        与 5xx 同族；`INTERNAL` 会让根因不可判（第 50 轮实测：产物里只有 `INTERNAL`）。
+        附录 A §A.11 的 28 码里没有"LLM 超时"专用码 ⇒ 归 `LLM_UPSTREAM_ERROR`(502/✅)，
+        具体成因由终态的 `error_detail` 区分（`{reason: "timeout", …}`）。
+
+        ⚠️ 07 字面仍是 `degraded + switched_to_weak_model`（网关降级链，图内不可测）；
+        本用例测的是**降级链也走完后**冒到图里的终态，两者不矛盾。
         """
         chain = make_chain(understand_error=LlmTimeout("单次调用超时"))
         frames, outcome = run_chain(chain)
@@ -62,7 +67,9 @@ class TestGroupF:
         terminals = terminal_frames(frames)
         assert len(terminals) == 1
         assert terminals[0][0] == "error"
-        assert terminals[0][1]["code"] == "INTERNAL"
+        assert terminals[0][1]["code"] == "LLM_UPSTREAM_ERROR", (
+            "超时不得落 INTERNAL（不可判根因）"
+        )
         assert outcome.status is TaskStatus.FAILED
         assert _reasons(frames) == []
         assert all(e != "data" for e, _ in frames)

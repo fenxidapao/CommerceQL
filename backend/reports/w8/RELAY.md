@@ -5226,3 +5226,143 @@ with-L4-cand   -> state=resolved_default  layer=L3  reason=resolved_default  bin
 - G-2 逐条：`eval/results_g2_r49_clean.json` 的 `records[].{outcome,verdict.equivalent,refusal_reason,latency_ms}`。
 - 57 族逐条：`eval/results_f57_r49_clean.json`；plan 原文：`eval/cassettes/w8_r49_f57b_r*.jsonl`。
 - 禁自指自查：以上入口均指向**非本节文件**。
+
+## §五一 第 51 轮 · LLM 节点清单统一 ＋ 超时语义订正 ＋ G-2/57/稳定性重跑 ｜ 2026-10-17 12:09–12:4x +0800 ｜ 起点 HEAD `50d6575`
+
+### 51.0 本轮结论
+
+| 项 | 判 | 现读 |
+|---|---|---|
+| A. LLM 节点清单 | ✅ 代码事实统一 | 生产/评测两侧改为同一真相源；`bind` 实效 = `l4_score` 客户端硬超时（现 15s）；新契约 6 passed |
+| B. 超时语义 | ✅ 注入桩与 live 原始产物 | 超时/上游故障冒到终态 = `error(LLM_UPSTREAM_ERROR)`，不再落 `refuse(no_data_asset)`；`error_detail.last_degrade_error=LlmTimeout` 可区分上游慢 |
+| E-VER-07 稳定性 | 🟡 不再超时误拒，但等价不稳 | 6/6 `complete`、0 `no_data_asset`；`equivalent 2/6`，余 4 次均因 plan 把筛选误当分组维度 |
+| M-DIM-08 稳定性 | ✅ | 5/5 `complete`、5/5 `equivalent` |
+| G-2 10 条 | 🔴 不达门 | 原始首跑 `complete 8 / error 1 / refuse 1`、`equivalent 6`；干净重跑 `complete 9 / refuse 1`、`equivalent 7`（<95%） |
+| 57 族 | 🔴 不达 G-5 | 原始首跑 `complete 44 / error 1 / refuse 10 / clarify 2`、`equivalent 16`；干净重跑 `complete 45 / refuse 10 / clarify 2`、`equivalent 16` |
+| integration | ✅ | 一次性 PG/Redis ＋ `alembic upgrade head`：`124 passed / 0 failed / 33.65s / rc 0` |
+| offline | ✅ | `.venv`：`2551 passed / 0 failed / 1 warning / 112.62s` |
+
+> 🔴 判断口径：G-2 的 `≥95%` 与 G-5 的门均**没有重算、没有改判据**；上表只报现测，不写“通过”。
+
+### 51.1 A 项：两份 LLM 节点清单统一（先纠派单事实）
+
+**现读纠偏（起点 `50d6575`）**：生产侧 `backend/app/graph/build.py:395-403` 本来就已含 `bind: "l4_score"` ⇒ `_effective_limit_for("bind")` 早已是 `hard_timeout_s(resolve_route("l4_score").model_key)`（当前 **15s**），不是 0.2s。改前真正的两份清单差异是：评测侧手抄集**漏 `present`**；旧注释却把病因写反成“bind 不在生产清单”。本轮按**代码事实**统一，而不是继续维护两份人抄表。
+
+| 面 | before | after |
+|---|---|---|
+| `eval/harness.py:98-103` | 无生产清单 import | 引入 `_LLM_NODE_TASKS` |
+| `eval/harness.py:592` | `frozenset({"normalize","intent","plan","bind","gen_sql","repair"})`（手抄，漏 present） | `frozenset(_LLM_NODE_TASKS)`（单一真相源） |
+| `backend/tests/contract/test_llm_node_manifest_contract.py:1-175` | 无防漂移契约 | 双向运行时比对 ＋ 代码事实扫描 ＋ `present` 具名文档例外 |
+| `backend/app/graph/build.py:395-403` | 已有 `bind`，但生产侧无具体清单回归 | `bind` 实效硬超时与评测侧同源；契约 `test_bind_gets_client_hard_timeout_not_contract_value` 钉住 |
+
+**判据说明**：代码事实 = 节点源文件是否触达 `deps.llm` 或 `deps.paralanner`。`present` 不触达 LLM，但 `07 §5.3` 给它客户端超时格且 P0 presenter 为空；因此不靠猜删格，而是放入**具名白名单** `DOC_ONLY_LLM_SLOTS = {"present"}`（只许减少、新增同类成员即红），保住既有超时包装。
+
+**实跑**：`..\.venv\Scripts\python.exe -X utf8 -m pytest tests/contract/test_llm_node_manifest_contract.py -q` ⇒ `6 passed`。
+
+### 51.2 B 项：超时不得伪装成 `no_data_asset`
+
+| 面 | 文件:行号 | before → after |
+|---|---|---|
+| LLM 异常码 | `backend/app/llm/errors.py:134-178` | `LlmTimeout` / `LlmCircuitOpen` / `LlmSaturated`：`INTERNAL` → `LLM_UPSTREAM_ERROR` |
+| 网关分流 | `backend/app/llm/__init__.py:103-112`、`:436`、`:459-485`、`:527-550` | 记录最后的降级异常类型；上游故障类降级后模板仍 miss ⇒ 抛 `LlmUpstreamError(reason=upstream_fault_then_template_miss)`，不再 `LlmRefused` |
+| 节点超时出路 | `backend/app/graph/build.py:454-465`、`:506-531`、`:533-586` | LLM 节点超时 → `error(LLM_UPSTREAM_ERROR)` ＋ `error_detail={reason:"timeout",stage,limit_s}`；`bind` 分支同步订正 |
+| 契约/回归 | `backend/tests/contract/test_graph_timeout_contract.py:113-...`、`test_graph_timeout_contract.py:307-...`、`backend/tests/unit/test_llm_gateway.py:716-...`、`backend/tests/contract/test_decision_table_f_g.py:53-...`、`test_llm_node_manifest_contract.py:131-175` | 新增慢桩、真图端到端、全节点终态护栏，断言任何超时终态都不得是 `refuse(no_data_asset)` |
+
+**边界保留**：`plan.py` 的 `PlanUnavailable`（出站成功、JSON/schema 仍不可用）仍按既有 §5.3 走 `degraded(plan_generation_failed)` ＋ `refuse(no_data_asset)`；它是**产品结论**，不是超时。真正的 `LlmTimeout` 是 `LlmError`，在 `plan.py:68-70` 先经 `llm_error_update` 分流为 error。**没有改判据，只改工程故障路径。**
+
+**红 → 绿**：旧期望的两条超时断言已同步订正；定向面 `test_llm_node_manifest_contract.py + test_graph_timeout_contract.py + test_llm_gateway.py` 合计 **79 passed / 0 failed / 3.24s**。
+
+### 51.3 C 项：E-VER-07 n=6 ／ M-DIM-08 n=5
+
+**E-VER-07（同身份、同问句、语义包 `2026.10.16.2`）**：
+
+| 次 | terminal | refusal_reason | equivalent | 关键 SQL |
+|---|---|---|---|---|
+| 1 | complete | null | false | `SELECT region_name, COUNT(*) … GROUP BY region_name` |
+| 2 | complete | null | false | 同左 |
+| 3 | complete | null | true | `SELECT COUNT(*) … WHERE region_name=…` |
+| 4 | complete | null | false | 同左 1 |
+| 5 | complete | null | true | 同左 3 |
+| 6 | complete | null | false | 同左 1 |
+
+⇒ **0/6 `no_data_asset`、0/6 上游故障终态**；失败不再是“没有数据资产”。等价仅 2/6 的差异是 plan 把筛选 `region_name='华东'` 误判为分组维度，属**语义/计划抖动**，不是 15s 超时。
+
+**M-DIM-08**：5/5 `complete ＋ equivalent`，无 refusal、无 timeout；`GROUP BY region_name` 形态稳定。
+
+**出站**：E-VER-07 6 次 = `tokens 163,918`／`price_guess 0.318540`；M-DIM-08 5 次 = `tokens 136,971`／`price_guess 0.228802`；合计 `300,889 / 0.547342`。产物：`eval/results_r51_stab_E-VER-07_{1..6}.json`、`eval/results_r51_stab_M-DIM-08_{1..5}.json`、对应 cassettes。
+
+### 51.4 G-2：原始首跑与干净重跑都报
+
+**命令**：`%TEMP%\w8r51\clean_batch51.py --prefix r51g2 --cases E-VER-01,E-VER-02,E-VER-03,E-VER-04,E-VER-05,E-VER-06,E-VER-07,E-VER-08,E-VER-10,E-VER-11 --max-rounds 6 --out eval/results_g2_r51_clean.json`
+
+| 次面 | complete | error | refuse | equivalent | 备注 |
+|---|---:|---:|---:|---:|---|
+| 原始首跑 `results_r51g2_r1.json` | 8 | 1 | 1 | 6 | `E-VER-02` = `LlmTimeout` ⇒ `error(LLM_UPSTREAM_ERROR)`，**没有**记 `no_data_asset` |
+| 干净重跑 `results_g2_r51_clean.json` | 9 | 0 | 1 | 7 | `E-VER-02` 第 2 轮补跑为 `complete/eq`；`E-VER-08` 仍业务 refuse |
+
+**逐 case（clean）**：`E-VER-01` complete/neq（既登记冻结集时间谓词冲突）；`E-VER-02` complete/eq；`E-VER-03/04/05/07/10/11` complete/eq；`E-VER-06` complete/neq（campaign_cnt 全量口径 vs gold `normal_type='normal_sale'`，既登记）；`E-VER-08` refuse/no_data_asset（业务侧拒答，不是超时）。⇒ **7/10 equivalent，不达 95%**。
+
+**原始首跑异常对照**：`E-VER-02` 终态 `error`、码 `LLM_UPSTREAM_ERROR`、`last_degrade_error=LlmTimeout`、`normalize=15008ms`；干净第 2 轮 `complete/eq`。这是“上游慢”与“业务拒答”已分开的直接证据；干净重跑只用于满足“每 case 至少一条无基础设施痕迹记录”，**不抹掉原始首跑**。
+
+出站实报：原始首跑 `tokens 234,691 / 0.468514`，补跑 `tokens 27,470 / 0.151124`；合计 `262,161 / 0.619638`（全部 `price_guess`）。
+
+### 51.5 57 族：原始首跑、干净重跑与 r49→r51 转移矩阵
+
+**命令**：`%TEMP%\w8r51\clean_batch51.py --prefix r51f57 --cases <57 ids> --max-rounds 6 --out eval/results_f57_r51_clean.json`
+
+| 次面 | complete | error | refuse | clarify | equivalent |
+|---|---:|---:|---:|---:|---:|
+| 原始首跑 `results_r51f57_r1.json` | 44 | 1 | 10 | 2 | 16 |
+| 干净重跑 `results_f57_r51_clean.json` | 45 | 0 | 10 | 2 | 16 |
+
+**转移矩阵（r49 clean → r51 clean，状态 = terminal/equivalent）**：
+
+| before → after | 条数 |
+|---|---:|
+| complete/eq → complete/eq | 12 |
+| complete/eq → complete/neq | 1 |
+| complete/neq → complete/eq | 1 |
+| complete/neq → complete/neq | 20 |
+| complete/neq → clarify/neq | 1 |
+| complete/neq → refuse/neq | 1 |
+| refuse/neq → complete/eq | 2 |
+| refuse/neq → complete/neq | 8 |
+| refuse/neq → refuse/neq | 9 |
+| refuse/neq → clarify/neq | 1 |
+| clarify/neq → complete/eq | 1 |
+
+**当前 10 refuse**（均停在 `plan → refuse_out`，业务拒答，plan 延迟 2.8–6.8s，不是 15s）：`E-ENUM-02`、`E-ENUM-03`、`E-MET-08`、`E-VER-08`、`M-ENUM-03`、`M-ENUM-04`、`X-ENUM-01`、`X-ENUM-04`、`X-ENUM-06`、`X-ENUM-07`。其中 `E-MET-08` 仍是反面口径（包内全指标默认 `pay_status='paid'`），**按设计不应补 metric**。
+
+**当前 2 clarify**：`H-STR-06`、`X-STR-02`；均在 `normalize → clarify_out` 停住，归因 `field_binding`（绑定歧义未消解），不是超时。
+
+**首跑的两条上游慢**：`H-STR-05` = `error(LLM_UPSTREAM_ERROR)`、`plan=15019ms`、`last_degrade_error=LlmTimeout`；第 2 轮补跑为 `complete/neq`。`E-VER-02` 同 51.4。⇒ 原始首跑 1 error ＋ 干净补跑 1 条，均**不再伪装成 no_data_asset**；clean 只保留每 case 第一条无基础设施痕迹记录，原始 jsonl 保留全部 58 次调用。
+
+出站实报：原始首跑 `tokens 1,395,145 / 4.421479`，补跑 `tokens 27,567 / 0.153008`；合计 `1,422,712 / 4.574487`（全部 `price_guess`）。
+
+### 51.6 integration 与 offline 收口
+
+**integration 配方**：一次性 `w8r51-int-pg`（`pgvector/pgvector:pg16`，宿主 55439）＋ `w8r51-int-redis`（`redis:7-alpine`，宿主 56386）；`cd backend`，`MIGRATION_DATABASE_URL` 指向一次性库跑 `alembic upgrade head`，四个测试 DSN 与 `COMMERCEQL_TEST_REDIS_URL` 全指一次性资源；凭据只在子壳从 `deploy/.env` 解析，不回显。实跑：
+
+```text
+INFO  [alembic.runtime.migration] Running upgrade 0005 -> 0006, ...
+alembic_rc=0
+........................................................................ [ 58%]
+....................................................                     [100%]
+124 passed in 33.65s
+pytest_rc=0
+oneoff_before_drop=ecom
+DROP DATABASE
+oneoff_after_drop=
+```
+
+**残渣尺**：`DATABASE WHERE datname LIKE 'ecom%'` 在一次性库 = `ecom` → DROP 后空；共享库现查仍只有 `ecom`、`ecom_u123_probe`。一次性容器现查 0 件。
+
+**offline**：`.\.venv\Scripts\python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q` ⇒ `2551 passed, 1 warning in 112.62s`。
+
+### 51.7 边界、出站、门禁、复算入口
+
+- **出站实报（本轮全部 live）**：`tokens 1,985,762`／`price_guess 5.741467 CNY`；其中 G-2 `262,161 / 0.619638`、57 族 `1,422,712 / 4.574487`、E-VER-07＋M-DIM-08 `300,889 / 0.547342`。模型均为 `deepseek-v4.1-flash`；该 ID 不在 `backend/app/llm/budget.py:122-163` 的价表，按 `deepseek-v4-pro` 兜底并标 `price_guess`（`:134`、`:161`、`:265`、`:430`）。
+- **未动**：`reports/qa/**`、共享 `ecom`、冻结集、阈值、判据措辞；`07 §10.2` 的 15s 未改（`backend/app/llm/router.py:167-170`）。
+- **门禁**：未重算，现读仍 `PASS 1/8`（`backend/reports/w6/eval_metrics.json`，`meta.git.rev=88f3500`）；不得写“通过”。
+- **取号**：零新增号；现读 `U-143`（`docs/07_技术设计文档_TDD.md:1094`）。
+- **复算入口**：G-2 读 `eval/results_r51g2_r1.json`＋`eval/results_g2_r51_clean.json`；57 族读 `eval/results_r51f57_r1.json`＋`eval/results_f57_r51_clean.json`；稳定性读 `eval/results_r51_stab_E-VER-07_*.json`／`_M-DIM-08_*.json`；清单事实读 `backend/app/graph/build.py:395-403`＋`eval/harness.py:98-103,592`；超时分流读 `backend/app/graph/build.py:454-586`＋`backend/app/llm/__init__.py:527-550`。以上均为非本节文件，无自指。
