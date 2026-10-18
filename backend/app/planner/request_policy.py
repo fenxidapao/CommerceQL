@@ -17,7 +17,7 @@ from typing import Any, Final
 from app.core.contracts import SemanticBundlePort
 from app.core.enums import RefuseReason
 
-__all__ = ["PreflightRefusal", "preflight_refusal"]
+__all__ = ["PreflightRefusal", "preflight_refusal", "raw_preflight_refusal"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,6 +59,41 @@ def _sensitive_hit(question: str, semantics: SemanticBundlePort) -> str | None:
             for keyword in _SENSITIVE_KEYWORDS.get(label, ()):
                 if keyword in question:
                     return label
+    return None
+
+
+def raw_preflight_refusal(question: str, semantics: SemanticBundlePort) -> PreflightRefusal | None:
+    """在调用 LLM 前按原文做确定性安全判定。
+
+    只覆盖原文即可判死的敏感列/外部数据/其它租户范围；语义包黑话和
+    normalize 产出的 reason_code 仍由后置的同名守卫处理。
+    """
+    sensitive = _sensitive_hit(question, semantics)
+    if sensitive is not None:
+        return PreflightRefusal(
+            RefuseReason.PII_BLOCKED,
+            f"sensitive_column:{sensitive}",
+            f"sensitive={sensitive}",
+        )
+    if "订单明细" in question or "买家手机号" in question:
+        return PreflightRefusal(
+            RefuseReason.PII_BLOCKED,
+            "sensitive_export",
+            "raw_sensitive_export_phrase",
+        )
+    if any(phrase in question for phrase in _EXTERNAL_DATA_PHRASES):
+        return PreflightRefusal(
+            RefuseReason.NO_DATA_ASSET,
+            "no_data_asset",
+            "external_data_phrase",
+        )
+    for phrase in _OTHER_SCOPE_PHRASES:
+        if phrase in question:
+            return PreflightRefusal(
+                RefuseReason.OUT_OF_SCOPE,
+                "unauthorized_scope",
+                f"phrase={phrase}",
+            )
     return None
 
 

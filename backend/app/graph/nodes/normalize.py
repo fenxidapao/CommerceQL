@@ -63,7 +63,7 @@ from app.graph.state import GraphState
 from app.llm.errors import LlmError
 from app.planner.errors import PlannerError
 from app.planner.payloads import detect_foreign_tenant_code, strip_tenant_self_reference
-from app.planner.request_policy import preflight_refusal
+from app.planner.request_policy import preflight_refusal, raw_preflight_refusal
 from app.planner.schemas import IntentKind
 
 __all__ = ["normalize"]
@@ -79,6 +79,30 @@ async def normalize(state: GraphState) -> dict[str, Any]:
     #: （**只问题**，不含 SQL 与结果 —— N-17 / §10.5 ⑥）。此前这里恒传 `()`，
     #: 表现为多轮指代（"它/那个/再看一下"）拿不到上一轮上下文 —— 缺口已登记 U-142。
     history = tuple(state.get("history_questions") or ())
+
+    # 🔴 W58：应拒问题（PII/竞品/其它店铺）必须在 LLM 之前判死。
+    # 否则上游 normalize 超时会把“系统不回答”错误地变成 infra error。
+    semantics = getattr(deps, "semantics", None)
+    if semantics is not None:
+        early = raw_preflight_refusal(question, semantics)
+        if early is not None:
+            update = {
+                "intent": IntentKind.REFUSE.value,
+                "intent_detail": {
+                    "reason_code": early.reason_code,
+                    "refuse_kind": early.reason.value,
+                    "preflight_evidence": early.evidence,
+                },
+            }
+            update.update(
+                terminal_update(
+                    state,
+                    event="refuse",
+                    outcome=Outcome.REFUSE,
+                    reason=early.reason.value,
+                )
+            )
+            return update
 
     try:
         with node_latency(LatencyKey.NORMALIZE):
@@ -144,7 +168,6 @@ async def normalize(state: GraphState) -> dict[str, Any]:
         )
         return update
     # 🔴 W58：把语义包已能确定的“不回答”问题从 clarify 出口拉回 refuse。
-    semantics = getattr(deps, "semantics", None)
     if semantics is not None:
         policy_refusal = preflight_refusal(
             str(update.get("normalized_question") or question),

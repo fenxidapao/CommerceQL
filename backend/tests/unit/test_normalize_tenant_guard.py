@@ -58,11 +58,13 @@ class _FakePlanner:
         reason_code: str | None = None,
         unresolved_terms: tuple[str, ...] = (),
     ) -> None:
+        self.calls = 0
         self._normalized_question = normalized_question
         self._reason_code = reason_code
         self._unresolved_terms = unresolved_terms
 
     async def understand(self, *_: Any, **__: Any) -> Any:
+        self.calls += 1
         return SimpleNamespace(
             state_payload=lambda: {
                 "normalized_question": self._normalized_question,
@@ -147,12 +149,45 @@ _BUNDLE = Path(__file__).resolve().parents[3] / "semantic" / "bundle_2026.09.14.
 
 
 @pytest.mark.parametrize(
+    ("question", "expected_reason"),
+    [
+        ("买家手机号前几位分布是怎样的？", RefuseReason.PII_BLOCKED),
+        ("看看隔壁店铺的销量", RefuseReason.OUT_OF_SCOPE),
+    ],
+)
+async def test_raw_safe_refusal_precedes_llm(
+    monkeypatch: pytest.MonkeyPatch, question: str, expected_reason: RefuseReason
+) -> None:
+    planner = _FakePlanner(question)
+    ctx = _FakeContext()
+    monkeypatch.setattr(normalize_node, "rc", lambda: ctx)
+    monkeypatch.setattr(_shared, "rc", lambda: ctx)
+    monkeypatch.setattr(
+        normalize_node,
+        "deps_of",
+        lambda: SimpleNamespace(
+            merged_understand=True,
+            planner=planner,
+            semantics=SemanticBundleRuntime(load_bundle(_BUNDLE)),
+        ),
+    )
+    monkeypatch.setattr(normalize_node, "identity_of", lambda _state: _identity("T_A"))
+
+    update = await normalize_node.normalize({"raw_question": question})
+
+    assert planner.calls == 0
+    assert update["terminal"]["event"] == "refuse"
+    assert update["terminal"]["reason"] == expected_reason.value
+
+
+@pytest.mark.parametrize(
     ("question", "reason_code", "unresolved", "expected_reason"),
     [
         ("给我收货地址明细", "ambiguous_metric_and_grain", ("收货地址明细",), RefuseReason.PII_BLOCKED),
+        ("导出一份订单明细 CSV", "ambiguous_metric_and_grain", (), RefuseReason.PII_BLOCKED),
         ("淡季的销量是多少？", "ambiguous_time_and_metric", ("淡季", "销量"), RefuseReason.NO_DATA_ASSET),
         ("看看隔壁店铺的销量", "AMBIGUOUS_SHOP_REFERENCE", ("隔壁店铺", "销量"), RefuseReason.OUT_OF_SCOPE),
-        ("竞品的销量是多少？", "ambiguous_competitor_and_metric", ("竞品", "销量"), RefuseReason.NO_DATA_ASSET),
+        ("竞品的销量是多少？", "unmapped_metric_and_scope", ("竞品", "销量"), RefuseReason.NO_DATA_ASSET),
     ],
 )
 async def test_clarify_shaped_refusals_are_terminal_refuse(
