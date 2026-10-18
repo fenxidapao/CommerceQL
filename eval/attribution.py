@@ -165,7 +165,7 @@ def attribute(
         return Attribution("time_semantics", "等价判定命中时间边界差异")
     if any(t in missing for t in _DEFAULT_PRED_COLS):
         return Attribution("default_predicate", f"漏了隐式过滤：{[t for t in missing if t in _DEFAULT_PRED_COLS]}")
-    if any("value_map" in b or any(tok in b.lower() for tok in _VALUE_MAP_TOKENS) for b in bk):
+    if any("value_map" in b or b.startswith("enum:") or any(tok in b.lower() for tok in _VALUE_MAP_TOKENS) for b in bk):
         return Attribution("value_mapping", f"值映射信号：{bk}")
     if len(_JOIN_RE.findall(gold_sql)) != len(_JOIN_RE.findall(predicted_sql)) or \
             len(_SUBQUERY_RE.findall(gold_sql)) != len(_SUBQUERY_RE.findall(predicted_sql)):

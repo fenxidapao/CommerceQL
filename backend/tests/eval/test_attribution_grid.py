@@ -364,3 +364,13 @@ def test_recompute_detects_a_planted_drift(dataset_cases):
 
 def test_recompute_skips_cases_without_gold_sql():
     assert g.recompute_struct_labels([{"case_id": "X", "gold_sql": None}]) == []
+
+
+def test_enum_knowledge_tag_is_value_mapping():
+    assert _struct(
+        case_over={
+            "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '3C数码'",
+            "business_knowledge_required": ["enum:category_l1"],
+        },
+        predicted_sql="SELECT COUNT(*) FROM v_product WHERE category_l1 = %(category_l1)s",
+    ) == "value_mapping"
