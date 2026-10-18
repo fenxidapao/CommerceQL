@@ -723,4 +723,4 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **B**：时间范围阻塞降级、`shop.city` 资产面唯一化、enum 归因补齐；原 4 条 `unattributed` 已转为 `value_mapping`，重算版 full166 仅剩 1 条。
 - **C**：G-2 `10/10 equivalent`（`264,615 tok / 0.868998`）；G-5 148 `17/24` 应拒、误拒 `9/124=7.3%`、equiv 35/124（`3,180,216 / 9.488419`）⇒ **G-5 FAIL**；clarify 18 `9/6/2/1`（`294,235 / 0.910469`）。
 - **门禁**：G-2 measured 8/8 但 τ 未校准 ⇒ UNVERIFIED；G-5 FAIL；G-8 UNVERIFIED；官方 json 未刷新。
-- **回归**：最终 offline `2576/0`；终版 integration 因 Docker daemon 不可用 UNVERIFIED（不冒充此前 `d33aa26` 的 124/0）；未改阈值/判据/15s/语义包/gold/QA/共享 ecom；U-127 open。
+- **回归**：最终 offline `2576/0`（HEAD `ce76f1b`，14:10–14:12 +0800）；W57 收口补跑 integration `124/0`（2026-10-18 14:08–14:10 +0800，HEAD `ce76f1b`/被测代码 `e0cd546`，一次性 PG/Redis，DROP 后残渣仅 `ecom`/`ecom_u123_probe`）；未改阈值/判据/15s/语义包/gold/QA/共享 ecom；U-127 open。

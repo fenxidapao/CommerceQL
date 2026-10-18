@@ -5765,7 +5765,7 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 | G-2 | **10/10 equivalent**；门禁格 `easy×low 8/8=100%`，但 τ 未校准 ⇒ G-2 verdict **UNVERIFIED** | `eval/results_r57b_g2_10.json`、`eval/results_r57b_gate_recompute.json` |
 | G-5 | 🔴 **未达门**：`correct_refused 17/24=70.8%`，`over_refused 9/124=7.3%`（>5%）；equivalent 35/124 | `eval/results_r57b_g5_148.json`、`eval/results_r57b_g5_matrix.json` |
 | G-8 | UNVERIFIED（单轮无可测的二级成功率；澄清率 26/166=15.7%） | `eval/results_r57b_gate_recompute.json` |
-| integration | 终版 Docker daemon 不可用 ⇒ UNVERIFIED；此前 `d33aa26` 一次性库为 124/0 | 见 57.4 |
+| integration | **124 passed / 0 failed**（2026-10-18 14:08–14:10 +0800 补跑；HEAD `ce76f1b`，被测代码 `e0cd546`；一次性 PG/Redis，已 DROP，残渣仅 `ecom`/`ecom_u123_probe`） | 见 57.5 |
 | offline | 最终代码离线 `2576 passed / 0 failed / 1 warning` | 57.4 |
 
 ### 57.1 A：19 条超时尾部
@@ -5789,13 +5789,21 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 - **G-2**：`eval/results_r57b_g2_10.json`，`git_rev=518b6a0`、`dirty=false`；`10 complete / 10 equivalent`；tokens `264,615`、price_guess `0.868998`。
 - **G-5 完整 148**：`eval/results_r57b_g5_148.json`，`git_rev=518b6a0`、`dirty=false`；`complete 101 / refuse 26 / clarify 17 / error 4`；correct_refused `17/24`、over_refused `9/124=7.3%`、execute equivalent `35/124`；tokens `3,180,216`、price_guess `9.488419`。逐条矩阵 `eval/results_r57b_g5_matrix.json`；**FAIL，未达 ≤5%**。
 - **clarify 18 单列**：`eval/results_r57b_clarify_18.json`；`clarify 9 / complete 6 / refuse 2 / error 1`；tokens `294,235`、price_guess `0.910469`；矩阵 `eval/results_r57b_clarify_matrix.json`。
+- **终版残留（未达门，逐条见矩阵）**：误拒 9 条 = `E-MET-08`、`M-HIER-03`、`M-MET-09`、`H-MET-01`、`X-STR-07`、`X-ENUM-02`、`X-ENUM-04`、`X-ENUM-05`、`X-MET-07`；应拒未拒 7 条 = 6 条 `clarify/terminal_shape_gap`（`R-PII-02`、`R-PII-07`、`R-GMV-01`、`R-NA-01`、`R-NA-02`、`R-NA-07`）＋ `R-GMV-02` `complete/security_leak`。
 - 合批 full166：`eval/results_r57b_full166.json`（用于门禁重算）；归因重算版 `eval/results_r57b_full166_attribution.json`，`unattributed` 7→1。
 - 门禁重算：`eval/results_r57b_gate_recompute.json`；G-2 measured 8/8 但 verdict UNVERIFIED（τ），G-5 FAIL，G-8 UNVERIFIED；官方 `backend/reports/w6/eval_metrics.json` **未刷新**。
 
 ### 57.4 回归与边界
 
-- offline（最终代码 e0cd546）：`.\.venv\Scripts\python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q -p no:randomly` ⇒ **2576 passed / 0 failed / 1 warning / 109.62s**。
-- integration：最后一次运行因 Docker daemon 不在线（`npipe:////./pipe/dockerDesktopLinuxEngine`）无法启动一次性 PG/Redis ⇒ **UNVERIFIED**；此前同一轮功能改动 `d33aa26` 曾在一次性库跑出 **124/0**，不得把它冒充终版 `e0cd546` 的复算。
+- offline（2026-10-18 14:10–14:12 +0800，HEAD `ce76f1b`；`ce76f1b` 仅改 QA 三件，被测代码仍 `e0cd546`）：`.\.venv\Scripts\python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q -p no:randomly` ⇒ **2576 passed / 0 failed / 1 warning / 113.72s**。
+- integration（W57 收口补跑，2026-10-18 14:08–14:10 +0800，HEAD `ce76f1b`；该提交仅改 QA 三件，被测代码仍 `e0cd546`）：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File E:\codex\w8r53\integration.ps1` ⇒ **124 passed / 0 failed / 32.38s**；`alembic_rc=0`、`pytest_rc=0`；`oneoff_before_drop=ecom`，`DROP DATABASE` 后 `oneoff_after_drop=`；共享残渣仅 `ecom`/`ecom_u123_probe`。原“Docker daemon 不在线”UNVERIFIED 已由本次补跑覆盖，不冒充历史 `d33aa26` 结果。
 - 出站：本轮全部 live（含失败/补跑）合计 **6,988,313 tokens / price_guess 21.072356 CNY**；分项：r57 G-2 `263,742/1.146033`、r57 G-5 `2,985,505/8.658437`、r57b G-2 `264,615/0.868998`、r57b G-5 `3,180,216/9.488419`、r57b clarify `294,235/0.910469`。模型 `deepseek-v4.1-flash`，价表未登记 ⇒ `price_guess`。
 - 边界：未改阈值/判据/07 §10.2 15s/语义包/gold；未动 `backend/reports/qa/**`；未写共享 `ecom`；U-127 open；G-5 仍 FAIL、G-2 gate 因 τ 为 UNVERIFIED，官方门禁未刷新。
 - 复算入口：A 读 `eval/results_r57_timeout_tail.json`＋`eval/results_r57_timeout_stats.json`；B 读 `eval/results_r57_plan_blocking_14.json`＋`eval/results_r57_overrefusal_triage.json`；C 读 `eval/results_r57b_g2_matrix.json`＋`eval/results_r57b_g5_matrix.json`＋`eval/results_r57b_clarify_matrix.json`＋`eval/results_r57b_gate_recompute.json`。以上入口不命中本节自身。
+
+### 57.5 W57 收口补跑（integration）
+
+- 时点/绑定：2026-10-18 14:08–14:10 +0800；HEAD `ce76f1b`；`ce76f1b` 仅改 QA 三件，被测代码仍 `e0cd546`；工作树仅既有未跟踪 `.workbuddy/`。
+- 命令：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File E:\codex\w8r53\integration.ps1`。
+- 原始输出：`alembic_rc=0`；`124 passed in 32.38s`；`pytest_rc=0`；`oneoff_before_drop=ecom`；`DROP DATABASE`；`oneoff_after_drop=`；`shared_ecom_residue: ecom / ecom_u123_probe`。
+- 口径：一次性 PG/Redis，先 `alembic upgrade head`；该结果只补 integration 证据，不改变 G-2/G-5 判词。G-2 仍因 τ 未校准为 **UNVERIFIED**，G-5 仍 **FAIL**，官方 `backend/reports/w6/eval_metrics.json` 未刷新。
