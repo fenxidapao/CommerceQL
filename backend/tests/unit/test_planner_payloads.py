@@ -403,6 +403,15 @@ class TestSemanticSummary:
         missing = [a.term for a in sample if a.term not in summary]
         assert not missing, f"这些别名没进摘要：{missing}"
 
+    def test_certified_join_paths_reach_the_model(
+        self, prompt_ctx: PromptContext
+    ) -> None:
+        """join 未进摘要时，plan 只能猜路径，X-STR/X-ENUM 的多表题会卡在 blocking。"""
+        summary = prompt_ctx.semantic_summary
+        assert "## 认证关联" in summary
+        assert "traffic_daily.sku_id" in summary and "product.sku_id" in summary
+        assert "product.shop_id" in summary and "shop.shop_id" in summary
+
     def test_gaps_registry_carries_no_ghost_entries(self) -> None:
         """修好的缺口必须从 `summary_gaps()` 里**删掉** —— 留着就是假警报。
 
@@ -737,6 +746,17 @@ class TestTenantSelfReferenceNote:
             assert "据此判 `clarify_needed`" in text
             #: 注入防护声明必须仍在（共用文本面：加一句不得把另一句挤掉）
             assert INJECTION_DECLARATION in text
+
+    def test_note_keeps_specific_tenant_codes_for_deterministic_postprocess(
+        self, prompt_ctx: PromptContext
+    ) -> None:
+        """具体租户代号不得由 LLM 猜自指；原样留给 normalize 后处理。"""
+        text = normalize_intent_payload(prompt_ctx, question="T_B 租户这个月卖了多少？")[
+            "constraints"
+        ]
+        assert "原样保留" in text
+        assert "不得改写" in text
+        assert "服务端" in text
 
     def test_note_does_not_leak_into_plan_or_sql(self, prompt_ctx: PromptContext) -> None:
         """`plan`/`gen_sql`/`repair` 读同一槽位 ⇒ 一条改变另一阶段判据（同 `gen_sql` 表名那次）。"""

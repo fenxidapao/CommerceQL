@@ -91,6 +91,7 @@ __all__ = [
     "sanitize_few_shots",
     "sanitize_history",
     "strip_tenant_self_reference",
+    "detect_foreign_tenant_rewrite",
     "summary_gaps",
 ]
 
@@ -140,9 +141,11 @@ MAX_HISTORY_TURNS: Final[int] = 6
 #: 一句话改变另一阶段的判据（同 `gen_sql` 表名规则那次的教训）。
 TENANT_SELF_REFERENCE_NOTE: Final[str] = (
     "【范围自指】数据范围已由调用者身份确定（系统按租户隔离）。"
-    "问句里指向**调用者自身租户**的代号（例如形如 `T_A`/`T_B` 的租户标识、"
-    "「我们租户」「本租户」这类自指）只是对同一范围的重复说明："
-    "**不得**据此判 `clarify_needed`，也**不得**把它列进 `unmapped_terms`。"
+    "问句里形如 `T_A`/`T_B` 的**具体租户代号必须原样保留**："
+    "不得改写、删除或替换为「本租户」；服务端会在归一化后确定性处理"
+    "调用者自己的代号。**不得**据此判 `clarify_needed`，也**不得**把它列进"
+    " `unmapped_terms`。「我们租户」「本租户」「我们公司」等不含具体代号的表达"
+    "才是可直接按自指处理的形态。"
 )
 
 #: 通用自指短语（**不含具体租户代号** —— 代号部分由 `tenant_id` 运行时提供）。
@@ -189,6 +192,29 @@ def strip_tenant_self_reference(text: str, tenant_id: str) -> str:
     cleaned = re.sub(r"^[，、,;；:\s]+", "", cleaned)
     cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
     return cleaned
+
+
+_FOREIGN_TENANT_CODE_RE: Final[re.Pattern[str]] = re.compile(r"\bT_[A-Za-z0-9_]+\b")
+
+
+def detect_foreign_tenant_rewrite(
+    raw_question: str, normalized_question: str, tenant_id: str
+) -> str | None:
+    """返回 raw 中存在、但 normalized 已丢失/改写的**非本租户**代号。
+
+    只在“原始问题里确实有其它租户代号”且“归一化文本不再保留该代号”时触发。
+    本租户代号被确定性剥离、其它租户代号原样保留，都不触发。
+    """
+    raw_codes = [m.group(0) for m in _FOREIGN_TENANT_CODE_RE.finditer(raw_question)]
+    if not raw_codes:
+        return None
+    normalized_codes = {
+        m.group(0) for m in _FOREIGN_TENANT_CODE_RE.finditer(normalized_question)
+    }
+    for code in raw_codes:
+        if code != tenant_id and code not in normalized_codes:
+            return code
+    return None
 
 
 # ============================================================================
@@ -303,11 +329,6 @@ def summary_gaps() -> tuple[str, ...]:
     """
     return (
         "column_comments: 依赖 asset() 逐资产补齐；取不到注释时只渲染列名（降级可见，非静默）",
-        # ⚠️ 下面这条是**本窗口只登记、未动手**的：join 路径（`runtime.joins()`）同样没有
-        #    渲染进语义摘要，而 `plan_v1.txt` 硬性规则 3 要求计划写出"关联键与关联方向、
-        #    找不到就写 blocking_issues" ⇒ 与指标缺口**同一失败类**（都能独立触发 PLAN 自拒）。
-        #    修它要定渲染形状与基数（是本窗口的另一处改动，未获授权），故只登记。
-        "joins: 语义摘要未渲染 join 路径（plan_v1.txt 规则 3 却要求写出关联键）",
     )
 
 
@@ -426,6 +447,8 @@ def build_semantic_summary(
             detail = "；".join(x for x in (note, hint) if x)
             asset_lines.append(f"    - {col}" + (f"：{detail}" if detail else ""))
 
+    join_lines = _join_section(semantics, denied)
+
     dimension_lines: list[str] = ["## 维度与层级"]
     for dim in _sorted_dimensions(semantics):
         binding = getattr(dim, "binding", None) or getattr(dim, "bindings", None)
@@ -447,9 +470,11 @@ def build_semantic_summary(
         else:
             binding_lines.append(f"- {fb.concept} → {getattr(fb, 'canonical_asset', None)}")
 
+    sections.append("\n".join(asset_lines))
+    if join_lines:
+        sections.append("\n".join(join_lines))
     sections.extend(
         (
-            "\n".join(asset_lines),
             "\n".join(dimension_lines),
             "\n".join(binding_lines),
             "\n".join(_alias_section(semantics, denied)),
@@ -461,6 +486,31 @@ def build_semantic_summary(
 # ----------------------------------------------------------------------------
 # 指标段 / 同义词段的取材与渲染
 # ----------------------------------------------------------------------------
+
+def _join_section(semantics: SemanticBundlePort, denied: frozenset[str]) -> list[str]:
+    """渲染已认证 join 路径；这是 plan 唯一可依据的关联真相。"""
+    joins = getattr(semantics, "joins", None)
+    if not callable(joins):
+        return []
+    items = list(joins())
+    if not items:
+        return []
+    lines = ["## 认证关联（只能使用下列已登记 join；不得自行猜路径）"]
+    def _key(item: Any) -> tuple[str, str]:
+        return (str(getattr(item, "left", "")), str(getattr(item, "right", "")))
+    for item in sorted(items, key=_key):
+        left = str(getattr(item, "left", ""))
+        right = str(getattr(item, "right", ""))
+        kind = str(getattr(item, "type", ""))
+        cols = "、".join(str(c) for c in (getattr(item, "on_columns", ()) or ()))
+        note = _one_line(getattr(item, "note", "") or "")
+        text = f"- {left} -> {right}｜类型={kind}｜on={cols}"
+        if note:
+            text += f"｜说明={note}"
+        if _leaks_denied(text, denied):
+            continue
+        lines.append(text)
+    return lines if len(lines) > 1 else []
 
 def _one_line(text: str) -> str:
     """压成单行（YAML 的 `>` 折叠块会带换行；多行会让段落的"按行"结构失效）。"""

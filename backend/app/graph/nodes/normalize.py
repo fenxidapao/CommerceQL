@@ -62,7 +62,8 @@ from app.graph.nodes._shared import (
 from app.graph.state import GraphState
 from app.llm.errors import LlmError
 from app.planner.errors import PlannerError
-from app.planner.payloads import strip_tenant_self_reference
+from app.planner.payloads import detect_foreign_tenant_rewrite, strip_tenant_self_reference
+from app.planner.request_policy import preflight_refusal
 from app.planner.schemas import IntentKind
 
 __all__ = ["normalize"]
@@ -120,6 +121,54 @@ async def normalize(state: GraphState) -> dict[str, Any]:
 
     context.record_usage(outcome.meta.tokens, outcome.meta.cost_cny)
     update: dict[str, Any] = dict(outcome.state_payload())
+    # 🔴 W58 P0：raw 中出现非本租户代号，但 LLM 把它改写/删掉时，
+    # 不得让下游以为这是本租户自指而继续出数。这里做成确定性 fail-closed。
+    foreign_code = detect_foreign_tenant_rewrite(
+        str(state.get("raw_question") or ""),
+        str(update.get("normalized_question") or ""),
+        identity.tenant_id,
+    )
+    if foreign_code is not None:
+        update["intent"] = IntentKind.REFUSE.value
+        update["intent_detail"] = {
+            "reason_code": "unauthorized_scope",
+            "refuse_kind": RefuseReason.OUT_OF_SCOPE.value,
+            "foreign_tenant_code": foreign_code,
+        }
+        update.update(
+            terminal_update(
+                state,
+                event="refuse",
+                outcome=Outcome.REFUSE,
+                reason=RefuseReason.OUT_OF_SCOPE.value,
+            )
+        )
+        return update
+    # 🔴 W58：把语义包已能确定的“不回答”问题从 clarify 出口拉回 refuse。
+    semantics = getattr(deps, "semantics", None)
+    if semantics is not None:
+        policy_refusal = preflight_refusal(
+            str(update.get("normalized_question") or question),
+            dict(update.get("intent_detail") or {}),
+            [str(term) for term in (update.get("unresolved_terms") or ())],
+            semantics,
+        )
+        if policy_refusal is not None:
+            update["intent"] = IntentKind.REFUSE.value
+            update["intent_detail"] = {
+                "reason_code": policy_refusal.reason_code,
+                "refuse_kind": policy_refusal.reason.value,
+                "preflight_evidence": policy_refusal.evidence,
+            }
+            update.update(
+                terminal_update(
+                    state,
+                    event="refuse",
+                    outcome=Outcome.REFUSE,
+                    reason=policy_refusal.reason.value,
+                )
+            )
+            return update
     # 🔴 P0-A-1（2026-10-16）：**确定性**剥掉指向调用者自身租户的自指。
     #   为什么放在这里而不是提示词里：`normalized_question` 的残留**只有**本节点能收口，
     #   而下游 `plan` **刻意不带**那条「范围自指」说明（`payloads.py:136-137`）⇒

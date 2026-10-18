@@ -233,13 +233,15 @@ def _demote_asset_resolved_city_blockers(plan: Plan) -> tuple[Plan, tuple[str, .
     `city` 的全局绑定有 `order_paid.receiver_city` 与 `shop.city` 两个候选，
     但“店铺各 SKU”这类计划只含 `shop`/`product`/`traffic_daily`，根本不可能用
     `receiver_city`。模型却仍写 blocking，导致明明已给出 `shop.city` 筛选的题被拒。
-    只在资产面已排除 `order_paid` 且 filter 明写 `shop.city` 时降级。
+    只在资产面已排除 `order_paid`，且 filter 或分组维度明写 `shop.city` 时降级。
     """
     if not plan.blocking_issues or not plan.metrics:
         return plan, ()
     assets = {str(a.asset).lower() for a in plan.assets}
     filters = " ".join(str(f).lower() for f in plan.filters)
-    if "shop" not in assets or "order_paid" in assets or "shop.city" not in filters:
+    dimensions = " ".join(str(d).lower() for d in (plan.dimensions or ()))
+    has_shop_city = "shop.city" in filters or "shop.city" in dimensions
+    if "shop" not in assets or "order_paid" in assets or not has_shop_city:
         return plan, ()
     kept: list[str] = []
     removed: list[str] = []

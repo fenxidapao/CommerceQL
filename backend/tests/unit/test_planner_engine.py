@@ -1306,6 +1306,25 @@ class TestAssetResolvedCityBlocker:
         assert outcome.plan.blocking_issues == []
 
     @pytest.mark.asyncio
+    async def test_shop_city_dimension_without_order_paid_demotes_ambiguity_blocker(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        body = _plan_body(
+            metrics=[{"name": "on_sale_product_cnt", "caliber": "COUNT(*) WHERE on_sale = true"}],
+            assets=[
+                {"asset": "product", "join_key": None},
+                {"asset": "shop", "join_key": "shop_id"},
+            ],
+            dimensions=["shop.city"],
+            filters=["product.on_sale = true"],
+            output_columns=["city", "on_sale_product_cnt"],
+            blocking_issues=["「城市」存在歧义：order_paid.receiver_city 与 shop.city"],
+        )
+        engine, _, _ = _engine({"plan": [body]}, runtime, clock)
+        outcome = await engine.plan_for(_ctx(), normalized_question="各城市的在架商品数分别是多少？")
+        assert outcome.plan.blocking_issues == []
+
+    @pytest.mark.asyncio
     async def test_order_paid_city_ambiguity_is_preserved(
         self, runtime: SemanticBundleRuntime, clock: FrozenClock
     ) -> None:
