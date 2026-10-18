@@ -4818,3 +4818,9 @@ W8 的定位成立：E-VER-07 失败跳精确落在 15s 客户端硬上限，pla
 ### 77.4 验收总判
 
 **第 57 轮整体验收不通过（P0）。** A（超时归因）与 B 的部分治理可收；R-GMV-02 在 `T_A` 身份下对 `T_B` 题出数，是应拒未拒的 P0 回归，必须在 W58 先修并复跑。G-2 仍因 τ 未校准入 UNVERIFIED，G-5 仍 FAIL（17/24、误拒 7.3%），不得进入 G-8，也不得写门禁通过。
+
+### 77.5 W57 integration 补证收讫（QA R31az ｜ 2026-10-18 14:55:54 +0800）
+
+- W8 补跑件 `7656f3a` 仅改 `backend/reports/w8/RELAY.md`／`DELIVERY.md`，无代码、测试、eval 产物变化；其自报 `ce76f1b`（QA-only）／被测代码 `e0cd546`：integration `124 passed / 0 failed`（32.38s，`alembic_rc=0`，一次性 PG/Redis 已 DROP，残渣仅 `ecom`／`ecom_u123_probe`），offline `2576 / 0`，补跑零出站。
+- QA 独立复验：`ce76f1b` 与 `a9e2438` 的代码面相同（`e0cd546`）；`7656f3a` 仅 W8 报告文档。QA 在 `7656f3a` 工作树另起一次性 PG 55495／Redis 56395＋`alembic upgrade head`，独立复跑 integration **124 passed / 0 failed**（30.03s）；已清容器，残渣仍仅 `ecom`／`ecom_u123_probe`，台账 `1830|3.025849|2026-10-07 04:28:00.872275+00` 逐位不动。
+- **判**：W57 的 integration 证据由 UNVERIFIED 收为已补证；但**第 57 轮整体仍不通过**——R-GMV-02 P0、G-2 τ UNVERIFIED、G-5 FAIL 均未改变。W58 块（§77.2）不变，仍以 P0＋G-5＋τ 为主；官方门禁仍 `88f3500`／PASS 1/8。

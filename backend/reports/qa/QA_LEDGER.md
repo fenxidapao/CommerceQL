@@ -1467,3 +1467,15 @@
 **结论**：A/B 收；C 有推进但 G-5 仍未达门，且 R-GMV-02 出现 P0 跨租户拒答回归；下一轮按 `TASK_BOARD §77.2` 先修 P0，再收 G-5 与 τ 校准。官方门禁未刷新前不得写“通过”。
 
 **总判**：第 57 轮不通过（P0）。R-GMV-02 在 T_A 身份下对 T_B 题出数，属应拒未拒；G-2 因 τ 未校准仍 UNVERIFIED，G-5 仍 FAIL（17/24、误拒 7.3%）；不得进入 G-8，也不得写门禁通过。
+
+## R31az · W57 integration 补证收讫（总判不变：第 57 轮不通过／P0） ／ 2026-10-18 14:56:49 +0800 ／ HEAD `7656f3a`／595 笔
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 补跑提交面 | `7656f3a` 仅改 `backend/reports/w8/RELAY.md`／`DELIVERY.md`；无代码/测试/eval 变化 | ✅ docs-only |
+| 2 | 代码同一性 | `ce76f1b`／`7656f3a` 的 `eval/runner.py`、`planner/engine.py`、`binding/l4.py`、`planner/payloads.py` blob 与 `a9e2438` 逐件相同 | ✅ 被测代码 `e0cd546` |
+| 3 | W8 自报 | integration `124 passed / 0 failed`（32.38s，`alembic_rc=0`）；offline `2576/0`；补跑零出站 | ✅ |
+| 4 | QA 独立复验 | `7656f3a` 一次性 PG 55495／Redis 56395＋alembic：**124 passed / 0 failed**（30.03s）；容器清、残渣两库、台账逐位不动 | ✅ |
+| 5 | 总判 | integration 由 UNVERIFIED 收为已补证；R-GMV-02 P0、G-2 τ UNVERIFIED、G-5 FAIL 均不变 | 🔴 仍不通过 |
+
+**结论**：W57 的 integration 证据已补齐并经 QA 复算；第 57 轮整体仍不通过（P0），W58 块 `TASK_BOARD §77.2` 不变。
