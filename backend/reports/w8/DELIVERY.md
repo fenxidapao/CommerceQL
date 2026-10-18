@@ -715,3 +715,12 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **C**：G-2 10 条 `7 equivalent/10`（E-VER-01/06/08 修复，E-VER-05/07/10 超时），tokens `232,137`/`0.506298`；G-5 148 条 `24/24` 应拒但误拒 `14/124=11.3%`，tokens `2,778,228`/`9.931561`；18 clarify 单列 `258,563`/`0.615126`。
 - **门禁**：G-2/G-5 独立重算均 FAIL；官方 `eval_metrics.json` 未刷新；G-8 单轮 UNVERIFIED。
 - **回归**：integration `124/0`；offline `2568/0`；最终 live 产物 `git_rev=00318f6/dirty=false`、dataset v2；未改阈值/判据/15s/QA/共享 ecom；U-127 open。
+
+
+## 第 57 轮交付（超时尾部／误拒簇治理／二轮复跑 ｜ 代码 `518b6a0`，归因重算 `e0cd546` ｜ 2026-10-18 12:26–13:10 +0800）
+
+- **A**：19 条 15s timeout 归因完成；L4 66 候选触发 2304-token 截断，已裁到 30；`LlmTimeout` 仍不重试、不剔分母。
+- **B**：时间范围阻塞降级、`shop.city` 资产面唯一化、enum 归因补齐；原 4 条 `unattributed` 已转为 `value_mapping`，重算版 full166 仅剩 1 条。
+- **C**：G-2 `10/10 equivalent`（`264,615 tok / 0.868998`）；G-5 148 `17/24` 应拒、误拒 `9/124=7.3%`、equiv 35/124（`3,180,216 / 9.488419`）⇒ **G-5 FAIL**；clarify 18 `9/6/2/1`（`294,235 / 0.910469`）。
+- **门禁**：G-2 measured 8/8 但 τ 未校准 ⇒ UNVERIFIED；G-5 FAIL；G-8 UNVERIFIED；官方 json 未刷新。
+- **回归**：最终 offline `2576/0`；终版 integration 因 Docker daemon 不可用 UNVERIFIED（不冒充此前 `d33aa26` 的 124/0）；未改阈值/判据/15s/语义包/gold/QA/共享 ecom；U-127 open。

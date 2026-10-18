@@ -5751,3 +5751,51 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 - **出站实报**：pilot `27,394 / 0.062957`（自报旧 HEAD `1ec8f4d/dirty=true`，只作管道健康样本）；最终绑定 G-2 `232,137 / 0.506298`、G-5 `2,778,228 / 9.931561`、clarify `258,563 / 0.615126`；最终绑定小计 **3,268,928 tokens / 11.052985 price_guess CNY**，含 pilot 全轮 **3,296,322 / 11.115942**。
 - **边界**：未改阈值/判据措辞/07 §10.2 15s/语义包；未动 `backend/reports/qa/**`；未写共享 `ecom`；U-127 open；G-2 仍 FAIL、G-5 仍 FAIL，官方门禁未刷新；E-VER-08 `domain=products` 未捆绑、另立登记。
 - **复算入口**：A 读 `eval/dataset_v1_frozen.json`、`eval/gold_query_seed_v1.json`、`eval/results_r56_hash_reconciliation.json`；B 读 `eval/runner.py:96-179`、`eval/results_r56_provider_diagnosis.json`、`backend/tests/eval/test_eval_runner_checkpoint.py`; C 读 `eval/results_r56_g2_matrix.json`、`eval/results_r56_g5_matrix.json`、`eval/results_r56_clarify_matrix.json`、`eval/results_r56_gate_recompute.json`。以上入口均不命中本节自身。
+
+
+## §五七 第 57 轮 · 超时尾部归因／误拒簇治理／二轮复跑 ｜ 2026-10-18 12:26–13:10 +0800 ｜ 代码 `518b6a0`／归因重算 `e0cd546`
+
+### 57.0 结论
+
+| 面 | 结果 | 证据 |
+|---|---|---|
+| A 超时尾部 | 归因为“provider 尾延迟 + L4 候选输出截断”混合；原 19 条 timeout 全部贴 15s | `eval/results_r57_timeout_tail.json`、`results_r57_timeout_stats.json` |
+| B 误拒治理 | 时间范围阻塞降级、资产面唯一化 `shop.city`、L4 候选裁到 30；可修时间/城市簇已修 | `backend/app/planner/engine.py`、`backend/app/binding/l4.py`、`backend/app/planner/payloads.py` |
+| 归因空洞 | 原 4 条 `unattributed`（E-ENUM-06/07/09/10）已按 `enum:*` 归为 `value_mapping`；重算后 full166 剩 1 条 `unattributed`（M-HIER-06） | `eval/attribution.py`、`eval/results_r57b_full166_attribution.json` |
+| G-2 | **10/10 equivalent**；门禁格 `easy×low 8/8=100%`，但 τ 未校准 ⇒ G-2 verdict **UNVERIFIED** | `eval/results_r57b_g2_10.json`、`eval/results_r57b_gate_recompute.json` |
+| G-5 | 🔴 **未达门**：`correct_refused 17/24=70.8%`，`over_refused 9/124=7.3%`（>5%）；equivalent 35/124 | `eval/results_r57b_g5_148.json`、`eval/results_r57b_g5_matrix.json` |
+| G-8 | UNVERIFIED（单轮无可测的二级成功率；澄清率 26/166=15.7%） | `eval/results_r57b_gate_recompute.json` |
+| integration | 终版 Docker daemon 不可用 ⇒ UNVERIFIED；此前 `d33aa26` 一次性库为 124/0 | 见 57.4 |
+| offline | 最终代码离线 `2576 passed / 0 failed / 1 warning` | 57.4 |
+
+### 57.1 A：19 条超时尾部
+
+- 原批：G-2 3 条、G-5 15 条、clarify 1 条；逐条明细在 `eval/results_r57_timeout_tail.json`。
+- 节点分布：`plan 5 / gen_sql 5 / normalize_intent 4 / l4_score 4 / 无 task 1`；15s 触顶，不是 1s/2s 阶段预算。
+- 同批成功样本对照：plan p95 `6303.6ms`、gen_sql p95 `7033.0ms`、normalize p95 `6565.2ms`；timeout 是约 2.1–2.4× p95 的尾部。
+- 确定性载荷问题：L4 原始 candidate 达 66 条，输出 `finish_reason=length`、2304 token 截断；**已做零出站修复为最多 30 条**（`backend/app/binding/l4.py:93,204-206`）。
+- 纪律：`LlmTimeout` 不重试；仅传输层 ConnectError/CircuitOpen 可退避重试。终版仍有 4 条 G-5 l4_score timeout，未剔分母。
+
+### 57.2 B：14 条误拒簇
+
+- 14 条原文/plan blocking：`eval/results_r57_plan_blocking_14.json`；分类：`eval/results_r57_overrefusal_triage.json`。
+- 时间簇：E-ENUM-04、E-MET-06、M-ENUM-02/03、M-MET-09/10、H-ENUM-03/04 等；修法为“缺时间范围不是数据缺失，TimeWindow None 表示该侧开区间”。
+- 城市簇：M-HIER-03、X-STR-02/05/07 等；当计划不含 `order_paid` 且 filter 明写 `shop.city` 时，降级“城市歧义” blocking（`backend/app/planner/engine.py:230-269`）。
+- 其它：M-DIM-05（城市/店铺粒度）、M-IDX-09/10（L4 截断/绑定）、E-MET-08（可能的口径冲突）逐条登记；未为贴 gold 改判据或语义包。
+- 零出站测试：`test_planner_engine.py` 新增时间/城市正反例；`test_binding_l4.py` 新增 30 候选上限；`test_attribution_grid.py` 新增 enum 归因。目标测验合计 `156 passed` 后归因单测 `34 passed`。
+
+### 57.3 C：二轮 live 复跑
+
+- **G-2**：`eval/results_r57b_g2_10.json`，`git_rev=518b6a0`、`dirty=false`；`10 complete / 10 equivalent`；tokens `264,615`、price_guess `0.868998`。
+- **G-5 完整 148**：`eval/results_r57b_g5_148.json`，`git_rev=518b6a0`、`dirty=false`；`complete 101 / refuse 26 / clarify 17 / error 4`；correct_refused `17/24`、over_refused `9/124=7.3%`、execute equivalent `35/124`；tokens `3,180,216`、price_guess `9.488419`。逐条矩阵 `eval/results_r57b_g5_matrix.json`；**FAIL，未达 ≤5%**。
+- **clarify 18 单列**：`eval/results_r57b_clarify_18.json`；`clarify 9 / complete 6 / refuse 2 / error 1`；tokens `294,235`、price_guess `0.910469`；矩阵 `eval/results_r57b_clarify_matrix.json`。
+- 合批 full166：`eval/results_r57b_full166.json`（用于门禁重算）；归因重算版 `eval/results_r57b_full166_attribution.json`，`unattributed` 7→1。
+- 门禁重算：`eval/results_r57b_gate_recompute.json`；G-2 measured 8/8 但 verdict UNVERIFIED（τ），G-5 FAIL，G-8 UNVERIFIED；官方 `backend/reports/w6/eval_metrics.json` **未刷新**。
+
+### 57.4 回归与边界
+
+- offline（最终代码 e0cd546）：`.\.venv\Scripts\python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q -p no:randomly` ⇒ **2576 passed / 0 failed / 1 warning / 109.62s**。
+- integration：最后一次运行因 Docker daemon 不在线（`npipe:////./pipe/dockerDesktopLinuxEngine`）无法启动一次性 PG/Redis ⇒ **UNVERIFIED**；此前同一轮功能改动 `d33aa26` 曾在一次性库跑出 **124/0**，不得把它冒充终版 `e0cd546` 的复算。
+- 出站：本轮全部 live（含失败/补跑）合计 **6,988,313 tokens / price_guess 21.072356 CNY**；分项：r57 G-2 `263,742/1.146033`、r57 G-5 `2,985,505/8.658437`、r57b G-2 `264,615/0.868998`、r57b G-5 `3,180,216/9.488419`、r57b clarify `294,235/0.910469`。模型 `deepseek-v4.1-flash`，价表未登记 ⇒ `price_guess`。
+- 边界：未改阈值/判据/07 §10.2 15s/语义包/gold；未动 `backend/reports/qa/**`；未写共享 `ecom`；U-127 open；G-5 仍 FAIL、G-2 gate 因 τ 为 UNVERIFIED，官方门禁未刷新。
+- 复算入口：A 读 `eval/results_r57_timeout_tail.json`＋`eval/results_r57_timeout_stats.json`；B 读 `eval/results_r57_plan_blocking_14.json`＋`eval/results_r57_overrefusal_triage.json`；C 读 `eval/results_r57b_g2_matrix.json`＋`eval/results_r57b_g5_matrix.json`＋`eval/results_r57b_clarify_matrix.json`＋`eval/results_r57b_gate_recompute.json`。以上入口不命中本节自身。

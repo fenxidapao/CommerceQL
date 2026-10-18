@@ -1,0 +1,109 @@
+{
+  "round": 57,
+  "artifact_set": "r57b-final-live",
+  "count": 5,
+  "rows": [
+    {
+      "batch": "g5",
+      "case_id": "X-ENUM-06",
+      "task": "l4_score",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 1853,
+        "linking": 0,
+        "plan": 2958,
+        "total": 19825
+      },
+      "tokens": {
+        "input": 16038,
+        "output": 361,
+        "cache_hit": 15616,
+        "total": 16399
+      },
+      "git_rev": "518b6a0",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "X-MET-01",
+      "task": "l4_score",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 5590,
+        "linking": 0,
+        "plan": 3209,
+        "total": 23810
+      },
+      "tokens": {
+        "input": 16023,
+        "output": 1052,
+        "cache_hit": 0,
+        "total": 17134
+      },
+      "git_rev": "518b6a0",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "X-MET-06",
+      "task": "l4_score",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 1952,
+        "linking": 0,
+        "plan": 3830,
+        "total": 20795
+      },
+      "tokens": {
+        "input": 16053,
+        "output": 479,
+        "cache_hit": 12288,
+        "total": 16532
+      },
+      "git_rev": "518b6a0",
+      "git_dirty": false
+    },
+    {
+      "batch": "g5",
+      "case_id": "M-IDX-03",
+      "task": "l4_score",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 1875,
+        "linking": 0,
+        "plan": 2734,
+        "total": 19631
+      },
+      "tokens": {
+        "input": 16045,
+        "output": 327,
+        "cache_hit": 15744,
+        "total": 16372
+      },
+      "git_rev": "518b6a0",
+      "git_dirty": false
+    },
+    {
+      "batch": "clarify",
+      "case_id": "C-GMV-04",
+      "task": null,
+      "kind": null,
+      "latency_ms": {
+        "normalize": 2815,
+        "linking": 1,
+        "plan": 4277,
+        "gen_sql": 4978,
+        "gate": 9,
+        "total": 16878
+      },
+      "tokens": {
+        "input": 24901,
+        "output": 1954,
+        "cache_hit": 0,
+        "total": 27032
+      },
+      "git_rev": "518b6a0",
+      "git_dirty": false
+    }
+  ]
+}

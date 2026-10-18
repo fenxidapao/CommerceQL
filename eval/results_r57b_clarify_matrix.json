@@ -1,0 +1,145 @@
+{
+  "round": 57,
+  "artifact": "eval/results_r57b_clarify_18.json",
+  "git": {
+    "rev": "518b6a0",
+    "dirty": false,
+    "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5"
+  },
+  "actual": {
+    "clarify": 9,
+    "complete": 6,
+    "error": 1,
+    "refuse": 2
+  },
+  "tokens_total": 294235,
+  "price_guess_cny": 0.910469,
+  "rows": [
+    {
+      "case_id": "C-CITY-01",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-CITY-02",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-CITY-03",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-CITY-04",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-GMV-01",
+      "terminal": "complete",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-GMV-02",
+      "terminal": "complete",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-GMV-03",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-GMV-04",
+      "terminal": "error",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-RATE-01",
+      "terminal": "complete",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-RATE-02",
+      "terminal": "refuse",
+      "refusal_reason": "no_data_asset",
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-REP-01",
+      "terminal": "refuse",
+      "refusal_reason": "no_data_asset",
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-REP-02",
+      "terminal": "complete",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-UV-01",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-UV-02",
+      "terminal": "complete",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-AOV-01",
+      "terminal": "complete",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-REG-01",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-REG-02",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    },
+    {
+      "case_id": "C-CAT-01",
+      "terminal": "clarify",
+      "refusal_reason": null,
+      "error": {},
+      "equivalent": false
+    }
+  ]
+}

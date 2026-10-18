@@ -1,0 +1,1553 @@
+{
+  "frozen_evidence": {
+    "checks": {
+      "dataset_content_hash": {
+        "expected": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+        "actual": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+        "ok": true
+      },
+      "sandbox_db_sha256": {
+        "expected": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "actual": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "ok": true
+      },
+      "red_team_content_hash_present": true,
+      "gold_seed_derived_from_dataset_hash": true,
+      "all_ok": true
+    },
+    "dataset_version": "2",
+    "frozen_at": "2026-10-17",
+    "n_cases": 166,
+    "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+    "red_team": {
+      "content_hash": "sha256:886cb57052368541e60727cbcee78db2aa1ad1c381cb083a540673999ed9d01d",
+      "n_cases": 66
+    },
+    "gold_seed": {
+      "content_hash": "sha256:2f91ed51e0c97fcbb45b7a59eabc13067167747df52d5cae6d1b37cfe339a592",
+      "n_seeds": 119
+    }
+  },
+  "config": {
+    "live": true,
+    "cassette": "eval/cassettes/w8_r57b_clarify_18.jsonl",
+    "mode": "record",
+    "db": "e:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\ecom_sandbox.db",
+    "column_top": null,
+    "n_requested": 18,
+    "provenance": "W8 r57b final clarify 18 diagnostic: time demotion + L4 cap + shop.city asset-resolution",
+    "node_timeouts": {
+      "contract": {
+        "link": 30.0,
+        "gate1_ast": 0.1,
+        "gate2_policy": 0.1,
+        "gate3_cost": 1.0,
+        "execute": 30.0,
+        "mask": 0.1,
+        "audit_pre": 1.0,
+        "audit_supp": 0.5
+      },
+      "effective": {
+        "mask": 0.8,
+        "link": 30.0,
+        "normalize": 162.0,
+        "bind": 162.0,
+        "gate1_ast": 0.8,
+        "gate2_policy": 0.8,
+        "intent": 162.0,
+        "gen_sql": 162.0,
+        "present": 162.0,
+        "plan": 162.0,
+        "gate3_cost": 8.0,
+        "execute": 30.0,
+        "audit_supp": 4.0,
+        "audit_pre": 8.0,
+        "repair": 162.0
+      },
+      "scaled": true,
+      "llm_calling_nodes": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "not_in_contract": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "kept_as_contract": [
+        "execute",
+        "link"
+      ],
+      "cpu_factor": 8.0,
+      "llm_node_floor_s": 162.0
+    },
+    "max_concurrency": 2,
+    "checkpoint": "eval/cassettes/w8_r57b_clarify_18.checkpoint.jsonl",
+    "resume": false,
+    "transport_retries": 3,
+    "transport_backoff_s": 5.0
+  },
+  "summary": {
+    "n_records": 18,
+    "n_scored": 18,
+    "n_unscored": 0,
+    "n_node_timeout": 0,
+    "n_execute_scored": 0,
+    "n_execute_with_sql": 0,
+    "n_equivalent": 0,
+    "terminal_distribution": {
+      "clarify": 9,
+      "complete": 6,
+      "error": 1,
+      "refuse": 2
+    },
+    "attribution_distribution": {
+      "ambiguity_not_clarified": 9
+    },
+    "tokens_total": 294235,
+    "cost_cny_total": 0.910469,
+    "wall_s": {
+      "max": 28.305,
+      "median": 5.439,
+      "sum": 173.571
+    }
+  },
+  "records": [
+    {
+      "case_id": "C-CITY-01",
+      "question": "城市维度的 GMV 是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "clarify_out"
+      ],
+      "terminal_event": "clarify",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "clarify",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 2307,
+        "total": 2316
+      },
+      "tokens": {
+        "input": 7903,
+        "output": 110,
+        "cache_hit": 7680,
+        "total": 8013
+      },
+      "cost_cny": 0.003791,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": null,
+      "wall_s": 2.316,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-CITY-02",
+      "question": "各城市的订单量分别是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "clarify_out"
+      ],
+      "terminal_event": "clarify",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "clarify",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 2110,
+        "total": 2113
+      },
+      "tokens": {
+        "input": 7902,
+        "output": 100,
+        "cache_hit": 6144,
+        "total": 8002
+      },
+      "cost_cny": 0.010603,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": null,
+      "wall_s": 2.114,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-CITY-03",
+      "question": "广州的销售额是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "clarify_out"
+      ],
+      "terminal_event": "clarify",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "clarify",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 1760,
+        "total": 1762
+      },
+      "tokens": {
+        "input": 7900,
+        "output": 101,
+        "cache_hit": 7680,
+        "total": 8001
+      },
+      "cost_cny": 0.00365,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": null,
+      "wall_s": 1.763,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-CITY-04",
+      "question": "城市口径下哪个卖得最好？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "clarify_out"
+      ],
+      "terminal_event": "clarify",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "clarify",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 2389,
+        "total": 2392
+      },
+      "tokens": {
+        "input": 7903,
+        "output": 132,
+        "cache_hit": 7680,
+        "total": 8035
+      },
+      "cost_cny": 0.0041,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": null,
+      "wall_s": 2.393,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-GMV-01",
+      "question": "本月的 GMV 是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(month_start)s AND v_order_paid.pay_time < %(month_end)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "sql_params": {
+        "pay_status": "paid",
+        "refund_status": "refunded",
+        "is_test_order": false,
+        "month_start": "2026-10-01 00:00:00",
+        "month_end": "2026-11-01 00:00:00"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "GMV 的时间基准固定为 pay_time，而非 create_time"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 1657,
+        "linking": 0,
+        "plan": 2505,
+        "gen_sql": 2715,
+        "gate": 20,
+        "exec": 4,
+        "present": 0,
+        "total": 11871
+      },
+      "tokens": {
+        "input": 24945,
+        "output": 1587,
+        "cache_hit": 21760,
+        "total": 26591
+      },
+      "cost_cny": 0.040635,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": {
+        "category": "ambiguity_not_clarified",
+        "signal": "该澄清的题没澄清",
+        "severity": "normal"
+      },
+      "wall_s": 11.873,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-GMV-02",
+      "question": "上个月的销售额是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_time < %(end_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "sql_params": {
+        "start_ts": "2025-09-01 00:00:00",
+        "end_ts": "2025-10-01 00:00:00"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "GMV 的时间基准固定为 pay_time，而非 create_time"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 3554,
+        "linking": 0,
+        "plan": 3536,
+        "gen_sql": 6436,
+        "gate": 51,
+        "exec": 5,
+        "present": 0,
+        "total": 19555
+      },
+      "tokens": {
+        "input": 24893,
+        "output": 1564,
+        "cache_hit": 0,
+        "total": 26693
+      },
+      "cost_cny": 0.138635,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": {
+        "category": "ambiguity_not_clarified",
+        "signal": "该澄清的题没澄清",
+        "severity": "normal"
+      },
+      "wall_s": 19.557,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-GMV-03",
+      "question": "最近的 GMV 怎么样？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "clarify_out"
+      ],
+      "terminal_event": "clarify",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "clarify",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 1952,
+        "total": 1955
+      },
+      "tokens": {
+        "input": 7901,
+        "output": 91,
+        "cache_hit": 7680,
+        "total": 7992
+      },
+      "cost_cny": 0.003515,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": null,
+      "wall_s": 1.956,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-GMV-04",
+      "question": "最近一周的 GMV 环比是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "error_out"
+      ],
+      "terminal_event": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "terminal_error_detail": {},
+      "outcome": "failed",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "WITH bounds AS (SELECT %(cur_start)s::date AS cur_start, %(cur_end)s::date AS cur_end, %(prev_start)s::date AS prev_start, %(prev_end)s::date AS prev_end), cur AS (SELECT COALESCE(SUM(o.pay_amount), 0) AS gmv FROM v_order_paid o, bounds b WHERE o.pay_status = 'paid' AND o.refund_status <> 'refunded' AND o.is_test_order = false AND o.pay_time >= b.cur_start AND o.pay_time < b.cur_end), prev AS (SELECT COALESCE(SUM(o.pay_amount), 0) AS gmv FROM v_order_paid o, bounds b WHERE o.pay_status = 'paid' AND o.refund_status <> 'refunded' AND o.is_test_order = false AND o.pay_time >= b.prev_start AND o.pay_time < b.prev_end) SELECT 'current' AS period_label, b.cur_start AS period_start, b.cur_end AS period_end, cur.gmv AS gmv, prev.gmv AS gmv_prev, CASE WHEN prev.gmv = 0 THEN NULL ELSE (cur.gmv - prev.gmv) / prev.gmv END AS gmv_pop_ratio FROM cur CROSS JOIN prev CROSS JOIN bounds b UNION ALL SELECT 'previous' AS period_label, b.prev_start AS period_start, b.prev_end AS period_end, prev.gmv AS gmv, NULL::numeric AS gmv_prev, NULL::numeric AS gmv_pop_ratio FROM cur CROSS JOIN prev CROSS JOIN bounds b LIMIT 10",
+      "sql_params": {
+        "cur_start": "2026-10-09",
+        "cur_end": "2026-10-16",
+        "prev_start": "2026-10-02",
+        "prev_end": "2026-10-09"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {
+        "1": "reject/False"
+      },
+      "gate1_reject_rule": "R10",
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 2815,
+        "linking": 1,
+        "plan": 4277,
+        "gen_sql": 4978,
+        "gate": 9,
+        "total": 16878
+      },
+      "tokens": {
+        "input": 24901,
+        "output": 1954,
+        "cache_hit": 0,
+        "total": 27032
+      },
+      "cost_cny": 0.144156,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": {
+        "category": "ambiguity_not_clarified",
+        "signal": "该澄清的题没澄清",
+        "severity": "normal"
+      },
+      "wall_s": 16.882,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-RATE-01",
+      "question": "退款率是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0) AS refund_rate FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.is_test_order = FALSE AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 100",
+      "sql_params": {},
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "退款率以支付订单为分母，时间随分母"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 3127,
+        "linking": 0,
+        "plan": 4186,
+        "gen_sql": 4154,
+        "gate": 8,
+        "exec": 249,
+        "present": 0,
+        "total": 16181
+      },
+      "tokens": {
+        "input": 24832,
+        "output": 1533,
+        "cache_hit": 0,
+        "total": 26542
+      },
+      "cost_cny": 0.137914,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": {
+        "category": "ambiguity_not_clarified",
+        "signal": "该澄清的题没澄清",
+        "severity": "normal"
+      },
+      "wall_s": 16.183,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-RATE-02",
+      "question": "退货率最高的商品是哪个？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "refuse_out"
+      ],
+      "terminal_event": "refuse",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "refuse",
+      "refusal_reason": "no_data_asset",
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 2056,
+        "linking": 0,
+        "plan": 3376,
+        "total": 5436
+      },
+      "tokens": {
+        "input": 16022,
+        "output": 294,
+        "cache_hit": 15616,
+        "total": 16316
+      },
+      "cost_cny": 0.008474,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": {
+        "category": "ambiguity_not_clarified",
+        "signal": "该澄清的题直接拒答",
+        "severity": "normal"
+      },
+      "wall_s": 5.439,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-REP-01",
+      "question": "复购率是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "refuse_out"
+      ],
+      "terminal_event": "refuse",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "refuse",
+      "refusal_reason": "no_data_asset",
+      "binding_status": "resolved_default",
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 4530,
+        "linking": 0,
+        "plan": 4026,
+        "gen_sql": 7405,
+        "total": 24244
+      },
+      "tokens": {
+        "input": 17007,
+        "output": 1900,
+        "cache_hit": 0,
+        "total": 18966
+      },
+      "cost_cny": 0.106405,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": {
+        "category": "ambiguity_not_clarified",
+        "signal": "该澄清的题直接拒答",
+        "severity": "normal"
+      },
+      "wall_s": 24.247,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-REP-02",
+      "question": "复购情况怎么样？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "WITH buyer_orders AS (SELECT order_paid.buyer_id AS buyer_id, COUNT(DISTINCT order_paid.sub_order_id) AS cnt FROM v_order_paid AS order_paid WHERE order_paid.pay_status = 'paid' AND order_paid.is_test_order = FALSE AND order_paid.pay_time >= %(start_ts)s AND order_paid.pay_time < %(end_ts)s AND order_paid.is_test_order = FALSE AND order_paid.refund_status <> 'refunded' AND order_paid.pay_status = 'paid' GROUP BY order_paid.buyer_id) SELECT COUNT(DISTINCT CASE WHEN buyer_orders.cnt >= 2 THEN buyer_orders.buyer_id END) * 1.0 / NULLIF(COUNT(DISTINCT buyer_orders.buyer_id), 0) AS repurchase_rate_90d FROM buyer_orders LIMIT 1",
+      "sql_params": {
+        "start_ts": "1970-01-01 00:00:00",
+        "end_ts": "1970-01-01 00:00:00"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "复购窗口以支付时间为基准"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 1510,
+        "linking": 0,
+        "plan": 2904,
+        "gen_sql": 3508,
+        "gate": 9,
+        "exec": 1,
+        "present": 0,
+        "total": 14862
+      },
+      "tokens": {
+        "input": 24941,
+        "output": 1956,
+        "cache_hit": 21376,
+        "total": 26956
+      },
+      "cost_cny": 0.047542,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": {
+        "category": "ambiguity_not_clarified",
+        "signal": "该澄清的题没澄清",
+        "severity": "normal"
+      },
+      "wall_s": 14.864,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-UV-01",
+      "question": "这段时间的 UV 是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "clarify_out"
+      ],
+      "terminal_event": "clarify",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "clarify",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 4142,
+        "total": 4145
+      },
+      "tokens": {
+        "input": 7867,
+        "output": 81,
+        "cache_hit": 0,
+        "total": 8007
+      },
+      "cost_cny": 0.038003,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": null,
+      "wall_s": 4.147,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-UV-02",
+      "question": "总访客数是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT SUM(v_traffic_daily.uv) AS uv FROM v_traffic_daily WHERE v_traffic_daily.uv >= %(uv_min)s AND v_traffic_daily.uv >= 0 LIMIT 10000",
+      "sql_params": {
+        "uv_min": 0,
+        "limit": 100
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": {
+        "injected": true,
+        "original_limit": "PLACEHOLDER"
+      },
+      "applied_predicates": [
+        "uv >= 0"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "流量表的时间基准是 stat_date（date 型），不是 pay_time"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 1604,
+        "linking": 0,
+        "plan": 3369,
+        "gen_sql": 2644,
+        "gate": 2,
+        "exec": 245,
+        "present": 0,
+        "total": 13364
+      },
+      "tokens": {
+        "input": 24898,
+        "output": 1483,
+        "cache_hit": 21760,
+        "total": 26440
+      },
+      "cost_cny": 0.038951,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": {
+        "category": "ambiguity_not_clarified",
+        "signal": "该澄清的题没澄清",
+        "severity": "normal"
+      },
+      "wall_s": 13.366,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-AOV-01",
+      "question": "客单价是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.sub_order_id), 0) AS aov FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status_excluded)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 100",
+      "sql_params": {
+        "pay_status": "paid",
+        "refund_status_excluded": "refunded",
+        "is_test_order": false
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "客单价属交易口径"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 4412,
+        "linking": 0,
+        "plan": 9740,
+        "gen_sql": 4916,
+        "gate": 8,
+        "exec": 381,
+        "present": 0,
+        "total": 28303
+      },
+      "tokens": {
+        "input": 24797,
+        "output": 1540,
+        "cache_hit": 0,
+        "total": 26573
+      },
+      "cost_cny": 0.137849,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": {
+        "category": "ambiguity_not_clarified",
+        "signal": "该澄清的题没澄清",
+        "severity": "normal"
+      },
+      "wall_s": 28.305,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-REG-01",
+      "question": "华东的销量是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "clarify_out"
+      ],
+      "terminal_event": "clarify",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "clarify",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 1986,
+        "total": 1989
+      },
+      "tokens": {
+        "input": 7900,
+        "output": 128,
+        "cache_hit": 7680,
+        "total": 8028
+      },
+      "cost_cny": 0.00403,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": null,
+      "wall_s": 1.99,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-REG-02",
+      "question": "南方卖得怎么样？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "clarify_out"
+      ],
+      "terminal_event": "clarify",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "clarify",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 2313,
+        "total": 2316
+      },
+      "tokens": {
+        "input": 7900,
+        "output": 134,
+        "cache_hit": 7680,
+        "total": 8034
+      },
+      "cost_cny": 0.004114,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": null,
+      "wall_s": 2.317,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-CAT-01",
+      "question": "哪个品类卖得最好？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "clarify_out"
+      ],
+      "terminal_event": "clarify",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "clarify",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 3855,
+        "total": 3858
+      },
+      "tokens": {
+        "input": 7867,
+        "output": 88,
+        "cache_hit": 0,
+        "total": 8014
+      },
+      "cost_cny": 0.038102,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": null,
+      "wall_s": 3.859,
+      "runner_transport_retries": 0
+    }
+  ],
+  "generated_at": "2026-10-18T05:05:46+00:00",
+  "git_rev": "518b6a0",
+  "git_dirty": false
+}

@@ -1,0 +1,45 @@
+{
+  "round": 57,
+  "head": "518b6a0",
+  "generated_at": "2026-10-18T05:09:33+00:00",
+  "results_path": "eval/results_r57b_full166.json",
+  "results_sha256": "766533e1f42f4acf442ae37980b58f432fe35cc03a1fd7fdd888be8f984ee2f7",
+  "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+  "gates": {
+    "G-2": {
+      "gate_id": "G-2",
+      "condition": "结构 Easy × 语义低 ≥ 95%",
+      "verdict": "UNVERIFIED",
+      "measured": "easy×low = 8/8 = 100.0%",
+      "basis": "冻结集分层网格（I-1 主口径）",
+      "caveats": [
+        "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
+      ],
+      "red_split": {}
+    },
+    "G-5": {
+      "gate_id": "G-5",
+      "condition": "拒答准确率 ≥ 95%，误拒 ≤ 5%",
+      "verdict": "FAIL",
+      "measured": "该拒则拒 17/24 = 70.8%；误拒 9/124 = 7.3%",
+      "basis": "拒答集 + §C.4.4（两类错误分开统计）",
+      "caveats": [
+        "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
+      ],
+      "red_split": {}
+    },
+    "G-8": {
+      "gate_id": "G-8",
+      "condition": "澄清率 ≤ 15% 且澄清后一次成功率 ≥ 80%",
+      "verdict": "UNVERIFIED",
+      "measured": "澄清率 26/166 = 15.7%；澄清后一次成功 0.0%",
+      "basis": "§6.8.3 + N-25",
+      "caveats": [
+        "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）",
+        "本批次为**单轮**（`runner.py` 无「clarify → 用户补答 → 再走一次」的第二轮回路）⇒ 后半句「澄清后一次成功率」不可测 ⇒ 整条门禁判 UNVERIFIED（既非 FAIL 也非 PASS）。澄清率那一半是可测的，已作为证据列出。",
+        "τ 未校准 → 澄清率的判据点本身未定稿（C.4.6 步骤 4）"
+      ],
+      "red_split": {}
+    }
+  }
+}

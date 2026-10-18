@@ -1,0 +1,238 @@
+{
+  "round": 57,
+  "before_artifact": "eval/results_r56_g2_10.json",
+  "after_artifact": "eval/results_r57b_g2_10.json",
+  "rows": [
+    {
+      "case_id": "E-VER-01",
+      "before": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS day_cnt FROM v_dim_date WHERE date_key >= %(start_date)s AND date_key <= %(end_date)s LIMIT 100",
+        "tokens_total": 27454,
+        "cost_cny": 0.047756,
+        "error": {}
+      },
+      "after": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS day_cnt FROM v_dim_date WHERE year = %(year)s AND month = %(month)s LIMIT 1",
+        "tokens_total": 26416,
+        "cost_cny": 0.040138,
+        "error": {}
+      }
+    },
+    {
+      "case_id": "E-VER-02",
+      "before": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE LIMIT 1",
+        "tokens_total": 27316,
+        "cost_cny": 0.053771,
+        "error": {}
+      },
+      "after": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE LIMIT 1",
+        "tokens_total": 26402,
+        "cost_cny": 0.135945,
+        "error": {}
+      }
+    },
+    {
+      "case_id": "E-VER-03",
+      "before": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS off_sale_product_cnt FROM v_product WHERE on_sale = FALSE LIMIT 1",
+        "tokens_total": 27378,
+        "cost_cny": 0.052756,
+        "error": {}
+      },
+      "after": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS off_sale_product_cnt FROM v_product WHERE on_sale = FALSE LIMIT 100",
+        "tokens_total": 26540,
+        "cost_cny": 0.138454,
+        "error": {}
+      }
+    },
+    {
+      "case_id": "E-VER-04",
+      "before": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(DISTINCT v_product.spu_id) AS spu_cnt FROM v_product WHERE v_product.on_sale = TRUE LIMIT 1",
+        "tokens_total": 27515,
+        "cost_cny": 0.054852,
+        "error": {}
+      },
+      "after": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(DISTINCT v_product.spu_id) AS spu_cnt FROM v_product WHERE v_product.on_sale = TRUE LIMIT 1",
+        "tokens_total": 26432,
+        "cost_cny": 0.032359,
+        "error": {}
+      }
+    },
+    {
+      "case_id": "E-VER-05",
+      "before": {
+        "terminal": "error",
+        "refusal_reason": null,
+        "equivalent": false,
+        "sql": "",
+        "tokens_total": 7847,
+        "cost_cny": 0.037066,
+        "error": {
+          "task": "plan",
+          "reason": "upstream_fault_then_template_miss",
+          "last_degrade_error": "LlmTimeout"
+        }
+      },
+      "after": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS shop_cnt FROM v_shop LIMIT 1",
+        "tokens_total": 26272,
+        "cost_cny": 0.134746,
+        "error": {}
+      }
+    },
+    {
+      "case_id": "E-VER-06",
+      "before": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS campaign_cnt FROM v_campaign LIMIT 100",
+        "tokens_total": 27484,
+        "cost_cny": 0.151826,
+        "error": {}
+      },
+      "after": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS campaign_cnt FROM v_campaign LIMIT 100",
+        "tokens_total": 26574,
+        "cost_cny": 0.1393,
+        "error": {}
+      }
+    },
+    {
+      "case_id": "E-VER-07",
+      "before": {
+        "terminal": "error",
+        "refusal_reason": null,
+        "equivalent": false,
+        "sql": "",
+        "tokens_total": 15942,
+        "cost_cny": 0.005851,
+        "error": {
+          "task": "l4_score",
+          "reason": "upstream_fault_then_template_miss",
+          "last_degrade_error": "LlmTimeout"
+        }
+      },
+      "after": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS province_cnt FROM v_region WHERE region_name = %(region_name)s LIMIT 1",
+        "tokens_total": 26250,
+        "cost_cny": 0.03816,
+        "error": {}
+      }
+    },
+    {
+      "case_id": "E-VER-08",
+      "before": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(DISTINCT v_order_paid.region_code) AS province_covered_cnt FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.region_code IS NOT NULL AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_time < %(end_ts)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+        "tokens_total": 27742,
+        "cost_cny": 0.052739,
+        "error": {}
+      },
+      "after": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(DISTINCT v_order_paid.region_code) AS province_covered_cnt FROM v_order_paid WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_time < %(end_ts)s AND v_order_paid.region_code IS NOT NULL AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 100",
+        "tokens_total": 27045,
+        "cost_cny": 0.144263,
+        "error": {}
+      }
+    },
+    {
+      "case_id": "E-VER-10",
+      "before": {
+        "terminal": "error",
+        "refusal_reason": null,
+        "equivalent": false,
+        "sql": "",
+        "tokens_total": 15973,
+        "cost_cny": 0.006305,
+        "error": {
+          "task": "l4_score",
+          "reason": "upstream_fault_then_template_miss",
+          "last_degrade_error": "LlmTimeout"
+        }
+      },
+      "after": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE LIMIT 1",
+        "tokens_total": 26383,
+        "cost_cny": 0.038618,
+        "error": {}
+      }
+    },
+    {
+      "case_id": "E-VER-11",
+      "before": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE LIMIT 1",
+        "tokens_total": 27486,
+        "cost_cny": 0.043376,
+        "error": {}
+      },
+      "after": {
+        "terminal": "complete",
+        "refusal_reason": null,
+        "equivalent": true,
+        "sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE LIMIT 1",
+        "tokens_total": 26301,
+        "cost_cny": 0.027015,
+        "error": {}
+      }
+    }
+  ],
+  "before_equivalent": 7,
+  "after_equivalent": 10,
+  "after_tokens": 264615,
+  "after_price_guess_cny": 0.868998,
+  "after_git": {
+    "rev": "518b6a0",
+    "dirty": false,
+    "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5"
+  }
+}
