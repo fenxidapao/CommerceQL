@@ -227,6 +227,33 @@ def _metric_requires_time_range(metric: Any) -> bool:
     return any(marker in note for marker in ("须给时间范围", "必须给时间范围", "需要指定统计区间"))
 
 
+def _demote_asset_resolved_city_blockers(plan: Plan) -> tuple[Plan, tuple[str, ...]]:
+    """当计划已经限定在 `shop.city` 且没有收货事实表时，城市歧义已由资产面消解。
+
+    `city` 的全局绑定有 `order_paid.receiver_city` 与 `shop.city` 两个候选，
+    但“店铺各 SKU”这类计划只含 `shop`/`product`/`traffic_daily`，根本不可能用
+    `receiver_city`。模型却仍写 blocking，导致明明已给出 `shop.city` 筛选的题被拒。
+    只在资产面已排除 `order_paid` 且 filter 明写 `shop.city` 时降级。
+    """
+    if not plan.blocking_issues or not plan.metrics:
+        return plan, ()
+    assets = {str(a.asset).lower() for a in plan.assets}
+    filters = " ".join(str(f).lower() for f in plan.filters)
+    if "shop" not in assets or "order_paid" in assets or "shop.city" not in filters:
+        return plan, ()
+    kept: list[str] = []
+    removed: list[str] = []
+    for issue in plan.blocking_issues:
+        text = str(issue)
+        if "城市" in text and "歧义" in text:
+            removed.append(text)
+        else:
+            kept.append(text)
+    if not removed:
+        return plan, ()
+    return plan.model_copy(update={"blocking_issues": kept}), tuple(removed)
+
+
 def _demote_time_blockers(
     plan: Plan, semantics: SemanticBundlePort
 ) -> tuple[Plan, tuple[str, ...]]:
@@ -769,8 +796,20 @@ class PlannerEngine:
                     "extra_fact": "缺时间范围不是数据缺失；TimeWindow 的 None 表示该侧开区间",
                 },
             )
+        city_demoted_plan, city_demoted = _demote_asset_resolved_city_blockers(
+            time_demoted_plan
+        )
+        if city_demoted:
+            _log.warning(
+                "plan_asset_resolved_city_blocker_demoted",
+                extra={
+                    "removed_blocking_issues": list(city_demoted),
+                    "assets": [a.asset for a in city_demoted_plan.assets],
+                    "extra_fact": "计划无 order_paid 且 filter 明写 shop.city，城市候选已由资产面唯一化",
+                },
+            )
         normalized_plan, demoted = _demote_constant_filter_dimensions(
-            time_demoted_plan, self._semantics, normalized_question
+            city_demoted_plan, self._semantics, normalized_question
         )
         if demoted:
             _log.warning(

@@ -1283,3 +1283,39 @@ class TestTimeBlockerDemotion:
         engine, _, _ = _engine({"plan": [body]}, runtime, clock)
         outcome = await engine.plan_for(_ctx(), normalized_question="跨订单与流量分析")
         assert outcome.plan.blocking_issues == ["订单表与流量表无关联路径"]
+
+
+class TestAssetResolvedCityBlocker:
+    @pytest.mark.asyncio
+    async def test_shop_side_city_filter_demotes_ambiguity_blocker(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        body = _plan_body(
+            metrics=[{"name": "pv", "caliber": "SUM(traffic_daily.pv)"}],
+            assets=[
+                {"asset": "traffic_daily", "join_key": None},
+                {"asset": "product", "join_key": "sku_id"},
+                {"asset": "shop", "join_key": "shop_id"},
+            ],
+            filters=["shop.city = '南京市'"],
+            output_columns=["sku_id", "pv"],
+            blocking_issues=["“南京市的店铺”城市概念存在歧义：order_paid.receiver_city 与 shop.city"],
+        )
+        engine, _, _ = _engine({"plan": [body]}, runtime, clock)
+        outcome = await engine.plan_for(_ctx(), normalized_question="南京市店铺各 SKU 浏览量合计")
+        assert outcome.plan.blocking_issues == []
+
+    @pytest.mark.asyncio
+    async def test_order_paid_city_ambiguity_is_preserved(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        body = _plan_body(
+            metrics=[{"name": "gmv", "caliber": "SUM(pay_amount)"}],
+            assets=[{"asset": "order_paid", "join_key": None}],
+            filters=["order_paid.receiver_city = '杭州市'"],
+            output_columns=["gmv"],
+            blocking_issues=["“杭州市”城市概念存在歧义：order_paid.receiver_city 与 shop.city"],
+        )
+        engine, _, _ = _engine({"plan": [body]}, runtime, clock)
+        outcome = await engine.plan_for(_ctx(), normalized_question="杭州市 GMV")
+        assert outcome.plan.blocking_issues == ["“杭州市”城市概念存在歧义：order_paid.receiver_city 与 shop.city"]
