@@ -1,0 +1,204 @@
+{
+  "source": "eval/results_r58e_full166_merged.json",
+  "git_rev": "89a48ce",
+  "git_dirty": false,
+  "g2": {
+    "n": 10,
+    "terminal": {
+      "complete": 9,
+      "error": 1
+    },
+    "tokens": 269393,
+    "price_guess": 0.736887,
+    "equivalent": 9
+  },
+  "g5": {
+    "n": 148,
+    "terminal": {
+      "complete": 93,
+      "error": 13,
+      "refuse": 27,
+      "clarify": 15
+    },
+    "tokens": 3077378,
+    "price_guess": 8.969213,
+    "equivalent": 29
+  },
+  "clarify": {
+    "n": 18,
+    "terminal": {
+      "error": 13,
+      "clarify": 4,
+      "complete": 1
+    },
+    "tokens": 114065,
+    "price_guess": 0.091692,
+    "equivalent": 0
+  },
+  "g5_refuse": {
+    "correct_refused": 24,
+    "total": 24
+  },
+  "g5_over_refused": {
+    "count": 3,
+    "total": 124
+  },
+  "errors": [
+    {
+      "case_id": "E-VER-03",
+      "expected": "execute",
+      "task": "gen_sql",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "M-HIER-01",
+      "expected": "execute",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "H-STR-05",
+      "expected": "execute",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "H-STR-06",
+      "expected": "execute",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "H-MET-02",
+      "expected": "execute",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "H-MET-03",
+      "expected": "execute",
+      "task": "l4_score",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "X-STR-07",
+      "expected": "execute",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "X-ENUM-02",
+      "expected": "execute",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "M-IDX-01",
+      "expected": "execute",
+      "task": "gen_sql",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "M-IDX-02",
+      "expected": "execute",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "M-IDX-07",
+      "expected": "execute",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "M-IDX-09",
+      "expected": "execute",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "M-IDX-10",
+      "expected": "execute",
+      "task": "l4_score",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "C-CITY-01",
+      "expected": "clarify",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "C-CITY-03",
+      "expected": "clarify",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "C-CITY-04",
+      "expected": "clarify",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "C-GMV-01",
+      "expected": "clarify",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "C-GMV-02",
+      "expected": "clarify",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "C-GMV-04",
+      "expected": "clarify",
+      "task": "l4_score",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "C-RATE-01",
+      "expected": "clarify",
+      "task": "l4_score",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "C-RATE-02",
+      "expected": "clarify",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "C-REP-01",
+      "expected": "clarify",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "C-REP-02",
+      "expected": "clarify",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "C-UV-02",
+      "expected": "clarify",
+      "task": "l4_score",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "C-AOV-01",
+      "expected": "clarify",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    },
+    {
+      "case_id": "C-CAT-01",
+      "expected": "clarify",
+      "task": "normalize_intent",
+      "last_degrade_error": "LlmTimeout"
+    }
+  ]
+}
