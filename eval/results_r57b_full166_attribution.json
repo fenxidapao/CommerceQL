@@ -111,16 +111,17 @@
       "error": 5
     },
     "attribution_distribution": {
-      "unattributed": 7,
-      "time_semantics": 16,
-      "over_refusal": 9,
-      "gate_policy_gap": 40,
-      "field_binding": 11,
-      "schema_linking_miss": 2,
-      "sql_generation": 4,
       "ambiguity_not_clarified": 9,
+      "field_binding": 11,
+      "gate_policy_gap": 40,
+      "over_refusal": 9,
+      "schema_linking_miss": 2,
+      "security_leak": 1,
+      "sql_generation": 4,
       "terminal_shape_gap": 6,
-      "security_leak": 1
+      "time_semantics": 16,
+      "unattributed": 1,
+      "value_mapping": 6
     },
     "tokens_total": 3474451,
     "cost_cny_total": 10.398888,
@@ -21101,16 +21102,33 @@
   "git_rev": "518b6a0",
   "git_dirty": false,
   "attribution_recomputed": {
-    "code_rev": "e0cd546",
-    "rule": "enum:* knowledge tags classify non-equivalent complete as value_mapping",
-    "changed": [
-      "E-ENUM-06",
-      "E-ENUM-07",
-      "E-ENUM-08",
-      "E-ENUM-09",
-      "E-ENUM-10",
-      "M-ENUM-02",
-      "M-HIER-06"
-    ]
+    "rule": "summary recomputed from records only; records authoritative",
+    "n_records": 166,
+    "n_attributed": 105,
+    "before_summary": {
+      "unattributed": 7,
+      "time_semantics": 16,
+      "over_refusal": 9,
+      "gate_policy_gap": 40,
+      "field_binding": 11,
+      "schema_linking_miss": 2,
+      "sql_generation": 4,
+      "ambiguity_not_clarified": 9,
+      "terminal_shape_gap": 6,
+      "security_leak": 1
+    },
+    "after_summary": {
+      "ambiguity_not_clarified": 9,
+      "field_binding": 11,
+      "gate_policy_gap": 40,
+      "over_refusal": 9,
+      "schema_linking_miss": 2,
+      "security_leak": 1,
+      "sql_generation": 4,
+      "terminal_shape_gap": 6,
+      "time_semantics": 16,
+      "unattributed": 1,
+      "value_mapping": 6
+    }
   }
 }
