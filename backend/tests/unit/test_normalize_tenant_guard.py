@@ -135,12 +135,13 @@ async def test_own_or_absent_code_does_not_refuse(
     assert update["normalized_question"] == expected
 
 
-async def test_foreign_tenant_code_preserved_is_left_for_plan(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_foreign_tenant_code_preserved_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
     _patch(monkeypatch, "T_B 租户这个月卖了多少？")
     update = await normalize_node.normalize({"raw_question": "T_B 租户这个月卖了多少？"})
 
-    assert "terminal" not in update
-    assert update["normalized_question"] == "T_B 租户这个月卖了多少？"
+    assert update["terminal"]["event"] == "refuse"
+    assert update["terminal"]["reason"] == RefuseReason.OUT_OF_SCOPE.value
+    assert update["intent_detail"]["reason_code"] == "unauthorized_scope"
 
 _BUNDLE = Path(__file__).resolve().parents[3] / "semantic" / "bundle_2026.09.14.1.yaml"
 

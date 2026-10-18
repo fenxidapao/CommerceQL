@@ -48,7 +48,7 @@ def test_external_and_other_scope_terms_are_refused() -> None:
 
     competitor = preflight_refusal(
         "竞品的销量是多少？",
-        {"reason_code": "ambiguous_competitor_and_metric"},
+        {"reason_code": "unmapped_metric_and_scope"},
         ("竞品", "销量"),
         semantics,
     )

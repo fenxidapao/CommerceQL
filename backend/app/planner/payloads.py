@@ -91,7 +91,7 @@ __all__ = [
     "sanitize_few_shots",
     "sanitize_history",
     "strip_tenant_self_reference",
-    "detect_foreign_tenant_rewrite",
+    "detect_foreign_tenant_code",
     "summary_gaps",
 ]
 
@@ -197,22 +197,11 @@ def strip_tenant_self_reference(text: str, tenant_id: str) -> str:
 _FOREIGN_TENANT_CODE_RE: Final[re.Pattern[str]] = re.compile(r"\bT_[A-Za-z0-9_]+\b")
 
 
-def detect_foreign_tenant_rewrite(
-    raw_question: str, normalized_question: str, tenant_id: str
-) -> str | None:
-    """返回 raw 中存在、但 normalized 已丢失/改写的**非本租户**代号。
-
-    只在“原始问题里确实有其它租户代号”且“归一化文本不再保留该代号”时触发。
-    本租户代号被确定性剥离、其它租户代号原样保留，都不触发。
-    """
-    raw_codes = [m.group(0) for m in _FOREIGN_TENANT_CODE_RE.finditer(raw_question)]
-    if not raw_codes:
-        return None
-    normalized_codes = {
-        m.group(0) for m in _FOREIGN_TENANT_CODE_RE.finditer(normalized_question)
-    }
-    for code in raw_codes:
-        if code != tenant_id and code not in normalized_codes:
+def detect_foreign_tenant_code(raw_question: str, tenant_id: str) -> str | None:
+    """返回 raw 中出现的**非本租户**代号；命中即应拒绝。"""
+    for match in _FOREIGN_TENANT_CODE_RE.finditer(raw_question):
+        code = match.group(0)
+        if code != tenant_id:
             return code
     return None
 

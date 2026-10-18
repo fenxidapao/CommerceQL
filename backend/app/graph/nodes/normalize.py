@@ -62,7 +62,7 @@ from app.graph.nodes._shared import (
 from app.graph.state import GraphState
 from app.llm.errors import LlmError
 from app.planner.errors import PlannerError
-from app.planner.payloads import detect_foreign_tenant_rewrite, strip_tenant_self_reference
+from app.planner.payloads import detect_foreign_tenant_code, strip_tenant_self_reference
 from app.planner.request_policy import preflight_refusal
 from app.planner.schemas import IntentKind
 
@@ -123,9 +123,8 @@ async def normalize(state: GraphState) -> dict[str, Any]:
     update: dict[str, Any] = dict(outcome.state_payload())
     # 🔴 W58 P0：raw 中出现非本租户代号，但 LLM 把它改写/删掉时，
     # 不得让下游以为这是本租户自指而继续出数。这里做成确定性 fail-closed。
-    foreign_code = detect_foreign_tenant_rewrite(
+    foreign_code = detect_foreign_tenant_code(
         str(state.get("raw_question") or ""),
-        str(update.get("normalized_question") or ""),
         identity.tenant_id,
     )
     if foreign_code is not None:

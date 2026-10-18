@@ -32,6 +32,12 @@ _SENSITIVE_KEYWORDS: Final[dict[str, tuple[str, ...]]] = {
     "pii_phone": ("手机号", "手机", "电话"),
     "internal_cost": ("成本", "成本价", "毛利"),
 }
+_EXTERNAL_DATA_PHRASES: Final[tuple[str, ...]] = (
+    "竞品",
+    "竞争对手",
+    "竞店",
+    "同行",
+)
 _OTHER_SCOPE_PHRASES: Final[tuple[str, ...]] = (
     "隔壁店铺",
     "其他店铺",
@@ -88,7 +94,11 @@ def preflight_refusal(
                 )
 
     # 3) 外部竞品/没有对应指标：产品边界是“不回答”，不是“再问一轮”。
-    if "competitor" in lowered or reason_code == "unmapped_metric":
+    if (
+        any(phrase in question for phrase in _EXTERNAL_DATA_PHRASES)
+        or "competitor" in lowered
+        or reason_code == "unmapped_metric"
+    ):
         return PreflightRefusal(
             RefuseReason.NO_DATA_ASSET,
             "no_data_asset",
