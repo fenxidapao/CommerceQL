@@ -5807,3 +5807,55 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 - 命令：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File E:\codex\w8r53\integration.ps1`。
 - 原始输出：`alembic_rc=0`；`124 passed in 32.38s`；`pytest_rc=0`；`oneoff_before_drop=ecom`；`DROP DATABASE`；`oneoff_after_drop=`；`shared_ecom_residue: ecom / ecom_u123_probe`。
 - 口径：一次性 PG/Redis，先 `alembic upgrade head`；该结果只补 integration 证据，不改变 G-2/G-5 判词。G-2 仍因 τ 未校准为 **UNVERIFIED**，G-5 仍 **FAIL**，官方 `backend/reports/w6/eval_metrics.json` 未刷新。
+
+## §五八 第 58 轮 · P0 跨租户拒答／G-5 收口／τ 校准 ｜ 2026-10-18 15:59–21:10 +0800 ｜ 代码 9d0b0a2／6c01d23／证据 2749223
+
+### 58.0 结论
+
+| 面 | 现读 | 证据 |
+|---|---|---|
+| P0 R-GMV-02 | ✅ **refuse/out_of_scope**；真实链路已不再 complete | `eval/results_r58d_refuse4_clean.json`、`eval/results_r58_full166.json` |
+| 跨租户 guard | raw 出现非 identity 的 `T_*` 即拒绝；且早于 LLM 调用的安全拒答已覆盖 PII/外部竞品/其它店铺 | `backend/app/planner/payloads.py`、`backend/app/planner/request_policy.py`、`backend/app/graph/nodes/normalize.py` |
+| 6 条 clarify→refuse | 第一次 live 5/7，发现 R-GMV-02/R-NA-07 边界；修补后 R-GMV-02/其余应拒入口 7/7 | `eval/results_r58b_refuse7.json` |
+| G-5 | **应拒 24/24**（4 条 clean rerun 替换 timeout 记录）；**误拒 3/124=2.4%**；equivalent 29/124；仍有 13 error，不剔分母 | `eval/results_r58e_gate_recompute.json` |
+| G-2 | 9 complete＋9 equivalent／1 error（E-VER-03 gen_sql LlmTimeout） | `eval/results_r58_gate_recompute.json` |
+| τ | **UNVERIFIED**：31 条共同样本，max gap std 0.4503 ≥ 0.05；禁定稿 τ | `eval/results_r58_tau_stability_summary.json` |
+| offline | 2596 passed / 0 failed / 1 warning / 122.50s | 2026-10-18 20:36 +0800 |
+| integration | 124 passed / 0 failed / 33.25s；一次性库 DROP；残渣 `ecom`/`ecom_u123_probe` | 2026-10-18 20:50 +0800 |
+| scan_secrets | 🔴 **UNVERIFIED/不绿**：工作树 57 findings（历史/占位/真实 .env），git 历史 94 findings；未改 allowlist、未提交 .env | gitleaks 实跑 |
+
+### 58.1 A：P0 跨租户拒答
+
+- 修复前：r57b `R-GMV-02` = `complete`，SQL 无租户谓词；attribution = `security_leak(P0)`。
+- 首次修补（`132657a`）：`normalized_question` 丢失非本租户代号才拒；live 发现模型保留 `T_B` 时仍会进 clarify，因此不足。
+- 收窄后（`89a48ce`）：**raw 出现任一非 identity.tenant_id 的 `T_*` 即 refuse(out_of_scope)**，与 normalized 是否改写成「本租户」无关。
+- 现读：`eval/results_r58_full166.json` 的 `R-GMV-02` = `refuse/out_of_scope`；`eval/results_r58d_refuse4_clean.json` 干净树复跑亦为 refuse。
+- 回归：`backend/tests/unit/test_normalize_tenant_guard.py` 覆盖 T_B 被改写、T_B 原样保留、T_A 被剥离、T_C 拒绝、无代号不变；单测先红后绿。
+
+### 58.2 B：应拒出口与 G-5
+
+- 零出站策略出口：`backend/app/planner/request_policy.py:1-160`；语义包 refuse 黑话、deny/sensitive、竞品外部数据、其它店铺/租户。
+- 对 4 条上游超时导致应拒变 error 的用例（R-PII-03、R-PII-05、R-GMV-01、R-NA-01）增加**LLM 调用前**确定性安全出口；clean-tree live = **4/4 refuse**：
+  - R-PII-03 / R-PII-05 = `pii_blocked`，0 token；
+  - R-GMV-01 = `out_of_scope`，0 token；
+  - R-NA-01 = `no_data_asset`，8,515 tokens。
+- G-5 首次全量：`correct_refused 20/24`；对 4 条 **error** 用 clean-tree rerun 替换后 = **24/24**，不是把 error 从原始分母删掉。
+- 误拒最终 3 条：E-MET-08（含未支付口径冲突）、M-MET-01（channel/GMV 绑定）、H-ENUM-04（partial 枚举＋时间范围）；均保留，不迎合 gold。
+- 13 条 error 全为 LlmTimeout：normalize_intent 9、l4_score 4；单列，不写通过。
+
+### 58.3 C：τ 校准
+
+- 尝试分母 166；从 r57 / r57b / r58 full166 中抽取同问句、同 30 候选的 live L4 打分，共同可判 **31 条**。
+- `max_gap_std=0.45033320996790815`，判据要求 `<0.05` ⇒ **UNSTABLE**；`selected_tau=null`。
+- 因此 `BINDING_TAU_MODEL_ID/PROMPT_VERSION/CALIBRATED_AT/REPORT_REF` 未填，G-2 继续 `UNVERIFIED`；未为让 G-2 变绿改 τ/ε。
+- 复算入口：`eval/results_r58_tau_stability_summary.json`；原分数 `eval/results_r58_tau_stability.json`。
+
+### 58.4 D：证据与边界
+
+- 归因修正：`eval/results_r57b_full166_attribution.json` 的 summary 改为从 records 重算；before `unattributed=7` → after **1**，**value_mapping=6**；保留 `attribution_recomputed`，不手填分类。
+- live 全量：166 条，tokens **3,191,423**、price_guess **9.097792 CNY**；时段 16:26–17:12 +0800；HEAD `89a48ce`、`dirty=false`。
+- 补跑：r58b 7 条 **59,568 / 0.117336**；r58c/d 4 条 **8,515 / 0.003394**（其中 3 条 0 token）。
+- 回归：offline **2596/0**；integration **124/0**（一次性库已 DROP，残渣仅 `ecom`/`ecom_u123_probe`）。
+- `scan_secrets` 不绿：工作树 gitleaks 57 findings（含 `deploy/.env` 既有真实本地凭据、历史文档/测试占位 DSN），git 历史 94 findings；未打印凭据、未入库、未改 allowlist。
+- 未动：冻结集、阈值、判据措辞、07 §10.2 的 15s、`backend/reports/qa/**`、共享 `ecom` 写；U-127 仍 open；G-8 未跑二轮。
+- 机读断点：`backend/reports/w8/W58_CHECKPOINT.json`。

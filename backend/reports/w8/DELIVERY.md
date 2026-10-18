@@ -724,3 +724,13 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **C**：G-2 `10/10 equivalent`（`264,615 tok / 0.868998`）；G-5 148 `17/24` 应拒、误拒 `9/124=7.3%`、equiv 35/124（`3,180,216 / 9.488419`）⇒ **G-5 FAIL**；clarify 18 `9/6/2/1`（`294,235 / 0.910469`）。
 - **门禁**：G-2 measured 8/8 但 τ 未校准 ⇒ UNVERIFIED；G-5 FAIL；G-8 UNVERIFIED；官方 json 未刷新。
 - **回归**：最终 offline `2576/0`（HEAD `ce76f1b`，14:10–14:12 +0800）；W57 收口补跑 integration `124/0`（2026-10-18 14:08–14:10 +0800，HEAD `ce76f1b`/被测代码 `e0cd546`，一次性 PG/Redis，DROP 后残渣仅 `ecom`/`ecom_u123_probe`）；未改阈值/判据/15s/语义包/gold/QA/共享 ecom；U-127 open。
+
+## 第 58 轮交付（P0 跨租户拒答／G-5 收口／τ 校准 ｜ 代码 `9d0b0a2`／`6c01d23`／证据 `2749223` ｜ 2026-10-18 15:59–21:10 +0800）
+
+- **A**：R-GMV-02 修复前 `complete/security_leak`；修复后两次实跑均为 `refuse/out_of_scope`。根因是租户代号自指提示与 normalize 后处理；现改为 raw 中非 identity 的 `T_*` 直接拒绝，并保留 T_A 剥离路径。
+- **应拒出口**：新增零出站 request policy；6 条 clarify／1 条 complete 出口清点后，7/7 应拒回归通过。4 条上游超时触发的应拒 error 增加 pre-LLM 安全出口，干净树 4/4 refuse。
+- **G-5**：完整 148；原始 `correct_refused 20/24`、误拒 `3/124=2.4%`、equiv `29/124`、error 17；以 4 条 clean rerun 替换对应 timeout 记录后 `24/24` 应拒，13 error 仍单列。**G-5 不写通过**（13 error 仍存）。
+- **G-2**：9 complete/9 equivalent/1 timeout，**UNVERIFIED**。τ 校准共同 31 条，`max_gap_std=0.450333` ≥ 0.05 ⇒ UNSTABLE，`selected_tau=null`，未改动 τ/ε 或 `BINDING_TAU_*`。
+- **证据**：full166 `tokens=3,191,423`、`price_guess=9.097792`；r58b `59,568/0.117336`；r58c/d `8,515/0.003394`。全量 HEAD `89a48ce/dirty=false`，补跑 clean HEAD `6c01d23/dirty=false`。
+- **回归**：offline `2596/0`；integration `124/0`（一次性 PG/Redis，DROP 后残渣仅 `ecom`/`ecom_u123_probe`）。
+- **边界**：归因 summary 已按 records 重算（`unattributed 7→1`、`value_mapping=6`）；`scan_secrets` ❌ 不绿（工作树 57、git 历史 94 个历史/占位/本地 `.env` finding，未打印凭据、未改 allowlist）；未改冻结集/阈值/判据/15s/QA，未写共享 ecom；U-127 open，G-8 未跑。

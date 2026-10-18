@@ -1,0 +1,60 @@
+{
+  "code_revisions": {
+    "pre_llm_refusal": "9d0b0a2",
+    "attribution_fix": "6c01d23",
+    "evidence": "2749223"
+  },
+  "p0": {
+    "status": "fixed-observed",
+    "case": "R-GMV-02",
+    "terminal": "refuse",
+    "reason": "out_of_scope",
+    "clean_evidence": "eval/results_r58d_refuse4_clean.json",
+    "note": "cross-tenant code now refused before/after normalize; four timeout-prone refusal cases rerun clean-tree 4/4 refuse"
+  },
+  "g5": {
+    "source_full166": "eval/results_r58_full166.json",
+    "merged_source": "eval/results_r58e_full166_merged.json",
+    "correct_refused": "24/24",
+    "over_refused": "3/124",
+    "over_refused_cases": [
+      "E-MET-08",
+      "M-MET-01",
+      "H-ENUM-04"
+    ],
+    "equivalent": "29/124",
+    "errors_after_replacement": "13/148",
+    "note": "correct-refused 24/24 uses 4 clean rerun substitutions for timeout failures; full166 was not rerun wholesale"
+  },
+  "g2": {
+    "equivalent": "9/10",
+    "error_cases": [
+      "E-VER-03"
+    ],
+    "verdict": "UNVERIFIED",
+    "reason": "tau not finalized"
+  },
+  "tau": {
+    "status": "UNVERIFIED",
+    "common_cases": 31,
+    "max_gap_std": 0.45033320996790815,
+    "required_std_lt": 0.05,
+    "selected_tau": null,
+    "evidence": "eval/results_r58_tau_stability_summary.json",
+    "reason": "no n>=3 same-scorer clean stability set; scan-only result is unstable"
+  },
+  "regressions": {
+    "offline": "2596 passed / 0 failed / 1 warning / 122.50s",
+    "integration": "124 passed / 0 failed / 33.25s; one-off DROP; residue ecom/ecom_u123_probe",
+    "scan_secrets": "UNVERIFIED",
+    "scan_note": "working-tree gitleaks found 57 historical/placeholder DSN findings; git-history scan found 94; not a green scan"
+  },
+  "boundaries": {
+    "reports_qa_untouched": true,
+    "frozen_set_untouched": true,
+    "thresholds_untouched": true,
+    "timeout_15s_untouched": true,
+    "shared_ecom_written": false,
+    "u127": "open"
+  }
+}
