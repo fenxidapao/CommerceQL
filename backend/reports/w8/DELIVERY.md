@@ -734,3 +734,14 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **证据**：full166 `tokens=3,191,423`、`price_guess=9.097792`；r58b `59,568/0.117336`；r58c/d `8,515/0.003394`。全量 HEAD `89a48ce/dirty=false`，补跑 clean HEAD `6c01d23/dirty=false`。
 - **回归**：offline `2596/0`；integration `124/0`（一次性 PG/Redis，DROP 后残渣仅 `ecom`/`ecom_u123_probe`）。
 - **边界**：归因 summary 已按 records 重算（`unattributed 7→1`、`value_mapping=6`）；`scan_secrets` ❌ 不绿（工作树 57、git 历史 94 个历史/占位/本地 `.env` finding，未打印凭据、未改 allowlist）；未改冻结集/阈值/判据/15s/QA，未写共享 ecom；U-127 open，G-8 未跑。
+
+## 第 59 轮交付（P0 前置化／超时尾部／G-5 口径／τ schema 审计／secrets 分面 ｜ 代码 `2bac27d` ｜ 2026-10-19 00:01–02:00 +0800）
+
+- **P0**：T_B under T_A 在 normalize 的 **LLM 调用前**直接 refuse(out_of_scope)，永久 timeout stub 下 planner 调用数 = 0、0 token；T_A under T_A / T_B under T_B / 无代号保持原路径，timeout 正常上抛。17 条 tenant guard 单测通过。
+- **超时**：30 error 全为 LlmTimeout；execute 13、clarify 13、refuse 4；节点分布 normalize_intent 19、l4_score 5、gen_sql 2、plan 1；节点耗时集中 15,006–15,023ms，成功 p95 normalize 12,682 / plan 10,529 / gen_sql 7,985ms。逐条输入输出/candidate 数因结果件与 cassette 无一一绑定，标为聚合证据，不伪造精确归因。
+- **G-5**：保留原尺 `20/24` 与 merged `24/24` 两把尺；原始 error 17/148，clean rerun 后仍 13/148；execute error 13/124、clarify error 13/18 单列为判据盲点，未改门禁。
+- **3 误拒**：E-MET-08 判为 gold/语义包“含未支付”口径冲突；M-MET-01 判为 channel 绑定歧义/缺声明；H-ENUM-04 同文 H-ENUM-01 完成、H-ENUM-04 在 bind 后 refuse，登记为应用 enum/binding 缺口，均未改 gold/代码迎合。
+- **τ**：raw 31×3 只有分数数组，缺 candidate_ids/顺序与 gold_candidate_id，`can_form_score_sample=false`；未调用 calibrate 选 τ，`BINDING_TAU_*` 未改，G-2 继续 UNVERIFIED。
+- **等价审计**：64 条 complete 非等价；首版静态分类器被复核推翻（LIMIT 关键字不能证明截断），因此六类账**UNVERIFIED**，不引用错误计数、不升格 equivalent、不改规则。
+- **secrets**：worktree 57、当前提交树 51、git 历史 94 三把尺分开；worktree 分类和 fingerprint baseline/diff-scoped 方案已落证据；未打印、未提交 secrets、未放宽 allowlist，scan 不绿。
+- **回归**：W59 代码目标测试 17/0；W58 旧代码 offline 2596/0、integration 124/0；本轮 live G-2/G-5 未复跑、终版 integration/offline 未复跑，均写 UNVERIFIED；官方门禁未刷新，U-127 open，G-8 未跑。

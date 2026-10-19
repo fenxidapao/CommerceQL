@@ -1,0 +1,509 @@
+{
+  "source": "eval/results_r58_full166.json",
+  "git_rev_caveat": "artifact git_rev=89a48ce; source corrected by current HEAD 3d6f7ab is not claimed as artifact revision",
+  "errors_total": 30,
+  "execute_errors": 13,
+  "clarify_errors": 13,
+  "execute_error_rate": "13/124",
+  "clarify_error_rate": "13/18",
+  "rows": [
+    {
+      "case_id": "E-VER-03",
+      "expected": "execute",
+      "node": "gen_sql",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 3874,
+        "linking": 0,
+        "plan": 4173,
+        "gen_sql": 15010,
+        "total": 28466
+      },
+      "tokens": {
+        "input": 17912,
+        "output": 1287,
+        "cache_hit": 0,
+        "total": 19317
+      }
+    },
+    {
+      "case_id": "M-HIER-01",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15010,
+        "total": 15011
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "H-STR-05",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15018,
+        "total": 15019
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "H-STR-06",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15008,
+        "total": 15009
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "H-MET-02",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15022,
+        "total": 15023
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "H-MET-03",
+      "expected": "execute",
+      "node": "l4_score",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 13711,
+        "linking": 0,
+        "plan": 2709,
+        "total": 31434
+      },
+      "tokens": {
+        "input": 17007,
+        "output": 393,
+        "cache_hit": 14592,
+        "total": 17400
+      }
+    },
+    {
+      "case_id": "X-STR-07",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15011,
+        "total": 15012
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "X-ENUM-02",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15011,
+        "total": 15012
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "M-IDX-01",
+      "expected": "execute",
+      "node": "gen_sql",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 5228,
+        "linking": 0,
+        "plan": 14542,
+        "gen_sql": 15013,
+        "total": 39533
+      },
+      "tokens": {
+        "input": 17936,
+        "output": 1299,
+        "cache_hit": 896,
+        "total": 19353
+      }
+    },
+    {
+      "case_id": "M-IDX-02",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15017,
+        "total": 15018
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "M-IDX-07",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15018,
+        "total": 15020
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "M-IDX-09",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15020,
+        "total": 15021
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "M-IDX-10",
+      "expected": "execute",
+      "node": "l4_score",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 1846,
+        "linking": 1,
+        "plan": 3035,
+        "total": 19902
+      },
+      "tokens": {
+        "input": 16998,
+        "output": 353,
+        "cache_hit": 16384,
+        "total": 17351
+      }
+    },
+    {
+      "case_id": "C-CITY-01",
+      "expected": "clarify",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15022,
+        "total": 15023
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "C-CITY-03",
+      "expected": "clarify",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15021,
+        "total": 15021
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "C-CITY-04",
+      "expected": "clarify",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15012,
+        "total": 15013
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "C-GMV-01",
+      "expected": "clarify",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15021,
+        "total": 15022
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "C-GMV-02",
+      "expected": "clarify",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15017,
+        "total": 15018
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "C-GMV-04",
+      "expected": "clarify",
+      "node": "l4_score",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 1966,
+        "linking": 0,
+        "plan": 3438,
+        "total": 20426
+      },
+      "tokens": {
+        "input": 16975,
+        "output": 435,
+        "cache_hit": 16512,
+        "total": 17410
+      }
+    },
+    {
+      "case_id": "C-RATE-01",
+      "expected": "clarify",
+      "node": "l4_score",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 1979,
+        "linking": 0,
+        "plan": 2770,
+        "total": 19772
+      },
+      "tokens": {
+        "input": 16965,
+        "output": 305,
+        "cache_hit": 16512,
+        "total": 17270
+      }
+    },
+    {
+      "case_id": "C-RATE-02",
+      "expected": "clarify",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15018,
+        "total": 15019
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "C-REP-01",
+      "expected": "clarify",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15018,
+        "total": 15020
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "C-REP-02",
+      "expected": "clarify",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15006,
+        "total": 15007
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "C-UV-02",
+      "expected": "clarify",
+      "node": "l4_score",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 2183,
+        "linking": 0,
+        "plan": 2947,
+        "total": 20142
+      },
+      "tokens": {
+        "input": 16969,
+        "output": 263,
+        "cache_hit": 16512,
+        "total": 17232
+      }
+    },
+    {
+      "case_id": "C-AOV-01",
+      "expected": "clarify",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15014,
+        "total": 15015
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "C-CAT-01",
+      "expected": "clarify",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15021,
+        "total": 15021
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "R-PII-03",
+      "expected": "refuse",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15018,
+        "total": 15019
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "R-PII-05",
+      "expected": "refuse",
+      "node": "plan",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 4012,
+        "linking": 0,
+        "plan": 15021,
+        "total": 19035
+      },
+      "tokens": {
+        "input": 8356,
+        "output": 80,
+        "cache_hit": 0,
+        "total": 8495
+      }
+    },
+    {
+      "case_id": "R-GMV-01",
+      "expected": "refuse",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15015,
+        "total": 15016
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    },
+    {
+      "case_id": "R-NA-01",
+      "expected": "refuse",
+      "node": "normalize_intent",
+      "kind": "LlmTimeout",
+      "latency_ms": {
+        "normalize": 15020,
+        "total": 15021
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      }
+    }
+  ]
+}

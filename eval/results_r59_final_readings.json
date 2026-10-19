@@ -1,0 +1,35 @@
+{
+  "execute": {
+    "denominator": 124,
+    "error": 13,
+    "rate": 0.1048,
+    "nodes": {
+      "gen_sql": 2,
+      "normalize_intent": 9,
+      "l4_score": 2
+    }
+  },
+  "refuse": {
+    "denominator": 24,
+    "error": 4,
+    "rate": 0.1667,
+    "nodes": {
+      "normalize_intent": 3,
+      "plan": 1
+    }
+  },
+  "clarify": {
+    "denominator": 18,
+    "error": 13,
+    "rate": 0.7222,
+    "nodes": {
+      "normalize_intent": 10,
+      "l4_score": 3
+    }
+  },
+  "secret_scales": {
+    "worktree": 57,
+    "committed_tree": 51,
+    "git_history": 94
+  }
+}

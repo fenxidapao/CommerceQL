@@ -5859,3 +5859,71 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 - `scan_secrets` 不绿：工作树 gitleaks 57 findings（含 `deploy/.env` 既有真实本地凭据、历史文档/测试占位 DSN），git 历史 94 findings；未打印凭据、未入库、未改 allowlist。
 - 未动：冻结集、阈值、判据措辞、07 §10.2 的 15s、`backend/reports/qa/**`、共享 `ecom` 写；U-127 仍 open；G-8 未跑二轮。
 - 机读断点：`backend/reports/w8/W58_CHECKPOINT.json`。
+
+## §五九 第 59 轮 · P0 前置化／超时尾部／G-5 口径／τ schema 审计／secrets 分面 ｜ 2026-10-19 00:01–02:00 +0800 ｜ 代码 2bac27d／证据待绑定
+
+### 59.0 结论
+
+| 面 | 现读 | 证据 |
+|---|---|---|
+| P0 前置化 | ✅ 已修：raw 中非 identity 的 `T_*` 在 LLM 前直接 refuse(out_of_scope)，0 LLM、0 token | `backend/app/graph/nodes/normalize.py:83-104`、`backend/tests/unit/test_normalize_tenant_guard.py:151-190` |
+| 超时尾部 | 🔴 30 error 全为 LlmTimeout；execute 13、clarify 13、refuse 4；normalize 19、l4_score 5、gen_sql 2、plan 1（refuse 集）/ execute 9/2/2 | `eval/results_r59_error_rate.json`、`eval/results_r59_final_readings.json`、`eval/results_r59_timeout_tail_table.json` |
+| G-5 原始尺 | `correct_refused 20/24`、误拒 `3/124`、equiv `29/124`；clean rerun 合并后才 `24/24` | `eval/results_r59_raw_gate.json`、`eval/results_r58e_gate_recompute.json` |
+| G-5 可用性盲点 | execute error `13/124=10.48%`，clarify error `13/18=72.22%`；不自行改门禁 | `eval/results_r59_error_rate.json` |
+| 3 条误拒 | E-MET-08 gold/语义包无“含未支付”口径；M-MET-01 channel 绑定歧义；H-ENUM-04 同文 H-ENUM-01 complete、H-ENUM-04 在 bind 后 refuse，属应用映射缺口 | `eval/results_r59_over_refusal_contract.json`、`eval/results_r59_over_refusal_evidence.json` |
+| τ | ❌ 不可校准：31 条 raw 仅存 30 分数、缺 candidate_ids 顺序与 gold_candidate_id；`can_form_score_sample=false`，未填 τ/ε | `eval/results_r59_tau_schema_audit.json` |
+| 等价差异 | 64 条 complete 非等价；本窗口静态分类器**不可信**（LIMIT 关键字≠截断），没有完成六类逐条审计，标 UNVERIFIED | `eval/results_r59_equiv_audited.json`（原始分类仅作失败样，不引用其计数为结论） |
+| secrets | 三把尺分开：worktree 57、当前提交树 51、git 历史 94；worktree 分类：测试/bootstrap 28、历史报告 11、source 8、local ignored secret 6、dev placeholder 2、误报 2 | `eval/results_r59_secret_scan_summary.json`、`.w8r59-*.json` |
+
+### 59.1 A：跨租户拒绝前移（代码 2bac27d）
+
+- 断点前状态：`detect_foreign_tenant_code` 位于 normalize LLM 调用之后；若 normalize 超时，T_B under T_A 仍会 error。现读代码把判断前移到 `history` 之后、`raw_preflight_refusal` 与 `planner.understand()` 之前。
+- 判据：raw_question 中出现任一 `T_*` 且 != `identity.tenant_id` ⇒ `refuse(out_of_scope)`；T_A under T_A 走本租户剥离；T_B under T_B 正常；无代号不变。
+- TDD 原始失败：使用永久 `TimeoutError` stub，修复前 T_B under T_A 仍进入 LLM 并抛 timeout；修复后该支路 `planner.calls=0`、终态 `refuse/out_of_scope`；其余三支仍进入 LLM 并保持 `TimeoutError` 向上传播（不折成产品拒答）。
+- 测试：`backend/tests/unit/test_normalize_tenant_guard.py::test_foreign_tenant_scope_is_decided_before_llm`；实跑 **17 passed**。
+- live 复算（2026-10-19 10:28 +0800，HEAD `2bac27d`，`dirty=true`；脏项是未提交的 W59 证据/报告，不是 `backend/**`）：`R-GMV-02` = `refuse/out_of_scope`，`tokens=0`、`price_guess=0`、`wall_s=0.007`，产物 `eval/results_r59_rgmv02_zero_token.json`；该件 `dirty=true`（未提交证据造成），**不能作为干净树证据**；W58 的 8,497 tokens 不再代表当前路径。
+
+### 59.2 B：超时尾部（零出站）
+
+- 总分母：30 条 error；其中 execute 13（normalize_intent 9、l4_score 2、gen_sql 2）、clarify 13（normalize_intent 10、l4_score 3）、refuse 4（normalize_intent 2、plan 1、? 1；按 W58 明细逐条见 `results_r59_timeout_tail_table.json`）。
+- 节点：所有 30 条 `last_degrade_error=LlmTimeout`；normalize 侧样本的节点耗时集中在 15006–15023ms；`E-VER-03` gen_sql=15010ms；`M-IDX-01` plan=14542ms/gen_sql=15013ms；`R-PII-05` plan=15021ms。
+- 同批成功对照：normalize_intent p50 `2595ms` / p95 `12682ms` / max `14737ms`；plan p50 `3327` / p95 `10529` / max `13473`；gen_sql p50 `3459.5` / p95 `7985` / max `10142`。
+- 请求体聚合（cassette）：normalize_intent 20,091–20,427 bytes / 8,352–8,410 input tokens；plan 20,200–22,791 bytes / 8,276–8,606 tokens；l4_score 5,717–6,075 bytes / 974–1,030 input / 917–1,201 output；gen_sql 21,207–21,279 bytes / 8,536–8,623 tokens。
+- 但**不能**把上述聚合值强行分配给每一条 error：cassette 只有 144 个 normalize 任务，覆盖不到 166 条且存在同问句；结果 JSON 也不保留每条任务的输入/输出 token。故逐条精度只到节点/耗时/重试；输入输出与候选数标为聚合证据。`limitations` 已写进 JSON。
+- 分类：现有证据支持“硬顶附近的服务端首字节/整体响应超时”；`finish_reason=stop` 的成功样本没有截断；没有连接失败证据，也没有传输重试（全部 0）。结构化输出截断只在旧 L4 66 候选记录中出现，不是本轮 30 error 的直接证据。
+- 候选修复（未落地、未宣称解决）：减少 normalize/plan payload 的稳定前缀重复、把 L4 候选上限继续验算、连接复用/预热、对上游慢做可观测分类；不得重试硬超时或改 15s。
+
+### 59.3 C：G-5 与 3 条误拒
+
+- 原始 full166 仍保留：`correct_refused 20/24`、`over_refused 3/124`、`equivalent 29/124`、error `17/148`。`eval/results_r58e_full166_merged.json` 是“4 条 clean rerun 替换”后的 merged 尺，不能写成同一批全绿；merged 为 `24/24` 应拒、`3/124` 误拒、error 13/148。
+- 可用性：execute error 13/124；clarify error 13/18；两者均不进入 G-5 的“应拒/误拒”两个率，构成判据盲点，需总控决定是否另立项。
+- **E-MET-08**：gold `SELECT SUM(pay_amount) ... WHERE pay_status='unpaid'`；题面写“含未支付”，语义包没有“含未支付的付费金额”指标，plan 明确 blocking“口径冲突”。判定：**gold/语义包口径冲突**，不应直接改代码迎合 gold。
+- **M-MET-01**：gold 与题面是 `v_order_paid.channel`；语义包同时存在 `order_paid.channel` 与 `traffic_daily.channel`，计划生成器把两者判为同名异义且没有已登记 join，plan blocking。判定：**语义包缺明确 channel 归属/绑定**，非单纯应用错。
+- **H-ENUM-04**：同文 H-ENUM-01 在 W58 为 complete，H-ENUM-04 在 plan 后 bind 终态 refuse；plan 已接受 `refund_status='partial'`，说明不是 gold/enum 本身不可表达，而是重复题在不同运行中枚举/绑定路径不稳。判定：**应用侧 enum/binding 路径缺口**；先登记，未在本轮改代码。
+
+### 59.4 D：τ schema 审计
+
+- 现读 raw：31 cases × 3 runs，每 run 30 scores；但**没有 candidate_ids、候选顺序、gold_candidate_id**，也没有 calibration/holdout 分离声明。
+- 结论：`can_form_score_sample=false`。不能凭 30 个分数数组伪造 `ScoreSample`；未调用 `calibrate` 选 τ，未改 `BINDING_TAU_*`。
+- 必要输入：同一 `(model_id,prompt_version)`、同一候选 ID 集与顺序、每次原始分数、gold candidate（该澄清则 None）、calibration/holdout 分离。
+- 后续最小动作：从保留候选 ID 的 live/cassette 重跑 L4，或补录 cassette 元数据；在此之前 τ 继续 **UNVERIFIED**。
+
+### 59.5 E：等价差异审计
+
+- 首版启发式把 64 条分到 `extra_display_columns 37 / limit_truncation 17 / value_mapping 4 / sql_generation 6`，但复核发现 `LIMIT` 关键字与非空结果不能直接证明截断；该分类**撤回为不可判**，不得据此说某类已闭环。
+- 现读只保留静态原 SQL/gold 对照，不把任何行升格为 equivalent，也不改 gold/规则；进一步分类需按“列投影、谓词、时间、值映射、join/CTE、实际结果行数”逐条人工审计。
+
+### 59.6 F：secrets 三把尺
+
+- **worktree**：57 findings；规则分布 51 DSN、1 DeepSeek、3 generic、1 JWT、1 private key。分类：测试/bootstrap 28、历史报告 11、source placeholder 8、ignored local `.env`/pem 6、dev placeholder 2、prometheus 注释误报 2。
+- **当前提交树**：51 findings（worktree 57 减去 ignored/本地文件等 6 条）；未提交本地 `.env`、未打印任何 secret 内容。
+- **git 历史**：94 findings，跨 40 commits；规则为 90 DSN + 4 generic；历史证据不删除、不打印。
+- 方案：reviewed fingerprint baseline（rule+file+line+content digest）＋ diff-scoped scan；不做 broad path allowlist；风险是“同位置替换新密钥仍可能被 fingerprint 吞掉”，要求 fingerprint 复用必须人工复核。
+- 未改 `.gitleaks.toml`、未加宽 allowlist、未提交 secrets；scan 仍不绿。
+
+### 59.7 回归与边界
+
+- offline：`2596 passed / 0 failed / 1 warning / 122.50s`（W58 旧代码；本轮 2bac27d 尚未复跑全量）。
+- integration：`124 passed / 0 failed / 33.25s`（W58 旧代码；本轮 2bac27d 尚未复跑）。
+- 本轮 W59 代码测试：`17 passed`（tenant guard）；未把 W58 live 产物冒充 W59 live。
+- 未动：15s、阈值、判据、gold、语义包、冻结集、`reports/qa/**`、共享 ecom；U-127 open；G-8 未跑；官方门禁未刷新。

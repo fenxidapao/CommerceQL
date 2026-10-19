@@ -1,0 +1,45 @@
+{
+  "source": "eval/results_r58_full166.json",
+  "git_rev": "89a48ce",
+  "dirty": false,
+  "g2": {
+    "n": 10,
+    "terminal": {
+      "complete": 9,
+      "error": 1
+    },
+    "equivalent": 9,
+    "tokens": 269393,
+    "price_guess": 0.736887
+  },
+  "g5": {
+    "n": 148,
+    "terminal": {
+      "complete": 93,
+      "error": 17,
+      "refuse": 23,
+      "clarify": 15
+    },
+    "equivalent": 29,
+    "tokens": 3077358,
+    "price_guess": 9.0061
+  },
+  "clarify": {
+    "n": 18,
+    "terminal": {
+      "error": 13,
+      "clarify": 4,
+      "complete": 1
+    },
+    "equivalent": 0,
+    "tokens": 114065,
+    "price_guess": 0.091692
+  },
+  "correct_refused": 20,
+  "over_refused": 3,
+  "errors_by_expected": {
+    "execute": 13,
+    "clarify": 13,
+    "refuse": 4
+  }
+}

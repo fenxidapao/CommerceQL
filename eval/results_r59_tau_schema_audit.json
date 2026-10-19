@@ -1,0 +1,864 @@
+{
+  "source": "eval/results_r58_tau_stability.json",
+  "attempted": 166,
+  "common_cases": 31,
+  "runs": [
+    {
+      "case_id": "M-MET-10",
+      "run_index": 0,
+      "normalized_question": "一月起各 SKU 的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-MET-10",
+      "run_index": 1,
+      "normalized_question": "一月起各 SKU 的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-MET-10",
+      "run_index": 2,
+      "normalized_question": "一月起各 SKU 的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-MET-09",
+      "run_index": 0,
+      "normalized_question": "六月起各 SKU 的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-MET-09",
+      "run_index": 1,
+      "normalized_question": "六月起各 SKU 的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-MET-09",
+      "run_index": 2,
+      "normalized_question": "六月起各 SKU 的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-STR-09",
+      "run_index": 0,
+      "normalized_question": "各店铺的商品平均标价是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-STR-09",
+      "run_index": 1,
+      "normalized_question": "各店铺的商品平均标价是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-STR-09",
+      "run_index": 2,
+      "normalized_question": "各店铺的商品平均标价是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-ENUM-02",
+      "run_index": 0,
+      "normalized_question": "处于「全额退款」状态的订单在各店铺分别是多少笔？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-ENUM-02",
+      "run_index": 1,
+      "normalized_question": "处于「全额退款」状态的订单在各店铺分别是多少笔？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-ENUM-02",
+      "run_index": 2,
+      "normalized_question": "处于「全额退款」状态的订单在各店铺分别是多少笔（全额退款订单数，按店铺分组）",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-ENUM-03",
+      "run_index": 0,
+      "normalized_question": "无退款状态的订单在各店铺分别是多少笔？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-ENUM-03",
+      "run_index": 1,
+      "normalized_question": "处于「无退款」状态的订单在各店铺分别是多少笔？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-ENUM-03",
+      "run_index": 2,
+      "normalized_question": "处于「无退款」状态的订单在各店铺分别是多少笔？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-ENUM-04",
+      "run_index": 0,
+      "normalized_question": "处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-ENUM-04",
+      "run_index": 1,
+      "normalized_question": "处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-ENUM-04",
+      "run_index": 2,
+      "normalized_question": "处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-CAT-01",
+      "run_index": 0,
+      "normalized_question": "「3C数码」一级类目下各店铺的商品数分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-CAT-01",
+      "run_index": 1,
+      "normalized_question": "「3C数码」各店铺的商品数分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-CAT-01",
+      "run_index": 2,
+      "normalized_question": "「3C数码」各店铺的商品数分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-ENUM-01",
+      "run_index": 0,
+      "normalized_question": "「3C数码」商品在各店铺的浏览量合计是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-ENUM-01",
+      "run_index": 1,
+      "normalized_question": "3C数码类目商品在各店铺的浏览量合计是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-ENUM-01",
+      "run_index": 2,
+      "normalized_question": "「3C数码」商品在各店铺的浏览量合计是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-CAT-02",
+      "run_index": 0,
+      "normalized_question": "「家用电器」各店铺的商品数分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-CAT-02",
+      "run_index": 1,
+      "normalized_question": "「家用电器」各店铺的商品数分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-CAT-02",
+      "run_index": 2,
+      "normalized_question": "「家用电器」各店铺的商品数分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-CAT-03",
+      "run_index": 0,
+      "normalized_question": "服饰鞋包类目下各店铺的商品数分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-CAT-03",
+      "run_index": 1,
+      "normalized_question": "「服饰鞋包」各店铺的商品数分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-CAT-03",
+      "run_index": 2,
+      "normalized_question": "「服饰鞋包」类目下各店铺的商品数分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-ENUM-03",
+      "run_index": 0,
+      "normalized_question": "「服饰鞋包」商品在各店铺的浏览量合计是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-ENUM-03",
+      "run_index": 1,
+      "normalized_question": "「服饰鞋包」商品在各店铺的浏览量合计是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-ENUM-03",
+      "run_index": 2,
+      "normalized_question": "「服饰鞋包」商品在各店铺的浏览量合计是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-ENUM-07",
+      "run_index": 0,
+      "normalized_question": "「母婴玩具」商品在各店铺的浏览量（pv）合计是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-ENUM-07",
+      "run_index": 1,
+      "normalized_question": "「母婴玩具」商品在各店铺的浏览量合计是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-ENUM-07",
+      "run_index": 2,
+      "normalized_question": "「母婴玩具」商品在各店铺的浏览量合计是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-ENUM-08",
+      "run_index": 0,
+      "normalized_question": "「运动户外」商品在各店铺的浏览量合计是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-ENUM-08",
+      "run_index": 1,
+      "normalized_question": "「运动户外」商品在各店铺的浏览量（pv）合计是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-ENUM-08",
+      "run_index": 2,
+      "normalized_question": "「运动户外」商品在各店铺的浏览量合计是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-CAT-04",
+      "run_index": 0,
+      "normalized_question": "「食品生鲜」各店铺的商品数分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-CAT-04",
+      "run_index": 1,
+      "normalized_question": "食品生鲜类目下各店铺的商品数分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-CAT-04",
+      "run_index": 2,
+      "normalized_question": "「食品生鲜」一级类目下各店铺的商品数分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-09",
+      "run_index": 0,
+      "normalized_question": "各大区各店铺的GMV分别是多少？时间范围从2026-03-01起",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-09",
+      "run_index": 1,
+      "normalized_question": "自 2026-03-01 起各大区各店铺的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-09",
+      "run_index": 2,
+      "normalized_question": "自 2026-03-01 起各大区各店铺的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-09",
+      "run_index": 0,
+      "normalized_question": "自 2026-03-01 起各大区的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-09",
+      "run_index": 1,
+      "normalized_question": "自 2026-03-01 起各大区的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-09",
+      "run_index": 2,
+      "normalized_question": "自 2026-03-01 起各大区的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-08",
+      "run_index": 0,
+      "normalized_question": "自 2026-05-01 起各大区各店铺的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-08",
+      "run_index": 1,
+      "normalized_question": "自 2026-05-01 起，各大区、各店铺的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-08",
+      "run_index": 2,
+      "normalized_question": "自 2026-05-01 起各大区各店铺的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-08",
+      "run_index": 0,
+      "normalized_question": "自 2026-05-01 起各大区的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-08",
+      "run_index": 1,
+      "normalized_question": "自 2026-05-01 起各大区的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-08",
+      "run_index": 2,
+      "normalized_question": "自 2026-05-01 起各大区的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-07",
+      "run_index": 0,
+      "normalized_question": "自 2026-06-01 起各大区的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-07",
+      "run_index": 1,
+      "normalized_question": "自 2026-06-01 起各大区的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-07",
+      "run_index": 2,
+      "normalized_question": "自 2026-06-01 起各大区的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-06",
+      "run_index": 0,
+      "normalized_question": "自 2026-08-01 起各大区的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-06",
+      "run_index": 1,
+      "normalized_question": "自 2026-08-01 起各大区的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-06",
+      "run_index": 2,
+      "normalized_question": "自 2026-08-01 起各大区的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-10",
+      "run_index": 0,
+      "normalized_question": "自 2026-08-01 起有流量但零转化的 SKU 有哪些？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-10",
+      "run_index": 1,
+      "normalized_question": "自 2026-08-01 起有流量但零转化的 SKU 有哪些？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-10",
+      "run_index": 2,
+      "normalized_question": "自 2026-08-01 起有流量但零转化（支付转化率为 0）的 SKU 有哪些？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-IDX-01",
+      "run_index": 0,
+      "normalized_question": "自 2026-08-01 起的客单价是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-IDX-01",
+      "run_index": 1,
+      "normalized_question": "自 2026-08-01 起的客单价是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-IDX-01",
+      "run_index": 2,
+      "normalized_question": "自 2026-08-01 起的客单价是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-IDX-05",
+      "run_index": 0,
+      "normalized_question": "自 2026-08-01 起的退款率是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-IDX-05",
+      "run_index": 1,
+      "normalized_question": "自 2026-08-01 起的退款率是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-IDX-05",
+      "run_index": 2,
+      "normalized_question": "自 2026-08-01 起的退款率是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-02",
+      "run_index": 0,
+      "normalized_question": "「家用电器」类目自 2026-08-01 起各店铺的浏览量分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-02",
+      "run_index": 1,
+      "normalized_question": "「家用电器」自 2026-08-01 起各店铺的浏览量分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-02",
+      "run_index": 2,
+      "normalized_question": "「家用电器」自 2026-08-01 起各店铺的浏览量分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-03",
+      "run_index": 0,
+      "normalized_question": "「服饰鞋包」类目自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-03",
+      "run_index": 1,
+      "normalized_question": "「服饰鞋包」自 2026-06-01 起各店铺的浏览量（pv）分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-03",
+      "run_index": 2,
+      "normalized_question": "「服饰鞋包」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-05",
+      "run_index": 0,
+      "normalized_question": "「美妆个护」自 2026-05-01 起各店铺的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-05",
+      "run_index": 1,
+      "normalized_question": "自 2026-05-01 起，「美妆个护」各店铺的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-05",
+      "run_index": 2,
+      "normalized_question": "「美妆个护」自 2026-05-01 起各店铺的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-05",
+      "run_index": 0,
+      "normalized_question": "「美妆个护」自 2026-05-01 起各店铺的浏览量分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-05",
+      "run_index": 1,
+      "normalized_question": "2026-05-01 起「美妆个护」各店铺的浏览量分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-05",
+      "run_index": 2,
+      "normalized_question": "「美妆个护」自 2026-05-01 起各店铺的浏览量分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-04",
+      "run_index": 0,
+      "normalized_question": "食品生鲜一级类目自 2026-06-01 起各店铺的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-04",
+      "run_index": 1,
+      "normalized_question": "「食品生鲜」自 2026-06-01 起各店铺的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "H-MET-04",
+      "run_index": 2,
+      "normalized_question": "「食品生鲜」自 2026-06-01 起各店铺的 GMV 分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-04",
+      "run_index": 0,
+      "normalized_question": "「食品生鲜」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-04",
+      "run_index": 1,
+      "normalized_question": "「食品生鲜」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "X-MET-04",
+      "run_index": 2,
+      "normalized_question": "「食品生鲜」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-IDX-08",
+      "run_index": 0,
+      "normalized_question": "自 2026-01-01 起的支付转化率是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-IDX-08",
+      "run_index": 1,
+      "normalized_question": "自 2026-01-01 起的支付转化率是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-IDX-08",
+      "run_index": 2,
+      "normalized_question": "自 2026-01-01 起的支付转化率是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-IDX-06",
+      "run_index": 0,
+      "normalized_question": "自 2026-06-01 起的退款率是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-IDX-06",
+      "run_index": 1,
+      "normalized_question": "自 2026-06-01 起的退款率是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    },
+    {
+      "case_id": "M-IDX-06",
+      "run_index": 2,
+      "normalized_question": "自 2026-06-01 起的退款率是多少？",
+      "n_candidates": 30,
+      "n_scores": 30,
+      "has_candidate_ids": false,
+      "has_gold_candidate_id": false
+    }
+  ],
+  "schema_failures": {
+    "missing_candidate_ids": 93,
+    "missing_gold_candidate_id": 93,
+    "score_arrays": 93
+  },
+  "can_form_score_sample": false,
+  "n_min_repeats": 3,
+  "observed_repeats_per_case": 3,
+  "reason": "The frozen artifact stores only score arrays; candidate IDs/order and gold_candidate_id were not retained. It cannot be passed to ScoreSample without inventing metadata.",
+  "schema_decision": {
+    "can_form_score_sample": false,
+    "same_model_id": true,
+    "same_prompt_version": true,
+    "same_candidate_ids_and_order": false,
+    "gold_candidate_id_present": false,
+    "calibration_holdout_separated": false,
+    "required_min_repeats": 3,
+    "observed_repeats_per_case": 3,
+    "required_next": "re-run L4 with candidate IDs/order and gold labels, or replay cassettes preserving them; do not invent IDs"
+  }
+}

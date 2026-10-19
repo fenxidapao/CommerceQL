@@ -1,0 +1,55 @@
+{
+  "source": "eval/results_r58_full166.json",
+  "n": 3,
+  "rows": [
+    {
+      "case_id": "E-MET-08",
+      "question": "T_A 从 2026-08-01 起的付费金额合计（含未支付）是多少？",
+      "refusal_reason": "no_data_asset",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "refuse_out"
+      ],
+      "category": "gold conflict / semantic package lacks unpaid-pay_amount metric; gold uses pay_status='unpaid' only while app correctly refuses undefined mixed paid+unpaid caliber",
+      "tokens": 17368,
+      "cost_cny": 0.009459
+    },
+    {
+      "case_id": "M-MET-01",
+      "question": "T_A 从 2026-08-01 起各渠道的 GMV 分别是多少？",
+      "refusal_reason": "no_data_asset",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "refuse_out"
+      ],
+      "category": "semantic-package ambiguity / missing channel binding on order_paid; app treats channel as order_paid.channel but plan declares collision with traffic_daily.channel and blocks",
+      "tokens": 17433,
+      "cost_cny": 0.011552
+    },
+    {
+      "case_id": "H-ENUM-04",
+      "question": "T_A 处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "refusal_reason": "no_data_asset",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "refuse_out"
+      ],
+      "category": "app/semantic mapping gap: plan accepted refund_status='partial' but bind/gate ended refuse; gold expects same enum and no time filter",
+      "tokens": 19458,
+      "cost_cny": 0.024821
+    }
+  ]
+}
