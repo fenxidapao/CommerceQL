@@ -4824,3 +4824,83 @@ W8 的定位成立：E-VER-07 失败跳精确落在 15s 客户端硬上限，pla
 - W8 补跑件 `7656f3a` 仅改 `backend/reports/w8/RELAY.md`／`DELIVERY.md`，无代码、测试、eval 产物变化；其自报 `ce76f1b`（QA-only）／被测代码 `e0cd546`：integration `124 passed / 0 failed`（32.38s，`alembic_rc=0`，一次性 PG/Redis 已 DROP，残渣仅 `ecom`／`ecom_u123_probe`），offline `2576 / 0`，补跑零出站。
 - QA 独立复验：`ce76f1b` 与 `a9e2438` 的代码面相同（`e0cd546`）；`7656f3a` 仅 W8 报告文档。QA 在 `7656f3a` 工作树另起一次性 PG 55495／Redis 56395＋`alembic upgrade head`，独立复跑 integration **124 passed / 0 failed**（30.03s）；已清容器，残渣仍仅 `ecom`／`ecom_u123_probe`，台账 `1830|3.025849|2026-10-07 04:28:00.872275+00` 逐位不动。
 - **判**：W57 的 integration 证据由 UNVERIFIED 收为已补证；但**第 57 轮整体仍不通过**——R-GMV-02 P0、G-2 τ UNVERIFIED、G-5 FAIL 均未改变。W58 块（§77.2）不变，仍以 P0＋G-5＋τ 为主；官方门禁仍 `88f3500`／PASS 1/8。
+
+## 78 · W8 第 59 轮验收：P0 前置拒答成立；G-2 门禁仍 FAIL、G-5/G-8 仍 UNVERIFIED（QA R31ba ｜ 2026-10-19 14:15:59 +0800 ｜ HEAD `3fa31c5`／610 笔）
+
+### 78.0 结论
+
+**P0 前置化可收；G-2/G-5/G-8 未达门，τ 仍未校准，secrets 未绿。第 59 轮整体不能判为通过。**
+
+- R-GMV-02：QA 在 `eval/results_r59_rgmv02_clean.json` 实读 `refuse/out_of_scope`，节点仅 `trusted_context → normalize → refuse_out`，`tokens=0`、`cost=0`；P0 前置拒答成立。
+- 定向测试：`test_normalize_tenant_guard.py` + `test_normalize_request_policy.py` 独立复跑 **21 passed**；含永久 `TimeoutError` stub 下 `planner.calls=0` 的支路。
+- 全量 166：`n_records=166`、`complete 105 / error 13 / clarify 24 / refuse 24`、`tokens 3,416,959`、`price_guess 8.813584`；artifact 自报 `git_rev=8b67705`、`dirty=false`。
+- 官方 `reporter.recompute_gate` 复算：G-2 **FAIL（easy×low 7/8=87.5%）**；G-5 **UNVERIFIED（23/24=95.8%；误拒 0/124=0.0%）**；G-8 **UNVERIFIED**。三者均带 τ 未校准 caveat；G-2 不是 9/10 即 PASS。
+- W8 回执中的“G-2 9/10”“G-5 23/24”是 **full166 原始批次读数**，不等于官方门禁判词；验收必须引用门禁复算件。
+- 终版 `E-MET-08/M-MET-01/H-ENUM-04` 已不是 W58 的“3 条误拒”：分别为 `clarify / complete / complete`，且 `equivalent=false`；属终态不稳定/契约冲突，不得写成“误拒已清零”。
+- τ：raw 只有 31×3 个分数数组，缺 `candidate_ids`、顺序与 `gold_candidate_id`，`can_form_score_sample=false`；不能伪造 `ScoreSample`，τ 仍 UNVERIFIED。
+- secrets：worktree **57**、提交树 **51**、607 笔历史 **94**；未打凭据、未改 allowlist，scan 不绿。
+- 回归：W8 自报 offline **2600/0**、integration **124/0**；QA 本轮未重跑全量（见 78.1 的独立复算面）。官方 `backend/reports/w6/eval_metrics.json` 仍为 `88f3500`／PASS 1/8，未刷新。
+- 边界：本窗未动 `semantic/**`、`eval/**`、`backend/app/**`、`backend/tests/**`、`reports/w8/**`、冻结集、阈值、15s 或共享 `ecom`；U-127 仍 open；G-8 未跑。
+
+### 78.1 QA 独立复算
+
+| 面 | QA 现读 | 判 |
+|---|---|---|
+| 提交/树 | HEAD＝origin/main＝`3fa31c5`／610 笔；工作树仅 `?? .workbuddy/` | ✅ |
+| 五查 | 台账 `1830\|3.025849\|2026-10-07 04:28:00.872275+00` 逐位不动；残渣 `ecom`／`ecom_u123_probe`；容器 7 件 Up | ✅ |
+| P0 代码 | `normalize.py:83-104` 在任何 LLM 调用前读取 raw + identity，命中非本租户 `T_*` 直接 `refuse(out_of_scope)` | ✅ |
+| P0 证据 | `R-GMV-02` 干净单例 `refuse/out_of_scope`，0 token；`4775f08/dirty=false` | ✅ |
+| 定向测试 | 两份测试件合计 **21 passed**（W8 回执写 17 是单件口径） | ✅ |
+| G-2 | 官方复算 **FAIL**，`easy×low 7/8=87.5%`；full166 G-2 子集 9 complete/1 error 不等于网格门禁 | 🔴 |
+| G-5 | 官方复算 **UNVERIFIED**；`23/24`＋`0/124`，但 G-5 子集仍有 11 error、15 clarify | 🟡 未通过 |
+| G-8/τ | G-8 **UNVERIFIED**；τ `can_form_score_sample=false`，未选 τ、未改配置 | 🔴 |
+| 3 条契约件 | 终版 `E-MET-08=clarify`、`M-MET-01=complete`、`H-ENUM-04=complete`，均不等价；不能写“误拒已清零” | 🔴 口径纠正 |
+| 全量读数 | 166/166；105/13/24/24；3,416,959／8.813584；`8b67705/dirty=false` | ✅ 可复算 |
+| 官方门禁 | `88f3500`／PASS 1、FAIL 3、PARTIAL 2、UNVERIFIED 2；未刷新 | 🔴 |
+| 回归/边界 | W8 自报 offline 2600/0、integration 124/0；QA 未重跑全量；secrets 57/51/94；U-127 open | ✅/🔴 |
+
+### 78.2 W8 第 60 轮块（可整段复制）
+
+``text
+【W8 第 60 轮｜P0 前置化已收；先修终态稳定性与门禁口径，再谈 G-8】
+
+0. 现读 HEAD `3fa31c5`。本轮不得把 G-2 的 9/10 写成门禁 PASS：官方复算是 easy×low 7/8=87.5% FAIL；G-5/G-8 仍因 τ 未校准 UNVERIFIED。
+   不改 15s、阈值、判据措辞、gold、冻结集；证据必须绑 git_rev + dirty=false。
+
+1. 🔴 G-5 的 11 error + 15 clarify 单列收口
+- full166 的 G-5 子集：complete 99 / error 11 / clarify 15 / refuse 23；correct_refused 23/24，over_refused 0/124。
+- 11 error 全为 LlmTimeout；按节点逐条列 normalize_intent / l4_score / gen_sql 的耗时、重试=0、cassette 是否有请求；不得把 timeout 剔出分母或改判 PASS。
+- 15 clarify 中先分出“真澄清”与“应 refuse/应 execute”的形状；不得用 clarify 冒充 G-5 通过。
+
+2. 🔴 终态稳定性：E-MET-08 / M-MET-01 / H-ENUM-04
+- 终版已变 clarify / complete / complete，且 equivalent=false；与 W58 的 3 条误拒不同。
+- 逐条给 gold、语义包、plan、bind、gate 原文；先判契约冲突还是应用路径问题，不得为贴 gold 改判据。
+- E-MET-08 的“含未支付”不得被静默改成仅 unpaid；M-MET-01/H-ENUM-04 的 projection alias/默认谓词问题要单独归因（现读 attribution 指向 gate policy gap）。
+- 三条都不得为了让 G-5 表面变好而删出分母。
+
+3. 🔴 G-2 / τ
+- 官方门禁：easy×low 7/8=87.5% FAIL；full166 的 G-2 原始 9 eq/1 timeout 不是网格门禁。
+- τ raw 缺 candidate_ids、顺序、gold_candidate_id；`can_form_score_sample=false`。
+- 若要做 τ 校准，必须先补同一 model/prompt、同候选 ID 集与顺序、gold label、calibration/holdout 分离；不得凭 30 个分数数组伪造 ScoreSample，不得反向拟合 τ。
+
+4. 🔴 secrets
+- 三把尺分开报：worktree 57、提交树 51、历史 94（607 commits）。
+- 不做 broad path allowlist；若建 baseline，必须 rule+file+line+content digest 可审计，并说明“同位置替换新密钥”风险。
+- 不打印凭据、不提交本地 .env/pem；scan 不绿就写不绿。
+
+5. 回归与交付
+- offline、integration（一次性 PG/Redis、alembic、DROP 后残渣）、scan_secrets、定向租户守卫全跑。
+- 证据绑 git_rev + dirty=false；报告新增/修改只写可复算入口；官方门禁未刷新就写未刷新。
+- U-127 仍 open；G-8 第二轮回路另轮，不在本轮夹带。
+``
+
+### 78.3 总控侧待点句
+
+- **无新的花钱授权请求**：W59 的 live 已由 W8 完成并自报 3,416,959／8.813584；QA 本轮零出站。
+- 🔴 需总控裁：G-5 的 **11 execute error + 15 clarify** 是否继续按“超时=判据失败、不剔分母”执行；若允许另立可用性/error-rate 判据，必须由 W8 走判据变更，不由 QA 自拟。
+- 🔴 需总控裁：τ 校准是 G-2/G-5/G-8 的共同前提；在补齐 candidate IDs + gold label 前，不批准“调 τ 让门禁变绿”。
+- 🔴 需总控裁：secrets 历史 94 条是否接受 reviewed fingerprint baseline；不接受就保持不绿，不得用 path allowlist 遮盖。
+
+### 78.4 验收总判
+
+**第 59 轮 P0 前置化通过；整体不通过。** G-2 官方门禁仍 FAIL（7/8=87.5%），G-5 23/24 但带 11 error 且 τ 未校准 ⇒ UNVERIFIED；G-8 仍 UNVERIFIED；secrets 57/51/94 不绿；官方门禁仍 PASS 1/8。W60 必须先收终态稳定性与门禁口径，不得进入 G-8 或宣称收口。

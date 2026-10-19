@@ -4667,3 +4667,45 @@ A/B/C 主路径成立：守卫已按 grain＋题面显式分组语义收窄；E-
 - W8 `7656f3a` 仅改 W8 报告（`RELAY.md`／`DELIVERY.md`），代码仍 `e0cd546`；其补跑 integration `124/0`（32.38s）、offline `2576/0`、零出站。
 - QA 独立复验：`ce76f1b` 与 `a9e2438` 代码面相同；在 `7656f3a` 工作树另起一次性 PG 55495／Redis 56395＋alembic，integration **124/0**（30.03s）；容器已清、残渣两库、台账逐位不动。
 - **判**：W57 integration 由 UNVERIFIED 收为已补证；但第 57 轮整体仍不通过（R-GMV-02 P0、G-2 τ UNVERIFIED、G-5 FAIL）。W58 块 §77.2 不变。
+
+## 73 · W8 第 59 轮验收：P0 前置拒答成立；G-2 门禁仍 FAIL、G-5/G-8 仍 UNVERIFIED（QA R31ba ｜ 2026-10-19 14:25:00 +0800 ｜ HEAD 3fa31c5／610 笔）
+
+### 73.0 结论
+
+P0 前置化可收；G-2／G-5／G-8 未达门，τ 仍未校准，secrets 未绿。第 59 轮整体不能判为通过。
+
+- R-GMV-02 在干净单例 eval/results_r59_rgmv02_clean.json 为 refuse/out_of_scope，节点仅 trusted_context → normalize → refuse_out，tokens=0、cost=0；P0 前置拒答成立。
+- 独立定向测试：test_normalize_tenant_guard.py + test_normalize_request_policy.py = 21 passed；永久 TimeoutError stub 支路 planner.calls=0。
+- 全量 166：complete 105／error 13／clarify 24／refuse 24，tokens 3,416,959，price_guess 8.813584；artifact git_rev=8b67705、dirty=false。
+- 官方 reporter.recompute_gate：G-2 FAIL（easy×low 7/8=87.5%）；G-5 UNVERIFIED（23/24=95.8%；误拒 0/124=0.0%）；G-8 UNVERIFIED。G-2 的 full166 子集 9 complete／1 error 不是网格分母。
+- 终版 E-MET-08／M-MET-01／H-ENUM-04 = clarify／complete／complete 且 equivalent=false；不是 W58 的“3 条误拒”，属终态不稳定／契约冲突，不能写“误拒已清零”。
+- τ：raw 缺 candidate_ids、顺序、gold_candidate_id，can_form_score_sample=false；未伪造 ScoreSample，未改 τ／ε。
+- secrets：worktree 57、提交树 51、607 笔历史 94；未打凭据、未改 allowlist，scan 不绿。
+- W8 自报 offline 2600/0、integration 124/0；QA 本轮未重跑全量。官方门禁仍 88f3500／PASS 1/8，未刷新；U-127 open；G-8 未跑。
+
+### 73.1 QA 独立复算
+
+| 面 | QA 现读 | 判 |
+|---|---|---|
+| 提交／树 | HEAD＝origin/main＝3fa31c5／610 笔；工作树仅 ?? .workbuddy/ | ✅ |
+| 五查 | 台账逐位不动；残渣两库；容器 7 件 Up | ✅ |
+| P0 代码 | normalize.py 在 LLM 前读取 raw + identity；非本租户 T_* 直接拒答 | ✅ |
+| P0 证据 | 0 token、refuse/out_of_scope、干净树 4775f08／dirty=false | ✅ |
+| 定向测试 | 21 passed（17 是单件口径，不是两份合计） | ✅ |
+| G-2 | 官方复算 FAIL：easy×low 7/8=87.5% | 🔴 |
+| G-5 | 官方复算 UNVERIFIED：23/24、0/124，但 11 error／15 clarify 仍在 | 🟡 未通过 |
+| G-8／τ | UNVERIFIED；τ schema 不足 | 🔴 |
+| 3 条契约件 | 终版 clarify／complete／complete，均不等价；旧“3 误拒”口径已过期 | 🔴 |
+| 全量 | 166/166；105／13／24／24；3,416,959／8.813584 | ✅ 可复算 |
+| 官方门禁 | 88f3500；PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2 | 🔴 |
+| 回归／边界 | W8 自报 2600/0、124/0；QA 未重跑全量；secrets 57/51/94；U-127 open | ✅／🔴 |
+
+### 73.2 验收总判
+
+第 59 轮 P0 前置化通过；整体不通过。G-2 官方门禁仍 FAIL（7/8=87.5%）；G-5 23/24 但带 11 error 且 τ 未校准 ⇒ UNVERIFIED；G-8 仍 UNVERIFIED；secrets 57/51/94 不绿；官方门禁仍 PASS 1/8。W60 必须先收终态稳定性与门禁口径，不得进入 G-8 或宣称收口。
+
+### 73.3 边界与下一步
+
+- 本窗未动 semantic/**、eval/**、backend/app/**、backend/tests/**、reports/w8/**、冻结集、阈值、15s 或共享 ecom；未打印／提交凭据。
+- 待总控裁：① G-5 的 11 execute error + 15 clarify 是否继续按“超时=判据失败、不剔分母”；② τ 校准必须先补 candidate IDs + gold label；③ secrets 历史 94 是否接受 reviewed fingerprint baseline。
+- W60 块见 TASK_BOARD §78.2；不得把 3fa31c5 写成收口点。

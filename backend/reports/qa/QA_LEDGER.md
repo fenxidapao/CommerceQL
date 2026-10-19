@@ -1479,3 +1479,24 @@
 | 5 | 总判 | integration 由 UNVERIFIED 收为已补证；R-GMV-02 P0、G-2 τ UNVERIFIED、G-5 FAIL 均不变 | 🔴 仍不通过 |
 
 **结论**：W57 的 integration 证据已补齐并经 QA 复算；第 57 轮整体仍不通过（P0），W58 块 `TASK_BOARD §77.2` 不变。
+
+## R31ba · W8 第 59 轮验收：P0 前置拒答成立；G-2 门禁仍 FAIL、G-5/G-8 仍 UNVERIFIED ／ 2026-10-19 14:25:00 +0800 ／ HEAD 3fa31c5／610 笔
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 提交／树 | HEAD＝origin/main＝3fa31c5／610 笔；工作树仅 ?? .workbuddy/ | ✅ |
+| 2 | 五查 | 台账 1830|3.025849|2026-10-07 04:28:00.872275+00 逐位不动；残渣 ecom／ecom_u123_probe；容器 7 件 Up | ✅ |
+| 3 | P0 代码 | normalize.py 在 LLM 前读取 raw + identity；非本租户 T_* 直接 refuse(out_of_scope) | ✅ |
+| 4 | P0 证据 | R-GMV-02 干净单例 0 token、refuse/out_of_scope；4775f08／dirty=false | ✅ |
+| 5 | 定向测试 | tenant guard + request policy 合计 21 passed；永久 TimeoutError stub 下 planner.calls=0 | ✅ |
+| 6 | 全量 166 | complete 105／error 13／clarify 24／refuse 24；3,416,959／8.813584；8b67705／dirty=false | ✅ 可复算 |
+| 7 | G-2 官方复算 | FAIL：easy×low 7/8=87.5%；不是 full166 子集 9/10 | 🔴 |
+| 8 | G-5 官方复算 | UNVERIFIED：23/24=95.8%、误拒 0/124=0.0%；仍有 11 error、15 clarify | 🟡 未通过 |
+| 9 | G-8／τ | G-8 UNVERIFIED；τ raw 缺 candidate_ids/顺序/gold_candidate_id，can_form_score_sample=false | 🔴 |
+| 10 | 3 条契约件 | E-MET-08=clarify、M-MET-01=complete、H-ENUM-04=complete，均 equivalent=false；旧 “3 误拒” 口径过期 | 🔴 |
+| 11 | secrets | worktree 57／提交树 51／607 笔历史 94；未改 allowlist、未打印凭据 | 🔴 不绿 |
+| 12 | 官方门禁 | 88f3500；PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2；未刷新 | 🔴 |
+| 13 | 回归 | W8 自报 offline 2600/0、integration 124/0；QA 本轮未重跑全量 | ✅／⚠️ |
+| 14 | 边界 | 未动 semantic／eval／app／tests／reports_w8／冻结集／阈值／15s／共享 ecom；U-127 open；G-8 未跑 | ✅／🔴 |
+
+**结论**：第 59 轮 P0 前置化可收，但整体不通过：G-2 仍 FAIL（7/8=87.5%），G-5/G-8 仍 UNVERIFIED，secrets 57/51/94 不绿，官方门禁仍 PASS 1/8。W60 按 TASK_BOARD §78.2 执行；不得写收口或门禁通过。
