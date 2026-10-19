@@ -5933,20 +5933,20 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 - **M-MET-01**：终态 `complete`，SQL 使用 `v_order_paid.channel` 且与 gold 同轴，但结果不等价；attribution 指向 gate 投影别名判定残留。归因从“缺 channel 绑定”修正为 **应用/gate 路径仍需核验**，不升格 equivalent。
 - **H-ENUM-04**：终态 `complete`，已过 plan/bind/gate，但结果不等价（gold 用 `shop_id`，预测用 `shop_name` 且多默认谓词）。原“bind 后 refuse”已不再复现；归因改为 **展示列/默认谓词差异**，不写通过。
 - **最终回归（HEAD `2fd7ca6`）**：offline `2600 passed / 0 failed / 1 warning / 118.15s`；integration `alembic_rc=0`、`124 passed / 0 failed / 32.70s`，一次性库 DROP 后空，容器已清，残渣仅 `ecom`/`ecom_u123_probe`。
-## 第 60 轮（W8 接续：W8r60）｜G-5 error/clarify 分栏、归因误判修复与城市误澄清收窄（2026-10-19 15:0x–15:3x +0800，HEAD `f7b739d`）
+## 第 60 轮（W8 接续：W8r60）｜G-5 error/clarify 分栏、归因误判修复与城市误澄清收窄（2026-10-19 15:0x–16:5x +0800，代码 `7de77ce`）
 
 ### 60.1 G-5 结构矩阵（零出站）
 - 现读 `eval/results_r59_full166.json`，G-5 148 = execute 124 + refuse 24；终态 `complete 99 / error 11 / clarify 15 / refuse 23`，`correct_refused 23/24`、`over_refused 0/124`、equivalent `32/124`。
-- 11 条 error 全为 `LlmTimeout`：`normalize_intent 6 / l4_score 2 / gen_sql 3`；节点耗时 15,00x–15,03x ms，`retries=0`，硬顶 15s；cassette 请求计数与明细见 `eval/results_r60_g5_error_clarify.json`。不得剔除分母、不得改判 PASS。
+- 11 条 error 全为 `LlmTimeout`：`normalize_intent 6 / l4_score 2 / gen_sql 3`；`retries=0`，不得剔除分母、不得改判 PASS。矩阵 `eval/results_r60_g5_error_clarify.json`；其中 7 条节点延迟在 15.00±0.05s，4 条为上游总耗时/节点记录为空，不能把 11 条一律写成“15s 节点硬顶”。
 - 15 条 clarify 均为 execute 被误澄清，无“真澄清”、无应拒：冻结口径冲突 1（E-MET-08）、可修城市误澄清 5（M-DIM-05、M-HIER-03、X-STR-03/05/07）、误澄清叠加 gold `on_sale=1` 冲突 8（H-STR-01…08）、时间解析歧义 1（X-MET-10）。
 
 ### 60.2 评测归因误判修复（TDD）
-- `eval/runner.py:445-471` 新增 `_gate_defect_if_rejected()`：只有 gate1 实际 `reject/` 时才做 F1/F2 自伤检测；gate1 `pass/True` 不得被静态形态覆盖。回归在 `backend/tests/eval/test_eval_runner_checkpoint.py:117-130`。
-- 零出站 replay（脏树，仅作归因证据）：M-MET-01、H-ENUM-04 仍 `complete + equivalent=false`；归因由错误 `gate_policy_gap` 修正为 `time_semantics` / `value_mapping`。原 `gate_policy_gap` 撤回。
+- `eval/runner.py:445-471` 新增 `_gate_defect_if_rejected()`：只有 gate1 实际 `reject/` 时才做 F1/F2 自伤检测；gate1 `pass/True` 不得被静态形态覆盖。回归 `backend/tests/eval/test_eval_runner_checkpoint.py:118-130`。
+- 干净树零出站 replay：`E:\codex\w8r60\replay_attribution_clean2.json`（HEAD `7de77ce`/dirty=false）；M-MET-01、H-ENUM-04 仍 `complete + equivalent=false`，归因为 `time_semantics` / `value_mapping`，旧 `gate_policy_gap` 撤回。
 
 ### 60.3 城市误澄清收窄
-- `backend/app/graph/nodes/normalize.py:72-101` 新增确定性 demotion：只对“各城市”与“在<城市>的店铺各 SKU”两类明确题面撤销 `ambiguous_dimension_city`；商品口径、收货城市、时间歧义保持原终态。回归 `backend/tests/unit/test_normalize_city_clarification.py`（4）与 `backend/tests/contract/test_city_clarification_demotion_contract.py`（1）。
-- 5 条 replay 已越过 clarify 进入 `normalize→intent→link`，但 plan 因测试 `task_id` 进入载荷而 `cassette_miss`；**不写 complete/改善**。回放绑定限制另项处理。
+- `backend/app/graph/nodes/normalize.py:74-101` 新增确定性 demotion：只对“各城市”与“在<城市>的店铺各 SKU”两类明确题面撤销 `ambiguous_dimension_city`；商品口径、收货城市、时间歧义保持原终态。回归 `backend/tests/unit/test_normalize_city_clarification.py`（4）与 `backend/tests/contract/test_city_clarification_demotion_contract.py`（1）。
+- 干净树 replay `E:\codex\w8r60\replay_city_fix_clean.json`（HEAD `7de77ce`/dirty=false）：5/5 已越过 clarify 进入 `normalize→intent→link`，随后因测试 `task_id` 改变载荷而 `cassette_miss`；**不写 complete/改善**，归因为回放绑定限制。
 
 ### 60.4 三条终态稳定性（只归因，不删分母）
 - **E-MET-08**：`clarify`；gold 仅 `pay_status='unpaid'`，题面“含未支付”无对应混合口径 ⇒ 冻结口径冲突；不补 metric、不改 gold。
@@ -5957,8 +5957,17 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 ### 60.5 G-2 / τ / 门禁
 - 官方门禁复算仍 `easy×low 7/8 = 87.5% FAIL`；r59 full166 的 G-2 `9 complete+eq / 1 timeout` 不是网格门禁，**不得写 PASS**。
 - τ raw 缺 candidate_ids、候选顺序、gold_candidate_id 与 calibration/holdout 分离，`can_form_score_sample=false`；未选 τ、未改 `BINDING_TAU_*`。G-5/G-8 继续 `UNVERIFIED`。
-- 官方 `backend/reports/w6/eval_metrics.json` 未刷新；不得手改。U-127 仍 open；G-8 二轮未跑。
+- 官方 `backend/reports/w6/eval_metrics.json` 未刷新（仍 `88f3500 / PASS 1/8`）；不得手改。U-127 仍 open；G-8 二轮未跑。
 
-### 60.6 回归与边界
-- 定向 54 passed（城市 5、runner 回归、allowlist、租户守卫）；离线全量 **2606 passed / 0 failed / 1 warning / 117.62s**（2026-10-19 15:1x +0800，HEAD `f7b739d`）。
+### 60.6 本轮新增出站（实报）
+- 在 `7de77ce` 代码树上定向 live 2 条（M-MET-01、H-ENUM-04，17:07–17:08 +0800）：`45,372 tokens / price_guess 0.104611 CNY`；M-MET-01 `complete`、非等价、`time_semantics`；H-ENUM-04 `error/LLM_UPSTREAM_ERROR`、`l4_score` `LlmTimeout`。该 live 件自报 `git_dirty=true`（报告未提交），不得当干净证据；clean replay 才是本轮归因主证。
+
+### 60.7 secrets 三把尺
+- 干净提交 `7de77ce` 实跑 gitleaks 8.24.3：worktree **57**（DSN 51 / DeepSeek 1 / generic 3 / JWT 1 / private-key 1）、提交树 **51**（DSN 49 / generic 2）、历史 **94**（612 commits；DSN 92 / generic 2）。
+- 分类与明细：`eval/results_r60_secret_scan_final.json`；未打印凭据、未提交 `.env`/pem、未加 broad allowlist，scan **不绿**。baseline 若建须 rule+file+line+content digest 可审计；同位置替换新密钥仍可能被 fingerprint 吞掉，必须人工复核。
+
+### 60.8 回归与边界
+- 干净树定向：租户守卫 **17 passed**；城市/runner/allowlist 组合 **54 passed**。
+- 干净树离线全量：**2606 passed / 0 failed / 1 warning / 109.34s**（HEAD `7de77ce`）。
+- 干净树一次性 PG/Redis：`alembic_rc=0`，**124 passed / 0 failed / 32.81s**；DROP 后 `oneoff_after_drop=` 空，残渣仅 `ecom`/`ecom_u123_probe`。
 - 未改 15s、阈值、判据、gold、语义包、冻结集、`backend/reports/qa/**`、共享 ecom；`.workbuddy/` 未 add。

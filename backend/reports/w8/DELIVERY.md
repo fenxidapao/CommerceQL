@@ -748,13 +748,15 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **回归**：offline `2600/0`（118.15s，HEAD `2fd7ca6`）；一次性 PG/Redis integration `124/0`（32.70s，alembic_rc=0，已 DROP，残渣仅 `ecom`/`ecom_u123_probe`）。
 - **门禁/边界**：官方门禁未刷新；未改 15s/阈值/判据/gold/语义包/冻结集/QA/共享 ecom；U-127 open；G-8 未跑。
 
-## 第 60 轮交付（G-5 error/clarify 单列 ＋ 归因误判修复 ＋ 城市误澄清收窄 ｜ 起点 HEAD `f7b739d` ｜ 2026-10-19 15:0x–15:3x +0800）
+## 第 60 轮交付（G-5 error/clarify 单列 ＋ 归因误判修复 ＋ 城市误澄清收窄 ｜ 代码 HEAD `7de77ce` ｜ 2026-10-19 15:0x–16:5x +0800）
 
 - **G-5 结构**：148 = execute 124 + refuse 24；`complete 99 / error 11 / clarify 15 / refuse 23`，`correct_refused 23/24`、`over_refused 0/124`、equivalent `32/124`；11 error 全 `LlmTimeout`（normalize_intent 6 / l4_score 2 / gen_sql 3），不剔分母、不写通过。矩阵 `eval/results_r60_g5_error_clarify.json`。
 - **15 clarify**：全部为 execute 被误澄清，无真澄清、无应拒；冻结冲突 1（E-MET-08）、可修城市 5、叠加 gold `on_sale` 冲突 8、时间解析 1（X-MET-10）。
-- **评测归因修复**：`eval/runner.py:445-471` 只在 gate1 实际 reject 时做自伤检测；`backend/tests/eval/test_eval_runner_checkpoint.py:118-130` 防漂移。M-MET-01/H-ENUM-04 的旧 `gate_policy_gap` 撤回，现归 `time_semantics` / `value_mapping`；均仍非等价。
-- **城市误澄清收窄**：`backend/app/graph/nodes/normalize.py:74-101` 仅撤销“各城市”与“在<城市>的店铺各 SKU”两类明确题面的 clarify；反向测试 4 + 契约 1。replay 越过 clarify 后因 `task_id` 触发 `cassette_miss`，不写改善。
+- **评测归因修复**：`eval/runner.py:445-471` 只在 gate1 实际 reject 时做自伤检测；`backend/tests/eval/test_eval_runner_checkpoint.py:118-130` 防漂移。干净树 replay 中 M-MET-01/H-ENUM-04 仍 `complete + 非等价`，归因 `time_semantics` / `value_mapping`，旧 `gate_policy_gap` 撤回。
+- **城市误澄清收窄**：`backend/app/graph/nodes/normalize.py:74-101` 仅撤销“各城市”与“在<城市>的店铺各 SKU”两类明确题面的 clarify；反向测试 4 + 契约 1。干净 replay 越过 clarify 后因 `task_id` 触发 `cassette_miss`，不写改善。
 - **E-MET-08**：仍 clarify；gold 仅 unpaid、题面“含未支付” ⇒ 冻结口径冲突，不删分母、不改 gold/语义包。
-- **G-2/τ/门禁**：官方 easy×low `7/8 = 87.5% FAIL`；τ 输入 schema 不成立、`can_form_score_sample=false`，未校准；G-5/G-8 `UNVERIFIED`；官方门禁未刷新；U-127 open；G-8 未跑。
-- **回归**：定向 `54 passed`；离线 `2606 passed / 0 failed / 1 warning / 117.62s`（HEAD `f7b739d`）。integration 与 secrets 在干净提交后复跑，未跑前保持 `UNVERIFIED`。
+- **G-2/τ/门禁**：官方 easy×low `7/8 = 87.5% FAIL`；τ 输入 schema 不成立、`can_form_score_sample=false`，未校准；G-5/G-8 `UNVERIFIED`；官方门禁未刷新（仍 `88f3500 / PASS 1/8`）；U-127 open；G-8 未跑。
+- **secrets**：干净 HEAD `7de77ce` 实跑 worktree **57** / 提交树 **51** / 历史 **94**（612 commits）；分类见 `eval/results_r60_secret_scan_final.json`；未打印、未提交本地凭据、未加 broad allowlist，scan 不绿。
+- **回归**：租户守卫 `17 passed`；城市/runner/allowlist 组合 `54 passed`；干净树离线 `2606 passed / 0 failed / 1 warning / 109.34s`；一次性 PG/Redis integration `124 passed / 0 failed / 32.81s`，`alembic_rc=0`、DROP 后空、残渣仅 `ecom`/`ecom_u123_probe`。
+- **出站实报**：定向 live 2 条 `45,372 tokens / price_guess 0.104611 CNY`（17:07–17:08 +0800）；该件 `git_rev=7de77ce`、`dirty=true`，仅作 live 观测，不作干净证据。
 - **边界**：未改 15s/阈值/判据/gold/语义包/冻结集/`reports/qa/**`/共享 ecom；`.workbuddy/` 未 add。
