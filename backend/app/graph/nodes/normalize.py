@@ -80,6 +80,28 @@ async def normalize(state: GraphState) -> dict[str, Any]:
     #: 表现为多轮指代（"它/那个/再看一下"）拿不到上一轮上下文 —— 缺口已登记 U-142。
     history = tuple(state.get("history_questions") or ())
 
+    # 🔴 W59 P0：跨租户范围只依赖可信 identity + 原始问题，必须在任何 LLM 调用之前判死。
+    # 这能保证 normalize 超时不会把“应拒”折成 infra error，且不产生任何 token。
+    foreign_code = detect_foreign_tenant_code(question, identity.tenant_id)
+    if foreign_code is not None:
+        update = {
+            "intent": IntentKind.REFUSE.value,
+            "intent_detail": {
+                "reason_code": "unauthorized_scope",
+                "refuse_kind": RefuseReason.OUT_OF_SCOPE.value,
+                "foreign_tenant_code": foreign_code,
+            },
+        }
+        update.update(
+            terminal_update(
+                state,
+                event="refuse",
+                outcome=Outcome.REFUSE,
+                reason=RefuseReason.OUT_OF_SCOPE.value,
+            )
+        )
+        return update
+
     # 🔴 W58：应拒问题（PII/竞品/其它店铺）必须在 LLM 之前判死。
     # 否则上游 normalize 超时会把“系统不回答”错误地变成 infra error。
     semantics = getattr(deps, "semantics", None)
@@ -113,6 +135,10 @@ async def normalize(state: GraphState) -> dict[str, Any]:
     except LlmError as exc:
         # 顺序刻意：`LlmRefused` 在 `llm_error_update` 内部最先分流（产品结论 ≠ 故障）。
         return llm_error_update(state, exc, stage="normalize")
+    except TimeoutError:
+        # W59: TimeoutError from a stub/provider must propagate to the graph-level timeout handling,
+        # not be converted into a product refusal. Scope refusal is already handled before this call.
+        raise
     except PlannerError as exc:
         # 引擎已把 notes 送进它自己的 sink（→ `RunContext.report_degraded`），此处**不重发**，
         # 只补一条"下一步走模板"的业务降级（网关那一条是"出站跳"，语义不同）。

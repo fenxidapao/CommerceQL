@@ -148,6 +148,53 @@ async def test_foreign_tenant_code_preserved_is_refused(monkeypatch: pytest.Monk
 _BUNDLE = Path(__file__).resolve().parents[3] / "semantic" / "bundle_2026.09.14.1.yaml"
 
 
+class _AlwaysTimeoutPlanner:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def understand(self, *_: Any, **__: Any) -> Any:
+        self.calls += 1
+        raise TimeoutError("forced timeout")
+
+
+@pytest.mark.parametrize(
+    ("tenant", "raw", "must_refuse"),
+    [
+        ("T_A", "T_B 租户这个月卖了多少？", True),
+        ("T_A", "T_A 的在架商品数是多少？", False),
+        ("T_B", "T_B 租户这个月卖了多少？", False),
+        ("T_C", "在架商品数是多少？", False),
+    ],
+)
+async def test_foreign_tenant_scope_is_decided_before_llm(
+    monkeypatch: pytest.MonkeyPatch, tenant: str, raw: str, must_refuse: bool
+) -> None:
+    planner = _AlwaysTimeoutPlanner()
+    ctx = _FakeContext()
+    monkeypatch.setattr(normalize_node, "rc", lambda: ctx)
+    monkeypatch.setattr(_shared, "rc", lambda: ctx)
+    monkeypatch.setattr(
+        normalize_node,
+        "deps_of",
+        lambda: SimpleNamespace(merged_understand=True, planner=planner, semantics=None),
+    )
+    monkeypatch.setattr(normalize_node, "identity_of", lambda _state: _identity(tenant))
+
+    if must_refuse:
+        update = await normalize_node.normalize({"raw_question": raw})
+    else:
+        with pytest.raises(TimeoutError):
+            await normalize_node.normalize({"raw_question": raw})
+        assert planner.calls == 1
+        return
+
+    if must_refuse:
+        assert planner.calls == 0
+        assert update["terminal"]["event"] == "refuse"
+        assert update["terminal"]["reason"] == RefuseReason.OUT_OF_SCOPE.value
+        assert "code" not in update["terminal"]
+
+
 @pytest.mark.parametrize(
     ("question", "expected_reason"),
     [
