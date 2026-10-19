@@ -5926,3 +5926,10 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 - integration 终版：`alembic_rc=0`；`124 passed / 0 failed / 32.33s`（2026-10-19 11:38–11:39 +0800，HEAD `8b67705`；一次性 PG/Redis，已 DROP；残渣仅 `ecom`/`ecom_u123_probe`）。
 - W59 live 终版：R-GMV-02 干净单例 `refuse/out_of_scope`、0 token（HEAD `4775f08`/dirty=false）；全量 166 `3,416,959 tokens / price_guess 8.813584`（2026-10-19 10:55–11:32 +0800，HEAD `8b67705`/dirty=false）；G-2 `9 complete+9 eq/1 timeout`，G-5 应拒 `23/24`（R-NA-06 timeout）、误拒 `0/124`、equiv `32/124`，clarify `9/6/1/2` 单列；门禁不写通过。
 - 未动：15s、阈值、判据、gold、语义包、冻结集、`reports/qa/**`、共享 ecom；U-127 open；G-8 未跑；官方门禁未刷新。
+
+### 59.8 终版补证（HEAD `2fd7ca6`，2026-10-19 11:45–11:53 +0800）
+
+- **E-MET-08**：终态 `clarify`、无 SQL；gold 为 `pay_status='unpaid'`，题面“含未支付”无对应混合口径，仍判 **gold/语义包冲突**，不修代码迎合。
+- **M-MET-01**：终态 `complete`，SQL 使用 `v_order_paid.channel` 且与 gold 同轴，但结果不等价；attribution 指向 gate 投影别名判定残留。归因从“缺 channel 绑定”修正为 **应用/gate 路径仍需核验**，不升格 equivalent。
+- **H-ENUM-04**：终态 `complete`，已过 plan/bind/gate，但结果不等价（gold 用 `shop_id`，预测用 `shop_name` 且多默认谓词）。原“bind 后 refuse”已不再复现；归因改为 **展示列/默认谓词差异**，不写通过。
+- **最终回归（HEAD `2fd7ca6`）**：offline `2600 passed / 0 failed / 1 warning / 118.15s`；integration `alembic_rc=0`、`124 passed / 0 failed / 32.70s`，一次性库 DROP 后空，容器已清，残渣仅 `ecom`/`ecom_u123_probe`。

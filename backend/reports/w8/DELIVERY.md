@@ -745,5 +745,5 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **clarify**：18 条单列 `clarify 9 / complete 6 / refuse 1 / error 2`（两条 `GATE_AST_REJECTED`）。
 - **τ**：raw 缺 candidate IDs/顺序与 gold label，`can_form_score_sample=false`；未选 τ、未改配置。
 - **secrets**：worktree 57／提交树 51／607 笔历史 94；未改 allowlist、未提交 secrets；scan 不绿。
-- **回归**：offline `2600/0`（103.35s）；一次性 PG/Redis integration `124/0`（32.33s，alembic_rc=0，已 DROP，残渣仅 `ecom`/`ecom_u123_probe`）。
+- **回归**：offline `2600/0`（118.15s，HEAD `2fd7ca6`）；一次性 PG/Redis integration `124/0`（32.70s，alembic_rc=0，已 DROP，残渣仅 `ecom`/`ecom_u123_probe`）。
 - **门禁/边界**：官方门禁未刷新；未改 15s/阈值/判据/gold/语义包/冻结集/QA/共享 ecom；U-127 open；G-8 未跑。

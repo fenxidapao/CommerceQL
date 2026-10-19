@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-19T11:45:00+08:00",
+  "updated_at": "2026-10-19T11:53:00+08:00",
   "round": 59,
   "evidence": {
     "full166": "eval/results_r59_full166.json",
@@ -11,7 +11,7 @@
     "tenant_clean": "eval/results_r59_rgmv02_clean.json"
   },
   "schema": "W8_CHECKPOINT/v1",
-  "head": "8b67705",
+  "head": "2fd7ca6",
   "status": {
     "timeout_tail": "audited-13-errors-not-resolved",
     "u127": "open",
@@ -35,7 +35,7 @@
     "gold_untouched": true
   },
   "readings": {
-    "offline": "2600/0/1 warning/103.35s",
+    "offline": "2600/0/1 warning/118.15s",
     "secrets": {
       "history": 94,
       "history_commits": 607,
@@ -63,13 +63,14 @@
       "errors": 11
     },
     "full166_price_guess": 8.813584,
-    "integration": "124/0/32.33s; alembic_rc=0; DROP empty; residue ecom/ecom_u123_probe",
+    "integration": "124/0/32.70s; alembic_rc=0; DROP empty; residue ecom/ecom_u123_probe",
     "g2": {
       "equivalent": 9,
       "error": 1,
       "n": 10,
       "complete": 9
     },
-    "full166_tokens": 3416959
+    "full166_tokens": 3416959,
+    "regression_head": "2fd7ca6"
   }
 }
