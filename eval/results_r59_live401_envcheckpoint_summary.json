@@ -1,0 +1,20 @@
+{
+  "source": "eval\\results_r59_live401_envcheckpoint.jsonl",
+  "attempted_records": 16,
+  "stopped_after_case": "E-ENUM-06",
+  "all_terminal_error": true,
+  "all_http_401": true,
+  "terminal_codes": [
+    "LLM_UPSTREAM_ERROR"
+  ],
+  "tokens_total": 0,
+  "wall_s_total": 443.312,
+  "transport_retries_values": [
+    0,
+    3
+  ],
+  "root_cause": "local process inherited only a stale DEEPSEEK_API_KEY and omitted deploy/.env endpoint/model binding; requests were sent to the default endpoint and rejected with HTTP 401 authentication_error",
+  "git_rev": "4775f08",
+  "git_dirty": false,
+  "note": "failure evidence preserved; this partial run is not a denominator for G-2 or G-5"
+}
