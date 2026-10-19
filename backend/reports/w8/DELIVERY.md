@@ -735,13 +735,15 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **回归**：offline `2596/0`；integration `124/0`（一次性 PG/Redis，DROP 后残渣仅 `ecom`/`ecom_u123_probe`）。
 - **边界**：归因 summary 已按 records 重算（`unattributed 7→1`、`value_mapping=6`）；`scan_secrets` ❌ 不绿（工作树 57、git 历史 94 个历史/占位/本地 `.env` finding，未打印凭据、未改 allowlist）；未改冻结集/阈值/判据/15s/QA，未写共享 ecom；U-127 open，G-8 未跑。
 
-## 第 59 轮交付（P0 前置化／超时尾部／G-5 口径／τ schema 审计／secrets 分面 ｜ 代码 `2bac27d` ｜ 2026-10-19 00:01–02:00 +0800）
 
-- **P0**：T_B under T_A 在 normalize 的 **LLM 调用前**直接 refuse(out_of_scope)，永久 timeout stub 下 planner 调用数 = 0、0 token；T_A under T_A / T_B under T_B / 无代号保持原路径，timeout 正常上抛。17 条 tenant guard 单测通过。
-- **超时**：30 error 全为 LlmTimeout；execute 13、clarify 13、refuse 4；节点分布 normalize_intent 19、l4_score 5、gen_sql 2、plan 1；节点耗时集中 15,006–15,023ms，成功 p95 normalize 12,682 / plan 10,529 / gen_sql 7,985ms。逐条输入输出/candidate 数因结果件与 cassette 无一一绑定，标为聚合证据，不伪造精确归因。
-- **G-5**：保留原尺 `20/24` 与 merged `24/24` 两把尺；原始 error 17/148，clean rerun 后仍 13/148；execute error 13/124、clarify error 13/18 单列为判据盲点，未改门禁。
-- **3 误拒**：E-MET-08 判为 gold/语义包“含未支付”口径冲突；M-MET-01 判为 channel 绑定歧义/缺声明；H-ENUM-04 同文 H-ENUM-01 完成、H-ENUM-04 在 bind 后 refuse，登记为应用 enum/binding 缺口，均未改 gold/代码迎合。
-- **τ**：raw 31×3 只有分数数组，缺 candidate_ids/顺序与 gold_candidate_id，`can_form_score_sample=false`；未调用 calibrate 选 τ，`BINDING_TAU_*` 未改，G-2 继续 UNVERIFIED。
-- **等价审计**：64 条 complete 非等价；首版静态分类器被复核推翻（LIMIT 关键字不能证明截断），因此六类账**UNVERIFIED**，不引用错误计数、不升格 equivalent、不改规则。
-- **secrets**：worktree 57、当前提交树 51、git 历史 94 三把尺分开；worktree 分类和 fingerprint baseline/diff-scoped 方案已落证据；未打印、未提交 secrets、未放宽 allowlist，scan 不绿。
-- **回归**：W59 目标测试 17/0；offline `2600/0`（118.14s）、一次性 PG/Redis integration `124/0`（36.55s，已 DROP，残渣 `ecom`/`ecom_u123_probe`）；R-GMV-02 单例 live `refuse/out_of_scope`、0 token/0 cost，但产物 dirty=true；G-2/G-5 全量二轮与 τ 校准未跑，标 UNVERIFIED；官方门禁未刷新，U-127 open，G-8 未跑。
+## 第 59 轮终版补记（P0 前置化＋全量 166＋secrets 三把尺 ｜ 代码 `2bac27d`；证据 `4775f08`／`8b67705` ｜ 2026-10-19 10:43–11:45 +0800）
+
+- **P0**：干净单例 R-GMV-02 `refuse/out_of_scope`、0 token、`git_rev=4775f08`、`dirty=false`。
+- **live 全量**：166/166 有记录；`3,416,959 tokens / price_guess 8.813584`；HEAD `8b67705`、`dirty=false`；终态 `complete 105 / error 13 / clarify 24 / refuse 24`。
+- **G-2**：`9 complete + 9 equivalent / 1 timeout`；门禁仍因 τ 未校准为 UNVERIFIED。
+- **G-5**：应拒 `23/24`（R-NA-06 normalize timeout）、误拒 `0/124`、equiv `32/124`、error `11/148`；不写通过。
+- **clarify**：18 条单列 `clarify 9 / complete 6 / refuse 1 / error 2`（两条 `GATE_AST_REJECTED`）。
+- **τ**：raw 缺 candidate IDs/顺序与 gold label，`can_form_score_sample=false`；未选 τ、未改配置。
+- **secrets**：worktree 57／提交树 51／607 笔历史 94；未改 allowlist、未提交 secrets；scan 不绿。
+- **回归**：offline `2600/0`（103.35s）；一次性 PG/Redis integration `124/0`（32.33s，alembic_rc=0，已 DROP，残渣仅 `ecom`/`ecom_u123_probe`）。
+- **门禁/边界**：官方门禁未刷新；未改 15s/阈值/判据/gold/语义包/冻结集/QA/共享 ecom；U-127 open；G-8 未跑。

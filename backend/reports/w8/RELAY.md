@@ -5860,20 +5860,20 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 - 未动：冻结集、阈值、判据措辞、07 §10.2 的 15s、`backend/reports/qa/**`、共享 `ecom` 写；U-127 仍 open；G-8 未跑二轮。
 - 机读断点：`backend/reports/w8/W58_CHECKPOINT.json`。
 
-## §五九 第 59 轮 · P0 前置化／超时尾部／G-5 口径／τ schema 审计／secrets 分面 ｜ 2026-10-19 00:01–10:32 +0800 ｜ 代码 2bac27d／证据 cf57522（单例 dirty=true，待干净复跑）
+## §五九 第 59 轮 · P0 前置化／超时尾部／G-5 口径／τ schema 审计／secrets 分面 ｜ 2026-10-19 00:01–11:45 +0800 ｜ 代码 2bac27d／证据 4775f08＋8b67705
 
-### 59.0 结论（完成度分层：A 完成；B–F 零出站完成；live/recalibration 未跑）
+### 59.0 结论（完成度分层：A 完成；B–F 零出站完成；G-2/G-5 live 已跑但未达门；τ 未校准）
 
 | 面 | 现读 | 证据 |
 |---|---|---|
 | P0 前置化 | ✅ 已修：raw 中非 identity 的 `T_*` 在 LLM 前直接 refuse(out_of_scope)，0 LLM、0 token | `backend/app/graph/nodes/normalize.py:83-104`、`backend/tests/unit/test_normalize_tenant_guard.py:151-190` |
-| 超时尾部 | 🔴 零出站审计；30 error 全为 LlmTimeout；execute 13、clarify 13、refuse 4；normalize 22、l4_score 5、gen_sql 2、plan 1（refuse 集 normalize 3 / plan 1） | `eval/results_r59_error_rate.json`、`eval/results_r59_final_readings.json`、`eval/results_r59_timeout_tail_table.json` |
+| 超时尾部 | 🔴 零出站审计；30 error 全为 LlmTimeout；execute 13、clarify 13、refuse 4；normalize 22、l4_score 5、gen_sql 2、plan 1（r58 零出站审计） | `eval/results_r59_error_rate.json`、`eval/results_r59_final_readings.json`、`eval/results_r59_timeout_tail_table.json` |
 | G-5 原始尺 | `correct_refused 20/24`、误拒 `3/124`、equiv `29/124`；clean rerun 合并后才 `24/24` | `eval/results_r59_raw_gate.json`、`eval/results_r58e_gate_recompute.json` |
 | G-5 可用性盲点 | execute error `13/124=10.48%`，clarify error `13/18=72.22%`；不自行改门禁 | `eval/results_r59_error_rate.json` |
 | 3 条误拒 | E-MET-08 gold/语义包无“含未支付”口径；M-MET-01 channel 绑定歧义；H-ENUM-04 同文 H-ENUM-01 complete、H-ENUM-04 在 bind 后 refuse，属应用映射缺口 | `eval/results_r59_over_refusal_contract.json`、`eval/results_r59_over_refusal_evidence.json` |
 | τ | ❌ 不可校准：31 条 raw 仅存 30 分数、缺 candidate_ids 顺序与 gold_candidate_id；`can_form_score_sample=false`，未填 τ/ε | `eval/results_r59_tau_schema_audit.json` |
-| 等价差异 | 64 条 complete 非等价；静态分类器不可信，**六类逐条审计 UNVERIFIED** | `eval/results_r59_equiv_audited.json`（原始分类仅作失败样，不引用其计数为结论） |
-| secrets | 三把尺分开：worktree 57、当前提交树 51、git 历史 94；worktree 分类：测试/bootstrap 28、历史报告 11、source 8、local ignored secret 6、dev placeholder 2、误报 2 | `eval/results_r59_secret_scan_summary.json`、`.w8r59-*.json` |
+| 等价差异 | r58 的 64 条 complete 非等价按 sqlglot AST 只做差异审计：default predicate 43、limit 6、true generation 5、time 3、extra display 7；不等同于等价裁决 | `eval/results_r59_equiv_audited.v3.json` |
+| secrets | 三把尺分开：worktree 57、提交树 51、607 笔历史 94；worktree 分类见最终件；未打印、未改 allowlist | `eval/results_r59_secret_scan_final.json`、`.w8r59-*.json` |
 
 ### 59.1 A：跨租户拒绝前移（代码 2bac27d）
 
@@ -5922,8 +5922,7 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 - 未改 `.gitleaks.toml`、未加宽 allowlist、未提交 secrets；scan 仍不绿。
 
 ### 59.7 回归与边界
-
-- offline：`2600 passed / 0 failed / 1 warning / 118.14s`（2026-10-19 10:10–10:12 +0800，HEAD `2bac27d`）。
-- integration：`124 passed / 0 failed / 36.55s`（2026-10-19 10:27–10:29 +0800，HEAD `2bac27d`；一次性 PG/Redis，已 DROP，残渣仅 `ecom`/`ecom_u123_probe`）。
-- 本轮 W59 代码测试：`17 passed`（tenant guard）；全量 offline `2600/0`；integration `124/0`。R-GMV-02 live 单例已跑 0 token；G-2/G-5 全量二轮和 τ 校准未跑，标 UNVERIFIED。
+- offline 终版：`2600 passed / 0 failed / 1 warning / 103.35s`（2026-10-19 11:35–11:37 +0800，HEAD `8b67705`）。
+- integration 终版：`alembic_rc=0`；`124 passed / 0 failed / 32.33s`（2026-10-19 11:38–11:39 +0800，HEAD `8b67705`；一次性 PG/Redis，已 DROP；残渣仅 `ecom`/`ecom_u123_probe`）。
+- W59 live 终版：R-GMV-02 干净单例 `refuse/out_of_scope`、0 token（HEAD `4775f08`/dirty=false）；全量 166 `3,416,959 tokens / price_guess 8.813584`（2026-10-19 10:55–11:32 +0800，HEAD `8b67705`/dirty=false）；G-2 `9 complete+9 eq/1 timeout`，G-5 应拒 `23/24`（R-NA-06 timeout）、误拒 `0/124`、equiv `32/124`，clarify `9/6/1/2` 单列；门禁不写通过。
 - 未动：15s、阈值、判据、gold、语义包、冻结集、`reports/qa/**`、共享 ecom；U-127 open；G-8 未跑；官方门禁未刷新。

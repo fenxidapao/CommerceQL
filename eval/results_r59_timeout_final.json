@@ -1,0 +1,440 @@
+{
+  "source": "eval/results_r59_full166.json",
+  "git_rev": "8b67705",
+  "git_dirty": false,
+  "generated_at": "2026-10-19T02:55:40+00:00",
+  "denominators": {
+    "all": 166,
+    "execute": 124,
+    "clarify": 18,
+    "refuse": 24
+  },
+  "errors_total": 13,
+  "by_expected": {
+    "execute": 10,
+    "clarify": 2,
+    "refuse": 1
+  },
+  "by_node": {
+    "normalize_intent": 6,
+    "l4_score": 2,
+    "gen_sql": 3,
+    "null": 2
+  },
+  "rows": [
+    {
+      "case_id": "E-VER-11",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "node_latency_ms": 15019,
+      "total_latency_ms": 15020,
+      "retries": 0,
+      "hard_15s": true
+    },
+    {
+      "case_id": "M-DIM-02",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "node_latency_ms": 15006,
+      "total_latency_ms": 15008,
+      "retries": 0,
+      "hard_15s": true
+    },
+    {
+      "case_id": "M-DIM-09",
+      "expected": "execute",
+      "node": "l4_score",
+      "code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "tokens": {
+        "input": 16975,
+        "output": 260,
+        "cache_hit": 16512,
+        "total": 17235
+      },
+      "node_latency_ms": null,
+      "total_latency_ms": 23335,
+      "retries": 0,
+      "hard_15s": false
+    },
+    {
+      "case_id": "M-HIER-01",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "node_latency_ms": 15010,
+      "total_latency_ms": 15011,
+      "retries": 0,
+      "hard_15s": true
+    },
+    {
+      "case_id": "H-CAT-02",
+      "expected": "execute",
+      "node": "gen_sql",
+      "code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "tokens": {
+        "input": 17996,
+        "output": 1391,
+        "cache_hit": 16384,
+        "total": 19387
+      },
+      "node_latency_ms": 15015,
+      "total_latency_ms": 38624,
+      "retries": 0,
+      "hard_15s": true
+    },
+    {
+      "case_id": "H-CAT-03",
+      "expected": "execute",
+      "node": "gen_sql",
+      "code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "tokens": {
+        "input": 17999,
+        "output": 1367,
+        "cache_hit": 16384,
+        "total": 19366
+      },
+      "node_latency_ms": 15012,
+      "total_latency_ms": 24560,
+      "retries": 0,
+      "hard_15s": true
+    },
+    {
+      "case_id": "H-CAT-04",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "node_latency_ms": 15012,
+      "total_latency_ms": 15013,
+      "retries": 0,
+      "hard_15s": true
+    },
+    {
+      "case_id": "H-MET-02",
+      "expected": "execute",
+      "node": "l4_score",
+      "code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "tokens": {
+        "input": 17005,
+        "output": 392,
+        "cache_hit": 16640,
+        "total": 17397
+      },
+      "node_latency_ms": null,
+      "total_latency_ms": 23929,
+      "retries": 0,
+      "hard_15s": false
+    },
+    {
+      "case_id": "H-MET-05",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "node_latency_ms": 15016,
+      "total_latency_ms": 15017,
+      "retries": 0,
+      "hard_15s": true
+    },
+    {
+      "case_id": "H-MET-06",
+      "expected": "execute",
+      "node": "gen_sql",
+      "code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "tokens": {
+        "input": 18016,
+        "output": 1397,
+        "cache_hit": 16640,
+        "total": 19413
+      },
+      "node_latency_ms": 15015,
+      "total_latency_ms": 28898,
+      "retries": 0,
+      "hard_15s": true
+    },
+    {
+      "case_id": "C-REP-01",
+      "expected": "clarify",
+      "node": null,
+      "code": "GATE_AST_REJECTED",
+      "last_degrade_error": null,
+      "tokens": {
+        "input": 26372,
+        "output": 1678,
+        "cache_hit": 23040,
+        "total": 28050
+      },
+      "node_latency_ms": null,
+      "total_latency_ms": 14742,
+      "retries": 0,
+      "hard_15s": false
+    },
+    {
+      "case_id": "C-REP-02",
+      "expected": "clarify",
+      "node": null,
+      "code": "GATE_AST_REJECTED",
+      "last_degrade_error": null,
+      "tokens": {
+        "input": 26342,
+        "output": 1566,
+        "cache_hit": 24448,
+        "total": 27908
+      },
+      "node_latency_ms": null,
+      "total_latency_ms": 13860,
+      "retries": 0,
+      "hard_15s": false
+    },
+    {
+      "case_id": "R-NA-06",
+      "expected": "refuse",
+      "node": "normalize_intent",
+      "code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "node_latency_ms": 15013,
+      "total_latency_ms": 15014,
+      "retries": 0,
+      "hard_15s": true
+    }
+  ],
+  "g2": [
+    {
+      "case_id": "E-VER-01",
+      "terminal": "complete",
+      "equivalent": true,
+      "refusal_reason": null,
+      "code": null,
+      "task": null
+    },
+    {
+      "case_id": "E-VER-02",
+      "terminal": "complete",
+      "equivalent": true,
+      "refusal_reason": null,
+      "code": null,
+      "task": null
+    },
+    {
+      "case_id": "E-VER-03",
+      "terminal": "complete",
+      "equivalent": true,
+      "refusal_reason": null,
+      "code": null,
+      "task": null
+    },
+    {
+      "case_id": "E-VER-04",
+      "terminal": "complete",
+      "equivalent": true,
+      "refusal_reason": null,
+      "code": null,
+      "task": null
+    },
+    {
+      "case_id": "E-VER-05",
+      "terminal": "complete",
+      "equivalent": true,
+      "refusal_reason": null,
+      "code": null,
+      "task": null
+    },
+    {
+      "case_id": "E-VER-06",
+      "terminal": "complete",
+      "equivalent": true,
+      "refusal_reason": null,
+      "code": null,
+      "task": null
+    },
+    {
+      "case_id": "E-VER-07",
+      "terminal": "complete",
+      "equivalent": true,
+      "refusal_reason": null,
+      "code": null,
+      "task": null
+    },
+    {
+      "case_id": "E-VER-08",
+      "terminal": "complete",
+      "equivalent": true,
+      "refusal_reason": null,
+      "code": null,
+      "task": null
+    },
+    {
+      "case_id": "E-VER-10",
+      "terminal": "complete",
+      "equivalent": true,
+      "refusal_reason": null,
+      "code": null,
+      "task": null
+    },
+    {
+      "case_id": "E-VER-11",
+      "terminal": "error",
+      "equivalent": false,
+      "refusal_reason": null,
+      "code": "LLM_UPSTREAM_ERROR",
+      "task": "normalize_intent"
+    }
+  ],
+  "clarify": [
+    {
+      "case_id": "C-CITY-01",
+      "terminal": "clarify",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-CITY-02",
+      "terminal": "clarify",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-CITY-03",
+      "terminal": "clarify",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-CITY-04",
+      "terminal": "clarify",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-GMV-01",
+      "terminal": "complete",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-GMV-02",
+      "terminal": "complete",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-GMV-03",
+      "terminal": "clarify",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-GMV-04",
+      "terminal": "refuse",
+      "code": null,
+      "refusal_reason": "no_data_asset"
+    },
+    {
+      "case_id": "C-RATE-01",
+      "terminal": "complete",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-RATE-02",
+      "terminal": "complete",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-REP-01",
+      "terminal": "error",
+      "code": "GATE_AST_REJECTED",
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-REP-02",
+      "terminal": "error",
+      "code": "GATE_AST_REJECTED",
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-UV-01",
+      "terminal": "clarify",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-UV-02",
+      "terminal": "complete",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-AOV-01",
+      "terminal": "complete",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-REG-01",
+      "terminal": "clarify",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-REG-02",
+      "terminal": "clarify",
+      "code": null,
+      "refusal_reason": null
+    },
+    {
+      "case_id": "C-CAT-01",
+      "terminal": "clarify",
+      "code": null,
+      "refusal_reason": null
+    }
+  ],
+  "over_refused_cases": []
+}

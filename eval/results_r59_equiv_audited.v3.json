@@ -1,0 +1,4247 @@
+{
+  "source": "eval/results_r58_full166.json",
+  "n": 64,
+  "primary_counts": {
+    "default_predicate_mismatch": 43,
+    "limit_truncation": 6,
+    "true_sql_generation_error": 5,
+    "time_semantics": 3,
+    "extra_display_columns": 7
+  },
+  "flag_counts": {
+    "default_predicate_mismatch": 44,
+    "value_mapping": 16,
+    "limit_truncation": 9,
+    "true_sql_generation_error": 38,
+    "extra_display_columns": 26,
+    "time_semantics": 3
+  },
+  "rows": [
+    {
+      "case_id": "E-ENUM-06",
+      "question": "T_A 的「3C数码」在架商品有多少个？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch",
+        "value_mapping"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "count(*)"
+        ],
+        "gold_columns": [
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "on_sale_product_cnt"
+        ],
+        "gold_column_names": [
+          "count(*)"
+        ],
+        "predicted_where": [
+          "category_l1 = <val>",
+          "on_sale = true"
+        ],
+        "gold_where": [
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [
+          "on_sale = true"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>",
+          "on_sale = true"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE v_product.on_sale = TRUE AND v_product.category_l1 = %(category_l1)s LIMIT 1000",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '3C数码'"
+    },
+    {
+      "case_id": "E-ENUM-07",
+      "question": "T_A 的「家用电器」在架商品有多少个？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch",
+        "value_mapping"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "count(*)"
+        ],
+        "gold_columns": [
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "on_sale_product_cnt"
+        ],
+        "gold_column_names": [
+          "count(*)"
+        ],
+        "predicted_where": [
+          "on_sale = true",
+          "category_l1 = <val>"
+        ],
+        "gold_where": [
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [
+          "on_sale = true"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>",
+          "on_sale = true"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE v_product.category_l1 = %(category_l1)s AND v_product.on_sale = TRUE LIMIT 100",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '家用电器'"
+    },
+    {
+      "case_id": "E-ENUM-08",
+      "question": "T_A 的「美妆个护」在架商品有多少个？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch",
+        "value_mapping"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "count(*)"
+        ],
+        "gold_columns": [
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "on_sale_product_cnt"
+        ],
+        "gold_column_names": [
+          "count(*)"
+        ],
+        "predicted_where": [
+          "category_l1 = <val>",
+          "on_sale = true"
+        ],
+        "gold_where": [
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [
+          "on_sale = true"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>",
+          "on_sale = true"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE AND category_l1 = %(category_l1)s LIMIT 100",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '美妆个护'"
+    },
+    {
+      "case_id": "E-ENUM-09",
+      "question": "T_B 的「服饰鞋包」在架商品有多少个？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch",
+        "value_mapping"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "count(*)"
+        ],
+        "gold_columns": [
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "on_sale_product_cnt"
+        ],
+        "gold_column_names": [
+          "count(*)"
+        ],
+        "predicted_where": [
+          "category_l1 = <val>",
+          "on_sale = true"
+        ],
+        "gold_where": [
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [
+          "on_sale = true"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>",
+          "on_sale = true"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE v_product.on_sale = TRUE AND v_product.category_l1 = %(category_l1)s LIMIT 100",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '服饰鞋包'"
+    },
+    {
+      "case_id": "E-ENUM-10",
+      "question": "T_C 的「食品生鲜」在架商品有多少个？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch",
+        "value_mapping"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "count(*)"
+        ],
+        "gold_columns": [
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "on_sale_product_cnt"
+        ],
+        "gold_column_names": [
+          "count(*)"
+        ],
+        "predicted_where": [
+          "category_l1 = <val>",
+          "on_sale = true"
+        ],
+        "gold_where": [
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [
+          "on_sale = true"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>",
+          "on_sale = true"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT COUNT(*) AS on_sale_product_cnt FROM v_product WHERE on_sale = TRUE AND category_l1 = %(category_l1)s LIMIT 100",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '食品生鲜'"
+    },
+    {
+      "case_id": "E-MET-01",
+      "question": "T_A 从 2026-08-01 起的 GMV 是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 1,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "gmv"
+        ],
+        "gold_column_names": [
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "pay_time >= <val>",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01'"
+    },
+    {
+      "case_id": "E-MET-02",
+      "question": "T_A 从 2026-06-01 起的 GMV 是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 1,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "gmv"
+        ],
+        "gold_column_names": [
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "is_test_order = false",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-06-01'"
+    },
+    {
+      "case_id": "E-MET-03",
+      "question": "T_A 从 2025-11-01 起的 GMV 是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 1,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "gmv"
+        ],
+        "gold_column_names": [
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "pay_time >= <val>",
+          "is_test_order = false",
+          "refund_status <> <val>",
+          "pay_status = <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2025-11-01'"
+    },
+    {
+      "case_id": "E-MET-04",
+      "question": "T_A 从 2026-03-01 起的 GMV 是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 1,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "gmv"
+        ],
+        "gold_column_names": [
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "pay_time >= <val>",
+          "is_test_order = false",
+          "refund_status <> <val>",
+          "pay_status = <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-03-01'"
+    },
+    {
+      "case_id": "E-MET-05",
+      "question": "T_A 从 2026-08-01 起的订单量是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "count(distinct sub_order_id)"
+        ],
+        "gold_columns": [
+          "count(distinct sub_order_id)"
+        ],
+        "predicted_column_names": [
+          "order_cnt"
+        ],
+        "gold_column_names": [
+          "count(distinct sub_order_id)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "pay_time >= <val>",
+          "is_test_order = false",
+          "refund_status <> <val>",
+          "pay_status = <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) AS order_cnt FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1000",
+      "gold_sql": "SELECT COUNT(DISTINCT sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-08-01'"
+    },
+    {
+      "case_id": "E-MET-06",
+      "question": "T_A 从 2026-06-01 起的订单量是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 1,
+        "gold_limit": null,
+        "predicted_columns": [
+          "count(distinct sub_order_id)"
+        ],
+        "gold_columns": [
+          "count(distinct sub_order_id)"
+        ],
+        "predicted_column_names": [
+          "order_cnt"
+        ],
+        "gold_column_names": [
+          "count(distinct sub_order_id)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "is_test_order = false",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) AS order_cnt FROM v_order_paid WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "gold_sql": "SELECT COUNT(DISTINCT sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-06-01'"
+    },
+    {
+      "case_id": "E-MET-07",
+      "question": "T_A 从 2026-01-01 起的订单量是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 1,
+        "gold_limit": null,
+        "predicted_columns": [
+          "count(distinct sub_order_id)"
+        ],
+        "gold_columns": [
+          "count(distinct sub_order_id)"
+        ],
+        "predicted_column_names": [
+          "order_cnt"
+        ],
+        "gold_column_names": [
+          "count(distinct sub_order_id)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) AS order_cnt FROM v_order_paid WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "gold_sql": "SELECT COUNT(DISTINCT sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-01-01'"
+    },
+    {
+      "case_id": "E-MET-09",
+      "question": "T_B 从 2026-08-01 起的 GMV 是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 1,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "gmv"
+        ],
+        "gold_column_names": [
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "pay_time >= <val>",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01'"
+    },
+    {
+      "case_id": "M-DIM-01",
+      "question": "T_A 的各 SKU 的浏览量分别是多少？",
+      "primary": "limit_truncation",
+      "flags": [
+        "limit_truncation"
+      ],
+      "evidence": {
+        "predicted_rows": 1000,
+        "gold_rows": 2000,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sku_id",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "sku_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "sku_id",
+          "pv"
+        ],
+        "gold_column_names": [
+          "sku_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0"
+        ],
+        "gold_where": [],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_traffic_daily.sku_id AS sku_id, SUM(v_traffic_daily.pv) AS pv FROM v_traffic_daily WHERE v_traffic_daily.uv >= 0 GROUP BY v_traffic_daily.sku_id ORDER BY pv DESC LIMIT 1000",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily GROUP BY sku_id"
+    },
+    {
+      "case_id": "M-DIM-06",
+      "question": "T_A 的各 SPU 的 SKU 数分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 666,
+        "gold_rows": 667,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "spu_id",
+          "count(*)"
+        ],
+        "gold_columns": [
+          "spu_id",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "spu_id",
+          "sku_cnt"
+        ],
+        "gold_column_names": [
+          "spu_id",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "on_sale = true"
+        ],
+        "gold_where": [],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [
+          "on_sale = true"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "on_sale = true"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT product.spu_id AS spu_id, COUNT(*) AS sku_cnt FROM v_product AS product WHERE product.on_sale = TRUE GROUP BY product.spu_id ORDER BY product.spu_id LIMIT 1000",
+      "gold_sql": "SELECT spu_id, COUNT(*) FROM v_product GROUP BY spu_id"
+    },
+    {
+      "case_id": "M-DIM-07",
+      "question": "T_A 的各二级类目的商品数分别是多少？",
+      "primary": "true_sql_generation_error",
+      "flags": [
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 32,
+        "gold_rows": 33,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "category_l2",
+          "count(*)"
+        ],
+        "gold_columns": [
+          "category_l2",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "category_l2",
+          "product_cnt"
+        ],
+        "gold_column_names": [
+          "category_l2",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "category_l2 is not <val>"
+        ],
+        "gold_where": [],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_product.category_l2 AS category_l2, COUNT(*) AS product_cnt FROM v_product WHERE v_product.category_l2 IS NOT NULL GROUP BY v_product.category_l2 ORDER BY product_cnt DESC LIMIT 100",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product GROUP BY category_l2"
+    },
+    {
+      "case_id": "M-ENUM-01",
+      "question": "T_A 直播渠道各 SKU 的浏览量分别是多少？",
+      "primary": "limit_truncation",
+      "flags": [
+        "limit_truncation",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 100,
+        "gold_rows": 2000,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sku_id",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "sku_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "sku_id",
+          "pv"
+        ],
+        "gold_column_names": [
+          "sku_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "channel = <val>"
+        ],
+        "gold_where": [
+          "channel = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "channel = <val>"
+        ],
+        "value_predicates_gold": [
+          "channel = <val>"
+        ],
+        "joins_equal": false,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_traffic_daily.sku_id AS sku_id, SUM(v_traffic_daily.pv) AS pv FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id WHERE v_traffic_daily.channel = %(channel)s AND v_traffic_daily.uv >= 0 GROUP BY v_traffic_daily.sku_id ORDER BY pv DESC LIMIT 100",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily WHERE channel = 'live' GROUP BY sku_id"
+    },
+    {
+      "case_id": "M-ENUM-02",
+      "question": "T_A 搜索渠道各 SKU 的浏览量分别是多少？",
+      "primary": "limit_truncation",
+      "flags": [
+        "extra_display_columns",
+        "limit_truncation",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 1000,
+        "gold_rows": 2000,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sku_id",
+          "sku_name",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "sku_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "sku_id",
+          "sku_name",
+          "pv"
+        ],
+        "gold_column_names": [
+          "sku_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "channel = <val>"
+        ],
+        "gold_where": [
+          "channel = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "channel = <val>"
+        ],
+        "value_predicates_gold": [
+          "channel = <val>"
+        ],
+        "joins_equal": false,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "sku_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT p.sku_id AS sku_id, p.sku_name AS sku_name, SUM(t.pv) AS pv FROM v_traffic_daily AS t JOIN v_product AS p ON t.sku_id = p.sku_id WHERE t.channel = %(channel)s AND t.uv >= 0 GROUP BY p.sku_id, p.sku_name ORDER BY pv DESC LIMIT 1000",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily WHERE channel = 'search' GROUP BY sku_id"
+    },
+    {
+      "case_id": "M-ENUM-03",
+      "question": "T_A 推荐渠道各 SKU 的浏览量分别是多少？",
+      "primary": "limit_truncation",
+      "flags": [
+        "extra_display_columns",
+        "limit_truncation",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 1000,
+        "gold_rows": 2000,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sku_id",
+          "sku_name",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "sku_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "sku_id",
+          "sku_name",
+          "pv"
+        ],
+        "gold_column_names": [
+          "sku_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "channel = <val>"
+        ],
+        "gold_where": [
+          "channel = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "channel = <val>"
+        ],
+        "value_predicates_gold": [
+          "channel = <val>"
+        ],
+        "joins_equal": false,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "sku_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT p.sku_id AS sku_id, p.sku_name AS sku_name, SUM(t.pv) AS pv FROM v_traffic_daily AS t JOIN v_product AS p ON t.sku_id = p.sku_id WHERE t.channel = %(channel)s AND t.uv >= 0 GROUP BY p.sku_id, p.sku_name ORDER BY pv DESC LIMIT 1000",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily WHERE channel = 'feed' GROUP BY sku_id"
+    },
+    {
+      "case_id": "M-ENUM-04",
+      "question": "T_A 付费广告渠道各 SKU 的浏览量分别是多少？",
+      "primary": "limit_truncation",
+      "flags": [
+        "extra_display_columns",
+        "limit_truncation",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 1000,
+        "gold_rows": 2000,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sku_id",
+          "sku_name",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "sku_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "sku_id",
+          "sku_name",
+          "pv"
+        ],
+        "gold_column_names": [
+          "sku_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "channel = <val>"
+        ],
+        "gold_where": [
+          "channel = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "channel = <val>"
+        ],
+        "value_predicates_gold": [
+          "channel = <val>"
+        ],
+        "joins_equal": false,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "sku_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_product.sku_id AS sku_id, v_product.sku_name AS sku_name, SUM(v_traffic_daily.pv) AS pv FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id WHERE v_traffic_daily.channel = %(channel)s AND v_traffic_daily.uv >= 0 GROUP BY v_product.sku_id, v_product.sku_name ORDER BY pv DESC LIMIT 1000",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily WHERE channel = 'ad' GROUP BY sku_id"
+    },
+    {
+      "case_id": "M-HIER-04",
+      "question": "3C数码下一级各子类的商品数分别是多少？",
+      "primary": "true_sql_generation_error",
+      "flags": [
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 4,
+        "gold_rows": 0,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "category_l2",
+          "count(*)"
+        ],
+        "gold_columns": [
+          "category_l2",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "category_l2",
+          "product_cnt"
+        ],
+        "gold_column_names": [
+          "category_l2",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "category_l1 = <val>"
+        ],
+        "gold_where": [
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_product.category_l2 AS category_l2, COUNT(*) AS product_cnt FROM v_product WHERE v_product.category_l1 = %(category_l1)s GROUP BY v_product.category_l2 ORDER BY product_cnt DESC LIMIT 100",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE category_l1 = '3C数码-子类1' GROUP BY category_l2"
+    },
+    {
+      "case_id": "M-HIER-05",
+      "question": "家用电器下一级各子类的商品数分别是多少？",
+      "primary": "true_sql_generation_error",
+      "flags": [
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 4,
+        "gold_rows": 0,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "category_l2",
+          "count(*)"
+        ],
+        "gold_columns": [
+          "category_l2",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "category_l2",
+          "product_cnt"
+        ],
+        "gold_column_names": [
+          "category_l2",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "category_l1 = <val>"
+        ],
+        "gold_where": [
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_product.category_l2 AS category_l2, COUNT(*) AS product_cnt FROM v_product WHERE v_product.category_l1 = %(category_l1)s GROUP BY v_product.category_l2 ORDER BY product_cnt DESC LIMIT 100",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE category_l1 = '家用电器-子类1' GROUP BY category_l2"
+    },
+    {
+      "case_id": "M-HIER-06",
+      "question": "服饰鞋包下一级各子类的商品数分别是多少？",
+      "primary": "true_sql_generation_error",
+      "flags": [
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 4,
+        "gold_rows": 0,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "category_l2",
+          "count(*)"
+        ],
+        "gold_columns": [
+          "category_l2",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "category_l2",
+          "product_cnt"
+        ],
+        "gold_column_names": [
+          "category_l2",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "category_l1 = <val>"
+        ],
+        "gold_where": [
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_product.category_l2 AS category_l2, COUNT(*) AS product_cnt FROM v_product WHERE v_product.category_l1 = %(category_l1)s GROUP BY v_product.category_l2 ORDER BY product_cnt DESC LIMIT 100",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE category_l1 = '服饰鞋包-子类1' GROUP BY category_l2"
+    },
+    {
+      "case_id": "M-MET-02",
+      "question": "T_A 从 2026-08-01 起各店铺的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "pay_time >= <val>",
+          "is_test_order = false",
+          "refund_status <> <val>",
+          "pay_status = <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": false,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY gmv DESC LIMIT 1000",
+      "gold_sql": "SELECT shop_id, SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' GROUP BY shop_id"
+    },
+    {
+      "case_id": "M-MET-03",
+      "question": "T_A 从 2026-08-01 起各一级类目的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 9,
+        "gold_rows": 9,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "category_l1",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "category_l1",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "category_l1",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "category_l1",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "pay_time >= <val>",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": false,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_product.category_l1 AS category_l1, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(pay_time_start)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_product.category_l1 ORDER BY gmv DESC LIMIT 100",
+      "gold_sql": "SELECT category_l1, SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' GROUP BY category_l1"
+    },
+    {
+      "case_id": "M-MET-04",
+      "question": "T_A 从 2026-08-01 起各收货城市的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 32,
+        "gold_rows": 32,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "receiver_city",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "receiver_city",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "receiver_city",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "receiver_city",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "pay_time >= <val>",
+          "is_test_order = false",
+          "refund_status <> <val>",
+          "pay_status = <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_order_paid.receiver_city AS receiver_city, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_order_paid.receiver_city ORDER BY gmv DESC LIMIT 1000",
+      "gold_sql": "SELECT receiver_city, SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' GROUP BY receiver_city"
+    },
+    {
+      "case_id": "M-MET-05",
+      "question": "T_A 从 2026-08-01 起各sku_id的 UV 分别是多少？",
+      "primary": "limit_truncation",
+      "flags": [
+        "limit_truncation",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 1000,
+        "gold_rows": 1697,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sku_id",
+          "sum(uv)"
+        ],
+        "gold_columns": [
+          "sku_id",
+          "sum(uv)"
+        ],
+        "predicted_column_names": [
+          "sku_id",
+          "uv"
+        ],
+        "gold_column_names": [
+          "sku_id",
+          "sum(uv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "stat_date >= <val>"
+        ],
+        "gold_where": [
+          "stat_date >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "stat_date >= <val>"
+        ],
+        "time_predicates_gold": [
+          "stat_date >= <val>"
+        ],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [],
+        "value_predicates_gold": [],
+        "joins_equal": false,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT p.sku_id AS sku_id, SUM(t.uv) AS uv FROM v_traffic_daily AS t JOIN v_product AS p ON t.sku_id = p.sku_id WHERE t.stat_date >= %(start_date)s AND t.uv >= 0 GROUP BY p.sku_id ORDER BY uv DESC LIMIT 1000",
+      "gold_sql": "SELECT sku_id, SUM(uv) FROM v_traffic_daily WHERE stat_date >= '2026-08-01' GROUP BY sku_id"
+    },
+    {
+      "case_id": "M-MET-08",
+      "question": "T_A 八月起各 SKU 的 GMV 分别是多少？",
+      "primary": "time_semantics",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "limit_truncation",
+        "time_semantics",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 1000,
+        "gold_rows": 1232,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sku_id",
+          "sum(pay_amount)",
+          "count(distinct sub_order_id)",
+          "sum(pay_amount) / nullif(count(distinct sub_order_id), 0)"
+        ],
+        "gold_columns": [
+          "sku_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "sku_id",
+          "gmv",
+          "order_cnt",
+          "aov"
+        ],
+        "gold_column_names": [
+          "sku_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "pay_time < <val>",
+          "pay_time >= <val>",
+          "is_test_order = false",
+          "refund_status <> <val>",
+          "pay_status = <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time < <val>",
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": false,
+        "groups_equal": true,
+        "aggs_equal": false,
+        "extra_expr": [
+          "count(distinct sub_order_id)",
+          "sum(pay_amount) / nullif(count(distinct sub_order_id), 0)"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT p.sku_id AS sku_id, SUM(o.pay_amount) AS gmv, COUNT(DISTINCT o.sub_order_id) AS order_cnt, SUM(o.pay_amount) / NULLIF(COUNT(DISTINCT o.sub_order_id), 0) AS aov FROM v_order_paid AS o JOIN v_product AS p ON o.sku_id = p.sku_id WHERE o.pay_status = 'paid' AND o.refund_status <> 'refunded' AND o.is_test_order = FALSE AND o.pay_time >= %(start_ts)s AND o.pay_time < %(end_ts)s AND o.is_test_order = FALSE AND o.refund_status <> 'refunded' AND o.pay_status = 'paid' GROUP BY p.sku_id ORDER BY gmv DESC LIMIT 1000",
+      "gold_sql": "SELECT sku_id, SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' GROUP BY sku_id"
+    },
+    {
+      "case_id": "M-MET-09",
+      "question": "T_A 六月起各 SKU 的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch",
+        "limit_truncation",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 1000,
+        "gold_rows": 1590,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sku_id",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "sku_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "sku_id",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "sku_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "pay_time >= <val>",
+          "is_test_order = false",
+          "refund_status <> <val>",
+          "pay_status = <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": false,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT p.sku_id AS sku_id, SUM(o.pay_amount) AS gmv FROM v_order_paid AS o JOIN v_product AS p ON o.sku_id = p.sku_id WHERE o.pay_status = 'paid' AND o.refund_status <> 'refunded' AND o.is_test_order = FALSE AND o.pay_time >= %(start_ts)s AND o.is_test_order = FALSE AND o.refund_status <> 'refunded' AND o.pay_status = 'paid' GROUP BY p.sku_id ORDER BY gmv DESC LIMIT 1000",
+      "gold_sql": "SELECT sku_id, SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-06-01' GROUP BY sku_id"
+    },
+    {
+      "case_id": "M-MET-10",
+      "question": "T_A 一月起各 SKU 的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch",
+        "limit_truncation",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 1000,
+        "gold_rows": 1910,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sku_id",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "sku_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "sku_id",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "sku_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "pay_time >= <val>",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": false,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT p.sku_id AS sku_id, SUM(o.pay_amount) AS gmv FROM v_order_paid AS o JOIN v_product AS p ON o.sku_id = p.sku_id WHERE o.pay_status = %(pay_status)s AND o.refund_status <> %(refund_status)s AND o.is_test_order = %(is_test_order)s AND o.pay_time >= %(pay_time_start)s AND o.is_test_order = FALSE AND o.refund_status <> 'refunded' AND o.pay_status = 'paid' GROUP BY p.sku_id ORDER BY gmv DESC LIMIT 1000",
+      "gold_sql": "SELECT sku_id, SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-01-01' GROUP BY sku_id"
+    },
+    {
+      "case_id": "H-STR-02",
+      "question": "T_A 位于杭州的店铺各有多少个商品？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 0,
+        "gold_rows": 0,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "count(*)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "product_cnt"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "city = <val>"
+        ],
+        "gold_where": [
+          "on_sale = 1",
+          "city = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [
+          "on_sale = 1"
+        ],
+        "value_predicates_predicted": [],
+        "value_predicates_gold": [
+          "on_sale = 1"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, COUNT(*) AS product_cnt FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = %(city)s GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY product_cnt DESC LIMIT 1000",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '杭州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "H-ENUM-01",
+      "question": "T_A 处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "value_mapping",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "count(distinct sub_order_id)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "order_cnt"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "is_test_order = <val>",
+          "pay_status = <val>",
+          "refund_status = <val>"
+        ],
+        "gold_where": [
+          "pay_status = <val>",
+          "refund_status = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status = <val>"
+        ],
+        "default_predicates_gold": [
+          "pay_status = <val>",
+          "refund_status = <val>"
+        ],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status = <val>"
+        ],
+        "value_predicates_gold": [
+          "pay_status = <val>",
+          "refund_status = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name",
+          "count(distinct sub_order_id)"
+        ],
+        "missing_expr": [
+          "count(*)"
+        ]
+      },
+      "predicted_sql": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, COUNT(DISTINCT v_order_paid.sub_order_id) AS order_cnt FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = %(refund_status)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY order_cnt DESC LIMIT 100",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'partial' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "H-ENUM-02",
+      "question": "T_A 处于「全额退款」状态的订单在各店铺分别是多少笔？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "value_mapping",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 0,
+        "gold_rows": 5,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "count(distinct sub_order_id)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "refunded_order_cnt"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "refund_status = <val>",
+          "pay_status = <val>",
+          "is_test_order = false"
+        ],
+        "gold_where": [
+          "pay_status = <val>",
+          "refund_status = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status = <val>"
+        ],
+        "default_predicates_gold": [
+          "pay_status = <val>",
+          "refund_status = <val>"
+        ],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status = <val>"
+        ],
+        "value_predicates_gold": [
+          "pay_status = <val>",
+          "refund_status = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name",
+          "count(distinct sub_order_id)"
+        ],
+        "missing_expr": [
+          "count(*)"
+        ]
+      },
+      "predicted_sql": "SELECT s.shop_id AS shop_id, s.shop_name AS shop_name, COUNT(DISTINCT o.sub_order_id) AS refunded_order_cnt FROM v_order_paid AS o JOIN v_shop AS s ON o.shop_id = s.shop_id WHERE o.is_test_order = FALSE AND o.pay_status = 'paid' AND o.refund_status = 'refunded' AND o.is_test_order = FALSE AND o.refund_status <> 'refunded' AND o.pay_status = 'paid' GROUP BY s.shop_id, s.shop_name ORDER BY refunded_order_cnt DESC, s.shop_id ASC LIMIT 1000",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "H-ENUM-03",
+      "question": "T_A 处于「无退款」状态的订单在各店铺分别是多少笔？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "value_mapping",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "count(distinct sub_order_id)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "order_cnt"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "is_test_order = <val>",
+          "pay_status = <val>",
+          "refund_status = <val>"
+        ],
+        "gold_where": [
+          "pay_status = <val>",
+          "refund_status = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status = <val>"
+        ],
+        "default_predicates_gold": [
+          "pay_status = <val>",
+          "refund_status = <val>"
+        ],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status = <val>"
+        ],
+        "value_predicates_gold": [
+          "pay_status = <val>",
+          "refund_status = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name",
+          "count(distinct sub_order_id)"
+        ],
+        "missing_expr": [
+          "count(*)"
+        ]
+      },
+      "predicted_sql": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, COUNT(DISTINCT v_order_paid.sub_order_id) AS order_cnt FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = %(refund_status)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY order_cnt DESC LIMIT 100",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'none' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "H-CAT-01",
+      "question": "T_A 的「3C数码」各店铺的商品数分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "value_mapping",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "count(*)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "product_cnt"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "category_l1 = <val>"
+        ],
+        "gold_where": [
+          "on_sale = 1",
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [
+          "on_sale = 1"
+        ],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>",
+          "on_sale = 1"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_product.shop_id AS shop_id, v_shop.shop_name AS shop_name, COUNT(*) AS product_cnt FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = %(category_l1)s GROUP BY v_product.shop_id, v_shop.shop_name ORDER BY product_cnt DESC LIMIT 100",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '3C数码' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "H-CAT-02",
+      "question": "T_A 的「家用电器」各店铺的商品数分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "value_mapping",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "count(*)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "product_cnt"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "category_l1 = <val>"
+        ],
+        "gold_where": [
+          "on_sale = 1",
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [
+          "on_sale = 1"
+        ],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>",
+          "on_sale = 1"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_product.shop_id AS shop_id, v_shop.shop_name AS shop_name, COUNT(*) AS product_cnt FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = %(category_l1)s GROUP BY v_product.shop_id, v_shop.shop_name ORDER BY product_cnt DESC LIMIT 100",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '家用电器' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "H-CAT-03",
+      "question": "T_A 的「服饰鞋包」各店铺的商品数分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "value_mapping",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "count(*)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "product_cnt"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "category_l1 = <val>"
+        ],
+        "gold_where": [
+          "on_sale = 1",
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [
+          "on_sale = 1"
+        ],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>",
+          "on_sale = 1"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, COUNT(*) AS product_cnt FROM v_product INNER JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = %(category_l1)s GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY product_cnt DESC, v_shop.shop_id ASC LIMIT 1000",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '服饰鞋包' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "H-CAT-04",
+      "question": "T_A 的「食品生鲜」各店铺的商品数分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch",
+        "value_mapping",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_name",
+          "count(*)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "shop_name",
+          "product_cnt"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "category_l1 = <val>"
+        ],
+        "gold_where": [
+          "on_sale = 1",
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [
+          "on_sale = 1"
+        ],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>",
+          "on_sale = 1"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": [
+          "shop_id"
+        ]
+      },
+      "predicted_sql": "SELECT v_shop.shop_name AS shop_name, COUNT(*) AS product_cnt FROM v_product AS v_product JOIN v_shop AS v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = %(category_l1)s GROUP BY v_shop.shop_name ORDER BY product_cnt DESC LIMIT 1000",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '食品生鲜' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "H-CAT-05",
+      "question": "T_A 的「美妆个护」各店铺的商品数分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "value_mapping",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "count(*)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "product_cnt"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "count(*)"
+        ],
+        "predicted_where": [
+          "category_l1 = <val>"
+        ],
+        "gold_where": [
+          "on_sale = 1",
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [
+          "on_sale = 1"
+        ],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>",
+          "on_sale = 1"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_product.shop_id AS shop_id, v_shop.shop_name AS shop_name, COUNT(*) AS product_cnt FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = %(category_l1)s GROUP BY v_product.shop_id, v_shop.shop_name ORDER BY product_cnt DESC, v_product.shop_id ASC LIMIT 1000",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '美妆个护' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "H-MET-01",
+      "question": "T_A「3C数码」自 2026-08-01 起各店铺的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "value_mapping",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "category_l1 = <val>",
+          "is_test_order = false",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>",
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": false,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_order_paid.shop_id AS shop_id, v_shop.shop_name AS shop_name, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.category_l1 = %(category_l1)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_order_paid.shop_id, v_shop.shop_name ORDER BY gmv DESC LIMIT 1000",
+      "gold_sql": "SELECT v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE v_product.category_l1 = '3C数码' AND v_order_paid.pay_time >= '2026-08-01' GROUP BY v_order_paid.shop_id"
+    },
+    {
+      "case_id": "H-MET-04",
+      "question": "T_A「食品生鲜」自 2026-06-01 起各店铺的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "value_mapping",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "category_l1 = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>",
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": false,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_order_paid.shop_id AS shop_id, v_shop.shop_name AS shop_name, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.category_l1 = %(category_l1)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status_excluded)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_order_paid.shop_id, v_shop.shop_name ORDER BY gmv DESC LIMIT 1000",
+      "gold_sql": "SELECT v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE v_product.category_l1 = '食品生鲜' AND v_order_paid.pay_time >= '2026-06-01' GROUP BY v_order_paid.shop_id"
+    },
+    {
+      "case_id": "H-MET-05",
+      "question": "T_A「美妆个护」自 2026-05-01 起各店铺的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "value_mapping",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "category_l1 = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>",
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": false,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_order_paid.shop_id AS shop_id, v_shop.shop_name AS shop_name, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.category_l1 = %(category_l1)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_order_paid.shop_id, v_shop.shop_name ORDER BY gmv DESC LIMIT 1000",
+      "gold_sql": "SELECT v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE v_product.category_l1 = '美妆个护' AND v_order_paid.pay_time >= '2026-05-01' GROUP BY v_order_paid.shop_id"
+    },
+    {
+      "case_id": "H-MET-06",
+      "question": "T_A 自 2026-08-01 起各大区的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 7,
+        "gold_rows": 7,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "region_name",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "region_name",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "region_name",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "region_name",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_region.region_name AS region_name, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status_excluded)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_region.region_name ORDER BY gmv DESC LIMIT 100",
+      "gold_sql": "SELECT v_region.region_name, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE v_order_paid.pay_time >= '2026-08-01' GROUP BY v_region.region_name"
+    },
+    {
+      "case_id": "H-MET-07",
+      "question": "T_A 自 2026-06-01 起各大区的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 7,
+        "gold_rows": 7,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "region_name",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "region_name",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "region_name",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "region_name",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "region_code is not <val>",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_region.region_name AS region_name, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.region_code IS NOT NULL AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_region.region_name ORDER BY gmv DESC LIMIT 100",
+      "gold_sql": "SELECT v_region.region_name, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE v_order_paid.pay_time >= '2026-06-01' GROUP BY v_region.region_name"
+    },
+    {
+      "case_id": "H-MET-08",
+      "question": "T_A 自 2026-05-01 起各大区的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 7,
+        "gold_rows": 7,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "region_name",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "region_name",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "region_name",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "region_name",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "region_code is not <val>",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_region.region_name AS region_name, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.region_code IS NOT NULL AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_region.region_name ORDER BY gmv DESC LIMIT 100",
+      "gold_sql": "SELECT v_region.region_name, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE v_order_paid.pay_time >= '2026-05-01' GROUP BY v_region.region_name"
+    },
+    {
+      "case_id": "H-MET-09",
+      "question": "T_A 自 2026-03-01 起各大区的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 7,
+        "gold_rows": 7,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "region_name",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "region_name",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "region_name",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "region_name",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "region_code is not <val>",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_region.region_name AS region_name, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.region_code IS NOT NULL AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_region.region_name ORDER BY gmv DESC LIMIT 100",
+      "gold_sql": "SELECT v_region.region_name, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE v_order_paid.pay_time >= '2026-03-01' GROUP BY v_region.region_name"
+    },
+    {
+      "case_id": "H-MET-10",
+      "question": "T_A 自 2026-08-01 起有流量但零转化的 SKU 有哪些？",
+      "primary": "time_semantics",
+      "flags": [
+        "extra_display_columns",
+        "time_semantics",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 574,
+        "gold_rows": 1602,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sku_id",
+          "sku_name",
+          "uv_sum",
+          "order_cnt_sum",
+          "order_cnt_sum * 1.0 / nullif(uv_sum, 0)"
+        ],
+        "gold_columns": [
+          "sku_id",
+          "sum(uv)"
+        ],
+        "predicted_column_names": [
+          "sku_id",
+          "sku_name",
+          "uv_sum",
+          "order_cnt_sum",
+          "pay_cvr"
+        ],
+        "gold_column_names": [
+          "sku_id",
+          "sum(uv)"
+        ],
+        "predicted_where": [
+          "order_cnt_sum = 0",
+          "uv_sum > 0"
+        ],
+        "gold_where": [
+          "order_cnt = 0",
+          "stat_date >= <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [
+          "stat_date >= <val>"
+        ],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [
+          "sku_name",
+          "uv_sum",
+          "order_cnt_sum",
+          "order_cnt_sum * 1.0 / nullif(uv_sum, 0)"
+        ],
+        "missing_expr": [
+          "sum(uv)"
+        ]
+      },
+      "predicted_sql": "SELECT p.sku_id AS sku_id, p.sku_name AS sku_name, t.uv_sum AS uv_sum, t.order_cnt_sum AS order_cnt_sum, t.order_cnt_sum * 1.0 / NULLIF(t.uv_sum, 0) AS pay_cvr FROM (SELECT td.sku_id AS sku_id, SUM(td.uv) AS uv_sum, SUM(td.order_cnt) AS order_cnt_sum FROM v_traffic_daily AS td WHERE td.stat_date >= %(start_date)s AND td.uv >= 0 GROUP BY td.sku_id) AS t JOIN v_product AS p ON t.sku_id = p.sku_id WHERE t.uv_sum > 0 AND t.order_cnt_sum = 0 ORDER BY p.sku_id ASC LIMIT 1000",
+      "gold_sql": "SELECT v_traffic_daily.sku_id, SUM(v_traffic_daily.uv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id WHERE v_traffic_daily.stat_date >= '2026-08-01' AND v_traffic_daily.order_cnt = 0 GROUP BY v_traffic_daily.sku_id"
+    },
+    {
+      "case_id": "X-ENUM-01",
+      "question": "T_A 的「3C数码」商品在各店铺的浏览量合计是多少？",
+      "primary": "extra_display_columns",
+      "flags": [
+        "extra_display_columns",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "pv"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "category_l1 = <val>"
+        ],
+        "gold_where": [
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, SUM(v_traffic_daily.pv) AS pv FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = %(category_l1)s AND v_traffic_daily.uv >= 0 GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY pv DESC LIMIT 100",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '3C数码' GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "X-ENUM-03",
+      "question": "T_A 的「服饰鞋包」商品在各店铺的浏览量合计是多少？",
+      "primary": "time_semantics",
+      "flags": [
+        "extra_display_columns",
+        "time_semantics",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "pv"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "stat_date <= <val>",
+          "stat_date >= <val>",
+          "category_l1 = <val>"
+        ],
+        "gold_where": [
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [
+          "stat_date <= <val>",
+          "stat_date >= <val>"
+        ],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, SUM(v_traffic_daily.pv) AS pv FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = %(category_l1)s AND v_traffic_daily.stat_date >= %(start_date)s AND v_traffic_daily.stat_date <= %(end_date)s AND v_traffic_daily.uv >= 0 GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY pv DESC LIMIT 100",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '服饰鞋包' GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "X-ENUM-06",
+      "question": "T_A 的「家居家装」商品在各店铺的浏览量合计是多少？",
+      "primary": "extra_display_columns",
+      "flags": [
+        "extra_display_columns",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 500,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "pv"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "category_l1 = <val>"
+        ],
+        "gold_where": [
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, SUM(v_traffic_daily.pv) AS pv FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = %(category_l1)s AND v_traffic_daily.uv >= 0 GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY pv DESC LIMIT 500",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '家居家装' GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "X-ENUM-08",
+      "question": "T_A 的「运动户外」商品在各店铺的浏览量合计是多少？",
+      "primary": "extra_display_columns",
+      "flags": [
+        "extra_display_columns",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "pv"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "category_l1 = <val>"
+        ],
+        "gold_where": [
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [],
+        "time_predicates_gold": [],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, SUM(v_traffic_daily.pv) AS pv FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = %(category_l1)s AND v_traffic_daily.uv >= 0 GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY pv DESC LIMIT 100",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '运动户外' GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "X-MET-01",
+      "question": "T_A「3C数码」自 2026-08-01 起各店铺的浏览量分别是多少？",
+      "primary": "extra_display_columns",
+      "flags": [
+        "extra_display_columns",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 500,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "pv"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "uv >= 0",
+          "category_l1 = <val>",
+          "stat_date >= <val>"
+        ],
+        "gold_where": [
+          "stat_date >= <val>",
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [
+          "stat_date >= <val>"
+        ],
+        "time_predicates_gold": [
+          "stat_date >= <val>"
+        ],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT p.shop_id AS shop_id, s.shop_name AS shop_name, SUM(t.pv) AS pv FROM v_traffic_daily AS t JOIN v_product AS p ON t.sku_id = p.sku_id JOIN v_shop AS s ON p.shop_id = s.shop_id WHERE t.stat_date >= %(start_date)s AND p.category_l1 = %(category_l1)s AND t.uv >= 0 AND t.uv >= 0 GROUP BY p.shop_id, s.shop_name ORDER BY pv DESC, p.shop_id ASC LIMIT 500",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '3C数码' AND v_traffic_daily.stat_date >= '2026-08-01' GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "X-MET-02",
+      "question": "T_A「家用电器」自 2026-08-01 起各店铺的浏览量分别是多少？",
+      "primary": "extra_display_columns",
+      "flags": [
+        "extra_display_columns",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 100,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "pv"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "uv >= 0",
+          "category_l1 = <val>",
+          "stat_date >= <val>"
+        ],
+        "gold_where": [
+          "stat_date >= <val>",
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [
+          "stat_date >= <val>"
+        ],
+        "time_predicates_gold": [
+          "stat_date >= <val>"
+        ],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT s.shop_id AS shop_id, s.shop_name AS shop_name, SUM(t.pv) AS pv FROM v_traffic_daily AS t JOIN v_product AS p ON t.sku_id = p.sku_id JOIN v_shop AS s ON p.shop_id = s.shop_id WHERE t.stat_date >= %(start_date)s AND p.category_l1 = %(category_l1)s AND t.uv >= 0 AND t.uv >= 0 GROUP BY s.shop_id, s.shop_name ORDER BY pv DESC LIMIT 100",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '家用电器' AND v_traffic_daily.stat_date >= '2026-08-01' GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "X-MET-03",
+      "question": "T_A「服饰鞋包」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "primary": "true_sql_generation_error",
+      "flags": [
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_name",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "shop_name",
+          "pv"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "pv >= <val>",
+          "category_l1 = <val>",
+          "stat_date >= <val>"
+        ],
+        "gold_where": [
+          "stat_date >= <val>",
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [
+          "stat_date >= <val>"
+        ],
+        "time_predicates_gold": [
+          "stat_date >= <val>"
+        ],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": [
+          "shop_id"
+        ]
+      },
+      "predicted_sql": "SELECT v_shop.shop_name AS shop_name, SUM(v_traffic_daily.pv) AS pv FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_traffic_daily.stat_date >= %(start_date)s AND v_product.category_l1 = %(category_l1)s AND v_traffic_daily.pv >= %(pv_min)s AND v_traffic_daily.uv >= 0 GROUP BY v_shop.shop_name ORDER BY pv DESC LIMIT 1000",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '服饰鞋包' AND v_traffic_daily.stat_date >= '2026-06-01' GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "X-MET-04",
+      "question": "T_A「食品生鲜」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "primary": "extra_display_columns",
+      "flags": [
+        "extra_display_columns",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "pv"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "category_l1 = <val>",
+          "stat_date >= <val>"
+        ],
+        "gold_where": [
+          "stat_date >= <val>",
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [
+          "stat_date >= <val>"
+        ],
+        "time_predicates_gold": [
+          "stat_date >= <val>"
+        ],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, SUM(v_traffic_daily.pv) AS pv FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_traffic_daily.stat_date >= %(start_date)s AND v_product.category_l1 = %(category_l1)s AND v_traffic_daily.uv >= 0 GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY pv DESC LIMIT 1000",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '食品生鲜' AND v_traffic_daily.stat_date >= '2026-06-01' GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "X-MET-05",
+      "question": "T_A「美妆个护」自 2026-05-01 起各店铺的浏览量分别是多少？",
+      "primary": "extra_display_columns",
+      "flags": [
+        "extra_display_columns",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 5,
+        "gold_rows": 5,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "shop_id",
+          "shop_name",
+          "sum(pv)"
+        ],
+        "gold_columns": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_column_names": [
+          "shop_id",
+          "shop_name",
+          "pv"
+        ],
+        "gold_column_names": [
+          "shop_id",
+          "sum(pv)"
+        ],
+        "predicted_where": [
+          "uv >= 0",
+          "category_l1 = <val>",
+          "stat_date >= <val>"
+        ],
+        "gold_where": [
+          "stat_date >= <val>",
+          "category_l1 = <val>"
+        ],
+        "time_predicates_predicted": [
+          "stat_date >= <val>"
+        ],
+        "time_predicates_gold": [
+          "stat_date >= <val>"
+        ],
+        "default_predicates_predicted": [],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "category_l1 = <val>"
+        ],
+        "value_predicates_gold": [
+          "category_l1 = <val>"
+        ],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, SUM(v_traffic_daily.pv) AS pv FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_traffic_daily.stat_date >= %(start_date)s AND v_product.category_l1 = %(category_l1)s AND v_traffic_daily.uv >= 0 GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY pv DESC LIMIT 1000",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '美妆个护' AND v_traffic_daily.stat_date >= '2026-05-01' GROUP BY v_shop.shop_id"
+    },
+    {
+      "case_id": "X-MET-06",
+      "question": "T_A 自 2026-08-01 起各大区各店铺的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 35,
+        "gold_rows": 35,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "region_name",
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "region_name",
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "region_name",
+          "shop_id",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "region_name",
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_region.region_name AS region_name, v_shop.shop_id AS shop_id, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_region.region_name, v_shop.shop_id ORDER BY v_region.region_name, v_shop.shop_id LIMIT 1000",
+      "gold_sql": "SELECT v_region.region_name, v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= '2026-08-01' GROUP BY v_region.region_name, v_order_paid.shop_id"
+    },
+    {
+      "case_id": "X-MET-07",
+      "question": "T_A 自 2026-06-01 起各大区各店铺的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 35,
+        "gold_rows": 35,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "region_name",
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "region_name",
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "region_name",
+          "shop_id",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "region_name",
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_region.region_name AS region_name, v_shop.shop_id AS shop_id, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_region.region_name, v_shop.shop_id ORDER BY gmv DESC LIMIT 1000",
+      "gold_sql": "SELECT v_region.region_name, v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= '2026-06-01' GROUP BY v_region.region_name, v_order_paid.shop_id"
+    },
+    {
+      "case_id": "X-MET-08",
+      "question": "T_A 自 2026-05-01 起各大区各店铺的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "extra_display_columns",
+        "default_predicate_mismatch",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 35,
+        "gold_rows": 35,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "region_name",
+          "shop_id",
+          "shop_name",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "region_name",
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "region_name",
+          "shop_id",
+          "shop_name",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "region_name",
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "region_code is not <val>",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT v_region.region_name AS region_name, v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.region_code IS NOT NULL AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_region.region_name, v_shop.shop_id, v_shop.shop_name ORDER BY gmv DESC LIMIT 1000",
+      "gold_sql": "SELECT v_region.region_name, v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= '2026-05-01' GROUP BY v_region.region_name, v_order_paid.shop_id"
+    },
+    {
+      "case_id": "X-MET-09",
+      "question": "T_A 自 2026-03-01 起各大区各店铺的 GMV 分别是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch",
+        "true_sql_generation_error"
+      ],
+      "evidence": {
+        "predicted_rows": 35,
+        "gold_rows": 35,
+        "predicted_limit": 1000,
+        "gold_limit": null,
+        "predicted_columns": [
+          "region_name",
+          "shop_name",
+          "sum(pay_amount)"
+        ],
+        "gold_columns": [
+          "region_name",
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_column_names": [
+          "region_name",
+          "shop_name",
+          "gmv"
+        ],
+        "gold_column_names": [
+          "region_name",
+          "shop_id",
+          "sum(pay_amount)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "is_test_order = <val>",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": false,
+        "aggs_equal": true,
+        "extra_expr": [
+          "shop_name"
+        ],
+        "missing_expr": [
+          "shop_id"
+        ]
+      },
+      "predicted_sql": "SELECT v_region.region_name AS region_name, v_shop.shop_name AS shop_name, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_region.region_name, v_shop.shop_name ORDER BY v_region.region_name, v_shop.shop_name LIMIT 1000",
+      "gold_sql": "SELECT v_region.region_name, v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= '2026-03-01' GROUP BY v_region.region_name, v_order_paid.shop_id"
+    },
+    {
+      "case_id": "M-IDX-03",
+      "question": "T_A 自 2026-08-01 起的人均消费是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 1,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sum(pay_amount) / nullif(count(distinct buyer_id), 0)"
+        ],
+        "gold_columns": [
+          "sum(pay_amount) / nullif(count(distinct buyer_id), 0)"
+        ],
+        "predicted_column_names": [
+          "arpu"
+        ],
+        "gold_column_names": [
+          "sum(pay_amount) / nullif(count(distinct buyer_id), 0)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "is_test_order = false",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.buyer_id), 0) AS arpu FROM v_order_paid WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "gold_sql": "SELECT SUM(pay_amount) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM v_order_paid WHERE pay_time >= '2026-08-01'"
+    },
+    {
+      "case_id": "M-IDX-04",
+      "question": "T_B 自 2026-08-01 起的人均消费是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 1,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sum(pay_amount) / nullif(count(distinct buyer_id), 0)"
+        ],
+        "gold_columns": [
+          "sum(pay_amount) / nullif(count(distinct buyer_id), 0)"
+        ],
+        "predicted_column_names": [
+          "arpu"
+        ],
+        "gold_column_names": [
+          "sum(pay_amount) / nullif(count(distinct buyer_id), 0)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "is_test_order = false",
+          "refund_status <> <val>",
+          "pay_status = <val>",
+          "pay_time >= <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.buyer_id), 0) AS arpu FROM v_order_paid WHERE v_order_paid.pay_time >= %(start)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "gold_sql": "SELECT SUM(pay_amount) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM v_order_paid WHERE pay_time >= '2026-08-01'"
+    },
+    {
+      "case_id": "M-IDX-05",
+      "question": "T_A 自 2026-08-01 起的退款率是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 1,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sum(case when refund_status = <val> then pay_amount else 0 end) / nullif(sum(pay_amount), 0)"
+        ],
+        "gold_columns": [
+          "sum(case when refund_status = <val> then pay_amount else 0 end) / nullif(sum(pay_amount), 0)"
+        ],
+        "predicted_column_names": [
+          "refund_rate"
+        ],
+        "gold_column_names": [
+          "sum(case when refund_status = <val> then pay_amount else 0 end) / nullif(sum(pay_amount), 0)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "pay_time >= <val>",
+          "is_test_order = false",
+          "pay_status = <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = false",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0) AS refund_rate FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "gold_sql": "SELECT SUM(CASE WHEN refund_status = 'refunded' THEN pay_amount ELSE 0 END) / NULLIF(SUM(pay_amount), 0) FROM v_order_paid WHERE pay_time >= '2026-08-01'"
+    },
+    {
+      "case_id": "M-IDX-06",
+      "question": "T_B 自 2026-06-01 起的退款率是多少？",
+      "primary": "default_predicate_mismatch",
+      "flags": [
+        "default_predicate_mismatch"
+      ],
+      "evidence": {
+        "predicted_rows": 1,
+        "gold_rows": 1,
+        "predicted_limit": 1,
+        "gold_limit": null,
+        "predicted_columns": [
+          "sum(case when refund_status = <val> then pay_amount else 0 end) / nullif(sum(pay_amount), 0)"
+        ],
+        "gold_columns": [
+          "sum(case when refund_status = <val> then pay_amount else 0 end) / nullif(sum(pay_amount), 0)"
+        ],
+        "predicted_column_names": [
+          "refund_rate"
+        ],
+        "gold_column_names": [
+          "sum(case when refund_status = <val> then pay_amount else 0 end) / nullif(sum(pay_amount), 0)"
+        ],
+        "predicted_where": [
+          "pay_status = <val>",
+          "refund_status <> <val>",
+          "is_test_order = false",
+          "pay_time >= <val>",
+          "is_test_order = <val>",
+          "pay_status = <val>"
+        ],
+        "gold_where": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_predicted": [
+          "pay_time >= <val>"
+        ],
+        "time_predicates_gold": [
+          "pay_time >= <val>"
+        ],
+        "default_predicates_predicted": [
+          "is_test_order = <val>",
+          "is_test_order = false",
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>"
+        ],
+        "default_predicates_gold": [],
+        "value_predicates_predicted": [
+          "pay_status = <val>",
+          "pay_status = <val>",
+          "refund_status <> <val>"
+        ],
+        "value_predicates_gold": [],
+        "joins_equal": true,
+        "groups_equal": true,
+        "aggs_equal": true,
+        "extra_expr": [],
+        "missing_expr": []
+      },
+      "predicted_sql": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0) AS refund_rate FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "gold_sql": "SELECT SUM(CASE WHEN refund_status = 'refunded' THEN pay_amount ELSE 0 END) / NULLIF(SUM(pay_amount), 0) FROM v_order_paid WHERE pay_time >= '2026-06-01'"
+    }
+  ],
+  "limitation": "Static AST audit only; flags are conservative, non-exclusive indicators, and do not promote any row to equivalent."
+}
