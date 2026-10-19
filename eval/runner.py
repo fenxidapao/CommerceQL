@@ -442,7 +442,7 @@ async def score_case(
     if not failed:
         record["attribution"] = None
     else:
-        defect = detect_gate_self_defect(run.sql_text, allowlist)
+        defect = _gate_defect_if_rejected(run.sql_text, allowlist, run.gate_decisions)
         a = attr.attribute(
             case=case,
             predicted_sql=run.sql_text or None,
@@ -456,6 +456,20 @@ async def score_case(
         record["attribution"] = {"category": a.category, "signal": a.signal, "severity": a.severity}
     return record
 
+
+def _gate_defect_if_rejected(
+    sql: str | None,
+    allowlist: Mapping[str, Any],
+    gate_decisions: Mapping[str, str],
+) -> str | None:
+    """只在 gate1 实际拒绝时检查其自伤形态。
+
+    `detect_gate_self_defect` 是静态形态检测；若 gate1 已经放行（例如排序别名
+    已被 `_resolve_column` 正常解析），该形态不能覆盖一手 `pass/True` 事实。
+    """
+    if not str(gate_decisions.get("1") or "").startswith("reject/"):
+        return None
+    return detect_gate_self_defect(sql or "", allowlist)
 
 def _slim(result: dict[str, Any] | None) -> dict[str, Any] | None:
     if result is None:

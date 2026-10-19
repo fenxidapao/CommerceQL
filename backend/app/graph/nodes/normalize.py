@@ -48,6 +48,8 @@
 
 from __future__ import annotations
 
+import re
+
 from typing import Any
 
 from app.core.enums import ActionTaken, DegradedReason, LatencyKey, Outcome, RefuseReason
@@ -67,6 +69,37 @@ from app.planner.request_policy import preflight_refusal, raw_preflight_refusal
 from app.planner.schemas import IntentKind
 
 __all__ = ["normalize"]
+
+
+def _demote_unambiguous_shop_city_clarification(
+    update: dict[str, Any], raw_question: str
+) -> dict[str, Any]:
+    """明确指向店铺城市时，撤销 normalize 的城市歧义澄清。
+
+    只处理两类题面证据：
+    - 各城市（按城市分组）；
+    - 在<城市>的店铺各 SKU（先按店铺城市筛选，再按 SKU 聚合）。
+
+    商品口径歧义、收货城市筛选、时间歧义都不在此函数内，保持原终态。
+    """
+    if str(update.get("intent") or "") != IntentKind.CLARIFY.value:
+        return update
+    detail = dict(update.get("intent_detail") or {})
+    reason_code = str(detail.get("reason_code") or "")
+    if "city" not in reason_code.casefold():
+        return update
+    question = raw_question.strip()
+    if "各城市" not in question and not re.search(
+        r"在\s*[^，。？?]{1,12}?的店铺各\s*SKU", question, re.IGNORECASE
+    ):
+        return update
+    update["intent"] = IntentKind.EXECUTABLE.value
+    update["intent_detail"] = {
+        **detail,
+        "reason_code": "shop_city_unambiguous",
+        "normalize_original_reason_code": reason_code,
+    }
+    return update
 
 
 async def normalize(state: GraphState) -> dict[str, Any]:
@@ -170,7 +203,9 @@ async def normalize(state: GraphState) -> dict[str, Any]:
         return update
 
     context.record_usage(outcome.meta.tokens, outcome.meta.cost_cny)
-    update: dict[str, Any] = dict(outcome.state_payload())
+    update: dict[str, Any] = _demote_unambiguous_shop_city_clarification(
+        dict(outcome.state_payload()), question
+    )
     # 🔴 W58 P0：raw 中出现非本租户代号，但 LLM 把它改写/删掉时，
     # 不得让下游以为这是本租户自指而继续出数。这里做成确定性 fail-closed。
     foreign_code = detect_foreign_tenant_code(

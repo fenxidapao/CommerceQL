@@ -114,3 +114,17 @@ async def test_runner_retries_transient_but_not_timeout(
         str(tmp_path / "checkpoint.jsonl"), expected_content_hash="sha256:test"
     )
     assert set(loaded) == {"X-transport", "X-timeout"}
+
+def test_gate_self_defect_is_only_recorded_when_gate1_actually_rejected() -> None:
+    """gate1 已 pass 时，F1 静态形态不得覆盖 gate_decisions 的一手事实。"""
+    sql = (
+        "SELECT channel, SUM(pay_amount) AS gmv FROM v_order_paid "
+        "GROUP BY channel ORDER BY gmv DESC LIMIT 100"
+    )
+    allowlist = {"assets": {}, "default_predicates": {}}
+    assert runner._gate_defect_if_rejected(
+        sql, allowlist, {"1": "pass/True"}
+    ) is None
+    assert runner._gate_defect_if_rejected(
+        sql, allowlist, {"1": "reject/False"}
+    ) is not None

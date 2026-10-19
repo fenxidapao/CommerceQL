@@ -1,0 +1,563 @@
+{
+  "source": "eval/results_r59_full166.json",
+  "git_rev": "8b67705",
+  "git_dirty": false,
+  "generated_at": "2026-10-19T02:55:40+00:00",
+  "g5_errors": [
+    {
+      "case_id": "E-VER-11",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15019,
+      "total_latency_ms": 15020,
+      "retries": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cassette_request_count": 0,
+      "cassette_indices": [],
+      "cassette_tasks": [],
+      "hard_15s": true
+    },
+    {
+      "case_id": "M-DIM-02",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15006,
+      "total_latency_ms": 15008,
+      "retries": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cassette_request_count": 1,
+      "cassette_indices": [
+        115
+      ],
+      "cassette_tasks": [
+        "plan"
+      ],
+      "hard_15s": true
+    },
+    {
+      "case_id": "M-DIM-09",
+      "expected": "execute",
+      "node": "l4_score",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": null,
+      "total_latency_ms": 23335,
+      "retries": 0,
+      "tokens": {
+        "input": 16975,
+        "output": 260,
+        "cache_hit": 16512,
+        "total": 17235
+      },
+      "cassette_request_count": 2,
+      "cassette_indices": [
+        137,
+        138
+      ],
+      "cassette_tasks": [
+        "plan",
+        "plan"
+      ],
+      "hard_15s": false
+    },
+    {
+      "case_id": "M-HIER-01",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15010,
+      "total_latency_ms": 15011,
+      "retries": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cassette_request_count": 0,
+      "cassette_indices": [],
+      "cassette_tasks": [],
+      "hard_15s": true
+    },
+    {
+      "case_id": "H-CAT-02",
+      "expected": "execute",
+      "node": "gen_sql",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15015,
+      "total_latency_ms": 38624,
+      "retries": 0,
+      "tokens": {
+        "input": 17996,
+        "output": 1391,
+        "cache_hit": 16384,
+        "total": 19387
+      },
+      "cassette_request_count": 2,
+      "cassette_indices": [
+        248,
+        249
+      ],
+      "cassette_tasks": [
+        "plan",
+        "plan"
+      ],
+      "hard_15s": true
+    },
+    {
+      "case_id": "H-CAT-03",
+      "expected": "execute",
+      "node": "gen_sql",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15012,
+      "total_latency_ms": 24560,
+      "retries": 0,
+      "tokens": {
+        "input": 17999,
+        "output": 1367,
+        "cache_hit": 16384,
+        "total": 19366
+      },
+      "cassette_request_count": 2,
+      "cassette_indices": [
+        251,
+        252
+      ],
+      "cassette_tasks": [
+        "plan",
+        "plan"
+      ],
+      "hard_15s": true
+    },
+    {
+      "case_id": "H-CAT-04",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15012,
+      "total_latency_ms": 15013,
+      "retries": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cassette_request_count": 0,
+      "cassette_indices": [],
+      "cassette_tasks": [],
+      "hard_15s": true
+    },
+    {
+      "case_id": "H-MET-02",
+      "expected": "execute",
+      "node": "l4_score",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": null,
+      "total_latency_ms": 23929,
+      "retries": 0,
+      "tokens": {
+        "input": 17005,
+        "output": 392,
+        "cache_hit": 16640,
+        "total": 17397
+      },
+      "cassette_request_count": 2,
+      "cassette_indices": [
+        262,
+        263
+      ],
+      "cassette_tasks": [
+        "plan",
+        "plan"
+      ],
+      "hard_15s": false
+    },
+    {
+      "case_id": "H-MET-05",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15016,
+      "total_latency_ms": 15017,
+      "retries": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cassette_request_count": 0,
+      "cassette_indices": [],
+      "cassette_tasks": [],
+      "hard_15s": true
+    },
+    {
+      "case_id": "H-MET-06",
+      "expected": "execute",
+      "node": "gen_sql",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15015,
+      "total_latency_ms": 28898,
+      "retries": 0,
+      "tokens": {
+        "input": 18016,
+        "output": 1397,
+        "cache_hit": 16640,
+        "total": 19413
+      },
+      "cassette_request_count": 2,
+      "cassette_indices": [
+        272,
+        273
+      ],
+      "cassette_tasks": [
+        "plan",
+        "plan"
+      ],
+      "hard_15s": true
+    },
+    {
+      "case_id": "R-NA-06",
+      "expected": "refuse",
+      "node": "normalize_intent",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15013,
+      "total_latency_ms": 15014,
+      "retries": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cassette_request_count": 0,
+      "cassette_indices": [],
+      "cassette_tasks": [],
+      "hard_15s": true
+    }
+  ],
+  "g5_error_count": 11,
+  "g5_error_by_node": {
+    "normalize_intent": 6,
+    "l4_score": 2,
+    "gen_sql": 3
+  },
+  "g5_clarify": [
+    {
+      "case_id": "E-MET-08",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 从 2026-08-01 起的付费金额合计（含未支付）是多少？",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_status = 'unpaid'",
+      "clarify_hint": "「付费金额合计（含未支付）」口径不明确：gmv 口径仅统计已支付（pay_status = 'paid'）且剔除全额退款与测试单，无法覆盖「含未支付」；请确认是要 GMV（已支付口径），还是需要包含未支付订单的实付金额合计（该口径本语义包未定义）。",
+      "category": "frozen_caliber_conflict",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8406,
+        "output": 178,
+        "cache_hit": 8192,
+        "total": 8584
+      },
+      "cost_cny": 0.009569
+    },
+    {
+      "case_id": "M-DIM-05",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 的各城市的店铺数分别是多少？",
+      "gold_sql": "SELECT city, COUNT(*) FROM v_shop GROUP BY city",
+      "clarify_hint": "「城市」存在歧义：是指店铺所在城市（shop.city），还是订单收货城市（order_paid.receiver_city）？请明确其一。",
+      "category": "execute_misclarified",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8393,
+        "output": 104,
+        "cache_hit": 8192,
+        "total": 8497
+      },
+      "cost_cny": 0.007367
+    },
+    {
+      "case_id": "M-HIER-03",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 各城市的在架商品数分别是多少？",
+      "gold_sql": "SELECT city, COUNT(*) FROM v_shop WHERE category_l1 IS NOT NULL GROUP BY city",
+      "clarify_hint": "「城市」存在歧义：是指收货城市（order_paid.receiver_city）还是店铺所在城市（shop.city）？请明确后我再取数。",
+      "category": "execute_misclarified",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8395,
+        "output": 108,
+        "cache_hit": 8192,
+        "total": 8503
+      },
+      "cost_cny": 0.007498
+    },
+    {
+      "case_id": "H-STR-01",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 位于广州的店铺各有多少个商品？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '广州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "clarify_hint": "「商品数」在语义包中有多个口径：商品数（product_cnt，按 SKU 存量计数）、在架商品数（on_sale_product_cnt）、SPU 数（spu_cnt，按款去重）。请确认要按哪个口径统计。",
+      "category": "execute_misclarified_plus_gold_on_sale_conflict",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8395,
+        "output": 130,
+        "cache_hit": 8192,
+        "total": 8525
+      },
+      "cost_cny": 0.008117
+    },
+    {
+      "case_id": "H-STR-02",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 位于杭州的店铺各有多少个商品？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '杭州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "clarify_hint": "「杭州」指店铺所在城市还是收货城市？「商品」按商品数（SKU 数）还是 SPU 款数统计？",
+      "category": "execute_misclarified_plus_gold_on_sale_conflict",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8395,
+        "output": 106,
+        "cache_hit": 8192,
+        "total": 8501
+      },
+      "cost_cny": 0.007442
+    },
+    {
+      "case_id": "H-STR-03",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 位于成都的店铺各有多少个商品？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '成都市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "clarify_hint": "「成都」存在歧义：是指店铺所在城市（shop.city），还是订单收货城市（order_paid.receiver_city）？请确认按哪一个口径筛选。",
+      "category": "execute_misclarified_plus_gold_on_sale_conflict",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8395,
+        "output": 109,
+        "cache_hit": 8192,
+        "total": 8504
+      },
+      "cost_cny": 0.007526
+    },
+    {
+      "case_id": "H-STR-04",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 位于武汉的店铺各有多少个商品？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '武汉市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "clarify_hint": "「武汉」指店铺所在城市还是收货城市？两者语义不同，需确认后再取数。",
+      "category": "execute_misclarified_plus_gold_on_sale_conflict",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8395,
+        "output": 94,
+        "cache_hit": 8192,
+        "total": 8489
+      },
+      "cost_cny": 0.007105
+    },
+    {
+      "case_id": "H-STR-05",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 位于南京的店铺各有多少个商品？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '南京市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "clarify_hint": "「位于南京」中的城市存在歧义：可能指店铺所在城市（shop.city），也可能指订单收货城市（order_paid.receiver_city），请确认按哪一个口径筛选。",
+      "category": "execute_misclarified_plus_gold_on_sale_conflict",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8395,
+        "output": 113,
+        "cache_hit": 8192,
+        "total": 8508
+      },
+      "cost_cny": 0.007639
+    },
+    {
+      "case_id": "H-STR-06",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 位于西安的店铺各有多少个商品？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '西安市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "clarify_hint": "「商品数」在按店铺分组时存在口径歧义：是指商品数（product_cnt，按 SKU 计）、在架商品数（on_sale_product_cnt）还是款数（spu_cnt，按 SPU 去重）？请确认要统计的口径。",
+      "category": "execute_misclarified_plus_gold_on_sale_conflict",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8395,
+        "output": 134,
+        "cache_hit": 8192,
+        "total": 8529
+      },
+      "cost_cny": 0.008229
+    },
+    {
+      "case_id": "H-STR-07",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 位于长沙的店铺各有多少个商品？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '长沙市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "clarify_hint": "「城市」存在歧义：是指店铺所在城市（shop.city）还是收货城市（order_paid.receiver_city）？请确认按哪一个筛选长沙。",
+      "category": "execute_misclarified_plus_gold_on_sale_conflict",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8395,
+        "output": 108,
+        "cache_hit": 8192,
+        "total": 8503
+      },
+      "cost_cny": 0.007498
+    },
+    {
+      "case_id": "H-STR-08",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 位于郑州的店铺各有多少个商品？",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '郑州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "clarify_hint": "「商品数」在语义包中有多个口径：product_cnt（全部商品数，不区分上下架）、on_sale_product_cnt（在架商品数）、off_sale_product_cnt（下架商品数）、spu_cnt（款数）。请确认要统计哪一种？",
+      "category": "execute_misclarified_plus_gold_on_sale_conflict",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8395,
+        "output": 131,
+        "cache_hit": 8192,
+        "total": 8526
+      },
+      "cost_cny": 0.008145
+    },
+    {
+      "case_id": "X-STR-03",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 在 成都市 的店铺各 SKU 浏览量合计是多少？",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '成都市' GROUP BY v_product.sku_id",
+      "clarify_hint": "「成都市」存在歧义：是指店铺所在城市（shop.city），还是收货城市（order_paid.receiver_city）？请确认按哪一个口径筛选。",
+      "category": "execute_misclarified",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8400,
+        "output": 112,
+        "cache_hit": 8192,
+        "total": 8512
+      },
+      "cost_cny": 0.007658
+    },
+    {
+      "case_id": "X-STR-05",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 在 南京市 的店铺各 SKU 浏览量合计是多少？",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '南京市' GROUP BY v_product.sku_id",
+      "clarify_hint": "「南京市」存在歧义：是指店铺所在城市（shop.city）还是收货城市（order_paid.receiver_city）？请确认。",
+      "category": "execute_misclarified",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8400,
+        "output": 107,
+        "cache_hit": 8192,
+        "total": 8507
+      },
+      "cost_cny": 0.007517
+    },
+    {
+      "case_id": "X-STR-07",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 在 长沙市 的店铺各 SKU 浏览量合计是多少？",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '长沙市' GROUP BY v_product.sku_id",
+      "clarify_hint": "「长沙市」存在歧义：可能指店铺所在城市（shop.city），也可能指订单收货城市（order_paid.receiver_city），请确认按哪一个口径筛选店铺。",
+      "category": "execute_misclarified",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8400,
+        "output": 114,
+        "cache_hit": 8192,
+        "total": 8514
+      },
+      "cost_cny": 0.007714
+    },
+    {
+      "case_id": "X-MET-10",
+      "expected": "execute",
+      "terminal": "clarify",
+      "question": "T_A 618 期间各大区各店铺的成交金额合计是多少？",
+      "gold_sql": "SELECT v_region.region_name, v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= '2026-05-24' AND v_order_paid.pay_time < '2026-06-21' GROUP BY v_region.region_name, v_order_paid.shop_id",
+      "clarify_hint": "",
+      "category": "time_parse_ambiguity",
+      "plan": null,
+      "binding_status": null,
+      "gate_decisions": {},
+      "tokens": {
+        "input": 8399,
+        "output": 74,
+        "cache_hit": 8192,
+        "total": 8473
+      },
+      "cost_cny": 0.00658
+    }
+  ],
+  "g5_clarify_count": 15,
+  "g5_clarify_categories": {
+    "frozen_caliber_conflict": 1,
+    "execute_misclarified": 5,
+    "execute_misclarified_plus_gold_on_sale_conflict": 8,
+    "time_parse_ambiguity": 1
+  },
+  "limitation": "cassette user is a hash of eval user id; request counts are association evidence, not response latency evidence. Hard timeouts may have no recorded response."
+}

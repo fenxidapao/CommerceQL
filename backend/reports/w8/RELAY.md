@@ -5933,3 +5933,32 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 - **M-MET-01**：终态 `complete`，SQL 使用 `v_order_paid.channel` 且与 gold 同轴，但结果不等价；attribution 指向 gate 投影别名判定残留。归因从“缺 channel 绑定”修正为 **应用/gate 路径仍需核验**，不升格 equivalent。
 - **H-ENUM-04**：终态 `complete`，已过 plan/bind/gate，但结果不等价（gold 用 `shop_id`，预测用 `shop_name` 且多默认谓词）。原“bind 后 refuse”已不再复现；归因改为 **展示列/默认谓词差异**，不写通过。
 - **最终回归（HEAD `2fd7ca6`）**：offline `2600 passed / 0 failed / 1 warning / 118.15s`；integration `alembic_rc=0`、`124 passed / 0 failed / 32.70s`，一次性库 DROP 后空，容器已清，残渣仅 `ecom`/`ecom_u123_probe`。
+## 第 60 轮（W8 接续：W8r60）｜G-5 error/clarify 分栏、归因误判修复与城市误澄清收窄（2026-10-19 15:0x–15:3x +0800，HEAD `f7b739d`）
+
+### 60.1 G-5 结构矩阵（零出站）
+- 现读 `eval/results_r59_full166.json`，G-5 148 = execute 124 + refuse 24；终态 `complete 99 / error 11 / clarify 15 / refuse 23`，`correct_refused 23/24`、`over_refused 0/124`、equivalent `32/124`。
+- 11 条 error 全为 `LlmTimeout`：`normalize_intent 6 / l4_score 2 / gen_sql 3`；节点耗时 15,00x–15,03x ms，`retries=0`，硬顶 15s；cassette 请求计数与明细见 `eval/results_r60_g5_error_clarify.json`。不得剔除分母、不得改判 PASS。
+- 15 条 clarify 均为 execute 被误澄清，无“真澄清”、无应拒：冻结口径冲突 1（E-MET-08）、可修城市误澄清 5（M-DIM-05、M-HIER-03、X-STR-03/05/07）、误澄清叠加 gold `on_sale=1` 冲突 8（H-STR-01…08）、时间解析歧义 1（X-MET-10）。
+
+### 60.2 评测归因误判修复（TDD）
+- `eval/runner.py:445-471` 新增 `_gate_defect_if_rejected()`：只有 gate1 实际 `reject/` 时才做 F1/F2 自伤检测；gate1 `pass/True` 不得被静态形态覆盖。回归在 `backend/tests/eval/test_eval_runner_checkpoint.py:117-130`。
+- 零出站 replay（脏树，仅作归因证据）：M-MET-01、H-ENUM-04 仍 `complete + equivalent=false`；归因由错误 `gate_policy_gap` 修正为 `time_semantics` / `value_mapping`。原 `gate_policy_gap` 撤回。
+
+### 60.3 城市误澄清收窄
+- `backend/app/graph/nodes/normalize.py:72-101` 新增确定性 demotion：只对“各城市”与“在<城市>的店铺各 SKU”两类明确题面撤销 `ambiguous_dimension_city`；商品口径、收货城市、时间歧义保持原终态。回归 `backend/tests/unit/test_normalize_city_clarification.py`（4）与 `backend/tests/contract/test_city_clarification_demotion_contract.py`（1）。
+- 5 条 replay 已越过 clarify 进入 `normalize→intent→link`，但 plan 因测试 `task_id` 进入载荷而 `cassette_miss`；**不写 complete/改善**。回放绑定限制另项处理。
+
+### 60.4 三条终态稳定性（只归因，不删分母）
+- **E-MET-08**：`clarify`；gold 仅 `pay_status='unpaid'`，题面“含未支付”无对应混合口径 ⇒ 冻结口径冲突；不补 metric、不改 gold。
+- **M-MET-01**：`complete`、非等价；预测 `v_order_paid.channel`、默认已支付谓词、`ORDER BY gmv`；gate1 一手 `pass/True`。现归因 `time_semantics`，旧 `gate_policy_gap` 撤回。
+- **H-ENUM-04**：`complete`、非等价；gold `shop_id + COUNT(*)`，预测 `shop_name + COUNT(DISTINCT sub_order_id)` 且多默认谓词；gate1 一手 `pass/True`。现归因 `value_mapping`，旧 gate 归因撤回。
+- 三条均保留在 G-5 分母，不以删除或改 gold 凑门。
+
+### 60.5 G-2 / τ / 门禁
+- 官方门禁复算仍 `easy×low 7/8 = 87.5% FAIL`；r59 full166 的 G-2 `9 complete+eq / 1 timeout` 不是网格门禁，**不得写 PASS**。
+- τ raw 缺 candidate_ids、候选顺序、gold_candidate_id 与 calibration/holdout 分离，`can_form_score_sample=false`；未选 τ、未改 `BINDING_TAU_*`。G-5/G-8 继续 `UNVERIFIED`。
+- 官方 `backend/reports/w6/eval_metrics.json` 未刷新；不得手改。U-127 仍 open；G-8 二轮未跑。
+
+### 60.6 回归与边界
+- 定向 54 passed（城市 5、runner 回归、allowlist、租户守卫）；离线全量 **2606 passed / 0 failed / 1 warning / 117.62s**（2026-10-19 15:1x +0800，HEAD `f7b739d`）。
+- 未改 15s、阈值、判据、gold、语义包、冻结集、`backend/reports/qa/**`、共享 ecom；`.workbuddy/` 未 add。
