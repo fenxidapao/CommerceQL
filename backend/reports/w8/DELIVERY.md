@@ -744,4 +744,4 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **τ**：raw 31×3 只有分数数组，缺 candidate_ids/顺序与 gold_candidate_id，`can_form_score_sample=false`；未调用 calibrate 选 τ，`BINDING_TAU_*` 未改，G-2 继续 UNVERIFIED。
 - **等价审计**：64 条 complete 非等价；首版静态分类器被复核推翻（LIMIT 关键字不能证明截断），因此六类账**UNVERIFIED**，不引用错误计数、不升格 equivalent、不改规则。
 - **secrets**：worktree 57、当前提交树 51、git 历史 94 三把尺分开；worktree 分类和 fingerprint baseline/diff-scoped 方案已落证据；未打印、未提交 secrets、未放宽 allowlist，scan 不绿。
-- **回归**：W59 代码目标测试 17/0；W58 旧代码 offline 2596/0、integration 124/0；本轮 live G-2/G-5 未复跑、终版 integration/offline 未复跑，均写 UNVERIFIED；官方门禁未刷新，U-127 open，G-8 未跑。
+- **回归**：W59 目标测试 17/0；offline `2600/0`（118.14s）、一次性 PG/Redis integration `124/0`（36.55s，已 DROP，残渣 `ecom`/`ecom_u123_probe`）；R-GMV-02 单例 live `refuse/out_of_scope`、0 token/0 cost，但产物 dirty=true；G-2/G-5 全量二轮与 τ 校准未跑，标 UNVERIFIED；官方门禁未刷新，U-127 open，G-8 未跑。
