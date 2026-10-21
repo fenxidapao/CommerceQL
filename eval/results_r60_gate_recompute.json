@@ -1,0 +1,78 @@
+{
+  "generated_at": "2026-10-19T09:32:41+00:00",
+  "git_rev": "fc97acb",
+  "git_dirty": false,
+  "source": "eval/results_r59_gate_recompute.json",
+  "source_git_rev": "8b67705",
+  "source_dirty": false,
+  "g2": {
+    "official_grid": "easy×low 7/8 = 87.5% FAIL",
+    "status": "FAIL",
+    "r59_full166_non_grid": {
+      "n": 10,
+      "terminal": {
+        "complete": 9,
+        "error": 1
+      },
+      "equivalent": 9,
+      "tokens": 249844,
+      "price_guess": 0.855232
+    },
+    "note": "full166 G-2 9/10 equivalent is not the official easy×low grid and must not be promoted."
+  },
+  "g5": {
+    "status": "UNVERIFIED",
+    "denominator": {
+      "n": 148,
+      "terminal": {
+        "complete": 99,
+        "error": 11,
+        "clarify": 15,
+        "refuse": 23
+      },
+      "equivalent": 32,
+      "tokens": 3099908,
+      "price_guess": 8.098308
+    },
+    "correct_refused": 23,
+    "over_refused": 0,
+    "errors_by_expected": {
+      "execute": 10,
+      "clarify": 2,
+      "refuse": 1
+    },
+    "error_and_clarify_matrix": "eval/results_r60_g5_error_clarify.json",
+    "error_count": 11,
+    "error_by_node": {
+      "normalize_intent": 6,
+      "l4_score": 2,
+      "gen_sql": 3
+    },
+    "clarify_count": 15,
+    "clarify_categories": {
+      "frozen_caliber_conflict": 1,
+      "execute_misclarified": 5,
+      "execute_misclarified_plus_gold_on_sale_conflict": 8,
+      "time_parse_ambiguity": 1
+    },
+    "note": "11 errors and 15 execute mis-clarifications remain in denominator; no PASS claim."
+  },
+  "g8": {
+    "status": "UNVERIFIED",
+    "reason": "G-8 second-round loop not run"
+  },
+  "tau": {
+    "status": "UNVERIFIED",
+    "can_form_score_sample": false,
+    "tau_changed": false
+  },
+  "u127": "open",
+  "official_gate": "not-refreshed",
+  "secrets": {
+    "status": "not-green",
+    "worktree": 57,
+    "committed_tree": 51,
+    "history": 94,
+    "history_commits": 612
+  }
+}

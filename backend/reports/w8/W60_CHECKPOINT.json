@@ -1,0 +1,76 @@
+{
+  "schema": "W8_CHECKPOINT/v1",
+  "updated_at": "2026-10-19T09:32:41+00:00",
+  "round": 60,
+  "head": "fc97acb",
+  "evidence": {
+    "g5_error_clarify": "eval/results_r60_g5_error_clarify.json",
+    "gate_recompute": "eval/results_r60_gate_recompute.json",
+    "secret_scan": "eval/results_r60_secret_scan_final.json",
+    "clean_replay_attribution": "E:\\codex\\w8r60\\replay_attribution_clean2.json",
+    "clean_replay_city": "E:\\codex\\w8r60\\replay_city_fix_clean.json",
+    "live_two_case": "E:\\codex\\w8r60\\w60_live_attr.json",
+    "integration_script": "E:\\codex\\w8r60\\integration_r60.ps1"
+  },
+  "status": {
+    "g5": "UNVERIFIED",
+    "g2": "FAIL",
+    "g8": "UNVERIFIED",
+    "tau": "UNVERIFIED",
+    "secrets": "not-green",
+    "official_gate": "not-refreshed",
+    "u127": "open",
+    "p0": "complete-existing-clean-evidence"
+  },
+  "readings": {
+    "g5": {
+      "n": 148,
+      "complete": 99,
+      "error": 11,
+      "clarify": 15,
+      "refuse": 23,
+      "correct_refused": 23,
+      "over_refused": 0,
+      "equivalent": 32,
+      "errors_by_node": {
+        "normalize_intent": 6,
+        "l4_score": 2,
+        "gen_sql": 3
+      },
+      "clarify_categories": {
+        "frozen_caliber_conflict": 1,
+        "execute_misclarified": 5,
+        "execute_misclarified_plus_gold_on_sale_conflict": 8,
+        "time_parse_ambiguity": 1
+      }
+    },
+    "g2": {
+      "official_easy_low": "7/8=87.5% FAIL",
+      "r59_full166": "9 equivalent / 1 timeout (non-grid)"
+    },
+    "offline": "2606 passed / 0 failed / 1 warning / 109.34s at code HEAD 7de77ce",
+    "integration": "124 passed / 0 failed / 32.81s; alembic_rc=0; DROP empty; residue ecom/ecom_u123_probe",
+    "live_two_case": {
+      "tokens": 45372,
+      "price_guess": 0.104611,
+      "git_rev": "7de77ce",
+      "git_dirty": true
+    },
+    "secrets": {
+      "worktree": 57,
+      "committed_tree": 51,
+      "history": 94,
+      "history_commits": 612
+    }
+  },
+  "boundaries": {
+    "timeout_15s_untouched": true,
+    "thresholds_untouched": true,
+    "criteria_untouched": true,
+    "gold_untouched": true,
+    "semantic_bundle_untouched": true,
+    "frozen_set_untouched": true,
+    "reports_qa_untouched": true,
+    "shared_ecom_written": false
+  }
+}
