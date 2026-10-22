@@ -5227,3 +5227,105 @@ v2 写「G-1 端到端跑通」可以，但**必须带树**：QA 的 `offline 26
 ### 82.5 仍悬（累计）
 
 - 终态稳定性（A 4/5）／`no_data_asset` 误分类（错误分类把超时与检索缺失收口成"库里没数据"，RELAY:854 已建议开单，未见单号）/ 归因未定位 / dense 68% 降级 / τ 未校准且样本作废 / secrets 57·51·94 不绿 / U-127 open / 官方门禁未刷新 / Docker 未启动致台账·残渣·集成仍未核实。
+
+## 83 · W8 第 62 轮验收：**QA 撤回 §82.2②**；生产 P0 独立复现、影响面收窄为 dense＋sparse；B 分叉层定位收讫（QA R31bf ｜ 2026-10-22 15:15 +0800 ｜ HEAD `64e4acd`／624 笔）
+
+### 83.0 QA 撤回（自曝，红字保留在此，不改上文）
+
+**§82.2② 的判词「113/166 带 embedding_unavailable ⇒ dense 检索不可用 ⇒ 全部门禁读数建在降级面上」整体撤销。**
+
+W8 的前提纠错成立，我实测复核了三条硬证据：
+
+- `eval/harness.py:16` 装配表：评测 `retrieval` = **`BundleCatalogRetrieval`（全目录夹具）**，生产 = `RetrievalService`；同处写明 §17.4「评测不测向量检索」。
+- `eval/harness.py:60-69` 注释原话：`mode` 只能填 `SPARSE_ONLY`、`degraded_reason` 只能填 `EMBEDDING_UNAVAILABLE`，因为 `RetrievalMode` 只有 2 个值（C-11），**「没有『目录夹具』这一档」——"不是降级描述准确，而是没有准确的档可填"**。
+- `eval/harness.py:307-316`：`mode=SPARSE_ONLY`／`degraded_reason=EMBEDDING_UNAVAILABLE`／`action_taken=SPARSE_ONLY` 是**夹具硬编码**；`eval/gap_table.py:124` 同口径。
+
+⇒ 113/166 是**契约缺档 + 夹具标签**，既不能证明生产 dense 不可用，也不是 M-DIM-05 翻转的成因。
+
+**我的错在哪**：我把记录里的 `degradations` 字段当成了现场观测，没有回去读装配层（谁注入了 retrieval）。教训登记：**凡是降级/错误码字段，必须先查"这个字段是谁写的"再引用**。
+
+### 83.1 生产 P0：QA 独立复现（不看 W8 的数，我自己查）
+
+Docker 已起（7 件 Up），只读事务（`begin; … rollback;`），未写一行：
+
+| 查项 | 我的实测 |
+|---|---|
+| `embed_doc` 版本分布 | **只有 `2026.09.14.1`：197 行，`count(embedding)=197`（100% 非 NULL），NULL=0** |
+| `asset`／`metric_def`／`field_binding` | 同样只有 `2026.09.14.1`：8／9／7 行 |
+| `semantic_bundle` | 只有 `2026.09.14.1`，status = **`staged`**（不是 published） |
+| 运行时 active 版本 | `healthz.bundle_version = 2026.10.16.2`；`runtime.py:104-110` 返回 `self._loaded.version` |
+| `semantic/bundle_2026.09.14.1.yaml:49` | `version: "2026.10.16.2"` —— **文件名 09.14.1、文件内声明 10.16.2** |
+| active 版本在四表行数 | **0／0／0／0** |
+
+⇒ **生产 P0 成立**：版本指针（文件声明 10.16.2）与库内物化版本（09.14.1）错位，检索 SQL 按 `bundle_version=:active` 过滤 ⇒ 一行不返回。`dense.py:337-350` 的判据是「**有行**且全 NULL」，**0 行被明确当作合法空结果**，所以**静默返回空、零降级标记**。
+
+**但 W8 的影响面表述过宽，我按代码收窄一处**：运行时真正用 SQL 读 `app.*` 语义表的只有 `retrieval/dense.py`、`retrieval/sparse.py`（读）与 `semantics/materialize.py`（写）；`asset/metric_def/field_binding` **在运行时不被 SQL 读取**——binding 的 `filters.py` 用的是**已加载的文件包**。
+⇒ 准确说法是：**影响面＝检索面（dense＋sparse）**，不是"元数据查询一律 0 行"。这条要在 RELAY §66 与 `results_r62_dense_probe.json` 里同步改口径。
+
+### 83.2 结构性盲区（本轮最重要的收口结论）
+
+八格门禁全部只测 **SQL 生成面**（评测走夹具，§17.4 明文不测向量检索）。所以：
+
+```text
+生产检索面现在一行不返回，而八格里没有任何一格能反映它。
+⇒「八格全绿」永远不等于「生产可用」，收口定义必须补一格生产侧检查。
+```
+
+这不是抬杠：`G-4` 已经在为"PG RLS 未在真实 DB 层验证"判 PARTIAL，同理，"检索面在真实 DB 上返回 0 行"也应有归属，现在**无归属**。建议在收口清单里新增 **G-9（生产检索面自检）** 或把 `startup_assertions` 的版本行数断言升为启动硬门槛——二者都是判据变更，需提案。
+
+### 83.3 B 三例分叉定位：收讫（只到层，不到根因）
+
+`eval/results_r62_b_divergence.json`（`e858f97`／dirty=false／零出站），我逐条读了 `pairs`：
+
+| case | 首处分叉层 | 读数 |
+|---|---|---|
+| E-MET-08 | **nodes（intent）** | r59 `…intent → clarify_out`（clarify）／r61 `…intent → link → plan → refuse_out(no_data_asset)` |
+| M-MET-01 | **plan** | r59 走完整链 complete；r61 `plan → refuse_out`；`binding_status` 由 `resolved_default` → `null` |
+| H-ENUM-04 | **plan 投影列** | 路径/终态/binding/gate 全同，仅投影 `[shop_name, order_cnt]` → `[shop_id, shop_name, order_cnt]` |
+| cross-cutting | `retrieval_counts` | 三例**逐字相同**（assets 8／columns 66／metrics 21／metrics_in_catalog 21／denied 4） |
+
+⇒ **「检索没捞到资产导致 no_data_asset」在评测侧不成立**（候选集两批完全一致），与 83.0 的撤回自洽。分叉落在 `intent` 与 `plan` 两层，而这两层吃的是 LLM 输出 ⇒ 下一步若要归因，只能出站复现；本轮到此为止是正确的停手点。
+
+### 83.4 三点句意见
+
+**1）物化重跑授权（写共享 `ecom`）—— 建议批，带四条护栏。**
+① 先 `pg_dump -n app -Fc` 到 `E:\WorkBuddyDL\ecom_app_20261022.dump`，回滚点留档；
+② 只做 active 版本 `2026.10.16.2` 的 INSERT（`materialize.py:336/465` 都是**按版本** DELETE+INSERT，不会伤 09.14.1）；
+③ 跑完核对五表行数应为 `asset 8／metric_def 9／dimension 6／field_binding 7／embed_doc 197`（在 10.16.2 名下）；
+④ 收尾用只读事务复核 + 一条检索自检，**不出站**（embedding 走本地 `bge-m3`／1024 维，healthz 现读可达，¥0）。
+另：`semantic_bundle` 那行是 `staged` 不是 `published`，物化时要不要一并转正，必须先问清——**不能顺手改状态**（FR-12.3 人工发布）。
+
+**2）0 行要不要补降级标记 —— 不建议改 `dense.py` 语义。**
+理由：0 行是**合法空**（空 KB、该版本无文档）。把它改判 `degraded` 会让真正的空库永远误报，等于用错误的信号掩盖版本错位这个真因。正确落点是**启动期 fail-fast**：`startup_assertions` 增加「active 版本在 `app.asset`／`app.embed_doc` 是否有行」，无行即拒启动。这是改启动行为 ⇒ 判据/契约变更，走提案，W8 不自签。
+
+**3）新基线要不要等物化 —— 不等，立刻跑，两条轨道分开。**
+关键事实：**评测不走 dense/sparse**（走夹具），所以生产 0 行对评测读数**零影响**——物化前后跑出来的 G-2/G-5 一模一样。因此：
+- 评测轨：直接跑新基线（官方端点＋`deepseek-flash`，全量 166，≈¥8.8／上界 ¥12），重算 G-2/G-5/G-8，τ 在新模型上重采；
+- 生产轨：物化修复 + 启动断言提案，零出站、¥0，与基线并行。
+反过来"先跑一版建在 0 行检索上的对照"没有信息量——评测根本不经过那条链路。
+
+### 83.5 W63 建议（待点句才生效）
+
+```text
+【W8 第 63 轮建议｜两轨并行：生产轨修检索，评测轨立新基线】
+
+A. 生产轨（零出站；需总控书面授权写共享 ecom）
+- A1 先 pg_dump -n app 留回滚点，再 materialize 2026.10.16.2（只 INSERT 该版本）。
+- A2 核对五表行数 8/9/6/7/197 并在 10.16.2 名下；只读事务复核；不出站。
+- A3 提案：startup_assertions 增加「active 版本行数」fail-fast（不改 dense 0 行语义）。
+- A4 提案：semantic_bundle 的 staged→published 是否随物化转正（FR-12.3 人工发布，W8 不自签）。
+- ⚠️ 纠正口径：影响面是 dense+sparse，不是"元数据查询"；RELAY §66 与 dense_probe 同步改。
+
+B. 评测轨（出站，须先点预算）
+- B1 新基线：官方端点+deepseek-flash，全量 166 一次，绑 git_rev+dirty=false；上界 ¥12。
+- B2 用新基线重算 G-2/G-5/G-8；τ 必须在新 model_id+prompt_version 上重采，不得复用 r59 raw。
+- B3 B 类差异（E-MET-08/M-MET-01/H-ENUM-04）只在新基线上重测一次，禁止与 r59 做差值结论。
+
+C. 不做
+- 不把夹具的 SPARSE_ONLY/EMBEDDING_UNAVAILABLE 当生产证据（QA 已撤回，勿再引）；
+- 不改 0 行语义、不改 15s/判据/gold/冻结集；不刷官方门禁；不碰 reports/qa/**。
+```
+
+### 83.6 累计悬项
+
+生产检索面 0 行（P0，待授权）／门禁无生产侧归属（建议 G-9 或启动断言）／`semantic_bundle` staged 未发布／终态稳定性 A=4/5／`no_data_asset` 误分类未开单／B 归因只到层／τ 未校准且样本作废／secrets 57·51·94／U-127 open／官方门禁 `88f3500` 未刷新／台账·残渣·集成仍未核（本轮 Docker 已起，可补）。

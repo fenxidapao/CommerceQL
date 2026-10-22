@@ -4859,3 +4859,43 @@ W8 v2 撤回「城市 5 条越过 clarify」，并把「修复前批次」写成
 ### 77.5 边界
 
 本窗零出站；未动任何 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`；`probe401.json` 我核过**不含 `sk-` 明文**；`.workbuddy/` 未清。
+
+## 78 · W8 第 62 轮验收：QA 撤回 §82.2②；生产检索面 P0 独立复现；B 分叉层定位收讫（QA R31bf ｜ 2026-10-22 15:15 +0800 ｜ HEAD `64e4acd`／624 笔）
+
+### 78.0 QA 撤回（自曝）
+
+**§82.2② 撤销**：`113/166 embedding_unavailable` 是**评测夹具硬编码**（`harness.py:16` 装配表 + `:60-69` 注释「`RetrievalMode` 只有 2 个值，没有『目录夹具』这一档」+ `:307-316` 硬编码；`gap_table.py:124` 同口径），不是 dense 故障，也不是 M-DIM-05 的成因。**我的错：把记录字段当现场观测，没回读装配层。** 教训：降级/错误码字段必须先把"谁写的"查清再引用。
+
+### 78.1 生产 P0：QA 独立复现（只读事务，未写一行）
+
+| 查项 | 实测 |
+|---|---|
+| `embed_doc` | 仅 `2026.09.14.1`：197 行，`count(embedding)=197`（100% 非 NULL） |
+| `asset／metric_def／field_binding` | 仅 `2026.09.14.1`：8／9／7 行 |
+| `semantic_bundle` | 仅 `2026.09.14.1`，status=**staged** |
+| active 版本（healthz／`runtime.py:104-110`） | **2026.10.16.2**；`semantic/bundle_2026.09.14.1.yaml:49` 亦声明 `2026.10.16.2`（文件名与声明不一致） |
+| active 版本四表行数 | **0／0／0／0** ⇒ `dense.py:337-350` 把 0 行当**合法空**，静默返回、零降级标记 |
+
+**影响面按代码收窄**：运行时用 SQL 读语义表的只有 `dense.py`／`sparse.py`（读）与 `materialize.py`（写）；`asset／metric_def／field_binding` 运行时不被 SQL 读取（binding 用文件包）⇒ 准确表述是**检索面（dense＋sparse）**，不是"元数据查询一律 0 行"。W8 需同步改 RELAY §66 与 `dense_probe` 口径。
+
+### 78.2 结构性盲区
+
+八格只测 SQL 生成面（评测走夹具，§17.4 不测向量检索）⇒ **生产检索面返回 0 行，八格里没有任何一格能反映它**。所以「八格全绿 ≠ 生产可用」。建议新增 **G-9（生产检索面自检）** 或把 `startup_assertions` 的版本行数断言升为启动硬门槛——均属判据变更，走提案。
+
+### 78.3 B 分叉定位收讫
+
+E-MET-08 首分叉在 `intent`；M-MET-01 在 `plan`（`binding_status` resolved_default→null）；H-ENUM-04 仅在 `plan` 投影列。三例 `retrieval_counts` **逐字相同**（8／66／21／21／4）⇒「检索没捞到资产」在评测侧不成立，与本窗撤回自洽。只到层，不到根因（再往下必须出站）。
+
+### 78.4 三点句意见
+
+1. **物化授权：建议批**，护栏四条——先 `pg_dump -n app -Fc` 留回滚点；只 INSERT active 版本（`materialize` 按版本 DELETE+INSERT，不伤 09.14.1）；核五行 8／9／6／7／197；收尾只读复核＋本地 embedding 自检（¥0，不出站）。`staged→published` 不能顺手改（FR-12.3）。
+2. **0 行不改降级语义**：0 行是合法空，改判 degraded 会让真空库误报；正确落点是启动期 fail-fast（提案）。
+3. **新基线不等物化**：评测不走 dense/sparse，物化对读数零影响 ⇒ 两轨并行（生产轨修检索 ¥0；评测轨新基线 ≈¥8.8／上界 ¥12）。
+
+### 78.5 五查补完（Docker 已起，之前欠账结清）
+
+台账 `1830|3.025849|2026-10-07 04:28:00.872275+00` **逐位不动**；残渣 `ecom`／`ecom_u123_probe`；容器 7 件 Up。⇒ R31bc／R31be 里"未核实"的三项，本轮补齐；但 W61 的 `integration 124` 仍**未复跑**（一次性 PG/Redis，需另起），不得写成已证。
+
+### 78.6 边界
+
+本窗零出站、零写库（全部 `begin; … rollback;`）；未动 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`；W63 建议见 `TASK_BOARD §83.5`，待点句生效。
