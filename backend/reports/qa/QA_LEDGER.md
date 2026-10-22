@@ -1718,3 +1718,44 @@
 **结论**：第 65 轮 C4／D5／C5 材料／花费可收；C1 与 C2 半收。**本轮最有价值的产出是两条负向结论**：C1 的回路做好了但门禁读不到（`reporter` 硬编码），C2 的反解规则把过滤列当成了金标（42 条假 matched、27 条 gold 分数低于次优）。τ 采样在规则修好之前**跑了也是错的**，故 ¥6 不批；改为修规则后 L4-only、样本集内采样、上界 ¥1.5、排低谷。
 
 W66 派单见 `TASK_BOARD §87.3`（四项，全部零出站）。
+
+---
+
+## R31bk · W8 第 66 轮验收：四件全收；τ 议程重排（L4 从未参与判定） ／ 2026-10-22 22:20 +0800 ／ HEAD `dee748e`／641 笔
+
+**基线**：HEAD `dee748e`、641 笔、与 origin/main 齐平；工作树仅 `?? .workbuddy/`；无 `M`、W8 三个证据件均已入库。
+
+| # | 项 | 读数 / 判据 | 级别 | 判 |
+|---|---|---|---|---|
+| 1 | C2-1 规则返工 | 不回退全候选／新 reason `gold_table_not_in_candidates`／`COUNT(*)`⇒`no_target_column`／`COUNT(DISTINCT x)`⇒x／删列名兜底 | 读码 | ✅ |
+| 2 | C2-1 读数 | matched **29**／unmatched 119／expected_clarify 18；unmatched 分解 `no_target_column 26`／`gold_table_not_in_candidates 25`／`no_column_overlap 23`／`empty_gold_sql 24`／`no_l4_candidates 15`／`multiple 6` | 实测 | ✅ |
+| 3 | 假匹配率 | 旧口径 27/61（44%）→ 新口径 **8/29（27.6%）**；那 8 条逐条核对为「打分器把次优排在金标前」，非金标选错 | 实测 | ✅ |
+| 4 | 双口径消除 | coverage 件直接读 raw 内嵌字段 ⇒ 逐条 0 不一致（QA 干净树重跑复现：**gold 判定 0 条不一致、29 条分差逐条一致**） | 实测 | ✅ |
+| 5 | QA 口径独立复算 | 在 r66 raw 上得 matched **31**（含 5 条 GROUP BY 跨资产假匹配）⇒ **撤回 31，接受 29** | 实测 | 🔻 自纠 |
+| 6 | C1-2 reporter 接线 | `_clarify_counts` 从 records 数 attempted/success；单轮仍 `False` | 读码 | ✅ |
+| 7 | G-8 复算（二轮件） | `FAIL｜澄清率 3/3 = 100.0%；澄清后一次成功 100.0%`；caveat2 原文＝「分子＝**二轮回到可执行终态（complete）的比例**，不是答案正确率」 | 实测 | ✅ |
+| 8 | G-8 复算（单轮 r63） | `UNVERIFIED｜澄清率 16/166 = 9.6%；澄清后一次成功 0.0%` ⇒ 单轮仍 False，未被接线改坏 | 实测 | ✅ |
+| 9 | 二轮 FAIL 的性质 | 3 条全为澄清题 ⇒ 澄清率分母只有 3 ⇒ 必然 100%；**不得写进任何对外口径** | 判词 | ⚠️ 小样本假象 |
+| 10 | C2-2 适用范围 | `scope_limitation`：只校准 `v_order_paid`/`v_order_refund`/`v_product`；其余 5 资产未校准，**不得据此宣称已校准** | 实测 | ✅ |
+| 11 | 候选资产分布 | 119 条已打分记录的候选只有 3 个资产（2499/714/357 次）；gold 表分布 v_product 51／v_traffic_daily 40／v_order_paid 38／v_shop 37／v_region 10／v_campaign 2／v_dim_date 1 ⇒ **约一半 gold 题在覆盖外** | 实测 | ⚠️ |
+| 12 | D5-1 图级饱和 | 同一次 run 内三段齐全；`code=LLM_CONCURRENCY_EXCEEDED`、`degradations.reason=llm_concurrency_exceeded`、`action=reduced_candidates`、匣带 `calls=0`、`transport_zero_calls=true` | 实测 | ✅ U-127 图级闭环 |
+| 13 | degradation sink | 原 `degradation=None` ⇒ 网关降级只进日志、不进 `GraphState.degradations` ⇒ 评测面与生产侧可见性不一致；已改 `_EvalDegradationSink`（不改 `app/**`） | 读码 | 🟡 超出派单，须立项 |
+| 14 | 证据身份 | 三件均 `c847c3d / dirty=true`（跑批时改动未提交）；**QA 在 `dee748e` 干净树重跑核对一致** ⇒ 结论可采，下轮起须绑提交后干净树 | 实测 | 🔻 已核销 |
+| 15 | 回归 | `unit + eval` = **1992 passed / 0 failed / 60.66s**（我实跑，日志 `E:/WorkBuddyDL/qa_r66_unit_eval.log`） | 实测 | ✅ 与自报一致 |
+| 16 | **L4 参与度** | `binding_status` ＝ `resolved_default` **119**／`None` **47**；**有 L4 候选并打分的正好 119 条 ⇒ 完全重合 ⇒ 这 119 条全由 L3 判定，L4 分数从未进入判定** | 实测 | 🔴 |
+| 17 | clarify 的落点 | 16 条 clarify 的 `binding_status` 全为 `None`，nodes 止于 `trusted_context→normalize→intent→clarify_out` ⇒ **在 intent 就澄清，从没到 bind** | 实测 | 🔴 |
+| 18 | 生产侧印证 | `four_layer.py:237 decide` L1→L2→L3→L4 顺序判定，前层能定则不进下一层；L3 命中即 `return RESOLVED_DEFAULT` ⇒ **L4 兜底层近乎空转**（与 U-117「`layer=L4` 计数 0」一致） | 读码 | 🔴 |
+| 19 | τ 样本适配性 | 29 条 matched ＝ `expected=execute` 29／`binding_status=resolved_default` 29 ⇒ **三点都与 τ 拟合所需相反**（τ 要 L1–L3 全不成立的歧义集） | 实测 | 🔴 |
+| 20 | E-5 歧义集 | 18 条 expected_clarify 全在 intent 澄清、不经 L4；119 条走 L4 打分的全是 execute ⇒ **安全侧样本 0** | 实测 | 🔴 |
+| 21 | L4 成本 | r63 匣带 L4 **114 次调用**，占 token **6.4%**、占估算成本 **58%（¥1.27/¥2.17）**，判定贡献 **0** | 实测 | 🔴 纯花费 |
+| 22 | τ 敏感度 | τ=0.00⇒10.8% ✅；0.05⇒29.5%／0.10⇒43.4%／0.15⇒51.2%／0.20⇒53.0% ⇒ **τ>0 即破 N-25 的 15%** | 实测 | 🔴 窗口极窄 |
+| 23 | Δ=0 并列 | 119 条里 **24 条 Δ 恰好 = 0** ⇒ 这些题无论 τ 多小都得靠别的层解决 | 实测 | 🔴 |
+| 24 | 概念错位 | τ 拟合需「Δ 分布 ＋ 唯一/歧义真值标签」；`gold_candidate_id` 答的是「gold 排第几」＝**打分器质量**（E-5），**不是 τ 拟合的直接输入** | 判词 | 🔴 需先对齐 |
+| 25 | 官方门禁 | 仍 `88f3500`／PASS 1/8 | 实测 | 未刷新（正确） |
+| 26 | 边界 | 未改 `app/**`／`semantic/**`／冻结集／gold／阈值／判据／15s-30s／`dense.py` 0 行语义；未碰 `reports/qa/**`；未 add -A；`.workbuddy/` 未入库；未写共享 ecom；零出站 ¥0 | 实测 | ✅ |
+
+**点句**：① **GROUP BY 兜底采他的 29 条**（跨资产假匹配 ⇒ unmatched 更安全；QA 撤回 31）；② **τ 采样暂不批**（¥1.5／¥6 皆不批）—— 先做 W67-1 歧义面诊断（零出站，用语义包 `城市` 的 `ambiguous: true` 现成材料）；③ **不单开一轮扩 L4 候选**（那改被测行为；先解决「L4 是否在起作用」）。
+
+**结论**：第 66 轮四件全收（Q1–Q4 齐），U-127 图级闭环。但本轮最重要的产出是**一条议题级结论**：**L4 在这批 166 条上一次也没参与过判定**（119/119 全由 L3 定、16 条 clarify 止步 intent、47 条无 binding_status）⇒ τ 的样本来源与 PRD E-5 要求的「歧义集」都对不上，且 τ>0 即破 N-25 的 15% 上限。⇒ **τ 议程须重排：先扩 L4 生效面（歧义面诊断，零出站），再谈采样与定稿。**
+
+W67 派单见 `TASK_BOARD §88.5`（三件，全部零出站）。
