@@ -5971,3 +5971,190 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 - 干净树离线全量：**2606 passed / 0 failed / 1 warning / 109.34s**（HEAD `7de77ce`）。
 - 干净树一次性 PG/Redis：`alembic_rc=0`，**124 passed / 0 failed / 32.81s**；DROP 后 `oneoff_after_drop=` 空，残渣仅 `ecom`/`ecom_u123_probe`。
 - 未改 15s、阈值、判据、gold、语义包、冻结集、`backend/reports/qa/**`、共享 ecom；`.workbuddy/` 未 add。
+
+## 第 61 轮（W8 接续：401 匣带回滚／G-2 网格三批横比与唯一失败样本归因／secrets 在 616 笔重扫／W60 证据树订正）｜起点 HEAD `de69315`／616 笔｜2026-10-22 00:0x–00:1x +0800
+
+> 派单来源：总控 2026-10-22 点句「按你建议进行」（对应接手侦查给出的 A→B→C→D 四项）。
+> 本轮**零出站**：全部动作只读盘上产物＋本地 gitleaks＋git 只读命令；未调 LLM、未连共享 `ecom`、未改判据/阈值/15s/gold/冻结集。
+
+### 61.1 A｜未归属 401 匣带回滚（已完成）
+
+| 面 | 现读 |
+|---|---|
+| 文件 | `eval/cassettes/w6_batch.jsonl`（W6 官方门禁批次的输入匣带） |
+| 改动 | `+3` 行 / `-0`，750 → 753 行；mtime `2026-10-21 19:40:27 +0800` |
+| 内容 | 3 条 `status: 401`、`model: deepseek-v4.1-flash`、`/v1/chat/completions`、normalize＋intent 合并提示词、`max_tokens=384`、`response` 只有 `error` 体 |
+| 计费 | 0 token / 0 费用（鉴权失败，未产生用量） |
+| 处置 | 先备份 `E:\codex\w8r61\w6_batch.jsonl.with401_3lines.bak`，再 `git checkout -- eval/cassettes/w6_batch.jsonl` ⇒ 现读 750 行、该文件无 M |
+| 非 W60 复跑的证据 | ① W60 出站在 `2026-10-19 17:07–17:08`，与 19:40 不同日；② `2026-10-21` 全日 `eval/` 下仅该匣带变动，无任何新结果产物；③ 同日 `backend/reports/w8/` 无任何文件变动 ⇒ 不是某轮 W8 跑批的产物 |
+
+> 同族事故对照：`eval/results_r59_live401_envcheckpoint_summary.json` 记 `all_http_401=true`、`root_cause`＝本地进程只继承到过期 key 且缺 `deploy/.env` 端点绑定 ⇒ 本次形态相同。**凭据未修，任何 live 复跑仍会 401。**
+
+### 61.2 B｜G-2 官方网格复算：`7/8` 可复算，但唯一失败样本是上游错误
+
+复算入口（零出站，与 QA 同一条）：
+
+```text
+PYTHONUTF8=1 .venv/Scripts/python.exe -c "import sys;sys.path[:0]=['eval','.'];import reporter as r;print(r.recompute_gate('G-2', results_path='eval/results_r59_full166.json'))"
+```
+
+三批横向（同一入口、同一冻结集分层，只是跑批不同）：
+
+| 批次产物 | G-2 measured | verdict | 该格失败样本 |
+|---|---|---|---|
+| `eval/results_r56_full166.json`（head `00318f6`） | `easy×low = 7/8 = 87.5%` | FAIL | `E-VER-06`／`LLM_UPSTREAM_ERROR` |
+| `eval/results_r57b_full166.json`（head `518b6a0`） | `easy×low = 8/8 = 100.0%` | **UNVERIFIED**（τ 未校准降级） | 无 |
+| `eval/results_r59_full166.json`（head `8b67705`） | `easy×low = 7/8 = 87.5%` | FAIL | `E-VER-11`／`LLM_UPSTREAM_ERROR` |
+
+该格 8 条**全部是 `E-VER-*`**（02/03/04/05/06/07/10/11）。r59 唯一失败样本 `E-VER-11` 现读：
+
+```text
+terminal_code = LLM_UPSTREAM_ERROR
+nodes         = trusted_context -> normalize -> error_out
+tokens.total  = 0        cost_cny = 0.0        wall_s = 15.027
+scored        = true
+```
+
+⇒ 🔻 **自曝：本轮推翻本窗接手侦查时的判断**。那次写「`7/8` 是抄 r56 的旧值、没有 r59 实测支撑」——本轮实跑证明 `7/8` 在 r59 批次上可原样复现，那句**是错的**，据此提出「证据链断裂」的定性也一并撤回。真实问题换了位置：**该格唯一的失败样本是 0 token 的上游错误**（normalize 即断，wall≈15.03s），不是语义/结构答错；r57b 同一格是 8/8 ⇒ 网格读数在跑批间**抖动 1 格 = 12.5pp**，恰好跨在 95% 阈值两侧。
+
+判据立场（不改）：
+- 现行判据下 `G-2 = FAIL` 是字面结果，**不得写成 PASS**，也不得把上游错误剔出分母后宣称通过。
+- 但「G-2 失败 ⇒ 结构 easy × 语义低 能力不足」这个推论**不成立**：分母里唯一红的是基础设施错误。要改这个口径（把 `LLM_UPSTREAM_ERROR`／`LlmTimeout` 记为 `unscored`，或另立可用性/error-rate 判据）＝**判据变更**；`eval/runner.py:42` 现只把 `infra_error`（匣带 miss／装配异常）判成 `scored=False`，上游错误与节点超时仍记 `scored=True`。
+- 本轮**不改那一行**，等总控点句。改判据与「让门禁变绿」是两件事，必须分开走。
+
+### 61.3 G-5 / G-8 同批次复算（零出站，读数与第 60 轮一致）
+
+```text
+G-5 = UNVERIFIED  | 该拒则拒 23/24 = 95.8%；误拒 0/124 = 0.0%   （11 error + 15 clarify 仍在分母）
+G-8 = UNVERIFIED  | 澄清率 24/166 = 14.5%；澄清后一次成功 0.0%   （无第二轮回路 ⇒ 单轮不可测）
+```
+
+### 61.4 C｜secrets 三把尺在 `de69315`／616 笔重扫（gitleaks 8.24.3，`--redact`）
+
+| 面 | 计数 | 分规则 |
+|---|---|---|
+| 工作树（含未跟踪 `.workbuddy/`） | **57** | dsn-with-password 51／generic-api-key 3／deepseek-key 1／jwt-secret 1／private-key 1 |
+| 提交树（`git archive HEAD` → 临时树） | **51** | dsn-with-password 49／generic-api-key 2 |
+| 全历史（616 commits） | **94** | dsn-with-password 92／generic-api-key 2 |
+
+与第 60 轮（`7de77ce`／612 笔）**逐位同为 57 / 51 / 94** ⇒ 新增 4 笔 docs-only 提交未引入新命中。**scan 仍不绿**：未打印凭据、未提交 `.env`/pem、未加 broad path allowlist。baseline 若建，仍须 rule+file+line+content digest 可审计，并写明「同位置替换新密钥可能被 fingerprint 吞掉」的风险。
+
+### 61.5 D｜W60 证据树订正（回答 QA `TASK_BOARD §79.2 D-3`）
+
+`backend/reports/w8/W60_CHECKPOINT.json` 追加字段，**原有 `head` 值一字未改**：
+
+- `head_note`：测量取证发生在 `7de77ce`（代码树）／`fc97acb`（证据提交）；本文件自身由 `de69315` 提交 ⇒ 引用必须分写「测量树」与「提交树」两格。
+- `committed_by: de69315`。
+- `evidence_tree_map`：八份证据逐份写明绑定哪棵树、是否 dirty（`live_two_case` = `dirty=true` 的 live 观测，**不是干净证据**；`gate_recompute` = 只重排 r59 读数，**未产生新测量**；`g5_error_clarify_matrix` = 复算自 `results_r59_full166.json`）。
+- `r61_recompute`：指向本轮新件 `eval/results_r61_gate_recompute.json`。
+
+### 61.6 本轮新增产物
+
+```text
+eval/results_r61_gate_recompute.json     零出站复算件（G-2 三批横比＋G-5/G-8＋secrets 三把尺＋匣带事故登记）
+backend/reports/w8/W60_CHECKPOINT.json   追加树归属字段（§61.5）
+backend/reports/w8/RELAY.md              本节
+E:\codex\w8r61\                          生成器 build_r61.py、三份 gitleaks 原始件、匣带备份（仓库外）
+```
+
+### 61.7 未做 / 待点句
+
+1. **判据变更**（`LLM_UPSTREAM_ERROR`／`LlmTimeout` 是否记 `unscored`，或另立可用性判据）—— 需总控点句；本窗不自签，也不先改 `runner.py`。
+2. **live 凭据 401** —— 未修，`deploy/.env` 的 key／端点需总控处置；修好前 τ 校准、G-5 error 复现、G-8 二轮全部无法出站。
+3. **U-127** —— 仍 `open`（缺 W7 `llm_queue_wait_ms` 与真压测非零）；属他窗依赖，本窗无法单独关闭。
+4. **城市 5 条 replay** —— 仍未闭环（`cassette_miss`），本轮未碰。
+5. **官方门禁** —— `backend/reports/w6/eval_metrics.json` 仍 `88f3500`／PASS 1/8，**未刷新**。
+6. **G-8 二轮回路** —— 未跑。
+
+### 61.8 边界声明
+
+未改 `backend/app/**`、`backend/tests/**`、`semantic/**`、冻结集、阈值、判据、15s、gold；未写共享 `ecom`；未碰 `backend/reports/qa/**`（该目录现有 3 个 M 属 QA 窗本轮落笔，本窗不动）；`.workbuddy/` 未 add；无 LLM 出站（0 token／¥0）。
+
+## 第 62 轮（W8 订正：撤回 W60 回执中四条不可收项｜2026-10-22 10:1x +0800｜起点 HEAD `de69315`／616 笔）
+
+> 触发：总控 2026-10-22 复核指出 W60 回执四处的证据强度超过盘上事实。
+> **本节只做订正，不回改 §60／§61 的历史读数**（历史读数不重写，只以 🔻 追加订正）。引用 W60 一律以本节为准。
+> 本轮零出站，未改代码、测试、判据、阈值、15s、gold、冻结集，未碰 `backend/reports/qa/**`。
+
+### 62.1 逐条核实（盘上现读，四条全部成立）
+
+**① 城市 5 条 replay 是空转，不是修复生效**
+
+`E:\codex\w8r60\replay_city_fix_clean.json`（`7de77ce`／dirty=false）现读：
+
+```text
+summary: n_records=5  n_scored=0  n_unscored=5  terminal_distribution={"None": 5}
+         tokens_total=0  cost_cny_total=0.0  wall_s_sum=0.202
+逐条:    M-DIM-05 / M-HIER-03 / X-STR-03 / X-STR-05 / X-STR-07
+         unscored_reason = infra: cassette_miss（匣带 w8_r59_full166.jsonl 未命中）
+         nodes 止于 trusted_context → normalize → intent → link，无终态
+```
+
+机理：W60 改了 `normalize.py` 的城市 demotion ⇒ 请求体变化 ⇒ 匣带 key（含规范化请求体 hash）必然 miss。**用旧匣带回放新 prompt，原理上不成立**；5 条 unscored 只是评测基建信号，按项目口径不进任何分子分母，**不能反推"修好了"**。
+
+⇒ §60.3 与我的回执里"5/5 已越过 clarify"这句**超出证据**：它只证明"走过了 clarify 节点"，而 clarify 之后全部因 miss 中断，既无终态也无 SQL。**撤回该表述**（§60.3 原文保留作史料）。
+
+**② W60 代码没有同批 G-5 实测**
+
+```text
+git log: 8b67705  2026-10-19 10:54  （r59 全量批 + 证据）
+         7de77ce  2026-10-19 15:54  （W60 代码）
+git merge-base --is-ancestor 8b67705 7de77ce  ->  true（8b67705 是祖先）
+```
+
+G-5 矩阵（`eval/results_r60_g5_error_clarify.json`）与 G-2 网格都复算自 `results_r59_full166.json`（`8b67705`）⇒ **99/11/15/23 是 W60 代码之前那一批的读数**。W60 没有跑过同批全量。
+
+⇒ W60 的性质应写：**"复算 + 归因 + 文档"轮**，不是"修复已验证"轮。我的回执"G-5 = 148 = 99/11/15/23（W8 判）"未标批次，**是表述缺陷**。
+
+**③ "归因撤回"与原始件不一致，且证明力只有 2 例**
+
+| 面 | M-MET-01 | H-ENUM-04 | 身份 |
+|---|---|---|---|
+| r59 原始批 | `gate_policy_gap` | `gate_policy_gap` | `results_r59_full166.json`（`8b67705`） |
+| 干净 replay | `time_semantics`，`equivalent=false`，28,136 tok | `value_mapping`，`equivalent=false`，28,023 tok | `replay_attribution_clean2.json`（`7de77ce`／dirty=false，零出站，tokens 56,159／price_guess 0.140766） |
+| live 两条 | `time_semantics`，`complete`，`equivalent=false`，28,062 tok／16.463s | **`sql_generation`**，`error/LLM_UPSTREAM_ERROR`，17,310 tok／31.725s | `w60_live_attr.json`（`7de77ce`／dirty=true） |
+
+三处归因**并存且对不上**：r59 原始件没重写；replay 与 live 对同一个 `H-ENUM-04` 给出**不同** category（`value_mapping` vs `sql_generation`）。且两例 `equivalent` 始终 false。
+⇒ 只能说"在干净树重放同一批输入后，归因从 `gate_policy_gap` 改判为 `time_semantics` / `value_mapping`"，**不能说"归因撤回成立"**，更不能说问题已定位。归因**不稳定**本身是新的坏消息。
+
+**④ live 面 H-ENUM-04 仍是 error**
+
+`w60_live_attr.json` 现读：`terminal_code=LLM_UPSTREAM_ERROR`、`tokens.total=17,310`、`wall_s=31.725`、`equivalent=false`。两条 live 合计 45,372 tok／price_guess 0.104611。
+⇒ `H-ENUM-04` 的终端稳定性**未解决**；且该次 live 是 `dirty=true` 观测，本身不是干净证据。
+
+### 62.2 我的回执错在哪（自曝）
+
+1. 把"越过 clarify"写成进度，实际是"断在 clarify 之后" —— **性质错**（把基础设施 miss 读成行为改变）。
+2. G-5/G-2 读数没标"修复前批次" —— **归因错**（让人误以为 W60 代码已体现在读数里）。
+3. 归因撤回照抄 §60.2/§60.4，没核原始件与两套 replay/live 的不一致 —— **核证不足**。
+
+### 62.3 W60 正确定性（对外口径）
+
+```text
+W60（7de77ce）= 复算 + 归因 + 文档轮
+  ✅ 11 error + 15 clarify 分栏矩阵（逐条带节点／耗时／重试／匣带索引）
+  ✅ 评测归因误判的代码修复（eval/runner.py:445-471 `_gate_defect_if_rejected()`，有回归测试）
+  ⚠️ 城市 demotion：代码级成立（unit 4 + contract 1），端到端 UNVERIFIED
+  ❌ 未产出同批 G-5／G-2 实测
+  ❌ 无任何"修复生效"的端到端证据
+```
+
+### 62.4 城市修复要怎样才能算验过
+
+1. `normalize` 提示词与请求体一旦变化，`w8_r59_full166.jsonl` 整条匣带对新代码**全部作废**——不是这 5 条，是整批。后续任何全量 replay 都必须**重录**，不能复用。
+2. 重录 = 出站 = 需要 ① 401 凭据修复 ② 预算点句（按 r59 实测 3,099,908 tok／8.098308 price_guess 量级）。
+3. 在此之前，能写的最强表述只有："`normalize` 的城市 demotion 有确定性单测与契约测试；端到端行为未验证"。
+
+### 62.5 本轮落盘（只追加，不改历史读数）
+
+```text
+backend/reports/w8/W60_CHECKPOINT.json   追加 measurement_scope（g5/g2 同批=false、city_fix_end_to_end=false）
+eval/results_r61_gate_recompute.json     追加 corrections_r62（四条逐条盘上读数）
+backend/reports/w8/RELAY.md              本节 §62
+```
+
+### 62.6 待总控点句
+
+1. **重录匣带**是否批准（需先修 401，再给预算）；不批准则城市修复只能停在代码级。
+2. **判据变更**（`LLM_UPSTREAM_ERROR`／`LlmTimeout` 是否记 `unscored`）—— 仍未决；注意它与"城市修复"是两件事，不可捆一起谈。
+3. W8 侧未提交文件现在 3 个（`w8/RELAY.md`、`w8/W60_CHECKPOINT.json`、`eval/results_r61_gate_recompute.json`），等点句后按名 stage／commit／push。

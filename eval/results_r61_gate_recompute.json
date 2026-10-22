@@ -1,0 +1,749 @@
+{
+  "schema": "W8_GATE_RECOMPUTE/v1",
+  "round": 61,
+  "generated_at": "2026-10-22T00:09:27+08:00",
+  "git_rev": "de69315264c1f3f32c93b7fe8e676e2bdebaf8bc",
+  "git_commits": 616,
+  "git_dirty": true,
+  "dirty_paths": [
+    "backend/reports/qa/QA_LEDGER.md",
+    "backend/reports/qa/RELAY.md",
+    "backend/reports/qa/TASK_BOARD.md"
+  ],
+  "w8_surface_dirty": false,
+  "zero_outbound": true,
+  "methods": {
+    "gates": "python -c \"import sys;sys.path[:0]=['eval','.'];import reporter as r;r.recompute_gate('<G-ID>', results_path='eval/results_r59_full166.json')\"",
+    "secrets.worktree": "gitleaks dir . --config .gitleaks.toml --redact",
+    "secrets.committed_tree_de69315": "git archive HEAD -> temp tree -> gitleaks dir",
+    "secrets.git_history": "gitleaks git . --config .gitleaks.toml --redact --log-opts=HEAD"
+  },
+  "tool": "gitleaks 8.24.3",
+  "g2": {
+    "official_grid_on_r59": {
+      "verdict": "FAIL",
+      "measured": "easy×low = 7/8 = 87.5%",
+      "source": "eval/results_r59_full166.json",
+      "n": 8,
+      "passed": 7,
+      "caveats": [
+        "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
+      ]
+    },
+    "batch_comparison": {
+      "r56": {
+        "results_path": "eval/results_r56_full166.json",
+        "verdict": "FAIL",
+        "measured": "easy×low = 7/8 = 87.5%",
+        "n": 8,
+        "passed": 7,
+        "caveats": [
+          "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
+        ],
+        "cases": [
+          {
+            "case_id": "E-VER-02",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27323,
+            "wall_s": 14.734
+          },
+          {
+            "case_id": "E-VER-03",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27485,
+            "wall_s": 15.931
+          },
+          {
+            "case_id": "E-VER-04",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27417,
+            "wall_s": 17.208
+          },
+          {
+            "case_id": "E-VER-05",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27121,
+            "wall_s": 23.901
+          },
+          {
+            "case_id": "E-VER-06",
+            "passed": false,
+            "terminal_code": "LLM_UPSTREAM_ERROR",
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "error_out"
+            ],
+            "tokens_total": 7833,
+            "wall_s": 20.887
+          },
+          {
+            "case_id": "E-VER-07",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27269,
+            "wall_s": 61.844
+          },
+          {
+            "case_id": "E-VER-10",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27283,
+            "wall_s": 15.389
+          },
+          {
+            "case_id": "E-VER-11",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27355,
+            "wall_s": 15.113
+          }
+        ]
+      },
+      "r57b": {
+        "results_path": "eval/results_r57b_full166.json",
+        "verdict": "UNVERIFIED",
+        "measured": "easy×low = 8/8 = 100.0%",
+        "n": 8,
+        "passed": 8,
+        "caveats": [
+          "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
+        ],
+        "cases": [
+          {
+            "case_id": "E-VER-02",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 26429,
+            "wall_s": 15.616
+          },
+          {
+            "case_id": "E-VER-03",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 26354,
+            "wall_s": 24.69
+          },
+          {
+            "case_id": "E-VER-04",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 26326,
+            "wall_s": 11.471
+          },
+          {
+            "case_id": "E-VER-05",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 26272,
+            "wall_s": 17.647
+          },
+          {
+            "case_id": "E-VER-06",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 26250,
+            "wall_s": 15.541
+          },
+          {
+            "case_id": "E-VER-07",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 26236,
+            "wall_s": 11.358
+          },
+          {
+            "case_id": "E-VER-10",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 26388,
+            "wall_s": 12.778
+          },
+          {
+            "case_id": "E-VER-11",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 26334,
+            "wall_s": 11.77
+          }
+        ]
+      },
+      "r59": {
+        "results_path": "eval/results_r59_full166.json",
+        "verdict": "FAIL",
+        "measured": "easy×low = 7/8 = 87.5%",
+        "n": 8,
+        "passed": 7,
+        "caveats": [
+          "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
+        ],
+        "cases": [
+          {
+            "case_id": "E-VER-02",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27728,
+            "wall_s": 15.01
+          },
+          {
+            "case_id": "E-VER-03",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27802,
+            "wall_s": 13.238
+          },
+          {
+            "case_id": "E-VER-04",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27723,
+            "wall_s": 12.576
+          },
+          {
+            "case_id": "E-VER-05",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27541,
+            "wall_s": 18.254
+          },
+          {
+            "case_id": "E-VER-06",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27708,
+            "wall_s": 13.291
+          },
+          {
+            "case_id": "E-VER-07",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27678,
+            "wall_s": 13.004
+          },
+          {
+            "case_id": "E-VER-10",
+            "passed": true,
+            "terminal_code": null,
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "intent",
+              "link",
+              "plan",
+              "bind",
+              "gen_sql",
+              "gate1_ast",
+              "gate2_policy",
+              "gate3_cost",
+              "execute",
+              "mask",
+              "audit_pre",
+              "present",
+              "audit_supp"
+            ],
+            "tokens_total": 27820,
+            "wall_s": 13.472
+          },
+          {
+            "case_id": "E-VER-11",
+            "passed": false,
+            "terminal_code": "LLM_UPSTREAM_ERROR",
+            "nodes": [
+              "trusted_context",
+              "normalize",
+              "error_out"
+            ],
+            "tokens_total": 0,
+            "wall_s": 15.027
+          }
+        ]
+      }
+    },
+    "attribution_of_the_only_failure": {
+      "case_id": "E-VER-11 (r59) / E-VER-06 (r56)",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "error_out"
+      ],
+      "tokens_total": 0,
+      "wall_s": 15.027,
+      "reading": "easy×low 的 8 条全是 E-VER-*；唯一失败样本是 0 token 的上游错误（normalize 即断，wall≈15.03s），不是语义/结构答错。"
+    },
+    "note": "7/8=87.5% FAIL 是现行判据的字面结果，本次实跑可复算；但该格唯一失败样本为上游错误 ⇒ 不构成『结构 easy × 语义低 能力未达标』的证据。把上游错误改记为 unscored / 另立可用性判据 = 判据变更，本窗不自签。"
+  },
+  "g5": {
+    "verdict": "UNVERIFIED",
+    "measured": "该拒则拒 23/24 = 95.8%；误拒 0/124 = 0.0%",
+    "source": "eval/results_r59_full166.json",
+    "caveats": [
+      "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
+    ],
+    "denominator_note": "11 error + 15 clarify 仍在分母；未剔除、未改判。"
+  },
+  "g8": {
+    "verdict": "UNVERIFIED",
+    "measured": "澄清率 24/166 = 14.5%；澄清后一次成功 0.0%",
+    "source": "eval/results_r59_full166.json",
+    "caveats": [
+      "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）",
+      "本批次为**单轮**（`runner.py` 无「clarify → 用户补答 → 再走一次」的第二轮回路）⇒ 后半句「澄清后一次成功率」不可测 ⇒ 整条门禁判 UNVERIFIED（既非 FAIL 也非 PASS）。澄清率那一半是可测的，已作为证据列出。",
+      "τ 未校准 → 澄清率的判据点本身未定稿（C.4.6 步骤 4）"
+    ]
+  },
+  "secrets": {
+    "worktree": {
+      "count": 57,
+      "by_rule": {
+        "commerceql-dsn-with-password": 51,
+        "commerceql-deepseek-key": 1,
+        "generic-api-key": 3,
+        "private-key": 1,
+        "commerceql-jwt-secret": 1
+      }
+    },
+    "committed_tree_de69315": {
+      "count": 51,
+      "by_rule": {
+        "commerceql-dsn-with-password": 49,
+        "generic-api-key": 2
+      }
+    },
+    "git_history": {
+      "count": 94,
+      "by_rule": {
+        "commerceql-dsn-with-password": 92,
+        "generic-api-key": 2
+      }
+    }
+  },
+  "worktree_incident": {
+    "path": "eval/cassettes/w6_batch.jsonl",
+    "what": "3 条 HTTP 401（Invalid token）记录，model deepseek-v4.1-flash，/v1/chat/completions，normalize+intent 合并提示词",
+    "mtime": "2026-10-21 19:40:27 +0800",
+    "disposition": "已备份至 E:/codex/w8r61/w6_batch.jsonl.with401_3lines.bak 后 git checkout -- 回滚至 de69315 版本（750 行）",
+    "not_a_w60_rerun": "2026-10-21 全日 eval/ 下仅该匣带变动，无任何新结果产物或 W8 报告；W60 的出站发生在 2026-10-19 17:07–17:08。",
+    "tokens": 0,
+    "cost_cny": 0.0
+  },
+  "tau": {
+    "status": "UNVERIFIED",
+    "can_form_score_sample": false,
+    "tau_changed": false
+  },
+  "u127": "open",
+  "official_gate": "not-refreshed (backend/reports/w6/eval_metrics.json @88f3500)",
+  "corrections_r62": {
+    "trigger": "总控 2026-10-22 复核：W60 回执中四条不可收（城市 5 条空转 / G-5 无同批实测 / 归因撤回与原始件不一致 / live H-ENUM-04 仍 error）",
+    "verified_on_disk": {
+      "city_replay_is_noop": {
+        "file": "E:/codex/w8r60/replay_city_fix_clean.json",
+        "git_rev": "7de77ce",
+        "git_dirty": false,
+        "summary": "n_records=5, n_scored=0, n_unscored=5, terminal_distribution={'None': 5}, tokens_total=0, cost_cny_total=0.0, wall_s_sum=0.202",
+        "per_case": "M-DIM-05 / M-HIER-03 / X-STR-03 / X-STR-05 / X-STR-07 五条均 unscored_reason=infra: cassette_miss（匣带 w8_r59_full166.jsonl 未命中），nodes 止于 trusted_context→normalize→intent→link，无终态",
+        "reading": "W60 改动 normalize 提示词 ⇒ 请求体 hash 变 ⇒ r59 匣带必然 miss。用旧匣带回放新 prompt，原理上不可成立；5 条 unscored 只能是评测基建信号，不计任何分子分母，不构成『城市误澄清已修复』。",
+        "what_the_fix_actually_has": "代码级：backend/tests/unit/test_normalize_city_clarification.py（4）+ backend/tests/contract/test_city_clarification_demotion_contract.py（1）；端到端：UNVERIFIED（需重录匣带，出站被 401 阻塞）"
+      },
+      "g5_matrix_is_pre_fix_batch": {
+        "matrix_source": "eval/results_r59_full166.json",
+        "matrix_source_git_rev": "8b67705 (2026-10-19 10:54)",
+        "w60_code_git_rev": "7de77ce (2026-10-19 15:54)",
+        "ancestry": "git merge-base --is-ancestor 8b67705 7de77ce = true（8b67705 是祖先）",
+        "reading": "99/11/15/23 是 W60 代码之前那批的读数；W60 没有同批 G-5 实测 ⇒ W60 性质 = 复算 + 归因 + 文档轮，不是『修复已验证』轮。"
+      },
+      "attribution_withdrawal_only_two_replay_cases": {
+        "r59_raw": {
+          "M-MET-01": "attribution.category = gate_policy_gap（闸门判据缺陷）",
+          "H-ENUM-04": "attribution.category = gate_policy_gap（闸门判据缺陷）"
+        },
+        "replay_clean2": {
+          "file": "E:/codex/w8r60/replay_attribution_clean2.json",
+          "git_rev": "7de77ce",
+          "git_dirty": false,
+          "mode": "零出站 replay（tokens 从匣带读出）",
+          "M-MET-01": "attribution=time_semantics, equivalent=false, tokens=28136",
+          "H-ENUM-04": "attribution=value_mapping, equivalent=false, tokens=28023",
+          "tokens_total": 56159,
+          "price_guess_total": 0.140766
+        },
+        "live_run_same_case": {
+          "file": "E:/codex/w8r60/w60_live_attr.json",
+          "git_rev": "7de77ce",
+          "git_dirty": true,
+          "M-MET-01": "complete, equivalent=false, tokens=28062, wall=16.463, attribution=time_semantics",
+          "H-ENUM-04": "error/LLM_UPSTREAM_ERROR, equivalent=false, tokens=17310, wall=31.725, attribution=sql_generation",
+          "tokens_total": 45372,
+          "price_guess_total": 0.104611
+        },
+        "reading": "撤回只有 2 例 replay 支撑，两例 equivalent 仍为 false；r59 原始件 attribution 未重写 ⇒ 盘上两套归因并存，引用必须带文件名。且同一 H-ENUM-04 在 replay 与 live 两次给出不同归因（value_mapping vs sql_generation）⇒ 归因本身不稳定，撤回的证明力更弱。"
+      }
+    },
+    "receipt_v2_effect": "W60 回执把『城市 5 条越过 clarify』整条降级为『代码级通过 / 端到端 UNVERIFIED（空转）』，并把 W60 定性改为『复算＋归因＋文档轮』；G-5/G-2 读数逐条标注为修复前批次。"
+  }
+}

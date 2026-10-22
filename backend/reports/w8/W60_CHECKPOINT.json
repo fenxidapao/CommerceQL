@@ -3,6 +3,25 @@
   "updated_at": "2026-10-19T09:32:41+00:00",
   "round": 60,
   "head": "fc97acb",
+  "head_note": "语义：测量取证发生在 7de77ce（代码树）/ fc97acb（证据提交）；本文件自身由 de69315 提交 ⇒ 引用时必须分写『测量树』与『提交树』两格。",
+  "committed_by": "de69315",
+  "evidence_tree_map": {
+    "offline_regression": "7de77ce code tree, dirty=false",
+    "integration_regression": "7de77ce code tree, dirty=false",
+    "clean_replay_attribution": "7de77ce code tree, dirty=false",
+    "clean_replay_city": "7de77ce code tree, dirty=false",
+    "live_two_case": "7de77ce code tree, dirty=true —— live 观测，报告未提交，不是干净证据",
+    "g5_error_clarify_matrix": "复算自 eval/results_r59_full166.json（8b67705, dirty=false）",
+    "gate_recompute": "同上：只重排 r59 读数并加状态字段，未产生新测量",
+    "secret_scan": "7de77ce 提交树，612 commits"
+  },
+  "r61_recompute": "eval/results_r61_gate_recompute.json（de69315，零出站；secrets 于 616 笔重扫 = 57/51/94）",
+  "measurement_scope": {
+    "g5_same_batch_as_w60_code": false,
+    "g2_same_batch_as_w60_code": false,
+    "city_fix_end_to_end_verified": false,
+    "note": "G-5 矩阵与 G-2 网格均由 eval/results_r59_full166.json（8b67705，2026-10-19 10:54）复算，而 W60 代码为 7de77ce（2026-10-19 15:54），8b67705 是 7de77ce 的祖先 ⇒ 这组读数是修复前批次；城市 5 条 replay（E:/codex/w8r60/replay_city_fix_clean.json）n_scored=0、五条全 cassette_miss、无终态，属评测基建信号，不计任何分子分母，也不能当作修复生效。"
+  },
   "evidence": {
     "g5_error_clarify": "eval/results_r60_g5_error_clarify.json",
     "gate_recompute": "eval/results_r60_gate_recompute.json",
