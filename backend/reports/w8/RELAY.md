@@ -6230,3 +6230,96 @@ B: 同上，--cases "E-MET-08,M-MET-01,H-ENUM-04" --cassette eval/cassettes/w8_r
 1. **key 落盘**：把 35 位的 key 写进 `deploy/.env`（我不代写凭据；若授权我写，也不会打印）；写完我重跑 8-token 探针，200 再开 A/B。
 2. A/B 的两份新产物（`results_r61_city5_live.json`、`results_r61_contract3_live.json`）跑完后是否按名提交。
 3. 本轮两件零出站产物（`results_r61_availability.json`、`results_r61_probe401.json`）是否随下一笔提交入库。
+
+## 第 64 轮（W8 第 61 轮实测：A 城市 5 条 live 重录＋干净树 replay｜B 三条契约件 live ×2｜C 沿用 §63.3｜2026-10-22 10:47–10:55 +0800）
+
+> 起点 HEAD `cd65cc8`（A live）／`7d05c61`（A replay、B 两批）。零判据改动：未动 `scored` 语义、未动 15s、未改 G-2 分母、未刷新官方门禁。
+> 🔴 **本轮最大前提变更（必须先读）**：新 key 只在**官方 `api.deepseek.com`** 有效，在 `kuaipao.pro` 代理上 401。为使 key 可用，`.env` 已改三行（见 64.1）⇒ **A/B 全部跑在 `deepseek-chat`（官方，响应回显 `deepseek-flash`）上，而 r56/r57b/r59 基线是 `deepseek-v4.1-flash`（代理）**。**任何与基线终态的对比都是跨模型对比，既不能当回归，也不能当修复证据。**
+
+### 64.1 前置与配置变更
+
+```text
+探针①（.env 原配 kuaipao.pro / 51 位旧 key）       -> HTTP 401 new_api_error
+探针①（仅换 35 位新 key，端点仍 kuaipao.pro）      -> HTTP 401（同一把 key）
+探针（换官方 api.deepseek.com，同一把 35 位 key）  -> HTTP 200，model=deepseek-flash，
+                                                     usage prompt 5 / completion 8 / total 13，content 非空
+```
+
+⇒ 结论：key 有效，**端点不匹配**。`.env` 改动三行（`.env` 被 gitignore，不入库）：
+
+```text
+DEEPSEEK_BASE_URL  https://kuaipao.pro/v1  ->  https://api.deepseek.com
+LLM_MODEL_FAST     deepseek-v4.1-flash     ->  deepseek-chat
+LLM_MODEL_STRONG   deepseek-v4.1-flash     ->  deepseek-chat
+```
+
+⚠️ `Settings.model_config.env_file=".env"` 相对 CWD，仓库根直跑读不到 `deploy/.env` ⇒ 本轮用仓库外包装 `E:\codex\w8r61\run_live.py` 显式注入环境变量后再调 `runner.main()`；这是 r59 那次 401 的同源坑。
+
+### 64.2 A｜城市 5 条 live 重录（P0，目标 5/5 complete、不再 clarify）
+
+`eval/results_r61_city5_live.json`（`cd65cc8`／**dirty=true** —— 开会时 `w8/RELAY.md` 仍是 M，成因见 64.5）＋ 匣带 `eval/cassettes/w8_r61_city5.jsonl`（20 行）。
+
+| case | 终态 | 等价 | 归因 | tokens | cost(CNY) | wall(s) |
+|---|---|---|---|---|---|---|
+| M-DIM-05 | complete | ✅ | — | 27,586 | 0.066918* | 8.986 |
+| M-HIER-03 | complete | ❌ | schema_linking_miss | 27,960 | 0.018441 | 10.551 |
+| X-STR-03 | complete | ✅ | — | 27,942 | 0.017898 | 7.446 |
+| X-STR-05 | complete | ✅ | — | 27,978 | 0.018185 | 10.181 |
+| X-STR-07 | complete | ✅ | — | 27,880 | 0.017439 | 7.289 |
+
+`*` M-DIM-05 是首条（冷缓存），单价不可用；其余 4 条均值 ≈ ¥0.0180/条。
+本批合计 **139,346 tok／¥0.138881**（上界 ¥0.30 ✅）；5/5 `complete`、**0 clarify**、4/5 等价。
+
+干净树零出站 replay：`eval/results_r61_city5_replay.json`（`7d05c61`／**dirty=false**、`mode=replay`、`live=false`）⇒ 终态与等价**逐条一致**（5/5 complete、4 等价），wall 2.682s→5.012s 总。**这份才是指定要求的「绑 git_rev + dirty=false」证据**；live 件是观测记录。
+
+🔴 **归因限制（不得绕过）**：这 5 条在 r59（代理模型）上是 clarify，本批（官方模型 + 新代码）全 complete。本轮**同时**变了代码与模型 ⇒ 只能写「新模型 + 新代码下 5/5 complete、0 clarify」，**不能单独归因给城市 demotion 修复**。代码级证据仍只有 `test_normalize_city_clarification.py`(4) + `test_city_clarification_demotion_contract.py`(1)。
+
+### 64.3 B｜三条契约件 live（各 1 次，跑了两遍）
+
+| case | r59（代理模型） | 本轮 run1（官方模型） | 本轮 run2 | 读数 |
+|---|---|---|---|---|
+| E-MET-08 | clarify／field_binding | **refuse / no_data_asset** | refuse / no_data_asset | over_refusal；停在 `link→plan→refuse_out`；17,455 tok／5.306s |
+| M-MET-01 | complete／gate_policy_gap | **refuse / no_data_asset** | refuse / no_data_asset | over_refusal；17,371 tok／4.016s |
+| H-ENUM-04 | complete／gate_policy_gap | complete／**value_mapping** | complete／value_mapping | 非等价；28,050 tok／9.975s；`present_failed→table_only` |
+
+- run1：`eval/results_r61_contract3_live.json`（`7d05c61`／dirty=false，62,635 tok／¥0.027784）
+- run2：`eval/results_r61_contract3_embed_live.json`（`7d05c61`／dirty=false，62,876 tok／¥0.026820），在补起 embedding 后复跑
+- 两遍**终态与归因完全一致** ⇒ 该结果可重复（不是单次抖动）。B 合计 ¥0.054604（上界 ¥0.20 ✅）。
+
+🔴 **H-ENUM-04 的 15s 疑点解除**：本轮不再 `LLM_UPSTREAM_ERROR`，9.975s 收口、完整走完 15 节点 ⇒ 上一轮 live 那次 17,310 tok／31.725s 的 error **没有复现**，不得写成「语义修复失败」，也不必记入 C 类可用性。
+
+🔴 **E-MET-08 / M-MET-01 的拒绝读数不可当契约结论**：两条都是 `no_data_asset`，且与 r59 的终态方向相反（clarify→refuse、complete→refuse）。本轮同时换了模型，**无法区分是模型换了还是契约层变了**。只报观测。
+
+### 64.4 `embedding_unavailable` 是结构性降级，不是网络问题（自我订正）
+
+本轮 A/B 全部记录 `degraded(embedding_unavailable, sparse_only)`。我先按「Ollama 没起」处理：起服务（`bge-m3:latest` 在位）后用 `W8R61_EMBED_URL=http://127.0.0.1:11434` 复跑 B（run2）——**降级依旧**。
+读码定位：`backend/app/retrieval/dense.py:337-350` 的 `EmbeddingUnavailable` 触发条件是「`app.embed_doc` 有行但 `embedding` 全 NULL」⇒ **向量列未物化**（U-112 形态 ii），与 Ollama 是否在跑无关。
+交叉核对：r59 全量里 **113/166** 条同样带该降级 ⇒ 这是评测环境的**既有结构条件**，不是本轮引入，也不是我起 Ollama 能修的。
+⇒ 结论：**起 Ollama 对 A/B 无影响**；该降级在本轮所有读数上都成立，引用时必须带这句。
+
+### 64.5 证据身份（逐份）
+
+| 产物 | git_rev | dirty | 面 |
+|---|---|---|---|
+| `results_r61_city5_live.json` | `cd65cc8` | **true**（原因是 `w8/RELAY.md` 未提交；非代码/测试/eval 输入改动） | live 观测 |
+| `results_r61_city5_replay.json` | `7d05c61` | false | 干净树零出站复现（**主证**） |
+| `results_r61_contract3_live.json` | `7d05c61` | false | live 观测 run1 |
+| `results_r61_contract3_embed_live.json` | `7d05c61` | false | live 观测 run2（embedding 补起后） |
+| `results_r61_availability.json` | `cd65cc8` | false | C 可用性单列（§63.3） |
+
+### 64.6 五查（本轮回执口径）
+
+```text
+HEAD（本轮收尾前）= 7d05c61 ／ origin/main 同步 ／ 616→617 笔
+台账 = 1830|3.025849|2026-10-07 04:28:00.872275+00（逐位不动；harness 不走网关，账面≠实际花费）
+残渣 = ecom / ecom_u123_probe
+容器 = 六件 Up（五件 CommerceQL 栈 + agent-platform-redis）
+实际花费 = ¥0.193485（A 0.138881 + B 0.054604；台账不记）
+```
+
+### 64.7 未做 / 待点句
+
+1. **模型可比性**：要不要拿回代理侧可用 key 复现 `deepseek-v4.1-flash` 基线？不做，则 A/B 永远只能写「跨模型观测」。
+2. 城市 5 条能否归因给修复：需同模型 A/B（旧代码 vs 新代码）。当前不可分离。
+3. 判据变更（`LLM_UPSTREAM_ERROR`/`LlmTimeout` 是否记 `unscored`）仍未决 —— 本轮未动。
+4. G-8 二轮、τ 校准、官方门禁刷新：按指令未碰。

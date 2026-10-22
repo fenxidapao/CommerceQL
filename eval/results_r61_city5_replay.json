@@ -1,0 +1,872 @@
+{
+  "frozen_evidence": {
+    "checks": {
+      "dataset_content_hash": {
+        "expected": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+        "actual": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+        "ok": true
+      },
+      "sandbox_db_sha256": {
+        "expected": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "actual": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "ok": true
+      },
+      "red_team_content_hash_present": true,
+      "gold_seed_derived_from_dataset_hash": true,
+      "all_ok": true
+    },
+    "dataset_version": "2",
+    "frozen_at": "2026-10-17",
+    "n_cases": 166,
+    "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+    "red_team": {
+      "content_hash": "sha256:886cb57052368541e60727cbcee78db2aa1ad1c381cb083a540673999ed9d01d",
+      "n_cases": 66
+    },
+    "gold_seed": {
+      "content_hash": "sha256:2f91ed51e0c97fcbb45b7a59eabc13067167747df52d5cae6d1b37cfe339a592",
+      "n_seeds": 119
+    }
+  },
+  "config": {
+    "live": false,
+    "cassette": "eval/cassettes/w8_r61_city5.jsonl",
+    "mode": "replay",
+    "db": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\ecom_sandbox.db",
+    "column_top": null,
+    "n_requested": 5,
+    "provenance": "w8r61 city5 clean-tree replay",
+    "node_timeouts": {
+      "contract": {
+        "link": 30.0,
+        "gate1_ast": 0.1,
+        "gate2_policy": 0.1,
+        "gate3_cost": 1.0,
+        "execute": 30.0,
+        "mask": 0.1,
+        "audit_pre": 1.0,
+        "audit_supp": 0.5
+      },
+      "effective": {
+        "link": 30.0,
+        "gate1_ast": 0.1,
+        "gate2_policy": 0.1,
+        "gate3_cost": 1.0,
+        "execute": 30.0,
+        "mask": 0.1,
+        "audit_pre": 1.0,
+        "audit_supp": 0.5
+      },
+      "scaled": false,
+      "llm_calling_nodes": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "not_in_contract": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "kept_as_contract": [
+        "execute",
+        "link"
+      ],
+      "cpu_factor": 8.0,
+      "llm_node_floor_s": 162.0
+    },
+    "max_concurrency": null,
+    "checkpoint": null,
+    "resume": false,
+    "transport_retries": 2,
+    "transport_backoff_s": 2.0
+  },
+  "summary": {
+    "n_records": 5,
+    "n_scored": 5,
+    "n_unscored": 0,
+    "n_node_timeout": 0,
+    "n_execute_scored": 5,
+    "n_execute_with_sql": 5,
+    "n_equivalent": 4,
+    "terminal_distribution": {
+      "complete": 5
+    },
+    "attribution_distribution": {
+      "schema_linking_miss": 1
+    },
+    "tokens_total": 139346,
+    "cost_cny_total": 0.138881,
+    "wall_s": {
+      "max": 2.682,
+      "median": 0.185,
+      "sum": 5.012
+    }
+  },
+  "records": [
+    {
+      "case_id": "M-DIM-05",
+      "question": "T_A 的各城市的店铺数分别是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT v_shop.city AS city, COUNT(*) AS shop_cnt FROM v_shop GROUP BY v_shop.city ORDER BY shop_cnt DESC LIMIT 1000",
+      "sql_params": {},
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "店铺数是维表存量口径，时间语义为当前值"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 129,
+        "linking": 0,
+        "plan": 8,
+        "gen_sql": 6,
+        "gate": 14,
+        "exec": 2,
+        "present": 0,
+        "total": 180
+      },
+      "tokens": {
+        "input": 26309,
+        "output": 1277,
+        "cache_hit": 0,
+        "total": 27586
+      },
+      "cost_cny": 0.066918,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "SELECT city, COUNT(*) FROM v_shop GROUP BY city",
+        "frozen_hash": "sha256:d240cc4d7ded57e5d3df9d06bc1df28a6c1f6cfe3a690ef4f183aeead679a70c",
+        "via_view": {
+          "hash": "sha256:d240cc4d7ded57e5d3df9d06bc1df28a6c1f6cfe3a690ef4f183aeead679a70c",
+          "rows": 5,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:d240cc4d7ded57e5d3df9d06bc1df28a6c1f6cfe3a690ef4f183aeead679a70c",
+          "rows": 5,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:81b8f8d8b3e6f3a0e91af6d335fe32a493fe84e28f80ce4be740b9c4ca27e206",
+        "columns": [
+          "city",
+          "shop_cnt"
+        ],
+        "rows": 5,
+        "shape": {
+          "columns": [
+            "city",
+            "shop_cnt"
+          ],
+          "row_count": 5,
+          "head_rows": [
+            [
+              "长春市",
+              1
+            ],
+            [
+              "郑州市",
+              1
+            ],
+            [
+              "福州市",
+              1
+            ],
+            [
+              "太原市",
+              1
+            ],
+            [
+              "南京市",
+              1
+            ]
+          ]
+        },
+        "state_row_count": 5,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": true,
+        "hash_matches": false,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": true
+      },
+      "attribution": null,
+      "wall_s": 0.185,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "M-HIER-03",
+      "question": "T_A 各城市的在架商品数分别是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "medium",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT v_order_paid.receiver_city AS city, COUNT(*) AS on_sale_product_cnt FROM v_product JOIN v_order_paid ON v_order_paid.sku_id = v_product.sku_id WHERE v_product.on_sale = TRUE AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_order_paid.receiver_city ORDER BY on_sale_product_cnt DESC LIMIT 100",
+      "sql_params": {},
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "在架商品数是维表存量口径，时间语义为当前值"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 6,
+        "linking": 0,
+        "plan": 7,
+        "gen_sql": 6,
+        "gate": 5,
+        "exec": 648,
+        "present": 0,
+        "total": 686
+      },
+      "tokens": {
+        "input": 26366,
+        "output": 1594,
+        "cache_hit": 24576,
+        "total": 27960
+      },
+      "cost_cny": 0.018441,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "SELECT city, COUNT(*) FROM v_shop WHERE category_l1 IS NOT NULL GROUP BY city",
+        "frozen_hash": "sha256:d240cc4d7ded57e5d3df9d06bc1df28a6c1f6cfe3a690ef4f183aeead679a70c",
+        "via_view": {
+          "hash": "sha256:d240cc4d7ded57e5d3df9d06bc1df28a6c1f6cfe3a690ef4f183aeead679a70c",
+          "rows": 5,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:d240cc4d7ded57e5d3df9d06bc1df28a6c1f6cfe3a690ef4f183aeead679a70c",
+          "rows": 5,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:47fa1991d2cb0fed651ffcc81e7e639b9e168f03350cf27949ddc903d3bb45f3",
+        "columns": [
+          "city",
+          "on_sale_product_cnt"
+        ],
+        "rows": 32,
+        "shape": {
+          "columns": [
+            "city",
+            "on_sale_product_cnt"
+          ],
+          "row_count": 32,
+          "head_rows": [
+            [
+              "上海市",
+              4986
+            ],
+            [
+              "北京市",
+              4947
+            ],
+            [
+              "广州市",
+              4906
+            ],
+            [
+              "昆明市",
+              4903
+            ],
+            [
+              "哈尔滨市",
+              4890
+            ]
+          ]
+        },
+        "state_row_count": 32,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": false,
+        "tags": [],
+        "diffs": [
+          "行数不同：金标 5 / 预测 32"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "schema_linking_miss",
+        "signal": "涉及资产不一致：缺 ['v_shop'] / 多 ['v_order_paid', 'v_product']",
+        "severity": "normal"
+      },
+      "wall_s": 2.042,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "X-STR-03",
+      "question": "T_A 在 成都市 的店铺各 SKU 浏览量合计是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT p.sku_id AS sku_id, SUM(t.pv) AS pv FROM v_traffic_daily AS t JOIN v_product AS p ON t.sku_id = p.sku_id JOIN v_shop AS s ON p.shop_id = s.shop_id WHERE s.city = %(city)s AND t.uv >= 0 GROUP BY p.sku_id ORDER BY pv DESC LIMIT 1000",
+      "sql_params": {
+        "city": "成都市"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "uv >= 0"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "浏览量只存在于流量表，时间随统计日"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 6,
+        "linking": 0,
+        "plan": 7,
+        "gen_sql": 6,
+        "gate": 5,
+        "exec": 1,
+        "present": 0,
+        "total": 40
+      },
+      "tokens": {
+        "input": 26427,
+        "output": 1515,
+        "cache_hit": 24576,
+        "total": 27942
+      },
+      "cost_cny": 0.017898,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '成都市' GROUP BY v_product.sku_id",
+        "frozen_hash": "sha256:365967c57a1cd9b979a91393fa854dd01be8d0a3b1334ceecb70fb021521f4f4",
+        "via_view": {
+          "hash": "sha256:365967c57a1cd9b979a91393fa854dd01be8d0a3b1334ceecb70fb021521f4f4",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:365967c57a1cd9b979a91393fa854dd01be8d0a3b1334ceecb70fb021521f4f4",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:f0819ea30456d2adfd1c52348e9ef475daaf18d74b4e5d26c6995625a6aab1d8",
+        "columns": [
+          "sku_id",
+          "pv"
+        ],
+        "rows": 0,
+        "shape": {
+          "columns": [
+            "sku_id",
+            "pv"
+          ],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": true,
+        "hash_matches": false,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": true
+      },
+      "attribution": null,
+      "wall_s": 0.046,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "X-STR-05",
+      "question": "T_A 在 南京市 的店铺各 SKU 浏览量合计是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT p.sku_id AS sku_id, SUM(t.pv) AS pv FROM v_traffic_daily AS t JOIN v_product AS p ON t.sku_id = p.sku_id JOIN v_shop AS s ON p.shop_id = s.shop_id WHERE s.city = %(city)s AND t.uv >= 0 GROUP BY p.sku_id ORDER BY pv DESC LIMIT 1000",
+      "sql_params": {
+        "city": "南京市"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "uv >= 0"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "浏览量只存在于流量表，时间随统计日"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 6,
+        "linking": 0,
+        "plan": 7,
+        "gen_sql": 7,
+        "gate": 5,
+        "exec": 357,
+        "present": 0,
+        "total": 396
+      },
+      "tokens": {
+        "input": 26430,
+        "output": 1548,
+        "cache_hit": 24576,
+        "total": 27978
+      },
+      "cost_cny": 0.018185,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '南京市' GROUP BY v_product.sku_id",
+        "frozen_hash": "sha256:dc5619ba1039af1311faa2e105c1c17f666f67bae0720bcf678ef51bce95e4ff",
+        "via_view": {
+          "hash": "sha256:dc5619ba1039af1311faa2e105c1c17f666f67bae0720bcf678ef51bce95e4ff",
+          "rows": 400,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:dc5619ba1039af1311faa2e105c1c17f666f67bae0720bcf678ef51bce95e4ff",
+          "rows": 400,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:fedfaeea2af205ebfd05bbcb10ee70e1c5f5ec2e4bfb3a009ad95d263c2f1dcc",
+        "columns": [
+          "sku_id",
+          "pv"
+        ],
+        "rows": 400,
+        "shape": {
+          "columns": [
+            "sku_id",
+            "pv"
+          ],
+          "row_count": 400,
+          "head_rows": [
+            [
+              "SKU00003",
+              813399
+            ],
+            [
+              "SKU00008",
+              707730
+            ],
+            [
+              "SKU00013",
+              588331
+            ],
+            [
+              "SKU00018",
+              469947
+            ],
+            [
+              "SKU00023",
+              385799
+            ]
+          ]
+        },
+        "state_row_count": 400,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": true,
+        "hash_matches": false,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": true
+      },
+      "attribution": null,
+      "wall_s": 2.682,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "X-STR-07",
+      "question": "T_A 在 长沙市 的店铺各 SKU 浏览量合计是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT p.sku_id AS sku_id, SUM(t.pv) AS pv FROM v_traffic_daily AS t JOIN v_product AS p ON t.sku_id = p.sku_id JOIN v_shop AS s ON p.shop_id = s.shop_id WHERE s.city = %(city)s AND t.uv >= 0 GROUP BY p.sku_id ORDER BY pv DESC LIMIT 1000",
+      "sql_params": {
+        "city": "长沙市"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "uv >= 0"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "浏览量只存在于流量表，时间随统计日"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 8,
+        "linking": 0,
+        "plan": 8,
+        "gen_sql": 7,
+        "gate": 6,
+        "exec": 0,
+        "present": 0,
+        "total": 49
+      },
+      "tokens": {
+        "input": 26416,
+        "output": 1464,
+        "cache_hit": 24576,
+        "total": 27880
+      },
+      "cost_cny": 0.017439,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "gold": {
+        "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '长沙市' GROUP BY v_product.sku_id",
+        "frozen_hash": "sha256:365967c57a1cd9b979a91393fa854dd01be8d0a3b1334ceecb70fb021521f4f4",
+        "via_view": {
+          "hash": "sha256:365967c57a1cd9b979a91393fa854dd01be8d0a3b1334ceecb70fb021521f4f4",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:365967c57a1cd9b979a91393fa854dd01be8d0a3b1334ceecb70fb021521f4f4",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:f0819ea30456d2adfd1c52348e9ef475daaf18d74b4e5d26c6995625a6aab1d8",
+        "columns": [
+          "sku_id",
+          "pv"
+        ],
+        "rows": 0,
+        "shape": {
+          "columns": [
+            "sku_id",
+            "pv"
+          ],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": true,
+        "hash_matches": false,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": true
+      },
+      "attribution": null,
+      "wall_s": 0.057,
+      "runner_transport_retries": 0
+    }
+  ],
+  "generated_at": "2026-10-22T02:49:43+00:00",
+  "git_rev": "7d05c61",
+  "git_dirty": false
+}
