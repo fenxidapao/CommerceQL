@@ -6158,3 +6158,75 @@ backend/reports/w8/RELAY.md              本节 §62
 1. **重录匣带**是否批准（需先修 401，再给预算）；不批准则城市修复只能停在代码级。
 2. **判据变更**（`LLM_UPSTREAM_ERROR`／`LlmTimeout` 是否记 `unscored`）—— 仍未决；注意它与"城市修复"是两件事，不可捆一起谈。
 3. W8 侧未提交文件现在 3 个（`w8/RELAY.md`、`w8/W60_CHECKPOINT.json`、`eval/results_r61_gate_recompute.json`），等点句后按名 stage／commit／push。
+
+## 第 63 轮（W8 第 61 轮执行：前置三条＋探针 401 即停＋可用性单列｜2026-10-22 10:4x +0800｜HEAD `cd65cc8`）
+
+> 派单来源：总控 2026-10-22「W8 第 61 轮｜先把改了的代码测一遍，再谈门禁」。
+> 结论先行：**前置①未满足（探针 401），A／B 两批未开跑**；前置②③已完成；C（可用性单列）零出站交付。
+
+### 63.1 前置三条
+
+| # | 要求 | 现读 | 判 |
+|---|---|---|---|
+| ② | 三件按名提交推送 | `git add -- w8/RELAY.md w8/W60_CHECKPOINT.json eval/results_r61_gate_recompute.json` → `cd65cc8`；`origin/main` 同步；工作树仅 `?? .workbuddy/` | ✅ |
+| ③ | Docker 起 + 台账／残渣 | 六件 Up（`commerceql-{api,web,pgbouncer,redis,pg}-1` ＋ `agent-platform-redis`）；台账 `1830\|3.025849\|2026-10-07 04:28:00.872275+00` **逐位不动**；残渣 `ecom`／`ecom_u123_probe` | ✅ |
+| ① | 8-token 探针 200 才开跑 | **HTTP 401**（`new_api_error` / Invalid token），`usage` 无、`content_len=0` | 🔴 **不满足 ⇒ 停手** |
+
+探针回执（详见 `eval/results_r61_probe401.json`）：
+
+```text
+http_status = 401
+model       = deepseek-v4.1-flash
+usage       = null（未产生用量）
+content_len = 0
+```
+
+**401 的根因是「新 key 没落进配置」，不是模型/网络问题**：`deploy/.env` 与当前进程环境里的 `DEEPSEEK_API_KEY` **同为 51 位**，而总控这轮给的 key 是 **35 位** ⇒ 两处都还是旧值。凭据值未打印、未落盘。
+按指令「401 就停，别重试刷匣带」：**未重试、未写匣带、0 token／¥0**。
+
+### 63.2 A／B 未开跑（阻塞）
+
+- A（`M-DIM-05`／`M-HIER-03`／`X-STR-03`／`X-STR-05`／`X-STR-07` live 重录到 `eval/cassettes/w8_r61_city5.jsonl`，上界 ¥0.30）：**未启动**。
+- B（`E-MET-08`／`M-MET-01`／`H-ENUM-04` 各 1 次，上界 ¥0.20）：**未启动**。
+- 阻塞点：凭据；不是判据、不是代码、不是预算。修好 key 后 A/B 可在同一条命令形态下直接开跑（命令已在 §63.4 备好）。
+
+### 63.3 C｜可用性单列（零出站，已交付）
+
+产物：`eval/results_r61_availability.json`（源 `results_r59_full166.json`／`8b67705`；矩阵 `results_r60_g5_error_clarify.json`）。
+
+| 面 | 读数 |
+|---|---|
+| 全量 166 的 error | **13**＝`LLM_UPSTREAM_ERROR` 11 ＋ `GATE_AST_REJECTED` 2 |
+| G-5 子集（148）的 error | **11**，全部 `LLM_UPSTREAM_ERROR`／`last_degrade=LlmTimeout` |
+| 按节点 | `normalize_intent` 6／`l4_score` 2／`gen_sql` 3 |
+| 节点延迟落 15.00±0.05s | **9 条**（🔻 §60.1 写「7 条」，本轮实读矩阵 `hard_15s=True` 为 9 ⇒ **§60.1 少记 2 条**，以本件为准） |
+| 其余 2 条 | `l4_score` 两条 `node_latency_ms=null`，只有上游总耗时 23,335／23,929ms |
+| 匣带 | 5 条 `cassette_request_count=0`（E-VER-11／M-HIER-01／H-CAT-04／H-MET-05／R-NA-06），其余 6 条有 1~2 条请求 |
+| 重试 | 11 条全 `retries=0` |
+| 上游错误率 | G-5 面 **11/148 = 7.43%**；全量面 **13/166 = 7.83%**；clarify 面闸门拒绝 **2/18 = 11.11%** |
+| wall | max 38.631s／median 16.028s／sum 232.314s |
+| 另两条 `GATE_AST_REJECTED` | `C-REP-01`／`C-REP-02`（期望 clarify），停在 `gate1_ast → error_out`，各 ~28k token ⇒ 属**闸门拒绝**家族，不是上游可用性 |
+
+口径声明（写进产物 `scope_statement`）：**不改 `runner.py` 的 `scored` 语义、不动 15s、不改 G-2 分母、不重算门禁判词；G-2 继续 FAIL**——与总控本轮裁定一致。
+
+### 63.4 key 修好后的开跑命令（备好，未执行）
+
+```text
+A: PYTHONUTF8=1 .venv/Scripts/python.exe eval/runner.py --cases "M-DIM-05,M-HIER-03,X-STR-03,X-STR-05,X-STR-07" \
+     --live --mode record --cassette eval/cassettes/w8_r61_city5.jsonl \
+     --out eval/results_r61_city5_live.json --provenance "w8r61 city5 relive" --yes
+B: 同上，--cases "E-MET-08,M-MET-01,H-ENUM-04" --cassette eval/cassettes/w8_r61_contract3.jsonl \
+     --out eval/results_r61_contract3_live.json
+```
+
+> 注意：跑前须确认 `python eval/runner.py` 能读到 `deploy/.env`（`Settings.model_config.env_file=".env"`，相对 CWD；从仓库根跑时 `.env` 在 `deploy/` 下 ⇒ 需先导出环境变量或改用 `deploy/.env` 的显式注入），这条要在开跑前验一次，别再撞一次 401。
+
+### 63.5 未做（按指令）
+
+不标 unscored、不剔分母、不碰 G-8 二轮、不碰 τ 校准、不刷新 `backend/reports/w6/eval_metrics.json`、不碰 `backend/reports/qa/**`、不碰 `.workbuddy/` 入库。
+
+### 63.6 待总控点句
+
+1. **key 落盘**：把 35 位的 key 写进 `deploy/.env`（我不代写凭据；若授权我写，也不会打印）；写完我重跑 8-token 探针，200 再开 A/B。
+2. A/B 的两份新产物（`results_r61_city5_live.json`、`results_r61_contract3_live.json`）跑完后是否按名提交。
+3. 本轮两件零出站产物（`results_r61_availability.json`、`results_r61_probe401.json`）是否随下一笔提交入库。

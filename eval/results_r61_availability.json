@@ -1,0 +1,292 @@
+{
+  "schema": "W8_AVAILABILITY/v1",
+  "generated_at": "2026-10-22T10:40:58+08:00",
+  "git_rev": "cd65cc8",
+  "git_dirty": false,
+  "zero_outbound": true,
+  "scope_statement": "本件只做可用性单列：不改 eval/runner.py 的 scored 语义、不动 15s 判据、不改 G-2 分母、不重算门禁判词。G-2 继续 FAIL。",
+  "source": {
+    "results": "eval\\results_r59_full166.json",
+    "results_git_rev": "8b67705",
+    "results_git_dirty": false,
+    "matrix": "eval\\results_r60_g5_error_clarify.json",
+    "matrix_git_rev": "8b67705",
+    "batch_note": "该批为 W60 代码（7de77ce）之前的批次（8b67705）；本件是可用性观测，不是修复验证。"
+  },
+  "denominators": {
+    "full166": 166,
+    "by_expected_behavior": {
+      "execute": 124,
+      "clarify": 18,
+      "refuse": 24
+    },
+    "g5_declared": 148,
+    "execute_set": 124,
+    "refuse_set": 24
+  },
+  "errors": {
+    "full166_count": 13,
+    "full166_by_code": {
+      "LLM_UPSTREAM_ERROR": 11,
+      "GATE_AST_REJECTED": 2
+    },
+    "full166_ids": [
+      "C-REP-01",
+      "C-REP-02",
+      "E-VER-11",
+      "H-CAT-02",
+      "H-CAT-03",
+      "H-CAT-04",
+      "H-MET-02",
+      "H-MET-05",
+      "H-MET-06",
+      "M-DIM-02",
+      "M-DIM-09",
+      "M-HIER-01",
+      "R-NA-06"
+    ],
+    "g5_count": 11,
+    "g5_by_node": {
+      "normalize_intent": 6,
+      "l4_score": 2,
+      "gen_sql": 3
+    },
+    "g5_by_degrade": {
+      "LlmTimeout": 11
+    },
+    "g5_tokens_total": 92798
+  },
+  "rates": {
+    "g5_error_rate": 0.0743,
+    "full166_error_rate": 0.0783,
+    "g5_hard_15s_rate": 0.8182,
+    "clarify_set_gate_reject_rate": 0.1111,
+    "definition": "error_rate = 该面 error 条数 / 该面记录数；hard_15s_rate = 节点延迟落在 15.00±0.05s 的占比。两者都只是可用性观测，不进 G-2/G-5 的分子分母。"
+  },
+  "hard_15s": {
+    "count": 9,
+    "ids": [
+      "H-CAT-02",
+      "H-CAT-03",
+      "H-MET-06",
+      "E-VER-11",
+      "H-CAT-04",
+      "H-MET-05",
+      "M-DIM-02",
+      "M-HIER-01",
+      "R-NA-06"
+    ],
+    "note": "11 条里 9 条节点延迟落在 15.00±0.05s；其余 2 条为上游总耗时或节点耗时缺失（l4_score 两条 node_latency_ms=null），不得一律写成「15s 硬顶」。🔻 与 RELAY §60.1 的『7 条』不一致：本轮实读该矩阵 hard_15s=True 为 9 条，§60.1 少记 2 条，以本件为准。"
+  },
+  "cassette": {
+    "rows_without_request": 5,
+    "rows_with_request": 6,
+    "note": "cassette_request_count=0 表示该次调用没有落下匣带条目（先于请求失败或未进到该节点）；它是关联证据，不是响应延迟证据（沿用 r60 矩阵 limitation）。"
+  },
+  "wall_s": {
+    "max": 38.631,
+    "median": 16.028,
+    "sum": 232.314
+  },
+  "rows": [
+    {
+      "case_id": "H-CAT-02",
+      "expected": "execute",
+      "node": "gen_sql",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15015,
+      "total_latency_ms": 38624,
+      "hard_15s": true,
+      "retries": 0,
+      "tokens_total": 19387,
+      "cassette_request_count": 2,
+      "cassette_indices": [
+        248,
+        249
+      ],
+      "cassette_tasks": [
+        "plan",
+        "plan"
+      ]
+    },
+    {
+      "case_id": "H-CAT-03",
+      "expected": "execute",
+      "node": "gen_sql",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15012,
+      "total_latency_ms": 24560,
+      "hard_15s": true,
+      "retries": 0,
+      "tokens_total": 19366,
+      "cassette_request_count": 2,
+      "cassette_indices": [
+        251,
+        252
+      ],
+      "cassette_tasks": [
+        "plan",
+        "plan"
+      ]
+    },
+    {
+      "case_id": "H-MET-06",
+      "expected": "execute",
+      "node": "gen_sql",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15015,
+      "total_latency_ms": 28898,
+      "hard_15s": true,
+      "retries": 0,
+      "tokens_total": 19413,
+      "cassette_request_count": 2,
+      "cassette_indices": [
+        272,
+        273
+      ],
+      "cassette_tasks": [
+        "plan",
+        "plan"
+      ]
+    },
+    {
+      "case_id": "H-MET-02",
+      "expected": "execute",
+      "node": "l4_score",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": null,
+      "total_latency_ms": 23929,
+      "hard_15s": false,
+      "retries": 0,
+      "tokens_total": 17397,
+      "cassette_request_count": 2,
+      "cassette_indices": [
+        262,
+        263
+      ],
+      "cassette_tasks": [
+        "plan",
+        "plan"
+      ]
+    },
+    {
+      "case_id": "M-DIM-09",
+      "expected": "execute",
+      "node": "l4_score",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": null,
+      "total_latency_ms": 23335,
+      "hard_15s": false,
+      "retries": 0,
+      "tokens_total": 17235,
+      "cassette_request_count": 2,
+      "cassette_indices": [
+        137,
+        138
+      ],
+      "cassette_tasks": [
+        "plan",
+        "plan"
+      ]
+    },
+    {
+      "case_id": "E-VER-11",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15019,
+      "total_latency_ms": 15020,
+      "hard_15s": true,
+      "retries": 0,
+      "tokens_total": 0,
+      "cassette_request_count": 0,
+      "cassette_indices": [],
+      "cassette_tasks": []
+    },
+    {
+      "case_id": "H-CAT-04",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15012,
+      "total_latency_ms": 15013,
+      "hard_15s": true,
+      "retries": 0,
+      "tokens_total": 0,
+      "cassette_request_count": 0,
+      "cassette_indices": [],
+      "cassette_tasks": []
+    },
+    {
+      "case_id": "H-MET-05",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15016,
+      "total_latency_ms": 15017,
+      "hard_15s": true,
+      "retries": 0,
+      "tokens_total": 0,
+      "cassette_request_count": 0,
+      "cassette_indices": [],
+      "cassette_tasks": []
+    },
+    {
+      "case_id": "M-DIM-02",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15006,
+      "total_latency_ms": 15008,
+      "hard_15s": true,
+      "retries": 0,
+      "tokens_total": 0,
+      "cassette_request_count": 1,
+      "cassette_indices": [
+        115
+      ],
+      "cassette_tasks": [
+        "plan"
+      ]
+    },
+    {
+      "case_id": "M-HIER-01",
+      "expected": "execute",
+      "node": "normalize_intent",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15010,
+      "total_latency_ms": 15011,
+      "hard_15s": true,
+      "retries": 0,
+      "tokens_total": 0,
+      "cassette_request_count": 0,
+      "cassette_indices": [],
+      "cassette_tasks": []
+    },
+    {
+      "case_id": "R-NA-06",
+      "expected": "refuse",
+      "node": "normalize_intent",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "last_degrade_error": "LlmTimeout",
+      "node_latency_ms": 15013,
+      "total_latency_ms": 15014,
+      "hard_15s": true,
+      "retries": 0,
+      "tokens_total": 0,
+      "cassette_request_count": 0,
+      "cassette_indices": [],
+      "cassette_tasks": []
+    }
+  ]
+}
