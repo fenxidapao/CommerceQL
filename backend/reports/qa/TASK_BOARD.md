@@ -5472,3 +5472,74 @@ DeepSeek API 自 **2026-08-17** 起改峰谷分时计费：**高峰＝北京时�
 ### 85.4 边界
 
 本窗只写 `backend/reports/qa/**`（含新建 `r63_availability_v2.json`）；未动 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`、冻结集、阈值、15s/30s、gold；一次性 PG/Redis 已 DROP，共享 `ecom` 未被写（跑前跑后各核一次）；零出站、¥0。
+
+## 86 · W8 第 64 轮验收：C 批六件可收、C1 机制成立但证据不成立；五点句答复（QA R31bi ｜ 2026-10-22 17:00 +0800 ｜ HEAD `24d4477`／630 笔）
+
+### 86.0 结论
+
+**C3／C4／C5／C6／A2–A5 收；C1 半收（机制成立、证据不干净）；D5 结论收且代码面已对齐 07。**
+
+| 项 | QA 现读 | 判 |
+|---|---|---|
+| C1 机制 | `results_r64_second_round_replay.json`：首轮 `clarify 3`（**未被改写**）、`attempted 3`、`success 0`、二轮 tokens 0；二轮 nodes 仅 `["trusted_context"]` | ✅ 机制成立 |
+| C1 证据身份 | 该件自报 **`ae87c75`／dirty=true**（跑批时 runner.py 未提交） | 🔴 不作干净证据 |
+| C1 miss 面订正 | 回执只写 C-CITY-01 `cassette_miss`；实测 **3/3 全 miss**（C-CITY-03、04 同样） | 🔻 订正 |
+| C1 机理 | r63 匣带 509 条，三题各只 1 条首轮记录、止于 `clarify_out`，二轮题面变⇒请求体变⇒必 miss | ✅ 与 W8 一致 |
+| C3 启动断言 | 我实跑两件测试 **36 passed**；口径 `0 行⇒FAIL／有行⇒PASS／Unreachable⇒PENDING`，且默认占位探针返回 None ⇒ 老调用点不会静默通过 | ✅ 收 |
+| C4 结论 | `runtime.py:104-110` 确不校验 status，`bundle_status()` 另开；结论属实 | ✅ 收（未改码） |
+| C5 材料 | A/B/C 三案，建议 B（四值＋`unavailable_reason`） | ✅ 收，附限定（86.2-4） |
+| C6 材料 | `results_r64_wall_gap.json`：n=166、median 14ms、p95 7,805ms、max 250,240ms | ✅ 与 QA 件一致（p95 差 75ms 属分位数算法差异，非数据差异） |
+| D5 结论 | 我 grep 复核：`LlmSaturated` 仅 `client.py` 抛出；`llm/__init__.py:470/631` 已映射 `DegradedReason.LLM_CONCURRENCY_EXCEEDED`；`errors.py:128` 明文"前者 error，后者 degraded" | ✅ **代码已对齐 07** |
+| A2 | `W60_CHECKPOINT.json` 有 `updated_at_note`＋`file_revision`，测量读数未动 | ✅ |
+| A3 | `.gitignore` 增 `eval/*.checkpoint.jsonl`、`eval/*.bak-*`；`results_r61_probe401.json` 入库 | ✅ |
+| A4 | RELAY 记 A4 处理（§60.1 原文不动＋🔻 指回 §66.2） | ✅ |
+| A5 | `eval_metrics.json` 增 `stale_notice`；**G-2 仍 `0/10`、gate_summary 未变**（合要求） | ✅ 只加标记 |
+
+### 86.1 D5 的新判断：U-127 在代码面已不成立，只差夹具确认
+
+R31at 当时记录的「`LlmSaturated` 被归入 `_UPSTREAM_FAULT_DEGRADES`」在现树上**找不到该常量**；现行路径是 `llm/__init__.py:631` → `DegradedReason.LLM_CONCURRENCY_EXCEEDED`。
+⇒ **U-127 从"代码待改"降级为"代码已对齐、只缺零出站夹具确认"**。W8 提的"先造饱和夹具再改"方向正确，但预期结果应改为：夹具若证明落 `degraded(llm_concurrency_exceeded)`，则 **U-127 直接关闭**，不动一行代码。
+
+### 86.2 五点句答复
+
+1. **C1 录 3 条二轮匣带：批。** 总控已明确 ≤¥0.05 不看时段（高峰也可）。三条硬要求：① 录完**必须在干净树上重跑一次 replay** 并把结果绑 `git_rev+dirty=false`——现有 `ae87c75/dirty=true` 那份只能当"机制验证"，不能当 G-8 证据；② cassette 与 results 一起入库；③ 回执写清 `n_second_round_success` 到底几/3，别只写"机制完成"。
+2. **C2 τ 三问**：① 候选 ID 用**语义包内的稳定键**（如 `asset.column` 或候选 ref 的稳定标识），**禁止用数组下标**；顺序另存 `rank`；② gold 标签由冻结集 `gold_sql` **反解到候选集**，匹配不上就写 `gold_candidate_id=null`＋`gold_unmatched_reason`，**不许猜**；③ **raw 与 ScoreSample 双落**：record 里存 raw（candidate_ids／顺序／分数／gold），ScoreSample 由构建器从 record 派生（可审计、可重算），不要在采样时直接丢 raw。
+3. **C4 不要动 `active_version()`。** 硬校验会让 dev 与评测（包 status=candidate）起不来。正解：在 `startup_assertions` 里按环境分流——`APP_ENV=prod` 且包非 `published` ⇒ **FAIL**；dev／评测 ⇒ **WARN**。用同一套断言面控风险，不污染运行时接口。
+4. **C5 采 B，但加限定**：**不改 terminal 四值枚举（C-12）**，只在 `error` 终态下加**可选字段** `unavailable_reason`（`upstream_timeout`／`upstream_auth`／`retrieval_unavailable` 等），旧客户端不受影响。要求给出"四值不变＋字段可选"的向后兼容说明。
+5. **D5 批准"先夹具后改"**，但按 86.1 的预期走：夹具验证为 `degraded` ⇒ 关 U-127、零改动；只有夹具证明落 `error` 才改码。
+
+### 86.3 环境警告（会咬人，写进每轮前置）
+
+W8 自报：**本机进程环境的 `DEEPSEEK_API_KEY` 仍是 51 位旧 key，`deploy/.env` 才是 35 位新 key** ⇒ 任何不经 `run_live.py` 注入的直跑都会 401，与 2026-10-21 那次匣带事故**同源**。
+QA 侧：本窗离线/集成均不触 LLM，不受影响。**后续任何 live 轮，开跑前必须二选一**：走 `run_live.py` 注入，或先跑 8-token 探针验身；探针 401 就停，别重试刷匣带。
+
+### 86.4 W65 派单要点（零出站为主，唯一花钱项 ≤¥0.05）
+
+```text
+【W8 第 65 轮｜补干净证据 + τ schema + 饱和夹具】
+
+0. 前置：进程 env 的 51 位旧 key 会 401 —— live 一律走 run_live.py 注入；开跑前先 8-token 探针。
+   现读 HEAD；不碰 reports/qa/**；不 git add -A；.workbuddy/ 不入库。
+
+1. 🟡 C1 二轮匣带（唯一花钱，≤¥0.05，总控已批，不看时段）
+- live+record+--second-round 录 C-CITY-01/03/04 三条二轮；录完在**干净树**上 replay 一次。
+- 证据必须绑 git_rev+dirty=false；现有 ae87c75/dirty=true 只能作为机制验证，不得当 G-8 证据。
+- 回执写 n_second_round_success 几/3 + 逐条二轮终态。
+
+2. 🔴 C2 τ schema（只写码）
+- candidate_id 用稳定键（禁下标）+ rank；gold 反解，匹配不上写 null+reason；
+  raw 与 ScoreSample 双落，ScoreSample 由 record 派生。
+
+3. 🟡 C4（按 QA 意见，不碰 active_version）
+- startup_assertions 里分流：prod 且包非 published ⇒ FAIL；dev/评测 ⇒ WARN；补单测。
+
+4. 🟡 D5 饱和夹具（零出站）
+- 把信号量等待压到 0 强制 LlmSaturated，断言终态与 degraded.reason；
+  若为 degraded(llm_concurrency_exceeded) ⇒ 关 U-127、零改码；若为 error ⇒ 出证据再报总控。
+
+5. 不做：不改 dense 0 行语义、不改 15s/判据/gold/冻结集、不刷官方门禁。
+```
+
+### 86.5 边界
+
+本窗零出站、零写库；只追加 `reports/qa/**`；未动 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`。

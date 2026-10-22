@@ -4966,3 +4966,30 @@ D1 G-3 维持 PARTIAL（列未覆盖用例）；D2 G-4 走工程修复不降判�
 ### 80.4 边界
 
 只写 `backend/reports/qa/**`；共享 `ecom` 未写；一次性资源已清；¥0。
+
+## 81 · W8 第 64 轮验收：C 批可收、C1 证据不成立；五点句答复（QA R31bi ｜ 2026-10-22 17:00 +0800 ｜ HEAD `24d4477`／630 笔）
+
+### 81.0 结论
+
+**C3／C4／C5／C6／A2–A5 收；C1 半收（机制成立、证据 dirty=true 不作数）；D5 结论收，且代码已对齐 07。**
+
+- C1：首轮 `clarify 3` 未被改写、`attempted 3`、`success 0`、二轮 nodes 仅 `trusted_context` ⇒ 机制成立；但产物自报 `ae87c75／dirty=true`，**不能当 G-8 证据**。且 **3/3 全 `cassette_miss`**（回执只写了 C-CITY-01，订正）。
+- C3：我实跑 `test_startup_active_bundle_rows` + `test_startup_assertions` ⇒ **36 passed**；`PENDING≠通过` 的口径正确。
+- C6：`r64_wall_gap.json` n=166／median 14ms／p95 7,805／max 250,240，与 QA 件一致（p95 差 75ms 是分位数算法差异）。
+- A5：只加 `stale_notice`，`gate_summary` 与 G-2 `0/10` **一字未动**，合要求。
+
+### 81.1 D5 新判断：U-127 代码面已不成立
+
+现树 grep：`LlmSaturated` 只在 `client.py` 抛出；`llm/__init__.py:470/631` 映射 `DegradedReason.LLM_CONCURRENCY_EXCEEDED`；`errors.py:128` 明文「前者 error，后者 degraded」。⇒ **U-127 降级为"只缺零出站夹具确认"**；夹具若证 degraded，直接关号、零改码。
+
+### 81.2 五点句
+
+C1 录制**批**（≤¥0.05 不看时段），但要求干净树重放＋cassette/results 入库＋success 几/3；C2 三问已答（稳定键/禁下标、gold 反解可 null、raw 与 ScoreSample 双落）；C4 **不碰 `active_version()`**，改在 `startup_assertions` 按 `APP_ENV` 分流；C5 采 B 但**不改四值枚举**、只加可选 `unavailable_reason`；D5 按"夹具先行"。
+
+### 81.3 环境警告
+
+进程 env 仍是 51 位旧 key（`deploy/.env` 才是 35 位）⇒ 不经 `run_live.py` 注入的直跑必 401，与 10-21 匣带事故同源。后续 live 轮开跑前先 8-token 探针。
+
+### 81.4 W65 派单
+
+`TASK_BOARD §86.4`：C1 录三条二轮（唯一花钱项 ≤¥0.05）／C2 τ schema 写码／C4 断言分流／D5 饱和夹具；其余零出站。

@@ -1659,3 +1659,27 @@
 | 12 | 边界 | 只写 `reports/qa/**`；未动 `eval`／`app`／`tests`／`semantic`／`reports/w8`；零出站、¥0 | ✅ |
 
 **结论**：零成本批次三件落地，G-1 本轮读数成立（2606／124），可用性按新基线 v2 出件；判据六项已裁并落账；W64 派单可直接转发，全程不花钱。
+
+## R31bi · W8 第 64 轮验收：C 批可收、C1 证据不成立；五点句答复 ／ 2026-10-22 17:00 +0800 ／ HEAD `24d4477`／630 笔
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 基线 | HEAD＝origin/main＝`24d4477`／630 笔；工作树仅 `?? .workbuddy/` | ✅ |
+| 2 | C1 机制 | 首轮 `clarify 3` 未改写、`attempted 3`、`success 0`、二轮 tokens 0、nodes 仅 `trusted_context` | ✅ |
+| 3 | C1 证据 | 产物自报 **`ae87c75`／dirty=true** ⇒ 不作干净证据 | 🔴 |
+| 4 | C1 订正 | 回执只提 C-CITY-01 miss；实测 **3/3 全 cassette_miss** | 🔻 |
+| 5 | C3 | 实跑两件测试 **36 passed**；`0 行⇒FAIL／有行⇒PASS／Unreachable⇒PENDING` 口径正确；默认占位探针返回 None | ✅ 收 |
+| 6 | C4 | `runtime.py:104-110` 确不校验 status；结论属实，未改码 | ✅ 收 |
+| 7 | C5 | 三案材料齐，建议 B（四值＋`unavailable_reason`） | ✅ 收（附限定） |
+| 8 | C6 | `r64_wall_gap.json` n=166／median 14ms／p95 7,805／max 250,240；与 QA 件一致（p95 差 75ms＝算法差异） | ✅ 收 |
+| 9 | D5 | 现树：`LlmSaturated` 仅 client 抛出，`llm/__init__.py:470/631` 已映射 `LLM_CONCURRENCY_EXCEEDED` ⇒ **代码已对齐 07** | ✅ 收，U-127 降级为"缺夹具确认" |
+| 10 | A2 | `W60_CHECKPOINT` 有 `updated_at_note`／`file_revision`，读数未动 | ✅ |
+| 11 | A3 | `.gitignore` 增两条；`probe401.json` 入库 | ✅ |
+| 12 | A4 | §60.1 原文不动＋🔻 指回 §66.2 | ✅ |
+| 13 | A5 | `eval_metrics.json` 只加 `stale_notice`；gate_summary 与 G-2 `0/10` 未动 | ✅ |
+| 14 | 环境 | 进程 env 仍 51 位旧 key（`.env` 为 35 位）⇒ 直跑必 401；QA 本窗不触 LLM 不受影响 | ⚠️ 前置 |
+| 15 | 边界 | 零出站、零写库；只追加 `reports/qa/**` | ✅ |
+
+**点句**：C1 录制批准（≤¥0.05 不看时段，但要干净树重放+入库+success 几/3）；C2 三问已答；C4 不碰 `active_version()`、改断言分流；C5 采 B 不改四值枚举；D5 夹具先行、若 degraded 则关 U-127。
+
+**结论**：第 64 轮 C 批六件可收、C1 机制成立但证据不干净（须干净树重放）。U-127 代码面已对齐，只差夹具确认。W65 要点见 `TASK_BOARD §86.4`。
