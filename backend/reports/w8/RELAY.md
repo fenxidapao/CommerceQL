@@ -6732,3 +6732,164 @@ M-MET-10   wall 15,476ms ｜ 节点自报 16ms ｜ 缺口 15,460ms（同上）
 3. **C4**：`active_version()` 是否校验 `status='published'`（会影响 dev/评测面能否启动）。
 4. **C5**：选 A／B／C（建议 B）。
 5. **D5**：是否按"先造饱和夹具再改"的路径走。
+
+## 第 65 轮（C1 二轮匣带真打重录／C2 τ 采样 schema／C4 发布闸门按环境分流／D5 饱和夹具）｜起点 HEAD `ee78d51`／631 笔 → 收口 `f85704b`｜2026-10-22 17:0x–17:5x +0800
+
+> 派单来源：QA TASK_BOARD §86.4（W65 四条）＋ §86.2 五点句。验收基线 `24d4477`；QA 收 C3/C4/C5/C6/A2–A5，C1 半收（机制成立、证据脏）。
+> 本轮**唯一花钱项** = C1 的 3 条二轮录制；C2/C4/D5 全部零出站。
+
+### 70.1 前置：探针与网络（两次失败如实记）
+
+| 时刻 | 现象 | 判读 |
+|---|---|---|
+| 17:02 | `ProxyError: 502 Bad Gateway`（`127.0.0.1:51475`），`NO_PROXY` 直连 `getaddrinfo failed` | **网络出口不可用**，不是凭据问题；此时不跑 live（C1 押后） |
+| 17:1x | `http_status=200`，`model=deepseek-flash`，`usage 31/8/39`，但 `content_len=0` | 8 token 全被 `reasoning_tokens: 8` 吃掉 ⇒ **鉴权正常、探针口径需要 `thinking=disabled`** |
+| 17:2x | 补 `thinking: {"type":"disabled"}`（与网关同形）⇒ `200`／`5/15/20`／`content="Pong! 🏓"` | ✅ 前置通过，开跑 |
+
+⚠️ 探针口径教训：`max_tokens=8` 在**思考默认开**的模型上会得到空 content。判"能不能出站"看 **HTTP 码 + model + usage**；判"模型能不能干活"必须**关思考**再探（否则空 content 会被误读成模型故障）。
+
+### 70.2 C1｜3 条二轮匣带（唯一花钱项，目标达成）
+
+```text
+录制（live）：PYTHONUTF8=1 .venv/Scripts/python.exe E:/codex/w8r61/run_live.py
+  --cases C-CITY-01,C-CITY-03,C-CITY-04 --live --mode record
+  --cassette eval/cassettes/w8_r65_second_round.jsonl
+  --out eval/results_r65_second_round_live.json
+  --second-round --second-round-answers E:/codex/w8r64/second_round_answers.json
+```
+
+| case | 首轮 | 二轮终态 | 二轮 nodes | 二轮 tokens | 二轮 cost |
+|---|---|---|---|---|---|
+| C-CITY-01 | clarify | **complete** | `trusted_context→normalize→intent→link→plan→bind→gen_sql→gate1/2/3→execute→…` | 27,873 | 0.017514 |
+| C-CITY-03 | clarify | **complete** | 同上 | 27,785 | 0.016936 |
+| C-CITY-04 | clarify | **complete** | 同上 | 27,909 | 0.017591 |
+
+- `n_second_round_attempted = 3`、**`n_second_round_success = 3`**、首轮 `terminal_distribution {"clarify": 3}`（**未被改写**）。
+- 匣带 15 条（首轮 3 + 二轮 12）。
+- **证据身份**：录制件 `d227037`／`dirty=false`；干净树 replay 件 `763fc62`／`dirty=false`／`mode=replay`，三条逐项一致（终态/success/tokens 全同）。
+- **花费 ¥0.057224**（首轮 0.005183 + 二轮 0.052041）—— **超 ¥0.05 上界 ¥0.0072（14%）**，如实登记；超的原因是"二轮会重走整条链"（≈0.017/条），开跑前的估算偏低了这一项。
+- 🔻 **回执口径订正**（QA §86.0 指出）：上一轮我写"只有 C-CITY-01 cassette_miss"是**漏写**，30/03/04 **3/3 全 miss**（因为旧匣带每题的 `plan/gen_sql` 从未录过）。本轮新匣带是"连同二轮一起重录"，miss 面自然消失。
+
+**边界（不得越写）**：`success` 的定义是"第二轮走到 `complete`"。它**不表示答案正确** —— 二轮的预测结果与 gold 的可比性本轮未判（二轮问句含补充口径，冻结集 gold 只对首轮成立，见 §70.3）。可写"澄清后一次成功 3/3"，不可写"城市口径歧义已彻底解决"。
+
+### 70.3 C2｜τ 采样 schema（只写码，未采 τ）
+
+#### 落点（5 处，全部为零出站改动）
+
+| 文件 | 改动 |
+|---|---|
+| `app/graph/context.py` | 新增 `hold_l4_raw/take_l4_raw`（**内存中转**，与 `hold_columns` 同款；`__slots__` 已同步） |
+| `app/graph/nodes/bind.py` | `_l4_raw_payload()`：`ScoreOutcome` → `{candidate_ids, scores, rank, scorer}`，失败态也留（`reason`） |
+| `eval/harness.py` | `CaseRun.l4_raw`：跑完从 `RunContext` 取一次（不进 `GraphState`、不进检查点） |
+| `eval/runner.py` | `record["tau_raw"]`（含 gold 反解）；二轮的 `second_round.tau_raw` 另存 |
+| `eval/tau_samples.py`（新） | `tau_raw` → `ScoreSample` 派生器（纯函数，可审计可重算） |
+
+#### 三条点句逐条落地
+
+1. **稳定键、禁下标、顺序另存 `rank`**：`candidate_ids` 是 `资产.列`（实测 `v_order_paid.pay_amount`）；`rank` 另存"分数降序 + 同分按 id 字典序"。`test_candidate_order_does_not_change_the_sample` 用"第二轮把候选顺序反过来"证明派生器按 **id** 对齐（下标方案会在这条上直接错）。
+2. **gold 由 `gold_sql` 反解，匹配不上写 `null`+`reason`**：见下"规则升级"。`unmatched` **不进样本**（不是"该澄清"）。
+3. **raw 与 `ScoreSample` 双落**：record 存 raw，`build_score_samples()` 只读不写（`test_raw_is_kept_verbatim_and_rank_is_order_by_score` 断言 raw 不被改写）。
+
+#### 🔴 规则升级（本轮实测逼出来的）
+
+初版只做"整条 `gold_sql` 里出现过的列名"匹配，实测（`results_r65_tau_raw_replay.json`，119 条已打分）：
+
+| 初版结果 | 条数 |
+|---|---|
+| `matched` | **19** |
+| `multiple_candidates_match` | **75** ← `pay_time`/`pay_status` 这类**过滤列**把唯一命中挤成多命中 |
+
+⇒ 升级为两级**确定性**收敛（每一步可逐条复核，不是"挑一个更像的"）：
+
+1. 只在 `gold_sql` 的 `FROM`/`JOIN` 表对应的候选里找（按资产前缀比表名）；
+2. 再收敛到**聚合函数参数里的列**（`sum/avg/count/min/max(...)`）—— L4 绑定的就是"被测量的那个字段"；
+3. 收敛后命中 **恰好 1 个** → `matched`（`gold_match_rule` 记 `aggregate_arg` / `table_scoped_column`）；0 → `no_column_overlap`；≥2 → `multiple_candidates_match`。
+
+升级后（`eval/results_r65_tau_coverage.json`，同一份 l4 raw 离线重算，未重跑图）：
+
+| 面 | 读数 |
+|---|---|
+| `matched` | **61 / 166**（`aggregate_arg` 29 + `table_scoped_column` 32） |
+| `expected_clarify` | 18（clarify 用例，安全侧样本） |
+| `unmatched` | 87 = `empty_gold_sql` 24（refuse 用例本就没有 gold）+ `no_column_overlap` 33 + `multiple_candidates_match` 15 + `no_l4_candidates` 15 |
+| **execute 面样本率** | **61 / 124 ≈ 49%** |
+| 单轮可定稿样本 | **0**（`insufficient_repeats: 166`）—— τ 定稿需同配置 **≥3 轮**（§C.4.6 约束 5） |
+
+⇒ **τ 采样可行的量级**：3 轮 × 61 ≈ **183 条样本实例**。剩余 33+15 条是**结构性**缺口（gold 里的列不在检索候选里 / 同一列名跨资产不可判），**靠改规则解决不了**，只能补人工 gold_candidate_id 或扩候选集 —— 这一条必须让 QA 知道，否则"τ 一直 UNVERIFIED"会被误读成"没去采"。
+
+#### 二轮 gold 的独立性（自曝一条差点造出的假样本）
+
+首版把二轮的 `tau_raw` 也走同一个 `_gold_for_tau(case, expected)`，于是 clarify 用例的二轮拿到 `expected_clarify` —— 但二轮问句**已带补充口径**、且实际答出了 `complete`。把它算成"本该澄清"是**凭空造安全侧样本**。已改：二轮一律 `gold_status="not_defined_for_second_round"` + `reason="second_round_question_changed"`，派生器按 `gold_missing` 跳过（`test_second_round_gold_is_not_defined_rather_than_should_clarify`）。
+
+### 70.4 C4｜发布闸门按环境分流（不碰 `active_version()`）
+
+新增第 6 条启动断言 `semantic_bundle_status_published`：
+
+| 现读 | `APP_ENV=prod` | dev／staging（含评测面） |
+|---|---|---|
+| `published` | PASS | PASS |
+| `draft/candidate/staged/其它` | **FAIL（拒启动）** | **PENDING ⇒ 日志 WARN、放行**（`strict_in_prod=False`） |
+| `None`（未注入/读不到） | PENDING（`strict_in_prod=True` ⇒ prod 致命） | PENDING |
+
+- 探针 `StartupProbes.bundle_status` 默认 = 占位探针（回 `None`）⇒ **老调用点不传不会静默通过**，只会 PENDING。
+- `active_version()` **一字未改**（QA §86.2-3 的明确要求）。
+- 🔴 **连带改动（必须报）**：`obs/metrics.py` 的 `BOUNDED_ALLOWED_LABELS["assertion"]` 5 → **6**（§15.3 纪律②要求"改上界须留裁定出处"，出处写进注释 = QA §86.2-3）；`startup_assertion_state` 序列数 5×3=15 → **6×3=18**，四处注释/文档同步（`metrics.py` 三处 + `deploy/runbook/README.md` §二）。
+
+### 70.5 D5｜饱和夹具（零出站）：U-127 结论 = **关**
+
+`backend/tests/unit/test_llm_saturation_terminal.py`（4 passed）：
+
+| 断言 | 结果 |
+|---|---|
+| 把等待压到 0（`deadline_s=0.5 < HEADROOM 1.0` ⇒ `min(20, remaining-ε)=0`）+ 占满并发位 ⇒ `LlmSaturated`，**传输层 0 调用** | ✅ |
+| `LlmSaturated.default_code == LLM_CONCURRENCY_EXCEEDED` 且 **≠ `LLM_UPSTREAM_ERROR`** | ✅ |
+| `_reason_for(LlmSaturated) is DegradedReason.LLM_CONCURRENCY_EXCEEDED`（≠ `LLM_UNAVAILABLE`） | ✅ |
+| 全档饱和 + 模板 miss 外抛后，节点收口 = `terminal{event: error, code: LLM_CONCURRENCY_EXCEEDED}` + `error_detail.reason=saturation_then_template_miss` | ✅ |
+
+⇒ **U-127 可直接关闭，零改码**（与 QA §86.1 的 grep 结论一致）。
+**边界**：三段（客户端抛点 / 原因码表 / 节点收口）各自有断言，但**没有在同一次图级 run 里串起来**（评测面 harness 的 LLM 走匣带，注入饱和客户端要改 harness，不在本轮范围）。要图级证据需另开一轮。
+
+### 70.6 C5｜采纳 B 的限定版（材料，未落码）
+
+**结论**：不改 C-12 的终态四值（`complete/clarify/refuse/error`）；只在 `event=error` 时加**可选**字段 `unavailable_reason`。
+
+建议取值域（待裁）：`upstream_timeout` / `upstream_auth` / `upstream_rate_limited` / `upstream_unavailable` / `retrieval_unavailable` / `exec_timeout` / `internal`。
+
+**向后兼容逐层**：
+
+1. **生产端**：`terminal` 在 `GraphState` 里是 `OpaquePayload` ⇒ 加键**不需要**改 `FIELD_GROUP`/三列分类（先例 = `terminal.error_detail`，P0-A-4 同一容器加键、同样可选、已上线）。
+2. **判定端**：`api/runner.py::_task_status_of` 只读 `terminal.event`，新键不参与任何分支 ⇒ HTTP 状态映射不变。
+3. **出站**：SSE 帧是 JSON 对象，前端 `parseSSEChunk` 只取已知键，未知键被忽略（`frontend/src/api/queryStream.test.ts` 的解析断言形态）。
+4. **审计/回放**：旧记录**没有**该键 ⇒ 读侧必须 `.get()`；**不得**把缺失落成 `unknown`（那是造假事实）。
+5. **待补**：契约测试"旧记录无该键仍可解析"（本轮未写，因未落码）。
+
+**不做**：不新增终态值、不改 HTTP 状态、**不在 `refuse` 上挂该字段**（refuse 是产品结论，不是"不可用"）。
+
+### 70.7 测试与产物
+
+```text
+backend/tests/unit + backend/tests/eval = 1980 passed（本轮新增 4 + 11 + 18 = 33 条：
+  test_llm_saturation_terminal.py 4、test_startup_semantic_published.py 11、test_tau_samples.py 18）
+DSN 卫生 8 passed；git diff --check 干净
+
+eval/results_r65_second_round_live.json      d227037 / dirty=false（¥0.057224）
+eval/cassettes/w8_r65_second_round.jsonl     15 条
+eval/results_r65_second_round_replay.json    763fc62 / dirty=false（干净树复现，3/3 一致）
+eval/results_r65_tau_raw_replay.json         ae21a0d / dirty=false（全量 166 replay，产出 tau_raw；真实花费 ¥0）
+eval/results_r65_tau_coverage.json           210b461（gold 覆盖率读数）
+eval/results_r65_tau_second_round.json       499e799 / dirty=false（二轮 tau_raw，30 候选/条）
+```
+
+提交链：`d227037`（C2/C4/D5 代码）→ `763fc62`（录制件）→ `ae21a0d`（干净树 replay）→ `210b461`（gold 规则升级+覆盖件）→ `499e799`（二轮 gold 修正）→ `f85704b`（二轮 tau 采集件）。
+
+### 70.8 未做 / 待点句
+
+1. **τ 采样未跑**（派单即"只写码"）：需 3 轮同配置跑批（≈¥0.65/轮 × 3 ≈ ¥2，上界另批）；跑完 `tau_samples.py` 才能给 `calibrate()`。
+2. **图级饱和证据**未做（见 §70.5 边界）。
+3. **C5 未落码**（等终态字段裁定）。
+4. **官方门禁未刷新**（仍 `88f3500`／PASS 1/8）；**G-8 判词未变**（UNVERIFIED，但"二次成功"从 0.0% 变为**可测且 3/3**）。
+5. **U-127** 本窗判"关"（零改码），待 QA 复核。
+
+### 70.9 边界声明
+
+未改 `backend/reports/qa/**`；未 `git add -A`；`.workbuddy/` 未入库；未改 15s／判据／gold／冻结集／`dense.py` 的 0 行语义；未动 `active_version()`；未刷官方门禁；未写共享 `ecom`（本轮无写库）。
