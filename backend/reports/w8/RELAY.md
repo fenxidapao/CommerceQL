@@ -6323,3 +6323,73 @@ HEAD（本轮收尾前）= 7d05c61 ／ origin/main 同步 ／ 616→617 笔
 2. 城市 5 条能否归因给修复：需同模型 A/B（旧代码 vs 新代码）。当前不可分离。
 3. 判据变更（`LLM_UPSTREAM_ERROR`/`LlmTimeout` 是否记 `unscored`）仍未决 —— 本轮未动。
 4. G-8 二轮、τ 校准、官方门禁刷新：按指令未碰。
+
+## 第 65 轮（W8 第 61 轮收口：模型同一性裁定落地｜A 两次跑／B 三次跑横比｜2026-10-22 11:0x +0800）
+
+> 总控 2026-10-22 裁定：**`deepseek-flash` 就是 `deepseek-v4.1-flash`**（代理侧只是换了别名）。
+> 本节按该前提重写口径，并给出两次 A、三次 B 的横向对比。零判据改动：`scored` 语义、15s、G-2 分母、官方门禁均未动。
+
+### 65.1 模型同一性的证据边界（先说清"能证到什么"）
+
+| 事实 | 读数 |
+|---|---|
+| 官方端点对 `deepseek-v4.1-flash` 的回应 | **HTTP 400**：`The supported API model names are deepseek-flash, deepseek-v4-pro` |
+| 官方端点对 `deepseek-flash` | HTTP 200，响应 `model=deepseek-flash` |
+| 官方端点对 `deepseek-chat` | HTTP 200，响应 `model=deepseek-flash`（别名归一到同一模型） |
+| `.env.example` 的项目官方名 | `LLM_MODEL_FAST=deepseek-flash`、`LLM_MODEL_STRONG=deepseek-v4-pro` |
+| 代理侧 r59 请求里的 model 串 | `deepseek-v4.1-flash`（并入匣带） |
+
+⇒ 能证的：**"版本名"只存在于代理侧**，官方不认这个字面名；官方把 `deepseek-chat` 归一成 `deepseek-flash`。
+⇒ 不能证的：两套服务（代理 / 官方）背后的权重与部署版本是否逐位一致 —— 本窗无法验证，**按总控裁定采信为同一模型**。
+⇒ 由此产生的唯一残留不确定：**端点不同**（`kuaipao.pro` vs `api.deepseek.com`），服务侧版本、采样实现、限流策略均可能不同。引用时须同时给"模型名"和"端点"两格。
+
+配置最终态（`.env`，gitignore 不入库）：`DEEPSEEK_BASE_URL=https://api.deepseek.com`、`LLM_MODEL_FAST=deepseek-flash`、`LLM_MODEL_STRONG=deepseek-flash`（与 r59 基线"两档同为 flash"一致，未引入 `deepseek-v4-pro` 这个第二变量）。客户端对 FAST 强制 `thinking={"type":"disabled"}`（`egress_guard.py:458`），与基线请求同形。
+
+### 65.2 A｜城市 5 条：两次跑横比
+
+| case | A-run1（`deepseek-chat`） | A-run2（`deepseek-flash`） | 稳定？ |
+|---|---|---|---|
+| M-DIM-05 | complete／**等价**／27,586 tok | **refuse / no_data_asset**／17,187 tok | ❌ 翻转 |
+| M-HIER-03 | complete／schema_linking_miss | complete／schema_linking_miss | ✅ |
+| X-STR-03 | complete／等价 | complete／等价 | ✅ |
+| X-STR-05 | complete／等价 | complete／等价 | ✅ |
+| X-STR-07 | complete／等价 | complete／等价 | ✅ |
+| 合计 | 5/5 complete、4 等价、139,346 tok／¥0.138881 | 4/5 complete、3 等价、128,769 tok／¥0.071406 | — |
+
+- 两次**都是 0 clarify**（核心目标保持）⇒ 城市 demotion 的"去澄清"效果**可重复**，且不再被模型变更混淆（按 65.1 的同一性前提）。
+- 但 **M-DIM-05 在 complete 与 refuse/no_data_asset 之间翻转**，两次都伴随 `embedding_unavailable → sparse_only` ⇒ **终态稳定性不成立**，且翻转点落在检索降级面（`link→plan→refuse_out`，无 SQL）。
+- 产物：`results_r61_city5_live.json`（`cd65cc8`／dirty=true，成因=RELAY 未提交）＋ `results_r61_city5_flash_live.json`（`d7c60b5`／**dirty=false**）＋干净树 replay `results_r61_city5_replay.json`（`7d05c61`／dirty=false，与 run1 逐条一致）。
+- A 累计 ¥0.210287（上界 ¥0.30 ✅）。
+
+### 65.3 B｜三条契约件：三次跑横比
+
+| case | r59（代理/基线） | run1（chat） | run2（chat+embedding） | run3（flash） | 一致？ |
+|---|---|---|---|---|---|
+| E-MET-08 | clarify／field_binding | refuse / no_data_asset | refuse / no_data_asset | refuse / no_data_asset | ✅ 三次同 |
+| M-MET-01 | complete／gate_policy_gap | refuse / no_data_asset | refuse / no_data_asset | refuse / no_data_asset | ✅ 三次同 |
+| H-ENUM-04 | complete／gate_policy_gap | complete／value_mapping | complete／value_mapping | complete／value_mapping | ✅ 三次同 |
+
+- run3：`eval/results_r61_contract3_flash_live.json`（`d7c60b5`／dirty=false，62,933 tok／¥0.027039，17,455／17,442／28,036 tok，4.9／4.136／9.435s）。
+- 三次跑（含两次换 model 串、一次补 embedding）**终态与归因逐字一致** ⇒ 这三条的结果**与模型串无关、可重复**。
+- 🔴 与 r59 的差（clarify→refuse、complete→refuse、gate_policy_gap→value_mapping）在"同一模型"前提下**不能再用"换模型"解释**。W60 代码只动了城市 demotion（只命中"各城市"/"在<城市>的店铺各 SKU"两类题面）与 `eval/runner.py` 的归因函数，理论上不该改这三条的终态。⇒ **归因未定位**，候选变量：端点/服务侧版本差异、sparse-only 命中集差异、生成抖动。**本节只报观测，不宣称已定位。**
+- B 累计 ¥0.081643（上界 ¥0.20 ✅）。
+
+### 65.4 `embedding_unavailable` 口径（沿用 §64.4，仍是结构性）
+
+`dense.py:337-350`：`app.embed_doc` 有行但 `embedding` 全 NULL ⇒ 向量列未物化（U-112 形态 ii）。r59 全量 113/166 同样带此降级；本轮五批全部带。**与 Ollama 是否在跑无关**（已实测：补起 Ollama 后 run2 结论不变）。
+
+### 65.5 本轮总账
+
+```text
+实际花费 = ¥0.291930（A 0.210287 + B 0.081643；5 份 live 件）
+台账     = 1830|3.025849|2026-10-07 04:28:00.872275+00（逐位不动；harness 不走网关，账面 ≠ 实际花费）
+时段     = 2026-10-22 10:47–11:03 +0800（含首探针 401 两次，未计费）
+HEAD     = 收尾前 d7c60b5（617 笔），origin/main 同步
+残渣     = ecom / ecom_u123_probe；容器六件 Up
+```
+
+### 65.6 待点句
+
+1. **B 的三条差是否要继续查**（同模型前提下已不能用"换模型"解释）：查法 = 拿 r59 的同一份 sparse-only 检索上下文做引脚夹具，逐节点比 `plan/bind`。需另开一轮，零出站即可做。
+2. **M-DIM-05 的 complete↔refuse 翻转**：属可用性面（C 类），建议并入可用性指标单列，不动 G-2 判据。
+3. 判据变更（上游错误是否记 `unscored`）仍未决；G-8 二轮、τ 校准、官方门禁刷新按指令未碰。
