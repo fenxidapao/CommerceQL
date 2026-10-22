@@ -5627,6 +5627,99 @@ caveats: '本批次为**单轮**（runner.py 无「clarify → 用户补答 → 
 **④ D5-1 图级串跑（决定 U-127 能否真关）**
 夹具三段各自成立（`LlmSaturated` 抛出、`_reason_for=llm_concurrency_exceeded`、传输层 0 调用），但**未在同一次图级 run 里串起来**（harness 的 LLM 走匣带，注入饱和客户端要改 harness）。⇒ U-127 的代码面判定为「已对齐 07 §10.1」，但**图级证据仍缺一环**。建议：W66 内做图级串跑（零出站，改 harness 注入），别再单开一轮。
 
+### 87.3.1 W66 派单块（可整段复制转发）
+
+```text
+【QA → W8｜W65 验收 + W66 派单】2026-10-22 20:05 +0800｜HEAD 89eef65／638 笔
+
+一、W65 判定
+收：C4（QA 实跑 47 passed）、D5 夹具（QA 实跑 4 passed ⇒ U-127 判"关"成立）、
+    C5 提案方向、花费 ¥0.057224（0.052041+0.005183 逐分对得上；超 ¥0.05 上界 14%，自报属实）。
+半收：C1（机制 3/3 成立，但门禁读不到——见二①）、C2（代码收，数据不收——见二②）。
+不收：「matched 61/166」当实测样本量。61 是离线重算口径；raw 件内嵌的是 19（ae21a0d 旧规则），
+      coverage 件是 61（210b461 新规则），两件差 42 条。请统一写"按当前规则的离线重算"。
+
+二、两条硬事实（QA 实跑，零出站）
+① C1 的成果在门禁口径里读不出来：eval/reporter.py:1362 仍硬编码
+   "second_round_loop_available": False，而 eval/gates.py:525 读的就是它。
+   实跑 recompute_gate('G-8', results_path='eval/results_r65_second_round_live.json')：
+   → "澄清率 3/3 = 100.0%；澄清后一次成功 0.0%"，caveat 还写"runner.py 无第二轮回路"。
+   ⇒ W66 必须接线（评测器接线，不是判据变更；gates.py 阈值与文案不动）。
+② τ 反解规则有假匹配：
+   - eval/runner.py:415 `scoped = [...] or candidate_ids` —— 筛空时回退全候选；
+   - 兜底"列名在 gold_sql 出现过" —— 过滤列(pay_time/category_l1/refund_status)被当被测字段。
+   实例：M-HIER-03「各城市的在架商品数」gold_sql 是 SELECT city, COUNT(*) FROM v_shop，
+   gold 被判成 v_order_paid.category_l1（0.02 分、排名 12）；v_shop.city 不在候选集里。
+   QA 严格口径重算同一份 raw：**31 vs 61**；61 条里 27 条（44%）gold 分数低于次优；
+   τ=0.15 会把 42/61（68.9%）判 ambiguous。⇒ 规则修好前采样必校错位置。
+
+三、三个点句
+1) τ 采样：¥6 不批。顺序＝先修规则（零出站）→ 再 L4-only 采样。
+   成本依据（QA 实算 r63 匣带）：L4 占 6.4% token 却占 58% 成本（output 117,293/177,857），
+   单次 ≈¥0.011；全图重跑 3 轮≈¥6.5 属重复付费。
+   ⇒ 只对 matched 样本集跑 L4-only，QA 估 ≈¥1.0；**上界 ¥1.5，排 18:00 后低谷（半价≈¥0.5）**。
+   采样另开一轮（W67），W66 先把规则修好。
+2) 图级饱和：不单开一轮，并入 W66。只差 harness 注入饱和客户端一处。
+   U-127 代码面判定"已对齐 07 §10.1"不变，图级证据缺口挂在 W66。
+3) C5：取值域照 §70.6 七值定（upstream_timeout/upstream_auth/upstream_rate_limited/
+   upstream_unavailable/retrieval_unavailable/exec_timeout/internal），四条硬约束：
+   ① 终态四值不变；② 只在 event=error 下出现，refuse 不挂；③ 旧记录必须 .get()，
+   不得落 unknown（那是造假事实）；④ 补"旧记录无该键仍可解析"契约测试。
+
+四、W66 派单（四项，全部零出站，本轮不花钱）
+0. 前置
+- 现读 HEAD 并写进回执；本轮**零出站**（不跑 live、不动 15s/判据/gold/冻结集/语义包）。
+- 不碰 backend/reports/qa/**（QA 面）；不 git add -A；.workbuddy/ 不入库。
+- 集成测试隐性前置（QA 实测）：RETRIEVAL_TEST_PG_DSN 必须指**可建表**实例
+  （指 app_rw 会 6 skip + 3 error，报 permission denied for database）；
+  其余三个 DSN 照旧 app_rw/app_ro/super。alembic 要在 backend/ 目录跑。
+
+1. 🔴 C2-1 反解规则返工（阻塞 τ 采样）
+- eval/runner.py `_gold_for_tau`：
+  ① 规则①不得回退全候选：`scoped` 为空 ⇒ 判 unmatched，并新增
+     gold_unmatched_reason='gold_table_not_in_candidates'（现有枚举里没有这一项）；
+  ② 规则②须处理 COUNT(*)（无参数列 ⇒ unmatched）与 COUNT(DISTINCT x)（取 x）；
+  ③ **禁止**用"列名在 gold_sql 出现过"兜底——那正是过滤列假匹配的来源；
+  ④ 口径：宁可少，不可假。QA 复算的严格口径 31 条是合理量级；
+     no_column_overlap / no_gold_asset_in_candidates 上升是诚实，不是退化。
+- 补单测四例：COUNT(*)／COUNT(DISTINCT x)／过滤列与被测列同名／gold 表不在候选集。
+- 产出：eval/results_r66_tau_coverage.json（零出站离线重算），给 n_matched 与
+  逐条 gold_status 分布；**须与 raw 件内嵌的 gold_status 口径一致**（不要再出现 19 vs 61 双口径）。
+
+2. 🔴 C1-2 reporter 接线
+- eval/reporter.py `_clarification_digest`：从 records 数 second_round.attempted /
+  second_round.success，据此置 second_round_loop_available（单轮批次仍须为 False）；
+  clarify_then_correct 与 second_round.success 口径对齐。
+- ⚠️ 文案红线：success ＝ 二轮走到 complete，**不等于答案正确**
+  （二轮 gold 已由 499e799 定为 not_defined_for_second_round）。
+  门禁文案写"二轮回到可执行终态的比例"，**不得写成"答案正确率"**。
+- 补单测：带二轮批次 ⇒ second_round_loop_available=True；单轮批次仍 False。
+- 复算 G-8（对 r65 二轮件）须给出完整 evidence 与 caveat 全文。
+
+3. 🟡 C2-2 候选集覆盖口径（独立于规则）
+- QA 复算有 25 条 gold 表不在候选资产内（v_dim_date/v_shop/v_region/v_traffic_daily/
+  v_campaign 等），候选只有 v_order_paid/v_order_refund/v_product ⇒ 即使反解全对也进不了样本。
+- 本轮路线：**不扩候选面**（改代码超 C2 范围，另开），而是把 τ 校准的适用范围
+  明确限定为"这三类资产上的字段绑定"，写进报告与 eval/tau_samples.py 的 docstring。
+
+4. 🟡 D5-1 图级饱和串跑
+- 改 harness 注入饱和客户端，把三段（抛出 / _reason_for 映射 / 传输层 0 调用）
+  串进同一次图级 run；产出终态 + degraded.reason 证据。
+- U-127 代码面判定"已对齐 07 §10.1"不变；本项补齐图级证据那一环。
+
+5. 不做
+- 不标 unscored、不剔分母；不动 15s/30s 判据；不改 gold/冻结集/semantic 包；
+- 不改 dense.py 的 0 行语义；不改 eval/runner.py 的 scored 语义；
+- 不做 τ 真采样（等 W67）；不刷官方门禁（仍 88f3500／PASS 1/8）；
+- 不碰 backend/reports/qa/**；不 git add -A；不提交 .workbuddy/。
+
+6. 回执要求
+- 每条给：改动文件、测试数、产物路径、git_rev + dirty、tokens（本轮应 0）；
+- 若跑集成：写明 RETRIEVAL_TEST_PG_DSN 指向、alembic_rc、DROP 后残渣、
+  共享 ecom 的 embed_doc 行数（跑前跑后各一次）；
+- 若复算 G-8：给完整 evidence 字符串与 caveat 全文。
+```
+
 ### 87.4 τ 采样的真实成本（答他点句 1）
 
 他估「3 轮 × ≈¥2 ≈ ¥6」。我用 r63 匣带的 token 结构实算：
