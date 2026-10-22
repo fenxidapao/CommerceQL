@@ -303,7 +303,12 @@ def test_clarify_counts_record_the_denominator_it_used():
         _rec(case_id="C", terminal_event="clarify", sql_text="",
              verdict={"equivalent": False, "diffs": ["预测 0 列"], "hash_matches": None}),
     ])
-    assert c == {"requests": 3, "clarify_expected_n": 2, "clarified": 2, "clarify_then_correct": 1,
+    # 🔴 W8 第 66 轮 C1-2 订正：分子口径 = `second_round.success`（「二轮回到可执行终态」），
+    # **不是**首轮 `verdict.equivalent`（那测的是"没澄清就答对"，与本口径无关）。
+    # 本例三条都没有 `second_round` ⇒ 单轮批次 ⇒ 分子 0、标志 False。
+    assert c == {"requests": 3, "clarify_expected_n": 2, "clarified": 2,
+                 "clarify_then_correct": 0,
+                 "second_round_attempted": 0, "second_round_success": 0,
                  "second_round_loop_available": False}
 
 

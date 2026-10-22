@@ -524,11 +524,14 @@ def evaluate_gates(
         )
         has_second_round = bool(clarification.get("second_round_loop_available"))
         if not has_second_round:
-            # 单轮批次里「澄清后一次成功」的分子恒为 0 —— 那是评测器没有回补答的回路，
+            # 本批次拿不到「二轮回到可执行终态」的分子 —— 那是评测器侧没有可测样本
+            # （没开 `--second-round`，或开了但本批没有带补答来源的澄清题），
             # 不是被测系统失败。判 FAIL 会把这个门禁变成不可能通过，进而诱使下一轮"放宽阈值"。
             verdict = "UNVERIFIED"
             extra = (
-                "本批次为**单轮**（`runner.py` 无「clarify → 用户补答 → 再走一次」的第二轮回路）"
+                "本批次**无可测的二轮分子**（`--second-round` 未开，或本批没有带补答来源的澄清题）"
+                "⇒ **第二轮回路**能力本身已具备（W8 第 65 轮起 `runner.py --second-round`），"
+                "—— 回路能力本身已具备（W8 第 65 轮起 `runner.py --second-round`），"
                 "⇒ 后半句「澄清后一次成功率」不可测 ⇒ 整条门禁判 UNVERIFIED（既非 FAIL 也非 PASS）。"
                 "澄清率那一半是可测的，已作为证据列出。",
             )
@@ -537,7 +540,14 @@ def evaluate_gates(
                 succ is not None and succ >= THRESHOLDS["G-8_clarify_success"]
             )
             verdict = _tau_verdict("G-8", "PASS" if ok else "FAIL", tau_calibrated)
-            extra = ()
+            # 🔴 W8 第 66 轮 C1-2：分子口径必须写清 —— 它是「**二轮回到可执行终态的比例**」，
+            # **不是**答案正确率：二轮问句带补答，冻结集 gold 只对首轮成立
+            # （二轮 gold = `not_defined_for_second_round`）⇒ 二轮没有可比对的正确答案。
+            extra = (
+                "「澄清后一次成功」的分子＝**二轮回到可执行终态（complete）的比例**，"
+                "**不是答案正确率**（二轮问句带补答，冻结集 gold 只对首轮成立，"
+                "二轮 gold 为 `not_defined_for_second_round` ⇒ 没有可比对的正确答案）。",
+            )
         gates.append(Gate(
             "G-8", "澄清率 ≤ 15% 且澄清后一次成功率 ≥ 80%", verdict,
             evidence,

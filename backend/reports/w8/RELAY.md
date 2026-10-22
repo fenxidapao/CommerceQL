@@ -6893,3 +6893,178 @@ eval/results_r65_tau_second_round.json       499e799 / dirty=false（二轮 tau_
 ### 70.9 边界声明
 
 未改 `backend/reports/qa/**`；未 `git add -A`；`.workbuddy/` 未入库；未改 15s／判据／gold／冻结集／`dense.py` 的 0 行语义；未动 `active_version()`；未刷官方门禁；未写共享 `ecom`（本轮无写库）。
+
+## 第 66 轮（W8：§87.3.1 四项 —— C2-1 反解规则返工／C1-2 reporter 接线／C2-2 覆盖口径／D5-1 图级饱和）｜起点 HEAD `c847c3d`／640 笔｜2026-10-22 20:3x–21:4x +0800
+
+> 派单来源：QA TASK_BOARD §87.3.1（W66 派单块）。本轮**零出站**（tokens 真实计费 = 0，¥0）：
+> 未跑 live、未动 15s/30s 判据、未改 gold/冻结集/语义包、未碰 `backend/app/**`、
+> 未碰 `backend/reports/qa/**`、未 `git add -A`、`.workbuddy/` 未入库。
+
+### 71.1 🔴 C2-1｜反解规则返工（阻塞 τ 采样的一项，本轮完成）
+
+**病根**（QA §87.2 实测）：旧 `_gold_for_tau` 有两处会造假匹配 ——
+① 规则①「`scoped` 为空 ⇒ **回退全候选**」（`eval/runner.py:415`）；
+② 命中判定用「**列名在 gold_sql 里出现过**」兜底 ⇒ `pay_time`／`pay_status`／
+`category_l1`／`refund_status` 这类**过滤列**被当成被测字段。
+⇒ 旧口径 matched 61 条，其中 **27 条（44%）** 的 gold 分数低于同候选集次高分
+⇒ 采样会把 τ 校到错的位置。
+
+**改法**（`eval/runner.py::_gold_for_tau` + 新增 `_agg_target_columns`）：
+
+| 级 | 规则 | 失败 reason |
+|---|---|---|
+| ① | 表作用域（`FROM`/`JOIN` 表名 → 候选资产前缀）。**空即失败，绝不回退全候选** | `gold_table_not_in_candidates`（**新增 reason**） |
+| ② | 目标列只取**聚合函数参数列**：`SUM(x)`→`x`、`COUNT(DISTINCT x)`→`x`；`COUNT(*)` 无参数 ⇒ 无可反解的被测字段 | `no_target_column`（**新增 reason**） |
+| ③ | 命中**只认列名相等**（作用域内），**删除**全文兜底 | `no_column_overlap` / `multiple_candidates_match` |
+
+**读数（同一份 raw，零出站）**：
+
+```
+matched 29 ／ unmatched 119 ／ expected_clarify 18（n_records 166，n_l4_scored 119）
+unmatched 分解：no_target_column 26／gold_table_not_in_candidates 25／
+                no_column_overlap 23／empty_gold_sql 24／no_l4_candidates 15／multiple 6
+假匹配审计：matched 里 gold 分数 < 次优 = **8/29（27.6%）**
+```
+
+🔴 **8 条残余低分逐条核对后确认：它们是"打分器把次优排在金标前面"的真实观测**
+（`E-VER-04`／`E-MET-05/06/07`／`M-MET-03`／`M-MET-08`／`M-IDX-05/06`），
+**不是金标选错** ⇒ 那正是 τ 要量的东西（τ = 金标与次优的分数差下界）。
+旧口径的 27 条才是金标选错 ⇒ 本轮已把那一类全部剔除。
+
+⚠️ **为什么不用 `GROUP BY` 的维度列兜底**（实测会**跨资产假匹配**）：
+`H-ENUM-01…04` 的 gold 字段是 `v_shop.shop_id`，而 `v_shop` **不在 L4 候选集**
+⇒ 按列名命中会撞上 `v_order_paid.shop_id`（同列名、**错资产**）。
+⚠️ `H-ENUM-04` 正是 W8 第 65 轮 B 批那条 `value_mapping` 归因的 case ——
+若它进样本且金标配成 `v_order_paid.shop_id`，τ 会拿一个**错的被测字段**当金标。
+⇒ 宁可少，不可假。
+
+**与 QA §87.2 复算（31 条）的差异分解**（同源逐条对照，写进
+`eval/results_r66_tau_coverage.json` 的 `qa_variant_comparison`）：
+* 5 条 `GROUP BY` 类：QA 口径判 matched、本轮判 unmatched（**上面那条跨资产假匹配**）；
+* 10 条 `expected_clarify` 的**归类**差（QA 的复算脚本把它并进 `unmatched`）；
+* ⇒ **两套口径的可用样本数相同**（本轮 29 ＋ 18 = QA 的 31 可用集）。
+* ⚠️ 另注：把 QA 的口径**实跑**一遍（`E:\codex\w8r66\explain_29_vs_31.py`）得 **34**，
+  与 QA 复算的 31 差 3 条 ⇒ **QA 那 31 的口径与其文字描述不完全等价**，本轮已把
+  两套口径的逐条对照一并落盘，供裁定。
+
+**双口径已消除**：本轮先零出站 replay 产出新 raw 件
+（`eval/results_r66_tau_raw_replay.json`，内嵌**新规则**的 `gold_status`），
+再由它生成覆盖件（`eval/results_r66_tau_coverage.json`，**直接读 raw 内嵌字段**、
+不二次重算）⇒ 两者逐条 **0 不一致**（实测校验）。
+
+**单测**：`backend/tests/eval/test_tau_samples.py` 25 passed
+（QA 点名四例：`COUNT(*)`／`COUNT(DISTINCT x)`／过滤列与被测列同名／
+gold 表不在候选集；另加"GROUP BY 不跨资产兜底"一例）。
+
+### 71.2 🔴 C1-2｜reporter 接线（C1 的成果此前在门禁口径里读不出来）
+
+**病根**（QA §87.1 实测）：`eval/reporter.py:1362` 硬编码 `"second_round_loop_available": False`，
+而 `eval/gates.py:525` 读的就是它 ⇒ 带二轮的批次，官方复算 G-8 仍说
+"runner.py 无第二轮回路"、后半句恒 **0.0%**。
+
+**改法**：
+
+| # | 改哪 | 改成什么 |
+|---|---|---|
+| ① | `eval/reporter.py::_clarify_counts` | **从 records 数** `second_round.attempted` / `second_round.success`；据此置 `second_round_loop_available`（单轮批次**仍为 False**；开了二轮但无可补答来源**也是 False**） |
+| ② | 分子口径 | `clarify_then_correct` = **`second_round.success`**（「二轮回到可执行终态」），**不是**首轮 `verdict.equivalent`（那测的是"没澄清就答对"） |
+| ③ | 文案（`gates.py` + `reporter.py`） | 写「**二轮回到可执行终态（complete）的比例**」，**不得**写成"答案正确率"（二轮 gold 已由 `499e799` 定为 `not_defined_for_second_round` ⇒ 没有可比对的正确答案） |
+| ④ | 事实性错误 | `gates.py` 单轮分支原写"`runner.py` 无…第二轮回路"——C1 落地后 runner **已有**回路 ⇒ 改为"本批次无可测的二轮分子"，并保留"第二轮回路"字样（下游 grep 依赖） |
+
+**复算 G-8（对 r65 二轮件，`git=89eef65`）**：
+
+```
+verdict : FAIL
+measured: 澄清率 3/3 = 100.0%；澄清后一次成功 100.0%
+caveats :
+  - τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）
+  - 「澄清后一次成功」的分子＝**二轮回到可执行终态（complete）的比例**，**不是答案正确率**
+    （二轮问句带补答，冻结集 gold 只对首轮成立，二轮 gold 为 not_defined_for_second_round
+      ⇒ 没有可比对的正确答案）。
+  - τ 未校准 → 澄清率的判据点本身未定稿（C.4.6 步骤 4）
+```
+
+🔴 **这个 FAIL 是小样本假象，必须连读**：r65 二轮件只有 **3 条**，且**全是应澄清题**
+⇒ 澄清率分母只有 3 ⇒ 3/3 = 100% 必然超 15% 门槛。
+**它不表示被测系统澄清率 100%**；澄清率的可用读数在 r63 全量件（16/166 = 9.6%）。
+⚠️ 门禁文案红线**只**约束"分子"的措辞（"二轮回到可执行终态"），
+"澄清率 3/3"这个分母问题属**批次构成**，本轮不改判据、只在回执里讲清。
+
+**单测**：新增 `backend/tests/eval/test_reporter_second_round.py`（4 条）
+＋ 既有 `test_consistency_reporter.py` / `test_gates.py` 订正（口径/文案）
+⇒ `backend/tests/eval` 全量 **122 passed**。
+
+### 71.3 🟡 C2-2｜候选集覆盖口径（适用范围已写死）
+
+**实测**（`eval/results_r66_tau_raw_replay.json`）：119 条已打分记录的候选资产前缀
+**只有** `v_order_paid`（2499 次）／`v_order_refund`（714）／`v_product`（357）；
+而冻结集 `gold_sql` 的表分布是 `v_product` 51／`v_traffic_daily` 40／
+`v_order_paid` 38／`v_shop` 37／`v_region` 10／`v_campaign` 2／`v_dim_date` 1
+⇒ **约一半的 gold 题落在候选覆盖之外**，即使反解全对也进不了样本。
+
+**本轮路线**（QA §87.3-② 建议）：**不扩候选面**（改 L4 候选生成超 C2 范围、且会改被测行为），
+而是把适用范围**写死**：
+* `eval/tau_samples.py` 的 docstring 新增「🔴 适用范围（W8 第 66 轮 C2-2）」节；
+* `eval/results_r66_tau_coverage.json` 的 `scope_limitation` 落同样的限定
+  （两处**同源同措辞**）。
+
+限定语（可整段引用）：
+「本次 τ **只**校准了 `v_order_paid`／`v_order_refund`／`v_product` 三类资产上的字段绑定；
+`v_shop`／`v_region`／`v_dim_date`／`v_traffic_daily`／`v_campaign` 上的字段绑定
+**未被校准**（候选集不覆盖），不得据此宣称它们已校准。」
+
+### 71.4 🟡 D5-1｜图级饱和串跑（U-127 图级证据那一环补齐）
+
+**注入方式**（`eval/harness.py`）：新增 `Harness(saturate_llm=True)` ⇒
+**并发位压到 0** ⇒ `_acquire` 永远排不到位 ⇒ 抛 `LlmSaturated`。
+⚠️ 这**不是**"注入超时"：`deadline_s` 仍由生产路由给（flash 15s / pro 45s），
+变的是**排队能不能排到**——这正是 07 §10.1「排队」那一行的真实成因。
+
+**同一次图级 run 里的三段**（`eval/results_r66_saturation_graph.json`）：
+
+```
+nodes   : trusted_context → normalize → error_out
+terminal: event=error ／ code=LLM_CONCURRENCY_EXCEEDED（≠ LLM_UPSTREAM_ERROR）
+          error_detail.reason=saturation_then_template_miss
+          error_detail: wait_timeout_s=14.0 / remaining_s=15.0 / headroom_s=1.0
+degradations: [{reason: llm_concurrency_exceeded, action_taken: reduced_candidates,
+                detail: {error: LlmSaturated, advisory: true}}]
+匣带 calls: 0（**传输层 0 调用** ⇒ 饱和发生在传输之前）
+```
+
+⇒ **三段在同一次 run 里串起来了**（①抛出 ②映射 ③传输层 0 调用），
+U-127 的图级证据那一环补齐。
+
+🔴 **顺带修掉一个评测面的可见性缺口**（跑图级串跑时暴露，不在派单里）：
+`eval/harness.py` 装配网关时写的是 `degradation=None` ⇒ 网关每一跳的降级
+**只进结构化日志**、**不进 `RunContext`** ⇒ **不进 `GraphState.degradations`**
+⇒ 评测面看不到任何网关层降级（`llm_concurrency_exceeded` 等），
+而生产侧（`app/api/deps.py:727` 的 `SseDegradationSink`）是落 `RunContext` 的。
+⇒ 评测面**注入了一个与生产同形的 sink**（`eval/harness.py::_EvalDegradationSink`），
+**不改 `app/**`** ⇒ 评测与生产的降级可见性从此一致。
+（回归已验：全量 1992 passed，无既有读数变化。）
+
+### 71.5 本轮新增产物
+
+```
+eval/results_r66_tau_raw_replay.json   零出站 replay（内嵌新规则的 gold_status；166 条）
+eval/results_r66_tau_coverage.json     覆盖件（直接读 raw 内嵌字段；含假匹配审计 +
+                                        适用范围 + QA 口径逐条对照）
+eval/results_r66_saturation_graph.json 图级饱和串跑证据（三段 + 终态 + degraded.reason）
+```
+
+### 71.6 本轮未做 / 未跑
+
+* **未跑 τ 真采样**（等 W67；本轮只把规则修好、样本率换成真读数 29 条可用金标）；
+* 未跑回归（offline 全量／integration）—— 本轮改动**不触达**集成面；
+* 未刷官方门禁（`backend/reports/w6/eval_metrics.json` 仍 `88f3500`／PASS 1/8）；
+* 未扩 L4 候选面（C2-2 走"限定适用范围"路线）；
+* 未碰 `backend/app/**`、`semantic/**`、冻结集、gold、阈值、判据、`dense.py` 的 0 行语义；
+* 未碰 `backend/reports/qa/**`。
+
+### 71.7 边界声明
+
+未改 `backend/app/**`、`backend/tests/**`（除 `backend/tests/eval/**` 的两处口径/文案订正）、
+`semantic/**`、冻结集、阈值、判据、15s/30s、gold；未写共享 `ecom`；
+未碰 `backend/reports/qa/**`；未 `git add -A`；`.workbuddy/` 未入库；
+**零出站**（tokens 真实计费 = 0，¥0；回放轮只读匣带，未连任何上游）。

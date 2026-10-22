@@ -17,6 +17,34 @@
 单次跑批只有一次打分 ⇒ **必须同一 case 有 ≥3 次独立跑批**（同 prompt/同打分器）才能成样本。
 本模块按 `case_id` 分组，不跨 case 拼凑、不对分数取平均（取平均是约束 5 明令禁止的"藏方差"）。
 
+## 🔴 适用范围（W8 第 66 轮 C2-2；QA §87.3-②）
+
+**τ 校准的结论只在这三类资产上的「字段绑定」成立**：
+
+| 资产 | 说明 |
+|---|---|
+| `v_order_paid` | 已覆盖（L4 候选集含） |
+| `v_order_refund` | 已覆盖（L4 候选集含） |
+| `v_product` | 已覆盖（L4 候选集含） |
+
+**不覆盖**（实测：L4 候选集里**没有**这些资产 ⇒ 这些题即反解全对也进不了样本）：
+`v_dim_date` / `v_shop` / `v_region` / `v_traffic_daily` / `v_campaign`。
+
+⚠️ **这条限制的来源与后果**：L4 的候选集只覆盖上述 3 个资产（实测于
+`eval/results_r65_tau_raw_replay.json`：119 条已打分记录的候选资产前缀只有
+`v_order_paid`／`v_order_refund`／`v_product`）。而冻结集 `gold_sql` 的表分布是
+`v_product` 51／`v_traffic_daily` 40／`v_order_paid` 38／`v_shop` 37／`v_region` 10／
+`v_campaign` 2／`v_dim_date` 1 ⇒ **约一半的 gold 题落在覆盖之外**。
+
+⇒ **引用 τ 校准结果时必须带这句限定**：
+「本次 τ 只校准了 `v_order_paid`／`v_order_refund`／`v_product` 三类资产上的字段绑定；
+`v_shop`／`v_region`／`v_dim_date`／`v_traffic_daily`／`v_campaign` 上的字段绑定
+**未被校准**（候选集不覆盖），不得据此宣称它们已校准。」
+
+🔴 **为什么本轮不扩候选面**：扩候选面要改 L4 的候选生成（`backend/app/**`），
+超出 C2「τ 采样 schema」的范围，且会同时改动被测行为 ⇒ 另开一轮。
+⚠️ 也不许把"覆盖不到"说成"这些题太简单/不需要校准"——那是**事实错误**。
+
 用法（零出站）：
 
     python eval/tau_samples.py eval/results_a.json eval/results_b.json eval/results_c.json

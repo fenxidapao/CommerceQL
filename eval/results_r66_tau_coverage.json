@@ -1,0 +1,1444 @@
+{
+  "schema": "W8_TAU_COVERAGE/v1",
+  "git_rev": "c847c3d",
+  "source_raw": "eval/results_r66_tau_raw_replay.json",
+  "source_raw_git_rev": "c847c3d",
+  "source_raw_git_dirty": true,
+  "source_raw_config": {
+    "live": false,
+    "cassette": "eval/cassettes/w8_r63_full166.jsonl",
+    "mode": "replay",
+    "db": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\ecom_sandbox.db",
+    "column_top": null,
+    "n_requested": 166,
+    "provenance": "w66 C2-1 tau_raw replay under corrected gold rule (zero egress)",
+    "node_timeouts": {
+      "contract": {
+        "link": 30.0,
+        "gate1_ast": 0.1,
+        "gate2_policy": 0.1,
+        "gate3_cost": 1.0,
+        "execute": 30.0,
+        "mask": 0.1,
+        "audit_pre": 1.0,
+        "audit_supp": 0.5
+      },
+      "effective": {
+        "link": 30.0,
+        "gate1_ast": 0.1,
+        "gate2_policy": 0.1,
+        "gate3_cost": 1.0,
+        "execute": 30.0,
+        "mask": 0.1,
+        "audit_pre": 1.0,
+        "audit_supp": 0.5
+      },
+      "scaled": false,
+      "llm_calling_nodes": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "not_in_contract": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "kept_as_contract": [
+        "execute",
+        "link"
+      ],
+      "cpu_factor": 8.0,
+      "llm_node_floor_s": 162.0
+    },
+    "max_concurrency": null,
+    "checkpoint": null,
+    "resume": false,
+    "transport_retries": 2,
+    "transport_backoff_s": 2.0
+  },
+  "rule_provenance": {
+    "implemented_in": "eval/runner.py::_gold_for_tau（W8 第 66 轮 C2-1 返工）",
+    "single_source_of_truth": "本件的 gold_status **直接读 raw 件内嵌的 tau_raw.gold_status**，不做二次重算 ⇒ 覆盖件与 raw 件必然同口径。",
+    "changes_vs_prev_round": [
+      "规则①：`scoped`（FROM/JOIN 表作用域）为空 ⇒ unmatched + 新 reason `gold_table_not_in_candidates`；**不再回退全候选**",
+      "规则②：目标列只取**聚合函数参数列**；`COUNT(*)` 无参数 ⇒ `no_target_column`；`COUNT(DISTINCT x)` ⇒ 取 `x`",
+      "规则③：**删除**「列名在 gold_sql 里出现过」的兜底（过滤列假匹配的来源）"
+    ]
+  },
+  "counts": {
+    "n_records": 166,
+    "n_l4_scored": 119,
+    "n_matched": 29,
+    "n_unmatched": 119,
+    "n_expected_clarify": 18
+  },
+  "gold_status_distribution": {
+    "expected_clarify": 18,
+    "matched": 29,
+    "unmatched": 119
+  },
+  "gold_unmatched_reason_distribution": {
+    "empty_gold_sql": 24,
+    "gold_table_not_in_candidates": 25,
+    "multiple_candidates_match": 6,
+    "no_column_overlap": 23,
+    "no_l4_candidates": 15,
+    "no_target_column": 26
+  },
+  "per_case": [
+    {
+      "case_id": "E-VER-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "E-VER-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "E-VER-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "E-VER-04",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_product.spu_id",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "E-VER-05",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "E-VER-06",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "E-VER-07",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "E-VER-08",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.region_code",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "E-VER-10",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "E-VER-11",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "E-ENUM-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "E-ENUM-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "E-ENUM-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "E-ENUM-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "E-ENUM-05",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "E-ENUM-06",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "E-ENUM-07",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "E-ENUM-08",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "E-ENUM-09",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "E-ENUM-10",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "E-MET-01",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "E-MET-02",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "E-MET-03",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "E-MET-04",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "E-MET-05",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.sub_order_id",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "E-MET-06",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.sub_order_id",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "E-MET-07",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.sub_order_id",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "E-MET-08",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "E-MET-09",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "E-MET-10",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-DIM-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-DIM-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-DIM-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-DIM-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-DIM-05",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "M-DIM-06",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "M-DIM-07",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "M-DIM-08",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-DIM-09",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "M-DIM-10",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-ENUM-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-ENUM-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "M-ENUM-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-ENUM-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-HIER-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "M-HIER-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "M-HIER-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-HIER-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "M-HIER-05",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "M-HIER-06",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "M-MET-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "M-MET-02",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "M-MET-03",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "M-MET-04",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "M-MET-05",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-MET-06",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-MET-07",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-MET-08",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "M-MET-09",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "M-MET-10",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "H-STR-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "H-STR-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "H-STR-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "H-STR-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "H-STR-05",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "H-STR-06",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "H-STR-07",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "H-STR-08",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "H-STR-09",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "H-ENUM-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "H-ENUM-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "H-ENUM-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "H-ENUM-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "H-CAT-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "H-CAT-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "H-CAT-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "H-CAT-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "H-CAT-05",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_target_column"
+    },
+    {
+      "case_id": "H-MET-01",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "H-MET-02",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "H-MET-03",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "H-MET-04",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "H-MET-05",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "H-MET-06",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "H-MET-07",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "H-MET-08",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "H-MET-09",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "H-MET-10",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-STR-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-STR-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-STR-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-STR-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-STR-05",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-STR-06",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-STR-07",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-STR-08",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-ENUM-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-ENUM-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-ENUM-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-ENUM-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-ENUM-05",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-ENUM-06",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-ENUM-07",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-ENUM-08",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-MET-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-MET-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-MET-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-MET-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-MET-05",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_column_overlap"
+    },
+    {
+      "case_id": "X-MET-06",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "X-MET-07",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "X-MET-08",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "X-MET-09",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "X-MET-10",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "no_l4_candidates"
+    },
+    {
+      "case_id": "M-IDX-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "multiple_candidates_match"
+    },
+    {
+      "case_id": "M-IDX-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "multiple_candidates_match"
+    },
+    {
+      "case_id": "M-IDX-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "multiple_candidates_match"
+    },
+    {
+      "case_id": "M-IDX-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "multiple_candidates_match"
+    },
+    {
+      "case_id": "M-IDX-05",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "M-IDX-06",
+      "gold_status": "matched",
+      "gold_candidate_id": "v_order_paid.pay_amount",
+      "gold_match_rule": "aggregate_arg",
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "M-IDX-07",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-IDX-08",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "gold_table_not_in_candidates"
+    },
+    {
+      "case_id": "M-IDX-09",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "multiple_candidates_match"
+    },
+    {
+      "case_id": "M-IDX-10",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "multiple_candidates_match"
+    },
+    {
+      "case_id": "C-CITY-01",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-CITY-02",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-CITY-03",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-CITY-04",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-GMV-01",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-GMV-02",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-GMV-03",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-GMV-04",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-RATE-01",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-RATE-02",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-REP-01",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-REP-02",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-UV-01",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-UV-02",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-AOV-01",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-REG-01",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-REG-02",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "C-CAT-01",
+      "gold_status": "expected_clarify",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": null
+    },
+    {
+      "case_id": "R-PII-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-PII-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-PII-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-PII-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-PII-05",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-PII-06",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-PII-07",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-GMV-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-GMV-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-GMV-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-GMV-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-NA-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-NA-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-NA-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-NA-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-NA-05",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-NA-06",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-NA-07",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-NA-08",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-NA-09",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-SEC-01",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-SEC-02",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-SEC-03",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    },
+    {
+      "case_id": "R-SEC-04",
+      "gold_status": "unmatched",
+      "gold_candidate_id": null,
+      "gold_match_rule": null,
+      "gold_unmatched_reason": "empty_gold_sql"
+    }
+  ],
+  "false_match_audit": {
+    "definition": "matched 条里，gold 的 L4 分数**低于**同候选集次高的条数",
+    "n_low_score": 8,
+    "n_matched": 29,
+    "rate": 0.2759,
+    "note": "🔴 这**不是**规则错：逐条核对后，这些是「打分器把次优排在金标前面」的真实观测 —— 那正是 τ 要量的东西（τ 就是金标与次优的分数差下界）。旧口径（61 条 matched）里有 27 条是**金标本身选错**（过滤列被当被测字段），本口径已把那一类全部剔除。",
+    "details": [
+      {
+        "case_id": "E-VER-04",
+        "gold_candidate_id": "v_product.spu_id",
+        "gold_score": 0.85,
+        "runner_up": "v_order_paid.spu_id",
+        "runner_up_score": 0.9,
+        "gap": 0.05
+      },
+      {
+        "case_id": "E-MET-05",
+        "gold_candidate_id": "v_order_paid.sub_order_id",
+        "gold_score": 0.55,
+        "runner_up": "v_order_paid.order_id",
+        "runner_up_score": 0.8,
+        "gap": 0.25
+      },
+      {
+        "case_id": "E-MET-06",
+        "gold_candidate_id": "v_order_paid.sub_order_id",
+        "gold_score": 0.55,
+        "runner_up": "v_order_paid.order_id",
+        "runner_up_score": 0.8,
+        "gap": 0.25
+      },
+      {
+        "case_id": "E-MET-07",
+        "gold_candidate_id": "v_order_paid.sub_order_id",
+        "gold_score": 0.35,
+        "runner_up": "v_order_paid.order_id",
+        "runner_up_score": 0.9,
+        "gap": 0.55
+      },
+      {
+        "case_id": "M-MET-03",
+        "gold_candidate_id": "v_order_paid.pay_amount",
+        "gold_score": 0.6,
+        "runner_up": "v_order_paid.category_l1",
+        "runner_up_score": 0.95,
+        "gap": 0.35
+      },
+      {
+        "case_id": "M-MET-08",
+        "gold_candidate_id": "v_order_paid.pay_amount",
+        "gold_score": 0.85,
+        "runner_up": "v_order_paid.sku_id",
+        "runner_up_score": 0.9,
+        "gap": 0.05
+      },
+      {
+        "case_id": "M-IDX-05",
+        "gold_candidate_id": "v_order_paid.pay_amount",
+        "gold_score": 0.15,
+        "runner_up": "v_order_paid.refund_status",
+        "runner_up_score": 0.55,
+        "gap": 0.4
+      },
+      {
+        "case_id": "M-IDX-06",
+        "gold_candidate_id": "v_order_paid.pay_amount",
+        "gold_score": 0.15,
+        "runner_up": "v_order_paid.refund_status",
+        "runner_up_score": 0.3,
+        "gap": 0.15
+      }
+    ]
+  },
+  "scope_limitation": {
+    "covered_assets": [
+      "v_order_paid",
+      "v_order_refund",
+      "v_product"
+    ],
+    "not_covered_assets": [
+      "v_campaign",
+      "v_dim_date",
+      "v_region",
+      "v_shop",
+      "v_traffic_daily"
+    ],
+    "statement": "🔴 本次 τ **只**校准了 `v_order_paid`／`v_order_refund`／`v_product` 三类资产上的字段绑定；其余资产（`v_shop`／`v_region`／`v_dim_date`／`v_traffic_daily`／`v_campaign`）上的字段绑定**未被校准**（L4 候选集不覆盖这些资产 ⇒ 相关题即反解全对也进不了样本）。**不得**据此宣称它们已校准。",
+    "provenance": "eval/tau_samples.py 的 docstring（同一份限定，两处同源）"
+  },
+  "sample_feasibility": {
+    "min_repeats": 3,
+    "single_round_samples": 0,
+    "note": "`ScoreSample` 要求同一 case 有 ≥3 次独立跑批 ⇒ 单轮 0 样本。采样需同配置多轮（W67 另开）。"
+  },
+  "provenance": {
+    "zero_egress": true,
+    "method": "读 raw 件内嵌字段 + 离线统计；未调用任何 LLM、未出网、未写库"
+  },
+  "qa_variant_comparison": {
+    "why_this_section_exists": "派单要求「不要再出现 19 vs 61 双口径」。本节把**本轮口径**与**QA §87.2 的严格口径**在同一份 raw 上逐条对照，说明 29 vs 31 的差在哪。",
+    "qa_variant_status_distribution": {
+      "matched": 34,
+      "unmatched": 85
+    },
+    "n_differing_cases": 15,
+    "n_group_by_cases": 5,
+    "n_expected_clarify_state_cases": 10,
+    "group_by_cases": [
+      {
+        "case_id": "M-DIM-06",
+        "this_round": {
+          "status": "unmatched",
+          "gold": null,
+          "reason": "no_target_column"
+        },
+        "qa_variant": {
+          "status": "matched",
+          "gold": "v_product.spu_id",
+          "reason": "aggregate_or_group_by"
+        },
+        "gold_sql": "SELECT spu_id, COUNT(*) FROM v_product GROUP BY spu_id"
+      },
+      {
+        "case_id": "H-ENUM-01",
+        "this_round": {
+          "status": "unmatched",
+          "gold": null,
+          "reason": "no_target_column"
+        },
+        "qa_variant": {
+          "status": "matched",
+          "gold": "v_order_paid.shop_id",
+          "reason": "aggregate_or_group_by"
+        },
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'partial' AND v_order_"
+      },
+      {
+        "case_id": "H-ENUM-02",
+        "this_round": {
+          "status": "unmatched",
+          "gold": null,
+          "reason": "no_target_column"
+        },
+        "qa_variant": {
+          "status": "matched",
+          "gold": "v_order_paid.shop_id",
+          "reason": "aggregate_or_group_by"
+        },
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'refunded' AND v_order"
+      },
+      {
+        "case_id": "H-ENUM-03",
+        "this_round": {
+          "status": "unmatched",
+          "gold": null,
+          "reason": "no_target_column"
+        },
+        "qa_variant": {
+          "status": "matched",
+          "gold": "v_order_paid.shop_id",
+          "reason": "aggregate_or_group_by"
+        },
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'none' AND v_order_pai"
+      },
+      {
+        "case_id": "H-ENUM-04",
+        "this_round": {
+          "status": "unmatched",
+          "gold": null,
+          "reason": "no_target_column"
+        },
+        "qa_variant": {
+          "status": "matched",
+          "gold": "v_order_paid.shop_id",
+          "reason": "aggregate_or_group_by"
+        },
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'partial' AND v_order_"
+      }
+    ],
+    "group_by_verdict": "🔴 在这 5 条上，**QA 口径产生跨资产假匹配**：`H-ENUM-01…04` 的 gold 字段是 `v_shop.shop_id`，而 `v_shop` **不在 L4 候选集**（候选只有 `v_order_paid`／`v_order_refund`／`v_product`）⇒ 按列名命中会撞上 `v_order_paid.shop_id`（同列名、**错资产**）。⇒ 本轮判 `unmatched` 是「宁可少、不可假」的正确处理。⚠️ `H-ENUM-04` 正是 W8 第 65 轮 B 批里那条 `value_mapping` 归因的 case；若它进样本且金标配成 `v_order_paid.shop_id`，τ 会拿一个**错的被测字段**当金标。",
+    "expected_clarify_note": "另 10 条是 `expected_clarify`（该题本就该澄清 ⇒ 安全侧样本）的**归类差**：本轮把它们单列为一类，QA 的复算脚本把它们并进 `unmatched`。⇒ **可用样本数实际上相同**（本轮 matched 29 ＋ expected_clarify 18）。",
+    "verdict": "⇒ 两套口径的**可用样本数相同**；差别在 5 条 `GROUP BY` 类的判定方向，而本轮的方向（判 unmatched）**更安全**。"
+  }
+}

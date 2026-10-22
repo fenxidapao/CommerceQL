@@ -1,0 +1,51 @@
+{
+  "schema": "W8_SATURATION_GRAPH/v1",
+  "git_rev": "c847c3d",
+  "git_dirty": true,
+  "question": "各城市 GMV 排名",
+  "nodes": [
+    "trusted_context",
+    "normalize",
+    "error_out"
+  ],
+  "terminal": {
+    "event": "error",
+    "outcome": null,
+    "code": "LLM_CONCURRENCY_EXCEEDED",
+    "reason": null,
+    "error_detail": {
+      "model": "deepseek-flash",
+      "wait_timeout_s": 14.0,
+      "configured_wait_timeout_s": 20.0,
+      "remaining_s": 15.0,
+      "headroom_s": 1.0,
+      "task": "normalize_intent",
+      "reason": "saturation_then_template_miss",
+      "last_degrade_error": "LlmSaturated"
+    }
+  },
+  "degradations": [
+    {
+      "reason": "llm_concurrency_exceeded",
+      "action_taken": "reduced_candidates",
+      "detail": {
+        "from_model": "deepseek-flash",
+        "error": "LlmSaturated",
+        "advisory": true,
+        "model_override": false
+      }
+    }
+  ],
+  "cassette_calls_before_read": 0,
+  "cassette_calls_after_run": 0,
+  "transport_zero_calls": true,
+  "expectations": {
+    "segment_1_saturated_raised": true,
+    "segment_2_reason_is_llm_concurrency_exceeded": true,
+    "segment_2_action_is_reduced_candidates": true,
+    "segment_3_transport_zero_calls": true,
+    "not_upstream_error": true,
+    "code_is_concurrency_exceeded": true
+  },
+  "all_segments_hold": true
+}

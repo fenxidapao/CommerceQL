@@ -106,14 +106,129 @@ def test_gold_uses_the_from_join_table_to_disambiguate_same_column_name() -> Non
     assert gold["gold_status"] == "matched"
     assert gold["gold_candidate_id"] == "v_product.spu_id"
 
-    # 表名不在候选的资产前缀里 ⇒ 收敛不了，必须如实判多命中
+    # 🔴 W8 第 66 轮 C2-1 订正：表名不在候选的资产前缀里 ⇒ **作用域为空** ⇒
+    # 按新规则①**不再回退全候选**，而是判 `gold_table_not_in_candidates`。
+    # （旧规则回退全候选后才落到"多命中"，那正是 QA §87.2 指出的假匹配来源。）
     ambiguous = _gold_for_tau(
         {"gold_sql": "SELECT COUNT(spu_id) FROM v_unknown WHERE on_sale = 1"},
         "execute",
         ["v_product.spu_id", "v_dim_product.spu_id"],
     )
     assert ambiguous["gold_status"] == "unmatched"
-    assert ambiguous["gold_unmatched_reason"] == "multiple_candidates_match"
+    assert ambiguous["gold_unmatched_reason"] == "gold_table_not_in_candidates"
+
+
+def test_gold_count_star_has_no_measurable_field() -> None:
+    """QA §87.3-①-② 第一例：`COUNT(*)` **无参数列** ⇒ 无可反解的被测字段 ⇒ unmatched。
+
+    🔴 这条是本轮返工的**核心病根**：旧正则把 `*` 排除在参数之外，于是 `COUNT(*)`
+    与"聚合参数找不到"混成同一条路；而旧规则的兜底又会把过滤列顶上来当金标。
+    """
+    gold = _gold_for_tau(
+        {"gold_sql": "SELECT COUNT(*) FROM v_product WHERE on_sale = 1"},
+        "execute",
+        ["v_product.spu_id", "v_product.on_sale", "v_order_paid.pay_amount"],
+    )
+    assert gold["gold_status"] == "unmatched"
+    assert gold["gold_candidate_id"] is None
+    assert gold["gold_unmatched_reason"] == "no_target_column"
+    # `COUNT(*)` 的存在被显式记下来（不是"没找到"，是"结构上没有"）
+    assert gold["gold_has_star_agg"] is True
+
+
+def test_gold_count_distinct_takes_the_distinct_column() -> None:
+    """QA §87.3-①-② 第二例：`COUNT(DISTINCT x)` ⇒ 目标列是 `x`（不是 `*`、不是 `COUNT`）。"""
+    gold = _gold_for_tau(
+        {"gold_sql": "SELECT COUNT(DISTINCT sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-08-01'"},
+        "execute",
+        ["v_order_paid.sub_order_id", "v_order_paid.order_id", "v_order_paid.pay_time"],
+    )
+    assert gold["gold_status"] == "matched"
+    assert gold["gold_candidate_id"] == "v_order_paid.sub_order_id"
+    assert gold["gold_match_rule"] == "aggregate_arg"
+    assert gold["gold_has_star_agg"] is False
+
+
+def test_gold_never_picks_a_filter_column_just_because_it_appears() -> None:
+    """QA §87.3-①-③ 第三例：过滤列与被测列**同名**时，不许靠"在 gold_sql 里出现过"命中。
+
+    这条是 §87.2 的核心指控：`category_l1`（过滤/分组列）与金标同名前缀时，
+    旧规则的全文兜底会把它当被测字段 ⇒ 金标分数低于次优 ⇒ τ 校到错位置。
+    """
+    gold = _gold_for_tau(
+        {
+            "gold_sql": (
+                "SELECT category_l1, SUM(pay_amount) FROM v_order_paid "
+                "WHERE category_l1 = '家电' GROUP BY category_l1"
+            )
+        },
+        "execute",
+        [
+            "v_order_paid.pay_amount",
+            "v_order_paid.category_l1",
+            "v_order_paid.pay_time",
+        ],
+    )
+    # 唯一命中必须是聚合参数列 `pay_amount`，**不是**同名的 `category_l1`
+    assert gold["gold_status"] == "matched"
+    assert gold["gold_candidate_id"] == "v_order_paid.pay_amount"
+
+    # 若聚合参数列压根不在候选里 ⇒ 判 unmatched，**不**回退去挑那个出现过的过滤列
+    fallback = _gold_for_tau(
+        {
+            "gold_sql": (
+                "SELECT category_l1, SUM(pay_amount) FROM v_order_paid GROUP BY category_l1"
+            )
+        },
+        "execute",
+        ["v_order_paid.category_l1", "v_order_paid.pay_time"],
+    )
+    assert fallback["gold_status"] == "unmatched"
+    assert fallback["gold_unmatched_reason"] == "no_column_overlap"
+
+
+def test_gold_table_not_in_candidates_does_not_fall_back_to_all() -> None:
+    """QA §87.3-①-① 第四例：gold 表不在候选资产内 ⇒ **不回退全候选**。
+
+    实例（QA §87.2 点名的 `M-HIER-03`）：gold_sql 是 `SELECT city, COUNT(*) FROM v_shop`，
+    而 `v_shop.city` 根本不在候选集（候选只有 `v_order_paid`/`v_order_refund`/`v_product`）
+    ⇒ 旧规则回退全候选后把金标判成 `v_order_paid.category_l1`（0.02 分、排名 12）。
+    """
+    gold = _gold_for_tau(
+        {"gold_sql": "SELECT city, COUNT(*) FROM v_shop"},
+        "execute",
+        [
+            "v_order_paid.category_l1",
+            "v_order_paid.pay_amount",
+            "v_product.spu_id",
+        ],
+    )
+    assert gold["gold_status"] == "unmatched"
+    assert gold["gold_candidate_id"] is None
+    assert gold["gold_unmatched_reason"] == "gold_table_not_in_candidates"
+
+
+def test_gold_does_not_fall_back_to_group_by_column_across_assets() -> None:
+    """`GROUP BY` 的维度列**不**作兜底：同列名跨资产会假匹配。
+
+    `SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ...` 的
+    `v_shop.shop_id` 若拿列名去命中，会撞上 `v_order_paid.shop_id`（同列名、错资产）。
+    """
+    gold = _gold_for_tau(
+        {
+            "gold_sql": (
+                "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid "
+                "JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id "
+                "GROUP BY v_shop.shop_id"
+            )
+        },
+        "execute",
+        ["v_order_paid.shop_id", "v_order_paid.pay_amount"],
+    )
+    # `COUNT(*)` ⇒ 无被测字段 ⇒ unmatched（**不是** `v_order_paid.shop_id`）
+    assert gold["gold_status"] == "unmatched"
+    assert gold["gold_candidate_id"] is None
+    assert gold["gold_unmatched_reason"] == "no_target_column"
 
 
 def test_gold_expected_clarify_is_its_own_status_not_unmatched() -> None:
@@ -128,11 +243,35 @@ def test_gold_expected_clarify_is_its_own_status_not_unmatched() -> None:
     ("case", "candidates", "expected", "reason"),
     [
         ({"gold_sql": ""}, ["a.x", "b.y"], "execute", "empty_gold_sql"),
-        ({"gold_sql": "SELECT count(*) FROM v_dim_date WHERE year = 2026"}, ["a.x"], "execute", "no_column_overlap"),
+        # 🔴 W8 第 66 轮 C2-1 订正：`COUNT(*)` **无参数列** ⇒ 没有可反解的被测字段
+        # ⇒ `no_target_column`（旧规则会落到 `no_column_overlap`，两者是不同的病）。
+        # ⚠️ 作用域要先判：`v_dim_date` 不在候选资产 `a` 里 ⇒ 命中的是①的
+        # `gold_table_not_in_candidates`；要让②生效，gold 表必须在候选资产内。
         (
-            # 两个候选的列名**都**在 gold_sql 里出现 ⇒ 不挑一个更像的，判 unmatched
+            {"gold_sql": "SELECT count(*) FROM v_dim_date WHERE year = 2026"},
+            ["v_dim_date.year", "v_dim_date.month"],
+            "execute",
+            "no_target_column",
+        ),
+        # 作用域为空（gold 表不在候选资产内）⇒ 新 reason
+        (
+            {"gold_sql": "SELECT count(spu_id) FROM v_unknown"},
+            ["v_product.spu_id"],
+            "execute",
+            "gold_table_not_in_candidates",
+        ),
+        (
+            # 没有聚合函数 ⇒ 没有可反解的被测字段 ⇒ `no_target_column`
+            # （旧规则会靠"列名在 gold_sql 出现过"兜底，撞上 `t.a`／`t.b` 两条）
             {"gold_sql": "SELECT a, b FROM t"},
             ["t.a", "t.b"],
+            "execute",
+            "no_target_column",
+        ),
+        (
+            # 作用域内**两个**候选列名都等于聚合参数列 ⇒ 不挑一个更像的，判 unmatched
+            {"gold_sql": "SELECT sum(a) FROM t JOIN u ON t.id = u.id"},
+            ["t.a", "u.a"],
             "execute",
             "multiple_candidates_match",
         ),

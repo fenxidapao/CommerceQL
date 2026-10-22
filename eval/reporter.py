@@ -1336,12 +1336,37 @@ def _refusal_counts(records: Sequence[Mapping[str, Any]]) -> dict[str, Any] | No
 
 
 def _clarify_counts(records: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
-    """G-8 的输入。**没有应澄清题就返回 None**（⇒ `NOT_AVAILABLE`），理由：
+    """G-8 的输入。**没有应澄清题就返回 None**（⇒ `NOT_AVAILABLE`）。
 
-    `runner.py` 只跑**单轮** —— 它没有「clarify 之后把用户补答再喂回去」的第二轮回路。
-    而 G-8 的后半句正是"澄清后一次成功率"，它在单轮批次上**结构上不可测**。
-    拿 5 条单轮记录去判 FAIL，等于把评测器的能力缺口记成被测系统的失败
-    （更糟：这条门禁变得不可能通过，于是下一轮有人会来"放宽阈值"）。
+    ## 二轮回路（W8 第 66 轮 C1-2 接线；QA §87.1）
+
+    🔴 **旧实现把 `second_round_loop_available` 写死成 `False`**，
+    而 `gates.py` 读的就是这个字段 ⇒ **带二轮的批次，官方复算 G-8 仍说
+    "runner.py 无第二轮回路"、后半句恒 0.0%** ⇒ C1 的成果在门禁口径里读不出来。
+    现在改为**从 records 里数**：
+    `second_round.attempted` / `second_round.success` 都来自 `runner.py` 的
+    `record["second_round"]`（默认 `None` ⇒ 单轮批次）。
+
+    | 批次形态 | `attempted` | `success` | `second_round_loop_available` |
+    |---|---|---|---|
+    | 单轮（`--second-round` 未开） | 0 | 0 | **False**（单轮批次仍须为 False） |
+    | 开了二轮但没有可补答来源 | 0 | 0 | **False**（回路存在但**本批无可测分子**） |
+    | 开了二轮且跑到了补答 | >0 | ≥0 | **True** |
+
+    ⚠️ "开了二轮但 attempted=0" 与"单轮"**读数相同但含义不同**：前者是
+    "回路在、这批没有可补答的题"，后者是"回路根本不存在"。
+    两者都判 UNVERIFIED（后半句无可测分子 ⇒ 不是 FAIL），但
+    `second_round_attempted` / `second_round_success` 两个计数把差别**留在盘上**。
+
+    ## 「澄清后一次成功」的口径（②）
+
+    **分子 = 二轮走到 `complete` 的条数**（`second_round.success`），
+    **分母 = 首轮收口成 `clarify` 的条数**（`clarified`）。
+
+    🔴 **分子不说明"答案对"**：二轮问句是「原问句 + 补充口径」，
+    冻结集 `gold_sql` 描述的是**首轮问句**的答案 ⇒ 二轮**没有**可比对的
+    正确答案（二轮 gold 已由 `499e799` 明确为 `not_defined_for_second_round`）。
+    ⇒ 门禁文案写「**二轮回到可执行终态的比例**」，**不得**写成"答案正确率"。
 
     ⚠️ 反过来，题面是 execute 却收口成 clarify 的**误澄清**是真实观测，
     它进 §3 的覆盖率读数与 §C.4.4 的误拒面，**不进** G-8。
@@ -1350,16 +1375,30 @@ def _clarify_counts(records: Sequence[Mapping[str, Any]]) -> dict[str, Any] | No
     if not want:
         return None
     asked = [r for r in records if _terminal(r) == "clarify"]
+    # 二轮计数：**只从 records 数**（`runner.py` 落的 `record["second_round"]`）。
+    attempted = 0
+    succeeded = 0
+    for r in records:
+        sr = r.get("second_round")
+        if not isinstance(sr, Mapping):
+            continue
+        if sr.get("attempted"):
+            attempted += 1
+            if sr.get("success"):
+                succeeded += 1
     # 分母取「本轮跑到的全部用例」，并把「题面本来就要澄清」的条数一并落盘 ——
     # 分母口径不写死，读者就会按自己的理解重算出一个不同的澄清率。
     return {
         "requests": len(records),
         "clarify_expected_n": len(want),
         "clarified": len(asked),
-        "clarify_then_correct": sum(1 for r in asked if (r.get("verdict") or {}).get("equivalent")),
-        #: `runner.py` 只跑单轮 ⇒ 后半句「澄清后一次成功」在本类批次里**永远拿不到分子**。
+        # 🔴 分子口径 = `second_round.success`（「二轮回到可执行终态」），**不是**答案正确。
+        "clarify_then_correct": succeeded,
+        "second_round_attempted": attempted,
+        "second_round_success": succeeded,
         #: 落这个标志不是装饰：少了它，`gates.py` 会把「评测器没有第二轮回路」判成被测系统 FAIL。
-        "second_round_loop_available": False,
+        #: 现在它**从 records 数出来** ⇒ 带二轮的批次能真正被门禁读到。
+        "second_round_loop_available": attempted > 0,
     }
 
 
@@ -1526,12 +1565,20 @@ def _known_limitations(
             )
         )
         out.append(
-            "**G-8 结构性不可测**：`runner.py` 只跑单轮，没有「clarify 之后把用户补答喂回去」的"
-            f"第二轮回路 ⇒ 「澄清后一次成功率」无从度量。{shape}。"
-            "两者都**不是** FAIL：拿评测器自己的缺口给被测系统定罪，会把这条门禁变成不可能通过，"
+            "**G-8 结构性不可测（后半句）**：本批次**没有可测的二轮分子**"
+            "（要么没开 `--second-round`，要么开了但本批没有带补答来源的澄清题）"
+            f"⇒ 「澄清后一次成功率」无从度量。{shape}。"
+            "这**不是** FAIL：拿评测器自己的缺口给被测系统定罪，会把这条门禁变成不可能通过，"
             "下一轮就有人来放宽阈值。"
             f"本轮 {coverage['n_false_clarify']} 条**误澄清**（题面 execute 却 clarify）"
-            "已计入 §C.4.4 误拒面。该回路缺口属 W6 评测器自身，已上呈（见 RELAY）。"
+            "已计入 §C.4.4 误拒面。"
+        )
+    else:
+        out.append(
+            "**G-8 后半句的口径**：分子＝「**二轮回到可执行终态（complete）的比例**」，"
+            "**不是**答案正确率——二轮问句带补答，冻结集 gold 只对首轮成立"
+            "（二轮 gold 为 `not_defined_for_second_round`）⇒ 二轮**没有**可比对的正确答案。"
+            "分母＝首轮收口成 clarify 的条数。"
         )
     return out
 

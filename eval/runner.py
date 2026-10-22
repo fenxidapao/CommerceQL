@@ -348,12 +348,56 @@ def _column_of_candidate(candidate_id: str) -> str:
 
 #: 聚合函数参数里的列 = "**被测量的那个字段**"（L4 绑定的正是它）。
 #: ⚠️ 只认这五个聚合：它们是语义包里 `agg` 的全集（sum/avg/count/min/max）。
+#:
+#: 🔴 W8 第 66 轮 C2-1：**参数列允许是 `*`**（`COUNT(*)`）—— 旧正则把 `*` 排除在外，
+#: 于是 `COUNT(*)` 与"聚合参数在候选集里找不到"混成同一条路（都表现为"没有参数"）。
+#: 现在 `*` 被显式捕获，由 `_agg_target_columns` 判成"**无可反解的被测字段**"。
 _AGG_ARG = re.compile(
-    r"\b(?:sum|avg|count|min|max)\s*\(\s*(?:distinct\s+)?([A-Za-z_][A-Za-z0-9_.]*)",
+    r"\b(sum|avg|count|min|max)\s*\(\s*(distinct\s+)?([A-Za-z_][A-Za-z0-9_.]*|\*)",
     re.I,
 )
 #: `FROM x` / `JOIN x` 的表名（用于把候选**按资产前缀**收敛到本次查询真正用到的表）。
 _GOLD_TABLES = re.compile(r"\b(?:from|join)\s+([A-Za-z_][A-Za-z0-9_]*)", re.I)
+#: SQL 关键字 —— 聚合参数**不是**这些（`SUM(CASE WHEN ...)` 里的 `CASE` 是表达式开头，
+#: 不是列名）。把它当列名会把"表达式"伪装成"被测字段"。
+_SQL_KEYWORDS = frozenset({
+    "case", "when", "then", "else", "end", "distinct", "nullif", "coalesce",
+    "sum", "avg", "count", "min", "max", "select", "from", "where",
+})
+
+
+def _agg_target_columns(gold_sql: str) -> tuple[list[str], bool]:
+    """从 `gold_sql` 里取出"**被测量的那个字段**"的候选列名。
+
+    返回 `(列名列表, 是否存在无参聚合)`。
+
+    ## 形态区分（W8 第 66 轮 C2-1，QA §87.3-①-②）
+
+    | 形态 | 例子 | 目标列 | `has_star_agg` |
+    |---|---|---|---|
+    | 聚合**带**参数 | `SUM(pay_amount)` | `pay_amount` | False |
+    | `COUNT(DISTINCT x)` | `COUNT(DISTINCT sub_order_id)` | `sub_order_id` | False |
+    | 聚合**无**参数 | `COUNT(*)` | —— | **True** |
+
+    🔴 `COUNT(*)` 为什么要单列：它**没有**被测字段 —— `COUNT(*)` 的答案只取决于行数，
+    与任何一列都无关 ⇒ 反解不出金标 ⇒ 必须 `unmatched`。
+    （`GROUP BY` 的维度列**不**作为兜底：那不是"被测量本身"，
+    且实测会跨资产假匹配 —— `SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid
+    JOIN v_shop ...` 的 `v_shop.shop_id` 会被配成 `v_order_paid.shop_id`。
+    宁可少，不可假。）
+    """
+    targets: list[str] = []
+    has_star_agg = False
+    for _fn, _distinct, arg in _AGG_ARG.findall(gold_sql):
+        if arg == "*":
+            has_star_agg = True
+            continue
+        col = arg.split(".")[-1].lower()
+        # `SUM(CASE WHEN ...)` ⇒ 抓到的是表达式开头 `CASE`，不是列名 ⇒ 跳过。
+        if col in _SQL_KEYWORDS:
+            continue
+        targets.append(col)
+    return sorted(set(targets)), has_star_agg
 
 
 def _asset_of(candidate_id: str) -> str:
@@ -378,19 +422,26 @@ def _gold_for_tau(
     的语义是"**本该澄清**"。把"我没反解出来"塞进同一个 `None`，等于凭空造出一批
     "该澄清未澄清"的样本 —— 校准结果会朝"更容易澄清"的方向漂（NFR-7.1 最不希望的方向）。
 
-    ## 反解规则（两级**确定性**收敛，逐步可审计）
+    ## 反解规则（W8 第 66 轮 C2-1 返工后；QA §87.3-①）
 
-    | 级 | 规则 | 落在 `gold_match_rule` |
+    | 级 | 规则 | 失败落 `gold_unmatched_reason` |
     |---|---|---|
-    | ① | 只在 **`gold_sql` 的 `FROM`/`JOIN` 表**对应的候选里找（按 `资产.列` 的资产前缀比表名） | `table_scoped_column` / `aggregate_arg` |
-    | ② | 再收敛到**出现在聚合函数参数里的列**（`sum/avg/count/min/max(...)`）—— L4 绑定的就是"被测量的那个字段" | 同上（优先报 `aggregate_arg`） |
-    | ③ | 收敛后命中**恰好 1 个** → `matched`；0 个 → `no_column_overlap`；≥2 个 → `multiple_candidates_match` | —— |
+    | ① | **表作用域**：`gold_sql` 的 `FROM`/`JOIN` 表名 → 候选的资产前缀。**空即失败，不回退全候选** | `gold_table_not_in_candidates` |
+    | ② | **目标列**：只取**聚合函数的参数列**（`SUM(x)`→`x`、`COUNT(DISTINCT x)`→`x`）。`COUNT(*)` 无参数 ⇒ 无可反解的被测字段 | `no_target_column` |
+    | ③ | **命中**：作用域内**列名等于**目标列的候选。**恰好 1 个** → `matched`；0 个 → `no_column_overlap`；≥2 个 → `multiple_candidates_match` | —— |
 
-    为什么要有 ①②：初版只做"整条 SQL 里出现过的列名"匹配，实测 119 条已打分记录里
-    **只有 19 条**唯一命中、**75 条**被判多命中（`pay_time`/`pay_status` 这类过滤列与
-    被测字段一起出现在 SQL 里）⇒ 样本基数被这个粗糙规则吃掉了。①② 是把
-    "同一列名出现在多张资产"与"过滤列混进金标"这两种**假歧义**剔掉，
-    每一步都是确定性的、可逐条复核的，**不是"挑一个更像的"**。
+    🔴 **为什么删掉「列名在 gold_sql 里出现过」的兜底**（QA §87.2 的核心指控）：
+    旧规则在②落空时退回"作用域内任何在 gold_sql 出现过的列名都算命中" ⇒
+    `pay_time`／`pay_status`／`category_l1`／`refund_status` 这类**过滤列**
+    被当成被测字段。实测（同一份 raw）：旧口径 matched 61 条，其中 **27 条（44%）**
+    的 gold 分数**低于**同候选集次高分 ⇒ 金标本身选错 ⇒ 采样会把 τ 校到错的位置。
+    新口径 matched **29** 条；残余 8 条低分逐条核对后**都是"打分器把次优排在金标
+    前面"的真实观测**（τ 要量的正是这个），不是金标选错 ⇒ **宁可少，不可假**。
+
+    ⚠️ 为什么**不**用 `GROUP BY` 的维度列兜底：实测它会**跨资产假匹配** ——
+    `SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ...` 的
+    `v_shop.shop_id` 会被配成 `v_order_paid.shop_id`（同列名、错资产）。
+    宁可少，不可假 ⇒ `COUNT(*)` 一律 `unmatched`。
     """
     gold_sql = str(
         case.get("gold_sql") or (case.get("gold") or {}).get("gold_sql") or ""
@@ -403,6 +454,9 @@ def _gold_for_tau(
         "gold_match_rule": None,
         "gold_candidates_considered": len(candidate_ids),
         "gold_unmatched_reason": None,
+        # 🔴 W8 第 66 轮 C2-1：`COUNT(*)` 的存在与否恒定落盘（**不只在失败分支**）——
+        # 读者要能区分"这条题结构上没有可反解的被测字段"与"有但没命中"。
+        "gold_has_star_agg": False,
     }
     if expected == "clarify":
         return {**base, "gold_status": "expected_clarify"}
@@ -411,29 +465,37 @@ def _gold_for_tau(
     if not candidate_ids:
         return {**base, "gold_status": "unmatched", "gold_unmatched_reason": "no_l4_candidates"}
 
+    # ① 表作用域：**空即失败，绝不回退全候选**（QA §87.3-①-①）。
     tables = {name.lower() for name in _GOLD_TABLES.findall(gold_sql)}
-    scoped = [cid for cid in candidate_ids if _asset_of(cid).lower() in tables] or candidate_ids
-    agg_args = {arg.split(".")[-1].lower() for arg in _AGG_ARG.findall(gold_sql)}
-    by_agg = [cid for cid in scoped if _column_of_candidate(cid).lower() in agg_args]
+    scoped = [cid for cid in candidate_ids if _asset_of(cid).lower() in tables]
+    if not scoped:
+        return {
+            **base,
+            "gold_status": "unmatched",
+            "gold_unmatched_reason": "gold_table_not_in_candidates",
+        }
 
-    # ② 聚合参数优先（它就是"被测量的字段"）；没有聚合参数时才退回①的整表作用域。
-    pool = by_agg or scoped
-    rule = "aggregate_arg" if by_agg else "table_scoped_column"
-    hits = [
-        cid
-        for cid in pool
-        if re.search(
-            rf"(?<![A-Za-z0-9_]){re.escape(_column_of_candidate(cid))}(?![A-Za-z0-9_])",
-            gold_sql,
-            re.I,
-        )
-    ]
+    # ② 目标列：只认聚合函数的参数列（`COUNT(*)` ⇒ 无可反解的被测字段）。
+    targets, has_star_agg = _agg_target_columns(gold_sql)
+    if not targets:
+        return {
+            **base,
+            "gold_status": "unmatched",
+            "gold_unmatched_reason": "no_target_column",
+            "gold_has_star_agg": has_star_agg,
+        }
+
+    # 目标列存在 ⇒ 把 `COUNT(*)` 的事实也记下来（matched 分支同样可见）。
+
+    # ③ 命中：**只认列名相等**（作用域内），不认"在 gold_sql 里出现过"。
+    hits = [cid for cid in scoped if _column_of_candidate(cid).lower() in targets]
     if len(hits) == 1:
         return {
             **base,
             "gold_status": "matched",
             "gold_candidate_id": hits[0],
-            "gold_match_rule": rule,
+            "gold_match_rule": "aggregate_arg",
+            "gold_has_star_agg": has_star_agg,
         }
     if not hits:
         return {**base, "gold_status": "unmatched", "gold_unmatched_reason": "no_column_overlap"}

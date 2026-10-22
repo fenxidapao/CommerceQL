@@ -666,6 +666,37 @@ def describe_node_timeouts(effective: Mapping[str, float]) -> dict[str, Any]:
 # 六、harness
 # ============================================================================
 
+class _EvalDegradationSink:
+    """评测面的**网关层**降级 sink（与生产 `SseDegradationSink` 同形）。
+
+    🔴 W8 第 66 轮 D5-1：harness 此前用 `degradation=None` ⇒ 网关降级**只进日志**、
+    **不进 `GraphState.degradations`** ⇒ 评测面看不到任何网关层降级
+    （`llm_concurrency_exceeded` / `switched_to_weak_model` / `llm_unavailable` …），
+    而生产侧（`app/api/deps.py` 的 `SseDegradationSink`）是落 `RunContext` 的。
+    ⇒ 本类把降级写进**当前请求的 `RunContext`** ⇒ 与生产同形、落
+    `GraphState.degradations`（组 10），评测面从此与生产侧**可见性一致**。
+
+    ⚠️ 只做"转发"：不新增/不重命名 reason，不改 `action_taken`，
+    `detail` 仍只进日志与 state（不进 SSE 帧 —— C-08 的既有口径）。
+    """
+
+    __slots__ = ()
+
+    def on_degraded(self, event: Any) -> None:
+        from app.graph.context import current_run_context_or_none
+
+        context = current_run_context_or_none()
+        if context is None:
+            # 无请求上下文（如离线单测）⇒ 记日志放行，**不抛**
+            # （与 `app/api/deps.py::_report_degraded` 的既有口径一致）。
+            return
+        context.report_degraded(
+            event.reason,
+            event.action_taken,
+            getattr(event, "detail", None),
+        )
+
+
 class Harness:
     """一次构造、多次 run 的评测装配台。
 
@@ -686,9 +717,14 @@ class Harness:
         column_top: int | None = None,
         node_timeout_overrides: Mapping[str, float] | None = None,
         max_concurrency: int | None = None,
+        saturate_llm: bool = False,
     ) -> None:
         if live and cassette_path and cassette_mode not in ("record", "replay"):
             raise ValueError(f"未知匣带模式：{cassette_mode}")
+        #: 🔴 W8 第 66 轮 D5-1：**注入饱和**（并发位压到 0）⇒ 图级 run 里
+        #: `LlmSaturated` 在**传输之前**抛出，匣带 `calls` 计数不增长。
+        #: 只在 D5 夹具里开；默认 False ⇒ 生产/评测路径逐字不变。
+        self.saturate_llm = saturate_llm
         self.settings = settings or get_settings()
         #: 评测批次的额外并发帽；None = 沿用 Settings。它只收窄，不放大生产配置。
         self.max_concurrency = (
@@ -728,7 +764,11 @@ class Harness:
 
         self.gateway = build_gateway(
             self.settings,
-            degradation=None,  # 无 SSE 出口：降级只进 state/审计（`RunContext` 的既定口径）
+            # 🔴 W8 第 66 轮 D5-1：改用与生产同形的 sink（落 `RunContext` ⇒ 落
+            # `GraphState.degradations`）。旧写法 `degradation=None` 让网关降级
+            # **只进日志**，评测面因此看不到 `llm_concurrency_exceeded` 等网关层降级
+            # —— 与生产侧的可见性不一致。评测面无 SSE 出口，但 state 是有的。
+            degradation=_EvalDegradationSink(),
             client=self._chat_client(),
         )
         self.graph = build_graph(node_timeout_overrides=node_timeout_overrides)
@@ -750,6 +790,13 @@ class Harness:
             if self.max_concurrency is not None
             else s.LLM_MAX_CONCURRENCY
         )
+        if self.saturate_llm:
+            # 🔴 D5-1：**并发位 = 0** ⇒ `_acquire` 永远拿不到位 ⇒ 抛 `LlmSaturated`。
+            # ⚠️ 这不是"改超时"：`deadline_s` 仍由生产路由给（15s/45s），
+            # 变的是**排队能不能排到**——这正是 07 §10.1「排队」那一行的成因。
+            # 效果：`asyncio.timeout(min(20s, remaining-ε))` 立即超时 ⇒ `LlmSaturated`，
+            # 且**传输层根本没被碰到**（`_acquire` 在 `self._client.post` 之前）。
+            concurrency = 0
         return ChatClient(
             base_url=s.DEEPSEEK_BASE_URL,
             api_key=s.DEEPSEEK_API_KEY.get_secret_value(),
