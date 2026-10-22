@@ -6504,3 +6504,66 @@ healthz.bundle_version     = 2026.10.16.2（现读一致）
 | 仍然不做的 | 不改 `dense.py` 的 0 行语义（那是判据/契约变更，需提案）；不改 `startup_assertions` 的检查项（同上） |
 
 **不受影响的部分**：§66.1 的夹具硬编码结论、§66.2 的版本错位读数（active 0 行／197 行全非 NULL）、§66.3 的三处静默缺口、§66.4 的 B 分叉定位 —— 全部照旧。
+
+## 第 67 轮（W8 第 63 轮 A 轨：生产检索面修复完成｜2026-10-22 15:16–15:2x +0800｜起点 HEAD `8d5a082`）
+
+> 派单：`TASK_BOARD §83.5` A 轨（B 轨另行开跑）。总控 2026-10-22 已授权写共享 `ecom`。
+> 本轮 A 轨**零出站到 LLM**：embedding 走本地 Ollama `bge-m3`（1024 维），不产生计费面。
+
+### 67.0 🔻 先订正我自己的一句话（QA §83.1 收窄）
+
+§66.2 写「稠密检索、稀疏检索、**元数据查询**对当前 active 版本全部命中 0 行」——**最后半句错了**。
+我 grep 复核：`backend/app` 内除 `semantics/materialize.py`（写）外，**没有任何运行时 SQL 读 `app.asset`／`metric_def`／`field_binding`／`dimension`**（binding 用的是已加载的文件包）。
+⇒ 准确影响面 = **检索面（dense＋sparse，二者都读 `app.embed_doc`）**。已同步写入 `results_r62_dense_probe.json` 的 `corrections`。
+
+### 67.1 A1｜回滚点与写库（已执行）
+
+```text
+回滚点  E:\WorkBuddyDL\ecom_app_20261022.dump
+        pg_dump -U postgres -d ecom -n app -Fc → 43,315,886 B，文件头 magic=PGDMP（校验通过）
+写库     materialize(loaded, dsn=postgresql://app_rw@127.0.0.1:5432/ecom,
+                     tokenizer=app.retrieval.tokenizer.tokenize,      # N-24 两侧同源
+                     embedder=本地 Ollama bge-m3 批量 /api/embed,      # 零出站到 LLM
+                     with_policy=False, content_hash=sha256(文件字节))
+版本     2026.10.16.2（= 运行时 active_version，取自 semantic/bundle_2026.09.14.1.yaml:49 的文件内声明）
+```
+
+`WITH_POLICY=False` 的理由：GRANT/RLS 语句集（`derive_policy_statements`）**与版本无关**且已存在，本轮不重放 DDL —— 降低对共享库的对象级改动面。代价：§6.2 步骤② 未在本轮重做，**已如实记入 report.warnings 与产物**。
+
+### 67.2 A2｜只读复核 ＋ 检索面自检（产物 `eval/results_r63_materialize.json`）
+
+| 表 | 2026.09.14.1（旧） | 2026.10.16.2（新，本轮写入） |
+|---|---|---|
+| semantic_bundle | 1（staged） | **1（staged）**，content_hash `sha256:2c802e24f799d…` |
+| asset | 8 | **8** |
+| metric_def | 9 | **22**（21 active ＋ 1 draft） |
+| dimension | 6 | **9** |
+| field_binding | 7 | **7** |
+| embed_doc | 197（非 NULL 197／tsv 197） | **284（非 NULL 284／tsv 284）** |
+
+检索面自检（按 active 版本 + 全局租户，只读事务）：
+
+```text
+dense    可用行 284；查询「各城市 GMV 排名」top5 → GMV/synonym 0.6043、销售额/synonym 0.5905
+sparse   `tsv @@ plainto_tsquery('simple','GMV')` → order_paid/asset 0.0827、gmv/synonym 0.0760
+```
+
+⇒ **生产检索面从「一行不返回」恢复为「284 行可用且 dense/sparse 均出结果」**。旧版本 197 行未被触碰（按版本 DELETE 只作用于 active 版本）。
+
+🔴 **QA 护栏③ 的期望值要改**：`8／9／6／7／197` 是 **2026.09.14.1 版本**的规模，不是新版本的期望。新版本内容变了（metric 22、dimension 9、embed_doc 284），拿旧规模当验收线会误判成"物化不对"。正确判据应是：**active 版本行数 > 0，且 `embedding`／`tsv` 非 NULL 比例 100%**。
+
+### 67.3 A3／A4｜两个提案（本轮只提，不改代码、不改状态）
+
+**提案 P-1（启动期 fail-fast，替代"改 dense 0 行语义"）**
+在 `backend/app/repo/startup_assertions.py` 增加一项断言：`active_version` 在 `app.asset` 与 `app.embed_doc` 的行数必须 > 0，否则**拒绝启动**。
+理由：0 行是合法空（空 KB／该版本无文档），把它改判 `degraded` 会让真·空库永久误报；把错误放在启动期，才能指向"版本错位"这个真因。
+风险：会改变启动行为 ⇒ 属判据/契约变更，**需提案批准后方可改代码**（本轮不动）。
+
+**提案 P-2（`semantic_bundle` 的 `staged` → `published`）**
+本轮物化写入的 10.16.2 行状态是 `staged`（`materialize.py:323`），旧 09.14.1 也是 `staged`。
+FR-12.3 规定"发布走人工"，而运行时 `active_version()` **不读这张表**（取文件声明）⇒ 状态与"谁在服务"目前是**两张皮**。
+⇒ 需裁：① 是否把 10.16.2 转 `published`；② 还是把 `active_version()` 改为读表（这才是单键指针的正解，属契约变更）。**本轮不动状态**。
+
+### 67.4 边界
+
+未改 `dense.py` 的 0 行语义、未改 `startup_assertions` 代码、未改 `semantic_bundle` 状态、未改判据/阈值/15s/gold/冻结集、未碰 `reports/qa/**`；未重放 GRANT/RLS；LLM 零出站（embedding 为本地模型）。

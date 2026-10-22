@@ -95,6 +95,13 @@
       "before": "who_can_fix 原文：物化归 W2A（startup_assertions.py:316）；且需写共享 ecom ⇒ 本窗不动",
       "after": "本窗（W8）：物化重跑只需 `python -m app.semantics.materialize` 形态的一次运行，但它会 DELETE+INSERT 共享 ecom 的 app.* 表 ⇒ 需总控书面授权（当前无「W2A/其他窗口」可转，W0…W7 均为史料标签，项目只剩 W8 与 QA）。",
       "still_valid": "缺陷读数（active 0 行 / 197 行全非 NULL / 三处静默缺口）不受影响，只有『归属』这半句作废"
+    },
+    {
+      "at": "2026-10-22 15:1x +0800",
+      "trigger": "QA §83.1 按代码收窄：运行时用 SQL 读 app.* 语义表的只有 retrieval/dense.py 与 retrieval/sparse.py；asset/metric_def/field_binding/dimension 在运行时**不被 SQL 读取**（binding 用已加载的文件包）",
+      "w8_verified": "grep 复核一致：backend/app 内除 semantics/materialize.py（写）外，无 `FROM app.asset|metric_def|field_binding|dimension`",
+      "before": "§66.2 写『稠密检索、稀疏检索、元数据查询，对当前 active 版本全部命中 0 行』",
+      "after": "影响面 = **检索面（dense＋sparse，均读 app.embed_doc）**；元数据表在运行时不被 SQL 读取，所以『元数据查询 0 行』这句不成立（0 行是事实，但不影响运行时行为）"
     }
   ]
 }

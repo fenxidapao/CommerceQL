@@ -1,0 +1,162 @@
+{
+  "schema": "W8_MATERIALIZE_VERIFY/v1",
+  "generated_at": "2026-10-22T15:18:24+08:00",
+  "git_rev": "8d5a082",
+  "git_dirty": false,
+  "zero_outbound_to_llm": true,
+  "embedding_source": "本地 Ollama bge-m3（127.0.0.1:11434），非 LLM 计费面",
+  "rollback_point": "E:\\WorkBuddyDL\\ecom_app_20261022.dump (pg_dump -n app -Fc, 43,315,886 B, magic=PGDMP)",
+  "materialized_version": "2026.10.16.2",
+  "counts_by_version": [
+    [
+      "asset",
+      "2026.09.14.1",
+      "8"
+    ],
+    [
+      "asset",
+      "2026.10.16.2",
+      "8"
+    ],
+    [
+      "dimension",
+      "2026.09.14.1",
+      "6"
+    ],
+    [
+      "dimension",
+      "2026.10.16.2",
+      "9"
+    ],
+    [
+      "embed_doc",
+      "2026.09.14.1",
+      "197"
+    ],
+    [
+      "embed_doc",
+      "2026.10.16.2",
+      "284"
+    ],
+    [
+      "field_binding",
+      "2026.09.14.1",
+      "7"
+    ],
+    [
+      "field_binding",
+      "2026.10.16.2",
+      "7"
+    ],
+    [
+      "metric_def",
+      "2026.09.14.1",
+      "9"
+    ],
+    [
+      "metric_def",
+      "2026.10.16.2",
+      "22"
+    ],
+    [
+      "semantic_bundle",
+      "2026.09.14.1",
+      "1"
+    ],
+    [
+      "semantic_bundle",
+      "2026.10.16.2",
+      "1"
+    ]
+  ],
+  "embed_doc_detail": [
+    [
+      "2026.09.14.1",
+      "197",
+      "197",
+      "197",
+      "0"
+    ],
+    [
+      "2026.10.16.2",
+      "284",
+      "284",
+      "284",
+      "0"
+    ]
+  ],
+  "semantic_bundle_rows": [
+    [
+      "2026.09.14.1",
+      "staged",
+      ""
+    ],
+    [
+      "2026.10.16.2",
+      "staged",
+      "sha256:2c802e24f799d"
+    ]
+  ],
+  "self_check": {
+    "dense_active_rows": 284,
+    "dense_top5": [
+      [
+        "GMV",
+        "synonym",
+        "0.6043"
+      ],
+      [
+        "销售额",
+        "synonym",
+        "0.5905"
+      ],
+      [
+        "成交额",
+        "synonym",
+        "0.5790"
+      ],
+      [
+        "交易额",
+        "synonym",
+        "0.5759"
+      ],
+      [
+        "成交金额",
+        "synonym",
+        "0.5757"
+      ]
+    ],
+    "sparse_top5": [
+      [
+        "order_paid",
+        "asset",
+        "0.082745634"
+      ],
+      [
+        "gmv",
+        "synonym",
+        "0.075990885"
+      ],
+      [
+        "gmv",
+        "metric",
+        "0.075990885"
+      ],
+      [
+        "GMV",
+        "synonym",
+        "0.075990885"
+      ],
+      [
+        "order_paid.create_time",
+        "column",
+        "0.06079271"
+      ]
+    ]
+  },
+  "expectation_check": {
+    "qa_expected_8_9_6_7_197": "该组数字是 **2026.09.14.1 版本**的行数，不是新版本的期望值 —— 新版本内容变了（metric 22／dimension 9／embed_doc 284），拿旧版本的规模当验收线会误判；正确判据是『active 版本行数 > 0 且派生列非空』",
+    "old_version_intact": "2026.09.14.1 的 197 行未被触碰（按版本 DELETE 只作用于 active 版本）"
+  },
+  "boundary": "未重放 GRANT/RLS（with_policy=False）：语句集与版本无关且已存在；如需 §6.2 步骤②完整，必须另开一次带 with_policy=True 的运行（会执行 DDL），需再点一次句"
+}
