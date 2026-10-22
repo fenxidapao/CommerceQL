@@ -1,0 +1,63 @@
+{
+  "schema": "W8_WALL_GAP/v1",
+  "source": "eval/results_r63_full166.json",
+  "git_rev": "ae87c75",
+  "method": "gap_ms = wall_s*1000 - latency_ms.total（节点内计时之和）。gap 包含：金标沙箱执行、预测侧沙箱执行、匣带写盘、runner 记账等**未分段计时**的部分。",
+  "stats": {
+    "n": 166,
+    "median_gap_ms": 14.0,
+    "p95_gap_ms": 7805.0,
+    "max_gap_ms": 250240.0
+  },
+  "top_gaps": [
+    {
+      "case_id": "X-ENUM-02",
+      "wall_ms": 287969.0,
+      "node_total_ms": 37729.0,
+      "gap_ms": 250240.0,
+      "terminal": "error",
+      "exec_ms": 30000
+    },
+    {
+      "case_id": "M-MET-09",
+      "wall_ms": 27839.0,
+      "node_total_ms": 6.0,
+      "gap_ms": 27833.0,
+      "terminal": "error",
+      "exec_ms": null
+    },
+    {
+      "case_id": "M-MET-10",
+      "wall_ms": 15476.0,
+      "node_total_ms": 16.0,
+      "gap_ms": 15460.0,
+      "terminal": "error",
+      "exec_ms": null
+    },
+    {
+      "case_id": "M-MET-05",
+      "wall_ms": 22777.0,
+      "node_total_ms": 10309.0,
+      "gap_ms": 12468.0,
+      "terminal": "complete",
+      "exec_ms": 2139
+    },
+    {
+      "case_id": "M-ENUM-04",
+      "wall_ms": 25395.0,
+      "node_total_ms": 12995.0,
+      "gap_ms": 12400.0,
+      "terminal": "complete",
+      "exec_ms": 2064
+    },
+    {
+      "case_id": "M-DIM-01",
+      "wall_ms": 20640.0,
+      "node_total_ms": 8481.0,
+      "gap_ms": 12159.0,
+      "terminal": "complete",
+      "exec_ms": 2119
+    }
+  ],
+  "note": "X-ENUM-02 的 250,240ms 缺口来自 exec 之外的未计时段（exec 自报 30,000ms 是语句超时，不是全部）。要定位到具体阶段**必须加埋点**（本轮未做）。"
+}

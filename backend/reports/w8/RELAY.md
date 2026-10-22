@@ -5937,7 +5937,8 @@ W8 **不自行豁免**；总控未裁决前 G-2 仍写 FAIL/未达门。
 
 ### 60.1 G-5 结构矩阵（零出站）
 - 现读 `eval/results_r59_full166.json`，G-5 148 = execute 124 + refuse 24；终态 `complete 99 / error 11 / clarify 15 / refuse 23`，`correct_refused 23/24`、`over_refused 0/124`、equivalent `32/124`。
-- 11 条 error 全为 `LlmTimeout`：`normalize_intent 6 / l4_score 2 / gen_sql 3`；`retries=0`，不得剔除分母、不得改判 PASS。矩阵 `eval/results_r60_g5_error_clarify.json`；其中 7 条节点延迟在 15.00±0.05s，4 条为上游总耗时/节点记录为空，不能把 11 条一律写成“15s 节点硬顶”。
+- 11 条 error 全为 `LlmTimeout`：`normalize_intent 6 / l4_score 2 / gen_sql 3`；`retries=0`，不得剔除分母、不得改判 PASS。
+> 🔻 **W8 第 64 轮补注（不回改上行原文）**：上行「7 条节点延迟在 15.00±0.05s」**少记 2 条**，实读矩阵 `hard_15s=True` 为 **9 条**；订正见 §66.2 与 `eval/results_r62_availability.json`（`results_r61_availability.json`）。矩阵 `eval/results_r60_g5_error_clarify.json`；其中 7 条节点延迟在 15.00±0.05s，4 条为上游总耗时/节点记录为空，不能把 11 条一律写成“15s 节点硬顶”。
 - 15 条 clarify 均为 execute 被误澄清，无“真澄清”、无应拒：冻结口径冲突 1（E-MET-08）、可修城市误澄清 5（M-DIM-05、M-HIER-03、X-STR-03/05/07）、误澄清叠加 gold `on_sale=1` 冲突 8（H-STR-01…08）、时间解析歧义 1（X-MET-10）。
 
 ### 60.2 评测归因误判修复（TDD）
@@ -6628,3 +6629,106 @@ EX         n_execute_scored 124，出 SQL 109，等价 36（29.0%）
 1. **τ 采集**：批准「在 `l4_score` 落 `candidate_ids` + `gold_candidate_id`」的代码改动 + 一轮出站采样（n≥3，calibration/holdout 分离）？这是 G-2/G-5 从 UNVERIFIED 走向判词的最后一道。
 2. **可用性单列（C 件）重做一版**：按新基线的 6 条 error 重算上游错误率（含 `EXEC_TIMEOUT` 家族），零出站。
 3. **回归要不要现在跑**：offline 全量 + 一次性 PG/Redis 集成（约 2–3 分钟），给 G-1 一个**本轮**的读数。
+
+## 第 69 轮（W8 第 64 轮：G-8 二轮回路／启动断言 active 行数／卫生四件｜2026-10-22 16:35–17:2x +0800｜起点 HEAD `ae87c75`）
+
+> 派单：总控「W8 第 64 轮｜零成本批」。本轮**零出站**（无 live、无 τ 采样），未动 15s／判据／gold／冻结集／语义包，未碰 `backend/reports/qa/**`。
+> 🔴 结论先行：**C3 完成、C1 机制完成但端到端被匣带覆盖卡住（详见 69.1）、C2／C6 埋点／D5 未做（逐条给理由，不硬凑）**，卫生四件完成。
+
+### 69.1 C1｜G-8 二轮回路（主项）
+
+**改了什么（全部在评测侧，不动图、不动判据）**
+
+| 文件 | 改动 |
+|---|---|
+| `eval/runner.py` | 新增 `second_round_question()`／`second_round_success()`；`score_case` 尾部追加 `record["second_round"]`；`summarize` 暴露 `n_second_round_attempted`／`n_second_round_success`／`second_round_tokens_total`／`second_round_cost_cny_total`；CLI 新增 `--second-round` 与 `--second-round-answers <json>` |
+| `backend/tests/eval/test_second_round.py` | 新增 **6** 个用例 |
+
+口径：补答来源**只认数据** —— 优先 `--second-round-answers`（`{case_id: 补答文本}`），否则取冻结集 `clarify_expected.candidates[0]`；**首轮 `terminal_event` 一个字节都不改**，二轮结果只进附加字段。「澄清后一次成功」只认第二轮 `complete` 且非基建中断。
+
+**验收实测（`eval/results_r64_second_round_replay.json`）**
+
+```text
+命令  --cases C-CITY-01,C-CITY-03,C-CITY-04 --mode replay --cassette eval/cassettes/w8_r63_full166.jsonl --second-round
+结果  n_records 3 ｜ 首轮 terminal_distribution {"clarify":3}（**未被改写**）
+      n_second_round_attempted 3 ｜ n_second_round_success 0
+      second_round_tokens_total 0 ｜ second_round_cost_cny_total 0.0 ｜ wall sum 0.177s（¥0）
+      C-CITY-01 第二轮：nodes=["trusted_context"]，infra_error=cassette_miss，无终态
+```
+
+🔴 **验收未达（不打绿）——两个硬阻塞，都是结构性的，不是实现问题**：
+
+1. **匣带覆盖不足**：r63 匣带共 509 条；C-CITY-01/03/04 每题只有 **1 条**（首轮 normalize+intent 合并调用，已逐条数过）。二轮题面变了 ⇒ 请求体变了 ⇒ **必然 miss**；而首轮停在 `clarify_out`，`plan/gen_sql` 从未录过。⇒「用现有匣带回放跑完二轮」在原理上不成立。
+2. **补答来源只有 1 条**：冻结集 18 条 clarify 里**只有 C-CITY-01** 带 `clarify_expected.candidates`，其余 17 条为空。不改冻结集就拿不到 3 条补答。（已用 `--second-round-answers` 解决"来源"这半边，但解决不了第 1 条。）
+
+**要把这条真正闭环，最小成本**：录 3 条二轮匣带（`--live --mode record --second-round --second-round-answers …`），每条约 2–3 次调用 ≈ 2.8 万 token ⇒ **估 ¥0.05 以内**。
+
+### 69.2 C3｜启动断言「active 版本行数」（完成）＋ C4 结论
+
+| 文件 | 改动 |
+|---|---|
+| `backend/app/repo/startup_assertions.py` | 新增常量 `ACTIVE_BUNDLE_VERSION_MATERIALIZED`（进 `ASSERTION_NAMES`）、`StartupProbes.active_bundle_rows`（默认占位探针 ⇒ **老调用点不传只会 PENDING，不会静默通过**）、纯判定 `evaluate_active_bundle_rows()`、只读 I/O `_fetch_active_bundle_rows()`；`run/enforce_startup_assertions` 增加 `active_bundle_version` 入参并**并行**采集第 4 个探针 |
+| `backend/app/core/config.py` | 在 `STARTUP_ASSERTIONS_DELEGATED_TO_W1B` 登记新名字（双向比对要求，否则启动即 `ConfigError`） |
+| `backend/app/main.py` | 把 `semantic_runtime.active_version()` 同时喂给 `live_probes(...)` 与 `enforce_startup_assertions(...)` |
+| `backend/tests/unit/test_startup_active_bundle_rows.py` | 新增 **7** 个用例 |
+
+判定：`app.asset` 或 `app.embed_doc` 在 active 版本 **0 行 ⇒ FAIL（拒启动）**；两表都有行 ⇒ PASS；库不可达／未注入版本／表不存在 ⇒ PENDING（**无法判定 ≠ 通过**）。
+**`dense.py` 的 0 行语义一字未动**（空 KB 仍是合法空）。测试：新 7 + 既有 `test_startup_assertions.py` 29 = **36 passed**；`assert_covers_delegated_names()` 通过（实现 5 == 登记 5）。
+
+**C4 结论（只出结论，未改代码）**：`active_version()`（`semantics/runtime.py:104-110`）**不做任何 status 校验**，直接返回 `self._loaded.version`；`bundle_status()` 另开一个方法返回状态。`trusted_context` 只调前者 ⇒ **`candidate`／`staged` 的包会被当作 active 正常服务**，FR-12.3 的"人工发布"在运行时是**没有闸门的**。
+影响面：① 版本状态机与运行时解耦（发布流程形同虚设）；② 若把校验加进 `active_version()`，所有 `candidate` 包在 dev／评测面会直接起不来 ⇒ 属于契约变更，**必须总控点句**。
+
+### 69.3 C2｜τ 采样 schema（未做）
+
+**没做，理由是它不是一个"只加字段"的改动**：`l4_score` 的产物要带 `candidate_ids`／候选顺序／`gold_candidate_id`，得先确定三件事——① 候选 ID 的最小稳定形态（现读 `L4_SCORE_ITEM_KEYS` 里没有 ID 位，`CandidateRef.asset_id` 与 L4 打分项不是一一对应）；② `gold_candidate_id` 从冻结集哪一列派生（现在 gold 只有 `gold_sql`，没有候选标签）；③ 这些字段落进 **record** 还是落进 **ScoreSample**（后者有类型化约束 `RerankScore(model_id, prompt_version)`）。
+硬塞一个字段会让"可校准"看起来成立而其实不成立 —— 那正是 τ 一直 UNVERIFIED 的原因，不能再用一个假 schema 盖过去。**下一轮先出 3 句话的 schema 定稿，再写码。**
+
+### 69.4 C5 提案（只出材料）＋ C6 分解材料
+
+**C5｜C-12 终态四值缺「上游不可用」格 —— 提案（三选一，均需点句）**
+
+| 方案 | 内容 | 码表 | 接口 | 前端 |
+|---|---|---|---|---|
+| A 新增第五值 `unavailable` | 终态枚举加值 | 改 `Outcome`/`ErrorCode` + §A.11 断言集 | 响应 schema 枚举变化（**破坏性**） | 需新增分支 |
+| **B（建议）** 保持四值，加 `unavailable_reason` 字段 | `error` 下细分 `upstream_timeout`／`saturated`／`upstream_5xx` | 只加字段，不改枚举 | 向后兼容（可选字段） | 仅在 error 卡片上多一行 |
+| C 只加 `degraded` 标记 | 复用 `DegradedReason` | 无改动 | 无改动 | 语义弱（degraded 不等于终态不可用） |
+
+推荐 B：既能让可用性统计把"上游不可用"单独数出来，又不动终态四值这条已被 G-5/G-8 依赖的判据面。
+
+**C6｜`EXEC_TIMEOUT` 的墙钟缺口（只出分解，未加埋点）**
+产物 `eval/results_r64_wall_gap.json`（166 条逐案 `wall_ms − latency_ms.total`）：**median 14ms／p95 7,805ms／max 250,240ms**（与 QA `r63_availability_v2.json` 的 14ms／7.73s 一致）。
+
+```text
+X-ENUM-02  wall 287,969ms ｜ 节点自报合计 37,729ms ｜ 缺口 **250,240ms**
+           exec 自报 30,000ms（EXEC_TIMEOUT），其余节点 normalize 789 / plan 1,251 / gen_sql 2,269 / gate 12
+M-MET-09   wall 27,839ms ｜ 节点自报 6ms ｜ 缺口 27,833ms（LLM_UPSTREAM_ERROR，失败调用未记账）
+M-MET-10   wall 15,476ms ｜ 节点自报 16ms ｜ 缺口 15,460ms（同上）
+```
+
+⇒ 缺口集中在 **error 三类**（失败调用与 exec 之外的金标沙箱执行），不是普遍漂移；**要定位到具体阶段必须加分段埋点**（`score_case` 内：graph 往返／金标沙箱／预测沙箱／匣带写盘四段计时），本轮未改。
+
+### 69.5 D5｜U-127 与 §10.1 对齐（未做）
+
+**没做，理由是缺一条可验证的落点**：全仓 `LlmSaturated` 只在 `app/llm/**`（`client.py` 抛出、`__init__.py:_reason_for` 已正确映射到 `DegradedReason.LLM_CONCURRENCY_EXCEEDED`），**没有任何节点或收口逻辑把它写成 `error(LLM_UPSTREAM_ERROR)`**。也就是说"饱和被归成上游错误"这条**在代码面上找不到发生点**（只可能在 `_with_node_timeout` 的超时出路表里与超时混淆）。改错误码是判据面的事，凭猜测动它风险大于收益。
+下一轮的正确做法：先造一个**零出站夹具**（把信号量等待压到 0，强制 `LlmSaturated`），跑一条看终态与 `degraded.reason` 实际是什么，再决定改哪一行。
+
+### 69.6 卫生四件（完成）
+
+| 项 | 处置 |
+|---|---|
+| A2 | `W60_CHECKPOINT.json` 追加 `updated_at_note`＋`file_revision`，并给 secrets 读数加 `history_commits_note`（612 @7de77ce／616 @de69315／621 @r63，**三把尺并存、数值同为 94**，不得混写成同一把） |
+| A3 | `eval/results_r61_probe401.json`（1 KB，QA 已核无 `sk-` 明文）**入库**；`eval/*.checkpoint.jsonl` 与 `eval/*.bak-*` 写入 `.gitignore`（断点续跑中间件可再生成） |
+| A4 | `RELAY §60.1` **原文不动**，在其后加一行 🔻 补注：hard_15s 应为 9 条，指回 §66.2 |
+| A5 | `backend/reports/w6/eval_metrics.json` 追加 `stale_notice`＋`stale_notice_added_by`（**未改任何 measured/gate 字段**） |
+
+### 69.7 环境提醒（本轮踩到）
+
+本机**进程环境**里的 `DEEPSEEK_API_KEY` 仍是 51 位旧 key（`deploy/.env` 已是 35 位新 key）。任何不经仓库外包装 `run_live.py` 的直跑（`python eval/runner.py`）会读到旧 key ⇒ 401。这与 r59 事故同源，已在 §63 记录过，本轮再次实测确认。
+
+### 69.8 待点句
+
+1. **C1 闭环**：批准 3 条二轮匣带录制（出站，估 ≤¥0.05）。
+2. **C2**：先定 schema 三问（候选 ID 形态／gold 标签来源／落 record 还是落 ScoreModel），再写码。
+3. **C4**：`active_version()` 是否校验 `status='published'`（会影响 dev/评测面能否启动）。
+4. **C5**：选 A／B／C（建议 B）。
+5. **D5**：是否按"先造饱和夹具再改"的路径走。

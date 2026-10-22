@@ -1,0 +1,328 @@
+{
+  "frozen_evidence": {
+    "checks": {
+      "dataset_content_hash": {
+        "expected": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+        "actual": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+        "ok": true
+      },
+      "sandbox_db_sha256": {
+        "expected": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "actual": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "ok": true
+      },
+      "red_team_content_hash_present": true,
+      "gold_seed_derived_from_dataset_hash": true,
+      "all_ok": true
+    },
+    "dataset_version": "2",
+    "frozen_at": "2026-10-17",
+    "n_cases": 166,
+    "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+    "red_team": {
+      "content_hash": "sha256:886cb57052368541e60727cbcee78db2aa1ad1c381cb083a540673999ed9d01d",
+      "n_cases": 66
+    },
+    "gold_seed": {
+      "content_hash": "sha256:2f91ed51e0c97fcbb45b7a59eabc13067167747df52d5cae6d1b37cfe339a592",
+      "n_seeds": 119
+    }
+  },
+  "config": {
+    "live": false,
+    "cassette": "eval/cassettes/w8_r63_full166.jsonl",
+    "mode": "replay",
+    "db": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\ecom_sandbox.db",
+    "column_top": null,
+    "n_requested": 3,
+    "provenance": "w64 G-8 second round; 3 clarify cases; r63 cassette",
+    "node_timeouts": {
+      "contract": {
+        "link": 30.0,
+        "gate1_ast": 0.1,
+        "gate2_policy": 0.1,
+        "gate3_cost": 1.0,
+        "execute": 30.0,
+        "mask": 0.1,
+        "audit_pre": 1.0,
+        "audit_supp": 0.5
+      },
+      "effective": {
+        "link": 30.0,
+        "gate1_ast": 0.1,
+        "gate2_policy": 0.1,
+        "gate3_cost": 1.0,
+        "execute": 30.0,
+        "mask": 0.1,
+        "audit_pre": 1.0,
+        "audit_supp": 0.5
+      },
+      "scaled": false,
+      "llm_calling_nodes": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "not_in_contract": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "kept_as_contract": [
+        "execute",
+        "link"
+      ],
+      "cpu_factor": 8.0,
+      "llm_node_floor_s": 162.0
+    },
+    "max_concurrency": null,
+    "checkpoint": null,
+    "resume": false,
+    "transport_retries": 2,
+    "transport_backoff_s": 2.0
+  },
+  "summary": {
+    "n_records": 3,
+    "n_scored": 3,
+    "n_unscored": 0,
+    "n_node_timeout": 0,
+    "n_execute_scored": 0,
+    "n_execute_with_sql": 0,
+    "n_equivalent": 0,
+    "terminal_distribution": {
+      "clarify": 3
+    },
+    "attribution_distribution": {},
+    "tokens_total": 25517,
+    "cost_cny_total": 0.006871,
+    "wall_s": {
+      "max": 0.147,
+      "median": 0.016,
+      "sum": 0.177
+    },
+    "n_second_round_attempted": 3,
+    "n_second_round_success": 0,
+    "second_round_tokens_total": 0,
+    "second_round_cost_cny_total": 0.0
+  },
+  "records": [
+    {
+      "case_id": "C-CITY-01",
+      "question": "城市维度的 GMV 是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "clarify_out"
+      ],
+      "terminal_event": "clarify",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "clarify",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 131,
+        "total": 140
+      },
+      "tokens": {
+        "input": 8391,
+        "output": 104,
+        "cache_hit": 7936,
+        "total": 8495
+      },
+      "cost_cny": 0.002193,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": {
+        "attempted": true,
+        "question": "城市维度的 GMV 是多少？（补充口径：order_paid.receiver_city）",
+        "terminal_event": null,
+        "terminal_code": null,
+        "nodes": [
+          "trusted_context"
+        ],
+        "tokens": {},
+        "cost_cny": 0.0,
+        "infra_error": "cassette_miss: 匣带未命中（w8_r63_full166.jsonl）：key=sha256:67052565468c9201… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
+        "success": false
+      },
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": null,
+      "wall_s": 0.147,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-CITY-03",
+      "question": "广州的销售额是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "clarify_out"
+      ],
+      "terminal_event": "clarify",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "clarify",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 6,
+        "total": 9
+      },
+      "tokens": {
+        "input": 8388,
+        "output": 101,
+        "cache_hit": 7936,
+        "total": 8489
+      },
+      "cost_cny": 0.002161,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": {
+        "attempted": true,
+        "question": "广州的销售额是多少？（补充口径：shop.city）",
+        "terminal_event": null,
+        "terminal_code": null,
+        "nodes": [
+          "trusted_context"
+        ],
+        "tokens": {},
+        "cost_cny": 0.0,
+        "infra_error": "cassette_miss: 匣带未命中（w8_r63_full166.jsonl）：key=sha256:c6f609d54bab6cc8… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
+        "success": false
+      },
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": null,
+      "wall_s": 0.016,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "C-CITY-04",
+      "question": "城市口径下哪个卖得最好？",
+      "tenant": "T_A",
+      "expected_behavior": "clarify",
+      "difficulty_struct": null,
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "clarify_out"
+      ],
+      "terminal_event": "clarify",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "clarify",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 5,
+        "total": 8
+      },
+      "tokens": {
+        "input": 8391,
+        "output": 142,
+        "cache_hit": 7936,
+        "total": 8533
+      },
+      "cost_cny": 0.002517,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": {
+        "attempted": true,
+        "question": "城市口径下哪个卖得最好？（补充口径：shop.city）",
+        "terminal_event": null,
+        "terminal_code": null,
+        "nodes": [
+          "trusted_context"
+        ],
+        "tokens": {},
+        "cost_cny": 0.0,
+        "infra_error": "cassette_miss: 匣带未命中（w8_r63_full166.jsonl）：key=sha256:83a5ac48b638bda1… miss 通常是 prompt/时间语义变了 —— 重新录制，不要在评测里回退到真网络",
+        "success": false
+      },
+      "gold": {
+        "gold_sql": "",
+        "frozen_hash": null,
+        "via_view": null,
+        "via_wrap": null,
+        "view_eq_wrap": false,
+        "wrap_eq_frozen": false
+      },
+      "verdict": null,
+      "attribution": null,
+      "wall_s": 0.014,
+      "runner_transport_retries": 0
+    }
+  ],
+  "generated_at": "2026-10-22T08:41:19+00:00",
+  "git_rev": "ae87c75",
+  "git_dirty": true
+}

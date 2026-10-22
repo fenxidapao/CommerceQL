@@ -1515,5 +1515,7 @@
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --live --yes   # 真打全量需额度：先不带 --yes 看计划",
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/runner.py --mode replay --provenance \"<匣带来源>\" --yes   # 匣带未失效时才是零成本复算；今天是否可复算看 §8 那条 🔴（探针 = 下一条命令）",
     "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe backend/reports/w6/probe_cassette_replay.py   # 匣带可复算性探针（不是批次读数；产物喂 §8 那条 🔴）"
-  ]
+  ],
+  "stale_notice": "⚠️ 过期快照（rev 88f3500／2026-10-07）：G-2 记 0/10、G-5 记 19/24，均非现状。不得引用为本仓库当前门禁读数；现状见 eval/results_r63_gate_recompute.json（新基线 r63：G-2 8/8、G-5 24/24 + 误拒 2.4%，三格仍 UNVERIFIED 因 τ 未校准）。",
+  "stale_notice_added_by": "W8 2026-10-22（第 64 轮 A5；只加标记，未改任何 measured/gate 字段）"
 }

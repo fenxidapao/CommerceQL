@@ -326,6 +326,7 @@ STARTUP_ASSERTIONS_DELEGATED_TO_W1B: Final[tuple[str, ...]] = (
     "embedding_dim_matches_vector_column",
     "audit_log_append_only_enforced",
     "semantic_bundle_passed_five_step_validation",
+    "active_bundle_version_materialized",
 )
 
 

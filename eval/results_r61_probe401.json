@@ -1,0 +1,25 @@
+{
+  "schema": "W8_LIVE_PROBE/v1",
+  "round": 61,
+  "probe_kind": "8-token 前置探针（不加 --live、不写匣带、不重试）",
+  "http_status": 401,
+  "model_requested": "deepseek-v4.1-flash",
+  "usage": null,
+  "content_len": 0,
+  "error_type": "new_api_error",
+  "error_message": "Invalid token (request id 见终端；未落盘敏感字段)",
+  "env_diagnosis": {
+    "deploy_env_key_present": true,
+    "deploy_env_key_len": 51,
+    "expected_new_key_len": 35,
+    "deploy_env_and_process_env_same": true,
+    "reading": "deploy/.env 与当前进程环境里的 DEEPSEEK_API_KEY 同为 51 位，与总控新给的 35 位不是同一个值 ⇒ 新 key 未落进这两处；本次 401 属凭据未更新，不是模型/网络问题。",
+    "no_credential_printed": true
+  },
+  "consequence": "A（城市 5 条 live 重录）与 B（三条契约件 live）**未开跑**；按总控指令「401 就停，别重试刷匣带」执行，未写任何匣带。",
+  "zero_side_effects": {
+    "cassette_written": false,
+    "tokens": 0,
+    "cost_cny": 0.0
+  }
+}

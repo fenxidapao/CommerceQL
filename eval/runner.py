@@ -288,12 +288,55 @@ def load_cases(
 # 三、单条用例
 # ---------------------------------------------------------------------------
 
+def second_round_question(
+    case: Mapping[str, Any],
+    terminal_event: str | None,
+    *,
+    answers: Mapping[str, str] | None = None,
+) -> str | None:
+    """G-8 二轮回路：首轮 `clarify` 后，用「补答」把题面补全，再走一次图。
+
+    补答来源只取**冻结集自带**的 `clarify_expected.candidates[0]`（争议集里已经写明
+    两个竞争口径），不猜、不调模型 —— 保证"补答"是数据而不是第二次推断。
+    返回 `None` = 不该跑二轮（非 clarify 终态 / 该用例没有候选口径）。
+
+    ⚠️ 首轮判定**不被改写**：本函数只生产第二轮的输入题面，首轮 `terminal_event`
+    仍按原样落进记录（`record["second_round"]` 是**附加字段**）。
+    """
+    if terminal_event != "clarify":
+        return None
+    # 外部答案文件优先（`--second-round-answers`）：冻结集里 18 条 clarify 只有 1 条带 candidates，
+    # 不引入外部补答就无法对多数澄清用例跑二轮。answers 是**数据**，不调模型。
+    if answers:
+        given = answers.get(str(case.get("case_id")))
+        if given and str(given).strip():
+            return f"{case.get('question')}（补充口径：{str(given).strip()}）"
+    expected = case.get("clarify_expected")
+    if not isinstance(expected, Mapping):
+        return None
+    candidates = [str(c) for c in (expected.get("candidates") or []) if str(c).strip()]
+    if not candidates:
+        return None
+    question = str(case.get("question") or "")
+    return f"{question}（补充口径：{candidates[0]}）"
+
+
+def second_round_success(terminal_event: str | None, infra_error: str | None) -> bool:
+    """「澄清后一次成功」的判定：第二轮**真的走到 complete** 且不是基建中断。
+
+    只认 `complete`：`refuse`/`clarify`/`error` 都不是"补答后答出来了"。
+    """
+    return terminal_event == "complete" and not infra_error
+
+
 async def score_case(
     harness: Harness,
     case: dict[str, Any],
     *,
     allowlist: Mapping[str, Any],
     db_path: str,
+    second_round: bool = False,
+    second_round_answers: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """跑一条用例并产出**可 JSON 化**的完整记录（判定与归因都在这里，不再回头戳 state）。
 
@@ -341,6 +384,8 @@ async def score_case(
         "infra_error": run.infra_error,
         "scored": True,
         "unscored_reason": None,
+        # G-8 二轮：默认 None（未开跑）；`--second-round` 时由尾部块填
+        "second_round": None,
     }
 
     if run.infra_error:
@@ -454,6 +499,32 @@ async def score_case(
             gate_self_defect=defect,
         )
         record["attribution"] = {"category": a.category, "signal": a.signal, "severity": a.severity}
+
+    # ---- G-8 二轮回路（默认关；`--second-round` 才跑）----
+    # 首轮 clarify 判定**不改写**：这里只追加 `second_round` 字段。
+    if second_round:
+        question2 = second_round_question(
+            case, run.terminal_event, answers=second_round_answers
+        )
+        if question2 is not None:
+            run2 = await harness.run_case_async(
+                case_id=f"{case_id}#r2", question=question2, tenant=tenant
+            )
+            record["second_round"] = {
+                "attempted": True,
+                "question": question2,
+                "terminal_event": run2.terminal_event,
+                "terminal_code": run2.terminal_code,
+                "nodes": list(run2.nodes),
+                "tokens": dict(run2.tokens),
+                "cost_cny": run2.cost_cny,
+                "infra_error": run2.infra_error,
+                "success": second_round_success(run2.terminal_event, run2.infra_error),
+            }
+        else:
+            record["second_round"] = {"attempted": False, "reason": "no_supplement_source"}
+    else:
+        record["second_round"] = None
     return record
 
 
@@ -552,6 +623,8 @@ async def run_batch(
     checkpoint_meta: Mapping[str, Any] | None = None,
     transport_retries: int = 2,
     transport_backoff_s: float = 2.0,
+    second_round: bool = False,
+    second_round_answers: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """串行跑完整批。**整批只有一个 event loop**（纪律由 `run_batch_sync` 唯一持有）。
 
@@ -587,7 +660,9 @@ async def run_batch(
             retry_attempt = 0
             while True:
                 record = await score_case(
-                    harness, case, allowlist=allowlist, db_path=db_path
+                    harness, case, allowlist=allowlist, db_path=db_path,
+                    second_round=second_round,
+                    second_round_answers=second_round_answers,
                 )
                 if _is_transient_transport_record(record) and retry_attempt < max(0, transport_retries):
                     delay = max(0.0, transport_backoff_s) * (2 ** retry_attempt)
@@ -663,6 +738,22 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
             "median": walls[len(walls) // 2] if walls else None,
             "sum": round(sum(walls), 3) if walls else None,
         },
+        # ---- G-8 二轮回路读数（`--second-round` 才有非零值）----
+        # 口径：attempted = 首轮 clarify 且拿到补答来源；success = 第二轮走到 complete 且非基建中断。
+        "n_second_round_attempted": sum(
+            1 for r in records if (r.get("second_round") or {}).get("attempted")
+        ),
+        "n_second_round_success": sum(
+            1 for r in records if (r.get("second_round") or {}).get("success")
+        ),
+        # 第二轮 tokens/cost 单列，避免与首轮混账（首轮才是可比的基线成本）。
+        "second_round_tokens_total": sum(
+            int(((r.get("second_round") or {}).get("tokens") or {}).get("total") or 0)
+            for r in records
+        ),
+        "second_round_cost_cny_total": round(sum(
+            float((r.get("second_round") or {}).get("cost_cny") or 0) for r in records
+        ), 6),
     }
 
 
@@ -729,6 +820,16 @@ def main(argv: list[str] | None = None) -> int:
             "批次来源说明，原样落进 `config.provenance`。回放轮必填：否则报告只能说"
             "「本轮未真打」，把已经花过钱的 §17.2 录制事实说没了（漏报同样是失真）。"
         ),
+    )
+    parser.add_argument(
+        "--second-round",
+        action="store_true",
+        help="G-8 二轮回路：首轮 clarify 后用冻结集的 clarify_expected.candidates[0] 做补答再走一次图",
+    )
+    parser.add_argument(
+        "--second-round-answers",
+        default=None,
+        help="JSON 文件：{case_id: \"补答文本\"}；冻结集外补充答来源（不改冻结集）",
     )
     parser.add_argument("--verify-only", action="store_true")
     args = parser.parse_args(argv)
@@ -797,6 +898,11 @@ def main(argv: list[str] | None = None) -> int:
         column_top=args.column_top,
         node_timeout_overrides=node_timeouts,
         max_concurrency=args.max_concurrency,
+        second_round=args.second_round,
+        second_round_answers=(
+            json.loads(Path(args.second_round_answers).read_text(encoding="utf-8"))
+            if args.second_round_answers else None
+        ),
         checkpoint_path=checkpoint_path,
         resume_records=resume_records if args.resume else None,
         checkpoint_meta={

@@ -86,6 +86,7 @@ from app.repo.reachability import (
 
 __all__ = [
     "ANALYTICS_DSN_IS_READ_ONLY",
+    "ACTIVE_BUNDLE_VERSION_MATERIALIZED",
     "ASSERTION_NAMES",
     "AUDIT_LOG_APPEND_ONLY_ENFORCED",
     "EMBEDDING_DIM_MATCHES_VECTOR_COLUMN",
@@ -112,10 +113,17 @@ EMBEDDING_DIM_MATCHES_VECTOR_COLUMN: Final[str] = "embedding_dim_matches_vector_
 AUDIT_LOG_APPEND_ONLY_ENFORCED: Final[str] = "audit_log_append_only_enforced"
 SEMANTIC_BUNDLE_PASSED_FIVE_STEP_VALIDATION: Final[str] = "semantic_bundle_passed_five_step_validation"
 
+#: 🔴 W8 第 64 轮（总控裁：替代新增 G-9）：**active 版本在 `app.asset`／`app.embed_doc` 行数为 0 ⇒ 拒启动**。
+#: 存在理由：版本指针与库内物化版本错位时，检索 SQL 按 `bundle_version=:active` 过滤会**一行不返回**，
+#: 而 `dense.py` 把「0 行」当**合法空**（空 KB / 该版本无文档），于是**静默空检索、零降级标记**。
+#: 这条断言把「配了对不对」的判据放在**启动期**，而不是改 `dense.py` 的 0 行语义（那会让真·空库永远误报）。
+ACTIVE_BUNDLE_VERSION_MATERIALIZED: Final[str] = "active_bundle_version_materialized"
+
 ASSERTION_NAMES: Final[tuple[str, ...]] = (
     ANALYTICS_DSN_IS_READ_ONLY,
     EMBEDDING_DIM_MATCHES_VECTOR_COLUMN,
     AUDIT_LOG_APPEND_ONLY_ENFORCED,
+    ACTIVE_BUNDLE_VERSION_MATERIALIZED,
     SEMANTIC_BUNDLE_PASSED_FIVE_STEP_VALIDATION,
 )
 
@@ -179,6 +187,11 @@ class AuditAccess:
     trigger_present: bool
 
 
+async def _no_active_version_probe() -> None:
+    """组装根没注入 active 版本时的占位探针：返回 `None` ⇒ 判定为 PENDING（**不是 PASS**）。"""
+    return None
+
+
 @dataclass(frozen=True, slots=True)
 class StartupProbes:
     """四条断言所需的**最小 I/O 面**。
@@ -197,6 +210,11 @@ class StartupProbes:
     analytics_role: Callable[[], Awaitable[tuple[bool, str] | Unreachable | None]]
     vector_column: Callable[[], Awaitable[tuple[str, int | None] | Unreachable | None]]
     audit_access: Callable[[], Awaitable[AuditAccess | Unreachable]]
+    #: 🔴 (asset 行数, embed_doc 行数)；`None` = 组装根未注入 active 版本（→ PENDING，不是 PASS）
+    #: 默认值 = 占位探针（返回 None）：**老调用点不传也不会静默通过**，只会变成 PENDING。
+    active_bundle_rows: Callable[[], Awaitable[tuple[int, int] | None | Unreachable]] = (
+        _no_active_version_probe
+    )
 
 
 # ============================================================================
@@ -449,6 +467,78 @@ def evaluate_semantic_bundle(*, validator: Callable[[], Awaitable[None]] | None)
     )
 
 
+def evaluate_active_bundle_rows(
+    row: tuple[int, int] | None | Unreachable,
+    *,
+    version: str | None,
+) -> AssertionOutcome:
+    """active 版本是否有物化行（**0 行 ⇒ FAIL 拒启动**）。
+
+    ⚠️ 与 `dense.py` 的分工：那边「0 行 = 合法空」（空 KB / 该版本无文档），
+    这边「active 版本 0 行 = 版本指针与库内物化错位」。**后者是配置错误，不是业务状态**，
+    所以判定落在这里，且只在这里 —— 不改 `dense.py` 的 0 行语义。
+    """
+    if version is None:
+        return AssertionOutcome(
+            name=ACTIVE_BUNDLE_VERSION_MATERIALIZED,
+            status=AssertionStatus.PENDING,
+            detail="组装根未注入 active 版本（`live_probes(active_bundle_version=…)`）⇒ 无法判定物化行数",
+        )
+    if isinstance(row, Unreachable):
+        return AssertionOutcome(
+            name=ACTIVE_BUNDLE_VERSION_MATERIALIZED,
+            status=AssertionStatus.PENDING,
+            detail=f"元数据库不可达 ⇒ 无法判定 active={version!r} 的物化行数（不是通过）：{row.reason}",
+        )
+    if row is None:
+        return AssertionOutcome(
+            name=ACTIVE_BUNDLE_VERSION_MATERIALIZED,
+            status=AssertionStatus.PENDING,
+            detail=f"元数据表不存在或查询无结果 ⇒ 无法判定 active={version!r} 的物化行数",
+        )
+    asset_rows, embed_rows = int(row[0]), int(row[1])
+    if asset_rows == 0 or embed_rows == 0:
+        return AssertionOutcome(
+            name=ACTIVE_BUNDLE_VERSION_MATERIALIZED,
+            status=AssertionStatus.FAIL,
+            detail=(
+                f"active 版本 {version!r} 未物化：app.asset={asset_rows} 行、app.embed_doc={embed_rows} 行 "
+                "⇒ 检索面会按版本过滤到 0 行且**不报降级**（静默空检索）。"
+                "修法：materialize 该版本（语义包升版后必须重跑物化）"
+            ),
+        )
+    return AssertionOutcome(
+        name=ACTIVE_BUNDLE_VERSION_MATERIALIZED,
+        status=AssertionStatus.PASS,
+        detail=f"active={version!r}：app.asset={asset_rows} 行、app.embed_doc={embed_rows} 行",
+    )
+
+
+async def _fetch_active_bundle_rows(
+    engine: AsyncEngine, version: str
+) -> tuple[int, int] | None:
+    """按版本数两张表的行（只读，一条 SQL）。
+
+    ⚠️ 只数**行数**，不判 `embedding` 是否非 NULL：列级完整性由 `evaluate_embedding_dim`
+    （类型/维度）与物化报告的 `embedding_status` 负责，这里判的是「版本对不对得上」。
+    """
+    async with engine.connect() as conn:
+        row = (
+            await conn.execute(
+                text(
+                    """
+                    SELECT (SELECT count(*) FROM app.asset     WHERE bundle_version = :v),
+                           (SELECT count(*) FROM app.embed_doc WHERE bundle_version = :v)
+                    """
+                ),
+                {"v": version},
+            )
+        ).first()
+    if row is None:
+        return None
+    return int(row[0]), int(row[1])
+
+
 async def _evaluate_semantic_with_validator(
     validator: Callable[[], Awaitable[None]] | None,
 ) -> AssertionOutcome:
@@ -647,7 +737,12 @@ async def _guarded[T](fn: Callable[[], Awaitable[T]]) -> T | Unreachable:
         return unreachable_from(exc)
 
 
-def live_probes(settings: Settings, *, metadata_engine: AsyncEngine) -> StartupProbes:
+def live_probes(
+    settings: Settings,
+    *,
+    metadata_engine: AsyncEngine,
+    active_bundle_version: str | None = None,
+) -> StartupProbes:
     """把上面三个 I/O 实现绑成 `StartupProbes`。
 
     ⚠️ `metadata_engine` 由调用方（`app/main.py` 的组装根）注入，本模块**不自建池** ——
@@ -661,6 +756,11 @@ def live_probes(settings: Settings, *, metadata_engine: AsyncEngine) -> StartupP
         analytics_role=lambda: _guarded(lambda: _fetch_analytics_role(settings.ANALYTICS_DB_URL)),
         vector_column=lambda: _guarded(lambda: _fetch_vector_column(metadata_engine)),
         audit_access=lambda: _guarded(lambda: _fetch_audit_access(metadata_engine)),
+        active_bundle_rows=(
+            (lambda: _guarded(lambda: _fetch_active_bundle_rows(metadata_engine, active_bundle_version)))
+            if active_bundle_version
+            else _no_active_version_probe
+        ),
     )
 
 
@@ -690,8 +790,9 @@ async def run_startup_assertions(
     probes: StartupProbes,
     *,
     semantic_validator: Callable[[], Awaitable[None]] | None = None,
+    active_bundle_version: str | None = None,
 ) -> tuple[AssertionOutcome, ...]:
-    """跑全部 4 条，**按清单顺序返回**（顺序稳定 → 日志可 diff）。
+    """跑全部 5 条，**按清单顺序返回**（顺序稳定 → 日志可 diff）。
 
     ⚠️ 三条 I/O 断言**并行**发出（`asyncio.gather`）：它们互不依赖，
     串行会让 api 的启动时间无谓地叠加三次连接超时（pg 未就绪时最坏 15s）。
@@ -702,10 +803,11 @@ async def run_startup_assertions(
 
     assert_covers_delegated_names()
 
-    role_row, vector_col, audit_access = await asyncio.gather(
+    role_row, vector_col, audit_access, bundle_rows = await asyncio.gather(
         probes.analytics_role(),
         probes.vector_column(),
         probes.audit_access(),
+        probes.active_bundle_rows(),
     )
 
     return (
@@ -714,6 +816,7 @@ async def run_startup_assertions(
         ),
         evaluate_embedding_dim(declared_dim=settings.EMBEDDING_DIM, column=vector_col),
         evaluate_audit_append_only(audit_access),
+        evaluate_active_bundle_rows(bundle_rows, version=active_bundle_version),
         await _evaluate_semantic_with_validator(semantic_validator),
     )
 
@@ -736,6 +839,7 @@ async def enforce_startup_assertions(
     *,
     logger: Any,
     semantic_validator: Callable[[], Awaitable[None]] | None = None,
+    active_bundle_version: str | None = None,
 ) -> tuple[AssertionOutcome, ...]:
     """跑断言；**任一致命 → 抛 `ConfigError` 拒绝启动**（07 §18.4 fail-fast）。
 
@@ -746,7 +850,8 @@ async def enforce_startup_assertions(
     - `FAIL` → 先 ERROR 打出全部失败项（**不是第一条就抛**），让一次启动就能看到所有问题。
     """
     outcomes = await run_startup_assertions(
-        settings, probes, semantic_validator=semantic_validator
+        settings, probes, semantic_validator=semantic_validator,
+        active_bundle_version=active_bundle_version,
     )
 
     for outcome in outcomes:

@@ -174,9 +174,18 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     # --- 3. 启动断言（07 §18.4：失败即拒绝启动）---
     outcomes = await enforce_startup_assertions(
         settings,
-        live_probes(settings, metadata_engine=pools.metadata),
+        live_probes(
+            settings,
+            metadata_engine=pools.metadata,
+            active_bundle_version=(
+                semantic_runtime.active_version() if semantic_runtime is not None else None
+            ),
+        ),
         logger=logger,
         semantic_validator=_semantic_validator,
+        active_bundle_version=(
+            semantic_runtime.active_version() if semantic_runtime is not None else None
+        ),
     )
     logger.info(
         "startup_assertions_done",

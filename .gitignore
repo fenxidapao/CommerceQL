@@ -93,3 +93,7 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# 评测断点续跑中间件（可再生成，不入库）
+eval/*.checkpoint.jsonl
+eval/*.bak-*

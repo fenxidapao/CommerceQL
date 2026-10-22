@@ -79,7 +79,10 @@
       "worktree": 57,
       "committed_tree": 51,
       "history": 94,
-      "history_commits": 612
+      "history_commits": 612,
+      "history_commits_note": "两把尺并存：本件写 612（7de77ce 时点，gitleaks 实扫）；r61 件写 616（de69315 时点），两次数值同为 94。以各自时点为准，不得混写成同一把。",
+      "history_commits_r61": 616,
+      "history_commits_r63": 621
     }
   },
   "boundaries": {
@@ -91,5 +94,7 @@
     "frozen_set_untouched": true,
     "reports_qa_untouched": true,
     "shared_ecom_written": false
-  }
+  },
+  "updated_at_note": "updated_at=2026-10-19T09:32:41Z 是 **W60 收口时刻**，此后本件只做过字段级订正（head_note/committed_by/evidence_tree_map/measurement_scope/本 note），不再改动测量读数。",
+  "file_revision": "2026-10-22 W8 第 64 轮：字段级订正（测量读数未改）"
 }
