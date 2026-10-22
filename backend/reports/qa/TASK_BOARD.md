@@ -4904,3 +4904,242 @@ W8 的定位成立：E-VER-07 失败跳精确落在 15s 客户端硬上限，pla
 ### 78.4 验收总判
 
 **第 59 轮 P0 前置化通过；整体不通过。** G-2 官方门禁仍 FAIL（7/8=87.5%），G-5 23/24 但带 11 error 且 τ 未校准 ⇒ UNVERIFIED；G-8 仍 UNVERIFIED；secrets 57/51/94 不绿；官方门禁仍 PASS 1/8。W60 必须先收终态稳定性与门禁口径，不得进入 G-8 或宣称收口。
+
+## 79 · QA 接手侦查（W60 验收前置）：基线现读、文档矛盾四条、未归属 cassette 改动登记（**非验收节** ｜ 2026-10-22 00:05 +0800 ｜ HEAD `de69315`／616 笔）
+
+### 79.0 定位
+
+本节由 QA 接手窗落笔，**不是 W60 验收节**。W60 的 W8 回执尚未提交 QA 审阅；在回执到达并逐项复核前，W60 一律写「未验收」。本节只做三件事：① 现读基线与官方门禁（不复述交接口径）；② 登记交接文档与仓库实际的四条矛盾；③ 登记一处未归属的工作树改动并请总控定性。
+
+本窗**未开工**：未改代码、未改测试、未碰 `eval/**`／`semantic/**`／`backend/app/**`／`reports/w8/**`、未动冻结集/阈值/15s/gold、未出站、未提交、未推送、未清理 `.workbuddy/`。
+
+### 79.1 基线现读（现场读取）
+
+| 项 | 现读 | 级 |
+|---|---|---|
+| HEAD | `de69315`（`docs(w8): close W60 checkpoint`） | 【实测】 |
+| origin/main | `de69315`，与 HEAD 齐平 | 【实测】 |
+| 提交数 | 616 笔 | 【实测】 |
+| 近 5 笔 | `de69315` → `f0b724b` → `8b2b5e2` → `fc97acb` → `7de77ce` | 【实测】 |
+| 工作树 | ` M eval/cassettes/w6_batch.jsonl`（+3 行，mtime `2026-10-21 19:40`）＋ `?? .workbuddy/` | 【实测】 |
+| 官方门禁文件 | `backend/reports/w6/eval_metrics.json`：`git_rev=88f3500`、`git_dirty=false`、`generated_at=2026-10-07T05:27:34+00:00`、`all_pass=false`、**PASS 1／FAIL 3／PARTIAL 2／UNVERIFIED 2** | 【实测】 |
+| τ | `BINDING_TAU=0.2`、`calibrated_under_eval_env=false`；`MODEL_ID`／`PROMPT_VERSION`／`CALIBRATED_AT`／`REPORT_REF` 四项 `deploy_env_declared=false`（`deploy/.env.example` 均为空值） | 【实测】 |
+| W59 QA 落点 | `TASK_BOARD` 本节之上 §78、`RELAY` §73、`QA_LEDGER` R31ba 三处一致 | 【实测】 |
+| W60 QA 落点 | **不存在**（三份 QA 文件末节此前全为 W59） | 【实测】 |
+| W60 W8 产物 | `W60_CHECKPOINT.json`（2328B）、`results_r60_gate_recompute.json`（2001B）、`results_r60_g5_error_clarify.json`（19978B）、`results_r60_secret_scan_final.json`（7204B）均在盘且**已 tracked**；W8 `RELAY.md` §60 在第 5936 行 | 【实测】 |
+| W60 是否已验收 | 否（QA 无任何落笔） | 【推断·基于三处末节缺失】 |
+
+官方门禁逐格（照录 `88f3500` 快照，**不是** W60 读数）：
+
+| 格 | 条件 | 判 | measured |
+|---|---|---|---|
+| G-1 | 全部 P0 用例通过 | PASS | 红 0 条（offline 2485 ＋ integration 124） |
+| G-2 | Easy × 语义低 ≥ 95% | FAIL | `easy×low 0/10 = 0.0%` |
+| G-3 | 危险 SQL 放行 = 0 | PARTIAL | 放行 0 / 覆盖 48 条（应拦 50） |
+| G-4 | 跨租户泄露 = 0 | PARTIAL | 跨租户行 0；PG RLS 未在真实 DB 层验证 |
+| G-5 | 拒答 ≥95%、误拒 ≤5% | FAIL | 该拒则拒 19/24=79.2%；误拒 63/124=50.8% |
+| G-6 | P95 ≤ 8s | UNVERIFIED | 7268ms，分母＝口径未标注（U-106 前回执） |
+| G-7 | 口径一致性 ≥95% | FAIL | 一致 1/13 = 7.7% |
+| G-8 | 澄清 ≤15% 且澄清后一次成功 ≥80% | UNVERIFIED | 30/166=18.1%；0.0% |
+
+口径提醒：W60 的 `easy×low 7/8=87.5% FAIL` 出自**非官方**复算件 `eval/results_r60_gate_recompute.json`，与官方快照的 `0/10` 是两份不同取数；两者**都判 FAIL**，但数值不得互换引用，官方文件亦未刷新。
+
+### 79.2 文档矛盾四条（不采信任何一方，逐条交总控核）
+
+**D-1 工作树描述与仓库实际不符【中】**
+`HANDOFF_2026-10-21.md` §3.1／§6.6 声明工作树 = `M w8/DELIVERY.md`、`M w8/RELAY.md`、`?? W60_CHECKPOINT.json`、`?? results_r60_gate_recompute.json`、`?? .workbuddy/`。实测那 4 个 W8 文件**已在 `de69315` 提交**、工作树干净；实际未提交项是 `eval/cassettes/w6_batch.jsonl`（交接未记录）。⇒ 交接快照落后 3 笔 docs-only 提交（`8b2b5e2`／`f0b724b`／`de69315`），且漏记一项改动。
+
+**D-2 未归属 cassette 改动（见 79.3）【高】**
+
+**D-3 W60 证据内部身份不一致【中】**
+`W60_CHECKPOINT.json` 自报 `head=fc97acb`、`updated_at=2026-10-19T09:32:41+00:00`，但它由更晚的 `de69315` 提交；同件 `live_two_case` 写 `git_dirty=true`，而 `results_r60_gate_recompute.json` 写 `git_dirty=false`（两者取证面不同）。⇒ 需 W8 在回执中一句话说明每份证据绑定的是哪棵树、哪次跑。
+
+**D-4 门禁口径易被混用【低】**
+官方快照 G-2 为 `0/10=0.0%`（W6 时代），W60 复算为 `7/8=87.5%`。二者都 FAIL，但官方快照自 2026-10-07 起未刷新（文件 tracked 且无 M）。验收引用时必须写明“哪一份文件”。
+
+### 79.3 未归属改动登记（第 0 步产出，QA 不 touch）
+
+| 面 | 现读 |
+|---|---|
+| 文件 | `eval/cassettes/w6_batch.jsonl`（W6 官方门禁批次的输入匣带；`eval_metrics.meta.run_config.cassette` 指向它、`mode=record`） |
+| 改动 | `+3` 行，无删除；mtime `2026-10-21 19:40`（晚于交接快照 19:00） |
+| 内容 | 3 条均为 `status: 401`、`model: deepseek-v4.1-flash`、`path: /v1/chat/completions`、`max_tokens=384`、normalize+intent 合并提示词（语义包 `2026.09.14.1`） |
+| 错误体 | `{"error":{"code":"","message":"Invalid token (request id: 20261021114010693207483G4RxGcqf2NjfWVU7)","type":"new_api_error"}}` |
+| 计费 | 鉴权失败 ⇒ 0 token、0 费用 |
+| 归属 | **非本窗所为**；W60 的 `CHECKPOINT`／W8 `RELAY §60` 均未登记；`2026-10-20` 之后仅该文件与交接文档有变动（全树 find 实测）⇒ 来源不明，登记为**未归属** |
+| 副作用 ① | 属 `eval/**`＝W8 写面；QA 不提交、不改写、不清理 |
+| 副作用 ② | 该匣带是 W6 门禁输入；若将来同 prompt 重放，会命中缓存的 401 而产出**假 error** |
+| 副作用 ③ | 这 3 条**不得**当“provider 尾延迟波动”的证据——它是**凭据失效**（401 Invalid token），不是模型行为 |
+
+**请总控定性（三选一，QA 不代选、不执行）**
+
+- **A（建议）** 由 W8 执行 `git checkout -- eval/cassettes/w6_batch.jsonl` 恢复至 `fc97acb` 版本：清掉 401 污染，代价是丢弃 3 条无证据价值的失败探针。风险最低，且能立刻满足“工作树无未归属改动”。
+- **B** 由 W8 按名 stage 单独提交并认领，附一句来源说明（何时、何脚本、为何目标写进 W6 匣带）：保真，但会把一次失败探针固化进门禁输入。
+- **C** 留在盘上不提交，等后续真打覆盖：**不可取**，脏工作树会直接阻断收口条件（HANDOFF §6.8「工作树没有未归属改动」）。
+
+附带要求（不论选哪条）：请 W8 确认这 3 条**不属于**某次未记账的 W60 复跑。支持“单点探针”的证据：19:40 之后无任何新 `eval/**` 结果产物、无新日志、无对应 report。
+
+### 79.4 新增阻塞登记：live 凭据 401
+
+- 现网 LLM 调用返回 **401 Invalid token**（时间戳 `2026-10-21 19:40:10 +0800`）。
+- 影响面：G-5 的 11 条 `LlmTimeout` 归因复现、τ 校准的 n≥3 采样、任何 live 二轮复跑，**全部需要出站** ⇒ 在凭据修复前，这些卡点无法推进。
+- 零出站可做的仍成立：读 W60 已有产物做 desk-check 验收、G-2/G-5 分母与终态复核、τ schema 缺件核对、secrets 计数复核。
+- 请总控裁：先修凭据（`deploy/.env` 那条已被 401 的 key），还是先只做零出站验收。**QA 不读、不打印、不改 `.env`。**
+
+### 79.5 停手点
+
+本节止于登记。W60 正式验收**未开始**；在收到 W8 回执与总控对 79.3 的定性前，本窗不开工、不出站、不落 W60 验收节。
+
+## 80 · W8 第 60 轮验收：分栏与口径可收；城市修复证据不成立（cassette_miss 空转）；W60 代码无同批实测（QA R31bc ｜ 2026-10-22 01:25 +0800 ｜ HEAD `de69315`／616 笔）
+
+### 80.0 结论
+
+**部分可收，整体不通过。** W60 是「复算＋归因＋文档」轮，不是「修复已验证」轮：其代码提交 `7de77ce` 没有任何同批 G-5 实测，报告里的 G-5 读数全部复算自 r59（`8b67705`，早于 W60 代码）。
+
+**可收四项**
+1. **G-5 error/clarify 分栏矩阵**（`eval/results_r60_g5_error_clarify.json`）：11 条逐条带节点、耗时、重试、匣带索引；15 条逐条带 hint 与分类。QA 独立复算一致。
+2. **cassette 401 事故按 A 案处置**：QA 现读 `750` 行、`git diff` 为空、备份 `E:/codex/w8r61/w6_batch.jsonl.with401_3lines.bak`（14,321,497B）在盘。§79.3 的 D-2 闭环。
+3. **D-3 身份标注**：`W60_CHECKPOINT.json` 新增 `head_note`／`committed_by`／`evidence_tree_map`，八份证据逐份标树与 dirty，且明确写「`live_two_case` 是 dirty=true 的 live 观测，不是干净证据」。
+4. **r61 复算件**（`eval/results_r61_gate_recompute.json`）：`zero_outbound=true`、`dirty_paths` 只列 QA 三件、`w8_surface_dirty=false` —— 把「谁把工作树搞脏」写清楚了，属诚实登记。
+
+**不可收四项（本轮验收的实质结论）**
+1. 🔴 **「城市 5 条越过 clarify」证据不成立**：盘上 `E:\codex\w8r60\replay_city_fix_clean.json` 5/5 全为 `cassette_miss`、`n_scored=0`、`tokens_total=0`、wall ≤0.137s、`terminal=None`、节点停在 `link`。这是**匣带未命中后链路中断**，不是「修复让 5 条越过澄清」。改 prompt 必导致 normalize 请求 hash 变化 ⇒ 用 r59 匣带回放 W60 的城市修复在原理上就不可能成立。
+2. 🔴 **W60 代码无同批 G-5 实测**：`W60_CHECKPOINT.json` 自写 `g5_error_clarify_matrix = 复算自 results_r59_full166.json（8b67705）`；而 W60 代码是 `7de77ce`。⇒ 99/11/15/23 这组数是**修复前**的读数。任何「W60 改善了 G-5」的说法，本轮无证据。
+3. 🔴 **「归因撤回」与原始件不一致**：r59 原始记录里 `M-MET-01`／`H-ENUM-04` 的 `attribution.category` 仍是 `gate_policy_gap`（signal 写「F1 排序键用了投影别名 ⇒ R06」）。撤回只有 2 例回放（`replay_attribution_clean2.json`：complete ×2、`equivalent=0`、归因改为 `time_semantics`／`value_mapping`）支撑，且两条**仍不等价**。⇒ 撤回属分析性重判，不是新测量，且原始件未同步。
+4. 🔴 **live 面 H-ENUM-04 仍 error**：`w60_live_attr.json`（`7de77ce`／`dirty=true`）2 例中 `M-MET-01` complete＋eq=false（28,062 tok／16.463s），`H-ENUM-04` **error**（17,310 tok／31.725s）。⇒ 不能写「三条契约件已修复」。
+
+**状态不变**：G-2 FAIL（7/8）、G-5 UNVERIFIED、G-8 UNVERIFIED、τ UNVERIFIED、secrets not-green、官方门禁未刷新（`88f3500`／PASS 1/8）、U-127 open。
+
+### 80.1 QA 独立复算（零出站，本窗实跑）
+
+| 面 | 现读 | 判 |
+|---|---|---|
+| 提交／树 | HEAD＝origin/main＝`de69315`／616 笔；QA 三件 M ＋ W8 两件 M ＋ r61 一件 ?? | ✅ |
+| G-2 | `reporter.recompute_gate` ⇒ **FAIL｜easy×low 7/8 = 87.5%** | 🔴 与 W8 自报一致 |
+| G-5 | ⇒ **UNVERIFIED｜23/24 = 95.8%；误拒 0/124 = 0.0%** | 🟡 未通过 |
+| G-8 | ⇒ **UNVERIFIED｜24/166 = 14.5%；二次成功 0.0%** | 🟡 未通过 |
+| 全量分布 | 166 = complete 105／error 13／clarify 24／refuse 24；`terminal_code`：11 `LLM_UPSTREAM_ERROR` ＋ 2 `GATE_AST_REJECTED` | ✅ 可复算 |
+| 11 条 error 节点 | `normalize_intent 6`／`l4_score 2`／`gen_sql 3`；**全部 `last_degrade_error=LlmTimeout`、`retries=0`、`scored=true`** | ✅ 与 W8 一致 |
+| 11 条 error 耗时 | 9 条 `hard_15s=true`、节点耗时 15.006–15.019s（撞 15s flash 客户端硬超时）；2 条 `l4_score` `hard_15s=false` 且 `node_latency_ms` 缺测 | ✅ 登记 |
+| 匣带存在性 | 6 条 normalize 超时 `cassette_request_count=0`（**硬超时无响应记录**）⇒ 这 6 条离线不可复现 | ⚠️ 限制 |
+| 15 条 clarify | **全部 `expected=execute`**；分类 1 冻结口径／5 纯误澄清／8 含 gold on_sale 冲突／1 时间歧义 —— 与 W8 一致 | ✅ 分类可追溯 |
+| 15 条原始归因 | r59 原始记录里 15 条 `attribution` **全是 `field_binding`/`normal`** ⇒ 「8 条属 gold 冲突」是 W8 后验分析，非原始件字段 | ⚠️ 需注明 |
+| 三条契约件 | `E-MET-08=clarify`（列数 1/0）；`M-MET-01=complete` eq=false；`H-ENUM-04=complete` eq=false | 🔴 均不等价 |
+| 城市 5 条 | `replay_city_fix_clean.json`：5/5 `cassette_miss`，`n_scored=0`，0 token | 🔴 证据空转 |
+| 归因 2 例 | `replay_attribution_clean2.json`：2/2 scored、complete、eq=0；56,159 tok／0.140766 | 🟡 归因变、等价未变 |
+| live 2 例 | `w60_live_attr.json`（`7de77ce`／dirty=true）：1 complete＋1 error | 🔴 |
+| 离线回归（QA 自跑） | **2606 passed／0 failed／1 warning（194.82s）**，rc=0；日志 `E:\WorkBuddyDL\qa_r61_offline.log` | ✅ 由自报升为实测 |
+| 集成回归 | **未复跑**（Docker 未启动，见 80.4） | ⚠️ 未核实 |
+| 五查 | Docker 未启动 ⇒ 台账／残渣／容器三项**未核实** | ⚠️ 不得写「逐位不动」 |
+| cassette | 750 行、无 diff、备份在盘 | ✅ |
+| checkpoint 卫生 | `updated_at` 仍 `2026-10-19T09:32:41Z`（文件 10-22 改过却未更）；`secrets.history_commits` 仍 612，而 r61 已按 616 重扫 | ⚠️ 小瑕 |
+| 官方门禁 | `88f3500`／PASS 1・FAIL 3・PARTIAL 2・UNVERIFIED 2；未刷新 | 🔴 |
+| 本窗出站 | **0**（连通探针全部网络层失败，0 token 0 费用，见 80.4） | ✅ |
+| 边界 | 未改业务代码／测试／`semantic/**`／`eval/**`／`reports/w8/**`／冻结集／阈值／15s／gold；未碰共享 `ecom` | ✅ |
+
+### 80.2 关键缺陷复述：为什么「城市 5 条」不能算证据
+
+```text
+replay_city_fix_clean.json  summary: n_records 5, n_scored 0, n_unscored 5,
+                            terminal_distribution {"None": 5}, tokens_total 0
+每一条: infra = cassette_miss: 匣带未命中（w8_r59_full166.jsonl）
+        nodes = trusted_context -> normalize -> intent -> link   ← 停在 link，没有终态
+```
+
+`cassette_miss` 是评测基建信号，按项目自己的判据口径属 **unscored/infra**，不得计入任何门禁分子或分母，更不得反过来证明「修好了」。**若 W8 另有真打件证明该 5 条越过 clarify，请给路径；否则本轮该项判「无证据」。**
+
+### 80.3 判据变更（上游错误记 unscored）—— QA 意见
+
+W8 上呈的问题是「`LLM_UPSTREAM_ERROR`／`LlmTimeout` 是否记 `unscored`」。**QA 明确反对按 unscored 处理**，三条理由：
+
+1. **它会直接让 G-2 变绿**：`easy×low` 8 条里唯一失败者 `E-VER-11` 就是上游超时；标 unscored 后分母 8→7、7/7=100%，门禁「通过」。这正是「剔除分母凑门」的红线形态，与既有纪律（硬超时=判据失败、不剔分母）冲突。
+2. **成因已定位，不是玄学**：9/11 条撞的是 **15s flash 客户端硬超时**（`build.py:390` 注释：U-67 后 P0 恒 flash／15s），生产 `LLM_TIMEOUT_SECONDS=60`、`effective` 里 LLM 节点 162s。⇒ 这是**评测侧配置比生产严 4–10 倍**造成的人为淘汰，不是模型能力问题。
+3. **正确做法是「不动作 + 说清楚」或「另立门」**：① G-2 判据不动、继续 FAIL，报告里写明「唯一红点为 15s 评测超时，非语义/结构错误」；② 另立可用性指标（如 upstream-error rate ≤X%）单独报，不参与 G-2 分母。**改判据或调 15s 均属总控裁决，W8/QA 均不得自签。**
+
+### 80.4 本窗未能完成的两项（不掩盖）
+
+- **Docker 未启动**：`npipe:////./dockerDesktopLinuxEngine` 连不上 ⇒ 台账 `1830|3.025849|…` 无法现读、残渣库无法核对、容器数无法核对、集成 124 无法复跑。**本轮不得写「台账逐位不动／残渣仅两库／集成 124」。**
+- **新 key 无法在 QA 窗验证**：沙箱直连 `kuaipao.pro:443` 与 `api.deepseek.com:443` 均 15s 超时，本地代理对 `kuaipao.pro` 返回 `CONNECT 502`；一次 `/v1/models` 曾返回 401 后又不可达。⇒ **探针结论：网络路径不可用，无法判定 key 有效或无效**；3 次尝试均 0 token／¥0。key 需由总控/W8 注入 `deploy/.env` 后再验，QA 不写、不读、不打印该文件。
+
+### 80.5 验收总判
+
+**第 60 轮验收：不通过（部分可收）。** 可收 = 分栏矩阵、cassette A 案处置、证据身份标注、r61 零出站复算；不可收 = 城市修复（证据为 `cassette_miss` 空转）、W60 代码无同批 G-5 实测、归因撤回与原始件不一致、live 面 H-ENUM-04 仍 error。G-2／G-5／G-8／τ／secrets／官方门禁状态一字不变；**不得刷新 `backend/reports/w6/eval_metrics.json`**。
+
+### 80.6 W61 建议块（**仅供参考，待总控点句才生效**）
+
+```text
+【W8 第 61 轮｜先把「改了的代码」测一遍，再谈门禁】
+
+0. 前置：总控先注入可用 key 到 deploy/.env，并跑一次 8-token 连通探针；不通就别开跑。
+   现读 HEAD 让 QA 复核；不改 15s/阈值/判据/gold/冻结集/语义包；证据必须绑 git_rev+dirty=false。
+
+1. 🔴 A 城市修复必须真打重录（本轮 P0，唯一能救 W60 结论的活）
+- 现状：replay_city_fix_clean.json 5/5 cassette_miss，n_scored=0，证据为空转。
+- 改 prompt 后 r59 匣带必然 miss ⇒ 只能 live 重录 5 条（M-DIM-05、M-HIER-03、X-STR-03、X-STR-05、X-STR-07），
+  记录 git_rev + dirty=false + tokens + 每条终态；目标：5 条全部 complete（不再 clarify）。
+- 预算上界 ¥0.15（按 r59 单条均值估），超了就停并报。
+
+2. 🔴 B 三条契约件定性（不再回放，直接 live 各 1 次）
+- E-MET-08「含未支付」：clarify 是否应为 refuse/execute，先给契约判断，再决定改不改。
+- M-MET-01 / H-ENUM-04：live 面 H-ENUM-04 是 error（31.725s）⇒ 先确认是不是又一次 15s 超时；
+  若是，归入 A 类可用性问题，不得写成语义修复失败。
+- 三条都不得为贴 gold 改判据；归因结论必须回写原始件字段，不能只改报告叙述。
+
+3. 🔴 C 可用性单列（不碰 G-2 判据）
+- 11 条 error 单列一张表：节点／task／hard_15s／cassette 有无／wall；给出 upstream-error rate。
+- 是否另立可用性门禁 = 总控裁；本轮 W8 只出数据，不改判据。
+
+4. 不做
+- 不把上游错误标 unscored、不剔分母（QA 已反对，见 TASK_BOARD §80.3）。
+- 不动 G-8 二轮回路、不碰 τ 校准（都等 A/B 收敛且 key 可用）。
+- 官方门禁未刷新就写未刷新。
+```
+
+### 80.7 总控侧待点句
+
+- 🔴 **判据**：上游错误是否另立可用性门禁（QA 建议：另立、G-2 判据不动且继续 FAIL）。
+- 🔴 **凭据**：新 key 谁注入、何时注入；注入后是否需要 QA 复验（QA 窗网络不可用，建议由 W8 出 8-token 探针回执）。
+- 🟡 **W8 三件提交**：`w8/RELAY.md`／`w8/W60_CHECKPOINT.json`／`eval/results_r61_gate_recompute.json` 仍 M/?? —— 提交后再由 QA 复读一次，验收结论才绑得上提交号。
+- 🟡 **城市 5 条**：是否有真打件？没有就按 §80.6-A 重做。
+
+## 81 · W60 回执 v2 收讫与判词分层订正；总控三项裁决落账（QA R31bd ｜ 2026-10-22 10:35 +0800 ｜ HEAD `de69315`／616 笔）
+
+### 81.0 订正范围（只追加，不改 R31bc 正文）
+
+W8 回执 v2 撤回了 v1 的「城市 5 条越过 clarify」整条，并把「修复前批次」写成机器可读字段。**R31bc 记录的四条事实一条未变**，变的是判词需要按口径分层：
+
+| 口径 | W60 判定 |
+|---|---|
+| 按「**修复已验证**」验收 | 🔴 **不成立**（城市端到端 UNVERIFIED／无同批 G-5 实测／live H-ENUM-04 仍 error） |
+| 按「**复算＋归因＋文档轮**」验收 | ✅ **可收**（四条交付物齐、可复算、边界干净） |
+
+即：**W60 作为一轮"把话说清楚"的工作可以收；作为"把问题修好"的工作不能收。** 官方门禁仍不得刷新。
+
+### 81.1 v2 新增可核项（QA 现读）
+
+| 项 | 现读 | 判 |
+|---|---|---|
+| `measurement_scope` | 三字段全 `false`（`g5_same_batch_as_w60_code`／`g2_same_batch_as_w60_code`／`city_fix_end_to_end_verified`），note 写明 `8b67705` 是 `7de77ce` 的祖先、匣带 5 条属基建信号 | ✅ 字段与值均实测存在 |
+| 批次先后 | `git merge-base --is-ancestor 8b67705 7de77ce` ⇒ rc=0 | ✅ 自报成立 |
+| 城市代码级证据 | `backend/tests/unit/test_normalize_city_clarification.py` + `backend/tests/contract/test_city_clarification_demotion_contract.py` ⇒ QA 实跑 **5 passed**（4＋1） | ✅ 代码级成立、端到端 UNVERIFIED |
+| cassette | 750 行、`git diff` 空、备份在盘（R31bc 已核，保持） | ✅ |
+| r61 secrets | 57／51／94 @616 笔 | 🟡 读文件核，QA 未复跑 gitleaks |
+
+### 81.2 总控裁决落账（2026-10-22，本窗生效）
+
+1. **判据（采纳 QA §80.3 意见）**：**不把** `LLM_UPSTREAM_ERROR`／`LlmTimeout` 记 `unscored`；G-2 判据与分母**保持不动、继续 FAIL**；可用性另立指标单列。⇒ W8 不得改 `eval/runner.py` 的 `scored` 语义，也不得改 15s 来凑门。
+2. **提交**：W8 三件（`backend/reports/w8/RELAY.md`、`backend/reports/w8/W60_CHECKPOINT.json`、`eval/results_r61_gate_recompute.json`）**准予按名 stage／commit／push**；禁止 `git add -A`，`.workbuddy/` 不入库。提交后 QA 复读三行 diff，把 R31bc／R31bd 绑到提交号转正式。
+3. **W61 派单**：`§80.6` 块**生效**——A 城市 5 条真打重录（上界 ¥0.15）→ B 三条契约件 live 各 1 次 → C 可用性单列。前置：key 注入 `deploy/.env` 且 8-token 连通探针通过；不通过则该轮不开跑。
+
+### 81.3 仍未闭项（不因 v2 消失）
+
+- 城市修复**端到端 UNVERIFIED**（需 live／重录匣带）；
+- W60 代码**无同批 G-5 实测**；
+- **归因不稳**：同一 `H-ENUM-04`，replay 给 `value_mapping`、live 给 `sql_generation` ⇒ 归因结论本身不可作为定位依据；
+- live `H-ENUM-04` error（`dirty=true`，非干净证据）；
+- secrets 57／51／94 不绿；官方门禁 `88f3500` 未刷新；U-127 open；
+- **Docker 未启动** ⇒ 台账／残渣／容器／集成 124 仍未核实（自 R31bc 延续）。
+
+### 81.4 引用纪律（对 W8 v2「可写」清单的补充）
+
+v2 写「G-1 端到端跑通」可以，但**必须带树**：QA 的 `offline 2606/0`（194.82s）跑在 **`de69315` 工作树**上（工作树含 W8 三件未提交改动，但不含 `app/**`／`tests/**` 代码变更），不是 `7de77ce` 树；W8 自报的 2606 是 `7de77ce` 树。两者条数相同，但引用时不得省掉树名。

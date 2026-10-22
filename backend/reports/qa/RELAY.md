@@ -4709,3 +4709,117 @@ P0 前置化可收；G-2／G-5／G-8 未达门，τ 仍未校准，secrets 未�
 - 本窗未动 semantic/**、eval/**、backend/app/**、backend/tests/**、reports/w8/**、冻结集、阈值、15s 或共享 ecom；未打印／提交凭据。
 - 待总控裁：① G-5 的 11 execute error + 15 clarify 是否继续按“超时=判据失败、不剔分母”；② τ 校准必须先补 candidate IDs + gold label；③ secrets 历史 94 是否接受 reviewed fingerprint baseline。
 - W60 块见 TASK_BOARD §78.2；不得把 3fa31c5 写成收口点。
+
+## 74 · QA 接手侦查（W60 验收前置）：基线现读、文档矛盾四条、未归属 cassette 改动与 401 阻塞（**非验收节** ｜ 2026-10-22 00:05 +0800 ｜ HEAD `de69315`／616 笔）
+
+### 74.0 定位
+
+接手窗只读侦查的落账点。详表见 `TASK_BOARD §79`，本节只留结论与待点句。**W60 未验收**，本节不构成任何验收判词。
+
+### 74.1 现读要点
+
+| 面 | 现读 | 级 |
+|---|---|---|
+| 提交／树 | HEAD＝origin/main＝`de69315`／616 笔；工作树 ` M eval/cassettes/w6_batch.jsonl` ＋ `?? .workbuddy/` | 【实测】 |
+| 官方门禁 | `88f3500`／`dirty=false`／生成于 `2026-10-07T05:27:34Z`／PASS 1・FAIL 3・PARTIAL 2・UNVERIFIED 2 | 【实测】 |
+| 逐格 | G-1 PASS；G-2 `0/10=0.0%`；G-3 `48/50`；G-4 RLS 未在真实 DB 层验证；G-5 `19/24`、误拒 `63/124`；G-6 `7268ms` 分母未标注；G-7 `1/13`；G-8 `30/166`、二次成功 `0.0%` | 【实测】 |
+| τ | `0.20`／`calibrated_under_eval_env=false`／四项校准元数据未声明 | 【实测】 |
+| W59 | `TASK_BOARD §78`／本节 §73／`QA_LEDGER R31ba` 一致 | 【实测】 |
+| W60 | 产物齐、已 tracked（`fc97acb` 与 `de69315` 两笔）；**QA 无落笔 ⇒ 未验收** | 【实测】＋【推断】 |
+
+### 74.2 交接文档矛盾四条
+
+- **D-1** 交接称工作树有 4 个未提交 W8 文件；实测已全部在 `de69315` 提交，实际未提交项是交接未记录的 `eval/cassettes/w6_batch.jsonl`。
+- **D-2** 该 cassette 改动未归属（详 74.3）。
+- **D-3** `W60_CHECKPOINT.json` 自报 `head=fc97acb`／`live_two_case.git_dirty=true`，而 `results_r60_gate_recompute.json` 自报 `git_dirty=false` ⇒ 需 W8 说明各自绑定哪棵树。
+- **D-4** 官方快照 G-2 `0/10` 与 W60 复算 `7/8=87.5%` 是两份取数，均 FAIL，引用时须写文件名。
+
+### 74.3 未归属 cassette 改动（第 0 步产出）
+
+`eval/cassettes/w6_batch.jsonl` 被追加 3 条 `status: 401`／`deepseek-v4.1-flash`／`max_tokens=384` 的 normalize 调用，mtime `2026-10-21 19:40`，错误体为 `Invalid token`。鉴权失败 ⇒ 0 token／0 费用。非本窗所为，W8 报告未登记，`2026-10-20` 后全树仅此文件与交接文档有变动 ⇒ 判**未归属**。
+
+- 处置三选一（QA 不代选、不执行）：**A 建议** `git checkout --` 恢复至 `fc97acb` 版本（清污染、代价最小）；**B** 由 W8 按名 stage 单独提交并认领来源；**C** 留盘不提交（阻断收口条件，不可取）。
+- 附要求：W8 确认这 3 条不属于某次未记账的 W60 复跑（支持“单点探针”的证据：19:40 后无新 eval 产物、无日志、无报告）。
+- 风险：该匣带是 W6 门禁输入；若同 prompt 重放会命中缓存 401 ⇒ **假 error**。这 3 条**不得**当 provider 波动证据。
+
+### 74.4 新增阻塞：live 凭据 401
+
+现网 LLM 返回 `401 Invalid token`。凡需出站的卡点（G-5 的 11 条 `LlmTimeout` 归因复现、τ 校准 n≥3 采样、任何 live 二轮跑）在凭据修复前**不可推进**；零出站的 desk-check 验收不受影响。QA 不读、不打印、不改 `deploy/.env`。
+
+### 74.5 边界与下一步
+
+- 本窗零出站、零提交、零推送；未动 `eval/**`／`semantic/**`／`backend/app/**`／`backend/tests/**`／`reports/w8/**`／冻结集/阈值/15s/gold；`.workbuddy/` 未清理。
+- 待总控点：① 74.3 的 A/B/C 定性；② 先修凭据还是先做零出站验收；③ W8 回执何时交 QA。
+- 回执到齐且定性落定后，才开 W60 验收节；W60 未验收前**不得**刷新 `backend/reports/w6/eval_metrics.json`。
+
+## 75 · W8 第 60 轮验收：分栏与口径可收；城市修复证据不成立；W60 代码无同批实测（QA R31bc ｜ 2026-10-22 01:25 +0800 ｜ HEAD `de69315`／616 笔）
+
+### 75.0 结论
+
+**部分可收，整体不通过。** W60 是「复算＋归因＋文档」轮：其代码 `7de77ce` 没有任何同批 G-5 实测，报告里的 G-5 读数全部复算自 r59（`8b67705`，早于该代码）。
+
+- ✅ 可收：11 error＋15 clarify 分栏矩阵（逐条可追溯，QA 独立复算一致）；cassette 401 按 A 案处置（750 行、无 diff、备份在盘）；`evidence_tree_map` 八份逐份标树；r61 零出站复算件（`w8_surface_dirty=false` 诚实）。
+- 🔴 不可收：① **城市 5 条证据空转** —— `replay_city_fix_clean.json` 5/5 `cassette_miss`、`n_scored=0`、0 token、停在 `link`；② **W60 代码无同批 G-5 实测**（矩阵自写「复算自 r59」）；③ **归因撤回与原始件不一致**（r59 仍写 `gate_policy_gap`，撤回只有 2 例回放且仍 `equivalent=0`）；④ **live 面 H-ENUM-04 仍 error**（31.725s）。
+
+### 75.1 独立复算
+
+| 面 | 现读 | 判 |
+|---|---|---|
+| G-2／G-5／G-8 | FAIL `7/8`；UNVERIFIED `23/24`＋`0/124`；UNVERIFIED `24/166`＋`0.0%` | 🔴／🟡 |
+| 全量 166 | 105／13／24／24；11 `LLM_UPSTREAM_ERROR`＋2 `GATE_AST_REJECTED` | ✅ |
+| 11 error | normalize 6／l4_score 2／gen_sql 3；全 `LlmTimeout`、`retries=0`、9 条撞 15s | ✅ |
+| 匣带 | 6 条 normalize 超时 `cassette_request_count=0` ⇒ 不可离线复现 | ⚠️ |
+| 15 clarify | 全 `expected=execute`；1／5／8／1 分类一致；但原始 `attribution` 全为 `field_binding` | ✅／⚠️ |
+| 三条契约件 | clarify／complete／complete，均 `equivalent=false` | 🔴 |
+| 离线（QA 自跑） | **2606 passed／0 failed（194.82s）** | ✅ 实测 |
+| 集成／五查 | **未核实**（Docker 未启动） | ⚠️ |
+| 门禁 | `88f3500`／PASS 1/8，未刷新 | 🔴 |
+| 出站 | 0（连通探针全部网络层失败，0 token 0 费用） | ✅ |
+
+### 75.2 判据问题（QA 意见，已上升总控）
+
+W8 问「上游错误能否记 `unscored`」。**QA 反对**：`easy×low` 唯一失败者 `E-VER-11` 正是 15s 超时，标 unscored ⇒ 分母 8→7、7/7＝100%，等于剔分母凑门；且成因已定位为**评测 15s vs 生产 60s/162s 的配置差**（`build.py:390`）。建议：G-2 判据不动、继续 FAIL，另立可用性指标单列。
+
+### 75.3 未能完成（不掩盖）
+
+- Docker 未启动 ⇒ 台账／残渣／容器／集成 124 **未核实**，本轮不得写「逐位不动／残渣两库／124」。
+- 新 key 在 QA 窗**无法验证**：直连 `kuaipao.pro`／`api.deepseek.com` 均超时，本地代理 `CONNECT 502`；探针结论「网络路径不可用」，不判 key 好坏。
+
+### 75.4 边界与下一步
+
+- 本窗未改业务代码／测试／`semantic/**`／`eval/**`／`reports/w8/**`／冻结集／阈值／15s／gold；未碰共享 `ecom`；`.workbuddy/` 未清；未提交、未推送。
+- W61 建议块见 `TASK_BOARD §80.6`（**待总控点句才生效**）：A 城市 5 条真打重录（上界 ¥0.15）／B 三条契约件 live 各 1 次／C 可用性单列；不做 unscored、不碰 G-8 二轮、不碰 τ。
+- 官方门禁未刷新；W60 三件未提交前，本验收结论绑不上提交号，提交后 QA 复读一次即转正式。
+
+## 76 · W60 回执 v2 收讫：判词分层成立；总控三项裁决落账（QA R31bd ｜ 2026-10-22 10:35 +0800 ｜ HEAD `de69315`／616 笔）
+
+### 76.0 订正
+
+W8 v2 撤回「城市 5 条越过 clarify」，并把「修复前批次」写成字段（`measurement_scope` 三 false ＋ 祖先关系说明）。**R31bc 的四条事实一条未变**，判词改为分层：
+
+- 按「修复已验证」验收 ⇒ **不成立**（城市端到端 UNVERIFIED、无同批 G-5 实测、live `H-ENUM-04` 仍 error）。
+- 按「复算＋归因＋文档轮」验收 ⇒ **可收**（四条交付物齐、可复算、边界干净）。
+
+⇒ W60 收的是「话讲清楚了」，不是「问题修好了」。官方门禁不得刷新。
+
+### 76.1 核验
+
+| 项 | 现读 | 判 |
+|---|---|---|
+| `measurement_scope` | 三字段全 false ＋ note 写清 `8b67705` 为 `7de77ce` 祖先 | ✅ |
+| 批次先后 | `git merge-base --is-ancestor 8b67705 7de77ce` rc=0 | ✅ |
+| 城市代码级 | unit 4 ＋ contract 1 ⇒ QA 实跑 **5 passed** | ✅ 端到端仍 UNVERIFIED |
+| cassette | 750 行、无 diff、备份在盘 | ✅ |
+| r61 secrets | 57／51／94 @616 | 🟡 未复跑 gitleaks |
+
+### 76.2 总控裁决（本窗落账）
+
+1. **判据**：上游错误不记 `unscored`；G-2 分母不动、继续 FAIL；**另立可用性指标**单列。W8 不得改 `scored` 语义或 15s。
+2. **提交**：W8 三件准予按名 stage／commit／push（禁 `git add -A`，`.workbuddy/` 不入库）；提交后 QA 复读三行 diff 转正式。
+3. **W61**：`TASK_BOARD §80.6` 生效 —— A 城市 5 条真打重录（¥0.15 上界）→ B 三条契约件 live 各 1 次 → C 可用性单列；前置 key 注入＋探针通过。
+
+### 76.3 未闭项与引用纪律
+
+- 未闭：城市端到端 UNVERIFIED／无同批 G-5／**归因不稳**（同一 `H-ENUM-04` replay=`value_mapping`、live=`sql_generation`）／live error（dirty=true）／secrets 不绿／门禁未刷新／U-127 open／Docker 未启动致台账·残渣·集成未核实。
+- 引用纪律：QA 的 `offline 2606/0`（194.82s）跑在 **`de69315` 工作树**；W8 的 2606 是 `7de77ce` 树。条数相同但**不得省树名**。
+- 本窗零出站、零提交、零推送；未动 `app/**`／`tests/**`／`semantic/**`／`eval/**`／`reports/w8/**`／冻结集／阈值／15s／gold。

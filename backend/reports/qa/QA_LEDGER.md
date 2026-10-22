@@ -1500,3 +1500,69 @@
 | 14 | 边界 | 未动 semantic／eval／app／tests／reports_w8／冻结集／阈值／15s／共享 ecom；U-127 open；G-8 未跑 | ✅／🔴 |
 
 **结论**：第 59 轮 P0 前置化可收，但整体不通过：G-2 仍 FAIL（7/8=87.5%），G-5/G-8 仍 UNVERIFIED，secrets 57/51/94 不绿，官方门禁仍 PASS 1/8。W60 按 TASK_BOARD §78.2 执行；不得写收口或门禁通过。
+
+## R31bb · QA 接手侦查（W60 验收前置）：基线现读＋文档矛盾四条＋未归属 cassette 改动登记（**非验收**） ／ 2026-10-22 00:05 +0800 ／ HEAD `de69315`／616 笔
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 提交／树 | HEAD＝origin/main＝`de69315`／616 笔 | ✅ |
+| 2 | 工作树 | ` M eval/cassettes/w6_batch.jsonl`（+3 行，mtime 10-21 19:40）＋ `?? .workbuddy/` | ⚠️ 未归属 |
+| 3 | 官方门禁 | `88f3500`／`dirty=false`／`2026-10-07T05:27:34Z`；PASS 1・FAIL 3・PARTIAL 2・UNVERIFIED 2 | 🔴 未刷新 |
+| 4 | 逐格 | G-1 PASS；G-2 `0/10`；G-3 `48/50`；G-4 RLS 未经真实 DB；G-5 `19/24`＋误拒 `63/124`；G-6 `7268ms` 分母未标注；G-7 `1/13`；G-8 `30/166`＋`0.0%` | 🔴 |
+| 5 | τ | `0.20`／`calibrated_under_eval_env=false`／四项元数据未声明 | 🔴 |
+| 6 | W59 | `TASK_BOARD §78`／`RELAY §73`／R31ba 一致 | ✅ |
+| 7 | W60 | W8 产物齐且已 tracked；**QA 无落笔 ⇒ 未验收** | ⏸ 未验收 |
+| 8 | 文档矛盾 | D-1 工作树清单过期（W8 文件已在 `de69315` 提交）／D-2 cassette 未归属／D-3 checkpoint `fc97acb`+`dirty=true` vs 复算件 `dirty=false`／D-4 官方 `0/10` 与 W60 `7/8` 两份取数 | 🔴 上呈 |
+| 9 | cassette 内容 | 3 条 `401 Invalid token`／`deepseek-v4.1-flash`／`max_tokens=384`／normalize 提示词；0 token 0 费用 | ⚠️ 0 收入、不得作出站证据 |
+| 10 | live 凭据 | 现网 401 ⇒ 需出站的卡点（G-5 timeout 复现、τ 采样、live 二轮）全部阻塞 | 🔴 阻塞 |
+| 11 | 边界 | 未动 `eval/**`／`semantic/**`／`app/**`／`tests/**`／`reports/w8/**`／冻结集／阈值／15s／gold；零出站、零提交、零推送；`.workbuddy/` 未清 | ✅ |
+
+**待总控点**：① cassette 三选一（建议 A：`git checkout --` 恢复至 `fc97acb`，由 W8 执行）；② 先修凭据还是先做零出站 desk-check；③ W8 回执交付时点。
+**结论**：W60 未验收，本窗不开工、不出站、不刷官方门禁；验收前置条件见 `TASK_BOARD §79`。
+
+## R31bc · W8 第 60 轮验收：分栏与口径可收；城市修复证据不成立；W60 代码无同批实测 ／ 2026-10-22 01:25 +0800 ／ HEAD `de69315`／616 笔
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 提交／树 | HEAD＝origin/main＝`de69315`／616 笔；W8 两件 M ＋ r61 一件 ?? 待提交 | ✅ |
+| 2 | D-2 闭环 | cassette 750 行、`git diff` 空、备份 `E:/codex/w8r61/…with401_3lines.bak` 在盘 | ✅ |
+| 3 | G-2 | 独立 `recompute_gate` ⇒ FAIL `easy×low 7/8=87.5%` | 🔴 |
+| 4 | G-5 | UNVERIFIED `23/24=95.8%`、误拒 `0/124=0.0%` | 🟡 |
+| 5 | G-8 | UNVERIFIED `24/166=14.5%`、二次成功 `0.0%` | 🟡 |
+| 6 | 11 error 分栏 | normalize 6／l4_score 2／gen_sql 3；全 `LlmTimeout`、`retries=0`、`scored=true`；9 条撞 15s 硬超时 | ✅ 可追溯 |
+| 7 | 匣带 | 6 条 normalize 超时 `cassette_request_count=0` ⇒ 离线不可复现 | ⚠️ |
+| 8 | 15 clarify | 全 `expected=execute`；1／5／8／1 分类一致；原始 `attribution` 全 `field_binding` ⇒ 分类属后验分析 | ✅／⚠️ |
+| 9 | 三条契约件 | `E-MET-08=clarify`、`M-MET-01=complete`、`H-ENUM-04=complete`，均 eq=false | 🔴 |
+| 10 | 🔴 城市 5 条 | `replay_city_fix_clean.json` 5/5 `cassette_miss`、`n_scored=0`、0 token、停在 `link` ⇒ **证据空转** | 🔴 不成立 |
+| 11 | 🔴 W60 代码实测 | G-5 读数复算自 r59（`8b67705`），早于代码 `7de77ce` ⇒ 修复无同批验证 | 🔴 |
+| 12 | 归因撤回 | 2 例回放 complete 但 `equivalent=0`；r59 原始件仍写 `gate_policy_gap` | 🔴 不一致 |
+| 13 | live 2 例 | `7de77ce`／dirty=true：M-MET-01 complete＋eq=false；H-ENUM-04 error（31.725s） | 🔴 |
+| 14 | 离线（QA 自跑） | **2606 passed／0 failed／1 warning（194.82s）** | ✅ 实测 |
+| 15 | 集成／五查 | **未核实**（Docker 未启动）⇒ 不得写台账逐位不动／残渣两库／124 | ⚠️ |
+| 16 | 出站 | 0（连通探针全部网络层失败，0 token 0 费用）；新 key 无法在 QA 窗判定 | ✅／⚠️ |
+| 17 | checkpoint 卫生 | `updated_at` 仍 10-19（文件 10-22 改）；`history_commits` 仍 612 而 r61 按 616 重扫 | ⚠️ |
+| 18 | 官方门禁 | `88f3500`／PASS 1・FAIL 3・PARTIAL 2・UNVERIFIED 2；未刷新 | 🔴 |
+| 19 | 边界 | 未改代码／测试／`semantic`／`eval`／`reports/w8`／冻结集／阈值／15s／gold；未碰共享 `ecom`；未提交未推送 | ✅ |
+
+**QA 意见（判据）**：反对把上游错误记 `unscored` —— `easy×low` 唯一失败者正是 15s 超时，标 unscored 即分母 8→7、门禁假绿；建议 G-2 判据不动、另立可用性指标单列。
+
+**结论**：第 60 轮验收不通过（部分可收）。可收＝分栏矩阵／cassette A 案／证据身份标注／r61 零出站复算；不可收＝城市修复（`cassette_miss` 空转）／W60 代码无同批实测／归因撤回与原始件不一致／live 面 H-ENUM-04 仍 error。W61 建议块见 `TASK_BOARD §80.6`，待总控点句。
+
+## R31bd · W60 回执 v2 收讫：判词分层成立；总控三项裁决落账 ／ 2026-10-22 10:35 +0800 ／ HEAD `de69315`／616 笔
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | v2 变更 | 撤回「城市 5 条越过 clarify」；补 `measurement_scope` 三 false；W60 定性改「复算＋归因＋文档轮」 | ✅ 与 QA R31bc 一致 |
+| 2 | `measurement_scope` | `g5/g2_same_batch_as_w60_code=false`、`city_fix_end_to_end_verified=false`，note 写明 `8b67705` 为 `7de77ce` 祖先 | ✅ 实测字段在 |
+| 3 | 批次先后 | `git merge-base --is-ancestor 8b67705 7de77ce` rc=0 | ✅ |
+| 4 | 城市代码级 | `test_normalize_city_clarification.py`(4) ＋ `contract/test_city_clarification_demotion_contract.py`(1) ⇒ **5 passed** | ✅ 端到端 UNVERIFIED |
+| 5 | cassette／r61 | 750 行无 diff；secrets 57／51／94 @616（QA 未复跑 gitleaks） | ✅／🟡 |
+| 6 | 判词 | 「修复已验证」⇒ 不成立；「复算＋归因＋文档轮」⇒ 可收 | 🟡 分层验收 |
+| 7 | 总控裁决①判据 | 上游错误不记 unscored；G-2 分母不动继续 FAIL；**另立可用性指标** | ✅ 落账 |
+| 8 | 总控裁决②提交 | W8 三件准予按名提交推送；禁 `git add -A`；`.workbuddy/` 不入库 | ✅ 落账 |
+| 9 | 总控裁决③W61 | `TASK_BOARD §80.6` 生效（A 重录→B live 三例→C 可用性单列），前置 key＋探针 | ✅ 落账 |
+| 10 | 未闭项 | 城市端到端／无同批 G-5／归因不稳（replay `value_mapping` vs live `sql_generation`）／live error（dirty=true）／secrets 不绿／门禁未刷新／U-127 open／Docker 未启动 | 🔴／⚠️ |
+| 11 | 引用纪律 | QA `offline 2606/0`（194.82s）在 `de69315` 工作树；W8 的 2606 在 `7de77ce` 树 ⇒ 引用须带树名 | ✅ 登记 |
+| 12 | 边界 | 零出站零提交零推送；未动 `app`／`tests`／`semantic`／`eval`／`reports/w8`／冻结集／阈值／15s／gold | ✅ |
+
+**结论**：W60 按「复算＋归因＋文档轮」口径收讫；按「修复已验证」口径仍不成立，官方门禁不得刷新。W61 派单已生效，前置＝key 注入＋连通探针通过。
