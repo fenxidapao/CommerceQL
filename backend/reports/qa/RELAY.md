@@ -4823,3 +4823,39 @@ W8 v2 撤回「城市 5 条越过 clarify」，并把「修复前批次」写成
 - 未闭：城市端到端 UNVERIFIED／无同批 G-5／**归因不稳**（同一 `H-ENUM-04` replay=`value_mapping`、live=`sql_generation`）／live error（dirty=true）／secrets 不绿／门禁未刷新／U-127 open／Docker 未启动致台账·残渣·集成未核实。
 - 引用纪律：QA 的 `offline 2606/0`（194.82s）跑在 **`de69315` 工作树**；W8 的 2606 是 `7de77ce` 树。条数相同但**不得省树名**。
 - 本窗零出站、零提交、零推送；未动 `app/**`／`tests/**`／`semantic/**`／`eval/**`／`reports/w8/**`／冻结集／阈值／15s／gold。
+
+## 77 · W8 第 61 轮验收：去澄清可重复成立；终态稳定性与归因双双不成立；测量系统已换代（QA R31be ｜ 2026-10-22 14:45 +0800 ｜ HEAD `b4c0c58`／621 笔）
+
+### 77.0 结论
+
+**A 收、B 半收、C 收；状态面零变化（G-2 FAIL／G-5·G-8·τ UNVERIFIED／secrets 不绿／官方门禁仍 PASS 1/8）。**
+
+- A：城市 5 条 **0 clarify ×2**、干净树 replay 与 run1 逐条一致 ⇒ **去澄清可重复成立**；但 `M-DIM-05` complete↔refuse/`no_data_asset` 翻转 ⇒ **终态稳定性不成立**。
+- B：三次跑终态与归因逐字一致 ⇒ **观测可重复**；但 E-MET-08／M-MET-01 由 clarify／complete 变 refuse，H-ENUM-04 归因变 `value_mapping` ⇒ **归因不成立**（W60 代码理论到不了这三条）。
+- C：13＝11+2、11 全 `LlmTimeout`、`hard_15s=9`、7.43%／7.83%，QA 复核一致。
+- 花费 ¥0.291930（A 0.210287＋B 0.081643），逐分对得上，在上界内。
+
+### 77.1 两个坏消息（本轮核心产出）
+
+1. **测量系统换代**：端点 `kuaipao.pro`→`api.deepseek.com`、模型 `deepseek-v4.1-flash`→`deepseek-flash`，且「同一性」是总控裁定而非实测 ⇒ **r59 与 r61 不可横比**、B 的差不可称回归、**τ 校准样本作废**（N-25 要求同 model_id＋prompt_version）。
+2. **113/166（68.1%）带 `embedding_unavailable` 跑完**（105 条同时 `present_failed`，U-112 形态 ii：向量列未物化）⇒ **全部门禁读数都建立在 dense 检索不可用的降级面上**；`M-DIM-05` 的 `no_data_asset` 更像「检索没捞到资产被说成库里没数据」。建议提 P0。
+
+### 77.2 三处订正
+
+1. 🔻 **QA 自曝**：R31bc／§80.1 的「6 条 normalize 超时 `cassette_request_count=0`」写错，实为 **5 条**（M-DIM-02 有 1 条 `plan` 记录）；以 W8 availability 的 5 为准。
+2. W8 回执「B 三份均 `d7c60b5`」不准确：实为 2 份 `7d05c61` ＋ 1 份 `d7c60b5`（其 RELAY:6203 正确）。
+3. `hard_15s=9`：W8 已自查 RELAY §60.1 少记 2 条（:6202），与我实读一致。
+
+### 77.3 三点句答复
+
+1. B 三条差 → **开一轮，但只做零出站分叉点定位**（normalize 文本／link 命中面／plan blocking／bind／gate 逐层比），只出层级不出根因。
+2. `M-DIM-05` 抖动 → **不并入 C**；单列「终态稳定性」（本轮 A=4/5）＋「`no_data_asset` 误判率」。
+3. 判据变更 → **已裁、不必再等**：不记 unscored、G-2 分母不动、另立可用性指标；要写进 `docs/07` 另走提案。
+
+### 77.4 W62 建议（`TASK_BOARD §82.4`，待点句）
+
+先修 dense 观测面（向量列物化）→ 零出站分叉定位 → 修完再重跑全量 166 当**新基线**（≈¥8.8，上界 ¥12）→ τ 在新模型上重采。不做跨系统差值结论、不改 15s/判据、不刷官方门禁。
+
+### 77.5 边界
+
+本窗零出站；未动任何 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`；`probe401.json` 我核过**不含 `sk-` 明文**；`.workbuddy/` 未清。

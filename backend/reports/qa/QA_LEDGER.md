@@ -1566,3 +1566,29 @@
 | 12 | 边界 | 零出站零提交零推送；未动 `app`／`tests`／`semantic`／`eval`／`reports/w8`／冻结集／阈值／15s／gold | ✅ |
 
 **结论**：W60 按「复算＋归因＋文档轮」口径收讫；按「修复已验证」口径仍不成立，官方门禁不得刷新。W61 派单已生效，前置＝key 注入＋连通探针通过。
+
+## R31be · W8 第 61 轮验收：去澄清可重复成立；终态稳定性与归因双双不成立；测量系统已换代 ／ 2026-10-22 14:45 +0800 ／ HEAD `b4c0c58`／621 笔
+
+| # | 项 | 本窗现读 | 判 |
+|---|---|---|---|
+| 1 | 基线／树 | HEAD＝origin/main＝`b4c0c58`／621 笔；工作树仅 `?? .workbuddy/`＋`?? eval/results_r61_probe401.json` | ✅ |
+| 2 | 提交面 | `15db849..HEAD` 四笔只动 `reports/w8`＋`eval/**`；未碰 `app`／`tests`／`semantic`／`reports/qa` | ✅ |
+| 3 | A run1 | `cd65cc8`／dirty=true：5/5 complete、4 eq、139,346 tok／0.138881 | 🟡 非干净 |
+| 4 | A run2 | `d7c60b5`／dirty=false：4 complete＋1 refuse、3 eq、128,769／0.071406 | ✅ |
+| 5 | A replay | `7d05c61`／dirty=false：与 run1 逐条同（token 同、wall 降至 0.05–2.7s） | ✅ |
+| 6 | A 结论 | **0 clarify ×2 ⇒ 去澄清可重复成立**；`M-DIM-05` complete↔refuse ⇒ **终态稳定性不成立** | ✅／🔴 |
+| 7 | B 三份 | `contract3_live`／`_embed_live`＝`7d05c61`；`_flash_live`＝`d7c60b5`；三条终态与归因三次全同 | ✅ 可重复 |
+| 8 | B 与 r59 差 | clarify／complete → refuse/no_data_asset×2；`gate_policy_gap` → `value_mapping` | 🔴 不可归因 |
+| 9 | H-ENUM-04 超时 | 上轮 `LLM_UPSTREAM_ERROR` 未复现（9.435s 走完 15 节点） | ✅ 不记可用性 |
+| 10 | C 可用性 | 13＝11+2；11 全 `LlmTimeout`（6／2／3）；`hard_15s=9`；7.43%／7.83%；`scope_statement` 不动 scored／15s／分母 | ✅ |
+| 11 | 降级面 | **113/166（68.1%）`embedding_unavailable`**（105 条兼 `present_failed`）⇒ 门禁建在降级面上 | 🔴 P0 建议 |
+| 12 | 测量系统 | 端点＋模型双双换代，「同一性」为总控裁定非实测 ⇒ r59 与 r61 不可横比、τ 样本作废 | 🔴 |
+| 13 | 花费 | 0.138881＋0.071406＋0.027784＋0.026820＋0.027039＝**0.291930**（逐分一致，上界内） | ✅ |
+| 14 | 探针件卫生 | `probe401.json` 401、51 位旧 key vs 35 位新 key、**无 `sk-` 明文** | ✅ |
+| 15 | 订正①（QA 自曝） | R31bc「6 条 normalize 且 cassette=0」错，实为 **5 条**（M-DIM-02 有 1 条 plan） | 🔻 已订正 |
+| 16 | 订正② | W8 回执「B 三份均 `d7c60b5`」不准确，实为 2×`7d05c61`＋1×`d7c60b5` | 🔻 登记 |
+| 17 | 订正③ | `hard_15s=9`，W8 自查 RELAY §60.1 少记 2 条（:6202），与我实读一致 | ✅ |
+| 18 | 状态面 | G-2 FAIL／G-5·G-8·τ UNVERIFIED／secrets 57·51·94／官方门禁 `88f3500` PASS 1/8／U-127 open | 🔴 未变 |
+| 19 | 边界 | 零出站；未动 `eval`／`app`／`tests`／`semantic`／`reports/w8`／冻结集／阈值／15s／gold | ✅ |
+
+**结论**：第 61 轮 A 收、B 半收、C 收。最大价值＝钉住「城市去澄清可重复」＋暴露「测量系统换代」与「68% 降级面」两个坏消息。W62 建议见 `TASK_BOARD §82.4`：先修 dense 向量列物化 → 零出站分叉定位 → 修完重跑全量 166 当新基线（上界 ¥12）→ τ 在新模型重采。

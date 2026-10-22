@@ -5143,3 +5143,87 @@ W8 回执 v2 撤回了 v1 的「城市 5 条越过 clarify」整条，并把「�
 ### 81.4 引用纪律（对 W8 v2「可写」清单的补充）
 
 v2 写「G-1 端到端跑通」可以，但**必须带树**：QA 的 `offline 2606/0`（194.82s）跑在 **`de69315` 工作树**上（工作树含 W8 三件未提交改动，但不含 `app/**`／`tests/**` 代码变更），不是 `7de77ce` 树；W8 自报的 2606 是 `7de77ce` 树。两者条数相同，但引用时不得省掉树名。
+
+## 82 · W8 第 61 轮验收：去澄清可重复成立；终态稳定性与归因双双不成立；**测量系统已换代**（QA R31be ｜ 2026-10-22 14:45 +0800 ｜ HEAD `b4c0c58`／621 笔）
+
+### 82.0 结论
+
+**A 收、B 半收、C 收。但本轮最重要的产出不是门禁数字，是两个坏消息（见 82.2）。**
+
+- **A 可收**：城市 5 条 **0 clarify ×2**（两次 live 都无澄清），干净树 replay 与 run1 逐条一致（同 token／同终态／同等价）⇒「城市 demotion 的去澄清」**可重复成立**。
+- **A 不可收**：**终态稳定性不成立** —— `M-DIM-05` 在 complete（eq=true）↔ refuse/`no_data_asset` 间翻转，两次均带 `embedding_unavailable→sparse_only`，翻转点在 `refuse_out`、无 SQL。
+- **B 半收**：三次跑（两套模型串 + 一次补 embedding）终态与归因**逐字一致**⇒「观测可重复」成立；但**归因不成立** —— E-MET-08／M-MET-01 从 r59 的 `clarify`／`complete` 变成 `refuse/no_data_asset`（现判 `over_refusal`），H-ENUM-04 从 `gate_policy_gap` 变 `value_mapping`；W60 代码只碰城市 demotion 与 runner 归因函数，理论到不了这三条。
+- **C 可收**：`13 = 11 LLM_UPSTREAM_ERROR + 2 GATE_AST_REJECTED`；11 条全 `LlmTimeout`（normalize 6／l4_score 2／gen_sql 3）；`hard_15s=9`；上游错误率 11/148=7.43%、13/166=7.83%。我逐项复核一致。
+- **成本**：A 0.138881＋0.071406；B 0.027784＋0.026820＋0.027039 ⇒ 合计 **0.291930**，与回执逐分一致，在上界内（我批的硬上界 ¥0.60）。replay 零花费属实。
+
+### 82.1 独立复算（零出站）
+
+| 面 | 现读 | 判 |
+|---|---|---|
+| 基线／树 | HEAD＝origin/main＝`b4c0c58`／621 笔；工作树仅 `?? .workbuddy/`＋`?? eval/results_r61_probe401.json` | ✅ |
+| 提交面 | `15db849..HEAD` 四笔，只动 `reports/w8`＋`eval/**`；**未碰 `app/**`／`tests/**`／`semantic/**`／`reports/qa/**`** | ✅ |
+| A run1 | `cd65cc8`／**dirty=true**（成因＝RELAY 未提交）：5/5 complete、4 eq、139,346 tok | 🟡 非干净证据 |
+| A run2 | `d7c60b5`／dirty=false：4 complete＋1 refuse、3 eq、128,769 tok | ✅ 干净 |
+| A replay | `7d05c61`／dirty=false：与 run1 逐条同（终态／等价／token 全同，wall 降到 0.05–2.7s） | ✅ |
+| A 抖动 | `M-DIM-05` complete↔refuse；两轮同 `sparse_only`，翻转在 `refuse_out` | 🔴 不稳定 |
+| B 三份 | `contract3_live`／`..._embed_live` 绑 **`7d05c61`**；`..._flash_live` 绑 **`d7c60b5`**；三条终态与归因三次全同 | ✅ 可重复 |
+| B 与 r59 的差 | clarify／complete → **refuse/no_data_asset**×2；`gate_policy_gap` → `value_mapping` | 🔴 不可归因 |
+| H-ENUM-04 超时 | 上轮 `LLM_UPSTREAM_ERROR` 31.725s **未复现**；本轮 9.435s 走完 15 节点 | ✅ 登记不记可用性 |
+| C 可用性 | 分母／计数／rates 全部复核一致；`scope_statement` 明确不动 scored／15s／G-2 分母 | ✅ |
+| 降级面 | **113/166（68.1%）带 `embedding_unavailable`**（105 条同时 `present_failed`） | 🔴 结构缺陷 |
+| 探针件 | `results_r61_probe401.json`：http 401、`deploy_env_key_len=51` vs 新 key 35 位、**不含任何 `sk-` 明文** | ✅ 卫生 |
+
+**三处订正（含 QA 自曝）**
+
+1. 🔻 **QA 自曝**：R31bc／§80.1 写「6 条 normalize 超时 `cassette_request_count=0`」**是错的，实为 5 条**（`E-VER-11`、`M-HIER-01`、`H-CAT-04`、`H-MET-05`、`R-NA-06`；`M-DIM-02` 有 1 条 `plan` 记录）。W8 的 availability 件写 5 条是对的，以 5 为准。
+2. W8 回执写 B「三者均 `d7c60b5`」**不准确**：实为 2 份 `7d05c61` ＋ 1 份 `d7c60b5`。其 RELAY 6203 行写法正确，属回执笔误，须以产物自报为准。
+3. `hard_15s`：W8 称其 RELAY §60.1 记 7 条、本轮实读 9 条并已订正（`RELAY.md:6202`）；我实读亦为 9 ⇒ 一致，无遗留。
+
+### 82.2 两个坏消息（本轮真正值钱的东西）
+
+**① 测量系统换代了，r59 与 r61 不可横比。**
+端点 `kuaipao.pro` → `api.deepseek.com`，模型 `deepseek-v4.1-flash` → `deepseek-flash`。W8 自己承认「同一性」只有**总控裁定**、没有实测（官方对旧名回 400，按名字推定是同一个）。后果三条：
+- B 的「clarify→refuse」**不能**写成「回归」或「修复副作用」，因为被测量系统换了；
+- **τ 校准样本作废**：N-25 要求 `BINDING_TAU_MODEL_ID`＋`PROMPT_VERSION` 同版本，模型名一换，r59 的 raw 分数就不能再用于校准；
+- G-2 的 `7/8` 与 r61 的任何读数做 delta，都是**跨系统比较**，只能报两个数，不能报差值原因。
+
+**② 68% 的样本在 `sparse_only` 下跑完。**
+`113/166` 带 `embedding_unavailable`（105 条同时 `present_failed`），根因按 W8 是 U-112 形态 ii（向量列未物化，`dense.py:337-350`），与 Ollama 起没起无关。这意味着：**G-1…G-8 的所有读数，都是在一个 dense 检索长期不可用的降级系统上取得的。** 那么「M-DIM-05 从 complete 掉成 no_data_asset」更像是**检索没捞到资产被错误分类成"库里没数据"**，而不是模型能力问题。这条比 G-2 红不红重要得多，建议提为 P0。
+
+### 82.3 对 W8 三点句的答复
+
+1. **B 三条差是否单开一轮查？—— 开，但只做零出站"分叉点定位"，不出站重跑。**
+   做法：拿 r61 三份记录与 r59 同 case 记录，逐层比 `normalize` 文本、`link` 检索命中面、`plan` blocking、`bind` 状态、`gate` 决策，定位**分叉发生在哪一层**：分叉在 normalize ⇒ 模型/端点；分叉在 link 之后命中集 ⇒ sparse_only；分叉在 gate ⇒ 判据。
+   边界：r59 是旧端点旧模型，本轮**只能定位层级，不能定量归因到"是谁"**，别写成「根因已确认」。
+2. **`M-DIM-05` 抖动是否并入 C？—— 不并。** C 的口径是 upstream error rate（LLM/基建失败）；M-DIM-05 是**检索降级导致的终态翻转＋错误分类**。并进去会污染 7.43% 这个可比数字。建议单列两项：**终态稳定性**（同 case 重复跑终态一致率，本轮 A = 4/5）＋**`no_data_asset` 误判率**。
+3. **判据变更是否还悬空？—— 已裁，不必再等。** 总控 2026-10-22 裁：上游错误不记 `unscored`、G-2 分母不动、**另立可用性指标**。C 件就是落实，方向正确。若要把它写进 `docs/07` 判据文本，需另走判据变更提案（W8 提、总控批），现在不动 07。
+
+### 82.4 总判与 W62 建议（待点句）
+
+**第 61 轮：A 收、B 半收、C 收；G-2／G-5／G-8／τ／secrets／官方门禁状态一字未变（仍 `88f3500`／PASS 1/8）。** 本轮最大价值是把「城市去澄清可重复」钉住，同时把「测量系统换代」和「68% 降级面」暴露出来。
+
+```text
+【W8 第 62 轮建议｜先修观测面，再谈门禁】
+
+1. 🔴 P0 结构：dense 检索 113/166 不可用（U-112 形态 ii，向量列未物化）
+- 先给三件事：① 该表向量列有没有数据（count/非 NULL 比例）；② 物化失败在哪一步（迁移？回填脚本？）；
+  ③ 物化成功后用同一批 20 条对比 sparse_only vs hybrid 的终态差异。
+- 这一步不做，后面所有门禁数字都建在降级面上，等于白测。
+
+2. 🔴 B 的零出站分叉定位（可与 1 并行，¥0）
+- 逐层比 r61 三份 vs r59 同 case：normalize 文本 / link 命中面 / plan blocking / bind 状态 / gate 决策。
+- 只出"分叉在哪一层"，不出"根因是谁"。
+
+3. 🟡 新基线（等 1 修完再跑，别现在跑）
+- 端点和模型已换代 ⇒ r59 不能当基线。修完 dense 后重跑全量 166 一次，作为**新基线**，
+  并重算 G-2/G-5/G-8。预算按 r59 口径 ≈ ¥8.8，上界 ¥12，超了停手。
+- 同时：τ 校准必须在新模型上重采（model_id＋prompt_version 同版本），不得复用 r59 raw。
+
+4. 不做
+- 不与 r59 做差值结论（跨测量系统）；不改 15s/判据/gold/冻结集；不刷官方门禁；
+- 不把 M-DIM-05 混进可用性指标；不碰 reports/qa/**。
+```
+
+### 82.5 仍悬（累计）
+
+- 终态稳定性（A 4/5）／`no_data_asset` 误分类（错误分类把超时与检索缺失收口成"库里没数据"，RELAY:854 已建议开单，未见单号）/ 归因未定位 / dense 68% 降级 / τ 未校准且样本作废 / secrets 57·51·94 不绿 / U-127 open / 官方门禁未刷新 / Docker 未启动致台账·残渣·集成仍未核实。
