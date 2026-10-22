@@ -149,6 +149,35 @@ def test_gold_never_guesses(
     assert gold["gold_unmatched_reason"] == reason
 
 
+def test_second_round_gold_is_not_defined_rather_than_should_clarify() -> None:
+    """二轮问句带补答 ⇒ gold 未定义（**不是** `expected_clarify`），派生器必须跳过。
+
+    这是最隐蔽的一类假样本：clarify 用例的二轮明明答出了 complete，
+    若沿用首轮 gold（`expected_clarify`），校准会把它读成"本该澄清"。
+    """
+    class _Run:
+        l4_raw = {
+            "schema": "W8_TAU_RAW/v1",
+            "ok": True,
+            "candidate_ids": ["v_order_paid.pay_amount", "v_order_paid.receiver_city"],
+            "scores": [0.7, 0.6],
+            "rank": ["v_order_paid.pay_amount", "v_order_paid.receiver_city"],
+            "scorer": {"model_id": "deepseek-flash", "prompt_version": "l4_score_v1"},
+        }
+
+    from eval.runner import GOLD_NOT_DEFINED_SECOND_ROUND, _tau_raw
+
+    raw = _tau_raw(_Run(), {"gold_sql": ""}, "clarify", second_round=True)
+    assert raw["gold_status"] == GOLD_NOT_DEFINED_SECOND_ROUND
+    assert raw["gold_candidate_id"] is None
+    assert raw["gold_unmatched_reason"] == "second_round_question_changed"
+
+    records = [{"case_id": "C-9", "tau_raw": raw} for _ in range(3)]
+    samples, skips = build_score_samples(records, min_repeats=3)
+    assert samples == []
+    assert skips[0]["reason"] == "gold_missing"
+
+
 # ---------------------------------------------------------------------------
 # 2. 派生器（eval/tau_samples.build_score_samples）
 # ---------------------------------------------------------------------------

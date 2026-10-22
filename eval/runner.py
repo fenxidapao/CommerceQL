@@ -67,7 +67,7 @@ import time
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import _bootstrap
 
@@ -446,11 +446,27 @@ def _gold_for_tau(
     }
 
 
-def _tau_raw(run: Any, case: Mapping[str, Any], expected: str) -> dict[str, Any]:
+#: 二轮问句已带补答 ⇒ 冻结集的 `gold_sql` 只对**首轮问句**成立，二轮的 gold **未定义**。
+#: 把这个状态单列，而不是复用 `expected_clarify`：后者会被 `ScoreSample` 读成
+#: "本该澄清"（安全侧样本）——而二轮明明答出来了，那是**凭空造样本**。
+GOLD_NOT_DEFINED_SECOND_ROUND: Final[str] = "not_defined_for_second_round"
+
+
+def _tau_raw(
+    run: Any,
+    case: Mapping[str, Any],
+    expected: str,
+    *,
+    second_round: bool = False,
+) -> dict[str, Any]:
     """一条记录的 `tau_raw`：L4 原始读数 + 金标反解（C2）。
 
     `l4_raw is None` = 本次没走到 L4（`bind` 之前就终止 / 无字段级候选）——
     照常给键，写 `ok=False, reason="l4_not_reached"`，**不用空对象冒充"跑过但没分"**。
+
+    ⚠️ `second_round=True` 时金标一律 `not_defined_for_second_round`：二轮问句是
+    "原问句 + 补充口径"，冻结集的 `gold_sql` 描述的是**首轮问句**的答案。
+    两边混用会让"补答后唯一"被误当成"本该澄清"，把样本推向"更容易澄清"的方向。
     """
     raw = dict(getattr(run, "l4_raw", None) or {})
     if not raw:
@@ -465,6 +481,15 @@ def _tau_raw(run: Any, case: Mapping[str, Any], expected: str) -> dict[str, Any]
             "scorer": {"model_id": None, "prompt_version": None},
         }
     candidate_ids = [str(cid) for cid in (raw.get("candidate_ids") or [])]
+    if second_round:
+        return {
+            **raw,
+            "gold_status": GOLD_NOT_DEFINED_SECOND_ROUND,
+            "gold_candidate_id": None,
+            "gold_match_rule": None,
+            "gold_unmatched_reason": "second_round_question_changed",
+            "gold_sql_present": bool(case.get("gold_sql")),
+        }
     return {**raw, **_gold_for_tau(case, expected, candidate_ids)}
 
 
@@ -664,7 +689,7 @@ async def score_case(
                 "success": second_round_success(run2.terminal_event, run2.infra_error),
                 # C2：二轮往往才是**真的走到 bind**（首轮停在 clarify，L4 没跑）⇒ 二轮的
                 # `tau_raw` 才是 τ 样本的主要来源，必须一并落盘，否则样本基数被吃掉一半。
-                "tau_raw": _tau_raw(run2, case, expected),
+                "tau_raw": _tau_raw(run2, case, expected, second_round=True),
             }
         else:
             record["second_round"] = {"attempted": False, "reason": "no_supplement_source"}
