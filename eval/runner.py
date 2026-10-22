@@ -346,6 +346,21 @@ def _column_of_candidate(candidate_id: str) -> str:
     return candidate_id.rsplit(".", 1)[-1]
 
 
+#: 聚合函数参数里的列 = "**被测量的那个字段**"（L4 绑定的正是它）。
+#: ⚠️ 只认这五个聚合：它们是语义包里 `agg` 的全集（sum/avg/count/min/max）。
+_AGG_ARG = re.compile(
+    r"\b(?:sum|avg|count|min|max)\s*\(\s*(?:distinct\s+)?([A-Za-z_][A-Za-z0-9_.]*)",
+    re.I,
+)
+#: `FROM x` / `JOIN x` 的表名（用于把候选**按资产前缀**收敛到本次查询真正用到的表）。
+_GOLD_TABLES = re.compile(r"\b(?:from|join)\s+([A-Za-z_][A-Za-z0-9_]*)", re.I)
+
+
+def _asset_of(candidate_id: str) -> str:
+    """`资产.列` → `资产`（无点则整串，视为"没有资产前缀"）。"""
+    return candidate_id.rsplit(".", 1)[0] if "." in candidate_id else candidate_id
+
+
 def _gold_for_tau(
     case: Mapping[str, Any], expected: str, candidate_ids: list[str]
 ) -> dict[str, Any]:
@@ -355,13 +370,27 @@ def _gold_for_tau(
 
     | `gold_status` | 含义 | 派生器怎么用 |
     |---|---|---|
-    | `matched` | 金标列**唯一**命中了某个候选 | 样本可用，`gold_candidate_id` 进 `ScoreSample` |
+    | `matched` | 金标候选**唯一**确定 | 样本可用，`gold_candidate_id` 进 `ScoreSample` |
     | `expected_clarify` | 该题**本就该澄清**（`expected_behavior=clarify`） | 样本可用，`gold_candidate_id=None`（安全侧样本） |
-    | `unmatched` | 金标没命中 / 命中多个 / 无 gold_sql / 无候选 | 🔴 **不进样本**（不是"该澄清"！） |
+    | `unmatched` | 反解不出唯一金标 | 🔴 **不进样本**（不是"该澄清"！） |
 
     🔴 为什么 `unmatched` 必须跳过而不是当 `None`：`ScoreSample.gold_candidate_id is None`
     的语义是"**本该澄清**"。把"我没反解出来"塞进同一个 `None`，等于凭空造出一批
-    "该澄清未澄清"的样本 —— 校准结果会朝"更容易澄清"的方向漂，而这正是 NFR-7.1 最不希望的方向。
+    "该澄清未澄清"的样本 —— 校准结果会朝"更容易澄清"的方向漂（NFR-7.1 最不希望的方向）。
+
+    ## 反解规则（两级**确定性**收敛，逐步可审计）
+
+    | 级 | 规则 | 落在 `gold_match_rule` |
+    |---|---|---|
+    | ① | 只在 **`gold_sql` 的 `FROM`/`JOIN` 表**对应的候选里找（按 `资产.列` 的资产前缀比表名） | `table_scoped_column` / `aggregate_arg` |
+    | ② | 再收敛到**出现在聚合函数参数里的列**（`sum/avg/count/min/max(...)`）—— L4 绑定的就是"被测量的那个字段" | 同上（优先报 `aggregate_arg`） |
+    | ③ | 收敛后命中**恰好 1 个** → `matched`；0 个 → `no_column_overlap`；≥2 个 → `multiple_candidates_match` | —— |
+
+    为什么要有 ①②：初版只做"整条 SQL 里出现过的列名"匹配，实测 119 条已打分记录里
+    **只有 19 条**唯一命中、**75 条**被判多命中（`pay_time`/`pay_status` 这类过滤列与
+    被测字段一起出现在 SQL 里）⇒ 样本基数被这个粗糙规则吃掉了。①② 是把
+    "同一列名出现在多张资产"与"过滤列混进金标"这两种**假歧义**剔掉，
+    每一步都是确定性的、可逐条复核的，**不是"挑一个更像的"**。
     """
     gold_sql = str(
         case.get("gold_sql") or (case.get("gold") or {}).get("gold_sql") or ""
@@ -371,6 +400,8 @@ def _gold_for_tau(
         "gold_sql_present": bool(gold_sql),
         "gold_sql_sha256": digest,
         "gold_candidate_id": None,
+        "gold_match_rule": None,
+        "gold_candidates_considered": len(candidate_ids),
         "gold_unmatched_reason": None,
     }
     if expected == "clarify":
@@ -380,13 +411,30 @@ def _gold_for_tau(
     if not candidate_ids:
         return {**base, "gold_status": "unmatched", "gold_unmatched_reason": "no_l4_candidates"}
 
+    tables = {name.lower() for name in _GOLD_TABLES.findall(gold_sql)}
+    scoped = [cid for cid in candidate_ids if _asset_of(cid).lower() in tables] or candidate_ids
+    agg_args = {arg.split(".")[-1].lower() for arg in _AGG_ARG.findall(gold_sql)}
+    by_agg = [cid for cid in scoped if _column_of_candidate(cid).lower() in agg_args]
+
+    # ② 聚合参数优先（它就是"被测量的字段"）；没有聚合参数时才退回①的整表作用域。
+    pool = by_agg or scoped
+    rule = "aggregate_arg" if by_agg else "table_scoped_column"
     hits = [
         cid
-        for cid in candidate_ids
-        if re.search(rf"(?<![A-Za-z0-9_]){re.escape(_column_of_candidate(cid))}(?![A-Za-z0-9_])", gold_sql, re.I)
+        for cid in pool
+        if re.search(
+            rf"(?<![A-Za-z0-9_]){re.escape(_column_of_candidate(cid))}(?![A-Za-z0-9_])",
+            gold_sql,
+            re.I,
+        )
     ]
     if len(hits) == 1:
-        return {**base, "gold_status": "matched", "gold_candidate_id": hits[0]}
+        return {
+            **base,
+            "gold_status": "matched",
+            "gold_candidate_id": hits[0],
+            "gold_match_rule": rule,
+        }
     if not hits:
         return {**base, "gold_status": "unmatched", "gold_unmatched_reason": "no_column_overlap"}
     return {
@@ -614,6 +662,9 @@ async def score_case(
                 "cost_cny": run2.cost_cny,
                 "infra_error": run2.infra_error,
                 "success": second_round_success(run2.terminal_event, run2.infra_error),
+                # C2：二轮往往才是**真的走到 bind**（首轮停在 clarify，L4 没跑）⇒ 二轮的
+                # `tau_raw` 才是 τ 样本的主要来源，必须一并落盘，否则样本基数被吃掉一半。
+                "tau_raw": _tau_raw(run2, case, expected),
             }
         else:
             record["second_round"] = {"attempted": False, "reason": "no_supplement_source"}

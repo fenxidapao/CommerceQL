@@ -75,6 +75,47 @@ def test_gold_single_column_hit_is_matched() -> None:
     assert len(gold["gold_sql_sha256"]) == 64
 
 
+def test_gold_prefers_the_aggregate_argument_over_filter_columns() -> None:
+    """过滤列与**被测字段**同时出现在 SQL 里时，只认聚合参数里的那一列。
+
+    这是初版规则的实测病根：`pay_status`/`pay_time` 这类过滤列会把"唯一命中"挤成多命中，
+    119 条已打分记录里 75 条因此被判 `multiple_candidates_match`。
+    """
+    case = {
+        "gold_sql": (
+            "SELECT sum(pay_amount) FROM v_order_paid "
+            "WHERE pay_status = 'paid' AND pay_time >= '2026-08-01'"
+        )
+    }
+    gold = _gold_for_tau(
+        case,
+        "execute",
+        ["v_order_paid.pay_amount", "v_order_paid.pay_status", "v_order_paid.pay_time"],
+    )
+    assert gold["gold_status"] == "matched"
+    assert gold["gold_candidate_id"] == "v_order_paid.pay_amount"
+    assert gold["gold_match_rule"] == "aggregate_arg"
+
+
+def test_gold_uses_the_from_join_table_to_disambiguate_same_column_name() -> None:
+    """同名同列在两套资产里都出现 ⇒ 用 gold_sql 的 `FROM` 表收敛（**不是**挑一个更像的）。"""
+    case = {"gold_sql": "SELECT COUNT(spu_id) FROM v_product WHERE on_sale = 1"}
+    gold = _gold_for_tau(
+        case, "execute", ["v_product.spu_id", "v_dim_product.spu_id"]
+    )
+    assert gold["gold_status"] == "matched"
+    assert gold["gold_candidate_id"] == "v_product.spu_id"
+
+    # 表名不在候选的资产前缀里 ⇒ 收敛不了，必须如实判多命中
+    ambiguous = _gold_for_tau(
+        {"gold_sql": "SELECT COUNT(spu_id) FROM v_unknown WHERE on_sale = 1"},
+        "execute",
+        ["v_product.spu_id", "v_dim_product.spu_id"],
+    )
+    assert ambiguous["gold_status"] == "unmatched"
+    assert ambiguous["gold_unmatched_reason"] == "multiple_candidates_match"
+
+
 def test_gold_expected_clarify_is_its_own_status_not_unmatched() -> None:
     """该澄清题：`gold_candidate_id=None` 但状态是 `expected_clarify`（安全侧样本）。"""
     gold = _gold_for_tau({"gold_sql": ""}, "clarify", ["a.x", "b.y"])
