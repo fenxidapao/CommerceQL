@@ -86,6 +86,15 @@
     "qa_premise_82_4_item1": "『dense 检索 113/166 不可用（向量列未物化）』——评测侧不成立（夹具硬编码，不走 pgvector）",
     "production_fact": "生产侧确实坏，但机制不是空向量：向量 197/197 全非 NULL，问题是**版本错位**——active=2026.10.16.2，库内全部只有 2026.09.14.1 ⇒ 查询 0 行",
     "severity": "P0（静默空检索，无任何降级标记，startup 断言不覆盖）",
-    "who_can_fix": "物化归 W2A（startup_assertions.py:316）；且需写共享 ecom ⇒ 本窗不动"
-  }
+    "who_can_fix": "本窗（W8）：物化重跑只需 `python -m app.semantics.materialize` 形态的一次运行，但它会 DELETE+INSERT 共享 ecom 的 app.* 表 ⇒ 需总控书面授权（当前无「W2A/其他窗口」可转，W0…W7 均为史料标签，项目只剩 W8 与 QA）。"
+  },
+  "corrections": [
+    {
+      "at": "2026-10-22 15:0x +0800",
+      "trigger": "总控指出：项目只有 W8 与 QA 两个活窗口，旧窗口（含 W2A）都是史料、不再使用",
+      "before": "who_can_fix 原文：物化归 W2A（startup_assertions.py:316）；且需写共享 ecom ⇒ 本窗不动",
+      "after": "本窗（W8）：物化重跑只需 `python -m app.semantics.materialize` 形态的一次运行，但它会 DELETE+INSERT 共享 ecom 的 app.* 表 ⇒ 需总控书面授权（当前无「W2A/其他窗口」可转，W0…W7 均为史料标签，项目只剩 W8 与 QA）。",
+      "still_valid": "缺陷读数（active 0 行 / 197 行全非 NULL / 三处静默缺口）不受影响，只有『归属』这半句作废"
+    }
+  ]
 }
