@@ -6393,3 +6393,98 @@ HEAD     = 收尾前 d7c60b5（617 笔），origin/main 同步
 1. **B 的三条差是否要继续查**（同模型前提下已不能用"换模型"解释）：查法 = 拿 r59 的同一份 sparse-only 检索上下文做引脚夹具，逐节点比 `plan/bind`。需另开一轮，零出站即可做。
 2. **M-DIM-05 的 complete↔refuse 翻转**：属可用性面（C 类），建议并入可用性指标单列，不动 G-2 判据。
 3. 判据变更（上游错误是否记 `unscored`）仍未决；G-8 二轮、τ 校准、官方门禁刷新按指令未碰。
+
+## 第 66 轮（W8 第 62 轮开工：§82.4 第 1 条前提纠错｜生产 dense 实为版本错位 P0｜B 三条分叉定位｜2026-10-22 14:5x +0800｜HEAD `e858f97`）
+
+> 派单来源：总控「看 TASK_BOARD §82.4，开工」。
+> 本轮**零出站、零写库**：只读 `SELECT … begin/rollback`、读 YAML、读已有结果件；未改 `app/**`／`tests/**`／`semantic/**`／`eval` 判据／`reports/qa/**`。
+> 🔴 结论先行：**§82.4 第 1 条的前提在评测侧不成立**（§66.1），但顺着它查下去发现了一个**更硬、且与它完全不同的 P0**（§66.2）。
+
+### 66.1 前提纠错：评测里的 `embedding_unavailable` 是**夹具硬编码**，不是 dense 故障
+
+| 证据 | 现值 |
+|---|---|
+| `eval/harness.py:16` | 评测检索用 `BundleCatalogRetrieval`（**全目录夹具**），§17.4 明文「评测不测向量检索」 |
+| `eval/harness.py:307-316` | 返回值里 `mode=SPARSE_ONLY`、`degraded_reason=EMBEDDING_UNAVAILABLE`、`action_taken=SPARSE_ONLY` 是**写死的** |
+| `eval/harness.py:66-69` | 注释原话：`RetrievalMode` 只有 2 个值（C-11），**没有「目录夹具」这一档** ⇒「不是降级描述准确，而是没有准确的档可填」（已作为契约缺口登记） |
+| `eval/gap_table.py:124` | 「评测执行器不接 `PgVectorStore`」 |
+
+⇒ 推论（可复算）：**「113/166 带 embedding_unavailable」是"夹具标签 + 契约缺档"，与生产 dense 是否可用无关**；评测从不走 pgvector。
+⇒ 连带作废一条推断：§82.2②「M-DIM-05 掉成 no_data_asset 更像是检索没捞到资产」——**该推断的证据基础是那个标签，标签不成立**；且 §66.4 的 retrieval_counts 三例逐字相同，从另一侧也否掉了它。
+
+### 66.2 生产侧真缺陷：active 版本与库内物化版本**错位**（P0，静默）
+
+只读读数（`begin/rollback`，未写一行）：
+
+```text
+运行时 active_version 来源 = backend/app/semantics/runtime.py:110  -> self._loaded.version（取**文件内声明**）
+bundle 文件名版本          = 2026.09.14.1（semantic/bundle_2026.09.14.1.yaml）
+bundle 文件内声明版本      = 2026.10.16.2（同文件 :49）        <- 运行时用的是这个
+healthz.bundle_version     = 2026.10.16.2（现读一致）
+
+库内各表版本分布（app schema）：
+  semantic_bundle  2026.09.14.1 | 1
+  asset            2026.09.14.1 | 8
+  metric_def       2026.09.14.1 | 9
+  dimension        2026.09.14.1 | 6
+  field_binding    2026.09.14.1 | 7
+  embed_doc        2026.09.14.1 | 197   （embedding 非 NULL 197/197，NULL 0）
+  —— 以上表**没有任何 2026.10.16.2 的行** ——
+
+按 active 版本查：
+  embed_doc@2026.10.16.2      = 0 行
+  asset@2026.10.16.2          = 0 行
+  metric_def@2026.10.16.2     = 0 行
+  field_binding@2026.10.16.2  = 0 行
+```
+
+过滤条件（SQL 层强制）：
+- `backend/app/retrieval/dense.py:12` —— `bundle_version = :active AND tenant_id = :tenant`
+- `backend/app/retrieval/sparse.py:71` —— `AND bundle_version = :bundle_version`
+
+⇒ **生产链路的稠密检索、稀疏检索、元数据查询，对当前 active 版本全部命中 0 行**。
+
+### 66.3 为什么一直没人发现（三处「看不见」）
+
+| # | 缺口 | 位置 |
+|---|---|---|
+| 1 | **0 行被当作合法空**：`EmbeddingUnavailable` 只在「作用域内有行但 embedding 全 NULL」时抛；代码注释明确「空 KB / 该版本无文档是合法状态」⇒ 版本错位产生的 0 行**不产生任何 degraded 标记** | `backend/app/retrieval/dense.py:337-350` |
+| 2 | 启动断言只查**列类型与维度**，不查「当前 active 版本有没有行」 | `backend/app/repo/startup_assertions.py:602-616` |
+| 3 | 启动时**不重物化**：`backend/app/main.py` 内 `materialize` 零命中 ⇒ 升版后无人重跑 | grep 实证 |
+
+`materialize` 的版本取自 `loaded.version`（`semantics/materialize.py:258/318`），写入前按版本 `DELETE` 再 `INSERT`（`:465-478`）⇒ 一次正确地重跑就能修好；**但它归 W2A**（`startup_assertions.py:316` 明写「语义包物化归 W2A」），且要**写共享 `ecom`**，本窗按红线不动。
+
+⚠️ 影响面（勿夸大）：这是**生产运行时**的缺陷；评测读数（G-1…G-8、r59/r61 各批）走的是目录夹具，**不经过这条链路**，因此既有门禁读数不因本条而失效，也不因本条而变绿。反向也成立：**别拿评测里的 `embedding_unavailable` 当这条缺陷的证据**。
+
+### 66.4 B 三条的零出站分叉定位（§82.4 第 2 条）
+
+产物：`eval/results_r62_b_divergence.json`（`e858f97`／dirty=false）。方法：逐层比 `nodes → retrieval_counts → predicted(plan 产物) → binding_status → applied_predicates → gate_decisions → sql_text`，**只定位层级，不断言根因**。
+
+| case | 首处分叉层 | 关键读数 |
+|---|---|---|
+| E-MET-08 | `nodes`（intent 的**澄清判定**） | r59 `…intent → clarify_out`；r61 `…intent → link → plan → refuse_out(no_data_asset)` |
+| M-MET-01 | `nodes`（**plan** 决策） | r59 走完 `bind…audit_supp` → complete；r61 `plan → refuse_out(no_data_asset)`；`binding_status` 由 `resolved_default` 变 `null` |
+| H-ENUM-04 | `plan(predicted)` | 路径/终态/binding/gate 全同，只有投影列不同：r59 `[shop_name, order_cnt]` → r61 `[shop_id, shop_name, order_cnt]`（predicted hash 亦不同） |
+
+**cross-cutting（本轮最有用的一条）**：三例的 `retrieval_counts` **逐字相同**（`assets 8 / columns 66 / metrics 21 / metrics_in_catalog 21 / denied_filtered 4`）⇒ 送进 plan 的候选集两批完全一致 ⇒ **「检索没捞到资产导致 no_data_asset」在本批不成立**；分叉发生在 `intent` 判定与 `plan` 决策，与模型/端点/prompt 面相关。
+边界（照 QA §82.3 第 1 条）：r59 与 r61 是**两套端点**，本条只定位「分叉在哪一层」，**不写「根因是谁」**。
+
+### 66.5 §82.4 第 1 条三项，逐项答复
+
+| # | 要求 | 本轮答复 | 判 |
+|---|---|---|---|
+| ① 向量列有没有数据（count／非 NULL 比例） | `embed_doc` 共 **197 行，embedding 非 NULL 197（100%）**，全在 `2026.09.14.1`；**active 版本 2026.10.16.2 为 0 行** | ✅ 已答 |
+| ② 物化失败在哪一步 | 不是「物化失败」，是**升版后没人重跑物化**：`materialize` 取 `loaded.version`、按版本 DELETE+INSERT；`main.py` 无启动钩子；`startup_assertions` 只查类型维度 | ✅ 已答 |
+| ③ 物化成功后 20 条 sparse vs hybrid 对比 | **本轮不可做**：评测通路没有 dense 路径（夹具），要做得先修物化（写共享 `ecom`，归 W2A）或用生产 API 打 20 条（出站、需预算点句） | ⛔ 阻塞，待授权 |
+
+### 66.6 归属与红线
+
+- 物化能力归 **W2A**（`startup_assertions.py:316`）；本窗**不写库、不改 `semantic/**`**。
+- 若要本窗代跑物化：需要 ① 总控书面授权 ② 明确「写共享 `ecom`」的例外（当前红线是只读），③ 一次 `alembic`-级操作的回滚点。
+- 官方门禁、G-2/G-5/G-8、τ、secrets、U-127 状态**一字未变**（仍 `88f3500`／PASS 1/8）。
+
+### 66.7 待点句
+
+1. **物化重跑**：授权本窗代跑（写 `ecom`）还是转 W2A？转 W2A 需给一个可验收的判据（例如“`app.*` 在 active 版本的行数 > 0，且 healthz 增加版本行数探针”）。
+2. **要不要给 0 行补一个降级标记**（现在 0 行＝静默空）：这是**判据/契约变更**，需走提案，本窗不自签。
+3. **§82.4 第 3 条（新基线）**：按 QA 原话应等物化修完再跑；本轮未动，等 1 的结论。

@@ -1,0 +1,419 @@
+{
+  "generated_at": "2026-10-22T14:52:34+08:00",
+  "git_rev": "e858f97",
+  "git_dirty": false,
+  "zero_outbound": true,
+  "schema": "W8_B_DIVERGENCE/v1",
+  "method": "逐层比 nodes → retrieval_counts → predicted(plan 产物) → binding_status → applied_predicates → gate_decisions → sql_text；只定位层级，不断言根因",
+  "sources": {
+    "r59": "eval/results_r59_full166.json (8b67705)",
+    "r61": "eval/results_r61_contract3_flash_live.json (d7c60b5)"
+  },
+  "pairs": [
+    {
+      "case_id": "E-MET-08",
+      "first_divergent_layer": "nodes(路径)",
+      "r59": {
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "clarify_out"
+        ],
+        "terminal": "clarify",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "degradations": [],
+        "predicted": {
+          "hash": null,
+          "columns": [],
+          "rows": 0,
+          "shape": {
+            "columns": [],
+            "row_count": 0,
+            "head_rows": []
+          },
+          "state_row_count": 0,
+          "sandbox_error": null
+        },
+        "binding_status": null,
+        "applied_predicates": [],
+        "gate_decisions": {},
+        "gate1_reject_rule": null,
+        "sql_text": "",
+        "attribution": "field_binding"
+      },
+      "r61": {
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "refuse_out"
+        ],
+        "terminal": "refuse",
+        "terminal_code": null,
+        "refusal_reason": "no_data_asset",
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "degradations": [
+          "embedding_unavailable"
+        ],
+        "predicted": {
+          "hash": null,
+          "columns": [],
+          "rows": 0,
+          "shape": {
+            "columns": [],
+            "row_count": 0,
+            "head_rows": []
+          },
+          "state_row_count": 0,
+          "sandbox_error": null
+        },
+        "binding_status": null,
+        "applied_predicates": [],
+        "gate_decisions": {},
+        "gate1_reject_rule": null,
+        "sql_text": "",
+        "attribution": "over_refusal"
+      },
+      "retrieval_counts_identical": true
+    },
+    {
+      "case_id": "M-MET-01",
+      "first_divergent_layer": "nodes(路径)",
+      "r59": {
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "terminal": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "degradations": [
+          "embedding_unavailable",
+          "present_failed"
+        ],
+        "predicted": {
+          "hash": "sha256:28a9172189a78e5e084cdafb688f34bcaf6b7a5272a6430c542fe398fc00ccab",
+          "columns": [
+            "channel",
+            "gmv"
+          ],
+          "rows": 5,
+          "shape": {
+            "columns": [
+              "channel",
+              "gmv"
+            ],
+            "row_count": 5,
+            "head_rows": [
+              [
+                "search",
+                3342633.37
+              ],
+              [
+                "feed",
+                3221151.72
+              ],
+              [
+                "live",
+                3121318.65
+              ],
+              [
+                "ad",
+                2979913.47
+              ],
+              [
+                "direct",
+                2946712.74
+              ]
+            ]
+          },
+          "state_row_count": 5,
+          "sandbox_error": null
+        },
+        "binding_status": "resolved_default",
+        "applied_predicates": [
+          "is_test_order = false",
+          "refund_status <> 'refunded'",
+          "pay_status = 'paid'"
+        ],
+        "gate_decisions": {
+          "1": "pass/True",
+          "2": "pass/True",
+          "3": "skipped/False"
+        },
+        "gate1_reject_rule": null,
+        "sql_text": "SELECT v_order_paid.channel AS channel, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_order_paid.channel ORDER BY gmv DESC LIMIT 100",
+        "attribution": "gate_policy_gap"
+      },
+      "r61": {
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "refuse_out"
+        ],
+        "terminal": "refuse",
+        "terminal_code": null,
+        "refusal_reason": "no_data_asset",
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "degradations": [
+          "embedding_unavailable"
+        ],
+        "predicted": {
+          "hash": null,
+          "columns": [],
+          "rows": 0,
+          "shape": {
+            "columns": [],
+            "row_count": 0,
+            "head_rows": []
+          },
+          "state_row_count": 0,
+          "sandbox_error": null
+        },
+        "binding_status": null,
+        "applied_predicates": [],
+        "gate_decisions": {},
+        "gate1_reject_rule": null,
+        "sql_text": "",
+        "attribution": "over_refusal"
+      },
+      "retrieval_counts_identical": true
+    },
+    {
+      "case_id": "H-ENUM-04",
+      "first_divergent_layer": "plan(predicted)",
+      "r59": {
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "terminal": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "degradations": [
+          "embedding_unavailable",
+          "present_failed"
+        ],
+        "predicted": {
+          "hash": "sha256:d9807a85d4f3419ca24347164fe03182c61c6a7310e43b714ae0fe4f5ceb6891",
+          "columns": [
+            "shop_name",
+            "order_cnt"
+          ],
+          "rows": 5,
+          "shape": {
+            "columns": [
+              "shop_name",
+              "order_cnt"
+            ],
+            "row_count": 5,
+            "head_rows": [
+              [
+                "T_A官方旗舰店5号",
+                288
+              ],
+              [
+                "T_A官方旗舰店2号",
+                282
+              ],
+              [
+                "T_A官方旗舰店3号",
+                274
+              ],
+              [
+                "T_A官方旗舰店1号",
+                271
+              ],
+              [
+                "T_A官方旗舰店4号",
+                257
+              ]
+            ]
+          },
+          "state_row_count": 5,
+          "sandbox_error": null
+        },
+        "binding_status": "resolved_default",
+        "applied_predicates": [
+          "is_test_order = false",
+          "refund_status <> 'refunded'",
+          "pay_status = 'paid'"
+        ],
+        "gate_decisions": {
+          "1": "pass/True",
+          "2": "pass/True",
+          "3": "skipped/False"
+        },
+        "gate1_reject_rule": null,
+        "sql_text": "SELECT v_shop.shop_name AS shop_name, COUNT(DISTINCT v_order_paid.sub_order_id) AS order_cnt FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = %(refund_status)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_name ORDER BY order_cnt DESC LIMIT 1000",
+        "attribution": "gate_policy_gap"
+      },
+      "r61": {
+        "nodes": [
+          "trusted_context",
+          "normalize",
+          "intent",
+          "link",
+          "plan",
+          "bind",
+          "gen_sql",
+          "gate1_ast",
+          "gate2_policy",
+          "gate3_cost",
+          "execute",
+          "mask",
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "terminal": "complete",
+        "terminal_code": null,
+        "refusal_reason": null,
+        "retrieval_counts": {
+          "assets": 8,
+          "columns": 66,
+          "metrics": 21,
+          "metrics_in_catalog": 21,
+          "denied_filtered": 4
+        },
+        "degradations": [
+          "embedding_unavailable",
+          "present_failed"
+        ],
+        "predicted": {
+          "hash": "sha256:a1a869eb237fb78aa01cf5623cd44d3a2411c0b7594e96cffa213f5c02eabe89",
+          "columns": [
+            "shop_id",
+            "shop_name",
+            "order_cnt"
+          ],
+          "rows": 5,
+          "shape": {
+            "columns": [
+              "shop_id",
+              "shop_name",
+              "order_cnt"
+            ],
+            "row_count": 5,
+            "head_rows": [
+              [
+                "T_A-S05",
+                "T_A官方旗舰店5号",
+                288
+              ],
+              [
+                "T_A-S02",
+                "T_A官方旗舰店2号",
+                282
+              ],
+              [
+                "T_A-S03",
+                "T_A官方旗舰店3号",
+                274
+              ],
+              [
+                "T_A-S01",
+                "T_A官方旗舰店1号",
+                271
+              ],
+              [
+                "T_A-S04",
+                "T_A官方旗舰店4号",
+                257
+              ]
+            ]
+          },
+          "state_row_count": 5,
+          "sandbox_error": null
+        },
+        "binding_status": "resolved_default",
+        "applied_predicates": [
+          "is_test_order = false",
+          "refund_status <> 'refunded'",
+          "pay_status = 'paid'"
+        ],
+        "gate_decisions": {
+          "1": "pass/True",
+          "2": "pass/True",
+          "3": "skipped/False"
+        },
+        "gate1_reject_rule": null,
+        "sql_text": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, COUNT(DISTINCT v_order_paid.sub_order_id) AS order_cnt FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = %(refund_status)s AND v_order_paid.pay_status = %(pay_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY order_cnt DESC LIMIT 1000",
+        "attribution": "value_mapping"
+      },
+      "retrieval_counts_identical": true
+    }
+  ],
+  "conclusion": {
+    "E-MET-08": "首处分叉在 intent 的**澄清判定**：r59 走 clarify_out，r61 继续 link→plan→refuse_out(no_data_asset)。两批 retrieval_counts 完全相同（8/66/21）⇒ 差异不在检索输入。",
+    "M-MET-01": "首处分叉在 **plan**：r59 走完 bind→…→complete，r61 在 plan 直接 refuse_out(no_data_asset)。两批 retrieval_counts 完全相同 ⇒ **不能**归因『检索没捞到资产』。",
+    "H-ENUM-04": "路径/终态/binding/gate 全同，分叉只在 **plan 的投影列集合**：r59=[shop_name, order_cnt]，r61=[shop_id, shop_name, order_cnt]。",
+    "cross_cutting": "三条的 retrieval_counts 逐字相同（assets 8 / columns 66 / metrics 21 / denied 4）⇒ 『检索降级导致 no_data_asset』这一推断在本批**不成立**；分叉发生在 intent 判定与 plan 决策，属模型/端点/prompt 面。"
+  }
+}

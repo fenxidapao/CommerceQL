@@ -1,0 +1,91 @@
+{
+  "generated_at": "2026-10-22T14:52:34+08:00",
+  "git_rev": "e858f97",
+  "git_dirty": false,
+  "zero_outbound": true,
+  "schema": "W8_DENSE_PROBE/v2",
+  "title": "生产向量面 vs 评测面：两件不同的事，不能互相引证",
+  "active_version_source": {
+    "code": "backend/app/semantics/runtime.py:104-110 → active_version() 返回 self._loaded.version",
+    "loaded_from": "SEMANTIC_BUNDLE_PATH=/semantic/bundle_2026.09.14.1.yaml（文件名版本 2026.09.14.1）",
+    "declared_in_file": "semantic/bundle_2026.09.14.1.yaml:49  version: \"2026.10.16.2\"",
+    "note": "文件名版本与文件内声明版本不一致；运行时用的是**文件内声明**（2026.10.16.2）"
+  },
+  "db_materialized_by_version": [
+    [
+      "asset",
+      "2026.09.14.1",
+      "8"
+    ],
+    [
+      "dimension",
+      "2026.09.14.1",
+      "6"
+    ],
+    [
+      "embed_doc",
+      "2026.09.14.1",
+      "197"
+    ],
+    [
+      "field_binding",
+      "2026.09.14.1",
+      "7"
+    ],
+    [
+      "metric_def",
+      "2026.09.14.1",
+      "9"
+    ],
+    [
+      "semantic_bundle",
+      "2026.09.14.1",
+      "1"
+    ]
+  ],
+  "embed_doc_totals": [
+    [
+      "197",
+      "197",
+      "0"
+    ]
+  ],
+  "active_version_rows": [
+    [
+      "0",
+      "0",
+      "0",
+      "0",
+      "0"
+    ]
+  ],
+  "filters": {
+    "dense": "backend/app/retrieval/dense.py:12 —— 检索范围 SQL 层强制 `bundle_version = :active AND tenant_id = :tenant`",
+    "sparse": "backend/app/retrieval/sparse.py:71 —— `AND bundle_version = :bundle_version`"
+  },
+  "zero_row_semantics": {
+    "code": "backend/app/retrieval/dense.py:337-350",
+    "rule": "只有『作用域内有行但 embedding 全 NULL』才 raise EmbeddingUnavailable；『一行都没有』被明确当作**合法空结果**（注释：空 KB / 该版本无文档是合法状态）",
+    "consequence": "当前 active 版本一行都没有 ⇒ 稠密检索**静默返回空**，不产生任何 degraded 标记"
+  },
+  "startup_assertions_gap": {
+    "code": "backend/app/repo/startup_assertions.py:602-616",
+    "checks": "只读 app.embed_doc.embedding 的**类型与维度**",
+    "does_not_check": "当前 active bundle_version 是否有行",
+    "ownership_note": "同文件 :316 写明『语义包物化归 W2A』"
+  },
+  "no_startup_materialize": "backend/app/main.py 内无 materialize 调用（grep 零命中）⇒ 升版后不会自动重物化",
+  "eval_side_is_a_fixture": {
+    "code": "eval/harness.py:231 BundleCatalogRetrieval / :307-316 返回值",
+    "hardcoded": "mode=RetrievalMode.SPARSE_ONLY、degraded_reason=EMBEDDING_UNAVAILABLE、action_taken=SPARSE_ONLY 为**夹具硬编码**",
+    "why": "eval/harness.py:66-69 —— RetrievalMode 只有 2 个值（C-11），没有『目录夹具』这一档 ⇒ 『不是降级描述准确，而是没有准确的档可填』（已作为契约缺口登记）",
+    "scope": "eval/harness.py:16 —— 评测用 BundleCatalogRetrieval 全目录夹具，§17.4 明文『评测不测向量检索』",
+    "consequence": "所以『113/166 带 embedding_unavailable』是**夹具标签 + 契约缺档**，不能用来证明生产 dense 不可用，也不能当成 M-DIM-05 翻转的原因证据"
+  },
+  "verdict": {
+    "qa_premise_82_4_item1": "『dense 检索 113/166 不可用（向量列未物化）』——评测侧不成立（夹具硬编码，不走 pgvector）",
+    "production_fact": "生产侧确实坏，但机制不是空向量：向量 197/197 全非 NULL，问题是**版本错位**——active=2026.10.16.2，库内全部只有 2026.09.14.1 ⇒ 查询 0 行",
+    "severity": "P0（静默空检索，无任何降级标记，startup 断言不覆盖）",
+    "who_can_fix": "物化归 W2A（startup_assertions.py:316）；且需写共享 ecom ⇒ 本窗不动"
+  }
+}
