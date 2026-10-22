@@ -146,6 +146,7 @@ class RunContext:
         "_cost",
         "_degradations",
         "_disclosure",
+        "_l4_raw",
         "_latency",
         "_mask_hits",
         "_monotonic",
@@ -177,6 +178,10 @@ class RunContext:
         self._pending_rows: tuple[tuple[Any, ...], ...] | None = None
         self._pending_columns: tuple[tuple[str, float], ...] | None = None
         self._mask_hits: tuple[str, ...] | None = None
+        #: 🔴 W8 第 65 轮（C2，τ 采样 schema）：L4 打分的**原始读数**（候选稳定键 / 分数 / rank）。
+        #: `GraphState` 组 5 没有该键（07 §5.2 穷举，不得为传值新增）⇒ 与结果行同款的内存通道。
+        #: 只有 `bind` 写、只有评测组装点（`eval/harness.py`）读；生产装配根不读 ⇒ 行为不变。
+        self._l4_raw: dict[str, Any] | None = None
         self._tokens = TokenUsage()
         self._cost: Decimal = Decimal(0)
         self._disclosure: str | None = None
@@ -303,6 +308,24 @@ class RunContext:
         text = self._disclosure
         self._disclosure = None
         return text
+
+    def hold_l4_raw(self, payload: Mapping[str, Any]) -> None:
+        """L4 打分的原始读数 → 评测组装点（C2，τ 采样）。
+
+        ⚠️ **为什么必须留 raw**：τ 校准要的是"同一次打分里，各候选各得多少分 + 谁是金标"。
+        只留最终 `bindings` 会把分数丢在判定层内部（`resolve_detailed` 只回绑定结果），
+        事后无法重算分差 ⇒ 校准只能靠猜。raw 落 record、`ScoreSample` 由 raw **派生**
+        （`eval/tau_samples.py`），两者不各自为政。
+
+        ⚠️ **候选标识必须是稳定键**（`资产.列`，如 `v_order_paid.pay_amount`），
+        **禁止数组下标** —— 下标在两次跑批间会漂，用它对齐候选等于把"同一个候选"认错。
+        """
+        self._l4_raw = dict(payload)
+
+    def take_l4_raw(self) -> dict[str, Any] | None:
+        payload = self._l4_raw
+        self._l4_raw = None
+        return payload
 
     # -- 计时 ---------------------------------------------------------------
 

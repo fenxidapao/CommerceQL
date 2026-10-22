@@ -63,7 +63,7 @@ PromQL `histogram_quantile` 口径与库一致。
 * **B 类 · 整族不输出**：有标签**未声明取值域**且从未观测 ⇒ 该前缀在 `/metrics` 里**根本不存在**。
   危险读法："没看到线" ≠ "值为 0"，也可能是"有流量但标签被丢弃"。
 * ⚠️ **第三种：类别会随运行期改变** —— `startup_assertion_state` 的域是**绑定进来**的，
-  所以它在 `bind_startup_assertion_domains` 之前是 B 类（整族不输出）、之后是 A 类（15 条 0 序列齐备，U-111 预留第 5 条断言）。
+  所以它在 `bind_startup_assertion_domains` 之前是 B 类（整族不输出）、之后是 A 类（18 条 0 序列齐备：5 条断言时为 15 条，W8 §65 增第 6 条后为 18 条）。
   在这条上"整族不输出"多了一层含义：**装配没跑到第 3.5 段**（而那种情况下任何 `observe` 都会当场抛，
   不会静默）⇒ 读这族时先确认进程是**完整启动**过的。
 
@@ -162,13 +162,18 @@ BOUNDED_ALLOWED_LABELS: Final[dict[str, int]] = {
     "kind": 8,              # §15.3 `ui_contract_violation` 的标签
     "error_class": 9,       # 07 §8.9 的 8 类 + `resource_exceeded`（§A.11 的 EXEC_RESOURCE_EXCEEDED）
     # --- U-105（架构裁定，2026-09-20）：启动校验三态镜像 ---
-    "assertion": 5,         # `repo/startup_assertions.ASSERTION_NAMES` 的条数（**封闭集**，见下）。
-                            #   ⚠️ 4→5 是**提前一步**：U-111（架构 v4，归 W1B）会新增第 5 条断言
-                            #   （materialize 的 `embedding_status` 生产侧零读者）。`bind_domain` 对上界
-                            #   是 fail-fast 的，而它的调用点在 `app/main.py` 的 **lifespan** 里
-                            #   ⇒ 不提前抬这个数，W1B 一合就是"启动抛 ValueError"而不是"CI 变红"。
-                            #   系列上界随之 4×3=12 ⇒ 5×3=**15**（`startup_assertion_state` 的 help_text、
-                            #   本文件 §导出口径注释、`deploy/runbook/README.md` §二 三处同步）。
+    "assertion": 6,         # `repo/startup_assertions.ASSERTION_NAMES` 的条数（**封闭集**，见下）。
+                            #   ⚠️ 4→5 是**提前一步**：U-111（架构 v4，归 W1B）规划的
+                            #   `embedding_status` 断言。`bind_domain` 对上界是 fail-fast 的，而它的
+                            #   调用点在 `app/main.py` 的 **lifespan** 里 ⇒ 不提前抬这个数，
+                            #   W1B 一合就是"启动抛 ValueError"而不是"CI 变红"。
+                            #   🔴 5→6（W8 第 65 轮，**裁定出处** = QA TASK_BOARD §86.2-3 + W8 §65）：
+                            #   新增 `semantic_bundle_status_published`（FR-12.3 发布闸门按 APP_ENV 分流）。
+                            #   §15.3 纪律②要求"改上界须留裁定出处"，此处即该出处：
+                            #   派单方明确要求把闸门落在**启动断言面**（不污染 `active_version()`）。
+                            #   系列上界随之 5×3=15 ⇒ 6×3=**18**（`startup_assertion_state` 的 help_text、
+                            #   本文件 §导出口径注释与 `bind_startup_assertion_domains` 的注释、
+                            #   `deploy/runbook/README.md` §二 **四处同步**）。
     "assertion_status": 3,  # `AssertionStatus` 三值 pass/pending/fail。⚠️ 刻意**不叫 `status`** ——
                             #   `status` 已被 HTTP 状态类占用（≤10）、`state` 已被 BindingState 占用（≤4），
                             #   同名两义会让 `BOUNDED_ALLOWED_LABELS` 的上界在两个指标间互相背锅
@@ -870,7 +875,8 @@ STARTUP_ASSERTION_STATE = register_metric(
         labels=("assertion", "assertion_status"),
         closed=("assertion", "assertion_status"),
         # ⚠️ 注册时**故意不给 domains**：见 `bind_startup_assertion_domains` 的 R-DEP-3 说明。
-        #   未绑定前本族整族不输出（B 类，"没线"≠"0"）；绑定后 15 条 0 序列齐备（A 类，上界随 U-111 到 5）。
+        #   未绑定前本族整族不输出（B 类，"没线"≠"0"）；绑定后 18 条 0 序列齐备
+        #   （A 类，上界 6×3；5 条断言时为 15）。
     )
 )
 

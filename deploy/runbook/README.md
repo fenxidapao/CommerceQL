@@ -108,7 +108,7 @@
    `tests/unit/test_startup_assertions.py::test_pending_is_fatal_only_in_prod_by_design`：
    **prod 下 PENDING 升级为拒绝启动**，非 prod 放行 —— 所以"本地起得来"不代表这三条过了。
    ✅ 这一条**已从"只有日志"变成可查询**（★ U-105，2026-09-20 裁定 + W7 接线）：
-   `startup_assertion_state{assertion,assertion_status}`（gauge，1=当前态；5×3=15 条序列 —— 上界已按 U-111 预留第 5 条断言）。
+   `startup_assertion_state{assertion,assertion_status}`（gauge，1=当前态；**6×3=18** 条序列 —— 5 条断言时为 15；第 6 条 `semantic_bundle_status_published` 由 W8 §65 增，裁定出处 QA §86.2-3）。
    运维查法：`count(startup_assertion_state{assertion_status="pending"} == 1) by (instance)`
    ⇒ "有多少实例端着未判定断言在跑"第一次有了数。
    ⚠️ 读法两条：① 该族**整族不输出**不代表"没有 pending"，而是**进程没跑到 lifespan 第 3.5 段**

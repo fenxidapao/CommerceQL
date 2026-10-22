@@ -47,7 +47,7 @@ concept = plan.metrics[0].name  （没有指标时退回 normalized_question）
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, Final
 
 from app.binding import MAX_CLARIFY_OPTIONS
 from app.binding.context import BindingRequestScope, clear_binding_scope, set_binding_scope
@@ -161,6 +161,57 @@ def _concept_of(plan: Plan, question: str) -> str:
     return question
 
 
+#: τ 采样原始读数的 schema 版本（C2）。改字段名必须同时改 `eval/tau_samples.py`
+#: 与该模块的单测 —— 否则派生器会**静默少样本**，而少样本的校准看起来照样能跑完。
+TAU_RAW_SCHEMA: Final[str] = "W8_TAU_RAW/v1"
+
+
+def _l4_raw_payload(
+    scores: Any, requested: Sequence[str]
+) -> dict[str, Any]:
+    """`ScoreOutcome` → 可落 record 的原始读数（C2）。
+
+    三个字段是**契约**（QA 第 65 轮点句）：
+
+    | 字段 | 内容 | 为什么这样 |
+    |---|---|---|
+    | `candidate_ids` | 被打了分的候选**稳定键**（`资产.列`） | 禁数组下标：下标跨跑批会漂，按下标对齐等于认错候选 |
+    | `rank` | 按分数降序的**候选 id 序列**（稳定序断平） | 顺序单独存，不与 `candidate_ids` 混为一谈（后者是"打分集合"的稳定顺序） |
+    | `scorer` | `model_id` + `prompt_version` | τ 绑定三元组之一；缺了它分数跨打分器不可比（N-27 约束②） |
+
+    ⚠️ 失败态（`failed=True`）：`scores` 为空 tuple ⇒ `candidate_ids` 取**请求集合**、
+    `scores`/`rank` 为空、`ok=False` + `reason`。此时它**不是校准样本**，
+    但仍是"为什么没有样本"的证据。
+    """
+    items = tuple(getattr(scores, "scores", ()) or ())
+    ok = bool(getattr(scores, "ok", False))
+    if ok and items:
+        ids = [str(s.candidate_id) for s in items]
+        values = [float(s.value) for s in items]
+        scorer = {
+            "model_id": str(items[0].model_id),
+            "prompt_version": str(items[0].prompt_version),
+        }
+        # 稳定断平：分数降序 + 同分按 id 字典序 ⇒ 两次跑批的 rank 可直接逐位比对。
+        rank = [cid for cid, _ in sorted(zip(ids, values), key=lambda kv: (-kv[1], kv[0]))]
+    else:
+        ids = [str(cid) for cid in requested if cid]
+        values = []
+        scorer = {"model_id": None, "prompt_version": None}
+        rank = []
+    reason = getattr(scores, "reason", None)
+    return {
+        "schema": TAU_RAW_SCHEMA,
+        "source": "bind.l4",
+        "ok": ok,
+        "reason": None if reason is None else str(reason),
+        "candidate_ids": ids,
+        "scores": values,
+        "rank": rank,
+        "scorer": scorer,
+    }
+
+
 async def _online_l4(
     context: RunContext, candidate_ids: Sequence[str], question: str
 ) -> tuple[CandidateRef, ...]:
@@ -182,6 +233,12 @@ async def _online_l4(
         candidates=list(candidate_ids),
         bundle_version=context.bundle_version,
     )
+    # 🔴 W8 第 65 轮（C2）：把**原始读数**交给评测组装点（不进 state、不进检查点）。
+    #    τ 校准需要「各候选各得多少分 + 打分器身份」；`resolve_detailed` 只回绑定结果，
+    #    分数到这里就断了 ⇒ 不在此留 raw 的话，事后无法重算分差（校准只能靠猜）。
+    #    ⚠️ 失败态也要留：`failed=True` 时没有分数，但**候选集与失败原因**本身是可审计事实
+    #    （"这条为什么进不了校准"必须有据可查，不能只写一句"失败了"）。
+    context.hold_l4_raw(_l4_raw_payload(scores, candidate_ids))
     # 🔴 用量必须进累加器：`record_usage` 此前只有 normalize/intent/plan/gen_sql/repair 五处，
     # 而 `l4_score` 的钱是真的花了（落库面有行）。不接 ⇒ 口径条与审计的成本**少一整档**
     # （2026-10-04 实测：口径条 ¥0.003288 vs 落库面 ¥0.004670）。失败态同样要记（已经付过钱）。

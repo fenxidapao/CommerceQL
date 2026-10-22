@@ -53,12 +53,19 @@ class _StubContext:
     bundle_version: str = "2026.09.14.1"
     usages: list[tuple[TokenUsage, Decimal]] = field(default_factory=list)
     degradations: list[Any] = field(default_factory=list)
+    #: 🔴 W8 第 65 轮 C2：`bind` 现在把 L4 原始读数交给评测组装点（τ 采样 schema）。
+    #: 本文件测的是**用量入账**，与 raw 无关；但替身必须接住这次调用，
+    #: 否则会以 `AttributeError` 形式失败 —— 那是替身缺方法，不是节点坏掉。
+    l4_raw: list[dict[str, Any]] = field(default_factory=list)
 
     def record_usage(self, usage: TokenUsage, cost: Decimal) -> None:
         self.usages.append((usage, cost))
 
     def report_degraded(self, reason: Any, action: Any, fact: Any = None) -> None:
         self.degradations.append((reason, action, fact))
+
+    def hold_l4_raw(self, payload: dict[str, Any]) -> None:
+        self.l4_raw.append(dict(payload))
 
 
 def _ctx(port: _FakePort) -> _StubContext:

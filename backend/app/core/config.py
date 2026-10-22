@@ -327,6 +327,7 @@ STARTUP_ASSERTIONS_DELEGATED_TO_W1B: Final[tuple[str, ...]] = (
     "audit_log_append_only_enforced",
     "semantic_bundle_passed_five_step_validation",
     "active_bundle_version_materialized",
+    "semantic_bundle_status_published",
 )
 
 

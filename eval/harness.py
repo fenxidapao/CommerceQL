@@ -367,6 +367,10 @@ class CaseRun:
     state: Mapping[str, Any] = field(default_factory=dict)
     nodes: tuple[str, ...] = ()
     infra_error: str | None = None  # 匣带 miss / 装配异常：该用例**不进分母**
+    #: 🔴 W8 第 65 轮（C2）：`bind` 写进 `RunContext` 的 L4 **原始读数**
+    #: （候选稳定键 / 分数 / rank / 打分器身份）。`None` = 本次没走到 L4
+    #: （无字段级候选 / 在 `bind` 之前就终止）。它**不进 GraphState**，只在评测组装点读取。
+    l4_raw: Mapping[str, Any] | None = None
 
     # -- 便捷视图（全部从 state 派生，不另存一份真相） ----------------------
 
@@ -850,6 +854,9 @@ class Harness:
             clear_run_context(run_token)
             reset_identity(identity_token)
 
+        # C2：raw 在 `clear_run_context` 之后仍可从**对象**上取（清的是 contextvar，不是实例）。
+        l4_raw = context.take_l4_raw()
+
         return CaseRun(
             case_id=case_id,
             question=question,
@@ -858,6 +865,7 @@ class Harness:
             state=dict(final),
             nodes=tuple(nodes),
             infra_error=infra_error,
+            l4_raw=l4_raw,
         )
 
     def run_case(self, **kwargs: Any) -> CaseRun:

@@ -163,6 +163,14 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
             why="软依赖降级：semantic_bundle_loaded 探针将如实报 unhealthy（readiness 503）",
         )
 
+    async def _bundle_status() -> str | None:
+        """启动断言注入物（W8 第 65 轮 C4）：语义包 `status` 读数。
+
+        ⚠️ **只读状态、不做校验**：闸门判定在 `startup_assertions`（按 `APP_ENV` 分流），
+        这里若顺手 raise，「dev 起不来」的问题就又回来了（QA §86.2-3 明确否掉了那条路）。
+        """
+        return None if semantic_runtime is None else semantic_runtime.bundle_status()
+
     async def _semantic_validator() -> None:
         """启动断言注入物（W2A RELAY §1①）：五步校验，失败抛 SemanticBundleError。"""
         await validate_bundle_path(
@@ -180,6 +188,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
             active_bundle_version=(
                 semantic_runtime.active_version() if semantic_runtime is not None else None
             ),
+            bundle_status=_bundle_status,
         ),
         logger=logger,
         semantic_validator=_semantic_validator,

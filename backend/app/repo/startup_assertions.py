@@ -91,6 +91,7 @@ __all__ = [
     "AUDIT_LOG_APPEND_ONLY_ENFORCED",
     "EMBEDDING_DIM_MATCHES_VECTOR_COLUMN",
     "SEMANTIC_BUNDLE_PASSED_FIVE_STEP_VALIDATION",
+    "SEMANTIC_BUNDLE_STATUS_PUBLISHED",
     "AssertionOutcome",
     "AssertionStatus",
     "AuditAccess",
@@ -119,12 +120,26 @@ SEMANTIC_BUNDLE_PASSED_FIVE_STEP_VALIDATION: Final[str] = "semantic_bundle_passe
 #: 这条断言把「配了对不对」的判据放在**启动期**，而不是改 `dense.py` 的 0 行语义（那会让真·空库永远误报）。
 ACTIVE_BUNDLE_VERSION_MATERIALIZED: Final[str] = "active_bundle_version_materialized"
 
+#: 🔴 W8 第 65 轮（C4，QA §86.2-3）：**FR-12.3 的发布闸门在启动期补上，但不污染运行时接口**。
+#:
+#: 现状（W8 第 64 轮 C4 结论）：`SemanticBundleRuntime.active_version()` 直接回
+#: `self._loaded.version`，**不看 `status`** ⇒ `candidate`/`staged` 的包被当作 active 正常服务。
+#: QA 明确否掉了"在 `active_version()` 里硬校验"——那会让 dev 与评测面（包 `status=candidate`）
+#: 直接起不来，等于把**发布流程**和**能不能开发**绑成一件事。
+#:
+#: 故分流放在这里：**`APP_ENV=prod` 且包非 `published` ⇒ FAIL（拒启动）；
+#: dev／staging（含评测面）⇒ PENDING（日志 WARN、放行）**。
+#: ⚠️ 用 `PENDING` 而不是新增第四态：本模块只有三态（`AssertionStatus` 的 docstring 已钉死），
+#: 而"非 prod 放行但必须可见"恰好就是 `PENDING` + `strict_in_prod` 的既有语义。
+SEMANTIC_BUNDLE_STATUS_PUBLISHED: Final[str] = "semantic_bundle_status_published"
+
 ASSERTION_NAMES: Final[tuple[str, ...]] = (
     ANALYTICS_DSN_IS_READ_ONLY,
     EMBEDDING_DIM_MATCHES_VECTOR_COLUMN,
     AUDIT_LOG_APPEND_ONLY_ENFORCED,
     ACTIVE_BUNDLE_VERSION_MATERIALIZED,
     SEMANTIC_BUNDLE_PASSED_FIVE_STEP_VALIDATION,
+    SEMANTIC_BUNDLE_STATUS_PUBLISHED,
 )
 
 
@@ -187,6 +202,11 @@ class AuditAccess:
     trigger_present: bool
 
 
+async def _no_bundle_status_probe() -> str | None:
+    """组装根没注入语义包 status 时的占位探针：返回 `None` ⇒ PENDING（**不是 PASS**）。"""
+    return None
+
+
 async def _no_active_version_probe() -> None:
     """组装根没注入 active 版本时的占位探针：返回 `None` ⇒ 判定为 PENDING（**不是 PASS**）。"""
     return None
@@ -215,6 +235,9 @@ class StartupProbes:
     active_bundle_rows: Callable[[], Awaitable[tuple[int, int] | None | Unreachable]] = (
         _no_active_version_probe
     )
+    #: 🔴 语义包 `status`（`draft|candidate|published`）；`None` = 组装根未注入（→ PENDING）。
+    #: 默认值同样是占位探针：**不传不会静默通过**，只会 PENDING。
+    bundle_status: Callable[[], Awaitable[str | None]] = _no_bundle_status_probe
 
 
 # ============================================================================
@@ -514,6 +537,59 @@ def evaluate_active_bundle_rows(
     )
 
 
+def evaluate_semantic_bundle_published(
+    status: str | None, *, app_env: AppEnv, version: str | None = None
+) -> AssertionOutcome:
+    """FR-12.3 的发布闸门（**按环境分流**，W8 第 65 轮 C4）。
+
+    | 现读 | prod | dev／staging（含评测面） |
+    |---|---|---|
+    | `status == "published"` | PASS | PASS |
+    | `status` 为 `draft`/`candidate`/`staged`/其它 | **FAIL（拒启动）** | **PENDING ⇒ 日志 WARN、放行** |
+    | `status is None`（未注入／读不到） | PENDING（prod 下由 `strict_in_prod` 升级为致命） | PENDING |
+
+    🔴 **为什么不在 `active_version()` 里卡**：dev 与评测面的包本来就是 `candidate`
+    （转 `published` 走人工发布），硬校验会让它们**起不来** —— 把"发布流程没过"
+    和"开发起不了服务"绑成一件事，代价远大于收益。闸门只该在**生产**咬人。
+    🔴 **为什么不是新增第四态 `WARN`**：本模块只有三态，且"非 prod 放行但必须可见"
+    正是 `PENDING + strict_in_prod` 的既有语义（`enforce_startup_assertions` 对 `PENDING`
+    打的就是 WARNING）。加第四态会让 `is_fatal` 的两处判断各多一条分支，而收益只是改个词。
+    """
+    shown = "unknown" if status is None else repr(status)
+    where = f"（active={version!r}）" if version else ""
+    if status is None:
+        return AssertionOutcome(
+            name=SEMANTIC_BUNDLE_STATUS_PUBLISHED,
+            status=AssertionStatus.PENDING,
+            detail=f"语义包 status 未注入或读不到{where} ⇒ 无法判定是否已发布（不是通过）",
+        )
+    if status == "published":
+        return AssertionOutcome(
+            name=SEMANTIC_BUNDLE_STATUS_PUBLISHED,
+            status=AssertionStatus.PASS,
+            detail=f"语义包 status=published{where} —— FR-12.3 的发布闸门已过",
+        )
+    if app_env is AppEnv.PROD:
+        return AssertionOutcome(
+            name=SEMANTIC_BUNDLE_STATUS_PUBLISHED,
+            status=AssertionStatus.FAIL,
+            detail=(
+                f"APP_ENV=prod 但语义包 status={shown}{where} —— "
+                "FR-12.3 要求只有 published 可服务；请走人工发布后再启动"
+            ),
+        )
+    return AssertionOutcome(
+        name=SEMANTIC_BUNDLE_STATUS_PUBLISHED,
+        status=AssertionStatus.PENDING,
+        detail=(
+            f"WARN：APP_ENV={app_env.value} 且语义包 status={shown}{where} —— "
+            "非 prod 放行（dev／评测面的包本来就是 candidate）；prod 下本项会拒绝启动"
+        ),
+        # 已按环境分流：这里已是"非 prod"，不要再由 `strict_in_prod` 二次升级。
+        strict_in_prod=False,
+    )
+
+
 async def _fetch_active_bundle_rows(
     engine: AsyncEngine, version: str
 ) -> tuple[int, int] | None:
@@ -742,6 +818,7 @@ def live_probes(
     *,
     metadata_engine: AsyncEngine,
     active_bundle_version: str | None = None,
+    bundle_status: Callable[[], Awaitable[str | None]] | None = None,
 ) -> StartupProbes:
     """把上面三个 I/O 实现绑成 `StartupProbes`。
 
@@ -761,6 +838,9 @@ def live_probes(
             if active_bundle_version
             else _no_active_version_probe
         ),
+        # status 由组装根注入（`semantic_runtime.bundle_status`）—— 本模块不 import
+        # `app.semantics`（R-DEP-1），所以这里只能收 callable。
+        bundle_status=bundle_status or _no_bundle_status_probe,
     )
 
 
@@ -803,11 +883,12 @@ async def run_startup_assertions(
 
     assert_covers_delegated_names()
 
-    role_row, vector_col, audit_access, bundle_rows = await asyncio.gather(
+    role_row, vector_col, audit_access, bundle_rows, bundle_status = await asyncio.gather(
         probes.analytics_role(),
         probes.vector_column(),
         probes.audit_access(),
         probes.active_bundle_rows(),
+        probes.bundle_status(),
     )
 
     return (
@@ -818,6 +899,9 @@ async def run_startup_assertions(
         evaluate_audit_append_only(audit_access),
         evaluate_active_bundle_rows(bundle_rows, version=active_bundle_version),
         await _evaluate_semantic_with_validator(semantic_validator),
+        evaluate_semantic_bundle_published(
+            bundle_status, app_env=settings.APP_ENV, version=active_bundle_version
+        ),
     )
 
 

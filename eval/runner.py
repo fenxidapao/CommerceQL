@@ -56,8 +56,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import os
+import re
 import shutil
 import sqlite3
 import sys
@@ -329,6 +331,95 @@ def second_round_success(terminal_event: str | None, infra_error: str | None) ->
     return terminal_event == "complete" and not infra_error
 
 
+#: τ 采样原始读数的 schema 版本（C2）。与 `app/graph/nodes/bind.py::TAU_RAW_SCHEMA` **必须同值**，
+#: 派生器（`tau_samples.py`）只认这一个版本 —— 两边漂了会让样本**静默变少**。
+TAU_RAW_SCHEMA = "W8_TAU_RAW/v1"
+
+
+def _column_of_candidate(candidate_id: str) -> str:
+    """`资产.列` → `列`（金标反解只用列名，不猜表名）。
+
+    ⚠️ 为什么只比列名：`gold_sql` 里列名常不带表前缀（`SELECT sum(pay_amount) FROM v_order_paid`），
+    而候选键必然是 `资产.列`。带前缀严格匹配会**全不命中**，把每条都判成 `unmatched`；
+    只比列名会引入"同名列"的假命中 ⇒ 所以**多命中就判 unmatched**，不挑一个更像的。
+    """
+    return candidate_id.rsplit(".", 1)[-1]
+
+
+def _gold_for_tau(
+    case: Mapping[str, Any], expected: str, candidate_ids: list[str]
+) -> dict[str, Any]:
+    """把冻结集 `gold_sql` **反解**到候选集（C2；QA 点句：匹配不上写 null + reason，不许猜）。
+
+    三种状态，**不可混用**：
+
+    | `gold_status` | 含义 | 派生器怎么用 |
+    |---|---|---|
+    | `matched` | 金标列**唯一**命中了某个候选 | 样本可用，`gold_candidate_id` 进 `ScoreSample` |
+    | `expected_clarify` | 该题**本就该澄清**（`expected_behavior=clarify`） | 样本可用，`gold_candidate_id=None`（安全侧样本） |
+    | `unmatched` | 金标没命中 / 命中多个 / 无 gold_sql / 无候选 | 🔴 **不进样本**（不是"该澄清"！） |
+
+    🔴 为什么 `unmatched` 必须跳过而不是当 `None`：`ScoreSample.gold_candidate_id is None`
+    的语义是"**本该澄清**"。把"我没反解出来"塞进同一个 `None`，等于凭空造出一批
+    "该澄清未澄清"的样本 —— 校准结果会朝"更容易澄清"的方向漂，而这正是 NFR-7.1 最不希望的方向。
+    """
+    gold_sql = str(
+        case.get("gold_sql") or (case.get("gold") or {}).get("gold_sql") or ""
+    )
+    digest = hashlib.sha256(gold_sql.encode("utf-8")).hexdigest() if gold_sql else None
+    base = {
+        "gold_sql_present": bool(gold_sql),
+        "gold_sql_sha256": digest,
+        "gold_candidate_id": None,
+        "gold_unmatched_reason": None,
+    }
+    if expected == "clarify":
+        return {**base, "gold_status": "expected_clarify"}
+    if not gold_sql:
+        return {**base, "gold_status": "unmatched", "gold_unmatched_reason": "empty_gold_sql"}
+    if not candidate_ids:
+        return {**base, "gold_status": "unmatched", "gold_unmatched_reason": "no_l4_candidates"}
+
+    hits = [
+        cid
+        for cid in candidate_ids
+        if re.search(rf"(?<![A-Za-z0-9_]){re.escape(_column_of_candidate(cid))}(?![A-Za-z0-9_])", gold_sql, re.I)
+    ]
+    if len(hits) == 1:
+        return {**base, "gold_status": "matched", "gold_candidate_id": hits[0]}
+    if not hits:
+        return {**base, "gold_status": "unmatched", "gold_unmatched_reason": "no_column_overlap"}
+    return {
+        **base,
+        "gold_status": "unmatched",
+        "gold_unmatched_reason": "multiple_candidates_match",
+        # 命中集合原样留下：多命中是"金标与候选集不匹配"的事实，不是可以择一解决的歧义。
+        "gold_ambiguous_matches": hits,
+    }
+
+
+def _tau_raw(run: Any, case: Mapping[str, Any], expected: str) -> dict[str, Any]:
+    """一条记录的 `tau_raw`：L4 原始读数 + 金标反解（C2）。
+
+    `l4_raw is None` = 本次没走到 L4（`bind` 之前就终止 / 无字段级候选）——
+    照常给键，写 `ok=False, reason="l4_not_reached"`，**不用空对象冒充"跑过但没分"**。
+    """
+    raw = dict(getattr(run, "l4_raw", None) or {})
+    if not raw:
+        raw = {
+            "schema": TAU_RAW_SCHEMA,
+            "source": None,
+            "ok": False,
+            "reason": "l4_not_reached",
+            "candidate_ids": [],
+            "scores": [],
+            "rank": [],
+            "scorer": {"model_id": None, "prompt_version": None},
+        }
+    candidate_ids = [str(cid) for cid in (raw.get("candidate_ids") or [])]
+    return {**raw, **_gold_for_tau(case, expected, candidate_ids)}
+
+
 async def score_case(
     harness: Harness,
     case: dict[str, Any],
@@ -386,6 +477,9 @@ async def score_case(
         "unscored_reason": None,
         # G-8 二轮：默认 None（未开跑）；`--second-round` 时由尾部块填
         "second_round": None,
+        # 🔴 W8 第 65 轮（C2）：τ 采样的**原始读数**（候选稳定键 / 分数 / rank / 打分器 / 金标反解）。
+        #    §65 只写 schema 与派生器，**不采 τ、不改 BINDING_TAU_***。
+        "tau_raw": _tau_raw(run, case, expected),
     }
 
     if run.infra_error:
