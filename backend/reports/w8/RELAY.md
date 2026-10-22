@@ -6567,3 +6567,64 @@ FR-12.3 规定"发布走人工"，而运行时 `active_version()` **不读这张
 ### 67.4 边界
 
 未改 `dense.py` 的 0 行语义、未改 `startup_assertions` 代码、未改 `semantic_bundle` 状态、未改判据/阈值/15s/gold/冻结集、未碰 `reports/qa/**`；未重放 GRANT/RLS；LLM 零出站（embedding 为本地模型）。
+
+## 第 68 轮（W8 第 63 轮 B 轨：新基线全量 166 跑完｜2026-10-22 15:20–15:5x +0800｜代码 `97313f9`）
+
+> 派单：`TASK_BOARD §83.5` B 轨。上界 ¥12（总控已授权）。
+> 本批 = **测量系统换代后的第一份全量基线**（官方端点 + `deepseek-flash` + thinking disabled）。
+
+### 68.1 批次身份与账
+
+```text
+产物     eval/results_r63_full166.json（git_rev=97313f9 / dirty=false）
+匣带     eval/cassettes/w8_r63_full166.jsonl
+时段     2026-10-22 15:20–15:45 +0800（wall 合计 1,535.6s，max 287.969s / median 7.877s）
+规模     166/166 条，n_scored 166，n_unscored 0
+tokens   3,646,155
+花费     ¥2.174280（上界 ¥12 ✅，仅占 18%；r59 口径的 ¥8.8 预估偏高，官方 flash 单价更低）
+```
+
+⚠️ 物化修复（§67）与本批**无因果关系**：评测检索走目录夹具、不读 `app.embed_doc` ⇒ 物化前后跑出的评测读数应一致。本批的差异只能来自**端点/模型换代**。
+
+### 68.2 分布
+
+```text
+terminal   complete 116 / refuse 28 / error 6 / clarify 16
+EX         n_execute_scored 124，出 SQL 109，等价 36（29.0%）
+归因       time_semantics 31 / value_mapping 20 / schema_linking_miss 13 / field_binding 9
+           / ambiguity_not_clarified 11 / unattributed 8 / sql_generation 4 / over_refusal 3
+```
+
+### 68.3 门禁复算（`eval/results_r63_gate_recompute.json`）
+
+| 格 | 判 | 实测 |
+|---|---|---|
+| G-2 结构 Easy × 语义低 | **UNVERIFIED** | `easy×low = 8/8 = 100.0%`（门槛 95%） |
+| G-5 拒答准确率 / 误拒 | **UNVERIFIED** | 该拒则拒 `24/24 = 100.0%`；误拒 `3/124 = 2.4%`（门槛 95% / 5%） |
+| G-8 澄清率 / 二次成功 | **UNVERIFIED** | 澄清率 `16/166 = 9.6%`（≤15% ✅）；澄清后一次成功 `0.0%`（无二轮回路） |
+| G-1 P0 用例 | PASS（⚠️ 见下） | 红 0 条 |
+
+🔴 **本轮的实质变化**：G-2 与 G-5 的**数值都已过门槛**，但 `_tau_verdict` 把 `PASS` 降级成 `UNVERIFIED` ——
+**τ 现在是唯一按住这两格的钉子**。要变绿只有一条路：在**新 model_id + prompt_version** 上重采 τ（不得复用 r59 raw）。
+
+⚠️ **G-1 的 PASS 不是本轮证据**：复算入口读的是**既有 pytest 日志**（离线 2340 / 集成 107），不是本批跑出来的。回归要另跑，不能借用这格。
+
+### 68.4 细节（供后续开单）
+
+- **G-5 子集 148**：complete 108 / refuse 27 / error 4 / clarify 9（r59 是 99/23/11/15）。
+- **error 6 条**：`LLM_UPSTREAM_ERROR` 3（M-ENUM-02 22.7s／M-MET-09 27.8s／M-MET-10 15.5s）＋ `EXEC_TIMEOUT` 1（**X-ENUM-02 287.969s**）＋ `GATE_AST_REJECTED` 2（C-GMV-04／C-REP-02，期望 clarify）。
+  ⇒ `EXEC_TIMEOUT` 与 `GATE_AST_REJECTED` 是**新基线里的新形状**，与 r59 的 11 条 `LlmTimeout` 不同族；可用性单列（C 件）需要按新基线重做一版。
+- **clarify 16 条**：7 条是**该澄清**（C-CITY-01/03/04、C-UV-01、C-REG-01/02、C-CAT-01，expected=clarify）；9 条是**误澄清**（H-STR-01…08 + X-MET-10，expected=execute，占 execute 集 9/124 = 7.26%）。
+- **B 类三条在新基线的读数**（§83.5 B3，不引 r59 差值）：E-MET-08 `refuse/over_refusal`；M-MET-01 `refuse/over_refusal`；H-ENUM-04 `complete` 非等价 / `value_mapping`。与 §65 三次 live 的终态一致。
+
+### 68.5 未做
+
+- **τ 未采**：raw 仍缺 `candidate_ids`／候选顺序／`gold_candidate_id`，`can_form_score_sample=false`；采 τ 需要「L4 记账补候选 ID」的**代码改动＋一轮出站**，本轮未动。
+- G-8 二轮回路未写；官方 `backend/reports/w6/eval_metrics.json` 未刷新（仍 `88f3500`／PASS 1/8）；`semantic_bundle` 状态未转 `published`。
+- 未做回归（offline／integration），G-1 那格不引。
+
+### 68.6 待点句
+
+1. **τ 采集**：批准「在 `l4_score` 落 `candidate_ids` + `gold_candidate_id`」的代码改动 + 一轮出站采样（n≥3，calibration/holdout 分离）？这是 G-2/G-5 从 UNVERIFIED 走向判词的最后一道。
+2. **可用性单列（C 件）重做一版**：按新基线的 6 条 error 重算上游错误率（含 `EXEC_TIMEOUT` 家族），零出站。
+3. **回归要不要现在跑**：offline 全量 + 一次性 PG/Redis 集成（约 2–3 分钟），给 G-1 一个**本轮**的读数。

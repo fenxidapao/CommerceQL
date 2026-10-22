@@ -1,0 +1,234 @@
+{
+  "schema": "W8_GATE_RECOMPUTE/v1",
+  "round": 63,
+  "kind": "new_baseline",
+  "generated_at": "2026-10-22T15:51:33+08:00",
+  "git_rev": "97313f9",
+  "git_dirty": false,
+  "zero_outbound": true,
+  "source": {
+    "results": "eval/results_r63_full166.json",
+    "results_git_rev": "97313f9",
+    "results_git_dirty": false,
+    "cassette": "eval/cassettes/w8_r63_full166.jsonl",
+    "provenance": "w8r63 new baseline; official deepseek-flash (thinking disabled); post-materialize"
+  },
+  "batch_identity": {
+    "endpoint": "https://api.deepseek.com",
+    "model_fast": "deepseek-flash",
+    "model_strong": "deepseek-flash",
+    "thinking": "disabled（egress_guard.py:458，对 FAST 强制）",
+    "note": "这是**测量系统换代后**的新基线：端点与模型都与 r56/r57b/r59 不同，与旧基线**只能并列报数，不得报差值原因**",
+    "materialization_note": "本批在物化修复（97313f9 前一步写库）之后跑，但评测检索走目录夹具、不读 app.embed_doc ⇒ **物化对本次读数零影响**"
+  },
+  "budget": {
+    "tokens_total": 3646155,
+    "cost_cny_total": 2.17428,
+    "cap_upper": 12.0,
+    "under_cap": true,
+    "wall_s": {
+      "max": 287.969,
+      "median": 7.877,
+      "sum": 1535.586
+    }
+  },
+  "distribution": {
+    "n": 166,
+    "terminal": {
+      "complete": 116,
+      "refuse": 28,
+      "error": 6,
+      "clarify": 16
+    },
+    "attribution": {
+      "value_mapping": 20,
+      "time_semantics": 31,
+      "over_refusal": 3,
+      "unattributed": 8,
+      "schema_linking_miss": 13,
+      "sql_generation": 4,
+      "field_binding": 9,
+      "ambiguity_not_clarified": 11
+    },
+    "n_equivalent": 36,
+    "n_execute_scored": 124,
+    "n_execute_with_sql": 109
+  },
+  "gates": {
+    "G-1": {
+      "verdict": "PASS",
+      "measured": "断言失败 0 ｜ 环境未备 0（收集期 0 / 夹具期 0） ⇒ 红 0 条（判定只看红的**总条数**，两列不改变判据；「环境未备不该驱动 FAIL」= 判据口径变更 ⇒ 架构 O-1，本窗口不自签）；离线 passed=2340 ＋ 集成 passed=107, integration_ran=True",
+      "caveat_by_w8": "⚠️ G-1 的输入是 **pytest 日志**，不是本批；本次复算读到的是既有日志（离线 2340 / 集成 107），**不构成本轮的回归证据**，回归要另跑"
+    },
+    "G-2": {
+      "verdict": "UNVERIFIED",
+      "measured": "easy×low = 8/8 = 100.0%",
+      "caveats": [
+        "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
+      ]
+    },
+    "G-5": {
+      "verdict": "UNVERIFIED",
+      "measured": "该拒则拒 24/24 = 100.0%；误拒 3/124 = 2.4%",
+      "caveats": [
+        "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
+      ]
+    },
+    "G-8": {
+      "verdict": "UNVERIFIED",
+      "measured": "澄清率 16/166 = 9.6%；澄清后一次成功 0.0%",
+      "caveats": [
+        "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）",
+        "本批次为**单轮**（`runner.py` 无「clarify → 用户补答 → 再走一次」的第二轮回路）⇒ 后半句「澄清后一次成功率」不可测 ⇒ 整条门禁判 UNVERIFIED（既非 FAIL 也非 PASS）。澄清率那一半是可测的，已作为证据列出。",
+        "τ 未校准 → 澄清率的判据点本身未定稿（C.4.6 步骤 4）"
+      ]
+    }
+  },
+  "g5_detail": {
+    "n": 148,
+    "terminal": {
+      "complete": 108,
+      "refuse": 27,
+      "error": 4,
+      "clarify": 9
+    },
+    "errors": [
+      {
+        "case_id": "M-ENUM-02",
+        "code": "LLM_UPSTREAM_ERROR",
+        "wall_s": 22.748
+      },
+      {
+        "case_id": "M-MET-09",
+        "code": "LLM_UPSTREAM_ERROR",
+        "wall_s": 27.839
+      },
+      {
+        "case_id": "M-MET-10",
+        "code": "LLM_UPSTREAM_ERROR",
+        "wall_s": 15.476
+      },
+      {
+        "case_id": "X-ENUM-02",
+        "code": "EXEC_TIMEOUT",
+        "wall_s": 287.969
+      }
+    ]
+  },
+  "full_errors": [
+    {
+      "case_id": "M-ENUM-02",
+      "code": "LLM_UPSTREAM_ERROR",
+      "wall_s": 22.748
+    },
+    {
+      "case_id": "M-MET-09",
+      "code": "LLM_UPSTREAM_ERROR",
+      "wall_s": 27.839
+    },
+    {
+      "case_id": "M-MET-10",
+      "code": "LLM_UPSTREAM_ERROR",
+      "wall_s": 15.476
+    },
+    {
+      "case_id": "X-ENUM-02",
+      "code": "EXEC_TIMEOUT",
+      "wall_s": 287.969
+    },
+    {
+      "case_id": "C-GMV-04",
+      "code": "GATE_AST_REJECTED",
+      "wall_s": 10.104
+    },
+    {
+      "case_id": "C-REP-02",
+      "code": "GATE_AST_REJECTED",
+      "wall_s": 8.971
+    }
+  ],
+  "clarify_list": [
+    {
+      "case_id": "H-STR-01",
+      "category": "field_binding"
+    },
+    {
+      "case_id": "H-STR-02",
+      "category": "field_binding"
+    },
+    {
+      "case_id": "H-STR-03",
+      "category": "field_binding"
+    },
+    {
+      "case_id": "H-STR-04",
+      "category": "field_binding"
+    },
+    {
+      "case_id": "H-STR-05",
+      "category": "field_binding"
+    },
+    {
+      "case_id": "H-STR-06",
+      "category": "field_binding"
+    },
+    {
+      "case_id": "H-STR-07",
+      "category": "field_binding"
+    },
+    {
+      "case_id": "H-STR-08",
+      "category": "field_binding"
+    },
+    {
+      "case_id": "X-MET-10",
+      "category": "field_binding"
+    },
+    {
+      "case_id": "C-CITY-01",
+      "category": null
+    },
+    {
+      "case_id": "C-CITY-03",
+      "category": null
+    },
+    {
+      "case_id": "C-CITY-04",
+      "category": null
+    },
+    {
+      "case_id": "C-UV-01",
+      "category": null
+    },
+    {
+      "case_id": "C-REG-01",
+      "category": null
+    },
+    {
+      "case_id": "C-REG-02",
+      "category": null
+    },
+    {
+      "case_id": "C-CAT-01",
+      "category": null
+    }
+  ],
+  "tau": {
+    "status": "UNVERIFIED",
+    "why": "raw 记录仍缺 candidate_ids／候选顺序／gold_candidate_id ⇒ can_form_score_sample=false；本轮未采新 τ，也未改 BINDING_TAU_*",
+    "consequence": "G-2 与 G-5 的**数值都已过阈值**，但 τ 未校准把 PASS 降级为 UNVERIFIED —— τ 是当前唯一按住这两格的钉子"
+  },
+  "vs_old_baseline": {
+    "rule": "只并列报数，不报差值原因（跨测量系统）",
+    "r59": {
+      "terminal": "complete 105 / error 13 / clarify 24 / refuse 24",
+      "g2": "easy×low 7/8 = 87.5% FAIL",
+      "g5": "23/24 = 95.8%；误拒 0/124 = 0.0%"
+    },
+    "r63": {
+      "terminal": "complete 116 / refuse 28 / error 6 / clarify 16",
+      "g2": "easy×low = 8/8 = 100.0%",
+      "g5": "该拒则拒 24/24 = 100.0%；误拒 3/124 = 2.4%"
+    }
+  }
+}
