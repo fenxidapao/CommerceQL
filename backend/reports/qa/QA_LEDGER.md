@@ -1683,3 +1683,38 @@
 **点句**：C1 录制批准（≤¥0.05 不看时段，但要干净树重放+入库+success 几/3）；C2 三问已答；C4 不碰 `active_version()`、改断言分流；C5 采 B 不改四值枚举；D5 夹具先行、若 degraded 则关 U-127。
 
 **结论**：第 64 轮 C 批六件可收、C1 机制成立但证据不干净（须干净树重放）。U-127 代码面已对齐，只差夹具确认。W65 要点见 `TASK_BOARD §86.4`。
+
+---
+
+## R31bj · W8 第 65 轮验收：C1 机制成立但门禁未接线；τ 反解规则假匹配，先修规则再采样 ／ 2026-10-22 20:05 +0800 ／ HEAD `89eef65`／638 笔
+
+**基线**：HEAD `89eef65`、638 笔、与 origin/main 齐平；工作树仅 `?? .workbuddy/`；无 `M` 无 `??`（W8 三个证据件均已入库）。
+
+| # | 项 | 读数 / 判据 | 级别 | 判 |
+|---|---|---|---|---|
+| 1 | C1 live 件 | `d227037`／`dirty=false`／mode=record；`n_second_round_attempted=3`／`n_second_round_success=3`；逐条 C-CITY-01/03/04 → complete（27,873／27,785／27,909 tok） | 实测 | ✅ |
+| 2 | C1 replay 件 | `763fc62`／`dirty=false`／mode=replay；与 live **逐项一致**（同终态、同 token） | 实测 | ✅ |
+| 3 | C1 匣带 | `eval/cassettes/w8_r65_second_round.jsonl` 15 条，已 tracked | 实测 | ✅ |
+| 4 | **C1 门禁接线** | `eval/reporter.py:1362` 仍硬编码 `"second_round_loop_available": False`；复算 G-8 得「澄清率 3/3=100.0%；澄清后一次成功 **0.0%**」＋caveat「runner.py 无第二轮回路」 | 实测 | 🔴 |
+| 5 | 二轮 success 口径 | = 二轮走到 complete，**≠ 答案正确**（二轮 gold 为 `not_defined_for_second_round`） | 读码 | ⚠️ 文案须改 |
+| 6 | C2 落点 | `app/graph/context.py`／`bind.py`／`eval/harness.py`／`eval/runner.py`／新文件 `eval/tau_samples.py`；派生器实跑可执行（`insufficient_repeats` 全部正确跳过） | 实测 | ✅ |
+| 7 | **τ gold 口径差** | raw replay 内嵌 `gold_status` matched=**19**；coverage 件重算 matched=**61**（两件差 42 条） | 实测 | 🔴 |
+| 8 | **τ 假匹配** | 严格口径重算：**31 vs 61**；61 条里 **27 条（44%）gold 分数低于次优**；`M-HIER-03` 把 `v_shop.city` 的题判成 `v_order_paid.category_l1`（0.02／排名 12） | 实测 | 🔴 |
+| 9 | τ 可分性 | 用 61 条 gold 算分差：median=0.0，τ=0.15 ⇒ 42/61（68.9%）判 ambiguous | 实测 | 🔴 |
+| 10 | 候选集覆盖 | 25 条 gold 表不在候选资产内（候选只有 `v_order_paid`／`v_order_refund`／`v_product`） | 实测 | ⚠️ |
+| 11 | C4 断言 | `semantic_bundle_status_published`：prod 且非 published ⇒ FAIL；dev/staging ⇒ PENDING；`status=None` ⇒ PENDING；未动 `active_version()`；`BOUNDED_ALLOWED_LABELS['assertion']` 5→6、`startup_assertion_state` 15→18 | 实测（我跑 **47 passed**） | ✅ |
+| 12 | C4 库侧事实 | `app.semantic_bundle` 两版 **status 都是 `staged`**（`2026.09.14.1`／`2026.10.16.2`），无 `published` ⇒ prod 下该断言会 FAIL | 实测（只读事务） | ⚠️ 发布闸门真实生效 |
+| 13 | D5 夹具 | `backend/tests/unit/test_llm_saturation_terminal.py`：**4 passed**（我实跑）；`LlmSaturated` → `default_code=LLM_CONCURRENCY_EXCEEDED`、`_reason_for=llm_concurrency_exceeded`、传输层 0 调用 | 实测 | ✅（三段各自断言，未图级串跑） |
+| 14 | U-127 | 代码面已对齐 07 §10.1；夹具补齐 ⇒ **判「关」** | 判词 | ✅ |
+| 15 | C5 提案 | §70.6 限定版（四值不变、error 下可选 `unavailable_reason`、五层向后兼容） | 读文 | ✅ 材料收 |
+| 16 | 花费 | `second_round_cost_cny_total` 0.052041 ＋ 首轮 `cost_cny_total` 0.005183 ＝ **¥0.057224**；超 ¥0.05 上界 14%，漏算项为「二轮重走整链 ≈¥0.017/条」 | 实测 | ✅ 如实自报 |
+| 17 | 成本结构 | r63 匣带：L4 占 **6.4%** token 却占估算成本 **58%**（输出 117,293／177,857）；L4 单次 ≈¥0.011 | 实测 | 供下轮预算 |
+| 18 | 测试数 | `backend/tests/unit`＋`backend/tests/eval` 收集 **1981** 条（自报 1980 passed，差 1 为收集口径） | 实测 | ✅ |
+| 19 | 官方门禁 | `backend/reports/w6/eval_metrics.json` 仍 `88f3500`／PASS 1/8 | 实测 | 未刷新（正确） |
+| 20 | 边界 | 未改 `reports/qa/**`／未 add -A／`.workbuddy/` 未入库／未动 15s·判据·gold·冻结集·`dense.py` 0 行语义／未写共享 ecom | 实测 | ✅ |
+
+**点句**：① **τ 采样不批 ¥6** —— 先修反解规则（零出站），再只对 matched 样本集跑 **L4-only 重采样**，上界 **¥1.5**、排 18:00 后低谷；② **图级饱和不单开一轮**，并入 W66；③ **C5 取值域照 §70.6 定**（七值，四条硬约束）。
+
+**结论**：第 65 轮 C4／D5／C5 材料／花费可收；C1 与 C2 半收。**本轮最有价值的产出是两条负向结论**：C1 的回路做好了但门禁读不到（`reporter` 硬编码），C2 的反解规则把过滤列当成了金标（42 条假 matched、27 条 gold 分数低于次优）。τ 采样在规则修好之前**跑了也是错的**，故 ¥6 不批；改为修规则后 L4-only、样本集内采样、上界 ¥1.5、排低谷。
+
+W66 派单见 `TASK_BOARD §87.3`（四项，全部零出站）。

@@ -5543,3 +5543,108 @@ QA 侧：本窗离线/集成均不触 LLM，不受影响。**后续任何 live �
 ### 86.5 边界
 
 本窗零出站、零写库；只追加 `reports/qa/**`；未动 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`。
+
+---
+
+## 87 · W8 第 65 轮验收：C1 二轮回路成立但未接线到门禁；τ 反解规则存在**假匹配**，必须先修规则再采样（QA R31bj ｜ 2026-10-22 20:05 +0800 ｜ HEAD `89eef65`／638 笔）
+
+### 87.0 结论
+
+| 项 | 判定 | 一句话理由 |
+|---|---|---|
+| **C1 二轮回路** | 🟡 **机制成立，门禁未接线** | 3/3 success 实测成立；但 `reporter.py:1362` 仍硬编码 `second_round_loop_available: False` ⇒ 官方复算 G-8 仍读「澄清后一次成功 0.0%」，C1 的成果**在门禁口径里读不出来** |
+| **C2 τ schema** | 🟡 **代码收，数据不收** | 落点齐、派生器双落正确；但**反解规则产生 42 条假 matched**，其中 27 条 gold 分数低于次优 ⇒ 现在采样会把 τ 校到错的位置 |
+| **C4 断言** | ✅ **收** | 47 passed（我实跑）；未动 `active_version()`；prod/dev 分流正确 |
+| **D5 饱和夹具** | ✅ **收** | 4 passed（我实跑）；U-127 判「关」成立，但仅到三段各自断言，未图级串跑 |
+| **C5 提案** | ✅ **材料收，落码另轮** | 限定版（不改四值、error 下可选 `unavailable_reason`）方向正确 |
+| **花费** | ✅ **收，但上界估算漏项已记** | 实测 ¥0.057224（`second_round_cost_cny_total` 0.052041 ＋ 首轮 0.005183），超 ¥0.05 上界 14%，原因自报属实 |
+
+### 87.1 🔴 C1 最大的问题：**回路做了，但门禁读不到**
+
+实测两处（`git=89eef65`，零出站）：
+
+1. `eval/runner.py:671-697` 已产出 `record["second_round"]`（含 `attempted`／`success`／`tokens`／`cost_cny`），匣带 15 条，live 与 replay 两份产物 `dirty=false` 且逐条一致（3/3 complete，27,873／27,785／27,909 tok）。
+2. 🔴 **但 `eval/reporter.py:1362` 仍是 `"second_round_loop_available": False` 硬编码**，`eval/gates.py:525` 读的就是这个字段。
+
+⇒ 我实跑 `reporter.recompute_gate('G-8', results_path='eval/results_r65_second_round_live.json')` 得到：
+
+```
+G-8: UNVERIFIED | 澄清率 3/3 = 100.0%；澄清后一次成功 0.0%
+caveats: '本批次为**单轮**（runner.py 无「clarify → 用户补答 → 再走一次」的第二轮回路）…'
+```
+
+**带二轮的批次，官方复算仍说「runner.py 无第二轮回路」**。⇒ C1 的 3/3 落在产物里，落不进门禁。
+
+⇒ **W66 必修（零出站）**：`reporter._clarification_digest` 改为**从 records 里数** `second_round.attempted`／`second_round.success`，据此置 `second_round_loop_available`；`clarify_then_correct` 需与 `second_round.success` 的口径对齐（见 87.3-③）。**这属评测器接线，不是判据变更**，`gates.py` 的阈值与文案不动。
+
+### 87.2 🔴 C2 的真问题：反解规则产生**假 matched**
+
+`results_r65_tau_coverage.json` 自报 `matched 61/166`。我按它自己的口径复算（`n_gold_matched=61`）能对上，但**逐条看 gold 是否正确**，发现两处硬伤：
+
+**① `results_r65_tau_raw_replay.json` 内嵌的 `gold_status` 与 coverage 件不一致**：
+
+| 来源 | matched | unmatched | 说明 |
+|---|---|---|---|
+| raw replay 内嵌（`ae21a0d`） | **19** | 129 | 旧规则产物 |
+| coverage 件重算（`210b461`） | **61** | 87 | 新规则（两级收敛） |
+
+两件差 42 条。coverage 件自己写了「本件的 gold 统计是规则口径，不是新的测量」，**这句话是对的**；但「61/166（execute 面 61/124≈49%）」被当成了实测结论引用。⇒ **61 这个数只能写成「按当前规则的离线重算」，不能写成实测样本量。**
+
+**② 更严重：61 条 matched 里大部分是假匹配。** 根因在 `_gold_for_tau` 的 ①② 收敛（`eval/runner.py:415-421`）：
+
+- 规则①按 `gold_sql` 的 `FROM`/`JOIN` 表筛候选，**但当筛出空集时代码回退到全候选**（`scoped = [...] or candidate_ids`）；
+- 规则②用「出现在聚合函数参数里的列」，**`COUNT(*)`／`COUNT(DISTINCT x)` 的参数会被 `_AGG_ARG` 正则吃掉或误取**；
+- 两级都不命中时，`hits` 用「列名在 gold_sql 里出现过」兜底 ⇒ **过滤列（`pay_time`／`category_l1`／`refund_status`）被当成被测字段**。
+
+我用严格口径（gold 表必须在候选资产内 ＋ 只认 SELECT 聚合参数列／GROUP BY 列）重算同一份 raw：
+
+```
+严格规则：matched 31 / no_target_match 40 / no_gold_asset_in_candidates 25 / multiple 13
+```
+
+**31 vs 61**。而且 61 条里 **27 条（44%）的 gold 分数低于同候选集的次高分** —— 例如：
+
+- `M-HIER-03`「各城市的在架商品数」：gold_sql 是 `SELECT city, COUNT(*) FROM v_shop …`，gold 被判成 `v_order_paid.category_l1`（0.02，排名 12）；而 `v_shop.city` **根本不在候选集**（候选只有 `v_order_paid`／`v_order_refund`／`v_product`）⇒ 规则①落空→回退全候选→`category_l1` 命中。
+- `E-MET-07`「订单量」：gold_sql 是 `COUNT(DISTINCT sub_order_id)`，`sub_order_id` 在候选里，但规则把它判成 `multiple_candidates_match`（因为 `order_id` 也在候选里且列名子串命中）⇒ 反而漏掉。
+
+⇒ **结论：按当前规则采样，τ 会被校到错的位置。** 用我复算的 61 条 gold 算分差：`median=0.0`、`gap≤0` 有 27 条；τ=0.15 会把 42/61（68.9%）判 ambiguous。**这不是打分器的问题，是金标选错的问题。**
+
+### 87.3 W66 必修四项（全部零出站）
+
+**① C2-1 反解规则返工（阻塞 τ 采样）**
+- 规则①**不得回退全候选**：`scoped` 为空 ⇒ 直接判 `unmatched` 并写 `gold_unmatched_reason='gold_table_not_in_candidates'`（现有 reason 枚举里**没有这一项**，需新增）；
+- 规则②须处理 `COUNT(*)`（无参数列 ⇒ 不能反解出「被测字段」⇒ `unmatched`）与 `COUNT(DISTINCT x)`（取 `x`）；
+- **禁止用「列名在 gold_sql 出现」兜底**——那正是过滤列假匹配的来源；
+- 目标口径：**宁可少，不可假**。我复算的严格口径 31 条是合理量级；`no_column_overlap`／`no_gold_asset_in_candidates` 应当显著上升，这是**诚实**，不是退化。
+- 补单测：`COUNT(*)`／`COUNT(DISTINCT x)`／过滤列同名列／gold 表不在候选集 四个 case。
+
+**② C2-2 候选集覆盖缺口（独立于规则）**
+25 条 `no_gold_asset_in_candidates`（`v_dim_date`／`v_shop`／`v_region`／`v_traffic_daily`／`v_campaign` 等）说明 **L4 候选集只覆盖 3 个资产**（`v_order_paid`／`v_order_refund`／`v_product`）。这是检索面的真实边界：**即使反解全对，这些题也进不了样本**。⇒ 要么扩候选面（改代码，超出 C2 范围，另开），要么**明确把 τ 校准的适用范围限定为「这三类资产上的字段绑定」**，并在报告里写清。**后者是本轮建议路线**（零成本、不改判据）。
+
+**③ C1-2 reporter 接线（见 87.1）**
+`second_round_loop_available` 改从 records 数；`clarify_then_correct` 与 `second_round.success` 口径对齐。注意：**success ＝ 二轮走到 complete，不等于答案正确**（冻结集 gold 只对首轮成立，二轮 gold 已由 `499e799` 明确为 `not_defined_for_second_round`）。⇒ 门禁文案要写「二轮回到可执行终态的比例」，**不得写成「答案正确率」**。
+
+**④ D5-1 图级串跑（决定 U-127 能否真关）**
+夹具三段各自成立（`LlmSaturated` 抛出、`_reason_for=llm_concurrency_exceeded`、传输层 0 调用），但**未在同一次图级 run 里串起来**（harness 的 LLM 走匣带，注入饱和客户端要改 harness）。⇒ U-127 的代码面判定为「已对齐 07 §10.1」，但**图级证据仍缺一环**。建议：W66 内做图级串跑（零出站，改 harness 注入），别再单开一轮。
+
+### 87.4 τ 采样的真实成本（答他点句 1）
+
+他估「3 轮 × ≈¥2 ≈ ¥6」。我用 r63 匣带的 token 结构实算：
+
+| 阶段 | 调用数 | 未命中计费 tok | 占全量 | 估算成本 |
+|---|---|---|---|---|
+| plan | 242 | 2,106,223 | 57.9% | ¥0.93 |
+| normalize | 153 | 1,296,779 | 35.7% | ¥0.40 |
+| **L4** | **114** | **233,025** | **6.4%** | **¥1.27**（输出 token 占大头：117,293／177,857） |
+
+**L4 只占 6.4% 的 token，却占估算成本的 58%**（输出单价高）。⇒
+
+- **重跑整图 166 条 × 3 轮 ≈ ¥6.5**（他估 ¥6，基本准）；
+- **但若只重跑 L4 层**（固定候选集，只重打打分），单次 ≈¥0.011 × 114 ≈ **¥1.27/轮**，3 轮 ≈ **¥3.8**；
+- 再加上「只采样本集而非全 166 条」（严格口径 31 条 × 3 轮 ≈ 93 次 L4 调用 ≈ **¥1.0**）。
+
+⇒ **建议：先按 87.3-① 修规则，再只对「matched 样本集」跑 L4-only 重采样**，上界 **¥1.5**、且**排 18:00 后低谷**（半价 ⇒ 实际 ≈¥0.5）。这比 ¥6 省 4 倍，且**跑的是对的东西**。
+
+### 87.5 边界
+
+本窗零出站、零写库（全部 `begin;…rollback;`）；只追加 `reports/qa/**`；未动 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`；未改 15s／判据／gold／冻结集；官方门禁仍 `88f3500`／PASS 1/8 未刷新。
