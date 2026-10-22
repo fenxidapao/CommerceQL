@@ -1,0 +1,225 @@
+{
+  "schema": "QA_AVAILABILITY/v2",
+  "generated_at": "2026-10-22T16:35:00+08:00",
+  "produced_by": "QA (R31bh)  —— 依据 eval/results_r63_full166.json，零出站、零改判据",
+  "source": {
+    "results": "eval/results_r63_full166.json",
+    "git_rev": "97313f9",
+    "git_dirty": false
+  },
+  "scope_statement": "只做可用性观测：不改 scored 语义、不动 15s/30s 判据、不改 G-2/G-5 分母、不重算门禁判词。",
+  "denominators": {
+    "full166": 166,
+    "g5_declared": 148
+  },
+  "errors": {
+    "full166_count": 6,
+    "by_code": {
+      "LLM_UPSTREAM_ERROR": 3,
+      "EXEC_TIMEOUT": 1,
+      "GATE_AST_REJECTED": 2
+    },
+    "by_task": {
+      "normalize_intent": 3,
+      "None": 3
+    },
+    "by_expected": {
+      "execute": 4,
+      "clarify": 2
+    },
+    "rows": [
+      {
+        "case_id": "M-ENUM-02",
+        "code": "LLM_UPSTREAM_ERROR",
+        "task": "normalize_intent",
+        "expected": "execute",
+        "tokens": 0,
+        "wall_s": 22.748,
+        "node_latency_ms": {
+          "normalize": 15015,
+          "total": 15018
+        },
+        "gap_ms": 7730.0,
+        "exec_error_class": null,
+        "retries": 0,
+        "sql_len": 0
+      },
+      {
+        "case_id": "M-MET-09",
+        "code": "LLM_UPSTREAM_ERROR",
+        "task": "normalize_intent",
+        "expected": "execute",
+        "tokens": 0,
+        "wall_s": 27.839,
+        "node_latency_ms": {
+          "normalize": 5,
+          "total": 6
+        },
+        "gap_ms": 27833.0,
+        "exec_error_class": null,
+        "retries": 2,
+        "sql_len": 0
+      },
+      {
+        "case_id": "M-MET-10",
+        "code": "LLM_UPSTREAM_ERROR",
+        "task": "normalize_intent",
+        "expected": "execute",
+        "tokens": 0,
+        "wall_s": 15.476,
+        "node_latency_ms": {
+          "normalize": 11,
+          "total": 16
+        },
+        "gap_ms": 15460.0,
+        "exec_error_class": null,
+        "retries": 2,
+        "sql_len": 0
+      },
+      {
+        "case_id": "X-ENUM-02",
+        "code": "EXEC_TIMEOUT",
+        "task": null,
+        "expected": "execute",
+        "tokens": 27966,
+        "wall_s": 287.969,
+        "node_latency_ms": {
+          "normalize": 789,
+          "linking": 0,
+          "plan": 1251,
+          "gen_sql": 2269,
+          "gate": 12,
+          "exec": 30000,
+          "total": 37729
+        },
+        "gap_ms": 250240.0,
+        "exec_error_class": "timeout",
+        "retries": 0,
+        "sql_len": 500
+      },
+      {
+        "case_id": "C-GMV-04",
+        "code": "GATE_AST_REJECTED",
+        "task": null,
+        "expected": "clarify",
+        "tokens": 28303,
+        "wall_s": 10.104,
+        "node_latency_ms": {
+          "normalize": 1090,
+          "linking": 0,
+          "plan": 2723,
+          "gen_sql": 2658,
+          "gate": 8,
+          "total": 10100
+        },
+        "gap_ms": 4.0,
+        "exec_error_class": null,
+        "retries": 0,
+        "sql_len": 854
+      },
+      {
+        "case_id": "C-REP-02",
+        "code": "GATE_AST_REJECTED",
+        "task": null,
+        "expected": "clarify",
+        "tokens": 28034,
+        "wall_s": 8.971,
+        "node_latency_ms": {
+          "normalize": 984,
+          "linking": 0,
+          "plan": 1800,
+          "gen_sql": 2145,
+          "gate": 5,
+          "total": 8967
+        },
+        "gap_ms": 4.0,
+        "exec_error_class": null,
+        "retries": 0,
+        "sql_len": 365
+      }
+    ]
+  },
+  "rates": {
+    "full166_error_rate": 0.0361,
+    "g5_error_rate": 0.027
+  },
+  "wall_vs_node_gap": {
+    "note": "wall_s 是整案墙钟；latency_ms.total 是各节点自报延迟之和。差值为『未归因墙钟』。",
+    "n": 166,
+    "median_gap_ms": 14.0,
+    "p95_gap_ms": 7730.0,
+    "max_gap_ms": 250240.0,
+    "top10": [
+      {
+        "case_id": "X-ENUM-02",
+        "gap_ms": 250240.0,
+        "wall_s": 287.969,
+        "node_total_ms": 37729,
+        "code": "EXEC_TIMEOUT"
+      },
+      {
+        "case_id": "M-MET-09",
+        "gap_ms": 27833.0,
+        "wall_s": 27.839,
+        "node_total_ms": 6,
+        "code": "LLM_UPSTREAM_ERROR"
+      },
+      {
+        "case_id": "M-MET-10",
+        "gap_ms": 15460.0,
+        "wall_s": 15.476,
+        "node_total_ms": 16,
+        "code": "LLM_UPSTREAM_ERROR"
+      },
+      {
+        "case_id": "M-MET-05",
+        "gap_ms": 12468.0,
+        "wall_s": 22.777,
+        "node_total_ms": 10309,
+        "code": null
+      },
+      {
+        "case_id": "M-ENUM-04",
+        "gap_ms": 12400.0,
+        "wall_s": 25.395,
+        "node_total_ms": 12995,
+        "code": null
+      },
+      {
+        "case_id": "M-DIM-01",
+        "gap_ms": 12159.0,
+        "wall_s": 20.64,
+        "node_total_ms": 8481,
+        "code": null
+      },
+      {
+        "case_id": "M-ENUM-03",
+        "gap_ms": 11953.0,
+        "wall_s": 24.922,
+        "node_total_ms": 12969,
+        "code": null
+      },
+      {
+        "case_id": "M-ENUM-01",
+        "gap_ms": 11723.0,
+        "wall_s": 21.387,
+        "node_total_ms": 9664,
+        "code": null
+      },
+      {
+        "case_id": "H-MET-10",
+        "gap_ms": 7805.0,
+        "wall_s": 16.675,
+        "node_total_ms": 8870,
+        "code": null
+      },
+      {
+        "case_id": "M-ENUM-02",
+        "gap_ms": 7730.0,
+        "wall_s": 22.748,
+        "node_total_ms": 15018,
+        "code": "LLM_UPSTREAM_ERROR"
+      }
+    ]
+  }
+}

@@ -5383,3 +5383,92 @@ DeepSeek API 自 **2026-08-17** 起改峰谷分时计费：**高峰＝北京时�
 ### 84.7 累计悬项
 
 τ 采样（待方案）／G-8 二轮回路（代码债）／G-1 本轮回归（待跑）／`semantic_bundle` 两版全 staged 与「只有 published 可服务」冲突（开单）／GRANT·RLS 未重放／X-ENUM-02 的 250s 未归因／`no_data_asset` 误分类未开单／secrets 57·51·94／U-127 open／官方门禁 `88f3500` 未刷新／台账·残渣已核（逐位不动、两库）、集成本轮未跑。
+
+## 85 · 零成本批次执行（A1／B1／B2）＋ 总控判据裁决落账 ＋ W64 派单（QA R31bh ｜ 2026-10-22 16:45 +0800 ｜ HEAD `dbeb5c9`／627 笔）
+
+### 85.0 执行摘要（三件已落地，全部 ¥0）
+
+| 项 | 结果 |
+|---|---|
+| A1 交接文档 | `HANDOFF_2026-10-21.md` 顶部加「历史快照·不再作为接手依据」标注，并写明失效原因与当前正确入口 |
+| B1 离线回归 | **2606 passed／0 failed／1 warning／117.23s**（`E:\WorkBuddyDL\qa_r63_offline.log`） |
+| B1 集成回归 | **124 passed／0 failed／0 skipped／36.56s**（一次性 PG `55498`＋Redis `56398`，alembic 六版全过；用完已 DROP，残渣回到 `ecom`／`ecom_u123_probe`，容器 7 件） |
+| B2 可用性 v2 | 新件 `backend/reports/qa/r63_availability_v2.json`：error 6 ＝ 3 上游（normalize，0 token）＋ 1 `EXEC_TIMEOUT` ＋ 2 `GATE_AST_REJECTED`；full166 错误率 **3.61%**、G-5 面 **2.70%** |
+| 共享库完整性 | 集成跑完复核：`2026.09.14.1` 197/197/197、`2026.10.16.2` 284/284/284 **均未被误伤**；台账 `1830|3.025849` 逐位不动 |
+| G-1 | 本轮回归读数到此成立：`offline 2606 ＋ integration 124`，可替换那份 2340/107 的旧日志 |
+
+### 85.1 两个新事实（本轮顺带挖出来的）
+
+**① 集成测试有一条隐性前置，文档里没有。**
+第一次跑：`115 passed／6 skipped／3 errors`，全部集中在 `test_retrieval_fts_pg.py`，原因是 `RETRIEVAL_TEST_PG_DSN` 指向 `app_rw`（无 DDL 权限，`permission denied for database ecom`）。把该变量指到**可建表的超级用户**后立刻 **124 全绿**。
+⇒ "该变量要指可建表实例"只写在**跳过提示文案**里，跑法文档没写。下个窗口照文档跑必然重踩一次、并误以为"集成有 3 红"。**必须写进交接/W64 派单。**
+
+**② `latency_ms` 系统性低估重试与超时等待。**
+`wall_s − latency_ms.total` 的分布：中位 **14ms**、p95 **7.73s**、max **250,240ms**。
+- 极值是 X-ENUM-02（wall 287.969s，节点只记 37.729s，其中 exec 30s）；
+- 3 条上游错误也各有 15–27s 缺口，因为**超时/重试的等待不计入节点延迟**（节点延迟记 6–16ms）。
+⇒ 结论：250s 是**单点异常不是普遍漂移**；但凡用 `latency_ms` 算延迟/占比的读数，都必须带「不含重试与超时等待」的 caveat。
+
+### 85.2 总控判据裁决（2026-10-22，采纳 QA 建议，本窗落账）
+
+| 编号 | 裁决 | 影响面 / 附带要求 |
+|---|---|---|
+| D1 G-3（48/50 覆盖） | **维持 PARTIAL**：不做判据豁免、不强补 SQLite EXPLAIN（沙箱无 EXPLAIN 是能力边界，硬补等于改评测环境） | 报告必须逐条列出未覆盖的 2 条用例 ID 与原因，禁止只写"48/50" |
+| D2 G-4（RLS 并行/串行不等值） | **工程修复**，不降判据：修占位符 GUC 不随 worker 传值（PG 配置/策略文本），修好后重测并行路径 | 零出站；修前该格的所有 PG 读数一律不得引用 |
+| D3 生产检索面 | **采用 `startup_assertions` 版本行数 fail-fast**，**不新增 G-9**（避免判据膨胀） | 生产检索面写入收口清单的**人工必检项**；`dense.py` 的 0 行语义不动 |
+| D4 secrets 历史 94 | **接受 reviewed fingerprint baseline**（rule+file+line+content digest） | 只允许「已确认非真凭据」（测试夹具/示例）进白名单；真凭据必须轮换并清理；baseline 必须写明「同位置替换新密钥仍可能被吞」的风险 |
+| D5 U-127 饱和归类 | **对齐 `docs/07 §10.1`（`degraded(llm_concurrency_exceeded)`）**，代码改回 | 改后饱和不再计入 error 分母 ⇒ 可用性件需按新口径重算一次 |
+| D6 G-2 仅 8 条 | **不扩容冻结集**（动冻结集＝重基线＋重跑，此刻不必要） | G-2 报告必须标注「8 条、全 E-VER-*、单族」，不得据此宣称整体能力 |
+
+### 85.3 W64 派单块（可整段复制）
+
+```text
+【W8 第 64 轮｜零成本批：把 G-8 回路和启动断言做出来，顺手清卫生】
+
+0. 现读 HEAD 并写进回执；本轮**零出站**（不跑 live、不动 15s/判据/gold/冻结集/语义包）。
+   不碰 backend/reports/qa/**；不 git add -A；.workbuddy/ 不入库。
+   ⚠️ 集成跑法隐性前置（QA 实测，写进你的交接）：RETRIEVAL_TEST_PG_DSN 必须指**可建表**实例
+      （app_rw 会 6 skip + 3 error，报 permission denied for database）；其余三个 DSN 照旧走 app_rw/app_ro/super。
+
+1. 🔴 C1 G-8 二轮回路（本轮主项，代码 + 测试，零出站）
+- 现状：runner 只有单轮，"澄清后一次成功"恒 0.0% ⇒ G-8 永远 UNVERIFIED。
+- 做：clarify 终态后接受一条「补答」输入，重走一次图，记第二轮终态与是否成功；
+  运行器侧暴露 n_second_round_attempted / n_second_round_success。
+- 验收：至少 3 条真 clarify 用例（C-CITY-01/03/04 里挑）用现有匣带回放能跑完二轮，
+  且首轮 clarify 的判定不被改写；给出 replay 产物（¥0）。
+- 不做：不为了让数字好看放宽澄清判据；G-8 是否 PASS 仍由 τ 决定后半句之外的部分。
+
+2. 🔴 C3 启动断言加「active 版本行数」（总控已裁，替代新增 G-9）
+- startup_assertions 增加一条：active 版本的 app.asset / app.embed_doc 行数为 0 ⇒ FAIL 拒启动。
+- 单测覆盖：0 行必 FAIL；有行必 PASS；不得改 dense.py 的 0 行语义（0 行仍是合法空）。
+- 顺带 C4：active_version() 是否应校验 semantic_bundle.status='published'？
+  先给结论与影响面，不直接改（涉及 FR-12.3，需总控点句）。
+
+3. 🟡 C2 τ 采样的 schema 改动（只写码，不出站）
+- l4_score 产物增加 candidate_ids、候选顺序、gold_candidate_id；补单测。
+- 不采 τ、不改 BINDING_TAU_*；采样另轮（排 18:00 后低谷，上界 ¥1.5）。
+
+4. 🟡 C5/C6 两条开单件（只出材料，不改行为）
+- C5：C-12 四值缺「上游不可用」格 —— 给提案（码表/接口/前端影响）。
+- C6：EXEC_TIMEOUT 的 250s 缺口 —— 先加计时埋点（runner/executor 层），
+  产出「墙钟 − 节点延迟」逐案分解，解释 X-ENUM-02 的 250,240ms 去向。
+  参考 QA 件 backend/reports/qa/r63_availability_v2.json（p95 缺口 7.73s、中位 14ms ⇒ 是单点异常）。
+
+5. 🟡 D5 U-127 对齐 docs/07 §10.1（总控已裁）
+- 饱和（LlmSaturated）回到 degraded(llm_concurrency_exceeded)，不再归 LLM_UPSTREAM_ERROR；
+- 改完按新口径重算一次可用性（饱和不再进 error 分母），零出站。
+
+6. 🟢 卫生四件（几分钟）
+- A2：W60_CHECKPOINT.json 的 updated_at 停在 10-19（10-22 改过）；history_commits 612 与 r61 的 616 两把尺并存 → 统一。
+- A3：两个未跟踪证据件入库或显式忽略：eval/results_r63_full166.checkpoint.jsonl（460KB）、eval/results_r61_probe401.json（1KB，QA 核过无 sk- 明文）。
+- A4：RELAY §60.1 的 hard_15s 仍写 7，你已在 §66 订正为 9 → 在 §60.1 加一行指回 §66，别留双口径。
+- A5：官方 eval_metrics.json 是 88f3500 快照（G-2 还写 0/10）→ 在文件或其 README 显式标「过期快照，勿引用为现状」（不刷新数值）。
+
+7. 回执要求
+- 每条给：改动文件、测试数、产物路径、git_rev + dirty、tokens（本轮应为 0）；
+- 集成若跑：写明 RETRIEVAL_TEST_PG_DSN 指向、alembic_rc、DROP 后残渣、以及共享 ecom 的 embed_doc 行数（跑前跑后各一次）。
+```
+
+### 85.4 边界
+
+本窗只写 `backend/reports/qa/**`（含新建 `r63_availability_v2.json`）；未动 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`、冻结集、阈值、15s/30s、gold；一次性 PG/Redis 已 DROP，共享 `ecom` 未被写（跑前跑后各核一次）；零出站、¥0。
