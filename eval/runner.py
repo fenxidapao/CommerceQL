@@ -593,6 +593,9 @@ async def score_case(
         "outcome": run.outcome,
         "refusal_reason": run.refusal_reason,
         "binding_status": run.binding_status,
+        #: 🔴 W76-1：层号（L1/L2/L3/L4）逐 case 落盘 —— `CalibrationReport` 第 8 条要的
+        #: 运行时层分布只能从这里汇总（评测装配根不注入 QueryPlanStore）。
+        "binding_layer": run.binding_layer,
         "sql_text": run.sql_text,
         "sql_params": dict(run.sql_params),
         "sql_dialect": run.sql_dialect,
@@ -857,12 +860,19 @@ async def run_batch(
     transport_backoff_s: float = 2.0,
     second_round: bool = False,
     second_round_answers: Mapping[str, str] | None = None,
+    batch_id: str | None = None,
+    max_cost_cny: float | None = None,
 ) -> dict[str, Any]:
     """串行跑完整批。**整批只有一个 event loop**（纪律由 `run_batch_sync` 唯一持有）。
 
     `Harness` 在循环**内**构造：`ChatClient` 会建 `httpx.AsyncClient` 与信号量，
     构造期所在的 loop 就是它此后绑定的 loop —— 在外面构造、里面复用是另一半条
     "Event loop is closed"。
+
+    `batch_id`：本次跑批的**独立身份**（τ 采样要 3 次独立批次才构成 `repeats`）。
+    `max_cost_cny`：**累计计费硬上限**（W76 派单要求"越过硬上限立即停"）。每跑完一条
+    就把 `cost_cny` 累加；越过即**不再开始下一条**，并在返回值里落 `budget_stop`。
+    它只增不减、按记录自报的 `cost_cny` 计（与 summary 同一个口径）。
     """
     harness = Harness(
         live=live,
@@ -877,8 +887,12 @@ async def run_batch(
     )
     records: list[dict[str, Any]] = []
     resumed = dict(resume_records or {})
+    spent = 0.0
+    budget_stop: dict[str, Any] | None = None
     try:
         for index, case in enumerate(cases, start=1):
+            if budget_stop is not None:
+                break
             case_id = str(case["case_id"])
             existing = resumed.get(case_id)
             if existing is not None and _resume_should_skip(existing):
@@ -911,7 +925,10 @@ async def run_batch(
             # 没有这一列就没法把"卡住"和"很快失败"区分开（真打批次必须能看出去向）。
             record["wall_s"] = round(time.monotonic() - started, 3)
             record["runner_transport_retries"] = retry_attempt
+            if batch_id is not None:
+                record["batch_id"] = batch_id
             records.append(record)
+            spent += float(record.get("cost_cny") or 0.0)
             if checkpoint_path:
                 _append_checkpoint(
                     checkpoint_path,
@@ -919,6 +936,22 @@ async def run_batch(
                     dataset_content_hash=str((checkpoint_meta or {}).get("dataset_content_hash") or ""),
                     checkpoint_meta=checkpoint_meta,
                 )
+            if max_cost_cny is not None and spent >= float(max_cost_cny):
+                #: 派单原文：越过硬上限**立即停**，不得为追结果重试。已跑完的这一条照样入账。
+                budget_stop = {
+                    "reason": "max_cost_cny_exceeded",
+                    "max_cost_cny": float(max_cost_cny),
+                    "spent_cny": round(spent, 6),
+                    "stopped_after_case": case_id,
+                    "completed_cases": len(records),
+                    "requested_cases": len(cases),
+                }
+                print(
+                    "budget stop: spent "
+                    f"{spent:.4f} CNY >= cap {float(max_cost_cny):.4f} after {case_id}",
+                    flush=True,
+                )
+                break
     finally:
         written = harness.save_cassette()
         await harness.aclose()
@@ -927,6 +960,7 @@ async def run_batch(
         "cassette_entries_written": written,
         "node_timeout_overrides": dict(harness.node_timeout_overrides),
         "max_concurrency": harness.max_concurrency,
+        "budget_stop": budget_stop,
     }
 
 
@@ -948,6 +982,10 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
     for r in records:
         key = str(r.get("terminal_event"))
         terminals[key] = terminals.get(key, 0) + 1
+    layers: dict[str, int] = {}
+    for r in records:
+        key = str(r.get("binding_layer") or "none")
+        layers[key] = layers.get(key, 0) + 1
     # 超时是"外因"还是"被测事实"要能一眼分开看：放大后仍超时 = 真慢/真挂。
     n_timeout = sum(1 for r in records if "TimeoutError" in str(r.get("infra_error")))
     walls = sorted(float(r["wall_s"]) for r in records if r.get("wall_s") is not None)
@@ -962,6 +1000,7 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
         "n_execute_with_sql": sum(1 for r in execute if r.get("sql_text")),
         "n_equivalent": sum(1 for r in execute if (r.get("verdict") or {}).get("equivalent")),
         "terminal_distribution": terminals,
+        "binding_layer_distribution": layers,
         "attribution_distribution": cats,
         "tokens_total": sum(int((r.get("tokens") or {}).get("total") or 0) for r in records),
         "cost_cny_total": round(sum(float(r.get("cost_cny") or 0) for r in records), 6),
@@ -1063,6 +1102,17 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="JSON 文件：{case_id: \"补答文本\"}；冻结集外补充答来源（不改冻结集）",
     )
+    parser.add_argument(
+        "--batch-id",
+        default=None,
+        help="本次跑批的独立身份（W76 τ 采样：3 次独立批次才构成 repeats）",
+    )
+    parser.add_argument(
+        "--max-cost-cny",
+        type=float,
+        default=None,
+        help="累计计费硬上限（元）。每跑完一条累加，越过即停并落 budget_stop",
+    )
     parser.add_argument("--verify-only", action="store_true")
     args = parser.parse_args(argv)
 
@@ -1144,6 +1194,8 @@ def main(argv: list[str] | None = None) -> int:
         },
         transport_retries=max(0, args.transport_retries),
         transport_backoff_s=max(0.0, args.transport_backoff_s),
+        batch_id=args.batch_id,
+        max_cost_cny=args.max_cost_cny,
     )
     summary = summarize(batch["records"])
     payload = {
@@ -1162,6 +1214,9 @@ def main(argv: list[str] | None = None) -> int:
             "resume": bool(args.resume),
             "transport_retries": max(0, args.transport_retries),
             "transport_backoff_s": max(0.0, args.transport_backoff_s),
+            "batch_id": args.batch_id,
+            "max_cost_cny": args.max_cost_cny,
+            "budget_stop": batch.get("budget_stop"),
         },
         "summary": summary,
         "records": batch["records"],

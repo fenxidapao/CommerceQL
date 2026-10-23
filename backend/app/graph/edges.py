@@ -281,9 +281,18 @@ def route_after_gen_sql(state: GraphState) -> str:
 
 def route_after_gate1(state: GraphState) -> str:
     """§5.4：`not passed` → `error_out(GATE_AST_REJECTED)`，**不进 repair**
-    （结构性拒绝，重试无意义 —— 07 §5.4 明文）。"""
+    （结构性拒绝，重试无意义 —— 07 §5.4 明文）。
+
+    🔴 W76-3：节点**已自设终态**时按终态选出口（与 `route_after_gate2` 同一条纪律）。
+    W75-1 的指标窗口 fail-closed 是 `refuse(no_data_asset)` 而不是闸门拒绝 ——
+    硬走 `ERROR_OUT` 会让一次**产品结论**被包成 error 出口（终态虽不被覆盖，
+    但审计 outcome 与出口路径都错）。闸门拒绝路径的终态是 `error` ⇒
+    `terminal_target` 仍回 `ERROR_OUT`，行为逐字不变。
+    """
     if _gate_passed(state, GateNo.AST):
         return GATE2_POLICY
+    if state.get("terminal") is not None:
+        return terminal_target(state)
     return ERROR_OUT
 
 

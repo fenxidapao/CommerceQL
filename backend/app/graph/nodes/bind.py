@@ -151,6 +151,9 @@ async def bind(state: GraphState) -> dict[str, Any]:
         context.hold_disclosure(outcome.disclosure)
 
     await _write_query_plan(context, state, plan, result.state, result.layer)
+    #: 🔴 W76-1：层号也要给评测组装点（`CalibrationReport` 第 8 条要运行时层分布）。
+    #: 生产装配根不读这条通道 ⇒ 行为不变；评测面 `CaseRun.binding_layer` 消费。
+    context.hold_binding_layer(result.layer)
     return update
 
 

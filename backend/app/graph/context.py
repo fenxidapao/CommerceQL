@@ -143,6 +143,7 @@ class RunContext:
     """
 
     __slots__ = (
+        "_binding_layer",
         "_cost",
         "_degradations",
         "_disclosure",
@@ -182,6 +183,10 @@ class RunContext:
         #: `GraphState` 组 5 没有该键（07 §5.2 穷举，不得为传值新增）⇒ 与结果行同款的内存通道。
         #: 只有 `bind` 写、只有评测组装点（`eval/harness.py`）读；生产装配根不读 ⇒ 行为不变。
         self._l4_raw: dict[str, Any] | None = None
+        #: 🔴 W76-1：本次请求落在哪一层（`BindingLayer`）。`CalibrationReport` 的第 8 条
+        #: 要求「运行时观测到的层分布」，而 `bind` 此前只把它写进 QueryPlanStore（评测装配根
+        #: 不注入该 store ⇒ 层分布根本取不到）⇒ 与 `l4_raw` 同款内存通道，只写只读、不进 state。
+        self._binding_layer: str | None = None
         self._tokens = TokenUsage()
         self._cost: Decimal = Decimal(0)
         self._disclosure: str | None = None
@@ -326,6 +331,20 @@ class RunContext:
         payload = self._l4_raw
         self._l4_raw = None
         return payload
+
+    def hold_binding_layer(self, layer: Any) -> None:
+        """本次请求的绑定层号（`BindingLayer` 的字符串值）→ 评测组装点（W76-1）。
+
+        与 `hold_l4_raw` 同款理由：τ 校准报告的第 8 条要**运行时**层分布，而层号只在
+        `bind` 的返回值里存在一瞬（`resolve_detailed(...).result.layer`），
+        `GraphState` 组 5 没有该键（07 §5.2 穷举）⇒ 只能走这条内存通道。
+        """
+        self._binding_layer = str(getattr(layer, "value", layer))
+
+    def take_binding_layer(self) -> str | None:
+        layer = self._binding_layer
+        self._binding_layer = None
+        return layer
 
     # -- 计时 ---------------------------------------------------------------
 

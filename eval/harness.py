@@ -371,6 +371,9 @@ class CaseRun:
     #: （候选稳定键 / 分数 / rank / 打分器身份）。`None` = 本次没走到 L4
     #: （无字段级候选 / 在 `bind` 之前就终止）。它**不进 GraphState**，只在评测组装点读取。
     l4_raw: Mapping[str, Any] | None = None
+    #: 🔴 W76-1：本次请求落在哪一层（`L1`/`L2`/`L3`/`L4`）。`None` = 没走到 `bind`
+    #: （在它之前就终止）。τ 校准报告的第 8 条要用它算层分布。
+    binding_layer: str | None = None
 
     # -- 便捷视图（全部从 state 派生，不另存一份真相） ----------------------
 
@@ -903,6 +906,7 @@ class Harness:
 
         # C2：raw 在 `clear_run_context` 之后仍可从**对象**上取（清的是 contextvar，不是实例）。
         l4_raw = context.take_l4_raw()
+        binding_layer = context.take_binding_layer()
 
         return CaseRun(
             case_id=case_id,
@@ -913,6 +917,7 @@ class Harness:
             nodes=tuple(nodes),
             infra_error=infra_error,
             l4_raw=l4_raw,
+            binding_layer=binding_layer,
         )
 
     def run_case(self, **kwargs: Any) -> CaseRun:

@@ -53,6 +53,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -63,6 +64,20 @@ SCHEMA = "W8_TAU_RAW/v1"
 
 #: 与 `runner.TAU_RAW_SCHEMA` 必须同值（两处都改，或都别改）。
 ACCEPTED_SCHEMA = SCHEMA
+
+#: 🔴 W76-1：校准集/验收集的二分规则 —— **在采样前写死**，采样后不得调整
+#: （§C.4.6 约束 2：先分离再选点，否则无法排除"在校准集上迭代到过拟合"）。
+#: 规则 = `sha256("<salt>:<case_id>")` 前 8 位十六进制取模 2；盐一旦改动，
+#: 历史样本的侧别全部失效 ⇒ 只允许升版本号（`/v2`），不得原地改。
+SPLIT_SALT = "W76_TAU_SPLIT/v1"
+SPLIT_CALIBRATION = "calibration"
+SPLIT_HOLDOUT = "holdout"
+
+
+def split_of(case_id: str) -> str:
+    """该 case 属于校准集还是验收集（确定性：同一 id 永远同一侧）。"""
+    digest = hashlib.sha256(f"{SPLIT_SALT}:{case_id}".encode("utf-8")).hexdigest()
+    return SPLIT_CALIBRATION if int(digest[:8], 16) % 2 == 0 else SPLIT_HOLDOUT
 
 
 def _tau_raw(record: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -92,6 +107,7 @@ def coverage_summary(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     """金标反解的**覆盖情况**（这不是校准结果，只是"能校准多少"的分母）。"""
     by_status: dict[str, int] = {}
     by_reason: dict[str, int] = {}
+    by_asset: dict[str, int] = {}
     scored = 0
     for record in records:
         raw = _tau_raw(record)
@@ -101,11 +117,33 @@ def coverage_summary(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
             by_reason[reason] = by_reason.get(reason, 0) + 1
         if raw.get("ok"):
             scored += 1
+        for cid in candidate_ids_of(record):
+            asset = cid.split(".", 1)[0]
+            by_asset[asset] = by_asset.get(asset, 0) + 1
     return {
         "n_records": sum(by_status.values()),
         "n_l4_scored": scored,
         "gold_status": dict(sorted(by_status.items())),
         "gold_unmatched_reason": dict(sorted(by_reason.items())),
+        #: 候选面覆盖的资产（W76-1 的"候选覆盖面照录"）。L4 只覆盖 3 类资产时，
+        #: 其余资产的题**不可能**产生校准样本 —— 这个分布就是那句话的分子。
+        "candidate_asset_records": dict(sorted(by_asset.items())),
+    }
+
+
+def split_summary(case_ids: Iterable[str]) -> dict[str, Any]:
+    """校准/验收两侧的 case 数（规则见 `split_of`，采样前写死）。"""
+    counts = {SPLIT_CALIBRATION: 0, SPLIT_HOLDOUT: 0}
+    assignment: dict[str, str] = {}
+    for case_id in case_ids:
+        side = split_of(case_id)
+        counts[side] = counts.get(side, 0) + 1
+        assignment[str(case_id)] = side
+    return {
+        "rule": f"sha256('{SPLIT_SALT}:<case_id>')[:8] % 2 == 0 → calibration else holdout",
+        "salt": SPLIT_SALT,
+        "counts": counts,
+        "assignment": dict(sorted(assignment.items())),
     }
 
 
@@ -209,6 +247,7 @@ def summarize(samples: Sequence[Any], skips: Sequence[Mapping[str, Any]]) -> dic
                 "candidate_ids": list(s.candidate_ids),
                 "repeats": [list(row) for row in s.repeats],
                 "gold_candidate_id": s.gold_candidate_id,
+                "split": split_of(s.sample_id),
             }
             for s in samples
         ],
@@ -260,6 +299,10 @@ def main(argv: list[str] | None = None) -> int:
         "schema": SCHEMA,
         "inputs": files,
         "coverage": coverage_summary(records),
+        "split": split_summary(str(s.sample_id) for s in samples),
+        "batches": sorted(
+            {str(r.get("batch_id")) for r in records if r.get("batch_id")}
+        ),
         **summarize(samples, skips),
     }
     text = json.dumps(report, ensure_ascii=False, indent=2)
