@@ -57,6 +57,10 @@ from _bootstrap import BUNDLE_PATH, bootstrap, build_stamp  # noqa: E402
 
 bootstrap()
 
+#: 进程启动即取构建身份（T-11②）：同进程内先写的产物会把已跟踪文件弄脏，
+#: 逐函数调 build_stamp() 会让后写产物自报 dirty=True 假阳（W68 实测）。先取后写。
+STAMP = build_stamp()
+
 import yaml  # noqa: E402
 from app.binding.four_layer import GapBand, TauConfig, classify_gap  # noqa: E402
 from app.llm.budget import TokenUsage, Tier, compute_cost  # noqa: E402
@@ -282,7 +286,7 @@ def run_reach(records: list[dict[str, Any]], reason_map: dict[str, dict[str, str
     return {
         "provenance": PROVENANCE,
         "task": "W67-1 歧义面诊断：找出真正落到 L4 判定的题并读出 Δ 分布",
-        **build_stamp(),
+        **STAMP,
         "config": {
             "source_file": "eval/results_r66_tau_raw_replay.json",
             "source_cassette": "eval/cassettes/w8_r63_full166.jsonl",
@@ -464,7 +468,7 @@ def run_cost(records: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "provenance": PROVENANCE,
         "task": "W67-2 L4 触发条件与成本现状账（只出材料，不改行为；挂 U-117 / §88.4②）",
-        **build_stamp(),
+        **STAMP,
         "config": {
             "source_cassette": "eval/cassettes/w8_r63_full166.jsonl",
             "l4_call_fingerprint": L4_FINGERPRINT,
@@ -593,7 +597,7 @@ def run_cutover_inventory() -> dict[str, Any]:
         "task": "W67-3 评测面 degradations 口径变更影响清单（W66 起 _EvalDegradationSink 才把网关层降级接进 GraphState）"
                 "；W68-4 订正：n_files_scanned 实为『有非空 records 的文件数』，改名 n_files_with_records"
                 "并补全量计数与跳过类说明",
-        **build_stamp(),
+        **STAMP,
         "rule": {
             "pre_w66": "评测面 records[].degradations 只含**节点层**降级"
                        "（normalize/link/plan/present/embed 等经 RunContext 上报的）。",

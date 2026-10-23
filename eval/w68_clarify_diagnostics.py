@@ -23,6 +23,9 @@ from _bootstrap import bootstrap, build_stamp  # noqa: E402
 
 bootstrap()
 
+#: 进程启动即取构建身份（T-11②）：先取后写，避免同进程写盘弄脏后续 stamp。
+STAMP = build_stamp()
+
 from app.core.clock import FrozenClock  # noqa: E402
 from app.planner.timeexpr import resolve_time  # noqa: E402
 from app.semantics import SemanticBundleRuntime, load_bundle  # noqa: E402
@@ -89,7 +92,7 @@ def probe_xmet10() -> dict[str, Any]:
     return {
         "provenance": PROVENANCE,
         "task": "W68-2 X-MET-10 单条定位：止步 clarify_out 的触发层（只定位不断言）",
-        **build_stamp(),
+        **STAMP,
         "case": {"case_id": case_id, "question": question,
                  "expected_behavior": rec["expected_behavior"]},
         "r66_pipeline": {
@@ -243,7 +246,7 @@ def build_completeness() -> dict[str, Any]:
         "task": "W68-3 澄清完备性材料账（只出材料，不改行为；不实装闸门）",
         "red_line": "本产物不构成『澄清能力已验证』——它度量的是缺哪些闸门；"
                     "亦不得为凑澄清率上限改判据或剔分母",
-        **build_stamp(),
+        **STAMP,
         "headline": {
             "n_cases": len(cases),
             "n_clarified_actual": n_clarified,
