@@ -7500,3 +7500,132 @@ eval/results_r71_city_coverage.json         W71-3
 
 * 未改：gold / 冻结集 / 语义包 / 判据 / 等价判据 / 代码 / `reports/qa/**` / `.workbuddy/`；
   未标 unscored；未刷门禁（仍 `88f3500`/PASS 1/8）。
+
+---
+
+## 77 W72：D 类谓词缺口 / G-7 判据对象 / refund 泄漏定位 / 列配对 id↔name（全程零出站）
+
+派单：W72（2026-10-23 14:56）｜起跑 HEAD `ae48ae0`（QA 验收 W71 + 立 D 类）｜
+**tokens = 0，零出站**；W72-3 **未改一行代码**（派单要求「先出方案再动手 + 需点句」）。
+
+### 77.1 W72-1 D 类补审：40 条 gold 漏包内 default_predicates（另 1 条弱归因单列）
+
+`eval/results_r72_d_predicate_gap.json`（rev=ae48ae0/dirty=False；逐条含 gold WHERE、
+应有谓词、缺失谓词、沙箱原值/补谓词值、等价前后）。
+
+作用域：`terminal_event == complete` 且 gold 非空 = **108 条**（116 条 complete 里 8 条是
+C 类「应澄清」题，gold 为空串 ⇒ 不可比）。QA 记的「109 条 execute」差 1 条，差在这 8 条
+的计法上，不影响任何结论。
+
+**分布（按命中指标）**：gmv 22 ｜ order_cnt 3 ｜ uv 5 ｜ pay_cvr 2（+1 弱）｜ aov 2 ｜
+arpu 2 ｜ refund_rate 2 ｜ repurchase_rate_90d 2。**缺失组合极整齐**：
+gmv/order_cnt/aov/arpu 缺的全是同样三条（`pay_status='paid'` / `refund_status<>'refunded'` /
+`is_test_order=false`，包 `bundle:505-508` 与各指标块），uv/pay_cvr 缺 `uv >= 0`，
+refund_rate 缺两条（正确——它不该有 refund_status 那条）。
+
+**沙箱实算（同租户 TEMP VIEW，gold 原样 / 补谓词版 / 系统预测同器同界）**：
+* **31 条补谓词后结果变了**；**22 条等价结论翻转 False→True**
+  （E-MET-01/02/03/04/05/06/07/09、M-MET-03/04、H-MET-06/07/08/09、X-MET-06/07/08/09、
+  M-IDX-01/02/03/04）。逐位对账：E-MET-01 gold 16,483,171.53 → 补谓词 15,611,729.95
+  = 系统预测值 = QA §93.3 的权威值，**逐分一致**。
+* **9 条补了谓词但结果哈希不变**：7 条是 `uv >= 0` 类防御性谓词（数据无负数，数值无害）、
+  另 2 条（M-IDX-09/10 复购率）补完**仍是 0**，而系统预测 0.16/0.13 ⇒ 那是复购口径另有问题，
+  **本轮只登记不归因**（超出 D 类范围，不猜）。
+* **G-7 的 13 条探针案：13/13 的 gold WHERE 只有时间窗**（E-MET-01…10 只有
+  `pay_time/stat_date >= …`）⇒ D 类正是 G-7 读数 1/13 的直接成因，与 QA §93.4 一致。
+* **E-MET-08 反向口径**：题面明写「含未支付」、gold `pay_status = 'unpaid'` —— 这是
+  **合法的反向口径**，不是缺口。包内 `default_predicates` 是**默认值不是绝对约束**，
+  题面显式覆盖应豁免；机械求差会把它误判成 conflict，故单列（该条 r66 终态是 refuse，
+  本就不在 execute 作用域内）。
+
+### 77.2 W72-2 G-7 判据对象：核实成立，两案+成本（不改码）
+
+`eval/results_r72_g7_object.json`（rev=ae48ae0/dirty=False）。
+
+* **代码事实**：`eval/gates.py:488-508` 的 G-7 分支只读 `consistent` / `total` /
+  `unattributed` / `comparison_basis`；输入由 `eval/reporter.py:948-949,1031` 指定为
+  `backend/reports/w6/probe_metric_values.json`。该文件 `rows[]` 比的是
+  `gold_value vs authority_value` ⇒ **度量对象 = 题库口径一致性**，确认。
+* **两种口径的定义差异**：
+  - 现行（gold vs authority）：问「金标 SQL 与语义包/权威口径是否一致」——是**题库质量**；
+    可被「把 gold 换成 authority_sql」一键刷绿而系统一行未改。
+  - 提议（system vs authority）：问「系统算出来的数对不对」——是**系统能力**；
+    需沙箱重跑预测 SQL，引入执行环境依赖。
+* **实算（同一把尺 rel_err ≤ 1e-3）**：gold vs authority **1/13 = 7.7%**（现行读数）；
+  system vs authority **11/13 = 84.6%**，失败点收敛到 **M-IDX-05/06**（refund_rate 0.0）。
+  🔴 红线遵守：**84.6% < 95%，不得写成「G-7 通过」**；产物 `red_line` 字段已固化这句话。
+* **A 案**（维持现口径，改名「题库口径一致性」并移出八格）：动 `gates.py` / `reporter.py` /
+  runbook；历史读数不用重算；代价是**八格变七格**，所有「PASS x/8」外部材料要改；
+  风险 = 少一道题库漂移拦截。
+* **B 案**（改 system vs authority 作 G-7 真身）：动 `gates.py` 取字段 + 探针产出侧
+  （补 system_value/system_consistent）+ `reporter.py` 证据行；**须重算历史读数、重跑基线、
+  总控签**；风险 = 口径仍 FAIL（84.6%<95%），只是含义变对了，且引入沙箱执行依赖。
+
+### 77.3 W72-3 refund_rate 谓词泄漏：定位 + 方案（**未实装，等点句**）
+
+`eval/results_r72_refund_leak_localization.json`（rev=ae48ae0/dirty=False）。
+
+**定位（文件行号）**：注入按**资产所属域**取整份域级谓词表，指标维度在链上早已丢失——
+* `backend/app/guard/ast_gate.py:460` `_inject_predicates(root, allowlist)` —— **签名没有指标**；
+* `:463` `pred_by_domain = allowlist.get("default_predicates")` —— 域→谓词串（已丢 `applies_to`）；
+* `:477` `predicates = pred_by_domain.get(asset.get("domain", ""), [])` —— 按域取全量；
+* `:491` `for pred_sql in predicates:` —— 逐条注入，`dp_order_002` 就这么进了 refund_rate；
+* `backend/app/core/contracts.py:386` `default_predicates: Mapping[str, Sequence[str]]` —— 交付契约只有域级；
+* `backend/app/semantics/loader.py:384` —— 包加载期**已校验** `applies_to ⊆ 指标` 与两级一致，
+  但投影成 `guard_allowlist` 时被压平；
+* `backend/app/graph/nodes/gate1_ast.py:56` —— 节点手里**有** `state`（含 `plan.metrics`），
+  却只按 identity 取 allowlist ⇒ 指标名没往下传。
+**不是 bind 未覆盖**：bind 不下发谓词；注入发生在 gate1 的 AST 改写阶段。
+
+**包内证据**：`bundle:591` 明文「本指标的谓词**不含** refund_status <> 'refunded'」；
+metric 级 `default_predicates` 只有两条（`pay_status='paid'` / `is_test_order=false`）；
+域级 `dp_order_002` 的 `applies_to` 也**不含** refund_rate ⇒ A 级（域级）本身没错，是注入侧丢了过滤。
+
+**沙箱实算（去掉泄漏谓词，其余不动）**：M-IDX-05 `0.0 → 0.05008329`（权威 0.05008328882）；
+M-IDX-06 `0.0 → 0.04998161`（权威 0.04998161411）⇒ 泄漏是分子归零的唯一原因。
+
+**修复方案（5 步，最小改动）**：① `GuardAllowlist` 增 `metric_predicates`（来源
+`bundle.metrics[].default_predicates`）；② port 投影该键；③ `gate1_ast` 从 `state['plan'].metrics`
+取指标名下传；④ `run_gate1/_inject_predicates` 加 `metrics` 参数——指标全有声明时用其**并集**
+替换域级集，否则**回落域级**（fail-closed，不放松）；⑤ 多指标冲突（refund_rate + gmv 同 SELECT）
+记 warning 并回落域级，不静默选边。
+单测四条：refund_rate 不得含该谓词 / gmv 必须含三条 / 指标级覆盖域级 / 指标不可确定时回落域级。
+验证：replay r63 匣带（M-IDX-05/06 + 全量 166）+ 单测，**不真打**。
+影响面：所有带 default_predicates 的查询走新分支 ⇒ 须全量 166 回归；不改 prompt、不改 SQL 结构
+⇒ 匣带仍可 replay，不需重基线。
+🔴 **本轮到此为止：一行代码未改，等点句。**
+
+### 77.4 W72-4 列配对 id↔name：6 条，strict 露 1 条 / 归一后露 6 条
+
+`eval/results_r72_column_pairing.json`（rev=ae48ae0/dirty=False）。
+
+* **38 条「列无法配对」**（116 条有预测 SQL 的记录里）：37 条是「同名/数值列无法按多重集配对」，
+  1 条是 id↔name（X-ENUM-07）。
+* **id↔name 全量 6 条 = H-CAT-01…05 + X-ENUM-07**（与 QA §93.6 逐条一致）。
+  为什么 strict 只露 1 条：H-CAT 的计数列被 B 类 `on_sale` 差挡住（44/47… vs 49/49…），
+  列配对在**数值列**那一步就失败了，还没轮到首列。把金标归一到「只剩列身份差异」
+  （补 D 类谓词 + 去掉题面未问的 on_sale，**仅诊断用**）后，6 条全部露出 id↔name。
+* **允许一一映射会翻转几条**：strict **1 条**（X-ENUM-07）；归一后 **6 条**（上述 6 条全部）。
+  双射检查=「按其余已配对列对齐行，检查 id→name 是函数且单射」。
+* 🔴 **反向证据（必须一起看）**：kind=other 的候选里有 **31 条也满足「双射」**——因为两侧
+  数值列各值唯一时，任意配对都构成双射。⇒ 「允许一一映射配对」若不加 id↔name 限定，
+  会把**纯数值差异**（如 gold 16,483,171 vs pred 15,611,729）也判成等价。这条是本案最强的风险证据。
+* 风险三条：① 双射只证「存在对应」不证「对应正确」（同名店/自由文本 name 仍可凑）；② 一旦开口，
+  判据无法区分「同一实体的两种表示」与「换错维度/实体起个别名」；③ 属等价判据口径变更，须上呈。
+  建议（若批）：只对「gold `*_id` + pred `*_name` + 行数同 + 其余列多重集全等 + 双射可验证 +
+  非 vacuous」开窄口，并新增 `COL_ID_NAME_MAP` 标签显式计数，不静默计等价。
+
+### 77.5 本轮产物与边界
+
+```
+eval/w72_predicate_audit.py                          新增：W72 四件零出站审计脚本
+eval/results_r72_d_predicate_gap.json                W72-1（108 行全表 + 沙箱双版本）
+eval/results_r72_g7_object.json                      W72-2（两口径 + 两案成本）
+eval/results_r72_refund_leak_localization.json       W72-3（定位 + 实算 + 方案，未实装）
+eval/results_r72_column_pairing.json                 W72-4（strict/normalized 双模式）
+```
+
+* 未改：gold / 冻结集 / 语义包 / `gates.py` 阈值 / 探针脚本 / `equivalence.py` / 任何 `app/**`
+  代码（W72-3 只出方案）/ `reports/qa/**` / `.workbuddy/`；
+* 未跑 τ 采样、未扩 L4 候选面、未改 G-8 二轮、未刷官方门禁（仍 `88f3500`/PASS 1/8）；
+* 未 `git add -A`；零出站（tokens 计费 = 0，¥0）。
