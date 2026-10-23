@@ -1,0 +1,295 @@
+{
+  "provenance": "W72-3 修复后零出站验证（r66 旧重放 vs r73 新重放 + 沙箱只读重算；tokens=0）",
+  "task": "默认谓词按指标收窄：影响面 + G-7 system-vs-authority 重算（只出材料，不改判据）",
+  "generated_at": "2026-10-23T08:35:55+00:00",
+  "git_rev": "5f803b9",
+  "git_dirty": false,
+  "inputs": {
+    "before": "eval/results_r66_tau_raw_replay.json",
+    "after": "eval/results_r73_full166_metric_scope.json",
+    "probe": "backend/reports/w6/probe_metric_values.json"
+  },
+  "headline": {
+    "n_predicate_set_changed": 7,
+    "changed_cases": [
+      "M-IDX-05",
+      "M-IDX-06",
+      "M-IDX-09",
+      "M-IDX-10",
+      "C-RATE-01",
+      "C-RATE-02",
+      "C-REP-01"
+    ],
+    "all_removed_only": true,
+    "removed_predicates": [
+      "refund_status <> 'refunded'"
+    ]
+  },
+  "tally": {
+    "n_equivalent_before": 36,
+    "n_equivalent_after": 36,
+    "n_scored_before": 163,
+    "n_scored_after": 163,
+    "terminal_distribution_before": {
+      "complete": 116,
+      "refuse": 28,
+      "None": 3,
+      "clarify": 16,
+      "error": 3
+    },
+    "terminal_distribution_after": {
+      "complete": 116,
+      "refuse": 28,
+      "None": 3,
+      "clarify": 16,
+      "error": 3
+    }
+  },
+  "g7_system_vs_authority": {
+    "threshold_rel_error": 0.001,
+    "consistent": 13,
+    "total": 13,
+    "rate": 1.0,
+    "red_line": "84.6%→100% 只说明 D 类+W72-3 两个问题修好，**不改变**「G-7 现行实现度量题库而非系统」这一判据问题（W72-2 A/B 案仍待裁）"
+  },
+  "g7_rows": [
+    {
+      "case_id": "E-MET-01",
+      "metric": "gmv",
+      "authority_value": 15611729.95,
+      "system_value": 15611729.95,
+      "rel_error": 0.0,
+      "consistent": true,
+      "error": null
+    },
+    {
+      "case_id": "E-MET-02",
+      "metric": "gmv",
+      "authority_value": 30768819.37,
+      "system_value": 30768819.37,
+      "rel_error": 0.0,
+      "consistent": true,
+      "error": null
+    },
+    {
+      "case_id": "E-MET-03",
+      "metric": "gmv",
+      "authority_value": 103385547.56,
+      "system_value": 103385547.56,
+      "rel_error": 0.0,
+      "consistent": true,
+      "error": null
+    },
+    {
+      "case_id": "E-MET-04",
+      "metric": "gmv",
+      "authority_value": 57306143.84,
+      "system_value": 57306143.84,
+      "rel_error": 0.0,
+      "consistent": true,
+      "error": null
+    },
+    {
+      "case_id": "E-MET-05",
+      "metric": "order_cnt",
+      "authority_value": 11413.0,
+      "system_value": 11413,
+      "rel_error": 0.0,
+      "consistent": true,
+      "error": null
+    },
+    {
+      "case_id": "E-MET-06",
+      "metric": "order_cnt",
+      "authority_value": 22536.0,
+      "system_value": 22536,
+      "rel_error": 0.0,
+      "consistent": true,
+      "error": null
+    },
+    {
+      "case_id": "E-MET-07",
+      "metric": "order_cnt",
+      "authority_value": 56408.0,
+      "system_value": 56408,
+      "rel_error": 0.0,
+      "consistent": true,
+      "error": null
+    },
+    {
+      "case_id": "E-MET-09",
+      "metric": "gmv",
+      "authority_value": 13541842.86,
+      "system_value": 13541842.86,
+      "rel_error": 0.0,
+      "consistent": true,
+      "error": null
+    },
+    {
+      "case_id": "E-MET-10",
+      "metric": "uv",
+      "authority_value": 602325.0,
+      "system_value": 602325,
+      "rel_error": 0.0,
+      "consistent": true,
+      "error": null
+    },
+    {
+      "case_id": "M-IDX-01",
+      "metric": "aov",
+      "authority_value": 1367.8901209147464,
+      "system_value": 1367.8901209147,
+      "rel_error": 3.3909324353772586e-14,
+      "consistent": true,
+      "error": null
+    },
+    {
+      "case_id": "M-IDX-02",
+      "metric": "aov",
+      "authority_value": 1365.3185733936812,
+      "system_value": 1365.3185733937,
+      "rel_error": 1.3822426083957354e-14,
+      "consistent": true,
+      "error": null
+    },
+    {
+      "case_id": "M-IDX-05",
+      "metric": "refund_rate",
+      "authority_value": 0.05008328882002321,
+      "system_value": 0.0500832888,
+      "rel_error": 3.997982705742508e-10,
+      "consistent": true,
+      "error": null
+    },
+    {
+      "case_id": "M-IDX-06",
+      "metric": "refund_rate",
+      "authority_value": 0.049981614113764596,
+      "system_value": 0.0499816141,
+      "rel_error": 2.7539313956988324e-10,
+      "consistent": true,
+      "error": null
+    }
+  ],
+  "predicate_delta": [
+    {
+      "case_id": "M-IDX-05",
+      "question": "T_A 自 2026-08-01 起的退款率是多少？",
+      "removed": [
+        "refund_status <> 'refunded'"
+      ],
+      "added": [],
+      "before": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "after": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "M-IDX-06",
+      "question": "T_B 自 2026-06-01 起的退款率是多少？",
+      "removed": [
+        "refund_status <> 'refunded'"
+      ],
+      "added": [],
+      "before": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "after": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "M-IDX-09",
+      "question": "T_A 自 2026-06-01 起的 90 天复购率是多少？",
+      "removed": [
+        "refund_status <> 'refunded'"
+      ],
+      "added": [],
+      "before": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "after": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "M-IDX-10",
+      "question": "T_A 自 2026-03-01 起的 90 天复购率是多少？",
+      "removed": [
+        "refund_status <> 'refunded'"
+      ],
+      "added": [],
+      "before": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "after": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "C-RATE-01",
+      "question": "退款率是多少？",
+      "removed": [
+        "refund_status <> 'refunded'"
+      ],
+      "added": [],
+      "before": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "after": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "C-RATE-02",
+      "question": "退货率最高的商品是哪个？",
+      "removed": [
+        "refund_status <> 'refunded'"
+      ],
+      "added": [],
+      "before": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "after": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "C-REP-01",
+      "question": "复购率是多少？",
+      "removed": [
+        "refund_status <> 'refunded'"
+      ],
+      "added": [],
+      "before": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "after": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ]
+    }
+  ]
+}
