@@ -1,9 +1,9 @@
 {
   "provenance": "W72-3 修复后零出站验证（r66 旧重放 vs r73 新重放 + 沙箱只读重算；tokens=0）",
   "task": "默认谓词按指标收窄：影响面 + G-7 system-vs-authority 重算（只出材料，不改判据）",
-  "generated_at": "2026-10-23T08:45:35+00:00",
-  "git_rev": "66fab50",
-  "git_dirty": true,
+  "generated_at": "2026-10-23T08:45:57+00:00",
+  "git_rev": "3c96f32",
+  "git_dirty": false,
   "inputs": {
     "before": "eval/results_r66_tau_raw_replay.json",
     "after": "eval/results_r73_full166_metric_scope.json",
