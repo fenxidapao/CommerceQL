@@ -1,0 +1,155 @@
+{
+ "provenance": "W73 零出站材料（r74 重放 + r63 匣带 + 语义包 + 沙箱 sqlite；tokens = 0）",
+ "task": "W73-2 误拒 3/124 定位（只出材料；不改代码/判据）",
+ "generated_at": "2026-10-23T10:48:41+00:00",
+ "git_rev": "de08e74",
+ "git_dirty": false,
+ "method": "三条误拒案的终态/节点路径取自 r74 重放产物；模型原始计划响应取自 r63 匣带（按问句子串 + 计划提示词双重匹配，每次调用唯一命中）；「资产是否真缺」用语义包 `assets[].columns` / `dimensions` / `field_bindings` 核对",
+ "scope_note": "误拒分母 124 / 3 条由 QA §94.5 用 `reporter._refusal_counts` 测得；本件不重算分母，只做**逐条归因**",
+ "bundle_reality": {
+  "channel_dimension": {
+   "binding": "traffic_daily.channel",
+   "grain_level": 1
+  },
+  "city_dimension": {
+   "binding": "order_paid.receiver_city",
+   "grain_level": 4
+  },
+  "shop_has_city": true,
+  "order_paid_has_channel": true,
+  "concept_渠道": {
+   "canonical_asset": "traffic_daily.channel",
+   "note": "⚠️ order_paid.channel 同样存在（成交渠道）。订单域问题应绑 order_paid.channel",
+   "default_reason": "渠道枚举定义在流量表"
+  },
+  "lines": {
+   "shop_city_column": 320,
+   "city_dimension": 320,
+   "channel_dimension": 184,
+   "channel_concept_note": 1135
+  }
+ },
+ "cases": [
+  {
+   "case_id": "M-DIM-05",
+   "question": "T_A 的各城市的店铺数分别是多少？",
+   "expected_behavior": "execute",
+   "terminal_event": "refuse",
+   "refusal_reason": "no_data_asset",
+   "node_path": [
+    "trusted_context",
+    "normalize",
+    "intent",
+    "link",
+    "plan",
+    "refuse_out"
+   ],
+   "refused_at": "plan",
+   "terminal_error_detail": {},
+   "gold_sql": "SELECT city, COUNT(*) FROM v_shop GROUP BY city",
+   "planner_assets": [
+    {
+     "asset": "shop",
+     "join_key": null
+    }
+   ],
+   "planner_metrics": [],
+   "planner_blocking_issues": [
+    "“城市”是歧义概念：候选为 shop.city（店铺所在城市）与 order_paid.receiver_city（收货城市），语义包规定不得自行择一，需澄清按哪个城市口径统计店铺数。"
+   ]
+  },
+  {
+   "case_id": "M-MET-01",
+   "question": "T_A 从 2026-08-01 起各渠道的 GMV 分别是多少？",
+   "expected_behavior": "execute",
+   "terminal_event": "refuse",
+   "refusal_reason": "no_data_asset",
+   "node_path": [
+    "trusted_context",
+    "normalize",
+    "intent",
+    "link",
+    "plan",
+    "refuse_out"
+   ],
+   "refused_at": "plan",
+   "terminal_error_detail": {},
+   "gold_sql": "SELECT channel, SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' GROUP BY channel",
+   "planner_assets": [
+    {
+     "asset": "order_paid",
+     "join_key": null
+    },
+    {
+     "asset": "traffic_daily",
+     "join_key": "order_paid.sku_id -> traffic_daily.sku_id"
+    }
+   ],
+   "planner_metrics": [
+    {
+     "caliber": "SUM(order_paid.pay_amount)；按 pay_time 统计，含运费，剔除全额退款（refund_status <> 'refunded'）与测试单（is_test_order = false），仅 pay_status = 'paid'；不扣减部分退款。",
+     "name": "gmv"
+    }
+   ],
+   "planner_blocking_issues": [
+    "渠道维度绑定在 traffic_daily.channel（流量域，粒度 sku_day_channel），而 GMV 落在 order_paid（粒度 sub_order）；语义包只登记了 traffic_daily.sku_id -> product.sku_id 与 order_paid.sku_id -> product.sku_id 两条边，没有登记 order_paid 与 traffic_daily 之间的直接关联路径。按 SKU 经 product 桥接会把同一 SKU 当日多渠道的流量行与订单行做多对多扇出，导致 GMV 被重复计数；语义包未定义订单侧的成交渠道归属规则，因此不猜路径，无法按渠道拆分 GMV。"
+   ]
+  },
+  {
+   "case_id": "E-MET-08",
+   "question": "T_A 从 2026-08-01 起的付费金额合计（含未支付）是多少？",
+   "expected_behavior": "execute",
+   "terminal_event": "refuse",
+   "refusal_reason": "no_data_asset",
+   "node_path": [
+    "trusted_context",
+    "normalize",
+    "intent",
+    "link",
+    "plan",
+    "refuse_out"
+   ],
+   "refused_at": "plan",
+   "terminal_error_detail": {},
+   "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_status = 'unpaid'",
+   "planner_assets": [],
+   "planner_metrics": [],
+   "planner_blocking_issues": [
+    "语义包中不存在「付费金额合计（含未支付）」这一指标口径：gmv 的默认谓词为 pay_status = 'paid'，明确只统计已支付；若强行包含未支付订单，等于自造新口径（违反硬性规则 2）。请确认是要 gmv（仅已支付）还是需要另立「含未支付的支付金额」指标。",
+    "时间范围仅给出起点 2026-08-01，未给出结束边界；且语义包要求时间过滤不得用运行期函数表达，需明确结束日期。"
+   ]
+  }
+ ],
+ "verdicts": {
+  "M-DIM-05": {
+   "assets_really_missing": false,
+   "what_is_missing": "包内**没有** `shop.city` 这个维度条目：`dimensions[name=city]` 绑的是 `order_paid.receiver_city`；`assets[shop].columns` 里确实有 `city`（注释写明「店铺所在城市，与收货城市同名不同义」）⇒ 数据在、**维度声明缺一半**",
+   "node": "plan → refuse_out（`blocking_issues` 非空 ⇒ `refuse(no_data_asset)`）",
+   "why_intent_did_not_clarify": "模型在 normalize 合并档给了 `clarify_needed`/`ambiguous_dimension_city`，但 `normalize.py:104` `_demote_unambiguous_shop_city_clarification` 在 `normalize.py:130` 用「问句含『各城市』」这一条就把它降级为 executable ⇒ 走 link → plan；随后 plan 又以同一歧义为由阻塞",
+   "classification": "① 归因码错位（歧义被记成 `no_data_asset`）；② 降级判据与 planner 判定打架（结构化证据没传给 planner）"
+  },
+  "M-MET-01": {
+   "assets_really_missing": false,
+   "what_is_missing": "`order_paid.channel` **存在**（资产列清单里就有），包内 concept「渠道」的 `note` 也写明「订单域问题应绑 order_paid.channel」；但 `dimensions[name=channel].binding` 是 `traffic_daily.channel` ⇒ 模型只看到后者，据此判定「订单侧无渠道」并要求澄清/阻塞",
+   "node": "plan → refuse_out（`blocking_issues` 非空）",
+   "classification": "planner 资产映射缺陷（维度声明与 concept note 方向相反 ⇒ 模型选错一面）"
+  },
+  "E-MET-08": {
+   "assets_really_missing": false,
+   "what_is_missing": "不是资产缺失：模型给的两条阻塞项是 ①「语义包无『含未支付』指标，gmv 默认只算已支付」②「时间范围只有起点、无终点」",
+   "node": "plan → refuse_out（`blocking_issues` 非空）",
+   "classification": "「自造口径」保护按设计生效；但 ② 是**误加**的阻塞项（同批其它「从 2026-08-01 起」的题都执行了）",
+   "disposition_recommendation": {
+    "expected_behavior": "clarify（建议）",
+    "why": "题面「付费金额合计（含未支付）」本身歧义：「含未支付」= 不过滤支付状态（全部），还是 = 仅未支付？冻结集 gold 取 `pay_status = 'unpaid'`（仅未支付），与题面「含」不等价；改成 clarify 既承认这层歧义，又不需要自造指标",
+    "alternatives": [
+     "refuse：承认「自造口径应拒答」是设计意图 ⇒ 需同步改冻结集 notes 与 G-5 分母",
+     "execute + 修 gold：gold 改 `SELECT SUM(pay_amount) ... WHERE pay_time >= …`（不过滤 pay_status）⇒ 冻结集变更，需总控签"
+    ],
+    "g7_reverse_contrast": "只有**修 gold 并置 execute** 才能充当 G-7 的「反向口径」正例（系统须算出与权威值一致的数）；若定为 clarify/refuse，它就只能测「不静默套默认谓词」，测不到「反向口径算对」",
+    "warning": "任何改 expected_behavior 的动作都会让 G-5 误拒从 3/124 变成 2/124 —— 这是**刷绿**风险，必须总控签"
+   }
+  }
+ },
+ "root_cause_shared": "三条里没有一条是「语义包真的没有这张表」；两条（M-DIM-05/M-MET-01）是**维度声明只写了一半**（shop.city 缺维度条目、order_paid.channel 与 canonical 绑定相反），一条（E-MET-08）是**问题本身歧义 + gold 取反向**。三者共同被 `plan.blocking_issues → refuse(no_data_asset)` 这层映射压成同一个码，于是「歧义 / 映射错 / 真缺数据」在报表上不可区分（`plan.py:91-105`）。"
+}

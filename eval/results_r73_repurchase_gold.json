@@ -1,0 +1,110 @@
+{
+ "provenance": "W73 零出站材料（r74 重放 + r63 匣带 + 语义包 + 沙箱 sqlite；tokens = 0）",
+ "task": "W73-4 复购率金标（只出方案；改 gold 属冻结集变更 ⇒ 须总控签）",
+ "generated_at": "2026-10-23T10:48:41+00:00",
+ "git_rev": "de08e74",
+ "git_dirty": false,
+ "metric_definition": {
+  "name": "repurchase_rate_90d",
+  "expression": "COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) / NULLIF(COUNT(DISTINCT buyer_id), 0)\n",
+  "window": "90 days",
+  "definition_note": "90 天内购买 ≥ 2 次；**不含首单口径**。周期固定 90 天，不接受运行时改窗口。",
+  "default_predicates": [
+   "pay_status = 'paid'",
+   "is_test_order = false"
+  ],
+  "time_basis": "pay_time"
+ },
+ "findings": [
+  "① **整数除法**：gold 的 `COUNT(...)/COUNT(...)` 两侧都是整数 ⇒ SQLite 与 Postgres **都**截断为 0（M-IDX-09/10 的 gold 原值实测 0.0）。`* 1.0` 后 M-IDX-09 = 0.1671171171171171（与 QA §94.5 数字一致）。",
+  "② **缺少 90 天上界**：`bundle:613` 写 `window: \"90 days\"`，`definition_note` 也写「周期固定 90 天，不接受运行时改窗口」；但 gold 只有 `pay_time >= start`，**没有上界** ⇒ M-IDX-10 gold 覆盖 2026-03-01 起的全部历史，比系统（截至 2026-05-30）大 2.2 倍，差异方向与「窗口缺上界」一致。",
+  "③ **默认谓词缺失**：gold 无 `pay_status='paid'` / `is_test_order=false`（D 类一脉），补上后与系统的差距进一步收窄。",
+  "④ **系统自身不一致**：M-IDX-09 的系统 SQL 只有下界、M-IDX-10 有上界 ⇒ 90 天窗口由模型即兴决定，代码里没有任何一处读 `metrics[].window`（`grep '.window'` 只命中 `planner/engine.py` 的时间解析，与指标窗口无关）。"
+ ],
+ "proposed_fix": {
+  "status": "PROPOSED（未改 gold；冻结集与语义包均未动）",
+  "gold_v2": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) * 1.0 / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE pay_time >= '{start}' AND pay_time < '{start+90d}' AND pay_status = 'paid' AND is_test_order = false GROUP BY buyer_id)",
+  "expected_values": {
+   "M-IDX-09": {
+    "v3_float_predicates_90d": 0.11984047856430707,
+    "system_value": 0.16654133453652178
+   },
+   "M-IDX-10": {
+    "v3_float_predicates_90d": 0.13292697943603005,
+    "system_value": 0.13292697943603005
+   }
+  },
+  "code_follow_up": "若要「窗口由指标定义强制」，需在 gen_sql 之后按 `metric.window` 覆写/校验时间窗（当前无任何代码读该字段）—— 属产品行为变更，另立议题",
+  "sign_required": "改冻结集 gold（2 条）+ 可能改语义包 expected 值 ⇒ 需总控签"
+ },
+ "cases": [
+  {
+   "case_id": "M-IDX-09",
+   "question": "T_A 自 2026-06-01 起的 90 天复购率是多少？",
+   "start": "2026-06-01",
+   "gold_sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE pay_time >= '2026-06-01' GROUP BY buyer_id)",
+   "system_sql": "SELECT COUNT(DISTINCT CASE WHEN per_buyer.cnt >= 2 THEN per_buyer.buyer_id END) * 1.0 / NULLIF(COUNT(DISTINCT per_buyer.buyer_id), 0) AS repurchase_rate_90d FROM (SELECT v_order_paid.buyer_id AS buyer_id, COUNT(DISTINCT v_order_paid.sub_order_id) AS cnt FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.is_test_order = FALSE GROUP BY v_order_paid.buyer_id) AS per_buyer LIMIT 100",
+   "system_params": {
+    "pay_status": "paid",
+    "start_ts": "2026-06-01"
+   },
+   "system_value": 0.16654133453652178,
+   "variants": {
+    "v0_gold_as_is": {
+     "sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE pay_time >= '2026-06-01' GROUP BY buyer_id)",
+     "value": 0,
+     "error": null
+    },
+    "v1_float_only": {
+     "sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) * 1.0 / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE pay_time >= '2026-06-01' GROUP BY buyer_id)",
+     "value": 0.1671171171171171,
+     "error": null
+    },
+    "v2_float_predicates": {
+     "sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) * 1.0 / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_status = 'paid' AND is_test_order = false GROUP BY buyer_id)",
+     "value": 0.16654133453652178,
+     "error": null
+    },
+    "v3_float_predicates_90d": {
+     "sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) * 1.0 / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE pay_time >= '2026-06-01' AND pay_time < '2026-08-30' AND pay_status = 'paid' AND is_test_order = false GROUP BY buyer_id)",
+     "value": 0.11984047856430707,
+     "error": null
+    }
+   }
+  },
+  {
+   "case_id": "M-IDX-10",
+   "question": "T_A 自 2026-03-01 起的 90 天复购率是多少？",
+   "start": "2026-03-01",
+   "gold_sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE pay_time >= '2026-03-01' GROUP BY buyer_id)",
+   "system_sql": "WITH buyer_orders AS (SELECT v_order_paid.buyer_id AS buyer_id, COUNT(DISTINCT v_order_paid.sub_order_id) AS cnt FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_time < %(end_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.is_test_order = FALSE GROUP BY v_order_paid.buyer_id) SELECT COUNT(DISTINCT CASE WHEN buyer_orders.cnt >= 2 THEN buyer_orders.buyer_id END) * 1.0 / NULLIF(COUNT(DISTINCT buyer_orders.buyer_id), 0) AS repurchase_rate_90d FROM buyer_orders LIMIT 1",
+   "system_params": {
+    "start_ts": "2026-03-01",
+    "end_ts": "2026-05-30"
+   },
+   "system_value": 0.13292697943603005,
+   "variants": {
+    "v0_gold_as_is": {
+     "sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE pay_time >= '2026-03-01' GROUP BY buyer_id)",
+     "value": 0,
+     "error": null
+    },
+    "v1_float_only": {
+     "sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) * 1.0 / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE pay_time >= '2026-03-01' GROUP BY buyer_id)",
+     "value": 0.29174849590074503,
+     "error": null
+    },
+    "v2_float_predicates": {
+     "sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) * 1.0 / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE pay_time >= '2026-03-01' AND pay_status = 'paid' AND is_test_order = false GROUP BY buyer_id)",
+     "value": 0.2907648583653456,
+     "error": null
+    },
+    "v3_float_predicates_90d": {
+     "sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) * 1.0 / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE pay_time >= '2026-03-01' AND pay_time < '2026-05-30' AND pay_status = 'paid' AND is_test_order = false GROUP BY buyer_id)",
+     "value": 0.13292697943603005,
+     "error": null
+    }
+   }
+  }
+ ]
+}

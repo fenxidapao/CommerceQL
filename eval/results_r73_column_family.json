@@ -1,0 +1,1259 @@
+{
+ "provenance": "W73 零出站材料（r74 重放 + r63 匣带 + 语义包 + 沙箱 sqlite；tokens = 0）",
+ "task": "W73-3 列族量化（只出影响面；不改 equivalence.py、不改判据）",
+ "generated_at": "2026-10-23T10:48:41+00:00",
+ "git_rev": "de08e74",
+ "git_dirty": false,
+ "method": "r74 重放里 terminal=complete 且带预测 SQL 的每条，在同一沙箱/租户边界重跑金标与预测；取列数不等的那些，再做两种投影：`name` = 金标每列必须在预测里**同名同值**，`value` = 只要求**同值**（覆盖改名）；预测多出的列一律忽略、行序不参与",
+ "headline": {
+  "n_column_count_mismatch": 36,
+  "n_sandbox_runnable": 24,
+  "n_no_result_set": 12,
+  "no_result_set_cases": [
+   "E-MET-08",
+   "M-DIM-05",
+   "M-MET-01",
+   "H-STR-01",
+   "H-STR-02",
+   "H-STR-03",
+   "H-STR-04",
+   "H-STR-05",
+   "H-STR-06",
+   "H-STR-07",
+   "H-STR-08",
+   "X-MET-10"
+  ],
+  "by_shape": {
+   "None→0": 12,
+   "2→3": 23,
+   "2→5": 1
+  },
+  "by_family": {
+   "预测无结果集（拒答/错误）— 不属列族问题": 12,
+   "值也不同（多列之外还有数值差）": 10,
+   "仅多列（忽略预测多出的列后，金标每列都能按值配上）": 14
+  },
+  "n_flip_if_ignore_extra_by_name": 0,
+  "flip_cases_by_name": [],
+  "n_flip_if_ignore_extra_by_value": 14,
+  "flip_cases_by_value": [
+   "H-ENUM-01",
+   "H-ENUM-02",
+   "H-ENUM-04",
+   "X-STR-08",
+   "X-ENUM-01",
+   "X-ENUM-03",
+   "X-ENUM-04",
+   "X-ENUM-06",
+   "X-ENUM-08",
+   "X-MET-01",
+   "X-MET-02",
+   "X-MET-03",
+   "X-MET-04",
+   "X-MET-05"
+  ],
+  "extra_column_histogram": {
+   "shop_name": 13,
+   "sku_name": 1
+  },
+  "name_mode_is_unusable": "金标的聚合列**没有别名** ⇒ `Table.columns` 里是 `SUM(pay_amount)` 这种表达式串，而预测侧是 `gmv`；按列名投影会**结构性**匹配不上（0/24），所以「忽略多余列」只能按**值**判定，这也正是风险所在",
+  "red_line": "只出影响面。是否「忽略多余列」= 等价判据口径变更 ⇒ 须总控裁；本件未改 `equivalence.py` 一行"
+ },
+ "risk": [
+  "① 「忽略多余列」会放过「预测多算了一列」这类真缺陷：多出来的列若本身是错的，判定层再也看不见；须配「多列只允许出现在 output_columns 声明的范围内」之类的限定。",
+  "② 本件只证明「值对齐」，不证明「多出来的列是合理投影」：例如多 `shop_id` 与多 `shop_name` 在业务上不同（前者可配对、后者是改名）。",
+  "③ 23 条 2→3 的多列里，若预测同时带 `shop_id` 与 `shop_name`，按 name 模式金标 `shop_id` 能配上、`shop_name` 属多余；按 value 模式两者都可能配得上 ⇒ 两种模式给出不同清单，不可混用。"
+ ],
+ "rows": [
+  {
+   "case_id": "E-MET-08",
+   "question": "T_A 从 2026-08-01 起的付费金额合计（含未支付）是多少？",
+   "expected_behavior": "execute",
+   "terminal_event": "refuse",
+   "n_gold_cols": null,
+   "n_pred_cols": 0,
+   "family": "预测无结果集（拒答/错误）— 不属列族问题",
+   "only_extra_column": false
+  },
+  {
+   "case_id": "M-DIM-05",
+   "question": "T_A 的各城市的店铺数分别是多少？",
+   "expected_behavior": "execute",
+   "terminal_event": "refuse",
+   "n_gold_cols": null,
+   "n_pred_cols": 0,
+   "family": "预测无结果集（拒答/错误）— 不属列族问题",
+   "only_extra_column": false
+  },
+  {
+   "case_id": "M-ENUM-01",
+   "question": "T_A 直播渠道各 SKU 的浏览量分别是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "sku_id",
+    "SUM(pv)"
+   ],
+   "pred_cols": [
+    "sku_id",
+    "sku_name",
+    "pv"
+   ],
+   "gold_rows": 2000,
+   "pred_rows": 1000,
+   "projection_name": {
+    "ok": false,
+    "reason": "行数不同：2000 vs 1000"
+   },
+   "projection_value": {
+    "ok": false,
+    "reason": "行数不同：2000 vs 1000"
+   },
+   "extra_columns": [
+    "sku_name",
+    "pv"
+   ],
+   "only_extra_column": false,
+   "family": "值也不同（多列之外还有数值差）"
+  },
+  {
+   "case_id": "M-ENUM-03",
+   "question": "T_A 推荐渠道各 SKU 的浏览量分别是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "sku_id",
+    "SUM(pv)"
+   ],
+   "pred_cols": [
+    "sku_id",
+    "sku_name",
+    "pv"
+   ],
+   "gold_rows": 2000,
+   "pred_rows": 1000,
+   "projection_name": {
+    "ok": false,
+    "reason": "行数不同：2000 vs 1000"
+   },
+   "projection_value": {
+    "ok": false,
+    "reason": "行数不同：2000 vs 1000"
+   },
+   "extra_columns": [
+    "sku_name",
+    "pv"
+   ],
+   "only_extra_column": false,
+   "family": "值也不同（多列之外还有数值差）"
+  },
+  {
+   "case_id": "M-MET-01",
+   "question": "T_A 从 2026-08-01 起各渠道的 GMV 分别是多少？",
+   "expected_behavior": "execute",
+   "terminal_event": "refuse",
+   "n_gold_cols": null,
+   "n_pred_cols": 0,
+   "family": "预测无结果集（拒答/错误）— 不属列族问题",
+   "only_extra_column": false
+  },
+  {
+   "case_id": "M-MET-02",
+   "question": "T_A 从 2026-08-01 起各店铺的 GMV 分别是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(pay_amount)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "gmv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(pay_amount)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": false,
+    "reason": "金标列 'SUM(pay_amount)' 在预测里找不到同值列（value 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "extra_columns": [
+    "shop_name",
+    "gmv"
+   ],
+   "only_extra_column": false,
+   "family": "值也不同（多列之外还有数值差）"
+  },
+  {
+   "case_id": "H-STR-01",
+   "question": "T_A 位于广州的店铺各有多少个商品？",
+   "expected_behavior": "execute",
+   "terminal_event": "clarify",
+   "n_gold_cols": null,
+   "n_pred_cols": 0,
+   "family": "预测无结果集（拒答/错误）— 不属列族问题",
+   "only_extra_column": false
+  },
+  {
+   "case_id": "H-STR-02",
+   "question": "T_A 位于杭州的店铺各有多少个商品？",
+   "expected_behavior": "execute",
+   "terminal_event": "clarify",
+   "n_gold_cols": null,
+   "n_pred_cols": 0,
+   "family": "预测无结果集（拒答/错误）— 不属列族问题",
+   "only_extra_column": false
+  },
+  {
+   "case_id": "H-STR-03",
+   "question": "T_A 位于成都的店铺各有多少个商品？",
+   "expected_behavior": "execute",
+   "terminal_event": "clarify",
+   "n_gold_cols": null,
+   "n_pred_cols": 0,
+   "family": "预测无结果集（拒答/错误）— 不属列族问题",
+   "only_extra_column": false
+  },
+  {
+   "case_id": "H-STR-04",
+   "question": "T_A 位于武汉的店铺各有多少个商品？",
+   "expected_behavior": "execute",
+   "terminal_event": "clarify",
+   "n_gold_cols": null,
+   "n_pred_cols": 0,
+   "family": "预测无结果集（拒答/错误）— 不属列族问题",
+   "only_extra_column": false
+  },
+  {
+   "case_id": "H-STR-05",
+   "question": "T_A 位于南京的店铺各有多少个商品？",
+   "expected_behavior": "execute",
+   "terminal_event": "clarify",
+   "n_gold_cols": null,
+   "n_pred_cols": 0,
+   "family": "预测无结果集（拒答/错误）— 不属列族问题",
+   "only_extra_column": false
+  },
+  {
+   "case_id": "H-STR-06",
+   "question": "T_A 位于西安的店铺各有多少个商品？",
+   "expected_behavior": "execute",
+   "terminal_event": "clarify",
+   "n_gold_cols": null,
+   "n_pred_cols": 0,
+   "family": "预测无结果集（拒答/错误）— 不属列族问题",
+   "only_extra_column": false
+  },
+  {
+   "case_id": "H-STR-07",
+   "question": "T_A 位于长沙的店铺各有多少个商品？",
+   "expected_behavior": "execute",
+   "terminal_event": "clarify",
+   "n_gold_cols": null,
+   "n_pred_cols": 0,
+   "family": "预测无结果集（拒答/错误）— 不属列族问题",
+   "only_extra_column": false
+  },
+  {
+   "case_id": "H-STR-08",
+   "question": "T_A 位于郑州的店铺各有多少个商品？",
+   "expected_behavior": "execute",
+   "terminal_event": "clarify",
+   "n_gold_cols": null,
+   "n_pred_cols": 0,
+   "family": "预测无结果集（拒答/错误）— 不属列族问题",
+   "only_extra_column": false
+  },
+  {
+   "case_id": "H-ENUM-01",
+   "question": "T_A 处于「部分退款」状态的订单在各店铺分别是多少笔？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "COUNT(*)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "order_cnt"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'COUNT(*)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     },
+     {
+      "gold": "COUNT(*)",
+      "pred": "order_cnt"
+     }
+    ],
+    "extra_pred_columns": [
+     "shop_name"
+    ]
+   },
+   "extra_columns": [
+    "shop_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "H-ENUM-02",
+   "question": "T_A 处于「全额退款」状态的订单在各店铺分别是多少笔？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "COUNT(*)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "refunded_order_cnt"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'COUNT(*)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     },
+     {
+      "gold": "COUNT(*)",
+      "pred": "refunded_order_cnt"
+     }
+    ],
+    "extra_pred_columns": [
+     "shop_name"
+    ]
+   },
+   "extra_columns": [
+    "shop_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "H-ENUM-03",
+   "question": "T_A 处于「无退款」状态的订单在各店铺分别是多少笔？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "COUNT(*)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "order_cnt"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'COUNT(*)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": false,
+    "reason": "金标列 'COUNT(*)' 在预测里找不到同值列（value 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "extra_columns": [
+    "shop_name",
+    "order_cnt"
+   ],
+   "only_extra_column": false,
+   "family": "值也不同（多列之外还有数值差）"
+  },
+  {
+   "case_id": "H-ENUM-04",
+   "question": "T_A 处于「部分退款」状态的订单在各店铺分别是多少笔？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "COUNT(*)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "order_cnt"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'COUNT(*)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     },
+     {
+      "gold": "COUNT(*)",
+      "pred": "order_cnt"
+     }
+    ],
+    "extra_pred_columns": [
+     "shop_name"
+    ]
+   },
+   "extra_columns": [
+    "shop_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "H-MET-01",
+   "question": "T_A「3C数码」自 2026-08-01 起各店铺的 GMV 分别是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_order_paid.pay_amount)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "gmv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_order_paid.pay_amount)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_order_paid.pay_amount)' 在预测里找不到同值列（value 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "extra_columns": [
+    "shop_name",
+    "gmv"
+   ],
+   "only_extra_column": false,
+   "family": "值也不同（多列之外还有数值差）"
+  },
+  {
+   "case_id": "H-MET-02",
+   "question": "T_A「家用电器」自 2026-08-01 起各店铺的 GMV 分别是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_order_paid.pay_amount)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "gmv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_order_paid.pay_amount)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_order_paid.pay_amount)' 在预测里找不到同值列（value 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "extra_columns": [
+    "shop_name",
+    "gmv"
+   ],
+   "only_extra_column": false,
+   "family": "值也不同（多列之外还有数值差）"
+  },
+  {
+   "case_id": "H-MET-03",
+   "question": "T_A「服饰鞋包」自 2026-06-01 起各店铺的 GMV 分别是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_order_paid.pay_amount)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "gmv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_order_paid.pay_amount)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_order_paid.pay_amount)' 在预测里找不到同值列（value 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "extra_columns": [
+    "shop_name",
+    "gmv"
+   ],
+   "only_extra_column": false,
+   "family": "值也不同（多列之外还有数值差）"
+  },
+  {
+   "case_id": "H-MET-04",
+   "question": "T_A「食品生鲜」自 2026-06-01 起各店铺的 GMV 分别是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_order_paid.pay_amount)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "gmv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_order_paid.pay_amount)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_order_paid.pay_amount)' 在预测里找不到同值列（value 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "extra_columns": [
+    "shop_name",
+    "gmv"
+   ],
+   "only_extra_column": false,
+   "family": "值也不同（多列之外还有数值差）"
+  },
+  {
+   "case_id": "H-MET-05",
+   "question": "T_A「美妆个护」自 2026-05-01 起各店铺的 GMV 分别是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_order_paid.pay_amount)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "gmv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_order_paid.pay_amount)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_order_paid.pay_amount)' 在预测里找不到同值列（value 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "extra_columns": [
+    "shop_name",
+    "gmv"
+   ],
+   "only_extra_column": false,
+   "family": "值也不同（多列之外还有数值差）"
+  },
+  {
+   "case_id": "H-MET-10",
+   "question": "T_A 自 2026-08-01 起有流量但零转化的 SKU 有哪些？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 5,
+   "gold_cols": [
+    "sku_id",
+    "SUM(v_traffic_daily.uv)"
+   ],
+   "pred_cols": [
+    "sku_id",
+    "sku_name",
+    "uv",
+    "pv",
+    "order_cnt"
+   ],
+   "gold_rows": 1602,
+   "pred_rows": 579,
+   "projection_name": {
+    "ok": false,
+    "reason": "行数不同：1602 vs 579"
+   },
+   "projection_value": {
+    "ok": false,
+    "reason": "行数不同：1602 vs 579"
+   },
+   "extra_columns": [
+    "sku_name",
+    "uv",
+    "pv",
+    "order_cnt"
+   ],
+   "only_extra_column": false,
+   "family": "值也不同（多列之外还有数值差）"
+  },
+  {
+   "case_id": "X-STR-08",
+   "question": "T_A 在 郑州市 的店铺各 SKU 浏览量合计是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "sku_id",
+    "SUM(v_traffic_daily.pv)"
+   ],
+   "pred_cols": [
+    "sku_id",
+    "sku_name",
+    "pv"
+   ],
+   "gold_rows": 400,
+   "pred_rows": 400,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_traffic_daily.pv)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "sku_id",
+      "pred": "sku_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "sku_id",
+      "pred": "sku_id"
+     },
+     {
+      "gold": "SUM(v_traffic_daily.pv)",
+      "pred": "pv"
+     }
+    ],
+    "extra_pred_columns": [
+     "sku_name"
+    ]
+   },
+   "extra_columns": [
+    "sku_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "X-ENUM-01",
+   "question": "T_A 的「3C数码」商品在各店铺的浏览量合计是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_traffic_daily.pv)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "pv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_traffic_daily.pv)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     },
+     {
+      "gold": "SUM(v_traffic_daily.pv)",
+      "pred": "pv"
+     }
+    ],
+    "extra_pred_columns": [
+     "shop_name"
+    ]
+   },
+   "extra_columns": [
+    "shop_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "X-ENUM-03",
+   "question": "T_A 的「服饰鞋包」商品在各店铺的浏览量合计是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_traffic_daily.pv)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "pv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_traffic_daily.pv)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     },
+     {
+      "gold": "SUM(v_traffic_daily.pv)",
+      "pred": "pv"
+     }
+    ],
+    "extra_pred_columns": [
+     "shop_name"
+    ]
+   },
+   "extra_columns": [
+    "shop_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "X-ENUM-04",
+   "question": "T_A 的「食品生鲜」商品在各店铺的浏览量合计是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_traffic_daily.pv)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "pv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_traffic_daily.pv)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     },
+     {
+      "gold": "SUM(v_traffic_daily.pv)",
+      "pred": "pv"
+     }
+    ],
+    "extra_pred_columns": [
+     "shop_name"
+    ]
+   },
+   "extra_columns": [
+    "shop_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "X-ENUM-06",
+   "question": "T_A 的「家居家装」商品在各店铺的浏览量合计是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_traffic_daily.pv)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "pv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_traffic_daily.pv)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     },
+     {
+      "gold": "SUM(v_traffic_daily.pv)",
+      "pred": "pv"
+     }
+    ],
+    "extra_pred_columns": [
+     "shop_name"
+    ]
+   },
+   "extra_columns": [
+    "shop_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "X-ENUM-08",
+   "question": "T_A 的「运动户外」商品在各店铺的浏览量合计是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_traffic_daily.pv)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "pv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_traffic_daily.pv)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     },
+     {
+      "gold": "SUM(v_traffic_daily.pv)",
+      "pred": "pv"
+     }
+    ],
+    "extra_pred_columns": [
+     "shop_name"
+    ]
+   },
+   "extra_columns": [
+    "shop_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "X-MET-01",
+   "question": "T_A「3C数码」自 2026-08-01 起各店铺的浏览量分别是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_traffic_daily.pv)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "pv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_traffic_daily.pv)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     },
+     {
+      "gold": "SUM(v_traffic_daily.pv)",
+      "pred": "pv"
+     }
+    ],
+    "extra_pred_columns": [
+     "shop_name"
+    ]
+   },
+   "extra_columns": [
+    "shop_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "X-MET-02",
+   "question": "T_A「家用电器」自 2026-08-01 起各店铺的浏览量分别是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_traffic_daily.pv)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "pv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_traffic_daily.pv)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     },
+     {
+      "gold": "SUM(v_traffic_daily.pv)",
+      "pred": "pv"
+     }
+    ],
+    "extra_pred_columns": [
+     "shop_name"
+    ]
+   },
+   "extra_columns": [
+    "shop_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "X-MET-03",
+   "question": "T_A「服饰鞋包」自 2026-06-01 起各店铺的浏览量分别是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_traffic_daily.pv)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "pv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_traffic_daily.pv)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     },
+     {
+      "gold": "SUM(v_traffic_daily.pv)",
+      "pred": "pv"
+     }
+    ],
+    "extra_pred_columns": [
+     "shop_name"
+    ]
+   },
+   "extra_columns": [
+    "shop_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "X-MET-04",
+   "question": "T_A「食品生鲜」自 2026-06-01 起各店铺的浏览量分别是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_traffic_daily.pv)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "pv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_traffic_daily.pv)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     },
+     {
+      "gold": "SUM(v_traffic_daily.pv)",
+      "pred": "pv"
+     }
+    ],
+    "extra_pred_columns": [
+     "shop_name"
+    ]
+   },
+   "extra_columns": [
+    "shop_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "X-MET-05",
+   "question": "T_A「美妆个护」自 2026-05-01 起各店铺的浏览量分别是多少？",
+   "n_gold_cols": 2,
+   "n_pred_cols": 3,
+   "gold_cols": [
+    "shop_id",
+    "SUM(v_traffic_daily.pv)"
+   ],
+   "pred_cols": [
+    "shop_id",
+    "shop_name",
+    "pv"
+   ],
+   "gold_rows": 5,
+   "pred_rows": 5,
+   "projection_name": {
+    "ok": false,
+    "reason": "金标列 'SUM(v_traffic_daily.pv)' 在预测里找不到同值列（name 模式）",
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     }
+    ]
+   },
+   "projection_value": {
+    "ok": true,
+    "matched": [
+     {
+      "gold": "shop_id",
+      "pred": "shop_id"
+     },
+     {
+      "gold": "SUM(v_traffic_daily.pv)",
+      "pred": "pv"
+     }
+    ],
+    "extra_pred_columns": [
+     "shop_name"
+    ]
+   },
+   "extra_columns": [
+    "shop_name"
+   ],
+   "only_extra_column": true,
+   "family": "仅多列（忽略预测多出的列后，金标每列都能按值配上）"
+  },
+  {
+   "case_id": "X-MET-10",
+   "question": "T_A 618 期间各大区各店铺的成交金额合计是多少？",
+   "expected_behavior": "execute",
+   "terminal_event": "clarify",
+   "n_gold_cols": null,
+   "n_pred_cols": 0,
+   "family": "预测无结果集（拒答/错误）— 不属列族问题",
+   "only_extra_column": false
+  }
+ ]
+}
