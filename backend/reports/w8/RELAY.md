@@ -7835,3 +7835,134 @@ eval/w73_materials.py + 4 份产物（r74 replay / 误拒 / 列族 / 复购）  
 
 未改：gold／冻结集／语义包／`gates.py` 阈值／probe／`equivalence.py`／`reports/qa/**`／`.workbuddy/`。
 未跑 τ 采样、未扩 L4、未改 G-8、未刷门禁（仍 `88f3500`／PASS 1/8）。
+
+---
+
+## 80 W74：G-7 改 B（system vs 权威值）＋ 多余列窄口 ＋ 依赖白名单 ＋ 维度/处置材料
+
+派单：TASK_BOARD §95.7（QA R31br，2026-10-23 19:20）｜起跑 HEAD `a05981e`｜
+**零出站**（replay 复用 r63 匣带；probe/沙箱全本地；tokens 计费 = 0）。
+
+### 80.1 W74-1 G-7 改 B：度量对象 = system vs 语义包权威值（总控已签）
+
+| 文件 | 改动 |
+|---|---|
+| `backend/reports/w6/probe_metric_values.py` | 新增 `--system-replay`（默认取最近一次全量重放）；逐案把记录的 `sql_text`+`sql_params` 在**同一沙箱、同一租户边界**重跑得 `system_value`；行级新增 `system_sql/system_value/system_rel_error/system_consistent/system_error/system_record_found` |
+| 产物 | 顶层新增 `system_consistent` / `system_total` / `system_consistent_rate` / `system_differing` / `system_source`；`comparison_basis` 改为 system vs authority；新增 `dataset_caliber_consistency{...}` 作非门禁回归；四个扁平键（`total/consistent/consistent_rate/unattributed`）**语义未变**（仍是 gold 侧），文件内注明不得被门禁读取 |
+| `eval/gates.py` | G-7 只读 `system_consistent`/`system_total`；**缺键 ⇒ NOT_AVAILABLE，不回落 gold**；分母 0 ⇒ NOT_AVAILABLE；条件文案同步为「system vs 语义包权威值」 |
+| `eval/reporter.py` | `_metric_values_digest` 增 system 键 + `dataset_caliber_consistency`；§8 与 §6.5 改为「G-7 读数 = system vs authority」＋「非门禁回归 = gold vs authority」两段 |
+
+**读数（现跑，`backend/reports/w6/probe_metric_values.json`，rev=`af4a62c`/dirty=False）**：
+`system vs authority = 13/13`；`gold vs authority = 1/13`（旧口径，保留为回归项）。
+**门禁判定**：τ 未校准 ⇒ 原始 `PASS` 被 `_tau_verdict` 降为 **`UNVERIFIED`**；
+τ 已校准的对照实验（同输入）才给 `PASS`。官方门禁快照**未刷新**（仍 `88f3500`）。
+
+**测试**：`backend/tests/eval/test_gates.py` 新增 5 条 —— 只读 system（gold 1/13 不影响）／
+缺 `system_*` ⇒ NOT_AVAILABLE 且不回落／gold 低一致率不得驱动 FAIL／system 12/13 ⇒ FAIL／
+τ 未校准 ⇒ UNVERIFIED／分母 0 ⇒ NOT_AVAILABLE。
+`test_gate_inputs_p0_merge_two_state.py` 的「八格与已入库报告对表」改成：**只允许 G-7 偏离历史**，
+且新值必须是 `UNVERIFIED`（有人把它刷成 PASS 立刻红），其余七格仍逐格对表。
+
+### 80.2 W74-2 多余列窄口：等价 36 → 50（总控已签）
+
+`eval/equivalence.py`：新增 `Tag.EXTRA_COLUMNS` 与 `_extra_column_pairs()`，`compare_tables` 在
+**`pred.columns > gold.columns`** 时走窄口。四条判据同时成立才放行：
+① 仅「预测多列」；② 每列金标按整列值多重集在预测里**恰好一个**同值列（0 或多于 1 都不放行）；
+③ 不同金标列不落同一预测列；④ 配对后的预测列下标**严格递增**。命中记 Tag，多余列名写进 notes。
+**等列数路径一行未动**（id↔name 仍不放开）。
+
+**测试** `test_equivalence_extra_columns.py` **7 passed**：H-ENUM-02 形状判等价且带 Tag／
+H-MET-01 值不同仍不等价／列序倒置拒／重复值列（vacuous）拒／预测更少列不变／行数不同不走窄口／
+等列数 id↔name 仍不等价。
+
+**全量 166 replay**（`eval/results_r75_full166_extra_columns.json`，rev=`71ec30d`/dirty=False）：
+* 等价 **36 → 50**（+14），与派单预期一致；
+* 终态分布 116 complete / 28 refuse / 16 clarify / 3 error / 3 None **逐格不变**；
+* 翻转的 14 条：H-ENUM-01/02/04、X-STR-08、X-ENUM-01/03/04/06/08、X-MET-01…05；
+  逐条核难度档 = hard×medium / extra×low / extra×medium / extra×high ⇒ **与 G-2 的 easy×low 交集仍为 0**；
+* H-ENUM-02 判等价（Tag=`extra_columns_ignored`，多出 `shop_name`）；
+  H-MET-01 仍不等价（"0 个同值列"）、M-ENUM-01 仍不等价（行数 2000 vs 1000）。
+
+### 80.3 W74-3 依赖白名单
+
+`backend/tests/contract/test_dependency_whitelist.py` 的 `_FIRST_PARTY` 加 `"eval"`，未动
+`pyproject.toml`，正向对照（假模块必须红）保留。contract **647 passed**（此前 646+1 红）。
+
+### 80.4 W74-4 材料（只出材料；包/冻结集/expected 一行未改）
+
+`eval/results_r74_dimension_dispositions.json`（rev=`11c5dcf`/dirty=False）。
+
+**(a) 城市维度**：6 条提到「城市」的题 —— 有 gold 的 3 条里 **2 条落 `v_shop.city`**
+（M-DIM-05、M-HIER-03）、1 条落 `receiver_city`（M-MET-04）；另 3 条 expected=clarify。
+方案 A（新增 `shop_city` 维度，`binding: shop.city`）＋ 方案 B（在 `city` 下加
+`alternatives: shop.city / use_when: shop_grain`）。**建议 A + 把「店铺粒度」写进 plan 提示词** ——
+只因结构证据目前只活在 `normalize.py` 的降级规则里，planner 看不到。
+关键旁证：**M-HIER-03（各城市的在架商品数）同形状却执行成功**且绑的是 shop 粒度
+⇒ 「各城市」不是拦路虎，**主语粒度**才是。
+
+**(b) 渠道维度**：12 条提「渠道」的题，10 条 gold 走 `v_traffic_daily`（流量域）、
+1 条走 `v_order_paid`（M-MET-01）、1 条题面含英文 channel。建议给 `dimensions[channel]` 加
+`alternatives: order_paid.channel / use_when: orders_domain`（`bundle:1135` 的 concept note 已写
+这句话，缺的只是维度层表达），并把 note 渲染进 planner 提示词。影响面 = 仅 M-MET-01。
+
+**(c) normalize / plan 两层判据打架**：三案（C1 结构化传递 / C2 阻塞项分类 / C3 撤掉降级）。
+**建议 C1 + A 案**：C1 要改 payloads 与提示词 ⇒ **请求哈希变化、匣带失效、需重录（花钱）**，
+本轮不做。🔴 **C2 单做只会刷绿**：`_refusal_counts` 的 `over_refused` 只数 `terminal == refuse`，
+**clarify 不计**（`reporter.py:1334`）⇒ 把 refuse 改成 clarify，over_refused 会从 3 掉到 1，
+而系统一步没变强。**新增旁证**：`C-CITY-02`（expected=clarify）也走了
+`plan → refuse(no_data_asset)` ⇒ 这条冲突不止 M-DIM-05 一例。
+
+**(d) E-MET-08 四种处置**（当前 G-5 输入：refuse 24/24、answerable 124、over_refused 3；
+G-8：requests=166、clarify_expected=18、clarified=16、澄清率 9.6%）：
+
+| 处置 | G-5 | G-8 |
+|---|---|---|
+| execute（修 gold） | 不变（仍被拒 ⇒ 仍算误拒） | 不变 |
+| clarify | answerable 124→123、over_refused 3→2 | requests 不变（分母=全部 166）、clarified 不变 ⇒ 澄清率仍 9.6%；`clarify_expected_n` 18→19；**G-8 不度量漏澄清** |
+| refuse | refuse 24→25、correct_refused 24→25、answerable 124→123、over_refused 3→2 | 不变 |
+| 标 unscored | **不变** —— `_refusal_counts` 只按 `expected_behavior` 分组，**不看 `scored`** | 不变 |
+
+⇒ 除 execute 外，三个选项都会让 over_refused 少 1 条，**那是口径变更不是能力提升**；
+要让 unscored 真的退出计分，得在 reporter 侧加 `scored` 过滤（判据改动）。
+
+**(e) 复购两议题分开列**（等价矩阵，沙箱实算）：
+
+| 方案 | M-IDX-09 | M-IDX-10 |
+|---|---|---|
+| 只改 gold_v2 | ✗（系统无上界 0.16654 vs gold 0.11984） | ✓ |
+| 只强制 window | ✗（gold 仍是整数除法 ⇒ 0） | ✗ |
+| 两者都做 | ✓ | ✓ |
+
+`metrics[].window` 全仓只有 `repurchase_rate_90d` 一处声明、**无代码读取**；强制窗口等于在
+gen_sql 后改写时间谓词（产品行为变更）。**改 gold 与改代码是两个签，建议分开走。**
+
+### 80.5 交总控/文档窗的回填清单（本窗未改：属 PRD/接口窗）
+
+| 文件:行 | 现文 | 建议改为 |
+|---|---|---|
+| `docs/04_附录C_评测方案与合成数据集设计.md:323` | `G-7 \| 口径一致性 ≥ 95%（核心指标子集），差异 100% 可归因` | `G-7 \| 口径一致性 ≥ 95%（核心指标子集，system vs 语义包权威值）`；并注明「差异可归因」已降为非门禁回归项 |
+| `docs/01_需求规格说明书_PRD.md:1621` | 同上旧措辞 | 同上 |
+| `docs/02_附录A_接口契约详解.md:1031` | `{"id":"G-7","name":"口径一致性 ≥ 95%"}` | `name` 加注 `(system vs bundle authority)` |
+| `docs/04` §C.4.1（L116-130 的九条规则表） | 无「预测多列」行 | 增一行：`预测列多于金标 \| **仅当**每列金标在预测里唯一同值匹配且列序严格递增时等价 \| \`Tag.EXTRA_COLUMNS\`（W74-2，总控签）` |
+| `deploy/runbook/README.md` | 无 G-7 字样（grep 0 命中） | 无需改 |
+
+`docs/07`（本窗自有）已同步：G-7 行改文 + v1.7.35 追加说明（不并列历史读数）。
+
+### 80.6 测试与边界
+
+**2670 passed / 0 failed**（unit 1546 ｜ eval 477 ｜ contract 647，`PYTHONPATH` 含仓库根）。
+
+```
+eval/equivalence.py / gates.py / reporter.py                     ← 3 处判据面（两项已签）
+backend/reports/w6/probe_metric_values.py + 其产物               ← G-7 输入（本单明确项）
+backend/tests/eval/{test_gates,test_consistency_reporter,
+  test_gate_inputs_p0_merge_two_state,test_equivalence_extra_columns}.py
+backend/tests/contract/test_dependency_whitelist.py
+eval/{w74_materials.py,results_r75_full166_extra_columns.json,
+     results_r74_dimension_dispositions.json}
+docs/07_技术设计文档_TDD.md                                       ← 仅 G-7 行 + 追加说明
+```
+
+未改：gold／冻结集／语义包／`gates.py` 阈值（`THRESHOLDS` 未动）／`equivalence.py` 的 `REL_TOL`／
+`reports/qa/**`／`.workbuddy/`。未跑 τ、未扩 L4、未改 G-8、**未刷官方门禁**（仍 `88f3500`）。
+🔴 对外口径：**G-7 不是「通过」**（τ 未校准 ⇒ UNVERIFIED）；20 条等价新增是判据变更所得，不是能力提升。
