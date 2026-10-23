@@ -1,0 +1,425 @@
+{
+  "frozen_evidence": {
+    "checks": {
+      "dataset_content_hash": {
+        "expected": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+        "actual": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+        "ok": true
+      },
+      "sandbox_db_sha256": {
+        "expected": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "actual": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "ok": true
+      },
+      "red_team_content_hash_present": true,
+      "gold_seed_derived_from_dataset_hash": true,
+      "all_ok": true
+    },
+    "dataset_version": "2",
+    "frozen_at": "2026-10-17",
+    "n_cases": 166,
+    "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+    "red_team": {
+      "content_hash": "sha256:886cb57052368541e60727cbcee78db2aa1ad1c381cb083a540673999ed9d01d",
+      "n_cases": 66
+    },
+    "gold_seed": {
+      "content_hash": "sha256:2f91ed51e0c97fcbb45b7a59eabc13067167747df52d5cae6d1b37cfe339a592",
+      "n_seeds": 119
+    }
+  },
+  "config": {
+    "live": true,
+    "cassette": "eval/cassettes/w76_smoke.jsonl",
+    "mode": "record",
+    "db": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\ecom_sandbox.db",
+    "column_top": null,
+    "n_requested": 1,
+    "provenance": "W76 tau sampling precondition smoke (1 case)",
+    "node_timeouts": {
+      "contract": {
+        "link": 30.0,
+        "gate1_ast": 0.1,
+        "gate2_policy": 0.1,
+        "gate3_cost": 1.0,
+        "execute": 30.0,
+        "mask": 0.1,
+        "audit_pre": 1.0,
+        "audit_supp": 0.5
+      },
+      "effective": {
+        "audit_pre": 8.0,
+        "normalize": 162.0,
+        "mask": 0.8,
+        "audit_supp": 4.0,
+        "intent": 162.0,
+        "gate1_ast": 0.8,
+        "gate3_cost": 8.0,
+        "link": 30.0,
+        "plan": 162.0,
+        "gen_sql": 162.0,
+        "gate2_policy": 0.8,
+        "bind": 162.0,
+        "execute": 30.0,
+        "repair": 162.0,
+        "present": 162.0
+      },
+      "scaled": true,
+      "llm_calling_nodes": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "not_in_contract": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "kept_as_contract": [
+        "execute",
+        "link"
+      ],
+      "cpu_factor": 8.0,
+      "llm_node_floor_s": 162.0
+    },
+    "max_concurrency": null,
+    "checkpoint": null,
+    "resume": false,
+    "transport_retries": 2,
+    "transport_backoff_s": 2.0,
+    "batch_id": "w76_smoke",
+    "max_cost_cny": 0.05,
+    "budget_stop": null
+  },
+  "summary": {
+    "n_records": 1,
+    "n_scored": 1,
+    "n_unscored": 0,
+    "n_node_timeout": 0,
+    "n_execute_scored": 1,
+    "n_execute_with_sql": 1,
+    "n_equivalent": 0,
+    "terminal_distribution": {
+      "complete": 1
+    },
+    "binding_layer_distribution": {
+      "L3": 1
+    },
+    "attribution_distribution": {
+      "schema_linking_miss": 1
+    },
+    "tokens_total": 28153,
+    "cost_cny_total": 0.008828,
+    "wall_s": {
+      "max": 17.653,
+      "median": 17.653,
+      "sum": 17.653
+    },
+    "n_second_round_attempted": 0,
+    "n_second_round_success": 0,
+    "second_round_tokens_total": 0,
+    "second_round_cost_cny_total": 0.0
+  },
+  "records": [
+    {
+      "case_id": "M-MET-02",
+      "question": "T_A 从 2026-08-01 起各店铺的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "high",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "binding_layer": "L3",
+      "sql_text": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY gmv DESC LIMIT 1000",
+      "sql_params": {
+        "start_ts": "2026-08-01"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "GMV 的时间基准固定为 pay_time，而非 create_time"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 7138,
+        "linking": 0,
+        "plan": 2457,
+        "gen_sql": 1914,
+        "gate": 18,
+        "exec": 243,
+        "present": 0,
+        "total": 16414
+      },
+      "tokens": {
+        "input": 26495,
+        "output": 1658,
+        "cache_hit": 25344,
+        "total": 28153
+      },
+      "cost_cny": 0.008828,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": "bind.l4",
+        "ok": true,
+        "reason": null,
+        "candidate_ids": [
+          "v_order_paid.sub_order_id",
+          "v_order_paid.order_id",
+          "v_order_paid.shop_id",
+          "v_order_paid.buyer_id",
+          "v_order_paid.sku_id",
+          "v_order_paid.spu_id",
+          "v_order_paid.category_l1",
+          "v_order_paid.category_l2",
+          "v_order_paid.category_l3",
+          "v_order_paid.pay_amount",
+          "v_order_paid.freight_amount",
+          "v_order_paid.discount_amount",
+          "v_order_paid.quantity",
+          "v_order_paid.pay_time",
+          "v_order_paid.create_time",
+          "v_order_paid.pay_status",
+          "v_order_paid.refund_status",
+          "v_order_paid.region_code",
+          "v_order_paid.receiver_city",
+          "v_order_paid.channel",
+          "v_order_paid.is_test_order",
+          "v_order_refund.refund_id",
+          "v_order_refund.sub_order_id",
+          "v_order_refund.refund_amount",
+          "v_order_refund.refund_type",
+          "v_order_refund.refund_time",
+          "v_order_refund.refund_status",
+          "v_product.sku_id",
+          "v_product.sku_name",
+          "v_product.spu_id"
+        ],
+        "scores": [
+          0.02,
+          0.02,
+          0.35,
+          0.02,
+          0.02,
+          0.02,
+          0.03,
+          0.03,
+          0.03,
+          0.9,
+          0.1,
+          0.08,
+          0.05,
+          0.15,
+          0.12,
+          0.08,
+          0.05,
+          0.03,
+          0.03,
+          0.03,
+          0.03,
+          0.02,
+          0.02,
+          0.1,
+          0.02,
+          0.03,
+          0.03,
+          0.02,
+          0.02,
+          0.02
+        ],
+        "rank": [
+          "v_order_paid.pay_amount",
+          "v_order_paid.shop_id",
+          "v_order_paid.pay_time",
+          "v_order_paid.create_time",
+          "v_order_paid.freight_amount",
+          "v_order_refund.refund_amount",
+          "v_order_paid.discount_amount",
+          "v_order_paid.pay_status",
+          "v_order_paid.quantity",
+          "v_order_paid.refund_status",
+          "v_order_paid.category_l1",
+          "v_order_paid.category_l2",
+          "v_order_paid.category_l3",
+          "v_order_paid.channel",
+          "v_order_paid.is_test_order",
+          "v_order_paid.receiver_city",
+          "v_order_paid.region_code",
+          "v_order_refund.refund_status",
+          "v_order_refund.refund_time",
+          "v_order_paid.buyer_id",
+          "v_order_paid.order_id",
+          "v_order_paid.sku_id",
+          "v_order_paid.spu_id",
+          "v_order_paid.sub_order_id",
+          "v_order_refund.refund_id",
+          "v_order_refund.refund_type",
+          "v_order_refund.sub_order_id",
+          "v_product.sku_id",
+          "v_product.sku_name",
+          "v_product.spu_id"
+        ],
+        "scorer": {
+          "model_id": "deepseek-flash",
+          "prompt_version": "l4_score_v1"
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "585e4ea6ac02d2d48b00a736851303eea99fa53c18f2444d78a2ff34fbdc3524",
+        "gold_candidate_id": "v_order_paid.pay_amount",
+        "gold_match_rule": "aggregate_arg",
+        "gold_candidates_considered": 30,
+        "gold_unmatched_reason": null,
+        "gold_has_star_agg": false,
+        "gold_status": "matched"
+      },
+      "gold": {
+        "gold_sql": "SELECT shop_id, SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' GROUP BY shop_id",
+        "frozen_hash": "sha256:8b40c3c2df25187ed8d36f24cf999346c75bb6b3078aa967e2b3ec649ba5d024",
+        "via_view": {
+          "hash": "sha256:8b40c3c2df25187ed8d36f24cf999346c75bb6b3078aa967e2b3ec649ba5d024",
+          "rows": 5,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:8b40c3c2df25187ed8d36f24cf999346c75bb6b3078aa967e2b3ec649ba5d024",
+          "rows": 5,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:4637e42859fa4e1f6b23b3cf41ccf808f34f8844c093590b3475eeb93657dc39",
+        "columns": [
+          "shop_id",
+          "shop_name",
+          "gmv"
+        ],
+        "rows": 5,
+        "shape": {
+          "columns": [
+            "shop_id",
+            "shop_name",
+            "gmv"
+          ],
+          "row_count": 5,
+          "head_rows": [
+            [
+              "T_A-S01",
+              "T_A官方旗舰店1号",
+              3230469.43
+            ],
+            [
+              "T_A-S04",
+              "T_A官方旗舰店4号",
+              3196944.29
+            ],
+            [
+              "T_A-S05",
+              "T_A官方旗舰店5号",
+              3177130.08
+            ],
+            [
+              "T_A-S03",
+              "T_A官方旗舰店3号",
+              3146110.99
+            ],
+            [
+              "T_A-S02",
+              "T_A官方旗舰店2号",
+              2861075.16
+            ]
+          ]
+        },
+        "state_row_count": 5,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": false,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 3；金标列 'SUM(pay_amount)' 在预测里有 0 个同值列（窄口要求**唯一**匹配，0 或多于 1 都不放行）"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "schema_linking_miss",
+        "signal": "涉及资产不一致：缺 [] / 多 ['v_shop']",
+        "severity": "normal"
+      },
+      "wall_s": 17.653,
+      "runner_transport_retries": 0,
+      "batch_id": "w76_smoke"
+    }
+  ],
+  "generated_at": "2026-10-23T14:29:55+00:00",
+  "git_rev": "34cc628",
+  "git_dirty": false
+}
