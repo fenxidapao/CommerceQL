@@ -1860,3 +1860,17 @@ W67 派单见 `TASK_BOARD §88.5`（三件，全部零出站）。
 7. **三条已签**：① G-7 改 system vs authority（gold 侧降非门禁回归；旧读数标旧口径；预期 FAIL→UNVERIFIED，不是 PASS）② 多余列窄口放行（预期 36→50，八闸不变）③ `eval` 入 `_FIRST_PARTY`（不动 pyproject）。
 8. **测试成本**：QA 本轮 ¥0（零出站、只读沙箱）。
 9. **结论**：第 73 轮 W73-1 实装收、W73-2/3/4 材料收；**谓词矛盾子类（显式矛盾）已闭，"空声明回落"仍按设计保留**。W74 派单见 `TASK_BOARD §95.7`；待总控三签（E-MET-08／复购/窗口／维度绑定）。
+
+## R31bs · W8 第 74 轮验收：三件实装收＋材料收；窄口零列洞；当前三格只卡 τ ／ 2026-10-23 20:20 +0800 ／ HEAD `4f9ee30`／675 笔
+
+1. **基线【实测】**：`4f9ee30`／675／与 origin/main 齐平；树仅 `?? .workbuddy/`；禁改面（reports/qa、冻结集、semantic、cassettes、官方 eval_metrics）空 diff；probe 产物被改 = G-7 B 已签必要项。
+2. **测试【实测】**：unit＋eval＋contract **2670 passed / 0 failed**（114.92s）；含 integration 的全量收集因本机无 PG 报 11 个 collection error（环境性）。
+3. **W74-1 收【实测】**：probe system 13/13、gold 1/13 保留为非门禁回归；13 条 system_value 与 r75 实跑逐条相等；gates 只读 system_*、缺键/分母 0 ⇒ NOT_AVAILABLE 不回落；当前 G-7 = **UNVERIFIED**（τ）；八格对表测试断言其余七格不动、G-7 必须 UNVERIFIED。
+4. **W74-2 收【实测】**：r74→r75 恰 14 条 false→true、全带 `extra_columns_ignored`；等价 36→50；终态逐格不变；H-MET-01／M-ENUM-01 正确不翻。
+5. **🔴 零列洞（我复现）**：`_extra_column_pairs` 对 gold 0 列 + pred 1 列循环 0 次 ⇒ 误判等价；当前数据不可达（121 条 gold 中 0 条），W75-2 修。
+6. **W74-3 收**：`eval` 入 `_FIRST_PARTY`、pyproject 未动、contract 647 passed。
+7. **W74-4 收**：E-MET-08 除 execute 外全部把 over_refused 3→2（移出分母）；`unscored` 因 reporter 不看 `scored` 而无效；复购矩阵 only-gold_v2 1/2、only-window 0/2、both 2/2；维度 C1 需重录、C2/C3 刷绿或换错误类型。
+8. **我的决定（总控授权自作）**：E-MET-08 保持 execute＋gold 原样（已知数据集缺陷）；复购只修系统 `metric.window`、不改冻结集 gold；维度暂不动（登记已知限制）；W75 修零列洞；文档窗回填 04/01/02＋04 §C.4.1。
+9. **当前门禁（冻结集网格，非官方快照）**：G-1 PASS（过期）｜**G-2 8/8→UNVERIFIED（τ）**｜G-3/G-4 PARTIAL（过期）｜**G-5 24/24＋3/124→UNVERIFIED（τ）**｜G-6 UNVERIFIED（过期）｜**G-7 13/13→UNVERIFIED（τ）**｜G-8 9.6% 二轮未实现→UNVERIFIED。
+10. **读数订正**：官方 G-2 `0/10` 是冻结前网格（冻结集 easy.low=8）；W60 的 7/8 也过期；r63/r66/r73/r74/r75 五批均 8/8 ⇒ **G-2 现在不是 FAIL，是等 τ**。最大杠杆 = τ（同时解锁 G-2/G-5/G-7）。
+11. **结论**：第 74 轮三件实装收、材料收；判据变更已落地且可核；W75 派单见 `TASK_BOARD §96.8`（零出站）。

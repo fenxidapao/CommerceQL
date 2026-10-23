@@ -6767,3 +6767,120 @@ params: {"refund_status": "refunded", "pay_status": "paid"}
 ### 95.9 边界
 
 本窗零出站、零写库（沙箱 `mode=ro`）；只追加 `reports/qa/**`；未动产品代码／测试／语义包／冻结集／判据；官方门禁仍 `88f3500`／PASS 1/8。
+
+## 96 · W8 第 74 轮验收：三件实装收＋材料收；**窄口有零列洞（latent）**；当前三格只卡 τ（QA R31bs ｜ 2026-10-23 20:20 +0800 ｜ HEAD `4f9ee30`／675 笔）
+
+> 总控授权"少问、自己选最优解"。本轮 QA 零出站；W74 的数字我逐项复算，决定见 96.6。
+
+### 96.1 现状现读【实测】
+
+| 项 | 现读 |
+|---|---|
+| HEAD / 笔数 | `4f9ee30` / 675，与 `origin/main` 齐平；树仅 `?? .workbuddy/` |
+| 本轮改动面 | `gates.py`／`reporter.py`／`equivalence.py`／probe 脚本与产物／3 个测试文件／`docs/07`／W8 `RELAY` |
+| 禁改面 | `reports/qa/**`、冻结集、`semantic/**`、`cassettes/**`、官方 `eval_metrics.json` **全部空 diff**；**probe 产物被改是 G-7 B 的已签必要项**，不是越界 |
+| 测试 | 我按 W8 口径跑 unit＋eval＋contract：**2670 passed / 0 failed**（114.92s）；含 integration 的全量收集会因本机无 PG 报 11 个 collection error（环境性，不属本轮） |
+| 官方门禁 | 仍 `88f3500`／PASS 1/8，未刷新 |
+
+### 96.2 W74-1 G-7 改 B：收【实测】
+
+| 项 | 我的结果 |
+|---|---|
+| probe 产物 | 顶层有 `system_total=13`／`system_consistent=13`／`system_consistent_rate=1.0`／`dataset_caliber_consistency={1,13,7.69%}`；`comparison_basis` 明确写 system vs authority |
+| 系统值 | 13 条 `system_value` 与 r75 实跑首列**逐条相等（0 差异）**；来源 r74（rev `de08e74`／dirty=false） |
+| 门禁 | `gates.py` 只读 `system_consistent/system_total`；缺键／分母 0 ⇒ NOT_AVAILABLE；**不回落** gold 侧 |
+| 当前判定 | G-7 = **UNVERIFIED**（原始 13/13 PASS，但 τ 未校准降级）；八格对表测试同时断言"其余七格不许动、G-7 必须是 UNVERIFIED（刷成 PASS 立刻红）"——我跑到该测试通过 |
+| 报告 | 门禁读数与非门禁回归分两段；旧 1/13 保留为 `dataset_caliber_consistency`，不驱动门禁 |
+| 文档 | `docs/07:3309` 已改为 system vs authority 并写明"不可与历史并列、不得宣布通过"；`docs/04:323`、`docs/01:1621`、`docs/02:1031` 仍未改（属文档窗，见 96.6-D5） |
+
+**子变更记录**：新 G-7 条件只剩"一致率 ≥95%"，旧口径的"差异 100% 可归因"随度量对象变更退出——system vs authority 没有归因模型；报告仍列 `system_differing`（当前为空）。这不是静默放松，必须在文档窗同步时写明。
+
+### 96.3 W74-2 多余列窄口：收；**但我发现一个零列洞**【实测】
+
+- 实现与派单一致：仅 `pred>gold`；金标每列在预测里**恰好一个**同值列；一一对应；配对后预测列下标**严格递增**；行数相同。等列数路径一行未动。
+- 7 条新测覆盖：H-ENUM-02 等价带 Tag／H-MET-01 值不同仍不等价／列序倒置拒／重复值列 vacuous 拒／预测更少列不变／行数不同不走窄口／等列数 id↔name 仍不等价。
+- r74→r75：**恰好 14 条** false→true（H-ENUM-01/02/04、X-STR-08、X-ENUM-01/03/04/06/08、X-MET-01/02/03/04/05），全部 `complete`、全部带 `extra_columns_ignored`；终态 116/28/16/3/3 **逐格不变**；等价 **36→50**；H-MET-01／M-ENUM-01 正确不翻。
+
+**🔴 零列洞（我复现，latent）**：`gold` 0 列、`pred` 1 列时，`_extra_column_pairs` 循环 0 次、配对为空 ⇒ `compare_tables` 返回 **equivalent=True** 并带 `extra_columns_ignored`。当前数据不可达（121 条可读 gold 里 0 列且预测有列的 **0 条**），但判据本身必须加"金标零列直接拒"的守卫；W75-2 修。
+
+### 96.4 W74-3 依赖白名单：收【实测】
+
+`_FIRST_PARTY = {"app", "tests", "scripts", "eval"}`；`pyproject.toml` 未动；正向对照保留；contract **647 passed**（全量 2670 一并确认）。
+
+### 96.5 W74-4 材料：收【实测】
+
+- **维度**：城市 6 条、渠道 12 条；有 gold 的 3 条城市里 2 条落 `v_shop.city`、1 条 `receiver_city`；`M-HIER-03` 同形状却能执行 ⇒ 卡的是**主语粒度**不是"各城市"。方案 A（shop_city）+ B（city alternatives）；C1 要改提示词 ⇒ **匣带失效、需重录（花钱）**。
+- **两层判据**：C1 正面解决（需重录）；C2 只改归因码，会让 over_refused 3→1 而系统没变强（**刷绿**）；C3 撤降级会把 C-CITY 族推回 clarify 并推翻 W68/W69 结论。
+- **E-MET-08**：execute／clarify／refuse／unscored 四处置，除 execute 外**全部**把 over_refused 从 3 降到 2——降的那条是被移出分母，不是修好；且 `unscored` 根本不移出（`_refusal_counts` 不看 `scored`）。
+- **复购矩阵**：只改 gold_v2 → M-IDX-10 翻（1/2）；只强制 window → 0/2；两者都做 → 2/2。
+
+### 96.6 我的决定（总控授权"自己选最优解"，已按此执行）
+
+| # | 决定 | 理由 |
+|---|---|---|
+| D1 | **E-MET-08 保持 execute＋gold 原样**，登记为**已知数据集缺陷**，不改任何判据 | 四个选项里只有它不刷绿；仍在 3/124（2.4%，G-5 阈值内）；改成 clarify/refuse 都是把该条移出分母，`unscored` 则因 reporter 不看 `scored` 而无效 |
+| D2 | **复购只修系统**：W75 强制读 `metric.window`（两例都用到 90 天上界）；**不改冻结集 gold** | 修的是真 bug（同指标两次窗口不一致）；gold 的整除=0 是客观缺陷，但改冻结集会破坏全项目可比性。修正后的 gold_v2 值（0.11984／0.13293）登记在案，等价仍 0/2，**不计入能力提升**；若将来要改基准，另立 dataset v2 |
+| D3 | **维度绑定暂不动**（不加 shop_city、不改 channel、不改提示词） | C1 需重录（花钱）；C2/C3 只换错误类型或刷绿。M-DIM-05／M-MET-01 登记为已知限制，二者正是 3 条误拒里的 2 条，G-5 仍 2.4% 达标；W75 只做**重录成本估算** |
+| D4 | W75 修**零列洞**（96.3） | 新判据的健壮性问题，当前不可达但必须堵 |
+| D5 | 文档窗回填：`docs/04:323`、`docs/01:1621`、`docs/02:1031`；`docs/04 §C.4.1` 增"预测列多于金标"一行；`deploy/runbook/README.md` 无 G-7 字样不用改 | 属 PRD/接口窗，W8 不越界；`docs/07` 已改 |
+
+### 96.7 当前门禁读数（我按冻结集网格复算；**不是官方快照**）
+
+| 格 | 当前输入 | 读数 | 判定 |
+|---|---|---|---|
+| G-1 | 官方 P0 结果（`88f3500`） | 红 0 | PASS（**读数过期**） |
+| G-2 | r75 easy×low（冻结集网格 = 8） | **8/8 = 100%** | 原始 PASS → **UNVERIFIED**（τ） |
+| G-3 | 官方红队（过期） | 48/50 | PARTIAL（**过期**） |
+| G-4 | 官方 RLS（过期） | — | PARTIAL（**过期**） |
+| G-5 | r75 | 24/24＋3/124（2.4%） | 原始 PASS → **UNVERIFIED**（τ） |
+| G-6 | 官方压测（过期） | 7268ms 但无合格样本 | UNVERIFIED（**过期**） |
+| G-7 | probe system 13/13 | 100% | 原始 PASS → **UNVERIFIED**（τ） |
+| G-8 | r75 | clarify 16/166=9.6%；二轮未实现 | UNVERIFIED |
+
+**关键读数订正**：官方 G-2 写 `0/10`，而冻结集 `grid.easy.low = 8`；`0/10` 是**冻结前网格**的分母，已过期。W60 的 `7/8=87.5%` 也过期；r63/r66/r73/r74/r75 **五批均为 8/8**。⇒ **G-2 现在不是 FAIL，是等 τ 的 UNVERIFIED**。
+
+**剩余收口杠杆（按性价比）**：
+1. **τ 校准**（G-2/G-5/G-7 三格同时解锁；需 n≥3 采样，花钱）——最大杠杆。
+2. G-6 压测重跑（W7/基础设施，非 W8 单方）。
+3. G-8 二轮回路（功能 + 重录，花钱）。
+4. G-3 2 条 / G-4 RLS 的 PG 侧验证。
+5. G-1 换读数、secrets 57/51/94 处置、U-127 闭环。
+
+### 96.8 W75 派单（零出站；不含任何真打）
+
+```text
+【W8 第 75 轮｜复购窗口强制 + 零列守卫 + 当前门禁复算 + 两项成本估算】
+
+0. 前置：现读 HEAD；证据绑 git_rev+dirty=false；不碰 reports/qa/**；不 git add -A；
+   .workbuddy/ 不入库；不改 gold/冻结集/语义包/gates 阈值/probe 判定口径；不刷官方门禁；零出站。
+
+1. 🔴 W75-1 复购窗口强制（QA 决定 D2）
+- 目标：`metrics[].window`（现只有 repurchase_rate_90d = "90 days"，bundle:613）真正生效。
+- 行为：有 window 且有起始时间时，SQL 的时间谓词必须含 `time_basis < start + window`；
+  缺失则补、不一致则修/拒；无法解析 window 或 start 时**fail-closed**（不得静默忽略）。
+- 单测：补上界／已有正确上界不动／无起始时间不误加／非法 window 拒绝。
+- replay 166：M-IDX-09 0.166541→0.11984047856430707；M-IDX-10 0.13292697943603005 不变；
+  C-REP-01 不变；等价仍 50、终态逐格不变；其它指标 SQL 不得变。
+- 红线：不改 gold、不改冻结集；M-IDX-09/10 仍判不等价（gold 整除=0），**不得写成"修好 2 条"**。
+
+2. 🔴 W75-2 多余列零列守卫（QA 发现）
+- `_extra_column_pairs`：`len(gold.columns)==0` ⇒ 直接拒（返回 None + 明确 note），不得判等价。
+- 单测：gold 0 列 vs pred 1 列 ⇒ False；replay 166 不受影响（无该形态）。
+- 复跑 W74-2 的 7 条测试，确认不放宽。
+
+3. 🟡 W75-3 当前门禁复算（零出站材料，不刷官方快照）
+- 用冻结集网格与最新 replay 复算八格，逐格标输入来源与是否过期；
+  预期：G-2 8/8、G-5 24/24＋3/124、G-7 13/13、G-8 9.6%，受 τ 影响的三格 = UNVERIFIED。
+- 明确写：这不是官方快照，`backend/reports/w6/eval_metrics.json` 不动。
+
+4. 🟡 W75-4 两项成本估算（只出材料）
+- (a) τ：现缺 schema（candidate_ids/顺序/gold_candidate_id/calibration-holdout 分离）、n≥3 采样
+  需要多少次调用、token/¥ 估算、建议的硬上限；不执行真打。
+- (b) 维度 C1+A：要重录多少请求、token/¥ 估算、预期翻转（M-DIM-05/M-MET-01）；不执行。
+
+5. 不做：不改 gold/冻结集/语义包/prompt；不跑 τ；不扩 L4；不改 G-8；不刷门禁；不真打。
+```
+
+### 96.9 边界
+
+本窗零出站、零写库（沙箱 `mode=ro`）；只追加 `reports/qa/**`；未动产品代码／测试／语义包／冻结集／判据；官方门禁仍 `88f3500`／PASS 1/8。
