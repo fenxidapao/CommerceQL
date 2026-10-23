@@ -1,0 +1,409 @@
+{
+ "provenance": "W74-4 零出站材料（冻结集 + 语义包 + 沙箱 sqlite + r75 重放；tokens = 0）",
+ "task": "W74-4 材料：维度绑定 / 两层判据 / E-MET-08 处置 / 复购双议题（只出材料）",
+ "generated_at": "2026-10-23T11:52:11+00:00",
+ "git_rev": "11c5dcf",
+ "git_dirty": false,
+ "source_replay": {
+  "path": "results_r75_full166_extra_columns.json",
+  "git_rev": "71ec30d",
+  "git_dirty": false
+ },
+ "dimensions": {
+  "bundle_facts": {
+   "dimensions_city": {
+    "name": "city",
+    "binding": "order_paid.receiver_city",
+    "hierarchy": [
+     "region",
+     "province",
+     "city"
+    ],
+    "grain_levels": {
+     "region": 2,
+     "province": 3,
+     "city": 4
+    },
+    "grain_level": 4,
+    "note": "⚠️ 本维度是\"城市\"概念的**收货侧**绑定。店铺侧绑定是 shop.city。 二者 grain_level **相同（=4）** → 构成竞争 → 必须走 field_bindings.城市 的 ambiguous 流程。 （对齐 07 §6.8.1：**同粒度不同语义**才是必须澄清的形态；\n \"城市 vs 区县\"因粒度不同而**不**触发澄清 —— 上游 PRD §6.2 的举例与 §6.3.1 相反，\n 以 §6.3.1 为准，已登记 U-10。）\n"
+   },
+   "dimensions_channel": {
+    "name": "channel",
+    "binding": "traffic_daily.channel",
+    "hierarchy": [
+     "channel"
+    ],
+    "grain_levels": {
+     "channel": 1
+    },
+    "grain_level": 1,
+    "note": "枚举值见 traffic_daily.channel.enum（5 个渠道）"
+   },
+   "concept_渠道": {
+    "concept": "渠道",
+    "canonical_asset": "traffic_daily.channel",
+    "time_semantics": "current",
+    "grain_level": 1,
+    "default_reason": "渠道枚举定义在流量表",
+    "note": "⚠️ order_paid.channel 同样存在（成交渠道）。订单域问题应绑 order_paid.channel"
+   },
+   "shop_columns": [
+    "tenant_id",
+    "shop_id",
+    "shop_name",
+    "city",
+    "category_l1",
+    "open_date"
+   ],
+   "order_paid_columns": [
+    "tenant_id",
+    "sub_order_id",
+    "order_id",
+    "shop_id",
+    "buyer_id",
+    "sku_id",
+    "spu_id",
+    "category_l1",
+    "category_l2",
+    "category_l3",
+    "pay_amount",
+    "freight_amount",
+    "discount_amount",
+    "quantity",
+    "pay_time",
+    "create_time",
+    "pay_status",
+    "refund_status",
+    "region_code",
+    "receiver_city",
+    "channel",
+    "is_test_order",
+    "receiver_phone",
+    "receiver_address"
+   ],
+   "lines": {
+    "shop_city_column": 320,
+    "city_dimension": 320,
+    "channel_dimension": 184,
+    "channel_concept": null
+   }
+  },
+  "city_cases": [
+   {
+    "case_id": "M-DIM-05",
+    "question": "T_A 的各城市的店铺数分别是多少？",
+    "expected_behavior": "execute",
+    "gold_binding": "shop.city",
+    "terminal": "refuse",
+    "difficulty": "medium×low"
+   },
+   {
+    "case_id": "M-HIER-03",
+    "question": "T_A 各城市的在架商品数分别是多少？",
+    "expected_behavior": "execute",
+    "gold_binding": "shop.city",
+    "terminal": "complete",
+    "difficulty": "medium×medium"
+   },
+   {
+    "case_id": "M-MET-04",
+    "question": "T_A 从 2026-08-01 起各收货城市的 GMV 分别是多少？",
+    "expected_behavior": "execute",
+    "gold_binding": "order_paid.receiver_city",
+    "terminal": "complete",
+    "difficulty": "medium×high"
+   },
+   {
+    "case_id": "C-CITY-01",
+    "question": "城市维度的 GMV 是多少？",
+    "expected_behavior": "clarify",
+    "gold_binding": "(no gold)",
+    "terminal": "clarify",
+    "difficulty": "None×high"
+   },
+   {
+    "case_id": "C-CITY-02",
+    "question": "各城市的订单量分别是多少？",
+    "expected_behavior": "clarify",
+    "gold_binding": "(no gold)",
+    "terminal": "refuse",
+    "difficulty": "None×high"
+   },
+   {
+    "case_id": "C-CITY-04",
+    "question": "城市口径下哪个卖得最好？",
+    "expected_behavior": "clarify",
+    "gold_binding": "(no gold)",
+    "terminal": "clarify",
+    "difficulty": "None×high"
+   }
+  ],
+  "channel_cases": [
+   {
+    "case_id": "E-ENUM-01",
+    "question": "T_A 直播渠道一共带来多少浏览量？",
+    "expected_behavior": "execute",
+    "gold_binding": "traffic_daily.channel",
+    "terminal": "complete",
+    "difficulty": "easy×medium"
+   },
+   {
+    "case_id": "E-ENUM-02",
+    "question": "T_A 搜索渠道一共带来多少浏览量？",
+    "expected_behavior": "execute",
+    "gold_binding": "traffic_daily.channel",
+    "terminal": "complete",
+    "difficulty": "easy×medium"
+   },
+   {
+    "case_id": "E-ENUM-03",
+    "question": "T_A 推荐渠道一共带来多少浏览量？",
+    "expected_behavior": "execute",
+    "gold_binding": "traffic_daily.channel",
+    "terminal": "complete",
+    "difficulty": "easy×medium"
+   },
+   {
+    "case_id": "E-ENUM-04",
+    "question": "T_A 付费广告渠道一共带来多少浏览量？",
+    "expected_behavior": "execute",
+    "gold_binding": "traffic_daily.channel",
+    "terminal": "complete",
+    "difficulty": "easy×medium"
+   },
+   {
+    "case_id": "E-ENUM-05",
+    "question": "T_A 直接访问渠道一共带来多少浏览量？",
+    "expected_behavior": "execute",
+    "gold_binding": "traffic_daily.channel",
+    "terminal": "complete",
+    "difficulty": "easy×medium"
+   },
+   {
+    "case_id": "M-DIM-02",
+    "question": "T_A 的各渠道的浏览量分别是多少？",
+    "expected_behavior": "execute",
+    "gold_binding": "traffic_daily.channel",
+    "terminal": "complete",
+    "difficulty": "medium×low"
+   },
+   {
+    "case_id": "M-DIM-10",
+    "question": "各渠道的加购次数合计分别是多少？",
+    "expected_behavior": "execute",
+    "gold_binding": "traffic_daily.channel",
+    "terminal": "complete",
+    "difficulty": "medium×low"
+   },
+   {
+    "case_id": "M-ENUM-01",
+    "question": "T_A 直播渠道各 SKU 的浏览量分别是多少？",
+    "expected_behavior": "execute",
+    "gold_binding": "traffic_daily.channel",
+    "terminal": "complete",
+    "difficulty": "medium×medium"
+   },
+   {
+    "case_id": "M-ENUM-02",
+    "question": "T_A 搜索渠道各 SKU 的浏览量分别是多少？",
+    "expected_behavior": "execute",
+    "gold_binding": "traffic_daily.channel",
+    "terminal": null,
+    "difficulty": "medium×medium"
+   },
+   {
+    "case_id": "M-ENUM-03",
+    "question": "T_A 推荐渠道各 SKU 的浏览量分别是多少？",
+    "expected_behavior": "execute",
+    "gold_binding": "traffic_daily.channel",
+    "terminal": "complete",
+    "difficulty": "medium×medium"
+   },
+   {
+    "case_id": "M-ENUM-04",
+    "question": "T_A 付费广告渠道各 SKU 的浏览量分别是多少？",
+    "expected_behavior": "execute",
+    "gold_binding": "traffic_daily.channel",
+    "terminal": "complete",
+    "difficulty": "medium×medium"
+   },
+   {
+    "case_id": "M-MET-01",
+    "question": "T_A 从 2026-08-01 起各渠道的 GMV 分别是多少？",
+    "expected_behavior": "execute",
+    "gold_binding": "order_paid.channel",
+    "terminal": "refuse",
+    "difficulty": "medium×high"
+   },
+   {
+    "case_id": "M-MET-06",
+    "question": "T_A 从 2026-08-01 起各channel的 UV 分别是多少？",
+    "expected_behavior": "execute",
+    "gold_binding": "traffic_daily.channel",
+    "terminal": "complete",
+    "difficulty": "medium×high"
+   }
+  ],
+  "city_proposal": {
+   "status": "PROPOSED（未改包）",
+   "option_a_add_dimension": {
+    "yaml": "  - name: shop_city\n    binding: shop.city\n    hierarchy: [country, region, province, city]\n    grain_levels: { country: 1, region: 2, province: 3, city: 4 }\n    grain_level: 4\n    note: \"店铺所在城市（与 `city`=收货城市 同名不同义）；店/商品域问题用它\"\n",
+    "impact": "有 gold 的两条按 `v_shop.city` 落绑（M-DIM-05、M-HIER-03），M-MET-04 用 `receiver_city` 不受影响；三条 expected=clarify 不受影响",
+    "risk": "新增维度名会把「城市」的同义词分成两个 ⇒ planner 仍需判域；若同义词表把「城市」同时挂到 shop_city 与 city，歧义会从「表不明」变成「维度名重复」"
+   },
+   "option_b_context_binding": {
+    "yaml": "在 `dimensions[name=city]` 下加 `alternatives: [{asset: shop.city, use_when: shop_grain}]`",
+    "impact": "不动维度名，改的是「同一概念按粒度选绑定」；需 planner 提示词把 use_when 渲染出来",
+    "risk": "结构性证据（「各城市的店铺数」主语是店铺）目前只存在于 `normalize.py` 的降级规则里，planner 看不到 ⇒ 单改包不改提示词，模型仍可能选错"
+   },
+   "recommendation": "A + 把「店铺粒度」作为结构证据写进 plan 提示词（两者缺一都会回到本轮现象）"
+  },
+  "channel_proposal": {
+   "status": "PROPOSED（未改包）",
+   "option_domain_binding": {
+    "yaml": "  - name: channel\n    binding: traffic_daily.channel\n    alternatives:\n      - asset: order_paid.channel\n        use_when: orders_domain\n        note: \"成交渠道；GMV/订单域问题绑它（bundle:1135 已写，但维度层没表达）\"\n",
+    "impact": "12 条提「渠道」的题里，10 条 gold 走 `v_traffic_daily`（PV/加购/流量域），1 条走 `v_order_paid`（M-MET-01 GMV），1 条题面含英文 channel；只有 M-MET-01 会受影响（当前 refuse）",
+    "risk": "「渠道」两义（流量渠道 vs 成交渠道）在数值上可能不同源 ⇒ 必须按域选，不能合并"
+   },
+   "recommendation": "按域绑定（alternatives），并在 planner 提示词里把 note 渲染到维度行"
+  }
+ },
+ "normalize_plan": {
+  "status": "PROPOSED（未改代码）",
+  "conflict": "`normalize.py:104` 的降级规则用「问句含『各城市』」把模型的 `clarify_needed` 改写成 executable（`normalize.py:130`），随后 `plan` 又以同一歧义为由 `refuse(no_data_asset)`（`plan.py:91-105`）⇒ 同一个歧义先被撤销、再被拒答，既没澄清也没执行",
+  "options": [
+   {
+    "id": "C1",
+    "name": "plan 消费 normalize 的维度结论",
+    "how": "把 `intent_detail.reason_code == 'shop_city_unambiguous'` 作为一条结构化约束写进 plan 提示词（`filters`/`dimensions` 提示），让模型知道「城市已判定为店铺维度」",
+    "cost": "改 payloads + 提示词 ⇒ 请求哈希变化 ⇒ **匣带失效、需重录**（真打花钱）",
+    "effect": "正面解决；M-DIM-05 可能直接执行"
+   },
+   {
+    "id": "C2",
+    "name": "blocking_issues 分类映射",
+    "how": "plan 的阻塞项按类型分流：歧义类 → `clarify`，缺资产类 → `refuse(no_data_asset)`",
+    "cost": "需给 `Plan.blocking_issues` 加类型（提示词 + schema 变更，同样动请求哈希）；若不改 schema 只能靠关键词猜 ⇒ 脆弱",
+    "effect": "只修归因码，不修「能不能算」；M-DIM-05/M-MET-01 变成 clarify，G-5 over_refused 会从 3 掉到 1 —— **但那是计数器不数 clarify 造成的**，不是系统变强"
+   },
+   {
+    "id": "C3",
+    "name": "撤掉降级规则",
+    "how": "删除 `normalize.py:104-142`，让 M-DIM-05 回到 clarify_out",
+    "cost": "零出站可验证（replay），但会把 C-CITY 族的澄清率推高，且 W68/W69 的结论（「各城市」结构上唯一指向 shop.city）被推翻",
+    "effect": "M-DIM-05 由 refuse 变 clarify；M-HIER-03（同形状、目前能执行）可能受连带影响"
+   }
+  ],
+  "second_instance": {
+   "case": "C-CITY-02「各城市的订单数分别是多少？」",
+   "expected": "clarify（城市维度歧义）",
+   "terminal": "refuse",
+   "reason": "no_data_asset",
+   "nodes": [
+    "trusted_context",
+    "normalize",
+    "intent",
+    "link",
+    "plan",
+    "refuse_out"
+   ],
+   "note": "同一条冲突的第二例：模型判 clarify、被降级、plan 阻塞 ⇒ 记成 `refuse(no_data_asset)`。所以「歧义被压成缺数据」不是 M-DIM-05 独有，expected-clarify 的 18 条里有 1 条最终成了 refuse。"
+  },
+  "measured_now": {
+   "M-DIM-05": {
+    "terminal": "refuse",
+    "reason": "no_data_asset"
+   },
+   "M-HIER-03": {
+    "terminal": "complete",
+    "note": "同形状（各城市的…）但主语是在架商品 ⇒ 走了 shop 粒度并执行成功；说明「各城市」本身不是拦路虎，**主语粒度**才是",
+    "sql": "SELECT v_shop.city AS city, COUNT(*) AS on_sale_product_cnt FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.on_sale = TRUE GROUP BY v_shop.city ORDER BY on_sale_product_cnt DESC LIMIT 100"
+   }
+  },
+  "recommendation": "C1（结构化传递）＋ A 案的 shop_city 维度；C2 单独做只会把数字刷绿，不建议先做"
+ },
+ "emet08": {
+  "status": "只出对照（未改 expected_behavior、未改冻结集）",
+  "current": {
+   "case": "E-MET-08",
+   "terminal": "refuse",
+   "expected": "execute",
+   "G5_inputs": {
+    "total": 24,
+    "correct_refused": 24,
+    "answerable_total": 124,
+    "over_refused": 3
+   },
+   "G8_inputs": {
+    "requests": 166,
+    "clarify_expected_n": 18,
+    "clarified": 16,
+    "clarify_then_correct": 0,
+    "second_round_attempted": 0,
+    "second_round_success": 0,
+    "second_round_loop_available": false
+   }
+  },
+  "dispositions": {
+   "execute": {
+    "G-5": "不变：answerable=124，over_refused=3（该条仍被拒 ⇒ 仍计入误拒）",
+    "G-8": "不变：requests=166，clarified=16"
+   },
+   "clarify": {
+    "G-5": "answerable 124→123；over_refused 3→2（该条不再参与误拒分母）",
+    "G-8": "requests 不变（分母 = 全部 166 条）；clarified 不变（系统实际终态是 refuse） ⇒ 澄清率仍 9.6%；`clarify_expected_n` 18→19",
+    "note": "该条会变成「该澄清却没澄清」，但 **G-8 不度量漏澄清**（只度量澄清率与澄清后成功率）"
+   },
+   "refuse": {
+    "G-5": "refuse 题 24→25；correct_refused 24→25；answerable 124→123；over_refused 3→2",
+    "G-8": "不变：requests=166，clarified=16"
+   },
+   "unscored": {
+    "G-5": "**不变**：`_refusal_counts` 只按 `expected_behavior` 分组，**不看 `scored`** ⇒ 标 unscored 不会把它移出分母（answerable 仍 124、over_refused 仍 3）",
+    "G-8": "不变：requests=166，clarified=16",
+    "note": "若真要让它退出计分，得在 reporter 侧加 `scored` 过滤 —— 那是**判据改动**"
+   }
+  },
+  "honest_warning": "四个选项里，execute 之外**全部**会把 over_refused 从 3 降到 2 —— 降的那 1 条不是「系统修好了」，而是「该条被移出了 execute 分母」。任何一项都需要总控签，并在台账上写明这是口径变更而非能力提升。"
+ },
+ "repurchase": {
+  "status": "只出对照（未改 gold、未改代码）",
+  "cases": [
+   {
+    "case_id": "M-IDX-09",
+    "start": "2026-06-01",
+    "gold_now_value": 0.0,
+    "gold_v2_value": 0.11984047856430707,
+    "system_value_now": 0.16654133453652178,
+    "system_value_with_window_enforced": 0.11984047856430707
+   },
+   {
+    "case_id": "M-IDX-10",
+    "start": "2026-03-01",
+    "gold_now_value": 0.0,
+    "gold_v2_value": 0.13292697943603005,
+    "system_value_now": 0.13292697943603005,
+    "system_value_with_window_enforced": 0.13292697943603005
+   }
+  ],
+  "equivalence_matrix": {
+   "M-IDX-09": {
+    "only_gold_v2": false,
+    "only_window_enforced": false,
+    "both": true
+   },
+   "M-IDX-10": {
+    "only_gold_v2": true,
+    "only_window_enforced": false,
+    "both": true
+   }
+  },
+  "impact": {
+   "only_gold_v2": "等价翻转 1/2（M-IDX-10 翻；M-IDX-09 不翻 —— 系统无上界）",
+   "only_window_enforced": "翻转 0/2（gold 仍是整数除法 ⇒ 恒 0，翻不动）",
+   "both": "翻转 2/2",
+   "scope_of_window_enforcement": "`metrics[].window` 只在 repurchase_rate_90d 一处声明（`bundle:613`），全仓无代码读取 ⇒ 强制窗口只影响该指标的查询；但实现上等于在 gen_sql 后改写时间谓词，属产品行为变更（会改变任何『复购率 + 自定义时间』问句的语义）",
+   "sign_required": "gold_v2 改冻结集（2 条）⇒ 需总控签；window 强制改产品行为 ⇒ 另立议题"
+  }
+ }
+}
