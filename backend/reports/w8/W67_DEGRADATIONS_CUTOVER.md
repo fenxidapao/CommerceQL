@@ -73,3 +73,23 @@ QA 点句把 `llm_concurrency_exceeded` / `switched_to_weak_model` / `llm_unavai
 > 评测面 `degradations` 自 **W66**（`dee748e`）起才含网关层事件；W66 前的全部 eval 产物
 > （152 个中的 151 个结构化批次 + 2 个 BOM 文件）在该字段上**系统性缺网关层**，
 > 跨 W66 边界的降级横比必须先按第三节规则归一。本登记不改任何既有文件。
+
+---
+
+## 六、W68-4 口径订正（2026-10-23，QA 派单 §4）
+
+QA 审出：`results_r67_degradations_cutover_inventory.json` 的 `n_files_scanned=152`
+**不是**"扫描的文件数"，而是"有非空 `records[]` 的文件数"——脚本在 `records` 为空/缺失时
+静默 `continue`，把 59 个聚合形态产物漏在正表外（`eval/results_*.json` 实有 211，本
+文档第四节"152 个"同口径订正）。
+
+订正内容（脚本 `eval/w67_l4_diagnostics.py::run_cutover_inventory` 已改）：
+
+- `n_files_scanned` → **`n_files_with_records`**（152，含义不变）；
+- 新增 `n_files_total`（211）/ `n_files_skipped`（59）；
+- 新增 `skipped_categories`（逐类计数）与 `skipped_files`（逐文件 + top_keys 证据）：
+  全部 59 个均为**无 `records[]` 的聚合形态产物**（gate_recompute/矩阵/τ 审计/探针/
+  秘密扫描等），**0 个解析失败**（此前报告的 2 个 BOM 文件以 `utf-8-sig` 兜底后可读，
+  属本类，不再单列）。
+- 横比结论不受影响：可逐条查 `degradations` 的正是这 152 个；59 个聚合产物没有
+  逐条记录，不构成反例。

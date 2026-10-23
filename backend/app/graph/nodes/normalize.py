@@ -71,27 +71,54 @@ from app.planner.schemas import IntentKind
 __all__ = ["normalize"]
 
 
+#: 「位于/在 … 的店铺」**定语位**（QA R31bl / W68 派单①）：城市短语是店铺的定语，
+#: 城市语义必然唯一落在 shop.city —— 不可能是商品/收货城市歧义。
+#: 红线：不得扩成"句中出现城市名就撤销"——C-CITY-03「广州的销售额是多少？」
+#: 没有店铺定语位，必须仍走澄清。
+_SHOP_LOCATIVE_RE = re.compile(r"(?:位于|在)\s*[^，。？?！!、\s]{2,6}\s*的\s*店铺")
+
+#: 定语位之后的**被测主体**：逐店聚合「商品数 / SKU」口径 ⇒ 被测主体是店铺或商品。
+#: H-STR 族「各有多少个商品」与 W60 族「各 SKU …」都落在这一尾缀上。
+_SHOP_SUBJECT_RE = re.compile(r"^\s*各\s*(?:有多少个?商品|SKU|商品数)", re.IGNORECASE)
+
+#: 可被结构证据撤销的澄清理由族：
+#: - ``*city*``：城市维度歧义（结构证明城市是店铺定语 ⇒ 唯一 shop.city）；
+#: - ``ambiguous_metric_product_cnt``：商品数口径歧义（下游 bind 有 L3 默认绑定
+#:   on_sale_product_cnt 兜底，实测见 r63 M-HIER-03 / M-MET-04）。
+#: 时间 / 范围 / 权限类澄清**永不**在此列：没有可证伪的结构证据，不能被措辞覆盖。
+#: ⚠️ 实测（r63 匣带）：H-STR 族的 reason_code 是 ``ambiguous_metric_product_cnt``
+#: （商品数口径），**不含 city** —— 旧守卫在正则之前就把这 8 条拦死了，故必须放开。
+_DEMOTABLE_REASON_PARTS = ("city", "product_cnt")
+
+
 def _demote_unambiguous_shop_city_clarification(
     update: dict[str, Any], raw_question: str
 ) -> dict[str, Any]:
-    """明确指向店铺城市时，撤销 normalize 的城市歧义澄清。
+    """明确指向店铺城市（结构证据）时，撤销 normalize 的城市/商品数歧义澄清。
 
-    只处理两类题面证据：
-    - 各城市（按城市分组）；
-    - 在<城市>的店铺各 SKU（先按店铺城市筛选，再按 SKU 聚合）。
+    三类题面结构证据（QA R31bl / W68 派单①）：
+    - 各城市（按城市分组，W60 原判据）；
+    - 在<城市>的店铺各 SKU（W60 原判据）；
+    - 「位于/在 <城市> 的店铺」**定语位** + 被测主体是逐店聚合的商品数/SKU
+      （W68 新增 —— 覆盖 H-STR-01…08「位于<城市>的店铺各有多少个商品」）。
 
-    商品口径歧义、收货城市筛选、时间歧义都不在此函数内，保持原终态。
+    C-CITY-01/03/04（城市维度 / 城市名做主语 / 城市口径视角）无定语位，保持澄清；
+    时间 / 范围 / 权限类澄清理由不在此函数的撤销范围内，保持原终态。
     """
     if str(update.get("intent") or "") != IntentKind.CLARIFY.value:
         return update
     detail = dict(update.get("intent_detail") or {})
     reason_code = str(detail.get("reason_code") or "")
-    if "city" not in reason_code.casefold():
+    lowered = reason_code.casefold()
+    if not any(part in lowered for part in _DEMOTABLE_REASON_PARTS):
         return update
     question = raw_question.strip()
-    if "各城市" not in question and not re.search(
-        r"在\s*[^，。？?]{1,12}?的店铺各\s*SKU", question, re.IGNORECASE
-    ):
+    locative = _SHOP_LOCATIVE_RE.search(question)
+    structured_evidence = "各城市" in question or (
+        locative is not None
+        and _SHOP_SUBJECT_RE.match(question[locative.end():]) is not None
+    )
+    if not structured_evidence:
         return update
     update["intent"] = IntentKind.EXECUTABLE.value
     update["intent_detail"] = {

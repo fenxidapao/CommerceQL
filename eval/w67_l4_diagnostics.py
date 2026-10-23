@@ -521,18 +521,56 @@ def _nearest(cost_by_tier: dict[str, dict[str, Any]], reported: float) -> str:
 # W67-3 —— degradation sink 口径变更影响清单（只读盘点，不改任何既有产物）
 # ============================================================================
 
+def _skipped_class(name: str, _data: Any) -> str:
+    """无 records[] 产物的逐类归档（W68-4：不再静默跳过，逐类说明）。"""
+    n = name.lower()
+    if "gate_recompute" in n:
+        return "gate_recompute_门禁重算聚合"
+    if "matrix" in n:
+        return "matrix_判定矩阵对比"
+    if "stab_" in n:
+        return "stability_单题稳定性探针"
+    if "tau" in n:
+        return "tau_采样审计与摘要"
+    if "secret" in n:
+        return "secret_scan_秘密扫描证据"
+    if any(k in n for k in ("probe", "diagnosis", "401", "timeout", "availability", "dense")):
+        return "probe_探针与诊断一次性产物"
+    if "materialize" in n:
+        return "materialize_物化核对"
+    if "equiv" in n:
+        return "equiv_等价性审计"
+    if "error" in n:
+        return "error_错误率与形态盘点"
+    if "refusal" in n:
+        return "over_refusal_过拒盘点"
+    return "aggregate_其它聚合摘要（无逐条记录）"
+
+
 def run_cutover_inventory() -> dict[str, Any]:
     files = sorted(glob.glob(os.path.join(HERE, "results_*.json")))
     inventory = []
+    skipped: list[dict[str, Any]] = []
     for path in files:
         name = os.path.basename(path)
         try:
             data = json.load(open(path, encoding="utf-8-sig"))
         except Exception as exc:
-            inventory.append({"file": f"eval/{name}", "parse_error": type(exc).__name__})
+            skipped.append(
+                {"file": f"eval/{name}", "skip_class": "parse_error",
+                 "detail": type(exc).__name__}
+            )
             continue
         recs = data.get("records") or []
         if not isinstance(recs, list) or not recs:
+            #: W68-4 订正（QA 派单 §4）：此前在这里静默 continue，把"无 records[] 的
+            #: 聚合形态产物"漏在 n_files_scanned 之外（152 实为有 records 的子集）。
+            #: 现在纳入 skipped 正表并逐类计数。
+            skipped.append({
+                "file": f"eval/{name}",
+                "skip_class": _skipped_class(name, data),
+                "top_keys": sorted(data.keys()) if isinstance(data, dict) else None,
+            })
             continue
         reasons: Counter[str] = Counter()
         for r in recs:
@@ -549,9 +587,12 @@ def run_cutover_inventory() -> dict[str, Any]:
             "has_gateway_new_reason": bool(GATEWAY_NEW_REASONS & set(reasons)),
         })
     n_with = sum(1 for e in inventory if e.get("has_gateway_new_reason"))
+    by_class: Counter[str] = Counter(e["skip_class"] for e in skipped)
     return {
         "provenance": PROVENANCE,
-        "task": "W67-3 评测面 degradations 口径变更影响清单（W66 起 _EvalDegradationSink 才把网关层降级接进 GraphState）",
+        "task": "W67-3 评测面 degradations 口径变更影响清单（W66 起 _EvalDegradationSink 才把网关层降级接进 GraphState）"
+                "；W68-4 订正：n_files_scanned 实为『有非空 records 的文件数』，改名 n_files_with_records"
+                "并补全量计数与跳过类说明",
         **build_stamp(),
         "rule": {
             "pre_w66": "评测面 records[].degradations 只含**节点层**降级"
@@ -563,11 +604,18 @@ def run_cutover_inventory() -> dict[str, Any]:
                 "llm_unavailable 是双路值：节点路径（normalize UnderstandUnavailable）一直可见，"
                 "故旧产物含 llm_unavailable 不构成反例；网关路径的同类事件 W66 起才可见。",
                 "因此『W66 前缺网关层』的可检验特征 = 产物中 llm_concurrency_exceeded 恒不出现"
-                "（本清单实测：152 个产物中 0 个含它，唯一例外是 W66 自己的饱和产物，见下）。",
+                "（本清单实测：有 records 的产物中 0 个含它，唯一例外是 W66 自己的饱和产物，见下）。",
+                "W68-4 口径订正：eval/results_*.json 全量 n_files_total 个；只有 n_files_with_records 个"
+                "带非空 records[]（可逐条查 degradations）；另有 n_files_skipped 个为聚合形态"
+                "（无 records[]），不构成反例但也未纳入正表——跳过清单与逐类计数见 skipped_categories / skipped_files。",
             ],
         },
-        "n_files_scanned": len(inventory),
+        "n_files_total": len(files),
+        "n_files_with_records": len(inventory),
+        "n_files_skipped": len(skipped),
         "n_files_with_gateway_new_reason": n_with,
+        "skipped_categories": dict(by_class),
+        "skipped_files": skipped,
         "expected_post_w66_holders": [
             "eval/results_r66_saturation_graph.json（W66 D5-1 饱和串跑，llm_concurrency_exceeded 图级证据）",
         ],
@@ -599,7 +647,8 @@ def main() -> None:
     print(json.dumps(cost["cost_by_tier"], ensure_ascii=False, indent=2))
     print(json.dumps(cost["tier_inference"], ensure_ascii=False, indent=2))
     print("== W67-3 cutover inventory ==")
-    print("n_files:", cutover["n_files_scanned"],
+    print("n_files total/with_records/skipped:",
+          cutover["n_files_total"], cutover["n_files_with_records"], cutover["n_files_skipped"],
           "with_gateway_new_reason:", cutover["n_files_with_gateway_new_reason"])
 
 
