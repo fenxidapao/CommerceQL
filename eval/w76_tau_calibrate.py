@@ -144,7 +144,8 @@ def main(argv: list[str] | None = None) -> int:
             "meets_nfr71": point.clarify_rate <= 0.15,
         }
 
-    holdout_reading = _holdout_at(None if report is None else report.selected_tau)
+    selected_tau = None if report is None else report.selected_tau
+    holdout_reading = _holdout_at(selected_tau)
 
     #: 🔴 U-83：准确率目标本身是**待上游/业务定**的参数 ⇒ 三档全跑，别让一个自选数字
     #: 决定"有没有 τ"。每档都带自己的选点、可定稿性与验收集读数。
