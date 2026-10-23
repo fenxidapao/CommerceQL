@@ -236,6 +236,14 @@ def main(argv: list[str] | None = None) -> int:
         "targets": targets,
         "target_note": "accuracy_target 是待上游/业务定的参数（U-83）；0.8 只作主档，"
         "0.7/0.9 一并落盘，避免一个自选数字决定「有没有 τ」",
+        "gate_impact": {
+            "tau_selected": selected_tau is not None,
+            "G-2": "UNVERIFIED（τ 未校准）" if selected_tau is None else "可复算（需另行给证据）",
+            "G-5": "UNVERIFIED（τ 未校准）" if selected_tau is None else "可复算（需另行给证据）",
+            "G-7": "UNVERIFIED（τ 未校准）" if selected_tau is None else "可复算（需另行给证据）",
+            "note": "官方门禁快照未刷新；三格的当前读数仍以 W75-3 的 "
+            "`results_r75_gate_recompute.json` 为准",
+        },
         "sample_scope_warning": (
             "本批 29 条全部是金标反解命中的题 ⇒ 没有「本该澄清」的安全侧样本："
             "`should_clarify_but_did_not` 恒为 None，NFR-7.1 的澄清率约束在本样本集上"
