@@ -1,8 +1,8 @@
 {
   "provenance": "w67 diagnostics: L4 reach + L4 cost, zero egress (read-only over r66 replay + r63 cassette)",
   "task": "W67-2 L4 触发条件与成本现状账（只出材料，不改行为；挂 U-117 / §88.4②）",
-  "generated_at": "2026-10-23T02:01:47+00:00",
-  "git_rev": "891fe0c",
+  "generated_at": "2026-10-23T02:55:50+00:00",
+  "git_rev": "0426f72",
   "git_dirty": false,
   "config": {
     "source_cassette": "eval/cassettes/w8_r63_full166.jsonl",

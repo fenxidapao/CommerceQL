@@ -1,0 +1,75 @@
+{
+  "provenance": "W68 零出站诊断（r63 匣带 + r66 重放 + 真语义包离线解析；tokens 计费 = 0）",
+  "task": "W68-2 X-MET-10 单条定位：止步 clarify_out 的触发层（只定位不断言）",
+  "generated_at": "2026-10-23T02:55:49+00:00",
+  "git_rev": "0426f72",
+  "git_dirty": false,
+  "case": {
+    "case_id": "X-MET-10",
+    "question": "T_A 618 期间各大区各店铺的成交金额合计是多少？",
+    "expected_behavior": "execute"
+  },
+  "r66_pipeline": {
+    "nodes": [
+      "trusted_context",
+      "normalize",
+      "clarify_out"
+    ],
+    "terminal": "clarify",
+    "note": "nodes 里没有 intent 节点 ⇒ 路由在 intent 之前分流"
+  },
+  "layers": [
+    {
+      "layer": "① intent LLM（normalize 合并档）",
+      "observed": {
+        "intent": "query",
+        "confidence": 0.95,
+        "reason_code": null,
+        "clarify_hint": null,
+        "time_expression": "618",
+        "unmapped_terms": [],
+        "source": "eval/cassettes/w8_r63_full166.jsonl（r63 实跑录制）"
+      },
+      "verdict": "query/高置信、reason_code=null ⇒ LLM 不构成澄清触发"
+    },
+    {
+      "layer": "② resolve_time（planner/timeexpr.py:329，docstring 三种 ok=False 之情形 1）",
+      "observed": {
+        "ok": false,
+        "reason": "campaign_window_not_structured",
+        "window": null,
+        "unresolved_terms": [
+          "618"
+        ],
+        "method": "resolve_time(question, SemanticBundleRuntime(真包 2026.10.16.2), FrozenClock(2026-10-23 10:30 +08)) —— 离线实证，非复述文档"
+      },
+      "verdict": "「618」是 campaign 别名、包内无结构化窗口 ⇒ time_parse_ok=False —— **实际触发点**"
+    },
+    {
+      "layer": "③ route_after_normalize（graph/edges.py:183）",
+      "observed": "time_parse_ok is False → CLARIFY_OUT（意图节点不运行）",
+      "verdict": "路由层执行了 ② 的判定"
+    },
+    {
+      "layer": "④ 层级（大区/店铺）",
+      "verdict": "未触发 —— 链在 link/plan 之前已断，层级从未被读到"
+    },
+    {
+      "layer": "⑤ 成交金额口径",
+      "verdict": "未触发 —— 同上；gold 用 gmv（SUM(pay_amount)），口径可映射"
+    }
+  ],
+  "honest_note": "派单要求读 intent_detail.reason_code 与 ambiguities 原文 —— 实测两者在运行时不存在：intent 节点未运行（r66 nodes 无 intent），澄清由确定性时间层在路由处触发；此处如实报告『要读的东西不存在』，不构造替代文本。",
+  "gold_reference": {
+    "gold_window": "pay_time >= '2026-05-24' AND pay_time < '2026-06-21'",
+    "note": "gold 有结构化 618 窗而语义包没有 ⇒ 修复路径 = 契约变更（语义包补 campaign 结构化窗口），按派单⑤本轮不碰、须另轮 + 重基线"
+  },
+  "conclusion": {
+    "trigger": "time_window（campaign_window_not_structured）",
+    "not_triggered": [
+      "region/shop 层级",
+      "成交金额口径"
+    ],
+    "assertion_scope": "只定位不断言（本产物不给修复方案）"
+  }
+}

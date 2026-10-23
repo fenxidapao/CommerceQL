@@ -1,0 +1,297 @@
+{
+  "provenance": "W68 零出站诊断（r63 匣带 + r66 重放 + 真语义包离线解析；tokens 计费 = 0）",
+  "task": "W68-3 澄清完备性材料账（只出材料，不改行为；不实装闸门）",
+  "red_line": "本产物不构成『澄清能力已验证』——它度量的是缺哪些闸门；亦不得为凑澄清率上限改判据或剔分母",
+  "generated_at": "2026-10-23T02:55:49+00:00",
+  "git_rev": "0426f72",
+  "git_dirty": false,
+  "headline": {
+    "n_cases": 10,
+    "n_clarified_actual": 0,
+    "n_executed_complete": 8,
+    "n_error": 2,
+    "verdict": "10 条『应澄清』题实测 0 条澄清：8 条带静默默认值一路执行到 complete，2 条在 gate1_ast 报 error（C-GMV-04 / C-REP-02），澄清完备性闸门整体缺失"
+  },
+  "class_counts": {
+    "time_window_undefined": 5,
+    "echo_confirm": 2,
+    "definition_multiple": 1,
+    "term_mapping_unknown": 1,
+    "aggregation_ambiguous": 1
+  },
+  "class_counts_qa_reference": {
+    "time_window_undefined": 5,
+    "definition_multiple": 1,
+    "term_mapping_unknown": 1,
+    "aggregation_ambiguous": 1,
+    "echo_confirm": 2,
+    "note": "与 QA 派单给的四类计数逐类对齐"
+  },
+  "cases": [
+    {
+      "case_id": "C-GMV-01",
+      "question": "本月的 GMV 是多少？",
+      "clarify_expected_reason": "「本月」= 当前自然月还是最近 30 天？须澄清",
+      "gate_class": "time_window_undefined",
+      "missing_gate": "「本月」= 自然月 vs 最近 30 天，包内两解且无闸门",
+      "actual": {
+        "terminal": "complete",
+        "clarified": false,
+        "nodes_tail": [
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "sql_present": true,
+        "sql_digest": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_…",
+        "applied_predicates": [
+          "is_test_order = false",
+          "refund_status <> 'refunded'",
+          "pay_status = 'paid'"
+        ],
+        "note": null
+      }
+    },
+    {
+      "case_id": "C-GMV-02",
+      "question": "上个月的销售额是多少？",
+      "clarify_expected_reason": "「上个月」在语义包里有定义（日历上月首日 00:00:00 至末日 23:59:59），但**时区与是否含端**须回显确认",
+      "gate_class": "echo_confirm",
+      "missing_gate": "「上月」已定义，但时区与含端未回显确认",
+      "actual": {
+        "terminal": "complete",
+        "clarified": false,
+        "nodes_tail": [
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "sql_present": true,
+        "sql_digest": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FA…",
+        "applied_predicates": [
+          "is_test_order = false",
+          "refund_status <> 'refunded'",
+          "pay_status = 'paid'"
+        ],
+        "note": null
+      }
+    },
+    {
+      "case_id": "C-GMV-03",
+      "question": "最近的 GMV 怎么样？",
+      "clarify_expected_reason": "「最近」无定义窗口",
+      "gate_class": "time_window_undefined",
+      "missing_gate": "「最近」无定义窗口",
+      "actual": {
+        "terminal": "complete",
+        "clarified": false,
+        "nodes_tail": [
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "sql_present": true,
+        "sql_digest": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_…",
+        "applied_predicates": [
+          "is_test_order = false",
+          "refund_status <> 'refunded'",
+          "pay_status = 'paid'"
+        ],
+        "note": null
+      }
+    },
+    {
+      "case_id": "C-GMV-04",
+      "question": "最近一周的 GMV 环比是多少？",
+      "clarify_expected_reason": "「最近一周」起点未定（周起点是 monday，但「最近」未必对齐自然周）",
+      "gate_class": "time_window_undefined",
+      "missing_gate": "「最近一周」起点未定（且实测 gate1_ast error）",
+      "actual": {
+        "terminal": "error",
+        "clarified": false,
+        "nodes_tail": [
+          "gen_sql",
+          "gate1_ast",
+          "error_out"
+        ],
+        "sql_present": true,
+        "sql_digest": "WITH bounds AS (SELECT date_trunc('week', CURRENT_DATE)::date AS this_week_start, (date_trunc('week', CURRENT_DATE) - INTERVAL '7 days')::date AS last_week_start), cur AS (SELECT C…",
+        "applied_predicates": [],
+        "note": "实测未澄清且未出数：error @ error_out（terminal_error_detail={}）"
+      }
+    },
+    {
+      "case_id": "C-RATE-01",
+      "question": "退款率是多少？",
+      "clarify_expected_reason": "退款率有金额口径与单量口径；本包只定义金额口径，须确认或告知不支持",
+      "gate_class": "definition_multiple",
+      "missing_gate": "退款率金额/单量双口径，包只定义金额口径，缺口径确认闸门",
+      "actual": {
+        "terminal": "complete",
+        "clarified": false,
+        "nodes_tail": [
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "sql_present": true,
+        "sql_digest": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0) AS refund_rate FROM v_order_paid WHE…",
+        "applied_predicates": [
+          "is_test_order = false",
+          "refund_status <> 'refunded'",
+          "pay_status = 'paid'"
+        ],
+        "note": null
+      }
+    },
+    {
+      "case_id": "C-RATE-02",
+      "question": "退货率最高的商品是哪个？",
+      "clarify_expected_reason": "「退货」与「退款」在数据上只有 refund_status，须澄清映射",
+      "gate_class": "term_mapping_unknown",
+      "missing_gate": "「退货」→ refund_status 的术语映射未闸",
+      "actual": {
+        "terminal": "complete",
+        "clarified": false,
+        "nodes_tail": [
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "sql_present": true,
+        "sql_digest": "SELECT p.sku_id AS sku_id, p.sku_name AS sku_name, SUM(CASE WHEN o.refund_status = 'refunded' THEN o.pay_amount ELSE 0 END) * 1.0 / NULLIF(SUM(o.pay_amount), 0) AS refund_rate FROM…",
+        "applied_predicates": [
+          "is_test_order = false",
+          "refund_status <> 'refunded'",
+          "pay_status = 'paid'"
+        ],
+        "note": null
+      }
+    },
+    {
+      "case_id": "C-REP-01",
+      "question": "复购率是多少？",
+      "clarify_expected_reason": "复购窗口固定 90 天且不含首单口径，须回显确认",
+      "gate_class": "echo_confirm",
+      "missing_gate": "复购 90 天窗口固定口径须回显确认",
+      "actual": {
+        "terminal": "complete",
+        "clarified": false,
+        "nodes_tail": [
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "sql_present": true,
+        "sql_digest": "WITH buyer_cnt AS (SELECT v_order_paid.buyer_id AS buyer_id, COUNT(DISTINCT v_order_paid.sub_order_id) AS cnt FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v…",
+        "applied_predicates": [
+          "is_test_order = false",
+          "refund_status <> 'refunded'",
+          "pay_status = 'paid'"
+        ],
+        "note": null
+      }
+    },
+    {
+      "case_id": "C-REP-02",
+      "question": "复购情况怎么样？",
+      "clarify_expected_reason": "开放式问法，既没有时间窗也没有维度",
+      "gate_class": "time_window_undefined",
+      "missing_gate": "开放式问法无时间窗（QA 计入 time_window_undefined）",
+      "actual": {
+        "terminal": "error",
+        "clarified": false,
+        "nodes_tail": [
+          "gen_sql",
+          "gate1_ast",
+          "error_out"
+        ],
+        "sql_present": true,
+        "sql_digest": "SELECT COUNT(DISTINCT CASE WHEN buyer_cnt >= 2 THEN buyer_id END) * 1.0 / NULLIF(COUNT(DISTINCT buyer_id), 0) AS repurchase_rate_90d FROM (SELECT buyer_id, COUNT(DISTINCT sub_order…",
+        "applied_predicates": [],
+        "note": "实测未澄清且未出数：error @ error_out（terminal_error_detail={}）"
+      }
+    },
+    {
+      "case_id": "C-UV-02",
+      "question": "总访客数是多少？",
+      "clarify_expected_reason": "「总」= 全期去重还是逐日累加？本包未定义 uv_period",
+      "gate_class": "aggregation_ambiguous",
+      "missing_gate": "「总」= 全期去重 vs 逐日累加，uv_period 未定义",
+      "actual": {
+        "terminal": "complete",
+        "clarified": false,
+        "nodes_tail": [
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "sql_present": true,
+        "sql_digest": "SELECT SUM(traffic_daily.uv) AS uv FROM v_traffic_daily AS traffic_daily WHERE traffic_daily.uv >= %(uv_min)s AND traffic_daily.uv >= 0 LIMIT 1000",
+        "applied_predicates": [
+          "uv >= 0"
+        ],
+        "note": null
+      }
+    },
+    {
+      "case_id": "C-AOV-01",
+      "question": "客单价是多少？",
+      "clarify_expected_reason": "客单价无时间窗",
+      "gate_class": "time_window_undefined",
+      "missing_gate": "客单价无时间窗",
+      "actual": {
+        "terminal": "complete",
+        "clarified": false,
+        "nodes_tail": [
+          "audit_pre",
+          "present",
+          "audit_supp"
+        ],
+        "sql_present": true,
+        "sql_digest": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.sub_order_id), 0) AS aov FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.…",
+        "applied_predicates": [
+          "is_test_order = false",
+          "refund_status <> 'refunded'",
+          "pay_status = 'paid'"
+        ],
+        "note": null
+      }
+    }
+  ],
+  "implementation_checklist": {
+    "contract_change_required": true,
+    "files_to_touch": [
+      {
+        "path": "semantic/bundle_2026.09.14.1.yaml（新版本号）",
+        "change": "四类闸门的语义声明：模糊时间窗策略（relative_time 未定 → 强制澄清）、多口径指标标记（refund_rate 单量口径=未定义）、术语映射表（退货→refund_status）、uv_period / 复购口径回显位",
+        "blast": "契约变更：改 prompt ⇒ 请求哈希全变 ⇒ r63 匣带全 miss，须重基线（派单⑤）"
+      },
+      {
+        "path": "backend/app/planner/timeexpr.py",
+        "change": "window 已解析但属『模糊来源』时仍返回可区分 reason（现状：只有解析失败才 ok=False，C-GMV-01/02 的窗口直接放行）"
+      },
+      {
+        "path": "backend/app/planner/request_policy.py",
+        "change": "preflight 增加 definition_multiple / term_mapping_unknown / echo_confirm 三类澄清判定"
+      },
+      {
+        "path": "backend/app/graph/nodes/normalize.py",
+        "change": "preflight 澄清结果进 intent_detail（reason_code 家族 + 缺失闸门原文）"
+      },
+      {
+        "path": "backend/app/graph/nodes/clarify_out.py",
+        "change": "按闸门类组装澄清文案（回显确认类要带出包内既有定义）"
+      },
+      {
+        "path": "eval/case_library.py",
+        "change": "clarify 期望文本已有（_CLARIFY），冻结集不动；如需逐闸门断言须扩 schema（另轮）"
+      }
+    ],
+    "cassette_breakage": [
+      "语义包变更 ⇒ normalize/intent 与 plan 的 prompt 都变 ⇒ eval/cassettes/w8_r63_full166.jsonl 全量 miss（166 条重放失效，须 live 重录）",
+      "timeexpr/request_policy 为确定性代码层：不改 prompt ⇒ 匣带请求哈希不变，但重放语义改变（8 条 complete 会变 clarify）⇒ G-2/G-5/G-8 口径重算，属重基线范围"
+    ],
+    "gating_position": "单列指标（澄清完备性），不进八格、不作收口硬条件（总控已裁）"
+  }
+}

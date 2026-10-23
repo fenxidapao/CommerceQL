@@ -1,8 +1,8 @@
 {
   "provenance": "w67 diagnostics: L4 reach + L4 cost, zero egress (read-only over r66 replay + r63 cassette)",
-  "task": "W67-3 评测面 degradations 口径变更影响清单（W66 起 _EvalDegradationSink 才把网关层降级接进 GraphState）",
-  "generated_at": "2026-10-23T02:01:47+00:00",
-  "git_rev": "891fe0c",
+  "task": "W67-3 评测面 degradations 口径变更影响清单（W66 起 _EvalDegradationSink 才把网关层降级接进 GraphState）；W68-4 订正：n_files_scanned 实为『有非空 records 的文件数』，改名 n_files_with_records并补全量计数与跳过类说明",
+  "generated_at": "2026-10-23T02:55:50+00:00",
+  "git_rev": "0426f72",
   "git_dirty": false,
   "rule": {
     "pre_w66": "评测面 records[].degradations 只含**节点层**降级（normalize/link/plan/present/embed 等经 RunContext 上报的）。",
@@ -10,11 +10,926 @@
     "precision_notes": [
       "switched_to_weak_model 是 ActionTaken 不是 reason（core/enums.py DegradedReason 8 值里没有它）。",
       "llm_unavailable 是双路值：节点路径（normalize UnderstandUnavailable）一直可见，故旧产物含 llm_unavailable 不构成反例；网关路径的同类事件 W66 起才可见。",
-      "因此『W66 前缺网关层』的可检验特征 = 产物中 llm_concurrency_exceeded 恒不出现（本清单实测：152 个产物中 0 个含它，唯一例外是 W66 自己的饱和产物，见下）。"
+      "因此『W66 前缺网关层』的可检验特征 = 产物中 llm_concurrency_exceeded 恒不出现（本清单实测：有 records 的产物中 0 个含它，唯一例外是 W66 自己的饱和产物，见下）。",
+      "W68-4 口径订正：eval/results_*.json 全量 n_files_total 个；只有 n_files_with_records 个带非空 records[]（可逐条查 degradations）；另有 n_files_skipped 个为聚合形态（无 records[]），不构成反例但也未纳入正表——跳过清单与逐类计数见 skipped_categories / skipped_files。"
     ]
   },
-  "n_files_scanned": 152,
+  "n_files_total": 213,
+  "n_files_with_records": 152,
+  "n_files_skipped": 61,
   "n_files_with_gateway_new_reason": 0,
+  "skipped_categories": {
+    "stability_单题稳定性探针": 4,
+    "aggregate_其它聚合摘要（无逐条记录）": 14,
+    "matrix_判定矩阵对比": 6,
+    "gate_recompute_门禁重算聚合": 8,
+    "probe_探针与诊断一次性产物": 12,
+    "over_refusal_过拒盘点": 3,
+    "tau_采样审计与摘要": 5,
+    "equiv_等价性审计": 2,
+    "error_错误率与形态盘点": 3,
+    "secret_scan_秘密扫描证据": 3,
+    "materialize_物化核对": 1
+  },
+  "skipped_files": [
+    {
+      "file": "eval/results_r50_stab_ever07.json",
+      "skip_class": "stability_单题稳定性探针",
+      "top_keys": [
+        "case",
+        "n",
+        "runs"
+      ]
+    },
+    {
+      "file": "eval/results_r50_stab_mdim08.json",
+      "skip_class": "stability_单题稳定性探针",
+      "top_keys": [
+        "case",
+        "n",
+        "runs"
+      ]
+    },
+    {
+      "file": "eval/results_r51_stab_ever07.json",
+      "skip_class": "stability_单题稳定性探针",
+      "top_keys": [
+        "case",
+        "n",
+        "runs"
+      ]
+    },
+    {
+      "file": "eval/results_r51_stab_mdim08.json",
+      "skip_class": "stability_单题稳定性探针",
+      "top_keys": [
+        "case",
+        "n",
+        "runs"
+      ]
+    },
+    {
+      "file": "eval/results_r54_ever08_cross_batch.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "batches",
+        "bundle_metric",
+        "case_id",
+        "code_head",
+        "conclusion",
+        "evidence_head",
+        "generated_at",
+        "gold_sql",
+        "question"
+      ]
+    },
+    {
+      "file": "eval/results_r54_g2_conflicts.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "code_head",
+        "conclusion",
+        "conflicts",
+        "g2_denominator",
+        "generated_at",
+        "pass_requirement_with_ten_cases",
+        "theoretical_max_if_three_conflicts_remain_non_equivalent",
+        "theoretical_max_rate",
+        "threshold"
+      ]
+    },
+    {
+      "file": "eval/results_r54_g5_partial.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "causes",
+        "code_head",
+        "conclusion",
+        "current_57_subset",
+        "evidence_head",
+        "full_denominator",
+        "generated_at",
+        "missing_minimal_for_g5",
+        "partial_denominators",
+        "raw_errors_r53f57"
+      ]
+    },
+    {
+      "file": "eval/results_r55_g2_contract_proposal.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "baseline_files",
+        "boundaries",
+        "cases",
+        "commands",
+        "grid_after",
+        "head",
+        "mode",
+        "observed_at",
+        "proposed_combined",
+        "round"
+      ]
+    },
+    {
+      "file": "eval/results_r56_clarify_matrix.json",
+      "skip_class": "matrix_判定矩阵对比",
+      "top_keys": [
+        "actual",
+        "artifact",
+        "git_dirty",
+        "head",
+        "n",
+        "price_guess_cny",
+        "round",
+        "rows",
+        "tokens_total"
+      ]
+    },
+    {
+      "file": "eval/results_r56_g2_matrix.json",
+      "skip_class": "matrix_判定矩阵对比",
+      "top_keys": [
+        "after",
+        "after_artifact",
+        "after_content_hash",
+        "after_git",
+        "before",
+        "before_artifact",
+        "before_content_hash",
+        "round",
+        "rows"
+      ]
+    },
+    {
+      "file": "eval/results_r56_g5_matrix.json",
+      "skip_class": "matrix_判定矩阵对比",
+      "top_keys": [
+        "actual",
+        "dataset_content_hash",
+        "errors",
+        "expected",
+        "g5",
+        "git_dirty",
+        "head",
+        "n",
+        "over_refused_cases",
+        "price_guess_cny",
+        "round",
+        "rows",
+        "timeouts",
+        "tokens_total"
+      ]
+    },
+    {
+      "file": "eval/results_r56_gate_recompute.json",
+      "skip_class": "gate_recompute_门禁重算聚合",
+      "top_keys": [
+        "gate_input",
+        "gates",
+        "generated_at",
+        "head",
+        "results_path",
+        "results_sha256",
+        "round"
+      ]
+    },
+    {
+      "file": "eval/results_r56_hash_reconciliation.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "checked_at",
+        "dataset",
+        "decision",
+        "evidence",
+        "gold_seed",
+        "head_before",
+        "outbound",
+        "root_cause",
+        "round"
+      ]
+    },
+    {
+      "file": "eval/results_r56_provider_diagnosis.json",
+      "skip_class": "probe_探针与诊断一次性产物",
+      "top_keys": [
+        "head",
+        "network_probe",
+        "observed_at",
+        "pipeline_smoke",
+        "r54_failure",
+        "round",
+        "runner_hardening"
+      ]
+    },
+    {
+      "file": "eval/results_r57_overrefusal_14.json",
+      "skip_class": "over_refusal_过拒盘点",
+      "top_keys": [
+        "head",
+        "n",
+        "round",
+        "rows",
+        "source"
+      ]
+    },
+    {
+      "file": "eval/results_r57_overrefusal_triage.json",
+      "skip_class": "over_refusal_过拒盘点",
+      "top_keys": [
+        "counts",
+        "head",
+        "round",
+        "rows"
+      ]
+    },
+    {
+      "file": "eval/results_r57_plan_blocking_14.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "head",
+        "round",
+        "rows"
+      ]
+    },
+    {
+      "file": "eval/results_r57_timeout_stats.json",
+      "skip_class": "probe_探针与诊断一次性产物",
+      "top_keys": [
+        "gen_sql",
+        "l4_score",
+        "normalize_intent",
+        "plan"
+      ]
+    },
+    {
+      "file": "eval/results_r57_timeout_tail.json",
+      "skip_class": "probe_探针与诊断一次性产物",
+      "top_keys": [
+        "cassette_sha256",
+        "count",
+        "head",
+        "observed_at",
+        "root_cause",
+        "round",
+        "rows",
+        "success_controls"
+      ]
+    },
+    {
+      "file": "eval/results_r57b_clarify_matrix.json",
+      "skip_class": "matrix_判定矩阵对比",
+      "top_keys": [
+        "actual",
+        "artifact",
+        "git",
+        "price_guess_cny",
+        "round",
+        "rows",
+        "tokens_total"
+      ]
+    },
+    {
+      "file": "eval/results_r57b_g2_matrix.json",
+      "skip_class": "matrix_判定矩阵对比",
+      "top_keys": [
+        "after_artifact",
+        "after_equivalent",
+        "after_git",
+        "after_price_guess_cny",
+        "after_tokens",
+        "before_artifact",
+        "before_equivalent",
+        "round",
+        "rows"
+      ]
+    },
+    {
+      "file": "eval/results_r57b_g5_matrix.json",
+      "skip_class": "matrix_判定矩阵对比",
+      "top_keys": [
+        "actual",
+        "artifact",
+        "clarify_cases",
+        "errors",
+        "expected",
+        "g5",
+        "git",
+        "n",
+        "over_refused_cases",
+        "price_guess_cny",
+        "round",
+        "rows",
+        "tokens_total"
+      ]
+    },
+    {
+      "file": "eval/results_r57b_gate_recompute.json",
+      "skip_class": "gate_recompute_门禁重算聚合",
+      "top_keys": [
+        "content_hash",
+        "gates",
+        "generated_at",
+        "head",
+        "results_path",
+        "results_sha256",
+        "round"
+      ]
+    },
+    {
+      "file": "eval/results_r57b_timeout_tail.json",
+      "skip_class": "probe_探针与诊断一次性产物",
+      "top_keys": [
+        "artifact_set",
+        "count",
+        "round",
+        "rows"
+      ]
+    },
+    {
+      "file": "eval/results_r58_gate_recompute.json",
+      "skip_class": "gate_recompute_门禁重算聚合",
+      "top_keys": [
+        "clarify",
+        "errors",
+        "g2",
+        "g5",
+        "g5_over_refused",
+        "g5_refuse",
+        "git_dirty",
+        "git_rev",
+        "source"
+      ]
+    },
+    {
+      "file": "eval/results_r58_tau_stability.json",
+      "skip_class": "tau_采样审计与摘要",
+      "top_keys": [
+        "attempted",
+        "common_cases",
+        "runs",
+        "why_not_finalized"
+      ]
+    },
+    {
+      "file": "eval/results_r58_tau_stability_summary.json",
+      "skip_class": "tau_采样审计与摘要",
+      "top_keys": [
+        "attempted",
+        "cases",
+        "common_cases",
+        "max_gap_std",
+        "runs",
+        "selected_tau",
+        "stable",
+        "tau_sweep_step",
+        "why_not_finalized"
+      ]
+    },
+    {
+      "file": "eval/results_r58e_gate_recompute.json",
+      "skip_class": "gate_recompute_门禁重算聚合",
+      "top_keys": [
+        "clarify",
+        "errors",
+        "g2",
+        "g5",
+        "g5_over_refused",
+        "g5_refuse",
+        "git_dirty",
+        "git_rev",
+        "source"
+      ]
+    },
+    {
+      "file": "eval/results_r59_equiv_audited.json",
+      "skip_class": "equiv_等价性审计",
+      "top_keys": [
+        "case_ids",
+        "categories",
+        "limitation",
+        "n"
+      ]
+    },
+    {
+      "file": "eval/results_r59_equiv_audited.v3.json",
+      "skip_class": "equiv_等价性审计",
+      "top_keys": [
+        "flag_counts",
+        "limitation",
+        "n",
+        "primary_counts",
+        "rows",
+        "source"
+      ]
+    },
+    {
+      "file": "eval/results_r59_error_io.json",
+      "skip_class": "error_错误率与形态盘点",
+      "top_keys": [
+        "count",
+        "rows"
+      ]
+    },
+    {
+      "file": "eval/results_r59_error_rate.json",
+      "skip_class": "error_错误率与形态盘点",
+      "top_keys": [
+        "clarify_error_rate",
+        "clarify_errors",
+        "errors_total",
+        "execute_error_rate",
+        "execute_errors",
+        "git_rev_caveat",
+        "rows",
+        "source"
+      ]
+    },
+    {
+      "file": "eval/results_r59_final_readings.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "clarify",
+        "execute",
+        "refuse",
+        "secret_scales"
+      ]
+    },
+    {
+      "file": "eval/results_r59_gate_recompute.json",
+      "skip_class": "gate_recompute_门禁重算聚合",
+      "top_keys": [
+        "clarify",
+        "correct_refused",
+        "dirty",
+        "errors",
+        "errors_by_expected",
+        "g2",
+        "g2_cases",
+        "g5",
+        "g5_refuse_cases",
+        "generated_at",
+        "git_rev",
+        "over_refused",
+        "over_refused_cases",
+        "source"
+      ]
+    },
+    {
+      "file": "eval/results_r59_live401_envcheckpoint_summary.json",
+      "skip_class": "probe_探针与诊断一次性产物",
+      "top_keys": [
+        "all_http_401",
+        "all_terminal_error",
+        "attempted_records",
+        "git_dirty",
+        "git_rev",
+        "note",
+        "root_cause",
+        "source",
+        "stopped_after_case",
+        "terminal_codes",
+        "tokens_total",
+        "transport_retries_values",
+        "wall_s_total"
+      ]
+    },
+    {
+      "file": "eval/results_r59_over_refusal_contract.json",
+      "skip_class": "over_refusal_过拒盘点",
+      "top_keys": [
+        "n",
+        "rows",
+        "source"
+      ]
+    },
+    {
+      "file": "eval/results_r59_raw_gate.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "clarify",
+        "correct_refused",
+        "dirty",
+        "errors_by_expected",
+        "g2",
+        "g5",
+        "git_rev",
+        "over_refused",
+        "source"
+      ]
+    },
+    {
+      "file": "eval/results_r59_secret_scan_final.json",
+      "skip_class": "secret_scan_秘密扫描证据",
+      "top_keys": [
+        "committed_tree_method",
+        "generated_at",
+        "git_rev",
+        "history_method",
+        "policy",
+        "scales",
+        "status"
+      ]
+    },
+    {
+      "file": "eval/results_r59_secret_scan_summary.json",
+      "skip_class": "secret_scan_秘密扫描证据",
+      "top_keys": [
+        "git",
+        "proposal",
+        "worktree"
+      ]
+    },
+    {
+      "file": "eval/results_r59_tau_schema_audit.json",
+      "skip_class": "tau_采样审计与摘要",
+      "top_keys": [
+        "attempted",
+        "can_form_score_sample",
+        "common_cases",
+        "n_min_repeats",
+        "observed_repeats_per_case",
+        "reason",
+        "runs",
+        "schema_decision",
+        "schema_failures",
+        "source"
+      ]
+    },
+    {
+      "file": "eval/results_r59_timeout_final.json",
+      "skip_class": "probe_探针与诊断一次性产物",
+      "top_keys": [
+        "by_expected",
+        "by_node",
+        "clarify",
+        "denominators",
+        "errors_total",
+        "g2",
+        "generated_at",
+        "git_dirty",
+        "git_rev",
+        "over_refused_cases",
+        "rows",
+        "source"
+      ]
+    },
+    {
+      "file": "eval/results_r59_timeout_shape.json",
+      "skip_class": "probe_探针与诊断一次性产物",
+      "top_keys": [
+        "clarify_errors",
+        "dirty",
+        "error_count",
+        "execute_errors",
+        "finish_reason",
+        "git_rev",
+        "task_request_shape"
+      ]
+    },
+    {
+      "file": "eval/results_r59_timeout_tail_table.json",
+      "skip_class": "probe_探针与诊断一次性产物",
+      "top_keys": [
+        "cassette",
+        "errors",
+        "limitations",
+        "request_bytes_aggregate",
+        "source",
+        "task_latency",
+        "task_sequence"
+      ]
+    },
+    {
+      "file": "eval/results_r60_g5_error_clarify.json",
+      "skip_class": "error_错误率与形态盘点",
+      "top_keys": [
+        "g5_clarify",
+        "g5_clarify_categories",
+        "g5_clarify_count",
+        "g5_error_by_node",
+        "g5_error_count",
+        "g5_errors",
+        "generated_at",
+        "git_dirty",
+        "git_rev",
+        "limitation",
+        "source"
+      ]
+    },
+    {
+      "file": "eval/results_r60_gate_recompute.json",
+      "skip_class": "gate_recompute_门禁重算聚合",
+      "top_keys": [
+        "g2",
+        "g5",
+        "g8",
+        "generated_at",
+        "git_dirty",
+        "git_rev",
+        "official_gate",
+        "secrets",
+        "source",
+        "source_dirty",
+        "source_git_rev",
+        "tau",
+        "u127"
+      ]
+    },
+    {
+      "file": "eval/results_r60_secret_scan_final.json",
+      "skip_class": "secret_scan_秘密扫描证据",
+      "top_keys": [
+        "generated_at",
+        "git_rev",
+        "history_commits",
+        "methods",
+        "policy",
+        "scales",
+        "status",
+        "tool"
+      ]
+    },
+    {
+      "file": "eval/results_r61_availability.json",
+      "skip_class": "probe_探针与诊断一次性产物",
+      "top_keys": [
+        "cassette",
+        "denominators",
+        "errors",
+        "generated_at",
+        "git_dirty",
+        "git_rev",
+        "hard_15s",
+        "rates",
+        "rows",
+        "schema",
+        "scope_statement",
+        "source",
+        "wall_s",
+        "zero_outbound"
+      ]
+    },
+    {
+      "file": "eval/results_r61_gate_recompute.json",
+      "skip_class": "gate_recompute_门禁重算聚合",
+      "top_keys": [
+        "corrections_r62",
+        "dirty_paths",
+        "g2",
+        "g5",
+        "g8",
+        "generated_at",
+        "git_commits",
+        "git_dirty",
+        "git_rev",
+        "methods",
+        "official_gate",
+        "round",
+        "schema",
+        "secrets",
+        "tau",
+        "tool",
+        "u127",
+        "w8_surface_dirty",
+        "worktree_incident",
+        "zero_outbound"
+      ]
+    },
+    {
+      "file": "eval/results_r61_probe401.json",
+      "skip_class": "probe_探针与诊断一次性产物",
+      "top_keys": [
+        "consequence",
+        "content_len",
+        "env_diagnosis",
+        "error_message",
+        "error_type",
+        "http_status",
+        "model_requested",
+        "probe_kind",
+        "round",
+        "schema",
+        "usage",
+        "zero_side_effects"
+      ]
+    },
+    {
+      "file": "eval/results_r62_b_divergence.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "conclusion",
+        "generated_at",
+        "git_dirty",
+        "git_rev",
+        "method",
+        "pairs",
+        "schema",
+        "sources",
+        "zero_outbound"
+      ]
+    },
+    {
+      "file": "eval/results_r62_dense_probe.json",
+      "skip_class": "probe_探针与诊断一次性产物",
+      "top_keys": [
+        "active_version_rows",
+        "active_version_source",
+        "corrections",
+        "db_materialized_by_version",
+        "embed_doc_totals",
+        "eval_side_is_a_fixture",
+        "filters",
+        "generated_at",
+        "git_dirty",
+        "git_rev",
+        "no_startup_materialize",
+        "schema",
+        "startup_assertions_gap",
+        "title",
+        "verdict",
+        "zero_outbound",
+        "zero_row_semantics"
+      ]
+    },
+    {
+      "file": "eval/results_r63_gate_recompute.json",
+      "skip_class": "gate_recompute_门禁重算聚合",
+      "top_keys": [
+        "batch_identity",
+        "budget",
+        "clarify_list",
+        "distribution",
+        "full_errors",
+        "g5_detail",
+        "gates",
+        "generated_at",
+        "git_dirty",
+        "git_rev",
+        "kind",
+        "round",
+        "schema",
+        "source",
+        "tau",
+        "vs_old_baseline",
+        "zero_outbound"
+      ]
+    },
+    {
+      "file": "eval/results_r63_materialize.json",
+      "skip_class": "materialize_物化核对",
+      "top_keys": [
+        "boundary",
+        "counts_by_version",
+        "embed_doc_detail",
+        "embedding_source",
+        "expectation_check",
+        "generated_at",
+        "git_dirty",
+        "git_rev",
+        "materialized_version",
+        "rollback_point",
+        "schema",
+        "self_check",
+        "semantic_bundle_rows",
+        "zero_outbound_to_llm"
+      ]
+    },
+    {
+      "file": "eval/results_r64_wall_gap.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "git_rev",
+        "method",
+        "note",
+        "schema",
+        "source",
+        "stats",
+        "top_gaps"
+      ]
+    },
+    {
+      "file": "eval/results_r65_tau_coverage.json",
+      "skip_class": "tau_采样审计与摘要",
+      "top_keys": [
+        "case_gold",
+        "coverage",
+        "derivation",
+        "n_records",
+        "sample_feasibility",
+        "schema",
+        "source",
+        "source_git_dirty",
+        "source_git_rev"
+      ]
+    },
+    {
+      "file": "eval/results_r66_saturation_graph.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "all_segments_hold",
+        "cassette_calls_after_run",
+        "cassette_calls_before_read",
+        "degradations",
+        "expectations",
+        "git_dirty",
+        "git_rev",
+        "nodes",
+        "question",
+        "schema",
+        "terminal",
+        "transport_zero_calls"
+      ]
+    },
+    {
+      "file": "eval/results_r66_tau_coverage.json",
+      "skip_class": "tau_采样审计与摘要",
+      "top_keys": [
+        "counts",
+        "false_match_audit",
+        "git_rev",
+        "gold_status_distribution",
+        "gold_unmatched_reason_distribution",
+        "per_case",
+        "provenance",
+        "qa_variant_comparison",
+        "rule_provenance",
+        "sample_feasibility",
+        "schema",
+        "scope_limitation",
+        "source_raw",
+        "source_raw_config",
+        "source_raw_git_dirty",
+        "source_raw_git_rev"
+      ]
+    },
+    {
+      "file": "eval/results_r67_degradations_cutover_inventory.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "expected_post_w66_holders",
+        "generated_at",
+        "git_dirty",
+        "git_rev",
+        "inventory",
+        "n_files_scanned",
+        "n_files_with_gateway_new_reason",
+        "provenance",
+        "rule",
+        "task"
+      ]
+    },
+    {
+      "file": "eval/results_r67_l4_cost.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "config",
+        "cost_by_tier",
+        "generated_at",
+        "git_dirty",
+        "git_rev",
+        "headline",
+        "per_case",
+        "provenance",
+        "shared_request_groups",
+        "task",
+        "tier_inference"
+      ]
+    },
+    {
+      "file": "eval/results_r68_clarify_completeness.json",
+      "skip_class": "aggregate_其它聚合摘要（无逐条记录）",
+      "top_keys": [
+        "cases",
+        "class_counts",
+        "class_counts_qa_reference",
+        "generated_at",
+        "git_dirty",
+        "git_rev",
+        "headline",
+        "implementation_checklist",
+        "provenance",
+        "red_line",
+        "task"
+      ]
+    },
+    {
+      "file": "eval/results_r68_xmet10_diagnosis.json",
+      "skip_class": "probe_探针与诊断一次性产物",
+      "top_keys": [
+        "case",
+        "conclusion",
+        "generated_at",
+        "git_dirty",
+        "git_rev",
+        "gold_reference",
+        "honest_note",
+        "layers",
+        "provenance",
+        "r66_pipeline",
+        "task"
+      ]
+    }
+  ],
   "expected_post_w66_holders": [
     "eval/results_r66_saturation_graph.json（W66 D5-1 饱和串跑，llm_concurrency_exceeded 图级证据）"
   ],
