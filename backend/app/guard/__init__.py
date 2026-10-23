@@ -17,7 +17,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from app.core.contracts import GateResult, ScopeInfo
@@ -47,8 +47,15 @@ class SqlGuard:
     本类是端口契约的**形状实现**（供 runtime_checkable 断言与依赖注入框架使用）。
     """
 
-    def gate1(self, sql: str, allowlist: Mapping[str, Any]) -> GateResult:
-        return run_gate1(sql, allowlist).gate_result
+    def gate1(
+        self,
+        sql: str,
+        allowlist: Mapping[str, Any],
+        *,
+        metrics: Sequence[str] = (),
+        params: Mapping[str, Any] | None = None,
+    ) -> GateResult:
+        return run_gate1(sql, allowlist, metrics=metrics, params=params).gate_result
 
     def gate2(
         self, sql: str, ctx: IdentityContext, bundle: SemanticBundlePort

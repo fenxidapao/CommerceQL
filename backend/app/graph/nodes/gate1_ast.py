@@ -59,7 +59,9 @@ async def gate1_ast(state: GraphState) -> dict[str, Any]:
     )
 
     with node_latency(LatencyKey.GATE):
-        report = run_gate1(sql, allowlist, metrics=_metric_names(state))
+        report = run_gate1(
+            sql, allowlist, metrics=_metric_names(state), params=_sql_params(state)
+        )
 
     update: dict[str, Any] = dict(gate_update(state, GateNo.AST, report.gate_result))
     if report.gate_result.passed:
@@ -115,3 +117,13 @@ def _metric_names(state: GraphState) -> tuple[str, ...]:
         if name and str(name) not in names:
             names.append(str(name))
     return tuple(names)
+
+
+def _sql_params(state: GraphState) -> Mapping[str, Any] | None:
+    """该 SQL 的绑定参数（`state["sql_params"]`，`planner/engine.py:538` 写入）。
+
+    只给闸门的矛盾守卫解析 `%(name)s` 用（W73-1）；非 `Mapping` ⇒ `None`
+    ⇒ 占位符一律按「解析不出」处理（保守跳过同列 `=`/`<>` 候选，不放松其它谓词）。
+    """
+    params = state.get("sql_params")
+    return params if isinstance(params, Mapping) else None

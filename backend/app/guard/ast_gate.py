@@ -279,12 +279,18 @@ def _build_reject(rule: AstRule) -> Gate1Report:
 # ---------------------------------------------------------------------------
 
 def run_gate1(
-    sql: str, allowlist: Mapping[str, Any], *, metrics: Sequence[str] = ()
+    sql: str,
+    allowlist: Mapping[str, Any],
+    *,
+    metrics: Sequence[str] = (),
+    params: Mapping[str, Any] | None = None,
 ) -> Gate1Report:
     """执行 gate1（完整流程，见模块 docstring 的顺序）。
 
     `metrics`：本次查询声明的指标名（`plan.metrics[].name`）。非空时按指标级谓词集收窄
     默认谓词注入范围（W72-3 / R31bq）；不传 = 沿用域级行为（向后兼容，也是 fail-closed 兜底）。
+    `params`：该 SQL 的绑定参数字典（`state["sql_params"]`），供矛盾守卫解析 `%(name)s`
+    （W73-1）；不传时占位符一律按「解析不出」处理 ⇒ 同列的 `=`/`<>` 候选保守跳过。
     """
 
     if not isinstance(sql, str) or not sql.strip():
@@ -330,7 +336,7 @@ def run_gate1(
     had_top_level_limit = _top_level_limit(root) is not None
 
     # --- 默认谓词注入（AST 层，必须先于审计）---
-    applied = _inject_predicates(root, allowlist, metrics)
+    applied = _inject_predicates(root, allowlist, metrics, params)
 
     # R14 白名单 = ① LIMIT 注入值 ② 谓词常量 ③ 语义包声明常量（07 §7.2 三类）。
     effective_limit = _effective_limit(allowlist)
@@ -513,14 +519,141 @@ def _metric_scoped_predicates(
     return scoped, f"scoped:{','.join(metrics)}"
 
 
+class _Unknown:
+    """占位符解析不出的值。
+
+    ⚠️ 必须是独立哨兵而**不是** `None` —— `None` 是合法字面量（`IS NULL` / `= NULL`），
+    两者混用会让「绑定值恰好是 None」被当成「解析不出」。
+    """
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return "<unknown>"
+
+
+_UNKNOWN: Final = _Unknown()
+
+_OP_EQ: Final = "eq"
+_OP_NE: Final = "ne"
+
+
+def _flatten_and(node: exp.Expression) -> list[exp.Expression]:
+    """把 `a AND b AND c`（含括号）摊平成合取项列表。"""
+    if isinstance(node, exp.Paren):
+        return _flatten_and(node.this)
+    if isinstance(node, exp.And):
+        return [*_flatten_and(node.this), *_flatten_and(node.expression)]
+    return [node]
+
+
+def _scalar_value(node: exp.Expression, params: Mapping[str, Any] | None) -> Any:
+    """字面量 / 绑定占位符 → Python 值；解析不出 → `_UNKNOWN`。"""
+    if isinstance(node, exp.Literal):
+        if node.is_string:
+            return node.this
+        text = str(node.this)
+        try:
+            return float(text) if ("." in text or "e" in text.lower()) else int(text)
+        except (TypeError, ValueError):
+            return _UNKNOWN
+    if isinstance(node, exp.Boolean):
+        return bool(node.this)
+    if isinstance(node, exp.Null):
+        return None
+    if isinstance(node, exp.Neg):
+        inner = _scalar_value(node.this, params)
+        if isinstance(inner, (int, float)) and not isinstance(inner, bool):
+            return -inner
+        return _UNKNOWN
+    if isinstance(node, exp.Placeholder):
+        #: psycopg 命名参数 `%(name)s` → `Placeholder.this` 是 Identifier
+        name = getattr(node.this, "name", None)
+        if name is not None and params and name in params:
+            return params[name]
+        return _UNKNOWN
+    return _UNKNOWN
+
+
+def _norm_value(value: Any) -> tuple[str, Any]:
+    """跨类型比较的归一（`False` / `0` / `'false'` 不互相冒充，但 `False` 与 `false` 相等）。"""
+    if isinstance(value, bool):
+        return ("bool", value)
+    if isinstance(value, (int, float)):
+        return ("num", float(value))
+    if value is None:
+        return ("null", None)
+    return ("str", str(value).strip().lower())
+
+
+def _comparison(
+    node: exp.Expression, params: Mapping[str, Any] | None
+) -> tuple[str, str, Any] | None:
+    """`col = v` / `col <> v` → `(列名小写, 算子, 值)`；其它形态 → `None`。"""
+    if isinstance(node, exp.Paren):
+        node = node.this
+    if isinstance(node, exp.EQ):
+        op = _OP_EQ
+    elif isinstance(node, exp.NEQ):
+        op = _OP_NE
+    else:
+        return None
+    for col, val in ((node.this, node.expression), (node.expression, node.this)):
+        if isinstance(col, exp.Column) and not isinstance(val, exp.Column):
+            return (col.name.lower(), op, _scalar_value(val, params))
+    return None
+
+
+def _contradiction(
+    node: exp.Expression,
+    existing: Sequence[tuple[str, str, Any]],
+    params: Mapping[str, Any] | None,
+) -> str | None:
+    """候选谓词与查询**已有**谓词逻辑矛盾时返回原因（供日志），否则 `None`。
+
+    只认同列的 `=` / `<>` 两种算子，四种组合里三种是矛盾：
+    `= v` vs `<> v`、`<> v` vs `= v`、`= v1` vs `= v2`（v1 ≠ v2）。
+    `<> v1` vs `<> v2` 不矛盾（可同时成立）。
+
+    ⚠️ 值解析不出（占位符没有绑定值）时**按矛盾处理**：模型已经对该列表过态，
+    闸门不替它翻案 —— 宁可少注入一条，也不注入一条把结果清零的谓词
+    （`H-ENUM-02` 的 0 行就是这么来的）。
+
+    ⚠️ 列名只比**不带表限定**的那一半：本包默认谓词引用的列
+    （`is_test_order` / `pay_status` / `refund_status` / `uv` …）在各资产上语义一致；
+    若将来出现同名异义列，本守卫会偏保守（多跳过），不会放松。
+    """
+    cand = _comparison(node, params)
+    if cand is None:
+        return None
+    ccol, cop, cval = cand
+    for ecol, eop, eval_ in existing:
+        if ecol != ccol:
+            continue
+        if {cop, eop} == {_OP_EQ, _OP_NE}:
+            if cval is _UNKNOWN or eval_ is _UNKNOWN or _norm_value(cval) == _norm_value(eval_):
+                return f"{ccol}: 候选 {cop} 与查询 {eop} 相反"
+        elif cop == eop == _OP_EQ:
+            if cval is _UNKNOWN or eval_ is _UNKNOWN or _norm_value(cval) != _norm_value(eval_):
+                return f"{ccol}: 候选 eq {cval!r} 与查询 eq {eval_!r} 不同"
+    return None
+
+
 def _inject_predicates(
-    root: exp.Expr, allowlist: Mapping[str, Any], metrics: Sequence[str] = ()
+    root: exp.Expr,
+    allowlist: Mapping[str, Any],
+    metrics: Sequence[str] = (),
+    params: Mapping[str, Any] | None = None,
 ) -> list[str]:
     """对查询内每个**物理表实例**注入其域的默认谓词，返回已注入谓词（审计可追溯）。
 
     `metrics` = 本次查询声明的指标名（`plan.metrics[].name`）。非空时按
     `allowlist["metric_predicates"]` 收窄域级谓词表（见 `_metric_scoped_predicates`）——
     这是 `refund_rate` 不被注入 `refund_status <> 'refunded'` 的唯一依据（包 `bundle:591`）。
+
+    `params` = 该 SQL 的绑定参数（`state["sql_params"]`），只用于矛盾守卫解析
+    `%(name)s`（`_contradiction`）：没有它，H-ENUM-02 那种**模型用占位符表过态**的
+    反向谓词就解析不出来，注入仍会把结果清零（W73-1）。
     """
 
     pred_by_domain: Mapping[str, Sequence[str]] = allowlist.get("default_predicates") or {}
@@ -537,6 +670,8 @@ def _inject_predicates(
     assets: Mapping[str, Any] = allowlist.get("assets") or {}
     cte_names = {c.alias for c in root.find_all(exp.CTE)}
     applied: list[str] = []
+    #: 每个 SELECT 的**原始** WHERE 合取项（注入前快照；之后 WHERE 会被改写）
+    existing_by_select: dict[int, list[tuple[str, str, Any]]] = {}
 
     for table in list(root.find_all(exp.Table)):
         name = table.name
@@ -559,6 +694,13 @@ def _inject_predicates(
             p = p.parent
         if parent_select is None:
             continue
+        key = id(parent_select)
+        if key not in existing_by_select:
+            where_now = parent_select.args.get("where")
+            conjuncts = _flatten_and(where_now.this) if where_now is not None else []
+            existing_by_select[key] = [
+                cmp for cmp in (_comparison(j, params) for j in conjuncts) if cmp is not None
+            ]
         for pred_sql in predicates:
             node = _parse_predicate(pred_sql)
             if node is None:
@@ -572,6 +714,18 @@ def _inject_predicates(
             # 跳过注入不放松策略：这些谓词在该资产上本来就不可表达。
             face = {str(c) for c in (asset.get("columns") or {})}
             if {c.name for c in node.find_all(exp.Column)} - face:
+                continue
+            #: 🔴 W73-1：与查询**已有**谓词显式矛盾的默认谓词必须跳过，否则它会把结果清零。
+            #: 实证 H-ENUM-02：题面 `refund_status='refunded'` + 注入 `<> 'refunded'` ⇒ 0 行；
+            #: 只去掉这一条后 5 行、计数与金标逐值相同。E-MET-08 的 `pay_status='unpaid'`
+            #: 同理。跳过是**逐条**的，不动其它谓词（派单红线）。
+            reason = _contradiction(node, existing_by_select[key], params)
+            if reason is not None:
+                _LOG.warning(
+                    "gate1 default predicate skipped (contradicts the query): "
+                    "predicate=%r asset=%s metric_scope=%s reason=%s",
+                    pred_sql, name, scope_note, reason,
+                )
                 continue
             for col in node.find_all(exp.Column):
                 if not col.table:
