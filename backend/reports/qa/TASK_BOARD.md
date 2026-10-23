@@ -5925,3 +5925,139 @@ canonical_asset / default_binding ⇒ L3 几乎全命中 ⇒ L4 兜底层近乎�
 ### 88.6 边界
 
 本窗零出站、零写库（全部 `begin;…rollback;`）；只追加 `reports/qa/**`；未动 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`；未改 15s／判据／gold／冻结集／语义包；官方门禁仍 `88f3500`／PASS 1/8 未刷新。
+
+---
+
+## 89 · W8 第 67 轮验收：三件可收；D0 裁定「该问但不卡门禁」；一条正则救 8 条误澄清（QA R31bl ｜ 2026-10-23 10:40 +0800 ｜ HEAD `f81a971`／644 笔）
+
+### 89.1 基线现读（【实测】）
+
+| 项 | 现读 |
+|---|---|
+| HEAD / origin/main | `f81a971`／644 笔，齐平；工作树仅 `?? .workbuddy/` |
+| 本轮入库 | `eval/w67_l4_diagnostics.py`、`results_r67_l4_reach.json`／`_l4_cost.json`／`_degradations_cutover_inventory.json`、`reports/w8/W67_DEGRADATIONS_CUTOVER.md`、`w8/RELAY.md` |
+| 是否碰 QA 面 | **否**（`reports/qa/**` 零改动，符合派单边界） |
+| 出站 / 花费 | 0 token／¥0 |
+| 官方门禁 | 仍 `88f3500`／PASS 1/8（未刷新，正确） |
+
+### 89.2 三件验收
+
+| 项 | 判 | QA 独立复核 |
+|---|---|---|
+| W67-1 L4 reach | 🟡 **结论收、分类要改** | “L4 判定 0 次”成立：我另从 r66 raw 数 `binding_status` = `resolved_default` **119**／`None` **47**／`resolved_unique` **0**／`ambiguous` **0**；`_level4` 只产后两种状态 ⇒ 0 次。`ε=0` 变体 **0/31/54/67/70** 与我 §88.5 表逐格一致 ⇒ 双口径已消 |
+| W67-2 L4 成本 | ✅ 收 | 按 `budget.PRICES`（peak 0.30／0.006／1.20 USD/M ×7.1）复算：`(68,884×0.30 + 46,848×0.006 + 117,293×1.20)/1e6 ×7.1 = ¥1.148062` **逐位对上**；off-peak 恰半 `¥0.574023`。119 次调用／54% 成本／0 次判定成立 |
+| W67-3 cutover | ✅ 收（标签要改） | 两处定性修正成立（我核 `enums.py:442-467`：`switched_to_weak_model` 属 `ActionTaken`、`DegradedReason` 8 值含 `llm_unavailable`）。**但 `n_files_scanned=152` 名不符实**：它是“有非空 `records` 的文件数”，`eval/results_*.json` 实有 **211**，**静默跳过 59 个**（gate recompute／矩阵／提案类无 `records`，`w67_l4_diagnostics.py:534` 的 `continue`）。结论不受影响——我全量 grep 211 个，含 `llm_concurrency_exceeded` 的只有 `results_r66_saturation_graph.json`（+盘点件自我引用） |
+
+**订正一（口径，影响对外引用）**：`16 条 expected_clarify` 是**两个集合被合并**——
+`16` = `terminal=clarify` 的记录数（构成 **7 条 expected=clarify ＋ 9 条 expected=execute 的误澄清**）；
+`18` = 冻结集 `expected_behavior=clarify` 的题数。实况：**7 条 intent 澄清**（C-CITY-01/03/04、C-UV-01、C-REG-01/02、C-CAT-01）＋**1 条 plan 拒答**（C-CITY-02）＋**10 条已走到 bind 并被 L3 判 `resolved_default`**（C-GMV-01/02/03/04、C-RATE-01/02、C-REP-01/02、C-UV-02、C-AOV-01 ⇒ 8 complete ＋ 2 `GATE_AST_REJECTED`）。
+⇒ “16 条 expected_clarify 从未进入 bind”只对 7 条成立。
+
+**订正二（根因，我上一轮也说得太窄）**：读完这 10 条的 `clarify_expected` 原文，**它们不是“指标定义歧义”**，而是四类缺口（与绑定层无关）：
+
+| 类 | 条数 | 例 |
+|---|---|---|
+| 时间窗未定义／未对齐 | 5 | C-GMV-01「本月」＝自然月还是近 30 天；C-GMV-03「最近」无窗口；C-GMV-04「最近一周」起点；C-AOV-01 无时间窗；C-REP-02 开放式 |
+| 口径二义 | 1 | C-RATE-01 退款率 金额口径 vs 单量口径 |
+| 术语映射不明 | 1 | C-RATE-02「退货」vs「退款」只有 `refund_status` |
+| 聚合语义不明 | 1 | C-UV-02「总」＝全期去重 vs 逐日累加 |
+| 包内有定义但要求回显确认 | 2 | C-GMV-02「上个月」时区/含端；C-REP-01 复购率 90 天窗口 |
+
+代码侧佐证：`bind.py:_concept_of` 只判 `plan.metrics[0].name`，**时间窗与口径根本不进绑定层**（`time_semantics` 在 bind 处传 `None` 不校）。而且 C-GMV-03「最近的 GMV」生成 SQL 里出现了 `pay_time >= %(start_ts)s` ⇒ **无定义窗口被静默填了默认值**。⇒ 真正缺的是**时间窗/口径这一段的澄清闸门**，L3 对指标概念的判定本身没错。
+
+### 89.3 🔴 一条正则救 8 条误澄清（本轮最可操作发现）
+
+9 条误澄清 = **H-STR-01…08（同一模板，只换城市名）＋ X-MET-10**。8 条的问句形如
+`T_A 位于广州的店铺各有多少个商品？`，全部止步 `normalize → intent → clarify_out`。
+
+根因在 `backend/app/graph/nodes/normalize.py:74-101` 的
+`_demote_unambiguous_shop_city_clarification`：它只在两种题面下撤销城市歧义澄清——
+
+```python
+if "各城市" not in question and not re.search(
+    r"在\s*[^，。？?]{1,12}?的店铺各\s*SKU", question, re.IGNORECASE
+):
+    return update          # ← 不匹配就保持 CLARIFY
+```
+
+H-STR 的问句同时卡两道：**「位于」不是「在」**、**「各有多少个商品」不是「各 SKU」** ⇒ 正则不命中 ⇒ 澄清照旧。
+而该澄清的 C-CITY-03「广州的销售额是多少？」没有「的店铺」定语 ⇒ 扩宽后仍不会误伤。**两条题面在结构上可分。**
+
+⇒ **8 条 = 一处正则 + 单测**，属语义漂移修复，**不是判据变更**。注意：demotion 只改路由不改 LLM 请求，但 demotion 后要真的走 `link→plan→gen_sql`，而 r63 匣带对这些 case **只录了 normalize 一条** ⇒ 端到端验证必然 `cassette_miss`，**需真打 8 条**（按 r63 实测 ≈¥0.013/条 ⇒ 高峰 ≈¥0.10、低谷 ≈¥0.05，上界 ¥0.15）。
+
+### 89.4 D0 裁定（总控授权「按你建议」）——**判据上该问，但它不卡任何一格门禁**
+
+**裁定**：这 10 条按冻结集口径**应当澄清**（冻结集是判据基准，不得为迁就系统而改），系统当前「披露后默认答」不对齐判据。
+
+**但不必因此阻塞收口**，理由是我核过判据原文：`eval/gates.py:35-36` 与官方快照的 `condition` 都写着
+**G-8 = 澄清率 ≤15% 且澄清后一次成功 ≥80%** ——**它只封上限、不度量“该澄清的澄清到了没有”**。八格里没有一格覆盖“澄清完备性”。⇒ 这 10 条不对应任何门禁判定，塞进 G-8 反而是错放（且 10 条全澄清会让澄清率从 9.6% 升到 10.8%，仍在限内，但语义上是两件事）。
+
+**处置（三层）**：
+1. **单列指标「澄清完备性」**（与可用性单列同构）：只作报告指标，**不作为收口硬条件**，也不进 `eval_metrics.json` 的八格；
+2. **不阻塞**：W68 只出材料账（零出站），实装另轮；实装必然改语义包／时间窗定义 ⇒ 请求哈希变 ⇒ **必须重录匣带 + 全量重跑**（低谷 ≈¥1.1），**排在 8 条误澄清修好之后一次跑完**，不单独烧一轮；
+3. **红线**：不得改冻结集／gold／判据／15s；不得把“10 条未澄清”写成“门禁通过”或“澄清能力已验证”。
+
+### 89.5 W68 派单（可整段转发）
+
+```text
+【W8 第 68 轮｜零出站为主 + 一笔 ≤¥0.15 的 8 条验证】
+
+0. 前置
+- 现读 HEAD 写进回执；证据一律绑 git_rev + dirty=false。
+- 不碰 backend/reports/qa/**；不 git add -A；.workbuddy/ 不入库。
+- 不改冻结集／gold／判据／15s／30s／dense.py 0 行语义；不刷官方门禁（仍 88f3500/PASS 1/8）。
+
+1. 🔴 W68-1（本轮主项，先改码零出站）8 条城市误澄清：demotion 正则太窄
+- 事实：H-STR-01…08（「T_A 位于<城市>的店铺各有多少个商品？」）全部止步
+  normalize→intent→clarify_out，而它们语义上明确 = 店铺城市（唯一绑定 shop.city）。
+- 根因：backend/app/graph/nodes/normalize.py:74-101 _demote_unambiguous_shop_city_clarification
+  只认两种题面：「各城市」/ 正则 r"在\s*[^，。？?]{1,12}?的店铺各\s*SKU"。
+  H-STR 同时卡两道：「位于」≠「在」、「各有多少个商品」≠「各 SKU」。
+- 改法要求（QA 建议，按结构不按措辞）：
+  ① 把「位于/在 … 的店铺」定语位 + 被测主体是店铺或商品 ⇒ 判 shop.city 唯一；
+  ② 不要把规则扩成“句中出现城市名就撤销”——C-CITY-03「广州的销售额是多少？」必须**仍澄清**；
+     C-CITY-01/04 同理。
+  ③ 保留现有 reason_code 记账方式，新增的 demotion 也要写 normalize_original_reason_code。
+- 单测（必须新增）：
+  · H-STR-01 题面 ⇒ 不再 CLARIFY（reason_code=shop_city_unambiguous）
+  · C-CITY-03 题面 ⇒ 仍 CLARIFY
+  · C-CITY-01 / C-CITY-04 ⇒ 仍 CLARIFY
+  · 「在杭州的店铺各 SKU 有多少」（W60 原用例）⇒ 仍 demote（回归不破）
+- 端到端验证（唯一花钱项）：改完 live 跑这 8 条，录新匣带 eval/cassettes/w8_r68_hstr8.jsonl。
+  **注意**：r63 匣带对这 8 条只录了 normalize 一条，demotion 后要走 link→plan→gen_sql ⇒ replay 必 miss，
+  所以必须真打，不能拿 replay 冒充。
+  预算：≈¥0.10（高峰）/ ≈¥0.05（低谷），**上界 ¥0.15，超了停手报总控**；建议排 18:00 后。
+  回执要给：每条终态、tokens、cost、是否还 clarify。
+
+2. 🔴 W68-2 X-MET-10 单条定位（零出站）
+- 「618 期间各大区各店铺的成交金额合计是多少？」止步 clarify_out，冻结集 expected=execute。
+- 只定位不断言根因：是「618 期间」时间窗、还是「大区/店铺」层级、还是「成交金额」口径触发。
+- 产出：逐层读 normalize 的 intent_detail.reason_code 与 ambiguities 原文。
+
+3. 🟡 W68-3 澄清完备性材料账（零出站，只出材料，不改行为）
+- 对象：10 条（C-GMV-01/02/03/04、C-RATE-01/02、C-REP-01/02、C-UV-02、C-AOV-01）。
+- 每条给：问句／clarify_expected 原文／实际生成 SQL／缺的是哪一类闸门。
+- 四类口径（QA 已分类，请沿用）：time_window_undefined 5 条／definition_multiple 1／
+  term_mapping_unknown 1／aggregation_ambiguous 1／需回显确认 2。
+- 总控已裁：**判据上该问**；但 G-8 只封澄清率上限、不度量澄清完备性 ⇒ 单列指标、
+  不进八格、不作收口硬条件。**本轮不要实装闸门**，只出“实装需要动哪些文件 + 会破哪些匣带”的清单。
+- 红线：不得写「澄清能力已验证」；不得为凑 15% 改判据或剔分母。
+
+4. 🟡 W68-4 盘点件口径订正（零出站）
+- results_r67_degradations_cutover_inventory.json 的 n_files_scanned=152 实为“有非空 records 的文件数”，
+  eval/results_*.json 实有 211（跳过 59 个）。请把字段改名为 n_files_with_records，并在 rule 里
+  写明“另有 N 个无 records[] 的产物未纳入正表，逐类说明”，避免下一窗当成“全量盘点”。
+
+5. 不做
+- 不跑 τ 采样（已暂缓，等 10 条材料账 + 8 条修复落地）；不扩 L4 候选面；不碰 G-8 二轮；
+- 不改 semantic/ 正式包（时间窗/口径闸门属契约变更，另轮 + 需重基线）。
+
+6. 回执要求
+- 每项：改动文件／测试数／产物路径／git_rev+dirty／tokens；
+- W68-1 必须给 8 条逐条终态 + 四条单测的 name 列表；
+- 若本轮花了钱，给逐条 cost 与合计，超出 ¥0.15 说明原因。
+```
+
+### 89.6 边界
+
+本窗零出站、零写库（全部只读）；只追加 `reports/qa/**`；未动 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`；未改 15s／判据／gold／冻结集／语义包；官方门禁仍 `88f3500`／PASS 1/8 未刷新。
