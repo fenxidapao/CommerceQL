@@ -1,0 +1,127 @@
+{
+  "provenance": "W71 零出站审计（r66 重放 + 冻结集 + 语义包 + 沙箱 sqlite；tokens 计费 = 0）",
+  "task": "W71-3 城市覆盖缺口登记（只出材料）",
+  "generated_at": "2026-10-23T06:31:29+00:00",
+  "git_rev": "ec3dc64",
+  "git_dirty": false,
+  "sandbox_tenant_cities": {
+    "T_A": [
+      "太原市（T_A-S01）",
+      "长春市（T_A-S02）",
+      "南京市（T_A-S03）",
+      "福州市（T_A-S04）",
+      "郑州市（T_A-S05）"
+    ],
+    "T_B": [
+      "呼和浩特市（T_B-S01）",
+      "哈尔滨市（T_B-S02）",
+      "杭州市（T_B-S03）",
+      "南昌市（T_B-S04）"
+    ],
+    "T_C": [
+      "沈阳市（T_C-S01）",
+      "上海市（T_C-S02）",
+      "合肥市（T_C-S03）"
+    ]
+  },
+  "n_t_a_cities": 5,
+  "zero_gold_city_cases": [
+    {
+      "case_id": "H-STR-01",
+      "city": "广州市",
+      "city_exists_in_tenant": null,
+      "expected": "execute",
+      "terminal": "clarify"
+    },
+    {
+      "case_id": "H-STR-02",
+      "city": "杭州市",
+      "city_exists_in_tenant": "T_B",
+      "expected": "execute",
+      "terminal": "clarify"
+    },
+    {
+      "case_id": "H-STR-03",
+      "city": "成都市",
+      "city_exists_in_tenant": null,
+      "expected": "execute",
+      "terminal": "clarify"
+    },
+    {
+      "case_id": "H-STR-04",
+      "city": "武汉市",
+      "city_exists_in_tenant": null,
+      "expected": "execute",
+      "terminal": "clarify"
+    },
+    {
+      "case_id": "H-STR-06",
+      "city": "西安市",
+      "city_exists_in_tenant": null,
+      "expected": "execute",
+      "terminal": "clarify"
+    },
+    {
+      "case_id": "H-STR-07",
+      "city": "长沙市",
+      "city_exists_in_tenant": null,
+      "expected": "execute",
+      "terminal": "clarify"
+    },
+    {
+      "case_id": "X-STR-01",
+      "city": "广州市",
+      "city_exists_in_tenant": null,
+      "expected": "execute",
+      "terminal": "complete"
+    },
+    {
+      "case_id": "X-STR-02",
+      "city": "杭州市",
+      "city_exists_in_tenant": "T_B",
+      "expected": "execute",
+      "terminal": "complete"
+    },
+    {
+      "case_id": "X-STR-03",
+      "city": "成都市",
+      "city_exists_in_tenant": null,
+      "expected": "execute",
+      "terminal": "complete"
+    },
+    {
+      "case_id": "X-STR-04",
+      "city": "武汉市",
+      "city_exists_in_tenant": null,
+      "expected": "execute",
+      "terminal": "complete"
+    },
+    {
+      "case_id": "X-STR-06",
+      "city": "西安市",
+      "city_exists_in_tenant": null,
+      "expected": "execute",
+      "terminal": "complete"
+    },
+    {
+      "case_id": "X-STR-07",
+      "city": "长沙市",
+      "city_exists_in_tenant": null,
+      "expected": "execute",
+      "terminal": "complete"
+    }
+  ],
+  "two_fix_paths": {
+    "补沙箱数据": {
+      "what": "给 T_A 增补广州/成都/武汉/西安/长沙的店铺与商品（或把杭州划到 T_A）",
+      "impact": "不动冻结集/gold/判据；沙箱指纹变化 ⇒ 需重跑基线（results 全刷新），不需重封印冻结集（gold_result_hash 由 gold SQL 与数据共同决定 ⇒ 空→非空会变）",
+      "risk": "🔴 沙箱 DB sha256 写在冻结集 `sandbox_db_sha256` ⇒ 补数据会触发 N-13 验真不一致，必须同时更新该指纹（属于冻结集变更，须总控批准）"
+    },
+    "把 case 改到存在城市": {
+      "what": "把 12 条的 6 个城市换成 T_A 已存在的城市",
+      "impact": "冻结集变更 + 重封印 + 重基线；沙箱不动",
+      "risk": "题面语义随之改变（Q 与 gold 都改），且 H-STR/X-STR 各 8 条会重复城市"
+    }
+  },
+  "recommendation": "不建议直接改 case；若要修，优先补数据 + 更新 sandbox 指纹（一次变更解决 12 条），但须先确认冻结集指纹更新的授权路径"
+}

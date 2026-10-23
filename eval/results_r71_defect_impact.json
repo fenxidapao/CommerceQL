@@ -1,0 +1,511 @@
+{
+  "provenance": "W71 零出站审计（r66 重放 + 冻结集 + 语义包 + 沙箱 sqlite；tokens 计费 = 0）",
+  "task": "W71-2 三类缺陷「若修正」的影响面（沙箱双版本实跑；只算不改）",
+  "generated_at": "2026-10-23T06:31:29+00:00",
+  "git_rev": "ec3dc64",
+  "git_dirty": false,
+  "method": "修正版 gold 与 r66 记录的预测 SQL 都在同一沙箱、同一租户边界（TEMP VIEW）重跑，再用 eval/equivalence.py::compare_tables 判定 —— 与判分同器同界，非推演",
+  "class_summary": {
+    "A": {
+      "n": 5,
+      "equiv_before": 0,
+      "equiv_after": 5,
+      "flips": [
+        "E-ENUM-06",
+        "E-ENUM-07",
+        "E-ENUM-08",
+        "E-ENUM-09",
+        "E-ENUM-10"
+      ]
+    },
+    "A2": {
+      "n": 1,
+      "equiv_before": 0,
+      "equiv_after": 1,
+      "flips": [
+        "M-HIER-03"
+      ]
+    },
+    "B": {
+      "n": 13,
+      "equiv_before": 0,
+      "equiv_after": 0,
+      "flips": []
+    },
+    "C": {
+      "n": 3,
+      "equiv_before": 0,
+      "equiv_after": 3,
+      "flips": [
+        "M-HIER-04",
+        "M-HIER-05",
+        "M-HIER-06"
+      ]
+    }
+  },
+  "per_case": [
+    {
+      "case_id": "E-ENUM-06",
+      "fix_class": "A",
+      "gold_rows_before": 1,
+      "gold_rows_after": 1,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": true,
+      "diffs_before": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "diffs_after": [],
+      "flips_to_equivalent": true,
+      "pred_rows": 1
+    },
+    {
+      "case_id": "E-ENUM-07",
+      "fix_class": "A",
+      "gold_rows_before": 1,
+      "gold_rows_after": 1,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": true,
+      "diffs_before": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "diffs_after": [],
+      "flips_to_equivalent": true,
+      "pred_rows": 1
+    },
+    {
+      "case_id": "E-ENUM-08",
+      "fix_class": "A",
+      "gold_rows_before": 1,
+      "gold_rows_after": 1,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": true,
+      "diffs_before": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "diffs_after": [],
+      "flips_to_equivalent": true,
+      "pred_rows": 1
+    },
+    {
+      "case_id": "E-ENUM-09",
+      "fix_class": "A",
+      "gold_rows_before": 1,
+      "gold_rows_after": 1,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": true,
+      "diffs_before": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "diffs_after": [],
+      "flips_to_equivalent": true,
+      "pred_rows": 1
+    },
+    {
+      "case_id": "E-ENUM-10",
+      "fix_class": "A",
+      "gold_rows_before": 1,
+      "gold_rows_after": 1,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": true,
+      "diffs_before": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "diffs_after": [],
+      "flips_to_equivalent": true,
+      "pred_rows": 1
+    },
+    {
+      "case_id": "M-HIER-03",
+      "fix_class": "A2",
+      "gold_rows_before": 5,
+      "gold_rows_after": 5,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": true,
+      "diffs_before": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "diffs_after": [],
+      "flips_to_equivalent": true,
+      "pred_rows": 5
+    },
+    {
+      "case_id": "H-STR-01",
+      "fix_class": "B",
+      "gold_rows_before": 0,
+      "gold_rows_after": 0,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": null,
+      "equivalent_after": null,
+      "diffs_before": null,
+      "diffs_after": null,
+      "flips_to_equivalent": false,
+      "pred_rows": null
+    },
+    {
+      "case_id": "H-STR-02",
+      "fix_class": "B",
+      "gold_rows_before": 0,
+      "gold_rows_after": 0,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": null,
+      "equivalent_after": null,
+      "diffs_before": null,
+      "diffs_after": null,
+      "flips_to_equivalent": false,
+      "pred_rows": null
+    },
+    {
+      "case_id": "H-STR-03",
+      "fix_class": "B",
+      "gold_rows_before": 0,
+      "gold_rows_after": 0,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": null,
+      "equivalent_after": null,
+      "diffs_before": null,
+      "diffs_after": null,
+      "flips_to_equivalent": false,
+      "pred_rows": null
+    },
+    {
+      "case_id": "H-STR-04",
+      "fix_class": "B",
+      "gold_rows_before": 0,
+      "gold_rows_after": 0,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": null,
+      "equivalent_after": null,
+      "diffs_before": null,
+      "diffs_after": null,
+      "flips_to_equivalent": false,
+      "pred_rows": null
+    },
+    {
+      "case_id": "H-STR-05",
+      "fix_class": "B",
+      "gold_rows_before": 1,
+      "gold_rows_after": 1,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": null,
+      "equivalent_after": null,
+      "diffs_before": null,
+      "diffs_after": null,
+      "flips_to_equivalent": false,
+      "pred_rows": null
+    },
+    {
+      "case_id": "H-STR-06",
+      "fix_class": "B",
+      "gold_rows_before": 0,
+      "gold_rows_after": 0,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": null,
+      "equivalent_after": null,
+      "diffs_before": null,
+      "diffs_after": null,
+      "flips_to_equivalent": false,
+      "pred_rows": null
+    },
+    {
+      "case_id": "H-STR-07",
+      "fix_class": "B",
+      "gold_rows_before": 0,
+      "gold_rows_after": 0,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": null,
+      "equivalent_after": null,
+      "diffs_before": null,
+      "diffs_after": null,
+      "flips_to_equivalent": false,
+      "pred_rows": null
+    },
+    {
+      "case_id": "H-STR-08",
+      "fix_class": "B",
+      "gold_rows_before": 1,
+      "gold_rows_after": 1,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": null,
+      "equivalent_after": null,
+      "diffs_before": null,
+      "diffs_after": null,
+      "flips_to_equivalent": false,
+      "pred_rows": null
+    },
+    {
+      "case_id": "H-CAT-01",
+      "fix_class": "B",
+      "gold_rows_before": 5,
+      "gold_rows_after": 5,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": false,
+      "diffs_before": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "diffs_after": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "flips_to_equivalent": false,
+      "pred_rows": 5
+    },
+    {
+      "case_id": "H-CAT-02",
+      "fix_class": "B",
+      "gold_rows_before": 5,
+      "gold_rows_after": 5,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": false,
+      "diffs_before": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "diffs_after": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "flips_to_equivalent": false,
+      "pred_rows": 5
+    },
+    {
+      "case_id": "H-CAT-03",
+      "fix_class": "B",
+      "gold_rows_before": 5,
+      "gold_rows_after": 5,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": false,
+      "diffs_before": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "diffs_after": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "flips_to_equivalent": false,
+      "pred_rows": 5
+    },
+    {
+      "case_id": "H-CAT-04",
+      "fix_class": "B",
+      "gold_rows_before": 5,
+      "gold_rows_after": 5,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": false,
+      "diffs_before": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "diffs_after": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "flips_to_equivalent": false,
+      "pred_rows": 5
+    },
+    {
+      "case_id": "H-CAT-05",
+      "fix_class": "B",
+      "gold_rows_before": 5,
+      "gold_rows_after": 5,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": false,
+      "diffs_before": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "diffs_after": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "flips_to_equivalent": false,
+      "pred_rows": 5
+    },
+    {
+      "case_id": "M-HIER-04",
+      "fix_class": "C",
+      "gold_rows_before": 0,
+      "gold_rows_after": 4,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": true,
+      "diffs_before": [
+        "行数不同：金标 0 / 预测 4"
+      ],
+      "diffs_after": [],
+      "flips_to_equivalent": true,
+      "pred_rows": 4
+    },
+    {
+      "case_id": "M-HIER-05",
+      "fix_class": "C",
+      "gold_rows_before": 0,
+      "gold_rows_after": 4,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": true,
+      "diffs_before": [
+        "行数不同：金标 0 / 预测 4"
+      ],
+      "diffs_after": [],
+      "flips_to_equivalent": true,
+      "pred_rows": 4
+    },
+    {
+      "case_id": "M-HIER-06",
+      "fix_class": "C",
+      "gold_rows_before": 0,
+      "gold_rows_after": 4,
+      "gold_error_before": null,
+      "gold_error_after": null,
+      "equivalent_before": false,
+      "equivalent_after": true,
+      "diffs_before": [
+        "行数不同：金标 0 / 预测 4"
+      ],
+      "diffs_after": [],
+      "flips_to_equivalent": true,
+      "pred_rows": 4
+    }
+  ],
+  "gate_impact": [
+    {
+      "gate": "G-1",
+      "input": "p0_tests（pytest 单元 + 集成结果）",
+      "defect_cases_in_input": [],
+      "affected": false,
+      "evidence": "输入是测试结果文件，不消费 166 条 records 的等价结论"
+    },
+    {
+      "gate": "G-2",
+      "input": "grid easy×low 单元格（passed = verdict.equivalent）",
+      "input_cases": [
+        "E-VER-02",
+        "E-VER-03",
+        "E-VER-04",
+        "E-VER-05",
+        "E-VER-06",
+        "E-VER-07",
+        "E-VER-10",
+        "E-VER-11"
+      ],
+      "defect_cases_in_input": [],
+      "affected": false,
+      "evidence": "easy×low 共 8 条，与 A/B/C 缺陷集交集 0 条 ⇒ 缺陷修正不会改变该格分子分母"
+    },
+    {
+      "gate": "G-3",
+      "input": "红队矩阵 RT-*（66 条攻击 SQL）",
+      "defect_cases_in_input": [],
+      "affected": false,
+      "evidence": "红队 case id 为 RT-*，与 166 条业务 case 无交集"
+    },
+    {
+      "gate": "G-4",
+      "input": "跨租户夹具（redteam 里的 RT-XT 子集）",
+      "defect_cases_in_input": [],
+      "affected": false,
+      "evidence": "输入是 RT-XT 结果，不消费业务 166 条"
+    },
+    {
+      "gate": "G-5",
+      "input": "refusal（expected=refuse 的记录）",
+      "input_cases_n": 24,
+      "defect_cases_in_input": [],
+      "affected": false,
+      "evidence": "拒答分母 24 条，与缺陷集交集 0 条"
+    },
+    {
+      "gate": "G-6",
+      "input": "压测回执（W7 loadtest）",
+      "defect_cases_in_input": [],
+      "affected": false,
+      "evidence": "输入是压测报告，与业务 case 无关"
+    },
+    {
+      "gate": "G-7",
+      "input": "probe_metric_values.json（13 条核心指标权威值比对）",
+      "input_cases": [
+        "E-MET-01",
+        "E-MET-02",
+        "E-MET-03",
+        "E-MET-04",
+        "E-MET-05",
+        "E-MET-06",
+        "E-MET-07",
+        "E-MET-09",
+        "M-IDX-01",
+        "M-IDX-02",
+        "M-IDX-05",
+        "M-IDX-06"
+      ],
+      "defect_cases_in_input": [],
+      "affected": false,
+      "evidence": "G-7 输入是 12 条 E-MET/M-IDX，与缺陷集交集 0 条"
+    },
+    {
+      "gate": "G-8",
+      "input": "records 的 clarify 计数（分子=clarify，分母=已评分）",
+      "clarify_cases_n": 16,
+      "defect_cases_that_are_clarify": [
+        "H-STR-01",
+        "H-STR-02",
+        "H-STR-03",
+        "H-STR-04",
+        "H-STR-05",
+        "H-STR-06",
+        "H-STR-07",
+        "H-STR-08"
+      ],
+      "affected": false,
+      "evidence": "修正只改 gold 侧，不改系统行为 ⇒ clarify 分子分母都不变（H-STR 6 条目前确为 clarify，但修正 gold 不会让它们变 execute）"
+    }
+  ],
+  "b_consistency_check": {
+    "question": "B 类若改成 COUNT(*)，H-CAT 与 M-DIM 是否就一致？还剩几处分歧？",
+    "answer": "见 b_pair_values：H-CAT 改 COUNT(*) 后其口径与 M-DIM-07/09 同为全量；但 H-STR 仍带 on_sale（同属 B 类），且 M-HIER-04/05/06 是 C 类字面问题 —— 「一致」只在 B 类内部成立，跨类分歧（C 类 + A 类）仍在",
+    "pairs": [
+      {
+        "case_id": "H-CAT-01",
+        "gold_rows": 5,
+        "dropping_on_sale_rows": 5,
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '3C数码' AND v_product.on_sale = 1 "
+      },
+      {
+        "case_id": "M-DIM-07",
+        "gold_rows": 33,
+        "dropping_on_sale_rows": 33,
+        "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product GROUP BY category_l2"
+      },
+      {
+        "case_id": "M-DIM-09",
+        "gold_rows": 9,
+        "dropping_on_sale_rows": 9,
+        "gold_sql": "SELECT category_l1, COUNT(*) FROM v_product GROUP BY category_l1"
+      }
+    ]
+  }
+}

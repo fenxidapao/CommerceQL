@@ -7418,3 +7418,85 @@ eval/results_r70_zero_gold_inventory.json     W70-3
 
 * 未改：语义包 / gold / 冻结集 / 判据 / 等价判据 / 代码 / `reports/qa/**` / `.workbuddy/`；
   未标 unscored、未剔分母；未刷门禁（仍 `88f3500`/PASS 1/8）。
+
+---
+
+## 76 W71：全量 166 条金标口径审计 + 缺陷影响面 + 城市覆盖缺口（零出站）
+
+派单：W71（2026-10-23 14:27）｜起跑 HEAD `ec3dc64`｜**tokens = 0，零出站**。
+
+### 76.1 W71-1 审计表（166 行）—— 三类缺陷条数与派单一致，但 B 类少 1 条有据
+
+`eval/results_r71_gold_caliber_audit.json`（rev=ec3dc64/dirty=False；166 行全表 + 逐条证据）。
+
+方法（机械，可复算）：问句正则抽线索 → gold_sql 抽谓词/字面/表集合 → 包内 `metrics[].synonyms`
+最长匹配定位概念、再比对 `metrics[].expression`。缺陷规则四条（A / A2 / B / C），
+另发现第 5 类 C2（数据缺口，非 gold 缺陷）。
+
+| 类 | 定义 | 条数 | case |
+|---|---|---|---|
+| A | 问在架/在售/上架，gold 缺 on_sale，而包 expression 有 | **6** | E-ENUM-06…10、M-HIER-03 |
+| A2 | 问商品但 gold 的 FROM 无商品表（错表） | **1** | M-HIER-03（`SELECT city, COUNT(*) FROM v_shop`） |
+| B | 裸「商品数」/「有多少个商品」，gold 带 on_sale，而包 product_cnt=COUNT(*) | **13** | H-CAT-01…05、H-STR-01…08 |
+| C | gold 字面自造后缀（前缀在库内、全字面不在） | **3** | M-HIER-04/05/06（`'3C数码-子类1'` vs 库内 `'3C数码'`） |
+| C2 | 字面悬空（数据缺口，非 gold 缺陷） | 10 | H-STR-01/03/04/06/07、X-STR-01/03/04/06/07 |
+
+* 🔴 **H-STR-09 不是缺陷**（与派单点名的「H-STR-01…09」差 1 条）：其 gold 是
+  `AVG(list_price) ... WHERE on_sale = 1`，而包 `avg_list_price` 的 expression 本身就是
+  `AVG(product.list_price) WHERE on_sale = true` ⇒ gold 与包**一致**。判 B 类 13 条（非 14）。
+* 每条均带：问句原词 / gold 原文 / 包行号或库内实测值 / **对等价判定的方向**
+  （A/B/C 全部为**假阴性** = 系统按包做对却被判错；无一条是假阳性）。
+* 干净条数 139/166（重复计入已去重）。**未改任何一条 gold**；本产物不构成"已修复"。
+
+### 76.2 W71-2 若修正的影响面（沙箱双版本实跑，非推演）
+
+`eval/results_r71_defect_impact.json`（rev=ec3dc64/dirty=False）。
+方法与判分同器同界：修正版 gold 与 r66 预测 SQL 均经 `run_in_sandbox(tenant, views=True)`
+重跑后交 `equivalence.compare_tables`。
+
+* **A（5 条）**：补 on_sale 后 **0/5 → 5/5 等价**（E-ENUM-06…10 全部翻转）。
+* **A2（1 条）**：M-HIER-03 改成按店铺城市统计在架商品数后 **0 → 1 等价**。
+* **C（3 条）**：字面修正后 gold 0 行 → 4 行，**0/3 → 3/3 等价**（M-HIER-04/05/06）。
+* **B（13 条）**：改成 COUNT(*) 后 **0/13 → 0/13**，一条都没翻转。原因实测：
+  - H-STR-06 条在 r66 是 clarify ⇒ 无预测 SQL，等价判定**无从比较**（`diffs=None`）；
+  - H-STR-05、H-CAT-01…05 有预测但不等价，修正后仍是
+    `列无法配对（列数相同但内容不匹配）`（预测侧列结构/标签与 gold 不同）。
+  ⇒ **"把 B 类 gold 改成 COUNT(*)"不是提升等价条数的路径**；它只解决口径语义，不解决列结构。
+* **B 类一致性问句的答案**：H-CAT-01 改成 COUNT(*) 后与 M-DIM-07/09 同为"全量、无 on_sale"
+  口径（实测 H-CAT-01 T_A 3C数码：带 on_sale 44/47/42/46/47，无过滤 49/49/48/50/48），
+  **口径一致、粒度不同**（按店铺 vs 按类目）。剩 1 处口径分歧：H-STR 若也改全量则一致，
+  但 M-HIER-04…06 是 C 类字面问题、A 类 6 条是缺过滤 —— 跨类分歧仍在，不是"改 B 就齐"。
+* **八闸逐格核实（全部不受影响，逐格给输入与交集）**：
+  G-1 输入=pytest 结果（不消费 records）｜G-2 easy×low 8 条、与缺陷集交集 **0**｜
+  G-3 红队 66 条 RT-*、交集 **0**｜G-4 输入=RT-XT 结果｜G-5 拒答分母 24 条、交集 **0**｜
+  G-6 压测回执｜G-7 输入=12 条 E-MET/M-IDX、交集 **0**｜
+  G-8 澄清分子分母只受系统行为影响，修正只动 gold 侧 ⇒ 不变。
+
+### 76.3 W71-3 城市覆盖缺口登记（只出材料）
+
+`eval/results_r71_city_coverage.json`（rev=ec3dc64/dirty=False）。
+
+* 沙箱租户城市（实测）：**T_A 5 城**（太原/长春/南京/福州/郑州，各 1 店）、
+  **T_B**（呼和浩特/哈尔滨/杭州/南昌）、**T_C**（沈阳/上海/合肥）。
+* 12 条零金标城市案对照：广州/成都/武汉/西安/长沙 —— **沙箱无该城市**；
+  杭州 —— **存在但属 T_B**（租户隔离导致 T_A 视角 0 行）。H-STR 6 条（clarify）+
+  X-STR 6 条（complete）城市完全同构。
+* 两种修法：
+  1. **补沙箱数据**（给 T_A 增补 5 城或把杭州划归 T_A）：不动 gold/判据，但
+     🔴 冻结集里有 `sandbox_db_sha256` 指纹 ⇒ 补数据会触发 N-13 验真不一致，
+     必须同步更新该指纹（属冻结集变更，须总控批准）；改完需重跑基线（不需重封印 gold）。
+  2. **把 case 改到已存在城市**：冻结集变更 + 重封印 + 重基线；题面与 gold 同时改，
+     且 H-STR/X-STR 会撞城市。**不建议**先走这条。
+* 建议：优先补数据 + 更新指纹（一次变更解决 12 条），但先确认指纹更新的授权路径。
+
+### 76.4 边界
+
+```
+eval/w71_gold_caliber_audit.py              新增：W71 三件零出站审计脚本
+eval/results_r71_gold_caliber_audit.json    W71-1（166 行全表）
+eval/results_r71_defect_impact.json         W71-2（含八闸逐格）
+eval/results_r71_city_coverage.json         W71-3
+```
+
+* 未改：gold / 冻结集 / 语义包 / 判据 / 等价判据 / 代码 / `reports/qa/**` / `.workbuddy/`；
+  未标 unscored；未刷门禁（仍 `88f3500`/PASS 1/8）。
