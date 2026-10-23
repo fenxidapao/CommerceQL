@@ -1848,3 +1848,15 @@ W67 派单见 `TASK_BOARD §88.5`（三件，全部零出站）。
 8. **列族**：W72-4 的 38/6 只覆盖列数相同支；全量另有 **36 条"列数不同"**（23 条 2/3、1 条 2/5、12 条预测 0），全 execute、G-2 交集 0；"多余列是否等价"须总控裁。
 9. **既有红灯**：`test_no_undeclared_third_party_imports`（`from eval.runner`，起跑点即存在）；建议 eval 入测试 `_FIRST_PARTY`，需点句。
 10. **结论**：第 72 轮材料全收、W72-3 实装收；**"谓词矛盾"这一类只修了一半——按声明治好了 refund_rate，按空表放过了 refunded_order_cnt。** W73 派单见 `TASK_BOARD §94.9`。
+
+## R31br · W8 第 73 轮验收：四件全收；谓词矛盾子类已闭；三条判据变更已签 ／ 2026-10-23 19:20 +0800 ／ HEAD `d005555`／669 笔
+
+1. **基线【实测】**：`d005555`／669／与 origin/main 齐平；树仅 `?? .workbuddy/`；禁改面（reports/qa、semantic、冻结集、equivalence、gates、probe、cassettes）空 diff；官方门禁仍 `88f3500`／PASS 1/8。
+2. **W73-1 收【实测】**：新测 8 passed；累计 14；全量 unit **1546 passed**；replay 谓词集变化**恰 1 条**、行数变化**恰 1 条**、逐案终态/等价 0 变化；H-ENUM-02 五店计数 1648/1628/1610/1601/1585 与沙箱逐值相同；H-ENUM-01/03/04 未误伤。
+3. **残余**：占位符未解析⇒跳过（保守 fail-open）；多条件谓词不参与；列名带表限定时不比较（偏保守）。`SqlGuard.gate1` 已透传 metrics/params。
+4. **W73-2 收**：三条全部 `plan→refuse_out`，`blocking_issues` 统一记 `no_data_asset`；M-DIM-05 维度声明缺 shop.city；M-MET-01 channel 绑定与 concept note 相反；E-MET-08 歧义＋反向 gold＋误加无时间终点。**没有一条是真缺表。**
+5. **W73-3 收**：36 = 24 可跑＋12 无结果；按名 0/24，按值翻 14（列 shop_name×13＋sku_name×1）；10 条不翻。总控签"允许多余列"，W74 窄口。
+6. **W73-4 收**：v1/v2/v3 数值确认；系统 M-IDX-09 无上界（=v2）、M-IDX-10 有上界（=v3）⇒ 同指标窗口不一致；`metric.window` 无代码读取；金标三缺陷成立。
+7. **三条已签**：① G-7 改 system vs authority（gold 侧降非门禁回归；旧读数标旧口径；预期 FAIL→UNVERIFIED，不是 PASS）② 多余列窄口放行（预期 36→50，八闸不变）③ `eval` 入 `_FIRST_PARTY`（不动 pyproject）。
+8. **测试成本**：QA 本轮 ¥0（零出站、只读沙箱）。
+9. **结论**：第 73 轮 W73-1 实装收、W73-2/3/4 材料收；**谓词矛盾子类（显式矛盾）已闭，"空声明回落"仍按设计保留**。W74 派单见 `TASK_BOARD §95.7`；待总控三签（E-MET-08／复购/窗口／维度绑定）。

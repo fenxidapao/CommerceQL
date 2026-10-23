@@ -6646,3 +6646,124 @@ params: {"refund_status": "refunded", "pay_status": "paid"}
 ### 94.10 边界
 
 本窗零出站、零写库（沙箱 `mode=ro`）；只追加 `reports/qa/**`；未动 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`／`data/**`；未改判据／gold／冻结集／语义包；官方门禁仍 `88f3500`／PASS 1/8。
+
+## 95 · W8 第 73 轮验收：四件全收；谓词矛盾子类已闭；**总控三条判据变更已签**（QA R31br ｜ 2026-10-23 19:20 +0800 ｜ HEAD `d005555`／669 笔）
+
+> 总控点句：**G-7 按 B 案；允许多余列；依赖白名单按建议处理**。本轮 QA 零出站，W73 的数字我逐项复算。
+
+### 95.1 现状现读【实测】
+
+| 项 | 现读 |
+|---|---|
+| HEAD / 笔数 | `d005555` / 669，与 `origin/main` 齐平；树仅 `?? .workbuddy/` |
+| 本轮改动面 | 3 处产品代码（`ast_gate.py` 矛盾守卫、`gate1_ast.py` 传 params、`guard/__init__.py` 形状实现透传）＋1 个新测试文件＋4 份 W73 材料＋W8 `RELAY.md` |
+| 禁改面 | `reports/qa/**`、`semantic/**`、冻结集、`equivalence.py`、`gates.py`、`probe_metric_values.json`、`cassettes/**` **全部空 diff**【实测】 |
+| 官方门禁 | 仍 `88f3500`／PASS 1/8，未刷新 |
+
+### 95.2 W73-1 谓词矛盾哨兵：收【实测】
+
+| 项 | 我的结果 |
+|---|---|
+| 新测试 | `test_guard_predicate_contradiction.py` **8 passed**（参数化 `%(refund_status)s`、字面量、partial 不误伤、反向 `pay_status='unpaid'`、无矛盾不动、占位符未解析判冲突、同值等号不算、两个不同等号算冲突） |
+| 累计测试 | 新 8＋W72 的 6 共 **14 passed**；全量 unit **1546 passed**（1538→+8） |
+| 166 replay | 谓词集变化 **恰好 1 条**：H-ENUM-02 去掉 `refund_status <> 'refunded'`，无新增；行数变化 **恰好 1 条**：0→5；**逐案终态/等价 0 变化**（等价仍 36/163） |
+| H-ENUM-02 | 5 行，计数 1648/1628/1610/1601/1585，与我的沙箱复算逐值相同；剩余 `is_test_order=false`、`pay_status='paid'` 两条保留；仍因"金标 2 列/预测 3 列"判非等价（见 95.4） |
+| 未误伤 | H-ENUM-01/03/04、gmv/order_cnt/aov/arpu 谓词集均未变 |
+
+**设计判断我认同**：不采纳"空声明=明确无谓词"是对的——那会一次性把 14 个空谓词指标判成不注入，用一次语义变更换掉 fail-closed；W73-1 只闭"显式矛盾"这一支，是正确的最小步。`SqlGuard.gate1` 补 metrics/params 透传也补上了 §94.7 的残余风险②。
+
+**残余（记录，不阻塞）**：
+1. **占位符未解析 ⇒ 按矛盾跳过**（`_contradiction` 的显式选择）。这意味着 `sql_params` 缺失时，同列 `=`/`<>` 候选会被静默跳过（日志有），属**保守 fail-open**。本轮 166 replay 只动了 H-ENUM-02，未观察到其它跳过；但参数注入链路若变化，需重测。
+2. **多条件谓词（`a AND b`）不参与守卫**：`_comparison` 只认单列 `=`/`<>`；当前包内域级谓词都是单条件，无现时影响。
+3. **列名不带表限定**：同名异义列会偏保守（多跳过），不放松。
+
+### 95.3 W73-2 误拒 3/124 定位：收（材料）【实测】
+
+三条**全部**止于 `plan → refuse_out`，`blocking_issues` 非空 ⇒ `plan.py:89-105` 统一记 `no_data_asset`。我核过语义包与代码：
+
+| case | 真因（我复算） |
+|---|---|
+| M-DIM-05 | `shop.city` 列存在（`bundle:320` 注释明写"店铺所在城市，与收货城市同名不同义"），但 `dimensions[city]` 绑的是 `order_paid.receiver_city`（`bundle:1026-1027`）⇒ **维度声明缺一半**；且 `normalize.py` 的"各城市"降级把模型给的 clarify 降成 executable，随后 plan 又以同一歧义阻塞 ⇒ **两层判据打架** |
+| M-MET-01 | `order_paid.channel` 存在；concept「渠道」note（`bundle:1135`）明写"订单域问题应绑 order_paid.channel"，但 `dimensions[channel]` 绑 `traffic_daily.channel`（`bundle:998`）⇒ 模型据此判"订单侧无渠道" |
+| E-MET-08 | 不是资产缺失；"自造口径"保护 + 一条误加的"无时间终点"阻塞；题面"含未支付"与 gold"只取未支付"不等价 |
+
+**结论：三条里没有一条是"语义包真的没有这张表"**，`no_data_asset` 这个码把"歧义/映射错/真缺数据"压成同一个，报表不可区分。M-DIM-05/M-MET-01 是真缺陷，值得修；E-MET-08 处置待签（见 95.7）。
+
+### 95.4 W73-3 列族量化：收（材料）；判据已签"允许多余列"【实测】
+
+- 36 条列数不等 = **24 可跑**（23 条 2→3、1 条 2→5）＋12 条预测无结果集（拒答/错误，不属列族）——与我 §94.6 记数一致。
+- **按名投影 0/24**：金标聚合列没有别名（`COUNT(*)`、`SUM(pay_amount)`），预测叫 `refunded_order_cnt`/`gmv` ⇒ 结构性匹配不上。
+- **按值投影翻转 14 条**：H-ENUM-01/02/04、X-STR-08、X-ENUM-01/03/04/06/08、X-MET-01/02/03/04/05；多余列 `shop_name`×13＋`sku_name`×1。
+- 不翻转 10 条：H-MET-01…05＋M-MET-02（D 类缺谓词，值不同）、M-ENUM-01/03（行数 2000 vs 1000）、H-MET-10（1602 vs 579）。
+- **风险确认**：按值配对能凑出唯一对应，但不证明"对应是对的"；所以 W74 实现必须加"唯一匹配＋列序递增＋Tag 显式计数"，不能静默判等价。
+
+### 95.5 W73-4 复购金标：收（材料）；待签【实测】
+
+| 口径 | M-IDX-09 | M-IDX-10 |
+|---|---|---|
+| v0 gold 原样（整除） | 0 | 0 |
+| v1 仅 `*1.0` | 0.1671171171171171 | 0.29174849590074503 |
+| v2 `*1.0`＋两条谓词 | 0.16654133453652178 | 0.2907648583653456 |
+| v3 `*1.0`＋谓词＋90d 上界 | 0.11984047856430707 | 0.13292697943603005 |
+| 系统实测 | **0.16654133453652178（=v2，无上界）** | **0.13292697943603005（=v3，有上界）** |
+
+我核过系统 SQL：M-IDX-09 只有下界（`pay_time >= %(start_ts)s`），M-IDX-10 有 `pay_time < %(end_ts)s`（`end_ts=2026-05-30`）⇒ **同一指标两次运行窗口不一致**。包内 `window: "90 days"` 在 `bundle:613`，但 `grep` 全仓无代码读取 `metrics[].window`（只有 `models.py:169` 的字段声明）⇒ 窗口目前由模型即兴决定。金标三缺陷（整除／缺上界／缺谓词）成立。
+
+### 95.6 总控三条判据变更：已记录
+
+1. **G-7 = B 案（已签）**：门禁改为 **system vs semantic bundle authority**；`gold vs authority`（1/13）降为**非门禁回归项**保留。历史 G-7 读数一律标"旧口径"，不重算、不并列比较。**预期效果：G-7 从 FAIL 变 UNVERIFIED（因 τ 未校准），不是 PASS；官方门禁仍不刷新。**
+2. **多余列（已签）**：允许忽略预测多出的列，但只走**窄口**：唯一同值匹配＋列序递增＋显式 Tag；等列数路径（含 id↔name）不动。预期全量等价 36→50（+14），八闸读数不变（36 条与 G-2 交集 0，已核）。
+3. **依赖白名单（已签）**：`eval` 加入 `test_dependency_whitelist.py` 的 `_FIRST_PARTY`，不动 `pyproject.toml`；正向对照（假模块必须红）保留。
+
+### 95.7 W74 派单（三条已签实装＋三项材料；零出站）
+
+```text
+【W8 第 74 轮｜G-7 改 B、多余列窄口、依赖白名单＋误拒/复购/维度材料】
+
+0. 前置：现读 HEAD；证据绑 git_rev+dirty=false；不碰 reports/qa/**；不 git add -A；
+   .workbuddy/ 不入库；不改 gold/冻结集/语义包/gates 阈值/probe（除本单明确项）；不刷门禁；零出站。
+
+1. 🔴 W74-1 G-7 改 B（总控已签）
+- 产物：在原 probe rows 保留 gold_value/authority_value，新增 system_value/system_consistent；
+  顶层加 system_consistent/total/comparison_basis="system vs semantic bundle authority"。
+- gates.py G-7 只读 system_consistent/total；缺字段 ⇒ NOT_AVAILABLE（**不得回落到 gold**）；
+  τ 未校准仍降 UNVERIFIED；门禁条件文案同步。
+- reporter：G-7 摘要 = system vs authority；另列 dataset_caliber_consistency（gold vs authority）作非门禁回归。
+- 历史：旧 G-7=1/13 标"旧口径"，不重算、不并列。
+- 测试：system 13/13 时 raw PASS 但 τ 未校准→UNVERIFIED；只有 gold 1/13 时 NOT_AVAILABLE；
+  gold 1/13 不得驱动 PASS。
+- 文档清单（W8 写面不含 docs 则列出交总控/文档窗）：docs/07:3309、docs/04:323、docs/01:1621、docs/02:1031、runbook。
+- 红线：不得声称 G-7 通过；官方门禁不刷。
+
+2. 🔴 W74-2 多余列窄口（总控已签）
+- 仅当 pred 列数 > gold 列数时启用；pred 0 列/更少列不变；等列数路径不动（id↔name 仍不放开）。
+- 规则：金标每列在预测中按值多重集找**唯一**匹配列；全部金标列匹配成功且预测列下标**严格递增**；
+  新增 Tag.EXTRA_COLUMNS，报告列出多余列，不得静默。
+- 测试：H-ENUM-02 形状判等价；H-MET-01（值不同）仍不等价；列序倒置不通过；vacuous 不放行。
+- replay 166：预期 36→50；终态不变；复核 G-2 交集仍 0。
+- 文档：04 §C.4.1 + 07 等价判据同步。
+
+3. 🟢 W74-3 依赖白名单（总控已签）
+- test_dependency_whitelist.py 的 _FIRST_PARTY 加 "eval"；不动 pyproject；正向对照保留；
+  contract 全量应为 1112 passed。
+
+4. 🟡 W74-4 材料（只出材料，不改代码/包/gold）
+- M-DIM-05：新增 shop_city 维度或按上下文绑定？出最小包改动方案＋影响面（多少题受影响）。
+- M-MET-01：channel 维度按域绑定（order_paid.channel vs traffic_daily.channel）方案＋影响面。
+- normalize/plan 两层判据打架：出修复方案（plan 是否消费 normalize 的维度选择），不改。
+- E-MET-08：三种处置对 G-5/G-8 的影响对照（execute / clarify / refuse / 非计分反向探针），不执行。
+- 复购：gold_v2 与 metric.window 强制分开列影响面；不改 gold、不改代码。
+- 红线：改包/改冻结集/改 expected_behavior 均需总控签。
+
+5. 不做：不跑 τ；不扩 L4；不改 G-8；不刷门禁；不改官方快照。
+```
+
+### 95.8 待总控三签（W74 材料回来后逐条裁）
+
+1. **E-MET-08**：我建议**不改成 clarify 来"消掉"误拒**（那会把 3/124 变 2/124、答案面 124→123，属刷绿）。优先把它改成**非计分反向探针**（保留 execute 与故意不合格的 gold，但不进 G-2/G-5 分母），或修 gold 后保持 execute。请裁。
+2. **复购**：建议先让代码强制读 `metric.window`（只有该指标有 window，影响 3 条），再改 gold_v2；两者都属行为/冻结集变更，需签。
+3. **维度绑定**：M-DIM-05 的 shop_city、M-MET-01 的 channel 按域绑定，都会改语义包 ⇒ 需签版本与重基线方案。
+
+### 95.9 边界
+
+本窗零出站、零写库（沙箱 `mode=ro`）；只追加 `reports/qa/**`；未动产品代码／测试／语义包／冻结集／判据；官方门禁仍 `88f3500`／PASS 1/8。
