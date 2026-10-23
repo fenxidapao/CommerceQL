@@ -14,7 +14,8 @@
 --------------------------------------------------------------------------
 `run_gate1(sql, allowlist)` 的 `allowlist` 是 gate1 的**全部判据**（白名单表、默认谓词、
 `deny_columns`、常量表、生效 LIMIT）。它**只能**由 `SemanticBundlePort.guard_allowlist(ctx, max_rows=…)`
-产出（`contracts.GuardAllowlist`，7 键 wrapper；U-121 裁定"两个投影、两种形状"）。
+产出（`contracts.GuardAllowlist`，8 键 wrapper —— W72-3 起增 `metric_predicates`；
+U-121 裁定"两个投影、两种形状"）。
 ⚠️ 扁平的 `asset_allowlist(ctx)` 是 planner / binding 的**可见面**，按设计**不得**喂闸门 ——
 把它喂进来 `assets` 键取不到 ⇒ 普通 SQL 必被 R05 拒（那正是 `U-121` 的病害，不是预期行为）。
 ⚠️ 与 gate2 各自取一次：两次调用是**刻意**的 —— 判据按身份现算，共用一份变量会让

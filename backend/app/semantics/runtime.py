@@ -143,10 +143,10 @@ class SemanticBundleRuntime:
     ) -> GuardAllowlist:
         """闸门判据的**唯一形状**（U-121；`asset_allowlist` 的姊妹投影）。
 
-        7 个键**全部必填**（缺键 = 违约，见 `contracts.GuardAllowlist`；**明令禁止**
+        8 个键**全部必填**（缺键 = 违约，见 `contracts.GuardAllowlist`；**明令禁止**
         只补 `assets` 一键 —— 那会把一条 fail-closed 换成三条 fail-open）：
         `bundle_version` / `assets` / `joins` / `deny_columns` / `default_predicates` /
-        `allowed_constants` / `max_rows`。
+        `metric_predicates` / `allowed_constants` / `max_rows`。
 
         🔴 **`assets[]` 带两个列面，不是一个**（U-121 子事实 2 / W0 `RELAY.md` §11.1）：
 
