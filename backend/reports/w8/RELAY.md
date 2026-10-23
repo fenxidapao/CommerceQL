@@ -7966,3 +7966,96 @@ docs/07_技术设计文档_TDD.md                                       ← 仅 
 未改：gold／冻结集／语义包／`gates.py` 阈值（`THRESHOLDS` 未动）／`equivalence.py` 的 `REL_TOL`／
 `reports/qa/**`／`.workbuddy/`。未跑 τ、未扩 L4、未改 G-8、**未刷官方门禁**（仍 `88f3500`）。
 🔴 对外口径：**G-7 不是「通过」**（τ 未校准 ⇒ UNVERIFIED）；20 条等价新增是判据变更所得，不是能力提升。
+
+## 81 W75：复购窗口强制 ＋ 零列守卫 ＋ 当前门禁复算 ＋ 两项成本估算（零出站）
+
+派单：TASK_BOARD §96.8（QA R31bs，2026-10-23 20:20）｜起跑 HEAD `40241b5`｜
+**零出站**（replay 复用 r63 匣带；probe/沙箱全本地；tokens 计费 = 0）。
+
+### 81.1 W75-1 复购窗口强制（QA 决定 D2：只修系统，不改 gold）
+
+| 文件 | 改动 |
+|---|---|
+| `backend/app/guard/metric_window.py`（新） | 纯函数 `enforce_metric_windows(sql, params, rules)`：按 SELECT 找 `time_basis` 的**起始下界**，强制 `time_basis < start + window`；缺则补、不一致则改那一个比较、一致则不动、无起始时间不误加；窗口/起点解析不出 ⇒ `MetricWindowError`（fail-closed）；多指标同一基准窗口冲突 ⇒ 拒绝。上界一律走新绑定参数 `%(window_end_<metric>)s`（N-04，R14 不必开新常量） |
+| `backend/app/graph/nodes/gate1_ast.py` | 在 `run_gate1` **之前**按 `state["plan"].metrics[].name` 从语义包取 `window`/`time_basis`（可选能力探测 `semantics.metric()`），强制后把 `sql_text`/`sql_params` 同批落盘；无法强制 ⇒ `refuse(no_data_asset)` + `reason_code=metric_window_unenforceable`。放在本节点是因为 `repair` 也回到这里（`build.py:828`），gen_sql 会漏掉 repair 的 SQL |
+| `backend/tests/unit/test_guard_metric_window.py`（新） | 8 条：补上界／已有正确上界不动／无起始时间不误加／非法 window 拒／起点解析不出拒／不一致改值（其它谓词不动）／上界落在**拥有起点的那个 SELECT**／同基准窗口冲突拒 |
+
+**replay 166 逐条 delta**（`eval/results_r75_window_delta.json`，prev/next 两产物均 dirty=False）：
+
+| 项 | 结果 |
+|---|---|
+| SQL/参数变化的 case | **仅 `M-IDX-09`**（`pay_time < %(window_end_repurchase_rate_90d)s`，值 `2026-08-30`） |
+| M-IDX-09 值 | `0.16654133453652178` → **`0.11984047856430707`**（= 派单预期，逐位相等） |
+| M-IDX-10 | SQL 与参数**逐字不变**，值仍 `0.13292697943603005` |
+| C-REP-01 | SQL 与参数**逐字不变**（无起始时间 ⇒ 不加） |
+| 其它 case 的值 | 0 条变化（`changed_predicted_values_only = []`） |
+| 等价 / 终态 | 仍 **50**；`complete 116 / refuse 28 / none 3 / clarify 16 / error 3` 逐格不变 |
+
+🔴 **不是「修好 2 条」**：M-IDX-09/10 仍判**不等价**（gold 的 `COUNT/COUNT` 整数除法 ⇒ 0），
+本改动只修「同一指标两次窗口不一致」这个真 bug；`metrics[].window` 至今只有
+`repurchase_rate_90d` 一处声明（`bundle:613`）。
+
+### 81.2 W75-2 多余列零列守卫（QA 发现，latent）
+
+`eval/equivalence.py::_extra_column_pairs`：`len(gold.columns) == 0` ⇒ 直接返回 `None` +
+「金标零列：没有可配对的金标列（预测多出的列一律不忽略）」。此前循环 0 次、配对为空 ⇒
+`compare_tables` 会判 **equivalent=True**。当前数据不可达（0 列金标 0 条）。
+新增 2 条单测（0 行、2 行两种形态）；W74-2 原有 7 条全部复跑通过（共 9 条）。
+
+### 81.3 W75-3 当前门禁复算（**不是官方快照**；`eval_metrics.json` 未动）
+
+产物：`eval/results_r75_gate_recompute.json`（rev=`53cb149`/dirty=False）。
+输入：冻结集 166 × `results_r75_full166_window.json`（`53cb149`/dirty=False）＋
+`probe_metric_values.json`（同一 replay，system 13/13）＋ 官方快照只读引用。
+
+| 格 | 当期读数 | 是否过期 | 判定 |
+|---|---|---|---|
+| G-1 | 本轮 unit+eval+contract **2680 passed / 0 failed**；集成未跑 | fresh（缺集成层） | **PARTIAL**（官方 `88f3500` 的 PASS 已过期） |
+| G-2 | easy×low **8/8 = 100%** | fresh | 原始 PASS → **UNVERIFIED**（τ） |
+| G-3 | 放行 0 / 覆盖 48（应拦 50） | **STALE** | PARTIAL（官方快照） |
+| G-4 | 跨租户行 0；PG RLS 未在真实 DB 验证 | **STALE** | PARTIAL（官方快照） |
+| G-5 | 该拒则拒 **24/24**；误拒 **3/124 = 2.4%** | fresh | 原始 PASS → **UNVERIFIED**（τ） |
+| G-6 | P95 = 7268ms，分母未标注（U-106 之前回执） | **STALE** | UNVERIFIED（官方快照） |
+| G-7 | system vs authority **13/13 = 100%** | fresh | 原始 PASS → **UNVERIFIED**（τ） |
+| G-8 | 澄清率 **16/166 = 9.6%**；二轮未开（`--second-round`） | fresh | **UNVERIFIED** |
+
+⇒ **当前八格 0 PASS**：三格卡 τ、一格缺集成层、两格过期、一格缺二轮分子。
+**不刷官方门禁**：`backend/reports/w6/eval_metrics.json` 仍 `88f3500` / PASS 1/8。
+
+### 81.4 W75-4 两项成本估算（只出材料，未执行真打）
+
+产物：`eval/results_r75_cost_estimates.json`（rev=`53cb149`/dirty=False）。
+
+**(a) τ 采样** —— schema 已有 `W8_TAU_RAW/v1`（candidate_ids/rank/scores/scorer/gold_*），
+缺四件：① case 级 `split`（校准/验收分离目前只是一个声明布尔）② 运行时 `binding_layer` 分布
+（`is_finalizable` 第 8 条，runner 未采集）③ `batch_id`（无法证明 3 次跑批相互独立）
+④ 候选面只覆盖 3 个资产。
+样本产出：L4 打分子 119 / 金标反解命中 **29**（命中率 24.4%）⇒ 可校准样本 **29** 条。
+n≥3 ⇒ 29 条 × 3 批 = 87 record / ≈**267 次调用** / 2.44M tokens / 实测 **¥0.80**（含 30% 余量 ¥1.04）。
+全批 3 次 = 1527 次调用 / 10.94M tokens / ¥3.26（余量 ¥4.23）。
+**建议硬上限 ¥2.50 / 3.5M tokens / 350 次调用**，先跑 29 条子集。
+
+**(b) 维度 C1+A 重录** —— 6 条城市题直接成本 ¥0.0233（18 次调用）；但包内新增维度会改
+planner 载荷 ⇒ **每一条 plan 调用的匣带键都变** ⇒ 只重录 6 条会在其余 160 条取不到调用。
+按全批计价：**166 请求 / 509 次调用 / 3.65M tokens / ¥1.09**（余量 ¥1.41），建议硬上限 ¥2.50。
+预期翻转：`M-DIM-05 refuse→complete`；`M-MET-01` 按 QA §96.5 预期但它是指标绑定问题、
+不随 shop_city 翻，引用时须分开说；`M-HIER-03`/`M-MET-04` 已 complete，三条 clarify 题不动。
+
+### 81.5 测试与边界
+
+**2680 passed / 0 failed**（unit 1554 ｜ eval 479 ｜ contract 647；较 W74 的 2670 增 10 条新测）。
+
+```
+backend/app/guard/metric_window.py（新）/ app/graph/nodes/gate1_ast.py
+backend/tests/unit/test_guard_metric_window.py（新）
+eval/equivalence.py + backend/tests/eval/test_equivalence_extra_columns.py
+eval/{w75_gate_recompute.py, w75_cost_estimates.py, w75_window_delta.py}（新，材料脚本）
+eval/{results_r75_full166_window.json, results_r75_gate_recompute.json,
+      results_r75_cost_estimates.json, results_r75_window_delta.json}（新产物）
+backend/reports/w6/probe_metric_values.json（按同一 replay 重跑）
+```
+
+未改：gold／冻结集／语义包／prompt／`gates.py` 阈值／`probe` 判定口径／`reports/qa/**`／
+`.workbuddy/`。未跑 τ、未扩 L4、未改 G-8、未真打、**未刷官方门禁**（仍 `88f3500`）。
+🔴 对外口径：G-2/G-5/G-7 的原始读数达标但 **τ 未校准 ⇒ UNVERIFIED**，不得说“通过”；
+M-IDX-09 的值变化是**系统一致性修复**，不是能力提升（仍不等价）。

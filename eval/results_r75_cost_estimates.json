@@ -1,0 +1,161 @@
+{
+  "generated_at": "2026-10-23T12:41:39+00:00",
+  "git_rev": "53cb149",
+  "git_dirty": false,
+  "task": "W75-4 两项成本估算（零出站材料；未执行任何真打）",
+  "basis": {
+    "replay": {
+      "path": "eval/results_r75_full166_window.json",
+      "git_rev": "5bdb663",
+      "git_dirty": false
+    },
+    "margin": 1.3,
+    "note": "费用 = 录制批次的同模型同 prompt 计费（代理量）；重放不产生新调用"
+  },
+  "tau": {
+    "schema_in_place": {
+      "version": "W8_TAU_RAW/v1",
+      "fields": [
+        "candidate_ids（稳定键 `资产.列`）",
+        "rank（按分数降序的 id 序列，断平稳定）",
+        "scores（与 candidate_ids 等长）",
+        "scorer{model_id,prompt_version}",
+        "gold_status / gold_candidate_id / gold_unmatched_reason"
+      ],
+      "deriver": "eval/tau_samples.py（按 case_id 分组，n≥3 才成样本）"
+    },
+    "gaps": [
+      "① **校准集/验收集分离**：`ScoreSample` 与 `calibrate(holdout_separated=…)` 只接受一个**声明**布尔；采样数据里没有 case 级 `split` 字段 ⇒ 目前无法证明「分离」是真的（§C.4.6 约束 2）。需要新增 split 清单（先定种子/规则再采样）",
+      "② **`binding_layer` 分布**：`CalibrationReport.is_finalizable` 的第 8 条要求运行时观测到的层分布；`tau_raw` 不含该字段（只有 `bind.py` 往 QueryPlanStore 落），runner 也未采集 ⇒ 必须先在 runner 侧补一条逐 case 的 `binding_layer`",
+      "③ **批次身份**：`repeats` 要 3 次**独立**跑批；现有产物没有 `batch_id`，派生器只能按 case_id 跨文件分组 ⇒ 无法区分「3 次独立」与「同一份跑三遍」",
+      "④ **候选覆盖**：L4 只覆盖 `v_order_paid`/`v_order_refund`/`v_product`；金标反解命中率实测低（见 sample_yield）"
+    ],
+    "sample_yield": {
+      "n_records": 166,
+      "n_l4_scored": 119,
+      "n_gold_matched": 29,
+      "match_rate_of_scored": 0.2437,
+      "gold_status": {
+        "expected_clarify": 18,
+        "matched": 29,
+        "unmatched": 119
+      }
+    },
+    "n_repeats_required": 3,
+    "sampling_plan": {
+      "scenario_subset": {
+        "requests_per_batch": 29,
+        "calls_per_batch_est": 89,
+        "batches": 3,
+        "calls_total_est": 267,
+        "tokens_total": 2440995,
+        "cost_cny_measured": 0.801993,
+        "cost_cny_with_margin": 1.0426
+      },
+      "scenario_full": {
+        "requests_per_batch": 166,
+        "calls_per_batch": 509,
+        "batches": 3,
+        "calls_total": 1527,
+        "tokens_total": 10938339,
+        "cost_cny_measured": 3.257262,
+        "cost_cny_with_margin": 4.2344
+      },
+      "recommendation": "先跑 scenario_subset（29 条可校准题 × 3 批次 = 87 record / ≈267 次调用 / 2.44M tokens / 实测 ¥0.80）；它的样本量仍是当前候选面能产出的**全部**，全批 3 次只会把同样的 29 条再跑一遍。硬上限建议 ¥2.50（≈3× 实测），越过即停并把已花额度写进报告。"
+    },
+    "hard_cap": {
+      "cost_cny": 2.5,
+      "tokens": 3500000,
+      "calls": 350,
+      "rationale": "实测 ¥0.80 / 2.44M tokens / 267 calls × ≈1.4 → 取整；超限即停，不得「再试一次」——τ 采样不是结果导向的刷点数"
+    }
+  },
+  "dimension_c1a": {
+    "case_ids": [
+      "M-DIM-05",
+      "M-HIER-03",
+      "M-MET-04",
+      "C-CITY-01",
+      "C-CITY-02",
+      "C-CITY-04"
+    ],
+    "cases": [
+      {
+        "case_id": "M-DIM-05",
+        "question": "T_A 的各城市的店铺数分别是多少？",
+        "expected_behavior": "execute",
+        "gold_binding": "shop.city",
+        "terminal_now": "refuse"
+      },
+      {
+        "case_id": "M-HIER-03",
+        "question": "T_A 各城市的在架商品数分别是多少？",
+        "expected_behavior": "execute",
+        "gold_binding": "shop.city",
+        "terminal_now": "complete"
+      },
+      {
+        "case_id": "M-MET-04",
+        "question": "T_A 从 2026-08-01 起各收货城市的 GMV 分别是多少？",
+        "expected_behavior": "execute",
+        "gold_binding": "order_paid.receiver_city",
+        "terminal_now": "complete"
+      },
+      {
+        "case_id": "C-CITY-01",
+        "question": "城市维度的 GMV 是多少？",
+        "expected_behavior": "clarify",
+        "gold_binding": "(no gold)",
+        "terminal_now": "clarify"
+      },
+      {
+        "case_id": "C-CITY-02",
+        "question": "各城市的订单量分别是多少？",
+        "expected_behavior": "clarify",
+        "gold_binding": "(no gold)",
+        "terminal_now": "refuse"
+      },
+      {
+        "case_id": "C-CITY-04",
+        "question": "城市口径下哪个卖得最好？",
+        "expected_behavior": "clarify",
+        "gold_binding": "(no gold)",
+        "terminal_now": "clarify"
+      }
+    ],
+    "expected_flips": {
+      "M-DIM-05": "refuse → complete（按 shop_city 落绑）",
+      "M-MET-01": "refuse → complete（QA §96.5 的预期；它不是城市题，翻转取决于指标默认绑定，不取决于 shop_city —— 引用时必须分开说）",
+      "unaffected": [
+        "M-HIER-03",
+        "M-MET-04（已是 complete）",
+        "C-CITY-01/02/04（expected=clarify）"
+      ]
+    },
+    "rerecord_cost": {
+      "minimal_city_only": {
+        "requests": 6,
+        "calls_est": 18,
+        "tokens": 107435,
+        "cost_cny_measured": 0.023329,
+        "cost_cny_with_margin": 0.0303,
+        "valid_only_if": "其余 160 条匣带键**不变**"
+      },
+      "full_batch": {
+        "requests": 166,
+        "calls": 509,
+        "tokens": 3646113,
+        "cost_cny_measured": 1.085754,
+        "cost_cny_with_margin": 1.4115,
+        "why": "包内新增维度会改 planner 载荷（维度段逐条渲染进 prompt）⇒ **每一条** plan 调用的匣带键都变 ⇒ 只重录 6 条时其余 160 条会在重放里取不到对应调用。除非证明键未变，否则按全批计价"
+      }
+    },
+    "hard_cap": {
+      "cost_cny": 2.5,
+      "tokens": 5000000,
+      "calls": 700,
+      "rationale": "实测全批 ¥1.09 / 3.65M tokens / 509 calls × ≈1.4 → 取整"
+    },
+    "not_executed": true
+  }
+}

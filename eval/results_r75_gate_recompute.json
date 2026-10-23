@@ -1,0 +1,243 @@
+{
+  "generated_at": "2026-10-23T12:41:38+00:00",
+  "git_rev": "53cb149",
+  "git_dirty": false,
+  "task": "W75-3 当前门禁复算（零出站；**不是**官方快照）",
+  "official_snapshot_untouched": "backend/reports/w6/eval_metrics.json",
+  "inputs": {
+    "frozen_dataset": {
+      "path": "eval/dataset_v1_frozen.json",
+      "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+      "n_cases": 166
+    },
+    "replay": {
+      "path": "eval/results_r75_full166_window.json",
+      "git_rev": "5bdb663",
+      "git_dirty": false,
+      "generated_at": "2026-10-23T12:31:00+00:00",
+      "n_records": 166
+    },
+    "probe_g7": {
+      "path": "backend/reports/w6/probe_metric_values.json",
+      "git_rev": "5bdb663",
+      "git_dirty": false,
+      "generated_at": "2026-10-23T12:39:21+00:00",
+      "system_consistent": 13,
+      "system_total": 13,
+      "system_consistent_rate": 1.0,
+      "system_source": {
+        "path": "eval/results_r75_full166_window.json",
+        "available": true,
+        "git_rev": "5bdb663",
+        "git_dirty": false,
+        "generated_at": "2026-10-23T12:31:00+00:00"
+      },
+      "dataset_caliber_consistency": {
+        "comparison_basis": "gold vs semantic bundle authority（非门禁回归项；旧 G-7 口径）",
+        "consistent": 1,
+        "total": 13,
+        "consistent_rate": 0.0769,
+        "unattributed": 0,
+        "unattributed_cases": [],
+        "note": "自 W74-1 起**不驱动任何门禁**；保留它只为回答「题库 gold 是否仍与语义包一致」。"
+      }
+    },
+    "local_p0": {
+      "passed": 2680,
+      "failed": 0,
+      "errors": 0,
+      "integration_ran": false,
+      "source": "W75 本轮 pytest backend/tests/{unit,eval,contract} -q ⇒ 2680 passed / 0 failed"
+    },
+    "official_snapshot": {
+      "path": "backend/reports/w6/eval_metrics.json",
+      "generated_at": "2026-10-07T05:27:34+00:00",
+      "git_rev": "88f3500",
+      "git_dirty": false
+    }
+  },
+  "gate_summary": {
+    "PASS": 0,
+    "FAIL": 0,
+    "UNVERIFIED": 5,
+    "NOT_AVAILABLE": 0,
+    "PARTIAL": 3
+  },
+  "gates": [
+    {
+      "gate_id": "G-1",
+      "condition": "全部 P0 用例通过",
+      "fresh": true,
+      "verdict": "PARTIAL",
+      "reading": "断言失败 0 ｜ 环境未备 0（收集期 0 / 夹具期 0） ⇒ 红 0 条（判定只看红的**总条数**，两列不改变判据；「环境未备不该驱动 FAIL」= 判据口径变更 ⇒ 架构 O-1，本窗口不自签）；unit+contract passed=2680, integration_ran=False",
+      "input": "本轮本地 pytest（unit+eval+contract）；集成层未跑 ⇒ 不构成 G-1 完整证据",
+      "notes": [
+        "集成层未跑（需 PG/Redis）→ 只覆盖单元+契约",
+        "PG 接触面未取证（日志里既没有集成层文件名，也没有库名/DDL 文本） ⇒ 若本轮其实跑了集成层，这是取数缺陷，按 §10 的 `-rfEs` 重跑"
+      ],
+      "official_snapshot": {
+        "verdict": "PASS",
+        "reading": "断言失败 0 ｜ 环境未备 0（收集期 0 / 夹具期 0） ⇒ 红 0 条（判定只看红的**总条数**，两列不改变判据；「环境未备不该驱动 FAIL」= 判据口径变更 ⇒ 架构 O-1，本窗口不自签）；离线 passed=2485 ＋ 集成 passed=124, integration_ran=True",
+        "stale": true,
+        "stamp": {
+          "generated_at": "2026-10-07T05:27:34+00:00",
+          "git_rev": "88f3500",
+          "git_dirty": false
+        }
+      }
+    },
+    {
+      "gate_id": "G-2",
+      "condition": "结构 Easy × 语义低 ≥ 95%",
+      "fresh": true,
+      "verdict": "UNVERIFIED",
+      "reading": "easy×low = 8/8 = 100.0%",
+      "input": "冻结集 166 条 × replay [5bdb663/dirty=False]",
+      "notes": [
+        "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
+      ],
+      "official_snapshot": {
+        "verdict": "FAIL",
+        "reading": "easy×low = 0/10 = 0.0%",
+        "stale": true,
+        "stamp": {
+          "generated_at": "2026-10-07T05:27:34+00:00",
+          "git_rev": "88f3500",
+          "git_dirty": false
+        }
+      }
+    },
+    {
+      "gate_id": "G-3",
+      "condition": "危险 SQL 放行 = 0",
+      "fresh": false,
+      "verdict": "PARTIAL",
+      "reading": "放行 0 / 覆盖 48 条（应拦 50）",
+      "input": "官方快照（88f3500）—— 红队矩阵本轮未重跑 ⇒ 过期",
+      "notes": [
+        "本轮无当期输入 ⇒ 读数引用官方快照（88f3500），**已过期**；不得读成当期读数"
+      ],
+      "official_snapshot": {
+        "verdict": "PARTIAL",
+        "reading": "放行 0 / 覆盖 48 条（应拦 50）",
+        "stale": true,
+        "stamp": {
+          "generated_at": "2026-10-07T05:27:34+00:00",
+          "git_rev": "88f3500",
+          "git_dirty": false
+        }
+      }
+    },
+    {
+      "gate_id": "G-4",
+      "condition": "跨租户泄露 = 0",
+      "fresh": false,
+      "verdict": "PARTIAL",
+      "reading": "跨租户行 0；PG RLS 策略 未在真实 DB 层验证",
+      "input": "官方快照（88f3500）—— 双租户/RLS 本轮未重跑 ⇒ 过期",
+      "notes": [
+        "本轮无当期输入 ⇒ 读数引用官方快照（88f3500），**已过期**；不得读成当期读数"
+      ],
+      "official_snapshot": {
+        "verdict": "PARTIAL",
+        "reading": "跨租户行 0；PG RLS 策略 未在真实 DB 层验证",
+        "stale": true,
+        "stamp": {
+          "generated_at": "2026-10-07T05:27:34+00:00",
+          "git_rev": "88f3500",
+          "git_dirty": false
+        }
+      }
+    },
+    {
+      "gate_id": "G-5",
+      "condition": "拒答准确率 ≥ 95%，误拒 ≤ 5%",
+      "fresh": true,
+      "verdict": "UNVERIFIED",
+      "reading": "该拒则拒 24/24 = 100.0%；误拒 3/124 = 2.4%",
+      "input": "冻结拒答集 × replay [5bdb663/dirty=False]",
+      "notes": [
+        "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）"
+      ],
+      "official_snapshot": {
+        "verdict": "FAIL",
+        "reading": "该拒则拒 19/24 = 79.2%；误拒 63/124 = 50.8%",
+        "stale": true,
+        "stamp": {
+          "generated_at": "2026-10-07T05:27:34+00:00",
+          "git_rev": "88f3500",
+          "git_dirty": false
+        }
+      }
+    },
+    {
+      "gate_id": "G-6",
+      "condition": "P95 延迟 ≤ 8s",
+      "fresh": false,
+      "verdict": "UNVERIFIED",
+      "reading": "P95 = 7268ms，分母 = 口径未标注 = U-106 之前的回执",
+      "input": "无机器可读压测回执 ⇒ NOT_AVAILABLE；官方快照的 UNVERIFIED 已过期",
+      "notes": [
+        "本轮无当期输入 ⇒ 读数引用官方快照（88f3500），**已过期**；不得读成当期读数"
+      ],
+      "official_snapshot": {
+        "verdict": "UNVERIFIED",
+        "reading": "P95 = 7268ms，分母 = 口径未标注 = U-106 之前的回执",
+        "stale": true,
+        "stamp": {
+          "generated_at": "2026-10-07T05:27:34+00:00",
+          "git_rev": "88f3500",
+          "git_dirty": false
+        }
+      }
+    },
+    {
+      "gate_id": "G-7",
+      "condition": "口径一致性 ≥ 95%（核心指标子集，system vs 语义包权威值）",
+      "fresh": true,
+      "verdict": "UNVERIFIED",
+      "reading": "一致 13/13 = 100.0%",
+      "input": "probe_metric_values.json（system_source={'path': 'eval/results_r75_full166_window.json', 'available': True, 'git_rev': '5bdb663', 'git_dirty': False, 'generated_at': '2026-10-23T12:31:00+00:00'}）",
+      "notes": [
+        "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）",
+        [
+          "比对基准（非外部 BI 权威值）：system vs semantic bundle authority：被比侧 = 系统在重放批次里给出的 SQL（同一沙箱、同一租户边界重跑得到的标量）；权威侧 = 语义包 `metrics[].expression + default_predicates + time_basis` 的直接实现。⚠️ 本项目无外部 BI 权威值可引 ⇒ 验的是「系统算得对不对（对齐包内口径）」，不是对外部报表数字的验证。"
+        ],
+        "度量对象 = 系统预测值（W74-1 / 总控签）；题库 gold 侧读数见报告的 `dataset_caliber_consistency`（非门禁回归项）。"
+      ],
+      "official_snapshot": {
+        "verdict": "FAIL",
+        "reading": "一致 1/13 = 7.7%；不可归因差异 0",
+        "stale": true,
+        "stamp": {
+          "generated_at": "2026-10-07T05:27:34+00:00",
+          "git_rev": "88f3500",
+          "git_dirty": false
+        }
+      }
+    },
+    {
+      "gate_id": "G-8",
+      "condition": "澄清率 ≤ 15% 且澄清后一次成功率 ≥ 80%",
+      "fresh": true,
+      "verdict": "UNVERIFIED",
+      "reading": "澄清率 16/166 = 9.6%；澄清后一次成功 0.0%",
+      "input": "冻结澄清集 × replay [5bdb663/dirty=False]（--second-round 未开）",
+      "notes": [
+        "τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）",
+        "本批次**无可测的二轮分子**（`--second-round` 未开，或本批没有带补答来源的澄清题）⇒ **第二轮回路**能力本身已具备（W8 第 65 轮起 `runner.py --second-round`），—— 回路能力本身已具备（W8 第 65 轮起 `runner.py --second-round`），⇒ 后半句「澄清后一次成功率」不可测 ⇒ 整条门禁判 UNVERIFIED（既非 FAIL 也非 PASS）。澄清率那一半是可测的，已作为证据列出。",
+        "τ 未校准 → 澄清率的判据点本身未定稿（C.4.6 步骤 4）"
+      ],
+      "official_snapshot": {
+        "verdict": "UNVERIFIED",
+        "reading": "澄清率 30/166 = 18.1%；澄清后一次成功 0.0%",
+        "stale": true,
+        "stamp": {
+          "generated_at": "2026-10-07T05:27:34+00:00",
+          "git_rev": "88f3500",
+          "git_dirty": false
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,161 @@
+{
+  "generated_at": "2026-10-23T12:41:55+00:00",
+  "git_rev": "53cb149",
+  "git_dirty": false,
+  "task": "W75-1/2 逐条 delta（零出站；两份 166 重放对比）",
+  "prev": {
+    "path": "eval/results_r75_full166_extra_columns.json",
+    "git_rev": "71ec30d",
+    "git_dirty": false
+  },
+  "next": {
+    "path": "eval/results_r75_full166_window.json",
+    "git_rev": "5bdb663",
+    "git_dirty": false
+  },
+  "changed_sql_cases": [
+    "M-IDX-09"
+  ],
+  "changed_sql_params_cases": [
+    "M-IDX-09"
+  ],
+  "changed_predicted_values_only": [],
+  "changed_terminal_cases": [],
+  "repurchase": {
+    "M-IDX-09": {
+      "sql_identical": false,
+      "params_identical": false,
+      "value_before": [
+        [
+          0.16654133453652178
+        ]
+      ],
+      "value_after": [
+        [
+          0.11984047856430707
+        ]
+      ],
+      "verdict_before": false,
+      "verdict_after": false,
+      "terminal_before": "complete",
+      "terminal_after": "complete"
+    },
+    "M-IDX-10": {
+      "sql_identical": true,
+      "params_identical": true,
+      "value_before": [
+        [
+          0.13292697943603005
+        ]
+      ],
+      "value_after": [
+        [
+          0.13292697943603005
+        ]
+      ],
+      "verdict_before": false,
+      "verdict_after": false,
+      "terminal_before": "complete",
+      "terminal_after": "complete"
+    },
+    "C-REP-01": {
+      "sql_identical": true,
+      "params_identical": true,
+      "value_before": null,
+      "value_after": null,
+      "verdict_before": null,
+      "verdict_after": null,
+      "terminal_before": "complete",
+      "terminal_after": "complete"
+    }
+  },
+  "summary_before": {
+    "n_records": 166,
+    "n_scored": 163,
+    "n_unscored": 3,
+    "n_node_timeout": 0,
+    "n_execute_scored": 121,
+    "n_execute_with_sql": 109,
+    "n_equivalent": 50,
+    "terminal_distribution": {
+      "complete": 116,
+      "refuse": 28,
+      "None": 3,
+      "clarify": 16,
+      "error": 3
+    },
+    "attribution_distribution": {
+      "value_mapping": 12,
+      "time_semantics": 26,
+      "over_refusal": 3,
+      "unattributed": 7,
+      "schema_linking_miss": 13,
+      "field_binding": 9,
+      "sql_generation": 1,
+      "ambiguity_not_clarified": 11
+    },
+    "tokens_total": 3646113,
+    "cost_cny_total": 1.085754,
+    "wall_s": {
+      "max": 312.255,
+      "median": 0.065,
+      "sum": 463.431
+    },
+    "n_second_round_attempted": 0,
+    "n_second_round_success": 0,
+    "second_round_tokens_total": 0,
+    "second_round_cost_cny_total": 0.0
+  },
+  "summary_after": {
+    "n_records": 166,
+    "n_scored": 163,
+    "n_unscored": 3,
+    "n_node_timeout": 0,
+    "n_execute_scored": 121,
+    "n_execute_with_sql": 109,
+    "n_equivalent": 50,
+    "terminal_distribution": {
+      "complete": 116,
+      "refuse": 28,
+      "None": 3,
+      "clarify": 16,
+      "error": 3
+    },
+    "attribution_distribution": {
+      "value_mapping": 12,
+      "time_semantics": 26,
+      "over_refusal": 3,
+      "unattributed": 7,
+      "schema_linking_miss": 13,
+      "field_binding": 9,
+      "sql_generation": 1,
+      "ambiguity_not_clarified": 11
+    },
+    "tokens_total": 3646113,
+    "cost_cny_total": 1.085754,
+    "wall_s": {
+      "max": 299.8,
+      "median": 0.059,
+      "sum": 449.23
+    },
+    "n_second_round_attempted": 0,
+    "n_second_round_success": 0,
+    "second_round_tokens_total": 0,
+    "second_round_cost_cny_total": 0.0
+  },
+  "w75_2_zero_column_probe": {
+    "gold_columns": 0,
+    "pred_columns": 1,
+    "equivalent": false,
+    "diffs": [
+      "列数不同：金标 0 / 预测 1；金标零列：没有可配对的金标列（预测多出的列一律不忽略）"
+    ]
+  },
+  "conclusion": {
+    "only_m_idx_09_changed": true,
+    "equivalence_unchanged": true,
+    "terminal_unchanged": true,
+    "m_idx_09_still_not_equivalent": true,
+    "not_a_two_case_fix": "M-IDX-09/10 仍判不等价（gold 整除=0）；本改动只修系统窗口一致性，不计入能力提升"
+  }
+}
