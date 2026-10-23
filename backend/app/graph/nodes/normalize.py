@@ -77,33 +77,43 @@ __all__ = ["normalize"]
 #: 没有店铺定语位，必须仍走澄清。
 _SHOP_LOCATIVE_RE = re.compile(r"(?:位于|在)\s*[^，。？?！!、\s]{2,6}\s*的\s*店铺")
 
-#: 定语位之后的**被测主体**：逐店聚合「商品数 / SKU」口径 ⇒ 被测主体是店铺或商品。
-#: H-STR 族「各有多少个商品」与 W60 族「各 SKU …」都落在这一尾缀上。
-_SHOP_SUBJECT_RE = re.compile(r"^\s*各\s*(?:有多少个?商品|SKU|商品数)", re.IGNORECASE)
+#: 定语位之后的**被测主体**：只认「各 SKU …」（W60 族）。
+#: 🔴 R31bm（W69-1）收窄：此前还接受「各有多少个商品 / 各商品数」尾缀，但商品数口径
+#: （product_cnt / on_sale_product_cnt / spu_cnt）是**真歧义** —— r63 匣带实测 H-STR 族
+#: 8 条里 6 条 reason 为 ``ambiguous_metric_product_cnt``、杭州为 ``ambiguous_city_dimension``
+#: （hint 问店铺城市 vs 收货城市）、武汉为 ``ambiguous_metric_and_city``（hint 同时问
+#: product_cnt vs spu_cnt 与城市）。若按"理由含 city 就降级"，杭州/武汉两条会被误降级
+#: （replay 只能 6/8），且降级后商品数默默绑 product_cnt、金标要 on_sale_product_cnt
+#: ⇒ 口径错。故商品数尾缀**不再构成降级证据**，不依赖 LLM 给的表面理由族。
+_SHOP_SUBJECT_RE = re.compile(r"^\s*各\s*SKU", re.IGNORECASE)
 
-#: 可被结构证据撤销的澄清理由族：
-#: - ``*city*``：城市维度歧义（结构证明城市是店铺定语 ⇒ 唯一 shop.city）；
-#: - ``product_cnt`` / ``product_count``：商品数口径歧义（下游 bind 有 L3 默认绑定
-#:   on_sale_product_cnt 兜底，实测见 r63 M-HIER-03 / M-MET-04）。
+#: 可被结构证据撤销的澄清理由族：**只有 city 族**。
+#: - ``*city*``：城市维度歧义（结构证明城市是店铺定语 ⇒ 唯一 shop.city）。
+#: 🔴 **R31bm（W69-1，QA 定 / 总控授权）回滚商品数口径族**：``product_cnt`` /
+#:   ``product_count`` 曾被 W68 一并放开，是**判据分歧不是代码缺陷**——
+#:   H-STR-01…08 的 clarify_hint 全在问「商品数按 product_cnt / on_sale_product_cnt /
+#:   spu_cnt 哪个口径」⇒ 这是**真歧义**；降级后默认绑 product_cnt，金标要
+#:   on_sale_product_cnt，8/8 预测 SQL 缺 ``AND v_product.on_sale = 1`` ⇒ 等价 0/8 是
+#:   **口径错**而非列数问题。故该类理由重新回到"保持澄清"。
+#: ⚠️ 结构判据（定语位 + 被测主体）**保留**：它对城市族仍然成立；
+#:   但理由族回到只有 city ⇒ 商品数口径歧义不再被结构证据覆盖。
 #: 时间 / 范围 / 权限类澄清**永不**在此列：没有可证伪的结构证据，不能被措辞覆盖。
-#: ⚠️ 实测（r63 匣带 + r68 首次 live）：H-STR 族的 reason_code 表面形式**逐次漂移**——
-#: 同一题面出现过 ``ambiguous_metric_product_cnt``（r63/r68 杭蓉汉郑）与
-#: ``ambiguous_metric_product_count``（r68 穗宁西沙）两种拼法，还有
-#: ``ambiguous_city_dimension``（r68 郑）。守卫必须按族匹配而非单串子串，
-#: 否则同一题面一次能降级、下一次不能（W68-1 live 实测 4/8 漏网）。
-_DEMOTABLE_REASON_PARTS = ("city", "product_cnt", "product_count")
+_DEMOTABLE_REASON_PARTS = ("city",)
 
 
 def _demote_unambiguous_shop_city_clarification(
     update: dict[str, Any], raw_question: str
 ) -> dict[str, Any]:
-    """明确指向店铺城市（结构证据）时，撤销 normalize 的城市/商品数歧义澄清。
+    """明确指向店铺城市（结构证据）时，撤销 normalize 的城市歧义澄清。
 
-    三类题面结构证据（QA R31bl / W68 派单①）：
+    三类题面结构证据（QA R31bl / W60）：
     - 各城市（按城市分组，W60 原判据）；
     - 在<城市>的店铺各 SKU（W60 原判据）；
-    - 「位于/在 <城市> 的店铺」**定语位** + 被测主体是逐店聚合的商品数/SKU
-      （W68 新增 —— 覆盖 H-STR-01…08「位于<城市>的店铺各有多少个商品」）。
+    - 「位于/在 <城市> 的店铺」**定语位** + 被测主体是**逐店 SKU**（W68 新增的结构判据，
+      W69 收窄为只认 SKU 尾缀 —— 商品数尾缀属真歧义，见 `_SHOP_SUBJECT_RE` 注释）。
+
+    🔴 理由族**只含 city**（W69-1 / R31bm 回滚商品数口径族）：商品数口径
+    （product_cnt / on_sale_product_cnt / spu_cnt）是**真歧义**，必须仍澄清。
 
     C-CITY-01/03/04（城市维度 / 城市名做主语 / 城市口径视角）无定语位，保持澄清；
     时间 / 范围 / 权限类澄清理由不在此函数的撤销范围内，保持原终态。
