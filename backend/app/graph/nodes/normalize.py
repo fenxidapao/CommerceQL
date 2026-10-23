@@ -83,12 +83,15 @@ _SHOP_SUBJECT_RE = re.compile(r"^\s*各\s*(?:有多少个?商品|SKU|商品数)"
 
 #: 可被结构证据撤销的澄清理由族：
 #: - ``*city*``：城市维度歧义（结构证明城市是店铺定语 ⇒ 唯一 shop.city）；
-#: - ``ambiguous_metric_product_cnt``：商品数口径歧义（下游 bind 有 L3 默认绑定
+#: - ``product_cnt`` / ``product_count``：商品数口径歧义（下游 bind 有 L3 默认绑定
 #:   on_sale_product_cnt 兜底，实测见 r63 M-HIER-03 / M-MET-04）。
 #: 时间 / 范围 / 权限类澄清**永不**在此列：没有可证伪的结构证据，不能被措辞覆盖。
-#: ⚠️ 实测（r63 匣带）：H-STR 族的 reason_code 是 ``ambiguous_metric_product_cnt``
-#: （商品数口径），**不含 city** —— 旧守卫在正则之前就把这 8 条拦死了，故必须放开。
-_DEMOTABLE_REASON_PARTS = ("city", "product_cnt")
+#: ⚠️ 实测（r63 匣带 + r68 首次 live）：H-STR 族的 reason_code 表面形式**逐次漂移**——
+#: 同一题面出现过 ``ambiguous_metric_product_cnt``（r63/r68 杭蓉汉郑）与
+#: ``ambiguous_metric_product_count``（r68 穗宁西沙）两种拼法，还有
+#: ``ambiguous_city_dimension``（r68 郑）。守卫必须按族匹配而非单串子串，
+#: 否则同一题面一次能降级、下一次不能（W68-1 live 实测 4/8 漏网）。
+_DEMOTABLE_REASON_PARTS = ("city", "product_cnt", "product_count")
 
 
 def _demote_unambiguous_shop_city_clarification(

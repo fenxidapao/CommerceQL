@@ -63,6 +63,23 @@ def test_hstr_family_city_variants_are_demoted() -> None:
         assert got["intent"] == IntentKind.EXECUTABLE.value, question
 
 
+def test_hstr_reason_code_surface_variants_are_demoted() -> None:
+    """W68 live 实测：同一题面的 reason_code 表面形式逐次漂移
+    （ambiguous_metric_product_cnt / _product_count / ambiguous_city_dimension），
+    守卫必须按族匹配——任何一种拼法都不得漏网。"""
+    question = "T_A 位于广州的店铺各有多少个商品？"
+    for reason in (
+        "ambiguous_metric_product_cnt",
+        "ambiguous_metric_product_count",
+        "ambiguous_city_dimension",
+    ):
+        got = _demote_unambiguous_shop_city_clarification(_outcome(question, reason), question)
+        assert got["intent"] == IntentKind.EXECUTABLE.value, reason
+        assert (
+            got["intent_detail"]["normalize_original_reason_code"] == reason
+        ), reason
+
+
 def test_guangzhou_sales_subject_still_clarifies() -> None:
     """C-CITY-03「广州的销售额是多少？」——城市做主语、无店铺定语位 ⇒ 仍 CLARIFY。"""
     question = "广州的销售额是多少？"
