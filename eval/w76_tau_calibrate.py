@@ -188,6 +188,21 @@ def main(argv: list[str] | None = None) -> int:
             "verdict": str(getattr(stability_calib, "verdict", "")),
             "is_calibratable": bool(getattr(stability_calib, "is_calibratable", False)),
             "max_gap_std": getattr(stability_calib, "max_gap_std", None),
+            "min_kendall": getattr(stability_calib, "min_kendall", None),
+            "repeats": getattr(stability_calib, "repeats", None),
+            #: 诊断面：哪几条把 max 抬起来（判据看 max，故只列最差的十条）
+            "worst_samples": [
+                {
+                    "sample_id": item.sample_id,
+                    "split": split_of(item.sample_id),
+                    "gaps": [round(g, 4) for g in item.gaps],
+                    "gap_std": round(item.gap_std, 4),
+                    "kendalls": [round(k, 4) for k in item.kendalls],
+                }
+                for item in sorted(
+                    stability_calib.samples, key=lambda s: -s.gap_std
+                )[:10]
+            ],
         },
         "calibration": None
         if report is None
