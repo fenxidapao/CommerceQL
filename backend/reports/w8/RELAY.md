@@ -8059,3 +8059,113 @@ backend/reports/w6/probe_metric_values.json（按同一 replay 重跑）
 `.workbuddy/`。未跑 τ、未扩 L4、未改 G-8、未真打、**未刷官方门禁**（仍 `88f3500`）。
 🔴 对外口径：G-2/G-5/G-7 的原始读数达标但 **τ 未校准 ⇒ UNVERIFIED**，不得说“通过”；
 M-IDX-09 的值变化是**系统一致性修复**，不是能力提升（仍不等价）。
+
+## 82 W76：τ 校准（3 批限量真打 → **稳定性未过，不定稿**）＋ G-8 二轮设计 ＋ 窗口拒答小补
+
+派单：TASK_BOARD §97.8（QA R31bt，2026-10-23 21:15）｜起跑 HEAD `b3ade0f`｜
+**有出站**：仅 τ 采样的 29 条 × 3 批（+1 条冒烟 +1 批作废重跑）；未改 gold／冻结集／语义包／prompt。
+
+### 82.1 Z 先补 schema（零出站，先于任何真打）
+
+| 补充 | 落点 | 说明 |
+|---|---|---|
+| ① case 级 split | `eval/tau_samples.split_of` / `split_summary` | `sha256("W76_TAU_SPLIT/v1:<case_id>")[:8] % 2`；**采样前写死**，盐带版本号，改盐只能升 `/v2` |
+| ② 逐 case `binding_layer` | `RunContext.hold/take_binding_layer` → `bind` 写入 → `CaseRun` → record | 评测装配根不注入 QueryPlanStore，层分布此前**取不到**；现在 87 条全部落 `L3` |
+| ③ `batch_id` | `runner --batch-id` → 每条 record + `config` | 3 批可区分（`w76_b1/b2/b3`） |
+| ④ 候选覆盖面 + gold 命中率 | `tau_samples.coverage_summary` 增 `candidate_asset_records` | 87 条候选只来自 `v_order_paid`(1827)/`v_order_refund`(522)/`v_product`(261) 三个资产 |
+| ⑤ 计费硬上限 | `runner --max-cost-cny` | 每跑完一条累加，越过即停并落 `budget_stop`（三轮均未触发） |
+
+单测：`test_tau_split_and_layers.py`（5 条：split 确定性/版本化/样本带 split/候选覆盖/层分布）全绿。
+
+### 82.2 真打批次（逐批 tokens／¥／calls）
+
+| 批次 | rev / dirty | n | tokens | ¥ | calls | 备注 |
+|---|---|---|---|---|---|---|
+| 冒烟 | 34cc628 / False | 1 | 28,153 | 0.008828 | 4 | 验证 key／live 通路；1 条属 29 条之一 |
+| b1 | 34cc628 / False | 29 | 813,972 | 0.246446 | 116 | 29/29 L4 打分 + 金标命中 |
+| b2（作废） | 10b72fc / **True** | 29 | 813,792 | 0.244557 | 116 | 跑批期间改了离线校准脚本 ⇒ 树脏；**不作样本**，只计入花费 |
+| b2（重跑） | 00260ef / False | 29 | 813,462 | 0.240611 | 116 | 替代上一条 |
+| b3 | 00260ef / False | 29 | 814,100 | 0.243072 | 116 | |
+| **采样计划合计** | | 87 | **2,441,534** | **0.730129** | **348** | |
+| **实际总花费** | | 117 | **3,283,479** | **0.983514** | **468** | 含冒烟 4 + 作废批 116 |
+
+🔴 **calls 超限，如实登记**：派单硬上限 350 calls；采样计划本身 348（≤350），但加上
+冒烟 4 与**作废的脏树批次** 116 ⇒ 实际 468 calls。¥（0.98 ≤ 2.50）与 tokens
+（3.28M ≤ 3.5M）未超。作废批次的产物在 `eval/results_w76_tau_b2.json.bak-20261023T145718Z`
+（被 `.gitignore` 忽略，仍在盘上）。
+每批 29/29 全部 `tau_raw.ok=True` 且 `gold_status=matched`；`binding_layer` 全为 `L3`。
+
+### 82.3 τ 校准结果：**稳定性未过 ⇒ 不得定稿 τ**（§C.4.6 约束 5）
+
+产物：`eval/results_w76_tau_calibration.json`（rev=`b36e4b0`/dirty=False）。
+样本：**29 条**（0 跳过）；split = 校准 15 / 验收 14；候选集三批复核**逐字一致**。
+
+| 项 | 实测 |
+|---|---|
+| 稳定性判定 | **UNSTABLE**（`max gap std = 0.3060` ≥ τ 分辨率 0.05） |
+| 最差样本 | `H-MET-02` gaps `[0.02, 0.55, 0.55]`（std 0.306）；`M-MET-02` `[0.75,0.37,0.55]`（0.190）；`H-MET-03` `[0.60,0.30,0.60]`（0.173） |
+| 排名一致性 | `min Kendall τ_b = 0.639`（高相关，但**分差量级**不稳） |
+| 选点 | `selected_tau = null`（三档目标 0.7/0.8/0.9 全部 null） |
+| 可定稿 | **false**；`blocking_actions` = ① 约束 5 禁止定稿 ② 按 PRD §12.9 升级方案 A（本地 cross-encoder）后重新校准 ③ 不得多打取平均绕过 |
+| 层分布 | `{L3: 87}`（本次 29 条全部走 L3 默认绑定；L4 只产分数、未参与终判） |
+
+⚠️ **样本范围限定（引用 τ 必须同行）**：29 条全部是金标反解命中的题 ⇒
+**没有"本该澄清"的安全侧样本**：`should_clarify_but_did_not = null`，
+NFR-7.1 的澄清率约束在本样本集上**不构成有效检验**。
+另：τ=0 时曲线澄清率下界 ≈20%（29 条中 6 条 top1−top2 差 < 0.05）——
+即使稳定性过关，这批样本也**无法**满足 ≤15% 的 NFR-7.1。
+
+⇒ **结论（E-5 的答案）**：C 档 LLM 精排（`deepseek-flash` / `l4_score_v1`）的**分差方差
+与 τ 分辨率同量级**，按 §C.4.6 约束 5 **不成立**，必须升级方案 A 才能谈 τ 定稿。
+本轮**不写任何 τ 配置**（`.env` 未动）。
+
+### 82.4 门禁影响：三格仍 UNVERIFIED（官方快照未刷新）
+
+`gate_impact`（在 calibration 产物内）：`tau_selected=false` ⇒ **G-2 / G-5 / G-7 仍判
+UNVERIFIED**；当前读数仍以 `eval/results_r75_gate_recompute.json`（W75-3）为准：
+G-2 8/8、G-5 24/24＋3/124、G-7 13/13 —— **原始达标但 τ 未校准，不得宣布通过**。
+`backend/reports/w6/eval_metrics.json` 仍 `88f3500` / PASS 1/8，未动。
+
+### 82.5 W76-2 G-8 二轮回路：设计＋成本（只出材料）
+
+产物：`eval/results_w76_g8_design.json`（rev=`10b72fc`/dirty=False）。
+
+* **生产侧已实现**：`clarify_out` → `clarify_id` + Redis 上下文（5 分钟）→
+  `POST /clarify`（属主门 → 一次性消费 → `compose_question` → **完整重跑**，新 task、同 session）。
+* **评测侧已实现**：`runner --second-round`（首轮终态 clarify ⇒ 用补答拼题再跑一次图）。
+  但它**绕过 `/clarify` 端点** ⇒ 过期/一次性/属主门这些生产语义未被评测覆盖。
+* **数据缺口**：18 条 expected=clarify 中只有 **1 条**（`C-CITY-01`）带冻结候选口径；
+  实际收口成 clarify 的 16 条里 **9 条是误澄清**（本应 execute），它们没有补答来源。
+* **分母问题**：现行 G-8 用 `success / clarified`；只跑 1 条二轮会让分母仍是 16 ⇒ 6.25%，
+  读起来像系统很差，实际是**没覆盖**。建议报告并列 `success/attempted`，且
+  `attempted < clarified` 时后半句判 UNVERIFIED（**判据变更，需签**，本轮不改）。
+* **成本**：整批重录（166 首轮 + 16 条二轮）≈ ¥1.09 + ¥0.14，含 30% 余量 **¥1.43**；
+  单条功能验证（`C-CITY-01`）≈ ¥0.02。**本轮未真打**。
+
+### 82.6 W76-3 小补（零出站）
+
+* `test_gate1_metric_window_refusal.py`（4 条）：`MetricWindowError` → `refuse(no_data_asset)` +
+  `reason_code=metric_window_unenforceable`；**不伪造** `gate_results[AST]`；
+  路由 → `refuse_out`（新）；闸门拒绝旧路径仍 → `error_out`；无 window 声明不触发改写。
+* `route_after_gate1`：节点已自设终态时按 `terminal_target` 选出口（与 gate2 同一纪律）。
+  闸门拒绝的终态是 `error` ⇒ 行为逐字不变。
+* `metric_window.py` docstring 登记两条 latent：① 起点/上界跨嵌套 SELECT（当前无此形态）；
+  ② 未声明 window 的指标可能被同基准窗口连带（当前唯一带 window 的指标总单独出现）。
+
+### 82.7 测试与边界
+
+**2689 passed / 0 failed**（unit 1558 ｜ eval 484 ｜ contract 647；较 W75 的 2680 增 9 条：
+节点级 4 + split/层 5）。
+
+```
+backend/app/graph/{context.py,nodes/bind.py,edges.py}；backend/app/guard/metric_window.py（仅 docstring）
+eval/{harness.py,runner.py,tau_samples.py}
+eval/{w76_tau_calibrate.py,w76_g8_design.py}（新）
+eval/{results_w76_tau_b1,b2,b3.json,results_w76_tau_calibration.json,
+      results_w76_g8_design.json,results_w76_smoke.json}
+eval/cassettes/{w76_smoke,w76_tau_b1,w76_tau_b2,w76_tau_b3}.jsonl
+backend/tests/{unit/test_gate1_metric_window_refusal.py,eval/test_tau_split_and_layers.py}（新）
+```
+
+未改：gold／冻结集／语义包／prompt／`gates.py` 阈值／`reports/qa/**`／`.workbuddy/`／官方快照。
+**出站记录**：29×3 批 + 冒烟 1 + 作废批 1；`.env` 未改；未扩 L4、未改 G-8、未跑维度重录。
