@@ -11,11 +11,11 @@
   "system_total": 13,
   "system_consistent_rate": 1.0,
   "system_source": {
-    "path": "eval/results_r74_full166_contradiction_guard.json",
+    "path": "eval/results_r75_full166_window.json",
     "available": true,
-    "git_rev": "de08e74",
+    "git_rev": "5bdb663",
     "git_dirty": false,
-    "generated_at": "2026-10-23T10:53:39+00:00"
+    "generated_at": "2026-10-23T12:31:00+00:00"
   },
   "dataset_caliber_consistency": {
     "comparison_basis": "gold vs semantic bundle authority（非门禁回归项；旧 G-7 口径）",
@@ -747,7 +747,7 @@
   "excluded": [],
   "comparison_basis": "system vs semantic bundle authority：被比侧 = 系统在重放批次里给出的 SQL（同一沙箱、同一租户边界重跑得到的标量）；权威侧 = 语义包 `metrics[].expression + default_predicates + time_basis` 的直接实现。⚠️ 本项目无外部 BI 权威值可引 ⇒ 验的是「系统算得对不对（对齐包内口径）」，不是对外部报表数字的验证。",
   "caveat": "只纳入「题面命中单个核心指标词形 + gold 无 GROUP BY + WHERE 除时间边界与默认谓词外无其他条件」的用例；被排除者逐条列在 `excluded`，不静默丢。可归因判据是三条同时成立（表达式同形 + 缺集非空 + 补齐后收敛），见本文件 docstring。",
-  "generated_at": "2026-10-23T11:43:57+00:00",
-  "git_rev": "af4a62c",
+  "generated_at": "2026-10-23T12:39:21+00:00",
+  "git_rev": "5bdb663",
   "git_dirty": false
 }
