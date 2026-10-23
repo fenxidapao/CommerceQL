@@ -6997,3 +6997,141 @@ params: {"refund_status": "refunded", "pay_status": "paid"}
 ### 97.9 边界
 
 本窗零出站、零写库（沙箱 `mode=ro`）；只追加 `reports/qa/**`；未动产品代码／测试／语义包／冻结集／判据；官方门禁仍 `88f3500`／PASS 1/8。
+
+## 98 · W8 第 76 轮验收：τ 负结果有效但**样本不是歧义集**；L4 决策份额 0/166；calls 超限；G-8 缺口定位（QA R31bu ｜ 2026-10-24 00:09 +0800 ｜ HEAD `cb8fd45`／688 笔）
+
+> 总控授权"自己选最优解"。本轮 QA 零出站；W76 的读数逐项复算；另跑一次**零出站全量 166 回放**（`--mode replay`，输出到临时目录，不入库）取得 `binding_layer`/`binding_status`。结论：**W76 的 τ 负结果成立，但 29 条样本全部由 L3 判定，L4 决策份额 0/166 ⇒ 它不是 E-5 的"歧义集"，不能据此触发方案 A；τ 对当前数据集的三格读数没有行为杠杆。**
+
+### 98.1 现状现读【实测】
+
+| 项 | 现读 |
+|---|---|
+| HEAD / 笔数 | `cb8fd45` / 688，与 `origin/main` 齐平；树仅 `?? .workbuddy/` |
+| 本轮改动面 | `app/graph/{context.py,edges.py,nodes/bind.py}`；`metric_window.py`（仅 docstring）；`eval/{harness.py,runner.py,tau_samples.py,w76_*.py}`；6 份 W76 产物；4 份匣带；2 个测试文件；W8 `RELAY` |
+| 禁改面 | `reports/qa/**`（我的 R31bt 除外）、冻结集、`semantic/**`、`gates.py`、官方 `eval_metrics.json`、`.env` **全部空 diff**【实测】 |
+| 测试 | unit＋eval＋contract **2689 passed / 0 failed**（125.22s） |
+| 官方门禁 | 仍 `88f3500`／PASS 1/8，未刷新 |
+
+### 98.2 W76-1 采样与校准：收【实测；负结果有效】
+
+| 项 | 我的复算 |
+|---|---|
+| schema | split 盐 `W76_TAU_SPLIT/v1`，15 校准/14 验收；`batch_id` 三批可区分；`binding_layer` 落 record；候选覆盖仅 3 资产（`v_order_paid` 1827／`v_order_refund` 522／`v_product` 261） |
+| 批次 | 冒烟 1/28,153/¥0.008828/4 calls @`34cc628`；b1 29/813,972/¥0.246446/116 @`34cc628`；**作废 b2** 29/813,792/¥0.244557/116 @`10b72fc`/dirty=True；重跑 b2 29/813,462/¥0.240611/116 @`00260ef`；b3 29/814,100/¥0.243072/116 @`00260ef` |
+| 计划/实际 | 计划 87 条/2,441,534 tok/¥0.730129/348 calls；实际 117 条/3,283,479 tok/¥0.983514/**468 calls** |
+| 稳定性 | **UNSTABLE**：`max_gap_std=0.30599564267050167` ≥ `TAU_SWEEP_STEP=0.05`（判据 `backend/app/binding/calibration.py:286-289`）；`min_kendall=0.6387102666891444`（只报告，不参与判据） |
+| 选点 | `selected_tau=null`；`is_finalizable=false`；`nfr71_satisfied=false`；`holdout=null`；0.7/0.8/0.9 三档全 null；`blocking_actions` 含"约束 5 禁止定稿""不得多打取平均" |
+| τ 配置 | **未写**（`.env` 未动）；G-2/G-5/G-7 仍 UNVERIFIED |
+| 样本范围 | 29 条全部 `gold=matched`；`should_clarify_but_did_not=null`；NFR-7.1 在本样本上**不构成有效检验** |
+
+**口径订正（W8 的"τ=0 澄清率下界 ≈20%"）**：实测 τ=0 时 **3/15 校准样本 = 20.0%**、**6/29 全样本 = 20.7%**（近差分 <0.05：H-MET-02、H-MET-04、M-MET-04、M-IDX-05、M-IDX-06、M-MET-03）。这是**该样本上的观测率**，不是总体下界；全量 166 的实际澄清率是 16/166=9.6%（上游澄清，不是 L4 澄清）。两者不可直接比较。W8 的"这批样本无法满足 ≤15%"在样本内成立，但不能写成全局 NFR-7.1 结论。
+
+### 98.3 预算合规：**calls 超限**（如实登记，不洗）【实测】
+
+| 项 | 读数 | 对硬上限 |
+|---|---|---|
+| ¥ | 0.983514 | 39.3% of ¥2.50 ✅ |
+| tokens | 3,283,479 | 93.8% of 3.5M ✅ |
+| calls | **468** | **133.7% of 350 ❌** |
+
+- 采样计划本身 348 calls（≤350）；**加冒烟 4 = 352 > 350** ⇒ 授权上限与"必须冒烟"在算术上不自洽。
+- 作废的脏树 b2 又加 116 calls（¥0.244557）⇒ 实际 468。
+- W8 **主动登记了**"calls 超限"，没有藏；这点记功。但流程上应在"重跑 b2 后累计 352 > 350"时**停手上报**，而不是继续 b3；下一轮起必须用**全局调用账本**（冒烟+重跑+重试都计入），任一上限先到即停。
+- **本窗裁定：在总控给出新上限前，不再发生任何真打。** 新上限必须同时约束 calls/¥/tokens，并以"全局累计"而非"单批"计量。
+
+**匣带卫生（b2）**：b1／b3 各 115 个唯一键，b2 **138** 个；干净重跑 29 条×4=116 calls 只应产 115 个唯一键。多出的 **23 个键**是脏树批次的残余，**没有任何干净 record 引用它们**。`eval/cassette.py::save()` 以"磁盘旧记录 update 新记录"合并 ⇒ 干净结果 JSON（`git_rev=00260ef`/`dirty=False`）可用，但**匣带文件本身不是清洁证据**；须清理/重建后才能作为证据。作废结果 `.bak-20261023T145718Z` 仍在盘上且被 `.gitignore`。
+
+### 98.4 方法学发现：**29 条样本不是"歧义集"；L4 决策份额 0/166**【实测】
+
+我另跑了一次全量 166 回放（`--mode replay --cassette eval/cassettes/w8_r63_full166.jsonl`，输出到 `%TEMP%`，**零出站、未入库**），与 r75 逐条对比：
+
+| 项 | 读数 |
+|---|---|
+| 终态 | complete 116／refuse 28／clarify 16／error 3／None 3（与 r75 **逐格相同**） |
+| 等价 | 50（与 r75 相同）；逐 case 终态/verdict 差异 **0** |
+| `binding_layer` | **L3 119 ／ none 47 ／ L4 0** |
+| `binding_status` | **resolved_default 119 ／ none 47 ／ ambiguous 0** |
+| L4 打分 | `tau_raw.ok=True` **119/166 = 71.7%**（候选数全部 = 30，撞 `L4_MAX_CANDIDATES` 上限）；47 条 `l4_not_reached` |
+| L4 决策 | **0/166 = 0%** |
+
+**推论（这是本轮最重要的结论）**：
+
+1. W76 的 29 条校准样本，**全部由 L3 默认绑定判定**；L4 只被打分，从未参与终判。它们是"L4 有分数且 gold 命中"的题，不是 E-5 所说的"歧义集"。
+2. 因此"`C 不稳定`"这半句成立（打分器确实抖），但**不能据此说 E-5 在歧义集上失败**——前提集不在。
+3. PRD §12.9 的 P1 升级路径三条硬前置（`docs/01_需求规格说明书_PRD.md:1524`）：① L4 触发率 >10% → **决策份额 0%**；② L4 是误判 `ambiguous` 的主因 → **ambiguous 绑定 0 条**；③ 语义层按 §C.4.6 步骤 4 补全后仍不下降 → 无对象。**三条全不成立 ⇒ 不评估方案 A；不装 `torch`/`sentence-transformers`，不改 ADR，不扩镜像。**
+4. 另有一条架构事实要记：L4 **打分覆盖 119/166 = 71.7%** 但**决策率 0%**。PRD 的假设是"L4 是兜底层、触发量小"；当前实现是在 L1–L3 之前**急切打分**，成本与设计假设不符。此项**本轮不改**（改它会动成本/行为/匣带），只登记为 latent。
+5. `eval/gates.py:60-76` 的 `_TAU_DEPENDENT` 前提是"判据点落在 L4 精排/澄清边界上"。本数据集上该前提不成立 ⇒ 我签**条件性 τ 非适用豁免**（见 98.7 D-W77-1），**不是**"τ 已校准"。
+
+### 98.5 W76-2 G-8 设计：收【实测；不实装】
+
+- 生产侧 `/clarify` 已实现（`clarify_id`→Redis 5 分钟→属主门→一次性消费→`compose_question`→完整重跑）；评测侧 `--second-round` **绕过** `/clarify`，生产语义未被覆盖。
+- 18 条 expected=clarify 中只有 **1 条**（C-CITY-01）带冻结候选；**17 条需外部补答**。实际 clarify 16 条 = 7 条 expected + **9 条误澄清**（H-STR-01…08、X-MET-10）。
+- 分母：现行 `success/clarified` 在只跑 1 条时会读成 6.25%，实际是"没覆盖"；W8 提议并列 `success/attempted`。**我签这个口径**（D-W77-3，本窗自订）。
+- 成本：全批重录 ¥1.1025（含 30% 余量 ¥1.4332），硬上限建议 ¥1.8；本轮未真打。
+- **不做的理由**：17/18 没有答案来源；自己编补答 = 造数据；先要数据源，再谈真打。9 条误澄清题**不给补答**（它们本应 execute，补答会掩盖绑定缺陷）。
+
+### 98.6 W76-3 小补：收【实测】
+
+`test_gate1_metric_window_refusal.py` 4 条；`route_after_gate1` 按 `terminal_target` 选出口；`context/bind` 的层通道；`test_tau_split_and_layers.py` 5 条。全量 **2689 passed / 0 failed**。
+
+### 98.7 我的决定（总控授权，不再问）
+
+| # | 决定 | 理由 |
+|---|---|---|
+| D-W77-1 | **签条件性 τ 非适用豁免**（本窗自订）：仅当全量 166 回放证据同时满足 `l4_decisions==0`、`ambiguous_bindings==0`、`n_records==166`，G-2/G-5/G-7 才可按其**实质读数**（8/8、24/24＋3/124、13/13）输出 PASS，并强制标注 `tau_applicability=not_exercised`；证据缺失或任一 L4/ambiguous >0 ⇒ **保持现有 UNVERIFIED**（fail-closed）。G-8 **不豁免**。 | `_TAU_DEPENDENT` 的前提在本数据集上不成立；豁免必须绑证据、可自动失效，且**不得**写成"τ 已校准"。 |
+| D-W77-2 | **不评估、不实施方案 A**；不装 torch/sentence-transformers；不改 ADR/镜像。 | PRD §12.9 三条硬前置全不成立；方案 A 是为"L4 决策率高且语义层已补全"的场景准备的，不是为本数据集。 |
+| D-W77-3 | **签 G-8 分母口径**（本窗自订）：主读数 `success/attempted`，并列 `success/clarified`；`attempted<clarified` 时后者判 UNVERIFIED；原始计数必须落盘。 | 现行分母会把"没覆盖"读成"成功率低"；这是判据变更，由我签并记录。 |
+| D-W77-4 | **暂停一切真打**，直到总控给新上限；新上限必须全局累计 calls/¥/tokens，先到即停。 | W76 calls 468>350；且计划+冒烟本身 352>350，旧上限不自洽。 |
+| D-W77-5 | 官方门禁**仍不刷新**。 | G-1/G-3/G-4/G-6/G-8 未齐；τ 豁免只改"当前复算"的标注，不改官方快照。 |
+| D-W77-6 | b2 匣带**不得作为清洁证据**；重跑结果 JSON 可用（rev/dirty 为证），匣带须清理/重建。 | b2 匣带 138 键 vs b1/b3 115；多出 23 个脏树批次的残余键，无干净 record 引用它们。 |
+
+### 98.8 W77 派单
+
+```text
+【W8 第 77 轮｜τ 非适用性证据 + G-8 分母/补答缺口 + 预算/匣带卫生（全部零出站）】
+
+0. 前置：现读 HEAD；证据绑 git_rev+dirty=false；不碰 reports/qa/**；不 git add -A；
+   .workbuddy/ 不入库；不改 gold/冻结集/语义包/prompt；不刷官方门禁；
+   🔴 本轮零真打（不调 LLM、不花一分钱）；不装任何新依赖。
+
+1. 🔴 W77-1 τ 非适用性证据（零出站；为 D-W77-1 供证）
+- 用当前代码跑全量 166 replay（`--mode replay --cassette eval/cassettes/w8_r63_full166.jsonl`），
+  输出 `eval/results_w77_full166_applicability.json`；必须逐 case 落 `binding_layer`/`binding_status`，
+  并给分布、`tau_raw.ok` 计数、L4 候选数分布。
+- 验收硬条件：`n_records==166`；`l4_decisions==0`；`ambiguous_bindings==0`；
+  终态/等价与 r75 逐条一致（差异 0）；`live=false`、`mode=replay`、注明"历史计费仅随匣带回放，零新增"。
+- 若任一条件不满足 ⇒ 如实落盘并**停止** W77-1 后续，不得改判据凑数。
+
+2. 🔴 W77-2 门禁口径：条件性 τ 非适用（零出站；唯一允许的 gates.py 改动）
+- 在 `eval/gates.py` 增加 `tau_applicability` 输入：仅当 W77-1 证据通过 D-W77-1 的三条件，
+  G-2/G-5/G-7 的 PASS 不被降级，并在 notes 写 `tau_applicability=not_exercised`
+  ＋"τ 未校准；本数据集不触发 L4 决策；此标注不是 τ 校准证据"；G-8 不适用。
+- 任何一条证据缺失/不通过 ⇒ 维持现有 UNVERIFIED。FAIL 仍 FAIL，阈值一律不动。
+- 单测：证据缺失→UNVERIFIED；L4>0→UNVERIFIED；ambiguous>0→UNVERIFIED；三条件满足→PASS+标注；
+  FAIL 不被豁免。全部 fixture，零真打。
+- 产出 `eval/results_w77_gate_recompute.json`（当前复算，非官方快照），报告逐格读数。
+
+3. 🟡 W77-3 G-8 分母 + 补答缺口（零出站，不实装二轮）
+- 分母口径按 D-W77-3 落地到报告层（`success/attempted` 主、`success/clarified` 并列、
+  attempted<clarified ⇒ 后者 UNVERIFIED）；补测。
+- 产出 `eval/results_w77_g8_answer_gap.json`：18 条 expected=clarify 逐条列
+  `case_id/question/reason/是否带冻结候选/缺什么答案`，只列不编；9 条误澄清单列并标"不给补答"。
+- 结论只能是"G-8 仍 UNVERIFIED；需数据源"，不得跑真打。
+
+4. 🟢 W77-4 预算账本 + b2 匣带卫生（零出站）
+- runner 增加**全局 calls 账本**：冒烟/重跑/重试都计入，与 ¥/tokens 上限并列；
+  任一越限即停并落 `budget_stop`（含 calls 字段）。用假 transport 做单测，零真打。
+- b2 匣带：清理/重建为仅含干净批次的 115 键（或落 manifest 标明 23 个脏键并禁作证据）；
+  不得改写 b1/b3 历史。重跑结果 JSON 保留。
+
+5. 不做：不评估/不实施方案 A；不装 torch/sentence-transformers；不改 ADR/镜像；
+   不真打 τ/G-8；不扩 L4；不改 gold/冻结集/语义包/prompt；不刷官方快照；
+   不做维度重录；不改 G-8 阈值；不把 τ 豁免写成"τ 已校准"。
+
+6. 回执：产物路径／git_rev+dirty／tokens（应 0）；W77-1/2/3/4 各一句"通过/不通过/不可判"；
+   引用 τ 时必须同写"L4 决策份额 0/166；τ 未校准"。
+```
+
+### 98.9 边界
+
+本窗零出站、零写库（沙箱 `mode=ro`）；只追加 `reports/qa/**`；另跑的 166 回放输出到 `%TEMP%`，未入库；未动产品代码／测试／语义包／冻结集／判据／gates 阈值；官方门禁仍 `88f3500`／PASS 1/8。
