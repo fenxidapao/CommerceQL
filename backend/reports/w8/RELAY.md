@@ -7629,3 +7629,84 @@ eval/results_r72_column_pairing.json                 W72-4（strict/normalized �
   代码（W72-3 只出方案）/ `reports/qa/**` / `.workbuddy/`；
 * 未跑 τ 采样、未扩 L4 候选面、未改 G-8 二轮、未刷官方门禁（仍 `88f3500`/PASS 1/8）；
 * 未 `git add -A`；零出站（tokens 计费 = 0，¥0）。
+
+---
+
+## 78 W72-3 实装：默认谓词按指标收窄（R31bq）—— refund_rate 不再被自己的 WHERE 清零
+
+派单：W72 §3（总控点句「改」，2026-10-23 16:04）｜起跑 HEAD `a9779b4`｜
+**零出站**（replay 复用 r63 匣带；tokens 计费 = 0）。
+
+### 78.1 改动（5 处代码 + 3 处夹具/契约测试）
+
+| 文件 | 改动 |
+|---|---|
+| `app/core/contracts.py` | `GuardAllowlist` 增第 8 键 **`metric_predicates`**（指标 → 该指标自身 default_predicates），缺省方向表补一行（fail-open：口径反向） |
+| `app/semantics/runtime.py` | `_metric_predicates()` 投影（与 `_default_predicates()` 同源同一份 bundle）；返回体补键 |
+| `app/guard/ast_gate.py` | 新增 `_metric_scoped_predicates()`；`_inject_predicates(root, allowlist, metrics=())`；`run_gate1(..., *, metrics=())`；冲突/缺声明走 `logging` 警告
+| `app/graph/nodes/gate1_ast.py` | `_metric_names(state)` 从 `state["plan"].metrics` 取名（去重保序）并下传 |
+| `tests/unit/test_guard_predicate_metric_scope.py` | 新增 6 测（派单要求的 4 条 + 冲突 + 无声明两条） |
+| `tests/unit/guard_fixtures.py` / `tests/contract/_fullchain_deps.py` | 夹具补 `metric_predicates`（键集契约 7→8） |
+| `tests/unit/test_semantics_loader.py` | 键集测试改名 `..._all_eight_keys` 并加键 |
+
+**收窄规则（三条，写进函数 docstring 与契约注释）**：
+1. 无指标 / 有指标缺指标级条目 ⇒ **回落域级**（fail-closed，宁可多注入）；
+2. 全部指标都有条目 ⇒ 每个域取「本域内指标声明的谓词并集」（本域无参与指标 ⇒ 保持域级）；
+3. 同域内指标对同一谓词意见不一致 ⇒ **判冲突、回落域级**，不静默选边
+   （`refund_rate`+`gmv` 同 SELECT 时「排退款单」与「必须含退款单」无法同时成立）。
+   ⚠️ 冲突用 `logging` 记，不走 `Gate1Report.warnings` —— 后者按 `AstRule` 编号记账，
+   而规则编号会进 `gate_detail.ast.rule_id` 与指标分组（`enums.AstRule` 明令不得随便改）。
+
+**顺带修的一处既有红灯**（如实报备）：`tests/eval/test_eval_boundary.py` 要求「只有
+`sqlite_exec.py` 等 5 个模块直连 sqlite3」，而 W70/W71 的审计脚本自己 `sqlite3.connect`（红灯
+自 W70 起）。本轮把 `w70_accounts.py` / `w71_gold_caliber_audit.py` 改走
+`sqlite_exec.open_sandbox_connection(..., tenant_id=None)`（只读），**未扩白名单**、未改断言；
+`w72_predicate_audit.py` 的 `sqlite3` 是未用导入，已删。该测试现 16 passed。
+
+### 78.2 行为验证（全量 166 replay，零出站）
+
+`eval/results_r73_full166_metric_scope.json`（r63 匣带 replay）+ `results_r73_metric_scope_delta.json`。
+
+* **谓词集变化 = 7 条，全部「只减不增」**，且减掉的都是同一条
+  `refund_status <> 'refunded'`：M-IDX-05/06、C-RATE-01/02（refund_rate）、
+  M-IDX-09/10、C-REP-01（repurchase_rate_90d）—— 这两个指标在包内的
+  `default_predicates` 本来就只有 `pay_status='paid'` / `is_test_order=false`。
+* **gmv / order_cnt / aov / arpu 一条未变**（仍三条；只出现顺序差异，集合相同）。
+* **等价条数 36/163（前后不变）**；终态分布 116 complete / 28 refuse / 16 clarify / 3 error / 3 None
+  **逐格不变**。⇒ 本次修复只动「该动的 7 条」，没有连带效应。
+* **M-IDX-05/06 的退款率**：`0.0` → `0.05008328882` / `0.04998161411`，与权威值
+  （`0.05008328882002321` / `0.049981614113764596`）逐位一致。
+* **G-7 重算（system vs authority，同一把尺 rel_err ≤ 1e-3）：13/13 = 100%**。
+  🔴 红线：这只说明「D 类 + 本轮 bug」两件事都清楚了，**不改变** W72-2 的判据问题
+  ——现行 G-7 实现仍然度量题库（gold vs authority）而非系统，A/B 两案仍待总控裁。
+
+### 78.3 测试
+
+* 新增 `test_guard_predicate_metric_scope.py` **6 passed**：
+  `test_refund_rate_does_not_get_refund_status_filter` / `test_gmv_keeps_three_predicates` /
+  `test_metric_predicates_override_domain` / `test_unknown_metric_falls_back_to_domain` /
+  `test_conflicting_metrics_fall_back_to_domain` / `test_metric_without_declaration_falls_back`。
+* 全量 unit **1538 passed**（1532 → +6）。
+* eval + contract（`PYTHONPATH` 含仓库根）：**1111 passed / 1 failed**，失败 =
+  `test_no_undeclared_third_party_imports`（`backend/tests/eval/test_tau_samples.py` 的
+  `from eval.runner import` 被当成未声明第三方包）—— **本轮之前就红**，与本轮改动无关，
+  未私自动 `pyproject` 或该测试。另：该套件需 `PYTHONPATH` 才可收集，否则
+  `test_tau_samples.py` 直接 ImportError（同样是既有环境问题）。
+
+### 78.4 边界
+
+```
+backend/app/core/contracts.py / semantics/runtime.py / guard/ast_gate.py
+backend/app/graph/nodes/gate1_ast.py                     ← 4 处产品代码
+backend/tests/unit/test_guard_predicate_metric_scope.py  ← 新增 6 测
+backend/tests/unit/guard_fixtures.py / test_semantics_loader.py
+backend/tests/contract/_fullchain_deps.py / tests/eval/test_harness_allowlist.py
+eval/w70_accounts.py / w71_gold_caliber_audit.py         ← sqlite 直连改走适配层
+eval/w72_predicate_audit.py                              ← 删未用导入
+eval/w73_metric_scope_verify.py                          ← 新增（零出站验证脚本）
+eval/results_r73_full166_metric_scope.json               ← 166 replay
+eval/results_r73_metric_scope_delta.json                 ← 谓词集差异 + G-7 重算
+```
+
+* 未改：gold / 冻结集 / 语义包 / `gates.py` 阈值 / 探针脚本 / `equivalence.py` / τ / 门禁；
+* 未真打（0 tokens）；未 `git add -A`；未碰 `backend/reports/qa/**`。

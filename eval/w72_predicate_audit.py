@@ -15,7 +15,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import sqlite3
 import sys
 from collections import Counter, defaultdict
 from typing import Any

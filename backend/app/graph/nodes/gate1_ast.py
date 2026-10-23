@@ -58,7 +58,7 @@ async def gate1_ast(state: GraphState) -> dict[str, Any]:
     )
 
     with node_latency(LatencyKey.GATE):
-        report = run_gate1(sql, allowlist)
+        report = run_gate1(sql, allowlist, metrics=_metric_names(state))
 
     update: dict[str, Any] = dict(gate_update(state, GateNo.AST, report.gate_result))
     if report.gate_result.passed:
@@ -93,3 +93,24 @@ def _request_max_rows(state: GraphState) -> int | None:
         return None
     value = options.get("max_rows")
     return value if isinstance(value, int) else None
+
+
+def _metric_names(state: GraphState) -> tuple[str, ...]:
+    """本次计划声明的指标名（去重保序）—— 谓词按指标收窄的入口（W72-3 / R31bq）。
+
+    来源 = `state["plan"].metrics[].name`（`planner/schemas.Plan`；`bind` 读的是
+    `plan.metrics[0].name`，这里取**全部**）。计划缺失 / 非结构化 ⇒ 返回空元组 ⇒
+    `ast_gate._inject_predicates` 回落域级谓词（保持旧行为，不放松）。
+    """
+    plan = state.get("plan")
+    metrics: Any = getattr(plan, "metrics", None)
+    if metrics is None and isinstance(plan, Mapping):
+        metrics = plan.get("metrics")
+    names: list[str] = []
+    for item in metrics or ():
+        name = getattr(item, "name", None)
+        if name is None and isinstance(item, Mapping):
+            name = item.get("name")
+        if name and str(name) not in names:
+            names.append(str(name))
+    return tuple(names)

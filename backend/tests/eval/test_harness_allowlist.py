@@ -115,9 +115,10 @@ def test_structural_face_widening_only_touches_the_columns_key(analyst_ctx, harn
 
 
 # ==== U-119 / U-121：形状只能取自端口，且适配层不得复活============
-#: `contracts.GuardAllowlist` 的七个键（本测试只用作**反查**：评测侧不许自己拼出这些键）。
+#: `contracts.GuardAllowlist` 的八个键（本测试只用作**反查**：评测侧不许自己拼出这些键）。
+#: W72-3 起增 `metric_predicates`：指标级谓词必须由端口给，注入侧不得凭域级列表自行推断。
 _GUARD_KEYS = ("bundle_version", "assets", "joins", "deny_columns",
-               "default_predicates", "allowed_constants", "max_rows")
+               "default_predicates", "metric_predicates", "allowed_constants", "max_rows")
 #: 两道闸门的取数点（W2C 的接线面）。
 _GATE_CONSUMERS = (os.path.join("app", "guard", "policy_gate.py"),
                    os.path.join("app", "graph", "nodes", "gate1_ast.py"))

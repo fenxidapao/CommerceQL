@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import os
-import sqlite3
 import sys
 from collections import Counter, defaultdict
 from typing import Any
@@ -70,8 +69,15 @@ _HSTR_CITY = {
 }
 
 
+def _connect():
+    """只读沙箱连接 —— 走 `eval/sqlite_exec.py` 的唯一适配层（不直连 sqlite3）。"""
+    from sqlite_exec import open_sandbox_connection
+
+    return open_sandbox_connection(SANDBOX, tenant_id=None, tenant_scoped_physicals={})
+
+
 def _run(sql: str) -> tuple[int, list[tuple]]:
-    con = sqlite3.connect(SANDBOX)
+    con = _connect()
     try:
         rows = con.execute(sql).fetchall()
         return len(rows), rows[:3]
@@ -81,7 +87,7 @@ def _run(sql: str) -> tuple[int, list[tuple]]:
 
 def build_c_account() -> dict[str, Any]:
     r66 = {r["case_id"]: r for r in json.load(open(SRC_R66, encoding="utf-8"))["records"]}
-    con = sqlite3.connect(SANDBOX)
+    con = _connect()
     city_owner = {
         row[0]: row[1] for row in con.execute("SELECT city, tenant_id FROM v_shop").fetchall()
     }

@@ -64,12 +64,18 @@ def build_allowlist(bundle: dict[str, Any] | None = None) -> dict[str, Any]:
         domain: [p["predicate"] for p in preds]
         for domain, preds in b["default_predicates"].items()
     }
+    #: W72-3：指标级谓词集（与域级同源，loader 已校验一致）—— 注入侧按它收窄
+    metric_predicates = {
+        m["name"]: list(m.get("default_predicates") or ())
+        for m in b["metrics"]
+    }
     return {
         "bundle_version": b["meta"]["version"],
         "assets": assets,
         "joins": joins,
         "deny_columns": deny,
         "default_predicates": default_predicates,
+        "metric_predicates": metric_predicates,
         # R14 第③类"语义包声明常量"：当前 bundle 无声明区 → 空（R14 口径见 ast_gate.py）
         "allowed_constants": [],
     }

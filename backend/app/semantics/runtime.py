@@ -14,7 +14,7 @@
 
 ⚠️ **两个投影、两种形状，各自显式声明（U-121）**：本模块对外给**两份**白名单视图 ——
 `asset_allowlist(ctx)`（**扁平** `{物理名: 条目}`，给 `planner` / `binding`）与
-`guard_allowlist(ctx, *, max_rows=None)`（**7 键 wrapper**，给 `guard/ast_gate` / `guard/policy_gate`）。
+`guard_allowlist(ctx, *, max_rows=None)`（**8 键 wrapper**，给 `guard/ast_gate` / `guard/policy_gate`）。
 二者**同源于同一份 `LoadedBundle`**；消费方**不得**互相派生（"闸门自己从扁平拼判据"正是
 U-121 那条缝的成因：同一条真 SQL 在生产里必 `R05`）。形状由 `app/core/contracts.py`
 （W0 冻结）声明，本模块只负责**如实产出**，不自行发明键。
@@ -220,6 +220,7 @@ class SemanticBundleRuntime:
             ),
             deny_columns=self._deny_columns(),
             default_predicates=self._default_predicates(),
+            metric_predicates=self._metric_predicates(),
             allowed_constants=(),
             max_rows=max_rows,
         )
@@ -246,6 +247,22 @@ class SemanticBundleRuntime:
         return {
             domain: tuple(dp.predicate for dp in dps)
             for domain, dps in self._loaded.bundle.default_predicates.items()
+        }
+
+    def _metric_predicates(self) -> dict[str, tuple[str, ...]]:
+        """指标 → 该指标**自身**声明的默认谓词（W72-3；`GuardAllowlist.metric_predicates`）。
+
+        ⚠️ 必须与 `_default_predicates()` **同源**（同一份 `bundle`）—— 两处各写一遍会让
+        "域级集"与"指标级集"存在漂移空间（loader 已校验两者双向一致，投影不该破坏它）。
+
+        为什么需要这一层：域级谓词是**全域业务规则**，而指标可以有例外 ——
+        典型 = `refund_rate` 的分子靠退款行为算出来，**不得**注入
+        `refund_status <> 'refunded'`（包 `bundle:591` 明文）。只给域级集时这条例外无法表达，
+        注入侧只能无差别套用 ⇒ 退款率分子被清零（M-IDX-05/06 = 0.0）。
+        """
+        return {
+            m.name: tuple(m.default_predicates)
+            for m in self._loaded.bundle.metrics
         }
 
     def policy(self) -> Mapping[str, Any]:

@@ -21,6 +21,7 @@ allowlist 输入形状：**不做本模块声明**（U-121 第三步收口）—
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -33,6 +34,10 @@ from sqlglot.errors import ParseError
 from app.core.contracts import GateResult
 from app.core.enums import AstRule, GateDecision, GateNo
 from app.guard.rules import FUNCTION_DENYLIST, FUNCTION_DENYLIST_PREFIXES, RULES
+
+#: W72-3：谓词收窄被拒（指标缺失/多指标冲突）时记日志用 —— 不走 `Gate1Report.warnings`，
+#: 后者按 `AstRule` 编号记账，而规则编号会进指标分组（见 `enums.AstRule` 的告诫）。
+_LOG = logging.getLogger(__name__)
 
 __all__ = [
     "Gate1Warning",
@@ -273,8 +278,14 @@ def _build_reject(rule: AstRule) -> Gate1Report:
 # 入口
 # ---------------------------------------------------------------------------
 
-def run_gate1(sql: str, allowlist: Mapping[str, Any]) -> Gate1Report:
-    """执行 gate1（完整流程，见模块 docstring 的顺序）。"""
+def run_gate1(
+    sql: str, allowlist: Mapping[str, Any], *, metrics: Sequence[str] = ()
+) -> Gate1Report:
+    """执行 gate1（完整流程，见模块 docstring 的顺序）。
+
+    `metrics`：本次查询声明的指标名（`plan.metrics[].name`）。非空时按指标级谓词集收窄
+    默认谓词注入范围（W72-3 / R31bq）；不传 = 沿用域级行为（向后兼容，也是 fail-closed 兜底）。
+    """
 
     if not isinstance(sql, str) or not sql.strip():
         return _build_reject(AstRule.R01_STATEMENT_TYPE)
@@ -319,7 +330,7 @@ def run_gate1(sql: str, allowlist: Mapping[str, Any]) -> Gate1Report:
     had_top_level_limit = _top_level_limit(root) is not None
 
     # --- 默认谓词注入（AST 层，必须先于审计）---
-    applied = _inject_predicates(root, allowlist)
+    applied = _inject_predicates(root, allowlist, metrics)
 
     # R14 白名单 = ① LIMIT 注入值 ② 谓词常量 ③ 语义包声明常量（07 §7.2 三类）。
     effective_limit = _effective_limit(allowlist)
@@ -457,12 +468,72 @@ def _predicate_constants(node: exp.Expr) -> frozenset[str]:
     return frozenset(vals)
 
 
-def _inject_predicates(root: exp.Expr, allowlist: Mapping[str, Any]) -> list[str]:
-    """对查询内每个**物理表实例**注入其域的默认谓词，返回已注入谓词（审计可追溯）。"""
+def _metric_scoped_predicates(
+    pred_by_domain: Mapping[str, Sequence[str]],
+    metric_predicates: Mapping[str, Sequence[str]],
+    metrics: Sequence[str],
+) -> tuple[Mapping[str, Sequence[str]], str]:
+    """按指标收窄域级谓词表（W72-3）；无法收窄时**原样返回域级表**（不放松）。
+
+    返回 `(收窄后的域表, 决策说明)`。三条规则（契约 `GuardAllowlist.metric_predicates` 同步写）：
+
+    1. `metrics` 为空 或 有指标缺指标级条目 ⇒ **回落域级**（fail-closed：宁可多注入也不漏注入）；
+    2. 所有指标都有条目 ⇒ 每个域取「该域内指标声明的谓词并集」；
+    3. 多指标对同一谓词**意见不一致**（有的要、有的不要）⇒ 判冲突，整表回落域级。
+       理由：同一 SELECT 的 WHERE 是共享的，`refund_rate`+`gmv` 同时出现时
+       「排掉退款单」与「必须含退款单」无法同时成立，没有正确答案 ⇒ 不静默选边。
+    """
+    domain_union = {d: t for d, t in pred_by_domain.items()}
+    if not metrics:
+        return domain_union, "fallback:no_metric"
+    missing = [m for m in metrics if not metric_predicates.get(m)]
+    if missing:
+        return domain_union, f"fallback:no_metric_predicates:{','.join(missing)}"
+
+    scoped: dict[str, Sequence[str]] = {}
+    for domain, preds in pred_by_domain.items():
+        #: 属于本域的指标 = 其指标级谓词集 ⊆ 本域谓词集（`bundle.metrics[].domain` 不在
+        #: allowlist 里，用集合包含关系反推，避免再加一个键）
+        in_domain = [m for m in metrics if set(metric_predicates[m]) <= set(preds)]
+        if not in_domain:
+            #: 本域没有参与本次查询的指标 ⇒ 保持域级（与收窄前完全一致，不改变既有行为）
+            scoped[domain] = tuple(preds)
+            continue
+        #: 冲突：同域内指标对同一谓词意见不一致（有的要、有的不要）
+        for pred in preds:
+            wants = [pred in metric_predicates[m] for m in in_domain]
+            if any(wants) and not all(wants):
+                return domain_union, f"fallback:metric_conflict:{domain}:{pred}"
+        union: list[str] = []
+        for m in in_domain:
+            for p in metric_predicates[m]:
+                if p not in union:
+                    union.append(p)
+        scoped[domain] = tuple(union)
+    return scoped, f"scoped:{','.join(metrics)}"
+
+
+def _inject_predicates(
+    root: exp.Expr, allowlist: Mapping[str, Any], metrics: Sequence[str] = ()
+) -> list[str]:
+    """对查询内每个**物理表实例**注入其域的默认谓词，返回已注入谓词（审计可追溯）。
+
+    `metrics` = 本次查询声明的指标名（`plan.metrics[].name`）。非空时按
+    `allowlist["metric_predicates"]` 收窄域级谓词表（见 `_metric_scoped_predicates`）——
+    这是 `refund_rate` 不被注入 `refund_status <> 'refunded'` 的唯一依据（包 `bundle:591`）。
+    """
 
     pred_by_domain: Mapping[str, Sequence[str]] = allowlist.get("default_predicates") or {}
     if not pred_by_domain:
         return []
+    pred_by_domain, scope_note = _metric_scoped_predicates(
+        pred_by_domain, allowlist.get("metric_predicates") or {}, metrics
+    )
+    if scope_note.startswith(("fallback:metric_conflict", "fallback:no_metric_predicates")):
+        #: ⚠️ 用日志而不是 `Gate1Report.warnings`：后者按 `AstRule` 编号记录（R17–R20），
+        #: 而规则编号会进 `gate_detail.ast.rule_id` 与指标分组（`enums.AstRule` 明令不得随便改）
+        #: ⇒ 不为了这一条内部决策去动规则编号体系。
+        _LOG.warning("gate1 predicate scoping rejected: %s", scope_note)
     assets: Mapping[str, Any] = allowlist.get("assets") or {}
     cte_names = {c.alias for c in root.find_all(exp.CTE)}
     applied: list[str] = []

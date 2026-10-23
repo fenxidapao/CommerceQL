@@ -185,6 +185,7 @@ def base_allowlist() -> dict[str, Any]:
         "joins": [],
         "deny_columns": [],
         "default_predicates": {},
+        "metric_predicates": {},
         "allowed_constants": [],
         "max_rows": 1000,
     }

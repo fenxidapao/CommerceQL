@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import sqlite3
 import sys
 from collections import Counter, defaultdict
 from typing import Any
@@ -117,10 +116,17 @@ def _gold_facts(sql: str) -> dict[str, Any]:
 _COL_CACHE: dict[str, set[str]] = {}
 
 
+def _connect():
+    """只读沙箱连接 —— 走 `eval/sqlite_exec.py` 的唯一适配层（不直连 sqlite3）。"""
+    from sqlite_exec import open_sandbox_connection
+
+    return open_sandbox_connection(SANDBOX, tenant_id=None, tenant_scoped_physicals={})
+
+
 def _column_values(col: str) -> set[str] | None:
     if col in _COL_CACHE:
         return _COL_CACHE[col]
-    con = sqlite3.connect(SANDBOX)
+    con = _connect()
     try:
         vals: set[str] = set()
         for (tbl,) in con.execute(
@@ -485,7 +491,7 @@ def _b_pairs(records: dict[str, dict], sandbox) -> list[dict[str, Any]]:
 # ============================================================================
 
 def build_city() -> dict[str, Any]:
-    con = sqlite3.connect(SANDBOX)
+    con = _connect()
     tenant_cities: dict[str, list[str]] = defaultdict(list)
     for city, tid, shop in con.execute(
         "SELECT city, tenant_id, shop_id FROM v_shop ORDER BY tenant_id, shop_id"

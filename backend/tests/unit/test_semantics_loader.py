@@ -404,10 +404,10 @@ class TestRuntime:
     # 约束必须同时可读 —— 只钉一个投影正是那条缝能存活这么久的原因）
     # ------------------------------------------------------------------
 
-    def test_guard_allowlist_carries_all_seven_keys(
+    def test_guard_allowlist_carries_all_eight_keys(
         self, runtime: SemanticBundleRuntime
     ) -> None:
-        """7 键**全部在位**（缺键 = 违约，`GuardAllowlist` 把它们全声明为 Required）。"""
+        """8 键**全部在位**（缺键 = 违约，`GuardAllowlist` 把它们全声明为 Required）。"""
         wrapper = runtime.guard_allowlist(_identity())
         assert set(wrapper) == set(GuardAllowlist.__required_keys__)
         assert set(wrapper) == {
@@ -416,6 +416,7 @@ class TestRuntime:
             "joins",
             "deny_columns",
             "default_predicates",
+            "metric_predicates",
             "allowed_constants",
             "max_rows",
         }

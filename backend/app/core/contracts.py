@@ -301,7 +301,7 @@ class LLMPort(Protocol):
 #
 # 裁定 = 端口**新增一个显式声明形状的方法**（`guard_allowlist`），**禁止**闸门各自派生。
 #
-# 七个键的**缺省方向**（逐键已裁，**明令禁止"只补 `assets` 键"**）：
+# 八个键的**缺省方向**（逐键已裁，**明令禁止"只补 `assets` 键"**）：
 #
 # | 键 | 缺键方向 | 后果 |
 # |---|---|---|
@@ -309,11 +309,12 @@ class LLMPort(Protocol):
 # | `joins` | fail-closed（过严） | 认证边循环空转 ⇒ 所有 join 落 R10 |
 # | `deny_columns` | fail-closed（丢归因） | R07 / `G2-DENY` 永不触发，降级成 R06 |
 # | `default_predicates` | 🔴 fail-open | 口径谓词零注入 ⇒ GMV 静默算进测试单/退款单/未支付单 |
+# | `metric_predicates` | 🔴 fail-open（口径反向） | 只能按域级注入 ⇒ 指标级例外（如退款率不得排退款单）丢失，分子被清零（W72-3 实证） |
 # | `bundle_version` | 🔴 fail-open | gate2 ① 恒不触发 ⇒ 违反 §5.7「不得静默用新版本续跑」 |
 # | `max_rows` | 🔴 fail-open | 请求级上限被静默忽略，生产恒 `L = 10000` |
 # | `allowed_constants` | fail-closed | R14 少一类白名单来源（见下） |
 #
-# ⇒ 本文件把 **7 个键全部声明为 Required**：缺键 = 违约，实现必须显式给值
+# ⇒ 本文件把 **8 个键全部声明为 Required**：缺键 = 违约，实现必须显式给值
 #   （`allowed_constants` 在语义包里没有区块时给**空序列**，不是不给键）。
 #   "只补 `assets`"之所以被禁止：`R05` 一解除，另外三条 fail-open 会从
 #   "被掩盖" 变成 "被暴露" —— 把一条 fail-closed 换成三条 fail-open 比现状更坏。
@@ -405,6 +406,23 @@ class GuardAllowlist(TypedDict):
     #:     `graph/nodes/execute.py:34` 已就这一点具名自警）。
     #: ⚠️ 若实现干脆不给本键 ⇒ 就是把 `options.max_rows` 静默丢掉（U-121 子事实 7，fail-open）。
     max_rows: int | None
+    #: 指标 → 该指标**自身**声明的默认谓词。来源：`SemanticBundle.metrics[].default_predicates`
+    #: （loader `:384-408` 已校验它与域级 `applies_to` 双向一致）。
+    #:
+    #: 🔴 为什么必须另立本键（W72-3 / R31bq 实证）：`default_predicates` 是**域级**的，
+    #: 注入侧按「资产所属域」取整份列表 ⇒ `orders` 域的 `refund_status <> 'refunded'`
+    #: （`dp_order_002`，`applies_to` **不含** `refund_rate`）被无差别注入到退款率查询，
+    #: 而退款率的分子正是靠退款行为算出来的 ⇒ **分子被自己的 WHERE 清零**，
+    #: M-IDX-05/06 实测恒 `0.0`（权威 0.05008 / 0.04998）。
+    #: 包内 `bundle:591` 明文写着「本指标的谓词**不含** `refund_status <> 'refunded'`」——
+    #: 规则在包里是清楚的，坏在**这条信息没传到闸门**。
+    #:
+    #: ⚠️ 与本键同时生效的用法约束（`ast_gate._inject_predicates`）：
+    #:   · 只有**所有**已声明指标都有指标级条目时才按指标集注入；
+    #:   · 任何指标缺条目 / 无指标（`metrics` 为空）⇒ **回落域级**（保持现状，不放松）；
+    #:   · 多指标对同一谓词意见不一致（有的要、有的不要）⇒ 判冲突，回落域级并记 warning，
+    #:     **不静默选边**（同一 SELECT 的 WHERE 是共享的，没有"正确答案"）。
+    metric_predicates: Mapping[str, Sequence[str]]
 
 
 @runtime_checkable
@@ -416,7 +434,7 @@ class SemanticBundlePort(Protocol):
 
     - `asset_allowlist(ctx) -> {物理名: AssetAllowlistEntry}`：**扁平**，给
       `planner/payloads`（它按物理名迭代）与 `binding/filters`（它按物理名查表）；
-    - `guard_allowlist(ctx) -> GuardAllowlist`：**7 键 wrapper**，给 `guard/ast_gate`
+    - `guard_allowlist(ctx) -> GuardAllowlist`：**8 键 wrapper**，给 `guard/ast_gate`
       与 `guard/policy_gate`。
 
     ⚠️ 闸门**不得**再从扁平形状"自己派生"判据（那正是评测侧适配层
