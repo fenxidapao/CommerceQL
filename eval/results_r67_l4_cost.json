@@ -1,0 +1,1265 @@
+{
+  "provenance": "w67 diagnostics: L4 reach + L4 cost, zero egress (read-only over r66 replay + r63 cassette)",
+  "task": "W67-2 L4 触发条件与成本现状账（只出材料，不改行为；挂 U-117 / §88.4②）",
+  "generated_at": "2026-10-23T02:01:47+00:00",
+  "git_rev": "891fe0c",
+  "git_dirty": false,
+  "config": {
+    "source_cassette": "eval/cassettes/w8_r63_full166.jsonl",
+    "l4_call_fingerprint": "字段绑定 L4 打分器",
+    "pricing_source": "backend/app/llm/budget.py PRICES + compute_cost（与结算同源，缓存分档）",
+    "model": "deepseek-flash",
+    "zero_egress": true
+  },
+  "headline": {
+    "l4_runtime_calls": 119,
+    "l4_unique_requests": 106,
+    "l4_cassette_lines": 114,
+    "n_records_unmatched": 8,
+    "n_matched_via_nospace": 6,
+    "unmatched_case_ids": [
+      "E-ENUM-07",
+      "E-ENUM-08",
+      "E-ENUM-09",
+      "M-MET-06",
+      "M-MET-07",
+      "C-GMV-02",
+      "C-REP-02",
+      "C-UV-02"
+    ],
+    "unmatched_note": "残余未匹配 = 归一化组件做了**同义词/词序级改写**（如『销售额』→『GMV』、『总访客数』→『总访客数（UV）』、『在架商品有多少个』→『在架商品数是多少』），无法用无语义假设的规则安全复原；匹配判据只用了『剥租户前缀 + 剥句首「的」+ 去空白』三级，全部无语义假设。",
+    "dedup_note": "r63 实跑发起 119 次 L4 调用（每条走到 bind 且有字段级候选的记录恰 1 次）；匣带 save() 按 key 覆盖去重后留 114 行（= 唯一请求哈希数）。本表 l4_unique_requests=106 是**按问句匹配到的唯一请求数**（114 行匣带中有 8 行对应的记录因归一化改写未被匹配，见 unmatched_note）；两者口径不同，勿混用。",
+    "subset_violations": [],
+    "l4_tokens": {
+      "prompt": 115732,
+      "cache_hit": 46848,
+      "completion": 117293,
+      "prompt_miss": 68884
+    },
+    "l4_decision_contribution": {
+      "n_records_decided_at_l4": 0,
+      "verdict": "L4 打分在这批上一次也没有改变过任何判定：119 条 binding 全部由 L3 终止（W67-1 层归因），L4 分数算完即弃。U-117 原提案（改触发条件）的成本依据成立。"
+    },
+    "u117_reference": "TASK_BOARD §88.4②：114 次/¥1.27/58% 为 QA 估算口径（prompt 全按未命中计）；本表按 compute_cost 缓存分档计价，两档都列。"
+  },
+  "cost_by_tier": {
+    "off_peak": {
+      "l4_cost_cny": 0.574023,
+      "total_cost_cny": 1.062979,
+      "l4_share": 0.54
+    },
+    "peak": {
+      "l4_cost_cny": 1.148062,
+      "total_cost_cny": 2.125965,
+      "l4_share": 0.54
+    }
+  },
+  "tier_inference": {
+    "r63_live_reported_total_cny": 2.17428,
+    "r63_live_nearest_tier": "peak",
+    "r63_live_started_at_utc": "2026-10-22T07:19:48+00:00",
+    "r66_replay_reported_total_cny": 1.085754,
+    "r66_replay_nearest_tier": "off_peak",
+    "r66_replay_generated_at": "2026-10-22T13:30:23+00:00",
+    "note": "r63 实跑 2026-10-22T07:19Z = 北京时间 15:19（周四，14:00-18:00 高峰窗）；r66 重放 13:30Z = 21:30（非高峰）。与数值对账互证。"
+  },
+  "shared_request_groups": [
+    {
+      "normalized_question": "从 2026-08-01 起的 GMV 是多少？",
+      "case_ids": [
+        "E-MET-01",
+        "E-MET-09"
+      ],
+      "n": 2
+    },
+    {
+      "normalized_question": "在架商品数是多少？",
+      "case_ids": [
+        "E-VER-02",
+        "E-VER-10",
+        "E-VER-11"
+      ],
+      "n": 3
+    },
+    {
+      "normalized_question": "处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "case_ids": [
+        "H-ENUM-01",
+        "H-ENUM-04"
+      ],
+      "n": 2
+    },
+    {
+      "normalized_question": "自 2026-08-01 起的人均消费是多少？",
+      "case_ids": [
+        "M-IDX-03",
+        "M-IDX-04"
+      ],
+      "n": 2
+    }
+  ],
+  "per_case": [
+    {
+      "case_id": "C-AOV-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-CAT-01",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-CITY-01",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-CITY-02",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-CITY-03",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-CITY-04",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-GMV-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-GMV-02",
+      "l4_runtime_call": true,
+      "request_matched": false,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-GMV-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-GMV-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-RATE-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-RATE-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-REG-01",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-REG-02",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-REP-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-REP-02",
+      "l4_runtime_call": true,
+      "request_matched": false,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-UV-01",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "C-UV-02",
+      "l4_runtime_call": true,
+      "request_matched": false,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-ENUM-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-ENUM-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-ENUM-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-ENUM-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-ENUM-05",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-ENUM-06",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-ENUM-07",
+      "l4_runtime_call": true,
+      "request_matched": false,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-ENUM-08",
+      "l4_runtime_call": true,
+      "request_matched": false,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-ENUM-09",
+      "l4_runtime_call": true,
+      "request_matched": false,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-ENUM-10",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-MET-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-MET-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-MET-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-MET-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-MET-05",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-MET-06",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-MET-07",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-MET-08",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-MET-09",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-MET-10",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-VER-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-VER-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-VER-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-VER-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-VER-05",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-VER-06",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-VER-07",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-VER-08",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-VER-10",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "E-VER-11",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-CAT-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-CAT-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-CAT-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-CAT-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-CAT-05",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-ENUM-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-ENUM-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-ENUM-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-ENUM-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-MET-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-MET-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-MET-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-MET-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-MET-05",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-MET-06",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-MET-07",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-MET-08",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-MET-09",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-MET-10",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-STR-01",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-STR-02",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-STR-03",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-STR-04",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-STR-05",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-STR-06",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-STR-07",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-STR-08",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "H-STR-09",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-DIM-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-DIM-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-DIM-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-DIM-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-DIM-05",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-DIM-06",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-DIM-07",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-DIM-08",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-DIM-09",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-DIM-10",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-ENUM-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-ENUM-02",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-ENUM-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-ENUM-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-HIER-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-HIER-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-HIER-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-HIER-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-HIER-05",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-HIER-06",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-IDX-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-IDX-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-IDX-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-IDX-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-IDX-05",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-IDX-06",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-IDX-07",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-IDX-08",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-IDX-09",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-IDX-10",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-MET-01",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-MET-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-MET-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-MET-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-MET-05",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-MET-06",
+      "l4_runtime_call": true,
+      "request_matched": false,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-MET-07",
+      "l4_runtime_call": true,
+      "request_matched": false,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-MET-08",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-MET-09",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "M-MET-10",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-GMV-01",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-GMV-02",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-GMV-03",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-GMV-04",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-NA-01",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-NA-02",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-NA-03",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-NA-04",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-NA-05",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-NA-06",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-NA-07",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-NA-08",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-NA-09",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-PII-01",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-PII-02",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-PII-03",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-PII-04",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-PII-05",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-PII-06",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-PII-07",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-SEC-01",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-SEC-02",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-SEC-03",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "R-SEC-04",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-ENUM-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-ENUM-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-ENUM-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-ENUM-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-ENUM-05",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-ENUM-06",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-ENUM-07",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-ENUM-08",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-MET-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-MET-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-MET-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-MET-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-MET-05",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-MET-06",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-MET-07",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-MET-08",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-MET-09",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-MET-10",
+      "l4_runtime_call": false,
+      "request_matched": false,
+      "n_candidates": 0,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-STR-01",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-STR-02",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-STR-03",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-STR-04",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-STR-05",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-STR-06",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-STR-07",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    },
+    {
+      "case_id": "X-STR-08",
+      "l4_runtime_call": true,
+      "request_matched": true,
+      "n_candidates": 30,
+      "changed_decision": false
+    }
+  ]
+}

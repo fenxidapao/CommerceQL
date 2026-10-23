@@ -1,0 +1,1475 @@
+{
+  "provenance": "w67 diagnostics: L4 reach + L4 cost, zero egress (read-only over r66 replay + r63 cassette)",
+  "task": "W67-3 评测面 degradations 口径变更影响清单（W66 起 _EvalDegradationSink 才把网关层降级接进 GraphState）",
+  "generated_at": "2026-10-23T02:01:47+00:00",
+  "git_rev": "891fe0c",
+  "git_dirty": false,
+  "rule": {
+    "pre_w66": "评测面 records[].degradations 只含**节点层**降级（normalize/link/plan/present/embed 等经 RunContext 上报的）。",
+    "post_w66": "自 W66（_EvalDegradationSink，见 eval/harness.py）起，网关层降级（llm_concurrency_exceeded 等，原只进日志）也进 records[].degradations。",
+    "precision_notes": [
+      "switched_to_weak_model 是 ActionTaken 不是 reason（core/enums.py DegradedReason 8 值里没有它）。",
+      "llm_unavailable 是双路值：节点路径（normalize UnderstandUnavailable）一直可见，故旧产物含 llm_unavailable 不构成反例；网关路径的同类事件 W66 起才可见。",
+      "因此『W66 前缺网关层』的可检验特征 = 产物中 llm_concurrency_exceeded 恒不出现（本清单实测：152 个产物中 0 个含它，唯一例外是 W66 自己的饱和产物，见下）。"
+    ]
+  },
+  "n_files_scanned": 152,
+  "n_files_with_gateway_new_reason": 0,
+  "expected_post_w66_holders": [
+    "eval/results_r66_saturation_graph.json（W66 D5-1 饱和串跑，llm_concurrency_exceeded 图级证据）"
+  ],
+  "inventory": [
+    {
+      "file": "eval/results_a1fix57_r47.json",
+      "n_records": 57,
+      "n_records_with_degradations": 53,
+      "reasons_observed": {
+        "embedding_unavailable": 53,
+        "present_failed": 41,
+        "plan_generation_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_a1fix5_r47.json",
+      "n_records": 5,
+      "n_records_with_degradations": 5,
+      "reasons_observed": {
+        "embedding_unavailable": 5,
+        "plan_generation_failed": 1,
+        "present_failed": 5
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_a3_r44.json",
+      "n_records": 5,
+      "n_records_with_degradations": 5,
+      "reasons_observed": {
+        "embedding_unavailable": 5,
+        "plan_generation_failed": 1,
+        "present_failed": 4
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_f57_r48.json",
+      "n_records": 57,
+      "n_records_with_degradations": 23,
+      "reasons_observed": {
+        "embedding_unavailable": 23,
+        "plan_generation_failed": 2,
+        "present_failed": 12
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_f57_r48_fixA.json",
+      "n_records": 10,
+      "n_records_with_degradations": 7,
+      "reasons_observed": {
+        "llm_unavailable": 4,
+        "embedding_unavailable": 3,
+        "plan_generation_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_f57_r48_fixB.json",
+      "n_records": 10,
+      "n_records_with_degradations": 8,
+      "reasons_observed": {
+        "embedding_unavailable": 7,
+        "plan_generation_failed": 3,
+        "present_failed": 3,
+        "llm_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_f57_r48_fixC.json",
+      "n_records": 10,
+      "n_records_with_degradations": 10,
+      "reasons_observed": {
+        "embedding_unavailable": 6,
+        "plan_generation_failed": 2,
+        "present_failed": 4,
+        "llm_unavailable": 4
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_f57_r48_retry.json",
+      "n_records": 57,
+      "n_records_with_degradations": 27,
+      "reasons_observed": {
+        "llm_unavailable": 6,
+        "embedding_unavailable": 21,
+        "present_failed": 15,
+        "plan_generation_failed": 6
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_f57_r49_clean.json",
+      "n_records": 57,
+      "n_records_with_degradations": 56,
+      "reasons_observed": {
+        "embedding_unavailable": 56,
+        "present_failed": 36
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_f57_r51_clean.json",
+      "n_records": 57,
+      "n_records_with_degradations": 55,
+      "reasons_observed": {
+        "embedding_unavailable": 55,
+        "present_failed": 45,
+        "plan_generation_failed": 3
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_f57_r52_clean.json",
+      "n_records": 57,
+      "n_records_with_degradations": 54,
+      "reasons_observed": {
+        "embedding_unavailable": 54,
+        "present_failed": 45,
+        "plan_generation_failed": 3
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_f57_r53_clean.json",
+      "n_records": 57,
+      "n_records_with_degradations": 54,
+      "reasons_observed": {
+        "embedding_unavailable": 54,
+        "present_failed": 45
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_g2_r48_10.json",
+      "n_records": 10,
+      "n_records_with_degradations": 10,
+      "reasons_observed": {
+        "embedding_unavailable": 10,
+        "plan_generation_failed": 1,
+        "present_failed": 10
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_g2_r48_10_final.json",
+      "n_records": 10,
+      "n_records_with_degradations": 10,
+      "reasons_observed": {
+        "embedding_unavailable": 10,
+        "plan_generation_failed": 1,
+        "present_failed": 8
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_g2_r49_10.json",
+      "n_records": 10,
+      "n_records_with_degradations": 9,
+      "reasons_observed": {
+        "embedding_unavailable": 9,
+        "plan_generation_failed": 1,
+        "present_failed": 6
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_g2_r49_78.json",
+      "n_records": 2,
+      "n_records_with_degradations": 2,
+      "reasons_observed": {
+        "embedding_unavailable": 2
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_g2_r49_clean.json",
+      "n_records": 10,
+      "n_records_with_degradations": 10,
+      "reasons_observed": {
+        "embedding_unavailable": 10,
+        "present_failed": 7
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_g2_r49_r2.json",
+      "n_records": 9,
+      "n_records_with_degradations": 8,
+      "reasons_observed": {
+        "embedding_unavailable": 8,
+        "present_failed": 7
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_g2_r49_r3.json",
+      "n_records": 3,
+      "n_records_with_degradations": 3,
+      "reasons_observed": {
+        "embedding_unavailable": 3,
+        "plan_generation_failed": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_g2_r51_clean.json",
+      "n_records": 10,
+      "n_records_with_degradations": 10,
+      "reasons_observed": {
+        "embedding_unavailable": 10,
+        "present_failed": 9
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_g2_r52_clean.json",
+      "n_records": 10,
+      "n_records_with_degradations": 10,
+      "reasons_observed": {
+        "embedding_unavailable": 10,
+        "plan_generation_failed": 2,
+        "present_failed": 9
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_g2_r53_clean.json",
+      "n_records": 10,
+      "n_records_with_degradations": 10,
+      "reasons_observed": {
+        "embedding_unavailable": 10,
+        "present_failed": 9
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_clean_r1.json",
+      "n_records": 57,
+      "n_records_with_degradations": 49,
+      "reasons_observed": {
+        "embedding_unavailable": 49,
+        "plan_generation_failed": 5,
+        "present_failed": 31
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_clean_r2.json",
+      "n_records": 8,
+      "n_records_with_degradations": 8,
+      "reasons_observed": {
+        "embedding_unavailable": 8,
+        "present_failed": 3
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_clean_r3.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_ever06.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_ever07.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_ever07b.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_ever07c.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_f57b_r1.json",
+      "n_records": 57,
+      "n_records_with_degradations": 46,
+      "reasons_observed": {
+        "embedding_unavailable": 46,
+        "present_failed": 28
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_f57b_r2.json",
+      "n_records": 10,
+      "n_records_with_degradations": 9,
+      "reasons_observed": {
+        "embedding_unavailable": 9,
+        "present_failed": 8
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_f57b_r3.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_f57b_r4.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_mdim08.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_mdim08b.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r49_mdim08c.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r50_stab_E-VER-07_1.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r50_stab_E-VER-07_2.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r50_stab_E-VER-07_3.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r50_stab_E-VER-07_4.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r50_stab_E-VER-07_5.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r50_stab_E-VER-07_6.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r50_stab_M-DIM-08_1.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r50_stab_M-DIM-08_2.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r50_stab_M-DIM-08_3.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r50_stab_M-DIM-08_4.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r50_stab_M-DIM-08_5.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51_stab_E-VER-07_1.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51_stab_E-VER-07_2.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51_stab_E-VER-07_3.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51_stab_E-VER-07_4.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51_stab_E-VER-07_5.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51_stab_E-VER-07_6.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51_stab_M-DIM-08_1.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51_stab_M-DIM-08_2.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51_stab_M-DIM-08_3.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51_stab_M-DIM-08_4.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51_stab_M-DIM-08_5.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51f57_r1.json",
+      "n_records": 57,
+      "n_records_with_degradations": 55,
+      "reasons_observed": {
+        "embedding_unavailable": 55,
+        "present_failed": 44,
+        "plan_generation_failed": 3
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51f57_r2.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51g2_r1.json",
+      "n_records": 10,
+      "n_records_with_degradations": 9,
+      "reasons_observed": {
+        "embedding_unavailable": 9,
+        "present_failed": 8
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r51g2_r2.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_ever07_pre_fix_shape.json",
+      "n_records": 6,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_E-VER-07_1.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_E-VER-07_2.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_E-VER-07_2b.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_E-VER-07_2c.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_E-VER-07_3.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_E-VER-07_3b.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_E-VER-07_4.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_E-VER-07_5.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_E-VER-07_6.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_E-VER-07_6b.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_E-VER-07_6c.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_M-DIM-08_1.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_M-DIM-08_1b.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_M-DIM-08_2.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_M-DIM-08_3.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_M-DIM-08_3b.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_M-DIM-08_4.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52_stab_M-DIM-08_5.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52f57_r1.json",
+      "n_records": 57,
+      "n_records_with_degradations": 53,
+      "reasons_observed": {
+        "embedding_unavailable": 53,
+        "present_failed": 41,
+        "plan_generation_failed": 3
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52f57_r2.json",
+      "n_records": 4,
+      "n_records_with_degradations": 4,
+      "reasons_observed": {
+        "embedding_unavailable": 4,
+        "present_failed": 4
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52g2_r1.json",
+      "n_records": 10,
+      "n_records_with_degradations": 10,
+      "reasons_observed": {
+        "embedding_unavailable": 10,
+        "plan_generation_failed": 1,
+        "present_failed": 8
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r52g2_r2.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "plan_generation_failed": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53_stab_E-VER-07_1.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53_stab_E-VER-07_2.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53_stab_E-VER-07_3.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53_stab_E-VER-07_4.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53_stab_E-VER-07_5.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53_stab_E-VER-07_6.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53_stab_M-DIM-08_1.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53_stab_M-DIM-08_2.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53_stab_M-DIM-08_3.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53_stab_M-DIM-08_4.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53_stab_M-DIM-08_5.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53f57_r1.json",
+      "n_records": 57,
+      "n_records_with_degradations": 50,
+      "reasons_observed": {
+        "embedding_unavailable": 50,
+        "present_failed": 38
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53f57_r2.json",
+      "n_records": 7,
+      "n_records_with_degradations": 6,
+      "reasons_observed": {
+        "embedding_unavailable": 6,
+        "present_failed": 6
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53f57_r3.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53f57_r4.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53f57_r5.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53g2_r1.json",
+      "n_records": 10,
+      "n_records_with_degradations": 8,
+      "reasons_observed": {
+        "embedding_unavailable": 8,
+        "present_failed": 7
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53g2_r2.json",
+      "n_records": 3,
+      "n_records_with_degradations": 3,
+      "reasons_observed": {
+        "embedding_unavailable": 3,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53g2_r3.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r53g2_r4.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r54_full166.json",
+      "n_records": 166,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r54_full_denominator_structure.json",
+      "n_records": 166,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r54_pilot3.json",
+      "n_records": 3,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r54_replay_E-VER-07.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r54_replay_E-VER-08_57.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r54_replay_E-VER-08_g2.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r54_replay_M-DIM-08.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r56_clarify_18.json",
+      "n_records": 18,
+      "n_records_with_degradations": 10,
+      "reasons_observed": {
+        "embedding_unavailable": 10,
+        "present_failed": 2
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r56_full166.json",
+      "n_records": 166,
+      "n_records_with_degradations": 115,
+      "reasons_observed": {
+        "embedding_unavailable": 115,
+        "plan_generation_failed": 5,
+        "present_failed": 83
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r56_g2_10.json",
+      "n_records": 10,
+      "n_records_with_degradations": 10,
+      "reasons_observed": {
+        "embedding_unavailable": 10,
+        "present_failed": 7,
+        "plan_generation_failed": 2
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r56_g5_148.json",
+      "n_records": 148,
+      "n_records_with_degradations": 105,
+      "reasons_observed": {
+        "embedding_unavailable": 105,
+        "plan_generation_failed": 5,
+        "present_failed": 81
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r56_pilot1.json",
+      "n_records": 1,
+      "n_records_with_degradations": 1,
+      "reasons_observed": {
+        "embedding_unavailable": 1,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r57_g2_10.json",
+      "n_records": 10,
+      "n_records_with_degradations": 10,
+      "reasons_observed": {
+        "embedding_unavailable": 10,
+        "present_failed": 10
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r57_g5_148.json",
+      "n_records": 148,
+      "n_records_with_degradations": 110,
+      "reasons_observed": {
+        "embedding_unavailable": 110,
+        "present_failed": 88,
+        "plan_generation_failed": 2
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r57b_clarify_18.json",
+      "n_records": 18,
+      "n_records_with_degradations": 9,
+      "reasons_observed": {
+        "embedding_unavailable": 9,
+        "present_failed": 6
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r57b_full166.json",
+      "n_records": 166,
+      "n_records_with_degradations": 123,
+      "reasons_observed": {
+        "embedding_unavailable": 123,
+        "present_failed": 107
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r57b_full166_attribution.json",
+      "n_records": 166,
+      "n_records_with_degradations": 123,
+      "reasons_observed": {
+        "embedding_unavailable": 123,
+        "present_failed": 107
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r57b_full166_attribution_recomputed.json",
+      "n_records": 166,
+      "n_records_with_degradations": 123,
+      "reasons_observed": {
+        "embedding_unavailable": 123,
+        "present_failed": 107
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r57b_g2_10.json",
+      "n_records": 10,
+      "n_records_with_degradations": 10,
+      "reasons_observed": {
+        "embedding_unavailable": 10,
+        "present_failed": 10
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r57b_g5_148.json",
+      "n_records": 148,
+      "n_records_with_degradations": 114,
+      "reasons_observed": {
+        "embedding_unavailable": 114,
+        "present_failed": 101
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r58_full166.json",
+      "n_records": 166,
+      "n_records_with_degradations": 105,
+      "reasons_observed": {
+        "embedding_unavailable": 105,
+        "present_failed": 94
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r58b_refuse7.json",
+      "n_records": 7,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r58c_refuse4.json",
+      "n_records": 4,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r58d_refuse4_clean.json",
+      "n_records": 4,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r58e_full166_merged.json",
+      "n_records": 166,
+      "n_records_with_degradations": 104,
+      "reasons_observed": {
+        "embedding_unavailable": 104,
+        "present_failed": 94
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r59_full166.json",
+      "n_records": 166,
+      "n_records_with_degradations": 113,
+      "reasons_observed": {
+        "embedding_unavailable": 113,
+        "present_failed": 105
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r59_rgmv02_clean.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r59_rgmv02_zero_token.json",
+      "n_records": 1,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r61_city5_flash_live.json",
+      "n_records": 5,
+      "n_records_with_degradations": 5,
+      "reasons_observed": {
+        "embedding_unavailable": 5,
+        "present_failed": 4
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r61_city5_live.json",
+      "n_records": 5,
+      "n_records_with_degradations": 5,
+      "reasons_observed": {
+        "embedding_unavailable": 5,
+        "present_failed": 5
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r61_city5_replay.json",
+      "n_records": 5,
+      "n_records_with_degradations": 5,
+      "reasons_observed": {
+        "embedding_unavailable": 5,
+        "present_failed": 5
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r61_contract3_embed_live.json",
+      "n_records": 3,
+      "n_records_with_degradations": 3,
+      "reasons_observed": {
+        "embedding_unavailable": 3,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r61_contract3_flash_live.json",
+      "n_records": 3,
+      "n_records_with_degradations": 3,
+      "reasons_observed": {
+        "embedding_unavailable": 3,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r61_contract3_live.json",
+      "n_records": 3,
+      "n_records_with_degradations": 3,
+      "reasons_observed": {
+        "embedding_unavailable": 3,
+        "present_failed": 1
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r63_full166.json",
+      "n_records": 166,
+      "n_records_with_degradations": 123,
+      "reasons_observed": {
+        "embedding_unavailable": 123,
+        "present_failed": 116
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r64_second_round_replay.json",
+      "n_records": 3,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r65_second_round_live.json",
+      "n_records": 3,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r65_second_round_replay.json",
+      "n_records": 3,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r65_tau_raw_replay.json",
+      "n_records": 166,
+      "n_records_with_degradations": 123,
+      "reasons_observed": {
+        "embedding_unavailable": 123,
+        "present_failed": 116
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r65_tau_second_round.json",
+      "n_records": 3,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r66_tau_raw_replay.json",
+      "n_records": 166,
+      "n_records_with_degradations": 123,
+      "reasons_observed": {
+        "embedding_unavailable": 123,
+        "present_failed": 116
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_r67_l4_reach.json",
+      "n_records": 166,
+      "n_records_with_degradations": 0,
+      "reasons_observed": {},
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_replay_after_l4fix_20261003T1722Z.json",
+      "n_records": 166,
+      "n_records_with_degradations": 118,
+      "reasons_observed": {
+        "embedding_unavailable": 118,
+        "present_failed": 48,
+        "llm_unavailable": 5
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_replay_probe.json",
+      "n_records": 5,
+      "n_records_with_degradations": 4,
+      "reasons_observed": {
+        "embedding_unavailable": 4,
+        "llm_unavailable": 3
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_v1.json",
+      "n_records": 166,
+      "n_records_with_degradations": 118,
+      "reasons_observed": {
+        "embedding_unavailable": 118,
+        "present_failed": 48,
+        "llm_unavailable": 5
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_v1_live_20261003T1410Z.json",
+      "n_records": 166,
+      "n_records_with_degradations": 92,
+      "reasons_observed": {
+        "embedding_unavailable": 92,
+        "present_failed": 12,
+        "llm_unavailable": 5
+      },
+      "has_gateway_new_reason": false
+    },
+    {
+      "file": "eval/results_v2_live_20261003T1632Z.json",
+      "n_records": 166,
+      "n_records_with_degradations": 118,
+      "reasons_observed": {
+        "embedding_unavailable": 118,
+        "present_failed": 48,
+        "llm_unavailable": 5
+      },
+      "has_gateway_new_reason": false
+    }
+  ]
+}
