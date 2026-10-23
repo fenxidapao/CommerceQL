@@ -7146,3 +7146,102 @@ backend/reports/w8/W67_DEGRADATIONS_CUTOVER.md         W67-3 口径变更说明
 * 未跑 τ 真采样（等歧义面立项）、未刷官方门禁（仍 `88f3500`/PASS 1/8）；
 * 无 app/eval 行为改动 ⇒ 未跑测试套（本轮改动 = 新增只读脚本 + 产物 + 文档）；
 * 未 `git add -A`；`.workbuddy/` 未入库；**零出站（tokens 计费 = 0，¥0）**。
+
+---
+
+## 73 W68：H-STR 误澄清修复（live 8 条）+ X-MET-10 定位 + 澄清完备性材料账 + 盘点件订正
+
+派单：TASK_BOARD W68 派单块（2026-10-23）｜起跑 HEAD `1f5d540`，提交链
+`90930f5`（代码+脚本+订正文档）→ `0426f72`（stamp 进程级一次取，防 dirty 假阳）→
+`9dd7736`（零出站产物）→ `28b66ea`（reason_code 族化）→ 本节随 live 产物提交。
+
+### 73.1 W68-1 主项：8 条城市误澄清 = demotion 双道卡，修复后 live 8/8 complete
+
+* 🔴 **根因比派单指的"正则太窄"多一道**：r63 匣带实测 H-STR-01 的 clarify
+  reason_code = `ambiguous_metric_product_cnt`（商品数口径），**不含 city** ——
+  旧守卫 `if "city" not in reason_code` 在正则之前就把 8 条全拦死。修法 = 定语位结构
+  判据（`位于/在 … 的店铺` + 被测主体 `各(有多少个商品|SKU)`，`normalize.py`）+
+  守卫按族放开（city / product_cnt）。
+* 🔴 **live 实测再暴露第二层**：同一题面的 reason_code 表面形式**逐次漂移**——
+  r68 首次 live 8 条里 4 条返回 `ambiguous_metric_product_count`（全拼，非子串）漏网、
+  1 条返回 `ambiguous_city_dimension`、4 条返回 `_cnt`。守卫族化补 `_count` 后补跑
+  4 条全过。单测新增 `test_hstr_reason_code_surface_variants_are_demoted`。
+* **live 结果（两次录制 + 合并匣带 replay）**：8/8 `complete`、binding 全
+  `resolved_default`（商品数→维表存量口径，绑定披露文案正常产出）、澄清误判清零。
+  等价判定 0/8，唯一 diff = **列数（金标 2 / 预测 3，预测多带 shop_name）**、
+  `unmatched=0`（值集合全对上；on_sale=1 过滤在沙箱数据上非约束性）——判据面，
+  不在本轮范围。
+* 🔴 **live 过程两次预备跑失败（均 0 tokens、未花钱）**：①根 `.env` 缺失 →
+  占位 key（首跑 8 error）；②**Windows 用户级环境变量残留旧 51 位 key**（kuaipao
+  时代），os.environ 优先于 .env → 官方端点 401。处置：重建根 .env（gitignored）+
+  进程级 `DEEPSEEK_API_KEY` 覆盖跑通；**建议总控清理用户级旧环境变量**。两次失败
+  批次均 mv 留档（`results_r68_hstr8.failed-noenv.json` / `.failed-stale-envvar.json`）。
+* **花费**：¥0.077996（首轮 8 条）+ ¥0.070488（补跑 4 条）= **¥0.148484 ≤ 上界
+  ¥0.15**；tokens 145,737 + 111,603 = 257,340。10:56–11:0x 高峰时段（未排 18:00 后，
+  偏离"建议"如实在案）。8-token 探针先行（HTTP 200 / deepseek-flash / usage 上报）。
+* 单测：9 条全过（`test_normalize_city_clarification.py`）；全量 unit 1532 passed。
+
+### 73.2 W68-2 X-MET-10 定位：时间窗层（campaign 无结构化窗口），零出站
+
+`eval/results_r68_xmet10_diagnosis.json`。逐层：
+
+* intent LLM（r63 匣带）：`query` / conf 0.95 / reason_code=null —— **不是 intent 触发**；
+* `resolve_time` 离线实证（真包 + FrozenClock）：`618` 是 campaign 别名、包内无结构化
+  窗口 → `ok=False, reason=campaign_window_not_structured, unresolved=('618',)` ——
+  **实际触发点**；
+* `route_after_normalize`（edges.py:183）：`time_parse_ok=False → clarify_out`，
+  intent 节点不运行（r66 nodes 无 intent）——派单要读的 `intent_detail.reason_code` /
+  ambiguities **运行时不存在**，如实报告不构造；
+* 层级（大区/店铺）与成交金额口径**未触发**（链在此之前已断；gold 用 gmv 可映射）。
+* gold 有结构化 618 窗（2026-05-24..2026-06-21）而语义包没有 ⇒ 修复 = 契约变更
+  （语义包补 campaign 窗口），按派单⑤另轮 + 重基线。
+
+### 73.3 W68-3 澄清完备性材料账：10 条应澄清实测 0 条澄清
+
+`eval/results_r68_clarify_completeness.json`（只出材料，未实装闸门）。
+
+* 🔴 **10 条实测：0 澄清 / 8 条带静默默认值一路 complete / 2 条 gate1_ast error**
+  （C-GMV-04、C-REP-02；terminal_error_detail 为空，如实登记）。澄清完备性闸门
+  **整体缺失**，不是"差一个闸门"。
+* 逐条：问句 / `_CLARIFY` 期望原文（case_library）/ 实际 SQL 摘要 / 缺哪类闸门；
+  四类计数与 QA 派单**逐类对齐**（time_window_undefined 5 / definition_multiple 1 /
+  term_mapping_unknown 1 / aggregation_ambiguous 1 / echo_confirm 2）。
+* 静默默认举例：C-UV-02 实际 SQL `SUM(uv)`（逐日累加口径被默默选定）；C-RATE-01
+  金额口径；C-REP-01 固定 90d。
+* 实装清单（6 文件 + 匣带破坏面）随产物：语义包契约变更为前置（prompt 变 ⇒ r63 匣带
+  全 miss 须重基线）；timeexpr/request_policy 属确定性代码层，不改 prompt 但改重放语义。
+* 红线遵守：产物明示"不构成『澄清能力已验证』"；不进八格、不作收口硬条件。
+
+### 73.4 W68-4 盘点件订正
+
+* `n_files_scanned` 改名 **`n_files_with_records`**（152），新增 `n_files_total`（211）
+  / `n_files_skipped`（59）/ `skipped_categories`（11 类逐类计数）/ `skipped_files`
+  （逐文件 + top_keys）；59 个全部为无 `records[]` 的聚合形态产物、0 解析失败。
+* 说明文档补"六、W68-4 口径订正"节；横比结论不变（可逐条查 degradations 的正是 152 个）。
+* 注：清单为生成时点快照（213 文件 = 0426f72 时点）；此后新增的 r68 产物不在其中，
+  语义为"快照 + 快照后增量"，已在产物 task 字段声明。
+
+### 73.5 本轮改动与边界
+
+```
+backend/app/graph/nodes/normalize.py                   W68-1 定语位判据 + 守卫族化
+backend/tests/unit/test_normalize_city_clarification.py 重写：9 测（含表面漂移测）
+eval/w67_l4_diagnostics.py                              W68-4 清单订正 + stamp 进程级一次取
+eval/w68_clarify_diagnostics.py                         新增：W68-2/3 零出站诊断
+backend/reports/w8/W67_DEGRADATIONS_CUTOVER.md          补订正节
+backend/reports/w8/RELAY.md                             本节
+eval/cassettes/w8_r68_hstr8.jsonl                       live 录制（20 行唯一请求）
+eval/results_r68_hstr8.json                             统一 8 条 replay 产物
+eval/results_r68_hstr8_remaining4.json                  补跑 4 条 live 产物
+eval/results_r68_hstr8.failed-*.json ×2                 失败批次留档（0 tokens）
+eval/results_r68_xmet10_diagnosis.json                  W68-2
+eval/results_r68_clarify_completeness.json              W68-3
+eval/results_r67_degradations_cutover_inventory.json    W68-4 订正后重生成
+eval/results_r67_l4_reach.json / _l4_cost.json          干净树重生成（stamp 对齐 0426f72）
+```
+
+* 未碰：冻结集/gold/判据/15s/30s/dense.py/semantic 正式包/G-8 二轮/官方门禁
+  （仍 `88f3500` / PASS 1/8）；未跑 τ 采样；未扩 L4 候选面；
+* 未 git add -A；.workbuddy/ 与 .env 未入库（.env 已确认 gitignored）；
+* 测试：新增 9 测全过 + 全量 unit 1532 passed；
+* tokens：live 257,340（¥0.148484）+ 探针 13；零出站产物 0。

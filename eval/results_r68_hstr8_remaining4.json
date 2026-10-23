@@ -1,0 +1,1164 @@
+{
+  "frozen_evidence": {
+    "checks": {
+      "dataset_content_hash": {
+        "expected": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+        "actual": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+        "ok": true
+      },
+      "sandbox_db_sha256": {
+        "expected": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "actual": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "ok": true
+      },
+      "red_team_content_hash_present": true,
+      "gold_seed_derived_from_dataset_hash": true,
+      "all_ok": true
+    },
+    "dataset_version": "2",
+    "frozen_at": "2026-10-17",
+    "n_cases": 166,
+    "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+    "red_team": {
+      "content_hash": "sha256:886cb57052368541e60727cbcee78db2aa1ad1c381cb083a540673999ed9d01d",
+      "n_cases": 66
+    },
+    "gold_seed": {
+      "content_hash": "sha256:2f91ed51e0c97fcbb45b7a59eabc13067167747df52d5cae6d1b37cfe339a592",
+      "n_seeds": 119
+    }
+  },
+  "config": {
+    "live": true,
+    "cassette": "eval/cassettes/w8_r68_hstr8.jsonl",
+    "mode": "record",
+    "db": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\ecom_sandbox.db",
+    "column_top": null,
+    "n_requested": 4,
+    "provenance": "W68-1 补跑：首次 live 暴露 reason_code 表面漂移（_count 变体漏网），守卫按族化后仅补跑 4 条（01/05/06/07）；累计花费含首轮 ≈¥0.149 ≤ 上界 ¥0.15",
+    "node_timeouts": {
+      "contract": {
+        "link": 30.0,
+        "gate1_ast": 0.1,
+        "gate2_policy": 0.1,
+        "gate3_cost": 1.0,
+        "execute": 30.0,
+        "mask": 0.1,
+        "audit_pre": 1.0,
+        "audit_supp": 0.5
+      },
+      "effective": {
+        "normalize": 162.0,
+        "audit_supp": 4.0,
+        "gate3_cost": 8.0,
+        "mask": 0.8,
+        "plan": 162.0,
+        "gen_sql": 162.0,
+        "present": 162.0,
+        "repair": 162.0,
+        "bind": 162.0,
+        "gate1_ast": 0.8,
+        "link": 30.0,
+        "intent": 162.0,
+        "gate2_policy": 0.8,
+        "execute": 30.0,
+        "audit_pre": 8.0
+      },
+      "scaled": true,
+      "llm_calling_nodes": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "not_in_contract": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "kept_as_contract": [
+        "execute",
+        "link"
+      ],
+      "cpu_factor": 8.0,
+      "llm_node_floor_s": 162.0
+    },
+    "max_concurrency": null,
+    "checkpoint": null,
+    "resume": false,
+    "transport_retries": 2,
+    "transport_backoff_s": 2.0
+  },
+  "summary": {
+    "n_records": 4,
+    "n_scored": 4,
+    "n_unscored": 0,
+    "n_node_timeout": 0,
+    "n_execute_scored": 4,
+    "n_execute_with_sql": 4,
+    "n_equivalent": 0,
+    "terminal_distribution": {
+      "complete": 4
+    },
+    "attribution_distribution": {
+      "unattributed": 4
+    },
+    "tokens_total": 111603,
+    "cost_cny_total": 0.070488,
+    "wall_s": {
+      "max": 10.769,
+      "median": 9.158,
+      "sum": 37.039
+    },
+    "n_second_round_attempted": 0,
+    "n_second_round_success": 0,
+    "second_round_tokens_total": 0,
+    "second_round_cost_cny_total": 0.0
+  },
+  "records": [
+    {
+      "case_id": "H-STR-01",
+      "question": "T_A 位于广州的店铺各有多少个商品？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, COUNT(*) AS product_cnt FROM v_shop JOIN v_product ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = %(city)s GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY product_cnt DESC LIMIT 100",
+      "sql_params": {
+        "city": "广州市"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "商品数是维表存量口径，时间语义为当前值"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 3907,
+        "linking": 0,
+        "plan": 1358,
+        "gen_sql": 1405,
+        "gate": 13,
+        "exec": 2,
+        "present": 0,
+        "total": 10765
+      },
+      "tokens": {
+        "input": 26356,
+        "output": 1527,
+        "cache_hit": 24704,
+        "total": 27883
+      },
+      "cost_cny": 0.017581,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": "bind.l4",
+        "ok": true,
+        "reason": null,
+        "candidate_ids": [
+          "v_order_paid.sub_order_id",
+          "v_order_paid.order_id",
+          "v_order_paid.shop_id",
+          "v_order_paid.buyer_id",
+          "v_order_paid.sku_id",
+          "v_order_paid.spu_id",
+          "v_order_paid.category_l1",
+          "v_order_paid.category_l2",
+          "v_order_paid.category_l3",
+          "v_order_paid.pay_amount",
+          "v_order_paid.freight_amount",
+          "v_order_paid.discount_amount",
+          "v_order_paid.quantity",
+          "v_order_paid.pay_time",
+          "v_order_paid.create_time",
+          "v_order_paid.pay_status",
+          "v_order_paid.refund_status",
+          "v_order_paid.region_code",
+          "v_order_paid.receiver_city",
+          "v_order_paid.channel",
+          "v_order_paid.is_test_order",
+          "v_order_refund.refund_id",
+          "v_order_refund.sub_order_id",
+          "v_order_refund.refund_amount",
+          "v_order_refund.refund_type",
+          "v_order_refund.refund_time",
+          "v_order_refund.refund_status",
+          "v_product.sku_id",
+          "v_product.sku_name",
+          "v_product.spu_id"
+        ],
+        "scores": [
+          0.05,
+          0.05,
+          0.15,
+          0.02,
+          0.3,
+          0.3,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.55,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.1,
+          0.1,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.3,
+          0.02,
+          0.3
+        ],
+        "rank": [
+          "v_order_paid.quantity",
+          "v_order_paid.sku_id",
+          "v_order_paid.spu_id",
+          "v_product.sku_id",
+          "v_product.spu_id",
+          "v_order_paid.shop_id",
+          "v_order_paid.receiver_city",
+          "v_order_paid.region_code",
+          "v_order_paid.order_id",
+          "v_order_paid.sub_order_id",
+          "v_order_paid.buyer_id",
+          "v_order_paid.category_l1",
+          "v_order_paid.category_l2",
+          "v_order_paid.category_l3",
+          "v_order_paid.channel",
+          "v_order_paid.create_time",
+          "v_order_paid.discount_amount",
+          "v_order_paid.freight_amount",
+          "v_order_paid.is_test_order",
+          "v_order_paid.pay_amount",
+          "v_order_paid.pay_status",
+          "v_order_paid.pay_time",
+          "v_order_paid.refund_status",
+          "v_order_refund.refund_amount",
+          "v_order_refund.refund_id",
+          "v_order_refund.refund_status",
+          "v_order_refund.refund_time",
+          "v_order_refund.refund_type",
+          "v_order_refund.sub_order_id",
+          "v_product.sku_name"
+        ],
+        "scorer": {
+          "model_id": "deepseek-flash",
+          "prompt_version": "l4_score_v1"
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "1558d4b43bf4f4bf4e1a493e6622b6ba353e1fdad0270ef23200e7a4dfd812b9",
+        "gold_candidate_id": null,
+        "gold_match_rule": null,
+        "gold_candidates_considered": 30,
+        "gold_unmatched_reason": "no_target_column",
+        "gold_has_star_agg": true,
+        "gold_status": "unmatched"
+      },
+      "gold": {
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '广州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+        "frozen_hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+        "via_view": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:a5a038f84627b7809685af6c607c49040ea3d24827eeb3f25a1140d54b955e8b",
+        "columns": [
+          "shop_id",
+          "shop_name",
+          "product_cnt"
+        ],
+        "rows": 0,
+        "shape": {
+          "columns": [
+            "shop_id",
+            "shop_name",
+            "product_cnt"
+          ],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": false,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 3"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "unattributed",
+        "signal": "无结构化信号可用（需人工复核）",
+        "severity": "normal"
+      },
+      "wall_s": 10.769,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "H-STR-05",
+      "question": "T_A 位于南京的店铺各有多少个商品？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, COUNT(*) AS product_cnt FROM v_shop JOIN v_product ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = %(city)s GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY product_cnt DESC LIMIT 100",
+      "sql_params": {
+        "city": "南京市"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "商品数是维表存量口径，时间语义为当前值"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 1108,
+        "linking": 0,
+        "plan": 1666,
+        "gen_sql": 1323,
+        "gate": 3,
+        "exec": 0,
+        "present": 0,
+        "total": 8528
+      },
+      "tokens": {
+        "input": 26368,
+        "output": 1508,
+        "cache_hit": 24704,
+        "total": 27876
+      },
+      "cost_cny": 0.017445,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": "bind.l4",
+        "ok": true,
+        "reason": null,
+        "candidate_ids": [
+          "v_order_paid.sub_order_id",
+          "v_order_paid.order_id",
+          "v_order_paid.shop_id",
+          "v_order_paid.buyer_id",
+          "v_order_paid.sku_id",
+          "v_order_paid.spu_id",
+          "v_order_paid.category_l1",
+          "v_order_paid.category_l2",
+          "v_order_paid.category_l3",
+          "v_order_paid.pay_amount",
+          "v_order_paid.freight_amount",
+          "v_order_paid.discount_amount",
+          "v_order_paid.quantity",
+          "v_order_paid.pay_time",
+          "v_order_paid.create_time",
+          "v_order_paid.pay_status",
+          "v_order_paid.refund_status",
+          "v_order_paid.region_code",
+          "v_order_paid.receiver_city",
+          "v_order_paid.channel",
+          "v_order_paid.is_test_order",
+          "v_order_refund.refund_id",
+          "v_order_refund.sub_order_id",
+          "v_order_refund.refund_amount",
+          "v_order_refund.refund_type",
+          "v_order_refund.refund_time",
+          "v_order_refund.refund_status",
+          "v_product.sku_id",
+          "v_product.sku_name",
+          "v_product.spu_id"
+        ],
+        "scores": [
+          0.05,
+          0.05,
+          0.35,
+          0.02,
+          0.55,
+          0.5,
+          0.03,
+          0.03,
+          0.03,
+          0.02,
+          0.02,
+          0.02,
+          0.7,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.1,
+          0.15,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.5,
+          0.05,
+          0.45
+        ],
+        "rank": [
+          "v_order_paid.quantity",
+          "v_order_paid.sku_id",
+          "v_order_paid.spu_id",
+          "v_product.sku_id",
+          "v_product.spu_id",
+          "v_order_paid.shop_id",
+          "v_order_paid.receiver_city",
+          "v_order_paid.region_code",
+          "v_order_paid.order_id",
+          "v_order_paid.sub_order_id",
+          "v_product.sku_name",
+          "v_order_paid.category_l1",
+          "v_order_paid.category_l2",
+          "v_order_paid.category_l3",
+          "v_order_paid.buyer_id",
+          "v_order_paid.channel",
+          "v_order_paid.create_time",
+          "v_order_paid.discount_amount",
+          "v_order_paid.freight_amount",
+          "v_order_paid.is_test_order",
+          "v_order_paid.pay_amount",
+          "v_order_paid.pay_status",
+          "v_order_paid.pay_time",
+          "v_order_paid.refund_status",
+          "v_order_refund.refund_amount",
+          "v_order_refund.refund_id",
+          "v_order_refund.refund_status",
+          "v_order_refund.refund_time",
+          "v_order_refund.refund_type",
+          "v_order_refund.sub_order_id"
+        ],
+        "scorer": {
+          "model_id": "deepseek-flash",
+          "prompt_version": "l4_score_v1"
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "b1b84d57e9db3011973cd83ce52ef6532fe550b406a13a26f6069790a2548584",
+        "gold_candidate_id": null,
+        "gold_match_rule": null,
+        "gold_candidates_considered": 30,
+        "gold_unmatched_reason": "no_target_column",
+        "gold_has_star_agg": true,
+        "gold_status": "unmatched"
+      },
+      "gold": {
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '南京市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+        "frozen_hash": "sha256:0e9e20520f46d88ace72ecc22053c7699087402d4b69bbeee2fdc18a4141f4ca",
+        "via_view": {
+          "hash": "sha256:0e9e20520f46d88ace72ecc22053c7699087402d4b69bbeee2fdc18a4141f4ca",
+          "rows": 1,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:0e9e20520f46d88ace72ecc22053c7699087402d4b69bbeee2fdc18a4141f4ca",
+          "rows": 1,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:1aadb1db0c4589b430b126583f396ae4b6b953abd6eeb68d66957714c414a0d7",
+        "columns": [
+          "shop_id",
+          "shop_name",
+          "product_cnt"
+        ],
+        "rows": 1,
+        "shape": {
+          "columns": [
+            "shop_id",
+            "shop_name",
+            "product_cnt"
+          ],
+          "row_count": 1,
+          "head_rows": [
+            [
+              "T_A-S03",
+              "T_A官方旗舰店3号",
+              400
+            ]
+          ]
+        },
+        "state_row_count": 1,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": false,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 3"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "unattributed",
+        "signal": "无结构化信号可用（需人工复核）",
+        "severity": "normal"
+      },
+      "wall_s": 8.533,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "H-STR-06",
+      "question": "T_A 位于西安的店铺各有多少个商品？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, COUNT(*) AS product_cnt FROM v_shop JOIN v_product ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = %(city)s GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY product_cnt DESC LIMIT 1000",
+      "sql_params": {
+        "city": "西安市"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "商品数是维表存量口径，时间语义为当前值"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 1270,
+        "linking": 0,
+        "plan": 1487,
+        "gen_sql": 1602,
+        "gate": 3,
+        "exec": 1,
+        "present": 0,
+        "total": 8575
+      },
+      "tokens": {
+        "input": 26385,
+        "output": 1549,
+        "cache_hit": 24704,
+        "total": 27934
+      },
+      "cost_cny": 0.01783,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": "bind.l4",
+        "ok": true,
+        "reason": null,
+        "candidate_ids": [
+          "v_order_paid.sub_order_id",
+          "v_order_paid.order_id",
+          "v_order_paid.shop_id",
+          "v_order_paid.buyer_id",
+          "v_order_paid.sku_id",
+          "v_order_paid.spu_id",
+          "v_order_paid.category_l1",
+          "v_order_paid.category_l2",
+          "v_order_paid.category_l3",
+          "v_order_paid.pay_amount",
+          "v_order_paid.freight_amount",
+          "v_order_paid.discount_amount",
+          "v_order_paid.quantity",
+          "v_order_paid.pay_time",
+          "v_order_paid.create_time",
+          "v_order_paid.pay_status",
+          "v_order_paid.refund_status",
+          "v_order_paid.region_code",
+          "v_order_paid.receiver_city",
+          "v_order_paid.channel",
+          "v_order_paid.is_test_order",
+          "v_order_refund.refund_id",
+          "v_order_refund.sub_order_id",
+          "v_order_refund.refund_amount",
+          "v_order_refund.refund_type",
+          "v_order_refund.refund_time",
+          "v_order_refund.refund_status",
+          "v_product.sku_id",
+          "v_product.sku_name",
+          "v_product.spu_id"
+        ],
+        "scores": [
+          0.35,
+          0.2,
+          0.3,
+          0.05,
+          0.75,
+          0.7,
+          0.05,
+          0.05,
+          0.05,
+          0.02,
+          0.02,
+          0.02,
+          0.55,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.15,
+          0.2,
+          0.02,
+          0.02,
+          0.02,
+          0.05,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.5,
+          0.05,
+          0.45
+        ],
+        "rank": [
+          "v_order_paid.sku_id",
+          "v_order_paid.spu_id",
+          "v_order_paid.quantity",
+          "v_product.sku_id",
+          "v_product.spu_id",
+          "v_order_paid.sub_order_id",
+          "v_order_paid.shop_id",
+          "v_order_paid.order_id",
+          "v_order_paid.receiver_city",
+          "v_order_paid.region_code",
+          "v_order_paid.buyer_id",
+          "v_order_paid.category_l1",
+          "v_order_paid.category_l2",
+          "v_order_paid.category_l3",
+          "v_order_refund.sub_order_id",
+          "v_product.sku_name",
+          "v_order_paid.channel",
+          "v_order_paid.create_time",
+          "v_order_paid.discount_amount",
+          "v_order_paid.freight_amount",
+          "v_order_paid.is_test_order",
+          "v_order_paid.pay_amount",
+          "v_order_paid.pay_status",
+          "v_order_paid.pay_time",
+          "v_order_paid.refund_status",
+          "v_order_refund.refund_amount",
+          "v_order_refund.refund_id",
+          "v_order_refund.refund_status",
+          "v_order_refund.refund_time",
+          "v_order_refund.refund_type"
+        ],
+        "scorer": {
+          "model_id": "deepseek-flash",
+          "prompt_version": "l4_score_v1"
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "1d546add659149b6e582eae6e2bdb54a2e06960a2c310d05af2cef1296260175",
+        "gold_candidate_id": null,
+        "gold_match_rule": null,
+        "gold_candidates_considered": 30,
+        "gold_unmatched_reason": "no_target_column",
+        "gold_has_star_agg": true,
+        "gold_status": "unmatched"
+      },
+      "gold": {
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '西安市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+        "frozen_hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+        "via_view": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:a5a038f84627b7809685af6c607c49040ea3d24827eeb3f25a1140d54b955e8b",
+        "columns": [
+          "shop_id",
+          "shop_name",
+          "product_cnt"
+        ],
+        "rows": 0,
+        "shape": {
+          "columns": [
+            "shop_id",
+            "shop_name",
+            "product_cnt"
+          ],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": false,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 3"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "unattributed",
+        "signal": "无结构化信号可用（需人工复核）",
+        "severity": "normal"
+      },
+      "wall_s": 8.579,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "H-STR-07",
+      "question": "T_A 位于长沙的店铺各有多少个商品？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "sql_text": "SELECT v_shop.shop_id AS shop_id, v_shop.shop_name AS shop_name, COUNT(*) AS product_cnt FROM v_shop JOIN v_product ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = %(city)s GROUP BY v_shop.shop_id, v_shop.shop_name ORDER BY product_cnt DESC LIMIT 100",
+      "sql_params": {
+        "city": "长沙市"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "商品数是维表存量口径，时间语义为当前值"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 8,
+        "columns": 66,
+        "metrics": 21,
+        "metrics_in_catalog": 21,
+        "denied_filtered": 4
+      },
+      "latency_ms": {
+        "normalize": 1517,
+        "linking": 0,
+        "plan": 1795,
+        "gen_sql": 1731,
+        "gate": 3,
+        "exec": 0,
+        "present": 0,
+        "total": 9154
+      },
+      "tokens": {
+        "input": 26384,
+        "output": 1526,
+        "cache_hit": 24704,
+        "total": 27910
+      },
+      "cost_cny": 0.017632,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": "bind.l4",
+        "ok": true,
+        "reason": null,
+        "candidate_ids": [
+          "v_order_paid.sub_order_id",
+          "v_order_paid.order_id",
+          "v_order_paid.shop_id",
+          "v_order_paid.buyer_id",
+          "v_order_paid.sku_id",
+          "v_order_paid.spu_id",
+          "v_order_paid.category_l1",
+          "v_order_paid.category_l2",
+          "v_order_paid.category_l3",
+          "v_order_paid.pay_amount",
+          "v_order_paid.freight_amount",
+          "v_order_paid.discount_amount",
+          "v_order_paid.quantity",
+          "v_order_paid.pay_time",
+          "v_order_paid.create_time",
+          "v_order_paid.pay_status",
+          "v_order_paid.refund_status",
+          "v_order_paid.region_code",
+          "v_order_paid.receiver_city",
+          "v_order_paid.channel",
+          "v_order_paid.is_test_order",
+          "v_order_refund.refund_id",
+          "v_order_refund.sub_order_id",
+          "v_order_refund.refund_amount",
+          "v_order_refund.refund_type",
+          "v_order_refund.refund_time",
+          "v_order_refund.refund_status",
+          "v_product.sku_id",
+          "v_product.sku_name",
+          "v_product.spu_id"
+        ],
+        "scores": [
+          0.35,
+          0.15,
+          0.2,
+          0.05,
+          0.4,
+          0.35,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.75,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.1,
+          0.1,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.05,
+          0.4,
+          0.05,
+          0.35
+        ],
+        "rank": [
+          "v_order_paid.quantity",
+          "v_order_paid.sku_id",
+          "v_product.sku_id",
+          "v_order_paid.spu_id",
+          "v_order_paid.sub_order_id",
+          "v_product.spu_id",
+          "v_order_paid.shop_id",
+          "v_order_paid.order_id",
+          "v_order_paid.receiver_city",
+          "v_order_paid.region_code",
+          "v_order_paid.buyer_id",
+          "v_order_paid.category_l1",
+          "v_order_paid.category_l2",
+          "v_order_paid.category_l3",
+          "v_order_paid.channel",
+          "v_order_paid.create_time",
+          "v_order_paid.discount_amount",
+          "v_order_paid.freight_amount",
+          "v_order_paid.is_test_order",
+          "v_order_paid.pay_amount",
+          "v_order_paid.pay_status",
+          "v_order_paid.pay_time",
+          "v_order_paid.refund_status",
+          "v_order_refund.refund_amount",
+          "v_order_refund.refund_id",
+          "v_order_refund.refund_status",
+          "v_order_refund.refund_time",
+          "v_order_refund.refund_type",
+          "v_order_refund.sub_order_id",
+          "v_product.sku_name"
+        ],
+        "scorer": {
+          "model_id": "deepseek-flash",
+          "prompt_version": "l4_score_v1"
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "64c43d1a1b4599d91bd54697ace459b84be35c1358f37ba87eb514ad124bfe88",
+        "gold_candidate_id": null,
+        "gold_match_rule": null,
+        "gold_candidates_considered": 30,
+        "gold_unmatched_reason": "no_target_column",
+        "gold_has_star_agg": true,
+        "gold_status": "unmatched"
+      },
+      "gold": {
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '长沙市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+        "frozen_hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+        "via_view": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:a5a038f84627b7809685af6c607c49040ea3d24827eeb3f25a1140d54b955e8b",
+        "columns": [
+          "shop_id",
+          "shop_name",
+          "product_cnt"
+        ],
+        "rows": 0,
+        "shape": {
+          "columns": [
+            "shop_id",
+            "shop_name",
+            "product_cnt"
+          ],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": false,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 3"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "unattributed",
+        "signal": "无结构化信号可用（需人工复核）",
+        "severity": "normal"
+      },
+      "wall_s": 9.158,
+      "runner_transport_retries": 0
+    }
+  ],
+  "generated_at": "2026-10-23T03:06:19+00:00",
+  "git_rev": "28b66ea",
+  "git_dirty": false
+}

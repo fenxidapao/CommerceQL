@@ -1,0 +1,1096 @@
+{
+  "frozen_evidence": {
+    "checks": {
+      "dataset_content_hash": {
+        "expected": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+        "actual": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+        "ok": true
+      },
+      "sandbox_db_sha256": {
+        "expected": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "actual": "eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1",
+        "ok": true
+      },
+      "red_team_content_hash_present": true,
+      "gold_seed_derived_from_dataset_hash": true,
+      "all_ok": true
+    },
+    "dataset_version": "2",
+    "frozen_at": "2026-10-17",
+    "n_cases": 166,
+    "content_hash": "sha256:31f3385f3a5da8e126cac209d1d812d09dd7c62998f60b0fdde61ac19235d7c5",
+    "red_team": {
+      "content_hash": "sha256:886cb57052368541e60727cbcee78db2aa1ad1c381cb083a540673999ed9d01d",
+      "n_cases": 66
+    },
+    "gold_seed": {
+      "content_hash": "sha256:2f91ed51e0c97fcbb45b7a59eabc13067167747df52d5cae6d1b37cfe339a592",
+      "n_seeds": 119
+    }
+  },
+  "config": {
+    "live": true,
+    "cassette": "eval/cassettes/w8_r68_hstr8.jsonl",
+    "mode": "record",
+    "db": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\ecom_sandbox.db",
+    "column_top": null,
+    "n_requested": 8,
+    "provenance": "W68-1 H-STR 8 条 live：demotion 定语位修复（R31bl）后真打验证；首跑因根 .env 缺失占位 key 全 error（0 tokens），已备份 failed-noenv",
+    "node_timeouts": {
+      "contract": {
+        "link": 30.0,
+        "gate1_ast": 0.1,
+        "gate2_policy": 0.1,
+        "gate3_cost": 1.0,
+        "execute": 30.0,
+        "mask": 0.1,
+        "audit_pre": 1.0,
+        "audit_supp": 0.5
+      },
+      "effective": {
+        "intent": 162.0,
+        "normalize": 162.0,
+        "gate2_policy": 0.8,
+        "link": 30.0,
+        "plan": 162.0,
+        "bind": 162.0,
+        "gen_sql": 162.0,
+        "gate1_ast": 0.8,
+        "execute": 30.0,
+        "gate3_cost": 8.0,
+        "audit_supp": 4.0,
+        "repair": 162.0,
+        "audit_pre": 8.0,
+        "present": 162.0,
+        "mask": 0.8
+      },
+      "scaled": true,
+      "llm_calling_nodes": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "not_in_contract": [
+        "bind",
+        "gen_sql",
+        "intent",
+        "normalize",
+        "plan",
+        "present",
+        "repair"
+      ],
+      "kept_as_contract": [
+        "execute",
+        "link"
+      ],
+      "cpu_factor": 8.0,
+      "llm_node_floor_s": 162.0
+    },
+    "max_concurrency": null,
+    "checkpoint": null,
+    "resume": false,
+    "transport_retries": 2,
+    "transport_backoff_s": 2.0
+  },
+  "summary": {
+    "n_records": 8,
+    "n_scored": 8,
+    "n_unscored": 0,
+    "n_node_timeout": 0,
+    "n_execute_scored": 8,
+    "n_execute_with_sql": 0,
+    "n_equivalent": 0,
+    "terminal_distribution": {
+      "error": 8
+    },
+    "attribution_distribution": {
+      "sql_generation": 8
+    },
+    "tokens_total": 0,
+    "cost_cny_total": 0.0,
+    "wall_s": {
+      "max": 6.032,
+      "median": 0.801,
+      "sum": 19.478
+    },
+    "n_second_round_attempted": 0,
+    "n_second_round_success": 0,
+    "second_round_tokens_total": 0,
+    "second_round_cost_cny_total": 0.0
+  },
+  "records": [
+    {
+      "case_id": "H-STR-01",
+      "question": "T_A 位于广州的店铺各有多少个商品？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "error_out"
+      ],
+      "terminal_event": "error",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "terminal_error_detail": {
+        "model": "deepseek-flash",
+        "status": 401,
+        "upstream_type": "authentication_error",
+        "upstream_code": "invalid_request_error"
+      },
+      "outcome": "failed",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 791,
+        "total": 796
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cost_cny": 0.0,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": null,
+        "ok": false,
+        "reason": "l4_not_reached",
+        "candidate_ids": [],
+        "scores": [],
+        "rank": [],
+        "scorer": {
+          "model_id": null,
+          "prompt_version": null
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "1558d4b43bf4f4bf4e1a493e6622b6ba353e1fdad0270ef23200e7a4dfd812b9",
+        "gold_candidate_id": null,
+        "gold_match_rule": null,
+        "gold_candidates_considered": 0,
+        "gold_unmatched_reason": "no_l4_candidates",
+        "gold_has_star_agg": false,
+        "gold_status": "unmatched"
+      },
+      "gold": {
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '广州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+        "frozen_hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+        "via_view": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": null,
+        "columns": [],
+        "rows": 0,
+        "shape": {
+          "columns": [],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": null,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "sql_generation",
+        "signal": "链路在生成前失败（终态 error 且无 SQL）",
+        "severity": "normal"
+      },
+      "wall_s": 0.801,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "H-STR-02",
+      "question": "T_A 位于杭州的店铺各有多少个商品？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "error_out"
+      ],
+      "terminal_event": "error",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "terminal_error_detail": {
+        "model": "deepseek-flash",
+        "status": 401,
+        "upstream_type": "authentication_error",
+        "upstream_code": "invalid_request_error"
+      },
+      "outcome": "failed",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 154,
+        "total": 155
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cost_cny": 0.0,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": null,
+        "ok": false,
+        "reason": "l4_not_reached",
+        "candidate_ids": [],
+        "scores": [],
+        "rank": [],
+        "scorer": {
+          "model_id": null,
+          "prompt_version": null
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "70bf336dd933048151cf9025ffbb37b72e75ac11b83c9f1421ae8ac2cf7fbcaa",
+        "gold_candidate_id": null,
+        "gold_match_rule": null,
+        "gold_candidates_considered": 0,
+        "gold_unmatched_reason": "no_l4_candidates",
+        "gold_has_star_agg": false,
+        "gold_status": "unmatched"
+      },
+      "gold": {
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '杭州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+        "frozen_hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+        "via_view": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": null,
+        "columns": [],
+        "rows": 0,
+        "shape": {
+          "columns": [],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": null,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "sql_generation",
+        "signal": "链路在生成前失败（终态 error 且无 SQL）",
+        "severity": "normal"
+      },
+      "wall_s": 0.159,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "H-STR-03",
+      "question": "T_A 位于成都的店铺各有多少个商品？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "error_out"
+      ],
+      "terminal_event": "error",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "terminal_error_detail": {
+        "model": "deepseek-flash",
+        "status": 401,
+        "upstream_type": "authentication_error",
+        "upstream_code": "invalid_request_error"
+      },
+      "outcome": "failed",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 143,
+        "total": 144
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cost_cny": 0.0,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": null,
+        "ok": false,
+        "reason": "l4_not_reached",
+        "candidate_ids": [],
+        "scores": [],
+        "rank": [],
+        "scorer": {
+          "model_id": null,
+          "prompt_version": null
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "f991b8d6d61ae2b948d31c7fede9f2c3d916ce5fa48a2d05d9fa20a017266132",
+        "gold_candidate_id": null,
+        "gold_match_rule": null,
+        "gold_candidates_considered": 0,
+        "gold_unmatched_reason": "no_l4_candidates",
+        "gold_has_star_agg": false,
+        "gold_status": "unmatched"
+      },
+      "gold": {
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '成都市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+        "frozen_hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+        "via_view": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": null,
+        "columns": [],
+        "rows": 0,
+        "shape": {
+          "columns": [],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": null,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "sql_generation",
+        "signal": "链路在生成前失败（终态 error 且无 SQL）",
+        "severity": "normal"
+      },
+      "wall_s": 0.148,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "H-STR-04",
+      "question": "T_A 位于武汉的店铺各有多少个商品？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "error_out"
+      ],
+      "terminal_event": "error",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "terminal_error_detail": {
+        "model": "deepseek-flash",
+        "status": 401,
+        "upstream_type": "authentication_error",
+        "upstream_code": "invalid_request_error"
+      },
+      "outcome": "failed",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 118,
+        "total": 119
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cost_cny": 0.0,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": null,
+        "ok": false,
+        "reason": "l4_not_reached",
+        "candidate_ids": [],
+        "scores": [],
+        "rank": [],
+        "scorer": {
+          "model_id": null,
+          "prompt_version": null
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "e43d201417f6f1553cfe6fdddee0fa25655254998123bf159c3398275e4736c8",
+        "gold_candidate_id": null,
+        "gold_match_rule": null,
+        "gold_candidates_considered": 0,
+        "gold_unmatched_reason": "no_l4_candidates",
+        "gold_has_star_agg": false,
+        "gold_status": "unmatched"
+      },
+      "gold": {
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '武汉市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+        "frozen_hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+        "via_view": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": null,
+        "columns": [],
+        "rows": 0,
+        "shape": {
+          "columns": [],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": null,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "sql_generation",
+        "signal": "链路在生成前失败（终态 error 且无 SQL）",
+        "severity": "normal"
+      },
+      "wall_s": 0.123,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "H-STR-05",
+      "question": "T_A 位于南京的店铺各有多少个商品？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "error_out"
+      ],
+      "terminal_event": "error",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "terminal_error_detail": {
+        "model": "deepseek-flash",
+        "status": 401,
+        "upstream_type": "authentication_error",
+        "upstream_code": "invalid_request_error"
+      },
+      "outcome": "failed",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 149,
+        "total": 150
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cost_cny": 0.0,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": null,
+        "ok": false,
+        "reason": "l4_not_reached",
+        "candidate_ids": [],
+        "scores": [],
+        "rank": [],
+        "scorer": {
+          "model_id": null,
+          "prompt_version": null
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "b1b84d57e9db3011973cd83ce52ef6532fe550b406a13a26f6069790a2548584",
+        "gold_candidate_id": null,
+        "gold_match_rule": null,
+        "gold_candidates_considered": 0,
+        "gold_unmatched_reason": "no_l4_candidates",
+        "gold_has_star_agg": false,
+        "gold_status": "unmatched"
+      },
+      "gold": {
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '南京市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+        "frozen_hash": "sha256:0e9e20520f46d88ace72ecc22053c7699087402d4b69bbeee2fdc18a4141f4ca",
+        "via_view": {
+          "hash": "sha256:0e9e20520f46d88ace72ecc22053c7699087402d4b69bbeee2fdc18a4141f4ca",
+          "rows": 1,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:0e9e20520f46d88ace72ecc22053c7699087402d4b69bbeee2fdc18a4141f4ca",
+          "rows": 1,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": null,
+        "columns": [],
+        "rows": 0,
+        "shape": {
+          "columns": [],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": null,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "sql_generation",
+        "signal": "链路在生成前失败（终态 error 且无 SQL）",
+        "severity": "normal"
+      },
+      "wall_s": 0.155,
+      "runner_transport_retries": 0
+    },
+    {
+      "case_id": "H-STR-06",
+      "question": "T_A 位于西安的店铺各有多少个商品？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "error_out"
+      ],
+      "terminal_event": "error",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "terminal_error_detail": {
+        "task": "normalize_intent",
+        "reason": "upstream_fault_then_template_miss",
+        "last_degrade_error": "LlmCircuitOpen"
+      },
+      "outcome": "failed",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "llm_unavailable",
+          "action_taken": "template_only",
+          "detail": {
+            "from_model": "deepseek-flash",
+            "error": "LlmCircuitOpen",
+            "advisory": false,
+            "model_override": false
+          }
+        }
+      ],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 4,
+        "total": 5
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cost_cny": 0.0,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": null,
+        "ok": false,
+        "reason": "l4_not_reached",
+        "candidate_ids": [],
+        "scores": [],
+        "rank": [],
+        "scorer": {
+          "model_id": null,
+          "prompt_version": null
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "1d546add659149b6e582eae6e2bdb54a2e06960a2c310d05af2cef1296260175",
+        "gold_candidate_id": null,
+        "gold_match_rule": null,
+        "gold_candidates_considered": 0,
+        "gold_unmatched_reason": "no_l4_candidates",
+        "gold_has_star_agg": false,
+        "gold_status": "unmatched"
+      },
+      "gold": {
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '西安市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+        "frozen_hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+        "via_view": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": null,
+        "columns": [],
+        "rows": 0,
+        "shape": {
+          "columns": [],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": null,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "sql_generation",
+        "signal": "链路在生成前失败（终态 error 且无 SQL）",
+        "severity": "normal"
+      },
+      "wall_s": 6.03,
+      "runner_transport_retries": 2
+    },
+    {
+      "case_id": "H-STR-07",
+      "question": "T_A 位于长沙的店铺各有多少个商品？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "error_out"
+      ],
+      "terminal_event": "error",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "terminal_error_detail": {
+        "task": "normalize_intent",
+        "reason": "upstream_fault_then_template_miss",
+        "last_degrade_error": "LlmCircuitOpen"
+      },
+      "outcome": "failed",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "llm_unavailable",
+          "action_taken": "template_only",
+          "detail": {
+            "from_model": "deepseek-flash",
+            "error": "LlmCircuitOpen",
+            "advisory": false,
+            "model_override": false
+          }
+        }
+      ],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 5,
+        "total": 6
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cost_cny": 0.0,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": null,
+        "ok": false,
+        "reason": "l4_not_reached",
+        "candidate_ids": [],
+        "scores": [],
+        "rank": [],
+        "scorer": {
+          "model_id": null,
+          "prompt_version": null
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "64c43d1a1b4599d91bd54697ace459b84be35c1358f37ba87eb514ad124bfe88",
+        "gold_candidate_id": null,
+        "gold_match_rule": null,
+        "gold_candidates_considered": 0,
+        "gold_unmatched_reason": "no_l4_candidates",
+        "gold_has_star_agg": false,
+        "gold_status": "unmatched"
+      },
+      "gold": {
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '长沙市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+        "frozen_hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+        "via_view": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:0914676a32bcbf315105ba79ef0adc0aefa092fdae8df376788ee7ff407e7522",
+          "rows": 0,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": null,
+        "columns": [],
+        "rows": 0,
+        "shape": {
+          "columns": [],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": null,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "sql_generation",
+        "signal": "链路在生成前失败（终态 error 且无 SQL）",
+        "severity": "normal"
+      },
+      "wall_s": 6.03,
+      "runner_transport_retries": 2
+    },
+    {
+      "case_id": "H-STR-08",
+      "question": "T_A 位于郑州的店铺各有多少个商品？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "error_out"
+      ],
+      "terminal_event": "error",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "terminal_error_detail": {
+        "task": "normalize_intent",
+        "reason": "upstream_fault_then_template_miss",
+        "last_degrade_error": "LlmCircuitOpen"
+      },
+      "outcome": "failed",
+      "refusal_reason": null,
+      "binding_status": null,
+      "sql_text": "",
+      "sql_params": {},
+      "sql_dialect": "",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "gate_decisions": {},
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "degradations": [
+        {
+          "reason": "llm_unavailable",
+          "action_taken": "template_only",
+          "detail": {
+            "from_model": "deepseek-flash",
+            "error": "LlmCircuitOpen",
+            "advisory": false,
+            "model_override": false
+          }
+        }
+      ],
+      "retrieval_counts": {},
+      "latency_ms": {
+        "normalize": 5,
+        "total": 6
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_hit": 0,
+        "total": 0
+      },
+      "cost_cny": 0.0,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": null,
+        "ok": false,
+        "reason": "l4_not_reached",
+        "candidate_ids": [],
+        "scores": [],
+        "rank": [],
+        "scorer": {
+          "model_id": null,
+          "prompt_version": null
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "2669e9196781de48a1e13e8f8faee3a0890640734e148036b6114dd0301d7a3c",
+        "gold_candidate_id": null,
+        "gold_match_rule": null,
+        "gold_candidates_considered": 0,
+        "gold_unmatched_reason": "no_l4_candidates",
+        "gold_has_star_agg": false,
+        "gold_status": "unmatched"
+      },
+      "gold": {
+        "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '郑州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+        "frozen_hash": "sha256:5e08ccc3edf56455bcad517499b0f923b86e97cefe797fd0327167224630e91a",
+        "via_view": {
+          "hash": "sha256:5e08ccc3edf56455bcad517499b0f923b86e97cefe797fd0327167224630e91a",
+          "rows": 1,
+          "cols": 2,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:5e08ccc3edf56455bcad517499b0f923b86e97cefe797fd0327167224630e91a",
+          "rows": 1,
+          "cols": 2,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": null,
+        "columns": [],
+        "rows": 0,
+        "shape": {
+          "columns": [],
+          "row_count": 0,
+          "head_rows": []
+        },
+        "state_row_count": 0,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": null,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "sql_generation",
+        "signal": "链路在生成前失败（终态 error 且无 SQL）",
+        "severity": "normal"
+      },
+      "wall_s": 6.032,
+      "runner_transport_retries": 2
+    }
+  ],
+  "generated_at": "2026-10-23T02:59:02+00:00",
+  "git_rev": "9dd7736",
+  "git_dirty": false
+}
