@@ -1,0 +1,146 @@
+{
+  "provenance": "W72 零出站审计（r66 重放 + 冻结集 + 语义包 + 沙箱 sqlite；tokens 计费 = 0）",
+  "task": "W72-3 refund_rate 谓词泄漏定位（只定位，不改代码、不改包、不改判据）",
+  "generated_at": "2026-10-23T07:30:42+00:00",
+  "git_rev": "70b9201",
+  "git_dirty": false,
+  "root_cause": {
+    "summary": "注入按**资产所属域**取整份域级谓词表，未按指标自身 default_predicates 过滤 ⇒ orders 域的 dp_order_002（refund_status <> 'refunded'）被无差别注入 refund_rate",
+    "code_sites": [
+      {
+        "file": "backend/app/guard/ast_gate.py",
+        "line": 460,
+        "code": "def _inject_predicates(root: exp.Expr, allowlist: Mapping[str, Any]) -> list[str]:",
+        "note": "函数签名只有 root + allowlist，**没有指标维度** ⇒ 注入侧无法按指标过滤"
+      },
+      {
+        "file": "backend/app/guard/ast_gate.py",
+        "line": 463,
+        "code": "pred_by_domain: Mapping[str, Sequence[str]] = allowlist.get(\"default_predicates\") or {}",
+        "note": "谓词表以**域**为键，装载时已丢失 metric 维度与 applies_to"
+      },
+      {
+        "file": "backend/app/guard/ast_gate.py",
+        "line": 477,
+        "code": "predicates = pred_by_domain.get(asset.get(\"domain\", \"\"), [])",
+        "note": "按资产 domain 取整份谓词表，不看「当前查询算的是哪个指标」"
+      },
+      {
+        "file": "backend/app/guard/ast_gate.py",
+        "line": 491,
+        "code": "for pred_sql in predicates:",
+        "note": "逐条注入；dp_order_002 就是这样进到 refund_rate 的 WHERE 里"
+      },
+      {
+        "file": "backend/app/core/contracts.py",
+        "line": 386,
+        "code": "default_predicates: Mapping[str, Sequence[str]]",
+        "note": "交付契约类型本身只有「域→谓词串」，没有 metric→谓词 ⇒ 注入方无处可查"
+      },
+      {
+        "file": "backend/app/semantics/loader.py",
+        "line": 384,
+        "code": "default_predicates：applies_to ⊆ 已定义指标；与 metrics[].default_predicates 双向一致",
+        "note": "包加载期**已经**校验了两级一致（含 applies_to），但该信息在投影成 guard_allowlist 时被压平"
+      },
+      {
+        "file": "backend/app/graph/nodes/gate1_ast.py",
+        "line": 56,
+        "code": "allowlist = deps.semantics.guard_allowlist(identity, max_rows=…)",
+        "note": "节点手里**有** state（含 plan.metrics），但只按 identity 取 allowlist ⇒ 指标名没往下传"
+      }
+    ],
+    "why_not_bind": "不是 bind 未覆盖：bind 只负责把概念绑到资产/字段，不下发谓词；谓词注入发生在 gate1 的 AST 改写阶段（`_inject_predicates`），那里拿到的 allowlist 只有域级列表"
+  },
+  "bundle_evidence": {
+    "metric_block_line": 592,
+    "metric_predicates": [
+      "pay_status = 'paid'",
+      "is_test_order = false"
+    ],
+    "metric_predicate_lines": {
+      "pay_status = 'paid": 593,
+      "is_test_order = false": 594
+    },
+    "forbidden_note": "bundle 第 591 行（refund_rate 块内）：本指标的谓词**不含** refund_status <> 'refunded' —— 分子正是靠退款行为算出来的",
+    "domain_leak_origin": {
+      "id": null,
+      "line": null,
+      "predicate_line": null,
+      "applies_to": null,
+      "note": "applies_to 明确不含 refund_rate ⇒ A 级（域级）本身没错，是注入侧丢了这个过滤"
+    }
+  },
+  "cases": [
+    {
+      "case_id": "M-IDX-05",
+      "question": "T_A 自 2026-08-01 起的退款率是多少？",
+      "applied_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "bundle_metric_predicates": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ],
+      "bundle_metric_block_line": 592,
+      "leaked_predicate": "refund_status <> 'refunded'",
+      "value_with_leak": 0.0,
+      "value_without_leak": 0.05008329,
+      "value_gold": 0.04993644,
+      "authority_value": 0.05008328882002321,
+      "error_with_leak": null,
+      "sql_with_leak": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0) AS refund_rate FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "sql_without_leak": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0) AS refund_rate FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_status = 'paid' LIMIT 1"
+    },
+    {
+      "case_id": "M-IDX-06",
+      "question": "T_B 自 2026-06-01 起的退款率是多少？",
+      "applied_predicates": [
+        "is_test_order = false",
+        "refund_status <> 'refunded'",
+        "pay_status = 'paid'"
+      ],
+      "bundle_metric_predicates": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ],
+      "bundle_metric_block_line": 592,
+      "leaked_predicate": "refund_status <> 'refunded'",
+      "value_with_leak": 0.0,
+      "value_without_leak": 0.04998161,
+      "value_gold": 0.04985778,
+      "authority_value": 0.049981614113764596,
+      "error_with_leak": null,
+      "sql_with_leak": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0) AS refund_rate FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' LIMIT 1",
+      "sql_without_leak": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0) AS refund_rate FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_status = 'paid' LIMIT 1"
+    }
+  ],
+  "fix_plan": {
+    "status": "PROPOSED（未实装；派单要求「先出方案再动手 + 需点句」）",
+    "approach": "把指标维度带进注入链，**按指标自身 default_predicates 覆盖域级并集**，指标不可确定时回落域级（保持现状 = fail-closed，不放松）",
+    "steps": [
+      "① contracts.GuardAllowlist 增加 `metric_predicates: Mapping[str, Sequence[str]]`（来源 bundle.metrics[].default_predicates，loader 已保证与域级一致）",
+      "② SemanticBundlePort.guard_allowlist 投影该键（与 assets 同一次取用，不额外查库）",
+      "③ graph/nodes/gate1_ast.py 从 state['plan'].metrics 取指标名（去重）并下传",
+      "④ ast_gate.run_gate1 / _inject_predicates 增加 metrics 参数：metrics 非空且全部有指标级声明 ⇒ 用其**并集**替换域级集；否则回落域级",
+      "⑤ 多指标共存冲突（如 refund_rate + gmv 同 SELECT）无法同时满足 ⇒ 记 warning 并回落域级，不静默选边"
+    ],
+    "touch_points": [
+      "backend/app/core/contracts.py:382-386（allowlist 类型）",
+      "backend/app/semantics/port.py / materialize（投影 metric_predicates）",
+      "backend/app/guard/ast_gate.py:460-509（注入选择逻辑）",
+      "backend/app/graph/nodes/gate1_ast.py:56-64（传 plan 指标）"
+    ],
+    "unit_tests": [
+      "test_refund_rate_does_not_get_refund_status_filter（refund_rate 的 SQL 不得含 refund_status <> 'refunded'）",
+      "test_gmv_keeps_three_predicates（gmv 必须同时含 pay_status / refund_status / is_test_order）",
+      "test_metric_predicates_override_domain（指标级 ⊂ 域级时以指标级为准）",
+      "test_unknown_metric_falls_back_to_domain（无指标 / 取不到时保持域级，不放松）"
+    ],
+    "verification": "replay r63 匣带 M-IDX-05/06 + 全量 166（零出站）+ 单测；**不真打**",
+    "expected_effect": "M-IDX-05/06 refund_rate 由 0.0 → 0.0501/0.0500（与权威值一致）；system vs authority 由 11/13 → 13/13（其余不动的前提下）",
+    "blast_radius": "所有带 default_predicates 的查询都会走新分支 ⇒ 必须跑全量 166 回归；r63 匣带可继续 replay（不改 prompt、不改 SQL 结构，只改注入的谓词集）⇒ 不需重基线"
+  }
+}

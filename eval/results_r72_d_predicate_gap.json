@@ -1,0 +1,4804 @@
+{
+  "provenance": "W72 零出站审计（r66 重放 + 冻结集 + 语义包 + 沙箱 sqlite；tokens 计费 = 0）",
+  "task": "W72-1 D 类补审：gold WHERE 与包内 metric 级 default_predicates 求差（只出表，不改 gold）",
+  "generated_at": "2026-10-23T07:30:42+00:00",
+  "git_rev": "70b9201",
+  "git_dirty": false,
+  "method": "① 问句按包内 synonyms 最长匹配定位指标；② 取该指标 metric 级 default_predicates 为应有集（loader.py:384-408 保证它是域级 applies_to 的子集）；③ 解析 gold 顶层 WHERE 的三元组求差；④ 沙箱同租户重跑 gold 原样 / 补谓词版 / 系统预测，用 equivalence.compare_tables 判等价",
+  "scope": {
+    "n_execute_with_gold": 108,
+    "scope_definition": "terminal_event == complete 且 gold_sql 非空（r66 重放产物）"
+  },
+  "headline": {
+    "n_defect": 40,
+    "n_defect_total_incl_weak": 41,
+    "n_weak_attribution": 1,
+    "weak_attribution_cases": [
+      "H-MET-10"
+    ],
+    "n_missing_only": 40,
+    "n_conflict": 0,
+    "n_value_changed": 31,
+    "n_value_unchanged_harmless": 9,
+    "harmless_cases": [
+      "E-MET-10",
+      "M-DIM-03",
+      "M-MET-05",
+      "M-MET-06",
+      "M-MET-07",
+      "M-IDX-07",
+      "M-IDX-08",
+      "M-IDX-09",
+      "M-IDX-10"
+    ],
+    "harmless_split": {
+      "defensive_only": [
+        "E-MET-10",
+        "M-DIM-03",
+        "M-MET-05",
+        "M-MET-06",
+        "M-MET-07",
+        "M-IDX-07",
+        "M-IDX-08"
+      ],
+      "unchanged_but_anomalous": [
+        "M-IDX-09",
+        "M-IDX-10"
+      ]
+    },
+    "harmless_reason": "补谓词后沙箱结果哈希不变 —— ① `uv >= 0` 这类防御性谓词（数据无负数）与 uv/pay_cvr 缺口属数值无害；② M-IDX-09/10 补谓词后**仍为 0**（系统预测 0.16/0.13）⇒ 那不是谓词无害，是复购口径另有问题，本轮只登记、不归因（超出 D 类范围）",
+    "n_flips_to_equivalent": 22,
+    "flip_cases": [
+      "E-MET-01",
+      "E-MET-02",
+      "E-MET-03",
+      "E-MET-04",
+      "E-MET-05",
+      "E-MET-06",
+      "E-MET-07",
+      "E-MET-09",
+      "M-MET-03",
+      "M-MET-04",
+      "H-MET-06",
+      "H-MET-07",
+      "H-MET-08",
+      "H-MET-09",
+      "X-MET-06",
+      "X-MET-07",
+      "X-MET-08",
+      "X-MET-09",
+      "M-IDX-01",
+      "M-IDX-02",
+      "M-IDX-03",
+      "M-IDX-04"
+    ],
+    "g7_subset": {
+      "n": 13,
+      "n_gold_where_time_only": 13,
+      "cases": [
+        {
+          "case_id": "E-MET-01",
+          "metric": [
+            "gmv"
+          ],
+          "gold_where": "WHERE pay_time >= '2026-08-01'",
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ]
+        },
+        {
+          "case_id": "E-MET-02",
+          "metric": [
+            "gmv"
+          ],
+          "gold_where": "WHERE pay_time >= '2026-06-01'",
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ]
+        },
+        {
+          "case_id": "E-MET-03",
+          "metric": [
+            "gmv"
+          ],
+          "gold_where": "WHERE pay_time >= '2025-11-01'",
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ]
+        },
+        {
+          "case_id": "E-MET-04",
+          "metric": [
+            "gmv"
+          ],
+          "gold_where": "WHERE pay_time >= '2026-03-01'",
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ]
+        },
+        {
+          "case_id": "E-MET-05",
+          "metric": [
+            "order_cnt"
+          ],
+          "gold_where": "WHERE pay_time >= '2026-08-01'",
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ]
+        },
+        {
+          "case_id": "E-MET-06",
+          "metric": [
+            "order_cnt"
+          ],
+          "gold_where": "WHERE pay_time >= '2026-06-01'",
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ]
+        },
+        {
+          "case_id": "E-MET-07",
+          "metric": [
+            "order_cnt"
+          ],
+          "gold_where": "WHERE pay_time >= '2026-01-01'",
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ]
+        },
+        {
+          "case_id": "E-MET-09",
+          "metric": [
+            "gmv"
+          ],
+          "gold_where": "WHERE pay_time >= '2026-08-01'",
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ]
+        },
+        {
+          "case_id": "E-MET-10",
+          "metric": [
+            "uv"
+          ],
+          "gold_where": "WHERE stat_date >= '2026-08-01'",
+          "missing": [
+            "uv >= 0"
+          ]
+        },
+        {
+          "case_id": "M-IDX-01",
+          "metric": [
+            "aov"
+          ],
+          "gold_where": "WHERE pay_time >= '2026-08-01'",
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ]
+        },
+        {
+          "case_id": "M-IDX-02",
+          "metric": [
+            "aov"
+          ],
+          "gold_where": "WHERE pay_time >= '2026-06-01'",
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ]
+        },
+        {
+          "case_id": "M-IDX-05",
+          "metric": [
+            "refund_rate"
+          ],
+          "gold_where": "WHERE pay_time >= '2026-08-01'",
+          "missing": [
+            "pay_status = 'paid'",
+            "is_test_order = false"
+          ]
+        },
+        {
+          "case_id": "M-IDX-06",
+          "metric": [
+            "refund_rate"
+          ],
+          "gold_where": "WHERE pay_time >= '2026-06-01'",
+          "missing": [
+            "pay_status = 'paid'",
+            "is_test_order = false"
+          ]
+        }
+      ]
+    },
+    "by_metric": {
+      "gmv": {
+        "n": 22,
+        "cases": [
+          "E-MET-01",
+          "E-MET-02",
+          "E-MET-03",
+          "E-MET-04",
+          "E-MET-09",
+          "M-MET-02",
+          "M-MET-03",
+          "M-MET-04",
+          "M-MET-08",
+          "H-MET-01",
+          "H-MET-02",
+          "H-MET-03",
+          "H-MET-04",
+          "H-MET-05",
+          "H-MET-06",
+          "H-MET-07",
+          "H-MET-08",
+          "H-MET-09",
+          "X-MET-06",
+          "X-MET-07",
+          "X-MET-08",
+          "X-MET-09"
+        ],
+        "missing_combos": {
+          "(\"pay_status = 'paid'\", \"refund_status <> 'refunded'\", 'is_test_order = false')": 22
+        }
+      },
+      "order_cnt": {
+        "n": 3,
+        "cases": [
+          "E-MET-05",
+          "E-MET-06",
+          "E-MET-07"
+        ],
+        "missing_combos": {
+          "(\"pay_status = 'paid'\", \"refund_status <> 'refunded'\", 'is_test_order = false')": 3
+        }
+      },
+      "uv": {
+        "n": 5,
+        "cases": [
+          "E-MET-10",
+          "M-DIM-03",
+          "M-MET-05",
+          "M-MET-06",
+          "M-MET-07"
+        ],
+        "missing_combos": {
+          "('uv >= 0',)": 5
+        }
+      },
+      "aov": {
+        "n": 2,
+        "cases": [
+          "M-IDX-01",
+          "M-IDX-02"
+        ],
+        "missing_combos": {
+          "(\"pay_status = 'paid'\", \"refund_status <> 'refunded'\", 'is_test_order = false')": 2
+        }
+      },
+      "arpu": {
+        "n": 2,
+        "cases": [
+          "M-IDX-03",
+          "M-IDX-04"
+        ],
+        "missing_combos": {
+          "(\"pay_status = 'paid'\", \"refund_status <> 'refunded'\", 'is_test_order = false')": 2
+        }
+      },
+      "refund_rate": {
+        "n": 2,
+        "cases": [
+          "M-IDX-05",
+          "M-IDX-06"
+        ],
+        "missing_combos": {
+          "(\"pay_status = 'paid'\", 'is_test_order = false')": 2
+        }
+      },
+      "pay_cvr": {
+        "n": 2,
+        "cases": [
+          "M-IDX-07",
+          "M-IDX-08"
+        ],
+        "missing_combos": {
+          "('uv >= 0',)": 2
+        }
+      },
+      "repurchase_rate_90d": {
+        "n": 2,
+        "cases": [
+          "M-IDX-09",
+          "M-IDX-10"
+        ],
+        "missing_combos": {
+          "(\"pay_status = 'paid'\", 'is_test_order = false')": 2
+        }
+      }
+    }
+  },
+  "emet08_reverse_caliber": {
+    "case_id": "E-MET-08",
+    "included_in_execute_scope": false,
+    "gold_sql": null,
+    "verdict": "该条终态非 complete（r66=refuse）⇒ 不在 execute 作用域内；gold `pay_status = 'unpaid'` 属题面显式指定的反向口径，合法。",
+    "terminal_event": "refuse"
+  },
+  "rows": [
+    {
+      "case_id": "E-VER-01",
+      "question": "T_A 2026-08 的日期维表有多少天？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(*) FROM v_dim_date WHERE year = 2026 AND month = 8",
+      "gold_where": "WHERE year = 2026 AND month = 8",
+      "metrics_matched": [],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [
+        "问句未命中任何包内指标同义词 ⇒ 本规则无从比对（不计缺陷）"
+      ]
+    },
+    {
+      "case_id": "E-VER-02",
+      "question": "T_A 的在架商品数是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE on_sale = 1",
+      "gold_where": "WHERE on_sale = 1",
+      "metrics_matched": [
+        "on_sale_product_cnt",
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "on_sale_product_cnt",
+          "synonym": "在架商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        },
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-VER-03",
+      "question": "T_A 的下架商品数是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE on_sale = 0",
+      "gold_where": "WHERE on_sale = 0",
+      "metrics_matched": [
+        "off_sale_product_cnt",
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "off_sale_product_cnt",
+          "synonym": "下架商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        },
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-VER-04",
+      "question": "T_A 的SPU 数是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(DISTINCT spu_id) FROM v_product WHERE on_sale = 1",
+      "gold_where": "WHERE on_sale = 1",
+      "metrics_matched": [],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [
+        "问句未命中任何包内指标同义词 ⇒ 本规则无从比对（不计缺陷）"
+      ]
+    },
+    {
+      "case_id": "E-VER-05",
+      "question": "T_A 的店铺数是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(*) FROM v_shop WHERE city IS NOT NULL",
+      "gold_where": "WHERE city IS NOT NULL",
+      "metrics_matched": [
+        "shop_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "shop_cnt",
+          "synonym": "店铺数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-VER-06",
+      "question": "T_A 的活动数是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(*) FROM v_campaign",
+      "gold_where": "",
+      "metrics_matched": [
+        "campaign_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "campaign_cnt",
+          "synonym": "活动数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-VER-07",
+      "question": "T_A 的华东覆盖省份数是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(*) FROM v_region WHERE region_name = '华东'",
+      "gold_where": "WHERE region_name = '华东'",
+      "metrics_matched": [
+        "province_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "province_cnt",
+          "synonym": "覆盖省份数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-VER-08",
+      "question": "T_A 2026-08 的收货省份覆盖数是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(DISTINCT region_code) FROM v_order_paid WHERE region_code IS NOT NULL AND pay_time >= '2026-08-01' AND pay_time < '2026-09-01'",
+      "gold_where": "WHERE region_code IS NOT NULL AND pay_time >= '2026-08-01' AND pay_time < '2026-09-01'",
+      "metrics_matched": [
+        "province_covered_cnt",
+        "province_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "province_covered_cnt",
+          "synonym": "收货省份覆盖数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        },
+        {
+          "metric": "province_cnt",
+          "synonym": "省份覆盖数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-VER-10",
+      "question": "T_B 的在架商品数是多少？",
+      "tenant": "T_B",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE on_sale = 1",
+      "gold_where": "WHERE on_sale = 1",
+      "metrics_matched": [
+        "on_sale_product_cnt",
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "on_sale_product_cnt",
+          "synonym": "在架商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        },
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-VER-11",
+      "question": "T_C 的在架商品数是多少？",
+      "tenant": "T_C",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE on_sale = 1",
+      "gold_where": "WHERE on_sale = 1",
+      "metrics_matched": [
+        "on_sale_product_cnt",
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "on_sale_product_cnt",
+          "synonym": "在架商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        },
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-ENUM-01",
+      "question": "T_A 直播渠道一共带来多少浏览量？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'live'",
+      "gold_where": "WHERE channel = 'live'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-ENUM-02",
+      "question": "T_A 搜索渠道一共带来多少浏览量？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'search'",
+      "gold_where": "WHERE channel = 'search'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-ENUM-03",
+      "question": "T_A 推荐渠道一共带来多少浏览量？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'feed'",
+      "gold_where": "WHERE channel = 'feed'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-ENUM-04",
+      "question": "T_A 付费广告渠道一共带来多少浏览量？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'ad'",
+      "gold_where": "WHERE channel = 'ad'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-ENUM-05",
+      "question": "T_A 直接访问渠道一共带来多少浏览量？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(pv) FROM v_traffic_daily WHERE channel = 'direct'",
+      "gold_where": "WHERE channel = 'direct'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-ENUM-06",
+      "question": "T_A 的「3C数码」在架商品有多少个？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '3C数码'",
+      "gold_where": "WHERE category_l1 = '3C数码'",
+      "metrics_matched": [
+        "on_sale_product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "on_sale_product_cnt",
+          "synonym": "在架商品",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-ENUM-07",
+      "question": "T_A 的「家用电器」在架商品有多少个？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '家用电器'",
+      "gold_where": "WHERE category_l1 = '家用电器'",
+      "metrics_matched": [
+        "on_sale_product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "on_sale_product_cnt",
+          "synonym": "在架商品",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-ENUM-08",
+      "question": "T_A 的「美妆个护」在架商品有多少个？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '美妆个护'",
+      "gold_where": "WHERE category_l1 = '美妆个护'",
+      "metrics_matched": [
+        "on_sale_product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "on_sale_product_cnt",
+          "synonym": "在架商品",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-ENUM-09",
+      "question": "T_B 的「服饰鞋包」在架商品有多少个？",
+      "tenant": "T_B",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '服饰鞋包'",
+      "gold_where": "WHERE category_l1 = '服饰鞋包'",
+      "metrics_matched": [
+        "on_sale_product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "on_sale_product_cnt",
+          "synonym": "在架商品",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-ENUM-10",
+      "question": "T_C 的「食品生鲜」在架商品有多少个？",
+      "tenant": "T_C",
+      "gold_sql": "SELECT COUNT(*) FROM v_product WHERE category_l1 = '食品生鲜'",
+      "gold_where": "WHERE category_l1 = '食品生鲜'",
+      "metrics_matched": [
+        "on_sale_product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "on_sale_product_cnt",
+          "synonym": "在架商品",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "E-MET-01",
+      "question": "T_A 从 2026-08-01 起的 GMV 是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "gold_where": "WHERE pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": true,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE ((pay_time >= '2026-08-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 16483171.53,
+        "gold_value_after": 15611729.95,
+        "gold_hash_before": "sha256:4ffcbe1cb1de0ae18243f67b10a9830698c41399eb5cd61bb607c99ed831b82c",
+        "gold_hash_after": "sha256:645ad879379e98badda0c0d9c1b70318379e23aaba630fe082447ec6a4854a84",
+        "value_changed": true,
+        "pred_value": 15611729.95,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "E-MET-02",
+      "question": "T_A 从 2026-06-01 起的 GMV 是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-06-01'",
+      "gold_where": "WHERE pay_time >= '2026-06-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": true,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE ((pay_time >= '2026-06-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 32486530.79,
+        "gold_value_after": 30768819.37,
+        "gold_hash_before": "sha256:b924e3961275482610795a6adcd986b7aeeb7579070bc92424688c289b7d4bc4",
+        "gold_hash_after": "sha256:fc153934f0cd955010bc077f4a2d6f7c7e5e50e79981718b81824222c6b4d7df",
+        "value_changed": true,
+        "pred_value": 30768819.37,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "E-MET-03",
+      "question": "T_A 从 2025-11-01 起的 GMV 是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2025-11-01'",
+      "gold_where": "WHERE pay_time >= '2025-11-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": true,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE ((pay_time >= '2025-11-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 108857094.48,
+        "gold_value_after": 103385547.56,
+        "gold_hash_before": "sha256:f67cee0eb0cb15553cecfbcefbb8c405a55975f446d8d6ceec959bc447a738e3",
+        "gold_hash_after": "sha256:65de0285d21e5d01d031b2f6fdebcf02c6962ac353674fee17521ac7dc19281f",
+        "value_changed": true,
+        "pred_value": 103385547.56,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "E-MET-04",
+      "question": "T_A 从 2026-03-01 起的 GMV 是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-03-01'",
+      "gold_where": "WHERE pay_time >= '2026-03-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": true,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE ((pay_time >= '2026-03-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 60389934.75,
+        "gold_value_after": 57306143.84,
+        "gold_hash_before": "sha256:d86311bee309c66336f230c664221aed7606463ac334797e32d9ebc226e345be",
+        "gold_hash_after": "sha256:adce1fb0f0f4f287766d32b38053a4bddfa0cd8d925ae7729997e482fba1a969",
+        "value_changed": true,
+        "pred_value": 57306143.84,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "E-MET-05",
+      "question": "T_A 从 2026-08-01 起的订单量是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(DISTINCT sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "gold_where": "WHERE pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "order_cnt"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "order_cnt",
+          "synonym": "订单量",
+          "bundle_block_line": 526,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 527,
+            "refund_status <> 'refunded": 528,
+            "is_test_order = false": 529
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": true,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT COUNT(DISTINCT sub_order_id) FROM v_order_paid WHERE ((pay_time >= '2026-08-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 11995,
+        "gold_value_after": 11413,
+        "gold_hash_before": "sha256:72793ab5ea81c609005af407839544bb36388a96d811d21c492406a4c023a1ab",
+        "gold_hash_after": "sha256:31fd4cdbbb035f366c6e54dbf924a1704ea7696baf7c121b5074ef41b8dad5b0",
+        "value_changed": true,
+        "pred_value": 11413,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "E-MET-06",
+      "question": "T_A 从 2026-06-01 起的订单量是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(DISTINCT sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-06-01'",
+      "gold_where": "WHERE pay_time >= '2026-06-01'",
+      "metrics_matched": [
+        "order_cnt"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "order_cnt",
+          "synonym": "订单量",
+          "bundle_block_line": 526,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 527,
+            "refund_status <> 'refunded": 528,
+            "is_test_order = false": 529
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": true,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT COUNT(DISTINCT sub_order_id) FROM v_order_paid WHERE ((pay_time >= '2026-06-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 23747,
+        "gold_value_after": 22536,
+        "gold_hash_before": "sha256:13d173601fb03084481bb93be5a5e8bbc6d86d1960914beaed4a2516e3595c29",
+        "gold_hash_after": "sha256:a81418569bc452a3224c05fcaba6f4d5162faf702f1d0f7be55f89288d775916",
+        "value_changed": true,
+        "pred_value": 22536,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "E-MET-07",
+      "question": "T_A 从 2026-01-01 起的订单量是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(DISTINCT sub_order_id) FROM v_order_paid WHERE pay_time >= '2026-01-01'",
+      "gold_where": "WHERE pay_time >= '2026-01-01'",
+      "metrics_matched": [
+        "order_cnt"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "order_cnt",
+          "synonym": "订单量",
+          "bundle_block_line": 526,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 527,
+            "refund_status <> 'refunded": 528,
+            "is_test_order = false": 529
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": true,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT COUNT(DISTINCT sub_order_id) FROM v_order_paid WHERE ((pay_time >= '2026-01-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 59418,
+        "gold_value_after": 56408,
+        "gold_hash_before": "sha256:376ff65b642bca20f894ebdeed47fe67c97f58b77d01b60935c11da8270fcab2",
+        "gold_hash_after": "sha256:1a944e9c43fc844f9c30ed57e3d5e530473f673f46eec582a5615fe94968ea35",
+        "value_changed": true,
+        "pred_value": 56408,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "E-MET-09",
+      "question": "T_B 从 2026-08-01 起的 GMV 是多少？",
+      "tenant": "T_B",
+      "gold_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "gold_where": "WHERE pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": true,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(pay_amount) FROM v_order_paid WHERE ((pay_time >= '2026-08-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 14275035.28,
+        "gold_value_after": 13541842.86,
+        "gold_hash_before": "sha256:63919efb133ffd3e10c9d963f746c0120436d2ba1badfaf1c92abe07c7187ad8",
+        "gold_hash_after": "sha256:99df7a00509bf490513f203bdb78a633a06fc80ab578ccd2477e90604bf4c701",
+        "value_changed": true,
+        "pred_value": 13541842.86,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "E-MET-10",
+      "question": "T_C 从 2026-08-01 起的 UV 合计是多少？",
+      "tenant": "T_C",
+      "gold_sql": "SELECT SUM(uv) FROM v_traffic_daily WHERE stat_date >= '2026-08-01'",
+      "gold_where": "WHERE stat_date >= '2026-08-01'",
+      "metrics_matched": [
+        "uv"
+      ],
+      "required_predicates": [
+        "uv >= 0"
+      ],
+      "missing_predicates": [
+        "uv >= 0"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "uv",
+          "synonym": "UV",
+          "bundle_block_line": 637,
+          "bundle_predicate_lines": {
+            "uv >= 0": 638
+          },
+          "required": [
+            "uv >= 0"
+          ],
+          "missing": [
+            "uv >= 0"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": true,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(uv) FROM v_traffic_daily WHERE stat_date >= '2026-08-01' AND uv >= 0",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 602325,
+        "gold_value_after": 602325,
+        "gold_hash_before": "sha256:d6e82152e3b66d16506a3656d4a1b8122d0d17066060b03e456afb7383589ce9",
+        "gold_hash_after": "sha256:d6e82152e3b66d16506a3656d4a1b8122d0d17066060b03e456afb7383589ce9",
+        "value_changed": false,
+        "pred_value": 602325,
+        "pred_error": null,
+        "equivalent_before": true,
+        "equivalent_after": true,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "M-DIM-01",
+      "question": "T_A 的各 SKU 的浏览量分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily GROUP BY sku_id",
+      "gold_where": "",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-DIM-02",
+      "question": "T_A 的各渠道的浏览量分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT channel, SUM(pv) FROM v_traffic_daily GROUP BY channel",
+      "gold_where": "",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-DIM-03",
+      "question": "T_A 的各日期的访客数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT stat_date, SUM(uv) FROM v_traffic_daily GROUP BY stat_date",
+      "gold_where": "",
+      "metrics_matched": [
+        "uv"
+      ],
+      "required_predicates": [
+        "uv >= 0"
+      ],
+      "missing_predicates": [
+        "uv >= 0"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "uv",
+          "synonym": "访客数",
+          "bundle_block_line": 637,
+          "bundle_predicate_lines": {
+            "uv >= 0": 638
+          },
+          "required": [
+            "uv >= 0"
+          ],
+          "missing": [
+            "uv >= 0"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT stat_date, SUM(uv) FROM v_traffic_daily WHERE uv >= 0 GROUP BY stat_date",
+        "gold_rows_before": 730,
+        "gold_rows_after": 730,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:8280490089c437636718ed198d3e36ba751ac743d2272614d8379986829ccb84",
+        "gold_hash_after": "sha256:8280490089c437636718ed198d3e36ba751ac743d2272614d8379986829ccb84",
+        "value_changed": false,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": true,
+        "equivalent_after": true,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "M-DIM-04",
+      "question": "T_A 的各活动类型的活动数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT campaign_type, COUNT(*) FROM v_campaign GROUP BY campaign_type",
+      "gold_where": "",
+      "metrics_matched": [
+        "campaign_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "campaign_cnt",
+          "synonym": "活动数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-DIM-06",
+      "question": "T_A 的各 SPU 的 SKU 数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT spu_id, COUNT(*) FROM v_product GROUP BY spu_id",
+      "gold_where": "",
+      "metrics_matched": [],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [
+        "问句未命中任何包内指标同义词 ⇒ 本规则无从比对（不计缺陷）"
+      ]
+    },
+    {
+      "case_id": "M-DIM-07",
+      "question": "T_A 的各二级类目的商品数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product GROUP BY category_l2",
+      "gold_where": "",
+      "metrics_matched": [
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-DIM-08",
+      "question": "7 个大区各覆盖的省份数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT region_name, COUNT(*) FROM v_region GROUP BY region_name",
+      "gold_where": "",
+      "metrics_matched": [
+        "province_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "province_cnt",
+          "synonym": "省份数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-DIM-09",
+      "question": "各一级类目的商品数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT category_l1, COUNT(*) FROM v_product GROUP BY category_l1",
+      "gold_where": "",
+      "metrics_matched": [
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-DIM-10",
+      "question": "各渠道的加购次数合计分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT channel, SUM(cart_add_cnt) FROM v_traffic_daily GROUP BY channel",
+      "gold_where": "",
+      "metrics_matched": [
+        "cart_add_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "cart_add_cnt",
+          "synonym": "加购次数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-ENUM-01",
+      "question": "T_A 直播渠道各 SKU 的浏览量分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily WHERE channel = 'live' GROUP BY sku_id",
+      "gold_where": "WHERE channel = 'live'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-ENUM-03",
+      "question": "T_A 推荐渠道各 SKU 的浏览量分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily WHERE channel = 'feed' GROUP BY sku_id",
+      "gold_where": "WHERE channel = 'feed'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-ENUM-04",
+      "question": "T_A 付费广告渠道各 SKU 的浏览量分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT sku_id, SUM(pv) FROM v_traffic_daily WHERE channel = 'ad' GROUP BY sku_id",
+      "gold_where": "WHERE channel = 'ad'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-HIER-01",
+      "question": "T_A 各一级类目的在架商品数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT category_l1, COUNT(*) FROM v_product WHERE on_sale = 1 GROUP BY category_l1",
+      "gold_where": "WHERE on_sale = 1",
+      "metrics_matched": [
+        "on_sale_product_cnt",
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "on_sale_product_cnt",
+          "synonym": "在架商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        },
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-HIER-02",
+      "question": "T_A 各二级类目的在架商品数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE on_sale = 1 GROUP BY category_l2",
+      "gold_where": "WHERE on_sale = 1",
+      "metrics_matched": [
+        "on_sale_product_cnt",
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "on_sale_product_cnt",
+          "synonym": "在架商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        },
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-HIER-03",
+      "question": "T_A 各城市的在架商品数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT city, COUNT(*) FROM v_shop WHERE category_l1 IS NOT NULL GROUP BY city",
+      "gold_where": "WHERE category_l1 IS NOT NULL",
+      "metrics_matched": [
+        "on_sale_product_cnt",
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "on_sale_product_cnt",
+          "synonym": "在架商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        },
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-HIER-04",
+      "question": "3C数码下一级各子类的商品数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE category_l1 = '3C数码-子类1' GROUP BY category_l2",
+      "gold_where": "WHERE category_l1 = '3C数码-子类1'",
+      "metrics_matched": [
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-HIER-05",
+      "question": "家用电器下一级各子类的商品数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE category_l1 = '家用电器-子类1' GROUP BY category_l2",
+      "gold_where": "WHERE category_l1 = '家用电器-子类1'",
+      "metrics_matched": [
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-HIER-06",
+      "question": "服饰鞋包下一级各子类的商品数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE category_l1 = '服饰鞋包-子类1' GROUP BY category_l2",
+      "gold_where": "WHERE category_l1 = '服饰鞋包-子类1'",
+      "metrics_matched": [
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "M-MET-02",
+      "question": "T_A 从 2026-08-01 起各店铺的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT shop_id, SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' GROUP BY shop_id",
+      "gold_where": "WHERE pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT shop_id, SUM(pay_amount) FROM v_order_paid WHERE ((pay_time >= '2026-08-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY shop_id",
+        "gold_rows_before": 5,
+        "gold_rows_after": 5,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:8b40c3c2df25187ed8d36f24cf999346c75bb6b3078aa967e2b3ec649ba5d024",
+        "gold_hash_after": "sha256:e82b64301e578beee3872b4c7b5f5e783699d8787dc629c9dab4461cb1a9b721",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": false,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "M-MET-03",
+      "question": "T_A 从 2026-08-01 起各一级类目的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT category_l1, SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' GROUP BY category_l1",
+      "gold_where": "WHERE pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT category_l1, SUM(pay_amount) FROM v_order_paid WHERE ((pay_time >= '2026-08-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY category_l1",
+        "gold_rows_before": 9,
+        "gold_rows_after": 9,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:36d52916e8f16f44aafada1aa3c7d42df3a78716a224b3b6ef46d371cec4fc70",
+        "gold_hash_after": "sha256:84df5663e9d861bf74408380fd3ec8ad24c1f0d1ff4815b0cb60a3e14e740908",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "M-MET-04",
+      "question": "T_A 从 2026-08-01 起各收货城市的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT receiver_city, SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' GROUP BY receiver_city",
+      "gold_where": "WHERE pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT receiver_city, SUM(pay_amount) FROM v_order_paid WHERE ((pay_time >= '2026-08-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY receiver_city",
+        "gold_rows_before": 32,
+        "gold_rows_after": 32,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:4c83eedcbef6387098f32629ca012dfb3c11da6fd7bc34e62a818a0cd1a8e243",
+        "gold_hash_after": "sha256:f91b787ca3b7426995a6a572182ed31fcd044e7da4570227ef97e75220c3f871",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "M-MET-05",
+      "question": "T_A 从 2026-08-01 起各sku_id的 UV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT sku_id, SUM(uv) FROM v_traffic_daily WHERE stat_date >= '2026-08-01' GROUP BY sku_id",
+      "gold_where": "WHERE stat_date >= '2026-08-01'",
+      "metrics_matched": [
+        "uv"
+      ],
+      "required_predicates": [
+        "uv >= 0"
+      ],
+      "missing_predicates": [
+        "uv >= 0"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "uv",
+          "synonym": "UV",
+          "bundle_block_line": 637,
+          "bundle_predicate_lines": {
+            "uv >= 0": 638
+          },
+          "required": [
+            "uv >= 0"
+          ],
+          "missing": [
+            "uv >= 0"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT sku_id, SUM(uv) FROM v_traffic_daily WHERE stat_date >= '2026-08-01' AND uv >= 0 GROUP BY sku_id",
+        "gold_rows_before": 1697,
+        "gold_rows_after": 1697,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:55001bf2483aaa8be2082e6722849e2bcf0ada183b7086876f52e704d10e675d",
+        "gold_hash_after": "sha256:55001bf2483aaa8be2082e6722849e2bcf0ada183b7086876f52e704d10e675d",
+        "value_changed": false,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": false,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "M-MET-06",
+      "question": "T_A 从 2026-08-01 起各channel的 UV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT channel, SUM(uv) FROM v_traffic_daily WHERE stat_date >= '2026-08-01' GROUP BY channel",
+      "gold_where": "WHERE stat_date >= '2026-08-01'",
+      "metrics_matched": [
+        "uv"
+      ],
+      "required_predicates": [
+        "uv >= 0"
+      ],
+      "missing_predicates": [
+        "uv >= 0"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "uv",
+          "synonym": "UV",
+          "bundle_block_line": 637,
+          "bundle_predicate_lines": {
+            "uv >= 0": 638
+          },
+          "required": [
+            "uv >= 0"
+          ],
+          "missing": [
+            "uv >= 0"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT channel, SUM(uv) FROM v_traffic_daily WHERE stat_date >= '2026-08-01' AND uv >= 0 GROUP BY channel",
+        "gold_rows_before": 5,
+        "gold_rows_after": 5,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:aa0255e6761bbd063b101b1cca40ab751279a257e429d6a302fc1176c749580f",
+        "gold_hash_after": "sha256:aa0255e6761bbd063b101b1cca40ab751279a257e429d6a302fc1176c749580f",
+        "value_changed": false,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": true,
+        "equivalent_after": true,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "M-MET-07",
+      "question": "T_A 从 2026-08-01 起各stat_date的 UV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT stat_date, SUM(uv) FROM v_traffic_daily WHERE stat_date >= '2026-08-01' GROUP BY stat_date",
+      "gold_where": "WHERE stat_date >= '2026-08-01'",
+      "metrics_matched": [
+        "uv"
+      ],
+      "required_predicates": [
+        "uv >= 0"
+      ],
+      "missing_predicates": [
+        "uv >= 0"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "uv",
+          "synonym": "UV",
+          "bundle_block_line": 637,
+          "bundle_predicate_lines": {
+            "uv >= 0": 638
+          },
+          "required": [
+            "uv >= 0"
+          ],
+          "missing": [
+            "uv >= 0"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT stat_date, SUM(uv) FROM v_traffic_daily WHERE stat_date >= '2026-08-01' AND uv >= 0 GROUP BY stat_date",
+        "gold_rows_before": 61,
+        "gold_rows_after": 61,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:1591bc25b79cda8656c12c9b8cdd1b8543d11121706a29b39839388be93346e6",
+        "gold_hash_after": "sha256:1591bc25b79cda8656c12c9b8cdd1b8543d11121706a29b39839388be93346e6",
+        "value_changed": false,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": true,
+        "equivalent_after": true,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "M-MET-08",
+      "question": "T_A 八月起各 SKU 的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT sku_id, SUM(pay_amount) FROM v_order_paid WHERE pay_time >= '2026-08-01' GROUP BY sku_id",
+      "gold_where": "WHERE pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT sku_id, SUM(pay_amount) FROM v_order_paid WHERE ((pay_time >= '2026-08-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY sku_id",
+        "gold_rows_before": 1232,
+        "gold_rows_after": 1202,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:9b35c9af85c97adf3f40ae771827d93560ea23da6732dfb3c064a72387b4f449",
+        "gold_hash_after": "sha256:e803f3da68b17ed90188008b88096e905d4d94dc275d2d7ab508b8e1785c577b",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": false,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "H-STR-09",
+      "question": "T_A 各店铺的商品平均标价是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, AVG(v_product.list_price) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.on_sale = 1",
+      "metrics_matched": [
+        "avg_list_price"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "avg_list_price",
+          "synonym": "商品平均标价",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "H-ENUM-01",
+      "question": "T_A 处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'partial' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_order_paid.refund_status = 'partial' AND v_order_paid.pay_status = 'paid'",
+      "metrics_matched": [],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [
+        "问句未命中任何包内指标同义词 ⇒ 本规则无从比对（不计缺陷）"
+      ]
+    },
+    {
+      "case_id": "H-ENUM-02",
+      "question": "T_A 处于「全额退款」状态的订单在各店铺分别是多少笔？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'refunded' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_order_paid.refund_status = 'refunded' AND v_order_paid.pay_status = 'paid'",
+      "metrics_matched": [],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [
+        "问句未命中任何包内指标同义词 ⇒ 本规则无从比对（不计缺陷）"
+      ]
+    },
+    {
+      "case_id": "H-ENUM-03",
+      "question": "T_A 处于「无退款」状态的订单在各店铺分别是多少笔？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'none' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_order_paid.refund_status = 'none' AND v_order_paid.pay_status = 'paid'",
+      "metrics_matched": [],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [
+        "问句未命中任何包内指标同义词 ⇒ 本规则无从比对（不计缺陷）"
+      ]
+    },
+    {
+      "case_id": "H-ENUM-04",
+      "question": "T_A 处于「部分退款」状态的订单在各店铺分别是多少笔？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_order_paid JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.refund_status = 'partial' AND v_order_paid.pay_status = 'paid' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_order_paid.refund_status = 'partial' AND v_order_paid.pay_status = 'paid'",
+      "metrics_matched": [],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [
+        "问句未命中任何包内指标同义词 ⇒ 本规则无从比对（不计缺陷）"
+      ]
+    },
+    {
+      "case_id": "H-CAT-01",
+      "question": "T_A 的「3C数码」各店铺的商品数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '3C数码' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '3C数码' AND v_product.on_sale = 1",
+      "metrics_matched": [
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "H-CAT-02",
+      "question": "T_A 的「家用电器」各店铺的商品数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '家用电器' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '家用电器' AND v_product.on_sale = 1",
+      "metrics_matched": [
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "H-CAT-03",
+      "question": "T_A 的「服饰鞋包」各店铺的商品数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '服饰鞋包' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '服饰鞋包' AND v_product.on_sale = 1",
+      "metrics_matched": [
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "H-CAT-04",
+      "question": "T_A 的「食品生鲜」各店铺的商品数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '食品生鲜' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '食品生鲜' AND v_product.on_sale = 1",
+      "metrics_matched": [
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "H-CAT-05",
+      "question": "T_A 的「美妆个护」各店铺的商品数分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '美妆个护' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '美妆个护' AND v_product.on_sale = 1",
+      "metrics_matched": [
+        "product_cnt"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "product_cnt",
+          "synonym": "商品数",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "H-MET-01",
+      "question": "T_A「3C数码」自 2026-08-01 起各店铺的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE v_product.category_l1 = '3C数码' AND v_order_paid.pay_time >= '2026-08-01' GROUP BY v_order_paid.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '3C数码' AND v_order_paid.pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE (((v_product.category_l1 = '3C数码' AND v_order_paid.pay_time >= '2026-08-01') AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY v_order_paid.shop_id",
+        "gold_rows_before": 5,
+        "gold_rows_after": 5,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:065d65480b7318196a4935ba64ff13dd6d7b846773d55087d1a02a095f900eef",
+        "gold_hash_after": "sha256:e8995b0cc0e024875ba942e82ecae408a9a54008d88ed67af4ba88df249e25a8",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": false,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "H-MET-02",
+      "question": "T_A「家用电器」自 2026-08-01 起各店铺的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE v_product.category_l1 = '家用电器' AND v_order_paid.pay_time >= '2026-08-01' GROUP BY v_order_paid.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '家用电器' AND v_order_paid.pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE (((v_product.category_l1 = '家用电器' AND v_order_paid.pay_time >= '2026-08-01') AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY v_order_paid.shop_id",
+        "gold_rows_before": 5,
+        "gold_rows_after": 5,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:9db6f99b5a4fa15440a28da88304e46139d31998c5030ba29dbc4ecc959c0e76",
+        "gold_hash_after": "sha256:beb991578bf8bf7d484526aeb9b1a9ead50bff409c1302d7a8bb8b0862bc5d1f",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": false,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "H-MET-03",
+      "question": "T_A「服饰鞋包」自 2026-06-01 起各店铺的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE v_product.category_l1 = '服饰鞋包' AND v_order_paid.pay_time >= '2026-06-01' GROUP BY v_order_paid.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '服饰鞋包' AND v_order_paid.pay_time >= '2026-06-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE (((v_product.category_l1 = '服饰鞋包' AND v_order_paid.pay_time >= '2026-06-01') AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY v_order_paid.shop_id",
+        "gold_rows_before": 5,
+        "gold_rows_after": 5,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:65f271d0befa210f307b616b595692fdab4d549d660187408675e29b60a3341d",
+        "gold_hash_after": "sha256:7af324290edd6c3ed5e010d84f2cf58c6f71b967bc3af59b7fa4bee51a05ed1c",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": false,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "H-MET-04",
+      "question": "T_A「食品生鲜」自 2026-06-01 起各店铺的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE v_product.category_l1 = '食品生鲜' AND v_order_paid.pay_time >= '2026-06-01' GROUP BY v_order_paid.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '食品生鲜' AND v_order_paid.pay_time >= '2026-06-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE (((v_product.category_l1 = '食品生鲜' AND v_order_paid.pay_time >= '2026-06-01') AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY v_order_paid.shop_id",
+        "gold_rows_before": 5,
+        "gold_rows_after": 5,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:2acb3fce355944aafbc6cebbd66a5b73ba548a2d9b34a5139dc3474e56b5b8bf",
+        "gold_hash_after": "sha256:7c6eca5c999788626a6d84ff26b11cfd291d9c160b994bb63dafc6cce2a57cdf",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": false,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "H-MET-05",
+      "question": "T_A「美妆个护」自 2026-05-01 起各店铺的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE v_product.category_l1 = '美妆个护' AND v_order_paid.pay_time >= '2026-05-01' GROUP BY v_order_paid.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '美妆个护' AND v_order_paid.pay_time >= '2026-05-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_product ON v_order_paid.sku_id = v_product.sku_id WHERE (((v_product.category_l1 = '美妆个护' AND v_order_paid.pay_time >= '2026-05-01') AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY v_order_paid.shop_id",
+        "gold_rows_before": 5,
+        "gold_rows_after": 5,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:185d6b0a9a495fb5e24a9af1416a4a6d365e4aaa92e35bba89d0ca553920a40b",
+        "gold_hash_after": "sha256:334675046607f245e67ee9a6d053b92bc1f8e62d83286543222d1da61e0c208c",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": false,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "H-MET-06",
+      "question": "T_A 自 2026-08-01 起各大区的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_region.region_name, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE v_order_paid.pay_time >= '2026-08-01' GROUP BY v_region.region_name",
+      "gold_where": "WHERE v_order_paid.pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT v_region.region_name, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE ((v_order_paid.pay_time >= '2026-08-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY v_region.region_name",
+        "gold_rows_before": 7,
+        "gold_rows_after": 7,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:c20e64a8703ebc7433e6854ee6644860a6c0c03648a6be80ae483a05f82b7964",
+        "gold_hash_after": "sha256:6a03f23958ecedad0a182737cf7421e1201964e9f2da4e4b0159f0ac15f697aa",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "H-MET-07",
+      "question": "T_A 自 2026-06-01 起各大区的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_region.region_name, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE v_order_paid.pay_time >= '2026-06-01' GROUP BY v_region.region_name",
+      "gold_where": "WHERE v_order_paid.pay_time >= '2026-06-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT v_region.region_name, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE ((v_order_paid.pay_time >= '2026-06-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY v_region.region_name",
+        "gold_rows_before": 7,
+        "gold_rows_after": 7,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:259b6a70560d5e7d53581148093d09508c2b96db460c66d36c20711c0b064262",
+        "gold_hash_after": "sha256:39f0f39fc8e85a28f93b2780c337e4cc01e2b1d1efc75c8e137cca8ab7e784c4",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "H-MET-08",
+      "question": "T_A 自 2026-05-01 起各大区的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_region.region_name, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE v_order_paid.pay_time >= '2026-05-01' GROUP BY v_region.region_name",
+      "gold_where": "WHERE v_order_paid.pay_time >= '2026-05-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT v_region.region_name, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE ((v_order_paid.pay_time >= '2026-05-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY v_region.region_name",
+        "gold_rows_before": 7,
+        "gold_rows_after": 7,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:1f81bb3e57b440c8b77e71bd21a4ac347bc3c701db6b47017720362dea67e8ca",
+        "gold_hash_after": "sha256:c366a39ac83e11b31877a94d45b4de6b32bd1f91053e5c432716a79e08fd3b52",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "H-MET-09",
+      "question": "T_A 自 2026-03-01 起各大区的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_region.region_name, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE v_order_paid.pay_time >= '2026-03-01' GROUP BY v_region.region_name",
+      "gold_where": "WHERE v_order_paid.pay_time >= '2026-03-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT v_region.region_name, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code WHERE ((v_order_paid.pay_time >= '2026-03-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY v_region.region_name",
+        "gold_rows_before": 7,
+        "gold_rows_after": 7,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:473cb7111164fc0a2fa7e8156d1a309e7da6238d4035aa808dd24efdf1fb0ad5",
+        "gold_hash_after": "sha256:2f50916e5d112c5a40b70ea817a45d6ef1497114ac6ec79bdd3919dde14b28e4",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "H-MET-10",
+      "question": "T_A 自 2026-08-01 起有流量但零转化的 SKU 有哪些？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_traffic_daily.sku_id, SUM(v_traffic_daily.uv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id WHERE v_traffic_daily.stat_date >= '2026-08-01' AND v_traffic_daily.order_cnt = 0 GROUP BY v_traffic_daily.sku_id",
+      "gold_where": "WHERE v_traffic_daily.stat_date >= '2026-08-01' AND v_traffic_daily.order_cnt = 0",
+      "metrics_matched": [
+        "pay_cvr"
+      ],
+      "required_predicates": [
+        "uv >= 0"
+      ],
+      "missing_predicates": [
+        "uv >= 0"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pay_cvr",
+          "synonym": "转化",
+          "bundle_block_line": 656,
+          "bundle_predicate_lines": {
+            "uv >= 0": 657
+          },
+          "required": [
+            "uv >= 0"
+          ],
+          "missing": [
+            "uv >= 0"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [
+        "pay_cvr"
+      ],
+      "notes": [
+        "归因偏弱：pay_cvr 的包内 expression 是比率形，而 gold 不是 ⇒ 同义词只是字面命中（该条不计入主账，单列 weak_attribution）"
+      ],
+      "sandbox": {
+        "patched_sql": "SELECT v_traffic_daily.sku_id, SUM(v_traffic_daily.uv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id WHERE (v_traffic_daily.stat_date >= '2026-08-01' AND v_traffic_daily.order_cnt = 0) AND uv >= 0 GROUP BY v_traffic_daily.sku_id",
+        "gold_rows_before": 1602,
+        "gold_rows_after": 1602,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:8f23186fc53ef16beced34a04ba6c6c58b4982cd0fb256a4efc6fe3f1f6bedf4",
+        "gold_hash_after": "sha256:8f23186fc53ef16beced34a04ba6c6c58b4982cd0fb256a4efc6fe3f1f6bedf4",
+        "value_changed": false,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": false,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "X-STR-01",
+      "question": "T_A 在 广州市 的店铺各 SKU 浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '广州市' GROUP BY v_product.sku_id",
+      "gold_where": "WHERE v_shop.city = '广州市'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-STR-02",
+      "question": "T_A 在 杭州市 的店铺各 SKU 浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '杭州市' GROUP BY v_product.sku_id",
+      "gold_where": "WHERE v_shop.city = '杭州市'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-STR-03",
+      "question": "T_A 在 成都市 的店铺各 SKU 浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '成都市' GROUP BY v_product.sku_id",
+      "gold_where": "WHERE v_shop.city = '成都市'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-STR-04",
+      "question": "T_A 在 武汉市 的店铺各 SKU 浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '武汉市' GROUP BY v_product.sku_id",
+      "gold_where": "WHERE v_shop.city = '武汉市'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-STR-05",
+      "question": "T_A 在 南京市 的店铺各 SKU 浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '南京市' GROUP BY v_product.sku_id",
+      "gold_where": "WHERE v_shop.city = '南京市'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-STR-06",
+      "question": "T_A 在 西安市 的店铺各 SKU 浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '西安市' GROUP BY v_product.sku_id",
+      "gold_where": "WHERE v_shop.city = '西安市'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-STR-07",
+      "question": "T_A 在 长沙市 的店铺各 SKU 浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '长沙市' GROUP BY v_product.sku_id",
+      "gold_where": "WHERE v_shop.city = '长沙市'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-STR-08",
+      "question": "T_A 在 郑州市 的店铺各 SKU 浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '郑州市' GROUP BY v_product.sku_id",
+      "gold_where": "WHERE v_shop.city = '郑州市'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-ENUM-01",
+      "question": "T_A 的「3C数码」商品在各店铺的浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '3C数码' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '3C数码'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-ENUM-03",
+      "question": "T_A 的「服饰鞋包」商品在各店铺的浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '服饰鞋包' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '服饰鞋包'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-ENUM-04",
+      "question": "T_A 的「食品生鲜」商品在各店铺的浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '食品生鲜' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '食品生鲜'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-ENUM-05",
+      "question": "T_A 的「美妆个护」商品在各店铺的浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '美妆个护' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '美妆个护'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-ENUM-06",
+      "question": "T_A 的「家居家装」商品在各店铺的浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '家居家装' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '家居家装'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-ENUM-07",
+      "question": "T_A 的「母婴玩具」商品在各店铺的浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '母婴玩具' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '母婴玩具'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-ENUM-08",
+      "question": "T_A 的「运动户外」商品在各店铺的浏览量合计是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '运动户外' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '运动户外'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-MET-01",
+      "question": "T_A「3C数码」自 2026-08-01 起各店铺的浏览量分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '3C数码' AND v_traffic_daily.stat_date >= '2026-08-01' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '3C数码' AND v_traffic_daily.stat_date >= '2026-08-01'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-MET-02",
+      "question": "T_A「家用电器」自 2026-08-01 起各店铺的浏览量分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '家用电器' AND v_traffic_daily.stat_date >= '2026-08-01' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '家用电器' AND v_traffic_daily.stat_date >= '2026-08-01'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-MET-03",
+      "question": "T_A「服饰鞋包」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '服饰鞋包' AND v_traffic_daily.stat_date >= '2026-06-01' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '服饰鞋包' AND v_traffic_daily.stat_date >= '2026-06-01'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-MET-04",
+      "question": "T_A「食品生鲜」自 2026-06-01 起各店铺的浏览量分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '食品生鲜' AND v_traffic_daily.stat_date >= '2026-06-01' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '食品生鲜' AND v_traffic_daily.stat_date >= '2026-06-01'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-MET-05",
+      "question": "T_A「美妆个护」自 2026-05-01 起各店铺的浏览量分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_product.category_l1 = '美妆个护' AND v_traffic_daily.stat_date >= '2026-05-01' GROUP BY v_shop.shop_id",
+      "gold_where": "WHERE v_product.category_l1 = '美妆个护' AND v_traffic_daily.stat_date >= '2026-05-01'",
+      "metrics_matched": [
+        "pv"
+      ],
+      "required_predicates": [],
+      "missing_predicates": [],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pv",
+          "synonym": "浏览量",
+          "bundle_block_line": null,
+          "bundle_predicate_lines": {},
+          "required": [],
+          "missing": [],
+          "conflicting": []
+        }
+      ],
+      "defect": false,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": []
+    },
+    {
+      "case_id": "X-MET-06",
+      "question": "T_A 自 2026-08-01 起各大区各店铺的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_region.region_name, v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= '2026-08-01' GROUP BY v_region.region_name, v_order_paid.shop_id",
+      "gold_where": "WHERE v_order_paid.pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT v_region.region_name, v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE ((v_order_paid.pay_time >= '2026-08-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY v_region.region_name, v_order_paid.shop_id",
+        "gold_rows_before": 35,
+        "gold_rows_after": 35,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:4be3dd18501a03b8a8154d4efbfbb6a8d62235be92ba31d2e3b2dc45221deee4",
+        "gold_hash_after": "sha256:c32ab5988b8b1d5e7735b4fc2a204f6ff34044de2294c01fe8f7d55602e07e6e",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "X-MET-07",
+      "question": "T_A 自 2026-06-01 起各大区各店铺的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_region.region_name, v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= '2026-06-01' GROUP BY v_region.region_name, v_order_paid.shop_id",
+      "gold_where": "WHERE v_order_paid.pay_time >= '2026-06-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT v_region.region_name, v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE ((v_order_paid.pay_time >= '2026-06-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY v_region.region_name, v_order_paid.shop_id",
+        "gold_rows_before": 35,
+        "gold_rows_after": 35,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:3e5e716f1652a63254140edf29a112a6ce7c2191dba2f61ebacabc12a002be1d",
+        "gold_hash_after": "sha256:6d3233f04965faca40b92588568bb5b92b4c9dc17591a9bb887f276dc98dc408",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "X-MET-08",
+      "question": "T_A 自 2026-05-01 起各大区各店铺的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_region.region_name, v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= '2026-05-01' GROUP BY v_region.region_name, v_order_paid.shop_id",
+      "gold_where": "WHERE v_order_paid.pay_time >= '2026-05-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT v_region.region_name, v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE ((v_order_paid.pay_time >= '2026-05-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY v_region.region_name, v_order_paid.shop_id",
+        "gold_rows_before": 35,
+        "gold_rows_after": 35,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:a3d8a7024b1f73085fc744d2d712c8ae45c67b2f70a7aae81dc891585502944c",
+        "gold_hash_after": "sha256:089f2ed726fa44a795b7ab19ca7b8d08e7abefd55df637f630269261c99a17cc",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "X-MET-09",
+      "question": "T_A 自 2026-03-01 起各大区各店铺的 GMV 分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT v_region.region_name, v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE v_order_paid.pay_time >= '2026-03-01' GROUP BY v_region.region_name, v_order_paid.shop_id",
+      "gold_where": "WHERE v_order_paid.pay_time >= '2026-03-01'",
+      "metrics_matched": [
+        "gmv"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "gmv",
+          "synonym": "GMV",
+          "bundle_block_line": 505,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 506,
+            "refund_status <> 'refunded": 507,
+            "is_test_order = false": 508
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT v_region.region_name, v_order_paid.shop_id, SUM(v_order_paid.pay_amount) FROM v_order_paid JOIN v_region ON v_order_paid.region_code = v_region.code JOIN v_shop ON v_order_paid.shop_id = v_shop.shop_id WHERE ((v_order_paid.pay_time >= '2026-03-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE GROUP BY v_region.region_name, v_order_paid.shop_id",
+        "gold_rows_before": 35,
+        "gold_rows_after": 35,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": null,
+        "gold_value_after": null,
+        "gold_hash_before": "sha256:71d11568ee8dbad30d1b0e2f360e485d3ce0d2cb40a89c58da5745597c27e9a8",
+        "gold_hash_after": "sha256:45ed45e292c22db263e16f6b31d490a830ec28dc3161b61eb3026f2b1db828fe",
+        "value_changed": true,
+        "pred_value": null,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "M-IDX-01",
+      "question": "T_A 自 2026-08-01 起的客单价是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(pay_amount) / NULLIF(COUNT(DISTINCT sub_order_id), 0) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "gold_where": "WHERE pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "aov"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "aov",
+          "synonym": "客单价",
+          "bundle_block_line": 550,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 551,
+            "refund_status <> 'refunded": 552,
+            "is_test_order = false": 553
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": true,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(pay_amount) / NULLIF(COUNT(DISTINCT sub_order_id), 0) FROM v_order_paid WHERE ((pay_time >= '2026-08-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 1374.17019842,
+        "gold_value_after": 1367.89012091,
+        "gold_hash_before": "sha256:d938a6590158380b7d8def7310c7b38cf7889b25f8a5b15c107c33d3c61cd144",
+        "gold_hash_after": "sha256:f1bbc940ebf5acb769cafb4f55f1b5fe734dd3c163e4384e58842ad26faf6583",
+        "value_changed": true,
+        "pred_value": 1367.89012091,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "M-IDX-02",
+      "question": "T_A 自 2026-06-01 起的客单价是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(pay_amount) / NULLIF(COUNT(DISTINCT sub_order_id), 0) FROM v_order_paid WHERE pay_time >= '2026-06-01'",
+      "gold_where": "WHERE pay_time >= '2026-06-01'",
+      "metrics_matched": [
+        "aov"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "aov",
+          "synonym": "客单价",
+          "bundle_block_line": 550,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 551,
+            "refund_status <> 'refunded": 552,
+            "is_test_order = false": 553
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": true,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(pay_amount) / NULLIF(COUNT(DISTINCT sub_order_id), 0) FROM v_order_paid WHERE ((pay_time >= '2026-06-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 1368.02673138,
+        "gold_value_after": 1365.31857339,
+        "gold_hash_before": "sha256:c98f1bc7cdb81542a624dcf6381e6440085c4f65cddb3bf9b5a86dccacde471e",
+        "gold_hash_after": "sha256:7470974f3fe11ad3bf47c1f002f4d47863f5aab7774e91fdd26e78bc7f0d7f56",
+        "value_changed": true,
+        "pred_value": 1365.31857339,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "M-IDX-03",
+      "question": "T_A 自 2026-08-01 起的人均消费是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(pay_amount) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "gold_where": "WHERE pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "arpu"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "arpu",
+          "synonym": "人均消费",
+          "bundle_block_line": 571,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 572,
+            "refund_status <> 'refunded": 573,
+            "is_test_order = false": 574
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(pay_amount) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM v_order_paid WHERE ((pay_time >= '2026-08-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 1505.72499589,
+        "gold_value_after": 1492.3745292,
+        "gold_hash_before": "sha256:c63261351e5bc767c87e3bc7610e59c9e0ba04de3fca9ba9920f3ddcce4dadd4",
+        "gold_hash_after": "sha256:b8212881a7c5a5ca282df77f860b2445bc3bc4a95662e2ea7b4c9034a41a7446",
+        "value_changed": true,
+        "pred_value": 1492.3745292,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "M-IDX-04",
+      "question": "T_B 自 2026-08-01 起的人均消费是多少？",
+      "tenant": "T_B",
+      "gold_sql": "SELECT SUM(pay_amount) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "gold_where": "WHERE pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "arpu"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "arpu",
+          "synonym": "人均消费",
+          "bundle_block_line": 571,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 572,
+            "refund_status <> 'refunded": 573,
+            "is_test_order = false": 574
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "refund_status <> 'refunded'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(pay_amount) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM v_order_paid WHERE ((pay_time >= '2026-08-01' AND pay_status = 'paid') AND refund_status <> 'refunded') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 1483.42879352,
+        "gold_value_after": 1478.36712445,
+        "gold_hash_before": "sha256:bfa2ca1a0e82160c1505cc73fd1db6238c88cda7fd899be02898f0c7cd55693b",
+        "gold_hash_after": "sha256:bbfa8bd0923b917723f33b68df83409c31d5811f7e25a71639f8bdd5cc071758",
+        "value_changed": true,
+        "pred_value": 1478.36712445,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": true,
+        "flips_to_equivalent": true
+      }
+    },
+    {
+      "case_id": "M-IDX-05",
+      "question": "T_A 自 2026-08-01 起的退款率是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(CASE WHEN refund_status = 'refunded' THEN pay_amount ELSE 0 END) / NULLIF(SUM(pay_amount), 0) FROM v_order_paid WHERE pay_time >= '2026-08-01'",
+      "gold_where": "WHERE pay_time >= '2026-08-01'",
+      "metrics_matched": [
+        "refund_rate"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "refund_rate",
+          "synonym": "退款率",
+          "bundle_block_line": 592,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 593,
+            "is_test_order = false": 594
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": true,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(CASE WHEN refund_status = 'refunded' THEN pay_amount ELSE 0 END) / NULLIF(SUM(pay_amount), 0) FROM v_order_paid WHERE (pay_time >= '2026-08-01' AND pay_status = 'paid') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 0.04993644,
+        "gold_value_after": 0.05008329,
+        "gold_hash_before": "sha256:78a0af091ce4e9e2392912f46fc51a8f1b14f93b2a11ea8fafa45a390b69fbb4",
+        "gold_hash_after": "sha256:a702a2beaa911ca166bfa7200a7532cab0d8d5633f173c37e73bf5b37fa1f4d2",
+        "value_changed": true,
+        "pred_value": 0.0,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": false,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "M-IDX-06",
+      "question": "T_B 自 2026-06-01 起的退款率是多少？",
+      "tenant": "T_B",
+      "gold_sql": "SELECT SUM(CASE WHEN refund_status = 'refunded' THEN pay_amount ELSE 0 END) / NULLIF(SUM(pay_amount), 0) FROM v_order_paid WHERE pay_time >= '2026-06-01'",
+      "gold_where": "WHERE pay_time >= '2026-06-01'",
+      "metrics_matched": [
+        "refund_rate"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "refund_rate",
+          "synonym": "退款率",
+          "bundle_block_line": 592,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 593,
+            "is_test_order = false": 594
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": true,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(CASE WHEN refund_status = 'refunded' THEN pay_amount ELSE 0 END) / NULLIF(SUM(pay_amount), 0) FROM v_order_paid WHERE (pay_time >= '2026-06-01' AND pay_status = 'paid') AND is_test_order = FALSE",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 0.04985778,
+        "gold_value_after": 0.04998161,
+        "gold_hash_before": "sha256:a04663c0c3ebb96ac42e851bf2f8770a3884bbd42a6e3f511ffa1dc9201ed181",
+        "gold_hash_after": "sha256:81c90310f523b2c6d5d33ac2a4a050d84d89aef243534acea8cf9b7775684bf8",
+        "value_changed": true,
+        "pred_value": 0.0,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": false,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "M-IDX-07",
+      "question": "T_A 自 2026-08-01 起的支付转化率是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT SUM(order_cnt) * 1.0 / NULLIF(SUM(uv), 0) FROM v_traffic_daily WHERE stat_date >= '2026-08-01'",
+      "gold_where": "WHERE stat_date >= '2026-08-01'",
+      "metrics_matched": [
+        "pay_cvr"
+      ],
+      "required_predicates": [
+        "uv >= 0"
+      ],
+      "missing_predicates": [
+        "uv >= 0"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pay_cvr",
+          "synonym": "支付转化率",
+          "bundle_block_line": 656,
+          "bundle_predicate_lines": {
+            "uv >= 0": 657
+          },
+          "required": [
+            "uv >= 0"
+          ],
+          "missing": [
+            "uv >= 0"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(order_cnt) * 1.0 / NULLIF(SUM(uv), 0) FROM v_traffic_daily WHERE stat_date >= '2026-08-01' AND uv >= 0",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 0.03404144,
+        "gold_value_after": 0.03404144,
+        "gold_hash_before": "sha256:f3090a08d1ef062eb334580f9ab7af7aa4da454725f669a186b474b9546c719b",
+        "gold_hash_after": "sha256:f3090a08d1ef062eb334580f9ab7af7aa4da454725f669a186b474b9546c719b",
+        "value_changed": false,
+        "pred_value": 0.03404144,
+        "pred_error": null,
+        "equivalent_before": true,
+        "equivalent_after": true,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "M-IDX-08",
+      "question": "T_B 自 2026-01-01 起的支付转化率是多少？",
+      "tenant": "T_B",
+      "gold_sql": "SELECT SUM(order_cnt) * 1.0 / NULLIF(SUM(uv), 0) FROM v_traffic_daily WHERE stat_date >= '2026-01-01'",
+      "gold_where": "WHERE stat_date >= '2026-01-01'",
+      "metrics_matched": [
+        "pay_cvr"
+      ],
+      "required_predicates": [
+        "uv >= 0"
+      ],
+      "missing_predicates": [
+        "uv >= 0"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "pay_cvr",
+          "synonym": "支付转化率",
+          "bundle_block_line": 656,
+          "bundle_predicate_lines": {
+            "uv >= 0": 657
+          },
+          "required": [
+            "uv >= 0"
+          ],
+          "missing": [
+            "uv >= 0"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT SUM(order_cnt) * 1.0 / NULLIF(SUM(uv), 0) FROM v_traffic_daily WHERE stat_date >= '2026-01-01' AND uv >= 0",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 0.03361594,
+        "gold_value_after": 0.03361594,
+        "gold_hash_before": "sha256:67456e1990ff99dce81d2195a9940bc5c23b3ff527bdbf1972511b93e0e211ec",
+        "gold_hash_after": "sha256:67456e1990ff99dce81d2195a9940bc5c23b3ff527bdbf1972511b93e0e211ec",
+        "value_changed": false,
+        "pred_value": 0.03361594,
+        "pred_error": null,
+        "equivalent_before": true,
+        "equivalent_after": true,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "M-IDX-09",
+      "question": "T_A 自 2026-06-01 起的 90 天复购率是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE pay_time >= '2026-06-01' GROUP BY buyer_id)",
+      "gold_where": "",
+      "metrics_matched": [
+        "repurchase_rate_90d"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "repurchase_rate_90d",
+          "synonym": "复购率",
+          "bundle_block_line": 615,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 616,
+            "is_test_order = false": 617
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE (pay_time >= '2026-06-01' AND pay_status = 'paid') AND is_test_order = FALSE GROUP BY buyer_id)",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 0,
+        "gold_value_after": 0,
+        "gold_hash_before": "sha256:1462eee5c2cf2aebf97c15a8ad156ac40171651910866c57248938d85b4839d9",
+        "gold_hash_after": "sha256:1462eee5c2cf2aebf97c15a8ad156ac40171651910866c57248938d85b4839d9",
+        "value_changed": false,
+        "pred_value": 0.16015278,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": false,
+        "flips_to_equivalent": false
+      }
+    },
+    {
+      "case_id": "M-IDX-10",
+      "question": "T_A 自 2026-03-01 起的 90 天复购率是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE pay_time >= '2026-03-01' GROUP BY buyer_id)",
+      "gold_where": "",
+      "metrics_matched": [
+        "repurchase_rate_90d"
+      ],
+      "required_predicates": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ],
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ],
+      "conflicting_predicates": [],
+      "per_metric": [
+        {
+          "metric": "repurchase_rate_90d",
+          "synonym": "复购率",
+          "bundle_block_line": 615,
+          "bundle_predicate_lines": {
+            "pay_status = 'paid": 616,
+            "is_test_order = false": 617
+          },
+          "required": [
+            "pay_status = 'paid'",
+            "is_test_order = false"
+          ],
+          "missing": [
+            "pay_status = 'paid'",
+            "is_test_order = false"
+          ],
+          "conflicting": []
+        }
+      ],
+      "defect": true,
+      "in_g7_probe_set": false,
+      "attribution_weak_metrics": [],
+      "notes": [],
+      "sandbox": {
+        "patched_sql": "SELECT COUNT(DISTINCT CASE WHEN cnt >= 2 THEN buyer_id END) / NULLIF(COUNT(DISTINCT buyer_id), 0) FROM (SELECT buyer_id, COUNT(DISTINCT sub_order_id) AS cnt FROM v_order_paid WHERE (pay_time >= '2026-03-01' AND pay_status = 'paid') AND is_test_order = FALSE GROUP BY buyer_id)",
+        "gold_rows_before": 1,
+        "gold_rows_after": 1,
+        "gold_error_before": null,
+        "gold_error_after": null,
+        "gold_value_before": 0,
+        "gold_value_after": 0,
+        "gold_hash_before": "sha256:1462eee5c2cf2aebf97c15a8ad156ac40171651910866c57248938d85b4839d9",
+        "gold_hash_after": "sha256:1462eee5c2cf2aebf97c15a8ad156ac40171651910866c57248938d85b4839d9",
+        "value_changed": false,
+        "pred_value": 0.12662296,
+        "pred_error": null,
+        "equivalent_before": false,
+        "equivalent_after": false,
+        "flips_to_equivalent": false
+      }
+    }
+  ]
+}

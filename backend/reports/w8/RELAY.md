@@ -7510,7 +7510,7 @@ eval/results_r71_city_coverage.json         W71-3
 
 ### 77.1 W72-1 D 类补审：40 条 gold 漏包内 default_predicates（另 1 条弱归因单列）
 
-`eval/results_r72_d_predicate_gap.json`（rev=ae48ae0/dirty=False；逐条含 gold WHERE、
+`eval/results_r72_d_predicate_gap.json`（rev=70b9201/dirty=False；逐条含 gold WHERE、
 应有谓词、缺失谓词、沙箱原值/补谓词值、等价前后）。
 
 作用域：`terminal_event == complete` 且 gold 非空 = **108 条**（116 条 complete 里 8 条是
@@ -7540,7 +7540,7 @@ refund_rate 缺两条（正确——它不该有 refund_status 那条）。
 
 ### 77.2 W72-2 G-7 判据对象：核实成立，两案+成本（不改码）
 
-`eval/results_r72_g7_object.json`（rev=ae48ae0/dirty=False）。
+`eval/results_r72_g7_object.json`（rev=70b9201/dirty=False）。
 
 * **代码事实**：`eval/gates.py:488-508` 的 G-7 分支只读 `consistent` / `total` /
   `unattributed` / `comparison_basis`；输入由 `eval/reporter.py:948-949,1031` 指定为
@@ -7563,7 +7563,7 @@ refund_rate 缺两条（正确——它不该有 refund_status 那条）。
 
 ### 77.3 W72-3 refund_rate 谓词泄漏：定位 + 方案（**未实装，等点句**）
 
-`eval/results_r72_refund_leak_localization.json`（rev=ae48ae0/dirty=False）。
+`eval/results_r72_refund_leak_localization.json`（rev=70b9201/dirty=False）。
 
 **定位（文件行号）**：注入按**资产所属域**取整份域级谓词表，指标维度在链上早已丢失——
 * `backend/app/guard/ast_gate.py:460` `_inject_predicates(root, allowlist)` —— **签名没有指标**；
@@ -7597,7 +7597,7 @@ M-IDX-06 `0.0 → 0.04998161`（权威 0.04998161411）⇒ 泄漏是分子归零
 
 ### 77.4 W72-4 列配对 id↔name：6 条，strict 露 1 条 / 归一后露 6 条
 
-`eval/results_r72_column_pairing.json`（rev=ae48ae0/dirty=False）。
+`eval/results_r72_column_pairing.json`（rev=70b9201/dirty=False）。
 
 * **38 条「列无法配对」**（116 条有预测 SQL 的记录里）：37 条是「同名/数值列无法按多重集配对」，
   1 条是 id↔name（X-ENUM-07）。
@@ -7618,7 +7618,7 @@ M-IDX-06 `0.0 → 0.04998161`（权威 0.04998161411）⇒ 泄漏是分子归零
 ### 77.5 本轮产物与边界
 
 ```
-eval/w72_predicate_audit.py                          新增：W72 四件零出站审计脚本
+eval/w72_predicate_audit.py                          新增：W72 四件零出站审计脚本（4 产物在其提交后干净树重跑，stamp=70b9201）
 eval/results_r72_d_predicate_gap.json                W72-1（108 行全表 + 沙箱双版本）
 eval/results_r72_g7_object.json                      W72-2（两口径 + 两案成本）
 eval/results_r72_refund_leak_localization.json       W72-3（定位 + 实算 + 方案，未实装）

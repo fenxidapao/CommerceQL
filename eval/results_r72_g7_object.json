@@ -1,0 +1,275 @@
+{
+  "provenance": "W72 零出站审计（r66 重放 + 冻结集 + 语义包 + 沙箱 sqlite；tokens 计费 = 0）",
+  "task": "W72-2 G-7 判据对象核实与提案（只出材料，不改 gates.py / 探针脚本）",
+  "generated_at": "2026-10-23T07:30:42+00:00",
+  "git_rev": "70b9201",
+  "git_dirty": false,
+  "code_fact": {
+    "g7_branch": "eval/gates.py:488-508",
+    "read_fields": [
+      "consistent",
+      "total",
+      "unattributed",
+      "comparison_basis"
+    ],
+    "input_artifact": "backend/reports/w6/probe_metric_values.json",
+    "input_wiring": "eval/reporter.py:948-949 / 1031（consistency = _load(probe_metric_values.json)）",
+    "conclusion": "G-7 现状消费者的确是该文件的 consistent/total；而该文件的 rows[] 比的是 gold_value vs authority_value ⇒ 度量对象 = 题库口径一致性，不是系统能力"
+  },
+  "calibration": {
+    "threshold_rel_error": 0.001,
+    "gold_vs_authority": {
+      "consistent": 1,
+      "total": 13,
+      "rate": 0.0769,
+      "definition": "题库金标与语义包/权威口径是否一致（现行 G-7 读数）"
+    },
+    "system_vs_authority": {
+      "consistent": 11,
+      "total": 13,
+      "rate": 0.8462,
+      "definition": "系统预测值与权威值是否一致（同一把尺 rel_err ≤ 1e-3）",
+      "failures": [
+        "M-IDX-05",
+        "M-IDX-06"
+      ]
+    },
+    "red_line": "system vs authority = 84.6% 仍 < 95% ⇒ 不得写成「G-7 通过」"
+  },
+  "proposals": [
+    {
+      "option": "A",
+      "title": "维持现口径，改名「题库口径一致性」并移出八格",
+      "why": "现行实现度量的对象确实是题库；它是有价值的回归检查（防止改题库时口径漂移），但不是系统能力，放在八格里会持续被误读为「系统口径 7.7%」",
+      "cost": {
+        "files": [
+          "eval/gates.py（G-7 分支改名/移出）",
+          "eval/reporter.py（八格汇总里去掉该格）",
+          "deploy/runbook/README.md（门禁清单同步）"
+        ],
+        "regression": "历史读数不需重算（口径不变，只是移出八格）；但**八格变七格**，所有引用「PASS x/8」的外部材料都要改",
+        "egress": 0
+      },
+      "risk": "少一格 = 少一个约束；题库与包的一致性一旦漂移将无门禁拦截"
+    },
+    {
+      "option": "B",
+      "title": "改为 system vs authority 作为 G-7 真身",
+      "why": "门禁要管的是「系统算出来的数对不对」，权威值比对才是这个语义；且现行口径可被『把 gold 换成 authority_sql』刷绿（QA §93.4 已指出）",
+      "cost": {
+        "files": [
+          "eval/gates.py（G-7 分支改读字段）",
+          "探针脚本 backend/reports/w6 的产出侧（新增 system_value/system_consistent）",
+          "eval/reporter.py（G-7 证据行）"
+        ],
+        "regression": "须重算历史读数（7.7% → 84.6%），须重跑基线快照，须总控签",
+        "egress": 0
+      },
+      "risk": "system 侧取值依赖 sandbox 重跑预测 SQL ⇒ 引入执行环境依赖；另：84.6% < 95% ⇒ 门禁由 FAIL 变为「更接近但仍 FAIL」，不得宣称通过"
+    }
+  ],
+  "rows": [
+    {
+      "case_id": "E-MET-01",
+      "metric": "gmv",
+      "authority_value": 15611729.95,
+      "gold_value": 16483171.53,
+      "gold_consistent": false,
+      "system_value": 15611729.95,
+      "system_error": null,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "E-MET-02",
+      "metric": "gmv",
+      "authority_value": 30768819.37,
+      "gold_value": 32486530.79,
+      "gold_consistent": false,
+      "system_value": 30768819.37,
+      "system_error": null,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "E-MET-03",
+      "metric": "gmv",
+      "authority_value": 103385547.56,
+      "gold_value": 108857094.48,
+      "gold_consistent": false,
+      "system_value": 103385547.56,
+      "system_error": null,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "E-MET-04",
+      "metric": "gmv",
+      "authority_value": 57306143.84,
+      "gold_value": 60389934.75,
+      "gold_consistent": false,
+      "system_value": 57306143.84,
+      "system_error": null,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "E-MET-05",
+      "metric": "order_cnt",
+      "authority_value": 11413.0,
+      "gold_value": 11995.0,
+      "gold_consistent": false,
+      "system_value": 11413,
+      "system_error": null,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "E-MET-06",
+      "metric": "order_cnt",
+      "authority_value": 22536.0,
+      "gold_value": 23747.0,
+      "gold_consistent": false,
+      "system_value": 22536,
+      "system_error": null,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "E-MET-07",
+      "metric": "order_cnt",
+      "authority_value": 56408.0,
+      "gold_value": 59418.0,
+      "gold_consistent": false,
+      "system_value": 56408,
+      "system_error": null,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "E-MET-09",
+      "metric": "gmv",
+      "authority_value": 13541842.86,
+      "gold_value": 14275035.28,
+      "gold_consistent": false,
+      "system_value": 13541842.86,
+      "system_error": null,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "E-MET-10",
+      "metric": "uv",
+      "authority_value": 602325.0,
+      "gold_value": 602325.0,
+      "gold_consistent": true,
+      "system_value": 602325,
+      "system_error": null,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "missing_predicates": null
+    },
+    {
+      "case_id": "M-IDX-01",
+      "metric": "aov",
+      "authority_value": 1367.8901209147464,
+      "gold_value": 1374.1701984160065,
+      "gold_consistent": false,
+      "system_value": 1367.89012091,
+      "system_error": null,
+      "system_rel_error": 3.4698879700245235e-12,
+      "system_consistent": true,
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "M-IDX-02",
+      "metric": "aov",
+      "authority_value": 1365.3185733936812,
+      "gold_value": 1368.0267313765949,
+      "gold_consistent": false,
+      "system_value": 1365.31857339,
+      "system_error": null,
+      "system_rel_error": 2.696205762641802e-12,
+      "system_consistent": true,
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "refund_status <> 'refunded'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "M-IDX-05",
+      "metric": "refund_rate",
+      "authority_value": 0.05008328882002321,
+      "gold_value": 0.04993643841550195,
+      "gold_consistent": false,
+      "system_value": 0.0,
+      "system_error": null,
+      "system_rel_error": 1.0,
+      "system_consistent": false,
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ]
+    },
+    {
+      "case_id": "M-IDX-06",
+      "metric": "refund_rate",
+      "authority_value": 0.049981614113764596,
+      "gold_value": 0.04985778251783307,
+      "gold_consistent": false,
+      "system_value": 0.0,
+      "system_error": null,
+      "system_rel_error": 1.0,
+      "system_consistent": false,
+      "missing_predicates": [
+        "pay_status = 'paid'",
+        "is_test_order = false"
+      ]
+    }
+  ]
+}
