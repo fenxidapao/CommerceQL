@@ -7068,3 +7068,81 @@ eval/results_r66_saturation_graph.json 图级饱和串跑证据（三段 + 终�
 `semantic/**`、冻结集、阈值、判据、15s/30s、gold；未写共享 `ecom`；
 未碰 `backend/reports/qa/**`；未 `git add -A`；`.workbuddy/` 未入库；
 **零出站**（tokens 真实计费 = 0，¥0；回放轮只读匣带，未连任何上游）。
+
+---
+
+## 72 W67：L4 触达面诊断 + 成本现状账 + degradations 口径登记（零出站）
+
+派单：TASK_BOARD §88.5（QA → W8，2026-10-22 22:20）｜HEAD `dee748e`→工作树＝`2565be0` 干净树起跑。
+三件全零出站：只读 r66 重放产物 + r63 匣带 + 语义包，**tokens 计费 = 0**。
+
+### 72.1 W67-1 歧义面诊断 —— 结论：L4 判定数 = 0/166，照实写
+
+`eval/results_r67_l4_reach.json`（166 条逐条：binding_status / 判定层 / Δ / 是否真到 L4 / terminal）。
+
+* **判定层分布：L3 = 119，未到绑定判定 = 47，L1/L2/L4 = 0**。binding_status 全域只有
+  `resolved_default`(119) 与 `None`(47)，没有任何 `resolved_unique` / `ambiguous`。
+* **「城市」类歧义题无一走到 bind**：C-CITY-01/03/04 在 intent 就澄清
+  （tau_raw=`l4_not_reached`）；C-CITY-02、M-DIM-05 在 plan 拒答（`no_data_asset`）；
+  M-HIER-03/M-MET-04 的 `resolved_default` 是**指标概念**（on_sale_product_cnt / gmv）的
+  L3 命中，与「城市」无关（披露文案逐字反查，116/119 条判定概念全部反查成功、0 条解释不了，
+  21 个指标概念全覆盖——「城市」从未成为判定概念）。
+* **结构性根因（代码依据）**：`bind` 只对 `plan.metrics[0].name` 一个概念做绑定
+  （`bind.py::_concept_of`）；「城市」出现在维度/分组位，从不进入绑定判定；问题本身问歧义
+  概念时又被 intent 先行拦截。⇒ **L4 打分被无条件调用 119 次，但分数一次也没进过判定**。
+* Δ 分布（119 条有分）：**24 条 Δ=0（并列）**，median 0.10，p25 0.03，p75 0.55，max 0.93。
+* **反事实**（绑定层单层模拟，`classify_gap` 现行判据 τ=0.20/ε=0.05）：若判定概念无 L3 声明，
+  119 条会判成 **72 ambiguous / 47 unique** ⇒ 澄清率冲到 54.2%。**四条局限随产物走**
+  （单层模拟非端到端；上游假设不变；schema 上不能单撤 canonical_asset；概念反查靠披露文案）。
+* **τ 扫描（ε=0.05 现行判据）**：τ=0.00 → 29.5%，τ=0.20 → 54.2%，全部破 N-25 的 15% 上限
+  ——ε 邻域把 24 条 Δ=0 全部吞成 ambiguous，连"τ=0"都不安全。
+  **ε=0 变体与 QA §88.5-四 的表逐格一致**（0/31/54/67/70）——双向验证通过。
+* 🔴 **临时语义包全链回放在零出站下不可行**：planner prompt 渲染 `概念 → canonical_asset`
+  行（`payloads.py:449`），撤声明必改 prompt 必改请求哈希必匣带全 miss。故改走绑定层
+  离线模拟，局限如实标注（产物 `counterfactual_limitations` 四条）。
+
+### 72.2 W67-2 L4 成本现状账 —— U-117 的成本依据成立
+
+`eval/results_r67_l4_cost.json`。
+
+* **运行时调用 119 次**（每条走到 bind 且有字段级候选的记录恰 1 次）；匣带按 key 覆盖去重后
+  **114 行唯一请求**；本诊断按归一化问句匹配到 106 个唯一问句（覆盖 111 条记录，
+  4 组共享请求：E-MET-01/09、E-VER-02/10/11、H-ENUM-01/04、M-IDX-03/04），**8 条记录**
+  因归一化做了同义词级改写（销售额→GMV 等）无法无语义假设地匹配，逐条列于
+  `unmatched_case_ids`；候选包含关系校验 **0 违例**。
+* **L4 tokens**：prompt 115,732（cache_hit 46,848 / miss 68,884）+ completion 117,293。
+* **成本（`compute_cost` 缓存分档，与结算同源）**：off-peak **¥0.574023**（占 54%）/
+  peak **¥1.148062**（占 54%）。**时段对账互证**：匣带全量按 peak 算 = ¥2.125965 ≈ r63
+  自报 ¥2.17428（15:19 北京时间＝高峰窗）；按 off-peak = ¥1.062979 ≈ r66 重放自报
+  ¥1.085754（21:30 非高峰）。QA §88.4② 的 ¥1.27/58% 是"prompt 全按未命中"的估算口径，
+  缓存分档后为 ¥1.148/54%（peak）——**结论不变：L4 是纯花费，判定贡献 = 0 条**。
+* **判定贡献**：119 次打分、0 次改变判定（72.1 层归因）。U-117 原提案（改触发条件）的
+  成本依据成立；是否改触发条件属判据/契约面，本轮**只出材料不改行为**。
+
+### 72.3 W67-3 degradations 口径变更登记
+
+* 说明文档：`backend/reports/w8/W67_DEGRADATIONS_CUTOVER.md`（口径精确化 +
+  横比规则四条 + 受影响清单分组摘要）。
+* 机器可读清单：`eval/results_r67_degradations_cutover_inventory.json`
+  （152 个 `results_*.json` 逐一盘点；**0 个**含 `llm_concurrency_exceeded`——
+  与"W66 前网关层不可见"自洽；唯一含它是 W66 饱和产物 `results_r66_saturation_graph.json`）。
+* 两处定性修正（比派单点句细）：① `switched_to_weak_model` 是 **ActionTaken** 不是 reason
+  （`enums.py:467`）；② `llm_unavailable` 是**双路**值（节点路径 `normalize.py:179` 一直可见
+  ⇒ 旧产物含它不构成反例；网关路径 W66 起才可见）。可检验特征收敛为一条：
+  **W66 前产物中 `llm_concurrency_exceeded` 恒不出现**（实测 0/152）。
+
+### 72.4 本轮新增产物与边界
+
+```
+eval/w67_l4_diagnostics.py                             只读诊断脚本（三件合一只读分析）
+eval/results_r67_l4_reach.json                         W67-1 逐条触达面 + 反事实 + τ 扫描
+eval/results_r67_l4_cost.json                          W67-2 成本账 + 时段对账 + 逐条调用
+eval/results_r67_degradations_cutover_inventory.json   W67-3 受影响清单（152 文件）
+backend/reports/w8/W67_DEGRADATIONS_CUTOVER.md         W67-3 口径变更说明
+```
+
+* 未改 `app/**`、`eval/runner.py`、`semantic/**`、冻结集、gold、判据、15s/30s、`dense.py`；
+* 未动既有产物文件（W67-3 红线）；未碰 `backend/reports/qa/**`；
+* 未跑 τ 真采样（等歧义面立项）、未刷官方门禁（仍 `88f3500`/PASS 1/8）；
+* 无 app/eval 行为改动 ⇒ 未跑测试套（本轮改动 = 新增只读脚本 + 产物 + 文档）；
+* 未 `git add -A`；`.workbuddy/` 未入库；**零出站（tokens 计费 = 0，¥0）**。
