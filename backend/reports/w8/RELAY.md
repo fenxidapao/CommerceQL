@@ -7245,3 +7245,85 @@ eval/results_r67_l4_reach.json / _l4_cost.json          干净树重生成（sta
 * 未 git add -A；.workbuddy/ 与 .env 未入库（.env 已确认 gitignored）；
 * 测试：新增 9 测全过 + 全量 unit 1532 passed；
 * tokens：live 257,340（¥0.148484）+ 探针 13；零出站产物 0。
+
+---
+
+## 74 W69：回滚 product_cnt 降级族（R31bm）+ 19 条冲突包 + 空集等价退化出数
+
+派单：W69（2026-10-23 11:27）｜起跑 HEAD `aeda423`（QA 验收 W68-2/3/4）｜
+提交：`53d4343`（W69-1 回滚 + 单测）→ 本轮产物｜**全程零出站（tokens = 0）**。
+
+### 74.1 W69-1 回滚：商品数口径族退出降级（判据分歧，非代码缺陷）
+
+* `_DEMOTABLE_REASON_PARTS` 从 `("city","product_cnt","product_count")` 回退为 **`("city",)`**；
+  定语位结构判据保留，但被测主体**收窄为「各 SKU …」（W60 族）**。
+* 🔴 **收窄的实证理由（比派单字面多走一步，请 QA 复核）**：r63 匣带里 8 条的
+  reason 并非全是 product_cnt —— 杭州 = `ambiguous_city_dimension`、
+  武汉 = `ambiguous_metric_and_city`，二者**含 city**。若只"保留 city 族 + 保留商品数尾缀"，
+  这两条仍会被降级 ⇒ replay 只能 **6/8**，达不到派单要求的 8/8。而这两条的 clarify_hint
+  实测仍含商品数口径问题（武汉同时问了 product_cnt vs spu_cnt 与城市；杭州问城市）。
+  ⇒ 商品数尾缀**不依赖 LLM 给的表面理由族**，一律不降级；SKU 尾缀（W60 族）不受影响。
+* 单测 9 条全过（`test_normalize_city_clarification.py`），覆盖派单 ①–⑤：
+  H-STR-01 四种表面 reason 全回 CLARIFY；C-CITY-01/03/04 仍 CLARIFY；
+  W60「在杭州的店铺各 SKU」仍 demote；定语位+城市族仍 demote；时间/口径类永不 demote。
+  全量 unit **1532 passed**。
+* **replay 验证（零出站，`eval/results_r69_hstr8_rollback_replay.json`，rev=53d4343/dirty=False）**：
+  **8/8 回到 clarify**，节点链止步 `trusted_context → normalize → intent → clarify_out`
+  （不触 link 之后）；nominal tokens 68,045（回放复用录制，**实际花费 ¥0**）。
+* 定性（按派单红线）：这是**判据分歧**（R31bm），不是代码缺陷，也不是"修复失败"。
+  W68 的 live 证据（`results_r68_hstr8*.json`）保留为历史，但**该行为已被本轮回滚**，
+  不得再作为当前行为引用；W68 暴露的 reason_code 表面漂移（`_cnt`/`_count`/`city_dimension`）
+  仍是事实记录。
+
+### 74.2 W69-2 19 条判据冲突包（只出材料）
+
+`eval/results_r69_conflict_19.json`（rev=53d4343/dirty=False）。
+
+* **10 条「该问却答」**（C-GMV-01…04、C-RATE-01/02、C-REP-01/02、C-UV-02、C-AOV-01）：
+  冻结 expected=clarify，实测 8 条 complete（带静默默认执行）、2 条 gate1_ast error；
+  LLM 原话全部 `intent=query`、无 clarify_hint ⇒ 澄清期望只存在于判据侧。
+* **9 条「合理澄清却要求直答」**（H-STR-01…08 + X-MET-10）：冻结 expected=execute；
+  8 条 H-STR 的 LLM 原话全在问商品数口径（其中 2 条同时问城市），X-MET-10 的
+  LLM 判 query、澄清由时间窗层触发。
+* 逐条给「问句 / expected + 理由原文 / 实际行为 + LLM 原话 / 按 expected 改要动什么」；
+  改动面分三类：语义包字段（时间窗策略、多口径标记、术语映射、campaign 窗口）、
+  系统判据（timeexpr / request_policy）、或**修订冻结集 expected 本身**。
+* 汇总（照派单原话）：**这 19 条是「判据与系统语义判断不一致」，不是系统缺陷也不是判据缺陷，
+  须总控二选一**（修订 expected 走基线变更 / 改系统行为走契约变更 + 重基线）。
+  本产物不做选择、未动任何一侧。
+
+### 74.3 W69-3 空结果等价退化：出数不改判据
+
+`eval/results_r69_equiv_empty_degeneracy.json`（rev=53d4343/dirty=False）。
+
+* 机制（`equivalence.py::compare_tables`）：先比列数 → 再比行数 → 行数相同后
+  `_multiset_diff`；两侧 0 行 ⇒ `unmatched=0` ⇒ **默认判等价**（前提：列数相同且列可配对）。
+  ⇒ `unmatched=0` **不能**读作"数据对上"。
+* **166 条实测：双空 = 6 条**（X-STR-01/02/03/04/06/07，全部 extra×low），
+  verdict 全为 `equivalent=True`、diffs 为空。其余：both_nonempty 106 / gold 空预测非空 3 /
+  预测空金标非空 1 / refuse 28 / clarify 16 / error 3 / None 3。
+* **对三闸的贡献（复算）**：
+  - G-2（easy×low 单元格）：单元格 8/8 PASS；**双空 0 条落在该格**（双空全在 extra×low）
+    ⇒ 贡献 = 0；但"双空判等价"机制仍在，一旦有双空题进 easy×low 就会白送通过。
+  - G-5：分母 = 冻结 expected=refuse；双空题全 expected=execute ⇒ 贡献 = 0。
+  - G-7：输入是 `probe_metric_values.json`（§C.4.3 权威值比对），**不消费** records 等价
+    ⇒ 贡献 = 0。
+* **W68 live 的 H-STR 核对**：6 条双空（01/02/03/04/06/07）成立，当时唯一 diff = 列数不同
+  —— 与派单描述一致。
+* 未改 `equivalence.py` / 判据 / 冻结集；空集要求列标签一致之类的口径变更**上呈**。
+
+### 74.4 本轮改动与边界
+
+```
+backend/app/graph/nodes/normalize.py                   守卫族回滚 + SKU-only 主体收窄
+backend/tests/unit/test_normalize_city_clarification.py 9 测（W69 ①②③④⑤）
+eval/w69_accounts.py                                    新增：W69-2/3 零出站材料脚本
+eval/results_r69_hstr8_rollback_replay.json             W69-1 replay 8/8 clarify
+eval/results_r69_conflict_19.json                       W69-2
+eval/results_r69_equiv_empty_degeneracy.json            W69-3
+```
+
+* 零出站：未打任何 API（tokens 计费 = 0）；replay 的 nominal token 数不产生费用；
+* 未碰：`reports/qa/**`、冻结集/gold/判据/15s/30s/dense.py/semantic 正式包、
+  G-8 二轮、L4 候选面、等价判据、官方门禁（仍 `88f3500`/PASS 1/8）；
+* 未 `git add -A`；`.workbuddy/` 与 `.env` 未入库。

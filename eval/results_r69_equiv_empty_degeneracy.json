@@ -1,0 +1,207 @@
+{
+  "provenance": "W69 零出站材料（r66 重放 + r68 live + r63 匣带 + 冻结集/case_library；tokens 计费 = 0）",
+  "task": "W69-3 等价判定对空结果的退化：出数不改判据（口径变更一律上呈）",
+  "generated_at": "2026-10-23T03:32:33+00:00",
+  "git_rev": "53d4343",
+  "git_dirty": false,
+  "rule_evidence": {
+    "compare_order": "eval/equivalence.py::compare_tables —— 先比列数，再比行数，行数相同后走 _multiset_diff；两侧 0 行 ⇒ unmatched=0 ⇒ equivalent=True",
+    "implication": "『双空』默认判等价（前提：列数相同且列可配对）；unmatched=0 不能读作『数据对上』",
+    "g2_passed_source": "eval/reporter.py:1004 —— passed = bool(verdict.equivalent)"
+  },
+  "headline": {
+    "n_records": 166,
+    "category_counts": {
+      "both_nonempty": 106,
+      "double_empty": 6,
+      "gold_empty_pred_nonempty": 3,
+      "not_complete:None": 3,
+      "not_complete:clarify": 16,
+      "not_complete:error": 3,
+      "not_complete:refuse": 28,
+      "pred_empty_gold_nonempty": 1
+    },
+    "n_double_empty": 6,
+    "n_double_empty_equivalent": 6,
+    "verdict": "166 条里 6 条双空（gold 0 行 & 预测 0 行），全部判等价=True；它们对 G-2 / G-5 / G-7 的贡献见 gate_contribution"
+  },
+  "gate_contribution": {
+    "G-2": {
+      "cell": "easy × low",
+      "cell_n": 8,
+      "cell_passed": 8,
+      "cell_rate": 1.0,
+      "double_empty_in_cell": [],
+      "contribution": "0 条（双空题全部落在 extra×low，不进 easy×low 单元格）⇒ 对 G-2 判定贡献 = 0；但『双空判等价』的机制仍在，一旦有双空题落进 easy×low 就会白送通过"
+    },
+    "G-5": {
+      "denominator": "冻结集 expected_behavior == 'refuse' 的题",
+      "double_empty_in_denominator": [],
+      "contribution": "0 条（双空题全部 expected=execute，不进拒答分母）⇒ 贡献 = 0"
+    },
+    "G-7": {
+      "input_source": "eval/reporter.py:1031 —— consistency = probe_metric_values.json（§C.4.3 权威值比对），不是 166 条 records 的等价结论",
+      "contribution": "不消费 records 等价 ⇒ 贡献 = 0（双空退化影响不到 G-7）"
+    }
+  },
+  "double_empty_cases": [
+    {
+      "case_id": "X-STR-01",
+      "difficulty": [
+        "extra",
+        "low"
+      ],
+      "gold_rows": 0,
+      "pred_rows": 0,
+      "equivalent": true,
+      "gold_cols": 2,
+      "pred_cols": 2,
+      "diffs": []
+    },
+    {
+      "case_id": "X-STR-02",
+      "difficulty": [
+        "extra",
+        "low"
+      ],
+      "gold_rows": 0,
+      "pred_rows": 0,
+      "equivalent": true,
+      "gold_cols": 2,
+      "pred_cols": 2,
+      "diffs": []
+    },
+    {
+      "case_id": "X-STR-03",
+      "difficulty": [
+        "extra",
+        "low"
+      ],
+      "gold_rows": 0,
+      "pred_rows": 0,
+      "equivalent": true,
+      "gold_cols": 2,
+      "pred_cols": 2,
+      "diffs": []
+    },
+    {
+      "case_id": "X-STR-04",
+      "difficulty": [
+        "extra",
+        "low"
+      ],
+      "gold_rows": 0,
+      "pred_rows": 0,
+      "equivalent": true,
+      "gold_cols": 2,
+      "pred_cols": 2,
+      "diffs": []
+    },
+    {
+      "case_id": "X-STR-06",
+      "difficulty": [
+        "extra",
+        "low"
+      ],
+      "gold_rows": 0,
+      "pred_rows": 0,
+      "equivalent": true,
+      "gold_cols": 2,
+      "pred_cols": 2,
+      "diffs": []
+    },
+    {
+      "case_id": "X-STR-07",
+      "difficulty": [
+        "extra",
+        "low"
+      ],
+      "gold_rows": 0,
+      "pred_rows": 0,
+      "equivalent": true,
+      "gold_cols": 2,
+      "pred_cols": 2,
+      "diffs": []
+    }
+  ],
+  "gold_empty_only": [
+    {
+      "case_id": "M-HIER-04",
+      "difficulty": [
+        "medium",
+        "medium"
+      ],
+      "gold_rows": 0,
+      "pred_rows": 4,
+      "equivalent": false,
+      "gold_cols": 2,
+      "pred_cols": 2,
+      "diffs": [
+        "行数不同：金标 0 / 预测 4"
+      ]
+    },
+    {
+      "case_id": "M-HIER-05",
+      "difficulty": [
+        "medium",
+        "medium"
+      ],
+      "gold_rows": 0,
+      "pred_rows": 4,
+      "equivalent": false,
+      "gold_cols": 2,
+      "pred_cols": 2,
+      "diffs": [
+        "行数不同：金标 0 / 预测 4"
+      ]
+    },
+    {
+      "case_id": "M-HIER-06",
+      "difficulty": [
+        "medium",
+        "medium"
+      ],
+      "gold_rows": 0,
+      "pred_rows": 4,
+      "equivalent": false,
+      "gold_cols": 2,
+      "pred_cols": 2,
+      "diffs": [
+        "行数不同：金标 0 / 预测 4"
+      ]
+    }
+  ],
+  "pred_empty_only": [
+    {
+      "case_id": "H-ENUM-02",
+      "difficulty": [
+        "hard",
+        "medium"
+      ],
+      "gold_rows": 5,
+      "pred_rows": 0,
+      "equivalent": false,
+      "gold_cols": 2,
+      "pred_cols": 3,
+      "diffs": [
+        "列数不同：金标 2 / 预测 3"
+      ]
+    }
+  ],
+  "w68_live_hstr_check": {
+    "n_double_empty": 6,
+    "case_ids": [
+      "H-STR-01",
+      "H-STR-02",
+      "H-STR-03",
+      "H-STR-04",
+      "H-STR-06",
+      "H-STR-07"
+    ],
+    "verdict_diffs_observed": {
+      "列数不同：金标 2 / 预测 3": 8
+    },
+    "note": "派单所述『H-STR 8 条里 6 条双空』核实成立；当时唯一 diff = 列数不同"
+  },
+  "boundary": "只出数：未改 equivalence.py / 判据 / 冻结集；口径变更（如空集要求列标签一致）上呈"
+}

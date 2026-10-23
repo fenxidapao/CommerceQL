@@ -1,0 +1,370 @@
+{
+  "provenance": "W69 零出站材料（r66 重放 + r68 live + r63 匣带 + 冻结集/case_library；tokens 计费 = 0）",
+  "task": "W69-2 19 条判据冲突包（只出材料：不改冻结集、不为对齐 expected 调系统行为）",
+  "generated_at": "2026-10-23T03:32:33+00:00",
+  "git_rev": "53d4343",
+  "git_dirty": false,
+  "headline": {
+    "n_cases": 19,
+    "buckets": {
+      "该问却答": 10,
+      "合理澄清却要求直答": 9
+    },
+    "verdict": "这 19 条是『判据与系统语义判断不一致』—— 既不是系统缺陷也不是判据缺陷；须总控二选一：①修订 expected（基线变更，改冻结集）②改系统行为（语义包契约变更 + 重基线）。本产物不做选择、不动任何一侧。"
+  },
+  "source_note": "actual/LLM 原话来自 r66 重放（10 条该问却答 + X-MET-10）与 r63 匣带 intent 响应；H-STR 8 条另引 r69 回滚 replay（8/8 clarify）。",
+  "cases": [
+    {
+      "case_id": "C-GMV-01",
+      "bucket": "该问却答",
+      "question": "本月的 GMV 是多少？",
+      "frozen_expected": "clarify",
+      "frozen_reason_text": "「本月」= 当前自然月还是最近 30 天？须澄清",
+      "actual_terminal": "complete",
+      "actual_note": "SQL 已生成并执行（present → audit_supp）",
+      "llm_verbatim": {
+        "intent": "query",
+        "reason_code": null,
+        "clarify_hint": null,
+        "note": "LLM 本身判 query（未识别歧义）⇒ 澄清期望只存在于判据侧"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段 + 系统判据",
+        "detail": "「本月」两解（自然月 / 最近 30 天）标记 + timeexpr 模糊来源闸门"
+      }
+    },
+    {
+      "case_id": "C-GMV-02",
+      "bucket": "该问却答",
+      "question": "上个月的销售额是多少？",
+      "frozen_expected": "clarify",
+      "frozen_reason_text": "「上个月」在语义包里有定义（日历上月首日 00:00:00 至末日 23:59:59），但**时区与是否含端**须回显确认",
+      "actual_terminal": "complete",
+      "actual_note": "SQL 已生成并执行（present → audit_supp）",
+      "llm_verbatim": {
+        "intent": "query",
+        "reason_code": null,
+        "clarify_hint": null,
+        "note": "LLM 本身判 query（未识别歧义）⇒ 澄清期望只存在于判据侧"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段 + 系统判据",
+        "detail": "「上月」已有定义 ⇒ 需 echo_confirm 回显确认位 + request_policy 判定"
+      }
+    },
+    {
+      "case_id": "C-GMV-03",
+      "bucket": "该问却答",
+      "question": "最近的 GMV 怎么样？",
+      "frozen_expected": "clarify",
+      "frozen_reason_text": "「最近」无定义窗口",
+      "actual_terminal": "complete",
+      "actual_note": "SQL 已生成并执行（present → audit_supp）",
+      "llm_verbatim": {
+        "intent": "query",
+        "reason_code": null,
+        "clarify_hint": null,
+        "note": "LLM 本身判 query（未识别歧义）⇒ 澄清期望只存在于判据侧"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段 + 系统判据",
+        "detail": "「最近」无定义窗口策略 + timeexpr 未定义窗闸门"
+      }
+    },
+    {
+      "case_id": "C-GMV-04",
+      "bucket": "该问却答",
+      "question": "最近一周的 GMV 环比是多少？",
+      "frozen_expected": "clarify",
+      "frozen_reason_text": "「最近一周」起点未定（周起点是 monday，但「最近」未必对齐自然周）",
+      "actual_terminal": "error",
+      "actual_note": "止步 error_out；terminal_error_detail={}",
+      "llm_verbatim": {
+        "intent": "query",
+        "reason_code": null,
+        "clarify_hint": null,
+        "note": "LLM 本身判 query（未识别歧义）⇒ 澄清期望只存在于判据侧"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段 + 系统判据",
+        "detail": "「最近一周」起点未定（周起点与自然周边界不同）+ timeexpr 闸门"
+      }
+    },
+    {
+      "case_id": "C-RATE-01",
+      "bucket": "该问却答",
+      "question": "退款率是多少？",
+      "frozen_expected": "clarify",
+      "frozen_reason_text": "退款率有金额口径与单量口径；本包只定义金额口径，须确认或告知不支持",
+      "actual_terminal": "complete",
+      "actual_note": "SQL 已生成并执行（present → audit_supp）",
+      "llm_verbatim": {
+        "intent": "query",
+        "reason_code": null,
+        "clarify_hint": null,
+        "note": "LLM 本身判 query（未识别歧义）⇒ 澄清期望只存在于判据侧"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段 + 系统判据",
+        "detail": "退款率多口径（金额/单量）标记，包只定义金额口径 ⇒ definition_multiple 闸门"
+      }
+    },
+    {
+      "case_id": "C-RATE-02",
+      "bucket": "该问却答",
+      "question": "退货率最高的商品是哪个？",
+      "frozen_expected": "clarify",
+      "frozen_reason_text": "「退货」与「退款」在数据上只有 refund_status，须澄清映射",
+      "actual_terminal": "complete",
+      "actual_note": "SQL 已生成并执行（present → audit_supp）",
+      "llm_verbatim": {
+        "intent": "query",
+        "reason_code": null,
+        "clarify_hint": null,
+        "note": "LLM 本身判 query（未识别歧义）⇒ 澄清期望只存在于判据侧"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段 + 系统判据",
+        "detail": "「退货」→ refund_status 术语映射 + request_policy 未映射词闸门"
+      }
+    },
+    {
+      "case_id": "C-REP-01",
+      "bucket": "该问却答",
+      "question": "复购率是多少？",
+      "frozen_expected": "clarify",
+      "frozen_reason_text": "复购窗口固定 90 天且不含首单口径，须回显确认",
+      "actual_terminal": "complete",
+      "actual_note": "SQL 已生成并执行（present → audit_supp）",
+      "llm_verbatim": {
+        "intent": "query",
+        "reason_code": null,
+        "clarify_hint": null,
+        "note": "LLM 本身判 query（未识别歧义）⇒ 澄清期望只存在于判据侧"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段 + 系统判据",
+        "detail": "复购 90 天固定口径的回显确认位"
+      }
+    },
+    {
+      "case_id": "C-REP-02",
+      "bucket": "该问却答",
+      "question": "复购情况怎么样？",
+      "frozen_expected": "clarify",
+      "frozen_reason_text": "开放式问法，既没有时间窗也没有维度",
+      "actual_terminal": "error",
+      "actual_note": "止步 error_out；terminal_error_detail={}",
+      "llm_verbatim": {
+        "intent": "query",
+        "reason_code": null,
+        "clarify_hint": null,
+        "note": "LLM 本身判 query（未识别歧义）⇒ 澄清期望只存在于判据侧"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "系统判据",
+        "detail": "开放式问法（无窗无维度）缺聚合/时间闸门，纯 request_policy 判定"
+      }
+    },
+    {
+      "case_id": "C-UV-02",
+      "bucket": "该问却答",
+      "question": "总访客数是多少？",
+      "frozen_expected": "clarify",
+      "frozen_reason_text": "「总」= 全期去重还是逐日累加？本包未定义 uv_period",
+      "actual_terminal": "complete",
+      "actual_note": "SQL 已生成并执行（present → audit_supp）",
+      "llm_verbatim": {
+        "intent": "query",
+        "reason_code": null,
+        "clarify_hint": null,
+        "note": "LLM 本身判 query（未识别歧义）⇒ 澄清期望只存在于判据侧"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段 + 系统判据",
+        "detail": "uv_period 未定义（全期去重 vs 逐日累加）⇒ aggregation_ambiguous 闸门"
+      }
+    },
+    {
+      "case_id": "C-AOV-01",
+      "bucket": "该问却答",
+      "question": "客单价是多少？",
+      "frozen_expected": "clarify",
+      "frozen_reason_text": "客单价无时间窗",
+      "actual_terminal": "complete",
+      "actual_note": "SQL 已生成并执行（present → audit_supp）",
+      "llm_verbatim": {
+        "intent": "query",
+        "reason_code": null,
+        "clarify_hint": null,
+        "note": "LLM 本身判 query（未识别歧义）⇒ 澄清期望只存在于判据侧"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段 + 系统判据",
+        "detail": "客单价无时间窗 ⇒ timeexpr 闸门"
+      }
+    },
+    {
+      "case_id": "H-STR-01",
+      "bucket": "合理澄清却要求直答",
+      "question": "T_A 位于广州的店铺各有多少个商品？",
+      "frozen_expected": "execute",
+      "frozen_reason_text": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard",
+      "actual_terminal": "clarify",
+      "actual_note": "商品数口径歧义（product_cnt / on_sale_product_cnt / spu_cnt）⇒ intent 判 clarify；W69-1 回滚后 replay 仍 clarify（8/8）",
+      "llm_verbatim": {
+        "intent": "clarify_needed",
+        "reason_code": "ambiguous_metric_product_cnt",
+        "clarify_hint": "「商品数」按哪个口径统计：商品数（全部商品，不区分上下架）、在架商品数，还是 SPU 款数？"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段（默认口径）或 修订冻结集 expected",
+        "detail": "商品数口径（product_cnt / on_sale_product_cnt / spu_cnt）无唯一默认：若判直答须在语义包给唯一默认（gold 要 on_sale_product_cnt）；否则应修订 expected=clarify"
+      }
+    },
+    {
+      "case_id": "H-STR-02",
+      "bucket": "合理澄清却要求直答",
+      "question": "T_A 位于杭州的店铺各有多少个商品？",
+      "frozen_expected": "execute",
+      "frozen_reason_text": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard",
+      "actual_terminal": "clarify",
+      "actual_note": "商品数口径歧义（product_cnt / on_sale_product_cnt / spu_cnt）⇒ intent 判 clarify；W69-1 回滚后 replay 仍 clarify（8/8）",
+      "llm_verbatim": {
+        "intent": "clarify_needed",
+        "reason_code": "ambiguous_city_dimension",
+        "clarify_hint": "「杭州」指店铺所在城市还是收货城市？两者语义不同，需确认。"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段（默认口径）或 修订冻结集 expected",
+        "detail": "商品数口径（product_cnt / on_sale_product_cnt / spu_cnt）无唯一默认：若判直答须在语义包给唯一默认（gold 要 on_sale_product_cnt）；否则应修订 expected=clarify"
+      }
+    },
+    {
+      "case_id": "H-STR-03",
+      "bucket": "合理澄清却要求直答",
+      "question": "T_A 位于成都的店铺各有多少个商品？",
+      "frozen_expected": "execute",
+      "frozen_reason_text": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard",
+      "actual_terminal": "clarify",
+      "actual_note": "商品数口径歧义（product_cnt / on_sale_product_cnt / spu_cnt）⇒ intent 判 clarify；W69-1 回滚后 replay 仍 clarify（8/8）",
+      "llm_verbatim": {
+        "intent": "clarify_needed",
+        "reason_code": "ambiguous_metric_product_count",
+        "clarify_hint": "「商品数」在语义包中有多个口径：商品数（product_cnt，含上下架）、在架商品数（on_sale_product_cnt）、SPU 款数（spu_cnt）。请确认要按哪个口径统计。"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段（默认口径）或 修订冻结集 expected",
+        "detail": "商品数口径（product_cnt / on_sale_product_cnt / spu_cnt）无唯一默认：若判直答须在语义包给唯一默认（gold 要 on_sale_product_cnt）；否则应修订 expected=clarify"
+      }
+    },
+    {
+      "case_id": "H-STR-04",
+      "bucket": "合理澄清却要求直答",
+      "question": "T_A 位于武汉的店铺各有多少个商品？",
+      "frozen_expected": "execute",
+      "frozen_reason_text": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard",
+      "actual_terminal": "clarify",
+      "actual_note": "商品数口径歧义（product_cnt / on_sale_product_cnt / spu_cnt）⇒ intent 判 clarify；W69-1 回滚后 replay 仍 clarify（8/8）",
+      "llm_verbatim": {
+        "intent": "clarify_needed",
+        "reason_code": "ambiguous_metric_and_city",
+        "clarify_hint": "「商品数」存在歧义：是指商品数（product_cnt，按 SKU 计）还是款数（spu_cnt，按 SPU 去重）？另外「位于武汉的店铺」中的城市指店铺所在城市（shop.city），请确认。"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段（默认口径）或 修订冻结集 expected",
+        "detail": "商品数口径（product_cnt / on_sale_product_cnt / spu_cnt）无唯一默认：若判直答须在语义包给唯一默认（gold 要 on_sale_product_cnt）；否则应修订 expected=clarify"
+      }
+    },
+    {
+      "case_id": "H-STR-05",
+      "bucket": "合理澄清却要求直答",
+      "question": "T_A 位于南京的店铺各有多少个商品？",
+      "frozen_expected": "execute",
+      "frozen_reason_text": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard",
+      "actual_terminal": "clarify",
+      "actual_note": "商品数口径歧义（product_cnt / on_sale_product_cnt / spu_cnt）⇒ intent 判 clarify；W69-1 回滚后 replay 仍 clarify（8/8）",
+      "llm_verbatim": {
+        "intent": "clarify_needed",
+        "reason_code": "ambiguous_metric_product_cnt",
+        "clarify_hint": "「商品数」按哪个口径统计：商品数（全部 SKU 存量）、在架商品数，还是 SPU 款数？"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段（默认口径）或 修订冻结集 expected",
+        "detail": "商品数口径（product_cnt / on_sale_product_cnt / spu_cnt）无唯一默认：若判直答须在语义包给唯一默认（gold 要 on_sale_product_cnt）；否则应修订 expected=clarify"
+      }
+    },
+    {
+      "case_id": "H-STR-06",
+      "bucket": "合理澄清却要求直答",
+      "question": "T_A 位于西安的店铺各有多少个商品？",
+      "frozen_expected": "execute",
+      "frozen_reason_text": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard",
+      "actual_terminal": "clarify",
+      "actual_note": "商品数口径歧义（product_cnt / on_sale_product_cnt / spu_cnt）⇒ intent 判 clarify；W69-1 回滚后 replay 仍 clarify（8/8）",
+      "llm_verbatim": {
+        "intent": "clarify_needed",
+        "reason_code": "ambiguous_metric_product_cnt",
+        "clarify_hint": "「商品数」按哪个口径统计：商品数（全部 SKU 存量）、在架商品数，还是 SPU 款数？"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段（默认口径）或 修订冻结集 expected",
+        "detail": "商品数口径（product_cnt / on_sale_product_cnt / spu_cnt）无唯一默认：若判直答须在语义包给唯一默认（gold 要 on_sale_product_cnt）；否则应修订 expected=clarify"
+      }
+    },
+    {
+      "case_id": "H-STR-07",
+      "bucket": "合理澄清却要求直答",
+      "question": "T_A 位于长沙的店铺各有多少个商品？",
+      "frozen_expected": "execute",
+      "frozen_reason_text": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard",
+      "actual_terminal": "clarify",
+      "actual_note": "商品数口径歧义（product_cnt / on_sale_product_cnt / spu_cnt）⇒ intent 判 clarify；W69-1 回滚后 replay 仍 clarify（8/8）",
+      "llm_verbatim": {
+        "intent": "clarify_needed",
+        "reason_code": "ambiguous_metric_product_cnt",
+        "clarify_hint": "「商品数」按哪个口径统计：商品数（全部商品，不区分上下架）、在架商品数，还是 SPU 款数？"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段（默认口径）或 修订冻结集 expected",
+        "detail": "商品数口径（product_cnt / on_sale_product_cnt / spu_cnt）无唯一默认：若判直答须在语义包给唯一默认（gold 要 on_sale_product_cnt）；否则应修订 expected=clarify"
+      }
+    },
+    {
+      "case_id": "H-STR-08",
+      "bucket": "合理澄清却要求直答",
+      "question": "T_A 位于郑州的店铺各有多少个商品？",
+      "frozen_expected": "execute",
+      "frozen_reason_text": "2 表 + 2 条件 + GROUP BY → c1=3、o=1 → hard",
+      "actual_terminal": "clarify",
+      "actual_note": "商品数口径歧义（product_cnt / on_sale_product_cnt / spu_cnt）⇒ intent 判 clarify；W69-1 回滚后 replay 仍 clarify（8/8）",
+      "llm_verbatim": {
+        "intent": "clarify_needed",
+        "reason_code": "ambiguous_metric_product_cnt",
+        "clarify_hint": "「商品数」在郑州店铺维度下存在口径歧义：是指商品数（product_cnt，按 SKU 计）、在架商品数（on_sale_product_cnt）还是款数（spu_cnt）？请确认口径。"
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段（默认口径）或 修订冻结集 expected",
+        "detail": "商品数口径（product_cnt / on_sale_product_cnt / spu_cnt）无唯一默认：若判直答须在语义包给唯一默认（gold 要 on_sale_product_cnt）；否则应修订 expected=clarify"
+      }
+    },
+    {
+      "case_id": "X-MET-10",
+      "bucket": "合理澄清却要求直答",
+      "question": "T_A 618 期间各大区各店铺的成交金额合计是多少？",
+      "frozen_expected": "execute",
+      "frozen_reason_text": "大促区间含预售期，与语义包 time_semantics.notes 一致（05-24~06-20，含端）；3 表 + 2 条件 + 双列 GROUP BY → c1=4 → extra",
+      "actual_terminal": "clarify",
+      "actual_note": "时间窗无结构化来源（campaign_window_not_structured）⇒ route_after_normalize 直判 clarify",
+      "llm_verbatim": {
+        "intent": "query",
+        "reason_code": null,
+        "clarify_hint": null
+      },
+      "remedy_if_align_frozen": {
+        "kind": "语义包字段（契约变更）",
+        "detail": "「618」campaign 别名缺结构化窗口（gold 用 2026-05-24..06-21）"
+      }
+    }
+  ]
+}
