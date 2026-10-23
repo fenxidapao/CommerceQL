@@ -6510,3 +6510,139 @@ W71-2 报「B 13 条 0 翻转，原因是列数相同但内容不匹配」。QA 
 ### 93.9 边界
 
 本窗零出站、零写库（沙箱 `mode=ro` 只读、未建 TEMP VIEW、未写一行）；只追加 `reports/qa/**`；未动 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`／`data/**`；未改 15s／判据／gold／冻结集／语义包；官方门禁仍 `88f3500`／PASS 1/8 未刷新。
+
+## 94 · W8 第 72 轮验收：材料三项全收＋W72-3 实装收；**同根因未闭（H-ENUM-02 仍归零）**；G-7 13/13 不是门禁通过（QA R31bq ｜ 2026-10-23 18:35 +0800 ｜ HEAD `5a71fbb`／665 笔）
+
+> 本轮 QA 零出站、零写库（沙箱 `mode=ro`；只跑 pytest 与只读复算）。W8 的数字我逐项复算，下面凡标【实测】者均为 QA 自己跑出来的。
+
+### 94.1 现状现读【实测】
+
+| 项 | 现读 |
+|---|---|
+| HEAD / 笔数 | `5a71fbb` / 665，与 `origin/main` 齐平 |
+| 工作树 | 仅 `?? .workbuddy/`（未入库） |
+| 本轮改动面 | 16 个文件：4 个产品代码（`contracts.py`／`semantics/runtime.py`／`guard/ast_gate.py`／`graph/nodes/gate1_ast.py`）＋6 测/夹具＋3 个 eval 脚本＋2 份 r73 产物＋W8 `RELAY.md` |
+| 禁改面 | `reports/qa/**`、`semantic/**`、冻结集、`equivalence.py`、`gates.py`、`probe_metric_values.json`、`cassettes/**` **全部为空 diff**【实测】 |
+| 官方门禁 | 仍 `88f3500`／PASS 1/8，未刷新（本轮未跑门禁） |
+
+### 94.2 W72-3 实装：我跑过的验证【实测】
+
+| 项 | 我的结果 |
+|---|---|
+| 新增测试 | `test_guard_predicate_metric_scope.py` 6 passed（退款率不排退款单／gmv 保三条／未知指标回落／冲突回落／无声明回落） |
+| 相关键集 | 新测试＋`test_semantics_loader`＋`test_harness_allowlist` 共 **85 passed** |
+| 全量 unit | **1538 passed**（50.74s） |
+| eval＋contract | **1111 passed / 1 failed**（唯一红＝`test_no_undeclared_third_party_imports`，既有问题，见 94.5） |
+| 边界测试 | `test_eval_boundary.py` **16 passed**（W8 把 w70/w71 审计脚本改走 `open_sandbox_connection`，**未改断言**） |
+| 166 replay | 166 条；等价 **36/163**；终态 116 complete／28 refuse／16 clarify／3 error／3 None；**逐案终态与等价判定与 r66 对比 0 条变化**（比 W8 的聚合计数更强的对照） |
+| 谓词集变化 | 我独立比对 r66/r73 `applied_predicates`：**恰好 7 条**，全部只减不加，减掉的都只有 `refund_status <> 'refunded'`：M-IDX-05/06/09/10、C-RATE-01/02、C-REP-01 |
+| refund_rate | M-IDX-05 `0.05008328882002321`、M-IDX-06 `0.049981614113764596`，与权威值**逐位一致**；SQL 全文已无 `refund_status <> 'refunded'` |
+| G-7（system vs authority） | 我用 r73 的 `predicted.shape.head_rows` 对 `probe_metric_values.json` 的 `authority_value` 重算：**13/13** |
+| D 类翻转抽检 | `M-MET-03`（类目 GMV）：补三谓词的金标与系统表**集合完全相等**（两别名都加租户后） |
+| 代码面 | 8 键 wrapper 落地；三规则（缺指标/缺条目→域级；全有条目→域内并集；同域冲突→域级）与契约注释双写；`run_gate1` 默认 `metrics=()` 保持旧行为 |
+
+**结论：W72-3 实装收。** 代码改动最小、测试真跑过、影响面恰好 7 条且全是"只减正确的那一条谓词"、系统值与权威值逐位对齐。
+
+### 94.3 🔴 同根因未闭：`refunded_order_cnt` 走"空声明→回落域级"，H-ENUM-02 仍被清零【实测】
+
+W8 的规则①写的是"有指标缺指标级条目 ⇒ 回落域级（fail-closed）"。但包内 **22 个指标里有 14 个的 `default_predicates` 是空表**（`bundle` 里 `refunded_order_cnt:927`、`day_cnt`、`campaign_cnt`、`product_cnt` 等）。空表在 `ast_gate.py:489` 的 `not metric_predicates.get(m)` 下被当成"缺条目" ⇒ 仍走域级 ⇒ **同一类泄漏原样复现**：
+
+`H-ENUM-02`「全额退款状态的订单数」系统 SQL（节选，实测原文）：
+
+```text
+... WHERE v_order_paid.refund_status = %(refund_status)s AND ... AND
+    v_order_paid.refund_status <> 'refunded' AND v_order_paid.pay_status = 'paid' ...
+params: {"refund_status": "refunded", "pay_status": "paid"}
+```
+
+- 结果：**0 行**（`predicted.shape.row_count = 0`）
+- 我在沙箱只去掉 `refund_status <> 'refunded'` 这一条重跑：**5 行**，计数与金标**逐值相同**（1628／1648／1601…）
+- ⇒ 这与 `refund_rate` 是**同一个根因**：域级谓词与题目显式谓词直接矛盾。W72-3 只治了"有指标级声明的 8 个指标"，没治"空声明的 14 个"。
+
+**并且我核过：把 `metric_predicates` 的来源从 `metrics[].default_predicates` 换成谓词级 `applies_to` 也无效**——22 个指标里两者**逐条相同（22/22）**，空对空。所以问题不在投影来源，而在"空 = 缺失"的语义。
+
+**修复方向（建议 W73-1，二选一或并用）**：
+1. **显式矛盾守卫（推荐）**：注入前检查候选谓词是否与 SQL 已有顶层谓词矛盾（同列 `col = 'v'` 对 `col <> 'v'`），矛盾则跳过该条并记日志。它不放松缺指标时的 fail-closed，且对"指标未声明"场景同样有效。
+2. **空声明语义**：指标在包内存在且声明为空 ⇒ 视为"明确无谓词"（`m not in metric_predicates` 而非真值判断），缺键才回落。风险是"误填空表"会静默丢默认谓词，需 loader 侧加显式标记或断言。
+
+验收用例就用 `H-ENUM-02`：注入后不得出现 `refund_status <> 'refunded'`，沙箱应返回 5 行、计数与金标逐值相同。**注意：即便谓词修好，H-ENUM-02 仍会因"金标 2 列 / 预测 3 列（多 shop_name）"判非等价**，那是 94.6 的另一族。
+
+### 94.4 G-7 的 13/13：只证明系统能力，不是门禁通过
+
+- `probe_metric_values.json` 仍比 `gold_value` vs `authority_value`（1/13）；`gates.py:488-508` 只读该文件的 `consistent/total` ⇒ **门禁度量对象未变**。
+- 13/13 是 QA 用 r73 replay 另算的 `system vs authority`，不是 G-7 读数。
+- 即便将来改口径，G-7 仍在 `_TAU_DEPENDENT` 里、τ 未校准 ⇒ PASS 会被降为 UNVERIFIED。**现在写"G-7 通过"是错的。**
+- A/B 两案仍待总控裁（我倾向 B：让 G-7 度量系统；但须同时保留"题库口径一致性"作非门禁回归项，避免丢掉那层保护）。
+
+### 94.5 订正与顺带发现【实测】
+
+1. **E-MET-08 的定性要改**。W8 写"题面明写含未支付、gold `pay_status='unpaid'` ⇒ 合法反向口径"。冻结集该条 `notes` 原文是：**"反面口径：故意不套默认谓词，用来测 W6 的『口径一致性』能否识别默认谓词缺失"**。即它是**故意不合格的探针**，不是合法业务口径；且题面"含未支付"与 gold"只取未支付"并不等价。它不在 G-7 的 13 条探针里 ⇒ **这条探针的设计用途目前没有被执行**。它仍在作用域外（终态 refuse、未评分），但标签必须改，并决定是否要把它纳入 G-7 的反向对照。
+2. **误拒现值是 3/124，不是 0/124**。我用 `reporter._refusal_counts` 直接跑 r73：`{total:24, correct_refused:24, answerable_total:124, over_refused:3}`，归因分布 `over_refusal: 3`。三条为 `M-DIM-05`（各城市店铺数）、`M-MET-01`（各渠道 GMV）、`E-MET-08`，原因均为 `no_data_asset`。W60 的 `0/124` 出自 148 条批次，**已过期**。前两条看起来是真误拒，值得单独立项。G-5 原始读数因此是 24/24＋3/124（阈值内），但 τ 未校准仍 UNVERIFIED。
+3. **复购率 M-IDX-09/10 的"仍为 0"真因是整数除法**。金标 `COUNT(...)/COUNT(...)` 在 SQLite 下整除 ⇒ 0；改成 `*1.0` 后：M-IDX-09 `0.1671171171171171` vs 系统 `0.16654133453652178`（仍不等），M-IDX-10 `0.29174849590074503` vs 系统 `0.13292697943603005`（2.2 倍）。⇒ 金标侧还有"方言/类型"缺陷，且 90 天窗口定义可能不一致。W8 把它列"另案"是对的，但原因不是谓词，别混。
+4. **作用域 108 的记法**：`execute+SQL = 109`，其中 `X-ENUM-02` 是 error（非 complete）⇒ 108；另一路 `116 complete − 8 条 clarify 空 gold = 108`。两路都是 108，W8 的数字对，但"差在这 8 条的计法上"表述不精确，差的那 1 条是 X-ENUM-02。
+5. **w70/w71 脚本被事后改动**（`sqlite3.connect` → `open_sandbox_connection`）：只动连接、只读、未改断言；`test_eval_boundary` 16 passed。两份旧产物未重跑，数值不受影响（只读查询等价）。记录在案。
+6. **依赖白名单那 1 条红灯**：`backend/tests/eval/test_tau_samples.py` 的 `from eval.runner import ...`；该文件自起跑点 `ae48ae0` 未改，`eval/` 无 `__init__.py` ⇒ 既有问题。建议把 `eval` 加入该测试的 `_FIRST_PARTY`（仓库内目录，不是发行版），而不是往 `pyproject.toml` 塞假依赖；二选一需总控点句。
+
+### 94.6 列对齐：W72-4 的 38/6 只覆盖"列数相同"的那一支【实测】
+
+- W72-4 的 strict 38 ＝ 37 值差＋1 id↔name；6 条 id↔name；31 条"other"也满足双射 ⇒ 不加限定的"允许双射"会过度翻绿，这个反向证据成立，**不建议动 `equivalence.py`**。
+- 但全量里还有 **36 条"列数不同"**（全部 expected=execute）：
+  - **23 条：金标 2 列 / 预测 3 列**（典型：多一列 `shop_name`；H-ENUM-01…04、H-STR-01…08 等）
+  - 1 条：金标 2 / 预测 5
+  - 12 条：预测 0 列（拒答/错误，无结果集）
+  - **与 G-2 的 8 条交集 = 0** ⇒ 不进 G-2，但压着全量等价分（36/163）。
+- `compare_tables` 在列数不等时**直接返回 False**，所以 W72-4 的配对分析根本看不到这 23 条。**"多余列是否应判等价"是判据口径变更**，须总控裁；若批准"忽略多余列"，需逐条验证值是否真的对齐（H-ENUM-02 已证：去掉泄漏谓词后计数逐值相同）。
+
+### 94.7 残余风险（不阻塞本轮验收，须记录）
+
+1. **多指标冲突回落域级**：同一 SELECT 既声明 `gmv` 又声明 `refund_rate` 时判冲突、回落域级 ⇒ refund_rate 仍会被注入 `<> 'refunded'`。设计上"不静默选边"可接受，但当前数据集无此组合，属已知限制。
+2. **`SqlGuard.gate1` 形状实现不带 metrics**（`backend/app/guard/__init__.py:51`）⇒ 仅走端口注入的路径拿不到指标收窄，回落域级（安全但旧 bug 仍在）。生产节点走 `run_gate1(..., metrics=...)`，不受影响。
+3. **14/22 空谓词指标**：见 94.3，凡落在 orders 域的空谓词指标（`refunded_order_cnt`／`day_cnt`／`campaign_cnt` 等）都可能被注入三条订单谓词；目前只有 H-ENUM-02 被证有害。
+
+### 94.8 结论
+
+**第 72 轮：W72-1／W72-2／W72-4 材料全收；W72-3 实装收（代码+测试+replay 三重实测通过），但"谓词矛盾"这一类未闭。** 官方门禁未刷新，G-7 13/13 不得写成门禁通过。
+
+### 94.9 W73 派单（全部零出站，除明确标注需点句者）
+
+```text
+【W8 第 73 轮｜闭类：谓词矛盾 + 误拒定位 + 列族量化 + 复购金标】
+
+0. 前置：现读 HEAD；证据绑 git_rev+dirty=false；不碰 reports/qa/**；不 git add -A；
+   .workbuddy/ 不入库；不改 gold/冻结集/语义包/gates 阈值/probe 脚本；不刷门禁。
+
+1. 🔴 W73-1（P0）把"域级谓词与题目显式谓词矛盾"这一类闭掉
+- 现证：H-ENUM-02 全额退款订单数 → SQL 同时有 refund_status='refunded' 与 <> 'refunded' → 0 行；
+  去掉泄漏谓词后 5 行、计数与金标逐值相同（1628/1648/1601…）。
+- 二选一（QA 倾向 ①）：① 注入前做显式矛盾检查（同列 = 'v' vs <> 'v'）→ 跳过该条并记日志；
+  ② 指标在包内存在且声明为空 ⇒ 视为"明确无谓词"，仅缺键回落（须 loader 侧说明空表语义）。
+- 单测：H-ENUM-02 形状（题目 refund_status='refunded' + metric refunded_order_cnt）不得出现 <> 'refunded'；
+  再补一条 gmv 无矛盾时三条仍在。replay 166，核对只动该动的谓词。
+- 红线：不得为了修这一条把默认谓词整体关掉。
+
+2. 🔴 W73-2 误拒 3/124 定位（只出材料）
+- M-DIM-05「各城市店铺数」、M-MET-01「各渠道 GMV」均 no_data_asset 拒答；expected=execute。
+- 出：拒答发生在哪个节点/缺哪个资产/包内是否真缺维度（渠道、城市→shop_cnt）；是否属 planner 资产映射缺陷。
+- E-MET-08 单列：冻结集 notes 写明它是"故意不套默认谓词的反向探针"，题面"含未支付"与 gold"只取未支付"也不等价；
+  给出它对 expected_behavior 的处置建议（execute / clarify / refuse），并说明是否纳入 G-7 的反向对照（需总控签）。
+
+3. 🟡 W73-3 列族量化（只出材料，不改 equivalence.py）
+- 36 条"列数不同"逐条跑双版本：若"忽略多余列"（按金标列投影）有几条会等价？
+- 重点 23 条"金标 2 / 预测 3"（多 shop_name）；逐条标注"仅多列"还是"值也不同"。
+- 红线：只出影响面，不改判据；是否允许多余列由总控裁。
+
+4. 🟡 W73-4 复购金标（只出方案）
+- M-IDX-09/10 gold 整除 → 0；*1.0 后 0.167117 vs 系统 0.166541、0.291748 vs 0.132927。
+- 定位：90 天窗口是否缺上界、分子分母口径、是否还有整数除法。改 gold 属冻结集变更 → 先出方案等签。
+
+5. 🟢 W73-5 依赖白名单红灯（需点句）
+- 建议把 eval 加入 test_dependency_whitelist 的 _FIRST_PARTY（仓库目录，非发行版），不动 pyproject。
+
+6. 不做：不跑 τ 采样；不扩 L4；不改 G-8 二轮；不改官方门禁；不改冻结集/语义包。
+
+7. 回执：产物路径／git_rev+dirty／tokens（应 0）；每项一句"可判/不可判"。
+```
+
+### 94.10 边界
+
+本窗零出站、零写库（沙箱 `mode=ro`）；只追加 `reports/qa/**`；未动 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`／`data/**`；未改判据／gold／冻结集／语义包；官方门禁仍 `88f3500`／PASS 1/8。
