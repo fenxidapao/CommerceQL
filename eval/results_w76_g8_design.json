@@ -1,0 +1,95 @@
+{
+  "generated_at": "2026-10-23T14:31:34+00:00",
+  "git_rev": "34cc628",
+  "git_dirty": false,
+  "task": "W76-2 G-8 二轮回路设计＋成本估算（只出材料；未改代码、未真打）",
+  "current_reading": {
+    "requests": 166,
+    "clarified": 16,
+    "clarify_rate": 0.0964,
+    "expected_clarify_n": 18,
+    "terminal_clarify_in_expected": 7,
+    "mis_clarified_outside_expected": 9,
+    "clarify_then_correct": 0,
+    "second_round_loop_available": false,
+    "why_zero": "本批 `--second-round` 未开 ⇒ 无可测分子；门禁因此判 UNVERIFIED（不是 FAIL）—— 见 gates.py 的 G-8 分支"
+  },
+  "state_machine": {
+    "production": [
+      "首轮图：意图/绑定走到 clarify → `clarify_out` 写 `clarify` 终态 + `clarify_id` + 选项 `{value,label,asset}`",
+      "`SseRunner._persist_clarify` 把上下文（raw_question / session / options / task_id）落 Redis，TTL 5 分钟（§A.13）",
+      "前端 `POST /api/v1/clarify {clarify_id, option|value}` → 属主门（session 归属） → **一次性消费**（先删后跑）",
+      "`compose_question(raw_question, answer)` → **完整重跑**（FR-9.2：不复用澄清前结论）",
+      "新 `task_id`、同 `session_id`、继承原轮 `options`、幂等键不复用",
+      "终态 complete / refuse / clarify（再澄清）/ error"
+    ],
+    "eval": [
+      "`runner --second-round`：首轮终态 == clarify 时，用 `clarify_expected.candidates[0]`（或 `--second-round-answers` 文件）拼出「原问句（补充口径：X）」",
+      "同一 `score_case` 再跑一遍图（**不经 /clarify 端点**）",
+      "`record['second_round'] = {attempted, reason, question, terminal_event, success, tokens, cost_cny, tau_raw}`",
+      "`success` 只认二轮 `complete` 且无 infra_error；二轮 gold = `not_defined_for_second_round`（二轮问句变了，冻结 gold 只对首轮成立）"
+    ],
+    "gap_between_two": "评测侧绕过 `/clarify` 端点 ⇒ 过期/一次性/属主门/推导式重组这些**生产语义**没有被评测覆盖；评测只覆盖「补答后再跑一次图能否 complete」"
+  },
+  "answer_source_gap": {
+    "expected_clarify_cases": 18,
+    "with_frozen_candidates": 1,
+    "candidate_cases": [
+      "C-CITY-01"
+    ],
+    "needs_external_answers": 17,
+    "mis_clarified_without_answer_source": [
+      "H-STR-01",
+      "H-STR-02",
+      "H-STR-03",
+      "H-STR-04",
+      "H-STR-05",
+      "H-STR-06",
+      "H-STR-07",
+      "H-STR-08",
+      "X-MET-10"
+    ],
+    "decision_needed": "外部补答文件（`--second-round-answers`）由谁给、按什么口径给 —— 它是**数据**，不是第二次模型推断；不给就只覆盖 1 条，G-8 分子没有统计意义"
+  },
+  "denominator_issue": {
+    "current_gate_formula": "clarify_then_correct / clarified（gates.py G-8）",
+    "problem": "只跑 1 条二轮也能让分母保持 16 ⇒ 6.25%，读起来像系统只成功了 6%，实际是**没有覆盖**；分母应同时给 `attempted`",
+    "proposal": "报告同时列 `success/attempted` 与 `success/clarified`；`attempted < clarified` 时后半句判 UNVERIFIED（判据变更，需总控/QA 签）"
+  },
+  "cost_estimates": {
+    "per_round_18_clarify_cases": {
+      "requests": 18,
+      "tokens": 356342,
+      "cost_cny": 0.102962
+    },
+    "second_round_est": {
+      "requests": 16,
+      "cost_cny": 0.016715,
+      "note": "二轮是完整重跑一次图（同 prompt/同工具）⇒ 以首轮同 case 的计费代理"
+    },
+    "functional_single_case": {
+      "cases": [
+        "C-CITY-01"
+      ],
+      "cost_cny": 0.0022,
+      "note": "只做功能验证（1 条），G-8 分子仍不具统计意义"
+    },
+    "full_batch_with_second_round": {
+      "requests": 166,
+      "first_round_cost_cny": 1.085754,
+      "second_round_cost_cny_est": 0.016715,
+      "total_cny_measured": 1.1025,
+      "total_cny_with_margin": 1.4332,
+      "why_full_batch": "匣带按 prompt 哈希键控，`record` 模式**整条重打**（不混用旧响应）⇒ 想得到可上报告的 G-8 读数，只能整批真打一次"
+    },
+    "hard_cap_suggestion": {
+      "cost_cny": 1.8,
+      "rationale": "实测全批 ¥1.09 + 二轮 ≈ ¥0.14，×1.3 余量取整；先补外部补答数据再花钱，否则分子最多 1 条"
+    }
+  },
+  "recommendation": [
+    "先定补答数据源（覆盖至少 7 条 expected=clarify 的实际 clarify 题；9 条误澄清题要不要给补答另议——它们本应 execute，补答会掩盖绑定缺陷）",
+    "再决定是否改 G-8 分母口径（success/attempted）—— 判据变更需签",
+    "最后才真打（整批 ¥1.2-1.5）；在此之前 G-8 保持 UNVERIFIED"
+  ]
+}
