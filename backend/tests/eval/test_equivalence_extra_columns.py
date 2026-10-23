@@ -84,3 +84,22 @@ def test_equal_column_count_path_untouched():
     pred = _t("shop_name", "cnt", rows=[("旗舰店1", 1)])
     v = eq.compare_tables(gold, pred)
     assert not v.equivalent, "等列数路径不得因 W74-2 而放开 id↔name"
+
+
+# ==== W75-2：金标零列必须直接拒（此前循环 0 次 ⇒ 空配对 ⇒ 判等价）====
+def test_zero_column_gold_is_rejected():
+    """gold 0 列 / pred 1 列（两边都 0 行）：换任何预测都不该"等价"。"""
+    gold = _t(rows=[])
+    pred = _t("anything", rows=[])
+    v = eq.compare_tables(gold, pred)
+    assert not v.equivalent
+    assert eq.Tag.EXTRA_COLUMNS not in v.tags
+    assert any("金标零列" in n for n in v.diffs), v.diffs
+
+
+def test_zero_column_gold_with_rows_is_rejected():
+    gold = _t(rows=[(), ()])
+    pred = _t("cnt", rows=[(1,), (2,)])
+    v = eq.compare_tables(gold, pred)
+    assert not v.equivalent
+    assert any("金标零列" in n for n in v.diffs), v.diffs

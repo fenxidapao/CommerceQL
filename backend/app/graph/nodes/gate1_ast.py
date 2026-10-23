@@ -27,15 +27,26 @@ U-121 裁定"两个投影、两种形状"）。
 结构性拒绝（多语句 / 非 SELECT / 注释注入…）**重试无意义** ⇒ 直接 `error(GATE_AST_REJECTED)`。
 `route_after_gate1` 会读 `gate_results[AST].passed` 决定去向；本节点的终态写在
 "拒绝"分支上，两条路互斥且都由**本节点**给出结论（判定只有一处）。
+
+--------------------------------------------------------------------------
+四、指标窗口强制（W75-1）在**本节点**做，理由有二
+--------------------------------------------------------------------------
+① `repair` 重新出 SQL 后**也回到本节点**（`build.py:828`）⇒ 这里是所有待执行 SQL 的
+   唯一收口点；放在 `gen_sql` 会漏掉 repair 生成的 SQL。
+② 必须在 `run_gate1` **之前**改写：R14 字面量与列白名单审计的对象应是**最终** SQL。
+   补/修的上界一律走绑定参数（`app/guard/metric_window.py`），不产生新字面量。
+无法强制的窗口 ⇒ `refuse(no_data_asset)` + `reason_code=metric_window_unenforceable`
+（fail-closed；派单 §96.8 明令「不得静默忽略」）。
 """
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from typing import Any
 
 from app.core.contracts import GuardAllowlist
-from app.core.enums import ErrorCode, GateNo, LatencyKey, Outcome
+from app.core.enums import ErrorCode, GateNo, LatencyKey, Outcome, RefuseReason
 from app.graph.nodes._shared import (
     deps_of,
     gate_update,
@@ -45,27 +56,67 @@ from app.graph.nodes._shared import (
 )
 from app.graph.state import GraphState
 from app.guard import run_gate1
+from app.guard.metric_window import (
+    MetricWindowError,
+    MetricWindowRule,
+    WindowEnforcement,
+    enforce_metric_windows,
+)
 
 __all__ = ["gate1_ast"]
 
+_LOG = logging.getLogger(__name__)
+
 
 async def gate1_ast(state: GraphState) -> dict[str, Any]:
-    """gate1：静态审计（纯函数，W2C）。"""
+    """gate1：静态审计（纯函数，W2C）+ 指标窗口强制（W75-1）。"""
     deps = deps_of()
     identity = identity_of(state)
     sql = str(state.get("sql_text") or "")
+    params: Mapping[str, Any] = _sql_params(state) or {}
     allowlist: GuardAllowlist = deps.semantics.guard_allowlist(
         identity, max_rows=_request_max_rows(state)
     )
 
+    windowed: WindowEnforcement | None = None
+    rules = _metric_window_rules(state, deps.semantics)
+    if rules:
+        try:
+            windowed = enforce_metric_windows(sql, params, rules)
+        except MetricWindowError as exc:
+            _LOG.warning(
+                "metric window unenforceable (fail-closed): code=%s detail=%s",
+                exc.code, exc.detail,
+            )
+            update = terminal_update(
+                state,
+                event="refuse",
+                outcome=Outcome.REFUSE,
+                reason=RefuseReason.NO_DATA_ASSET.value,
+            )
+            update["intent_detail"] = {
+                "reason_code": "metric_window_unenforceable",
+                "refuse_kind": RefuseReason.NO_DATA_ASSET.value,
+                "metric_window_error": exc.code,
+                "metric_window_detail": exc.detail,
+            }
+            return update
+        if windowed.changed:
+            _LOG.info("metric window enforced: %s", "; ".join(windowed.applied))
+            sql = windowed.sql
+            params = windowed.params
+
     with node_latency(LatencyKey.GATE):
         report = run_gate1(
-            sql, allowlist, metrics=_metric_names(state), params=_sql_params(state)
+            sql, allowlist, metrics=_metric_names(state), params=params
         )
 
     update: dict[str, Any] = dict(gate_update(state, GateNo.AST, report.gate_result))
     if report.gate_result.passed:
         update["sql_text"] = report.rewritten_sql
+        if windowed is not None and windowed.changed:
+            #: 补/修出来的上界走绑定参数（N-04）⇒ 参数表必须与 SQL 同批落盘。
+            update["sql_params"] = dict(params)
         update["limit_injected"] = (
             dict(report.limit_injected) if report.limit_injected is not None else None
         )
@@ -127,3 +178,31 @@ def _sql_params(state: GraphState) -> Mapping[str, Any] | None:
     """
     params = state.get("sql_params")
     return params if isinstance(params, Mapping) else None
+
+
+def _metric_window_rules(state: GraphState, semantics: Any) -> tuple[MetricWindowRule, ...]:
+    """本次计划里**声明了 window** 的指标（W75-1）。
+
+    来源 = 语义包 `Metric.window` / `Metric.time_basis`。`metric()` 不在
+    `SemanticBundlePort` 的五方法里 ⇒ 按 `payloads.py` 的既有约定做**可选能力探测**：
+    取不到就返回空元组（评测夹具之外的生产/评测路径都持有真运行时）。
+    """
+    lookup = getattr(semantics, "metric", None)
+    if not callable(lookup):
+        return ()
+    rules: list[MetricWindowRule] = []
+    for name in _metric_names(state):
+        metric = lookup(name)
+        if metric is None:
+            continue
+        window = getattr(metric, "window", None)
+        if not window:
+            continue
+        rules.append(
+            MetricWindowRule(
+                metric=name,
+                time_basis=str(getattr(metric, "time_basis", "") or ""),
+                window=str(window),
+            )
+        )
+    return tuple(rules)

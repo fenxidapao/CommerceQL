@@ -254,7 +254,13 @@ def _extra_column_pairs(
     为什么不放宽：§C.4.1 的列等价建立在「同一列」上；忽略多余列等于承认
     「预测多算了一列」不是缺陷。这条只是把**纯投影**（多带一列 `shop_name`）与
     **算错**（值不同）分开，不改变逐值比对本身。
+
+    🔴 W75-2：**金标零列直接拒**。此前的循环在 `gold.columns == ()` 时一次不跑、
+    配对为空 ⇒ 返回 `([], "忽略预测多出的 N 列")` ⇒ `compare_tables` **判等价**。
+    当前数据不可达（0 列金标 0 条），但"零列金标"不构成任何投影判据，必须 fail-closed。
     """
+    if len(gold.columns) == 0:
+        return None, "金标零列：没有可配对的金标列（预测多出的列一律不忽略）"
     if len(gold.rows) != len(pred.rows):
         return None, (
             f"行数不同：金标 {len(gold.rows)} / 预测 {len(pred.rows)}"
