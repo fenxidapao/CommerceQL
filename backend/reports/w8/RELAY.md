@@ -7710,3 +7710,128 @@ eval/results_r73_metric_scope_delta.json                 ← 谓词集差异 + G
 
 * 未改：gold / 冻结集 / 语义包 / `gates.py` 阈值 / 探针脚本 / `equivalence.py` / τ / 门禁；
 * 未真打（0 tokens）；未 `git add -A`；未碰 `backend/reports/qa/**`。
+
+---
+
+## 79 W73：谓词矛盾哨兵（H-ENUM-02 闭类）＋ 误拒定位 ／ 列族量化 ／ 复购金标方案
+
+派单：TASK_BOARD §94.9（2026-10-23 18:35 QA R31bq）｜起跑 HEAD `b5fb46c`｜
+**零出站**（replay 复用 r63 匣带；沙箱 `mode=ro`；tokens 计费 = 0）。
+
+### 79.1 W73-1 实装：显式矛盾守卫（P0）
+
+| 文件 | 改动 |
+|---|---|
+| `app/guard/ast_gate.py` | 新增 `_flatten_and` / `_scalar_value` / `_norm_value` / `_comparison` / `_contradiction`；`_inject_predicates(..., params=None)` 在每个谓词**注入前**逐条比对查询已有 WHERE 合取项；`run_gate1(..., *, metrics=(), params=None)` |
+| `app/graph/nodes/gate1_ast.py` | 新增 `_sql_params(state)`（`state["sql_params"]`，`planner/engine.py:538` 写入）并下传 |
+| `app/guard/__init__.py` | `SqlGuard.gate1` 增 `metrics` / `params` 透传（QA §94.7 残余风险②，顺手一并接上） |
+| `tests/unit/test_guard_predicate_contradiction.py` | 新增 **8 测** |
+
+**判据（三选一里选派单推荐的 ①，不并用 ②）**：同列 `=` / `<>` 四种组合里三种判矛盾 ——
+`=v` vs `<>v`、`<>v` vs `=v`、`=v1` vs `=v2`（v1≠v2）；`<>v1` vs `<>v2` 不矛盾。
+值解析不出（占位符无绑定）时**按矛盾处理**：模型已经对该列表过态，闸门不替它翻案。
+**未采纳 ②「空声明 = 明确无谓词」**：它把 14 个空谓词指标一次性判成「不注入」，
+等于用一次语义变更换掉 fail-closed，且需要 loader 侧显式标记 —— 属语义包变更，须单独立项。
+
+**键点**：H-ENUM-02 的模型谓词是**参数化**的（`refund_status = %(refund_status)s`），
+只看字面量抓不到 ⇒ 必须把 `sql_params` 喂进闸门（这就是 `params` 参数的唯一用途）。
+
+**单测 8/8**：占位符版 H-ENUM-02 不注入 `<> 'refunded'` 且仍保留另两条／字面量版同样拦／
+`= 'partial'` 不算矛盾（H-ENUM-01 形状）／E-MET-08 的 `pay_status='unpaid'` 不注入 `='paid'`／
+无矛盾时 gmv 仍三条／无 params 时占位符按矛盾处理／同值相等不算矛盾／两不同等值算矛盾。
+全量 unit **1546 passed**（1538 → +8）。
+
+### 79.2 W73-1 验证：全量 166 replay（零出站）
+
+`eval/results_r74_full166_contradiction_guard.json`（rev=de08e74/dirty=False）。
+
+* **谓词集变化 = 恰好 1 条**：`H-ENUM-02` 去掉 `refund_status <> 'refunded'`，**无新增**。
+* **结果行数变化 = 恰好 1 条**：`H-ENUM-02` **0 → 5 行**，
+  计数 `1628 / 1648 / 1601 / 1610 / 1585`（与 QA §94.3 沙箱复算逐值相同）。
+* **等价条数 36/163 不变；终态分布 116/28/16/3/3 逐格不变**；无任何一条等价判定翻转。
+* H-ENUM-01/03/04（`= 'partial'` / `= 'none'`）**未被误伤**，仍三条谓词 + 5 行。
+
+### 79.3 W73-2 误拒 3/124 定位（材料，不改代码）
+
+`eval/results_r73_refusal_localization.json`（rev=de08e74/dirty=False）。
+方法：终态/节点路径取自 r74 产物；模型原始计划响应取自 r63 匣带（问句子串 + 计划提示词双重匹配）；
+「资产是否真缺」用语义包 `assets[].columns` / `dimensions` / `field_bindings` 核对。
+
+**三条全部止于 `plan → refuse_out`**，`refusal_reason = no_data_asset`
+（`plan.py:91-105`：`blocking_issues` 非空 ⇒ 直接 `refuse(NO_DATA_ASSET)`）。
+
+| 案 | 包内真相 | 归因 |
+|---|---|---|
+| **M-DIM-05** 各城市店铺数 | `shop.city` **存在**（`bundle:320`，注释「店铺所在城市，与收货城市同名不同义」），但 `dimensions[name=city]` 绑的是 `order_paid.receiver_city`（`bundle:1026-1027`）⇒ **维度声明只写了一半** | ① 归因码错位：歧义被记成 `no_data_asset`；② 与 `normalize.py:104/130` 的降级判据打架 —— 模型给的是 `clarify_needed`／`ambiguous_dimension_city`，但「问句含『各城市』」这一条就把它降级成 executable，随后 `plan` 又以同一歧义为由阻塞 |
+| **M-MET-01** 各渠道 GMV | `order_paid.channel` **存在**（资产列清单），`field_bindings` 的 concept「渠道」`note` 明写「订单域问题应绑 order_paid.channel」（`bundle:1135`）；但 `dimensions[name=channel].binding` 是 `traffic_daily.channel`（`bundle:998-999`） | planner 资产映射缺陷：维度声明与 concept note **方向相反**，模型只看到前者，据此判「订单侧无渠道」并阻塞 |
+| **E-MET-08** 含未支付 | 不是资产缺失；模型给了两条阻塞：「无『含未支付』指标（gmv 默认只算已支付）」＋「时间只有起点无终点」 | 「自造口径」保护按设计生效；第二条是**误加**（同批其它「从 … 起」的题都执行了） |
+
+**共同根因**：三条里没有一条是「语义包真的没有这张表」。两条是**维度声明只写了一半**，
+一条是**问题本身歧义 + gold 取反向**；三者被 `plan.blocking_issues → refuse(no_data_asset)`
+压成同一个码，于是「歧义 / 映射错 / 真缺数据」在报表上不可区分。
+
+**E-MET-08 处置建议（需总控签）**：
+* 首选 `expected_behavior = clarify` —— 题面「含未支付」本身两义（不过滤支付状态 vs 仅未支付），
+  冻结集 gold 取 `pay_status='unpaid'`（**仅**未支付）与「含」不等价；
+* 备选 `refuse`（认「自造口径应拒答」为设计意图）／`execute + 修 gold`（gold 去掉 pay_status 过滤）；
+* **纳入 G-7 反向对照的前提是「修 gold 且置 execute」**，否则系统不给 SQL，只能测「不静默套默认谓词」，
+  测不到「反向口径算对」；
+* ⚠️ 任何改 `expected_behavior` 的动作都会让 G-5 误拒 3/124 → 2/124，属**刷绿**风险。
+
+### 79.4 W73-3 列族量化（材料，不改 `equivalence.py`）
+
+`eval/results_r73_column_family.json`（rev=de08e74/dirty=False）。
+
+* **36 条列数不等**，与 QA 记数一致：**24 条沙箱可跑**（23 条 `2→3`、1 条 `2→5`）＋
+  **12 条预测无结果集**（拒答/错误：E-MET-08、M-DIM-05、M-MET-01、H-STR-01…08、X-MET-10）。
+* **「忽略多余列、按金标列投影」后翻转 = 14 条**：
+  H-ENUM-01/02/04、X-STR-08、X-ENUM-01/03/04/06/08、X-MET-01/02/03/04/05。
+  多出来的列：`shop_name` ×13、`sku_name` ×1。
+* **不翻转的 10 条**：H-MET-01…05、M-MET-02（金标聚合列与预测列**值不同** —— D 类缺谓词一串）、
+  M-ENUM-01/03（行数 2000 vs 1000）、H-MET-10（1602 vs 579）。
+* 🔴 **按列名投影结构性失效（0/24）**：金标聚合列**没有别名**，`Table.columns` 里是
+  `SUM(pay_amount)` 这种表达式串，预测侧是 `gmv` ⇒ 只能按**值**判定 ⇒ 这正是风险所在
+  （值一对一配对会放过「多出来的列本身算错」）。
+* 是否「忽略多余列」= **等价判据口径变更**，须总控裁；本件未改判据一行。
+
+### 79.5 W73-4 复购金标（方案，须签）
+
+`eval/results_r73_repurchase_gold.json`（rev=de08e74/dirty=False）。
+
+| 变体 | M-IDX-09（起 2026-06-01） | M-IDX-10（起 2026-03-01） |
+|---|---|---|
+| v0 gold 原样（整数除法） | **0** | **0** |
+| v1 仅 `*1.0` | 0.1671171171171171 | 0.29174849590074503 |
+| v2 `*1.0` + 两条默认谓词 | **0.16654133453652178** | 0.2907648583653456 |
+| v3 `*1.0` + 谓词 + 90 天上界 | 0.11984047856430707 | **0.13292697943603005** |
+| 系统实测 | **0.16654133453652178**（= v2） | **0.13292697943603005**（= v3） |
+
+**三条金标缺陷 + 一条系统缺陷**：
+① **整数除法**（`COUNT/COUNT` 在 SQLite 与 PG 都截断为 0）；
+② **缺 90 天上界**（`bundle:613` 写 `window: "90 days"`，gold 只有下界）；
+③ **缺默认谓词**（D 类一脉）；
+④ 🔴 **系统自己不一致**：M-IDX-09 的系统 SQL 只有下界、M-IDX-10 有上界
+   ⇒ 90 天窗口由模型即兴决定，**代码里没有任何一处读 `metrics[].window`**
+   （`grep '.window'` 只命中 `planner/engine.py` 的时间解析）。
+
+**建议 gold_v2**（`*1.0` + 90 天上界 + 两条默认谓词）：按此口径 M-IDX-09 应为 0.11984
+（系统现值 0.16654 也就错了），M-IDX-10 = 0.13293（与系统一致）。
+⚠️ 改 gold 属**冻结集变更**，且「窗口由指标定义强制」需要 gen_sql 后按 `metric.window` 校验/覆写
+（产品行为变更，另立议题）⇒ 均需总控签。
+
+### 79.6 W73-5 依赖白名单红灯（待点句，本轮未动）
+
+`backend/tests/contract/test_dependency_whitelist.py` 把 `from eval.runner import …`
+判成「未声明第三方包」。建议把 `eval` 加入该测试的 `_FIRST_PARTY`（仓库内目录，不是发行版），
+**不动 `pyproject.toml`**。改的是测试的判据面 ⇒ 按派单「需点句」，本轮未改，现状仍是 1111 passed / 1 failed。
+
+### 79.7 边界
+
+```
+backend/app/guard/ast_gate.py / guard/__init__.py / graph/nodes/gate1_ast.py   ← 3 处产品代码
+backend/tests/unit/test_guard_predicate_contradiction.py                       ← 新增 8 测
+eval/w73_materials.py + 4 份产物（r74 replay / 误拒 / 列族 / 复购）            ← 新增
+```
+
+未改：gold／冻结集／语义包／`gates.py` 阈值／probe／`equivalence.py`／`reports/qa/**`／`.workbuddy/`。
+未跑 τ 采样、未扩 L4、未改 G-8、未刷门禁（仍 `88f3500`／PASS 1/8）。
