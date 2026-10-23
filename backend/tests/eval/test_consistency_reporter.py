@@ -510,14 +510,23 @@ def test_known_limitations_discloses_c43_rate_and_never_the_coverage_probe():
         metric_values={"total": 13, "consistent": 1, "consistent_rate": 0.0769, "unattributed": 0},
     )
     text = "\n".join(low)
-    assert "§C.4.3 口径比对" in text and "7.7%" in text and "冻结集 gold 与语义包默认口径" in text
+    # W74-1：G-7 只认 system_*；只有 gold 侧字段的旧产物必须被判「缺 system_*、不回落」。
+    assert "§C.4.3 口径比对" in text and "NOT_AVAILABLE" in text and "不回落" in text
     assert "G-7（核心指标口径一致性）**未跑**" not in text
 
     ok = rp._known_limitations(
         cov, None, None, None, g8_second_round_available=True, pg_txt=PG_TXT,
-        metric_values={"total": 13, "consistent": 13, "consistent_rate": 1.0, "unattributed": 0},
+        metric_values={
+            "system_consistent": 13, "system_total": 13, "system_consistent_rate": 1.0,
+            "system_differing": [],
+            "dataset_caliber_consistency": {
+                "consistent": 1, "total": 13, "consistent_rate": 0.0769, "unattributed": 0,
+            },
+        },
     )
-    assert "冻结集 gold 与语义包默认口径" not in "\n".join(ok), "达标时不许留低一致率的归因句"
+    ok_text = "\n".join(ok)
+    assert "G-7 读数" in ok_text and "13/13" in ok_text
+    assert "非门禁回归" in ok_text and "1/13" in ok_text, "题库口径必须作为回归项披露"
 
 
 def test_zero_input_report_has_no_pg_or_c43_readings(zero_input_payload):

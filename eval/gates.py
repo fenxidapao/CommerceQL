@@ -485,27 +485,47 @@ def evaluate_gates(
                 (*notes, "判定值 = 全请求分位数；准入样本口径只作对照，不参与打分"),
             ))
 
-    # ---- G-7 口径一致性 ≥ 95% 且差异 100% 可归因 ----
-    if consistency is None or int(consistency.get("total", 0)) == 0:
-        gates.append(Gate("G-7", "口径一致性 ≥ 95%（核心指标子集），差异 100% 可归因",
-                          "NOT_AVAILABLE", "无核心指标比对数据", "附录 C",
-                          ("本轮未做核心指标权威值比对 → 该门禁未验证，不得计入通过",)))
+    # ---- G-7 口径一致性 ≥ 95%（W74-1：度量对象 = system vs 语义包权威值）----
+    #: 🔴 总控 2026-10-23 已签（B 案）：G-7 的度量对象从「题库 gold」改成「**系统预测值**」。
+    #: `gold vs authority` 降为**非门禁回归项**（`dataset_caliber_consistency`），不参与判定。
+    #: ⚠️ 缺 `system_*` 字段 ⇒ NOT_AVAILABLE，**不得回落**到 gold 侧读数 —— 回落会让旧产物
+    #: 在无人察觉的情况下继续驱动门禁，正是这次改口径要消灭的形态。
+    g7_title = "口径一致性 ≥ 95%（核心指标子集，system vs 语义包权威值）"
+    if consistency is None or "system_consistent" not in consistency or "system_total" not in consistency:
+        gates.append(Gate(
+            "G-7", g7_title, "NOT_AVAILABLE",
+            "无系统侧核心指标比对数据"
+            if consistency is None else
+            "输入产物缺 `system_consistent` / `system_total`（旧口径产物，需重跑 probe_metric_values.py）",
+            "附录 C §C.4.3",
+            ("🔴 W74-1 起 G-7 只认 **system vs 语义包权威值**；缺 `system_*` 字段 ⇒ NOT_AVAILABLE，"
+             "不回落 `gold vs authority`（后者已是非门禁回归项）。",),
+        ))
+    elif int(consistency.get("system_total") or 0) == 0:
+        gates.append(Gate(
+            "G-7", g7_title, "NOT_AVAILABLE",
+            "系统侧无可比对用例（重放产物里没有对应 case 的 SQL 或执行失败）",
+            "附录 C §C.4.3",
+            ("分母为 0 不构成「达标」，也不构成「不达标」⇒ 该门禁未验证。",),
+        ))
     else:
-        c_rate = _rate(int(consistency["consistent"]), consistency["total"])
-        attributable = int(consistency.get("unattributed", 0)) == 0
+        s_total = int(consistency["system_total"])
+        s_ok = int(consistency["system_consistent"])
+        s_rate = _rate(s_ok, s_total)
         basis = consistency.get("comparison_basis")
         gates.append(Gate(
-            "G-7", "口径一致性 ≥ 95%（核心指标子集），差异 100% 可归因",
+            "G-7", g7_title,
             _tau_verdict(
                 "G-7",
-                "PASS" if (c_rate or 0) >= THRESHOLDS["G-7_consistency"] and attributable else "FAIL",
+                "PASS" if (s_rate or 0) >= THRESHOLDS["G-7_consistency"] else "FAIL",
                 tau_calibrated,
             ),
-            f"一致 {consistency['consistent']}/{consistency['total']}"
-            + ("" if c_rate is None else f" = {c_rate:.1%}")
-            + f"；不可归因差异 {consistency.get('unattributed', 0)}",
+            f"一致 {s_ok}/{s_total}" + ("" if s_rate is None else f" = {s_rate:.1%}"),
             "附录 C §C.4.3",
-            caveats + ((f"比对基准（非外部 BI 权威值）：{basis}",) if basis else ()),
+            (*caveats,
+             (f"比对基准（非外部 BI 权威值）：{basis}",) if basis else (),
+             "度量对象 = 系统预测值（W74-1 / 总控签）；题库 gold 侧读数见报告的"
+             " `dataset_caliber_consistency`（非门禁回归项）。"),
         ))
 
     # ---- G-8 澄清率 ≤ 15% 且澄清后一次成功率 ≥ 80% ----

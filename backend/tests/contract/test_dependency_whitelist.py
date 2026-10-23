@@ -253,7 +253,10 @@ def _module_to_distributions() -> dict[str, list[str]]:
     return packages_distributions()
 
 #: 仓库内一方包（不按发行版解析）
-_FIRST_PARTY = {"app", "tests", "scripts"}
+#: 仓库内的一等目录（不是发行版）。`eval` 是评测层，无 `__init__.py`、也不该进
+#: `pyproject.toml`（W74-3 / 总控 2026-10-23 签）：`backend/tests/eval/*` 里的
+#: `from eval.runner import …` 是**本地包导入**，不是未声明第三方依赖。
+_FIRST_PARTY = {"app", "tests", "scripts", "eval"}
 
 #: 扫描范围：仓库里**我们自己写的** Python。注意用的是仓库根相对路径。
 _SCAN_ROOTS = (

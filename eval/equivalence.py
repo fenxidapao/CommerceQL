@@ -73,6 +73,9 @@ class Tag:
     LIMIT_TIE = "limit_boundary_tie"
     REPRESENTATION = "value_representation_difference"
     NULL_PRESENTATION = "null_presentation_difference"
+    #: W74-2（总控签）：预测比金标**多出列**，但金标每列都能在预测里找到唯一同值列
+    #: 且列序严格递增 ⇒ 判等价。命中即必须显式计数，不得静默（见 `_extra_column_pairs`）。
+    EXTRA_COLUMNS = "extra_columns_ignored"
 
 
 @dataclass(frozen=True, slots=True)
@@ -236,6 +239,53 @@ def _multiset_diff(
     return n, notes, ()
 
 
+def _extra_column_pairs(
+    gold: Table, pred: Table
+) -> tuple[tuple[tuple[int, int], ...] | None, str]:
+    """W74-2 窄口：`pred` 列多于 `gold` 时，把金标列投影到预测列上。
+
+    判据（四条**同时**成立才放行，缺一即拒）：
+    1. 只对 `pred.columns > gold.columns` 生效（调用方保证）；
+    2. 每列金标按**整列值多重集**在预测里找同值列，必须**恰好一个**（0 个 = 值不同；
+       ≥2 个 = 配对不唯一，可能掩盖真错）；
+    3. 不同金标列不得落到同一个预测列（一一对应）；
+    4. 配对后的预测列下标**严格递增**（列序不许倒置）—— 倒置说明预测的投影顺序错了。
+
+    为什么不放宽：§C.4.1 的列等价建立在「同一列」上；忽略多余列等于承认
+    「预测多算了一列」不是缺陷。这条只是把**纯投影**（多带一列 `shop_name`）与
+    **算错**（值不同）分开，不改变逐值比对本身。
+    """
+    if len(gold.rows) != len(pred.rows):
+        return None, (
+            f"行数不同：金标 {len(gold.rows)} / 预测 {len(pred.rows)}"
+            "（多余列仅在同构行集上可判）"
+        )
+    pairs: list[tuple[int, int]] = []
+    used: set[int] = set()
+    for i, gname in enumerate(gold.columns):
+        gkey = Counter(_row_key((v,)) for v in gold.column(i))
+        hits = [
+            j
+            for j in range(len(pred.columns))
+            if Counter(_row_key((v,)) for v in pred.column(j)) == gkey
+        ]
+        if len(hits) != 1:
+            return None, (
+                f"金标列 {gname!r} 在预测里有 {len(hits)} 个同值列"
+                "（窄口要求**唯一**匹配，0 或多于 1 都不放行）"
+            )
+        j = hits[0]
+        if j in used:
+            return None, f"预测列 {pred.columns[j]!r} 被两列金标同时匹配 ⇒ 非一一对应"
+        used.add(j)
+        pairs.append((i, j))
+    indexes = [j for _, j in pairs]
+    if indexes != sorted(indexes):
+        return None, f"配对后预测列下标未严格递增（{indexes}）⇒ 列序倒置，不放行"
+    extras = [pred.columns[j] for j in range(len(pred.columns)) if j not in used]
+    return tuple(pairs), f"忽略预测多出的 {len(extras)} 列：{extras}（列序与值均一致）"
+
+
 def compare_tables(
     gold: Table,
     pred: Table,
@@ -247,11 +297,21 @@ def compare_tables(
     """§C.4.1 等价判定主入口。"""
     tags: list[str] = []
     notes: list[str] = []
+    extra_pairs: tuple[tuple[int, int], ...] | None = None
     if len(gold.columns) != len(pred.columns):
-        return Verdict(
-            False, hash_matches, (),
-            (f"列数不同：金标 {len(gold.columns)} / 预测 {len(pred.columns)}",),
-        )
+        if len(pred.columns) > len(gold.columns):
+            #: 🔴 W74-2（总控签）：预测多出列 ⇒ 走窄口；不满足四条判据照样判不等价。
+            extra_pairs, extra_note = _extra_column_pairs(gold, pred)
+            if extra_pairs is None:
+                return Verdict(
+                    False, hash_matches, (),
+                    (f"列数不同：金标 {len(gold.columns)} / 预测 {len(pred.columns)}；{extra_note}",),
+                )
+        else:
+            return Verdict(
+                False, hash_matches, (),
+                (f"列数不同：金标 {len(gold.columns)} / 预测 {len(pred.columns)}",),
+            )
     if len(gold.rows) != len(pred.rows):
         tie = _limit_tie(gold, pred, gold_sql, pred_sql)
         if tie is None:
@@ -264,10 +324,15 @@ def compare_tables(
         gold = Table(gold.columns, gold.rows[:keep])
         pred = Table(pred.columns, pred.rows[:keep])
 
-    pairs, col_tags = _pair_columns(gold, pred)
-    tags.extend(col_tags)
-    if len(pairs) != len(gold.columns):
-        return Verdict(False, hash_matches, tuple(tags), ("列无法配对（列数相同但内容不匹配）",))
+    if extra_pairs is not None:
+        pairs = extra_pairs
+        tags.append(Tag.EXTRA_COLUMNS)
+        notes.append(extra_note)
+    else:
+        pairs, col_tags = _pair_columns(gold, pred)
+        tags.extend(col_tags)
+        if len(pairs) != len(gold.columns):
+            return Verdict(False, hash_matches, tuple(tags), ("列无法配对（列数相同但内容不匹配）",))
 
     gold_ordered = has_explicit_order(gold_sql) and has_explicit_order(pred_sql)
     if gold_ordered:

@@ -41,6 +41,7 @@ owner=finance/operations，是 §17.6 I-1「口径唯一来源」指定的那一
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import os
@@ -71,6 +72,14 @@ CORE_METRICS: tuple[str, ...] = ("gmv", "order_cnt", "uv", "aov", "refund_rate")
 
 #: "口径不一致"的判定阈值 —— §C.4.3 原文"相对误差 < 0.1%"。
 REL_TOL: float = 1e-3
+
+#: 🔴 W74-1（总控已签）：G-7 的**度量对象**从「题库 gold」改为「**系统预测值**」。
+#: 系统侧的值取自**最近一次全量重放**（零出站：重放复用匣带，不再打模型），
+#: 逐案在**同一沙箱、同一租户边界**重跑该记录的 `sql_text` + `sql_params` 得到。
+#: 换批次时用 `--system-replay` 指定别的产物；缺记录/缺 SQL ⇒ 该条不计入 `system_total`。
+SYSTEM_REPLAY_DEFAULT: str = os.path.join(
+    "eval", "results_r74_full166_contradiction_guard.json"
+)
 
 _GROUP_RE = re.compile(r"\bGROUP\s+BY\b", re.I)
 _WHERE_RE = re.compile(
@@ -226,7 +235,35 @@ def _attribute(
     }
 
 
-def main() -> int:
+def _load_system(path: str) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+    """读重放产物 → `{case_id: record}` + 该产物自报的构建身份。
+
+    为什么系统侧取「重放产物里的 SQL 再沙箱重跑」而不是直接抄 `predicted.head_rows`：
+    ① 后者只有前几行（`head_rows`），口径比对要的是**完整标量**；
+    ② 自己重跑一遍等于把「系统 SQL」当作被测对象，金标/权威值都不参与，判据干净。
+    """
+    if not os.path.exists(path):
+        return {}, {"path": path, "available": False, "reason": "not_found"}
+    doc = json.load(open(path, encoding="utf-8"))
+    records = {str(r.get("case_id")): r for r in (doc.get("records") or [])}
+    return records, {
+        "path": os.path.relpath(path, ROOT).replace("\\", "/"),
+        "available": True,
+        "git_rev": doc.get("git_rev"),
+        "git_dirty": doc.get("git_dirty"),
+        "generated_at": doc.get("generated_at"),
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="§C.4.3 核心指标口径比对（G-7 的唯一输入）")
+    parser.add_argument(
+        "--system-replay",
+        default=os.path.join(ROOT, SYSTEM_REPLAY_DEFAULT),
+        help="系统侧 SQL 的来源重放产物（默认：最近一次全量 166 重放）",
+    )
+    args = parser.parse_args(argv)
+
     loaded = load_bundle(_bootstrap.BUNDLE_PATH)
     terms = metric_terms(loaded, SemanticBundleRuntime(loaded))
     by_name = {str(m.name): m for m in loaded.bundle.metrics}
@@ -236,6 +273,7 @@ def main() -> int:
     dataset = _bootstrap.load_json(_bootstrap.DATASET_PATH)
     cases = list(dataset["cases"])
     db_path = _bootstrap.SANDBOX_DB
+    system_records, system_source = _load_system(args.system_replay)
 
     rows: list[dict[str, Any]] = []
     excluded: list[dict[str, Any]] = []
@@ -328,6 +366,25 @@ def main() -> int:
             auth_value = _scalar(auth_out)
 
             err = _rel_err(gold_value, auth_value)
+
+            #: 🔴 W74-1：系统侧的同一把尺（`system vs authority`）—— G-7 从此只认这一对。
+            sys_rec = system_records.get(str(case["case_id"])) or {}
+            system_value = None
+            system_error = None
+            system_sql = re.sub(r"\s+", " ", str(sys_rec.get("sql_text") or "")).strip()
+            if system_sql:
+                sys_out = run_in_sandbox(
+                    system_sql,
+                    dict(sys_rec.get("sql_params") or {}),
+                    tenant=tenant,
+                    views=True,
+                    db_path=db_path,
+                    tenant_scoped_physicals=ts_physicals,
+                )
+                system_value = _scalar(sys_out)
+                system_error = sys_out.get("error")
+            system_rel = _rel_err(system_value, auth_value)
+
             row: dict[str, Any] = {
                 "case_id": str(case["case_id"]),
                 "metric": name,
@@ -342,6 +399,12 @@ def main() -> int:
                 "gold_error": gold_out.get("error"),
                 "authority_error": auth_out.get("error"),
                 "attribution": None,
+                "system_sql": system_sql or None,
+                "system_value": system_value,
+                "system_rel_error": None if system_rel is None else round(system_rel, 6),
+                "system_consistent": bool(system_rel is not None and system_rel < REL_TOL),
+                "system_error": system_error,
+                "system_record_found": bool(sys_rec),
             }
             if gold_value is not None and auth_value is not None and not row["consistent"]:
                 row["attribution"] = _attribute(
@@ -362,9 +425,36 @@ def main() -> int:
     unattributed = [
         r for r in differing if not (r["attribution"] or {}).get("explained_by_predicate")
     ]
+    system_comparable = [
+        r for r in rows if r["system_value"] is not None and r["authority_value"] is not None
+    ]
+    system_consistent = sum(1 for r in system_comparable if r["system_consistent"])
     out = {
         "threshold_rel_error": REL_TOL,
         "core_metrics": list(CORE_METRICS),
+        #: 🔴 W74-1：G-7 的判定读数。度量对象 = **系统预测值 vs 语义包权威值**。
+        "system_consistent": system_consistent,
+        "system_total": len(system_comparable),
+        "system_consistent_rate": round(system_consistent / len(system_comparable), 4)
+        if system_comparable
+        else 0.0,
+        "system_source": system_source,
+        #: 旧口径（gold vs authority）—— **非门禁回归项**，只用于看题库有没有漂移。
+        #: ⚠️ 下面这四个扁平键（`total` / `consistent` / `consistent_rate` / `unattributed`）
+        #: 仍是**题库侧**的读数，**不得**被门禁读取（W74-1 前 G-7 读的就是它们）。
+        "dataset_caliber_consistency": {
+            "comparison_basis": "gold vs semantic bundle authority（非门禁回归项；旧 G-7 口径）",
+            "consistent": sum(1 for r in comparable if r["consistent"]),
+            "total": len(comparable),
+            "consistent_rate": round(
+                sum(1 for r in comparable if r["consistent"]) / len(comparable), 4
+            )
+            if comparable
+            else 0.0,
+            "unattributed": len(unattributed),
+            "unattributed_cases": [r["case_id"] for r in unattributed],
+            "note": "自 W74-1 起**不驱动任何门禁**；保留它只为回答「题库 gold 是否仍与语义包一致」。",
+        },
         "total": len(comparable),
         "consistent": sum(1 for r in comparable if r["consistent"]),
         "consistent_rate": round(
@@ -375,14 +465,16 @@ def main() -> int:
         "unattributed": len(unattributed),
         "differing": [r["case_id"] for r in differing],
         "unattributed_cases": [r["case_id"] for r in unattributed],
+        "system_differing": [r["case_id"] for r in system_comparable if not r["system_consistent"]],
         "metrics_covered": sorted({r["metric"] for r in comparable}),
         "rows": rows,
         "excluded": excluded,
         "comparison_basis": (
-            "权威侧 = 语义包 `metrics[].expression + default_predicates + time_basis` 在同一沙箱、"
-            "同一租户边界（TEMP VIEW）上的直接实现；被比侧 = 冻结集 `gold_sql`（W1A，content_hash 冻结）。"
-            "⚠️ 本项目无外部 BI 权威值可引 ⇒ 本产物验的是**内部口径一致性**，"
-            "不是对外部报表数字的验证（§C.4.3 的「已确认权威值」只能降级到这一层，报告须如实写）。"
+            "system vs semantic bundle authority："
+            "被比侧 = 系统在重放批次里给出的 SQL（同一沙箱、同一租户边界重跑得到的标量）；"
+            "权威侧 = 语义包 `metrics[].expression + default_predicates + time_basis` 的直接实现。"
+            "⚠️ 本项目无外部 BI 权威值可引 ⇒ 验的是「系统算得对不对（对齐包内口径）」，"
+            "不是对外部报表数字的验证。"
         ),
         "caveat": (
             "只纳入「题面命中单个核心指标词形 + gold 无 GROUP BY + WHERE 除时间边界与默认谓词外无其他条件」"
@@ -396,14 +488,14 @@ def main() -> int:
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(out, fh, ensure_ascii=False, indent=2)
 
-    print(f"可比对 {out['total']} 条 / 一致 {out['consistent']}（{out['consistent_rate']:.1%}）"
+    print(f"system vs authority：{out['system_consistent']}/{out['system_total']}"
+          f"（{out['system_consistent_rate']:.1%}）  ← G-7 的读数")
+    print(f"gold vs authority（旧口径/非门禁）：{out['consistent']}/{out['total']}"
           f" / 不可归因 {out['unattributed']}")
     print(f"覆盖指标：{out['metrics_covered']}；排除 {len(excluded)} 条")
-    for r in differing[:8]:
-        att = r["attribution"] or {}
-        print(f"  差异 {r['case_id']} {r['metric']}: gold={r['gold_value']} auth={r['authority_value']} "
-              f"rel_err={r['rel_error']} 缺谓词={att.get('missing_predicates')} "
-              f"可归因={att.get('explained_by_predicate')} {att.get('why_not_explained') or ''}")
+    for r in [x for x in system_comparable if not x["system_consistent"]][:8]:
+        print(f"  系统不一致 {r['case_id']} {r['metric']}: system={r['system_value']} "
+              f"auth={r['authority_value']} rel_err={r['system_rel_error']} err={r['system_error']}")
     print("written:", path)
     return 0
 

@@ -1403,7 +1403,12 @@ def _clarify_counts(records: Sequence[Mapping[str, Any]]) -> dict[str, Any] | No
 
 
 def _metric_values_digest(mv: Mapping[str, Any] | None) -> dict[str, Any] | None:
-    """§C.4.3 权威值比对的摘要（G-7 的读数 + 差异到底差在哪条谓词）。"""
+    """§C.4.3 权威值比对的摘要。
+
+    W74-1（总控签）起分两层：
+    * **门禁读数** = `system_*`（系统预测值 vs 语义包权威值）；
+    * **非门禁回归** = `dataset_caliber_consistency`（题库 gold vs 权威值，旧 G-7 口径）。
+    """
     if not mv:
         return None
     rows = list(mv.get("rows") or [])
@@ -1411,6 +1416,14 @@ def _metric_values_digest(mv: Mapping[str, Any] | None) -> dict[str, Any] | None
     for row in rows:
         by_metric.setdefault(str(row.get("metric")), []).append(row)
     return {
+        #: 🔴 门禁侧（system vs authority）
+        "system_total": mv.get("system_total"),
+        "system_consistent": mv.get("system_consistent"),
+        "system_consistent_rate": mv.get("system_consistent_rate"),
+        "system_differing": mv.get("system_differing"),
+        "system_source": mv.get("system_source"),
+        #: 非门禁回归（gold vs authority，旧口径）
+        "dataset_caliber_consistency": mv.get("dataset_caliber_consistency"),
         "total": mv.get("total"),
         "consistent": mv.get("consistent"),
         "consistent_rate": mv.get("consistent_rate"),
@@ -1503,20 +1516,34 @@ def _known_limitations(
         # 空串不占位：§8 是"已知限制"清单，一条空 bullet 会被读成"这里本来有内容但没渲染"。
         out.append(replay_txt)
     if metric_values:
-        rate = float(metric_values.get("consistent_rate") or 0.0)
-        out.append(
-            f"**§C.4.3 口径比对**：核心指标 {metric_values.get('total')} 条可比对用例中一致 "
-            f"{metric_values.get('consistent')} 条（{rate:.1%}），不可归因差异 "
-            f"{metric_values.get('unattributed')} 条。一致率低于 95% 是**冻结集 gold 与语义包默认口径"
-            "不一致**的实测结论（差在 gold 少了 `default_predicates`），不是环境缺陷；"
-            "比对方是语义包而非外部 BI ⇒ 「已确认权威值」按内部口径降级验证，见 `comparison_basis`。"
-            if isinstance(rate, (int, float)) and rate < gates_mod.THRESHOLDS["G-7_consistency"]
-            else (
-                f"**§C.4.3 口径比对**：{metric_values.get('total')} 条可比对用例，一致率 "
-                f"{rate:.1%}，不可归因 {metric_values.get('unattributed')} 条。"
+        #: 🔴 W74-1：门禁读数 = system vs authority；gold 侧单列成回归项。
+        s_ok = metric_values.get("system_consistent")
+        s_total = metric_values.get("system_total")
+        s_rate = metric_values.get("system_consistent_rate")
+        dc = metric_values.get("dataset_caliber_consistency") or {}
+        if s_ok is None or s_total is None:
+            out.append(
+                "**§C.4.3 口径比对**：输入产物缺 `system_consistent` / `system_total`"
+                "（旧口径产物）⇒ **G-7 判 NOT_AVAILABLE**，且**不回落**到 gold 侧读数"
+                "（题库口径一致性已是非门禁回归项）。重跑 `probe_metric_values.py` 即可补齐。"
+            )
+        else:
+            out.append(
+                f"**§C.4.3 口径比对（G-7 读数）**：系统 vs 语义包权威值 {s_ok}/{s_total} 条一致"
+                + ("" if not isinstance(s_rate, (int, float)) else f"（{s_rate:.1%}）")
+                + f"；差异项 {len(metric_values.get('system_differing') or [])} 条。"
                 "比对方是语义包而非外部 BI ⇒ 「已确认权威值」按内部口径降级验证。"
             )
-        )
+        if dc:
+            out.append(
+                "**§C.4.3 非门禁回归（旧口径）**：题库 gold vs 权威值 "
+                f"{dc.get('consistent')}/{dc.get('total')}"
+                + ("" if not isinstance(dc.get("consistent_rate"), (int, float))
+                   else f"（{dc['consistent_rate']:.1%}）")
+                + f"，不可归因 {dc.get('unattributed')} 条。"
+                "低一致率是**冻结集 gold 缺 `default_predicates`** 的实测结论，不是环境缺陷；"
+                "该行只回答「题库有没有漂移」，**不驱动任何门禁**。"
+            )
     else:
         out.append(
             "G-7（核心指标口径一致性）**未跑**：`probe_metric_values.py` 尚无产物 ⇒ NOT_AVAILABLE。"
@@ -1870,12 +1897,32 @@ def render_markdown(p: Mapping[str, Any]) -> str:
         add("")
     else:
         add(
-            f"- 可比对 **{mc['total']}** 条（题面命中单个核心指标词形 + gold 无 `GROUP BY` + "
-            f"WHERE 只剩时间边界与默认谓词）；一致 **{mc['consistent']}** 条 = "
-            f"**{mc['consistent_rate']:.1%}**（门槛 95%）；**不可归因差异 "
-            f"{mc['unattributed']}** 条（门槛 0）。"
+            f"- **门禁读数（W74-1 起）＝ system vs 语义包权威值**："
+            f"{mc['system_consistent']}/{mc['system_total']}"
+            + ("" if not isinstance(mc.get("system_consistent_rate"), (int, float))
+               else f" = **{mc['system_consistent_rate']:.1%}**")
+            + f"（门槛 95%）；差异项：{('、'.join(f'`{c}`' for c in (mc.get('system_differing') or [])) or '（无）')}。"
         )
+        src = mc.get("system_source") or {}
+        if src:
+            add(
+                f"- 系统侧来源：`{src.get('path')}`（rev=`{src.get('git_rev')}`，"
+                f"dirty={src.get('git_dirty')}）—— 同一沙箱、同一租户边界重跑其 SQL 得到标量。"
+            )
+        dc = mc.get("dataset_caliber_consistency") or {}
+        if dc:
+            add(
+                f"- **非门禁回归（旧口径）**：题库 gold vs 权威值 "
+                f"{dc.get('consistent')}/{dc.get('total')}"
+                + ("" if not isinstance(dc.get("consistent_rate"), (int, float))
+                   else f" = {dc['consistent_rate']:.1%}")
+                + f"；不可归因 {dc.get('unattributed')} 条。"
+                "⚠️ 这条**不驱动任何门禁**，只用于看题库是否漂移。"
+            )
         add(f"- 判定阈值：相对误差 < {mc['threshold_rel_error']:.1%}（§C.4.3 原文）。")
+        add("")
+        add("_下表为**题库侧**（gold vs 权威值）的逐指标分解 —— 非门禁回归项，"
+            "用来说明「旧读数为什么是 1/13」：_")
         add("")
         add(_md_table(
             ["指标", "比对条数", "一致", "最大相对误差", "差异背后的默认谓词"],

@@ -163,7 +163,16 @@ def test_all_eight_verdicts_equal_the_committed_report_on_clean_pair(log):
         pressure_report=(os.path.relpath(pr, rp._bootstrap.ROOT) if pr and os.path.isfile(pr) else None),
     )
     got = {g.gate_id: g.verdict for g in gate_list}
-    assert got == want, {k: (want[k], got[k]) for k in want if want[k] != got[k]}
+    #: 🔴 W74-1（总控 2026-10-23 签）：G-7 的度量对象改成 system vs 语义包权威值 ⇒
+    #: 已入库报告里的 `FAIL`（旧口径：gold vs authority 1/13）在新口径下必然变。
+    #: 系统侧 13/13 ⇒ 原始 PASS，但 τ 未校准 ⇒ **UNVERIFIED**（不得宣布通过）。
+    #: 因此本测试的用途收窄为「改一处不许动**其它**七格」：只允许 G-7 这一格偏离历史报告，
+    #: 且它的新值必须是 UNVERIFIED（若有人把它刷成 PASS，这里立刻红）。
+    assert got["G-7"] == "UNVERIFIED", got["G-7"]
+    others = {k: v for k, v in want.items() if k != "G-7"}
+    assert {k: got[k] for k in others} == others, {
+        k: (others[k], got[k]) for k in others if others[k] != got[k]
+    }
 
 
 # ── 5. 守卫的**前提**要可核：只有离线槽逐字覆盖集成槽全部文件时才允许不合并 ────

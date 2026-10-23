@@ -38,7 +38,13 @@ def _all_pass_inputs() -> dict:
                      "p95_scope": "admitted_http_2xx",
                      "admission": [{"admitted": 150, "rejected_429": 0}],
                      "source": "W7", "as_of": "2026-09-18T00:00:00Z"},
-        "consistency": {"consistent": 5, "total": 5, "unattributed": 0},
+        #: 🔴 W74-1：G-7 只读 system_*（system vs 语义包权威值）；`consistent/total` 是
+        #: 非门禁的题库口径回归（旧 G-7 口径），刻意给一个**低**值以证明它不再影响判定。
+        "consistency": {
+            "system_consistent": 5, "system_total": 5,
+            "consistent": 1, "total": 5, "unattributed": 0,
+            "dataset_caliber_consistency": {"consistent": 1, "total": 5, "unattributed": 0},
+        },
         "clarification": {"requests": 100, "clarified": 10, "clarify_then_correct": 9,
                           "second_round_loop_available": True},
         "tau_calibrated": True,
@@ -407,12 +413,52 @@ def test_g6_names_the_owing_window_when_no_receipt_arrives():
     assert not any("压测报告" in c for c in bare.caveats)
 
 
-# ==== G-7：一致率达标但有不可归因差异 ⇒ FAIL ==========================
-def test_g7_requires_full_attribution_not_just_rate():
-    """§C.4.3：差异 100% 可归因是**并列条件**，5/5 一致但有一条说不清 = FAIL。"""
+# ==== G-7（W74-1 起）：度量对象 = system vs 语义包权威值 ==============
+def test_g7_reads_system_not_gold():
+    """门禁只看 `system_*`：题库侧 1/13 不影响判定（它已是非门禁回归项）。"""
     inputs = _all_pass_inputs()
-    inputs["consistency"] = {"consistent": 5, "total": 5, "unattributed": 1}
+    inputs["consistency"] = {"system_consistent": 13, "system_total": 13,
+                             "consistent": 1, "total": 13, "unattributed": 0}
+    assert _verdict_of(gt.evaluate_gates(**inputs), "G-7").verdict == "PASS"
+
+
+def test_g7_gold_side_is_never_a_fallback():
+    """缺 `system_*`（旧口径产物）⇒ NOT_AVAILABLE，**不得回落**到 gold 侧读数。"""
+    inputs = _all_pass_inputs()
+    inputs["consistency"] = {"consistent": 13, "total": 13, "unattributed": 0}
+    assert _verdict_of(gt.evaluate_gates(**inputs), "G-7").verdict == "NOT_AVAILABLE"
+
+
+def test_g7_gold_low_rate_does_not_drive_fail():
+    """系统 5/5 达标、题库 1/5 —— 判 PASS（若仍读 gold 就会 FAIL）。"""
+    inputs = _all_pass_inputs()
+    inputs["consistency"] = {"system_consistent": 5, "system_total": 5,
+                             "consistent": 1, "total": 5, "unattributed": 1}
+    assert _verdict_of(gt.evaluate_gates(**inputs), "G-7").verdict == "PASS"
+
+
+def test_g7_system_below_threshold_is_fail():
+    """系统侧 12/13 = 92.3% < 95% ⇒ FAIL（τ 未校准也只降 PASS，不降 FAIL）。"""
+    inputs = _all_pass_inputs()
+    inputs["consistency"] = {"system_consistent": 12, "system_total": 13,
+                             "consistent": 13, "total": 13, "unattributed": 0}
     assert _verdict_of(gt.evaluate_gates(**inputs), "G-7").verdict == "FAIL"
+
+
+def test_g7_system_pass_downgraded_to_unverified_when_tau_uncalibrated():
+    """系统 13/13 但 τ 未校准 ⇒ 原始 PASS 被降为 UNVERIFIED（不得宣布通过）。"""
+    inputs = _all_pass_inputs()
+    inputs["tau_calibrated"] = False
+    inputs["consistency"] = {"system_consistent": 13, "system_total": 13,
+                             "consistent": 1, "total": 13}
+    assert _verdict_of(gt.evaluate_gates(**inputs), "G-7").verdict == "UNVERIFIED"
+
+
+def test_g7_zero_system_total_is_not_available():
+    """分母为 0 既不是达标也不是不达标。"""
+    inputs = _all_pass_inputs()
+    inputs["consistency"] = {"system_consistent": 0, "system_total": 0}
+    assert _verdict_of(gt.evaluate_gates(**inputs), "G-7").verdict == "NOT_AVAILABLE"
 
 
 # ==== G-8：零澄清请求 = 没测到，不是"澄清率 0% ⇒ 达标" ================
@@ -464,7 +510,8 @@ def test_uncalibrated_tau_downgrades_l4_dependent_gates_to_unverified():
 def test_uncalibrated_tau_does_not_soften_a_fail():
     """反例：降级只作用于 PASS；未校准下的 FAIL 仍是 FAIL（方向必须偏向拦住上线）。"""
     inputs = _all_pass_inputs()
-    inputs.update(tau_calibrated=False, consistency={"consistent": 1, "total": 5, "unattributed": 4})
+    inputs.update(tau_calibrated=False,
+                  consistency={"system_consistent": 1, "system_total": 5})
     assert _verdict_of(gt.evaluate_gates(**inputs), "G-7").verdict == "FAIL"
 
 
