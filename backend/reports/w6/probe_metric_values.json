@@ -7,6 +7,25 @@
     "aov",
     "refund_rate"
   ],
+  "system_consistent": 13,
+  "system_total": 13,
+  "system_consistent_rate": 1.0,
+  "system_source": {
+    "path": "eval/results_r74_full166_contradiction_guard.json",
+    "available": true,
+    "git_rev": "de08e74",
+    "git_dirty": false,
+    "generated_at": "2026-10-23T10:53:39+00:00"
+  },
+  "dataset_caliber_consistency": {
+    "comparison_basis": "gold vs semantic bundle authority（非门禁回归项；旧 G-7 口径）",
+    "consistent": 1,
+    "total": 13,
+    "consistent_rate": 0.0769,
+    "unattributed": 0,
+    "unattributed_cases": [],
+    "note": "自 W74-1 起**不驱动任何门禁**；保留它只为回答「题库 gold 是否仍与语义包一致」。"
+  },
   "total": 13,
   "consistent": 1,
   "consistent_rate": 0.0769,
@@ -26,6 +45,7 @@
     "M-IDX-06"
   ],
   "unattributed_cases": [],
+  "system_differing": [],
   "metrics_covered": [
     "aov",
     "gmv",
@@ -83,7 +103,13 @@
         "reconstructed_value": 15611729.95,
         "explained_by_predicate": true,
         "why_not_explained": null
-      }
+      },
+      "system_sql": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE LIMIT 100",
+      "system_value": 15611729.95,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "system_error": null,
+      "system_record_found": true
     },
     {
       "case_id": "E-MET-02",
@@ -134,7 +160,13 @@
         "reconstructed_value": 30768819.37,
         "explained_by_predicate": true,
         "why_not_explained": null
-      }
+      },
+      "system_sql": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE LIMIT 1",
+      "system_value": 30768819.37,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "system_error": null,
+      "system_record_found": true
     },
     {
       "case_id": "E-MET-03",
@@ -185,7 +217,13 @@
         "reconstructed_value": 103385547.56,
         "explained_by_predicate": true,
         "why_not_explained": null
-      }
+      },
+      "system_sql": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE LIMIT 100",
+      "system_value": 103385547.56,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "system_error": null,
+      "system_record_found": true
     },
     {
       "case_id": "E-MET-04",
@@ -236,7 +274,13 @@
         "reconstructed_value": 57306143.84,
         "explained_by_predicate": true,
         "why_not_explained": null
-      }
+      },
+      "system_sql": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE LIMIT 1",
+      "system_value": 57306143.84,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "system_error": null,
+      "system_record_found": true
     },
     {
       "case_id": "E-MET-05",
@@ -287,7 +331,13 @@
         "reconstructed_value": 11413.0,
         "explained_by_predicate": true,
         "why_not_explained": null
-      }
+      },
+      "system_sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) AS order_cnt FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE LIMIT 1",
+      "system_value": 11413.0,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "system_error": null,
+      "system_record_found": true
     },
     {
       "case_id": "E-MET-06",
@@ -338,7 +388,13 @@
         "reconstructed_value": 22536.0,
         "explained_by_predicate": true,
         "why_not_explained": null
-      }
+      },
+      "system_sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) AS order_cnt FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE LIMIT 1",
+      "system_value": 22536.0,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "system_error": null,
+      "system_record_found": true
     },
     {
       "case_id": "E-MET-07",
@@ -389,7 +445,13 @@
         "reconstructed_value": 56408.0,
         "explained_by_predicate": true,
         "why_not_explained": null
-      }
+      },
+      "system_sql": "SELECT COUNT(DISTINCT v_order_paid.sub_order_id) AS order_cnt FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE LIMIT 100",
+      "system_value": 56408.0,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "system_error": null,
+      "system_record_found": true
     },
     {
       "case_id": "E-MET-09",
@@ -440,7 +502,13 @@
         "reconstructed_value": 13541842.86,
         "explained_by_predicate": true,
         "why_not_explained": null
-      }
+      },
+      "system_sql": "SELECT SUM(v_order_paid.pay_amount) AS gmv FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.refund_status <> %(refund_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE LIMIT 1",
+      "system_value": 13541842.86,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "system_error": null,
+      "system_record_found": true
     },
     {
       "case_id": "E-MET-10",
@@ -455,7 +523,13 @@
       "consistent": true,
       "gold_error": null,
       "authority_error": null,
-      "attribution": null
+      "attribution": null,
+      "system_sql": "SELECT SUM(v_traffic_daily.uv) AS uv FROM v_traffic_daily WHERE v_traffic_daily.stat_date >= %(start_date)s AND v_traffic_daily.uv >= 0 AND v_traffic_daily.uv >= 0 LIMIT 100",
+      "system_value": 602325.0,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "system_error": null,
+      "system_record_found": true
     },
     {
       "case_id": "M-IDX-01",
@@ -506,7 +580,13 @@
         "reconstructed_value": 1367.8901209147464,
         "explained_by_predicate": true,
         "why_not_explained": null
-      }
+      },
+      "system_sql": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.sub_order_id), 0) AS aov FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE LIMIT 1",
+      "system_value": 1367.8901209147464,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "system_error": null,
+      "system_record_found": true
     },
     {
       "case_id": "M-IDX-02",
@@ -557,7 +637,13 @@
         "reconstructed_value": 1365.3185733936812,
         "explained_by_predicate": true,
         "why_not_explained": null
-      }
+      },
+      "system_sql": "SELECT SUM(v_order_paid.pay_amount) / NULLIF(COUNT(DISTINCT v_order_paid.sub_order_id), 0) AS aov FROM v_order_paid WHERE v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE AND v_order_paid.pay_time >= %(start_ts)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.refund_status <> 'refunded' AND v_order_paid.is_test_order = FALSE LIMIT 1",
+      "system_value": 1365.3185733936812,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "system_error": null,
+      "system_record_found": true
     },
     {
       "case_id": "M-IDX-05",
@@ -600,7 +686,13 @@
         "reconstructed_value": 0.05008328882002321,
         "explained_by_predicate": true,
         "why_not_explained": null
-      }
+      },
+      "system_sql": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0) AS refund_rate FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.is_test_order = FALSE LIMIT 1",
+      "system_value": 0.05008328882002321,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "system_error": null,
+      "system_record_found": true
     },
     {
       "case_id": "M-IDX-06",
@@ -643,10 +735,19 @@
         "reconstructed_value": 0.049981614113764596,
         "explained_by_predicate": true,
         "why_not_explained": null
-      }
+      },
+      "system_sql": "SELECT SUM(CASE WHEN v_order_paid.refund_status = 'refunded' THEN v_order_paid.pay_amount ELSE 0 END) / NULLIF(SUM(v_order_paid.pay_amount), 0) AS refund_rate FROM v_order_paid WHERE v_order_paid.pay_status = %(pay_status)s AND v_order_paid.is_test_order = %(is_test_order)s AND v_order_paid.pay_time >= %(start_time)s AND v_order_paid.pay_status = 'paid' AND v_order_paid.is_test_order = FALSE LIMIT 1",
+      "system_value": 0.049981614113764596,
+      "system_rel_error": 0.0,
+      "system_consistent": true,
+      "system_error": null,
+      "system_record_found": true
     }
   ],
   "excluded": [],
-  "comparison_basis": "权威侧 = 语义包 `metrics[].expression + default_predicates + time_basis` 在同一沙箱、同一租户边界（TEMP VIEW）上的直接实现；被比侧 = 冻结集 `gold_sql`（W1A，content_hash 冻结）。⚠️ 本项目无外部 BI 权威值可引 ⇒ 本产物验的是**内部口径一致性**，不是对外部报表数字的验证（§C.4.3 的「已确认权威值」只能降级到这一层，报告须如实写）。",
-  "caveat": "只纳入「题面命中单个核心指标词形 + gold 无 GROUP BY + WHERE 除时间边界与默认谓词外无其他条件」的用例；被排除者逐条列在 `excluded`，不静默丢。可归因判据是三条同时成立（表达式同形 + 缺集非空 + 补齐后收敛），见本文件 docstring。"
+  "comparison_basis": "system vs semantic bundle authority：被比侧 = 系统在重放批次里给出的 SQL（同一沙箱、同一租户边界重跑得到的标量）；权威侧 = 语义包 `metrics[].expression + default_predicates + time_basis` 的直接实现。⚠️ 本项目无外部 BI 权威值可引 ⇒ 验的是「系统算得对不对（对齐包内口径）」，不是对外部报表数字的验证。",
+  "caveat": "只纳入「题面命中单个核心指标词形 + gold 无 GROUP BY + WHERE 除时间边界与默认谓词外无其他条件」的用例；被排除者逐条列在 `excluded`，不静默丢。可归因判据是三条同时成立（表达式同形 + 缺集非空 + 补齐后收敛），见本文件 docstring。",
+  "generated_at": "2026-10-23T11:43:57+00:00",
+  "git_rev": "af4a62c",
+  "git_dirty": false
 }
