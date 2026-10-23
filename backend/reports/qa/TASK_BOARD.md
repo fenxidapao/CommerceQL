@@ -6884,3 +6884,116 @@ params: {"refund_status": "refunded", "pay_status": "paid"}
 ### 96.9 边界
 
 本窗零出站、零写库（沙箱 `mode=ro`）；只追加 `reports/qa/**`；未动产品代码／测试／语义包／冻结集／判据；官方门禁仍 `88f3500`／PASS 1/8。
+
+## 97 · W8 第 75 轮验收：四件全收；窗口强制只动 1 条；零列洞已堵；**决定开跑限量 τ**（QA R31bt ｜ 2026-10-23 21:15 +0800 ｜ HEAD `b3ade0f`／679 笔）
+
+> 总控授权"自己选最优解"。本轮 QA 零出站；W75 的数字我逐项复算。**W76 我决定花小钱跑 τ（硬上限 ¥2.50），理由见 97.6。**
+
+### 97.1 现状现读【实测】
+
+| 项 | 现读 |
+|---|---|
+| HEAD / 笔数 | `b3ade0f` / 679，与 `origin/main` 齐平；树仅 `?? .workbuddy/` |
+| 本轮改动面 | 新增 `app/guard/metric_window.py`；`gate1_ast.py` 接线；`equivalence.py` 零列守卫；probe 产物（G-7 已签输入）；3 个测试文件；4 份 W75 材料；W8 `RELAY` |
+| 禁改面 | `reports/qa/**`、冻结集、`semantic/**`、`cassettes/**`、`gates.py`、官方 `eval_metrics.json` **全部空 diff**【实测】 |
+| 测试 | 我跑 unit＋eval＋contract：**2680 passed / 0 failed**（129.45s） |
+| 官方门禁 | 仍 `88f3500`／PASS 1/8，未刷新 |
+
+### 97.2 W75-1 复购窗口强制：收【实测】
+
+| 项 | 我的结果 |
+|---|---|
+| 单测 | `test_guard_metric_window.py` **8 passed**（补上界／正确不动／无起点不加／非法 window 拒／起点解析不出拒／不一致改值／落在拥有起点的子查询／同基准冲突拒） |
+| replay 166 | 与 r75（多余列版）逐条对比：**SQL/params 只变 M-IDX-09**；值只变 M-IDX-09：`0.16654133453652178 → 0.11984047856430707`；M-IDX-10 SQL/params/值逐字不变；C-REP-01 不变；**其它 case 值变化 0 条** |
+| 新参数 | M-IDX-09 的 SQL 带 `pay_time < %(window_end_repurchase_rate_90d)s`，参数值 `2026-08-30`（= 06-01 + 90 天） |
+| 等价/终态 | 等价 **50 不变**；终态 116/28/16/3/3 逐格不变；M-IDX-09/10 **仍不等价**（gold 整除=0） |
+| 实现位置 | 纯函数 + `gate1_ast` 在 `run_gate1` **之前**改写（repair 也回本节点）；上界走绑定参数（N-04）；无法强制 ⇒ `refuse(no_data_asset)` + `reason_code=metric_window_unenforceable` |
+
+**残余（记录）**：① `MetricWindowError` 的**节点级**拒答路径目前只有纯函数测试，没有节点级测试（W76-3 补）；② 起点在某 SELECT、上界在另一层嵌套 SELECT 的拆分形态未覆盖（当前数据无）；③ 若一次查询同时声明带 window 与不带 window 的指标，窗口会作用于共享的时间基准（当前无此组合）；④ 只支持 day/week（月/季/年 fail-closed）。
+
+### 97.3 W75-2 零列守卫：收【实测】
+
+`_extra_column_pairs` 增加 `len(gold.columns)==0` 直接拒；新增 2 条测试；W74-2 原 7 条全部复跑；delta 里的 `w75_2_zero_column_probe` 实测 `equivalent=false`，note 明确。replay 166 无该形态，读数不变。
+
+### 97.4 W75-3 当前门禁复算：收【实测；不是官方快照】
+
+我核了产物逐格：**0 PASS｜3 PARTIAL｜5 UNVERIFIED**。
+
+| 格 | 当前 | 新鲜度 | 读数 |
+|---|---|---|---|
+| G-1 | PARTIAL | fresh | unit+eval+contract 2680 passed；**集成层未跑** ⇒ 不构成完整证据（官方 PASS 过期） |
+| G-2 | UNVERIFIED | fresh | easy×low **8/8 = 100%**（τ） |
+| G-3 | PARTIAL | STALE | 放行 0 / 覆盖 48（应拦 50） |
+| G-4 | PARTIAL | STALE | 跨租户 0；PG RLS 未验证 |
+| G-5 | UNVERIFIED | fresh | 该拒 24/24；误拒 **3/124 = 2.4%**（τ） |
+| G-6 | UNVERIFIED | STALE | P95 7268ms，分母未标注 |
+| G-7 | UNVERIFIED | fresh | system vs authority **13/13**（τ） |
+| G-8 | UNVERIFIED | fresh | 澄清率 **16/166 = 9.6%**；二轮未开 |
+
+官方 `eval_metrics.json` 未动（产物里 `official_snapshot_untouched` 明写）。**G-1 从旧 PASS 降为 PARTIAL 是对的**——集成层没跑，不能算 P0 全过。
+
+### 97.5 W75-4 成本估算：收【实测】
+
+| 项 | 估算 |
+|---|---|
+| τ 子集（29 条 × 3 批） | 267 calls / 2.44M tokens / **¥0.80**（含 30% 余量 ¥1.04） |
+| τ 全批（166 × 3） | 1527 calls / 10.94M tokens / ¥3.26（余量 ¥4.23）——**不建议**：候选面只能产出这 29 条，全批只是重跑同一批 |
+| τ 硬上限建议 | **¥2.50 / 3.5M tokens / 350 calls**，超限即停 |
+| 维度 C1+A | 改提示词 ⇒ **全批 509 calls / 3.65M tokens / ¥1.09**（余量 ¥1.41）；只重录 6 条不成立（其余 160 条键也变） |
+
+我核过基数：r75 summary 的 tokens/¥ 与估算同源；29 条命中率 24.4%（119 条有 L4 打分子、29 条金标命中），与 W73 的观察一致。
+
+### 97.6 我的决定（总控授权，不再问）
+
+| # | 决定 | 理由 |
+|---|---|---|
+| D-W76-1 | **开跑 τ 校准（限量真打）**：29 条 × 3 批，硬上限 **¥2.50 / 3.5M tokens / 350 calls**；超限立即停、如实报已花额度、**不得重试刷点** | τ 是当前唯一能同时解锁 G-2/G-5/G-7 的杠杆；实测代理成本 ¥0.80，控制在总控"控制成本"的授权内。`deploy/.env` 已有新 key（我检查了前缀存在且未入库） |
+| D-W76-2 | **维度 C1+A 仍不执行** | 只为 M-DIM-05 一条，且要让全批 509 次 plan 调用失效并重录（¥1.09＋重建基线）；G-5 2.4% 已达标，不阻塞收口 |
+| D-W76-3 | **E-MET-08 维持原样**（上一轮决定，继续有效） | 不改判据、不刷绿 |
+| D-W76-4 | G-8 只做**设计＋成本估算**，不实装 | 二轮回路是下一个功能型卡点，先把状态机/字段/分母/重录成本写清 |
+| D-W76-5 | 官方门禁**仍不刷新** | G-1/G-3/G-4/G-6/G-8 未齐，τ 后也只解锁三格 |
+
+### 97.7 当前收口路径（τ 之后）
+
+τ 若成功选出并被门禁采纳：G-2/G-5/G-7 可从 UNVERIFIED 变为 PASS（仍需 τ 证据绑定；官方快照不刷）。之后剩余：
+
+1. **G-1**：跑集成层（PG/Redis）→ 才有完整 P0 证据。
+2. **G-3 / G-4**：2 条成本闸门用例 + PG RLS 真实执行链验证。
+3. **G-6**：W7 压测重跑（有合格分母）。
+4. **G-8**：二轮回路 + 重录 + 澄清后成功率。
+5. secrets 57/51/94 处置、U-127 闭环、G-1 换读数后由 W8 刷新官方快照。
+
+### 97.8 W76 派单
+
+```text
+【W8 第 76 轮｜τ 校准（限量真打）+ G-8 二轮设计 + 小补】
+
+0. 前置：现读 HEAD；证据绑 git_rev+dirty=false；不碰 reports/qa/**；不 git add -A；
+   .workbuddy/ 不入库；不改 gold/冻结集/语义包/prompt/gates 阈值；不刷官方门禁。
+   🔴 总控授权（QA 决定）：τ 真打硬上限 ¥2.50 / 3.5M tokens / 350 calls；只跑 29 条 × 3 批；
+      超限立即停并报已花额度；不得为追结果重试。key 在 deploy/.env（未入库）。
+
+1. 🔴 W76-1 τ 校准（先零出站补 schema，再限量真打）
+- schema 补齐：① case 级 calibration/holdout split（种子/规则先写死，禁止采样后调）
+  ② runner 逐 case 记录 `binding_layer` 分布 ③ `batch_id`（3 次独立批次可区分）
+  ④ 候选覆盖面与 gold 命中率照录。
+- 真打：29 条 × 3 批；逐批落 tokens/¥/calls；越过硬上限立即停。
+- 产物：3 批 tau_raw + calibration report；`is_finalizable=false` 时如实写缺哪条，不得硬选 τ。
+- 若选出 τ：只复算 G-2/G-5/G-7 三格（给出 PASS/FAIL/UNVERIFIED 与证据），官方快照仍不动。
+- 红线：不得改 gold/冻结集/语义包/G-8；不得调阈值；不得重试刷点。
+
+2. 🟡 W76-2 G-8 二轮回路设计＋成本估算（只出材料，不实装）
+- 现状 16/166=9.6%、second-round 未实现、澄清后一次成功 0.0%。
+- 出：状态机/所需字段/评测分母/需重录请求数/¥估算；不改代码、不真打。
+
+3. 🟢 W76-3 小补（零出站）
+- metric_window 拒答路径的节点级测试：MetricWindowError → refuse(no_data_asset,
+  reason_code=metric_window_unenforceable) 且路由正确；不改行为。
+- 在 docstring 记录两条 latent：起点/上界跨嵌套 SELECT；未声明 window 的指标可能被同基准窗口连带。
+
+4. 不做：不改 gold/冻结集/语义包/prompt；不跑维度重录；不扩 L4；不改 G-8；不刷门禁。
+```
+
+### 97.9 边界
+
+本窗零出站、零写库（沙箱 `mode=ro`）；只追加 `reports/qa/**`；未动产品代码／测试／语义包／冻结集／判据；官方门禁仍 `88f3500`／PASS 1/8。
