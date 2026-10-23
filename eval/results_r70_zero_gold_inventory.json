@@ -1,0 +1,462 @@
+{
+  "provenance": "W70 零出站材料（r66 重放 + r63 匣带 + 语义包 + 冻结集 + 沙箱 sqlite；tokens 计费 = 0）",
+  "task": "W70-3 空金标盘点（只出事实 + 影响面；不改判据、不标 unscored、不剔分母）",
+  "generated_at": "2026-10-23T05:09:32+00:00",
+  "git_rev": "b26afa8",
+  "git_dirty": false,
+  "headline": {
+    "n_zero_gold": 15,
+    "reason_classes": {
+      "gold_字面与数据不匹配": 3,
+      "数据覆盖缺口（城市）": 12
+    },
+    "terminal_split": {
+      "complete": 9,
+      "clarify": 6
+    },
+    "verdict": "15 条空金标全部可归因于**数据/字面**：12 条城市不在 T_A、3 条 gold 品类字面错误（'3C数码-子类1' 数据里不存在）。没有一条是「视图空」或「过滤过严」；与 on_sale 口径无关（详见 W70-1 沙箱双版本跑）。"
+  },
+  "cases": [
+    {
+      "case_id": "M-HIER-04",
+      "question": "3C数码下一级各子类的商品数分别是多少？",
+      "difficulty": [
+        "medium",
+        "medium"
+      ],
+      "expected": "execute",
+      "terminal": "complete",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE category_l1 = '3C数码-子类1' GROUP BY category_l2",
+      "gold_predicates": [
+        "category_l1"
+      ],
+      "reason_class": "gold_字面与数据不匹配",
+      "reason_detail": "gold 过滤 category_l1='3C数码-子类1'，沙箱该列实际值为 '3C数码'（「-」后是 case_library 里自造的后缀）⇒ 该品类有数据但字面错"
+    },
+    {
+      "case_id": "M-HIER-05",
+      "question": "家用电器下一级各子类的商品数分别是多少？",
+      "difficulty": [
+        "medium",
+        "medium"
+      ],
+      "expected": "execute",
+      "terminal": "complete",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE category_l1 = '家用电器-子类1' GROUP BY category_l2",
+      "gold_predicates": [
+        "category_l1"
+      ],
+      "reason_class": "gold_字面与数据不匹配",
+      "reason_detail": "gold 过滤 category_l1='家用电器-子类1'，沙箱该列实际值为 '家用电器'（「-」后是 case_library 里自造的后缀）⇒ 该品类有数据但字面错"
+    },
+    {
+      "case_id": "M-HIER-06",
+      "question": "服饰鞋包下一级各子类的商品数分别是多少？",
+      "difficulty": [
+        "medium",
+        "medium"
+      ],
+      "expected": "execute",
+      "terminal": "complete",
+      "gold_sql": "SELECT category_l2, COUNT(*) FROM v_product WHERE category_l1 = '服饰鞋包-子类1' GROUP BY category_l2",
+      "gold_predicates": [
+        "category_l1"
+      ],
+      "reason_class": "gold_字面与数据不匹配",
+      "reason_detail": "gold 过滤 category_l1='服饰鞋包-子类1'，沙箱该列实际值为 '服饰鞋包'（「-」后是 case_library 里自造的后缀）⇒ 该品类有数据但字面错"
+    },
+    {
+      "case_id": "H-STR-01",
+      "question": "T_A 位于广州的店铺各有多少个商品？",
+      "difficulty": [
+        "hard",
+        "low"
+      ],
+      "expected": "execute",
+      "terminal": "clarify",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '广州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gold_predicates": [
+        "city",
+        "on_sale"
+      ],
+      "reason_class": "数据覆盖缺口（城市）",
+      "reason_detail": "该城市在 T_A 无店铺（或属他租户）⇒ 与 on_sale / 过滤松严无关"
+    },
+    {
+      "case_id": "H-STR-02",
+      "question": "T_A 位于杭州的店铺各有多少个商品？",
+      "difficulty": [
+        "hard",
+        "low"
+      ],
+      "expected": "execute",
+      "terminal": "clarify",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '杭州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gold_predicates": [
+        "city",
+        "on_sale"
+      ],
+      "reason_class": "数据覆盖缺口（城市）",
+      "reason_detail": "该城市在 T_A 无店铺（或属他租户）⇒ 与 on_sale / 过滤松严无关"
+    },
+    {
+      "case_id": "H-STR-03",
+      "question": "T_A 位于成都的店铺各有多少个商品？",
+      "difficulty": [
+        "hard",
+        "low"
+      ],
+      "expected": "execute",
+      "terminal": "clarify",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '成都市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gold_predicates": [
+        "city",
+        "on_sale"
+      ],
+      "reason_class": "数据覆盖缺口（城市）",
+      "reason_detail": "该城市在 T_A 无店铺（或属他租户）⇒ 与 on_sale / 过滤松严无关"
+    },
+    {
+      "case_id": "H-STR-04",
+      "question": "T_A 位于武汉的店铺各有多少个商品？",
+      "difficulty": [
+        "hard",
+        "low"
+      ],
+      "expected": "execute",
+      "terminal": "clarify",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '武汉市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gold_predicates": [
+        "city",
+        "on_sale"
+      ],
+      "reason_class": "数据覆盖缺口（城市）",
+      "reason_detail": "该城市在 T_A 无店铺（或属他租户）⇒ 与 on_sale / 过滤松严无关"
+    },
+    {
+      "case_id": "H-STR-06",
+      "question": "T_A 位于西安的店铺各有多少个商品？",
+      "difficulty": [
+        "hard",
+        "low"
+      ],
+      "expected": "execute",
+      "terminal": "clarify",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '西安市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gold_predicates": [
+        "city",
+        "on_sale"
+      ],
+      "reason_class": "数据覆盖缺口（城市）",
+      "reason_detail": "该城市在 T_A 无店铺（或属他租户）⇒ 与 on_sale / 过滤松严无关"
+    },
+    {
+      "case_id": "H-STR-07",
+      "question": "T_A 位于长沙的店铺各有多少个商品？",
+      "difficulty": [
+        "hard",
+        "low"
+      ],
+      "expected": "execute",
+      "terminal": "clarify",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '长沙市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "gold_predicates": [
+        "city",
+        "on_sale"
+      ],
+      "reason_class": "数据覆盖缺口（城市）",
+      "reason_detail": "该城市在 T_A 无店铺（或属他租户）⇒ 与 on_sale / 过滤松严无关"
+    },
+    {
+      "case_id": "X-STR-01",
+      "question": "T_A 在 广州市 的店铺各 SKU 浏览量合计是多少？",
+      "difficulty": [
+        "extra",
+        "low"
+      ],
+      "expected": "execute",
+      "terminal": "complete",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '广州市' GROUP BY v_product.sku_id",
+      "gold_predicates": [
+        "city"
+      ],
+      "reason_class": "数据覆盖缺口（城市）",
+      "reason_detail": "该城市在 T_A 无店铺（或属他租户）⇒ 与 on_sale / 过滤松严无关"
+    },
+    {
+      "case_id": "X-STR-02",
+      "question": "T_A 在 杭州市 的店铺各 SKU 浏览量合计是多少？",
+      "difficulty": [
+        "extra",
+        "low"
+      ],
+      "expected": "execute",
+      "terminal": "complete",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '杭州市' GROUP BY v_product.sku_id",
+      "gold_predicates": [
+        "city"
+      ],
+      "reason_class": "数据覆盖缺口（城市）",
+      "reason_detail": "该城市在 T_A 无店铺（或属他租户）⇒ 与 on_sale / 过滤松严无关"
+    },
+    {
+      "case_id": "X-STR-03",
+      "question": "T_A 在 成都市 的店铺各 SKU 浏览量合计是多少？",
+      "difficulty": [
+        "extra",
+        "low"
+      ],
+      "expected": "execute",
+      "terminal": "complete",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '成都市' GROUP BY v_product.sku_id",
+      "gold_predicates": [
+        "city"
+      ],
+      "reason_class": "数据覆盖缺口（城市）",
+      "reason_detail": "该城市在 T_A 无店铺（或属他租户）⇒ 与 on_sale / 过滤松严无关"
+    },
+    {
+      "case_id": "X-STR-04",
+      "question": "T_A 在 武汉市 的店铺各 SKU 浏览量合计是多少？",
+      "difficulty": [
+        "extra",
+        "low"
+      ],
+      "expected": "execute",
+      "terminal": "complete",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '武汉市' GROUP BY v_product.sku_id",
+      "gold_predicates": [
+        "city"
+      ],
+      "reason_class": "数据覆盖缺口（城市）",
+      "reason_detail": "该城市在 T_A 无店铺（或属他租户）⇒ 与 on_sale / 过滤松严无关"
+    },
+    {
+      "case_id": "X-STR-06",
+      "question": "T_A 在 西安市 的店铺各 SKU 浏览量合计是多少？",
+      "difficulty": [
+        "extra",
+        "low"
+      ],
+      "expected": "execute",
+      "terminal": "complete",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '西安市' GROUP BY v_product.sku_id",
+      "gold_predicates": [
+        "city"
+      ],
+      "reason_class": "数据覆盖缺口（城市）",
+      "reason_detail": "该城市在 T_A 无店铺（或属他租户）⇒ 与 on_sale / 过滤松严无关"
+    },
+    {
+      "case_id": "X-STR-07",
+      "question": "T_A 在 长沙市 的店铺各 SKU 浏览量合计是多少？",
+      "difficulty": [
+        "extra",
+        "low"
+      ],
+      "expected": "execute",
+      "terminal": "complete",
+      "gold_sql": "SELECT v_product.sku_id, SUM(v_traffic_daily.pv) FROM v_traffic_daily JOIN v_product ON v_traffic_daily.sku_id = v_product.sku_id JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '长沙市' GROUP BY v_product.sku_id",
+      "gold_predicates": [
+        "city"
+      ],
+      "reason_class": "数据覆盖缺口（城市）",
+      "reason_detail": "该城市在 T_A 无店铺（或属他租户）⇒ 与 on_sale / 过滤松严无关"
+    }
+  ],
+  "impact_if_unscored": [
+    {
+      "cell": [
+        "easy",
+        "high"
+      ],
+      "n": 10,
+      "passed": 1,
+      "rate": 0.1,
+      "zero_gold_n": 0,
+      "zero_gold_passed": 0,
+      "after_unscored": {
+        "n": 10,
+        "passed": 1,
+        "rate": 0.1
+      }
+    },
+    {
+      "cell": [
+        "easy",
+        "low"
+      ],
+      "n": 8,
+      "passed": 8,
+      "rate": 1.0,
+      "zero_gold_n": 0,
+      "zero_gold_passed": 0,
+      "after_unscored": {
+        "n": 8,
+        "passed": 8,
+        "rate": 1.0
+      }
+    },
+    {
+      "cell": [
+        "easy",
+        "medium"
+      ],
+      "n": 10,
+      "passed": 5,
+      "rate": 0.5,
+      "zero_gold_n": 0,
+      "zero_gold_passed": 0,
+      "after_unscored": {
+        "n": 10,
+        "passed": 5,
+        "rate": 0.5
+      }
+    },
+    {
+      "cell": [
+        "extra",
+        "high"
+      ],
+      "n": 12,
+      "passed": 0,
+      "rate": 0.0,
+      "zero_gold_n": 0,
+      "zero_gold_passed": 0,
+      "after_unscored": {
+        "n": 12,
+        "passed": 0,
+        "rate": 0.0
+      }
+    },
+    {
+      "cell": [
+        "extra",
+        "low"
+      ],
+      "n": 8,
+      "passed": 7,
+      "rate": 0.875,
+      "zero_gold_n": 6,
+      "zero_gold_passed": 6,
+      "after_unscored": {
+        "n": 2,
+        "passed": 1,
+        "rate": 0.5
+      }
+    },
+    {
+      "cell": [
+        "extra",
+        "medium"
+      ],
+      "n": 8,
+      "passed": 1,
+      "rate": 0.125,
+      "zero_gold_n": 0,
+      "zero_gold_passed": 0,
+      "after_unscored": {
+        "n": 8,
+        "passed": 1,
+        "rate": 0.125
+      }
+    },
+    {
+      "cell": [
+        "hard",
+        "high"
+      ],
+      "n": 10,
+      "passed": 0,
+      "rate": 0.0,
+      "zero_gold_n": 0,
+      "zero_gold_passed": 0,
+      "after_unscored": {
+        "n": 10,
+        "passed": 0,
+        "rate": 0.0
+      }
+    },
+    {
+      "cell": [
+        "hard",
+        "low"
+      ],
+      "n": 9,
+      "passed": 1,
+      "rate": 0.1111,
+      "zero_gold_n": 6,
+      "zero_gold_passed": 0,
+      "after_unscored": {
+        "n": 3,
+        "passed": 1,
+        "rate": 0.3333
+      }
+    },
+    {
+      "cell": [
+        "hard",
+        "medium"
+      ],
+      "n": 9,
+      "passed": 0,
+      "rate": 0.0,
+      "zero_gold_n": 0,
+      "zero_gold_passed": 0,
+      "after_unscored": {
+        "n": 9,
+        "passed": 0,
+        "rate": 0.0
+      }
+    },
+    {
+      "cell": [
+        "medium",
+        "high"
+      ],
+      "n": 16,
+      "passed": 4,
+      "rate": 0.25,
+      "zero_gold_n": 0,
+      "zero_gold_passed": 0,
+      "after_unscored": {
+        "n": 16,
+        "passed": 4,
+        "rate": 0.25
+      }
+    },
+    {
+      "cell": [
+        "medium",
+        "low"
+      ],
+      "n": 12,
+      "passed": 7,
+      "rate": 0.5833,
+      "zero_gold_n": 0,
+      "zero_gold_passed": 0,
+      "after_unscored": {
+        "n": 12,
+        "passed": 7,
+        "rate": 0.5833
+      }
+    },
+    {
+      "cell": [
+        "medium",
+        "medium"
+      ],
+      "n": 9,
+      "passed": 2,
+      "rate": 0.2222,
+      "zero_gold_n": 3,
+      "zero_gold_passed": 0,
+      "after_unscored": {
+        "n": 6,
+        "passed": 2,
+        "rate": 0.3333
+      }
+    }
+  ],
+  "g2_note": "G-2 只看 easy×low 格：该格 8/8 PASS，且 15 条空金标**无一落在此格** ⇒ 标 unscored 不影响 G-2 判定"
+}

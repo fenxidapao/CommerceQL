@@ -7327,3 +7327,94 @@ eval/results_r69_equiv_empty_degeneracy.json            W69-3
 * 未碰：`reports/qa/**`、冻结集/gold/判据/15s/30s/dense.py/semantic 正式包、
   G-8 二轮、L4 候选面、等价判据、官方门禁（仍 `88f3500`/PASS 1/8）；
 * 未 `git add -A`；`.workbuddy/` 与 `.env` 未入库。
+
+---
+
+## 75 W70：C 类 gold-vs-包物证 + A 类三分法 + 空金标盘点（全程零出站）
+
+派单：W70（2026-10-23 13:05）｜起跑 HEAD `b26afa8`｜**tokens = 0，零出站**。
+
+### 75.1 W70-1 C 类 8 条物证 —— 🔴 派单前提在沙箱上不成立
+
+`eval/results_r70_c_gold_vs_bundle.json`（rev=b26afa8/dirty=False）。
+
+* 包内引用：`product_cnt` L728（expression L730 `COUNT(*)`、definition_note L733-737
+  「不区分上/下架」、synonyms L744）；`on_sale_product_cnt` L748（expression L750
+  `COUNT(*) WHERE on_sale = true`、synonyms L766）；`spu_cnt` L790。
+* **沙箱双版本实跑（每格都跑了，不是推断）**：`gold_rows_T_A` / 去掉 on_sale 的
+  `no_on_sale_rows_T_A` / 无租户过滤的 raw 两列：
+
+| case | 城市 | T_A gold | T_A 去 on_sale | raw gold | raw 去 on_sale | 空→非空 |
+|---|---|---|---|---|---|---|
+| H-STR-01 | 广州 | 0 | 0 | 0 | 0 | 否 |
+| H-STR-02 | 杭州 | 0 | 0 | 1（T_B-S03） | 1 | 否 |
+| H-STR-03 | 成都 | 0 | 0 | 0 | 0 | 否 |
+| H-STR-04 | 武汉 | 0 | 0 | 0 | 0 | 否 |
+| H-STR-05 | 南京 | 1 | 1 | 1 | 1 | 否 |
+| H-STR-06 | 西安 | 0 | 0 | 0 | 0 | 否 |
+| H-STR-07 | 长沙 | 0 | 0 | 0 | 0 | 否 |
+| H-STR-08 | 郑州 | 1 | 1 | 1 | 1 | 否 |
+
+* **结论（照实说，与派单前提相反）**：改 gold 为 `COUNT(*)`（去 on_sale）后，
+  **8 条里没有任何一条从空变非空**。成因是数据：广州/成都/武汉/西安/长沙在 T_A 根本
+  没有店铺（沙箱 12 店只有 5 个 T_A 城市），杭州的店属 T_B（租户隔离）。
+  on_sale 口径差真实存在（南京 369 vs 400、郑州 377 vs 400），**但不是 0/8 的主因**；
+  W68 live 里这两条的 diff 实测是**列数**（预测多 shop_name）。
+* 🔴 **比"gold vs 包"更硬的物证：gold 内部口径分裂**。同一措辞「商品数」：
+  `M-DIM-07/09`、`M-HIER-04/05/06` 的 gold 用 `COUNT(*)`（全量），
+  `H-CAT-01…05` 与 H-STR 族用 `COUNT(*) + on_sale=1`。⇒ 即使把包改向任一侧，
+  都会与另一侧 gold 冲突。
+* **改 synonyms 的波及面（只列不改）**：裸「商品数」题 10 条 —— `H-CAT-01…05` 的 gold
+  已是 on_sale（迁移后自洽）、`M-DIM-07/09`、`M-HIER-04/05/06` 的 gold 是全量（迁移后冲突）。
+  另：迁移后 `product_cnt` 将失去全部裸同义词（只剩 SKU数/款式数/货品数），
+  「全量商品数」再无能命中的词；`spu_cnt` 不受影响。
+
+### 75.2 W70-2 A 类 10 条三分法 —— 6 改 expected / 4 改系统
+
+`eval/results_r70_a_three_way.json`（rev=b26afa8/dirty=False；实际 SQL 与缺闸门沿用 W68-3，未重做）。
+
+| case | 判定 | 依据（包内行号 / 系统行为） | 破匣带 | 重基线 |
+|---|---|---|---|---|
+| C-GMV-01 本月 | 改 expected | L1510 alias 本月→this_month（唯一） | 否 | 是 |
+| C-GMV-02 上个月 | 改 expected（次选改包加回显） | L1512 alias + L1605 明文窗口 | 否 | 是 |
+| C-GMV-03 最近 | **改系统** | 包内无 alias；plan LLM 自填 `rolling:7d_incl_today` 且 blocking=[] | 否 | 是 |
+| C-GMV-04 最近一周 | **改系统** | 包内无；系统自选 `date_trunc('week')` 周起点 | 否 | 是 |
+| C-RATE-01 退款率 | 改 expected | L580 金额口径 + 明文「单量须另立 refund_rate_qty」 | 否 | 是 |
+| C-RATE-02 退货率 | 改 expected | L580 synonyms 含「退货率」⇒ 映射已存在 | 否 | 是 |
+| C-REP-01 复购率 | 改 expected | L603 固定 90d + 明文「不接受运行时改窗口」 | 否 | 是 |
+| C-REP-02 复购情况 | **改系统** | 开放式问法无维度无窗口（包固定 90d 也答不了「情况」） | 否 | 是 |
+| C-UV-02 总访客数 | **改系统** | L626 明文「跨日累加会重复计数；uv_period 未定义**不得生成**」，实测 SQL 正是 SUM(uv) | 否 | 是 |
+| C-AOV-01 客单价 | 改 expected | L535 分母=支付子订单数，包未要求时间窗 | 否 | 是 |
+
+* 三处对 W68-3 的更正：① C-RATE-02 的 `term_mapping_unknown` 判定不准确（包内已有
+  `退货率→refund_rate`）；② C-UV-02 性质更硬（包内明文禁止生成未定义指标）；
+  ③ C-GMV-03 不是"无定义"这么简单 —— plan LLM 会自填 rolling 窗口且不报 blocking（静默默认缺陷）。
+* 成本口径：改 expected = 冻结集变更（重封印 + 重基线，不碰代码⇒不破匣带）；
+  改系统 = 只动 timeexpr/request_policy 判定（不破匣带，行为变⇒重基线）；
+  改包 = prompt 变 ⇒ 匣带全 miss + 重基线。
+
+### 75.3 W70-3 空金标盘点 —— 15 条全部可归因于数据/字面
+
+`eval/results_r70_zero_gold_inventory.json`（rev=b26afa8/dirty=False）。
+
+* 15 条 = `数据覆盖缺口（城市）12` + `gold_字面与数据不匹配 3`；按终态：complete 9 / clarify 6。
+  - 城市 12：H-STR-01/02/03/04/06/07 + X-STR-01/02/03/04/06/07（同 6 个城市）；
+  - **gold 字面错误 3**：`M-HIER-04/05/06` 的 gold 写 `category_l1 = '3C数码-子类1'`，
+    而沙箱实际值是 `'3C数码'`（该品类 244 行存在）—— 是 case_library L194 自造后缀的字面缺陷；
+  - **无一条**是「视图空」或「过滤过严」。
+* 若标 unscored 的影响面（只算不改）：`easy×low`（G-2 格）8/8 **不受影响（0 条在此格）**；
+  `extra×low` 8→2（87.5%→50%）、`hard×low` 9→3（11.1%→33.3%）、
+  `medium×medium` 9→6（22.2%→33.3%）。
+  ⇒ 双空退化的"白送通过"实际落在 `extra×low` 格（6 条 X-STR 全判等价），不在门禁格。
+
+### 75.4 边界
+
+```
+eval/w70_accounts.py                          新增：W70 三件零出站材料脚本
+eval/results_r70_c_gold_vs_bundle.json        W70-1
+eval/results_r70_a_three_way.json             W70-2
+eval/results_r70_zero_gold_inventory.json     W70-3
+```
+
+* 未改：语义包 / gold / 冻结集 / 判据 / 等价判据 / 代码 / `reports/qa/**` / `.workbuddy/`；
+  未标 unscored、未剔分母；未刷门禁（仍 `88f3500`/PASS 1/8）。

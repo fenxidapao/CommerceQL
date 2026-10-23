@@ -1,0 +1,227 @@
+{
+  "provenance": "W70 零出站材料（r66 重放 + r63 匣带 + 语义包 + 冻结集 + 沙箱 sqlite；tokens 计费 = 0）",
+  "task": "W70-2 A 类 10 条逐条三分法（只出材料：不改 expected / 不改包 / 不改系统）",
+  "generated_at": "2026-10-23T05:09:32+00:00",
+  "git_rev": "b26afa8",
+  "git_dirty": false,
+  "headline": {
+    "n_cases": 10,
+    "judgment_counts": {
+      "改 expected": 6,
+      "改系统": 4
+    },
+    "verdict": "10 条里 6 条判「改 expected」（包内已有唯一口径或明文映射：本月/上个月/退款率/退货率/复购率/客单价）、4 条判「改系统」（最近/最近一周/开放式复购/总访客数 —— 包内无定义或包内明文禁止生成未定义指标）。三分法不替总控做选择，只标出每条的最短改动路径与成本。",
+    "cost_summary": {
+      "改 expected（6 条）": "改冻结集 ⇒ 重封印 + 重基线；不动代码 ⇒ 不破匣带",
+      "改系统（4 条）": "只改 timeexpr/request_policy 判定 ⇒ 不破匣带，但行为变 ⇒ 重基线",
+      "改包（0 条主判，仅 C-GMV-03/04、C-UV-02 的可选路径）": "包变 ⇒ prompt 变 ⇒ 匣带全 miss + 重基线"
+    }
+  },
+  "corrections_to_w68_3": [
+    "C-RATE-02：包 refund_rate synonyms 含「退货率」⇒ 术语映射已存在，W68-3 的 term_mapping_unknown 判定不准确",
+    "C-UV-02：包内 uv 明文「跨日累加会重复计数 + uv_period 未定义不得生成」⇒ 缺闸门性质更硬",
+    "C-GMV-03：缺窗口不是「无定义」这么简单 —— plan LLM 会自填 rolling:7d 且不报 blocking，属静默默认缺陷"
+  ],
+  "cases": [
+    {
+      "case_id": "C-GMV-01",
+      "question": "本月的 GMV 是多少？",
+      "judgment": "改 expected",
+      "basis": "包 L1510 明文 alias 本月→relative:this_month（唯一口径）；系统按包执行未自造窗口",
+      "evidence": {
+        "bundle_declared": true,
+        "explicit_window": true,
+        "system_silent_default": false
+      },
+      "counter_consideration": "若产品坚持「本月=最近 30 天」，那是另一个指标，须改包新增 alias（与字面冲突）",
+      "cost": {
+        "changes_frozen_set": true,
+        "changes_bundle": false,
+        "changes_code": false,
+        "breaks_cassette": false,
+        "needs_rebaseline": true
+      },
+      "reuse": "实际 SQL / 缺哪类闸门来自 W68-3 results_r68_clarify_completeness.json（未重做）"
+    },
+    {
+      "case_id": "C-GMV-02",
+      "question": "上个月的销售额是多少？",
+      "judgment": "改 expected（首选）/ 改包加回显（次选）",
+      "basis": "包 L1512 alias 上个月→relative:last_month + L1605 明文窗口定义；回显确认是体验项而非口径必需",
+      "evidence": {
+        "bundle_declared": true,
+        "explicit_window": true,
+        "system_silent_default": false
+      },
+      "counter_consideration": "若要求「先回显再答」，属新增闸门（改包 + 改系统），成本高于改 expected",
+      "cost": {
+        "changes_frozen_set": true,
+        "changes_bundle": true,
+        "changes_code": false,
+        "breaks_cassette": true,
+        "needs_rebaseline": true
+      },
+      "reuse": "实际 SQL / 缺哪类闸门来自 W68-3 results_r68_clarify_completeness.json（未重做）"
+    },
+    {
+      "case_id": "C-GMV-03",
+      "question": "最近的 GMV 怎么样？",
+      "judgment": "改系统",
+      "basis": "包内无「最近」alias；plan LLM 自填 time_range=rolling:7d_incl_today 且 blocking_issues=[]（r63 匣带 plan 响应原文）⇒ 静默默认必须改成澄清",
+      "evidence": {
+        "bundle_declared": false,
+        "explicit_window": false,
+        "system_silent_default": true
+      },
+      "counter_consideration": "也可改包定义「最近=近 7 天」（产品决策），但那需要重基线",
+      "cost": {
+        "changes_frozen_set": false,
+        "changes_bundle": false,
+        "changes_code": true,
+        "breaks_cassette": false,
+        "needs_rebaseline": true
+      },
+      "reuse": "实际 SQL / 缺哪类闸门来自 W68-3 results_r68_clarify_completeness.json（未重做）"
+    },
+    {
+      "case_id": "C-GMV-04",
+      "question": "最近一周的 GMV 环比是多少？",
+      "judgment": "改系统",
+      "basis": "包内无「最近一周」；系统自选 date_trunc('week', CURRENT_DATE) 周起点 ⇒ 起点未定却出数",
+      "evidence": {
+        "bundle_declared": false,
+        "explicit_window": false,
+        "system_silent_default": true
+      },
+      "counter_consideration": "周起点包内虽有 week_starts_on，但「最近一周」不等于「本周」",
+      "cost": {
+        "changes_frozen_set": false,
+        "changes_bundle": false,
+        "changes_code": true,
+        "breaks_cassette": false,
+        "needs_rebaseline": true
+      },
+      "reuse": "实际 SQL / 缺哪类闸门来自 W68-3 results_r68_clarify_completeness.json（未重做）"
+    },
+    {
+      "case_id": "C-RATE-01",
+      "question": "退款率是多少？",
+      "judgment": "改 expected",
+      "basis": "包 refund_rate（L580）表达式=金额口径，definition_note 明文「若要单量口径须另立 refund_rate_qty（P1）」⇒ 包内唯一口径，直答正确",
+      "evidence": {
+        "bundle_declared": true,
+        "explicit_window": false,
+        "system_silent_default": false
+      },
+      "counter_consideration": "若产品要在答案里披露口径，属展示层改进，不必走澄清",
+      "cost": {
+        "changes_frozen_set": true,
+        "changes_bundle": false,
+        "changes_code": false,
+        "breaks_cassette": false,
+        "needs_rebaseline": true
+      },
+      "reuse": "实际 SQL / 缺哪类闸门来自 W68-3 results_r68_clarify_completeness.json（未重做）"
+    },
+    {
+      "case_id": "C-RATE-02",
+      "question": "退货率最高的商品是哪个？",
+      "judgment": "改 expected",
+      "basis": "包 refund_rate synonyms 含「退货率」（L580 块）⇒ 术语映射**已存在**；W68-3 记的 term_mapping_unknown 判定需更正",
+      "evidence": {
+        "bundle_declared": true,
+        "explicit_window": false,
+        "system_silent_default": false
+      },
+      "counter_consideration": "若业务认为「退货」与「退款」应分开（单据类型不同），须改包拆指标",
+      "cost": {
+        "changes_frozen_set": true,
+        "changes_bundle": false,
+        "changes_code": false,
+        "breaks_cassette": false,
+        "needs_rebaseline": true
+      },
+      "reuse": "实际 SQL / 缺哪类闸门来自 W68-3 results_r68_clarify_completeness.json（未重做）"
+    },
+    {
+      "case_id": "C-REP-01",
+      "question": "复购率是多少？",
+      "judgment": "改 expected",
+      "basis": "包 repurchase_rate_90d（L603）周期固定 90 天、明文「不接受运行时改窗口」⇒ 唯一口径",
+      "evidence": {
+        "bundle_declared": true,
+        "explicit_window": true,
+        "system_silent_default": false
+      },
+      "counter_consideration": "「不含首单」是包内刻意默认，已在 definition_note 写明",
+      "cost": {
+        "changes_frozen_set": true,
+        "changes_bundle": false,
+        "changes_code": false,
+        "breaks_cassette": false,
+        "needs_rebaseline": true
+      },
+      "reuse": "实际 SQL / 缺哪类闸门来自 W68-3 results_r68_clarify_completeness.json（未重做）"
+    },
+    {
+      "case_id": "C-REP-02",
+      "question": "复购情况怎么样？",
+      "judgment": "改系统",
+      "basis": "开放式「怎么样」既无维度也无窗口；包内 repurchase 固定 90d 但无法回答「情况」⇒ 系统应澄清要哪个指标/维度，而非自选",
+      "evidence": {
+        "bundle_declared": false,
+        "explicit_window": false,
+        "system_silent_default": true
+      },
+      "counter_consideration": "也可在 request_policy 里把开放式问法判 open_analysis（拒答+替代问法）",
+      "cost": {
+        "changes_frozen_set": false,
+        "changes_bundle": false,
+        "changes_code": true,
+        "breaks_cassette": false,
+        "needs_rebaseline": true
+      },
+      "reuse": "实际 SQL / 缺哪类闸门来自 W68-3 results_r68_clarify_completeness.json（未重做）"
+    },
+    {
+      "case_id": "C-UV-02",
+      "question": "总访客数是多少？",
+      "judgment": "改系统（必须澄清）",
+      "basis": "包 uv（L626）明文「跨日直接累加会重复计数；uv_period（P1，本包未定义 → **未定义的指标不得被生成**）」；实测 SQL 正是 SUM(uv) 全期累加 ⇒ 违反包内明文",
+      "evidence": {
+        "bundle_declared": true,
+        "explicit_window": false,
+        "system_silent_default": true
+      },
+      "counter_consideration": "P1 落地 uv_period 后本条可改 expected=execute（改包）",
+      "cost": {
+        "changes_frozen_set": false,
+        "changes_bundle": false,
+        "changes_code": true,
+        "breaks_cassette": false,
+        "needs_rebaseline": true
+      },
+      "reuse": "实际 SQL / 缺哪类闸门来自 W68-3 results_r68_clarify_completeness.json（未重做）"
+    },
+    {
+      "case_id": "C-AOV-01",
+      "question": "客单价是多少？",
+      "judgment": "改 expected",
+      "basis": "包 aov（L535）分母=支付子订单数、definition_note 覆盖高危口径说明；包未要求时间窗",
+      "evidence": {
+        "bundle_declared": true,
+        "explicit_window": false,
+        "system_silent_default": false
+      },
+      "counter_consideration": "全期客单价业务上少见；若要强制窗口须改系统闸门（会波及其它指标）",
+      "cost": {
+        "changes_frozen_set": true,
+        "changes_bundle": false,
+        "changes_code": false,
+        "breaks_cassette": false,
+        "needs_rebaseline": true
+      },
+      "reuse": "实际 SQL / 缺哪类闸门来自 W68-3 results_r68_clarify_completeness.json（未重做）"
+    }
+  ]
+}

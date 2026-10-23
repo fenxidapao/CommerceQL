@@ -1,0 +1,289 @@
+{
+  "provenance": "W70 零出站材料（r66 重放 + r63 匣带 + 语义包 + 冻结集 + 沙箱 sqlite；tokens 计费 = 0）",
+  "task": "W70-1 C 类 8 条「gold vs 包」物证包（只出材料：不改包/gold/代码）",
+  "generated_at": "2026-10-23T05:09:32+00:00",
+  "git_rev": "b26afa8",
+  "git_dirty": false,
+  "bundle_refs": {
+    "file": "semantic/bundle_2026.09.14.1.yaml（版本身份 2026.10.16.2）",
+    "product_cnt": {
+      "name_line": 728,
+      "expression_line": 730,
+      "expression": "COUNT(*)",
+      "definition_note_lines": "733-737（不区分上/下架；time_basis=current）",
+      "synonyms_line": 744,
+      "synonyms": [
+        "商品数",
+        "商品数量",
+        "商品个数",
+        "SKU数",
+        "SKU数量",
+        "sku数",
+        "款式数",
+        "货品数"
+      ]
+    },
+    "on_sale_product_cnt": {
+      "name_line": 748,
+      "expression_line": 750,
+      "expression": "COUNT(*) WHERE on_sale = true",
+      "definition_note_lines": "757-761（谓词写进 expression 的理由）",
+      "synonyms_line": 766,
+      "synonyms": [
+        "在架商品数",
+        "在架商品",
+        "在售商品数",
+        "在售商品",
+        "上架商品数",
+        "在架SKU数",
+        "在售SKU数",
+        "在架商品个数"
+      ]
+    },
+    "off_sale_product_cnt": {
+      "name_line": 768,
+      "synonyms_line": 786
+    },
+    "spu_cnt": {
+      "name_line": 790,
+      "expression_line": 792,
+      "expression": "COUNT(DISTINCT product.spu_id) WHERE on_sale = true"
+    }
+  },
+  "sandbox_note": "沙箱 = data/ecom_sandbox.db（12 店：T_A 太原/长春/南京/福州/郑州，T_B 呼和浩特/哈尔滨/杭州/南昌，T_C 沈阳/上海/合肥）。gold 执行层带租户隔离 ⇒ 本表 `_T_A` 列在 SQL 里显式加 `v_shop.tenant_id='T_A'` 复刻。",
+  "honest_correction": "派单前提『8/8 预测 SQL 缺 AND v_product.on_sale = 1 ⇒ 0/8 等价是口径错』在沙箱上**不成立**：8 条里 6 条的城市在 T_A 根本不存在（去掉 on_sale 仍 0 行），第 7 条杭州属 T_B（租户隔离），只有南京/郑州两条有数据；而这两条的等价失败 diff 实测是**列数**（预测多 shop_name），不是 on_sale。on_sale 口径差真实存在（南京 369 vs 400、郑州 377 vs 400），但它不是 0/8 的主因。",
+  "per_case": [
+    {
+      "case_id": "H-STR-01",
+      "city": "广州市",
+      "city_tenant_in_sandbox": null,
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '广州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "sandbox": {
+        "gold_rows_T_A": 0,
+        "no_on_sale_rows_T_A": 0,
+        "empty_becomes_nonempty_after_dropping_on_sale": false,
+        "gold_rows_no_tenant_filter": 0,
+        "no_on_sale_rows_no_tenant_filter": 0
+      },
+      "conflict_points": [
+        "包 product_cnt（L728）expression=COUNT(*)、L733-737（不区分上/下架；time_basis=current） 明文「不区分上/下架」，与 gold 的 `AND v_product.on_sale = 1` 直接冲突",
+        "同一措辞「商品数」在 gold 内部就分裂：M-DIM-07/09、M-HIER-04/05/06 的 gold 用 COUNT(*) 无过滤，H-CAT-01…05 与本案族用 COUNT(*) + on_sale=1"
+      ],
+      "sandbox_verdict": "该城市在沙箱**不存在**（或属他租户）⇒ 去掉 on_sale 仍 0 行，空金标与 on_sale 无关"
+    },
+    {
+      "case_id": "H-STR-02",
+      "city": "杭州市",
+      "city_tenant_in_sandbox": "T_B",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '杭州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "sandbox": {
+        "gold_rows_T_A": 0,
+        "no_on_sale_rows_T_A": 0,
+        "empty_becomes_nonempty_after_dropping_on_sale": false,
+        "gold_rows_no_tenant_filter": 1,
+        "no_on_sale_rows_no_tenant_filter": 1
+      },
+      "conflict_points": [
+        "包 product_cnt（L728）expression=COUNT(*)、L733-737（不区分上/下架；time_basis=current） 明文「不区分上/下架」，与 gold 的 `AND v_product.on_sale = 1` 直接冲突",
+        "同一措辞「商品数」在 gold 内部就分裂：M-DIM-07/09、M-HIER-04/05/06 的 gold 用 COUNT(*) 无过滤，H-CAT-01…05 与本案族用 COUNT(*) + on_sale=1"
+      ],
+      "sandbox_verdict": "该城市在沙箱**不存在**（或属他租户）⇒ 去掉 on_sale 仍 0 行，空金标与 on_sale 无关"
+    },
+    {
+      "case_id": "H-STR-03",
+      "city": "成都市",
+      "city_tenant_in_sandbox": null,
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '成都市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "sandbox": {
+        "gold_rows_T_A": 0,
+        "no_on_sale_rows_T_A": 0,
+        "empty_becomes_nonempty_after_dropping_on_sale": false,
+        "gold_rows_no_tenant_filter": 0,
+        "no_on_sale_rows_no_tenant_filter": 0
+      },
+      "conflict_points": [
+        "包 product_cnt（L728）expression=COUNT(*)、L733-737（不区分上/下架；time_basis=current） 明文「不区分上/下架」，与 gold 的 `AND v_product.on_sale = 1` 直接冲突",
+        "同一措辞「商品数」在 gold 内部就分裂：M-DIM-07/09、M-HIER-04/05/06 的 gold 用 COUNT(*) 无过滤，H-CAT-01…05 与本案族用 COUNT(*) + on_sale=1"
+      ],
+      "sandbox_verdict": "该城市在沙箱**不存在**（或属他租户）⇒ 去掉 on_sale 仍 0 行，空金标与 on_sale 无关"
+    },
+    {
+      "case_id": "H-STR-04",
+      "city": "武汉市",
+      "city_tenant_in_sandbox": null,
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '武汉市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "sandbox": {
+        "gold_rows_T_A": 0,
+        "no_on_sale_rows_T_A": 0,
+        "empty_becomes_nonempty_after_dropping_on_sale": false,
+        "gold_rows_no_tenant_filter": 0,
+        "no_on_sale_rows_no_tenant_filter": 0
+      },
+      "conflict_points": [
+        "包 product_cnt（L728）expression=COUNT(*)、L733-737（不区分上/下架；time_basis=current） 明文「不区分上/下架」，与 gold 的 `AND v_product.on_sale = 1` 直接冲突",
+        "同一措辞「商品数」在 gold 内部就分裂：M-DIM-07/09、M-HIER-04/05/06 的 gold 用 COUNT(*) 无过滤，H-CAT-01…05 与本案族用 COUNT(*) + on_sale=1"
+      ],
+      "sandbox_verdict": "该城市在沙箱**不存在**（或属他租户）⇒ 去掉 on_sale 仍 0 行，空金标与 on_sale 无关"
+    },
+    {
+      "case_id": "H-STR-05",
+      "city": "南京市",
+      "city_tenant_in_sandbox": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '南京市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "sandbox": {
+        "gold_rows_T_A": 1,
+        "no_on_sale_rows_T_A": 1,
+        "empty_becomes_nonempty_after_dropping_on_sale": false,
+        "gold_rows_no_tenant_filter": 1,
+        "no_on_sale_rows_no_tenant_filter": 1
+      },
+      "conflict_points": [
+        "包 product_cnt（L728）expression=COUNT(*)、L733-737（不区分上/下架；time_basis=current） 明文「不区分上/下架」，与 gold 的 `AND v_product.on_sale = 1` 直接冲突",
+        "同一措辞「商品数」在 gold 内部就分裂：M-DIM-07/09、M-HIER-04/05/06 的 gold 用 COUNT(*) 无过滤，H-CAT-01…05 与本案族用 COUNT(*) + on_sale=1"
+      ],
+      "sandbox_verdict": "两版均非空：带 on_sale 1 行 / 不带 1 行（口径差可由 COUNT 值体现，但不会改变空/非空）"
+    },
+    {
+      "case_id": "H-STR-06",
+      "city": "西安市",
+      "city_tenant_in_sandbox": null,
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '西安市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "sandbox": {
+        "gold_rows_T_A": 0,
+        "no_on_sale_rows_T_A": 0,
+        "empty_becomes_nonempty_after_dropping_on_sale": false,
+        "gold_rows_no_tenant_filter": 0,
+        "no_on_sale_rows_no_tenant_filter": 0
+      },
+      "conflict_points": [
+        "包 product_cnt（L728）expression=COUNT(*)、L733-737（不区分上/下架；time_basis=current） 明文「不区分上/下架」，与 gold 的 `AND v_product.on_sale = 1` 直接冲突",
+        "同一措辞「商品数」在 gold 内部就分裂：M-DIM-07/09、M-HIER-04/05/06 的 gold 用 COUNT(*) 无过滤，H-CAT-01…05 与本案族用 COUNT(*) + on_sale=1"
+      ],
+      "sandbox_verdict": "该城市在沙箱**不存在**（或属他租户）⇒ 去掉 on_sale 仍 0 行，空金标与 on_sale 无关"
+    },
+    {
+      "case_id": "H-STR-07",
+      "city": "长沙市",
+      "city_tenant_in_sandbox": null,
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '长沙市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "sandbox": {
+        "gold_rows_T_A": 0,
+        "no_on_sale_rows_T_A": 0,
+        "empty_becomes_nonempty_after_dropping_on_sale": false,
+        "gold_rows_no_tenant_filter": 0,
+        "no_on_sale_rows_no_tenant_filter": 0
+      },
+      "conflict_points": [
+        "包 product_cnt（L728）expression=COUNT(*)、L733-737（不区分上/下架；time_basis=current） 明文「不区分上/下架」，与 gold 的 `AND v_product.on_sale = 1` 直接冲突",
+        "同一措辞「商品数」在 gold 内部就分裂：M-DIM-07/09、M-HIER-04/05/06 的 gold 用 COUNT(*) 无过滤，H-CAT-01…05 与本案族用 COUNT(*) + on_sale=1"
+      ],
+      "sandbox_verdict": "该城市在沙箱**不存在**（或属他租户）⇒ 去掉 on_sale 仍 0 行，空金标与 on_sale 无关"
+    },
+    {
+      "case_id": "H-STR-08",
+      "city": "郑州市",
+      "city_tenant_in_sandbox": "T_A",
+      "gold_sql": "SELECT v_shop.shop_id, COUNT(*) FROM v_product JOIN v_shop ON v_product.shop_id = v_shop.shop_id WHERE v_shop.city = '郑州市' AND v_product.on_sale = 1 GROUP BY v_shop.shop_id",
+      "sandbox": {
+        "gold_rows_T_A": 1,
+        "no_on_sale_rows_T_A": 1,
+        "empty_becomes_nonempty_after_dropping_on_sale": false,
+        "gold_rows_no_tenant_filter": 1,
+        "no_on_sale_rows_no_tenant_filter": 1
+      },
+      "conflict_points": [
+        "包 product_cnt（L728）expression=COUNT(*)、L733-737（不区分上/下架；time_basis=current） 明文「不区分上/下架」，与 gold 的 `AND v_product.on_sale = 1` 直接冲突",
+        "同一措辞「商品数」在 gold 内部就分裂：M-DIM-07/09、M-HIER-04/05/06 的 gold 用 COUNT(*) 无过滤，H-CAT-01…05 与本案族用 COUNT(*) + on_sale=1"
+      ],
+      "sandbox_verdict": "两版均非空：带 on_sale 1 行 / 不带 1 行（口径差可由 COUNT 值体现，但不会改变空/非空）"
+    }
+  ],
+  "synonym_move_impact": {
+    "what_changes": "把「商品数/商品数量/商品个数」从 product_cnt（L744）迁到 on_sale_product_cnt（L766）⇒ 裸「商品数」将按在架口径计数",
+    "affected_metrics": {
+      "product_cnt": "失去全部裸同义词（只剩 SKU数/SKU数量/sku数/款式数/货品数）⇒ 「全量商品数」将无任何同义词可命中",
+      "on_sale_product_cnt": "新增裸同义词，与已有「在架商品数」共存（不冲突）",
+      "spu_cnt": "不受影响（款数/SPU 系独立）"
+    },
+    "affected_frozen_cases": [
+      {
+        "case_id": "M-DIM-07",
+        "question": "T_A 的各二级类目的商品数分别是多少？",
+        "gold_uses_on_sale": false,
+        "consistent_with_move": false
+      },
+      {
+        "case_id": "M-DIM-09",
+        "question": "各一级类目的商品数分别是多少？",
+        "gold_uses_on_sale": false,
+        "consistent_with_move": false
+      },
+      {
+        "case_id": "M-HIER-04",
+        "question": "3C数码下一级各子类的商品数分别是多少？",
+        "gold_uses_on_sale": false,
+        "consistent_with_move": false
+      },
+      {
+        "case_id": "M-HIER-05",
+        "question": "家用电器下一级各子类的商品数分别是多少？",
+        "gold_uses_on_sale": false,
+        "consistent_with_move": false
+      },
+      {
+        "case_id": "M-HIER-06",
+        "question": "服饰鞋包下一级各子类的商品数分别是多少？",
+        "gold_uses_on_sale": false,
+        "consistent_with_move": false
+      },
+      {
+        "case_id": "H-CAT-01",
+        "question": "T_A 的「3C数码」各店铺的商品数分别是多少？",
+        "gold_uses_on_sale": true,
+        "consistent_with_move": true
+      },
+      {
+        "case_id": "H-CAT-02",
+        "question": "T_A 的「家用电器」各店铺的商品数分别是多少？",
+        "gold_uses_on_sale": true,
+        "consistent_with_move": true
+      },
+      {
+        "case_id": "H-CAT-03",
+        "question": "T_A 的「服饰鞋包」各店铺的商品数分别是多少？",
+        "gold_uses_on_sale": true,
+        "consistent_with_move": true
+      },
+      {
+        "case_id": "H-CAT-04",
+        "question": "T_A 的「食品生鲜」各店铺的商品数分别是多少？",
+        "gold_uses_on_sale": true,
+        "consistent_with_move": true
+      },
+      {
+        "case_id": "H-CAT-05",
+        "question": "T_A 的「美妆个护」各店铺的商品数分别是多少？",
+        "gold_uses_on_sale": true,
+        "consistent_with_move": true
+      }
+    ],
+    "n_affected": 10,
+    "consistency_split": {
+      "gold_already_on_sale": [
+        "H-CAT-01",
+        "H-CAT-02",
+        "H-CAT-03",
+        "H-CAT-04",
+        "H-CAT-05"
+      ],
+      "gold_without_on_sale": [
+        "M-DIM-07",
+        "M-DIM-09",
+        "M-HIER-04",
+        "M-HIER-05",
+        "M-HIER-06"
+      ]
+    },
+    "verdict": "波及 10 条裸「商品数」题：其中 5 条 gold 已是 on_sale 口径（迁移后自洽）、其余 gold 是 COUNT(*) 全量口径（迁移后会与 gold 冲突）⇒ 迁移必须与 gold 口径统一同步做，否则只是把冲突从 8 条扩散到更多条"
+  }
+}
