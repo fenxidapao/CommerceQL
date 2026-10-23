@@ -6378,3 +6378,135 @@ M-HIER-03 「T_A 各城市的在架商品数分别是多少？」
 ### 92.7 边界
 
 本窗零出站、零写库（库查询全部只读，无 `begin…rollback` 之外的语句）；只追加 `reports/qa/**`；未动 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`；未改 15s／判据／gold／冻结集／语义包；官方门禁仍 `88f3500`／PASS 1/8。
+
+## 93 · W8 第 71 轮验收：三项全收；**新增 D 类（gold 漏包内 `default_predicates`）**；**G-7 现行读数测的是题库不是系统**（QA R31bp ｜ 2026-10-23 14:40 +0800 ｜ HEAD `185533c`／657 笔）
+
+> 本轮 QA 零出站、零写库（沙箱 `file:...?mode=ro` 只读）。所有"我实测"均为 QA 独立复算，不采信 W8 自报。
+
+### 93.1 现状现读【实测】
+
+| 项 | 现读 |
+|---|---|
+| HEAD / 笔数 | `185533c` / 657（与 `origin/main` 齐平） |
+| 工作树 | 仅 `?? .workbuddy/` |
+| 本轮改动范围 | `eval/w71_gold_caliber_audit.py` + 3 产物 + `w8/RELAY.md` §76；**未碰 `reports/qa/**`**、未碰 `app/**`／`tests/**`／`semantic/**`／冻结集 |
+| 花费 | ¥0（三件产物 `git_rev=ec3dc64`／`git_dirty=false`） |
+
+### 93.2 W71-1 全量审计：收，且并集自洽【实测】
+
+我独立重算缺陷并集：A 6（含 M-HIER-03）∪ A2 1（⊂A）∪ B 13 ∪ C 3 ∪ C2 10（其中 5 条与 B 重叠：H-STR-01/03/04/06/07）= **27 条** ⇒ `166 − 27 = 139`，与产物的 `n_clean=139` 逐位一致。
+
+**W8 对我派单的订正成立，我认错**：我 §92.6 写「B 类至少 13 条（H-STR-01…09、H-CAT-01…05）」——列了 14 个 case 却说 13，自身就是矛盾的。H-STR-09 的 gold 是 `AVG(list_price) … WHERE on_sale=1`，而语义包 `bundle:810-813` 的 `avg_list_price` 明文 `expression: "AVG(product.list_price) WHERE on_sale = true"` ⇒ **gold 与包一致，不是缺陷**。B 类 = 13 条正确。
+
+### 93.3 🔴 新增 D 类：gold 漏了包内 `default_predicates`（本轮最重要）
+
+W71-1 的规则只比了 `on_sale`、字面、错表，**没有比对 `default_predicates` 覆盖**，因此漏了一整族。QA 用沙箱只读实算 `E-MET-01`：
+
+| 口径 | 值（T_A，`pay_time >= '2026-08-01'`） |
+|---|---|
+| gold 原样（**只有时间窗**） | 16,483,171.53 |
+| gold 补包内三谓词 | **15,611,729.95** |
+| 系统预测（r63 记录） | **15,611,729.95** ← 逐分一致 |
+
+包内 `bundle:505-508` 明文 `default_predicates: pay_status='paid' / refund_status<>'refunded' / is_test_order=false`；12 条 G-7 案的 gold 全部只有 `pay_time >= …`。⇒ **系统按包做对，gold 漏谓词**，gold 偏高 5.58%。
+
+**同类物证早已存在、此前无人读**：`backend/reports/w6/probe_metric_values.json` 的 `rows[].attribution.missing_predicates` 逐条列的就是这三条谓词，且 `gold_value` / `authority_value` 与我上面的数字逐位相同。
+
+### 93.4 🔴🔴 G-7 的现行读数**测的是题库，不是系统**
+
+`probe_metric_values.json`：`consistent 1 / total 13 = 0.0769`，其 `rows[]` 比的是 **`gold_value` vs `authority_value`** ⇒ 这是"**题库口径与语义包的一致性**"，不是系统能力。官方快照 `G-7 FAIL 1/13 = 7.7%` 被当作"系统口径一致性 7.7%"引用了多轮，**该读法不成立**。
+
+QA 用同一把尺（`rel_err ≤ 1e-3`）另算 **系统 vs 权威值**：
+
+| case | 权威值 | 系统 | 判 |
+|---|---|---|---|
+| E-MET-01/02/03/04/09（gmv） | 15,611,729.95 / 30,768,819.37 / 103,385,547.56 / 57,306,143.84 / 13,541,842.86 | 逐位相同 | ✅ 5 |
+| E-MET-05/06/07（order_cnt） | 11,413 / 22,536 / 56,408 | 逐位相同 | ✅ 3 |
+| E-MET-10（uv） | 602,325 | 602,325 | ✅ |
+| M-IDX-01/02（aov） | 1,367.8901209147464 / 1,365.3185733936812 | 逐位相同 | ✅ 2 |
+| M-IDX-05/06（refund_rate） | 0.05008328882002321 / 0.049981614113764596 | **0.0** | ❌ 2 |
+
+⇒ **系统 vs 权威值 = 11/13 = 84.6%**（仍 <95%，但数字与含义都变了，且失败点收敛到 2 条）。
+
+**并且这条判据可以被"改题库"刷绿**：若把 gold 换成 `authority_sql`，`gold_value == authority_value` ⇒ 立刻 13/13 PASS，而系统一行未改。⇒ 当前实现度量的对象错了，属**判据实现口径问题**，须立提案（QA 不自签改 `gates.py`／探针脚本）。
+
+### 93.5 🔴 唯一一条**真实系统缺陷**：`refund_rate` 谓词泄漏
+
+`M-IDX-05/06` 的 `applied_predicates = ["is_test_order = false", "refund_status <> 'refunded'", "pay_status = 'paid'"]`，SQL 里真的带着 `AND v_order_paid.refund_status <> 'refunded'`。而语义包 `bundle:591` 明文写：
+
+> `# ⚠️ 本指标的谓词**不含** refund_status <> 'refunded' —— 分子正是靠退款行为算出来的。`
+
+⇒ 分子被自己的 WHERE 排除干净，`refund_rate` 恒为 `0.0`（权威值 0.0501）。这是**系统侧真 bug**（G-7 集里唯一一条），根因是订单域的 `default_predicates` 被无差别套到 `refund_rate` 上，未按指标自身的谓词集覆盖。
+
+### 93.6 B 类的失败原因比回执更具体：卡在**列配对**，不是"口径救不了"
+
+W71-2 报「B 13 条 0 翻转，原因是列数相同但内容不匹配」。QA 在沙箱把 H-CAT-01 三种写法都跑了一遍：
+
+| 写法 | 结果 |
+|---|---|
+| gold 原样（`GROUP BY shop_id`，带 `on_sale`） | 44/47/42/46/47 · 226 · 74/80/72（9 行） |
+| gold 去 `on_sale`（`GROUP BY shop_id`） | 49/49/48/50/48 · 244 · 81/83/80 |
+| 预测（`GROUP BY shop_name`，无 `on_sale`） | **49/49/48/50/48 · 244 · 81/83/80** ← 计数列逐值相同 |
+
+⇒ 去谓词后**计数列完全一致**，唯一差别是首列 `shop_name` 与 `shop_id`。`equivalence._pair_columns` 先按列名、再按"整列值多重集"配对；`shop_name`（字符串）与 `shop_id`（编号）两种都不成立 ⇒ 返回"列无法配对"。
+
+**全量同模式 6 条**：`H-CAT-01…05`、`X-ENUM-07`（金标 `SELECT shop_id`、预测 `SELECT shop_name`）。⇒ B 类不是"改口径没用"，是"改了口径也被判据的列配对挡住"。这属**等价判据列对齐**问题（id↔name 一一映射不可比），单列待裁。
+
+另：全量 109 条 execute 里有 **39 条** diff 为"列无法配对"，且 **39 条行数全部相同**；其中 12 条（E-MET-*／M-IDX-*）的真因是 93.3 的 D 类（数值不同所以列也配不上），不是列身份问题。两类必须分开读。
+
+### 93.7 W71-2 八闸逐格 / W71-3 城市缺口：收，两处小订正
+
+- 八闸逐格判"全部不受影响"成立（G-2 格 8 条 `E-VER-*` 与缺陷集交集 0；G-5 分母 24 条交集 0；G-7 12 条交集 0）。**但 `G-7` 那一行的 `input` 写"13 条"、`input_cases` 只列 12 条**（漏 `E-MET-10`）——不影响结论，按"证据字段须自洽"记一笔。
+- W71-3 的 N-13 说法**成立且我实测**：冻结集 `sandbox_db_sha256 = eb35a97f14392e94cb07d6bee4b4c58553e812a6d14d4e4b4f12c8469da425a1`，`data/ecom_sandbox.db` 实算 SHA-256 **逐位相同** ⇒ 往沙箱补数据必然触发验真不一致，须同步改指纹（属冻结集变更）。
+
+### 93.8 结论与 W72 派单
+
+**收**：W71-1／W71-2／W71-3 三件（含 W8 对我派单的 H-STR-09 订正）。**另立两条**：D 类（gold 漏 `default_predicates`，12 条）＋ A/B/C/D 之外的"列配对 id↔name"（6 条）。**上呈一条判据问题**：G-7 现行实现度量题库而非系统。
+
+**W72 派单（全部零出站）**
+
+```text
+【W8 第 72 轮｜补审 D 类 + G-7 判据对象 + refund_rate 真 bug】
+
+0. 前置：现读 HEAD；证据绑 git_rev+dirty=false；不碰 reports/qa/**；不 git add -A；
+   .workbuddy/ 不入库；**不动 gold／冻结集／语义包／gates.py 阈值／probe 脚本**（判据面只出提案）；不刷官方门禁。
+
+1. 🔴 W72-1 补审 D 类「gold 漏包内 default_predicates」（本轮主项，零出站）
+- 做法：对全量 166 条 execute 题，逐条把 gold 的 WHERE 与所命中指标在包内的
+  default_predicates 求差（`bundle:505-508` 等），输出缺谓词清单（case / metric / 缺哪些 / 包内行号）。
+- 已知：12 条 G-7 案（E-MET-01…07/09、M-IDX-01/02/05/06）的 gold 只有 `pay_time >= …`；
+  另请把 E-MET-08（gold `pay_status='unpaid'`）单独标注——它是不是"含未支付"的合法反向口径。
+- 沙箱实算：对每条给「gold 原值 / 补谓词后值」，判是否改变等价结论（只算不改）。
+- 红线：只出表；不得改任何 gold。
+
+2. 🔴 W72-2 G-7 判据对象核实与提案（只出材料，不自签改码）
+- 事实（QA 实测）：probe_metric_values.json 比的是 gold_value vs authority_value；
+  gold vs authority = 1/13（现行读数）；**system vs authority = 11/13 = 84.6%**（逐格见 TASK_BOARD §93.4）。
+- 请核实 gates.py 的 G-7 分支取的确实是该文件的 consistent/total，并写出两种口径的定义差异。
+- 出提案（A/B 两案 + 成本）：A 维持现口径但改名为「题库口径一致性」并移出八格；B 改为
+  system vs authority 作为 G-7 真身（须重算历史读数、须总控签）。**本轮不改码。**
+- 红线：不得把 84.6% 写成"G-7 通过"（仍 <95%）。
+
+3. 🔴 W72-3 refund_rate 谓词泄漏（真 bug，先定位后改，需点句）
+- 事实：M-IDX-05/06 的 applied_predicates 含 `refund_status <> 'refunded'`，SQL 真带该谓词
+  ⇒ 分子恒 0，refund_rate = 0.0（权威值 0.0501）。包 `bundle:591` 明文禁止该谓词。
+- 先出定位：谓词从哪来（域级 default_predicates 无差别套用？bind 未按 metric 覆盖？），给文件行号。
+- 修法**先出方案再动手**：按 metric 自身 default_predicates 覆盖，而非域级并集；补单测
+  （refund_rate 不得含 refund_status<>'refunded'；gmv 必须含三条）。
+- 修完只做零出站验证（replay + 单测），**不真打**。
+
+4. 🟡 W72-4 列配对 id↔name 材料（只出材料，不改 equivalence.py）
+- 已知 6 条（H-CAT-01…05、X-ENUM-07）：金标 SELECT shop_id、预测 SELECT shop_name；
+  沙箱已证 H-CAT-01 去谓词后计数列逐值相同（49/49/48/50/48/244/81/83/80）。
+- 请出：全量 166 里还有哪些 id↔name 型（product_id/sku_id/buyer_id vs name 列）对照，
+  以及"若允许一一映射配对"会翻转几条（只算不改，附风险：误配会掩盖真错）。
+- 红线：不改 equivalence.py，不改判据；结论只到"影响面"。
+
+5. 不做：不跑 τ 采样；不扩 L4 候选面；不改 G-8 二轮；不改官方门禁；不改冻结集/语义包。
+
+6. 回执：产物路径／git_rev+dirty／tokens（应 0）；四项各给一句"可判/不可判"。
+```
+
+### 93.9 边界
+
+本窗零出站、零写库（沙箱 `mode=ro` 只读、未建 TEMP VIEW、未写一行）；只追加 `reports/qa/**`；未动 `eval/**`／`app/**`／`tests/**`／`semantic/**`／`reports/w8/**`／`data/**`；未改 15s／判据／gold／冻结集／语义包；官方门禁仍 `88f3500`／PASS 1/8 未刷新。
