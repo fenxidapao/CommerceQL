@@ -1,5 +1,9 @@
 # W1A（阶段 1A · 地基）交付与交接
 
+> 🔻 **历史交接件（2026-09-16，v2）**：进度与门禁已被 `OVERVIEW.md §6/§7` 取代；
+> 正文保留原样，仅作过程证据。引用 HEAD / 提交数前实跑 `git rev-list --count HEAD`，
+> 不要抄本文里的旧数。
+
 > **作者窗口**：W1A　**日期**：2026-09-16
 > **任务书**：`docs/08 §3.2`
 > **自检入口**：`./.venv/Scripts/python.exe data/generator/selfcheck.py`　→ **32 项：PASS=30 / FAIL=0 / SKIP=2**
