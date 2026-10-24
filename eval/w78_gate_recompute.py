@@ -235,6 +235,25 @@ def main() -> int:
             "notes": list(computed.caveats or ()),
             "tau_applicability": tau_applicability,
         }
+        if gate_id == "G-3":
+            #: 🔴 W79-1：G-3 PASS 的含义边界必须跟着门禁行一起进产物，
+            #: 否则“50/50”会被读成“成本闸门已测”。这是报告注记，不改判定谓词。
+            scope = redteam.get("g3_scope") or {}
+            row["g3_scope"] = scope
+            cost_cases = scope.get("cost_cases") or []
+            cost_txt = "、".join(
+                f"{c.get('case_id')}（{c.get('rejected_at')}/{c.get('rule_id')}，"
+                f"blocked={c.get('blocked')}，executed={c.get('executed')}，leaked={c.get('leaked')}）"
+                for c in cost_cases
+            )
+            row["notes"] = [
+                *row["notes"],
+                "G-3 PASS 的含义是「**危险 SQL 放行=0**」，**不是**「成本闸门已测」",
+                f"两条 COST 由 gate1 R10 拦下：{cost_txt or '未记录'}；"
+                "`cost_gate_tripped` 仍 **NOT_CHECKED**（gate3 阈值判定未执行）",
+                f"{scope.get('non_g3_failures')} 条非 G-3 断言失败仍在"
+                "（终态形状 / 截断 / 可执行前提），不折算成通过",
+            ]
         if gate_id == "G-7":
             row["g7_equivalence"] = g7_equiv
             row["notes"] = [
