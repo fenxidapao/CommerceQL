@@ -623,29 +623,49 @@ def evaluate_gates(
                           ("本轮无澄清集（含「提问→澄清→补答」第二轮回路）运行数据 → "
                            "该门禁未验证，不得计入通过",)))
     else:
-        rate = _rate(int(clarification["clarified"]), clarification["requests"])
-        succ = _rate(int(clarification.get("clarify_then_correct", 0)), int(clarification.get("clarified", 0)))
-        evidence = (
-            f"澄清率 {clarification['clarified']}/{clarification['requests']}"
-            + ("" if rate is None else f" = {rate:.1%}")
-            + f"；澄清后一次成功 {succ if succ is None else f'{succ:.1%}'}"
+        clarified_n = int(clarification["clarified"])
+        attempted = int(clarification.get("second_round_attempted") or 0)
+        succeeded = int(clarification.get("clarify_then_correct") or 0)
+        rate = _rate(clarified_n, int(clarification["requests"]))
+        # 🔴 W78-2 / D-W78-2：成功侧**主读数 = success/attempted**。
+        # `success_rate_attempted` 由 `reporter._clarify_counts` 直接给；旧输入没这个键时
+        # 用 `clarify_then_correct / attempted` 现算（分母仍是 attempted，不回落 clarified）。
+        attempted_rate = clarification.get("success_rate_attempted")
+        if attempted_rate is None and attempted > 0:
+            attempted_rate = _rate(succeeded, attempted)
+        clarified_rate = clarification.get("success_rate_clarified")
+        if clarified_rate is None and clarified_n > 0:
+            clarified_rate = _rate(succeeded, clarified_n)
+        uncovered = attempted < clarified_n
+        secondary_flag = (
+            "UNVERIFIED（attempted<clarified：分母未覆盖，不得用它判 verdict）"
+            if uncovered else "并列可读（attempted>=clarified）"
         )
-        has_second_round = bool(clarification.get("second_round_loop_available"))
-        if not has_second_round:
+        evidence = (
+            f"澄清率 {clarified_n}/{clarification['requests']}"
+            + ("" if rate is None else f" = {rate:.1%}")
+            + f"；主读数 success/attempted = {succeeded}/{attempted}"
+            + ("" if attempted_rate is None else f" = {attempted_rate:.1%}")
+            + ("（attempted=0 ⇒ 不可测，不是 0%）" if attempted == 0 else "")
+            + f"；并列 success/clarified = {succeeded}/{clarified_n}"
+            + ("" if clarified_rate is None else f" = {clarified_rate:.1%}")
+            + f"（{secondary_flag}）"
+        )
+        if attempted == 0:
             # 本批次拿不到「二轮回到可执行终态」的分子 —— 那是评测器侧没有可测样本
             # （没开 `--second-round`，或开了但本批没有带补答来源的澄清题），
             # 不是被测系统失败。判 FAIL 会把这个门禁变成不可能通过，进而诱使下一轮"放宽阈值"。
             verdict = "UNVERIFIED"
             extra = (
-                "本批次**无可测的二轮分子**（`--second-round` 未开，或本批没有带补答来源的澄清题）"
-                "⇒ **第二轮回路**能力本身已具备（W8 第 65 轮起 `runner.py --second-round`），"
-                "—— 回路能力本身已具备（W8 第 65 轮起 `runner.py --second-round`），"
-                "⇒ 后半句「澄清后一次成功率」不可测 ⇒ 整条门禁判 UNVERIFIED（既非 FAIL 也非 PASS）。"
+                "**第二轮回路**能力本身已具备（W8 第 65 轮起 `runner.py --second-round`），"
+                "但本批次 **attempted=0** ⇒ 没有任何二轮样本，后半句「澄清后一次成功率」不可测 "
+                "⇒ 整条门禁判 UNVERIFIED（既非 FAIL 也非 PASS）。"
                 "澄清率那一半是可测的，已作为证据列出。",
             )
         else:
             ok = (rate is not None and rate <= THRESHOLDS["G-8_clarify_rate"]) and (
-                succ is not None and succ >= THRESHOLDS["G-8_clarify_success"]
+                attempted_rate is not None
+                and attempted_rate >= THRESHOLDS["G-8_clarify_success"]
             )
             verdict = _tau_verdict("G-8", "PASS" if ok else "FAIL", tau_calibrated, tau_applicability)
             # 🔴 W8 第 66 轮 C1-2：分子口径必须写清 —— 它是「**二轮回到可执行终态的比例**」，
@@ -654,7 +674,12 @@ def evaluate_gates(
             extra = (
                 "「澄清后一次成功」的分子＝**二轮回到可执行终态（complete）的比例**，"
                 "**不是答案正确率**（二轮问句带补答，冻结集 gold 只对首轮成立，"
-                "二轮 gold 为 `not_defined_for_second_round` ⇒ 没有可比对的正确答案）。",
+                "二轮 gold 为 `not_defined_for_second_round` ⇒ 没有可比对的正确答案）。"
+                "成功侧**主分母＝attempted**（实际跑了二轮的条数）；"
+                f"并列 success/clarified = {succeeded}/{clarified_n}"
+                + (" ⇒ **UNVERIFIED（attempted<clarified，分母未覆盖，不参与 verdict）**"
+                   if uncovered else "（本批 attempted>=clarified，可作并列读数）")
+                + "。",
             )
         gates.append(Gate(
             "G-8", "澄清率 ≤ 15% 且澄清后一次成功率 ≥ 80%", verdict,

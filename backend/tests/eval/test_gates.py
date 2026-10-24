@@ -46,6 +46,8 @@ def _all_pass_inputs() -> dict:
             "dataset_caliber_consistency": {"consistent": 1, "total": 5, "unattributed": 0},
         },
         "clarification": {"requests": 100, "clarified": 10, "clarify_then_correct": 9,
+                          "second_round_attempted": 10, "second_round_success": 9,
+                          "success_rate_attempted": 0.9, "success_rate_clarified": 0.9,
                           "second_round_loop_available": True},
         "tau_calibrated": True,
     }
@@ -470,8 +472,11 @@ def test_g8_zero_requests_is_not_available():
 
 def test_g8_fail_when_over_clarifying():
     inputs = _all_pass_inputs()
-    inputs["clarification"] = {"requests": 100, "clarified": 40, "clarify_then_correct": 38,
-                               "second_round_loop_available": True}
+    inputs["clarification"] = {
+        "requests": 100, "clarified": 40, "clarify_then_correct": 38,
+        "second_round_attempted": 40, "second_round_success": 38,
+        "second_round_loop_available": True,
+    }
     assert _verdict_of(gt.evaluate_gates(**inputs), "G-8").verdict == "FAIL"
 
 
