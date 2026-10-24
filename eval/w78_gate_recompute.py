@@ -47,7 +47,7 @@ OUT = os.path.join(HERE, "results_w78_gate_recompute.json")
 
 #: W78 本轮离线 P0 读数（unit+eval+contract + 其余 offline；集成层由 JUnit 另计）。
 LOCAL_P0 = {
-    "passed": 2731,
+    "passed": 2732,
     "failed": 0,
     "errors": 0,
     "source": "W78 本轮 pytest backend/tests --ignore=backend/tests/integration -q",

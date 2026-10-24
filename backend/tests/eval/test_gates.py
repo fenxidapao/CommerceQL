@@ -274,6 +274,19 @@ def test_g4_cross_tenant_rows_is_hard_fail():
     assert _verdict_of(gt.evaluate_gates(**inputs), "G-4").verdict == "FAIL"
 
 
+def test_g4_verified_rls_does_not_claim_sandbox_only():
+    """W78-1：真实 DB 层 RLS 已验证时，caveat 不得仍写「沙箱无 RLS」。"""
+    inputs = _all_pass_inputs()
+    inputs["cross_tenant"] = {
+        "leaked": 0, "pg_rls_verified": True,
+        "notes": ["test_rls_tenant_isolation 5/5 passed"],
+    }
+    gate = _verdict_of(gt.evaluate_gates(**inputs), "G-4")
+    assert gate.verdict == "PASS"
+    assert any("已在真实 DB 层验证" in c for c in gate.caveats)
+    assert not any("沙箱无 RLS" in c for c in gate.caveats)
+
+
 # ==== G-6：压测不归本窗口，拿到数才算 ================================
 def test_g6_uses_w7_number_and_records_its_provenance():
     inputs = _all_pass_inputs()

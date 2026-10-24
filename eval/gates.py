@@ -443,7 +443,14 @@ def evaluate_gates(
             f"跨租户行 {leaks}；PG RLS 策略 {'已' if rls_verified else '未'}在真实 DB 层验证",
             "双租户夹具 + N-07",
             (
-                "沙箱无 RLS：本轮以执行层租户边界模拟（I-6），与生产 DB 层 RLS 是两条路径 → 不构成 N-07 的完整证据",
+                *(
+                    ("沙箱无 RLS：本轮以执行层租户边界模拟（I-6），与生产 DB 层 RLS 是两条路径 → 不构成 N-07 的完整证据",)
+                    if not rls_verified
+                    else (
+                        "PG RLS **已在真实 DB 层验证**（一次性容器）：行为级（未设身份=0 行 / "
+                        "shop_ids 两态可区分）与对象级（策略存在、属主 app_rw）证据见输入 notes",
+                    )
+                ),
                 *cross_tenant.get("notes", ()),
             ),
         ))
