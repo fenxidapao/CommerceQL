@@ -21,10 +21,16 @@ import argparse
 import hashlib
 import json
 import os
+import sys
 from typing import Any
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+for _p in (HERE, os.path.join(ROOT, "backend")):
+    sys.path.insert(0, _p)
+
+import _bootstrap  # noqa: E402
+
 CASSETTE = os.path.join(HERE, "cassettes", "w76_tau_b2.jsonl")
 OUT = os.path.join(HERE, "cassettes", "w76_tau_b2.manifest.json")
 CLEAN_RESULT = os.path.join(HERE, "results_w76_tau_b2.json")
@@ -73,6 +79,7 @@ def main(argv: list[str] | None = None) -> int:
     result_config = clean_result.get("config") or {}
 
     payload = {
+        **_bootstrap.build_stamp(),
         "schema": "W77_B2_CASSETTE_MANIFEST/v1",
         "cassette": {
             "path": _relative(args.cassette),
