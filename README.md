@@ -58,18 +58,20 @@ backend/
 ├── app/            16 个业务包：api auth binding cache core exec graph guard
 │                   llm mask obs planner present repo retrieval semantics
 ├── tests/          6 个目录：unit · contract · eval · integration · redteam · graph_snapshot
-├── reports/        20 个窗口目录的过程证据 → 读 backend/reports/README.md
+├── reports/        当前证据：w6 / w8 / qa → 读 backend/reports/README.md
 ├── scripts/        探针、门禁与 secrets 扫描脚本
 └── pyproject.toml  依赖白名单 + pytest / ruff / mypy 配置
-eval/               评测执行器 + 冻结集(166) + 红队集 + results_* + cassettes
+eval/               评测执行器 + 冻结集 + 当期 W77–W80 结果 + 2 个 cassette
                     → 读 eval/README.md
 semantic/           语义包 bundle + 口径字典 + 校验器
-data/               合成数据生成器 + schema.sql（沙箱库 ecom_sandbox.db 不入库）
+data/               合成数据生成器 + schema.sql（沙箱库在仓库外 archive）
 deploy/             compose · Dockerfile · nginx · 压测驱动 · runbook · 观测面板
 frontend/           Vite + React + TS（SSE 流式对话与评测页）
 docs/01–08          契约文档集（2026-10-04 起已入库跟踪）
 .github/            CI：契约断言 / 迁移闸门 / 依赖方向 / lint / secret-scan
 ```
+
+> 历史窗口报告、旧评测结果与其余匣带已移至仓库外 `../CommerceQL-archive/`（2026-10-24 整理）；恢复方式见该目录 README。
 
 文件数 / 行数会随提交变化，不要抄树里的数字；需要时现算，例如：
 

@@ -129,16 +129,18 @@ trusted_context → normalize → intent → link → plan → bind → gen_sql
     ├── README.md         ← 工程约束版说明书（⚠️ 进度章节已过期，见 §6）
     ├── backend/app/      ← 16 个业务包，160 个模块文件 / 42,420 行（2026-10-24 现算；旧读数 147 / 38,006 保留在 §6 历史表）
     ├── backend/tests/    ← **107 个测试文件 / 2,041 个 test 函数**（2026-10-02 15:5x 按 **HEAD 口径**实测：unit 54 · contract 30 · eval 12 · integration 9 · redteam 1 · graph_snapshot 1；口径 = `git grep -c "def test_" HEAD -- backend/tests` 与 `git ls-tree -r --name-only HEAD backend/tests` 逐文件计数**两条独立算法互验** ⇒ 两个读数必须相等才允许落笔；`backend/tests` 下另有 `122 - 107 = 15` 个 .py 不含 `def test_`（conftest / 夹具 / 工具），不得混进"测试文件数"。⚠️ 前值 **113** 是"逐目录分项相加"得来的、分项没重测 ⇒ 已具名订正，规矩见 `reports/arch/HANDOVER.md §7.1` 第 **18** 条）
-    ├── backend/reports/  ← 20 个窗口目录的 DELIVERY / RELAY / PROMPT / HANDOFF 与探针脚本、取证产物（读 backend/reports/README.md）
+    ├── backend/reports/  ← 当前证据：w6 / w8 / qa（读 backend/reports/README.md）；历史窗口报告在仓库外 archive
     ├── semantic/         ← 语义包 bundle_2026.09.14.1.yaml（1,225 行）+ 口径字典 + 校验器
     ├── data/             ← 合成数据生成器 + SQLite 沙箱库（440 MB）+ schema.sql
-    ├── eval/             ← 46 个执行器脚本 + 冻结集(166) + 红队集(66) + 匣带 + MANIFEST（读 eval/README.md）
+    ├── eval/             ← 46 个执行器脚本 + 冻结集 + 当期 W77–W80 结果 + 2 个 cassette（读 eval/README.md）；历史结果在仓库外 archive
     ├── frontend/         ← 37 个 ts/tsx / 8,412 行（09-29 复算**与 09-28 同值**）
     ├── deploy/           ← compose / Dockerfile / nginx.conf / .env.example / 压测驱动与回执 / 观测面板
     └── .github/workflows/ci.yml  ← 6 job：契约断言、W1A 产物验真、迁移闸门、依赖方向(含注入实验)、ruff+mypy、gitleaks 全史扫描
 ```
 
 > **读法**：上树中的“文件数 / 行数”是各自时点读数（09-29、10-02），会随提交变化；现读用 `git ls-files backend/app | grep '\.py$' | wc -l` 等命令。当期状态见 §6 顶部。
+>
+> **2026-10-24 整理**：旧窗口报告（w0–w7/arch/t-a1）、旧评测结果与其余 cassette 已移至仓库外 `../CommerceQL-archive/`；仓库内只留当前证据。恢复方式见该目录 README。
 
 `backend/app/` 按依赖层级从低到高：`core`(2,326 行) → `cache`(551) → `obs`(2,675) → `repo`(4,006) →
 `api`(5,231) → `auth`(639) → `semantics`(2,182) → `retrieval`(1,783) → `binding`(3,160) →
