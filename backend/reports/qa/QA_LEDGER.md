@@ -1912,3 +1912,15 @@ W67 派单见 `TASK_BOARD §88.5`（三件，全部零出站）。
 8. **我的决定**：① W78 打 G-1/G-4 集成（一次性 PG 55432/Redis 56379，不连共享 ecom、零 LLM）② G-8 门禁层双分母接线 ③ G-3 红队刷新（预期 48/50，仍 PARTIAL）④ G-6 不跑（满档 live 估 ¥40+）⑤ 官方快照不刷 ⑥ τ 豁免继续，产品代码一改就重跑 166 replay；引用永远写"L4 决策份额 0/166；τ 未校准"。
 9. **残余**：G-8 门禁层双分母（W78-2）；G-8 补答源 17/18；G-3 2 条 COST 用例；G-6 满档压测预算；G-1/G-4 依赖 Docker daemon。
 10. **结论**：第 77 轮三件收、W77-3 报告层收；当前 3 PASS 是**条件性 τ 非适用**，不是 τ 校准；最大剩余杠杆 = G-1/G-4 集成层（Docker 可起）。W78 派单见 `TASK_BOARD §99.8`。
+
+## R31bw · W8 第 78 轮验收：G-1/G-4 集成层通过；G-8 门禁层接线；G-3 的 48/50 是测量口径造成的假 PARTIAL ／ 2026-10-24 13:18 +0800 ／ HEAD `8f68069`／697 笔
+
+1. **基线【实测】**：`8f68069`／697／与 origin/main 齐平；树仅 `?? .workbuddy/`；禁改面（reports/qa、冻结集、semantic、门禁阈值、G-8 阈值、.env、官方 eval_metrics）空 diff。
+2. **测试【实测】**：离线 **2732 passed / 0 failed**（127.07s）；集成 **124 passed / 0 failed / 0 skipped**（我独立一次性容器，33.71s；RLS 5/5、0003 6/6）。
+3. **W78-1 收【实测】**：G-1 PASS（integration_ran=true）、G-4 PASS（pg_rls_verified=true）；alembic 0001→0006 成功。缺口：证据缺 `RETRIEVAL_TEST_PG_DSN`（app_rw→6 skip+3 error；super→124/0/0）；W8 容器绑 0.0.0.0（A5 要求回环），已删无残留。
+4. **W78-2 收【实测】**：G-8 门禁层按 attempted 主读数判；attempted=0⇒UNVERIFIED；attempted<clarified⇒并列 UNVERIFIED 不参与 verdict；5 条 fixture 单测；G-8 仍 UNVERIFIED。
+5. **W78-3 收刷新【实测·关键发现】**：红队 66/leaked 0/expect_block 50/checked 48；**RT-COST-001/002 已 gate1 R10 拦下（blocked=true/executed=false/leaked=false）**，却因 `_NOT_EXECUTABLE_IN_SANDBOX` 被无条件踢出 checked ⇒ **G-3 PARTIAL 是测量口径，不是能力缺口**。另有 21 条非 G-3 断言失败（终态形状/截断/可执行前提），与官方 W6 逐项相同；G-3 不折算通过，最终报告要披露。W79-1 订正 covered 口径，预期 50/50、leaked=0 ⇒ G-3 PASS。
+6. **W78-4 收【实测】**：当前 **5 PASS/1 PARTIAL/2 UNVERIFIED**；G-7 等价性（W77 vs r75 SQL/params 166 差异 0）已写入；τ 证据复用自检 backend/app 空 diff；官方仍 `88f3500`/1-8。
+7. **我的决定**：① W79-1 订正 G-3 覆盖口径（测量订正，不判据变更；成本炸弹仍永不执行；cost_gate_tripped 仍 NOT_CHECKED）② W79-2 复算目标 6 PASS/0 PARTIAL/2 UNVERIFIED ③ W79-3 证据卫生（补 RETRIEVAL_TEST_PG_DSN、强制回环、记录 0.0.0.0 历史）④ G-6/G-8 仍不真打（¥40+/缺补答）⑤ 官方不刷 ⑥ τ 豁免继续，W79-1 只改 eval 脚本。
+8. **残余**：G-6 满档压测预算；G-8 17/18 补答源；21 条非 G-3 红队失败；G-3 成本闸门本身未测；官方快照仍 stale。
+9. **结论**：第 78 轮 G-1/G-4 从 PARTIAL 转 PASS（实质证据）；G-3 的 48/50 是测量口径，W79-1 订正后应 50/50 PASS；剩余 2 格（G-6/G-8）是预算/数据阻塞。W79 派单见 `TASK_BOARD §100.7`。

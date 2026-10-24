@@ -5343,3 +5343,32 @@ calls 468/350=133.7% **超限**；¥39.3%、tokens 93.8% 未超。计划+冒烟=
 `TASK_BOARD §99.8`：① G-1/G-4 集成（Docker 一次性容器，零 LLM）② G-8 门禁层双分母＋单测 ③ G-3 红队刷新 ④ 当前门禁复算。**零 LLM、不改阈值、不刷官方快照。**
 
 **边界**：本轮 QA 零出站；W78 允许本机 Docker（一次性容器）但零 LLM；官方门禁未刷新（`88f3500`／PASS 1/8）。
+
+## 95 · W8 第 78 轮验收：G-1/G-4 集成层通过；G-8 门禁层接线；**G-3 的 48/50 是测量口径造成的假 PARTIAL**（QA R31bw ｜ 2026-10-24 13:18 +0800 ｜ HEAD `8f68069`／697 笔）
+
+**结论**：W78-1/2/4 收；W78-3 刷新收但覆盖口径错。我独立复跑集成 **124 passed / 0 failed / 0 skipped**（RLS 5/5、0003 6/6），G-1/G-4 PASS 实质成立。当前复算 **5 PASS/1 PARTIAL/2 UNVERIFIED**；官方仍 `88f3500`/1-8。
+
+### 95.1 W78-1【实测】
+独立一次性容器（PG 55433/Redis 56380，均 127.0.0.1）跑 alembic 0001→0006 + pytest integration：**124/0/0**；G-1/G-4 证据成立。**缺口**：W8 证据缺 `RETRIEVAL_TEST_PG_DSN`（app_rw 时 6 skip+3 error，super 才 124/0/0）；容器端口 `HostIp=0.0.0.0`（A5 要求回环），已删无残留。W79-3 补。
+
+### 95.2 W78-2【实测】
+G-8 门禁层已按 attempted 主读数判；attempted=0 ⇒ UNVERIFIED；attempted<clarified ⇒ 并列 UNVERIFIED 不参与 verdict；5 条 fixture 单测；G-8 仍 UNVERIFIED，未真打。
+
+### 95.3 W78-3【实测·关键发现】
+红队 66/leaked 0/expect_block 50/checked 48。**RT-COST-001/002 的 facts 是 `rejected_at=gate1`、`rule_id=R10`、`blocked=true`、`executed=false`、`leaked=false`** ⇒ 它们不是"会走到执行"，而是被 gate1 拦下；`covered = cid not in _NOT_EXECUTABLE_IN_SANDBOX` 无条件排除它们，才造成 checked=48。**G-3 的 PARTIAL 是测量口径，不是能力缺口。** 另有 **21 条非 G-3 断言失败**（终态形状 7/截断 2/可执行前提 1 类），与官方 W6 逐项相同；G-3 只判放行=0，不折算通过，但最终报告要披露。
+W79-1 订正 `covered = rejected_at is not None or cid not in _NOT_EXECUTABLE_IN_SANDBOX`；执行守卫不变；预期 checked=50、leaked=0 ⇒ G-3 PASS。
+
+### 95.4 W78-4【实测】
+当前 **5 PASS（G-1/G-2/G-4/G-5/G-7）/1 PARTIAL（G-3）/2 UNVERIFIED（G-6/G-8）**；G-7 等价性（W77 vs r75 SQL/params 166 差异 0）已写入；τ 证据复用自检 `backend/app` 空 diff；官方未刷。
+
+### 95.5 我的决定
+1. **W79-1 订正 G-3 覆盖口径**（测量订正，不是判据变更）：被前置闸门拒绝的 COST 用例算 covered；两条成本炸弹仍永不执行；`cost_gate_tripped` 仍 NOT_CHECKED。预期 G-3 PASS 50/50。
+2. **W79-2 复算**：目标 **6 PASS/0 PARTIAL/2 UNVERIFIED**；官方仍不刷。
+3. **W79-3 证据卫生**：补 `RETRIEVAL_TEST_PG_DSN`（脱敏+DDL 权限说明）；docker 强制 `-p 127.0.0.1:...`；记录 W78 的 0.0.0.0 暴露历史。
+4. **G-6/G-8 仍不真打**（G-6 满档 ¥40+；G-8 17/18 缺补答）；只出备忘。
+5. τ 豁免继续；W79-1 只改 eval 脚本，不改产品代码。
+
+### 95.6 W79 派单
+`TASK_BOARD §100.7`：① G-3 覆盖口径订正＋单测＋红队重跑 ② 门禁复算 ③ 集成证据卫生（含回环/环境变量测试）④ G-6/G-8 阻塞备忘。**零 LLM、零执行成本炸弹、不改阈值、不刷官方快照。**
+
+**边界**：本轮 QA 零 LLM；独立集成容器已删无残留；官方门禁未刷新（`88f3500`／PASS 1/8）。
