@@ -8529,3 +8529,18 @@ a398c60 artifacts(w8): W80 same-HEAD audit (6 PASS/2 UNVERIFIED; 21 tail failure
 * **出站记录：0 次 LLM；tokens=0；¥=0**。
 * **收口口径**：G-6／G-8 是「没有外部输入无法做」；若无新预算/补答源，项目以
   **6 PASS＋2 UNVERIFIED** 收口，不再开无新输入的开发轮。
+
+### 86.7 W80.1 订正记录（QA §103.4）：**完成**
+
+* **改了什么**（唯一文件 = `backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md`）：
+  ① §2.4 删除「约 ¥0.39」作为当期报价的写法，改为带出处的下限口径：
+  `results_v1`/`results_v2_live` 的 `cost_cny_total=0.391504` 是修复前**下限口径**
+  （W8 RELAY §六.15 明写少算最贵一档；同批评测复算为 ¥1.131531）；W59 全量 166 的 price_guess
+  为 ¥8.813584；W76 G-8 全批重录估 ¥1.1025。刷新前按当期 `budget.PRICES` 重算，不得把 ¥0.39 当报价。
+  ② 把「必须再打一次 `--live` 全量 166」改成：先在同一 HEAD 重跑 **166 replay（零 LLM）**对齐 rev；
+  只有需要 fresh live 证据时才出站。
+  ③ §4 命令块前写明 **cwd = 仓库根**（输出路径按仓库根写，避免 `backend/backend/...` 翻倍）。
+* **为什么**：QA §103.4 判 W80-3「决定/刷新条件/唯一入口正确，但 §2.4 成本口径与『必须 live』必须订正」；
+  订正只改文档，**不改变「仍不刷新」的决定**。
+* **没改**：`DELIVERY.md`／`OVERVIEW.md`／官方快照／代码／判据／阈值；未跑测试、未出站。
+* **出站记录**：0 次 LLM；tokens=0；¥=0。
