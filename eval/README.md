@@ -13,7 +13,7 @@
 | `red_team_cases_v1.json` | 红队用例集；**不可改** |
 | `MANIFEST_v1.json` | 数据集清单与哈希 |
 | `cassettes/` | **只留 2 个**：`w6_batch.jsonl`（14M，ACCEPTANCE 引用）、`w8_r44_a3.jsonl`（453K，文档引用） |
-| `results_*.json` | **只留当期 15 个**：`results_w77_*`、`results_w78_*`、`results_w79_*`、`results_w80_*` |
+| `results_*.json` | **当期 9 件**：`w77_full166_applicability` / `w77_g8_answer_gap` / `w78_integration` / `w79_blockers` / `w80_final_audit` / `w80_gate_recompute` / `w80_redteam` / `w80_redteam_tail`（＋ `w80_offline_pytest.junit.xml`）。**另有 7 件历史轮次件**（`w77/w78/w79_gate_recompute`、`w78/w79_redteam`、`w78_integration.junit.xml`、`w79_integration_hygiene`）→ 它们是 `eval/w7x_*.py` 的**输入**（`w80_final_audit.py` 也读 `w79_gate_recompute`），**不要当当期读数引用、也不要删** |
 | `results_w80_offline_pytest.junit.xml` | 当期离线测试面 |
 
 > 🔻 `backend/reports/w6/` 仍是 `eval/reporter.py`、`redteam_eval.py`、`consistency.py` 的默认输入/输出目录（代码硬编码），因此目录保留；W6 窗口的 `DELIVERY/RELAY/PROMPT` 与 58 个旧日志已移至 `CommerceQL-archive/reports/w6/`。
@@ -31,6 +31,11 @@
 ## 3. 历史产物在哪
 
 旧轮次的 `results_r*`、`results_w7*`、`results_v1*`、`results_v2*`、`results_replay*` 等，以及其余 138 个 cassette（另 1 个 manifest），已移到：
+
+**2026-10-25 补归档 2 件**（在 `evidence/results/`，用同一条 `-What results` 可恢复）：
+`results_r59_live401_envcheckpoint.jsonl`（本目录零引用，且违反"只留当期"规则）、`results_w77_b2_clean_calls.json`（无脚本读它）。
+
+> ⚠️ 另外 7 件历史轮次结果**刻意保留在仓库内**：`w77/w78/w79_gate_recompute`、`w78/w79_redteam`、`w78_integration.junit.xml`、`w79_integration_hygiene` —— 它们被 `eval/w7x_*.py` 当**输入**读（`w80_final_audit.py` 也读 `results_w79_gate_recompute.json`），归档会让历史复算链断开。它们**不是**当期读数，引用前先看文件名里的轮次号。
 
 ```
 CommerceQL-archive\evidence\results\      （与本仓库同级，不在仓库内）

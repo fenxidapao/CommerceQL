@@ -55,6 +55,12 @@ F=backend/reports/qa/RELAY.md;      N=$(grep -n '^## ' "$F" | tail -1 | cut -d: 
 
 ## 5. 根目录遗留件（已移出）
 
+- **2026-10-25 清理一次性日志**：删掉 13 个未跟踪的 pytest/复算输出转储（`*.log` 全局被 `.gitignore` 忽略，从未入库）；
+  仓库现在只留 **G-1 的两个输入**：`w6/_full_pytest_w6.log`、`w6/_integration_pytest.log`（`eval/reporter.py:75,80` 硬编码）。
+  ⚠️ 其中 `_full_pytest_1004_rT30.log`、`_integration_pytest_{1004_rT30,1006_rT37,1006_rT38,1006_rT39_v}.log`、
+  `_r1{4,6}_offline_cleantree.log` **仍被本目录 `w8/RELAY.md`、`qa/{RELAY,QA_LEDGER,TASK_BOARD}.md` 与
+  `w6/eval_metrics.json` 的 provenance 字段按文件名引用** —— 这些引用现在指向不存在的文件，与"异地 clone 只带入库件"同态
+  （`eval/README.md §4` 早已声明 G-1 输入是未跟踪 `.log`）。要复现口径请重跑测试，不要去找这些旧文件。
 - `.w8r59-git-scan.json`、`.w8r59-worktree-scan.json`：W59 的 gitleaks 原始扫描件（命中值已 `REDACTED`），已移至 `CommerceQL-archive\root\`；聚合读数 `eval/results_r59_secret_scan_final.json` 也已随旧结果移至 archive。
 - `../W1A_HANDOVER.md`：2026-09-16 的 W1A 交接，已移至 `CommerceQL-archive\root\`；`docs/07` 的历史引用已标注该位置。
 

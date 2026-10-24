@@ -1,5 +1,7 @@
 # CommerceQL
 
+> **新 Agent / 新接手请先读 [`AGENTS.md`](AGENTS.md)**（导航、阅读预算、禁区、五个陷阱）。本文是工程约束说明。
+
 基于 **Text2SQL** 的电商数据分析 Agent：把一句中文业务问题，变成一条**受控**的 SQL，
 再变成带口径说明的图表与结论。
 
@@ -9,13 +11,13 @@
 
 ---
 
-## 1. 当前状态（2026-10-24 快照 · 必然过期）
+## 1. 当前状态（2026-10-25 快照 · 必然过期）
 
 > 引用前先实跑 `git rev-parse --short HEAD; git rev-list --count HEAD` 并读源件，不要抄本节。
 
 | 项 | 读数 | 源 |
 |---|---|---|
-| 代码 HEAD | `df65531` / 711 笔 | `git log -1`；`git rev-list --count HEAD` |
+| 代码 HEAD | `e537a24` / 718 笔 | `git log -1`；`git rev-list --count HEAD` |
 | 官方快照 | `88f3500` / **PASS 1/8**（PASS 1 / FAIL 3 / PARTIAL 2 / UNVERIFIED 2），生成 `2026-10-07T05:27:34Z`，最后改动该文件的提交 `24d4477` | `backend/reports/w6/eval_metrics.json`；`backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md` |
 | 当期复算 | **6 PASS / 0 PARTIAL / 2 UNVERIFIED / 0 FAIL**，rev `26421ae` | `eval/results_w80_gate_recompute.json`；`backend/reports/w8/DELIVERY.md` 终版节 |
 | 契约文档 | `07 v1.7.34`（3,683 行）；`08 v1.4.1` | `docs/07_技术设计文档_TDD.md` 头部版本字段 |
