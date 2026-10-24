@@ -119,6 +119,17 @@ def main() -> int:
     }
 
     exempt = {"G-2", "G-5", "G-7"}
+    g8_dual = (
+        {
+            key: clarification.get(key)
+            for key in (
+                "requests", "clarified", "clarify_expected_n", "second_round_attempted",
+                "second_round_success", "primary_denominator", "success_rate_attempted",
+                "success_rate_clarified", "clarified_denominator_verdict",
+            )
+        }
+        if clarification else None
+    )
     rows: list[dict[str, Any]] = []
     for gate_id in ("G-1", "G-2", "G-3", "G-4", "G-5", "G-6", "G-7", "G-8"):
         computed = fresh[gate_id]
@@ -140,8 +151,20 @@ def main() -> int:
         }
         if gate_id == "G-8":
             row["tau_applicability"] = None
+            row["clarification_denominators"] = g8_dual
+            attempted = int((g8_dual or {}).get("second_round_attempted") or 0)
+            clarified_n = int((g8_dual or {}).get("clarified") or 0)
+            succeeded = int((g8_dual or {}).get("second_round_success") or 0)
+            primary = (
+                "不存在（attempted=0，**不是 0%**）"
+                if attempted == 0 else f"{succeeded}/{attempted}"
+            )
             row["notes"] = [
                 *row["notes"],
+                f"D-W77-3 双分母：主读数 success/attempted = {primary}；"
+                f"并列 success/clarified = {succeeded}/{clarified_n} ⇒ "
+                f"{g8_dual.get('clarified_denominator_verdict') if g8_dual else None}"
+                "（attempted<clarified 时分母未覆盖，不得读成低成功率）",
                 "G-8 **不适用** D-W77-1 的 τ 非适用豁免（澄清率/二轮成功率的判据点不在 L4 决策上）",
             ]
         if gate_id in official_by_id:
