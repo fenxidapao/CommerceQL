@@ -765,7 +765,7 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 
 > 本节是本项目当前的**对外最终口径**。上面第 60 轮及以前是历史交付，保留不改。
 
-- **官方快照**：`backend/reports/w6/eval_metrics.json` 仍 **`88f3500`／PASS 1/8**（件内自报 `88f3500`／dirty=false，生成于 `2026-10-07T05:27:34Z`；最后改动该文件的提交 = `24d4477`，两格并报）。**未刷新，非当期读数**。
+- **官方快照**（`backend/reports/w6/eval_metrics.json`）：仍 88f3500/PASS 1/8，未刷新（件内自报 `88f3500`／dirty=false，生成于 `2026-10-07T05:27:34Z`；最后改动该文件的提交 = `24d4477`，两格并报）。**非当期读数**。
 - **当期复算**（`eval/results_w80_gate_recompute.json`，rev `26421ae`／dirty=false）：**6 PASS／0 PARTIAL／2 UNVERIFIED／0 FAIL**。
   - G-1 PASS：离线 **2736** ＋ 集成 **124**（集成复用 W78 `e7fc769`；`backend/app` 与 `backend/tests/integration` 自 `e7fc769` 空 diff，本轮不启动容器）。
   - G-2 PASS：easy×low **8/8**；G-5 PASS：该拒 **24/24**、误拒 **3/124 = 2.4%**；G-7 PASS：**13/13**。三格同写「**L4 决策份额 0/166；τ 未校准**（条件性非适用，不是校准证据）」。
