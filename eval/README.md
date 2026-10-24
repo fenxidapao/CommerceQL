@@ -31,11 +31,11 @@
 旧轮次的 `results_r*`、`results_w7*`、`results_v1*`、`results_v2*`、`results_replay*` 等，以及其余 138 个 cassette（另 1 个 manifest），已移到：
 
 ```
-..\CommerceQL-archive\evidence\results\
-..\CommerceQL-archive\evidence\cassettes\
+CommerceQL-archive\evidence\results\      （与本仓库同级，不在仓库内）
+CommerceQL-archive\evidence\cassettes\
 ```
 
-需要复算某一旧轮次时，先恢复（`-WhatIf` 预览）：
+需要复算某一旧轮次时，在**仓库根**执行恢复（`-WhatIf` 预览）：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File ..\CommerceQL-archive\restore-evidence.ps1 -What cassettes -WhatIf

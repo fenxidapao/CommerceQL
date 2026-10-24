@@ -24,14 +24,14 @@
 `w0`、`w1a`、`w1b`、`w2a`–`w2d`、`w2-int`、`w3a`–`w3c`、`w3-int`、`w4`、`w5`、`w7`、`arch`、`t-a1` 已整体移到：
 
 ```
-..\..\CommerceQL-archive\reports\
+CommerceQL-archive\reports\      （与本仓库同级，不在仓库内）
 ```
 
-它们是**史料**，只读、不得引作当期依据。需要查阅或被旧文档引用时，先恢复：
+它们是**史料**，只读、不得引作当期依据。需要查阅或被旧文档引用时，在**仓库根**执行恢复：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File ..\..\CommerceQL-archive\restore-evidence.ps1 -What reports -WhatIf
-powershell -ExecutionPolicy Bypass -File ..\..\CommerceQL-archive\restore-evidence.ps1 -What reports
+powershell -ExecutionPolicy Bypass -File ..\CommerceQL-archive\restore-evidence.ps1 -What reports -WhatIf
+powershell -ExecutionPolicy Bypass -File ..\CommerceQL-archive\restore-evidence.ps1 -What reports
 ```
 
 ## 4. 怎么读追加型文件

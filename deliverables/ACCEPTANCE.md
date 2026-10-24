@@ -5,7 +5,7 @@
 >
 > 🔻 **本件正文是 2026-10-04 课程交付包快照**（HEAD `60624ff`／388 笔为包身份，保留不改；包哈希仍只对那一包有效）。
 > **当前状态（2026-10-24 快照）**：官方快照 `88f3500`／PASS 1/8；当期复算 **6 PASS＋2 UNVERIFIED**（rev `26421ae`；6/8 ≠ 通过）。以 `OVERVIEW.md §6/§7`、`backend/reports/w8/DELIVERY.md` 终版节、`backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md` 为准；正文 §3/§5 的 `PASS 1/8` 均为官方快照读数。
-> 🔻 **2026-10-24 整理**：旧窗口报告（w0–w7/arch/t-a1）与旧评测结果/cassette 已移至仓库外 `../CommerceQL-archive/`；正文中的历史路径按原样保留，恢复见该目录 README。
+> 🔻 **2026-10-24 整理**：旧窗口报告（w0–w7/arch/t-a1）与旧评测结果/cassette 已移至仓库外同级的 `CommerceQL-archive/`；正文中的历史路径按原样保留，恢复见该目录 README。
 
 ---
 
