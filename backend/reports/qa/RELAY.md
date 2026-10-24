@@ -5430,3 +5430,18 @@ W80 只发零成本收口件：① 同一 HEAD 最终审计 ② `DELIVERY.md` �
 `TASK_BOARD §103.7`：订正成本口径（下限/最近读数/本轮未重测）、去掉“必须 live”、明确 §4 cwd；回执 diff＋rev/dirty＋tokens=0。
 
 **边界**：本轮 QA 零 LLM、零出站、未启动容器；官方门禁未刷新（`88f3500`／PASS 1/8）。
+
+## 98 · 路径 A 收口完成：W80.1 订正通过；定稿 6 PASS＋2 UNVERIFIED（QA R31bz ｜ 2026-10-24 14:50 +0800 ｜ HEAD `7170874`／710 笔）
+
+**结论**：W80.1 通过（只改 `OFFICIAL_SNAPSHOT_DECISION.md` §2.4/§4 与 W8 `RELAY §86.7`；`¥0.39` 只留在“不得当报价”的否定句；`必须 live` 已删；cwd = 仓库根）。**Path A 收口完成；项目验收状态定稿为 6 PASS＋2 UNVERIFIED（G-6/G-8 外部阻塞）**。官方快照仍 `88f3500`／PASS 1/8，未刷新。
+
+### 98.1 W80.1【实测】
+`7170874`／710，origin 齐平；推送 `1e58d5b..7170874`；2 文件 +18/−3；`DELIVERY`／`OVERVIEW`／官方快照／代码／判据／阈值／`reports/qa`／`README` 空 diff；DSN 卫生 8 passed；tokens=0。
+
+### 98.2 定稿口径
+**6 PASS / 0 PARTIAL / 2 UNVERIFIED / 0 FAIL**：G-1 2736+124；G-2 8/8；G-3 50/50（放行 0；成本闸门未测；21 条非 G-3 失败仍在）；G-4 RLS 真库；G-5 24/24+3/124；G-7 13/13；G-6/G-8 UNVERIFIED。τ 未校准、L4 决策 0/166；官方 1/8 与当期 6/2 同框引用。交付件：`DELIVERY` 终版节、`OFFICIAL_SNAPSHOT_DECISION`、`OVERVIEW §6/§7/§9`、`results_w80_final_audit`、`results_w80_redteam_tail`。
+
+### 98.3 收口后边界
+不再开无新输入的开发轮；没有新预算/补答源/判据变更，不再跑 G-6/G-8、不改产品代码、不刷官方快照。未来顺序：G-6 U-126 容量→满档 live；G-8 补答源→U-141→二轮；两者 PASS 且同 rev 后由 `reporter.py` 刷新。任何 `backend/app` 改动先重跑 166 replay。
+
+**边界**：本轮 QA 零 LLM、零出站；官方门禁未刷新（`88f3500`／PASS 1/8）。

@@ -7671,3 +7671,44 @@ params: {"refund_status": "refunded", "pay_status": "paid"}
 ### 103.8 边界
 
 本轮 QA 零 LLM、零出站、未启动容器；只追加 `reports/qa/**`；W80 未改产品代码/测试/语义包/冻结集/判据/阈值/官方快照；G-6/G-8 未真打；README 未改。
+
+## 104 · 路径 A 收口完成：W80.1 订正通过；项目验收状态定稿为 6 PASS＋2 UNVERIFIED（QA R31bz ｜ 2026-10-24 14:50 +0800 ｜ HEAD `7170874`／710 笔）
+
+> W80.1 只改 `OFFICIAL_SNAPSHOT_DECISION.md` §2.4/§4 与 W8 `RELAY §86.7`；我逐字核对：`¥0.39` 只保留在“不得当报价”的否定句里，`必须再打一次 --live` 已删除，cwd 已写“仓库根”。**Path A 收口完成；项目验收状态定稿为 6 PASS＋2 UNVERIFIED（两格为外部阻塞）**。
+
+### 104.1 W80.1 通过【实测】
+
+| 项 | 现读 |
+|---|---|
+| HEAD / 笔数 | `7170874` / 710，与 `origin/main` 齐平；树仅 `?? .workbuddy/` |
+| 推送范围 | `1e58d5b..7170874` |
+| 改动面 | **2 文件、+18/−3**：`OFFICIAL_SNAPSHOT_DECISION.md`（§2.4 成本口径＋§4 cwd，3 行改）＋ W8 `RELAY` §86.7（+15） |
+| 禁改面 | `DELIVERY.md`、`OVERVIEW.md`、官方快照、`backend/app`、`backend/tests`、`semantic`、`eval/gates.py`、`reports/qa`、`README` **空 diff**【实测】 |
+| 订正核对 | §2.4：`0.391504` 明确为**修复前下限**（同批复算 ¥1.131531；W59 全量 price_guess ¥8.813584；W76 G-8 全批估 ¥1.1025；刷新前按 `budget.PRICES` 重算）；“必须 live”改为“同 HEAD 先跑 166 replay（零 LLM）对齐 rev”；§4 写明 cwd = 仓库根 |
+| 测试 | 离线 DSN 卫生 **8 passed**（doc-only 改动后复跑；W80 全量 2736/0 未变） |
+| 出站 | tokens=0；LLM 0 次；未跑 G-6/G-8；未启动容器 |
+
+### 104.2 项目验收状态（定稿口径）
+
+| 面 | 定稿 |
+|---|---|
+| 门禁 | **6 PASS / 0 PARTIAL / 2 UNVERIFIED / 0 FAIL** |
+| PASS 六格 | G-1 离线 2736＋集成 124；G-2 8/8；G-3 放行 0／覆盖 50/50；G-4 RLS 真库（5/5＋6/6）；G-5 24/24＋3/124；G-7 13/13 |
+| UNVERIFIED 两格 | **G-6**（无 live 压测：¥40+＋U-126 容量 8→约 38–48＋满档全分母）；**G-8**（17/18 缺补答源＋U-141 绑定型澄清路径未走到＋二轮未跑） |
+| 官方快照 | **`88f3500`／PASS 1/8，未刷新**；与当期 6/2 复算必须同框引用 |
+| τ | **未校准**；G-2/G-5/G-7 为**条件性 τ 非适用**（`tau_applicability=not_exercised`，L4 决策份额 **0/166**） |
+| G-3 口径 | PASS = **危险 SQL 放行=0**；**成本闸门未测**（`cost_gate_tripped=NOT_CHECKED`）；**21 条非 G-3 红队断言失败仍在**（7 设计如此／3 已知限制／0 潜在缺陷） |
+| 测试 | 离线 **2736/0**；集成 **124/0/0**（W78 `e7fc769` 复用；`backend/app` 与集成测试空 diff） |
+| 交付件 | `DELIVERY.md` 终版节；`OFFICIAL_SNAPSHOT_DECISION.md`；`OVERVIEW.md` §6/§7/§9；`eval/results_w80_final_audit.json`；`eval/results_w80_redteam_tail.json` |
+| 结论 | **路径 A 收口：6 PASS＋2 UNVERIFIED（需预算/业务输入的阻塞项）**；🚫 不得写“门禁通过”“8/8”“全部达标” |
+
+### 104.3 收口后的动作边界
+
+1. **不再开无新输入的开发轮**（W81 及以后）：没有新预算/补答源/判据变更，不再跑 G-6/G-8，不再改产品代码。
+2. 若未来拿到外部输入，顺序固定：**G-6 容量决策（U-126）→ 满档 live 压测（全分母、429 单列）**；**G-8 补答源 → U-141 绑定型澄清路径 → 二轮**；两者都 PASS 且同 rev/dirty=false 后，才允许 `eval/reporter.py` 刷新官方快照并同步「评测报告与门禁判定.md」。
+3. 任何 `backend/app/**` 改动 ⇒ 先重跑 **166 replay**，否则 τ 豁免与 G-2/G-5/G-7 证据失效。
+4. 已知限制（保留披露，不阻塞收口）：τ 未校准；G-7 权威侧是语义包而非外部 BI；G-3 成本闸门未测；21 条非 G-3 红队失败；b2 匣带 23 个脏键不得作清洁证据；secrets 最后一次实测 W60=57/51/94（此后未复测）；U-142 多轮历史未纳入八格；`semantic_bundle` 发布状态与生产检索面不在八格内；README 进度表归上游窗口。
+
+### 104.4 边界
+
+本轮 QA 零 LLM、零出站、未启动容器；只追加 `reports/qa/**`；W80.1 只改 W8 文档，未改产品代码/测试/语义包/冻结集/判据/阈值/官方快照/DELIVERY/OVERVIEW/README。

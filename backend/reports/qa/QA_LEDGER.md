@@ -1951,3 +1951,15 @@ W67 派单见 `TASK_BOARD §88.5`（三件，全部零出站）。
 8. **我的决定**：① W80-1/2/4/5 通过；W80-3 有条件通过 ② **Path A 收口 = 主体完成、W80.1 一笔订正待落**；订正前不写“路径 A 收口完成” ③ W80.1 只改 `OFFICIAL_SNAPSHOT_DECISION.md` §2.4/§4 与 W8 RELAY §86.7；零 LLM、零产品代码、零官方快照 ④ 仍不跑 G-6/G-8、不刷官方快照。
 9. **残余**：W80.1 订正（成本口径/必须 live/cwd）；G-6 预算＋U-126 容量；G-8 17/18 补答源＋U-141；官方快照仍 stale；21 条非 G-3 失败；G-3 成本闸门未测。
 10. **结论**：W80 零成本收口件主体通过；唯一阻碍“路径 A 收口完成”的是一处**文档成本口径**，不是门禁/代码问题。W80.1 见 `TASK_BOARD §103.7`。
+
+## R31bz · 路径 A 收口完成：W80.1 订正通过；定稿 6 PASS＋2 UNVERIFIED ／ 2026-10-24 14:50 +0800 ／ HEAD `7170874`／710 笔
+
+1. **基线【实测】**：`7170874`／710／与 origin/main 齐平；树仅 `?? .workbuddy/`；推送 `1e58d5b..7170874`；W80.1 只改 2 文件 **+18/−3**（`OFFICIAL_SNAPSHOT_DECISION.md` §2.4/§4 ＋ W8 `RELAY §86.7`）。
+2. **禁改面【实测】**：`DELIVERY.md`、`OVERVIEW.md`、官方 `eval_metrics.json`、`backend/app`、`backend/tests`、`semantic`、`eval/gates.py`、`reports/qa`、`README` **空 diff**；W80.1 零 LLM、tokens=0、未跑测试、未出站。
+3. **订正核对【实测】**：§2.4 的 `0.391504` 已明确为**修复前下限**（同批复算 ¥1.131531；W59 全量 price_guess ¥8.813584；W76 G-8 全批估 ¥1.1025；刷新前按 `budget.PRICES` 重算）；`¥0.39` 只保留在“不得当报价”的否定句；“必须再打一次 --live”已删除，改为“同 HEAD 先跑 166 replay（零 LLM）对齐 rev”；§4 写明 cwd = 仓库根。W8 `RELAY §86.7` 记录订正并引用 `TASK_BOARD §103.4`。
+4. **回归【实测】**：DSN 卫生 **8 passed**（doc-only 改动后复跑）；W80 全量离线 2736/0 未变；官方快照与交付件未动。
+5. **定稿【实测】**：**6 PASS / 0 PARTIAL / 2 UNVERIFIED / 0 FAIL**——G-1 2736+124；G-2 8/8；G-3 放行 0／覆盖 50/50（成本闸门未测；21 条非 G-3 失败仍在）；G-4 RLS 真库；G-5 24/24＋3/124；G-7 13/13；G-6/G-8 UNVERIFIED。τ 未校准、L4 决策 0/166；官方 `88f3500`／PASS 1/8，未刷新。
+6. **交付件齐【实测】**：`DELIVERY.md` 终版节（含 G-6/G-8 阻塞表与“路径 A 收口”结论）；`OFFICIAL_SNAPSHOT_DECISION.md`（不刷新＋刷新条件＋reporter 唯一入口）；`OVERVIEW.md` §6/§7/§9；`results_w80_final_audit.json`；`results_w80_redteam_tail.json`。
+7. **收口后边界**：不再开无新输入的开发轮；没有新预算/补答源/判据变更，不再跑 G-6/G-8、不改产品代码、不刷官方快照。未来顺序：G-6 U-126 容量→满档 live；G-8 补答源→U-141→二轮；两者 PASS 且同 rev 后 `reporter.py` 刷新；任何 `backend/app` 改动先重跑 166 replay。
+8. **已知限制（保留披露）**：τ 未校准；G-7 权威侧是语义包非外部 BI；G-3 成本闸门未测；21 条非 G-3 红队失败；b2 匣带 23 脏键；secrets 最后实测 W60=57/51/94（此后未复测）；U-142 未纳入八格；`semantic_bundle` 发布状态与生产检索面不在八格内；README 归上游窗口。
+9. **结论**：W80.1 通过，**路径 A 收口完成**；项目验收状态定稿为 **6 PASS＋2 UNVERIFIED（G-6/G-8 需预算/业务输入的阻塞项）**。不写“门禁通过”“8/8”“全部达标”。
