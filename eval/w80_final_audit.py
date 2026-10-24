@@ -158,6 +158,7 @@ def _junit_counts(path: str) -> dict[str, Any]:
         **_relative_path_and_sha(path),
         **total,
         "passed": total["tests"] - failed - total["skipped"],
+        "failed": total["failures"],
         "failed_tests": failed_tests,
         "error_tests": error_tests,
     }
