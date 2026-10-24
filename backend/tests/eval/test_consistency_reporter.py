@@ -309,7 +309,14 @@ def test_clarify_counts_record_the_denominator_it_used():
     assert c == {"requests": 3, "clarify_expected_n": 2, "clarified": 2,
                  "clarify_then_correct": 0,
                  "second_round_attempted": 0, "second_round_success": 0,
-                 "second_round_loop_available": False}
+                 "second_round_loop_available": False,
+                 "primary_denominator": "attempted",
+                 "success_rate_attempted": None,
+                 "success_rate_clarified": 0.0,
+                 "clarified_denominator_verdict": "UNVERIFIED",
+                 "denominator_note":
+                     "主读数 = success/attempted；并列 success/clarified；"
+                     "attempted<clarified 时后者判 UNVERIFIED（D-W77-3）"}
 
 
 # ============================================================================

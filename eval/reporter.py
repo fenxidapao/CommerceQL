@@ -1031,6 +1031,9 @@ def gate_inputs(
         "consistency": _load(metric_values_path),
         "clarification": _clarify_counts(records),
         "tau_calibrated": bool(tau_facts()["calibrated_under_eval_env"]),
+        #: W77-2：报告装配根**不**读 W77-1 证据 ⇒ `None` = 旧降级。
+        #: 条件性豁免只出现在 `w77_gate_recompute.py` 的复算产物里；官方口径不因此变绿。
+        "tau_applicability": None,
     }
 
 
@@ -1388,6 +1391,15 @@ def _clarify_counts(records: Sequence[Mapping[str, Any]]) -> dict[str, Any] | No
                 succeeded += 1
     # 分母取「本轮跑到的全部用例」，并把「题面本来就要澄清」的条数一并落盘 ——
     # 分母口径不写死，读者就会按自己的理解重算出一个不同的澄清率。
+    #
+    # 🔴 W77-3 / D-W77-3（QA §98.7，本窗自订）：
+    #   主读数 = `success/attempted`（只算**真的跑了二轮**的条数）；
+    #   并列   = `success/clarified`（首轮收口成 clarify 的全部条数）。
+    #   `attempted < clarified` ⇒ 后者**没有覆盖全部澄清题**，判 `UNVERIFIED`
+    #   （不是低成功率，是分母没覆盖）—— 这正是 W76 G-8 设计发现的 6.25% 误读。
+    attempted_rate = None if attempted == 0 else succeeded / attempted
+    clarified_rate = None if not asked else succeeded / len(asked)
+    clarified_verdict = "UNVERIFIED" if attempted < len(asked) else None
     return {
         "requests": len(records),
         "clarify_expected_n": len(want),
@@ -1399,6 +1411,15 @@ def _clarify_counts(records: Sequence[Mapping[str, Any]]) -> dict[str, Any] | No
         #: 落这个标志不是装饰：少了它，`gates.py` 会把「评测器没有第二轮回路」判成被测系统 FAIL。
         #: 现在它**从 records 数出来** ⇒ 带二轮的批次能真正被门禁读到。
         "second_round_loop_available": attempted > 0,
+        # ---- W77-3：双分母（原始计数已在上面，下面只加派生读数）----
+        "primary_denominator": "attempted",
+        "success_rate_attempted": attempted_rate,
+        "success_rate_clarified": clarified_rate,
+        "clarified_denominator_verdict": clarified_verdict,
+        "denominator_note": (
+            "主读数 = success/attempted；并列 success/clarified；"
+            "attempted<clarified 时后者判 UNVERIFIED（D-W77-3）"
+        ),
     }
 
 
@@ -1605,7 +1626,8 @@ def _known_limitations(
             "**G-8 后半句的口径**：分子＝「**二轮回到可执行终态（complete）的比例**」，"
             "**不是**答案正确率——二轮问句带补答，冻结集 gold 只对首轮成立"
             "（二轮 gold 为 `not_defined_for_second_round`）⇒ 二轮**没有**可比对的正确答案。"
-            "分母＝首轮收口成 clarify 的条数。"
+            "主分母＝**实际跑了二轮**的条数（`attempted`）；并列给出 `success/clarified`，"
+            "`attempted<clarified` 时后者判 UNVERIFIED（D-W77-3：分母没覆盖 ≠ 成功率低）。"
         )
     return out
 

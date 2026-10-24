@@ -862,6 +862,9 @@ async def run_batch(
     second_round_answers: Mapping[str, str] | None = None,
     batch_id: str | None = None,
     max_cost_cny: float | None = None,
+    max_calls: int | None = None,
+    max_tokens: int | None = None,
+    prior_usage: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """串行跑完整批。**整批只有一个 event loop**（纪律由 `run_batch_sync` 唯一持有）。
 
@@ -870,9 +873,18 @@ async def run_batch(
     "Event loop is closed"。
 
     `batch_id`：本次跑批的**独立身份**（τ 采样要 3 次独立批次才构成 `repeats`）。
-    `max_cost_cny`：**累计计费硬上限**（W76 派单要求"越过硬上限立即停"）。每跑完一条
-    就把 `cost_cny` 累加；越过即**不再开始下一条**，并在返回值里落 `budget_stop`。
-    它只增不减、按记录自报的 `cost_cny` 计（与 summary 同一个口径）。
+
+    ## 预算账本（W77-4；派单要求"全局累计，任一先到即停"）
+
+    `max_cost_cny` / `max_calls` / `max_tokens` 三者**并列**，全部按
+    **`prior_usage` + 本次跑批** 的累计值判定（`prior_usage` 由 `--budget-ledger`
+    从上一轮落盘的 totals 读入 ⇒ 冒烟、重跑、重试都在账上）。
+    * `calls` 从 `transport.calls` 的**增量**数（重试会重复调用 ⇒ 自然计入）；
+    * `tokens` = 首轮 + 二轮 tokens 之和；
+    * `cost_cny` = 首轮 + 二轮 cost 之和（历史计费随匣带回放时仍按记录原值入账，
+      但那是**历史账**，不是本轮新增支出 —— `live` 字段负责区分）。
+    任一累计值 `>=` 上限 ⇒ **不再开始下一条**，`budget_stop` 里带 `calls`/`tokens`/
+    `cost_cny` 与 `breached` 清单；开跑前就已被上轮账本顶到上限 ⇒ 一条都不跑。
     """
     harness = Harness(
         live=live,
@@ -887,8 +899,62 @@ async def run_batch(
     )
     records: list[dict[str, Any]] = []
     resumed = dict(resume_records or {})
-    spent = 0.0
+    #: 全局账本（W77-4）：上轮累计 + 本轮增量。**calls/tokens/¥ 同权**，任一先到即停。
+    prior = dict(prior_usage or {})
+    prior_calls = int(prior.get("calls") or 0)
+    prior_tokens = int(prior.get("tokens") or 0)
+    prior_cost = float(prior.get("cost_cny") or 0.0)
+    usage: dict[str, float | int] = {"calls": 0, "tokens": 0, "cost_cny": 0.0}
     budget_stop: dict[str, Any] | None = None
+
+    def _totals() -> dict[str, Any]:
+        return {
+            "calls": prior_calls + int(usage["calls"]),
+            "tokens": prior_tokens + int(usage["tokens"]),
+            "cost_cny": round(prior_cost + float(usage["cost_cny"]), 6),
+        }
+
+    def _breached() -> list[str]:
+        totals = _totals()
+        hit: list[str] = []
+        if max_cost_cny is not None and totals["cost_cny"] >= float(max_cost_cny):
+            hit.append("max_cost_cny")
+        if max_calls is not None and totals["calls"] >= int(max_calls):
+            hit.append("max_calls")
+        if max_tokens is not None and totals["tokens"] >= int(max_tokens):
+            hit.append("max_tokens")
+        return hit
+
+    def _stop(reason: str, hit: list[str], case_id: str | None) -> dict[str, Any]:
+        totals = _totals()
+        return {
+            "reason": reason,
+            "breached": hit,
+            "caps": {
+                "max_cost_cny": max_cost_cny,
+                "max_calls": max_calls,
+                "max_tokens": max_tokens,
+            },
+            "prior_usage": {
+                "calls": prior_calls,
+                "tokens": prior_tokens,
+                "cost_cny": round(prior_cost, 6),
+            },
+            "calls": totals["calls"],
+            "tokens": totals["tokens"],
+            "spent_cny": totals["cost_cny"],
+            # 兼容 W76 的旧读者：`max_cost_cny` / `spent_cny` 两个键仍在。
+            "max_cost_cny": max_cost_cny,
+            "stopped_after_case": case_id,
+            "completed_cases": len(records),
+            "requested_cases": len(cases),
+        }
+
+    pre = _breached()
+    if pre:
+        budget_stop = _stop("budget_already_exhausted", pre, None)
+        print(f"budget stop before batch: caps already reached {pre}", flush=True)
+
     try:
         for index, case in enumerate(cases, start=1):
             if budget_stop is not None:
@@ -901,6 +967,9 @@ async def run_batch(
                 continue
 
             started = time.monotonic()
+            calls_at_start = (
+                len(harness.transport.calls) if harness.transport is not None else 0
+            )
             print(f"[{index}/{len(cases)}] {case_id}", flush=True)
             record: dict[str, Any] = {}
             retry_attempt = 0
@@ -909,6 +978,19 @@ async def run_batch(
                     harness, case, allowlist=allowlist, db_path=db_path,
                     second_round=second_round,
                     second_round_answers=second_round_answers,
+                )
+                #: 每次尝试都入账（重试的调用与 tokens 不是免费的重放）——W77-4。
+                calls_now = (
+                    len(harness.transport.calls) if harness.transport is not None else 0
+                )
+                usage["calls"] += max(0, calls_now - calls_at_start)
+                calls_at_start = calls_now
+                second = record.get("second_round") or {}
+                usage["tokens"] += int((record.get("tokens") or {}).get("total") or 0) + int(
+                    (second.get("tokens") or {}).get("total") or 0
+                )
+                usage["cost_cny"] += float(record.get("cost_cny") or 0.0) + float(
+                    second.get("cost_cny") or 0.0
                 )
                 if _is_transient_transport_record(record) and retry_attempt < max(0, transport_retries):
                     delay = max(0.0, transport_backoff_s) * (2 ** retry_attempt)
@@ -928,7 +1010,6 @@ async def run_batch(
             if batch_id is not None:
                 record["batch_id"] = batch_id
             records.append(record)
-            spent += float(record.get("cost_cny") or 0.0)
             if checkpoint_path:
                 _append_checkpoint(
                     checkpoint_path,
@@ -936,24 +1017,21 @@ async def run_batch(
                     dataset_content_hash=str((checkpoint_meta or {}).get("dataset_content_hash") or ""),
                     checkpoint_meta=checkpoint_meta,
                 )
-            if max_cost_cny is not None and spent >= float(max_cost_cny):
+            hit = _breached()
+            if hit:
                 #: 派单原文：越过硬上限**立即停**，不得为追结果重试。已跑完的这一条照样入账。
-                budget_stop = {
-                    "reason": "max_cost_cny_exceeded",
-                    "max_cost_cny": float(max_cost_cny),
-                    "spent_cny": round(spent, 6),
-                    "stopped_after_case": case_id,
-                    "completed_cases": len(records),
-                    "requested_cases": len(cases),
-                }
+                budget_stop = _stop(f"{hit[0]}_exceeded", hit, case_id)
+                totals = _totals()
                 print(
-                    "budget stop: spent "
-                    f"{spent:.4f} CNY >= cap {float(max_cost_cny):.4f} after {case_id}",
+                    "budget stop: "
+                    f"calls={totals['calls']} tokens={totals['tokens']} "
+                    f"cost={totals['cost_cny']:.4f} CNY; caps={hit} after {case_id}",
                     flush=True,
                 )
                 break
     finally:
         written = harness.save_cassette()
+        calls = list(harness.transport.calls) if harness.transport is not None else []
         await harness.aclose()
     return {
         "records": records,
@@ -961,6 +1039,19 @@ async def run_batch(
         "node_timeout_overrides": dict(harness.node_timeout_overrides),
         "max_concurrency": harness.max_concurrency,
         "budget_stop": budget_stop,
+        "usage": {
+            "calls": int(usage["calls"]),
+            "tokens": int(usage["tokens"]),
+            "cost_cny": round(float(usage["cost_cny"]), 6),
+            "prior": {
+                "calls": prior_calls,
+                "tokens": prior_tokens,
+                "cost_cny": round(prior_cost, 6),
+            },
+            "totals": _totals(),
+        },
+        "calls": calls,
+        "calls_unique": len(set(calls)),
     }
 
 
@@ -986,6 +1077,24 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
     for r in records:
         key = str(r.get("binding_layer") or "none")
         layers[key] = layers.get(key, 0) + 1
+    #: 🔴 W77-1：`binding_status` / L4 决策份额 / 候选数分布逐批落盘。
+    #: τ 非适用豁免（D-W77-1）只认这三格读数，缺一格就 fail-closed。
+    statuses: dict[str, int] = {}
+    for r in records:
+        key = str(r.get("binding_status") or "none")
+        statuses[key] = statuses.get(key, 0) + 1
+    tau_ok = 0
+    tau_reasons: dict[str, int] = {}
+    candidate_counts: dict[int, int] = {}
+    for r in records:
+        raw = r.get("tau_raw") or {}
+        ok = raw.get("ok") is True
+        if ok:
+            tau_ok += 1
+            n = len(raw.get("candidate_ids") or [])
+            candidate_counts[n] = candidate_counts.get(n, 0) + 1
+        reason = str(raw.get("reason") or ("ok" if ok else "unknown"))
+        tau_reasons[reason] = tau_reasons.get(reason, 0) + 1
     # 超时是"外因"还是"被测事实"要能一眼分开看：放大后仍超时 = 真慢/真挂。
     n_timeout = sum(1 for r in records if "TimeoutError" in str(r.get("infra_error")))
     walls = sorted(float(r["wall_s"]) for r in records if r.get("wall_s") is not None)
@@ -1001,6 +1110,17 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
         "n_equivalent": sum(1 for r in execute if (r.get("verdict") or {}).get("equivalent")),
         "terminal_distribution": terminals,
         "binding_layer_distribution": layers,
+        "binding_status_distribution": statuses,
+        "l4_decisions": sum(
+            1 for r in records if str(r.get("binding_layer") or "").upper() == "L4"
+        ),
+        "ambiguous_bindings": statuses.get("ambiguous", 0),
+        "tau_raw_ok": tau_ok,
+        "l4_scored_records": tau_ok,
+        "tau_raw_reason_distribution": tau_reasons,
+        "l4_candidate_count_distribution": {
+            str(k): candidate_counts[k] for k in sorted(candidate_counts)
+        },
         "attribution_distribution": cats,
         "tokens_total": sum(int((r.get("tokens") or {}).get("total") or 0) for r in records),
         "cost_cny_total": round(sum(float(r.get("cost_cny") or 0) for r in records), 6),
@@ -1111,7 +1231,29 @@ def main(argv: list[str] | None = None) -> int:
         "--max-cost-cny",
         type=float,
         default=None,
-        help="累计计费硬上限（元）。每跑完一条累加，越过即停并落 budget_stop",
+        help="累计计费硬上限（元）。与 --max-calls/--max-tokens 并列，按全局账本判定",
+    )
+    parser.add_argument(
+        "--max-calls",
+        type=int,
+        default=None,
+        help="累计 LLM 调用硬上限（冒烟/重跑/重试都计入）；任一越限即停",
+    )
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=None,
+        help="累计 token 硬上限（首轮+二轮）；任一越限即停",
+    )
+    parser.add_argument(
+        "--budget-ledger",
+        default=None,
+        help="全局预算账本 JSON 路径：读取上轮 totals，本轮结束后累加写回",
+    )
+    parser.add_argument(
+        "--calls-manifest",
+        default=None,
+        help="把本次 transport.calls（顺序+唯一键）落盘，供匣带卫生核对",
     )
     parser.add_argument("--verify-only", action="store_true")
     args = parser.parse_args(argv)
@@ -1171,6 +1313,20 @@ def main(argv: list[str] | None = None) -> int:
         print("\n未带 --yes：只打印计划，不执行。")
         return 0
 
+    #: 🔴 W77-4：全局账本 = 上轮 totals + 本轮增量。没有账本文件 ⇒ 从 0 起算。
+    prior_usage: dict[str, Any] = {}
+    ledger_payload: dict[str, Any] | None = None
+    if args.budget_ledger:
+        ledger_file = Path(args.budget_ledger)
+        if ledger_file.is_file():
+            ledger_payload = json.loads(ledger_file.read_text(encoding="utf-8"))
+            prior_usage = dict(ledger_payload.get("totals") or {})
+            print(
+                "预算账本：已载入上轮累计 "
+                f"calls={prior_usage.get('calls')} tokens={prior_usage.get('tokens')} "
+                f"cost={prior_usage.get('cost_cny')}"
+            )
+
     batch = run_batch_sync(
         cases,
         live=args.live,
@@ -1196,7 +1352,63 @@ def main(argv: list[str] | None = None) -> int:
         transport_backoff_s=max(0.0, args.transport_backoff_s),
         batch_id=args.batch_id,
         max_cost_cny=args.max_cost_cny,
+        max_calls=args.max_calls,
+        max_tokens=args.max_tokens,
+        prior_usage=prior_usage,
     )
+
+    if args.budget_ledger:
+        ledger_file = Path(args.budget_ledger)
+        ledger_file.parent.mkdir(parents=True, exist_ok=True)
+        ledger_payload = ledger_payload or {"schema": "W77_CALLS_LEDGER/v1", "runs": []}
+        ledger_payload["schema"] = "W77_CALLS_LEDGER/v1"
+        ledger_payload["updated_at"] = datetime.now(UTC).isoformat()
+        ledger_payload["totals"] = batch["usage"]["totals"]
+        ledger_payload.setdefault("runs", []).append({
+            "generated_at": stamp.get("generated_at"),
+            "git_rev": stamp.get("git_rev"),
+            "git_dirty": stamp.get("git_dirty"),
+            "batch_id": args.batch_id,
+            "live": args.live,
+            "mode": "record" if args.live else args.mode,
+            "cases": len(batch["records"]),
+            "calls": batch["usage"]["calls"],
+            "calls_unique": batch["calls_unique"],
+            "tokens": batch["usage"]["tokens"],
+            "cost_cny": batch["usage"]["cost_cny"],
+            "budget_stop": batch.get("budget_stop") is not None,
+        })
+        ledger_file.write_text(
+            json.dumps(ledger_payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(f"预算账本已更新：{args.budget_ledger} totals={batch['usage']['totals']}")
+
+    if args.calls_manifest:
+        manifest_file = Path(args.calls_manifest)
+        manifest_file.parent.mkdir(parents=True, exist_ok=True)
+        manifest_file.write_text(
+            json.dumps(
+                {
+                    "schema": "W77_CALLS_MANIFEST/v1",
+                    "generated_at": stamp.get("generated_at"),
+                    "git_rev": stamp.get("git_rev"),
+                    "git_dirty": stamp.get("git_dirty"),
+                    "live": args.live,
+                    "mode": "record" if args.live else args.mode,
+                    "cassette": args.cassette,
+                    "n_calls": len(batch["calls"]),
+                    "n_unique": batch["calls_unique"],
+                    "calls": batch["calls"],
+                    "unique": sorted(set(batch["calls"])),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        print(f"调用清单已落盘：{args.calls_manifest} unique={batch['calls_unique']}")
     summary = summarize(batch["records"])
     payload = {
         "frozen_evidence": evidence,
@@ -1216,6 +1428,12 @@ def main(argv: list[str] | None = None) -> int:
             "transport_backoff_s": max(0.0, args.transport_backoff_s),
             "batch_id": args.batch_id,
             "max_cost_cny": args.max_cost_cny,
+            "max_calls": args.max_calls,
+            "max_tokens": args.max_tokens,
+            "budget_ledger": args.budget_ledger,
+            "budget_prior_usage": (batch.get("usage") or {}).get("prior"),
+            "calls_total": (batch.get("usage") or {}).get("calls"),
+            "calls_unique": batch.get("calls_unique"),
             "budget_stop": batch.get("budget_stop"),
         },
         "summary": summary,

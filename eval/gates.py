@@ -21,7 +21,14 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Final
 
-__all__ = ["VERDICTS", "Gate", "evaluate_gates", "red_split", "summary"]
+__all__ = [
+    "VERDICTS",
+    "Gate",
+    "evaluate_gates",
+    "red_split",
+    "summary",
+    "tau_applicability_holds",
+]
 
 VERDICTS: Final[tuple[str, ...]] = ("PASS", "FAIL", "UNVERIFIED", "NOT_AVAILABLE", "PARTIAL")
 
@@ -60,8 +67,53 @@ def _rate(numerator: int, denominator: int) -> float | None:
 #: τ 未校准时**结论口径被污染**的门禁（判据点落在 L4 精排 / 澄清边界上，R-19）。
 _TAU_DEPENDENT: Final[frozenset[str]] = frozenset({"G-2", "G-5", "G-7", "G-8"})
 
+#: 🔴 W77-2 / D-W77-1（QA §98.7）：**只有**这三格允许按"τ 非适用"豁免降级。
+#: G-8 的判据点含澄清边界，**不豁免**（澄清率与 L4 是否决策不是同一件事）。
+_TAU_EXEMPT_GATES: Final[frozenset[str]] = frozenset({"G-2", "G-5", "G-7"})
 
-def _tau_verdict(gate_id: str, verdict: str, tau_calibrated: bool) -> str:
+#: 豁免成立时 notes 里必须逐字出现的标注（派单 §98.8-W77-2）。
+TAU_APPLICABILITY_NOTE: Final[str] = (
+    "tau_applicability=not_exercised：τ 未校准；本数据集不触发 L4 决策；"
+    "此标注不是 τ 校准证据"
+)
+
+#: D-W77-1 的三条件。**只看这三个数**：缺任何一格 ⇒ False（fail-closed）。
+_TAU_APPLICABILITY_EXPECTED_N: Final[int] = 166
+
+
+def tau_applicability_holds(evidence: Mapping[str, Any] | None) -> bool:
+    """W77-1 回放证据是否满足 D-W77-1 的三条件。
+
+    | 条件 | 含义 |
+    |---|---|
+    | `n_records == 166` | 全量冻结集都跑到（少一条就不是"本数据集不触发"） |
+    | `l4_decisions == 0` | `binding_layer == "L4"` 的条数为 0（L4 从未参与终判） |
+    | `ambiguous_bindings == 0` | `binding_status == "ambiguous"` 的条数为 0（无歧义绑定） |
+
+    ⚠️ 证据缺失/字段类型不对/任一条 >0 ⇒ `False`，调用方保持现有 `UNVERIFIED`。
+    本函数**不读** `tau_calibrated`：豁免不是"校准"的替代品，而是"该前提未被触发"。
+    """
+    if not isinstance(evidence, Mapping):
+        return False
+    try:
+        n_records = int(evidence["n_records"])
+        l4_decisions = int(evidence["l4_decisions"])
+        ambiguous = int(evidence["ambiguous_bindings"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    return (
+        n_records == _TAU_APPLICABILITY_EXPECTED_N
+        and l4_decisions == 0
+        and ambiguous == 0
+    )
+
+
+def _tau_verdict(
+    gate_id: str,
+    verdict: str,
+    tau_calibrated: bool,
+    tau_applicability: Mapping[str, Any] | None = None,
+) -> str:
     """τ 未校准 ⇒ 受污染门禁的 `PASS` 降级为 `UNVERIFIED`。
 
     🔴 为什么必须有这个降级：词表里的 `UNVERIFIED` 若没有任何代码路径产出，
@@ -70,10 +122,34 @@ def _tau_verdict(gate_id: str, verdict: str, tau_calibrated: bool) -> str:
 
     ⚠️ 只降 `PASS`、不降 `FAIL`：未校准下"没达标"依然是拦住上线的事实；
     把 FAIL 也改成 UNVERIFIED 会让门禁**变松**，判据方向必须偏向"不许宣布通过"。
+
+    🔴 W77-2 / D-W77-1：仅当 `tau_applicability_holds(evidence)` 为真，且门禁是
+    G-2/G-5/G-7 时，`PASS` 才保持 `PASS`（notes 由 `_tau_caveats` 加标注）。
+    证据缺失/不通过 ⇒ 走上面的旧降级；G-8 永不走豁免分支。
     """
     if verdict == "PASS" and not tau_calibrated and gate_id in _TAU_DEPENDENT:
+        if gate_id in _TAU_EXEMPT_GATES and tau_applicability_holds(tau_applicability):
+            return verdict
         return "UNVERIFIED"
     return verdict
+
+
+def _tau_caveats(
+    gate_id: str,
+    verdict: str,
+    tau_calibrated: bool,
+    tau_applicability: Mapping[str, Any] | None,
+) -> tuple[str, ...]:
+    """τ 相关的 notes：校准过 ⇒ 无；豁免生效（该格 PASS）⇒ 强制标注；否则旧 caveat。"""
+    if tau_calibrated:
+        return ()
+    if (
+        verdict == "PASS"
+        and gate_id in _TAU_EXEMPT_GATES
+        and tau_applicability_holds(tau_applicability)
+    ):
+        return (TAU_APPLICABILITY_NOTE,)
+    return ("τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）",)
 
 
 #: `reporter.pg_surface()` 交回来的 `ddl_targets` 形如 `DROP TABLE public.foo`：
@@ -272,10 +348,12 @@ def evaluate_gates(
     consistency: Mapping[str, Any] | None = None,
     clarification: Mapping[str, Any] | None = None,
     tau_calibrated: bool = False,
+    #: 🔴 W77-2：W77-1 全量回放的 `applicability` 块（至少含 `n_records`/`l4_decisions`/
+    #: `ambiguous_bindings`）。**缺省 = None ⇒ 维持旧降级**（fail-closed）。
+    tau_applicability: Mapping[str, Any] | None = None,
 ) -> list[Gate]:
     """逐条判定。缺输入 = `NOT_AVAILABLE`，**不是** `FAIL`（也不得静默跳过该门禁）。"""
     gates: list[Gate] = []
-    caveats = () if tau_calibrated else ("τ 未校准 → 依赖 L4 精排的结论口径污染（R-19 / §18.4.1）",)
 
     # ---- G-1 全部 P0 用例通过 ----
     if p0_tests is None:
@@ -315,14 +393,19 @@ def evaluate_gates(
     else:
         cell = grid.cell("easy", "low")
         rate = cell.pass_rate
+        verdict = "NOT_AVAILABLE" if rate is None else _tau_verdict(
+            "G-2",
+            "PASS" if rate >= THRESHOLDS["G-2_easy_low"] else "FAIL",
+            tau_calibrated,
+            tau_applicability,
+        )
         gates.append(Gate(
             "G-2", "结构 Easy × 语义低 ≥ 95%",
-            "NOT_AVAILABLE" if rate is None else _tau_verdict(
-                "G-2", "PASS" if rate >= THRESHOLDS["G-2_easy_low"] else "FAIL", tau_calibrated
-            ),
+            verdict,
             f"easy×low = {cell.passed}/{cell.total}" + ("" if rate is None else f" = {rate:.1%}"),
             "冻结集分层网格（I-1 主口径）",
-            caveats + (() if rate is not None else ("该格无有效样本",)),
+            _tau_caveats("G-2", verdict, tau_calibrated, tau_applicability)
+            + (() if rate is not None else ("该格无有效样本",)),
         ))
 
     # ---- G-3 危险 SQL 放行 = 0 ----
@@ -376,14 +459,17 @@ def evaluate_gates(
         ok = (r_rate is not None and r_rate >= THRESHOLDS["G-5_refuse"]) and (
             o_rate is None or o_rate <= THRESHOLDS["G-5_over_refusal"]
         )
+        verdict = _tau_verdict(
+            "G-5", "PASS" if ok else "FAIL", tau_calibrated, tau_applicability
+        )
         gates.append(Gate(
             "G-5", "拒答准确率 ≥ 95%，误拒 ≤ 5%",
-            _tau_verdict("G-5", "PASS" if ok else "FAIL", tau_calibrated),
+            verdict,
             f"该拒则拒 {refusal['correct_refused']}/{refusal['total']} = {r_rate:.1%}；"
             f"误拒 {refusal.get('over_refused', 0)}/{refusal.get('answerable_total', 0)}"
             + (f" = {o_rate:.1%}" if o_rate is not None else ""),
             "拒答集 + §C.4.4（两类错误分开统计）",
-            caveats,
+            _tau_caveats("G-5", verdict, tau_calibrated, tau_applicability),
         ))
 
     # ---- G-6 P95 ≤ 8s（输入归 W7）----
@@ -513,17 +599,19 @@ def evaluate_gates(
         s_ok = int(consistency["system_consistent"])
         s_rate = _rate(s_ok, s_total)
         basis = consistency.get("comparison_basis")
+        verdict = _tau_verdict(
+            "G-7",
+            "PASS" if (s_rate or 0) >= THRESHOLDS["G-7_consistency"] else "FAIL",
+            tau_calibrated,
+            tau_applicability,
+        )
         gates.append(Gate(
             "G-7", g7_title,
-            _tau_verdict(
-                "G-7",
-                "PASS" if (s_rate or 0) >= THRESHOLDS["G-7_consistency"] else "FAIL",
-                tau_calibrated,
-            ),
+            verdict,
             f"一致 {s_ok}/{s_total}" + ("" if s_rate is None else f" = {s_rate:.1%}"),
             "附录 C §C.4.3",
-            (*caveats,
-             (f"比对基准（非外部 BI 权威值）：{basis}",) if basis else (),
+            (*_tau_caveats("G-7", verdict, tau_calibrated, tau_applicability),
+             *((f"比对基准（非外部 BI 权威值）：{basis}",) if basis else ()),
              "度量对象 = 系统预测值（W74-1 / 总控签）；题库 gold 侧读数见报告的"
              " `dataset_caliber_consistency`（非门禁回归项）。"),
         ))
@@ -559,7 +647,7 @@ def evaluate_gates(
             ok = (rate is not None and rate <= THRESHOLDS["G-8_clarify_rate"]) and (
                 succ is not None and succ >= THRESHOLDS["G-8_clarify_success"]
             )
-            verdict = _tau_verdict("G-8", "PASS" if ok else "FAIL", tau_calibrated)
+            verdict = _tau_verdict("G-8", "PASS" if ok else "FAIL", tau_calibrated, tau_applicability)
             # 🔴 W8 第 66 轮 C1-2：分子口径必须写清 —— 它是「**二轮回到可执行终态的比例**」，
             # **不是**答案正确率：二轮问句带补答，冻结集 gold 只对首轮成立
             # （二轮 gold = `not_defined_for_second_round`）⇒ 二轮没有可比对的正确答案。
@@ -572,7 +660,12 @@ def evaluate_gates(
             "G-8", "澄清率 ≤ 15% 且澄清后一次成功率 ≥ 80%", verdict,
             evidence,
             "§6.8.3 + N-25",
-            caveats + extra + (() if tau_calibrated else ("τ 未校准 → 澄清率的判据点本身未定稿（C.4.6 步骤 4）",)),
+            caveats=(
+                _tau_caveats("G-8", verdict, tau_calibrated, tau_applicability)
+                + extra
+                + (() if tau_calibrated else
+                   ("τ 未校准 → 澄清率的判据点本身未定稿（C.4.6 步骤 4）",))
+            ),
         ))
     return gates
 

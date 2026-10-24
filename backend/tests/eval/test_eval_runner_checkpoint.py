@@ -63,9 +63,15 @@ class _Semantics:
         return {}
 
 
+class _Transport:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+
 class _Harness:
     def __init__(self, **_kwargs: Any) -> None:
         self.semantics = _Semantics()
+        self.transport = _Transport()
         self.max_concurrency = _kwargs.get("max_concurrency")
         self.node_timeout_overrides: dict[str, float] = {}
 
