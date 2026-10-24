@@ -8443,3 +8443,89 @@ backend/tests/eval/{test_redteam_logic.py,test_integration_evidence_hygiene.py}
 未改：`backend/app/**`、gold／冻结集／语义包／prompt／门禁阈值／G-8 阈值／`reports/qa/**`／
 官方快照／`.env`；未评估方案 A；未真打 LLM；未启动新容器。
 **出站记录：0 次 LLM；tokens=0；¥=0**。
+
+## 86 · W8 第 80 轮：路径 A 零成本收口（同 HEAD 审计 ＋ 最终交付节 ＋ 官方快照决策备忘 ＋ 红队尾分类 ＋ OVERVIEW 刷新；零 LLM）
+
+派单 = `backend/reports/qa/TASK_BOARD.md §102.3`（QA R31bx 裁剪版）。本轮不真打 G-6／G-8，
+不刷新官方快照，不改 `backend/app/**`，不启动容器。
+
+### 86.1 W80-1 最终门禁证据链审计：**通过**
+
+同一 HEAD（脚本笔 `26421ae`／`dirty=false`）重跑三件，并生成 `eval/results_w80_final_audit.json`：
+
+| 件 | 读数 | 产物 |
+|---|---|---|
+| 离线 pytest（`--ignore=backend/tests/integration`） | **2736 passed / 0 failed / 0 errors**（JUnit `timestamp=2026-10-24T14:24:12+08:00`，113.479s） | `eval/results_w80_offline_pytest.junit.xml` |
+| 红队 `eval/redteam_eval.py` | total **66**／leaked **0**／expect_block **50**／checked **50**／PASS 192／FAIL **21**／NOT_CHECKED 25 | `eval/results_w80_redteam.json` |
+| 门禁复算 `eval/w80_gate_recompute.py` | **6 PASS／0 PARTIAL／2 UNVERIFIED／0 FAIL** | `eval/results_w80_gate_recompute.json` |
+
+八格逐格 verdict／evidence path／git_rev／dirty／fresh／复算命令／"什么会改变这个判定" 全在审计件内；
+`all_checks_pass=true`。**六格 PASS 与 W79 逐格逐字一致**（G-1 2736＋124；G-2 8/8；G-3 50/50；
+G-4 RLS 真库；G-5 24/24＋3/124；G-7 13/13），G-6／G-8 也逐字一致。
+
+* **集成层复用依据（不手填）**：`git diff --name-only e7fc769..HEAD -- backend/app backend/tests/integration`
+  = **空**；W78 集成件 `e7fc769`/dirty=false 的 124/0/0（RLS 行为 5/5＋对象 6/6）作为同一 HEAD 的输入。
+  本轮**未启动容器**、未重跑 124 条。
+* **G-1 装配口小修**：`eval/w78_gate_recompute.py` 原先把离线面的 `failed`/`errors` 只取集成层
+  ⇒ 若离线有红会被抹平。本轮把 `LOCAL_P0` 的红也并入分母（与 `reporter.merge_p0_logs()` 同口径）；
+  本轮离线 **0 红** ⇒ 判定量不变，只把装配口对齐判据原文。
+* **G-6** 仍是 `fresh=false`/STALE（引用官方快照 `88f3500` 的 P95 7268ms）；其余七格 `fresh=true`
+  （G-2/G-5/G-7/G-8 是"用 W77 replay 本轮重算"，不是重新调用模型）。
+
+### 86.2 W80-2 最终交付节：**通过**
+
+`backend/reports/w8/DELIVERY.md` 追加「终版（路径 A 收口）」节，含：
+
+* 官方快照 **`88f3500`／PASS 1/8**（未刷新，非当期读数；件内自报 rev 与最后改动笔 `24d4477` 两格并报）；
+* 当期复算 **6 PASS／0 PARTIAL／2 UNVERIFIED／0 FAIL**；
+* 「**L4 决策份额 0/166；τ 未校准**」＋ 条件性非适用标注；
+* G-3 PASS 的含义（放行=0）、「**G-3 的成本闸门未测**」、成本闸门 NOT_CHECKED、21 条非 G-3 失败；
+* G-6／G-8 阻塞表（逐字采用 §102.2）；
+* 结论「**路径 A 收口：6 PASS＋2 UNVERIFIED（需预算/业务输入的阻塞项）**」。
+
+grep 自检（全部命中）：`6 PASS`／`2 UNVERIFIED`／`τ 未校准`／`L4 决策份额 0/166`／
+`G-3 的成本闸门未测`／`21 条非 G-3 红队断言失败仍在`／`G-6`／`G-8`／`88f3500`／`PASS 1/8`。
+结论行只写「路径 A 收口：6 PASS＋2 UNVERIFIED」，未写总体达标判定。
+
+### 86.3 W80-3 官方快照决策备忘：**通过（零执行）**
+
+新增 `backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md`：仍不刷新；刷新条件 = G-6/G-8 都有
+带证据的 PASS 且八格证据与产品代码同 rev／dirty=false；只许 `eval/reporter.py` 重生成并同步
+`backend/reports/w6/评测报告与门禁判定.md`；禁止手改 `eval_metrics.json`；旧快照 `88f3500` 保留为历史指针。
+本轮**未动**官方快照。
+
+### 86.4 W80-4 红队尾部分类：**通过（零执行）**
+
+新增 `eval/results_w80_redteam_tail.json`（rev `26421ae`／dirty=false）：**21 条断言失败／10 用例**。
+
+| 桶 | 断言 | 用例 | 分类 |
+|---|---|---|---|
+| 终态形状（refuse vs error） | 17 | 7 | **设计如此**：gate1 R07/R14 先拦，在线映射 `error(GATE_AST_REJECTED)`；用例期望 `refuse` ⇒ 用例前提 vs 实现约定，不是漏拦 |
+| 截断可观测性（truncated） | 2 | 2 | **已知限制**：P0 `effective_limit` 恒 None（N-06/FR-8.9）＋沙箱 `LIMIT 10000` 下结果恰 10000 行／2000 组 |
+| 可执行前提（假设能跑到 DB） | 2 | 1 | **已知限制（用例前提）**：题面引用 `tenant_id`（deny 列）⇒ gate1 R07 拒绝 |
+
+潜在缺陷 **0**；`leaked=0` 不变。**不是红队全绿，也不影响 G-3 的「放行=0」**；未改用例、未改产品。
+
+### 86.5 W80-5 OVERVIEW 进度刷新：**通过**
+
+只改 `OVERVIEW.md` §6／§7／§9（`git diff` 显示 3 个 hunk、+34 行）：
+§6 当期收口摘要；§7 顶部八格「数＋面＋时刻＋HEAD＋复算命令」表；§9 外部阻塞与已知限制清单。
+**README 未改**（进度表归上游窗口，已在最终交付节登记）。官方 `PASS 1/8` 与当期 6/2 同框。
+
+### 86.6 提交、测试与边界
+
+本轮的笔（按序）：
+
+```
+986334e feat(eval): W80 final audit chain (offline JUnit + redteam tail + gate recompute)
+26421ae fix(eval): include JUnit failed count in W80 audit payload
+a398c60 artifacts(w8): W80 same-HEAD audit (6 PASS/2 UNVERIFIED; 21 tail failures classified)
+（本段所在笔：DELIVERY 终版节 ＋ OFFICIAL_SNAPSHOT_DECISION.md ＋ OVERVIEW §6/§7/§9 ＋ 本 RELAY §86）
+```
+
+* 离线 **2736/0/0**（113.479s）；集成沿用 W78 **124/0/0**（未重跑）；未启动容器。
+* 未改 `backend/app/**`、gold／冻结集／语义包／prompt／门禁阈值／G-8 阈值／`reports/qa/**`／
+  官方快照／`.env`；未评估方案 A；未跑 G-6 压测／G-8 二轮；未装新依赖。
+* **出站记录：0 次 LLM；tokens=0；¥=0**。
+* **收口口径**：G-6／G-8 是「没有外部输入无法做」；若无新预算/补答源，项目以
+  **6 PASS＋2 UNVERIFIED** 收口，不再开无新输入的开发轮。

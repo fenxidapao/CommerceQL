@@ -141,6 +141,13 @@ R-DEP-3（`obs/` 内除 `audit.py` 外禁依赖 `repo`）。
 
 ## 6. 当前实现进度（实测）
 
+🔻 **2026-10-24 第 80 轮（路径 A 零成本收口）当期读数 —— 本节下面的大段历轮快照保留，现状以本段为准**（审计 rev `26421ae`／`dirty=false`；时刻 = 2026-10-24 14:24–14:26 +0800；零 LLM 出站；产物 = `eval/results_w80_final_audit.json`）：
+
+- **当期复算 6 PASS／0 PARTIAL／2 UNVERIFIED／0 FAIL**；官方快照仍 **`88f3500`／PASS 1/8，未刷新**，与当期复算不是同一份读数。
+- 六个 PASS 的单格读数：G-1 离线 **2736** ＋ 集成 **124**（W78 复用）；G-2 **8/8**；G-3 放行 **0**／覆盖 **50**；G-4 跨租户行 **0**（PG RLS 真库）；G-5 **24/24**＋误拒 **3/124 = 2.4%**；G-7 **13/13**。G-6／G-8 属外部阻塞，见 §9。
+- 「**L4 决策份额 0/166；τ 未校准**」——G-2／G-5／G-7 的 PASS 是**条件性 τ 非适用**（`tau_applicability=not_exercised`），不是 τ 校准证据。
+- 逐格「数＋面＋时刻＋HEAD＋复算命令」见 §7 顶部表；最终交付见 `backend/reports/w8/DELIVERY.md` 终版节；快照决策见 `backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md`。
+
 阶段划分：`0` 脚手架+契约固化 → `1A` 地基（语义包/合成数据/冻结集/红队）→ `1B` 骨架（认证/审计/图/checkpointer）
 → `2` 确定性核心（W2A 语义层 / W2B 检索 / W2C 闸门 / W2D 执行脱敏）→ `3` LLM 链路（W3A 网关 / W3B 理解生成 / W3C 四层绑定）
 → `4` 编排收口（W4）→ `5` 前端（W5）→ `6` 评测与门禁（W6）→ `7` 观测部署（W7）。
@@ -238,6 +245,25 @@ w3a w3b w3c w3-int w4 w5 w6 w7`）各自留有 `PROMPT/DELIVERY/RELAY`。`app/` 
 ---
 
 ## 7. 质量现状：上线门禁 1/8（这一段是本项目最诚实的部分；🔻 10-03 第 6 轮之前是 0/8）
+
+🔻 **W80 当期收口（2026-10-24；审计 rev `26421ae`／`dirty=false`；零 LLM）—— 下面全部历轮表保留作史料，当期只认本表**
+
+**汇总：6 PASS／0 PARTIAL／2 UNVERIFIED／0 FAIL**；官方快照 **`88f3500`／PASS 1/8**（未刷新，非当期读数）。τ 未校准；G-2／G-5／G-7 的 PASS 标 `tau_applicability=not_exercised`（条件性非适用，不是校准证据）。
+
+| 格 | 判定 | 数（当期） | 面（产物） | 时刻（产物自报） | HEAD（产物自报） | 复算命令 |
+|---|---|---|---|---|---|---|
+| G-1 | PASS | 离线 **2736**／集成 **124**；红 **0** | `eval/results_w80_offline_pytest.junit.xml` ＋ `eval/results_w78_integration.json` | `2026-10-24T06:24:12Z`（离线）／`2026-10-24T04:49:46Z`（集成） | `26421ae`／`e7fc769` | `pytest … --junitxml=eval/results_w80_offline_pytest.junit.xml` ＋ `eval/w80_gate_recompute.py` |
+| G-2 | PASS | easy×low **8/8**（单格分母） | `eval/results_w77_full166_applicability.json`（166 条 replay） | `2026-10-24T04:06:41Z` | `2cd6c92` | `eval/w80_gate_recompute.py` |
+| G-3 | PASS | 放行 **0**／覆盖 **50/50** | `eval/results_w80_redteam.json`（66 条） | `2026-10-24T06:26:15Z` | `26421ae` | `eval/redteam_eval.py --out eval/results_w80_redteam.json` ＋ `eval/w80_gate_recompute.py` |
+| G-4 | PASS | 跨租户行 **0**；RLS 行为 5/5＋对象 6/6 | `eval/results_w78_integration.json` | `2026-10-24T04:49:46Z` | `e7fc769` | `eval/w80_gate_recompute.py` |
+| G-5 | PASS | 该拒 **24/24**；误拒 **3/124 = 2.4%** | `eval/results_w77_full166_applicability.json` | `2026-10-24T04:06:41Z` | `2cd6c92` | `eval/w80_gate_recompute.py` |
+| G-6 | UNVERIFIED | P95 **7268ms**（分母未标注；STALE） | `backend/reports/w6/eval_metrics.json`（官方快照） | `2026-10-07T05:27:34Z` | `88f3500` | `eval/w80_gate_recompute.py`（引用旧快照，非当期） |
+| G-7 | PASS | 一致 **13/13** | `backend/reports/w6/probe_metric_values.json`（system_source `5bdb663`／r75）＋ W77 replay | `2026-10-23T12:39:21Z`／`2026-10-24T04:06:41Z` | `5bdb663`／`2cd6c92` | `eval/w80_gate_recompute.py` |
+| G-8 | UNVERIFIED | 澄清率 **16/166 = 9.6%**；`success/attempted = 0/0`（**不可测，不是 0%**） | `eval/results_w77_full166_applicability.json` | `2026-10-24T04:06:41Z` | `2cd6c92` | `eval/w80_gate_recompute.py` |
+
+> 命令前缀均为 `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe`，cwd = 仓库根；完整命令串见 `eval/results_w80_final_audit.json` 的 `commands`。
+> **G-3 PASS 只等于「危险 SQL 放行=0」**：`G-3 的成本闸门未测`（`cost_gate_tripped = NOT_CHECKED`；两条 COST 由 gate1 R10 拦下、未执行）；`21 条非 G-3 红队断言失败仍在`（终态形状 7 用例／截断 2／可执行前提 1；分类见 `eval/results_w80_redteam_tail.json`）。
+> **G-6** 历史 p95 `11,381.8ms` 是 Ollama 未运行、检索 100% `sparse_only` 时的污染读数，只能参照；**G-8** `attempted=0` 不等于 0%，缺 17/18 补答来源。两格都保持 UNVERIFIED，见 §9。
 
 **门禁定义**：`docs/07 §17.3`（**八格 = G-1…G-8** 的唯一定义处）＋ `eval/gates.py`（件在**仓库根**、不在 `backend/`）。
 🔻 旧句写的「附录 C §C.8」那一份**只到 G-1…G-7 七格**（`04` 现读没有 G-8）⇒ 引条数前必须点名是哪一份。
@@ -471,6 +497,14 @@ G-6 那一格除原有"分母口径未标注 ＋ 0 条真正完成"外，**再�
 ---
 
 ## 9. 已知限制（不隐瞒清单）
+
+🔻 **W80 路径 A 收口（2026-10-24；审计 rev `26421ae`／`dirty=false`）—— 未闭清单只保留外部阻塞与已知限制，不再开无新输入的开发轮**：
+
+- **G-6 UNVERIFIED（外部阻塞）**：需要 live LLM 预算（W7 估 **¥40+**）＋容量决策（U-126：flash 槽位现 **8**，50 并发/8s 按推导需约 **38–48**；全局并发 50）＋满档 50 并发×10min 的**全请求分母**（429 单列）。历史配额档 p95 **11,381.8ms** 是 Ollama 未运行、检索 100% `sparse_only` 时的**污染读数**，只能参照，不能当 G-6 判定；证据 `eval/results_w79_blockers.json`。
+- **G-8 UNVERIFIED（外部阻塞）**：缺 **17/18** 条 expected=clarify 的补答来源（业务给）＋U-141 绑定型澄清路径（`bind → ambiguous → clarify_out`）＋二轮真跑。当前 16 条澄清全是 `intent → clarify_out`；`attempted=0` ⇒ 成功侧不可测，**不是 0%**；证据 `eval/results_w77_g8_answer_gap.json`。
+- **已知限制：truncated 可观测性（N-06 / FR-8.9）**：P0 的 `effective_limit` 恒 `None`（`backend/app/graph/nodes/execute.py:133`），`truncated` 走退化口径；沙箱改写后 `LIMIT 10000 = EXEC_MAX_ROWS`，结果恰 10000 行／2000 组 ⇒ `RT-LIM-001/004` 的 `truncated=True` 期望不成立。归为**已知限制**，不是放行、不是越权。
+- **用例前提：红队 21 条非 G-3 断言失败（10 用例）**：终态形状 17 断言／7 用例（gate1 按设计出 `error(GATE_AST_REJECTED)`，用例期望 `refuse`）、截断 2／2、可执行前提 2／1（`tenant_id` 是 deny 列）。逐条分类见 `eval/results_w80_redteam_tail.json`（设计如此 7 用例／已知限制 3 用例／潜在缺陷 0）；**这不是红队全绿**，也不影响 G-3 的「放行=0」。
+- **README 进度表归上游窗口**，本轮不改；`OVERVIEW.md` §6／§7／§9 是本窗的进度写面。官方快照仍 `88f3500`／PASS 1/8，未刷新（决策见 `backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md`）。
 
 - 🔴 **同租户内跨属主会话可读（P0，编号 `U-131`；🔻 2026-10-04 17:2x +0800 @ HEAD `4a070ae`：本格原写"未修"，现状态 = 修复已落地、待验收）**：
   修法落在 `backend/app/api/state_store.py` 的**单一强制点**（`get_session` 比对载荷属主，不符或缺失一律返回 `None` ⇒ 两个端点现有 404 分支自动生效），

@@ -760,3 +760,31 @@ GUC 三键同语句／tenant 强制过滤＋RLS 双保证＋禁把 `tenant_id` �
 - **回归**：租户守卫 `17 passed`；城市/runner/allowlist 组合 `54 passed`；干净树离线 `2606 passed / 0 failed / 1 warning / 109.34s`；一次性 PG/Redis integration `124 passed / 0 failed / 32.81s`，`alembic_rc=0`、DROP 后空、残渣仅 `ecom`/`ecom_u123_probe`。
 - **出站实报**：定向 live 2 条 `45,372 tokens / price_guess 0.104611 CNY`（17:07–17:08 +0800）；该件 `git_rev=7de77ce`、`dirty=true`，仅作 live 观测，不作干净证据。
 - **边界**：未改 15s/阈值/判据/gold/语义包/冻结集/`reports/qa/**`/共享 ecom；`.workbuddy/` 未 add。
+
+## 终版（路径 A 收口 ｜ W80 ｜ 2026-10-24 ｜ 审计 rev `26421ae`／产物笔 `a398c60` ｜ 零 LLM 出站）
+
+> 本节是本项目当前的**对外最终口径**。上面第 60 轮及以前是历史交付，保留不改。
+
+- **官方快照**：`backend/reports/w6/eval_metrics.json` 仍 **`88f3500`／PASS 1/8**（件内自报 `88f3500`／dirty=false，生成于 `2026-10-07T05:27:34Z`；最后改动该文件的提交 = `24d4477`，两格并报）。**未刷新，非当期读数**。
+- **当期复算**（`eval/results_w80_gate_recompute.json`，rev `26421ae`／dirty=false）：**6 PASS／0 PARTIAL／2 UNVERIFIED／0 FAIL**。
+  - G-1 PASS：离线 **2736** ＋ 集成 **124**（集成复用 W78 `e7fc769`；`backend/app` 与 `backend/tests/integration` 自 `e7fc769` 空 diff，本轮不启动容器）。
+  - G-2 PASS：easy×low **8/8**；G-5 PASS：该拒 **24/24**、误拒 **3/124 = 2.4%**；G-7 PASS：**13/13**。三格同写「**L4 决策份额 0/166；τ 未校准**（条件性非适用，不是校准证据）」。
+  - G-3 PASS：**危险 SQL 放行=0**（覆盖 **50/50**）。**G-3 的成本闸门未测**（`cost_gate_tripped` = `NOT_CHECKED`；两条 COST 由 gate1 R10 拦下、未执行）。**21 条非 G-3 红队断言失败仍在**（终态形状 7 用例／17 断言、截断 2／2、可执行前提 1／2；分类见 `eval/results_w80_redteam_tail.json`），不改用例、不改产品。
+  - G-4 PASS：跨租户行 **0**；PG RLS 在真实 DB 层验证（W78 集成：行为级 5/5、对象级 6/6）。
+- **G-6／G-8**：均 **UNVERIFIED**，属**外部阻塞**——不是「没做」、不是「待优化」、不是「已知小问题」，所需输入见下表。
+- **结论**：**路径 A 收口：6 PASS＋2 UNVERIFIED（需预算/业务输入的阻塞项）**。6/8 不等于满分；官方 `PASS 1/8` 与当期 6/2 复算必须同框引用。
+
+### G-6／G-8 阻塞表（逐字采用 TASK_BOARD §102.2）
+
+| 阻塞项 | 当前状态 | 需要什么 | 为什么零成本做不了 | 证据 |
+|---|---|---|---|---|
+| **G-6** | **UNVERIFIED** | live LLM 预算（W7 估 **¥40+**）＋容量决策（U-126：flash 槽位现 **8**，50 并发/8s 按推导需约 **38–48**；全局并发 50）＋满档 50 并发×10min 的**全请求分母**（429 单列） | 无预算；且 U-126 是容量/成本决策，不是跑一次就能过；历史配额档 p95 **11,381.8ms** 还是 Ollama 未运行、检索 100% sparse_only 时的**污染读数**，只能参照 | `eval/results_w79_blockers.json`；[docs/07 U-126](file:///E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL/docs/07_技术设计文档_TDD.md#L1165) |
+| **G-8** | **UNVERIFIED** | **17/18** 条 expected=clarify 的补答来源（业务给）＋U-141 绑定型澄清路径（`bind → ambiguous → clarify_out`）＋二轮真跑 | 编答案＝造数据；当前 16 条澄清全是 `intent → clarify_out`，绑定型路径**从未走到**；`attempted=0` ⇒ 成功侧不可测 | `eval/results_w77_g8_answer_gap.json`；[docs/07 U-141](file:///E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL/docs/07_技术设计文档_TDD.md#L1190) |
+
+### 口径与边界
+
+- **证据链**：`eval/results_w80_final_audit.json`（八格逐格 verdict／evidence path／git_rev／dirty／fresh／复算命令／"什么会改变这个判定"；`all_checks_pass=true`）、`eval/results_w80_gate_recompute.json`、`eval/results_w80_redteam.json`、`eval/results_w80_redteam_tail.json`、`eval/results_w80_offline_pytest.junit.xml`。
+- **红队尾巴**：21 条/10 用例已逐条归类（7 用例=设计如此；3 用例=已知限制；潜在缺陷 0），见 `eval/results_w80_redteam_tail.json`；这不是红队全绿，也不影响 G-3 的「放行=0」。
+- **官方快照决策**：`backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md`（仍不刷新；刷新条件与唯一入口见该件）。
+- **进度面**：`OVERVIEW.md` §6/§7/§9 已按本期刷新；**README 进度表归上游窗口**，本轮不改。
+- **零出站**：`tokens=0`；未启动容器、未跑 G-6 压测、未跑 G-8 二轮；未改 `backend/app/**`、gold/冻结集/语义包/prompt/门禁阈值，未刷新官方快照。
