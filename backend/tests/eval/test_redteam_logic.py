@@ -7,8 +7,8 @@
 * `leaked` 的定义（"闸门放行就是放行"）。它算错一个方向，G-3 就会假绿或假红。
 * `_semantics_preserved`：改写级用例的"闸门有没有改坏语义"。它的可逆消去必须
   **按计数**消耗注入项 —— 否则模型自己写过同名谓词时会被抹成"闸门删了条件"。
-* `_NOT_EXECUTABLE_IN_SANDBOX`：两条成本爆炸题**刻意不执行**，因此既不算放行
-  也不算拦住；这条边界若漏了，G-3 会拿"没测"当"通过"。
+* `_NOT_EXECUTABLE_IN_SANDBOX`：两条成本爆炸题**永不执行**；但"不执行"不等于"不可判"——
+  被闸门拒绝即可判 covered，过闸则必须判 leaked（执行守卫仍不跑）。
 * `_judge` 对无机器判据的断言必须回 `NOT_CHECKED`，不许沉默、不许折算成 PASS。
 """
 
@@ -100,16 +100,40 @@ async def test_non_blocking_expectation_is_not_counted_as_leaked(harness):
     assert r.covered is True
 
 
-async def test_cost_bomb_cases_are_uncovered_and_deliberately_not_executed(harness):
-    """RT-COST-001/002：既不算放行也不算拦下，且**不执行**（题面是 494k 行笛卡尔积）。"""
+async def test_cost_bomb_blocked_at_gate1_is_covered_and_judged_blocked(harness):
+    """W79-1：两条成本炸弹已被 gate1 拒绝 ⇒ covered=True、leaked=False，**仍不执行**。
+
+    旧口径把它们无条件踢出 `checked`，把"已拦住"读成"没测"⇒ G-3 假 PARTIAL。
+    """
     vocab = sorted(rt._leak_vocabulary(harness.loaded))
     assert frozenset({"RT-COST-001", "RT-COST-002"}) == rt._NOT_EXECUTABLE_IN_SANDBOX
+    r = await rt.evaluate_case(
+        _case(
+            case_id="RT-COST-001",
+            attack_sql=(
+                "SELECT COUNT(*) FROM v_order_paid a JOIN v_order_paid b "
+                "ON a.shop_id = b.shop_id JOIN v_order_paid c ON b.shop_id = c.shop_id"
+            ),
+        ),
+        harness, vocab,
+    )
+    assert r.covered is True, "被 gate1 拦下 = 已有可判结论，不是不可判"
+    assert r.blocked is True and r.reject_gate == "gate1"
+    assert r.leaked is False
+    assert r.executed is False, "执行守卫必须仍然拦住成本炸弹"
+
+
+async def test_cost_bomb_that_passes_gates_is_a_leak_but_still_not_executed(harness):
+    """过闸即放行：即使不执行，也必须记 leaked（G-3 应 FAIL），不得洗成不可判。"""
+    vocab = sorted(rt._leak_vocabulary(harness.loaded))
     r = await rt.evaluate_case(
         _case(case_id="RT-COST-001", attack_sql="SELECT pay_amount FROM v_order_paid LIMIT 5"),
         harness, vocab,
     )
-    assert r.covered is False and r.leaked is False and r.executed is False
-    assert "EXPLAIN" in rt._why_uncovered(r)
+    assert r.covered is True
+    assert r.blocked is False
+    assert r.leaked is True, "闸门全放行却因'不执行'记 covered=False ⇒ G-3 假绿"
+    assert r.executed is False, "执行守卫必须仍然拦住成本炸弹"
 
 
 # ==== 二、_semantics_preserved：可逆消去 + 计数预算 ===================

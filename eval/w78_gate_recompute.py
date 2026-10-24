@@ -59,6 +59,10 @@ W77_REV = "2cd6c92"
 #: 本轮无当期输入的格：引用官方快照并标 stale。
 _STALE_GATES = ("G-6",)
 
+#: 供 W79 包装脚本覆盖（同一套复算逻辑，不复制第二份）。
+ROUND_LABEL = "W78-4"
+REDTEAM_LABEL = "W78-3 红队刷新"
+
 
 def _load(path: str) -> Any:
     with open(path, encoding="utf-8") as handle:
@@ -278,7 +282,7 @@ def main() -> int:
 
     payload = {
         **_bootstrap.build_stamp(),
-        "task": "W78-4 当前门禁复算（零出站；一次性 Docker 集成层；**不是**官方快照）",
+        "task": f"{ROUND_LABEL} 当前门禁复算（零出站；一次性 Docker 集成层；**不是**官方快照）",
         "official_snapshot_untouched": _relative(OFFICIAL),
         "tau_applicability_evidence": {
             "source": _relative(REPLAY),
@@ -371,7 +375,7 @@ def _input_source(
     return {
         "G-1": "本轮离线 pytest + 一次性 Docker 集成层 JUnit（integration_ran 由证据推导）",
         "G-2": f"冻结集 {len(cases)} 条 × W77 replay [{stamp}]",
-        "G-3": f"W78-3 红队刷新（{_relative(REDTEAM)}；rev={redteam.get('git_rev')}/"
+        "G-3": f"{REDTEAM_LABEL}（{_relative(REDTEAM)}；rev={redteam.get('git_rev')}/"
                f"dirty={redteam.get('git_dirty')}）",
         "G-4": f"一次性 Docker 集成层（{_relative(INTEGRATION)}；RLS 行为 + 策略对象两文件全绿）",
         "G-5": f"冻结拒答集 × W77 replay [{stamp}]",

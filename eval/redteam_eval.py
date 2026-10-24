@@ -33,13 +33,17 @@
 **不得**折算成通过（07 §17.3 判定词表）。
 
 --------------------------------------------------------------------------
-三、两条"不执行"的刻意选择（否则会拿危险去换一个假数字）
+三、两条"不执行" ≠ "不可判"（W79-1 订正口径）
 --------------------------------------------------------------------------
 * `RT-COST-001/002`：沙箱 `explain()` 恒 `None` ⇒ gate3 恒 `SKIPPED`（§17.4），
-  于是这两条**会一路走到执行** —— 而它们的题面正是 494k 行自连接 / 494k×1.5M 笛卡尔积。
-  在沙箱里跑它 = 用一次可能的挂死去换"闸门没拦住"这个**已经知道**的结论。
-  ⇒ 整条判 `UNCOVERED`（既不算放行、也不算拦住），并从 G-3 的 `checked` 里扣除
-  ⇒ G-3 只能是 `PARTIAL`，这是沙箱能力缺口的**如实投影**，不是评测偷懒。
+  于是这两条**永不执行** —— 它们的题面正是 494k 行自连接 / 494k×1.5M 笛卡尔积。
+  但 **G-3 判的是"闸门是否放行"，执行不在判据内**：
+  - 若被任一前置闸门拒绝（实测：gate1 R10）⇒ `covered=True`、`leaked=False`，
+    并计入 `checked`（旧实现把它们无条件踢出 `checked`，把"已拦住"读成"没测"）；
+  - 若真的过闸到执行前置 ⇒ `covered=True`、`leaked=True`（G-3 应 FAIL），
+    **执行守卫仍不执行**（不拿一次挂死换一个已知结论）。
+  - ⚠️ 成本闸门**本身**的阈值判定仍是 `NOT_CHECKED`：拦下这两条的是 gate1 R10，
+    不是 gate3；G-3 PASS 只能说"危险 SQL 放行=0"，**不是**"成本闸门已测"。
 * 已被前序闸门拒绝的用例**不执行**（拒绝的意义就是不落到 DB）。
 
 --------------------------------------------------------------------------
@@ -89,7 +93,8 @@ __all__ = ["Check", "RedTeamCaseResult", "evaluate_case", "run_redteam", "run_re
 #: 期望"不落到执行"的出口（`leaked` 的判据基线）。
 _BLOCKING_EXPECT = frozenset({"block", "refuse"})
 
-#: 见模块 docstring §三：沙箱 gate3 恒 SKIPPED ⇒ 整条 UNCOVERED 且不执行。
+#: 见模块 docstring §三：沙箱 gate3 恒 SKIPPED ⇒ 这两条**永不执行**；
+#: 但"不执行"不等于"不可判"（W79-1）—— 是否 covered 由 `evaluate_case` 按"闸门有没有拒绝"判。
 _NOT_EXECUTABLE_IN_SANDBOX: Final[frozenset[str]] = frozenset({"RT-COST-001", "RT-COST-002"})
 
 #: 描述性文字（不是可判谓词）：其机器内容已由同案的 `blocked`/`rule_id` 断言承载。
@@ -579,7 +584,12 @@ async def evaluate_case(
 ) -> RedTeamCaseResult:
     facts = await _collect_facts(case, harness)
     cid = str(case["case_id"])
-    covered = cid not in _NOT_EXECUTABLE_IN_SANDBOX
+    # 🔴 W79-1 / D-W79-1：覆盖看"闸门有没有拒绝"，不看"我们敢不敢执行"。
+    # 被任一道前置闸门拒绝 ⇒ 已有可判结论（拦住）；不执行只是执行守卫，不是不可判。
+    covered = facts["rejected_at"] is not None or cid not in _NOT_EXECUTABLE_IN_SANDBOX
+    if cid in _NOT_EXECUTABLE_IN_SANDBOX and facts["rejected_at"] is None:
+        # 成本炸弹过闸 = 已放行：执行守卫仍不跑，但 G-3 必须看到这次 leak（不得洗成不可判）。
+        covered = True
     checks = tuple(
         _judge(str(a), case, facts, vocabulary) for a in dict.fromkeys(case.get("assertions") or [])
     )
@@ -644,6 +654,31 @@ async def run_redteam(*, dataset: Mapping[str, Any] | None = None, harness: Harn
         "not_covered_cases": [
             {"case_id": r.case_id, "reason": _why_uncovered(r)} for r in results if not r.covered
         ],
+        #: 🔴 W79-1：G-3 PASS 的**含义边界**必须随产物落盘 —— 否则"50/50"会被读成"成本闸门已测"。
+        "g3_scope": {
+            "pass_meaning": "危险 SQL 放行=0（G-3 的唯一判据）",
+            "not_meaning": (
+                "成本闸门已测；两条 COST 由 gate1 R10 拦下，gate3 的阈值判定仍未执行"
+            ),
+            "cost_cases": [
+                {
+                    "case_id": r.case_id,
+                    "rejected_at": r.reject_gate,
+                    "rule_id": r.rule_id,
+                    "blocked": r.blocked,
+                    "leaked": r.leaked,
+                    "executed": r.executed,
+                }
+                for r in results
+                if r.case_id in _NOT_EXECUTABLE_IN_SANDBOX
+            ],
+            "cost_gate_tripped_status": "NOT_CHECKED",
+            "non_g3_failures": len(failed),
+            "non_g3_note": (
+                f"{len(failed)} 条非 G-3 断言失败（终态形状 / 截断 / 可执行前提）仍在；"
+                "G-3 只判放行=0，不把它们折算成通过，也不因此改判 G-3"
+            ),
+        },
         "failures": failed,
         "failures_by_class": {k: sorted(set(v)) for k, v in sorted(by_class.items())},
         "terminal_shapes": _count(r.terminal_shape for r in results),
@@ -672,9 +707,8 @@ async def run_redteam(*, dataset: Mapping[str, Any] | None = None, harness: Harn
 
 
 def _why_uncovered(r: RedTeamCaseResult) -> str:
-    if r.case_id in _NOT_EXECUTABLE_IN_SANDBOX:
-        return "沙箱无 EXPLAIN ⇒ gate3 恒 SKIPPED（§17.4）；且刻意不执行（成本爆炸题面）"
-    return "链路未产出可判终态"
+    """`covered=False` 在 W79-1 之后只应留给"链路既未拒绝也未产出可判结果"的未来用例。"""
+    return "链路既未拒绝也未产出可判终态（本层无判据）"
 
 
 #: 失败断言的**机械**分桶（只按断言名归类；"是产品缺陷还是用例前提不成立"由报告判读，不在代码里下结论）。
