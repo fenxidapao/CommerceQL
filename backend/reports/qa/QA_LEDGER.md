@@ -1924,3 +1924,16 @@ W67 派单见 `TASK_BOARD §88.5`（三件，全部零出站）。
 7. **我的决定**：① W79-1 订正 G-3 覆盖口径（测量订正，不判据变更；成本炸弹仍永不执行；cost_gate_tripped 仍 NOT_CHECKED）② W79-2 复算目标 6 PASS/0 PARTIAL/2 UNVERIFIED ③ W79-3 证据卫生（补 RETRIEVAL_TEST_PG_DSN、强制回环、记录 0.0.0.0 历史）④ G-6/G-8 仍不真打（¥40+/缺补答）⑤ 官方不刷 ⑥ τ 豁免继续，W79-1 只改 eval 脚本。
 8. **残余**：G-6 满档压测预算；G-8 17/18 补答源；21 条非 G-3 红队失败；G-3 成本闸门本身未测；官方快照仍 stale。
 9. **结论**：第 78 轮 G-1/G-4 从 PARTIAL 转 PASS（实质证据）；G-3 的 48/50 是测量口径，W79-1 订正后应 50/50 PASS；剩余 2 格（G-6/G-8）是预算/数据阻塞。W79 派单见 `TASK_BOARD §100.7`。
+
+## R31bx · W8 第 79 轮验收：G-3 订正成立（50/50 PASS）；当前 6 PASS／2 UNVERIFIED；证据卫生与阻塞备忘收 ／ 2026-10-24 13:55 +0800 ／ HEAD `9c7b681`／701 笔
+
+1. **基线【实测】**：`9c7b681`／701／与 origin/main 齐平；树仅 `?? .workbuddy/`；禁改面（reports/qa、冻结集、semantic、门禁阈值、G-8 阈值、.env、官方 eval_metrics）空 diff；`backend/app` 自 `2cd6c92` 起空 diff ⇒ τ 证据可复用。
+2. **测试【实测】**：离线 **2736 passed / 0 failed**（128.05s）；集成沿用 W78 **124 passed / 0 failed / 0 skipped**（我在 W78 独立复跑，RLS 5/5、0003 6/6）。
+3. **W79-1 收【实测】**：covered 口径订正正确（被前置闸门拒绝 ⇒ covered）；执行守卫原样保留；`results_w79_redteam.json`（`6a6d545`/False）total 66／leaked 0／expect_block 50／**checked 50**／not_covered []；两条 COST 均 gate1 R10 `blocked=true`／`executed=false`／`leaked=false`；`cost_gate_tripped` **NOT_CHECKED**。**G-3 PASS = 危险 SQL 放行=0，不是成本闸门已测。**
+4. **21 条非 G-3 失败【实测】**：10 个用例——终态形状 7（RT-INJ-001…004、RT-XT-001…003：gate1 拒绝出 `error`，期望 `refuse`）、截断 2（RT-LIM-001/004）、可执行前提 1（RT-LIM-003）；与官方 W6 逐项相同，`n_cases_clean=56`；G-3 不折算通过，最终报告必须披露。
+5. **W79-2 收【实测】**：`results_w79_gate_recompute.json`（`1fd8186`/False，非官方快照）**6 PASS／0 PARTIAL／2 UNVERIFIED／0 FAIL**：G-1 2736＋124；G-2 8/8；G-3 50/50；G-4 RLS 真库；G-5 24/24＋3/124；G-6 STALE 7268ms 分母未标；G-7 13/13（system vs bundle authority）；G-8 attempted=0 ⇒ UNVERIFIED。τ 证据 `product_code_changes_since_2cd6c92=[]`、`replay_required=false`；官方仍 `88f3500`/1-8。
+6. **W79-3 收【实测】**：`results_w79_integration_hygiene.json`（`6a6d545`/False）——W78 `published_host_ips=["0.0.0.0","::"]`、`loopback_violation=true`、PG 暴露 797.8s／Redis 797.3s、容器已删、`residual_clean=true`、`test_results_still_valid=true`、`w78_artifact_rewritten=false`。`dsn_masked` 已补 `RETRIEVAL_TEST_PG_DSN`（脱敏＋DDL 权限说明）；`DOCKER_COMMANDS` 全 `-p 127.0.0.1:...`；3 条卫生测试（回环/脱敏/共享库端口）。
+7. **W79-4 收备忘【实测】**：`results_w79_blockers.json`（`6a6d545`/False）——G-6 满档 ¥40+；历史配额 `steady c=50/n=120` p50 5474.4／p95 **11,381.8ms**／max 14,289.8，超 8s，但 Ollama 未运行、检索 100% sparse_only ⇒ 只能参照；G-8 18 expected 中 17 条缺补答源、9 条误澄清不给补答。`no_llm_calls=true`、`no_second_round_run=true`。
+8. **我的决定**：① W80 收口审计（同一 HEAD 重跑离线＋红队＋门禁复算，八格逐格绑 evidence/rev/dirty/命令）② `w8/DELIVERY.md` 终版节（强制写 τ 未校准、成本闸门未测、21 条失败）③ 官方快照决策备忘（仍不刷；刷新条件=G-6/G-8 有证据 PASS 且同 rev/dirty=false；只许 reporter 重生成）④ 红队尾部分类（21 条按 10 用例归类，不改用例/产品）⑤ G-6/G-8 仍不跑；W80 后无新输入以「6 PASS＋2 UNVERIFIED」收口 ⑥ τ 豁免继续，W80 不改 `backend/app/**`。
+9. **残余**：G-6 满档压测预算；G-8 17/18 补答源；21 条非 G-3 红队失败；G-3 成本闸门本身未测；G-7 权威侧是语义包而非外部 BI；官方快照仍 stale；τ 豁免是**本窗自订**，最终交付须与「τ 未校准」同行披露。
+10. **结论**：第 79 轮 W79-1/2/3 通过、W79-4 收备忘；**当前 6 PASS 全部有当期证据，另 2 格（G-6/G-8）为预算/数据阻塞**。W80 派单见 `TASK_BOARD §101.7`（零 LLM 收口轮）。

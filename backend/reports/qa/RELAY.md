@@ -5372,3 +5372,31 @@ W79-1 订正 `covered = rejected_at is not None or cid not in _NOT_EXECUTABLE_IN
 `TASK_BOARD §100.7`：① G-3 覆盖口径订正＋单测＋红队重跑 ② 门禁复算 ③ 集成证据卫生（含回环/环境变量测试）④ G-6/G-8 阻塞备忘。**零 LLM、零执行成本炸弹、不改阈值、不刷官方快照。**
 
 **边界**：本轮 QA 零 LLM；独立集成容器已删无残留；官方门禁未刷新（`88f3500`／PASS 1/8）。
+
+## 96 · W8 第 79 轮验收：G-3 订正成立（50/50 PASS）；当前 6 PASS／2 UNVERIFIED；证据卫生收（QA R31bx ｜ 2026-10-24 13:55 +0800 ｜ HEAD `9c7b681`／701 笔）
+
+**结论**：W79-1/2/3 通过；W79-4 只收备忘。**G-3 的 PASS 是「危险 SQL 放行=0」，不是「成本闸门已测」**；21 条非 G-3 失败仍在。离线 **2736 passed / 0 failed**；集成沿用 W78 的 124/0/0（产品代码空 diff）。官方快照仍 `88f3500`／PASS 1/8。
+
+### 96.1 W79-1【实测】
+`covered = rejected_at is not None or cid not in _NOT_EXECUTABLE_IN_SANDBOX`；执行守卫不变（两条成本炸弹永不执行）。红队产物 `results_w79_redteam.json`（rev=`6a6d545`/False）：total 66、leaked 0、expect_block 50、**checked 50**、not_covered []；两条 COST 均 gate1/R10 `blocked=true`/`executed=false`/`leaked=false`；`cost_gate_tripped` 仍 **NOT_CHECKED**。21 条非 G-3 失败 = 10 个用例（终态形状 7／截断 2／可执行前提 1），与官方 W6 逐项相同，不折算通过。
+
+### 96.2 W79-2【实测】
+`results_w79_gate_recompute.json`（rev=`1fd8186`/False）：**6 PASS／0 PARTIAL／2 UNVERIFIED／0 FAIL**。G-1 离线 2736＋集成 124；G-2 8/8；G-3 50/50；G-4 RLS 真库验证；G-5 24/24＋3/124；G-6 STALE；G-7 13/13；G-8 attempted=0 ⇒ UNVERIFIED。τ 证据 `product_code_changes_since_2cd6c92=[]`；官方快照未动。
+
+### 96.3 W79-3【实测】
+`results_w79_integration_hygiene.json`：W78 `HostIp=0.0.0.0`/`::`、暴露 797.8s／797.3s、容器已删、结果有效；`w78_artifact_rewritten=false`。`dsn_masked` 已补 `RETRIEVAL_TEST_PG_DSN`（脱敏＋DDL 权限说明）；DOCKER_COMMANDS 全部 `-p 127.0.0.1:...`；3 条卫生测试。本轮未起容器。
+
+### 96.4 W79-4【收备忘】
+`results_w79_blockers.json`：G-6 满档 ¥40+，历史配额 p95 **11,381.8ms > 8000**，但 Ollama 未运行污染读数，只能参照；G-8 17/18 缺补答源。两项均 UNVERIFIED，`no_llm_calls=true`、`no_second_round_run=true`。
+
+### 96.5 我的决定
+1. **W80 收口审计**：同一 HEAD 重跑离线＋红队＋门禁复算，八格逐格绑 evidence/rev/dirty/命令 ⇒ `results_w80_final_audit.json`。
+2. **最终交付节**：`w8/DELIVERY.md` 追加终版，写清官方快照 vs 当期复算、τ 未校准＋L4 决策 0/166、G-3 含义、21 条失败、G-6/G-8 阻塞；🚫 不得写"门禁通过"。
+3. **官方快照决策备忘**：仍不刷新；刷新条件 = G-6/G-8 均有证据 PASS 且同 rev/dirty=false；只许 `reporter.py` 重生成并同步 `评测报告与门禁判定.md`。
+4. **红队尾部分类**：21 条按 10 个用例归类（设计如此／已知限制／潜在缺陷），不改用例、不改产品代码。
+5. G-6/G-8 仍不跑；官方仍不刷；**W80 后若无新预算/补答源，以「6 PASS＋2 UNVERIFIED」收口**；τ 豁免继续，W80 不改 `backend/app/**`。
+
+### 96.6 W80 派单
+`TASK_BOARD §101.7`：① 同一 HEAD 收口审计（离线＋红队＋门禁复算）② `DELIVERY.md` 终版节（三条强制披露）③ 官方快照决策备忘 ④ 红队尾部分类。**零 LLM、零压测、零二轮、不改阈值、不刷官方快照、不改产品代码。**
+
+**边界**：本轮 QA 零 LLM、零出站、未启动容器；官方门禁未刷新（`88f3500`／PASS 1/8）。
