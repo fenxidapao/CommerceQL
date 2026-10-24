@@ -5315,3 +5315,31 @@ calls 468/350=133.7% **超限**；¥39.3%、tokens 93.8% 未超。计划+冒烟=
 `TASK_BOARD §98.8`：① 166 replay 出 τ 非适用性证据（零出站）② `gates.py` 条件豁免 + 单测 + 当前复算 ③ G-8 分母/补答缺口 ④ 全局 calls 账本 + b2 匣带清理。**全部零出站、零真打、零新依赖。**
 
 **边界**：本轮 QA 零出站；W77 零真打；官方门禁未刷新（`88f3500`／PASS 1/8）。
+
+## 94 · W8 第 77 轮验收：三件全收；τ 豁免落地成 3 PASS；G-8 双分母只到报告层；W78 打集成层（QA R31bv ｜ 2026-10-24 12:29 +0800 ｜ HEAD `2852cab`／693 笔）
+
+**结论**：W77-1/2/4 通过；W77-3 报告层通过、**门禁层未接线**。当前复算 **3 PASS（G-2 8/8、G-5 24/24＋3/124、G-7 13/13，均标 `tau_applicability=not_exercised`）｜3 PARTIAL（G-1/G-3/G-4）｜2 UNVERIFIED（G-6/G-8）**；官方快照仍 `88f3500`／PASS 1/8。测试 **2726 passed**。
+
+### 94.1 W77-1【实测】
+166 条；L3 119/none 47/L4 0；resolved_default 119/ambiguous 0；L4 打分 119（71.7%）、候选数 30；与 r75 终态/等价差异 0，SQL/params 差异 0；`live=false`/`mode=replay`；三条件全成立。
+
+### 94.2 W77-2【实测】
+`tau_applicability` 只对 G-2/G-5/G-7 生效，缺证据/L4>0/ambiguous>0/n≠166 ⇒ 仍 UNVERIFIED；G-8 不豁免；FAIL 不豁免；阈值未动；6 条 fixture 单测。我独立复算复现逐格。G-7 输入仍是 W74 probe/r75（SQL/params 全 166 差异 0 ⇒ 读数可转移）；W78 复算补等价性注记。
+
+### 94.3 W77-3【收报告层；门禁层未接线】
+`reporter` 双分母正确：attempted=0（主读数不存在，不是 0%）、clarified=16、并列 0/16 ⇒ UNVERIFIED；18 expected＝1 有冻结候选＋17 缺补答；9 条误澄清不给补答。🔴 `eval/gates.py` G-8 仍用 `clarify_then_correct/clarified` 判 verdict，没读 `success_rate_attempted`/`clarified_denominator_verdict` ⇒ 将来 attempted<clarified 时仍会按未覆盖分母误判。W78-2 接。
+
+### 94.4 W77-4【实测】
+`--max-calls/--max-tokens/--budget-ledger/--calls-manifest`；calls 按 transport 增量（重试计入）、tokens/¥ 含二轮、prior 累加、先到即停；4 条假 transport 单测。b2 manifest 逐键复核：138=115 clean+23 dirty、无交集、missing 0、116 calls/115 unique、sha 一致、`usable_as_clean_evidence=false`、未改写、b1/b3 未动。
+
+### 94.5 我的决定
+1. **W78 打 G-1/G-4 集成层**：本机一次性 Docker（PG 55432/Redis 56379），不连共享 ecom、零 LLM；daemon 现未起，先启动；起不来/测试红如实报，不得写 PASS。
+2. **G-8 门禁层双分母接线**（attempted 主、clarified 并列、attempted<clarified ⇒ 后者 UNVERIFIED），不真打。
+3. **G-3 红队刷新**（预期 48/50，仍 PARTIAL）。
+4. **G-6 不跑**（满档 live 估 ¥40+，无新预算）；官方快照不刷。
+5. τ 豁免继续，但产品代码一改就必须重跑 166 replay；引用永远写"L4 决策份额 0/166；τ 未校准"。
+
+### 94.6 W78 派单
+`TASK_BOARD §99.8`：① G-1/G-4 集成（Docker 一次性容器，零 LLM）② G-8 门禁层双分母＋单测 ③ G-3 红队刷新 ④ 当前门禁复算。**零 LLM、不改阈值、不刷官方快照。**
+
+**边界**：本轮 QA 零出站；W78 允许本机 Docker（一次性容器）但零 LLM；官方门禁未刷新（`88f3500`／PASS 1/8）。

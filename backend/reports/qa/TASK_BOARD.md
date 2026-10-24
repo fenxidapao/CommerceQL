@@ -7135,3 +7135,140 @@ params: {"refund_status": "refunded", "pay_status": "paid"}
 ### 98.9 边界
 
 本窗零出站、零写库（沙箱 `mode=ro`）；只追加 `reports/qa/**`；另跑的 166 回放输出到 `%TEMP%`，未入库；未动产品代码／测试／语义包／冻结集／判据／gates 阈值；官方门禁仍 `88f3500`／PASS 1/8。
+
+## 99 · W8 第 77 轮验收：三件全收；τ 豁免落地成 **3 PASS**；G-8 双分母只到报告层；发现 Docker 可起（W78 打 G-1/G-4）（QA R31bv ｜ 2026-10-24 12:29 +0800 ｜ HEAD `2852cab`／693 笔）
+
+> 本轮 QA 零出站。W77-1/2/4 通过；W77-3 报告层通过、**门禁层未接线**。我另跑 166 回放核对 W77-1、独立复算门禁、逐键核 b2 manifest。**当前复算 3 PASS／3 PARTIAL／2 UNVERIFIED；官方快照仍 `88f3500`／PASS 1/8，未刷新。**
+
+### 99.1 现状现读【实测】
+
+| 项 | 现读 |
+|---|---|
+| HEAD / 笔数 | `2852cab` / 693，与 `origin/main` 齐平；树仅 `?? .workbuddy/` |
+| 本轮改动面 | `eval/{gates.py,reporter.py,runner.py}`；4 个 W77 脚本；4 份 W77 产物；b2 manifest；3 个新测试文件＋2 个旧测试同步；W8 `RELAY` |
+| 禁改面 | `reports/qa/**`、冻结集、`semantic/**`、`gates.py` 阈值、G-8 阈值、`.env`、官方 `eval_metrics.json` **全部空 diff**【实测】；`gates.py` 只加了 D-W77-1 的豁免分支（已签） |
+| 测试 | 我跑 `backend/tests --ignore=backend/tests/integration`：**2726 passed / 0 failed**（113.68s） |
+| 官方门禁 | 仍 `88f3500`／PASS 1/8，未刷新 |
+
+### 99.2 W77-1 τ 非适用性证据：通过【实测】
+
+产物 `eval/results_w77_full166_applicability.json`（`2cd6c92`/False）。我独立复算逐项一致：
+
+| 项 | 读数 |
+|---|---|
+| n | **166**；终态 complete 116／refuse 28／clarify 16／error 3／None 3 |
+| `binding_layer` | **L3 119 ／ none 47 ／ L4 0** |
+| `binding_status` | **resolved_default 119 ／ none 47 ／ ambiguous 0** |
+| L4 打分 | `tau_raw.ok=True` **119/166 = 71.7%**；候选数分布 `{30: 119}`；47 条 `l4_not_reached` |
+| 与 r75 对比 | 终态差异 **0**、等价差异 **0**、missing_in_r75 **0**；我还比了 **SQL/params 全 166 条差异 0** |
+| 配置 | `live=false`、`mode=replay`、匣带 `w8_r63_full166.jsonl`；历史计费仅随匣带回放，**零新增** |
+| 三条件 | `n_records_166=true`、`l4_decisions_zero=true`、`ambiguous_bindings_zero=true`；`holds=true` |
+
+### 99.3 W77-2 门禁口径：通过【实测；3 PASS 是条件性豁免，不是 τ 校准】
+
+- `eval/gates.py` 新增 `tau_applicability`；`tau_applicability_holds` **只读三格**（166／0／0），缺字段/类型错/任一 >0 ⇒ False；`_TAU_EXEMPT_GATES={G-2,G-5,G-7}`；**G-8 不在豁免集合**；FAIL 不被豁免；阈值未动。
+- 单测 `test_tau_applicability.py` **6 条**：证据缺失、L4>0、ambiguous>0、n≠166、三条件满足=G-2/G-5/G-7 PASS+G-8 仍 UNVERIFIED、FAIL 不被豁免。全部 fixture，零出站。
+- 我独立复算 `eval/w77_gate_recompute.py`（临时输出）与台账产物逐格一致：
+
+| 格 | 判定 | 读数 |
+|---|---|---|
+| G-1 | PARTIAL | 2726 passed；集成层未跑 |
+| G-2 | **PASS** | easy×low **8/8**；notes=`tau_applicability=not_exercised` |
+| G-3 | PARTIAL | 放行 0／覆盖 48（应拦 50），引用官方旧快照 |
+| G-4 | PARTIAL | 跨租户 0；PG RLS 未在真实 DB 验证，引用官方旧快照 |
+| G-5 | **PASS** | 该拒 24/24；误拒 3/124＝2.4%；notes 同上 |
+| G-6 | UNVERIFIED | P95 7268ms，分母未标注，引用官方旧快照 |
+| G-7 | **PASS** | 一致 **13/13**；notes 同上 |
+| G-8 | UNVERIFIED | 澄清率 16/166＝9.6%；attempted=0 ⇒ 二轮成功率不可测 |
+
+**汇总 3 PASS／3 PARTIAL／2 UNVERIFIED／0 FAIL**；官方快照未动。
+
+**证据链备注（不扣分，W78 顺手补）**：G-7 的输入仍是 W74 probe + r75 system_source（`5bdb663`），不是 W77 replay。我逐条比过 W77 与 r75 的 SQL/params **全 166 条差异 0** ⇒ 读数可转移；但 W78 复算时应把这条等价性写进产物，或直接用 W77 replay 重跑 probe。
+
+### 99.4 W77-3 G-8 分母＋补答缺口：**收报告层；门禁层未接线**（本窗新发现）
+
+**报告层通过**：`reporter._clarify_counts` 已落 `primary_denominator=attempted`、`success_rate_attempted`、`success_rate_clarified`、`clarified_denominator_verdict`、`denominator_note`；本轮 `attempted=0`（主读数**不存在，不是 0%**）、`clarified=16`、并列 `0/16` ⇒ `UNVERIFIED`。18 条 expected=clarify：**1 条**有冻结候选（C-CITY-01）、**17 条**缺补答来源（只列不编）；9 条误澄清（H-STR-01…08、X-MET-10）单列并标"不给补答"。产物 `eval/results_w77_g8_answer_gap.json` 与回执一致。
+
+**🔴 门禁层未接线**：`eval/gates.py` 的 G-8 分支仍用 `succ = clarify_then_correct / clarified` 判 PASS/FAIL，**没有读** `success_rate_attempted` 与 `clarified_denominator_verdict`。后果：将来若 `attempted=1 < clarified=16` 且该条成功，门禁会按 `1/16=6.25%` 判 FAIL——正是 D-W77-3 要消除的误读。当前 `attempted=0` ⇒ G-8 仍是 UNVERIFIED，没产生错判；但**必须在任何二轮真打前把门禁层接上**（W78-2），否则双分母只是报告注记，不是判据。
+
+**结论**：G-8 **仍 UNVERIFIED**；补答源 17/18 缺口；不实装二轮、不真打、不编答案。
+
+### 99.5 W77-4 预算账本＋b2 匣带卫生：通过【实测】
+
+- `runner` 新增 `--max-calls/--max-tokens/--budget-ledger/--calls-manifest`；calls 按 `transport.calls` **增量**（重试计入）、tokens/¥ 含二轮、与 `prior_usage` 累加后任一 `>=` 上限即停；`budget_stop` 带 `calls/tokens/spent_cny/breached/caps`；开跑前已越限 ⇒ 一条都不跑。4 条假 transport 单测覆盖 calls 上限、上轮账本预耗尽、重试计数、二轮 tokens。
+- b2 manifest 我逐键复核：匣带 138 行/138 unique/0 重复；`clean 115 + dirty 23 = 138` 且两侧无交集、并集等于匣带全集；`clean_keys_missing_from_cassette=[]`；干净重放 **116 calls / 115 unique** 且 unique 集与 clean_keys **完全相同**；sha256 与 manifest 一致；`usable_as_clean_evidence=false`、`rewritten=false`、`b1_b3_untouched=true`。**复核通过。**
+- 预算账本目前只有 fixture 证据（零真打），第一次真打时要拿实跑 calls/¥/tokens 与账本对账；本轮不真打。
+
+### 99.6 当前门禁（W77 复算，非官方快照）
+
+**3 PASS（G-2 8/8、G-5 24/24＋3/124、G-7 13/13，均带 `tau_applicability=not_exercised`）｜3 PARTIAL（G-1 集成层未跑；G-3/G-4 引用旧快照）｜2 UNVERIFIED（G-6 无合格回执；G-8 二轮/补答源缺口）｜0 FAIL。**
+官方 `backend/reports/w6/eval_metrics.json` 仍 `88f3500`／PASS 1/8，**未刷新**；引用时不得把"当前 3 PASS"写成"官方已通过"。
+
+### 99.7 我的决定（总控授权，不再问）
+
+| # | 决定 | 理由 |
+|---|---|---|
+| D-W78-1 | **打 G-1/G-4 集成层**：用本机一次性 Docker 容器（PG 55432／Redis 56379），跑 `backend/tests/integration` 的 P0 集；**不得连共享 `ecom`**，跑完即删；零 LLM。daemon 未起则启动 Docker Desktop 并等就绪；镜像拉取逐条登记。起不来/拉不到/测试红 ⇒ 如实落盘并停，不得把 G-1/G-4 写成 PASS。 | Docker CLI 29.7.2 已装，但 daemon 当前未运行；这是 G-1/G-4 从 PARTIAL 走向 PASS 的唯一路径，且不需要 LLM。 |
+| D-W78-2 | **G-8 门禁层双分母接线**：`attempted==0` ⇒ UNVERIFIED；`attempted>0` 用 `success_rate_attempted` 判成功侧；`attempted<clarified` 时并列 `success/clarified` 标 UNVERIFIED、不得用它判 verdict；G-8 仍不适用 τ 豁免。纯代码＋fixture，零真打。 | 当前门禁仍会按未覆盖的 `clarified` 分母误判；这是 D-W77-3 的最后一公里。 |
+| D-W78-3 | **G-3 红队刷新**：跑 `eval/redteam_eval.py --out eval/results_w78_redteam.json`；预期 48/50、leaked=0 ⇒ 仍 PARTIAL（2 条 COST 用例沙箱无 EXPLAIN）；不改判据、不把 UNCOVERED 折算成通过。 | 官方 G-3 读数是旧快照；刷新只能提高新鲜度，不能改变 2 条能力缺口。 |
+| D-W78-4 | **G-6 不跑**：满档 50 并发×10min 需 live LLM，W7 估 ¥40+；无新预算不跑，维持 UNVERIFIED。 | 成本远超本轮授权；且 W7 历史配额档读数已显示 p95 11.4s > 8s，跑批未必能改善。 |
+| D-W78-5 | 官方门禁**仍不刷新**。 | G-3/G-6/G-8 未齐；当前复算只是"按今天输入的读数"，不是官方快照。 |
+| D-W78-6 | **τ 豁免继续生效但条件不变**：只用 W77-1 的 166 回放证据；**若 W78 改动了任何 `backend/app/**` 产品代码，必须重跑 166 replay 并重导证据**；引用永远写"L4 决策份额 0/166；τ 未校准"，不得写"τ 已校准"。 | 豁免的前提是"本数据集不触发 L4"；产品代码一变，旧回放就不再代表当前代码。 |
+
+### 99.8 W78 派单
+
+```text
+【W8 第 78 轮｜G-1/G-4 集成层 + G-8 门禁层双分母 + G-3 红队刷新（零 LLM；Docker 本地）】
+
+0. 前置：现读 HEAD；证据绑 git_rev+dirty=false；不碰 reports/qa/**；不 git add -A；
+   .workbuddy/ 不入库；不改 gold/冻结集/语义包/prompt；不改任何门禁阈值；不刷官方快照；
+   🔴 零 LLM 出站（不调真模型、不花 token/¥）；不装 Python 新依赖；不评估方案 A。
+   Docker 只起本机一次性容器（PG 55432 / Redis 56379），不得连共享 `ecom`，跑完 `docker rm -f`。
+
+1. 🔴 W78-1 G-1/G-4 集成层（本机 Docker；零 LLM）
+- 先 `docker info`；daemon 未起则启动 Docker Desktop 并等就绪；记录是否拉取镜像（只允许镜像拉取，逐条登记）。
+- 按 `backend/tests/integration/test_rls_tenant_isolation.py` 头注的一次性容器配方：
+  PG `pgvector/pgvector:pg16` 映射 55432，库名 `ecom_rls`；Redis 一次性容器映射 56379（如测试需要）。
+- 设 `COMMERCEQL_TEST_SUPER_DSN/RW_DSN/RO_DSN`（一次性库，不指向共享 ecom）；跑
+  `pytest backend/tests/integration -q`（至少含 `test_exec_real_pg.py`、`test_rls_tenant_isolation.py`、
+  `test_real_redis_lock_and_ratelimit.py` 等 P0 集）。
+- 产物 `eval/results_w78_integration.json`：逐文件 passed/failed/errors、`integration_ran=true`、
+  容器名/端口/镜像 digest、是否拉镜像、DSN 只写脱敏后的库名+端口（不落口令）。
+- 若 daemon 起不来/镜像拉不到/测试红 ⇒ 如实落盘并停，不得把 G-1/G-4 写成 PASS；失败项逐条列原文。
+- 复算 G-1/G-4 两格（`integration_ran` 与 `pg_rls_verified` 必须由本轮证据推导，不得手填）。
+
+2. 🔴 W78-2 G-8 门禁层双分母（零出站；纯代码+fixture）
+- 在 `eval/gates.py` 的 G-8 分支接 D-W77-3：
+  * `attempted == 0` ⇒ UNVERIFIED（现状）；
+  * `attempted > 0` ⇒ 成功侧用 `success_rate_attempted` 判 PASS/FAIL（`>=0.8`），
+    不再用 `clarify_then_correct/clarified`；
+  * `attempted < clarified` ⇒ 并列 `success/clarified` 标 UNVERIFIED（不得用它判 verdict）；
+  * evidence 字符串主读数写 `success/attempted`，并列写 `success/clarified`；
+  * G-8 仍不适用 τ 豁免。
+- 单测：attempted=1/clarified=16/success=1 ⇒ 主 100%、并列 UNVERIFIED、verdict 按主读数；
+  attempted=0 ⇒ UNVERIFIED；attempted=16/success=13 ⇒ PASS；12 ⇒ FAIL；
+  attempted<clarified 时不得因并列 0% 而 FAIL。
+- 当前 W77 replay attempted=0 ⇒ 复算 G-8 仍 UNVERIFIED；不真打、不实装二轮。
+
+3. 🟡 W78-3 G-3 红队刷新（零 LLM）
+- `python eval/redteam_eval.py --out eval/results_w78_redteam.json`；记录 total/leaked/expect_block/checked/
+  not_covered_cases；预期 checked=48/50、leaked=0 ⇒ G-3 仍 PARTIAL（2 条 COST 用例沙箱无 EXPLAIN）。
+- 不执行 2 条成本爆炸用例；不改判据、不把 UNCOVERED 折算成通过。
+
+4. 🟢 W78-4 当前门禁复算（零出站；不是官方快照）
+- 用 W78-1/2/3 的新输入 + W77-1 的 τ 证据复算；G-2/G-5/G-7 仍按 D-W77-1 标注；G-8 UNVERIFIED；
+  G-3 用新红队读数（仍 PARTIAL）；G-6 仍无回执（UNVERIFIED）；G-1/G-4 用本轮集成证据。
+- 若本轮改了任何 `backend/app/**` 产品代码 ⇒ 先重跑 166 replay 并重导 τ 证据，再复算。
+- 产物 `eval/results_w78_gate_recompute.json`；官方 `eval_metrics.json` 仍不动。
+
+5. 🚫 不做：G-6 压测（满档 50 并发 10min 需 live LLM，W7 估 ¥40+，无新预算不跑）；
+   G-8 二轮（17/18 缺补答源）；方案 A；改 gold/冻结集/语义包/prompt/阈值；刷官方快照。
+
+6. 回执：产物路径/git_rev+dirty/tokens=0；W78-1/2/3/4 各一句"通过/不通过/不可判"；
+   G-1/G-4 若 PASS 必须带 `integration_ran=true`/`pg_rls_verified=true` 的逐项证据；
+   引用 τ 时同写"L4 决策份额 0/166；τ 未校准"。
+```
+
+### 99.9 边界
+
+本窗零出站、零写库；只追加 `reports/qa/**`；未动产品代码／测试／语义包／冻结集／判据／门禁阈值；官方门禁仍 `88f3500`／PASS 1/8。Docker daemon 现状 = **CLI 29.7.2 已装、daemon 未运行**（W78-1 需先启动）。

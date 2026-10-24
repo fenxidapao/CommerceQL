@@ -1899,3 +1899,16 @@ W67 派单见 `TASK_BOARD §88.5`（三件，全部零出站）。
 8. **我的决定**：① 签**条件性 τ 非适用豁免**（166 回放需 0 L4 决策/0 ambiguous/166 条；G-2/G-5/G-7 标 `tau_applicability=not_exercised`，证据缺或条件不满足即 UNVERIFIED；G-8 不豁免；不得写成"τ 已校准"）② 不评估方案 A（三前置全不成立；不装 torch/sentence-transformers/不改 ADR）③ 签 G-8 分母口径（success/attempted 主、success/clarified 并列、attempted<clarified ⇒ 后者 UNVERIFIED）④ 暂停真打到新上限 ⑤ 官方门禁不刷 ⑥ b2 匣带 138 键 vs 115，23 个脏键不得作清洁证据。
 9. **残余**：17/18 G-8 补答源缺口；L4 急切打分成本与设计不符（latent）；b2 匣带待清理；τ 豁免是**本窗自订判据**，须在最终交付里与"τ 未校准"同行披露；方案 A 未评估。
 10. **结论**：第 76 轮三件收；τ 负结果成立但**样本不是歧义集**，不能据此触发 A；当前最大卡点从"τ 抖动"改为"E-5 没有歧义集 + G-8 没有补答源"。W77 派单见 `TASK_BOARD §98.8`（全零出站）。
+
+## R31bv · W8 第 77 轮验收：三件全收；τ 豁免落地成 3 PASS；G-8 双分母只到报告层；W78 打集成层 ／ 2026-10-24 12:29 +0800 ／ HEAD `2852cab`／693 笔
+
+1. **基线【实测】**：`2852cab`／693／与 origin/main 齐平；树仅 `?? .workbuddy/`；禁改面（reports/qa、冻结集、semantic、gates 阈值、G-8 阈值、.env、官方 eval_metrics）空 diff；`gates.py` 只加已签的 τ 豁免分支。
+2. **测试【实测】**：`backend/tests --ignore=backend/tests/integration` **2726 passed / 0 failed**（113.68s）。
+3. **W77-1 收【实测】**：166；L3 119/none 47/L4 0；resolved_default 119/ambiguous 0；L4 打分 119（71.7%）、候选数 30；与 r75 终态/等价差异 0、SQL/params 差异 0；live=false/replay；三条件全成立。
+4. **W77-2 收【实测】**：τ 豁免只作用 G-2/G-5/G-7；缺证据/L4>0/ambiguous>0/n≠166 ⇒ UNVERIFIED；G-8 不豁免；FAIL 不豁免；阈值未动；6 条 fixture 单测；我独立复算逐格一致。**当前 3 PASS/3 PARTIAL/2 UNVERIFIED**；官方仍 `88f3500`/1-8。G-7 输入为 W74 probe/r75，SQL/params 全 166 差异 0 ⇒ 读数可转移，W78 补注记。
+5. **W77-3 收报告层【实测·门禁层未接线】**：attempted=0（不存在，不是 0%）、clarified=16、并列 0/16 ⇒ UNVERIFIED；18 expected=1 有候选+17 缺补答；9 条误澄清不给补答。🔴 `gates.py` G-8 仍用 `clarify_then_correct/clarified` 判 verdict，未读新字段 ⇒ attempted<clarified 时会按未覆盖分母误判；W78-2 接。
+6. **W77-4 收【实测】**：budget ledger flags/计数/4 条假 transport 单测；b2 manifest 逐键复核 138=115+23、无交集、missing 0、116/115、sha 一致、usable=false、未改写、b1/b3 未动。
+7. **Docker 环境【实测】**：CLI 29.7.2 已装，daemon **未运行**；W78-1 先启动，起不来如实报。
+8. **我的决定**：① W78 打 G-1/G-4 集成（一次性 PG 55432/Redis 56379，不连共享 ecom、零 LLM）② G-8 门禁层双分母接线 ③ G-3 红队刷新（预期 48/50，仍 PARTIAL）④ G-6 不跑（满档 live 估 ¥40+）⑤ 官方快照不刷 ⑥ τ 豁免继续，产品代码一改就重跑 166 replay；引用永远写"L4 决策份额 0/166；τ 未校准"。
+9. **残余**：G-8 门禁层双分母（W78-2）；G-8 补答源 17/18；G-3 2 条 COST 用例；G-6 满档压测预算；G-1/G-4 依赖 Docker daemon。
+10. **结论**：第 77 轮三件收、W77-3 报告层收；当前 3 PASS 是**条件性 τ 非适用**，不是 τ 校准；最大剩余杠杆 = G-1/G-4 集成层（Docker 可起）。W78 派单见 `TASK_BOARD §99.8`。
