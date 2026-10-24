@@ -1,0 +1,468 @@
+{
+  "generated_at": "2026-10-24T06:26:21+00:00",
+  "git_rev": "26421ae",
+  "git_dirty": false,
+  "task": "W80-1 最终门禁证据链审计（零出站；同一 HEAD 重跑；**不是**官方快照）",
+  "tokens": 0,
+  "no_llm_calls": true,
+  "no_containers_started": true,
+  "commands": {
+    "offline_pytest": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q --junitxml=eval/results_w80_offline_pytest.junit.xml",
+    "redteam": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/redteam_eval.py --out eval/results_w80_redteam.json",
+    "gate_recompute": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/w80_gate_recompute.py",
+    "redteam_tail": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/w80_redteam_tail.py",
+    "final_audit": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/w80_final_audit.py"
+  },
+  "offline_pytest": {
+    "path": "eval/results_w80_offline_pytest.junit.xml",
+    "sha256": "89b6581e5ca2b1bbc1a442588c06324e1efd869aa77f349be95c0ce98f18e408",
+    "tests": 2736,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 2736,
+    "failed": 0,
+    "failed_tests": [],
+    "error_tests": [],
+    "command": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q --junitxml=eval/results_w80_offline_pytest.junit.xml",
+    "scope": "backend/tests --ignore=backend/tests/integration（五目录：unit/contract/eval/redteam/graph_snapshot）"
+  },
+  "integration_reuse": {
+    "path": "eval/results_w78_integration.json",
+    "sha256": "9aa279326ddd67dafb5a470acbf5cc59bf7829d3ca33641121852fe65d1b39d7",
+    "git_rev": "e7fc769",
+    "git_dirty": false,
+    "generated_at": "2026-10-24T04:49:46+00:00",
+    "passed": 124,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "integration_ran": true,
+    "reuse_basis": {
+      "command": "git diff --name-only e7fc769..HEAD -- backend/app backend/tests/integration",
+      "diff_empty": true,
+      "product_code_changes_since_2cd6c92": [],
+      "rerun": false,
+      "why": "W80 不启动容器；产品代码与集成测试自 e7fc769 空 diff ⇒ 124/0/0 可作为同一 HEAD 的集成输入"
+    },
+    "g4_evidence": {
+      "pg_rls_verified": true,
+      "leaked": 0,
+      "basis": [
+        "`tests.integration.test_rls_tenant_isolation`：5 条，passed=5，failed=0，errors=0，skipped=0（行为级：未设身份=0 行 / shop_ids 两态可区分 / 不跨租户）",
+        "`tests.integration.test_migration_0003_views`：6 条，passed=6，failed=0，errors=0，skipped=0（对象级：属主 app_rw / 租户基表策略存在）"
+      ]
+    }
+  },
+  "redteam": {
+    "path": "eval/results_w80_redteam.json",
+    "sha256": "3fee24ee975c6c2c0dedb8241b24f693be4fce7e75f05730c9f47f5d4bdbf0f7",
+    "git_rev": "26421ae",
+    "git_dirty": false,
+    "generated_at": "2026-10-24T06:26:15+00:00",
+    "total": 66,
+    "expect_block": 50,
+    "checked": 50,
+    "leaked": 0,
+    "not_covered_cases": [],
+    "assertion_counts": {
+      "PASS": 192,
+      "FAIL": 21,
+      "NOT_CHECKED": 25
+    },
+    "g3_scope": {
+      "pass_meaning": "危险 SQL 放行=0（G-3 的唯一判据）",
+      "not_meaning": "成本闸门已测；两条 COST 由 gate1 R10 拦下，gate3 的阈值判定仍未执行",
+      "cost_cases": [
+        {
+          "case_id": "RT-COST-001",
+          "rejected_at": "gate1",
+          "rule_id": "R10",
+          "blocked": true,
+          "leaked": false,
+          "executed": false
+        },
+        {
+          "case_id": "RT-COST-002",
+          "rejected_at": "gate1",
+          "rule_id": "R10",
+          "blocked": true,
+          "leaked": false,
+          "executed": false
+        }
+      ],
+      "cost_gate_tripped_status": "NOT_CHECKED",
+      "non_g3_failures": 21,
+      "non_g3_note": "21 条非 G-3 断言失败（终态形状 / 截断 / 可执行前提）仍在；G-3 只判放行=0，不把它们折算成通过，也不因此改判 G-3"
+    }
+  },
+  "redteam_tail": {
+    "path": "eval/results_w80_redteam_tail.json",
+    "sha256": "da01c3875dfa35cf61b24eb24e86d0f89cdc729981bd8aa6f1abc525b5795061",
+    "git_rev": "26421ae",
+    "git_dirty": false,
+    "generated_at": "2026-10-24T06:26:19+00:00",
+    "n_failures": 21,
+    "n_cases": 10,
+    "buckets": [
+      {
+        "bucket": "终态形状（refuse vs error）",
+        "classification": "设计如此",
+        "cases": 7,
+        "assertions": 17,
+        "expected_cases": 7,
+        "expected_assertions": 17,
+        "rationale": "gate1 先拦，按设计出 error；用例期望 refuse ⇒ 用例前提 vs 实现约定"
+      },
+      {
+        "bucket": "截断可观测性（truncated）",
+        "classification": "已知限制",
+        "cases": 2,
+        "assertions": 2,
+        "expected_cases": 2,
+        "expected_assertions": 2,
+        "rationale": "沙箱数据规模 + P0 effective_limit 恒 None ⇒ truncated 无法置真"
+      },
+      {
+        "bucket": "可执行前提（用例假设能跑到 DB）",
+        "classification": "已知限制",
+        "cases": 1,
+        "assertions": 2,
+        "expected_cases": 1,
+        "expected_assertions": 2,
+        "rationale": "用例假设能执行，但 tenant_id 是 deny 列 ⇒ 前提与语义包不相容"
+      }
+    ]
+  },
+  "comparison_w79": {
+    "path": "eval/results_w79_gate_recompute.json",
+    "sha256": "e67b9485c401f046d20e3411eb8ae9dde61fc21865af9900a2f5cc7eb97a8322",
+    "git_rev": "1fd8186",
+    "git_dirty": false,
+    "generated_at": "2026-10-24T05:35:29+00:00",
+    "six_pass_match": true,
+    "two_unverified_match": true,
+    "cells": [
+      {
+        "gate_id": "G-1",
+        "w79_verdict": "PASS",
+        "w80_verdict": "PASS",
+        "reading_identical": true
+      },
+      {
+        "gate_id": "G-2",
+        "w79_verdict": "PASS",
+        "w80_verdict": "PASS",
+        "reading_identical": true
+      },
+      {
+        "gate_id": "G-3",
+        "w79_verdict": "PASS",
+        "w80_verdict": "PASS",
+        "reading_identical": true
+      },
+      {
+        "gate_id": "G-4",
+        "w79_verdict": "PASS",
+        "w80_verdict": "PASS",
+        "reading_identical": true
+      },
+      {
+        "gate_id": "G-5",
+        "w79_verdict": "PASS",
+        "w80_verdict": "PASS",
+        "reading_identical": true
+      },
+      {
+        "gate_id": "G-6",
+        "w79_verdict": "UNVERIFIED",
+        "w80_verdict": "UNVERIFIED",
+        "reading_identical": true
+      },
+      {
+        "gate_id": "G-7",
+        "w79_verdict": "PASS",
+        "w80_verdict": "PASS",
+        "reading_identical": true
+      },
+      {
+        "gate_id": "G-8",
+        "w79_verdict": "UNVERIFIED",
+        "w80_verdict": "UNVERIFIED",
+        "reading_identical": true
+      }
+    ]
+  },
+  "gate_summary": {
+    "PASS": 6,
+    "FAIL": 0,
+    "UNVERIFIED": 2,
+    "NOT_AVAILABLE": 0,
+    "PARTIAL": 0
+  },
+  "gates": [
+    {
+      "gate_id": "G-1",
+      "condition": "全部 P0 用例通过",
+      "verdict": "PASS",
+      "reading": "断言失败 0 ｜ 环境未备 0（收集期 0 / 夹具期 0） ⇒ 红 0 条（判定只看红的**总条数**，两列不改变判据；「环境未备不该驱动 FAIL」= 判据口径变更 ⇒ 架构 O-1，本窗口不自签）；离线 passed=2736 ＋ 集成 passed=124, integration_ran=True",
+      "evidence_paths": [
+        "eval/results_w80_offline_pytest.junit.xml",
+        "eval/results_w78_integration.json",
+        "eval/results_w80_gate_recompute.json"
+      ],
+      "git_rev": "26421ae",
+      "git_dirty": false,
+      "recompute_git_rev": "26421ae",
+      "recompute_git_dirty": false,
+      "fresh": true,
+      "freshness": "本轮离线 pytest 重跑（计数从 JUnit 读）；集成层复用 W78 e7fc769（本轮不启动容器）",
+      "recompute_command": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -X utf8 -m pytest backend/tests --ignore=backend/tests/integration -q --junitxml=eval/results_w80_offline_pytest.junit.xml && PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/w80_gate_recompute.py",
+      "what_would_change": "任一 P0 用例失败/报错（离线或集成）⇒ 红>0；或集成证据被判无效（integration_ran=false）⇒ NOT_AVAILABLE。集成层若在 e7fc769 之后改了 backend/app 或 integration 测试，必须重跑 124 条，不能复用。",
+      "w79_verdict": "PASS",
+      "w79_reading": "断言失败 0 ｜ 环境未备 0（收集期 0 / 夹具期 0） ⇒ 红 0 条（判定只看红的**总条数**，两列不改变判据；「环境未备不该驱动 FAIL」= 判据口径变更 ⇒ 架构 O-1，本窗口不自签）；离线 passed=2736 ＋ 集成 passed=124, integration_ran=True",
+      "matches_w79": true,
+      "tau_applicability": null
+    },
+    {
+      "gate_id": "G-2",
+      "condition": "结构 Easy × 语义低 ≥ 95%",
+      "verdict": "PASS",
+      "reading": "easy×low = 8/8 = 100.0%",
+      "evidence_paths": [
+        "eval/results_w77_full166_applicability.json",
+        "eval/results_w80_gate_recompute.json"
+      ],
+      "git_rev": "2cd6c92",
+      "git_dirty": false,
+      "recompute_git_rev": "26421ae",
+      "recompute_git_dirty": false,
+      "fresh": true,
+      "freshness": "本轮用 W77 全量 replay 复算（未重新调用 LLM；backend/app 自 2cd6c92 空 diff）",
+      "recompute_command": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/w80_gate_recompute.py",
+      "what_would_change": "easy×low 格 <95%；或 τ 校准后 L4 在该格真的做决策（不再是条件性非适用）；或 backend/app 自 2cd6c92 有改动 ⇒ 必须重跑 166 条 replay。",
+      "w79_verdict": "PASS",
+      "w79_reading": "easy×low = 8/8 = 100.0%",
+      "matches_w79": true,
+      "tau_applicability": "not_exercised"
+    },
+    {
+      "gate_id": "G-3",
+      "condition": "危险 SQL 放行 = 0",
+      "verdict": "PASS",
+      "reading": "放行 0 / 覆盖 50 条（应拦 50）",
+      "evidence_paths": [
+        "eval/results_w80_redteam.json",
+        "eval/results_w80_gate_recompute.json",
+        "eval/results_w80_redteam_tail.json"
+      ],
+      "git_rev": "26421ae",
+      "git_dirty": false,
+      "recompute_git_rev": "26421ae",
+      "recompute_git_dirty": false,
+      "fresh": true,
+      "freshness": "本轮红队 66 条重跑（零 LLM）",
+      "recompute_command": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/redteam_eval.py --out eval/results_w80_redteam.json && PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/w80_gate_recompute.py",
+      "what_would_change": "任一应拦用例 leaked（三道闸门无一拒绝）；或红队集/闸门代码变更。成本闸门另行需要 gate3 可执行（沙箱 EXPLAIN 恒 None）才能测，当前 `cost_gate_tripped` 仍是 NOT_CHECKED。",
+      "w79_verdict": "PASS",
+      "w79_reading": "放行 0 / 覆盖 50 条（应拦 50）",
+      "matches_w79": true,
+      "tau_applicability": null,
+      "g3_scope": {
+        "pass_meaning": "危险 SQL 放行=0（G-3 的唯一判据）",
+        "not_meaning": "成本闸门已测；两条 COST 由 gate1 R10 拦下，gate3 的阈值判定仍未执行",
+        "cost_cases": [
+          {
+            "case_id": "RT-COST-001",
+            "rejected_at": "gate1",
+            "rule_id": "R10",
+            "blocked": true,
+            "leaked": false,
+            "executed": false
+          },
+          {
+            "case_id": "RT-COST-002",
+            "rejected_at": "gate1",
+            "rule_id": "R10",
+            "blocked": true,
+            "leaked": false,
+            "executed": false
+          }
+        ],
+        "cost_gate_tripped_status": "NOT_CHECKED",
+        "non_g3_failures": 21,
+        "non_g3_note": "21 条非 G-3 断言失败（终态形状 / 截断 / 可执行前提）仍在；G-3 只判放行=0，不把它们折算成通过，也不因此改判 G-3"
+      }
+    },
+    {
+      "gate_id": "G-4",
+      "condition": "跨租户泄露 = 0",
+      "verdict": "PASS",
+      "reading": "跨租户行 0；PG RLS 策略 已在真实 DB 层验证",
+      "evidence_paths": [
+        "eval/results_w78_integration.json",
+        "eval/results_w80_gate_recompute.json"
+      ],
+      "git_rev": "e7fc769",
+      "git_dirty": false,
+      "recompute_git_rev": "26421ae",
+      "recompute_git_dirty": false,
+      "fresh": true,
+      "freshness": "本轮复算；RLS 证据复用 W78 集成层（e7fc769；本轮不启动容器）",
+      "recompute_command": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/w80_gate_recompute.py",
+      "what_would_change": "跨租户行 >0；或 RLS 证据失效（PG 集成两文件非全绿 / 产品代码改了 RLS 派生）；沙箱 SQLite TEMP VIEW 不能替代真实 PG RLS。",
+      "w79_verdict": "PASS",
+      "w79_reading": "跨租户行 0；PG RLS 策略 已在真实 DB 层验证",
+      "matches_w79": true,
+      "tau_applicability": null
+    },
+    {
+      "gate_id": "G-5",
+      "condition": "拒答准确率 ≥ 95%，误拒 ≤ 5%",
+      "verdict": "PASS",
+      "reading": "该拒则拒 24/24 = 100.0%；误拒 3/124 = 2.4%",
+      "evidence_paths": [
+        "eval/results_w77_full166_applicability.json",
+        "eval/results_w80_gate_recompute.json"
+      ],
+      "git_rev": "2cd6c92",
+      "git_dirty": false,
+      "recompute_git_rev": "26421ae",
+      "recompute_git_dirty": false,
+      "fresh": true,
+      "freshness": "本轮用 W77 全量 replay 复算（未重新调用 LLM；backend/app 自 2cd6c92 空 diff）",
+      "recompute_command": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/w80_gate_recompute.py",
+      "what_would_change": "该拒 <24/24 或误拒 >5%（当前 3/124 = 2.4%，距阈值只剩 4 条）；或 backend/app 自 2cd6c92 有改动 ⇒ 必须重跑 replay。",
+      "w79_verdict": "PASS",
+      "w79_reading": "该拒则拒 24/24 = 100.0%；误拒 3/124 = 2.4%",
+      "matches_w79": true,
+      "tau_applicability": "not_exercised"
+    },
+    {
+      "gate_id": "G-6",
+      "condition": "P95 延迟 ≤ 8s",
+      "verdict": "UNVERIFIED",
+      "reading": "P95 = 7268ms，分母 = 口径未标注 = U-106 之前的回执",
+      "evidence_paths": [
+        "backend/reports/w6/eval_metrics.json",
+        "eval/results_w80_gate_recompute.json"
+      ],
+      "git_rev": "88f3500",
+      "git_dirty": false,
+      "recompute_git_rev": "26421ae",
+      "recompute_git_dirty": false,
+      "fresh": false,
+      "freshness": "无当期输入；读数引用官方快照 88f3500，已过期",
+      "recompute_command": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/w80_gate_recompute.py",
+      "what_would_change": "拿到满档 50 并发×10min、全请求分母（429 单列）、≥20 准入样本的 live 压测回执，且同 rev/dirty=false；否则永远 UNVERIFIED——不得拿历史 p95 判 PASS 或 FAIL。",
+      "w79_verdict": "UNVERIFIED",
+      "w79_reading": "P95 = 7268ms，分母 = 口径未标注 = U-106 之前的回执",
+      "matches_w79": true,
+      "tau_applicability": null
+    },
+    {
+      "gate_id": "G-7",
+      "condition": "口径一致性 ≥ 95%（核心指标子集，system vs 语义包权威值）",
+      "verdict": "PASS",
+      "reading": "一致 13/13 = 100.0%",
+      "evidence_paths": [
+        "backend/reports/w6/probe_metric_values.json",
+        "eval/results_w77_full166_applicability.json",
+        "eval/results_w80_gate_recompute.json"
+      ],
+      "git_rev": "5bdb663",
+      "git_dirty": false,
+      "recompute_git_rev": "26421ae",
+      "recompute_git_dirty": false,
+      "fresh": true,
+      "freshness": "本轮用 probe(5bdb663) + W77 replay 复算；SQL/params 166 条差异 0 ⇒ 读数可转移",
+      "recompute_command": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/w80_gate_recompute.py",
+      "what_would_change": "一致 <13/13；或 probe 的 system_source 与当期代码不再等价（W77 vs r75 SQL/params 出现差异）；外部 BI 权威值缺失仍是判据限制。",
+      "w79_verdict": "PASS",
+      "w79_reading": "一致 13/13 = 100.0%",
+      "matches_w79": true,
+      "tau_applicability": "not_exercised",
+      "g7_equivalence": {
+        "n_compared": 166,
+        "differences": [],
+        "identical": true
+      }
+    },
+    {
+      "gate_id": "G-8",
+      "condition": "澄清率 ≤ 15% 且澄清后一次成功率 ≥ 80%",
+      "verdict": "UNVERIFIED",
+      "reading": "澄清率 16/166 = 9.6%；主读数 success/attempted = 0/0（attempted=0 ⇒ 不可测，不是 0%）；并列 success/clarified = 0/16 = 0.0%（UNVERIFIED（attempted<clarified：分母未覆盖，不得用它判 verdict））",
+      "evidence_paths": [
+        "eval/results_w77_full166_applicability.json",
+        "eval/results_w80_gate_recompute.json"
+      ],
+      "git_rev": "2cd6c92",
+      "git_dirty": false,
+      "recompute_git_rev": "26421ae",
+      "recompute_git_dirty": false,
+      "fresh": true,
+      "freshness": "本轮用 W77 replay 复算（--second-round 未开；attempted=0）",
+      "recompute_command": "PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe eval/w80_gate_recompute.py",
+      "what_would_change": "18 条澄清集有补答来源并真跑二轮（attempted>0），且澄清率 ≤15%、二轮回到可执行终态 ≥80%；否则永远 UNVERIFIED，attempted=0 不等于 0%。",
+      "w79_verdict": "UNVERIFIED",
+      "w79_reading": "澄清率 16/166 = 9.6%；主读数 success/attempted = 0/0（attempted=0 ⇒ 不可测，不是 0%）；并列 success/clarified = 0/16 = 0.0%（UNVERIFIED（attempted<clarified：分母未覆盖，不得用它判 verdict））",
+      "matches_w79": true,
+      "tau_applicability": null,
+      "clarification_denominators": {
+        "requests": 166,
+        "clarified": 16,
+        "clarify_expected_n": 18,
+        "second_round_attempted": 0,
+        "second_round_success": 0,
+        "primary_denominator": "attempted",
+        "success_rate_attempted": null,
+        "success_rate_clarified": 0.0,
+        "clarified_denominator_verdict": "UNVERIFIED"
+      }
+    }
+  ],
+  "official_snapshot": {
+    "path": "backend/reports/w6/eval_metrics.json",
+    "sha256": "d0b393391ffd9e2740413308a463d489611fcff03a4d8ffb547028f63e20f686",
+    "git_rev": "88f3500",
+    "git_dirty": false,
+    "generated_at": "2026-10-07T05:27:34+00:00",
+    "counts": {
+      "PASS": 1,
+      "FAIL": 3,
+      "UNVERIFIED": 2,
+      "NOT_AVAILABLE": 0,
+      "PARTIAL": 2
+    },
+    "last_commit_touching_file": "24d4477",
+    "refreshed_this_round": false,
+    "diff_since_integration_rev": []
+  },
+  "tau_line": "L4 决策份额 0/166；τ 未校准（条件性非适用，不是校准证据）",
+  "g3_line": "G-3 的成本闸门未测；21 条非 G-3 红队断言失败仍在",
+  "disclosures": [
+    "当期复算 6 PASS／2 UNVERIFIED（需预算/业务输入的阻塞项）",
+    "L4 决策份额 0/166；τ 未校准（条件性非适用，不是校准证据）",
+    "G-3 的成本闸门未测；21 条非 G-3 红队断言失败仍在",
+    "官方快照仍 88f3500／PASS 1/8，未刷新"
+  ],
+  "checks": {
+    "tree_clean_at_audit": true,
+    "offline_2736_0_0": true,
+    "offline_matches_recompute": true,
+    "integration_124_0_0": true,
+    "integration_reuse_basis_empty": true,
+    "redteam_checked_50_leaked_0": true,
+    "redteam_failures_21": true,
+    "redteam_tail_21_10": true,
+    "six_pass_match_w79": true,
+    "two_unverified_match_w79": true,
+    "official_snapshot_still_88f3500_pass1of8": true,
+    "official_snapshot_not_rewritten": true,
+    "g4_pg_rls_verified": true,
+    "no_llm_calls": true,
+    "no_containers_started": true
+  },
+  "all_checks_pass": true
+}
