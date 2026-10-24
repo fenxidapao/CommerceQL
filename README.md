@@ -9,11 +9,20 @@
 
 ---
 
-## 1. 当前进度
+## 1. 当前状态（2026-10-24 快照 · 必然过期）
 
-> **本节已删除旧的进度表**（它停在 2026-09-16、写着"1A/1B/2–7 未开始"，与代码差约 180 次提交）。
-> 进度与上线门禁的**唯一当前真相** = 项目根 **`OVERVIEW.md §6（实测进度）/ §7（门禁 8 条判定）`**，每条读数都带文件指针与读数时刻；跨窗口交接读数看 `backend/reports/wN/{DELIVERY,RELAY}.md`。
-> 契约文档集 **`docs/01–08` 已在本仓库内**（2026-10-04 起；此前它们在仓库之外，`git clone` 或 GitHub zip 会拿不到）。权威顺序：附录 A(02) > PRD(01) > UIUX(06) > TDD(07) > 实施计划(08)。
+> 引用前先实跑 `git rev-parse --short HEAD; git rev-list --count HEAD` 并读源件，不要抄本节。
+
+| 项 | 读数 | 源 |
+|---|---|---|
+| 代码 HEAD | `df65531` / 711 笔 | `git log -1`；`git rev-list --count HEAD` |
+| 官方快照 | `88f3500` / **PASS 1/8**（PASS 1 / FAIL 3 / PARTIAL 2 / UNVERIFIED 2），生成 `2026-10-07T05:27:34Z`，最后改动该文件的提交 `24d4477` | `backend/reports/w6/eval_metrics.json`；`backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md` |
+| 当期复算 | **6 PASS / 0 PARTIAL / 2 UNVERIFIED / 0 FAIL**，rev `26421ae` | `eval/results_w80_gate_recompute.json`；`backend/reports/w8/DELIVERY.md` 终版节 |
+| 契约文档 | `07 v1.7.34`（3,683 行）；`08 v1.4.1` | `docs/07_技术设计文档_TDD.md` 头部版本字段 |
+
+**两个门禁数必须同框**：官方快照是入库件、不是当期读数；当期复算是审计复算、不是官方快照。
+**6/8 不等于门禁通过**：G-6（P95 延迟）与 G-8（澄清率）仍是 `UNVERIFIED`，属外部输入阻塞（见 §6）。
+
 ## 2. 快速开始
 
 ```bash
@@ -24,9 +33,9 @@ cp deploy/.env.example deploy/.env
 # 2) 起基础设施 + API
 docker compose -f deploy/docker-compose.yml up -d --build pg redis api
 
-# 3) 验三探针
+# 3) 验三探针（必须带 /api/v1 前缀；裸 /healthz/ready 是 404）
 curl -i http://127.0.0.1:8000/api/v1/healthz/live     # 期望 200
-curl -i http://127.0.0.1:8000/api/v1/healthz/ready    # 当前栈实测 200（阶段 0 那句"期望 503"已过期；⚠️ 探针必须带 /api/v1 前缀，裸 /healthz/ready 是 404）
+curl -i http://127.0.0.1:8000/api/v1/healthz/ready    # 当前栈实测 200
 curl -i http://127.0.0.1:8000/api/v1/healthz          # 期望 503 + degraded_dependencies
 ```
 
@@ -36,38 +45,38 @@ curl -i http://127.0.0.1:8000/api/v1/healthz          # 期望 503 + degraded_de
 cd backend
 python -m venv ../.venv && ../.venv/Scripts/pip install -e ".[dev]"   # Windows
 pytest
-```
 
----
+cd ../frontend
+npm ci && npm run dev        # Vite 开发服务器
+npm run test                 # vitest
+```
 
 ## 3. 目录结构
 
 ```
 backend/
-├── app/
-│   ├── core/        enums.py ★  contracts.py ★  config.py  errors.py  clock.py
-│   ├── cache/       keys.py ★
-│   ├── obs/         logging / trace / metrics / audit / schema
-│   ├── api/         errors.py（错误码唯一映射）· sse.py（帧唯一编码）· routers/health.py
-│   ├── repo/        dsn.py（两套 DSN + 身份注入）
-│   ├── main.py      ASGI 组装根
-│   └── {semantics,retrieval,binding,planner,guard,exec,mask,llm,graph,auth}/   仅 __init__.py
-├── tests/contract/  契约断言（158 条）
-├── scripts/         assert_importlinter.py（DoD② 的注入实验）
-├── .importlinter    依赖方向契约（R-DEP-1/2/3）
-└── pyproject.toml   依赖白名单 + pytest / ruff / mypy 配置
-deploy/              docker-compose.yml · Dockerfile · nginx.conf · .env.example
-.github/workflows/   ci.yml（契约断言 / import-linter / gitleaks）
-.gitignore           密钥/虚拟环境/评测产物 不进仓库（清单外新增，理由见 §5）
-.gitattributes       行尾归一化 LF（清单外新增，理由见 §5）
+├── app/            16 个业务包：api auth binding cache core exec graph guard
+│                   llm mask obs planner present repo retrieval semantics
+├── tests/          6 个目录：unit · contract · eval · integration · redteam · graph_snapshot
+├── reports/        20 个窗口目录的过程证据 → 读 backend/reports/README.md
+├── scripts/        探针、门禁与 secrets 扫描脚本
+└── pyproject.toml  依赖白名单 + pytest / ruff / mypy 配置
+eval/               评测执行器 + 冻结集(166) + 红队集 + results_* + cassettes
+                    → 读 eval/README.md
+semantic/           语义包 bundle + 口径字典 + 校验器
+data/               合成数据生成器 + schema.sql（沙箱库 ecom_sandbox.db 不入库）
+deploy/             compose · Dockerfile · nginx · 压测驱动 · runbook · 观测面板
+frontend/           Vite + React + TS（SSE 流式对话与评测页）
+docs/01–08          契约文档集（2026-10-04 起已入库跟踪）
+.github/            CI：契约断言 / 迁移闸门 / 依赖方向 / lint / secret-scan
 ```
 
-**两个清单外新增文件的理由**（都不在上游阶段的交付清单里，但阶段 0 的目标依赖它们）：
-`.gitignore` —— 没有它，一次 `git add -A` 就会把 `deploy/.env` 提交上去，DoD④ 与密钥纪律同时失效；
-`.gitattributes` —— 开发在 Windows、CI 与容器在 Linux，不做行尾归一化会出现"容器内读到 `\r\n`"
-以及"PR diff 整文件全红全绿、真实改动被淹没"两类问题。二者均已在此处显式登记，不属静默增项。
+文件数 / 行数会随提交变化，不要抄树里的数字；需要时现算，例如：
 
----
+```bash
+git ls-files backend/app | grep '\.py$' | wc -l
+git ls-files backend/app | grep '\.py$' | xargs wc -l | tail -1
+```
 
 ## 4. 五条工程约束（改代码前请先读）
 
@@ -97,26 +106,59 @@ R-DEP-3（`obs/` 内除 `audit.py` 外禁依赖 `repo`）。跑 `lint-imports` �
 只有"原样重发会有不同结果"的错误才允许带它；"必须先改请求"的错误**不得**带倒计时，
 而是给可执行的改法（`suggestions[]`）。
 
----
+## 5. 文档地图
 
-## 5. 已知限制（不隐瞒）
+### 5.1 当前真相的读取顺序
 
-- **阶段 0 的 `/healthz/ready` 恒为 503** —— 四个硬依赖（元数据库 / checkpointer / Redis /
-  语义包）的探针实现归后续阶段，这不是缺陷，而是阶段划分的必然状态。
-- **决策点 τ（绑定层精排阈值）尚未校准** —— 非 `prod` 环境允许启动，但**必须可见**：
-  启动日志会打 WARN，指标 `binding_tau_calibrated` 暴露 0/1。此窗口产出的任何准确率 / 澄清率
-  结论**不得**作为评测证据。`APP_ENV=prod` 时该检查为 fail-closed（拒绝启动）。
-- **结果缓存（查询级）在 P0 阶段关闭** —— `cache/keys.py` 刻意不提供该键。
-- 需要真实外部依赖的 4 条启动断言（分析库只读角色、embedding 维度、审计表权限、
-  语义包五步校验）**留给了后续阶段** —— 纯配置层校验不出来，必须连上依赖才能判定。
+1. **`OVERVIEW.md §6（实测进度）/ §7（门禁 8 条判定）`** —— 项目进度与门禁的唯一当前真相；
+2. **`backend/reports/w8/DELIVERY.md` 终版节** —— 对外最终口径（6 PASS＋2 UNVERIFIED 的逐格说明）；
+3. **`backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md`** —— 官方快照 `88f3500` 为何不刷新、何时才允许刷新；
+4. **`backend/reports/qa/TASK_BOARD.md` 末节** —— 最新一轮验收结论。该件只追加，当期永远在最后一节：
 
----
+```bash
+F=backend/reports/qa/TASK_BOARD.md; N=$(grep -n '^## ' "$F" | tail -1 | cut -d: -f1); sed -n "${N},\$p" "$F"
+F=backend/reports/qa/RELAY.md;      N=$(grep -n '^## ' "$F" | tail -1 | cut -d: -f1); sed -n "${N},\$p" "$F"
+```
 
-## 6. 文档位置
+### 5.2 契约文档集（权威顺序：02 > 01 > 06 > 07 > 08）
 
-需求规格（PRD）、附录 A–D、UI/UX 设计、技术设计（TDD）、编程实施计划（阶段划分与窗口归属）
-**不随本仓库分发**，它们由独立文档窗口维护。本仓库内的代码注释会引用其章节号
-（例如 `07 §11.2`、`附录 A §A.11`），那是契约溯源，不是失效链接。
+| 文件 | 用途 |
+|---|---|
+| [01 需求规格说明书 PRD](docs/01_需求规格说明书_PRD.md) | 角色、目标、NFR、功能需求、假设登记 |
+| [02 附录 A 接口契约详解](docs/02_附录A_接口契约详解.md) | 全端点契约、SSE、图表 spec、错误码（最高权威） |
+| [03 附录 B 语义层与指标口径字典](docs/03_附录B_语义层与指标口径字典.md) | 指标定义与口径 |
+| [04 附录 C 评测方案与合成数据集设计](docs/04_附录C_评测方案与合成数据集设计.md) | 冻结集、红队集、判定方法 |
+| [05 附录 D 环境依赖与部署清单](docs/05_附录D_环境依赖与部署清单.md) | 部署矩阵与依赖清单 |
+| [06 UIUX 设计文档](docs/06_UIUX设计文档.md) | 页面、交互、视觉与可访问性 |
+| [07 技术设计文档 TDD](docs/07_技术设计文档_TDD.md) | 架构、判据、问题编号登记（§4.8 唯一权威）、门禁表 §17.3 |
+| [08 编程实施计划](docs/08_编程实施计划_阶段划分与窗口归属.md) | 阶段划分、窗口归属、纪律 |
 
-`README.md` 的上游归属见编程实施计划的文件归属权表 —— 本文件当前只保证"能跑起来 + 约束在哪"，
-产品级说明待上游窗口补全。
+各文档版本以文件头部版本字段为准，本表不抄版本号。
+`deliverables/ACCEPTANCE.md` 是 **2026-10-04 课程交付包入口**（含包身份与哈希），不是当期状态；
+当前状态看 §1 与 OVERVIEW。
+
+## 6. 已知限制（不隐瞒）
+
+- **探针**：`/api/v1/healthz/ready` 当前栈已实测 200；旧文档里"阶段 0 恒 503"是历史读数。
+- **决策点 τ 未校准**：L4 决策份额 0/166；G-2 / G-5 / G-7 的 PASS 标 `tau_applicability=not_exercised`
+  （条件性非适用，不是校准证据）。`APP_ENV=prod` 时该检查 fail-closed。
+- **结果缓存（查询级）在 P0 阶段关闭**：`cache/keys.py` 刻意不提供该键。
+- **4 条启动断言**（分析库只读角色、embedding 维度、审计表权限、语义包五步校验）必须连真实依赖才能判定。
+- **G-6（P95 ≤ 8s）仍 `UNVERIFIED`**：需要 live LLM 预算（约 ¥40+）、容量决策（U-126：flash 槽位现 8，
+  50 并发/8s 按推导需约 38–48）与满档 50 并发 × 10 分钟的全请求分母（429 单列）。
+- **G-8（澄清率 ≤ 15% 且澄清后一次成功率 ≥ 80%）仍 `UNVERIFIED`**：缺 17/18 条 expected=clarify 的
+  补答来源、U-141 绑定型澄清路径、二轮真跑；当前 `attempted=0`。
+- **图表仍为降级形态**：`app/present/` 能装载产物，但 `chart_spec` / `insight` 不在该包内生成，
+  `GraphDeps.presenter` 恒 `None` ⇒ 每轮带一条"本次未能生成图表，已用表格展示"的降级标注（设计如此，不是 bug）。
+- **红队不是全绿**：G-3 的 PASS 只表示"危险 SQL 放行 = 0"（覆盖 50/50），成本闸门 `NOT_CHECKED`；
+  另有 21 条非 G-3 红队断言失败已逐条归类，见 `eval/results_w80_redteam_tail.json`。
+
+## 7. 维护约定
+
+- 每轮收口只更新**当期状态块**（同一组位置）：本文 §1、`OVERVIEW.md` 顶部块与 §6/§7、QA 末节指针；
+  历史段落保留并标日期，不删原文、不把历史数当现状。
+- 所有数字必须带**源件 + 复算命令 + 快照日期**；官方快照与当期复算永远同框。
+- 未跑过的写 `UNVERIFIED`；不得写"门禁通过"（当前官方快照不是全 PASS）。
+- 证据与源码分离：过程证据在 `backend/reports/`，评测产物在 `eval/`，两者都有索引；
+  源码、冻结集、阈值与判据措辞不因整理文档而改动。
+- 仓库不写入真实密钥：`.env`、`deploy/secrets/`、`.workbuddy/` 均被忽略。
