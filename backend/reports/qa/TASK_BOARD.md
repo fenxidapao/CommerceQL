@@ -7586,3 +7586,88 @@ params: {"refund_status": "refunded", "pay_status": "paid"}
 ### 102.5 边界
 
 本窗零 LLM、零出站；只追加 `reports/qa/**`；W80 仍零 LLM、零产品代码、零官方快照；G-6/G-8 不真打；README 不由本窗/W8 改。
+
+## 103 · W80 路径 A 收口验收：W80-1/2/4/5 通过；W80-3 决定正确但 §2.4 成本口径需订正；Path A 收口待 W80.1 一笔（QA R31by ｜ 2026-10-24 14:40 +0800 ｜ HEAD `36a0f15`／708 笔）
+
+> 本轮 QA 独立重跑离线 **2736 passed / 0 failed**（115.24s）与红队（`total=66`／`leaked=0`／`expect_block=50`／`checked=50`；断言 192/21/25），与 W80 产物逐项相同。W80-1/2/4/5 通过；**W80-3 的「约 ¥0.39」是历史下限、不是当期全量报价，「必须再打一次 --live」也不成立**（同 rev 可用零 LLM replay 对齐）⇒ 需一笔文档订正（W80.1），订正后 Path A 才算收口完成。
+
+### 103.1 现状现读【实测】
+
+| 项 | 现读 |
+|---|---|
+| HEAD / 笔数 | `36a0f15` / 708，与 `origin/main` 齐平；树仅 `?? .workbuddy/` |
+| 推送范围 | `c3135a4..36a0f15`（W80 五笔：`986334e` 审计链 → `26421ae` JUnit 分母 → `a398c60` 产物 → `750e9f9` 文档 → `36a0f15` 措辞） |
+| 禁改面 | `backend/app/**`、`backend/tests/**`、`semantic/**`、gold/冻结集/prompt、门禁阈值/G-8 阈值、`reports/qa/**`、官方 `eval_metrics.json`、`README.md` **全部空 diff**【实测】 |
+| 测试 | 我独立重跑离线 **2736 passed / 0 failed**（115.24s；JUnit 2736/0/0/0）；集成沿用 W78 **124/0/0**（`e7fc769..HEAD -- backend/app backend/tests/integration` **空 diff**） |
+| 官方快照 | 仍 `88f3500`／PASS 1/8，未刷新；最后改动笔 `24d4477` |
+
+### 103.2 W80-1 最终门禁证据链审计：通过【实测】
+
+- 产物 `eval/results_w80_final_audit.json`（rev=`26421ae`/dirty=false，`all_checks_pass=true`）：八格逐格 verdict／evidence path／git_rev／dirty／fresh／复算命令／“什么会改变这个判定”；`gate_summary = {PASS:6, FAIL:0, UNVERIFIED:2, PARTIAL:0, NOT_AVAILABLE:0}`；六格 PASS 与 W79 逐格 verdict＋reading 全等（`comparison_w79.six_pass_match=true`）。
+- **我独立复跑**：离线 2736/0（JUnit 2736/0/0/0）；红队 `66/0/50/50`、`PASS 192／FAIL 21／NOT_CHECKED 25`、`failures_by_class` 与 W80 逐字相同；尾部 21 条/10 用例的 case→assertion 集合与 W80 逐项相同。产物 SHA256 与 final audit 记录逐件一致（离线、红队、尾部、W78 集成、W79 对照五件）。
+- 集成复用依据成立：`e7fc769..HEAD -- backend/app backend/tests/integration` 空 diff；W78 产物 124/0/0；本轮未启动容器。
+- **附带披露的 G-1 装配口订正**：`eval/w78_gate_recompute.py` 把**离线** `failed/errors` 并入 G-1 分母（原只取集成层）。当前离线 0 红 ⇒ 判定量不变；这是**取数订正**（更严，对齐“全部 P0 用例通过”），不是阈值/判据变更。**接受**，并记入本台账。
+- 注意：G-1/G-4 的 `fresh=true` 指“本轮复算”，**集成 124 条是复用 W78 的、不是本轮重跑**；final audit 的 `freshness` 已逐格写明，引用时不得写成“同 HEAD 全跑过”。
+
+### 103.3 W80-2 最终交付节：通过【实测】
+
+`backend/reports/w8/DELIVERY.md` 的「终版（路径 A 收口）」节逐项核对：
+
+- 官方快照 **88f3500/PASS 1/8** 逐字出现；当期 **6 PASS／0 PARTIAL／2 UNVERIFIED／0 FAIL**；τ 未校准＋L4 决策份额 0/166；G-3 的成本闸门未测；21 条非 G-3 红队断言失败仍在。
+- G-6/G-8 阻塞表与 §102.2 **逐字一致**；结论 = **「路径 A 收口：6 PASS＋2 UNVERIFIED（需预算/业务输入的阻塞项）」**；`门禁通过`/`全部达标`/总门禁 `8/8` **0 命中**（唯一的 `8/8` 是 G-2 的 easy×low 8/8）。
+- 官方快照“最后改动笔 `24d4477`”与 `git log -1 -- backend/reports/w6/eval_metrics.json` 一致；`c3135a4..HEAD` 对官方快照空 diff。
+
+### 103.4 W80-3 官方快照决策备忘：**有条件通过**【实测】
+
+**决定与条件正确**：仍不刷新；刷新条件 = G-6/G-8 均有带证据的 PASS＋八格同 rev/dirty=false；只许 `eval/reporter.py` 重生成（`--results/--redteam/--pytest-log/--integration-log/--p0-summary/--json-out/--md-out` 七个参数我在 `reporter.py:2074-2094` 现读存在）；同步「评测报告与门禁判定.md」；不手改 `eval_metrics.json`。
+
+**必须订正的两处（不改变“不刷新”决定，但不得留在最终交付里）**：
+
+1. **§2.4 成本口径错**：`换 G-2/G-5/G-8 的数必须再打一次 --live 全量 166 题（约 ¥0.39）`。`¥0.391504` 是早期 `results_v1`／`results_v2_live` 的**修复前下限口径**——W8 `RELAY §六.15` 自己写明“都是下限”，同批评测复算为 **¥1.131531**；W59 全量 166 的 `price_guess` = **¥8.813584**；W76 G-8 全批重录估 **¥1.1025**。⇒ 不得把 ¥0.39 当当期报价；应改成有出处、带“本轮未重测”的写法。
+2. **“必须 --live”过强**：要与官方快照同 rev 的证据，先在同一 HEAD 重跑 **166 replay（零 LLM）**对齐 rev 即可；只有需要 fresh live 证据时才出站。备忘录把“同 rev”与“必须 live”混成了一句。
+
+**次要订正（P3）**：§4 命令块用 `--json-out backend/reports/w6/...`，该路径只在**仓库根**成立；但正文写“cwd = `backend/` 或仓库根”。二选一：写明 cwd = 仓库根，或把输出路径改成与 cwd=backend 一致。
+
+### 103.5 W80-4 红队尾部分类：通过【实测】
+
+- 产物 `eval/results_w80_redteam_tail.json`：21 条断言/10 用例；`classification_counts={设计如此:7, 已知限制:3}`、`potential_defect_count=0`、`shape_ok=true`、`mixed_bucket_cases=[]`。
+- 我用独立重跑的红队产物反查：10 个 case 的 FAIL 断言集合与尾部件**逐项相同**（17+2+2=21）；未改用例、未改产品。
+- 口径注记：终态形状 7 用例归“设计如此”只表示 **gate1 按设计出 `error`、没有放行**，不等于“用户可见语义已经理想”；若产品要把 `error` 改成 `refuse`，是 G-3 之外的产品决策，另行开单。最终交付已写“不是红队全绿”。
+
+### 103.6 W80-5 OVERVIEW 进度刷新：通过【实测】
+
+- `git diff 750e9f9^..750e9f9 -- OVERVIEW.md` = **3 个 hunk、+34 行**，只动 §6/§7/§9；§7 每格带“数＋面＋时刻＋HEAD＋复算命令”；我抽查 G-1/G-2/G-3/G-7 的时间戳与产物自报一致（G-1 离线 `06:24:12Z`、G-2/G-5/G-8 `04:06:41Z`、G-7 `12:39:21Z`、集成 `04:49:46Z`）。
+- `README.md` 未改（`c3135a4..HEAD` 空 diff），最终交付已登记“README 进度表归上游窗口”。
+
+### 103.7 我的决定与 W80.1 派单
+
+| # | 决定 |
+|---|---|
+| D-W80-1 | W80-1/2/4/5 **通过**；Path A 的六格 PASS 与阻塞表口径成立。 |
+| D-W80-2 | W80-3 **有条件通过**：决定/刷新条件/唯一入口正确；§2.4 成本口径与“必须 live”必须订正，§4 cwd 措辞一并修。 |
+| D-W80-3 | **Path A 收口状态 = 主体完成、一笔文档订正待落**；W80.1 落地并验收前，不写“路径 A 收口完成”。 |
+| D-W80-4 | 仍不跑 G-6/G-8、不刷官方快照、不改产品代码；W80.1 零 LLM。 |
+
+**W80.1 派单（零 LLM、零产品代码）**：
+
+```text
+【W8 第 80.1 轮｜W80-3 文档订正（零 LLM、零产品代码）】
+
+0. 前置：现读 HEAD；不碰 reports/qa/**；不改代码/判据/阈值/官方快照；不跑测试、不出站。
+1. 修改 backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md：
+   (a) §2.4 删除"约 ¥0.39"作为当期报价的写法，改为有出处的口径：
+       "成本未在本轮重测。`results_v1`/`results_v2_live` 的 `cost_cny_total=0.391504` 是修复前**下限口径**
+        （W8 RELAY §六.15 明写少算最贵一档；同批评测复算为 ¥1.131531）；W59 全量 166 的 price_guess 为 ¥8.813584；
+        W76 G-8 全批重录估 ¥1.1025。刷新前按当期 budget.PRICES 重算，不得把 ¥0.39 当报价。"
+   (b) 把"必须再打一次 --live 全量 166"改成：
+       "若要与官方快照同 rev 的证据，先在同一 HEAD 重跑 166 replay（零 LLM）对齐 rev；
+        只有需要 fresh live 证据时才出站。"
+   (c) §4 命令块前写明 "cwd = 仓库根"（或把输出路径改成与 cwd=backend 一致），避免路径翻倍。
+2. 在 backend/reports/w8/RELAY.md 追加 §86.7 订正记录（改了什么/为什么/引用本验收 §103.4）。
+3. 不改 DELIVERY/OVERVIEW（它们没有 ¥0.39 句）；不改官方快照。
+4. 回执：diff 行、git_rev+dirty、tokens=0；一句话"订正完成"。
+```
+
+### 103.8 边界
+
+本轮 QA 零 LLM、零出站、未启动容器；只追加 `reports/qa/**`；W80 未改产品代码/测试/语义包/冻结集/判据/阈值/官方快照；G-6/G-8 未真打；README 未改。
