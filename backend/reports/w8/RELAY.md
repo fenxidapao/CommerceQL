@@ -8169,3 +8169,100 @@ backend/tests/{unit/test_gate1_metric_window_refusal.py,eval/test_tau_split_and_
 
 未改：gold／冻结集／语义包／prompt／`gates.py` 阈值／`reports/qa/**`／`.workbuddy/`／官方快照。
 **出站记录**：29×3 批 + 冒烟 1 + 作废批 1；`.env` 未改；未扩 L4、未改 G-8、未跑维度重录。
+
+---
+
+## 83 · W8 第 77 轮：τ 非适用性证据（L4 决策份额 0/166；τ 未校准）＋ G-8 双分母/补答缺口＋预算账本/匣带卫生（全零出站）
+
+派单：`TASK_BOARD.md §98.8`。本轮**零真打、零新增 tokens/¥**；只用历史匣带回放与 fixture 单测。
+代码提交：`2cd6c92`（主体）→ `f76278d`（G-8 双分母逐格注记）→ `ce1599e`（manifest 自带 rev/dirty 戳）。
+
+### 83.1 W77-1 τ 非适用性证据：**通过**（D-W77-1 三条件全成立）
+
+产物：`eval/results_w77_full166_applicability.json`（rev=`2cd6c92`/dirty=False；`live=false`、`mode=replay`）。
+`applicability.holds = true`，逐条件：
+
+| 条件 | 实测 |
+|---|---|
+| `n_records == 166` | **166** |
+| `l4_decisions == 0` | **0**（`binding_layer`：L3 **119** ／ none **47** ／ L4 **0**） |
+| `ambiguous_bindings == 0` | **0**（`binding_status`：resolved_default **119** ／ none **47** ／ ambiguous **0**） |
+| 与 r75 终态逐条一致 | **0 差异**（complete 116／refuse 28／clarify 16／error 3／None 3） |
+| 与 r75 等价逐条一致 | **0 差异**（equivalent 50） |
+
+* `tau_raw.ok = 119/166 = 71.7%`；候选数分布 **`{30: 119}`**（全部撞 `L4_MAX_CANDIDATES=30`）；
+  其余 47 条 `l4_not_reached`。
+* **历史计费仅随匣带回放，零新增**：记录里的 `tokens_total=3,646,113`、`cost_cny_total=1.085754`、
+  517 calls 都是录制时的历史读数；本轮 `live=false`，未向上游发请求。
+* 口径：**L4 决策份额 0/166；τ 未校准**。本证据只说明"该前提未被触发"，**不是** τ 校准证据。
+
+### 83.2 W77-2 门禁口径：**通过**（条件性豁免只作用于 G-2/G-5/G-7）
+
+`eval/gates.py` 新增 `tau_applicability` 输入（`tau_applicability_holds()` 只认
+`n_records==166 ∧ l4_decisions==0 ∧ ambiguous_bindings==0`；缺一格 fail-closed）。
+证据成立时 G-2/G-5/G-7 的 PASS 不降级，notes 强制写
+`tau_applicability=not_exercised：τ 未校准；本数据集不触发 L4 决策；此标注不是 τ 校准证据`；
+**G-8 永不豁免**；FAIL 不被豁免，阈值未动。
+
+产物：`eval/results_w77_gate_recompute.json`（rev=`f76278d`/dirty=False；**当前复算，非官方快照**）：
+
+| 门禁 | 判定 | 读数 | τ 标注 |
+|---|---|---|---|
+| G-1 | PARTIAL（fresh） | 红 0；2726 passed；集成层未跑 | — |
+| G-2 | **PASS**（fresh） | easy×low 8/8 = 100% | `not_exercised` |
+| G-3 | PARTIAL（STALE） | 放行 0 / 覆盖 48（应拦 50） | — |
+| G-4 | PARTIAL（STALE） | 跨租户 0；PG RLS 未验证 | — |
+| G-5 | **PASS**（fresh） | 24/24；误拒 3/124 = 2.4% | `not_exercised` |
+| G-6 | UNVERIFIED（STALE） | 旧回执 7268ms，分母未标注 | — |
+| G-7 | **PASS**（fresh） | 13/13 = 100% | `not_exercised` |
+| G-8 | **UNVERIFIED**（fresh） | 澄清率 16/166 = 9.6%；主读数 attempted=0 | 不适用豁免 |
+
+汇总：PASS 3 ／ PARTIAL 3 ／ UNVERIFIED 2。官方快照 `backend/reports/w6/eval_metrics.json`
+仍 `88f3500` / PASS 1/8，**未刷新**（D-W77-5）。
+⚠️ 引用这三格 PASS 时必须同写：**L4 决策份额 0/166；τ 未校准**；不得写成"τ 已校准"。
+
+### 83.3 W77-3 G-8 分母＋补答缺口：**通过（口径落地）/ 不可判（G-8 本身）**
+
+报告层（`reporter._clarify_counts`）新增：`success/attempted` 主读数、`success/clarified` 并列、
+`attempted<clarified ⇒ clarified 分母判 UNVERIFIED`、原始计数与 `denominator_note` 全落盘。
+单测 3 条 + 既有 reporter 断言已更新。
+
+产物：`eval/results_w77_g8_answer_gap.json`（rev=`f76278d`/dirty=False）：
+
+* 18 条 `expected_behavior=clarify` 逐条列出 `case_id/question/reason/是否带冻结候选/缺什么答案`；
+  **1 条**带冻结候选（`C-CITY-01`），**17 条**缺补答来源（只列不编）。
+* 9 条误澄清（`H-STR-01…08`、`X-MET-10`）单列，标 **"不给补答"**（题面本应 execute，补答会掩盖绑定缺陷）。
+* 双分母：`attempted=0`、`clarified=16` ⇒ 主读数**不存在（不是 0%）**；
+  并列 `success/clarified = 0/16` ⇒ **UNVERIFIED**（分母未覆盖）。
+* 结论：**G-8 仍 UNVERIFIED；需数据源**。本轮不跑真打、不实装二轮。
+
+### 83.4 W77-4 预算账本＋b2 匣带卫生：**通过**
+
+* `eval/runner.py` 新增全局账本：`--max-calls` / `--max-tokens` / `--budget-ledger` /
+  `--calls-manifest`；`calls` 取 `transport.calls` **增量**（重试的调用也计入），
+  `tokens` 含二轮，`¥` 含二轮；与 `prior_usage` 累加后任一 `>=` 上限即停，
+  `budget_stop` 含 `calls/tokens/spent_cny/breached/caps`；开跑前已越限 ⇒ 一条都不跑。
+  4 条 fixture 单测（假 transport）：calls 上限、上轮账本预耗尽、重试计数、tokens 含二轮。
+* b2 卫生（**不改写匣带**）：干净批次重放（29 条，`--mode replay`）产出
+  `eval/results_w77_b2_clean_calls.json`（rev=`2cd6c92`/dirty=False，116 calls / **115 unique**）；
+  与 b2 匣带的 138 unique 求差 ⇒ `eval/cassettes/w76_tau_b2.manifest.json`
+  （rev=`ce1599e`/dirty=False）：**clean 115 / dirty 23 / missing_clean 0 / usable_as_clean_evidence=false**。
+  b1/b3 未动；`eval/results_w76_tau_b2.json`（`00260ef`/False）保留。
+
+### 83.5 测试与边界
+
+`2726 passed / 0 failed`（本轮新增 13 条：τ 豁免 6 + G-8 双分母 3 + 预算账本 4；既有断言同步更新）。
+
+```
+eval/{gates.py,reporter.py,runner.py}
+eval/{w77_applicability.py,w77_gate_recompute.py,w77_g8_answer_gap.py,w77_b2_manifest.py}（新）
+eval/{results_w77_full166_applicability.json,results_w77_gate_recompute.json,
+      results_w77_g8_answer_gap.json,results_w77_b2_clean_calls.json}
+eval/cassettes/w76_tau_b2.manifest.json
+backend/tests/eval/{test_tau_applicability.py,test_g8_denominator.py,test_budget_ledger.py}（新）
+backend/tests/eval/{test_consistency_reporter.py,test_eval_runner_checkpoint.py}
+```
+
+未改：gold／冻结集／语义包／prompt／`gates.py` 阈值／G-8 阈值／`reports/qa/**`／官方快照／`.env`；
+未评估/实施方案 A；未装新依赖；未扩 L4；未真打 τ/G-8。
+**出站记录：0**（全部 `--mode replay` + fixture）；**新增 tokens = 0**。

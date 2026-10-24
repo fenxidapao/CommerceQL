@@ -1,0 +1,281 @@
+{
+  "generated_at": "2026-10-24T04:17:40+00:00",
+  "git_rev": "f76278d",
+  "git_dirty": false,
+  "task": "W77-3 G-8 分母与补答缺口（零出站；只列不编；不实装二轮）",
+  "source": {
+    "replay": "eval/results_w77_full166_applicability.json",
+    "git_rev": "2cd6c92",
+    "git_dirty": false,
+    "generated_at": "2026-10-24T04:06:41+00:00",
+    "n_records": 166
+  },
+  "expected_clarify": {
+    "n": 18,
+    "n_with_frozen_candidate": 1,
+    "n_missing_answer_source": 17,
+    "rows": [
+      {
+        "case_id": "C-AOV-01",
+        "question": "客单价是多少？",
+        "reason": "客单价无时间窗",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "complete"
+      },
+      {
+        "case_id": "C-CAT-01",
+        "question": "哪个品类卖得最好？",
+        "reason": "品类有三层（l1/l2/l3），且「卖得最好」的口径未定",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "clarify"
+      },
+      {
+        "case_id": "C-CITY-01",
+        "question": "城市维度的 GMV 是多少？",
+        "reason": "「城市」有收货城市与店铺城市两个绑定，且**同 grain_level（=4）**",
+        "has_frozen_candidate": true,
+        "frozen_candidates": [
+          "order_paid.receiver_city",
+          "shop.city"
+        ],
+        "missing_answer": "已有冻结候选，可直接作为补答来源（`candidates[0]`）",
+        "observed_terminal_event": "clarify"
+      },
+      {
+        "case_id": "C-CITY-02",
+        "question": "各城市的订单量分别是多少？",
+        "reason": "同上：收货侧 vs 店铺侧同粒度竞争",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "refuse"
+      },
+      {
+        "case_id": "C-CITY-03",
+        "question": "广州的销售额是多少？",
+        "reason": "「广州」可指收货城市或店铺所在城市",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "clarify"
+      },
+      {
+        "case_id": "C-CITY-04",
+        "question": "城市口径下哪个卖得最好？",
+        "reason": "同 C-CITY-01",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "clarify"
+      },
+      {
+        "case_id": "C-GMV-01",
+        "question": "本月的 GMV 是多少？",
+        "reason": "「本月」= 当前自然月还是最近 30 天？须澄清",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "complete"
+      },
+      {
+        "case_id": "C-GMV-02",
+        "question": "上个月的销售额是多少？",
+        "reason": "「上个月」在语义包里有定义（日历上月首日 00:00:00 至末日 23:59:59），但**时区与是否含端**须回显确认",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "complete"
+      },
+      {
+        "case_id": "C-GMV-03",
+        "question": "最近的 GMV 怎么样？",
+        "reason": "「最近」无定义窗口",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "complete"
+      },
+      {
+        "case_id": "C-GMV-04",
+        "question": "最近一周的 GMV 环比是多少？",
+        "reason": "「最近一周」起点未定（周起点是 monday，但「最近」未必对齐自然周）",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "error"
+      },
+      {
+        "case_id": "C-RATE-01",
+        "question": "退款率是多少？",
+        "reason": "退款率有金额口径与单量口径；本包只定义金额口径，须确认或告知不支持",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "complete"
+      },
+      {
+        "case_id": "C-RATE-02",
+        "question": "退货率最高的商品是哪个？",
+        "reason": "「退货」与「退款」在数据上只有 refund_status，须澄清映射",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "complete"
+      },
+      {
+        "case_id": "C-REG-01",
+        "question": "华东的销量是多少？",
+        "reason": "「销量」未定义：是单量还是金额？且「华东」需按 value_map 展开",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "clarify"
+      },
+      {
+        "case_id": "C-REG-02",
+        "question": "南方卖得怎么样？",
+        "reason": "「南方」不在 region.value_map 的 7 个大区里 → 需澄清或告知不支持",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "clarify"
+      },
+      {
+        "case_id": "C-REP-01",
+        "question": "复购率是多少？",
+        "reason": "复购窗口固定 90 天且不含首单口径，须回显确认",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "complete"
+      },
+      {
+        "case_id": "C-REP-02",
+        "question": "复购情况怎么样？",
+        "reason": "开放式问法，既没有时间窗也没有维度",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "error"
+      },
+      {
+        "case_id": "C-UV-01",
+        "question": "这段时间的 UV 是多少？",
+        "reason": "UV 是自然日窗口口径，跨日直接累加会重复计数；区间未定",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "clarify"
+      },
+      {
+        "case_id": "C-UV-02",
+        "question": "总访客数是多少？",
+        "reason": "「总」= 全期去重还是逐日累加？本包未定义 uv_period",
+        "has_frozen_candidate": false,
+        "frozen_candidates": [],
+        "missing_answer": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）",
+        "observed_terminal_event": "complete"
+      }
+    ]
+  },
+  "misclarified": {
+    "n": 9,
+    "policy": "不给补答（见每行 why）；它们进误拒面，不进 G-8 的二轮回路",
+    "rows": [
+      {
+        "case_id": "H-STR-01",
+        "question": "T_A 位于广州的店铺各有多少个商品？",
+        "expected_behavior": "execute",
+        "observed_terminal_event": "clarify",
+        "supplement_policy": "不给补答",
+        "why": "题面本应 execute；补答会掩盖绑定缺陷"
+      },
+      {
+        "case_id": "H-STR-02",
+        "question": "T_A 位于杭州的店铺各有多少个商品？",
+        "expected_behavior": "execute",
+        "observed_terminal_event": "clarify",
+        "supplement_policy": "不给补答",
+        "why": "题面本应 execute；补答会掩盖绑定缺陷"
+      },
+      {
+        "case_id": "H-STR-03",
+        "question": "T_A 位于成都的店铺各有多少个商品？",
+        "expected_behavior": "execute",
+        "observed_terminal_event": "clarify",
+        "supplement_policy": "不给补答",
+        "why": "题面本应 execute；补答会掩盖绑定缺陷"
+      },
+      {
+        "case_id": "H-STR-04",
+        "question": "T_A 位于武汉的店铺各有多少个商品？",
+        "expected_behavior": "execute",
+        "observed_terminal_event": "clarify",
+        "supplement_policy": "不给补答",
+        "why": "题面本应 execute；补答会掩盖绑定缺陷"
+      },
+      {
+        "case_id": "H-STR-05",
+        "question": "T_A 位于南京的店铺各有多少个商品？",
+        "expected_behavior": "execute",
+        "observed_terminal_event": "clarify",
+        "supplement_policy": "不给补答",
+        "why": "题面本应 execute；补答会掩盖绑定缺陷"
+      },
+      {
+        "case_id": "H-STR-06",
+        "question": "T_A 位于西安的店铺各有多少个商品？",
+        "expected_behavior": "execute",
+        "observed_terminal_event": "clarify",
+        "supplement_policy": "不给补答",
+        "why": "题面本应 execute；补答会掩盖绑定缺陷"
+      },
+      {
+        "case_id": "H-STR-07",
+        "question": "T_A 位于长沙的店铺各有多少个商品？",
+        "expected_behavior": "execute",
+        "observed_terminal_event": "clarify",
+        "supplement_policy": "不给补答",
+        "why": "题面本应 execute；补答会掩盖绑定缺陷"
+      },
+      {
+        "case_id": "H-STR-08",
+        "question": "T_A 位于郑州的店铺各有多少个商品？",
+        "expected_behavior": "execute",
+        "observed_terminal_event": "clarify",
+        "supplement_policy": "不给补答",
+        "why": "题面本应 execute；补答会掩盖绑定缺陷"
+      },
+      {
+        "case_id": "X-MET-10",
+        "question": "T_A 618 期间各大区各店铺的成交金额合计是多少？",
+        "expected_behavior": "execute",
+        "observed_terminal_event": "clarify",
+        "supplement_policy": "不给补答",
+        "why": "题面本应 execute；补答会掩盖绑定缺陷"
+      }
+    ]
+  },
+  "clarification_denominators": {
+    "requests": 166,
+    "clarify_expected_n": 18,
+    "clarified": 16,
+    "clarify_then_correct": 0,
+    "second_round_attempted": 0,
+    "second_round_success": 0,
+    "second_round_loop_available": false,
+    "primary_denominator": "attempted",
+    "success_rate_attempted": null,
+    "success_rate_clarified": 0.0,
+    "clarified_denominator_verdict": "UNVERIFIED",
+    "denominator_note": "主读数 = success/attempted；并列 success/clarified；attempted<clarified 时后者判 UNVERIFIED（D-W77-3）"
+  },
+  "conclusion": "G-8 仍 UNVERIFIED；需数据源",
+  "reason": "17/18 应澄清题没有补答来源；唯一有冻结候选的 C-CITY-01 只覆盖 1 条，attempted<clarified ⇒ success/clarified 判 UNVERIFIED。在数据源到位前不跑二轮、不编补答。",
+  "no_live_run": true,
+  "historical_billing_note": "回放读数来自历史匣带，零新增支出"
+}
