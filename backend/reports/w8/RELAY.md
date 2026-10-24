@@ -8266,3 +8266,94 @@ backend/tests/eval/{test_consistency_reporter.py,test_eval_runner_checkpoint.py}
 未改：gold／冻结集／语义包／prompt／`gates.py` 阈值／G-8 阈值／`reports/qa/**`／官方快照／`.env`；
 未评估/实施方案 A；未装新依赖；未扩 L4；未真打 τ/G-8。
 **出站记录：0**（全部 `--mode replay` + fixture）；**新增 tokens = 0**。
+
+---
+
+## 84 · W8 第 78 轮：G-1/G-4 集成层走通（一次性 Docker）＋ G-8 门禁层双分母＋G-3 刷新（零 LLM）
+
+派单：`TASK_BOARD.md §99.8`。本轮**零 LLM 出站、零新增 token/¥**；Docker 只用本机一次性容器，
+跑完已 `docker rm -f`。代码提交：`e7fc769`（G-8 双分母 + W78 证据脚本）→ `e6cc8bd`（G-4 caveat 修正）。
+
+### 84.1 W78-1 G-1/G-4 集成层：**通过**（G-1 PASS / G-4 PASS）
+
+一次性容器（镜像本机已有，**未拉取**；跑完已删，`docker ps -a` 无残留）：
+
+| 容器 | 镜像 | ID / digest | 端口 |
+|---|---|---|---|
+| `cql-w78-pg` | `pgvector/pgvector:pg16` | `ccc6e83d6e35` / `pgvector/pgvector@sha256:ccc6e83d…` | 55432 → 5432 |
+| `cql-w78-redis` | `redis:7-alpine` | `ff02b58f971e` / `redis@sha256:ff02b58f…` | 56379 → 6379 |
+
+* 库 = `ecom_rls`（一次性），DSN 只落脱敏的库名+端口；`shared_ecom_touched=false`；
+  未连共享 `ecom`（5432）或共享 Redis（6379）。
+* 迁移 `0001→0006` 全链真实执行成功（`alembic upgrade head`，一次性库）。
+* `pytest backend/tests/integration -q` ⇒ **124 passed / 0 failed / 0 errors / 0 skipped**（32.45s）。
+  逐文件：audit_append_only 9、audit_read_rls 17、exec_real_pg 19、feedback_store_pg 16、
+  migration_0003 6、migration_0004 11、query_plan_store 6、real_redis 15、retrieval_fts 11、
+  rls_tenant_isolation 5、semantic_materialization 9。
+* 产物：`eval/results_w78_integration.json`（rev=`e7fc769`/dirty=False；含 JUnit sha256
+  `3712803f608c…`、容器/镜像 ID、逐文件读数、脱敏 DSN）；JUnit 原文
+  `eval/results_w78_integration.junit.xml`。
+
+**G-1 的逐项证据**：`integration_ran=true`（JUnit 有真实执行的用例，且三个指定 P0 文件各有用例）；
+离线 2732 passed + 集成 124 passed，`failed=0`、`errors=0` ⇒ G-1 **PASS**。
+**G-4 的逐项证据**：`pg_rls_verified=true` 由两个文件全绿推出（不手填）：
+`test_rls_tenant_isolation.py` 5/5（未设身份=0 行、`shop_ids` 两态可区分、不跨租户）＋
+`test_migration_0003_views.py` 6/6（策略存在、属主 `app_rw`）；`leaked=0` ⇒ G-4 **PASS**。
+⚠️ 顺带修正：G-4 旧 caveat 恒写「沙箱无 RLS」，与真实证据矛盾；现按 `pg_rls_verified` 分支，
+判定谓词未动，补 1 条回归测试。
+
+### 84.2 W78-2 G-8 门禁层双分母：**通过**（W77 的最后一公里已接上）
+
+`eval/gates.py` 的 G-8 分支按 D-W78-2 接线：
+`attempted==0 ⇒ UNVERIFIED`；`attempted>0` 只按 `success_rate_attempted` 判成功侧（≥80%）；
+`attempted<clarified` ⇒ 并列 `success/clarified` 标 UNVERIFIED 且**不参与 verdict**；
+evidence 主读数写 `success/attempted`、并列写 `success/clarified`；G-8 仍不适用 τ 豁免。
+新增 5 条 fixture 单测（attempted=1/16 主读数 PASS、attempted=0 UNVERIFIED、
+16/13 PASS、16/12 FAIL、并列 12.5% 不驱动 FAIL）。
+当前 W77 replay `attempted=0` ⇒ 复算 G-8 仍 **UNVERIFIED**；未真打、未实装二轮。
+
+### 84.3 W78-3 G-3 红队刷新：**通过（新鲜度）/ G-3 仍 PARTIAL**
+
+产物：`eval/results_w78_redteam.json`（rev=`e7fc769`/dirty=False）：
+`total=66`、`leaked=0`、`expect_block=50`、`checked=48`；
+未覆盖 `RT-COST-001`、`RT-COST-002`（沙箱无 EXPLAIN，§17.4；刻意不执行成本爆炸用例）。
+⇒ G-3 **PARTIAL（fresh）**；未覆盖不折算成通过，判据未改。
+
+### 84.4 W78-4 当前门禁复算：**G-1/G-2/G-4/G-5/G-7 PASS；G-3 PARTIAL；G-6/G-8 UNVERIFIED**
+
+产物：`eval/results_w78_gate_recompute.json`（rev=`e6cc8bd`/dirty=False；**非官方快照**）：
+
+| 格 | 判定 | 读数 |
+|---|---|---|
+| G-1 | **PASS**（fresh） | 离线 2732 ＋ 集成 124；红 0；`integration_ran=true` |
+| G-2 | **PASS**（fresh） | easy×low 8/8；`tau_applicability=not_exercised` |
+| G-3 | PARTIAL（fresh） | 放行 0 / 覆盖 48（应拦 50） |
+| G-4 | **PASS**（fresh） | 跨租户 0；PG RLS 已在真实 DB 层验证 |
+| G-5 | **PASS**（fresh） | 24/24；误拒 3/124 = 2.4%；`tau_applicability=not_exercised` |
+| G-6 | UNVERIFIED（STALE） | 官方旧回执 7268ms，分母未标注 |
+| G-7 | **PASS**（fresh） | 13/13；`tau_applicability=not_exercised` |
+| G-8 | **UNVERIFIED**（fresh） | 澄清率 16/166 = 9.6%；`attempted=0` ⇒ 成功侧不可测 |
+
+汇总：**PASS 5 ／ PARTIAL 1 ／ UNVERIFIED 2 ／ FAIL 0**。
+官方 `backend/reports/w6/eval_metrics.json` 仍 `88f3500`／PASS 1/8，**未刷新**（D-W78-5）。
+**τ 证据复用**：`2cd6c92..HEAD -- backend/app` 空 diff（脚本自检），故按 D-W78-6 复用 W77-1；
+引用三格 PASS 时同写：**L4 决策份额 0/166；τ 未校准**。
+**G-7 输入等价性**：probe 的 `system_source` 仍是 r75；本脚本逐条核对 **W77 replay 与 r75 的
+SQL/params 166 条差异 = 0**，已写进产物的 `g7_equivalence`（QA §99.3 的备注已闭合）。
+
+### 84.5 测试与边界
+
+`2732 passed / 0 failed`（offline）＋ `124 passed / 0 failed`（integration，一次性 Docker）。
+本轮新增 6 条测试（G-8 双分母 5 + G-4 caveat 1）；W78 未改 `backend/app/**`。
+
+```
+eval/{gates.py}
+eval/{w78_integration_evidence.py,w78_gate_recompute.py}（新）
+eval/{results_w78_integration.json,results_w78_integration.junit.xml,
+      results_w78_redteam.json,results_w78_gate_recompute.json}
+backend/tests/eval/{test_g8_dual_denominator_gate.py（新）,test_gates.py}
+```
+
+未改：gold／冻结集／语义包／prompt／门禁阈值／G-8 阈值／`reports/qa/**`／官方快照／`.env`；
+未评估方案 A；未装 Python 新依赖；未真打 LLM；G-6 未跑（无新预算）；G-8 二轮未跑（17/18 缺补答源）。
+**出站记录：0 次 LLM**（集成的 `test_dead_ollama_port` 只连本机死端口）；Docker 镜像未拉取（本机已有）。

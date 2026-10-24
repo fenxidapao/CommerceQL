@@ -1,0 +1,273 @@
+{
+  "generated_at": "2026-10-24T04:49:46+00:00",
+  "git_rev": "e7fc769",
+  "git_dirty": false,
+  "task": "W78-1 G-1/G-4 集成层实跑（一次性 Docker；零 LLM）",
+  "docker": {
+    "daemon": "29.7.2",
+    "containers": [
+      {
+        "name": "cql-w78-pg",
+        "id": "a4f58e8296b8",
+        "image": "pgvector/pgvector:pg16",
+        "image_id": "sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b",
+        "status": "running",
+        "started_at": "2026-10-24T04:42:10.888946315Z",
+        "ports": {
+          "5432/tcp": [
+            {
+              "HostIp": "0.0.0.0",
+              "HostPort": "55432"
+            },
+            {
+              "HostIp": "::",
+              "HostPort": "55432"
+            }
+          ]
+        }
+      },
+      {
+        "name": "cql-w78-redis",
+        "id": "a9e6a80a9589",
+        "image": "redis:7-alpine",
+        "image_id": "sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf",
+        "status": "running",
+        "started_at": "2026-10-24T04:42:11.363828717Z",
+        "ports": {
+          "6379/tcp": [
+            {
+              "HostIp": "0.0.0.0",
+              "HostPort": "56379"
+            },
+            {
+              "HostIp": "::",
+              "HostPort": "56379"
+            }
+          ]
+        }
+      }
+    ],
+    "images": [
+      {
+        "tag": "pgvector/pgvector:pg16",
+        "id": "sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b",
+        "repo_digests": [
+          "pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b"
+        ],
+        "created": "2026-08-13T21:25:50.283685587Z"
+      },
+      {
+        "tag": "redis:7-alpine",
+        "id": "sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf",
+        "repo_digests": [
+          "redis@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf"
+        ],
+        "created": "2026-08-18T16:56:46.926554149Z"
+      }
+    ],
+    "image_pulled_this_round": false,
+    "image_pull_basis": "两个镜像在 `docker run` 之前已在本机镜像清单中；`docker run` 只输出容器 ID，无 pull 输出行。未新增拉取。",
+    "removed_after_run": true,
+    "removal_note": "证据生成后执行 `docker rm -f cql-w78-pg cql-w78-redis`",
+    "removed_at": "2026-10-24T04:55:28.657738+00:00",
+    "removal_verified": true,
+    "remaining_containers": [],
+    "removal_command": "docker rm -f cql-w78-pg cql-w78-redis"
+  },
+  "dsn_masked": {
+    "super": {
+      "scheme": "postgresql",
+      "user": "postgres",
+      "password": "***",
+      "host": "127.0.0.1",
+      "port": 55432,
+      "database": "ecom_rls",
+      "masked": "postgresql://postgres:***@127.0.0.1:55432/ecom_rls"
+    },
+    "rw": {
+      "scheme": "postgresql",
+      "user": "app_rw",
+      "password": "***",
+      "host": "127.0.0.1",
+      "port": 55432,
+      "database": "ecom_rls",
+      "masked": "postgresql://app_rw:***@127.0.0.1:55432/ecom_rls"
+    },
+    "ro": {
+      "scheme": "postgresql",
+      "user": "app_ro",
+      "password": "***",
+      "host": "127.0.0.1",
+      "port": 55432,
+      "database": "ecom_rls",
+      "masked": "postgresql://app_ro:***@127.0.0.1:55432/ecom_rls"
+    },
+    "redis": "redis://***@127.0.0.1:56379/0",
+    "shared_ecom_touched": false,
+    "shared_ecom_hits": []
+  },
+  "junit": {
+    "source": "C:/Users/林琪荣/AppData/Local/Temp/w78_integration_final.xml",
+    "committed_copy": "eval/results_w78_integration.junit.xml",
+    "sha256": "3712803f608c3e6fa5db83515a4150b1c5bf1077366831bf18ea532c7ea3193d",
+    "totals": {
+      "tests": 124,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 31.632,
+      "passed": 124
+    }
+  },
+  "files": {
+    "tests.integration.test_audit_append_only": {
+      "tests": 9,
+      "passed": 9,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.288,
+      "failed_tests": [],
+      "error_tests": [],
+      "skipped_tests": []
+    },
+    "tests.integration.test_audit_read_rls": {
+      "tests": 17,
+      "passed": 17,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 2.71,
+      "failed_tests": [],
+      "error_tests": [],
+      "skipped_tests": []
+    },
+    "tests.integration.test_exec_real_pg": {
+      "tests": 19,
+      "passed": 19,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 2.061,
+      "failed_tests": [],
+      "error_tests": [],
+      "skipped_tests": []
+    },
+    "tests.integration.test_feedback_store_pg": {
+      "tests": 16,
+      "passed": 16,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 1.832,
+      "failed_tests": [],
+      "error_tests": [],
+      "skipped_tests": []
+    },
+    "tests.integration.test_migration_0003_views": {
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 1.743,
+      "failed_tests": [],
+      "error_tests": [],
+      "skipped_tests": []
+    },
+    "tests.integration.test_migration_0004_runtime": {
+      "tests": 11,
+      "passed": 11,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 5.574,
+      "failed_tests": [],
+      "error_tests": [],
+      "skipped_tests": []
+    },
+    "tests.integration.test_query_plan_store_pg": {
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 1.349,
+      "failed_tests": [],
+      "error_tests": [],
+      "skipped_tests": []
+    },
+    "tests.integration.test_real_redis_lock_and_ratelimit": {
+      "tests": 15,
+      "passed": 15,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 3.513,
+      "failed_tests": [],
+      "error_tests": [],
+      "skipped_tests": []
+    },
+    "tests.integration.test_retrieval_fts_pg": {
+      "tests": 11,
+      "passed": 11,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 6.308,
+      "failed_tests": [],
+      "error_tests": [],
+      "skipped_tests": []
+    },
+    "tests.integration.test_rls_tenant_isolation": {
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 2.193,
+      "failed_tests": [],
+      "error_tests": [],
+      "skipped_tests": []
+    },
+    "tests.integration.test_semantic_materialization": {
+      "tests": 9,
+      "passed": 9,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 4.061,
+      "failed_tests": [],
+      "error_tests": [],
+      "skipped_tests": []
+    }
+  },
+  "missing_required_p0": [],
+  "g1_evidence": {
+    "integration_ran": true,
+    "passed": 124,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "basis": "JUnit 里有真实执行的用例，且 test_exec_real_pg / test_rls_tenant_isolation / test_real_redis_lock_and_ratelimit 三个 P0 文件各有用例"
+  },
+  "g4_evidence": {
+    "pg_rls_verified": true,
+    "leaked": 0,
+    "basis": [
+      "`tests.integration.test_rls_tenant_isolation`：5 条，passed=5，failed=0，errors=0，skipped=0（行为级：未设身份=0 行 / shop_ids 两态可区分 / 不跨租户）",
+      "`tests.integration.test_migration_0003_views`：6 条，passed=6，failed=0，errors=0，skipped=0（对象级：属主 app_rw / 租户基表策略存在）"
+    ],
+    "derivation": "两文件全绿 ⇒ pg_rls_verified=true；任一文件缺失/有红/有 skip ⇒ false"
+  },
+  "verdicts": {
+    "g1_integration_evidenced": true,
+    "g4_pg_rls_evidenced": true
+  },
+  "commands": [
+    "docker run -d --name cql-w78-pg -e POSTGRES_PASSWORD=*** -e POSTGRES_DB=ecom_rls -p 55432:5432 pgvector/pgvector:pg16",
+    "docker run -d --name cql-w78-redis -p 56379:6379 redis:7-alpine",
+    "alembic upgrade head（MIGRATION_DATABASE_URL=postgres@127.0.0.1:55432/ecom_rls）",
+    "pytest backend/tests/integration -q --junitxml=<tmp>（env 见 dsn_masked）"
+  ]
+}
