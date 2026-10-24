@@ -124,12 +124,12 @@ trusted_context → normalize → intent → link → plan → bind → gen_sql
 │   ├── 06_UIUX设计文档.md                  v1.2.2 2,691 行：Design Token、§7 四大异常态、§8 组件×11 态矩阵、§10 SSE 客户端契约
 │   ├── 07_技术设计文档_TDD.md              v1.7.34 **3,683 行**（`wc -l` 现读 3,683）／ 0–20 章 + 附录：**20 条 ADR**、包结构与依赖规则、状态机契约、§4.8 问题编号登记表、§16.5 零额度可还原面台账（**8 个面**，10-01 新加 `lg.checkpoint_writes`）、§17 门禁与不变量
 │   └── 08_编程实施计划_阶段划分与窗口归属.md v1.4.1（10-02 补 `tests/integration/**` 归属行，回 QA O-4）   8 阶段 / 14 工作包 / 文件归属权表 / 取号协议 / 交接纪律
-├── _refs/               ← 参考材料（Spider 官方抓取记录 + 2 张原图）与踩坑记录
+├── _refs/               ← 已移至仓库外 archive/_refs/（Spider 参考材料，不在仓库内）
 └── CommerceQL/          ← 代码仓库（GitHub: fenxidapao/CommerceQL, main）
     ├── README.md         ← 工程约束版说明书（⚠️ 进度章节已过期，见 §6）
     ├── backend/app/      ← 16 个业务包，160 个模块文件 / 42,420 行（2026-10-24 现算；旧读数 147 / 38,006 保留在 §6 历史表）
     ├── backend/tests/    ← **107 个测试文件 / 2,041 个 test 函数**（2026-10-02 15:5x 按 **HEAD 口径**实测：unit 54 · contract 30 · eval 12 · integration 9 · redteam 1 · graph_snapshot 1；口径 = `git grep -c "def test_" HEAD -- backend/tests` 与 `git ls-tree -r --name-only HEAD backend/tests` 逐文件计数**两条独立算法互验** ⇒ 两个读数必须相等才允许落笔；`backend/tests` 下另有 `122 - 107 = 15` 个 .py 不含 `def test_`（conftest / 夹具 / 工具），不得混进"测试文件数"。⚠️ 前值 **113** 是"逐目录分项相加"得来的、分项没重测 ⇒ 已具名订正，规矩见 `reports/arch/HANDOVER.md §7.1` 第 **18** 条）
-    ├── backend/reports/  ← 当前证据：w6 / w8 / qa（读 backend/reports/README.md）；历史窗口报告在仓库外 archive
+    ├── backend/reports/  ← 当前证据：w6（评测输出）/ w8 / qa（读 backend/reports/README.md）；历史窗口报告在仓库外 archive
     ├── semantic/         ← 语义包 bundle_2026.09.14.1.yaml（1,225 行）+ 口径字典 + 校验器
     ├── data/             ← 合成数据生成器 + SQLite 沙箱库（440 MB）+ schema.sql
     ├── eval/             ← 46 个执行器脚本 + 冻结集 + 当期 W77–W80 结果 + 2 个 cassette（读 eval/README.md）；历史结果在仓库外 archive
@@ -140,7 +140,7 @@ trusted_context → normalize → intent → link → plan → bind → gen_sql
 
 > **读法**：上树中的“文件数 / 行数”是各自时点读数（09-29、10-02），会随提交变化；现读用 `git ls-files backend/app | grep '\.py$' | wc -l` 等命令。当期状态见 §6 顶部。
 >
-> **2026-10-24 整理**：旧窗口报告（w0–w7/arch/t-a1）、旧评测结果与其余 cassette 已移至仓库外 `../CommerceQL-archive/`；仓库内只留当前证据。恢复方式见该目录 README。
+> **2026-10-24 整理**：旧窗口报告（w6 叙事/旧日志、w0–w7/arch/t-a1）、旧评测结果与其余 cassette、`deliverables/`、`_refs/`、`W1A_HANDOVER.md`、`.w8r59-*.json` 已移至仓库外 `../CommerceQL-archive/`；仓库内只留当前证据。恢复方式见该目录 README。
 
 `backend/app/` 按依赖层级从低到高：`core`(2,326 行) → `cache`(551) → `obs`(2,675) → `repo`(4,006) →
 `api`(5,231) → `auth`(639) → `semantics`(2,182) → `retrieval`(1,783) → `binding`(3,160) →
@@ -798,7 +798,7 @@ DoD④ 全仓重放 = **零未放行命中**（= 每个命中都落在豁免面�
 | **A 实测** | §6 全部读数、§7 表格内所有分数、RLS 行数与策略数、pytest 计数、冷/热 p95 | 各自带文件指针与读数时刻 |
 | **B 设计目标（未实测）** | G1 端到端 P95 ≤8s/≤4s、G2 自助率 ≥70%、G3 口径一致 ≥95%、G5 拒答 ≥95%、G4 越权执行成功 = **0**（硬红线）、NFR 全部延迟/可用性/成本值 | PRD `:73-77`（G1–G5）、`:570-650`（NFR 7 组）；"目标值非实测"由 **PRD §17.3 Q-7** 显式确认（`:1806-1814`） |
 | **C 二手待复核** | "裸表准确率低 66%"、"澄清使 42.5%→92.5%" 等引用 | PRD §18.2 来源登记 S11–S14（`:1851-1852`），未包装为已验证事实 |
-| **D 外部一手事实** | Spider 1.0 10,181 问 / 5,693 SQL / 200 库（榜单 2024-02 冻结，CC BY-SA 4.0）；Spider 2.0 632 任务、GPT-4o 仅 10.1%、要求输出 CSV、不提供预定义 schema；CSpider 榜首 test 62.1（比英文低 29 点）；CoSQL 官方把"执行/澄清/告知无法回答"并列建模；DeepSeek 当前仅 `deepseek-flash`/`deepseek-v4-pro`、`deepseek-chat` 已退役、限流按并发（2500/500）、缓存命中差 50 倍；PG 原生 `tsvector` 无中文分词 | 官方站点与 API 文档，抓取记录见 `_refs/00_参考站点抓取记录.md` |
+| **D 外部一手事实** | Spider 1.0 10,181 问 / 5,693 SQL / 200 库（榜单 2024-02 冻结，CC BY-SA 4.0）；Spider 2.0 632 任务、GPT-4o 仅 10.1%、要求输出 CSV、不提供预定义 schema；CSpider 榜首 test 62.1（比英文低 29 点）；CoSQL 官方把"执行/澄清/告知无法回答"并列建模；DeepSeek 当前仅 `deepseek-flash`/`deepseek-v4-pro`、`deepseek-chat` 已退役、限流按并发（2500/500）、缓存命中差 50 倍；PG 原生 `tsvector` 无中文分词 | 官方站点与 API 文档，抓取记录见仓库外 `archive/_refs/00_参考站点抓取记录.md` |
 
 **免责**：本项目数据全部为**合成数据**，不代表任何真实企业经营数据。规模为设计目标 **3 租户 / 50 万订单 / 2,000 SKU**
 （PRD §17.3 Q-8 确认按附录 C 实现），对应**实测**：沙箱已支付订单视图 494,249 行（逐租户 200,000 + 175,000 + 119,249）、

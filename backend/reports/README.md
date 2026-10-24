@@ -1,6 +1,6 @@
 # backend/reports —— 当前证据索引（2026-10-24 整理后）
 
-> 本目录只保留**当前真相链**需要的证据。旧窗口报告已移到仓库外 `../../CommerceQL-archive/reports/`；
+> 本目录只保留**当前真相链**需要的证据。旧窗口报告已移到仓库外、与本仓库同级的 `CommerceQL-archive/reports/`；
 > 当前进展与门禁仍以 `OVERVIEW.md §6/§7` 为准。
 
 ## 1. 当前真相的读取顺序
@@ -17,7 +17,7 @@
 |---|---|---|
 | `w8/` | 当期（集成收尾窗） | `DELIVERY.md` 终版节、`OFFICIAL_SNAPSHOT_DECISION.md`、`RELAY.md`、当期证据 |
 | `qa/` | 当期（验收窗） | `TASK_BOARD.md` 末节、`QA_LEDGER.md` 最新条目、`RELAY.md` |
-| `w6/` | 当期（官方快照） | `eval_metrics.json`、`评测报告与门禁判定.md`、G-1 日志与探针 |
+| `w6/` | 当前（eval 输入/输出目录） | `eval_metrics.json`、`评测报告与门禁判定.md`、G-1 日志与探针；**W6 窗口叙事与旧日志已移至 archive/reports/w6/** |
 
 ## 3. 历史窗口报告在哪
 
@@ -27,11 +27,16 @@
 CommerceQL-archive\reports\      （与本仓库同级，不在仓库内）
 ```
 
-它们是**史料**，只读、不得引作当期依据。需要查阅或被旧文档引用时，在**仓库根**执行恢复：
+W6 的窗口叙事（`DELIVERY.md`/`RELAY.md`/`PROMPT.md`）与 58 个旧日志也移到了 `CommerceQL-archive\reports\w6\`；
+`w6/` 目录本身保留，因为 `eval/reporter.py`、`eval/redteam_eval.py`、`eval/consistency.py`、`app/present/artifacts.py` 和 4 个测试把它当作默认输入/输出目录。
+
+它们都是**史料**，只读、不得引作当期依据。需要查阅或被旧文档引用时，在**仓库根**执行恢复：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File ..\CommerceQL-archive\restore-evidence.ps1 -What reports -WhatIf
+powershell -ExecutionPolicy Bypass -File ..\CommerceQL-archive\restore-evidence.ps1 -What w6 -WhatIf
 powershell -ExecutionPolicy Bypass -File ..\CommerceQL-archive\restore-evidence.ps1 -What reports
+powershell -ExecutionPolicy Bypass -File ..\CommerceQL-archive\restore-evidence.ps1 -What w6
 ```
 
 ## 4. 怎么读追加型文件
@@ -48,10 +53,10 @@ F=backend/reports/qa/RELAY.md;      N=$(grep -n '^## ' "$F" | tail -1 | cut -d: 
 - **导航头会滞后**：文件顶部的“现读末节 / 行数”是上一次手工更新的快照，可能落后于末节实际位置；以 `grep '^## '` 现读为准。
 - **行号会漂移**：插入新节会让后面所有行号下移；引用只用“行首串 + 现读行号”两格，禁止只写行号。
 
-## 5. 根目录的两类遗留件
+## 5. 根目录遗留件（已移出）
 
-- `.w8r59-git-scan.json`、`.w8r59-worktree-scan.json`：W59 的 gitleaks 原始扫描件（命中值已 `REDACTED`）。聚合读数见 `eval/results_r59_secret_scan_final.json`（该文件已随旧结果移至 archive）；原始件被 `w8/RELAY.md` 引用，保留不删。
-- `../W1A_HANDOVER.md`：2026-09-16 的 W1A 交接，历史件；被 `docs/07` 引用，保留不删。
+- `.w8r59-git-scan.json`、`.w8r59-worktree-scan.json`：W59 的 gitleaks 原始扫描件（命中值已 `REDACTED`），已移至 `CommerceQL-archive\root\`；聚合读数 `eval/results_r59_secret_scan_final.json` 也已随旧结果移至 archive。
+- `../W1A_HANDOVER.md`：2026-09-16 的 W1A 交接，已移至 `CommerceQL-archive\root\`；`docs/07` 的历史引用已标注该位置。
 
 ## 6. 维护约定
 

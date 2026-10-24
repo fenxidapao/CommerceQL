@@ -1540,7 +1540,7 @@ outcome(success|clarify|refuse|degraded|failed), refusal_reason
 | 评测机制借鉴 | 采纳 Test Suite Accuracy 的四条原则（§2.5） |
 | 能力分层参考 | 借鉴 Spider hardness 规则，并做**双维度改进**（§13.2） |
 | **多轮能力参考** | **SParC（4,298 组问题序列）与 CoSQL（30k+ 轮对话）** 才是与"追问/条件继承"对应的正确基准；**Spider 1.0 是单轮的，不适用于评估多轮**。CoSQL 官方同时建模"执行/澄清/拒答"三类行为，可直接借用其评测思路 |
-| **官方难度示例锚点** | 用官方四级示例（`_refs/spider_examples.png`）校准我们的结构复杂度轴：Easy = 单表一个 `WHERE`；Medium = 双表 `JOIN` + `GROUP BY`；Hard = 三表 `JOIN` + `HAVING`；Extra Hard = 嵌套子查询 |
+| **官方难度示例锚点** | 用官方四级示例（`仓库外 archive/_refs/spider_examples.png`）校准我们的结构复杂度轴：Easy = 单表一个 `WHERE`；Medium = 双表 `JOIN` + `GROUP BY`；Hard = 三表 `JOIN` + `HAVING`；Extra Hard = 嵌套子查询 |
 
 ### 13.2 双维度难度分层（**本项目对 Spider 规则的改进**）
 
@@ -1836,7 +1836,7 @@ latency_ms{...}, outcome, error_code, retry_count
 | S4 | `spider2-sql.github.io`（官方站点，实际抓取） | Spider 2.0 = 632 个真实企业工作流问题；库常 >1000 列、环境 >3000 列；**o1-preview 17.1% / GPT-4o 10.1%**；**不提供预定义 schema，需交互式探索**；**最终输出是 CSV 不是 SQL** |
 | S4b | `yale-lily.github.io/sparc`（官方站点，实际抓取 + 浏览器验证） | SParC = Spider 的多轮/上下文版本（ACL'19，Yale & Salesforce）；**4,298 组连贯问题序列（12k+ 单问）**；200 库 / 138 领域；官方指标同为 Test Suite Accuracy |
 | S4c | `yale-lily.github.io/cosql`（官方站点，实际抓取） | CoSQL = 对话版 Text2SQL（EMNLP'19）；**30k+ 轮对话 + 10k+ SQL**；3k 组 Wizard-of-Oz 对话；**官方明确把"用 SQL 取回答案 / 澄清歧义问题 / 告知无法回答"三者并列建模为一等行为** → 印证本 PRD §6.9 三档门禁 |
-| S4d | Spider 官方首页配图（浏览器抓取，已存 `_refs/spider_examples.png`、`_refs/spider_chart.png`） | ① 官方四级难度示例图：Easy = 单表一个 `WHERE`；Medium = 双表 `JOIN` + `GROUP BY`；Hard = 三表 `JOIN` + `HAVING`；Extra Hard = 嵌套子查询。**四级示例均不含任何业务口径** ② 官方对比雷达图 7 个坐标轴（`#SQL`/`#DB`/`#Table·DB`/`#ORDERBY`/`#GROUPBY`/`#NESTED`/`#HAVING`）**全部是 SQL 结构维度，无一个业务语义维度** |
+| S4d | Spider 官方首页配图（浏览器抓取，已存 `仓库外 archive/_refs/spider_examples.png`、`仓库外 archive/_refs/spider_chart.png`） | ① 官方四级难度示例图：Easy = 单表一个 `WHERE`；Medium = 双表 `JOIN` + `GROUP BY`；Hard = 三表 `JOIN` + `HAVING`；Extra Hard = 嵌套子查询。**四级示例均不含任何业务口径** ② 官方对比雷达图 7 个坐标轴（`#SQL`/`#DB`/`#Table·DB`/`#ORDERBY`/`#GROUPBY`/`#NESTED`/`#HAVING`）**全部是 SQL 结构维度，无一个业务语义维度** |
 | S5 | `taolusi.github.io/CSpider-explorer/`（官方站点，实际抓取） | CSpider = 中文版 Spider，同规模；**榜首 test 仅 62.1**；中文三大额外难点：**英文表列名 vs 中文问题**、**分词错误**、**零代词** |
 | S6 | DeepSeek 官方 API 文档 `api-docs.deepseek.com`（实际抓取） | 模型 ID `deepseek-flash` / `deepseek-v4-pro`；**`deepseek-chat`/`deepseek-reasoner` 已退役**；价格表；**并发限制 2500/500（非 QPS）**；`user_id` 三重隔离；keep-alive 机制 |
 | S7 | DeepSeek 隐私政策（2026-02-10 版） | "智能对话"章节存在训练使用条款与"产品内"退出开关；**"开放平台服务"章节未明确 API 输入输出是否用于训练**（→ Q-1） |

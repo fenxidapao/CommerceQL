@@ -16,6 +16,8 @@
 | `results_*.json` | **只留当期 15 个**：`results_w77_*`、`results_w78_*`、`results_w79_*`、`results_w80_*` |
 | `results_w80_offline_pytest.junit.xml` | 当期离线测试面 |
 
+> 🔻 `backend/reports/w6/` 仍是 `eval/reporter.py`、`redteam_eval.py`、`consistency.py` 的默认输入/输出目录（代码硬编码），因此目录保留；W6 窗口的 `DELIVERY/RELAY/PROMPT` 与 58 个旧日志已移至 `CommerceQL-archive/reports/w6/`。
+
 ## 2. 当期权威产物（引用只认这一组）
 
 - `results_w80_final_audit.json` —— 八格逐格 verdict / evidence path / git_rev / dirty / fresh / 复算命令 / “什么会改变判定”；

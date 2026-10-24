@@ -1215,7 +1215,7 @@ backend/
 
 | 侧 | 号出现在哪 | 让号成本 |
 |---|---|---|
-| **W1A（U-23/U-24/U-25）** | `07 §4.6/§4.7`（架构窗口的裁定正文）+ `W1A_HANDOVER.md` + `SCHEMA_v1.md` + `bundle_*.yaml`（**55KB，注释里 12 处**）+ `validate_bundle.py` | **高**（且会改动已冻结的语义包注释） |
+| **W1A（U-23/U-24/U-25）** | `07 §4.6/§4.7`（架构窗口的裁定正文）+ `W1A_HANDOVER.md`（已移至仓库外 archive/root/） + `SCHEMA_v1.md` + `bundle_*.yaml`（**55KB，注释里 12 处**）+ `validate_bundle.py` | **高**（且会改动已冻结的语义包注释） |
 | **W1B（U-38～U-46）** | `backend/reports/w1b/DELIVERY.md`（含**逐条登记表**）+ `RELAY.md`（逐窗口可粘贴转述件）+ `tests/` 与 `scripts/` 注释（`U-39`/`U-44` 等） | **高**（引用面最大：报告 + 转述件 + 测试） |
 | **W0（U-23/U-24/U-25）** | 仅 **3 处代码注释**（`auth/tokens.py` / `graph/state.py` / `enums.py`），**尚未进入任何权威文档** | **低** |
 

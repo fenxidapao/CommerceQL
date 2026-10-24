@@ -58,7 +58,7 @@ backend/
 ├── app/            16 个业务包：api auth binding cache core exec graph guard
 │                   llm mask obs planner present repo retrieval semantics
 ├── tests/          6 个目录：unit · contract · eval · integration · redteam · graph_snapshot
-├── reports/        当前证据：w6 / w8 / qa → 读 backend/reports/README.md
+├── reports/        当前证据：w6（评测输出）/ w8 / qa → 读 backend/reports/README.md
 ├── scripts/        探针、门禁与 secrets 扫描脚本
 └── pyproject.toml  依赖白名单 + pytest / ruff / mypy 配置
 eval/               评测执行器 + 冻结集 + 当期 W77–W80 结果 + 2 个 cassette
@@ -71,7 +71,7 @@ docs/01–08          契约文档集（2026-10-04 起已入库跟踪）
 .github/            CI：契约断言 / 迁移闸门 / 依赖方向 / lint / secret-scan
 ```
 
-> 历史窗口报告、旧评测结果与其余匣带已移至仓库外 `../CommerceQL-archive/`（2026-10-24 整理）；恢复方式见该目录 README。
+> 历史窗口报告、旧评测结果与其余匣带、`deliverables/`、`_refs/`、`W1A_HANDOVER.md`、`.w8r59-*.json` 已移至仓库外 `../CommerceQL-archive/`（2026-10-24 整理）；恢复方式见该目录 README。
 
 文件数 / 行数会随提交变化，不要抄树里的数字；需要时现算，例如：
 
@@ -136,8 +136,8 @@ F=backend/reports/qa/RELAY.md;      N=$(grep -n '^## ' "$F" | tail -1 | cut -d: 
 | [08 编程实施计划](docs/08_编程实施计划_阶段划分与窗口归属.md) | 阶段划分、窗口归属、纪律 |
 
 各文档版本以文件头部版本字段为准，本表不抄版本号。
-`deliverables/ACCEPTANCE.md` 是 **2026-10-04 课程交付包入口**（含包身份与哈希），不是当期状态；
-当前状态看 §1 与 OVERVIEW。
+`deliverables/`（含 `ACCEPTANCE.md` 与截图）已移至仓库外 `CommerceQL-archive/deliverables/`；
+它不是当期状态，当前状态看 §1 与 OVERVIEW。
 
 ## 6. 已知限制（不隐瞒）
 
