@@ -8357,3 +8357,89 @@ backend/tests/eval/{test_g8_dual_denominator_gate.py（新）,test_gates.py}
 未改：gold／冻结集／语义包／prompt／门禁阈值／G-8 阈值／`reports/qa/**`／官方快照／`.env`；
 未评估方案 A；未装 Python 新依赖；未真打 LLM；G-6 未跑（无新预算）；G-8 二轮未跑（17/18 缺补答源）。
 **出站记录：0 次 LLM**（集成的 `test_dead_ollama_port` 只连本机死端口）；Docker 镜像未拉取（本机已有）。
+
+---
+
+## 85 · W8 第 79 轮：G-3 覆盖口径订正（50/50 PASS，成本闸门仍未测）＋ 6 PASS 复算 ＋ 集成证据卫生（零 LLM）
+
+派单：`TASK_BOARD.md §100.7`。本轮**零 LLM、零出站、零容器启动**；只改评测器覆盖口径与证据脚本。
+代码提交：`6a6d545`（G-3 覆盖口径 + 证据卫生 + W79 脚本）→ `1fd8186`（G-3 PASS 语义注记进门禁行）。
+
+### 85.1 W79-1 G-3 覆盖口径订正：**通过**（checked 48→50，G-3 PASS）
+
+`eval/redteam_eval.py`：
+* `covered = rejected_at is not None or cid not in _NOT_EXECUTABLE_IN_SANDBOX`；
+  若成本炸弹真的过闸（`rejected_at is None`）⇒ 强制 `covered=True`、`leaked=True`（G-3 应 FAIL）；
+* **执行守卫原样保留**（`chain_sql and rejected_at is None and cid not in _NOT_EXECUTABLE_IN_SANDBOX`），
+  两条成本炸弹**永不执行**；
+* 新增 `g3_scope`：把"G-3 PASS = 危险 SQL 放行=0，不是成本闸门已测"写进产物。
+
+产物：`eval/results_w79_redteam.json`（rev=`6a6d545`/dirty=False）：
+`total=66`、`leaked=0`、`expect_block=50`、**`checked=50`**、`not_covered_cases=[]`。
+两条 COST：`RT-COST-001/002` 均 `rejected_at=gate1`、`rule_id=R10`、`blocked=true`、
+`executed=false`、`leaked=false`；`cost_gate_tripped` 仍 **NOT_CHECKED**。
+**21 条非 G-3 断言失败仍在**（终态形状 7、截断 2、可执行前提 1 及其他；`n_cases_clean=56`），
+`g3_scope.non_g3_failures=21`；G-3 只判放行=0，**不把它们折算成通过**。
+单测：COST 被 gate1 拦下 ⇒ covered/blocked/not leaked/not executed；COST 过闸 ⇒ covered/leaked/not executed；
+非 COST 行为不变（`test_redteam_logic.py` 59 passed）。
+
+### 85.2 W79-2 当前门禁复算：**6 PASS / 0 PARTIAL / 2 UNVERIFIED**
+
+产物：`eval/results_w79_gate_recompute.json`（rev=`1fd8186`/dirty=False；**非官方快照**）：
+
+| 格 | 判定 | 读数 |
+|---|---|---|
+| G-1 | **PASS** | 离线 2736 ＋ 集成 124；红 0；`integration_ran=true` |
+| G-2 | **PASS** | easy×low 8/8；`tau_applicability=not_exercised` |
+| G-3 | **PASS** | 放行 0 / 覆盖 **50/50**；notes 明写"两条 COST 由 gate1 R10 拦下；成本闸门未测；21 条非 G-3 失败仍在" |
+| G-4 | **PASS** | 跨租户 0；PG RLS 已在真实 DB 层验证（W78 集成证据） |
+| G-5 | **PASS** | 24/24；误拒 3/124 = 2.4%；τ 标注同上 |
+| G-6 | UNVERIFIED（STALE） | 官方旧回执 7268ms，分母未标注 |
+| G-7 | **PASS** | 13/13；τ 标注同上；W77 vs r75 SQL/params 166 差异 0 |
+| G-8 | UNVERIFIED | 澄清率 16/166 = 9.6%；attempted=0 ⇒ 成功侧不可测；双分母已接门禁层 |
+
+汇总：**PASS 6 ／ PARTIAL 0 ／ UNVERIFIED 2 ／ FAIL 0**。
+τ 证据复用：`2cd6c92..HEAD -- backend/app` 空 diff（脚本自检）；
+引用三格 PASS 同写：**L4 决策份额 0/166；τ 未校准**。
+官方 `backend/reports/w6/eval_metrics.json` 仍 `88f3500`／PASS 1/8，**未刷新**（D-W79-5）。
+
+### 85.3 W79-3 集成证据卫生：**通过**（不改写 W78 历史产物）
+
+产物：`eval/results_w79_integration_hygiene.json`（rev=`6a6d545`/dirty=False）。
+
+* **W78 历史事实**：一次性容器发布 IP = `['0.0.0.0', '::']` ⇒ `loopback_violation=true`；
+  PG 暴露 **797.8s**、Redis **797.3s**（约 13.3 分钟）；容器已删、`docker ps -a` 无残留；
+  测试结果（124/0/0）**仍然有效**，但违反 A5 的"只绑回环"。
+* **W78 证据缺口**：`dsn_masked` 缺 `RETRIEVAL_TEST_PG_DSN`；app_rw 指向它会 6 skipped + 3 errors，
+  super 才 124/0/0（QA §100.2）。W79 的 `w78_integration_evidence.py` 已补 `retrieval_pg`（脱敏）
+  并注明**需要 DDL 权限（super）**。
+* **下一次约束**：`DOCKER_COMMANDS` 全部写死 `-p 127.0.0.1:<port>:<port>`；
+  3 条单测（回环、脱敏、共享库标记）钉住；`w78_artifact_rewritten=false`。
+
+### 85.4 W79-4 G-6 / G-8 阻塞备忘：**不可判（未跑，符合派单）**
+
+产物：`eval/results_w79_blockers.json`（rev=`6a6d545`/dirty=False；零出站）。
+
+* **G-6**：满档 50 并发×10min 需 live LLM，成本 **¥40+**（W7 估；D-W79-4）；
+  历史配额档 `steady c=50/n=120` 读数 p50 5474.4 / **p95 11,381.8ms** / max 14,289.8
+  （`backend/reports/w7/DELIVERY.md:149`）⇒ 超 8s；但该轮 Ollama 未运行、检索 100% sparse_only，
+  容量读数被污染，只能当参照。**本轮不跑**。
+* **G-8**：17/18 条 expected=clarify 缺补答源（逐条 `case_id/question/reason/missing` 在产物内，
+  引用 `results_w77_g8_answer_gap.json`）；9 条误澄清**不给补答**；**本轮不跑二轮、不编答案**。
+
+### 85.5 测试与边界
+
+`2736 passed / 0 failed`（offline；较 W78 +4：红队覆盖 2 条净增 1 + 证据卫生 3）。
+集成层沿用 W78 的 124/0/0，本轮未重跑（D-W79-3 允许）。
+
+```
+eval/redteam_eval.py；eval/w78_integration_evidence.py；eval/w78_gate_recompute.py（注记）
+eval/{w79_gate_recompute.py,w79_integration_hygiene.py,w79_blockers.py}（新）
+eval/{results_w79_redteam.json,results_w79_integration_hygiene.json,
+      results_w79_blockers.json,results_w79_gate_recompute.json}
+backend/tests/eval/{test_redteam_logic.py,test_integration_evidence_hygiene.py}
+```
+
+未改：`backend/app/**`、gold／冻结集／语义包／prompt／门禁阈值／G-8 阈值／`reports/qa/**`／
+官方快照／`.env`；未评估方案 A；未真打 LLM；未启动新容器。
+**出站记录：0 次 LLM；tokens=0；¥=0**。

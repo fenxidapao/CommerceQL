@@ -1,0 +1,58 @@
+{
+  "generated_at": "2026-10-24T05:35:13+00:00",
+  "git_rev": "6a6d545",
+  "git_dirty": false,
+  "task": "W79-3 集成证据卫生（零出站；W78 历史产物不改写）",
+  "w78_artifact": {
+    "path": "eval/results_w78_integration.json",
+    "git_rev": "e7fc769",
+    "git_dirty": false,
+    "reattested_untouched": true
+  },
+  "w78_historical_facts": {
+    "published_host_ips": [
+      "0.0.0.0",
+      "::"
+    ],
+    "loopback_violation": true,
+    "violation_rule": "A5：一次性测试服务的发布端口只绑回环（127.0.0.1/::1）",
+    "exposure": [
+      {
+        "name": "cql-w78-pg",
+        "started_at": "2026-10-24T04:42:10.888946315Z",
+        "removed_at": "2026-10-24T04:55:28.657738+00:00",
+        "exposed_seconds": 797.8
+      },
+      {
+        "name": "cql-w78-redis",
+        "started_at": "2026-10-24T04:42:11.363828717Z",
+        "removed_at": "2026-10-24T04:55:28.657738+00:00",
+        "exposed_seconds": 797.3
+      }
+    ],
+    "containers_removed": true,
+    "residual_containers_now": [],
+    "residual_clean": true,
+    "test_results_still_valid": true,
+    "note": "端口暴露是卫生问题，不改变 124/0/0 的测试结论；容器已删、无残留"
+  },
+  "w78_evidence_gap": {
+    "retrieval_test_pg_dsn_present_in_w78": false,
+    "missing_env": "RETRIEVAL_TEST_PG_DSN",
+    "reproduction_fact": "app_rw 指向 RETRIEVAL_TEST_PG_DSN ⇒ 6 skipped + 3 errors（无 DDL 权限）；super ⇒ 124 passed / 0 failed / 0 skipped（QA §100.2 独立复跑）",
+    "w79_fix": "`w78_integration_evidence.py` 的 `dsn_masked` 已补 retrieval_pg（脱敏）并注明需要 DDL 权限（super）"
+  },
+  "w79_rule": {
+    "loopback_only": true,
+    "command_template": "docker run ... -p 127.0.0.1:<port>:<port> ...",
+    "commands_in_evidence_script": [
+      "docker run -d --name cql-w78-pg -e POSTGRES_PASSWORD=*** -e POSTGRES_DB=ecom_rls -p 127.0.0.1:55432:5432 pgvector/pgvector:pg16",
+      "docker run -d --name cql-w78-redis -p 127.0.0.1:56379:6379 redis:7-alpine",
+      "alembic upgrade head（MIGRATION_DATABASE_URL=postgres@127.0.0.1:55432/ecom_rls）",
+      "pytest backend/tests/integration -q --junitxml=<tmp>（env 见 dsn_masked）"
+    ],
+    "commands_use_loopback": true,
+    "enforced_by_test": "backend/tests/eval/test_integration_evidence_hygiene.py::test_docker_run_commands_bind_loopback_only"
+  },
+  "w78_artifact_rewritten": false
+}

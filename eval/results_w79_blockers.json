@@ -1,0 +1,170 @@
+{
+  "generated_at": "2026-10-24T05:35:13+00:00",
+  "git_rev": "6a6d545",
+  "git_dirty": false,
+  "task": "W79-4 G-6/G-8 阻塞备忘（零出站；不跑）",
+  "g6": {
+    "status": "UNVERIFIED",
+    "not_run": true,
+    "why": "满档压测需要 live LLM；无新预算授权（D-W79-4）",
+    "scenario": "50 并发 × 10min（§16.5 满档）",
+    "cost_estimate_cny": "¥40+（W7 估；派单 §100.6 D-W79-4 引用）",
+    "cost_source": "TASK_BOARD §100.6 D-W79-4；W7 历史压测记录",
+    "historical_quota_reading": {
+      "scenario": "steady c=50/n=120",
+      "p50_ms": 5474.4,
+      "p95_ms": 11381.8,
+      "max_ms": 14289.8,
+      "threshold_ms": 8000,
+      "exceeds_threshold": true,
+      "source": "backend/reports/w7/DELIVERY.md:149",
+      "caveat": "该轮本机 Ollama 未运行 ⇒ 检索 100% sparse_only、ok 率 2/79；容量读数被污染，只能当参照，不能当 G-6 判定"
+    },
+    "what_it_would_measure": "满档并发下的端到端 P95（含被 429 挡在分母外的请求需单列）",
+    "possible_conclusions": [
+      "P95 ≤ 8s 且回执带全请求分母 ⇒ 可判 PASS",
+      "P95 > 8s ⇒ FAIL（不得因环境噪声改判）",
+      "回执缺全请求分母/带 g6_caveat ⇒ UNVERIFIED，不得宣布通过"
+    ],
+    "prerequisites": [
+      "live LLM 预算（¥40+）",
+      "Ollama 可用（否则检索退化污染读数）",
+      "10 个同租户令牌 + 50 并发压测环境"
+    ]
+  },
+  "g8": {
+    "status": "UNVERIFIED",
+    "not_run": true,
+    "why": "17/18 条 expected=clarify 没有补答来源；编答案 = 造数据（D-W79-4）",
+    "source": "eval/results_w77_g8_answer_gap.json",
+    "source_git_rev": "f76278d",
+    "source_git_dirty": false,
+    "n_expected_clarify": 18,
+    "n_with_frozen_candidate": 1,
+    "n_missing_answer_source": 17,
+    "missing_answer_sources": [
+      {
+        "case_id": "C-AOV-01",
+        "question": "客单价是多少？",
+        "reason": "客单价无时间窗",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-CAT-01",
+        "question": "哪个品类卖得最好？",
+        "reason": "品类有三层（l1/l2/l3），且「卖得最好」的口径未定",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-CITY-02",
+        "question": "各城市的订单量分别是多少？",
+        "reason": "同上：收货侧 vs 店铺侧同粒度竞争",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-CITY-03",
+        "question": "广州的销售额是多少？",
+        "reason": "「广州」可指收货城市或店铺所在城市",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-CITY-04",
+        "question": "城市口径下哪个卖得最好？",
+        "reason": "同 C-CITY-01",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-GMV-01",
+        "question": "本月的 GMV 是多少？",
+        "reason": "「本月」= 当前自然月还是最近 30 天？须澄清",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-GMV-02",
+        "question": "上个月的销售额是多少？",
+        "reason": "「上个月」在语义包里有定义（日历上月首日 00:00:00 至末日 23:59:59），但**时区与是否含端**须回显确认",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-GMV-03",
+        "question": "最近的 GMV 怎么样？",
+        "reason": "「最近」无定义窗口",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-GMV-04",
+        "question": "最近一周的 GMV 环比是多少？",
+        "reason": "「最近一周」起点未定（周起点是 monday，但「最近」未必对齐自然周）",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-RATE-01",
+        "question": "退款率是多少？",
+        "reason": "退款率有金额口径与单量口径；本包只定义金额口径，须确认或告知不支持",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-RATE-02",
+        "question": "退货率最高的商品是哪个？",
+        "reason": "「退货」与「退款」在数据上只有 refund_status，须澄清映射",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-REG-01",
+        "question": "华东的销量是多少？",
+        "reason": "「销量」未定义：是单量还是金额？且「华东」需按 value_map 展开",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-REG-02",
+        "question": "南方卖得怎么样？",
+        "reason": "「南方」不在 region.value_map 的 7 个大区里 → 需澄清或告知不支持",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-REP-01",
+        "question": "复购率是多少？",
+        "reason": "复购窗口固定 90 天且不含首单口径，须回显确认",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-REP-02",
+        "question": "复购情况怎么样？",
+        "reason": "开放式问法，既没有时间窗也没有维度",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-UV-01",
+        "question": "这段时间的 UV 是多少？",
+        "reason": "UV 是自然日窗口口径，跨日直接累加会重复计数；区间未定",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      },
+      {
+        "case_id": "C-UV-02",
+        "question": "总访客数是多少？",
+        "reason": "「总」= 全期去重还是逐日累加？本包未定义 uv_period",
+        "missing": "冻结集无 `clarify_expected.candidates` ⇒ 缺外部补答来源（需业务给出该维度的口径；本脚本不编答案）"
+      }
+    ],
+    "misclarified_policy": {
+      "n": 9,
+      "policy": "不给补答（题面本应 execute；补答会掩盖绑定缺陷）",
+      "case_ids": [
+        "H-STR-01",
+        "H-STR-02",
+        "H-STR-03",
+        "H-STR-04",
+        "H-STR-05",
+        "H-STR-06",
+        "H-STR-07",
+        "H-STR-08",
+        "X-MET-10"
+      ]
+    },
+    "needs_business_input": true,
+    "what_it_would_measure": "二轮回到可执行终态（complete）的比例；主分母 = attempted，attempted<clarified 时并列 success/clarified 判 UNVERIFIED",
+    "do_not_run_until": "业务为 17 条补齐口径（外部补答源），且不把 9 条误澄清算进去"
+  },
+  "no_llm_calls": true,
+  "no_second_round_run": true
+}
