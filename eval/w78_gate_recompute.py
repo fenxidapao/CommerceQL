@@ -59,9 +59,16 @@ W77_REV = "2cd6c92"
 #: 本轮无当期输入的格：引用官方快照并标 stale。
 _STALE_GATES = ("G-6",)
 
-#: 供 W79 包装脚本覆盖（同一套复算逻辑，不复制第二份）。
+#: 供 W79／W80 包装脚本覆盖（同一套复算逻辑，不复制第二份）。
 ROUND_LABEL = "W78-4"
 REDTEAM_LABEL = "W78-3 红队刷新"
+
+#: 集成层来源文案。W80 复用 W78 的 124/0/0 时由包装脚本覆盖——
+#: 产物里必须写清「这 124 条不是本轮重跑」，否则读成"同一 HEAD 全跑过"。
+INTEGRATION_SOURCE = (
+    "JUnit 集成层（一次性 Docker；端口/库名见 results_w78_integration.json）"
+)
+INTEGRATION_LABEL = "一次性 Docker 集成层"
 
 
 def _load(path: str) -> Any:
@@ -146,16 +153,23 @@ def main() -> int:
         "passed": int(LOCAL_P0["passed"]) + int(int_run.get("passed") or 0),
         "passed_offline": LOCAL_P0["passed"],
         "passed_integration": int_run.get("passed"),
-        "failed": int(int_run.get("failed") or 0),
-        "errors": int(int_run.get("errors") or 0),
+        # 🔴 W80-1：离线红必须进分母。原装配只取集成层的 failed/errors，若离线面有红，
+        # G-1 会拿 0 红判 PASS（同一坑在 `reporter.merge_p0_logs()` 已由 W10 修过）。
+        # 本轮离线 0 红 ⇒ 判定量不变，只是把装配口对齐判据原文。
+        "failed": int(LOCAL_P0.get("failed") or 0) + int(int_run.get("failed") or 0),
+        "errors": int(LOCAL_P0.get("errors") or 0) + int(int_run.get("errors") or 0),
         "failed_tests": [
-            t for f in (integration.get("files") or {}).values() for t in f.get("failed_tests") or []
+            *[str(t) for t in (LOCAL_P0.get("failed_tests") or [])],
+            *[t for f in (integration.get("files") or {}).values()
+              for t in f.get("failed_tests") or []],
         ],
         "error_tests": [
-            t for f in (integration.get("files") or {}).values() for t in f.get("error_tests") or []
+            *[str(t) for t in (LOCAL_P0.get("error_tests") or [])],
+            *[t for f in (integration.get("files") or {}).values()
+              for t in f.get("error_tests") or []],
         ],
         "integration_ran": bool(int_run.get("integration_ran")),
-        "source": "离线 pytest + JUnit 集成层（一次性 Docker；端口/库名见 results_w78_integration.json）",
+        "source": f"离线 pytest + {INTEGRATION_SOURCE}",
         "pg_surface": {
             "integration_named": "backend/tests/integration（JUnit 逐文件计数见产物）",
             "databases_denied": [],
@@ -392,11 +406,11 @@ def _input_source(
 ) -> str:
     stamp = f"{replay.get('git_rev')}/dirty={replay.get('git_dirty')}"
     return {
-        "G-1": "本轮离线 pytest + 一次性 Docker 集成层 JUnit（integration_ran 由证据推导）",
+        "G-1": f"本轮离线 pytest + {INTEGRATION_SOURCE}（integration_ran 由证据推导）",
         "G-2": f"冻结集 {len(cases)} 条 × W77 replay [{stamp}]",
         "G-3": f"{REDTEAM_LABEL}（{_relative(REDTEAM)}；rev={redteam.get('git_rev')}/"
                f"dirty={redteam.get('git_dirty')}）",
-        "G-4": f"一次性 Docker 集成层（{_relative(INTEGRATION)}；RLS 行为 + 策略对象两文件全绿）",
+        "G-4": f"{INTEGRATION_LABEL}（{_relative(INTEGRATION)}；RLS 行为 + 策略对象两文件全绿）",
         "G-5": f"冻结拒答集 × W77 replay [{stamp}]",
         "G-6": "无机器可读压测回执 ⇒ NOT_AVAILABLE；官方快照的判定已过期",
         "G-7": f"probe_metric_values.json（system_source={probe.get('system_source')}）"
