@@ -422,7 +422,7 @@ def main(argv: list[str] | None = None) -> int:
 
     payload = {
         "mode": "offline" if not stats else "batches",
-        "dataset": str(dataset_path),
+        "dataset": dataset_path.as_posix(),
         "content_hash": content_hash,
         "full_hash": full_hash,
         "batch_ids": batch_ids,
@@ -453,9 +453,24 @@ def main(argv: list[str] | None = None) -> int:
             "dialect_gap": (stats[0]["sandbox_dialect_gap"] if stats else "UNVERIFIED"),
             "ex_exec": (stats[0]["equivalent"] if stats else "UNVERIFIED"),
         }),
-        "gold": gold,
-        "control": control,
-        "profile": profile,
+        "evidence": {
+            "gold": {
+                "path": str(args.gold) if args.gold else None,
+                "n_cases": (gold or {}).get("n_cases"),
+                "gold_executable": (gold or {}).get("gold_executable"),
+                "caliber_match": (gold or {}).get("caliber_match"),
+                "interaction_valid": (gold or {}).get("interaction_valid"),
+            },
+            "control": {
+                "path": str(args.control) if args.control else None,
+                "all_ok": (control or {}).get("all_ok"),
+                "not_ex_official": (control or {}).get("not_ex_official"),
+            },
+            "profile": {
+                "path": str(args.profile) if args.profile else None,
+                "all_ok": ((profile or {}).get("checks") or {}).get("all_ok"),
+            },
+        },
     }
     write_json(json_out, payload, indent=2)
     print(f"[out] {out.relative_to(REPO_ROOT).as_posix()}")
