@@ -850,6 +850,7 @@ async def run_batch(
     cassette: str,
     mode: str,
     db_path: str,
+    bundle_path: str | None = None,
     column_top: int | None,
     node_timeout_overrides: Mapping[str, float] | None,
     max_concurrency: int | None = None,
@@ -890,6 +891,8 @@ async def run_batch(
         live=live,
         cassette_path=cassette,
         cassette_mode=mode,
+        bundle_path=bundle_path,
+        db_path=db_path,
         column_top=column_top,
         node_timeout_overrides=node_timeout_overrides,
         max_concurrency=max_concurrency,
@@ -1038,6 +1041,10 @@ async def run_batch(
         "cassette_entries_written": written,
         "node_timeout_overrides": dict(harness.node_timeout_overrides),
         "max_concurrency": harness.max_concurrency,
+        "executor": {
+            "bundle_path": str(bundle_path or _bootstrap.BUNDLE_PATH),
+            "db_path": str(db_path),
+        },
         "budget_stop": budget_stop,
         "usage": {
             "calls": int(usage["calls"]),

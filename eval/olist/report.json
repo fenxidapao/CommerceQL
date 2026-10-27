@@ -1,0 +1,3605 @@
+{
+  "mode": "offline",
+  "dataset": "eval\\olist\\dataset_v1.yaml",
+  "content_hash": "sha256:f5e78268bf4b20a32d566b7b82a0b2c89fc0bed4f2ba68802846ab0ff978f894",
+  "full_hash": "sha256:b4491abbf5ccf100bc752b950c6a257f8fc93ac2c8bfc4d2c175330b54bb8928",
+  "batch_ids": [],
+  "batches": [],
+  "ex_official": null,
+  "interaction_judge": "terminal_event == expected_behavior and infra_error is None",
+  "fixed_lines": [
+    "EX_official = UNVERIFIED / scored_total = UNVERIFIED%",
+    "分母构成：scored=UNVERIFIED | struct_null_skipped=5 | execute=55 | with_sql=UNVERIFIED | with_result=UNVERIFIED | equivalent=UNVERIFIED",
+    "交互正确（不计入 EX）：refuse UNVERIFIED/2 ｜ clarify UNVERIFIED/3",
+    "沙箱方言缺口（单列，不是模型错）：UNVERIFIED",
+    "若报 EX_exec（非官方，仅 coverage）：UNVERIFIED/55"
+  ],
+  "gold": {
+    "mode": "gold-only",
+    "generated_at": "2026-10-27T07:42:13+00:00",
+    "dataset": "dataset_v1.yaml",
+    "dataset_version": "olist_v1",
+    "dataset_hash_mode": "stamped",
+    "bundle": {
+      "path": "semantic/bundle_olist_2018.yaml",
+      "version": "2026.10.27.1"
+    },
+    "db": "data\\olist\\olist_sandbox.db",
+    "tenant": "T_A",
+    "content_hash": "sha256:f5e78268bf4b20a32d566b7b82a0b2c89fc0bed4f2ba68802846ab0ff978f894",
+    "content_hash_stamp": "sha256:f5e78268bf4b20a32d566b7b82a0b2c89fc0bed4f2ba68802846ab0ff978f894",
+    "full_hash": "sha256:b4491abbf5ccf100bc752b950c6a257f8fc93ac2c8bfc4d2c175330b54bb8928",
+    "full_hash_stamp": "sha256:b4491abbf5ccf100bc752b950c6a257f8fc93ac2c8bfc4d2c175330b54bb8928",
+    "sandbox_db_sha256": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+    "n_cases": 60,
+    "n_execute_cases": 55,
+    "n_interaction_cases": 5,
+    "gold_executable": 55,
+    "caliber_match": 55,
+    "interaction_valid": 5,
+    "cases_valid": 60,
+    "cases": [
+      {
+        "case_id": "g01",
+        "question": "2018 年的 GMV 是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "low",
+        "metrics": [
+          "gmv"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:48dbc2303ab1512d3bc26317ffd82b350a37e69dd4600f02c6f95e9e1f5f6b9e",
+        "sample": {
+          "columns": [
+            "gmv"
+          ],
+          "rows": [
+            [
+              8594831.98
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "g02",
+        "question": "2017 年每个月的订单量是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "hard",
+        "difficulty_semantic": "low",
+        "metrics": [
+          "order_cnt"
+        ],
+        "executable": true,
+        "rows": 12,
+        "cols": 2,
+        "result_hash": "sha256:e924a981438e5588b53aa3875e85b05a6cc0608fd5e961ce69a15c987e84914d",
+        "sample": {
+          "columns": [
+            "month",
+            "order_cnt"
+          ],
+          "rows": [
+            [
+              "2017-01",
+              787
+            ],
+            [
+              "2017-02",
+              1718
+            ],
+            [
+              "2017-03",
+              2617
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "g03",
+        "question": "各州 GMV 前十名是哪些？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "low",
+        "metrics": [
+          "gmv"
+        ],
+        "executable": true,
+        "rows": 10,
+        "cols": 2,
+        "result_hash": "sha256:df2d5b5e77815deea3d2eba45533d5b1ade421d4fe1a1a13d4635ae115e38f19",
+        "sample": {
+          "columns": [
+            "state",
+            "gmv"
+          ],
+          "rows": [
+            [
+              "SP",
+              5878935.99
+            ],
+            [
+              "RJ",
+              2115994.28
+            ],
+            [
+              "MG",
+              1843460.37
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "g04",
+        "question": "各品类商品销售额（不含运费）前十名是哪些？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "low",
+        "metrics": [
+          "item_gmv"
+        ],
+        "executable": true,
+        "rows": 10,
+        "cols": 2,
+        "result_hash": "sha256:89c836b51a7eb37d108c35d326f1a76670c791608709f2d28d6639298482617a",
+        "sample": {
+          "columns": [
+            "category",
+            "item_gmv"
+          ],
+          "rows": [
+            [
+              "health_beauty",
+              1255695.13
+            ],
+            [
+              "watches_gifts",
+              1198185.21
+            ],
+            [
+              "bed_bath_table",
+              1035964.06
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "g05",
+        "question": "2018 年的客单价是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "low",
+        "metrics": [
+          "aov"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:59d585f571e9c397f82d951ce675730207898ae5fade76ba4afa545eb0f7b280",
+        "sample": {
+          "columns": [
+            "aov"
+          ],
+          "rows": [
+            [
+              160.56
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "g06",
+        "question": "每个月的运费总额是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "low",
+        "metrics": [
+          "freight_total"
+        ],
+        "executable": true,
+        "rows": 24,
+        "cols": 2,
+        "result_hash": "sha256:0c7d119a43f4c69289db01c30817e7159ccacb3337794b9c214be32d5630f1dc",
+        "sample": {
+          "columns": [
+            "month",
+            "freight_total"
+          ],
+          "rows": [
+            [
+              "2016-09",
+              71.83
+            ],
+            [
+              "2016-10",
+              6847.22
+            ],
+            [
+              "2016-12",
+              8.72
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "g07",
+        "question": "各订单状态分别有多少订单？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "low",
+        "metrics": [
+          "order_cnt_all"
+        ],
+        "executable": true,
+        "rows": 8,
+        "cols": 2,
+        "result_hash": "sha256:5b19d12ce3c3ec9d0395539da9209dd5996c1cc61a1e95c1058697be622af922",
+        "sample": {
+          "columns": [
+            "status",
+            "order_cnt_all"
+          ],
+          "rows": [
+            [
+              "delivered",
+              96478
+            ],
+            [
+              "shipped",
+              1107
+            ],
+            [
+              "canceled",
+              625
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "g08",
+        "question": "各州的平均评分是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "hard",
+        "difficulty_semantic": "low",
+        "metrics": [
+          "avg_review_score"
+        ],
+        "executable": true,
+        "rows": 27,
+        "cols": 2,
+        "result_hash": "sha256:72cdc4ea3859b7aec39d0792b4856ce8a76099ddf0a5fdc61bf17a8c0149a798",
+        "sample": {
+          "columns": [
+            "state",
+            "avg_review_score"
+          ],
+          "rows": [
+            [
+              "AP",
+              4.194
+            ],
+            [
+              "AM",
+              4.1837
+            ],
+            [
+              "PR",
+              4.18
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "g09",
+        "question": "各州的配送延迟率是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "low",
+        "metrics": [
+          "delivery_late_rate"
+        ],
+        "executable": true,
+        "rows": 27,
+        "cols": 2,
+        "result_hash": "sha256:05ea8db9a7e98aadc0e41281e5fe32c6b71636e338fe503ccfcfe8121bc1cafd",
+        "sample": {
+          "columns": [
+            "state",
+            "delivery_late_rate"
+          ],
+          "rows": [
+            [
+              "AL",
+              23.9295
+            ],
+            [
+              "MA",
+              19.6653
+            ],
+            [
+              "PI",
+              15.9664
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "g10",
+        "question": "2018 年每个月的商品件数是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "low",
+        "metrics": [
+          "item_cnt"
+        ],
+        "executable": true,
+        "rows": 9,
+        "cols": 2,
+        "result_hash": "sha256:16f1604138b5e2aecad8b42396ac8ce5ec253a53704df3568ae9638983963fb4",
+        "sample": {
+          "columns": [
+            "month",
+            "item_cnt"
+          ],
+          "rows": [
+            [
+              "2018-01",
+              8173
+            ],
+            [
+              "2018-02",
+              7597
+            ],
+            [
+              "2018-03",
+              8195
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o01",
+        "question": "2017 年的 GMV 是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "gmv"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:04747d701220dabaa18631e11a8aa5c8f069d47e8a67d40a6a22fde1b7785492",
+        "sample": {
+          "columns": [
+            "gmv"
+          ],
+          "rows": [
+            [
+              7092491.65
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o02",
+        "question": "2018 年每个月的 GMV 是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "gmv"
+        ],
+        "executable": true,
+        "rows": 8,
+        "cols": 2,
+        "result_hash": "sha256:77afae4c040696d9153ec8c33568b7c8d6a61fbf33e92670a7e78cc243c400ee",
+        "sample": {
+          "columns": [
+            "month",
+            "gmv"
+          ],
+          "rows": [
+            [
+              "2018-01",
+              1102639.41
+            ],
+            [
+              "2018-02",
+              979966.23
+            ],
+            [
+              "2018-03",
+              1152736.74
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o03",
+        "question": "2018 年 GMV 最高的 5 个州是哪些？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "gmv"
+        ],
+        "executable": true,
+        "rows": 5,
+        "cols": 2,
+        "result_hash": "sha256:a0266950e8bb81e5e3043dfb4db85331088188221b2d97b16add9fd09d1c05f9",
+        "sample": {
+          "columns": [
+            "state",
+            "gmv"
+          ],
+          "rows": [
+            [
+              "SP",
+              3374237.33
+            ],
+            [
+              "RJ",
+              1064121.68
+            ],
+            [
+              "MG",
+              1001226.7
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o04",
+        "question": "2018 年的 GMV 和订单量分别是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "hard",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "gmv",
+          "order_cnt"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 2,
+        "result_hash": "sha256:7025f4bb0058e737c804c970fbc1587c4e1375beb29b6ea17bded21c610878dc",
+        "sample": {
+          "columns": [
+            "gmv",
+            "order_cnt"
+          ],
+          "rows": [
+            [
+              8594831.98,
+              53532
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o05",
+        "question": "2017 年第四季度的 GMV 是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "gmv"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:68d69b5994e37d62d386641c76f6f4755baddd7a5f930cb18704ff28de4d0870",
+        "sample": {
+          "columns": [
+            "gmv"
+          ],
+          "rows": [
+            [
+              2799338.97
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o06",
+        "question": "全期间的有效订单量是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "easy",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "order_cnt"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:6f2a3993414cbd27594bbb98dccf69a6a49f19511205642cd11fe26160ae1e0b",
+        "sample": {
+          "columns": [
+            "order_cnt"
+          ],
+          "rows": [
+            [
+              98207
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o07",
+        "question": "成交订单有多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "easy",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "order_cnt"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:6f2a3993414cbd27594bbb98dccf69a6a49f19511205642cd11fe26160ae1e0b",
+        "sample": {
+          "columns": [
+            "order_cnt"
+          ],
+          "rows": [
+            [
+              98207
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o08",
+        "question": "各州的订单量是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "order_cnt"
+        ],
+        "executable": true,
+        "rows": 27,
+        "cols": 2,
+        "result_hash": "sha256:9836664363c7af926414759ac2a81b1586d996994e6b9c586bc1132259f72ac5",
+        "sample": {
+          "columns": [
+            "state",
+            "order_cnt"
+          ],
+          "rows": [
+            [
+              "AC",
+              81
+            ],
+            [
+              "AL",
+              411
+            ],
+            [
+              "AM",
+              147
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o09",
+        "question": "2018 年每个月的订单量是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "hard",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "order_cnt"
+        ],
+        "executable": true,
+        "rows": 8,
+        "cols": 2,
+        "result_hash": "sha256:a4a7e65c76d3be57f3ce97d785cee3a75ce215f19cfd9869785acba019d3255c",
+        "sample": {
+          "columns": [
+            "month",
+            "order_cnt"
+          ],
+          "rows": [
+            [
+              "2018-01",
+              7187
+            ],
+            [
+              "2018-02",
+              6625
+            ],
+            [
+              "2018-03",
+              7168
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o10",
+        "question": "2018 年各州的订单量是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "hard",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "order_cnt"
+        ],
+        "executable": true,
+        "rows": 27,
+        "cols": 2,
+        "result_hash": "sha256:25e76d2add9350635762d5d26e65bfb91d6ddf464ef4418444f44ae6ac413e9f",
+        "sample": {
+          "columns": [
+            "state",
+            "order_cnt"
+          ],
+          "rows": [
+            [
+              "SP",
+              23599
+            ],
+            [
+              "RJ",
+              6516
+            ],
+            [
+              "MG",
+              6134
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o11",
+        "question": "全期间一共有多少订单（含所有状态）？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "easy",
+        "difficulty_semantic": "low",
+        "metrics": [
+          "order_cnt_all"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:c29e10ea1c07590d60673ff82d5041de7fa49e5c86106dcd1f670c96ac9feca2",
+        "sample": {
+          "columns": [
+            "order_cnt_all"
+          ],
+          "rows": [
+            [
+              99441
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o12",
+        "question": "全状态订单数超过 1000 的州有哪些？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "order_cnt_all"
+        ],
+        "executable": true,
+        "rows": 12,
+        "cols": 2,
+        "result_hash": "sha256:374559e955434a1555fd4be7c7ea7cad1c8c75980388b7d8fa4a553514cb0b50",
+        "sample": {
+          "columns": [
+            "state",
+            "order_cnt_all"
+          ],
+          "rows": [
+            [
+              "SP",
+              41746
+            ],
+            [
+              "RJ",
+              12852
+            ],
+            [
+              "MG",
+              11635
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o13",
+        "question": "2018 年每个月的全状态订单数是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "hard",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "order_cnt_all"
+        ],
+        "executable": true,
+        "rows": 8,
+        "cols": 2,
+        "result_hash": "sha256:c895958acb6111be5e020de44a0448f755ca364ee7bb91036b8d8c2140f16f4c",
+        "sample": {
+          "columns": [
+            "month",
+            "order_cnt_all"
+          ],
+          "rows": [
+            [
+              "2018-01",
+              7269
+            ],
+            [
+              "2018-02",
+              6728
+            ],
+            [
+              "2018-03",
+              7211
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o14",
+        "question": "各州各状态的订单数是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "order_cnt_all"
+        ],
+        "executable": true,
+        "rows": 149,
+        "cols": 3,
+        "result_hash": "sha256:3b23bd714243be9b0c9e8041baee177297e06ccddecd7d4ecc28978d8cc1715f",
+        "sample": {
+          "columns": [
+            "state",
+            "status",
+            "order_cnt_all"
+          ],
+          "rows": [
+            [
+              "AC",
+              "delivered",
+              80
+            ],
+            [
+              "AC",
+              "shipped",
+              1
+            ],
+            [
+              "AL",
+              "canceled",
+              1
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o15",
+        "question": "2018 年各州的全状态订单数是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "hard",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "order_cnt_all"
+        ],
+        "executable": true,
+        "rows": 27,
+        "cols": 2,
+        "result_hash": "sha256:ea86f0271562d7dd70dc00e6c78b8d97034d4bec6b6c1a6f4809abde31fd97fd",
+        "sample": {
+          "columns": [
+            "state",
+            "order_cnt_all"
+          ],
+          "rows": [
+            [
+              "SP",
+              23871
+            ],
+            [
+              "RJ",
+              6571
+            ],
+            [
+              "MG",
+              6181
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o16",
+        "question": "2017 年的客单价是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "aov"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:9765f4155146adbb3b2e6de856fe20e958ba89a47dbb522ed9f56370eb7ed076",
+        "sample": {
+          "columns": [
+            "aov"
+          ],
+          "rows": [
+            [
+              159.82
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o17",
+        "question": "2018 年每个月的客单价是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "aov"
+        ],
+        "executable": true,
+        "rows": 8,
+        "cols": 2,
+        "result_hash": "sha256:6fd169b4b68bdfe8e413e27e4f6a15097888ec28e38c52a83ccb2512faceffc5",
+        "sample": {
+          "columns": [
+            "month",
+            "aov"
+          ],
+          "rows": [
+            [
+              "2018-01",
+              153.42
+            ],
+            [
+              "2018-02",
+              147.92
+            ],
+            [
+              "2018-03",
+              160.82
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o18",
+        "question": "各州的客单价是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "hard",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "aov"
+        ],
+        "executable": true,
+        "rows": 27,
+        "cols": 2,
+        "result_hash": "sha256:48202e71c995f12ca6c959c57189d8c8214325aaf4a55c81ae04be6a03b7c541",
+        "sample": {
+          "columns": [
+            "state",
+            "aov"
+          ],
+          "rows": [
+            [
+              "AC",
+              242.97
+            ],
+            [
+              "AL",
+              234.19
+            ],
+            [
+              "AM",
+              189.43
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o19",
+        "question": "2017 年第四季度的客单价是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "aov"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:2e3358222c714f88cf8dba78c0148596d9678bc929e41efcec2b8e28d1a177ec",
+        "sample": {
+          "columns": [
+            "aov"
+          ],
+          "rows": [
+            [
+              159.14
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o20",
+        "question": "客单价高于全期间平均的州有哪些？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "aov"
+        ],
+        "executable": true,
+        "rows": 24,
+        "cols": 2,
+        "result_hash": "sha256:b5488a0498c7bc6f317a245e81ca137ff3d1c2fcc8b8dfd0bb97debd256f5841",
+        "sample": {
+          "columns": [
+            "state",
+            "aov"
+          ],
+          "rows": [
+            [
+              "PB",
+              264.63
+            ],
+            [
+              "AC",
+              242.97
+            ],
+            [
+              "AP",
+              239.16
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o21",
+        "question": "2017 年的商品销售额（不含运费）是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "item_gmv"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:6b7807d3b67cc8fc3ae923cccb7750029dacc61ff32e948d66d995307883da0a",
+        "sample": {
+          "columns": [
+            "item_gmv"
+          ],
+          "rows": [
+            [
+              6108492.27
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o22",
+        "question": "2018 年每个月的商品销售额（不含运费）是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "item_gmv"
+        ],
+        "executable": true,
+        "rows": 8,
+        "cols": 2,
+        "result_hash": "sha256:453f5037ac88286aacb70aa943f93d400a507c22c79e1375f7dd8703cb74c729",
+        "sample": {
+          "columns": [
+            "month",
+            "item_gmv"
+          ],
+          "rows": [
+            [
+              "2018-01",
+              945456.29
+            ],
+            [
+              "2018-02",
+              837895.43
+            ],
+            [
+              "2018-03",
+              981051.06
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o23",
+        "question": "各州的商品销售额（不含运费）是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "item_gmv"
+        ],
+        "executable": true,
+        "rows": 27,
+        "cols": 2,
+        "result_hash": "sha256:bf141a2865f4e963317b193e98cc1d1db6a12d3d84d31d324c98b798c1a11027",
+        "sample": {
+          "columns": [
+            "state",
+            "item_gmv"
+          ],
+          "rows": [
+            [
+              "SP",
+              5163867.22
+            ],
+            [
+              "RJ",
+              1811623.42
+            ],
+            [
+              "MG",
+              1573508.2
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o24",
+        "question": "2018 年各品类的商品销售额（不含运费）是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "item_gmv"
+        ],
+        "executable": true,
+        "rows": 71,
+        "cols": 2,
+        "result_hash": "sha256:7aeff0d291ec64394ce66d148640f7e55d2eac32daa691639484e28e7026deab",
+        "sample": {
+          "columns": [
+            "category",
+            "item_gmv"
+          ],
+          "rows": [
+            [
+              "health_beauty",
+              770002.81
+            ],
+            [
+              "watches_gifts",
+              708305.95
+            ],
+            [
+              "bed_bath_table",
+              537514.13
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o25",
+        "question": "2018 年的商品销售额和运费分别是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "hard",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "item_gmv",
+          "freight_total"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 2,
+        "result_hash": "sha256:d1ddc1e0b107efb76021339bb5113b3a0e9bfabf4d7f6ef1e453e8f85580ff9a",
+        "sample": {
+          "columns": [
+            "item_gmv",
+            "freight_total"
+          ],
+          "rows": [
+            [
+              7341182.41,
+              1252121.55
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o26",
+        "question": "2017 年的运费总额是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "freight_total"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:dbf1596cafd29884244530791ca55b50246afba3df1d0c2c2cdffd1e16577f8c",
+        "sample": {
+          "columns": [
+            "freight_total"
+          ],
+          "rows": [
+            [
+              982076.97
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o27",
+        "question": "各州的运费总额是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "freight_total"
+        ],
+        "executable": true,
+        "rows": 27,
+        "cols": 2,
+        "result_hash": "sha256:d43e77ac4ab5fbb724166ff815e327cec5756896c0699f8935143d5d2e80e57e",
+        "sample": {
+          "columns": [
+            "state",
+            "freight_total"
+          ],
+          "rows": [
+            [
+              "SP",
+              714264.84
+            ],
+            [
+              "RJ",
+              304044.14
+            ],
+            [
+              "MG",
+              269566.23
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o28",
+        "question": "各品类的运费总额是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "freight_total"
+        ],
+        "executable": true,
+        "rows": 72,
+        "cols": 2,
+        "result_hash": "sha256:c1cec9eff05b162646cd03c2bf27a386adde9232b8a6bec464afed8f5b2ad9a4",
+        "sample": {
+          "columns": [
+            "category",
+            "freight_total"
+          ],
+          "rows": [
+            [
+              "bed_bath_table",
+              204422.07
+            ],
+            [
+              "health_beauty",
+              181970.65
+            ],
+            [
+              "furniture_decor",
+              172160.99
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o29",
+        "question": "2018 年每个月的运费总额是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "freight_total"
+        ],
+        "executable": true,
+        "rows": 8,
+        "cols": 2,
+        "result_hash": "sha256:479caa967b94df7140d12c2a5c489cd4c3d3628b5c46ee116fb78b87130c6758",
+        "sample": {
+          "columns": [
+            "month",
+            "freight_total"
+          ],
+          "rows": [
+            [
+              "2018-01",
+              156463.72
+            ],
+            [
+              "2018-02",
+              141590.73
+            ],
+            [
+              "2018-03",
+              171605.93
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o30",
+        "question": "2018 年的运费总额和商品销售额分别是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "hard",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "freight_total",
+          "item_gmv"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 2,
+        "result_hash": "sha256:f965b6fcd40784680259812e22739be72c6809d7dd36fcb13f7218700532d03b",
+        "sample": {
+          "columns": [
+            "freight_total",
+            "item_gmv"
+          ],
+          "rows": [
+            [
+              1252121.55,
+              7341182.41
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o31",
+        "question": "2017 年一共卖出了多少件商品？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "item_cnt"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:bd1573f54124f437b176adc381b1c2aa3e704953ee9311c9be4a4c1e01a9c383",
+        "sample": {
+          "columns": [
+            "item_cnt"
+          ],
+          "rows": [
+            [
+              50617
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o32",
+        "question": "各州卖出了多少件商品？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "item_cnt"
+        ],
+        "executable": true,
+        "rows": 27,
+        "cols": 2,
+        "result_hash": "sha256:e339f6971cb9e4db6a43448ae9ba77ffae7c1524c1818b1819983325cb858f69",
+        "sample": {
+          "columns": [
+            "state",
+            "item_cnt"
+          ],
+          "rows": [
+            [
+              "SP",
+              47153
+            ],
+            [
+              "RJ",
+              14509
+            ],
+            [
+              "MG",
+              13071
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o33",
+        "question": "各品类卖出了多少件商品？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "item_cnt"
+        ],
+        "executable": true,
+        "rows": 72,
+        "cols": 2,
+        "result_hash": "sha256:fce7ebbfc3ff7e439c46d5388b14312c03fced98c09f7699524565335d7321dc",
+        "sample": {
+          "columns": [
+            "category",
+            "item_cnt"
+          ],
+          "rows": [
+            [
+              "bed_bath_table",
+              11097
+            ],
+            [
+              "health_beauty",
+              9634
+            ],
+            [
+              "sports_leisure",
+              8590
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o34",
+        "question": "2017 年每个月的商品件数是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "item_cnt"
+        ],
+        "executable": true,
+        "rows": 12,
+        "cols": 2,
+        "result_hash": "sha256:c042b8f8962e8501ed7b89f1a796bc54ef31ef73872e7fc79978e15249339673",
+        "sample": {
+          "columns": [
+            "month",
+            "item_cnt"
+          ],
+          "rows": [
+            [
+              "2017-01",
+              953
+            ],
+            [
+              "2017-02",
+              1936
+            ],
+            [
+              "2017-03",
+              2975
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o35",
+        "question": "2018 年的订单量和商品件数分别是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "hard",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "order_cnt",
+          "item_cnt"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 2,
+        "result_hash": "sha256:ad1e16d065aa47457f73a3f7cc42582dde53fd7d0ddc00af4597c6a9b8f6f31a",
+        "sample": {
+          "columns": [
+            "order_cnt",
+            "item_cnt"
+          ],
+          "rows": [
+            [
+              53531,
+              61136
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o36",
+        "question": "全期间的平均评分是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "easy",
+        "difficulty_semantic": "low",
+        "metrics": [
+          "avg_review_score"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:82f9004b2352436cce8080c8b5595010e88bb29d2dbb4eedd3d9c93dcae824b3",
+        "sample": {
+          "columns": [
+            "avg_review_score"
+          ],
+          "rows": [
+            [
+              4.0864
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o37",
+        "question": "2018 年以来的平均评分是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "easy",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "avg_review_score"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:19cee863675f857b17d62b82242944c038509ccdbc41fe7710b406bb25b117f4",
+        "sample": {
+          "columns": [
+            "avg_review_score"
+          ],
+          "rows": [
+            [
+              4.072
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o38",
+        "question": "2018 年各州的平均评分是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "hard",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "avg_review_score"
+        ],
+        "executable": true,
+        "rows": 27,
+        "cols": 2,
+        "result_hash": "sha256:afca7a761725762a897e1f04be544ecc9ac10c8af71177c973865aa45fa58e3b",
+        "sample": {
+          "columns": [
+            "state",
+            "avg_review_score"
+          ],
+          "rows": [
+            [
+              "AC",
+              4.2813
+            ],
+            [
+              "AL",
+              3.7757
+            ],
+            [
+              "AM",
+              4.1098
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o39",
+        "question": "2017 年每个月的平均评分是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "hard",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "avg_review_score"
+        ],
+        "executable": true,
+        "rows": 12,
+        "cols": 2,
+        "result_hash": "sha256:fed020ff2fb7626bd0fd99b70b9c656dd8443858f6c7db99444b0af917575ffb",
+        "sample": {
+          "columns": [
+            "month",
+            "avg_review_score"
+          ],
+          "rows": [
+            [
+              "2017-01",
+              4.3389
+            ],
+            [
+              "2017-02",
+              4.281
+            ],
+            [
+              "2017-03",
+              4.0331
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o40",
+        "question": "平均评分最低的 5 个州是哪些？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "avg_review_score"
+        ],
+        "executable": true,
+        "rows": 5,
+        "cols": 2,
+        "result_hash": "sha256:0dc10e80d77e49ba9160c5faba5d9dad154d7f4e4263f183e2b50f1645d299b2",
+        "sample": {
+          "columns": [
+            "state",
+            "avg_review_score"
+          ],
+          "rows": [
+            [
+              "RR",
+              3.6087
+            ],
+            [
+              "AL",
+              3.7512
+            ],
+            [
+              "MA",
+              3.7641
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o41",
+        "question": "全期间的配送延迟率是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "delivery_late_rate"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:38355c9e4ab63e8e2ebd83c50d3d90b153814ea613d0cdceaebb7257c71d39bd",
+        "sample": {
+          "columns": [
+            "delivery_late_rate"
+          ],
+          "rows": [
+            [
+              8.1124
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o42",
+        "question": "2018 年的配送延迟率是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "medium",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "delivery_late_rate"
+        ],
+        "executable": true,
+        "rows": 1,
+        "cols": 1,
+        "result_hash": "sha256:71d5fece3cf506a8be1cb3b76eb91e8355a49951c3ba530db8c4d98c959ad3f2",
+        "sample": {
+          "columns": [
+            "delivery_late_rate"
+          ],
+          "rows": [
+            [
+              9.3677
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o43",
+        "question": "配送延迟率最低的 5 个州是哪些？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "delivery_late_rate"
+        ],
+        "executable": true,
+        "rows": 5,
+        "cols": 2,
+        "result_hash": "sha256:1bf5935a6ce6a2c0a1fad57b87b07700320414e9a1eb02d5ab3cb649647eda04",
+        "sample": {
+          "columns": [
+            "state",
+            "delivery_late_rate"
+          ],
+          "rows": [
+            [
+              "RO",
+              2.8807
+            ],
+            [
+              "AC",
+              3.75
+            ],
+            [
+              "AM",
+              4.1379
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o44",
+        "question": "2017 年每个月的配送延迟率是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "high",
+        "metrics": [
+          "delivery_late_rate"
+        ],
+        "executable": true,
+        "rows": 12,
+        "cols": 2,
+        "result_hash": "sha256:90cb3157c1f12a69b2c97f3c322c4273ea0dbbd92702551369c0ba75045bb2b9",
+        "sample": {
+          "columns": [
+            "month",
+            "delivery_late_rate"
+          ],
+          "rows": [
+            [
+              "2017-01",
+              3.0667
+            ],
+            [
+              "2017-02",
+              3.2063
+            ],
+            [
+              "2017-03",
+              5.5774
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "o45",
+        "question": "2018 年各州的配送延迟率是多少？",
+        "expected_behavior": "execute",
+        "eval_tenant": "T_A",
+        "difficulty_struct": "extra",
+        "difficulty_semantic": "medium",
+        "metrics": [
+          "delivery_late_rate"
+        ],
+        "executable": true,
+        "rows": 27,
+        "cols": 2,
+        "result_hash": "sha256:eb1899c8caa49a748fa10095fe0837036a31edc875f60dd96f72770ac45f1c61",
+        "sample": {
+          "columns": [
+            "state",
+            "delivery_late_rate"
+          ],
+          "rows": [
+            [
+              "AL",
+              24.2424
+            ],
+            [
+              "MA",
+              22.8324
+            ],
+            [
+              "CE",
+              21.0111
+            ]
+          ]
+        },
+        "checks": {
+          "C1_assets": true,
+          "C2_columns": true,
+          "C3_time_basis": true,
+          "C4_amount": true,
+          "C5_status": true,
+          "C6_tenant": true,
+          "C7_metric": true
+        },
+        "caliber_match": true,
+        "interaction_valid": null,
+        "error": null
+      },
+      {
+        "case_id": "c01",
+        "question": "各地区的 GMV 是多少？",
+        "expected_behavior": "clarify",
+        "eval_tenant": "T_A",
+        "difficulty_struct": null,
+        "difficulty_semantic": "high",
+        "metrics": [],
+        "executable": null,
+        "rows": null,
+        "cols": null,
+        "result_hash": null,
+        "sample": [],
+        "checks": {},
+        "caliber_match": null,
+        "interaction_valid": true,
+        "error": null
+      },
+      {
+        "case_id": "c02",
+        "question": "各州的销量是多少？",
+        "expected_behavior": "clarify",
+        "eval_tenant": "T_A",
+        "difficulty_struct": null,
+        "difficulty_semantic": "high",
+        "metrics": [],
+        "executable": null,
+        "rows": null,
+        "cols": null,
+        "result_hash": null,
+        "sample": [],
+        "checks": {},
+        "caliber_match": null,
+        "interaction_valid": true,
+        "error": null
+      },
+      {
+        "case_id": "c03",
+        "question": "最近一年的 GMV 是多少？",
+        "expected_behavior": "clarify",
+        "eval_tenant": "T_A",
+        "difficulty_struct": null,
+        "difficulty_semantic": "high",
+        "metrics": [],
+        "executable": null,
+        "rows": null,
+        "cols": null,
+        "result_hash": null,
+        "sample": [],
+        "checks": {},
+        "caliber_match": null,
+        "interaction_valid": true,
+        "error": null
+      },
+      {
+        "case_id": "r01",
+        "question": "退款率是多少？",
+        "expected_behavior": "refuse",
+        "eval_tenant": "T_A",
+        "difficulty_struct": null,
+        "difficulty_semantic": "high",
+        "metrics": [],
+        "executable": null,
+        "rows": null,
+        "cols": null,
+        "result_hash": null,
+        "sample": [],
+        "checks": {},
+        "caliber_match": null,
+        "interaction_valid": true,
+        "error": null
+      },
+      {
+        "case_id": "r02",
+        "question": "各品类的利润率是多少？",
+        "expected_behavior": "refuse",
+        "eval_tenant": "T_A",
+        "difficulty_struct": null,
+        "difficulty_semantic": "high",
+        "metrics": [],
+        "executable": null,
+        "rows": null,
+        "cols": null,
+        "result_hash": null,
+        "sample": [],
+        "checks": {},
+        "caliber_match": null,
+        "interaction_valid": true,
+        "error": null
+      }
+    ],
+    "verification": {
+      "profile": "olist",
+      "dataset": "eval\\olist\\dataset_v1.yaml",
+      "db": "data\\olist\\olist_sandbox.db",
+      "python": "3.13.14",
+      "mode": "stamped",
+      "frozen": false,
+      "checks": {
+        "dataset_content_hash": {
+          "expected": "sha256:f5e78268bf4b20a32d566b7b82a0b2c89fc0bed4f2ba68802846ab0ff978f894",
+          "actual": "sha256:f5e78268bf4b20a32d566b7b82a0b2c89fc0bed4f2ba68802846ab0ff978f894",
+          "mode": "stamped",
+          "ok": true
+        },
+        "dataset_full_hash": {
+          "expected": "sha256:b4491abbf5ccf100bc752b950c6a257f8fc93ac2c8bfc4d2c175330b54bb8928",
+          "actual": "sha256:b4491abbf5ccf100bc752b950c6a257f8fc93ac2c8bfc4d2c175330b54bb8928",
+          "mode": "stamped",
+          "ok": true
+        },
+        "sandbox_db_sha256": {
+          "expected": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+          "actual": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+          "mode": "manifest",
+          "python": "3.13.14",
+          "pinned_python": "3.13.14",
+          "ok": true
+        },
+        "dataset_shape": {
+          "expected": {
+            "n_cases": 60,
+            "n_execute_cases": 55,
+            "n_interaction_cases": 5
+          },
+          "actual": {
+            "n_cases": 60,
+            "n_execute_cases": 55,
+            "n_interaction_cases": 5
+          },
+          "ok": true
+        },
+        "gold_executable": {
+          "expected": 55,
+          "actual": 55,
+          "ok": true
+        },
+        "caliber_match": {
+          "expected": 55,
+          "actual": 55,
+          "ok": true
+        },
+        "interaction_unlabeled": {
+          "expected": 5,
+          "actual": 5,
+          "ok": true
+        },
+        "cases_valid": {
+          "expected": 60,
+          "actual": 60,
+          "ok": true
+        },
+        "gold_result_hash": {
+          "mode": "n/a (source mode)",
+          "ok": true
+        },
+        "all_ok": true
+      },
+      "dataset_version": "olist_v1",
+      "frozen_at": null,
+      "n_cases": 60,
+      "n_execute_cases": 55,
+      "n_interaction_cases": 5,
+      "content_hash": "sha256:f5e78268bf4b20a32d566b7b82a0b2c89fc0bed4f2ba68802846ab0ff978f894",
+      "full_hash": "sha256:b4491abbf5ccf100bc752b950c6a257f8fc93ac2c8bfc4d2c175330b54bb8928",
+      "sandbox_db_sha256": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0"
+    }
+  },
+  "control": {
+    "mode": "instrument-control",
+    "generated_at": "2026-10-27T08:00:37+00:00",
+    "not_ex_official": true,
+    "dataset": "dataset_v1.yaml",
+    "db": "data\\olist\\olist_sandbox.db",
+    "n_cases": 60,
+    "n_execute_cases": 55,
+    "positive": {
+      "scored_total": 55,
+      "scored_passed": 55,
+      "ex": 1.0,
+      "matrix": [
+        [
+          {
+            "struct": "easy",
+            "semantic": "low",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "easy",
+            "semantic": "medium",
+            "total": 1,
+            "passed": 1,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "easy",
+            "semantic": "high",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          }
+        ],
+        [
+          {
+            "struct": "medium",
+            "semantic": "low",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "medium",
+            "semantic": "medium",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "medium",
+            "semantic": "high",
+            "total": 8,
+            "passed": 8,
+            "pass_rate": 1.0,
+            "attribution": {}
+          }
+        ],
+        [
+          {
+            "struct": "hard",
+            "semantic": "low",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "hard",
+            "semantic": "medium",
+            "total": 7,
+            "passed": 7,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "hard",
+            "semantic": "high",
+            "total": 4,
+            "passed": 4,
+            "pass_rate": 1.0,
+            "attribution": {}
+          }
+        ],
+        [
+          {
+            "struct": "extra",
+            "semantic": "low",
+            "total": 6,
+            "passed": 6,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "extra",
+            "semantic": "medium",
+            "total": 11,
+            "passed": 11,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "extra",
+            "semantic": "high",
+            "total": 8,
+            "passed": 8,
+            "pass_rate": 1.0,
+            "attribution": {}
+          }
+        ]
+      ]
+    },
+    "negative": {
+      "scored_total": 55,
+      "scored_passed": 0,
+      "ex": 0.0,
+      "matrix": [
+        [
+          {
+            "struct": "easy",
+            "semantic": "low",
+            "total": 2,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "unattributed": 2
+            }
+          },
+          {
+            "struct": "easy",
+            "semantic": "medium",
+            "total": 1,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "unattributed": 1
+            }
+          },
+          {
+            "struct": "easy",
+            "semantic": "high",
+            "total": 2,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "unattributed": 2
+            }
+          }
+        ],
+        [
+          {
+            "struct": "medium",
+            "semantic": "low",
+            "total": 2,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "unattributed": 2
+            }
+          },
+          {
+            "struct": "medium",
+            "semantic": "medium",
+            "total": 2,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "unattributed": 2
+            }
+          },
+          {
+            "struct": "medium",
+            "semantic": "high",
+            "total": 8,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "unattributed": 8
+            }
+          }
+        ],
+        [
+          {
+            "struct": "hard",
+            "semantic": "low",
+            "total": 2,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "unattributed": 2
+            }
+          },
+          {
+            "struct": "hard",
+            "semantic": "medium",
+            "total": 7,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "unattributed": 7
+            }
+          },
+          {
+            "struct": "hard",
+            "semantic": "high",
+            "total": 4,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "unattributed": 4
+            }
+          }
+        ],
+        [
+          {
+            "struct": "extra",
+            "semantic": "low",
+            "total": 6,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "unattributed": 6
+            }
+          },
+          {
+            "struct": "extra",
+            "semantic": "medium",
+            "total": 11,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "unattributed": 11
+            }
+          },
+          {
+            "struct": "extra",
+            "semantic": "high",
+            "total": 8,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "unattributed": 8
+            }
+          }
+        ]
+      ]
+    },
+    "all_ok": true,
+    "cases": [
+      {
+        "case_id": "g01",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "g02",
+        "gold_rows": 12,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 12
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "g03",
+        "gold_rows": 10,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 10
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "g04",
+        "gold_rows": 10,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 10
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "g05",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "g06",
+        "gold_rows": 24,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 24
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "g07",
+        "gold_rows": 8,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 8
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "g08",
+        "gold_rows": 27,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 27
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "g09",
+        "gold_rows": 27,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 27
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "g10",
+        "gold_rows": 9,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 9
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o01",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o02",
+        "gold_rows": 8,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 8
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o03",
+        "gold_rows": 5,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 5
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o04",
+        "gold_rows": 1,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o05",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o06",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o07",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o08",
+        "gold_rows": 27,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 27
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o09",
+        "gold_rows": 8,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 8
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o10",
+        "gold_rows": 27,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 27
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o11",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o12",
+        "gold_rows": 12,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 12
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o13",
+        "gold_rows": 8,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 8
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o14",
+        "gold_rows": 149,
+        "gold_cols": 3,
+        "pred_shape": {
+          "columns": 3,
+          "rows": 149
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o15",
+        "gold_rows": 27,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 27
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o16",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o17",
+        "gold_rows": 8,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 8
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o18",
+        "gold_rows": 27,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 27
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o19",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o20",
+        "gold_rows": 24,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 24
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o21",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o22",
+        "gold_rows": 8,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 8
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o23",
+        "gold_rows": 27,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 27
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o24",
+        "gold_rows": 71,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 71
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o25",
+        "gold_rows": 1,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o26",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o27",
+        "gold_rows": 27,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 27
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o28",
+        "gold_rows": 72,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 72
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o29",
+        "gold_rows": 8,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 8
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o30",
+        "gold_rows": 1,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o31",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o32",
+        "gold_rows": 27,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 27
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o33",
+        "gold_rows": 72,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 72
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o34",
+        "gold_rows": 12,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 12
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o35",
+        "gold_rows": 1,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o36",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o37",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o38",
+        "gold_rows": 27,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 27
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o39",
+        "gold_rows": 12,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 12
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o40",
+        "gold_rows": 5,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 5
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o41",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o42",
+        "gold_rows": 1,
+        "gold_cols": 1,
+        "pred_shape": {
+          "columns": 1,
+          "rows": 1
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o43",
+        "gold_rows": 5,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 5
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o44",
+        "gold_rows": 12,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 12
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      },
+      {
+        "case_id": "o45",
+        "gold_rows": 27,
+        "gold_cols": 2,
+        "pred_shape": {
+          "columns": 2,
+          "rows": 27
+        },
+        "positive_equivalent": true,
+        "negative_equivalent": false,
+        "error": null
+      }
+    ]
+  },
+  "profile": {
+    "profile": "olist",
+    "dataset": "eval\\olist\\dataset_v1.yaml",
+    "db": "data\\olist\\olist_sandbox.db",
+    "python": "3.13.14",
+    "mode": "stamped",
+    "frozen": false,
+    "checks": {
+      "dataset_content_hash": {
+        "expected": "sha256:f5e78268bf4b20a32d566b7b82a0b2c89fc0bed4f2ba68802846ab0ff978f894",
+        "actual": "sha256:f5e78268bf4b20a32d566b7b82a0b2c89fc0bed4f2ba68802846ab0ff978f894",
+        "mode": "stamped",
+        "ok": true
+      },
+      "dataset_full_hash": {
+        "expected": "sha256:b4491abbf5ccf100bc752b950c6a257f8fc93ac2c8bfc4d2c175330b54bb8928",
+        "actual": "sha256:b4491abbf5ccf100bc752b950c6a257f8fc93ac2c8bfc4d2c175330b54bb8928",
+        "mode": "stamped",
+        "ok": true
+      },
+      "sandbox_db_sha256": {
+        "expected": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+        "actual": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+        "mode": "manifest",
+        "python": "3.13.14",
+        "pinned_python": "3.13.14",
+        "ok": true
+      },
+      "dataset_shape": {
+        "expected": {
+          "n_cases": 60,
+          "n_execute_cases": 55,
+          "n_interaction_cases": 5
+        },
+        "actual": {
+          "n_cases": 60,
+          "n_execute_cases": 55,
+          "n_interaction_cases": 5
+        },
+        "ok": true
+      },
+      "gold_executable": {
+        "expected": 55,
+        "actual": 55,
+        "ok": true
+      },
+      "caliber_match": {
+        "expected": 55,
+        "actual": 55,
+        "ok": true
+      },
+      "interaction_unlabeled": {
+        "expected": 5,
+        "actual": 5,
+        "ok": true
+      },
+      "cases_valid": {
+        "expected": 60,
+        "actual": 60,
+        "ok": true
+      },
+      "gold_result_hash": {
+        "mode": "n/a (source mode)",
+        "ok": true
+      },
+      "all_ok": true
+    },
+    "dataset_version": "olist_v1",
+    "frozen_at": null,
+    "n_cases": 60,
+    "n_execute_cases": 55,
+    "n_interaction_cases": 5,
+    "content_hash": "sha256:f5e78268bf4b20a32d566b7b82a0b2c89fc0bed4f2ba68802846ab0ff978f894",
+    "full_hash": "sha256:b4491abbf5ccf100bc752b950c6a257f8fc93ac2c8bfc4d2c175330b54bb8928",
+    "sandbox_db_sha256": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0"
+  }
+}
