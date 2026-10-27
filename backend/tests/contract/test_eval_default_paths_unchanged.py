@@ -10,6 +10,7 @@ W1 的整条 Olist 链路（`eval/olist/**`、`deploy/demo/**`、`semantic/bundl
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -17,12 +18,16 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 EVAL_DIR = REPO_ROOT / "eval"
-if str(EVAL_DIR) not in sys.path:
-    sys.path.insert(0, str(EVAL_DIR))
+for _p in (str(REPO_ROOT), str(EVAL_DIR)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 import _bootstrap  # noqa: E402
 
 _bootstrap.bootstrap()
+
+import build_frozen_set as bfs  # noqa: E402
+from eval.olist.hashing import case_full_hash  # noqa: E402
 
 
 def test_default_paths_are_still_the_synthetic_ones() -> None:
@@ -52,11 +57,17 @@ def test_verify_frozen_inputs_all_ok_when_synthetic_sandbox_present() -> None:
 
 
 def test_olist_outputs_stay_inside_eval_olist() -> None:
-    """Olist 轨的产物清单里不得出现 eval/ 根或 data/ecom_sandbox.db。"""
+    """Olist 轨的产物清单里不得出现 eval/ 根或 data/ecom_sandbox.db。
+
+    U-146：`eval/olist/dataset_v1_frozen.json` 是**精确允许**的唯一例外 ——
+    它由 W2 在冒烟通过后生成，路径由派单固定；其余四个合成冻结件与 `ecom_sandbox.db`
+    仍一律禁止出现在 `eval/olist/` 下。
+    """
     olist_dir = EVAL_DIR / "olist"
     if not olist_dir.is_dir():
         pytest.skip(f"olist_track_absent: {olist_dir}")
 
+    allowed = {olist_dir / "dataset_v1_frozen.json"}
     offenders = [
         p.as_posix()
         for p in olist_dir.rglob("*")
@@ -69,5 +80,24 @@ def test_olist_outputs_stay_inside_eval_olist() -> None:
             "red_team_cases_v1.json",
             "ecom_sandbox.db",
         }
+        and p.resolve() not in {path.resolve() for path in allowed}
     ]
     assert not offenders, offenders
+
+
+def test_olist_frozen_file_is_valid_if_present() -> None:
+    """冻结件存在时校验它自洽（本轮不生成 ⇒ 正常情况下 skip）。"""
+    frozen_path = EVAL_DIR / "olist" / "dataset_v1_frozen.json"
+    if not frozen_path.is_file():
+        pytest.skip(f"olist_frozen_not_generated_yet: {frozen_path}")
+
+    frozen = json.loads(frozen_path.read_text(encoding="utf-8"))
+    cases = frozen["cases"]
+    assert frozen["content_hash"] == bfs.case_content_hash(cases)
+    assert frozen["full_hash"] == case_full_hash(cases)
+    assert len(frozen["sandbox_db_sha256"]) == 64
+    assert len(cases) == 60
+    assert sum(
+        1 for case in cases
+        if (case.get("expected_behavior") or "execute") == "execute"
+    ) == 55
