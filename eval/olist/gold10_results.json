@@ -1,0 +1,416 @@
+{
+  "mode": "gold-only",
+  "generated_at": "2026-10-27T07:11:16+00:00",
+  "dataset": "dataset_w1_gold10.yaml",
+  "bundle": {
+    "path": "semantic/bundle_olist_2018.yaml",
+    "version": "2026.10.27.1"
+  },
+  "db": "data\\olist\\olist_sandbox.db",
+  "tenant": "T_A",
+  "n_cases": 10,
+  "gold_executable": 10,
+  "caliber_match": 10,
+  "cases": [
+    {
+      "case_id": "g01",
+      "question": "2018 年的 GMV 是多少？",
+      "metrics": [
+        "gmv"
+      ],
+      "executable": true,
+      "rows": 1,
+      "cols": 1,
+      "result_hash": "sha256:48dbc2303ab1512d3bc26317ffd82b350a37e69dd4600f02c6f95e9e1f5f6b9e",
+      "sample": {
+        "columns": [
+          "gmv"
+        ],
+        "rows": [
+          [
+            8594831.98
+          ]
+        ]
+      },
+      "checks": {
+        "C1_assets": true,
+        "C2_columns": true,
+        "C3_time_basis": true,
+        "C4_amount": true,
+        "C5_status": true,
+        "C6_tenant": true,
+        "C7_metric": true
+      },
+      "caliber_match": true,
+      "error": null
+    },
+    {
+      "case_id": "g02",
+      "question": "2017 年每个月的订单量是多少？",
+      "metrics": [
+        "order_cnt"
+      ],
+      "executable": true,
+      "rows": 12,
+      "cols": 2,
+      "result_hash": "sha256:e924a981438e5588b53aa3875e85b05a6cc0608fd5e961ce69a15c987e84914d",
+      "sample": {
+        "columns": [
+          "month",
+          "order_cnt"
+        ],
+        "rows": [
+          [
+            "2017-01",
+            787
+          ],
+          [
+            "2017-02",
+            1718
+          ],
+          [
+            "2017-03",
+            2617
+          ]
+        ]
+      },
+      "checks": {
+        "C1_assets": true,
+        "C2_columns": true,
+        "C3_time_basis": true,
+        "C4_amount": true,
+        "C5_status": true,
+        "C6_tenant": true,
+        "C7_metric": true
+      },
+      "caliber_match": true,
+      "error": null
+    },
+    {
+      "case_id": "g03",
+      "question": "各州 GMV 前十名是哪些？",
+      "metrics": [
+        "gmv"
+      ],
+      "executable": true,
+      "rows": 10,
+      "cols": 2,
+      "result_hash": "sha256:df2d5b5e77815deea3d2eba45533d5b1ade421d4fe1a1a13d4635ae115e38f19",
+      "sample": {
+        "columns": [
+          "state",
+          "gmv"
+        ],
+        "rows": [
+          [
+            "SP",
+            5878935.99
+          ],
+          [
+            "RJ",
+            2115994.28
+          ],
+          [
+            "MG",
+            1843460.37
+          ]
+        ]
+      },
+      "checks": {
+        "C1_assets": true,
+        "C2_columns": true,
+        "C3_time_basis": true,
+        "C4_amount": true,
+        "C5_status": true,
+        "C6_tenant": true,
+        "C7_metric": true
+      },
+      "caliber_match": true,
+      "error": null
+    },
+    {
+      "case_id": "g04",
+      "question": "各品类商品销售额（不含运费）前十名是哪些？",
+      "metrics": [
+        "item_gmv"
+      ],
+      "executable": true,
+      "rows": 10,
+      "cols": 2,
+      "result_hash": "sha256:89c836b51a7eb37d108c35d326f1a76670c791608709f2d28d6639298482617a",
+      "sample": {
+        "columns": [
+          "category",
+          "item_gmv"
+        ],
+        "rows": [
+          [
+            "health_beauty",
+            1255695.13
+          ],
+          [
+            "watches_gifts",
+            1198185.21
+          ],
+          [
+            "bed_bath_table",
+            1035964.06
+          ]
+        ]
+      },
+      "checks": {
+        "C1_assets": true,
+        "C2_columns": true,
+        "C3_time_basis": true,
+        "C4_amount": true,
+        "C5_status": true,
+        "C6_tenant": true,
+        "C7_metric": true
+      },
+      "caliber_match": true,
+      "error": null
+    },
+    {
+      "case_id": "g05",
+      "question": "2018 年的客单价是多少？",
+      "metrics": [
+        "aov"
+      ],
+      "executable": true,
+      "rows": 1,
+      "cols": 1,
+      "result_hash": "sha256:59d585f571e9c397f82d951ce675730207898ae5fade76ba4afa545eb0f7b280",
+      "sample": {
+        "columns": [
+          "aov"
+        ],
+        "rows": [
+          [
+            160.56
+          ]
+        ]
+      },
+      "checks": {
+        "C1_assets": true,
+        "C2_columns": true,
+        "C3_time_basis": true,
+        "C4_amount": true,
+        "C5_status": true,
+        "C6_tenant": true,
+        "C7_metric": true
+      },
+      "caliber_match": true,
+      "error": null
+    },
+    {
+      "case_id": "g06",
+      "question": "每个月的运费总额是多少？",
+      "metrics": [
+        "freight_total"
+      ],
+      "executable": true,
+      "rows": 24,
+      "cols": 2,
+      "result_hash": "sha256:0c7d119a43f4c69289db01c30817e7159ccacb3337794b9c214be32d5630f1dc",
+      "sample": {
+        "columns": [
+          "month",
+          "freight_total"
+        ],
+        "rows": [
+          [
+            "2016-09",
+            71.83
+          ],
+          [
+            "2016-10",
+            6847.22
+          ],
+          [
+            "2016-12",
+            8.72
+          ]
+        ]
+      },
+      "checks": {
+        "C1_assets": true,
+        "C2_columns": true,
+        "C3_time_basis": true,
+        "C4_amount": true,
+        "C5_status": true,
+        "C6_tenant": true,
+        "C7_metric": true
+      },
+      "caliber_match": true,
+      "error": null
+    },
+    {
+      "case_id": "g07",
+      "question": "各订单状态分别有多少订单？",
+      "metrics": [
+        "order_cnt_all"
+      ],
+      "executable": true,
+      "rows": 8,
+      "cols": 2,
+      "result_hash": "sha256:5b19d12ce3c3ec9d0395539da9209dd5996c1cc61a1e95c1058697be622af922",
+      "sample": {
+        "columns": [
+          "status",
+          "order_cnt_all"
+        ],
+        "rows": [
+          [
+            "delivered",
+            96478
+          ],
+          [
+            "shipped",
+            1107
+          ],
+          [
+            "canceled",
+            625
+          ]
+        ]
+      },
+      "checks": {
+        "C1_assets": true,
+        "C2_columns": true,
+        "C3_time_basis": true,
+        "C4_amount": true,
+        "C5_status": true,
+        "C6_tenant": true,
+        "C7_metric": true
+      },
+      "caliber_match": true,
+      "error": null
+    },
+    {
+      "case_id": "g08",
+      "question": "各州的平均评分是多少？",
+      "metrics": [
+        "avg_review_score"
+      ],
+      "executable": true,
+      "rows": 27,
+      "cols": 2,
+      "result_hash": "sha256:72cdc4ea3859b7aec39d0792b4856ce8a76099ddf0a5fdc61bf17a8c0149a798",
+      "sample": {
+        "columns": [
+          "state",
+          "avg_review_score"
+        ],
+        "rows": [
+          [
+            "AP",
+            4.194
+          ],
+          [
+            "AM",
+            4.1837
+          ],
+          [
+            "PR",
+            4.18
+          ]
+        ]
+      },
+      "checks": {
+        "C1_assets": true,
+        "C2_columns": true,
+        "C3_time_basis": true,
+        "C4_amount": true,
+        "C5_status": true,
+        "C6_tenant": true,
+        "C7_metric": true
+      },
+      "caliber_match": true,
+      "error": null
+    },
+    {
+      "case_id": "g09",
+      "question": "各州的配送延迟率是多少？",
+      "metrics": [
+        "delivery_late_rate"
+      ],
+      "executable": true,
+      "rows": 27,
+      "cols": 2,
+      "result_hash": "sha256:05ea8db9a7e98aadc0e41281e5fe32c6b71636e338fe503ccfcfe8121bc1cafd",
+      "sample": {
+        "columns": [
+          "state",
+          "delivery_late_rate"
+        ],
+        "rows": [
+          [
+            "AL",
+            23.9295
+          ],
+          [
+            "MA",
+            19.6653
+          ],
+          [
+            "PI",
+            15.9664
+          ]
+        ]
+      },
+      "checks": {
+        "C1_assets": true,
+        "C2_columns": true,
+        "C3_time_basis": true,
+        "C4_amount": true,
+        "C5_status": true,
+        "C6_tenant": true,
+        "C7_metric": true
+      },
+      "caliber_match": true,
+      "error": null
+    },
+    {
+      "case_id": "g10",
+      "question": "2018 年每个月的商品件数是多少？",
+      "metrics": [
+        "item_cnt"
+      ],
+      "executable": true,
+      "rows": 9,
+      "cols": 2,
+      "result_hash": "sha256:16f1604138b5e2aecad8b42396ac8ce5ec253a53704df3568ae9638983963fb4",
+      "sample": {
+        "columns": [
+          "month",
+          "item_cnt"
+        ],
+        "rows": [
+          [
+            "2018-01",
+            8173
+          ],
+          [
+            "2018-02",
+            7597
+          ],
+          [
+            "2018-03",
+            8195
+          ]
+        ]
+      },
+      "checks": {
+        "C1_assets": true,
+        "C2_columns": true,
+        "C3_time_basis": true,
+        "C4_amount": true,
+        "C5_status": true,
+        "C6_tenant": true,
+        "C7_metric": true
+      },
+      "caliber_match": true,
+      "error": null
+    }
+  ]
+}

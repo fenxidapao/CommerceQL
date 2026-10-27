@@ -1,0 +1,228 @@
+# W1 gold-only 题集（10 条）
+#
+# 归属窗口：W1 实施窗（docs/07 §4.8 的 U-143）。
+# ⚠️ 这不是冻结件：`dataset_v1_frozen.json` 在 W2 的 60 题首轮跑完后才生成。
+#
+# 每题四段：
+#   gold_sql   只查 `v_o_*`（沙箱物理名），不含 tenant_id（由执行层注入）
+#   metrics    声明的指标（必须在 bundle 中 status=active）
+#   assets     声明的逻辑资产（映射到 physical_asset）
+#   expect     口径对账的期望值，7 条机器判据逐条比对
+#
+# `expect` 字段含义：
+#   time_column         该指标的 time_basis（C3 会拿它与 bundle 比对）
+#   time_filtered       gold SQL 是否用时间过滤（true 则 time_column 必须出现在 WHERE）
+#   amount_column       被聚合的金额列；纯计数题为 null
+#   status_mode         exclude / require / none —— 与指标表达式必须一致
+#   status_values       status_mode 非 none 时的取值集合
+
+dataset: w1_gold10
+bundle: semantic/bundle_olist_2018.yaml
+tenant: T_A
+
+cases:
+
+  - case_id: g01
+    question: 2018 年的 GMV 是多少？
+    metrics: [gmv]
+    assets: [order, payment]
+    gold_sql: |
+      SELECT ROUND(SUM(p.payment_value), 2) AS gmv
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+    expect:
+      time_column: order_purchase_timestamp
+      time_filtered: true
+      amount_column: payment_value
+      status_mode: exclude
+      status_values: [canceled, unavailable]
+    caliber_note: "GMV = 支付表金额求和（含运费），剔除取消/不可用单，按订单创建时间归属。"
+
+  - case_id: g02
+    question: 2017 年每个月的订单量是多少？
+    metrics: [order_cnt]
+    assets: [order]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+             COUNT(DISTINCT o.order_id) AS order_cnt
+      FROM v_o_orders AS o
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2017-01-01'
+        AND o.order_purchase_timestamp <  '2018-01-01'
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: order_purchase_timestamp
+      time_filtered: true
+      amount_column: null
+      status_mode: exclude
+      status_values: [canceled, unavailable]
+    caliber_note: "订单量用 DISTINCT order_id；多支付行不会放大计数。"
+
+  - case_id: g03
+    question: 各州 GMV 前十名是哪些？
+    metrics: [gmv]
+    assets: [order, payment]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             ROUND(SUM(p.payment_value), 2) AS gmv
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY o.customer_state
+      ORDER BY gmv DESC
+      LIMIT 10
+    expect:
+      time_column: order_purchase_timestamp
+      time_filtered: false
+      amount_column: payment_value
+      status_mode: exclude
+      status_values: [canceled, unavailable]
+    caliber_note: "全期间口径；州取收货州（订单侧唯一州字段）。"
+
+  - case_id: g04
+    question: 各品类商品销售额（不含运费）前十名是哪些？
+    metrics: [item_gmv]
+    assets: [order, order_item, product]
+    gold_sql: |
+      SELECT pr.product_category AS category,
+             ROUND(SUM(i.price), 2) AS item_gmv
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o   ON o.order_id = i.order_id
+      JOIN v_o_products AS pr ON pr.product_id = i.product_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY pr.product_category
+      ORDER BY item_gmv DESC
+      LIMIT 10
+    expect:
+      time_column: order_purchase_timestamp
+      time_filtered: false
+      amount_column: price
+      status_mode: exclude
+      status_values: [canceled, unavailable]
+    caliber_note: "商品销售额只算 price，不含 freight_value；无品类译名的商品落空值组（报告里记录其排名）。"
+
+  - case_id: g05
+    question: 2018 年的客单价是多少？
+    metrics: [aov]
+    assets: [order, payment]
+    gold_sql: |
+      SELECT ROUND(SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0), 2) AS aov
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+    expect:
+      time_column: order_purchase_timestamp
+      time_filtered: true
+      amount_column: payment_value
+      status_mode: exclude
+      status_values: [canceled, unavailable]
+    caliber_note: "分子分母同过滤；分母是全量有效单量（订单级），不是支付行数。"
+
+  - case_id: g06
+    question: 每个月的运费总额是多少？
+    metrics: [freight_total]
+    assets: [order, order_item]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+             ROUND(SUM(i.freight_value), 2) AS freight_total
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: order_purchase_timestamp
+      time_filtered: false
+      amount_column: freight_value
+      status_mode: exclude
+      status_values: [canceled, unavailable]
+    caliber_note: "运费只在明细行有值，按订单时间归属到月份。"
+
+  - case_id: g07
+    question: 各订单状态分别有多少订单？
+    metrics: [order_cnt_all]
+    assets: [order]
+    gold_sql: |
+      SELECT o.order_status AS status,
+             COUNT(DISTINCT o.order_id) AS order_cnt_all
+      FROM v_o_orders AS o
+      GROUP BY o.order_status
+      ORDER BY order_cnt_all DESC
+    expect:
+      time_column: order_purchase_timestamp
+      time_filtered: false
+      amount_column: null
+      status_mode: none
+      status_values: []
+    caliber_note: "全状态口径（order_cnt_all），刻意不加任何状态过滤 —— 域级谓词必须为空的探针。"
+
+  - case_id: g08
+    question: 各州的平均评分是多少？
+    metrics: [avg_review_score]
+    assets: [order, review]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             ROUND(AVG(r.review_score), 4) AS avg_review_score
+      FROM v_o_reviews AS r
+      JOIN v_o_orders AS o ON o.order_id = r.order_id
+      GROUP BY o.customer_state
+      ORDER BY avg_review_score DESC
+    expect:
+      time_column: review_creation_date
+      time_filtered: false
+      amount_column: null
+      status_mode: none
+      status_values: []
+    caliber_note: "分母是有评价的订单，不是全部订单；评分不做状态过滤。"
+
+  - case_id: g09
+    question: 各州的配送延迟率是多少？
+    metrics: [delivery_late_rate]
+    assets: [order]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             ROUND(
+               SUM(CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date
+                        THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0), 4
+             ) AS delivery_late_rate
+      FROM v_o_orders AS o
+      WHERE o.order_status = 'delivered'
+        AND o.order_delivered_customer_date IS NOT NULL
+        AND o.order_estimated_delivery_date IS NOT NULL
+      GROUP BY o.customer_state
+      ORDER BY delivery_late_rate DESC
+    expect:
+      time_column: order_purchase_timestamp
+      time_filtered: false
+      amount_column: null
+      status_mode: require
+      status_values: [delivered]
+    caliber_note: "分母 = delivered 且两个日期列均非空（96,470）；全量口径 7,826/96,470 = 8.112%。"
+
+  - case_id: g10
+    question: 2018 年每个月的商品件数是多少？
+    metrics: [item_cnt]
+    assets: [order, order_item]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+             COUNT(*) AS item_cnt
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: order_purchase_timestamp
+      time_filtered: true
+      amount_column: null
+      status_mode: exclude
+      status_values: [canceled, unavailable]
+    caliber_note: "件数按明细行计（order_item 粒度），与订单量聚合时必然放大。"
