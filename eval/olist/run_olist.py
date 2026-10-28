@@ -605,6 +605,7 @@ def batch_mode(args: argparse.Namespace, dataset_path: Path, db_path: Path, out:
         "batch_id": args.batch_id,
         "frozen_evidence": evidence,
         "config": {
+            "batch_id": args.batch_id,
             "live": args.live,
             "mode": mode,
             "cassette": str(cassette),

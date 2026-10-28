@@ -59,6 +59,24 @@ def interaction_correct(record: Mapping[str, Any]) -> bool:
     )
 
 
+#: 沙箱是 SQLite、闸门一按 postgres 解析：这些函数在闸门 R14 就被拒，
+#: 走不到执行层，故 `attribution` 不会给出 `sandbox_dialect_gap`。报告层单列。
+_POSTGRES_ONLY_TOKENS = (
+    "to_char(", "date_trunc(", "::timestamp", "::date", "::numeric",
+    "interval ", "extract(",
+)
+
+
+def is_sandbox_dialect_gap(record: Mapping[str, Any]) -> bool:
+    """方言缺口：归因已标，或闸门 R14 拒了 postgres 专有函数/转换。"""
+    if (record.get("attribution") or {}).get("category") == "sandbox_dialect_gap":
+        return True
+    if str(record.get("gate1_reject_rule") or "") != "R14":
+        return False
+    sql = str(record.get("sql_text") or "").lower()
+    return any(token in sql for token in _POSTGRES_ONLY_TOKENS)
+
+
 def _results_map(records: Iterable[Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
     mapping: dict[str, dict[str, Any]] = {}
     for record in records:
@@ -88,7 +106,10 @@ def batch_stats(cases: list[dict[str, Any]], records: list[dict[str, Any]]) -> d
         "scored_total": grid.scored_total,
         "scored_passed": grid.scored_passed,
         "ex": grid.ex,
-        "struct_null_skipped": len(cases) - grid.scored_total,
+        "struct_null_skipped": sum(
+            1 for c in cases
+            if c.get("difficulty_struct") is None or c.get("difficulty_semantic") is None
+        ),
         "n_execute": len(execute),
         "with_sql": _count(execute, "sql_text"),
         "with_result": len(with_result),
@@ -97,10 +118,7 @@ def batch_stats(cases: list[dict[str, Any]], records: list[dict[str, Any]]) -> d
         "n_unscored": sum(1 for r in records if not r.get("scored")),
         "n_false_clarify": sum(1 for r in execute if r.get("terminal_event") == "clarify"),
         "n_false_refuse": sum(1 for r in execute if r.get("terminal_event") == "refuse"),
-        "sandbox_dialect_gap": sum(
-            1 for r in records
-            if (r.get("attribution") or {}).get("category") == "sandbox_dialect_gap"
-        ),
+        "sandbox_dialect_gap": sum(1 for r in records if is_sandbox_dialect_gap(r)),
         "clarify_correct": sum(1 for r in clarify if interaction_correct(r)),
         "clarify_total": len(clarify),
         "refuse_correct": sum(1 for r in refuse if interaction_correct(r)),
@@ -124,7 +142,10 @@ def validate_batches(
     """校验批次身份与证据链；返回逐批 stats。任一不成立即拒绝出 EX。"""
     if not batches:
         return []
-    ids = [str((b.get("config") or {}).get("batch_id") or "") for b in batches]
+    ids = [
+        str((b.get("config") or {}).get("batch_id") or b.get("batch_id") or "")
+        for b in batches
+    ]
     if any(not batch_id for batch_id in ids):
         raise ValueError(f"批次缺 config.batch_id：{ids}")
     if len(set(ids)) != len(ids):
@@ -136,11 +157,13 @@ def validate_batches(
         evidence = batch.get("frozen_evidence") or {}
         if evidence.get("content_hash") != content_hash:
             raise ValueError(
-                f"批次 {batch.get('config', {}).get('batch_id')} 的 content_hash 与数据集不一致"
+                f"批次 {(batch.get('config') or {}).get('batch_id') or batch.get('batch_id')} "
+                "的 content_hash 与数据集不一致"
             )
         if evidence.get("full_hash") != full_hash:
             raise ValueError(
-                f"批次 {batch.get('config', {}).get('batch_id')} 的 full_hash 与数据集不一致"
+                f"批次 {(batch.get('config') or {}).get('batch_id') or batch.get('batch_id')} "
+                "的 full_hash 与数据集不一致"
             )
         records = list(batch.get("records") or [])
         record_ids = {str(r.get("case_id")) for r in records}
@@ -148,7 +171,8 @@ def validate_batches(
             missing = sorted(all_ids - record_ids)
             extra = sorted(record_ids - all_ids)
             raise ValueError(
-                f"批次 {batch.get('config', {}).get('batch_id')} 用例不完整："
+                f"批次 {(batch.get('config') or {}).get('batch_id') or batch.get('batch_id')} "
+                "用例不完整："
                 f"missing={missing} extra={extra}（冒烟批不得当 EX 用）"
             )
         stats.append(batch_stats(cases, records))
@@ -220,7 +244,7 @@ def render_markdown(
             "dialect_gap": first["sandbox_dialect_gap"],
             "ex_exec": first["equivalent"],
         })
-    lines += ["```"]
+    lines += ["```", ""]
     if stats:
         mean_ex = statistics.fmean(s["ex"] for s in stats)
         std_ex = statistics.stdev(s["ex"] for s in stats) if len(stats) > 1 else None
@@ -363,6 +387,14 @@ def render_markdown(
         "单列、不归因模型。",
         "- Olist 数据实际止于 2018-08（9 月 1 单、10 月 0 单）。",
         "- `gold_executable` 的分母是 55 条 execute；交互题无 gold，不冒充可执行 SQL。",
+        "- 模型把表别名写成 `AS order`（SQL 保留字）⇒ 本轮 7/55 条 `SQL_SYNTAX_ERROR`；"
+        "这是生成缺陷，不是方言缺口。",
+        "- gold 做了 `ROUND`、模型常未做 ⇒ `REL_TOL=1e-6` 判不等（AOV/评分/延迟率多例）；"
+        "本轮不改判据，W3 裁定是去 gold 的 ROUND 还是把舍入写进 bundle/prompt。",
+        "- `delivery_late_rate` 的 bundle expression 未乘 100，模型照 expression 生成 ⇒ "
+        "SQLite 整数除法归零；这是 bundle 与 gold 口径不一致，不归因模型。",
+        "- 批次 r1 有 1 条 `GraphRecursionError`（o19）记 `unscored`，"
+        "故该批分母 54；其余两批分母 55。",
         "",
     ]
     return "\n".join(lines)
@@ -412,7 +444,10 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         print(f"批次校验失败：{exc}", file=sys.stderr)
         return 3
-    batch_ids = [str((b.get("config") or {}).get("batch_id")) for b in batches]
+    batch_ids = [
+        str((b.get("config") or {}).get("batch_id") or b.get("batch_id"))
+        for b in batches
+    ]
 
     markdown = render_markdown(
         dataset_path=dataset_path, mode=mode, cases=cases, gold=gold,
