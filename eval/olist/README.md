@@ -57,7 +57,7 @@ V="E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL-archi
   --dataset eval/olist/dataset_v1.yaml --db data/olist/olist_sandbox.db \
   --out eval/olist/instrument_control.json
 
-# 6. 跑批计划（无 --yes 不构造 Harness、不写盘；本轮未批准 live）
+# 6. 跑批计划（无 --yes 不构造 Harness、不写盘）
 "$V" eval/olist/run_olist.py --batch --limit 10 \
   --dataset eval/olist/dataset_v1.yaml --db data/olist/olist_sandbox.db \
   --batch-id w2_smoke --cassette eval/olist/cassettes/olist_v1_smoke.jsonl \
@@ -68,6 +68,24 @@ V="E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL-archi
   --dataset eval/olist/dataset_v1.yaml --profile eval/olist/olist_profile.json \
   --gold eval/olist/gold60_results.json --control eval/olist/instrument_control.json \
   --out eval/olist/report.md --json-out eval/olist/report.json
+```
+
+live（需进程环境已注入 `DEEPSEEK_API_KEY`；冒烟通过后才冻结）：
+
+```bash
+# 冒烟 ≤¥5，独立账本
+"$V" eval/olist/run_olist.py --batch --live --yes --limit 10   --dataset eval/olist/dataset_v1.yaml --db data/olist/olist_sandbox.db   --cassette eval/olist/cassettes/olist_v1_smoke.jsonl --batch-id w2_smoke   --max-cost-cny 5 --max-calls 200 --budget-ledger eval/olist/budget_smoke.json   --out eval/olist/results_v1_smoke.json
+
+# 只此一次冻结；改集走 v2
+"$V" eval/olist/build_dataset.py --freeze --source eval/olist/dataset_v1.yaml   --db data/olist/olist_sandbox.db --out eval/olist/dataset_v1_frozen.json
+
+# 3 个独立批次（各自进程 + 各自 batch-id；共享账本）
+for r in 1 2 3; do
+  "$V" eval/olist/run_olist.py --batch --live --yes     --dataset eval/olist/dataset_v1_frozen.json --db data/olist/olist_sandbox.db     --cassette eval/olist/cassettes/olist_v1_r$r.jsonl --batch-id w2_r$r     --max-cost-cny 50 --max-calls 1500 --budget-ledger eval/olist/budget_full.json     --out eval/olist/results_v1_r$r.json
+done
+
+# 报告（3 批 → EX 均值 ± 样本标准差）
+"$V" eval/olist/report_olist.py --dataset eval/olist/dataset_v1_frozen.json   --results eval/olist/results_v1_r1.json eval/olist/results_v1_r2.json             eval/olist/results_v1_r3.json   --profile eval/olist/olist_profile_frozen.json   --out eval/olist/report.md --json-out eval/olist/report.json
 ```
 
 ## 3. 三条边界（写进代码，不只是文档）
@@ -117,9 +135,10 @@ V="E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL-archi
    W2 加了 `bundle_path` 并同时传 `db_path`，默认路径行为不变。
 9. **9 个指标而非 8 个** —— 多出 `order_cnt_all`（全状态口径），与 `order_cnt` 不许合并。
 10. **`meta.dialect: "sqlite"`** —— 只声明 W1/W2 评测基底；W3 进 PG 前必须显式裁定。
-11. **`--live` 本轮显式拒绝** —— 预算账本尚未与 `runner.main` 共用（`W77_CALLS_LEDGER/v1`），
-    钱账不能有两份实现。批准 live 前必须先完成：账本读/写提成 `runner` 的共用函数，
-    或加 schema/键一致性测试；本轮只交付 dry-run 与 replay 通路。
+11. **`--live` 的账本门已闭合** —— 账本读/写已提成 `runner.load_budget_ledger` /
+    `save_budget_ledger` / `ledger_run_entry`，两个入口共用同一份 schema；
+    `test_olist_budget_ledger.py` 守键集与调用点。live 必须带 `--batch-id`、
+    `--max-cost-cny`、`--max-calls`，且 cassette/out/ledger 只能落在 `eval/olist/`。
 
 ## 7. 沙箱 sha256 与解释器
 

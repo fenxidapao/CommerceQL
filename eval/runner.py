@@ -1067,6 +1067,83 @@ def run_batch_sync(cases: list[dict[str, Any]], **kwargs: Any) -> dict[str, Any]
     return asyncio.run(run_batch(cases, **kwargs))
 
 
+# ---------------------------------------------------------------------------
+# 预算账本（W77-4；W2 的 live 前置门：runner.main 与 run_olist 共用这一份）
+# ---------------------------------------------------------------------------
+
+LEDGER_SCHEMA = "W77_CALLS_LEDGER/v1"
+LEDGER_RUN_KEYS: tuple[str, ...] = (
+    "generated_at", "git_rev", "git_dirty", "batch_id", "live", "mode",
+    "cases", "calls", "calls_unique", "tokens", "cost_cny", "budget_stop",
+)
+
+
+def load_budget_ledger(
+    path: str | os.PathLike[str] | None,
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """读账本；返回 `(payload, prior_usage)`。缺文件 ⇒ `(None, {})`，从 0 起算。"""
+    if not path:
+        return None, {}
+    ledger_file = Path(path)
+    if not ledger_file.is_file():
+        return None, {}
+    payload = json.loads(ledger_file.read_text(encoding="utf-8"))
+    prior_usage = dict(payload.get("totals") or {})
+    print(
+        "预算账本：已载入上轮累计 "
+        f"calls={prior_usage.get('calls')} tokens={prior_usage.get('tokens')} "
+        f"cost={prior_usage.get('cost_cny')}"
+    )
+    return payload, prior_usage
+
+
+def ledger_run_entry(
+    batch: Mapping[str, Any], *, batch_id: str | None, live: bool, mode: str
+) -> dict[str, Any]:
+    """本次跑批在账本里的那一行（**唯一构造点**，两入口共用）。"""
+    return {
+        "batch_id": batch_id,
+        "live": live,
+        "mode": mode,
+        "cases": len(batch["records"]),
+        "calls": batch["usage"]["calls"],
+        "calls_unique": batch["calls_unique"],
+        "tokens": batch["usage"]["tokens"],
+        "cost_cny": batch["usage"]["cost_cny"],
+        "budget_stop": batch.get("budget_stop") is not None,
+    }
+
+
+def save_budget_ledger(
+    path: str | os.PathLike[str],
+    *,
+    payload: dict[str, Any] | None,
+    totals: Mapping[str, Any],
+    run: Mapping[str, Any],
+    stamp: Mapping[str, Any],
+) -> dict[str, Any]:
+    """把本批累计写回账本；schema 与 run 键只来自本模块。"""
+    ledger_file = Path(path)
+    ledger_file.parent.mkdir(parents=True, exist_ok=True)
+    ledger_payload = payload or {"schema": LEDGER_SCHEMA, "runs": []}
+    ledger_payload["schema"] = LEDGER_SCHEMA
+    ledger_payload["updated_at"] = datetime.now(UTC).isoformat()
+    ledger_payload["totals"] = dict(totals)
+    entry = {
+        "generated_at": stamp.get("generated_at"),
+        "git_rev": stamp.get("git_rev"),
+        "git_dirty": stamp.get("git_dirty"),
+        **dict(run),
+    }
+    ledger_payload.setdefault("runs", []).append(entry)
+    ledger_file.write_text(
+        json.dumps(ledger_payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(f"预算账本已更新：{path} totals={ledger_payload['totals']}")
+    return ledger_payload
+
+
 def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
     """本次 run 的分布（headline 数字由 `reporter.py` 负责，这里只做**跑批当场**的核对面）。"""
     scored = [r for r in records if r.get("scored")]
@@ -1321,18 +1398,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     #: 🔴 W77-4：全局账本 = 上轮 totals + 本轮增量。没有账本文件 ⇒ 从 0 起算。
-    prior_usage: dict[str, Any] = {}
-    ledger_payload: dict[str, Any] | None = None
-    if args.budget_ledger:
-        ledger_file = Path(args.budget_ledger)
-        if ledger_file.is_file():
-            ledger_payload = json.loads(ledger_file.read_text(encoding="utf-8"))
-            prior_usage = dict(ledger_payload.get("totals") or {})
-            print(
-                "预算账本：已载入上轮累计 "
-                f"calls={prior_usage.get('calls')} tokens={prior_usage.get('tokens')} "
-                f"cost={prior_usage.get('cost_cny')}"
-            )
+    ledger_payload, prior_usage = load_budget_ledger(args.budget_ledger)
 
     batch = run_batch_sync(
         cases,
@@ -1365,31 +1431,18 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     if args.budget_ledger:
-        ledger_file = Path(args.budget_ledger)
-        ledger_file.parent.mkdir(parents=True, exist_ok=True)
-        ledger_payload = ledger_payload or {"schema": "W77_CALLS_LEDGER/v1", "runs": []}
-        ledger_payload["schema"] = "W77_CALLS_LEDGER/v1"
-        ledger_payload["updated_at"] = datetime.now(UTC).isoformat()
-        ledger_payload["totals"] = batch["usage"]["totals"]
-        ledger_payload.setdefault("runs", []).append({
-            "generated_at": stamp.get("generated_at"),
-            "git_rev": stamp.get("git_rev"),
-            "git_dirty": stamp.get("git_dirty"),
-            "batch_id": args.batch_id,
-            "live": args.live,
-            "mode": "record" if args.live else args.mode,
-            "cases": len(batch["records"]),
-            "calls": batch["usage"]["calls"],
-            "calls_unique": batch["calls_unique"],
-            "tokens": batch["usage"]["tokens"],
-            "cost_cny": batch["usage"]["cost_cny"],
-            "budget_stop": batch.get("budget_stop") is not None,
-        })
-        ledger_file.write_text(
-            json.dumps(ledger_payload, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
+        save_budget_ledger(
+            args.budget_ledger,
+            payload=ledger_payload,
+            totals=batch["usage"]["totals"],
+            run=ledger_run_entry(
+                batch,
+                batch_id=args.batch_id,
+                live=args.live,
+                mode="record" if args.live else args.mode,
+            ),
+            stamp=stamp,
         )
-        print(f"预算账本已更新：{args.budget_ledger} totals={batch['usage']['totals']}")
 
     if args.calls_manifest:
         manifest_file = Path(args.calls_manifest)

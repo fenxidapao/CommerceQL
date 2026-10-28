@@ -532,9 +532,13 @@ def batch_mode(args: argparse.Namespace, dataset_path: Path, db_path: Path, out:
         return 2
 
     spec = load_annotated_cases(dataset_path)
+    bundle_path = Path(args.bundle) if args.bundle else REPO_ROOT / str(spec["bundle"])
+    if not bundle_path.is_file():
+        print(f"语义包不存在：{bundle_path}", file=sys.stderr)
+        return 2
     try:
         evidence = verify_olist_inputs(
-            dataset_path, db_path, bundle_path=args.bundle, tenant=args.tenant
+            dataset_path, db_path, bundle_path=str(bundle_path), tenant=args.tenant
         )
     except OlistVerificationError as exc:
         print(f"Olist N-13 验真失败：{exc}", file=sys.stderr)
@@ -548,7 +552,7 @@ def batch_mode(args: argparse.Namespace, dataset_path: Path, db_path: Path, out:
         cases, live=args.live, cassette=str(cassette), mode=mode, node_timeouts=node_timeouts
     ))
     print(f"  执行器 DB     : {db_path}（与判分 DB 同一个）")
-    print(f"  执行器 bundle : {args.bundle or spec.get('bundle')}")
+    print(f"  执行器 bundle : {bundle_path}")
     print(f"  数据集        : {dataset_path}  content_hash={evidence['content_hash']}")
     if args.live:
         print(
@@ -561,25 +565,23 @@ def batch_mode(args: argparse.Namespace, dataset_path: Path, db_path: Path, out:
         print("\n未带 --yes：只打印计划，不构造 Harness、不写盘。")
         return 0
 
+    if not args.live and not cassette.is_file():
+        print(f"回放匣带不存在：{cassette}（replay 无法开跑）", file=sys.stderr)
+        return 4
     if args.live:
-        print(
-            "拒绝 --live：预算账本尚未与 runner.main 共用（U-144 Step 6 的 live 前置门）。\n"
-            "本窗未获 live 批准；先完成账本共用/schema 一致性测试再放开。",
-            file=sys.stderr,
-        )
-        return 4
+        cassette.parent.mkdir(parents=True, exist_ok=True)
 
-    if not cassette.is_file():
-        print(f"回放匣带不存在：{cassette}（本轮不录制，replay 无法开跑）", file=sys.stderr)
-        return 4
+    ledger_payload, prior_usage = runner.load_budget_ledger(
+        str(ledger) if ledger else None
+    )
 
     batch = runner.run_batch_sync(
         cases,
-        live=False,
+        live=args.live,
         cassette=str(cassette),
         mode=mode,
         db_path=str(db_path),
-        bundle_path=args.bundle,
+        bundle_path=str(bundle_path),
         column_top=args.column_top,
         node_timeout_overrides=node_timeouts,
         max_concurrency=args.max_concurrency,
@@ -587,12 +589,23 @@ def batch_mode(args: argparse.Namespace, dataset_path: Path, db_path: Path, out:
         max_cost_cny=args.max_cost_cny,
         max_calls=args.max_calls,
         max_tokens=args.max_tokens,
+        prior_usage=prior_usage,
     )
+    if ledger:
+        ledger_payload = runner.save_budget_ledger(
+            str(ledger),
+            payload=ledger_payload,
+            totals=batch["usage"]["totals"],
+            run=runner.ledger_run_entry(
+                batch, batch_id=args.batch_id, live=args.live, mode=mode
+            ),
+            stamp=_bootstrap.build_stamp(),
+        )
     payload = {
         "batch_id": args.batch_id,
         "frozen_evidence": evidence,
         "config": {
-            "live": False,
+            "live": args.live,
             "mode": mode,
             "cassette": str(cassette),
             "dataset": str(dataset_path),
