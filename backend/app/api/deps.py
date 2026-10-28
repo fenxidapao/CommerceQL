@@ -710,6 +710,7 @@ def build_graph_runtime(
     from app.llm import build_gateway
     from app.mask.engine import SemanticMaskEngine
     from app.planner.engine import PlannerEngine
+    from app.present.presenter import ChartPresenter
     from app.repo.cost_ledger import DbCostLedgerSink
     from app.repo.query_plan import QueryPlanStore
     from app.retrieval.dense import OllamaEmbedder, PgVectorStore
@@ -795,6 +796,20 @@ def build_graph_runtime(
     time_semantics = semantic_runtime.time_semantics()
     store = RedisStateStore(redis)
 
+    # 单位/口径的**装配点注入**：`ColumnMeta.unit` 恒为 None（`app/exec/executor.py`），
+    # presenter 必须无 IO，所以元数据在这里从语义包取一次、随实例带进图。
+    # 只收 active：draft/deprecated 的 display_name/unit 不是可用口径（FR-12.3）。
+    metric_catalog = {
+        metric.name: {
+            "display_name": metric.display_name,
+            "unit": metric.unit or "",
+            "aggregation": metric.default_aggregation or "",
+        }
+        for metric in semantic_runtime.metrics()
+        if metric.status == "active"
+    }
+    presenter = ChartPresenter(metric_catalog=metric_catalog)
+
     def new_deps() -> GraphDeps:
         """**每请求一份** `GraphDeps`。
 
@@ -827,11 +842,9 @@ def build_graph_runtime(
             #    `mask` 节点因此走"写失败只告警"的已登记路径。
             result_cache=None,
             query_plan_writer=query_plan_writer,
-            # ⚠️ `None`：`app/present/` 仍是空壳（W3B 归属）⇒ `present` 节点走
-            #    §14.2 F4 降级（`present_failed` + `table_only`）。这意味着 **P0 下
-            #    每个成功请求都会带一条 `degraded`** —— 这是既定 P0 形态（不是缺陷），
-            #    已在 DELIVERY 显著登记。
-            presenter=None,
+            # 生产出图（U-148）。`metric_catalog` 装配期注入、实例无请求态，可共享。
+            # 评测链路 `eval/harness.py` 显式传 `None`（不出图是既定形态）。
+            presenter=presenter,
             gate3_thresholds=thresholds,
             max_rows=settings.EXEC_MAX_ROWS,
             statement_timeout_ms=settings.EXEC_STATEMENT_TIMEOUT_MS,
