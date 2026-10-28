@@ -1,0 +1,91 @@
+{
+  "bundle": {
+    "path": "/semantic/bundle_olist_2018.yaml",
+    "version": "2026.10.27.1"
+  },
+  "materialize": {
+    "version": "2026.10.27.1",
+    "grant_policy_executed": true,
+    "embedding_status": "embedded",
+    "tsv_status": "tokenized",
+    "warnings": []
+  },
+  "consistency": {
+    "consistent": true,
+    "checked_assets": 5,
+    "mismatches": []
+  },
+  "canaries": {
+    "o_orders": {
+      "tenant_id": "T_B",
+      "order_id": "canary_order_1"
+    },
+    "o_order_items": {
+      "tenant_id": "T_B",
+      "order_id": "canary_order_1",
+      "order_item_id": 1
+    },
+    "o_products": {
+      "tenant_id": "T_B",
+      "product_id": "canary_product_1"
+    },
+    "o_payments": {
+      "tenant_id": "T_B",
+      "order_id": "canary_order_1",
+      "payment_sequential": 1
+    },
+    "o_reviews": {
+      "tenant_id": "T_B",
+      "review_id": "canary_review_1",
+      "order_id": "canary_order_1"
+    }
+  },
+  "expected_rows": {
+    "v_o_orders": 99441,
+    "v_o_order_items": 112650,
+    "v_o_products": 32951,
+    "v_o_payments": 103886,
+    "v_o_reviews": 99224
+  },
+  "readings": {
+    "no_guc": {
+      "v_o_orders": 0,
+      "v_o_order_items": 0,
+      "v_o_products": 0,
+      "v_o_payments": 0,
+      "v_o_reviews": 0
+    },
+    "T_A": {
+      "v_o_orders": 99441,
+      "v_o_order_items": 112650,
+      "v_o_products": 32951,
+      "v_o_payments": 103886,
+      "v_o_reviews": 99224
+    },
+    "T_B": {
+      "v_o_orders": 1,
+      "v_o_order_items": 1,
+      "v_o_products": 1,
+      "v_o_payments": 1,
+      "v_o_reviews": 1
+    }
+  },
+  "cleanup": {
+    "T_A": {
+      "v_o_orders": 99441,
+      "v_o_order_items": 112650,
+      "v_o_products": 32951,
+      "v_o_payments": 103886,
+      "v_o_reviews": 99224
+    },
+    "T_B": {
+      "v_o_orders": 0,
+      "v_o_order_items": 0,
+      "v_o_products": 0,
+      "v_o_payments": 0,
+      "v_o_reviews": 0
+    }
+  },
+  "ok": true,
+  "failure": null
+}

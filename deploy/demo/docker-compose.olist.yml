@@ -1,0 +1,13 @@
+# Olist 演示叠加文件（W3 / U-147）
+#
+# 只把 api 的语义包切到 Olist；其余环境变量由 deploy/.env 提供，不在这里复制。
+# 用法：
+#   docker compose -f deploy/docker-compose.yml -f deploy/demo/docker-compose.olist.yml \
+#     up -d --no-deps api
+#
+# 验收后切回合成包：
+#   docker compose -f deploy/docker-compose.yml up -d --no-deps api
+services:
+  api:
+    environment:
+      SEMANTIC_BUNDLE_PATH: /semantic/bundle_olist_2018.yaml
