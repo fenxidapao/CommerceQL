@@ -550,8 +550,8 @@ class SseRunner:
         | `refuse_out` | `reason` / `message` / `suggestions` | 文案由 **L5** 的 `api/errors.map_refuse` 产出（对称理由同上）。🔴 两条都**必须**走侧信道：LangGraph `stream_mode="updates"` 只放行 `GraphState` schema 键，出口节点往增量顶层写的这些键在到达 `events` 之前就被丢弃（T9 批次②实测：上游已设终态时 refuse_out/error_out 增量 = `{}`）⇒ 终态事实（`reason`/`code`）改从 `_RunTrace` 的**累积 state** 读（`merge` 先于本方法调用，两条分支都覆盖），文案查表本就在 L5 |
         """
         if node == AUDIT_PRE:
-            # `take_rows()` 是**取走即清**（单次赋值语义）：结果行只在这一刻出内存通道。
-            return {"rows": run_context.take_rows()}
+            # `peek_rows()` **不清空**：同一份脱敏行还要交给 `present`（末尾 `take_rows()` 消费）。
+            return {"rows": run_context.peek_rows()}
         if node == PRESENT:
             return {
                 "meta": meta_payload(trace.state, bundle_version=run_context.bundle_version)

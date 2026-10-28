@@ -45,6 +45,7 @@ from app.core.contracts import (
     IdentityContext,
     LLMPort,
     MaskPort,
+    PresenterPort,
     RetrievalPort,
     SemanticBundlePort,
     SqlExecutorPort,
@@ -112,9 +113,10 @@ class GraphDeps:
     result_cache: CachePort | None = None
     #: `query_plan` 写入通道（W1B `QueryPlanStore`）。`None` = 未接线 → 该写入跳过并登记。
     query_plan_writer: Any | None = None
-    #: `present` 生成器（chart/insight）。**P0 = `None`**：`app/present/` 仍是空壳（W3B 归属），
-    #: 此时 `present` 节点走 §14.2 F4 的降级路径（`degraded(present_failed)` + `table_only`）。
-    presenter: Any | None = None
+    #: `present` 生成器（chart/insight）。生产装配 = `ChartPresenter`（`app/api/deps.py`）；
+    #: 评测链路（`eval/harness.py`）显式传 `None` ⇒ 走 §14.2 F4 降级
+    #: （`degraded(present_failed)` + `table_only`）。“评测不出图”是既定形态，别改。
+    presenter: PresenterPort | None = None
     #: gate3 阈值（`CostThresholds.from_mapping` 的输入）。
     #: ⚠️ 来源 = **`Settings.GATE3_*`**（`deps._gate3_thresholds()` 按 `CostThresholds`
     #: 的字段名映射），**不是**语义包 `policy()` —— 本注释原先写"来源 = 语义包 policy()"，
@@ -136,10 +138,10 @@ class GraphDeps:
 class RunContext:
     """一次 run 的可变状态：**服务依赖** + **降级累积** + **分项计时** + **体积数据中转**。
 
-    ⚠️ 体积数据中转（`hold_rows`/`take_rows`）是刻意的：结果行**不进** `GraphState`
+    ⚠️ 体积数据中转（`hold_rows`/`peek_rows`/`take_rows`）是刻意的：结果行**不进** `GraphState`
     （07 §5.2.1 的体积规则），但 `execute` 与 `mask` 是两个节点 —— 未脱敏的行不能进 Redis
     （N-05），也不能进检查点，只能经这条**内存**通道从前者交到后者。
-    它是**单次赋值**语义（`take_rows` 取走即清空），不构成"第二个数据通道"。
+    `peek_rows` 只读、`take_rows` 取走即清（单次消费），不构成"第二个数据通道"。
     """
 
     __slots__ = (
@@ -268,6 +270,15 @@ class RunContext:
         rows = self._pending_rows or ()
         self._pending_rows = None
         return rows
+
+    def peek_rows(self) -> tuple[tuple[Any, ...], ...]:
+        """读取结果行但**不清空**。
+
+        `audit_pre` 的 SSE 侧信道（`api/runner.py`）用它发 `data` 帧；真正的消费点是
+        `present` 末尾的 `take_rows()` —— 这样同一份脱敏行既进 `data`，也进 presenter，
+        且只被消费一次（不构成第二条数据通道）。
+        """
+        return self._pending_rows or ()
 
     def hold_columns(self, columns: Sequence[tuple[str, float]]) -> None:
         """列级候选（ref 形状 `资产.列`）移交 `bind` 的在线 L4 打分。

@@ -32,6 +32,7 @@ from zoneinfo import ZoneInfo
 from app.core.enums import (
     BindingLayer,
     BindingState,
+    ChartType,
     Dependency,
     DependencyKind,
     GateDecision,
@@ -51,6 +52,7 @@ __all__ = [
     "IdentityContext", "TimeSemantics", "ColumnMeta", "ResultSet", "GateResult",
     "ScopeInfo", "TokenUsage", "LatencyBreakdown", "LLMResponse",
     "RateLimitDecision", "MaskOutcome", "BindingResult", "CandidateRef", "HealthProbeResult",
+    "PresentationInput", "Presentation",
     # 语义层 → 闸门的判据形状（U-121：形状必须与端口同源）
     "AssetAllowlistEntry", "GuardAllowlistAsset", "GuardAllowlistJoin", "GuardAllowlist",
     # 执行器 → gate3 的计划载荷（U-121 家族第二个实例：形状归本文件，L2 只能再导出）
@@ -60,6 +62,7 @@ __all__ = [
     "AuditSinkPort", "SessionLockPort", "RateLimiterPort", "CachePort",
     "SqlExecutorPort", "MaskPort", "RetrievalPort", "BindingPort", "PlannerPort",
     "GuardPort", "EventEmitterPort", "ErrorMapperPort", "DependencyProbePort",
+    "PresenterPort",
 ]
 
 
@@ -120,6 +123,44 @@ class ResultSet:
     row_count: int
     truncated: bool
     fingerprint: str        # 结果集哈希（缓存/去重），07 §8.8
+
+
+@dataclass(frozen=True, slots=True)
+class PresentationInput:
+    """`present` 节点的呈现入参（**纯值对象**，不是 API DTO）。
+
+    ⚠️ `rows` 必须是**已脱敏**行（`mask` 之后）；未脱敏行不得写回 state 或交给 presenter。
+    ⚠️ `metric_meta` = `plan.metrics` 的原样投影（name/caliber），**不在这里重算口径**；
+    单位/聚合由装配点通过 `ChartPresenter.metric_catalog` 注入（`ColumnMeta.unit` 恒 None，
+    见 `app/exec/executor.py` 的诚实边界）。
+    """
+
+    question: str
+    plan: Mapping[str, Any] | None
+    columns: tuple[ColumnMeta, ...]
+    rows: tuple[tuple[Any, ...], ...]
+    row_count: int
+    truncated: bool
+    metric_meta: tuple[Mapping[str, Any], ...]
+    chart_preference: str
+    time_range: Mapping[str, Any] | None
+    disclosure: str | None
+    bundle_version: str
+
+
+@dataclass(frozen=True, slots=True)
+class Presentation:
+    """呈现结果。落 state 时由 `present` 节点转成纯 dict：
+
+    - `chart_spec = {chart_type, option}`（**只消费这两键**，见 `graph/events.py`）；
+    - `insight = {text, caveats, citations}`（`citations` 由节点写 `[]`，不编造）。
+    """
+
+    chart_type: ChartType | None
+    option: Mapping[str, Any] | None
+    insight_text: str
+    caveats: tuple[str, ...]
+    chart_skipped_reason: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -590,6 +631,18 @@ class SqlExecutorPort(Protocol):
         *,
         statement_timeout_ms: int,
     ) -> ExplainPlan: ...
+
+
+@runtime_checkable
+class PresenterPort(Protocol):
+    """呈现生成器（L3；`app.present` 实现）。
+
+    ⚠️ **纯函数、无 LLM、无 IO**：只读 `PresentationInput`，返回 `Presentation`。
+    ⚠️ 生产装配（`app/api/deps.py`）注入实现；评测链路（`eval/harness.py`）显式保持
+    `None` —— 评测不出图是既定形态，不得为了“评测也出图”改变 166 题判分基线。
+    """
+
+    def build(self, payload: PresentationInput) -> Presentation: ...
 
 
 @runtime_checkable
