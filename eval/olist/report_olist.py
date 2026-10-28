@@ -395,6 +395,9 @@ def render_markdown(
         "SQLite 整数除法归零；这是 bundle 与 gold 口径不一致，不归因模型。",
         "- 批次 r1 有 1 条 `GraphRecursionError`（o19）记 `unscored`，"
         "故该批分母 54；其余两批分母 55。",
+        "- 零出站回放复核（r1 匣带）：59/60 逐例一致；o19 的 `GraphRecursionError` "
+        "**不复现**（回放记 `scored` 但仍不等值）⇒ 回放批 23/55、首发 23/54。"
+        "官方 EX 仍取首发三批，回放件 `results_v1_r1_replay.json` 只作复核证据。",
         "",
     ]
     return "\n".join(lines)

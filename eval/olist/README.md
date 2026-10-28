@@ -20,6 +20,7 @@
 | `olist_profile.json` / `olist_profile_frozen.json` | N-13 证据块（源模式 / 冻结件模式，均 `all_ok=true`） |
 | `instrument_control.json` | 仪器正/负控（+55/55、−0/55；**不是模型 EX**） |
 | `results_v1_smoke.json` / `results_v1_r1..r3.json` | 冒烟批 / 3 个独立 live 批的逐题读数（EX 源件） |
+| `results_v1_r1_replay.json` | r1 的零出站回放复核（59/60 与首发逐例一致） |
 | `budget_smoke.json` / `budget_full.json` | 共享预算账本（`W77_CALLS_LEDGER/v1`，每次尝试一行） |
 | `report.md` / `report.json` | 最终报告（EX = 3 批均值 ± 样本标准差） |
 | `cassettes/` | live 回放匣带（**不入库**，见 §1.1） |
@@ -30,8 +31,21 @@
 
 3 个整批回放匣带共约 11 MiB（每批 ~3.7 MiB），且逐题 SQL/行数/判据已在
 `results_v1_r*.json` 里，同一份信息不落两遍。因此 `.gitignore` 掉
-`eval/olist/cassettes/`：本机能 `--batch --batch-id w2_r1 --yes`（不带 `--live`）离线回放，
-换机器要重放就得重录（= 花钱）。**报告复算不依赖匣带**：`report_olist.py --results …` 即可。
+`eval/olist/cassettes/`。**报告复算不依赖匣带**：`report_olist.py --results …` 即可
+（2026-10-28 实测：同一组输入重跑 `report.md` 逐字节相同）。
+
+本机回放（零出站；匣带缺省路径是 `olist_v1_{batch_id}.jsonl`，与记录的
+`olist_v1_r1.jsonl` 不同名，**必须显式给 `--cassette`**）：
+
+```bash
+"$V" eval/olist/run_olist.py --batch --yes \
+  --dataset eval/olist/dataset_v1_frozen.json --db data/olist/olist_sandbox.db \
+  --cassette eval/olist/cassettes/olist_v1_r1.jsonl --batch-id w2_r1 \
+  --out eval/olist/results_v1_r1_replay.json
+```
+
+读数：59/60 逐例一致；o19 的 `GraphRecursionError` 不复现（回放 23/55，首发 23/54）。
+official EX 取首发三批，不取回放件。换机器要重放就得重录（= 花钱）。
 
 ## 2. 跑法（仓库根）
 
