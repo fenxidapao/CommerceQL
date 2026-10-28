@@ -107,7 +107,7 @@ for r in 1 2 3; do
 done
 
 # 报告（3 批 → EX 均值 ± 样本标准差）
-"$V" eval/olist/report_olist.py --dataset eval/olist/dataset_v1_frozen.json   --results eval/olist/results_v1_r1.json eval/olist/results_v1_r2.json             eval/olist/results_v1_r3.json   --profile eval/olist/olist_profile_frozen.json   --out eval/olist/report.md --json-out eval/olist/report.json
+"$V" eval/olist/report_olist.py --dataset eval/olist/dataset_v1_frozen.json   --results eval/olist/results_v1_r1.json eval/olist/results_v1_r2.json             eval/olist/results_v1_r3.json   --profile eval/olist/olist_profile_frozen.json   --gold eval/olist/gold60_frozen_results.json --control eval/olist/instrument_control.json   --out eval/olist/report.md --json-out eval/olist/report.json
 ```
 
 ## 3. 三条边界（写进代码，不只是文档）
