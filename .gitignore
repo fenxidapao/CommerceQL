@@ -98,5 +98,8 @@ desktop.ini
 eval/*.checkpoint.jsonl
 eval/*.bak-*
 
+# Olist live 回放匣带（~3.7 MiB/批；同一份信息已在 results_v1_r*.json，见 eval/olist/README §1.1）
+eval/olist/cassettes/
+
 # ---------- 本地 agent 记忆（含操作口令，禁止入库） ----------
 .workbuddy/

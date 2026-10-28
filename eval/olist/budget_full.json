@@ -1,0 +1,53 @@
+{
+  "schema": "W77_CALLS_LEDGER/v1",
+  "runs": [
+    {
+      "generated_at": "2026-10-28T11:57:12+00:00",
+      "git_rev": "aeb53eb",
+      "git_dirty": true,
+      "batch_id": "w2_r1",
+      "live": true,
+      "mode": "record",
+      "cases": 60,
+      "calls": 251,
+      "calls_unique": 239,
+      "tokens": 943940,
+      "cost_cny": 0.510667,
+      "budget_stop": false
+    },
+    {
+      "generated_at": "2026-10-28T12:12:44+00:00",
+      "git_rev": "aeb53eb",
+      "git_dirty": true,
+      "batch_id": "w2_r2",
+      "live": true,
+      "mode": "record",
+      "cases": 60,
+      "calls": 259,
+      "calls_unique": 239,
+      "tokens": 928361,
+      "cost_cny": 0.472657,
+      "budget_stop": false
+    },
+    {
+      "generated_at": "2026-10-28T12:25:24+00:00",
+      "git_rev": "aeb53eb",
+      "git_dirty": true,
+      "batch_id": "w2_r3",
+      "live": true,
+      "mode": "record",
+      "cases": 60,
+      "calls": 253,
+      "calls_unique": 239,
+      "tokens": 927531,
+      "cost_cny": 0.466004,
+      "budget_stop": false
+    }
+  ],
+  "updated_at": "2026-10-28T12:25:24.062840+00:00",
+  "totals": {
+    "calls": 763,
+    "tokens": 2799832,
+    "cost_cny": 1.449328
+  }
+}

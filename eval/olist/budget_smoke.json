@@ -1,0 +1,25 @@
+{
+  "schema": "W77_CALLS_LEDGER/v1",
+  "runs": [
+    {
+      "generated_at": "2026-10-28T11:41:57+00:00",
+      "git_rev": "16ea30a",
+      "git_dirty": true,
+      "batch_id": "w2_smoke",
+      "live": true,
+      "mode": "record",
+      "cases": 10,
+      "calls": 48,
+      "calls_unique": 42,
+      "tokens": 166907,
+      "cost_cny": 0.090114,
+      "budget_stop": false
+    }
+  ],
+  "updated_at": "2026-10-28T11:41:57.986672+00:00",
+  "totals": {
+    "calls": 48,
+    "tokens": 166907,
+    "cost_cny": 0.090114
+  }
+}

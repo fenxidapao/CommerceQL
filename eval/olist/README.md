@@ -1,7 +1,8 @@
 # eval/olist —— Olist 真实数据轨的评测侧
 
 > 归属窗口：W1 实施窗（`U-143`）＋ W2 实施窗（`U-144`/`U-145`/`U-146`，`docs/07 §4.8`）
-> 零 PG、零 LLM、零出站。本目录只跑 **SQLite 沙箱**上的 gold SQL。
+> 零 PG。本目录只跑 **SQLite 沙箱**上的 gold SQL；离线默认零 LLM 零出站，
+> live 只在本窗一次性授权下跑过（账本前置门 + 路径围栏，见 §6.11）。
 
 ## 1. 目录
 
@@ -13,17 +14,24 @@
 | `hashing.py` | 两个并列哈希：共享 `content_hash` + Olist 自定 `full_hash` |
 | `report_olist.py` | 报告生成：固定五行、分母构成、3 批 EX 均值±样本标准差 |
 | `dataset_v1.yaml` | **60 题**源集（55 execute / 3 clarify / 2 refuse），g01..g10 原样承接 |
+| `dataset_v1_frozen.json` | 冻结件（冒烟通过后 `--freeze` 生成）；3 批 live 只认它 |
 | `dataset_w1_gold10.yaml` | W1 的 10 条 gold（对账基准，不改） |
-| `gold60_results.json` | 60 题的逐题读数（gold 哈希 / 行数 / C1–C7 / 样本行） |
-| `olist_profile.json` | N-13 源模式证据块（`all_ok=true`） |
+| `gold60_results.json` / `gold60_frozen_results.json` | 60 题的逐题 gold 读数（源集 / 冻结件各一份） |
+| `olist_profile.json` / `olist_profile_frozen.json` | N-13 证据块（源模式 / 冻结件模式，均 `all_ok=true`） |
 | `instrument_control.json` | 仪器正/负控（+55/55、−0/55；**不是模型 EX**） |
-| `report.md` / `report.json` | 本轮离线报告（EX 段 `UNVERIFIED`） |
+| `results_v1_smoke.json` / `results_v1_r1..r3.json` | 冒烟批 / 3 个独立 live 批的逐题读数（EX 源件） |
+| `budget_smoke.json` / `budget_full.json` | 共享预算账本（`W77_CALLS_LEDGER/v1`，每次尝试一行） |
+| `report.md` / `report.json` | 最终报告（EX = 3 批均值 ± 样本标准差） |
+| `cassettes/` | live 回放匣带（**不入库**，见 §1.1） |
 | `gold10_results.json` / `gold10_report.md` | W1 证据（历史读数，不改） |
 | `sandbox_manifest.json` | 沙箱行数 / 体积 / sha256（`deploy/demo/build_olist_sandbox.py` 生成） |
 
-**本目录没有的东西**（有意）：`dataset_v1_frozen.json`（冒烟通过后由
-`build_dataset.py --freeze` 生成；本轮未跑 live 故未生成）、`results_v1_r*.json`、
-cassettes、budget ledger。
+### 1.1 cassettes 不入库
+
+3 个整批回放匣带共约 11 MiB（每批 ~3.7 MiB），且逐题 SQL/行数/判据已在
+`results_v1_r*.json` 里，同一份信息不落两遍。因此 `.gitignore` 掉
+`eval/olist/cassettes/`：本机能 `--batch --batch-id w2_r1 --yes`（不带 `--live`）离线回放，
+换机器要重放就得重录（= 花钱）。**报告复算不依赖匣带**：`report_olist.py --results …` 即可。
 
 ## 2. 跑法（仓库根）
 
@@ -130,7 +138,8 @@ done
    两者并列落盘、并列校验，不混用。
 6. **55/55 vs 60/60** —— 派单的 `gold_executable=60/60` 在 5 条交互题无 gold 时不可达；
    本目录按 `55/55（execute）+ 5/5（interaction）+ 60/60（cases_valid）` 拆分报告。
-7. **冻结时机** —— 冒烟通过后才生成 `dataset_v1_frozen.json`；改集走 v2。本轮未生成。
+7. **冻结时机** —— 2026-10-28 冒烟通过后生成 `dataset_v1_frozen.json`（`content_hash`
+   `f5e78268…`、`full_hash` `b4491abb…`）；3 批 live 都读冻结件，改集走 v2。
 8. **Harness 透传** —— W1 的 `run_batch` 不传 bundle/db（`--db` 只影响判分沙箱）；
    W2 加了 `bundle_path` 并同时传 `db_path`，默认路径行为不变。
 9. **9 个指标而非 8 个** —— 多出 `order_cnt_all`（全状态口径），与 `order_cnt` 不许合并。
@@ -139,6 +148,16 @@ done
     `save_budget_ledger` / `ledger_run_entry`，两个入口共用同一份 schema；
     `test_olist_budget_ledger.py` 守键集与调用点。live 必须带 `--batch-id`、
     `--max-cost-cny`、`--max-calls`，且 cassette/out/ledger 只能落在 `eval/olist/`。
+12. **`delivery_late_rate` 的 bundle expression 未乘 100** —— gold 与数据集按百分比
+    （`* 100.0`、`ROUND 4`）判分，而 bundle 的 `expression` 是裸比率；模型照 expression
+    生成会被判错（SQLite 整数除法还会归零）。这是 **bundle 与 gold 的口径不一致**，
+    不归因模型；W2 不动 bundle，W3 修 expression 并递增 `meta.version`。
+13. **live 三批读数（2026-10-28，冻结件）** —— EX = 23/54、23/55、22/55（r1 有 1 条
+    `GraphRecursionError` 记 `unscored`）⇒ `41.47% ± 1.33%`（n=3，样本标准差）；
+    方言缺口 12/55（3 批同）；交互 refuse 2/2、clarify 2/3、1/3、1/3。
+    花费：冒烟 ¥0.090114 + 三批 ¥1.449328 = **¥1.539442**；另两次预热探针（bundle 配错，
+    不入 EX）¥0.048696 ⇒ 本窗累计 **¥1.588138**，逐笔在 `budget_*.json`。
+    预热探针的 `results_v1_warmup*.json` 与匣带已删（配置错误，不构成证据）。
 
 ## 7. 沙箱 sha256 与解释器
 
