@@ -29,7 +29,10 @@ function fmtCell(v: unknown): string {
 }
 
 const CHART_TYPES_CARTESIAN: ChartType[] = ['line', 'bar', 'stacked_bar', 'grouped_bar'];
-const CHART_TYPES_ALL: ChartType[] = [...CHART_TYPES_CARTESIAN, 'pie'];
+// `kpi` 必须在这里：否则下面 `ct === 'kpi'` 分支永远不可达（实测后端下发 kpi 时
+// 前端打印 `ui_unknown_chart_type: kpi` 并降级成表格）。`table` 不走本分支（它由
+// optionIncomplete 落到 DataTable），故此处只补 kpi。
+const CHART_TYPES_ALL: ChartType[] = [...CHART_TYPES_CARTESIAN, 'pie', 'kpi'];
 
 /** 后端约束子集可能不含 dataZoom；数据点 > 30 时按 06 §4.5 启用（仅交互能力，非业务计算） */
 function withDataZoom(option: Record<string, unknown>): Record<string, unknown> {
