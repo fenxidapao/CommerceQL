@@ -98,6 +98,19 @@
 - **未改任何产品代码/判据**；按总控「再不行就停下」停跑。
 - 展示口径：截图为 W3 生产栈真跑（`backend/reports/w3_demo/demo_*.png`），本窗**没有**可替换的新截图；本目录的尝试件只作过程证据，**不得**当作 5/5 通过。
 
+### 7.1 15:00 复核重跑（`v4.1-flash` 恢复后）
+
+总控 2026-10-29 15:00 告知 `v4.1-flash` 可用，遂**重建**工作树 @ `b780125` + 全新 `cqlw4`（迁移 0007、Olist 448,152 行、materialize `embedded`、ready `2026.10.27.1`）重跑三轮：
+
+| 轮 | 结果 | 账本 ¥ | 源 |
+|---|---|---|---|
+| a | 0 complete（demo_1/2/3/5 `error`（`llm_unavailable`/`plan_generation_failed`）+ demo_4 refuse） | 0.0000 | `demo_5_rerun_v41.json` |
+| b | 2 complete（demo_3 bar ¥0.256641、demo_5 kpi ¥0.282244）+ demo_4 refuse + demo_1/2 `error` | 0.5389 | `demo_5_rerun_v41b.json` |
+| c | 2 complete（demo_1 **table** ¥0.514876〔图表类型漂移〕、demo_5 kpi ¥0.256278）+ demo_4 refuse + demo_2/3 `error` | 0.7712 | `demo_5_rerun_v41c.json` |
+
+- 失败均为 **15s 节点超时**（`normalize`/`plan`/`bind`），非拒答逻辑；中转延迟在 2.5s–20s 间波动。
+- **三轮仍未达 4+1**；重跑账本 `¥1.725950`（含失败请求已产生的计费调用），见 `cqlw4_cost_ledger_rerun.txt`。按「再不行就停下」**定版**。
+
 ## 8. 花费账
 
 | 账本 | 读数 | 源 |
@@ -105,17 +118,19 @@
 | 主栈（验收前/后） | `2026-10-28 0.083210 + 2026-10-29 0.024597 = ¥0.107807`（DB 时区分日；前后同值） | `main_stack_before.txt`、`main_stack_after.txt` |
 | `cqlw4` 合成问题 1 条 | `¥0.877296`（4 次调用；97,242 入 / 4,456 出；`deepseek-v4.1-flash` 按兜底价 + `price_guess`） | `synth_query_M-DIM-02.sse` |
 | `cqlw4` demo 四轮 | `0 + 0.1414 + 0.242185 + 0.1579 = ¥0.541485` | §7 各件、`cqlw4_cost_ledger.txt` |
-| **`cqlw4` 合计** | `¥1.739752`（`v4.1-flash 4 调用 ¥0.877296` + `v4-pro 47 调用 ¥0.862456`） | `cqlw4_cost_ledger.txt` |
-| **两栈合计（账本口径）** | `¥0.107807 + ¥1.739752 = ¥1.847559` | 同上 |
+| `cqlw4` 首次窗口合计 | `¥1.739752`（`v4.1-flash 4 调用 ¥0.877296` + `v4-pro 47 调用 ¥0.862456`） | `cqlw4_cost_ledger.txt` |
+| `cqlw4` 15:00 复核重跑 | `¥1.725950`（`v4.1-flash 23 调用`；含失败请求已产生的计费调用） | `cqlw4_cost_ledger_rerun.txt` |
+| **`cqlw4` 合计** | `¥1.739752 + ¥1.725950 = ¥3.465702` | 同上 |
+| **两栈合计（账本口径）** | `¥0.107807 + ¥3.465702 = ¥3.573509` | 同上 |
 
-> ⚠️ 对照本窗批准上限 **¥0.3：账本口径已超 6.2 倍**。三个原因必须同框：① 中转模型 ID 不在 `app/llm/budget.py:PRICES`，按 `deepseek-v4-pro` 最贵档兜底（`price_guess`）；② 中转回报 token 偏大（8-token ping 报 874 入 / 516 出）；③ 轮 2–4 的重试与多轮 demo。**这不是中转真实扣费**——该站无账单接口（`/v1/dashboard/billing/*`、`/v1/credits`、`/v1/balance` 全 404），真实花费 **UNVERIFIED**。总控 12:00 后批准 demo 上限 ¥6（账本口径），demo 实际 ¥0.541485，未超该批准。
+> ⚠️ 对照本窗批准上限 **¥0.3：账本口径已超 11.9 倍**。原因必须同框：① 中转模型 ID 不在 `app/llm/budget.py:PRICES`，按 `deepseek-v4-pro` 最贵档兜底（`price_guess`）；② 中转回报 token 偏大（8-token ping 报 874 入 / 516 出）；③ 多轮重试与 15:00 复核重跑。**这不是中转真实扣费**——该站无账单接口（`/v1/dashboard/billing/*`、`/v1/credits`、`/v1/balance` 全 404），真实花费 **UNVERIFIED**。总控 12:00 后批准 demo 上限 ¥6（账本口径）；demo 累计 `¥0.541485 + ¥1.725950 = ¥2.267435`，未超该批准。
 
 ## 9. 与 W3 参考读数的偏差登记（必须同框）
 
 1. **LLM 端点不同**：W3 的 5 条 demo 走官方 `https://api.deepseek.com` + `deepseek-flash`（`backend/reports/w3_demo/demo_5.json`：`total_cost_cny=¥0.02384`）。本窗为第三方中转 `https://wanwanzhou.top/v1` + `deepseek-v4.1-flash`（总控提供）。
 2. **模型 ID 不在价目表**：`app/llm/budget.py:PRICES` 只有 `deepseek-flash` 与 `deepseek-v4-pro`；`deepseek-v4.1-flash` 按最贵档兜底计价并打 `price_guess`。因此账本 ¥ 值**不是中转真实扣费**（该站无余额接口，`/v1/dashboard/billing/*`、`/v1/credits`、`/v1/balance` 全 404）。
 3. **中转 token 回报偏大**：8 token 的 ping 回报 `prompt_tokens=874`、`completion_tokens=516`。
-4. **中转可用性**：2026-10-29 12:01–13:07 期间 `deepseek-v4.1-flash` 持续 `502 upstream_error`（四个模型同时 502 出现在 12:01–12:24；13:04 起 `v4-pro`/`v3.2` 恢复 200，`v4.1-flash` 仍 502）。因此 demo 轮 2–4 改用 `deepseek-v4-pro`，与总控口径「`deepseek-flash` = `v4.1-flash`」**不一致**；此偏差只影响 demo，不影响 EX 读数（EX 三批未重跑）。
+4. **中转可用性**：2026-10-29 12:01–13:07 期间 `deepseek-v4.1-flash` 持续 `502 upstream_error`（四个模型同时 502 出现在 12:01–12:24；13:04 起 `v4-pro`/`v3.2` 恢复 200，`v4.1-flash` 仍 502）。因此首轮 demo 轮 2–4 改用 `deepseek-v4-pro`，与总控口径「`deepseek-flash` = `v4.1-flash`」**不一致**；15:00 起 `v4.1-flash` 恢复（延迟 2.5s–20s 波动），复核重跑三轮见 §7.1，仍未达 4+1。此偏差只影响 demo，不影响 EX 读数（EX 三批未重跑）。
 5. **读数身份**：三批 live EX 的 `build.git_rev=aeb53eb`、`git_dirty=true`（W2 未提交中间态）；最终入库代码 `b780125`。本验收是**工作树 @ b780125**，不写「同一 rev 干净复现」。
 
 ## 10. 回归读数（零成本，主仓）

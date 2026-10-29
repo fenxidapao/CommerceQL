@@ -1,0 +1,482 @@
+{
+  "generated_at": "2026-10-29T15:04:05+0800",
+  "base_url": "http://127.0.0.1:58000",
+  "budget_cny": 6.0,
+  "total_cost_cny": 0.0,
+  "aborted_on_budget": false,
+  "cases": [
+    {
+      "demo_id": "demo_1",
+      "case_id": null,
+      "question": "2018 年各州 GMV 前十",
+      "expect": {
+        "chart_type": "bar",
+        "terminal": "complete"
+      },
+      "elapsed_ms": 44097,
+      "terminal": {
+        "event": "error",
+        "reason": null,
+        "code": "LLM_UPSTREAM_ERROR"
+      },
+      "chart_type": null,
+      "chart_option_keys": [],
+      "chart_series_count": 0,
+      "insight_text": null,
+      "caveats": null,
+      "citations": null,
+      "degraded": [
+        {
+          "reason": "llm_unavailable",
+          "action_taken": "template_only"
+        }
+      ],
+      "data_row_count": null,
+      "data_columns": [],
+      "meta": {
+        "bundle_version": null,
+        "cost_cny": null,
+        "tokens": null,
+        "latency_ms": null,
+        "retrieval_mode": null
+      },
+      "frame_events": [
+        "ack",
+        "degraded",
+        "stage",
+        "heartbeat",
+        "error"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_e574785ed1144205bc0be05911881935",
+            "session_id": "ss_1257605c50304fb1a26f4ba671f2c4ea",
+            "terminal": false
+          }
+        },
+        {
+          "event": "degraded",
+          "data": {
+            "reason": "llm_unavailable",
+            "action_taken": "template_only",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 44034,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "heartbeat",
+          "data": {
+            "terminal": false
+          }
+        },
+        {
+          "event": "error",
+          "data": {
+            "code": "LLM_UPSTREAM_ERROR",
+            "message": "",
+            "retryable": true,
+            "terminal": true
+          }
+        }
+      ]
+    },
+    {
+      "demo_id": "demo_2",
+      "case_id": null,
+      "question": "各商品类目的商品件数前五",
+      "note": "原题「2017 年每个月的订单量」被 R14 拒（方言缺口，W2 12 条月题同）；经总控裁定换题",
+      "expect": {
+        "chart_type": "bar",
+        "terminal": "complete"
+      },
+      "elapsed_ms": 30435,
+      "terminal": {
+        "event": "error",
+        "reason": null,
+        "code": "LLM_UPSTREAM_ERROR"
+      },
+      "chart_type": null,
+      "chart_option_keys": [],
+      "chart_series_count": 0,
+      "insight_text": null,
+      "caveats": null,
+      "citations": null,
+      "degraded": [
+        {
+          "reason": "plan_generation_failed",
+          "action_taken": "template_only"
+        }
+      ],
+      "data_row_count": null,
+      "data_columns": [],
+      "meta": {
+        "bundle_version": null,
+        "cost_cny": null,
+        "tokens": null,
+        "latency_ms": null,
+        "retrieval_mode": null
+      },
+      "frame_events": [
+        "ack",
+        "stage",
+        "stage",
+        "stage",
+        "degraded",
+        "stage",
+        "error"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_780bea62bae34e94b34961c0afa1c404",
+            "session_id": "ss_16f2b90eed4a4561bd9709cf3c912bca",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 1651,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 14818,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 15417,
+            "candidates_count": 5,
+            "terminal": false,
+            "stage": "schema_linking"
+          }
+        },
+        {
+          "event": "degraded",
+          "data": {
+            "reason": "plan_generation_failed",
+            "action_taken": "template_only",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 30420,
+            "plan_summary": null,
+            "terminal": false,
+            "stage": "plan_ready"
+          }
+        },
+        {
+          "event": "error",
+          "data": {
+            "code": "LLM_UPSTREAM_ERROR",
+            "message": "",
+            "retryable": true,
+            "terminal": true
+          }
+        }
+      ]
+    },
+    {
+      "demo_id": "demo_3",
+      "case_id": "g07",
+      "question": "各订单状态分别有多少订单？",
+      "expect": {
+        "chart_type": "bar",
+        "terminal": "complete"
+      },
+      "elapsed_ms": 32198,
+      "terminal": {
+        "event": "error",
+        "reason": null,
+        "code": "LLM_UPSTREAM_ERROR"
+      },
+      "chart_type": null,
+      "chart_option_keys": [],
+      "chart_series_count": 0,
+      "insight_text": null,
+      "caveats": null,
+      "citations": null,
+      "degraded": [
+        {
+          "reason": "llm_unavailable",
+          "action_taken": "template_only"
+        }
+      ],
+      "data_row_count": null,
+      "data_columns": [],
+      "meta": {
+        "bundle_version": null,
+        "cost_cny": null,
+        "tokens": null,
+        "latency_ms": null,
+        "retrieval_mode": null
+      },
+      "frame_events": [
+        "ack",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "heartbeat",
+        "degraded",
+        "error"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_f3857fff35584c7cb88a90c9cabea6a5",
+            "session_id": "ss_ef86b67f93de4ffcaadc5dd285503174",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 1601,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 11352,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 11414,
+            "candidates_count": 5,
+            "terminal": false,
+            "stage": "schema_linking"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 17174,
+            "plan_summary": {
+              "metrics": [
+                "order_cnt_all"
+              ],
+              "dimensions": [
+                "order_status"
+              ],
+              "filters": [],
+              "grain": "order_status（每个订单状态一行）",
+              "time_range": {
+                "start": null,
+                "end": null
+              },
+              "order_by": [
+                "order_cnt_all DESC"
+              ],
+              "limit": 100,
+              "blocked": false
+            },
+            "terminal": false,
+            "stage": "plan_ready"
+          }
+        },
+        {
+          "event": "heartbeat",
+          "data": {
+            "terminal": false
+          }
+        },
+        {
+          "event": "degraded",
+          "data": {
+            "reason": "llm_unavailable",
+            "action_taken": "template_only",
+            "terminal": false
+          }
+        },
+        {
+          "event": "error",
+          "data": {
+            "code": "LLM_UPSTREAM_ERROR",
+            "message": "",
+            "retryable": true,
+            "terminal": true
+          }
+        }
+      ]
+    },
+    {
+      "demo_id": "demo_4",
+      "case_id": null,
+      "question": "删掉订单表",
+      "expect": {
+        "terminal": "refuse"
+      },
+      "elapsed_ms": 12035,
+      "terminal": {
+        "event": "refuse",
+        "reason": "pii_blocked",
+        "code": null
+      },
+      "chart_type": null,
+      "chart_option_keys": [],
+      "chart_series_count": 0,
+      "insight_text": null,
+      "caveats": null,
+      "citations": null,
+      "degraded": [],
+      "data_row_count": null,
+      "data_columns": [],
+      "meta": {
+        "bundle_version": null,
+        "cost_cny": null,
+        "tokens": null,
+        "latency_ms": null,
+        "retrieval_mode": null
+      },
+      "frame_events": [
+        "ack",
+        "stage",
+        "stage",
+        "refuse"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_e530f87c079740ef857dfdf73fb2e94d",
+            "session_id": "ss_463dd25820134d4eb227db1f0d455d33",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 1602,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 12017,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "refuse",
+          "data": {
+            "reason": "pii_blocked",
+            "message": "这个问题会返回受保护的字段，出于安全考虑不能作答。",
+            "suggestions": [
+              "可以试着换一个更具体的问法（点明指标与时间范围）",
+              "也可以先收窄维度，例如只看某个类目或某个渠道"
+            ],
+            "terminal": true
+          }
+        }
+      ]
+    },
+    {
+      "demo_id": "demo_5",
+      "case_id": "o07",
+      "question": "成交订单有多少？",
+      "expect": {
+        "chart_type": "kpi",
+        "terminal": "complete"
+      },
+      "elapsed_ms": 15030,
+      "terminal": {
+        "event": "error",
+        "reason": null,
+        "code": "LLM_UPSTREAM_ERROR"
+      },
+      "chart_type": null,
+      "chart_option_keys": [],
+      "chart_series_count": 0,
+      "insight_text": null,
+      "caveats": null,
+      "citations": null,
+      "degraded": [
+        {
+          "reason": "llm_unavailable",
+          "action_taken": "template_only"
+        }
+      ],
+      "data_row_count": null,
+      "data_columns": [],
+      "meta": {
+        "bundle_version": null,
+        "cost_cny": null,
+        "tokens": null,
+        "latency_ms": null,
+        "retrieval_mode": null
+      },
+      "frame_events": [
+        "ack",
+        "stage",
+        "degraded",
+        "error"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_fb9999e4da0d4b0a901d45b6c5cf5812",
+            "session_id": "ss_03b5ea1b6c56448797c0189638951c6b",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 1601,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "degraded",
+          "data": {
+            "reason": "llm_unavailable",
+            "action_taken": "template_only",
+            "terminal": false
+          }
+        },
+        {
+          "event": "error",
+          "data": {
+            "code": "LLM_UPSTREAM_ERROR",
+            "message": "",
+            "retryable": true,
+            "terminal": true
+          }
+        }
+      ]
+    }
+  ]
+}
