@@ -1,0 +1,11 @@
+services:
+  pg:
+    ports: !override ["127.0.0.1:55432:5432"]
+  redis:
+    ports: !reset []
+  api:
+    ports: !override ["127.0.0.1:58000:8000"]
+  pgbouncer:
+    ports: !reset []
+  web:
+    ports: !reset []

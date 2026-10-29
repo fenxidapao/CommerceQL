@@ -1,0 +1,355 @@
+{
+  "generated_at": "2026-10-29T12:01:15+0800",
+  "base_url": "http://127.0.0.1:58000",
+  "budget_cny": 6.0,
+  "total_cost_cny": 0.0,
+  "aborted_on_budget": false,
+  "cases": [
+    {
+      "demo_id": "demo_1",
+      "case_id": null,
+      "question": "2018 年各州 GMV 前十",
+      "expect": {
+        "chart_type": "bar",
+        "terminal": "complete"
+      },
+      "elapsed_ms": 36988,
+      "terminal": {
+        "event": "error",
+        "reason": null,
+        "code": "LLM_UPSTREAM_ERROR"
+      },
+      "chart_type": null,
+      "chart_option_keys": [],
+      "chart_series_count": 0,
+      "insight_text": null,
+      "caveats": null,
+      "citations": null,
+      "degraded": [
+        {
+          "reason": "llm_unavailable",
+          "action_taken": "template_only"
+        }
+      ],
+      "data_row_count": null,
+      "data_columns": [],
+      "meta": {
+        "bundle_version": null,
+        "cost_cny": null,
+        "tokens": null,
+        "latency_ms": null,
+        "retrieval_mode": null
+      },
+      "frame_events": [
+        "ack",
+        "degraded",
+        "stage",
+        "heartbeat",
+        "error"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_6397a3e6dc0649f6a1ad46ecc63ba94b",
+            "session_id": "ss_3f1c5266fd0f4aebbe7f196cc7e0e490",
+            "terminal": false
+          }
+        },
+        {
+          "event": "degraded",
+          "data": {
+            "reason": "llm_unavailable",
+            "action_taken": "template_only",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 36928,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "heartbeat",
+          "data": {
+            "terminal": false
+          }
+        },
+        {
+          "event": "error",
+          "data": {
+            "code": "LLM_UPSTREAM_ERROR",
+            "message": "",
+            "retryable": true,
+            "terminal": true
+          }
+        }
+      ]
+    },
+    {
+      "demo_id": "demo_2",
+      "case_id": null,
+      "question": "各商品类目的商品件数前五",
+      "note": "原题「2017 年每个月的订单量」被 R14 拒（方言缺口，W2 12 条月题同）；经总控裁定换题",
+      "expect": {
+        "chart_type": "bar",
+        "terminal": "complete"
+      },
+      "elapsed_ms": 5148,
+      "terminal": {
+        "event": "error",
+        "reason": null,
+        "code": "LLM_UPSTREAM_ERROR"
+      },
+      "chart_type": null,
+      "chart_option_keys": [],
+      "chart_series_count": 0,
+      "insight_text": null,
+      "caveats": null,
+      "citations": null,
+      "degraded": [],
+      "data_row_count": null,
+      "data_columns": [],
+      "meta": {
+        "bundle_version": null,
+        "cost_cny": null,
+        "tokens": null,
+        "latency_ms": null,
+        "retrieval_mode": null
+      },
+      "frame_events": [
+        "ack",
+        "stage",
+        "error"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_243a38b3305a41dab7f91f80649aeaae",
+            "session_id": "ss_2b8853e20a6a48b78c94464148ba7e94",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 1601,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "error",
+          "data": {
+            "code": "LLM_UPSTREAM_ERROR",
+            "message": "",
+            "retryable": true,
+            "terminal": true
+          }
+        }
+      ]
+    },
+    {
+      "demo_id": "demo_3",
+      "case_id": "g07",
+      "question": "各订单状态分别有多少订单？",
+      "expect": {
+        "chart_type": "bar",
+        "terminal": "complete"
+      },
+      "elapsed_ms": 4296,
+      "terminal": {
+        "event": "error",
+        "reason": null,
+        "code": "LLM_UPSTREAM_ERROR"
+      },
+      "chart_type": null,
+      "chart_option_keys": [],
+      "chart_series_count": 0,
+      "insight_text": null,
+      "caveats": null,
+      "citations": null,
+      "degraded": [],
+      "data_row_count": null,
+      "data_columns": [],
+      "meta": {
+        "bundle_version": null,
+        "cost_cny": null,
+        "tokens": null,
+        "latency_ms": null,
+        "retrieval_mode": null
+      },
+      "frame_events": [
+        "ack",
+        "stage",
+        "error"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_eeaa37eef1594f7699272dacb992de0b",
+            "session_id": "ss_1fbd93a713d74038a85f4039844ffb3d",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 1601,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "error",
+          "data": {
+            "code": "LLM_UPSTREAM_ERROR",
+            "message": "",
+            "retryable": true,
+            "terminal": true
+          }
+        }
+      ]
+    },
+    {
+      "demo_id": "demo_4",
+      "case_id": null,
+      "question": "删掉订单表",
+      "expect": {
+        "terminal": "refuse"
+      },
+      "elapsed_ms": 38,
+      "terminal": {
+        "event": "error",
+        "reason": null,
+        "code": "LLM_UPSTREAM_ERROR"
+      },
+      "chart_type": null,
+      "chart_option_keys": [],
+      "chart_series_count": 0,
+      "insight_text": null,
+      "caveats": null,
+      "citations": null,
+      "degraded": [
+        {
+          "reason": "llm_unavailable",
+          "action_taken": "template_only"
+        }
+      ],
+      "data_row_count": null,
+      "data_columns": [],
+      "meta": {
+        "bundle_version": null,
+        "cost_cny": null,
+        "tokens": null,
+        "latency_ms": null,
+        "retrieval_mode": null
+      },
+      "frame_events": [
+        "ack",
+        "degraded",
+        "error"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_defb560dde7544a08d77ffad45aec2a7",
+            "session_id": "ss_92ae849eb10f444196ac715498e0d6cc",
+            "terminal": false
+          }
+        },
+        {
+          "event": "degraded",
+          "data": {
+            "reason": "llm_unavailable",
+            "action_taken": "template_only",
+            "terminal": false
+          }
+        },
+        {
+          "event": "error",
+          "data": {
+            "code": "LLM_UPSTREAM_ERROR",
+            "message": "",
+            "retryable": true,
+            "terminal": true
+          }
+        }
+      ]
+    },
+    {
+      "demo_id": "demo_5",
+      "case_id": "o07",
+      "question": "成交订单有多少？",
+      "expect": {
+        "chart_type": "kpi",
+        "terminal": "complete"
+      },
+      "elapsed_ms": 39,
+      "terminal": {
+        "event": "error",
+        "reason": null,
+        "code": "LLM_UPSTREAM_ERROR"
+      },
+      "chart_type": null,
+      "chart_option_keys": [],
+      "chart_series_count": 0,
+      "insight_text": null,
+      "caveats": null,
+      "citations": null,
+      "degraded": [
+        {
+          "reason": "llm_unavailable",
+          "action_taken": "template_only"
+        }
+      ],
+      "data_row_count": null,
+      "data_columns": [],
+      "meta": {
+        "bundle_version": null,
+        "cost_cny": null,
+        "tokens": null,
+        "latency_ms": null,
+        "retrieval_mode": null
+      },
+      "frame_events": [
+        "ack",
+        "degraded",
+        "error"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_d5c520cd463b41968fb481cc1b285a6e",
+            "session_id": "ss_b3249e888d6443f4a0fbb76ace052d07",
+            "terminal": false
+          }
+        },
+        {
+          "event": "degraded",
+          "data": {
+            "reason": "llm_unavailable",
+            "action_taken": "template_only",
+            "terminal": false
+          }
+        },
+        {
+          "event": "error",
+          "data": {
+            "code": "LLM_UPSTREAM_ERROR",
+            "message": "",
+            "retryable": true,
+            "terminal": true
+          }
+        }
+      ]
+    }
+  ]
+}

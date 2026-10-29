@@ -1,0 +1,9 @@
+command: cd backend && PYTHONPATH=.. python -m pytest -q --ignore=tests/integration --junitxml=<temp>/pytest.xml
+result: 2908 passed, 5 failed, 1 warning in 430.72s (0:07:10)
+baseline: W3 b780125 2908 passed / 5 failed (same list; evidence moved out of repo)
+failed:
+  - tests.contract.test_admin_eval_report_contract::test_real_artifacts_endpoint_projection_matches_committed_report
+  - tests.contract.test_shape_guard_faces::test_all_three_faces_are_countable
+  - tests.contract.test_shape_guard_faces::test_no_file_uses_the_predicate_without_consuming_the_guard
+  - tests.eval.test_consistency_reporter::test_timeout_snapshot_drift_names_the_shape_change
+  - tests.eval.test_gate_inputs_p0_merge_two_state::test_all_eight_verdicts_equal_the_committed_report_on_clean_pair

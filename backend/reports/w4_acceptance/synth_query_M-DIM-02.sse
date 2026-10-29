@@ -1,0 +1,36 @@
+event: ack
+data: {"task_id":"tk_fbd7f1602e0344bea7c342d8c879ccd6","session_id":"ss_160dd16286914e05a2e1bb6ef693b942","terminal":false}
+
+event: stage
+data: {"elapsed_ms":1601,"terminal":false,"stage":"intent"}
+
+event: stage
+data: {"elapsed_ms":14523,"terminal":false,"stage":"intent"}
+
+event: stage
+data: {"elapsed_ms":15120,"candidates_count":5,"terminal":false,"stage":"schema_linking"}
+
+event: stage
+data: {"elapsed_ms":20953,"plan_summary":{"metrics":["pv"],"dimensions":["channel"],"filters":[],"grain":"channel（最细粒度 traffic_daily 的 sku_day_channel，先按 sku×日×渠道 汇总后在 channel 上卷）","time_range":{"start":null,"end":null},"order_by":["pv DESC"],"limit":100,"blocked":false},"terminal":false,"stage":"plan_ready"}
+
+event: stage
+data: {"elapsed_ms":32697,"dialect":"postgres","confidence":0.95,"sql":"SELECT v_traffic_daily.channel AS channel, SUM(v_traffic_daily.pv) AS pv FROM v_traffic_daily GROUP BY v_traffic_daily.channel ORDER BY pv DESC LIMIT %(limit)s","terminal":false,"stage":"sql_ready"}
+
+event: stage
+data: {"elapsed_ms":32722,"terminal":false,"stage":"executing"}
+
+event: data
+data: {"columns":[{"name":"channel","type_name":"string","unit":null},{"name":"pv","type_name":"decimal","unit":null}],"rows":[["live","12673801"],["feed","12668285"],["ad","12668142"],["direct","12640453"],["search","12632268"]],"row_count":5,"truncated":false,"amount_unit":null,"terminal":false}
+
+event: chart
+data: {"chart_type":"bar","option":{"title":{"text":"浏览量"},"tooltip":{"trigger":"axis"},"grid":{"left":16,"right":16,"bottom":24,"containLabel":true},"xAxis":{"type":"category","data":["live","feed","ad","direct","search"],"name":"channel"},"yAxis":{"type":"value","name":"浏览量（次）"},"series":[{"name":"浏览量","type":"bar","data":[12673801,12668285,12668142,12640453,12632268]}]},"terminal":false}
+
+event: insight
+data: {"text":"按 channel 看，live 的 浏览量 最高（12,673,801），共 5 项。","caveats":["浏览量只存在于流量表，时间随统计日","按计划 Top-100 展示。","语义包版本 2026.10.16.2。"],"citations":[],"terminal":false}
+
+event: meta
+data: {"bundle_version":"2026.10.16.2","cost_cny":0.877296,"tokens":{"input":97242,"output":4456,"cache_hit":17588,"total":101698},"latency_ms":33090,"trace_id":"tr_6b23854b0da443d3aa7541d977313990","scope":{"level":"tenant_isolated","applied":true,"notice":null,"disclosable":false},"retrieval_mode":"hybrid","terminal":false}
+
+event: complete
+data: {"terminal":true}
+

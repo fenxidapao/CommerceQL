@@ -18,6 +18,7 @@
 | `w8/` | 当期（集成收尾窗） | `DELIVERY.md` 终版节、`OFFICIAL_SNAPSHOT_DECISION.md`、`RELAY.md`、当期证据 |
 | `qa/` | 当期（验收窗） | `TASK_BOARD.md` 末节、`QA_LEDGER.md` 最新条目、`RELAY.md` |
 | `w6/` | 当前（eval 输入/输出目录） | `eval_metrics.json`、`评测报告与门禁判定.md`、G-1 日志与探针；**W6 窗口叙事与旧日志已移至 archive/reports/w6/** |
+| `w4_acceptance/` | 当期（W4 包装窗） | `ACCEPTANCE.md`、`pytest_summary.txt`、demo/SSE/账本原始件、`manifest.sha256`；**不覆盖 `w3_demo/**`** |
 
 ## 3. 历史窗口报告在哪
 

@@ -1,0 +1,5 @@
+# relay probe 2026-10-29T12:01:48+08:00
+deepseek-v4.1-flash http=502 {"error":{"message":"Upstream service temporarily unavailable","type":"upstream_error"}}
+deepseek-v4-flash http=502 {"error":{"message":"Upstream service temporarily unavailable","type":"upstream_error"}}
+deepseek-v3.2 http=502 {"error":{"message":"Upstream service temporarily unavailable","type":"upstream_error"}}
+deepseek-v4-pro http=502 {"error":{"message":"Upstream service temporarily unavailable","type":"upstream_error"}}

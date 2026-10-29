@@ -1,0 +1,5 @@
+worktree: /e/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL-archive/w4_worktree
+HEAD: b780125462574391f29f5bdd3567f2876c672863
+short: b780125
+commits: 739
+dirty: 5 entries (expected: eval outputs + override)

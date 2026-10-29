@@ -1,0 +1,6 @@
+== 主栈容器（验收后 2026-10-29T13:09:37+08:00）==
+57e3f774c297	commerceql-api-1	Up 4 hours (healthy)
+fa54a7439eeb	commerceql-pg-1	Up 4 hours (healthy)
+09431e04669c	commerceql-pgbouncer-1	Up 4 hours
+fbfd28a37a2b	commerceql-redis-1	Up 4 hours (healthy)
+a26ae80c8acb	commerceql-web-1	Up 4 hours
