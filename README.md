@@ -2,6 +2,12 @@
 
 > **新 Agent / 新接手请先读 [`AGENTS.md`](AGENTS.md)**（导航、阅读预算、禁区、五个陷阱）。本文是工程约束说明。
 
+> **Showcase**：受控 Text2SQL 电商分析 Agent —— 三道闸门 + 租户 RLS + 两段式审计。
+> **EX_official = 41.47% ± 1.33%**（Olist 60 题，3 批，n=3）｜ **448,152 行** Olist 五表入库 + RLS 金丝雀｜ **5/5** 生产栈 demo（4 图 + 1 拒答）。
+> 图：[bar](backend/reports/w3_demo/demo_1_bar.png) ｜ [KPI](backend/reports/w3_demo/demo_5_kpi.png) ｜ [拒答](backend/reports/w3_demo/demo_4_refuse.png)
+> 详情 / 复算附录 → [docs/portfolio/README.md](docs/portfolio/README.md)
+> ⚠️ 41.47% 未达 85%；`6/8 ≠ 门禁通过`（G-6/G-8 `UNVERIFIED`）。
+
 基于 **Text2SQL** 的电商数据分析 Agent：把一句中文业务问题，变成一条**受控**的 SQL，
 再变成带口径说明的图表与结论。
 
@@ -11,16 +17,17 @@
 
 ---
 
-## 1. 当前状态（2026-10-25 快照 · 必然过期）
+## 1. 当前状态（2026-10-29 快照 · 必然过期）
 
 > 引用前先实跑 `git rev-parse --short HEAD; git rev-list --count HEAD` 并读源件，不要抄本节。
 
 | 项 | 读数 | 源 |
 |---|---|---|
-| 代码 HEAD | `e537a24` / 718 笔 | `git log -1`；`git rev-list --count HEAD` |
+| 代码 HEAD（最后代码提交） | `b780125` / 739 笔（W3 最后代码提交；本窗仅文档提交，现 HEAD 见命令行） | `git log -1 b780125`；`git rev-list --count b780125` |
+| 离线回归 | `2908 passed / 5 failed`（既有 5 条，证据移出仓库）；`ruff 214`；`mypy 8 errors / 5 files`；`lint-imports 4 kept / 0 broken` | `backend/reports/w4_acceptance/pytest_summary.txt`、`ruff.log`、`mypy.log`、`lint_imports.log` |
 | 官方快照 | `88f3500` / **PASS 1/8**（PASS 1 / FAIL 3 / PARTIAL 2 / UNVERIFIED 2），生成 `2026-10-07T05:27:34Z`，最后改动该文件的提交 `24d4477` | `backend/reports/w6/eval_metrics.json`；`backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md` |
-| 当期复算 | **6 PASS / 0 PARTIAL / 2 UNVERIFIED / 0 FAIL**，rev `26421ae` | `eval/results_w80_gate_recompute.json`；`backend/reports/w8/DELIVERY.md` 终版节 |
-| 契约文档 | `07 v1.7.34`（3,683 行）；`08 v1.4.1` | `docs/07_技术设计文档_TDD.md` 头部版本字段 |
+| 当期复算 | **6 PASS / 0 PARTIAL / 2 UNVERIFIED / 0 FAIL**，复算件 rev `26421ae`（2026-10-24） | `eval/results_w80_gate_recompute.json`；`backend/reports/w8/DELIVERY.md` 终版节 |
+| 契约文档 | `07 v1.7.39`（3,698 行）；`08 v1.4.2` | `docs/07_技术设计文档_TDD.md` 头部版本字段 |
 
 **两个门禁数必须同框**：官方快照是入库件、不是当期读数；当期复算是审计复算、不是官方快照。
 **6/8 不等于门禁通过**：G-6（P95 延迟）与 G-8（澄清率）仍是 `UNVERIFIED`，属外部输入阻塞（见 §6）。
@@ -154,6 +161,9 @@ F=backend/reports/qa/RELAY.md;      N=$(grep -n '^## ' "$F" | tail -1 | cut -d: 
   补答来源、U-141 绑定型澄清路径、二轮真跑；当前 `attempted=0`。
 - **图表仍为降级形态**：`app/present/` 能装载产物，但 `chart_spec` / `insight` 不在该包内生成，
   `GraphDeps.presenter` 恒 `None` ⇒ 每轮带一条"本次未能生成图表，已用表格展示"的降级标注（设计如此，不是 bug）。
+  **2026-10-29 现读更订**：W3 已接线 `ChartPresenter`（commit `223ffdc`），生产栈 demo 5 条中
+  4 条出图（bar/bar/bar/kpi）；上述"恒 None"是历史读数。源：`backend/reports/w3_demo/demo_5.json`、
+  `browser_acceptance.json`。
 - **红队不是全绿**：G-3 的 PASS 只表示"危险 SQL 放行 = 0"（覆盖 50/50），成本闸门 `NOT_CHECKED`；
   另有 21 条非 G-3 红队断言失败已逐条归类，见 `eval/results_w80_redteam_tail.json`。
 
