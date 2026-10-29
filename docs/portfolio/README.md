@@ -67,7 +67,7 @@ flowchart TD
 | **两段式审计（fail-closed）** | `audit_log` append-only；代码层只暴露 `insert`；写失败即不下发数据 | `backend/app/obs/audit.py`（`AuditWriter`）、`backend/app/graph/nodes/audit_pre.py`、`audit_supp.py`、`backend/tests/integration/test_audit_append_only.py`（本窗未跑 integration，不报绿） |
 | **PII 脱敏** | 按语义包列标签（`pii_phone` / `pii_email` / `pii_idcard` / `pii_address` / `pii_name`）派发掩码；错误消息不回显明文 | `backend/app/mask/engine.py`、`backend/app/mask/rules.py` |
 | **结果级校验（U-149）** | 空结果 / 全 NULL / 单行 KPI 异常 / 守恒式；守恒式只在结果自带合计行且未截断时校验，**无基准就跳过**而不是猜 | `backend/app/present/checks.py` |
-| **官方门禁快照（仅引用，非当期）** | 官方 `88f3500`：**PASS 1/8**；其中 G-3 = PASS（危险 SQL 放行=0，覆盖 50/50），成本闸门 `NOT_CHECKED` | `backend/reports/w6/eval_metrics.json`、`README.md §6` |
+| **官方门禁快照（仅引用，非当期）** | 官方 `88f3500`：**PASS 1/8**；G-3 = **PARTIAL**（`red_team.leaked=0`；`expect_block=50`、`checked=48`，2 条成本题 `NOT_CHECKED`；另有 21 条非 G-3 断言失败） | `backend/reports/w6/eval_metrics.json`（`gate_summary` / `red_team`）、`README.md §6` |
 
 **RLS 金丝雀读数（W3，2026-10-28 实测）**
 
