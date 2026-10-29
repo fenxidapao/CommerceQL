@@ -1,0 +1,81 @@
+{
+  "generated_at": "2026-10-29T09:18:08+0800",
+  "finding": "Olist 月度时序题在闸门一被 R14 拒",
+  "question": "2017 年每个月的订单量",
+  "generated_sql": "SELECT to_char(v_o_orders.order_purchase_timestamp::timestamp, 'YYYY-MM') AS month, COUNT(DISTINCT v_o_orders.order_id) AS order_cnt FROM v_o_orders WHERE v_o_orders.order_status NOT IN ('canceled', 'unavailable') AND v_o_orders.order_purchase_timestamp >= %(start_ts)s AND v_o_orders.order_purchase_timestamp < %(end_ts)s GROUP BY to_char(v_o_orders.order_purchase_timestamp::timestamp, 'YYYY-MM') ORDER BY month ASC LIMIT 100",
+  "offline_gate1_probe": {
+    "bundle": "semantic/bundle_olist_2018.yaml",
+    "bundle_version": "2026.10.27.1",
+    "passed": false,
+    "rule_id": "R14",
+    "reason": "to_char(..., 'YYYY-MM') / date_trunc('month', ...) 的字符串格式串不在 R14 字面量白名单（白名单只有 LIMIT 注入值 / 谓词常量 / 语义包声明常量）"
+  },
+  "w2_reference": {
+    "file": "eval/olist/results_v1_r1.json",
+    "r14_count": 12,
+    "cases": [
+      {
+        "case_id": "g02",
+        "question": "2017 年每个月的订单量是多少？",
+        "gate1_reject_rule": "R14"
+      },
+      {
+        "case_id": "g06",
+        "question": "每个月的运费总额是多少？",
+        "gate1_reject_rule": "R14"
+      },
+      {
+        "case_id": "g10",
+        "question": "2018 年每个月的商品件数是多少？",
+        "gate1_reject_rule": "R14"
+      },
+      {
+        "case_id": "o02",
+        "question": "2018 年每个月的 GMV 是多少？",
+        "gate1_reject_rule": "R14"
+      },
+      {
+        "case_id": "o09",
+        "question": "2018 年每个月的订单量是多少？",
+        "gate1_reject_rule": "R14"
+      },
+      {
+        "case_id": "o13",
+        "question": "2018 年每个月的全状态订单数是多少？",
+        "gate1_reject_rule": "R14"
+      },
+      {
+        "case_id": "o17",
+        "question": "2018 年每个月的客单价是多少？",
+        "gate1_reject_rule": "R14"
+      },
+      {
+        "case_id": "o22",
+        "question": "2018 年每个月的商品销售额（不含运费）是多少？",
+        "gate1_reject_rule": "R14"
+      },
+      {
+        "case_id": "o29",
+        "question": "2018 年每个月的运费总额是多少？",
+        "gate1_reject_rule": "R14"
+      },
+      {
+        "case_id": "o34",
+        "question": "2017 年每个月的商品件数是多少？",
+        "gate1_reject_rule": "R14"
+      },
+      {
+        "case_id": "o39",
+        "question": "2017 年每个月的平均评分是多少？",
+        "gate1_reject_rule": "R14"
+      },
+      {
+        "case_id": "o44",
+        "question": "2017 年每个月的配送延迟率是多少？",
+        "gate1_reject_rule": "R14"
+      }
+    ]
+  },
+  "impact": "W3 demo #2 无法出 line 图；后端 presenter 的 line 形态由单测覆盖（test_present_chart_selection.py::test_time_series_is_line）",
+  "decision": "总控 2026-10-29 裁定：换题「各商品类目的商品件数前五」（bar），不改 app/guard/**（W2C 归属，改它=改判据）；缺口登记于此与 docs/07 v1.7.38"
+}

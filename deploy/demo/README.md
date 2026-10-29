@@ -45,6 +45,7 @@ V="E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL-archi
 | `load_olist_to_pg.py` | SQLite 沙箱 → PG `app.o_*` 基表（app_rw 写；COPY text 流） |
 | `materialize_olist.py` | Olist 包物化（`with_policy=True`）+ 一致性断言 + T_B 金丝雀读数 |
 | `docker-compose.olist.yml` | 只把 api 的 `SEMANTIC_BUNDLE_PATH` 切到 Olist 包 |
+| `run_demo_queries.py` | 5 条 live 演示（真打 `POST /api/v1/query`，逐帧落证据 JSON，带 ¥0.3 预算闸） |
 
 ### 2.1 迁移
 
@@ -104,7 +105,47 @@ docker compose -f deploy/docker-compose.yml -f deploy/demo/docker-compose.olist.
 docker compose -f deploy/docker-compose.yml up -d --no-deps api
 ```
 
-### 2.5 两个刻意保留的已知项
+### 2.5 5 条 live 演示（2026-10-29，U-147/U-148）
+
+```bash
+# 1) api 切到 Olist 包并重建（代码在镜像里，改 app 后必须 build）
+docker compose -f deploy/docker-compose.yml build api
+docker compose -f deploy/docker-compose.yml -f deploy/demo/docker-compose.olist.yml \
+  up -d --no-deps api
+# 2) 签 T_A 令牌（不读 .env）
+TOKEN=$(cd backend && "$V" scripts/mint_dev_token.py --tenant-id T_A --user-id u_dev --role analyst | tail -1)
+# 3) 5 条（live，预算闸 ¥0.3）
+"$V" deploy/demo/run_demo_queries.py --token "$TOKEN" \
+  --out backend/reports/w3_demo/demo_5.json
+```
+
+实测（`backend/reports/w3_demo/demo_5.json`，一次跑完 `total_cost_cny=0.02384`）：
+
+| # | 题面 | terminal | chart_type | 结果 |
+|---|---|---|---|---|
+| 1 | 2018 年各州 GMV 前十 | complete | bar | SP ¥3,374,237.33（10 项） |
+| 2 | 各商品类目的商品件数前五 | complete | bar | bed_bath_table 11,097 件（5 项） |
+| 3 | `g07` 原文「各订单状态分别有多少订单？」 | complete | bar | delivered 96,478 单（8 类） |
+| 4 | 删掉订单表 | **refuse** | — | `pii_blocked`（危险请求被拒） |
+| 5 | `o07` 原文「成交订单有多少？」 | complete | kpi | 98,207 单 |
+
+⚠️ **第 2 条换过题**：原题「2017 年每个月的订单量」在闸门一被 **R14** 拒 ——
+`to_char(..., 'YYYY-MM')` / `date_trunc('month', ...)` 的字符串格式串不在字面量白名单。
+W2 的 `results_v1_r1.json` 里 **12 条**“每月”题（`g02/g06/g10/o02/o09/o13/o17/o22/o29/o34/o39/o44`）
+全部同样 R14，是既存方言缺口，不是 W3 回归。修它要改 `app/guard/**`（W2C 归属，
+等于改判据）⇒ 总控告裁定换题并在
+`backend/reports/w3_demo/r14_line_gap.json` 与 `docs/07 v1.7.38` 登记。
+
+浏览器验收（截图 + 任务号在 `backend/reports/w3_demo/browser_acceptance.json`）：
+5/5 交互完成，其中 4 条图形 / 拒答卡真渲染；第 5 条命中一个**前端既有缺陷** ——
+`CHART_TYPES_ALL` 缺 `'kpi'`，后端正确的 kpi 被当成未知类型降级为表格。
+经总控授权 W3 代改一行（`frontend/src/components/ResultBlock.tsx`，W5 归属），
+重建 `dist` 后 kpi 卡正常渲染（控制台不再出现 `ui_unknown_chart_type: kpi`）。
+
+累计 live 花费：`app.cost_ledger` 2026-10-28 + 10-29 合计 **¥0.107807**
+（含首轮旧题、line 尝试与浏览器重跑），低于批准上限 ¥0.3。
+
+### 2.6 两个刻意保留的已知项
 
 1. **`semantic/bundle_olist_2018.yaml` 一个字不改**：`meta.dialect: sqlite` 与
    `meta.version: 2026.10.27.1` 保持原样。冻结集钉了 `bundle_version`，改包会让
@@ -118,6 +159,6 @@ docker compose -f deploy/docker-compose.yml up -d --no-deps api
 ## 3. 文件归属
 
 `deploy/**` 归 W7 实施窗；`build_olist_sandbox.py` 由 W1 建。W3 按
-`docs/07 v1.7.38` / U-147 写入本目录的三个新文件（`load_olist_to_pg.py` /
-`materialize_olist.py` / `docker-compose.olist.yml`），不改 `deploy/**` 的归属列。
-新增脚本前先确认不覆盖 `deploy/.env`（含密钥，不入库）。
+`docs/07 v1.7.38` / U-147 写入本目录的四个新文件（`load_olist_to_pg.py` /
+`materialize_olist.py` / `docker-compose.olist.yml` / `run_demo_queries.py`），
+不改 `deploy/**` 的归属列。新增脚本前先确认不覆盖 `deploy/.env`（含密钥，不入库）。

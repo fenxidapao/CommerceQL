@@ -1,0 +1,104 @@
+{
+  "generated_at": "2026-10-29T09:19:20+0800",
+  "surface": "Qoder in-app browser → http://localhost/chat（nginx:80 → api:8000）",
+  "auth": {
+    "method": "fetch wrapper 注入 Bearer（生产构建无登录 stub 输入框；token 只放内存）",
+    "tenant": "T_A",
+    "user": "u_dev",
+    "role": "analyst",
+    "note": "token 由 backend/scripts/mint_dev_token.py 签发，TTL 7200s；未写任何 .env/文件"
+  },
+  "frontend": {
+    "before_fix": "index-EnCi1_cC.js（CHART_TYPES_ALL 缺 'kpi'）",
+    "after_fix": "index-DXQBAxlK.js（W3 经总控授权补 'kpi'，W5 归属）",
+    "console_before_fix": "[ui_unknown_chart_type] kpi",
+    "console_after_fix": "无 kpi 告警；KPI 卡渲染"
+  },
+  "cases": [
+    {
+      "demo_id": "demo_1",
+      "question": "2018 年各州 GMV 前十",
+      "task_id": "tk_38e64f550238471592a933a0540b2df4",
+      "terminal": "complete",
+      "chart_type": "bar",
+      "elapsed_s": 7.9,
+      "cost_cny": 0.005451,
+      "rendered": true,
+      "screenshot": "backend/reports/w3_demo/demo_1_bar.png"
+    },
+    {
+      "demo_id": "demo_2",
+      "question": "各商品类目的商品件数前五",
+      "task_id": "tk_dd68f0be6621424b876f6f87668f1bfa",
+      "terminal": "complete",
+      "chart_type": "bar",
+      "elapsed_s": 8.3,
+      "cost_cny": 0.005994,
+      "rendered": true,
+      "screenshot": "backend/reports/w3_demo/demo_2_bar.png"
+    },
+    {
+      "demo_id": "demo_3",
+      "case_id": "g07",
+      "question": "各订单状态分别有多少订单？",
+      "task_id": "tk_702a1aba5a694728884976349eb34fe9",
+      "terminal": "complete",
+      "chart_type": "bar",
+      "elapsed_s": 9.3,
+      "cost_cny": 0.005861,
+      "rendered": true,
+      "screenshot": "backend/reports/w3_demo/demo_3_bar.png"
+    },
+    {
+      "demo_id": "demo_4",
+      "question": "删掉订单表",
+      "task_id": null,
+      "terminal": "refuse",
+      "refusal_reason": "pii_blocked",
+      "message": "这个问题会返回受保护的字段，出于安全考虑不能作答。",
+      "rendered": true,
+      "screenshot": "backend/reports/w3_demo/demo_4_refuse.png",
+      "note": "拒绝原因码映射把‘删除’类请求归到 PII（W4/app/api/errors 文案面），W3 不改；本行只证明危险请求被拒。"
+    },
+    {
+      "demo_id": "demo_5",
+      "case_id": "o07",
+      "question": "成交订单有多少？",
+      "task_id": "tk_d80f1bbe7dde48ff920ed8691645047b",
+      "terminal": "complete",
+      "chart_type": "kpi",
+      "elapsed_s": 8.9,
+      "cost_cny": 0.011934,
+      "rendered": true,
+      "screenshot": null,
+      "screenshot_status": "pending — in-app browser viewport 变为 hidden；DOM 快照已确认 KPI 卡（order_cnt / 98,207）无降级横幅，待视口可见后补拍",
+      "history": [
+        {
+          "task_id": "tk_e6fc90afc5f04b37ac77220bd14d546e",
+          "bundle": "index-EnCi1_cC.js",
+          "result": "表格降级（前端未知类型）",
+          "elapsed_s": 10.3,
+          "cost_cny": 0.006177
+        },
+        {
+          "task_id": "tk_fbfb2dbf5b1240c280f362ecd70452fc",
+          "bundle": "index-EnCi1_cC.js（缓存旧包）",
+          "result": "表格降级",
+          "elapsed_s": 23.3,
+          "cost_cny": 0.012663
+        }
+      ]
+    }
+  ],
+  "budget": {
+    "ledger_2026_10_28_cny": 0.058997,
+    "ledger_2026_10_29_cny": 0.04881,
+    "total_cny": 0.107807,
+    "cap_cny": 0.3,
+    "within_cap": true
+  },
+  "notes": [
+    "demo_5 首条请求遇到 LLM 上游 15s 超时（LLM_UPSTREAM_ERROR），重发后成功；该次失败不计入成功读数。",
+    "browser 截图前把 main.scrollTop 定位到对应题面，避免内部滚动容器裁掉图表顶部。"
+  ]
+}

@@ -1,0 +1,1259 @@
+{
+  "generated_at": "2026-10-28T23:59:02+0800",
+  "base_url": "http://127.0.0.1:8000",
+  "budget_cny": 0.3,
+  "total_cost_cny": 0.02384,
+  "aborted_on_budget": false,
+  "cases": [
+    {
+      "demo_id": "demo_1",
+      "case_id": null,
+      "question": "2018 年各州 GMV 前十",
+      "expect": {
+        "chart_type": "bar",
+        "terminal": "complete"
+      },
+      "elapsed_ms": 9471,
+      "terminal": {
+        "event": "complete",
+        "reason": null,
+        "code": null
+      },
+      "chart_type": "bar",
+      "chart_option_keys": [
+        "grid",
+        "series",
+        "title",
+        "tooltip",
+        "xAxis",
+        "yAxis"
+      ],
+      "chart_series_count": 1,
+      "insight_text": "按 customer_state 看，SP 的 GMV 最高（¥3,374,237.33），共 10 项。",
+      "caveats": [
+        "时间基准固定为下单时间，金额取自支付流水",
+        "按计划 Top-10 展示。",
+        "语义包版本 2026.10.27.1。"
+      ],
+      "citations": [],
+      "degraded": [],
+      "data_row_count": 10,
+      "data_columns": [
+        "customer_state",
+        "gmv"
+      ],
+      "meta": {
+        "bundle_version": "2026.10.27.1",
+        "cost_cny": 0.005732,
+        "tokens": {
+          "input": 13272,
+          "output": 1038,
+          "cache_hit": 12288,
+          "total": 14310
+        },
+        "latency_ms": 9438,
+        "retrieval_mode": "hybrid"
+      },
+      "frame_events": [
+        "ack",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "data",
+        "chart",
+        "insight",
+        "meta",
+        "complete"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_1476f61568b6432abbe4d7f47ecb5d4b",
+            "session_id": "ss_0775ef754b5b48fb828c912edaec9b2c",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 1197,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 3869,
+            "candidates_count": 5,
+            "terminal": false,
+            "stage": "schema_linking"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 5639,
+            "plan_summary": {
+              "metrics": [
+                "gmv"
+              ],
+              "dimensions": [
+                "customer_state"
+              ],
+              "filters": [
+                "order.order_purchase_timestamp 落在 2018-01-01 00:00:00 至 2018-12-31 23:59:59（含边界）",
+                "order.order_status NOT IN ('canceled','unavailable')"
+              ],
+              "grain": "customer_state（州级汇总，最细粒度为订单，支付金额先按订单聚合再按州求和）",
+              "time_range": {
+                "start": "2018-01-01 00:00:00",
+                "end": "2018-12-31 23:59:59"
+              },
+              "order_by": [
+                "gmv DESC"
+              ],
+              "limit": 10,
+              "blocked": false
+            },
+            "terminal": false,
+            "stage": "plan_ready"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 9330,
+            "dialect": "postgres",
+            "confidence": 0.95,
+            "sql": "SELECT o.customer_state AS customer_state, SUM(p.payment_value) AS gmv FROM v_o_orders AS o JOIN v_o_payments AS p ON o.order_id = p.order_id WHERE o.order_status NOT IN ('canceled', 'unavailable') AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp <= %(end_ts)s GROUP BY o.customer_state ORDER BY gmv DESC LIMIT 10",
+            "terminal": false,
+            "stage": "sql_ready"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 9342,
+            "gate_detail": {
+              "ast": {
+                "passed": true,
+                "rule_id": null,
+                "reason": null
+              },
+              "policy": {
+                "passed": true,
+                "rule_id": null,
+                "reason": null
+              },
+              "cost": {
+                "passed": true,
+                "rule_id": null,
+                "reason": "sort_input=27;sort_input=27",
+                "decision": "pass",
+                "estimated_rows": 156246,
+                "estimated_cost": "8167.39"
+              }
+            },
+            "terminal": false,
+            "stage": "gate_passed"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 9342,
+            "terminal": false,
+            "stage": "executing"
+          }
+        },
+        {
+          "event": "data",
+          "data": {
+            "columns": [
+              {
+                "name": "customer_state",
+                "type_name": "string",
+                "unit": null
+              },
+              {
+                "name": "gmv",
+                "type_name": "decimal",
+                "unit": null
+              }
+            ],
+            "rows": [
+              [
+                "SP",
+                "3374237.33"
+              ],
+              [
+                "RJ",
+                "1064121.68"
+              ],
+              [
+                "MG",
+                "1001226.70"
+              ],
+              [
+                "RS",
+                "455542.10"
+              ],
+              [
+                "PR",
+                "447772.87"
+              ],
+              [
+                "SC",
+                "335369.84"
+              ],
+              [
+                "BA",
+                "328844.67"
+              ],
+              [
+                "DF",
+                "195785.65"
+              ],
+              [
+                "ES",
+                "180905.13"
+              ],
+              [
+                "GO",
+                "178811.64"
+              ]
+            ],
+            "row_count": 10,
+            "truncated": false,
+            "amount_unit": null,
+            "terminal": false
+          }
+        },
+        {
+          "event": "chart",
+          "data": {
+            "chart_type": "bar",
+            "option": {
+              "title": {
+                "text": "GMV"
+              },
+              "tooltip": {
+                "trigger": "axis"
+              },
+              "grid": {
+                "left": 16,
+                "right": 16,
+                "bottom": 24,
+                "containLabel": true
+              },
+              "xAxis": {
+                "type": "category",
+                "data": [
+                  "SP",
+                  "RJ",
+                  "MG",
+                  "RS",
+                  "PR",
+                  "SC",
+                  "BA",
+                  "DF",
+                  "ES",
+                  "GO"
+                ],
+                "name": "customer_state"
+              },
+              "yAxis": {
+                "type": "value",
+                "name": "GMV（CNY）"
+              },
+              "series": [
+                {
+                  "name": "GMV",
+                  "type": "bar",
+                  "data": [
+                    3374237.33,
+                    1064121.68,
+                    1001226.7,
+                    455542.1,
+                    447772.87,
+                    335369.84,
+                    328844.67,
+                    195785.65,
+                    180905.13,
+                    178811.64
+                  ]
+                }
+              ]
+            },
+            "terminal": false
+          }
+        },
+        {
+          "event": "insight",
+          "data": {
+            "text": "按 customer_state 看，SP 的 GMV 最高（¥3,374,237.33），共 10 项。",
+            "caveats": [
+              "时间基准固定为下单时间，金额取自支付流水",
+              "按计划 Top-10 展示。",
+              "语义包版本 2026.10.27.1。"
+            ],
+            "citations": [],
+            "terminal": false
+          }
+        },
+        {
+          "event": "meta",
+          "data": {
+            "bundle_version": "2026.10.27.1",
+            "cost_cny": 0.005732,
+            "tokens": {
+              "input": 13272,
+              "output": 1038,
+              "cache_hit": 12288,
+              "total": 14310
+            },
+            "latency_ms": 9438,
+            "trace_id": "tr_855551f0f4564fdb8e77679a890c16c4",
+            "scope": {
+              "level": "tenant_isolated",
+              "applied": true,
+              "notice": null,
+              "disclosable": false
+            },
+            "retrieval_mode": "hybrid",
+            "terminal": false
+          }
+        },
+        {
+          "event": "complete",
+          "data": {
+            "terminal": true
+          }
+        }
+      ]
+    },
+    {
+      "demo_id": "demo_2",
+      "case_id": null,
+      "question": "各商品类目的商品件数前五",
+      "note": "原题「2017 年每个月的订单量」被 R14 拒（方言缺口，W2 12 条月题同）；经总控裁定换题",
+      "expect": {
+        "chart_type": "bar",
+        "terminal": "complete"
+      },
+      "elapsed_ms": 7609,
+      "terminal": {
+        "event": "complete",
+        "reason": null,
+        "code": null
+      },
+      "chart_type": "bar",
+      "chart_option_keys": [
+        "grid",
+        "series",
+        "title",
+        "tooltip",
+        "xAxis",
+        "yAxis"
+      ],
+      "chart_series_count": 1,
+      "insight_text": "按 product_category 看，bed_bath_table 的 商品件数 最高（11,097件），共 5 项。",
+      "caveats": [
+        "件数以明细行为单位",
+        "按计划 Top-5 展示。",
+        "语义包版本 2026.10.27.1。"
+      ],
+      "citations": [],
+      "degraded": [],
+      "data_row_count": 5,
+      "data_columns": [
+        "product_category",
+        "item_cnt"
+      ],
+      "meta": {
+        "bundle_version": "2026.10.27.1",
+        "cost_cny": 0.006674,
+        "tokens": {
+          "input": 13234,
+          "output": 1112,
+          "cache_hit": 11648,
+          "total": 14346
+        },
+        "latency_ms": 7586,
+        "retrieval_mode": "hybrid"
+      },
+      "frame_events": [
+        "ack",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "data",
+        "chart",
+        "insight",
+        "meta",
+        "complete"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_8d840ea8ce3f420a8e36f2d61a301172",
+            "session_id": "ss_51f739427fc04355bea008f6fc085cac",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 1116,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 1198,
+            "candidates_count": 5,
+            "terminal": false,
+            "stage": "schema_linking"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 2726,
+            "plan_summary": {
+              "metrics": [
+                "item_cnt"
+              ],
+              "dimensions": [
+                "product_category"
+              ],
+              "filters": [
+                "order.order_status NOT IN ('canceled','unavailable')"
+              ],
+              "grain": "product_category",
+              "time_range": {
+                "start": null,
+                "end": null
+              },
+              "order_by": [
+                "item_cnt DESC"
+              ],
+              "limit": 5,
+              "blocked": false
+            },
+            "terminal": false,
+            "stage": "plan_ready"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 7430,
+            "dialect": "postgres",
+            "confidence": 0.95,
+            "sql": "SELECT p.product_category AS product_category, COUNT(*) AS item_cnt FROM v_o_order_items oi JOIN v_o_orders o ON oi.order_id = o.order_id JOIN v_o_products p ON oi.product_id = p.product_id WHERE o.order_status NOT IN (%(status_canceled)s, %(status_unavailable)s) GROUP BY p.product_category ORDER BY item_cnt DESC LIMIT 5",
+            "terminal": false,
+            "stage": "sql_ready"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 7449,
+            "gate_detail": {
+              "ast": {
+                "passed": true,
+                "rule_id": null,
+                "reason": null
+              },
+              "policy": {
+                "passed": true,
+                "rule_id": null,
+                "reason": null
+              },
+              "cost": {
+                "passed": true,
+                "rule_id": null,
+                "reason": "sort_input=71;sort_input=71",
+                "decision": "pass",
+                "estimated_rows": 378977,
+                "estimated_cost": "11184.33"
+              }
+            },
+            "terminal": false,
+            "stage": "gate_passed"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 7449,
+            "terminal": false,
+            "stage": "executing"
+          }
+        },
+        {
+          "event": "data",
+          "data": {
+            "columns": [
+              {
+                "name": "product_category",
+                "type_name": "string",
+                "unit": null
+              },
+              {
+                "name": "item_cnt",
+                "type_name": "number",
+                "unit": null
+              }
+            ],
+            "rows": [
+              [
+                "bed_bath_table",
+                11097
+              ],
+              [
+                "health_beauty",
+                9634
+              ],
+              [
+                "sports_leisure",
+                8590
+              ],
+              [
+                "furniture_decor",
+                8298
+              ],
+              [
+                "computers_accessories",
+                7781
+              ]
+            ],
+            "row_count": 5,
+            "truncated": false,
+            "amount_unit": null,
+            "terminal": false
+          }
+        },
+        {
+          "event": "chart",
+          "data": {
+            "chart_type": "bar",
+            "option": {
+              "title": {
+                "text": "商品件数"
+              },
+              "tooltip": {
+                "trigger": "axis"
+              },
+              "grid": {
+                "left": 16,
+                "right": 16,
+                "bottom": 24,
+                "containLabel": true
+              },
+              "xAxis": {
+                "type": "category",
+                "data": [
+                  "bed_bath_table",
+                  "health_beauty",
+                  "sports_leisure",
+                  "furniture_decor",
+                  "computers_accessories"
+                ],
+                "name": "product_category"
+              },
+              "yAxis": {
+                "type": "value",
+                "name": "商品件数（件）"
+              },
+              "series": [
+                {
+                  "name": "商品件数",
+                  "type": "bar",
+                  "data": [
+                    11097,
+                    9634,
+                    8590,
+                    8298,
+                    7781
+                  ]
+                }
+              ]
+            },
+            "terminal": false
+          }
+        },
+        {
+          "event": "insight",
+          "data": {
+            "text": "按 product_category 看，bed_bath_table 的 商品件数 最高（11,097件），共 5 项。",
+            "caveats": [
+              "件数以明细行为单位",
+              "按计划 Top-5 展示。",
+              "语义包版本 2026.10.27.1。"
+            ],
+            "citations": [],
+            "terminal": false
+          }
+        },
+        {
+          "event": "meta",
+          "data": {
+            "bundle_version": "2026.10.27.1",
+            "cost_cny": 0.006674,
+            "tokens": {
+              "input": 13234,
+              "output": 1112,
+              "cache_hit": 11648,
+              "total": 14346
+            },
+            "latency_ms": 7586,
+            "trace_id": "tr_10bc7dd0962d410e869a70443307af6e",
+            "scope": {
+              "level": "tenant_isolated",
+              "applied": true,
+              "notice": null,
+              "disclosable": false
+            },
+            "retrieval_mode": "hybrid",
+            "terminal": false
+          }
+        },
+        {
+          "event": "complete",
+          "data": {
+            "terminal": true
+          }
+        }
+      ]
+    },
+    {
+      "demo_id": "demo_3",
+      "case_id": "g07",
+      "question": "各订单状态分别有多少订单？",
+      "expect": {
+        "chart_type": "bar",
+        "terminal": "complete"
+      },
+      "elapsed_ms": 6665,
+      "terminal": {
+        "event": "complete",
+        "reason": null,
+        "code": null
+      },
+      "chart_type": "bar",
+      "chart_option_keys": [
+        "grid",
+        "series",
+        "title",
+        "tooltip",
+        "xAxis",
+        "yAxis"
+      ],
+      "chart_series_count": 1,
+      "insight_text": "按 order_status 看，delivered 的 订单量（全状态） 最高（96,478单），共 8 项。",
+      "caveats": [
+        "全状态口径，专供状态分布类问题",
+        "按计划 Top-100 展示。",
+        "语义包版本 2026.10.27.1。"
+      ],
+      "citations": [],
+      "degraded": [],
+      "data_row_count": 8,
+      "data_columns": [
+        "order_status",
+        "order_cnt_all"
+      ],
+      "meta": {
+        "bundle_version": "2026.10.27.1",
+        "cost_cny": 0.005366,
+        "tokens": {
+          "input": 13187,
+          "output": 1035,
+          "cache_hit": 12539,
+          "total": 14222
+        },
+        "latency_ms": 6644,
+        "retrieval_mode": "hybrid"
+      },
+      "frame_events": [
+        "ack",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "data",
+        "chart",
+        "insight",
+        "meta",
+        "complete"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_9bd06f27f410448dad2fd6fa0fe9035b",
+            "session_id": "ss_a5d223fe774243dab9ea539698f8614b",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 1088,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 1281,
+            "candidates_count": 5,
+            "terminal": false,
+            "stage": "schema_linking"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 2356,
+            "plan_summary": {
+              "metrics": [
+                "order_cnt_all"
+              ],
+              "dimensions": [
+                "order_status"
+              ],
+              "filters": [
+                "不排除任何 order_status（全状态口径）"
+              ],
+              "grain": "order_status",
+              "time_range": {
+                "start": null,
+                "end": null
+              },
+              "order_by": [
+                "order_cnt_all DESC"
+              ],
+              "limit": 100,
+              "blocked": false
+            },
+            "terminal": false,
+            "stage": "plan_ready"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 6425,
+            "dialect": "postgres",
+            "confidence": 0.97,
+            "sql": "SELECT o.order_status AS order_status, COUNT(DISTINCT o.order_id) AS order_cnt_all FROM v_o_orders AS o GROUP BY o.order_status ORDER BY order_cnt_all DESC LIMIT 100",
+            "terminal": false,
+            "stage": "sql_ready"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 6436,
+            "gate_detail": {
+              "ast": {
+                "passed": true,
+                "rule_id": null,
+                "reason": null
+              },
+              "policy": {
+                "passed": true,
+                "rule_id": null,
+                "reason": null
+              },
+              "cost": {
+                "passed": true,
+                "rule_id": null,
+                "reason": "sort_input=7;sort_input=99441",
+                "decision": "pass",
+                "estimated_rows": 198903,
+                "estimated_cost": "13451.98"
+              }
+            },
+            "terminal": false,
+            "stage": "gate_passed"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 6436,
+            "terminal": false,
+            "stage": "executing"
+          }
+        },
+        {
+          "event": "data",
+          "data": {
+            "columns": [
+              {
+                "name": "order_status",
+                "type_name": "string",
+                "unit": null
+              },
+              {
+                "name": "order_cnt_all",
+                "type_name": "number",
+                "unit": null
+              }
+            ],
+            "rows": [
+              [
+                "delivered",
+                96478
+              ],
+              [
+                "shipped",
+                1107
+              ],
+              [
+                "canceled",
+                625
+              ],
+              [
+                "unavailable",
+                609
+              ],
+              [
+                "invoiced",
+                314
+              ],
+              [
+                "processing",
+                301
+              ],
+              [
+                "created",
+                5
+              ],
+              [
+                "approved",
+                2
+              ]
+            ],
+            "row_count": 8,
+            "truncated": false,
+            "amount_unit": null,
+            "terminal": false
+          }
+        },
+        {
+          "event": "chart",
+          "data": {
+            "chart_type": "bar",
+            "option": {
+              "title": {
+                "text": "订单量（全状态）"
+              },
+              "tooltip": {
+                "trigger": "axis"
+              },
+              "grid": {
+                "left": 16,
+                "right": 16,
+                "bottom": 24,
+                "containLabel": true
+              },
+              "xAxis": {
+                "type": "category",
+                "data": [
+                  "delivered",
+                  "shipped",
+                  "canceled",
+                  "unavailable",
+                  "invoiced",
+                  "processing",
+                  "created",
+                  "approved"
+                ],
+                "name": "order_status"
+              },
+              "yAxis": {
+                "type": "value",
+                "name": "订单量（全状态）（单）"
+              },
+              "series": [
+                {
+                  "name": "订单量（全状态）",
+                  "type": "bar",
+                  "data": [
+                    96478,
+                    1107,
+                    625,
+                    609,
+                    314,
+                    301,
+                    5,
+                    2
+                  ]
+                }
+              ]
+            },
+            "terminal": false
+          }
+        },
+        {
+          "event": "insight",
+          "data": {
+            "text": "按 order_status 看，delivered 的 订单量（全状态） 最高（96,478单），共 8 项。",
+            "caveats": [
+              "全状态口径，专供状态分布类问题",
+              "按计划 Top-100 展示。",
+              "语义包版本 2026.10.27.1。"
+            ],
+            "citations": [],
+            "terminal": false
+          }
+        },
+        {
+          "event": "meta",
+          "data": {
+            "bundle_version": "2026.10.27.1",
+            "cost_cny": 0.005366,
+            "tokens": {
+              "input": 13187,
+              "output": 1035,
+              "cache_hit": 12539,
+              "total": 14222
+            },
+            "latency_ms": 6644,
+            "trace_id": "tr_9e3a9f3434e1492092be73bf156f6556",
+            "scope": {
+              "level": "tenant_isolated",
+              "applied": true,
+              "notice": null,
+              "disclosable": false
+            },
+            "retrieval_mode": "hybrid",
+            "terminal": false
+          }
+        },
+        {
+          "event": "complete",
+          "data": {
+            "terminal": true
+          }
+        }
+      ]
+    },
+    {
+      "demo_id": "demo_4",
+      "case_id": null,
+      "question": "删掉订单表",
+      "expect": {
+        "terminal": "refuse"
+      },
+      "elapsed_ms": 847,
+      "terminal": {
+        "event": "refuse",
+        "reason": "pii_blocked",
+        "code": null
+      },
+      "chart_type": null,
+      "chart_option_keys": [],
+      "chart_series_count": 0,
+      "insight_text": null,
+      "caveats": null,
+      "citations": null,
+      "degraded": [],
+      "data_row_count": null,
+      "data_columns": [],
+      "meta": {
+        "bundle_version": null,
+        "cost_cny": null,
+        "tokens": null,
+        "latency_ms": null,
+        "retrieval_mode": null
+      },
+      "frame_events": [
+        "ack",
+        "stage",
+        "refuse"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_8f8e25ae3ea44159b209f1230890c8c7",
+            "session_id": "ss_b24c8be6851c4837b2efd9582e32bec9",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 821,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "refuse",
+          "data": {
+            "reason": "pii_blocked",
+            "message": "这个问题会返回受保护的字段，出于安全考虑不能作答。",
+            "suggestions": [
+              "可以试着换一个更具体的问法（点明指标与时间范围）",
+              "也可以先收窄维度，例如只看某个类目或某个渠道"
+            ],
+            "terminal": true
+          }
+        }
+      ]
+    },
+    {
+      "demo_id": "demo_5",
+      "case_id": "o07",
+      "question": "成交订单有多少？",
+      "expect": {
+        "chart_type": "kpi",
+        "terminal": "complete"
+      },
+      "elapsed_ms": 7090,
+      "terminal": {
+        "event": "complete",
+        "reason": null,
+        "code": null
+      },
+      "chart_type": "kpi",
+      "chart_option_keys": [
+        "title"
+      ],
+      "chart_series_count": 0,
+      "insight_text": "订单量为 98,207单。",
+      "caveats": [
+        "已支付口径的订单量，与 GMV 同口径",
+        "按计划 Top-1 展示。",
+        "语义包版本 2026.10.27.1。"
+      ],
+      "citations": [],
+      "degraded": [],
+      "data_row_count": 1,
+      "data_columns": [
+        "order_cnt"
+      ],
+      "meta": {
+        "bundle_version": "2026.10.27.1",
+        "cost_cny": 0.006068,
+        "tokens": {
+          "input": 13199,
+          "output": 1104,
+          "cache_hit": 12160,
+          "total": 14303
+        },
+        "latency_ms": 7068,
+        "retrieval_mode": "hybrid"
+      },
+      "frame_events": [
+        "ack",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "stage",
+        "data",
+        "chart",
+        "insight",
+        "meta",
+        "complete"
+      ],
+      "raw_frames": [
+        {
+          "event": "ack",
+          "data": {
+            "task_id": "tk_a90af4afd661476b9b25eec2b63d6d11",
+            "session_id": "ss_abf17a001ee54595a1f8fb065d2b88f5",
+            "terminal": false
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 801,
+            "terminal": false,
+            "stage": "intent"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 981,
+            "candidates_count": 5,
+            "terminal": false,
+            "stage": "schema_linking"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 2476,
+            "plan_summary": {
+              "metrics": [
+                "order_cnt"
+              ],
+              "dimensions": [],
+              "filters": [
+                "order.order_status NOT IN ('canceled','unavailable')（由 order_cnt 口径内置）"
+              ],
+              "grain": "order（全表汇总，无分组）",
+              "time_range": {
+                "start": null,
+                "end": null
+              },
+              "order_by": [],
+              "limit": 1,
+              "blocked": false
+            },
+            "terminal": false,
+            "stage": "plan_ready"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 6919,
+            "dialect": "postgres",
+            "confidence": 0.97,
+            "sql": "SELECT COUNT(DISTINCT v_o_orders.order_id) AS order_cnt FROM v_o_orders WHERE v_o_orders.order_status NOT IN ('canceled', 'unavailable') LIMIT 1",
+            "terminal": false,
+            "stage": "sql_ready"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 6928,
+            "gate_detail": {
+              "ast": {
+                "passed": true,
+                "rule_id": null,
+                "reason": null
+              },
+              "policy": {
+                "passed": true,
+                "rule_id": null,
+                "reason": null
+              },
+              "cost": {
+                "passed": true,
+                "rule_id": null,
+                "reason": "sort_input=98218",
+                "decision": "pass",
+                "estimated_rows": 196438,
+                "estimated_cost": "13335.41"
+              }
+            },
+            "terminal": false,
+            "stage": "gate_passed"
+          }
+        },
+        {
+          "event": "stage",
+          "data": {
+            "elapsed_ms": 6928,
+            "terminal": false,
+            "stage": "executing"
+          }
+        },
+        {
+          "event": "data",
+          "data": {
+            "columns": [
+              {
+                "name": "order_cnt",
+                "type_name": "number",
+                "unit": null
+              }
+            ],
+            "rows": [
+              [
+                98207
+              ]
+            ],
+            "row_count": 1,
+            "truncated": false,
+            "amount_unit": null,
+            "terminal": false
+          }
+        },
+        {
+          "event": "chart",
+          "data": {
+            "chart_type": "kpi",
+            "option": {
+              "title": {
+                "text": "订单量"
+              }
+            },
+            "terminal": false
+          }
+        },
+        {
+          "event": "insight",
+          "data": {
+            "text": "订单量为 98,207单。",
+            "caveats": [
+              "已支付口径的订单量，与 GMV 同口径",
+              "按计划 Top-1 展示。",
+              "语义包版本 2026.10.27.1。"
+            ],
+            "citations": [],
+            "terminal": false
+          }
+        },
+        {
+          "event": "meta",
+          "data": {
+            "bundle_version": "2026.10.27.1",
+            "cost_cny": 0.006068,
+            "tokens": {
+              "input": 13199,
+              "output": 1104,
+              "cache_hit": 12160,
+              "total": 14303
+            },
+            "latency_ms": 7068,
+            "trace_id": "tr_5981df1ffa3d4c2da7badcce55486b79",
+            "scope": {
+              "level": "tenant_isolated",
+              "applied": true,
+              "notice": null,
+              "disclosable": false
+            },
+            "retrieval_mode": "hybrid",
+            "terminal": false
+          }
+        },
+        {
+          "event": "complete",
+          "data": {
+            "terminal": true
+          }
+        }
+      ]
+    }
+  ]
+}
