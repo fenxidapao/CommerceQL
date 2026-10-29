@@ -70,8 +70,8 @@
       "elapsed_s": 8.9,
       "cost_cny": 0.011934,
       "rendered": true,
-      "screenshot": null,
-      "screenshot_status": "pending — in-app browser viewport 变为 hidden；DOM 快照已确认 KPI 卡（order_cnt / 98,207）无降级横幅，待视口可见后补拍",
+      "screenshot": "backend/reports/w3_demo/demo_5_kpi.png",
+      "screenshot_status": "captured",
       "history": [
         {
           "task_id": "tk_e6fc90afc5f04b37ac77220bd14d546e",
@@ -87,7 +87,8 @@
           "elapsed_s": 23.3,
           "cost_cny": 0.012663
         }
-      ]
+      ],
+      "screenshot_note": "KPI 卡：order_cnt / 98,207；无‘图表数据不完整’横幅；控制台无 ui_unknown_chart_type"
     }
   ],
   "budget": {
@@ -100,5 +101,6 @@
   "notes": [
     "demo_5 首条请求遇到 LLM 上游 15s 超时（LLM_UPSTREAM_ERROR），重发后成功；该次失败不计入成功读数。",
     "browser 截图前把 main.scrollTop 定位到对应题面，避免内部滚动容器裁掉图表顶部。"
-  ]
+  ],
+  "demo_5_screenshot_captured_at": "2026-10-29T09:26:30+0800"
 }
