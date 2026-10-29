@@ -1,0 +1,5 @@
+semantic bundle loaded: version=2026.10.27.1 status=candidate assets=5 excluded=0 warnings=1
+positive (gold vs gold) : 55/55 ex=1.0
+negative (perturbed)    : 0/55 ex=0.0
+all_ok                  : True  (not_ex_official=True)
+[out] eval/olist/instrument_control.json

@@ -1,0 +1,42 @@
+语义包校验：semantic\bundle_2026.09.14.1.yaml
+==============================================================================
+------------------------------------------------------------------------------
+资产 8 个 / 指标 22 个 / 维度 9 个 / 绑定 7 条 / Join 10 条 / 别名 179 条 / 黑话 15 条
+列总数 75；敏感列 9 个
+==============================================================================
+[OK]   ① 读取 YAML                                                     bundle_2026.09.14.1.yaml (90372 bytes，无重复 key)
+[OK]   ② 字段齐全性 FR-12.2（15 类）                                         15/15 齐全
+[OK]   ② 扩展字段（07 §4.7.1 裁定后）                                         5/5 齐全
+[OK]   ② 已删字段未复活（07 §4.7.1 负向断言）                                     3/3 确认不存在（disclosure_text/grain_level/default_binding）
+[OK]   ② 资产域 ⊆ meta.domain                                           declared=['orders', 'products', 'traffic'] used=['orders', 'products', 'traffic']
+[OK]   ② draft 指标无 default_binding                                   draft 指标不参与 L3
+[OK]   ③ joins 引用完整性                                                 10 条路径全部可解析
+[OK]   ③ field_bindings 引用完整性                                        7 条绑定全部可解析（其中 ambiguous=1）
+[OK]   ③ ambiguous ⇔ 无 canonical_asset/无 default_reason（双向）          双向一致：6 条有 canon+reason，1 条 ambiguous 两者皆空
+[OK]   ③ 别名 term 唯一映射（L1 判据）                                         179 个 term 一对一
+[OK]   ③ 别名 maps_to_ref 可解析                                          全部可解析
+[OK]   ③ deny_columns 可解析                                            9 条全部存在
+[OK]   ③ 敏感列 ⊆ deny_columns                                          sensitive 与 deny_columns 双向一致
+[OK]   ③ default_predicates 引用完整性                                    applies_to 全部指向已定义指标
+[OK]   ③ default_predicates ↔ metric 双向一致                            8 个指标的两侧谓词逐条一致
+[OK]   ③ metrics.default_binding 形状 = {asset, reason}                21 条形状合规、asset 可解析、reason ≤ 40 字
+[OK]   ③ 危险边（跨租户 / 跨类型）必须带 note                                      10 条边中，所有跨租户/跨类型的边都写明了处置
+[OK]   ③ grain_levels ↔ hierarchy 一致                                 层级名与细度值一一对应且随层级严格递增
+[OK]   ③ grain_level == grain_levels[hierarchy 末项]（§4.7.1）           9 个维度全部一致（默认层级 ≡ hierarchy 末项）
+[WARN] ③ grain_level 读法残留待确认（属已裁定的 U-23）                             ['region: binding=order_paid.region_code 落在 region(2) 而 grain_level=4', 'category: binding=product.category_l1 落在 category_l1(1) 而 grain_level=3'] → 若架构窗口的'默认粒度'指 **binding 的粒度**，这两条要改；若要改，需新增 `default_level` 字段（附录 B 无承载位 → 属 U-34）
+[OK]   ③ tenant_scoped ⇔ 含 tenant_id 列（双向，§7.4）                      6 个租户资产 / 2 个公共资产，双向一致
+[OK]   ③ column/metric synonyms ⊆ aliases                            两处定义一致（别名表 179 个 term）
+[OK]   ③ aliases 不指向 draft 指标                                        draft 指标 ['sell_through_rate'] 无别名（FR-12.3）
+[OK]   ④ 质量准入门槛                                                      全部 8 个资产 ≥ 0.9
+[OK]   ④ on_violation 语义                                             exclude_from_context（降级排除 + 告警）
+[OK]   ⑤ EMBEDDING_DIM 与配置一致                                         bundle=bge-m3/1024 vs config 默认=bge-m3/1024
+[OK]   ⑤ meta 时间语义齐全（N-26）                                           tz=Asia/Shanghai fy_start=1 week=monday
+[OK]   ⑤ 版本号形态 YYYY.MM.DD.N                                          2026.10.16.2
+[SKIP] ⑤ jieba 词典可加载 / 分词函数可用                                        归 W2B（retrieval/tokenizer.py 是唯一入口，N-24）；本脚本不 import app.*
+[OK]   DoD⑤ field_bindings 默认口径覆盖（canonical_asset + default_reason）  6/7 有默认口径；1 条标 ambiguous（0 条同时有别名词 —— **必须为 0**，否则 L1 会短路掉澄清）
+[OK]   DoD⑤ 非 draft 指标 100% 有 default_binding{asset,reason}          21/21
+[WARN] DoD⑤ 非歧义概念有别名覆盖                                               无别名的概念 ['customer_name', '商品名称']（将落到 L3/L4，不是错误，但会抬高 L4 占比）
+[OK]   黑话表 action 取值                                                 9 拒答 + 6 澄清
+[OK]   黑话表文案齐全                                                       clarify_prompt / alt_question 齐全
+------------------------------------------------------------------------------
+总计 34 项：PASS=31 FAIL=0 SKIP=1 WARN=2

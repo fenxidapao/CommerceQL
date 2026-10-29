@@ -1,0 +1,182 @@
+............................................................F........... [  2%]
+........................................................................ [  4%]
+........................................................................ [  7%]
+........................................................................ [  9%]
+........................................................................ [ 12%]
+........................................................................ [ 14%]
+........................................................................ [ 17%]
+........................................................................ [ 19%]
+..........................................................FF............ [ 22%]
+........................................................................ [ 24%]
+........................................................................ [ 27%]
+....................F................................................... [ 29%]
+..........................................F............................. [ 32%]
+........................................................................ [ 34%]
+........................................................................ [ 37%]
+........................................................................ [ 39%]
+........................................................................ [ 42%]
+........................................................................ [ 44%]
+........................................................................ [ 46%]
+........................................................................ [ 49%]
+........................................................................ [ 51%]
+........................................................................ [ 54%]
+........................................................................ [ 56%]
+........................................................................ [ 59%]
+........................................................................ [ 61%]
+........................................................................ [ 64%]
+........................................................................ [ 66%]
+........................................................................ [ 69%]
+........................................................................ [ 71%]
+........................................................................ [ 74%]
+........................................................................ [ 76%]
+........................................................................ [ 79%]
+........................................................................ [ 81%]
+........................................................................ [ 84%]
+........................................................................ [ 86%]
+........................................................................ [ 88%]
+........................................................................ [ 91%]
+........................................................................ [ 93%]
+........................................................................ [ 96%]
+........................................................................ [ 98%]
+.................................                                        [100%]
+================================== FAILURES ===================================
+______ test_real_artifacts_endpoint_projection_matches_committed_report _______
+
+    def test_real_artifacts_endpoint_projection_matches_committed_report() -> None:
+        """读仓库里真在位的两份产物，与**已入库门禁报告**交叉对表。
+    
+        对表的是两个数：网格 `ex` 与拒答两率。后者是 L3 自己按 `eval/reporter.py:1211-1220`
+        \u7684\u8c13\u8bcd\u73b0\u7b97\u7684 \u21d2 \u82e5\u4e24\u8fb9\u7b97\u51fa\u4e0d\u540c\u7684\u6570\uff0c\u8fd9\u4e00\u6761\u5fc5\u987b\u7ea2\uff08\u672c\u9879\u76ee\u4e0d\u5141\u8bb8\u4e24\u4efd\u771f\u76f8\uff09\u3002
+        """
+        import re
+    
+        report = ar.gate_report_path()
+        if not report.is_file():
+            pytest.skip("门禁报告不在位（产物面，不是判据面）")
+        committed = json.loads(report.read_text(encoding="utf-8"))
+        stem = str(((committed.get("meta") or {}).get("results_artifact") or {}).get("stem") or "")
+        if not stem:
+            pytest.skip("\u95e8\u7981\u62a5\u544a\u672a\u81ea\u62a5\u6279\u6b21\u51fa\u5904\uff08\u672c\u8f6e\u4e4b\u524d\u751f\u6210\u7684\u65e7\u62a5\u544a\uff09\u21d2 \u65e0\u914d\u5bf9\u4f9d\u636e")
+>       data = _data(_client(_token(Role.PLATFORM_ADMIN)).get(f"{API_PREFIX}/admin/eval/runs/{stem}", headers=_auth()))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\contract\test_admin_eval_report_contract.py:623: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+resp = <Response [404 Not Found]>
+
+    def _data(resp: Any) -> dict[str, Any]:
+>       assert resp.status_code == 200, resp.text
+E       AssertionError: {"code":"RUN_NOT_FOUND","message":"评测批次不存在","trace_id":"tr_395e8169d46b4b5ebc06b10b49136fe7","detail":{"run_id":"results_v1"},"suggestions":null,"server_time":"2026-10-29T10:26:32+08:00"}
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests\contract\test_admin_eval_report_contract.py:342: AssertionError
+---------------------------- Captured stdout call -----------------------------
+2026-10-29 10:26:32 [warning  ] api_error                      code=RUN_NOT_FOUND error_type=RunNotFound path=/api/v1/admin/eval/runs/results_v1 status=404
+_____________________ test_all_three_faces_are_countable ______________________
+
+    def test_all_three_faces_are_countable() -> None:
+        faces = _faces()
+        counts = {k: 0 for k in ("F-pred", "F-guard", "F-consume")}
+        for rel in faces.FILES:
+            path = faces.REPO / rel
+>           assert path.exists(), f"{rel} 缺失 —— 三面尺失去承载件"
+E           AssertionError: backend/reports/w4/probe_prod_checkpoint_terminal.sql 缺失 —— 三面尺失去承载件
+E           assert False
+E            +  where False = exists()
+E            +    where exists = WindowsPath('E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL/backend/reports/w4/probe_prod_checkpoint_terminal.sql').exists
+
+tests\contract\test_shape_guard_faces.py:50: AssertionError
+_________ test_no_file_uses_the_predicate_without_consuming_the_guard _________
+
+    def test_no_file_uses_the_predicate_without_consuming_the_guard() -> None:
+        """★ 三面齐全性 = 本单的可执行部分（`violations()` 为空）。"""
+>       assert _faces().violations() == [], "有判据无守卫/有守卫不消费 —— 守卫没接成否决位，见 violations()"
+E       AssertionError: 有判据无守卫/有守卫不消费 —— 守卫没接成否决位，见 violations()
+E       assert ['backend/rep...\u4ef6\u7f3a\u5931 \u21d2 \u8986\u76d6\u9762\u4e0d\u53ef\u5f15'] == []
+E         
+E         Left contains one more item: 'backend/reports/w4/probe_prod_checkpoint_terminal.sql: \u627f\u8f7d\u6587\u4ef6\u7f3a\u5931 \u21d2 \u8986\u76d6\u9762\u4e0d\u53ef\u5f15'
+E         Use -v to get more diff
+
+tests\contract\test_shape_guard_faces.py:61: AssertionError
+_____________ test_timeout_snapshot_drift_names_the_shape_change ______________
+
+    def test_timeout_snapshot_drift_names_the_shape_change():
+        """\xa70 \u540c\u9875\u5199\u7740"\u672c\u6b21\u751f\u6210\u65f6\u7684 commit"\u548c**\u8dd1\u6279\u5f53\u65f6**\u7684\u8d85\u65f6\u5feb\u7167 \u21d2 \u4e24\u8005\u4e0d\u4e00\u81f4\u5fc5\u987b\u70b9\u540d\u3002
+    
+        \u26a0\ufe0f \u8f93\u5165\u6362\u6210**\u663e\u5f0f\u6869\u4ef6**\uff08\u65e7\u7248\u76f4\u63a5\u8bfb `eval/results_v1.json`\uff0c\u6ce8\u91ca\u5199\u7740"09-18 \u90a3\u6279 15 \u4e2a
+        \u8282\u70b9"\uff09\uff1a2026-10-03 \u91cd\u8dd1\u6279\u4e4b\u540e\u771f\u4ea7\u7269\u7684\u5feb\u7167**\u5df2\u7ecf\u4e0e\u5f53\u524d\u6811\u4e00\u81f4** \u21d2 \u6f02\u79fb\u4e3a\u771f\u7a7a\uff0c\u90a3\u6761
+        断言就会随每次重跑批随机变红 —— 而"漂移时必须点名"这条守卫本身没变。
+        守卫的输入是"一张 U-104 之前的旧表"，那就**造**一张，不指望仓库里恰好躺着旧的。
+        """
+        import harness as h
+    
+        stale = {"normalize": 2.0, "link": 4.0}          # `normalize` 已被移出、`link` 已抬到 30s
+        drift = rp.timeout_snapshot_drift(stale)
+        assert drift, "跑批快照与当前树明显不同，却报「无漂移」= 这条守卫失效"
+        assert "normalize" in drift and "已移出契约表" in drift
+        assert "`link` 4.0s→30.0s" in drift, "值变化的节点要带上前后两个数"
+        assert rp.timeout_snapshot_drift(dict(h.NODE_TIMEOUT_S)) == "", "一致时无许无病呻吟"
+        assert rp.timeout_snapshot_drift(None) == ""
+        #: \u987a\u5e26\u8bb0\u5f53\u524d\u4e8b\u5b9e\uff08\u4e0d\u662f\u5224\u636e\uff09\uff1a\u672c\u8f6e\u771f\u4ea7\u7269\u7684\u5feb\u7167\u4e0e\u5f53\u524d\u6811**\u4e00\u81f4** \u21d2 \u62a5\u544a \xa70 \u4e0d\u4f1a\u51fa\u6f02\u79fb\u63d0\u793a\u3002
+>       snapshot = rp._load(rp.DEFAULT_RESULTS)["config"]["node_timeouts"]["contract"]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+tests\eval\test_consistency_reporter.py:710: TypeError
+______ test_all_eight_verdicts_equal_the_committed_report_on_clean_pair _______
+
+log = <function log.<locals>._write at 0x0000021552E3F560>
+
+    def test_all_eight_verdicts_equal_the_committed_report_on_clean_pair(log):
+        report_path = os.path.join(rp.W6_DIR, "eval_metrics.json")
+        if not os.path.isfile(report_path):
+            pytest.skip("\u62a5\u544a\u4ea7\u7269\u4e0d\u5728\u4f4d \u21d2 \u65e0\u5386\u53f2\u8bfb\u6570\u53ef\u5bf9\u8868\uff08\u662f\u4ea7\u7269\u7f3a\u5931\uff0c\u4e0d\u662f\u5224\u636e\u7f3a\u5931\uff09")
+        with open(report_path, encoding="utf-8") as fh:
+            committed = json.load(fh)
+        want = {g["gate_id"]: g["verdict"] for g in committed["gates"]}
+        assert len(want) == 8, sorted(want)
+    
+        gi = rp.gate_inputs(pytest_log=log("off.log", _OFFLINE_CLEAN),
+                            integration_log=log("int.log", _INTEGRATION_CLEAN))
+        pr = rp.DEFAULT_PRESSURE_REPORT
+        gate_list = gt.evaluate_gates(
+            **gi,
+            pressure_report=(os.path.relpath(pr, rp._bootstrap.ROOT) if pr and os.path.isfile(pr) else None),
+        )
+        got = {g.gate_id: g.verdict for g in gate_list}
+        #: \U0001f534 W74-1\uff08\u603b\u63a7 2026-10-23 \u7b7e\uff09\uff1aG-7 \u7684\u5ea6\u91cf\u5bf9\u8c61\u6539\u6210 system vs \u8bed\u4e49\u5305\u6743\u5a01\u503c \u21d2
+        #: 已入库报告里的 `FAIL`（旧口径：gold vs authority 1/13）在新口径下必然变。
+        #: \u7cfb\u7edf\u4fa7 13/13 \u21d2 \u539f\u59cb PASS\uff0c\u4f46 \u03c4 \u672a\u6821\u51c6 \u21d2 **UNVERIFIED**\uff08\u4e0d\u5f97\u5ba3\u5e03\u901a\u8fc7\uff09\u3002
+        #: 因此本测试的用途收窄为「改一处不许动**其它**七格」：只允许 G-7 这一格偏离历史报告，
+        #: 且它的新值必须是 UNVERIFIED（若有人把它刷成 PASS，这里立刻红）。
+        assert got["G-7"] == "UNVERIFIED", got["G-7"]
+        others = {k: v for k, v in want.items() if k != "G-7"}
+>       assert {k: got[k] for k in others} == others, {
+            k: (others[k], got[k]) for k in others if others[k] != got[k]
+        }
+E       AssertionError: {'G-2': ('FAIL', 'NOT_AVAILABLE'), 'G-5': ('FAIL', 'NOT_AVAILABLE'), 'G-8': ('UNVERIFIED', 'NOT_AVAILABLE')}
+E       assert {'G-1': 'PASS...PARTIAL', ...} == {'G-1': 'PASS...PARTIAL', ...}
+E         
+E         Omitting 4 identical items, use -vv to show
+E         Differing items:
+E         {'G-8': 'NOT_AVAILABLE'} != {'G-8': 'UNVERIFIED'}
+E         {'G-5': 'NOT_AVAILABLE'} != {'G-5': 'FAIL'}
+E         {'G-2': 'NOT_AVAILABLE'} != {'G-2': 'FAIL'}
+E         Use -v to get more diff
+
+tests\eval\test_gate_inputs_p0_merge_two_state.py:173: AssertionError
+============================== warnings summary ===============================
+..\..\CommerceQL-archive\local\.venv\Lib\site-packages\starlette\testclient.py:53
+  E:\01_实训\项目\基于Text2SQL的电商数据分析Agent\CommerceQL-archive\local\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/contract/test_admin_eval_report_contract.py::test_real_artifacts_endpoint_projection_matches_committed_report
+FAILED tests/contract/test_shape_guard_faces.py::test_all_three_faces_are_countable
+FAILED tests/contract/test_shape_guard_faces.py::test_no_file_uses_the_predicate_without_consuming_the_guard
+FAILED tests/eval/test_consistency_reporter.py::test_timeout_snapshot_drift_names_the_shape_change
+FAILED tests/eval/test_gate_inputs_p0_merge_two_state.py::test_all_eight_verdicts_equal_the_committed_report_on_clean_pair
+5 failed, 2908 passed, 1 warning in 430.72s (0:07:10)

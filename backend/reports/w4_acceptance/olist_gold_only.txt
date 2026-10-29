@@ -1,0 +1,24 @@
+semantic bundle loaded: version=2026.10.27.1 status=candidate assets=5 excluded=0 warnings=1
+case    可执行     caliber       行    列   失败判据
+------------------------------------------------------------------------------
+g01     True    ✓             1    1   
+g02     True    ✓            12    2   
+g03     True    ✓            10    2   
+g04     True    ✓            10    2   
+g05     True    ✓             1    1   
+g06     True    ✓            24    2   
+g07     True    ✓             8    2   
+g08     True    ✓            27    2   
+g09     True    ✓            27    2   
+g10     True    ✓             9    2   
+------------------------------------------------------------------------------
+n_cases           = 10
+n_execute_cases   = 10
+gold_executable   = 10/10
+caliber_match     = 10/10
+interaction_valid = 0/0
+cases_valid       = 10/10
+content_hash      = sha256:fc0882f055c414a1e9f11ffd8a5dc1d4a5f2309b03cb2ee0abe131e3600b67c3
+full_hash         = sha256:7653c2ce8ad48e4905d62a952c9fb1d9ea11d4e7dc57e9cb26bc117ecb5fb57d
+sandbox_db_sha256 = 17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0
+[out] eval/olist/gold10_results.json

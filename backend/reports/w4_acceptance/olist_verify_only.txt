@@ -1,0 +1,63 @@
+semantic bundle loaded: version=2026.10.27.1 status=candidate assets=5 excluded=0 warnings=1
+{
+  "dataset_content_hash": {
+    "expected": "sha256:f5e78268bf4b20a32d566b7b82a0b2c89fc0bed4f2ba68802846ab0ff978f894",
+    "actual": "sha256:f5e78268bf4b20a32d566b7b82a0b2c89fc0bed4f2ba68802846ab0ff978f894",
+    "mode": "stamped",
+    "ok": true
+  },
+  "dataset_full_hash": {
+    "expected": "sha256:b4491abbf5ccf100bc752b950c6a257f8fc93ac2c8bfc4d2c175330b54bb8928",
+    "actual": "sha256:b4491abbf5ccf100bc752b950c6a257f8fc93ac2c8bfc4d2c175330b54bb8928",
+    "mode": "stamped",
+    "ok": true
+  },
+  "sandbox_db_sha256": {
+    "expected": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+    "actual": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+    "mode": "manifest",
+    "python": "3.13.14",
+    "pinned_python": "3.13.14",
+    "ok": true
+  },
+  "dataset_shape": {
+    "expected": {
+      "n_cases": 60,
+      "n_execute_cases": 55,
+      "n_interaction_cases": 5
+    },
+    "actual": {
+      "n_cases": 60,
+      "n_execute_cases": 55,
+      "n_interaction_cases": 5
+    },
+    "ok": true
+  },
+  "gold_executable": {
+    "expected": 55,
+    "actual": 55,
+    "ok": true
+  },
+  "caliber_match": {
+    "expected": 55,
+    "actual": 55,
+    "ok": true
+  },
+  "interaction_unlabeled": {
+    "expected": 5,
+    "actual": 5,
+    "ok": true
+  },
+  "cases_valid": {
+    "expected": 60,
+    "actual": 60,
+    "ok": true
+  },
+  "gold_result_hash": {
+    "mode": "n/a (source mode)",
+    "ok": true
+  },
+  "all_ok": true
+}
+N-13 all_ok = True
+[out] eval/olist/olist_profile.json

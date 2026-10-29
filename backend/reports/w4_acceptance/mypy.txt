@@ -1,0 +1,9 @@
+app\guard\ast_gate.py:722: error: Argument 1 to "_contradiction" has incompatible type "Expr"; expected "Expression"  [arg-type]
+app\planner\engine.py:276: error: "SemanticBundlePort" has no attribute "metric"  [attr-defined]
+app\graph\nodes\normalize.py:227: error: Name "update" already defined on line 160  [no-redef]
+app\graph\nodes\normalize.py:246: error: Name "update" already defined on line 160  [no-redef]
+app\graph\nodes\normalize.py:275: error: Argument 1 to "dict" has incompatible type "Collection[str]"; expected "Iterable[tuple[str, Any]]"  [arg-type]
+app\graph\nodes\gate1_ast.py:114: error: Name "update" already defined on line 91  [no-redef]
+app\graph\nodes\bind.py:203: error: Dict entry 0 has incompatible type "str": "None"; expected "str": "str"  [dict-item]
+app\graph\nodes\bind.py:203: error: Dict entry 1 has incompatible type "str": "None"; expected "str": "str"  [dict-item]
+Found 8 errors in 5 files (checked 163 source files)

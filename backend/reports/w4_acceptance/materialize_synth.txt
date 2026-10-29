@@ -1,0 +1,8 @@
+ Container cqlw4-api-run-222c95132ce1 Creating 
+ Container cqlw4-api-run-222c95132ce1 Created 
+semantic bundle loaded: version=2026.10.16.2 status=candidate assets=8 excluded=0 warnings=1
+Building prefix dict from the default dictionary ...
+Dumping model to file cache /tmp/jieba.cache
+Loading model cost 0.541 seconds.
+Prefix dict has been built successfully.
+{"bundle": "/semantic/bundle_2026.09.14.1.yaml", "version": "2026.10.16.2", "rows": {"asset": 8, "metric_def": 22, "dimension": 9, "field_binding": 7, "join_path": 10, "synonym": 179, "policy": 2, "default_predicate": 2, "embed_doc": 284}, "doc_count": 284, "embedding_status": "embedded", "tsv_status": "tokenized", "grant_policy_executed": true, "warnings": []}

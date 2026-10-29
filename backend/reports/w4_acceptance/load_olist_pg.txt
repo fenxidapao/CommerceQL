@@ -1,0 +1,19 @@
+BEGIN
+ set_config | set_config 
+------------+------------
+ T_A        | 
+(1 row)
+
+TRUNCATE TABLE
+COPY 99441
+COPY 112650
+COPY 32951
+COPY 103886
+COPY 99224
+COMMIT
+ANALYZE
+ANALYZE
+ANALYZE
+ANALYZE
+ANALYZE
+{"tenant": "T_A", "source_rows": {"v_o_orders": 99441, "v_o_order_items": 112650, "v_o_products": 32951, "v_o_payments": 103886, "v_o_reviews": 99224}, "pg_rows": {"o_orders": 99441, "o_order_items": 112650, "o_products": 32951, "o_payments": 103886, "o_reviews": 99224}, "total": 448152}

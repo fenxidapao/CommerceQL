@@ -1,0 +1,31 @@
+semantic bundle loaded: version=2026.10.27.1 status=candidate assets=5 excluded=0 warnings=1
+{
+  "mode": "check",
+  "source": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL-archive\\w4_worktree\\eval\\olist\\dataset_v1.yaml",
+  "stamps": {
+    "content_hash": {
+      "expected": "sha256:f5e78268bf4b20a32d566b7b82a0b2c89fc0bed4f2ba68802846ab0ff978f894",
+      "actual": "sha256:f5e78268bf4b20a32d566b7b82a0b2c89fc0bed4f2ba68802846ab0ff978f894",
+      "ok": true
+    },
+    "full_hash": {
+      "expected": "sha256:b4491abbf5ccf100bc752b950c6a257f8fc93ac2c8bfc4d2c175330b54bb8928",
+      "actual": "sha256:b4491abbf5ccf100bc752b950c6a257f8fc93ac2c8bfc4d2c175330b54bb8928",
+      "ok": true
+    }
+  },
+  "report": {
+    "gold_executable": 55,
+    "caliber_match": 55,
+    "interaction_valid": 5,
+    "cases_valid": 60,
+    "n_cases": 60,
+    "n_execute_cases": 55,
+    "n_interaction_cases": 5,
+    "empty_gold": [],
+    "failed_caliber_checks": {},
+    "shape_ok": true,
+    "ok": true
+  },
+  "all_ok": true
+}

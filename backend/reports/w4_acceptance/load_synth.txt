@@ -1,0 +1,35 @@
+[跳过] 沙箱表 dim_tenant 在 PG 侧无对应底表（租户维度由 app.policy + RLS 承担）
+[灌入] app.campaign: 沙箱 84 → PG 84  (0.0s)
+[灌入] app.dim_date: 沙箱 730 → PG 730  (0.0s)
+[灌入] app.order_paid: 沙箱 494249 → PG 494249  (8.7s)
+[灌入] app.order_refund: 沙箱 23116 → PG 23116  (0.3s)
+[灌入] app.product: 沙箱 6000 → PG 6000  (0.2s)
+[灌入] app.region: 沙箱 31 → PG 31  (0.0s)
+[灌入] app.shop: 沙箱 12 → PG 12  (0.0s)
+[灌入] app.traffic_daily: 沙箱 1500556 → PG 1500556  (13.3s)
+
+| 表 | 沙箱 | PG | 一致 |
+|---|---|---|---|
+| app.campaign | 84 | 84 | ✅ |
+| app.dim_date | 730 | 730 | ✅ |
+| app.order_paid | 494249 | 494249 | ✅ |
+| app.order_refund | 23116 | 23116 | ✅ |
+| app.product | 6000 | 6000 | ✅ |
+| app.region | 31 | 31 | ✅ |
+| app.shop | 12 | 12 | ✅ |
+| app.traffic_daily | 1500556 | 1500556 | ✅ |
+[视图] app.v_campaign 以 tenant=T_A 可读 84 行
+[视图] app.v_dim_date 以 tenant=T_A 可读 730 行
+[视图] app.v_o_order_items 以 tenant=T_A 可读 0 行
+[视图] app.v_o_orders 以 tenant=T_A 可读 0 行
+[视图] app.v_o_payments 以 tenant=T_A 可读 0 行
+[视图] app.v_o_products 以 tenant=T_A 可读 0 行
+[视图] app.v_o_reviews 以 tenant=T_A 可读 0 行
+[视图] app.v_order_paid 以 tenant=T_A 可读 494249 行
+[视图] app.v_order_refund 以 tenant=T_A 可读 23116 行
+[视图] app.v_product 以 tenant=T_A 可读 6000 行
+[视图] app.v_region 以 tenant=T_A 可读 31 行
+[视图] app.v_shop 以 tenant=T_A 可读 12 行
+[视图] app.v_traffic_daily 以 tenant=T_A 可读 1500556 行
+
+[完成] 底表与视图均通过；下一步用 app_ro 角色复核只读路径（GRANT 由 0001/0003 迁移负责）

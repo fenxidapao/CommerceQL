@@ -37,7 +37,7 @@
 | `app.shop` | 12 |
 | `app.traffic_daily` | 1,500,556 |
 
-视图以 `T_A` 可读（`v_order_paid 494,249`、`v_traffic_daily 1,500,556` …）。源：`load_synth.log`。
+视图以 `T_A` 可读（`v_order_paid 494,249`、`v_traffic_daily 1,500,556` …）。源：`load_synth.txt`。
 
 ## 3. Olist 沙箱重建（与主仓件对撞）
 
@@ -47,34 +47,34 @@
 | sha256 | `17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0` | `17c14cee…` | 一致 |
 | 五视图行数 | 99441 / 112650 / 32951 / 103886 / 99224 = **448,152** | 448,152 | 一致 |
 
-源：`build_olist_sandbox.log`。
+源：`build_olist_sandbox.txt`。
 
 ## 4. 零成本 60 题 dry-run（补充项，零 LLM）
 
 | 探针 | 读数 | 源 |
 |---|---|---|
-| `build_dataset.py --check` | `all_ok=true`；`cases_valid=60`、`execute=55`、`interaction=5`、`gold_executable=55`、`caliber_match=55` | `olist_dataset_check.log` |
-| `run_olist.py --verify-only` | N-13 `all_ok=True`（内容/全量哈希与冻结件一致） | `olist_verify_only.log` |
-| `run_olist.py --gold-only` | gold `10/10`、caliber `10/10`；`sandbox_db_sha256=17c14cee…` | `olist_gold_only.log` |
-| `run_olist.py --instrument-control` | 正控 `55/55 ex=1.0`；负控 `0/55 ex=0.0`；`all_ok=True (not_ex_official=True)` | `olist_instrument_control.log` |
+| `build_dataset.py --check` | `all_ok=true`；`cases_valid=60`、`execute=55`、`interaction=5`、`gold_executable=55`、`caliber_match=55` | `olist_dataset_check.txt` |
+| `run_olist.py --verify-only` | N-13 `all_ok=True`（内容/全量哈希与冻结件一致） | `olist_verify_only.txt` |
+| `run_olist.py --gold-only` | gold `10/10`、caliber `10/10`；`sandbox_db_sha256=17c14cee…` | `olist_gold_only.txt` |
+| `run_olist.py --instrument-control` | 正控 `55/55 ex=1.0`；负控 `0/55 ex=0.0`；`all_ok=True (not_ex_official=True)` | `olist_instrument_control.txt` |
 
 ## 5. Olist 装 PG（隔离栈）
 
 `COMPOSE_PROJECT_NAME=cqlw4 deploy/demo/load_olist_to_pg.py --exec --compose <worktree>/deploy/docker-compose.yml --source <worktree>/data/olist/olist_sandbox.db`
 
-`pg_rows = {o_orders 99441, o_order_items 112650, o_products 32951, o_payments 103886, o_reviews 99224}`，合计 `448,152`。源：`load_olist_pg.log`。
+`pg_rows = {o_orders 99441, o_order_items 112650, o_products 32951, o_payments 103886, o_reviews 99224}`，合计 `448,152`。源：`load_olist_pg.txt`。
 
 ## 6. 物化与 RLS 隔离读数
 
 ### 6.1 合成包 `2026.10.16.2`（一次性容器，启动期断言前置）
 
-`asset=8`、`metric_def=22`、`dimension=9`、`field_binding=7`、`join_path=10`、`synonym=179`、`policy=2`、`default_predicate=2`、`embed_doc=284`；`embedding_status=embedded`、`tsv_status=tokenized`、`grant_policy_executed=true`。源：`materialize_synth.log`。
+`asset=8`、`metric_def=22`、`dimension=9`、`field_binding=7`、`join_path=10`、`synonym=179`、`policy=2`、`default_predicate=2`、`embed_doc=284`；`embedding_status=embedded`、`tsv_status=tokenized`、`grant_policy_executed=true`。源：`materialize_synth.txt`。
 
 > 说明：全新库上 api 启动期断言 `active_bundle_version_materialized` 会**拒绝启动**（这是设计）。故先用一次性容器（`compose run --entrypoint python`）物化，再起 api。
 
 ### 6.2 Olist 包 `2026.10.27.1`
 
-`embedding_status=embedded`、`tsv_status=tokenized`、`grant_policy_executed=true`、`consistent=true`、`checked_assets=5`、`mismatches=[]`；`ok=true`。源：`materialize_olist.log`。
+`embedding_status=embedded`、`tsv_status=tokenized`、`grant_policy_executed=true`、`consistent=true`、`checked_assets=5`、`mismatches=[]`；`ok=true`。源：`materialize_olist.txt`。
 
 | 租户 | v_o_orders | v_o_order_items | v_o_products | v_o_payments | v_o_reviews |
 |---|---|---|---|---|---|
@@ -123,11 +123,11 @@
 | 项 | 读数 | 源 |
 |---|---|---|
 | pytest | `2908 passed / 5 failed`（430.72s；5 条为既有失败，清单见下） | `pytest_summary.txt` |
-| ruff | `214`（基线，允许红） | `ruff.log` |
-| mypy | `8 errors / 5 files` | `mypy.log` |
-| lint-imports | `4 kept / 0 broken` | `lint_imports.log` |
-| Olist 包校验 | `PASS=33 FAIL=0 SKIP=1 WARN=0` | `validate_bundle_olist.log` |
-| 合成包校验 | `31 PASS / 0 FAIL / 1 SKIP / 2 WARN` | `validate_bundle_synth.log` |
+| ruff | `214`（基线，允许红） | `ruff.txt` |
+| mypy | `8 errors / 5 files` | `mypy.txt` |
+| lint-imports | `4 kept / 0 broken` | `lint_imports.txt` |
+| Olist 包校验 | `PASS=33 FAIL=0 SKIP=1 WARN=0` | `validate_bundle_olist.txt` |
+| 合成包校验 | `31 PASS / 0 FAIL / 1 SKIP / 2 WARN` | `validate_bundle_synth.txt` |
 
 5 条既有失败测试 id 见 `pytest_summary.txt`；**不写成「已回归通过」**。
 

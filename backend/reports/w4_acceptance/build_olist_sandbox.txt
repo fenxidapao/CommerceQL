@@ -1,0 +1,18 @@
+[build] v_o_orders       += 99441 行
+[build] v_o_order_items  += 112650 行
+[build] v_o_products     += 32951 行
+[build] v_o_payments     += 103886 行
+[build] v_o_reviews      += 99224 行
+
+[build] 行数
+  v_o_orders          99441
+  v_o_order_items    112650
+  v_o_products        32951
+  v_o_payments       103886
+  v_o_reviews         99224
+  合计                448152
+[build] 沙箱 sha256 = 17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0
+[build] 沙箱体积   = 92684288 bytes
+[self-check] T_A 各表 > 0：True
+[self-check] T_B 各表 = 0：True
+[manifest] eval/olist/sandbox_manifest.json

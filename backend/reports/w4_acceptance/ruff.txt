@@ -1,0 +1,3311 @@
+RUF100 [*] Unused `noqa` directive (non-enabled: `BLE001`)
+   --> app\api\runner.py:307:35
+    |
+305 |         try:
+306 |             turns = await self._store.get_turns(identity, identity.session_id)
+307 |         except Exception as exc:  # noqa: BLE001 —— 历史是增强项，不得炸掉本轮
+    |                                   ^^^^^^^^^^^^^^
+308 |             _log.warning(
+309 |                 "session_history_read_failed",
+    |
+help: Remove unused `noqa` directive
+    |
+306 |             turns = await self._store.get_turns(identity, identity.session_id)
+    -         except Exception as exc:  # noqa: BLE001 —— 历史是增强项，不得炸掉本轮
+307 +         except Exception as exc:
+308 |             _log.warning(
+    |
+
+B905 `zip()` without an explicit `strict=` parameter
+   --> app\graph\nodes\bind.py:199:42
+    |
+197 |         }
+198 |         # 稳定断平：分数降序 + 同分按 id 字典序 ⇒ 两次跑批的 rank 可直接逐位比对。
+199 |         rank = [cid for cid, _ in sorted(zip(ids, values), key=lambda kv: (-kv[1], kv[0]))]
+    |                                          ^^^^^^^^^^^^^^^^
+200 |     else:
+201 |         ids = [str(cid) for cid in requested if cid]
+    |
+help: Add explicit value for parameter `strict=`
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> app\graph\nodes\normalize.py:49:1
+   |
+47 |   """
+48 |
+49 | / from __future__ import annotations
+50 | |
+51 | | import re
+52 | |
+53 | | from typing import Any
+54 | |
+55 | | from app.core.enums import ActionTaken, DegradedReason, LatencyKey, Outcome, RefuseReason
+56 | | from app.graph.nodes._shared import (
+57 | |     deps_of,
+58 | |     identity_of,
+59 | |     llm_error_update,
+60 | |     node_latency,
+61 | |     rc,
+62 | |     terminal_update,
+63 | | )
+64 | | from app.graph.state import GraphState
+65 | | from app.llm.errors import LlmError
+66 | | from app.planner.errors import PlannerError
+67 | | from app.planner.payloads import detect_foreign_tenant_code, strip_tenant_self_reference
+68 | | from app.planner.request_policy import preflight_refusal, raw_preflight_refusal
+69 | | from app.planner.schemas import IntentKind
+   | |__________________________________________^
+70 |
+71 |   __all__ = ["normalize"]
+   |
+help: Organize imports
+   |
+51 | import re
+   -
+52 | from typing import Any
+   |
+
+SIM102 Use a single `if` statement instead of nested `if` statements
+   --> app\guard\ast_gate.py:636:9
+    |
+634 |               if cval is _UNKNOWN or eval_ is _UNKNOWN or _norm_value(cval) == _norm_value(eval_):
+635 |                   return f"{ccol}: 候选 {cop} 与查询 {eop} 相反"
+636 | /         elif cop == eop == _OP_EQ:
+637 | |             if cval is _UNKNOWN or eval_ is _UNKNOWN or _norm_value(cval) != _norm_value(eval_):
+    | |________________________________________________________________________________________________^
+638 |                   return f"{ccol}: 候选 eq {cval!r} 与查询 eq {eval_!r} 不同"
+639 |       return None
+    |
+help: Combine `if` statements using `and`
+
+I001 [*] Import block is un-sorted or un-formatted
+   --> app\llm\__init__.py:72:1
+    |
+ 70 |   """
+ 71 |
+ 72 | / from __future__ import annotations
+ 73 | |
+ 74 | | from collections.abc import Callable, Mapping
+ 75 | | from contextvars import ContextVar
+ 76 | | from dataclasses import dataclass
+ 77 | | from datetime import UTC, datetime
+ 78 | | from decimal import Decimal
+ 79 | | from typing import Any, Final, Protocol
+ 80 | |
+ 81 | | from app.core.contracts import LLMResponse, TokenUsage
+ 82 | | from app.core.enums import ActionTaken, DegradedReason
+ 83 | | from app.llm.budget import (
+ 84 | |     BudgetGuard,
+ 85 | |     CostLedgerSink,
+ 86 | |     InMemoryCostLedgerSink,
+ 87 | |     estimate_for_payload,
+ 88 | | )
+ 89 | | from app.llm.client import ChatClient
+ 90 | | from app.llm.egress_guard import EgressPayload, build_wire_request
+ 91 | | from app.llm.errors import (
+ 92 | |     DEGRADABLE_LLM_ERRORS,
+ 93 | |     LlmCircuitOpen,
+ 94 | |     LlmError,
+ 95 | |     LlmRefused,
+ 96 | |     LlmSaturated,
+ 97 | |     LlmTemplateMiss,
+ 98 | |     LlmTimeout,
+ 99 | |     LlmUpstreamError,
+100 | | )
+    | |_^
+help: Organize imports
+    |
+101 |
+    -
+102 | #: 🔴 W8 第 51 轮：降级异常里"**上游故障**"的那几类 —— 它们意味着"上游没答上来"，
+    |
+
+E402 Module level import not at top of file
+   --> app\llm\__init__.py:114:1
+    |
+112 | )
+113 |
+114 | from app.llm.prompts import load_prompt, render_messages
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+115 | from app.llm.router import (
+116 |     MODEL_AUTO,
+    |
+help: Move module level imports to top of file
+
+E402 Module level import not at top of file
+   --> app\llm\__init__.py:115:1
+    |
+114 |   from app.llm.prompts import load_prompt, render_messages
+115 | / from app.llm.router import (
+116 | |     MODEL_AUTO,
+117 | |     ModelKey,
+118 | |     degrade_target,
+119 | |     hard_timeout_s,
+120 | |     max_tokens_for,
+121 | |     resolve_model_name,
+122 | |     resolve_route,
+123 | | )
+    | |_^
+124 |   from app.obs.logging import get_logger
+    |
+help: Move module level imports to top of file
+
+E402 Module level import not at top of file
+   --> app\llm\__init__.py:124:1
+    |
+122 |     resolve_route,
+123 | )
+124 | from app.obs.logging import get_logger
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+125 |
+126 | __all__ = [
+    |
+help: Move module level imports to top of file
+
+RUF036 [*] `None` not at the end of the type union.
+   --> app\repo\startup_assertions.py:235:48
+    |
+233 |     #: 🔴 (asset 行数, embed_doc 行数)；`None` = 组装根未注入 active 版本（→ PENDING，不是 PASS）
+234 |     #: 默认值 = 占位探针（返回 None）：**老调用点不传也不会静默通过**，只会变成 PENDING。
+235 |     active_bundle_rows: Callable[[], Awaitable[tuple[int, int] | None | Unreachable]] = (
+    |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+236 |         _no_active_version_probe
+237 |     )
+    |
+help: Move `None` to the end of the type union
+    |
+234 |     #: 默认值 = 占位探针（返回 None）：**老调用点不传也不会静默通过**，只会变成 PENDING。
+    -     active_bundle_rows: Callable[[], Awaitable[tuple[int, int] | None | Unreachable]] = (
+235 +     active_bundle_rows: Callable[[], Awaitable[tuple[int, int] | Unreachable | None]] = (
+236 |         _no_active_version_probe
+    |
+
+RUF036 [*] `None` not at the end of the type union.
+   --> app\repo\startup_assertions.py:494:10
+    |
+493 | def evaluate_active_bundle_rows(
+494 |     row: tuple[int, int] | None | Unreachable,
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+495 |     *,
+496 |     version: str | None,
+    |
+help: Move `None` to the end of the type union
+    |
+493 | def evaluate_active_bundle_rows(
+    -     row: tuple[int, int] | None | Unreachable,
+494 +     row: tuple[int, int] | Unreachable | None,
+495 |     *,
+    |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_a_table_r31e\extract_user_msgs.py:1:1
+  |
+1 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+2 | import json
+3 | import re
+  |
+help: Remove unnecessary coding comment
+  |
+  - # -*- coding: utf-8 -*-
+1 | import json
+  |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_a_table_r31e\scan_a_table.py:1:1
+  |
+1 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+2 | """R31e: A 表 117 条需求四段对表 —— 第一轮机械证据扫描（零额度、纯读）。
+  |
+help: Remove unnecessary coding comment
+  |
+  - # -*- coding: utf-8 -*-
+1 | """R31e: A 表 117 条需求四段对表 —— 第一轮机械证据扫描（零额度、纯读）。
+  |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_a_table_r31r\scan_b3.py:1:1
+  |
+1 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+2 | """B3 反查扫描器：对 30 条「四段全 0」需求做**功能关键词反向查找**（不认 ID）。
+  |
+help: Remove unnecessary coding comment
+  |
+  - # -*- coding: utf-8 -*-
+1 | """B3 反查扫描器：对 30 条「四段全 0」需求做**功能关键词反向查找**（不认 ID）。
+  |
+
+E401 [*] Multiple imports on one line
+  --> reports\qa\evidence_a_table_r31r\scan_b3.py:11:1
+   |
+ 9 | 🔴 本扫描器只产「候选载体清单」，**判定权在人**：每条都要落行读原文。
+10 | """
+11 | import io, json, os, re, sys, subprocess
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+12 |
+13 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+   |
+help: Split imports
+   |
+10 | """
+   - import io, json, os, re, sys, subprocess
+11 + import io
+12 + import json
+13 + import os
+14 + import re
+15 + import sys
+16 + import subprocess
+17 |
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> reports\qa\evidence_a_table_r31r\scan_b3.py:11:1
+   |
+ 9 | 🔴 本扫描器只产「候选载体清单」，**判定权在人**：每条都要落行读原文。
+10 | """
+11 | import io, json, os, re, sys, subprocess
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+12 |
+13 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+   |
+help: Organize imports
+   |
+10 | """
+   - import io, json, os, re, sys, subprocess
+11 + import io
+12 + import json
+13 + import os
+14 + import re
+15 + import subprocess
+16 + import sys
+17 |
+   |
+
+F401 [*] `re` imported but unused
+  --> reports\qa\evidence_a_table_r31r\scan_b3.py:11:22
+   |
+ 9 | 🔴 本扫描器只产「候选载体清单」，**判定权在人**：每条都要落行读原文。
+10 | """
+11 | import io, json, os, re, sys, subprocess
+   |                      ^^
+12 |
+13 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+   |
+help: Remove unused import
+   |
+10 | """
+   - import io, json, os, re, sys, subprocess
+11 + import io, json, os, subprocess
+12 |
+   |
+
+F401 [*] `sys` imported but unused
+  --> reports\qa\evidence_a_table_r31r\scan_b3.py:11:26
+   |
+ 9 | 🔴 本扫描器只产「候选载体清单」，**判定权在人**：每条都要落行读原文。
+10 | """
+11 | import io, json, os, re, sys, subprocess
+   |                          ^^^
+12 |
+13 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+   |
+help: Remove unused import
+   |
+10 | """
+   - import io, json, os, re, sys, subprocess
+11 + import io, json, os, subprocess
+12 |
+   |
+
+E741 Ambiguous variable name: `l`
+  --> reports\qa\evidence_a_table_r31r\scan_b3.py:59:22
+   |
+57 |             ["git", "grep", "-n", "-I", "--max-count=" + str(limit), "-e", kw, "--", root],
+58 |             capture_output=True, text=True, encoding="utf-8", errors="replace")
+59 |         out = [l for l in (r.stdout or "").split("\n") if l.strip()]
+   |                      ^
+60 |         return out
+61 |     except Exception:
+   |
+
+UP020 [*] Use builtin `open`
+  --> reports\qa\evidence_a_table_r31r\scan_b3.py:88:5
+   |
+86 |     out = "E:/tmp_qoder/qa_r31r/b3_raw.json"
+87 |     os.makedirs(os.path.dirname(out), exist_ok=True)
+88 |     io.open(out, "w", encoding="utf-8").write(json.dumps(results, ensure_ascii=False, indent=1))
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+89 |     print("RAW →", out)
+   |
+help: Replace with builtin `open`
+   |
+87 |     os.makedirs(os.path.dirname(out), exist_ok=True)
+   -     io.open(out, "w", encoding="utf-8").write(json.dumps(results, ensure_ascii=False, indent=1))
+88 +     open(out, "w", encoding="utf-8").write(json.dumps(results, ensure_ascii=False, indent=1))
+89 |     print("RAW →", out)
+   |
+
+SIM115 Use a context manager for opening files
+  --> reports\qa\evidence_a_table_r31r\scan_b3.py:88:5
+   |
+86 |     out = "E:/tmp_qoder/qa_r31r/b3_raw.json"
+87 |     os.makedirs(os.path.dirname(out), exist_ok=True)
+88 |     io.open(out, "w", encoding="utf-8").write(json.dumps(results, ensure_ascii=False, indent=1))
+   |     ^^^^^^^
+89 |     print("RAW →", out)
+   |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_a_table_r31s\grade_b4.py:1:1
+  |
+1 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+2 | """B4 全量：42 条 × 每条 2–3 个**强特征词** → 统计 S3（测试面）命中文件数，分档。
+  |
+help: Remove unnecessary coding comment
+  |
+  - # -*- coding: utf-8 -*-
+1 | """B4 全量：42 条 × 每条 2–3 个**强特征词** → 统计 S3（测试面）命中文件数，分档。
+  |
+
+E401 [*] Multiple imports on one line
+  --> reports\qa\evidence_a_table_r31s\grade_b4.py:10:1
+   |
+ 8 | 🔴 输出仅供分档，最终判定须回读原文。
+ 9 | """
+10 | import os, subprocess, json
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+11 |
+12 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+   |
+help: Split imports
+   |
+9  | """
+   - import os, subprocess, json
+10 + import os
+11 + import subprocess
+12 + import json
+13 |
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> reports\qa\evidence_a_table_r31s\grade_b4.py:10:1
+   |
+ 8 | 🔴 输出仅供分档，最终判定须回读原文。
+ 9 | """
+10 | import os, subprocess, json
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+11 |
+12 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+   |
+help: Organize imports
+   |
+9  | """
+   - import os, subprocess, json
+10 + import json
+11 + import os
+12 + import subprocess
+13 |
+   |
+
+RUF005 Consider iterable unpacking instead of concatenation
+  --> reports\qa\evidence_a_table_r31s\grade_b4.py:66:29
+   |
+64 | def files_hit(kw, roots, maxc=20):
+65 |     out = set()
+66 |     for r in subprocess.run(["git", "grep", "-l", "-I", f"--max-count={maxc}", "-e", kw, "--"] + roots,
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+67 |                             capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.split("\n"):
+68 |         if r.strip():
+   |
+help: Replace with iterable unpacking
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_a_table_r31s\sample_b4.py:1:1
+  |
+1 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+2 | """B4 抽样严验：8 条，逐条输出命中行全文供人工判「实质 / 名义 / 无」。
+  |
+help: Remove unnecessary coding comment
+  |
+  - # -*- coding: utf-8 -*-
+1 | """B4 抽样严验：8 条，逐条输出命中行全文供人工判「实质 / 名义 / 无」。
+  |
+
+E401 [*] Multiple imports on one line
+ --> reports\qa\evidence_a_table_r31s\sample_b4.py:7:1
+  |
+5 |    再把该词的全部命中行打出来 —— 让判定者能看见上下文，能判「蹭词」还是「真载体」。
+6 | """
+7 | import os, subprocess, sys
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+8 |
+9 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+  |
+help: Split imports
+   |
+6  | """
+   - import os, subprocess, sys
+7  + import os
+8  + import subprocess
+9  + import sys
+10 |
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> reports\qa\evidence_a_table_r31s\sample_b4.py:7:1
+  |
+5 |    再把该词的全部命中行打出来 —— 让判定者能看见上下文，能判「蹭词」还是「真载体」。
+6 | """
+7 | import os, subprocess, sys
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+8 |
+9 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+  |
+help: Organize imports
+   |
+6  | """
+   - import os, subprocess, sys
+7  + import os
+8  + import subprocess
+9  + import sys
+10 |
+   |
+
+F401 [*] `sys` imported but unused
+ --> reports\qa\evidence_a_table_r31s\sample_b4.py:7:24
+  |
+5 |    再把该词的全部命中行打出来 —— 让判定者能看见上下文，能判「蹭词」还是「真载体」。
+6 | """
+7 | import os, subprocess, sys
+  |                        ^^^
+8 |
+9 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+  |
+help: Remove unused import: `sys`
+  |
+6 | """
+  - import os, subprocess, sys
+7 + import os, subprocess
+8 |
+  |
+
+E741 Ambiguous variable name: `l`
+  --> reports\qa\evidence_a_table_r31s\sample_b4.py:29:19
+   |
+27 |     r = subprocess.run(["git", "grep", "-n", "-I", f"--max-count={maxc}", "-e", kw, "--", root],
+28 |                        capture_output=True, text=True, encoding="utf-8", errors="replace")
+29 |     return [l for l in (r.stdout or "").split("\n") if l.strip()]
+   |                   ^
+
+B007 Loop control variable `face` not used within loop body
+  --> reports\qa\evidence_a_table_r31s\sample_b4.py:32:14
+   |
+32 | for rid, kw, face, desc in SAMPLES:
+   |              ^^^^
+33 |     print(f"########## {rid} ｜ 决定性词 = `{kw}` ｜ {desc} ##########")
+34 |     for root, tag in [("backend/app", "S2"), ("frontend/src", "S2"), ("backend/tests", "S3"), ("eval", "S3")]:
+   |
+help: Rename unused `face` to `_face`
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_a_table_r31s\scan_b4.py:1:1
+  |
+1 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+2 | """B4 反查：42 条 P0/P0（安全）逐条按功能关键词扫 S2（实现）与 S3（测试）两面。
+  |
+help: Remove unnecessary coding comment
+  |
+  - # -*- coding: utf-8 -*-
+1 | """B4 反查：42 条 P0/P0（安全）逐条按功能关键词扫 S2（实现）与 S3（测试）两面。
+  |
+
+E401 [*] Multiple imports on one line
+ --> reports\qa\evidence_a_table_r31s\scan_b4.py:7:1
+  |
+5 | ⇒ 本扫描器先回答一个问题：这「缺」是「真没有」还是「有但没写 ID」？
+6 | """
+7 | import io, json, os, subprocess, sys
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+8 |
+9 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+  |
+help: Split imports
+   |
+6  | """
+   - import io, json, os, subprocess, sys
+7  + import io
+8  + import json
+9  + import os
+10 + import subprocess
+11 + import sys
+12 |
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> reports\qa\evidence_a_table_r31s\scan_b4.py:7:1
+  |
+5 | ⇒ 本扫描器先回答一个问题：这「缺」是「真没有」还是「有但没写 ID」？
+6 | """
+7 | import io, json, os, subprocess, sys
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+8 |
+9 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+  |
+help: Organize imports
+   |
+6  | """
+   - import io, json, os, subprocess, sys
+7  + import io
+8  + import json
+9  + import os
+10 + import subprocess
+11 + import sys
+12 |
+   |
+
+F401 [*] `sys` imported but unused
+ --> reports\qa\evidence_a_table_r31s\scan_b4.py:7:34
+  |
+5 | ⇒ 本扫描器先回答一个问题：这「缺」是「真没有」还是「有但没写 ID」？
+6 | """
+7 | import io, json, os, subprocess, sys
+  |                                  ^^^
+8 |
+9 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+  |
+help: Remove unused import: `sys`
+  |
+6 | """
+  - import io, json, os, subprocess, sys
+7 + import io, json, os, subprocess
+8 |
+  |
+
+E741 Ambiguous variable name: `l`
+  --> reports\qa\evidence_a_table_r31s\scan_b4.py:65:19
+   |
+63 |     r = subprocess.run(["git", "grep", "-n", "-I", f"--max-count={maxc}", "-e", kw, "--", root],
+64 |                        capture_output=True, text=True, encoding="utf-8", errors="replace")
+65 |     return [l for l in (r.stdout or "").split("\n") if l.strip()]
+   |                   ^
+
+UP020 [*] Use builtin `open`
+  --> reports\qa\evidence_a_table_r31s\scan_b4.py:94:5
+   |
+92 |         print()
+93 |     os.makedirs("E:/tmp_qoder/qa_r31s", exist_ok=True)
+94 |     io.open("E:/tmp_qoder/qa_r31s/b4_raw.json", "w", encoding="utf-8").write(
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+95 |         json.dumps(out, ensure_ascii=False, indent=1))
+96 |     # 汇总
+   |
+help: Replace with builtin `open`
+   |
+93 |     os.makedirs("E:/tmp_qoder/qa_r31s", exist_ok=True)
+   -     io.open("E:/tmp_qoder/qa_r31s/b4_raw.json", "w", encoding="utf-8").write(
+94 +     open("E:/tmp_qoder/qa_r31s/b4_raw.json", "w", encoding="utf-8").write(
+95 |         json.dumps(out, ensure_ascii=False, indent=1))
+   |
+
+SIM115 Use a context manager for opening files
+  --> reports\qa\evidence_a_table_r31s\scan_b4.py:94:5
+   |
+92 |         print()
+93 |     os.makedirs("E:/tmp_qoder/qa_r31s", exist_ok=True)
+94 |     io.open("E:/tmp_qoder/qa_r31s/b4_raw.json", "w", encoding="utf-8").write(
+   |     ^^^^^^^
+95 |         json.dumps(out, ensure_ascii=False, indent=1))
+96 |     # 汇总
+   |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_a_table_r31t\grade_b5.py:1:1
+  |
+1 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+2 | """B5 全量：33 条（defonly 10 ＋ 余下 23）逐条强特征词反查 → 测试文件级分档。
+  |
+help: Remove unnecessary coding comment
+  |
+  - # -*- coding: utf-8 -*-
+1 | """B5 全量：33 条（defonly 10 ＋ 余下 23）逐条强特征词反查 → 测试文件级分档。
+  |
+
+E401 [*] Multiple imports on one line
+  --> reports\qa\evidence_a_table_r31t\grade_b5.py:8:1
+   |
+ 6 | ⇒ 关键词要取「该 NFR 的机制符号」，不能取 NFR 名（如「可用性」）。
+ 7 | """
+ 8 | import os, subprocess, json, collections
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 9 |
+10 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+   |
+help: Split imports
+   |
+7  | """
+   - import os, subprocess, json, collections
+8  + import os
+9  + import subprocess
+10 + import json
+11 + import collections
+12 |
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> reports\qa\evidence_a_table_r31t\grade_b5.py:8:1
+   |
+ 6 | ⇒ 关键词要取「该 NFR 的机制符号」，不能取 NFR 名（如「可用性」）。
+ 7 | """
+ 8 | import os, subprocess, json, collections
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 9 |
+10 | REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+   |
+help: Organize imports
+   |
+7  | """
+   - import os, subprocess, json, collections
+8  + import collections
+9  + import json
+10 + import os
+11 + import subprocess
+12 |
+   |
+
+RUF005 Consider iterable unpacking instead of concatenation
+  --> reports\qa\evidence_a_table_r31t\grade_b5.py:57:24
+   |
+56 | def files(kw, roots, maxc=30):
+57 |     r = subprocess.run(["git", "grep", "-l", "-I", f"--max-count={maxc}", "-e", kw, "--"] + roots,
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+58 |                        capture_output=True, text=True, encoding="utf-8", errors="replace")
+59 |     return {x for x in (r.stdout or "").split("\n") if x.strip()}
+   |
+help: Replace with iterable unpacking
+
+E702 Multiple statements on one line (semicolon)
+  --> reports\qa\evidence_a_table_r31t\grade_b5.py:66:36
+   |
+64 |     s2, s3, per = set(), set(), {}
+65 |     for kw in kws:
+66 |         f2 = files(kw, ROOTS["S2"]); f3 = files(kw, ROOTS["S3"])
+   |                                    ^
+67 |         s2 |= f2; s3 |= f3
+68 |         per[kw] = (len(f2), len(f3))
+   |
+
+E702 Multiple statements on one line (semicolon)
+  --> reports\qa\evidence_a_table_r31t\grade_b5.py:67:17
+   |
+65 |     for kw in kws:
+66 |         f2 = files(kw, ROOTS["S2"]); f3 = files(kw, ROOTS["S3"])
+67 |         s2 |= f2; s3 |= f3
+   |                 ^
+68 |         per[kw] = (len(f2), len(f3))
+69 |     tests = {x for x in s3 if ("/tests/" in x or x.startswith("eval/") or x.endswith(".test.ts") or x.endswith(".test.tsx"))}
+   |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_cassette_r31ai\probe_summary_len.py:1:1
+  |
+1 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+2 | """离线复算：语义摘要长度（旧 9 指标包 ⟷ 新 22 指标包）。
+  |
+help: Remove unnecessary coding comment
+  |
+  - # -*- coding: utf-8 -*-
+1 | """离线复算：语义摘要长度（旧 9 指标包 ⟷ 新 22 指标包）。
+  |
+
+F401 [*] `io` imported but unused
+  --> reports\qa\evidence_cassette_r31ai\probe_summary_len.py:10:8
+   |
+ 8 | from __future__ import annotations
+ 9 |
+10 | import io
+   |        ^^
+11 | import os
+12 | import subprocess
+   |
+help: Remove unused import: `io`
+   |
+9  |
+   - import io
+10 | import os
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> reports\qa\evidence_cassette_r31ai\probe_summary_len.py:22:1
+   |
+20 |     sys.path.insert(0, p)
+21 |
+22 | import _bootstrap  # noqa: E402
+   | ^^^^^^^^^^^^^^^^^
+23 | _bootstrap.bootstrap()
+   |
+help: Organize imports
+   |
+22 | import _bootstrap  # noqa: E402
+23 +
+24 | _bootstrap.bootstrap()
+   |
+
+F541 [*] f-string without any placeholders
+  --> reports\qa\evidence_cassette_r31ai\probe_summary_len.py:70:11
+   |
+68 |     a, b = rows[0][1], rows[1][1]
+69 |     print(f"\n  摘要增长 = {b-a:+d} chars（{b/max(a,1):.2f}×，+{100*(b-a)/max(a,1):.1f}%）")
+70 |     print(f"  W8 报值 = 8,235 → 13,364（+5,129，1.62×）")
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: Remove extraneous `f` prefix
+   |
+69 |     print(f"\n  摘要增长 = {b-a:+d} chars（{b/max(a,1):.2f}×，+{100*(b-a)/max(a,1):.1f}%）")
+   -     print(f"  W8 报值 = 8,235 → 13,364（+5,129，1.62×）")
+70 +     print("  W8 报值 = 8,235 → 13,364（+5,129，1.62×）")
+   |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_cassette_r31ai\repro_decoding.py:1:1
+  |
+1 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+2 | """离线复现 DoD 门失败的真因（零网络 / 零花费 / 不跑 W8 脚本）。
+  |
+help: Remove unnecessary coding comment
+  |
+  - # -*- coding: utf-8 -*-
+1 | """离线复现 DoD 门失败的真因（零网络 / 零花费 / 不跑 W8 脚本）。
+  |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> reports\qa\evidence_cassette_r31ai\repro_decoding.py:17:1
+   |
+15 |   本脚本只做 **①②** 的复现（那是真因所在）；③④ 由**读码**证成（行号已具名）。
+16 |   """
+17 | / import asyncio
+18 | | import gzip
+19 | | import pathlib
+20 | | import sys
+21 | | import httpx
+   | |____________^
+22 |
+23 |   print("httpx", httpx.__version__)
+   |
+help: Organize imports
+   |
+20 | import sys
+21 +
+22 | import httpx
+   |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_cassette_r31ai\selfmatch2.py:1:1
+  |
+1 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+2 | """自匹配实测 v2（修正循环测试：改动前的行从 git 取）。
+  |
+help: Remove unnecessary coding comment
+  |
+  - # -*- coding: utf-8 -*-
+1 | """自匹配实测 v2（修正循环测试：改动前的行从 git 取）。
+  |
+
+F401 [*] `io` imported but unused
+ --> reports\qa\evidence_cassette_r31ai\selfmatch2.py:6:8
+  |
+4 | 纪律记录：v1 拿**改动后**的行去测**改动前**的 pattern ⇒ 那段字面量已被删 ⇒ 循环测试。
+5 | """
+6 | import io
+  |        ^^
+7 | import re
+8 | import subprocess
+  |
+help: Remove unused import: `io`
+  |
+5 | """
+  - import io
+6 | import re
+  |
+
+E741 Ambiguous variable name: `l`
+  --> reports\qa\evidence_cassette_r31ai\selfmatch2.py:18:13
+   |
+16 |     t = subprocess.run(["git", "show", ref + ":backend/reports/w8/RELAY.md"],
+17 |                        capture_output=True, text=True, encoding="utf-8", cwd=REPO).stdout
+18 |     for ln, l in enumerate(t.split("\n"), 1):
+   |             ^
+19 |         if "scan_rc" in l and "grep -lInE" in l:
+20 |             return ln, l
+   |
+
+E702 Multiple statements on one line (semicolon)
+  --> reports\qa\evidence_cassette_r31ai\selfmatch2.py:36:11
+   |
+34 | print("\n--- 自匹配矩阵（行 × pattern）---")
+35 | hdr = f"{'':10s} | {'改动前(OLD)':>12s} | {'改动后(NEW)':>12s}"
+36 | print(hdr); print("-" * len(hdr))
+   |           ^
+37 | for nm, line in (("改动前的行", pre), ("改动后的行", post)):
+38 |     a = bool(re.search(OLD, line)); b = bool(re.search(NEW, line))
+   |
+
+E702 Multiple statements on one line (semicolon)
+  --> reports\qa\evidence_cassette_r31ai\selfmatch2.py:38:35
+   |
+36 | print(hdr); print("-" * len(hdr))
+37 | for nm, line in (("改动前的行", pre), ("改动后的行", post)):
+38 |     a = bool(re.search(OLD, line)); b = bool(re.search(NEW, line))
+   |                                   ^
+39 |     print(f"{nm:10s} | {str(a):>12s} | {str(b):>12s}")
+   |
+
+RUF010 [*] Use explicit conversion flag
+  --> reports\qa\evidence_cassette_r31ai\selfmatch2.py:39:25
+   |
+37 | for nm, line in (("改动前的行", pre), ("改动后的行", post)):
+38 |     a = bool(re.search(OLD, line)); b = bool(re.search(NEW, line))
+39 |     print(f"{nm:10s} | {str(a):>12s} | {str(b):>12s}")
+   |                         ^^^^^^
+40 |
+41 | print("\n--- 被测集合里是否有该文件 ---")
+   |
+help: Replace with conversion flag
+   |
+38 |     a = bool(re.search(OLD, line)); b = bool(re.search(NEW, line))
+   -     print(f"{nm:10s} | {str(a):>12s} | {str(b):>12s}")
+39 +     print(f"{nm:10s} | {a!s:>12s} | {str(b):>12s}")
+40 |
+   |
+
+RUF010 [*] Use explicit conversion flag
+  --> reports\qa\evidence_cassette_r31ai\selfmatch2.py:39:41
+   |
+37 | for nm, line in (("改动前的行", pre), ("改动后的行", post)):
+38 |     a = bool(re.search(OLD, line)); b = bool(re.search(NEW, line))
+39 |     print(f"{nm:10s} | {str(a):>12s} | {str(b):>12s}")
+   |                                         ^^^^^^
+40 |
+41 | print("\n--- 被测集合里是否有该文件 ---")
+   |
+help: Replace with conversion flag
+   |
+38 |     a = bool(re.search(OLD, line)); b = bool(re.search(NEW, line))
+   -     print(f"{nm:10s} | {str(a):>12s} | {str(b):>12s}")
+39 +     print(f"{nm:10s} | {str(a):>12s} | {b!s:>12s}")
+40 |
+   |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_main_r31ad\diag_emb.py:2:1
+  |
+1 | #!/usr/bin/env python
+2 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+3 | """QA R31ad-2 · 决定性：`embedding_unavailable` 到底是根因还是伴随现象？
+4 | **只读 / 零出站 / 零花费**
+  |
+help: Remove unnecessary coding comment
+  |
+1 | #!/usr/bin/env python
+  - # -*- coding: utf-8 -*-
+2 | """QA R31ad-2 · 决定性：`embedding_unavailable` 到底是根因还是伴随现象？
+  |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> reports\qa\evidence_main_r31ad\diag_emb.py:10:1
+   |
+ 8 |     若只有误拒组有 ⇒ 它可能是根因
+ 9 |   """
+10 | / import io
+11 | | import json
+12 | | import collections
+   | |__________________^
+13 |
+14 |   d = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+   |
+help: Organize imports
+   |
+9  | """
+10 + import collections
+11 | import io
+12 | import json
+   - import collections
+13 |
+   |
+
+UP020 [*] Use builtin `open`
+  --> reports\qa\evidence_main_r31ad\diag_emb.py:14:15
+   |
+12 | import collections
+13 |
+14 | d = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+15 | recs = d["records"]
+   |
+help: Replace with builtin `open`
+   |
+13 |
+   - d = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+14 + d = json.load(open("eval/results_v1.json", encoding="utf-8"))
+15 | recs = d["records"]
+   |
+
+SIM115 Use a context manager for opening files
+  --> reports\qa\evidence_main_r31ad\diag_emb.py:14:15
+   |
+12 | import collections
+13 |
+14 | d = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+   |               ^^^^^^^
+15 | recs = d["records"]
+   |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_main_r31ad\diag_g2.py:2:1
+  |
+1 | #!/usr/bin/env python
+2 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+3 | """QA R31ad · 主线重启第一步：G-2 与误拒的根因分档（**只读 / 零出站 / 零花费**）
+  |
+help: Remove unnecessary coding comment
+  |
+1 | #!/usr/bin/env python
+  - # -*- coding: utf-8 -*-
+2 | """QA R31ad · 主线重启第一步：G-2 与误拒的根因分档（**只读 / 零出站 / 零花费**）
+  |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> reports\qa\evidence_main_r31ad\diag_g2.py:12:1
+   |
+10 |     ④ 这些题缺的是「资产（表/列）」还是「指标口径」？
+11 |   """
+12 | / import io
+13 | | import json
+14 | | import collections
+   | |__________________^
+15 |
+16 |   P = "eval/results_v1.json"
+   |
+help: Organize imports
+   |
+11 | """
+12 + import collections
+13 | import io
+14 | import json
+   - import collections
+15 |
+   |
+
+UP020 [*] Use builtin `open`
+  --> reports\qa\evidence_main_r31ad\diag_g2.py:17:15
+   |
+16 | P = "eval/results_v1.json"
+17 | d = json.load(io.open(P, encoding="utf-8"))
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+18 | recs = d["records"]
+19 | print("=" * 78)
+   |
+help: Replace with builtin `open`
+   |
+16 | P = "eval/results_v1.json"
+   - d = json.load(io.open(P, encoding="utf-8"))
+17 + d = json.load(open(P, encoding="utf-8"))
+18 | recs = d["records"]
+   |
+
+SIM115 Use a context manager for opening files
+  --> reports\qa\evidence_main_r31ad\diag_g2.py:17:15
+   |
+16 | P = "eval/results_v1.json"
+17 | d = json.load(io.open(P, encoding="utf-8"))
+   |               ^^^^^^^
+18 | recs = d["records"]
+19 | print("=" * 78)
+   |
+
+RUF010 [*] Use explicit conversion flag
+  --> reports\qa\evidence_main_r31ad\diag_g2.py:35:17
+   |
+33 | cc = collections.Counter([r.get("refusal_reason") for r in ref])
+34 | for k, v in cc.most_common():
+35 |     print(f"   {str(k):18s} = {v}")
+   |                 ^^^^^^
+36 |
+37 | # ---------- ③ no_data_asset x expected ----------
+   |
+help: Replace with conversion flag
+   |
+34 | for k, v in cc.most_common():
+   -     print(f"   {str(k):18s} = {v}")
+35 +     print(f"   {k!s:18s} = {v}")
+36 |
+   |
+
+RUF010 [*] Use explicit conversion flag
+  --> reports\qa\evidence_main_r31ad\diag_g2.py:47:17
+   |
+45 | print(f"\n④ 误拒（expected=execute 且 out=refuse）= {len(wrong)} 条")
+46 | for k, v in collections.Counter([r.get("refusal_reason") for r in wrong]).most_common():
+47 |     print(f"   {str(k):18s} = {v}")
+   |                 ^^^^^^
+48 |
+49 | # ---------- ⑤ 误拒里有哪些层级 ----------
+   |
+help: Replace with conversion flag
+   |
+46 | for k, v in collections.Counter([r.get("refusal_reason") for r in wrong]).most_common():
+   -     print(f"   {str(k):18s} = {v}")
+47 +     print(f"   {k!s:18s} = {v}")
+48 |
+   |
+
+F541 [*] f-string without any placeholders
+  --> reports\qa\evidence_main_r31ad\diag_g2.py:50:7
+   |
+49 | # ---------- ⑤ 误拒里有哪些层级 ----------
+50 | print(f"\n⑤ 误拒的分层分布")
+   |       ^^^^^^^^^^^^^^^^^^^^^
+51 | for k, v in collections.Counter([(r.get("difficulty_struct") or "(空)", r.get("difficulty_semantic") or "(空)") for r in wrong]).most_…
+52 |     print(f"   {str(k):22s} = {v}")
+   |
+help: Remove extraneous `f` prefix
+   |
+49 | # ---------- ⑤ 误拒里有哪些层级 ----------
+   - print(f"\n⑤ 误拒的分层分布")
+50 + print("\n⑤ 误拒的分层分布")
+51 | for k, v in collections.Counter([(r.get("difficulty_struct") or "(空)", r.get("difficulty_semantic") or "(空)") for r in wrong]).most_common(12):
+   |
+
+RUF010 [*] Use explicit conversion flag
+  --> reports\qa\evidence_main_r31ad\diag_g2.py:52:17
+   |
+50 | print(f"\n⑤ 误拒的分层分布")
+51 | for k, v in collections.Counter([(r.get("difficulty_struct") or "(空)", r.get("difficulty_semantic") or "(空)") for r in wrong]).most_…
+52 |     print(f"   {str(k):22s} = {v}")
+   |                 ^^^^^^
+53 |
+54 | # ---------- ⑥ 误拒的停止节点 ----------
+   |
+help: Replace with conversion flag
+   |
+51 | for k, v in collections.Counter([(r.get("difficulty_struct") or "(空)", r.get("difficulty_semantic") or "(空)") for r in wrong]).most_common(12):
+   -     print(f"   {str(k):22s} = {v}")
+52 +     print(f"   {k!s:22s} = {v}")
+53 |
+   |
+
+F541 [*] f-string without any placeholders
+  --> reports\qa\evidence_main_r31ad\diag_g2.py:55:7
+   |
+54 | # ---------- ⑥ 误拒的停止节点 ----------
+55 | print(f"\n⑥ 误拒的停止节点（nodes 末位）")
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+56 | for k, v in collections.Counter([(r.get("nodes") or ["?"])[-1] for r in wrong]).most_common():
+57 |     print(f"   {str(k):18s} = {v}")
+   |
+help: Remove extraneous `f` prefix
+   |
+54 | # ---------- ⑥ 误拒的停止节点 ----------
+   - print(f"\n⑥ 误拒的停止节点（nodes 末位）")
+55 + print("\n⑥ 误拒的停止节点（nodes 末位）")
+56 | for k, v in collections.Counter([(r.get("nodes") or ["?"])[-1] for r in wrong]).most_common():
+   |
+
+RUF010 [*] Use explicit conversion flag
+  --> reports\qa\evidence_main_r31ad\diag_g2.py:57:17
+   |
+55 | print(f"\n⑥ 误拒的停止节点（nodes 末位）")
+56 | for k, v in collections.Counter([(r.get("nodes") or ["?"])[-1] for r in wrong]).most_common():
+57 |     print(f"   {str(k):18s} = {v}")
+   |                 ^^^^^^
+58 |
+59 | # ---------- ⑦ 抽 6 条 no_data_asset 误拒题面 ----------
+   |
+help: Replace with conversion flag
+   |
+56 | for k, v in collections.Counter([(r.get("nodes") or ["?"])[-1] for r in wrong]).most_common():
+   -     print(f"   {str(k):18s} = {v}")
+57 +     print(f"   {k!s:18s} = {v}")
+58 |
+   |
+
+F541 [*] f-string without any placeholders
+  --> reports\qa\evidence_main_r31ad\diag_g2.py:60:7
+   |
+59 | # ---------- ⑦ 抽 6 条 no_data_asset 误拒题面 ----------
+60 | print(f"\n⑦ no_data_asset 误拒题面抽样（前 12）")
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+61 | for r in nd:
+62 |     if r.get("expected_behavior") == "execute":
+   |
+help: Remove extraneous `f` prefix
+   |
+59 | # ---------- ⑦ 抽 6 条 no_data_asset 误拒题面 ----------
+   - print(f"\n⑦ no_data_asset 误拒题面抽样（前 12）")
+60 + print("\n⑦ no_data_asset 误拒题面抽样（前 12）")
+61 | for r in nd:
+   |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_main_r31ad\diag_main.py:2:1
+  |
+1 | #!/usr/bin/env python
+2 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+3 | """QA R31ad · 主线重启诊断：G-2/G-5 同根因验证 + 语义包覆盖缺口清单
+4 | **只读 / 零出站 / 零花费**
+  |
+help: Remove unnecessary coding comment
+  |
+1 | #!/usr/bin/env python
+  - # -*- coding: utf-8 -*-
+2 | """QA R31ad · 主线重启诊断：G-2/G-5 同根因验证 + 语义包覆盖缺口清单
+  |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> reports\qa\evidence_main_r31ad\diag_main.py:6:1
+   |
+ 4 |   **只读 / 零出站 / 零花费**
+ 5 |   """
+ 6 | / import io
+ 7 | | import json
+ 8 | | import collections
+ 9 | | import yaml
+   | |___________^
+10 |
+11 |   d1 = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+   |
+help: Organize imports
+   |
+5  | """
+6  + import collections
+7  | import io
+8  | import json
+   - import collections
+9  +
+10 | import yaml
+   |
+
+UP020 [*] Use builtin `open`
+  --> reports\qa\evidence_main_r31ad\diag_main.py:11:16
+   |
+ 9 | import yaml
+10 |
+11 | d1 = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+12 | recs = d1["records"]
+13 | sem = yaml.safe_load(io.open("semantic/bundle_2026.09.14.1.yaml", encoding="utf-8"))
+   |
+help: Replace with builtin `open`
+   |
+10 |
+   - d1 = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+11 + d1 = json.load(open("eval/results_v1.json", encoding="utf-8"))
+12 | recs = d1["records"]
+   |
+
+SIM115 Use a context manager for opening files
+  --> reports\qa\evidence_main_r31ad\diag_main.py:11:16
+   |
+ 9 | import yaml
+10 |
+11 | d1 = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+   |                ^^^^^^^
+12 | recs = d1["records"]
+13 | sem = yaml.safe_load(io.open("semantic/bundle_2026.09.14.1.yaml", encoding="utf-8"))
+   |
+
+UP020 [*] Use builtin `open`
+  --> reports\qa\evidence_main_r31ad\diag_main.py:13:22
+   |
+11 | d1 = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+12 | recs = d1["records"]
+13 | sem = yaml.safe_load(io.open("semantic/bundle_2026.09.14.1.yaml", encoding="utf-8"))
+   |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+14 |
+15 | print("=" * 78)
+   |
+help: Replace with builtin `open`
+   |
+12 | recs = d1["records"]
+   - sem = yaml.safe_load(io.open("semantic/bundle_2026.09.14.1.yaml", encoding="utf-8"))
+13 + sem = yaml.safe_load(open("semantic/bundle_2026.09.14.1.yaml", encoding="utf-8"))
+14 |
+   |
+
+SIM115 Use a context manager for opening files
+  --> reports\qa\evidence_main_r31ad\diag_main.py:13:22
+   |
+11 | d1 = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+12 | recs = d1["records"]
+13 | sem = yaml.safe_load(io.open("semantic/bundle_2026.09.14.1.yaml", encoding="utf-8"))
+   |                      ^^^^^^^
+14 |
+15 | print("=" * 78)
+   |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_metric_gap_r31af\verify_r40.py:2:1
+  |
+1 | #!/usr/bin/env python
+2 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+3 | """QA R31af · W8 第 40 轮复算（v2，修 metric 数取值）
+4 | **只读 / 零出站 / 零花费**
+  |
+help: Remove unnecessary coding comment
+  |
+1 | #!/usr/bin/env python
+  - # -*- coding: utf-8 -*-
+2 | """QA R31af · W8 第 40 轮复算（v2，修 metric 数取值）
+  |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> reports\qa\evidence_metric_gap_r31af\verify_r40.py:6:1
+   |
+ 4 |   **只读 / 零出站 / 零花费**
+ 5 |   """
+ 6 | / import io
+ 7 | | import json
+ 8 | | import collections
+   | |__________________^
+ 9 |
+10 |   W = json.load(io.open("backend/reports/w8/probe_semantic_metric_gap.json", encoding="utf-8"))
+   |
+help: Organize imports
+  |
+5 | """
+6 + import collections
+7 | import io
+8 | import json
+  - import collections
+9 |
+  |
+
+UP020 [*] Use builtin `open`
+  --> reports\qa\evidence_metric_gap_r31af\verify_r40.py:10:15
+   |
+ 8 | import collections
+ 9 |
+10 | W = json.load(io.open("backend/reports/w8/probe_semantic_metric_gap.json", encoding="utf-8"))
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+11 | F = json.load(io.open("eval/dataset_v1_frozen.json", encoding="utf-8"))
+12 | R = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+   |
+help: Replace with builtin `open`
+   |
+9  |
+   - W = json.load(io.open("backend/reports/w8/probe_semantic_metric_gap.json", encoding="utf-8"))
+10 + W = json.load(open("backend/reports/w8/probe_semantic_metric_gap.json", encoding="utf-8"))
+11 | F = json.load(io.open("eval/dataset_v1_frozen.json", encoding="utf-8"))
+   |
+
+SIM115 Use a context manager for opening files
+  --> reports\qa\evidence_metric_gap_r31af\verify_r40.py:10:15
+   |
+ 8 | import collections
+ 9 |
+10 | W = json.load(io.open("backend/reports/w8/probe_semantic_metric_gap.json", encoding="utf-8"))
+   |               ^^^^^^^
+11 | F = json.load(io.open("eval/dataset_v1_frozen.json", encoding="utf-8"))
+12 | R = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+   |
+
+UP020 [*] Use builtin `open`
+  --> reports\qa\evidence_metric_gap_r31af\verify_r40.py:11:15
+   |
+10 | W = json.load(io.open("backend/reports/w8/probe_semantic_metric_gap.json", encoding="utf-8"))
+11 | F = json.load(io.open("eval/dataset_v1_frozen.json", encoding="utf-8"))
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+12 | R = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+13 | Y = None  # 语义包在别处已核
+   |
+help: Replace with builtin `open`
+   |
+10 | W = json.load(io.open("backend/reports/w8/probe_semantic_metric_gap.json", encoding="utf-8"))
+   - F = json.load(io.open("eval/dataset_v1_frozen.json", encoding="utf-8"))
+11 + F = json.load(open("eval/dataset_v1_frozen.json", encoding="utf-8"))
+12 | R = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+   |
+
+SIM115 Use a context manager for opening files
+  --> reports\qa\evidence_metric_gap_r31af\verify_r40.py:11:15
+   |
+10 | W = json.load(io.open("backend/reports/w8/probe_semantic_metric_gap.json", encoding="utf-8"))
+11 | F = json.load(io.open("eval/dataset_v1_frozen.json", encoding="utf-8"))
+   |               ^^^^^^^
+12 | R = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+13 | Y = None  # 语义包在别处已核
+   |
+
+UP020 [*] Use builtin `open`
+  --> reports\qa\evidence_metric_gap_r31af\verify_r40.py:12:15
+   |
+10 | W = json.load(io.open("backend/reports/w8/probe_semantic_metric_gap.json", encoding="utf-8"))
+11 | F = json.load(io.open("eval/dataset_v1_frozen.json", encoding="utf-8"))
+12 | R = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+13 | Y = None  # 语义包在别处已核
+   |
+help: Replace with builtin `open`
+   |
+11 | F = json.load(io.open("eval/dataset_v1_frozen.json", encoding="utf-8"))
+   - R = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+12 + R = json.load(open("eval/results_v1.json", encoding="utf-8"))
+13 | Y = None  # 语义包在别处已核
+   |
+
+SIM115 Use a context manager for opening files
+  --> reports\qa\evidence_metric_gap_r31af\verify_r40.py:12:15
+   |
+10 | W = json.load(io.open("backend/reports/w8/probe_semantic_metric_gap.json", encoding="utf-8"))
+11 | F = json.load(io.open("eval/dataset_v1_frozen.json", encoding="utf-8"))
+12 | R = json.load(io.open("eval/results_v1.json", encoding="utf-8"))
+   |               ^^^^^^^
+13 | Y = None  # 语义包在别处已核
+   |
+
+SIM300 [*] Yoda condition detected
+  --> reports\qa\evidence_metric_gap_r31af\verify_r40.py:42:62
+   |
+40 | print(f"  |A|={len(A)}｜|B|={len(B)}｜|C|={len(C)}")
+41 | print(f"  A∩B={len(A&B)}｜A∩C={len(A&C)}｜B∩C={len(B&C)} ⇒ 互斥 = {not (A&B or A&C or B&C)}")
+42 | print(f"  |A∪B∪C|={len(A|B|C)} ⟷ |cases|={len(allc)} ⇒ 相等 = {A|B|C == allc}")
+   |                                                                ^^^^^^^^^^^^^
+43 |
+44 | print()
+   |
+help: Rewrite as `allc == A|B|C`
+   |
+41 | print(f"  A∩B={len(A&B)}｜A∩C={len(A&C)}｜B∩C={len(B&C)} ⇒ 互斥 = {not (A&B or A&C or B&C)}")
+   - print(f"  |A∪B∪C|={len(A|B|C)} ⟷ |cases|={len(allc)} ⇒ 相等 = {A|B|C == allc}")
+42 + print(f"  |A∪B∪C|={len(A|B|C)} ⟷ |cases|={len(allc)} ⇒ 相等 = {allc == A|B|C}")
+43 |
+   |
+
+F541 [*] f-string without any placeholders
+  --> reports\qa\evidence_metric_gap_r31af\verify_r40.py:65:7
+   |
+63 | print()
+64 | print("  判据：「补 13 条 → 覆盖 16 条 case」⇒ 若**纯对 1**则 13 条只该覆盖 ≤13；")
+65 | print(f"        现 16 > 13 ⇒ **至少有一部分是多对多（概念级）**。")
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+66 | print(f"        但**仍有 {len(one)} 条 metric 是 1 对 1** ⇒ 需逐条看是否属'为单题造指标'。")
+   |
+help: Remove extraneous `f` prefix
+   |
+64 | print("  判据：「补 13 条 → 覆盖 16 条 case」⇒ 若**纯对 1**则 13 条只该覆盖 ≤13；")
+   - print(f"        现 16 > 13 ⇒ **至少有一部分是多对多（概念级）**。")
+65 + print("        现 16 > 13 ⇒ **至少有一部分是多对多（概念级）**。")
+66 | print(f"        但**仍有 {len(one)} 条 metric 是 1 对 1** ⇒ 需逐条看是否属'为单题造指标'。")
+   |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_outage_r31ah\probe_path.py:1:1
+  |
+1 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+2 | """出网路径诊断（只打 /models，零花费；不打印任何凭据）。
+  |
+help: Remove unnecessary coding comment
+  |
+  - # -*- coding: utf-8 -*-
+1 | """出网路径诊断（只打 /models，零花费；不打印任何凭据）。
+  |
+
+E401 [*] Multiple imports on one line
+ --> reports\qa\evidence_outage_r31ah\probe_path.py:7:1
+  |
+5 | 两者可能是**不同的出网路径** => QA 的 6/6 200 未必能推翻 W8 的 2/2 失败。
+6 | """
+7 | import io, os, re, sys, time
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+8 |
+9 | ROOT = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+  |
+help: Split imports
+   |
+6  | """
+   - import io, os, re, sys, time
+7  + import io
+8  + import os
+9  + import re
+10 + import sys
+11 + import time
+12 |
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> reports\qa\evidence_outage_r31ah\probe_path.py:7:1
+  |
+5 | 两者可能是**不同的出网路径** => QA 的 6/6 200 未必能推翻 W8 的 2/2 失败。
+6 | """
+7 | import io, os, re, sys, time
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+8 |
+9 | ROOT = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+  |
+help: Organize imports
+   |
+6  | """
+   - import io, os, re, sys, time
+7  + import io
+8  + import os
+9  + import re
+10 + import sys
+11 + import time
+12 |
+   |
+
+F401 [*] `re` imported but unused
+ --> reports\qa\evidence_outage_r31ah\probe_path.py:7:16
+  |
+5 | 两者可能是**不同的出网路径** => QA 的 6/6 200 未必能推翻 W8 的 2/2 失败。
+6 | """
+7 | import io, os, re, sys, time
+  |                ^^
+8 |
+9 | ROOT = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+  |
+help: Remove unused import
+  |
+6 | """
+  - import io, os, re, sys, time
+7 + import io, os, time
+8 |
+  |
+
+F401 [*] `sys` imported but unused
+ --> reports\qa\evidence_outage_r31ah\probe_path.py:7:20
+  |
+5 | 两者可能是**不同的出网路径** => QA 的 6/6 200 未必能推翻 W8 的 2/2 失败。
+6 | """
+7 | import io, os, re, sys, time
+  |                    ^^^
+8 |
+9 | ROOT = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+  |
+help: Remove unused import
+  |
+6 | """
+  - import io, os, re, sys, time
+7 + import io, os, time
+8 |
+  |
+
+UP020 [*] Use builtin `open`
+  --> reports\qa\evidence_outage_r31ah\probe_path.py:14:17
+   |
+12 |     p = os.path.join(ROOT, "deploy", ".env")
+13 |     out = {}
+14 |     for line in io.open(p, encoding="utf-8"):
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+15 |         line = line.strip()
+16 |         if not line or line.startswith("#") or "=" not in line:
+   |
+help: Replace with builtin `open`
+   |
+13 |     out = {}
+   -     for line in io.open(p, encoding="utf-8"):
+14 +     for line in open(p, encoding="utf-8"):
+15 |         line = line.strip()
+   |
+
+SIM115 Use a context manager for opening files
+  --> reports\qa\evidence_outage_r31ah\probe_path.py:14:17
+   |
+12 |     p = os.path.join(ROOT, "deploy", ".env")
+13 |     out = {}
+14 |     for line in io.open(p, encoding="utf-8"):
+   |                 ^^^^^^^
+15 |         line = line.strip()
+16 |         if not line or line.startswith("#") or "=" not in line:
+   |
+
+F541 [*] f-string without any placeholders
+  --> reports\qa\evidence_outage_r31ah\probe_path.py:27:7
+   |
+25 | print(f"base_url = {base}")
+26 | print(f"key      = <{len(key)} chars, 不打印>")
+27 | print(f"host env 代理变量 = " + ", ".join(
+   |       ^^^^^^^^^^^^^^^^^^^^^^^
+28 |     f"{k}={'set' if os.environ.get(k) else 'unset'}"
+29 |     for k in ("http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY", "no_proxy", "NO_PROXY")))
+   |
+help: Remove extraneous `f` prefix
+   |
+26 | print(f"key      = <{len(key)} chars, 不打印>")
+   - print(f"host env 代理变量 = " + ", ".join(
+27 + print("host env 代理变量 = " + ", ".join(
+28 |     f"{k}={'set' if os.environ.get(k) else 'unset'}"
+   |
+
+E402 Module level import not at top of file
+  --> reports\qa\evidence_outage_r31ah\probe_path.py:32:1
+   |
+30 | print()
+31 |
+32 | import httpx
+   | ^^^^^^^^^^^^
+33 | print("httpx", httpx.__version__)
+34 | print()
+   |
+help: Move module level imports to top of file
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> reports\qa\evidence_outage_r31ah\probe_path.py:32:1
+   |
+30 | print()
+31 |
+32 | import httpx
+   | ^^^^^^^^^^^^
+33 | print("httpx", httpx.__version__)
+34 | print()
+   |
+help: Organize imports
+   |
+32 | import httpx
+33 +
+34 | print("httpx", httpx.__version__)
+   |
+
+SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+  --> reports\qa\evidence_outage_r31ah\probe_path.py:46:9
+   |
+44 |           dt = time.monotonic() - t0
+45 |           ids = []
+46 | /         try:
+47 | |             ids = [m.get("id") for m in r.json().get("data", [])]
+48 | |         except Exception:
+49 | |             pass
+   | |________________^
+50 |           print(f"[{label:24s}] http={r.status_code} t={dt:.2f}s models={ids}")
+51 |           c.close()
+   |
+help: Replace `try`-`except`-`pass` with `with contextlib.suppress(Exception): ...`
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_outage_r31ah\probe_post.py:1:1
+  |
+1 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+2 | """补全端点冒烟（POST，max_tokens=1，成本≈¥0；只报状态与时延，不打印凭据/正文）。"""
+3 | import io, os, time
+  |
+help: Remove unnecessary coding comment
+  |
+  - # -*- coding: utf-8 -*-
+1 | """补全端点冒烟（POST，max_tokens=1，成本≈¥0；只报状态与时延，不打印凭据/正文）。"""
+  |
+
+E401 [*] Multiple imports on one line
+ --> reports\qa\evidence_outage_r31ah\probe_post.py:3:1
+  |
+1 | # -*- coding: utf-8 -*-
+2 | """补全端点冒烟（POST，max_tokens=1，成本≈¥0；只报状态与时延，不打印凭据/正文）。"""
+3 | import io, os, time
+  | ^^^^^^^^^^^^^^^^^^^
+4 | ROOT = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+5 | env = {}
+  |
+help: Split imports
+  |
+2 | """补全端点冒烟（POST，max_tokens=1，成本≈¥0；只报状态与时延，不打印凭据/正文）。"""
+  - import io, os, time
+3 + import io
+4 + import os
+5 + import time
+6 | ROOT = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+  |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> reports\qa\evidence_outage_r31ah\probe_post.py:3:1
+  |
+1 | # -*- coding: utf-8 -*-
+2 | """补全端点冒烟（POST，max_tokens=1，成本≈¥0；只报状态与时延，不打印凭据/正文）。"""
+3 | import io, os, time
+  | ^^^^^^^^^^^^^^^^^^^
+4 | ROOT = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+5 | env = {}
+  |
+help: Organize imports
+  |
+2 | """补全端点冒烟（POST，max_tokens=1，成本≈¥0；只报状态与时延，不打印凭据/正文）。"""
+  - import io, os, time
+3 + import io
+4 + import os
+5 + import time
+6 +
+7 | ROOT = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+  |
+
+UP020 [*] Use builtin `open`
+ --> reports\qa\evidence_outage_r31ah\probe_post.py:6:13
+  |
+4 | ROOT = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+5 | env = {}
+6 | for line in io.open(os.path.join(ROOT, "deploy", ".env"), encoding="utf-8"):
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+7 |     line = line.strip()
+8 |     if line and not line.startswith("#") and "=" in line:
+  |
+help: Replace with builtin `open`
+  |
+5 | env = {}
+  - for line in io.open(os.path.join(ROOT, "deploy", ".env"), encoding="utf-8"):
+6 + for line in open(os.path.join(ROOT, "deploy", ".env"), encoding="utf-8"):
+7 |     line = line.strip()
+  |
+
+SIM115 Use a context manager for opening files
+ --> reports\qa\evidence_outage_r31ah\probe_post.py:6:13
+  |
+4 | ROOT = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+5 | env = {}
+6 | for line in io.open(os.path.join(ROOT, "deploy", ".env"), encoding="utf-8"):
+  |             ^^^^^^^
+7 |     line = line.strip()
+8 |     if line and not line.startswith("#") and "=" in line:
+  |
+
+E702 Multiple statements on one line (semicolon)
+  --> reports\qa\evidence_outage_r31ah\probe_post.py:9:34
+   |
+ 7 |     line = line.strip()
+ 8 |     if line and not line.startswith("#") and "=" in line:
+ 9 |         k, v = line.split("=", 1); env[k.strip()] = v.strip().strip('"').strip("'")
+   |                                  ^
+10 | import httpx
+11 | MODELS = [env.get("LLM_MODEL_FAST"), env.get("LLM_MODEL_STRONG")]
+   |
+
+E402 Module level import not at top of file
+  --> reports\qa\evidence_outage_r31ah\probe_post.py:10:1
+   |
+ 8 |     if line and not line.startswith("#") and "=" in line:
+ 9 |         k, v = line.split("=", 1); env[k.strip()] = v.strip().strip('"').strip("'")
+10 | import httpx
+   | ^^^^^^^^^^^^
+11 | MODELS = [env.get("LLM_MODEL_FAST"), env.get("LLM_MODEL_STRONG")]
+12 | # 用项目网关**同样的超时形态**：connect=5.0 / read=None
+   |
+help: Move module level imports to top of file
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> reports\qa\evidence_outage_r31ah\probe_post.py:10:1
+   |
+ 8 |     if line and not line.startswith("#") and "=" in line:
+ 9 |         k, v = line.split("=", 1); env[k.strip()] = v.strip().strip('"').strip("'")
+10 | import httpx
+   | ^^^^^^^^^^^^
+11 | MODELS = [env.get("LLM_MODEL_FAST"), env.get("LLM_MODEL_STRONG")]
+12 | # 用项目网关**同样的超时形态**：connect=5.0 / read=None
+   |
+help: Organize imports
+   |
+10 | import httpx
+11 +
+12 | MODELS = [env.get("LLM_MODEL_FAST"), env.get("LLM_MODEL_STRONG")]
+   |
+
+SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+  --> reports\qa\evidence_outage_r31ah\probe_post.py:24:13
+   |
+22 |               dt = time.monotonic() - t0
+23 |               body = {}
+24 | /             try:
+25 | |                 body = r.json()
+26 | |             except Exception:
+27 | |                 pass
+   | |____________________^
+28 |               fr = (body.get("choices") or [{}])[0].get("finish_reason")
+29 |               usage = body.get("usage") or {}
+   |
+help: Replace `try`-`except`-`pass` with `with contextlib.suppress(Exception): ...`
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_recompute_r31ab\audit_recompute.py:2:1
+  |
+1 | #!/usr/bin/env python
+2 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+3 | """QA R31ab · W8「复算入口」机械审计（只读、零出站、零花费）
+  |
+help: Remove unnecessary coding comment
+  |
+1 | #!/usr/bin/env python
+  - # -*- coding: utf-8 -*-
+2 | """QA R31ab · W8「复算入口」机械审计（只读、零出站、零花费）
+  |
+
+UP020 [*] Use builtin `open`
+  --> reports\qa\evidence_recompute_r31ab\audit_recompute.py:63:12
+   |
+62 | def read(p):
+63 |     return io.open(p, encoding="utf-8").read()
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: Replace with builtin `open`
+   |
+62 | def read(p):
+   -     return io.open(p, encoding="utf-8").read()
+63 +     return open(p, encoding="utf-8").read()
+64 |
+   |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_recompute_r31ab\selfref_scan.py:2:1
+  |
+1 | #!/usr/bin/env python
+2 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+3 | """QA R31ab · 附：W8 复算入口「自指」机械扫描（只读、零出站、零花费）
+  |
+help: Remove unnecessary coding comment
+  |
+1 | #!/usr/bin/env python
+  - # -*- coding: utf-8 -*-
+2 | """QA R31ab · 附：W8 复算入口「自指」机械扫描（只读、零出站、零花费）
+  |
+
+E741 Ambiguous variable name: `l`
+  --> reports\qa\evidence_recompute_r31ab\selfref_scan.py:43:9
+   |
+41 |         return set()
+42 |     out = set()
+43 |     for l in (r.stdout or "").split("\n"):
+   |         ^
+44 |         mm = re.match(r"^[^:]+:(\d+):", l)
+45 |         if mm:
+   |
+
+UP020 [*] Use builtin `open`
+  --> reports\qa\evidence_recompute_r31ab\selfref_scan.py:56:17
+   |
+54 |     untested = []
+55 |     for f in FILES:
+56 |         lines = io.open(f, encoding="utf-8").read().split("\n")
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+57 |         for i, l in enumerate(lines):
+58 |             if "复算入口" not in l:
+   |
+help: Replace with builtin `open`
+   |
+55 |     for f in FILES:
+   -         lines = io.open(f, encoding="utf-8").read().split("\n")
+56 +         lines = open(f, encoding="utf-8").read().split("\n")
+57 |         for i, l in enumerate(lines):
+   |
+
+SIM115 Use a context manager for opening files
+  --> reports\qa\evidence_recompute_r31ab\selfref_scan.py:56:17
+   |
+54 |     untested = []
+55 |     for f in FILES:
+56 |         lines = io.open(f, encoding="utf-8").read().split("\n")
+   |                 ^^^^^^^
+57 |         for i, l in enumerate(lines):
+58 |             if "复算入口" not in l:
+   |
+
+E741 Ambiguous variable name: `l`
+  --> reports\qa\evidence_recompute_r31ab\selfref_scan.py:57:16
+   |
+55 |     for f in FILES:
+56 |         lines = io.open(f, encoding="utf-8").read().split("\n")
+57 |         for i, l in enumerate(lines):
+   |                ^
+58 |             if "复算入口" not in l:
+59 |                 continue
+   |
+
+B007 Loop control variable `idx` not used within loop body
+  --> reports\qa\evidence_recompute_r31ab\selfref_scan.py:61:17
+   |
+59 |                 continue
+60 |             total_entries += 1
+61 |             for idx, m in enumerate(GREP_PAT.finditer(l)):
+   |                 ^^^
+62 |                 pat = m.group(1)
+63 |                 # 目标文件 = 该 pattern **之后** 的下一个 token（第一个出现的 .md/.py/.json/目录）
+   |
+help: Rename unused `idx` to `_idx`
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\qa\evidence_recompute_r31ac\audit_recompute_v2.py:2:1
+  |
+1 | #!/usr/bin/env python
+2 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+3 | """QA R31ab · W8「复算入口」机械审计（只读、零出站、零花费）
+  |
+help: Remove unnecessary coding comment
+  |
+1 | #!/usr/bin/env python
+  - # -*- coding: utf-8 -*-
+2 | """QA R31ab · W8「复算入口」机械审计（只读、零出站、零花费）
+  |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> reports\qa\evidence_recompute_r31ac\audit_recompute_v2.py:14:1
+   |
+12 |   禁止：任何写入、任何 psql 非 begin-rollback、任何脚本执行（如 t51_collect.py —— 那条**真打**，约 ¥0.023，绝不在本审计内跑）。
+13 |   """
+14 | / import io
+15 | | import os
+16 | | import re          # 🔴 v3 补：判定器用到 re 但首版漏 import（跑起来才炸）
+17 | | import subprocess
+18 | | import sys
+   | |__________^
+19 |
+20 |   REPO = r"E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL"
+   |
+help: Organize imports
+   |
+15 | import os
+   - import re          # 🔴 v3 补：判定器用到 re 但首版漏 import（跑起来才炸）
+16 + import re  # 🔴 v3 补：判定器用到 re 但首版漏 import（跑起来才炸）
+17 | import subprocess
+   |
+
+UP020 [*] Use builtin `open`
+  --> reports\qa\evidence_recompute_r31ac\audit_recompute_v2.py:64:12
+   |
+63 | def read(p):
+64 |     return io.open(p, encoding="utf-8").read()
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: Replace with builtin `open`
+   |
+63 | def read(p):
+   -     return io.open(p, encoding="utf-8").read()
+64 +     return open(p, encoding="utf-8").read()
+65 |
+   |
+
+SIM115 Use a context manager for opening files
+   --> reports\w6\probe_metric_values.py:247:21
+    |
+245 |     if not os.path.exists(path):
+246 |         return {}, {"path": path, "available": False, "reason": "not_found"}
+247 |     doc = json.load(open(path, encoding="utf-8"))
+    |                     ^^^^
+248 |     records = {str(r.get("case_id")): r for r in (doc.get("records") or [])}
+249 |     return records, {
+    |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\w8\probe_semantic_metric_gap.py:2:1
+  |
+1 | #!/usr/bin/env python
+2 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+3 | """W8 第 40 轮 · 语义层 `metrics` 缺口清单（**只读 / 零出站 / 零花费 / 不动 YAML**）
+  |
+help: Remove unnecessary coding comment
+  |
+1 | #!/usr/bin/env python
+  - # -*- coding: utf-8 -*-
+2 | """W8 第 40 轮 · 语义层 `metrics` 缺口清单（**只读 / 零出站 / 零花费 / 不动 YAML**）
+  |
+
+UP020 [*] Use builtin `open`
+   --> reports\w8\probe_semantic_metric_gap.py:362:10
+    |
+361 | def main() -> int:
+362 |     with io.open(DS, encoding="utf-8") as fh:
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+363 |         ds = json.load(fh)
+364 |     with io.open(RES, encoding="utf-8") as fh:
+    |
+help: Replace with builtin `open`
+    |
+361 | def main() -> int:
+    -     with io.open(DS, encoding="utf-8") as fh:
+362 +     with open(DS, encoding="utf-8") as fh:
+363 |         ds = json.load(fh)
+    |
+
+UP020 [*] Use builtin `open`
+   --> reports\w8\probe_semantic_metric_gap.py:364:10
+    |
+362 |     with io.open(DS, encoding="utf-8") as fh:
+363 |         ds = json.load(fh)
+364 |     with io.open(RES, encoding="utf-8") as fh:
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+365 |         res = json.load(fh)["records"]
+366 |     by = {c["case_id"]: c for c in ds["cases"]}
+    |
+help: Replace with builtin `open`
+    |
+363 |         ds = json.load(fh)
+    -     with io.open(RES, encoding="utf-8") as fh:
+364 +     with open(RES, encoding="utf-8") as fh:
+365 |         res = json.load(fh)["records"]
+    |
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:382:27
+    |
+380 |             "case_id": r["case_id"],
+381 |             "template_block": c.get("template_block"),
+382 |             "difficulty": "%s×%s" % (c.get("difficulty_struct"), c.get("difficulty_semantic")),
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+383 |             "question": r["question"],
+384 |             "gold_sql": sql,
+    |
+help: Replace with format specifiers
+
+UP017 [*] Use `datetime.UTC` alias
+   --> reports\w8\probe_semantic_metric_gap.py:420:51
+    |
+418 |     payload = {
+419 |         "round": 40,
+420 |         "generated_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+    |                                                   ^^^^^^^^^^^^^^^^^^^^^
+421 |         "scope": "只读清单件；**不动 `semantic/**` YAML**、不改冻结集、不改判据、不取号",
+422 |         "inputs": {
+    |
+help: Convert to `datetime.UTC` alias
+    |
+419 |         "round": 40,
+    -         "generated_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+420 +         "generated_at_utc": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds"),
+421 |         "scope": "只读清单件；**不动 `semantic/**` YAML**、不改冻结集、不改判据、不取号",
+    |
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:447:40
+    |
+445 |                 set(r.get("refusal_reason") for r in wrong) == {"no_data_asset"}),
+446 |             "④ embedding 伴随率（零区分力？）": {
+447 |                 "success 含 embedding": "%d/%d" % (
+    |                                         ^^^^^^^
+448 |                     sum(1 for r in exp_exec if r.get("outcome") == "success"
+449 |                         and any("embedding" in str(x) for x in (r.get("degradations") or []))),
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:451:35
+    |
+449 |                         and any("embedding" in str(x) for x in (r.get("degradations") or []))),
+450 |                     sum(1 for r in exp_exec if r.get("outcome") == "success")),
+451 |                 "误拒 含 embedding": "%d/%d" % (
+    |                                      ^^^^^^^
+452 |                     sum(1 for r in wrong
+453 |                         if any("embedding" in str(x) for x in (r.get("degradations") or []))),
+    |
+help: Replace with format specifiers
+
+UP020 [*] Use builtin `open`
+   --> reports\w8\probe_semantic_metric_gap.py:495:10
+    |
+493 |     }
+494 |
+495 |     with io.open(OUT_JSON, "w", encoding="utf-8", newline="\n") as fh:
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+496 |         json.dump(payload, fh, ensure_ascii=False, indent=2)
+    |
+help: Replace with builtin `open`
+    |
+494 |
+    -     with io.open(OUT_JSON, "w", encoding="utf-8", newline="\n") as fh:
+495 +     with open(OUT_JSON, "w", encoding="utf-8", newline="\n") as fh:
+496 |         json.dump(payload, fh, ensure_ascii=False, indent=2)
+    |
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:504:14
+    |
+502 |     L.append("> **性质**：**只读清单件** —— 🔴 **本轮不动 `semantic/**` YAML**（派单 §58.1 三、）。")
+503 |     L.append("> **来源**：`eval/dataset_v1_frozen.json` 的 `gold_sql` ＋ `eval/results_v1.json` 的 outcome。")
+504 |     L.append("> **时点**：`%s`（UTC）" % payload["generated_at_utc"])
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+505 |     L.append("")
+506 |     L.append("## 0. 漏斗（现读）")
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:510:14
+    |
+508 |     L.append("| 步 | 数 |")
+509 |     L.append("|---|---|")
+510 |     L.append("| `expected_behavior = execute` | %d |" % payload["funnel"]["expected_execute"])
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+511 |     L.append("| 其中 **误拒**（`outcome = refuse`） | **%d** |" % payload["funnel"]["false_refusal"])
+512 |     L.append("| ↳ `refusal_reason` | %s |" % payload["funnel"]["refusal_reason"])
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:511:14
+    |
+509 |     L.append("|---|---|")
+510 |     L.append("| `expected_behavior = execute` | %d |" % payload["funnel"]["expected_execute"])
+511 |     L.append("| 其中 **误拒**（`outcome = refuse`） | **%d** |" % payload["funnel"]["false_refusal"])
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+512 |     L.append("| ↳ `refusal_reason` | %s |" % payload["funnel"]["refusal_reason"])
+513 |     L.append("| ↳ 停止节点 | %s |" % payload["funnel"]["stop_node"])
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:512:14
+    |
+510 |     L.append("| `expected_behavior = execute` | %d |" % payload["funnel"]["expected_execute"])
+511 |     L.append("| 其中 **误拒**（`outcome = refuse`） | **%d** |" % payload["funnel"]["false_refusal"])
+512 |     L.append("| ↳ `refusal_reason` | %s |" % payload["funnel"]["refusal_reason"])
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+513 |     L.append("| ↳ 停止节点 | %s |" % payload["funnel"]["stop_node"])
+514 |     L.append("| 既有 `metrics`（只读，未改） | %d |" % payload["existing_metrics_read_only"])
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:513:14
+    |
+511 |     L.append("| 其中 **误拒**（`outcome = refuse`） | **%d** |" % payload["funnel"]["false_refusal"])
+512 |     L.append("| ↳ `refusal_reason` | %s |" % payload["funnel"]["refusal_reason"])
+513 |     L.append("| ↳ 停止节点 | %s |" % payload["funnel"]["stop_node"])
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+514 |     L.append("| 既有 `metrics`（只读，未改） | %d |" % payload["existing_metrics_read_only"])
+515 |     L.append("| 本件建议**新增** `metrics` | **%d** |" % payload["proposed_new_metrics"])
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:514:14
+    |
+512 |     L.append("| ↳ `refusal_reason` | %s |" % payload["funnel"]["refusal_reason"])
+513 |     L.append("| ↳ 停止节点 | %s |" % payload["funnel"]["stop_node"])
+514 |     L.append("| 既有 `metrics`（只读，未改） | %d |" % payload["existing_metrics_read_only"])
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+515 |     L.append("| 本件建议**新增** `metrics` | **%d** |" % payload["proposed_new_metrics"])
+516 |     L.append("")
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:515:14
+    |
+513 |     L.append("| ↳ 停止节点 | %s |" % payload["funnel"]["stop_node"])
+514 |     L.append("| 既有 `metrics`（只读，未改） | %d |" % payload["existing_metrics_read_only"])
+515 |     L.append("| 本件建议**新增** `metrics` | **%d** |" % payload["proposed_new_metrics"])
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+516 |     L.append("")
+517 |     L.append("独立复核 QA `evidence_main_r31ad` 的五条断言（本窗**自算**，未抄其输出）：")
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:522:14
+    |
+520 | …append("| # | QA 断言 | 本窗自算（第 40 轮） | 判 |")
+521 | …append("|---|---|---|---|")
+522 | …append("| ① | G-2 面 10 条全 `refuse`／`no_data_asset`，`expected=execute` | n=%d｜outcome=%s｜reason=%s｜expected=%s | ✅ |" % (
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+523 | …  rk["① G-2 面构成"]["n"], rk["① G-2 面构成"]["outcome"],
+524 | …  rk["① G-2 面构成"]["refusal_reason"], rk["① G-2 面构成"]["expected"]))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:525:14
+    |
+523 |         rk["① G-2 面构成"]["n"], rk["① G-2 面构成"]["outcome"],
+524 |         rk["① G-2 面构成"]["refusal_reason"], rk["① G-2 面构成"]["expected"]))
+525 |     L.append("| ② | `set(G-2) ⊆ set(误拒)` | %s | ✅ |" % rk["② G-2 ⊆ 误拒"])
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+526 |     L.append("| ③ | 误拒 63 条 100%% `no_data_asset` | %s（`reason` 只有一种） | ✅ |" % rk["③ 误拒理由 100% no_data_asset"])
+527 |     L.append("| ④ | `embedding_unavailable` **零区分力**（非根因） | success **%s** ⟷ 误拒 **%s** | ✅ |" % (
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:526:14
+    |
+524 |         rk["① G-2 面构成"]["refusal_reason"], rk["① G-2 面构成"]["expected"]))
+525 |     L.append("| ② | `set(G-2) ⊆ set(误拒)` | %s | ✅ |" % rk["② G-2 ⊆ 误拒"])
+526 |     L.append("| ③ | 误拒 63 条 100%% `no_data_asset` | %s（`reason` 只有一种） | ✅ |" % rk["③ 误拒理由 100% no_data_asset"])
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+527 |     L.append("| ④ | `embedding_unavailable` **零区分力**（非根因） | success **%s** ⟷ 误拒 **%s** | ✅ |" % (
+528 |         rk["④ embedding 伴随率（零区分力？）"]["success 含 embedding"],
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:527:14
+    |
+525 |       L.append("| ② | `set(G-2) ⊆ set(误拒)` | %s | ✅ |" % rk["② G-2 ⊆ 误拒"])
+526 |       L.append("| ③ | 误拒 63 条 100%% `no_data_asset` | %s（`reason` 只有一种） | ✅ |" % rk["③ 误拒理由 100% no_data_asset"])
+527 |       L.append("| ④ | `embedding_unavailable` **零区分力**（非根因） | success **%s** ⟷ 误拒 **%s** | ✅ |" % (
+    |  ______________^
+528 | |         rk["④ embedding 伴随率（零区分力？）"]["success 含 embedding"],
+529 | |         rk["④ embedding 伴随率（零区分力？）"]["误拒 含 embedding"]))
+    | |____________________________________________________________________^
+530 |       L.append("| ⑤ | 停止点全在 `plan → refuse_out`（非 link 空召回） | nodes 末位=%s｜`retrieval_counts.assets`=%s｜`gate_decisions…
+531 |           rk["⑤ 停止点与召回"]["nodes 末位"], rk["⑤ 停止点与召回"]["retrieval_counts.assets"],
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:530:14
+    |
+528 | …rk["④ embedding 伴随率（零区分力？）"]["success 含 embedding"],
+529 | …rk["④ embedding 伴随率（零区分力？）"]["误拒 含 embedding"]))
+530 | …pend("| ⑤ | 停止点全在 `plan → refuse_out`（非 link 空召回） | nodes 末位=%s｜`retrieval_counts.assets`=%s｜`gate_decisions` 非空=%d | ✅ |" % (
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+531 | …rk["⑤ 停止点与召回"]["nodes 末位"], rk["⑤ 停止点与召回"]["retrieval_counts.assets"],
+532 | …rk["⑤ 停止点与召回"]["gate_decisions 非空"]))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:541:18
+    |
+539 |     L.append("|---|---|---|---|---|---|---|")
+540 |     for i, g in enumerate(gaps_out, 1):
+541 |         L.append("| %d | `%s` | %s | `%s`（`%s`） | `%s` | %s | **%d** |" % (
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+542 |             i, g["metric"], g["display_name"], g["asset"], g["asset_grain"],
+543 |             g["expression"],
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:550:18
+    |
+548 |     L.append("")
+549 |     for i, g in enumerate(gaps_out, 1):
+550 |         L.append("**%d. `%s` — %s**" % (i, g["metric"], g["display_name"]))
+    |                  ^^^^^^^^^^^^^^^^^^^
+551 |         L.append("")
+552 |         L.append("- `asset`：`%s`（`grain = %s`）｜`expression`：`%s`" % (g["asset"], g["asset_grain"], g["expression"]))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:552:18
+    |
+550 |         L.append("**%d. `%s` — %s**" % (i, g["metric"], g["display_name"]))
+551 |         L.append("")
+552 |         L.append("- `asset`：`%s`（`grain = %s`）｜`expression`：`%s`" % (g["asset"], g["asset_grain"], g["expression"]))
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+553 |         L.append("- `default_aggregation`：`%s`｜`unit`：`%s`｜`time_basis`：`%s`" % (
+554 |             g["default_aggregation"], g["unit"], g["time_basis"]))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:553:18
+    |
+551 |           L.append("")
+552 |           L.append("- `asset`：`%s`（`grain = %s`）｜`expression`：`%s`" % (g["asset"], g["asset_grain"], g["expression"]))
+553 |           L.append("- `default_aggregation`：`%s`｜`unit`：`%s`｜`time_basis`：`%s`" % (
+    |  __________________^
+554 | |             g["default_aggregation"], g["unit"], g["time_basis"]))
+    | |_________________________________________________________________^
+555 |           L.append("- `synonyms`：%s" % "、".join(g["synonyms"]))
+556 |           if g["default_predicates"]:
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:555:18
+    |
+553 |         L.append("- `default_aggregation`：`%s`｜`unit`：`%s`｜`time_basis`：`%s`" % (
+554 |             g["default_aggregation"], g["unit"], g["time_basis"]))
+555 |         L.append("- `synonyms`：%s" % "、".join(g["synonyms"]))
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+556 |         if g["default_predicates"]:
+557 |             L.append("- `default_predicates`：`%s`｜理由：%s" % ("`, `".join(g["default_predicates"]), g["predicate_reason"]))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:557:22
+    |
+555 |         L.append("- `synonyms`：%s" % "、".join(g["synonyms"]))
+556 |         if g["default_predicates"]:
+557 |             L.append("- `default_predicates`：`%s`｜理由：%s" % ("`, `".join(g["default_predicates"]), g["predicate_reason"]))
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+558 |         else:
+559 |             L.append("- `default_predicates`：**无**")
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:560:18
+    |
+558 |         else:
+559 |             L.append("- `default_predicates`：**无**")
+560 |         L.append("- `definition_note`：%s" % g["definition_note"])
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+561 |         L.append("- **覆盖 %d 条**：%s" % (g["n_covers"], ", ".join(g["covers"])))
+562 |         if g["uncertainty"]:
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:561:18
+    |
+559 |             L.append("- `default_predicates`：**无**")
+560 |         L.append("- `definition_note`：%s" % g["definition_note"])
+561 |         L.append("- **覆盖 %d 条**：%s" % (g["n_covers"], ", ".join(g["covers"])))
+    |                  ^^^^^^^^^^^^^^^^^^^^^^
+562 |         if g["uncertainty"]:
+563 |             for u in g["uncertainty"]:
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:564:26
+    |
+562 |         if g["uncertainty"]:
+563 |             for u in g["uncertainty"]:
+564 |                 L.append("- ⚠️ **不确定项**：%s" % u)
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+565 |         L.append("")
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:570:18
+    |
+568 |     L.append("")
+569 |     for k, v in NOT_GAP.items():
+570 |         L.append("- `%s` —— %s" % (k, v))
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^
+571 |     L.append("")
+572 |     L.append("## 3. 非 metric 面（**本轮不授权改**，只登记；下一轮须单独点句）")
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:577:18
+    |
+575 |     L.append("|---|---|---|---|")
+576 |     for f, v in payload["non_metric_faces"].items():
+577 |         L.append("| %s | %s | %d | %s |" % (f, v["face"], v["n_cases"], ", ".join(v["cases"]) or "—"))
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^
+578 |     L.append("")
+579 |     for f, v in payload["non_metric_faces"].items():
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:580:18
+    |
+578 |     L.append("")
+579 |     for f, v in payload["non_metric_faces"].items():
+580 |         L.append("- **%s**：%s" % (f, v["why"]))
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+581 |     L.append("")
+582 |     L.append("## 4. 覆盖预估（④ 合计）")
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:584:14
+    |
+582 |     L.append("## 4. 覆盖预估（④ 合计）")
+583 |     L.append("")
+584 |     L.append("- 误拒总数 **%d**" % payload["coverage"]["total_false_refusal"])
+    |              ^^^^^^^^^^^^^^^^^^^
+585 |     L.append("- ↳ **只补 metric 即可**（无 F-1…F-5 附面）：**%d** 条 —— %s" % (
+586 |         payload["coverage"]["pure_metric_only"], ", ".join(payload["coverage"]["pure_metric_only_cases"])))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:585:14
+    |
+583 |     L.append("")
+584 |     L.append("- 误拒总数 **%d**" % payload["coverage"]["total_false_refusal"])
+585 |     L.append("- ↳ **只补 metric 即可**（无 F-1…F-5 附面）：**%d** 条 —— %s" % (
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+586 |         payload["coverage"]["pure_metric_only"], ", ".join(payload["coverage"]["pure_metric_only_cases"])))
+587 |     L.append("- ↳ **还须附面**（F-1…F-5 任一，本轮**未授权**）：**%d** 条 —— %s" % (
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:587:14
+    |
+585 |     L.append("- ↳ **只补 metric 即可**（无 F-1…F-5 附面）：**%d** 条 —— %s" % (
+586 |         payload["coverage"]["pure_metric_only"], ", ".join(payload["coverage"]["pure_metric_only_cases"])))
+587 |     L.append("- ↳ **还须附面**（F-1…F-5 任一，本轮**未授权**）：**%d** 条 —— %s" % (
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+588 |         payload["coverage"]["needs_non_metric_face"],
+589 |         ", ".join(payload["coverage"]["needs_non_metric_face_cases"])))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:590:14
+    |
+588 |         payload["coverage"]["needs_non_metric_face"],
+589 |         ", ".join(payload["coverage"]["needs_non_metric_face_cases"])))
+590 |     L.append("- ↳ **不建议补**：%s" % ", ".join(payload["coverage"]["not_covered_by_any_metric"]))
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+591 |     L.append("- 校验：%d ＋ %d ＋ %d = %d ✅" % (
+592 |         payload["coverage"]["pure_metric_only"], payload["coverage"]["needs_non_metric_face"],
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:591:14
+    |
+589 |         ", ".join(payload["coverage"]["needs_non_metric_face_cases"])))
+590 |     L.append("- ↳ **不建议补**：%s" % ", ".join(payload["coverage"]["not_covered_by_any_metric"]))
+591 |     L.append("- 校验：%d ＋ %d ＋ %d = %d ✅" % (
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+592 |         payload["coverage"]["pure_metric_only"], payload["coverage"]["needs_non_metric_face"],
+593 |         len(payload["coverage"]["not_covered_by_any_metric"]), payload["coverage"]["total_false_refusal"]))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:598:18
+    |
+596 |     L.append("")
+597 |     for k, v in payload["landing_prereq"].items():
+598 |         L.append("- **`%s`**：%s" % (k, v))
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+599 |     L.append("")
+600 |     L.append("## 6. 纪律与红线")
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:610:14
+    |
+608 |     L.append("## 7. 复算入口（`PROMPT.md §5` 三条纪律：带时点 / 附实跑输出＋点名口径 / 禁自指）")
+609 |     L.append("")
+610 |     L.append("- **时点**：第 40 轮 ｜ 生成于 `%s`（UTC）" % payload["generated_at_utc"])
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+611 |     L.append("- **命令**（从仓库根，零出站）：")
+612 |     L.append("")
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:621:14
+    |
+619 |     L.append("")
+620 |     L.append("```text")
+621 |     L.append("expected=execute           = %d" % payload["funnel"]["expected_execute"])
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+622 |     L.append("其中误拒(outcome=refuse)   = %d | reason=%s" % (
+623 |         payload["funnel"]["false_refusal"], payload["funnel"]["refusal_reason"]))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:622:14
+    |
+620 |     L.append("```text")
+621 |     L.append("expected=execute           = %d" % payload["funnel"]["expected_execute"])
+622 |     L.append("其中误拒(outcome=refuse)   = %d | reason=%s" % (
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+623 |         payload["funnel"]["false_refusal"], payload["funnel"]["refusal_reason"]))
+624 |     L.append("① 建议新增 metrics         = %d 条" % len(gaps_out))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:624:14
+    |
+622 |     L.append("其中误拒(outcome=refuse)   = %d | reason=%s" % (
+623 |         payload["funnel"]["false_refusal"], payload["funnel"]["refusal_reason"]))
+624 |     L.append("① 建议新增 metrics         = %d 条" % len(gaps_out))
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+625 |     L.append("④ 覆盖预估                 = 只补 metric %d ＋ 还须附面 %d ＋ 不补 %d" % (
+626 |         payload["coverage"]["pure_metric_only"], payload["coverage"]["needs_non_metric_face"],
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:625:14
+    |
+623 |         payload["funnel"]["false_refusal"], payload["funnel"]["refusal_reason"]))
+624 |     L.append("① 建议新增 metrics         = %d 条" % len(gaps_out))
+625 |     L.append("④ 覆盖预估                 = 只补 metric %d ＋ 还须附面 %d ＋ 不补 %d" % (
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+626 |         payload["coverage"]["pure_metric_only"], payload["coverage"]["needs_non_metric_face"],
+627 |         len(payload["coverage"]["not_covered_by_any_metric"])))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:642:18
+    |
+640 |       L.append("|---|---|---|---|---|")
+641 |       for x in rows:
+642 |           L.append("| `%s` | `%s` | %s | %s | %s |" % (
+    |  __________________^
+643 | |             x["case_id"], x["gap_metric"],
+644 | |             ", ".join(x["non_metric_faces"]) or "—",
+645 | |             ("`%s`" % x["group_by"]) if x["group_by"] else "—",
+646 | |             x["question"].replace("|", "\\|")))
+    | |______________________________________________^
+647 |       L.append("")
+648 |       L.append("> `gold_sql` 全文（每条一份，可直接对拍）在 `probe_semantic_metric_gap.json` 的 `cases[]`。")
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:645:14
+    |
+643 |             x["case_id"], x["gap_metric"],
+644 |             ", ".join(x["non_metric_faces"]) or "—",
+645 |             ("`%s`" % x["group_by"]) if x["group_by"] else "—",
+    |              ^^^^^^^^^^^^^^^^^^^^^^
+646 |             x["question"].replace("|", "\\|")))
+647 |     L.append("")
+    |
+help: Replace with format specifiers
+
+UP020 [*] Use builtin `open`
+   --> reports\w8\probe_semantic_metric_gap.py:651:10
+    |
+649 |     L.append("")
+650 |
+651 |     with io.open(OUT_MD, "w", encoding="utf-8", newline="\n") as fh:
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+652 |         fh.write("\n".join(L))
+    |
+help: Replace with builtin `open`
+    |
+650 |
+    -     with io.open(OUT_MD, "w", encoding="utf-8", newline="\n") as fh:
+651 +     with open(OUT_MD, "w", encoding="utf-8", newline="\n") as fh:
+652 |         fh.write("\n".join(L))
+    |
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:658:11
+    |
+656 |     print("面 = eval/results_v1.json 连 eval/dataset_v1_frozen.json（按 case_id）")
+657 |     print("=" * 72)
+658 |     print("expected=execute           = %d" % payload["funnel"]["expected_execute"])
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+659 |     print("其中误拒(outcome=refuse)   = %d | reason=%s" % (
+660 |         payload["funnel"]["false_refusal"], payload["funnel"]["refusal_reason"]))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:659:11
+    |
+657 |     print("=" * 72)
+658 |     print("expected=execute           = %d" % payload["funnel"]["expected_execute"])
+659 |     print("其中误拒(outcome=refuse)   = %d | reason=%s" % (
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+660 |         payload["funnel"]["false_refusal"], payload["funnel"]["refusal_reason"]))
+661 |     print("停止节点                   = %s" % payload["funnel"]["stop_node"])
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:661:11
+    |
+659 |     print("其中误拒(outcome=refuse)   = %d | reason=%s" % (
+660 |         payload["funnel"]["false_refusal"], payload["funnel"]["refusal_reason"]))
+661 |     print("停止节点                   = %s" % payload["funnel"]["stop_node"])
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+662 |     rk = payload["qa_r31ad_recheck"]
+663 |     print("QA R31ad 五条复核：")
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:664:11
+    |
+662 |     rk = payload["qa_r31ad_recheck"]
+663 |     print("QA R31ad 五条复核：")
+664 |     print("   ① G-2 = %d 条 | outcome=%s | reason=%s | ⊆误拒=%s" % (
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+665 |         rk["① G-2 面构成"]["n"], rk["① G-2 面构成"]["outcome"],
+666 |         rk["① G-2 面构成"]["refusal_reason"], rk["② G-2 ⊆ 误拒"]))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:667:11
+    |
+665 |         rk["① G-2 面构成"]["n"], rk["① G-2 面构成"]["outcome"],
+666 |         rk["① G-2 面构成"]["refusal_reason"], rk["② G-2 ⊆ 误拒"]))
+667 |     print("   ③ 误拒理由只有 no_data_asset = %s" % rk["③ 误拒理由 100% no_data_asset"])
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+668 |     print("   ④ embedding 伴随 success %s ⟷ 误拒 %s" % (
+669 |         rk["④ embedding 伴随率（零区分力？）"]["success 含 embedding"],
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:668:11
+    |
+666 |           rk["① G-2 面构成"]["refusal_reason"], rk["② G-2 ⊆ 误拒"]))
+667 |       print("   ③ 误拒理由只有 no_data_asset = %s" % rk["③ 误拒理由 100% no_data_asset"])
+668 |       print("   ④ embedding 伴随 success %s ⟷ 误拒 %s" % (
+    |  ___________^
+669 | |         rk["④ embedding 伴随率（零区分力？）"]["success 含 embedding"],
+670 | |         rk["④ embedding 伴随率（零区分力？）"]["误拒 含 embedding"]))
+    | |____________________________________________________________________^
+671 |       print("   ⑤ nodes 末位=%s | assets=%s | gate_decisions 非空=%d" % (
+672 |           rk["⑤ 停止点与召回"]["nodes 末位"], rk["⑤ 停止点与召回"]["retrieval_counts.assets"],
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:671:11
+    |
+669 |         rk["④ embedding 伴随率（零区分力？）"]["success 含 embedding"],
+670 |         rk["④ embedding 伴随率（零区分力？）"]["误拒 含 embedding"]))
+671 |     print("   ⑤ nodes 末位=%s | assets=%s | gate_decisions 非空=%d" % (
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+672 |         rk["⑤ 停止点与召回"]["nodes 末位"], rk["⑤ 停止点与召回"]["retrieval_counts.assets"],
+673 |         rk["⑤ 停止点与召回"]["gate_decisions 非空"]))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:675:11
+    |
+673 |         rk["⑤ 停止点与召回"]["gate_decisions 非空"]))
+674 |     print()
+675 |     print("① 建议新增 metrics = %d 条" % len(gaps_out))
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+676 |     for i, g in enumerate(gaps_out, 1):
+677 |         print("   %2d. %-22s %-8s %-12s %-42s %2d 条" % (
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:677:15
+    |
+675 |     print("① 建议新增 metrics = %d 条" % len(gaps_out))
+676 |     for i, g in enumerate(gaps_out, 1):
+677 |         print("   %2d. %-22s %-8s %-12s %-42s %2d 条" % (
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+678 |             i, g["metric"], g["display_name"], g["asset"], g["expression"], g["n_covers"]))
+679 |     print()
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:680:11
+    |
+678 |             i, g["metric"], g["display_name"], g["asset"], g["expression"], g["n_covers"]))
+679 |     print()
+680 |     print("② 不补 = %s" % ", ".join(NOT_GAP))
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+681 |     print()
+682 |     print("③ 非 metric 面覆盖：")
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:684:15
+    |
+682 |     print("③ 非 metric 面覆盖：")
+683 |     for f, v in payload["non_metric_faces"].items():
+684 |         print("   %s %-46s %2d 条" % (f, v["face"], v["n_cases"]))
+    |               ^^^^^^^^^^^^^^^^^^^^
+685 |     print()
+686 |     print("④ 覆盖预估：误拒 %d = 只补 metric %d ＋ 还须附面 %d ＋ 不补 %d" % (
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:686:11
+    |
+684 |         print("   %s %-46s %2d 条" % (f, v["face"], v["n_cases"]))
+685 |     print()
+686 |     print("④ 覆盖预估：误拒 %d = 只补 metric %d ＋ 还须附面 %d ＋ 不补 %d" % (
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+687 |         payload["coverage"]["total_false_refusal"], payload["coverage"]["pure_metric_only"],
+688 |         payload["coverage"]["needs_non_metric_face"], len(NOT_GAP)))
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:690:11
+    |
+688 |         payload["coverage"]["needs_non_metric_face"], len(NOT_GAP)))
+689 |     print()
+690 |     print("产出：%s" % os.path.basename(OUT_JSON))
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+691 |     print("产出：%s" % os.path.basename(OUT_MD))
+692 |     return 0
+    |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+   --> reports\w8\probe_semantic_metric_gap.py:691:11
+    |
+689 |     print()
+690 |     print("产出：%s" % os.path.basename(OUT_JSON))
+691 |     print("产出：%s" % os.path.basename(OUT_MD))
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+692 |     return 0
+    |
+help: Replace with format specifiers
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> reports\w8\probe_semantic_summary.py:2:1
+  |
+1 | #!/usr/bin/env python
+2 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+3 | """W8 第 41 轮 · 零成本前置：语义摘要**长度/截断**体检（只读 / 零出站）
+  |
+help: Remove unnecessary coding comment
+  |
+1 | #!/usr/bin/env python
+  - # -*- coding: utf-8 -*-
+2 | """W8 第 41 轮 · 零成本前置：语义摘要**长度/截断**体检（只读 / 零出站）
+  |
+
+UP020 [*] Use builtin `open`
+  --> reports\w8\probe_semantic_summary.py:72:10
+   |
+70 |               "n_metric_lines": sum(1 for x in text.splitlines() if x.startswith("    ") and "：" in x),
+71 |           }
+72 |       with io.open(os.path.join(HERE, "probe_semantic_summary.json"), "w",
+   |  __________^
+73 | |                  encoding="utf-8", newline="\n") as fh:
+   | |________________________________________________^
+74 |           json.dump(out, fh, ensure_ascii=False, indent=2)
+   |
+help: Replace with builtin `open`
+   |
+71 |         }
+   -     with io.open(os.path.join(HERE, "probe_semantic_summary.json"), "w",
+72 +     with open(os.path.join(HERE, "probe_semantic_summary.json"), "w",
+73 |                  encoding="utf-8", newline="\n") as fh:
+   |
+
+UP031 Use format specifiers instead of percent format
+  --> reports\w8\probe_semantic_summary.py:76:11
+   |
+74 |         json.dump(out, fh, ensure_ascii=False, indent=2)
+75 |
+76 |     print("语义包版本 = %s ｜ 上限 = %d" % (out["bundle_version"], out["limit"]))
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+77 |     for t, v in out["tenants"].items():
+78 |         print("%s：chars=%d ｜ 余量=%d ｜ 截断=%s ｜ 段数=%d ｜ 行数=%d" % (
+   |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+  --> reports\w8\probe_semantic_summary.py:78:15
+   |
+76 |     print("语义包版本 = %s ｜ 上限 = %d" % (out["bundle_version"], out["limit"]))
+77 |     for t, v in out["tenants"].items():
+78 |         print("%s：chars=%d ｜ 余量=%d ｜ 截断=%s ｜ 段数=%d ｜ 行数=%d" % (
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+79 |             t, v["chars"], v["headroom"], v["truncated"], v["n_sections"], v["n_lines"]))
+80 |         for s in v["sections"]:
+   |
+help: Replace with format specifiers
+
+UP031 Use format specifiers instead of percent format
+  --> reports\w8\probe_semantic_summary.py:81:19
+   |
+79 |             t, v["chars"], v["headroom"], v["truncated"], v["n_sections"], v["n_lines"]))
+80 |         for s in v["sections"]:
+81 |             print("     %6d  %s" % (s["chars"], s["head"]))
+   |                   ^^^^^^^^^^^^^^
+82 |     return 0
+   |
+help: Replace with format specifiers
+
+W292 [*] No newline at end of file
+  --> reports\w8\t50_reason_probe.py:76:21
+   |
+76 | asyncio.run(_main())
+   |                     ^
+help: Add trailing newline
+   |
+75 |
+   - asyncio.run(_main())
+76 + asyncio.run(_main())
+   |
+
+RUF021 [*] Parenthesize `a and b` expressions when chaining `and` and `or` together, to make the precedence clear
+   --> reports\w8\t51_collect.py:173:38
+    |
+171 |         if "fuzzy:open_ended" in tags:
+172 |             return "开放式问法（不在 L4 候选空间）"
+173 |         if "fuzzy:metric" in tags or any(t.startswith("metric:") for t in tags) and "fuzzy:refund" in tags:
+    |                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+174 |             return "指标口径未定（不在 L4 候选空间）"
+175 |         return "其它"
+    |
+help: Parenthesize the `and` subexpression
+    |
+172 |             return "开放式问法（不在 L4 候选空间）"
+    -         if "fuzzy:metric" in tags or any(t.startswith("metric:") for t in tags) and "fuzzy:refund" in tags:
+173 +         if "fuzzy:metric" in tags or (any(t.startswith("metric:") for t in tags) and "fuzzy:refund" in tags):
+174 |             return "指标口径未定（不在 L4 候选空间）"
+    |
+
+W292 [*] No newline at end of file
+   --> reports\w8\t51_collect.py:233:11
+    |
+232 | if __name__ == "__main__":
+233 |     main()
+    |           ^
+help: Add trailing newline
+    |
+232 | if __name__ == "__main__":
+    -     main()
+233 +     main()
+    |
+
+UP009 [*] UTF-8 encoding declaration is unnecessary
+ --> scripts\scan_secrets.py:2:1
+  |
+1 | #!/usr/bin/env python
+2 | # -*- coding: utf-8 -*-
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+3 | """凭据字面量扫描（DoD④ 的本机替身）—— **规则单一出处**，报告只引本脚本名。
+  |
+help: Remove unnecessary coding comment
+  |
+1 | #!/usr/bin/env python
+  - # -*- coding: utf-8 -*-
+2 | """凭据字面量扫描（DoD④ 的本机替身）—— **规则单一出处**，报告只引本脚本名。
+  |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests\contract\test_city_clarification_demotion_contract.py:2:1
+  |
+1 |   """W60：明确店铺城市题面经 normalize 后必须进入执行链。"""
+2 | / from __future__ import annotations
+3 | |
+4 | | from app.graph.context import GraphDeps
+5 | | from app.planner.schemas import IntentKind
+6 | | from tests.contract._fullchain_deps import FullChainPlanner, FullChainSemantics, ScriptRetrieval, _green_understand
+7 | | from tests.contract.test_api_runner_contract import _IDENTITY
+  | |_____________________________________________________________^
+help: Organize imports
+   |
+5  | from app.planner.schemas import IntentKind
+   - from tests.contract._fullchain_deps import FullChainPlanner, FullChainSemantics, ScriptRetrieval, _green_understand
+6  + from tests.contract._fullchain_deps import (
+7  +     FullChainPlanner,
+8  +     FullChainSemantics,
+9  +     ScriptRetrieval,
+10 +     _green_understand,
+11 + )
+12 | from tests.contract.test_api_runner_contract import _IDENTITY
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests\contract\test_city_clarification_demotion_contract.py:54:5
+   |
+52 |       )
+53 |       # 只验证 normalize 产出，不执行完整依赖图。
+54 | /     import asyncio
+55 | |     from app.graph.context import RunContext, set_run_context, clear_run_context
+   | |________________________________________________________________________________^
+56 |
+57 |       async def _call():
+   |
+help: Organize imports
+   |
+54 |     import asyncio
+   -     from app.graph.context import RunContext, set_run_context, clear_run_context
+55 |
+56 +     from app.graph.context import RunContext, clear_run_context, set_run_context
+57 +
+58 |     async def _call():
+   |
+
+F401 [*] `asyncio` imported but unused
+   --> tests\contract\test_llm_node_manifest_contract.py:138:12
+    |
+136 |     `refuse(no_data_asset)`。
+137 |     """
+138 |     import asyncio
+    |            ^^^^^^^
+139 |
+140 |     _ensure_import_path()
+    |
+help: Remove unused import: `asyncio`
+    |
+137 |     """
+    -     import asyncio
+138 |
+    |
+
+I001 [*] Import block is un-sorted or un-formatted
+   --> tests\contract\test_llm_node_manifest_contract.py:142:5
+    |
+140 |       _ensure_import_path()
+141 |       sys.path.insert(0, str(REPO / "backend" / "tests"))  # `tests.contract.*` 包路径
+142 | /     from app.graph.build import build_graph
+143 | |     from app.graph.context import clear_run_context, set_run_context
+144 | |     from app.graph.events import EventRecorder
+145 | |     from app.api import sse
+146 | |     from app.llm.errors import LlmTimeout
+147 | |     from tests.contract._fullchain_deps import _DepsHolder, make_chain, run_chain
+    | |_________________________________________________________________________________^
+148 |
+149 |       for node, kwargs in (("plan", {"plan_error": LlmTimeout("stub")}),
+    |
+help: Organize imports
+    |
+141 |     sys.path.insert(0, str(REPO / "backend" / "tests"))  # `tests.contract.*` 包路径
+142 +     from app.api import sse
+143 |     from app.graph.build import build_graph
+144 |     from app.graph.context import clear_run_context, set_run_context
+145 |     from app.graph.events import EventRecorder
+    -     from app.api import sse
+146 |     from app.llm.errors import LlmTimeout
+    |
+
+F401 [*] `app.graph.build.build_graph` imported but unused
+   --> tests\contract\test_llm_node_manifest_contract.py:142:33
+    |
+140 |     _ensure_import_path()
+141 |     sys.path.insert(0, str(REPO / "backend" / "tests"))  # `tests.contract.*` 包路径
+142 |     from app.graph.build import build_graph
+    |                                 ^^^^^^^^^^^
+143 |     from app.graph.context import clear_run_context, set_run_context
+144 |     from app.graph.events import EventRecorder
+    |
+help: Remove unused import: `app.graph.build.build_graph`
+    |
+141 |     sys.path.insert(0, str(REPO / "backend" / "tests"))  # `tests.contract.*` 包路径
+    -     from app.graph.build import build_graph
+142 |     from app.graph.context import clear_run_context, set_run_context
+    |
+
+F401 [*] `app.graph.context.clear_run_context` imported but unused
+   --> tests\contract\test_llm_node_manifest_contract.py:143:35
+    |
+141 |     sys.path.insert(0, str(REPO / "backend" / "tests"))  # `tests.contract.*` 包路径
+142 |     from app.graph.build import build_graph
+143 |     from app.graph.context import clear_run_context, set_run_context
+    |                                   ^^^^^^^^^^^^^^^^^
+144 |     from app.graph.events import EventRecorder
+145 |     from app.api import sse
+    |
+help: Remove unused import
+    |
+142 |     from app.graph.build import build_graph
+    -     from app.graph.context import clear_run_context, set_run_context
+143 |     from app.graph.events import EventRecorder
+    |
+
+F401 [*] `app.graph.context.set_run_context` imported but unused
+   --> tests\contract\test_llm_node_manifest_contract.py:143:54
+    |
+141 |     sys.path.insert(0, str(REPO / "backend" / "tests"))  # `tests.contract.*` 包路径
+142 |     from app.graph.build import build_graph
+143 |     from app.graph.context import clear_run_context, set_run_context
+    |                                                      ^^^^^^^^^^^^^^^
+144 |     from app.graph.events import EventRecorder
+145 |     from app.api import sse
+    |
+help: Remove unused import
+    |
+142 |     from app.graph.build import build_graph
+    -     from app.graph.context import clear_run_context, set_run_context
+143 |     from app.graph.events import EventRecorder
+    |
+
+F401 [*] `app.graph.events.EventRecorder` imported but unused
+   --> tests\contract\test_llm_node_manifest_contract.py:144:34
+    |
+142 |     from app.graph.build import build_graph
+143 |     from app.graph.context import clear_run_context, set_run_context
+144 |     from app.graph.events import EventRecorder
+    |                                  ^^^^^^^^^^^^^
+145 |     from app.api import sse
+146 |     from app.llm.errors import LlmTimeout
+    |
+help: Remove unused import: `app.graph.events.EventRecorder`
+    |
+143 |     from app.graph.context import clear_run_context, set_run_context
+    -     from app.graph.events import EventRecorder
+144 |     from app.api import sse
+    |
+
+F401 [*] `app.api.sse` imported but unused
+   --> tests\contract\test_llm_node_manifest_contract.py:145:25
+    |
+143 |     from app.graph.context import clear_run_context, set_run_context
+144 |     from app.graph.events import EventRecorder
+145 |     from app.api import sse
+    |                         ^^^
+146 |     from app.llm.errors import LlmTimeout
+147 |     from tests.contract._fullchain_deps import _DepsHolder, make_chain, run_chain
+    |
+help: Remove unused import: `app.api.sse`
+    |
+144 |     from app.graph.events import EventRecorder
+    -     from app.api import sse
+145 |     from app.llm.errors import LlmTimeout
+    |
+
+F401 [*] `tests.contract._fullchain_deps._DepsHolder` imported but unused
+   --> tests\contract\test_llm_node_manifest_contract.py:147:48
+    |
+145 |     from app.api import sse
+146 |     from app.llm.errors import LlmTimeout
+147 |     from tests.contract._fullchain_deps import _DepsHolder, make_chain, run_chain
+    |                                                ^^^^^^^^^^^
+148 |
+149 |     for node, kwargs in (("plan", {"plan_error": LlmTimeout("stub")}),
+    |
+help: Remove unused import: `tests.contract._fullchain_deps._DepsHolder`
+    |
+146 |     from app.llm.errors import LlmTimeout
+    -     from tests.contract._fullchain_deps import _DepsHolder, make_chain, run_chain
+147 +     from tests.contract._fullchain_deps import make_chain, run_chain
+148 |
+    |
+
+RUF059 Unpacked variable `outcome` is never used
+   --> tests\contract\test_llm_node_manifest_contract.py:152:17
+    |
+150 |                          ("normalize", {"understand_error": LlmTimeout("stub")})):
+151 |         chain = make_chain(**kwargs)
+152 |         frames, outcome = run_chain(chain)
+    |                 ^^^^^^^
+153 |         terminal = [d for e, d in frames if d.get("terminal") is True]
+154 |         assert len(terminal) == 1, f"{node}: 终态数 != 1"
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+I001 [*] Import block is un-sorted or un-formatted
+   --> tests\contract\test_llm_node_manifest_contract.py:171:5
+    |
+169 |       """
+170 |       _ensure_import_path()
+171 | /     from app.core.enums import ErrorCode, RETRY_AFTER_DEFAULT_S
+172 | |     from app.llm.errors import LlmCircuitOpen, LlmSaturated, LlmTimeout
+    | |_______________________________________________________________________^
+173 |
+174 |       assert LlmTimeout.default_code == "LLM_UPSTREAM_ERROR"
+    |
+help: Organize imports
+    |
+170 |     _ensure_import_path()
+    -     from app.core.enums import ErrorCode, RETRY_AFTER_DEFAULT_S
+171 +     from app.core.enums import RETRY_AFTER_DEFAULT_S, ErrorCode
+172 |     from app.llm.errors import LlmCircuitOpen, LlmSaturated, LlmTimeout
+    |
+
+UP037 [*] Remove quotes from type annotation
+  --> tests\eval\test_budget_ledger.py:30:21
+   |
+29 | class _FakeHarness:
+30 |     instances: list["_FakeHarness"] = []
+   |                     ^^^^^^^^^^^^^^
+31 |
+32 |     def __init__(self, **kwargs: Any) -> None:
+   |
+help: Remove quotes
+   |
+29 | class _FakeHarness:
+   -     instances: list["_FakeHarness"] = []
+30 +     instances: list[_FakeHarness] = []
+31 |
+   |
+
+RUF012 Mutable default value for class attribute
+  --> tests\eval\test_budget_ledger.py:30:39
+   |
+29 | class _FakeHarness:
+30 |     instances: list["_FakeHarness"] = []
+   |                                       ^^
+31 |
+32 |     def __init__(self, **kwargs: Any) -> None:
+   |
+help: Consider initializing in `__init__` or annotating with `typing.ClassVar`
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests\eval\test_eval_runner_checkpoint.py:3:1
+   |
+ 1 |   """W8 第 56 轮：评测跑批的断点续跑与传输故障退避（零出站）。"""
+ 2 |
+ 3 | / from __future__ import annotations
+ 4 | |
+ 5 | | import json
+ 6 | | from typing import Any
+ 7 | |
+ 8 | | import pytest
+ 9 | |
+10 | | import runner
+   | |_____________^
+help: Organize imports
+  |
+8 | import pytest
+  -
+9 | import runner
+  |
+
+F821 Undefined name `Path`
+  --> tests\eval\test_eval_runner_checkpoint.py:44:57
+   |
+44 | def test_checkpoint_hash_mismatch_is_rejected(tmp_path: Path) -> None:
+   |                                                         ^^^^
+45 |     path = tmp_path / "checkpoint.jsonl"
+46 |     path.write_text(
+   |
+
+F821 Undefined name `Path`
+  --> tests\eval\test_eval_runner_checkpoint.py:87:48
+   |
+85 | @pytest.mark.asyncio
+86 | async def test_runner_retries_transient_but_not_timeout(
+87 |     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+   |                                                ^^^^
+88 | ) -> None:
+89 |     calls: list[str] = []
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests\eval\test_integration_evidence_hygiene.py:10:1
+   |
+ 8 |   """
+ 9 |
+10 | / from __future__ import annotations
+11 | |
+12 | | import json
+13 | | from typing import Any
+14 | |
+15 | | import pytest
+16 | |
+17 | | import w78_integration_evidence as ev
+   | |_____________________________________^
+18 |
+19 |   #: 刻意**不在源码里拼出完整 DSN 字面量**（DoD④ 的 gitleaks 规则会命中测试文件）。
+   |
+help: Organize imports
+   |
+15 | import pytest
+   -
+16 | import w78_integration_evidence as ev
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests\eval\test_tau_samples.py:15:1
+   |
+13 |   """
+14 |
+15 | / from __future__ import annotations
+16 | |
+17 | | from typing import Any
+18 | |
+19 | | import pytest
+20 | |
+21 | | from eval.runner import _gold_for_tau
+22 | | from eval.tau_samples import (
+23 | |     build_score_samples,
+24 | |     candidate_ids_of,
+25 | |     coverage_summary,
+26 | |     summarize,
+27 | | )
+   | |_^
+help: Organize imports
+   |
+19 | import pytest
+   -
+20 | from eval.runner import _gold_for_tau
+   |
+
+B905 `zip()` without an explicit `strict=` parameter
+  --> tests\eval\test_tau_samples.py:41:34
+   |
+39 | ) -> dict[str, Any]:
+40 |     rank = [
+41 |         cid for cid, _ in sorted(zip(candidate_ids, scores), key=lambda kv: (-kv[1], kv[0]))
+   |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+42 |     ]
+43 |     return {
+   |
+help: Add explicit value for parameter `strict=`
+
+RUF012 Mutable default value for class attribute
+   --> tests\eval\test_tau_samples.py:298:18
+    |
+296 |       """
+297 |       class _Run:
+298 |           l4_raw = {
+    |  __________________^
+299 | |             "schema": "W8_TAU_RAW/v1",
+300 | |             "ok": True,
+301 | |             "candidate_ids": ["v_order_paid.pay_amount", "v_order_paid.receiver_city"],
+302 | |             "scores": [0.7, 0.6],
+303 | |             "rank": ["v_order_paid.pay_amount", "v_order_paid.receiver_city"],
+304 | |             "scorer": {"model_id": "deepseek-flash", "prompt_version": "l4_score_v1"},
+305 | |         }
+    | |_________^
+306 |
+307 |       from eval.runner import GOLD_NOT_DEFINED_SECOND_ROUND, _tau_raw
+    |
+help: Consider initializing in `__init__` or annotating with `typing.ClassVar`
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests\unit\test_llm_gateway.py:29:1
+   |
+27 |   """
+28 |
+29 | / from __future__ import annotations
+30 | |
+31 | | import asyncio
+32 | | import inspect
+33 | |
+34 | | import httpx
+35 | | from collections.abc import Callable, Mapping
+36 | | from datetime import datetime
+37 | | from decimal import Decimal
+38 | | from typing import Any
+39 | |
+40 | | import pytest
+41 | | from pydantic import SecretStr
+42 | |
+43 | | from app.core.contracts import LLMPort
+44 | | from app.core.enums import ActionTaken, DegradedReason
+45 | | from app.llm import (
+46 | |     TEMPLATE_MODEL_ID,
+47 | |     TEMPLATE_PROMPT_VERSION,
+48 | |     CallRecord,
+49 | |     DegradationEvent,
+50 | |     LlmCallContext,
+51 | |     LlmGateway,
+52 | |     NullTemplateProvider,
+53 | |     build_gateway,
+54 | |     set_call_context,
+55 | | )
+56 | | from app.llm.budget import (
+57 | |     BILLING_TZ,
+58 | |     BudgetGuard,
+59 | |     CostEntry,
+60 | |     InMemoryCostLedgerSink,
+61 | | )
+62 | | from app.llm.client import ChatClient, Completion
+63 | | from app.llm.egress_guard import ALLOWED_WIRE_KEYS
+64 | | from app.llm.errors import (
+65 | |     LlmConcurrencyExceeded,
+66 | |     LlmEgressViolation,
+67 | |     LlmRefused,
+68 | |     LlmSaturated,
+69 | |     LlmUnknownModel,
+70 | |     LlmUnknownTask,
+71 | |     LlmUpstreamError,
+72 | | )
+73 | | from app.llm.router import (
+74 | |     MODEL_AUTO,
+75 | |     MODEL_HARD_TIMEOUT_S,
+76 | |     TASK_ROUTES,
+77 | |     LlmTask,
+78 | |     ModelKey,
+79 | |     TaskRoute,
+80 | | )
+81 | | from tests.unit._llm_fake_upstream import FakeUpstream, json_error, json_ok
+   | |___________________________________________________________________________^
+82 |
+83 |   #: 用**真实模型 ID**（而不是 "m-flash" 这类假名）：
+   |
+help: Organize imports
+   |
+32 | import inspect
+   -
+   - import httpx
+33 | from collections.abc import Callable, Mapping
+--------------------------------------------------------------------------------
+37 |
+38 + import httpx
+39 | import pytest
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+   --> tests\unit\test_llm_gateway.py:773:9
+    |
+771 |         ③ 该码的 `Retry-After` 默认值 = 5s（由 `core.enums` 唯一真相表提供）。
+772 |         """
+773 |         from app.core.enums import ErrorCode, RETRY_AFTER_DEFAULT_S
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+774 |
+775 |         monkeypatch.setattr("app.llm.client.SEMAPHORE_WAIT_TIMEOUT_S", 0.01)
+    |
+help: Organize imports
+    |
+772 |         """
+    -         from app.core.enums import ErrorCode, RETRY_AFTER_DEFAULT_S
+773 +         from app.core.enums import RETRY_AFTER_DEFAULT_S, ErrorCode
+774 |
+    |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `SLF001`)
+   --> tests\unit\test_llm_saturation_terminal.py:123:60
+    |
+121 |     from app.llm import LlmGateway
+122 |
+123 |     reason = LlmGateway._reason_for(LlmSaturated("test"))  # noqa: SLF001 - 判据表即被测量对象
+    |                                                            ^^^^^^^^^^^^^^
+124 |     assert reason is DegradedReason.LLM_CONCURRENCY_EXCEEDED
+125 |     assert reason is not DegradedReason.LLM_UNAVAILABLE
+    |
+help: Remove unused `noqa` directive
+    |
+122 |
+    -     reason = LlmGateway._reason_for(LlmSaturated("test"))  # noqa: SLF001 - 判据表即被测量对象
+123 +     reason = LlmGateway._reason_for(LlmSaturated("test"))
+124 |     assert reason is DegradedReason.LLM_CONCURRENCY_EXCEEDED
+    |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `ISC001`)
+  --> tests\unit\test_scan_secrets.py:27:31
+   |
+26 | #: 运行时拼装，源码里不留可命中的连续字面量。
+27 | _SCHEME = "postgres" + "://"  # noqa: ISC001  (拼装只为躲开扫描器，不是风格问题)
+   |                               ^^^^^^^^^^^^^^
+28 | _OWNER_DSN = _SCHEME + "owner_user:s0me_pwd@db.internal:5432/ecom"
+29 | _ALLOWLISTED_DSN = _SCHEME + "app_rw:app_rw_pwd@127.0.0.1:5432/ecom"
+   |
+help: Remove unused `noqa` directive
+   |
+26 | #: 运行时拼装，源码里不留可命中的连续字面量。
+   - _SCHEME = "postgres" + "://"  # noqa: ISC001  (拼装只为躲开扫描器，不是风格问题)
+27 + _SCHEME = "postgres" + "://"
+28 | _OWNER_DSN = _SCHEME + "owner_user:s0me_pwd@db.internal:5432/ecom"
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `PLC2701`)
+  --> tests\unit\test_startup_semantic_published.py:84:70
+   |
+82 | def test_default_probe_does_not_silently_pass() -> None:
+83 |     """旧调用点不注入 `bundle_status` ⇒ 占位探针回 `None` ⇒ PENDING（**不会静默通过**）。"""
+84 |     from app.repo.startup_assertions import _no_bundle_status_probe  # noqa: PLC2701
+   |                                                                      ^^^^^^^^^^^^^^^
+85 |
+86 |     assert StartupProbes.analytics_role.__class__ is not None  # dataclass 存在性（防拼写漂移）
+   |
+help: Remove unused `noqa` directive
+   |
+83 |     """旧调用点不注入 `bundle_status` ⇒ 占位探针回 `None` ⇒ PENDING（**不会静默通过**）。"""
+   -     from app.repo.startup_assertions import _no_bundle_status_probe  # noqa: PLC2701
+84 +     from app.repo.startup_assertions import _no_bundle_status_probe
+85 |
+   |
+
+Found 214 errors.
+[*] 114 fixable with the `--fix` option (35 hidden fixes can be enabled with the `--unsafe-fixes` option).

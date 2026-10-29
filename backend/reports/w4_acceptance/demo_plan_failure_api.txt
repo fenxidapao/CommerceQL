@@ -1,0 +1,2 @@
+{"node": "normalize", "limit_s": 15.0, "extra_fact": "节点超时 → 走 §5.3 失败转移列（§5.3.0 规则 2 / U-107 附注②）", "event": "node_timeout_degraded", "level": "error", "timestamp": "2026-10-29T05:05:46.963055"}
+{"node": "plan", "limit_s": 15.0, "extra_fact": "节点超时 → 走 §5.3 失败转移列（§5.3.0 规则 2 / U-107 附注②）", "event": "node_timeout_degraded", "level": "error", "timestamp": "2026-10-29T05:06:31.143778"}
