@@ -24,7 +24,7 @@
 | 项 | 读数 | 源 |
 |---|---|---|
 | 代码 HEAD（最后代码提交） | `b780125` / 739 笔（W3 最后代码提交；本窗仅文档提交，现 HEAD 见命令行） | `git log -1 b780125`；`git rev-list --count b780125` |
-| 离线回归 | `2908 passed / 5 failed`（既有 5 条，证据移出仓库）；`ruff 214`；`mypy 8 errors / 5 files`；`lint-imports 4 kept / 0 broken` | `backend/reports/w4_acceptance/pytest_summary.txt`、`ruff.log`、`mypy.log`、`lint_imports.log` |
+| 离线回归 | `2908 passed / 5 failed`（既有 5 条，证据移出仓库）；`ruff 214`；`mypy 8 errors / 5 files`；`lint-imports 4 kept / 0 broken` | `backend/reports/w4_acceptance/pytest_summary.txt`、`ruff.txt`、`mypy.txt`、`lint_imports.txt` |
 | 官方快照 | `88f3500` / **PASS 1/8**（PASS 1 / FAIL 3 / PARTIAL 2 / UNVERIFIED 2），生成 `2026-10-07T05:27:34Z`，最后改动该文件的提交 `24d4477` | `backend/reports/w6/eval_metrics.json`；`backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md` |
 | 当期复算 | **6 PASS / 0 PARTIAL / 2 UNVERIFIED / 0 FAIL**，复算件 rev `26421ae`（2026-10-24） | `eval/results_w80_gate_recompute.json`；`backend/reports/w8/DELIVERY.md` 终版节 |
 | 契约文档 | `07 v1.7.39`（3,698 行）；`08 v1.4.2` | `docs/07_技术设计文档_TDD.md` 头部版本字段 |

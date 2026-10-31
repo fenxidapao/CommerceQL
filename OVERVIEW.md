@@ -28,6 +28,7 @@
   —— 一次提问从输入到出表全链路真跑（DeepSeek ＋ PG RLS），四类终态都实测见过：正常出数、闸门拒、计划自拒、空结果。
   🔴 **但"出图"目前不成立**：`app/present/` 已不是空壳（现读 3 个文件 701 行：`artifacts.py` 只读产物装载 ＋ `eval_report.py` 是 A.9.2–A.9.4 的**投影**），但**图内侧仍未落** —— `chart_spec`／`insight` 不在这里生成，`GraphDeps.presenter` 恒 `None`、`graph/nodes/present.py` 的 fail-fast 照旧 ⇒ 每一轮都会带一条"本次未能生成图表，已用表格展示"的降级标注
   （这不是 bug 而是 §5.3 的如实降级，见 `graph/nodes/present.py` 的模块说明）。
+  【10-31 更订 · 跨窗】🔻 原文不删：W3 已接线 `ChartPresenter`（commit `223ffdc`），Olist demo 实测出 bar/kpi 四张图（`backend/reports/w3_demo/demo_*.png`）；「出图目前不成立」只对 10-03 当时成立。W4 干净栈复跑见 `backend/reports/w4_acceptance/demo_5_bailian_v41.json`（4 图 + 1 拒答，百炼 `deepseek-v4.1-flash`）。
   后端现读 **160 个模块文件 / 42,420 行**；**官方快照 PASS 1/8、当期复算 6 PASS＋2 UNVERIFIED**（详见 §7），"结果算对了"这件事**尚未成立**。
   【历史读数 · 10-03】🔻 **10-03 第 6 轮就地更新（原文不删）**：本轮跑了**第一批全量真打评测**（166 题、¥0.337171、14.6 分钟），
   门禁因此从 `0/8` 变成 **`1/8`**（G-1 转 PASS：离线 2,334 ＋ 集成 107，0 红）；"结果算对了"仍然**未成立**，

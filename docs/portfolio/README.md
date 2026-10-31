@@ -131,9 +131,9 @@ flowchart TD
 
 - 单次跑完 `total_cost_cny=0.02384`（`backend/reports/w3_demo/demo_5.json`）；
   浏览器重跑另计；`app.cost_ledger` 10-28+10-29 合计 **¥0.107807**（上限 ¥0.3）。
+- 表中耗时/费用取 API 跑 `demo_5.json`；截图为浏览器跑 `browser_acceptance.json`；两跑读数不同，均留证。
 - 截图路径：`backend/reports/w3_demo/demo_1_bar.png` … `demo_5_kpi.png`。
-- **W4 复跑**：见 `backend/reports/w4_acceptance/demo_5.json`（工作树 @ `b780125`；
-  若与截图读数有差异，以该文件为准并在此标注）。
+- **W4 干净栈复跑（最终）**：`backend/reports/w4_acceptance/demo_5_bailian_v41.json`（2026-10-31，百炼 `deepseek-v4.1-flash`，工作树 @ b780125 + 独立 cqlw4；4 图 + 1 拒答；`total_cost_cny=0.144741`；模型 ID 不在 `PRICES`，按 v4-pro 兜底价计，真实扣费 UNVERIFIED）。此前尝试（含失败轮）见同目录 `demo_5*json`；本窗无新截图，表格截图为 W3 浏览器跑。
 - demo 4 的原因码 `pii_blocked` 是"删除类请求"落到 PII 文案面的既存映射（W4 文案面），
   **只登记、不改**；它证明危险请求被拒，不证明脱敏链路。
 
@@ -237,6 +237,8 @@ docker compose -f deploy/docker-compose.yml up -d --no-deps api
 9. **披露文案 Top-N 噪音（未修）**：`backend/app/present/presenter.py:446-450` 只要 `plan.limit`
    存在就追加"按计划 Top-{limit} 展示"，不看是否真截断 ⇒ demo_3（8 行）挂"Top-100"、
    demo_5（KPI）挂"Top-1"。§3.8 微修需取 `U-150` 并重拍受影响截图；本窗**不做**，只登记。
+10. **W4 干净栈 demo 与 W3 截图的端点/模型不同**：W4 走百炼 `deepseek-v4.1-flash`，
+    W3 走官方 DeepSeek `deepseek-flash`；不合并成一次读数。
 
 **口径红线**：41.47% **未达 85%**；G-6（P95 ≤ 8s）与 G-8（澄清率）仍 `UNVERIFIED`；
 官方 `PASS 1/8` 与当期复算 `6 PASS / 2 UNVERIFIED` 必须同框，**`6/8 ≠ 门禁通过`**。
