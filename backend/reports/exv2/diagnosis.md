@@ -121,8 +121,22 @@ python -c "import json,re;recs=[json.loads(l) for l in open('eval/olist/cassette
 
 | 文件 | 改前 `content_hash` | 改后 `content_hash` | 版本号 |
 |---|---|---|---|
-| `backend/app/llm/prompts/gen_sql_v1.txt` | `7e1e48cc26fd7124` | `UNVERIFIED`（改动后回填） | `gen_sql_v1`（**未升**，理由见 §7.4） |
-| `backend/app/llm/prompts/gen_sql_complex_v1.txt` | `ce0968f4fa823315` | `UNVERIFIED`（改动后回填） | `gen_sql_complex_v1`（未升） |
-| `backend/app/llm/prompts/repair_v1.txt` | `fbbb656b30f2bba1` | `UNVERIFIED`（改动后回填） | `repair_v1`（未升） |
+| `backend/app/llm/prompts/gen_sql_v1.txt` | `7e1e48cc26fd7124` | `e58e1a6bdbf942fb` | `gen_sql_v1`（**未升**，理由见 §7.4） |
+| `backend/app/llm/prompts/gen_sql_complex_v1.txt` | `ce0968f4fa823315` | `2fde3d5598e49413` | `gen_sql_complex_v1`（未升） |
+| `backend/app/llm/prompts/repair_v1.txt` | `fbbb656b30f2bba1` | `7d7cc53ee4626a99` | `repair_v1`（未升） |
 
-> 改前值 = 改动**之前**用 `load_prompt(...).content_hash` 现算（与 `backend/app/llm/prompts/loader.py:197` 同口径：`sha256(utf-8 文本)[:16]`）。改后值在本窗 §3.4 步完成时回填。
+> 两列都用 `load_prompt(...).content_hash` 现算（与 `backend/app/llm/prompts/loader.py:197` 同口径：`sha256(utf-8 文本)[:16]`）。
+> 改前值取自**改动前**的工作区（未提交状态，已与 `HEAD` 对照一致），改后值取自改动后。
+
+## 10. 提示词改动后的回归读数（2026-10-31 现跑）
+
+| 项 | 基线（PROMPT_EXV2 §2，`efd744e`） | 本窗改后 | 判定 |
+|---|---|---|---|
+| 全量 pytest（`--ignore=tests/integration`） | 2908 passed / 5 failed | **2909 passed / 5 failed**（431.07s） | 净 **+1 passed** = 本窗新增的单测；失败集合与前 5 条完全一致 |
+| 既有 5 条失败 | `test_admin_eval_report_contract`×1、`test_shape_guard_faces`×2、`test_consistency_reporter`×1、`test_gate_inputs_p0_merge_two_state`×1 | 同左，**逐条同名** | 未新增、未修复（不属本窗） |
+
+## 11. 去 ROUND 的对称风险（必须同框，不是缺陷登记）
+
+去掉 gold 的 `ROUND` 后，两侧都是**原始精度**。若模型自己写了 `ROUND(...,2)`，则同样会出现 1e-5 量级的相对差 > `REL_TOL=1e-6` ⇒ 仍判不等（**方向相反的同一成因**）。
+- 依据：v1/v2 金标对撞实测最大相对差 **3.094e-5**（`g05`），`rel>1e-3` 的条数 = 0，且**无结构变化、无零/非零翻转**（`git diff --no-index` 之外的对撞脚本见 §8② 同族做法）。
+- 判据不变、容差不调；若 v2 出现"因模型主动舍入而判不等"的题，按 `U-151` 的备选 (a)（gold 除法显式 `1.0 *`）或 (b)（提示词精度规则）另行裁定，本窗不预改。

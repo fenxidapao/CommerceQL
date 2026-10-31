@@ -338,6 +338,21 @@ class TestSemanticSummary:
             text = (_PROMPT_DIR / name).read_text(encoding="utf-8")
             assert "FROM" in text and "物理名" in text and "不带 schema 前缀" in text, f"{name} 丢了表名规则"
 
+    def test_sql_prompts_forbid_reserved_word_aliases(self) -> None:
+        """`AS order`（order 表别名写成保留字）是**直接语法错**，W2 v1 实测 7/55 条。
+
+        这条规则只写在 **SQL 侧**提示词里 —— 与上一条同族（只有 SQL 阶段会读）。
+        ⚠️ 不能塞进 `DIALECT_NOTE`：它被 **10** 个模板注入（含 normalize / plan / present
+        等 8 个非 SQL 模板），改共用常量会连带改掉那些模板的渲染文本。
+        措辞必须点名它是「方言说明第 1 条『不加双引号』的**唯一例外**」—— 否则模型会同时
+        看到第 1 条「不加双引号」与新条「必要时加双引号」，自相矛盾。
+        """
+        for name in ("gen_sql_v1.txt", "gen_sql_complex_v1.txt", "repair_v1.txt"):
+            text = (_PROMPT_DIR / name).read_text(encoding="utf-8")
+            assert "保留字" in text, f"{name} 丢了保留字别名规则"
+            assert "唯一例外" in text, f"{name} 没写明这是「不加双引号」的唯一例外"
+            assert "order_cnt" in text, f"{name} 没给替代命名示例"
+
     def test_metric_directory_reaches_the_model(
         self, runtime: SemanticBundleRuntime, prompt_ctx: PromptContext
     ) -> None:
