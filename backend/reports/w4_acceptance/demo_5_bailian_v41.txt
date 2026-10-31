@@ -1,0 +1,6 @@
+{"demo_id": "demo_1", "terminal": "complete", "chart_type": "bar", "cost_cny": 0.075927, "degraded": [], "error": null}
+{"demo_id": "demo_2", "terminal": "complete", "chart_type": "bar", "cost_cny": 0.023068, "degraded": [], "error": null}
+{"demo_id": "demo_3", "terminal": "complete", "chart_type": "bar", "cost_cny": 0.022571, "degraded": [], "error": null}
+{"demo_id": "demo_4", "terminal": "refuse", "chart_type": null, "cost_cny": 0.0, "degraded": [], "error": null}
+{"demo_id": "demo_5", "terminal": "complete", "chart_type": "kpi", "cost_cny": 0.023175, "degraded": [], "error": null}
+[evidence] E:\01_实训\项目\基于Text2SQL的电商数据分析Agent\CommerceQL\backend\reports\w4_acceptance\demo_5_bailian_v41.json | total=¥0.1447
