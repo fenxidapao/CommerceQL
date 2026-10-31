@@ -1,0 +1,67 @@
+{
+  "schema": "W77_CALLS_LEDGER/v1",
+  "runs": [
+    {
+      "generated_at": "2026-10-31T06:09:25+00:00",
+      "git_rev": "57b3029",
+      "git_dirty": false,
+      "batch_id": "exv2_smoke",
+      "live": true,
+      "mode": "record",
+      "cases": 10,
+      "calls": 44,
+      "calls_unique": 40,
+      "tokens": 149385,
+      "cost_cny": 0.105854,
+      "budget_stop": false
+    },
+    {
+      "generated_at": "2026-10-31T06:24:16+00:00",
+      "git_rev": "57b3029",
+      "git_dirty": false,
+      "batch_id": "exv2_r1",
+      "live": true,
+      "mode": "record",
+      "cases": 60,
+      "calls": 236,
+      "calls_unique": 231,
+      "tokens": 864615,
+      "cost_cny": 0.538588,
+      "budget_stop": false
+    },
+    {
+      "generated_at": "2026-10-31T06:39:01+00:00",
+      "git_rev": "57b3029",
+      "git_dirty": false,
+      "batch_id": "exv2_r2",
+      "live": true,
+      "mode": "record",
+      "cases": 60,
+      "calls": 240,
+      "calls_unique": 231,
+      "tokens": 864686,
+      "cost_cny": 0.504919,
+      "budget_stop": false
+    },
+    {
+      "generated_at": "2026-10-31T06:53:44+00:00",
+      "git_rev": "57b3029",
+      "git_dirty": false,
+      "batch_id": "exv2_r3",
+      "live": true,
+      "mode": "record",
+      "cases": 60,
+      "calls": 235,
+      "calls_unique": 231,
+      "tokens": 865259,
+      "cost_cny": 0.506149,
+      "budget_stop": false
+    }
+  ],
+  "updated_at": "2026-10-31T06:53:44.396973+00:00",
+  "totals": {
+    "calls": 755,
+    "tokens": 2743945,
+    "cost_cny": 1.65551
+  }
+}
