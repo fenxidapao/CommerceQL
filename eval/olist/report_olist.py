@@ -77,6 +77,160 @@ def is_sandbox_dialect_gap(record: Mapping[str, Any]) -> bool:
     return any(token in sql for token in _POSTGRES_ONLY_TOKENS)
 
 
+#: v2 三类修复 + R14 的分桶标签。**唯一真相在这里** —— `backend/reports/exv2/diagnosis.md`
+#: 的读数与报告正文都用这一个函数，不另写第二份口径。
+BUCKET_LABELS: tuple[str, ...] = ("as_order", "round", "delivery", "r14")
+
+
+def case_buckets(
+    case: Mapping[str, Any], record: Mapping[str, Any]
+) -> frozenset[str]:
+    """把一个 case 归到 v2 的三类修复桶 + R14 桶（**可同时命中多个桶**，调用方自行去重）。
+
+    · `as_order`：`terminal_code == SQL_SYNTAX_ERROR`。v1 实测这 7 条**全部**是
+      「订单表别名写成保留字 `order`」（从匣带复原模型 SQL 逐条验证，见
+      `backend/reports/exv2/diagnosis.md` §2）；判据只认终态码，不猜错误文本
+      （v1 记录里 `sql_text` 为 `None`、`terminal_error_detail` 为空，猜不了）。
+    · `round`：gold SQL 含 `ROUND(` **且**判不等价 —— 差异形状是"金标舍入、模型未舍入"。
+    · `delivery`：`metrics` 含 `delivery_late_rate` **且**判不等价（与 `round` 相交，不重复计总数）。
+    · `r14`：`gate1_reject_rule == "R14"`（方言缺口，本窗不修、单列）。
+
+    `as_order` / `r14` 是**前置独占**桶（两者互斥且不再计入 `round`/`delivery`），因为这类题
+    根本没走到值比较；否则 R14 的 12 条会把 `round` 桶虚增一倍（v1 r1：13 → 26）。
+    """
+    terminal = str(record.get("terminal_code") or "")
+    rule = str(record.get("gate1_reject_rule") or "")
+    # **前置优先级**：`as_order` / `r14` 先行独占 —— 这两类题根本走不到"值比较"，
+    # 若同时计入 `round` 会把它们重复算进"舍入口径"的账上（v1 r1 会从 13 虚增到 26）。
+    if terminal == "SQL_SYNTAX_ERROR":
+        return frozenset({"as_order"})
+    if rule == "R14":
+        return frozenset({"r14"})
+    buckets: set[str] = set()
+    equivalent = (record.get("verdict") or {}).get("equivalent")
+    gold_sql = str((record.get("gold") or {}).get("gold_sql") or "")
+    if "ROUND(" in gold_sql.upper() and equivalent is False:
+        buckets.add("round")
+    metrics = record.get("metrics") or case.get("metrics") or []
+    if "delivery_late_rate" in metrics and equivalent is False:
+        buckets.add("delivery")
+    return frozenset(buckets)
+
+
+def bucket_counts(
+    cases: Iterable[Mapping[str, Any]], records: Iterable[Mapping[str, Any]]
+) -> dict[str, int]:
+    """逐桶计数（一个 case 可计入多桶；`round` 与 `delivery` 有交集，勿相加当总数）。"""
+    by_id = {str(case.get("case_id")): case for case in cases}
+    counts = dict.fromkeys(BUCKET_LABELS, 0)
+    for record in records:
+        for name in case_buckets(by_id.get(str(record.get("case_id")), {}), record):
+            counts[name] += 1
+    return counts
+
+
+#: v2（三类非模型修复已落）专属的「已知偏差」条目。默认路径**不渲染**这些行 ——
+#: 它们只在给了 `--baseline-results`（= 出 v2 报告）时替换掉 v1 的偏差陈述。
+_V2_BULLETS: tuple[str, ...] = (
+    "- **`AS order` 保留字（`U-150`）**：v1 的 `SQL_SYNTAX_ERROR` 已归零，逐批现算见 §6；"
+    "规则写进 `gen_sql_v1` / `gen_sql_complex_v1` / `repair_v1` 三份 **SQL 侧**提示词，"
+    "共用 `DIALECT_NOTE` 一字未动（它被 **10** 个模板注入，含 8 个非 SQL 模板）。",
+    "- **gold 去 `ROUND`（`U-151`）**：两侧都按原始精度比较；`REL_TOL=1e-6`、排序口径与判据措辞"
+    "**均未改**。反向风险同框：模型若自己舍入，同样是 1e-5 级相对差而判不等。",
+    "- **`delivery_late_rate` ×100（`U-152`）**：语义包 `2026.10.31.1` 的表达式前置 `100.0 *`，"
+    "一并消掉 SQLite 整数除法归零；v1 的 bundle 与冻结件**一字未改**。",
+    "- **R14 / 方言缺口 12 条**：三批一致（见 §6），本窗未修、单列、**不归因模型**。",
+    "- **端点与模型**：v2 = `deepseek-v4.1-flash` @ 阿里云百炼；v1 = `deepseek-flash` @ 官方 "
+    "`api.deepseek.com`。按总控 2026-10-31 裁定**合并成一次读数**，端点差异在此留一句、不拆两套。",
+    "- **匣带**：提示词变更使 v1 匣带**预期 miss**（key = `sha256(path + canonical body)`），"
+    "不重录、不补录、不花钱；属预期失效，不是回归退化。",
+    "- **预算上限是累计值**：`--max-cost-cny` / `--max-calls` 比的是 `prior + 本批`"
+    "（`eval/runner.py::_breached`），**不是每批上限**。",
+)
+
+
+def _mean_std(values: list[float]) -> str:
+    if not values:
+        return "UNVERIFIED"
+    mean = statistics.fmean(values)
+    std = statistics.stdev(values) if len(values) > 1 else None
+    return f"{mean:.4f} ± " + (f"{std:.4f}" if std is not None else "n/a") + f"（n={len(values)}）"
+
+
+def _bucket_row(
+    cases: Iterable[Mapping[str, Any]], batch_records: list[list[dict[str, Any]]], name: str
+) -> str:
+    return " / ".join(str(bucket_counts(cases, batch)[name]) for batch in batch_records)
+
+
+def _v2_sections(
+    *,
+    cases: list[dict[str, Any]],
+    stats: list[dict[str, Any]],
+    batch_ids: list[str],
+    records: list[list[dict[str, Any]]],
+    baseline: Mapping[str, Any],
+    note: str | None,
+) -> list[str]:
+    """§5 的 v2 专属条目 + §6 的 v1→v2 对比。**只在给了 baseline 时调用**。"""
+    out: list[str] = list(_V2_BULLETS)
+    if note:
+        out.append(f"- {note}")
+
+    base_stats: list[dict[str, Any]] = list(baseline.get("stats") or [])
+    base_records: list[list[dict[str, Any]]] = list(baseline.get("records") or [])
+    base_label = str(baseline.get("label") or "v1")
+    ex_now = [float(s["ex"]) for s in stats]
+    ex_base = [float(s["ex"]) for s in base_stats]
+
+    out += [
+        "",
+        "## 6. v1 → v2 对比（按总控 2026-10-31 裁定：合并成一次读数）",
+        "",
+        "| 指标 | " + base_label + " | v2（本报告） |",
+        "|---|---|---|",
+        f"| `EX_official` | {_mean_std(ex_base)} | {_mean_std(ex_now)} |",
+        "| 每批 EX | " + " / ".join(f"{v:.4f}" for v in ex_base) + " | "
+        + " / ".join(f"{v:.4f}" for v in ex_now) + " |",
+        "| scored 分母 | " + " / ".join(str(s["scored_total"]) for s in base_stats) + " | "
+        + " / ".join(str(s["scored_total"]) for s in stats) + " |",
+        "| 交互 refuse | " + " / ".join(
+            f"{s['refuse_correct']}/{s['refuse_total']}" for s in base_stats
+        ) + " | " + " / ".join(f"{s['refuse_correct']}/{s['refuse_total']}" for s in stats) + " |",
+        "| 交互 clarify | " + " / ".join(
+            f"{s['clarify_correct']}/{s['clarify_total']}" for s in base_stats
+        ) + " | " + " / ".join(f"{s['clarify_correct']}/{s['clarify_total']}" for s in stats) + " |",
+        "| 方言缺口（单列） | " + " / ".join(
+            str(s["sandbox_dialect_gap"]) for s in base_stats
+        ) + " | " + " / ".join(str(s["sandbox_dialect_gap"]) for s in stats) + " |",
+    ]
+
+    if records and base_records:
+        for name, text in (
+            ("as_order", "`SQL_SYNTAX_ERROR`（`AS order` 桶）"),
+            ("round", "`round` 桶（gold 含 `ROUND` 且不等价）"),
+            ("delivery", "`delivery_late_rate` 桶（含于 `round`）"),
+            ("r14", "R14 / 方言缺口桶（本窗不修）"),
+        ):
+            out.append(
+                f"| {text} | {_bucket_row(cases, base_records, name)} | "
+                f"{_bucket_row(cases, records, name)} |"
+            )
+        out += [
+            "",
+            "> 桶口径 = `eval/olist/report_olist.py::case_buckets`（唯一真相，"
+            "`backend/reports/exv2/diagnosis.md` 的读数由同一函数现算）；"
+            "`delivery` 含于 `round`，**两张表不可相加当非等价总数**。",
+        ]
+
+    out += [
+        "",
+        f"> 批次：v2 = {batch_ids}；{base_label} = {list(baseline.get('batch_ids') or [])}。",
+        "",
+    ]
+    return out
+
+
 def _results_map(records: Iterable[Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
     mapping: dict[str, dict[str, Any]] = {}
     for record in records:
@@ -197,9 +351,13 @@ def render_markdown(
     profile: dict[str, Any] | None,
     stats: list[dict[str, Any]],
     batch_ids: list[str],
+    title: str = "Olist 60 题评测报告（W2）",
+    records: list[list[dict[str, Any]]] | None = None,
+    baseline: dict[str, Any] | None = None,
+    note: str | None = None,
 ) -> str:
     lines = [
-        "# Olist 60 题评测报告（W2）",
+        f"# {title}",
         "",
         f"> 数据集：`{dataset_path.as_posix()}` ｜ 模式：{mode} ｜ "
         + ("offline · 未跑 live" if not stats else "3 个独立批次（各自进程 + 各自 --batch-id）"),
@@ -387,19 +545,33 @@ def render_markdown(
         "单列、不归因模型。",
         "- Olist 数据实际止于 2018-08（9 月 1 单、10 月 0 单）。",
         "- `gold_executable` 的分母是 55 条 execute；交互题无 gold，不冒充可执行 SQL。",
-        "- 模型把表别名写成 `AS order`（SQL 保留字）⇒ 本轮 7/55 条 `SQL_SYNTAX_ERROR`；"
-        "这是生成缺陷，不是方言缺口。",
-        "- gold 做了 `ROUND`、模型常未做 ⇒ `REL_TOL=1e-6` 判不等（AOV/评分/延迟率多例）；"
-        "本轮不改判据，W3 裁定是去 gold 的 ROUND 还是把舍入写进 bundle/prompt。",
-        "- `delivery_late_rate` 的 bundle expression 未乘 100，模型照 expression 生成 ⇒ "
-        "SQLite 整数除法归零；这是 bundle 与 gold 口径不一致，不归因模型。",
-        "- 批次 r1 有 1 条 `GraphRecursionError`（o19）记 `unscored`，"
-        "故该批分母 54；其余两批分母 55。",
-        "- 零出站回放复核（r1 匣带）：59/60 逐例一致；o19 的 `GraphRecursionError` "
-        "**不复现**（回放记 `scored` 但仍不等值）⇒ 回放批 23/55、首发 23/54。"
-        "官方 EX 仍取首发三批，回放件 `results_v1_r1_replay.json` 只作复核证据。",
-        "",
     ]
+    if baseline is None:
+        # 默认路径（v1 报告）：以下 6 条是**当时的实测陈述**，一字不动 ——
+        # `docs/portfolio/README.md` 的复算命令要求与 `eval/olist/report.md` 逐字节一致。
+        lines += [
+            "- 模型把表别名写成 `AS order`（SQL 保留字）⇒ 本轮 7/55 条 `SQL_SYNTAX_ERROR`；"
+            "这是生成缺陷，不是方言缺口。",
+            "- gold 做了 `ROUND`、模型常未做 ⇒ `REL_TOL=1e-6` 判不等（AOV/评分/延迟率多例）；"
+            "本轮不改判据，W3 裁定是去 gold 的 ROUND 还是把舍入写进 bundle/prompt。",
+            "- `delivery_late_rate` 的 bundle expression 未乘 100，模型照 expression 生成 ⇒ "
+            "SQLite 整数除法归零；这是 bundle 与 gold 口径不一致，不归因模型。",
+            "- 批次 r1 有 1 条 `GraphRecursionError`（o19）记 `unscored`，"
+            "故该批分母 54；其余两批分母 55。",
+            "- 零出站回放复核（r1 匣带）：59/60 逐例一致；o19 的 `GraphRecursionError` "
+            "**不复现**（回放记 `scored` 但仍不等值）⇒ 回放批 23/55、首发 23/54。"
+            "官方 EX 仍取首发三批，回放件 `results_v1_r1_replay.json` 只作复核证据。",
+            "",
+        ]
+    else:
+        lines += _v2_sections(
+            cases=cases,
+            stats=stats,
+            batch_ids=batch_ids,
+            records=records or [],
+            baseline=baseline,
+            note=note,
+        )
     return "\n".join(lines)
 
 
@@ -418,6 +590,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--control", default=None)
     parser.add_argument("--out", default=str(OLIST_DIR / "report.md"))
     parser.add_argument("--json-out", default=str(OLIST_DIR / "report.json"))
+    # --- v2 支持（全部可选）：不给这 4 个参数时，输出与 v1 报告**逐字节一致** ---
+    parser.add_argument(
+        "--title", default="Olist 60 题评测报告（W2）", help="一级标题（v2 报告用）"
+    )
+    parser.add_argument(
+        "--baseline-results", nargs="*", default=[],
+        help="对照组（v1）的批次结果；给了才渲染 §6 对比、才替换 §5 的 v1 偏差陈述",
+    )
+    parser.add_argument(
+        "--baseline-dataset", default=None, help="对照组数据集（仅用于报告头脚注，可省）"
+    )
+    parser.add_argument("--note", default=None, help="追加到 §5 的一条自由备注")
     args = parser.parse_args(argv)
 
     dataset_path = Path(args.dataset)
@@ -452,9 +636,28 @@ def main(argv: list[str] | None = None) -> int:
         for b in batches
     ]
 
+    # 对照组（v1）：**不走** `validate_batches` —— 那会用当前数据集（v2）的两个 hash
+    # 去校验 v1 批次，必然不一致；对照组的合法性由它自己的报告承担。
+    baseline: dict[str, Any] | None = None
+    if args.baseline_results:
+        base_batches = [_load_json(Path(p)) for p in args.baseline_results]
+        baseline = {
+            "label": "v1",
+            "stats": [batch_stats(cases, b["records"]) for b in base_batches],
+            "records": [b["records"] for b in base_batches],
+            "batch_ids": [
+                str((b.get("config") or {}).get("batch_id") or b.get("batch_id"))
+                for b in base_batches
+            ],
+        }
+
     markdown = render_markdown(
         dataset_path=dataset_path, mode=mode, cases=cases, gold=gold,
         control=control, profile=profile, stats=stats, batch_ids=batch_ids,
+        title=args.title,
+        records=[b["records"] for b in batches],
+        baseline=baseline,
+        note=args.note,
     )
     out.write_text(markdown, encoding="utf-8", newline="\n")
 
