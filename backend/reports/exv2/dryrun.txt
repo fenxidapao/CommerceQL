@@ -1,0 +1,13 @@
+semantic bundle loaded: version=2026.10.31.1 status=candidate assets=5 excluded=0 warnings=1
+执行计划（§C.6.1：先报告再跑批）
+  用例数        : 10  按期望行为 {'execute': 10}
+  LLM 来源      : 匣带回放（不出网）
+  匣带          : E:\01_实训\项目\基于Text2SQL的电商数据分析Agent\CommerceQL\eval\olist\cassettes\olist_v1_exv2_dryrun.jsonl  mode=replay
+  执行方式      : 串行，单线程，整批一个 event loop
+  节点超时      : 契约值（07 §5.3 同形；本轮覆盖超时回归）
+  成本预估      : 0（回放不出网；miss 会当场打断该条并记 infra_error）
+  执行器 DB     : data\olist\olist_sandbox.db（与判分 DB 同一个）
+  执行器 bundle : semantic\bundle_olist_2018_v2.yaml
+  数据集        : eval\olist\dataset_v2_frozen.json  content_hash=sha256:beceddbc92f474aa2d1f22949839314b2181626ac04c29c90943c99382a4685f
+
+未带 --yes：只打印计划，不构造 Harness、不写盘。
