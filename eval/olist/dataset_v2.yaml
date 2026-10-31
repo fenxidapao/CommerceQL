@@ -1,0 +1,1649 @@
+# W2 Olist 评测集（60 题：55 execute / 3 clarify / 2 refuse）
+#
+# 归属窗口：W2 实施窗（docs/07 §4.8 的 U-144）。
+# g01..g10 = W1 原样承接（question/gold_sql/metrics/assets/expect 逐字不变）；
+# o01..o45 = W2 新增；c01..c03 / r01..r02 = 交互题。
+# 难度标签不写在这里：加载时由 layering.annotate_case 机器计算。
+# 两个 stamp 由 `python eval/olist/build_dataset.py --stamp` 维护。
+#
+# content_hash: sha256:beceddbc92f474aa2d1f22949839314b2181626ac04c29c90943c99382a4685f
+# full_hash: sha256:1a0c58cc3464f1d3c1fbd5299c75d004d72542bbfadc1c800969e664a124f29a
+dataset: olist_v2
+bundle: semantic/bundle_olist_2018_v2.yaml
+tenant: T_A
+
+cases:
+
+  # ======================= W1 原样承接（10） =======================
+
+  - case_id: g01
+    question: "2018 年的 GMV 是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["gmv"]
+    assets: ["order", "payment"]
+    gold_sql: |
+      SELECT SUM(p.payment_value) AS gmv
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "payment_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: []
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "GMV = 支付表金额求和（含运费），剔除取消/不可用单，按订单创建时间归属。"
+
+  - case_id: g02
+    question: "2017 年每个月的订单量是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["order_cnt"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+             COUNT(DISTINCT o.order_id) AS order_cnt
+      FROM v_o_orders AS o
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2017-01-01'
+        AND o.order_purchase_timestamp <  '2018-01-01'
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: null
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: []
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "订单量用 DISTINCT order_id；多支付行不会放大计数。"
+
+  - case_id: g03
+    question: "各州 GMV 前十名是哪些？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["gmv"]
+    assets: ["order", "payment"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             SUM(p.payment_value) AS gmv
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY o.customer_state
+      ORDER BY gmv DESC
+      LIMIT 10
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: "payment_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: []
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "全期间口径；州取收货州（订单侧唯一州字段）。"
+
+  - case_id: g04
+    question: "各品类商品销售额（不含运费）前十名是哪些？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["item_gmv"]
+    assets: ["order", "order_item", "product"]
+    gold_sql: |
+      SELECT pr.product_category AS category,
+             SUM(i.price) AS item_gmv
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o   ON o.order_id = i.order_id
+      JOIN v_o_products AS pr ON pr.product_id = i.product_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY pr.product_category
+      ORDER BY item_gmv DESC
+      LIMIT 10
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: "price"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: []
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "商品销售额只算 price，不含 freight_value；无品类译名的商品落空值组（报告里记录其排名）。"
+
+  - case_id: g05
+    question: "2018 年的客单价是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["aov"]
+    assets: ["order", "payment"]
+    gold_sql: |
+      SELECT SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS aov
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "payment_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: []
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "分子分母同过滤；分母是全量有效单量（订单级），不是支付行数。"
+
+  - case_id: g06
+    question: "每个月的运费总额是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["freight_total"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+             SUM(i.freight_value) AS freight_total
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: "freight_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: []
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "运费只在明细行有值，按订单时间归属到月份。"
+
+  - case_id: g07
+    question: "各订单状态分别有多少订单？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["order_cnt_all"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT o.order_status AS status,
+             COUNT(DISTINCT o.order_id) AS order_cnt_all
+      FROM v_o_orders AS o
+      GROUP BY o.order_status
+      ORDER BY order_cnt_all DESC
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: null
+      status_mode: "none"
+      status_values: []
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: []
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "全状态口径（order_cnt_all），刻意不加任何状态过滤 —— 域级谓词必须为空的探针。"
+
+  - case_id: g08
+    question: "各州的平均评分是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["avg_review_score"]
+    assets: ["order", "review"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             AVG(r.review_score) AS avg_review_score
+      FROM v_o_reviews AS r
+      JOIN v_o_orders AS o ON o.order_id = r.order_id
+      GROUP BY o.customer_state
+      ORDER BY avg_review_score DESC
+    expect:
+      time_column: "review_creation_date"
+      time_filtered: false
+      amount_column: null
+      status_mode: "none"
+      status_values: []
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: []
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "分母是有评价的订单，不是全部订单；评分不做状态过滤。"
+
+  - case_id: g09
+    question: "各州的配送延迟率是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["delivery_late_rate"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+               SUM(CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date
+                        THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0) AS delivery_late_rate
+      FROM v_o_orders AS o
+      WHERE o.order_status = 'delivered'
+        AND o.order_delivered_customer_date IS NOT NULL
+        AND o.order_estimated_delivery_date IS NOT NULL
+      GROUP BY o.customer_state
+      ORDER BY delivery_late_rate DESC
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: null
+      status_mode: "require"
+      status_values: ["delivered"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: []
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "分母 = delivered 且两个日期列均非空（96,470）；全量口径 7,826/96,470 = 8.112%。"
+
+  - case_id: g10
+    question: "2018 年每个月的商品件数是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["item_cnt"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+             COUNT(*) AS item_cnt
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: null
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: []
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "件数按明细行计（order_item 粒度），与订单量聚合时必然放大。"
+
+  # ======================= W2 新增 execute（45） =======================
+
+  - case_id: o01
+    question: "2017 年的 GMV 是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["gmv"]
+    assets: ["order", "payment"]
+    gold_sql: |
+      SELECT SUM(p.payment_value) AS gmv
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2017-01-01'
+        AND o.order_purchase_timestamp <  '2018-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "payment_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["metric:gmv"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "与 g01 同口径，只换年份；时间基准仍为下单时间。"
+
+  - case_id: o02
+    question: "2018 年每个月的 GMV 是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["gmv"]
+    assets: ["order", "payment"]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+             SUM(p.payment_value) AS gmv
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2018-09-01'
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "payment_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["time:month"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "2018-09 只有 1 单、10 月 0 单，故范围截到 8 月底；不制造空月。"
+
+  - case_id: o03
+    question: "2018 年 GMV 最高的 5 个州是哪些？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["gmv"]
+    assets: ["order", "payment"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             SUM(p.payment_value) AS gmv
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+      GROUP BY o.customer_state
+      ORDER BY gmv DESC
+      LIMIT 5
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "payment_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["hierarchy:state"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "州取收货州；Top-N 由 ORDER BY + LIMIT 表达。"
+
+  - case_id: o04
+    question: "2018 年的 GMV 和订单量分别是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["gmv", "order_cnt"]
+    assets: ["order", "payment"]
+    gold_sql: |
+      SELECT SUM(p.payment_value) AS gmv,
+             COUNT(DISTINCT o.order_id) AS order_cnt
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "payment_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["synonym:GMV"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "多指标题：C3/C5 以第一个指标 gmv 为准；order_cnt 同状态口径。"
+
+  - case_id: o05
+    question: "2017 年第四季度的 GMV 是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["gmv"]
+    assets: ["order", "payment"]
+    gold_sql: |
+      SELECT SUM(p.payment_value) AS gmv
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2017-10-01'
+        AND o.order_purchase_timestamp <  '2018-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "payment_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["time:quarter"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "季度边界用半开区间表达，避免 DATE() 函数差异。"
+
+  - case_id: o06
+    question: "全期间的有效订单量是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["order_cnt"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT COUNT(DISTINCT o.order_id) AS order_cnt
+      FROM v_o_orders AS o
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: null
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["synonym:订单量"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "单表、单条件：用于 easy 层；DISTINCT 防多支付行放大。"
+
+  - case_id: o07
+    question: "成交订单有多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["order_cnt"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT COUNT(DISTINCT o.order_id) AS order_cnt
+      FROM v_o_orders AS o
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: null
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["predicate:status"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "与 o06 同 SQL、不同问法与知识标签；证明 easy/high 格可达。"
+
+  - case_id: o08
+    question: "各州的订单量是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["order_cnt"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             COUNT(DISTINCT o.order_id) AS order_cnt
+      FROM v_o_orders AS o
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY o.customer_state
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: null
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["hierarchy:state"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "单表分组；不带 ORDER BY，避免把排序算成结构难度。"
+
+  - case_id: o09
+    question: "2018 年每个月的订单量是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["order_cnt"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+             COUNT(DISTINCT o.order_id) AS order_cnt
+      FROM v_o_orders AS o
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2018-09-01'
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: null
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["time:month"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "与 g02（2017 全 12 月）互补，2018 只到 8 月。"
+
+  - case_id: o10
+    question: "2018 年各州的订单量是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["order_cnt"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             COUNT(DISTINCT o.order_id) AS order_cnt
+      FROM v_o_orders AS o
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+      GROUP BY o.customer_state
+      ORDER BY order_cnt DESC
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: null
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["value_map:state"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "州值映射到收货州；时间过滤与状态过滤并存。"
+
+  - case_id: o11
+    question: "全期间一共有多少订单（含所有状态）？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["order_cnt_all"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT COUNT(DISTINCT o.order_id) AS order_cnt_all
+      FROM v_o_orders AS o
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: null
+      status_mode: "none"
+      status_values: []
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: []
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "全状态口径；不带任何状态过滤（域级谓词必须为空的探针）。"
+
+  - case_id: o12
+    question: "全状态订单数超过 1000 的州有哪些？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["order_cnt_all"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             COUNT(DISTINCT o.order_id) AS order_cnt_all
+      FROM v_o_orders AS o
+      GROUP BY o.customer_state
+      HAVING order_cnt_all > 1000
+      ORDER BY order_cnt_all DESC
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: null
+      status_mode: "none"
+      status_values: []
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["metric:order_cnt_all"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "HAVING 用输出别名（SQLite 允许）；全状态口径不排除取消/不可用。"
+
+  - case_id: o13
+    question: "2018 年每个月的全状态订单数是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["order_cnt_all"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+             COUNT(DISTINCT o.order_id) AS order_cnt_all
+      FROM v_o_orders AS o
+      WHERE o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2018-09-01'
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: null
+      status_mode: "none"
+      status_values: []
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["time:month"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "无状态过滤；9 月只有 1 单，故截到 8 月底。"
+
+  - case_id: o14
+    question: "各州各状态的订单数是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["order_cnt_all"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             o.order_status AS status,
+             COUNT(DISTINCT o.order_id) AS order_cnt_all
+      FROM v_o_orders AS o
+      GROUP BY o.customer_state, o.order_status
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: null
+      status_mode: "none"
+      status_values: []
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["value_map:state"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "两列分组；状态是维度列，不是谓词 ⇒ C5 仍为 none。"
+
+  - case_id: o15
+    question: "2018 年各州的全状态订单数是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["order_cnt_all"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             COUNT(DISTINCT o.order_id) AS order_cnt_all
+      FROM v_o_orders AS o
+      WHERE o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+      GROUP BY o.customer_state
+      ORDER BY order_cnt_all DESC
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: null
+      status_mode: "none"
+      status_values: []
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["synonym:订单总数"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "全状态 + 时间过滤 + 排序；与 o10 的有效单口径形成对照。"
+
+  - case_id: o16
+    question: "2017 年的客单价是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["aov"]
+    assets: ["order", "payment"]
+    gold_sql: |
+      SELECT SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS aov
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2017-01-01'
+        AND o.order_purchase_timestamp <  '2018-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "payment_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["metric:aov"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "分子分母同过滤；分母是订单级 DISTINCT。"
+
+  - case_id: o17
+    question: "2018 年每个月的客单价是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["aov"]
+    assets: ["order", "payment"]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+             SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS aov
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2018-09-01'
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "payment_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["time:month"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "月度客单价；每个月的分子分母各自聚合。"
+
+  - case_id: o18
+    question: "各州的客单价是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["aov"]
+    assets: ["order", "payment"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS aov
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY o.customer_state
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: "payment_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["hierarchy:state"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "全期间口径；州取收货州。"
+
+  - case_id: o19
+    question: "2017 年第四季度的客单价是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["aov"]
+    assets: ["order", "payment"]
+    gold_sql: |
+      SELECT SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS aov
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2017-10-01'
+        AND o.order_purchase_timestamp <  '2018-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "payment_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["time:quarter"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "季度边界半开区间；与 o05 同时间窗。"
+
+  - case_id: o20
+    question: "客单价高于全期间平均的州有哪些？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["aov"]
+    assets: ["order", "payment"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS aov
+      FROM v_o_payments AS p
+      JOIN v_o_orders AS o ON o.order_id = p.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY o.customer_state
+      HAVING aov > (
+        SELECT SUM(p2.payment_value) / NULLIF(COUNT(DISTINCT o2.order_id), 0)
+        FROM v_o_payments AS p2
+        JOIN v_o_orders AS o2 ON o2.order_id = p2.order_id
+        WHERE o2.order_status NOT IN ('canceled', 'unavailable')
+      )
+      ORDER BY aov DESC
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: "payment_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["value_map:state"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "子查询 + HAVING：比较对象是全期间整体客单价；两端状态口径必须一致。"
+
+  - case_id: o21
+    question: "2017 年的商品销售额（不含运费）是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["item_gmv"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT SUM(i.price) AS item_gmv
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2017-01-01'
+        AND o.order_purchase_timestamp <  '2018-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "price"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["metric:item_gmv"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "只算 price，不含 freight_value；明细行粒度。"
+
+  - case_id: o22
+    question: "2018 年每个月的商品销售额（不含运费）是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["item_gmv"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+             SUM(i.price) AS item_gmv
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2018-09-01'
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "price"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["time:month"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "月度商品销售额；与 GMV 的支付口径不可互替。"
+
+  - case_id: o23
+    question: "各州的商品销售额（不含运费）是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["item_gmv"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             SUM(i.price) AS item_gmv
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY o.customer_state
+      ORDER BY item_gmv DESC
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: "price"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["hierarchy:state"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "按收货州汇总明细行；州字段在订单侧。"
+
+  - case_id: o24
+    question: "2018 年各品类的商品销售额（不含运费）是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["item_gmv"]
+    assets: ["order", "order_item", "product"]
+    gold_sql: |
+      SELECT pr.product_category AS category,
+             SUM(i.price) AS item_gmv
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      JOIN v_o_products AS pr ON pr.product_id = i.product_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+      GROUP BY pr.product_category
+      ORDER BY item_gmv DESC
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "price"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["hierarchy:category"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "三表 join；品类经 product 维表翻译，空品类落空值组。"
+
+  - case_id: o25
+    question: "2018 年的商品销售额和运费分别是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["item_gmv", "freight_total"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT SUM(i.price) AS item_gmv,
+             SUM(i.freight_value) AS freight_total
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "price"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["synonym:商品销售额"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "多指标题：主指标 item_gmv 的金额列是 price；两列同过滤。"
+
+  - case_id: o26
+    question: "2017 年的运费总额是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["freight_total"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT SUM(i.freight_value) AS freight_total
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2017-01-01'
+        AND o.order_purchase_timestamp <  '2018-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "freight_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["metric:freight_total"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "运费只在明细行有值；按订单时间归属。"
+
+  - case_id: o27
+    question: "各州的运费总额是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["freight_total"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             SUM(i.freight_value) AS freight_total
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY o.customer_state
+      ORDER BY freight_total DESC
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: "freight_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["hierarchy:state"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "按收货州汇总运费；订单级运费在明细行重复，按明细口径。"
+
+  - case_id: o28
+    question: "各品类的运费总额是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["freight_total"]
+    assets: ["order", "order_item", "product"]
+    gold_sql: |
+      SELECT pr.product_category AS category,
+             SUM(i.freight_value) AS freight_total
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      JOIN v_o_products AS pr ON pr.product_id = i.product_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY pr.product_category
+      ORDER BY freight_total DESC
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: "freight_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["hierarchy:category"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "按品类汇总运费；口径是明细行，不拆订单级运费。"
+
+  - case_id: o29
+    question: "2018 年每个月的运费总额是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["freight_total"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+             SUM(i.freight_value) AS freight_total
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2018-09-01'
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "freight_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["time:month"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "月度运费；与 g06（全期间）互补。"
+
+  - case_id: o30
+    question: "2018 年的运费总额和商品销售额分别是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["freight_total", "item_gmv"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT SUM(i.freight_value) AS freight_total,
+             SUM(i.price) AS item_gmv
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: "freight_value"
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["synonym:运费"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "多指标题：主指标 freight_total 的金额列是 freight_value。"
+
+  - case_id: o31
+    question: "2017 年一共卖出了多少件商品？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["item_cnt"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT COUNT(*) AS item_cnt
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2017-01-01'
+        AND o.order_purchase_timestamp <  '2018-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: null
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["metric:item_cnt"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "件数 = 有效单的明细行数；粒度是 order_item。"
+
+  - case_id: o32
+    question: "各州卖出了多少件商品？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["item_cnt"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             COUNT(*) AS item_cnt
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY o.customer_state
+      ORDER BY item_cnt DESC
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: null
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["hierarchy:state"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "按收货州汇总明细行；与订单量不同粒度。"
+
+  - case_id: o33
+    question: "各品类卖出了多少件商品？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["item_cnt"]
+    assets: ["order", "order_item", "product"]
+    gold_sql: |
+      SELECT pr.product_category AS category,
+             COUNT(*) AS item_cnt
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      JOIN v_o_products AS pr ON pr.product_id = i.product_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+      GROUP BY pr.product_category
+      ORDER BY item_cnt DESC
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: null
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["hierarchy:category"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "三表 join 的件数；品类空值组保留。"
+
+  - case_id: o34
+    question: "2017 年每个月的商品件数是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["item_cnt"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+             COUNT(*) AS item_cnt
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2017-01-01'
+        AND o.order_purchase_timestamp <  '2018-01-01'
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: null
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["time:month"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "与 g10（2018 年）互补；2017 全年 12 个月。"
+
+  - case_id: o35
+    question: "2018 年的订单量和商品件数分别是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["order_cnt", "item_cnt"]
+    assets: ["order", "order_item"]
+    gold_sql: |
+      SELECT COUNT(DISTINCT o.order_id) AS order_cnt,
+             COUNT(*) AS item_cnt
+      FROM v_o_order_items AS i
+      JOIN v_o_orders AS o ON o.order_id = i.order_id
+      WHERE o.order_status NOT IN ('canceled', 'unavailable')
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: null
+      status_mode: "exclude"
+      status_values: ["canceled", "unavailable"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["synonym:件数"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "多指标题：订单级 DISTINCT 与明细行 COUNT 同框，故意展示两种粒度。"
+
+  - case_id: o36
+    question: "全期间的平均评分是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["avg_review_score"]
+    assets: ["review"]
+    gold_sql: |
+      SELECT AVG(r.review_score) AS avg_review_score
+      FROM v_o_reviews AS r
+    expect:
+      time_column: "review_creation_date"
+      time_filtered: false
+      amount_column: null
+      status_mode: "none"
+      status_values: []
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: []
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "单表、无过滤：easy 层；分母是有评价的订单。"
+
+  - case_id: o37
+    question: "2018 年以来的平均评分是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["avg_review_score"]
+    assets: ["review"]
+    gold_sql: |
+      SELECT AVG(r.review_score) AS avg_review_score
+      FROM v_o_reviews AS r
+      WHERE r.review_creation_date >= '2018-01-01'
+    expect:
+      time_column: "review_creation_date"
+      time_filtered: true
+      amount_column: null
+      status_mode: "none"
+      status_values: []
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["time:year"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "时间基准是评价创建时间，不是下单时间。"
+
+  - case_id: o38
+    question: "2018 年各州的平均评分是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["avg_review_score"]
+    assets: ["order", "review"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             AVG(r.review_score) AS avg_review_score
+      FROM v_o_reviews AS r
+      JOIN v_o_orders AS o ON o.order_id = r.order_id
+      WHERE r.review_creation_date >= '2018-01-01'
+        AND r.review_creation_date <  '2019-01-01'
+      GROUP BY o.customer_state
+    expect:
+      time_column: "review_creation_date"
+      time_filtered: true
+      amount_column: null
+      status_mode: "none"
+      status_values: []
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["hierarchy:state", "time:year"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "评价表 join 订单取州；不做状态过滤。"
+
+  - case_id: o39
+    question: "2017 年每个月的平均评分是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["avg_review_score"]
+    assets: ["review"]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', r.review_creation_date) AS month,
+             AVG(r.review_score) AS avg_review_score
+      FROM v_o_reviews AS r
+      WHERE r.review_creation_date >= '2017-01-01'
+        AND r.review_creation_date <  '2018-01-01'
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: "review_creation_date"
+      time_filtered: true
+      amount_column: null
+      status_mode: "none"
+      status_values: []
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["time:month"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "评价侧月度；单表即可，不需要 join 订单。"
+
+  - case_id: o40
+    question: "平均评分最低的 5 个州是哪些？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["avg_review_score"]
+    assets: ["order", "review"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+             AVG(r.review_score) AS avg_review_score
+      FROM v_o_reviews AS r
+      JOIN v_o_orders AS o ON o.order_id = r.order_id
+      GROUP BY o.customer_state
+      ORDER BY avg_review_score ASC
+      LIMIT 5
+    expect:
+      time_column: "review_creation_date"
+      time_filtered: false
+      amount_column: null
+      status_mode: "none"
+      status_values: []
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["hierarchy:state"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "Top-N 的升序版本；排序对象是平均分。"
+
+  - case_id: o41
+    question: "全期间的配送延迟率是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["delivery_late_rate"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT 
+        SUM(CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date
+                 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0) AS delivery_late_rate
+      FROM v_o_orders AS o
+      WHERE o.order_status = 'delivered'
+        AND o.order_delivered_customer_date IS NOT NULL
+        AND o.order_estimated_delivery_date IS NOT NULL
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: null
+      status_mode: "require"
+      status_values: ["delivered"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["metric:delivery_late_rate"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "分母 = delivered 且两日期列均非空；与 g09 的全量口径一致（8.112%）。"
+
+  - case_id: o42
+    question: "2018 年的配送延迟率是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["delivery_late_rate"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT 
+        SUM(CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date
+                 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0) AS delivery_late_rate
+      FROM v_o_orders AS o
+      WHERE o.order_status = 'delivered'
+        AND o.order_delivered_customer_date IS NOT NULL
+        AND o.order_estimated_delivery_date IS NOT NULL
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: null
+      status_mode: "require"
+      status_values: ["delivered"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["time:year"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "状态过滤 + 时间过滤 + 两列非空；分母仍只算 delivered。"
+
+  - case_id: o43
+    question: "配送延迟率最低的 5 个州是哪些？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["delivery_late_rate"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+               SUM(CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date
+                        THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0) AS delivery_late_rate
+      FROM v_o_orders AS o
+      WHERE o.order_status = 'delivered'
+        AND o.order_delivered_customer_date IS NOT NULL
+        AND o.order_estimated_delivery_date IS NOT NULL
+      GROUP BY o.customer_state
+      ORDER BY delivery_late_rate ASC
+      LIMIT 5
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: false
+      amount_column: null
+      status_mode: "require"
+      status_values: ["delivered"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["hierarchy:state"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "升序 Top-N；分母按州各自计算。"
+
+  - case_id: o44
+    question: "2017 年每个月的配送延迟率是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["delivery_late_rate"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,
+               SUM(CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date
+                        THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0) AS delivery_late_rate
+      FROM v_o_orders AS o
+      WHERE o.order_status = 'delivered'
+        AND o.order_delivered_customer_date IS NOT NULL
+        AND o.order_estimated_delivery_date IS NOT NULL
+        AND o.order_purchase_timestamp >= '2017-01-01'
+        AND o.order_purchase_timestamp <  '2018-01-01'
+      GROUP BY month
+      ORDER BY month
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: null
+      status_mode: "require"
+      status_values: ["delivered"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["time:month"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "月度延迟率；分子分母同一批 delivered 单。"
+
+  - case_id: o45
+    question: "2018 年各州的配送延迟率是多少？"
+    expected_behavior: execute
+    eval_tenant: T_A
+    domain: orders
+    metrics: ["delivery_late_rate"]
+    assets: ["order"]
+    gold_sql: |
+      SELECT o.customer_state AS state,
+               SUM(CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date
+                        THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0) AS delivery_late_rate
+      FROM v_o_orders AS o
+      WHERE o.order_status = 'delivered'
+        AND o.order_delivered_customer_date IS NOT NULL
+        AND o.order_estimated_delivery_date IS NOT NULL
+        AND o.order_purchase_timestamp >= '2018-01-01'
+        AND o.order_purchase_timestamp <  '2019-01-01'
+      GROUP BY o.customer_state
+      ORDER BY delivery_late_rate DESC
+    expect:
+      time_column: "order_purchase_timestamp"
+      time_filtered: true
+      amount_column: null
+      status_mode: "require"
+      status_values: ["delivered"]
+    clarify_expected: null
+    refuse_reason: null
+    business_knowledge_required: ["value_map:state"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "按州 + 时间过滤；与 g09（全期间）互补。"
+
+  # ======================= 交互题（3 clarify / 2 refuse） =======================
+
+  - case_id: c01
+    question: "各地区的 GMV 是多少？"
+    expected_behavior: clarify
+    eval_tenant: T_A
+    domain: orders
+    metrics: []
+    assets: []
+    gold_sql: null
+    clarify_expected:
+      reason: "「地区」在薄语义包里没有唯一绑定：州（order.customer_state）与市（order.customer_city）同 grain，语义层无法二选一。"
+      candidates: ["order.customer_state", "order.customer_city"]
+    refuse_reason: null
+    business_knowledge_required: ["fuzzy:dimension_ambiguity"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "澄清题：期望 clarify 终态，不是 refuse、更不是随便选一个维度出数。"
+
+  - case_id: c02
+    question: "各州的销量是多少？"
+    expected_behavior: clarify
+    eval_tenant: T_A
+    domain: orders
+    metrics: []
+    assets: []
+    gold_sql: null
+    clarify_expected:
+      reason: "「销量」在薄语义包里对应两个不同粒度的指标：order_cnt（订单级）与 item_cnt（明细行级），聚合结果会成倍不同。"
+      candidates: ["order_cnt", "item_cnt"]
+    refuse_reason: null
+    business_knowledge_required: ["fuzzy:metric_ambiguity"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "澄清题：指标口径歧义；必须先问清订单量还是件数。"
+
+  - case_id: c03
+    question: "最近一年的 GMV 是多少？"
+    expected_behavior: clarify
+    eval_tenant: T_A
+    domain: orders
+    metrics: []
+    assets: []
+    gold_sql: null
+    clarify_expected:
+      reason: "「最近一年」的锚点未定：是相对数据期末（2018-10-17）还是相对当前日期（2026-10-27）？两者落在完全不同的数据区间。"
+      candidates: ["数据期末前 12 个月", "当前日期前 12 个月"]
+    refuse_reason: null
+    business_knowledge_required: ["fuzzy:time_anchor"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "澄清题：时间锚点歧义；Olist 数据实际止于 2018-08，当前日期口径会全空。"
+
+  - case_id: r01
+    question: "退款率是多少？"
+    expected_behavior: refuse
+    eval_tenant: T_A
+    domain: orders
+    metrics: []
+    assets: []
+    gold_sql: null
+    clarify_expected: null
+    refuse_reason: "Olist 无退款金额字段，无法计算退款率；bundle 的 blacklist_terms 已登记 refuse，不得用订单状态近似替代。"
+    business_knowledge_required: ["fuzzy:blacklist"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "拒答题：期望 refuse 态 + 审计，不是 error。"
+
+  - case_id: r02
+    question: "各品类的利润率是多少？"
+    expected_behavior: refuse
+    eval_tenant: T_A
+    domain: orders
+    metrics: []
+    assets: []
+    gold_sql: null
+    clarify_expected: null
+    refuse_reason: "Olist 无成本字段，无法计算利润/利润率；bundle 的 blacklist_terms 已登记 refuse。"
+    business_knowledge_required: ["fuzzy:blacklist"]
+    must_contain: []
+    must_not_contain: []
+    caliber_note: "拒答题：期望 refuse 态；不得用商品销售额冒充利润。"
