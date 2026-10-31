@@ -13,7 +13,7 @@
 |---|---|
 | `git rev-parse --short HEAD` | `efd744e` |
 | `git status --short` | 空 |
-| `docs/07` §4.8 指针行行首 | `下一个可用号 = U-150`（取号后已抬到 `U-153`） |
+| `docs/07` §4.8 指针行行首 | `下一个可用号 = U-150`（本窗取 U-150/151/152 → 抬到 `U-153`；v1.7.41 取 `U-153` → 抬到 `U-154`） |
 | `SQL_SYNTAX_ERROR` 的 case | `g01, o01, o04, o05, o16, o24, c03`（7 条；`c03` 是 clarify，**不计 EX 分母**） |
 | `gate1_reject_rule == R14` 的 case | `g02, g06, g10, o02, o09, o13, o17, o22, o29, o34, o39, o44`（12 条，**本窗不修**） |
 
@@ -98,6 +98,7 @@ v1 批次记录里 `sql_text` 为 `None`、`terminal_error_detail` 为空 ⇒ **
 3. **模型价表只有两档**：`backend/app/llm/budget.py:120-134` 的 `PRICES` 只含 `deepseek-flash` 与 `deepseek-v4-pro`，未知模型按最贵档兜底并打 `price_guess`。
    - v1 单批实测：`calls=251` / `tokens=943,940` / `cost_cny=0.510667`（按 flash 价）；
    - 若被迫回退到 `deepseek-v4.1-flash`，账本价 ≈ ¥2.3/批 ⇒ 三批 ≈ ¥7 ⇒ **¥3 上限不成立，必须停并交裁定**（不硬跑，否则批被中途截断、读数作废）。
+   - ✅ **已解决（`U-153`）**：官方单价查到并已入表（非峰 `$0.015/0.15/0.60`、峰 `$0.03/0.30/1.20`）—— 它与 `deepseek-flash` **输入/输出同价、仅缓存命中差 5 倍** ⇒ 实测单批 ¥0.50–0.54，**¥3 累计上限够用**，故上文「≈¥2.3/批」是按 v4-pro 兜底算的**错误估计，已作废**。
 4. **提示词三份 `.txt` 原地改、不升版本号**：
    - 升版（新建 `gen_sql_v2.txt`）会让 `test_llm_prompts.py:64-65`、`test_planner_engine.py:1203`、`test_llm_gateway.py:451,945` 四处 `prompt_version == "gen_sql_v1"` 断言变红，违反"只允许既有 5 失败"；
    - 故原地改 + 登记新 `content_hash`（§9）。
@@ -140,3 +141,42 @@ python -c "import json,re;recs=[json.loads(l) for l in open('eval/olist/cassette
 去掉 gold 的 `ROUND` 后，两侧都是**原始精度**。若模型自己写了 `ROUND(...,2)`，则同样会出现 1e-5 量级的相对差 > `REL_TOL=1e-6` ⇒ 仍判不等（**方向相反的同一成因**）。
 - 依据：v1/v2 金标对撞实测最大相对差 **3.094e-5**（`g05`），`rel>1e-3` 的条数 = 0，且**无结构变化、无零/非零翻转**（`git diff --no-index` 之外的对撞脚本见 §8② 同族做法）。
 - 判据不变、容差不调；若 v2 出现"因模型主动舍入而判不等"的题，按 `U-151` 的备选 (a)（gold 除法显式 `1.0 *`）或 (b)（提示词精度规则）另行裁定，本窗不预改。
+
+## 12. v2 实测读数（2026-10-31，百炼 live）
+
+**端点与模型**：`https://dashscope.aliyuncs.com/compatible-mode/v1` + `deepseek-v4.1-flash`（探活 200，`model_echo=deepseek-v4.1-flash`）。
+⚠️ 与 v1（官方 `api.deepseek.com` + `deepseek-flash`）**不同服务方**；按总控 2026-10-31 裁定「合并成一次读数」，不拆两套。
+`reasoning_chars=0` 全程成立 ⇒ 项目既有的 `thinking={"type":"disabled"}`（`backend/app/llm/egress_guard.py:458`）在百炼上同样生效，**没有吃思考 token**。
+
+| 批 | batch_id | scored | 等价 | EX | calls | 本批 ¥ | wall_s.sum |
+|---|---|---|---|---|---|---|---|
+| 冒烟 | `exv2_smoke` | 10 | 6 | — | 44 | 0.105854 | 164.3 |
+| 1 | `exv2_r1` | 55 | 41 | 0.7455 | 236 | 0.538588 | 822.2 |
+| 2 | `exv2_r2` | 55 | 39 | 0.7091 | 240 | 0.504919 | 833.8 |
+| 3 | `exv2_r3` | 55 | 40 | 0.7273 | 235 | 0.506149 | 828.0 |
+| **合计** | | | | **0.7273 ± 0.0182（n=3）** | **755** | **1.65551** | |
+
+- 累计上限 ¥3 / 1800 calls **未触顶**（用了 ¥1.66 / 755 calls），`price_guess` 全程为 `False`（`U-153` 入表后按真实档计价）。
+- v1 对照：`0.4147 ± 0.0133`（n=3，23/54·23/55·22/55）⇒ **+0.3126**。
+
+**三类修复逐桶归零**（`case_buckets` 现算，见 `eval/olist/report_v2.md` §6）：
+
+| 桶 | v1（r1/r2/r3） | v2（r1/r2/r3） |
+|---|---|---|
+| `as_order`（`SQL_SYNTAX_ERROR`） | 7 / 6 / 6 | **0 / 0 / 0** |
+| `round`（gold 含 ROUND 且不等价） | 13 / 14 / 15 | **0 / 0 / 0** |
+| `delivery_late_rate`（含于 `round`） | 5 / 5 / 5 | **0 / 0 / 0** |
+| `r14`（方言缺口，本窗不修） | 12 / 12 / 12 | **12 / 12 / 12** |
+
+**残差（如实列出，不归因本窗）**：v2 每批仍有 12 条 R14 + 1–4 条模型侧差异
+（r1：`o01`/`o31`；r2：`g01`/`o05`/`o19`/`o24`；r3：`g01`/`o05`/`o38`）。
+
+**交互正确有退化，必须同框**（不进 EX，但 `interaction_correct` 是独立判据）：
+
+| case | v1 | v2 | 说明 |
+|---|---|---|---|
+| `c01`（clarify） | 1/3 | **0/3** | 三批都走 `complete` |
+| `r02`（refuse） | 3/3 | **1/3** | r2/r3 走了 `clarify` |
+| `c03`（clarify） | 0/3 | 0/3 | v1 是 `error`（`AS order`），v2 r2 变 `complete`，都不算正确 |
+
+⇒ v2 交互正确 = refuse `2/2 / 1/2 / 1/2`、clarify `1/3 / 1/3 / 1/3`（v1：refuse `2/2×3`、clarify `2/3 / 1/3 / 1/3`）。**这是端点/模型差异，不是三类修复的副作用**（三类修复都不碰交互分支），但对外必须一并写。
