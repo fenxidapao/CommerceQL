@@ -1,0 +1,76 @@
+{
+  "profile": "olist",
+  "dataset": "eval\\olist\\dataset_v2.yaml",
+  "db": "data\\olist\\olist_sandbox.db",
+  "python": "3.13.14",
+  "mode": "stamped",
+  "frozen": false,
+  "checks": {
+    "dataset_content_hash": {
+      "expected": "sha256:beceddbc92f474aa2d1f22949839314b2181626ac04c29c90943c99382a4685f",
+      "actual": "sha256:beceddbc92f474aa2d1f22949839314b2181626ac04c29c90943c99382a4685f",
+      "mode": "stamped",
+      "ok": true
+    },
+    "dataset_full_hash": {
+      "expected": "sha256:1a0c58cc3464f1d3c1fbd5299c75d004d72542bbfadc1c800969e664a124f29a",
+      "actual": "sha256:1a0c58cc3464f1d3c1fbd5299c75d004d72542bbfadc1c800969e664a124f29a",
+      "mode": "stamped",
+      "ok": true
+    },
+    "sandbox_db_sha256": {
+      "expected": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+      "actual": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+      "mode": "manifest",
+      "python": "3.13.14",
+      "pinned_python": "3.13.14",
+      "ok": true
+    },
+    "dataset_shape": {
+      "expected": {
+        "n_cases": 60,
+        "n_execute_cases": 55,
+        "n_interaction_cases": 5
+      },
+      "actual": {
+        "n_cases": 60,
+        "n_execute_cases": 55,
+        "n_interaction_cases": 5
+      },
+      "ok": true
+    },
+    "gold_executable": {
+      "expected": 55,
+      "actual": 55,
+      "ok": true
+    },
+    "caliber_match": {
+      "expected": 55,
+      "actual": 55,
+      "ok": true
+    },
+    "interaction_unlabeled": {
+      "expected": 5,
+      "actual": 5,
+      "ok": true
+    },
+    "cases_valid": {
+      "expected": 60,
+      "actual": 60,
+      "ok": true
+    },
+    "gold_result_hash": {
+      "mode": "n/a (source mode)",
+      "ok": true
+    },
+    "all_ok": true
+  },
+  "dataset_version": "olist_v2",
+  "frozen_at": null,
+  "n_cases": 60,
+  "n_execute_cases": 55,
+  "n_interaction_cases": 5,
+  "content_hash": "sha256:beceddbc92f474aa2d1f22949839314b2181626ac04c29c90943c99382a4685f",
+  "full_hash": "sha256:1a0c58cc3464f1d3c1fbd5299c75d004d72542bbfadc1c800969e664a124f29a",
+  "sandbox_db_sha256": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0"
+}

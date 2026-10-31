@@ -1,0 +1,918 @@
+{
+  "mode": "instrument-control",
+  "generated_at": "2026-10-31T05:36:15+00:00",
+  "not_ex_official": true,
+  "dataset": "dataset_v2.yaml",
+  "db": "data\\olist\\olist_sandbox.db",
+  "n_cases": 60,
+  "n_execute_cases": 55,
+  "positive": {
+    "scored_total": 55,
+    "scored_passed": 55,
+    "ex": 1.0,
+    "matrix": [
+      [
+        {
+          "struct": "easy",
+          "semantic": "low",
+          "total": 2,
+          "passed": 2,
+          "pass_rate": 1.0,
+          "attribution": {}
+        },
+        {
+          "struct": "easy",
+          "semantic": "medium",
+          "total": 1,
+          "passed": 1,
+          "pass_rate": 1.0,
+          "attribution": {}
+        },
+        {
+          "struct": "easy",
+          "semantic": "high",
+          "total": 2,
+          "passed": 2,
+          "pass_rate": 1.0,
+          "attribution": {}
+        }
+      ],
+      [
+        {
+          "struct": "medium",
+          "semantic": "low",
+          "total": 2,
+          "passed": 2,
+          "pass_rate": 1.0,
+          "attribution": {}
+        },
+        {
+          "struct": "medium",
+          "semantic": "medium",
+          "total": 2,
+          "passed": 2,
+          "pass_rate": 1.0,
+          "attribution": {}
+        },
+        {
+          "struct": "medium",
+          "semantic": "high",
+          "total": 8,
+          "passed": 8,
+          "pass_rate": 1.0,
+          "attribution": {}
+        }
+      ],
+      [
+        {
+          "struct": "hard",
+          "semantic": "low",
+          "total": 2,
+          "passed": 2,
+          "pass_rate": 1.0,
+          "attribution": {}
+        },
+        {
+          "struct": "hard",
+          "semantic": "medium",
+          "total": 7,
+          "passed": 7,
+          "pass_rate": 1.0,
+          "attribution": {}
+        },
+        {
+          "struct": "hard",
+          "semantic": "high",
+          "total": 4,
+          "passed": 4,
+          "pass_rate": 1.0,
+          "attribution": {}
+        }
+      ],
+      [
+        {
+          "struct": "extra",
+          "semantic": "low",
+          "total": 6,
+          "passed": 6,
+          "pass_rate": 1.0,
+          "attribution": {}
+        },
+        {
+          "struct": "extra",
+          "semantic": "medium",
+          "total": 11,
+          "passed": 11,
+          "pass_rate": 1.0,
+          "attribution": {}
+        },
+        {
+          "struct": "extra",
+          "semantic": "high",
+          "total": 8,
+          "passed": 8,
+          "pass_rate": 1.0,
+          "attribution": {}
+        }
+      ]
+    ]
+  },
+  "negative": {
+    "scored_total": 55,
+    "scored_passed": 0,
+    "ex": 0.0,
+    "matrix": [
+      [
+        {
+          "struct": "easy",
+          "semantic": "low",
+          "total": 2,
+          "passed": 0,
+          "pass_rate": 0.0,
+          "attribution": {
+            "unattributed": 2
+          }
+        },
+        {
+          "struct": "easy",
+          "semantic": "medium",
+          "total": 1,
+          "passed": 0,
+          "pass_rate": 0.0,
+          "attribution": {
+            "unattributed": 1
+          }
+        },
+        {
+          "struct": "easy",
+          "semantic": "high",
+          "total": 2,
+          "passed": 0,
+          "pass_rate": 0.0,
+          "attribution": {
+            "unattributed": 2
+          }
+        }
+      ],
+      [
+        {
+          "struct": "medium",
+          "semantic": "low",
+          "total": 2,
+          "passed": 0,
+          "pass_rate": 0.0,
+          "attribution": {
+            "unattributed": 2
+          }
+        },
+        {
+          "struct": "medium",
+          "semantic": "medium",
+          "total": 2,
+          "passed": 0,
+          "pass_rate": 0.0,
+          "attribution": {
+            "unattributed": 2
+          }
+        },
+        {
+          "struct": "medium",
+          "semantic": "high",
+          "total": 8,
+          "passed": 0,
+          "pass_rate": 0.0,
+          "attribution": {
+            "unattributed": 8
+          }
+        }
+      ],
+      [
+        {
+          "struct": "hard",
+          "semantic": "low",
+          "total": 2,
+          "passed": 0,
+          "pass_rate": 0.0,
+          "attribution": {
+            "unattributed": 2
+          }
+        },
+        {
+          "struct": "hard",
+          "semantic": "medium",
+          "total": 7,
+          "passed": 0,
+          "pass_rate": 0.0,
+          "attribution": {
+            "unattributed": 7
+          }
+        },
+        {
+          "struct": "hard",
+          "semantic": "high",
+          "total": 4,
+          "passed": 0,
+          "pass_rate": 0.0,
+          "attribution": {
+            "unattributed": 4
+          }
+        }
+      ],
+      [
+        {
+          "struct": "extra",
+          "semantic": "low",
+          "total": 6,
+          "passed": 0,
+          "pass_rate": 0.0,
+          "attribution": {
+            "unattributed": 6
+          }
+        },
+        {
+          "struct": "extra",
+          "semantic": "medium",
+          "total": 11,
+          "passed": 0,
+          "pass_rate": 0.0,
+          "attribution": {
+            "unattributed": 11
+          }
+        },
+        {
+          "struct": "extra",
+          "semantic": "high",
+          "total": 8,
+          "passed": 0,
+          "pass_rate": 0.0,
+          "attribution": {
+            "unattributed": 8
+          }
+        }
+      ]
+    ]
+  },
+  "all_ok": true,
+  "cases": [
+    {
+      "case_id": "g01",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "g02",
+      "gold_rows": 12,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 12
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "g03",
+      "gold_rows": 10,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 10
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "g04",
+      "gold_rows": 10,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 10
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "g05",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "g06",
+      "gold_rows": 24,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 24
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "g07",
+      "gold_rows": 8,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 8
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "g08",
+      "gold_rows": 27,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 27
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "g09",
+      "gold_rows": 27,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 27
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "g10",
+      "gold_rows": 9,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 9
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o01",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o02",
+      "gold_rows": 8,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 8
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o03",
+      "gold_rows": 5,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 5
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o04",
+      "gold_rows": 1,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o05",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o06",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o07",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o08",
+      "gold_rows": 27,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 27
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o09",
+      "gold_rows": 8,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 8
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o10",
+      "gold_rows": 27,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 27
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o11",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o12",
+      "gold_rows": 12,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 12
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o13",
+      "gold_rows": 8,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 8
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o14",
+      "gold_rows": 149,
+      "gold_cols": 3,
+      "pred_shape": {
+        "columns": 3,
+        "rows": 149
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o15",
+      "gold_rows": 27,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 27
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o16",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o17",
+      "gold_rows": 8,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 8
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o18",
+      "gold_rows": 27,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 27
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o19",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o20",
+      "gold_rows": 24,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 24
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o21",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o22",
+      "gold_rows": 8,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 8
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o23",
+      "gold_rows": 27,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 27
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o24",
+      "gold_rows": 71,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 71
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o25",
+      "gold_rows": 1,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o26",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o27",
+      "gold_rows": 27,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 27
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o28",
+      "gold_rows": 72,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 72
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o29",
+      "gold_rows": 8,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 8
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o30",
+      "gold_rows": 1,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o31",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o32",
+      "gold_rows": 27,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 27
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o33",
+      "gold_rows": 72,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 72
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o34",
+      "gold_rows": 12,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 12
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o35",
+      "gold_rows": 1,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o36",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o37",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o38",
+      "gold_rows": 27,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 27
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o39",
+      "gold_rows": 12,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 12
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o40",
+      "gold_rows": 5,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 5
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o41",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o42",
+      "gold_rows": 1,
+      "gold_cols": 1,
+      "pred_shape": {
+        "columns": 1,
+        "rows": 1
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o43",
+      "gold_rows": 5,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 5
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o44",
+      "gold_rows": 12,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 12
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    },
+    {
+      "case_id": "o45",
+      "gold_rows": 27,
+      "gold_cols": 2,
+      "pred_shape": {
+        "columns": 2,
+        "rows": 27
+      },
+      "positive_equivalent": true,
+      "negative_equivalent": false,
+      "error": null
+    }
+  ]
+}
