@@ -128,6 +128,13 @@ PRICES: Final[dict[str, dict[Tier, ModelPrice]]] = {
         Tier.OFF_PEAK: _p("0.022", "0.66", "1.98"),
         Tier.PEAK: _p("0.044", "1.32", "3.96"),
     },
+    # 阿里云百炼（`U-153`，2026-10-31 现取官方 USD 表，全球部署）：EX v2 窗起 live 端点。
+    # ⚠️ 与 `deepseek-flash` **输入/输出同价**，只有缓存命中价差 5 倍（0.015 vs 0.003）
+    #    ⇒ 换端点不改变成本量级；不入表会被 `_PRICE_FALLBACK_MODEL` 兜底成 v4-pro（虚高 4.4 倍）。
+    "deepseek-v4.1-flash": {
+        Tier.OFF_PEAK: _p("0.015", "0.15", "0.60"),
+        Tier.PEAK: _p("0.03", "0.30", "1.20"),
+    },
 }
 
 #: 兜底计价用的模型名（未知模型按它算 = 按最贵的算）。

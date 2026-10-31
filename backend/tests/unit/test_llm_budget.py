@@ -165,6 +165,24 @@ class TestCost:
         _, is_guess = resolve_price("deepseek-flash", Tier.PEAK)
         assert is_guess is False
 
+    def test_bailian_flash_is_in_the_table(self) -> None:
+        """`deepseek-v4.1-flash`（阿里云百炼，`U-153`）必须在价目表里。
+
+        不在表里就会被 `_PRICE_FALLBACK_MODEL`（`deepseek-v4-pro`）兜底 ⇒ 账本虚高 4.4 倍、
+        且每笔都打 `price_guess`，导致"花了多少钱"这个问题永远没有答案。
+        官方事实：它**与 `deepseek-flash` 输入/输出同价**，只有缓存命中价差 5 倍。
+        """
+        price, is_guess = resolve_price("deepseek-v4.1-flash", Tier.PEAK)
+        assert is_guess is False
+        assert price.cache_hit == Decimal("0.03")
+        assert price.cache_miss == Decimal("0.30")
+        assert price.output == Decimal("1.20")
+        off = PRICES["deepseek-v4.1-flash"][Tier.OFF_PEAK]
+        flash_off = PRICES["deepseek-flash"][Tier.OFF_PEAK]
+        assert off.cache_miss == flash_off.cache_miss
+        assert off.output == flash_off.output
+        assert off.cache_hit == flash_off.cache_hit * 5
+
     def test_total_field_is_not_used_for_pricing(self) -> None:
         """`total` 含 reasoning token，而 reasoning 已计入 `output` —— 用它就是重复计。"""
         a = TokenUsage(input=1000, output=500, cache_hit=0, total=1500)
