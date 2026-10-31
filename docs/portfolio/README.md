@@ -9,15 +9,22 @@
 
 **中文**：把一句中文业务问题变成一条**受控** SQL —— 三道安全闸门（AST / 政策 / 成本）、
 按租户的行级隔离（RLS）、出站内容白名单、两段式审计（fail-closed）；在 Olist 真实数据
-60 题冻结集上，3 个独立批次实测 `EX_official = 41.47% ± 1.33%`（n=3，样本标准差）。
+60 题冻结集上，3 个独立批次实测 `EX_official = 72.73% ± 1.82%`（n=3，样本标准差）。
+历史读数 `41.47% ± 1.33%`（同一冻结集、同一判据、不同端点）**保留可复算**，作为 v1 对照。
 
 **English**：A controlled Text2SQL agent for e-commerce analytics. LLM-generated SQL is
 treated as **untrusted input**: three gates (AST / policy / cost), tenant-level RLS,
 outbound content whitelist, and fail-closed two-phase audit. On a 60-case frozen Olist
-set, `EX_official = 41.47% ± 1.33%` over 3 independent batches (n=3, sample std).
+set, `EX_official = 72.73% ± 1.82%` over 3 independent batches (n=3, sample std);
+the historical `41.47% ± 1.33%` (same frozen set, same judge, different endpoint) is kept
+reproducible as the v1 baseline.
 
-> 口径先说清：41.47% **未达**任务书的 85% 目标；`6/8 ≠ 门禁通过`（G-6 延迟、G-8 澄清率
+> 口径先说清：**72.73% 仍未达**任务书的 85% 目标；`6/8 ≠ 门禁通过`（G-6 延迟、G-8 澄清率
 > 仍 `UNVERIFIED`）。本项目只报实测，不报目标。
+> v2 相对 v1 的 **+31.26 个百分点全部来自 3 类非模型缺陷**（`AS order` 保留字 /
+> gold `ROUND` 舍入 / `delivery_late_rate` 未 ×100），三类桶逐批归零；
+> **剩余 12 条 R14 方言缺口未修**，且 v2 走百炼 `deepseek-v4.1-flash`、v1 走官方
+> `deepseek-flash`（端点不同，按总控裁定合并成一次读数）。源：`eval/olist/report_v2.md` §5–§6。
 
 ---
 
@@ -88,13 +95,18 @@ flowchart TD
 
 | 项 | 读数 | 源件 |
 |---|---|---|
-| **EX_official** | **0.4147 ± 0.0133**（3 批均值 ± 样本标准差，n=3） | `eval/olist/report.md:15`、`eval/olist/report.json` |
-| 三批 | r1 `23/54`（0.4259）、r2 `23/55`（0.4182）、r3 `22/55`（0.4000） | `eval/olist/report.md:21-25` |
-| 分母构成（r1） | `scored=54 \| struct_null_skipped=5 \| execute=55 \| with_sql=55 \| with_result=36 \| equivalent=23` | `eval/olist/report.md:9` |
-| 为什么 r1 分母是 54 | 1 条 `GraphRecursionError`（o19）记 `unscored`；r2/r3 分母 55 | `eval/olist/report.md:75` |
-| 交互正确（不计入 EX） | refuse `2/2`；clarify `2/3`、`1/3`、`1/3`（三批） | `eval/olist/report.md:41-45` |
-| 沙箱方言缺口 | `12/55`（三批同，单列、不归因模型） | `eval/olist/report.md:69` |
-| `EX_exec`（非官方，仅 coverage） | `23/55` | `eval/olist/report.md:12` |
+| **EX_official（v2，当前主数字）** | **0.7273 ± 0.0182**（3 批均值 ± 样本标准差，n=3） | `eval/olist/report_v2.md`、`eval/olist/report_v2.json` |
+| 三批（v2） | r1 `41/55`（0.7455）、r2 `39/55`（0.7091）、r3 `40/55`（0.7273） | `eval/olist/report_v2.md` §2 |
+| 三类修复桶（v2 相对 v1） | `as_order` 7/6/6 → **0/0/0**；`round` 13/14/15 → **0/0/0**；`delivery` 5/5/5 → **0/0/0**；R14 **12/12/12 不变** | `eval/olist/report_v2.md` §6 |
+| 交互正确（v2，不计入 EX） | refuse `2/2`、`1/2`、`1/2`；clarify `1/3`、`1/3`、`1/3` —— **比 v1 有退化**（`c01` 由 clarify 变 complete、`r02` 在 r2/r3 由 refuse 变 clarify） | `eval/olist/report_v2.md` §3、`backend/reports/exv2/diagnosis.md` §12 |
+| 沙箱方言缺口（v2） | `12/55`（三批同，**未修**、单列、不归因模型） | `eval/olist/report_v2.md` §6 |
+| **EX_official（v1，历史保留）** | **0.4147 ± 0.0133**（3 批均值 ± 样本标准差，n=3） | `eval/olist/report.md:15`、`eval/olist/report.json` |
+| 三批（v1） | r1 `23/54`（0.4259）、r2 `23/55`（0.4182）、r3 `22/55`（0.4000） | `eval/olist/report.md:21-25` |
+| 分母构成（v1 r1） | `scored=54 \| struct_null_skipped=5 \| execute=55 \| with_sql=55 \| with_result=36 \| equivalent=23` | `eval/olist/report.md:9` |
+| 为什么 v1 r1 分母是 54 | 1 条 `GraphRecursionError`（o19）记 `unscored`；r2/r3 分母 55 | `eval/olist/report.md:75` |
+| 交互正确（v1） | refuse `2/2`；clarify `2/3`、`1/3`、`1/3`（三批） | `eval/olist/report.md:41-45` |
+| 沙箱方言缺口（v1） | `12/55`（三批同，单列、不归因模型） | `eval/olist/report.md:69` |
+| `EX_exec`（v1，非官方，仅 coverage） | `23/55` | `eval/olist/report.md:12` |
 | 题集构成 | `60 = 55 execute + 5 interaction（3 clarify + 2 refuse）`；`gold_executable 55/55`、`caliber_match 55/55`、`interaction_valid 5/5`、`cases_valid 60/60` | `eval/olist/README.md:135-137`、`eval/olist/report.md:49-50` |
 | 仪器正/负控（不是模型 EX） | 正控 `55/55`、负控 `0/55` | `eval/olist/report.md:61-64` |
 | 冻结件 | `content_hash=sha256:f5e78268…`、`full_hash=sha256:b4491abb…`、`sandbox_db_sha256=17c14cee…` | `eval/olist/report.md:51-53` |
@@ -237,10 +249,14 @@ docker compose -f deploy/docker-compose.yml up -d --no-deps api
 9. **披露文案 Top-N 噪音（未修）**：`backend/app/present/presenter.py:446-450` 只要 `plan.limit`
    存在就追加"按计划 Top-{limit} 展示"，不看是否真截断 ⇒ demo_3（8 行）挂"Top-100"、
    demo_5（KPI）挂"Top-1"。§3.8 微修需取 `U-150` 并重拍受影响截图；本窗**不做**，只登记。
-10. **W4 干净栈 demo 与 W3 截图的端点/模型不同**：W4 走百炼 `deepseek-v4.1-flash`，
-    W3 走官方 DeepSeek `deepseek-flash`；不合并成一次读数。
+10. **端点/模型在不同轮次不同**：W4 demo 与 EX v2 三批走百炼 `deepseek-v4.1-flash`，
+    W3 截图与 EX v1 三批走官方 DeepSeek `deepseek-flash`。🟡 **EX 口径按总控 2026-10-31 裁定
+    「合并成一次读数」**：v1 的 41.47% 作历史保留、v2 的 72.73% 作当前主数字，端点差异在
+    `eval/olist/report_v2.md` §5 留一句；**demo 截图与 EX 读数仍不可混引**（前者是功能演示，
+    后者是冻结集判分）。
 
-**口径红线**：41.47% **未达 85%**；G-6（P95 ≤ 8s）与 G-8（澄清率）仍 `UNVERIFIED`；
+**口径红线**：72.73%（v2）**仍未达 85%**；v1 的 41.47% 作历史保留、不作当前口径；
+G-6（P95 ≤ 8s）与 G-8（澄清率）仍 `UNVERIFIED`；
 官方 `PASS 1/8` 与当期复算 `6 PASS / 2 UNVERIFIED` 必须同框，**`6/8 ≠ 门禁通过`**。
 
 ---
@@ -255,7 +271,8 @@ V="E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL-archi
 
 | 数字 / 结论 | 命令 | 期望 |
 |---|---|---|
-| `EX_official=0.4147±0.0133`、三批分母 | `"$V" eval/olist/report_olist.py --dataset eval/olist/dataset_v1_frozen.json --results eval/olist/results_v1_r1.json eval/olist/results_v1_r2.json eval/olist/results_v1_r3.json --profile eval/olist/olist_profile_frozen.json --gold eval/olist/gold60_frozen_results.json --control eval/olist/instrument_control.json --out /tmp/w4_report.md --json-out /tmp/w4_report.json` | 生成报告；与 `eval/olist/report.md` 对撞；`report.json` 的 `ex_official.mean/std/n` = 0.41470258…/0.01330853…/3 |
+| `EX_official=0.7273±0.0182`（v2，含 v1→v2 对比） | `"$V" eval/olist/report_olist.py --dataset eval/olist/dataset_v2_frozen.json --results eval/olist/results_v2_r1.json eval/olist/results_v2_r2.json eval/olist/results_v2_r3.json --profile eval/olist/olist_profile_v2.json --gold eval/olist/gold60_v2_results.json --control eval/olist/instrument_control_v2.json --baseline-results eval/olist/results_v1_r1.json eval/olist/results_v1_r2.json eval/olist/results_v1_r3.json --baseline-dataset eval/olist/dataset_v1_frozen.json --title "Olist 60 题评测报告（EX v2：三类非模型修复后）" --note "端点/交互退化备注" --out eval/olist/_check_v2.md --json-out eval/olist/_check_v2.json` | 与 `eval/olist/report_v2.md` 对撞（仅 `--note` 不同）；`report_v2.json` 的 `ex_official` = 0.72727272…/0.01820…/3 |
+| `EX_official=0.4147±0.0133`（v1 历史）、三批分母 | `"$V" eval/olist/report_olist.py --dataset eval/olist/dataset_v1_frozen.json --results eval/olist/results_v1_r1.json eval/olist/results_v1_r2.json eval/olist/results_v1_r3.json --profile eval/olist/olist_profile_frozen.json --gold eval/olist/gold60_frozen_results.json --control eval/olist/instrument_control.json --out eval/olist/_check_v1.md --json-out eval/olist/_check_v1.json` | 与 `eval/olist/report.md` **逐字节一致**（`sha256[:16]=e3509596ecf45ebf`）；`report.json` 的 `ex_official.mean/std/n` = 0.41470258…/0.01330853…/3 |
 | 三批 `23/54`、`23/55`、`22/55` | `"$V" -c "import json;r=json.load(open('eval/olist/report.json'));print([(b['scored_passed'],b['scored_total'],b['ex']) for b in r['batches']])"` | `[(23,54,0.4259…),(23,55,0.4182…),(22,55,0.4)]` |
 | 交互 `refuse 2/2`、`clarify 2/3·1/3·1/3` | `"$V" -c "import json;r=json.load(open('eval/olist/report.json'));print([(b['refuse_correct'],b['refuse_total'],b['clarify_correct'],b['clarify_total']) for b in r['batches']])"` | `[(2,2,2,3),(2,2,1,3),(2,2,1,3)]` |
 | `sandbox_dialect_gap=12` | `"$V" -c "import json;r=json.load(open('eval/olist/report.json'));print([b['sandbox_dialect_gap'] for b in r['batches']])"` | `[12,12,12]` |
@@ -271,9 +288,11 @@ V="E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL-archi
 | 公开仓库 | `git check-ignore -v data/olist/olist_sandbox.db`；`git ls-files \| grep -Ei '\.(db\|sqlite\|sqlite3)$'`；`git ls-files \| grep -Ei '(^\|/)\.env$\|secrets/'`；`"$V" backend/scripts/scan_secrets.py --working-tree` | 忽略行命中；后三条应空 / 0 命中 |
 | 图节点数 | `cd backend && PYTHONPATH=.. "$V" -c "from app.graph.nodes import ALL_NODE_NAMES;print(len(ALL_NODE_NAMES))"` | `19` |
 
-> 说明：`report_olist.py` 的输出写到 `/tmp`，**不覆盖** `eval/olist/report.md`；
-> 若脚本的落盘守卫限制输出位置，改到 `eval/olist/` 下的临时文件名、对撞后删除。
-> 所有原始读数与命令回执见 `backend/reports/w4_acceptance/`。
+> 说明：`report_olist.py` 的落盘守卫（`eval/olist/build_dataset.py:59-76`）**只允许**
+> 写 `eval/olist/` 的严格后代 ⇒ 上面两条命令都写到 `eval/olist/_check_*.md|json`，
+> **不覆盖** `eval/olist/report.md` / `report_v2.md`；对撞完把 `_check_*` 删掉即可
+> （旧版本文里写的 `--out /tmp/...` 会被守卫拒掉、返回 2，已在 v1.7.40 更正）。
+> 所有原始读数与命令回执见 `backend/reports/w4_acceptance/` 与 `backend/reports/exv2/`。
 
 ---
 

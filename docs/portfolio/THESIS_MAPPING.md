@@ -55,7 +55,7 @@
 | **B0** | 30 题子集；schema 从 bundle 的 columns 导出，信息量与 B3 对等；同模型、同温度、同 substrate；**一次调用，不经过语义层/闸门/结果校验** | **`UNVERIFIED`（未做）**；按计划 §3.1 "时间紧可砍"；本窗未跑、不补跑 | `计划_合并版 §3.2` 第 5 条、§5.4；无结果件 |
 | **B1** | 中间消融臂（计划未给出独立定义） | **`UNVERIFIED`**；Phase A 未单独跑，不得用 B3 的读数替代 | — |
 | **B2** | 中间消融臂（计划未给出独立定义） | **`UNVERIFIED`**；同上 | — |
-| **B3** | **当前全系统**：语义层 + 三闸门 + 结果级校验（计划用"信息量与 B3 对等"指代全系统） | 有读数：`EX_official=41.47%±1.33%`（n=3）、交互 refuse 2/2、clarify 2/3·1/3·1/3、方言缺口 12/55、RLS `448,152` 行、demo 5/5 | `eval/olist/report.md`、`eval/olist/report.json`、`backend/reports/w3_demo/materialize_olist_2026-10-28.json`、`backend/reports/w3_demo/demo_5.json` |
+| **B3** | **当前全系统**：语义层 + 三闸门 + 结果级校验（计划用"信息量与 B3 对等"指代全系统） | 有读数：`EX_official=72.73%±1.82%`（n=3，v2；v1 为 41.47%±1.33%）、交互 refuse 2/2·1/2·1/2、clarify 1/3×3、方言缺口 12/55、RLS `448,152` 行、demo 5/5 | `eval/olist/report_v2.md`、`eval/olist/report_v2.json`、`eval/olist/report.md`（v1 历史）、`backend/reports/w3_demo/materialize_olist_2026-10-28.json`、`backend/reports/w3_demo/demo_5.json` |
 
 > 如果论文必须写 B1/B2/B3 三档消融，正确做法是**先给 B1/B2 下定义、再按 §5.4 预算批准后真跑**；
 > 本窗不把"没跑过"写成"没差异"。
@@ -67,7 +67,8 @@
 以下三段按 `计划_合并版 §5.3` 的措辞写；**不得**写成"门禁通过"：
 
 1. **85%**：任务书原文"SQL 执行准确率目标 85% 以上"。本计划只报实测，不承诺、不改判据；
-   报告写"当前 41.47%，未达 85%"。源：`计划_合并版 §5.3`。
+   报告写"当前 72.73%，未达 85%"（v1 的 41.47% 作历史保留）。源：`计划_合并版 §5.3`、
+   `eval/olist/report_v2.md` §1。
 2. **8 秒**：任务书原文"平均响应时间目标不超过 8 秒"。G-6 判词仍是**未达成、不可引用**；
    最近压测 p95 8,887.4ms（n=18，含 8 条 `SESSION_NOT_FOUND` 快速失败）**不能当产品延迟**；
    Phase A 用 eval 链路的端到端分位数，报 n、样本构成与批次；未跑写 `UNVERIFIED`。

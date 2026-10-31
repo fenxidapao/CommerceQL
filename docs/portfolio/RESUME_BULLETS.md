@@ -8,10 +8,13 @@
 ## 1. 真实数据评测轨
 
 **把 LLM 生成的 SQL 当不可信输入**：为 Text2SQL Agent 建 Olist 真实数据评测轨（60 题冻结集：
-55 execute + 5 交互），跑 3 个独立 live 批次，`EX_official = 41.47% ± 1.33%`（n=3；
-23/54、23/55、22/55）；分母按 `scored_total` 现算，方言缺口 12/55 单列、不归因模型。
+55 execute + 5 交互），跑 3 个独立 live 批次，`EX_official = 72.73% ± 1.82%`（n=3；
+41/55、39/55、40/55）；分母按 `scored_total` 现算，方言缺口 12/55 单列、不归因模型。
+**同一冻结集上还做了一轮归因**：v1 的 41.47% 里，`AS order` 保留字、gold `ROUND` 舍入、
+`delivery_late_rate` 未 ×100 这三类**与模型能力无关**的缺陷占掉了 31.26 个百分点，
+逐类修掉后三类桶三批全归零（源：`eval/olist/report_v2.md` §6）。
 
-`复算：` `"$V" -c "import json;r=json.load(open('eval/olist/report.json'));print(r['ex_official'],[(b['scored_passed'],b['scored_total']) for b in r['batches']])"`
+`复算：` `"$V" -c "import json;r=json.load(open('eval/olist/report_v2.json'));print(r['ex_official'],[(b['scored_passed'],b['scored_total']) for b in r['batches']])"`
 
 ## 2. PostgreSQL 生产栈 + 租户 RLS
 
@@ -41,8 +44,10 @@
 
 **口径附注**
 
-- `EX_exec = 23/55` 仅 coverage，非官方，不进主数字。
+- `EX_exec = 41/55`（v2，仅 coverage，非官方，不进主数字）；v1 为 `23/55`。
 - 三批 live 的 `build.git_rev=aeb53eb`、`build.git_dirty=true`（W2 窗未提交的中间态）；
   最终入库代码 `b780125`。可复算的是命令/冻结件/三批结果件，**不是干净同 rev 复现**。
-- 41.47% **未达** 85% 目标；G-6（P95 ≤ 8s）/ G-8（澄清率）仍 `UNVERIFIED`；
+- v2 三批的端点是百炼 `deepseek-v4.1-flash`（v1 为官方 `deepseek-flash`）；按总控裁定
+  合并成一次读数，端点差异在报告里留一句。**交互正确有退化**（`c01`/`r02`），不进 EX 但同框报。
+- 72.73% **仍未达** 85% 目标；G-6（P95 ≤ 8s）/ G-8（澄清率）仍 `UNVERIFIED`；
   `6/8 ≠ 门禁通过`。
