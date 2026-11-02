@@ -7,6 +7,8 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { SessionRail } from '../components';
+import type { SessionSort, SessionSummary } from '../components';
 import { Button, Drawer, Modal, Tabs, message } from 'antd';
 import { tokens } from '../theme/tokens';
 import {
@@ -26,8 +28,9 @@ import {
   TruncateBar,
   type FeedbackPayload,
 } from '../components';
-import { ApiError, apiGet, apiPost } from '../api/client';
+import { ApiError, apiGet, apiPost, closeSession, listSessions } from '../api/client';
 import {
+  getToken,
   openClarifyStream,
   openQueryStream,
   stopCurrentQuery,
@@ -133,6 +136,51 @@ export function ChatPage() {
   const [authExpired, setAuthExpired] = useState(false);
   const [tick, setTick] = useState(() => Date.now());
   const [showNewContent, setShowNewContent] = useState(false);
+
+  // ---- B4：会话列表（rail）—— 数据源 = GET /sessions，不落 localStorage ----
+  const [railSessions, setRailSessions] = useState<SessionSummary[]>([]);
+  const [railTotal, setRailTotal] = useState(0);
+  const [railLoading, setRailLoading] = useState(false);
+  const [railLoadingMore, setRailLoadingMore] = useState(false);
+  const [railQuery, setRailQuery] = useState('');
+  const [railSort, setRailSort] = useState<SessionSort>('last_turn_at');
+  const [railError, setRailError] = useState<string | null>(null);
+  const railOffsetRef = useRef(0);
+
+  const loadRail = useCallback(
+    async (reset: boolean) => {
+      if (!getToken()) {
+        setRailSessions([]);
+        setRailTotal(0);
+        return;
+      }
+      const offset = reset ? 0 : railOffsetRef.current;
+      if (reset) setRailLoading(true);
+      else setRailLoadingMore(true);
+      setRailError(null);
+      try {
+        const data = await listSessions({
+          limit: 20,
+          offset,
+          q: railQuery || undefined,
+          sort: railSort,
+        });
+        setRailSessions((prev) => (reset ? data.items : [...prev, ...data.items]));
+        setRailTotal(data.total);
+        railOffsetRef.current = offset + data.items.length;
+      } catch (err) {
+        setRailError(err instanceof ApiError ? err.message : '会话列表加载失败');
+      } finally {
+        setRailLoading(false);
+        setRailLoadingMore(false);
+      }
+    },
+    [railQuery, railSort],
+  );
+
+  useEffect(() => {
+    void loadRail(true);
+  }, [loadRail, routeSessionId]);
 
   const abortRef = useRef<AbortController | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -411,8 +459,10 @@ export function ChatPage() {
       abortRef.current = controller;
       await openQueryStream({ question, sessionId: sid, options: opts }, makeHandlers(key), controller.signal);
       setStreaming(false);
+      // 首轮结束后标题才落库 ⇒ 刷新列表让 rail 显示新标题
+      void loadRail(true);
     },
-    [sessionId, setSessionId, startTurn, makeHandlers, navigate, setStreaming],
+    [sessionId, setSessionId, startTurn, makeHandlers, navigate, setStreaming, loadRail],
   );
 
   const handleAbort = useCallback(() => {
@@ -457,6 +507,17 @@ export function ChatPage() {
 
   const drawerTurn = turns.find((t) => t.key === drawerTurnKey) ?? null;
 
+  const handleRailDelete = async (id: string) => {
+    try {
+      await closeSession(id);
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '关闭会话失败');
+      return;
+    }
+    if (id === sessionId) navigate('/chat');
+    await loadRail(true);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#fff' }}>
       {/* Header 56px（06 §3.4：Header 高度落在 8pt 网格内） */}
@@ -491,12 +552,32 @@ export function ChatPage() {
           flex: 1,
           minHeight: 0,
           display: 'grid',
-          gridTemplateColumns: `0px 1fr 0px`,
+          gridTemplateColumns: 'auto 1fr 0px',
         }}
       >
-        {/* ⚠️ 不能改成 display:none：那会让它退出 grid item 序列 ⇒ 三条轨道整体左移一列 ⇒
-            main 落进 rail 的 0px 轨道（实测宽 32px = 0 内容 + 左右 padding，页面看着是空白页）。 */}
-        <div data-rail-placeholder="session-rail-p1" style={{ width: 0 }} />
+        {/* B4：会话列表（组件自带折叠宽度，故轨道用 auto） */}
+        <SessionRail
+          sessions={railSessions}
+          total={railTotal}
+          activeSessionId={sessionId}
+          currentBundleVersion={turns[turns.length - 1]?.meta?.bundle_version ?? ''}
+          loading={railLoading}
+          loadingMore={railLoadingMore}
+          query={railQuery}
+          sort={railSort}
+          onQueryChange={setRailQuery}
+          onSortChange={setRailSort}
+          onLoadMore={() => void loadRail(false)}
+          onSelect={(id) => navigate(`/chat/${id}`)}
+          onCreate={() => {
+            reset();
+            setSessionId(null);
+            navigate('/chat');
+          }}
+          onDelete={handleRailDelete}
+          error={railError}
+          onReload={() => void loadRail(true)}
+        />
         <main
           ref={scrollRef}
           style={{ overflowY: 'auto', padding: `${tokens.space.lg}px ${tokens.space.md}px` }}
