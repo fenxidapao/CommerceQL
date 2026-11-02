@@ -34,6 +34,16 @@ EX_official = 41 / scored_total = 74.55%
 | extra | 6 | 11 | 8 |
 | **合计** | 12 | 21 | 22 |
 
+### 2.1 运行指标（v2；W2 Gate 补齐）
+
+| batch_id | n | p50 wall_s | p95 wall_s | repair | tokens/题 | cost/题 ¥ | 总 cost ¥ |
+|---|---|---|---|---|---|---|---|
+| exv2_r1 | 60 | 13.476 | 19.973 | 0/60 | 14410 | 0.008976 | 0.538588 |
+| exv2_r2 | 60 | 13.497 | 23.356 | 0/60 | 14411 | 0.008415 | 0.504919 |
+| exv2_r3 | 60 | 13.562 | 19.777 | 0/60 | 14421 | 0.008436 | 0.506149 |
+
+> p95 = 最近秩（`ceil(0.95*n)` 位），样本 = 全部 60 题；eval 链路、节点超时已放大，**不是产品延迟**；G-6 仍 `UNVERIFIED`。repair 数的是 `second_round` 非空记录；本轮三批均为 0/60（未触发第二轮），不是修复失败。
+
 ## 3. 交互正确（运行时判据，不计入 EX）
 
 判据 = `terminal_event == expected_behavior and infra_error is None`；**不读 `verdict.equivalent`**（交互题 verdict 恒 None）。

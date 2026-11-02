@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import statistics
 import sys
 from collections.abc import Iterable, Mapping
@@ -438,6 +439,56 @@ def _fmt_ex(ex: float | None) -> str:
     return "UNVERIFIED" if ex is None else f"{ex:.4f}"
 
 
+def _nearest_rank(values: list[float], q: float) -> float | None:
+    """最近秩分位数（`ceil(q*n)` 位，1-based）；空样本返回 None。"""
+    if not values:
+        return None
+    ordered = sorted(values)
+    idx = max(1, math.ceil(q * len(ordered))) - 1
+    return ordered[idx]
+
+
+def _runtime_metrics_section(
+    batch_ids: list[str], records: list[list[dict[str, Any]]]
+) -> list[str]:
+    """W2 Gate 的运行指标（v2-only）：p95 / repair / tokens/题 / cost/题。
+
+    p95 取**全部 60 条**的 `wall_s`、最近秩；这是 eval 链路（节点超时已放大），
+    **不是产品延迟**，不得与 G-6 的 8s 判词混写。repair 只数 `second_round` 非空的记录。
+    """
+    lines = [
+        "### 2.1 运行指标（v2；W2 Gate 补齐）",
+        "",
+        "| batch_id | n | p50 wall_s | p95 wall_s | repair | tokens/题 | cost/题 ¥ | 总 cost ¥ |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for batch_id, batch in zip(batch_ids, records, strict=True):
+        walls = [
+            float(r["wall_s"])
+            for r in batch
+            if isinstance(r.get("wall_s"), (int, float))
+        ]
+        tokens = sum(int((r.get("tokens") or {}).get("total") or 0) for r in batch)
+        cost = sum(float(r.get("cost_cny") or 0) for r in batch)
+        n = len(batch)
+        median = statistics.median(walls) if walls else None
+        p95 = _nearest_rank(walls, 0.95)
+        repair = sum(1 for r in batch if r.get("second_round"))
+        lines.append(
+            f"| {batch_id} | {n} | "
+            f"{'n/a' if median is None else f'{median:.3f}'} | "
+            f"{'n/a' if p95 is None else f'{p95:.3f}'} | {repair}/{n} | "
+            f"{tokens / n:.0f} | {cost / n:.6f} | {cost:.6f} |"
+        )
+    lines += [
+        "",
+        "> p95 = 最近秩（`ceil(0.95*n)` 位），样本 = 全部 60 题；eval 链路、节点超时已放大，"
+        "**不是产品延迟**；G-6 仍 `UNVERIFIED`。repair 数的是 `second_round` 非空记录；"
+        "本轮三批均为 0/60（未触发第二轮），不是修复失败。",
+    ]
+    return lines
+
+
 def _fixed_lines(values: Mapping[str, Any]) -> list[str]:
     return [line.format(**values) for line in FIXED_LINES]
 
@@ -565,6 +616,9 @@ def render_markdown(
         )
         + " |"
     )
+
+    if baseline and records:
+        lines += [""] + _runtime_metrics_section(batch_ids, records)
 
     lines += [
         "",
