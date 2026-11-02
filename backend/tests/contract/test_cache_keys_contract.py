@@ -203,6 +203,27 @@ def test_session_meta_coexists_with_session_plan_without_collision() -> None:
     assert keys.session_meta(_TENANT, "s1") != keys.session_meta(_OTHER_TENANT, "s1")
 
 
+def test_session_index_key_format_and_pii() -> None:
+    """B1：会话列表索引按 `tenant` + `user_hash` 分键（§A.5.4 安全约束）。
+
+    - 缺租户 = 跨租户列表串号；缺用户 = 同租户内看别人的会话；
+    - 明文 `user_id` 不得进键（硬规则 4）；
+    - 与 `sess:meta` / `sess:plan` 结构性区分，不复用同一 ZSET。
+    """
+    user_id = "u_林琪荣_12345"
+    key = keys.session_index(_TENANT, user_id)
+    assert key == f"sess:index:{_TENANT}:{keys.user_scope_hash(user_id)}"
+    assert user_id not in key
+    assert keys.session_index(_OTHER_TENANT, user_id) != key
+    assert keys.session_index(_TENANT, "u_other") != key
+    assert keys.session_index(_TENANT, user_id).split(":")[1] == "index"
+    assert keys.session_index(_TENANT, user_id) not in {
+        keys.session_meta(_TENANT, "s1"),
+        keys.session_plan(_TENANT, "s1"),
+    }
+    assert keys.DEFAULT_TTL_S["session_index"] == 86400
+
+
 def test_w4_three_key_groups_all_have_ttl() -> None:
     """三组键都必须有 TTL —— 无 TTL 的任务状态/租约/会话元数据是永久驻留的租户数据。"""
     for name in ("task_state", "concurrency_lease", "session_meta"):

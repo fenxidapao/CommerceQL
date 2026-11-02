@@ -99,6 +99,11 @@ class Settings(BaseSettings):
 
     # ---------------- 认证 ----------------
     JWT_PUBLIC_KEY_PATH: str = "/run/secrets/jwt_public.pem"
+    #: Phase B B3：签发端私钥。只读挂载，仓库与镜像均不得包含真实密钥。
+    JWT_PRIVATE_KEY_PATH: str = "/run/secrets/jwt_private.pem"
+    JWT_TTL_SECONDS: int = Field(default=3600, gt=0)
+    #: 注册默认关闭：课程演示按需开启，避免演示环境被任意建号。
+    AUTH_ALLOW_REGISTRATION: bool = False
     JWT_ISSUER: str = "workbuddy-demo"
     JWT_AUDIENCE: str = "text2sql-agent"
 

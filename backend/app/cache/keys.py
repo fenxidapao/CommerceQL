@@ -63,6 +63,7 @@ __all__ = [
     "result_set",
     "semantic_few_shot",
     "semantic_retrieval",
+    "session_index",
     "session_lock",
     "session_meta",
     "session_plan",
@@ -187,6 +188,18 @@ def session_meta(tenant_id: str, session_id: str) -> str:
       两者前缀同族（`sess:`）但第 2 段不同（`meta` vs `plan`），键空间不重叠。
     """
     return _build("sess", "meta", tenant_id, session_id)
+
+
+def session_index(tenant_id: str, user_id: str) -> str:
+    """会话列表索引（ZSET；member = `session_id`，score = `last_turn_at` epoch）。
+
+    格式：`sess:index:{tenant}:{sha256(user_id)[:16]}`。
+
+    ⚠️ **必须带租户 + 用户摘要**（§A.5.4 安全约束）：列表按 JWT 的 `tenant_id`/`user_id`
+    强制过滤，禁止客户端传参；明文 `user_id` 不进键（硬规则 4，PII 面）。
+    ⚠️ 与 `session_meta` / `session_plan` 第 2 段不同（`index`），键空间不重叠。
+    """
+    return _build("sess", "index", tenant_id, user_scope_hash(user_id))
 
 
 def clarify_context(tenant_id: str, clarify_id: str) -> str:
@@ -319,6 +332,7 @@ DEFAULT_TTL_S: Final[Mapping[str, int]] = MappingProxyType(
         "task_state": 3600,             # 1h，对齐 event_buffer / result_set（W4 转述 #1）
         "concurrency_lease": 3600,      # 1h，活跃时由 Lua 进出刷新（W4 转述 #2）
         "session_meta": 86400,          # 会话期（同 session_plan / SESSION_TTL_SECONDS）
+        "session_index": 86400,         # 会话期；索引与 session_meta 同寿命
         # 限流计数的 TTL = **窗口长度**，不是"缓存时长"：§A.0.6 的四个桶都是「N 次/分钟」，
         # 故窗口 = 60s。写死在这里只是缺省值 —— 限流器按桶配置覆盖（§9.2）。
         "rate_limit": 60,
@@ -382,6 +396,7 @@ ALL_BUILDERS: Final[frozenset[str]] = frozenset(
         "result_set",
         "semantic_few_shot",
         "semantic_retrieval",
+        "session_index",
         "session_lock",
         "session_meta",
         "session_plan",
