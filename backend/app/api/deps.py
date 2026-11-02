@@ -42,7 +42,7 @@ from app.api.state_store import RedisStateStore
 from app.auth.context import bind_identity, build_identity, current_identity, reset_identity
 from app.auth.jwks import JwksCache, PemFileJwksSource
 from app.auth.revocation import InMemoryRevocationList
-from app.auth.tokens import TokenVerifier, VerifiedToken
+from app.auth.tokens import TokenIssuer, TokenVerifier, VerifiedToken
 from app.cache.session_lock import RedisSessionLock
 from app.core.config import Settings
 from app.core.contracts import (
@@ -61,6 +61,7 @@ from app.repo.audit_read import AuditReadDAO
 from app.repo.audit_store import AuditStore
 from app.repo.feedback import FeedbackStore
 from app.repo.pools import ThreePools
+from app.repo.users import UserStore
 
 if TYPE_CHECKING:  # pragma: no cover - 仅为类型检查
     from redis.asyncio import Redis
@@ -90,6 +91,8 @@ __all__ = [
     "get_runtime",
     "get_session_lock",
     "get_state_store",
+    "get_token_issuer",
+    "get_user_store",
     "new_identity",
     "remember_identity",
     "session_lock_guard",
@@ -125,6 +128,10 @@ class AppRuntime:
     #: `pools.metadata` —— 写反了不会有任何报错，只是读路径落在可写连接上，
     #: 而"只读"正是 §A.9.5 判据① 唯一的那道权限面（同 `assert_pools_are_separated` 的理由）。
     audit_read: AuditReadDAO
+    #: 本地账号（B3 注册/登录）。与 `feedback` 同池、同纪律：每语句借还一次。
+    users: UserStore
+    #: RS256 签发器（B3 登录）。懒加载私钥，构造零 I/O。
+    issuer: TokenIssuer
 
 
 def build_runtime(
@@ -153,6 +160,13 @@ def build_runtime(
         feedback=FeedbackStore(pools.metadata),
         # 审计读走**分析只读池**（§A.9.5 判据①）：与写路径分池，本窗不新建第四池。
         audit_read=AuditReadDAO(pools.analytics),
+        users=UserStore(pools.metadata),
+        issuer=TokenIssuer(
+            settings.JWT_PRIVATE_KEY_PATH,
+            issuer=settings.JWT_ISSUER,
+            audience=settings.JWT_AUDIENCE,
+            ttl_s=settings.JWT_TTL_SECONDS,
+        ),
     )
 
 
@@ -259,6 +273,16 @@ def get_rate_limiter(request: Request) -> RateLimiterPort:
 
 def get_audit_sink(request: Request) -> AuditSinkPort:
     return get_runtime(request).audit
+
+
+def get_user_store(request: Request) -> UserStore:
+    """本地账号访问对象（B3 注册/登录）。⚠️ 与 `get_state_store` 不同：后者是 Redis。"""
+    return get_runtime(request).users
+
+
+def get_token_issuer(request: Request) -> TokenIssuer:
+    """RS256 签发器（B3 登录）。⚠️ 私钥懒加载，缺文件时在首次签发才报错。"""
+    return get_runtime(request).issuer
 
 
 def get_feedback_store(request: Request) -> FeedbackStore:

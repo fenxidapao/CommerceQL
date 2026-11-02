@@ -30,23 +30,30 @@
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any, Final
 
 import jwt
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 from app.auth.errors import AuthError, TokenRevokedError
-from app.auth.jwks import JwksCache
+from app.auth.jwks import DEFAULT_KID, JwksCache
 from app.auth.revocation import RevocationChecker
 from app.core.enums import Role
 
 __all__ = [
     "JWKS_LEEWAY_S",
     "REQUIRED_CLAIMS",
-    "VerifiedToken",
+    "IssuedToken",
+    "TokenIssuer",
     "TokenVerifier",
+    "VerifiedToken",
+    "build_claims",
     "extract_bearer_token",
 ]
 
@@ -220,3 +227,120 @@ def _as_str_tuple(value: Any) -> tuple[str, ...]:
     if isinstance(value, Sequence):
         return tuple(str(item) for item in value if isinstance(item, str) and item)
     return ()
+
+
+# ============================================================================
+# 签发（Phase B B3）—— 与 `scripts/mint_dev_token.py` 共用同一份 claims 公式
+# ============================================================================
+
+def build_claims(
+    *,
+    subject: str,
+    tenant_id: str,
+    role: Role,
+    scope: str | None,
+    shop_ids: Sequence[str] | None,
+    issuer: str,
+    audience: str,
+    ttl_s: int,
+    now: datetime,
+    jti: str,
+) -> dict[str, Any]:
+    """构造 claims（纯函数）。**唯一一份公式**：脚本与登录端点都调它。
+
+    三条曾被真实校验抓出来的约束（删掉任何一条都会 401）：
+    1. `iss` / `aud` 不在 `REQUIRED_CLAIMS`，但 `jwt.decode` 会校验它们 ⇒ 必须写；
+    2. `scope` 是必需 claim ⇒ 即使为空也要发这个键（空串，不是 `None`）；
+    3. `role` 写 `.value`（StrEnum），不是枚举 repr。
+    """
+    claims: dict[str, Any] = {
+        "sub": subject,
+        "tenant_id": tenant_id,
+        "role": role.value,
+        "scope": scope or "",
+        "iss": issuer,
+        "aud": audience,
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(seconds=ttl_s)).timestamp()),
+        "jti": jti,
+    }
+    if shop_ids:
+        claims["shop_ids"] = list(shop_ids)
+    return claims
+
+
+@dataclass(frozen=True, slots=True)
+class IssuedToken:
+    """签发结果。`expires_in` 与写入 `exp` 的 TTL 同源，避免两处各算一次。"""
+
+    access_token: str
+    expires_in: int
+    jti: str
+
+
+class TokenIssuer:
+    """RS256 签发器（本地账号登录用）。
+
+    ⚠️ 私钥**只读**、懒加载：构造零 I/O，首次 `issue()` 才读文件。
+    文件缺失/不可解析 = 服务端配置错误 → `RuntimeError`（不是 401：
+    客户端没做错任何事，把它映射成 401 会掩盖部署缺陷）。
+    """
+
+    def __init__(
+        self,
+        private_key_path: str,
+        *,
+        issuer: str,
+        audience: str,
+        ttl_s: int,
+        kid: str = DEFAULT_KID,
+    ) -> None:
+        if ttl_s <= 0:
+            raise ValueError(f"JWT TTL 必须为正数：{ttl_s}")
+        self._path = Path(private_key_path)
+        self._issuer = issuer
+        self._audience = audience
+        self._ttl_s = ttl_s
+        self._kid = kid
+        self._key: rsa.RSAPrivateKey | None = None
+
+    def _load_key(self) -> rsa.RSAPrivateKey:
+        if self._key is None:
+            try:
+                raw = self._path.read_bytes()
+                key = serialization.load_pem_private_key(raw, password=None)
+            except (OSError, ValueError) as exc:
+                raise RuntimeError(
+                    "JWT 私钥不可用：检查 JWT_PRIVATE_KEY_PATH 的只读挂载与权限"
+                ) from exc
+            if not isinstance(key, rsa.RSAPrivateKey):
+                raise RuntimeError("JWT 私钥必须是 RSA（RS256）")
+            self._key = key
+        return self._key
+
+    def issue(
+        self,
+        *,
+        subject: str,
+        tenant_id: str,
+        role: Role,
+        scope_claims: Sequence[str] = (),
+        shop_ids: Sequence[str] | None = None,
+        now: datetime | None = None,
+    ) -> IssuedToken:
+        issued_at = now or datetime.now(UTC)
+        jti = uuid.uuid4().hex
+        claims = build_claims(
+            subject=subject,
+            tenant_id=tenant_id,
+            role=role,
+            scope=" ".join(scope_claims),
+            shop_ids=shop_ids,
+            issuer=self._issuer,
+            audience=self._audience,
+            ttl_s=self._ttl_s,
+            now=issued_at,
+            jti=jti,
+        )
+        token = jwt.encode(claims, self._load_key(), algorithm="RS256", headers={"kid": self._kid})
+        return IssuedToken(access_token=token, expires_in=self._ttl_s, jti=jti)

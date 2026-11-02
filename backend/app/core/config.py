@@ -104,6 +104,8 @@ class Settings(BaseSettings):
     JWT_TTL_SECONDS: int = Field(default=3600, gt=0)
     #: 注册默认关闭：课程演示按需开启，避免演示环境被任意建号。
     AUTH_ALLOW_REGISTRATION: bool = False
+    #: 注册落库租户（服务端事实）。客户端**不得**传租户 —— 见 `dto/auth.py`。
+    AUTH_REGISTRATION_TENANT_ID: str = "T_A"
     JWT_ISSUER: str = "workbuddy-demo"
     JWT_AUDIENCE: str = "text2sql-agent"
 

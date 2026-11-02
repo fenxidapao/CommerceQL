@@ -58,7 +58,7 @@ import os
 import subprocess
 import sys
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -72,7 +72,7 @@ if str(_BACKEND) not in sys.path:  # 让 `python scripts/mint_dev_token.py` 也�
 
 from app.auth.jwks import DEFAULT_KID, JwksCache, PemFileJwksSource  # noqa: E402
 from app.auth.revocation import InMemoryRevocationList  # noqa: E402
-from app.auth.tokens import REQUIRED_CLAIMS, TokenVerifier  # noqa: E402
+from app.auth.tokens import REQUIRED_CLAIMS, TokenVerifier, build_claims  # noqa: E402
 from app.core.enums import Role  # noqa: E402
 
 _DEFAULT_SECRETS_DIR = _BACKEND.parent / "deploy" / "secrets"
@@ -187,23 +187,21 @@ def _build_claims(
        "空串而不是 None"：`None` 会让 `jwt.encode` 落成 `null`，`_as_str_tuple(None)` → `()`。
     3. `role` 取 `.value`（StrEnum）：写进令牌的是字面值，不是 `Role.ANALYST` 的 repr。
     """
-    claims: dict[str, Any] = {
-        "sub": subject,
-        "tenant_id": tenant_id,
-        "role": role.value,
-        "scope": scope or "",
-        "iss": issuer,
-        "aud": audience,
-        "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(seconds=ttl_s)).timestamp()),
-        #: `jti` 只是唯一标识（撤销名单的键）；这里要唯一，不需要可读前缀 ⇒ uuid4。
-        "jti": jti,
-    }
-    if shop_ids:
-        #: ⚠️ 空列表**不发这个键**：`_as_str_tuple` 对 `None` 与 `[]` 都返回 `()`，
-        #: 但"键不存在"与"键为空"在排查时不是一回事（前者说明没设置，后者说明设置成空）。
-        claims["shop_ids"] = list(shop_ids)
-    return claims
+    #: 公式只有一份：与登录端点共用 `app.auth.tokens.build_claims`。
+    #: ⚠️ 空 `shop_ids` **不发这个键**：`_as_str_tuple` 对 `None` 与 `[]` 都返回 `()`，
+    #: 但"键不存在"与"键为空"在排查时不是一回事。
+    return build_claims(
+        subject=subject,
+        tenant_id=tenant_id,
+        role=role,
+        scope=scope,
+        shop_ids=shop_ids,
+        issuer=issuer,
+        audience=audience,
+        ttl_s=ttl_s,
+        now=now,
+        jti=jti,
+    )
 
 
 def _sign(private_key: rsa.RSAPrivateKey, claims: dict[str, Any]) -> str:

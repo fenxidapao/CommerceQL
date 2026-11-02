@@ -26,6 +26,7 @@ from app.api.deps import GRAPH_RUNTIME_STATE_KEY, RUNTIME_STATE_KEY, build_runti
 from app.api.routers import (
     admin_audit,
     admin_eval,
+    auth,
     clarify,
     feedback,
     health,
@@ -503,6 +504,8 @@ def create_app() -> FastAPI:
     # ⚠️ 异常处理器必须装：`CommerceQLError` → HTTP 码的映射只有 `api/errors.py` 一处
     #    （不装它，领域异常会落到 Starlette 的默认 500，前端拿不到 `code`/`retryable`）。
     errors.install_exception_handlers(app)
+    # --- Phase B B3：本地注册/登录（默认关闭注册，见 AUTH_ALLOW_REGISTRATION）---
+    app.include_router(auth.router, prefix=API_PREFIX)
     app.include_router(query.router, prefix=API_PREFIX)
     app.include_router(session.router, prefix=API_PREFIX)
     app.include_router(clarify.router, prefix=API_PREFIX)
