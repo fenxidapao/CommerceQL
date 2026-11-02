@@ -13,6 +13,7 @@ import {
   ForbiddenPage,
   LoginPage,
   NotFoundPage,
+  SchemaPage,
   SemanticPage,
   ServerErrorPage,
 } from './pages';
@@ -25,6 +26,7 @@ export default function App() {
       <Route path="/chat" element={<ChatPage />} />
       <Route path="/chat/:sessionId" element={<ChatPage />} />
       <Route path="/semantic/metrics" element={<SemanticPage />} />
+      <Route path="/schema" element={<SchemaPage />} />
       <Route path="/eval/runs" element={<EvalRunsPage />} />
       <Route path="/eval/reports/:runId" element={<EvalReportPage />} />
       <Route path="/403" element={<ForbiddenPage />} />

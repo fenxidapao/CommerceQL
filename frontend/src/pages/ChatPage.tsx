@@ -535,6 +535,9 @@ export function ChatPage() {
         <span style={{ fontSize: tokens.font.size.h1, fontWeight: tokens.font.weight.medium }}>CommerceQL</span>
         <span style={{ fontSize: 12, color: tokens.color.text.tertiary }}>电商数据分析</span>
         <nav style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: tokens.space.md }}>
+          <Link to="/schema" style={{ fontSize: 13 }}>
+            数据表
+          </Link>
           <Link to="/semantic/metrics" style={{ fontSize: 13 }}>
             口径字典
           </Link>

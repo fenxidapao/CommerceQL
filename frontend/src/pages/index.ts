@@ -2,6 +2,7 @@
 export { ChatPage } from './ChatPage';
 export { LoginPage } from './LoginPage';
 export { SemanticPage } from './SemanticPage';
+export { SchemaPage } from './SchemaPage';
 export { EvalRunsPage } from './EvalRunsPage';
 export { EvalReportPage } from './EvalReportPage';
 export { ForbiddenPage, NotFoundPage, ServerErrorPage } from './ErrorPages';
