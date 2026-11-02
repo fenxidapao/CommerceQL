@@ -12,8 +12,8 @@
 | **引言 / 相关工作** | Text2SQL 的不可信输入问题；受控管道 vs 开放式 Agent；本项目定位 = "受控 Agent 管道"（固定 19 节点图，不堆多 Agent） | `README.md`、`AGENTS.md`、`docs/07 §3–§5` |
 | **威胁模型与受控管道** | 三道闸门（AST / 政策 / 成本）+ 三终态出口 + repair 只回 gate1 + 依赖方向 R-DEP-1..4 | `app/graph/nodes/__init__.py`、`app/guard/*`、`backend/.importlinter` |
 | **Olist 语义层与结果级校验** | 薄语义包（`bundle_olist_2018.yaml`，`meta.version=2026.10.27.1`）+ 物化/RLS + 结果级校验四条判据（U-149） | `semantic/bundle_olist_2018.yaml`、`deploy/demo/materialize_olist.py`、`app/present/checks.py` |
-| **实验（B0–B3）** | 60 题冻结集 + 3 个独立 live 批次 + 交互题 + 仪器正/负控；B0 未做 | `eval/olist/report_v2.md`、`eval/olist/report_v2.json`、`eval/olist/results_v2_r1..r3.json`（v1 历史件 `report.md`/`results_v1_r1..r3.json`） |
-| **讨论与局限** | 方言缺口 12/55、三类桶（`as_order`/`round`/`delivery`）+ `o38` 时间基准差、端点未拆分、B0 未做、v1 dirty build | `eval/olist/report_v2.md:66-80`、`deploy/demo/README.md §2.6`、本目录 `README.md §7` |
+| **实验（B0–B3）** | 60 题冻结集 + 3 个独立 live 批次 + 交互题 + 仪器正/负控；B0 30 题已补（3/30，EX 10.00%；同 30 题 v1 B3 48.31%） | `eval/olist/report_v2.md`、`eval/olist/report_v2.json`、`eval/olist/results_v2_r1..r3.json`、`eval/olist/b0_30_report.md`（v1 历史件 `report.md`/`results_v1_r1..r3.json`） |
+| **讨论与局限** | 方言缺口 12/55（B0 另有 6/30 因 `::` 转型在 SQLite 报错）、三类桶（`as_order`/`round`/`delivery`）+ `o38` 时间基准差、端点未拆分、v1 dirty build | `eval/olist/report_v2.md:66-80`、`eval/olist/b0_30_report.md`、`deploy/demo/README.md §2.6`、本目录 `README.md §7` |
 | **可复现章节** | 每个数字一条命令；冻结件哈希；账本；公开仓库检查 | 本目录 `README.md §8`、`docs/portfolio/LICENSES.md` |
 
 ---
@@ -29,13 +29,14 @@
 | DSN / 执行库 | 评测执行与判分**同一个 SQLite 沙箱** `data/olist/olist_sandbox.db`（sha256 `17c14cee…`）；PG `127.0.0.1:5432/ecom` 是 demo/RLS 栈，**不是**本评测的 DSN | `eval/olist/results_v2_r1.json` 的 `config.executor` / `config.scorer_db` |
 | 读数身份 | v2 三批 `build.git_rev=57b3029`、`git_dirty=false`；v1 三批 `aeb53eb`、`git_dirty=true` | `eval/olist/results_v2_r1..r3.json`、`results_v1_r1..r3.json` 的 `build` |
 | 冻结件 | v2 `content_hash=sha256:beceddbc…`、`full_hash=sha256:1a0c58cc…`、`sandbox_db_sha256=17c14cee…`；v1 `f5e78268…`、`b4491abb…` | `eval/olist/report_v2.md:51-53`、`eval/olist/report.md:51-53` |
-| 预算 | v2 实花 **¥1.65551 / 755 calls**（累计上限 ¥3 / 1800 calls）；v1 见 `budget_smoke.json` / `budget_full.json`；B0 **未执行** | `eval/olist/budget_v2.json` |
+| 预算 | v2 实花 **¥1.65551 / 755 calls**；上限 `max_cost_cny=3.0` / `max_calls=1800`（每批累加 prior+current）。前者只在 `budget_v2.json`，**后者不在账本里**，源件是结果件配置；v1 见 `budget_smoke.json` / `budget_full.json` | 实花 `eval/olist/budget_v2.json`；上限 `eval/olist/results_v2_r1..r3.json` 的 `config.budget`（三批同值） |
 | 改题/改 bundle | **必须升 v2**；不回头改 v1 冻结集 | `计划_合并版 §3.4`、`eval/olist/README.md §6.7` |
 
 **关键口径**：
 
 - `EX_official = grid.scored_passed / grid.scored_total`，`scored_total` **现算**，不抄常量；
   **v2** 三批 `41/55`、`39/55`、`40/55`（μ=0.7273±0.0182，n=3），分母均 55；
+  `report_v2.md` 抬头固定五行按模板仍印**首批** `41/55 = 74.55%`（模板定义），对外主数字用跨批 μ=72.73%。
   **v1** 三批 `23/54`、`23/55`、`22/55`（r1 的 o19 记 `unscored` ⇒ 分母 54），仅作历史。
 - 交互题不计入 EX；判据 = `terminal_event == expected_behavior and infra_error is None`；
   **v2** refuse `2/2`、`1/2`、`1/2`，clarify `1/3`、`1/3`、`1/3`；**v1** refuse `2/2`×3、clarify `2/3`、`1/3`、`1/3`。
@@ -53,7 +54,7 @@
 
 | 臂 | 定义 | 现状 | 源件 |
 |---|---|---|---|
-| **B0** | 30 题子集；schema 从 bundle 的 columns 导出，信息量与 B3 对等；同模型、同温度、同 substrate；**一次调用，不经过语义层/闸门/结果校验** | **`UNVERIFIED`（未做）**；按计划 §3.1 "时间紧可砍"；本窗未跑、不补跑 | `计划_合并版 §3.2` 第 5 条、§5.4；无结果件 |
+| **B0** | 30 题子集；schema 从 bundle 的 columns 导出，信息量与 B3 对等；同模型、同温度、同 substrate；**一次调用，不经过语义层/闸门/结果校验** | **已跑（2026-11-02）**：`3/30`，EX **10.00%**，30 calls / ¥0.0646，0 blocked/0 error；同 30 题 v1 B3 均值 **48.31% ± 1.67%**（n=3），差 −38.31pp。6/30 因 `::timestamptz` 在 SQLite 报错（方言缺口，单列）；跑在 `3e592ef + 未提交 W2` 的脏树上 | `eval/olist/b0_30_results.json`、`eval/olist/b0_30_report.md`、`eval/olist/b0_30_meta.json` |
 | **B1** | 中间消融臂（计划未给出独立定义） | **`UNVERIFIED`**；Phase A 未单独跑，不得用 B3 的读数替代 | — |
 | **B2** | 中间消融臂（计划未给出独立定义） | **`UNVERIFIED`**；同上 | — |
 | **B3** | **当前全系统**：语义层 + 三闸门 + 结果级校验（计划用"信息量与 B3 对等"指代全系统） | 有读数：`EX_official=72.73%±1.82%`（n=3，v2；v1 为 41.47%±1.33%）、交互 refuse 2/2·1/2·1/2、clarify 1/3×3、方言缺口 12/55、RLS `448,152` 行、demo 5/5 | `eval/olist/report_v2.md`、`eval/olist/report_v2.json`、`eval/olist/report.md`（v1 历史）、`backend/reports/w3_demo/materialize_olist_2026-10-28.json`、`backend/reports/w3_demo/demo_5.json` |

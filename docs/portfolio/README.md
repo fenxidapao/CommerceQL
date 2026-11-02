@@ -249,7 +249,9 @@ docker compose -f deploy/docker-compose.yml up -d --no-deps api
    源：`eval/olist/README.md §6.12`、`deploy/demo/README.md §2.6`。
 5. **gold 带 `ROUND`、模型常不带** ⇒ `REL_TOL=1e-6` 判不等（AOV/评分/延迟率多例）；
    不改判据。源：`eval/olist/report.md:73`。
-6. **B0 消融 `UNVERIFIED`（未做）**：按计划 §3.1 "时间紧可砍"；不临时跑。
+6. **B0 30 题已补（2026-11-02）**：`3/30`、EX `10.00%`（¥0.0646），同 30 题 v1 B3 `48.31% ± 1.67%`；
+   差额方向符合"故意做弱"的基线设计；6/30 是 `::timestamptz` 的 SQLite 方言缺口，单列不归因模型。
+   B1/B2 仍 `UNVERIFIED`（计划未给独立定义）。源：`eval/olist/b0_30_report.md`。
 7. **5 条既有 pytest 失败（证据移出仓库）**：`test_admin_eval_report_contract` ×1、
    `test_shape_guard_faces` ×2、`test_consistency_reporter` ×1、
    `test_gate_inputs_p0_merge_two_state` ×1；本窗复跑清单见

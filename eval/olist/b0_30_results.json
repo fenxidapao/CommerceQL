@@ -1,0 +1,1219 @@
+{
+  "schema": "B0_30/v1",
+  "selection": [
+    "g01",
+    "g02",
+    "g03",
+    "g04",
+    "g05",
+    "o01",
+    "o02",
+    "o03",
+    "o04",
+    "o05",
+    "o06",
+    "o07",
+    "o08",
+    "o09",
+    "o10",
+    "o11",
+    "o12",
+    "o13",
+    "o15",
+    "o16",
+    "o17",
+    "o18",
+    "o19",
+    "o20",
+    "o21",
+    "o22",
+    "o23",
+    "o24",
+    "o27",
+    "o28"
+  ],
+  "dataset": "/work/eval/olist/dataset_v1_frozen.json",
+  "db": "/tmp/olist.db",
+  "bundle": "/work/semantic/bundle_olist_2018.yaml",
+  "summary": {
+    "n": 30,
+    "n_equivalent": 3,
+    "ex": 0.1,
+    "n_blocked": 0,
+    "n_error": 0,
+    "n_gold_error": 0,
+    "calls": 30,
+    "tokens_total": 69263,
+    "cost_cny_total": 0.0646,
+    "batch_id": "b0_30_r1",
+    "model": "deepseek-flash",
+    "bundle_version": "2026.10.27.1",
+    "budget": {
+      "max_cost_cny": 1.0,
+      "max_calls": 40
+    },
+    "budget_stop": false,
+    "aborted_on_errors": false,
+    "errors": 0,
+    "generated_at": "2026-11-02T08:19:30.590704+00:00"
+  },
+  "b3_same_30": {
+    "rows": [
+      {
+        "batch_id": "w2_r1",
+        "passed": 14,
+        "total": 29,
+        "ex": 0.4827586206896552
+      },
+      {
+        "batch_id": "w2_r2",
+        "passed": 14,
+        "total": 30,
+        "ex": 0.4666666666666667
+      },
+      {
+        "batch_id": "w2_r3",
+        "passed": 15,
+        "total": 30,
+        "ex": 0.5
+      }
+    ],
+    "mean": 0.48314176245210727,
+    "std": 0.016669969285675927
+  },
+  "records": [
+    {
+      "case_id": "g01",
+      "question": "2018 年的 GMV 是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT ROUND(SUM(p.payment_value), 2) AS gmv\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2018-01-01'\n  AND o.order_purchase_timestamp <  '2019-01-01'\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2113,
+        "output": 201,
+        "cache_hit": 1920,
+        "total": 2314
+      },
+      "cost_cny": 0.002205,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT COALESCE(SUM(p.payment_value), 0) AS gmv FROM v_o_payments p JOIN v_o_orders o ON o.order_id = p.order_id WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s LIMIT 1",
+      "params": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00"
+      },
+      "rationale": "GMV 取 v_o_payments.payment_value（含运费的唯一金额来源），时间基准用 v_o_orders.order_purchase_timestamp 限定 2018 自然年（左闭右开，避免依赖字符串格式细节）。按订单号关联支付流水，一单多行支付会被完整累加。",
+      "confidence": 0.82,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+          "金标行无法在预测结果中找到：(8594831.98,)"
+        ],
+        "unmatched": 1
+      },
+      "latency_ms": 18320
+    },
+    {
+      "case_id": "g02",
+      "question": "2017 年每个月的订单量是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,\n       COUNT(DISTINCT o.order_id) AS order_cnt\nFROM v_o_orders AS o\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2017-01-01'\n  AND o.order_purchase_timestamp <  '2018-01-01'\nGROUP BY month\nORDER BY month\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2114,
+        "output": 210,
+        "cache_hit": 1920,
+        "total": 2324
+      },
+      "cost_cny": 0.002284,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT to_char(o.order_purchase_timestamp::timestamptz, 'YYYY-MM') AS month, count(DISTINCT o.order_id) AS order_cnt FROM v_o_orders o WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY 1 ORDER BY 1 LIMIT %(limit)s",
+      "params": {
+        "start_ts": "2017-01-01T00:00:00",
+        "end_ts": "2018-01-01T00:00:00",
+        "limit": 100
+      },
+      "rationale": "订单量按父订单粒度去重计数（v_o_orders.order_id），时间基准用 order_purchase_timestamp，按自然月分组；2017 年用半开区间 [2017-01-01, 2018-01-01) 参数化表达。",
+      "confidence": 0.82,
+      "exec_error": "OperationalError: unrecognized token: \":\"",
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 1884
+    },
+    {
+      "case_id": "g03",
+      "question": "各州 GMV 前十名是哪些？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT o.customer_state AS state,\n       ROUND(SUM(p.payment_value), 2) AS gmv\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\nGROUP BY o.customer_state\nORDER BY gmv DESC\nLIMIT 10\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2114,
+        "output": 135,
+        "cache_hit": 1920,
+        "total": 2249
+      },
+      "cost_cny": 0.001645,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT o.customer_state AS customer_state, SUM(p.payment_value) AS gmv FROM v_o_orders AS o JOIN v_o_payments AS p ON p.order_id = o.order_id GROUP BY o.customer_state ORDER BY gmv DESC LIMIT %(limit)s",
+      "params": {
+        "limit": 10
+      },
+      "rationale": "GMV 取 v_o_payments.payment_value（含运费的唯一金额来源），按订单表收货州分组求和，降序取前十。未加订单状态过滤，因计划未给口径。",
+      "confidence": 0.82,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [
+          "第 0 行 列 'gmv'：金标 5878935.99 vs 预测 5998226.96",
+          "第 1 行 列 'gmv'：金标 2115994.28 vs 预测 2144379.69",
+          "第 2 行 列 'gmv'：金标 1843460.37 vs 预测 1872257.26",
+          "第 3 行 列 'gmv'：金标 877803.8 vs 预测 890898.54",
+          "第 4 行 列 'gmv'：金标 794653.2 vs 预测 811156.38",
+          "已跳过容差重匹配（两侧均要求 ORDER BY ⇒ 行序参与判据）"
+        ],
+        "unmatched": 10
+      },
+      "latency_ms": 2580
+    },
+    {
+      "case_id": "g04",
+      "question": "各品类商品销售额（不含运费）前十名是哪些？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT pr.product_category AS category,\n       ROUND(SUM(i.price), 2) AS item_gmv\nFROM v_o_order_items AS i\nJOIN v_o_orders AS o   ON o.order_id = i.order_id\nJOIN v_o_products AS pr ON pr.product_id = i.product_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\nGROUP BY pr.product_category\nORDER BY item_gmv DESC\nLIMIT 10\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2117,
+        "output": 124,
+        "cache_hit": 1920,
+        "total": 2241
+      },
+      "cost_cny": 0.001558,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT p.product_category AS category, SUM(oi.price) AS gmv_excl_freight FROM v_o_order_items oi JOIN v_o_products p ON p.product_id = oi.product_id WHERE p.product_category IS NOT NULL GROUP BY p.product_category ORDER BY gmv_excl_freight DESC LIMIT 10",
+      "params": {},
+      "rationale": "按品类英文名聚合明细行商品金额 price（不含运费），降序取前十；排除无译名品类。",
+      "confidence": 0.82,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 2700
+    },
+    {
+      "case_id": "g05",
+      "question": "2018 年的客单价是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT ROUND(SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0), 2) AS aov\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2018-01-01'\n  AND o.order_purchase_timestamp <  '2019-01-01'\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2112,
+        "output": 226,
+        "cache_hit": 1920,
+        "total": 2338
+      },
+      "cost_cny": 0.002416,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS avg_order_value FROM v_o_orders o JOIN v_o_payments p ON p.order_id = o.order_id WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s LIMIT 1",
+      "params": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00"
+      },
+      "rationale": "客单价 = GMV / 订单数。GMV 唯一金额来源为 v_o_payments.payment_value（含运费），订单数按父订单去重计数；时间基准用 v_o_orders.order_purchase_timestamp，2018 年取 [2018-01-01, 2019-01-01) 半开区间。用 NULLIF 防止除零。",
+      "confidence": 0.72,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 2605
+    },
+    {
+      "case_id": "o01",
+      "question": "2017 年的 GMV 是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT ROUND(SUM(p.payment_value), 2) AS gmv\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2017-01-01'\n  AND o.order_purchase_timestamp <  '2018-01-01'\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2113,
+        "output": 177,
+        "cache_hit": 1920,
+        "total": 2290
+      },
+      "cost_cny": 0.002001,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT SUM(p.payment_value) AS gmv FROM v_o_payments p JOIN v_o_orders o ON o.order_id = p.order_id WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s LIMIT 1",
+      "params": {
+        "start_ts": "2017-01-01T00:00:00",
+        "end_ts": "2018-01-01T00:00:00"
+      },
+      "rationale": "GMV 取 v_o_payments.payment_value（含运费的唯一金额来源），时间基准用 v_o_orders.order_purchase_timestamp 限定 2017 自然年（左闭右开，避免依赖字符串格式细节）。",
+      "confidence": 0.82,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+          "金标行无法在预测结果中找到：(7092491.65,)"
+        ],
+        "unmatched": 1
+      },
+      "latency_ms": 1916
+    },
+    {
+      "case_id": "o02",
+      "question": "2018 年每个月的 GMV 是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,\n       ROUND(SUM(p.payment_value), 2) AS gmv\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2018-01-01'\n  AND o.order_purchase_timestamp <  '2018-09-01'\nGROUP BY month\nORDER BY month\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2115,
+        "output": 248,
+        "cache_hit": 1920,
+        "total": 2363
+      },
+      "cost_cny": 0.00261,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT to_char(date_trunc('month', o.order_purchase_timestamp::timestamp), 'YYYY-MM') AS month, SUM(p.payment_value) AS gmv FROM v_o_orders AS o JOIN v_o_payments AS p ON p.order_id = o.order_id WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY date_trunc('month', o.order_purchase_timestamp::timestamp) ORDER BY month LIMIT %(limit)s",
+      "params": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00",
+        "limit": 100
+      },
+      "rationale": "GMV 取 v_o_payments.payment_value（唯一金额来源，含运费），按 v_o_orders.order_purchase_timestamp 的月份分组；时间范围用参数限定在 2018 年，避免运行期函数。订单与支付按 order_id 关联，一单多行支付会自然累加。",
+      "confidence": 0.82,
+      "exec_error": "OperationalError: unrecognized token: \":\"",
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 2454
+    },
+    {
+      "case_id": "o03",
+      "question": "2018 年 GMV 最高的 5 个州是哪些？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT o.customer_state AS state,\n       ROUND(SUM(p.payment_value), 2) AS gmv\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2018-01-01'\n  AND o.order_purchase_timestamp <  '2019-01-01'\nGROUP BY o.customer_state\nORDER BY gmv DESC\nLIMIT 5\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2120,
+        "output": 223,
+        "cache_hit": 1920,
+        "total": 2343
+      },
+      "cost_cny": 0.002408,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT o.customer_state AS customer_state, SUM(p.payment_value) AS gmv FROM v_o_orders AS o JOIN v_o_payments AS p ON p.order_id = o.order_id WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY o.customer_state ORDER BY gmv DESC LIMIT %(top_n)s",
+      "params": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00",
+        "top_n": 5
+      },
+      "rationale": "GMV 取 v_o_payments.payment_value（唯一金额来源，含运费），时间基准用 v_o_orders.order_purchase_timestamp 限定 2018 自然年（ISO 字符串可直接比较），按收货州 customer_state 汇总后取前 5。未拼租户/店铺谓词。",
+      "confidence": 0.82,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [
+          "第 0 行 列 'gmv'：金标 3374237.33 vs 预测 3417117.45",
+          "第 1 行 列 'gmv'：金标 1064121.68 vs 预测 1073957.9",
+          "第 2 行 列 'gmv'：金标 1001226.7 vs 预测 1010462.22",
+          "第 3 行 列 'gmv'：金标 455542.1 vs 预测 460583.93",
+          "第 4 行 列 'gmv'：金标 447772.87 vs 预测 454556.59",
+          "已跳过容差重匹配（两侧均要求 ORDER BY ⇒ 行序参与判据）"
+        ],
+        "unmatched": 5
+      },
+      "latency_ms": 2375
+    },
+    {
+      "case_id": "o04",
+      "question": "2018 年的 GMV 和订单量分别是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT ROUND(SUM(p.payment_value), 2) AS gmv,\n       COUNT(DISTINCT o.order_id) AS order_cnt\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2018-01-01'\n  AND o.order_purchase_timestamp <  '2019-01-01'\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2117,
+        "output": 217,
+        "cache_hit": 1920,
+        "total": 2334
+      },
+      "cost_cny": 0.00235,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT COALESCE(SUM(p.payment_value), 0) AS gmv, COUNT(DISTINCT o.order_id) AS order_cnt FROM v_o_orders o JOIN v_o_payments p ON p.order_id = o.order_id WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s LIMIT %(limit)s",
+      "params": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00",
+        "limit": 100
+      },
+      "rationale": "GMV 取 v_o_payments.payment_value 求和（唯一金额来源，含运费）；订单量按父订单去重计数。时间基准用 v_o_orders.order_purchase_timestamp，2018 年用左闭右开区间字符串比较（ISO 8601 可直接字典序比较）。",
+      "confidence": 0.82,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+          "金标行无法在预测结果中找到：(8594831.98, 53532)"
+        ],
+        "unmatched": 1
+      },
+      "latency_ms": 2407
+    },
+    {
+      "case_id": "o05",
+      "question": "2017 年第四季度的 GMV 是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT ROUND(SUM(p.payment_value), 2) AS gmv\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2017-10-01'\n  AND o.order_purchase_timestamp <  '2018-01-01'\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2116,
+        "output": 212,
+        "cache_hit": 1920,
+        "total": 2328
+      },
+      "cost_cny": 0.002306,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT COALESCE(SUM(p.payment_value), 0) AS gmv FROM v_o_orders AS o JOIN v_o_payments AS p ON p.order_id = o.order_id WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s LIMIT 1000",
+      "params": {
+        "start_ts": "2017-10-01T00:00:00",
+        "end_ts": "2018-01-01T00:00:00"
+      },
+      "rationale": "GMV 取 v_o_payments.payment_value（含运费的唯一金额来源），按 v_o_orders.order_purchase_timestamp 界定 2017 Q4（[2017-10-01, 2018-01-01)）。用半开区间避免字符串时间边界问题；JOIN 保证只统计有支付流水的订单。",
+      "confidence": 0.86,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+          "金标行无法在预测结果中找到：(2799338.97,)"
+        ],
+        "unmatched": 1
+      },
+      "latency_ms": 1955
+    },
+    {
+      "case_id": "o06",
+      "question": "全期间的有效订单量是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(DISTINCT o.order_id) AS order_cnt\nFROM v_o_orders AS o\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2111,
+        "output": 232,
+        "cache_hit": 1920,
+        "total": 2343
+      },
+      "cost_cny": 0.002465,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [
+        "语义包未登记「有效订单」的判定口径（是否排除 canceled/unavailable/created 等状态、是否要求已支付或已送达）。当前按排除 canceled 与 unavailable 的常见口径生成，需口径确认后方可定稿。"
+      ],
+      "sql_text": "SELECT count(DISTINCT o.order_id) AS valid_order_cnt FROM v_o_orders AS o WHERE o.order_status NOT IN (%(excluded_status_1)s, %(excluded_status_2)s) LIMIT %(limit)s",
+      "params": {
+        "excluded_status_1": "canceled",
+        "excluded_status_2": "unavailable",
+        "limit": 100
+      },
+      "rationale": "全期间有效订单量：以父订单粒度对 order_id 去重计数，时间基准为 order_purchase_timestamp（本题不加时间过滤，覆盖全期间）。有效订单口径未在语义包中登记，按常见做法排除 canceled / unavailable 两类无效状态；若口径要求仅统计 delivered 或需排除更多状态，请以口径为准调整。",
+      "confidence": 0.55,
+      "exec_error": null,
+      "equivalent": true,
+      "verdict": {
+        "equivalent": true,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [],
+        "unmatched": 0
+      },
+      "latency_ms": 2758
+    },
+    {
+      "case_id": "o07",
+      "question": "成交订单有多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(DISTINCT o.order_id) AS order_cnt\nFROM v_o_orders AS o\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2108,
+        "output": 171,
+        "cache_hit": 1920,
+        "total": 2279
+      },
+      "cost_cny": 0.001939,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [
+        "「成交」口径未在语义包登记：此处取 order_status = 'delivered'（已送达）作为成交；若业务口径为已支付（approved/invoiced/shipped 等）或排除取消单，需确认后调整参数。"
+      ],
+      "sql_text": "SELECT count(DISTINCT o.order_id) AS order_cnt FROM v_o_orders AS o WHERE o.order_status = %(status)s LIMIT %(limit)s",
+      "params": {
+        "status": "delivered",
+        "limit": 1000
+      },
+      "rationale": "「成交订单」按已送达订单（order_status = 'delivered'）计，父订单粒度去重计数。若口径为已支付/已批准订单，可改 status 参数。",
+      "confidence": 0.55,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+          "金标行无法在预测结果中找到：(98207,)"
+        ],
+        "unmatched": 1
+      },
+      "latency_ms": 2215
+    },
+    {
+      "case_id": "o08",
+      "question": "各州的订单量是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT o.customer_state AS state,\n       COUNT(DISTINCT o.order_id) AS order_cnt\nFROM v_o_orders AS o\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\nGROUP BY o.customer_state\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2110,
+        "output": 120,
+        "cache_hit": 1920,
+        "total": 2230
+      },
+      "cost_cny": 0.001509,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT customer_state, COUNT(DISTINCT order_id) AS order_cnt FROM v_o_orders GROUP BY customer_state ORDER BY order_cnt DESC LIMIT 100",
+      "params": {},
+      "rationale": "按收货州分组统计订单量；订单量以父订单号去重计数（v_o_orders 为父订单粒度，order_id 唯一，DISTINCT 仅为防御性写法）。未对 order_status 做过滤，因问题未限定状态口径。",
+      "confidence": 0.82,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [
+          "行多重集差异：仅金标 25 行 / 仅预测 25 行",
+          "金标行无法在预测结果中找到：('AL', 411)"
+        ],
+        "unmatched": 25
+      },
+      "latency_ms": 1668
+    },
+    {
+      "case_id": "o09",
+      "question": "2018 年每个月的订单量是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,\n       COUNT(DISTINCT o.order_id) AS order_cnt\nFROM v_o_orders AS o\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2018-01-01'\n  AND o.order_purchase_timestamp <  '2018-09-01'\nGROUP BY month\nORDER BY month\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2114,
+        "output": 203,
+        "cache_hit": 1920,
+        "total": 2317
+      },
+      "cost_cny": 0.002225,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT to_char(o.order_purchase_timestamp::timestamptz, 'YYYY-MM') AS month, count(DISTINCT o.order_id) AS order_cnt FROM v_o_orders o WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY 1 ORDER BY 1 LIMIT %(limit)s",
+      "params": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00",
+        "limit": 100
+      },
+      "rationale": "按 v_o_orders.order_purchase_timestamp（本包唯一交易时间基准）过滤 2018 自然年，按月分组统计父订单数（count(DISTINCT order_id)）。时间边界走参数占位，显式 LIMIT。",
+      "confidence": 0.82,
+      "exec_error": "OperationalError: unrecognized token: \":\"",
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 1775
+    },
+    {
+      "case_id": "o10",
+      "question": "2018 年各州的订单量是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT o.customer_state AS state,\n       COUNT(DISTINCT o.order_id) AS order_cnt\nFROM v_o_orders AS o\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2018-01-01'\n  AND o.order_purchase_timestamp <  '2019-01-01'\nGROUP BY o.customer_state\nORDER BY order_cnt DESC\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2114,
+        "output": 225,
+        "cache_hit": 1920,
+        "total": 2339
+      },
+      "cost_cny": 0.002412,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT customer_state, COUNT(DISTINCT order_id) AS order_cnt FROM v_o_orders WHERE order_purchase_timestamp >= %(start_ts)s AND order_purchase_timestamp < %(end_ts)s GROUP BY customer_state ORDER BY order_cnt DESC, customer_state ASC LIMIT %(limit)s",
+      "params": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00",
+        "limit": 100
+      },
+      "rationale": "按收货州分组统计 2018 自然年订单量。时间基准用 order_purchase_timestamp（本包唯一交易时间基准），以 ISO 8601 字符串半开区间过滤，避免运行期函数。订单量按父订单去重计数（COUNT(DISTINCT order_id)），因 v_o_orders 本身为父订单粒度，等价于行数但更稳健。未拼租户/店铺谓词。",
+      "confidence": 0.82,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [
+          "第 0 行 列 'order_cnt'：金标 23599 vs 预测 23845",
+          "第 1 行 列 'order_cnt'：金标 6516 vs 预测 6562",
+          "第 2 行 列 'order_cnt'：金标 6134 vs 预测 6171",
+          "第 3 行 列 'order_cnt'：金标 2764 vs 预测 2775",
+          "第 4 行 列 'order_cnt'：金标 2733 vs 预测 2752",
+          "已跳过容差重匹配（两侧均要求 ORDER BY ⇒ 行序参与判据）"
+        ],
+        "unmatched": 23
+      },
+      "latency_ms": 2217
+    },
+    {
+      "case_id": "o11",
+      "question": "全期间一共有多少订单（含所有状态）？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT COUNT(DISTINCT o.order_id) AS order_cnt_all\nFROM v_o_orders AS o\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2115,
+        "output": 110,
+        "cache_hit": 1920,
+        "total": 2225
+      },
+      "cost_cny": 0.001434,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT COUNT(DISTINCT o.order_id) AS order_cnt FROM v_o_orders AS o LIMIT 1000",
+      "params": {},
+      "rationale": "问题为全期间订单数（含所有状态），无时间过滤、无状态过滤。v_o_orders 为父订单粒度，order_id 唯一，直接 COUNT(DISTINCT order_id) 即可；不引入任何租户/店铺谓词。",
+      "confidence": 0.95,
+      "exec_error": null,
+      "equivalent": true,
+      "verdict": {
+        "equivalent": true,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [],
+        "unmatched": 0
+      },
+      "latency_ms": 1706
+    },
+    {
+      "case_id": "o12",
+      "question": "全状态订单数超过 1000 的州有哪些？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT o.customer_state AS state,\n       COUNT(DISTINCT o.order_id) AS order_cnt_all\nFROM v_o_orders AS o\nGROUP BY o.customer_state\nHAVING order_cnt_all > 1000\nORDER BY order_cnt_all DESC\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2117,
+        "output": 136,
+        "cache_hit": 1920,
+        "total": 2253
+      },
+      "cost_cny": 0.00166,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT customer_state, COUNT(DISTINCT order_id) AS order_cnt FROM v_o_orders GROUP BY customer_state HAVING COUNT(DISTINCT order_id) > %(min_orders)s ORDER BY order_cnt DESC LIMIT %(limit)s",
+      "params": {
+        "min_orders": 1000,
+        "limit": 100
+      },
+      "rationale": "按收货州分组统计订单数（父订单粒度，order_id 去重），HAVING 过滤订单数超过 1000 的州，按订单数降序并显式 LIMIT。",
+      "confidence": 0.82,
+      "exec_error": null,
+      "equivalent": true,
+      "verdict": {
+        "equivalent": true,
+        "tags": [
+          "column_alias_difference"
+        ],
+        "diffs": [],
+        "unmatched": 0
+      },
+      "latency_ms": 1682
+    },
+    {
+      "case_id": "o13",
+      "question": "2018 年每个月的全状态订单数是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,\n       COUNT(DISTINCT o.order_id) AS order_cnt_all\nFROM v_o_orders AS o\nWHERE o.order_purchase_timestamp >= '2018-01-01'\n  AND o.order_purchase_timestamp <  '2018-09-01'\nGROUP BY month\nORDER BY month\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2116,
+        "output": 200,
+        "cache_hit": 1920,
+        "total": 2316
+      },
+      "cost_cny": 0.002203,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT to_char(o.order_purchase_timestamp::timestamptz, 'YYYY-MM') AS month, count(DISTINCT o.order_id) AS order_cnt FROM v_o_orders AS o WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY 1 ORDER BY 1 LIMIT %(limit)s",
+      "params": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00",
+        "limit": 100
+      },
+      "rationale": "按 order_purchase_timestamp 落在 2018 年区间，按月分组统计父订单数（count distinct order_id）。全状态即不按 order_status 过滤。时间列以 ISO 字符串比较，参数化区间。",
+      "confidence": 0.82,
+      "exec_error": "OperationalError: unrecognized token: \":\"",
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 1831
+    },
+    {
+      "case_id": "o15",
+      "question": "2018 年各州的全状态订单数是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT o.customer_state AS state,\n       COUNT(DISTINCT o.order_id) AS order_cnt_all\nFROM v_o_orders AS o\nWHERE o.order_purchase_timestamp >= '2018-01-01'\n  AND o.order_purchase_timestamp <  '2019-01-01'\nGROUP BY o.customer_state\nORDER BY order_cnt_all DESC\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2116,
+        "output": 207,
+        "cache_hit": 1920,
+        "total": 2323
+      },
+      "cost_cny": 0.002263,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT customer_state, COUNT(DISTINCT order_id) AS order_cnt FROM v_o_orders WHERE order_purchase_timestamp >= %(start_ts)s AND order_purchase_timestamp < %(end_ts)s GROUP BY customer_state ORDER BY order_cnt DESC LIMIT %(limit)s",
+      "params": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00",
+        "limit": 100
+      },
+      "rationale": "按收货州分组统计 2018 年（order_purchase_timestamp 落在 [2018-01-01, 2019-01-01)）的订单数；订单量以父订单 order_id 去重计数，时间基准用本包唯一交易时间列 order_purchase_timestamp。未对 order_status 做过滤，因问题未限定状态（“全状态”）。",
+      "confidence": 0.82,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 2466
+    },
+    {
+      "case_id": "o16",
+      "question": "2017 年的客单价是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT ROUND(SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0), 2) AS aov\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2017-01-01'\n  AND o.order_purchase_timestamp <  '2018-01-01'\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2112,
+        "output": 252,
+        "cache_hit": 1920,
+        "total": 2364
+      },
+      "cost_cny": 0.002638,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS avg_order_value FROM v_o_orders o JOIN v_o_payments p ON p.order_id = o.order_id WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s LIMIT 1",
+      "params": {
+        "start_ts": "2017-01-01T00:00:00",
+        "end_ts": "2018-01-01T00:00:00"
+      },
+      "rationale": "客单价 = 2017 年 GMV / 2017 年订单数。GMV 唯一金额来源为 v_o_payments.payment_value（含运费），订单数按父订单 order_id 去重；时间基准用 v_o_orders.order_purchase_timestamp（本包唯一交易时间基准），以 ISO 字符串区间 [2017-01-01, 2018-01-01) 表达 2017 自然年，避免运行期函数。NULLIF 防止除零。",
+      "confidence": 0.72,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 2375
+    },
+    {
+      "case_id": "o17",
+      "question": "2018 年每个月的客单价是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,\n       ROUND(SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0), 2) AS aov\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2018-01-01'\n  AND o.order_purchase_timestamp <  '2018-09-01'\nGROUP BY month\nORDER BY month\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2114,
+        "output": 292,
+        "cache_hit": 1920,
+        "total": 2406
+      },
+      "cost_cny": 0.002983,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT to_char(o.order_purchase_timestamp::timestamp, 'YYYY-MM') AS month, SUM(p.payment_value) / COUNT(DISTINCT o.order_id) AS avg_order_value, COUNT(DISTINCT o.order_id) AS order_cnt, SUM(p.payment_value) AS gmv FROM v_o_orders o JOIN v_o_payments p ON p.order_id = o.order_id WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY 1 ORDER BY 1 LIMIT %(limit)s",
+      "params": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00",
+        "limit": 100
+      },
+      "rationale": "客单价 = GMV / 订单数。GMV 唯一金额来源为 v_o_payments.payment_value（含运费），订单量按父订单 order_id 去重；时间基准用 v_o_orders.order_purchase_timestamp（本包唯一交易时间基准），按 2018 自然年过滤后按月分组。注意：一单多行支付时 SUM(payment_value) 会正确累加，COUNT(DISTINCT order_id) 避免重复计数。",
+      "confidence": 0.72,
+      "exec_error": "OperationalError: unrecognized token: \":\"",
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 2449
+    },
+    {
+      "case_id": "o18",
+      "question": "各州的客单价是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT o.customer_state AS state,\n       ROUND(SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0), 2) AS aov\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\nGROUP BY o.customer_state\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2110,
+        "output": 176,
+        "cache_hit": 1920,
+        "total": 2286
+      },
+      "cost_cny": 0.001986,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT o.customer_state AS customer_state, SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS avg_order_value FROM v_o_orders o JOIN v_o_payments p ON p.order_id = o.order_id WHERE o.order_status <> %(excluded_status)s GROUP BY o.customer_state ORDER BY avg_order_value DESC NULLS LAST LIMIT %(limit)s",
+      "params": {
+        "excluded_status": "canceled",
+        "limit": 100
+      },
+      "rationale": "客单价按州聚合：GMV 取 v_o_payments.payment_value（唯一金额来源，含运费），订单量取去重父订单数；排除 canceled 状态订单。分母用 NULLIF 防零除。",
+      "confidence": 0.62,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 3173
+    },
+    {
+      "case_id": "o19",
+      "question": "2017 年第四季度的客单价是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT ROUND(SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0), 2) AS aov\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2017-10-01'\n  AND o.order_purchase_timestamp <  '2018-01-01'\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2115,
+        "output": 204,
+        "cache_hit": 1920,
+        "total": 2319
+      },
+      "cost_cny": 0.002235,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT SUM(p.payment_value) / COUNT(DISTINCT o.order_id) AS avg_order_value FROM v_o_orders o JOIN v_o_payments p ON p.order_id = o.order_id WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s LIMIT 100",
+      "params": {
+        "start_ts": "2017-10-01T00:00:00",
+        "end_ts": "2018-01-01T00:00:00"
+      },
+      "rationale": "客单价 = GMV / 订单数。GMV 唯一金额来源为 v_o_payments.payment_value（含运费），订单数按父订单 order_id 去重；时间基准用 v_o_orders.order_purchase_timestamp，2017 Q4 取 [2017-10-01, 2018-01-01)。",
+      "confidence": 0.72,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 1719
+    },
+    {
+      "case_id": "o20",
+      "question": "客单价高于全期间平均的州有哪些？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT o.customer_state AS state,\n       ROUND(SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0), 2) AS aov\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\nGROUP BY o.customer_state\nHAVING aov > (\n  SELECT SUM(p2.payment_value) / NULLIF(COUNT(DISTINCT o2.order_id), 0)\n  FROM v_o_payments AS p2\n  JOIN v_o_orders AS o2 ON o2.order_id = p2.order_id\n  WHERE o2.order_status NOT IN ('canceled', 'unavailable')\n)\nORDER BY aov DESC\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2114,
+        "output": 228,
+        "cache_hit": 1920,
+        "total": 2342
+      },
+      "cost_cny": 0.002438,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT o.customer_state AS customer_state, SUM(p.payment_value) / COUNT(DISTINCT o.order_id) AS avg_order_value FROM v_o_orders o JOIN v_o_payments p ON p.order_id = o.order_id GROUP BY o.customer_state HAVING SUM(p.payment_value) / COUNT(DISTINCT o.order_id) > (SELECT SUM(p2.payment_value) / COUNT(DISTINCT o2.order_id) FROM v_o_orders o2 JOIN v_o_payments p2 ON p2.order_id = o2.order_id) ORDER BY avg_order_value DESC LIMIT 100",
+      "params": {},
+      "rationale": "客单价按州聚合：GMV 取 v_o_payments.payment_value（唯一金额来源，含运费），订单量取 v_o_orders 去重 order_id；与全期间整体客单价（同一口径的标量子查询）比较，HAVING 过滤高于平均的州。未加时间过滤，因问题为“全期间”。",
+      "confidence": 0.62,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "行数不同：金标 24 / 预测 23"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 5271
+    },
+    {
+      "case_id": "o21",
+      "question": "2017 年的商品销售额（不含运费）是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT ROUND(SUM(i.price), 2) AS item_gmv\nFROM v_o_order_items AS i\nJOIN v_o_orders AS o ON o.order_id = i.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2017-01-01'\n  AND o.order_purchase_timestamp <  '2018-01-01'\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2116,
+        "output": 236,
+        "cache_hit": 1920,
+        "total": 2352
+      },
+      "cost_cny": 0.00251,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT COALESCE(SUM(oi.price), 0) AS gmv_excl_freight FROM v_o_order_items AS oi JOIN v_o_orders AS o ON o.order_id = oi.order_id WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s LIMIT 1",
+      "params": {
+        "start_ts": "2017-01-01T00:00:00",
+        "end_ts": "2018-01-01T00:00:00"
+      },
+      "rationale": "商品销售额（不含运费）取 v_o_order_items.price 求和；时间基准用 v_o_orders.order_purchase_timestamp（本包唯一交易时间基准），2017 年用半开区间 [2017-01-01, 2018-01-01) 以字符串比较 ISO 8601 时间。通过 order_id 关联明细与订单，避免明细行无时间列的问题。未加租户/店铺谓词（由执行层注入）。",
+      "confidence": 0.86,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 2340
+    },
+    {
+      "case_id": "o22",
+      "question": "2018 年每个月的商品销售额（不含运费）是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT STRFTIME('%Y-%m', o.order_purchase_timestamp) AS month,\n       ROUND(SUM(i.price), 2) AS item_gmv\nFROM v_o_order_items AS i\nJOIN v_o_orders AS o ON o.order_id = i.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2018-01-01'\n  AND o.order_purchase_timestamp <  '2018-09-01'\nGROUP BY month\nORDER BY month\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2118,
+        "output": 219,
+        "cache_hit": 1920,
+        "total": 2337
+      },
+      "cost_cny": 0.002369,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT to_char(o.order_purchase_timestamp::timestamp, 'YYYY-MM') AS month, SUM(oi.price) AS item_revenue FROM v_o_orders o JOIN v_o_order_items oi ON oi.order_id = o.order_id WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY 1 ORDER BY 1 LIMIT %(limit)s",
+      "params": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00",
+        "limit": 100
+      },
+      "rationale": "商品销售额（不含运费）取 v_o_order_items.price 求和；时间基准用 v_o_orders.order_purchase_timestamp（本包唯一交易时间基准），按 2018 自然年过滤后按月分组。未按订单状态过滤，因计划未给口径。",
+      "confidence": 0.86,
+      "exec_error": "OperationalError: unrecognized token: \":\"",
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 0"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 1995
+    },
+    {
+      "case_id": "o23",
+      "question": "各州的商品销售额（不含运费）是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT o.customer_state AS state,\n       ROUND(SUM(i.price), 2) AS item_gmv\nFROM v_o_order_items AS i\nJOIN v_o_orders AS o ON o.order_id = i.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\nGROUP BY o.customer_state\nORDER BY item_gmv DESC\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2114,
+        "output": 141,
+        "cache_hit": 1920,
+        "total": 2255
+      },
+      "cost_cny": 0.001696,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT o.customer_state AS customer_state, SUM(oi.price) AS gmv_excl_freight FROM v_o_orders AS o JOIN v_o_order_items AS oi ON oi.order_id = o.order_id GROUP BY o.customer_state ORDER BY gmv_excl_freight DESC LIMIT 100",
+      "params": {},
+      "rationale": "商品销售额（不含运费）取 v_o_order_items.price 求和，按 v_o_orders.customer_state 分组。未加订单状态过滤，因计划未给口径；如需仅统计有效订单可加 order_status 谓词。",
+      "confidence": 0.86,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 2151
+    },
+    {
+      "case_id": "o24",
+      "question": "2018 年各品类的商品销售额（不含运费）是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT pr.product_category AS category,\n       ROUND(SUM(i.price), 2) AS item_gmv\nFROM v_o_order_items AS i\nJOIN v_o_orders AS o ON o.order_id = i.order_id\nJOIN v_o_products AS pr ON pr.product_id = i.product_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2018-01-01'\n  AND o.order_purchase_timestamp <  '2019-01-01'\nGROUP BY pr.product_category\nORDER BY item_gmv DESC\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2119,
+        "output": 233,
+        "cache_hit": 1920,
+        "total": 2352
+      },
+      "cost_cny": 0.002491,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT p.product_category AS category, SUM(oi.price) AS gmv_excl_freight FROM v_o_order_items oi JOIN v_o_orders o ON o.order_id = oi.order_id JOIN v_o_products p ON p.product_id = oi.product_id WHERE o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY p.product_category ORDER BY gmv_excl_freight DESC LIMIT %(limit)s",
+      "params": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00",
+        "limit": 200
+      },
+      "rationale": "按订单下单时间（本包唯一交易时间基准）取 2018 自然年，用 order_items.price 求和得到不含运费的商品销售额，按商品英文品类分组。品类为空的行会单独成组（NULL），如需剔除可加 p.product_category IS NOT NULL。",
+      "confidence": 0.82,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 3286
+    },
+    {
+      "case_id": "o27",
+      "question": "各州的运费总额是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT o.customer_state AS state,\n       ROUND(SUM(i.freight_value), 2) AS freight_total\nFROM v_o_order_items AS i\nJOIN v_o_orders AS o ON o.order_id = i.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\nGROUP BY o.customer_state\nORDER BY freight_total DESC\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2110,
+        "output": 141,
+        "cache_hit": 1920,
+        "total": 2251
+      },
+      "cost_cny": 0.001688,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT o.customer_state AS customer_state, SUM(oi.freight_value) AS total_freight FROM v_o_orders AS o JOIN v_o_order_items AS oi ON oi.order_id = o.order_id GROUP BY o.customer_state ORDER BY total_freight DESC LIMIT 100",
+      "params": {},
+      "rationale": "按收货州汇总订单明细的运费金额（freight_value 为运费唯一来源），通过 order_id 关联订单表取 customer_state。未对订单状态做过滤，因问题未限定；如需仅统计有效订单可加 order_status 过滤。",
+      "confidence": 0.82,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 2287
+    },
+    {
+      "case_id": "o28",
+      "question": "各品类的运费总额是多少？",
+      "tenant": "T_A",
+      "gold_sql": "SELECT pr.product_category AS category,\n       ROUND(SUM(i.freight_value), 2) AS freight_total\nFROM v_o_order_items AS i\nJOIN v_o_orders AS o ON o.order_id = i.order_id\nJOIN v_o_products AS pr ON pr.product_id = i.product_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\nGROUP BY pr.product_category\nORDER BY freight_total DESC\n",
+      "batch_id": "b0_30_r1",
+      "call_ok": true,
+      "terminal": "complete",
+      "tokens": {
+        "input": 2111,
+        "output": 139,
+        "cache_hit": 1920,
+        "total": 2250
+      },
+      "cost_cny": 0.001673,
+      "model": "deepseek-flash",
+      "prompt_version": "gen_sql_v1",
+      "blocking_issues": [],
+      "sql_text": "SELECT p.product_category AS category, SUM(oi.freight_value) AS total_freight FROM v_o_order_items oi JOIN v_o_products p ON p.product_id = oi.product_id GROUP BY p.product_category ORDER BY total_freight DESC LIMIT 200",
+      "params": {},
+      "rationale": "按商品品类汇总订单明细行的运费（freight_value 为运费唯一来源）。品类用英文名 product_category；无译名/无品类商品会归入 NULL 分组。未做时间过滤（问题未给时间范围）。",
+      "confidence": 0.72,
+      "exec_error": null,
+      "equivalent": false,
+      "verdict": {
+        "equivalent": false,
+        "tags": [],
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ],
+        "unmatched": 0
+      },
+      "latency_ms": 2935
+    }
+  ]
+}

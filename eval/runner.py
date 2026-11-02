@@ -216,12 +216,17 @@ def run_in_sandbox(
     views: bool,
     db_path: str,
     tenant_scoped_physicals: Mapping[str, str],
+    timeout_s: float | None = None,
 ) -> dict[str, Any]:
     """在沙箱里执行一条 SQL，返回 `{hash, table, error}`（两种租户边界同函数覆盖）。
 
     `views=True` ⇒ 边界在 TEMP VIEW 上，SQL 本身**不再**包租户谓词（`tenant=None` 传给
     `result_hash`）；`views=False` ⇒ 走 W1A 的 `tenant_wrap`（手写等价谓词）。
     执行失败**不抛**：沙箱缺表达式（方言缺口）是**被测事实**，要进记录而不是打断整批。
+
+    `timeout_s` 非空时给连接装 SQLite progress handler；超时抛出的
+    `OperationalError: interrupted` 与其它执行失败同路进 `error`。B0 生成的无闸门 SQL
+    可能写出笛卡尔积（实测 o24 卡死 >5 分钟），批量脚本必须显式传值。
     """
     con = (
         open_sandbox_connection(
@@ -230,6 +235,9 @@ def run_in_sandbox(
         if views
         else sqlite3.connect(Path(db_path).resolve().as_uri() + "?mode=ro", uri=True)
     )
+    if timeout_s is not None:
+        deadline = time.monotonic() + timeout_s
+        con.set_progress_handler(lambda: 1 if time.monotonic() > deadline else 0, 10_000)
     #: 🔴 出站契约是 psycopg 的 `%(name)s`（`sql_params` 是接口契约的一部分），沙箱是
     #: sqlite3 的 `:name` ⇒ 不做这一步方言桥，**任何带绑定参数的被测 SQL 都恒
     #: `OperationalError: near "%"`**，预测侧永远是空表。2026-10-03 真打批次 EX=0 的

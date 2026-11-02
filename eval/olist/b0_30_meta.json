@@ -1,0 +1,43 @@
+{
+  "schema": "B0_30_META/v1",
+  "results": "eval/olist/b0_30_results.json",
+  "results_sha256": "2b3b026bdadb8c16c7f3dd4b28bd320c84bfd642d6ae287e2b56d924e357fd51",
+  "report": "eval/olist/b0_30_report.md",
+  "report_sha256": "7cf3bd3b1bc6da567008237f95e7781849e93ce16f1c21e26cae1422194bacbf",
+  "dataset": "eval/olist/dataset_v1_frozen.json",
+  "dataset_sha256": "a077b3056ad4ada6db20e5493506d3a51daa81fe50c5ed1f50d15c2a38ee55c9",
+  "bundle": "semantic/bundle_olist_2018.yaml",
+  "bundle_sha256": "24e49c1586949cf5f37f113673e4521fefa8764957e5f523b22a20a9603ac908",
+  "db": "data/olist/olist_sandbox.db",
+  "db_sha256": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+  "model": "deepseek-flash",
+  "temperature": 0.0,
+  "sql_timeout_s": 20.0,
+  "git_rev": "3e592ef",
+  "git_dirty": true,
+  "generated_at": "2026-11-02T08:20:22.499509+00:00",
+  "attempts": [
+    {
+      "n": 1,
+      "calls": 30,
+      "cost_cny": 0.076023,
+      "outcome": "report crashed on KeyError: 'batch_id'; all records lost",
+      "source": "task bdifvchfd.stdout"
+    },
+    {
+      "n": 2,
+      "calls": 28,
+      "cost_cny": 0.059668,
+      "cost_note": "last printed cumulative at [27/30] o23; o24 call not accounted",
+      "outcome": "hung >5 min on o24 pathological SQL; stopped; records lost",
+      "source": "task b6wh6o4ad.stdout"
+    },
+    {
+      "n": 3,
+      "calls": 30,
+      "cost_cny": 0.0646,
+      "outcome": "complete; results/report written",
+      "source": "eval/olist/b0_30_results.json"
+    }
+  ]
+}
