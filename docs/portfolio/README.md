@@ -10,21 +10,31 @@
 **中文**：把一句中文业务问题变成一条**受控** SQL —— 三道安全闸门（AST / 政策 / 成本）、
 按租户的行级隔离（RLS）、出站内容白名单、两段式审计（fail-closed）；在 Olist 真实数据
 60 题冻结集上，3 个独立批次实测 `EX_official = 72.73% ± 1.82%`（n=3，样本标准差）。
-历史读数 `41.47% ± 1.33%`（同一冻结集、同一判据、不同端点）**保留可复算**，作为 v1 对照。
+历史读数 `41.47% ± 1.33%`（v1 `dataset_v1_frozen.json` + bundle `2026.10.27.1`，同一 60 题题面、同一判分器、不同端点）**保留可复算**，作为 v1 对照。v2 不是「同一冻结集」：37 条 gold 去掉 `ROUND`（U-151）、bundle 的 `delivery_late_rate` 乘 100（U-152）；v1 原件一字未改。
 
 **English**：A controlled Text2SQL agent for e-commerce analytics. LLM-generated SQL is
 treated as **untrusted input**: three gates (AST / policy / cost), tenant-level RLS,
 outbound content whitelist, and fail-closed two-phase audit. On a 60-case frozen Olist
 set, `EX_official = 72.73% ± 1.82%` over 3 independent batches (n=3, sample std);
-the historical `41.47% ± 1.33%` (same frozen set, same judge, different endpoint) is kept
-reproducible as the v1 baseline.
+the historical `41.47% ± 1.33%` (v1 frozen set + bundle, same 60 questions, same judge,
+different endpoint) is kept; v2's frozen set and bundle were revised under U-151/U-152,
+v1 originals untouched.
 
 > 口径先说清：**72.73% 仍未达**任务书的 85% 目标；`6/8 ≠ 门禁通过`（G-6 延迟、G-8 澄清率
 > 仍 `UNVERIFIED`）。本项目只报实测，不报目标。
-> v2 相对 v1 的 **+31.26 个百分点全部来自 3 类非模型缺陷**（`AS order` 保留字 /
-> gold `ROUND` 舍入 / `delivery_late_rate` 未 ×100），三类桶逐批归零；
-> **剩余 12 条 R14 方言缺口未修**，且 v2 走百炼 `deepseek-v4.1-flash`、v1 走官方
-> `deepseek-flash`（端点不同，按总控裁定合并成一次读数）。源：`eval/olist/report_v2.md` §5–§6。
+> v2 相对 v1 的净观测差是 **+31.26 个百分点**，但**不能全部归因于 3 类修复**。逐例对撞：
+> 三类桶内 **51 条次**（逐批 18/16/17；`as_order` 10/16、`round` 41/42，含 `delivery` 15/15）
+> 转为等价；另有 **2 条**非桶转等价（`o15` r2、`o31` r3）、**1 条**分母变化（`o19` r1 由
+> `unscored` 变 `scored`，分子分母同 +1）、**2 条回归**（`o31` r1、`o24` r2）、
+> **7 条次**旧桶案例仍不等价（6 条次旧 `AS order` + r3 `o38`，后者是时间基准差）。
+> 恒等式：`51 + 2 + 1 − 2 = 52` = 三批分子净增（120 − 68）。R14 仍 **12/12/12**。
+> 且 v2 走百炼 `deepseek-v4.1-flash`、v1 走官方 `deepseek-flash`，**端点效应未拆分**；
+> 交互题 `c01`/`r02` 的退化证明端点/模型行为确实变了。
+> 源：`eval/olist/report_v2.md` §5–§6.1、`backend/reports/exv2/diagnosis.md`。
+>
+> **桶归零的证据强度不同**：`as_order` 0/0/0 = 无 `SQL_SYNTAX_ERROR`（实测）；
+> `delivery` 0/0/0 = ×100 后判等（实测）；`round` 0/0/0 = **桶定义使然**（v2 gold 已无
+> `ROUND`），逐例转换 41/42，r3 `o38` 仍失败（时间基准差，不是舍入）。
 
 ---
 
@@ -97,7 +107,8 @@ flowchart TD
 |---|---|---|
 | **EX_official（v2，当前主数字）** | **0.7273 ± 0.0182**（3 批均值 ± 样本标准差，n=3） | `eval/olist/report_v2.md`、`eval/olist/report_v2.json` |
 | 三批（v2） | r1 `41/55`（0.7455）、r2 `39/55`（0.7091）、r3 `40/55`（0.7273） | `eval/olist/report_v2.md` §2 |
-| 三类修复桶（v2 相对 v1） | `as_order` 7/6/6 → **0/0/0**；`round` 13/14/15 → **0/0/0**；`delivery` 5/5/5 → **0/0/0**；R14 **12/12/12 不变** | `eval/olist/report_v2.md` §6 |
+| 三类修复桶（v2 相对 v1；60 题口径，含 `c03`） | `as_order` 7/6/6 → **0/0/0**（EX 分母内 6/5/5 → 0）；`round` 13/14/15 → **0/0/0**（**0 是定义使然**；逐例转等价 41/42，r3 `o38` 仍失败）；`delivery` 5/5/5 → **0/0/0**（15/15 转等价）；R14 **12/12/12 不变** | `eval/olist/report_v2.md` §6、§6.1 |
+| 逐例对撞（v1→v2，同 case 同批次位） | 桶内失败 **58** 条次，转等价 **51**（18/16/17）；非桶转等价 **2**；分母变化 **1**（`o19` r1）；回归 **2**（`o31` r1、`o24` r2）；旧桶仍不等价 **7** 条次（6 条次旧 `AS order` + r3 `o38` 时间基准差） | `eval/olist/report_v2.md` §6.1 |
 | 交互正确（v2，不计入 EX） | refuse `2/2`、`1/2`、`1/2`；clarify `1/3`、`1/3`、`1/3` —— **比 v1 有退化**（`c01` 由 clarify 变 complete、`r02` 在 r2/r3 由 refuse 变 clarify） | `eval/olist/report_v2.md` §3、`backend/reports/exv2/diagnosis.md` §12 |
 | 沙箱方言缺口（v2） | `12/55`（三批同，**未修**、单列、不归因模型） | `eval/olist/report_v2.md` §6 |
 | **EX_official（v1，历史保留）** | **0.4147 ± 0.0133**（3 批均值 ± 样本标准差，n=3） | `eval/olist/report.md:15`、`eval/olist/report.json` |

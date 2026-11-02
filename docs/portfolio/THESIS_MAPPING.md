@@ -12,8 +12,8 @@
 | **引言 / 相关工作** | Text2SQL 的不可信输入问题；受控管道 vs 开放式 Agent；本项目定位 = "受控 Agent 管道"（固定 19 节点图，不堆多 Agent） | `README.md`、`AGENTS.md`、`docs/07 §3–§5` |
 | **威胁模型与受控管道** | 三道闸门（AST / 政策 / 成本）+ 三终态出口 + repair 只回 gate1 + 依赖方向 R-DEP-1..4 | `app/graph/nodes/__init__.py`、`app/guard/*`、`backend/.importlinter` |
 | **Olist 语义层与结果级校验** | 薄语义包（`bundle_olist_2018.yaml`，`meta.version=2026.10.27.1`）+ 物化/RLS + 结果级校验四条判据（U-149） | `semantic/bundle_olist_2018.yaml`、`deploy/demo/materialize_olist.py`、`app/present/checks.py` |
-| **实验（B0–B3）** | 60 题冻结集 + 3 个独立 live 批次 + 交互题 + 仪器正/负控；B0 未做 | `eval/olist/report.md`、`eval/olist/report.json`、`eval/olist/results_v1_r1..r3.json` |
-| **讨论与局限** | 方言缺口 12/55、`AS order` 7/55、`delivery_late_rate` 口径、`ROUND` 容差、R14 月度题、B0 未做、dirty build | `eval/olist/report.md:66-76`、`deploy/demo/README.md §2.6`、本目录 `README.md §7` |
+| **实验（B0–B3）** | 60 题冻结集 + 3 个独立 live 批次 + 交互题 + 仪器正/负控；B0 未做 | `eval/olist/report_v2.md`、`eval/olist/report_v2.json`、`eval/olist/results_v2_r1..r3.json`（v1 历史件 `report.md`/`results_v1_r1..r3.json`） |
+| **讨论与局限** | 方言缺口 12/55、三类桶（`as_order`/`round`/`delivery`）+ `o38` 时间基准差、端点未拆分、B0 未做、v1 dirty build | `eval/olist/report_v2.md:66-80`、`deploy/demo/README.md §2.6`、本目录 `README.md §7` |
 | **可复现章节** | 每个数字一条命令；冻结件哈希；账本；公开仓库检查 | 本目录 `README.md §8`、`docs/portfolio/LICENSES.md` |
 
 ---
@@ -22,26 +22,27 @@
 
 | 项 | 值 | 源件 |
 |---|---|---|
-| 题集 | **60 题冻结集** = 55 execute + 5 interaction（3 clarify + 2 refuse） | `eval/olist/dataset_v1_frozen.json`、`eval/olist/README.md:16` |
-| 批次 | **3 个独立批次**（各自进程 + 各自 `--batch-id`：`w2_r1` / `w2_r2` / `w2_r3`），不是"一条命令循环 3 次" | `eval/olist/report.md:3`、`eval/olist/report.json` 的 `batch_ids` |
-| 日期 | 2026-10-28 | `eval/olist/results_v1_r1..r3.json` 的 `build.generated_at` |
+| 题集 | **当前 v2**：60 题冻结集 = 55 execute + 5 interaction（3 clarify + 2 refuse），`dataset_v2_frozen.json`（bundle `2026.10.31.1`）；v1 历史件 `dataset_v1_frozen.json`（bundle `2026.10.27.1`）保留 | `eval/olist/dataset_v2_frozen.json`、`eval/olist/dataset_v1_frozen.json` |
+| 批次 | **当前 v2**：`exv2_r1` / `exv2_r2` / `exv2_r3`（各自进程 + 各自 `--batch-id`）；v1 历史 `w2_r1..r3` | `eval/olist/report_v2.json` 的 `batch_ids`、`eval/olist/report.json` |
+| 日期 | v2 2026-10-31；v1 2026-10-28 | `eval/olist/results_v2_r1..r3.json`、`eval/olist/results_v1_r1..r3.json` 的 `build.generated_at` |
 | 温度 | 所有 LLM 路由 `temperature=0.0` | `backend/app/llm/router.py:202-260` |
-| DSN | `postgresql+psycopg://postgres:postgres@127.0.0.1:5432/ecom` | `deploy/demo/README.md:60` |
-| 读数身份 | 三批运行时刻 `build.git_rev=aeb53eb`、`build.git_dirty=true`（三批同，W2 窗未提交的中间态）；最终入库代码 `b780125` | `eval/olist/results_v1_r1..r3.json` 的 `build` |
-| 冻结件 | `content_hash=sha256:f5e78268…`、`full_hash=sha256:b4491abb…`、`sandbox_db_sha256=17c14cee…` | `eval/olist/report.md:51-53` |
-| 预算 | 冒烟 ≤¥5；3 批 ≤¥50；B0 消融 30×4 ≤¥20（**未执行**） | `计划_合并版 §5.4` |
+| DSN / 执行库 | 评测执行与判分**同一个 SQLite 沙箱** `data/olist/olist_sandbox.db`（sha256 `17c14cee…`）；PG `127.0.0.1:5432/ecom` 是 demo/RLS 栈，**不是**本评测的 DSN | `eval/olist/results_v2_r1.json` 的 `config.executor` / `config.scorer_db` |
+| 读数身份 | v2 三批 `build.git_rev=57b3029`、`git_dirty=false`；v1 三批 `aeb53eb`、`git_dirty=true` | `eval/olist/results_v2_r1..r3.json`、`results_v1_r1..r3.json` 的 `build` |
+| 冻结件 | v2 `content_hash=sha256:beceddbc…`、`full_hash=sha256:1a0c58cc…`、`sandbox_db_sha256=17c14cee…`；v1 `f5e78268…`、`b4491abb…` | `eval/olist/report_v2.md:51-53`、`eval/olist/report.md:51-53` |
+| 预算 | v2 实花 **¥1.65551 / 755 calls**（累计上限 ¥3 / 1800 calls）；v1 见 `budget_smoke.json` / `budget_full.json`；B0 **未执行** | `eval/olist/budget_v2.json` |
 | 改题/改 bundle | **必须升 v2**；不回头改 v1 冻结集 | `计划_合并版 §3.4`、`eval/olist/README.md §6.7` |
 
 **关键口径**：
 
 - `EX_official = grid.scored_passed / grid.scored_total`，`scored_total` **现算**，不抄常量；
-  本次三批 `23/54`、`23/55`、`22/55`；r1 的 o19 `GraphRecursionError` 记 `unscored` ⇒ 分母 54。
+  **v2** 三批 `41/55`、`39/55`、`40/55`（μ=0.7273±0.0182，n=3），分母均 55；
+  **v1** 三批 `23/54`、`23/55`、`22/55`（r1 的 o19 记 `unscored` ⇒ 分母 54），仅作历史。
 - 交互题不计入 EX；判据 = `terminal_event == expected_behavior and infra_error is None`；
-  本次 refuse `2/2`、clarify `2/3`、`1/3`、`1/3`。
-- `sandbox_dialect_gap=12/55`（三批同）**单列、不归因模型**；`EX_exec=23/55` 只作 coverage。
+  **v2** refuse `2/2`、`1/2`、`1/2`，clarify `1/3`、`1/3`、`1/3`；**v1** refuse `2/2`×3、clarify `2/3`、`1/3`、`1/3`。
+- `sandbox_dialect_gap=12/55`（两版三批皆同）**单列、不归因模型**；`EX_exec` 只作 coverage（v2 `41/55`）。
 - 仪器正/负控（+55/55、−0/55）**不是模型 EX**。
-- 三批的 `git_dirty=true` 必须随论文一起写；**可复算的是命令、冻结件与三批结果件，
-  不是一棵干净的 git 树**——不得写"同一 rev 的干净复现"。
+- **v2** 三批 `git_dirty=false`（`57b3029`）；**v1** 三批 `git_dirty=true`（`aeb53eb`）。
+  可复算的是命令、冻结件、三批结果件与哈希；写 v1 时不得写"同一 rev 的干净复现"。
 
 ---
 
@@ -81,17 +82,17 @@
 
 ## 5. 论文里可直接引用的"可复现"材料
 
-| 材料 | 路径 |
-|---|---|
-| 题集与冻结件 | `eval/olist/dataset_v1_frozen.json`、`eval/olist/dataset_v1.yaml` |
-| 三批逐题读数 | `eval/olist/results_v1_r1.json`、`r2`、`r3` |
-| 报告（固定五行） | `eval/olist/report.md`、`eval/olist/report.json` |
-| 仪器正/负控 | `eval/olist/instrument_control.json` |
-| 验真 profile | `eval/olist/olist_profile_frozen.json` |
-| 预算账本 | `eval/olist/budget_smoke.json`、`budget_full.json` |
-| 沙箱清单 | `eval/olist/sandbox_manifest.json` |
-| RLS 物化读数 | `backend/reports/w3_demo/materialize_olist_2026-10-28.json` |
-| 5 条 demo | `backend/reports/w3_demo/demo_5.json`、`browser_acceptance.json`、5 张 PNG |
-| 许可证 | `docs/portfolio/LICENSES.md`、`backend/reports/w4_acceptance/kaggle_olist_metadata.json` |
+| 材料 | 当前（v2） | 历史（v1） |
+|---|---|---|
+| 题集与冻结件 | `eval/olist/dataset_v2_frozen.json`、`dataset_v2.yaml` | `eval/olist/dataset_v1_frozen.json`、`dataset_v1.yaml` |
+| 三批逐题读数 | `eval/olist/results_v2_r1.json`、`r2`、`r3` | `eval/olist/results_v1_r1.json`、`r2`、`r3` |
+| 报告（固定五行） | `eval/olist/report_v2.md`、`report_v2.json` | `eval/olist/report.md`、`report.json` |
+| 仪器正/负控 | `eval/olist/instrument_control_v2.json` | `eval/olist/instrument_control.json` |
+| 验真 profile | `eval/olist/olist_profile_v2.json` | `eval/olist/olist_profile_frozen.json` |
+| 预算账本 | `eval/olist/budget_v2.json` | `eval/olist/budget_smoke.json`、`budget_full.json` |
+| 沙箱清单 | `eval/olist/sandbox_manifest.json` | 同左 |
+| RLS 物化读数 | `backend/reports/w3_demo/materialize_olist_2026-10-28.json` | 同左 |
+| 5 条 demo | `backend/reports/w3_demo/demo_5.json`、`browser_acceptance.json`、5 张 PNG | 同左 |
+| 许可证 | `docs/portfolio/LICENSES.md`、`backend/reports/w4_acceptance/kaggle_olist_metadata.json` | 同左 |
 
 > 复算命令逐条见本目录 `README.md §8`；未跑/未做的项一律 `UNVERIFIED`。

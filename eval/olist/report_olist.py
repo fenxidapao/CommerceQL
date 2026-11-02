@@ -146,6 +146,9 @@ _V2_BULLETS: tuple[str, ...] = (
     "不重录、不补录、不花钱；属预期失效，不是回归退化。",
     "- **预算上限是累计值**：`--max-cost-cny` / `--max-calls` 比的是 `prior + 本批`"
     "（`eval/runner.py::_breached`），**不是每批上限**。",
+    "- **三类桶的 0 ≠ 「三类都修干净了」**：`as_order`/`delivery` 的 0 是实测，"
+    "`round` 的 0 **部分是桶定义使然**（v2 的 gold 已无 `ROUND`）；逐例转换数与仍未等价的 "
+    "`o38`（时间基准差，不是舍入）见 §6.1。",
 )
 
 
@@ -161,6 +164,78 @@ def _bucket_row(
     cases: Iterable[Mapping[str, Any]], batch_records: list[list[dict[str, Any]]], name: str
 ) -> str:
     return " / ".join(str(bucket_counts(cases, batch)[name]) for batch in batch_records)
+
+
+def _flip_section(
+    cases: Iterable[Mapping[str, Any]],
+    base_records: list[list[dict[str, Any]]],
+    records: list[list[dict[str, Any]]],
+) -> list[str]:
+    """逐例对撞：v1 的「桶内失败」在 v2 里变成了什么。**全部现算，不写死任何条次**。
+
+    注意两条口径：交互题 `verdict` 恒 `None` ⇒ 天然不进"失败"计数（`c03` 只出现在
+    `as_order` 桶的 60 题口径里，不进 EX 分母比对）；`r14` 桶不参与逐例（本窗不修）。
+    """
+    by_id = {str(c.get("case_id")): c for c in cases}
+    lines = [
+        "| 批次位 | v1 桶内失败 | → 等价 | 仍失败 | 非桶失败→等价 | 回归（v1 等价、v2 失败） |",
+        "|---|---|---|---|---|---|",
+    ]
+    per_bucket: dict[str, list[int]] = {name: [0, 0, 0] for name in BUCKET_LABELS}
+    tot = {"fail": 0, "conv": 0, "still": 0, "extra": 0, "regress": 0}
+    for idx, (base, now) in enumerate(zip(base_records, records), start=1):
+        v1 = {str(r["case_id"]): r for r in base}
+        v2 = {str(r["case_id"]): r for r in now}
+        conv = still = extra = regress = 0
+        still_ids: list[str] = []
+        regress_ids: list[str] = []
+        for cid, r1 in v1.items():
+            bset = case_buckets(by_id.get(cid, {}), r1) - {"r14"}
+            was_neq = (r1.get("verdict") or {}).get("equivalent") is False
+            now_neq = (v2.get(cid, {}).get("verdict") or {}).get("equivalent") is False
+            if bset and was_neq:
+                for name in bset:
+                    per_bucket[name][0] += 1
+                    per_bucket[name][1 if not now_neq else 2] += 1
+            if bset and was_neq and not now_neq:
+                conv += 1
+            elif bset and was_neq and now_neq:
+                still += 1
+                still_ids.append(cid)
+            elif not bset and was_neq and not now_neq:
+                extra += 1
+            elif not was_neq and now_neq:
+                regress += 1
+                regress_ids.append(cid)
+        lines.append(
+            f"| r{idx} | {conv + still} | {conv} | {still}"
+            + (f"（{'、'.join(f'`{x}`' for x in still_ids)}）" if still_ids else "")
+            + f" | {extra} | {regress}"
+            + (f"（{'、'.join(f'`{x}`' for x in regress_ids)}）" if regress_ids else "")
+            + " |"
+        )
+        tot["fail"] += conv + still
+        tot["conv"] += conv
+        tot["still"] += still
+        tot["extra"] += extra
+        tot["regress"] += regress
+    lines.append(
+        f"| **合计** | **{tot['fail']}** | **{tot['conv']}** | **{tot['still']}** | "
+        f"**{tot['extra']}** | **{tot['regress']}** |"
+    )
+    lines += [
+        "",
+        "按桶拆（同一批内一个 case 可同时计入 `round` 与 `delivery`，**勿相加当总数**）：",
+        "",
+        "| 桶 | v1 失败条次 | → 等价 | 仍失败 |",
+        "|---|---|---|---|",
+    ]
+    for name in BUCKET_LABELS:
+        if name == "r14":
+            continue
+        total, conv, still = per_bucket[name]
+        lines.append(f"| `{name}` | {total} | {conv} | {still} |")
+    return lines
 
 
 def _v2_sections(
@@ -207,7 +282,7 @@ def _v2_sections(
 
     if records and base_records:
         for name, text in (
-            ("as_order", "`SQL_SYNTAX_ERROR`（`AS order` 桶）"),
+            ("as_order", "`SQL_SYNTAX_ERROR`（60 题口径，含 `c03` clarify；EX 分母内 6/5/5）"),
             ("round", "`round` 桶（gold 含 `ROUND` 且不等价）"),
             ("delivery", "`delivery_late_rate` 桶（含于 `round`）"),
             ("r14", "R14 / 方言缺口桶（本窗不修）"),
@@ -221,7 +296,33 @@ def _v2_sections(
             "> 桶口径 = `eval/olist/report_olist.py::case_buckets`（唯一真相，"
             "`backend/reports/exv2/diagnosis.md` 的读数由同一函数现算）；"
             "`delivery` 含于 `round`，**两张表不可相加当非等价总数**。",
+            "",
+            "### 6.1 逐例转换（同一 case、同一批次位；桶标签取 **v1** 侧）",
+            "",
         ]
+        out += _flip_section(cases, base_records, records)
+        out += [
+            "",
+            "> ⚠️ **三类桶的 0 证据强度不同**：`as_order` 的 0 = 无 `SQL_SYNTAX_ERROR`（实测）；"
+            "`delivery` 的 0 = ×100 后判等（实测）；`round` 的 0 **部分是定义使然**"
+            "（v2 的 gold 已无 `ROUND`，桶自然为空），真正能说的是上表的「逐例转换」数，"
+            "而仍未等价的那条是**时间基准差**（`o38`：金标按 `review_creation_date` 过滤，"
+            "模型按 `order_purchase_timestamp`），不是舍入差。",
+            "> 因此 **`+31.26pp` 是净观测差，不能整笔记在 3 类修复账上**：端点/模型也换了"
+            "（v2 百炼 `deepseek-v4.1-flash`、v1 官方 `deepseek-flash`），端点效应未拆分。",
+        ]
+        unscored_flips: list[str] = []
+        for idx, (base, now) in enumerate(zip(base_records, records), start=1):
+            now_map = {str(r["case_id"]): r for r in now}
+            for r1 in base:
+                cid = str(r1["case_id"])
+                if not r1.get("scored") and now_map.get(cid, {}).get("scored"):
+                    unscored_flips.append(f"`{cid}`（r{idx}）")
+        if unscored_flips:
+            out.append(
+                f"> 分母变化来源：{'、'.join(unscored_flips)} 在 v1 记 `unscored`、v2 记 `scored`"
+                " ⇒ 该批分子分母可能**同 +1**，别把它当成「多对了一道」。"
+            )
 
     out += [
         "",

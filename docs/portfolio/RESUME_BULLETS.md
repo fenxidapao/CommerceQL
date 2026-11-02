@@ -10,9 +10,11 @@
 **把 LLM 生成的 SQL 当不可信输入**：为 Text2SQL Agent 建 Olist 真实数据评测轨（60 题冻结集：
 55 execute + 5 交互），跑 3 个独立 live 批次，`EX_official = 72.73% ± 1.82%`（n=3；
 41/55、39/55、40/55）；分母按 `scored_total` 现算，方言缺口 12/55 单列、不归因模型。
-**同一冻结集上还做了一轮归因**：v1 的 41.47% 里，`AS order` 保留字、gold `ROUND` 舍入、
-`delivery_late_rate` 未 ×100 这三类**与模型能力无关**的缺陷占掉了 31.26 个百分点，
-逐类修掉后三类桶三批全归零（源：`eval/olist/report_v2.md` §6）。
+**在 v2 冻结集上做了一轮归因**（37 条 gold 去 `ROUND`、bundle 修 `delivery_late_rate`；v1 原件未改）：
+三类桶内失败 58 条次，逐例转等价 **51 条次**（逐批 18/16/17，含 `delivery` 15/15），
+另有 2 条非桶转等价、**1 条分母变化**、**2 条回归**，**7 条次旧桶案例仍不等价**
+（源：`eval/olist/report_v2.md` §6.1）。31.26pp 是净观测差，**不全部记在修复账上**：
+v2/v1 端点不同，交互 `c01`/`r02` 有退化，同端点对照未做。
 
 `复算：` `"$V" -c "import json;r=json.load(open('eval/olist/report_v2.json'));print(r['ex_official'],[(b['scored_passed'],b['scored_total']) for b in r['batches']])"`
 

@@ -4,12 +4,14 @@
 
 > **Showcase**：受控 Text2SQL 电商分析 Agent —— 三道闸门 + 租户 RLS + 两段式审计。
 > **EX_official = 72.73% ± 1.82%**（Olist 60 题，3 批，n=3，v2 / 百炼 `deepseek-v4.1-flash`）｜ **448,152 行** Olist 五表入库 + RLS 金丝雀｜ **5/5** 生产栈 demo（4 图 + 1 拒答）。
-> 历史读数：**41.47% ± 1.33%**（v1 / 官方 `deepseek-flash`，同一冻结集、同一判据，**保留可复算**）。
+> 历史读数：**41.47% ± 1.33%**（v1 / 官方 `deepseek-flash`，同一 60 题题面、同一判分器；v2 的冻结集与 bundle 按 U-151/U-152 升版，v1 原件未改，**保留可复算**）。
 > 图：[bar](backend/reports/w3_demo/demo_1_bar.png) ｜ [KPI](backend/reports/w3_demo/demo_5_kpi.png) ｜ [拒答](backend/reports/w3_demo/demo_4_refuse.png)
 > 详情 / 复算附录 → [docs/portfolio/README.md](docs/portfolio/README.md)
 > ⚠️ 72.73% 仍未达 85%；`6/8 ≠ 门禁通过`（G-6/G-8 `UNVERIFIED`）。v2 修的是 **3 类非模型缺陷**
-> （`AS order` 保留字 / gold `ROUND` 舍入 / `delivery_late_rate` 未 ×100），**剩余 12 条 R14 方言缺口未修**，
-> 且 v2/v1 端点不同（源：`eval/olist/report_v2.md` §5–§6）。
+> （`AS order` 保留字 / gold `ROUND` 舍入 / `delivery_late_rate` 未 ×100），**剩余 12 条 R14 方言缺口未修**。
+> `+31.26pp` 是**净观测差**，不全部归因于修复：端点也换了（百炼 vs 官方），交互 `c01`/`r02` 有退化；
+> 可复算的修复面 = 桶内 **51 条次**转等价（逐批 18/16/17），另有 2 条非桶转等价、**2 条回归**、
+> 7 条次旧桶案例仍不等价（含 `o38` 的时间基准差）。源：`eval/olist/report_v2.md` §5–§6.1。
 
 基于 **Text2SQL** 的电商数据分析 Agent：把一句中文业务问题，变成一条**受控**的 SQL，
 再变成带口径说明的图表与结论。
