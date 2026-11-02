@@ -49,6 +49,7 @@ from app.api.deps import (
     trace_scope,
 )
 from app.api.dto.common import OkEnvelope
+from app.api.dto.semantic_asset_detail import AssetDetailData
 from app.api.exceptions import NoDataAsset
 from app.api.ratelimit import RateLimitQuota
 from app.api.routers.health import SEMANTIC_RUNTIME_STATE_KEY
@@ -135,6 +136,37 @@ async def list_assets(
         quota = await check_rate_limit(request, RateLimitBucket.READ, ctx)
         data = semantic_dict.assets(_runtime(request), domain=domain, q=q, limit=limit, offset=offset)
         return _ok(data, ctx, quota)
+
+
+@router.get(
+    "/assets/{logical_name}",
+    summary="资产详情（表/列/枚举/Join）",
+    responses={
+        401: {"description": "AUTH_FAILED"},
+        422: {"description": "NO_DATA_ASSET（未知或未激活资产）"},
+    },
+)
+async def get_asset_detail(
+    request: Request,
+    logical_name: str,
+    token: Annotated[VerifiedToken, Depends(authenticate)],
+) -> JSONResponse:
+    """B5：单资产详情。未知/未激活 → 422（`detail.reason = "unknown_asset"`）。
+
+    ⚠️ 被拒列在投影层**整列剔除**（`semantic_dict.asset_detail`），响应里没有
+    `sensitive`/`denied_columns` 字段 —— 那等于把"哪里敏感"告诉调用方。
+    """
+    ctx = new_identity(token, session_id=_SEMANTIC_SCOPE_SESSION)
+    remember_identity(request, ctx)
+    async with trace_scope(ctx):
+        quota = await check_rate_limit(request, RateLimitBucket.READ, ctx)
+        data = semantic_dict.asset_detail(_runtime(request), logical_name)
+        if data is None:
+            raise NoDataAsset(
+                "资产不存在或未激活",
+                detail={"reason": "unknown_asset"},
+            )
+        return _ok(AssetDetailData.model_validate(data).model_dump(mode="json"), ctx, quota)
 
 
 def _ok(data: object, ctx: IdentityContext, quota: RateLimitQuota) -> JSONResponse:

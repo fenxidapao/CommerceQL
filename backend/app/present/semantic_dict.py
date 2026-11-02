@@ -54,7 +54,7 @@ from typing import Any
 from app.semantics.models import Asset, Metric
 from app.semantics.runtime import SemanticBundleRuntime
 
-__all__ = ["assets", "metrics"]
+__all__ = ["asset_detail", "assets", "metrics"]
 
 
 def _page(items: list[dict[str, Any]], limit: int, offset: int) -> dict[str, Any]:
@@ -139,6 +139,68 @@ def metrics(
         if (domain is None or m.domain == domain) and _hit(q, m.name, m.display_name, *m.synonyms)
     ]
     return _page(rows, limit, offset)
+
+
+def asset_detail(
+    runtime: SemanticBundleRuntime, logical_name: str
+) -> dict[str, Any] | None:
+    """§A.7.3（B5 新增）：单个资产的表/列/枚举/Join 详情。
+
+    - 只服务**通过质量准入**的资产（`runtime.assets()`）；未激活/未知 → `None`（路由给 422）；
+    - **被拒列整列剔除**：`policies.deny_columns` 的命中列 + 任何带 `sensitive` 标记的列；
+      输出里没有 `sensitive`/`denied_columns` 字段（不告诉调用方"哪里敏感"）；
+    - Join 只列语义包允许的路径（未列出 = 禁止），且仅保留**当前资产为端点**的那些；
+    - 指标只列 `default_binding.asset == logical_name` 的，且只给 name/display_name。
+    """
+    asset = next((a for a in runtime.assets() if a.logical_name == logical_name), None)
+    if asset is None:
+        return None
+    denied = set(_deny_map(runtime).get(logical_name, []))
+    columns = [
+        {
+            "name": c.name,
+            "type": c.type,
+            "comment": c.comment,
+            "unit": c.unit,
+            "synonyms": list(c.synonyms),
+            "enum": dict(c.enum),
+            "time_semantics": c.time_semantics,
+        }
+        for c in asset.columns
+        if c.name not in denied and c.sensitive is None
+    ]
+    joins = [
+        {
+            "left": j.left,
+            "right": j.right,
+            "type": j.type,
+            "on_columns": list(j.on_columns),
+            "certified_by": j.certified_by,
+            "note": j.note,
+        }
+        for j in runtime.joins()
+        if j.left.split(".", 1)[0] == logical_name or j.right.split(".", 1)[0] == logical_name
+    ]
+    metric_refs = [
+        {"name": m.name, "display_name": m.display_name}
+        for m in runtime.metrics()
+        if m.default_binding is not None and m.default_binding.asset == logical_name
+    ]
+    return {
+        "logical_name": asset.logical_name,
+        "physical_asset": asset.physical_asset,
+        "grain": asset.grain,
+        "domain": asset.domain,
+        "owner": asset.owner,
+        "certified": asset.certified,
+        "freshness_sla": asset.freshness_sla,
+        "level": asset.level,
+        "row_estimate": asset.row_estimate,
+        "description": asset.description,
+        "columns": columns,
+        "joins": joins,
+        "metrics": metric_refs,
+    }
 
 
 def assets(
