@@ -449,6 +449,56 @@ export interface SessionListItem {
 }
 
 // ---------------------------------------------------------------------------
+// Phase B：本地账号 / 资产详情（B3 / B5）
+// ---------------------------------------------------------------------------
+
+export interface LoginResult {
+  access_token: string;
+  token_type: 'bearer';
+  expires_in: number;
+}
+
+export interface CloseSessionResult {
+  session_id: string;
+  closed: boolean;
+}
+
+export interface AssetColumnDetail {
+  name: string;
+  type: string;
+  comment: string | null;
+  unit: string | null;
+  synonyms: string[];
+  enum: Record<string, string>;
+  time_semantics: string | null;
+}
+
+export interface AssetJoinDetail {
+  left: string;
+  right: string;
+  type: string;
+  on_columns: string[];
+  certified_by: string;
+  note: string | null;
+}
+
+export interface AssetDetail {
+  logical_name: string;
+  physical_asset: string;
+  grain: string;
+  domain: string;
+  owner: string;
+  certified: boolean;
+  freshness_sla: string;
+  level: string;
+  row_estimate: number;
+  description: string;
+  columns: AssetColumnDetail[];
+  joins: AssetJoinDetail[];
+  metrics: { name: string; display_name: string }[];
+}
+
+// ---------------------------------------------------------------------------
 // A.6 feedback
 // ---------------------------------------------------------------------------
 

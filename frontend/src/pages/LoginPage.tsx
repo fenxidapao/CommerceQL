@@ -1,26 +1,46 @@
 /**
  * 登录页（/login）—— 06 §9.1 登录页壳
- * - P0 为壳形态：主按钮走 OIDC 重定向形态；真实 IdP 未接入前只做提示
- * - 登录端点属架构未决项（D-H），token 只放内存（见 api/queryStream.ts）
- * - 开发态 stub token 入口仅在 VITE_ENABLE_DEBUG_PANEL === 'true' 时出现
+ * - Phase B B3：接真实 `POST /api/v1/auth/login`；token 只放内存（`setToken`）
+ * - 统一错误文案由后端给（未知用户与错密码同一句），前端不自行区分
+ * - 开发态仍保留粘贴 token 的调试入口（VITE_ENABLE_DEBUG_PANEL === 'true'）
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Input, message } from 'antd';
+import { Alert, Button, Input } from 'antd';
+import { ApiError, login } from '../api/client';
 import { setToken } from '../api/queryStream';
 import { tokens } from '../theme/tokens';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [token, setTokenValue] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<{ code: string; message: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [stubToken, setStubToken] = useState('');
   const debugEnabled = import.meta.env.VITE_ENABLE_DEBUG_PANEL === 'true';
 
-  const onOidcLogin = () => {
-    void message.info('登录方式待架构裁决（D-H）');
+  const onSubmit = async () => {
+    if (!username.trim() || !password) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await login(username.trim(), password);
+      setToken(data.access_token);
+      navigate('/chat');
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError({ code: err.code, message: err.message });
+      } else {
+        setError({ code: 'INTERNAL', message: '登录失败，请稍后重试' });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const onStubLogin = () => {
-    setToken(token.trim() || null);
+    setToken(stubToken.trim() || null);
     navigate('/chat');
   };
 
@@ -56,11 +76,43 @@ export function LoginPage() {
           电商数据分析 Agent
         </div>
 
-        <Button type="primary" block style={{ marginTop: tokens.space.lg }} onClick={onOidcLogin}>
-          使用企业账号登录
+        <Input
+          placeholder="用户名"
+          autoComplete="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          style={{ marginTop: tokens.space.lg }}
+          onPressEnter={() => void onSubmit()}
+        />
+        <Input.Password
+          placeholder="密码"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={{ marginTop: tokens.space.xs }}
+          onPressEnter={() => void onSubmit()}
+        />
+        {error && (
+          <Alert
+            data-testid="login-error"
+            type="error"
+            showIcon
+            style={{ marginTop: tokens.space.sm, textAlign: 'left' }}
+            message={error.message}
+            description={`错误码：${error.code}`}
+          />
+        )}
+        <Button
+          type="primary"
+          block
+          loading={loading}
+          disabled={!username.trim() || !password}
+          style={{ marginTop: tokens.space.md }}
+          onClick={() => void onSubmit()}
+        >
+          登录
         </Button>
 
-        {/* 开发态 stub token 入口：默认环境变量下不显示 */}
         {debugEnabled && (
           <div style={{ marginTop: tokens.space.md, textAlign: 'left' }}>
             <div style={{ fontSize: tokens.font.size.caption, color: tokens.color.text.tertiary }}>
@@ -69,8 +121,8 @@ export function LoginPage() {
             <Input
               size="small"
               placeholder="粘贴测试 token"
-              value={token}
-              onChange={(e) => setTokenValue(e.target.value)}
+              value={stubToken}
+              onChange={(e) => setStubToken(e.target.value)}
               style={{ marginTop: tokens.space.xxs }}
             />
             <Button size="small" block style={{ marginTop: tokens.space.xs }} onClick={onStubLogin}>
@@ -89,7 +141,7 @@ export function LoginPage() {
           textAlign: 'center',
         }}
       >
-        登录端点属架构未决项（D-H），当前为本地 stub，真实 OIDC 流程待裁决后接入
+        课程演示账号由后端本地注册；注册开关默认关闭（AUTH_ALLOW_REGISTRATION）
       </div>
     </div>
   );

@@ -5,7 +5,15 @@
  * - 读取类限流（429）保留 Retry-After，供页面就地提示（不弹全局错误）
  */
 import { API_BASE } from './base';
-import type { ApiEnvelope, ErrorCode } from './types';
+import type {
+  ApiEnvelope,
+  AssetDetail,
+  CloseSessionResult,
+  ErrorCode,
+  LoginResult,
+  Paged,
+  SessionListItem,
+} from './types';
 import { getToken } from './queryStream';
 
 export class ApiError extends Error {
@@ -102,3 +110,35 @@ async function request<T>(method: 'GET' | 'POST' | 'DELETE', path: string, body?
 export const apiGet = <T>(path: string, params?: Query) => request<T>('GET', `${path}${buildQuery(params)}`);
 export const apiPost = <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {});
 export const apiDelete = <T>(path: string) => request<T>('DELETE', path);
+
+// ---------------------------------------------------------------------------
+// Phase B 端点（B3/B4/B5）—— 形状见 api/types.ts；token 由 request() 统一带
+// ---------------------------------------------------------------------------
+
+/** B3：本地账号登录。token 只写内存（`setToken` 由调用方负责）。 */
+export const login = (username: string, password: string) =>
+  apiPost<LoginResult>('/auth/login', { username, password });
+
+/** B3：注册（服务端 `AUTH_ALLOW_REGISTRATION=false` 时返回 403）。 */
+export const register = (username: string, password: string) =>
+  apiPost<{ user_id: string; username: string; created_at: string }>('/auth/register', {
+    username,
+    password,
+  });
+
+/** B4：会话列表（只回元数据）。 */
+export const listSessions = (params?: {
+  limit?: number;
+  offset?: number;
+  q?: string;
+  sort?: 'last_turn_at' | 'created_at';
+  order?: 'asc' | 'desc';
+}) => apiGet<Paged<SessionListItem>>('/sessions', params);
+
+/** B4：软关闭会话。 */
+export const closeSession = (sessionId: string) =>
+  apiDelete<CloseSessionResult>(`/session/${sessionId}`);
+
+/** B5：资产详情（已被拒列由后端整列剔除，前端不判断）。 */
+export const getAssetDetail = (logicalName: string) =>
+  apiGet<AssetDetail>(`/semantic/assets/${encodeURIComponent(logicalName)}`);
