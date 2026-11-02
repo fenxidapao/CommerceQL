@@ -33,6 +33,7 @@ from app.api.routers import (
     query,
     semantic,
     session,
+    sessions,
 )
 from app.core.clock import Clock
 from app.core.config import AppEnv, get_settings
@@ -508,6 +509,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix=API_PREFIX)
     app.include_router(query.router, prefix=API_PREFIX)
     app.include_router(session.router, prefix=API_PREFIX)
+    app.include_router(sessions.router, prefix=API_PREFIX)
     app.include_router(clarify.router, prefix=API_PREFIX)
     app.include_router(feedback.router, prefix=API_PREFIX)
     # --- W8 管理端只读面（T-34，2026-10-04）---

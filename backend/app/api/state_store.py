@@ -345,6 +345,9 @@ class RedisStateStore:
         本来也无法提供有意义的标题。
         """
         created = _now_iso()
+        index_key = cache_keys.session_index(ctx.tenant_id, ctx.user_id)
+        await self._client.zadd(index_key, {ctx.session_id: time.time()})
+        await self._client.expire(index_key, cache_keys.DEFAULT_TTL_S["session_index"])
         await self._write_json(
             self._session_key(ctx),
             {
@@ -455,6 +458,9 @@ class RedisStateStore:
         payload["graph_version"] = payload.get("graph_version") or _GRAPH_VERSION
         payload["last_turn_at"] = _now_iso()
         await self._write_json(key, payload, ttl_s=cache_keys.DEFAULT_TTL_S["session_meta"])
+        index_key = cache_keys.session_index(ctx.tenant_id, ctx.user_id)
+        await self._client.zadd(index_key, {ctx.session_id: time.time()})
+        await self._client.expire(index_key, cache_keys.DEFAULT_TTL_S["session_index"])
 
     async def append_turn(
         self,
@@ -496,6 +502,43 @@ class RedisStateStore:
         key = cache_keys.session_plan(ctx.tenant_id, session_id)
         raw: list[Any] = await self._client.lrange(key, 0, -1)
         return tuple(orjson.loads(item) for item in raw)
+
+    async def list_sessions(self, ctx: IdentityContext) -> tuple[SessionMeta, ...]:
+        """会话列表（§A.5.4）—— 索引按 `last_turn_at` 倒序，**逐条过属主门**。
+
+        - 索引键含 `tenant` + `user_hash` ⇒ 天然只含本属主写入的 member；
+        - 仍逐条调 `get_session`：索引可能是历史残留（meta 已过期/属主缺失），
+          以 `get_session` 的 fail-closed 结论为准，**不以索引存在为授权依据**；
+        - 已关闭（`closed=True`）的会话不返回（软关闭 = 从列表隐藏，历史仍可读）。
+
+        分页与 `q`/`sort`/`order` 由端点做（需要先按 `q` 过滤再算 `total`）。
+        """
+        index_key = cache_keys.session_index(ctx.tenant_id, ctx.user_id)
+        ids: list[Any] = await self._client.zrevrange(index_key, 0, -1)
+        metas: list[SessionMeta] = []
+        for raw in ids:
+            meta = await self.get_session(ctx, str(raw))
+            if meta is None or meta.closed:
+                continue
+            metas.append(meta)
+        return tuple(metas)
+
+    async def close_session(self, ctx: IdentityContext, session_id: str) -> bool:
+        """软关闭（§A.5.3）：置 `closed=True` 并从列表索引移除；**不删历史**。
+
+        ⚠️ 属主不符/不存在都返回 `False`（端点统一 404），与 `get_session` 同口径。
+        """
+        meta = await self.get_session(ctx, session_id)
+        if meta is None:
+            return False
+        key = cache_keys.session_meta(ctx.tenant_id, session_id)
+        payload = await self._read_json(key) or {}
+        payload["closed"] = True
+        await self._write_json(key, payload, ttl_s=cache_keys.DEFAULT_TTL_S["session_meta"])
+        await self._client.zrem(
+            cache_keys.session_index(ctx.tenant_id, ctx.user_id), session_id
+        )
+        return True
 
     # ======================================================================
     # 幂等（附录 A §A.12）

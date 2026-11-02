@@ -102,6 +102,27 @@ class FakeRedis:
             return list(items[start:])
         return list(items[start : end + 1])
 
+    # ---------------- 有序集合（`api/state_store.py` 的会话索引） ----------------
+    async def zadd(self, key: str, mapping: dict[str, float]) -> int:
+        bucket = self.zsets.setdefault(key, {})
+        added = 0
+        for member, score in mapping.items():
+            if member not in bucket:
+                added += 1
+            bucket[str(member)] = float(score)
+        return added
+
+    async def zrem(self, key: str, member: str) -> int:
+        bucket = self.zsets.get(key, {})
+        return 1 if bucket.pop(str(member), None) is not None else 0
+
+    async def zrevrange(self, key: str, start: int, end: int) -> list[str]:
+        ordered = sorted(self.zsets.get(key, {}).items(), key=lambda kv: kv[1], reverse=True)
+        members = [member for member, _ in ordered]
+        if end == -1:
+            return members[start:]
+        return members[start : end + 1]
+
     async def expire(self, key: str, seconds: int) -> bool:
         """给**已存在**的键设 TTL。⚠️ 键不存在时 Redis 返回 `False`：
         替身照此返回（不静默成功），否则"给不存在的键设 TTL"这类无害调用

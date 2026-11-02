@@ -41,6 +41,7 @@ from app.api.dto.session import (
     SessionDetailData,
     TurnData,
 )
+from app.api.dto.sessions import CloseSessionData
 from app.api.exceptions import SessionNotFound
 from app.api.ratelimit import RateLimitQuota
 from app.auth.tokens import VerifiedToken
@@ -131,6 +132,36 @@ async def get_session(
             ctx,
             quota,
         )
+
+
+@router.delete(
+    "/{session_id}",
+    summary="关闭会话（软关闭，幂等）",
+    responses={
+        403: {"description": "AUTH_FAILED"},
+        404: {"description": "SESSION_NOT_FOUND"},
+        429: {"description": "配额超限（写入类桶）"},
+    },
+)
+async def close_session(
+    request: Request,
+    session_id: str,
+    token: Annotated[VerifiedToken, Depends(authenticate)],
+) -> JSONResponse:
+    """§A.5.3：置 `closed=True` 并从列表隐藏；轮次历史保留可读。
+
+    ⚠️ 重复关闭返回同一形状的 200（幂等）；属主不符与不存在同为 404。
+    """
+    store = get_state_store(request)
+    ctx = new_identity(token, session_id=session_id)
+    remember_identity(request, ctx)
+
+    async with trace_scope(ctx):
+        quota = await check_rate_limit(request, RateLimitBucket.WRITE, ctx)
+        closed = await store.close_session(ctx, session_id)
+        if not closed:
+            raise SessionNotFound("会话不存在或已删除", detail={"session_id": session_id})
+        return _ok(CloseSessionData(session_id=session_id, closed=True), ctx, quota)
 
 
 def _ok(data: Any, ctx: IdentityContext, quota: RateLimitQuota) -> JSONResponse:
