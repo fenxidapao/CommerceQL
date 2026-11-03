@@ -2,6 +2,9 @@
 
 > 本文件是**导航与禁区**，不是项目文档。读完这一页就够开工；细节按 §3 的预算去读，不要整仓乱翻。
 > 项目本体全部在本目录（仓库根），**没有嵌套子目录**。人读版说明见 `README.md`，完整导读见 `OVERVIEW.md`。
+>
+> **现状态先读 [`docs/09_当前状态与交接.md`](docs/09_当前状态与交接.md)**：HEAD／完成度／实测读数／未完成项／验证命令一页给全。
+> 当前阶段：**Phase A 主体收口（两项验收未勾：静态全绿、逐数字复算）；Phase B 已开工**（B1/B3/B4/B5 完成，B2/B6/B7 未做，B8 可选）。执行计划在仓库外 `Text2SQL/计划_合并版.md`。
 
 ---
 
@@ -55,17 +58,19 @@ trusted_context → normalize → intent → link → plan → bind → gen_sql
 
 ---
 
-## 3. 阅读预算（硬性：只读这 7 个，约 60KB）
+## 3. 阅读预算（硬性：只读这 9 个，约 70KB）
 
-1. `README.md` §2–§4（快速开始 / 目录 / 五条工程约束）
-2. `backend/.importlinter`（8 分钟看懂 16 个包的层次与禁则，性价比最高）
-3. `backend/app/main.py`（组装根：lifespan 六步按什么顺序装配）
-4. `backend/app/core/enums.py` + `contracts.py`（取值集与端口，全仓引用最多）
-5. `backend/app/graph/build.py`（图装配、`GRAPH_VERSION`、条件边挂载）
-6. `semantic/bundle_2026.09.14.1.yaml` 的 `meta:` 段（版本真相与刻意解耦说明）
-7. `eval/README.md` + `backend/reports/README.md`（评测与证据怎么读）
+1. `docs/09_当前状态与交接.md`（**现行状态与完成度；先读这一页**）
+2. `README.md` §2–§4（快速开始 / 目录 / 五条工程约束）
+3. `backend/.importlinter`（8 分钟看懂 16 个包的层次与禁则，性价比最高）
+4. `backend/app/main.py`（组装根：lifespan 六步按什么顺序装配）
+5. `backend/app/core/enums.py` + `contracts.py`（取值集与端口，全仓引用最多）
+6. `backend/app/graph/build.py`（图装配、`GRAPH_VERSION`、条件边挂载）
+7. `semantic/bundle_2026.09.14.1.yaml` 的 `meta:` 段（版本真相与刻意解耦说明）
+8. `eval/README.md` + `backend/reports/README.md`（评测与证据怎么读）
+9. 仓库外 `Text2SQL/计划_合并版.md` §3–§4、§9（Phase A/B 范围与状态清单）
 
-其余一律 **grep 定位后只读 20–40 行**，不要整文件通读。`docs/07`（3,683 行）只在需要契约原文时按 § 检索。
+其余一律 **grep 定位后只读 20–40 行**，不要整文件通读。`docs/07`（3,704 行）只在需要契约原文时按 § 检索。
 
 ---
 
@@ -88,7 +93,7 @@ trusted_context → normalize → intent → link → plan → bind → gen_sql
 2. **依赖方向由机器保证**：只用 `lint-imports` 命令本身。⚠️ **禁止** `python -m importlinter.cli lint-imports`——该形态无输出、exit 0、什么都没验的**假绿**（U-41）。
 3. **审计 fail-closed**：`audit_log` append-only，代码层只暴露 `insert()`，静态断言禁 `UPDATE/DELETE`。**审计写失败 = 不下发数据**。
 4. **新增依赖双录账**：`pyproject.toml` 白名单 + 契约测试两处同改；新增配置项必须同步 `deploy/.env.example`。
-5. **冻结集不可动**：`eval/dataset_v1_frozen.json`、`gold_query_seed_v1.json`、`red_team_cases_v1.json` 与门禁阈值/判据措辞，不因调试或"整理"而改。要改先按 §8 取号。
+5. **冻结集不可动**：`eval/dataset_v1_frozen.json`、`gold_query_seed_v1.json`、`red_team_cases_v1.json`、`eval/olist/dataset_v1_frozen.json`、`eval/olist/dataset_v2_frozen.json` 与门禁阈值/判据措辞，不因调试或"整理"而改。要改先按 §8 取号。
 
 ---
 
@@ -103,11 +108,17 @@ curl -i http://127.0.0.1:8000/api/v1/healthz/ready   # 200（依赖就绪时）
 curl -i http://127.0.0.1:8000/api/v1/healthz         # 503 + degraded_dependencies 是设计
 #   ⚠️ 必须带 /api/v1 前缀；裸 /healthz/* 是 404
 
-# 本机跑测试（仓库内不含 .venv）
-cd backend && python -m pytest -q --ignore=tests/integration
+# 本机跑测试（仓库内不含 .venv；venv 在 ../CommerceQL-archive/local/.venv，用 python -m 调用）
+cd backend && python -m pytest -q tests/unit tests/contract
+# tests/eval 必须让 eval 可导入（Windows 分隔符为 ;）
+PYTHONPATH="<repo>;<repo>/eval" python -m pytest -q tests/eval
+
+cd ../frontend && npm run test && npm run typecheck && npm run build
 
 # 静态检查（在 backend/ 下）
 ruff check . && mypy app && lint-imports
+# lint-imports 的合法 Python 形态（⚠️ 禁用 python -m importlinter.cli lint-imports，见 §5）：
+PYTHONUTF8=1 python -c "from importlinter.cli import lint_imports_command; lint_imports_command()"
 
 # 评测（参数以 --help 为权威；离线回放零 LLM 零出站）
 python eval/runner.py --help
@@ -122,7 +133,7 @@ python eval/reporter.py --help
 
 1. **`app/xxx/engine.py` 与 `app/graph/nodes/xxx.py` 是"引擎 / 节点薄包装"成对结构**（`guard`、`mask`、`planner` 都是），全仓统一模式，**不是重复代码**。合并它们会破坏分层。
 2. **`backend/reports/w6/**` 是事实上的测试夹具，不可删**：6 个文件是生产默认路径（`app/present/artifacts.py` 读 `eval_metrics.json`）或测试直接执行的探针；`tests/eval/test_pg_contact_surface.py` 还有 `assert len(scanned) >= 4` 的目录 glob 断言。
-3. **semantic 文件名与版本号刻意解耦**：文件叫 `bundle_2026.09.14.1.yaml`，版本真相是 YAML 内 `meta.version`（现 `2026.10.16.2`）。二者不等是设计（约 40 处硬编码文件名），不是漂移。
+3. **semantic 文件名与版本号刻意解耦**：文件叫 `bundle_2026.09.14.1.yaml`，版本真相是 YAML 内 `meta.version`（现 `2026.10.16.2`；Olist v1/v2 分别是 `2026.10.27.1` / `2026.10.31.1`）。二者不等是设计（约 40 处硬编码文件名），不是漂移。
 4. **沙箱库不在仓库里**：`data/` 只有生成器。跑 eval 前先 `python data/generator/seed_generator.py`（约 440MB，`.gitignore` 排除）。
 5. **禁止读取** `.env`、`deploy/.env`、`deploy/secrets/*.pem`：含真实 API key 与带密码 DSN。需要新增配置 → 改 `deploy/.env.example`。
 
@@ -130,6 +141,7 @@ python eval/reporter.py --help
 
 ## 8. 改动纪律
 
+- **现状只认一处**：`docs/09_当前状态与交接.md`；`README §1`、`OVERVIEW.md` 的旧快照是历史叙述，引用前现读。
 - **取号**：新问题先在 `docs/07 §4.8` 登记 `U-xx` 再动代码；一个号只对应一件事。
 - **证据不改手**：`eval/results_*`、`backend/reports/**` 是证据，要修正读数就新生成一件并记 rev / 时刻 / 命令。
 - **两个门禁数必须同框**：官方快照 `PASS 1/8`（`backend/reports/w6/eval_metrics.json`）与当期复算 `6 PASS / 2 UNVERIFIED`（`eval/results_w80_gate_recompute.json`）是两件事——**6/8 ≠ 门禁通过**，G-6 与 G-8 仍是 `UNVERIFIED`。
