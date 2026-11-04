@@ -30,11 +30,11 @@
 
 | 项 | 读数 | 源 |
 |---|---|---|
-| 代码 HEAD | 最后代码提交 `adce347` / 788 笔（本节文档提交后 789）；`origin/main` 落后 **77 笔（未推送；文档提交后 78）** | `git log -1`；`git rev-list --count HEAD`；`git status -sb` |
-| 后端回归 | B2/B6 定向 **127 passed**；全量 unit+contract 本次未重跑（`ebf1471` 时点基线 2410/3 仅作历史）；`tests/eval` 505 passed / 2 failed（既有） | 2026-11-04 定向复跑；命令见 docs/09 §7 |
-| 前端 | `33 passed`（5 files）；`tsc --noEmit` 通过 | 2026-11-03 复跑；此后前端未改（B2 前端未做） |
+| 代码 HEAD | 最后代码提交 `39f99e3` / 791 笔（本节文档提交后 792）；`origin/main` 落后 **80 笔（未推送；文档提交后 81）** | `git log -1`；`git rev-list --count HEAD`；`git status -sb` |
+| 后端回归 | B2/B6 定向 **133 passed**；全量 unit+contract 本次未重跑（`ebf1471` 时点基线 2410/3 仅作历史）；`tests/eval` 505 passed / 2 failed（既有） | 2026-11-04 定向复跑；命令见 docs/09 §7 |
+| 前端 | `40 passed`（7 files）；`tsc --noEmit` 与 `npm run build` 通过 | 2026-11-04 复跑（新增导出 7 条） |
 | 静态检查 | `ruff 214`（114 可自动修）；`mypy 0 / 177 files`；`lint-imports 4 kept / 0 broken` | 2026-11-04 复跑 |
-| Phase B | B1/B3/B4/B5 **完成**；**B2 后端完成、前端/验收未做**；**B6 复杂档已接线，多轮/few-shot 未做**；B7 未做；B8 可选 | `docs/09` §4.2；提交见 git log |
+| Phase B | B1/B3/B4/B5 **完成**；**B2 代码完成、浏览器验收 `UNVERIFIED`**；**B6 复杂档已接线，多轮/few-shot 未做**；B7 未做；B8 可选 | `docs/09` §4.2；提交见 git log |
 | 官方快照 | `88f3500` / **PASS 1/8**（PASS 1 / FAIL 3 / PARTIAL 2 / UNVERIFIED 2），生成 `2026-10-07T05:27:34Z`，最后改动该文件的提交 `24d4477` | `backend/reports/w6/eval_metrics.json`；`backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md` |
 | 当期复算 | **6 PASS / 0 PARTIAL / 2 UNVERIFIED / 0 FAIL**，复算件 rev `26421ae`（2026-10-24） | `eval/results_w80_gate_recompute.json`；`backend/reports/w8/DELIVERY.md` 终版节 |
 | 契约文档 | `07 v1.7.41`（3,704 行）；`08 v1.4.3` | `docs/07_技术设计文档_TDD.md` 头部版本字段 |
