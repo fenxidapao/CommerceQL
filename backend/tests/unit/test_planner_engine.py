@@ -159,6 +159,7 @@ def _engine(
     *,
     sink: RecordingSink | None = None,
     few_shots: Any = None,
+    gold_query: Any = None,
 ) -> tuple[PlannerEngine, FakeLlmPort, RecordingSink]:
     llm = FakeLlmPort(script)
     the_sink = sink if sink is not None else RecordingSink()
@@ -172,6 +173,7 @@ def _engine(
         clock=clock,
         degradation=the_sink,
         few_shots=few_shots,
+        gold_query=gold_query,
         monotonic=lambda: 1.0 + 0.25 * next(ticks),
     )
     return engine, llm, the_sink
@@ -897,6 +899,73 @@ class TestSqlFor:
         engine, llm, _ = _engine({"gen_sql": [_sql_body()]}, runtime, clock)
         await engine.sql_for(_ctx(), normalized_question=_QUESTION, plan=_plan())
         assert llm.payload()["few_shots"] == []
+
+
+class TestFewShotFromGoldQuery:
+    """B6：Gold Query 库 → prompt 的 few-shot（租户/版本/域三类过滤由 provider 参数表达）。"""
+
+    @pytest.mark.asyncio
+    async def test_rows_enter_prompt_with_trusted_scope(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        class _Provider:
+            def __init__(self) -> None:
+                self.calls: list[dict[str, Any]] = []
+
+            async def few_shots(self, **kwargs: Any) -> tuple[tuple[str, str], ...]:
+                self.calls.append(kwargs)
+                return (("上月华东区 GMV", "SELECT 1"),)
+
+        provider = _Provider()
+        engine, llm, _ = _engine(
+            {"gen_sql": [_sql_body()]}, runtime, clock, gold_query=provider
+        )
+        await engine.sql_for(_ctx(), normalized_question=_QUESTION, plan=_plan())
+
+        assert provider.calls == [
+            {
+                "tenant_id": "t1",
+                "bundle_version": runtime.active_version(),
+                "domains": ("orders",),
+                "question": _QUESTION,
+                "limit": 5,
+            }
+        ]
+        assert llm.payload()["few_shots"] == [("上月华东区 GMV", "SELECT 1")]
+
+    @pytest.mark.asyncio
+    async def test_read_failure_degrades_to_no_examples(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        """few-shot 是增强项：库读失败不得把一次正常查询炸成错误。"""
+
+        class _Boom:
+            async def few_shots(self, **_: Any) -> tuple[tuple[str, str], ...]:
+                raise RuntimeError("metadata pool down")
+
+        engine, llm, _ = _engine(
+            {"gen_sql": [_sql_body()]}, runtime, clock, gold_query=_Boom()
+        )
+        await engine.sql_for(_ctx(), normalized_question=_QUESTION, plan=_plan())
+        assert llm.payload()["few_shots"] == []
+
+    @pytest.mark.asyncio
+    async def test_empty_gold_query_falls_back_to_injected_provider(
+        self, runtime: SemanticBundleRuntime, clock: FrozenClock
+    ) -> None:
+        class _Empty:
+            async def few_shots(self, **_: Any) -> tuple[tuple[str, str], ...]:
+                return ()
+
+        engine, llm, _ = _engine(
+            {"gen_sql": [_sql_body()]},
+            runtime,
+            clock,
+            few_shots=lambda _question: [("旧示例", "SELECT 9")],
+            gold_query=_Empty(),
+        )
+        await engine.sql_for(_ctx(), normalized_question=_QUESTION, plan=_plan())
+        assert llm.payload()["few_shots"] == [("旧示例", "SELECT 9")]
 
 
 class TestSqlRepairRound:

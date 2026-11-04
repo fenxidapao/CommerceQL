@@ -71,6 +71,7 @@ from pydantic import BaseModel, ValidationError
 from app.cache.keys import user_scope_hash
 from app.core.contracts import (
     ClockPort,
+    GoldQueryPort,
     IdentityContext,
     LLMPort,
     LLMResponse,
@@ -88,6 +89,7 @@ from app.planner.errors import (
 )
 from app.planner.jsonish import JsonAttempt, extract_json_object, validation_digest
 from app.planner.payloads import (
+    FEW_SHOT_TOP_K,
     PromptContext,
     detect_injection,
     gen_sql_payload,
@@ -588,12 +590,22 @@ class PlannerEngine:
     | `clock: ClockPort` | W0 | 唯一时间来源（N-18）；本类**不调** `datetime.now()` |
     | `degradation` | W4（SSE 队列） | 见模块 docstring §二 |
     | `few_shots` | W1B/W6（Gold Query 库） | 没有就**不假装有**（默认不传 few-shot） |
+    | `gold_query` | B6（`app.repo.gold_query`） | 只读检索；读失败降级为空，不影响本轮 |
 
     ⚠️ `user_scope` 由 `app.cache.keys.user_scope_hash` 现算（**键构造的唯一入口**，
     本类不自己哈希 —— 那会造出第二套隔离口径）。
     """
 
-    __slots__ = ("_clock", "_degradation", "_few_shots", "_llm", "_monotonic", "_pending", "_semantics")
+    __slots__ = (
+        "_clock",
+        "_degradation",
+        "_few_shots",
+        "_gold_query",
+        "_llm",
+        "_monotonic",
+        "_pending",
+        "_semantics",
+    )
 
     def __init__(
         self,
@@ -603,6 +615,7 @@ class PlannerEngine:
         clock: ClockPort,
         degradation: PlannerDegradationSink | None = None,
         few_shots: Callable[[str], Sequence[tuple[str, str]]] | None = None,
+        gold_query: GoldQueryPort | None = None,
         monotonic: Callable[[], float] | None = None,
     ) -> None:
         self._llm = llm
@@ -610,6 +623,7 @@ class PlannerEngine:
         self._clock = clock
         self._degradation: PlannerDegradationSink = degradation or LoggingDegradationSink()
         self._few_shots = few_shots
+        self._gold_query = gold_query
         self._monotonic = monotonic or time.perf_counter
         self._pending: list[DegradedNote] = []
 
@@ -869,7 +883,7 @@ class PlannerEngine:
             prompt_ctx,
             question=normalized_question,
             plan_block=block,
-            few_shots=self._few_shots_for(normalized_question),
+            few_shots=await self._few_shots_for(ctx, plan, normalized_question),
             complex_task=complex_query,
         )
         started = self._monotonic()
@@ -1078,11 +1092,59 @@ class PlannerEngine:
         """
         return _looks_complex(plan)
 
-    def _few_shots_for(self, question: str) -> tuple[tuple[str, str], ...]:
-        """few-shot 取数（**可选能力**：没注入就等于没有 Gold Query 库，不假装有）。"""
+    async def _few_shots_for(
+        self,
+        ctx: IdentityContext,
+        plan: Plan,
+        question: str,
+    ) -> tuple[tuple[str, str], ...]:
+        """few-shot 取数（**可选能力**：没有 Gold Query 库就不假装有）。
+
+        优先走库（B6）：`tenant_id` 来自可信身份、`bundle_version` 来自语义包、
+        `domains` 来自计划自身资产 —— 三者缺一都不查。读失败/空结果**不阻断本轮**，
+        退回注入的同步 provider（若有）。
+        """
+        if self._gold_query is not None:
+            try:
+                shots = await self._gold_query.few_shots(
+                    tenant_id=ctx.tenant_id,
+                    bundle_version=self._semantics.active_version(),
+                    domains=self._plan_domains(ctx, plan),
+                    question=question,
+                    limit=FEW_SHOT_TOP_K,
+                )
+            except Exception as exc:  # few-shot 是增强项，读失败不得炸本轮
+                _log.warning(
+                    "gold_query_read_failed",
+                    extra={
+                        "task_id": ctx.task_id,
+                        "error_type": type(exc).__name__,
+                        "extra_fact": "few-shot 读失败 → 本轮退回无示例（不影响 SQL 生成）",
+                    },
+                )
+                shots = ()
+            if shots:
+                return tuple(shots)
         if self._few_shots is None:
             return ()
         return tuple(self._few_shots(question))
+
+    def _plan_domains(self, ctx: IdentityContext, plan: Plan) -> tuple[str, ...]:
+        """计划资产 → 数据域集合（语义包 `asset_allowlist` 的 `domain` 字段）。
+
+        未知资产/缺 domain 的条目直接跳过：它们本来就会被绑定层判掉，
+        这里不替它兜底，也不把 `None` 当成一个域去查。
+        """
+        allowlist = self._semantics.asset_allowlist(ctx)
+        domains: list[str] = []
+        for asset_use in plan.assets:
+            entry = allowlist.get(asset_use.asset)
+            if not isinstance(entry, Mapping):
+                continue
+            domain = entry.get("domain")
+            if domain:
+                domains.append(str(domain))
+        return tuple(dict.fromkeys(domains))
 
     async def _call_validated(
         self,

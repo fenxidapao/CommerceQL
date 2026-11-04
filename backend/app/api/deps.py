@@ -63,6 +63,7 @@ from app.repo.audit_export_store import AuditExportStore
 from app.repo.audit_read import AuditReadDAO
 from app.repo.audit_store import AuditStore
 from app.repo.feedback import FeedbackStore
+from app.repo.gold_query import GoldQueryStore
 from app.repo.pools import ThreePools
 from app.repo.users import UserStore
 
@@ -826,6 +827,9 @@ def build_graph_runtime(
 
     # --- 5. query_plan 写入通道（W1B §10，W3C DoD① 的最后一步）---
     query_plan_writer = QueryPlanStore(pools.metadata)
+    #: few-shot 只读检索（B6）。无请求态，可在装配期造一份共享实例；
+    #: 每次查询独立借还连接（07 §8.1 纪律 1）。
+    gold_query_reader = GoldQueryStore(pools.metadata)
 
     # --- 6. 图（单例，可并发复用；依赖经 contextvars 每请求注入）---
     graph = build_graph(checkpointer=checkpointer)
@@ -872,6 +876,7 @@ def build_graph_runtime(
                 semantics=semantic_runtime,
                 clock=Clock(time_semantics),
                 degradation=SsePlannerDegradationSink(),
+                gold_query=gold_query_reader,
             ),
             binding=binding_service,
             semantics=semantic_runtime,

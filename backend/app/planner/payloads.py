@@ -74,6 +74,7 @@ from app.planner.schemas import output_schema_for
 
 __all__ = [
     "DIALECT_NOTE",
+    "FEW_SHOT_TOP_K",
     "INJECTION_DECLARATION",
     "MAX_HISTORY_TURNS",
     "InjectionScan",
@@ -131,6 +132,10 @@ INJECTION_DECLARATION: Final[str] = (
 #: ⚠️ 07 只写了"必须裁剪"，**没给数**。本窗口取 6 并在此**显式登记为自设值**
 #: （比照 W3A 对"租户日预算 10 元"的处理）：数字是经验值，不假装它有上游依据。
 MAX_HISTORY_TURNS: Final[int] = 6
+
+#: few-shot 注入条数（B6：Top-3–5）。上限由 `egress_guard.MAX_FEW_SHOT_TURNS`（8）兜底，
+#: 这里取 5 是**检索策略**，不是出站上限 —— 两件事不共用同一个数。
+FEW_SHOT_TOP_K: Final[int] = 5
 
 #: 理解阶段（`normalize` / `normalize_intent` / `intent`）的**租户自指**说明。
 #: 实测（2026-10-03 真打批次 63 条 `clarify_needed` 响应）：问句里原样出现的租户码被当成

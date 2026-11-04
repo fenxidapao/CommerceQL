@@ -61,8 +61,8 @@ __all__ = [
     "ClockPort", "TokenizerPort", "LLMPort", "SemanticBundlePort", "RepositoryPort",
     "AuditSinkPort", "SessionLockPort", "RateLimiterPort", "CachePort",
     "SqlExecutorPort", "MaskPort", "RetrievalPort", "BindingPort", "PlannerPort",
-    "GuardPort", "EventEmitterPort", "ErrorMapperPort", "DependencyProbePort",
-    "PresenterPort",
+    "GoldQueryPort", "GuardPort", "EventEmitterPort", "ErrorMapperPort",
+    "DependencyProbePort", "PresenterPort",
 ]
 
 
@@ -697,6 +697,25 @@ class PlannerPort(Protocol):
     async def generate_sql(
         self, plan: Mapping[str, Any], ctx: IdentityContext, *, candidates: int
     ) -> Mapping[str, Any]: ...
+
+
+@runtime_checkable
+class GoldQueryPort(Protocol):
+    """Gold Query 库的只读检索（L0；`app.repo.gold_query` 实现）。
+
+    §11.7 的两层可见性（`tenant_id IS NULL` = 全局认证库 ∪ 本租户私有库）
+    必须由实现写进 SQL，不得放在应用层过滤。返回形状固定为 `(问题, SQL)` 二元组。
+    """
+
+    async def few_shots(
+        self,
+        *,
+        tenant_id: str,
+        bundle_version: str,
+        domains: Sequence[str],
+        question: str,
+        limit: int,
+    ) -> tuple[tuple[str, str], ...]: ...
 
 
 @runtime_checkable
