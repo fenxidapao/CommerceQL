@@ -111,6 +111,53 @@ _TICK_MIN_S: Final[float] = 0.05
 #: 这是 **NFR-1.2 的唯一执行点**（网关根修后没有人替 W4 发这个帧）。
 PLACEHOLDER_AFTER_S: Final[float] = 1.6
 
+#: 历史计划摘要的落图上限（防一条旧计划把 state/后续 prompt 撑大）。
+_HISTORY_PLAN_LIST_LIMIT: Final[int] = 20
+_HISTORY_PLAN_STRING_LIMIT: Final[int] = 200
+_HISTORY_PLAN_TIME_LIMIT: Final[int] = 64
+
+
+def _history_plan_strings(value: Any) -> list[str]:
+    if not isinstance(value, (list, tuple)):
+        return []
+    out: list[str] = []
+    for item in value[:_HISTORY_PLAN_LIST_LIMIT]:
+        text = item.strip() if isinstance(item, str) else ""
+        if text:
+            out.append(text[:_HISTORY_PLAN_STRING_LIMIT])
+    return out
+
+
+def _sanitize_history_plan(raw: Any) -> dict[str, Any] | None:
+    """`sess:plan` 里的 `plan_summary` → **可进图的 C-01 摘要**（白名单键 + 形状校验）。
+
+    ⚠️ 这是"脱敏计划摘要"的**唯一转换点**：原始条目里的 `task_id` / `outcome` /
+    `bundle_version` / `at` 一律丢弃。只保留条件继承真正需要的字段，且逐项限长。
+    """
+    if not isinstance(raw, Mapping):
+        return None
+    plan: dict[str, Any] = {}
+    for key in ("metrics", "dimensions", "filters", "order_by"):
+        values = _history_plan_strings(raw.get(key))
+        if values:
+            plan[key] = values
+    grain = raw.get("grain")
+    if isinstance(grain, str) and grain.strip():
+        plan["grain"] = grain.strip()[:_HISTORY_PLAN_STRING_LIMIT]
+    time_range = raw.get("time_range")
+    if isinstance(time_range, Mapping):
+        window = {
+            side: str(time_range[side]).strip()[:_HISTORY_PLAN_TIME_LIMIT]
+            for side in ("start", "end")
+            if isinstance(time_range.get(side), str) and str(time_range[side]).strip()
+        }
+        if window:
+            plan["time_range"] = window
+    limit = raw.get("limit")
+    if isinstance(limit, int) and not isinstance(limit, bool) and 0 < limit <= 10_000:
+        plan["limit"] = limit
+    return plan or None
+
 
 # ============================================================================
 # 请求与结果
@@ -152,6 +199,18 @@ class RunOutcome:
     cancelled: bool
     nodes: tuple[str, ...] = ()
     violations: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class _SessionContext:
+    """同会话的**请求级上下文**（入口播种用）。
+
+    ⚠️ `plan` 是**脱敏后的 C-01 摘要**，不是 `sess:plan` 的原始条目：原始条目里还有
+    `task_id` / `outcome` / `bundle_version` / `at`，它们既不参与条件继承，也不该进图。
+    """
+
+    questions: tuple[str, ...]
+    plan: Mapping[str, Any] | None
 
 
 # ============================================================================
@@ -291,45 +350,52 @@ class SseRunner:
 
     # -- 主流程 -------------------------------------------------------------
 
-    async def _read_session_history(self, identity: IdentityContext) -> tuple[str, ...]:
-        """读同会话的历史**问题**（最新在前 → 反序成时间正序）。
+    async def _read_session_context(self, identity: IdentityContext) -> _SessionContext:
+        """读同会话的**历史问题**与**上一轮脱敏计划摘要**（一次 Redis 读，两个用途）。
 
-        🔴 P0-A-3（U-142）：这是"多轮指代"的**唯一载体**。三条边界：
-        · **只取 `question`** —— `get_turns` 里还有 `outcome` / `plan_summary` / `bundle_version`，
-          它们**不得**出站（§10.5 ⑥ 禁"历史 SQL 与结果"；`plan_summary` 是计划摘要，
-          也不能进 prompt —— 只有**问题本身**在 `egress_guard._EGRESS_ALLOWED_KEYS` 里）；
-        · 上限交给 `payloads.sanitize_history`（`MAX_HISTORY_TURNS`）—— 与提示词侧的截断**同一处**，
-          不在这里另设一个数（否则两处各自演化）；
-        · 读失败**不抛**：只告警 + 返回空历史（与 `clarify.py:272-278` 的写失败同口径）。
+        三条边界与 `_read_session_history` 同源：
+        · 问题只取 `question`，最新在前 → 反序成时间正序；
+        · 计划只取**最新一条**的 `plan_summary`（上一轮若不是可执行终态则没有摘要 ⇒ 不继承）；
+        · 读失败**不抛**：告警后退化为空上下文（多轮是增强项，不得炸掉本轮）。
         """
         try:
             turns = await self._store.get_turns(identity, identity.session_id)
-        except Exception as exc:  # noqa: BLE001 —— 历史是增强项，不得炸掉本轮
+        except Exception as exc:  # 历史是增强项，不得炸掉本轮
             _log.warning(
                 "session_history_read_failed",
                 task_id=identity.task_id,
                 error_type=type(exc).__name__,
                 extra_fact="读失败 → 本轮以空历史继续（多轮指代退化为单轮）",
             )
-            return ()
+            return _SessionContext(questions=(), plan=None)
         questions = [str(t.get("question")) for t in turns if isinstance(t, Mapping) and t.get("question")]
-        return tuple(reversed(questions))  # 存储是最新在前（LPUSH），提示词要时间正序
+        latest = turns[0] if turns and isinstance(turns[0], Mapping) else None
+        plan = _sanitize_history_plan(latest.get("plan_summary")) if latest else None
+        return _SessionContext(
+            questions=tuple(reversed(questions)),  # 存储是最新在前（LPUSH），提示词要时间正序
+            plan=plan,
+        )
+
+    async def _read_session_history(self, identity: IdentityContext) -> tuple[str, ...]:
+        """读同会话的历史**问题**（兼容入口；真实读路径见 `_read_session_context`）。"""
+        return (await self._read_session_context(identity)).questions
 
     async def stream(self, req: RunRequest) -> AsyncIterator[bytes]:
         """跑图并逐帧产出 SSE 字节（**首个 yield 是 `ack`**，W5 的硬要求）。"""
         recorder = EventRecorder(encoder=sse.encode, explain=req.explain)
         run_context = RunContext(self._new_deps(), recorder=recorder)
-        #: 🔴 P0-A-3（U-142）：把同会话的**历史问题**播种进组 1 的 `history_questions`。
-        #: 读失败**不抛**（与 `clarify.py:272-278` 的写失败同口径：历史是增强项，
-        #: 不能因为 Redis 抖一下把一次正常查询炸成 `INTERNAL`）—— 只告警 + 传空历史。
-        history = await self._read_session_history(req.identity)
+        #: 🔴 P0-A-3（U-142）+ B6（U-154）：把同会话的**历史问题**与**上一轮脱敏计划摘要**
+        #: 播种进组 1。读失败**不抛**（历史是增强项，不能因为 Redis 抖一下把一次正常查询
+        #: 炸成 `INTERNAL`）—— 只告警 + 传空历史/空计划。
+        session_context = await self._read_session_context(req.identity)
         state = initial_state(
             req.identity,
             raw_question=req.question,
             # ⚠️ `options` 必须是**纯 dict**（见 `RunRequest` 的注释）。
             options=dict(req.options) if req.options else None,
             idempotency_key=req.idempotency_key,
-            history_questions=history,
+            history_questions=session_context.questions,
+            history_plan=session_context.plan,
         )
         #: 用初始 state 播种累积器（组 1 的身份字段不经任何节点的增量，见 `_RunTrace`）。
         trace = _RunTrace(state=dict(state))

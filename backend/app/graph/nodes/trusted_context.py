@@ -57,9 +57,10 @@ __all__ = ["trusted_context"]
 #: 因为**值为 `None` 是合法的**（不带 `options` 的请求本来就是合法请求）。
 #:
 #: 🔴 为什么必须显式列出而不是靠 `state.get(f) is None` 判定：
-#: `REQUIRED_STATE_FIELDS` 是组 1 **全集**（**12** 个 —— 11 个是 07 §5.2 原文，
-#: 第 12 个 `history_questions` 是 P0-A-3（U-142）新增的载体，见 `state.py:126-129`），
-#: 其中 9 个字段每轮必有值（8 个身份 + `raw_question` + `history_questions`），
+#: `REQUIRED_STATE_FIELDS` 是组 1 **全集**（**13** 个 —— 11 个是 07 §5.2 原文，
+#: 第 12 个 `history_questions` 是 P0-A-3（U-142）新增的载体，第 13 个
+#: `history_plan` 是 B6（U-154）新增的脱敏计划摘要载体），
+#: 其中 11 个字段每轮必有值（8 个身份 + `raw_question` + `history_questions` + `history_plan`），
 #: 而那两个可选请求体**合法地可以是 `None`** ——
 #: 用 `is None` 会把"客户端没带"读成"API 层没播种"，判错方向还会 fail-fast 掉正常请求。
 #: （早期版本反过来：用 `is None` 判缺 ⇒ 本产品自己的官方构造器造出的状态过不了本节点的

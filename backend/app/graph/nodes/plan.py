@@ -44,9 +44,13 @@ from app.graph.nodes._shared import (
 )
 from app.graph.state import GraphState
 from app.llm.errors import LlmError
+from app.obs.logging import get_logger
 from app.planner.errors import PlannerError
+from app.planner.inherit import inherit_plan
 
 __all__ = ["plan"]
+
+_log = get_logger(__name__)
 
 
 async def plan(state: GraphState) -> dict[str, Any]:
@@ -106,5 +110,20 @@ async def plan(state: GraphState) -> dict[str, Any]:
         }
         return update
 
-    payload: Mapping[str, Any] = outcome.state_payload()
-    return dict(payload)
+    payload: dict[str, Any] = dict(outcome.state_payload())
+    #: 🔴 B6（U-154）：上一轮脱敏计划摘要 → **只补本轮空位**（时间窗/维度/筛选/粒度/排序/上限）。
+    #: 继承结果写回本轮的 `plan` / `plan_summary`，下游 `bind` 与 `gen_sql` 读到的就是合并后的计划；
+    #: `history_plan` 本身**不出站**（不在 `PROMPT_ALLOWED_FIELDS`）。
+    history_plan = state.get("history_plan")
+    if isinstance(history_plan, Mapping):
+        inherited = inherit_plan(outcome.plan, history_plan, question)
+        if inherited.fields:
+            payload["plan"] = inherited.plan.model_dump()
+            payload["plan_summary"] = inherited.plan.to_summary().model_dump()
+            _log.info(
+                "history_plan_inherited",
+                task_id=identity.task_id,
+                fields=list(inherited.fields),
+                extra_fact="多轮追问：本轮计划缺失的条件由上轮摘要补齐（只补空位，不覆盖本轮）",
+            )
+    return payload

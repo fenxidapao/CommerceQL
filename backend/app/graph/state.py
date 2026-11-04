@@ -125,6 +125,7 @@ STATE_GROUPS: Final[Mapping[str, tuple[str, ...]]] = {
         "shop_ids",
         "raw_question",
         "history_questions",   # 🔴 P0-A-3 新增（U-142 的载体）：同会话历史问题，入口播种
+        "history_plan",        # 🔴 B6 新增（U-154）：上一轮脱敏计划摘要，仅用于条件继承
         "options",
         "idempotency_key",
     ),
@@ -291,6 +292,11 @@ class GraphState(TypedDict, total=False):
     #: ⚠️ 此前**没有**这个字段 ⇒ `normalize` 只能调 `history=()`（缺口登记 U-142），
     #: 表现为"多轮指代（它/那个）拿不到上一轮上下文"。字段属**组 1**（入口播种、之后只读）。
     history_questions: tuple[str, ...]
+    #: 🔴 **B6（U-154）**：上一轮**脱敏计划摘要**（C-01 键集；不含 SQL/结果/资产物理名）。
+    #: 由 `runner` 从 `sess:plan` 的最新一条播种；`plan` 节点据此做确定性的**条件继承**
+    #: （时间窗/维度/筛选/粒度/排序/上限），**不直接出站**（PROMPT ❌）。
+    #: 与 `history_questions` 同为组 1（入口播种、之后只读）。
+    history_plan: OpaquePayload | None
     options: OpaquePayload | None      # U-24：`RunOptions`；判据⑦ 起本轮没带 = `None`（键恒存在）
     idempotency_key: str | None
 
@@ -469,6 +475,7 @@ def initial_state(
     options: OpaquePayload | None = None,
     idempotency_key: str | None = None,
     history_questions: Sequence[str] = (),
+    history_plan: Mapping[str, Any] | None = None,
 ) -> GraphState:
     """图入口的初始状态：组 1 由请求重写，**组 2–11 一律显式复位成 `None`**。
 
@@ -513,6 +520,9 @@ def initial_state(
     #: （`()` 也写）。理由同：它是**每轮请求级**输入；条件写会让"本轮没历史"继承上一轮的键。
     #: ⚠️ 本轮的空白历史必须留下**空元组**而不是 `None`（`normalize` 按 `or ()` 读）。
     state["history_questions"] = tuple(history_questions)
+    #: 🔴 B6（U-154）：上一轮脱敏计划摘要 —— 同样**无条件写**（`None` 也写）。
+    #: 空计划 = `None`，`plan` 节点按 `state.get("history_plan")` 判空后不做继承。
+    state["history_plan"] = dict(history_plan) if history_plan else None
     return state
 
 
