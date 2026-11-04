@@ -157,7 +157,7 @@ async def normalize(state: GraphState) -> dict[str, Any]:
     # 这能保证 normalize 超时不会把“应拒”折成 infra error，且不产生任何 token。
     foreign_code = detect_foreign_tenant_code(question, identity.tenant_id)
     if foreign_code is not None:
-        update = {
+        update: dict[str, Any] = {
             "intent": IntentKind.REFUSE.value,
             "intent_detail": {
                 "reason_code": "unauthorized_scope",
@@ -224,7 +224,7 @@ async def normalize(state: GraphState) -> dict[str, Any]:
                 "attempts": getattr(exc, "attempts", None),
             },
         )
-        update: dict[str, Any] = {
+        update = {
             "intent": IntentKind.REFUSE.value,
             "intent_detail": {
                 "reason_code": "understand_unavailable",
@@ -243,7 +243,7 @@ async def normalize(state: GraphState) -> dict[str, Any]:
         return update
 
     context.record_usage(outcome.meta.tokens, outcome.meta.cost_cny)
-    update: dict[str, Any] = _demote_unambiguous_shop_city_clarification(
+    update = _demote_unambiguous_shop_city_clarification(
         dict(outcome.state_payload()), question
     )
     # 🔴 W58 P0：raw 中出现非本租户代号，但 LLM 把它改写/删掉时，

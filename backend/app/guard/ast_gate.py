@@ -451,7 +451,13 @@ def _normalize_limit(
 # 默认谓词注入（AST 层）
 # ---------------------------------------------------------------------------
 
-def _parse_predicate(predicate_sql: str) -> exp.Expr | None:
+def _parse_predicate(predicate_sql: str) -> exp.Expression | None:
+    #: ⚠️ 标注面必须是 `Expression`（不是更宽的基类 `Expr`）：下游 `_contradiction` /
+    #: `_comparison` 收的就是 `Expression`。而 `sqlglot.parse_one` 的**类型面**只声明返回
+    #: `Expr`、运行时却一律是 `Expression` 子类 ⇒ 本函数两处 return 用 `isinstance` 做
+    #: **真窄化**：万一真拿到非 `Expression`，返回 `None` ⇒ 该条默认谓词被跳过 ⇒ 与本模块
+    #: 「宁可少注入一条，也不注入一条把结果清零的谓词」的 fail-conservative 方向一致。
+    #: 不用 `cast` / `# type: ignore`：那会把这条不匹配藏起来（存量 mypy 8 条里的第 4 条）。
     try:
         node = sqlglot.parse_one(predicate_sql, dialect="postgres")
     except ParseError:
@@ -461,8 +467,8 @@ def _parse_predicate(predicate_sql: str) -> exp.Expr | None:
         if where is None:
             return None
         predicate = where.this
-        return predicate if isinstance(predicate, exp.Expr) else None
-    return node
+        return predicate if isinstance(predicate, exp.Expression) else None
+    return node if isinstance(node, exp.Expression) else None
 
 
 def _predicate_constants(node: exp.Expr) -> frozenset[str]:

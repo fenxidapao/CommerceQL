@@ -271,9 +271,18 @@ def _demote_time_blockers(
     """
     if not plan.blocking_issues or not plan.metrics:
         return plan, ()
-    metrics = []
+    #: ⚠️ `metric()` **不在 `SemanticBundlePort` 的声明面里**（端口只有 `active_version` /
+    #: `asset_allowlist` / `guard_allowlist` / `time_semantics` / `policy` 五个方法，实现在
+    #: `app/semantics/runtime.py:341`）—— 这是 `U-122` 家族（端口声明面 < 实际调用面）的
+    #: 第三处实例，**不是类型小毛病**。此处按本仓既有约定走可选能力探测（同 `nodes/gate1_ast.py`
+    #: 对端口外能力的处置），**不新增第二份端口真相**：端口扩面归 `U-122` 的判据面做。
+    #: 探测不到 ⇒ 走下面那句 `return plan, ()` 保守保留阻塞（fail-conservative，不放松口径）。
+    probe = getattr(semantics, "metric", None)
+    if not callable(probe):
+        return plan, ()
+    metrics: list[Any] = []
     for item in plan.metrics:
-        metric = semantics.metric(str(item.name))
+        metric = probe(str(item.name))
         if metric is not None:
             metrics.append(metric)
     # 指标名由模型自由填写；若一个都解析不到，就无法证明“该指标允许全历史”。

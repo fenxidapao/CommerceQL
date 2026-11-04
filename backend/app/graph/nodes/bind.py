@@ -191,7 +191,9 @@ def _l4_raw_payload(
     if ok and items:
         ids = [str(s.candidate_id) for s in items]
         values = [float(s.value) for s in items]
-        scorer = {
+        #: 显式声明可空：失败态（见下）两个字段都写 `None`；不声明就会被上面的
+        #: `str(...)` 推断成 `dict[str, str]`，mypy 在失败态那行报 dict-item（8 条存量之一）。
+        scorer: dict[str, str | None] = {
             "model_id": str(items[0].model_id),
             "prompt_version": str(items[0].prompt_version),
         }

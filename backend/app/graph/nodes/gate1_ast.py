@@ -88,7 +88,7 @@ async def gate1_ast(state: GraphState) -> dict[str, Any]:
                 "metric window unenforceable (fail-closed): code=%s detail=%s",
                 exc.code, exc.detail,
             )
-            update = terminal_update(
+            update: dict[str, Any] = terminal_update(
                 state,
                 event="refuse",
                 outcome=Outcome.REFUSE,
@@ -111,7 +111,7 @@ async def gate1_ast(state: GraphState) -> dict[str, Any]:
             sql, allowlist, metrics=_metric_names(state), params=params
         )
 
-    update: dict[str, Any] = dict(gate_update(state, GateNo.AST, report.gate_result))
+    update = dict(gate_update(state, GateNo.AST, report.gate_result))
     if report.gate_result.passed:
         update["sql_text"] = report.rewritten_sql
         if windowed is not None and windowed.changed:
