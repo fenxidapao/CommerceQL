@@ -897,6 +897,7 @@ def build_graph_runtime(
             gate3_thresholds=thresholds,
             max_rows=settings.EXEC_MAX_ROWS,
             statement_timeout_ms=settings.EXEC_STATEMENT_TIMEOUT_MS,
+            complex_query_enabled=settings.COMPLEX_QUERY_ENABLED,
         )
 
     return GraphRuntime(

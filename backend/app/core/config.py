@@ -115,6 +115,8 @@ class Settings(BaseSettings):
 
     # ---------------- 执行与安全 ----------------
     EXEC_STATEMENT_TIMEOUT_MS: int = Field(default=30000, gt=0)
+    #: 复杂档开关（B6）：默认关，保持既有评测/演示口径不变；需要时用环境变量打开。
+    COMPLEX_QUERY_ENABLED: bool = False
     EXEC_MAX_ROWS: int = Field(default=10000, gt=0)
     EXEC_MAX_MEMORY_MB: int = Field(default=512, gt=0)  # 超限 → EXEC_RESOURCE_EXCEEDED
     EXEC_COST_ROW_THRESHOLD: int = Field(default=1_000_000, gt=0)

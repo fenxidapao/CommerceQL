@@ -133,6 +133,10 @@ class GraphDeps:
     #: **默认 `True`** —— 该手段在 §16.1 的状态栏是 ✅ 已落地，且"不合并"的路径不满足
     #: 8s P95。留开关是因为 §16.1 DoD① 要**实测**"合并省了多少"，没有单跑路径就无从测量。
     merged_understand: bool = True
+    #: 复杂档开关（B6）：关闭时 `gen_sql` 恒走 `GEN_SQL`，与旧评测口径一致。
+    #: 默认 `False` 是**刻意**的：`looks_complex` 是自设启发式，打开会改变成本/延迟分布，
+    #: 必须先有对照读数，不能默认漂移。
+    complex_query_enabled: bool = False
 
 
 class RunContext:
