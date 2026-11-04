@@ -48,6 +48,7 @@ from app.cache.session_lock import RedisSessionLock
 from app.core.config import Settings
 from app.core.contracts import (
     AuditSinkPort,
+    CachePort,
     IdentityContext,
     RateLimiterPort,
     SessionLockPort,
@@ -206,6 +207,11 @@ class GraphRuntime:
     #: 不挂出来的直接后果是"开发期一切正常、压测/长跑后连接数只增不减"。
     gateway: Any | None = None
     cost_ledger: Any | None = None
+    #: 结果集缓存（`CachePort` 实现）。轮询端按 `result:{tenant}:{task_id}` 读回**已脱敏**行，
+    #: 补上附录 A §A.2 说的"与 SSE 的 `data` 帧同构"（此前轮询的 `data` 恒 `null`）。
+    #: ⚠️ 必须与 `GraphDeps.result_cache` 是**同一个实例**（`single_flight` 的进程内锁挂在
+    #: 实例上）—— 每请求新建等于把防击穿拆掉。由 `build_graph_runtime` 一处造、两处用。
+    result_cache: CachePort | None = None
 
 
 def build_token_verifier(settings: Settings) -> TokenVerifier:
@@ -891,6 +897,7 @@ def build_graph_runtime(
         store=store,
         verifier=build_token_verifier(settings),
         new_deps=new_deps,
+        result_cache=result_cache,
         gateway=gateway,
         cost_ledger=cost_ledger,
     )
