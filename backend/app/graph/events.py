@@ -74,6 +74,7 @@ from app.core.enums import (
     Stage,
 )
 from app.core.errors import ContractViolationError
+from app.graph.data_frame import data_payload
 from app.graph.nodes import (
     AUDIT_PRE,
     AUDIT_SUPP,
@@ -228,16 +229,19 @@ def emissions_for_node(
         if update.get("terminal") is not None:
             return ()
         columns = _seq(update.get("result_columns"))
+        #: 载荷**不在这里拼**：`data` 的唯一构造点是 `app/graph/data_frame.py::data_payload`
+        #: —— `nodes/mask.py` 写结果集缓存时调的是同一个函数。理由 = 附录 A §A.2
+        #: 「轮询的 `data` 与 SSE 的 `data` 帧同构」：两处各拼一份字典，改一处必漏另一处，
+        #: 而漏掉**不会报错**（前端只是把某一列的单位/类型标错）。
         return (
             Emission(
                 SseEvent.DATA,
-                {
-                    "columns": [_jsonable(c) for c in columns],
-                    "rows": _jsonable(payload_extra.get("rows", update.get("result_rows", ()))),
-                    "row_count": update.get("row_count", 0),
-                    "truncated": bool(update.get("truncated", False)),
-                    "amount_unit": _amount_unit(columns),
-                },
+                data_payload(
+                    columns=columns,
+                    rows=payload_extra.get("rows", update.get("result_rows", ())),
+                    row_count=update.get("row_count", 0),
+                    truncated=bool(update.get("truncated", False)),
+                ),
             ),
         )
 

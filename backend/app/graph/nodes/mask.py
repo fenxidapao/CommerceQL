@@ -44,6 +44,7 @@ from typing import Any
 from app.core.contracts import ColumnMeta
 from app.core.enums import ErrorCode, Outcome
 from app.graph.context import RunContext
+from app.graph.data_frame import data_payload
 from app.graph.nodes._shared import deps_of, rc, terminal_update
 from app.graph.state import GraphState
 from app.mask import MaskFailed
@@ -115,11 +116,19 @@ async def _write_result_cache(
     from app.cache.keys import result_set  # 局部：键构造函数只能有一处（§11.2 硬规则 3）
 
     key = result_set(str(state["tenant_id"]), str(state["task_id"]))
+    #: ✅ 2026-11-04：`columns` 改存**列元数据对象**（原先是 `[col.name ...]`）。
+    #: 依据 = 附录 A §A.2「轮询的 `data` 与 SSE 的 `data` 帧同构」，而帧里 `columns` 是
+    #: `{name, type_name, unit}` 且另有 `amount_unit` ⇒ 只存列名的话，读回方必须自己
+    #: 再拼一遍元数据 = 同一份下发两种形状。载荷统一由 `data_frame.data_payload` 构造。
     payload = {
-        "columns": [col.name for col in columns],
-        "rows": rows,
-        "row_count": int(state.get("row_count") or len(rows)),
-        "truncated": bool(state.get("truncated")),
+        **data_payload(
+            columns=columns,
+            rows=rows,
+            row_count=int(state.get("row_count") or len(rows)),
+            truncated=bool(state.get("truncated")),
+        ),
+        #: 内部读数：**不进下发**（轮询侧按 `data_frame.DATA_PAYLOAD_KEYS` 裁剪；
+        #: 缓存里留着它，供异步/重放与取证读，07 §8.8）。
         "fingerprint": state.get("result_fingerprint"),
     }
     try:
