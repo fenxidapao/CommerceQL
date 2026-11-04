@@ -94,7 +94,7 @@ from app.graph.data_frame import DATA_PAYLOAD_KEYS
 from app.obs.logging import get_logger
 from app.obs.trace import new_id
 
-__all__ = ["HEADER_IDEMPOTENCY_KEY", "router"]
+__all__ = ["HEADER_IDEMPOTENCY_KEY", "read_cached_result", "router"]
 
 _log = get_logger(__name__)
 
@@ -335,7 +335,7 @@ async def poll_query(
             field: payload[field] for field in _POLL_FIELDS if field in payload
         }
         if fields.get("data") is None and status in _DATA_STATUSES:
-            fields["data"] = await _read_cached_result(runtime.result_cache, ctx, task_id)
+            fields["data"] = await read_cached_result(runtime.result_cache, ctx, task_id)
         data = TaskStatusData(
             task_id=task_id,
             status=status,
@@ -346,10 +346,14 @@ async def poll_query(
         return _ok(data, ctx, quota)
 
 
-async def _read_cached_result(
+async def read_cached_result(
     cache: CachePort | None, ctx: IdentityContext, task_id: str
 ) -> dict[str, Any] | None:
     """读回已脱敏结果行（`result:{tenant}:{task_id}`，07 §11.1 键表 / TTL 1h）。
+
+    ⚠️ **公开名、两个调用方**：`GET /query/{task_id}` 的轮询（本文件）与
+    `POST /export`（`routers/export.py`）。两者读的是**同一份**缓存、同一套裁剪规则
+    —— 各写一份就是同一份下发两种形状，而漂移不会报错。
 
     ⚠️ 调用前置：**必须**先过 `store.get_task` 的归属校验（它比对 `tenant_id` + `user_id`，
     不符一律 `None`）。本函数只按 `ctx` 造键、不再判一次权限 —— 两处判同一件事，

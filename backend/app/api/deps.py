@@ -56,9 +56,10 @@ from app.core.contracts import (
 from app.core.enums import RateLimitBucket
 from app.core.errors import CommerceQLError
 from app.obs import metrics
-from app.obs.audit import AuditWriter
+from app.obs.audit import AuditWriter, ExportAuditWriter
 from app.obs.logging import get_logger
 from app.obs.trace import TraceIds, bind_ids, new_id, reset_ids
+from app.repo.audit_export_store import AuditExportStore
 from app.repo.audit_read import AuditReadDAO
 from app.repo.audit_store import AuditStore
 from app.repo.feedback import FeedbackStore
@@ -130,6 +131,10 @@ class AppRuntime:
     #: `pools.metadata` —— 写反了不会有任何报错，只是读路径落在可写连接上，
     #: 而"只读"正是 §A.9.5 判据① 唯一的那道权限面（同 `assert_pools_are_separated` 的理由）。
     audit_read: AuditReadDAO
+    #: 导出审计（`POST /export` 的唯一写入通道，B2）。与 `audit` 同池、同纪律：
+    #: 每语句借还一次。**不复用 `audit`**：那张表是查询级两段式，导出是另一个动作
+    #: （形状差异见 `repo/audit_export_store.py` 的模块 docstring §一）。
+    audit_export: ExportAuditWriter
     #: 本地账号（B3 注册/登录）。与 `feedback` 同池、同纪律：每语句借还一次。
     users: UserStore
     #: RS256 签发器（B3 登录）。懒加载私钥，构造零 I/O。
@@ -158,6 +163,8 @@ def build_runtime(
         rate_limiter=RedisBucketRateLimiter(redis),
         # 审计的 fail-closed 语义在 `obs/audit.py`，SQL 在 `repo/audit_store.py`（§12.4.1 的分工）。
         audit=AuditWriter(AuditStore(pools.metadata)),
+        # 导出审计复用**元数据池**：不新建连接资源（同 `feedback` 的裁定）。
+        audit_export=ExportAuditWriter(AuditExportStore(pools.metadata)),
         # 反馈写入复用**元数据池**（W1B 开工指令 §1）：不新建连接资源。
         feedback=FeedbackStore(pools.metadata),
         # 审计读走**分析只读池**（§A.9.5 判据①）：与写路径分池，本窗不新建第四池。

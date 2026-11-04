@@ -28,6 +28,7 @@ from app.api.routers import (
     admin_eval,
     auth,
     clarify,
+    export,
     feedback,
     health,
     query,
@@ -512,6 +513,8 @@ def create_app() -> FastAPI:
     app.include_router(sessions.router, prefix=API_PREFIX)
     app.include_router(clarify.router, prefix=API_PREFIX)
     app.include_router(feedback.router, prefix=API_PREFIX)
+    # --- Phase B B2：导出（先审计再下发；形状见 routers/export.py 与 docs/02 §A.15）---
+    app.include_router(export.router, prefix=API_PREFIX)
     # --- W8 管理端只读面（T-34，2026-10-04）---
     # 数据源 = 已入库的评测产物（`eval/results_*.json` ＋ 门禁报告），端点内不重跑评测、
     # 不连库、不出站。容器里这两个路径来自只读挂载（`deploy/docker-compose.yml`），

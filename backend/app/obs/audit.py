@@ -64,9 +64,10 @@ from typing import Any
 from app.core.contracts import AuditSinkPort, IdentityContext
 from app.core.errors import AuditWriteFailed
 from app.obs.logging import get_logger
+from app.repo.audit_export_store import AuditExportStore, ExportSchemaMismatch
 from app.repo.audit_store import AuditSchemaMismatch, AuditStore
 
-__all__ = ["AuditWriter"]
+__all__ = ["AuditWriter", "ExportAuditWriter"]
 
 _logger = get_logger(__name__)
 
@@ -161,3 +162,60 @@ class AuditWriter(AuditSinkPort):
                     "但成本/token 相关统计会缺失，需告警跟进"
                 ),
             )
+
+
+class ExportAuditWriter:
+    """导出审计的**策略层**：写失败必须上抛（调用方据此不下发文件）。
+
+    ⚠️ 为什么不复用 `AuditWriter`：那个类实现的是 `AuditSinkPort`，语义是**查询级两段式**
+    （`write_pre` / `write_supp`）。导出是**一次写入、没有补充段**的另一个动作；
+    塞进同一端口会让\"哪一段\"重新变成实现里的 if/else —— 而 N-08 的双终态事故
+    正是这种\"一个方法两种语义\"造出来的。
+
+    ⚠️ 不提供\"关闭 fail-closed\"的开关：导出把数据**带出系统边界**，
+    没有审计的导出等于一次无法追溯的数据外流（07 §11.4 / N-09）。
+    一个这样的开关在第一次线上抖动时就会被打开，然后再也没关回去。
+
+    ⚠️ 为什么放在本文件而不是新开 `obs/audit_export.py`：`obs/` 内**只有本文件**
+    允许依赖 `repo`（`.importlinter` 的 R-DEP-3），而 `tests/contract/test_obs_audit_contract.py`
+    会比对目录实际文件 == 该清单 —— 新建文件会同时打破两处机器判据。
+    """
+
+    def __init__(self, store: AuditExportStore) -> None:
+        self._store = store
+
+    @staticmethod
+    def _identity(ctx: IdentityContext) -> dict[str, Any]:
+        """`IdentityContext` → 身份列（与 `AuditWriter._identity` 同款理由见那里）。"""
+        return {
+            "task_id": ctx.task_id,
+            "tenant_id": ctx.tenant_id,
+            "user_id": ctx.user_id,
+            "role": ctx.role.value,
+        }
+
+    async def write_export(self, ctx: IdentityContext, payload: Mapping[str, Any]) -> None:
+        """写一条导出审计。失败语义 = **fail-closed**。
+
+        ⚠️ 两类错误刻意分开（与 `write_pre` 同款）：
+        - `ExportSchemaMismatch`（字段名不在白名单 / 缺必填列 / 试图传身份列）→ **原样抛出**：
+          它是编程错误，包装成\"审计写失败\"会让排查方向从\"字段名写错了\"偏到\"数据库有问题\"。
+        - 其余任何异常 → 包成 `AuditWriteFailed`（映射 500 `INTERNAL`）并**保留异常链**。
+        """
+        try:
+            await self._store.insert_export_log(self._identity(ctx), payload)
+        except ExportSchemaMismatch:
+            raise
+        except Exception as exc:
+            _logger.error(
+                "audit_export_failed",
+                phase="export",
+                outcome="fail_closed",
+                task_id=ctx.task_id,
+                error_type=type(exc).__name__,
+                extra_fact="导出审计未落库 → 不得下发文件（N-09 延伸到导出面）",
+            )
+            raise AuditWriteFailed(
+                "导出审计写入失败，已中止本次导出（N-09 fail-closed）",
+                detail={"phase": "export", "error_type": type(exc).__name__},
+            ) from exc
