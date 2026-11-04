@@ -371,6 +371,16 @@ class FullChainPlanner:
             latency_ms=1,
         )
 
+    def looks_complex(self, plan: Plan) -> bool:
+        """`PlannerEngine.looks_complex` 的替身面（2026-11-04 随节点改调公开面而补）。
+
+        ⚠️ 默认恒 `False`：全链契约关心的是「绿档能走完」，不是「哪条计划算复杂」；
+        需要复杂档的用例自行覆盖本方法，或直接调 `sql_for(complex_query=True)`。
+        ⚠️ 这个面的存在本身是判据：端口面一旦长出新方法，替身不同步就会 AttributeError
+        打穿整条链 —— 这正是「端口声明面 < 实际调用面」（U-122 家族）能被发现的方式。
+        """
+        return False
+
     async def sql_for(
         self,
         identity: IdentityContext,

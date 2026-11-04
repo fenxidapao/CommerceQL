@@ -1065,6 +1065,19 @@ class PlannerEngine:
             ctx, self._semantics, user_scope=user_scope_hash(ctx.user_id)
         )
 
+    def looks_complex(self, plan: Plan) -> bool:
+        """本计划是否走复杂档（`GEN_SQL_COMPLEX`）—— **公开面**，节点从这里调。
+
+        ⚠️ 为什么必须公开：`app/graph/nodes/gen_sql.py` 的模块 docstring §一 已把处置写死
+        —— 不 import 模块私有名（`_looks_complex`）、不在节点里重抄关键词表
+        （第二份真相，两份必然漂移 —— U-18 的教训）。节点只该调公开面。
+
+        ⚠️ 判定本身是 **W3B 的自设启发式**（`_COMPLEX_HINTS`：排名/占比/同比/环比/累计/
+        增长率/top/rank/window/row_number/partition），07 / PRD 里**没有规则**。
+        本方法只是它的公开投影，判据仍在 `_looks_complex` 一处，**不新增第二份**。
+        """
+        return _looks_complex(plan)
+
     def _few_shots_for(self, question: str) -> tuple[tuple[str, str], ...]:
         """few-shot 取数（**可选能力**：没注入就等于没有 Gold Query 库，不假装有）。"""
         if self._few_shots is None:

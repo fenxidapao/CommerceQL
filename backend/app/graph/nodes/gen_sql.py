@@ -18,6 +18,13 @@ U-67 把 L3+ 生效档定为 `GEN_SQL_COMPLEX = flash 非思考 + 3.0s`，但**�
 一个档次开关）」写进本窗口 RELAY。**后果如实说明**：U-67 标定的 `gen_sql_complex` 档
 在 P0 请求路径上没有触发点（它只在直接调 `PlannerEngine.sql_for(complex_query=True)` 时生效）。
 
+✅ **2026-11-04 已接线**：`_looks_complex` 提为 `PlannerEngine.looks_complex()` 公开方法，
+本节点在 `sql_for(...)` 调用处传 `complex_query=deps.planner.looks_complex(plan)`
+⇒ 上面那句「没有触发点」**作废**（原文保留不删）。判定逻辑一字未动，仍在
+`planner/engine.py::_looks_complex` 一处；本节点没有关键词表、没有私有名 import。
+⚠️ 连带面：全链替身 `tests/contract/_fullchain_deps.py` 同批补了 `looks_complex` 面 ——
+替身缺方法时不会"静默降级"，而是 AttributeError 打穿整条契约链。
+
 --------------------------------------------------------------------------
 二、`sql_candidates` 只写**选中项**（§5.2.1 的体积规则）
 --------------------------------------------------------------------------
@@ -71,8 +78,10 @@ async def gen_sql(state: GraphState) -> dict[str, Any]:
                 normalized_question=question,
                 plan=plan,
                 candidates=deps.sql_candidates,
-                # 见模块 docstring §一：难度判定没有合法调用面 ⇒ P0 恒走 `gen_sql`。
-                complex_query=False,
+                # ✅ 2026-11-04：难度判定有了合法调用面（`PlannerEngine.looks_complex`，
+                # 即原 `_looks_complex` 的公开投影）⇒ 复杂档在请求路径上**可达**。
+                # 仍不 import 私有名、不重抄关键词表（本模块 docstring §一 的两条禁令）。
+                complex_query=deps.planner.looks_complex(plan),
             )
     except LlmError as exc:
         return llm_error_update(state, exc, stage="gen_sql")
