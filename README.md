@@ -1,7 +1,7 @@
 # CommerceQL
 
 > **新 Agent / 新接手请先读 [`AGENTS.md`](AGENTS.md)**（导航、阅读预算、禁区、五个陷阱）。本文是工程约束说明。
-> **现状态（2026-11-03）→ [`docs/09_当前状态与交接.md`](docs/09_当前状态与交接.md)**：HEAD、完成度、实测读数、未完成项与验证命令一页给全；本文 §1 只是快照。
+> **现状态（2026-11-04）→ [`docs/09_当前状态与交接.md`](docs/09_当前状态与交接.md)**：HEAD、完成度、实测读数、未完成项与验证命令一页给全；本文 §1 只是快照。
 
 > **Showcase**：受控 Text2SQL 电商分析 Agent —— 三道闸门 + 租户 RLS + 两段式审计。
 > **EX_official = 72.73% ± 1.82%**（Olist 60 题，3 批，n=3，v2 / 百炼 `deepseek-v4.1-flash`）｜ **448,152 行** Olist 五表入库 + RLS 金丝雀｜ **5/5** 生产栈 demo（4 图 + 1 拒答）。
@@ -23,18 +23,18 @@
 
 ---
 
-## 1. 当前状态（2026-11-03 快照 · 必然过期）
+## 1. 当前状态（2026-11-04 快照 · 必然过期）
 
 > **完整完成度与未完成项见 [`docs/09_当前状态与交接.md`](docs/09_当前状态与交接.md)**；本节只是速览。
 > 引用前先实跑 `git rev-parse --short HEAD; git rev-list --count HEAD; git status -sb` 并读源件，不要抄本节。
 
 | 项 | 读数 | 源 |
 |---|---|---|
-| 代码 HEAD | 最后代码提交 `ebf1471` / 775 笔（本节文档提交后 776）；`origin/main` 落后 **64 笔（未推送；文档提交后 65）** | `git log -1`；`git rev-list --count HEAD`；`git status -sb` |
-| 后端回归 | `2410 passed / 3 failed`（既有 3 条：`admin_eval_report_contract` 1、`shape_guard_faces` 2）；`tests/eval` 505 passed / 2 failed（既有） | 2026-11-02 基线 @ `ebf1471`；命令见 docs/09 §7 |
-| 前端 | `33 passed`（5 files）；`tsc --noEmit` 通过 | 2026-11-03 复跑 |
-| 静态检查 | `ruff 214`（114 可自动修）；`mypy 8 errors / 5 files`；`lint-imports 4 kept / 0 broken` | 2026-11-03 复跑；存量，不是本轮引入 |
-| Phase B | B1/B3/B4/B5 **完成**（前后端）；B2/B6/B7 **未做**；B8 可选 | `docs/09` §4.2；提交见 git log |
+| 代码 HEAD | 最后代码提交 `adce347` / 788 笔（本节文档提交后 789）；`origin/main` 落后 **77 笔（未推送；文档提交后 78）** | `git log -1`；`git rev-list --count HEAD`；`git status -sb` |
+| 后端回归 | B2/B6 定向 **127 passed**；全量 unit+contract 本次未重跑（`ebf1471` 时点基线 2410/3 仅作历史）；`tests/eval` 505 passed / 2 failed（既有） | 2026-11-04 定向复跑；命令见 docs/09 §7 |
+| 前端 | `33 passed`（5 files）；`tsc --noEmit` 通过 | 2026-11-03 复跑；此后前端未改（B2 前端未做） |
+| 静态检查 | `ruff 214`（114 可自动修）；`mypy 0 / 177 files`；`lint-imports 4 kept / 0 broken` | 2026-11-04 复跑 |
+| Phase B | B1/B3/B4/B5 **完成**；**B2 后端完成、前端/验收未做**；**B6 复杂档已接线，多轮/few-shot 未做**；B7 未做；B8 可选 | `docs/09` §4.2；提交见 git log |
 | 官方快照 | `88f3500` / **PASS 1/8**（PASS 1 / FAIL 3 / PARTIAL 2 / UNVERIFIED 2），生成 `2026-10-07T05:27:34Z`，最后改动该文件的提交 `24d4477` | `backend/reports/w6/eval_metrics.json`；`backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md` |
 | 当期复算 | **6 PASS / 0 PARTIAL / 2 UNVERIFIED / 0 FAIL**，复算件 rev `26421ae`（2026-10-24） | `eval/results_w80_gate_recompute.json`；`backend/reports/w8/DELIVERY.md` 终版节 |
 | 契约文档 | `07 v1.7.41`（3,704 行）；`08 v1.4.3` | `docs/07_技术设计文档_TDD.md` 头部版本字段 |
@@ -166,8 +166,9 @@ F=backend/reports/qa/RELAY.md;      N=$(grep -n '^## ' "$F" | tail -1 | cut -d: 
 - **探针**：`/api/v1/healthz/ready` 当前栈已实测 200；旧文档里"阶段 0 恒 503"是历史读数。
 - **决策点 τ 未校准**：L4 决策份额 0/166；G-2 / G-5 / G-7 的 PASS 标 `tau_applicability=not_exercised`
   （条件性非适用，不是校准证据）。`APP_ENV=prod` 时该检查 fail-closed。
-- **结果缓存有键、无实现**：`cache/keys.py` 有 `result_set` 键与 TTL，但 `app/cache/` 没有 CachePort 实现
-  ⇒ 轮询接口 `data` 恒 `null`；这是 **B2 后端导出的前置**（`eval/harness.py` 显式 `result_cache=None`，评测本身不走缓存）。
+- **结果集缓存已落地（2026-11-04）**：`app/cache/redis_cache.py::RedisCache` 是 `CachePort` 首个实现，
+  mask 写侧与轮询 `GET /query/{task_id}` 已接线，`data` 不再恒 `null`；B2 导出读同一份已脱敏行。
+  这不是 ADR-12 禁掉的"按问题缓存答案"，评测链路仍显式 `result_cache=None`。
 - **4 条启动断言**（分析库只读角色、embedding 维度、审计表权限、语义包五步校验）必须连真实依赖才能判定。
 - **G-6（P95 ≤ 8s）仍 `UNVERIFIED`**：需要 live LLM 预算（约 ¥40+）、容量决策（U-126：flash 槽位现 8，
   50 并发/8s 按推导需约 38–48）与满档 50 并发 × 10 分钟的全请求分母（429 单列）。
