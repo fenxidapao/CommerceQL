@@ -87,8 +87,10 @@ from app.api.ratelimit import RateLimitQuota
 from app.api.runner import RunOutcome, RunRequest, SseRunner
 from app.api.sse import SSE_MEDIA_TYPE
 from app.auth.tokens import VerifiedToken
-from app.core.contracts import IdentityContext
+from app.cache.keys import result_set
+from app.core.contracts import CachePort, IdentityContext
 from app.core.enums import Outcome, RateLimitBucket, SseEvent, TaskStatus
+from app.graph.data_frame import DATA_PAYLOAD_KEYS
 from app.obs.logging import get_logger
 from app.obs.trace import new_id
 
@@ -132,6 +134,17 @@ _TERMINAL_STATUSES: frozenset[str] = frozenset(
         TaskStatus.FAILED.value,
         TaskStatus.CANCELLED.value,
     }
+)
+
+#: 允许从结果集缓存下发 `data` 的终态。
+#:
+#: ⚠️ 这不是"有哪些终态"的清单，而是**安全判据**：`audit_pre` 写失败时图会落
+#: `terminal=error` 且**不发** `data` 帧（`graph/events.py` 的 fail-closed 分支）——
+#: 若轮询无条件读缓存，就会把"审计写失败"的那一轮数据补发出去，而 N-09 明文是
+#: **审计写失败 = 不下发数据**。故只认"SSE 真的发过 data 帧"的那两个终态：
+#: `succeeded`（正常complete）与 `degraded`（部分能力失效但结果已下发）。
+_DATA_STATUSES: frozenset[str] = frozenset(
+    {TaskStatus.SUCCEEDED.value, TaskStatus.DEGRADED.value}
 )
 
 
@@ -300,8 +313,15 @@ async def poll_query(
     ⚠️ `status` 取值集 = `TaskStatus` 的 8 值，**与附录 A §A.2 逐字一致**
     （W0 `d09020c` 已把枚举值对齐 ⇒ W4 PROMPT §七-1 关闭）。
     ⚠️ 不加 `Cache-Control`：前端 3s 轮询，缓存会让状态看起来卡住。
+
+    ✅ 2026-11-04（③b-2）：`data`（结果行）不再恒 `null` —— 归属校验通过后按
+    `result:{tenant}:{task_id}` 从结果集缓存读回**已脱敏**行。三条边界：
+    ① 只在 `_DATA_STATUSES` 的终态读（理由见该常量）；② 读失败只告警、`data` 留 `None`
+    （缓存是旁路，本次结果早已经 SSE 下发）；③ 行**不进** `task_state`
+    —— 唯一允许位置仍是结果集缓存（`api/runner.py` 的 P0 边界表 / 07 §5.2.1）。
     """
-    store = get_state_store(request)
+    runtime = get_graph_runtime(request)
+    store = runtime.store
     ctx = new_identity(token, session_id=new_id("session"), task_id=task_id)
     remember_identity(request, ctx)
 
@@ -311,14 +331,60 @@ async def poll_query(
         if payload is None:
             raise task_not_found(task_id)
         status = str(payload.get("status") or TaskStatus.FAILED.value)
+        fields: dict[str, Any] = {
+            field: payload[field] for field in _POLL_FIELDS if field in payload
+        }
+        if fields.get("data") is None and status in _DATA_STATUSES:
+            fields["data"] = await _read_cached_result(runtime.result_cache, ctx, task_id)
         data = TaskStatusData(
             task_id=task_id,
             status=status,
             # 自描述轮询地址（**非**附录 A 明文）。仅在非终态给：终态再让前端轮询是误导。
             poll_url=None if status in _TERMINAL_STATUSES else str(request.url),
-            **{field: payload[field] for field in _POLL_FIELDS if field in payload},
+            **fields,
         )
         return _ok(data, ctx, quota)
+
+
+async def _read_cached_result(
+    cache: CachePort | None, ctx: IdentityContext, task_id: str
+) -> dict[str, Any] | None:
+    """读回已脱敏结果行（`result:{tenant}:{task_id}`，07 §11.1 键表 / TTL 1h）。
+
+    ⚠️ 调用前置：**必须**先过 `store.get_task` 的归属校验（它比对 `tenant_id` + `user_id`，
+    不符一律 `None`）。本函数只按 `ctx` 造键、不再判一次权限 —— 两处判同一件事，
+    早晚一处被改而另一处忘了，而这类"两处各判一次"在权限面上是最典型的假绿来源。
+
+    ⚠️ 读失败**不阻断**轮询：缓存是**旁路**（本次结果已经 SSE 下发过了），
+    为它抛 500 等于把旁路设施当主链路。失败只告警、返回 `None`。
+
+    ⚠️ 按 `DATA_PAYLOAD_KEYS` 裁剪：缓存里还留着内部读数（`fingerprint`），
+    直接原样下发会把它漏进响应，而它是 07 §8.8 的取证字段、不是契约字段。
+    """
+    if cache is None:
+        return None
+    key = result_set(ctx.tenant_id, task_id)
+    try:
+        raw = await cache.get(key)
+    except Exception as exc:
+        _log.warning(
+            "result_cache_read_failed",
+            outcome="non_blocking",
+            task_id=task_id,
+            error_type=type(exc).__name__,
+        )
+        return None
+    if raw is None:
+        return None
+    try:
+        loaded = json.loads(raw)
+    except ValueError:
+        # 写入侧是 orjson 的合法输出；解析不了说明键被别的写法占过 —— 不猜、不下发。
+        _log.warning("result_cache_payload_unparsable", task_id=task_id)
+        return None
+    if not isinstance(loaded, dict):
+        return None
+    return {field: loaded[field] for field in DATA_PAYLOAD_KEYS if field in loaded}
 
 
 # ===========================================================================
