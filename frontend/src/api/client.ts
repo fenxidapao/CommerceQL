@@ -142,3 +142,81 @@ export const closeSession = (sessionId: string) =>
 /** B5：资产详情（已被拒列由后端整列剔除，前端不判断）。 */
 export const getAssetDetail = (logicalName: string) =>
   apiGet<AssetDetail>(`/semantic/assets/${encodeURIComponent(logicalName)}`);
+
+export interface ExportFile {
+  blob: Blob;
+  filename: string;
+}
+
+function filenameFrom(header: string | null, taskId: string): string {
+  const match = /filename="?([^";]+)"?/i.exec(header ?? '');
+  if (!match) return `${taskId}.csv`;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+/**
+ * B2：导出查询结果。
+ *
+ * ⚠️ 不能复用 `request()`：那个统一 `resp.json()`，而本端点成功时回的是 `text/csv`。
+ * 失败仍走统一错误封套（`{code,message,trace_id}`），故错误分支单独解析。
+ * ⚠️ 前端只**触发下载**：不把已到浏览器的数据重新拼 CSV（会绕过 `audit_export_log`）。
+ */
+export async function exportResult(taskId: string): Promise<ExportFile> {
+  let resp: Response;
+  try {
+    resp = await fetch(`${API_BASE}/export`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+        'X-Trace-Id': crypto.randomUUID(),
+      },
+      body: JSON.stringify({ task_id: taskId }),
+    });
+  } catch (err) {
+    throw new ApiError({
+      code: 'INTERNAL',
+      message: err instanceof Error ? err.message : '网络请求失败',
+      httpStatus: 0,
+    });
+  }
+
+  const ra = Number(resp.headers.get('Retry-After'));
+  const retryAfterSec = Number.isFinite(ra) && ra > 0 ? ra : undefined;
+
+  if (!resp.ok) {
+    let payload: unknown = null;
+    try {
+      payload = await resp.json();
+    } catch {
+      payload = null;
+    }
+    const env = payload as ApiEnvelope<unknown> | null;
+    throw new ApiError({
+      code: env?.code ?? 'INTERNAL',
+      message: env?.message ?? `HTTP ${resp.status}`,
+      traceId: env?.trace_id,
+      httpStatus: resp.status,
+      retryAfterSec,
+    });
+  }
+
+  const contentType = resp.headers.get('content-type') ?? '';
+  if (!contentType.toLowerCase().includes('text/csv')) {
+    // 契约不该走到这里；走到了说明后端回了非 CSV 的 2xx，按错误处理，避免下载一份 JSON。
+    throw new ApiError({
+      code: 'INTERNAL',
+      message: '导出响应不是 CSV',
+      httpStatus: resp.status,
+    });
+  }
+
+  return {
+    blob: await resp.blob(),
+    filename: filenameFrom(resp.headers.get('Content-Disposition'), taskId),
+  };
+}

@@ -12,6 +12,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import { tokens } from '../theme/tokens';
+import { exportResult } from '../api/client';
 import type { ChartEvent, ChartType, DataEvent } from '../api/types';
 
 // ---------------------------------------------------------------------------
@@ -335,21 +336,63 @@ function EmptyBlock({ onSuggest }: { onSuggest?: (text: string) => void }) {
 // ResultBlock
 // ---------------------------------------------------------------------------
 
+function ExportControl({ taskId }: { taskId?: string }) {
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  if (!taskId) return null;
+
+  const onExport = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const file = await exportResult(taskId);
+      const url = URL.createObjectURL(file.blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = file.filename;
+      anchor.rel = 'noopener';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '导出失败');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 12, color: tokens.color.text.tertiary }}>导出行为会被记录</span>
+        <Button size="small" loading={busy} onClick={onExport} data-testid="c5-export-csv">
+          导出 CSV
+        </Button>
+      </div>
+      {error && <InfoBar tone="error" text={`导出失败：${error}`} testId="c5-export-error" />}
+    </div>
+  );
+}
+
 export interface ResultBlockProps {
   data?: DataEvent | null;
   chart?: ChartEvent | null;
+  /** 服务端 task_id：导出必须带它做归属校验（无值时不显示导出入口） */
+  taskId?: string;
   /** 空态建议（「放宽时间范围」等）填入 AskBox，不自动提交 */
   onSuggest?: (text: string) => void;
 }
 
-export function ResultBlock({ data, chart, onSuggest }: ResultBlockProps) {
+export function ResultBlock({ data, chart, taskId, onSuggest }: ResultBlockProps) {
   const [showTable, setShowTable] = React.useState(false);
   if (!data) return null;
 
   // 空结果：正常完成路径，不是错误（§4.12 辨析 #2/#3）
   if (data.row_count === 0 || data.rows.length === 0) {
     return (
-      <div data-testid="c5-result-block">
+      <div data-testid="c5-result-block" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <ExportControl taskId={taskId} />
         <EmptyBlock onSuggest={onSuggest} />
       </div>
     );
@@ -420,6 +463,7 @@ export function ResultBlock({ data, chart, onSuggest }: ResultBlockProps) {
 
   return (
     <div data-testid="c5-result-block" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <ExportControl taskId={taskId} />
       {fallbackNote}
       {allNullCol && (
         <InfoBar

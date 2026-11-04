@@ -1016,7 +1016,7 @@ function TurnView(props: TurnViewProps) {
       )}
 
       {/* 6. ResultBlock */}
-      <ResultBlock data={turn.data} chart={turn.chart} onSuggest={onSuggest} />
+      <ResultBlock data={turn.data} chart={turn.chart} taskId={turn.taskId} onSuggest={onSuggest} />
 
       {/* 7. InsightCard + CaveatBar（同卡） */}
       {turn.insight && (
