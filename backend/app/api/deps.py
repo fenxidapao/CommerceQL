@@ -43,6 +43,7 @@ from app.auth.context import bind_identity, build_identity, current_identity, re
 from app.auth.jwks import JwksCache, PemFileJwksSource
 from app.auth.revocation import InMemoryRevocationList
 from app.auth.tokens import TokenIssuer, TokenVerifier, VerifiedToken
+from app.cache.redis_cache import RedisCache
 from app.cache.session_lock import RedisSessionLock
 from app.core.config import Settings
 from app.core.contracts import (
@@ -819,6 +820,11 @@ def build_graph_runtime(
     thresholds = _gate3_thresholds(settings)
     time_semantics = semantic_runtime.time_semantics()
     store = RedisStateStore(redis)
+    #: 结果集缓存实现（`CachePort` 的首个实现，`2026-11-04`）。**进程内一份**：
+    #: `single_flight` 的进程内锁挂在实例上（`app/cache/redis_cache.py`），
+    #: 每请求造一个等于把防击穿拆掉。
+    #: 客户端就是本函数的入参 `redis` —— 与上面 `store` 同一个，不另造第二个（N-14）。
+    result_cache = RedisCache(redis)
 
     # 单位/口径的**装配点注入**：`ColumnMeta.unit` 恒为 None（`app/exec/executor.py`），
     # presenter 必须无 IO，所以元数据在这里从语义包取一次、随实例带进图。
@@ -861,10 +867,16 @@ def build_graph_runtime(
             mask=mask,
             audit=audit,
             clock=Clock(time_semantics),
+            # ✅ 2026-11-04：`CachePort` 今有实现（`app/cache/redis_cache.py::RedisCache`，
+            #    本函数外那一份共享实例）⇒ 下面这段旧注释的前两句作废，原文保留不删。
+            #    仍成立的两条：① 结果集缓存的唯一位置仍是 `result:{tenant}:{task_id}`
+            #    （07 §5.2.1）；② **读侧尚未接线** —— `runner._write_final_task` 的
+            #    `"data": None` 仍是现状，别读成"轮询已能拿结果行"。
+            # ⚠️ 原注释（作废，保留原文）：
             # ⚠️ `None`：结果集缓存的唯一位置是 `result:{tenant}:{task_id}`，而
             #    `CachePort` 全仓无实现（与上面 embedder 的 cache 同一事实）。
             #    `mask` 节点因此走"写失败只告警"的已登记路径。
-            result_cache=None,
+            result_cache=result_cache,
             query_plan_writer=query_plan_writer,
             # 生产出图（U-148）。`metric_catalog` 装配期注入、实例无请求态，可共享。
             # 评测链路 `eval/harness.py` 显式传 `None`（不出图是既定形态）。
