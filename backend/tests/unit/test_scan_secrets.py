@@ -24,7 +24,7 @@ _REPO_ROOT = _BACKEND.parent
 _SCRIPT = _BACKEND / "scripts" / "scan_secrets.py"
 
 #: 运行时拼装，源码里不留可命中的连续字面量。
-_SCHEME = "postgres" + "://"  # noqa: ISC001  (拼装只为躲开扫描器，不是风格问题)
+_SCHEME = "postgres" + "://"
 _OWNER_DSN = _SCHEME + "owner_user:s0me_pwd@db.internal:5432/ecom"
 _ALLOWLISTED_DSN = _SCHEME + "app_rw:app_rw_pwd@127.0.0.1:5432/ecom"
 _PLACEHOLDER_DSN = _SCHEME + "owner_user:***@db.internal:5432/ecom"

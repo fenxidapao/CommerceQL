@@ -142,6 +142,11 @@ markers = [
 target-version = "py313"
 line-length = 100
 src = ["."]
+# `reports/` 是**归档证据**（QA 探针、逐轮读数脚本），按 §8「证据不改手」不得为
+# 迁就 lint 重写；它们不是产品代码，也不参与构建。要改读数只能新生成一件，
+# 所以这里整目录排除，而不是把 177 条样式问题（多为 UP031 `%` 格式化、SIM115
+# `open()` 未用 with）手动改到历史脚本里。
+extend-exclude = ["reports"]
 
 [tool.ruff.lint]
 select = [

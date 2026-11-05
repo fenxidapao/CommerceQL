@@ -14,10 +14,9 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
-
 from eval.runner import _gold_for_tau
 from eval.tau_samples import (
     build_score_samples,
@@ -38,7 +37,10 @@ def _tau_record(
     ok: bool = True,
 ) -> dict[str, Any]:
     rank = [
-        cid for cid, _ in sorted(zip(candidate_ids, scores), key=lambda kv: (-kv[1], kv[0]))
+        cid
+        for cid, _ in sorted(
+            zip(candidate_ids, scores, strict=False), key=lambda kv: (-kv[1], kv[0])
+        )
     ]
     return {
         "case_id": case_id,
@@ -295,7 +297,7 @@ def test_second_round_gold_is_not_defined_rather_than_should_clarify() -> None:
     若沿用首轮 gold（`expected_clarify`），校准会把它读成"本该澄清"。
     """
     class _Run:
-        l4_raw = {
+        l4_raw: ClassVar[dict[str, Any]] = {
             "schema": "W8_TAU_RAW/v1",
             "ok": True,
             "candidate_ids": ["v_order_paid.pay_amount", "v_order_paid.receiver_city"],

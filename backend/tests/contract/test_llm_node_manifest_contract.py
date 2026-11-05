@@ -135,21 +135,16 @@ def test_upstream_timeout_never_becomes_no_data_asset_end_to_end() -> None:
     真图 + 注入 `LlmTimeout`（零出站），断言终态与审计里都不出现
     `refuse(no_data_asset)`。
     """
-    import asyncio
 
     _ensure_import_path()
     sys.path.insert(0, str(REPO / "backend" / "tests"))  # `tests.contract.*` 包路径
-    from app.graph.build import build_graph
-    from app.graph.context import clear_run_context, set_run_context
-    from app.graph.events import EventRecorder
-    from app.api import sse
     from app.llm.errors import LlmTimeout
-    from tests.contract._fullchain_deps import _DepsHolder, make_chain, run_chain
+    from tests.contract._fullchain_deps import make_chain, run_chain
 
     for node, kwargs in (("plan", {"plan_error": LlmTimeout("stub")}),
                          ("normalize", {"understand_error": LlmTimeout("stub")})):
         chain = make_chain(**kwargs)
-        frames, outcome = run_chain(chain)
+        frames, _outcome = run_chain(chain)
         terminal = [d for e, d in frames if d.get("terminal") is True]
         assert len(terminal) == 1, f"{node}: 终态数 != 1"
         assert terminal[0].get("reason") != "no_data_asset", (
@@ -168,7 +163,7 @@ def test_timeout_error_code_is_recoverable_and_attributable() -> None:
     里的 `last_degrade_error` / `reason` 区分具体成因。
     """
     _ensure_import_path()
-    from app.core.enums import ErrorCode, RETRY_AFTER_DEFAULT_S
+    from app.core.enums import RETRY_AFTER_DEFAULT_S, ErrorCode
     from app.llm.errors import LlmCircuitOpen, LlmSaturated, LlmTimeout
 
     assert LlmTimeout.default_code == "LLM_UPSTREAM_ERROR"

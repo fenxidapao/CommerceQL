@@ -49,7 +49,6 @@
 from __future__ import annotations
 
 import re
-
 from typing import Any
 
 from app.core.enums import ActionTaken, DegradedReason, LatencyKey, Outcome, RefuseReason

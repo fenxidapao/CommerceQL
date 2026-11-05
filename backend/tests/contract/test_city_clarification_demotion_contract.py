@@ -3,7 +3,12 @@ from __future__ import annotations
 
 from app.graph.context import GraphDeps
 from app.planner.schemas import IntentKind
-from tests.contract._fullchain_deps import FullChainPlanner, FullChainSemantics, ScriptRetrieval, _green_understand
+from tests.contract._fullchain_deps import (
+    FullChainPlanner,
+    FullChainSemantics,
+    ScriptRetrieval,
+    _green_understand,
+)
 from tests.contract.test_api_runner_contract import _IDENTITY
 
 
@@ -52,7 +57,8 @@ def test_explicit_city_question_reaches_plan_not_clarify():
     )
     # 只验证 normalize 产出，不执行完整依赖图。
     import asyncio
-    from app.graph.context import RunContext, set_run_context, clear_run_context
+
+    from app.graph.context import RunContext, clear_run_context, set_run_context
 
     async def _call():
         token = set_run_context(RunContext(deps))

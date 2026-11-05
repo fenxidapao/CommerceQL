@@ -13,7 +13,6 @@ import json
 from typing import Any
 
 import pytest
-
 import w78_integration_evidence as ev
 
 #: 刻意**不在源码里拼出完整 DSN 字面量**（DoD④ 的 gitleaks 规则会命中测试文件）。

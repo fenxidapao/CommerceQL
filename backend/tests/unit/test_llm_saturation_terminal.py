@@ -120,7 +120,7 @@ async def test_midchain_saturation_is_recorded_as_concurrency_not_upstream() -> 
     from app.core.enums import ActionTaken, DegradedReason
     from app.llm import LlmGateway
 
-    reason = LlmGateway._reason_for(LlmSaturated("test"))  # noqa: SLF001 - 判据表即被测量对象
+    reason = LlmGateway._reason_for(LlmSaturated("test"))
     assert reason is DegradedReason.LLM_CONCURRENCY_EXCEEDED
     assert reason is not DegradedReason.LLM_UNAVAILABLE
     # 动作语义：饱和报 `reduced_candidates`（advisory），不能报成"已切弱档"的既成事实。

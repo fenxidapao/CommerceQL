@@ -198,7 +198,10 @@ def _l4_raw_payload(
             "prompt_version": str(items[0].prompt_version),
         }
         # 稳定断平：分数降序 + 同分按 id 字典序 ⇒ 两次跑批的 rank 可直接逐位比对。
-        rank = [cid for cid, _ in sorted(zip(ids, values), key=lambda kv: (-kv[1], kv[0]))]
+        rank = [
+            cid
+            for cid, _ in sorted(zip(ids, values, strict=True), key=lambda kv: (-kv[1], kv[0]))
+        ]
     else:
         ids = [str(cid) for cid in requested if cid]
         values = []

@@ -81,7 +81,7 @@ def test_unknown_status_is_pending_not_pass() -> None:
 
 def test_default_probe_does_not_silently_pass() -> None:
     """旧调用点不注入 `bundle_status` ⇒ 占位探针回 `None` ⇒ PENDING（**不会静默通过**）。"""
-    from app.repo.startup_assertions import _no_bundle_status_probe  # noqa: PLC2701
+    from app.repo.startup_assertions import _no_bundle_status_probe
 
     assert StartupProbes.analytics_role.__class__ is not None  # dataclass 存在性（防拼写漂移）
     assert _no_bundle_status_probe is StartupProbes.__dataclass_fields__["bundle_status"].default

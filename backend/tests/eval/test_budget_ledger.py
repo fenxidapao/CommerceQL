@@ -11,7 +11,7 @@ W76 的教训不是"多花了多少钱"，而是**没有账本**：冒烟 4 call
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, ClassVar
 
 import runner
 
@@ -27,7 +27,7 @@ class _FakeSemantics:
 
 
 class _FakeHarness:
-    instances: list["_FakeHarness"] = []
+    instances: ClassVar[list[_FakeHarness]] = []
 
     def __init__(self, **kwargs: Any) -> None:
         self.transport = _FakeTransport()

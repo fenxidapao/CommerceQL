@@ -232,7 +232,7 @@ class StartupProbes:
     audit_access: Callable[[], Awaitable[AuditAccess | Unreachable]]
     #: 🔴 (asset 行数, embed_doc 行数)；`None` = 组装根未注入 active 版本（→ PENDING，不是 PASS）
     #: 默认值 = 占位探针（返回 None）：**老调用点不传也不会静默通过**，只会变成 PENDING。
-    active_bundle_rows: Callable[[], Awaitable[tuple[int, int] | None | Unreachable]] = (
+    active_bundle_rows: Callable[[], Awaitable[tuple[int, int] | Unreachable | None]] = (
         _no_active_version_probe
     )
     #: 🔴 语义包 `status`（`draft|candidate|published`）；`None` = 组装根未注入（→ PENDING）。
@@ -491,7 +491,7 @@ def evaluate_semantic_bundle(*, validator: Callable[[], Awaitable[None]] | None)
 
 
 def evaluate_active_bundle_rows(
-    row: tuple[int, int] | None | Unreachable,
+    row: tuple[int, int] | Unreachable | None,
     *,
     version: str | None,
 ) -> AssertionOutcome:

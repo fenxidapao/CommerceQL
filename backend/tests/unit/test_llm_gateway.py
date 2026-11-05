@@ -30,13 +30,12 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-
-import httpx
 from collections.abc import Callable, Mapping
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
+import httpx
 import pytest
 from pydantic import SecretStr
 
@@ -770,7 +769,7 @@ class TestDegradeToTemplateAndRefuse:
         ② 终态异常 = `LlmSaturated`，`default_code=LLM_CONCURRENCY_EXCEEDED`；
         ③ 该码的 `Retry-After` 默认值 = 5s（由 `core.enums` 唯一真相表提供）。
         """
-        from app.core.enums import ErrorCode, RETRY_AFTER_DEFAULT_S
+        from app.core.enums import RETRY_AFTER_DEFAULT_S, ErrorCode
 
         monkeypatch.setattr("app.llm.client.SEMAPHORE_WAIT_TIMEOUT_S", 0.01)
 

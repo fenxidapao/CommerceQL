@@ -98,19 +98,6 @@ from app.llm.errors import (
     LlmTimeout,
     LlmUpstreamError,
 )
-
-
-#: 🔴 W8 第 51 轮：降级异常里"**上游故障**"的那几类 —— 它们意味着"上游没答上来"，
-#: 若模板层也无命中，产物应报 `error`（工程故障）而不是 `refuse`（产品结论，C-12）。
-#: 刻意**不含** `LlmEmptyContent`（模型成功但思考吃光 max_tokens ⇒ 空产出）、
-#: `LlmBudgetExceeded`（我们自己的预算策略）与 `LlmSaturated`（本地并发位等待）——
-#: 前者两类仍走 §10.2 末行的 `refuse`；饱和则走专用
-#: `LLM_CONCURRENCY_EXCEEDED`，不能被混成“上游坏了”。
-_UPSTREAM_FAULT_DEGRADES: tuple[type[LlmError], ...] = (
-    LlmTimeout,
-    LlmCircuitOpen,
-)
-
 from app.llm.prompts import load_prompt, render_messages
 from app.llm.router import (
     MODEL_AUTO,
@@ -122,6 +109,17 @@ from app.llm.router import (
     resolve_route,
 )
 from app.obs.logging import get_logger
+
+#: 🔴 W8 第 51 轮：降级异常里"**上游故障**"的那几类 —— 它们意味着"上游没答上来"，
+#: 若模板层也无命中，产物应报 `error`（工程故障）而不是 `refuse`（产品结论，C-12）。
+#: 刻意**不含** `LlmEmptyContent`（模型成功但思考吃光 max_tokens ⇒ 空产出）、
+#: `LlmBudgetExceeded`（我们自己的预算策略）与 `LlmSaturated`（本地并发位等待）——
+#: 前者两类仍走 §10.2 末行的 `refuse`；饱和则走专用
+#: `LLM_CONCURRENCY_EXCEEDED`，不能被混成“上游坏了”。
+_UPSTREAM_FAULT_DEGRADES: tuple[type[LlmError], ...] = (
+    LlmTimeout,
+    LlmCircuitOpen,
+)
 
 __all__ = [
     "LlmGateway",

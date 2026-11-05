@@ -636,12 +636,13 @@ def _contradiction(
     for ecol, eop, eval_ in existing:
         if ecol != ccol:
             continue
-        if {cop, eop} == {_OP_EQ, _OP_NE}:
-            if cval is _UNKNOWN or eval_ is _UNKNOWN or _norm_value(cval) == _norm_value(eval_):
-                return f"{ccol}: 候选 {cop} 与查询 {eop} 相反"
-        elif cop == eop == _OP_EQ:
-            if cval is _UNKNOWN or eval_ is _UNKNOWN or _norm_value(cval) != _norm_value(eval_):
-                return f"{ccol}: 候选 eq {cval!r} 与查询 eq {eval_!r} 不同"
+        # 两种算子组合互斥（`= / <>` 与 `= / =` 不可能同时成立），拆成两个 `if` 与原来的 `if / elif` 等价。
+        unknown = cval is _UNKNOWN or eval_ is _UNKNOWN
+        same_value = not unknown and _norm_value(cval) == _norm_value(eval_)
+        if {cop, eop} == {_OP_EQ, _OP_NE} and (unknown or same_value):
+            return f"{ccol}: 候选 {cop} 与查询 {eop} 相反"
+        if cop == eop == _OP_EQ and (unknown or not same_value):
+            return f"{ccol}: 候选 eq {cval!r} 与查询 eq {eval_!r} 不同"
     return None
 
 
