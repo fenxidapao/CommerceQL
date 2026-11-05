@@ -30,11 +30,11 @@
 
 | 项 | 读数 | 源 |
 |---|---|---|
-| 代码 HEAD | 最后代码提交 `20e19ac` / 809 笔（含本节文档提交）；`origin/main` 已推送 | `git log -1`；`git rev-list --count HEAD`；`git status -sb` |
-| 后端回归 | B2 **133 passed**；B6 few-shot **75 passed**；B6 多轮/图接线 **33 passed**；全量 unit+contract **2508 passed / 3 failed（既有）**；`tests/eval` 506 passed / 2 failed（既有） | 2026-11-05 现跑；命令见 docs/09 §5.3 |
+| 代码 HEAD | 最后代码提交 `4a38566` / 811 笔（含本节文档提交）；`origin/main` 已推送 | `git log -1`；`git rev-list --count HEAD`；`git status -sb` |
+| 后端回归 | B2 **133 passed**；B6 few-shot **75 passed**；B6 多轮/图接线 **33 passed**；B6 多轮 runner **13 passed**；全量 unit+contract **2508 passed / 3 failed（既有）**；`tests/eval` 519 passed / 2 failed（既有） | 2026-11-05 现跑；命令见 docs/09 §5.3 |
 | 前端 | `40 passed`（7 files）；`tsc --noEmit` 与 `npm run build` 通过 | 2026-11-04 复跑（新增导出 7 条） |
 | 静态检查 | `ruff 0`（`reports/` 排除）；`mypy 0 / 179 files`；`lint-imports 4 kept / 0 broken` | 2026-11-05 复跑 |
-| Phase B | B1/B2/B3/B4/B5 **完成**（B2 真栈 + 浏览器导出已验）；**B6 复杂档 + few-shot + 多轮条件继承完成（离线），live 二轮未测**；**B7 100 题完成，live EX 70.88% ± 1.61%**；B8 可选 | `docs/09` §4.2；提交见 git log |
+| Phase B | B1/B2/B3/B4/B5 **完成**（B2 真栈 + 浏览器导出已验）；**B6 复杂档 + few-shot + 多轮条件继承 + 多轮 runner 完成（离线），live 二轮未测**；**B7 100 题完成，live EX 70.88% ± 1.61%**；B8 可选 | `docs/09` §4.2；提交见 git log |
 | 官方快照 | `88f3500` / **PASS 1/8**（PASS 1 / FAIL 3 / PARTIAL 2 / UNVERIFIED 2），生成 `2026-10-07T05:27:34Z`，最后改动该文件的提交 `24d4477` | `backend/reports/w6/eval_metrics.json`；`backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md` |
 | 当期复算 | **6 PASS / 0 PARTIAL / 2 UNVERIFIED / 0 FAIL**，复算件 rev `26421ae`（2026-10-24） | `eval/results_w80_gate_recompute.json`；`backend/reports/w8/DELIVERY.md` 终版节 |
 | 契约文档 | `07 v1.7.42`（3,708 行）；`08 v1.4.3` | `docs/07_技术设计文档_TDD.md` 头部版本字段 |

@@ -4,7 +4,7 @@
 > 项目本体全部在本目录（仓库根），**没有嵌套子目录**。人读版说明见 `README.md`，完整导读见 `OVERVIEW.md`。
 >
 > **现状态先读 [`docs/09_当前状态与交接.md`](docs/09_当前状态与交接.md)**：HEAD／完成度／实测读数／未完成项／验证命令一页给全。
-> 当前阶段：**Phase A 验收已补（静态全绿：ruff 0 / mypy 0 / lint-imports 4/0；简历数字 4/4 复算）；Phase B 进行中**（B1/B2/B3/B4/B5 完成；B6 复杂档 + few-shot + 多轮条件继承已完成（离线），live 二轮未测；B7 完成：100 题、live EX 70.88% ± 1.61%；B8 可选）。执行计划在仓库外 `Text2SQL/计划_合并版.md`。
+> 当前阶段：**Phase A 验收已补（静态全绿：ruff 0 / mypy 0 / lint-imports 4/0；简历数字 4/4 复算）；Phase B 进行中**（B1/B2/B3/B4/B5 完成；B6 复杂档 + few-shot + 多轮条件继承 + 多轮 runner 已完成（离线），live 二轮未测；B7 完成：100 题、live EX 70.88% ± 1.61%；B8 可选）。执行计划在仓库外 `Text2SQL/计划_合并版.md`。
 
 ---
 
