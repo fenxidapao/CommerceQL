@@ -257,6 +257,17 @@ def test_f1_order_by_projection_alias_is_the_gates_fault(guard_allowlist):
     assert defect and "F1" in defect and "gmv" in defect
 
 
+def test_f1_requires_the_actual_reject_rule_to_be_r06(guard_allowlist):
+    """反例：SQL 里碰巧有 `ORDER BY <投影别名>`，但实际拒绝规则是 R14 ⇒ 不是 F1。
+
+    2026-11-05 B7 三批里 32 条 `gate_policy_gap` 全是这种误判（日期格式字面量撞 R14）。
+    """
+    sql = "SELECT SUM(pay_amount) AS gmv FROM v_order_paid ORDER BY gmv DESC"
+    assert "F1" in (H.detect_gate_self_defect(sql, guard_allowlist) or "")
+    assert H.detect_gate_self_defect(sql, guard_allowlist, "R14") is None
+    assert "F1" in (H.detect_gate_self_defect(sql, guard_allowlist, "R06") or "")
+
+
 def test_f1_must_not_fire_on_a_qualified_order_key(guard_allowlist):
     """反例：`ORDER BY o.region_name` 走表别名解析（`_scope_tables` 登记 alias），
     是合法形态，不许记成闸门缺陷。

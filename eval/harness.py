@@ -153,8 +153,16 @@ def _pred_columns_by_domain(allowlist: Mapping[str, Any]) -> dict[str, set[str]]
     return out
 
 
-def detect_gate_self_defect(sql: str, allowlist: Mapping[str, Any]) -> str | None:
+def detect_gate_self_defect(
+    sql: str, allowlist: Mapping[str, Any], reject_rule: str | None = None
+) -> str | None:
     """这条 SQL 会不会被 **gate1 自身的判据缺陷**（而非模型写错）杀掉。
+
+    ``reject_rule``：本次实际拒绝的规则号（`run.gate1_reject_rule`）。F1/F2 都只能
+    解释 **R06** 类拒绝；若实际是 R14（字面量策略）等别的规则，即使 SQL 里碰巧有
+    `ORDER BY <投影别名>` 也不能把锅记成 F1 —— 2026-11-05 B7 三批里 32 条
+    `gate_policy_gap` 全是这种误判（日期格式字面量撞 R14，被写成 F1/R06）。
+    ``None`` 保留旧调用面（探针/单测），仅用于无法取到规则号的场合。
 
     为什么这个判据**只能**在评测侧算：
     判定需要同时握着 ① 模型的**原始** SQL（gate1 拒绝时 `rewritten_sql` 恒空串，
@@ -175,6 +183,10 @@ def detect_gate_self_defect(sql: str, allowlist: Mapping[str, Any]) -> str | Non
         tree = sqlglot.parse_one(text, dialect="postgres")
     except sqlglot.errors.ParseError:
         return None  # 语法本身不成立 → 那是模型的账（`sql_generation`）
+
+    # F1/F2 只解释 R06 类拒绝；R14 等规则命中时，SQL 里的别名形态不是拒绝原因。
+    if reject_rule is not None and "R06" not in reject_rule:
+        return None
 
     findings: list[str] = []
 

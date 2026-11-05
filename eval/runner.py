@@ -727,7 +727,9 @@ async def score_case(
     if not failed:
         record["attribution"] = None
     else:
-        defect = _gate_defect_if_rejected(run.sql_text, allowlist, run.gate_decisions)
+        defect = _gate_defect_if_rejected(
+            run.sql_text, allowlist, run.gate_decisions, run.gate1_reject_rule
+        )
         a = attr.attribute(
             case=case,
             predicted_sql=run.sql_text or None,
@@ -775,6 +777,7 @@ def _gate_defect_if_rejected(
     sql: str | None,
     allowlist: Mapping[str, Any],
     gate_decisions: Mapping[str, str],
+    reject_rule: str | None = None,
 ) -> str | None:
     """只在 gate1 实际拒绝时检查其自伤形态。
 
@@ -783,7 +786,7 @@ def _gate_defect_if_rejected(
     """
     if not str(gate_decisions.get("1") or "").startswith("reject/"):
         return None
-    return detect_gate_self_defect(sql or "", allowlist)
+    return detect_gate_self_defect(sql or "", allowlist, reject_rule)
 
 def _slim(result: dict[str, Any] | None) -> dict[str, Any] | None:
     if result is None:
