@@ -1,0 +1,79 @@
+{
+  "probe": "b7_dialect_gain",
+  "dataset": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\olist\\dataset_v3_frozen.json",
+  "db": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\olist\\olist_sandbox.db",
+  "projected_mean_ex": 0.761404,
+  "batches": [
+    {
+      "batch_id": "b7_r1",
+      "old_pass": 69,
+      "new_pass": 74,
+      "projected_ex": 0.7789,
+      "recovered": [
+        "g02",
+        "g06",
+        "g10",
+        "o34",
+        "o44"
+      ],
+      "regressions": [],
+      "still_fail_by_old_cause": {
+        "upstream": 1,
+        "gate/R06": 1,
+        "gate/R14": 6,
+        "wrong": 9,
+        "syntax": 4
+      },
+      "errors": {
+        "exec:OperationalError": 1
+      }
+    },
+    {
+      "batch_id": "b7_r2",
+      "old_pass": 67,
+      "new_pass": 72,
+      "projected_ex": 0.7579,
+      "recovered": [
+        "g02",
+        "g06",
+        "g10",
+        "o34",
+        "o44"
+      ],
+      "regressions": [],
+      "still_fail_by_old_cause": {
+        "gate/R06": 2,
+        "gate/R14": 8,
+        "wrong": 10,
+        "syntax": 3
+      },
+      "errors": {
+        "exec:OperationalError": 2
+      }
+    },
+    {
+      "batch_id": "b7_r3",
+      "old_pass": 66,
+      "new_pass": 71,
+      "projected_ex": 0.7474,
+      "recovered": [
+        "g02",
+        "g06",
+        "g10",
+        "o34",
+        "o44"
+      ],
+      "regressions": [],
+      "still_fail_by_old_cause": {
+        "wrong": 9,
+        "gate/R14": 8,
+        "gate/R06": 3,
+        "syntax": 3,
+        "upstream": 1
+      },
+      "errors": {
+        "exec:OperationalError": 3
+      }
+    }
+  ]
+}
