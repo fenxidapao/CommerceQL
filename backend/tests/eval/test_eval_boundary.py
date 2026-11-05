@@ -56,7 +56,8 @@ FORBIDDEN_APP_DEPS = frozenset({"app.api"})
 EVAL_MODULES = frozenset({
     "_bootstrap", "attribution", "build_frozen_set", "build_gold_seed", "build_red_team",
     "case_library", "cassette", "consistency", "equivalence", "gap_table", "gates",
-    "grid", "harness", "redteam_eval", "reporter", "runner", "sqlite_exec",
+    "grid", "harness", "multiturn", "redteam_eval", "reporter", "run_multiturn",
+    "runner", "sqlite_exec",
 })
 
 #: W1A 的内容资产（评测只读；写它们 = 篡改冻结集）。
