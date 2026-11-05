@@ -15,6 +15,12 @@
 | `report_olist.py` | 报告生成：固定五行、分母构成、3 批 EX 均值±样本标准差 |
 | `dataset_v1.yaml` | **60 题**源集（55 execute / 3 clarify / 2 refuse），g01..g10 原样承接 |
 | `dataset_v1_frozen.json` | 冻结件（冒烟通过后 `--freeze` 生成）；3 批 live 只认它 |
+| `dataset_v3.yaml` | **100 题**源集（95 execute / 3 clarify / 2 refuse）；v2 的 60 题原样承接 + `n01..n40` |
+| `dataset_v3_frozen.json` | v3 冻结件（`scored_total=95`）；B7 live 只认它 |
+| `gold100_frozen_results.json` | v3 逐题 gold 读数（95/95 可执行、95/95 口径） |
+| `olist_profile_v3.json` | v3 的 N-13 证据块（`all_ok=true`） |
+| `instrument_control_v3.json` | v3 仪器正/负控（+95/95、−0/95；**不是模型 EX**） |
+| `report_v3.md` / `report_v3.json` | v3 报告（当前 offline：EX 段 `UNVERIFIED`，未跑 live） |
 | `dataset_w1_gold10.yaml` | W1 的 10 条 gold（对账基准，不改） |
 | `gold60_results.json` / `gold60_frozen_results.json` | 60 题的逐题 gold 读数（源集 / 冻结件各一份） |
 | `olist_profile.json` / `olist_profile_frozen.json` | N-13 证据块（源模式 / 冻结件模式，均 `all_ok=true`） |
@@ -91,6 +97,39 @@ V="E:/01_实训/项目/基于Text2SQL的电商数据分析Agent/CommerceQL-archi
   --gold eval/olist/gold60_results.json --control eval/olist/instrument_control.json \
   --out eval/olist/report.md --json-out eval/olist/report.json
 ```
+
+### 2.1 B7：v3（100 题）复算命令与现跑读数
+
+2026-11-05 现跑（零 LLM、零出站）：
+
+```bash
+"$V" eval/olist/build_dataset.py --check \
+  --source eval/olist/dataset_v3.yaml --db data/olist/olist_sandbox.db
+"$V" eval/olist/build_dataset.py --freeze \
+  --source eval/olist/dataset_v3.yaml --db data/olist/olist_sandbox.db \
+  --out eval/olist/dataset_v3_frozen.json
+"$V" eval/olist/run_olist.py --gold-only \
+  --dataset eval/olist/dataset_v3_frozen.json --db data/olist/olist_sandbox.db \
+  --out eval/olist/gold100_frozen_results.json
+"$V" eval/olist/run_olist.py --instrument-control \
+  --dataset eval/olist/dataset_v3_frozen.json --db data/olist/olist_sandbox.db \
+  --out eval/olist/instrument_control_v3.json
+"$V" eval/olist/run_olist.py --verify-only \
+  --dataset eval/olist/dataset_v3_frozen.json --db data/olist/olist_sandbox.db \
+  --out eval/olist/olist_profile_v3.json
+"$V" eval/olist/report_olist.py --dataset eval/olist/dataset_v3_frozen.json \
+  --profile eval/olist/olist_profile_v3.json \
+  --gold eval/olist/gold100_frozen_results.json \
+  --control eval/olist/instrument_control_v3.json \
+  --title "Olist 100 题评测报告（B7 · 离线）" --no-v1-deviations \
+  --out eval/olist/report_v3.md --json-out eval/olist/report_v3.json
+```
+
+读数：`n_cases=100`、`n_execute=95`、`n_interaction=5`；`gold_executable=95/95`、
+`caliber_match=95/95`、`interaction_valid=5/5`、`cases_valid=100/100`；
+N-13 `all_ok=true`；正控 95/95、负控 0/95。冻结哈希见
+`dataset_v3_frozen.json` 头部。**EX 未跑 live，固定五行全部 `UNVERIFIED`**；
+live 3 批估算约 ¥2.75 + 冒烟，未批准不跑。
 
 live（需进程环境已注入 `DEEPSEEK_API_KEY`；冒烟通过后才冻结）：
 

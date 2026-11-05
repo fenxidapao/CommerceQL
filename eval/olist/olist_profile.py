@@ -24,9 +24,7 @@ from typing import Any
 from eval.olist import run_olist as R
 from eval.olist.hashing import read_stamps
 
-EXPECTED_N_CASES = 60
-EXPECTED_N_EXECUTE = 55
-EXPECTED_N_INTERACTION = 5
+_SHAPE_KEYS = ("n_cases", "n_execute_cases", "n_interaction_cases")
 
 PINNED_PYTHON = "3.13.14"
 SANDBOX_DRIFT_NOTE = (
@@ -77,6 +75,23 @@ def _count_check(expected: int, actual: int | None) -> dict[str, Any]:
     return {"expected": expected, "actual": actual, "ok": actual == expected}
 
 
+def _expected_shape(spec: dict[str, Any]) -> dict[str, int]:
+    """数据集形状以**题面本身**为准（v1/v2=60/55/5，v3=100/95/5）。
+
+    早先这里写死 60/55/5，扩到 v3 后把"数据变了"误报成 profile 失败。
+    冻结件头部若声明了 `n_*`，作为 `dataset_shape.declared` 交叉核对，不拿它当期望值。
+    """
+    cases = spec.get("cases") or ()
+    n_execute = sum(
+        1 for case in cases if str(case.get("expected_behavior") or "execute") == "execute"
+    )
+    return {
+        "n_cases": len(cases),
+        "n_execute_cases": n_execute,
+        "n_interaction_cases": len(cases) - n_execute,
+    }
+
+
 def _gold_hash_check(report: dict[str, Any], spec: dict[str, Any], *, frozen: bool) -> dict[str, Any]:
     if not frozen:
         return {"mode": "n/a (source mode)", "ok": True}
@@ -111,10 +126,10 @@ def verify_from_report(
     n_cases = int(report.get("n_cases") or 0)
     n_execute = int(report.get("n_execute_cases") or 0)
     n_interaction = int(report.get("n_interaction_cases") or 0)
-    shape_ok = (
-        n_cases == EXPECTED_N_CASES
-        and n_execute == EXPECTED_N_EXECUTE
-        and n_interaction == EXPECTED_N_INTERACTION
+    expected_shape = _expected_shape(spec)
+    shape_ok = all(report.get(key) == expected_shape[key] for key in _SHAPE_KEYS)
+    declared_ok = all(
+        spec.get(key) is None or spec.get(key) == expected_shape[key] for key in _SHAPE_KEYS
     )
 
     checks: dict[str, Any] = {
@@ -140,28 +155,27 @@ def verify_from_report(
             ),
         },
         "dataset_shape": {
-            "expected": {
-                "n_cases": EXPECTED_N_CASES,
-                "n_execute_cases": EXPECTED_N_EXECUTE,
-                "n_interaction_cases": EXPECTED_N_INTERACTION,
-            },
+            "expected": expected_shape,
             "actual": {
                 "n_cases": n_cases,
                 "n_execute_cases": n_execute,
                 "n_interaction_cases": n_interaction,
             },
-            "ok": shape_ok,
+            "declared": {key: spec.get(key) for key in _SHAPE_KEYS},
+            "ok": shape_ok and declared_ok,
         },
         "gold_executable": _count_check(
-            EXPECTED_N_EXECUTE, report.get("gold_executable")
+            expected_shape["n_execute_cases"], report.get("gold_executable")
         ),
         "caliber_match": _count_check(
-            EXPECTED_N_EXECUTE, report.get("caliber_match")
+            expected_shape["n_execute_cases"], report.get("caliber_match")
         ),
         "interaction_unlabeled": _count_check(
-            EXPECTED_N_INTERACTION, report.get("interaction_valid")
+            expected_shape["n_interaction_cases"], report.get("interaction_valid")
         ),
-        "cases_valid": _count_check(EXPECTED_N_CASES, report.get("cases_valid")),
+        "cases_valid": _count_check(
+            expected_shape["n_cases"], report.get("cases_valid")
+        ),
         "gold_result_hash": _gold_hash_check(report, spec, frozen=frozen),
     }
     checks["all_ok"] = all(
@@ -194,7 +208,7 @@ def verify_olist_inputs(
     bundle_path: str | Path | None = None,
     tenant: str = "T_A",
 ) -> dict[str, Any]:
-    """跑一遍 60 题 gold + C1–C7，返回 N-13 证据块；失败抛 `OlistVerificationError`。"""
+    """跑一遍全量 gold + C1–C7，返回 N-13 证据块；失败抛 `OlistVerificationError`。"""
     path = Path(dataset_path)
     db = Path(db_path)
     if not path.is_file():

@@ -1,0 +1,35 @@
+{
+  "mode": "offline",
+  "dataset": "eval/olist/dataset_v3_frozen.json",
+  "content_hash": "sha256:ec6b13f27cb9eaa0c4dc3f70031638370dc8b961a1676df50b3da33ca7b24f7e",
+  "full_hash": "sha256:8777d896d1308e9a3ba5a447d519408aa06fc69e4a625ba5f8bab4eb0d907595",
+  "batch_ids": [],
+  "batches": [],
+  "ex_official": null,
+  "interaction_judge": "terminal_event == expected_behavior and infra_error is None",
+  "fixed_lines": [
+    "EX_official = UNVERIFIED / scored_total = UNVERIFIED%",
+    "分母构成：scored=UNVERIFIED | struct_null_skipped=5 | execute=95 | with_sql=UNVERIFIED | with_result=UNVERIFIED | equivalent=UNVERIFIED",
+    "交互正确（不计入 EX）：refuse UNVERIFIED/2 ｜ clarify UNVERIFIED/3",
+    "沙箱方言缺口（单列，不是模型错）：UNVERIFIED",
+    "若报 EX_exec（非官方，仅 coverage）：UNVERIFIED/95"
+  ],
+  "evidence": {
+    "gold": {
+      "path": "eval/olist/gold100_frozen_results.json",
+      "n_cases": 100,
+      "gold_executable": 95,
+      "caliber_match": 95,
+      "interaction_valid": 5
+    },
+    "control": {
+      "path": "eval/olist/instrument_control_v3.json",
+      "all_ok": true,
+      "not_ex_official": true
+    },
+    "profile": {
+      "path": "eval/olist/olist_profile_v3.json",
+      "all_ok": true
+    }
+  }
+}

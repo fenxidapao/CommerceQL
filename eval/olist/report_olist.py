@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Olist 60 题报告（W2，`U-144`）：离线证据 ＋ 3 批 `EX_official`。
+"""Olist 题集报告（W2，`U-144`；v3 起 100 题）：离线证据 ＋ 3 批 `EX_official`。
 
 两件事必须分开，否则读数会互相冒充
 --------------------------------
@@ -46,9 +46,10 @@ FIXED_LINES = (
     "EX_official = {passed} / scored_total = {pct}%",
     "分母构成：scored={scored} | struct_null_skipped={skipped} | execute={execute} | "
     "with_sql={with_sql} | with_result={with_result} | equivalent={equivalent}",
-    "交互正确（不计入 EX）：refuse {refuse_ok}/2 ｜ clarify {clarify_ok}/3",
+    "交互正确（不计入 EX）：refuse {refuse_ok}/{refuse_total} ｜ "
+    "clarify {clarify_ok}/{clarify_total}",
     "沙箱方言缺口（单列，不是模型错）：{dialect_gap}",
-    "若报 EX_exec（非官方，仅 coverage）：{ex_exec}/55",
+    "若报 EX_exec（非官方，仅 coverage）：{ex_exec}/{execute}",
 )
 
 
@@ -507,7 +508,13 @@ def render_markdown(
     records: list[list[dict[str, Any]]] | None = None,
     baseline: dict[str, Any] | None = None,
     note: str | None = None,
+    v1_deviations: bool = True,
 ) -> str:
+    execute_total = sum(
+        1 for case in cases if (case.get("expected_behavior") or "execute") == "execute"
+    )
+    refuse_total = sum(1 for case in cases if case.get("expected_behavior") == "refuse")
+    clarify_total = sum(1 for case in cases if case.get("expected_behavior") == "clarify")
     lines = [
         f"# {title}",
         "",
@@ -524,10 +531,9 @@ def render_markdown(
             "pct": "UNVERIFIED",
             "scored": "UNVERIFIED",
             "skipped": sum(1 for c in cases if c.get("difficulty_struct") is None),
-            "execute": sum(
-                1 for c in cases
-                if (c.get("expected_behavior") or "execute") == "execute"
-            ),
+            "execute": execute_total,
+            "refuse_total": refuse_total,
+            "clarify_total": clarify_total,
             "with_sql": "UNVERIFIED",
             "with_result": "UNVERIFIED",
             "equivalent": "UNVERIFIED",
@@ -551,6 +557,8 @@ def render_markdown(
             "equivalent": first["equivalent"],
             "refuse_ok": first["refuse_correct"],
             "clarify_ok": first["clarify_correct"],
+            "refuse_total": refuse_total,
+            "clarify_total": clarify_total,
             "dialect_gap": first["sandbox_dialect_gap"],
             "ex_exec": first["equivalent"],
         })
@@ -584,9 +592,11 @@ def render_markdown(
             f"{stat['sandbox_dialect_gap']} |"
         )
     if not stats:
+        skipped = sum(1 for c in cases if c.get("difficulty_struct") is None)
         lines.append(
-            "| — | UNVERIFIED | UNVERIFIED | UNVERIFIED | 5 | 55 | UNVERIFIED | UNVERIFIED | "
-            "UNVERIFIED | UNVERIFIED | UNVERIFIED | UNVERIFIED | UNVERIFIED |"
+            f"| — | UNVERIFIED | UNVERIFIED | UNVERIFIED | {skipped} | {execute_total} | "
+            "UNVERIFIED | UNVERIFIED | UNVERIFIED | UNVERIFIED | UNVERIFIED | "
+            "UNVERIFIED | UNVERIFIED |"
         )
 
     cell_counts: dict[tuple[str, str], int] = {}
@@ -638,7 +648,10 @@ def render_markdown(
             )
         )
     else:
-        lines.append("refuse `UNVERIFIED`/2 ｜ clarify `UNVERIFIED`/3（未跑 live）")
+        lines.append(
+            f"refuse `UNVERIFIED`/{refuse_total} ｜ clarify `UNVERIFIED`/{clarify_total}"
+            "（未跑 live）"
+        )
 
     lines += [
         "",
@@ -699,11 +712,13 @@ def render_markdown(
         "- `ast_gate` 是 postgres 方言、沙箱是 SQLite ⇒ 预期出现 `sandbox_dialect_gap`，"
         "单列、不归因模型。",
         "- Olist 数据实际止于 2018-08（9 月 1 单、10 月 0 单）。",
-        "- `gold_executable` 的分母是 55 条 execute；交互题无 gold，不冒充可执行 SQL。",
+        f"- `gold_executable` 的分母是 {execute_total} 条 execute；"
+        "交互题无 gold，不冒充可执行 SQL。",
     ]
-    if baseline is None:
+    if baseline is None and v1_deviations:
         # 默认路径（v1 报告）：以下 6 条是**当时的实测陈述**，一字不动 ——
         # `docs/portfolio/README.md` 的复算命令要求与 `eval/olist/report.md` 逐字节一致。
+        # v3 报告用 `--no-v1-deviations`：那些 7/55、r1 批次读数不属于新题集。
         lines += [
             "- 模型把表别名写成 `AS order`（SQL 保留字）⇒ 本轮 7/55 条 `SQL_SYNTAX_ERROR`；"
             "这是生成缺陷，不是方言缺口。",
@@ -718,7 +733,7 @@ def render_markdown(
             "官方 EX 仍取首发三批，回放件 `results_v1_r1_replay.json` 只作复核证据。",
             "",
         ]
-    else:
+    elif baseline is not None:
         lines += _v2_sections(
             cases=cases,
             stats=stats,
@@ -737,7 +752,7 @@ def _load_json(path: Path | None) -> Any:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Olist 60 题报告（offline / 3 批 EX）")
+    parser = argparse.ArgumentParser(description="Olist 题集报告（offline / 3 批 EX）")
     parser.add_argument("--dataset", default=str(OLIST_DIR / "dataset_v1.yaml"))
     parser.add_argument("--results", nargs="*", default=[])
     parser.add_argument("--profile", default=None)
@@ -757,6 +772,10 @@ def main(argv: list[str] | None = None) -> int:
         "--baseline-dataset", default=None, help="对照组数据集（仅用于报告头脚注，可省）"
     )
     parser.add_argument("--note", default=None, help="追加到 §5 的一条自由备注")
+    parser.add_argument(
+        "--no-v1-deviations", action="store_true",
+        help="不渲染 §5 的 v1 实测偏差（v3 等新题集报告用；默认渲染以保持 v1 逐字节一致）",
+    )
     args = parser.parse_args(argv)
 
     dataset_path = Path(args.dataset)
@@ -813,6 +832,7 @@ def main(argv: list[str] | None = None) -> int:
         records=[b["records"] for b in batches],
         baseline=baseline,
         note=args.note,
+        v1_deviations=not args.no_v1_deviations,
     )
     out.write_text(markdown, encoding="utf-8", newline="\n")
 
@@ -846,6 +866,8 @@ def main(argv: list[str] | None = None) -> int:
             "equivalent": (stats[0]["equivalent"] if stats else "UNVERIFIED"),
             "refuse_ok": (stats[0]["refuse_correct"] if stats else "UNVERIFIED"),
             "clarify_ok": (stats[0]["clarify_correct"] if stats else "UNVERIFIED"),
+            "refuse_total": sum(1 for c in cases if c.get("expected_behavior") == "refuse"),
+            "clarify_total": sum(1 for c in cases if c.get("expected_behavior") == "clarify"),
             "dialect_gap": (stats[0]["sandbox_dialect_gap"] if stats else "UNVERIFIED"),
             "ex_exec": (stats[0]["equivalent"] if stats else "UNVERIFIED"),
         }),

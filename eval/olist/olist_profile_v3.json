@@ -1,0 +1,83 @@
+{
+  "profile": "olist",
+  "dataset": "eval\\olist\\dataset_v3_frozen.json",
+  "db": "data\\olist\\olist_sandbox.db",
+  "python": "3.13.14",
+  "mode": "frozen",
+  "frozen": true,
+  "checks": {
+    "dataset_content_hash": {
+      "expected": "sha256:ec6b13f27cb9eaa0c4dc3f70031638370dc8b961a1676df50b3da33ca7b24f7e",
+      "actual": "sha256:ec6b13f27cb9eaa0c4dc3f70031638370dc8b961a1676df50b3da33ca7b24f7e",
+      "mode": "frozen",
+      "ok": true
+    },
+    "dataset_full_hash": {
+      "expected": "sha256:8777d896d1308e9a3ba5a447d519408aa06fc69e4a625ba5f8bab4eb0d907595",
+      "actual": "sha256:8777d896d1308e9a3ba5a447d519408aa06fc69e4a625ba5f8bab4eb0d907595",
+      "mode": "frozen",
+      "ok": true
+    },
+    "sandbox_db_sha256": {
+      "expected": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+      "actual": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+      "mode": "frozen",
+      "python": "3.13.14",
+      "pinned_python": "3.13.14",
+      "ok": true
+    },
+    "dataset_shape": {
+      "expected": {
+        "n_cases": 100,
+        "n_execute_cases": 95,
+        "n_interaction_cases": 5
+      },
+      "actual": {
+        "n_cases": 100,
+        "n_execute_cases": 95,
+        "n_interaction_cases": 5
+      },
+      "declared": {
+        "n_cases": 100,
+        "n_execute_cases": 95,
+        "n_interaction_cases": 5
+      },
+      "ok": true
+    },
+    "gold_executable": {
+      "expected": 95,
+      "actual": 95,
+      "ok": true
+    },
+    "caliber_match": {
+      "expected": 95,
+      "actual": 95,
+      "ok": true
+    },
+    "interaction_unlabeled": {
+      "expected": 5,
+      "actual": 5,
+      "ok": true
+    },
+    "cases_valid": {
+      "expected": 100,
+      "actual": 100,
+      "ok": true
+    },
+    "gold_result_hash": {
+      "mode": "frozen",
+      "checked_cases": 95,
+      "mismatches": [],
+      "ok": true
+    },
+    "all_ok": true
+  },
+  "dataset_version": "olist_v3",
+  "frozen_at": "2026-11-05T01:40:59+00:00",
+  "n_cases": 100,
+  "n_execute_cases": 95,
+  "n_interaction_cases": 5,
+  "content_hash": "sha256:ec6b13f27cb9eaa0c4dc3f70031638370dc8b961a1676df50b3da33ca7b24f7e",
+  "full_hash": "sha256:8777d896d1308e9a3ba5a447d519408aa06fc69e4a625ba5f8bab4eb0d907595",
+  "sandbox_db_sha256": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0"
+}

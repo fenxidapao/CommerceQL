@@ -733,11 +733,12 @@ def main(argv: list[str] | None = None) -> int:
                 report["n_execute_cases"] == report["gold_executable"] == report["caliber_match"]
                 and report["n_interaction_cases"] == report["interaction_valid"]
             )
-            if report["n_cases"] == 60:
-                from eval.olist.olist_profile import verify_from_report
+            from eval.olist.olist_profile import verify_from_report
 
-                report["verification"] = verify_from_report(report, dataset_path, load_cases(dataset_path))
-                ok = ok and bool(report["verification"]["checks"]["all_ok"])
+            report["verification"] = verify_from_report(
+                report, dataset_path, load_cases(dataset_path)
+            )
+            ok = ok and bool(report["verification"]["checks"]["all_ok"])
             out_path = write_json(out, report, indent=2)
             _print_gold_summary(report, out_path)
             return 0 if ok else 1
