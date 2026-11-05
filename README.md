@@ -1,7 +1,7 @@
 # CommerceQL
 
 > **新 Agent / 新接手请先读 [`AGENTS.md`](AGENTS.md)**（导航、阅读预算、禁区、五个陷阱）。本文是工程约束说明。
-> **现状态（2026-11-04）→ [`docs/09_当前状态与交接.md`](docs/09_当前状态与交接.md)**：HEAD、完成度、实测读数、未完成项与验证命令一页给全；本文 §1 只是快照。
+> **现状态（2026-11-05）→ [`docs/09_当前状态与交接.md`](docs/09_当前状态与交接.md)**：HEAD、完成度、实测读数、未完成项与验证命令一页给全；本文 §1 只是快照。
 
 > **Showcase**：受控 Text2SQL 电商分析 Agent —— 三道闸门 + 租户 RLS + 两段式审计。
 > **EX_official = 72.73% ± 1.82%**（Olist 60 题，3 批，n=3，v2 / 百炼 `deepseek-v4.1-flash`）｜ **448,152 行** Olist 五表入库 + RLS 金丝雀｜ **5/5** 生产栈 demo（4 图 + 1 拒答）。
@@ -23,18 +23,18 @@
 
 ---
 
-## 1. 当前状态（2026-11-04 快照 · 必然过期）
+## 1. 当前状态（2026-11-05 快照 · 必然过期）
 
 > **完整完成度与未完成项见 [`docs/09_当前状态与交接.md`](docs/09_当前状态与交接.md)**；本节只是速览。
 > 引用前先实跑 `git rev-parse --short HEAD; git rev-list --count HEAD; git status -sb` 并读源件，不要抄本节。
 
 | 项 | 读数 | 源 |
 |---|---|---|
-| 代码 HEAD | 最后代码提交 `19190dd` / 798 笔（本节文档提交后 799）；`origin/main` 落后 **87 笔（未推送；文档提交后 88）** | `git log -1`；`git rev-list --count HEAD`；`git status -sb` |
+| 代码 HEAD | 最后代码提交 `91fba80` / 801 笔（本节文档提交后 802）；`origin/main` 落后 **90 笔（未推送；文档提交后 91）** | `git log -1`；`git rev-list --count HEAD`；`git status -sb` |
 | 后端回归 | B2 **133 passed**；B6 few-shot **75 passed**；B6 多轮/图接线 **33 passed**；全量 unit+contract **2506 passed / 3 failed（既有）**；`tests/eval` 505 passed / 2 failed（既有） | 2026-11-04 现跑；命令见 docs/09 §5.3 |
 | 前端 | `40 passed`（7 files）；`tsc --noEmit` 与 `npm run build` 通过 | 2026-11-04 复跑（新增导出 7 条） |
 | 静态检查 | `ruff 213`（113 可自动修）；`mypy 0 / 179 files`；`lint-imports 4 kept / 0 broken` | 2026-11-04 复跑 |
-| Phase B | B1/B2/B3/B4/B5 **完成**（B2 真栈 + 浏览器导出已验）；**B6 复杂档 + few-shot + 多轮条件继承完成（离线），live 二轮未测**；B7 未做；B8 可选 | `docs/09` §4.2；提交见 git log |
+| Phase B | B1/B2/B3/B4/B5 **完成**（B2 真栈 + 浏览器导出已验）；**B6 复杂档 + few-shot + 多轮条件继承完成（离线），live 二轮未测**；**B7 100 题离线全绿，live EX 未跑**；B8 可选 | `docs/09` §4.2；提交见 git log |
 | 官方快照 | `88f3500` / **PASS 1/8**（PASS 1 / FAIL 3 / PARTIAL 2 / UNVERIFIED 2），生成 `2026-10-07T05:27:34Z`，最后改动该文件的提交 `24d4477` | `backend/reports/w6/eval_metrics.json`；`backend/reports/w8/OFFICIAL_SNAPSHOT_DECISION.md` |
 | 当期复算 | **6 PASS / 0 PARTIAL / 2 UNVERIFIED / 0 FAIL**，复算件 rev `26421ae`（2026-10-24） | `eval/results_w80_gate_recompute.json`；`backend/reports/w8/DELIVERY.md` 终版节 |
 | 契约文档 | `07 v1.7.42`（3,708 行）；`08 v1.4.3` | `docs/07_技术设计文档_TDD.md` 头部版本字段 |
