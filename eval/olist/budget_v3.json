@@ -1,0 +1,67 @@
+{
+  "schema": "W77_CALLS_LEDGER/v1",
+  "runs": [
+    {
+      "generated_at": "2026-11-05T10:30:42+00:00",
+      "git_rev": "39cb1f4",
+      "git_dirty": false,
+      "batch_id": "b7_smoke",
+      "live": true,
+      "mode": "record",
+      "cases": 10,
+      "calls": 41,
+      "calls_unique": 37,
+      "tokens": 134025,
+      "cost_cny": 0.095332,
+      "budget_stop": false
+    },
+    {
+      "generated_at": "2026-11-05T10:55:42+00:00",
+      "git_rev": "39cb1f4",
+      "git_dirty": false,
+      "batch_id": "b7_r1",
+      "live": true,
+      "mode": "record",
+      "cases": 100,
+      "calls": 398,
+      "calls_unique": 394,
+      "tokens": 1495514,
+      "cost_cny": 0.93953,
+      "budget_stop": false
+    },
+    {
+      "generated_at": "2026-11-05T11:20:51+00:00",
+      "git_rev": "39cb1f4",
+      "git_dirty": false,
+      "batch_id": "b7_r2",
+      "live": true,
+      "mode": "record",
+      "cases": 100,
+      "calls": 401,
+      "calls_unique": 395,
+      "tokens": 1491545,
+      "cost_cny": 0.874988,
+      "budget_stop": false
+    },
+    {
+      "generated_at": "2026-11-05T11:47:17+00:00",
+      "git_rev": "39cb1f4",
+      "git_dirty": false,
+      "batch_id": "b7_r3",
+      "live": true,
+      "mode": "record",
+      "cases": 100,
+      "calls": 412,
+      "calls_unique": 395,
+      "tokens": 1488488,
+      "cost_cny": 0.877885,
+      "budget_stop": false
+    }
+  ],
+  "updated_at": "2026-11-05T11:47:17.144911+00:00",
+  "totals": {
+    "calls": 1252,
+    "tokens": 4609572,
+    "cost_cny": 2.787735
+  }
+}

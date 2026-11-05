@@ -1,18 +1,486 @@
 {
-  "mode": "offline",
+  "mode": "batches",
   "dataset": "eval/olist/dataset_v3_frozen.json",
   "content_hash": "sha256:ec6b13f27cb9eaa0c4dc3f70031638370dc8b961a1676df50b3da33ca7b24f7e",
   "full_hash": "sha256:8777d896d1308e9a3ba5a447d519408aa06fc69e4a625ba5f8bab4eb0d907595",
-  "batch_ids": [],
-  "batches": [],
-  "ex_official": null,
+  "batch_ids": [
+    "b7_r1",
+    "b7_r2",
+    "b7_r3"
+  ],
+  "batches": [
+    {
+      "scored_total": 95,
+      "scored_passed": 69,
+      "ex": 0.7263157894736842,
+      "struct_null_skipped": 5,
+      "n_execute": 95,
+      "with_sql": 94,
+      "with_result": 79,
+      "equivalent": 69,
+      "ex_exec": 0.7263157894736842,
+      "n_unscored": 0,
+      "n_false_clarify": 0,
+      "n_false_refuse": 0,
+      "sandbox_dialect_gap": 15,
+      "clarify_correct": 1,
+      "clarify_total": 3,
+      "refuse_correct": 2,
+      "refuse_total": 2,
+      "matrix": [
+        [
+          {
+            "struct": "easy",
+            "semantic": "low",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "easy",
+            "semantic": "medium",
+            "total": 1,
+            "passed": 1,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "easy",
+            "semantic": "high",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          }
+        ],
+        [
+          {
+            "struct": "medium",
+            "semantic": "low",
+            "total": 20,
+            "passed": 17,
+            "pass_rate": 0.85,
+            "attribution": {
+              "unattributed": 3
+            }
+          },
+          {
+            "struct": "medium",
+            "semantic": "medium",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "medium",
+            "semantic": "high",
+            "total": 8,
+            "passed": 7,
+            "pass_rate": 0.875,
+            "attribution": {
+              "time_semantics": 1
+            }
+          }
+        ],
+        [
+          {
+            "struct": "hard",
+            "semantic": "low",
+            "total": 6,
+            "passed": 3,
+            "pass_rate": 0.5,
+            "attribution": {
+              "gate_policy_gap": 1,
+              "sandbox_dialect_gap": 1,
+              "unattributed": 1
+            }
+          },
+          {
+            "struct": "hard",
+            "semantic": "medium",
+            "total": 7,
+            "passed": 7,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "hard",
+            "semantic": "high",
+            "total": 4,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "gate_policy_gap": 2,
+              "time_semantics": 1,
+              "schema_linking_miss": 1
+            }
+          }
+        ],
+        [
+          {
+            "struct": "extra",
+            "semantic": "low",
+            "total": 24,
+            "passed": 16,
+            "pass_rate": 0.6667,
+            "attribution": {
+              "gate_policy_gap": 2,
+              "sandbox_dialect_gap": 3,
+              "unattributed": 3
+            }
+          },
+          {
+            "struct": "extra",
+            "semantic": "medium",
+            "total": 11,
+            "passed": 11,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "extra",
+            "semantic": "high",
+            "total": 8,
+            "passed": 1,
+            "pass_rate": 0.125,
+            "attribution": {
+              "sql_generation": 1,
+              "gate_policy_gap": 5,
+              "time_semantics": 1
+            }
+          }
+        ]
+      ],
+      "attribution": {
+        "gate_policy_gap": 10,
+        "sql_generation": 1,
+        "time_semantics": 3,
+        "schema_linking_miss": 1,
+        "unattributed": 7,
+        "sandbox_dialect_gap": 4
+      }
+    },
+    {
+      "scored_total": 95,
+      "scored_passed": 67,
+      "ex": 0.7052631578947368,
+      "struct_null_skipped": 5,
+      "n_execute": 95,
+      "with_sql": 95,
+      "with_result": 77,
+      "equivalent": 67,
+      "ex_exec": 0.7052631578947368,
+      "n_unscored": 0,
+      "n_false_clarify": 0,
+      "n_false_refuse": 0,
+      "sandbox_dialect_gap": 16,
+      "clarify_correct": 1,
+      "clarify_total": 3,
+      "refuse_correct": 2,
+      "refuse_total": 2,
+      "matrix": [
+        [
+          {
+            "struct": "easy",
+            "semantic": "low",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "easy",
+            "semantic": "medium",
+            "total": 1,
+            "passed": 1,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "easy",
+            "semantic": "high",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          }
+        ],
+        [
+          {
+            "struct": "medium",
+            "semantic": "low",
+            "total": 20,
+            "passed": 15,
+            "pass_rate": 0.75,
+            "attribution": {
+              "unattributed": 4,
+              "schema_linking_miss": 1
+            }
+          },
+          {
+            "struct": "medium",
+            "semantic": "medium",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "medium",
+            "semantic": "high",
+            "total": 8,
+            "passed": 7,
+            "pass_rate": 0.875,
+            "attribution": {
+              "unattributed": 1
+            }
+          }
+        ],
+        [
+          {
+            "struct": "hard",
+            "semantic": "low",
+            "total": 6,
+            "passed": 4,
+            "pass_rate": 0.6667,
+            "attribution": {
+              "gate_policy_gap": 1,
+              "sandbox_dialect_gap": 1
+            }
+          },
+          {
+            "struct": "hard",
+            "semantic": "medium",
+            "total": 7,
+            "passed": 6,
+            "pass_rate": 0.8571,
+            "attribution": {
+              "unattributed": 1
+            }
+          },
+          {
+            "struct": "hard",
+            "semantic": "high",
+            "total": 4,
+            "passed": 1,
+            "pass_rate": 0.25,
+            "attribution": {
+              "gate_policy_gap": 3
+            }
+          }
+        ],
+        [
+          {
+            "struct": "extra",
+            "semantic": "low",
+            "total": 24,
+            "passed": 15,
+            "pass_rate": 0.625,
+            "attribution": {
+              "gate_policy_gap": 3,
+              "sandbox_dialect_gap": 2,
+              "unattributed": 4
+            }
+          },
+          {
+            "struct": "extra",
+            "semantic": "medium",
+            "total": 11,
+            "passed": 10,
+            "pass_rate": 0.9091,
+            "attribution": {
+              "unattributed": 1
+            }
+          },
+          {
+            "struct": "extra",
+            "semantic": "high",
+            "total": 8,
+            "passed": 2,
+            "pass_rate": 0.25,
+            "attribution": {
+              "gate_policy_gap": 5,
+              "time_semantics": 1
+            }
+          }
+        ]
+      ],
+      "attribution": {
+        "unattributed": 11,
+        "gate_policy_gap": 12,
+        "time_semantics": 1,
+        "sandbox_dialect_gap": 3,
+        "schema_linking_miss": 1
+      }
+    },
+    {
+      "scored_total": 95,
+      "scored_passed": 66,
+      "ex": 0.6947368421052632,
+      "struct_null_skipped": 5,
+      "n_execute": 95,
+      "with_sql": 94,
+      "with_result": 76,
+      "equivalent": 66,
+      "ex_exec": 0.6947368421052632,
+      "n_unscored": 0,
+      "n_false_clarify": 0,
+      "n_false_refuse": 0,
+      "sandbox_dialect_gap": 16,
+      "clarify_correct": 1,
+      "clarify_total": 3,
+      "refuse_correct": 1,
+      "refuse_total": 2,
+      "matrix": [
+        [
+          {
+            "struct": "easy",
+            "semantic": "low",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "easy",
+            "semantic": "medium",
+            "total": 1,
+            "passed": 1,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "easy",
+            "semantic": "high",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          }
+        ],
+        [
+          {
+            "struct": "medium",
+            "semantic": "low",
+            "total": 20,
+            "passed": 13,
+            "pass_rate": 0.65,
+            "attribution": {
+              "unattributed": 6,
+              "sql_generation": 1
+            }
+          },
+          {
+            "struct": "medium",
+            "semantic": "medium",
+            "total": 2,
+            "passed": 2,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "medium",
+            "semantic": "high",
+            "total": 8,
+            "passed": 7,
+            "pass_rate": 0.875,
+            "attribution": {
+              "time_semantics": 1
+            }
+          }
+        ],
+        [
+          {
+            "struct": "hard",
+            "semantic": "low",
+            "total": 6,
+            "passed": 3,
+            "pass_rate": 0.5,
+            "attribution": {
+              "gate_policy_gap": 1,
+              "sandbox_dialect_gap": 1,
+              "unattributed": 1
+            }
+          },
+          {
+            "struct": "hard",
+            "semantic": "medium",
+            "total": 7,
+            "passed": 6,
+            "pass_rate": 0.8571,
+            "attribution": {
+              "unattributed": 1
+            }
+          },
+          {
+            "struct": "hard",
+            "semantic": "high",
+            "total": 4,
+            "passed": 0,
+            "pass_rate": 0.0,
+            "attribution": {
+              "gate_policy_gap": 3,
+              "time_semantics": 1
+            }
+          }
+        ],
+        [
+          {
+            "struct": "extra",
+            "semantic": "low",
+            "total": 24,
+            "passed": 17,
+            "pass_rate": 0.7083,
+            "attribution": {
+              "unattributed": 3,
+              "gate_policy_gap": 2,
+              "sandbox_dialect_gap": 2
+            }
+          },
+          {
+            "struct": "extra",
+            "semantic": "medium",
+            "total": 11,
+            "passed": 11,
+            "pass_rate": 1.0,
+            "attribution": {}
+          },
+          {
+            "struct": "extra",
+            "semantic": "high",
+            "total": 8,
+            "passed": 2,
+            "pass_rate": 0.25,
+            "attribution": {
+              "gate_policy_gap": 5,
+              "time_semantics": 1
+            }
+          }
+        ]
+      ],
+      "attribution": {
+        "unattributed": 11,
+        "gate_policy_gap": 11,
+        "time_semantics": 3,
+        "sandbox_dialect_gap": 3,
+        "sql_generation": 1
+      }
+    }
+  ],
+  "ex_official": {
+    "mean": 0.7087719298245614,
+    "std": 0.016079212964757335,
+    "n": 3
+  },
   "interaction_judge": "terminal_event == expected_behavior and infra_error is None",
   "fixed_lines": [
-    "EX_official = UNVERIFIED / scored_total = UNVERIFIED%",
-    "分母构成：scored=UNVERIFIED | struct_null_skipped=5 | execute=95 | with_sql=UNVERIFIED | with_result=UNVERIFIED | equivalent=UNVERIFIED",
-    "交互正确（不计入 EX）：refuse UNVERIFIED/2 ｜ clarify UNVERIFIED/3",
-    "沙箱方言缺口（单列，不是模型错）：UNVERIFIED",
-    "若报 EX_exec（非官方，仅 coverage）：UNVERIFIED/95"
+    "EX_official = 69 / scored_total = 72.63%",
+    "分母构成：scored=95 | struct_null_skipped=5 | execute=95 | with_sql=94 | with_result=79 | equivalent=69",
+    "交互正确（不计入 EX）：refuse 2/2 ｜ clarify 1/3",
+    "沙箱方言缺口（单列，不是模型错）：15",
+    "若报 EX_exec（非官方，仅 coverage）：69/95"
   ],
   "evidence": {
     "gold": {

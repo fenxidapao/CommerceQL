@@ -1,23 +1,28 @@
-# Olist 100 题评测报告（B7 · 离线）
+# Olist 100 题评测报告（B7 · live 3 批）
 
-> 数据集：`eval/olist/dataset_v3_frozen.json` ｜ 模式：frozen ｜ offline · 未跑 live
+> 数据集：`eval/olist/dataset_v3_frozen.json` ｜ 模式：frozen ｜ 3 个独立批次（各自进程 + 各自 --batch-id）
 
 ## 1. 结论（固定五行）
 
 ```
-EX_official = UNVERIFIED / scored_total = UNVERIFIED%
-分母构成：scored=UNVERIFIED | struct_null_skipped=5 | execute=95 | with_sql=UNVERIFIED | with_result=UNVERIFIED | equivalent=UNVERIFIED
-交互正确（不计入 EX）：refuse UNVERIFIED/2 ｜ clarify UNVERIFIED/3
-沙箱方言缺口（单列，不是模型错）：UNVERIFIED
-若报 EX_exec（非官方，仅 coverage）：UNVERIFIED/95
+EX_official = 69 / scored_total = 72.63%
+分母构成：scored=95 | struct_null_skipped=5 | execute=95 | with_sql=94 | with_result=79 | equivalent=69
+交互正确（不计入 EX）：refuse 2/2 ｜ clarify 1/3
+沙箱方言缺口（单列，不是模型错）：15
+若报 EX_exec（非官方，仅 coverage）：69/95
 ```
 
+`EX_official` = 0.7088 ± 0.0161（3 批均值 ± 样本标准差，n=3；batch_id=['b7_r1', 'b7_r2', 'b7_r3']）
+
+> 固定五行中的 `EX_official` / 分母构成 / 交互正确取**第一批**的逐例读数；跨批汇总以本行的均值±样本标准差为准（μ 与 σ 不可混批）。
 
 ## 2. 分母构成
 
 | batch_id | scored | passed | EX | struct_null_skipped | execute | with_sql | with_result | equivalent | n_unscored | false_clarify | false_refuse | dialect_gap |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| — | UNVERIFIED | UNVERIFIED | UNVERIFIED | 5 | 95 | UNVERIFIED | UNVERIFIED | UNVERIFIED | UNVERIFIED | UNVERIFIED | UNVERIFIED | UNVERIFIED |
+| b7_r1 | 95 | 69 | 0.7263 | 5 | 95 | 94 | 79 | 69 | 0 | 0 | 0 | 15 |
+| b7_r2 | 95 | 67 | 0.7053 | 5 | 95 | 95 | 77 | 67 | 0 | 0 | 0 | 16 |
+| b7_r3 | 95 | 66 | 0.6947 | 5 | 95 | 94 | 76 | 66 | 0 | 0 | 0 | 16 |
 
 ### 4×3 网格（数据集现算，execute 题）
 
@@ -33,7 +38,11 @@ EX_official = UNVERIFIED / scored_total = UNVERIFIED%
 
 判据 = `terminal_event == expected_behavior and infra_error is None`；**不读 `verdict.equivalent`**（交互题 verdict 恒 None）。
 
-refuse `UNVERIFIED`/2 ｜ clarify `UNVERIFIED`/3（未跑 live）
+| batch_id | refuse | clarify |
+|---|---|---|
+| b7_r1 | 2/2 | 1/3 |
+| b7_r2 | 2/2 | 1/3 |
+| b7_r3 | 1/2 | 1/3 |
 
 ## 4. 金标与口径（离线证据）
 
