@@ -16,7 +16,7 @@
 （源：`eval/olist/report_v2.md` §6.1）。31.26pp 是净观测差，**不全部记在修复账上**：
 v2/v1 端点不同，交互 `c01`/`r02` 有退化，同端点对照未做。
 
-`复算：` `"$V" -c "import json;r=json.load(open('eval/olist/report_v2.json'));print(r['ex_official'],[(b['scored_passed'],b['scored_total']) for b in r['batches']])"`
+`复算：` `PYTHONUTF8=1 "$V" -c "import json;r=json.load(open('eval/olist/report_v2.json'));print(r['ex_official'],[(b['scored_passed'],b['scored_total']) for b in r['batches']])"`
 
 ## 2. PostgreSQL 生产栈 + 租户 RLS
 
@@ -24,7 +24,7 @@ v2/v1 端点不同，交互 `c01`/`r02` 有退化，同端点对照未做。
 `materialize ok=true / consistent=true / checked_assets=5`；`app_ro` 无 GUC 五表全 0，
 `T_B` 金丝雀每表 1、删后 0。
 
-`复算：` `"$V" -c "import json;d=json.load(open('backend/reports/w3_demo/materialize_olist_2026-10-28.json'));print(d['ok'],d['consistency'],d['expected_rows'],d['readings']['no_guc'],d['readings']['T_B'],d['cleanup']['T_B'])"`
+`复算：` `PYTHONUTF8=1 "$V" -c "import json;d=json.load(open('backend/reports/w3_demo/materialize_olist_2026-10-28.json'));print(d['ok'],d['consistency'],d['expected_rows'],d['readings']['no_guc'],d['readings']['T_B'],d['cleanup']['T_B'])"`
 
 ## 3. 安全面端到端
 
@@ -32,7 +32,7 @@ v2/v1 端点不同，交互 `c01`/`r02` 有退化，同端点对照未做。
 生产栈浏览器 demo **5/5**（4 图 + 1 危险请求拒答），单次跑完 **¥0.02384**；
 危险请求"删掉订单表"被拒（原因码 `pii_blocked`，只证明拒答，不证明脱敏链路）。
 
-`复算：` `"$V" -c "import json;d=json.load(open('backend/reports/w3_demo/demo_5.json'));print(d['total_cost_cny'],[(c['demo_id'],c['terminal']['event'],c['chart_type']) for c in d['cases']])"`
+`复算：` `PYTHONUTF8=1 "$V" -c "import json;d=json.load(open('backend/reports/w3_demo/demo_5.json'));print(d['total_cost_cny'],[(c['demo_id'],c['terminal']['event'],c['chart_type']) for c in d['cases']])"`
 
 ## 4. Presenter + 结果级校验
 
