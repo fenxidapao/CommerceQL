@@ -390,6 +390,20 @@ class TestLiveBatchSelfDefects:
         r = run_gate1("SELECT COALESCE(channel, 'unknown') AS ch FROM v_traffic_daily", allow)
         assert not r.passed and r.gate_result.rule_id == AstRule.R14_LITERAL_POLICY.value
 
+    def test_date_format_literal_in_to_char_passes(self, allow: dict) -> None:
+        """日期格式串是结构常量：`to_char(ts,'YYYY-MM')` 不应被 R14 误杀。"""
+        sql = ("SELECT to_char(pay_time, 'YYYY-MM') AS month, COUNT(*) AS n "
+               "FROM v_order_paid GROUP BY to_char(pay_time, 'YYYY-MM') ORDER BY month")
+        r = run_gate1(sql, allow)
+        assert r.passed, r.gate_result.rule_id
+
+    def test_free_string_literal_beside_date_format_still_r14(self, allow: dict) -> None:
+        # 反证：放宽只对日期函数的直接格式参数，`'-Q'` 这类自由拼接字面量仍拒
+        sql = ("SELECT to_char(pay_time, 'YYYY') || '-Q' AS q FROM v_order_paid "
+               "GROUP BY to_char(pay_time, 'YYYY')")
+        r = run_gate1(sql, allow)
+        assert not r.passed and r.gate_result.rule_id == AstRule.R14_LITERAL_POLICY.value
+
     # ---- R04：参数化 LIMIT 改写为硬上界，而不是整条拒绝 ----
     def test_placeholder_limit_is_rewritten_not_rejected(self, allow: dict) -> None:
         r = run_gate1("SELECT pay_amount FROM v_order_paid LIMIT %(limit)s", allow)

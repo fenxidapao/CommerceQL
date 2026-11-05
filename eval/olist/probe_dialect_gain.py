@@ -37,9 +37,11 @@ import sqlglot  # noqa: E402
 from sqlglot import exp  # noqa: E402
 
 import equivalence as eq  # noqa: E402
+from app.guard.ast_gate import run_gate1  # noqa: E402
 from app.semantics.loader import load_bundle  # noqa: E402
+from eval.harness import Harness  # noqa: E402
 from eval.olist import run_olist as R  # noqa: E402
-from eval.runner import run_in_sandbox  # noqa: E402
+from eval.runner import identity_for_case, run_in_sandbox  # noqa: E402
 
 
 def _parse_expr(sql: str) -> exp.Expression:
@@ -127,6 +129,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--timeout-s", type=float, default=20.0)
     parser.add_argument(
+        "--apply-gate", action="store_true",
+        help="先按真实 gate1 审计（含 R14 新口径），通过后再转译执行",
+    )
+    parser.add_argument(
         "--out", default=str(OLIST_DIR / "probe_dialect_gain.json")
     )
     args = parser.parse_args(argv)
@@ -141,6 +147,12 @@ def main(argv: list[str] | None = None) -> int:
     tenant_scoped = {
         asset.physical_asset: "tenant_id" for asset in bundle.bundle.assets
     }
+    allowlist = None
+    if args.apply_gate:
+        harness = Harness(live=False, bundle_path=str(REPO_ROOT / str(spec["bundle"])), db_path=args.db)
+        allowlist = harness.semantics.guard_allowlist(
+            identity_for_case("ALLOWLIST", "T_A"), max_rows=None
+        )
 
     gold_tables: dict[tuple[str, str], eq.Table] = {}
 
@@ -179,6 +191,13 @@ def main(argv: list[str] | None = None) -> int:
             if not sql:
                 still[_old_cause(record)] += 1
                 continue
+            if allowlist is not None:
+                gate = run_gate1(sql, allowlist)
+                if not gate.passed:
+                    errors[f"gate:{gate.gate_result.rule_id}"] += 1
+                    still[_old_cause(record)] += 1
+                    continue
+                sql = gate.rewritten_sql
             try:
                 translated = postgres_to_sqlite(sql)
             except Exception as exc:  # 转译失败单独计数，不并入「仍失败」
@@ -244,7 +263,7 @@ def main(argv: list[str] | None = None) -> int:
     Path(args.out).write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
-    print(f"[out] {Path(args.out).relative_to(REPO_ROOT).as_posix()}")
+    print(f"[out] {Path(args.out).resolve().relative_to(REPO_ROOT).as_posix()}")
     return 0
 
 

@@ -30,7 +30,7 @@
 
 | 项 | 读数 | 源 |
 |---|---|---|
-| 代码 HEAD | 最后代码提交 `91fba80` / 805 笔（含本节文档提交）；`origin/main` 已推送 | `git log -1`；`git rev-list --count HEAD`；`git status -sb` |
+| 代码 HEAD | 最后代码提交 `91fba80` / 807 笔（含本节文档提交）；`origin/main` 已推送 | `git log -1`；`git rev-list --count HEAD`；`git status -sb` |
 | 后端回归 | B2 **133 passed**；B6 few-shot **75 passed**；B6 多轮/图接线 **33 passed**；全量 unit+contract **2506 passed / 3 failed（既有）**；`tests/eval` 505 passed / 2 failed（既有） | 2026-11-04 现跑；命令见 docs/09 §5.3 |
 | 前端 | `40 passed`（7 files）；`tsc --noEmit` 与 `npm run build` 通过 | 2026-11-04 复跑（新增导出 7 条） |
 | 静态检查 | `ruff 213`（113 可自动修）；`mypy 0 / 179 files`；`lint-imports 4 kept / 0 broken` | 2026-11-04 复跑 |

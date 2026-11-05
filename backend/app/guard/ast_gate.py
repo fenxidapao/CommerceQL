@@ -1145,6 +1145,8 @@ class _Auditor:
         for lit in root.find_all(exp.Literal):
             if _literal_key(lit) in self.allowed_constants:
                 continue
+            if _is_date_format_literal(lit):
+                continue
             if not self._literal_in_value_position(lit):
                 return _build_reject(AstRule.R14_LITERAL_POLICY)
         return None
@@ -1251,6 +1253,26 @@ def _warn_unbounded_sort(
     order = query.args.get("order") if hasattr(query, "args") else None
     if order is not None:
         warnings.append(Gate1Warning(AstRule.R18_UNBOUNDED_SORT, "top-level ORDER BY without LIMIT"))
+
+
+#: 允许承载「日期格式串」的函数。格式串是**结构常量**，不携带行/列数据；
+#: 恒真比较（`'x'='x'`）仍走原分支被拒，不因这条放宽。
+_DATE_FORMAT_FUNCS: Final[frozenset[str]] = frozenset({"strftime", "date_format"})
+
+
+def _is_date_format_literal(lit: exp.Literal) -> bool:
+    """字符串字面量是否是日期格式化函数的**直接实参**。
+
+    PostgreSQL 的 `to_char(ts, 'YYYY-MM')` 在 sqlglot 里是 `TimeToStr`；
+    `strftime('%Y-%m', ts)`（评测沙箱写法）是 `Anonymous`。只放行这两类函数的
+    直接格式参数，`'-Q'` 之类的自由拼接字面量**仍按 R14 拒绝**。
+    """
+    if not lit.is_string:
+        return False
+    parent = lit.parent
+    if isinstance(parent, exp.TimeToStr):
+        return True
+    return isinstance(parent, exp.Anonymous) and str(parent.this).lower() in _DATE_FORMAT_FUNCS
 
 
 def _literal_key(lit: exp.Literal) -> str:
