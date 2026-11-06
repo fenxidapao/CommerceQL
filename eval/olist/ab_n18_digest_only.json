@@ -1,0 +1,56 @@
+{
+  "schema": "T15_REPAIR_AB_PROBE/v1",
+  "note": "本件只判 parse_ok/exec_ok，**不判 equal_gold**；B 臂违反 N-17，仅评测侧实验",
+  "generated_at": "2026-11-06T08:04:55+00:00",
+  "model": "deepseek-v4.1-flash",
+  "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+  "peak": true,
+  "usd_cny_rate": 7.1,
+  "usd_cny_rate_source": "app.llm.budget.USD_CNY_RATE",
+  "cap": {
+    "max_calls": 1,
+    "max_cost_cny": 0.2,
+    "stopped": false,
+    "calls": 1,
+    "spent_cny": 0.0
+  },
+  "cases": [
+    "n18"
+  ],
+  "arms": [
+    "digest_only",
+    "with_failed_sql"
+  ],
+  "per_arm": {
+    "digest_only": {
+      "n": 1,
+      "parse_ok": 0,
+      "exec_ok": 0,
+      "cost_cny": 0
+    },
+    "with_failed_sql": {
+      "n": 0,
+      "parse_ok": 0,
+      "exec_ok": 0,
+      "cost_cny": 0
+    }
+  },
+  "runs": [
+    {
+      "case_id": "n18",
+      "arm": "digest_only",
+      "rep": 0,
+      "call_ok": false,
+      "error": "URLError: <urlopen error [Errno 11001] getaddrinfo failed>",
+      "finish_reason": null,
+      "latency_ms": 11077,
+      "usage": {},
+      "cost_cny": 0.0,
+      "sql": "",
+      "parse_ok": false,
+      "exec_ok": false,
+      "rows": null,
+      "note": "empty output"
+    }
+  ]
+}

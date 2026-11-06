@@ -1,0 +1,69 @@
+{
+  "schema": "T15_REPAIR_AB_PROBE/v1",
+  "note": "本件只判 parse_ok/exec_ok，**不判 equal_gold**；B 臂违反 N-17，仅评测侧实验",
+  "generated_at": "2026-11-06T08:05:23+00:00",
+  "model": "deepseek-v4.1-flash",
+  "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+  "peak": true,
+  "usd_cny_rate": 7.1,
+  "usd_cny_rate_source": "app.llm.budget.USD_CNY_RATE",
+  "cap": {
+    "max_calls": 1,
+    "max_cost_cny": 0.2,
+    "stopped": false,
+    "calls": 1,
+    "spent_cny": 0.017467
+  },
+  "cases": [
+    "n39"
+  ],
+  "arms": [
+    "digest_only",
+    "with_failed_sql"
+  ],
+  "per_arm": {
+    "digest_only": {
+      "n": 1,
+      "parse_ok": 0,
+      "exec_ok": 0,
+      "cost_cny": 0.017467
+    },
+    "with_failed_sql": {
+      "n": 0,
+      "parse_ok": 0,
+      "exec_ok": 0,
+      "cost_cny": 0
+    }
+  },
+  "runs": [
+    {
+      "case_id": "n39",
+      "arm": "digest_only",
+      "rep": 0,
+      "call_ok": true,
+      "error": null,
+      "finish_reason": "length",
+      "latency_ms": 14296,
+      "usage": {
+        "completion_tokens": 2000,
+        "completion_tokens_details": {
+          "reasoning_tokens": 2000,
+          "text_tokens": 0
+        },
+        "prompt_tokens": 431,
+        "prompt_tokens_details": {
+          "cached_tokens": 256,
+          "image_tokens": 0,
+          "text_tokens": 431
+        },
+        "total_tokens": 2431
+      },
+      "cost_cny": 0.017467,
+      "sql": "",
+      "parse_ok": false,
+      "exec_ok": false,
+      "rows": null,
+      "note": "empty output"
+    }
+  ]
+}
