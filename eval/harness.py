@@ -534,6 +534,21 @@ class CaseRun:
         return dict(detail) if isinstance(detail, Mapping) else {}
 
     @property
+    def repair_round(self) -> int:
+        """本次 run 走过的 repair 轮次（`state.repair_round`，0–2，`U-159`）。
+
+        为什么必须落盘：`repair` 节点自己写这一格（`graph/nodes/repair.py:122`），
+        但记录此前没取 ⇒ 480 条结果件全 `null`，「跑了几轮 / 改没改对」不可复算。
+        缺键一律回 `0`（= 没进过 repair），**不编**中间值。
+        """
+        return int(self.state.get("repair_round") or 0)
+
+    @property
+    def repair_history(self) -> tuple[dict[str, Any], ...]:
+        """逐轮的**脱敏摘要**（`round` / `error_class` / `attempts`），不含 SQL、不含原始库文本。"""
+        return tuple(dict(item) for item in (self.state.get("repair_history") or ()))
+
+    @property
     def degradations(self) -> tuple[dict[str, Any], ...]:
         return tuple(dict(d) for d in (self.state.get("degradations") or ()))
 

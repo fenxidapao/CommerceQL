@@ -612,6 +612,10 @@ async def score_case(
         "gate_decisions": run.gate_decisions,
         "gate1_reject_rule": run.gate1_reject_rule,
         "exec_error_class": run.exec_error_class,
+        # 🔴 U-159：repair 轮次与逐轮脱敏摘要 —— 图侧一直是有的（`state.py:355-356`），
+        # 此前评测侧没取 ⇒ 结果件里全 `null`，`T-04`/`T-15` 的「改没改对」无从复算。
+        "repair_round": run.repair_round,
+        "repair_history": list(run.repair_history),
         "degradations": list(run.degradations),
         # 候选规模 = L4 截断偏差的分母（实测每候选 ≈36.6 tok，512 上限只容 ≈14 个）。
         "retrieval_counts": dict(harness.retrieval.last_counts),
