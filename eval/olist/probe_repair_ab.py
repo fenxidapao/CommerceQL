@@ -156,7 +156,8 @@ def build_prompt(case: dict[str, Any], arm: str, digest: str, schema: str) -> tu
 
 
 def call_model(
-    *, endpoint: str, model: str, api_key: str, system: str, user: str, max_tokens: int
+    *, endpoint: str, model: str, api_key: str, system: str, user: str, max_tokens: int,
+    timeout_s: float = 90.0,
 ) -> dict[str, Any]:
     payload = {
         "model": model,
@@ -175,7 +176,7 @@ def call_model(
     )
     started = time.monotonic()
     try:
-        with urllib.request.urlopen(request, timeout=180) as response:
+        with urllib.request.urlopen(request, timeout=timeout_s) as response:
             body = json.loads(response.read().decode("utf-8"))
     except Exception as exc:  # noqa: BLE001 - 探针必须记录失败而不是抛出
         return {"ok": False, "error": f"{type(exc).__name__}: {str(exc)[:200]}",
@@ -240,6 +241,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
     parser.add_argument("--max-tokens", type=int, default=900)
+    parser.add_argument("--timeout-s", type=float, default=90.0, help="单次 HTTP 超时（秒）")
+    parser.add_argument("--arm", choices=ARMS, default=None, help="只跑一条臂（T-18 单条可重入形态）")
+    parser.add_argument("--case-id", default=None, help="只跑一条样例（同上）")
     parser.add_argument("--max-calls", type=int, default=4)
     parser.add_argument("--max-cost-cny", type=float, default=0.2)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
@@ -257,7 +261,12 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
         return 2
 
-    cases = load_failing_cases(list(args.results), limit=args.cases)
+    # T-18：单条可重入形态 —— `--case-id` 时先全量挑、再过滤，避免被 `--cases` 限额截掉。
+    if args.case_id:
+        pool = load_failing_cases(list(args.results), limit=None)
+        cases = [c for c in pool if c["case_id"] == args.case_id]
+    else:
+        cases = load_failing_cases(list(args.results), limit=args.cases)
     if not cases:
         print("REFUSE: 没挑到「真走过 repair 且仍失败」的样例", file=sys.stderr)
         return 2
@@ -286,7 +295,7 @@ def main(argv: list[str] | None = None) -> int:
 
     for case in cases:
         digest = digest_by_class.get(case["error_class"], "SQL 无法执行")
-        for arm in ARMS:
+        for arm in ((args.arm,) if args.arm else ARMS):
             for rep in range(args.reps):
                 if calls >= args.max_calls or spent >= args.max_cost_cny:
                     stopped = True
@@ -295,6 +304,7 @@ def main(argv: list[str] | None = None) -> int:
                 result = call_model(
                     endpoint=args.endpoint, model=args.model, api_key=api_key,
                     system=system, user=user, max_tokens=args.max_tokens,
+                    timeout_s=args.timeout_s,
                 )
                 calls += 1
                 usage = result.get("usage") or {}
