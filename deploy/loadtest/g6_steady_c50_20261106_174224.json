@@ -1,0 +1,197 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-11-06T09:42:24+00:00",
+  "target": "http://127.0.0.1:8000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 50,
+        "duration_s": 420.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": false,
+        "questions": "questions_T_A.txt",
+        "request_cap": 800
+      },
+      "requests": 800,
+      "wall_s": 21.104,
+      "throughput_rps": 37.908,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 10,
+        "rejected_429": 790,
+        "other_http_4xx": 0,
+        "http_5xx": 0,
+        "unresolved": 0,
+        "terminal": 10
+      },
+      "rejection_headers": {
+        "429": {
+          "retry_after=30": 790
+        }
+      },
+      "quota_headers_by_status": {
+        "429": {
+          "bucket+limit+remaining+reset": 790
+        }
+      },
+      "worker_session_depth": {
+        "grouping_key": "(worker, session_id)",
+        "is_server_thread": false,
+        "server_thread_key": "{tenant}:{user}:{session}（app/api/runner.py 的 thread_id 形状）",
+        "server_thread_ruler": "deploy/loadtest/r23_thread_from_checkpoints.sql ⑮/⑰（库面，须剔作废那跑）",
+        "groups": 0,
+        "depth_hist": {},
+        "unsessioned": 800,
+        "by_outcome": {
+          "http_4xx": {
+            "turn1": 0,
+            "turn2plus": 0,
+            "unsessioned": 790
+          },
+          "refuse": {
+            "turn1": 0,
+            "turn2plus": 0,
+            "unsessioned": 5
+          },
+          "ok": {
+            "turn1": 0,
+            "turn2plus": 0,
+            "unsessioned": 5
+          }
+        },
+        "by_code": {}
+      },
+      "latency_ms": {
+        "p50": 10825.8,
+        "p95": 20933.1,
+        "p99": 20933.1,
+        "max": 20933.1,
+        "mean": 14070.1,
+        "samples": 10
+      },
+      "latency_ms_all_ms": {
+        "p50": 112.3,
+        "p95": 550.3,
+        "samples": 800
+      },
+      "ttfb_ms": {
+        "p50": 193.7,
+        "p95": 434.2
+      },
+      "latency_samples_ms": [
+        {
+          "total_ms": 7195.0,
+          "ttfb_ms": 159.9,
+          "outcome": "refuse",
+          "code": null,
+          "task_id": "tk_ed9def8508164842ae5334457892e615"
+        },
+        {
+          "total_ms": 7197.6,
+          "ttfb_ms": 168.4,
+          "outcome": "refuse",
+          "code": null,
+          "task_id": "tk_6b570914a69e4bf886d14d13df372e23"
+        },
+        {
+          "total_ms": 8208.6,
+          "ttfb_ms": 174.2,
+          "outcome": "refuse",
+          "code": null,
+          "task_id": "tk_9c7e9205eee845b6a3d870820afa5000"
+        },
+        {
+          "total_ms": 9196.0,
+          "ttfb_ms": 193.7,
+          "outcome": "refuse",
+          "code": null,
+          "task_id": "tk_dec9bb2e67c047d9b854b22249573ba4"
+        },
+        {
+          "total_ms": 10825.8,
+          "ttfb_ms": 426.9,
+          "outcome": "refuse",
+          "code": null,
+          "task_id": "tk_d36fd142787d4583ac28ad840f7eeb10"
+        },
+        {
+          "total_ms": 18485.9,
+          "ttfb_ms": 188.7,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_6c02b3cff46b47db87e906abf018cda5"
+        },
+        {
+          "total_ms": 18490.8,
+          "ttfb_ms": 200.4,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_4a7fdae70ebe49d0b1db70b5883ff807"
+        },
+        {
+          "total_ms": 19727.5,
+          "ttfb_ms": 372.9,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_e14db7137cc1487a8d7905a41b572924"
+        },
+        {
+          "total_ms": 20440.9,
+          "ttfb_ms": 200.9,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_9db0f0b792ea4e14bd8bb6a71ed37440"
+        },
+        {
+          "total_ms": 20933.1,
+          "ttfb_ms": 434.2,
+          "outcome": "ok",
+          "code": null,
+          "task_id": "tk_ff123acc01d1482ea0d62ba4ee8ecd4c"
+        }
+      ],
+      "outcomes": {
+        "http_4xx": 790,
+        "refuse": 5,
+        "ok": 5
+      },
+      "codes": {
+        "RATE_LIMITED": 790
+      },
+      "codes_task_ids": {},
+      "terminal_provenance": {
+        "http_4xx": {
+          "stage=none|reason=none": 790
+        },
+        "refuse": {
+          "stage=schema_linking|reason=no_data_asset": 5
+        },
+        "ok": {
+          "stage=executing|reason=none": 5
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": null,
+      "g6_caveat": "准入样本仅 10 条（< 本窗口下限 20）⇒ P95 落点由个别样本决定，统计意义不足；另有 790 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）"
+    }
+  ],
+  "target_check": {
+    "url": "http://127.0.0.1:8000/api/v1/openapi.json",
+    "paths_total": 24,
+    "has_query": true,
+    "query_paths": [
+      "/api/v1/query",
+      "/api/v1/query/{task_id}",
+      "/api/v1/query/{task_id}/cancel"
+    ]
+  },
+  "finished_at": "2026-11-06T09:42:46+00:00",
+  "generated_at": "2026-11-06T09:42:46+00:00",
+  "git_rev": "2833c25",
+  "git_dirty": false
+}
