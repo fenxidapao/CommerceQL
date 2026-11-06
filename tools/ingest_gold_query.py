@@ -50,7 +50,7 @@ COLUMNS = (
 def normalize_sql(sql: str) -> str:
     """确定性归一：能解析就按 sqlglot postgres 重排（`normalize=True`），否则空白归一。"""
     try:
-        import sqlglot  # noqa: PLC0415 - 只在生成期需要，保持导入失败可降级
+        import sqlglot  # 只在生成期需要；导入失败降级为空白归一，不阻断入库
     except ImportError:
         return " ".join(sql.split())
     try:
