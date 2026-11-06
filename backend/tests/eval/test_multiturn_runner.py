@@ -116,6 +116,20 @@ def test_missing_plan_is_never_a_pass(spec: dict[str, Any]) -> None:
     assert result["fields"]["time_start"]["actual"] is None
 
 
+def test_time_caliber_day_granularity_and_exclusive_upper() -> None:
+    """U-157：时间面按日粒度比，`… 23:59:59` 抬次日与金标右开同口径。
+
+    这四条是**新口径的正/反控制**：① 时分秒差不再判不等；② 闭区间上界归一后与右开
+    金标相等；③ `T` 分隔同样归一；④ 纯日期上界**不抬**（`2018-12-31` ≠ `2019-01-01`，
+    仍判不等）—— 少了第 ④ 条，改动就会退化成「时间面永远通过」。
+    """
+    assert multiturn.time_field_ok("time_start", "2018-01-01", "2018-01-01 00:00:00") is True
+    assert multiturn.time_field_ok("time_end", "2019-01-01", "2018-12-31 23:59:59") is True
+    assert multiturn.time_field_ok("time_end", "2019-01-01", "2018-12-31T23:59:59") is True
+    assert multiturn.time_field_ok("time_end", "2019-01-01", "2018-12-31") is False
+    assert multiturn.time_field_ok("time_start", "2018-01-01", None) is False
+
+
 def test_history_sanitizer_matches_production() -> None:
     """镜像必须与 `app/api/runner._sanitize_history_plan` 等价（eval 不许 import app.api）。"""
     from app.api.runner import _sanitize_history_plan

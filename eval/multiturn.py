@@ -23,6 +23,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping, Sequence
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Final
 
@@ -211,6 +212,48 @@ def _summary_time(summary: Mapping[str, Any] | None, side: str) -> Any:
     return window.get(side)
 
 
+def _date_part(value: Any) -> date | None:
+    """取 `YYYY-MM-DD` 头部（容忍 `T`/空格分隔与带时分秒）。取不到返回 None。"""
+    if not isinstance(value, str):
+        return None
+    text = value.strip().replace("T", " ")
+    if len(text) < 10:
+        return None
+    try:
+        return date.fromisoformat(text[:10])
+    except ValueError:
+        return None
+
+
+def _exclusive_upper(value: Any) -> date | None:
+    """`time_end` 侧归一：闭区间上界（`… 23:59:59`，含 `T` 分隔）抬成次日 00:00:00。
+
+    ⚠️ **纯日期上界（`2018-12-31`）刻意不抬**（U-157）：它既可能就是闭区间当天，
+    也可能是右开的另一种写法；口径未定 ⇒ 按字面比，不猜。
+    """
+    day = _date_part(value)
+    if day is None:
+        return None
+    text = str(value).strip().replace("T", " ")
+    return day + timedelta(days=1) if text.endswith("23:59:59") else day
+
+
+def time_field_ok(key: str, expected: Any, actual: Any) -> bool:
+    """时间面判定（U-157）：两侧按**日粒度**比，右开/闭区间归一后再比。
+
+    修的是「模块口径说 ISO 日期字符串、实现做原始字符串全等」这处分歧
+    （见本模块 docstring 比较口径第 2 条）。`actual is None`（无完整计划）照旧判不等，
+    但统计层由 `plans_missing` 单列，不与「时间答错」混计。
+    """
+    if expected is None or actual is None:
+        return expected == actual
+    if key == "time_start":
+        left, right = _date_part(expected), _date_part(actual)
+    else:
+        left, right = _exclusive_upper(expected), _exclusive_upper(actual)
+    return left is not None and left == right
+
+
 def compare_expectation(
     expect: Mapping[str, Any],
     summary: Mapping[str, Any] | None,
@@ -237,7 +280,13 @@ def compare_expectation(
             continue
         expected = expect.get(key)
         actual = _summary_time(summary, "start" if key == "time_start" else "end")
-        fields[key] = {"expected": expected, "actual": actual, "ok": expected == actual}
+        # U-157：原先在这里做 `expected == actual`（原始字符串全等），与本模块
+        # docstring 第 2 条「比 ISO 日期字符串、金标右开」不一致 ⇒ 改走 time_field_ok。
+        fields[key] = {
+            "expected": expected,
+            "actual": actual,
+            "ok": time_field_ok(key, expected, actual),
+        }
 
     unmapped = {
         key: value for key, value in expect.items() if key not in MAPPED_KEYS
