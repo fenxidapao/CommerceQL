@@ -1,0 +1,48 @@
+{
+  "schema": "T04_REPAIR_TRACE_PROBE/v1",
+  "criterion": "图内 repair 节点按已落盘的 nodes 序列计数（不是 second_round）",
+  "report_caliber": "eval/olist/report_olist.py:477 现读数 second_round ⇒ 与图内 repair 无关",
+  "groups": [
+    {
+      "tag": "v3",
+      "n_records": 300,
+      "second_round_nonnull": 0,
+      "repair_nodes_seen": 10,
+      "repair_rounds_histogram": {
+        "2": 10
+      },
+      "terminal_of_repaired": {
+        "SQL_SYNTAX_ERROR": 10
+      },
+      "repaired_case_ids": [
+        "n05",
+        "n10",
+        "n18",
+        "n39",
+        "n10",
+        "n18",
+        "n39",
+        "n05",
+        "n10",
+        "n39"
+      ],
+      "landing": {
+        "repair_round_present": 0,
+        "repair_history_present": 0
+      }
+    },
+    {
+      "tag": "v2",
+      "n_records": 180,
+      "second_round_nonnull": 0,
+      "repair_nodes_seen": 0,
+      "repair_rounds_histogram": {},
+      "terminal_of_repaired": {},
+      "repaired_case_ids": [],
+      "landing": {
+        "repair_round_present": 0,
+        "repair_history_present": 0
+      }
+    }
+  ]
+}
