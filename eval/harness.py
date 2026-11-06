@@ -160,8 +160,10 @@ def detect_gate_self_defect(
 
     ``reject_rule``：本次实际拒绝的规则号（`run.gate1_reject_rule`）。F1/F2 都只能
     解释 **R06** 类拒绝；若实际是 R14（字面量策略）等别的规则，即使 SQL 里碰巧有
-    `ORDER BY <投影别名>` 也不能把锅记成 F1 —— 2026-11-05 B7 三批里 32 条
-    `gate_policy_gap` 全是这种误判（日期格式字面量撞 R14，被写成 F1/R06）。
+    `ORDER BY <投影别名>` 也不能把锅记成 F1 —— 2026-11-05 B7 三批里 **33** 条
+    `gate_policy_gap` 全是这种误判（日期格式字面量撞 R14，被写成 F1/R06；逐批
+    10/12/11，复算命令与逐条读数见 `eval/olist/probe_attribution_misjudge.py`。
+    ⚠️ 本注释原写「32 条」，2026-11-06 按 `results_v3_r1..r3` 现读订正为 33）。
     ``None`` 保留旧调用面（探针/单测），仅用于无法取到规则号的场合。
 
     为什么这个判据**只能**在评测侧算：

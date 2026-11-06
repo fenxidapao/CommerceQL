@@ -1,0 +1,45 @@
+{
+  "schema": "T03_ATTRIBUTION_MISJUDGE_PROBE/v1",
+  "category": "gate_policy_gap",
+  "criterion": "reject_rule 不含 R06 ⇒ F1/F2 不成立（镜像 harness.detect_gate_self_defect）",
+  "batches": [
+    {
+      "batch": "r1",
+      "present": true,
+      "n_records": 100,
+      "n_gate_policy_gap": 10,
+      "gap_rules": {
+        "R14": 10
+      },
+      "n_under_new_logic": 0,
+      "kept_case_ids": []
+    },
+    {
+      "batch": "r2",
+      "present": true,
+      "n_records": 100,
+      "n_gate_policy_gap": 12,
+      "gap_rules": {
+        "R14": 12
+      },
+      "n_under_new_logic": 0,
+      "kept_case_ids": []
+    },
+    {
+      "batch": "r3",
+      "present": true,
+      "n_records": 100,
+      "n_gate_policy_gap": 11,
+      "gap_rules": {
+        "R14": 11
+      },
+      "n_under_new_logic": 0,
+      "kept_case_ids": []
+    }
+  ],
+  "totals": {
+    "n_gate_policy_gap": 33,
+    "n_under_new_logic": 0,
+    "n_misjudged": 33
+  }
+}
