@@ -58,8 +58,9 @@ trusted_context → normalize → intent → link → plan → bind → gen_sql
 
 ---
 
-## 3. 阅读预算（硬性：只读这 9 个，约 70KB）
+## 3. 阅读预算（硬性：只读这 10 个，约 75KB）
 
+0. `docs/10_未决问题台账.md`（**未决唯一视图：现在到底有几件事没关；只减不增**）
 1. `docs/09_当前状态与交接.md`（**现行状态与完成度；先读这一页**）
 2. `README.md` §2–§4（快速开始 / 目录 / 五条工程约束）
 3. `backend/.importlinter`（8 分钟看懂 16 个包的层次与禁则，性价比最高）
@@ -143,6 +144,7 @@ python eval/reporter.py --help
 
 - **现状只认一处**：`docs/09_当前状态与交接.md`；`README §1`、`OVERVIEW.md` 的旧快照是历史叙述，引用前现读。
 - **取号**：新问题先在 `docs/07 §4.8` 登记 `U-xx` 再动代码；一个号只对应一件事。
+- **未决不许消失**：任何未完成项必须在 `docs/10_未决问题台账.md` 有一行。关闭 = 状态改 `CLOSED` + 盘上证据 + 可复算命令；跳过 = `WAIVED` + 复审触发条件，且 `docs/09` 同框写「豁免」。收口必跑 `python tools/open_issues.py --check`（有违规非零退出）。台账**只减不增**，WIP（OPEN/BLOCKED-BY-DATA/EVIDENCE-MISSING）> 12 条时先关后开。
 - **证据不改手**：`eval/results_*`、`backend/reports/**` 是证据，要修正读数就新生成一件并记 rev / 时刻 / 命令。
 - **两个门禁数必须同框**：官方快照 `PASS 1/8`（`backend/reports/w6/eval_metrics.json`）与当期复算 `6 PASS / 2 UNVERIFIED`（`eval/results_w80_gate_recompute.json`）是两件事——**6/8 ≠ 门禁通过**，G-6 与 G-8 仍是 `UNVERIFIED`。
 - **未跑过的写 `UNVERIFIED`**，不得写"门禁通过"；数字必须带源件 + 复算命令 + 日期。
