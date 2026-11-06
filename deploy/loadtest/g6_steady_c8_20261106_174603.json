@@ -1,0 +1,731 @@
+{
+  "schema": "w7.loadtest.receipt/1",
+  "started_at": "2026-11-06T09:46:04+00:00",
+  "target": "http://127.0.0.1:8000/api/v1",
+  "note": "回执只含耗时与状态分类，不含查询文本与结果数据（N-11 同源关注）",
+  "scenarios": [
+    {
+      "scenario": "steady",
+      "params": {
+        "concurrency": 8,
+        "duration_s": 210.0,
+        "total_requests": null,
+        "single_session": false,
+        "same_tenant": false,
+        "async_if_slow": false,
+        "questions": "questions_T_A.txt",
+        "request_cap": 120
+      },
+      "requests": 120,
+      "wall_s": 22.905,
+      "throughput_rps": 5.239,
+      "p95_scope": "admitted_http_2xx",
+      "admission": {
+        "admitted": 80,
+        "rejected_429": 33,
+        "other_http_4xx": 0,
+        "http_5xx": 7,
+        "unresolved": 0,
+        "terminal": 80
+      },
+      "rejection_headers": {
+        "503": {
+          "retry_after=5": 7
+        },
+        "429": {
+          "retry_after=30": 33
+        }
+      },
+      "quota_headers_by_status": {
+        "503": {
+          "none": 7
+        },
+        "429": {
+          "bucket+limit+remaining+reset": 33
+        }
+      },
+      "worker_session_depth": {
+        "grouping_key": "(worker, session_id)",
+        "is_server_thread": false,
+        "server_thread_key": "{tenant}:{user}:{session}（app/api/runner.py 的 thread_id 形状）",
+        "server_thread_ruler": "deploy/loadtest/r23_thread_from_checkpoints.sql ⑮/⑰（库面，须剔作废那跑）",
+        "groups": 0,
+        "depth_hist": {},
+        "unsessioned": 120,
+        "by_outcome": {
+          "error_frame": {
+            "turn1": 0,
+            "turn2plus": 0,
+            "unsessioned": 80
+          },
+          "http_5xx": {
+            "turn1": 0,
+            "turn2plus": 0,
+            "unsessioned": 7
+          },
+          "http_4xx": {
+            "turn1": 0,
+            "turn2plus": 0,
+            "unsessioned": 33
+          }
+        },
+        "by_code": {
+          "LLM_CONCURRENCY_EXCEEDED": {
+            "turn1": 0,
+            "turn2plus": 0,
+            "unsessioned": 6
+          },
+          "LLM_UPSTREAM_ERROR": {
+            "turn1": 0,
+            "turn2plus": 0,
+            "unsessioned": 74
+          }
+        }
+      },
+      "latency_ms": {
+        "p50": 297.8,
+        "p95": 14137.3,
+        "p99": 15081.1,
+        "max": 15081.1,
+        "mean": 1833.2,
+        "samples": 80
+      },
+      "latency_ms_all_ms": {
+        "p50": 278.2,
+        "p95": 14108.1,
+        "samples": 120
+      },
+      "ttfb_ms": {
+        "p50": 16.4,
+        "p95": 978.5
+      },
+      "latency_samples_ms": [
+        {
+          "total_ms": 42.6,
+          "ttfb_ms": 6.1,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_82c2c4af3e3e4f57aa5b19832dc53e55"
+        },
+        {
+          "total_ms": 225.2,
+          "ttfb_ms": 10.1,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_3700d8df50ec42619cb210cd19b98f25"
+        },
+        {
+          "total_ms": 242.0,
+          "ttfb_ms": 9.6,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_264107bdc6004721a7a82ce3f6dfee3a"
+        },
+        {
+          "total_ms": 245.3,
+          "ttfb_ms": 11.7,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_87b7dab0cb564dc6980b1d93283b4a2c"
+        },
+        {
+          "total_ms": 248.4,
+          "ttfb_ms": 16.8,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_0726466ac3384b2c879104cc5ce18b4b"
+        },
+        {
+          "total_ms": 259.3,
+          "ttfb_ms": 29.0,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_4cc9edb54ac24cb29684f578c71442eb"
+        },
+        {
+          "total_ms": 268.8,
+          "ttfb_ms": 18.0,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_078f24fdaae94f8bb173803c6689b373"
+        },
+        {
+          "total_ms": 271.1,
+          "ttfb_ms": 8.3,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_bbe40d9d707149f899ee73a6fd4467c4"
+        },
+        {
+          "total_ms": 271.4,
+          "ttfb_ms": 8.1,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_8a13436c368e422ab87f12379321528a"
+        },
+        {
+          "total_ms": 272.7,
+          "ttfb_ms": 7.1,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_d21836b304834cd1b46f73a79804896f"
+        },
+        {
+          "total_ms": 273.2,
+          "ttfb_ms": 6.1,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_8fc5f892670347e69f8393787890def0"
+        },
+        {
+          "total_ms": 274.1,
+          "ttfb_ms": 26.6,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_e3c373fcaf2f41ea8bcdf7db87cdbb21"
+        },
+        {
+          "total_ms": 274.2,
+          "ttfb_ms": 15.3,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_bb7810472d294e20a2eb0221af0daf3f"
+        },
+        {
+          "total_ms": 274.8,
+          "ttfb_ms": 9.1,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_2430fc968ebc41ab80d22fe0abd7cf69"
+        },
+        {
+          "total_ms": 275.8,
+          "ttfb_ms": 11.0,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_9e8e285d831f46909053652144066c79"
+        },
+        {
+          "total_ms": 275.8,
+          "ttfb_ms": 14.6,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_0e945acd84b74d16a5d1a62e5e2c43f5"
+        },
+        {
+          "total_ms": 275.8,
+          "ttfb_ms": 7.2,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_a1b8133774cf4b90953bddadaf55d69d"
+        },
+        {
+          "total_ms": 276.1,
+          "ttfb_ms": 22.8,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_10718bfe6f1b44c6856875ee374eb36f"
+        },
+        {
+          "total_ms": 276.1,
+          "ttfb_ms": 11.2,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_f9934aa98701468db94de6f9646f31d3"
+        },
+        {
+          "total_ms": 276.3,
+          "ttfb_ms": 18.1,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_fd0025335f384927a9d4cb448d864471"
+        },
+        {
+          "total_ms": 276.9,
+          "ttfb_ms": 10.8,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_57e005787b4947daa8d708e098772c3b"
+        },
+        {
+          "total_ms": 276.9,
+          "ttfb_ms": 8.5,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_1043e60f321d44eb95d0af37db75d837"
+        },
+        {
+          "total_ms": 277.2,
+          "ttfb_ms": 9.5,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_31c064c677c8404381b181a7edc5b43f"
+        },
+        {
+          "total_ms": 277.4,
+          "ttfb_ms": 7.3,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_f874e2a1a82f4b38ae3e46d0a23b7db5"
+        },
+        {
+          "total_ms": 277.5,
+          "ttfb_ms": 25.1,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_c7a4119e2eae43a5b046b000eaf4acd9"
+        },
+        {
+          "total_ms": 277.8,
+          "ttfb_ms": 8.0,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_4bc7d26431214a2b8a624a54e9941118"
+        },
+        {
+          "total_ms": 278.2,
+          "ttfb_ms": 8.0,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_d28ed8dffba04ce9b1491a60596b60ac"
+        },
+        {
+          "total_ms": 278.9,
+          "ttfb_ms": 23.4,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_dd4e7b0174f54f04a099b1b30e550a4f"
+        },
+        {
+          "total_ms": 281.0,
+          "ttfb_ms": 15.4,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_e1a53e710626414b8221697d0c4eab49"
+        },
+        {
+          "total_ms": 282.0,
+          "ttfb_ms": 10.3,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_9464737bb98441ddbd6e61a1fa9e2a34"
+        },
+        {
+          "total_ms": 285.2,
+          "ttfb_ms": 16.2,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_e188b9d211aa4a108e40c0b09ad9c073"
+        },
+        {
+          "total_ms": 287.1,
+          "ttfb_ms": 36.8,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_7e0a551a6d5e48c1b8121225a0042b7e"
+        },
+        {
+          "total_ms": 288.4,
+          "ttfb_ms": 16.6,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_dfac6236e925493fa343c0a6c6452590"
+        },
+        {
+          "total_ms": 289.1,
+          "ttfb_ms": 7.2,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_4de3b5bb7290438e987e6b53fc468bf2"
+        },
+        {
+          "total_ms": 292.3,
+          "ttfb_ms": 29.1,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_bffcf94f35cd433985ec280aa7a1b885"
+        },
+        {
+          "total_ms": 293.8,
+          "ttfb_ms": 17.2,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_6640cc711f7a49d1b91ef495e7561c43"
+        },
+        {
+          "total_ms": 294.6,
+          "ttfb_ms": 14.2,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_c09302b0364347389eaa1b712d5fab61"
+        },
+        {
+          "total_ms": 294.7,
+          "ttfb_ms": 42.6,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_1e70ff569d8b495982be1387e2df49f8"
+        },
+        {
+          "total_ms": 295.8,
+          "ttfb_ms": 18.0,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_1104dd7c273f40d1942fe62ba7fa49a9"
+        },
+        {
+          "total_ms": 297.8,
+          "ttfb_ms": 29.9,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_29479ff8708d46e395ac053da71ffa95"
+        },
+        {
+          "total_ms": 302.3,
+          "ttfb_ms": 15.5,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_0b7249b4375d4db78da66c2bfedfb7a9"
+        },
+        {
+          "total_ms": 302.7,
+          "ttfb_ms": 45.7,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_588445c01c16408e8b9a644886ee3c7c"
+        },
+        {
+          "total_ms": 303.7,
+          "ttfb_ms": 10.5,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_7bfda9cde324477eaf94982dedee9f88"
+        },
+        {
+          "total_ms": 304.3,
+          "ttfb_ms": 8.3,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_c9892a1675244774b01129deb959d5d5"
+        },
+        {
+          "total_ms": 304.9,
+          "ttfb_ms": 43.7,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_369ae89a71a34ca1b6def04e764457c8"
+        },
+        {
+          "total_ms": 305.9,
+          "ttfb_ms": 21.3,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_b51b29c56cc748948717ec45b264dd53"
+        },
+        {
+          "total_ms": 306.5,
+          "ttfb_ms": 7.8,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_9f455d4e174242279f013027288eef0f"
+        },
+        {
+          "total_ms": 306.6,
+          "ttfb_ms": 23.4,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_f52dc38262c64cd1b3e2f526f056e874"
+        },
+        {
+          "total_ms": 307.1,
+          "ttfb_ms": 25.0,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_433e2c0cf1f94d11b93a017e6d2e81a0"
+        },
+        {
+          "total_ms": 307.8,
+          "ttfb_ms": 30.3,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_dc4eb8d9af4e462783bbd82b00a9b605"
+        },
+        {
+          "total_ms": 308.0,
+          "ttfb_ms": 8.6,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_7fc04d1623c54054942c6e711de19a40"
+        },
+        {
+          "total_ms": 308.0,
+          "ttfb_ms": 7.6,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_4261761a973248108a66b5e352e34c2a"
+        },
+        {
+          "total_ms": 310.7,
+          "ttfb_ms": 39.3,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_3b6cfe3749e045d7a6f55e54038f9e8c"
+        },
+        {
+          "total_ms": 310.9,
+          "ttfb_ms": 16.4,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_c83cc33807614d5ca80fbb8ee85d7330"
+        },
+        {
+          "total_ms": 316.9,
+          "ttfb_ms": 27.2,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_f5d1c52c447645f286798128a1eeb863"
+        },
+        {
+          "total_ms": 318.9,
+          "ttfb_ms": 14.8,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_4fe2377cb0f94813866b937577d6ea1d"
+        },
+        {
+          "total_ms": 335.8,
+          "ttfb_ms": 31.9,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_f83bae0249ef422b97a97e286f91820f"
+        },
+        {
+          "total_ms": 362.7,
+          "ttfb_ms": 25.1,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_36092741bd9146e7b4f160432cdcd664"
+        },
+        {
+          "total_ms": 362.9,
+          "ttfb_ms": 7.5,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_6024c0948930449bb18428b561902675"
+        },
+        {
+          "total_ms": 363.0,
+          "ttfb_ms": 9.2,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_dcf05551da9c4a1c8bad36920e1ec5dc"
+        },
+        {
+          "total_ms": 363.3,
+          "ttfb_ms": 12.8,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_43972213a2a441d39b04f365281beda9"
+        },
+        {
+          "total_ms": 363.3,
+          "ttfb_ms": 8.9,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_11a7cfe0879741d89eaeb126285c4e29"
+        },
+        {
+          "total_ms": 363.7,
+          "ttfb_ms": 13.3,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_24e261c75255411bb69d71bcf8e18bc0"
+        },
+        {
+          "total_ms": 366.3,
+          "ttfb_ms": 10.0,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_f947716f99bb4f889f8c0fdd8479b581"
+        },
+        {
+          "total_ms": 367.5,
+          "ttfb_ms": 8.6,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_2d27c2fabca143539ffc160863e407f4"
+        },
+        {
+          "total_ms": 1196.7,
+          "ttfb_ms": 917.2,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_55f3e7681f3649229c47d83adf9eecfa"
+        },
+        {
+          "total_ms": 1255.6,
+          "ttfb_ms": 983.8,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_3706862fe66945dc868c3c98648dd167"
+        },
+        {
+          "total_ms": 1256.0,
+          "ttfb_ms": 966.2,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_30f8cc00ff14411b8567feb4a4a28092"
+        },
+        {
+          "total_ms": 1256.3,
+          "ttfb_ms": 978.5,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_e1656982c3a846469fbb09118a091099"
+        },
+        {
+          "total_ms": 1260.7,
+          "ttfb_ms": 986.4,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_9e9e21a686204390b753270fdb093686"
+        },
+        {
+          "total_ms": 1266.0,
+          "ttfb_ms": 1005.2,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_f3fb764101c6415f8810d9d9607b70b3"
+        },
+        {
+          "total_ms": 5273.1,
+          "ttfb_ms": 5016.5,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_7c3a774547b74454a0c80342b908bf86"
+        },
+        {
+          "total_ms": 14088.6,
+          "ttfb_ms": 26.8,
+          "outcome": "error_frame",
+          "code": "LLM_CONCURRENCY_EXCEEDED",
+          "task_id": "tk_a13da096601a48a69d432616166bf857"
+        },
+        {
+          "total_ms": 14108.1,
+          "ttfb_ms": 27.3,
+          "outcome": "error_frame",
+          "code": "LLM_CONCURRENCY_EXCEEDED",
+          "task_id": "tk_0c44de695a0b45e4a611a44ff4cd8731"
+        },
+        {
+          "total_ms": 14115.6,
+          "ttfb_ms": 26.4,
+          "outcome": "error_frame",
+          "code": "LLM_CONCURRENCY_EXCEEDED",
+          "task_id": "tk_c828582f3ec94c7e9e9e24260b533876"
+        },
+        {
+          "total_ms": 14137.3,
+          "ttfb_ms": 27.3,
+          "outcome": "error_frame",
+          "code": "LLM_CONCURRENCY_EXCEEDED",
+          "task_id": "tk_5e272d1c638f453c8809e3260966283c"
+        },
+        {
+          "total_ms": 14139.1,
+          "ttfb_ms": 27.1,
+          "outcome": "error_frame",
+          "code": "LLM_CONCURRENCY_EXCEEDED",
+          "task_id": "tk_0865b702c8294efeba19a2ff3bf2db38"
+        },
+        {
+          "total_ms": 14170.3,
+          "ttfb_ms": 85.8,
+          "outcome": "error_frame",
+          "code": "LLM_CONCURRENCY_EXCEEDED",
+          "task_id": "tk_503865f3f4244f78a3b411a0fdd7aeb7"
+        },
+        {
+          "total_ms": 15076.0,
+          "ttfb_ms": 26.9,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_11391eefa4034ed78e114680e4587e6b"
+        },
+        {
+          "total_ms": 15081.1,
+          "ttfb_ms": 27.7,
+          "outcome": "error_frame",
+          "code": "LLM_UPSTREAM_ERROR",
+          "task_id": "tk_bb88129766ff49308d9b02f7cb7aaa87"
+        }
+      ],
+      "outcomes": {
+        "error_frame": 80,
+        "http_5xx": 7,
+        "http_4xx": 33
+      },
+      "codes": {
+        "LLM_CONCURRENCY_EXCEEDED": 6,
+        "LLM_UPSTREAM_ERROR": 74,
+        "{\"code\":\"DB_UNAVAILABLE\",\"message\":\"服务暂时不可用，请稍后重": 7,
+        "RATE_LIMITED": 33
+      },
+      "codes_task_ids": {
+        "LLM_CONCURRENCY_EXCEEDED": [
+          "tk_0865b702c8294efeba19a2ff3bf2db38",
+          "tk_0c44de695a0b45e4a611a44ff4cd8731",
+          "tk_503865f3f4244f78a3b411a0fdd7aeb7",
+          "tk_5e272d1c638f453c8809e3260966283c",
+          "tk_a13da096601a48a69d432616166bf857",
+          "tk_c828582f3ec94c7e9e9e24260b533876"
+        ],
+        "LLM_UPSTREAM_ERROR": [
+          "tk_0726466ac3384b2c879104cc5ce18b4b",
+          "tk_078f24fdaae94f8bb173803c6689b373",
+          "tk_0b7249b4375d4db78da66c2bfedfb7a9",
+          "tk_0e945acd84b74d16a5d1a62e5e2c43f5",
+          "tk_1043e60f321d44eb95d0af37db75d837",
+          "tk_10718bfe6f1b44c6856875ee374eb36f",
+          "tk_1104dd7c273f40d1942fe62ba7fa49a9",
+          "tk_11391eefa4034ed78e114680e4587e6b",
+          "tk_11a7cfe0879741d89eaeb126285c4e29",
+          "tk_1e70ff569d8b495982be1387e2df49f8",
+          "tk_2430fc968ebc41ab80d22fe0abd7cf69",
+          "tk_24e261c75255411bb69d71bcf8e18bc0"
+        ]
+      },
+      "terminal_provenance": {
+        "error_frame": {
+          "stage=intent|reason=none": 8,
+          "stage=none|reason=none": 72
+        },
+        "http_5xx": {
+          "stage=none|reason=none": 7
+        },
+        "http_4xx": {
+          "stage=none|reason=none": 33
+        }
+      },
+      "drain_frames": 0,
+      "error_messages": {},
+      "g6_p95_le_8s": false,
+      "g6_caveat": "本场景 0 条真正完成（outcome=ok）⇒ P95 的分母全是失败/降级样本，不可判达标；另有 33 条被限流 429 拒掉（按 U-106 已**排除**出 P95 分母；它是配额画像而非容量读数）"
+    }
+  ],
+  "target_check": {
+    "url": "http://127.0.0.1:8000/api/v1/openapi.json",
+    "paths_total": 24,
+    "has_query": true,
+    "query_paths": [
+      "/api/v1/query",
+      "/api/v1/query/{task_id}",
+      "/api/v1/query/{task_id}/cancel"
+    ]
+  },
+  "finished_at": "2026-11-06T09:46:27+00:00",
+  "generated_at": "2026-11-06T09:46:27+00:00",
+  "git_rev": "21c2aa5",
+  "git_dirty": true
+}
