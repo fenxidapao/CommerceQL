@@ -325,7 +325,10 @@ def score_case_turns(case_id: str, follow_up_type: str, turns: Sequence[Mapping[
         "follow_up_type": follow_up_type,
         "turns": scored_turns,
         "turn_passes": turn_passes,
-        "both_passed": bool(turn_passes) and all(turn_passes),
+        # U-160：**未跑完 != 通过**。原先的 `bool(turn_passes) and all(turn_passes)`
+        # 让单元素 `[True]`（只跑完 turn1、turn2 被预算掐掉）也算「两轮全过」——
+        # 实测 r2 的 mt15 正因如此，造成 `cases_both_passed=1` 与 `turn2_passed=0` 同真。
+        "both_passed": len(turn_passes) == EXPECTED_TURNS and all(turn_passes),
     }
 
 
@@ -338,7 +341,17 @@ def summarize(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         for record in records
         if len(record.get("turn_passes") or []) > 1 and record["turn_passes"][1]
     )
-    both = sum(1 for record in records if record.get("both_passed"))
+    # U-160：不直接信记录里的 `both_passed`（旧件按错口径写的）—— 统一按 `turn_passes`
+    # 重算，保证 turn1 / turn2 / both 由同一份明细派生；未跑完的单列，不算通过。
+    both = sum(
+        1
+        for record in records
+        if len(record.get("turn_passes") or []) == EXPECTED_TURNS
+        and all(record.get("turn_passes") or [])
+    )
+    incomplete = sum(
+        1 for record in records if len(record.get("turn_passes") or []) != EXPECTED_TURNS
+    )
     unmapped = sorted(
         {
             key
@@ -359,6 +372,7 @@ def summarize(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "turn1_passed": turn1,
         "turn2_passed": turn2,
         "cases_both_passed": both,
+        "cases_incomplete": incomplete,
         "plans_missing": missing_plan,
         "unmapped_expect_keys": unmapped,
         "cost_cny_total": round(
