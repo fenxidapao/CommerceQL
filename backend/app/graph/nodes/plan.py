@@ -128,8 +128,20 @@ async def plan(state: GraphState) -> dict[str, Any]:
     #: turn2 时窗全为 `None`，而历史里明明有时窗。
     #: ⚠️ 只影响这个启发式，**不出站**：`plan_for` 的入参仍是 `normalized_question`。
     follow_up_text = str(state.get("raw_question") or question)
+    #: U-169：把语义面的 `is_metric_active` 交给继承 —— 指标只按名继承，且必须 active。
+    #: 它**不在**冻结端口 `SemanticBundlePort` 上（可选能力，`payloads.py:628-634` 同样用 getattr 探测），
+    #: 探测不到就不传 ⇒ `inherit_plan` 不继承 metrics（宁缺不猜）。
+    #: ⚠️ 两层都要探测：`is_metric_active` 是可选能力，而测试桩的 `deps` 可能连 `semantics` 都没有
+    #: （`SimpleNamespace` 桩）⇒ 缺任一层都传 `None`，由 `inherit_plan` 判定为「不继承 metrics」。
+    _semantics = getattr(deps, "semantics", None)
+    _metric_checker = getattr(_semantics, "is_metric_active", None) if _semantics is not None else None
     inherited = (
-        inherit_plan(outcome.plan, history_plan, follow_up_text)
+        inherit_plan(
+            outcome.plan,
+            history_plan,
+            follow_up_text,
+            is_metric_active=_metric_checker if callable(_metric_checker) else None,
+        )
         if isinstance(history_plan, Mapping)
         else None
     )

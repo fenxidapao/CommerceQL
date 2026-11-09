@@ -3,7 +3,8 @@
 只测确定性规则，不碰 LLM/Redis/图：
 - 只在**追问线索**出现时启用；
 - **只补空位**，本轮计划已有值不被历史覆盖；
-- `metrics` / `assets` 不继承（摘要里没有 caliber / 关联键，拼半份计划比缺字段更危险）。
+- `assets` / `output_columns` 不继承；
+- `metrics` **只在本轮为空、且指标 active 时**按名继承（U-169）。
 """
 
 from __future__ import annotations
@@ -86,10 +87,43 @@ def test_current_plan_wins_over_history() -> None:
     assert result.plan is current
 
 
-def test_metrics_and_assets_are_never_inherited() -> None:
+def test_metrics_are_inherited_only_when_current_is_empty() -> None:
+    """U-169 正控：本轮为空 + 指标 active ⇒ 按名继承（`caliber` 留空，不由继承合成）。"""
+    current = _plan(metrics=[], blocking_issues=["缺指标"])
+    result = inherit_plan(current, _HISTORY, "它呢？", is_metric_active=lambda n: n == "gmv")
+    assert [m.name for m in result.plan.metrics] == ["gmv"]
+    assert "metrics" in result.fields
+    assert all(m.caliber is None for m in result.plan.metrics)
+
+
+def test_metrics_inheritance_requires_active_checker() -> None:
+    """负控：没给检查器 ⇒ 不继承（证明不了 active 的指标不许进计划）。"""
     current = _plan(metrics=[], blocking_issues=["缺指标"])
     result = inherit_plan(current, _HISTORY, "它呢？")
     assert result.plan.metrics == []
+    assert "metrics" not in result.fields
+
+
+def test_draft_or_unknown_metric_is_filtered_out() -> None:
+    """负控：检查器判非 active（draft / 未定义）⇒ 该指标不进计划。"""
+    current = _plan(metrics=[], blocking_issues=["缺指标"])
+    history = {**_HISTORY, "metrics": ["gmv", "ghost_metric"]}
+    result = inherit_plan(current, history, "它呢？", is_metric_active=lambda n: n == "gmv")
+    assert [m.name for m in result.plan.metrics] == ["gmv"]
+
+
+def test_current_metrics_are_never_overwritten_by_history() -> None:
+    """负控：本轮已有指标 ⇒ 一律不覆盖（`metric_switch` 由模型自己给）。"""
+    current = _plan(metrics=[{"name": "aov"}])
+    result = inherit_plan(current, _HISTORY, "客单价呢？", is_metric_active=lambda n: True)
+    assert [m.name for m in result.plan.metrics] == ["aov"]
+    assert "metrics" not in result.fields
+
+
+def test_assets_are_never_inherited() -> None:
+    """`assets` 仍不继承（要关联键，摘要里没有）—— U-169 只放开 `metrics` 一格。"""
+    current = _plan(metrics=[], blocking_issues=["缺指标"])
+    result = inherit_plan(current, _HISTORY, "它呢？", is_metric_active=lambda n: True)
     assert [asset.asset for asset in result.plan.assets] == ["v_order_paid"]
 
 

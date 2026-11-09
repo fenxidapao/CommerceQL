@@ -5,8 +5,10 @@
 - 输入只有：本轮 LLM 产出的 `Plan`、上一轮**脱敏计划摘要**（C-01 键集）、归一化后的问题。
 - 只补**空位**：本轮计划已经给出的字段**一律不覆盖**（模型的当前判断优先于历史）。
 - 只继承**非结构字段**：`time_range` / `dimensions` / `filters` / `grain` / `order_by` / `limit`。
-  `metrics` / `assets` / `output_columns` **不继承** —— 摘要里没有 caliber 与关联键，
-  拼一个只有名字的计划会让绑定层拿到半份事实（比缺字段更危险）。
+  `assets` / `output_columns` **不继承** —— 摘要里没有关联键与物理列，拼半份计划比缺字段更危险。
+- `metrics` **在「本轮为空」时按名继承**，但有一个硬前提：调用方必须给出 `is_metric_active`，
+  未定义或 `draft` 的指标**一律不进计划**；没给检查器就**不继承**（证明不了 active 就不补）。
+  书面裁定见 `docs/07 §4.8` 的 `U-169`（含「`caliber` 不由继承合成」一条）。
 - 只在问题形似**追问**时启用（见 `FOLLOW_UP_CUES`）。判据是本窗自设的启发式，
   07/PRD 没有规则；宁可少继承，不把独立新问题硬接在上一轮上。
 
@@ -19,7 +21,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, Final
 
@@ -92,6 +94,8 @@ def inherit_plan(
     plan: Plan,
     history_plan: Mapping[str, Any] | None,
     question: str,
+    *,
+    is_metric_active: Callable[[str], bool] | None = None,
 ) -> InheritanceResult:
     """按"只补空位"的规则合并上一轮计划摘要；没有可继承项时原样返回。"""
     if not history_plan or not looks_like_follow_up(question):
@@ -111,6 +115,16 @@ def inherit_plan(
             if window:
                 data["time_range"] = window
                 fields.append("time_range")
+
+    #: U-169：`metrics` 只在本轮为空、且**能证明指标 active** 时按名继承。
+    #: `history_plan` 的 `metrics` 是**名字串**（`PlanSummary.metrics`），不是 `PlanMetric`；
+    #: 这里转成 `{"name": ...}`，`caliber` 留空 —— 从语义包合成口径属另一件事（见 §4.8 的书面裁定）。
+    #: 没给检查器就**不继承**：证明不了 active 的指标不许进计划（`FR-12.3`）。
+    if not data.get("metrics") and is_metric_active is not None:
+        names = [n for n in _strings(history_plan.get("metrics")) if is_metric_active(n)]
+        if names:
+            data["metrics"] = [{"name": n} for n in names]
+            fields.append("metrics")
 
     for key in ("dimensions", "filters", "order_by"):
         if not data.get(key):
