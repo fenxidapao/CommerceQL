@@ -549,6 +549,20 @@ class CaseRun:
         return tuple(dict(item) for item in (self.state.get("repair_history") or ()))
 
     @property
+    def intent_detail(self) -> dict[str, Any]:
+        """终态的业务归因细节（`state.intent_detail`，U-161）。
+
+        为什么必须落盘：`plan` 节点在模型给了 `blocking_issues` 时走
+        `refuse(no_data_asset)`（`graph/nodes/plan.py:94-111`），而 planner 不可用
+        也走同一个 `refuse(no_data_asset)`（`plan.py:85-90`）—— 终态相同，只能靠
+        `intent_detail.reason_code`（`plan_blocked` vs 其它）区分。此前记录里没有
+        这一格 ⇒ 「闸门误伤还是模型误报阻塞」不可判。
+        ⚠️ 缺键 / 非 Mapping 一律回 `{}`（**不编默认值**：空 == 本次终态里没有这项信息）。
+        """
+        detail = self.state.get("intent_detail")
+        return dict(detail) if isinstance(detail, Mapping) else {}
+
+    @property
     def degradations(self) -> tuple[dict[str, Any], ...]:
         return tuple(dict(d) for d in (self.state.get("degradations") or ()))
 

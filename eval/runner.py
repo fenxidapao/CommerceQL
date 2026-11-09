@@ -598,6 +598,9 @@ async def score_case(
         # 🔴 P0-A-4：上游失败的**根因细节**（`{"model":…, "kind":…}` 等）。此前只落 `code`
         # ⇒ `LLM_UPSTREAM_ERROR` 分不清"上游抖/超时"与"响应解码失败"（第 41–43 轮实测猜错三轮）。
         "terminal_error_detail": run.terminal_error_detail,
+        # 🔴 U-161：业务归因细节（`reason_code` / `blocking_issues` / `refuse_kind`）——
+        # `plan` 节点因模型给 `blocking_issues` 拒答，与 planner 不可用拒答**终态相同**，
+        # 只能靠这一格区分（`reason_code=plan_blocked` vs 其它）。
         "outcome": run.outcome,
         "refusal_reason": run.refusal_reason,
         "binding_status": run.binding_status,
