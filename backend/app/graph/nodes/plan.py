@@ -25,6 +25,16 @@ W3B 的接线硬约束（`RELAY §给 W4`）：`plan_for(ctx, *, normalized_ques
 
 C-12 的 `RefuseReason` 四值里没有"计划阻塞"槽位，取最接近的 `no_data_asset`（同
 `normalize` 的已知近似，已登记）。
+
+🔴 **U-163（2026-11-09）修订**：上表第二行的「直接 `refuse`」现在多一个前置条件 ——
+**先跑 `inherit_plan`，再判阻塞是否致命**。原顺序把继承排在阻塞判定之后
+（`:117-122`），模型一旦自陈阻塞，上一轮条件根本没机会参与判断；r5 全量 15 条里
+**10 条 turn2** 就是这样死的（`intent_detail.reason_code=plan_blocked`，原文
+「缺少分组维度与对比对象……无法确定 grain 与输出列」—— 而那些恰是 `inherit_plan`
+能补的字段）。判定收在纯函数 `_blocking_is_fatal()`：**继承补齐任一字段 ⇒ 阻塞不再
+致命**（并在日志里留一手证据）；**没有继承可补时仍按原样拒答**，不放松。
+⚠️ 不按 `blocking_issues` 的文本做匹配：那是模型自由文本、非闭集，按文本猜口径就是
+把"猜"写成"判据"。
 """
 
 from __future__ import annotations
@@ -46,11 +56,29 @@ from app.graph.state import GraphState
 from app.llm.errors import LlmError
 from app.obs.logging import get_logger
 from app.planner.errors import PlannerError
-from app.planner.inherit import inherit_plan
+from app.planner.inherit import InheritanceResult, inherit_plan
 
 __all__ = ["plan"]
 
 _log = get_logger(__name__)
+
+
+def _blocking_is_fatal(
+    blocking: tuple[str, ...], inherited: InheritanceResult | None
+) -> bool:
+    """阻塞项是否仍然致命（U-163 的判据，纯函数、可单测）。
+
+    改前是「只要有 `blocking_issues` 就拒答」，而 `inherit_plan` 排在判定之后 ⇒
+    模型一自陈阻塞，上一轮条件就没机会参与。现在：**上一轮摘要已补齐任一字段**
+    （`inherited.fields` 非空）时阻塞不再致命 —— 模型说缺的"分组维度 / 粒度 /
+    时间窗"正是继承能补的那些；**没有继承可补时仍拒答**，不放松口径。
+
+    ⚠️ 不判断 `blocking_issues` 的文本内容：那是模型自由文本、非闭集，按文本匹配
+    等于靠字符串猜口径。
+    """
+    if not blocking:
+        return False
+    return not (inherited is not None and inherited.fields)
 
 
 async def plan(state: GraphState) -> dict[str, Any]:
@@ -92,7 +120,15 @@ async def plan(state: GraphState) -> dict[str, Any]:
     context.record_usage(outcome.meta.tokens, outcome.meta.cost_cny)
 
     blocking = tuple(outcome.plan.blocking_issues)
-    if blocking:
+    #: 🔴 U-163：**继承要排在阻塞判定之前**（原顺序见模块 docstring §二 的修订段）。
+    history_plan = state.get("history_plan")
+    inherited = (
+        inherit_plan(outcome.plan, history_plan, question)
+        if isinstance(history_plan, Mapping)
+        else None
+    )
+
+    if _blocking_is_fatal(blocking, inherited):
         # 见模块 docstring §二 的第二行：产品结论，不降级。
         update = terminal_update(
             state,
@@ -107,23 +143,35 @@ async def plan(state: GraphState) -> dict[str, Any]:
             "reason_code": "plan_blocked",
             "refuse_kind": RefuseReason.NO_DATA_ASSET.value,
             "blocking_issues": list(blocking),
+            "history_inherited_fields": list(inherited.fields)
+            if inherited is not None
+            else [],
         }
         return update
+
+    if blocking:
+        # 走到这里 = 有阻塞项，但上一轮摘要已补齐字段 ⇒ 不再致命；留一手证据供审计。
+        _log.info(
+            "plan_blocked_resolved_by_history",
+            task_id=identity.task_id,
+            fields=list(inherited.fields) if inherited is not None else [],
+            extra_fact=(
+                "模型自陈 blocking_issues，但上一轮摘要已补齐相关字段 ⇒ 继续 bind，不在此处拒答"
+            ),
+        )
 
     payload: dict[str, Any] = dict(outcome.state_payload())
     #: 🔴 B6（U-154）：上一轮脱敏计划摘要 → **只补本轮空位**（时间窗/维度/筛选/粒度/排序/上限）。
     #: 继承结果写回本轮的 `plan` / `plan_summary`，下游 `bind` 与 `gen_sql` 读到的就是合并后的计划；
     #: `history_plan` 本身**不出站**（不在 `PROMPT_ALLOWED_FIELDS`）。
-    history_plan = state.get("history_plan")
-    if isinstance(history_plan, Mapping):
-        inherited = inherit_plan(outcome.plan, history_plan, question)
-        if inherited.fields:
-            payload["plan"] = inherited.plan.model_dump()
-            payload["plan_summary"] = inherited.plan.to_summary().model_dump()
-            _log.info(
-                "history_plan_inherited",
-                task_id=identity.task_id,
-                fields=list(inherited.fields),
-                extra_fact="多轮追问：本轮计划缺失的条件由上轮摘要补齐（只补空位，不覆盖本轮）",
-            )
+    #: 🔴 U-163：继承结果在上方**已算过一次**（要赶在阻塞判定之前），此处复用，不重复调用。
+    if inherited is not None and inherited.fields:
+        payload["plan"] = inherited.plan.model_dump()
+        payload["plan_summary"] = inherited.plan.to_summary().model_dump()
+        _log.info(
+            "history_plan_inherited",
+            task_id=identity.task_id,
+            fields=list(inherited.fields),
+            extra_fact="多轮追问：本轮计划缺失的条件由上轮摘要补齐（只补空位，不覆盖本轮）",
+        )
     return payload
