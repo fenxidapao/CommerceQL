@@ -67,6 +67,7 @@ SQLite 没有 `EXPLAIN (FORMAT JSON)`。返回 `None` 而不是抛异常：
 
 from __future__ import annotations
 
+import logging
 import re
 import sqlite3
 import time
@@ -79,6 +80,7 @@ from app.core.config import Settings
 from app.core.contracts import IdentityContext, MaskPort, ResultSet, SemanticBundlePort
 from app.exec.errors import LLM_HINT_BY_CLASS, MESSAGES, ExecError, ExecFailure
 from app.exec.executor import PgSqlExecutor
+from sqlite_pg_constructs import unregistered_constructs  # U-174：翻译前把未注册构造显式告警
 
 __all__ = [
     "SqliteEvalExecutor",
@@ -153,6 +155,18 @@ def to_sqlite_sql(sql: str) -> str:
     ⚠️ 不处理**字符串字面量内部**出现的 `%(x)s`（那是 gate1 R15 之外的极端形态）。
     在线路径由 psycopg 消费 `%(name)s`，本函数只在评测侧存在，故不改动任何在线代码。
     """
+    #: U-174（`T-22` 判据 ② 之㈡ 的告警出口）：未注册的 PG 专有构造在翻译前**显式告警**，
+    #: 不改写、不阻断 —— `unregistered_constructs` 只识别不翻译，本函数的输出一字不变。
+    #: 为什么挂在单一咽喉而不是两个调用点：`eval/runner.py` 的 `run_in_sandbox` 与
+    #: `SqliteEvalExecutor.fetch` 都只经本函数（实测两处唯一翻译面）。
+    #: 为什么不用 `report_degraded`：`DegradedReason` 是 8 值封收集合（C-08），
+    #: 且 `degradations` 只在图内累积（`backend/app/graph/context.py:262`），执行器不在图里。
+    constructs = unregistered_constructs(sql)
+    if constructs:
+        logging.getLogger(__name__).warning(
+            "sqlite dialect: unregistered construct(s) %s left as-is",
+            ",".join(constructs),
+        )
     return _PSYCOPG_PARAM_RE.sub(r":\1", translate_pg_functions(sql))
 
 
