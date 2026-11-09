@@ -1,0 +1,167 @@
+{
+  "schema": "T22_DIALECT_FORMS_PROBE/v1",
+  "note": "只跑候选形态、不改翻译器行为、不改白名单、不改判据；沙箱以 mode=ro 打开，源库零改动",
+  "db": "data\\olist\\olist_sandbox.db",
+  "column": "o.order_purchase_timestamp",
+  "forms": [
+    {
+      "name": "date_trunc_month",
+      "verdict": "adopt",
+      "note": "DATE_TRUNC('month', x) 的候选等价形态（PG 返回月初零点）",
+      "expr": "strftime('%Y-%m-01', o.order_purchase_timestamp)",
+      "ran": true,
+      "sql": "SELECT strftime('%Y-%m-01', o.order_purchase_timestamp) AS v FROM v_o_orders AS o WHERE o.order_purchase_timestamp IS NOT NULL LIMIT 3",
+      "error": null,
+      "samples": [
+        "2016-09-01",
+        "2016-09-01",
+        "2016-09-01"
+      ]
+    },
+    {
+      "name": "date_trunc_year",
+      "verdict": "adopt",
+      "note": "DATE_TRUNC('year', x) 的候选等价形态",
+      "expr": "strftime('%Y-01-01', o.order_purchase_timestamp)",
+      "ran": true,
+      "sql": "SELECT strftime('%Y-01-01', o.order_purchase_timestamp) AS v FROM v_o_orders AS o WHERE o.order_purchase_timestamp IS NOT NULL LIMIT 3",
+      "error": null,
+      "samples": [
+        "2016-01-01",
+        "2016-01-01",
+        "2016-01-01"
+      ]
+    },
+    {
+      "name": "date_trunc_day",
+      "verdict": "adopt",
+      "note": "DATE_TRUNC('day', x) 的候选等价形态",
+      "expr": "strftime('%Y-%m-%d', o.order_purchase_timestamp)",
+      "ran": true,
+      "sql": "SELECT strftime('%Y-%m-%d', o.order_purchase_timestamp) AS v FROM v_o_orders AS o WHERE o.order_purchase_timestamp IS NOT NULL LIMIT 3",
+      "error": null,
+      "samples": [
+        "2016-09-04",
+        "2016-09-05",
+        "2016-09-13"
+      ]
+    },
+    {
+      "name": "date_trunc_quarter_untouched",
+      "verdict": "reject",
+      "note": "PG 季度截断要落到季度首日，SQLite 无等价原语 ⇒ 不翻、原样保留并继续告警",
+      "expr": "DATE_TRUNC('quarter', o.order_purchase_timestamp)",
+      "ran": true,
+      "sql": "SELECT DATE_TRUNC('quarter', o.order_purchase_timestamp) AS v FROM v_o_orders AS o WHERE o.order_purchase_timestamp IS NOT NULL LIMIT 3",
+      "error": "OperationalError: no such function: DATE_TRUNC",
+      "samples": []
+    },
+    {
+      "name": "extract_year",
+      "verdict": "adopt",
+      "note": "EXTRACT(YEAR FROM x) 的候选等价形态",
+      "expr": "CAST(strftime('%Y', o.order_purchase_timestamp) AS INTEGER)",
+      "ran": true,
+      "sql": "SELECT CAST(strftime('%Y', o.order_purchase_timestamp) AS INTEGER) AS v FROM v_o_orders AS o WHERE o.order_purchase_timestamp IS NOT NULL LIMIT 3",
+      "error": null,
+      "samples": [
+        "2016",
+        "2016",
+        "2016"
+      ]
+    },
+    {
+      "name": "extract_month",
+      "verdict": "adopt",
+      "note": "EXTRACT(MONTH FROM x) 的候选等价形态",
+      "expr": "CAST(strftime('%m', o.order_purchase_timestamp) AS INTEGER)",
+      "ran": true,
+      "sql": "SELECT CAST(strftime('%m', o.order_purchase_timestamp) AS INTEGER) AS v FROM v_o_orders AS o WHERE o.order_purchase_timestamp IS NOT NULL LIMIT 3",
+      "error": null,
+      "samples": [
+        "9",
+        "9",
+        "9"
+      ]
+    },
+    {
+      "name": "extract_day",
+      "verdict": "adopt",
+      "note": "EXTRACT(DAY FROM x) 的候选等价形态",
+      "expr": "CAST(strftime('%d', o.order_purchase_timestamp) AS INTEGER)",
+      "ran": true,
+      "sql": "SELECT CAST(strftime('%d', o.order_purchase_timestamp) AS INTEGER) AS v FROM v_o_orders AS o WHERE o.order_purchase_timestamp IS NOT NULL LIMIT 3",
+      "error": null,
+      "samples": [
+        "4",
+        "5",
+        "13"
+      ]
+    },
+    {
+      "name": "extract_quarter",
+      "verdict": "adopt",
+      "note": "EXTRACT(QUARTER FROM x) 的候选等价形态（整数除法）",
+      "expr": "((CAST(strftime('%m', o.order_purchase_timestamp) AS INTEGER) + 2) / 3)",
+      "ran": true,
+      "sql": "SELECT ((CAST(strftime('%m', o.order_purchase_timestamp) AS INTEGER) + 2) / 3) AS v FROM v_o_orders AS o WHERE o.order_purchase_timestamp IS NOT NULL LIMIT 3",
+      "error": null,
+      "samples": [
+        "3",
+        "3",
+        "3"
+      ]
+    },
+    {
+      "name": "cast_timestamp_via_cast",
+      "verdict": "reject",
+      "note": "⚠️ 陷阱：SQLite 的 TIMESTAMP 走 NUMERIC 亲和性，会把时间串截成数字",
+      "expr": "CAST(o.order_purchase_timestamp AS TIMESTAMP)",
+      "ran": true,
+      "sql": "SELECT CAST(o.order_purchase_timestamp AS TIMESTAMP) AS v FROM v_o_orders AS o WHERE o.order_purchase_timestamp IS NOT NULL LIMIT 3",
+      "error": null,
+      "samples": [
+        "2016",
+        "2016",
+        "2016"
+      ]
+    },
+    {
+      "name": "strip_timestamp_cast",
+      "verdict": "adopt",
+      "note": "x::timestamp 的候选等价形态（PG 侧是恒等 ⇒ 只剥掉运算符，不转 CAST）",
+      "expr": "o.order_purchase_timestamp",
+      "ran": true,
+      "sql": "SELECT o.order_purchase_timestamp AS v FROM v_o_orders AS o WHERE o.order_purchase_timestamp IS NOT NULL LIMIT 3",
+      "error": null,
+      "samples": [
+        "2016-09-04 21:15:19",
+        "2016-09-05 00:15:34",
+        "2016-09-13 15:24:19"
+      ]
+    }
+  ],
+  "cast_timestamp_trap": {
+    "sql": "SELECT CAST('2018-03-05 10:11:12' AS TIMESTAMP) AS v",
+    "error": null,
+    "samples": [
+      "2018",
+      "2018",
+      "2018"
+    ]
+  },
+  "rejected_without_running": [
+    {
+      "name": "cast_numeric_kept",
+      "note": "x::numeric 改舍入语义（PG numeric 精确十进制 / SQLite REAL）⇒ 拒收，原样保留"
+    },
+    {
+      "name": "cast_date_kept",
+      "note": "x::date 会截掉时分 ⇒ 改结果粒度 ⇒ 拒收，原样保留"
+    },
+    {
+      "name": "cast_text_kept",
+      "note": "x::text 会改比较语义（数值列被当字符串比）⇒ 拒收，原样保留"
+    }
+  ]
+}
