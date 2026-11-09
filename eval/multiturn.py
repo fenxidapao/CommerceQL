@@ -330,6 +330,10 @@ def score_case_turns(case_id: str, follow_up_type: str, turns: Sequence[Mapping[
                 if isinstance(turn.get("intent_detail"), Mapping)
                 else {},
                 "nodes": tuple(turn.get("nodes") or ()),
+                # 🔴 U-166：同一道穿点守卫 —— 产出侧加了键、这里不透传就等于没加
+                # （U-162 已在 r3 冒烟上踩过一次：four_keys=0/4）。缺则回 "" / None，不编值。
+                "sql_text": str(turn.get("sql_text") or ""),
+                "exec_error_class": turn.get("exec_error_class"),
             }
         )
     turn_passes = [bool(item["comparison"]["passed"]) for item in scored_turns]
@@ -359,6 +363,12 @@ def turn_attribution(run: Any) -> dict[str, Any]:
         "refusal_reason": getattr(run, "refusal_reason", None),
         "intent_detail": dict(detail) if isinstance(detail, Mapping) else {},
         "nodes": tuple(getattr(run, "nodes", ()) or ()),
+        # 🔴 U-166：执行侧证据两键（SQL 原文与脱敏错误类别）。没有它们，
+        # `SQL_SYNTAX_ERROR` 到底是「模型写错语法」还是「方言错配（postgres 风味跑在
+        # SQLite 沙箱）」不可判 —— r5/r6/r7 三批分别 2/2/3 条，`mt06` 的 turn1 与 turn2
+        # 在 r7 均为该码、repair 三轮后 error_out。
+        "sql_text": str(getattr(run, "sql_text", "") or ""),
+        "exec_error_class": getattr(run, "exec_error_class", None),
     }
 
 def summarize(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
