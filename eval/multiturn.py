@@ -26,6 +26,7 @@ from collections.abc import Mapping, Sequence
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Final
+from sqlite_pg_constructs import unregistered_constructs  # noqa: E402 - U-174 记录面
 
 HERE: Final[Path] = Path(__file__).resolve().parent
 DATASET_PATH: Final[Path] = HERE / "dataset_multiturn_v1.json"
@@ -336,6 +337,7 @@ def score_case_turns(case_id: str, follow_up_type: str, turns: Sequence[Mapping[
                 "exec_error_class": turn.get("exec_error_class"),
                 "gate1_reject_rule": turn.get("gate1_reject_rule"),  # U-168 穿点
                 "applied_predicates": tuple(turn.get("applied_predicates") or ()),  # U-172 穿点
+                "unregistered_pg_constructs": tuple(turn.get("unregistered_pg_constructs") or ()),  # U-174 穿点
             }
         )
     turn_passes = [bool(item["comparison"]["passed"]) for item in scored_turns]
@@ -349,6 +351,11 @@ def score_case_turns(case_id: str, follow_up_type: str, turns: Sequence[Mapping[
         # 实测 r2 的 mt15 正因如此，造成 `cases_both_passed=1` 与 `turn2_passed=0` 同真。
         "both_passed": len(turn_passes) == EXPECTED_TURNS and all(turn_passes),
     }
+
+
+def _constructs(sql: object) -> tuple[str, ...]:
+    """U-174：把未注册的 PG 专有构造投影成 tuple（缺 sql 回空、不编值）。"""
+    return unregistered_constructs(str(sql or ""))
 
 
 def turn_attribution(run: Any) -> dict[str, Any]:
@@ -373,6 +380,7 @@ def turn_attribution(run: Any) -> dict[str, Any]:
         "exec_error_class": getattr(run, "exec_error_class", None),
         "gate1_reject_rule": getattr(run, "gate1_reject_rule", None),  # U-168
         "applied_predicates": tuple(getattr(run, "applied_predicates", ()) or ()),  # U-172
+        "unregistered_pg_constructs": _constructs(getattr(run, "sql_text", "")),  # U-174 记录面
     }
 
 def summarize(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:

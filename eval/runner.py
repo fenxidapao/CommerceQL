@@ -85,6 +85,7 @@ from harness import (  # noqa: E402
     identity_for_case,
 )
 from sqlite_exec import open_sandbox_connection, to_sqlite_sql  # noqa: E402
+from sqlite_pg_constructs import unregistered_constructs  # noqa: E402
 
 DEFAULT_OUT = os.path.join(_bootstrap.HERE, "results_v1.json")
 DEFAULT_CASSETTE = os.path.join(_bootstrap.HERE, "cassettes", "w6_batch.jsonl")
@@ -612,6 +613,7 @@ async def score_case(
         "sql_dialect": run.sql_dialect,
         "limit_injected": run.limit_injected,
         "applied_predicates": list(run.applied_predicates),
+        "unregistered_pg_constructs": list(unregistered_constructs(run.sql_text)),
         "gate_decisions": run.gate_decisions,
         "gate1_reject_rule": run.gate1_reject_rule,
         "exec_error_class": run.exec_error_class,
