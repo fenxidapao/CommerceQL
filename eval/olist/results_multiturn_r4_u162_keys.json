@@ -1,0 +1,1106 @@
+{
+  "generated_at": "2026-11-09T02:03:11+00:00",
+  "stamp": {
+    "generated_at": "2026-11-09T02:03:11+00:00",
+    "git_rev": "1599170",
+    "git_dirty": false
+  },
+  "dataset": "eval/dataset_multiturn_v1.json",
+  "dataset_version": "multiturn_v1",
+  "mode": "live",
+  "dataset_cases": [
+    {
+      "case_id": "mt01",
+      "follow_up_type": "ellipsis_time",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "那 2017 年呢？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2017-01-01",
+            "time_end": "2018-01-01"
+          }
+        }
+      ],
+      "note": "第二轮只换了时间：指标/资产必须沿用第一轮，时间以本轮显式表达为准。"
+    },
+    {
+      "case_id": "mt02",
+      "follow_up_type": "metric_switch",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "换成订单量呢？",
+          "expect": {
+            "metrics": [
+              "order_cnt"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "只换指标：时间窗必须从上一轮继承（本轮问句没有时间词）。"
+    },
+    {
+      "case_id": "mt03",
+      "follow_up_type": "dimension_add",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "按州拆开看看",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "省略主语的追问：指标与时间沿用，新增一个维度。"
+    },
+    {
+      "case_id": "mt04",
+      "follow_up_type": "filter_change",
+      "turns": [
+        {
+          "question": "2018 年圣保罗州的 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "customer_state = 'SP'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "那里约州呢？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "customer_state = 'RJ'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "指代 + 换筛选值：指标与时间必须继承，筛选值以本轮为准（不得同时保留 SP 与 RJ）。"
+    },
+    {
+      "case_id": "mt05",
+      "follow_up_type": "pronoun",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "它比 2017 年高多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01",
+            "comparison": "2017"
+          }
+        }
+      ],
+      "note": "「它」指上一轮指标；比较基准 2017 是本轮新增条件，不得把主时间窗改成 2017。"
+    },
+    {
+      "case_id": "mt06",
+      "follow_up_type": "metric_add",
+      "turns": [
+        {
+          "question": "2018 年各月 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "date"
+            ],
+            "grain": "month",
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "订单量也一起看",
+          "expect": {
+            "metrics": [
+              "gmv",
+              "order_cnt"
+            ],
+            "dimensions": [
+              "date"
+            ],
+            "grain": "month",
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "追加指标：维度/粒度/时间必须继承，指标是两个而不是只剩新指标。"
+    },
+    {
+      "case_id": "mt07",
+      "follow_up_type": "dimension_add",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "按品类拆开看看",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "product_category"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "同 mt03，换成品类维度；验证维度继承不是硬编码州。"
+    },
+    {
+      "case_id": "mt08",
+      "follow_up_type": "limit",
+      "turns": [
+        {
+          "question": "2018 年各州 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "只看前 5 名",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01",
+            "limit": 5,
+            "order_by": [
+              "gmv desc"
+            ]
+          }
+        }
+      ],
+      "note": "只加上限/排序：指标、维度、时间都必须继承。"
+    },
+    {
+      "case_id": "mt09",
+      "follow_up_type": "grain_change",
+      "turns": [
+        {
+          "question": "2018 年各月 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "date"
+            ],
+            "grain": "month",
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "按季度汇总",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "date"
+            ],
+            "grain": "quarter",
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "只换粒度：时间窗与指标沿用。"
+    },
+    {
+      "case_id": "mt10",
+      "follow_up_type": "filter_add",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "去掉取消订单再算",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "order_status <> 'canceled'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "追加状态筛选：时间窗继承；不得把 `order_status` 当作分组维度。"
+    },
+    {
+      "case_id": "mt11",
+      "follow_up_type": "dimension_add",
+      "turns": [
+        {
+          "question": "2018 年平均评分是多少？",
+          "expect": {
+            "metrics": [
+              "avg_review_score"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "按州看看",
+          "expect": {
+            "metrics": [
+              "avg_review_score"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "换指标族也要继承时间：评分题的时间语义必须与订单题一致。"
+    },
+    {
+      "case_id": "mt12",
+      "follow_up_type": "dimension_add",
+      "turns": [
+        {
+          "question": "2018 年配送延迟率是多少？",
+          "expect": {
+            "metrics": [
+              "delivery_late_rate"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "哪个州最高？",
+          "expect": {
+            "metrics": [
+              "delivery_late_rate"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01",
+            "limit": 1,
+            "order_by": [
+              "delivery_late_rate desc"
+            ]
+          }
+        }
+      ],
+      "note": "「最高」问的是排名：维度/排序/上限由本轮补充，时间与指标继承。"
+    },
+    {
+      "case_id": "mt13",
+      "follow_up_type": "metric_switch",
+      "turns": [
+        {
+          "question": "2018 年第三季度 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-07-01",
+            "time_end": "2018-10-01"
+          }
+        },
+        {
+          "question": "客单价呢？",
+          "expect": {
+            "metrics": [
+              "aov"
+            ],
+            "dimensions": [],
+            "time_start": "2018-07-01",
+            "time_end": "2018-10-01"
+          }
+        }
+      ],
+      "note": "换指标、时间窗按季度继承；不得把「第三季度」误扩成全年。"
+    },
+    {
+      "case_id": "mt14",
+      "follow_up_type": "filter_change",
+      "turns": [
+        {
+          "question": "2018 年电子产品类 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "product_category = 'electronics'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "换成家居类呢？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "product_category = 'home'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "品类筛选替换：旧品类条件必须被替换而不是叠加。"
+    },
+    {
+      "case_id": "mt15",
+      "follow_up_type": "reset",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "2019 年 1 月各州的订单量是多少？",
+          "expect": {
+            "metrics": [
+              "order_cnt"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2019-01-01",
+            "time_end": "2019-02-01"
+          }
+        }
+      ],
+      "note": "反例：第二轮是完整新问题（指标/维度/时间全给出），不得套用上一轮条件。"
+    }
+  ],
+  "dataset_content_hash": "sha256:d4a7a755b4768600a7ff30541803cfee53236cf096c1048ffb662d99e7d32dec",
+  "budget": {
+    "max_cost_cny": 0.2,
+    "spent_cny": 0.11073,
+    "stopped": false
+  },
+  "records": [
+    {
+      "case_id": "mt01",
+      "follow_up_type": "ellipsis_time",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "complete",
+          "plan_summary": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "order.order_status NOT IN ('canceled','unavailable')",
+              "order.order_purchase_timestamp 落在 2018-01-01 00:00:00 至 2018-12-31 23:59:59 之间"
+            ],
+            "grain": "order（聚合到单一标量，无分组）",
+            "time_range": {
+              "start": "2018-01-01T00:00:00",
+              "end": "2018-12-31T23:59:59"
+            },
+            "order_by": [],
+            "limit": 1,
+            "blocked": false
+          },
+          "history_seeded": false,
+          "comparison": {
+            "passed": true,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [
+                  "gmv"
+                ],
+                "ok": true
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": "2018-01-01T00:00:00",
+                "ok": true
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": "2018-12-31T23:59:59",
+                "ok": true
+              }
+            },
+            "unmapped": {},
+            "plan_present": true
+          },
+          "tokens": {
+            "input": 13445,
+            "output": 1580,
+            "cache_hit": 12544,
+            "total": 15025
+          },
+          "cost_cny": 0.018053,
+          "terminal_code": null,
+          "refusal_reason": null,
+          "intent_detail": {
+            "reason_code": null
+          },
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "intent",
+            "link",
+            "plan",
+            "bind",
+            "gen_sql",
+            "gate1_ast",
+            "gate2_policy",
+            "gate3_cost",
+            "execute",
+            "mask",
+            "audit_pre",
+            "present",
+            "audit_supp"
+          ]
+        },
+        {
+          "turn": 2,
+          "question": "那 2017 年呢？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2017-01-01",
+            "time_end": "2018-01-01"
+          },
+          "terminal_event": "complete",
+          "plan_summary": {
+            "metrics": [
+              "aov",
+              "gmv",
+              "order_cnt"
+            ],
+            "dimensions": [],
+            "filters": [
+              "order.order_purchase_timestamp 落在 2017-01-01 00:00:00 至 2017-12-31 23:59:59 之间",
+              "order.order_status NOT IN ('canceled','unavailable')"
+            ],
+            "grain": "order（全 2017 年汇总，不分组）",
+            "time_range": {
+              "start": "2017-01-01 00:00:00",
+              "end": "2017-12-31 23:59:59"
+            },
+            "order_by": [],
+            "limit": 100,
+            "blocked": false
+          },
+          "history_seeded": true,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [
+                  "aov",
+                  "gmv",
+                  "order_cnt"
+                ],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2017-01-01",
+                "actual": "2017-01-01 00:00:00",
+                "ok": true
+              },
+              "time_end": {
+                "expected": "2018-01-01",
+                "actual": "2017-12-31 23:59:59",
+                "ok": true
+              }
+            },
+            "unmapped": {},
+            "plan_present": true
+          },
+          "tokens": {
+            "input": 13533,
+            "output": 1718,
+            "cache_hit": 12544,
+            "total": 15251
+          },
+          "cost_cny": 0.019416,
+          "terminal_code": null,
+          "refusal_reason": null,
+          "intent_detail": {
+            "reason_code": "missing_metric_context"
+          },
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "intent",
+            "link",
+            "plan",
+            "bind",
+            "gen_sql",
+            "gate1_ast",
+            "gate2_policy",
+            "gate3_cost",
+            "execute",
+            "mask",
+            "audit_pre",
+            "present",
+            "audit_supp"
+          ]
+        }
+      ],
+      "turn_passes": [
+        true,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt02",
+      "follow_up_type": "metric_switch",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "order.order_purchase_timestamp 落在 2018-01-01 00:00:00 至 2018-12-31 23:59:59 之间",
+              "order.order_status NOT IN ('canceled','unavailable')"
+            ],
+            "grain": "order（聚合到单一标量，无分组）",
+            "time_range": {
+              "start": "2018-01-01",
+              "end": "2018-12-31"
+            },
+            "order_by": [],
+            "limit": 1,
+            "blocked": false
+          },
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [
+                  "gmv"
+                ],
+                "ok": true
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": "2018-01-01",
+                "ok": true
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": "2018-12-31",
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": true
+          },
+          "tokens": {
+            "input": 13430,
+            "output": 1551,
+            "cache_hit": 12544,
+            "total": 14981
+          },
+          "cost_cny": 0.017773,
+          "terminal_code": "GATE_AST_REJECTED",
+          "refusal_reason": null,
+          "intent_detail": {
+            "reason_code": null
+          },
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "intent",
+            "link",
+            "plan",
+            "bind",
+            "gen_sql",
+            "gate1_ast",
+            "error_out"
+          ]
+        },
+        {
+          "turn": 2,
+          "question": "换成订单量呢？",
+          "expect": {
+            "metrics": [
+              "order_cnt"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "complete",
+          "plan_summary": {
+            "metrics": [
+              "order_cnt"
+            ],
+            "dimensions": [],
+            "filters": [
+              "order_status NOT IN ('canceled','unavailable')（由 order_cnt 口径内置）"
+            ],
+            "grain": "order（全量汇总，无分组）",
+            "time_range": {
+              "start": null,
+              "end": null
+            },
+            "order_by": [],
+            "limit": 1,
+            "blocked": false
+          },
+          "history_seeded": true,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "order_cnt"
+                ],
+                "actual": [
+                  "order_cnt"
+                ],
+                "ok": true
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": true
+          },
+          "tokens": {
+            "input": 13316,
+            "output": 1446,
+            "cache_hit": 12032,
+            "total": 14762
+          },
+          "cost_cny": 0.017618,
+          "terminal_code": null,
+          "refusal_reason": null,
+          "intent_detail": {
+            "reason_code": "missing_context"
+          },
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "intent",
+            "link",
+            "plan",
+            "bind",
+            "gen_sql",
+            "gate1_ast",
+            "gate2_policy",
+            "gate3_cost",
+            "execute",
+            "mask",
+            "audit_pre",
+            "present",
+            "audit_supp"
+          ]
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt03",
+      "follow_up_type": "dimension_add",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "order.order_purchase_timestamp 落在 2018-01-01 00:00:00 至 2018-12-31 23:59:59 之间",
+              "order.order_status NOT IN ('canceled','unavailable')"
+            ],
+            "grain": "order（聚合到年度单值，无分组维度）",
+            "time_range": {
+              "start": "2018-01-01 00:00:00",
+              "end": "2018-12-31 23:59:59"
+            },
+            "order_by": [],
+            "limit": 100,
+            "blocked": false
+          },
+          "history_seeded": false,
+          "comparison": {
+            "passed": true,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [
+                  "gmv"
+                ],
+                "ok": true
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": "2018-01-01 00:00:00",
+                "ok": true
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": "2018-12-31 23:59:59",
+                "ok": true
+              }
+            },
+            "unmapped": {},
+            "plan_present": true
+          },
+          "tokens": {
+            "input": 13448,
+            "output": 1584,
+            "cache_hit": 12544,
+            "total": 15032
+          },
+          "cost_cny": 0.018093,
+          "terminal_code": "GATE_AST_REJECTED",
+          "refusal_reason": null,
+          "intent_detail": {
+            "reason_code": null
+          },
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "intent",
+            "link",
+            "plan",
+            "bind",
+            "gen_sql",
+            "gate1_ast",
+            "error_out"
+          ]
+        },
+        {
+          "turn": 2,
+          "question": "按州拆开看看",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "complete",
+          "plan_summary": {
+            "metrics": [
+              "gmv",
+              "order_cnt",
+              "aov"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "filters": [
+              "order.order_status NOT IN ('canceled','unavailable')（gmv / order_cnt / aov 口径内置）"
+            ],
+            "grain": "州（customer_state，grain_level=1）；指标在订单粒度去重后按州聚合",
+            "time_range": {
+              "start": "2018-01-01 00:00:00",
+              "end": "2018-12-31 23:59:59"
+            },
+            "order_by": [
+              "gmv DESC"
+            ],
+            "limit": 100,
+            "blocked": false
+          },
+          "history_seeded": true,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [
+                  "aov",
+                  "gmv",
+                  "order_cnt"
+                ],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [
+                  "customer_state"
+                ],
+                "actual": [
+                  "customer_state"
+                ],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": "2018-01-01 00:00:00",
+                "ok": true
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": "2018-12-31 23:59:59",
+                "ok": true
+              }
+            },
+            "unmapped": {},
+            "plan_present": true
+          },
+          "tokens": {
+            "input": 13551,
+            "output": 1756,
+            "cache_hit": 12544,
+            "total": 15307
+          },
+          "cost_cny": 0.019777,
+          "terminal_code": null,
+          "refusal_reason": null,
+          "intent_detail": {
+            "reason_code": "missing_metric"
+          },
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "intent",
+            "link",
+            "plan",
+            "bind",
+            "gen_sql",
+            "gate1_ast",
+            "gate2_policy",
+            "gate3_cost",
+            "execute",
+            "mask",
+            "audit_pre",
+            "present",
+            "audit_supp"
+          ]
+        }
+      ],
+      "turn_passes": [
+        true,
+        false
+      ],
+      "both_passed": false
+    }
+  ],
+  "summary": {
+    "n_cases": 3,
+    "turn1_passed": 2,
+    "turn2_passed": 0,
+    "cases_both_passed": 0,
+    "cases_incomplete": 0,
+    "plans_missing": 0,
+    "unmapped_expect_keys": [],
+    "cost_cny_total": 0.11073
+  }
+}
