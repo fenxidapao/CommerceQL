@@ -4,6 +4,7 @@
 读数上「方言翻不动」仍与「模型写错」长得一样（`T-22` 与 `T-15` 都吃过这个亏）。
 
 判据面不动：`to_sqlite_sql` 的输出**一字不变**、不阻断执行、不改 `sql_text`。
+⚠️ 扩白名单后 `EXTRACT(QUARTER ...)` 已可翻，故正控改用仍翻不动的 `DATE_TRUNC('quarter', …)`。
 """
 
 from __future__ import annotations
@@ -13,9 +14,9 @@ import logging
 from sqlite_exec import to_sqlite_sql
 
 
-def test_extract_warns_and_output_is_unchanged(caplog) -> None:
-    """正控：`EXTRACT` 必须告警，且翻译结果与输入逐字相同（不改写）。"""
-    sql = "SELECT EXTRACT(QUARTER FROM o.ts) AS q FROM v_o_orders AS o"
+def test_untranslatable_construct_warns_and_output_is_unchanged(caplog) -> None:
+    """正控：`DATE_TRUNC('quarter', …)` 翻不动 ⇒ 必须告警，且输出与输入逐字相同。"""
+    sql = "SELECT DATE_TRUNC('quarter', o.ts) AS q FROM v_o_orders AS o"
     with caplog.at_level(logging.WARNING, logger="sqlite_exec"):
         out = to_sqlite_sql(sql)
     assert out == sql
