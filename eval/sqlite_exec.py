@@ -145,13 +145,15 @@ def classify_sqlite_error(exc: BaseException) -> ExecError:
     )
 
 
+from sqlite_dialect import translate_pg_functions  # noqa: E402  （U-167：方言渲染器）
+
 def to_sqlite_sql(sql: str) -> str:
     """把在线契约的 `%(name)s` 占位符改写成 sqlite 的 `:name`（只动占位符，不碰值）。
 
     ⚠️ 不处理**字符串字面量内部**出现的 `%(x)s`（那是 gate1 R15 之外的极端形态）。
     在线路径由 psycopg 消费 `%(name)s`，本函数只在评测侧存在，故不改动任何在线代码。
     """
-    return _PSYCOPG_PARAM_RE.sub(r":\1", sql)
+    return _PSYCOPG_PARAM_RE.sub(r":\1", translate_pg_functions(sql))
 
 
 def open_sandbox_connection(
