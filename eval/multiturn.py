@@ -317,6 +317,16 @@ def score_case_turns(case_id: str, follow_up_type: str, turns: Sequence[Mapping[
                 "comparison": comparison,
                 "tokens": turn.get("tokens"),
                 "cost_cny": turn.get("cost_cny"),
+                # 🔴 U-162 补（2026-11-09）：四键由 run_multiturn 用
+                # `**multiturn.turn_attribution(run)` 展开进 raw turn，**必须在这里透传**——
+                # 否则本函数用固定键集重建 turn 时会把它们丢掉（r3 冒烟实测 four_keys=0/4
+                # 就是这条：产出侧改了、重装侧没改）。缺则回 None / {} / ()，**不编值**。
+                "terminal_code": turn.get("terminal_code"),
+                "refusal_reason": turn.get("refusal_reason"),
+                "intent_detail": dict(turn.get("intent_detail"))
+                if isinstance(turn.get("intent_detail"), Mapping)
+                else {},
+                "nodes": tuple(turn.get("nodes") or ()),
             }
         )
     turn_passes = [bool(item["comparison"]["passed"]) for item in scored_turns]
