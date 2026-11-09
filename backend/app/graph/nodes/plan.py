@@ -122,8 +122,14 @@ async def plan(state: GraphState) -> dict[str, Any]:
     blocking = tuple(outcome.plan.blocking_issues)
     #: 🔴 U-163：**继承要排在阻塞判定之前**（原顺序见模块 docstring §二 的修订段）。
     history_plan = state.get("history_plan")
+    #: 🔴 U-164：判「像不像追问」必须用**原始问题** —— `looks_like_follow_up` 靠
+    #: 「呢 / 换成 / 那」这类线索，而 `normalized_question` 会把线索抹掉（`换成订单量呢？`
+    #: 归一化后已无「呢 / 换成」）⇒ 继承在第一行就早退。实测 r6 的 mt01/mt02/mt13：
+    #: turn2 时窗全为 `None`，而历史里明明有时窗。
+    #: ⚠️ 只影响这个启发式，**不出站**：`plan_for` 的入参仍是 `normalized_question`。
+    follow_up_text = str(state.get("raw_question") or question)
     inherited = (
-        inherit_plan(outcome.plan, history_plan, question)
+        inherit_plan(outcome.plan, history_plan, follow_up_text)
         if isinstance(history_plan, Mapping)
         else None
     )
