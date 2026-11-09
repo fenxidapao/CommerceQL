@@ -1,0 +1,180 @@
+{
+  "schema": "T15_REPAIR_EQUAL_GOLD_POOL/v1",
+  "note": "本件判两件事：候选池里 repair 失败记录的原始 SQL、以及 ab_n* 七臂的输出；B 臂违反 N-17、仅评测侧实验；不做 tenant_wrap，故 hash_matches=None、不与 dataset_v3 的 gold_result_hash 对撞",
+  "db": "data\\olist\\olist_sandbox.db",
+  "dataset": "eval\\olist\\dataset_v3_frozen.json",
+  "results": [
+    "results_v3_r1.json",
+    "results_v3_r2.json",
+    "results_v3_r3.json"
+  ],
+  "translate_route": "eval/sqlite_exec.py::to_sqlite_sql",
+  "rel_tol": 1e-06,
+  "pool_n": 4,
+  "pool_judged_n": 2,
+  "pool_equivalent_n": 0,
+  "dialect_blocked_ids": [
+    "n10",
+    "n39"
+  ],
+  "pool": [
+    {
+      "case_id": "n05",
+      "source": "results_v3_r1.json",
+      "terminal_code": "SQL_SYNTAX_ERROR",
+      "exec_error_class": "syntax_error",
+      "sql_len": 397,
+      "sql_params_keys": [
+        "end_ts",
+        "start_ts"
+      ],
+      "dialect_tokens": {
+        "EXTRACT": 2
+      },
+      "judged": true,
+      "reason": "",
+      "translated_differs": true,
+      "gold_rows": 3,
+      "pred_rows": 3,
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": null,
+        "tags": [],
+        "diffs": [
+          "第 0 行 列 'quarter'：金标 '2018-Q1' vs 预测 1",
+          "第 1 行 列 'quarter'：金标 '2018-Q2' vs 预测 2",
+          "第 2 行 列 'quarter'：金标 '2018-Q3' vs 预测 3",
+          "已跳过容差重匹配（两侧均要求 ORDER BY ⇒ 行序参与判据）"
+        ],
+        "unmatched": 3
+      },
+      "equivalent": false
+    },
+    {
+      "case_id": "n10",
+      "source": "results_v3_r1.json",
+      "terminal_code": "SQL_SYNTAX_ERROR",
+      "exec_error_class": "unknown_function",
+      "sql_len": 362,
+      "sql_params_keys": [
+        "end_ts",
+        "start_ts"
+      ],
+      "dialect_tokens": {
+        "DATE_TRUNC": 2
+      },
+      "judged": false,
+      "reason": "执行失败：OperationalError: no such function: DATE_TRUNC",
+      "translated_differs": true,
+      "sqlite_error": "OperationalError: no such function: DATE_TRUNC",
+      "dialect_failure_kind": "no_such_function"
+    },
+    {
+      "case_id": "n18",
+      "source": "results_v3_r1.json",
+      "terminal_code": "SQL_SYNTAX_ERROR",
+      "exec_error_class": "syntax_error",
+      "sql_len": 554,
+      "sql_params_keys": [
+        "end_ts",
+        "start_ts"
+      ],
+      "dialect_tokens": {
+        "EXTRACT": 4
+      },
+      "judged": true,
+      "reason": "",
+      "translated_differs": true,
+      "gold_rows": 3,
+      "pred_rows": 3,
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": null,
+        "tags": [],
+        "diffs": [
+          "列数不同：金标 2 / 预测 3；金标列 'quarter' 在预测里有 0 个同值列（窄口要求**唯一**匹配，0 或多于 1 都不放行）"
+        ],
+        "unmatched": 0
+      },
+      "equivalent": false
+    },
+    {
+      "case_id": "n39",
+      "source": "results_v3_r1.json",
+      "terminal_code": "SQL_SYNTAX_ERROR",
+      "exec_error_class": "unknown_function",
+      "sql_len": 548,
+      "sql_params_keys": [
+        "end_ts",
+        "start_ts"
+      ],
+      "dialect_tokens": {
+        "DATE_TRUNC": 2
+      },
+      "judged": false,
+      "reason": "执行失败：OperationalError: no such function: DATE_TRUNC",
+      "translated_differs": true,
+      "sqlite_error": "OperationalError: no such function: DATE_TRUNC",
+      "dialect_failure_kind": "no_such_function"
+    }
+  ],
+  "arm_runs_n": 7,
+  "arm_run_meta": [
+    {
+      "source": "ab_n05_with_failed_sql.json",
+      "case_id": "n05",
+      "arm": "with_failed_sql",
+      "parse_ok": true,
+      "exec_ok": false,
+      "sql_len": 467
+    },
+    {
+      "source": "ab_n10_digest_only.json",
+      "case_id": "n10",
+      "arm": "digest_only",
+      "parse_ok": true,
+      "exec_ok": true,
+      "sql_len": 514
+    },
+    {
+      "source": "ab_n10_with_failed_sql.json",
+      "case_id": "n10",
+      "arm": "with_failed_sql",
+      "parse_ok": true,
+      "exec_ok": true,
+      "sql_len": 458
+    },
+    {
+      "source": "ab_n18_digest_only.json",
+      "case_id": "n18",
+      "arm": "digest_only",
+      "parse_ok": false,
+      "exec_ok": false,
+      "sql_len": 0
+    },
+    {
+      "source": "ab_n18_with_failed_sql.json",
+      "case_id": "n18",
+      "arm": "with_failed_sql",
+      "parse_ok": true,
+      "exec_ok": false,
+      "sql_len": 543
+    },
+    {
+      "source": "ab_n39_digest_only.json",
+      "case_id": "n39",
+      "arm": "digest_only",
+      "parse_ok": false,
+      "exec_ok": false,
+      "sql_len": 0
+    },
+    {
+      "source": "ab_n39_with_failed_sql.json",
+      "case_id": "n39",
+      "arm": "with_failed_sql",
+      "parse_ok": false,
+      "exec_ok": false,
+      "sql_len": 0
+    }
+  ]
+}

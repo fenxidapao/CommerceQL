@@ -91,10 +91,20 @@ def _open_ro(db_path: Path) -> sqlite3.Connection:
     return con
 
 
-def _run(con: sqlite3.Connection, sql: str, translate: Any, eq: Any) -> Any:
+def _run(
+    con: sqlite3.Connection, sql: str, translate: Any, eq: Any, params: Any = None
+) -> Any:
+    """`params` 非空时按 `%(name)s` → `:name` 绑定后执行。
+
+    与 `eval/runner.py:188-202` 的 `_ParamCursor` 同口径：只转发，值加工仍由 sqlite3 完成。
+    """
+    bound = dict(params or {})
     cur = con.cursor()
     try:
-        cur.execute(translate(sql))
+        if bound:
+            cur.execute(translate(sql), bound)
+        else:
+            cur.execute(translate(sql))
         return eq.Table.from_cursor(cur)
     finally:
         cur.close()
@@ -142,6 +152,9 @@ def load_pool(paths: list[Path]) -> list[dict[str, Any]]:
                 "exec_error_class": str(record.get("exec_error_class")),
                 "terminal_event": str(record.get("terminal_event")),
                 "sql_text": str(record.get("sql_text") or ""),
+                #: U-174／T-15：池内 SQL 带 `%(start_ts)s` 一类占位符，必须带参数执行，
+                #: 否则会误报 `Incorrect number of bindings supplied`（旧版就是这么误分类的）。
+                "sql_params": dict(record.get("sql_params") or {}),
                 "gold_sql_record": str((record.get("gold") or {}).get("gold_sql") or ""),
             }
     return [picked[k] for k in sorted(picked)]
@@ -217,6 +230,7 @@ def main(argv: list[str] | None = None) -> int:
                 "terminal_code": item["terminal_code"],
                 "exec_error_class": item["exec_error_class"],
                 "sql_len": len(sql),
+                "sql_params_keys": sorted((item.get("sql_params") or {})),
                 "dialect_tokens": toks,
                 "judged": False,
                 "reason": "",
@@ -232,7 +246,7 @@ def main(argv: list[str] | None = None) -> int:
             translated = translate(sql)
             rec["translated_differs"] = translated != sql
             try:
-                pred_table = _run(con, sql, translate, eq)
+                pred_table = _run(con, sql, translate, eq, item.get("sql_params") or {})
             except sqlite3.Error as exc:
                 msg = f"{type(exc).__name__}: {str(exc)}"
                 rec["reason"] = f"执行失败：{msg[:140]}"
