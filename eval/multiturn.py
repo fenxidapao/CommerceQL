@@ -334,6 +334,7 @@ def score_case_turns(case_id: str, follow_up_type: str, turns: Sequence[Mapping[
                 # （U-162 已在 r3 冒烟上踩过一次：four_keys=0/4）。缺则回 "" / None，不编值。
                 "sql_text": str(turn.get("sql_text") or ""),
                 "exec_error_class": turn.get("exec_error_class"),
+                "gate1_reject_rule": turn.get("gate1_reject_rule"),  # U-168 穿点
             }
         )
     turn_passes = [bool(item["comparison"]["passed"]) for item in scored_turns]
@@ -369,6 +370,7 @@ def turn_attribution(run: Any) -> dict[str, Any]:
         # 在 r7 均为该码、repair 三轮后 error_out。
         "sql_text": str(getattr(run, "sql_text", "") or ""),
         "exec_error_class": getattr(run, "exec_error_class", None),
+        "gate1_reject_rule": getattr(run, "gate1_reject_rule", None),  # U-168
     }
 
 def summarize(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
