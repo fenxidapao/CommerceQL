@@ -129,6 +129,7 @@ async def run_live(
                         "question": question,
                         "expect": turn.get("expect") or {},
                         "terminal_event": run.terminal_event,
+                        **multiturn.turn_attribution(run),
                         "plan_summary": summary,
                         "history_seeded": history,
                         "tokens": run.tokens,

@@ -332,6 +332,22 @@ def score_case_turns(case_id: str, follow_up_type: str, turns: Sequence[Mapping[
     }
 
 
+def turn_attribution(run: Any) -> dict[str, Any]:
+    """turn 级归因四键的**纯投影**（U-162；不读图、不编值）。
+
+    为什么必须有：r2 的 15 条里 8 条 turn2 收口 `refuse`，而 turn 记录此前只有
+    `terminal_event` 与 `plan_summary` —— 「意图层判拒 / 链接层无候选 / plan 阻塞 /
+    闸门拒」四者盘上不可判（单轮 record 的 `intent_detail` 也到不了 turn 级）。
+    缺属性一律回 `None` 或空，**不编默认值**：空 == 本次没这项信息。
+    """
+    detail = getattr(run, "intent_detail", None)
+    return {
+        "terminal_code": getattr(run, "terminal_code", None),
+        "refusal_reason": getattr(run, "refusal_reason", None),
+        "intent_detail": dict(detail) if isinstance(detail, Mapping) else {},
+        "nodes": tuple(getattr(run, "nodes", ()) or ()),
+    }
+
 def summarize(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """两轮分开计数：turn2 才是"继承是否生效"的读数，不能和 turn1 混成一个准确率。"""
     n_cases = len(records)
