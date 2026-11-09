@@ -120,16 +120,17 @@ def test_time_caliber_day_granularity_and_exclusive_upper() -> None:
     """U-157：时间面按日粒度比，`… 23:59:59` 抬次日与金标右开同口径。
 
     这四条是**新口径的正/反控制**：① 时分秒差不再判不等；② 闭区间上界归一后与右开
-    金标相等；③ `T` 分隔同样归一；④ 纯日期上界**抬成次日**（U-165 订正；原为不抬）（`2018-12-31` ≠ `2019-01-01`，
+    金标相等；③ `T` 分隔同样归一；④ 纯日期上界**不抬**（U-165 撤回，仍按字面比、不猜）（`2018-12-31` ≠ `2019-01-01`，
     仍判不等）—— 少了第 ④ 条，改动就会退化成「时间面永远通过」。
     """
     assert multiturn.time_field_ok("time_start", "2018-01-01", "2018-01-01 00:00:00") is True
     assert multiturn.time_field_ok("time_end", "2019-01-01", "2018-12-31 23:59:59") is True
     assert multiturn.time_field_ok("time_end", "2019-01-01", "2018-12-31T23:59:59") is True
-    # U-165 订正：纯日期上界按语义包 §9 notes 的闭区间口径（末日 23:59:59）抬成次日，
-    # 与右开金标同值 ⇒ 判 True。原写 False 是 U-157 在「口径未定」时的保守写法，
-    # 与 backend/app/planner/timeexpr.py:227-234 的闭区间口径冲突，按契约订正。
-    assert multiturn.time_field_ok("time_end", "2019-01-01", "2018-12-31") is True
+    # U-165 撤回（2026-11-09）：纯日期「抬次日」这条放弃 —— 它与本文件 `time_end-mutate2`
+    # （同一 mutate 必须判 False）直接互斥，且 `timeexpr.py:227-234` 只描述 resolve_time
+    # 的产出格式、不构成「计划裸日期 = 闭区间」的契约。评测口径变更属红线，须书面裁定；
+    # 在此之前按字面比、不猜。
+    assert multiturn.time_field_ok("time_end", "2019-01-01", "2018-12-31") is False
     assert multiturn.time_field_ok("time_start", "2018-01-01", None) is False
 
 
