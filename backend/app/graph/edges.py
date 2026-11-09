@@ -80,6 +80,7 @@ from app.graph.nodes import (
     REPAIR,
 )
 from app.graph.state import GraphState
+from app.planner.inherit import looks_like_follow_up
 from app.planner.schemas import IntentKind
 
 __all__ = [
@@ -200,6 +201,13 @@ def route_after_intent(state: GraphState) -> str:
     if intent == IntentKind.REFUSE.value:
         return REFUSE_OUT
     if intent == IntentKind.CLARIFY.value:
+        # 🔴 U-158：意图层的 `clarify` **不是唯一出口**。状态里有上一轮脱敏计划摘要
+        # （`history_plan`，组 1）且本轮问句形似追问时，意图层判出的「需要澄清」往往是
+        # **漏了上一轮条件**造成的假歧义（live 15 条多轮里 13 条栽在这里）⇒ 交给下游
+        # `link` / `plan`（`inherit_plan` 只补空位）继续，而不是在意图层就收口。
+        # 判据只在「有历史」时成立：单轮无 `history_plan` ⇒ 行为与改动前逐字一致。
+        if _follow_up_with_history(state):
+            return LINK
         return CLARIFY_OUT
     if intent == IntentKind.OPEN_ANALYSIS.value:
         # NG4：开放分析不是"看不懂"，是"这类问题不由本产品回答" → 拒答 + 替代问法。
@@ -209,6 +217,25 @@ def route_after_intent(state: GraphState) -> str:
         # → 按已定的终态出口，不硬走 `link`。
         return terminal_target(state)
     return LINK
+
+
+def _follow_up_with_history(state: GraphState) -> bool:
+    """U-158 的判据 —— 三件同时成立才算「假歧义」（纯函数，仅供 `route_after_intent`）。
+
+    ① 状态里有非空 `history_plan`（组 1；由 `runner` 从 `sess:plan` 播种）；
+    ② 本轮**原始问题**形似追问（`looks_like_follow_up` —— 与 `inherit_plan` 用**同一份**
+       实现，不另造第二份真相；L4 → L3 依赖合法，`plan.py:49` 早已同样 import）；
+    ③ 节点**尚未**设定终态（已设终态的优先级不变，否则会绕掉 kill switch 那类收口）。
+
+    ⚠️ 用 `raw_question` 而非 `normalized_question`：归一化会抹掉「呢 / 换成 / 那」这类
+    追问线索，拿归一化后的问题判等于把判据废掉（`换成订单量呢？` 归一化后已无线索）。
+    """
+    if state.get("terminal") is not None:
+        return False
+    if not state.get("history_plan"):
+        return False
+    question = str(state.get("raw_question") or state.get("normalized_question") or "")
+    return looks_like_follow_up(question)
 
 
 def route_after_link(state: GraphState) -> str:
