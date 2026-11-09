@@ -1,0 +1,104 @@
+{
+  "schema": "T15_REPAIR_EQUAL_GOLD/v1",
+  "note": "本件只判 equal_gold（equivalence 全口径）；B 臂违反 N-17、仅评测侧实验；不做 tenant_wrap，故 hash_matches=None、不与 dataset_v3 的 gold_result_hash 对撞",
+  "db": "data\\olist\\olist_sandbox.db",
+  "dataset": "eval\\olist\\dataset_v3_frozen.json",
+  "translate_route": "eval/sqlite_exec.py::to_sqlite_sql",
+  "rel_tol": 1e-06,
+  "judged_n": 2,
+  "equivalent_n": 1,
+  "records": [
+    {
+      "source": "ab_n05_with_failed_sql.json",
+      "case_id": "n05",
+      "arm": "with_failed_sql",
+      "parse_ok": true,
+      "exec_ok": false,
+      "sql_len": 467,
+      "judged": false,
+      "reason": "预测侧执行失败：OperationalError: near \"FROM\": syntax error"
+    },
+    {
+      "source": "ab_n10_digest_only.json",
+      "case_id": "n10",
+      "arm": "digest_only",
+      "parse_ok": true,
+      "exec_ok": true,
+      "sql_len": 514,
+      "judged": true,
+      "reason": "",
+      "gold_rows": 3,
+      "pred_rows": 4,
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": null,
+        "tags": [],
+        "diffs": [
+          "行数不同：金标 3 / 预测 4"
+        ],
+        "unmatched": 0
+      },
+      "equivalent": false
+    },
+    {
+      "source": "ab_n10_with_failed_sql.json",
+      "case_id": "n10",
+      "arm": "with_failed_sql",
+      "parse_ok": true,
+      "exec_ok": true,
+      "sql_len": 458,
+      "judged": true,
+      "reason": "",
+      "gold_rows": 3,
+      "pred_rows": 3,
+      "verdict": {
+        "equivalent": true,
+        "hash_matches": null,
+        "tags": [],
+        "diffs": [],
+        "unmatched": 0
+      },
+      "equivalent": true
+    },
+    {
+      "source": "ab_n18_digest_only.json",
+      "case_id": "n18",
+      "arm": "digest_only",
+      "parse_ok": false,
+      "exec_ok": false,
+      "sql_len": 0,
+      "judged": false,
+      "reason": "该臂没有产出 SQL（解析失败或空输出）"
+    },
+    {
+      "source": "ab_n18_with_failed_sql.json",
+      "case_id": "n18",
+      "arm": "with_failed_sql",
+      "parse_ok": true,
+      "exec_ok": false,
+      "sql_len": 543,
+      "judged": false,
+      "reason": "预测侧执行失败：OperationalError: near \"FROM\": syntax error"
+    },
+    {
+      "source": "ab_n39_digest_only.json",
+      "case_id": "n39",
+      "arm": "digest_only",
+      "parse_ok": false,
+      "exec_ok": false,
+      "sql_len": 0,
+      "judged": false,
+      "reason": "该臂没有产出 SQL（解析失败或空输出）"
+    },
+    {
+      "source": "ab_n39_with_failed_sql.json",
+      "case_id": "n39",
+      "arm": "with_failed_sql",
+      "parse_ok": false,
+      "exec_ok": false,
+      "sql_len": 0,
+      "judged": false,
+      "reason": "该臂没有产出 SQL（解析失败或空输出）"
+    }
+  ]
+}
