@@ -117,6 +117,10 @@ PYTHONPATH="<repo>;<repo>/eval" python -m pytest -q tests/eval
 cd ../frontend && npm run test && npm run typecheck && npm run build
 
 # 静态检查（在 backend/ 下）
+#   ⚠️ `eval/**` 不在 ruff 作用域内：`backend/pyproject.toml` 的 `[tool.ruff] src = ["."]`
+#      ⇒ 项目口径只覆盖 `backend/`。这是 2026-11-09 的书面裁定（台账 `T-19` 选 ②），不是遗漏；
+#      要纳入必须先逐条定性默认规则下 `eval/harness.py` + `eval/runner.py` 的 28 条（以 RUF100 为主，HEAD 同值）。
+
 ruff check . && mypy app && lint-imports
 # lint-imports 的合法 Python 形态（⚠️ 禁用 python -m importlinter.cli lint-imports，见 §5）：
 PYTHONUTF8=1 python -c "from importlinter.cli import lint_imports_command; lint_imports_command()"
@@ -126,7 +130,7 @@ python eval/runner.py --help
 python eval/reporter.py --help
 ```
 
-🚫 **不要跑 live 跑批**：`--live` 会真花钱（G-6 压测按 ¥40+ 估），无预算批准一律不跑。
+🚫 **live 跑批的钱已获常态授权**（用户 2026-11-06 三度点句「准许花钱」，此后不得再出现「等你批预算」）：仍须带硬停（`--max-cost-cny` / `--max-requests` / `--duration-s`），并把 `cap{calls,spent_cny,stopped}` 落进证据件；G-6 已实测三把、合计 **< ¥0.3**（回执 `deploy/loadtest/g6_steady_*.json`）⇒ 旧估「¥40+」作废。红线不变：冻结集、`backend/reports/**` 与 `eval/results_*` 证据、密钥文件、门禁阈值措辞一律不动。
 
 ---
 
