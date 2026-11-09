@@ -226,15 +226,22 @@ def _date_part(value: Any) -> date | None:
 
 
 def _exclusive_upper(value: Any) -> date | None:
-    """`time_end` 侧归一：闭区间上界（`… 23:59:59`，含 `T` 分隔）抬成次日 00:00:00。
+    """`time_end` 侧归一：把「含当日」的上界抬成次日 00:00:00（与右开金标同值）。
 
-    ⚠️ **纯日期上界（`2018-12-31`）刻意不抬**（U-157）：它既可能就是闭区间当天，
-    也可能是右开的另一种写法；口径未定 ⇒ 按字面比，不猜。
+    两种写法都算「含当日」，都抬：
+    * 带时刻的闭区间上界（`… 23:59:59`，含 `T` 分隔）；
+    * **纯日期上界**（`2018-12-31`）—— U-165 订正：平台自己的时间解析产出就是闭区间
+      （`backend/app/planner/timeexpr.py:227-234`，口径逐字取自语义包 §9 notes 的
+      「首日 00:00:00 至末日 23:59:59」）⇒ 模型写纯日期时按同一口径理解为「含当日」，
+      抬次日后与右开金标（`2019-01-01`）等值。原「不猜」写法（U-157）与契约冲突，已订正。
     """
     day = _date_part(value)
     if day is None:
         return None
     text = str(value).strip().replace("T", " ")
+    if not text[10:].strip():
+        # 纯日期：没有时刻信息 ⇒ 按「含当日」的闭区间口径抬成次日
+        return day + timedelta(days=1)
     return day + timedelta(days=1) if text.endswith("23:59:59") else day
 
 
