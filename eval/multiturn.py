@@ -13,7 +13,7 @@
 ## 比较口径（都写在这里，测试逐条钉住）
 
 - 集合类（`metrics` / `dimensions` / `filters` / `order_by`）：去重 + 大小写/空白归一后比集合；
-- 时间窗：比 `time_range.start` / `time_range.end` 的 ISO 日期字符串（金标右开区间）；
+- 时间窗：按**日粒度**比（`time_field_ok`）—— `time_start` 取日期部分、`time_end` 先做右开归一（`23:59:59` 抬次日、纯日期**不抬**，见 `U-165`）再比日期；故金标右开（`2019-01-01`）与图给闭区间（`2018-12-31 23:59:59`）归一后相等；`actual is None` 记 `ok=False` 并由 `plans_missing` 单列（本句于 `U-179` 按现行实现改写）；
 - `grain` / `limit`：直接比；
 - 计划缺失（图没走到 `plan`）：所有映射字段都记 `actual=None`、`ok=False`，不当作"空计划通过"。
 """
@@ -284,8 +284,8 @@ def _upper_representation_diff(expected: Any, actual: Any) -> bool:
 def time_field_ok(key: str, expected: Any, actual: Any) -> bool:
     """时间面判定（U-157）：两侧按**日粒度**比，右开/闭区间归一后再比。
 
-    修的是「模块口径说 ISO 日期字符串、实现做原始字符串全等」这处分歧
-    （见本模块 docstring 比较口径第 2 条）。`actual is None`（无完整计划）照旧判不等，
+    原「模块口径说 ISO 日期字符串、实现做原始字符串全等」的分歧已由 `U-179` 消除（第 2 条按实现改写）
+    （比较口径第 2 条，`U-179` 已同步）。`actual is None`（无完整计划）照旧判不等，
     但统计层由 `plans_missing` 单列，不与「时间答错」混计。
     """
     if expected is None or actual is None:
