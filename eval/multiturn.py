@@ -377,6 +377,12 @@ def score_case_turns(case_id: str, follow_up_type: str, turns: Sequence[Mapping[
                 "gate1_reject_rule": turn.get("gate1_reject_rule"),  # U-168 穿点
                 "applied_predicates": tuple(turn.get("applied_predicates") or ()),  # U-172 穿点
                 "unregistered_pg_constructs": tuple(turn.get("unregistered_pg_constructs") or ()),  # U-174 穿点
+                # U-181 穿点：产出侧加了键、这里不透传就等于没加（同 U-162/U-166 的坑）。
+                "latency_ms": dict(turn.get('latency_ms') or {})
+                if isinstance(turn.get('latency_ms'), Mapping)
+                else {},
+                "duration_ms": turn.get('duration_ms'),
+                "llm_calls": int(turn.get('llm_calls') or 0),
             }
         )
     turn_passes = [bool(item["comparison"]["passed"]) for item in scored_turns]
@@ -406,6 +412,9 @@ def turn_attribution(run: Any) -> dict[str, Any]:
     缺属性一律回 `None` 或空，**不编默认值**：空 == 本次没这项信息。
     """
     detail = getattr(run, "intent_detail", None)
+    #: U-181：逐轮耗时取图内 RunContext.latency_ms()（total = run 起点到收口墙钟）。
+    latency = getattr(run, 'latency_ms', None)
+    latency_map = dict(latency) if isinstance(latency, Mapping) else {}
     return {
         "terminal_code": getattr(run, "terminal_code", None),
         "refusal_reason": getattr(run, "refusal_reason", None),
@@ -420,6 +429,11 @@ def turn_attribution(run: Any) -> dict[str, Any]:
         "gate1_reject_rule": getattr(run, "gate1_reject_rule", None),  # U-168
         "applied_predicates": tuple(getattr(run, "applied_predicates", ()) or ()),  # U-172
         "unregistered_pg_constructs": _constructs(getattr(run, "sql_text", "")),  # U-174 记录面
+        # U-181：失败态也有耗时（_shared.metering_update 在 error_out 也写组 11），故不另加计时器；
+        # 缺则回 None / 0，不编值。
+        "latency_ms": latency_map,
+        "duration_ms": int(latency_map.get('total') or 0) if latency_map else None,
+        "llm_calls": int(getattr(run, 'llm_calls', 0) or 0),
     }
 
 def _upper_representation_diff_cell(turn: Mapping[str, Any]) -> bool:

@@ -89,6 +89,7 @@ async def run_live(
     tenant: str,
     limit: int | None,
     max_cost_cny: float,
+    max_requests: int | None = None,
 ) -> dict[str, Any]:
     """真打两轮：turn1 → 生产同款脱敏 → turn2 的 `history_plan`。"""
     from harness import Harness, eval_node_timeouts
@@ -104,10 +105,13 @@ async def run_live(
     )
     records: list[dict[str, Any]] = []
     spent = 0.0
+    calls = 0
     budget_stopped = False
     try:
         for case in cases:
-            if spent >= max_cost_cny:
+            if spent >= max_cost_cny or (
+                max_requests is not None and calls >= int(max_requests)
+            ):
                 budget_stopped = True
                 break
             case_id = str(case["case_id"])
@@ -137,8 +141,11 @@ async def run_live(
                     }
                 )
                 spent += float(run.cost_cny or 0)
+                calls += int(getattr(run, 'llm_calls', 0) or 0)
                 history = multiturn.history_plan_from_summary(summary)
-                if spent >= max_cost_cny:
+                if spent >= max_cost_cny or (
+                    max_requests is not None and calls >= int(max_requests)
+                ):
                     budget_stopped = True
                     break
             records.append(
@@ -154,6 +161,8 @@ async def run_live(
         "dataset_content_hash": spec.get("content_hash"),
         "budget": {
             "max_cost_cny": max_cost_cny,
+            "max_requests": max_requests,
+            "calls": calls,
             "spent_cny": round(spent, 6),
             "stopped": budget_stopped,
         },
@@ -210,6 +219,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--yes", action="store_true", help="确认 live 计费")
     parser.add_argument("--limit", type=int, default=None, help="只跑前 N 条用例")
     parser.add_argument("--max-cost-cny", type=float, default=2.0)
+    parser.add_argument("--max-requests", type=int, default=None, help="LLM 请求数硬停（None = 不限）")
     parser.add_argument("--out", default=None, help="报告落盘路径；live 必填")
     args = parser.parse_args(argv)
 
@@ -247,6 +257,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     tenant=str(args.tenant or spec.get("tenant") or "T_A"),
                     limit=args.limit,
                     max_cost_cny=args.max_cost_cny,
+                    max_requests=args.max_requests,
                 )
             ),
             spec,

@@ -215,6 +215,9 @@ class RunContext:
             total=self._tokens.total + usage.total,
         )
         self._cost += cost
+        #: U-181：LLM 逻辑调用次数（节点级：一次 record_usage = 一次调用；
+        #: 网关内部退避重试不单列 —— 与 eval/runner.py 的 transport.calls（HTTP 级）口径不同）。
+        self._calls = int(getattr(self, '_calls', 0)) + 1
 
     def tokens_payload(self) -> dict[str, int]:
         """`meta.tokens` 的形状（C-03 的 4 键，逐字）。"""
@@ -227,6 +230,10 @@ class RunContext:
 
     def cost_cny(self) -> Decimal:
         return self._cost
+
+    def calls(self) -> int:
+        '''U-181：LLM 逻辑调用次数（record_usage 每被调一次加一；缺则回 0，不编值）。'''
+        return int(getattr(self, '_calls', 0))
 
     # -- 降级（唯一上报入口） ------------------------------------------------
 

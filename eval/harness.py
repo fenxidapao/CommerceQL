@@ -388,6 +388,8 @@ class CaseRun:
     #: 🔴 W76-1：本次请求落在哪一层（`L1`/`L2`/`L3`/`L4`）。`None` = 没走到 `bind`
     #: （在它之前就终止）。τ 校准报告的第 8 条要用它算层分布。
     binding_layer: str | None = None
+    #: U-181：本次 run 的 LLM 逻辑调用次数（取自 RunContext.calls()；不进 GraphState）。
+    llm_calls: int = 0
 
     # -- 便捷视图（全部从 state 派生，不另存一份真相） ----------------------
 
@@ -961,6 +963,7 @@ class Harness:
             infra_error=infra_error,
             l4_raw=l4_raw,
             binding_layer=binding_layer,
+            llm_calls=int(getattr(context, 'calls', lambda: 0)()),
         )
 
     def run_case(self, **kwargs: Any) -> CaseRun:
