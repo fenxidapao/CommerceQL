@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Mapping, Sequence
 from datetime import date, timedelta
 from pathlib import Path
@@ -112,8 +113,34 @@ def verify_dataset(spec: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+#: U-175（T-16 裁定 A）：显式同义词表 —— **只按表归一**，不做子串匹配。
+SYNONYM_GROUPS: Final[tuple[tuple[str, ...], ...]] = (
+    ("month", "月", "year-month"),
+    ("date",),
+)
+SYNONYM_CANON: Final[dict[str, str]] = {
+    alias: group[0] for group in SYNONYM_GROUPS for alias in group
+}
+
+#: 显示装饰的括注（全角或半角）；U-175 只剥括号内内容、不动主词。
+_ANNOTATION = re.compile("（[^（）]*）|[(][^()]*[)]")
+
+
+def _strip_annotations(text: str) -> str:
+    return _ANNOTATION.sub("", text)
+
+
 def _norm(value: Any) -> str:
-    return " ".join(str(value).split()).casefold()
+    """归一（U-175）：剥离括注 → 折叠空白与小写 → 查同义词表。"""
+    base = " ".join(_strip_annotations(str(value)).split()).casefold()
+    return SYNONYM_CANON.get(base, base)
+
+
+def _norm_scalar_ok(expected: Any, actual: Any) -> bool:
+    """标量字段判定（U-175 的 `grain`）：任一侧为空则原样比，否则按同义词表归一后比。"""
+    if expected is None or actual is None:
+        return expected == actual
+    return _norm(expected) == _norm(actual)
 
 
 def _norm_set(value: Any) -> frozenset[str]:
@@ -242,6 +269,18 @@ def _exclusive_upper(value: Any) -> date | None:
     return day + timedelta(days=1) if text.endswith("23:59:59") else day
 
 
+def _upper_representation_diff(expected: Any, actual: Any) -> bool:
+    """`time_end` 的「上界表示差」（U-175 裁定 A 第二条）：两侧都是裸日期、且相差恰好一天。
+
+    `U-165` 已书面定「纯日期上界不 bump、不猜」⇒ 判定仍判不等；本函数只服务报告层单列计数，
+    不与「时间答错」混算。
+    """
+    left, right = _date_part(expected), _date_part(actual)
+    if left is None or right is None:
+        return False
+    return abs((left - right).days) == 1
+
+
 def time_field_ok(key: str, expected: Any, actual: Any) -> bool:
     """时间面判定（U-157）：两侧按**日粒度**比，右开/闭区间归一后再比。
 
@@ -274,7 +313,7 @@ def compare_expectation(
     if "grain" in expect:
         expected = expect.get("grain")
         actual = (summary or {}).get("grain")
-        fields["grain"] = {"expected": expected, "actual": actual, "ok": expected == actual}
+        fields["grain"] = {"expected": expected, "actual": actual, "ok": _norm_scalar_ok(expected, actual)}
     if "limit" in expect:
         expected = expect.get("limit")
         actual = (summary or {}).get("limit")
@@ -383,6 +422,15 @@ def turn_attribution(run: Any) -> dict[str, Any]:
         "unregistered_pg_constructs": _constructs(getattr(run, "sql_text", "")),  # U-174 记录面
     }
 
+def _upper_representation_diff_cell(turn: Mapping[str, Any]) -> bool:
+    """该 turn 的 `time_end` 是否属「上界表示差」（U-175：判定仍判不等，只在报告层单列）。"""
+    fields = (turn.get("comparison") or {}).get("fields") or {}
+    cell = fields.get("time_end")
+    if not isinstance(cell, Mapping) or cell.get("ok"):
+        return False
+    return _upper_representation_diff(cell.get("expected"), cell.get("actual"))
+
+
 def summarize(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """两轮分开计数：turn2 才是"继承是否生效"的读数，不能和 turn1 混成一个准确率。"""
     n_cases = len(records)
@@ -418,6 +466,13 @@ def summarize(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         for turn in record.get("turns") or []
         if not (turn.get("comparison") or {}).get("plan_present")
     )
+    #: U-175：`time_end` 的上界表示差单列计数（`U-165` 不 bump ⇒ 仍计 bad，不并从通过数）。
+    upper_diff = sum(
+        1
+        for record in records
+        for turn in record.get("turns") or []
+        if isinstance(turn, Mapping) and _upper_representation_diff_cell(turn)
+    )
     return {
         "n_cases": n_cases,
         "turn1_passed": turn1,
@@ -425,6 +480,7 @@ def summarize(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "cases_both_passed": both,
         "cases_incomplete": incomplete,
         "plans_missing": missing_plan,
+        "time_end_representation_diff": upper_diff,
         "unmapped_expect_keys": unmapped,
         "cost_cny_total": round(
             sum(float(turn.get("cost_cny") or 0) for record in records
