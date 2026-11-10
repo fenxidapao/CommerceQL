@@ -150,6 +150,7 @@ class RunContext:
 
     __slots__ = (
         "_binding_layer",
+        "_calls",
         "_cost",
         "_degradations",
         "_disclosure",
