@@ -1,0 +1,389 @@
+{
+  "schema": "U154_MULTITURN_CALIBER_PROBE/v1",
+  "source_report": "eval\\olist\\results_multiturn_r13_u172_applied.json",
+  "reported_summary": {
+    "n_cases": 6,
+    "turn1_passed": 4,
+    "turn2_passed": 3,
+    "cases_both_passed": 3,
+    "cases_incomplete": 0,
+    "plans_missing": 0,
+    "unmapped_expect_keys": [
+      "comparison"
+    ],
+    "cost_cny_total": 0.263186
+  },
+  "docstring_claim": "时间窗比 ISO 日期字符串（金标右开区间）—— eval/multiturn.py:16",
+  "implementation": "compare_expectation 对 time_start/time_end 做原始字符串全等 —— eval/multiturn.py:235-240",
+  "calibers": [
+    {
+      "caliber": "exact",
+      "n_cases": 6,
+      "turn1_passed": 0,
+      "turn2_passed": 0,
+      "cases_both_passed": 0,
+      "cases": [
+        {
+          "case_id": "mt01",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_start",
+              "time_end"
+            ],
+            [
+              "metrics",
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt02",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_start",
+              "time_end"
+            ],
+            [
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt03",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_start",
+              "time_end"
+            ],
+            [
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt04",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "filters",
+              "time_start",
+              "time_end"
+            ],
+            [
+              "filters",
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt05",
+          "terminal_events": [
+            "complete",
+            "refuse"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_start",
+              "time_end"
+            ],
+            [
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt06",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "dimensions",
+              "grain",
+              "time_end"
+            ],
+            [
+              "metrics",
+              "dimensions",
+              "grain",
+              "time_end"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "caliber": "date_only",
+      "n_cases": 6,
+      "turn1_passed": 4,
+      "turn2_passed": 3,
+      "cases_both_passed": 3,
+      "cases": [
+        {
+          "case_id": "mt01",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            false
+          ],
+          "bad_fields": [
+            [],
+            [
+              "metrics"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt02",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt03",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt04",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "filters"
+            ],
+            [
+              "filters"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt05",
+          "terminal_events": [
+            "complete",
+            "refuse"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt06",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "dimensions",
+              "grain",
+              "time_end"
+            ],
+            [
+              "metrics",
+              "dimensions",
+              "grain",
+              "time_end"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "caliber": "date_semantic",
+      "n_cases": 6,
+      "turn1_passed": 4,
+      "turn2_passed": 3,
+      "cases_both_passed": 3,
+      "cases": [
+        {
+          "case_id": "mt01",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            false
+          ],
+          "bad_fields": [
+            [],
+            [
+              "metrics"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt02",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt03",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt04",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "filters"
+            ],
+            [
+              "filters"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt05",
+          "terminal_events": [
+            "complete",
+            "refuse"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt06",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "dimensions",
+              "grain",
+              "time_end"
+            ],
+            [
+              "metrics",
+              "dimensions",
+              "grain",
+              "time_end"
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

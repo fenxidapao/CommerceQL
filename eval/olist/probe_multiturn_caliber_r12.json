@@ -1,0 +1,897 @@
+{
+  "schema": "U154_MULTITURN_CALIBER_PROBE/v1",
+  "source_report": "eval\\olist\\results_multiturn_r12_u169_inherit.json",
+  "reported_summary": {
+    "n_cases": 15,
+    "turn1_passed": 10,
+    "turn2_passed": 6,
+    "cases_both_passed": 6,
+    "cases_incomplete": 0,
+    "plans_missing": 0,
+    "unmapped_expect_keys": [
+      "comparison"
+    ],
+    "cost_cny_total": 0.62002
+  },
+  "docstring_claim": "时间窗比 ISO 日期字符串（金标右开区间）—— eval/multiturn.py:16",
+  "implementation": "compare_expectation 对 time_start/time_end 做原始字符串全等 —— eval/multiturn.py:235-240",
+  "calibers": [
+    {
+      "caliber": "exact",
+      "n_cases": 15,
+      "turn1_passed": 1,
+      "turn2_passed": 1,
+      "cases_both_passed": 1,
+      "cases": [
+        {
+          "case_id": "mt01",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_start",
+              "time_end"
+            ],
+            [
+              "metrics",
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt02",
+          "terminal_events": [
+            "error",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_start",
+              "time_end"
+            ],
+            [
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt03",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_start",
+              "time_end"
+            ],
+            [
+              "metrics",
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt04",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "filters",
+              "time_start",
+              "time_end"
+            ],
+            [
+              "filters",
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt05",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_start",
+              "time_end"
+            ],
+            [
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt06",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "dimensions",
+              "grain",
+              "time_end"
+            ],
+            [
+              "metrics",
+              "dimensions",
+              "grain",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt07",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_start",
+              "time_end"
+            ],
+            [
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt08",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_start",
+              "time_end"
+            ],
+            [
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt09",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "dimensions",
+              "grain",
+              "time_end"
+            ],
+            [
+              "dimensions",
+              "grain",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt10",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_start",
+              "time_end"
+            ],
+            [
+              "filters",
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt11",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_end"
+            ],
+            [
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt12",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_start",
+              "time_end"
+            ],
+            [
+              "metrics",
+              "order_by",
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt13",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt14",
+          "terminal_events": [
+            "complete",
+            "refuse"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "filters",
+              "time_start",
+              "time_end"
+            ],
+            [
+              "dimensions",
+              "filters",
+              "time_start",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt15",
+          "terminal_events": [
+            "error",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_start",
+              "time_end"
+            ],
+            [
+              "time_start",
+              "time_end"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "caliber": "date_only",
+      "n_cases": 15,
+      "turn1_passed": 10,
+      "turn2_passed": 6,
+      "cases_both_passed": 6,
+      "cases": [
+        {
+          "case_id": "mt01",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            false
+          ],
+          "bad_fields": [
+            [],
+            [
+              "metrics"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt02",
+          "terminal_events": [
+            "error",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt03",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            false
+          ],
+          "bad_fields": [
+            [],
+            [
+              "metrics"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt04",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "filters"
+            ],
+            [
+              "filters"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt05",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt06",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "dimensions",
+              "grain",
+              "time_end"
+            ],
+            [
+              "metrics",
+              "dimensions",
+              "grain",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt07",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt08",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt09",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "dimensions",
+              "grain",
+              "time_end"
+            ],
+            [
+              "dimensions",
+              "grain",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt10",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            false
+          ],
+          "bad_fields": [
+            [],
+            [
+              "filters"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt11",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_end"
+            ],
+            [
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt12",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            false
+          ],
+          "bad_fields": [
+            [],
+            [
+              "metrics",
+              "order_by"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt13",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt14",
+          "terminal_events": [
+            "complete",
+            "refuse"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "filters"
+            ],
+            [
+              "dimensions",
+              "filters"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt15",
+          "terminal_events": [
+            "error",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        }
+      ]
+    },
+    {
+      "caliber": "date_semantic",
+      "n_cases": 15,
+      "turn1_passed": 10,
+      "turn2_passed": 6,
+      "cases_both_passed": 6,
+      "cases": [
+        {
+          "case_id": "mt01",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            false
+          ],
+          "bad_fields": [
+            [],
+            [
+              "metrics"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt02",
+          "terminal_events": [
+            "error",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt03",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            false
+          ],
+          "bad_fields": [
+            [],
+            [
+              "metrics"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt04",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "filters"
+            ],
+            [
+              "filters"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt05",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt06",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "dimensions",
+              "grain",
+              "time_end"
+            ],
+            [
+              "metrics",
+              "dimensions",
+              "grain",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt07",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt08",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt09",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "dimensions",
+              "grain",
+              "time_end"
+            ],
+            [
+              "dimensions",
+              "grain",
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt10",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            false
+          ],
+          "bad_fields": [
+            [],
+            [
+              "filters"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt11",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "time_end"
+            ],
+            [
+              "time_end"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt12",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            false
+          ],
+          "bad_fields": [
+            [],
+            [
+              "metrics",
+              "order_by"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt13",
+          "terminal_events": [
+            "complete",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        },
+        {
+          "case_id": "mt14",
+          "terminal_events": [
+            "complete",
+            "refuse"
+          ],
+          "passes": [
+            false,
+            false
+          ],
+          "bad_fields": [
+            [
+              "filters"
+            ],
+            [
+              "dimensions",
+              "filters"
+            ]
+          ]
+        },
+        {
+          "case_id": "mt15",
+          "terminal_events": [
+            "error",
+            "complete"
+          ],
+          "passes": [
+            true,
+            true
+          ],
+          "bad_fields": [
+            [],
+            []
+          ]
+        }
+      ]
+    }
+  ]
+}
