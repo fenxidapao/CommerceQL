@@ -1,0 +1,194 @@
+{
+ "dataset": {
+  "path": "eval/spider/dataset_ecom7_v1.json",
+  "content_hash": "sha256:9c395390cc1bf07223d57fafb3a8f0c924742e752f0d3d81733c3aec9352dba9",
+  "cases": 523
+ },
+ "dataset_per_db": {
+  "customers_and_invoices": {
+   "cases": 82,
+   "strict_agg": 62,
+   "loose_agg": 62,
+   "plain": 20,
+   "only_loose": []
+  },
+  "sakila_1": {
+   "cases": 82,
+   "strict_agg": 50,
+   "loose_agg": 50,
+   "plain": 32,
+   "only_loose": []
+  },
+  "department_store": {
+   "cases": 88,
+   "strict_agg": 44,
+   "loose_agg": 44,
+   "plain": 44,
+   "only_loose": []
+  },
+  "cre_Drama_Workshop_Groups": {
+   "cases": 82,
+   "strict_agg": 34,
+   "loose_agg": 46,
+   "plain": 48,
+   "only_loose": [
+    "sp-0263",
+    "sp-0264",
+    "sp-0295",
+    "sp-0296",
+    "sp-0297",
+    "sp-0298",
+    "sp-0313",
+    "sp-0314",
+    "sp-0315",
+    "sp-0316",
+    "sp-0325",
+    "sp-0326"
+   ]
+  },
+  "tracking_share_transactions": {
+   "cases": 41,
+   "strict_agg": 23,
+   "loose_agg": 23,
+   "plain": 18,
+   "only_loose": []
+  },
+  "customers_and_addresses": {
+   "cases": 88,
+   "strict_agg": 42,
+   "loose_agg": 42,
+   "plain": 46,
+   "only_loose": []
+  },
+  "tracking_orders": {
+   "cases": 60,
+   "strict_agg": 22,
+   "loose_agg": 22,
+   "plain": 38,
+   "only_loose": []
+  }
+ },
+ "dataset_totals": {
+  "cases": 523,
+  "strict_agg": 277,
+  "loose_agg": 289,
+  "plain_by_strict": 246,
+  "only_loose_cases": 12
+ },
+ "per_source": {
+  "r1": {
+   "records": 24,
+   "judgeable": 24,
+   "equivalents_all": 18,
+   "strict_judgeable": 24,
+   "strict_equivalents": 18,
+   "judgeable_but_not_strict_agg": 0,
+   "not_strict_sample": [],
+   "calls": 91,
+   "spent_cny": 0.414061,
+   "not_a_reading": false
+  },
+  "r2": {
+   "records": 18,
+   "judgeable": 18,
+   "equivalents_all": 12,
+   "strict_judgeable": 18,
+   "strict_equivalents": 12,
+   "judgeable_but_not_strict_agg": 0,
+   "not_strict_sample": [],
+   "calls": 69,
+   "spent_cny": 0.358245,
+   "not_a_reading": false
+  },
+  "r3": {
+   "records": 235,
+   "judgeable": 70,
+   "equivalents_all": 46,
+   "strict_judgeable": 70,
+   "strict_equivalents": 46,
+   "judgeable_but_not_strict_agg": 0,
+   "not_strict_sample": [],
+   "calls": 255,
+   "spent_cny": 1.073285,
+   "not_a_reading": false
+  },
+  "r4": {
+   "records": 178,
+   "judgeable": 0,
+   "equivalents_all": 0,
+   "strict_judgeable": 0,
+   "strict_equivalents": 0,
+   "judgeable_but_not_strict_agg": 0,
+   "not_strict_sample": [],
+   "calls": 0,
+   "spent_cny": 0.0,
+   "not_a_reading": true
+  },
+  "r5": {
+   "records": 195,
+   "judgeable": 195,
+   "equivalents_all": 109,
+   "strict_judgeable": 185,
+   "strict_equivalents": 109,
+   "judgeable_but_not_strict_agg": 10,
+   "not_strict_sample": [
+    "sp-0295",
+    "sp-0296",
+    "sp-0297",
+    "sp-0298",
+    "sp-0313",
+    "sp-0314",
+    "sp-0315",
+    "sp-0316",
+    "sp-0325",
+    "sp-0326"
+   ],
+   "calls": 722,
+   "spent_cny": 3.248973,
+   "not_a_reading": false
+  }
+ },
+ "merged_strict": {
+  "judgeable": 277,
+  "equivalents": 171,
+  "ex_rate": 0.6173,
+  "by_db": {
+   "tracking_orders": {
+    "judgeable": 22,
+    "equivalents": 19,
+    "rate": 0.8636
+   },
+   "customers_and_addresses": {
+    "judgeable": 42,
+    "equivalents": 22,
+    "rate": 0.5238
+   },
+   "department_store": {
+    "judgeable": 44,
+    "equivalents": 26,
+    "rate": 0.5909
+   },
+   "customers_and_invoices": {
+    "judgeable": 62,
+    "equivalents": 38,
+    "rate": 0.6129
+   },
+   "cre_Drama_Workshop_Groups": {
+    "judgeable": 34,
+    "equivalents": 23,
+    "rate": 0.6765
+   },
+   "sakila_1": {
+    "judgeable": 50,
+    "equivalents": 30,
+    "rate": 0.6
+   },
+   "tracking_share_transactions": {
+    "judgeable": 23,
+    "equivalents": 13,
+    "rate": 0.5652
+   }
+  },
+  "note": "严格判定（正则）下的去重口径，与 results_batch_r5_merged.json 的 287 并列；287 含 r4/r5 因 GROUP in upper 误判的题，两者不可互比"
+ }
+}
