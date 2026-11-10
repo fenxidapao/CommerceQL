@@ -1,0 +1,151 @@
+{
+ "u_id": "U-182",
+ "kind": "smoke",
+ "db_id": "tracking_orders",
+ "mode": "agg",
+ "date": "2026-11-10",
+ "n_cases": 4,
+ "ex_equivalent": 3,
+ "ex_rate": 0.75,
+ "cap": {
+  "max_calls": 24,
+  "max_cost_cny": 0.35,
+  "duration_s": 240.0,
+  "calls": 16,
+  "spent_cny": 0.058194,
+  "elapsed_s": 39.877,
+  "stopped": false
+ },
+ "dataset": {
+  "path": "eval/spider/dataset_ecom7_v1.json",
+  "content_hash": "sha256:9c395390cc1bf07223d57fafb3a8f0c924742e752f0d3d81733c3aec9352dba9",
+  "subset_cases": 523
+ },
+ "bundle": {
+  "path": "eval/spider/bundles/bundle_spider_tracking_orders.yaml",
+  "version": "2026.11.10.2"
+ },
+ "caliber": [
+  "n=4 只是冒烟，不作 EX 结论；可判面 = 聚合型 277 题，检索型 246 题单列「架构不适用」",
+  "523 题全集不作 EX 分母：246 题纯检索，模型实回 metrics=[] 且 blocking_issues=[]，被 _either_plan_or_blocked 判非法（backend/app/planner/schemas.py:325-332）",
+  "EX 取行方式必须 run_in_sandbox 双跑 + compare_tables；state[result_rows] 是体积字段、读它恒 0 行（eval/runner.py:675-681）",
+  "派生语义包必须过 load_bundle；semantic/validate_bundle.py 对它是假绿（不查 meta extra=forbid 与非 draft 指标 time_basis，backend/app/semantics/models.py:59/182-193）",
+  "live 花费按 state[cost_cny] 显式 float()（该键是字符串），逐笔 llm_call 求和；app.cost_ledger 不参与评测侧",
+  "gold 只取 train_spider.json 的 query 字段（官方发布）；比对器为本项目实现（官方 evaluation.py 不在盘）"
+ ],
+ "provenance": {
+  "script": "CommerceQL-archive/local/spider_smoke_ex_u182.py",
+  "archive_artifact": "CommerceQL-archive/local/spider_smoke_ex_u182.json",
+  "run_shape": "AR=<repo> SP=<spider_data> SMOKE_DB=tracking_orders SMOKE_MODE=agg SMOKE_LIMIT=4 SMOKE_MAX_CALLS=24 SMOKE_MAX_COST=0.35 SMOKE_WALL_S=240 python <script>",
+  "recompute": "python eval/spider/build_dataset.py --spider-root <spider_data> --check",
+  "cumulative_live_cny": 0.148,
+  "cumulative_note": "U-182 各手 live 逐笔 llm_call 求和 ≈¥0.148，非 app.cost_ledger（评测侧不入该账本）"
+ },
+ "records": [
+  {
+   "case_id": "sp-0476",
+   "question": "What is the name of the customer who has the most orders?",
+   "gold_query": "SELECT T1.customer_name FROM customers AS T1 JOIN orders AS T2 ON T1.customer_id  =  T2.customer_id GROUP BY T1.customer_id ORDER BY count(*) DESC LIMIT 1",
+   "terminal_event": "complete",
+   "terminal_reason": null,
+   "outcome": "success",
+   "infra_error": null,
+   "nodes": 15,
+   "sql_text": "SELECT c.customer_name AS customer_name, COUNT(o.order_id) AS orders_row_count FROM Customers AS c JOIN Orders AS o ON o.customer_id = c.customer_id GROUP BY c.customer_name ORDER BY orders_row_count DESC LIMIT 1",
+   "exec_error_class": null,
+   "state_row_count": 1,
+   "gold_error": null,
+   "gold_rows": 1,
+   "pred_error": null,
+   "pred_rows": 1,
+   "equivalent": true,
+   "tags": [
+    "extra_columns_ignored",
+    "row_order_difference"
+   ],
+   "diffs": [
+    "忽略预测多出的 1 列：['orders_row_count']（列序与值均一致）"
+   ],
+   "llm_calls": 4,
+   "turn_cost_cny": 0.014885
+  },
+  {
+   "case_id": "sp-0477",
+   "question": "Which customer made the most orders? Find the customer name.",
+   "gold_query": "SELECT T1.customer_name FROM customers AS T1 JOIN orders AS T2 ON T1.customer_id  =  T2.customer_id GROUP BY T1.customer_id ORDER BY count(*) DESC LIMIT 1",
+   "terminal_event": "complete",
+   "terminal_reason": null,
+   "outcome": "success",
+   "infra_error": null,
+   "nodes": 15,
+   "sql_text": "SELECT c.customer_name AS customer_name, COUNT(o.order_id) AS orders_row_count FROM Orders AS o JOIN Customers AS c ON o.customer_id = c.customer_id GROUP BY c.customer_name ORDER BY orders_row_count DESC LIMIT 1",
+   "exec_error_class": null,
+   "state_row_count": 1,
+   "gold_error": null,
+   "gold_rows": 1,
+   "pred_error": null,
+   "pred_rows": 1,
+   "equivalent": true,
+   "tags": [
+    "extra_columns_ignored",
+    "row_order_difference"
+   ],
+   "diffs": [
+    "忽略预测多出的 1 列：['orders_row_count']（列序与值均一致）"
+   ],
+   "llm_calls": 4,
+   "turn_cost_cny": 0.013945
+  },
+  {
+   "case_id": "sp-0478",
+   "question": "What is the customer id of the customer who has the most orders?",
+   "gold_query": "SELECT T1.customer_id FROM customers AS T1 JOIN orders AS T2 ON T1.customer_id  =  T2.customer_id GROUP BY T1.customer_id ORDER BY count(*) DESC LIMIT 1",
+   "terminal_event": "complete",
+   "terminal_reason": null,
+   "outcome": "success",
+   "infra_error": null,
+   "nodes": 15,
+   "sql_text": "SELECT c.customer_id, COUNT(o.order_id) AS orders_row_count FROM Customers AS c JOIN Orders AS o ON o.customer_id = c.customer_id GROUP BY c.customer_id ORDER BY orders_row_count DESC LIMIT 1",
+   "exec_error_class": null,
+   "state_row_count": 1,
+   "gold_error": null,
+   "gold_rows": 1,
+   "pred_error": null,
+   "pred_rows": 1,
+   "equivalent": true,
+   "tags": [
+    "extra_columns_ignored",
+    "row_order_difference"
+   ],
+   "diffs": [
+    "忽略预测多出的 1 列：['orders_row_count']（列序与值均一致）"
+   ],
+   "llm_calls": 4,
+   "turn_cost_cny": 0.014643
+  },
+  {
+   "case_id": "sp-0479",
+   "question": "Find the id of the customer who made the most orders.",
+   "gold_query": "SELECT T1.customer_id FROM customers AS T1 JOIN orders AS T2 ON T1.customer_id  =  T2.customer_id GROUP BY T1.customer_id ORDER BY count(*) DESC LIMIT 1",
+   "terminal_event": "complete",
+   "terminal_reason": null,
+   "outcome": "success",
+   "infra_error": null,
+   "nodes": 15,
+   "sql_text": "SELECT c.customer_id AS customer_id, COUNT(o.order_id) AS orders_row_count FROM Customers AS c JOIN Orders AS o ON o.customer_id = c.customer_id GROUP BY c.customer_id ORDER BY orders_row_count DESC, c.customer_id ASC LIMIT 1",
+   "exec_error_class": null,
+   "state_row_count": 1,
+   "gold_error": null,
+   "gold_rows": 1,
+   "pred_error": null,
+   "pred_rows": 1,
+   "equivalent": false,
+   "tags": [],
+   "diffs": [
+    "列数不同：金标 1 / 预测 2；金标列 'customer_id' 在预测里有 0 个同值列（窄口要求**唯一**匹配，0 或多于 1 都不放行）"
+   ],
+   "llm_calls": 4,
+   "turn_cost_cny": 0.014721
+  }
+ ]
+}

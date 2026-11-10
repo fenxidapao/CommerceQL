@@ -1,0 +1,459 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "customers"
+    physical_asset: "Customers"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Customers（schema 派生资产，3 列）"
+    columns:
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "customer_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "customer_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "invoices"
+    physical_asset: "Invoices"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Invoices（schema 派生资产，3 列）"
+    columns:
+      - name: "invoice_number"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "invoice_date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "invoice_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "order_items"
+    physical_asset: "Order_Items"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Order_Items（schema 派生资产，5 列）"
+    columns:
+      - name: "order_item_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "product_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "order_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "order_item_status"
+        type: "VARCHAR(10)"
+        comment: "schema 派生列"
+      - name: "order_item_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "orders"
+    physical_asset: "Orders"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Orders（schema 派生资产，5 列）"
+    columns:
+      - name: "order_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "order_status"
+        type: "VARCHAR(10)"
+        comment: "schema 派生列"
+      - name: "date_order_placed"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "order_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "products"
+    physical_asset: "Products"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Products（schema 派生资产，3 列）"
+    columns:
+      - name: "product_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "product_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "product_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "shipment_items"
+    physical_asset: "Shipment_Items"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Shipment_Items（schema 派生资产，2 列）"
+    columns:
+      - name: "shipment_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "order_item_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "shipments"
+    physical_asset: "Shipments"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Shipments（schema 派生资产，6 列）"
+    columns:
+      - name: "shipment_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "order_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "invoice_number"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "shipment_tracking_number"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "shipment_date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "other_shipment_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "customers_row_count"
+    display_name: "Customers 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customers.customer_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "invoice_date"
+    owner: "data-team"
+    default_binding:
+      asset: "customers"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoices_row_count"
+    display_name: "Invoices 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Invoices.invoice_number)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "invoice_date"
+    owner: "data-team"
+    default_binding:
+      asset: "invoices"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoices_invoice_number_sum"
+    display_name: "Invoices.invoice_number SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Invoices.invoice_number)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "invoice_date"
+    owner: "data-team"
+    default_binding:
+      asset: "invoices"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoices_invoice_number_avg"
+    display_name: "Invoices.invoice_number AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Invoices.invoice_number)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "invoice_date"
+    owner: "data-team"
+    default_binding:
+      asset: "invoices"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "order_items_row_count"
+    display_name: "Order_Items 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Order_Items.order_item_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "invoice_date"
+    owner: "data-team"
+    default_binding:
+      asset: "order_items"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "orders_row_count"
+    display_name: "Orders 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Orders.order_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "invoice_date"
+    owner: "data-team"
+    default_binding:
+      asset: "orders"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_row_count"
+    display_name: "Products 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Products.product_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "invoice_date"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "shipment_items_row_count"
+    display_name: "Shipment_Items 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Shipment_Items.shipment_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "invoice_date"
+    owner: "data-team"
+    default_binding:
+      asset: "shipment_items"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "shipments_row_count"
+    display_name: "Shipments 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Shipments.shipment_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "invoice_date"
+    owner: "data-team"
+    default_binding:
+      asset: "shipments"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "shipments_invoice_number_sum"
+    display_name: "Shipments.invoice_number SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Shipments.invoice_number)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "invoice_date"
+    owner: "data-team"
+    default_binding:
+      asset: "shipments"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "shipments_invoice_number_avg"
+    display_name: "Shipments.invoice_number AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Shipments.invoice_number)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "invoice_date"
+    owner: "data-team"
+    default_binding:
+      asset: "shipments"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "invoice_date"
+      week: "invoice_date"
+      month: "invoice_date"
+      quarter: "invoice_date"
+      year: "invoice_date"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 Invoices.invoice_date"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "invoices.invoice_date"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "orders.customer_id"
+    right: "customers.customer_id"
+    type: "many_to_one"
+    on_columns: ["customer_id"]
+    certified_by: "data-team"
+
+  - left: "order_items.product_id"
+    right: "products.product_id"
+    type: "many_to_one"
+    on_columns: ["product_id"]
+    certified_by: "data-team"
+
+  - left: "order_items.order_id"
+    right: "orders.order_id"
+    type: "many_to_one"
+    on_columns: ["order_id"]
+    certified_by: "data-team"
+
+  - left: "shipments.invoice_number"
+    right: "invoices.invoice_number"
+    type: "many_to_one"
+    on_columns: ["invoice_number"]
+    certified_by: "data-team"
+
+  - left: "shipments.order_id"
+    right: "orders.order_id"
+    type: "many_to_one"
+    on_columns: ["order_id"]
+    certified_by: "data-team"
+
+  - left: "shipment_items.shipment_id"
+    right: "shipments.shipment_id"
+    type: "many_to_one"
+    on_columns: ["shipment_id"]
+    certified_by: "data-team"
+
+  - left: "shipment_items.order_item_id"
+    right: "order_items.order_item_id"
+    type: "many_to_one"
+    on_columns: ["order_item_id"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "customer_details", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_details", category: column }
+  - { term: "customer_name", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_name", category: column }
+  - { term: "date_order_placed", lang: en, maps_to_kind: column, maps_to_ref: "orders.date_order_placed", category: column }
+  - { term: "invoice_date", lang: en, maps_to_kind: column, maps_to_ref: "invoices.invoice_date", category: column }
+  - { term: "invoice_details", lang: en, maps_to_kind: column, maps_to_ref: "invoices.invoice_details", category: column }
+  - { term: "order_details", lang: en, maps_to_kind: column, maps_to_ref: "orders.order_details", category: column }
+  - { term: "order_item_details", lang: en, maps_to_kind: column, maps_to_ref: "order_items.order_item_details", category: column }
+  - { term: "order_item_status", lang: en, maps_to_kind: column, maps_to_ref: "order_items.order_item_status", category: column }
+  - { term: "order_status", lang: en, maps_to_kind: column, maps_to_ref: "orders.order_status", category: column }
+  - { term: "other_shipment_details", lang: en, maps_to_kind: column, maps_to_ref: "shipments.other_shipment_details", category: column }
+  - { term: "product_details", lang: en, maps_to_kind: column, maps_to_ref: "products.product_details", category: column }
+  - { term: "product_name", lang: en, maps_to_kind: column, maps_to_ref: "products.product_name", category: column }
+  - { term: "shipment_date", lang: en, maps_to_kind: column, maps_to_ref: "shipments.shipment_date", category: column }
+  - { term: "shipment_tracking_number", lang: en, maps_to_kind: column, maps_to_ref: "shipments.shipment_tracking_number", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Invoices.invoice_date（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context
