@@ -1,0 +1,373 @@
+{
+ "u_id": "U-182",
+ "kind": "batch_merged",
+ "date": "2026-11-10",
+ "entry": {
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "key_present": true,
+  "key_len": 35,
+  "env_steps": [
+   {
+    "file": ".env",
+    "ok": true,
+    "keys": 67
+   },
+   {
+    "file": "u182_llm.env",
+    "ok": true,
+    "keys": 7
+   }
+  ],
+  "note": "r3/r4 空转真因 = 旧 key 打 old endpoint 返 400 Arrearage；本批换成用户指定 key + compatible-mode（探针 A 组 200）"
+ },
+ "effective": {
+  "customers_and_invoices": {
+   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+   "model_fast": "deepseek-v4.1-flash",
+   "model_strong": "deepseek-v4.1-flash"
+  },
+  "sakila_1": {
+   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+   "model_fast": "deepseek-v4.1-flash",
+   "model_strong": "deepseek-v4.1-flash"
+  },
+  "cre_Drama_Workshop_Groups": {
+   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+   "model_fast": "deepseek-v4.1-flash",
+   "model_strong": "deepseek-v4.1-flash"
+  },
+  "department_store": {
+   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+   "model_fast": "deepseek-v4.1-flash",
+   "model_strong": "deepseek-v4.1-flash"
+  },
+  "tracking_share_transactions": {
+   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+   "model_fast": "deepseek-v4.1-flash",
+   "model_strong": "deepseek-v4.1-flash"
+  }
+ },
+ "dedupe_rule": "按 case_id 去重：同 case 多条时优先取 llm_calls>0 那条；都 judgeable 时取后跑那批（r5 > r3 > r2 > r1）。r5 offset=6，与 r1/r2/r3 有 case 重叠 ⇒ 严禁直接相加",
+ "per_source": {
+  "r1": {
+   "path": "eval\\spider\\results_batch_r1.json",
+   "sha256": "sha256:b93136f2b337ff03d4f4784e251129812edc6eea07a8208f66188afa3c83a47c",
+   "bytes": 21648,
+   "records": 24,
+   "judgeable": 24,
+   "equivalents": 18,
+   "judgeable_rate": 0.75,
+   "zero_call_cases": 0,
+   "calls": 91,
+   "spent_cny": 0.414061,
+   "stopped": false,
+   "not_a_reading": false
+  },
+  "r2": {
+   "path": "eval\\spider\\results_batch_r2.json",
+   "sha256": "sha256:e35a02791a92cdfb004e3662f27e1c2fb35fee16052fc7b03ef3002ed957ebf6",
+   "bytes": 15299,
+   "records": 18,
+   "judgeable": 18,
+   "equivalents": 12,
+   "judgeable_rate": 0.6667,
+   "zero_call_cases": 0,
+   "calls": 69,
+   "spent_cny": 0.358245,
+   "stopped": false,
+   "not_a_reading": false
+  },
+  "r3": {
+   "path": "eval\\spider\\results_batch_r3_rest.json",
+   "sha256": "sha256:efd8b163997a8d0f5615c216555cead9e34f6644e810207dc92876bfd66c9ef1",
+   "bytes": 177713,
+   "records": 235,
+   "judgeable": 70,
+   "equivalents": 46,
+   "judgeable_rate": 0.6571,
+   "zero_call_cases": 165,
+   "calls": 255,
+   "spent_cny": 1.073285,
+   "stopped": false,
+   "not_a_reading": false
+  },
+  "r4": {
+   "path": "eval\\spider\\results_batch_r4.json",
+   "sha256": "sha256:92dc86b0c1b18b7ab120224e16be10eeba3ebcffc6d14e11544f28b6220e0aac",
+   "bytes": 131920,
+   "records": 178,
+   "judgeable": 0,
+   "equivalents": 0,
+   "judgeable_rate": null,
+   "zero_call_cases": 178,
+   "calls": 0,
+   "spent_cny": 0.0,
+   "stopped": false,
+   "not_a_reading": true
+  },
+  "r5": {
+   "path": "eval\\spider\\results_batch_r5.json",
+   "sha256": "sha256:1b07e831f18ecf9133bb62219dc9b51cb469882008d7ecbf61fe5bb000094e10",
+   "bytes": 190052,
+   "records": 195,
+   "judgeable": 195,
+   "equivalents": 109,
+   "judgeable_rate": 0.559,
+   "zero_call_cases": 0,
+   "calls": 722,
+   "spent_cny": 3.248973,
+   "stopped": false,
+   "not_a_reading": false
+  }
+ },
+ "naive_sum_wrong": {
+  "judgeable": 307,
+  "equivalents": 185,
+  "note": "直接相加会重复计重叠题，仅作对照、不得引用"
+ },
+ "merged": {
+  "judgeable": 287,
+  "equivalents": 171,
+  "ex_rate": 0.5958,
+  "by_db": {
+   "tracking_orders": {
+    "judgeable": 22,
+    "equivalents": 19,
+    "rate": 0.8636
+   },
+   "customers_and_addresses": {
+    "judgeable": 42,
+    "equivalents": 22,
+    "rate": 0.5238
+   },
+   "department_store": {
+    "judgeable": 44,
+    "equivalents": 26,
+    "rate": 0.5909
+   },
+   "customers_and_invoices": {
+    "judgeable": 62,
+    "equivalents": 38,
+    "rate": 0.6129
+   },
+   "cre_Drama_Workshop_Groups": {
+    "judgeable": 44,
+    "equivalents": 23,
+    "rate": 0.5227
+   },
+   "sakila_1": {
+    "judgeable": 50,
+    "equivalents": 30,
+    "rate": 0.6
+   },
+   "tracking_share_transactions": {
+    "judgeable": 23,
+    "equivalents": 13,
+    "rate": 0.5652
+   }
+  },
+  "calls": 1137,
+  "spent_cny_combined": 5.094564
+ },
+ "overlap_conflicts": [
+  {
+   "case_id": "sp-0265",
+   "kept": "r5",
+   "dropped": "r2",
+   "every_equivalent": [
+    false,
+    false
+   ]
+  },
+  {
+   "case_id": "sp-0266",
+   "kept": "r5",
+   "dropped": "r2",
+   "every_equivalent": [
+    false,
+    false
+   ]
+  },
+  {
+   "case_id": "sp-0281",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    false,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0179",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0180",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0181",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0182",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0183",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0184",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0193",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0194",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0197",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0198",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0199",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    false,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0200",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0201",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    false,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0202",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    false
+   ]
+  },
+  {
+   "case_id": "sp-0203",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0204",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    true,
+    true
+   ]
+  },
+  {
+   "case_id": "sp-0209",
+   "kept": "r5",
+   "dropped": "r3",
+   "every_equivalent": [
+    false,
+    false
+   ]
+  }
+ ],
+ "overlap_conflict_count": 20,
+ "caliber": [
+  "可判面 = 逐题 llm_calls > 0；零调用题单列不进分母（按库切分母作废）",
+  "r5 端点 = compatible-mode/v1 + 用户指定 key（2026-11-06 授权）；r1/r2/r3 为旧 key 读数，同端点同模型",
+  "r4 = 旧 key 打旧端点 400 Arrearage，calls=0 ⇒ not_a_reading，不进任何合计",
+  "合并必须按 case_id 去重（r5 与 r1/r2/r3 有重叠），naive_sum_wrong 只作对照不得引用",
+  "EX 走 run_in_sandbox 双跑 + compare_tables；不读 state[result_rows]（体积字段恒 0 行）",
+  "与 Olist 70.88% 不同件、不交叉比较；246 题纯检索按架构判据不进分母",
+  "语义包由 build_bundle.py 机械派生，指标非业务口径"
+ ],
+ "budget_all_batches": {
+  "r1": 0.414061,
+  "r2": 0.358245,
+  "r3": 1.073285,
+  "r4": 0.0,
+  "r5": 3.248973,
+  "combined": 5.094564,
+  "note": "逐批取各自 budget.spent_cny；日志逐笔 llm_call 求和与 budget 有微差（重试不单列），以 budget 为准"
+ }
+}
