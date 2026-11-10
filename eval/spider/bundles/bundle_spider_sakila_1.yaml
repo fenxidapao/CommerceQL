@@ -1,0 +1,1076 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "actor"
+    physical_asset: "actor"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 200
+    description: "Spider 物理表 actor（schema 派生资产，4 列）"
+    columns:
+      - name: "actor_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "first_name"
+        type: "VARCHAR(45)"
+        comment: "schema 派生列"
+      - name: "last_name"
+        type: "VARCHAR(45)"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "address"
+    physical_asset: "address"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 603
+    description: "Spider 物理表 address（schema 派生资产，8 列）"
+    columns:
+      - name: "address_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "address"
+        type: "VARCHAR(50)"
+        comment: "schema 派生列"
+      - name: "address2"
+        type: "VARCHAR(50)"
+        comment: "schema 派生列"
+      - name: "district"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "city_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "postal_code"
+        type: "VARCHAR(10)"
+        comment: "schema 派生列"
+      - name: "phone"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "category"
+    physical_asset: "category"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 16
+    description: "Spider 物理表 category（schema 派生资产，3 列）"
+    columns:
+      - name: "category_id"
+        type: "TINYINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "name"
+        type: "VARCHAR(25)"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "city"
+    physical_asset: "city"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 600
+    description: "Spider 物理表 city（schema 派生资产，4 列）"
+    columns:
+      - name: "city_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "city"
+        type: "VARCHAR(50)"
+        comment: "schema 派生列"
+      - name: "country_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "country"
+    physical_asset: "country"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 109
+    description: "Spider 物理表 country（schema 派生资产，3 列）"
+    columns:
+      - name: "country_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "country"
+        type: "VARCHAR(50)"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "customer"
+    physical_asset: "customer"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 599
+    description: "Spider 物理表 customer（schema 派生资产，9 列）"
+    columns:
+      - name: "customer_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "store_id"
+        type: "TINYINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "first_name"
+        type: "VARCHAR(45)"
+        comment: "schema 派生列"
+      - name: "last_name"
+        type: "VARCHAR(45)"
+        comment: "schema 派生列"
+      - name: "email"
+        type: "VARCHAR(50)"
+        comment: "schema 派生列"
+      - name: "address_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "active"
+        type: "BOOLEAN"
+        comment: "schema 派生列"
+      - name: "create_date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "film"
+    physical_asset: "film"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 1000
+    description: "Spider 物理表 film（schema 派生资产，13 列）"
+    columns:
+      - name: "film_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "title"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "description"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "release_year"
+        type: "YEAR"
+        comment: "schema 派生列"
+      - name: "language_id"
+        type: "TINYINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "original_language_id"
+        type: "TINYINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "rental_duration"
+        type: "TINYINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "rental_rate"
+        type: "DECIMAL(4,2)"
+        comment: "schema 派生列"
+      - name: "length"
+        type: "SMALLINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "replacement_cost"
+        type: "DECIMAL(5,2)"
+        comment: "schema 派生列"
+      - name: "rating"
+        type: "text"
+        comment: "schema 派生列"
+      - name: "special_features"
+        type: "text"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "film_actor"
+    physical_asset: "film_actor"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 5462
+    description: "Spider 物理表 film_actor（schema 派生资产，3 列）"
+    columns:
+      - name: "actor_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "film_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "film_category"
+    physical_asset: "film_category"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 1000
+    description: "Spider 物理表 film_category（schema 派生资产，3 列）"
+    columns:
+      - name: "film_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "category_id"
+        type: "TINYINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "film_text"
+    physical_asset: "film_text"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 0
+    description: "Spider 物理表 film_text（schema 派生资产，3 列）"
+    columns:
+      - name: "film_id"
+        type: "SMALLINT"
+        comment: "主键；schema 派生列"
+      - name: "title"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "description"
+        type: "TEXT"
+        comment: "schema 派生列"
+
+  - logical_name: "inventory"
+    physical_asset: "inventory"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 4581
+    description: "Spider 物理表 inventory（schema 派生资产，4 列）"
+    columns:
+      - name: "inventory_id"
+        type: "MEDIUMINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "film_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "store_id"
+        type: "TINYINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "language"
+    physical_asset: "language"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 0
+    description: "Spider 物理表 language（schema 派生资产，3 列）"
+    columns:
+      - name: "language_id"
+        type: "TINYINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "name"
+        type: "CHAR(20)"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "payment"
+    physical_asset: "payment"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 16049
+    description: "Spider 物理表 payment（schema 派生资产，7 列）"
+    columns:
+      - name: "payment_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "customer_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "staff_id"
+        type: "TINYINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "rental_id"
+        type: "INT"
+        comment: "schema 派生列"
+      - name: "amount"
+        type: "DECIMAL(5,2)"
+        comment: "schema 派生列"
+      - name: "payment_date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "rental"
+    physical_asset: "rental"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 16044
+    description: "Spider 物理表 rental（schema 派生资产，7 列）"
+    columns:
+      - name: "rental_id"
+        type: "INT"
+        comment: "主键；schema 派生列"
+      - name: "rental_date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "inventory_id"
+        type: "MEDIUMINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "customer_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "return_date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "staff_id"
+        type: "TINYINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "staff"
+    physical_asset: "staff"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 0
+    description: "Spider 物理表 staff（schema 派生资产，11 列）"
+    columns:
+      - name: "staff_id"
+        type: "TINYINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "first_name"
+        type: "VARCHAR(45)"
+        comment: "schema 派生列"
+      - name: "last_name"
+        type: "VARCHAR(45)"
+        comment: "schema 派生列"
+      - name: "address_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "picture"
+        type: "BLOB"
+        comment: "schema 派生列"
+      - name: "email"
+        type: "VARCHAR(50)"
+        comment: "schema 派生列"
+      - name: "store_id"
+        type: "TINYINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "active"
+        type: "BOOLEAN"
+        comment: "schema 派生列"
+      - name: "username"
+        type: "VARCHAR(16)"
+        comment: "schema 派生列"
+      - name: "password"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+  - logical_name: "store"
+    physical_asset: "store"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 0
+    description: "Spider 物理表 store（schema 派生资产，4 列）"
+    columns:
+      - name: "store_id"
+        type: "TINYINT UNSIGNED"
+        comment: "主键；schema 派生列"
+      - name: "manager_staff_id"
+        type: "TINYINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "address_id"
+        type: "SMALLINT UNSIGNED"
+        comment: "schema 派生列"
+      - name: "last_update"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "actor_row_count"
+    display_name: "actor 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(actor.actor_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "actor"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "address_row_count"
+    display_name: "address 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(address.address_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "address"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "category_row_count"
+    display_name: "category 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(category.category_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "category"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "city_row_count"
+    display_name: "city 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(city.city_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "city"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "country_row_count"
+    display_name: "country 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(country.country_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "country"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_row_count"
+    display_name: "customer 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(customer.customer_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "customer"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "film_row_count"
+    display_name: "film 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(film.film_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "film"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "film_rental_duration_sum"
+    display_name: "film.rental_duration SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(film.rental_duration)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "film"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "film_rental_duration_avg"
+    display_name: "film.rental_duration AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(film.rental_duration)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "film"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "film_rental_rate_sum"
+    display_name: "film.rental_rate SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(film.rental_rate)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "film"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "film_rental_rate_avg"
+    display_name: "film.rental_rate AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(film.rental_rate)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "film"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "film_length_sum"
+    display_name: "film.length SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(film.length)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "film"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "film_length_avg"
+    display_name: "film.length AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(film.length)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "film"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "film_replacement_cost_sum"
+    display_name: "film.replacement_cost SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(film.replacement_cost)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "film"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "film_replacement_cost_avg"
+    display_name: "film.replacement_cost AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(film.replacement_cost)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "film"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "film_actor_row_count"
+    display_name: "film_actor 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(film_actor.actor_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "film_actor"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "film_category_row_count"
+    display_name: "film_category 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(film_category.film_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "film_category"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "film_text_row_count"
+    display_name: "film_text 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(film_text.film_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "film_text"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "inventory_row_count"
+    display_name: "inventory 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(inventory.inventory_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "inventory"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "language_row_count"
+    display_name: "language 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(language.language_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "language"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "payment_row_count"
+    display_name: "payment 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(payment.payment_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "payment"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "payment_amount_sum"
+    display_name: "payment.amount SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(payment.amount)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "payment"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "payment_amount_avg"
+    display_name: "payment.amount AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(payment.amount)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "payment"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "rental_row_count"
+    display_name: "rental 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(rental.rental_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "rental"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "staff_row_count"
+    display_name: "staff 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(staff.staff_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "staff"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "store_row_count"
+    display_name: "store 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(store.store_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "last_update"
+    owner: "data-team"
+    default_binding:
+      asset: "store"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "last_update"
+      week: "last_update"
+      month: "last_update"
+      quarter: "last_update"
+      year: "last_update"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 actor.last_update"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "actor.last_update"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "address.city_id"
+    right: "city.city_id"
+    type: "many_to_one"
+    on_columns: ["city_id"]
+    certified_by: "data-team"
+
+  - left: "city.country_id"
+    right: "country.country_id"
+    type: "many_to_one"
+    on_columns: ["country_id"]
+    certified_by: "data-team"
+
+  - left: "customer.store_id"
+    right: "store.store_id"
+    type: "many_to_one"
+    on_columns: ["store_id"]
+    certified_by: "data-team"
+
+  - left: "customer.address_id"
+    right: "address.address_id"
+    type: "many_to_one"
+    on_columns: ["address_id"]
+    certified_by: "data-team"
+
+  - left: "film.original_language_id"
+    right: "language.language_id"
+    type: "many_to_one"
+    on_columns: ["original_language_id"]
+    certified_by: "data-team"
+
+  - left: "film.language_id"
+    right: "language.language_id"
+    type: "many_to_one"
+    on_columns: ["language_id"]
+    certified_by: "data-team"
+
+  - left: "film_actor.film_id"
+    right: "film.film_id"
+    type: "many_to_one"
+    on_columns: ["film_id"]
+    certified_by: "data-team"
+
+  - left: "film_actor.actor_id"
+    right: "actor.actor_id"
+    type: "many_to_one"
+    on_columns: ["actor_id"]
+    certified_by: "data-team"
+
+  - left: "film_category.category_id"
+    right: "category.category_id"
+    type: "many_to_one"
+    on_columns: ["category_id"]
+    certified_by: "data-team"
+
+  - left: "film_category.film_id"
+    right: "film.film_id"
+    type: "many_to_one"
+    on_columns: ["film_id"]
+    certified_by: "data-team"
+
+  - left: "inventory.film_id"
+    right: "film.film_id"
+    type: "many_to_one"
+    on_columns: ["film_id"]
+    certified_by: "data-team"
+
+  - left: "inventory.store_id"
+    right: "store.store_id"
+    type: "many_to_one"
+    on_columns: ["store_id"]
+    certified_by: "data-team"
+
+  - left: "payment.staff_id"
+    right: "staff.staff_id"
+    type: "many_to_one"
+    on_columns: ["staff_id"]
+    certified_by: "data-team"
+
+  - left: "payment.customer_id"
+    right: "customer.customer_id"
+    type: "many_to_one"
+    on_columns: ["customer_id"]
+    certified_by: "data-team"
+
+  - left: "payment.rental_id"
+    right: "rental.rental_id"
+    type: "many_to_one"
+    on_columns: ["rental_id"]
+    certified_by: "data-team"
+
+  - left: "rental.customer_id"
+    right: "customer.customer_id"
+    type: "many_to_one"
+    on_columns: ["customer_id"]
+    certified_by: "data-team"
+
+  - left: "rental.inventory_id"
+    right: "inventory.inventory_id"
+    type: "many_to_one"
+    on_columns: ["inventory_id"]
+    certified_by: "data-team"
+
+  - left: "rental.staff_id"
+    right: "staff.staff_id"
+    type: "many_to_one"
+    on_columns: ["staff_id"]
+    certified_by: "data-team"
+
+  - left: "staff.address_id"
+    right: "address.address_id"
+    type: "many_to_one"
+    on_columns: ["address_id"]
+    certified_by: "data-team"
+
+  - left: "store.address_id"
+    right: "address.address_id"
+    type: "many_to_one"
+    on_columns: ["address_id"]
+    certified_by: "data-team"
+
+  - left: "store.manager_staff_id"
+    right: "staff.staff_id"
+    type: "many_to_one"
+    on_columns: ["manager_staff_id"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "address", lang: en, maps_to_kind: column, maps_to_ref: "address.address", category: column }
+  - { term: "address2", lang: en, maps_to_kind: column, maps_to_ref: "address.address2", category: column }
+  - { term: "amount", lang: en, maps_to_kind: column, maps_to_ref: "payment.amount", category: column }
+  - { term: "city", lang: en, maps_to_kind: column, maps_to_ref: "city.city", category: column }
+  - { term: "country", lang: en, maps_to_kind: column, maps_to_ref: "country.country", category: column }
+  - { term: "create_date", lang: en, maps_to_kind: column, maps_to_ref: "customer.create_date", category: column }
+  - { term: "district", lang: en, maps_to_kind: column, maps_to_ref: "address.district", category: column }
+  - { term: "length", lang: en, maps_to_kind: column, maps_to_ref: "film.length", category: column }
+  - { term: "manager_staff_id", lang: en, maps_to_kind: column, maps_to_ref: "store.manager_staff_id", category: column }
+  - { term: "original_language_id", lang: en, maps_to_kind: column, maps_to_ref: "film.original_language_id", category: column }
+  - { term: "password", lang: en, maps_to_kind: column, maps_to_ref: "staff.password", category: column }
+  - { term: "payment_date", lang: en, maps_to_kind: column, maps_to_ref: "payment.payment_date", category: column }
+  - { term: "payment_id", lang: en, maps_to_kind: column, maps_to_ref: "payment.payment_id", category: column }
+  - { term: "phone", lang: en, maps_to_kind: column, maps_to_ref: "address.phone", category: column }
+  - { term: "picture", lang: en, maps_to_kind: column, maps_to_ref: "staff.picture", category: column }
+  - { term: "postal_code", lang: en, maps_to_kind: column, maps_to_ref: "address.postal_code", category: column }
+  - { term: "rating", lang: en, maps_to_kind: column, maps_to_ref: "film.rating", category: column }
+  - { term: "release_year", lang: en, maps_to_kind: column, maps_to_ref: "film.release_year", category: column }
+  - { term: "rental_date", lang: en, maps_to_kind: column, maps_to_ref: "rental.rental_date", category: column }
+  - { term: "rental_duration", lang: en, maps_to_kind: column, maps_to_ref: "film.rental_duration", category: column }
+  - { term: "rental_rate", lang: en, maps_to_kind: column, maps_to_ref: "film.rental_rate", category: column }
+  - { term: "replacement_cost", lang: en, maps_to_kind: column, maps_to_ref: "film.replacement_cost", category: column }
+  - { term: "return_date", lang: en, maps_to_kind: column, maps_to_ref: "rental.return_date", category: column }
+  - { term: "special_features", lang: en, maps_to_kind: column, maps_to_ref: "film.special_features", category: column }
+  - { term: "username", lang: en, maps_to_kind: column, maps_to_ref: "staff.username", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = actor.last_update（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

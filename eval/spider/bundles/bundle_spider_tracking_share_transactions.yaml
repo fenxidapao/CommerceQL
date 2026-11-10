@@ -1,0 +1,407 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "investors"
+    physical_asset: "Investors"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 20
+    description: "Spider 物理表 Investors（schema 派生资产，2 列）"
+    columns:
+      - name: "investor_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Investor_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "lots"
+    physical_asset: "Lots"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Lots（schema 派生资产，3 列）"
+    columns:
+      - name: "lot_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "investor_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "lot_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "purchases"
+    physical_asset: "Purchases"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Purchases（schema 派生资产，2 列）"
+    columns:
+      - name: "purchase_transaction_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "purchase_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "ref_transaction_types"
+    physical_asset: "Ref_Transaction_Types"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 2
+    description: "Spider 物理表 Ref_Transaction_Types（schema 派生资产，2 列）"
+    columns:
+      - name: "transaction_type_code"
+        type: "VARCHAR(10)"
+        comment: "主键；schema 派生列"
+      - name: "transaction_type_description"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+
+  - logical_name: "sales"
+    physical_asset: "Sales"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Sales（schema 派生资产，2 列）"
+    columns:
+      - name: "sales_transaction_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "sales_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "transactions"
+    physical_asset: "Transactions"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Transactions（schema 派生资产，7 列）"
+    columns:
+      - name: "transaction_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "investor_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "transaction_type_code"
+        type: "VARCHAR(10)"
+        comment: "schema 派生列"
+      - name: "date_of_transaction"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "amount_of_transaction"
+        type: "DECIMAL(19,4)"
+        comment: "schema 派生列"
+      - name: "share_count"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "other_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "transactions_lots"
+    physical_asset: "Transactions_Lots"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Transactions_Lots（schema 派生资产，2 列）"
+    columns:
+      - name: "transaction_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "lot_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "investors_row_count"
+    display_name: "Investors 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Investors.investor_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_of_transaction"
+    owner: "data-team"
+    default_binding:
+      asset: "investors"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "lots_row_count"
+    display_name: "Lots 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Lots.lot_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_of_transaction"
+    owner: "data-team"
+    default_binding:
+      asset: "lots"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "purchases_row_count"
+    display_name: "Purchases 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Purchases.purchase_transaction_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_of_transaction"
+    owner: "data-team"
+    default_binding:
+      asset: "purchases"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "ref_transaction_types_row_count"
+    display_name: "Ref_Transaction_Types 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Ref_Transaction_Types.transaction_type_code)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_of_transaction"
+    owner: "data-team"
+    default_binding:
+      asset: "ref_transaction_types"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "sales_row_count"
+    display_name: "Sales 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Sales.sales_transaction_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_of_transaction"
+    owner: "data-team"
+    default_binding:
+      asset: "sales"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "transactions_row_count"
+    display_name: "Transactions 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Transactions.transaction_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_of_transaction"
+    owner: "data-team"
+    default_binding:
+      asset: "transactions"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "transactions_amount_of_transaction_sum"
+    display_name: "Transactions.amount_of_transaction SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Transactions.amount_of_transaction)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "date_of_transaction"
+    owner: "data-team"
+    default_binding:
+      asset: "transactions"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "transactions_amount_of_transaction_avg"
+    display_name: "Transactions.amount_of_transaction AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Transactions.amount_of_transaction)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "date_of_transaction"
+    owner: "data-team"
+    default_binding:
+      asset: "transactions"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "transactions_lots_row_count"
+    display_name: "Transactions_Lots 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Transactions_Lots.transaction_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_of_transaction"
+    owner: "data-team"
+    default_binding:
+      asset: "transactions_lots"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "date_of_transaction"
+      week: "date_of_transaction"
+      month: "date_of_transaction"
+      quarter: "date_of_transaction"
+      year: "date_of_transaction"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 Transactions.date_of_transaction"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "transactions.date_of_transaction"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "lots.investor_id"
+    right: "investors.investor_id"
+    type: "many_to_one"
+    on_columns: ["investor_id"]
+    certified_by: "data-team"
+
+  - left: "transactions.transaction_type_code"
+    right: "ref_transaction_types.transaction_type_code"
+    type: "many_to_one"
+    on_columns: ["transaction_type_code"]
+    certified_by: "data-team"
+
+  - left: "transactions.investor_id"
+    right: "investors.investor_id"
+    type: "many_to_one"
+    on_columns: ["investor_id"]
+    certified_by: "data-team"
+
+  - left: "sales.sales_transaction_id"
+    right: "transactions.transaction_id"
+    type: "many_to_one"
+    on_columns: ["sales_transaction_id"]
+    certified_by: "data-team"
+
+  - left: "purchases.purchase_transaction_id"
+    right: "transactions.transaction_id"
+    type: "many_to_one"
+    on_columns: ["purchase_transaction_id"]
+    certified_by: "data-team"
+
+  - left: "transactions_lots.transaction_id"
+    right: "transactions.transaction_id"
+    type: "many_to_one"
+    on_columns: ["transaction_id"]
+    certified_by: "data-team"
+
+  - left: "transactions_lots.lot_id"
+    right: "lots.lot_id"
+    type: "many_to_one"
+    on_columns: ["lot_id"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "Investor_details", lang: en, maps_to_kind: column, maps_to_ref: "investors.Investor_details", category: column }
+  - { term: "amount_of_transaction", lang: en, maps_to_kind: column, maps_to_ref: "transactions.amount_of_transaction", category: column }
+  - { term: "date_of_transaction", lang: en, maps_to_kind: column, maps_to_ref: "transactions.date_of_transaction", category: column }
+  - { term: "lot_details", lang: en, maps_to_kind: column, maps_to_ref: "lots.lot_details", category: column }
+  - { term: "other_details", lang: en, maps_to_kind: column, maps_to_ref: "transactions.other_details", category: column }
+  - { term: "purchase_details", lang: en, maps_to_kind: column, maps_to_ref: "purchases.purchase_details", category: column }
+  - { term: "purchase_transaction_id", lang: en, maps_to_kind: column, maps_to_ref: "purchases.purchase_transaction_id", category: column }
+  - { term: "sales_details", lang: en, maps_to_kind: column, maps_to_ref: "sales.sales_details", category: column }
+  - { term: "sales_transaction_id", lang: en, maps_to_kind: column, maps_to_ref: "sales.sales_transaction_id", category: column }
+  - { term: "share_count", lang: en, maps_to_kind: column, maps_to_ref: "transactions.share_count", category: column }
+  - { term: "transaction_type_description", lang: en, maps_to_kind: column, maps_to_ref: "ref_transaction_types.transaction_type_description", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Transactions.date_of_transaction（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context
