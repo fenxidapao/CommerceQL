@@ -1,0 +1,177 @@
+{
+ "u_id": "U-182",
+ "kind": "batch_breakdown",
+ "date": "2026-11-10",
+ "rule": "可判面 = 逐题 llm_calls > 0 的题；llm_calls == 0 的题单列不进分母。按库切分母作废（实测 165 条零调用题里有 20 条落在前 3 库内）。",
+ "sources": {
+  "r1": {
+   "path": "eval/spider/results_batch_r1.json",
+   "sha256": "sha256:b93136f2b337ff03d4f4784e251129812edc6eea07a8208f66188afa3c83a47c"
+  },
+  "r2": {
+   "path": "eval/spider/results_batch_r2.json",
+   "sha256": "sha256:e35a02791a92cdfb004e3662f27e1c2fb35fee16052fc7b03ef3002ed957ebf6"
+  },
+  "r3": {
+   "path": "eval/spider/results_batch_r3_rest.json",
+   "sha256": "sha256:efd8b163997a8d0f5615c216555cead9e34f6644e810207dc92876bfd66c9ef1",
+   "bytes": 177713,
+   "cap": {
+    "max_calls": 1000,
+    "max_cost_cny": 5.0,
+    "duration_s": 3000.0,
+    "calls": 255,
+    "spent_cny": 1.073285,
+    "elapsed_s": 667.124,
+    "stopped": false
+   }
+  }
+ },
+ "r1": {
+  "records": 24,
+  "judgeable": 24,
+  "equivalents": 18,
+  "ex_rate": 0.75,
+  "zero_call_cases": 0,
+  "refused": 3,
+  "no_sql": 3,
+  "calls": 91,
+  "spent_cny": 0.414061
+ },
+ "r2": {
+  "records": 18,
+  "judgeable": 18,
+  "equivalents": 12,
+  "ex_rate": 0.6667,
+  "zero_call_cases": 0,
+  "refused": 3,
+  "no_sql": 3,
+  "calls": 69,
+  "spent_cny": 0.358245
+ },
+ "r3": {
+  "records": 235,
+  "judgeable": 70,
+  "equivalents": 46,
+  "ex_rate": 0.6571,
+  "zero_call_cases": 165,
+  "refused": 11,
+  "no_sql": 178,
+  "calls": 255,
+  "spent_cny": 1.073285
+ },
+ "combined": {
+  "records": 277,
+  "judgeable": 112,
+  "equivalents": 76,
+  "zero_call_cases": 165,
+  "calls": 415,
+  "spent_cny": 1.845591,
+  "ex_rate": 0.6786
+ },
+ "r3_per_db": {
+  "tracking_orders": {
+   "records": 16,
+   "judgeable": 16,
+   "equivalent": 13,
+   "refused": 1,
+   "zero_call_cases": 0,
+   "no_sql": 1,
+   "calls": 61,
+   "spent_cny": 0.241499,
+   "judgeable_rate": 0.8125,
+   "segment_status": "judged"
+  },
+  "customers_and_addresses": {
+   "records": 36,
+   "judgeable": 36,
+   "equivalent": 19,
+   "refused": 9,
+   "zero_call_cases": 0,
+   "no_sql": 9,
+   "calls": 127,
+   "spent_cny": 0.531489,
+   "judgeable_rate": 0.5278,
+   "segment_status": "judged"
+  },
+  "department_store": {
+   "records": 38,
+   "judgeable": 17,
+   "equivalent": 14,
+   "refused": 1,
+   "zero_call_cases": 21,
+   "no_sql": 23,
+   "calls": 66,
+   "spent_cny": 0.297776,
+   "judgeable_rate": 0.8235,
+   "segment_status": "partial_no_llm_call"
+  },
+  "customers_and_invoices": {
+   "records": 56,
+   "judgeable": 0,
+   "equivalent": 0,
+   "refused": 0,
+   "zero_call_cases": 56,
+   "no_sql": 56,
+   "calls": 0,
+   "spent_cny": 0.0,
+   "judgeable_rate": null,
+   "segment_status": "empty_no_llm_call"
+  },
+  "cre_Drama_Workshop_Groups": {
+   "records": 28,
+   "judgeable": 1,
+   "equivalent": 0,
+   "refused": 0,
+   "zero_call_cases": 27,
+   "no_sql": 28,
+   "calls": 1,
+   "spent_cny": 0.002521,
+   "judgeable_rate": 0.0,
+   "segment_status": "partial_no_llm_call"
+  },
+  "sakila_1": {
+   "records": 44,
+   "judgeable": 0,
+   "equivalent": 0,
+   "refused": 0,
+   "zero_call_cases": 44,
+   "no_sql": 44,
+   "calls": 0,
+   "spent_cny": 0.0,
+   "judgeable_rate": null,
+   "segment_status": "empty_no_llm_call"
+  },
+  "tracking_share_transactions": {
+   "records": 17,
+   "judgeable": 0,
+   "equivalent": 0,
+   "refused": 0,
+   "zero_call_cases": 17,
+   "no_sql": 17,
+   "calls": 0,
+   "spent_cny": 0.0,
+   "judgeable_rate": null,
+   "segment_status": "empty_no_llm_call"
+  }
+ },
+ "break": {
+  "first_fallback_at": "2026-11-10T17:04:44+08:00",
+  "fallback_lines": 138,
+  "llm_calls_after_first_fallback": 1,
+  "upstream_error_lines": 0,
+  "degraded_true_lines": 0,
+  "zero_call_cases_r3": 165,
+  "no_sql_cases_r3": 178,
+  "log": "CommerceQL-archive/local/spider_batch_u182_r3.log",
+  "recompute": "grep -c -F 'llm_falling_back_to_template' <log> ; grep -a -F 'llm_call' <log> | grep -c '17:04:'",
+  "note": "网关整段落回模板（backend/app/llm/__init__.py:530 分支），与 LLM_UPSTREAM_ERROR 无关；后 4 库模型未被调用 ⇒ 空转不作读数，待重跑"
+ },
+ "caliber": [
+  "r3 整批不成立：后 4 库 llm_calls=0，不得与前三库相加成 235 题 EX，也不得记成 EX 0%",
+  "可判面逐题按 llm_calls>0 定；按库切分母作废（20 条零调用题落在前 3 库内）",
+  "只有 llm_calls>0 的题进分母；零调用题单列，报告须同框写",
+  "EX 判等走 run_in_sandbox 双跑 + compare_tables；不读 state[result_rows]（体积字段，恒 0 行）",
+  "本批与 Olist 70.88% 不同件、不交叉比较；246 题纯检索按架构判据不进分母"
+ ]
+}
