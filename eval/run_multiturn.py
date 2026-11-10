@@ -92,11 +92,14 @@ async def run_live(
     max_cost_cny: float,
     max_requests: int | None = None,
     duration_s: float | None = None,
+    offset: int | None = None,
 ) -> dict[str, Any]:
     """真打两轮：turn1 → 生产同款脱敏 → turn2 的 `history_plan`。"""
     from harness import Harness, eval_node_timeouts
 
     cases = list(spec.get("cases") or [])
+    if offset is not None:
+        cases = cases[max(0, int(offset)):]
     if limit is not None:
         cases = cases[: max(0, limit)]
     harness = Harness(
@@ -233,6 +236,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--max-cost-cny", type=float, default=2.0)
     parser.add_argument("--max-requests", type=int, default=None, help="LLM 请求数硬停（None = 不限）")
     parser.add_argument("--duration-s", type=float, default=None, help="墙钟硬停秒数（None = 不限）")
+    parser.add_argument("--offset", type=int, default=None, help="跳过前 N 条用例（None = 从头）")
     parser.add_argument("--out", default=None, help="报告落盘路径；live 必填")
     args = parser.parse_args(argv)
 
@@ -272,6 +276,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     max_cost_cny=args.max_cost_cny,
                     max_requests=args.max_requests,
                     duration_s=args.duration_s,
+                    offset=args.offset,
                 )
             ),
             spec,
