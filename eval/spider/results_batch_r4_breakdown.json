@@ -1,0 +1,109 @@
+{
+ "u_id": "U-182",
+ "kind": "batch_r4_breakdown",
+ "date": "2026-11-10",
+ "not_a_reading": true,
+ "not_a_reading_reason": "cap.calls == 0 且 spent_cny == 0.0 ⇒ 本批不成立；不得当 EX 读数、不得记 EX 0%、不得与前三批相加",
+ "sources": {
+  "r4": {
+   "path": "eval/spider/results_batch_r4.json",
+   "sha256": "sha256:92dc86b0c1b18b7ab120224e16be10eeba3ebcffc6d14e11544f28b6220e0aac",
+   "bytes": 131920
+  }
+ },
+ "cap": {
+  "max_calls": 800,
+  "max_cost_cny": 4.0,
+  "duration_s": 2400.0,
+  "calls": 0,
+  "spent_cny": 0.0,
+  "elapsed_s": 4.859,
+  "stopped": false
+ },
+ "summary": {
+  "n_cases": 178,
+  "judgeable": 0,
+  "ex_equivalent": 0,
+  "ex_rate": null,
+  "zero_call_cases": 178,
+  "refused": 0,
+  "no_sql": 178
+ },
+ "degradation_tally": {
+  "llm_unavailable/template_only": 158
+ },
+ "per_db": {
+  "customers_and_invoices": {
+   "records": 56,
+   "zero_call_cases": 56,
+   "no_sql": 56,
+   "calls": 0,
+   "spent_cny": 0.0
+  },
+  "sakila_1": {
+   "records": 44,
+   "zero_call_cases": 44,
+   "no_sql": 44,
+   "calls": 0,
+   "spent_cny": 0.0
+  },
+  "cre_Drama_Workshop_Groups": {
+   "records": 40,
+   "zero_call_cases": 40,
+   "no_sql": 40,
+   "calls": 0,
+   "spent_cny": 0.0
+  },
+  "department_store": {
+   "records": 38,
+   "zero_call_cases": 38,
+   "no_sql": 38,
+   "calls": 0,
+   "spent_cny": 0.0
+  }
+ },
+ "arrears_evidence": {
+  "status": 400,
+  "upstream_type": "Arrearage",
+  "upstream_code": "Arrearage",
+  "model": "deepseek-v4.1-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "terminal_event": "error",
+  "terminal_code": "LLM_UPSTREAM_ERROR",
+  "key_facts": {
+   "DEEPSEEK_API_KEY": {
+    "present": true,
+    "len": 117
+   },
+   "DASHSCOPE_API_KEY": {
+    "present": false,
+    "len": 0
+   },
+   "OPENAI_API_KEY": {
+    "present": false,
+    "len": 0
+   },
+   "LLM_BASE_URL": {
+    "present": false,
+    "len": 0
+   }
+  },
+  "diag_file": "CommerceQL-archive/local/diag_r4_degrade_u182.json",
+  "diag_case": "sp-0001",
+  "ruled_out": [
+   "LlmCircuitOpen（熔断开路）",
+   "cost_too_high 预算 preflight 拒绝",
+   "key 缺失/未载入（DEEPSEEK_API_KEY present=true len=117，值不记录）",
+   "三闸触顶（stopped=false，max_calls 800 / ¥4.0 / 2400s）"
+  ],
+  "note": "上游 400 Arrearage = 账户欠费；模型取不到产出 ⇒ 后 4 库 178 题空转。这是账户状态，不是预算审批，也不是代码缺陷。"
+ },
+ "caliber": [
+  "calls == 0 的批不成立：不进分母、不记 EX 0%，本件 not_a_reading=true",
+  "真因 = 上游 400 Arrearage（账户欠费），已排除熔断开路 / 预算 preflight / key 缺失 / 三闸触顶",
+  "r3 与 r4 的聚合型判定曾用不同函数（正则 vs 字符串），两批可判面不可互比、不可相加；该差异已作废口径",
+  "可用 EX 只有已入库那组：三批可判面 112 题 76 等价 = 67.86%（见 results_batch_r3_rest_breakdown.json）",
+  "与 Olist 70.88% 不同件、不交叉比较；246 题纯检索按架构判据不进分母",
+  "重跑前置 = 先恢复上游账户余额，再以新进程重跑后 4 库"
+ ]
+}
