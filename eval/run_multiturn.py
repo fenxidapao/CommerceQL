@@ -16,6 +16,7 @@ import argparse
 import asyncio
 import json
 import sys
+import time
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -90,6 +91,7 @@ async def run_live(
     limit: int | None,
     max_cost_cny: float,
     max_requests: int | None = None,
+    duration_s: float | None = None,
 ) -> dict[str, Any]:
     """真打两轮：turn1 → 生产同款脱敏 → turn2 的 `history_plan`。"""
     from harness import Harness, eval_node_timeouts
@@ -107,11 +109,21 @@ async def run_live(
     spent = 0.0
     calls = 0
     budget_stopped = False
+    started_at = time.monotonic()
+
+    def _elapsed_s() -> float:
+        return time.monotonic() - started_at
+
+    def _over_budget() -> bool:
+        """U-181：成本 / 请求数 / 墙钟三硬停任一触发即停。"""
+        if spent >= max_cost_cny:
+            return True
+        if max_requests is not None and calls >= int(max_requests):
+            return True
+        return duration_s is not None and _elapsed_s() >= float(duration_s)
     try:
         for case in cases:
-            if spent >= max_cost_cny or (
-                max_requests is not None and calls >= int(max_requests)
-            ):
+            if _over_budget():
                 budget_stopped = True
                 break
             case_id = str(case["case_id"])
@@ -143,9 +155,7 @@ async def run_live(
                 spent += float(run.cost_cny or 0)
                 calls += int(getattr(run, 'llm_calls', 0) or 0)
                 history = multiturn.history_plan_from_summary(summary)
-                if spent >= max_cost_cny or (
-                    max_requests is not None and calls >= int(max_requests)
-                ):
+                if _over_budget():
                     budget_stopped = True
                     break
             records.append(
@@ -162,8 +172,10 @@ async def run_live(
         "budget": {
             "max_cost_cny": max_cost_cny,
             "max_requests": max_requests,
+            "duration_s": duration_s,
             "calls": calls,
             "spent_cny": round(spent, 6),
+            "elapsed_s": round(_elapsed_s(), 3),
             "stopped": budget_stopped,
         },
         "records": records,
@@ -220,6 +232,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--limit", type=int, default=None, help="只跑前 N 条用例")
     parser.add_argument("--max-cost-cny", type=float, default=2.0)
     parser.add_argument("--max-requests", type=int, default=None, help="LLM 请求数硬停（None = 不限）")
+    parser.add_argument("--duration-s", type=float, default=None, help="墙钟硬停秒数（None = 不限）")
     parser.add_argument("--out", default=None, help="报告落盘路径；live 必填")
     args = parser.parse_args(argv)
 
@@ -258,6 +271,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     limit=args.limit,
                     max_cost_cny=args.max_cost_cny,
                     max_requests=args.max_requests,
+                    duration_s=args.duration_s,
                 )
             ),
             spec,
