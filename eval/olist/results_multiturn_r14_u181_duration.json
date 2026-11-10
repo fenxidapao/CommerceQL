@@ -1,0 +1,2942 @@
+{
+  "generated_at": "2026-11-10T04:52:04+00:00",
+  "stamp": {
+    "generated_at": "2026-11-10T04:52:04+00:00",
+    "git_rev": "6efe4ab",
+    "git_dirty": false
+  },
+  "dataset": "eval/dataset_multiturn_v1.json",
+  "dataset_version": "multiturn_v1",
+  "mode": "live",
+  "dataset_cases": [
+    {
+      "case_id": "mt01",
+      "follow_up_type": "ellipsis_time",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "那 2017 年呢？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2017-01-01",
+            "time_end": "2018-01-01"
+          }
+        }
+      ],
+      "note": "第二轮只换了时间：指标/资产必须沿用第一轮，时间以本轮显式表达为准。"
+    },
+    {
+      "case_id": "mt02",
+      "follow_up_type": "metric_switch",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "换成订单量呢？",
+          "expect": {
+            "metrics": [
+              "order_cnt"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "只换指标：时间窗必须从上一轮继承（本轮问句没有时间词）。"
+    },
+    {
+      "case_id": "mt03",
+      "follow_up_type": "dimension_add",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "按州拆开看看",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "省略主语的追问：指标与时间沿用，新增一个维度。"
+    },
+    {
+      "case_id": "mt04",
+      "follow_up_type": "filter_change",
+      "turns": [
+        {
+          "question": "2018 年圣保罗州的 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "customer_state = 'SP'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "那里约州呢？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "customer_state = 'RJ'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "指代 + 换筛选值：指标与时间必须继承，筛选值以本轮为准（不得同时保留 SP 与 RJ）。"
+    },
+    {
+      "case_id": "mt05",
+      "follow_up_type": "pronoun",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "它比 2017 年高多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01",
+            "comparison": "2017"
+          }
+        }
+      ],
+      "note": "「它」指上一轮指标；比较基准 2017 是本轮新增条件，不得把主时间窗改成 2017。"
+    },
+    {
+      "case_id": "mt06",
+      "follow_up_type": "metric_add",
+      "turns": [
+        {
+          "question": "2018 年各月 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "date"
+            ],
+            "grain": "month",
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "订单量也一起看",
+          "expect": {
+            "metrics": [
+              "gmv",
+              "order_cnt"
+            ],
+            "dimensions": [
+              "date"
+            ],
+            "grain": "month",
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "追加指标：维度/粒度/时间必须继承，指标是两个而不是只剩新指标。"
+    },
+    {
+      "case_id": "mt07",
+      "follow_up_type": "dimension_add",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "按品类拆开看看",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "product_category"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "同 mt03，换成品类维度；验证维度继承不是硬编码州。"
+    },
+    {
+      "case_id": "mt08",
+      "follow_up_type": "limit",
+      "turns": [
+        {
+          "question": "2018 年各州 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "只看前 5 名",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01",
+            "limit": 5,
+            "order_by": [
+              "gmv desc"
+            ]
+          }
+        }
+      ],
+      "note": "只加上限/排序：指标、维度、时间都必须继承。"
+    },
+    {
+      "case_id": "mt09",
+      "follow_up_type": "grain_change",
+      "turns": [
+        {
+          "question": "2018 年各月 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "date"
+            ],
+            "grain": "month",
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "按季度汇总",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "date"
+            ],
+            "grain": "quarter",
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "只换粒度：时间窗与指标沿用。"
+    },
+    {
+      "case_id": "mt10",
+      "follow_up_type": "filter_add",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "去掉取消订单再算",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "order_status <> 'canceled'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "追加状态筛选：时间窗继承；不得把 `order_status` 当作分组维度。"
+    },
+    {
+      "case_id": "mt11",
+      "follow_up_type": "dimension_add",
+      "turns": [
+        {
+          "question": "2018 年平均评分是多少？",
+          "expect": {
+            "metrics": [
+              "avg_review_score"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "按州看看",
+          "expect": {
+            "metrics": [
+              "avg_review_score"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "换指标族也要继承时间：评分题的时间语义必须与订单题一致。"
+    },
+    {
+      "case_id": "mt12",
+      "follow_up_type": "dimension_add",
+      "turns": [
+        {
+          "question": "2018 年配送延迟率是多少？",
+          "expect": {
+            "metrics": [
+              "delivery_late_rate"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "哪个州最高？",
+          "expect": {
+            "metrics": [
+              "delivery_late_rate"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01",
+            "limit": 1,
+            "order_by": [
+              "delivery_late_rate desc"
+            ]
+          }
+        }
+      ],
+      "note": "「最高」问的是排名：维度/排序/上限由本轮补充，时间与指标继承。"
+    },
+    {
+      "case_id": "mt13",
+      "follow_up_type": "metric_switch",
+      "turns": [
+        {
+          "question": "2018 年第三季度 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-07-01",
+            "time_end": "2018-10-01"
+          }
+        },
+        {
+          "question": "客单价呢？",
+          "expect": {
+            "metrics": [
+              "aov"
+            ],
+            "dimensions": [],
+            "time_start": "2018-07-01",
+            "time_end": "2018-10-01"
+          }
+        }
+      ],
+      "note": "换指标、时间窗按季度继承；不得把「第三季度」误扩成全年。"
+    },
+    {
+      "case_id": "mt14",
+      "follow_up_type": "filter_change",
+      "turns": [
+        {
+          "question": "2018 年电子产品类 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "product_category = 'electronics'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "换成家居类呢？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "product_category = 'home'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        }
+      ],
+      "note": "品类筛选替换：旧品类条件必须被替换而不是叠加。"
+    },
+    {
+      "case_id": "mt15",
+      "follow_up_type": "reset",
+      "turns": [
+        {
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          }
+        },
+        {
+          "question": "2019 年 1 月各州的订单量是多少？",
+          "expect": {
+            "metrics": [
+              "order_cnt"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2019-01-01",
+            "time_end": "2019-02-01"
+          }
+        }
+      ],
+      "note": "反例：第二轮是完整新问题（指标/维度/时间全给出），不得套用上一轮条件。"
+    }
+  ],
+  "dataset_content_hash": "sha256:d4a7a755b4768600a7ff30541803cfee53236cf096c1048ffb662d99e7d32dec",
+  "budget": {
+    "max_cost_cny": 0.9,
+    "max_requests": 200,
+    "calls": 0,
+    "spent_cny": 0.0,
+    "stopped": false
+  },
+  "records": [
+    {
+      "case_id": "mt01",
+      "follow_up_type": "ellipsis_time",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 574,
+            "total": 584
+          },
+          "duration_ms": 584,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "那 2017 年呢？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2017-01-01",
+            "time_end": "2018-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2017-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 107,
+            "total": 108
+          },
+          "duration_ms": 108,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt02",
+      "follow_up_type": "metric_switch",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 126,
+            "total": 127
+          },
+          "duration_ms": 127,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "换成订单量呢？",
+          "expect": {
+            "metrics": [
+              "order_cnt"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "order_cnt"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 100,
+            "total": 101
+          },
+          "duration_ms": 101,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt03",
+      "follow_up_type": "dimension_add",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 88,
+            "total": 89
+          },
+          "duration_ms": 89,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "按州拆开看看",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [
+                  "customer_state"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 3,
+            "total": 4
+          },
+          "duration_ms": 4,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt04",
+      "follow_up_type": "filter_change",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年圣保罗州的 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "customer_state = 'SP'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "filters": {
+                "expected": [
+                  "customer_state = 'sp'"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 3,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "那里约州呢？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "customer_state = 'RJ'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "filters": {
+                "expected": [
+                  "customer_state = 'rj'"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 3,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt05",
+      "follow_up_type": "pronoun",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 2,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "它比 2017 年高多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01",
+            "comparison": "2017"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {
+              "comparison": "2017"
+            },
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 2,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt06",
+      "follow_up_type": "metric_add",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年各月 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "date"
+            ],
+            "grain": "month",
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [
+                  "date"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "grain": {
+                "expected": "month",
+                "actual": null,
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 7,
+            "total": 8
+          },
+          "duration_ms": 8,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "订单量也一起看",
+          "expect": {
+            "metrics": [
+              "gmv",
+              "order_cnt"
+            ],
+            "dimensions": [
+              "date"
+            ],
+            "grain": "month",
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv",
+                  "order_cnt"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [
+                  "date"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "grain": {
+                "expected": "month",
+                "actual": null,
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 2,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt07",
+      "follow_up_type": "dimension_add",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 3,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "按品类拆开看看",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "product_category"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [
+                  "product_category"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 3,
+            "total": 4
+          },
+          "duration_ms": 4,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt08",
+      "follow_up_type": "limit",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年各州 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [
+                  "customer_state"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 2,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "只看前 5 名",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01",
+            "limit": 5,
+            "order_by": [
+              "gmv desc"
+            ]
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [
+                  "customer_state"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "order_by": {
+                "expected": [
+                  "gmv desc"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "limit": {
+                "expected": 5,
+                "actual": null,
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 2,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt09",
+      "follow_up_type": "grain_change",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年各月 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "date"
+            ],
+            "grain": "month",
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [
+                  "date"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "grain": {
+                "expected": "month",
+                "actual": null,
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 3,
+            "total": 4
+          },
+          "duration_ms": 4,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "按季度汇总",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [
+              "date"
+            ],
+            "grain": "quarter",
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [
+                  "date"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "grain": {
+                "expected": "quarter",
+                "actual": null,
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 3,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt10",
+      "follow_up_type": "filter_add",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 2,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "去掉取消订单再算",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "order_status <> 'canceled'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "filters": {
+                "expected": [
+                  "order_status <> 'canceled'"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 3,
+            "total": 4
+          },
+          "duration_ms": 4,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt11",
+      "follow_up_type": "dimension_add",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年平均评分是多少？",
+          "expect": {
+            "metrics": [
+              "avg_review_score"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "avg_review_score"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 2,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "按州看看",
+          "expect": {
+            "metrics": [
+              "avg_review_score"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "avg_review_score"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [
+                  "customer_state"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 2,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt12",
+      "follow_up_type": "dimension_add",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年配送延迟率是多少？",
+          "expect": {
+            "metrics": [
+              "delivery_late_rate"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "delivery_late_rate"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 4,
+            "total": 5
+          },
+          "duration_ms": 5,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "哪个州最高？",
+          "expect": {
+            "metrics": [
+              "delivery_late_rate"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01",
+            "limit": 1,
+            "order_by": [
+              "delivery_late_rate desc"
+            ]
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "delivery_late_rate"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [
+                  "customer_state"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "order_by": {
+                "expected": [
+                  "delivery_late_rate desc"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "limit": {
+                "expected": 1,
+                "actual": null,
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 2,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt13",
+      "follow_up_type": "metric_switch",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年第三季度 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-07-01",
+            "time_end": "2018-10-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-07-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2018-10-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 3,
+            "total": 4
+          },
+          "duration_ms": 4,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "客单价呢？",
+          "expect": {
+            "metrics": [
+              "aov"
+            ],
+            "dimensions": [],
+            "time_start": "2018-07-01",
+            "time_end": "2018-10-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "aov"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-07-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2018-10-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 4,
+            "total": 6
+          },
+          "duration_ms": 6,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt14",
+      "follow_up_type": "filter_change",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年电子产品类 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "product_category = 'electronics'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "filters": {
+                "expected": [
+                  "product_category = 'electronics'"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 3,
+            "total": 4
+          },
+          "duration_ms": 4,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "换成家居类呢？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "filters": [
+              "product_category = 'home'"
+            ],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "filters": {
+                "expected": [
+                  "product_category = 'home'"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 2,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    },
+    {
+      "case_id": "mt15",
+      "follow_up_type": "reset",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "2018 年 GMV 是多少？",
+          "expect": {
+            "metrics": [
+              "gmv"
+            ],
+            "dimensions": [],
+            "time_start": "2018-01-01",
+            "time_end": "2019-01-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "gmv"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [],
+                "actual": [],
+                "ok": true
+              },
+              "time_start": {
+                "expected": "2018-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 3,
+            "total": 4
+          },
+          "duration_ms": 4,
+          "llm_calls": 0
+        },
+        {
+          "turn": 2,
+          "question": "2019 年 1 月各州的订单量是多少？",
+          "expect": {
+            "metrics": [
+              "order_cnt"
+            ],
+            "dimensions": [
+              "customer_state"
+            ],
+            "time_start": "2019-01-01",
+            "time_end": "2019-02-01"
+          },
+          "terminal_event": "error",
+          "plan_summary": null,
+          "history_seeded": false,
+          "comparison": {
+            "passed": false,
+            "fields": {
+              "metrics": {
+                "expected": [
+                  "order_cnt"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "dimensions": {
+                "expected": [
+                  "customer_state"
+                ],
+                "actual": [],
+                "ok": false
+              },
+              "time_start": {
+                "expected": "2019-01-01",
+                "actual": null,
+                "ok": false
+              },
+              "time_end": {
+                "expected": "2019-02-01",
+                "actual": null,
+                "ok": false
+              }
+            },
+            "unmapped": {},
+            "plan_present": false
+          },
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "cache_hit": 0,
+            "total": 0
+          },
+          "cost_cny": 0.0,
+          "terminal_code": "LLM_UPSTREAM_ERROR",
+          "refusal_reason": null,
+          "intent_detail": {},
+          "nodes": [
+            "trusted_context",
+            "normalize",
+            "error_out"
+          ],
+          "sql_text": "",
+          "exec_error_class": null,
+          "gate1_reject_rule": null,
+          "applied_predicates": [],
+          "unregistered_pg_constructs": [],
+          "latency_ms": {
+            "normalize": 3,
+            "total": 3
+          },
+          "duration_ms": 3,
+          "llm_calls": 0
+        }
+      ],
+      "turn_passes": [
+        false,
+        false
+      ],
+      "both_passed": false
+    }
+  ],
+  "summary": {
+    "n_cases": 15,
+    "turn1_passed": 0,
+    "turn2_passed": 0,
+    "cases_both_passed": 0,
+    "cases_incomplete": 0,
+    "plans_missing": 30,
+    "time_end_representation_diff": 0,
+    "unmapped_expect_keys": [
+      "comparison"
+    ],
+    "cost_cny_total": 0.0
+  }
+}
