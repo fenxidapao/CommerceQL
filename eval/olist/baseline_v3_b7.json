@@ -1,0 +1,526 @@
+{
+  "schema": "U183_CARRIER_THREE_FACE_CHECK/v1",
+  "probe": "eval/olist/probe_u183_carriers.py",
+  "recompute": "python eval/olist/probe_u183_carriers.py",
+  "faces": {
+    "expectation": {
+      "face": "expectation",
+      "question": "有没有原生的『应该是什么』标注，还是只能靠派生/弱代理",
+      "carrier": {
+        "exists": true,
+        "path": "eval/olist/dataset_v3_frozen.json",
+        "bytes": 160153,
+        "sha256": "823196a8be60f760a9a58d7b3b51ed8c945c7800157a76e5127e128e9f20964e",
+        "crlf": 0,
+        "lone_lf": 4497,
+        "lines": 4497
+      },
+      "n_cases": 100,
+      "n_execute_cases": 95,
+      "n_interaction_cases": 5,
+      "execute_cases_read": 95,
+      "case_field_set": [
+        "assets",
+        "business_knowledge_required",
+        "caliber_checks",
+        "caliber_note",
+        "case_id",
+        "clarify_expected",
+        "difficulty_semantic",
+        "difficulty_struct",
+        "domain",
+        "eval_tenant",
+        "expect",
+        "expected_behavior",
+        "gold_result_cols",
+        "gold_result_hash",
+        "gold_result_rows",
+        "gold_sql",
+        "metrics",
+        "must_contain",
+        "must_not_contain",
+        "question",
+        "refuse_reason"
+      ],
+      "gold_field_coverage": {
+        "gold_result_cols": 95,
+        "gold_result_hash": 95,
+        "gold_result_rows": 95,
+        "gold_sql": 95
+      },
+      "gold_native_all_95": true,
+      "weak_proxy_coverage": {
+        "must_contain": 0,
+        "must_not_contain": 0,
+        "business_knowledge_required": 43,
+        "caliber_note": 95,
+        "expect": 95
+      },
+      "business_knowledge_vocab_size": 20,
+      "business_knowledge_top": [
+        [
+          "time:month",
+          9
+        ],
+        [
+          "hierarchy:state",
+          9
+        ],
+        [
+          "value_map:state",
+          4
+        ],
+        [
+          "hierarchy:category",
+          3
+        ],
+        [
+          "time:year",
+          3
+        ],
+        [
+          "time:quarter",
+          2
+        ],
+        [
+          "metric:gmv",
+          1
+        ],
+        [
+          "synonym:GMV",
+          1
+        ]
+      ],
+      "content_hash": "sha256:ec6b13f27cb9eaa0c4dc3f70031638370dc8b961a1676df50b3da33ca7b24f7e",
+      "full_hash": "sha256:8777d896d1308e9a3ba5a447d519408aa06fc69e4a625ba5f8bab4eb0d907595",
+      "sandbox_db_sha256": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+      "verdict": "gold_sql / gold_result_hash / gold_result_cols 原生齐备；但归因用的 must_contain / must_not_contain 覆盖为 0，知识标签词表仅 24 项 ⇒ 归因是弱代理，不是原生错因标注"
+    },
+    "observation": {
+      "face": "observation",
+      "question": "载体记的是谁产的数，产出方是否等于被测对象",
+      "verdict_producer": "eval/runner.py:697 eq.compare_tables(gold_view['table'], pred_table, ...)",
+      "verdict_sink": "eval/runner.py:714-724 record['verdict']",
+      "verdict": "观测侧是评测链路真打/重放后由 runner 判的结果等价，不是上游意图；匣带只记 LLM 请求响应，不记 verdict",
+      "batches": [
+        {
+          "exists": true,
+          "path": "eval/olist/results_v3_r1.json",
+          "bytes": 795125,
+          "sha256": "1c7b7e3f360c324a5cc643ae5198b4cee6469e52d5f2d54b62048b258fe6afbd",
+          "crlf": 0,
+          "lone_lf": 25574,
+          "lines": 25574,
+          "git_rev": "39cb1f4",
+          "n_equivalent": 69,
+          "n_execute_scored": 95
+        },
+        {
+          "exists": true,
+          "path": "eval/olist/results_v3_r2.json",
+          "bytes": 798443,
+          "sha256": "511d8b21457db5e62d595a353f93c3c69cbbd30deccfda4c9ced94c5d260aacc",
+          "crlf": 0,
+          "lone_lf": 25649,
+          "lines": 25649,
+          "git_rev": "39cb1f4",
+          "n_equivalent": 67,
+          "n_execute_scored": 95
+        },
+        {
+          "exists": true,
+          "path": "eval/olist/results_v3_r3.json",
+          "bytes": 797231,
+          "sha256": "7717dd50c4b3a5a069e5229e1b61cf073040ae8238e2c7cd9e9209f2e63fee51",
+          "crlf": 0,
+          "lone_lf": 25609,
+          "lines": 25609,
+          "git_rev": "39cb1f4",
+          "n_equivalent": 66,
+          "n_execute_scored": 95
+        }
+      ],
+      "cassettes": [
+        {
+          "exists": true,
+          "path": "eval/olist/cassettes/olist_v3_r1.jsonl",
+          "bytes": 6084701,
+          "sha256": "e4c335f75a43536045152e6de6f0d3e3252d5c0f6bcdc8747b6c00ad4fb0270d",
+          "crlf": 393,
+          "lone_lf": 0,
+          "lines": 393,
+          "n_records": 393,
+          "models": {
+            "deepseek-v4.1-flash": 393
+          },
+          "max_tokens": {
+            "384": 100,
+            "600": 97,
+            "2304": 96,
+            "800": 100
+          },
+          "few_shot_token_hits": 0,
+          "example_token_in_sqlgen_system": 0,
+          "sqlgen_system_n": 96
+        },
+        {
+          "exists": true,
+          "path": "eval/olist/cassettes/olist_v3_r2.jsonl",
+          "bytes": 6106813,
+          "sha256": "e3965c5142d01dfd89704aa09e246ec022bd70898e6199b2ff44c215d554316a",
+          "crlf": 395,
+          "lone_lf": 0,
+          "lines": 395,
+          "n_records": 395,
+          "models": {
+            "deepseek-v4.1-flash": 395
+          },
+          "max_tokens": {
+            "384": 100,
+            "600": 97,
+            "2304": 97,
+            "800": 101
+          },
+          "few_shot_token_hits": 0,
+          "example_token_in_sqlgen_system": 0,
+          "sqlgen_system_n": 97
+        },
+        {
+          "exists": true,
+          "path": "eval/olist/cassettes/olist_v3_r3.jsonl",
+          "bytes": 6093663,
+          "sha256": "3eb30ce6f49f7382f465b4a4f33dcbbf23fa9df0669916e3f690d7994a9c8a6f",
+          "crlf": 394,
+          "lone_lf": 0,
+          "lines": 394,
+          "n_records": 394,
+          "models": {
+            "deepseek-v4.1-flash": 394
+          },
+          "max_tokens": {
+            "384": 100,
+            "600": 97,
+            "2304": 97,
+            "800": 100
+          },
+          "few_shot_token_hits": 0,
+          "example_token_in_sqlgen_system": 0,
+          "sqlgen_system_n": 96
+        }
+      ]
+    },
+    "measurement": {
+      "face": "measurement",
+      "question": "分桶能否支持联合口径，分母混进了什么，异常分支是否占同一标签",
+      "denominator": "eval/runner.py:1213-1214 只在 expected_behavior=execute 上累加 n_equivalent",
+      "counter_increment": "eval/runner.py:1214 sum(1 for r in execute if (r.get('verdict') or {}).get('equivalent'))",
+      "abnormal_branch": "eval/runner.py:641-643 infra_error ⇒ scored=False / verdict=None / attribution=None，但仍进 terminal_distribution",
+      "marginal_only": "attribution_distribution 是单标签边际计数，拿不出『R14 ∧ 跑通但答错』的联合；下面 joint 是逐例现算的派生读数，不是盘上原生标签",
+      "scored_shape": {
+        "execute/True": 285,
+        "clarify/True": 9,
+        "refuse/True": 6
+      },
+      "joint_bad_by_terminal": {
+        "A_GATE_REJECT_R14": 37,
+        "E_RAN_BUT_WRONG_RESULT": 28,
+        "B_SQL_DIALECT_SYNTAX": 10,
+        "A_GATE_REJECT_R06": 6,
+        "D_INFRA_LLM_UPSTREAM_ERROR": 2
+      },
+      "marginal_attribution_over_bad": {
+        "gate_policy_gap": 33,
+        "unattributed": 29,
+        "sandbox_dialect_gap": 10,
+        "time_semantics": 7,
+        "sql_generation": 2,
+        "schema_linking_miss": 2
+      },
+      "per_batch": [
+        {
+          "batch": "results_v3_r1.json",
+          "n_records": 100,
+          "n_execute": 95,
+          "n_bad": 26,
+          "n_equivalent_summary": 69,
+          "attribution_distribution": {
+            "gate_policy_gap": 10,
+            "sql_generation": 1,
+            "time_semantics": 3,
+            "schema_linking_miss": 1,
+            "ambiguity_not_clarified": 2,
+            "unattributed": 7,
+            "sandbox_dialect_gap": 4
+          }
+        },
+        {
+          "batch": "results_v3_r2.json",
+          "n_records": 100,
+          "n_execute": 95,
+          "n_bad": 28,
+          "n_equivalent_summary": 67,
+          "attribution_distribution": {
+            "unattributed": 11,
+            "gate_policy_gap": 12,
+            "time_semantics": 1,
+            "ambiguity_not_clarified": 2,
+            "sandbox_dialect_gap": 3,
+            "schema_linking_miss": 1
+          }
+        },
+        {
+          "batch": "results_v3_r3.json",
+          "n_records": 100,
+          "n_execute": 95,
+          "n_bad": 29,
+          "n_equivalent_summary": 66,
+          "attribution_distribution": {
+            "unattributed": 11,
+            "gate_policy_gap": 11,
+            "time_semantics": 3,
+            "ambiguity_not_clarified": 2,
+            "terminal_shape_gap": 1,
+            "sandbox_dialect_gap": 3,
+            "sql_generation": 1
+          }
+        }
+      ],
+      "verdict": "分母 95 条 execute 干净；83 条失败按终态联合拆分属派生，归因分布属边际，两者不可混记"
+    }
+  },
+  "carriers": {
+    "probes": [
+      {
+        "exists": true,
+        "path": "eval/olist/probe_attribution_misjudge.py",
+        "bytes": 5042,
+        "sha256": "178b060200073a0edbe9da2a2bba2628bfa1246db827f9045cc889f1620b6e50",
+        "crlf": 0,
+        "lone_lf": 137,
+        "lines": 137
+      },
+      {
+        "exists": true,
+        "path": "eval/olist/probe_dialect_forms.py",
+        "bytes": 6934,
+        "sha256": "ef6628e1bc2d054f864b83375deab724b62dcc7c10f97a0de8a51b625189ddcb",
+        "crlf": 0,
+        "lone_lf": 184,
+        "lines": 184
+      },
+      {
+        "exists": true,
+        "path": "eval/olist/probe_dialect_gain.py",
+        "bytes": 10566,
+        "sha256": "b51cd007ac4c447df53d1c30efc9a4daeba75ebe5dc1e9a738a9a6da55ff3047",
+        "crlf": 0,
+        "lone_lf": 271,
+        "lines": 271
+      },
+      {
+        "exists": true,
+        "path": "eval/olist/probe_gate1_replay.py",
+        "bytes": 5545,
+        "sha256": "301052f84f058c11577df067a4829ca193390283a3dab0a0bd4c156050bb9ce4",
+        "crlf": 0,
+        "lone_lf": 133,
+        "lines": 133
+      },
+      {
+        "exists": true,
+        "path": "eval/olist/probe_multiturn_caliber.py",
+        "bytes": 7269,
+        "sha256": "8d1f047a8c1ce4b74b13483a48aed4114208ccdfe76d0e7832bcbf054263f025",
+        "crlf": 0,
+        "lone_lf": 171,
+        "lines": 171
+      },
+      {
+        "exists": true,
+        "path": "eval/olist/probe_quarter_start.py",
+        "bytes": 2852,
+        "sha256": "d252b54c45e5e17ae56891f61a0dd2bcc376cb575f8bf788b2feaa53a27bbdb1",
+        "crlf": 0,
+        "lone_lf": 79,
+        "lines": 79
+      },
+      {
+        "exists": true,
+        "path": "eval/olist/probe_repair_ab.py",
+        "bytes": 16562,
+        "sha256": "0cb232d706e8f1305d9c77dad44c350537f05bdca7be610c4210e62215eaeb6e",
+        "crlf": 0,
+        "lone_lf": 374,
+        "lines": 374
+      },
+      {
+        "exists": true,
+        "path": "eval/olist/probe_repair_equal_gold.py",
+        "bytes": 10328,
+        "sha256": "d07af0f9bee1c7171f24cb6da221e724d7de9d09fd9ead2ada6d7ea6126e9d5b",
+        "crlf": 0,
+        "lone_lf": 256,
+        "lines": 256
+      },
+      {
+        "exists": true,
+        "path": "eval/olist/probe_repair_equal_gold_pool.py",
+        "bytes": 14158,
+        "sha256": "7b28ed86ab34877eb653206f975d23cbdbd395cf1dff68eb1128cdcad68dd990",
+        "crlf": 0,
+        "lone_lf": 346,
+        "lines": 346
+      },
+      {
+        "exists": true,
+        "path": "eval/olist/probe_repair_trace.py",
+        "bytes": 4401,
+        "sha256": "dba9cfb272d719603b96bdfa322170efc90bc276af86056ec6b80a26a8c9b6ba",
+        "crlf": 0,
+        "lone_lf": 107,
+        "lines": 107
+      },
+      {
+        "exists": true,
+        "path": "eval/olist/probe_u183_carriers.py",
+        "bytes": 12723,
+        "sha256": "9de26ccada909da5ac142b76119349d0118f28df89c190dc839fc5c3e81221ad",
+        "crlf": 0,
+        "lone_lf": 245,
+        "lines": 245
+      }
+    ],
+    "docs": [
+      {
+        "exists": true,
+        "path": "docs/07_技术设计文档_TDD.md",
+        "bytes": 984164,
+        "sha256": "f9390ce5ad5d56ae8d357284b10e9add39644f82d4ca07fc5eae328a8c15d825",
+        "crlf": 0,
+        "lone_lf": 3763,
+        "lines": 3763
+      },
+      {
+        "exists": true,
+        "path": "docs/09_当前状态与交接.md",
+        "bytes": 44479,
+        "sha256": "2b6e91630ac4c1177496940e9dbb3bc463426cd5d4e786bc8d4932541ddb2e4e",
+        "crlf": 305,
+        "lone_lf": 0,
+        "lines": 305
+      },
+      {
+        "exists": true,
+        "path": "docs/10_未决问题台账.md",
+        "bytes": 157488,
+        "sha256": "b47bbc6d1c21535b1ca0976ad0416edb555a1f9aec58fd7b95a4c6391f675b5a",
+        "crlf": 75,
+        "lone_lf": 0,
+        "lines": 75
+      }
+    ],
+    "frozen": {
+      "exists": true,
+      "path": "eval/olist/dataset_v3_frozen.json",
+      "bytes": 160153,
+      "sha256": "823196a8be60f760a9a58d7b3b51ed8c945c7800157a76e5127e128e9f20964e",
+      "crlf": 0,
+      "lone_lf": 4497,
+      "lines": 4497
+    }
+  },
+  "claim_receipt": {
+    "conclusion": "认：三批读数、冻结集 gold、33 条误判、R14 +5、十件探针。不认：few-shot 行数（需真库）、replay 叠加 prompt 改动、原生错因标注。",
+    "rows": [
+      {
+        "claim": "三批 69/67/66 = 70.88%，分母 95 条 execute",
+        "observed": [
+          69,
+          67,
+          66
+        ],
+        "verdict": "OK",
+        "owner": "lead（本窗现读）"
+      },
+      {
+        "claim": "冻结集 gold 齐备且可零成本复算",
+        "observed": {
+          "gold_result_cols": 95,
+          "gold_result_hash": 95,
+          "gold_result_rows": 95,
+          "gold_sql": 95
+        },
+        "verdict": "OK",
+        "owner": "lead（本窗现读）"
+      },
+      {
+        "claim": "33 条 gate_policy_gap 全是 R14 误判",
+        "observed": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\olist\\probe_attribution_misjudge.json",
+        "verdict": "OK",
+        "owner": "T-03 已 CLOSED，证据件只读"
+      },
+      {
+        "claim": "R14 收窄实测 +5 题/批 → 76.14%，零回归",
+        "observed": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\olist\\probe_dialect_gain.json",
+        "verdict": "OK",
+        "owner": "T-02 探针，本窗不重跑"
+      },
+      {
+        "claim": "十件现成探针在盘可复跑",
+        "observed": 11,
+        "verdict": "OK",
+        "owner": "lead"
+      },
+      {
+        "claim": "few-shot 库 119 行已入库、SHOTS_N 5",
+        "observed": "docs/10:40 的书面登记；本窗未连真库，行数 NOT_VERIFIED",
+        "verdict": "PARTIAL",
+        "owner": "需真库冒烟，不能由本窗代认"
+      },
+      {
+        "claim": "改 prompt 的增益可 replay 叠加",
+        "observed": "eval/cassette.py key = sha256(path + canonical_json(body))，prompt 变即 CassetteMiss",
+        "verdict": "REJECTED",
+        "owner": "lead，写入 P1 两层方案"
+      },
+      {
+        "claim": "bad case 有原生错因标注可支撑逐例定性",
+        "observed": "must_contain / must_not_contain 覆盖 0，business_knowledge_required 词表 24",
+        "verdict": "NOT_AVAILABLE",
+        "owner": "lead，P0.2 人工定性不可省"
+      }
+    ],
+    "computable_today": {
+      "what": "95 条 execute 上的 EX、按终态拆分的 83 条失败联合分布、gold 字段覆盖率",
+      "does_not_answer": "28 条真错题各自错在哪、few-shot 增益多少、85% 能否达成"
+    },
+    "prerequisites": [
+      {
+        "item": "28 条真错题逐例错因",
+        "owner": "lead / 人工复核",
+        "why": "冻结集无原生标注，代做等于编数据"
+      },
+      {
+        "item": "app.gold_query 行数与同源题排除",
+        "owner": "真库冒烟",
+        "why": "本窗零 DB，不能拿文档登记冒充实测"
+      },
+      {
+        "item": "三批新 live 读数",
+        "owner": "P3 付费批",
+        "why": "prompt 改动必然 miss 旧匣带"
+      }
+    ],
+    "judgement_draft": {
+      "denominator": "dataset_v3_frozen.json 的 expected_behavior=execute，现读 95",
+      "numerator": "verdict.equivalent 为真的条数，唯一生产者 eval/runner.py:697",
+      "hard_requirements": [
+        "冻结集不动",
+        "三个独立 batch_id",
+        "cap{calls,spent_cny,stopped} 落全",
+        "不写 85% 达成除非实测达标"
+      ]
+    },
+    "suspension_rewrite": "不登记『悬空』；三半各有主：期望侧 lead（冻结集）、观测侧 runner（唯一生产者）、计量侧 runner:1214（分母），未决项只记各自缺口与 owner。"
+  }
+}
