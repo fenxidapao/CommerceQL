@@ -1,0 +1,74 @@
+{
+ "u_id": "U-182",
+ "kind": "batch_r7_entry_breakdown",
+ "date": "2026-11-11",
+ "entry_channel": "apps_anthropic_via_shim",
+ "upstream": "https://dashscope.aliyuncs.com/apps/anthropic",
+ "not_a_reading_ex": true,
+ "not_a_reading_reason": "calls>0 成立（不是 r4 那种零调用空转），但 22 题里 21 条 errored、20 条 no_sql、仅 1 条等价；失败面集中在图侧 understand 判不可用（llm_unavailable/template_only），属入口/垫片未通过，不能当该入口的 EX 读数，也不与前六批相加",
+ "cap": {
+  "max_calls": 400,
+  "max_cost_cny": 2.0,
+  "duration_s": 1500.0,
+  "calls": 29,
+  "spent_cny": 0.114093,
+  "elapsed_s": 479.012,
+  "stopped": false
+ },
+ "summary": {
+  "n_cases": 22,
+  "judgeable": 21,
+  "ex_equivalent": 1,
+  "ex_rate": 0.0476,
+  "zero_call_cases": 1,
+  "refused": 0,
+  "errored": 21,
+  "no_sql": 20
+ },
+ "degradation_tally": {
+  "embedding_unavailable/sparse_only": 21,
+  "llm_unavailable/template_only": 20,
+  "present_failed/table_only": 1
+ },
+ "per_db": {
+  "tracking_orders": {
+   "records": 22,
+   "errored": 21,
+   "no_sql": 20,
+   "refused": 0,
+   "equivalent": 1,
+   "calls": 29,
+   "spent_cny": 0.114093,
+   "zero_call": 1
+  }
+ },
+ "shim_observations": {
+  "upstream_status_all_200": true,
+  "last_case_log": {
+   "status": 200,
+   "finish": "stop",
+   "max_tokens": 384,
+   "text_len": 206,
+   "text_shape": "完整 normalize_intent JSON（非截断、非空）"
+  },
+  "fixed_defects": [
+   "urllib 读环境代理导致上游 403 -> ProxyHandler({}) 后 200",
+   "客户端 max_tokens 384/600 直传导致截断 -> 垫片下限 4096",
+   "HTTP/1.1 keep-alive 未声明 Connection: close -> 客户端 WinError 10053",
+   "曾用 thinking 块兜底 text，污染 JSON 解析 -> 已删除（三模型直连实测 content 含 text 块、stop_reason=end_turn）"
+  ],
+  "open_gap": "模型文本已合法，但图侧 understand 仍判不可用；换 qwen3.8-flash 那次 llm_calls=0（模型未被调用）。再往下需读 _call_validated 与 understand 的校验路径，属新一轮取证，未做"
+ },
+ "caliber": [
+  "本件只登记入口失败，不产出任何 EX 数字；可引用 EX 仍为前六批（compatible-mode）",
+  "r7 与 r4 不同类：r4 是 calls==0（零调用空转），r7 是 calls>0 但产出不可用",
+  "钱都在用户 2026-11-06 指定的 key 上；旧 key 未再花钱",
+  "复算：读 eval/spider/results_batch_r7_shim.json 的 budget/summary 与逐题 terminal_event"
+ ],
+ "sources": {
+  "r7": {
+   "path": "eval/spider/results_batch_r7_shim.json",
+   "bytes": 20155
+  }
+ }
+}
