@@ -1,0 +1,594 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "addresses"
+    physical_asset: "Addresses"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Addresses（schema 派生资产，2 列）"
+    columns:
+      - name: "Address_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "address_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "agreements"
+    physical_asset: "Agreements"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Agreements（schema 派生资产，2 列）"
+    columns:
+      - name: "Document_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Event_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "assets"
+    physical_asset: "Assets"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 3
+    description: "Spider 物理表 Assets（schema 派生资产，2 列）"
+    columns:
+      - name: "Asset_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Other_Details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "assets_in_events"
+    physical_asset: "Assets_in_Events"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 12
+    description: "Spider 物理表 Assets_in_Events（schema 派生资产，2 列）"
+    columns:
+      - name: "Asset_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Event_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "channels"
+    physical_asset: "Channels"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Channels（schema 派生资产，2 列）"
+    columns:
+      - name: "Channel_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Other_Details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "events"
+    physical_asset: "Events"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Events（schema 派生资产，6 列）"
+    columns:
+      - name: "Event_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Address_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Channel_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Event_Type_Code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+      - name: "Finance_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Location_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "finances"
+    physical_asset: "Finances"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Finances（schema 派生资产，2 列）"
+    columns:
+      - name: "Finance_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Other_Details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "locations"
+    physical_asset: "Locations"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Locations（schema 派生资产，2 列）"
+    columns:
+      - name: "Location_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Other_Details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "parties"
+    physical_asset: "Parties"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 7
+    description: "Spider 物理表 Parties（schema 派生资产，2 列）"
+    columns:
+      - name: "Party_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Party_Details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "parties_in_events"
+    physical_asset: "Parties_in_Events"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Parties_in_Events（schema 派生资产，3 列）"
+    columns:
+      - name: "Party_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Event_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Role_Code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+
+  - logical_name: "products"
+    physical_asset: "Products"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Products（schema 派生资产，4 列）"
+    columns:
+      - name: "Product_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Product_Type_Code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+      - name: "Product_Name"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "Product_Price"
+        type: "DECIMAL(20,4)"
+        comment: "schema 派生列"
+
+  - logical_name: "products_in_events"
+    physical_asset: "Products_in_Events"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Products_in_Events（schema 派生资产，3 列）"
+    columns:
+      - name: "Product_in_Event_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Event_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Product_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "addresses_row_count"
+    display_name: "Addresses 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Addresses.Address_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "addresses"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "agreements_row_count"
+    display_name: "Agreements 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Agreements.Document_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "agreements"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "assets_row_count"
+    display_name: "Assets 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Assets.Asset_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "assets"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "assets_in_events_row_count"
+    display_name: "Assets_in_Events 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Assets_in_Events.Asset_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "assets_in_events"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "channels_row_count"
+    display_name: "Channels 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Channels.Channel_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "channels"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "events_row_count"
+    display_name: "Events 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Events.Event_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "events"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "finances_row_count"
+    display_name: "Finances 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Finances.Finance_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "finances"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "locations_row_count"
+    display_name: "Locations 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Locations.Location_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "locations"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "parties_row_count"
+    display_name: "Parties 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Parties.Party_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "parties"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "parties_in_events_row_count"
+    display_name: "Parties_in_Events 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Parties_in_Events.Party_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "parties_in_events"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_row_count"
+    display_name: "Products 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Products.Product_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_product_price_sum"
+    display_name: "Products.Product_Price SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Products.Product_Price)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_product_price_avg"
+    display_name: "Products.Product_Price AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Products.Product_Price)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_in_events_row_count"
+    display_name: "Products_in_Events 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Products_in_Events.Product_in_Event_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "products_in_events"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "address_id"
+    bindings:
+      address_id: "Address_ID"
+    hierarchy: [address_id]
+    grain_levels: { address_id: 1 }
+    grain_level: 1
+    note: "schema 派生：绑 Addresses.Address_ID"
+
+field_bindings:
+
+  - concept: "address_id"
+    canonical_asset: "addresses.Address_ID"
+    grain_level: 1
+    default_reason: "schema 派生：该库无 time 列，取首个可用列作维度（非时间列，可能是数值列）"
+
+joins:
+
+  - left: "events.Finance_ID"
+    right: "finances.Finance_ID"
+    type: "many_to_one"
+    on_columns: ["Finance_ID"]
+    certified_by: "data-team"
+
+  - left: "events.Address_ID"
+    right: "addresses.Address_ID"
+    type: "many_to_one"
+    on_columns: ["Address_ID"]
+    certified_by: "data-team"
+
+  - left: "events.Location_ID"
+    right: "locations.Location_ID"
+    type: "many_to_one"
+    on_columns: ["Location_ID"]
+    certified_by: "data-team"
+
+  - left: "products_in_events.Product_ID"
+    right: "products.Product_ID"
+    type: "many_to_one"
+    on_columns: ["Product_ID"]
+    certified_by: "data-team"
+
+  - left: "products_in_events.Event_ID"
+    right: "events.Event_ID"
+    type: "many_to_one"
+    on_columns: ["Event_ID"]
+    certified_by: "data-team"
+
+  - left: "parties_in_events.Event_ID"
+    right: "events.Event_ID"
+    type: "many_to_one"
+    on_columns: ["Event_ID"]
+    certified_by: "data-team"
+
+  - left: "parties_in_events.Party_ID"
+    right: "parties.Party_ID"
+    type: "many_to_one"
+    on_columns: ["Party_ID"]
+    certified_by: "data-team"
+
+  - left: "agreements.Event_ID"
+    right: "events.Event_ID"
+    type: "many_to_one"
+    on_columns: ["Event_ID"]
+    certified_by: "data-team"
+
+  - left: "assets_in_events.Event_ID"
+    right: "events.Event_ID"
+    type: "many_to_one"
+    on_columns: ["Event_ID"]
+    certified_by: "data-team"
+
+  - left: "assets_in_events.Event_ID"
+    right: "events.Event_ID"
+    type: "many_to_one"
+    on_columns: ["Event_ID"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "Document_ID", lang: en, maps_to_kind: column, maps_to_ref: "agreements.Document_ID", category: column }
+  - { term: "Event_Type_Code", lang: en, maps_to_kind: column, maps_to_ref: "events.Event_Type_Code", category: column }
+  - { term: "Party_Details", lang: en, maps_to_kind: column, maps_to_ref: "parties.Party_Details", category: column }
+  - { term: "Product_Name", lang: en, maps_to_kind: column, maps_to_ref: "products.Product_Name", category: column }
+  - { term: "Product_Price", lang: en, maps_to_kind: column, maps_to_ref: "products.Product_Price", category: column }
+  - { term: "Product_Type_Code", lang: en, maps_to_kind: column, maps_to_ref: "products.Product_Type_Code", category: column }
+  - { term: "Product_in_Event_ID", lang: en, maps_to_kind: column, maps_to_ref: "products_in_events.Product_in_Event_ID", category: column }
+  - { term: "Role_Code", lang: en, maps_to_kind: column, maps_to_ref: "parties_in_events.Role_Code", category: column }
+  - { term: "address_details", lang: en, maps_to_kind: column, maps_to_ref: "addresses.address_details", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Addresses.Address_ID（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

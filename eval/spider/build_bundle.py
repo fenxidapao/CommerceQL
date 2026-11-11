@@ -128,7 +128,12 @@ def build(db_id, spider_root, out_path):
             if fallback is not None:
                 break
         if fallback is None:
-            raise SystemExit("该库既无 time 列也无 text 列，本手不生成: " + db_id)
+            for table in ordered:
+                name = sqlite_info[table]["columns"][0][0]
+                fallback = (table, name)
+                break
+        if fallback is None:
+            raise SystemExit("该库无任何列可作维度，本手不生成: " + db_id)
         time_table, time_col = fallback
     time_basis_value = time_col if time_is_real else "none（schema 无 time 列）"
 
@@ -285,7 +290,7 @@ def build(db_id, spider_root, out_path):
         add("    default_reason: " + q("schema 派生：该库首条 time 列"))
     else:
         add("    grain_level: 1")
-        add("    default_reason: " + q("schema 派生：该库无 time 列，取首个 text 列作维度（非时间列）"))
+        add("    default_reason: " + q("schema 派生：该库无 time 列，取首个可用列作维度（非时间列，可能是数值列）"))
 
     add("")
     if join_rows:

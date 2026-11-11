@@ -514,7 +514,7 @@ field_bindings:
   - concept: "state_name"
     canonical_asset: "border_info.state_name"
     grain_level: 1
-    default_reason: "schema 派生：该库无 time 列，取首个 text 列作维度（非时间列）"
+    default_reason: "schema 派生：该库无 time 列，取首个可用列作维度（非时间列，可能是数值列）"
 
 joins:
 

@@ -1,0 +1,299 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "manufacturers"
+    physical_asset: "Manufacturers"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 6
+    description: "Spider 物理表 Manufacturers（schema 派生资产，5 列）"
+    columns:
+      - name: "Code"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Name"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "Headquarter"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "Founder"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "Revenue"
+        type: "REAL"
+        comment: "schema 派生列"
+
+  - logical_name: "products"
+    physical_asset: "Products"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 11
+    description: "Spider 物理表 Products（schema 派生资产，4 列）"
+    columns:
+      - name: "Code"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Name"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "Price"
+        type: "DECIMAL"
+        comment: "schema 派生列"
+      - name: "Manufacturer"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "manufacturers_row_count"
+    display_name: "Manufacturers 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Manufacturers.Code)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "manufacturers"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "manufacturers_code_sum"
+    display_name: "Manufacturers.Code SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Manufacturers.Code)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "manufacturers"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "manufacturers_code_avg"
+    display_name: "Manufacturers.Code AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Manufacturers.Code)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "manufacturers"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "manufacturers_revenue_sum"
+    display_name: "Manufacturers.Revenue SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Manufacturers.Revenue)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "manufacturers"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "manufacturers_revenue_avg"
+    display_name: "Manufacturers.Revenue AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Manufacturers.Revenue)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "manufacturers"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_row_count"
+    display_name: "Products 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Products.Code)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_code_sum"
+    display_name: "Products.Code SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Products.Code)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_code_avg"
+    display_name: "Products.Code AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Products.Code)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_price_sum"
+    display_name: "Products.Price SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Products.Price)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_price_avg"
+    display_name: "Products.Price AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Products.Price)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_manufacturer_sum"
+    display_name: "Products.Manufacturer SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Products.Manufacturer)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_manufacturer_avg"
+    display_name: "Products.Manufacturer AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Products.Manufacturer)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "code"
+    bindings:
+      code: "Code"
+    hierarchy: [code]
+    grain_levels: { code: 1 }
+    grain_level: 1
+    note: "schema 派生：绑 Manufacturers.Code"
+
+field_bindings:
+
+  - concept: "code"
+    canonical_asset: "manufacturers.Code"
+    grain_level: 1
+    default_reason: "schema 派生：该库无 time 列，取首个可用列作维度（非时间列，可能是数值列）"
+
+joins:
+
+  - left: "products.Manufacturer"
+    right: "manufacturers.Code"
+    type: "many_to_one"
+    on_columns: ["Manufacturer"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "Founder", lang: en, maps_to_kind: column, maps_to_ref: "manufacturers.Founder", category: column }
+  - { term: "Headquarter", lang: en, maps_to_kind: column, maps_to_ref: "manufacturers.Headquarter", category: column }
+  - { term: "Manufacturer", lang: en, maps_to_kind: column, maps_to_ref: "products.Manufacturer", category: column }
+  - { term: "Price", lang: en, maps_to_kind: column, maps_to_ref: "products.Price", category: column }
+  - { term: "Revenue", lang: en, maps_to_kind: column, maps_to_ref: "manufacturers.Revenue", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Manufacturers.Code（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

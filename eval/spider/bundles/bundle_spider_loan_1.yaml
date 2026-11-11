@@ -1,0 +1,366 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "bank"
+    physical_asset: "bank"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 4
+    description: "Spider 物理表 bank（schema 派生资产，5 列）"
+    columns:
+      - name: "branch_ID"
+        type: "INT"
+        comment: "主键；schema 派生列"
+      - name: "bname"
+        type: "varchar(20)"
+        comment: "schema 派生列"
+      - name: "no_of_customers"
+        type: "INT"
+        comment: "schema 派生列"
+      - name: "city"
+        type: "varchar(10)"
+        comment: "schema 派生列"
+      - name: "state"
+        type: "varchar(20)"
+        comment: "schema 派生列"
+
+  - logical_name: "customer"
+    physical_asset: "customer"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 3
+    description: "Spider 物理表 customer（schema 派生资产，8 列）"
+    columns:
+      - name: "cust_ID"
+        type: "varchar(3)"
+        comment: "主键；schema 派生列"
+      - name: "cust_name"
+        type: "varchar(20)"
+        comment: "schema 派生列"
+      - name: "acc_type"
+        type: "char(1)"
+        comment: "schema 派生列"
+      - name: "acc_bal"
+        type: "INT"
+        comment: "schema 派生列"
+      - name: "no_of_loans"
+        type: "INT"
+        comment: "schema 派生列"
+      - name: "credit_score"
+        type: "INT"
+        comment: "schema 派生列"
+      - name: "branch_ID"
+        type: "INT"
+        comment: "schema 派生列"
+      - name: "state"
+        type: "varchar(20)"
+        comment: "schema 派生列"
+
+  - logical_name: "loan"
+    physical_asset: "loan"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 3
+    description: "Spider 物理表 loan（schema 派生资产，5 列）"
+    columns:
+      - name: "loan_ID"
+        type: "varchar(3)"
+        comment: "主键；schema 派生列"
+      - name: "loan_type"
+        type: "varchar(15)"
+        comment: "schema 派生列"
+      - name: "cust_ID"
+        type: "varchar(3)"
+        comment: "schema 派生列"
+      - name: "branch_ID"
+        type: "varchar(3)"
+        comment: "schema 派生列"
+      - name: "amount"
+        type: "INT"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "bank_row_count"
+    display_name: "bank 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(bank.branch_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "bank"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "bank_no_of_customers_sum"
+    display_name: "bank.no_of_customers SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(bank.no_of_customers)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "bank"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "bank_no_of_customers_avg"
+    display_name: "bank.no_of_customers AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(bank.no_of_customers)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "bank"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_row_count"
+    display_name: "customer 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(customer.cust_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "customer"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_acc_bal_sum"
+    display_name: "customer.acc_bal SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(customer.acc_bal)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "customer"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_acc_bal_avg"
+    display_name: "customer.acc_bal AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(customer.acc_bal)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "customer"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_no_of_loans_sum"
+    display_name: "customer.no_of_loans SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(customer.no_of_loans)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "customer"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_no_of_loans_avg"
+    display_name: "customer.no_of_loans AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(customer.no_of_loans)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "customer"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_credit_score_sum"
+    display_name: "customer.credit_score SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(customer.credit_score)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "customer"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_credit_score_avg"
+    display_name: "customer.credit_score AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(customer.credit_score)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "customer"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "loan_row_count"
+    display_name: "loan 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(loan.loan_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "loan"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "loan_amount_sum"
+    display_name: "loan.amount SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(loan.amount)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "loan"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "loan_amount_avg"
+    display_name: "loan.amount AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(loan.amount)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "loan"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "branch_id"
+    bindings:
+      branch_id: "branch_ID"
+    hierarchy: [branch_id]
+    grain_levels: { branch_id: 1 }
+    grain_level: 1
+    note: "schema 派生：绑 bank.branch_ID"
+
+field_bindings:
+
+  - concept: "branch_id"
+    canonical_asset: "bank.branch_ID"
+    grain_level: 1
+    default_reason: "schema 派生：该库无 time 列，取首个可用列作维度（非时间列，可能是数值列）"
+
+joins:
+
+  - left: "customer.branch_ID"
+    right: "bank.branch_ID"
+    type: "many_to_one"
+    on_columns: ["branch_ID"]
+    certified_by: "data-team"
+
+  - left: "loan.branch_ID"
+    right: "bank.branch_ID"
+    type: "many_to_one"
+    on_columns: ["branch_ID"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "acc_bal", lang: en, maps_to_kind: column, maps_to_ref: "customer.acc_bal", category: column }
+  - { term: "acc_type", lang: en, maps_to_kind: column, maps_to_ref: "customer.acc_type", category: column }
+  - { term: "amount", lang: en, maps_to_kind: column, maps_to_ref: "loan.amount", category: column }
+  - { term: "bname", lang: en, maps_to_kind: column, maps_to_ref: "bank.bname", category: column }
+  - { term: "city", lang: en, maps_to_kind: column, maps_to_ref: "bank.city", category: column }
+  - { term: "credit_score", lang: en, maps_to_kind: column, maps_to_ref: "customer.credit_score", category: column }
+  - { term: "cust_name", lang: en, maps_to_kind: column, maps_to_ref: "customer.cust_name", category: column }
+  - { term: "loan_ID", lang: en, maps_to_kind: column, maps_to_ref: "loan.loan_ID", category: column }
+  - { term: "loan_type", lang: en, maps_to_kind: column, maps_to_ref: "loan.loan_type", category: column }
+  - { term: "no_of_customers", lang: en, maps_to_kind: column, maps_to_ref: "bank.no_of_customers", category: column }
+  - { term: "no_of_loans", lang: en, maps_to_kind: column, maps_to_ref: "customer.no_of_loans", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = bank.branch_ID（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

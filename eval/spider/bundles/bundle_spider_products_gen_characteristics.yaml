@@ -1,0 +1,345 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "characteristics"
+    physical_asset: "Characteristics"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Characteristics（schema 派生资产，5 列）"
+    columns:
+      - name: "characteristic_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "characteristic_type_code"
+        type: "VARCHAR(15)"
+        comment: "schema 派生列"
+      - name: "characteristic_data_type"
+        type: "VARCHAR(10)"
+        comment: "schema 派生列"
+      - name: "characteristic_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "other_characteristic_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "product_characteristics"
+    physical_asset: "Product_Characteristics"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Product_Characteristics（schema 派生资产，3 列）"
+    columns:
+      - name: "product_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "characteristic_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "product_characteristic_value"
+        type: "VARCHAR(50)"
+        comment: "schema 派生列"
+
+  - logical_name: "products"
+    physical_asset: "Products"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Products（schema 派生资产，8 列）"
+    columns:
+      - name: "product_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "color_code"
+        type: "VARCHAR(15)"
+        comment: "schema 派生列"
+      - name: "product_category_code"
+        type: "VARCHAR(15)"
+        comment: "schema 派生列"
+      - name: "product_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "typical_buying_price"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "typical_selling_price"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "product_description"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "other_product_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "ref_characteristic_types"
+    physical_asset: "Ref_Characteristic_Types"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 2
+    description: "Spider 物理表 Ref_Characteristic_Types（schema 派生资产，2 列）"
+    columns:
+      - name: "characteristic_type_code"
+        type: "VARCHAR(15)"
+        comment: "主键；schema 派生列"
+      - name: "characteristic_type_description"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+
+  - logical_name: "ref_colors"
+    physical_asset: "Ref_Colors"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 8
+    description: "Spider 物理表 Ref_Colors（schema 派生资产，2 列）"
+    columns:
+      - name: "color_code"
+        type: "VARCHAR(15)"
+        comment: "主键；schema 派生列"
+      - name: "color_description"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+
+  - logical_name: "ref_product_categories"
+    physical_asset: "Ref_Product_Categories"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 3
+    description: "Spider 物理表 Ref_Product_Categories（schema 派生资产，3 列）"
+    columns:
+      - name: "product_category_code"
+        type: "VARCHAR(15)"
+        comment: "主键；schema 派生列"
+      - name: "product_category_description"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "unit_of_measure"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "characteristics_row_count"
+    display_name: "Characteristics 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Characteristics.characteristic_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "characteristics"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "product_characteristics_row_count"
+    display_name: "Product_Characteristics 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Product_Characteristics.product_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "product_characteristics"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_row_count"
+    display_name: "Products 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Products.product_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "ref_characteristic_types_row_count"
+    display_name: "Ref_Characteristic_Types 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Ref_Characteristic_Types.characteristic_type_code)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "ref_characteristic_types"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "ref_colors_row_count"
+    display_name: "Ref_Colors 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Ref_Colors.color_code)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "ref_colors"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "ref_product_categories_row_count"
+    display_name: "Ref_Product_Categories 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Ref_Product_Categories.product_category_code)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "ref_product_categories"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "characteristic_id"
+    bindings:
+      characteristic_id: "characteristic_id"
+    hierarchy: [characteristic_id]
+    grain_levels: { characteristic_id: 1 }
+    grain_level: 1
+    note: "schema 派生：绑 Characteristics.characteristic_id"
+
+field_bindings:
+
+  - concept: "characteristic_id"
+    canonical_asset: "characteristics.characteristic_id"
+    grain_level: 1
+    default_reason: "schema 派生：该库无 time 列，取首个可用列作维度（非时间列，可能是数值列）"
+
+joins:
+
+  - left: "characteristics.characteristic_type_code"
+    right: "ref_characteristic_types.characteristic_type_code"
+    type: "many_to_one"
+    on_columns: ["characteristic_type_code"]
+    certified_by: "data-team"
+
+  - left: "products.color_code"
+    right: "ref_colors.color_code"
+    type: "many_to_one"
+    on_columns: ["color_code"]
+    certified_by: "data-team"
+
+  - left: "products.product_category_code"
+    right: "ref_product_categories.product_category_code"
+    type: "many_to_one"
+    on_columns: ["product_category_code"]
+    certified_by: "data-team"
+
+  - left: "product_characteristics.product_id"
+    right: "products.product_id"
+    type: "many_to_one"
+    on_columns: ["product_id"]
+    certified_by: "data-team"
+
+  - left: "product_characteristics.characteristic_id"
+    right: "characteristics.characteristic_id"
+    type: "many_to_one"
+    on_columns: ["characteristic_id"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "characteristic_data_type", lang: en, maps_to_kind: column, maps_to_ref: "characteristics.characteristic_data_type", category: column }
+  - { term: "characteristic_name", lang: en, maps_to_kind: column, maps_to_ref: "characteristics.characteristic_name", category: column }
+  - { term: "characteristic_type_description", lang: en, maps_to_kind: column, maps_to_ref: "ref_characteristic_types.characteristic_type_description", category: column }
+  - { term: "color_description", lang: en, maps_to_kind: column, maps_to_ref: "ref_colors.color_description", category: column }
+  - { term: "other_characteristic_details", lang: en, maps_to_kind: column, maps_to_ref: "characteristics.other_characteristic_details", category: column }
+  - { term: "other_product_details", lang: en, maps_to_kind: column, maps_to_ref: "products.other_product_details", category: column }
+  - { term: "product_category_description", lang: en, maps_to_kind: column, maps_to_ref: "ref_product_categories.product_category_description", category: column }
+  - { term: "product_characteristic_value", lang: en, maps_to_kind: column, maps_to_ref: "product_characteristics.product_characteristic_value", category: column }
+  - { term: "product_description", lang: en, maps_to_kind: column, maps_to_ref: "products.product_description", category: column }
+  - { term: "product_name", lang: en, maps_to_kind: column, maps_to_ref: "products.product_name", category: column }
+  - { term: "typical_buying_price", lang: en, maps_to_kind: column, maps_to_ref: "products.typical_buying_price", category: column }
+  - { term: "typical_selling_price", lang: en, maps_to_kind: column, maps_to_ref: "products.typical_selling_price", category: column }
+  - { term: "unit_of_measure", lang: en, maps_to_kind: column, maps_to_ref: "ref_product_categories.unit_of_measure", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Characteristics.characteristic_id（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

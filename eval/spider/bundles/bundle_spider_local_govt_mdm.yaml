@@ -1,0 +1,386 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "benefits_overpayments"
+    physical_asset: "Benefits_Overpayments"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 4
+    description: "Spider 物理表 Benefits_Overpayments（schema 派生资产，2 列）"
+    columns:
+      - name: "council_tax_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "cmi_cross_ref_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "business_rates"
+    physical_asset: "Business_Rates"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 3
+    description: "Spider 物理表 Business_Rates（schema 派生资产，2 列）"
+    columns:
+      - name: "business_rates_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "cmi_cross_ref_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "cmi_cross_references"
+    physical_asset: "CMI_Cross_References"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 21
+    description: "Spider 物理表 CMI_Cross_References（schema 派生资产，3 列）"
+    columns:
+      - name: "cmi_cross_ref_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "master_customer_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "source_system_code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+
+  - logical_name: "council_tax"
+    physical_asset: "Council_Tax"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 6
+    description: "Spider 物理表 Council_Tax（schema 派生资产，2 列）"
+    columns:
+      - name: "council_tax_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "cmi_cross_ref_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "customer_master_index"
+    physical_asset: "Customer_Master_Index"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 9
+    description: "Spider 物理表 Customer_Master_Index（schema 派生资产，2 列）"
+    columns:
+      - name: "master_customer_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "cmi_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "electoral_register"
+    physical_asset: "Electoral_Register"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 6
+    description: "Spider 物理表 Electoral_Register（schema 派生资产，2 列）"
+    columns:
+      - name: "electoral_register_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "cmi_cross_ref_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "parking_fines"
+    physical_asset: "Parking_Fines"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 2
+    description: "Spider 物理表 Parking_Fines（schema 派生资产，2 列）"
+    columns:
+      - name: "council_tax_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "cmi_cross_ref_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "rent_arrears"
+    physical_asset: "Rent_Arrears"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 4
+    description: "Spider 物理表 Rent_Arrears（schema 派生资产，2 列）"
+    columns:
+      - name: "council_tax_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "cmi_cross_ref_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "benefits_overpayments_row_count"
+    display_name: "Benefits_Overpayments 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Benefits_Overpayments.council_tax_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "benefits_overpayments"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "business_rates_row_count"
+    display_name: "Business_Rates 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Business_Rates.business_rates_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "business_rates"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "cmi_cross_references_row_count"
+    display_name: "CMI_Cross_References 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(CMI_Cross_References.cmi_cross_ref_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "cmi_cross_references"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "council_tax_row_count"
+    display_name: "Council_Tax 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Council_Tax.council_tax_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "council_tax"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_master_index_row_count"
+    display_name: "Customer_Master_Index 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customer_Master_Index.master_customer_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "customer_master_index"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "electoral_register_row_count"
+    display_name: "Electoral_Register 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Electoral_Register.electoral_register_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "electoral_register"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "parking_fines_row_count"
+    display_name: "Parking_Fines 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Parking_Fines.council_tax_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "parking_fines"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "rent_arrears_row_count"
+    display_name: "Rent_Arrears 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Rent_Arrears.council_tax_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "rent_arrears"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "council_tax_id"
+    bindings:
+      council_tax_id: "council_tax_id"
+    hierarchy: [council_tax_id]
+    grain_levels: { council_tax_id: 1 }
+    grain_level: 1
+    note: "schema 派生：绑 Benefits_Overpayments.council_tax_id"
+
+field_bindings:
+
+  - concept: "council_tax_id"
+    canonical_asset: "benefits_overpayments.council_tax_id"
+    grain_level: 1
+    default_reason: "schema 派生：该库无 time 列，取首个可用列作维度（非时间列，可能是数值列）"
+
+joins:
+
+  - left: "cmi_cross_references.master_customer_id"
+    right: "customer_master_index.master_customer_id"
+    type: "many_to_one"
+    on_columns: ["master_customer_id"]
+    certified_by: "data-team"
+
+  - left: "council_tax.cmi_cross_ref_id"
+    right: "cmi_cross_references.cmi_cross_ref_id"
+    type: "many_to_one"
+    on_columns: ["cmi_cross_ref_id"]
+    certified_by: "data-team"
+
+  - left: "business_rates.cmi_cross_ref_id"
+    right: "cmi_cross_references.cmi_cross_ref_id"
+    type: "many_to_one"
+    on_columns: ["cmi_cross_ref_id"]
+    certified_by: "data-team"
+
+  - left: "benefits_overpayments.cmi_cross_ref_id"
+    right: "cmi_cross_references.cmi_cross_ref_id"
+    type: "many_to_one"
+    on_columns: ["cmi_cross_ref_id"]
+    certified_by: "data-team"
+
+  - left: "parking_fines.cmi_cross_ref_id"
+    right: "cmi_cross_references.cmi_cross_ref_id"
+    type: "many_to_one"
+    on_columns: ["cmi_cross_ref_id"]
+    certified_by: "data-team"
+
+  - left: "rent_arrears.cmi_cross_ref_id"
+    right: "cmi_cross_references.cmi_cross_ref_id"
+    type: "many_to_one"
+    on_columns: ["cmi_cross_ref_id"]
+    certified_by: "data-team"
+
+  - left: "electoral_register.cmi_cross_ref_id"
+    right: "cmi_cross_references.cmi_cross_ref_id"
+    type: "many_to_one"
+    on_columns: ["cmi_cross_ref_id"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "business_rates_id", lang: en, maps_to_kind: column, maps_to_ref: "business_rates.business_rates_id", category: column }
+  - { term: "cmi_details", lang: en, maps_to_kind: column, maps_to_ref: "customer_master_index.cmi_details", category: column }
+  - { term: "electoral_register_id", lang: en, maps_to_kind: column, maps_to_ref: "electoral_register.electoral_register_id", category: column }
+  - { term: "source_system_code", lang: en, maps_to_kind: column, maps_to_ref: "cmi_cross_references.source_system_code", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Benefits_Overpayments.council_tax_id（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context
