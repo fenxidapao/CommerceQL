@@ -1,0 +1,94 @@
+{
+  "schema": "U183_TIME_SHAPE_PROBE/v1",
+  "probe": "eval/olist/probe_u183_time_shape.py",
+  "recompute": "python eval/olist/probe_u183_time_shape.py",
+  "db": "data/olist/olist_sandbox.db (mode=ro, 源库零改动)",
+  "timestamp_samples": [
+    "2016-09-04 21:15:19",
+    "2016-09-05 00:15:34",
+    "2016-09-13 15:24:19"
+  ],
+  "n_timestamps_with_T": 0,
+  "n_timestamps_total": 99441,
+  "arms": [
+    {
+      "arm": "gold_literal_right_open",
+      "lo": "'2018-01-01'",
+      "op": "<",
+      "hi": "'2018-07-01'",
+      "result": [
+        [
+          5614133.04
+        ]
+      ],
+      "error": null,
+      "same_as_gold": true
+    },
+    {
+      "arm": "param_T_right_open",
+      "lo": "'2018-01-01T00:00:00'",
+      "op": "<",
+      "hi": "'2018-07-01T00:00:00'",
+      "result": [
+        [
+          5631554.3
+        ]
+      ],
+      "error": null,
+      "same_as_gold": false
+    },
+    {
+      "arm": "param_space_right_open",
+      "lo": "'2018-01-01 00:00:00'",
+      "op": "<",
+      "hi": "'2018-07-01 00:00:00'",
+      "result": [
+        [
+          5614133.04
+        ]
+      ],
+      "error": null,
+      "same_as_gold": true
+    },
+    {
+      "arm": "param_T_closed_end",
+      "lo": "'2018-01-01T00:00:00'",
+      "op": "<=",
+      "hi": "'2018-06-30T23:59:59'",
+      "result": [
+        [
+          5607184.83
+        ]
+      ],
+      "error": null,
+      "same_as_gold": false
+    },
+    {
+      "arm": "param_space_closed_end",
+      "lo": "'2018-01-01 00:00:00'",
+      "op": "<=",
+      "hi": "'2018-06-30 23:59:59'",
+      "result": [
+        [
+          5614133.04
+        ]
+      ],
+      "error": null,
+      "same_as_gold": true
+    },
+    {
+      "arm": "param_date_only_closed_end",
+      "lo": "'2018-01-01'",
+      "op": "<=",
+      "hi": "'2018-06-30'",
+      "result": [
+        [
+          5598753.16
+        ]
+      ],
+      "error": null,
+      "same_as_gold": false
+    }
+  ],
+  "verdict": "各臂结果与 gold 字面量对照；same_as_gold=False 即为该形态致错"
+}

@@ -1,0 +1,651 @@
+{
+  "schema": "U183_PARAM_GAIN_PROBE/v1",
+  "probe": "eval/olist/probe_u183_param_gain.py",
+  "recompute": "python eval/olist/probe_u183_param_gain.py",
+  "rule": "sql_params 值：T→空格；纯日期上界补 23:59:59。SQL 文本一字未改 ⇒ 匣带 key 不变，可 replay 验证",
+  "translate_route": "eval/sqlite_exec.py::to_sqlite_sql",
+  "db": "data/olist/olist_sandbox.db (mode=ro, 零改动)",
+  "n_records": 28,
+  "n_as_is_equivalent": 0,
+  "n_recovered_by_param_normalization": 20,
+  "n_still_wrong": 8,
+  "recovered": [
+    {
+      "batch": "r1",
+      "case_id": "o19"
+    },
+    {
+      "batch": "r1",
+      "case_id": "n23"
+    },
+    {
+      "batch": "r1",
+      "case_id": "n25"
+    },
+    {
+      "batch": "r1",
+      "case_id": "n28"
+    },
+    {
+      "batch": "r1",
+      "case_id": "n30"
+    },
+    {
+      "batch": "r1",
+      "case_id": "n33"
+    },
+    {
+      "batch": "r2",
+      "case_id": "o24"
+    },
+    {
+      "batch": "r2",
+      "case_id": "o31"
+    },
+    {
+      "batch": "r2",
+      "case_id": "o35"
+    },
+    {
+      "batch": "r2",
+      "case_id": "n23"
+    },
+    {
+      "batch": "r2",
+      "case_id": "n26"
+    },
+    {
+      "batch": "r2",
+      "case_id": "n28"
+    },
+    {
+      "batch": "r2",
+      "case_id": "n29"
+    },
+    {
+      "batch": "r2",
+      "case_id": "n33"
+    },
+    {
+      "batch": "r3",
+      "case_id": "g01"
+    },
+    {
+      "batch": "r3",
+      "case_id": "g05"
+    },
+    {
+      "batch": "r3",
+      "case_id": "o30"
+    },
+    {
+      "batch": "r3",
+      "case_id": "n23"
+    },
+    {
+      "batch": "r3",
+      "case_id": "n25"
+    },
+    {
+      "batch": "r3",
+      "case_id": "n26"
+    }
+  ],
+  "still_wrong": [
+    {
+      "batch": "r1",
+      "case_id": "o38",
+      "diffs": [
+        "行多重集差异：仅金标 27 行 / 仅预测 27 行",
+        "金标行无法在预测结果中找到：('AC', 4.28125)"
+      ],
+      "error": null
+    },
+    {
+      "batch": "r1",
+      "case_id": "n03",
+      "diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(51813.38,)"
+      ],
+      "error": null
+    },
+    {
+      "batch": "r1",
+      "case_id": "n37",
+      "diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "error": null
+    },
+    {
+      "batch": "r2",
+      "case_id": "n35",
+      "diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(4.047114937180083,)"
+      ],
+      "error": null
+    },
+    {
+      "batch": "r2",
+      "case_id": "n37",
+      "diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "error": null
+    },
+    {
+      "batch": "r3",
+      "case_id": "o05",
+      "diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "error": null
+    },
+    {
+      "batch": "r3",
+      "case_id": "o38",
+      "diffs": [
+        "行多重集差异：仅金标 27 行 / 仅预测 27 行",
+        "金标行无法在预测结果中找到：('AC', 4.28125)"
+      ],
+      "error": null
+    },
+    {
+      "batch": "r3",
+      "case_id": "n37",
+      "diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "error": null
+    }
+  ],
+  "records": [
+    {
+      "batch": "r1",
+      "case_id": "o19",
+      "params_original": {
+        "start_ts": "2017-10-01",
+        "end_ts": "2017-12-31"
+      },
+      "params_normalized": {
+        "start_ts": "2017-10-01",
+        "end_ts": "2017-12-31 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r1",
+      "case_id": "o38",
+      "params_original": {
+        "start_ts": "2018-01-01",
+        "end_ts": "2019-01-01"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01",
+        "end_ts": "2019-01-01 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": false,
+      "normalized_diffs": [
+        "行多重集差异：仅金标 27 行 / 仅预测 27 行",
+        "金标行无法在预测结果中找到：('AC', 4.28125)"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "n03",
+      "params_original": {
+        "start_ts": "2016-07-01T00:00:00",
+        "end_ts": "2017-01-01T00:00:00"
+      },
+      "params_normalized": {
+        "start_ts": "2016-07-01 00:00:00",
+        "end_ts": "2017-01-01 00:00:00"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": false,
+      "normalized_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(51813.38,)"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "n23",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-07-01T00:00:00"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01 00:00:00",
+        "end_ts": "2018-07-01 00:00:00"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r1",
+      "case_id": "n25",
+      "params_original": {
+        "status_canceled": "canceled",
+        "status_unavailable": "unavailable",
+        "start_ts": "2017-01-01",
+        "end_ts": "2017-12-31"
+      },
+      "params_normalized": {
+        "status_canceled": "canceled",
+        "status_unavailable": "unavailable",
+        "start_ts": "2017-01-01",
+        "end_ts": "2017-12-31 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r1",
+      "case_id": "n28",
+      "params_original": {
+        "status_canceled": "canceled",
+        "status_unavailable": "unavailable",
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-12-31T23:59:59"
+      },
+      "params_normalized": {
+        "status_canceled": "canceled",
+        "status_unavailable": "unavailable",
+        "start_ts": "2018-01-01 00:00:00",
+        "end_ts": "2018-12-31 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r1",
+      "case_id": "n30",
+      "params_original": {
+        "start_ts": "2017-01-01T00:00:00",
+        "end_ts": "2017-07-01T00:00:00"
+      },
+      "params_normalized": {
+        "start_ts": "2017-01-01 00:00:00",
+        "end_ts": "2017-07-01 00:00:00"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r1",
+      "case_id": "n33",
+      "params_original": {
+        "start_ts": "2017-01-01T00:00:00",
+        "end_ts": "2018-01-01T00:00:00"
+      },
+      "params_normalized": {
+        "start_ts": "2017-01-01 00:00:00",
+        "end_ts": "2018-01-01 00:00:00"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r1",
+      "case_id": "n37",
+      "params_original": {
+        "start_ts": "2018-01-01",
+        "end_ts": "2018-12-31"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01",
+        "end_ts": "2018-12-31 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": false,
+      "normalized_diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ]
+    },
+    {
+      "batch": "r2",
+      "case_id": "o24",
+      "params_original": {
+        "status_canceled": "canceled",
+        "status_unavailable": "unavailable",
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00"
+      },
+      "params_normalized": {
+        "status_canceled": "canceled",
+        "status_unavailable": "unavailable",
+        "start_ts": "2018-01-01 00:00:00",
+        "end_ts": "2019-01-01 00:00:00"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r2",
+      "case_id": "o31",
+      "params_original": {
+        "start_ts": "2017-01-01",
+        "end_ts": "2017-12-31"
+      },
+      "params_normalized": {
+        "start_ts": "2017-01-01",
+        "end_ts": "2017-12-31 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r2",
+      "case_id": "o35",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01 00:00:00",
+        "end_ts": "2019-01-01 00:00:00"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r2",
+      "case_id": "n23",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-07-01T00:00:00"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01 00:00:00",
+        "end_ts": "2018-07-01 00:00:00"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r2",
+      "case_id": "n26",
+      "params_original": {
+        "start_ts": "2017-01-01T00:00:00",
+        "end_ts": "2017-07-01T00:00:00"
+      },
+      "params_normalized": {
+        "start_ts": "2017-01-01 00:00:00",
+        "end_ts": "2017-07-01 00:00:00"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r2",
+      "case_id": "n28",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01 00:00:00",
+        "end_ts": "2019-01-01 00:00:00"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r2",
+      "case_id": "n29",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-12-31T23:59:59"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01 00:00:00",
+        "end_ts": "2018-12-31 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r2",
+      "case_id": "n33",
+      "params_original": {
+        "st_canceled": "canceled",
+        "st_unavailable": "unavailable",
+        "ts_start": "2017-01-01T00:00:00",
+        "ts_end": "2018-01-01T00:00:00"
+      },
+      "params_normalized": {
+        "st_canceled": "canceled",
+        "st_unavailable": "unavailable",
+        "ts_start": "2017-01-01 00:00:00",
+        "ts_end": "2018-01-01 00:00:00"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r2",
+      "case_id": "n35",
+      "params_original": {
+        "start_ts": "2017-10-01",
+        "end_ts": "2018-01-01"
+      },
+      "params_normalized": {
+        "start_ts": "2017-10-01",
+        "end_ts": "2018-01-01 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": false,
+      "normalized_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(4.047114937180083,)"
+      ]
+    },
+    {
+      "batch": "r2",
+      "case_id": "n37",
+      "params_original": {
+        "start_ts": "2018-01-01",
+        "end_ts": "2018-12-31"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01",
+        "end_ts": "2018-12-31 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": false,
+      "normalized_diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "g01",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-12-31T23:59:59"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01 00:00:00",
+        "end_ts": "2018-12-31 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r3",
+      "case_id": "g05",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-12-31T23:59:59"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01 00:00:00",
+        "end_ts": "2018-12-31 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r3",
+      "case_id": "o05",
+      "params_original": {
+        "start_ts": "2017-10-01",
+        "end_ts": "2018-01-01"
+      },
+      "params_normalized": {
+        "start_ts": "2017-10-01",
+        "end_ts": "2018-01-01 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": false,
+      "normalized_diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "o30",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-12-31T23:59:59"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01 00:00:00",
+        "end_ts": "2018-12-31 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r3",
+      "case_id": "o38",
+      "params_original": {
+        "start_ts": "2018-01-01",
+        "end_ts": "2018-12-31"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01",
+        "end_ts": "2018-12-31 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": false,
+      "normalized_diffs": [
+        "行多重集差异：仅金标 27 行 / 仅预测 27 行",
+        "金标行无法在预测结果中找到：('AC', 4.28125)"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "n23",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-07-01T00:00:00"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01 00:00:00",
+        "end_ts": "2018-07-01 00:00:00"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r3",
+      "case_id": "n25",
+      "params_original": {
+        "start_ts": "2017-01-01",
+        "end_ts": "2017-12-31"
+      },
+      "params_normalized": {
+        "start_ts": "2017-01-01",
+        "end_ts": "2017-12-31 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r3",
+      "case_id": "n26",
+      "params_original": {
+        "start_ts": "2017-01-01T00:00:00",
+        "end_ts": "2017-07-01T00:00:00"
+      },
+      "params_normalized": {
+        "start_ts": "2017-01-01 00:00:00",
+        "end_ts": "2017-07-01 00:00:00"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": true,
+      "normalized_diffs": []
+    },
+    {
+      "batch": "r3",
+      "case_id": "n37",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-12-31T23:59:59"
+      },
+      "params_normalized": {
+        "start_ts": "2018-01-01 00:00:00",
+        "end_ts": "2018-12-31 23:59:59"
+      },
+      "changed": true,
+      "as_is_equivalent": false,
+      "normalized_equivalent": false,
+      "normalized_diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ]
+    }
+  ],
+  "verdict": "参数归一属于确定性修复，不进请求体、不改冻结集、不重录匣带；剩余条目另需改 prompt 或投票"
+}

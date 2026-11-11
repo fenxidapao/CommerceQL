@@ -1,0 +1,854 @@
+{
+  "schema": "U183_BADCASE_V3_MANUAL/v1",
+  "builder": "eval/olist/build_badcase_v3_manual.py",
+  "recompute": "python eval/olist/build_badcase_v3_manual.py",
+  "n_records": 28,
+  "n_unique_cases": 19,
+  "categories": {
+    "time_semantics": 20,
+    "schema_linking_miss": 6,
+    "metric_definition": 2
+  },
+  "fix_levers": {
+    "param_normalization": 20,
+    "prompt_or_voting": 8
+  },
+  "unattributed_before": {
+    "n": 29,
+    "denom": 285,
+    "ratio": 0.1018
+  },
+  "unattributed_after": {
+    "n": 6,
+    "denom": 285,
+    "ratio": 0.0211,
+    "gate": "eval/attribution.py:16 要求 <= 10%"
+  },
+  "counterfactual": {
+    "probe": "eval/olist/probe_u183_param_gain.py",
+    "n_recovered": 20,
+    "n_still_wrong": 8,
+    "rule": "sql_params 值：T→空格；纯日期上界补 23:59:59。SQL 文本一字未改 ⇒ 匣带 key 不变，可 replay 验证"
+  },
+  "records": [
+    {
+      "batch": "r1",
+      "case_id": "o19",
+      "question": "2017 年第四季度的客单价是多少？",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "high",
+      "category_manual": "time_semantics",
+      "cause_manual": "2017Q4 客单价：上界 <= 2017-12-31 纯日期",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "time_semantics",
+      "business_knowledge_required": [
+        "time:quarter"
+      ],
+      "caliber_note": "季度边界半开区间；与 o05 同时间窗。",
+      "params_original": {
+        "start_ts": "2017-10-01",
+        "end_ts": "2017-12-31"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(159.14377316657192,)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[o19].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r1.json records[o19].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r1",
+      "case_id": "o38",
+      "question": "2018 年各州的平均评分是多少？",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "high",
+      "category_manual": "schema_linking_miss",
+      "cause_manual": "2018 各州平均评分：时间基准列误用 order_purchase_timestamp，且别名/排序与 gold 不一致",
+      "fix_lever": "prompt_or_voting",
+      "category_machine_old": "time_semantics",
+      "business_knowledge_required": [
+        "hierarchy:state",
+        "time:year"
+      ],
+      "caliber_note": "评价表 join 订单取州；不做状态过滤。",
+      "params_original": {
+        "start_ts": "2018-01-01",
+        "end_ts": "2019-01-01"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 27 行 / 仅预测 27 行",
+        "金标行无法在预测结果中找到：('AC', 4.28125)"
+      ],
+      "param_normalization_recovered": false,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[o38].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r1.json records[o38].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r1",
+      "case_id": "n03",
+      "question": "2016 年下半年的 GMV 是多少？",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "category_manual": "metric_definition",
+      "cause_manual": "2016H2 GMV 被写成 AOV 的 SUM/NULLIF(COUNT DISTINCT) 除法式，别名仍叫 gmv",
+      "fix_lever": "prompt_or_voting",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "数据从 2016-09 起，空月份不影响口径。",
+      "params_original": {
+        "start_ts": "2016-07-01T00:00:00",
+        "end_ts": "2017-01-01T00:00:00"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(51813.38,)"
+      ],
+      "param_normalization_recovered": false,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n03].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r1.json records[n03].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r1",
+      "case_id": "n23",
+      "question": "2018 年上半年的商品销售额（不含运费）是多少？",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2018H1 商品销售额：两界均带 T 分隔，字符串比较多算次日",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "上半年口径；与 o22（全年/月度）互补。",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-07-01T00:00:00"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(5614133.04,)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n23].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r1.json records[n23].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r1",
+      "case_id": "n25",
+      "question": "2017 年各州商品销售额（不含运费）是多少？",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2017 各州商品销售额：上界 <= 2017-12-31 纯日期，漏掉当日全部数据",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "州级商品销售额；state 在订单侧。",
+      "params_original": {
+        "status_canceled": "canceled",
+        "status_unavailable": "unavailable",
+        "start_ts": "2017-01-01",
+        "end_ts": "2017-12-31"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 16 行 / 仅预测 16 行",
+        "金标行无法在预测结果中找到：('BA', 234056.77)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n25].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r1.json records[n25].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r1",
+      "case_id": "n28",
+      "question": "2018 年运费总额最高的 5 个州是哪些？",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2018 运费 Top5 州：上界 <= 2018-12-31T23:59:59",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "州级运费降序前 5。",
+      "params_original": {
+        "status_canceled": "canceled",
+        "status_unavailable": "unavailable",
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-12-31T23:59:59"
+      },
+      "verdict_diffs": [
+        "第 0 行 列 'freight_total'：金标 413473.04 vs 预测 413106.1",
+        "第 1 行 列 'freight_total'：金标 162747.53 vs 预测 162566.17",
+        "第 2 行 列 'freight_total'：金标 149925.04 vs 预测 149711.67",
+        "第 3 行 列 'freight_total'：金标 72773.85 vs 预测 72625.04",
+        "第 4 行 列 'freight_total'：金标 66965.63 vs 预测 66920.04",
+        "已跳过容差重匹配（两侧均要求 ORDER BY ⇒ 行序参与判据）"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n28].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r1.json records[n28].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r1",
+      "case_id": "n30",
+      "question": "2017 年上半年的商品件数是多少？",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2017H1 件数：两界 T 分隔",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "件数按明细行计，不加 DISTINCT。",
+      "params_original": {
+        "start_ts": "2017-01-01T00:00:00",
+        "end_ts": "2017-07-01T00:00:00"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(16201,)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n30].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r1.json records[n30].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r1",
+      "case_id": "n33",
+      "question": "2017 年商品件数最少的 5 个州是哪些？",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2017 件数最少 5 州：两界 T 分隔；另有次排序键但非致错主因",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "州级升序前 5；分母是有效单明细。",
+      "params_original": {
+        "start_ts": "2017-01-01T00:00:00",
+        "end_ts": "2018-01-01T00:00:00"
+      },
+      "verdict_diffs": [
+        "第 4 行 列 'item_cnt'：金标 150 vs 预测 151",
+        "已跳过容差重匹配（两侧均要求 ORDER BY ⇒ 行序参与判据）"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n33].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r1.json records[n33].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r1",
+      "case_id": "n37",
+      "question": "2018 年平均评分最高的 5 个州是哪些？",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "category_manual": "schema_linking_miss",
+      "cause_manual": "2018 评分最高 5 州：时间基准列误用 order_purchase_timestamp，并多加订单状态过滤",
+      "fix_lever": "prompt_or_voting",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "评价表 join 订单取州；升序/降序以平均分为对象。",
+      "params_original": {
+        "start_ts": "2018-01-01",
+        "end_ts": "2018-12-31"
+      },
+      "verdict_diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "param_normalization_recovered": false,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n37].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r1.json records[n37].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r2",
+      "case_id": "o24",
+      "question": "2018 年各品类的商品销售额（不含运费）是多少？",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "medium",
+      "category_manual": "time_semantics",
+      "cause_manual": "2018 各品类销售额：两界 T 分隔",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [
+        "hierarchy:category"
+      ],
+      "caliber_note": "三表 join；品类经 product 维表翻译，空品类落空值组。",
+      "params_original": {
+        "status_canceled": "canceled",
+        "status_unavailable": "unavailable",
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00"
+      },
+      "verdict_diffs": [
+        "第 0 行 列 'item_gmv'：金标 770002.8099999999 vs 预测 769177.4",
+        "第 1 行 列 'item_gmv'：金标 708305.95 vs 预测 707157.27",
+        "第 2 行 列 'item_gmv'：金标 537514.13 vs 预测 537158.86",
+        "第 3 行 列 'item_gmv'：金标 530182.18 vs 预测 529799.18",
+        "第 4 行 列 'item_gmv'：金标 502432.09 vs 预测 502393.09",
+        "已跳过容差重匹配（两侧均要求 ORDER BY ⇒ 行序参与判据）"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[o24].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r2.json records[o24].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r2",
+      "case_id": "o31",
+      "question": "2017 年一共卖出了多少件商品？",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "high",
+      "category_manual": "time_semantics",
+      "cause_manual": "2017 件数：上界 <= 2017-12-31 纯日期",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [
+        "metric:item_cnt"
+      ],
+      "caliber_note": "件数 = 有效单的明细行数；粒度是 order_item。",
+      "params_original": {
+        "start_ts": "2017-01-01",
+        "end_ts": "2017-12-31"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(50617,)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[o31].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r2.json records[o31].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r2",
+      "case_id": "o35",
+      "question": "2018 年的订单量和商品件数分别是多少？",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "medium",
+      "category_manual": "time_semantics",
+      "cause_manual": "2018 订单量+件数：两界 T 分隔",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [
+        "synonym:件数"
+      ],
+      "caliber_note": "多指标题：订单级 DISTINCT 与明细行 COUNT 同框，故意展示两种粒度。",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(53531, 61136)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[o35].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r2.json records[o35].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r2",
+      "case_id": "n23",
+      "question": "2018 年上半年的商品销售额（不含运费）是多少？",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2018H1 商品销售额：两界均带 T 分隔，字符串比较多算次日",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "上半年口径；与 o22（全年/月度）互补。",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-07-01T00:00:00"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(5614133.04,)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n23].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r2.json records[n23].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r2",
+      "case_id": "n26",
+      "question": "2017 年上半年的运费总额是多少？",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2017H1 运费：两界 T 分隔",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "运费只在明细行有值。",
+      "params_original": {
+        "start_ts": "2017-01-01T00:00:00",
+        "end_ts": "2017-07-01T00:00:00"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(314017.07,)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n26].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r2.json records[n26].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r2",
+      "case_id": "n28",
+      "question": "2018 年运费总额最高的 5 个州是哪些？",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2018 运费 Top5 州：上界 <= 2018-12-31T23:59:59",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "州级运费降序前 5。",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2019-01-01T00:00:00"
+      },
+      "verdict_diffs": [
+        "第 0 行 列 'freight_total'：金标 413473.04 vs 预测 413106.1",
+        "第 1 行 列 'freight_total'：金标 162747.53 vs 预测 162566.17",
+        "第 2 行 列 'freight_total'：金标 149925.04 vs 预测 149711.67",
+        "第 3 行 列 'freight_total'：金标 72773.85 vs 预测 72625.04",
+        "第 4 行 列 'freight_total'：金标 66965.63 vs 预测 66920.04",
+        "已跳过容差重匹配（两侧均要求 ORDER BY ⇒ 行序参与判据）"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n28].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r2.json records[n28].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r2",
+      "case_id": "n29",
+      "question": "2018 年运费总额最低的 5 个品类是哪些？",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2018 运费最低 5 品类：上界 <= 2018-12-31T23:59:59",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "品类聚合需 product 表；升序前 5 可能含空品类组。",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-12-31T23:59:59"
+      },
+      "verdict_diffs": [
+        "第 3 行 列 'freight_total'：金标 109.85 vs 预测 91.82",
+        "已跳过容差重匹配（两侧均要求 ORDER BY ⇒ 行序参与判据）"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n29].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r2.json records[n29].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r2",
+      "case_id": "n33",
+      "question": "2017 年商品件数最少的 5 个州是哪些？",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2017 件数最少 5 州：两界 T 分隔；另有次排序键但非致错主因",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "州级升序前 5；分母是有效单明细。",
+      "params_original": {
+        "st_canceled": "canceled",
+        "st_unavailable": "unavailable",
+        "ts_start": "2017-01-01T00:00:00",
+        "ts_end": "2018-01-01T00:00:00"
+      },
+      "verdict_diffs": [
+        "第 4 行 列 'item_cnt'：金标 150 vs 预测 151",
+        "已跳过容差重匹配（两侧均要求 ORDER BY ⇒ 行序参与判据）"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n33].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r2.json records[n33].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r2",
+      "case_id": "n35",
+      "question": "2017 年第四季度的平均评分是多少？",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "category_manual": "schema_linking_miss",
+      "cause_manual": "2017Q4 平均评分：gold 只用 review 表按 review_creation_date；预测多 JOIN orders 并改用 order_purchase_timestamp",
+      "fix_lever": "prompt_or_voting",
+      "category_machine_old": "schema_linking_miss",
+      "business_knowledge_required": [],
+      "caliber_note": "评分不做订单状态过滤。",
+      "params_original": {
+        "start_ts": "2017-10-01",
+        "end_ts": "2018-01-01"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(4.047114937180083,)"
+      ],
+      "param_normalization_recovered": false,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n35].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r2.json records[n35].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r2",
+      "case_id": "n37",
+      "question": "2018 年平均评分最高的 5 个州是哪些？",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "category_manual": "schema_linking_miss",
+      "cause_manual": "2018 评分最高 5 州：时间基准列误用 order_purchase_timestamp，并多加订单状态过滤",
+      "fix_lever": "prompt_or_voting",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "评价表 join 订单取州；升序/降序以平均分为对象。",
+      "params_original": {
+        "start_ts": "2018-01-01",
+        "end_ts": "2018-12-31"
+      },
+      "verdict_diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "param_normalization_recovered": false,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n37].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r2.json records[n37].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r3",
+      "case_id": "g01",
+      "question": "2018 年的 GMV 是多少？",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2018 GMV：上界写成 <= 2018-12-31T23:59:59",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "GMV = 支付表金额求和（含运费），剔除取消/不可用单，按订单创建时间归属。",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-12-31T23:59:59"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(8594831.98,)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[g01].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r3.json records[g01].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r3",
+      "case_id": "g05",
+      "question": "2018 年的客单价是多少？",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2018 客单价：上界 <= 2018-12-31T23:59:59",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "分子分母同过滤；分母是全量有效单量（订单级），不是支付行数。",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-12-31T23:59:59"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(160.5550321303146,)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[g05].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r3.json records[g05].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r3",
+      "case_id": "o05",
+      "question": "2017 年第四季度的 GMV 是多少？",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "high",
+      "category_manual": "metric_definition",
+      "cause_manual": "2017Q4 GMV 被写成 AOV 除法式、别名 aov，列无法配对",
+      "fix_lever": "prompt_or_voting",
+      "category_machine_old": "time_semantics",
+      "business_knowledge_required": [
+        "time:quarter"
+      ],
+      "caliber_note": "季度边界用半开区间表达，避免 DATE() 函数差异。",
+      "params_original": {
+        "start_ts": "2017-10-01",
+        "end_ts": "2018-01-01"
+      },
+      "verdict_diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "param_normalization_recovered": false,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[o05].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r3.json records[o05].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r3",
+      "case_id": "o30",
+      "question": "2018 年的运费总额和商品销售额分别是多少？",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "medium",
+      "category_manual": "time_semantics",
+      "cause_manual": "2018 运费+销售额：上界 <= 2018-12-31T23:59:59",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [
+        "synonym:运费"
+      ],
+      "caliber_note": "多指标题：主指标 freight_total 的金额列是 freight_value。",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-12-31T23:59:59"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(1252121.55, 7341182.41)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[o30].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r3.json records[o30].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r3",
+      "case_id": "o38",
+      "question": "2018 年各州的平均评分是多少？",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "high",
+      "category_manual": "schema_linking_miss",
+      "cause_manual": "2018 各州平均评分：时间基准列误用 order_purchase_timestamp，且别名/排序与 gold 不一致",
+      "fix_lever": "prompt_or_voting",
+      "category_machine_old": "time_semantics",
+      "business_knowledge_required": [
+        "hierarchy:state",
+        "time:year"
+      ],
+      "caliber_note": "评价表 join 订单取州；不做状态过滤。",
+      "params_original": {
+        "start_ts": "2018-01-01",
+        "end_ts": "2018-12-31"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 27 行 / 仅预测 27 行",
+        "金标行无法在预测结果中找到：('AC', 4.28125)"
+      ],
+      "param_normalization_recovered": false,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[o38].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r3.json records[o38].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r3",
+      "case_id": "n23",
+      "question": "2018 年上半年的商品销售额（不含运费）是多少？",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2018H1 商品销售额：两界均带 T 分隔，字符串比较多算次日",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "上半年口径；与 o22（全年/月度）互补。",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-07-01T00:00:00"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(5614133.04,)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n23].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r3.json records[n23].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r3",
+      "case_id": "n25",
+      "question": "2017 年各州商品销售额（不含运费）是多少？",
+      "difficulty_struct": "hard",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2017 各州商品销售额：上界 <= 2017-12-31 纯日期，漏掉当日全部数据",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "州级商品销售额；state 在订单侧。",
+      "params_original": {
+        "start_ts": "2017-01-01",
+        "end_ts": "2017-12-31"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 16 行 / 仅预测 16 行",
+        "金标行无法在预测结果中找到：('BA', 234056.77)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n25].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r3.json records[n25].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r3",
+      "case_id": "n26",
+      "question": "2017 年上半年的运费总额是多少？",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "category_manual": "time_semantics",
+      "cause_manual": "2017H1 运费：两界 T 分隔",
+      "fix_lever": "param_normalization",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "运费只在明细行有值。",
+      "params_original": {
+        "start_ts": "2017-01-01T00:00:00",
+        "end_ts": "2017-07-01T00:00:00"
+      },
+      "verdict_diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(314017.07,)"
+      ],
+      "param_normalization_recovered": true,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n26].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r3.json records[n26].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    },
+    {
+      "batch": "r3",
+      "case_id": "n37",
+      "question": "2018 年平均评分最高的 5 个州是哪些？",
+      "difficulty_struct": "extra",
+      "difficulty_semantic": "low",
+      "category_manual": "schema_linking_miss",
+      "cause_manual": "2018 评分最高 5 州：时间基准列误用 order_purchase_timestamp，并多加订单状态过滤",
+      "fix_lever": "prompt_or_voting",
+      "category_machine_old": "unattributed",
+      "business_knowledge_required": [],
+      "caliber_note": "评价表 join 订单取州；升序/降序以平均分为对象。",
+      "params_original": {
+        "start_ts": "2018-01-01T00:00:00",
+        "end_ts": "2018-12-31T23:59:59"
+      },
+      "verdict_diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ],
+      "param_normalization_recovered": false,
+      "evidence": {
+        "gold_sql": "eval/olist/dataset_v3_frozen.json cases[n37].gold_sql",
+        "pred_sql": "eval/olist/results_v3_r3.json records[n37].sql_text",
+        "counterfactual": "eval/olist/param_gain_probe.json",
+        "time_shape": "eval/olist/time_shape_probe.json"
+      }
+    }
+  ],
+  "verdict": "28 条真错题全部落人工类别；20 条为时间参数形态（确定性、可 replay 验证），8 条需改 prompt 或候选投票"
+}
