@@ -1,0 +1,45 @@
+{
+  "schema": "U183_STACKED_REPLAY_SUMMARY/v1",
+  "translate_route": "eval/sqlite_exec.py::to_sqlite_sql",
+  "batches": [
+    {
+      "batch": "r1",
+      "base": 69,
+      "stacked": 80,
+      "ex": 0.8421,
+      "levers": {
+        "no_lever_applied": 70,
+        "gate_bypass_r14": 11,
+        "gate_bypass_r06": 1,
+        "param_normalization": 9,
+        "dialect_retry": 4
+      }
+    },
+    {
+      "batch": "r2",
+      "base": 67,
+      "stacked": 80,
+      "ex": 0.8421,
+      "levers": {
+        "gate_bypass_r06": 2,
+        "gate_bypass_r14": 13,
+        "no_lever_applied": 67,
+        "param_normalization": 10,
+        "dialect_retry": 3
+      }
+    },
+    {
+      "batch": "r3",
+      "base": 66,
+      "stacked": 77,
+      "ex": 0.8105,
+      "levers": {
+        "param_normalization": 9,
+        "gate_bypass_r14": 13,
+        "no_lever_applied": 67,
+        "gate_bypass_r06": 3,
+        "dialect_retry": 3
+      }
+    }
+  ]
+}

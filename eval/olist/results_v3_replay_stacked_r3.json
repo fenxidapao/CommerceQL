@@ -1,0 +1,1059 @@
+{
+  "schema": "U183_STACKED_REPLAY/v1",
+  "probe": "eval/olist/probe_u183_stacked_replay.py",
+  "recompute": "python eval/olist/probe_u183_stacked_replay.py",
+  "source": "eval/olist/results_v3_r3.json (只读)",
+  "translate_route": "eval/sqlite_exec.py::to_sqlite_sql",
+  "scope": "记录级重判；只叠加不改 LLM 请求体的确定性增益，是各杠杆上界而非闸门放行后的真实读数",
+  "n_execute": 95,
+  "base_pass": 66,
+  "stacked_pass": 77,
+  "stacked_ex": 0.8105,
+  "n_recovered": 11,
+  "recovered_case_ids": [
+    "g01",
+    "g02",
+    "g05",
+    "g06",
+    "g10",
+    "o30",
+    "o34",
+    "o44",
+    "n23",
+    "n25",
+    "n26"
+  ],
+  "lever_distribution": {
+    "param_normalization": 9,
+    "gate_bypass_r14": 13,
+    "no_lever_applied": 67,
+    "gate_bypass_r06": 3,
+    "dialect_retry": 3
+  },
+  "details": [
+    {
+      "case_id": "g01",
+      "base_equivalent": false,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "param_normalization",
+      "replay": {
+        "ok": true,
+        "equivalent": true,
+        "diffs": []
+      }
+    },
+    {
+      "case_id": "g02",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R14",
+      "stacked_equivalent": true,
+      "lever": "gate_bypass_r14",
+      "replay": {
+        "ok": true,
+        "equivalent": true,
+        "diffs": []
+      }
+    },
+    {
+      "case_id": "g03",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "g04",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "g05",
+      "base_equivalent": false,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "param_normalization",
+      "replay": {
+        "ok": true,
+        "equivalent": true,
+        "diffs": []
+      }
+    },
+    {
+      "case_id": "g06",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R14",
+      "stacked_equivalent": true,
+      "lever": "gate_bypass_r14",
+      "replay": {
+        "ok": true,
+        "equivalent": true,
+        "diffs": []
+      }
+    },
+    {
+      "case_id": "g07",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "g08",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "g09",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "g10",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R14",
+      "stacked_equivalent": true,
+      "lever": "gate_bypass_r14",
+      "replay": {
+        "ok": true,
+        "equivalent": true,
+        "diffs": []
+      }
+    },
+    {
+      "case_id": "o01",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o02",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R14",
+      "stacked_equivalent": false,
+      "lever": "gate_bypass_r14",
+      "replay": {
+        "ok": true,
+        "equivalent": false,
+        "diffs": [
+          "行数不同：金标 8 / 预测 9"
+        ]
+      }
+    },
+    {
+      "case_id": "o03",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o04",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o05",
+      "base_equivalent": false,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": false,
+      "lever": "param_normalization",
+      "replay": {
+        "ok": true,
+        "equivalent": false,
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ]
+      }
+    },
+    {
+      "case_id": "o06",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o07",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o08",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o09",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R14",
+      "stacked_equivalent": false,
+      "lever": "gate_bypass_r14",
+      "replay": {
+        "ok": true,
+        "equivalent": false,
+        "diffs": [
+          "行数不同：金标 8 / 预测 9"
+        ]
+      }
+    },
+    {
+      "case_id": "o10",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o11",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o12",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o13",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R14",
+      "stacked_equivalent": false,
+      "lever": "gate_bypass_r14",
+      "replay": {
+        "ok": true,
+        "equivalent": false,
+        "diffs": [
+          "行数不同：金标 8 / 预测 10"
+        ]
+      }
+    },
+    {
+      "case_id": "o14",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o15",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o16",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o17",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R14",
+      "stacked_equivalent": false,
+      "lever": "gate_bypass_r14",
+      "replay": {
+        "ok": true,
+        "equivalent": false,
+        "diffs": [
+          "行数不同：金标 8 / 预测 9"
+        ]
+      }
+    },
+    {
+      "case_id": "o18",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o19",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o20",
+      "base_equivalent": true,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R10",
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o21",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o22",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R14",
+      "stacked_equivalent": false,
+      "lever": "gate_bypass_r14",
+      "replay": {
+        "ok": true,
+        "equivalent": false,
+        "diffs": [
+          "行数不同：金标 8 / 预测 9"
+        ]
+      }
+    },
+    {
+      "case_id": "o23",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o24",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o25",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o26",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o27",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o28",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o29",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R14",
+      "stacked_equivalent": false,
+      "lever": "gate_bypass_r14",
+      "replay": {
+        "ok": true,
+        "equivalent": false,
+        "diffs": [
+          "行数不同：金标 8 / 预测 9"
+        ]
+      }
+    },
+    {
+      "case_id": "o30",
+      "base_equivalent": false,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "param_normalization",
+      "replay": {
+        "ok": true,
+        "equivalent": true,
+        "diffs": []
+      }
+    },
+    {
+      "case_id": "o31",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o32",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o33",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o34",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R14",
+      "stacked_equivalent": true,
+      "lever": "gate_bypass_r14",
+      "replay": {
+        "ok": true,
+        "equivalent": true,
+        "diffs": []
+      }
+    },
+    {
+      "case_id": "o35",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o36",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o37",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o38",
+      "base_equivalent": false,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": false,
+      "lever": "param_normalization",
+      "replay": {
+        "ok": true,
+        "equivalent": false,
+        "diffs": [
+          "行多重集差异：仅金标 27 行 / 仅预测 27 行",
+          "金标行无法在预测结果中找到：('AC', 4.28125)"
+        ]
+      }
+    },
+    {
+      "case_id": "o39",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R14",
+      "stacked_equivalent": false,
+      "lever": "gate_bypass_r14",
+      "replay": {
+        "ok": true,
+        "equivalent": false,
+        "diffs": [
+          "第 0 行 列 'avg_review_score'：金标 4.338912133891213 vs 预测 4.070263488080301",
+          "第 1 行 列 'avg_review_score'：金标 4.2809624911535735 vs 预测 4.017454954954955",
+          "第 2 行 列 'avg_review_score'：金标 4.033051189036679 vs 预测 4.0724962630792225"
+        ]
+      }
+    },
+    {
+      "case_id": "o40",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o41",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o42",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o43",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "o44",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R14",
+      "stacked_equivalent": true,
+      "lever": "gate_bypass_r14",
+      "replay": {
+        "ok": true,
+        "equivalent": true,
+        "diffs": []
+      }
+    },
+    {
+      "case_id": "o45",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n01",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R06",
+      "stacked_equivalent": false,
+      "lever": "gate_bypass_r06",
+      "replay": {
+        "ok": false,
+        "equivalent": false,
+        "error": "OperationalError: no such column: payment.payment_value"
+      }
+    },
+    {
+      "case_id": "n02",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R06",
+      "stacked_equivalent": false,
+      "lever": "gate_bypass_r06",
+      "replay": {
+        "ok": false,
+        "equivalent": false,
+        "error": "OperationalError: no such column: payment.payment_value"
+      }
+    },
+    {
+      "case_id": "n03",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R06",
+      "stacked_equivalent": false,
+      "lever": "gate_bypass_r06",
+      "replay": {
+        "ok": false,
+        "equivalent": false,
+        "error": "OperationalError: no such column: payment.payment_value"
+      }
+    },
+    {
+      "case_id": "n04",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n05",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "SQL_SYNTAX_ERROR",
+      "gate1_rule": null,
+      "stacked_equivalent": false,
+      "lever": "dialect_retry",
+      "replay": {
+        "ok": true,
+        "equivalent": false,
+        "diffs": [
+          "列数不同：金标 2 / 预测 3；金标列 'quarter' 在预测里有 0 个同值列（窄口要求**唯一**匹配，0 或多于 1 都不放行）"
+        ]
+      }
+    },
+    {
+      "case_id": "n06",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n07",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "LLM_UPSTREAM_ERROR",
+      "gate1_rule": null,
+      "stacked_equivalent": false,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n08",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n09",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n10",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "SQL_SYNTAX_ERROR",
+      "gate1_rule": null,
+      "stacked_equivalent": false,
+      "lever": "dialect_retry",
+      "replay": {
+        "ok": true,
+        "equivalent": false,
+        "diffs": [
+          "第 0 行 列 'quarter'：金标 '2018-Q1' vs 预测 1",
+          "第 1 行 列 'quarter'：金标 '2018-Q2' vs 预测 2",
+          "第 2 行 列 'quarter'：金标 '2018-Q3' vs 预测 3"
+        ]
+      }
+    },
+    {
+      "case_id": "n11",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n12",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n13",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n14",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n15",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n16",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n17",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n18",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "GATE_AST_REJECTED",
+      "gate1_rule": "R14",
+      "stacked_equivalent": false,
+      "lever": "gate_bypass_r14",
+      "replay": {
+        "ok": false,
+        "equivalent": false,
+        "error": "OperationalError: no such function: date_trunc"
+      }
+    },
+    {
+      "case_id": "n19",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n20",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n21",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n22",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n23",
+      "base_equivalent": false,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "param_normalization",
+      "replay": {
+        "ok": true,
+        "equivalent": true,
+        "diffs": []
+      }
+    },
+    {
+      "case_id": "n24",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n25",
+      "base_equivalent": false,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "param_normalization",
+      "replay": {
+        "ok": true,
+        "equivalent": true,
+        "diffs": []
+      }
+    },
+    {
+      "case_id": "n26",
+      "base_equivalent": false,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "param_normalization",
+      "replay": {
+        "ok": true,
+        "equivalent": true,
+        "diffs": []
+      }
+    },
+    {
+      "case_id": "n27",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n28",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n29",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n30",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n31",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n32",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n33",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n34",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n35",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n36",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n37",
+      "base_equivalent": false,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": false,
+      "lever": "param_normalization",
+      "replay": {
+        "ok": true,
+        "equivalent": false,
+        "diffs": [
+          "列无法配对（列数相同但内容不匹配）"
+        ]
+      }
+    },
+    {
+      "case_id": "n38",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    },
+    {
+      "case_id": "n39",
+      "base_equivalent": false,
+      "terminal": "error",
+      "terminal_code": "SQL_SYNTAX_ERROR",
+      "gate1_rule": null,
+      "stacked_equivalent": false,
+      "lever": "dialect_retry",
+      "replay": {
+        "ok": false,
+        "equivalent": false,
+        "error": "OperationalError: no such function: DATE_TRUNC"
+      }
+    },
+    {
+      "case_id": "n40",
+      "base_equivalent": true,
+      "terminal": "complete",
+      "terminal_code": null,
+      "gate1_rule": null,
+      "stacked_equivalent": true,
+      "lever": "no_lever_applied"
+    }
+  ]
+}

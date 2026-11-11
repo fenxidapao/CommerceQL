@@ -1,0 +1,47 @@
+{
+  "schema": "U183_FEWSHOT_LEAK_CHECK/v1",
+  "probe": "eval/olist/probe_u183_fewshot_leak.py",
+  "recompute": "python eval/olist/probe_u183_fewshot_leak.py",
+  "seed": {
+    "path": "eval/gold_query_seed_v1.json",
+    "n_seeds": 119,
+    "n_distinct_sources": 119,
+    "warning": "few-shot 示例**不得绕过闸门** —— 示例 SQL 同样要过 W4 守卫（07 纪律）"
+  },
+  "frozen_v3": {
+    "path": "eval/olist/dataset_v3_frozen.json",
+    "n_cases": 100
+  },
+  "n_overlap": 0,
+  "overlap_ids": [],
+  "b7_cassettes": [
+    {
+      "cassette": "eval/olist/cassettes/olist_v3_r1.jsonl",
+      "n_records": 393,
+      "n_sqlgen_prompts": 96,
+      "example_token_in_sqlgen_system": 0,
+      "few_shot_token_hits": 0
+    },
+    {
+      "cassette": "eval/olist/cassettes/olist_v3_r2.jsonl",
+      "n_records": 395,
+      "n_sqlgen_prompts": 97,
+      "example_token_in_sqlgen_system": 0,
+      "few_shot_token_hits": 0
+    },
+    {
+      "cassette": "eval/olist/cassettes/olist_v3_r3.jsonl",
+      "n_records": 394,
+      "n_sqlgen_prompts": 96,
+      "example_token_in_sqlgen_system": 0,
+      "few_shot_token_hits": 0
+    }
+  ],
+  "b7_fewshot_injected": false,
+  "verdict": "B7 三批的 SQL 生成提示词里「示例」命中为 0 ⇒ 当时 few-shot 未生效，故 70.88% 不含示例增益、也不存在同源泄漏；seed 的 source_case_id 与 v3 冻结集交集为 0，但 P2 注入 few-shot 前仍须在 `_few_shots_for` 加同源题排除，否则换题集后会产生泄漏。",
+  "prerequisite": {
+    "item": "app.gold_query 真库行数与 Top-5 内容",
+    "status": "NOT_VERIFIED",
+    "why": "本探针零 DB 连接，不能拿 docs/10:40 的书面登记冒充实测"
+  }
+}
