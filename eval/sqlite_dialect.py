@@ -26,16 +26,62 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from typing import Any
 
 __all__ = [
     "DATE_TRUNC_UNITS",
     "EXTRACT_UNITS",
     "TO_CHAR_FORMATS",
+    "normalize_time_params",
     "split_call_args",
     "strip_timestamp_casts",
     "translate_pg_functions",
 ]
+
+#: ISO 日期/日期时间字面量（PG 接受 `T` 分隔，SQLite 的 TEXT 列只认空格分隔）。
+_ISO_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2}:\d{2}))?$")
+#: 命名参数在 SQL 里的两种写法（在线 `%(name)s` / 评测 `:name`）。
+_CLOSED_UPPER = re.compile(r"<=\s*%\(([^)]+)\)s|<=\s*:([A-Za-z_]\w*)")
+
+
+def normalize_time_params(
+    params: Mapping[str, Any], sql: str
+) -> dict[str, Any]:
+    """把时间绑定参数归一到 SQLite TEXT 列可比较的形态（U-183 / P2）。
+
+    根因（`eval/olist/time_shape_probe.json`）：沙箱 `v_o_orders` 的 99,441 条时间戳
+    全是空格分隔（``2016-09-04 21:15:19``）；在线契约按 PG 产出 `T` 分隔 ISO 或纯日期
+    闭区间上界。SQLite 按字符串比较 ⇒ ``<= '2018-06-30'`` 漏掉当日全部数据、
+    ``< '2018-07-01T00:00:00'`` 多算次日。实测 gold 5,614,133.04 / T 分隔 5,631,554.30 /
+    纯日期闭区间 5,598,753.16 / 空格分隔 5,614,133.04。
+
+    只改**值**，不改 SQL 文本 ⇒ 不进 LLM 请求体、匣带 key 不变、可 replay 验证。
+    规则：
+      ① 匹配 ISO 日期形态的值把 `T` 换成空格；
+      ② 纯日期值且该参数在 SQL 中是 `<=` 的上界时补 ` 23:59:59`（闭合当日）；
+      ③ 其余值（状态字面量、数值、下界 `<`/`>=`）**一律原样**。
+
+    ⚠️ 这是评测侧方言桥，不是放宽判据：gold 用右开字面量，预测用闭区间，
+    归一只让两侧在同一字符串序下表达同一个区间。
+    """
+    closed_uppers = {a or b for a, b in _CLOSED_UPPER.findall(sql)}
+    out: dict[str, Any] = {}
+    for key, val in params.items():
+        if not isinstance(val, str):
+            out[key] = val
+            continue
+        m = _ISO_DATE.match(val)
+        if m is None:
+            out[key] = val
+            continue
+        if m.group(2):
+            out[key] = m.group(1) + " " + m.group(2)
+        elif key in closed_uppers:
+            out[key] = m.group(1) + " 23:59:59"
+        else:
+            out[key] = val
+    return out
 
 #: `TO_CHAR` 的 PG 格式 → SQLite `strftime` 格式（只收已验证等价的几种）。
 TO_CHAR_FORMATS: dict[str, str] = {

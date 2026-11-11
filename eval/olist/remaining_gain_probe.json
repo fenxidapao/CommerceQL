@@ -1,0 +1,497 @@
+{
+  "schema": "U183_REMAINING_GAIN_PROBE/v1",
+  "probe": "eval/olist/probe_u183_remaining_gain.py",
+  "recompute": "python eval/olist/probe_u183_remaining_gain.py",
+  "scope": "评测侧反事实，用于判断 quarter/月度翻译是否值得落码；不是最终 EX 读数",
+  "n_records": 46,
+  "n_recovered": 0,
+  "by_arm": {
+    "quarter_rewrite": {
+      "n": 12,
+      "recovered": 0
+    },
+    "plain_translate": {
+      "n": 34,
+      "recovered": 0
+    }
+  },
+  "records": [
+    {
+      "batch": "r1",
+      "case_id": "o05",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "error": "OperationalError: no such column: payment.payment_value"
+    },
+    {
+      "batch": "r1",
+      "case_id": "o09",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "o13",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 10"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "o17",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "o22",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "o29",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "o38",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行多重集差异：仅金标 27 行 / 仅预测 27 行",
+        "金标行无法在预测结果中找到：('AC', 4.28125)"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "o39",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "第 0 行 列 'avg_review_score'：金标 4.338912133891213 vs 预测 4.070263488080301",
+        "第 1 行 列 'avg_review_score'：金标 4.2809624911535735 vs 预测 4.017454954954955",
+        "第 2 行 列 'avg_review_score'：金标 4.033051189036679 vs 预测 4.0724962630792225"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "n03",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(51813.38,)"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "n05",
+      "constructs": [],
+      "arm": "quarter_rewrite",
+      "equivalent": false,
+      "diffs": [
+        "第 0 行 列 'quarter'：金标 '2018-Q1' vs 预测 1",
+        "第 1 行 列 'quarter'：金标 '2018-Q2' vs 预测 2",
+        "第 2 行 列 'quarter'：金标 '2018-Q3' vs 预测 3"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "n10",
+      "constructs": [
+        "DATE_TRUNC"
+      ],
+      "arm": "quarter_rewrite",
+      "equivalent": false,
+      "diffs": [
+        "第 0 行 列 'quarter'：金标 '2018-Q1' vs 预测 '2018-01-01'",
+        "第 1 行 列 'quarter'：金标 '2018-Q2' vs 预测 '2018-04-01'",
+        "第 2 行 列 'quarter'：金标 '2018-Q3' vs 预测 '2018-07-01'"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "n18",
+      "constructs": [],
+      "arm": "quarter_rewrite",
+      "equivalent": false,
+      "diffs": [
+        "列数不同：金标 2 / 预测 3；金标列 'quarter' 在预测里有 0 个同值列（窄口要求**唯一**匹配，0 或多于 1 都不放行）"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "n37",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ]
+    },
+    {
+      "batch": "r1",
+      "case_id": "n39",
+      "constructs": [
+        "DATE_TRUNC"
+      ],
+      "arm": "quarter_rewrite",
+      "equivalent": false,
+      "diffs": [
+        "第 0 行 列 'quarter'：金标 '2018-Q1' vs 预测 '2018-01-01'",
+        "第 1 行 列 'quarter'：金标 '2018-Q2' vs 预测 '2018-04-01'",
+        "第 2 行 列 'quarter'：金标 '2018-Q3' vs 预测 '2018-07-01'"
+      ]
+    },
+    {
+      "batch": "r2",
+      "case_id": "g01",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "error": "OperationalError: no such column: payment.payment_value"
+    },
+    {
+      "batch": "r2",
+      "case_id": "o02",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r2",
+      "case_id": "o09",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r2",
+      "case_id": "o13",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 10"
+      ]
+    },
+    {
+      "batch": "r2",
+      "case_id": "o17",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r2",
+      "case_id": "o22",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r2",
+      "case_id": "o29",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r2",
+      "case_id": "o39",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "第 0 行 列 'avg_review_score'：金标 4.338912133891213 vs 预测 4.070263488080301",
+        "第 1 行 列 'avg_review_score'：金标 4.2809624911535735 vs 预测 4.017454954954955",
+        "第 2 行 列 'avg_review_score'：金标 4.033051189036679 vs 预测 4.0724962630792225"
+      ]
+    },
+    {
+      "batch": "r2",
+      "case_id": "n02",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "error": "OperationalError: no such column: payment.payment_value"
+    },
+    {
+      "batch": "r2",
+      "case_id": "n05",
+      "constructs": [
+        "TO_CHAR"
+      ],
+      "arm": "quarter_rewrite",
+      "equivalent": false,
+      "error": "OperationalError: no such function: to_char"
+    },
+    {
+      "batch": "r2",
+      "case_id": "n10",
+      "constructs": [
+        "CAST",
+        "DATE_TRUNC"
+      ],
+      "arm": "quarter_rewrite",
+      "equivalent": false,
+      "error": "OperationalError: no such function: DATE_TRUNC"
+    },
+    {
+      "batch": "r2",
+      "case_id": "n18",
+      "constructs": [],
+      "arm": "quarter_rewrite",
+      "equivalent": false,
+      "diffs": [
+        "列数不同：金标 2 / 预测 3；金标列 'quarter' 在预测里有 0 个同值列（窄口要求**唯一**匹配，0 或多于 1 都不放行）"
+      ]
+    },
+    {
+      "batch": "r2",
+      "case_id": "n35",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+        "金标行无法在预测结果中找到：(4.047114937180083,)"
+      ]
+    },
+    {
+      "batch": "r2",
+      "case_id": "n37",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ]
+    },
+    {
+      "batch": "r2",
+      "case_id": "n39",
+      "constructs": [
+        "DATE_TRUNC"
+      ],
+      "arm": "quarter_rewrite",
+      "equivalent": false,
+      "diffs": [
+        "第 0 行 列 'quarter'：金标 '2018-Q1' vs 预测 '2018-01-01'",
+        "第 1 行 列 'quarter'：金标 '2018-Q2' vs 预测 '2018-04-01'",
+        "第 2 行 列 'quarter'：金标 '2018-Q3' vs 预测 '2018-07-01'"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "o02",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "o05",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "o09",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "o13",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 10"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "o17",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "o22",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "o29",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行数不同：金标 8 / 预测 9"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "o38",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "行多重集差异：仅金标 27 行 / 仅预测 27 行",
+        "金标行无法在预测结果中找到：('AC', 4.28125)"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "o39",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "第 0 行 列 'avg_review_score'：金标 4.338912133891213 vs 预测 4.070263488080301",
+        "第 1 行 列 'avg_review_score'：金标 4.2809624911535735 vs 预测 4.017454954954955",
+        "第 2 行 列 'avg_review_score'：金标 4.033051189036679 vs 预测 4.0724962630792225"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "n01",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "error": "OperationalError: no such column: payment.payment_value"
+    },
+    {
+      "batch": "r3",
+      "case_id": "n02",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "error": "OperationalError: no such column: payment.payment_value"
+    },
+    {
+      "batch": "r3",
+      "case_id": "n03",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "error": "OperationalError: no such column: payment.payment_value"
+    },
+    {
+      "batch": "r3",
+      "case_id": "n05",
+      "constructs": [],
+      "arm": "quarter_rewrite",
+      "equivalent": false,
+      "diffs": [
+        "列数不同：金标 2 / 预测 3；金标列 'quarter' 在预测里有 0 个同值列（窄口要求**唯一**匹配，0 或多于 1 都不放行）"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "n10",
+      "constructs": [],
+      "arm": "quarter_rewrite",
+      "equivalent": false,
+      "diffs": [
+        "第 0 行 列 'quarter'：金标 '2018-Q1' vs 预测 1",
+        "第 1 行 列 'quarter'：金标 '2018-Q2' vs 预测 2",
+        "第 2 行 列 'quarter'：金标 '2018-Q3' vs 预测 3"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "n18",
+      "constructs": [
+        "DATE_TRUNC",
+        "TO_CHAR"
+      ],
+      "arm": "quarter_rewrite",
+      "equivalent": false,
+      "error": "OperationalError: no such function: to_char"
+    },
+    {
+      "batch": "r3",
+      "case_id": "n37",
+      "constructs": [],
+      "arm": "plain_translate",
+      "equivalent": false,
+      "diffs": [
+        "列无法配对（列数相同但内容不匹配）"
+      ]
+    },
+    {
+      "batch": "r3",
+      "case_id": "n39",
+      "constructs": [
+        "CAST",
+        "DATE_TRUNC"
+      ],
+      "arm": "quarter_rewrite",
+      "equivalent": false,
+      "error": "OperationalError: no such function: DATE_TRUNC"
+    }
+  ]
+}

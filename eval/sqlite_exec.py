@@ -147,7 +147,10 @@ def classify_sqlite_error(exc: BaseException) -> ExecError:
     )
 
 
-from sqlite_dialect import translate_pg_functions  # noqa: E402  （U-167：方言渲染器）
+from sqlite_dialect import (  # noqa: E402  （U-167：方言渲染器 / U-183：时间参数桥）
+    normalize_time_params,
+    translate_pg_functions,
+)
 
 def to_sqlite_sql(sql: str) -> str:
     """把在线契约的 `%(name)s` 占位符改写成 sqlite 的 `:name`（只动占位符，不碰值）。
@@ -346,7 +349,7 @@ class SqliteEvalExecutor(PgSqlExecutor):
         return await self._execute_and_collect(
             raw,
             to_sqlite_sql(sql),
-            dict(params or {}),
+            normalize_time_params(params or {}, sql),
             ctx,
             max_rows=max_rows,
             effective_limit=effective_limit,

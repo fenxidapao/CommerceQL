@@ -1,0 +1,104 @@
+{
+  "probe": "b7_dialect_gain",
+  "dataset": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\olist\\dataset_v3_frozen.json",
+  "db": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\olist\\olist_sandbox.db",
+  "projected_mean_ex": 0.824561,
+  "batches": [
+    {
+      "batch_id": "b7_r1",
+      "old_pass": 69,
+      "new_pass": 79,
+      "projected_ex": 0.8316,
+      "recovered": [
+        "g02",
+        "g06",
+        "g10",
+        "o19",
+        "o34",
+        "o44",
+        "n23",
+        "n25",
+        "n28",
+        "n30",
+        "n33"
+      ],
+      "regressions": [],
+      "still_fail_by_old_cause": {
+        "upstream": 1,
+        "gate/R06": 1,
+        "gate/R14": 6,
+        "pass": 1,
+        "wrong": 3,
+        "syntax": 4
+      },
+      "errors": {
+        "gate:R06": 1,
+        "gate:R10": 1
+      }
+    },
+    {
+      "batch_id": "b7_r2",
+      "old_pass": 67,
+      "new_pass": 80,
+      "projected_ex": 0.8421,
+      "recovered": [
+        "g02",
+        "g06",
+        "g10",
+        "o24",
+        "o31",
+        "o34",
+        "o35",
+        "o44",
+        "n23",
+        "n26",
+        "n28",
+        "n29",
+        "n33"
+      ],
+      "regressions": [],
+      "still_fail_by_old_cause": {
+        "gate/R06": 2,
+        "gate/R14": 8,
+        "syntax": 3,
+        "wrong": 2
+      },
+      "errors": {
+        "gate:R06": 2,
+        "gate:R14": 1
+      }
+    },
+    {
+      "batch_id": "b7_r3",
+      "old_pass": 66,
+      "new_pass": 76,
+      "projected_ex": 0.8,
+      "recovered": [
+        "g01",
+        "g02",
+        "g05",
+        "g06",
+        "g10",
+        "o30",
+        "o34",
+        "o44",
+        "n23",
+        "n25",
+        "n26"
+      ],
+      "regressions": [],
+      "still_fail_by_old_cause": {
+        "gate/R14": 8,
+        "wrong": 3,
+        "pass": 1,
+        "gate/R06": 3,
+        "syntax": 3,
+        "upstream": 1
+      },
+      "errors": {
+        "gate:R10": 1,
+        "gate:R06": 3
+      }
+    }
+  ]
+}

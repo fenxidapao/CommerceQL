@@ -84,6 +84,7 @@ from harness import (  # noqa: E402
     eval_node_timeouts,
     identity_for_case,
 )
+from sqlite_dialect import normalize_time_params  # noqa: E402
 from sqlite_exec import open_sandbox_connection, to_sqlite_sql  # noqa: E402
 from sqlite_pg_constructs import unregistered_constructs  # noqa: E402
 
@@ -243,14 +244,18 @@ def run_in_sandbox(
     #: sqlite3 的 `:name` ⇒ 不做这一步方言桥，**任何带绑定参数的被测 SQL 都恒
     #: `OperationalError: near "%"`**，预测侧永远是空表。2026-10-03 真打批次 EX=0 的
     #: 第一条根因就在这里（不是"模型全错"）—— 金标不带参数，所以只有预测侧被打死。
+    #: U-183：评测侧方言桥 —— 时间绑定参数归一到 SQLite TEXT 列可比较的形态。
+    #: 只改值不改 SQL 文本 ⇒ 匣带 key 不变、旧件可 replay；归一规则单一真相在
+    #: `eval/sqlite_dialect.py::normalize_time_params`，此处与 `SqliteEvalExecutor.fetch` 共用。
+    bound = normalize_time_params(params or {}, sql)
     sql = to_sqlite_sql(sql)
     try:
         cur = con.cursor()
         digest, nrows, ncols = bfs.result_hash(
-            _ParamCursor(cur, params), sql, None if views else tenant
+            _ParamCursor(cur, bound), sql, None if views else tenant
         )
         cur2 = con.cursor()
-        _ParamCursor(cur2, params).execute(
+        _ParamCursor(cur2, bound).execute(
             sql if views else bfs.tenant_wrap(sql, tenant)
         )
         table = eq.Table.from_cursor(cur2)
