@@ -1,0 +1,855 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "albums"
+    physical_asset: "albums"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 347
+    description: "Spider 物理表 albums（schema 派生资产，3 列）"
+    columns:
+      - name: "id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "title"
+        type: "VARCHAR(160)"
+        comment: "schema 派生列"
+      - name: "artist_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "artists"
+    physical_asset: "artists"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 275
+    description: "Spider 物理表 artists（schema 派生资产，2 列）"
+    columns:
+      - name: "id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "name"
+        type: "VARCHAR(120)"
+        comment: "schema 派生列"
+
+  - logical_name: "customers"
+    physical_asset: "customers"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 59
+    description: "Spider 物理表 customers（schema 派生资产，13 列）"
+    columns:
+      - name: "id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "first_name"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "last_name"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "company"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "address"
+        type: "VARCHAR(70)"
+        comment: "schema 派生列"
+      - name: "city"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "state"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "country"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "postal_code"
+        type: "VARCHAR(10)"
+        comment: "schema 派生列"
+      - name: "phone"
+        type: "VARCHAR(24)"
+        comment: "schema 派生列"
+      - name: "fax"
+        type: "VARCHAR(24)"
+        comment: "schema 派生列"
+      - name: "email"
+        type: "VARCHAR(60)"
+        comment: "schema 派生列"
+      - name: "support_rep_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "employees"
+    physical_asset: "employees"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 8
+    description: "Spider 物理表 employees（schema 派生资产，15 列）"
+    columns:
+      - name: "id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "last_name"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "first_name"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "title"
+        type: "VARCHAR(30)"
+        comment: "schema 派生列"
+      - name: "reports_to"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "birth_date"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+      - name: "hire_date"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+      - name: "address"
+        type: "VARCHAR(70)"
+        comment: "schema 派生列"
+      - name: "city"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "state"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "country"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "postal_code"
+        type: "VARCHAR(10)"
+        comment: "schema 派生列"
+      - name: "phone"
+        type: "VARCHAR(24)"
+        comment: "schema 派生列"
+      - name: "fax"
+        type: "VARCHAR(24)"
+        comment: "schema 派生列"
+      - name: "email"
+        type: "VARCHAR(60)"
+        comment: "schema 派生列"
+
+  - logical_name: "genres"
+    physical_asset: "genres"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 25
+    description: "Spider 物理表 genres（schema 派生资产，2 列）"
+    columns:
+      - name: "id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "name"
+        type: "VARCHAR(120)"
+        comment: "schema 派生列"
+
+  - logical_name: "invoice_lines"
+    physical_asset: "invoice_lines"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 2240
+    description: "Spider 物理表 invoice_lines（schema 派生资产，5 列）"
+    columns:
+      - name: "id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "invoice_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "track_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "unit_price"
+        type: "NUMERIC(10,2)"
+        comment: "schema 派生列"
+      - name: "quantity"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "invoices"
+    physical_asset: "invoices"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 412
+    description: "Spider 物理表 invoices（schema 派生资产，9 列）"
+    columns:
+      - name: "id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "invoice_date"
+        type: "TIMESTAMP"
+        comment: "schema 派生列"
+      - name: "billing_address"
+        type: "VARCHAR(70)"
+        comment: "schema 派生列"
+      - name: "billing_city"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "billing_state"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "billing_country"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "billing_postal_code"
+        type: "VARCHAR(10)"
+        comment: "schema 派生列"
+      - name: "total"
+        type: "NUMERIC(10,2)"
+        comment: "schema 派生列"
+
+  - logical_name: "media_types"
+    physical_asset: "media_types"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 5
+    description: "Spider 物理表 media_types（schema 派生资产，2 列）"
+    columns:
+      - name: "id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "name"
+        type: "VARCHAR(120)"
+        comment: "schema 派生列"
+
+  - logical_name: "playlist_tracks"
+    physical_asset: "playlist_tracks"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 8715
+    description: "Spider 物理表 playlist_tracks（schema 派生资产，2 列）"
+    columns:
+      - name: "playlist_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "track_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "playlists"
+    physical_asset: "playlists"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 18
+    description: "Spider 物理表 playlists（schema 派生资产，2 列）"
+    columns:
+      - name: "id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "name"
+        type: "VARCHAR(120)"
+        comment: "schema 派生列"
+
+  - logical_name: "tracks"
+    physical_asset: "tracks"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 3503
+    description: "Spider 物理表 tracks（schema 派生资产，9 列）"
+    columns:
+      - name: "id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "name"
+        type: "VARCHAR(200)"
+        comment: "schema 派生列"
+      - name: "album_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "media_type_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "genre_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "composer"
+        type: "VARCHAR(220)"
+        comment: "schema 派生列"
+      - name: "milliseconds"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "bytes"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "unit_price"
+        type: "NUMERIC(10,2)"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "albums_row_count"
+    display_name: "albums 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(albums.id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "albums"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "artists_row_count"
+    display_name: "artists 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(artists.id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "artists"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customers_row_count"
+    display_name: "customers 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(customers.id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "customers"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "employees_row_count"
+    display_name: "employees 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(employees.id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "employees"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "employees_reports_to_sum"
+    display_name: "employees.reports_to SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(employees.reports_to)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "employees"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "employees_reports_to_avg"
+    display_name: "employees.reports_to AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(employees.reports_to)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "employees"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "genres_row_count"
+    display_name: "genres 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(genres.id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "genres"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoice_lines_row_count"
+    display_name: "invoice_lines 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(invoice_lines.id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "invoice_lines"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoice_lines_unit_price_sum"
+    display_name: "invoice_lines.unit_price SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(invoice_lines.unit_price)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "invoice_lines"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoice_lines_unit_price_avg"
+    display_name: "invoice_lines.unit_price AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(invoice_lines.unit_price)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "invoice_lines"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoice_lines_quantity_sum"
+    display_name: "invoice_lines.quantity SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(invoice_lines.quantity)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "invoice_lines"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoice_lines_quantity_avg"
+    display_name: "invoice_lines.quantity AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(invoice_lines.quantity)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "invoice_lines"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoices_row_count"
+    display_name: "invoices 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(invoices.id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "invoices"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoices_total_sum"
+    display_name: "invoices.total SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(invoices.total)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "invoices"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoices_total_avg"
+    display_name: "invoices.total AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(invoices.total)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "invoices"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "media_types_row_count"
+    display_name: "media_types 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(media_types.id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "media_types"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "playlist_tracks_row_count"
+    display_name: "playlist_tracks 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(playlist_tracks.playlist_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "playlist_tracks"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "playlists_row_count"
+    display_name: "playlists 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(playlists.id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "playlists"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "tracks_row_count"
+    display_name: "tracks 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(tracks.id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "tracks"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "tracks_milliseconds_sum"
+    display_name: "tracks.milliseconds SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(tracks.milliseconds)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "tracks"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "tracks_milliseconds_avg"
+    display_name: "tracks.milliseconds AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(tracks.milliseconds)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "tracks"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "tracks_bytes_sum"
+    display_name: "tracks.bytes SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(tracks.bytes)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "tracks"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "tracks_bytes_avg"
+    display_name: "tracks.bytes AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(tracks.bytes)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "tracks"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "tracks_unit_price_sum"
+    display_name: "tracks.unit_price SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(tracks.unit_price)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "tracks"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "tracks_unit_price_avg"
+    display_name: "tracks.unit_price AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(tracks.unit_price)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "birth_date"
+    owner: "data-team"
+    default_binding:
+      asset: "tracks"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "birth_date"
+      week: "birth_date"
+      month: "birth_date"
+      quarter: "birth_date"
+      year: "birth_date"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 employees.birth_date"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "employees.birth_date"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "albums.artist_id"
+    right: "artists.id"
+    type: "many_to_one"
+    on_columns: ["artist_id"]
+    certified_by: "data-team"
+
+  - left: "employees.reports_to"
+    right: "employees.id"
+    type: "many_to_one"
+    on_columns: ["reports_to"]
+    certified_by: "data-team"
+
+  - left: "customers.support_rep_id"
+    right: "employees.id"
+    type: "many_to_one"
+    on_columns: ["support_rep_id"]
+    certified_by: "data-team"
+
+  - left: "invoices.customer_id"
+    right: "customers.id"
+    type: "many_to_one"
+    on_columns: ["customer_id"]
+    certified_by: "data-team"
+
+  - left: "tracks.media_type_id"
+    right: "media_types.id"
+    type: "many_to_one"
+    on_columns: ["media_type_id"]
+    certified_by: "data-team"
+
+  - left: "tracks.genre_id"
+    right: "genres.id"
+    type: "many_to_one"
+    on_columns: ["genre_id"]
+    certified_by: "data-team"
+
+  - left: "tracks.album_id"
+    right: "albums.id"
+    type: "many_to_one"
+    on_columns: ["album_id"]
+    certified_by: "data-team"
+
+  - left: "invoice_lines.track_id"
+    right: "tracks.id"
+    type: "many_to_one"
+    on_columns: ["track_id"]
+    certified_by: "data-team"
+
+  - left: "invoice_lines.invoice_id"
+    right: "invoices.id"
+    type: "many_to_one"
+    on_columns: ["invoice_id"]
+    certified_by: "data-team"
+
+  - left: "playlist_tracks.track_id"
+    right: "tracks.id"
+    type: "many_to_one"
+    on_columns: ["track_id"]
+    certified_by: "data-team"
+
+  - left: "playlist_tracks.playlist_id"
+    right: "playlists.id"
+    type: "many_to_one"
+    on_columns: ["playlist_id"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "album_id", lang: en, maps_to_kind: column, maps_to_ref: "tracks.album_id", category: column }
+  - { term: "artist_id", lang: en, maps_to_kind: column, maps_to_ref: "albums.artist_id", category: column }
+  - { term: "billing_address", lang: en, maps_to_kind: column, maps_to_ref: "invoices.billing_address", category: column }
+  - { term: "billing_city", lang: en, maps_to_kind: column, maps_to_ref: "invoices.billing_city", category: column }
+  - { term: "billing_country", lang: en, maps_to_kind: column, maps_to_ref: "invoices.billing_country", category: column }
+  - { term: "billing_postal_code", lang: en, maps_to_kind: column, maps_to_ref: "invoices.billing_postal_code", category: column }
+  - { term: "billing_state", lang: en, maps_to_kind: column, maps_to_ref: "invoices.billing_state", category: column }
+  - { term: "birth_date", lang: en, maps_to_kind: column, maps_to_ref: "employees.birth_date", category: column }
+  - { term: "bytes", lang: en, maps_to_kind: column, maps_to_ref: "tracks.bytes", category: column }
+  - { term: "company", lang: en, maps_to_kind: column, maps_to_ref: "customers.company", category: column }
+  - { term: "composer", lang: en, maps_to_kind: column, maps_to_ref: "tracks.composer", category: column }
+  - { term: "customer_id", lang: en, maps_to_kind: column, maps_to_ref: "invoices.customer_id", category: column }
+  - { term: "genre_id", lang: en, maps_to_kind: column, maps_to_ref: "tracks.genre_id", category: column }
+  - { term: "hire_date", lang: en, maps_to_kind: column, maps_to_ref: "employees.hire_date", category: column }
+  - { term: "invoice_date", lang: en, maps_to_kind: column, maps_to_ref: "invoices.invoice_date", category: column }
+  - { term: "invoice_id", lang: en, maps_to_kind: column, maps_to_ref: "invoice_lines.invoice_id", category: column }
+  - { term: "media_type_id", lang: en, maps_to_kind: column, maps_to_ref: "tracks.media_type_id", category: column }
+  - { term: "milliseconds", lang: en, maps_to_kind: column, maps_to_ref: "tracks.milliseconds", category: column }
+  - { term: "playlist_id", lang: en, maps_to_kind: column, maps_to_ref: "playlist_tracks.playlist_id", category: column }
+  - { term: "quantity", lang: en, maps_to_kind: column, maps_to_ref: "invoice_lines.quantity", category: column }
+  - { term: "reports_to", lang: en, maps_to_kind: column, maps_to_ref: "employees.reports_to", category: column }
+  - { term: "support_rep_id", lang: en, maps_to_kind: column, maps_to_ref: "customers.support_rep_id", category: column }
+  - { term: "total", lang: en, maps_to_kind: column, maps_to_ref: "invoices.total", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = employees.birth_date（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

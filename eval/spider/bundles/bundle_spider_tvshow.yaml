@@ -1,0 +1,340 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "cartoon"
+    physical_asset: "Cartoon"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 12
+    description: "Spider 物理表 Cartoon（schema 派生资产，7 列）"
+    columns:
+      - name: "id"
+        type: "REAL"
+        comment: "主键；schema 派生列"
+      - name: "Title"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Directed_by"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Written_by"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Original_air_date"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Production_code"
+        type: "REAL"
+        comment: "schema 派生列"
+      - name: "Channel"
+        type: "TEXT"
+        comment: "schema 派生列"
+
+  - logical_name: "tv_channel"
+    physical_asset: "TV_Channel"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 TV_Channel（schema 派生资产，9 列）"
+    columns:
+      - name: "id"
+        type: "TEXT"
+        comment: "主键；schema 派生列"
+      - name: "series_name"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Country"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Language"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Content"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Pixel_aspect_ratio_PAR"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Hight_definition_TV"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Pay_per_view_PPV"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Package_Option"
+        type: "TEXT"
+        comment: "schema 派生列"
+
+  - logical_name: "tv_series"
+    physical_asset: "TV_series"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 12
+    description: "Spider 物理表 TV_series（schema 派生资产，9 列）"
+    columns:
+      - name: "id"
+        type: "REAL"
+        comment: "主键；schema 派生列"
+      - name: "Episode"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Air_Date"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Rating"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Share"
+        type: "REAL"
+        comment: "schema 派生列"
+      - name: "18_49_Rating_Share"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Viewers_m"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Weekly_Rank"
+        type: "REAL"
+        comment: "schema 派生列"
+      - name: "Channel"
+        type: "TEXT"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "cartoon_row_count"
+    display_name: "Cartoon 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Cartoon.id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "cartoon"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "cartoon_production_code_sum"
+    display_name: "Cartoon.Production_code SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Cartoon.Production_code)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "cartoon"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "cartoon_production_code_avg"
+    display_name: "Cartoon.Production_code AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Cartoon.Production_code)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "cartoon"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "tv_channel_row_count"
+    display_name: "TV_Channel 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(TV_Channel.id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "tv_channel"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "tv_series_row_count"
+    display_name: "TV_series 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(TV_series.id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "tv_series"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "tv_series_share_sum"
+    display_name: "TV_series.Share SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(TV_series.Share)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "tv_series"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "tv_series_share_avg"
+    display_name: "TV_series.Share AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(TV_series.Share)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "tv_series"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "tv_series_weekly_rank_sum"
+    display_name: "TV_series.Weekly_Rank SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(TV_series.Weekly_Rank)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "tv_series"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "tv_series_weekly_rank_avg"
+    display_name: "TV_series.Weekly_Rank AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(TV_series.Weekly_Rank)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "tv_series"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "title"
+    bindings:
+      title: "Title"
+    hierarchy: [title]
+    grain_levels: { title: 1 }
+    grain_level: 1
+    note: "schema 派生：绑 Cartoon.Title"
+
+field_bindings:
+
+  - concept: "title"
+    canonical_asset: "cartoon.Title"
+    grain_level: 1
+    default_reason: "schema 派生：该库无 time 列，取首个 text 列作维度（非时间列）"
+
+joins:
+
+  - left: "tv_series.Channel"
+    right: "tv_channel.id"
+    type: "many_to_one"
+    on_columns: ["Channel"]
+    certified_by: "data-team"
+
+  - left: "cartoon.Channel"
+    right: "tv_channel.id"
+    type: "many_to_one"
+    on_columns: ["Channel"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "18_49_Rating_Share", lang: en, maps_to_kind: column, maps_to_ref: "tv_series.18_49_Rating_Share", category: column }
+  - { term: "Air_Date", lang: en, maps_to_kind: column, maps_to_ref: "tv_series.Air_Date", category: column }
+  - { term: "Content", lang: en, maps_to_kind: column, maps_to_ref: "tv_channel.Content", category: column }
+  - { term: "Country", lang: en, maps_to_kind: column, maps_to_ref: "tv_channel.Country", category: column }
+  - { term: "Directed_by", lang: en, maps_to_kind: column, maps_to_ref: "cartoon.Directed_by", category: column }
+  - { term: "Episode", lang: en, maps_to_kind: column, maps_to_ref: "tv_series.Episode", category: column }
+  - { term: "Hight_definition_TV", lang: en, maps_to_kind: column, maps_to_ref: "tv_channel.Hight_definition_TV", category: column }
+  - { term: "Language", lang: en, maps_to_kind: column, maps_to_ref: "tv_channel.Language", category: column }
+  - { term: "Original_air_date", lang: en, maps_to_kind: column, maps_to_ref: "cartoon.Original_air_date", category: column }
+  - { term: "Package_Option", lang: en, maps_to_kind: column, maps_to_ref: "tv_channel.Package_Option", category: column }
+  - { term: "Pay_per_view_PPV", lang: en, maps_to_kind: column, maps_to_ref: "tv_channel.Pay_per_view_PPV", category: column }
+  - { term: "Pixel_aspect_ratio_PAR", lang: en, maps_to_kind: column, maps_to_ref: "tv_channel.Pixel_aspect_ratio_PAR", category: column }
+  - { term: "Production_code", lang: en, maps_to_kind: column, maps_to_ref: "cartoon.Production_code", category: column }
+  - { term: "Rating", lang: en, maps_to_kind: column, maps_to_ref: "tv_series.Rating", category: column }
+  - { term: "Share", lang: en, maps_to_kind: column, maps_to_ref: "tv_series.Share", category: column }
+  - { term: "Title", lang: en, maps_to_kind: column, maps_to_ref: "cartoon.Title", category: column }
+  - { term: "Viewers_m", lang: en, maps_to_kind: column, maps_to_ref: "tv_series.Viewers_m", category: column }
+  - { term: "Weekly_Rank", lang: en, maps_to_kind: column, maps_to_ref: "tv_series.Weekly_Rank", category: column }
+  - { term: "Written_by", lang: en, maps_to_kind: column, maps_to_ref: "cartoon.Written_by", category: column }
+  - { term: "series_name", lang: en, maps_to_kind: column, maps_to_ref: "tv_channel.series_name", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Cartoon.Title（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

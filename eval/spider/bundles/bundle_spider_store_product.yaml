@@ -1,0 +1,502 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "district"
+    physical_asset: "district"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 district（schema 派生资产，5 列）"
+    columns:
+      - name: "District_ID"
+        type: "INT"
+        comment: "主键；schema 派生列"
+      - name: "District_name"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Headquartered_City"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "City_Population"
+        type: "REAL"
+        comment: "schema 派生列"
+      - name: "City_Area"
+        type: "REAL"
+        comment: "schema 派生列"
+
+  - logical_name: "product"
+    physical_asset: "product"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 6
+    description: "Spider 物理表 product（schema 派生资产，7 列）"
+    columns:
+      - name: "product_id"
+        type: "INT"
+        comment: "主键；schema 派生列"
+      - name: "product"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "dimensions"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "dpi"
+        type: "REAL"
+        comment: "schema 派生列"
+      - name: "pages_per_minute_color"
+        type: "REAL"
+        comment: "schema 派生列"
+      - name: "max_page_size"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "interface"
+        type: "TEXT"
+        comment: "schema 派生列"
+
+  - logical_name: "store"
+    physical_asset: "store"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 5
+    description: "Spider 物理表 store（schema 派生资产，6 列）"
+    columns:
+      - name: "Store_ID"
+        type: "INT"
+        comment: "主键；schema 派生列"
+      - name: "Store_Name"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Type"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "Area_size"
+        type: "REAL"
+        comment: "schema 派生列"
+      - name: "Number_of_product_category"
+        type: "REAL"
+        comment: "schema 派生列"
+      - name: "Ranking"
+        type: "INT"
+        comment: "schema 派生列"
+
+  - logical_name: "store_district"
+    physical_asset: "store_district"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 5
+    description: "Spider 物理表 store_district（schema 派生资产，2 列）"
+    columns:
+      - name: "Store_ID"
+        type: "INT"
+        comment: "主键；schema 派生列"
+      - name: "District_ID"
+        type: "INT"
+        comment: "schema 派生列"
+
+  - logical_name: "store_product"
+    physical_asset: "store_product"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 store_product（schema 派生资产，2 列）"
+    columns:
+      - name: "Store_ID"
+        type: "INT"
+        comment: "主键；schema 派生列"
+      - name: "Product_ID"
+        type: "INT"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "district_row_count"
+    display_name: "district 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(district.District_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "district"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "district_city_population_sum"
+    display_name: "district.City_Population SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(district.City_Population)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "district"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "district_city_population_avg"
+    display_name: "district.City_Population AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(district.City_Population)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "district"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "district_city_area_sum"
+    display_name: "district.City_Area SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(district.City_Area)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "district"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "district_city_area_avg"
+    display_name: "district.City_Area AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(district.City_Area)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "district"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "product_row_count"
+    display_name: "product 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(product.product_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "product"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "product_dpi_sum"
+    display_name: "product.dpi SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(product.dpi)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "product"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "product_dpi_avg"
+    display_name: "product.dpi AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(product.dpi)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "product"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "product_pages_per_minute_color_sum"
+    display_name: "product.pages_per_minute_color SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(product.pages_per_minute_color)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "product"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "product_pages_per_minute_color_avg"
+    display_name: "product.pages_per_minute_color AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(product.pages_per_minute_color)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "product"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "store_row_count"
+    display_name: "store 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(store.Store_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "store"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "store_area_size_sum"
+    display_name: "store.Area_size SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(store.Area_size)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "store"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "store_area_size_avg"
+    display_name: "store.Area_size AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(store.Area_size)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "store"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "store_number_of_product_category_sum"
+    display_name: "store.Number_of_product_category SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(store.Number_of_product_category)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "store"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "store_number_of_product_category_avg"
+    display_name: "store.Number_of_product_category AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(store.Number_of_product_category)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "store"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "store_ranking_sum"
+    display_name: "store.Ranking SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(store.Ranking)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "store"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "store_ranking_avg"
+    display_name: "store.Ranking AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(store.Ranking)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "store"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "store_district_row_count"
+    display_name: "store_district 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(store_district.Store_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "store_district"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "store_product_row_count"
+    display_name: "store_product 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(store_product.Store_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "store_product"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "district_name"
+    bindings:
+      district_name: "District_name"
+    hierarchy: [district_name]
+    grain_levels: { district_name: 1 }
+    grain_level: 1
+    note: "schema 派生：绑 district.District_name"
+
+field_bindings:
+
+  - concept: "district_name"
+    canonical_asset: "district.District_name"
+    grain_level: 1
+    default_reason: "schema 派生：该库无 time 列，取首个 text 列作维度（非时间列）"
+
+joins:
+
+  - left: "store_product.Store_ID"
+    right: "store.Store_ID"
+    type: "many_to_one"
+    on_columns: ["Store_ID"]
+    certified_by: "data-team"
+
+  - left: "store_district.District_ID"
+    right: "district.District_ID"
+    type: "many_to_one"
+    on_columns: ["District_ID"]
+    certified_by: "data-team"
+
+  - left: "store_district.Store_ID"
+    right: "store.Store_ID"
+    type: "many_to_one"
+    on_columns: ["Store_ID"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "Area_size", lang: en, maps_to_kind: column, maps_to_ref: "store.Area_size", category: column }
+  - { term: "City_Area", lang: en, maps_to_kind: column, maps_to_ref: "district.City_Area", category: column }
+  - { term: "City_Population", lang: en, maps_to_kind: column, maps_to_ref: "district.City_Population", category: column }
+  - { term: "District_name", lang: en, maps_to_kind: column, maps_to_ref: "district.District_name", category: column }
+  - { term: "Headquartered_City", lang: en, maps_to_kind: column, maps_to_ref: "district.Headquartered_City", category: column }
+  - { term: "Number_of_product_category", lang: en, maps_to_kind: column, maps_to_ref: "store.Number_of_product_category", category: column }
+  - { term: "Product_ID", lang: en, maps_to_kind: column, maps_to_ref: "store_product.Product_ID", category: column }
+  - { term: "Ranking", lang: en, maps_to_kind: column, maps_to_ref: "store.Ranking", category: column }
+  - { term: "Store_Name", lang: en, maps_to_kind: column, maps_to_ref: "store.Store_Name", category: column }
+  - { term: "Type", lang: en, maps_to_kind: column, maps_to_ref: "store.Type", category: column }
+  - { term: "dimensions", lang: en, maps_to_kind: column, maps_to_ref: "product.dimensions", category: column }
+  - { term: "dpi", lang: en, maps_to_kind: column, maps_to_ref: "product.dpi", category: column }
+  - { term: "interface", lang: en, maps_to_kind: column, maps_to_ref: "product.interface", category: column }
+  - { term: "max_page_size", lang: en, maps_to_kind: column, maps_to_ref: "product.max_page_size", category: column }
+  - { term: "pages_per_minute_color", lang: en, maps_to_kind: column, maps_to_ref: "product.pages_per_minute_color", category: column }
+  - { term: "product", lang: en, maps_to_kind: column, maps_to_ref: "product.product", category: column }
+  - { term: "product_id", lang: en, maps_to_kind: column, maps_to_ref: "product.product_id", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = district.District_name（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

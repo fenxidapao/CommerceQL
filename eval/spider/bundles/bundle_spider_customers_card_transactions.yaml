@@ -1,0 +1,323 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "accounts"
+    physical_asset: "Accounts"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Accounts（schema 派生资产，4 列）"
+    columns:
+      - name: "account_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "account_name"
+        type: "VARCHAR(50)"
+        comment: "schema 派生列"
+      - name: "other_account_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "customers"
+    physical_asset: "Customers"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Customers（schema 派生资产，7 列）"
+    columns:
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "customer_first_name"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "customer_last_name"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "customer_address"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "customer_phone"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "customer_email"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "other_customer_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "customers_cards"
+    physical_asset: "Customers_Cards"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Customers_Cards（schema 派生资产，7 列）"
+    columns:
+      - name: "card_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "card_type_code"
+        type: "VARCHAR(15)"
+        comment: "schema 派生列"
+      - name: "card_number"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "date_valid_from"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "date_valid_to"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "other_card_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "financial_transactions"
+    physical_asset: "Financial_Transactions"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Financial_Transactions（schema 派生资产，9 列）"
+    columns:
+      - name: "transaction_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "previous_transaction_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "account_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "card_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "transaction_type"
+        type: "VARCHAR(15)"
+        comment: "schema 派生列"
+      - name: "transaction_date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "transaction_amount"
+        type: "DOUBLE"
+        comment: "schema 派生列"
+      - name: "transaction_comment"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "other_transaction_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "accounts_row_count"
+    display_name: "Accounts 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Accounts.account_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_valid_from"
+    owner: "data-team"
+    default_binding:
+      asset: "accounts"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customers_row_count"
+    display_name: "Customers 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customers.customer_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_valid_from"
+    owner: "data-team"
+    default_binding:
+      asset: "customers"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customers_cards_row_count"
+    display_name: "Customers_Cards 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customers_Cards.card_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_valid_from"
+    owner: "data-team"
+    default_binding:
+      asset: "customers_cards"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "financial_transactions_row_count"
+    display_name: "Financial_Transactions 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Financial_Transactions.transaction_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_valid_from"
+    owner: "data-team"
+    default_binding:
+      asset: "financial_transactions"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "financial_transactions_transaction_amount_sum"
+    display_name: "Financial_Transactions.transaction_amount SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Financial_Transactions.transaction_amount)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "date_valid_from"
+    owner: "data-team"
+    default_binding:
+      asset: "financial_transactions"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "financial_transactions_transaction_amount_avg"
+    display_name: "Financial_Transactions.transaction_amount AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Financial_Transactions.transaction_amount)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "date_valid_from"
+    owner: "data-team"
+    default_binding:
+      asset: "financial_transactions"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "date_valid_from"
+      week: "date_valid_from"
+      month: "date_valid_from"
+      quarter: "date_valid_from"
+      year: "date_valid_from"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 Customers_Cards.date_valid_from"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "customers_cards.date_valid_from"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "financial_transactions.account_id"
+    right: "accounts.account_id"
+    type: "many_to_one"
+    on_columns: ["account_id"]
+    certified_by: "data-team"
+
+  - left: "financial_transactions.card_id"
+    right: "customers_cards.card_id"
+    type: "many_to_one"
+    on_columns: ["card_id"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "account_name", lang: en, maps_to_kind: column, maps_to_ref: "accounts.account_name", category: column }
+  - { term: "card_number", lang: en, maps_to_kind: column, maps_to_ref: "customers_cards.card_number", category: column }
+  - { term: "card_type_code", lang: en, maps_to_kind: column, maps_to_ref: "customers_cards.card_type_code", category: column }
+  - { term: "customer_address", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_address", category: column }
+  - { term: "customer_email", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_email", category: column }
+  - { term: "customer_first_name", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_first_name", category: column }
+  - { term: "customer_last_name", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_last_name", category: column }
+  - { term: "customer_phone", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_phone", category: column }
+  - { term: "date_valid_from", lang: en, maps_to_kind: column, maps_to_ref: "customers_cards.date_valid_from", category: column }
+  - { term: "date_valid_to", lang: en, maps_to_kind: column, maps_to_ref: "customers_cards.date_valid_to", category: column }
+  - { term: "other_account_details", lang: en, maps_to_kind: column, maps_to_ref: "accounts.other_account_details", category: column }
+  - { term: "other_card_details", lang: en, maps_to_kind: column, maps_to_ref: "customers_cards.other_card_details", category: column }
+  - { term: "other_customer_details", lang: en, maps_to_kind: column, maps_to_ref: "customers.other_customer_details", category: column }
+  - { term: "other_transaction_details", lang: en, maps_to_kind: column, maps_to_ref: "financial_transactions.other_transaction_details", category: column }
+  - { term: "previous_transaction_id", lang: en, maps_to_kind: column, maps_to_ref: "financial_transactions.previous_transaction_id", category: column }
+  - { term: "transaction_amount", lang: en, maps_to_kind: column, maps_to_ref: "financial_transactions.transaction_amount", category: column }
+  - { term: "transaction_comment", lang: en, maps_to_kind: column, maps_to_ref: "financial_transactions.transaction_comment", category: column }
+  - { term: "transaction_date", lang: en, maps_to_kind: column, maps_to_ref: "financial_transactions.transaction_date", category: column }
+  - { term: "transaction_id", lang: en, maps_to_kind: column, maps_to_ref: "financial_transactions.transaction_id", category: column }
+  - { term: "transaction_type", lang: en, maps_to_kind: column, maps_to_ref: "financial_transactions.transaction_type", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Customers_Cards.date_valid_from（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

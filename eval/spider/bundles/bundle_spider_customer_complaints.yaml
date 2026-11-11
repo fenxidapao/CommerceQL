@@ -1,0 +1,342 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "complaints"
+    physical_asset: "Complaints"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 12
+    description: "Spider 物理表 Complaints（schema 派生资产，9 列）"
+    columns:
+      - name: "complaint_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "product_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "complaint_outcome_code"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "complaint_status_code"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "complaint_type_code"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "date_complaint_raised"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "date_complaint_closed"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "staff_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "customers"
+    physical_asset: "Customers"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 8
+    description: "Spider 物理表 Customers（schema 派生资产，8 列）"
+    columns:
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "customer_type_code"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "address_line_1"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "address_line_2"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "town_city"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "state"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "email_address"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "phone_number"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+
+  - logical_name: "products"
+    physical_asset: "Products"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 4
+    description: "Spider 物理表 Products（schema 派生资产，8 列）"
+    columns:
+      - name: "product_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "parent_product_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "product_category_code"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "date_product_first_available"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "date_product_discontinued"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "product_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "product_description"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "product_price"
+        type: "DECIMAL(19,4)"
+        comment: "schema 派生列"
+
+  - logical_name: "staff"
+    physical_asset: "Staff"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 7
+    description: "Spider 物理表 Staff（schema 派生资产，6 列）"
+    columns:
+      - name: "staff_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "gender"
+        type: "VARCHAR(1)"
+        comment: "schema 派生列"
+      - name: "first_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "last_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "email_address"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "phone_number"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "complaints_row_count"
+    display_name: "Complaints 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Complaints.complaint_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_complaint_raised"
+    owner: "data-team"
+    default_binding:
+      asset: "complaints"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customers_row_count"
+    display_name: "Customers 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customers.customer_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_complaint_raised"
+    owner: "data-team"
+    default_binding:
+      asset: "customers"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_row_count"
+    display_name: "Products 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Products.product_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_complaint_raised"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_product_price_sum"
+    display_name: "Products.product_price SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Products.product_price)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "date_complaint_raised"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_product_price_avg"
+    display_name: "Products.product_price AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Products.product_price)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "date_complaint_raised"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "staff_row_count"
+    display_name: "Staff 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Staff.staff_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_complaint_raised"
+    owner: "data-team"
+    default_binding:
+      asset: "staff"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "date_complaint_raised"
+      week: "date_complaint_raised"
+      month: "date_complaint_raised"
+      quarter: "date_complaint_raised"
+      year: "date_complaint_raised"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 Complaints.date_complaint_raised"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "complaints.date_complaint_raised"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "complaints.customer_id"
+    right: "customers.customer_id"
+    type: "many_to_one"
+    on_columns: ["customer_id"]
+    certified_by: "data-team"
+
+  - left: "complaints.product_id"
+    right: "products.product_id"
+    type: "many_to_one"
+    on_columns: ["product_id"]
+    certified_by: "data-team"
+
+  - left: "complaints.staff_id"
+    right: "staff.staff_id"
+    type: "many_to_one"
+    on_columns: ["staff_id"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "address_line_1", lang: en, maps_to_kind: column, maps_to_ref: "customers.address_line_1", category: column }
+  - { term: "address_line_2", lang: en, maps_to_kind: column, maps_to_ref: "customers.address_line_2", category: column }
+  - { term: "complaint_id", lang: en, maps_to_kind: column, maps_to_ref: "complaints.complaint_id", category: column }
+  - { term: "complaint_outcome_code", lang: en, maps_to_kind: column, maps_to_ref: "complaints.complaint_outcome_code", category: column }
+  - { term: "complaint_status_code", lang: en, maps_to_kind: column, maps_to_ref: "complaints.complaint_status_code", category: column }
+  - { term: "complaint_type_code", lang: en, maps_to_kind: column, maps_to_ref: "complaints.complaint_type_code", category: column }
+  - { term: "customer_type_code", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_type_code", category: column }
+  - { term: "date_complaint_closed", lang: en, maps_to_kind: column, maps_to_ref: "complaints.date_complaint_closed", category: column }
+  - { term: "date_complaint_raised", lang: en, maps_to_kind: column, maps_to_ref: "complaints.date_complaint_raised", category: column }
+  - { term: "date_product_discontinued", lang: en, maps_to_kind: column, maps_to_ref: "products.date_product_discontinued", category: column }
+  - { term: "date_product_first_available", lang: en, maps_to_kind: column, maps_to_ref: "products.date_product_first_available", category: column }
+  - { term: "first_name", lang: en, maps_to_kind: column, maps_to_ref: "staff.first_name", category: column }
+  - { term: "gender", lang: en, maps_to_kind: column, maps_to_ref: "staff.gender", category: column }
+  - { term: "last_name", lang: en, maps_to_kind: column, maps_to_ref: "staff.last_name", category: column }
+  - { term: "parent_product_id", lang: en, maps_to_kind: column, maps_to_ref: "products.parent_product_id", category: column }
+  - { term: "product_category_code", lang: en, maps_to_kind: column, maps_to_ref: "products.product_category_code", category: column }
+  - { term: "product_description", lang: en, maps_to_kind: column, maps_to_ref: "products.product_description", category: column }
+  - { term: "product_name", lang: en, maps_to_kind: column, maps_to_ref: "products.product_name", category: column }
+  - { term: "product_price", lang: en, maps_to_kind: column, maps_to_ref: "products.product_price", category: column }
+  - { term: "state", lang: en, maps_to_kind: column, maps_to_ref: "customers.state", category: column }
+  - { term: "town_city", lang: en, maps_to_kind: column, maps_to_ref: "customers.town_city", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Complaints.date_complaint_raised（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

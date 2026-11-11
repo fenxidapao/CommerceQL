@@ -1,0 +1,496 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "claim_headers"
+    physical_asset: "Claim_Headers"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Claim_Headers（schema 派生资产，8 列）"
+    columns:
+      - name: "Claim_Header_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Claim_Status_Code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+      - name: "Claim_Type_Code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+      - name: "Policy_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Date_of_Claim"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "Date_of_Settlement"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "Amount_Claimed"
+        type: "DECIMAL(20,4)"
+        comment: "schema 派生列"
+      - name: "Amount_Piad"
+        type: "DECIMAL(20,4)"
+        comment: "schema 派生列"
+
+  - logical_name: "claims_documents"
+    physical_asset: "Claims_Documents"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 14
+    description: "Spider 物理表 Claims_Documents（schema 派生资产，4 列）"
+    columns:
+      - name: "Claim_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Document_Type_Code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+      - name: "Created_by_Staff_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Created_Date"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "claims_processing"
+    physical_asset: "Claims_Processing"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Claims_Processing（schema 派生资产，5 列）"
+    columns:
+      - name: "Claim_Processing_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Claim_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Claim_Outcome_Code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+      - name: "Claim_Stage_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Staff_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "claims_processing_stages"
+    physical_asset: "Claims_Processing_Stages"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 2
+    description: "Spider 物理表 Claims_Processing_Stages（schema 派生资产，4 列）"
+    columns:
+      - name: "Claim_Stage_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Next_Claim_Stage_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Claim_Status_Name"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "Claim_Status_Description"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "customers"
+    physical_asset: "Customers"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Customers（schema 派生资产，2 列）"
+    columns:
+      - name: "Customer_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Customer_Details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "policies"
+    physical_asset: "Policies"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Policies（schema 派生资产，5 列）"
+    columns:
+      - name: "Policy_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Customer_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Policy_Type_Code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+      - name: "Start_Date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "End_Date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+
+  - logical_name: "staff"
+    physical_asset: "Staff"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Staff（schema 派生资产，2 列）"
+    columns:
+      - name: "Staff_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Staff_Details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "claim_headers_row_count"
+    display_name: "Claim_Headers 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Claim_Headers.Claim_Header_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Date_of_Claim"
+    owner: "data-team"
+    default_binding:
+      asset: "claim_headers"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claim_headers_amount_claimed_sum"
+    display_name: "Claim_Headers.Amount_Claimed SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Claim_Headers.Amount_Claimed)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "Date_of_Claim"
+    owner: "data-team"
+    default_binding:
+      asset: "claim_headers"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claim_headers_amount_claimed_avg"
+    display_name: "Claim_Headers.Amount_Claimed AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Claim_Headers.Amount_Claimed)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "Date_of_Claim"
+    owner: "data-team"
+    default_binding:
+      asset: "claim_headers"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claim_headers_amount_piad_sum"
+    display_name: "Claim_Headers.Amount_Piad SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Claim_Headers.Amount_Piad)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "Date_of_Claim"
+    owner: "data-team"
+    default_binding:
+      asset: "claim_headers"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claim_headers_amount_piad_avg"
+    display_name: "Claim_Headers.Amount_Piad AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Claim_Headers.Amount_Piad)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "Date_of_Claim"
+    owner: "data-team"
+    default_binding:
+      asset: "claim_headers"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claims_documents_row_count"
+    display_name: "Claims_Documents 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Claims_Documents.Claim_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Date_of_Claim"
+    owner: "data-team"
+    default_binding:
+      asset: "claims_documents"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claims_documents_created_date_sum"
+    display_name: "Claims_Documents.Created_Date SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Claims_Documents.Created_Date)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "Date_of_Claim"
+    owner: "data-team"
+    default_binding:
+      asset: "claims_documents"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claims_documents_created_date_avg"
+    display_name: "Claims_Documents.Created_Date AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Claims_Documents.Created_Date)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "Date_of_Claim"
+    owner: "data-team"
+    default_binding:
+      asset: "claims_documents"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claims_processing_row_count"
+    display_name: "Claims_Processing 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Claims_Processing.Claim_Processing_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Date_of_Claim"
+    owner: "data-team"
+    default_binding:
+      asset: "claims_processing"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claims_processing_stages_row_count"
+    display_name: "Claims_Processing_Stages 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Claims_Processing_Stages.Claim_Stage_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Date_of_Claim"
+    owner: "data-team"
+    default_binding:
+      asset: "claims_processing_stages"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customers_row_count"
+    display_name: "Customers 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customers.Customer_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Date_of_Claim"
+    owner: "data-team"
+    default_binding:
+      asset: "customers"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "policies_row_count"
+    display_name: "Policies 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Policies.Policy_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Date_of_Claim"
+    owner: "data-team"
+    default_binding:
+      asset: "policies"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "staff_row_count"
+    display_name: "Staff 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Staff.Staff_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Date_of_Claim"
+    owner: "data-team"
+    default_binding:
+      asset: "staff"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "Date_of_Claim"
+      week: "Date_of_Claim"
+      month: "Date_of_Claim"
+      quarter: "Date_of_Claim"
+      year: "Date_of_Claim"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 Claim_Headers.Date_of_Claim"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "claim_headers.Date_of_Claim"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "policies.Customer_ID"
+    right: "customers.Customer_ID"
+    type: "many_to_one"
+    on_columns: ["Customer_ID"]
+    certified_by: "data-team"
+
+  - left: "claim_headers.Policy_ID"
+    right: "policies.Policy_ID"
+    type: "many_to_one"
+    on_columns: ["Policy_ID"]
+    certified_by: "data-team"
+
+  - left: "claims_documents.Created_by_Staff_ID"
+    right: "staff.Staff_ID"
+    type: "many_to_one"
+    on_columns: ["Created_by_Staff_ID"]
+    certified_by: "data-team"
+
+  - left: "claims_documents.Claim_ID"
+    right: "claim_headers.Claim_Header_ID"
+    type: "many_to_one"
+    on_columns: ["Claim_ID"]
+    certified_by: "data-team"
+
+  - left: "claims_processing.Staff_ID"
+    right: "staff.Staff_ID"
+    type: "many_to_one"
+    on_columns: ["Staff_ID"]
+    certified_by: "data-team"
+
+  - left: "claims_processing.Claim_ID"
+    right: "claim_headers.Claim_Header_ID"
+    type: "many_to_one"
+    on_columns: ["Claim_ID"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "Amount_Claimed", lang: en, maps_to_kind: column, maps_to_ref: "claim_headers.Amount_Claimed", category: column }
+  - { term: "Amount_Piad", lang: en, maps_to_kind: column, maps_to_ref: "claim_headers.Amount_Piad", category: column }
+  - { term: "Claim_Header_ID", lang: en, maps_to_kind: column, maps_to_ref: "claim_headers.Claim_Header_ID", category: column }
+  - { term: "Claim_Outcome_Code", lang: en, maps_to_kind: column, maps_to_ref: "claims_processing.Claim_Outcome_Code", category: column }
+  - { term: "Claim_Processing_ID", lang: en, maps_to_kind: column, maps_to_ref: "claims_processing.Claim_Processing_ID", category: column }
+  - { term: "Claim_Status_Code", lang: en, maps_to_kind: column, maps_to_ref: "claim_headers.Claim_Status_Code", category: column }
+  - { term: "Claim_Status_Description", lang: en, maps_to_kind: column, maps_to_ref: "claims_processing_stages.Claim_Status_Description", category: column }
+  - { term: "Claim_Status_Name", lang: en, maps_to_kind: column, maps_to_ref: "claims_processing_stages.Claim_Status_Name", category: column }
+  - { term: "Claim_Type_Code", lang: en, maps_to_kind: column, maps_to_ref: "claim_headers.Claim_Type_Code", category: column }
+  - { term: "Created_Date", lang: en, maps_to_kind: column, maps_to_ref: "claims_documents.Created_Date", category: column }
+  - { term: "Created_by_Staff_ID", lang: en, maps_to_kind: column, maps_to_ref: "claims_documents.Created_by_Staff_ID", category: column }
+  - { term: "Customer_Details", lang: en, maps_to_kind: column, maps_to_ref: "customers.Customer_Details", category: column }
+  - { term: "Date_of_Claim", lang: en, maps_to_kind: column, maps_to_ref: "claim_headers.Date_of_Claim", category: column }
+  - { term: "Date_of_Settlement", lang: en, maps_to_kind: column, maps_to_ref: "claim_headers.Date_of_Settlement", category: column }
+  - { term: "Document_Type_Code", lang: en, maps_to_kind: column, maps_to_ref: "claims_documents.Document_Type_Code", category: column }
+  - { term: "End_Date", lang: en, maps_to_kind: column, maps_to_ref: "policies.End_Date", category: column }
+  - { term: "Next_Claim_Stage_ID", lang: en, maps_to_kind: column, maps_to_ref: "claims_processing_stages.Next_Claim_Stage_ID", category: column }
+  - { term: "Policy_Type_Code", lang: en, maps_to_kind: column, maps_to_ref: "policies.Policy_Type_Code", category: column }
+  - { term: "Staff_Details", lang: en, maps_to_kind: column, maps_to_ref: "staff.Staff_Details", category: column }
+  - { term: "Start_Date", lang: en, maps_to_kind: column, maps_to_ref: "policies.Start_Date", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Claim_Headers.Date_of_Claim（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

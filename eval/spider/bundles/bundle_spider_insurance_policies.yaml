@@ -1,0 +1,458 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "claims"
+    physical_asset: "Claims"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Claims（schema 派生资产，6 列）"
+    columns:
+      - name: "Claim_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Policy_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Date_Claim_Made"
+        type: "DATE"
+        comment: "schema 派生列"
+      - name: "Date_Claim_Settled"
+        type: "DATE"
+        comment: "schema 派生列"
+      - name: "Amount_Claimed"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Amount_Settled"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "customer_policies"
+    physical_asset: "Customer_Policies"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Customer_Policies（schema 派生资产，5 列）"
+    columns:
+      - name: "Policy_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Customer_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Policy_Type_Code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+      - name: "Start_Date"
+        type: "DATE"
+        comment: "schema 派生列"
+      - name: "End_Date"
+        type: "DATE"
+        comment: "schema 派生列"
+
+  - logical_name: "customers"
+    physical_asset: "Customers"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Customers（schema 派生资产，2 列）"
+    columns:
+      - name: "Customer_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Customer_Details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "payments"
+    physical_asset: "Payments"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Payments（schema 派生资产，5 列）"
+    columns:
+      - name: "Payment_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Settlement_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Payment_Method_Code"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "Date_Payment_Made"
+        type: "DATE"
+        comment: "schema 派生列"
+      - name: "Amount_Payment"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "settlements"
+    physical_asset: "Settlements"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Settlements（schema 派生资产，7 列）"
+    columns:
+      - name: "Settlement_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Claim_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Date_Claim_Made"
+        type: "DATE"
+        comment: "schema 派生列"
+      - name: "Date_Claim_Settled"
+        type: "DATE"
+        comment: "schema 派生列"
+      - name: "Amount_Claimed"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Amount_Settled"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Customer_Policy_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "claims_row_count"
+    display_name: "Claims 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Claims.Claim_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "claims"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claims_amount_claimed_sum"
+    display_name: "Claims.Amount_Claimed SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Claims.Amount_Claimed)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "claims"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claims_amount_claimed_avg"
+    display_name: "Claims.Amount_Claimed AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Claims.Amount_Claimed)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "claims"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claims_amount_settled_sum"
+    display_name: "Claims.Amount_Settled SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Claims.Amount_Settled)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "claims"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claims_amount_settled_avg"
+    display_name: "Claims.Amount_Settled AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Claims.Amount_Settled)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "claims"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_policies_row_count"
+    display_name: "Customer_Policies 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customer_Policies.Policy_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "customer_policies"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customers_row_count"
+    display_name: "Customers 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customers.Customer_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "customers"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "payments_row_count"
+    display_name: "Payments 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Payments.Payment_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "payments"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "payments_amount_payment_sum"
+    display_name: "Payments.Amount_Payment SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Payments.Amount_Payment)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "payments"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "payments_amount_payment_avg"
+    display_name: "Payments.Amount_Payment AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Payments.Amount_Payment)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "payments"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "settlements_row_count"
+    display_name: "Settlements 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Settlements.Settlement_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "settlements"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "settlements_amount_claimed_sum"
+    display_name: "Settlements.Amount_Claimed SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Settlements.Amount_Claimed)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "settlements"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "settlements_amount_claimed_avg"
+    display_name: "Settlements.Amount_Claimed AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Settlements.Amount_Claimed)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "settlements"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "settlements_amount_settled_sum"
+    display_name: "Settlements.Amount_Settled SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Settlements.Amount_Settled)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "settlements"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "settlements_amount_settled_avg"
+    display_name: "Settlements.Amount_Settled AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Settlements.Amount_Settled)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "Date_Claim_Made"
+    owner: "data-team"
+    default_binding:
+      asset: "settlements"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "Date_Claim_Made"
+      week: "Date_Claim_Made"
+      month: "Date_Claim_Made"
+      quarter: "Date_Claim_Made"
+      year: "Date_Claim_Made"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 Claims.Date_Claim_Made"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "claims.Date_Claim_Made"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "customer_policies.Customer_ID"
+    right: "customers.Customer_ID"
+    type: "many_to_one"
+    on_columns: ["Customer_ID"]
+    certified_by: "data-team"
+
+  - left: "claims.Policy_ID"
+    right: "customer_policies.Policy_ID"
+    type: "many_to_one"
+    on_columns: ["Policy_ID"]
+    certified_by: "data-team"
+
+  - left: "settlements.Claim_ID"
+    right: "claims.Claim_ID"
+    type: "many_to_one"
+    on_columns: ["Claim_ID"]
+    certified_by: "data-team"
+
+  - left: "payments.Settlement_ID"
+    right: "settlements.Settlement_ID"
+    type: "many_to_one"
+    on_columns: ["Settlement_ID"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "Amount_Payment", lang: en, maps_to_kind: column, maps_to_ref: "payments.Amount_Payment", category: column }
+  - { term: "Customer_Details", lang: en, maps_to_kind: column, maps_to_ref: "customers.Customer_Details", category: column }
+  - { term: "Customer_Policy_ID", lang: en, maps_to_kind: column, maps_to_ref: "settlements.Customer_Policy_ID", category: column }
+  - { term: "Date_Payment_Made", lang: en, maps_to_kind: column, maps_to_ref: "payments.Date_Payment_Made", category: column }
+  - { term: "End_Date", lang: en, maps_to_kind: column, maps_to_ref: "customer_policies.End_Date", category: column }
+  - { term: "Payment_ID", lang: en, maps_to_kind: column, maps_to_ref: "payments.Payment_ID", category: column }
+  - { term: "Payment_Method_Code", lang: en, maps_to_kind: column, maps_to_ref: "payments.Payment_Method_Code", category: column }
+  - { term: "Policy_Type_Code", lang: en, maps_to_kind: column, maps_to_ref: "customer_policies.Policy_Type_Code", category: column }
+  - { term: "Start_Date", lang: en, maps_to_kind: column, maps_to_ref: "customer_policies.Start_Date", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Claims.Date_Claim_Made（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

@@ -1,0 +1,594 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "border_info"
+    physical_asset: "border_info"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 0
+    description: "Spider 物理表 border_info（schema 派生资产，2 列）"
+    columns:
+      - name: "state_name"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "border"
+        type: "TEXT"
+        comment: "主键；schema 派生列"
+
+  - logical_name: "city"
+    physical_asset: "city"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 0
+    description: "Spider 物理表 city（schema 派生资产，4 列）"
+    columns:
+      - name: "city_name"
+        type: "TEXT"
+        comment: "主键；schema 派生列"
+      - name: "population"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "country_name"
+        type: "varchar(3)"
+        comment: "schema 派生列"
+      - name: "state_name"
+        type: "TEXT"
+        comment: "schema 派生列"
+
+  - logical_name: "highlow"
+    physical_asset: "highlow"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 0
+    description: "Spider 物理表 highlow（schema 派生资产，5 列）"
+    columns:
+      - name: "state_name"
+        type: "TEXT"
+        comment: "主键；schema 派生列"
+      - name: "highest_elevation"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "lowest_point"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "highest_point"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "lowest_elevation"
+        type: "TEXT"
+        comment: "schema 派生列"
+
+  - logical_name: "lake"
+    physical_asset: "lake"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 0
+    description: "Spider 物理表 lake（schema 派生资产，4 列）"
+    columns:
+      - name: "lake_name"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "area"
+        type: "double"
+        comment: "schema 派生列"
+      - name: "country_name"
+        type: "varchar(3)"
+        comment: "schema 派生列"
+      - name: "state_name"
+        type: "TEXT"
+        comment: "schema 派生列"
+
+  - logical_name: "mountain"
+    physical_asset: "mountain"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 0
+    description: "Spider 物理表 mountain（schema 派生资产，4 列）"
+    columns:
+      - name: "mountain_name"
+        type: "TEXT"
+        comment: "主键；schema 派生列"
+      - name: "mountain_altitude"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "country_name"
+        type: "varchar(3)"
+        comment: "schema 派生列"
+      - name: "state_name"
+        type: "TEXT"
+        comment: "schema 派生列"
+
+  - logical_name: "river"
+    physical_asset: "river"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 0
+    description: "Spider 物理表 river（schema 派生资产，4 列）"
+    columns:
+      - name: "river_name"
+        type: "TEXT"
+        comment: "主键；schema 派生列"
+      - name: "length"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "country_name"
+        type: "varchar(3)"
+        comment: "schema 派生列"
+      - name: "traverse"
+        type: "TEXT"
+        comment: "schema 派生列"
+
+  - logical_name: "state"
+    physical_asset: "state"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 0
+    description: "Spider 物理表 state（schema 派生资产，6 列）"
+    columns:
+      - name: "state_name"
+        type: "TEXT"
+        comment: "主键；schema 派生列"
+      - name: "population"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "area"
+        type: "double"
+        comment: "schema 派生列"
+      - name: "country_name"
+        type: "varchar(3)"
+        comment: "schema 派生列"
+      - name: "capital"
+        type: "TEXT"
+        comment: "schema 派生列"
+      - name: "density"
+        type: "double"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "border_info_row_count"
+    display_name: "border_info 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(border_info.border)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "border_info"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "city_row_count"
+    display_name: "city 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(city.city_name)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "city"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "city_population_sum"
+    display_name: "city.population SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(city.population)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "city"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "city_population_avg"
+    display_name: "city.population AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(city.population)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "city"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "highlow_row_count"
+    display_name: "highlow 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(highlow.state_name)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "highlow"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "lake_row_count"
+    display_name: "lake 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(lake.lake_name)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "lake"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "lake_area_sum"
+    display_name: "lake.area SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(lake.area)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "lake"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "lake_area_avg"
+    display_name: "lake.area AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(lake.area)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "lake"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "mountain_row_count"
+    display_name: "mountain 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(mountain.mountain_name)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "mountain"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "mountain_mountain_altitude_sum"
+    display_name: "mountain.mountain_altitude SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(mountain.mountain_altitude)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "mountain"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "mountain_mountain_altitude_avg"
+    display_name: "mountain.mountain_altitude AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(mountain.mountain_altitude)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "mountain"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "river_row_count"
+    display_name: "river 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(river.river_name)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "river"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "river_length_sum"
+    display_name: "river.length SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(river.length)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "river"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "river_length_avg"
+    display_name: "river.length AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(river.length)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "river"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "state_row_count"
+    display_name: "state 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(state.state_name)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "state"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "state_population_sum"
+    display_name: "state.population SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(state.population)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "state"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "state_population_avg"
+    display_name: "state.population AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(state.population)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "state"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "state_area_sum"
+    display_name: "state.area SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(state.area)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "state"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "state_area_avg"
+    display_name: "state.area AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(state.area)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "state"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "state_density_sum"
+    display_name: "state.density SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(state.density)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "state"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "state_density_avg"
+    display_name: "state.density AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(state.density)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "none（schema 无 time 列）"
+    owner: "data-team"
+    default_binding:
+      asset: "state"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "state_name"
+    bindings:
+      state_name: "state_name"
+    hierarchy: [state_name]
+    grain_levels: { state_name: 1 }
+    grain_level: 1
+    note: "schema 派生：绑 border_info.state_name"
+
+field_bindings:
+
+  - concept: "state_name"
+    canonical_asset: "border_info.state_name"
+    grain_level: 1
+    default_reason: "schema 派生：该库无 time 列，取首个 text 列作维度（非时间列）"
+
+joins:
+
+  - left: "city.state_name"
+    right: "state.state_name"
+    type: "many_to_one"
+    on_columns: ["state_name"]
+    certified_by: "data-team"
+
+  - left: "border_info.border"
+    right: "state.state_name"
+    type: "many_to_one"
+    on_columns: ["border"]
+    certified_by: "data-team"
+
+  - left: "border_info.state_name"
+    right: "state.state_name"
+    type: "many_to_one"
+    on_columns: ["state_name"]
+    certified_by: "data-team"
+
+  - left: "highlow.state_name"
+    right: "state.state_name"
+    type: "many_to_one"
+    on_columns: ["state_name"]
+    certified_by: "data-team"
+
+  - left: "mountain.state_name"
+    right: "state.state_name"
+    type: "many_to_one"
+    on_columns: ["state_name"]
+    certified_by: "data-team"
+
+  - left: "river.traverse"
+    right: "state.state_name"
+    type: "many_to_one"
+    on_columns: ["traverse"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "border", lang: en, maps_to_kind: column, maps_to_ref: "border_info.border", category: column }
+  - { term: "capital", lang: en, maps_to_kind: column, maps_to_ref: "state.capital", category: column }
+  - { term: "city_name", lang: en, maps_to_kind: column, maps_to_ref: "city.city_name", category: column }
+  - { term: "density", lang: en, maps_to_kind: column, maps_to_ref: "state.density", category: column }
+  - { term: "highest_elevation", lang: en, maps_to_kind: column, maps_to_ref: "highlow.highest_elevation", category: column }
+  - { term: "highest_point", lang: en, maps_to_kind: column, maps_to_ref: "highlow.highest_point", category: column }
+  - { term: "lake_name", lang: en, maps_to_kind: column, maps_to_ref: "lake.lake_name", category: column }
+  - { term: "length", lang: en, maps_to_kind: column, maps_to_ref: "river.length", category: column }
+  - { term: "lowest_elevation", lang: en, maps_to_kind: column, maps_to_ref: "highlow.lowest_elevation", category: column }
+  - { term: "lowest_point", lang: en, maps_to_kind: column, maps_to_ref: "highlow.lowest_point", category: column }
+  - { term: "mountain_altitude", lang: en, maps_to_kind: column, maps_to_ref: "mountain.mountain_altitude", category: column }
+  - { term: "mountain_name", lang: en, maps_to_kind: column, maps_to_ref: "mountain.mountain_name", category: column }
+  - { term: "river_name", lang: en, maps_to_kind: column, maps_to_ref: "river.river_name", category: column }
+  - { term: "traverse", lang: en, maps_to_kind: column, maps_to_ref: "river.traverse", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = border_info.state_name（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

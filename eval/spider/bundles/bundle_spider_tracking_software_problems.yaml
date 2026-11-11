@@ -1,0 +1,384 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "problem_category_codes"
+    physical_asset: "Problem_Category_Codes"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 3
+    description: "Spider 物理表 Problem_Category_Codes（schema 派生资产，2 列）"
+    columns:
+      - name: "problem_category_code"
+        type: "VARCHAR(20)"
+        comment: "主键；schema 派生列"
+      - name: "problem_category_description"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+
+  - logical_name: "problem_log"
+    physical_asset: "Problem_Log"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Problem_Log（schema 派生资产，9 列）"
+    columns:
+      - name: "problem_log_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "assigned_to_staff_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "problem_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "problem_category_code"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "problem_status_code"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "log_entry_date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "log_entry_description"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "log_entry_fix"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "other_log_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "problem_status_codes"
+    physical_asset: "Problem_Status_Codes"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 2
+    description: "Spider 物理表 Problem_Status_Codes（schema 派生资产，2 列）"
+    columns:
+      - name: "problem_status_code"
+        type: "VARCHAR(20)"
+        comment: "主键；schema 派生列"
+      - name: "problem_status_description"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+
+  - logical_name: "problems"
+    physical_asset: "Problems"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Problems（schema 派生资产，8 列）"
+    columns:
+      - name: "problem_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "product_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "closure_authorised_by_staff_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "reported_by_staff_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "date_problem_reported"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "date_problem_closed"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "problem_description"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "other_problem_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "product"
+    physical_asset: "Product"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Product（schema 派生资产，3 列）"
+    columns:
+      - name: "product_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "product_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "product_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "staff"
+    physical_asset: "Staff"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Staff（schema 派生资产，4 列）"
+    columns:
+      - name: "staff_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "staff_first_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "staff_last_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "other_staff_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "problem_category_codes_row_count"
+    display_name: "Problem_Category_Codes 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Problem_Category_Codes.problem_category_code)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "log_entry_date"
+    owner: "data-team"
+    default_binding:
+      asset: "problem_category_codes"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "problem_log_row_count"
+    display_name: "Problem_Log 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Problem_Log.problem_log_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "log_entry_date"
+    owner: "data-team"
+    default_binding:
+      asset: "problem_log"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "problem_status_codes_row_count"
+    display_name: "Problem_Status_Codes 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Problem_Status_Codes.problem_status_code)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "log_entry_date"
+    owner: "data-team"
+    default_binding:
+      asset: "problem_status_codes"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "problems_row_count"
+    display_name: "Problems 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Problems.problem_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "log_entry_date"
+    owner: "data-team"
+    default_binding:
+      asset: "problems"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "product_row_count"
+    display_name: "Product 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Product.product_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "log_entry_date"
+    owner: "data-team"
+    default_binding:
+      asset: "product"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "staff_row_count"
+    display_name: "Staff 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Staff.staff_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "log_entry_date"
+    owner: "data-team"
+    default_binding:
+      asset: "staff"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "log_entry_date"
+      week: "log_entry_date"
+      month: "log_entry_date"
+      quarter: "log_entry_date"
+      year: "log_entry_date"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 Problem_Log.log_entry_date"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "problem_log.log_entry_date"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "problem_log.problem_status_code"
+    right: "problem_status_codes.problem_status_code"
+    type: "many_to_one"
+    on_columns: ["problem_status_code"]
+    certified_by: "data-team"
+
+  - left: "problem_log.problem_id"
+    right: "problems.problem_id"
+    type: "many_to_one"
+    on_columns: ["problem_id"]
+    certified_by: "data-team"
+
+  - left: "problem_log.assigned_to_staff_id"
+    right: "staff.staff_id"
+    type: "many_to_one"
+    on_columns: ["assigned_to_staff_id"]
+    certified_by: "data-team"
+
+  - left: "problem_log.problem_category_code"
+    right: "problem_category_codes.problem_category_code"
+    type: "many_to_one"
+    on_columns: ["problem_category_code"]
+    certified_by: "data-team"
+
+  - left: "problems.reported_by_staff_id"
+    right: "staff.staff_id"
+    type: "many_to_one"
+    on_columns: ["reported_by_staff_id"]
+    certified_by: "data-team"
+
+  - left: "problems.product_id"
+    right: "product.product_id"
+    type: "many_to_one"
+    on_columns: ["product_id"]
+    certified_by: "data-team"
+
+  - left: "problems.closure_authorised_by_staff_id"
+    right: "staff.staff_id"
+    type: "many_to_one"
+    on_columns: ["closure_authorised_by_staff_id"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "assigned_to_staff_id", lang: en, maps_to_kind: column, maps_to_ref: "problem_log.assigned_to_staff_id", category: column }
+  - { term: "closure_authorised_by_staff_id", lang: en, maps_to_kind: column, maps_to_ref: "problems.closure_authorised_by_staff_id", category: column }
+  - { term: "date_problem_closed", lang: en, maps_to_kind: column, maps_to_ref: "problems.date_problem_closed", category: column }
+  - { term: "date_problem_reported", lang: en, maps_to_kind: column, maps_to_ref: "problems.date_problem_reported", category: column }
+  - { term: "log_entry_date", lang: en, maps_to_kind: column, maps_to_ref: "problem_log.log_entry_date", category: column }
+  - { term: "log_entry_description", lang: en, maps_to_kind: column, maps_to_ref: "problem_log.log_entry_description", category: column }
+  - { term: "log_entry_fix", lang: en, maps_to_kind: column, maps_to_ref: "problem_log.log_entry_fix", category: column }
+  - { term: "other_log_details", lang: en, maps_to_kind: column, maps_to_ref: "problem_log.other_log_details", category: column }
+  - { term: "other_problem_details", lang: en, maps_to_kind: column, maps_to_ref: "problems.other_problem_details", category: column }
+  - { term: "other_staff_details", lang: en, maps_to_kind: column, maps_to_ref: "staff.other_staff_details", category: column }
+  - { term: "problem_category_description", lang: en, maps_to_kind: column, maps_to_ref: "problem_category_codes.problem_category_description", category: column }
+  - { term: "problem_description", lang: en, maps_to_kind: column, maps_to_ref: "problems.problem_description", category: column }
+  - { term: "problem_log_id", lang: en, maps_to_kind: column, maps_to_ref: "problem_log.problem_log_id", category: column }
+  - { term: "problem_status_description", lang: en, maps_to_kind: column, maps_to_ref: "problem_status_codes.problem_status_description", category: column }
+  - { term: "product_details", lang: en, maps_to_kind: column, maps_to_ref: "product.product_details", category: column }
+  - { term: "product_name", lang: en, maps_to_kind: column, maps_to_ref: "product.product_name", category: column }
+  - { term: "reported_by_staff_id", lang: en, maps_to_kind: column, maps_to_ref: "problems.reported_by_staff_id", category: column }
+  - { term: "staff_first_name", lang: en, maps_to_kind: column, maps_to_ref: "staff.staff_first_name", category: column }
+  - { term: "staff_id", lang: en, maps_to_kind: column, maps_to_ref: "staff.staff_id", category: column }
+  - { term: "staff_last_name", lang: en, maps_to_kind: column, maps_to_ref: "staff.staff_last_name", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Problem_Log.log_entry_date（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

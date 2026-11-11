@@ -1,0 +1,626 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "customer_event_notes"
+    physical_asset: "Customer_Event_Notes"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 13
+    description: "Spider 物理表 Customer_Event_Notes（schema 派生资产，6 列）"
+    columns:
+      - name: "Customer_Event_Note_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Customer_Event_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "service_type_code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+      - name: "resident_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "property_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "date_moved_in"
+        type: "DATETIME"
+        comment: "schema 派生列"
+
+  - logical_name: "customer_events"
+    physical_asset: "Customer_Events"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 13
+    description: "Spider 物理表 Customer_Events（schema 派生资产，6 列）"
+    columns:
+      - name: "Customer_Event_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "date_moved_in"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "property_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "resident_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "thing_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "customers"
+    physical_asset: "Customers"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Customers（schema 派生资产，2 列）"
+    columns:
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "customer_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "organizations"
+    physical_asset: "Organizations"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 3
+    description: "Spider 物理表 Organizations（schema 派生资产，3 列）"
+    columns:
+      - name: "organization_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "parent_organization_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "organization_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "properties"
+    physical_asset: "Properties"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Properties（schema 派生资产，4 列）"
+    columns:
+      - name: "property_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "property_type_code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+      - name: "property_address"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "other_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "residents"
+    physical_asset: "Residents"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Residents（schema 派生资产，5 列）"
+    columns:
+      - name: "resident_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "property_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "date_moved_in"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "date_moved_out"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "other_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "residents_services"
+    physical_asset: "Residents_Services"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 11
+    description: "Spider 物理表 Residents_Services（schema 派生资产，7 列）"
+    columns:
+      - name: "resident_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "service_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "date_moved_in"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "property_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "date_requested"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "date_provided"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "other_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "services"
+    physical_asset: "Services"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Services（schema 派生资产，4 列）"
+    columns:
+      - name: "service_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "organization_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "service_type_code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+      - name: "service_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "things"
+    physical_asset: "Things"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Things（schema 派生资产，5 列）"
+    columns:
+      - name: "thing_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "organization_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Type_of_Thing_Code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+      - name: "service_type_code"
+        type: "CHAR(10)"
+        comment: "schema 派生列"
+      - name: "service_details"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "timed_locations_of_things"
+    physical_asset: "Timed_Locations_of_Things"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Timed_Locations_of_Things（schema 派生资产，3 列）"
+    columns:
+      - name: "thing_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Date_and_Time"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "Location_Code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+
+  - logical_name: "timed_status_of_things"
+    physical_asset: "Timed_Status_of_Things"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 18
+    description: "Spider 物理表 Timed_Status_of_Things（schema 派生资产，3 列）"
+    columns:
+      - name: "thing_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Date_and_Date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "Status_of_Thing_Code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "customer_event_notes_row_count"
+    display_name: "Customer_Event_Notes 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customer_Event_Notes.Customer_Event_Note_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_moved_in"
+    owner: "data-team"
+    default_binding:
+      asset: "customer_event_notes"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_events_row_count"
+    display_name: "Customer_Events 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customer_Events.Customer_Event_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_moved_in"
+    owner: "data-team"
+    default_binding:
+      asset: "customer_events"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customers_row_count"
+    display_name: "Customers 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customers.customer_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_moved_in"
+    owner: "data-team"
+    default_binding:
+      asset: "customers"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "organizations_row_count"
+    display_name: "Organizations 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Organizations.organization_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_moved_in"
+    owner: "data-team"
+    default_binding:
+      asset: "organizations"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "properties_row_count"
+    display_name: "Properties 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Properties.property_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_moved_in"
+    owner: "data-team"
+    default_binding:
+      asset: "properties"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "residents_row_count"
+    display_name: "Residents 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Residents.resident_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_moved_in"
+    owner: "data-team"
+    default_binding:
+      asset: "residents"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "residents_services_row_count"
+    display_name: "Residents_Services 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Residents_Services.resident_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_moved_in"
+    owner: "data-team"
+    default_binding:
+      asset: "residents_services"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "services_row_count"
+    display_name: "Services 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Services.service_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_moved_in"
+    owner: "data-team"
+    default_binding:
+      asset: "services"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "things_row_count"
+    display_name: "Things 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Things.thing_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_moved_in"
+    owner: "data-team"
+    default_binding:
+      asset: "things"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "timed_locations_of_things_row_count"
+    display_name: "Timed_Locations_of_Things 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Timed_Locations_of_Things.thing_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_moved_in"
+    owner: "data-team"
+    default_binding:
+      asset: "timed_locations_of_things"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "timed_status_of_things_row_count"
+    display_name: "Timed_Status_of_Things 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Timed_Status_of_Things.thing_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_moved_in"
+    owner: "data-team"
+    default_binding:
+      asset: "timed_status_of_things"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "date_moved_in"
+      week: "date_moved_in"
+      month: "date_moved_in"
+      quarter: "date_moved_in"
+      year: "date_moved_in"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 Customer_Event_Notes.date_moved_in"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "customer_event_notes.date_moved_in"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "residents.property_id"
+    right: "properties.property_id"
+    type: "many_to_one"
+    on_columns: ["property_id"]
+    certified_by: "data-team"
+
+  - left: "services.organization_id"
+    right: "organizations.organization_id"
+    type: "many_to_one"
+    on_columns: ["organization_id"]
+    certified_by: "data-team"
+
+  - left: "residents_services.resident_id"
+    right: "residents.resident_id"
+    type: "many_to_one"
+    on_columns: ["resident_id"]
+    certified_by: "data-team"
+
+  - left: "residents_services.property_id"
+    right: "residents.property_id"
+    type: "many_to_one"
+    on_columns: ["property_id"]
+    certified_by: "data-team"
+
+  - left: "residents_services.date_moved_in"
+    right: "residents.date_moved_in"
+    type: "many_to_one"
+    on_columns: ["date_moved_in"]
+    certified_by: "data-team"
+
+  - left: "residents_services.service_id"
+    right: "services.service_id"
+    type: "many_to_one"
+    on_columns: ["service_id"]
+    certified_by: "data-team"
+
+  - left: "things.organization_id"
+    right: "organizations.organization_id"
+    type: "many_to_one"
+    on_columns: ["organization_id"]
+    certified_by: "data-team"
+
+  - left: "customer_events.resident_id"
+    right: "residents.resident_id"
+    type: "many_to_one"
+    on_columns: ["resident_id"]
+    certified_by: "data-team"
+
+  - left: "customer_events.property_id"
+    right: "residents.property_id"
+    type: "many_to_one"
+    on_columns: ["property_id"]
+    certified_by: "data-team"
+
+  - left: "customer_events.date_moved_in"
+    right: "residents.date_moved_in"
+    type: "many_to_one"
+    on_columns: ["date_moved_in"]
+    certified_by: "data-team"
+
+  - left: "customer_events.customer_id"
+    right: "customers.customer_id"
+    type: "many_to_one"
+    on_columns: ["customer_id"]
+    certified_by: "data-team"
+
+  - left: "customer_events.thing_id"
+    right: "things.thing_id"
+    type: "many_to_one"
+    on_columns: ["thing_id"]
+    certified_by: "data-team"
+
+  - left: "customer_event_notes.Customer_Event_ID"
+    right: "customer_events.Customer_Event_ID"
+    type: "many_to_one"
+    on_columns: ["Customer_Event_ID"]
+    certified_by: "data-team"
+
+  - left: "timed_status_of_things.thing_id"
+    right: "things.thing_id"
+    type: "many_to_one"
+    on_columns: ["thing_id"]
+    certified_by: "data-team"
+
+  - left: "timed_locations_of_things.thing_id"
+    right: "things.thing_id"
+    type: "many_to_one"
+    on_columns: ["thing_id"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "Customer_Event_Note_ID", lang: en, maps_to_kind: column, maps_to_ref: "customer_event_notes.Customer_Event_Note_ID", category: column }
+  - { term: "Date_and_Date", lang: en, maps_to_kind: column, maps_to_ref: "timed_status_of_things.Date_and_Date", category: column }
+  - { term: "Date_and_Time", lang: en, maps_to_kind: column, maps_to_ref: "timed_locations_of_things.Date_and_Time", category: column }
+  - { term: "Location_Code", lang: en, maps_to_kind: column, maps_to_ref: "timed_locations_of_things.Location_Code", category: column }
+  - { term: "Status_of_Thing_Code", lang: en, maps_to_kind: column, maps_to_ref: "timed_status_of_things.Status_of_Thing_Code", category: column }
+  - { term: "Type_of_Thing_Code", lang: en, maps_to_kind: column, maps_to_ref: "things.Type_of_Thing_Code", category: column }
+  - { term: "customer_details", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_details", category: column }
+  - { term: "date_moved_out", lang: en, maps_to_kind: column, maps_to_ref: "residents.date_moved_out", category: column }
+  - { term: "date_provided", lang: en, maps_to_kind: column, maps_to_ref: "residents_services.date_provided", category: column }
+  - { term: "date_requested", lang: en, maps_to_kind: column, maps_to_ref: "residents_services.date_requested", category: column }
+  - { term: "organization_details", lang: en, maps_to_kind: column, maps_to_ref: "organizations.organization_details", category: column }
+  - { term: "parent_organization_id", lang: en, maps_to_kind: column, maps_to_ref: "organizations.parent_organization_id", category: column }
+  - { term: "property_address", lang: en, maps_to_kind: column, maps_to_ref: "properties.property_address", category: column }
+  - { term: "property_type_code", lang: en, maps_to_kind: column, maps_to_ref: "properties.property_type_code", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Customer_Event_Notes.date_moved_in（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

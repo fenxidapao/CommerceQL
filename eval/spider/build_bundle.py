@@ -117,8 +117,20 @@ def build(db_id, spider_root, out_path):
                 break
         if time_table is not None:
             break
-    if time_table is None:
-        raise SystemExit("该库无 time 列，本手不生成: " + db_id)
+    time_is_real = time_table is not None
+    if not time_is_real:
+        fallback = None
+        for table in ordered:
+            for name, ctype in sqlite_info[table]["columns"]:
+                if str(ctype).lower() == "text":
+                    fallback = (table, name)
+                    break
+            if fallback is not None:
+                break
+        if fallback is None:
+            raise SystemExit("该库既无 time 列也无 text 列，本手不生成: " + db_id)
+        time_table, time_col = fallback
+    time_basis_value = time_col if time_is_real else "none（schema 无 time 列）"
 
     owners = {}
     for table in ordered:
@@ -213,7 +225,7 @@ def build(db_id, spider_root, out_path):
         add("    expression: " + q("COUNT(" + table + "." + count_col + ")"))
         add('    default_aggregation: "count"')
         add('    unit: "count"')
-        add("    time_basis: " + q(time_col))
+        add("    time_basis: " + q(time_basis_value))
         add('    owner: "data-team"')
         add("    default_binding:")
         add("      asset: " + q(logical))
@@ -235,7 +247,7 @@ def build(db_id, spider_root, out_path):
                 add("    expression: " + q(agg.upper() + "(" + table + "." + name + ")"))
                 add('    default_aggregation: "' + agg + '"')
                 add('    unit: "number"')
-                add("    time_basis: " + q(time_col))
+                add("    time_basis: " + q(time_basis_value))
                 add('    owner: "data-team"')
                 add("    default_binding:")
                 add("      asset: " + q(logical))
@@ -246,23 +258,34 @@ def build(db_id, spider_root, out_path):
     add("")
     add("dimensions:")
     add("")
-    add('  - name: "date"')
+    dim_name = "date" if time_is_real else snake(time_col)
+    add("  - name: " + q(dim_name))
     add("    bindings:")
-    for grain in ("day", "week", "month", "quarter", "year"):
-        add("      " + grain + ": " + q(time_col))
-    add("    hierarchy: [year, quarter, month, week, day]")
-    add("    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }")
-    add("    grain_level: 5")
+    if time_is_real:
+        for grain in ("day", "week", "month", "quarter", "year"):
+            add("      " + grain + ": " + q(time_col))
+        add("    hierarchy: [year, quarter, month, week, day]")
+        add("    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }")
+        add("    grain_level: 5")
+    else:
+        add("      " + dim_name + ": " + q(time_col))
+        add("    hierarchy: [" + dim_name + "]")
+        add("    grain_levels: { " + dim_name + ": 1 }")
+        add("    grain_level: 1")
     add("    note: " + q("schema 派生：绑 " + time_table + "." + time_col))
 
     add("")
     add("field_bindings:")
     add("")
-    add('  - concept: "date"')
+    add("  - concept: " + q(dim_name))
     add("    canonical_asset: " + q(logical_of[time_table] + "." + time_col))
-    add('    time_semantics: "transaction_time"')
-    add("    grain_level: 5")
-    add("    default_reason: " + q("schema 派生：该库首条 time 列"))
+    if time_is_real:
+        add('    time_semantics: "transaction_time"')
+        add("    grain_level: 5")
+        add("    default_reason: " + q("schema 派生：该库首条 time 列"))
+    else:
+        add("    grain_level: 1")
+        add("    default_reason: " + q("schema 派生：该库无 time 列，取首个 text 列作维度（非时间列）"))
 
     add("")
     if join_rows:

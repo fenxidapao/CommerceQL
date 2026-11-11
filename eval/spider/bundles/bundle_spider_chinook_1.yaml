@@ -1,0 +1,1410 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "album"
+    physical_asset: "Album"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 347
+    description: "Spider 物理表 Album（schema 派生资产，3 列）"
+    columns:
+      - name: "AlbumId"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Title"
+        type: "varchar(160)"
+        comment: "schema 派生列"
+      - name: "ArtistId"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "artist"
+    physical_asset: "Artist"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 275
+    description: "Spider 物理表 Artist（schema 派生资产，2 列）"
+    columns:
+      - name: "ArtistId"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Name"
+        type: "varchar(120)"
+        comment: "schema 派生列"
+
+  - logical_name: "customer"
+    physical_asset: "Customer"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 59
+    description: "Spider 物理表 Customer（schema 派生资产，13 列）"
+    columns:
+      - name: "CustomerId"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "FirstName"
+        type: "varchar(40)"
+        comment: "schema 派生列"
+      - name: "LastName"
+        type: "varchar(20)"
+        comment: "schema 派生列"
+      - name: "Company"
+        type: "varchar(80)"
+        comment: "schema 派生列"
+      - name: "Address"
+        type: "varchar(70)"
+        comment: "schema 派生列"
+      - name: "City"
+        type: "varchar(40)"
+        comment: "schema 派生列"
+      - name: "State"
+        type: "varchar(40)"
+        comment: "schema 派生列"
+      - name: "Country"
+        type: "varchar(40)"
+        comment: "schema 派生列"
+      - name: "PostalCode"
+        type: "varchar(10)"
+        comment: "schema 派生列"
+      - name: "Phone"
+        type: "varchar(24)"
+        comment: "schema 派生列"
+      - name: "Fax"
+        type: "varchar(24)"
+        comment: "schema 派生列"
+      - name: "Email"
+        type: "varchar(60)"
+        comment: "schema 派生列"
+      - name: "SupportRepId"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "employee"
+    physical_asset: "Employee"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 8
+    description: "Spider 物理表 Employee（schema 派生资产，15 列）"
+    columns:
+      - name: "EmployeeId"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "LastName"
+        type: "varchar(20)"
+        comment: "schema 派生列"
+      - name: "FirstName"
+        type: "varchar(20)"
+        comment: "schema 派生列"
+      - name: "Title"
+        type: "varchar(30)"
+        comment: "schema 派生列"
+      - name: "ReportsTo"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "BirthDate"
+        type: "datetime"
+        comment: "schema 派生列"
+      - name: "HireDate"
+        type: "datetime"
+        comment: "schema 派生列"
+      - name: "Address"
+        type: "varchar(70)"
+        comment: "schema 派生列"
+      - name: "City"
+        type: "varchar(40)"
+        comment: "schema 派生列"
+      - name: "State"
+        type: "varchar(40)"
+        comment: "schema 派生列"
+      - name: "Country"
+        type: "varchar(40)"
+        comment: "schema 派生列"
+      - name: "PostalCode"
+        type: "varchar(10)"
+        comment: "schema 派生列"
+      - name: "Phone"
+        type: "varchar(24)"
+        comment: "schema 派生列"
+      - name: "Fax"
+        type: "varchar(24)"
+        comment: "schema 派生列"
+      - name: "Email"
+        type: "varchar(60)"
+        comment: "schema 派生列"
+
+  - logical_name: "genre"
+    physical_asset: "Genre"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 25
+    description: "Spider 物理表 Genre（schema 派生资产，2 列）"
+    columns:
+      - name: "GenreId"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Name"
+        type: "varchar(120)"
+        comment: "schema 派生列"
+
+  - logical_name: "invoice"
+    physical_asset: "Invoice"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 412
+    description: "Spider 物理表 Invoice（schema 派生资产，9 列）"
+    columns:
+      - name: "InvoiceId"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "CustomerId"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "InvoiceDate"
+        type: "datetime"
+        comment: "schema 派生列"
+      - name: "BillingAddress"
+        type: "varchar(70)"
+        comment: "schema 派生列"
+      - name: "BillingCity"
+        type: "varchar(40)"
+        comment: "schema 派生列"
+      - name: "BillingState"
+        type: "varchar(40)"
+        comment: "schema 派生列"
+      - name: "BillingCountry"
+        type: "varchar(40)"
+        comment: "schema 派生列"
+      - name: "BillingPostalCode"
+        type: "varchar(10)"
+        comment: "schema 派生列"
+      - name: "Total"
+        type: "decimal(10,2)"
+        comment: "schema 派生列"
+
+  - logical_name: "invoiceline"
+    physical_asset: "InvoiceLine"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 2240
+    description: "Spider 物理表 InvoiceLine（schema 派生资产，5 列）"
+    columns:
+      - name: "InvoiceLineId"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "InvoiceId"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "TrackId"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "UnitPrice"
+        type: "decimal(10,2)"
+        comment: "schema 派生列"
+      - name: "Quantity"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "mediatype"
+    physical_asset: "MediaType"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 5
+    description: "Spider 物理表 MediaType（schema 派生资产，2 列）"
+    columns:
+      - name: "MediaTypeId"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Name"
+        type: "varchar(120)"
+        comment: "schema 派生列"
+
+  - logical_name: "playlist"
+    physical_asset: "Playlist"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 18
+    description: "Spider 物理表 Playlist（schema 派生资产，2 列）"
+    columns:
+      - name: "PlaylistId"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Name"
+        type: "varchar(120)"
+        comment: "schema 派生列"
+
+  - logical_name: "playlisttrack"
+    physical_asset: "PlaylistTrack"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 8715
+    description: "Spider 物理表 PlaylistTrack（schema 派生资产，2 列）"
+    columns:
+      - name: "PlaylistId"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "TrackId"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "track"
+    physical_asset: "Track"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 3503
+    description: "Spider 物理表 Track（schema 派生资产，9 列）"
+    columns:
+      - name: "TrackId"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Name"
+        type: "varchar(200)"
+        comment: "schema 派生列"
+      - name: "AlbumId"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "MediaTypeId"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "GenreId"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Composer"
+        type: "varchar(220)"
+        comment: "schema 派生列"
+      - name: "Milliseconds"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Bytes"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "UnitPrice"
+        type: "decimal(10,2)"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "album_row_count"
+    display_name: "Album 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Album.AlbumId)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "album"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "album_albumid_sum"
+    display_name: "Album.AlbumId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Album.AlbumId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "album"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "album_albumid_avg"
+    display_name: "Album.AlbumId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Album.AlbumId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "album"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "album_artistid_sum"
+    display_name: "Album.ArtistId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Album.ArtistId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "album"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "album_artistid_avg"
+    display_name: "Album.ArtistId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Album.ArtistId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "album"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "artist_row_count"
+    display_name: "Artist 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Artist.ArtistId)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "artist"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "artist_artistid_sum"
+    display_name: "Artist.ArtistId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Artist.ArtistId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "artist"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "artist_artistid_avg"
+    display_name: "Artist.ArtistId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Artist.ArtistId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "artist"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_row_count"
+    display_name: "Customer 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customer.CustomerId)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "customer"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_customerid_sum"
+    display_name: "Customer.CustomerId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Customer.CustomerId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "customer"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_customerid_avg"
+    display_name: "Customer.CustomerId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Customer.CustomerId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "customer"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_supportrepid_sum"
+    display_name: "Customer.SupportRepId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Customer.SupportRepId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "customer"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_supportrepid_avg"
+    display_name: "Customer.SupportRepId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Customer.SupportRepId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "customer"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "employee_row_count"
+    display_name: "Employee 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Employee.EmployeeId)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "employee"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "employee_employeeid_sum"
+    display_name: "Employee.EmployeeId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Employee.EmployeeId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "employee"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "employee_employeeid_avg"
+    display_name: "Employee.EmployeeId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Employee.EmployeeId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "employee"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "employee_reportsto_sum"
+    display_name: "Employee.ReportsTo SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Employee.ReportsTo)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "employee"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "employee_reportsto_avg"
+    display_name: "Employee.ReportsTo AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Employee.ReportsTo)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "employee"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "genre_row_count"
+    display_name: "Genre 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Genre.GenreId)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "genre"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "genre_genreid_sum"
+    display_name: "Genre.GenreId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Genre.GenreId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "genre"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "genre_genreid_avg"
+    display_name: "Genre.GenreId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Genre.GenreId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "genre"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoice_row_count"
+    display_name: "Invoice 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Invoice.InvoiceId)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoice"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoice_invoiceid_sum"
+    display_name: "Invoice.InvoiceId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Invoice.InvoiceId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoice"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoice_invoiceid_avg"
+    display_name: "Invoice.InvoiceId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Invoice.InvoiceId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoice"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoice_customerid_sum"
+    display_name: "Invoice.CustomerId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Invoice.CustomerId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoice"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoice_customerid_avg"
+    display_name: "Invoice.CustomerId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Invoice.CustomerId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoice"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoice_total_sum"
+    display_name: "Invoice.Total SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Invoice.Total)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoice"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoice_total_avg"
+    display_name: "Invoice.Total AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Invoice.Total)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoice"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoiceline_row_count"
+    display_name: "InvoiceLine 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(InvoiceLine.InvoiceLineId)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoiceline"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoiceline_invoicelineid_sum"
+    display_name: "InvoiceLine.InvoiceLineId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(InvoiceLine.InvoiceLineId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoiceline"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoiceline_invoicelineid_avg"
+    display_name: "InvoiceLine.InvoiceLineId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(InvoiceLine.InvoiceLineId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoiceline"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoiceline_invoiceid_sum"
+    display_name: "InvoiceLine.InvoiceId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(InvoiceLine.InvoiceId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoiceline"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoiceline_invoiceid_avg"
+    display_name: "InvoiceLine.InvoiceId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(InvoiceLine.InvoiceId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoiceline"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoiceline_trackid_sum"
+    display_name: "InvoiceLine.TrackId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(InvoiceLine.TrackId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoiceline"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoiceline_trackid_avg"
+    display_name: "InvoiceLine.TrackId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(InvoiceLine.TrackId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoiceline"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoiceline_unitprice_sum"
+    display_name: "InvoiceLine.UnitPrice SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(InvoiceLine.UnitPrice)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoiceline"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoiceline_unitprice_avg"
+    display_name: "InvoiceLine.UnitPrice AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(InvoiceLine.UnitPrice)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoiceline"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoiceline_quantity_sum"
+    display_name: "InvoiceLine.Quantity SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(InvoiceLine.Quantity)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoiceline"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "invoiceline_quantity_avg"
+    display_name: "InvoiceLine.Quantity AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(InvoiceLine.Quantity)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "invoiceline"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "mediatype_row_count"
+    display_name: "MediaType 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(MediaType.MediaTypeId)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "mediatype"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "mediatype_mediatypeid_sum"
+    display_name: "MediaType.MediaTypeId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(MediaType.MediaTypeId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "mediatype"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "mediatype_mediatypeid_avg"
+    display_name: "MediaType.MediaTypeId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(MediaType.MediaTypeId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "mediatype"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "playlist_row_count"
+    display_name: "Playlist 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Playlist.PlaylistId)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "playlist"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "playlist_playlistid_sum"
+    display_name: "Playlist.PlaylistId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Playlist.PlaylistId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "playlist"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "playlist_playlistid_avg"
+    display_name: "Playlist.PlaylistId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Playlist.PlaylistId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "playlist"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "playlisttrack_row_count"
+    display_name: "PlaylistTrack 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(PlaylistTrack.PlaylistId)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "playlisttrack"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "playlisttrack_playlistid_sum"
+    display_name: "PlaylistTrack.PlaylistId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(PlaylistTrack.PlaylistId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "playlisttrack"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "playlisttrack_playlistid_avg"
+    display_name: "PlaylistTrack.PlaylistId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(PlaylistTrack.PlaylistId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "playlisttrack"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "playlisttrack_trackid_sum"
+    display_name: "PlaylistTrack.TrackId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(PlaylistTrack.TrackId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "playlisttrack"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "playlisttrack_trackid_avg"
+    display_name: "PlaylistTrack.TrackId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(PlaylistTrack.TrackId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "playlisttrack"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_row_count"
+    display_name: "Track 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Track.TrackId)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_trackid_sum"
+    display_name: "Track.TrackId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Track.TrackId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_trackid_avg"
+    display_name: "Track.TrackId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Track.TrackId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_albumid_sum"
+    display_name: "Track.AlbumId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Track.AlbumId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_albumid_avg"
+    display_name: "Track.AlbumId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Track.AlbumId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_mediatypeid_sum"
+    display_name: "Track.MediaTypeId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Track.MediaTypeId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_mediatypeid_avg"
+    display_name: "Track.MediaTypeId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Track.MediaTypeId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_genreid_sum"
+    display_name: "Track.GenreId SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Track.GenreId)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_genreid_avg"
+    display_name: "Track.GenreId AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Track.GenreId)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_milliseconds_sum"
+    display_name: "Track.Milliseconds SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Track.Milliseconds)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_milliseconds_avg"
+    display_name: "Track.Milliseconds AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Track.Milliseconds)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_bytes_sum"
+    display_name: "Track.Bytes SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Track.Bytes)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_bytes_avg"
+    display_name: "Track.Bytes AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Track.Bytes)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_unitprice_sum"
+    display_name: "Track.UnitPrice SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Track.UnitPrice)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "track_unitprice_avg"
+    display_name: "Track.UnitPrice AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Track.UnitPrice)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "BirthDate"
+    owner: "data-team"
+    default_binding:
+      asset: "track"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "BirthDate"
+      week: "BirthDate"
+      month: "BirthDate"
+      quarter: "BirthDate"
+      year: "BirthDate"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 Employee.BirthDate"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "employee.BirthDate"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "album.ArtistId"
+    right: "artist.ArtistId"
+    type: "many_to_one"
+    on_columns: ["ArtistId"]
+    certified_by: "data-team"
+
+  - left: "customer.SupportRepId"
+    right: "employee.EmployeeId"
+    type: "many_to_one"
+    on_columns: ["SupportRepId"]
+    certified_by: "data-team"
+
+  - left: "employee.ReportsTo"
+    right: "employee.EmployeeId"
+    type: "many_to_one"
+    on_columns: ["ReportsTo"]
+    certified_by: "data-team"
+
+  - left: "invoice.CustomerId"
+    right: "customer.CustomerId"
+    type: "many_to_one"
+    on_columns: ["CustomerId"]
+    certified_by: "data-team"
+
+  - left: "invoiceline.TrackId"
+    right: "track.TrackId"
+    type: "many_to_one"
+    on_columns: ["TrackId"]
+    certified_by: "data-team"
+
+  - left: "invoiceline.InvoiceId"
+    right: "invoice.InvoiceId"
+    type: "many_to_one"
+    on_columns: ["InvoiceId"]
+    certified_by: "data-team"
+
+  - left: "playlisttrack.TrackId"
+    right: "track.TrackId"
+    type: "many_to_one"
+    on_columns: ["TrackId"]
+    certified_by: "data-team"
+
+  - left: "playlisttrack.PlaylistId"
+    right: "playlist.PlaylistId"
+    type: "many_to_one"
+    on_columns: ["PlaylistId"]
+    certified_by: "data-team"
+
+  - left: "track.MediaTypeId"
+    right: "mediatype.MediaTypeId"
+    type: "many_to_one"
+    on_columns: ["MediaTypeId"]
+    certified_by: "data-team"
+
+  - left: "track.GenreId"
+    right: "genre.GenreId"
+    type: "many_to_one"
+    on_columns: ["GenreId"]
+    certified_by: "data-team"
+
+  - left: "track.AlbumId"
+    right: "album.AlbumId"
+    type: "many_to_one"
+    on_columns: ["AlbumId"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "BillingAddress", lang: en, maps_to_kind: column, maps_to_ref: "invoice.BillingAddress", category: column }
+  - { term: "BillingCity", lang: en, maps_to_kind: column, maps_to_ref: "invoice.BillingCity", category: column }
+  - { term: "BillingCountry", lang: en, maps_to_kind: column, maps_to_ref: "invoice.BillingCountry", category: column }
+  - { term: "BillingPostalCode", lang: en, maps_to_kind: column, maps_to_ref: "invoice.BillingPostalCode", category: column }
+  - { term: "BillingState", lang: en, maps_to_kind: column, maps_to_ref: "invoice.BillingState", category: column }
+  - { term: "BirthDate", lang: en, maps_to_kind: column, maps_to_ref: "employee.BirthDate", category: column }
+  - { term: "Bytes", lang: en, maps_to_kind: column, maps_to_ref: "track.Bytes", category: column }
+  - { term: "Company", lang: en, maps_to_kind: column, maps_to_ref: "customer.Company", category: column }
+  - { term: "Composer", lang: en, maps_to_kind: column, maps_to_ref: "track.Composer", category: column }
+  - { term: "EmployeeId", lang: en, maps_to_kind: column, maps_to_ref: "employee.EmployeeId", category: column }
+  - { term: "HireDate", lang: en, maps_to_kind: column, maps_to_ref: "employee.HireDate", category: column }
+  - { term: "InvoiceDate", lang: en, maps_to_kind: column, maps_to_ref: "invoice.InvoiceDate", category: column }
+  - { term: "InvoiceLineId", lang: en, maps_to_kind: column, maps_to_ref: "invoiceline.InvoiceLineId", category: column }
+  - { term: "Milliseconds", lang: en, maps_to_kind: column, maps_to_ref: "track.Milliseconds", category: column }
+  - { term: "Quantity", lang: en, maps_to_kind: column, maps_to_ref: "invoiceline.Quantity", category: column }
+  - { term: "ReportsTo", lang: en, maps_to_kind: column, maps_to_ref: "employee.ReportsTo", category: column }
+  - { term: "SupportRepId", lang: en, maps_to_kind: column, maps_to_ref: "customer.SupportRepId", category: column }
+  - { term: "Total", lang: en, maps_to_kind: column, maps_to_ref: "invoice.Total", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Employee.BirthDate（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

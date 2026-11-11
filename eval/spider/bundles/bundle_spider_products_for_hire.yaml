@@ -1,0 +1,762 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "bookings"
+    physical_asset: "Bookings"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Bookings（schema 派生资产，11 列）"
+    columns:
+      - name: "booking_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "booking_status_code"
+        type: "VARCHAR(10)"
+        comment: "schema 派生列"
+      - name: "returned_damaged_yn"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "booking_start_date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "booking_end_date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "count_hired"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+      - name: "amount_payable"
+        type: "DECIMAL(19,4)"
+        comment: "schema 派生列"
+      - name: "amount_of_discount"
+        type: "DECIMAL(19,4)"
+        comment: "schema 派生列"
+      - name: "amount_outstanding"
+        type: "DECIMAL(19,4)"
+        comment: "schema 派生列"
+      - name: "amount_of_refund"
+        type: "DECIMAL(19,4)"
+        comment: "schema 派生列"
+
+  - logical_name: "customers"
+    physical_asset: "Customers"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Customers（schema 派生资产，8 列）"
+    columns:
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "coupon_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "good_or_bad_customer"
+        type: "VARCHAR(4)"
+        comment: "schema 派生列"
+      - name: "first_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "last_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "gender_mf"
+        type: "VARCHAR(1)"
+        comment: "schema 派生列"
+      - name: "date_became_customer"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "date_last_hire"
+        type: "DATETIME"
+        comment: "schema 派生列"
+
+  - logical_name: "discount_coupons"
+    physical_asset: "Discount_Coupons"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Discount_Coupons（schema 派生资产，3 列）"
+    columns:
+      - name: "coupon_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "date_issued"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "coupon_amount"
+        type: "DECIMAL(19,4)"
+        comment: "schema 派生列"
+
+  - logical_name: "payments"
+    physical_asset: "Payments"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Payments（schema 派生资产，8 列）"
+    columns:
+      - name: "payment_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "booking_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "payment_type_code"
+        type: "VARCHAR(15)"
+        comment: "schema 派生列"
+      - name: "amount_paid_in_full_yn"
+        type: "VARCHAR(1)"
+        comment: "schema 派生列"
+      - name: "payment_date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "amount_due"
+        type: "DECIMAL(19,4)"
+        comment: "schema 派生列"
+      - name: "amount_paid"
+        type: "DECIMAL(19,4)"
+        comment: "schema 派生列"
+
+  - logical_name: "products_booked"
+    physical_asset: "Products_Booked"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 12
+    description: "Spider 物理表 Products_Booked（schema 派生资产，6 列）"
+    columns:
+      - name: "booking_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "product_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "returned_yn"
+        type: "VARCHAR(1)"
+        comment: "schema 派生列"
+      - name: "returned_late_yn"
+        type: "VARCHAR(1)"
+        comment: "schema 派生列"
+      - name: "booked_count"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "booked_amount"
+        type: "FLOAT"
+        comment: "schema 派生列"
+
+  - logical_name: "products_for_hire"
+    physical_asset: "Products_for_Hire"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 5
+    description: "Spider 物理表 Products_for_Hire（schema 派生资产，5 列）"
+    columns:
+      - name: "product_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "product_type_code"
+        type: "VARCHAR(15)"
+        comment: "schema 派生列"
+      - name: "daily_hire_cost"
+        type: "DECIMAL(19,4)"
+        comment: "schema 派生列"
+      - name: "product_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "product_description"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "view_product_availability"
+    physical_asset: "View_Product_Availability"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 4
+    description: "Spider 物理表 View_Product_Availability（schema 派生资产，4 列）"
+    columns:
+      - name: "product_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "booking_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "status_date"
+        type: "DATETIME"
+        comment: "主键；schema 派生列"
+      - name: "available_yn"
+        type: "VARCHAR(1)"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "bookings_row_count"
+    display_name: "Bookings 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Bookings.booking_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "bookings"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "bookings_amount_payable_sum"
+    display_name: "Bookings.amount_payable SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Bookings.amount_payable)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "bookings"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "bookings_amount_payable_avg"
+    display_name: "Bookings.amount_payable AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Bookings.amount_payable)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "bookings"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "bookings_amount_of_discount_sum"
+    display_name: "Bookings.amount_of_discount SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Bookings.amount_of_discount)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "bookings"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "bookings_amount_of_discount_avg"
+    display_name: "Bookings.amount_of_discount AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Bookings.amount_of_discount)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "bookings"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "bookings_amount_outstanding_sum"
+    display_name: "Bookings.amount_outstanding SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Bookings.amount_outstanding)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "bookings"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "bookings_amount_outstanding_avg"
+    display_name: "Bookings.amount_outstanding AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Bookings.amount_outstanding)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "bookings"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "bookings_amount_of_refund_sum"
+    display_name: "Bookings.amount_of_refund SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Bookings.amount_of_refund)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "bookings"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "bookings_amount_of_refund_avg"
+    display_name: "Bookings.amount_of_refund AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Bookings.amount_of_refund)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "bookings"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customers_row_count"
+    display_name: "Customers 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customers.customer_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "customers"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "discount_coupons_row_count"
+    display_name: "Discount_Coupons 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Discount_Coupons.coupon_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "discount_coupons"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "discount_coupons_coupon_amount_sum"
+    display_name: "Discount_Coupons.coupon_amount SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Discount_Coupons.coupon_amount)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "discount_coupons"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "discount_coupons_coupon_amount_avg"
+    display_name: "Discount_Coupons.coupon_amount AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Discount_Coupons.coupon_amount)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "discount_coupons"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "payments_row_count"
+    display_name: "Payments 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Payments.payment_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "payments"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "payments_amount_due_sum"
+    display_name: "Payments.amount_due SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Payments.amount_due)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "payments"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "payments_amount_due_avg"
+    display_name: "Payments.amount_due AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Payments.amount_due)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "payments"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "payments_amount_paid_sum"
+    display_name: "Payments.amount_paid SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Payments.amount_paid)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "payments"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "payments_amount_paid_avg"
+    display_name: "Payments.amount_paid AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Payments.amount_paid)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "payments"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_booked_row_count"
+    display_name: "Products_Booked 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Products_Booked.booking_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "products_booked"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_booked_booked_count_sum"
+    display_name: "Products_Booked.booked_count SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Products_Booked.booked_count)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "products_booked"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_booked_booked_count_avg"
+    display_name: "Products_Booked.booked_count AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Products_Booked.booked_count)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "products_booked"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_booked_booked_amount_sum"
+    display_name: "Products_Booked.booked_amount SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Products_Booked.booked_amount)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "products_booked"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_booked_booked_amount_avg"
+    display_name: "Products_Booked.booked_amount AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Products_Booked.booked_amount)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "products_booked"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_for_hire_row_count"
+    display_name: "Products_for_Hire 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Products_for_Hire.product_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "products_for_hire"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_for_hire_daily_hire_cost_sum"
+    display_name: "Products_for_Hire.daily_hire_cost SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Products_for_Hire.daily_hire_cost)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "products_for_hire"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_for_hire_daily_hire_cost_avg"
+    display_name: "Products_for_Hire.daily_hire_cost AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Products_for_Hire.daily_hire_cost)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "products_for_hire"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "view_product_availability_row_count"
+    display_name: "View_Product_Availability 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(View_Product_Availability.status_date)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "booking_start_date"
+    owner: "data-team"
+    default_binding:
+      asset: "view_product_availability"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "booking_start_date"
+      week: "booking_start_date"
+      month: "booking_start_date"
+      quarter: "booking_start_date"
+      year: "booking_start_date"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 Bookings.booking_start_date"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "bookings.booking_start_date"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "customers.coupon_id"
+    right: "discount_coupons.coupon_id"
+    type: "many_to_one"
+    on_columns: ["coupon_id"]
+    certified_by: "data-team"
+
+  - left: "bookings.customer_id"
+    right: "customers.customer_id"
+    type: "many_to_one"
+    on_columns: ["customer_id"]
+    certified_by: "data-team"
+
+  - left: "payments.customer_id"
+    right: "customers.customer_id"
+    type: "many_to_one"
+    on_columns: ["customer_id"]
+    certified_by: "data-team"
+
+  - left: "payments.booking_id"
+    right: "bookings.booking_id"
+    type: "many_to_one"
+    on_columns: ["booking_id"]
+    certified_by: "data-team"
+
+  - left: "products_booked.product_id"
+    right: "products_for_hire.product_id"
+    type: "many_to_one"
+    on_columns: ["product_id"]
+    certified_by: "data-team"
+
+  - left: "products_booked.booking_id"
+    right: "bookings.booking_id"
+    type: "many_to_one"
+    on_columns: ["booking_id"]
+    certified_by: "data-team"
+
+  - left: "view_product_availability.product_id"
+    right: "products_for_hire.product_id"
+    type: "many_to_one"
+    on_columns: ["product_id"]
+    certified_by: "data-team"
+
+  - left: "view_product_availability.booking_id"
+    right: "bookings.booking_id"
+    type: "many_to_one"
+    on_columns: ["booking_id"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "amount_due", lang: en, maps_to_kind: column, maps_to_ref: "payments.amount_due", category: column }
+  - { term: "amount_of_discount", lang: en, maps_to_kind: column, maps_to_ref: "bookings.amount_of_discount", category: column }
+  - { term: "amount_of_refund", lang: en, maps_to_kind: column, maps_to_ref: "bookings.amount_of_refund", category: column }
+  - { term: "amount_outstanding", lang: en, maps_to_kind: column, maps_to_ref: "bookings.amount_outstanding", category: column }
+  - { term: "amount_paid", lang: en, maps_to_kind: column, maps_to_ref: "payments.amount_paid", category: column }
+  - { term: "amount_paid_in_full_yn", lang: en, maps_to_kind: column, maps_to_ref: "payments.amount_paid_in_full_yn", category: column }
+  - { term: "amount_payable", lang: en, maps_to_kind: column, maps_to_ref: "bookings.amount_payable", category: column }
+  - { term: "available_yn", lang: en, maps_to_kind: column, maps_to_ref: "view_product_availability.available_yn", category: column }
+  - { term: "booked_amount", lang: en, maps_to_kind: column, maps_to_ref: "products_booked.booked_amount", category: column }
+  - { term: "booked_count", lang: en, maps_to_kind: column, maps_to_ref: "products_booked.booked_count", category: column }
+  - { term: "booking_end_date", lang: en, maps_to_kind: column, maps_to_ref: "bookings.booking_end_date", category: column }
+  - { term: "booking_start_date", lang: en, maps_to_kind: column, maps_to_ref: "bookings.booking_start_date", category: column }
+  - { term: "booking_status_code", lang: en, maps_to_kind: column, maps_to_ref: "bookings.booking_status_code", category: column }
+  - { term: "count_hired", lang: en, maps_to_kind: column, maps_to_ref: "bookings.count_hired", category: column }
+  - { term: "coupon_amount", lang: en, maps_to_kind: column, maps_to_ref: "discount_coupons.coupon_amount", category: column }
+  - { term: "daily_hire_cost", lang: en, maps_to_kind: column, maps_to_ref: "products_for_hire.daily_hire_cost", category: column }
+  - { term: "date_became_customer", lang: en, maps_to_kind: column, maps_to_ref: "customers.date_became_customer", category: column }
+  - { term: "date_issued", lang: en, maps_to_kind: column, maps_to_ref: "discount_coupons.date_issued", category: column }
+  - { term: "date_last_hire", lang: en, maps_to_kind: column, maps_to_ref: "customers.date_last_hire", category: column }
+  - { term: "first_name", lang: en, maps_to_kind: column, maps_to_ref: "customers.first_name", category: column }
+  - { term: "gender_mf", lang: en, maps_to_kind: column, maps_to_ref: "customers.gender_mf", category: column }
+  - { term: "good_or_bad_customer", lang: en, maps_to_kind: column, maps_to_ref: "customers.good_or_bad_customer", category: column }
+  - { term: "last_name", lang: en, maps_to_kind: column, maps_to_ref: "customers.last_name", category: column }
+  - { term: "payment_date", lang: en, maps_to_kind: column, maps_to_ref: "payments.payment_date", category: column }
+  - { term: "payment_id", lang: en, maps_to_kind: column, maps_to_ref: "payments.payment_id", category: column }
+  - { term: "payment_type_code", lang: en, maps_to_kind: column, maps_to_ref: "payments.payment_type_code", category: column }
+  - { term: "product_description", lang: en, maps_to_kind: column, maps_to_ref: "products_for_hire.product_description", category: column }
+  - { term: "product_name", lang: en, maps_to_kind: column, maps_to_ref: "products_for_hire.product_name", category: column }
+  - { term: "product_type_code", lang: en, maps_to_kind: column, maps_to_ref: "products_for_hire.product_type_code", category: column }
+  - { term: "returned_damaged_yn", lang: en, maps_to_kind: column, maps_to_ref: "bookings.returned_damaged_yn", category: column }
+  - { term: "returned_late_yn", lang: en, maps_to_kind: column, maps_to_ref: "products_booked.returned_late_yn", category: column }
+  - { term: "returned_yn", lang: en, maps_to_kind: column, maps_to_ref: "products_booked.returned_yn", category: column }
+  - { term: "status_date", lang: en, maps_to_kind: column, maps_to_ref: "view_product_availability.status_date", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Bookings.booking_start_date（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

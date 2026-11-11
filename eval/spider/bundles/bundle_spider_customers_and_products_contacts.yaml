@@ -1,0 +1,454 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "addresses"
+    physical_asset: "Addresses"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Addresses（schema 派生资产，6 列）"
+    columns:
+      - name: "address_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "line_1_number_building"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "city"
+        type: "VARCHAR(50)"
+        comment: "schema 派生列"
+      - name: "zip_postcode"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "state_province_county"
+        type: "VARCHAR(50)"
+        comment: "schema 派生列"
+      - name: "country"
+        type: "VARCHAR(50)"
+        comment: "schema 派生列"
+
+  - logical_name: "contacts"
+    physical_asset: "Contacts"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Contacts（schema 派生资产，6 列）"
+    columns:
+      - name: "contact_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "gender"
+        type: "VARCHAR(1)"
+        comment: "schema 派生列"
+      - name: "first_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "last_name"
+        type: "VARCHAR(50)"
+        comment: "schema 派生列"
+      - name: "contact_phone"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+
+  - logical_name: "customer_address_history"
+    physical_asset: "Customer_Address_History"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 20
+    description: "Spider 物理表 Customer_Address_History（schema 派生资产，4 列）"
+    columns:
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "address_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "date_from"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "date_to"
+        type: "DATETIME"
+        comment: "schema 派生列"
+
+  - logical_name: "customer_orders"
+    physical_asset: "Customer_Orders"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Customer_Orders（schema 派生资产，4 列）"
+    columns:
+      - name: "order_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "order_date"
+        type: "DATETIME"
+        comment: "schema 派生列"
+      - name: "order_status_code"
+        type: "VARCHAR(15)"
+        comment: "schema 派生列"
+
+  - logical_name: "customers"
+    physical_asset: "Customers"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Customers（schema 派生资产，7 列）"
+    columns:
+      - name: "customer_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "payment_method_code"
+        type: "VARCHAR(15)"
+        comment: "schema 派生列"
+      - name: "customer_number"
+        type: "VARCHAR(20)"
+        comment: "schema 派生列"
+      - name: "customer_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "customer_address"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+      - name: "customer_phone"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "customer_email"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+
+  - logical_name: "order_items"
+    physical_asset: "Order_Items"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Order_Items（schema 派生资产，4 列）"
+    columns:
+      - name: "order_item_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "order_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "product_id"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "order_quantity"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+
+  - logical_name: "products"
+    physical_asset: "Products"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Products（schema 派生资产，4 列）"
+    columns:
+      - name: "product_id"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "product_type_code"
+        type: "VARCHAR(15)"
+        comment: "schema 派生列"
+      - name: "product_name"
+        type: "VARCHAR(80)"
+        comment: "schema 派生列"
+      - name: "product_price"
+        type: "DOUBLE"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "addresses_row_count"
+    display_name: "Addresses 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Addresses.address_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_from"
+    owner: "data-team"
+    default_binding:
+      asset: "addresses"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "contacts_row_count"
+    display_name: "Contacts 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Contacts.contact_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_from"
+    owner: "data-team"
+    default_binding:
+      asset: "contacts"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_address_history_row_count"
+    display_name: "Customer_Address_History 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customer_Address_History.customer_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_from"
+    owner: "data-team"
+    default_binding:
+      asset: "customer_address_history"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customer_orders_row_count"
+    display_name: "Customer_Orders 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customer_Orders.order_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_from"
+    owner: "data-team"
+    default_binding:
+      asset: "customer_orders"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customers_row_count"
+    display_name: "Customers 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customers.customer_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_from"
+    owner: "data-team"
+    default_binding:
+      asset: "customers"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "order_items_row_count"
+    display_name: "Order_Items 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Order_Items.order_item_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_from"
+    owner: "data-team"
+    default_binding:
+      asset: "order_items"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_row_count"
+    display_name: "Products 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Products.product_id)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "date_from"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_product_price_sum"
+    display_name: "Products.product_price SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Products.product_price)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "date_from"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "products_product_price_avg"
+    display_name: "Products.product_price AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Products.product_price)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "date_from"
+    owner: "data-team"
+    default_binding:
+      asset: "products"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "date_from"
+      week: "date_from"
+      month: "date_from"
+      quarter: "date_from"
+      year: "date_from"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 Customer_Address_History.date_from"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "customer_address_history.date_from"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "customer_address_history.address_id"
+    right: "addresses.address_id"
+    type: "many_to_one"
+    on_columns: ["address_id"]
+    certified_by: "data-team"
+
+  - left: "customer_address_history.customer_id"
+    right: "customers.customer_id"
+    type: "many_to_one"
+    on_columns: ["customer_id"]
+    certified_by: "data-team"
+
+  - left: "customer_orders.customer_id"
+    right: "customers.customer_id"
+    type: "many_to_one"
+    on_columns: ["customer_id"]
+    certified_by: "data-team"
+
+  - left: "order_items.order_id"
+    right: "customer_orders.order_id"
+    type: "many_to_one"
+    on_columns: ["order_id"]
+    certified_by: "data-team"
+
+  - left: "order_items.product_id"
+    right: "products.product_id"
+    type: "many_to_one"
+    on_columns: ["product_id"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "city", lang: en, maps_to_kind: column, maps_to_ref: "addresses.city", category: column }
+  - { term: "contact_id", lang: en, maps_to_kind: column, maps_to_ref: "contacts.contact_id", category: column }
+  - { term: "contact_phone", lang: en, maps_to_kind: column, maps_to_ref: "contacts.contact_phone", category: column }
+  - { term: "country", lang: en, maps_to_kind: column, maps_to_ref: "addresses.country", category: column }
+  - { term: "customer_address", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_address", category: column }
+  - { term: "customer_email", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_email", category: column }
+  - { term: "customer_name", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_name", category: column }
+  - { term: "customer_number", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_number", category: column }
+  - { term: "customer_phone", lang: en, maps_to_kind: column, maps_to_ref: "customers.customer_phone", category: column }
+  - { term: "date_from", lang: en, maps_to_kind: column, maps_to_ref: "customer_address_history.date_from", category: column }
+  - { term: "date_to", lang: en, maps_to_kind: column, maps_to_ref: "customer_address_history.date_to", category: column }
+  - { term: "first_name", lang: en, maps_to_kind: column, maps_to_ref: "contacts.first_name", category: column }
+  - { term: "gender", lang: en, maps_to_kind: column, maps_to_ref: "contacts.gender", category: column }
+  - { term: "last_name", lang: en, maps_to_kind: column, maps_to_ref: "contacts.last_name", category: column }
+  - { term: "line_1_number_building", lang: en, maps_to_kind: column, maps_to_ref: "addresses.line_1_number_building", category: column }
+  - { term: "order_date", lang: en, maps_to_kind: column, maps_to_ref: "customer_orders.order_date", category: column }
+  - { term: "order_item_id", lang: en, maps_to_kind: column, maps_to_ref: "order_items.order_item_id", category: column }
+  - { term: "order_quantity", lang: en, maps_to_kind: column, maps_to_ref: "order_items.order_quantity", category: column }
+  - { term: "order_status_code", lang: en, maps_to_kind: column, maps_to_ref: "customer_orders.order_status_code", category: column }
+  - { term: "payment_method_code", lang: en, maps_to_kind: column, maps_to_ref: "customers.payment_method_code", category: column }
+  - { term: "product_name", lang: en, maps_to_kind: column, maps_to_ref: "products.product_name", category: column }
+  - { term: "product_price", lang: en, maps_to_kind: column, maps_to_ref: "products.product_price", category: column }
+  - { term: "product_type_code", lang: en, maps_to_kind: column, maps_to_ref: "products.product_type_code", category: column }
+  - { term: "state_province_county", lang: en, maps_to_kind: column, maps_to_ref: "addresses.state_province_county", category: column }
+  - { term: "zip_postcode", lang: en, maps_to_kind: column, maps_to_ref: "addresses.zip_postcode", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Customer_Address_History.date_from（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context

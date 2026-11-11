@@ -1,0 +1,410 @@
+# 由 eval/spider/build_bundle.py 机械生成 —— 禁止手改。
+# 来源：资产=PRAGMA table_info / Join=tables.json 外键 / 指标=数值列 / 维度=首条 time 列。
+# 指标口径是 schema 派生物、非业务口径。
+
+meta:
+  version: "2026.11.10.2"
+  domain: [orders]
+  dialect: "sqlite"
+  published_at: "2026-11-10T00:00:00+08:00"
+  published_by: "u-182-deriver"
+  status: "candidate"
+  timezone: "Asia/Shanghai"
+  fiscal_year_start_month: 1
+  week_starts_on: "monday"
+  embedding:
+    model: "bge-m3"
+    dim: 1024
+
+assets:
+
+  - logical_name: "available_policies"
+    physical_asset: "Available_Policies"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Available_Policies（schema 派生资产，3 列）"
+    columns:
+      - name: "Policy_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "policy_type_code"
+        type: "CHAR(15)"
+        comment: "schema 派生列"
+      - name: "Customer_Phone"
+        type: "VARCHAR(255)"
+        comment: "schema 派生列"
+
+  - logical_name: "claims"
+    physical_asset: "Claims"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 10
+    description: "Spider 物理表 Claims（schema 派生资产，3 列）"
+    columns:
+      - name: "Claim_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "FNOL_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Effective_Date"
+        type: "DATE"
+        comment: "schema 派生列"
+
+  - logical_name: "customers"
+    physical_asset: "Customers"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 15
+    description: "Spider 物理表 Customers（schema 派生资产，2 列）"
+    columns:
+      - name: "Customer_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Customer_name"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+
+  - logical_name: "customers_policies"
+    physical_asset: "Customers_Policies"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 14
+    description: "Spider 物理表 Customers_Policies（schema 派生资产，4 列）"
+    columns:
+      - name: "Customer_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Policy_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Date_Opened"
+        type: "DATE"
+        comment: "schema 派生列"
+      - name: "Date_Closed"
+        type: "DATE"
+        comment: "schema 派生列"
+
+  - logical_name: "first_notification_of_loss"
+    physical_asset: "First_Notification_of_Loss"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 7
+    description: "Spider 物理表 First_Notification_of_Loss（schema 派生资产，4 列）"
+    columns:
+      - name: "FNOL_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Customer_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Policy_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Service_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+
+  - logical_name: "services"
+    physical_asset: "Services"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 4
+    description: "Spider 物理表 Services（schema 派生资产，2 列）"
+    columns:
+      - name: "Service_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Service_name"
+        type: "VARCHAR(40)"
+        comment: "schema 派生列"
+
+  - logical_name: "settlements"
+    physical_asset: "Settlements"
+    grain: "row"
+    domain: "orders"
+    owner: "data-team"
+    certified: true
+    tenant_scoped: false
+    quality_score: 0.95
+    freshness_sla: "P1D"
+    level: "warm"
+    row_estimate: 10
+    description: "Spider 物理表 Settlements（schema 派生资产，4 列）"
+    columns:
+      - name: "Settlement_ID"
+        type: "INTEGER"
+        comment: "主键；schema 派生列"
+      - name: "Claim_ID"
+        type: "INTEGER"
+        comment: "schema 派生列"
+      - name: "Effective_Date"
+        type: "DATE"
+        comment: "schema 派生列"
+      - name: "Settlement_Amount"
+        type: "REAL"
+        comment: "schema 派生列"
+
+metrics:
+
+  - name: "available_policies_row_count"
+    display_name: "Available_Policies 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Available_Policies.Policy_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Effective_Date"
+    owner: "data-team"
+    default_binding:
+      asset: "available_policies"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "claims_row_count"
+    display_name: "Claims 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Claims.Claim_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Effective_Date"
+    owner: "data-team"
+    default_binding:
+      asset: "claims"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customers_row_count"
+    display_name: "Customers 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customers.Customer_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Effective_Date"
+    owner: "data-team"
+    default_binding:
+      asset: "customers"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "customers_policies_row_count"
+    display_name: "Customers_Policies 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Customers_Policies.Customer_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Effective_Date"
+    owner: "data-team"
+    default_binding:
+      asset: "customers_policies"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "first_notification_of_loss_row_count"
+    display_name: "First_Notification_of_Loss 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(First_Notification_of_Loss.FNOL_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Effective_Date"
+    owner: "data-team"
+    default_binding:
+      asset: "first_notification_of_loss"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "services_row_count"
+    display_name: "Services 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Services.Service_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Effective_Date"
+    owner: "data-team"
+    default_binding:
+      asset: "services"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "settlements_row_count"
+    display_name: "Settlements 行数"
+    domain: "orders"
+    status: "active"
+    expression: "COUNT(Settlements.Settlement_ID)"
+    default_aggregation: "count"
+    unit: "count"
+    time_basis: "Effective_Date"
+    owner: "data-team"
+    default_binding:
+      asset: "settlements"
+      reason: "schema 派生：整表行数"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "settlements_settlement_amount_sum"
+    display_name: "Settlements.Settlement_Amount SUM"
+    domain: "orders"
+    status: "active"
+    expression: "SUM(Settlements.Settlement_Amount)"
+    default_aggregation: "sum"
+    unit: "number"
+    time_basis: "Effective_Date"
+    owner: "data-team"
+    default_binding:
+      asset: "settlements"
+      reason: "schema 派生：数值列 sum"
+    definition_note: "schema 机械派生，非业务口径。"
+
+  - name: "settlements_settlement_amount_avg"
+    display_name: "Settlements.Settlement_Amount AVG"
+    domain: "orders"
+    status: "active"
+    expression: "AVG(Settlements.Settlement_Amount)"
+    default_aggregation: "avg"
+    unit: "number"
+    time_basis: "Effective_Date"
+    owner: "data-team"
+    default_binding:
+      asset: "settlements"
+      reason: "schema 派生：数值列 avg"
+    definition_note: "schema 机械派生，非业务口径。"
+
+dimensions:
+
+  - name: "date"
+    bindings:
+      day: "Effective_Date"
+      week: "Effective_Date"
+      month: "Effective_Date"
+      quarter: "Effective_Date"
+      year: "Effective_Date"
+    hierarchy: [year, quarter, month, week, day]
+    grain_levels: { year: 1, quarter: 2, month: 3, week: 4, day: 5 }
+    grain_level: 5
+    note: "schema 派生：绑 Claims.Effective_Date"
+
+field_bindings:
+
+  - concept: "date"
+    canonical_asset: "claims.Effective_Date"
+    time_semantics: "transaction_time"
+    grain_level: 5
+    default_reason: "schema 派生：该库首条 time 列"
+
+joins:
+
+  - left: "customers_policies.Policy_ID"
+    right: "available_policies.Policy_ID"
+    type: "many_to_one"
+    on_columns: ["Policy_ID"]
+    certified_by: "data-team"
+
+  - left: "customers_policies.Customer_ID"
+    right: "customers.Customer_ID"
+    type: "many_to_one"
+    on_columns: ["Customer_ID"]
+    certified_by: "data-team"
+
+  - left: "first_notification_of_loss.Customer_ID"
+    right: "customers_policies.Customer_ID"
+    type: "many_to_one"
+    on_columns: ["Customer_ID"]
+    certified_by: "data-team"
+
+  - left: "first_notification_of_loss.Policy_ID"
+    right: "customers_policies.Policy_ID"
+    type: "many_to_one"
+    on_columns: ["Policy_ID"]
+    certified_by: "data-team"
+
+  - left: "first_notification_of_loss.Service_ID"
+    right: "services.Service_ID"
+    type: "many_to_one"
+    on_columns: ["Service_ID"]
+    certified_by: "data-team"
+
+  - left: "claims.FNOL_ID"
+    right: "first_notification_of_loss.FNOL_ID"
+    type: "many_to_one"
+    on_columns: ["FNOL_ID"]
+    certified_by: "data-team"
+
+  - left: "settlements.Claim_ID"
+    right: "claims.Claim_ID"
+    type: "many_to_one"
+    on_columns: ["Claim_ID"]
+    certified_by: "data-team"
+
+default_predicates: {}
+
+aliases:
+  - { term: "Customer_Phone", lang: en, maps_to_kind: column, maps_to_ref: "available_policies.Customer_Phone", category: column }
+  - { term: "Customer_name", lang: en, maps_to_kind: column, maps_to_ref: "customers.Customer_name", category: column }
+  - { term: "Date_Closed", lang: en, maps_to_kind: column, maps_to_ref: "customers_policies.Date_Closed", category: column }
+  - { term: "Date_Opened", lang: en, maps_to_kind: column, maps_to_ref: "customers_policies.Date_Opened", category: column }
+  - { term: "Service_name", lang: en, maps_to_kind: column, maps_to_ref: "services.Service_name", category: column }
+  - { term: "Settlement_Amount", lang: en, maps_to_kind: column, maps_to_ref: "settlements.Settlement_Amount", category: column }
+  - { term: "Settlement_ID", lang: en, maps_to_kind: column, maps_to_ref: "settlements.Settlement_ID", category: column }
+  - { term: "policy_type_code", lang: en, maps_to_kind: column, maps_to_ref: "available_policies.policy_type_code", category: column }
+
+blacklist_terms: []
+
+time_semantics:
+  transaction_time: "交易时间 = Claims.Effective_Date（schema 派生）"
+  current: "主数据当前值"
+  period_end_snapshot: "统计期末快照"
+  notes:
+    - "本包由 eval/spider/build_bundle.py 从 Spider schema 机械派生，指标非业务口径。"
+
+policies:
+  - deny_columns: []
+    applies_to_roles: [analyst]
+    note: "Spider 沙箱库无租户列，本包不设拒绝列（机械派生）。"
+
+quality_gates:
+  min_certified: true
+  min_quality_score: 0.90
+  max_staleness_hours: 24
+  require_owner: true
+  on_violation: exclude_from_context
