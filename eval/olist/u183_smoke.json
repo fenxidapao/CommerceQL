@@ -1,0 +1,454 @@
+{
+  "batch_id": "u183_smoke",
+  "frozen_evidence": {
+    "profile": "olist",
+    "dataset": "eval\\olist\\dataset_v3_frozen.json",
+    "db": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\olist\\olist_sandbox.db",
+    "python": "3.13.14",
+    "mode": "frozen",
+    "frozen": true,
+    "checks": {
+      "dataset_content_hash": {
+        "expected": "sha256:ec6b13f27cb9eaa0c4dc3f70031638370dc8b961a1676df50b3da33ca7b24f7e",
+        "actual": "sha256:ec6b13f27cb9eaa0c4dc3f70031638370dc8b961a1676df50b3da33ca7b24f7e",
+        "mode": "frozen",
+        "ok": true
+      },
+      "dataset_full_hash": {
+        "expected": "sha256:8777d896d1308e9a3ba5a447d519408aa06fc69e4a625ba5f8bab4eb0d907595",
+        "actual": "sha256:8777d896d1308e9a3ba5a447d519408aa06fc69e4a625ba5f8bab4eb0d907595",
+        "mode": "frozen",
+        "ok": true
+      },
+      "sandbox_db_sha256": {
+        "expected": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+        "actual": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0",
+        "mode": "frozen",
+        "python": "3.13.14",
+        "pinned_python": "3.13.14",
+        "ok": true
+      },
+      "dataset_shape": {
+        "expected": {
+          "n_cases": 100,
+          "n_execute_cases": 95,
+          "n_interaction_cases": 5
+        },
+        "actual": {
+          "n_cases": 100,
+          "n_execute_cases": 95,
+          "n_interaction_cases": 5
+        },
+        "declared": {
+          "n_cases": 100,
+          "n_execute_cases": 95,
+          "n_interaction_cases": 5
+        },
+        "ok": true
+      },
+      "gold_executable": {
+        "expected": 95,
+        "actual": 95,
+        "ok": true
+      },
+      "caliber_match": {
+        "expected": 95,
+        "actual": 95,
+        "ok": true
+      },
+      "interaction_unlabeled": {
+        "expected": 5,
+        "actual": 5,
+        "ok": true
+      },
+      "cases_valid": {
+        "expected": 100,
+        "actual": 100,
+        "ok": true
+      },
+      "gold_result_hash": {
+        "mode": "frozen",
+        "checked_cases": 95,
+        "mismatches": [],
+        "ok": true
+      },
+      "all_ok": true
+    },
+    "dataset_version": "olist_v3",
+    "frozen_at": "2026-11-05T01:40:59+00:00",
+    "n_cases": 100,
+    "n_execute_cases": 95,
+    "n_interaction_cases": 5,
+    "content_hash": "sha256:ec6b13f27cb9eaa0c4dc3f70031638370dc8b961a1676df50b3da33ca7b24f7e",
+    "full_hash": "sha256:8777d896d1308e9a3ba5a447d519408aa06fc69e4a625ba5f8bab4eb0d907595",
+    "sandbox_db_sha256": "17c14cee7268e78225afa0406d705cf9a018c984d86697a038682d001fac31b0"
+  },
+  "config": {
+    "batch_id": "u183_smoke",
+    "live": true,
+    "mode": "record",
+    "cassette": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\eval\\olist\\cassettes\\u183_smoke.jsonl",
+    "dataset": "eval\\olist\\dataset_v3_frozen.json",
+    "dataset_content_hash": "sha256:ec6b13f27cb9eaa0c4dc3f70031638370dc8b961a1676df50b3da33ca7b24f7e",
+    "dataset_full_hash": "sha256:8777d896d1308e9a3ba5a447d519408aa06fc69e4a625ba5f8bab4eb0d907595",
+    "executor": {
+      "bundle_path": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\semantic\\bundle_olist_2018_v2.yaml",
+      "db_path": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\olist\\olist_sandbox.db"
+    },
+    "scorer_db": "E:\\01_实训\\项目\\基于Text2SQL的电商数据分析Agent\\CommerceQL\\data\\olist\\olist_sandbox.db",
+    "n_cases": 1,
+    "filters": {
+      "ids": [
+        "g01"
+      ],
+      "limit": null
+    },
+    "provenance": null,
+    "budget": {
+      "max_cost_cny": 0.5,
+      "max_calls": 20,
+      "max_tokens": 30000,
+      "ledger": null
+    }
+  },
+  "summary": {
+    "n_records": 1,
+    "n_scored": 1,
+    "n_unscored": 0,
+    "n_node_timeout": 0,
+    "n_execute_scored": 1,
+    "n_execute_with_sql": 1,
+    "n_equivalent": 0,
+    "terminal_distribution": {
+      "complete": 1
+    },
+    "binding_layer_distribution": {
+      "L3": 1
+    },
+    "binding_status_distribution": {
+      "resolved_default": 1
+    },
+    "l4_decisions": 0,
+    "ambiguous_bindings": 0,
+    "tau_raw_ok": 1,
+    "l4_scored_records": 1,
+    "tau_raw_reason_distribution": {
+      "ok": 1
+    },
+    "l4_candidate_count_distribution": {
+      "30": 1
+    },
+    "attribution_distribution": {
+      "unattributed": 1
+    },
+    "tokens_total": 19513,
+    "cost_cny_total": 0.052975,
+    "wall_s": {
+      "max": 17.311,
+      "median": 17.311,
+      "sum": 17.311
+    },
+    "n_second_round_attempted": 0,
+    "n_second_round_success": 0,
+    "second_round_tokens_total": 0,
+    "second_round_cost_cny_total": 0.0
+  },
+  "usage": {
+    "calls": 5,
+    "tokens": 19513,
+    "cost_cny": 0.052975,
+    "prior": {
+      "calls": 0,
+      "tokens": 0,
+      "cost_cny": 0.0
+    },
+    "totals": {
+      "calls": 5,
+      "tokens": 19513,
+      "cost_cny": 0.052975
+    }
+  },
+  "budget_stop": null,
+  "records": [
+    {
+      "case_id": "g01",
+      "question": "2018 年的 GMV 是多少？",
+      "tenant": "T_A",
+      "expected_behavior": "execute",
+      "difficulty_struct": "medium",
+      "difficulty_semantic": "low",
+      "nodes": [
+        "trusted_context",
+        "normalize",
+        "intent",
+        "link",
+        "plan",
+        "bind",
+        "gen_sql",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "repair",
+        "gate1_ast",
+        "gate2_policy",
+        "gate3_cost",
+        "execute",
+        "mask",
+        "audit_pre",
+        "present",
+        "audit_supp"
+      ],
+      "terminal_event": "complete",
+      "terminal_code": null,
+      "terminal_error_detail": {},
+      "outcome": "success",
+      "refusal_reason": null,
+      "binding_status": "resolved_default",
+      "binding_layer": "L3",
+      "sql_text": "SELECT SUM(payment.payment_value) / NULLIF(COUNT(DISTINCT order_cnt.order_id), 0) AS gmv FROM v_o_orders AS order_cnt JOIN v_o_payments AS payment ON order_cnt.order_id = payment.order_id WHERE NOT order_cnt.order_status IN ('canceled', 'unavailable') AND order_cnt.order_purchase_timestamp >= %(start_ts)s AND order_cnt.order_purchase_timestamp < %(end_ts)s LIMIT 100",
+      "sql_params": {
+        "start_ts": "2018-01-01",
+        "end_ts": "2019-01-01"
+      },
+      "sql_dialect": "postgres",
+      "limit_injected": null,
+      "applied_predicates": [],
+      "unregistered_pg_constructs": [],
+      "gate_decisions": {
+        "1": "pass/True",
+        "2": "pass/True",
+        "3": "skipped/False"
+      },
+      "gate1_reject_rule": null,
+      "exec_error_class": null,
+      "repair_round": 1,
+      "repair_history": [
+        {
+          "round": 1,
+          "error_class": "syntax_error",
+          "attempts": 1
+        }
+      ],
+      "degradations": [
+        {
+          "reason": "embedding_unavailable",
+          "action_taken": "sparse_only"
+        },
+        {
+          "reason": "present_failed",
+          "action_taken": "table_only",
+          "detail": {
+            "stage": "present",
+            "reason": "presenter_absent",
+            "binding_disclosure": "时间基准固定为下单时间，金额取自支付流水"
+          }
+        }
+      ],
+      "retrieval_counts": {
+        "assets": 5,
+        "columns": 32,
+        "metrics": 9,
+        "metrics_in_catalog": 9,
+        "denied_filtered": 1
+      },
+      "latency_ms": {
+        "normalize": 1238,
+        "linking": 0,
+        "plan": 2052,
+        "gen_sql": 4070,
+        "gate": 15,
+        "exec": 476,
+        "present": 0,
+        "total": 14351
+      },
+      "tokens": {
+        "input": 17727,
+        "output": 1786,
+        "cache_hit": 0,
+        "total": 19513
+      },
+      "cost_cny": 0.052975,
+      "infra_error": null,
+      "scored": true,
+      "unscored_reason": null,
+      "second_round": null,
+      "tau_raw": {
+        "schema": "W8_TAU_RAW/v1",
+        "source": "bind.l4",
+        "ok": true,
+        "reason": null,
+        "candidate_ids": [
+          "v_o_orders.order_id",
+          "v_o_orders.customer_id",
+          "v_o_orders.customer_unique_id",
+          "v_o_orders.customer_state",
+          "v_o_orders.customer_city",
+          "v_o_orders.order_status",
+          "v_o_orders.order_purchase_timestamp",
+          "v_o_orders.order_approved_at",
+          "v_o_orders.order_delivered_customer_date",
+          "v_o_orders.order_estimated_delivery_date",
+          "v_o_order_items.order_id",
+          "v_o_order_items.order_item_id",
+          "v_o_order_items.product_id",
+          "v_o_order_items.seller_id",
+          "v_o_order_items.shipping_limit_date",
+          "v_o_order_items.price",
+          "v_o_order_items.freight_value",
+          "v_o_products.product_id",
+          "v_o_products.product_category_name",
+          "v_o_products.product_category",
+          "v_o_products.product_weight_g",
+          "v_o_products.product_photos_qty",
+          "v_o_payments.order_id",
+          "v_o_payments.payment_sequential",
+          "v_o_payments.payment_type",
+          "v_o_payments.payment_installments",
+          "v_o_payments.payment_value",
+          "v_o_reviews.review_id",
+          "v_o_reviews.order_id",
+          "v_o_reviews.review_score"
+        ],
+        "scores": [
+          0.05,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.05,
+          0.1,
+          0.03,
+          0.03,
+          0.03,
+          0.05,
+          0.03,
+          0.02,
+          0.02,
+          0.03,
+          0.75,
+          0.45,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.02,
+          0.05,
+          0.03,
+          0.03,
+          0.03,
+          0.7,
+          0.02,
+          0.03,
+          0.02
+        ],
+        "rank": [
+          "v_o_order_items.price",
+          "v_o_payments.payment_value",
+          "v_o_order_items.freight_value",
+          "v_o_orders.order_purchase_timestamp",
+          "v_o_order_items.order_id",
+          "v_o_orders.order_id",
+          "v_o_orders.order_status",
+          "v_o_payments.order_id",
+          "v_o_order_items.order_item_id",
+          "v_o_order_items.shipping_limit_date",
+          "v_o_orders.order_approved_at",
+          "v_o_orders.order_delivered_customer_date",
+          "v_o_orders.order_estimated_delivery_date",
+          "v_o_payments.payment_installments",
+          "v_o_payments.payment_sequential",
+          "v_o_payments.payment_type",
+          "v_o_reviews.order_id",
+          "v_o_order_items.product_id",
+          "v_o_order_items.seller_id",
+          "v_o_orders.customer_city",
+          "v_o_orders.customer_id",
+          "v_o_orders.customer_state",
+          "v_o_orders.customer_unique_id",
+          "v_o_products.product_category",
+          "v_o_products.product_category_name",
+          "v_o_products.product_id",
+          "v_o_products.product_photos_qty",
+          "v_o_products.product_weight_g",
+          "v_o_reviews.review_id",
+          "v_o_reviews.review_score"
+        ],
+        "scorer": {
+          "model_id": "deepseek-v4.1-flash",
+          "prompt_version": "l4_score_v1"
+        },
+        "gold_sql_present": true,
+        "gold_sql_sha256": "ac056b19a225b043efd11a2ac96891673e06687bfa5146e4dbfee3b1bb069d4a",
+        "gold_candidate_id": "v_o_payments.payment_value",
+        "gold_match_rule": "aggregate_arg",
+        "gold_candidates_considered": 30,
+        "gold_unmatched_reason": null,
+        "gold_has_star_agg": false,
+        "gold_status": "matched"
+      },
+      "gold": {
+        "gold_sql": "SELECT SUM(p.payment_value) AS gmv\nFROM v_o_payments AS p\nJOIN v_o_orders AS o ON o.order_id = p.order_id\nWHERE o.order_status NOT IN ('canceled', 'unavailable')\n  AND o.order_purchase_timestamp >= '2018-01-01'\n  AND o.order_purchase_timestamp <  '2019-01-01'\n",
+        "frozen_hash": "sha256:48dbc2303ab1512d3bc26317ffd82b350a37e69dd4600f02c6f95e9e1f5f6b9e",
+        "via_view": {
+          "hash": "sha256:48dbc2303ab1512d3bc26317ffd82b350a37e69dd4600f02c6f95e9e1f5f6b9e",
+          "rows": 1,
+          "cols": 1,
+          "error": null
+        },
+        "via_wrap": {
+          "hash": "sha256:48dbc2303ab1512d3bc26317ffd82b350a37e69dd4600f02c6f95e9e1f5f6b9e",
+          "rows": 1,
+          "cols": 1,
+          "error": null
+        },
+        "view_eq_wrap": true,
+        "wrap_eq_frozen": true
+      },
+      "predicted": {
+        "hash": "sha256:90d532a235e3f03aca0f58c3d85d28bd871c31b906dc9aa5ae4fdb103e0f1314",
+        "columns": [
+          "gmv"
+        ],
+        "rows": 1,
+        "shape": {
+          "columns": [
+            "gmv"
+          ],
+          "row_count": 1,
+          "head_rows": [
+            [
+              160.5550321303146
+            ]
+          ]
+        },
+        "state_row_count": 1,
+        "sandbox_error": null
+      },
+      "verdict": {
+        "equivalent": false,
+        "hash_matches": false,
+        "tags": [],
+        "diffs": [
+          "行多重集差异：仅金标 1 行 / 仅预测 1 行",
+          "金标行无法在预测结果中找到：(8594831.98,)"
+        ],
+        "unmatched": 1,
+        "equivalent_despite_hash_mismatch": false
+      },
+      "attribution": {
+        "category": "unattributed",
+        "signal": "无结构化信号可用（需人工复核）",
+        "severity": "normal"
+      },
+      "wall_s": 17.311,
+      "runner_transport_retries": 0,
+      "batch_id": "u183_smoke"
+    }
+  ],
+  "build": {
+    "generated_at": "2026-11-11T09:34:03+00:00",
+    "git_rev": "f01cba7",
+    "git_dirty": true
+  }
+}
