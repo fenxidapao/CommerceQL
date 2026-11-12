@@ -10,14 +10,15 @@
 * `TO_CHAR(<expr>, <fmt>)` —— 5 种已验格式（U-167）；
 * `DATE_TRUNC('year'|'month'|'day', <expr>)` —— 三种单位的年初／月初／当日样本已出；
 * `EXTRACT(YEAR|MONTH|DAY|QUARTER FROM <expr>)` —— 四种单位样本已出；
-* `<标识符>::timestamp` —— **只剥运算符、不转 CAST**：`CAST(x AS TIMESTAMP)` 在 SQLite
-  走 NUMERIC 亲和性，会把时间串截成四位年值（实测 `['2016','2016','2016']`）——
-  那是「跑得通但算错」，比报错更危险。
+* `<标识符>::timestamp` 与 `CAST(<简单列> AS TIMESTAMP)` —— **只剥这个恒等标注**
+  （U-184 补函数写法）：`CAST(x AS TIMESTAMP)` 在 SQLite 走 NUMERIC 亲和性，会把时间串
+  截成四位年值（实测 `['2016','2016','2016']`）；再喂给 `strftime` 会按 Julian day
+  解出固定值（`2017` → `-4707-06`）⇒ 月度分组恒 1 行。那是「跑得通但算错」，比报错更危险。
 
 不翻的（原样保留、继续由 `eval/sqlite_pg_constructs.py` 点名）：
 * `DATE_TRUNC('quarter', ...)`（PG 语义是季度首日，SQLite 无等价原语，实测报 no such function）；
 * `<expr>::numeric` / `::date` / `::text`（改舍入 / 截时分 / 改比较语义）；
-* `CAST(...)`、`ILIKE`、`INTERVAL`、`NOW()`、以及任何单位不认识的时间函数。
+* `CAST(... AS 其它类型)` / 左值非简单列引用的 TIMESTAMP CAST、`ILIKE`、`INTERVAL`、`NOW()`、以及任何单位不认识的时间函数。
 
 翻译策略（保守优先）：任何一项对不上（单位未登记、参数个数不对、括号不配平）就**原样保留**；
 宁可让它照旧失败并暴露（`unknown_function` 是**可判**的），也不猜一个不等价的翻译。
@@ -115,6 +116,14 @@ _LITERAL = re.compile(r"'([^']*)'")
 #: 只认「标识符（可带一处表前缀）::timestamp」——更复杂的左值不做词法分析，留给原样保留。
 _TIMESTAMP_CAST = re.compile(
     r"(\b[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)::timestamp\b",
+    re.IGNORECASE,
+)
+#: U-184：PG 里对 timestamp 列恒等的 `CAST(<简单列引用> AS TIMESTAMP)`。
+#: 同样的「只认简单列引用」边界：函数/表达式左值、`AS 其它类型` 一律不剥。
+_TIMESTAMP_CAST_FUNC = re.compile(
+    r"\bCAST\s*\(\s*"
+    r"([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)"
+    r"\s+AS\s+TIMESTAMP\s*\)",
     re.IGNORECASE,
 )
 
@@ -222,8 +231,13 @@ def _build_to_char(args: list[str]) -> str | None:
 
 
 def strip_timestamp_casts(sql: str) -> str:
-    """剥掉 `<标识符>::timestamp` 的运算符（不转 CAST —— 见模块 docstring 的陷阱实测）。"""
-    return _TIMESTAMP_CAST.sub(r"\1", sql)
+    """剥掉 PG 的**恒等**时间戳标注：`x::timestamp` 与 `CAST(x AS TIMESTAMP)`。
+
+    U-184：函数写法与运算符写法在 PG 里是同一个恒等操作，SQLite 下却会把时间串
+    截成四位年值（见模块 docstring 的陷阱实测）⇒ 两种形态同样必须剥。
+    ⚠️ 只剥简单列引用，其它类型 CAST 与复杂左值原样保留（保守优先不变）。
+    """
+    return _TIMESTAMP_CAST_FUNC.sub(r"\1", _TIMESTAMP_CAST.sub(r"\1", sql))
 
 
 def translate_pg_functions(sql: str) -> str:

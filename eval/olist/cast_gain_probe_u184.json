@@ -1,0 +1,172 @@
+{
+  "schema": "U184_CAST_GAIN_PROBE/v1",
+  "probe": "eval/olist/probe_u184_cast_gain.py",
+  "recompute": "python eval/olist/probe_u184_cast_gain.py",
+  "denominator_source": "eval/olist/dataset_v3_frozen.json::n_execute_cases（U-177 已裁定）",
+  "scope": "判分面重算（已落盘 SQL，零 LLM）；不是新一轮 live，r6 仍 UNVERIFIED",
+  "batches": [
+    {
+      "batch": "r1",
+      "source": "eval/olist/results_v3_r1.json (只读)",
+      "n_execute": 95,
+      "denominator": 95,
+      "base_live_verdict": 69,
+      "rescored_after_u184": 80,
+      "rescored_strip_again": 80,
+      "ex": {
+        "base": 0.7263,
+        "after_u184": 0.8421
+      },
+      "n_records_with_ts_cast": 0,
+      "newly_equivalent": [],
+      "regressions": [],
+      "rescore_vs_live_verdict_agree": 83,
+      "rescore_vs_live_verdict_disagree": [
+        "g02",
+        "g06",
+        "g10",
+        "o19",
+        "o34",
+        "o44",
+        "n23",
+        "n25",
+        "n28",
+        "n30",
+        "n33"
+      ]
+    },
+    {
+      "batch": "r2",
+      "source": "eval/olist/results_v3_r2.json (只读)",
+      "n_execute": 95,
+      "denominator": 95,
+      "base_live_verdict": 67,
+      "rescored_after_u184": 80,
+      "rescored_strip_again": 80,
+      "ex": {
+        "base": 0.7053,
+        "after_u184": 0.8421
+      },
+      "n_records_with_ts_cast": 1,
+      "newly_equivalent": [],
+      "regressions": [],
+      "rescore_vs_live_verdict_agree": 82,
+      "rescore_vs_live_verdict_disagree": [
+        "g02",
+        "g06",
+        "g10",
+        "o24",
+        "o31",
+        "o34",
+        "o35",
+        "o44",
+        "n23",
+        "n26",
+        "n28",
+        "n29",
+        "n33"
+      ]
+    },
+    {
+      "batch": "r3",
+      "source": "eval/olist/results_v3_r3.json (只读)",
+      "n_execute": 95,
+      "denominator": 95,
+      "base_live_verdict": 66,
+      "rescored_after_u184": 77,
+      "rescored_strip_again": 77,
+      "ex": {
+        "base": 0.6947,
+        "after_u184": 0.8105
+      },
+      "n_records_with_ts_cast": 1,
+      "newly_equivalent": [],
+      "regressions": [],
+      "rescore_vs_live_verdict_agree": 83,
+      "rescore_vs_live_verdict_disagree": [
+        "g01",
+        "g02",
+        "g05",
+        "g06",
+        "g10",
+        "o30",
+        "o34",
+        "o44",
+        "n23",
+        "n25",
+        "n26"
+      ]
+    },
+    {
+      "batch": "r4",
+      "source": "eval/olist/results_v3_r4.json (只读)",
+      "n_execute": 95,
+      "denominator": 95,
+      "base_live_verdict": 74,
+      "rescored_after_u184": 79,
+      "rescored_strip_again": 79,
+      "ex": {
+        "base": 0.7789,
+        "after_u184": 0.8316
+      },
+      "n_records_with_ts_cast": 15,
+      "newly_equivalent": [],
+      "regressions": [],
+      "rescore_vs_live_verdict_agree": 90,
+      "rescore_vs_live_verdict_disagree": [
+        "g02",
+        "g06",
+        "g10",
+        "o34",
+        "o44"
+      ]
+    },
+    {
+      "batch": "r5",
+      "source": "eval/olist/results_v3_r5.json (只读)",
+      "n_execute": 95,
+      "denominator": 95,
+      "base_live_verdict": 71,
+      "rescored_after_u184": 76,
+      "rescored_strip_again": 76,
+      "ex": {
+        "base": 0.7474,
+        "after_u184": 0.8
+      },
+      "n_records_with_ts_cast": 13,
+      "newly_equivalent": [],
+      "regressions": [],
+      "rescore_vs_live_verdict_agree": 89,
+      "rescore_vs_live_verdict_disagree": [
+        "g02",
+        "g06",
+        "g10",
+        "o34",
+        "o44"
+      ]
+    }
+  ],
+  "p3_live_batches": {
+    "base": [
+      74,
+      71
+    ],
+    "after_u184": [
+      79,
+      76
+    ],
+    "ex_base": [
+      0.7789,
+      0.7474
+    ],
+    "ex_after_u184": [
+      0.8316,
+      0.8
+    ],
+    "gap_to_81": [
+      2,
+      5
+    ]
+  },
+  "verdict": "U-184 落码使 r4/r5 判分面重算读数由 [74, 71] 升至 [79, 76]；85%（81 题）仍未达成，差距照实保留；本件不是 live 实测，正式 EX 需新录匣带 + live 复测。"
+}
