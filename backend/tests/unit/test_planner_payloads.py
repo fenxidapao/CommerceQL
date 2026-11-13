@@ -353,6 +353,21 @@ class TestSemanticSummary:
             assert "唯一例外" in text, f"{name} 没写明这是「不加双引号」的唯一例外"
             assert "order_cnt" in text, f"{name} 没给替代命名示例"
 
+    def test_sql_prompts_carry_u185_caliber_rules(self) -> None:
+        """`U-185`：三条口径纪律**只**落 SQL 侧三份资产，且三份逐条齐备。
+
+        与保留字规则同一分工：这些是 SQL 生成纪律，不得塞进被 10 个模板共用的
+        `DIALECT_NOTE`（改它会连带改掉 normalize / plan / present 的渲染文本）。
+        反向断言保证「三份齐备」不是靠把规则抬进共用常量来作弊。
+        """
+        markers = ("已显式声明的别名", "时间基准", "YYYY-Qn")
+        for name in ("gen_sql_v1.txt", "gen_sql_complex_v1.txt", "repair_v1.txt"):
+            text = (_PROMPT_DIR / name).read_text(encoding="utf-8")
+            for marker in markers:
+                assert marker in text, f"{name} 丢了 U-185 口径纪律：{marker}"
+        for marker in markers:
+            assert marker not in DIALECT_NOTE, f"口径纪律误塞共用 DIALECT_NOTE：{marker}"
+
     def test_metric_directory_reaches_the_model(
         self, runtime: SemanticBundleRuntime, prompt_ctx: PromptContext
     ) -> None:
