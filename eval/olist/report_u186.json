@@ -1,0 +1,855 @@
+{
+  "schema": "U186_REPORT/v1",
+  "builder": "eval/olist/build_report_u186.py",
+  "recompute": "python eval/olist/build_report_u186.py",
+  "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "model": "deepseek-v4.1-flash（FAST=STRONG，与 P3 r4/r5 同端点同模型）",
+  "denominator": 95,
+  "denominator_source": "eval/olist/dataset_v3_frozen.json::n_execute_cases（U-177 已裁定）",
+  "unscored_policy": "unscored 的 execute 题计入分母但不计等价，不因 infra 失败缩分母",
+  "planned_batches": 3,
+  "executed_batches": 3,
+  "missing_batches": [],
+  "stop_line": 0.76,
+  "stopped_by_gate": false,
+  "budget_hard_stop": false,
+  "unverified_batches": [],
+  "batches": [
+    {
+      "batch_id": "u186_r1",
+      "file": "results_v3_u186_r1.json",
+      "denominator": 95,
+      "n_execute_scored": 95,
+      "n_unscored_execute": 0,
+      "unscored_cases": [],
+      "n_equivalent": 85,
+      "ex": 0.8947,
+      "failed_execute_cases": [
+        "o02",
+        "o09",
+        "o13",
+        "o14",
+        "o17",
+        "o22",
+        "o29",
+        "o40",
+        "n34",
+        "n37"
+      ],
+      "gate_rejects": {},
+      "terminal_distribution": {
+        "complete": 96,
+        "clarify": 2,
+        "refuse": 2
+      },
+      "usage": {
+        "calls": 388,
+        "tokens": 1490423,
+        "cost_cny": 1.856458,
+        "prior": {
+          "calls": 0,
+          "tokens": 0,
+          "cost_cny": 0.0
+        },
+        "totals": {
+          "calls": 388,
+          "tokens": 1490423,
+          "cost_cny": 1.856458
+        }
+      },
+      "budget_stop": null,
+      "git_rev": "cf353ae"
+    },
+    {
+      "batch_id": "u186_r2",
+      "file": "results_v3_u186_r2.json",
+      "denominator": 95,
+      "n_execute_scored": 95,
+      "n_unscored_execute": 0,
+      "unscored_cases": [],
+      "n_equivalent": 84,
+      "ex": 0.8842,
+      "failed_execute_cases": [
+        "o02",
+        "o09",
+        "o13",
+        "o17",
+        "o22",
+        "o29",
+        "o38",
+        "n34",
+        "n35",
+        "n36",
+        "n37"
+      ],
+      "gate_rejects": {},
+      "terminal_distribution": {
+        "complete": 97,
+        "clarify": 2,
+        "refuse": 1
+      },
+      "usage": {
+        "calls": 391,
+        "tokens": 1502146,
+        "cost_cny": 1.749304,
+        "prior": {
+          "calls": 0,
+          "tokens": 0,
+          "cost_cny": 0.0
+        },
+        "totals": {
+          "calls": 391,
+          "tokens": 1502146,
+          "cost_cny": 1.749304
+        }
+      },
+      "budget_stop": null,
+      "git_rev": "cf353ae"
+    },
+    {
+      "batch_id": "u186_r3",
+      "file": "results_v3_u186_r3.json",
+      "denominator": 95,
+      "n_execute_scored": 95,
+      "n_unscored_execute": 0,
+      "unscored_cases": [],
+      "n_equivalent": 85,
+      "ex": 0.8947,
+      "failed_execute_cases": [
+        "o02",
+        "o09",
+        "o13",
+        "o17",
+        "o22",
+        "o29",
+        "o38",
+        "o40",
+        "n35",
+        "n36"
+      ],
+      "gate_rejects": {},
+      "terminal_distribution": {
+        "complete": 96,
+        "clarify": 3,
+        "refuse": 1
+      },
+      "usage": {
+        "calls": 389,
+        "tokens": 1495643,
+        "cost_cny": 1.739388,
+        "prior": {
+          "calls": 0,
+          "tokens": 0,
+          "cost_cny": 0.0
+        },
+        "totals": {
+          "calls": 389,
+          "tokens": 1495643,
+          "cost_cny": 1.739388
+        }
+      },
+      "budget_stop": null,
+      "git_rev": "cf353ae"
+    }
+  ],
+  "mean_ex": 0.8912,
+  "stdev_ex": 0.0061,
+  "gap_to_81": -4,
+  "majority_vote": {
+    "n_cases": 95,
+    "pass": 85,
+    "ex": 0.8947,
+    "oracle_union": 89,
+    "n_arms": 3,
+    "note": "计划 3 路、实际 3 路独立采样；投票在报告层，不改 prompt、不改图结构；摘要是预测侧 SQL/终态代理，非执行结果集哈希"
+  },
+  "cap_receipt": [
+    {
+      "batch_id": "u186_r1",
+      "calls": 388,
+      "spent_cny": 1.856458,
+      "stopped": false
+    },
+    {
+      "batch_id": "u186_r2",
+      "calls": 391,
+      "spent_cny": 1.749304,
+      "stopped": false
+    },
+    {
+      "batch_id": "u186_r3",
+      "calls": 389,
+      "spent_cny": 1.739388,
+      "stopped": false
+    }
+  ],
+  "all_batches_at_least_85": true,
+  "verdict": "计划 3 批、实测 3 批；已跑均值 0.8912 ± 0.0061；三批齐且单批全部 ≥85% = True；内建止损闸触发 = False；多路多数投票 0.8947。未达标与未跑批次照实写，不自创口径。",
+  "vote_detail": [
+    {
+      "case_id": "g01",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "g02",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "g03",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "g04",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "g05",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "g06",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "g07",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "g08",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "g09",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "g10",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n01",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n02",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n03",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n04",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n05",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n06",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n07",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n08",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n09",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n10",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n11",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n12",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n13",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n14",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n15",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n16",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n17",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n18",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n19",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n20",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n21",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n22",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n23",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n24",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n25",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n26",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n27",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n28",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n29",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n30",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n31",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n32",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n33",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n34",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": false
+    },
+    {
+      "case_id": "n35",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": false
+    },
+    {
+      "case_id": "n36",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n37",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": false
+    },
+    {
+      "case_id": "n38",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n39",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "n40",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o01",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o02",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": false
+    },
+    {
+      "case_id": "o03",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o04",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o05",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o06",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o07",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o08",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o09",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": false
+    },
+    {
+      "case_id": "o10",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o11",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o12",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o13",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": false
+    },
+    {
+      "case_id": "o14",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o15",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o16",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o17",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": false
+    },
+    {
+      "case_id": "o18",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o19",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o20",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o21",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o22",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": false
+    },
+    {
+      "case_id": "o23",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o24",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o25",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o26",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o27",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o28",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o29",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": false
+    },
+    {
+      "case_id": "o30",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o31",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o32",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o33",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o34",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o35",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o36",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o37",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o38",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o39",
+      "n_arms": 3,
+      "winner": 1,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o40",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": false
+    },
+    {
+      "case_id": "o41",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o42",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o43",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 3,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o44",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 1,
+      "vote_equivalent": true
+    },
+    {
+      "case_id": "o45",
+      "n_arms": 3,
+      "winner": 0,
+      "vote_size": 2,
+      "vote_equivalent": true
+    }
+  ]
+}
