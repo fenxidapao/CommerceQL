@@ -368,6 +368,22 @@ class TestSemanticSummary:
         for marker in markers:
             assert marker not in DIALECT_NOTE, f"口径纪律误塞共用 DIALECT_NOTE：{marker}"
 
+    def test_sql_prompts_carry_u186_generation_rules(self) -> None:
+        """`U-186`：季度标签单列写法与「聚合对比不用 CTE」两条生成纪律，三份齐备。
+
+        形态探针 `eval/olist/probe_u186_shape.py` 实测：拼接 `'-Q'` 字面量的写法一律被
+        R14 拒；`WITH` 跨资产引用被 R10 拒；过闸写法只有单列 `to_char(..., 'YYYY"-Q"Q')`
+        与 `HAVING` / 派生表。与 U-185 同一分工：只落 SQL 侧三份，不得抬进共用
+        `DIALECT_NOTE`（它被 10 个模板注入）。
+        """
+        markers = ('YYYY"-Q"Q', "聚合对比不用 CTE", "HAVING")
+        for name in ("gen_sql_v1.txt", "gen_sql_complex_v1.txt", "repair_v1.txt"):
+            text = (_PROMPT_DIR / name).read_text(encoding="utf-8")
+            for marker in markers:
+                assert marker in text, f"{name} 丢了 U-186 生成纪律：{marker}"
+        for marker in markers:
+            assert marker not in DIALECT_NOTE, f"生成纪律误塞共用 DIALECT_NOTE：{marker}"
+
     def test_metric_directory_reaches_the_model(
         self, runtime: SemanticBundleRuntime, prompt_ctx: PromptContext
     ) -> None:

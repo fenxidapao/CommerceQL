@@ -39,6 +39,25 @@ def test_unregistered_format_is_left_untouched() -> None:
     assert sx.to_sqlite_sql(sql) == sql
 
 
+def test_quarter_label_format_is_translated() -> None:
+    """U-186 正控：`TO_CHAR(<expr>, 'YYYY"-Q"Q')` → 年份 ‖ `-Q` ‖ 季度序号拼接。"""
+    out = sx.to_sqlite_sql("SELECT TO_CHAR(t, 'YYYY\"-Q\"Q') AS q FROM x")
+    assert "strftime('%Y', t) || '-Q' || ((CAST(strftime('%m', t) AS INTEGER) + 2) / 3)" in out
+    assert "TO_CHAR" not in out.upper()
+
+
+def test_quarter_label_expression_executes_in_sqlite() -> None:
+    """U-186 穿点：翻译后的表达式在真 SQLite 上产出 `YYYY-Qn` 标签（不是只翻不验）。"""
+    sql = sx.to_sqlite_sql("SELECT TO_CHAR(t, 'YYYY\"-Q\"Q') AS q FROM x")
+    con = sqlite3.connect(":memory:")
+    try:
+        con.execute("CREATE TABLE x(t TEXT)")
+        con.execute("INSERT INTO x VALUES ('2018-05-17 10:00:00')")
+        assert con.execute(sql).fetchone()[0] == "2018-Q2"
+    finally:
+        con.close()
+
+
 def test_placeholders_are_still_rewritten() -> None:
     """旁证：翻译与占位符改写互不影响。"""
     out = sx.to_sqlite_sql("SELECT TO_CHAR(t, 'YYYY-MM') FROM x WHERE a = %(a)s")

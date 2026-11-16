@@ -93,6 +93,10 @@ TO_CHAR_FORMATS: dict[str, str] = {
     "MM": "%m",
 }
 
+#: U-186：季度标签的单列写法。PG 原生 `to_char(ts, 'YYYY"-Q"Q')` 输出 `YYYY-Qn`；
+#: 该格式含季度序号，单个 strftime 模板表达不了 ⇒ 单独生成拼接表达式（下方分支）。
+QUARTER_LABEL_FORMAT = 'YYYY"-Q"Q'
+
 #: `DATE_TRUNC` 可证等价的单位 → `strftime` 首日格式（U-174 取证件的三种样本）。
 DATE_TRUNC_UNITS: dict[str, str] = {
     "year": "%Y-01-01",
@@ -224,10 +228,16 @@ def _build_to_char(args: list[str]) -> str | None:
     literal = _LITERAL.fullmatch(args[1].strip())
     if literal is None:
         return None
+    expr = args[0].strip()
+    if literal.group(1) == QUARTER_LABEL_FORMAT:
+        return (
+            f"strftime('%Y', {expr}) || '-Q' || "
+            f"((CAST(strftime('%m', {expr}) AS INTEGER) + 2) / 3)"
+        )
     mapped = TO_CHAR_FORMATS.get(literal.group(1))
     if mapped is None:
         return None
-    return f"strftime('{mapped}', {args[0].strip()})"
+    return f"strftime('{mapped}', {expr})"
 
 
 def strip_timestamp_casts(sql: str) -> str:

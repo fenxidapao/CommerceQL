@@ -1,0 +1,245 @@
+{
+  "schema": "U186_SHAPE_PROBE/v1",
+  "note": "零 LLM 零出站；候选写法过真 gate1 + 真 run_in_sandbox + compare_tables；不是 live",
+  "dataset": "dataset_v3_frozen.json",
+  "cases": [
+    {
+      "case_id": "n05",
+      "shape": "base",
+      "sql": "SELECT to_char(o.order_purchase_timestamp::timestamp, 'YYYY') || '-Q' || to_char(o.order_purchase_timestamp::timestamp, 'Q') AS quarter, SUM(p.payment_value) AS gmv FROM v_o_orders AS o JOIN v_o_payments AS p ON o.order_id = p.order_id WHERE o.order_status NOT IN ('canceled', 'unavailable') AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp <= %(end_ts)s GROUP BY quarter ORDER BY quarter LIMIT 10",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "reject",
+      "rule": "R14",
+      "exec": null,
+      "equivalent": null
+    },
+    {
+      "case_id": "n05",
+      "shape": "Q-A",
+      "sql": "SELECT to_char(o.order_purchase_timestamp, 'YYYY') || '-Q' || EXTRACT(quarter FROM o.order_purchase_timestamp) AS quarter, SUM(p.payment_value) AS gmv FROM v_o_orders AS o JOIN v_o_payments AS p ON o.order_id = p.order_id WHERE o.order_status NOT IN ('canceled', 'unavailable') AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp <= %(end_ts)s GROUP BY quarter ORDER BY quarter LIMIT 10",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "reject",
+      "rule": "R14",
+      "exec": null,
+      "equivalent": null
+    },
+    {
+      "case_id": "n05",
+      "shape": "Q-B",
+      "sql": "SELECT to_char(o.order_purchase_timestamp, 'YYYY') || '-Q' || CAST(EXTRACT(quarter FROM o.order_purchase_timestamp) AS text) AS quarter, SUM(p.payment_value) AS gmv FROM v_o_orders AS o JOIN v_o_payments AS p ON o.order_id = p.order_id WHERE o.order_status NOT IN ('canceled', 'unavailable') AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp <= %(end_ts)s GROUP BY quarter ORDER BY quarter LIMIT 10",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "reject",
+      "rule": "R14",
+      "exec": null,
+      "equivalent": null
+    },
+    {
+      "case_id": "n05",
+      "shape": "Q-D",
+      "sql": "SELECT to_char(o.order_purchase_timestamp, 'YYYY\"-Q\"Q') AS quarter, SUM(p.payment_value) AS gmv FROM v_o_orders AS o JOIN v_o_payments AS p ON o.order_id = p.order_id WHERE o.order_status NOT IN ('canceled', 'unavailable') AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp <= %(end_ts)s GROUP BY quarter ORDER BY quarter LIMIT 10",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "pass",
+      "rule": null,
+      "exec": "ok",
+      "equivalent": true
+    },
+    {
+      "case_id": "n10",
+      "shape": "base",
+      "sql": "SELECT to_char(o.order_purchase_timestamp::timestamp, 'YYYY') || '-Q' || to_char(o.order_purchase_timestamp::timestamp, 'Q') AS quarter, COUNT(DISTINCT o.order_id) AS order_cnt FROM v_o_orders AS o WHERE o.order_status NOT IN ('canceled', 'unavailable') AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp <= %(end_ts)s GROUP BY to_char(o.order_purchase_timestamp::timestamp, 'YYYY') || '-Q' || to_char(o.order_purchase_timestamp::timestamp, 'Q') ORDER BY quarter ASC LIMIT 100",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "reject",
+      "rule": "R14",
+      "exec": null,
+      "equivalent": null
+    },
+    {
+      "case_id": "n10",
+      "shape": "Q-A",
+      "sql": "SELECT to_char(o.order_purchase_timestamp, 'YYYY') || '-Q' || EXTRACT(quarter FROM o.order_purchase_timestamp) AS quarter, COUNT(DISTINCT o.order_id) AS order_cnt FROM v_o_orders AS o WHERE o.order_status NOT IN ('canceled', 'unavailable') AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp <= %(end_ts)s GROUP BY to_char(o.order_purchase_timestamp, 'YYYY') || '-Q' || EXTRACT(quarter FROM o.order_purchase_timestamp) ORDER BY quarter ASC LIMIT 100",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "reject",
+      "rule": "R14",
+      "exec": null,
+      "equivalent": null
+    },
+    {
+      "case_id": "n10",
+      "shape": "Q-B",
+      "sql": "SELECT to_char(o.order_purchase_timestamp, 'YYYY') || '-Q' || CAST(EXTRACT(quarter FROM o.order_purchase_timestamp) AS text) AS quarter, COUNT(DISTINCT o.order_id) AS order_cnt FROM v_o_orders AS o WHERE o.order_status NOT IN ('canceled', 'unavailable') AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp <= %(end_ts)s GROUP BY to_char(o.order_purchase_timestamp, 'YYYY') || '-Q' || CAST(EXTRACT(quarter FROM o.order_purchase_timestamp) AS text) ORDER BY quarter ASC LIMIT 100",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "reject",
+      "rule": "R14",
+      "exec": null,
+      "equivalent": null
+    },
+    {
+      "case_id": "n10",
+      "shape": "Q-D",
+      "sql": "SELECT to_char(o.order_purchase_timestamp, 'YYYY\"-Q\"Q') AS quarter, COUNT(DISTINCT o.order_id) AS order_cnt FROM v_o_orders AS o WHERE o.order_status NOT IN ('canceled', 'unavailable') AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp <= %(end_ts)s GROUP BY to_char(o.order_purchase_timestamp, 'YYYY\"-Q\"Q') ORDER BY quarter ASC LIMIT 100",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "pass",
+      "rule": null,
+      "exec": "ok",
+      "equivalent": true
+    },
+    {
+      "case_id": "n18",
+      "shape": "base",
+      "sql": "SELECT to_char(o.order_purchase_timestamp::timestamp, 'YYYY') || '-Q' || to_char(o.order_purchase_timestamp::timestamp, 'Q') AS quarter_label, SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS aov FROM v_o_orders AS o JOIN v_o_payments AS p ON o.order_id = p.order_id WHERE o.order_status NOT IN ('canceled', 'unavailable') AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY quarter_label ORDER BY quarter_label ASC LIMIT 100",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "reject",
+      "rule": "R14",
+      "exec": null,
+      "equivalent": null
+    },
+    {
+      "case_id": "n18",
+      "shape": "Q-A",
+      "sql": "SELECT to_char(o.order_purchase_timestamp, 'YYYY') || '-Q' || EXTRACT(quarter FROM o.order_purchase_timestamp) AS quarter_label, SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS aov FROM v_o_orders AS o JOIN v_o_payments AS p ON o.order_id = p.order_id WHERE o.order_status NOT IN ('canceled', 'unavailable') AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY quarter_label ORDER BY quarter_label ASC LIMIT 100",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "reject",
+      "rule": "R14",
+      "exec": null,
+      "equivalent": null
+    },
+    {
+      "case_id": "n18",
+      "shape": "Q-B",
+      "sql": "SELECT to_char(o.order_purchase_timestamp, 'YYYY') || '-Q' || CAST(EXTRACT(quarter FROM o.order_purchase_timestamp) AS text) AS quarter_label, SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS aov FROM v_o_orders AS o JOIN v_o_payments AS p ON o.order_id = p.order_id WHERE o.order_status NOT IN ('canceled', 'unavailable') AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY quarter_label ORDER BY quarter_label ASC LIMIT 100",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "reject",
+      "rule": "R14",
+      "exec": null,
+      "equivalent": null
+    },
+    {
+      "case_id": "n18",
+      "shape": "Q-D",
+      "sql": "SELECT to_char(o.order_purchase_timestamp, 'YYYY\"-Q\"Q') AS quarter_label, SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS aov FROM v_o_orders AS o JOIN v_o_payments AS p ON o.order_id = p.order_id WHERE o.order_status NOT IN ('canceled', 'unavailable') AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY quarter_label ORDER BY quarter_label ASC LIMIT 100",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "pass",
+      "rule": null,
+      "exec": "ok",
+      "equivalent": true
+    },
+    {
+      "case_id": "n39",
+      "shape": "base",
+      "sql": "SELECT to_char(o.order_purchase_timestamp::timestamp, 'YYYY') || '-Q' || to_char(o.order_purchase_timestamp::timestamp, 'Q') AS quarter_label, 100.0 * SUM(CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0) AS delivery_late_rate FROM v_o_orders AS o WHERE o.order_status = 'delivered' AND o.order_delivered_customer_date IS NOT NULL AND o.order_estimated_delivery_date IS NOT NULL AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY quarter_label ORDER BY quarter_label ASC LIMIT 100",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "reject",
+      "rule": "R14",
+      "exec": null,
+      "equivalent": null
+    },
+    {
+      "case_id": "n39",
+      "shape": "Q-A",
+      "sql": "SELECT to_char(o.order_purchase_timestamp, 'YYYY') || '-Q' || EXTRACT(quarter FROM o.order_purchase_timestamp) AS quarter_label, 100.0 * SUM(CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0) AS delivery_late_rate FROM v_o_orders AS o WHERE o.order_status = 'delivered' AND o.order_delivered_customer_date IS NOT NULL AND o.order_estimated_delivery_date IS NOT NULL AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY quarter_label ORDER BY quarter_label ASC LIMIT 100",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "reject",
+      "rule": "R14",
+      "exec": null,
+      "equivalent": null
+    },
+    {
+      "case_id": "n39",
+      "shape": "Q-B",
+      "sql": "SELECT to_char(o.order_purchase_timestamp, 'YYYY') || '-Q' || CAST(EXTRACT(quarter FROM o.order_purchase_timestamp) AS text) AS quarter_label, 100.0 * SUM(CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0) AS delivery_late_rate FROM v_o_orders AS o WHERE o.order_status = 'delivered' AND o.order_delivered_customer_date IS NOT NULL AND o.order_estimated_delivery_date IS NOT NULL AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY quarter_label ORDER BY quarter_label ASC LIMIT 100",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "reject",
+      "rule": "R14",
+      "exec": null,
+      "equivalent": null
+    },
+    {
+      "case_id": "n39",
+      "shape": "Q-D",
+      "sql": "SELECT to_char(o.order_purchase_timestamp, 'YYYY\"-Q\"Q') AS quarter_label, 100.0 * SUM(CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0) AS delivery_late_rate FROM v_o_orders AS o WHERE o.order_status = 'delivered' AND o.order_delivered_customer_date IS NOT NULL AND o.order_estimated_delivery_date IS NOT NULL AND o.order_purchase_timestamp >= %(start_ts)s AND o.order_purchase_timestamp < %(end_ts)s GROUP BY quarter_label ORDER BY quarter_label ASC LIMIT 100",
+      "params_used": [
+        "end_ts",
+        "start_ts"
+      ],
+      "gate": "pass",
+      "rule": null,
+      "exec": "ok",
+      "equivalent": true
+    },
+    {
+      "case_id": "o20",
+      "shape": "base",
+      "sql": "WITH state_aov AS (SELECT o.customer_state AS customer_state, SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS state_aov FROM v_o_orders AS o JOIN v_o_payments AS p ON o.order_id = p.order_id WHERE o.order_status NOT IN ('canceled','unavailable') GROUP BY o.customer_state), overall AS (SELECT SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS overall_aov FROM v_o_orders AS o JOIN v_o_payments AS p ON o.order_id = p.order_id WHERE o.order_status NOT IN ('canceled','unavailable')) SELECT s.customer_state AS customer_state, s.state_aov AS state_aov, ov.overall_aov AS overall_aov FROM state_aov AS s CROSS JOIN overall AS ov WHERE s.state_aov > ov.overall_aov ORDER BY s.state_aov DESC LIMIT 100",
+      "params_used": [],
+      "gate": "reject",
+      "rule": "R10",
+      "exec": null,
+      "equivalent": null
+    },
+    {
+      "case_id": "o20",
+      "shape": "O-A",
+      "sql": "SELECT o.customer_state AS state, SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS aov FROM v_o_payments AS p JOIN v_o_orders AS o ON o.order_id = p.order_id WHERE o.order_status NOT IN ('canceled', 'unavailable') GROUP BY o.customer_state HAVING SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) > (SELECT SUM(p2.payment_value) / NULLIF(COUNT(DISTINCT o2.order_id), 0) FROM v_o_payments AS p2 JOIN v_o_orders AS o2 ON o2.order_id = p2.order_id WHERE o2.order_status NOT IN ('canceled', 'unavailable'))",
+      "params_used": [],
+      "gate": "pass",
+      "rule": null,
+      "exec": "ok",
+      "equivalent": true
+    },
+    {
+      "case_id": "o20",
+      "shape": "O-B",
+      "sql": "SELECT s.state, s.aov FROM (SELECT o.customer_state AS state, SUM(p.payment_value) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS aov FROM v_o_payments AS p JOIN v_o_orders AS o ON o.order_id = p.order_id WHERE o.order_status NOT IN ('canceled', 'unavailable') GROUP BY o.customer_state) AS s CROSS JOIN (SELECT SUM(p2.payment_value) / NULLIF(COUNT(DISTINCT o2.order_id), 0) AS overall_aov FROM v_o_payments AS p2 JOIN v_o_orders AS o2 ON o2.order_id = p2.order_id WHERE o2.order_status NOT IN ('canceled', 'unavailable')) AS g WHERE s.aov > g.overall_aov",
+      "params_used": [],
+      "gate": "pass",
+      "rule": null,
+      "exec": "ok",
+      "equivalent": true
+    }
+  ]
+}
